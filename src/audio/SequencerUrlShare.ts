@@ -3,25 +3,24 @@
  * Serializes groove state into a compact URL-safe base64 string for instant sharing.
  */
 
-export interface SharedTrackState {
-  name: string;
-  steps: Array<{
-    active: boolean;
-    velocity?: number;
-    pitch?: number;
-  }>;
-  mute?: boolean;
-  solo?: boolean;
-  volume?: number;
-}
+import { SequencerPattern, SequencerTrack } from "../types/genre";
 
 export interface SharedSequencerState {
   genreId: string;
   bpm: number;
   swing: number;
-  scaleKey?: string;
-  scaleMode?: string;
-  tracks: SharedTrackState[];
+  scale?: string;
+  tracks: Array<{
+    track_id: string;
+    name: string;
+    instrument: string;
+    steps: number[];
+    velocity?: number[];
+    pitch?: (number | null)[];
+    mute?: boolean;
+    solo?: boolean;
+    volume?: number;
+  }>;
 }
 
 /**
@@ -29,37 +28,24 @@ export interface SharedSequencerState {
  */
 export function encodeSharedSequencer(state: SharedSequencerState): string {
   try {
-    // Compact format:
-    // [genreId, bpm, swing, scaleKey, scaleMode, [ [name, bitmask16, [velocities], [pitches]] ]]
     const compactTracks = state.tracks.map((t) => {
       let mask = 0;
-      const vels: number[] = [];
-      const pitches: number[] = [];
-
-      (t.steps || []).forEach((step, idx) => {
-        if (step.active) {
-          mask |= (1 << idx);
-          if (step.velocity !== undefined && step.velocity !== 0.8) {
-            vels.push(Math.round(step.velocity * 100));
-          } else {
-            vels.push(-1); // default
-          }
-          if (step.pitch !== undefined && step.pitch !== 0) {
-            pitches.push(step.pitch);
-          } else {
-            pitches.push(0);
-          }
+      for (let i = 0; i < 16; i++) {
+        if (t.steps[i] === 1) {
+          mask |= (1 << i);
         }
-      });
+      }
 
       return {
+        id: t.track_id,
         n: t.name,
+        ins: t.instrument,
         m: mask,
-        v: vels.some((v) => v !== -1) ? vels : undefined,
-        p: pitches.some((p) => p !== 0) ? pitches : undefined,
+        v: t.velocity && t.velocity.some((v) => v !== 100) ? t.velocity : undefined,
+        p: t.pitch && t.pitch.some((p) => p !== null && p !== undefined) ? t.pitch : undefined,
         mu: t.mute ? 1 : undefined,
         so: t.solo ? 1 : undefined,
-        vol: t.volume !== undefined && t.volume !== 1 ? t.volume : undefined,
+        vol: t.volume !== undefined && t.volume !== 0.8 ? Math.round(t.volume * 100) : undefined,
       };
     });
 
@@ -67,20 +53,17 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
       g: state.genreId,
       b: state.bpm,
       s: state.swing,
-      k: state.scaleKey || "C",
-      m: state.scaleMode || "minor",
+      sc: state.scale || "C minor",
       t: compactTracks,
     };
 
     const jsonStr = JSON.stringify(payload);
-    // Base64 encode safe for URLs
     const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
       .replace(/\+/g, "-")
       .replace(/\//g, "_")
       .replace(/=+$/, "");
     return base64;
   } catch (err) {
-    console.error("Failed to encode sequencer state", err);
     return "";
   }
 }
@@ -91,7 +74,6 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
 export function decodeSharedSequencer(encoded: string): SharedSequencerState | null {
   try {
     if (!encoded || typeof encoded !== "string") return null;
-    // Restore standard base64
     let base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
     while (base64.length % 4 !== 0) {
       base64 += "=";
@@ -103,39 +85,23 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
       return null;
     }
 
-    const tracks: SharedTrackState[] = payload.t.map((ct: any) => {
+    const tracks = payload.t.map((ct: any) => {
       const mask = ct.m || 0;
-      const vels: number[] = ct.v || [];
-      const pitches: number[] = ct.p || [];
-      let activeCounter = 0;
-
-      const steps = [];
+      const steps: number[] = [];
       for (let i = 0; i < 16; i++) {
-        const isActive = (mask & (1 << i)) !== 0;
-        let vel = 0.8;
-        let pitch = 0;
-        if (isActive) {
-          if (vels[activeCounter] !== undefined && vels[activeCounter] !== -1) {
-            vel = vels[activeCounter] / 100;
-          }
-          if (pitches[activeCounter] !== undefined) {
-            pitch = pitches[activeCounter];
-          }
-          activeCounter++;
-        }
-        steps.push({
-          active: isActive,
-          velocity: vel,
-          pitch,
-        });
+        steps.push((mask & (1 << i)) !== 0 ? 1 : 0);
       }
 
       return {
+        track_id: ct.id || "track",
         name: ct.n || "Track",
+        instrument: ct.ins || "synth",
         steps,
-        mute: !!ct.mu,
-        solo: !!ct.so,
-        volume: ct.vol !== undefined ? ct.vol : 1.0,
+        velocity: ct.v || Array(16).fill(100),
+        pitch: ct.p || Array(16).fill(null),
+        mute: Boolean(ct.mu),
+        solo: Boolean(ct.so),
+        volume: ct.vol !== undefined ? ct.vol / 100 : 0.8,
       };
     });
 
@@ -143,19 +109,16 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
       genreId: payload.g,
       bpm: Number(payload.b) || 120,
       swing: Number(payload.s) || 0,
-      scaleKey: payload.k || "C",
-      scaleMode: payload.m || "minor",
+      scale: payload.sc || "C minor",
       tracks,
     };
   } catch (err) {
-    // Invalid base64 or json payload
-    return null;
     return null;
   }
 }
 
 /**
- * Returns full shareable URL with encoded hash or search query
+ * Returns full shareable URL with encoded query parameter
  */
 export function getShareUrl(state: SharedSequencerState): string {
   const code = encodeSharedSequencer(state);

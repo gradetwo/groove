@@ -19,7 +19,6 @@ export interface AudioEngineOptions {
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private isRunning: boolean = false;
   private isPlaying: boolean = false;
 
   // Scheduler state
@@ -108,7 +107,6 @@ export class AudioEngine {
 
   public setPattern(pattern: SequencerPattern): void {
     this.pattern = pattern;
-    // Update track states if length changes
     if (this.trackStates.length !== pattern.tracks.length) {
       this.trackStates = pattern.tracks.map((t) => ({
         mute: t.mute || false,
@@ -206,8 +204,7 @@ export class AudioEngine {
     const secondsPerBeat = 60.0 / this.bpm;
     let stepDuration = secondsPerBeat / 4; // 16th note duration
 
-    // Apply swing on odd steps (1, 3, 5, 7, 9, 11, 13, 15)
-    // Even steps get slightly longer, odd steps slightly shorter, or odd steps delayed
+    // Apply swing on odd steps
     if (this.swing > 0) {
       const swingOffset = (this.swing * 0.4) * stepDuration;
       if (this.currentStep % 2 === 0) {
@@ -232,11 +229,12 @@ export class AudioEngine {
       if (state.mute) return;
       if (anySolo && !state.solo) return;
 
-      const stepData = track.steps[step];
-      if (stepData && stepData.active) {
-        const vel = (stepData.velocity !== undefined ? stepData.velocity : 0.8) * state.volume;
-        const pitch = stepData.pitch || 0;
-        this.triggerInstrument(trackIdx, track.name, time, vel, pitch);
+      const isStepActive = track.steps[step] === 1;
+      if (isStepActive) {
+        const velVal = track.velocity && track.velocity[step] !== undefined ? track.velocity[step] : 100;
+        const normalizedVel = (velVal / 127) * state.volume;
+        const pitchVal = track.pitch && track.pitch[step] !== undefined && track.pitch[step] !== null ? track.pitch[step]! : 0;
+        this.triggerInstrument(trackIdx, track.name, time, normalizedVel, pitchVal);
       }
     });
 
@@ -284,16 +282,12 @@ export class AudioEngine {
     } else if (lowerName.includes("fx")) {
       this.playFX(time, vel, pitch);
     } else {
-      // Fallback drum sound
       this.playPercussion(time, vel, pitch);
     }
   }
 
   // --- SYNTHESIZER VOICES ---
 
-  /**
-   * 1. Kick: Punchy acoustic/electronic sub kick
-   */
   private playKick(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
@@ -314,7 +308,6 @@ export class AudioEngine {
     osc.connect(gain);
     gain.connect(this.masterGain);
 
-    // Click transient
     if (this.noiseBuffer) {
       const clickSrc = this.ctx.createBufferSource();
       clickSrc.buffer = this.noiseBuffer;
@@ -336,13 +329,9 @@ export class AudioEngine {
     osc.stop(time + 0.35);
   }
 
-  /**
-   * 2. Snare: Dual layer (Tonal body + noise burst)
-   */
   private playSnare(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
-    // Body tone
     const osc = this.ctx.createOscillator();
     const toneGain = this.ctx.createGain();
     const startFreq = 180 * Math.pow(2, pitchOffset / 12);
@@ -359,7 +348,6 @@ export class AudioEngine {
     osc.start(time);
     osc.stop(time + 0.15);
 
-    // Noise snap
     if (this.noiseBuffer) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = this.noiseBuffer;
@@ -381,9 +369,6 @@ export class AudioEngine {
     }
   }
 
-  /**
-   * 3. Hi-Hat: Crisp metallic high-pass noise
-   */
   private playHiHat(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
 
@@ -396,7 +381,7 @@ export class AudioEngine {
     highpass.frequency.value = hpFreq;
 
     const gain = this.ctx.createGain();
-    const decay = vel > 0.85 ? 0.22 : 0.06; // Open or closed hat feeling
+    const decay = vel > 0.85 ? 0.22 : 0.06;
     gain.gain.setValueAtTime(vel * 0.6, time);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + decay);
 
@@ -408,13 +393,9 @@ export class AudioEngine {
     noise.stop(time + decay + 0.02);
   }
 
-  /**
-   * 4. Percussion: Handclap multi-burst or Cowbell
-   */
   private playPercussion(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
 
-    // 808 Handclap triple burst
     const filter = this.ctx.createBiquadFilter();
     filter.type = "bandpass";
     filter.frequency.value = 1100 * Math.pow(2, pitchOffset / 12);
@@ -437,7 +418,6 @@ export class AudioEngine {
       src.stop(time + bt + 0.02);
     });
 
-    // Sustained clap reverb tail
     const tailSrc = this.ctx.createBufferSource();
     tailSrc.buffer = this.noiseBuffer;
     const tailGain = this.ctx.createGain();
@@ -449,13 +429,10 @@ export class AudioEngine {
     tailSrc.stop(time + 0.22);
   }
 
-  /**
-   * 5. Bass: Rich Sub Synth with warm harmonic saturation
-   */
   private playBass(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
-    const rootFreq = 55; // A1 / C2 range
+    const rootFreq = 55;
     const freq = rootFreq * Math.pow(2, pitchOffset / 12);
 
     const osc1 = this.ctx.createOscillator();
@@ -487,14 +464,10 @@ export class AudioEngine {
     osc2.stop(time + 0.38);
   }
 
-  /**
-   * 6. Chords: Lush polyphonic synth triad
-   */
   private playChord(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
-    const baseFreq = 196 * Math.pow(2, pitchOffset / 12); // G3
-    // Minor / major triad intervals: [0, 3, 7] semitones
+    const baseFreq = 196 * Math.pow(2, pitchOffset / 12);
     const chordIntervals = [0, 3, 7];
 
     const filter = this.ctx.createBiquadFilter();
@@ -519,13 +492,10 @@ export class AudioEngine {
     });
   }
 
-  /**
-   * 7. Lead: Expressive saw/square melody lead with filter env
-   */
   private playLead(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
-    const baseFreq = 330 * Math.pow(2, pitchOffset / 12); // E4
+    const baseFreq = 330 * Math.pow(2, pitchOffset / 12);
 
     const osc = this.ctx.createOscillator();
     osc.type = "sawtooth";
@@ -548,9 +518,6 @@ export class AudioEngine {
     osc.stop(time + 0.32);
   }
 
-  /**
-   * 8. FX: Sweep / Laser / Impact synth sound
-   */
   private playFX(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
@@ -578,9 +545,6 @@ export class AudioEngine {
     osc.stop(time + 0.4);
   }
 
-  /**
-   * Cleanup resources
-   */
   public destroy(): void {
     this.stop();
     if (this.ctx && this.ctx.state !== "closed") {

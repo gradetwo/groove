@@ -5,7 +5,7 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { ALL_GENRES } from "../data/genres";
 
 describe("Audio & Sequencer Utilities", () => {
-  const sampleGenre = ALL_GENRES[0]; // e.g. Chicago House
+  const sampleGenre = ALL_GENRES[0]; // Chicago House
 
   describe("MIDI Exporter", () => {
     it("generates valid SMF Type 0 byte array with headers", () => {
@@ -13,7 +13,7 @@ describe("Audio & Sequencer Utilities", () => {
       expect(sampleGenre.sequencer_pattern).toBeDefined();
 
       const bytes = generateMidiBytes({
-        bpm: sampleGenre.bpm_range[0],
+        bpm: sampleGenre.default_bpm || 120,
         pattern: sampleGenre.sequencer_pattern,
         genreName: sampleGenre.name,
       });
@@ -55,16 +55,15 @@ describe("Audio & Sequencer Utilities", () => {
       const originalState: SharedSequencerState = {
         genreId: sampleGenre.id,
         bpm: 126,
-        swing: 0.15,
-        scaleKey: "F",
-        scaleMode: "minor",
+        swing: 15,
+        scale: "C minor",
         tracks: sampleGenre.sequencer_pattern.tracks.map((t) => ({
+          track_id: t.track_id,
           name: t.name,
-          steps: t.steps.map((s) => ({
-            active: s.active,
-            velocity: s.velocity,
-            pitch: s.pitch,
-          })),
+          instrument: t.instrument,
+          steps: [...t.steps],
+          velocity: t.velocity ? [...t.velocity] : undefined,
+          pitch: t.pitch ? [...t.pitch] : undefined,
           mute: false,
           solo: false,
           volume: 0.8,
@@ -74,7 +73,6 @@ describe("Audio & Sequencer Utilities", () => {
       const encoded = encodeSharedSequencer(originalState);
       expect(encoded).toBeTruthy();
       expect(typeof encoded).toBe("string");
-      // URL-safe (no +, /, =)
       expect(encoded).not.toMatch(/[+/=]/);
 
       const decoded = decodeSharedSequencer(encoded);
@@ -82,8 +80,6 @@ describe("Audio & Sequencer Utilities", () => {
       expect(decoded!.genreId).toBe(originalState.genreId);
       expect(decoded!.bpm).toBe(originalState.bpm);
       expect(decoded!.swing).toBe(originalState.swing);
-      expect(decoded!.scaleKey).toBe(originalState.scaleKey);
-      expect(decoded!.scaleMode).toBe(originalState.scaleMode);
       expect(decoded!.tracks.length).toBe(originalState.tracks.length);
 
       // Compare active steps
@@ -92,7 +88,7 @@ describe("Audio & Sequencer Utilities", () => {
         const decTrack = decoded!.tracks[i];
         expect(decTrack.name).toBe(origTrack.name);
         for (let s = 0; s < 16; s++) {
-          expect(Boolean(decTrack.steps[s].active)).toBe(Boolean(origTrack.steps[s].active));
+          expect(decTrack.steps[s]).toBe(origTrack.steps[s]);
         }
       }
     });

@@ -67,7 +67,8 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
   const allEvents: MidiEvent[] = [];
 
   // 1. Tempo Meta Event at tick 0
-  const microsecondsPerBeat = Math.round(60000000 / Math.max(20, Math.min(300, bpm)));
+  const safeBpm = Math.max(20, Math.min(300, bpm || 120));
+  const microsecondsPerBeat = Math.round(60000000 / safeBpm);
   const tempoBytes = [
     (microsecondsPerBeat >> 16) & 0xff,
     (microsecondsPerBeat >> 8) & 0xff,
@@ -94,18 +95,22 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
   pattern.tracks.forEach((track: SequencerTrack, trackIdx: number) => {
     const mapping = TRACK_MIDI_MAPPINGS[trackIdx] || TRACK_MIDI_MAPPINGS[0];
     const steps = track.steps || [];
+    const velocities = track.velocity || [];
+    const pitches = track.pitch || [];
 
-    steps.forEach((step, stepIdx) => {
-      if (!step.active) return;
+    steps.forEach((stepVal, stepIdx) => {
+      if (stepVal !== 1) return;
 
       const tickStart = stepIdx * TICKS_PER_16TH;
       const tickEnd = tickStart + NOTE_DURATION_TICKS;
-      const vel = Math.round(Math.max(1, Math.min(127, (step.velocity ?? 0.8) * 127)));
-      const pitchOffset = step.pitch ?? 0;
-      const noteNumber = Math.max(0, Math.min(127, mapping.baseNote + pitchOffset));
+      const vel = velocities[stepIdx] !== undefined ? velocities[stepIdx] : 100;
+      const pitchOffset = (pitches[stepIdx] !== undefined && pitches[stepIdx] !== null) 
+        ? pitches[stepIdx]! 
+        : mapping.baseNote;
+      const noteNumber = Math.max(0, Math.min(127, pitchOffset));
 
-      // For chords, generate triad (root, +3 or +4, +7)
-      if (track.name.toLowerCase() === "chords") {
+      // For chords, generate triad
+      if (track.track_id === "chords" || track.name.toLowerCase().includes("chord")) {
         const chordNotes = [noteNumber, noteNumber + 3, noteNumber + 7];
         chordNotes.forEach((n) => {
           allEvents.push({
@@ -142,7 +147,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
     });
   });
 
-  // 4. Sort events chronologically. If ticks equal, noteOff before noteOn, meta first.
+  // 4. Sort events chronologically
   allEvents.sort((a, b) => {
     if (a.tick !== b.tick) return a.tick - b.tick;
     if (a.type === "meta") return -1;
