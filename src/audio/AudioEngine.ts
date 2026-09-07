@@ -28,10 +28,12 @@ export class AudioEngine {
   private currentStep: number = 0;
   private nextStepTime: number = 0;
   private scheduleTimerId: any = null;
-  private stepTimers: Set<any> = new Set();
+  private stepQueue: Array<{ step: number; time: number }> = [];
+  private lastReportedStep: number = -1;
+  private rafId: number | null = null;
 
   private lookaheadMs: number = 25; // How frequently to call scheduler (ms)
-  private scheduleAheadSec: number = 0.1; // How far ahead to schedule audio (sec)
+  private scheduleAheadSec: number = 0.12; // How far ahead to schedule audio (sec)
 
   // Pattern data
   private pattern: SequencerPattern | null = null;
@@ -110,9 +112,9 @@ export class AudioEngine {
     this.noiseBuffer = buffer;
   }
 
-  public setPattern(pattern: SequencerPattern): void {
+  public setPattern(pattern: SequencerPattern, resetStates = false): void {
     this.pattern = pattern;
-    if (this.trackStates.length !== pattern.tracks.length) {
+    if (resetStates || this.trackStates.length !== pattern.tracks.length) {
       this.trackStates = pattern.tracks.map((t) => ({
         mute: t.mute || false,
         solo: t.solo || false,
@@ -142,31 +144,39 @@ export class AudioEngine {
     }
   }
 
-  public play(): void {
+  public async play(): Promise<void> {
     if (!this.ctx) {
       this.initAudioContext();
     }
     if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume();
+      await this.ctx.resume();
     }
     if (this.isPlaying) return;
 
     this.isPlaying = true;
     this.currentStep = 0;
-    this.nextStepTime = (this.ctx ? this.ctx.currentTime : 0) + 0.05;
+    this.nextStepTime = (this.ctx ? this.ctx.currentTime : 0) + 0.035;
+    this.stepQueue = [];
+    this.lastReportedStep = -1;
 
+    this.schedulerLoop();
     this.startScheduler();
+    this.startPlayheadSync();
   }
 
   public pause(): void {
     this.isPlaying = false;
     this.stopScheduler();
+    this.stopPlayheadSync();
   }
 
   public stop(): void {
     this.isPlaying = false;
     this.stopScheduler();
+    this.stopPlayheadSync();
     this.currentStep = 0;
+    this.lastReportedStep = -1;
+    this.stepQueue = [];
     if (this.onStopCallback) {
       this.onStopCallback();
     }
@@ -196,41 +206,72 @@ export class AudioEngine {
       clearInterval(this.scheduleTimerId);
       this.scheduleTimerId = null;
     }
-    this.stepTimers.forEach((t) => clearTimeout(t));
-    this.stepTimers.clear();
+  }
+
+  private startPlayheadSync(): void {
+    const sync = () => {
+      if (!this.isPlaying || !this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      // Anticipation offset of 25ms aligns visual playhead with monitor refresh
+      const visualLeadSec = 0.025;
+
+      let latestStep = -1;
+      let latestTime = 0;
+
+      while (this.stepQueue.length > 0 && this.stepQueue[0].time <= now + visualLeadSec) {
+        const item = this.stepQueue.shift()!;
+        latestStep = item.step;
+        latestTime = item.time;
+      }
+
+      if (latestStep !== -1 && latestStep !== this.lastReportedStep) {
+        this.lastReportedStep = latestStep;
+        if (this.onStepCallback) {
+          this.onStepCallback({ step: latestStep, time: latestTime });
+        }
+      }
+
+      if (typeof requestAnimationFrame !== "undefined") {
+        this.rafId = requestAnimationFrame(sync);
+      }
+    };
+
+    if (typeof requestAnimationFrame !== "undefined") {
+      this.rafId = requestAnimationFrame(sync);
+    }
+  }
+
+  private stopPlayheadSync(): void {
+    if (this.rafId !== null && typeof cancelAnimationFrame !== "undefined") {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
   }
 
   private schedulerLoop(): void {
     if (!this.ctx || !this.isPlaying || !this.pattern) return;
 
+    const stepDur = (60.0 / this.bpm) / 4;
+
     while (this.nextStepTime < this.ctx.currentTime + this.scheduleAheadSec) {
-      this.scheduleStep(this.currentStep, this.nextStepTime);
-      this.advanceStep();
+      const step = this.currentStep;
+      // Swing pushes odd steps (1, 3, 5...) slightly forward
+      const swingOffset = (step % 2 === 1 && this.swing > 0) ? (this.swing * 0.5) * stepDur : 0;
+      const actualStepTime = this.nextStepTime + swingOffset;
+
+      this.scheduleStep(step, actualStepTime, stepDur);
+      this.stepQueue.push({ step, time: actualStepTime });
+
+      // Keep monotonic un-swung grid advancement
+      this.nextStepTime += stepDur;
+      this.currentStep = (this.currentStep + 1) % 16;
     }
   }
 
-  private advanceStep(): void {
-    const secondsPerBeat = 60.0 / this.bpm;
-    let stepDuration = secondsPerBeat / 4; // 16th note duration
-
-    // Apply swing on odd steps
-    if (this.swing > 0) {
-      const swingOffset = (this.swing * 0.4) * stepDuration;
-      if (this.currentStep % 2 === 0) {
-        stepDuration += swingOffset;
-      } else {
-        stepDuration -= swingOffset;
-      }
-    }
-
-    this.nextStepTime += Math.max(0.02, stepDuration);
-    this.currentStep = (this.currentStep + 1) % 16;
-  }
-
-  private scheduleStep(step: number, time: number): void {
+  private scheduleStep(step: number, time: number, stepDur: number): void {
     if (!this.pattern || !this.ctx) return;
 
-    // Check solo states
     const anySolo = this.trackStates.some((t) => t.solo);
 
     this.pattern.tracks.forEach((track, trackIdx) => {
@@ -244,53 +285,52 @@ export class AudioEngine {
         const velVal = track.velocity && track.velocity[step] !== undefined ? track.velocity[step] : 100;
         const normalizedVel = (velVal / 127) * state.volume;
         const pitchVal = track.pitch && track.pitch[step] !== undefined && track.pitch[step] !== null ? track.pitch[step]! : 0;
-        const stepDur = (60.0 / this.bpm) / 4;
         this.triggerInstrument(trackIdx, track.name, time, normalizedVel, pitchVal, stepVal, stepDur);
       }
     });
+  }
 
-    // Fire UI callback synced to playback time
-    if (this.onStepCallback) {
-      const delayMs = Math.max(0, (time - this.ctx.currentTime) * 1000);
-      const timer = setTimeout(() => {
-        this.stepTimers.delete(timer);
-        if (this.isPlaying && this.onStepCallback) {
-          this.onStepCallback({ step, time });
-        }
-      }, delayMs);
-      this.stepTimers.add(timer);
-    }
+  /**
+   * Converts MIDI note number to frequency in Hertz
+   */
+  public static midiToFreq(midiNote: number | null | undefined, fallbackNote = 60): number {
+    const note = (midiNote !== undefined && midiNote !== null && midiNote > 0) ? midiNote : fallbackNote;
+    return 440 * Math.pow(2, (note - 69) / 12);
   }
 
   /**
    * Preview a single track note immediately
    */
-  public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch = 0, stepVal = 1): void {
+  public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch: number | null = 0, stepVal = 1): void {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
     if (this.ctx.state === "suspended") this.ctx.resume();
-    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitch, stepVal, 0.125);
+    const stepDur = (60.0 / this.bpm) / 4;
+    const pitchVal = pitch !== null && pitch !== undefined && pitch > 0 ? pitch : 0;
+    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur);
   }
 
   private triggerInstrument(trackIdx: number, trackName: string, time: number, vel: number, pitch: number, stepVal = 1, stepDur = 0.125): void {
     if (!this.ctx || !this.masterGain) return;
 
+    const trackId = (this.pattern?.tracks[trackIdx]?.track_id || "").toLowerCase();
     const lowerName = trackName.toLowerCase();
-    if (lowerName.includes("kick")) {
+
+    if (trackId === "kick" || lowerName.includes("kick")) {
       this.playKick(time, vel, pitch);
-    } else if (lowerName.includes("snare")) {
+    } else if (trackId === "snare" || lowerName.includes("snare")) {
       this.playSnare(time, vel, pitch);
-    } else if (lowerName.includes("hihat") || lowerName.includes("hat")) {
+    } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
       this.playHiHat(time, vel, pitch, stepVal, stepDur);
-    } else if (lowerName.includes("perc") || lowerName.includes("clap")) {
+    } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
       this.playPercussion(time, vel, pitch);
-    } else if (lowerName.includes("bass")) {
+    } else if (trackId === "bass" || lowerName.includes("bass")) {
       this.playBass(time, vel, pitch);
-    } else if (lowerName.includes("chord") || lowerName.includes("pad")) {
+    } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
       this.playChord(time, vel, pitch);
-    } else if (lowerName.includes("lead")) {
+    } else if (trackId === "lead" || lowerName.includes("lead")) {
       this.playLead(time, vel, pitch);
-    } else if (lowerName.includes("fx")) {
+    } else if (trackId === "fx" || lowerName.includes("fx")) {
       this.playFX(time, vel, pitch);
     } else {
       this.playPercussion(time, vel, pitch);
@@ -305,7 +345,8 @@ export class AudioEngine {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
-    const startFreq = 150 * Math.pow(2, pitchOffset / 12);
+    const basePitch = (pitchOffset > 24) ? (pitchOffset - 36) : pitchOffset;
+    const startFreq = 150 * Math.pow(2, basePitch / 12);
     const endFreq = 42;
 
     osc.type = "sine";
@@ -345,7 +386,8 @@ export class AudioEngine {
 
     const osc = this.ctx.createOscillator();
     const toneGain = this.ctx.createGain();
-    const startFreq = 180 * Math.pow(2, pitchOffset / 12);
+    const basePitch = (pitchOffset > 24) ? (pitchOffset - 60) : pitchOffset;
+    const startFreq = 180 * Math.pow(2, basePitch / 12);
 
     osc.type = "triangle";
     osc.frequency.setValueAtTime(startFreq, time);
@@ -459,8 +501,7 @@ export class AudioEngine {
   private playBass(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
-    const rootFreq = 55;
-    const freq = rootFreq * Math.pow(2, pitchOffset / 12);
+    const freq = AudioEngine.midiToFreq(pitchOffset, 36);
 
     const osc1 = this.ctx.createOscillator();
     const osc2 = this.ctx.createOscillator();
@@ -474,8 +515,8 @@ export class AudioEngine {
     osc2.frequency.setValueAtTime(freq, time);
 
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(freq * 3.5, time);
-    filter.frequency.exponentialRampToValueAtTime(freq * 1.5, time + 0.25);
+    filter.frequency.setValueAtTime(Math.min(1200, freq * 3.5), time);
+    filter.frequency.exponentialRampToValueAtTime(Math.min(400, freq * 1.5), time + 0.25);
 
     gain.gain.setValueAtTime(vel * 0.85, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
@@ -494,7 +535,7 @@ export class AudioEngine {
   private playChord(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
-    const baseFreq = 196 * Math.pow(2, pitchOffset / 12);
+    const baseFreq = AudioEngine.midiToFreq(pitchOffset, 60);
     const chordIntervals = [0, 3, 7];
 
     const filter = this.ctx.createBiquadFilter();
@@ -522,7 +563,7 @@ export class AudioEngine {
   private playLead(time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx || !this.masterGain) return;
 
-    const baseFreq = 330 * Math.pow(2, pitchOffset / 12);
+    const baseFreq = AudioEngine.midiToFreq(pitchOffset, 72);
 
     const osc = this.ctx.createOscillator();
     osc.type = "sawtooth";
@@ -530,8 +571,8 @@ export class AudioEngine {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(baseFreq * 4, time);
-    filter.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, time + 0.2);
+    filter.frequency.setValueAtTime(Math.min(5000, baseFreq * 3), time);
+    filter.frequency.exponentialRampToValueAtTime(Math.min(2000, baseFreq * 1.5), time + 0.2);
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(vel * 0.5, time);
@@ -550,7 +591,9 @@ export class AudioEngine {
 
     const osc = this.ctx.createOscillator();
     osc.type = "sawtooth";
-    const startF = 880 * Math.pow(2, pitchOffset / 12);
+    const startF = pitchOffset > 24 
+      ? AudioEngine.midiToFreq(pitchOffset, 69) 
+      : 880 * Math.pow(2, pitchOffset / 12);
     osc.frequency.setValueAtTime(startF, time);
     osc.frequency.exponentialRampToValueAtTime(90, time + 0.35);
 

@@ -98,6 +98,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Drag-to-paint state
   const isPointerDownRef = useRef(false);
   const dragValRef = useRef<number | null>(null);
+  const hasDraggedRef = useRef(false);
 
   const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
 
@@ -217,12 +218,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setSolos(new Set());
 
     if (engineRef.current) {
-      engineRef.current.setPattern(newPattern);
+      engineRef.current.setPattern(newPattern, true);
       engineRef.current.setBpm(newBpm);
       engineRef.current.setSwing(newSwing / 100);
-      if (andPlay && !isPlaying) {
-        engineRef.current.play();
-        setIsPlaying(true);
+      if (andPlay) {
+        if (!isPlaying) {
+          engineRef.current.play();
+          setIsPlaying(true);
+        }
+      } else if (!isPlaying) {
+        engineRef.current.stop();
+        setCurrentStep(0);
       }
     }
   };
@@ -231,8 +237,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const handleTogglePlay = () => {
     if (!engineRef.current) return;
     if (isPlaying) {
-      engineRef.current.pause();
+      engineRef.current.stop();
       setIsPlaying(false);
+      setCurrentStep(0);
     } else {
       engineRef.current.play();
       setIsPlaying(true);
@@ -254,66 +261,118 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Step Cell interaction
   const handleCellClick = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
-    const isHat = pattern.tracks[trackIdx]?.track_id === "hihat" || pattern.tracks[trackIdx]?.name.toLowerCase().includes("hat");
-    setPattern((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
-      const tr = copy.tracks[trackIdx];
-      const cur = tr.steps[stepIdx] || 0;
+    if (hasDraggedRef.current) {
+      hasDraggedRef.current = false;
+      return;
+    }
 
-      // SHIFT + click = accent toggle
-      if (e.shiftKey && cur > 0) {
-        if (!tr.velocity) tr.velocity = Array(16).fill(100);
-        tr.velocity[stepIdx] = tr.velocity[stepIdx] >= 115 ? 90 : 127;
+    const tr = pattern.tracks[trackIdx];
+    if (!tr) return;
+    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
+    const cur = tr.steps[stepIdx] || 0;
+
+    // SHIFT + click = accent toggle
+    if (e.shiftKey && cur > 0) {
+      let newVel = 100;
+      setPattern((prev) => {
+        const copy = JSON.parse(JSON.stringify(prev));
+        const t = copy.tracks[trackIdx];
+        if (!t.velocity) t.velocity = Array(16).fill(100);
+        newVel = (t.velocity[stepIdx] || 100) >= 115 ? 90 : 127;
+        t.velocity[stepIdx] = newVel;
         return copy;
+      });
+      if (engineRef.current) {
+        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+        engineRef.current.triggerNote(trackIdx, tr.name, newVel / 127, pitch, cur);
       }
+      return;
+    }
 
-      let nextVal = 0;
-      if (isHat) {
-        // Cycle: 0 -> 1 (closed) -> 2 (open) -> 3 (triplet) -> 0
-        nextVal = cur === 0 ? 1 : cur === 1 ? 2 : cur === 2 ? 3 : 0;
-      } else {
-        nextVal = cur > 0 ? 0 : 1;
+    // Hi-Hat multi-state cycling: 0 -> 1 (closed) -> 2 (open) -> 3 (triplet) -> 0
+    if (isHat) {
+      const nextVal = cur === 0 ? 1 : cur === 1 ? 2 : cur === 2 ? 3 : 0;
+      setPattern((prev) => {
+        const copy = JSON.parse(JSON.stringify(prev));
+        const t = copy.tracks[trackIdx];
+        t.steps[stepIdx] = nextVal;
+        if (nextVal > 0) {
+          if (!t.velocity) t.velocity = Array(16).fill(100);
+          if (!t.velocity[stepIdx]) t.velocity[stepIdx] = 100;
+        }
+        return copy;
+      });
+      if (nextVal > 0 && engineRef.current) {
+        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
       }
-
-      tr.steps[stepIdx] = nextVal;
-      if (nextVal > 0) {
-        if (!tr.velocity) tr.velocity = Array(16).fill(100);
-        if (!tr.velocity[stepIdx]) tr.velocity[stepIdx] = 100;
-      }
-      return copy;
-    });
-
-    // Audition sound on click
-    if (engineRef.current) {
-      engineRef.current.triggerNote(trackIdx, pattern.tracks[trackIdx].name);
     }
   };
 
   // Pointer drag painting
   const handlePointerDown = (trackIdx: number, stepIdx: number, e: React.PointerEvent) => {
+    if (e.button !== 0) return;
     isPointerDownRef.current = true;
-    const cur = pattern.tracks[trackIdx]?.steps[stepIdx] || 0;
-    dragValRef.current = cur > 0 ? 0 : 1;
+    hasDraggedRef.current = false;
+
+    const tr = pattern.tracks[trackIdx];
+    if (!tr) return;
+    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
+
+    // Let click handler process shiftKey and hi-hat cycling
+    if (e.shiftKey || isHat) return;
+
+    const cur = tr.steps[stepIdx] || 0;
+    const nextVal = cur > 0 ? 0 : 1;
+    dragValRef.current = nextVal;
+
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const t = copy.tracks[trackIdx];
+      t.steps[stepIdx] = nextVal;
+      if (nextVal > 0) {
+        if (!t.velocity) t.velocity = Array(16).fill(100);
+        if (!t.velocity[stepIdx]) t.velocity[stepIdx] = 100;
+      }
+      return copy;
+    });
+
+    if (nextVal > 0 && engineRef.current) {
+      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
+    }
   };
 
   const handlePointerEnter = (trackIdx: number, stepIdx: number) => {
     if (!isPointerDownRef.current || dragValRef.current === null) return;
-    const isHat = pattern.tracks[trackIdx]?.track_id === "hihat" || pattern.tracks[trackIdx]?.name.toLowerCase().includes("hat");
+    const tr = pattern.tracks[trackIdx];
+    if (!tr) return;
+    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
     if (isHat) return;
 
+    hasDraggedRef.current = true;
     const val = dragValRef.current;
+
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
-      const tr = copy.tracks[trackIdx];
-      if (tr.steps[stepIdx] !== val) {
-        tr.steps[stepIdx] = val;
-        if (val > 0 && (!tr.velocity || !tr.velocity[stepIdx])) {
-          if (!tr.velocity) tr.velocity = Array(16).fill(100);
-          tr.velocity[stepIdx] = 100;
+      const t = copy.tracks[trackIdx];
+      if (t.steps[stepIdx] !== val) {
+        t.steps[stepIdx] = val;
+        if (val > 0 && (!t.velocity || !t.velocity[stepIdx])) {
+          if (!t.velocity) t.velocity = Array(16).fill(100);
+          t.velocity[stepIdx] = 100;
         }
       }
       return copy;
     });
+
+    if (val > 0 && engineRef.current) {
+      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, val);
+    }
   };
 
   useEffect(() => {
@@ -709,8 +768,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
               </div>
               <input
                 type="range"
-                min="60"
-                max="190"
+                min="40"
+                max="220"
                 value={bpm}
                 onChange={(e) => setBpm(+e.target.value)}
               />
@@ -725,7 +784,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               <input
                 type="range"
                 min="0"
-                max="60"
+                max="75"
                 value={swing}
                 onChange={(e) => setSwing(+e.target.value)}
               />
@@ -765,6 +824,50 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
           {/* 8 Tracks Sequencer Matrix (#tracks) */}
           <div className="space-y-1 overflow-x-auto min-w-[620px] pb-2 relative">
+            {/* Step Indicator Ruler Header (1-16 grouped in 4-beat bars) */}
+            <div className="flex items-center gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-[620px]">
+              {/* Left Label aligned with track headers */}
+              <div className="flex-none w-[128px] pr-1 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none">
+                <span>16-STEP GRID</span>
+                <span className="text-[#3a3e48]">4/4</span>
+              </div>
+
+              {/* 16 Ruler Step Badges */}
+              <div className="flex-1 flex gap-1 relative">
+                {Array.from({ length: 16 }, (_, stepIdx) => {
+                  const beatNum = Math.floor(stepIdx / 4) + 1;
+                  const subStep = (stepIdx % 4) + 1;
+                  const isDownbeat = stepIdx % 4 === 0;
+                  const isMeasureBreak = stepIdx % 4 === 0 && stepIdx !== 0;
+                  const isCurrent = isPlaying && currentStep === stepIdx;
+                  const stepStr = String(stepIdx + 1).padStart(2, "0");
+
+                  return (
+                    <div
+                      key={stepIdx}
+                      className={`flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border ${
+                        isMeasureBreak ? "ml-2 sm:ml-2.5" : ""
+                      } ${
+                        isCurrent
+                          ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] font-bold scale-[1.03]"
+                          : isDownbeat
+                          ? "bg-[#171920] border-[#2b2e38] text-[#e9e7e0]"
+                          : "bg-[#101115] border-[#1c1d22] text-[#5a5e68]"
+                      }`}
+                      title={`Step ${stepIdx + 1} (Beat ${beatNum}.${subStep})`}
+                    >
+                      <span className="font-['JetBrains_Mono'] text-[10px] leading-tight font-bold tracking-tight">
+                        {stepStr}
+                      </span>
+                      <span className={`font-['JetBrains_Mono'] text-[7.5px] leading-none ${isCurrent ? "text-[#f5b73d]" : isDownbeat ? "text-[#8b8f99]" : "text-[#3e424d]"}`}>
+                        {isDownbeat ? `B${beatNum}` : `.${subStep}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {pattern.tracks.map((track, trackIdx) => {
               const meta = DEMO_TRACKS_CONFIG[trackIdx % DEMO_TRACKS_CONFIG.length];
               const isSolo = solos.has(trackIdx);
