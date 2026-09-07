@@ -1,120 +1,591 @@
-import React from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { 
-  AlignVerticalJustifyStart, 
   Sparkles, 
   Sliders, 
-  ExternalLink, 
+  Play,
+  Square,
+  Volume2,
+  Clock, 
+  Radio,
   Disc, 
-  ArrowRight,
-  Music
+  Music,
+  Compass,
+  Cpu,
+  Flame,
+  ChevronRight,
+  Filter
 } from "lucide-react";
-import { TIMELINE_STORIES } from "../data/timeline_stories";
+import { TIMELINE_STORIES, TimelineStory } from "../data/timeline_stories";
 import { GENRES_MAP } from "../data/genres";
-import { Genre } from "../types/genre";
+import { Genre, GenreCategory } from "../types/genre";
 import { useLanguage } from "../i18n/LanguageContext";
+import { AudioEngine } from "../audio/AudioEngine";
 
 interface VerticalTimelineViewProps {
   onSelectGenre: (genre: Genre) => void;
   onOpenStudio: (genre: Genre) => void;
 }
 
+interface EraAesthetic {
+  accentColor: string;
+  glowColor: string;
+  badgeBg: string;
+  badgeBorder: string;
+  gradient: string;
+  techMilestones: { zh: string; en: string }[];
+  culturalTag: { zh: string; en: string };
+}
+
+const ERA_AESTHETICS: Record<number, EraAesthetic> = {
+  1900: {
+    accentColor: "#d97706", // Amber
+    glowColor: "rgba(217, 119, 6, 0.35)",
+    badgeBg: "rgba(217, 119, 6, 0.12)",
+    badgeBorder: "rgba(217, 119, 6, 0.35)",
+    gradient: "from-amber-950/30 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "原声滑棒吉他与脚步重踏", en: "Acoustic Slide & Foot Stomps" },
+      { zh: "神圣 12 小节布鲁斯和声基石", en: "Sacred 12-Bar Blues Foundation" },
+      { zh: "早蜡盘与留声机声学录音", en: "Acoustic Horn Wax Recording" },
+    ],
+    culturalTag: { zh: "棉花田灵歌与三角洲源头", en: "Delta Roots & Spiritual Hollers" },
+  },
+  1930: {
+    accentColor: "#f59e0b",
+    glowColor: "rgba(245, 158, 11, 0.35)",
+    badgeBg: "rgba(245, 158, 11, 0.12)",
+    badgeBorder: "rgba(245, 158, 11, 0.35)",
+    gradient: "from-amber-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "大乐队管乐组切分对位", en: "Big Band Brass Section Syncopation" },
+      { zh: "Django 吉普赛原声指弹神技", en: "Django Acoustic Gypsy Virtuosity" },
+      { zh: "德州公路小酒馆过载功放", en: "Texas Honky-Tonk Tube Overdrive" },
+    ],
+    culturalTag: { zh: "舞厅大乐队狂潮与吉普赛火焰", en: "Ballroom Swing Era & Gypsy Fire" },
+  },
+  1940: {
+    accentColor: "#3b82f6",
+    glowColor: "rgba(59, 130, 246, 0.35)",
+    badgeBg: "rgba(59, 130, 246, 0.12)",
+    badgeBorder: "rgba(59, 130, 246, 0.35)",
+    gradient: "from-blue-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "芝加哥电吉他与电子管功放炸裂", en: "Chicago Tube Amplifier Electrification" },
+      { zh: "比波普闪电即兴与前卫和声", en: "Bebop Lightning Virtuosity" },
+      { zh: "战后 78 转唱片广播普及", en: "Post-War Radio Broadcasting" },
+    ],
+    culturalTag: { zh: "电气化震撼与比波普纯艺术革命", en: "Electric Shock & Bebop Revolution" },
+  },
+  1950: {
+    accentColor: "#ec4899",
+    glowColor: "rgba(236, 72, 153, 0.35)",
+    badgeBg: "rgba(236, 72, 153, 0.12)",
+    badgeBorder: "rgba(236, 72, 153, 0.35)",
+    gradient: "from-pink-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "Fender 实体电吉他与贝斯问世", en: "Fender Solid-Body Electric Guitars" },
+      { zh: "45 转 7 英寸黑胶单曲唱片", en: "45-RPM 7-inch Vinyl Singles" },
+      { zh: "Bossa Nova 里约耳语般摇曳扫弦", en: "Bossa Nova Syncopated Nylon Strumming" },
+    ],
+    culturalTag: { zh: "青年文化觉醒与摇滚乐破晓", en: "Birth of Rock 'n' Roll & Soul" },
+  },
+  1960: {
+    accentColor: "#8b5cf6",
+    glowColor: "rgba(139, 92, 246, 0.35)",
+    badgeBg: "rgba(139, 92, 246, 0.12)",
+    badgeBorder: "rgba(139, 92, 246, 0.35)",
+    gradient: "from-purple-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "James Brown 确立第 1 拍重音 (The One)", en: "James Brown's 'The One' Funk Pocket" },
+      { zh: "牙买加录音台磁带延迟 (Tape Echo) 实验", en: "Jamaican Tape Echo Dub Experiments" },
+      { zh: "伯明翰重金属失真重型三全音", en: "Birmingham Heavy Metal Tritone Riffs" },
+    ],
+    culturalTag: { zh: "放克舞曲根基与重型迷幻狂澜", en: "The Golden Era: Funk, Metal & Dub" },
+  },
+  1970: {
+    accentColor: "#10b981",
+    glowColor: "rgba(16, 185, 129, 0.35)",
+    badgeBg: "rgba(16, 185, 129, 0.12)",
+    badgeBorder: "rgba(16, 185, 129, 0.35)",
+    gradient: "from-emerald-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "Technics SL-1200 双黑胶唱机混音", en: "Technics SL-1200 Direct-Drive Turntables" },
+      { zh: "四踩四 (Four-on-the-Floor) 迪斯科大鼓", en: "Four-on-the-Floor Kick Drum Grid" },
+      { zh: "布朗克斯 Break 鼓碎拍循环切片", en: "Bronx Turntable Drum Break Looping" },
+      { zh: "Minimoog 模拟单音合成器贝斯", en: "Minimoog Analog Synthesizer Bass" },
+    ],
+    culturalTag: { zh: "迪斯科统治全球舞池与嘻哈降生", en: "Disco Supremacy, Punk & Bronx Hip-Hop" },
+  },
+  1980: {
+    accentColor: "#06b6d4",
+    glowColor: "rgba(6, 182, 212, 0.35)",
+    badgeBg: "rgba(6, 182, 212, 0.12)",
+    badgeBorder: "rgba(6, 182, 212, 0.35)",
+    gradient: "from-cyan-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "Roland TR-808 / TR-909 经典可编程鼓机", en: "Roland TR-808 & TR-909 Drum Machines" },
+      { zh: "Roland TB-303 酸性共鸣低通滤波器", en: "Roland TB-303 Acid Resonant Filter" },
+      { zh: "MIDI 1.0 电子乐器通用通信协议", en: "MIDI 1.0 Universal Digital Protocol" },
+      { zh: "Akai MPC60 采样与打击垫音序器", en: "Akai MPC60 Sampling Drum Sequencer" },
+    ],
+    culturalTag: { zh: "芝加哥浩室与底特律铁克诺机器觉醒", en: "House, Techno & Golden Age 808s" },
+  },
+  1990: {
+    accentColor: "#6366f1",
+    glowColor: "rgba(99, 102, 241, 0.35)",
+    badgeBg: "rgba(99, 102, 241, 0.12)",
+    badgeBorder: "rgba(99, 102, 241, 0.35)",
+    gradient: "from-indigo-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "Amen Break 变速切片重构极速破拍", en: "Amen Break Timestretching & Slicing" },
+      { zh: "Roland JP-8000 史诗超级锯齿波 (Supersaw)", en: "Roland JP-8000 Epic Supersaw Oscillator" },
+      { zh: "Akai S1000 硬件数字采样器普及", en: "Akai S1000 Hardware Digital Sampler" },
+      { zh: "数字音频工作站 (DAW) 与电脑音乐萌芽", en: "Early Computer Audio Workstations" },
+    ],
+    culturalTag: { zh: "英国狂欢连续体与万人出神赞歌", en: "UK Rave Continuum, Trance & Breakbeat" },
+  },
+  2000: {
+    accentColor: "#a855f7",
+    glowColor: "rgba(168, 85, 247, 0.35)",
+    badgeBg: "rgba(168, 85, 247, 0.12)",
+    badgeBorder: "rgba(168, 85, 247, 0.35)",
+    gradient: "from-purple-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "50Hz 纯正正弦次低音 (Physical Sub-Bass)", en: "50Hz Physical Sub-Bass Compression" },
+      { zh: "FL Studio 与 Ableton Live 卧室制作革命", en: "FL Studio & Ableton Bedroom Production" },
+      { zh: "失真锯齿电锯波 (Buzz-Saw Electro)", en: "Distorted Buzz-Saw Electro Waveforms" },
+    ],
+    culturalTag: { zh: "南伦敦重低音海啸与电锯俱乐部浪潮", en: "Dubstep Sub-Pressure & Grime Explosion" },
+  },
+  2010: {
+    accentColor: "#f43f5e",
+    glowColor: "rgba(244, 63, 94, 0.35)",
+    badgeBg: "rgba(244, 63, 94, 0.12)",
+    badgeBorder: "rgba(244, 63, 94, 0.35)",
+    gradient: "from-rose-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "Xfer Serum 波表合成器与绚丽明亮 LFO", en: "Xfer Serum Wavetable & Modulated LFOs" },
+      { zh: "滑音 808 (Gliding 808) 颠覆全球钻头说唱", en: "Pitch-Bent Gliding 808 Basslines" },
+      { zh: "极致侧链抽吸 (Aggressive Sidechain)", en: "Extreme Sidechain Pumping Aesthetics" },
+    ],
+    culturalTag: { zh: "未来贝斯、音乐节电音陷阱与钻头风暴", en: "Future Bass, EDM Trap & Drill Revolution" },
+  },
+  2020: {
+    accentColor: "#14b8a6",
+    glowColor: "rgba(20, 184, 166, 0.35)",
+    badgeBg: "rgba(20, 184, 166, 0.12)",
+    badgeBorder: "rgba(20, 184, 166, 0.35)",
+    gradient: "from-teal-950/25 via-[#12131a] to-[#0c0d12]",
+    techMilestones: [
+      { zh: "155+ BPM 极速硬核 Techno 重构舞池", en: "155+ BPM Relentless Industrial Hard Techno" },
+      { zh: "漂移放克 (Drift Phonk) 牛铃音色网络风暴", en: "Cowbell Phonk Internet Synthesis" },
+      { zh: "全球跨界杂交与算法生成无界音乐", en: "Algorithmic Grooves & Global Hybrids" },
+    ],
+    culturalTag: { zh: "极速无界杂交与全球文艺复兴", en: "Speed, Hybrids & Endless Evolution" },
+  },
+};
+
 export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
   onSelectGenre,
   onOpenStudio,
 }) => {
   const { t, language } = useLanguage();
+  
+  // Realtime audio engine playback for immediate auditioning
+  const engineRef = useRef<AudioEngine | null>(null);
+  const [playingGenreId, setPlayingGenreId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [activeStoryId, setActiveStoryId] = useState<string>(TIMELINE_STORIES[0].id);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (engineRef.current) {
+        engineRef.current.stop();
+        engineRef.current = null;
+      }
+    };
+  }, []);
+
+  // Audio audition toggle
+  const handleToggleAudition = async (genre: Genre, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (playingGenreId === genre.id) {
+      if (engineRef.current) {
+        engineRef.current.stop();
+      }
+      setPlayingGenreId(null);
+      return;
+    }
+
+    if (!engineRef.current) {
+      engineRef.current = new AudioEngine({
+        onStop: () => setPlayingGenreId(null),
+      });
+    }
+
+    const engine = engineRef.current;
+    engine.stop();
+    engine.setPattern(genre.sequencer_pattern);
+    setPlayingGenreId(genre.id);
+    await engine.play();
+  };
+
+  // Scroll to decade story
+  const scrollToStory = (storyId: string) => {
+    setActiveStoryId(storyId);
+    const element = document.getElementById(storyId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[#f5b73d] text-xs font-semibold">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Chronological Sonic Revolution (1900 — Present)</span>
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-6 space-y-8">
+      {/* Luxury Curator Header */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#161822] via-[#101217] to-[#0a0b0e] border border-white/[0.08] p-6 sm:p-8 shadow-2xl">
+        {/* Ambient background light gradients */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 text-[#f5b73d] text-xs font-semibold tracking-wide shadow-sm">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>CENTURY SONIC REVOLUTION · 1900 — 2026</span>
+            </div>
+            
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#f5f4ef] tracking-tight flex items-center gap-3">
+              <span>{t("nav_timeline_v")}</span>
+              <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-white/[0.06] text-[#b9b7b0] border border-white/[0.1]">
+                11 纪元里程碑 · 159 经典曲风
+              </span>
+            </h1>
+
+            <p className="text-xs sm:text-sm text-[#8e93a0] max-w-2xl leading-relaxed">
+              {language === "zh"
+                ? "横跨一个世纪的声波革命殿堂：从密西西比原声三角洲蓝调与留声机，经历电气化冲击、放克基石、机器觉醒到全球无界数字浪潮。点击曲风试听即时合成律动，感悟百年音乐进化法则。"
+                : "A century of sonic evolution: from raw Mississippi Delta Blues to funk pockets, machine awakenings and algorithmic futures. Audition rhythms in real time and explore historical breakthroughs."}
+            </p>
+          </div>
+
+          {/* Metric Stats Display */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            <div className="px-4 py-2.5 rounded-2xl bg-[#0d0e12]/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+              <div className="text-lg sm:text-xl font-mono font-extrabold text-[#f5b73d]">120+</div>
+              <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
+                {language === "zh" ? "年演进跨度" : "Years Span"}
+              </div>
+            </div>
+            <div className="px-4 py-2.5 rounded-2xl bg-[#0d0e12]/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+              <div className="text-lg sm:text-xl font-mono font-extrabold text-cyan-400">14</div>
+              <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
+                {language === "zh" ? "大家族支系" : "Genealogies"}
+              </div>
+            </div>
+            <div className="px-4 py-2.5 rounded-2xl bg-[#0d0e12]/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+              <div className="text-lg sm:text-xl font-mono font-extrabold text-pink-400">159</div>
+              <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
+                {language === "zh" ? "经典曲风" : "Milestone Genres"}
+              </div>
+            </div>
+          </div>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#e9e7e0] tracking-wide">
-          {t("nav_timeline_v")}
-        </h2>
-        <p className="text-sm text-[#8b8f99] max-w-2xl mx-auto leading-relaxed">
-          {language === "zh"
-            ? "百余年现代音乐进化历程：从留声机与三角洲蓝调，到电子舞曲爆发与数字化未来。"
-            : "A century of modern music history: from phonographs and Delta Blues to dance music explosions and algorithmic futures."}
-        </p>
+
+        {/* Interactive Decade Quick-Navigator Bar */}
+        <div className="relative z-10 mt-6 pt-5 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#636875] mr-1 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              <span>{language === "zh" ? "纪元速查:" : "DECADE:"}</span>
+            </span>
+            {TIMELINE_STORIES.map((story) => {
+              const aesthetic = ERA_AESTHETICS[story.decade] || ERA_AESTHETICS[1980];
+              const isActive = activeStoryId === story.id;
+              return (
+                <button
+                  key={story.id}
+                  onClick={() => scrollToStory(story.id)}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all shrink-0 border ${
+                    isActive
+                      ? "text-black shadow-lg scale-105"
+                      : "bg-[#0c0d12]/90 text-[#9ca1ad] hover:text-[#f5f4ef] hover:border-white/20 border-white/[0.06]"
+                  }`}
+                  style={{
+                    backgroundColor: isActive ? aesthetic.accentColor : undefined,
+                    borderColor: isActive ? aesthetic.accentColor : undefined,
+                    boxShadow: isActive ? `0 0 14px ${aesthetic.glowColor}` : undefined,
+                  }}
+                >
+                  {story.year}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2 bg-[#0c0d12] border border-white/[0.08] rounded-2xl px-3 py-1.5 shrink-0">
+            <Filter className="w-3.5 h-3.5 text-[#636875]" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-[#b9b7b0] focus:outline-none cursor-pointer"
+            >
+              <option value="ALL" className="bg-[#12131a]">
+                {language === "zh" ? "全类别曲风" : "All Categories"}
+              </option>
+              <option value="Electronic" className="bg-[#12131a]">Electronic 电子</option>
+              <option value="Hip Hop" className="bg-[#12131a]">Hip Hop 嘻哈</option>
+              <option value="Rock/Metal" className="bg-[#12131a]">Rock/Metal 摇滚金属</option>
+              <option value="Jazz/Blues" className="bg-[#12131a]">Jazz/Blues 爵士蓝调</option>
+              <option value="Pop/R&B" className="bg-[#12131a]">Pop/R&B 流行布鲁斯</option>
+              <option value="Latin/World" className="bg-[#12131a]">Latin/World 拉丁世界</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      {/* Vertical Timeline Tree */}
-      <div className="relative border-l-2 border-[#23262d] ml-4 sm:ml-32 md:ml-40 pl-6 sm:pl-8 space-y-12">
-        {TIMELINE_STORIES.map((story) => {
-          return (
-            <div key={story.id} className="relative group">
-              {/* Left Timeline Node */}
-              <div className="absolute -left-[31px] sm:-left-[39px] top-1.5 flex items-center">
-                {/* Yellow Hollow Circle */}
-                <div className="w-4 h-4 rounded-full border-2 border-[#f5b73d] bg-[#0d0e12] group-hover:bg-[#f5b73d] group-hover:scale-125 transition-all shadow-md shadow-amber-400/20" />
-              </div>
+      {/* Vertical Dual-Laser Spine & Epoch Hall */}
+      <div className="relative ml-2 sm:ml-28 md:ml-36 pl-6 sm:pl-10 space-y-16">
+        {/* Continuous Neon Laser Spine Line */}
+        <div className="absolute left-0 sm:left-0 top-3 bottom-3 w-0.5 bg-gradient-to-b from-amber-500 via-cyan-400 via-purple-500 via-rose-500 to-teal-400 shadow-[0_0_12px_rgba(245,183,61,0.5)]" />
 
-              {/* Year Badge (Pinned on Left on desktop) */}
-              <div className="sm:absolute sm:-left-40 sm:top-0 sm:w-28 sm:text-right mb-2 sm:mb-0">
-                <span className="text-xs font-mono font-extrabold px-2.5 py-1 rounded-full bg-amber-500/20 text-[#f5b73d] border border-amber-500/30 inline-block shadow-sm">
-                  {story.year}
-                </span>
-                <div className="text-[11px] text-[#5a5e68] font-mono mt-0.5 hidden sm:block">
-                  {story.decade}s
+        {TIMELINE_STORIES.map((story, storyIdx) => {
+          const aesthetic = ERA_AESTHETICS[story.decade] || ERA_AESTHETICS[1980];
+          
+          // Filtered genres for this story
+          const storyGenres = story.genre_ids
+            .map((gid) => GENRES_MAP[gid])
+            .filter((g): g is Genre => {
+              if (!g) return false;
+              if (selectedCategory !== "ALL" && g.category !== selectedCategory) return false;
+              return true;
+            });
+
+          return (
+            <div 
+              key={story.id} 
+              id={story.id}
+              className="relative group scroll-mt-28"
+            >
+              {/* Left Chronological Hub (Timeline Node) */}
+              <div className="absolute -left-[31px] sm:-left-[47px] top-1.5 flex items-center justify-center">
+                {/* Glowing Concentric Hub Ring */}
+                <div 
+                  className="w-5 h-5 rounded-full border-2 bg-[#0c0d12] flex items-center justify-center transition-all duration-300 group-hover:scale-125 shadow-lg"
+                  style={{
+                    borderColor: aesthetic.accentColor,
+                    boxShadow: `0 0 16px ${aesthetic.glowColor}`,
+                  }}
+                >
+                  <div 
+                    className="w-2 h-2 rounded-full transition-colors"
+                    style={{ backgroundColor: aesthetic.accentColor }}
+                  />
                 </div>
               </div>
 
-              {/* Story Content Card */}
-              <div className="bg-[#121317] border border-[#23262d]/90 hover:border-[#393d46] rounded-2xl p-5 sm:p-6 shadow-xl transition-all hover:shadow-2xl">
-                {/* Title */}
-                <h3 className="text-lg sm:text-xl font-bold text-[#e9e7e0] tracking-wide">
-                  {story.title[language]}
-                </h3>
+              {/* Desktop Sticky Year Coordinates Badge */}
+              <div className="sm:absolute sm:-left-44 sm:top-0 sm:w-32 sm:text-right mb-3 sm:mb-0">
+                <div 
+                  className="inline-block px-3 py-1 rounded-xl text-xs font-mono font-extrabold border shadow-md transition-all group-hover:scale-105"
+                  style={{
+                    color: aesthetic.accentColor,
+                    backgroundColor: aesthetic.badgeBg,
+                    borderColor: aesthetic.badgeBorder,
+                    boxShadow: `0 0 10px ${aesthetic.glowColor}`,
+                  }}
+                >
+                  {story.year}
+                </div>
+                <div className="text-[11px] text-[#636875] font-mono mt-1 hidden sm:block">
+                  EPOCH {String(storyIdx + 1).padStart(2, "0")}
+                </div>
+              </div>
 
-                {/* Description */}
-                <p className="text-xs sm:text-sm text-[#b9b7b0] mt-2.5 leading-relaxed">
+              {/* Documentary-Grade Story Card */}
+              <div 
+                className={`relative overflow-hidden rounded-3xl bg-gradient-to-b ${aesthetic.gradient} border border-white/[0.08] hover:border-white/[0.22] p-5 sm:p-7 shadow-2xl transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)]`}
+                style={{
+                  borderLeftColor: aesthetic.accentColor,
+                  borderLeftWidth: 3,
+                }}
+              >
+                {/* Subtle chromatic corner gradient glow */}
+                <div 
+                  className="absolute -top-24 -right-24 w-60 h-60 rounded-full blur-3xl pointer-events-none opacity-20"
+                  style={{ backgroundColor: aesthetic.accentColor }}
+                />
+
+                {/* Card Top Title & Cultural Movement Header */}
+                <div className="flex flex-wrap items-start justify-between gap-2.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
+                        style={{
+                          color: aesthetic.accentColor,
+                          borderColor: aesthetic.badgeBorder,
+                          backgroundColor: aesthetic.badgeBg,
+                        }}
+                      >
+                        {aesthetic.culturalTag[language]}
+                      </span>
+                    </div>
+
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#f5f4ef] mt-2 tracking-wide leading-snug">
+                      {story.title[language]}
+                    </h2>
+                  </div>
+
+                  {/* Era Tag Pill */}
+                  <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-white/[0.05] text-[#b9b7b0] border border-white/[0.1] shrink-0">
+                    {story.decade}s DECADE
+                  </span>
+                </div>
+
+                {/* Narrative Paragraph */}
+                <p className="text-xs sm:text-sm text-[#b4b7c2] mt-3.5 leading-relaxed font-sans font-normal border-l-2 border-white/[0.12] pl-3.5 py-0.5">
                   {story.description[language]}
                 </p>
 
-                {/* Key Genres Spawned in this Era */}
-                <div className="mt-4 pt-3 border-t border-[#23262d]/80">
-                  <div className="text-[11px] font-semibold text-[#8b8f99] uppercase tracking-wider mb-2 flex items-center space-x-1.5">
-                    <Music className="w-3.5 h-3.5 text-[#f5b73d]" />
-                    <span>{language === "zh" ? "该时代诞生与演进的代表曲风" : "Milestone Genres in this Era"}</span>
+                {/* Technological & Cultural Milestone Tags (时代技术与设备突破) */}
+                <div className="mt-4 pt-3.5 border-t border-white/[0.06]">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#7e8494] mb-2">
+                    <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>{language === "zh" ? "时代技术革新与标志性乐器" : "Technological & Gear Breakthroughs"}</span>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-1.5">
+                    {aesthetic.techMilestones.map((tech, tIdx) => (
+                      <div 
+                        key={tIdx}
+                        className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-xl bg-[#0c0d12]/80 border border-white/[0.08] text-[#c7cbd6] font-mono shadow-sm"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: aesthetic.accentColor }} />
+                        <span>{tech[language]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Milestone Genres in this Era (代表曲风网格与即时试听) */}
+                <div className="mt-5 pt-4 border-t border-white/[0.08]">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#f5f4ef]">
+                      <Disc className="w-3.5 h-3.5" style={{ color: aesthetic.accentColor }} />
+                      <span>{language === "zh" ? "该纪元里程碑代表曲风" : "Milestone Genres in this Epoch"}</span>
+                      <span className="text-[10px] font-mono text-[#7e8494]">
+                        ({storyGenres.length})
+                      </span>
+                    </div>
+
+                    <span className="text-[10px] text-[#7e8494] font-sans hidden sm:inline">
+                      {language === "zh" ? "点击试听音序器律动 · 双击探索曲风详情" : "Click to audition groove · Click Studio to customize"}
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {story.genre_ids.map((gid) => {
-                      const genre = GENRES_MAP[gid];
-                      if (!genre) return null;
+                  {storyGenres.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                      {storyGenres.map((genre) => {
+                        const isPlayingThis = playingGenreId === genre.id;
 
-                      return (
-                        <div
-                          key={genre.id}
-                          className="group/pill inline-flex items-center space-x-1.5 pl-2.5 pr-1.5 py-1 rounded-xl bg-[#0d0e12] border border-[#23262d] hover:border-indigo-500/60 hover:bg-neutral-800 transition-all text-xs cursor-pointer shadow-sm"
-                          onClick={() => onSelectGenre(genre)}
-                        >
-                          <span className="font-semibold text-[#e9e7e0] group-hover/pill:text-[#f5b73d]">
-                            {genre.name}
-                          </span>
-                          {genre.aliases[0] && language === "zh" && (
-                            <span className="text-[10px] text-[#5a5e68]">
-                              ({genre.aliases[0]})
-                            </span>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenStudio(genre);
-                            }}
-                            className="p-1 rounded-lg hover:bg-indigo-600 text-[#8b8f99] hover:text-[#e9e7e0] transition-colors ml-1"
-                            title={t("open_in_studio")}
+                        return (
+                          <div
+                            key={genre.id}
+                            onClick={() => onSelectGenre(genre)}
+                            className={`group/card relative p-3 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between border ${
+                              isPlayingThis
+                                ? "bg-[#181b26] border-[#f5b73d] shadow-[0_0_16px_rgba(245,183,61,0.35)] scale-[1.01]"
+                                : "bg-[#0b0c11]/80 hover:bg-[#13151f] border-white/[0.06] hover:border-white/20 shadow-md"
+                            }`}
                           >
-                            <Sliders className="w-3 h-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <div>
+                              <div className="flex items-start justify-between gap-1.5">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-bold text-xs sm:text-sm text-[#f5f4ef] group-hover/card:text-[#f5b73d] transition-colors truncate">
+                                    {genre.name}
+                                  </h4>
+                                  {genre.aliases[0] && language === "zh" && (
+                                    <div className="text-[10px] text-[#7e8494] truncate">
+                                      {genre.aliases[0]}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/[0.05] text-[#b9b7b0] border border-white/[0.08] shrink-0">
+                                  {genre.origin_year}
+                                </span>
+                              </div>
+
+                              {/* BPM and Time Signature */}
+                              <div className="flex items-center gap-1.5 mt-2 text-[10px] text-[#8e93a0] font-mono">
+                                <span className="px-1.5 py-0.5 rounded bg-[#161822] border border-white/[0.06] text-[#d6d4ce]">
+                                  {genre.time_signature || "4/4"}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-[#161822] border border-white/[0.06] text-[#f5b73d] font-bold">
+                                  {genre.bpm_range} BPM
+                                </span>
+                              </div>
+
+                              {/* Key characteristics snippet */}
+                              <p className="text-[10.5px] text-[#9ca1ad] line-clamp-2 mt-2 leading-relaxed font-sans">
+                                {genre.key_characteristics[language] || genre.rhythm_features[language]}
+                              </p>
+                            </div>
+
+                            {/* Action Buttons: Audition & Studio */}
+                            <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-1.5">
+                              {/* Audio preview audition button */}
+                              <button
+                                onClick={(e) => handleToggleAudition(genre, e)}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                                  isPlayingThis
+                                    ? "bg-[#f5b73d] text-black shadow-md"
+                                    : "bg-[#161824] hover:bg-[#202334] text-[#d6d4ce] border border-white/[0.08]"
+                                }`}
+                                title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
+                              >
+                                {isPlayingThis ? (
+                                  <>
+                                    <Square className="w-3 h-3 fill-current text-black" />
+                                    <span>{t("timeline_stop_preview")}</span>
+                                    {/* Equalizer animation */}
+                                    <div className="flex items-end gap-0.5 h-3 ml-1">
+                                      <span className="w-0.5 h-3 bg-black animate-pulse" />
+                                      <span className="w-0.5 h-1.5 bg-black animate-ping" />
+                                      <span className="w-0.5 h-2.5 bg-black animate-pulse" />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Volume2 className="w-3 h-3 text-[#f5b73d]" />
+                                    <span>{t("timeline_play_preview")}</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {/* Open in Studio button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenStudio(genre);
+                                }}
+                                className="p-1 rounded-xl bg-[#161824] hover:bg-[#f5b73d] hover:text-black text-[#8e93a0] border border-white/[0.08] transition-colors shrink-0"
+                                title={t("open_in_studio")}
+                              >
+                                <Sliders className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center text-xs text-[#636875]">
+                      {language === "zh" ? "当前大类筛选下无此年代代表曲风" : "No genres in this era match category filter"}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -628,39 +628,52 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       });
     });
 
-    // 2. Generate particles for 159 subgenre stars with rich multi-layered planetary halos (每个子曲风星球带有光晕)
+    // 2. Generate particles for 159 subgenre stars with refined, delicate halos and distinct astronomical variations
     graphData.nodes.forEach((n) => {
       if (n.type !== "sub") return;
       const ci = graphData.clusters.findIndex((cl) => cl.id === n.cluster);
       const c = graphData.clusters[ci] || graphData.clusters[0];
-      const mag = n.children.length + 1;
+      const childCount = n.children.length;
+
+      // Deterministic astronomical personality variation (亮度和大小差异化)
+      const starHash = Math.abs(Math.sin(n.idx * 17.13 + (n.year || 1990) * 0.19)) * 10000;
+      const starJitter = starHash - Math.floor(starHash); // 0.0 ~ 1.0
+      // Prominence factor (0.58 ~ 1.38): landmark/parent subgenres are more radiant, niche subgenres are delicate
+      const prominence = clamp(0.62 + childCount * 0.18 + starJitter * 0.32, 0.58, 1.38);
 
       span(n.idx, () => {
-        // Layer 1: Core Hero Star Node with intense diamond specular spike
-        push(n.pos.x, n.pos.y, n.pos.z, 1.0, 1.0, 0.98, 9.2 + mag * 0.6, Math.random() * 100, n.year, 0, n.idx, ci, 1);
+        // Layer 1: Core Hero Star Node (晶莹钻石星核，大小随重要度变化 5.8 ~ 8.1)
+        const coreSize = 4.4 + prominence * 2.7;
+        const coreTc = tint(c.color, 0.85, 0.82 + prominence * 0.16, 0);
+        push(n.pos.x, n.pos.y, n.pos.z, coreTc[0], coreTc[1], coreTc[2], coreSize, Math.random() * 100, n.year, 0, n.idx, ci, 1);
         
-        // Layer 2: Inner Photospheric Corona (恒星紧致内层光晕，高亮纯色球体)
-        const coronaCol = tint(c.color, 0.68, 1.42, 0);
-        push(n.pos.x, n.pos.y, n.pos.z, coronaCol[0], coronaCol[1], coronaCol[2], 26.0 + mag * 3.2, Math.random() * 100, n.year, 0, n.idx, ci, 0);
+        // Layer 2: Inner Photospheric Corona (紧致紧凑光球层，尺寸缩小至 11 ~ 16，亮度柔和 0.32 ~ 0.54)
+        const coronaSize = 7.5 + prominence * 6.5;
+        const coronaCol = tint(c.color, 0.55, 0.32 + prominence * 0.22, 0);
+        push(n.pos.x, n.pos.y, n.pos.z, coronaCol[0], coronaCol[1], coronaCol[2], coronaSize, Math.random() * 100, n.year, 0, n.idx, ci, 0);
 
-        // Layer 3: Outer Atmospheric Gossamer Veil (飘逸外层星冕大气晕轮，梦幻蒙眬)
-        const veilCol = tint(c.color, 0.24, 0.72, 0.02);
-        push(n.pos.x, n.pos.y, n.pos.z, veilCol[0], veilCol[1], veilCol[2], 58.0 + mag * 6.5, Math.random() * 100, n.year, 0, n.idx, ci, 0);
+        // Layer 3: Outer Atmospheric Gossamer Veil (飘逸外层大气晕，尺寸缩减至 22 ~ 32，极柔和通透 0.10 ~ 0.19)
+        const veilSize = 16.0 + prominence * 11.5;
+        const veilCol = tint(c.color, 0.20, 0.10 + prominence * 0.09, 0.01);
+        push(n.pos.x, n.pos.y, n.pos.z, veilCol[0], veilCol[1], veilCol[2], veilSize, Math.random() * 100, n.year, 0, n.idx, ci, 0);
 
-        // Layer 4: Satellite Companion Micro-Spangles (微型伴星与辉光斑点)
-        for (let k = 0; k < 4; k++) {
-          W.set(gauss(), gauss(), gauss()).multiplyScalar(3.5 + mag * 0.7).add(n.pos);
-          const spkCol = tint(c.color, 0.88, 1.25, (Math.random() - 0.5) * 0.06);
-          push(W.x, W.y, W.z, spkCol[0], spkCol[1], spkCol[2], 2.4 + Math.random() * 1.8, Math.random() * 100, n.year, 0, n.idx, ci, 1);
+        // Layer 4: Satellite Companion Micro-Spangles (仅重点星体配备 1-2 颗微光伴星)
+        if (prominence > 0.88) {
+          const spangleCount = prominence > 1.15 ? 2 : 1;
+          for (let k = 0; k < spangleCount; k++) {
+            W.set(gauss(), gauss(), gauss()).multiplyScalar(2.2 + prominence * 0.6).add(n.pos);
+            const spkCol = tint(c.color, 0.85, 0.65, (Math.random() - 0.5) * 0.05);
+            push(W.x, W.y, W.z, spkCol[0], spkCol[1], spkCol[2], 1.6 + Math.random() * 0.8, Math.random() * 100, n.year, 0, n.idx, ci, 1);
+          }
         }
 
-        // Surrounding rich subgenre star dust & stellar nursery cloud
-        const nd = Math.round((85 + mag * 22) * Q);
+        // Surrounding delicate subgenre stardust cloud (点云疏密随曲风辐射度差异化)
+        const nd = Math.round((24 + prominence * 28) * Q);
         for (let i = 0; i < nd; i++) {
-          V.set(gauss(), gauss(), gauss()).multiplyScalar(11 + mag * 2.5).add(n.pos);
+          V.set(gauss(), gauss(), gauss()).multiplyScalar(7.5 + prominence * 3.5).add(n.pos);
           const rr = Math.random();
-          const tc = tint(c.color, clamp(1 - rr, 0.15, 0.82), 0.58, (Math.random() - 0.5) * 0.08);
-          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 1.3 + Math.random() * 1.7, Math.random() * 100, n.year, 0, n.idx, ci);
+          const tc = tint(c.color, clamp(1 - rr, 0.15, 0.80), 0.28 + prominence * 0.16, (Math.random() - 0.5) * 0.07);
+          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 0.9 + Math.random() * 1.1, Math.random() * 100, n.year, 0, n.idx, ci);
         }
       });
     });
