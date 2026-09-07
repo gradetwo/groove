@@ -20,6 +20,16 @@ export const DICTIONARY: Translations = {
   nav_compare: { en: "Genre Compare", zh: "曲风对比" },
   nav_challenge: { en: "Ear Challenge", zh: "听辨挑战" },
 
+  // Timeline Scale & Labels
+  timeline_scale_nonlinear: { en: "Non-linear Adaptive Scale", zh: "非线性自适应轴" },
+  timeline_scale_linear: { en: "Linear Equal Decades", zh: "等距年代轴" },
+  timeline_groove_core: { en: "Groove Core", zh: "律动核心" },
+  timeline_iconic_gear: { en: "Classic Gear", zh: "经典设备" },
+  timeline_pioneers: { en: "Pioneers", zh: "代表人物" },
+  timeline_lineage: { en: "Evolutionary Lineage", zh: "演变溯源" },
+  timeline_play_preview: { en: "Audition", zh: "试听" },
+  timeline_stop_preview: { en: "Stop", zh: "停止" },
+
   // Common UI
   search_placeholder: { en: "Search 150+ genres, aliases, BPM, tags... (Cmd+K)", zh: "搜索 150+ 曲风、别名、BPM、标签... (Cmd+K)" },
   search_no_results: { en: "No matching genres found", zh: "未找到匹配的曲风" },
