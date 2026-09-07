@@ -1455,38 +1455,44 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       {/* Top Left: Masthead */}
       <div className="absolute top-6 left-6 z-20 pointer-events-auto flex items-start gap-4">
         <div className="hidden sm:flex flex-col gap-1 border-r border-[#eae6dc]/15 pr-3 text-[10px] font-light tracking-[0.35em] text-[#eae6dc]/55 uppercase">
-          <span>声音的创世星图</span>
+          <span>{language === "zh" ? "声音的创世星图" : "Cosmic Sound Genesis"}</span>
           <span className="font-['Cormorant_Garamond'] tracking-[0.25em]">GENESIS ATLAS OF SOUND</span>
         </div>
         <div>
           <h1 className="text-2xl sm:text-3xl font-light tracking-[0.25em] text-[#eae6dc] drop-shadow-[0_0_20px_rgba(216,185,136,0.35)] m-0 font-['Noto_Serif_SC']">
-            曲风星谱
+            {language === "zh" ? "曲风星谱" : "Genre Galaxy"}
           </h1>
           <div className="flex items-center gap-2 mt-1 text-xs text-[#eae6dc]/60">
             <span className="inline-flex items-center gap-1 font-['JetBrains_Mono'] text-[11px] text-[#d8b988]">
               <Sparkles className="w-3 h-3" />
-              14 大星云 · 159 子曲风
+              {language === "zh" ? "14 大星云 · 159 子曲风" : "14 Nebulae · 159 Subgenres"}
             </span>
             {selectedCluster && (
               <>
                 <span className="text-[#eae6dc]/30">/</span>
                 <span className="text-xs font-bold text-[#f5b73d] flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedCluster.hexColor }} />
-                  {selectedCluster.name}星云 ({clusterSubgenres.length} 个子曲风)
+                  {language === "zh"
+                    ? `${selectedCluster.name}星云 (${clusterSubgenres.length} 个子曲风)`
+                    : `${selectedCluster.en} Nebula (${clusterSubgenres.length} Subgenres)`}
                 </span>
                 <button
                   onClick={() => setIsSubgenresPanelOpen((prev) => !prev)}
                   className="px-2 py-0.5 rounded bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] hover:border-[#d8b988]/50 text-[10px] text-[#eae6dc]/80 hover:text-[#d8b988] transition-colors flex items-center gap-1"
-                  title="展开或隐藏子曲风分支列表"
+                  title={language === "zh" ? "展开或隐藏子曲风分支列表" : "Toggle subgenres branch list"}
                 >
                   <Layers className="w-3 h-3 text-[#d8b988]" />
-                  <span>{isSubgenresPanelOpen ? "隐藏分支" : "展开分支"}</span>
+                  <span>
+                    {isSubgenresPanelOpen 
+                      ? (language === "zh" ? "隐藏分支" : "Hide Branches") 
+                      : (language === "zh" ? "展开分支" : "Explore Branches")}
+                  </span>
                 </button>
                 <button
                   onClick={() => selectMajorCluster(null)}
                   className="px-2 py-0.5 rounded bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] text-[10px] text-[#eae6dc]/80 hover:text-white transition-colors"
                 >
-                  返回全景 ✕
+                  {language === "zh" ? "返回全景 ✕" : "Overview ✕"}
                 </button>
               </>
             )}
@@ -1504,7 +1510,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               : "text-[#eae6dc]/70 hover:text-white hover:bg-white/5"
           }`}
         >
-          全景星图
+          {language === "zh" ? "全景星图" : "Overview"}
         </button>
         {graphData.clusters.map((c) => {
           const isSelected = selectedCluster?.id === c.id;
@@ -1526,7 +1532,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 className="w-1.5 h-1.5 rounded-full"
                 style={{ backgroundColor: isSelected ? "#000" : c.hexColor }}
               />
-              <span>{c.name}</span>
+              <span>{language === "zh" ? c.name : c.en}</span>
             </button>
           );
         })}
@@ -1538,7 +1544,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           {currentYear}
         </div>
         <div className="text-[10px] tracking-[0.4em] text-[#eae6dc]/50 mt-1 uppercase">
-          纪元 · ERA
+          {language === "zh" ? "纪元 · ERA" : "ERA TIMELINE"}
         </div>
         <div className="w-48 sm:w-56 mt-2 relative py-1 cursor-pointer">
           <input
@@ -1551,13 +1557,15 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           />
         </div>
         <div className="flex items-center gap-3 mt-1 text-xs text-[#eae6dc]/50">
-          <span className="text-[9.5px] tracking-wider">拖动回看演化</span>
+          <span className="text-[9.5px] tracking-wider">
+            {language === "zh" ? "拖动回看演化" : "Drag to view era"}
+          </span>
           <button
             onClick={handleToggleReplay}
             className={`w-7 h-7 rounded-full border border-[#eae6dc]/20 flex items-center justify-center transition-colors ${
               isPlayingYear ? "text-[#d8b988] border-[#d8b988] shadow-[0_0_10px_rgba(216,185,136,0.4)]" : "hover:text-[#d8b988] hover:border-[#d8b988]"
             }`}
-            title="重播星谱演化"
+            title={language === "zh" ? "重播星谱演化" : "Replay era evolution"}
           >
             {isPlayingYear ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-0.5" />}
           </button>
@@ -1568,7 +1576,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       {!selectedCluster && (
         <div className="absolute bottom-8 left-6 z-20 pointer-events-auto hidden md:flex flex-col gap-1 bg-[#05070c]/70 backdrop-blur-md p-3.5 rounded-xl border border-[#eae6dc]/15 shadow-2xl max-h-[48vh] overflow-y-auto no-scrollbar">
           <div className="text-[10px] tracking-[0.4em] text-[#eae6dc]/45 uppercase pb-1 border-b border-[#eae6dc]/10 mb-1">
-            星云 · NEBULAE
+            {language === "zh" ? "星云 · NEBULAE" : "NEBULAE CLUSTERS"}
           </div>
           {graphData.clusters.map((c) => (
             <div
@@ -1580,9 +1588,9 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 className="w-2 h-2 rounded-full shadow-sm shrink-0"
                 style={{ backgroundColor: c.hexColor, boxShadow: `0 0 8px ${c.hexColor}` }}
               />
-              <span className="text-xs">{c.name}</span>
+              <span className="text-xs">{language === "zh" ? c.name : c.en}</span>
               <span className="text-[9px] font-['Cormorant_Garamond'] tracking-wider opacity-60 ml-auto">
-                {c.en}
+                {language === "zh" ? c.en : c.name}
               </span>
             </div>
           ))}
@@ -1592,7 +1600,15 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       {/* Bottom Center: Operational Hint */}
       {!selectedCluster && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center text-xs text-[#eae6dc]/50 tracking-[0.2em] font-light hidden lg:block bg-[#05070c]/60 px-4 py-1.5 rounded-full border border-[#eae6dc]/10 backdrop-blur-sm">
-          <b>拖拽</b> 旋转 · <b>滚轮</b> 缩放 · <b>点击星云/星体</b> 居中探索 · <b>纪元</b> 回看演化史
+          {language === "zh" ? (
+            <>
+              <b>拖拽</b> 旋转 · <b>滚轮</b> 缩放 · <b>点击星云/星体</b> 居中探索 · <b>纪元</b> 回看演化史
+            </>
+          ) : (
+            <>
+              <b>Drag</b> to rotate · <b>Scroll</b> to zoom · <b>Click star/cluster</b> to focus · <b>Era</b> to explore timeline
+            </>
+          )}
         </div>
       )}
 
@@ -1608,7 +1624,9 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 8px ${selectedCluster.hexColor}` }}
             />
             <span className="font-medium tracking-wide">
-              展开子曲风分支 ({clusterSubgenres.length})
+              {language === "zh" 
+                ? `展开子曲风分支 (${clusterSubgenres.length})` 
+                : `Explore Subgenres (${clusterSubgenres.length})`}
             </span>
             <ChevronUp className="w-3.5 h-3.5 text-[#d8b988] group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -1628,10 +1646,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg sm:text-xl font-bold text-white m-0 tracking-wide font-['Noto_Serif_SC']">
-                    {selectedCluster.name}星云 · {selectedCluster.en}
+                    {language === "zh" ? `${selectedCluster.name}星云 · ${selectedCluster.en}` : `${selectedCluster.en} Nebula`}
                   </h2>
                   <span className="px-2 py-0.5 rounded bg-[#17181f] border border-[#2a2d38] font-['JetBrains_Mono'] text-xs font-semibold text-[#f5b73d]">
-                    {clusterSubgenres.length} 个子曲风分支
+                    {language === "zh" ? `${clusterSubgenres.length} 个子曲风分支` : `${clusterSubgenres.length} Subgenres`}
                   </span>
                 </div>
                 <p className="text-xs text-[#8b8f99] mt-0.5 line-clamp-1 max-w-2xl">
@@ -1647,7 +1665,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8b8f99]" />
                 <input
                   type="text"
-                  placeholder="筛选子曲风..."
+                  placeholder={language === "zh" ? "筛选子曲风..." : "Filter subgenres..."}
                   value={subgenreFilter}
                   onChange={(e) => setSubgenreFilter(e.target.value)}
                   className="w-36 lg:w-44 pl-8 pr-2.5 py-1 text-xs bg-[#12151e] border border-[#252834] rounded-lg text-white placeholder:text-[#5a5e6a] focus:outline-none focus:border-[#d8b988]"
@@ -1659,14 +1677,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 <button
                   onClick={() => setViewMode("rail")}
                   className={`p-1 rounded ${viewMode === "rail" ? "bg-[#252936] text-white" : "text-[#7a7e8a] hover:text-white"}`}
-                  title="横向滑轨视图"
+                  title={language === "zh" ? "横向滑轨视图" : "Horizontal Rail View"}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setViewMode("grid")}
                   className={`p-1 rounded ${viewMode === "grid" ? "bg-[#252936] text-white" : "text-[#7a7e8a] hover:text-white"}`}
-                  title="网格矩阵视图"
+                  title={language === "zh" ? "网格矩阵视图" : "Grid Matrix View"}
                 >
                   <Grid className="w-3.5 h-3.5" />
                 </button>
@@ -1676,19 +1694,19 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <button
                 onClick={() => setIsSubgenresPanelOpen(false)}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#15171e] hover:bg-[#20232c] border border-[#2b2e38] hover:border-[#d8b988] text-xs text-[#eae6dc] hover:text-[#d8b988] transition-colors"
-                title="隐藏子曲风分支面板"
+                title={language === "zh" ? "隐藏子曲风分支面板" : "Collapse subgenre panel"}
               >
                 <ChevronDown className="w-3.5 h-3.5 text-[#d8b988]" />
-                <span>收起</span>
+                <span>{language === "zh" ? "收起" : "Collapse"}</span>
               </button>
 
               <button
                 onClick={() => selectMajorCluster(null)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#15171e] hover:bg-[#20232c] border border-[#2b2e38] text-xs text-[#eae6dc] transition-colors"
-                title="返回全景星图"
+                title={language === "zh" ? "返回全景星图" : "Return to Overview"}
               >
                 <RotateCcw className="w-3 h-3 text-[#d8b988]" />
-                <span>返回全景</span>
+                <span>{language === "zh" ? "返回全景" : "Overview"}</span>
               </button>
             </div>
           </div>
@@ -1742,10 +1760,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
                       {/* Title */}
                       <h3 className="text-sm font-bold text-white tracking-wide truncate">
-                        {sub.name}
+                        {language === "zh" ? (sub.zhName || sub.name) : (sub.en || sub.name)}
                       </h3>
                       <div className="text-[11px] text-[#8b8f99] truncate font-['Noto_Serif_SC']">
-                        {sub.zhName !== sub.name ? sub.zhName : sub.en}
+                        {language === "zh" ? (sub.en || sub.name) : (sub.zhName || sub.name)}
                       </div>
 
                       {/* Key snippet */}
@@ -1764,7 +1782,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                         className="text-[10px] font-medium text-[#d8b988] hover:underline flex items-center gap-0.5"
                       >
                         <Compass className="w-3 h-3" />
-                        聚焦星体
+                        {language === "zh" ? "聚焦星体" : "Focus"}
                       </button>
 
                       <div className="flex items-center gap-1.5">
@@ -1775,10 +1793,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                               onOpenStudio(sub.genre!);
                             }}
                             className="px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#252a36] text-[#45e0c9] hover:text-white border border-[#2b303d] text-[10px] font-semibold transition-colors flex items-center gap-1"
-                            title="在 Studio 编曲机中试听与编辑"
+                            title={language === "zh" ? "在 Studio 编曲机中试听与编辑" : "Audition in Studio"}
                           >
                             <Music className="w-2.5 h-2.5" />
-                            试听
+                            {language === "zh" ? "试听" : "Studio"}
                           </button>
                         )}
                         {sub.genre && (
@@ -1788,9 +1806,9 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                               onSelectGenre(sub.genre!);
                             }}
                             className="px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#252a36] text-[#e9e7e0] border border-[#2b303d] text-[10px] transition-colors flex items-center gap-0.5"
-                            title="查看曲风详细百科"
+                            title={language === "zh" ? "查看曲风详细百科" : "View Encyclopedia Dossier"}
                           >
-                            详情 →
+                            {language === "zh" ? "详情 →" : "Details →"}
                           </button>
                         )}
                       </div>
@@ -1813,7 +1831,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             <button
               onClick={() => setIsCardOpen(false)}
               className="absolute top-5 right-5 w-8 h-8 rounded-full border border-[#2e323e] hover:border-[#d8b988] text-[#8b8f99] hover:text-[#d8b988] flex items-center justify-center transition-colors"
-              title="关闭详情面板"
+              title={language === "zh" ? "关闭详情面板" : "Close details"}
             >
               <X className="w-4 h-4" />
             </button>
@@ -1831,22 +1849,28 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               />
               <span className="text-xs tracking-[0.2em] font-light text-[#8b8f99] uppercase">
                 {selectedNode.type === "origin"
-                  ? "奇点 · 万物之源"
-                  : `${graphData.clusters.find((c) => c.id === selectedNode.cluster)?.name || "电子"}星云分支`}
+                  ? (language === "zh" ? "奇点 · 万物之源" : "Singularity · Origin of Sound")
+                  : (language === "zh"
+                    ? `${graphData.clusters.find((c) => c.id === selectedNode.cluster)?.name || "电子"}星云分支`
+                    : `${graphData.clusters.find((c) => c.id === selectedNode.cluster)?.en || "Electronic"} Nebula Branch`)}
               </span>
             </div>
 
             {/* Title */}
             <h2 className="text-2xl sm:text-3xl font-normal tracking-wide text-white m-0 font-['Noto_Serif_SC'] drop-shadow-[0_0_20px_rgba(216,185,136,0.25)]">
-              {selectedNode.name}
+              {language === "zh" ? selectedNode.name : selectedNode.en}
             </h2>
             <div className="font-['Cormorant_Garamond'] text-sm tracking-[0.25em] text-[#d8b988] mt-1 mb-3">
-              {selectedNode.en}
+              {language === "zh" ? selectedNode.en : selectedNode.name}
             </div>
 
             {/* Year & Place */}
             <div className="flex items-center gap-2 text-xs text-[#8b8f99] mb-4 pb-3 border-b border-[#1f222a]">
-              <span>诞生年代: {selectedNode.year > 0 ? `${selectedNode.year} 年` : "太初 · 有录音之前"}</span>
+              <span>
+                {language === "zh"
+                  ? `诞生年代: ${selectedNode.year > 0 ? `${selectedNode.year} 年` : "太初 · 有录音之前"}`
+                  : `Origin: ${selectedNode.year > 0 ? `${selectedNode.year}` : "Pre-Recording Roots"}`}
+              </span>
               {selectedNode.genre?.origin_place && (
                 <>
                   <span>·</span>
@@ -1873,7 +1897,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               return (
                 <div className="mb-5">
                   <span className="block text-[9.5px] tracking-[0.3em] text-[#5a5e68] uppercase mb-2">
-                    传承谱系 · LINEAGE
+                    {language === "zh" ? "传承谱系 · LINEAGE" : "LINEAGE & ROOTS"}
                   </span>
                   <div className="flex items-center gap-1.5 flex-wrap text-xs text-[#eae6dc]">
                     {parents.map((par) => (
@@ -1882,12 +1906,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                           onClick={() => selectNode(par, true)}
                           className="hover:text-[#d8b988] underline underline-offset-4 decoration-dashed transition-colors"
                         >
-                          {par.name}
+                          {language === "zh" ? par.name : par.en}
                         </button>
                         <span className="text-[#d8b988]/60 text-xs">⟶</span>
                       </React.Fragment>
                     ))}
-                    <span className="font-bold text-[#f5b73d]">{selectedNode.name}</span>
+                    <span className="font-bold text-[#f5b73d]">
+                      {language === "zh" ? selectedNode.name : selectedNode.en}
+                    </span>
                   </div>
                 </div>
               );
@@ -1897,7 +1923,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             {selectedNode.children.length > 0 && (
               <div className="mb-5">
                 <span className="block text-[9.5px] tracking-[0.3em] text-[#5a5e68] uppercase mb-2">
-                  演化分支 · EVOLVES
+                  {language === "zh" ? "演化分支 · EVOLVES" : "EVOLUTIONARY BRANCHES"}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedNode.children.map((k) => (
@@ -1906,7 +1932,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                       onClick={() => selectNode(k, true)}
                       className="px-2.5 py-1 rounded bg-[#13161f] hover:bg-[#1f2330] border border-[#242735] hover:border-[#d8b988] text-xs text-[#eae6dc] transition-colors"
                     >
-                      {k.name}
+                      {language === "zh" ? k.name : k.en}
                     </button>
                   ))}
                 </div>
@@ -1917,12 +1943,16 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             {selectedNode.genre && (
               <div className="mb-5 p-3.5 rounded-xl bg-[#0a0d14] border border-[#1d2029] space-y-2">
                 <div className="text-xs text-[#a0a5b2] leading-relaxed">
-                  <span className="text-[#d8b988] font-semibold mr-1">声音设计:</span>
+                  <span className="text-[#d8b988] font-semibold mr-1">
+                    {language === "zh" ? "声音设计:" : "Sound Design:"}
+                  </span>
                   {selectedNode.genre.sound_design[language]}
                 </div>
                 {selectedNode.genre.common_chords.length > 0 && (
                   <div className="text-xs text-[#a0a5b2] leading-relaxed">
-                    <span className="text-[#45e0c9] font-semibold mr-1">经典和弦:</span>
+                    <span className="text-[#45e0c9] font-semibold mr-1">
+                      {language === "zh" ? "经典和弦:" : "Common Chords:"}
+                    </span>
                     <code className="font-mono text-[#f5b73d]">{selectedNode.genre.common_chords.join(" → ")}</code>
                   </div>
                 )}
@@ -1933,7 +1963,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             {selectedNode.genre?.representative_tracks && selectedNode.genre.representative_tracks.length > 0 && (
               <div className="mb-5">
                 <span className="block text-[9.5px] tracking-[0.3em] text-[#5a5e68] uppercase mb-2">
-                  代表引力 · ARTISTS & TRACKS
+                  {language === "zh" ? "代表引力 · ARTISTS & TRACKS" : "KEY ARTISTS & TRACKS"}
                 </span>
                 <div className="space-y-1.5">
                   {selectedNode.genre.representative_tracks.slice(0, 4).map((t, i) => (
@@ -1957,16 +1987,16 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 className="flex-1 py-2.5 px-3 rounded-xl bg-[#f5b73d] hover:bg-[#e5a72d] text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_0_15px_rgba(245,183,61,0.3)]"
               >
                 <Music className="w-3.5 h-3.5" />
-                <span>进入 Studio 编曲</span>
+                <span>{language === "zh" ? "进入 Studio 编曲" : "Open in Studio"}</span>
               </button>
             )}
             {selectedNode.genre && (
               <button
                 onClick={() => onSelectGenre(selectedNode.genre!)}
                 className="py-2.5 px-3 rounded-xl bg-[#171a24] hover:bg-[#222735] border border-[#2b3040] text-xs text-white flex items-center justify-center gap-1 transition-colors"
-                title="查看该曲风的深度百科档案"
+                title={language === "zh" ? "查看该曲风的深度百科档案" : "View Encyclopedia Dossier"}
               >
-                <span>完整档案</span>
+                <span>{language === "zh" ? "完整档案" : "Full Dossier"}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}

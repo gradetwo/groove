@@ -68,6 +68,34 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
     updateFromPointer(e, stepIdx, rect);
   };
 
+  const handleTouchStart = (stepIdx: number, e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientY = touch.clientY;
+    const bottom = rect.bottom;
+    const height = rect.height;
+    const ratio = Math.max(0, Math.min(1, (bottom - clientY) / height));
+    const newVel = Math.round(ratio * 127);
+    onUpdateVelocity(activeTrackIdx, stepIdx, Math.max(1, Math.min(127, newVel)));
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!element) return;
+    const stepEl = element.closest("[data-step-idx]") as HTMLElement | null;
+    if (stepEl && stepEl.dataset.stepIdx !== undefined) {
+      const idx = parseInt(stepEl.dataset.stepIdx, 10);
+      const rect = stepEl.getBoundingClientRect();
+      const clientY = touch.clientY;
+      const bottom = rect.bottom;
+      const height = rect.height;
+      const ratio = Math.max(0, Math.min(1, (bottom - clientY) / height));
+      const newVel = Math.round(ratio * 127);
+      onUpdateVelocity(activeTrackIdx, idx, Math.max(1, Math.min(127, newVel)));
+    }
+  };
+
   useEffect(() => {
     const handleGlobalPointerUp = () => setIsPainting(false);
     window.addEventListener("pointerup", handleGlobalPointerUp);
@@ -195,7 +223,11 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
         </div>
 
         {/* Step Velocity Bar Grid */}
-        <div ref={containerRef} className="flex-1 flex gap-1 items-end h-24 sm:h-28 bg-[#090a0d] p-2 rounded-xl border border-[#1a1c22]">
+        <div 
+          ref={containerRef} 
+          onTouchMove={handleTouchMove}
+          className="flex-1 flex gap-1 items-end h-24 sm:h-28 bg-[#090a0d] p-2 rounded-xl border border-[#1a1c22] touch-none"
+        >
           {velocities.map((vel, stepIdx) => {
             const stepVal = currentTrack?.steps?.[stepIdx] || 0;
             const isOn = stepVal > 0;
@@ -208,9 +240,11 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
             return (
               <div
                 key={stepIdx}
+                data-step-idx={stepIdx}
                 onPointerDown={(e) => handlePointerDown(stepIdx, e)}
                 onPointerEnter={(e) => handlePointerEnter(stepIdx, e)}
-                className={`min-w-[28px] sm:min-w-[32px] flex-1 h-full flex flex-col justify-end items-center relative cursor-ns-resize group select-none ${
+                onTouchStart={(e) => handleTouchStart(stepIdx, e)}
+                className={`min-w-[28px] sm:min-w-[32px] flex-1 h-full flex flex-col justify-end items-center relative cursor-ns-resize group select-none touch-none ${
                   isBarStart ? "ml-3 sm:ml-4 border-l border-[#3a3e48]" : isGroupStart ? "ml-1.5 sm:ml-2" : ""
                 }`}
               >

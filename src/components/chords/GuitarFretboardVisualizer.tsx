@@ -5,12 +5,14 @@ interface GuitarFretboardVisualizerProps {
   rootNote: string;
   quality: ChordQuality;
   onStringClick?: (midi: number) => void;
+  language?: "zh" | "en";
 }
 
 export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps> = ({
   rootNote,
   quality,
   onStringClick,
+  language = "zh",
 }) => {
   const fretChord = getGuitarFretboardChord(rootNote, quality);
   const totalFrets = 12;
@@ -22,21 +24,25 @@ export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps>
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-2 text-xs text-[#8b8f99]">
           <span className="w-2 h-2 rounded-full bg-[#e5a93c] shadow-[0_0_6px_#e5a93c]" />
-          <span className="font-semibold text-[#eae6dc]">标准吉他指板和弦图 (E2 - e4 · 0-12品)</span>
-          <span className="text-[10px] text-[#5a5e68]">· 真实扫弦指法与按弦品位</span>
+          <span className="font-semibold text-[#eae6dc]">
+            {language === "zh" ? "标准吉他指板和弦图 (E2 - e4 · 0-12品)" : "6-String Guitar Fretboard (E2 - E4 · 0-12 Frets)"}
+          </span>
+          <span className="text-[10px] text-[#5a5e68]">
+            {language === "zh" ? "· 真实扫弦指法与按弦品位" : "· Authentic chord voicing & fret positions"}
+          </span>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-[#8b8f99]">
           <div className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-[#f5b73d] text-black font-bold flex items-center justify-center text-[8px]">●</span>
-            <span>按弦品位</span>
+            <span>{language === "zh" ? "按弦品位" : "Fretted"}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[#4ad8c8] font-bold">O</span>
-            <span>空弦发音</span>
+            <span>{language === "zh" ? "空弦发音" : "Open String"}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[#e84855] font-bold">✕</span>
-            <span>护弦/闷音</span>
+            <span>{language === "zh" ? "护弦/闷音" : "Muted (X)"}</span>
           </div>
         </div>
       </div>

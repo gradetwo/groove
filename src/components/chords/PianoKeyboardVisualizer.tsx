@@ -5,12 +5,14 @@ interface PianoKeyboardVisualizerProps {
   activeNotes: number[]; // Array of MIDI note numbers
   rootMidi?: number;
   onKeyClick?: (midi: number) => void;
+  language?: "zh" | "en";
 }
 
 export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = ({
   activeNotes,
   rootMidi,
   onKeyClick,
+  language = "zh",
 }) => {
   // 3 octaves: C3 (48) to B5 (83) -> 36 keys total (21 white, 15 black)
   const startMidi = 48; // C3
@@ -36,17 +38,21 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-2 text-xs text-[#8b8f99]">
           <span className="w-2 h-2 rounded-full bg-[#f5b73d] shadow-[0_0_6px_#f5b73d]" />
-          <span className="font-semibold text-[#eae6dc]">88键立体钢琴琴键映射 (C3 - B5)</span>
-          <span className="text-[10px] text-[#5a5e68]">· 点亮当前和弦发音键位</span>
+          <span className="font-semibold text-[#eae6dc]">
+            {language === "zh" ? "88键立体钢琴琴键映射 (C3 - B5)" : "Interactive Acoustic Grand Piano (C3 - B5)"}
+          </span>
+          <span className="text-[10px] text-[#5a5e68]">
+            {language === "zh" ? "· 点亮当前和弦发音键位" : "· Active chord tone lighting"}
+          </span>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-[#8b8f99]">
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded bg-[#f5b73d]" />
-            <span>根音 (Root)</span>
+            <span>{language === "zh" ? "根音 (Root)" : "Root Note"}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded bg-[#4ad8c8]" />
-            <span>和弦组成音 (Chord Notes)</span>
+            <span>{language === "zh" ? "和弦组成音 (Chord Notes)" : "Chord Tone"}</span>
           </div>
         </div>
       </div>

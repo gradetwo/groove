@@ -243,6 +243,25 @@ export const StudioView: React.FC<StudioViewProps> = ({
   } | null>(null);
   const [trackFlashTimes, setTrackFlashTimes] = useState<Record<number, number>>({});
 
+  // Mobile / Tablet touch detection & dedicated mobile tools
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  type MobileEditMode = "step" | "accent" | "ratchet" | "pitch" | "plocks";
+  const [mobileEditMode, setMobileEditMode] = useState<MobileEditMode>("step");
+  const longPressTimerRef = useRef<any>(null);
+  const isLongPressRef = useRef(false);
+
+  useEffect(() => {
+    const checkTouch = () => {
+      const hasTouch = typeof window !== "undefined" && (
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
+      );
+      setIsTouchDevice(hasTouch);
+    };
+    checkTouch();
+  }, []);
+
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
 
@@ -524,8 +543,52 @@ export const StudioView: React.FC<StudioViewProps> = ({
     };
   }, [isPlaying, isEditorMaximized, stepContextMenu, pitchPicker.isOpen, isEuclideanOpen, isVelocityLaneOpen]);
 
+  // Step Touch Handlers for Mobile / iPad
+  const handleStepTouchStart = (trackIdx: number, stepIdx: number, e: React.TouchEvent) => {
+    isLongPressRef.current = false;
+    const touch = e.touches[0];
+    const clientX = touch.clientX;
+    const clientY = touch.clientY;
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(35);
+      }
+      setStepContextMenu({
+        isOpen: true,
+        x: clientX,
+        y: clientY,
+        trackIdx,
+        stepIdx,
+      });
+    }, 450);
+  };
+
+  const handleStepTouchMove = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleStepTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
   // Step Cell interaction
   const handleCellClick = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false;
+      return;
+    }
     if (hasDraggedRef.current) {
       hasDraggedRef.current = false;
       return;
@@ -534,7 +597,83 @@ export const StudioView: React.FC<StudioViewProps> = ({
     const tr = pattern.tracks[trackIdx];
     if (!tr) return;
     const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
+    const isMelodic = tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead";
     const cur = tr.steps[stepIdx] || 0;
+
+    // Dedicated Tool Mode Actions (Mobile Touch Ribbon or Desktop Click)
+    if (mobileEditMode === "accent") {
+      let newVel = 100;
+      setPattern((prev) => {
+        const copy = JSON.parse(JSON.stringify(prev));
+        const t = copy.tracks[trackIdx];
+        if (t.steps[stepIdx] === 0) t.steps[stepIdx] = 1;
+        if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+        newVel = (t.velocity[stepIdx] || 100) >= 115 ? 90 : 127;
+        t.velocity[stepIdx] = newVel;
+        return copy;
+      });
+      if (engineRef.current) {
+        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+        engineRef.current.triggerNote(trackIdx, tr.name, newVel / 127, pitch, cur || 1);
+      }
+      return;
+    }
+
+    if (mobileEditMode === "ratchet") {
+      let nextRatchet = 2;
+      setPattern((prev) => {
+        const copy = JSON.parse(JSON.stringify(prev));
+        const t = copy.tracks[trackIdx];
+        if (t.steps[stepIdx] === 0) {
+          t.steps[stepIdx] = 1;
+          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          t.velocity[stepIdx] = 100;
+        }
+        if (!t.ratchet) t.ratchet = Array(stepCount).fill(1);
+        const curR = t.ratchet[stepIdx] || 1;
+        nextRatchet = curR === 1 ? 2 : curR === 2 ? 3 : curR === 3 ? 4 : 1;
+        t.ratchet[stepIdx] = nextRatchet;
+        return copy;
+      });
+      if (engineRef.current) {
+        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, cur || 1);
+      }
+      return;
+    }
+
+    if (mobileEditMode === "pitch" && isMelodic) {
+      if (cur === 0) {
+        setPattern((prev) => {
+          const copy = JSON.parse(JSON.stringify(prev));
+          const t = copy.tracks[trackIdx];
+          t.steps[stepIdx] = 1;
+          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          t.velocity[stepIdx] = 100;
+          return copy;
+        });
+      }
+      const currentPitch = tr.pitch?.[stepIdx] || (tr.track_id === "bass" ? 36 : 60);
+      setPitchPicker({
+        isOpen: true,
+        trackIdx,
+        stepIdx,
+        initialNote: currentPitch,
+      });
+      return;
+    }
+
+    if (mobileEditMode === "plocks") {
+      setStepContextMenu({
+        isOpen: true,
+        x: e.clientX || window.innerWidth / 2,
+        y: e.clientY || window.innerHeight / 2,
+        trackIdx,
+        stepIdx,
+      });
+      return;
+    }
 
     // SHIFT + click = accent toggle
     if (e.shiftKey && cur > 0) {
@@ -580,7 +719,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
 
     // Melodic track note picker shortcut (Cmd/Ctrl + click on step)
-    if ((e.metaKey || e.ctrlKey) && (tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead")) {
+    if ((e.metaKey || e.ctrlKey) && isMelodic) {
       if (cur === 0) {
         setPattern((prev) => {
           const copy = JSON.parse(JSON.stringify(prev));
@@ -604,6 +743,27 @@ export const StudioView: React.FC<StudioViewProps> = ({
     // Hi-Hat multi-state cycling: 0 -> 1 (closed) -> 2 (open) -> 3 (triplet) -> 0
     if (isHat) {
       const nextVal = cur === 0 ? 1 : cur === 1 ? 2 : cur === 2 ? 3 : 0;
+      setPattern((prev) => {
+        const copy = JSON.parse(JSON.stringify(prev));
+        const t = copy.tracks[trackIdx];
+        t.steps[stepIdx] = nextVal;
+        if (nextVal > 0) {
+          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          t.velocity[stepIdx] = 100;
+        }
+        return copy;
+      });
+      if (nextVal > 0 && engineRef.current) {
+        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
+      }
+      return;
+    }
+
+    // Touch tap standard note toggle
+    if (isTouchDevice) {
+      const nextVal = cur > 0 ? 0 : 1;
       setPattern((prev) => {
         const copy = JSON.parse(JSON.stringify(prev));
         const t = copy.tracks[trackIdx];
@@ -649,8 +809,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
     });
   };
 
-  // Pointer drag painting
+  // Pointer drag painting (for mouse desktop)
   const handlePointerDown = (trackIdx: number, stepIdx: number, e: React.PointerEvent) => {
+    if (isTouchDevice || e.pointerType === "touch") return;
     if (e.button !== 0) return;
     isPointerDownRef.current = true;
     hasDraggedRef.current = false;
@@ -659,8 +820,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     if (!tr) return;
     const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
 
-    // Let click handler process shiftKey, altKey, ctrlKey, metaKey, and hi-hat cycling
-    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || isHat) return;
+    // Let click handler process shiftKey, altKey, ctrlKey, metaKey, hi-hat cycling, and dedicated tool modes
+    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || isHat || mobileEditMode !== "step") return;
 
     const cur = tr.steps[stepIdx] || 0;
     const nextVal = cur > 0 ? 0 : 1;
@@ -1700,16 +1861,36 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   onChange={(e) => handleTimeSignatureChange(e.target.value)}
                   className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-bold focus:outline-none cursor-pointer"
                 >
-                  <option value="4/4" className="bg-[#121317]">4/4 (四四拍 · 4格一组)</option>
-                  <option value="2/4" className="bg-[#121317]">2/4 (二四拍 · 2格一组)</option>
-                  <option value="3/4" className="bg-[#121317]">3/4 (三四拍 · 3格一组)</option>
-                  <option value="2/2" className="bg-[#121317]">2/2 (二二拍 · 2格一组)</option>
-                  <option value="6/8" className="bg-[#121317]">6/8 (六八拍 · 3格一组)</option>
-                  <option value="3/8" className="bg-[#121317]">3/8 (三八拍 · 3格一组)</option>
-                  <option value="9/8" className="bg-[#121317]">9/8 (九八拍 · 3格一组)</option>
-                  <option value="12/8" className="bg-[#121317]">12/8 (十二八拍 · 3格一组)</option>
-                  <option value="5/4" className="bg-[#121317]">5/4 (五四拍 · 5格一组)</option>
-                  <option value="7/8" className="bg-[#121317]">7/8 (七八拍 · 7格一组)</option>
+                  <option value="4/4" className="bg-[#121317]">
+                    {language === "zh" ? "4/4 (四四拍 · 4格一组)" : "4/4 (Common · 4-step group)"}
+                  </option>
+                  <option value="2/4" className="bg-[#121317]">
+                    {language === "zh" ? "2/4 (二四拍 · 2格一组)" : "2/4 (March/Polka · 2-step group)"}
+                  </option>
+                  <option value="3/4" className="bg-[#121317]">
+                    {language === "zh" ? "3/4 (三四拍 · 3格一组)" : "3/4 (Waltz · 3-step group)"}
+                  </option>
+                  <option value="2/2" className="bg-[#121317]">
+                    {language === "zh" ? "2/2 (二二拍 · 2格一组)" : "2/2 (Cut Time · 2-step group)"}
+                  </option>
+                  <option value="6/8" className="bg-[#121317]">
+                    {language === "zh" ? "6/8 (六八拍 · 3格一组)" : "6/8 (Compound · 3-step group)"}
+                  </option>
+                  <option value="3/8" className="bg-[#121317]">
+                    {language === "zh" ? "3/8 (三八拍 · 3格一组)" : "3/8 (Single Compound · 3-step group)"}
+                  </option>
+                  <option value="9/8" className="bg-[#121317]">
+                    {language === "zh" ? "9/8 (九八拍 · 3格一组)" : "9/8 (Triple Compound · 3-step group)"}
+                  </option>
+                  <option value="12/8" className="bg-[#121317]">
+                    {language === "zh" ? "12/8 (十二八拍 · 3格一组)" : "12/8 (Shuffle · 3-step group)"}
+                  </option>
+                  <option value="5/4" className="bg-[#121317]">
+                    {language === "zh" ? "5/4 (五四拍 · 5格一组)" : "5/4 (Take Five · 5-step group)"}
+                  </option>
+                  <option value="7/8" className="bg-[#121317]">
+                    {language === "zh" ? "7/8 (七八拍 · 7格一组)" : "7/8 (Balkan · 7-step group)"}
+                  </option>
                 </select>
               </div>
 
@@ -1892,6 +2073,47 @@ export const StudioView: React.FC<StudioViewProps> = ({
             </div>
           </div>
 
+          {/* Mobile & Touch Workflow Tool Ribbon */}
+          <div className="flex items-center justify-between gap-2 p-2 bg-[#0a0b0e] border border-[#23262d] rounded-xl mb-3 overflow-x-auto select-none shadow-inner">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="font-['JetBrains_Mono'] text-[9px] text-[#5a5e68] tracking-wider uppercase px-1.5 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#f5b73d] animate-pulse" />
+                {language === "zh" ? "步进工具" : "TOOL MODE"}:
+              </span>
+              {([
+                { id: "step", labelZh: "普通步进", labelEn: "Step Note", icon: "●", descZh: "点按开/关步进音符", descEn: "Tap step to toggle on/off" },
+                { id: "accent", labelZh: "重音", labelEn: "Accent", icon: "▲", descZh: "设为最大重音 (Vel 127)", descEn: "Toggle max accent velocity" },
+                { id: "ratchet", labelZh: "连音滚奏", labelEn: "Ratchet", icon: "⫸", descZh: "循环细分滚奏 (1x-4x)", descEn: "Cycle rolls / ratchet (1x-4x)" },
+                { id: "pitch", labelZh: "音高选择", labelEn: "Pitch", icon: "♩", descZh: "为贝斯/旋律点选音高", descEn: "Pick pitch for bass/synth" },
+                { id: "plocks", labelZh: "参数锁", labelEn: "P-Locks", icon: "⚙", descZh: "单步独立参数 (长按也可呼出)", descEn: "Step parameter locks (or long-press)" },
+              ] as const).map((tool) => {
+                const isActive = mobileEditMode === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    onClick={() => setMobileEditMode(tool.id)}
+                    className={`px-2.5 py-1.5 rounded-lg font-['JetBrains_Mono'] text-xs font-semibold flex items-center gap-1.5 transition-all touch-manipulation ${
+                      isActive
+                        ? "bg-[#f5b73d] text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.4)] font-bold scale-[1.02]"
+                        : "bg-[#14151a] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d] hover:border-[#3a3e48]"
+                    }`}
+                    title={language === "zh" ? tool.descZh : tool.descEn}
+                  >
+                    <span className="text-[11px] leading-none opacity-80">{tool.icon}</span>
+                    <span className="text-[11px] whitespace-nowrap">{language === "zh" ? tool.labelZh : tool.labelEn}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="hidden lg:flex items-center text-[10px] text-[#5a5e68] font-['JetBrains_Mono'] pr-2 shrink-0">
+              {mobileEditMode === "step" && (language === "zh" ? "模式：点按切换开关，长按打开参数锁" : "Mode: Tap step to toggle, long-press for P-Locks")}
+              {mobileEditMode === "accent" && (language === "zh" ? "模式：点按步进切换重音 (127 / 90)" : "Mode: Tap step to toggle accent velocity (127 / 90)")}
+              {mobileEditMode === "ratchet" && (language === "zh" ? "模式：点按步进循环连音细分 (1x-4x)" : "Mode: Tap step to cycle ratchets (1x-4x)")}
+              {mobileEditMode === "pitch" && (language === "zh" ? "模式：点按贝斯/和弦步进选取音高" : "Mode: Tap bass/chords step to pick pitch")}
+              {mobileEditMode === "plocks" && (language === "zh" ? "模式：点按步进调出参数锁面板" : "Mode: Tap step to open step parameters menu")}
+            </div>
+          </div>
+
           {/* 8 Tracks Sequencer Matrix (#tracks) */}
           <div
             ref={matrixContainerRef}
@@ -1994,38 +2216,50 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   <div className="sticky left-0 z-20 bg-[#121317] flex-none w-[172px] pr-2 flex flex-col justify-center gap-1 select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                     {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
                     <div className="flex items-center gap-1.5">
-                      <span
-                        className="w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0"
-                        style={{ backgroundColor: meta.color }}
-                      />
-                      {/* Mini 4-Segment Activity Meter */}
-                      <div className="flex gap-[1.5px] items-center h-3 px-1 py-0.5 bg-[#0a0b0d] rounded border border-[#1a1c21] shrink-0" title="Audio Activity Peak">
-                        {[1, 2, 3, 4].map((seg) => {
-                          const active = isFlashing && (seg <= 2 || (trackVol > 0.5 && seg <= 3) || trackVol > 0.85);
-                          return (
-                            <span
-                              key={seg}
-                              className={`w-0.5 h-2 rounded-[0.5px] transition-all duration-75 ${
-                                active
-                                  ? seg === 4
-                                    ? "bg-[#ff5964] shadow-[0_0_4px_#ff5964]"
-                                    : seg === 3
-                                    ? "bg-[#f5b73d] shadow-[0_0_4px_#f5b73d]"
-                                    : "bg-[#45e0c9] shadow-[0_0_4px_#45e0c9]"
-                                  : "bg-[#1f222b]"
-                              }`}
-                            />
-                          );
-                        })}
+                      <div
+                        onClick={() => engineRef.current?.triggerNote(trackIdx, track.name, 0.9, 0, 1)}
+                        className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer group/trk hover:opacity-90 transition-opacity touch-manipulation"
+                        title={language === "zh" ? "点击试听音色" : "Tap to audition sound"}
+                      >
+                        <span
+                          className="w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0 group-hover/trk:scale-y-110 transition-transform"
+                          style={{ backgroundColor: meta.color }}
+                        />
+                        {/* Mini 4-Segment Activity Meter */}
+                        <div className="flex gap-[1.5px] items-center h-3 px-1 py-0.5 bg-[#0a0b0d] rounded border border-[#1a1c21] shrink-0" title="Audio Activity Peak">
+                          {[1, 2, 3, 4].map((seg) => {
+                            const active = isFlashing && (seg <= 2 || (trackVol > 0.5 && seg <= 3) || trackVol > 0.85);
+                            return (
+                              <span
+                                key={seg}
+                                className={`w-0.5 h-2 rounded-[0.5px] transition-all duration-75 ${
+                                  active
+                                    ? seg === 4
+                                      ? "bg-[#ff5964] shadow-[0_0_4px_#ff5964]"
+                                      : seg === 3
+                                      ? "bg-[#f5b73d] shadow-[0_0_4px_#f5b73d]"
+                                      : "bg-[#45e0c9] shadow-[0_0_4px_#45e0c9]"
+                                    : "bg-[#1f222b]"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-['JetBrains_Mono'] text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate">
+                            {meta.name}
+                          </span>
+                          <span className="font-['JetBrains_Mono'] text-[8.5px] text-[#5a5e68] truncate leading-none">
+                            {meta.sub ? meta.sub[language] : ""}
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-['JetBrains_Mono'] text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate flex-1" title={meta.name}>
-                        {meta.name}
-                      </span>
-                      <div className="flex gap-1 shrink-0">
+
+                      <div className="flex gap-1 shrink-0 items-center">
                         {/* Polymeter Loop Length Selector */}
                         <button
                           onClick={() => handleCycleTrackLength(trackIdx)}
-                          className={`px-1 h-4 rounded text-[8px] font-['JetBrains_Mono'] border transition-colors flex items-center justify-center ${
+                          className={`px-1.5 h-6 sm:h-4 rounded text-[9px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors flex items-center justify-center touch-manipulation ${
                             track.trackLength && track.trackLength !== stepCount
                               ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
                               : "bg-[#17181c] border-[#23262d] text-[#5a5e68] hover:text-[#8b8f99]"
@@ -2036,7 +2270,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         </button>
                         <button
                           onClick={() => toggleMute(trackIdx)}
-                          className={`w-4 h-4 font-['JetBrains_Mono'] text-[8.5px] border rounded transition-colors flex items-center justify-center ${
+                          className={`w-6 h-6 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
                             isMute
                               ? "border-[var(--tc)] text-[var(--tc)] bg-transparent font-bold"
                               : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
@@ -2047,7 +2281,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         </button>
                         <button
                           onClick={() => toggleSolo(trackIdx)}
-                          className={`w-4 h-4 font-['JetBrains_Mono'] text-[8.5px] border rounded transition-colors flex items-center justify-center ${
+                          className={`w-6 h-6 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
                             isSolo
                               ? "border-[#f5b73d] text-[#f5b73d] bg-[#f5b73d]/10 font-bold"
                               : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
@@ -2070,50 +2304,50 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           step="0.05"
                           value={trackVol}
                           onChange={(e) => handleTrackVolumeChange(trackIdx, +e.target.value)}
-                          className="w-11 h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer"
+                          className="w-12 sm:w-11 h-2 sm:h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer touch-manipulation"
                         />
                       </div>
 
                       {/* Track Quick Actions */}
-                      <div className="flex items-center gap-0.5 shrink-0">
+                      <div className="flex items-center gap-1 sm:gap-0.5 shrink-0">
                         <button
                           onClick={() => {
                             setVelocityActiveTrackIdx(trackIdx);
                             setIsVelocityLaneOpen(true);
                           }}
-                          className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${
+                          className={`w-6 h-6 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation ${
                             isVelocityLaneOpen && velocityActiveTrackIdx === trackIdx
                               ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
                               : "border-[#23262d] text-[#5a5e68] hover:text-[#45e0c9]"
                           }`}
                           title={language === "zh" ? "在力度抽屉中编辑" : "Edit velocity in drawer"}
                         >
-                          <Sliders className="w-2.5 h-2.5" />
+                          <Sliders className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
                         </button>
                         <button
                           onClick={() => handleShiftTrack(trackIdx, -1)}
-                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-[10px]"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "向左位移 1 步" : "Shift left 1 step"}
                         >
                           ◀
                         </button>
                         <button
                           onClick={() => handleShiftTrack(trackIdx, 1)}
-                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-[10px]"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "向右位移 1 步" : "Shift right 1 step"}
                         >
                           ▶
                         </button>
                         <button
                           onClick={() => handleSmartFillTrack(trackIdx)}
-                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#45e0c9] flex items-center justify-center text-[10px]"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#45e0c9] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "智能生成常规节拍" : "Smart fill rhythm"}
                         >
-                          <Wand2 className="w-2.5 h-2.5" />
+                          <Wand2 className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
                         </button>
                         <button
                           onClick={() => handleClearTrack(trackIdx)}
-                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#ff5964] flex items-center justify-center text-[10px]"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#ff5964] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "清空轨道" : "Clear track"}
                         >
                           ✕
@@ -2153,7 +2387,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onContextMenu={(e) => handleStepContextMenu(trackIdx, stepIdx, e)}
                           onPointerDown={(e) => handlePointerDown(trackIdx, stepIdx, e)}
                           onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
-                          className={`min-w-[28px] sm:min-w-[32px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none ${
+                          onTouchStart={(e) => handleStepTouchStart(trackIdx, stepIdx, e)}
+                          onTouchMove={handleStepTouchMove}
+                          onTouchEnd={handleStepTouchEnd}
+                          onTouchCancel={handleStepTouchEnd}
+                          className={`min-w-[28px] sm:min-w-[32px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none touch-manipulation ${
                             isBarStart
                               ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
                               : isGroupStart
@@ -2283,10 +2521,38 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
           {/* Bottom Hint Note (.seq-note) */}
           <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-[0.04em] leading-relaxed border-t border-[#1a1c21] pt-3 flex items-center justify-between flex-wrap gap-2">
-            <div>
-              {language === "zh"
-                ? "点击 / 拖拽编辑 · 右键参数锁 (P-Locks) · SHIFT+点击重音 · ALT+点击连音 (1x-4x) · CMD+点击选音高 · V 力度抽屉 · E 欧几里得律动"
-                : "Click / drag to edit · Right-click P-Locks · SHIFT+click accent · ALT+click ratchet (1x-4x) · CMD+click pitch · V Velocity drawer · E Euclidean generator"}
+            <div className="flex items-center gap-2 flex-wrap">
+              {isTouchDevice ? (
+                language === "zh" ? (
+                  <span>
+                    <strong className="text-[#f5b73d] font-bold">📱 触控/移动端操作：</strong> 点按步进开/关 · 长按步进调出参数锁 (P-Locks) · 顶部步进工具栏切换重音/连音/音高模式 · 点按轨道名试听音色 · 左右滑动浏览小节
+                  </span>
+                ) : (
+                  <span>
+                    <strong className="text-[#f5b73d] font-bold">📱 Touch & Mobile:</strong> Tap step to toggle · Long-press for P-Locks · Switch Tool Mode ribbon for accent/ratchet/pitch · Tap track name to audition · Swipe to scroll bars
+                  </span>
+                )
+              ) : (
+                language === "zh" ? (
+                  <span>
+                    <strong className="text-[#f5b73d] font-bold">💻 电脑端快捷键：</strong> 点击/拖拽涂抹 · 右键参数锁 (P-Locks) · SHIFT+点击重音 · ALT+点击连音 (1x-4x) · CMD+点击选音高 · 空格 播放/暂停 · V 力度抽屉 · E 欧几里得律动
+                  </span>
+                ) : (
+                  <span>
+                    <strong className="text-[#f5b73d] font-bold">💻 Desktop Shortcuts:</strong> Click / drag to paint · Right-click P-Locks · SHIFT+click accent · ALT+click ratchet (1x-4x) · CMD+click pitch · Space Play/Stop · V Velocity drawer · E Euclidean generator
+                  </span>
+                )
+              )}
+              {/* Manual Device Hint Switcher Button */}
+              <button
+                onClick={() => setIsTouchDevice(!isTouchDevice)}
+                className="px-1.5 py-0.5 text-[9px] rounded bg-[#17181d] border border-[#23262d] text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d]/50 transition-colors ml-1 touch-manipulation"
+                title={language === "zh" ? "手动切换电脑端 / 触控端提示视图" : "Toggle desktop / mobile hint view"}
+              >
+                {isTouchDevice
+                  ? (language === "zh" ? "电脑快捷键 ↗" : "Desktop Keys ↗")
+                  : (language === "zh" ? "触控操作指南 ↗" : "Mobile Gestures ↗")}
+              </button>
             </div>
             <div className="text-[#8b8f99]">
               {isEditorMaximized ? (language === "zh" ? "按 Esc 退出最大化" : "Press Esc to exit fullscreen") : ""}
