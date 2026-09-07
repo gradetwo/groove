@@ -29,9 +29,10 @@ export interface SharedSequencerState {
 export function encodeSharedSequencer(state: SharedSequencerState): string {
   try {
     const compactTracks = state.tracks.map((t) => {
+      const hasMultiVal = t.steps.some((s) => s > 1);
       let mask = 0;
       for (let i = 0; i < 16; i++) {
-        if (t.steps[i] === 1) {
+        if (t.steps[i] > 0) {
           mask |= (1 << i);
         }
       }
@@ -41,6 +42,7 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
         n: t.name,
         ins: t.instrument,
         m: mask,
+        st: hasMultiVal ? t.steps : undefined,
         v: t.velocity && t.velocity.some((v) => v !== 100) ? t.velocity : undefined,
         p: t.pitch && t.pitch.some((p) => p !== null && p !== undefined) ? t.pitch : undefined,
         mu: t.mute ? 1 : undefined,
@@ -86,10 +88,15 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
     }
 
     const tracks = payload.t.map((ct: any) => {
-      const mask = ct.m || 0;
-      const steps: number[] = [];
-      for (let i = 0; i < 16; i++) {
-        steps.push((mask & (1 << i)) !== 0 ? 1 : 0);
+      let steps: number[];
+      if (Array.isArray(ct.st) && ct.st.length === 16) {
+        steps = ct.st;
+      } else {
+        const mask = ct.m || 0;
+        steps = [];
+        for (let i = 0; i < 16; i++) {
+          steps.push((mask & (1 << i)) !== 0 ? 1 : 0);
+        }
       }
 
       return {

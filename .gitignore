@@ -25,6 +25,10 @@ dist-ssr
 # Testing
 coverage
 
+# Python
+__pycache__/
+*.pyc
+
 # Deploy packages
 *.tar.gz
 *.zip

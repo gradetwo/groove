@@ -238,12 +238,14 @@ export class AudioEngine {
       if (state.mute) return;
       if (anySolo && !state.solo) return;
 
-      const isStepActive = track.steps[step] === 1;
+      const stepVal = track.steps[step];
+      const isStepActive = stepVal > 0;
       if (isStepActive) {
         const velVal = track.velocity && track.velocity[step] !== undefined ? track.velocity[step] : 100;
         const normalizedVel = (velVal / 127) * state.volume;
         const pitchVal = track.pitch && track.pitch[step] !== undefined && track.pitch[step] !== null ? track.pitch[step]! : 0;
-        this.triggerInstrument(trackIdx, track.name, time, normalizedVel, pitchVal);
+        const stepDur = (60.0 / this.bpm) / 4;
+        this.triggerInstrument(trackIdx, track.name, time, normalizedVel, pitchVal, stepVal, stepDur);
       }
     });
 
@@ -263,14 +265,14 @@ export class AudioEngine {
   /**
    * Preview a single track note immediately
    */
-  public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch = 0): void {
+  public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch = 0, stepVal = 1): void {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
     if (this.ctx.state === "suspended") this.ctx.resume();
-    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitch);
+    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitch, stepVal, 0.125);
   }
 
-  private triggerInstrument(trackIdx: number, trackName: string, time: number, vel: number, pitch: number): void {
+  private triggerInstrument(trackIdx: number, trackName: string, time: number, vel: number, pitch: number, stepVal = 1, stepDur = 0.125): void {
     if (!this.ctx || !this.masterGain) return;
 
     const lowerName = trackName.toLowerCase();
@@ -279,7 +281,7 @@ export class AudioEngine {
     } else if (lowerName.includes("snare")) {
       this.playSnare(time, vel, pitch);
     } else if (lowerName.includes("hihat") || lowerName.includes("hat")) {
-      this.playHiHat(time, vel, pitch);
+      this.playHiHat(time, vel, pitch, stepVal, stepDur);
     } else if (lowerName.includes("perc") || lowerName.includes("clap")) {
       this.playPercussion(time, vel, pitch);
     } else if (lowerName.includes("bass")) {
@@ -378,9 +380,26 @@ export class AudioEngine {
     }
   }
 
-  private playHiHat(time: number, vel: number, pitchOffset: number): void {
+  private playHiHat(time: number, vel: number, pitchOffset: number, hatType = 1, stepDur = 0.125): void {
     if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
 
+    if (hatType === 3) {
+      // Triplet roll: 3 hits
+      const offsets = [0, stepDur / 3, (stepDur * 2) / 3];
+      offsets.forEach((off, i) => {
+        this.triggerSingleHat(time + off, vel * (i === 0 ? 1 : i === 1 ? 0.8 : 0.65), pitchOffset, 0.035);
+      });
+    } else if (hatType === 2) {
+      // Open hat: long decay
+      this.triggerSingleHat(time, vel * 0.9, pitchOffset, 0.35);
+    } else {
+      // Closed hat: snappy decay
+      this.triggerSingleHat(time, vel * 0.65, pitchOffset, 0.05);
+    }
+  }
+
+  private triggerSingleHat(time: number, vel: number, pitchOffset: number, decay: number): void {
+    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
     const noise = this.ctx.createBufferSource();
     noise.buffer = this.noiseBuffer;
 
@@ -390,7 +409,6 @@ export class AudioEngine {
     highpass.frequency.value = hpFreq;
 
     const gain = this.ctx.createGain();
-    const decay = vel > 0.85 ? 0.22 : 0.06;
     gain.gain.setValueAtTime(vel * 0.6, time);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + decay);
 
