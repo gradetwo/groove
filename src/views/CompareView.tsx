@@ -216,22 +216,18 @@ export const CompareView: React.FC<CompareViewProps> = ({
     };
   }, [genres]);
 
-  // SVG Radar Polygon coordinates generator
-  const getRadarCoordinates = (genre: Genre) => {
+  // SVG Radar Polygon coordinates & vertex generator
+  const getRadarVertexList = (genre: Genre) => {
     const center = 110;
     const radius = 80;
-    const points: string[] = [];
-
-    RADAR_AXES.forEach((axis, idx) => {
+    return RADAR_AXES.map((axis, idx) => {
       const angle = (Math.PI * 2 * idx) / RADAR_AXES.length - Math.PI / 2;
       const val = genre.radar_metrics ? genre.radar_metrics[axis.key] || 5 : 5;
       const r = (val / 10) * radius;
       const x = center + r * Math.cos(angle);
       const y = center + r * Math.sin(angle);
-      points.push(`${x},${y}`);
+      return { x, y, val, axis };
     });
-
-    return points.join(" ");
   };
 
   const currentPlayingGenre = genres.find((g) => g.id === playingId);
@@ -383,18 +379,33 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 );
               })}
 
-              {/* Render Polygons for each active genre */}
+              {/* Render Polygons and Vertex nodes for each active genre */}
               {genres.map((genre, idx) => {
                 const color = COMPARE_COLORS[idx % COMPARE_COLORS.length];
+                const vertices = getRadarVertexList(genre);
+                const pointsStr = vertices.map((v) => `${v.x},${v.y}`).join(" ");
                 return (
-                  <polygon
-                    key={genre.id}
-                    points={getRadarCoordinates(genre)}
-                    fill={color.fill}
-                    stroke={color.stroke}
-                    strokeWidth="2"
-                    className="transition-all duration-300 hover:opacity-90"
-                  />
+                  <g key={genre.id} className="transition-all duration-300">
+                    <polygon
+                      points={pointsStr}
+                      fill={color.fill}
+                      stroke={color.stroke}
+                      strokeWidth="2.2"
+                      className="transition-all duration-300 hover:opacity-95"
+                    />
+                    {vertices.map((v, vIdx) => (
+                      <circle
+                        key={vIdx}
+                        cx={v.x}
+                        cy={v.y}
+                        r="3.2"
+                        fill={color.stroke}
+                        stroke="#0d0e12"
+                        strokeWidth="1.5"
+                        className="transition-all duration-300"
+                      />
+                    ))}
+                  </g>
                 );
               })}
             </svg>

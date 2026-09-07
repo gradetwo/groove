@@ -95,4 +95,22 @@ describe('Genre Database Verification (PRD Standard 10.2)', () => {
       }
     }
   });
+
+  it('every genre must have valid and differentiated radar metrics', () => {
+    const radarKeys = ['groove', 'brightness', 'harmonicComplexity', 'rhythmDensity', 'bassEnergy', 'melodicFocus'] as const;
+    const profileSet = new Set<string>();
+
+    for (const g of ALL_GENRES) {
+      expect(g.radar_metrics, `Genre ${g.id} has radar_metrics`).toBeDefined();
+      for (const k of radarKeys) {
+        const val = g.radar_metrics[k];
+        expect(val).toBeGreaterThanOrEqual(1);
+        expect(val).toBeLessThanOrEqual(10);
+      }
+      profileSet.add(JSON.stringify(g.radar_metrics));
+    }
+
+    // Must have diverse profiles (not single dummy placeholder)
+    expect(profileSet.size).toBeGreaterThan(100);
+  });
 });
