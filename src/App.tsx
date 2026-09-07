@@ -3,6 +3,7 @@ import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { StudioView } from "./views/StudioView";
+import { ChordProgressionsView } from "./views/ChordProgressionsView";
 import { GalaxyView } from "./views/GalaxyView";
 import { HorizontalTimelineView } from "./views/HorizontalTimelineView";
 import { VerticalTimelineView } from "./views/VerticalTimelineView";
@@ -116,6 +117,14 @@ const MainApp: React.FC = () => {
             }}
             onAddToCompare={handleAddToCompare}
             onAudioEngineReady={handleEngineReady}
+          />
+        )}
+
+        {currentTab === "chords" && (
+          <ChordProgressionsView
+            onOpenStudioWithChords={(chords) => {
+              setCurrentTab("studio");
+            }}
           />
         )}
 

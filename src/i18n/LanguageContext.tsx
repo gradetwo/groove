@@ -14,6 +14,7 @@ export const DICTIONARY: Translations = {
   app_title: { en: "Groove & Genre Odyssey", zh: "音乐曲风探索与律动工作台" },
   app_subtitle: { en: "Interactive Music Genre Learning & Sequencer", zh: "沉浸式交互曲风百科与步进音序器" },
   nav_studio: { en: "Groove Studio", zh: "律动工作台" },
+  nav_chords: { en: "Chord Progressions", zh: "和弦走向" },
   nav_galaxy: { en: "Genre Galaxy", zh: "星系云团" },
   nav_timeline_h: { en: "Horizontal Timeline", zh: "水平演变轴" },
   nav_timeline_v: { en: "Vertical Timeline", zh: "垂直时间轴" },

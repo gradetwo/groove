@@ -10,7 +10,8 @@ import {
   Shuffle, 
   Menu, 
   X,
-  AlignVerticalJustifyStart
+  AlignVerticalJustifyStart,
+  Music2
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { ALL_GENRES } from "../data/genres";
@@ -18,6 +19,7 @@ import { Genre } from "../types/genre";
 
 export type NavTab = 
   | "studio" 
+  | "chords"
   | "galaxy" 
   | "horizontal-timeline" 
   | "vertical-timeline" 
@@ -82,6 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems: Array<{ tab: NavTab; labelKey: string; icon: React.ReactNode }> = [
     { tab: "studio", labelKey: "nav_studio", icon: <Sliders className="w-3.5 h-3.5" /> },
+    { tab: "chords", labelKey: "nav_chords", icon: <Music2 className="w-3.5 h-3.5" /> },
     { tab: "galaxy", labelKey: "nav_galaxy", icon: <Orbit className="w-3.5 h-3.5" /> },
     { tab: "horizontal-timeline", labelKey: "nav_timeline_h", icon: <Clock className="w-3.5 h-3.5" /> },
     { tab: "vertical-timeline", labelKey: "nav_timeline_v", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },

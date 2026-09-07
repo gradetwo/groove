@@ -232,9 +232,161 @@ export function downloadMidiFile(options: ExportMidiOptions, filename?: string):
   a.href = url;
   const nameBase = options.genreName ? options.genreName.toLowerCase().replace(/[^a-z0-9_-]/g, "_") : "groove";
   const safeName = filename || (nameBase + "-pattern");
-  a.download = safeName + ".mid";
+  a.download = safeName.endsWith(".mid") ? safeName : safeName + ".mid";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Exports chord progression to standard MIDI file
+ */
+export function exportChordsMidi(
+  chords: Array<{ root: string; quality: any; duration?: number; inversion?: any }>,
+  bpm: number,
+  filename = "groove_chords.mid"
+): void {
+  const TICKS_PER_QUARTER = 480;
+  const allEvents: MidiEvent[] = [];
+
+  // Tempo meta
+  const safeBpm = Math.max(20, Math.min(300, bpm || 120));
+  const microsecondsPerBeat = Math.round(60000000 / safeBpm);
+  allEvents.push({
+    tick: 0,
+    type: "meta",
+    metaData: [
+      0xff, 0x51, 0x03,
+      (microsecondsPerBeat >> 16) & 0xff,
+      (microsecondsPerBeat >> 8) & 0xff,
+      microsecondsPerBeat & 0xff,
+    ],
+  });
+
+  // Acoustic Grand Piano Program Change on channel 0
+  allEvents.push({
+    tick: 0,
+    type: "meta",
+    metaData: [0xc0, 0x00], // Program 0 = Acoustic Grand Piano
+  });
+
+  let currentTick = 0;
+  chords.forEach((chord) => {
+    const beats = chord.duration || 4;
+    const durTicks = beats * TICKS_PER_QUARTER;
+    const noteDur = Math.max(TICKS_PER_QUARTER, durTicks - 40);
+
+    // Import helper dynamically if needed or use basic midi calculation
+    const intervals: Record<string, number[]> = {
+      "5": [0, 7],
+      "maj": [0, 4, 7],
+      "min": [0, 3, 7],
+      "dim": [0, 3, 6],
+      "aug": [0, 4, 8],
+      "sus2": [0, 2, 7],
+      "sus4": [0, 5, 7],
+      "maj7": [0, 4, 7, 11],
+      "min7": [0, 3, 7, 10],
+      "7": [0, 4, 7, 10],
+      "m7b5": [0, 3, 6, 10],
+      "dim7": [0, 3, 6, 9],
+      "add9": [0, 4, 7, 14],
+      "maj9": [0, 4, 7, 11, 14],
+      "min9": [0, 3, 7, 10, 14],
+      "9": [0, 4, 7, 10, 14],
+      "6": [0, 4, 7, 9],
+    };
+
+    const notesTable = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const rootIdx = notesTable.indexOf(chord.root);
+    const rootMidi = 60 + (rootIdx >= 0 ? rootIdx : 0);
+    const chordInts = intervals[chord.quality] || [0, 4, 7];
+    const midiNotes = [rootMidi - 12, ...chordInts.map((inter) => rootMidi + inter)];
+
+    midiNotes.forEach((m) => {
+      allEvents.push({
+        tick: currentTick,
+        type: "noteOn",
+        channel: 0,
+        note: m,
+        velocity: 96,
+      });
+      allEvents.push({
+        tick: currentTick + noteDur,
+        type: "noteOff",
+        channel: 0,
+        note: m,
+        velocity: 0,
+      });
+    });
+
+    currentTick += durTicks;
+  });
+
+  allEvents.sort((a, b) => {
+    if (a.tick !== b.tick) return a.tick - b.tick;
+    if (a.type === "meta") return -1;
+    if (b.type === "meta") return 1;
+    if (a.type === "noteOff" && b.type === "noteOn") return -1;
+    if (a.type === "noteOn" && b.type === "noteOff") return 1;
+    return 0;
+  });
+
+  const trackBytes: number[] = [];
+  let lastTick = 0;
+  for (const ev of allEvents) {
+    const delta = Math.max(0, ev.tick - lastTick);
+    lastTick = ev.tick;
+    trackBytes.push(...writeVLQ(delta));
+    if (ev.type === "meta" && ev.metaData) {
+      trackBytes.push(...ev.metaData);
+    } else if (ev.type === "noteOn") {
+      trackBytes.push(0x90 | (ev.channel! & 0x0f), ev.note! & 0x7f, ev.velocity! & 0x7f);
+    } else if (ev.type === "noteOff") {
+      trackBytes.push(0x80 | (ev.channel! & 0x0f), ev.note! & 0x7f, 0x00);
+    }
+  }
+  trackBytes.push(...writeVLQ(0));
+  trackBytes.push(0xff, 0x2f, 0x00);
+
+  const headerBytes = [
+    0x4d, 0x54, 0x68, 0x64,
+    0x00, 0x00, 0x00, 0x06,
+    0x00, 0x00,
+    0x00, 0x01,
+    (TICKS_PER_QUARTER >> 8) & 0xff,
+    TICKS_PER_QUARTER & 0xff,
+  ];
+
+  const trackLength = trackBytes.length;
+  const trackHeader = [
+    0x4d, 0x54, 0x72, 0x6b,
+    (trackLength >> 24) & 0xff,
+    (trackLength >> 16) & 0xff,
+    (trackLength >> 8) & 0xff,
+    trackLength & 0xff,
+  ];
+
+  const result = new Uint8Array(headerBytes.length + trackHeader.length + trackBytes.length);
+  result.set(headerBytes, 0);
+  result.set(trackHeader, headerBytes.length);
+  result.set(trackBytes, headerBytes.length + trackHeader.length);
+
+  const blob = new Blob([result as unknown as BlobPart], { type: "audio/midi" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".mid") ? filename : filename + ".mid";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export const MidiExporter = {
+  generateMidiBytes,
+  downloadMidiFile,
+  exportChordsMidi,
+};
+
