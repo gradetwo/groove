@@ -54,6 +54,14 @@ const applyAudioMutes = (engine: AudioEngine, mode: "drums" | "full", genre: Gen
   });
 };
 
+// 4-Beat rich color themes for 16-step jumping dots
+const BEAT_DOT_COLORS = [
+  { active: "bg-amber-400 shadow-[0_0_10px_rgba(245,183,61,0.9)] ring-1 ring-amber-300", beatDot: "bg-amber-500/50" },  // Beat 1 (Amber / Gold)
+  { active: "bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.9)] ring-1 ring-cyan-300", beatDot: "bg-cyan-500/50" },       // Beat 2 (Cyan / Aqua)
+  { active: "bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.9)] ring-1 ring-rose-300", beatDot: "bg-rose-500/50" },       // Beat 3 (Rose / Coral)
+  { active: "bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.9)] ring-1 ring-purple-300", beatDot: "bg-purple-500/50" }, // Beat 4 (Purple / Violet)
+];
+
 export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   genre,
   onBack,
@@ -384,21 +392,46 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               </span>
             </div>
 
-            {/* Beat Readout & Measure Counter */}
-            <div className="flex items-center gap-2 font-mono">
+            {/* Beat Readout & Measure Counter with Colorful Jumping Dots */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono">
               <span className="px-2.5 py-1 rounded-lg bg-[#14161e] border border-[#282c38] text-xs font-bold text-[#f5b73d]">
                 BEAT {Math.floor(currentStep / 4) + 1} / 4
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-[#14161e] border border-[#282c38] text-xs font-bold text-[#06b6d4]">
                 STEP {currentStep + 1} / 16
               </span>
+
+              {/* 16-Step Animated Jumping Dots with 4-Beat Color Palette */}
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#07080a] border border-[#1b1e26] h-[28px]">
+                {Array.from({ length: 16 }).map((_, stepIdx) => {
+                  const isActive = isPlaying && currentStep === stepIdx;
+                  const isBeatStart = stepIdx % 4 === 0;
+                  const beatIdx = Math.floor(stepIdx / 4);
+                  const theme = BEAT_DOT_COLORS[beatIdx];
+
+                  return (
+                    <div
+                      key={stepIdx}
+                      className={`transition-all duration-75 ${
+                        stepIdx % 4 === 3 && stepIdx !== 15 ? "mr-1.5" : ""
+                      } ${
+                        isActive
+                          ? `w-3 h-2 rounded-full -translate-y-0.5 scale-110 ${theme.active}`
+                          : isBeatStart
+                          ? `w-2 h-2 rounded-full ${theme.beatDot}`
+                          : "w-1.5 h-1.5 rounded-full bg-[#1b1e26]"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           {/* Active Instrument Trigger Badges Footer */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-[#181a22] text-[11px]">
-            <span className="text-[#686d7c] font-semibold">
-              {language === "zh" ? "实时打击通道:" : "Live Sound Channels:"}
+            <span className="text-[#686d7c] font-semibold tracking-wider uppercase font-mono text-[10px]">
+              CHANNELS:
             </span>
             <div className="flex flex-wrap items-center gap-2 font-mono">
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
@@ -406,28 +439,28 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                   ? "bg-amber-500/25 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,183,61,0.5)] font-bold scale-105" 
                   : "bg-[#12141a] border-[#222632] text-[#6b7280]"
               }`}>
-                KICK 底鼓
+                KICK
               </span>
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
                 isPlaying && currentHits.hasSnare 
                   ? "bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.5)] font-bold scale-105" 
                   : "bg-[#12141a] border-[#222632] text-[#6b7280]"
               }`}>
-                SNARE 军鼓
+                SNARE
               </span>
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
                 isPlaying && currentHits.hasHihat 
                   ? "bg-yellow-500/25 border-yellow-400 text-yellow-300 shadow-[0_0_8px_rgba(234,179,8,0.5)] font-bold scale-105" 
                   : "bg-[#12141a] border-[#222632] text-[#6b7280]"
               }`}>
-                HI-HAT 踩镲
+                HI-HAT
               </span>
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
                 isPlaying && currentHits.hasPerc 
                   ? "bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.5)] font-bold scale-105" 
                   : "bg-[#12141a] border-[#222632] text-[#6b7280]"
               }`}>
-                PERC 打击乐
+                PERC
               </span>
               {auditionMode === "full" && (
                 <span className={`px-2 py-0.5 rounded-md border transition-all ${
@@ -435,7 +468,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                     ? "bg-purple-500/25 border-purple-400 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.5)] font-bold scale-105" 
                     : "bg-[#12141a] border-[#222632] text-[#6b7280]"
                 }`}>
-                  BASS 低音
+                  BASS
                 </span>
               )}
             </div>
