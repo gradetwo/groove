@@ -12,7 +12,21 @@ import {
   Check, 
   ExternalLink,
   ChevronRight,
-  Info
+  ChevronLeft,
+  ChevronDown,
+  Info,
+  Maximize2,
+  Minimize2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Minus,
+  Copy,
+  Trash2,
+  Sparkles,
+  Wand2,
+  Activity,
+  Layers
 } from "lucide-react";
 import { Genre, SequencerPattern, SequencerTrack } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
@@ -92,6 +106,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Category filter for the chip rail
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>("ALL");
 
+  // Sidebar collapse & Maximize states
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isEditorMaximized, setIsEditorMaximized] = useState<boolean>(false);
+
+  // Meter & quantization
+  const [timeSignature, setTimeSignature] = useState<string>(() => currentGenre.time_signature || "4/4");
+  const [resolution, setResolution] = useState<"1/8" | "1/16" | "1/32">("1/16");
+
+  // Visualizer canvas ref
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
 
@@ -123,6 +148,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     engine.setPattern(pattern);
     engine.setBpm(bpm);
     engine.setSwing(swing / 100);
+    engine.setTimeSignature(timeSignature);
+    engine.setResolution(resolution);
 
     if (onAudioEngineReady) {
       onAudioEngineReady(engine);
@@ -154,11 +181,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
         setCurrentGenre(found);
         setBpm(decoded.bpm);
         setSwing(decoded.swing);
+        if (decoded.timeSignature) setTimeSignature(decoded.timeSignature);
+        if (decoded.resolution) setResolution(decoded.resolution as any);
+
         const newPattern: SequencerPattern = {
           genre_id: decoded.genreId,
           bpm: decoded.bpm,
           scale: decoded.scale || "C minor",
           swing: decoded.swing,
+          timeSignature: decoded.timeSignature || "4/4",
+          resolution: (decoded.resolution as any) || "1/16",
+          totalSteps: decoded.totalSteps || decoded.tracks[0]?.steps?.length || 16,
           tracks: decoded.tracks.map((t) => ({
             track_id: t.track_id as any,
             name: t.name,
@@ -173,9 +206,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
         };
         setPattern(newPattern);
         if (engineRef.current) {
-          engineRef.current.setPattern(newPattern);
+          engineRef.current.setPattern(newPattern, true);
           engineRef.current.setBpm(decoded.bpm);
           engineRef.current.setSwing(decoded.swing / 100);
+          if (decoded.timeSignature) engineRef.current.setTimeSignature(decoded.timeSignature);
+          if (decoded.resolution) engineRef.current.setResolution(decoded.resolution as any);
         }
         showToast("Shared Pattern Loaded");
       }
@@ -184,7 +219,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   }, []);
 
-  // Sync engine on pattern/bpm/swing change
+  // Sync engine on pattern/bpm/swing/meter change
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.setPattern(pattern);
@@ -203,16 +238,80 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   }, [swing]);
 
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setTimeSignature(timeSignature);
+    }
+  }, [timeSignature]);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setResolution(resolution);
+    }
+  }, [resolution]);
+
+  // Real-time oscilloscope / spectrum canvas visualizer
+  useEffect(() => {
+    let animId: number;
+    const renderVisualizer = () => {
+      animId = requestAnimationFrame(renderVisualizer);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const analyser = engineRef.current?.getAnalyser();
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      if (!isPlaying || !analyser) {
+        ctx.fillStyle = "#1e2128";
+        const barCount = 18;
+        const bw = (w - (barCount - 1) * 2) / barCount;
+        for (let i = 0; i < barCount; i++) {
+          ctx.fillRect(i * (bw + 2), h - 3, bw, 3);
+        }
+        return;
+      }
+
+      const freqData = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(freqData);
+
+      const barCount = 18;
+      const bw = (w - (barCount - 1) * 2) / barCount;
+      const step = Math.max(1, Math.floor(freqData.length / barCount));
+
+      for (let i = 0; i < barCount; i++) {
+        const val = freqData[i * step] || 0;
+        const percent = val / 255;
+        const bh = Math.max(3, percent * (h - 2));
+
+        const grad = ctx.createLinearGradient(0, h, 0, 0);
+        grad.addColorStop(0, genreAccent || "#f5b73d");
+        grad.addColorStop(1, "#fff");
+        ctx.fillStyle = grad;
+        ctx.fillRect(i * (bw + 2), h - bh, bw, bh);
+      }
+    };
+
+    animId = requestAnimationFrame(renderVisualizer);
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, genreAccent]);
+
   // Switch genre (hot swap)
   const switchGenre = (genre: Genre, andPlay = false) => {
     setCurrentGenre(genre);
     onSelectGenre(genre);
     const newBpm = genre.default_bpm || 120;
     const newSwing = genre.sequencer_pattern.swing || 0;
+    const newSig = genre.time_signature || "4/4";
     const newPattern = JSON.parse(JSON.stringify(genre.sequencer_pattern));
 
     setBpm(newBpm);
     setSwing(newSwing);
+    setTimeSignature(newSig);
+    setResolution("1/16");
     setPattern(newPattern);
     setMutes(new Set());
     setSolos(new Set());
@@ -221,6 +320,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
       engineRef.current.setPattern(newPattern, true);
       engineRef.current.setBpm(newBpm);
       engineRef.current.setSwing(newSwing / 100);
+      engineRef.current.setTimeSignature(newSig);
+      engineRef.current.setResolution("1/16");
       if (andPlay) {
         if (!isPlaying) {
           engineRef.current.play();
@@ -246,18 +347,21 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   };
 
-  // Keyboard shortcut: Space to play/pause
+  // Keyboard shortcut: Space to play/pause, Esc to exit maximize
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.code === "Space") {
         e.preventDefault();
         handleTogglePlay();
+      } else if (e.key === "Escape" && isEditorMaximized) {
+        e.preventDefault();
+        setIsEditorMaximized(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying]);
+  }, [isPlaying, isEditorMaximized]);
 
   // Step Cell interaction
   const handleCellClick = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
@@ -442,6 +546,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
       bpm,
       swing,
       scale: pattern.scale,
+      timeSignature,
+      resolution,
+      totalSteps: pattern.tracks[0]?.steps?.length || 16,
       tracks: pattern.tracks.map((t) => ({
         track_id: t.track_id,
         name: t.name,
@@ -461,6 +568,241 @@ export const StudioView: React.FC<StudioViewProps> = ({
       });
     } else {
       showToast("URL: " + url);
+    }
+  };
+
+  // Step & meter calculations
+  const stepCount = pattern.tracks[0]?.steps?.length || 16;
+
+  const [timeNum, timeDenom] = useMemo(() => {
+    const parts = timeSignature.split("/");
+    return [parseInt(parts[0], 10) || 4, parseInt(parts[1], 10) || 4];
+  }, [timeSignature]);
+
+  const stepsPerBeat = useMemo(() => {
+    const stepsPerQuarter = resolution === "1/8" ? 2 : resolution === "1/32" ? 8 : 4;
+    return Math.max(1, Math.round(stepsPerQuarter * (4 / timeDenom)));
+  }, [resolution, timeDenom]);
+
+  const stepsPerBar = useMemo(() => {
+    return timeNum * stepsPerBeat;
+  }, [timeNum, stepsPerBeat]);
+
+  const barCount = Math.max(1, Math.ceil(stepCount / stepsPerBar));
+
+  // Step adding & trimming (+4 steps / -4 steps / +1 bar / +4 bars)
+  const handleAddSteps = (count = 4) => {
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        tr.steps = [...tr.steps, ...Array(count).fill(0)];
+        if (tr.velocity) tr.velocity = [...tr.velocity, ...Array(count).fill(100)];
+        if (tr.pitch) tr.pitch = [...tr.pitch, ...Array(count).fill(null)];
+      });
+      const newLen = copy.tracks[0]?.steps.length || 16;
+      copy.totalSteps = newLen;
+      if (engineRef.current) {
+        engineRef.current.setTotalSteps(newLen);
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? `已添加 +${count} 步 (共 ${stepCount + count} 步)` : `Added +${count} steps (${stepCount + count} total)`);
+  };
+
+  const handleRemoveSteps = (count = 4) => {
+    if (stepCount <= 4) {
+      showToast(language === "zh" ? "最少保留 4 步" : "Minimum 4 steps");
+      return;
+    }
+    const newLen = Math.max(4, stepCount - count);
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        tr.steps = tr.steps.slice(0, newLen);
+        if (tr.velocity) tr.velocity = tr.velocity.slice(0, newLen);
+        if (tr.pitch) tr.pitch = tr.pitch.slice(0, newLen);
+      });
+      copy.totalSteps = newLen;
+      if (engineRef.current) {
+        engineRef.current.setTotalSteps(newLen);
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? `已删减 -${count} 步 (共 ${newLen} 步)` : `Removed -${count} steps (${newLen} total)`);
+  };
+
+  const handleSetStepCount = (target: number) => {
+    if (target === stepCount) return;
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        if (target > tr.steps.length) {
+          const diff = target - tr.steps.length;
+          tr.steps = [...tr.steps, ...Array(diff).fill(0)];
+          if (tr.velocity) tr.velocity = [...tr.velocity, ...Array(diff).fill(100)];
+          if (tr.pitch) tr.pitch = [...tr.pitch, ...Array(diff).fill(null)];
+        } else {
+          tr.steps = tr.steps.slice(0, target);
+          if (tr.velocity) tr.velocity = tr.velocity.slice(0, target);
+          if (tr.pitch) tr.pitch = tr.pitch.slice(0, target);
+        }
+      });
+      copy.totalSteps = target;
+      if (engineRef.current) {
+        engineRef.current.setTotalSteps(target);
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? `步长设置为 ${target} 步` : `Grid set to ${target} steps`);
+  };
+
+  // Duplicate Bar 1 to subsequent bars
+  const handleDuplicateBar1 = () => {
+    if (stepCount <= stepsPerBar) {
+      handleAddSteps(stepsPerBar);
+    }
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        const bar1Steps = tr.steps.slice(0, stepsPerBar);
+        const bar1Vel = tr.velocity ? tr.velocity.slice(0, stepsPerBar) : Array(stepsPerBar).fill(100);
+        const bar1Pitch = tr.pitch ? tr.pitch.slice(0, stepsPerBar) : Array(stepsPerBar).fill(null);
+        
+        for (let i = stepsPerBar; i < tr.steps.length; i++) {
+          tr.steps[i] = bar1Steps[i % stepsPerBar];
+          if (tr.velocity) tr.velocity[i] = bar1Vel[i % stepsPerBar];
+          if (tr.pitch) tr.pitch[i] = bar1Pitch[i % stepsPerBar];
+        }
+      });
+      if (engineRef.current) {
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? "已将第 1 小节复制到全部小节" : "Duplicated Bar 1 to all bars");
+  };
+
+  // Clear all steps
+  const handleClearAll = () => {
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        tr.steps = Array(tr.steps.length).fill(0);
+      });
+      if (engineRef.current) {
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? "已清空所有轨道步进" : "Cleared all pattern steps");
+  };
+
+  // Humanize velocity
+  const handleHumanize = () => {
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        const vel = tr.velocity ? [...tr.velocity] : Array(tr.steps.length).fill(100);
+        tr.steps.forEach((v: number, idx: number) => {
+          if (v > 0) {
+            const delta = Math.floor(Math.random() * 21) - 10;
+            vel[idx] = Math.max(50, Math.min(127, (vel[idx] || 100) + delta));
+          }
+        });
+        tr.velocity = vel;
+      });
+      if (engineRef.current) {
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? "已注入微力度拟人化 (±10%)" : "Humanized note velocities (±10%)");
+  };
+
+  // Track shift left/right
+  const handleShiftTrack = (trackIdx: number, dir: -1 | 1) => {
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const tr = copy.tracks[trackIdx];
+      const len = tr.steps.length;
+      if (dir === 1) {
+        tr.steps = [tr.steps[len - 1], ...tr.steps.slice(0, len - 1)];
+        if (tr.velocity) tr.velocity = [tr.velocity[len - 1], ...tr.velocity.slice(0, len - 1)];
+        if (tr.pitch) tr.pitch = [tr.pitch[len - 1], ...tr.pitch.slice(0, len - 1)];
+      } else {
+        tr.steps = [...tr.steps.slice(1), tr.steps[0]];
+        if (tr.velocity) tr.velocity = [...tr.velocity.slice(1), tr.velocity[0]];
+        if (tr.pitch) tr.pitch = [...tr.pitch.slice(1), tr.pitch[0]];
+      }
+      if (engineRef.current) {
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+  };
+
+  // Smart Fill for a track
+  const handleSmartFillTrack = (trackIdx: number) => {
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const tr = copy.tracks[trackIdx];
+      const tid = tr.track_id;
+      const len = tr.steps.length;
+      tr.steps = Array(len).fill(0);
+      if (!tr.velocity) tr.velocity = Array(len).fill(100);
+
+      for (let i = 0; i < len; i++) {
+        const beatPos = i % stepsPerBeat;
+        const beatNum = Math.floor(i / stepsPerBeat) % timeNum;
+        if (tid === "kick") {
+          if (beatPos === 0) { tr.steps[i] = 1; tr.velocity[i] = 120; }
+        } else if (tid === "snare") {
+          if ((beatNum === 1 || beatNum === 3) && beatPos === 0) { tr.steps[i] = 1; tr.velocity[i] = 115; }
+        } else if (tid === "hihat") {
+          if (i % 2 === 0) { tr.steps[i] = (i % 4 === 2) ? 2 : 1; tr.velocity[i] = (i % 4 === 2) ? 90 : 75; }
+        } else if (tid === "bass") {
+          if (beatPos === 2 || (beatPos === 0 && beatNum % 2 === 0)) { tr.steps[i] = 1; tr.velocity[i] = 110; }
+        } else if (tid === "chords") {
+          if (beatPos === 2) { tr.steps[i] = 1; tr.velocity[i] = 95; }
+        } else if (tid === "percussion") {
+          if (beatPos === 3 || (beatNum === 2 && beatPos === 1)) { tr.steps[i] = 1; tr.velocity[i] = 85; }
+        } else {
+          if (i % stepsPerBar === 0) { tr.steps[i] = 1; tr.velocity[i] = 90; }
+        }
+      }
+      if (engineRef.current) {
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? `已智能填充 ${pattern.tracks[trackIdx].name}` : `Smart filled ${pattern.tracks[trackIdx].name}`);
+  };
+
+  // Clear single track
+  const handleClearTrack = (trackIdx: number) => {
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks[trackIdx].steps = Array(copy.tracks[trackIdx].steps.length).fill(0);
+      if (engineRef.current) {
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+    showToast(language === "zh" ? `已清空 ${pattern.tracks[trackIdx].name}` : `Cleared ${pattern.tracks[trackIdx].name}`);
+  };
+
+  // Track volume change
+  const handleTrackVolumeChange = (trackIdx: number, vol: number) => {
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.tracks[trackIdx].volume = vol;
+      return copy;
+    });
+    if (engineRef.current) {
+      engineRef.current.setTrackState(trackIdx, { volume: vol });
     }
   };
 
@@ -554,201 +896,263 @@ export const StudioView: React.FC<StudioViewProps> = ({
       </div>
 
       {/* Main Two-Column Layout (main: 352px 1fr) */}
-      <main className="grid grid-cols-1 lg:grid-cols-[352px_1fr] gap-5 px-4 sm:px-7 py-3 pb-16 items-start">
+      <main
+        className={`grid ${
+          isSidebarCollapsed || isEditorMaximized
+            ? "grid-cols-1"
+            : "grid-cols-1 lg:grid-cols-[352px_1fr]"
+        } gap-5 px-4 sm:px-7 py-3 pb-16 items-start`}
+      >
         {/* Left Column: Info Dossier (.info) */}
-        <aside className="sticky top-16 flex flex-col gap-3.5 order-2 lg:order-1">
-          {/* Hero Genre Card (.blk.g-head) */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-            <div className="font-['Space_Grotesk'] font-bold text-2xl sm:text-[26px] leading-[1.15] text-[var(--g)] tracking-tight">
-              {currentGenre.name}
-            </div>
-            <div className="text-xs text-[#8b8f99] mt-1 font-medium">
-              {currentGenre.aliases.length > 0 ? currentGenre.aliases[0] : currentGenre.category}
-            </div>
-
-            {/* Era & Place */}
-            <div className="flex gap-3.5 mt-2.5 font-['JetBrains_Mono'] text-xs text-[#8b8f99] flex-wrap">
-              <span>
-                {t("era")}: <b className="text-[#e9e7e0] font-normal">{currentGenre.origin_year}</b>
-              </span>
-              <span>
-                {t("place")}: <b className="text-[#e9e7e0] font-normal">{currentGenre.origin_place[language]}</b>
-              </span>
-            </div>
-
-            {/* Blurb */}
-            <p className="mt-3 text-[13px] text-[#c6c4bd] leading-[1.75]">
-              {currentGenre.cultural_context[language]}
-            </p>
-
-            {/* 3 Stats Grid */}
-            <div className="grid grid-cols-3 gap-2 mt-3.5">
-              <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
-                <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
-                  {t("range")}
+        {!isSidebarCollapsed && !isEditorMaximized && (
+          <aside className="sticky top-16 flex flex-col gap-3.5 order-2 lg:order-1">
+            {/* Hero Genre Card (.blk.g-head) */}
+            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-['Space_Grotesk'] font-bold text-2xl sm:text-[26px] leading-[1.15] text-[var(--g)] tracking-tight">
+                    {currentGenre.name}
+                  </div>
+                  <div className="text-xs text-[#8b8f99] mt-1 font-medium">
+                    {currentGenre.aliases.length > 0 ? currentGenre.aliases[0] : currentGenre.category}
+                  </div>
                 </div>
-                <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5">
-                  {currentGenre.bpm_range}
-                </div>
+                <button
+                  onClick={() => setIsSidebarCollapsed(true)}
+                  className="p-1.5 text-[#8b8f99] hover:text-[#e9e7e0] rounded-lg hover:bg-[#1a1c21] transition-colors shrink-0"
+                  title={language === "zh" ? "收起左侧信息栏" : "Collapse sidebar"}
+                >
+                  <PanelLeftClose className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
-                <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
-                  {t("keyLabel")}
-                </div>
-                <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5 truncate">
-                  {pattern.scale || "C minor"}
-                </div>
-              </div>
-
-              <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
-                <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
-                  {t("time")}
-                </div>
-                <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5">
-                  {currentGenre.time_signature || "4/4"}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Drum DNA Card (.blk) */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-            <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
-              {t("dna")}
-            </h3>
-            <div className="divide-y divide-[#1a1c21]">
-              <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
-                <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#ff5964]">
-                  KICK
+              {/* Era & Place */}
+              <div className="flex gap-3.5 mt-2.5 font-['JetBrains_Mono'] text-xs text-[#8b8f99] flex-wrap">
+                <span>
+                  {t("era")}: <b className="text-[#e9e7e0] font-normal">{currentGenre.origin_year}</b>
                 </span>
-                <span className="text-xs text-[#b9b7b0] leading-relaxed">
-                  {currentGenre.drum_pattern.kick[language]}
+                <span>
+                  {t("place")}: <b className="text-[#e9e7e0] font-normal">{currentGenre.origin_place[language]}</b>
                 </span>
               </div>
 
-              <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
-                <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#ffb65c]">
-                  SNARE
-                </span>
-                <span className="text-xs text-[#b9b7b0] leading-relaxed">
-                  {currentGenre.drum_pattern.snare_clap[language]}
-                </span>
-              </div>
+              {/* Blurb */}
+              <p className="mt-3 text-[13px] text-[#c6c4bd] leading-[1.75]">
+                {currentGenre.cultural_context[language]}
+              </p>
 
-              <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
-                <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#45e0c9]">
-                  HI-HAT
-                </span>
-                <span className="text-xs text-[#b9b7b0] leading-relaxed">
-                  {currentGenre.drum_pattern.hihats[language]}
-                </span>
-              </div>
+              {/* 3 Stats Grid */}
+              <div className="grid grid-cols-3 gap-2 mt-3.5">
+                <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
+                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
+                    {t("range")}
+                  </div>
+                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5">
+                    {currentGenre.bpm_range}
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
-                <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#ff8a5c]">
-                  BASS
-                </span>
-                <span className="text-xs text-[#b9b7b0] leading-relaxed">
-                  {currentGenre.bass_pattern[language]}
-                </span>
+                <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
+                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
+                    {t("keyLabel")}
+                  </div>
+                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5 truncate">
+                    {pattern.scale || "C minor"}
+                  </div>
+                </div>
+
+                <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
+                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
+                    {t("time")}
+                  </div>
+                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5">
+                    {timeSignature || currentGenre.time_signature || "4/4"}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Harmony & Sound (.blk) */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-            <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
-              {t("harm")}
-            </h3>
-            <p className="text-[12.5px] text-[#b9b7b0] leading-[1.75]">
-              {currentGenre.key_characteristics[language]}
-            </p>
-          </div>
+            {/* Drum DNA Card (.blk) */}
+            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+                {t("dna")}
+              </h3>
+              <div className="divide-y divide-[#1a1c21]">
+                <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
+                  <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#ff5964]">
+                    KICK
+                  </span>
+                  <span className="text-xs text-[#b9b7b0] leading-relaxed">
+                    {currentGenre.drum_pattern.kick[language]}
+                  </span>
+                </div>
 
-          {/* Pro Tips (.blk) */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-            <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
-              {t("tips")}
-            </h3>
-            <div className="space-y-2">
-              <div className="flex gap-2 text-xs text-[#b9b7b0] leading-relaxed">
-                <span className="text-[var(--g)] shrink-0">▸</span>
-                <span>{currentGenre.drum_pattern.swing[language]}</span>
+                <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
+                  <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#ffb65c]">
+                    SNARE
+                  </span>
+                  <span className="text-xs text-[#b9b7b0] leading-relaxed">
+                    {currentGenre.drum_pattern.snare_clap[language]}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
+                  <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#45e0c9]">
+                    HI-HAT
+                  </span>
+                  <span className="text-xs text-[#b9b7b0] leading-relaxed">
+                    {currentGenre.drum_pattern.hihats[language]}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[52px_1fr] gap-2.5 py-1.5 items-baseline">
+                  <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.08em] font-bold text-[#ff8a5c]">
+                    BASS
+                  </span>
+                  <span className="text-xs text-[#b9b7b0] leading-relaxed">
+                    {currentGenre.bass_pattern[language]}
+                  </span>
+                </div>
               </div>
-              {currentGenre.common_chords.length > 0 && (
+            </div>
+
+            {/* Harmony & Sound (.blk) */}
+            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+                {t("harm")}
+              </h3>
+              <p className="text-[12.5px] text-[#b9b7b0] leading-[1.75]">
+                {currentGenre.key_characteristics[language]}
+              </p>
+            </div>
+
+            {/* Pro Tips (.blk) */}
+            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+                {t("tips")}
+              </h3>
+              <div className="space-y-2">
                 <div className="flex gap-2 text-xs text-[#b9b7b0] leading-relaxed">
                   <span className="text-[var(--g)] shrink-0">▸</span>
-                  <span>
-                    {language === "zh" ? "经典走向: " : "Progressions: "}
-                    <code className="font-mono text-[var(--g)] font-bold">
-                      {currentGenre.common_chords.join(" → ")}
-                    </code>
-                  </span>
+                  <span>{currentGenre.drum_pattern.swing[language]}</span>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Essential Tracks (.blk) */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-            <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
-              {t("refs")}
-            </h3>
-            <div className="divide-y divide-[#1a1c21]">
-              {currentGenre.representative_tracks.slice(0, 3).map((track, i) => (
-                <div key={i} className="flex justify-between gap-2.5 py-2 text-xs">
-                  <span className="text-[#e9e7e0] truncate">
-                    {track.link ? (
-                      <a
-                        href={track.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#e9e7e0] hover:text-[var(--g)] hover:underline"
-                      >
-                        {track.title}
-                      </a>
-                    ) : (
-                      track.title
-                    )}{" "}
-                    · <span className="text-[#8b8f99]">{track.artist}</span>
-                  </span>
-                  <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a5e68] shrink-0">
-                    {track.year}
-                  </span>
-                </div>
-              ))}
+                {currentGenre.common_chords.length > 0 && (
+                  <div className="flex gap-2 text-xs text-[#b9b7b0] leading-relaxed">
+                    <span className="text-[var(--g)] shrink-0">▸</span>
+                    <span>
+                      {language === "zh" ? "经典走向: " : "Progressions: "}
+                      <code className="font-mono text-[var(--g)] font-bold">
+                        {currentGenre.common_chords.join(" → ")}
+                      </code>
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* View full detail / Add to compare button */}
-            <div className="flex items-center gap-2 mt-3 pt-2">
-              <button
-                onClick={() => onViewDetail(currentGenre)}
-                className="flex-1 text-xs text-[#8b8f99] hover:text-[var(--g)] hover:border-[var(--g)] p-2 border border-[#23262d] rounded-lg transition-colors text-center"
-              >
-                {t("view_detail")} →
-              </button>
-              {onAddToCompare && (
+            {/* Essential Tracks (.blk) */}
+            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+                {t("refs")}
+              </h3>
+              <div className="divide-y divide-[#1a1c21]">
+                {currentGenre.representative_tracks.slice(0, 3).map((track, i) => (
+                  <div key={i} className="flex justify-between gap-2.5 py-2 text-xs">
+                    <span className="text-[#e9e7e0] truncate">
+                      {track.link ? (
+                        <a
+                          href={track.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#e9e7e0] hover:text-[var(--g)] hover:underline"
+                        >
+                          {track.title}
+                        </a>
+                      ) : (
+                        track.title
+                      )}{" "}
+                      · <span className="text-[#8b8f99]">{track.artist}</span>
+                    </span>
+                    <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a5e68] shrink-0">
+                      {track.year}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* View full detail / Add to compare button */}
+              <div className="flex items-center gap-2 mt-3 pt-2">
                 <button
-                  onClick={() => onAddToCompare(currentGenre)}
-                  className="text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] p-2 border border-[#23262d] rounded-lg transition-colors"
-                  title={t("compare_add")}
+                  onClick={() => onViewDetail(currentGenre)}
+                  className="flex-1 text-xs text-[#8b8f99] hover:text-[var(--g)] hover:border-[var(--g)] p-2 border border-[#23262d] rounded-lg transition-colors text-center"
                 >
-                  {t("compare")} +
+                  {t("view_detail")} →
                 </button>
-              )}
+                {onAddToCompare && (
+                  <button
+                    onClick={() => onAddToCompare(currentGenre)}
+                    className="text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] p-2 border border-[#23262d] rounded-lg transition-colors"
+                    title={t("compare_add")}
+                  >
+                    {t("compare")} +
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        )}
 
         {/* Right Column: The Sequencer (.seq) */}
-        <section className="bg-[#121317] border border-[#23262d] rounded-2xl p-4 sm:p-5 min-w-0 order-1 lg:order-2">
+        <section
+          className={
+            isEditorMaximized
+              ? "fixed inset-0 z-50 overflow-y-auto bg-[#0a0b0d] p-4 sm:p-7 flex flex-col"
+              : "bg-[#121317] border border-[#23262d] rounded-2xl p-4 sm:p-5 min-w-0 order-1 lg:order-2 shadow-2xl"
+          }
+        >
+          {/* Maximize Top Banner (Only visible in fullscreen mode) */}
+          {isEditorMaximized && (
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#1a1c21] shrink-0">
+              <div className="flex items-center gap-3">
+                <span
+                  className="w-3 h-3 rounded-full shadow-[0_0_10px_var(--g)]"
+                  style={{ backgroundColor: "var(--g)" }}
+                />
+                <span className="font-['Space_Grotesk'] font-bold text-xl text-[#e9e7e0]">
+                  {currentGenre.name}
+                </span>
+                <span className="font-['JetBrains_Mono'] text-xs text-[#8b8f99] px-2.5 py-0.5 rounded-lg bg-[#17181c] border border-[#23262d]">
+                  {timeSignature} · {bpm} BPM · {stepCount} STEPS ({barCount} BARS) · {resolution}
+                </span>
+              </div>
+              <button
+                onClick={() => setIsEditorMaximized(false)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] text-xs text-[#e9e7e0] rounded-xl font-medium transition-colors shadow-lg"
+              >
+                <Minimize2 className="w-4 h-4 text-[#f5b73d]" />
+                <span>{language === "zh" ? "退出全屏 (Esc)" : "Exit Fullscreen (Esc)"}</span>
+              </button>
+            </div>
+          )}
+
           {/* Transport Bar (.transport) */}
-          <div className="flex items-center gap-4 flex-wrap pb-4 border-b border-[#1a1c21] mb-4">
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap pb-4 border-b border-[#1a1c21] mb-3">
+            {/* Sidebar toggle button when collapsed */}
+            {isSidebarCollapsed && !isEditorMaximized && (
+              <button
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#f5b73d] px-2.5 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
+                title={language === "zh" ? "展开风格档案" : "Expand genre dossier"}
+              >
+                <PanelLeftOpen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{language === "zh" ? "风格" : "Info"}</span>
+              </button>
+            )}
+
             {/* Round Play Button (#playBtn) */}
             <button
               onClick={handleTogglePlay}
-              className={`w-[54px] height-[54px] h-[54px] rounded-full bg-[#f5b73d] flex items-center justify-center transition-transform hover:brightness-110 shrink-0 ${
+              className={`w-[52px] h-[52px] rounded-full bg-[#f5b73d] flex items-center justify-center transition-transform hover:brightness-110 shrink-0 shadow-[0_0_20px_rgba(245,183,61,0.25)] ${
                 isPlaying ? "animate-pulse-play" : ""
               }`}
               aria-label="Play / Pause"
@@ -760,8 +1164,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
               )}
             </button>
 
+            {/* Real-time Spectrum / Oscilloscope Visualizer Canvas */}
+            <div
+              className="flex items-center gap-1 px-2 py-1 bg-[#0d0e12] border border-[#1a1c21] rounded-lg h-[48px] shrink-0 hidden md:flex"
+              title="Real-time Audio Spectrum / 实时音频频谱"
+            >
+              <canvas ref={canvasRef} width={80} height={36} className="w-[80px] h-[36px] block rounded" />
+            </div>
+
             {/* BPM Slider Knob */}
-            <div className="flex flex-col gap-1 min-w-[140px] flex-1 sm:flex-initial">
+            <div className="flex flex-col gap-1 min-w-[130px] flex-1 sm:flex-initial">
               <div className="flex justify-between font-['JetBrains_Mono'] text-[10px] tracking-[0.14em] text-[#5a5e68]">
                 <span>{t("bpm")}</span>
                 <b className="text-[#e9e7e0] font-normal tracking-normal">{bpm}</b>
@@ -776,7 +1188,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
             </div>
 
             {/* Swing Slider Knob */}
-            <div className="flex flex-col gap-1 min-w-[130px] flex-1 sm:flex-initial">
+            <div className="flex flex-col gap-1 min-w-[120px] flex-1 sm:flex-initial">
               <div className="flex justify-between font-['JetBrains_Mono'] text-[10px] tracking-[0.14em] text-[#5a5e68]">
                 <span>{t("swing")}</span>
                 <b className="text-[#e9e7e0] font-normal tracking-normal">{swing}%</b>
@@ -790,11 +1202,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap ml-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap ml-auto">
               {/* Reset Preset (.t-btn) */}
               <button
                 onClick={handleResetPreset}
-                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
+                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] px-2.5 sm:px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
                 title={t("restore")}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -804,7 +1216,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {/* Export MIDI (.t-btn) */}
               <button
                 onClick={handleExportMidi}
-                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
+                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] px-2.5 sm:px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
                 title={t("export")}
               >
                 <Download className="w-3.5 h-3.5" />
@@ -814,53 +1226,223 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {/* Share Groove */}
               <button
                 onClick={handleShare}
-                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
+                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] px-2.5 sm:px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
                 title={t("share_groove")}
               >
                 <Share2 className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Fullscreen Maximize Toggle */}
+              <button
+                onClick={() => setIsEditorMaximized(!isEditorMaximized)}
+                className={`flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2 border rounded-lg transition-colors bg-[#0d0e12] ${
+                  isEditorMaximized
+                    ? "border-[#f5b73d] text-[#f5b73d]"
+                    : "border-[#23262d] text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d]"
+                }`}
+                title={
+                  isEditorMaximized
+                    ? language === "zh"
+                      ? "退出最大化 (Esc)"
+                      : "Exit Fullscreen (Esc)"
+                    : language === "zh"
+                    ? "最大化编辑器"
+                    : "Maximize Editor"
+                }
+              >
+                {isEditorMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                <span className="hidden md:inline">
+                  {isEditorMaximized
+                    ? language === "zh"
+                      ? "退出"
+                      : "Exit"
+                    : language === "zh"
+                    ? "最大化"
+                    : "Maximize"}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Sequencer Pro Toolbar: Time Sig, Resolution, Step Length & Pro DAW Operations */}
+          <div className="flex items-center justify-between gap-2.5 flex-wrap pb-3 mb-3 border-b border-[#1a1c21] text-xs">
+            {/* Left group: Time Sig & Resolution & Steps */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Time Signature */}
+              <div className="flex items-center gap-1.5 bg-[#0d0e12] border border-[#23262d] px-2.5 py-1 rounded-lg">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase">
+                  {language === "zh" ? "节拍" : "METER"}
+                </span>
+                <select
+                  value={timeSignature}
+                  onChange={(e) => setTimeSignature(e.target.value)}
+                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="4/4" className="bg-[#121317]">4/4</option>
+                  <option value="3/4" className="bg-[#121317]">3/4</option>
+                  <option value="6/8" className="bg-[#121317]">6/8</option>
+                  <option value="3/8" className="bg-[#121317]">3/8</option>
+                  <option value="5/4" className="bg-[#121317]">5/4</option>
+                  <option value="7/8" className="bg-[#121317]">7/8</option>
+                  <option value="12/8" className="bg-[#121317]">12/8</option>
+                </select>
+              </div>
+
+              {/* Quantize Resolution */}
+              <div className="flex items-center gap-1 bg-[#0d0e12] border border-[#23262d] p-0.5 rounded-lg">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase pl-2 pr-1">
+                  {language === "zh" ? "精度" : "GRID"}
+                </span>
+                {(["1/8", "1/16", "1/32"] as const).map((res) => (
+                  <button
+                    key={res}
+                    onClick={() => setResolution(res)}
+                    className={`px-2 py-0.5 rounded font-['JetBrains_Mono'] text-xs transition-colors ${
+                      resolution === res
+                        ? "bg-[#f5b73d] text-[#0a0b0d] font-bold shadow-sm"
+                        : "text-[#8b8f99] hover:text-[#e9e7e0]"
+                    }`}
+                  >
+                    {res}
+                  </button>
+                ))}
+              </div>
+
+              {/* Step Length Controls */}
+              <div className="flex items-center gap-1 bg-[#0d0e12] border border-[#23262d] px-2 py-1 rounded-lg">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1">
+                  {stepCount} {language === "zh" ? "步" : "STEPS"} ({barCount} {barCount === 1 ? "BAR" : "BARS"})
+                </span>
+                <button
+                  onClick={() => handleRemoveSteps(4)}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
+                  title={language === "zh" ? "删减 4 步" : "Remove 4 steps"}
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => handleAddSteps(4)}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
+                  title={language === "zh" ? "添加 4 步" : "Add 4 steps"}
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => handleAddSteps(stepsPerBar)}
+                  className="px-1.5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[10px] font-['JetBrains_Mono'] text-[#f5b73d] border border-[#23262d]"
+                  title={language === "zh" ? `添加 1 小节 (+${stepsPerBar} 步)` : `Add 1 Bar (+${stepsPerBar} steps)`}
+                >
+                  +1 Bar
+                </button>
+                <button
+                  onClick={() => handleAddSteps(stepsPerBar * 4)}
+                  className="px-1.5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[10px] font-['JetBrains_Mono'] text-[#f5b73d] border border-[#23262d] hidden xl:flex"
+                  title={language === "zh" ? `添加 4 小节 (+${stepsPerBar * 4} 步)` : `Add 4 Bars (+${stepsPerBar * 4} steps)`}
+                >
+                  +4 Bars
+                </button>
+              </div>
+
+              {/* Quick Step Length Presets */}
+              <div className="hidden lg:flex items-center gap-1">
+                {[16, 32, 48, 64].map((cnt) => (
+                  <button
+                    key={cnt}
+                    onClick={() => handleSetStepCount(cnt)}
+                    className={`px-1.5 py-0.5 rounded font-['JetBrains_Mono'] text-[10px] border transition-colors ${
+                      stepCount === cnt
+                        ? "bg-[#23262d] text-[#f5b73d] border-[#f5b73d]/50 font-bold"
+                        : "bg-[#0d0e12] text-[#5a5e68] border-[#1a1c21] hover:text-[#8b8f99]"
+                    }`}
+                  >
+                    {cnt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right group: Pro Sequence Operations (Duplicate Bar, Humanize, Clear All) */}
+            <div className="flex items-center gap-1.5 ml-auto">
+              <button
+                onClick={handleDuplicateBar1}
+                className="flex items-center gap-1 px-2.5 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#3a3e48] rounded-lg text-xs text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
+                title={language === "zh" ? "将第 1 小节节奏平铺复制到整段" : "Duplicate Bar 1 across all bars"}
+              >
+                <Copy className="w-3 h-3 text-[#ffb65c]" />
+                <span className="hidden sm:inline">{language === "zh" ? "复制小节1" : "Dup Bar 1"}</span>
+              </button>
+
+              <button
+                onClick={handleHumanize}
+                className="flex items-center gap-1 px-2.5 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#3a3e48] rounded-lg text-xs text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
+                title={language === "zh" ? "微随机化触发力度 (±10%)，带来真实人性律动" : "Humanize velocity jitter (±10%)"}
+              >
+                <Sparkles className="w-3 h-3 text-[#45e0c9]" />
+                <span className="hidden sm:inline">{language === "zh" ? "人性化" : "Humanize"}</span>
+              </button>
+
+              <button
+                onClick={handleClearAll}
+                className="flex items-center gap-1 px-2 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#ff5964]/50 rounded-lg text-xs text-[#8b8f99] hover:text-[#ff5964] transition-colors"
+                title={language === "zh" ? "清空所有步进" : "Clear all steps"}
+              >
+                <Trash2 className="w-3 h-3" />
               </button>
             </div>
           </div>
 
           {/* 8 Tracks Sequencer Matrix (#tracks) */}
           <div className="space-y-1 overflow-x-auto min-w-[620px] pb-2 relative">
-            {/* Step Indicator Ruler Header (1-16 grouped in 4-beat bars) */}
-            <div className="flex items-center gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-[620px]">
-              {/* Left Label aligned with track headers */}
-              <div className="flex-none w-[128px] pr-1 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none">
-                <span>16-STEP GRID</span>
-                <span className="text-[#3a3e48]">4/4</span>
+            {/* Step Indicator Ruler Header */}
+            <div className="flex items-center gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-max">
+              {/* Left Label aligned with 172px track headers */}
+              <div className="flex-none w-[172px] pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none">
+                <span>{stepCount} STEPS</span>
+                <span className="text-[#3a3e48]">{timeSignature}</span>
               </div>
 
-              {/* 16 Ruler Step Badges */}
+              {/* Dynamic Ruler Step Badges */}
               <div className="flex-1 flex gap-1 relative">
-                {Array.from({ length: 16 }, (_, stepIdx) => {
-                  const beatNum = Math.floor(stepIdx / 4) + 1;
-                  const subStep = (stepIdx % 4) + 1;
-                  const isDownbeat = stepIdx % 4 === 0;
-                  const isMeasureBreak = stepIdx % 4 === 0 && stepIdx !== 0;
+                {Array.from({ length: stepCount }, (_, stepIdx) => {
+                  const beatIdx = Math.floor(stepIdx / stepsPerBeat);
+                  const subStep = (stepIdx % stepsPerBeat) + 1;
+                  const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
+                  const isBeatStart = stepIdx % stepsPerBeat === 0;
+                  const isSubBeatBreak = !isBarStart && isBeatStart && stepsPerBeat >= 4;
                   const isCurrent = isPlaying && currentStep === stepIdx;
                   const stepStr = String(stepIdx + 1).padStart(2, "0");
 
                   return (
                     <div
                       key={stepIdx}
-                      className={`flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border ${
-                        isMeasureBreak ? "ml-2 sm:ml-2.5" : ""
+                      className={`min-w-[24px] flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border ${
+                        isBarStart
+                          ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/70"
+                          : isSubBeatBreak
+                          ? "ml-1.5 sm:ml-2"
+                          : ""
                       } ${
                         isCurrent
                           ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] font-bold scale-[1.03]"
-                          : isDownbeat
+                          : isBeatStart
                           ? "bg-[#171920] border-[#2b2e38] text-[#e9e7e0]"
                           : "bg-[#101115] border-[#1c1d22] text-[#5a5e68]"
                       }`}
-                      title={`Step ${stepIdx + 1} (Beat ${beatNum}.${subStep})`}
+                      title={`Step ${stepIdx + 1} (Beat ${beatIdx + 1}.${subStep})`}
                     >
                       <span className="font-['JetBrains_Mono'] text-[10px] leading-tight font-bold tracking-tight">
                         {stepStr}
                       </span>
-                      <span className={`font-['JetBrains_Mono'] text-[7.5px] leading-none ${isCurrent ? "text-[#f5b73d]" : isDownbeat ? "text-[#8b8f99]" : "text-[#3e424d]"}`}>
-                        {isDownbeat ? `B${beatNum}` : `.${subStep}`}
+                      <span
+                        className={`font-['JetBrains_Mono'] text-[7.5px] leading-none ${
+                          isCurrent
+                            ? "text-[#f5b73d]"
+                            : isBeatStart
+                            ? "text-[#8b8f99]"
+                            : "text-[#3e424d]"
+                        }`}
+                      >
+                        {isBeatStart ? `B${beatIdx + 1}` : `.${subStep}`}
                       </span>
                     </div>
                   );
@@ -875,68 +1457,112 @@ export const StudioView: React.FC<StudioViewProps> = ({
               const anySolo = solos.size > 0;
               const isSilenced = isMute || (anySolo && !isSolo);
               const isHatTrack = track.track_id === "hihat" || track.name.toLowerCase().includes("hat");
+              const trackVol = track.volume !== undefined ? track.volume : 0.8;
 
               return (
                 <div
                   key={track.track_id}
-                  className={`flex items-center gap-3 py-1.5 transition-opacity ${
+                  className={`flex items-center gap-3 py-1.5 transition-opacity min-w-max ${
                     isSilenced ? "opacity-30" : "opacity-100"
                   }`}
                   style={{ ["--tc" as any]: meta.color }}
                 >
-                  {/* Track Header (.trk-head) */}
-                  <div className="flex-none w-[128px] flex items-center gap-2 pr-1">
-                    {/* Glowing vertical swatch */}
-                    <span
-                      className="w-1 h-7 rounded-sm shadow-[0_0_8px_var(--tc)]"
-                      style={{ backgroundColor: meta.color }}
-                    />
-
-                    {/* Track Title & Subtitle */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-['JetBrains_Mono'] text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate">
+                  {/* Track Header (.trk-head) - 172px width */}
+                  <div className="flex-none w-[172px] pr-2 flex flex-col justify-center gap-1 select-none">
+                    {/* Upper row: Swatch + Title + Mute / Solo */}
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0"
+                        style={{ backgroundColor: meta.color }}
+                      />
+                      <span className="font-['JetBrains_Mono'] text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate flex-1">
                         {meta.name}
+                      </span>
+                      <div className="flex gap-1 shrink-0">
+                        <button
+                          onClick={() => toggleMute(trackIdx)}
+                          className={`w-4 h-4 font-['JetBrains_Mono'] text-[8.5px] border rounded transition-colors flex items-center justify-center ${
+                            isMute
+                              ? "border-[var(--tc)] text-[var(--tc)] bg-transparent font-bold"
+                              : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
+                          }`}
+                          title={language === "zh" ? "静音轨道" : "Mute track"}
+                        >
+                          M
+                        </button>
+                        <button
+                          onClick={() => toggleSolo(trackIdx)}
+                          className={`w-4 h-4 font-['JetBrains_Mono'] text-[8.5px] border rounded transition-colors flex items-center justify-center ${
+                            isSolo
+                              ? "border-[#f5b73d] text-[#f5b73d] bg-[#f5b73d]/10 font-bold"
+                              : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
+                          }`}
+                          title={language === "zh" ? "独奏轨道" : "Solo track"}
+                        >
+                          S
+                        </button>
                       </div>
-                      <small className="block text-[9px] text-[#5a5e68] tracking-[0.1em] truncate">
-                        {meta.sub[language]}
-                      </small>
                     </div>
 
-                    {/* Mute / Solo Buttons (.ms) */}
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => toggleMute(trackIdx)}
-                        className={`w-5 h-5 font-['JetBrains_Mono'] text-[9px] border rounded transition-colors flex items-center justify-center ${
-                          isMute
-                            ? "border-[var(--tc)] text-[var(--tc)] bg-transparent font-bold"
-                            : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
-                        }`}
-                        title="Mute"
-                      >
-                        M
-                      </button>
-                      <button
-                        onClick={() => toggleSolo(trackIdx)}
-                        className={`w-5 h-5 font-['JetBrains_Mono'] text-[9px] border rounded transition-colors flex items-center justify-center ${
-                          isSolo
-                            ? "border-[#f5b73d] text-[#f5b73d] bg-[#f5b73d]/10 font-bold"
-                            : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
-                        }`}
-                        title="Solo"
-                      >
-                        S
-                      </button>
+                    {/* Lower row: Volume slider + Track actions (Shift, Smart Fill, Clear) */}
+                    <div className="flex items-center justify-between gap-1 text-[#5a5e68]">
+                      {/* Mini Volume Slider */}
+                      <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%`}>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={trackVol}
+                          onChange={(e) => handleTrackVolumeChange(trackIdx, +e.target.value)}
+                          className="w-12 h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Track Quick Actions */}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => handleShiftTrack(trackIdx, -1)}
+                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-[10px]"
+                          title={language === "zh" ? "向左位移 1 步" : "Shift left 1 step"}
+                        >
+                          ◀
+                        </button>
+                        <button
+                          onClick={() => handleShiftTrack(trackIdx, 1)}
+                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-[10px]"
+                          title={language === "zh" ? "向右位移 1 步" : "Shift right 1 step"}
+                        >
+                          ▶
+                        </button>
+                        <button
+                          onClick={() => handleSmartFillTrack(trackIdx)}
+                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#45e0c9] flex items-center justify-center text-[10px]"
+                          title={language === "zh" ? "智能生成常规节拍" : "Smart fill rhythm"}
+                        >
+                          🎲
+                        </button>
+                        <button
+                          onClick={() => handleClearTrack(trackIdx)}
+                          className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#ff5964] flex items-center justify-center text-[10px]"
+                          title={language === "zh" ? "清空轨道" : "Clear track"}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 16 Step Grid (.grid) */}
+                  {/* Step Grid (.grid) */}
                   <div className="flex-1 flex gap-1 relative">
                     {track.steps.map((stepVal, stepIdx) => {
                       const isOn = stepVal > 0;
                       const vel = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
                       const isAcc = vel >= 115;
                       const isPlayhead = isPlaying && currentStep === stepIdx;
-                      const isMeasureBreak = stepIdx % 4 === 0 && stepIdx !== 0;
+                      const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
+                      const isBeatStart = stepIdx % stepsPerBeat === 0;
+                      const isSubBeatBreak = !isBarStart && isBeatStart && stepsPerBeat >= 4;
 
                       // Hat shapes: 1 = closed, 2 = open (round), 3 = triplet roll (striped)
                       const isHatRound = isHatTrack && stepVal === 2;
@@ -948,8 +1574,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onClick={(e) => handleCellClick(trackIdx, stepIdx, e)}
                           onPointerDown={(e) => handlePointerDown(trackIdx, stepIdx, e)}
                           onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
-                          className={`flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none ${
-                            isMeasureBreak ? "ml-2 sm:ml-2.5" : ""
+                          className={`min-w-[24px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none ${
+                            isBarStart
+                              ? "ml-3 sm:ml-4"
+                              : isSubBeatBreak
+                              ? "ml-1.5 sm:ml-2"
+                              : ""
                           } ${
                             isHatRound ? "rounded-full" : "rounded"
                           } ${
@@ -998,10 +1628,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
           </div>
 
           {/* Bottom Hint Note (.seq-note) */}
-          <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-[0.04em] leading-relaxed border-t border-[#1a1c21] pt-3">
-            {language === "zh"
-              ? "点击 / 拖动步进格编辑 · SHIFT+点击 = 重音 · HI-HAT 轨单击循环：闭镲 → 开镲 → 三连滚 · 切换曲风即时热替换 Pattern"
-              : "Click / drag cells to edit · SHIFT+click = accent · HI-HAT lane cycles: closed → open → triplet roll · Switching genre hot-swaps pattern"}
+          <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-[0.04em] leading-relaxed border-t border-[#1a1c21] pt-3 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              {language === "zh"
+                ? "点击 / 拖动步进格编辑 · SHIFT+点击 = 重音 · HI-HAT 轨单击循环：闭镲 → 开镲 → 三连滚 · ◀/▶ 位移 · 🎲 智能填充"
+                : "Click / drag cells to edit · SHIFT+click = accent · HI-HAT lane cycles: closed → open → triplet roll · ◀/▶ shift · 🎲 smart fill"}
+            </div>
+            <div className="text-[#8b8f99]">
+              {isEditorMaximized ? (language === "zh" ? "按 Esc 退出最大化" : "Press Esc to exit fullscreen") : ""}
+            </div>
           </div>
         </section>
       </main>

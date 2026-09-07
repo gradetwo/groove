@@ -61,8 +61,13 @@ interface MidiEvent {
 export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
   const { bpm, pattern } = options;
   const TICKS_PER_QUARTER = 480;
-  const TICKS_PER_16TH = TICKS_PER_QUARTER / 4; // 120 ticks per 16th step
-  const NOTE_DURATION_TICKS = 100; // 16th note gate
+  const resolution = pattern.resolution || "1/16";
+  const ticksPerStep = resolution === "1/8" 
+    ? TICKS_PER_QUARTER / 2 
+    : resolution === "1/32" 
+    ? TICKS_PER_QUARTER / 8 
+    : TICKS_PER_QUARTER / 4;
+  const noteDurationTicks = Math.round(ticksPerStep * 0.85);
 
   const allEvents: MidiEvent[] = [];
 
@@ -97,16 +102,24 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
     const steps = track.steps || [];
     const velocities = track.velocity || [];
     const pitches = track.pitch || [];
+    const isHat = track.track_id === "hihat" || track.name.toLowerCase().includes("hat");
 
     steps.forEach((stepVal, stepIdx) => {
-      if (stepVal !== 1) return;
+      if (stepVal <= 0) return;
 
-      const tickStart = stepIdx * TICKS_PER_16TH;
-      const tickEnd = tickStart + NOTE_DURATION_TICKS;
+      const tickStart = stepIdx * ticksPerStep;
+      const tickEnd = tickStart + noteDurationTicks;
       const vel = velocities[stepIdx] !== undefined ? velocities[stepIdx] : 100;
-      const pitchOffset = (pitches[stepIdx] !== undefined && pitches[stepIdx] !== null) 
+      let pitchOffset = (pitches[stepIdx] !== undefined && pitches[stepIdx] !== null) 
         ? pitches[stepIdx]! 
         : mapping.baseNote;
+      
+      if (isHat) {
+        if (stepVal === 2) pitchOffset = 46; // GM Open Hi-Hat
+        else if (stepVal === 3) pitchOffset = 44; // GM Pedal Hi-Hat
+        else pitchOffset = 42; // GM Closed Hi-Hat
+      }
+
       const noteNumber = Math.max(0, Math.min(127, pitchOffset));
 
       // For chords, generate triad

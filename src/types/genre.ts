@@ -52,6 +52,9 @@ export interface SequencerPattern {
   bpm: number;
   scale: string;
   swing?: number; // 0 - 100
+  timeSignature?: string; // e.g. "4/4", "3/4", "6/8", "3/8", "5/4", "7/8"
+  resolution?: "1/8" | "1/16" | "1/32";
+  totalSteps?: number;
   tracks: SequencerTrack[];
 }
 

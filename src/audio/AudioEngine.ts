@@ -32,6 +32,11 @@ export class AudioEngine {
   private lastReportedStep: number = -1;
   private rafId: number | null = null;
 
+  // Meter and quantization
+  private totalSteps: number = 16;
+  private resolution: "1/8" | "1/16" | "1/32" = "1/16";
+  private timeSignature: string = "4/4";
+
   private lookaheadMs: number = 25; // How frequently to call scheduler (ms)
   private scheduleAheadSec: number = 0.12; // How far ahead to schedule audio (sec)
 
@@ -114,6 +119,19 @@ export class AudioEngine {
 
   public setPattern(pattern: SequencerPattern, resetStates = false): void {
     this.pattern = pattern;
+    if (pattern.totalSteps) {
+      this.totalSteps = pattern.totalSteps;
+    } else if (pattern.tracks && pattern.tracks.length > 0 && pattern.tracks[0].steps) {
+      this.totalSteps = pattern.tracks[0].steps.length;
+    } else {
+      this.totalSteps = 16;
+    }
+    if (pattern.resolution) {
+      this.resolution = pattern.resolution;
+    }
+    if (pattern.timeSignature) {
+      this.timeSignature = pattern.timeSignature;
+    }
     if (resetStates || this.trackStates.length !== pattern.tracks.length) {
       this.trackStates = pattern.tracks.map((t) => ({
         mute: t.mute || false,
@@ -122,6 +140,40 @@ export class AudioEngine {
         pan: t.pan !== undefined ? t.pan : 0,
       }));
     }
+  }
+
+  public setTotalSteps(steps: number): void {
+    this.totalSteps = Math.max(4, steps);
+  }
+
+  public getTotalSteps(): number {
+    return this.totalSteps;
+  }
+
+  public setResolution(resolution: "1/8" | "1/16" | "1/32"): void {
+    this.resolution = resolution;
+  }
+
+  public getResolution(): "1/8" | "1/16" | "1/32" {
+    return this.resolution;
+  }
+
+  public setTimeSignature(sig: string): void {
+    this.timeSignature = sig;
+  }
+
+  public getTimeSignature(): string {
+    return this.timeSignature;
+  }
+
+  public getStepDuration(): number {
+    const beatSec = 60.0 / this.bpm;
+    if (this.resolution === "1/8") {
+      return beatSec / 2;
+    } else if (this.resolution === "1/32") {
+      return beatSec / 8;
+    }
+    return beatSec / 4;
   }
 
   public setBpm(bpm: number): void {
@@ -252,7 +304,8 @@ export class AudioEngine {
   private schedulerLoop(): void {
     if (!this.ctx || !this.isPlaying || !this.pattern) return;
 
-    const stepDur = (60.0 / this.bpm) / 4;
+    const stepDur = this.getStepDuration();
+    const stepsCount = this.totalSteps > 0 ? this.totalSteps : 16;
 
     while (this.nextStepTime < this.ctx.currentTime + this.scheduleAheadSec) {
       const step = this.currentStep;
@@ -265,7 +318,7 @@ export class AudioEngine {
 
       // Keep monotonic un-swung grid advancement
       this.nextStepTime += stepDur;
-      this.currentStep = (this.currentStep + 1) % 16;
+      this.currentStep = (this.currentStep + 1) % stepsCount;
     }
   }
 
@@ -279,12 +332,14 @@ export class AudioEngine {
       if (state.mute) return;
       if (anySolo && !state.solo) return;
 
-      const stepVal = track.steps[step];
+      const trackStepsLen = track.steps ? track.steps.length : 16;
+      const stepIdx = trackStepsLen > 0 ? step % trackStepsLen : step;
+      const stepVal = track.steps ? track.steps[stepIdx] : 0;
       const isStepActive = stepVal > 0;
       if (isStepActive) {
-        const velVal = track.velocity && track.velocity[step] !== undefined ? track.velocity[step] : 100;
+        const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
         const normalizedVel = (velVal / 127) * state.volume;
-        const pitchVal = track.pitch && track.pitch[step] !== undefined && track.pitch[step] !== null ? track.pitch[step]! : 0;
+        const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
         this.triggerInstrument(trackIdx, track.name, time, normalizedVel, pitchVal, stepVal, stepDur);
       }
     });
@@ -305,7 +360,7 @@ export class AudioEngine {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
     if (this.ctx.state === "suspended") this.ctx.resume();
-    const stepDur = (60.0 / this.bpm) / 4;
+    const stepDur = this.getStepDuration();
     const pitchVal = pitch !== null && pitch !== undefined && pitch > 0 ? pitch : 0;
     this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur);
   }

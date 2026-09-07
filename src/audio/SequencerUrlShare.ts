@@ -10,6 +10,9 @@ export interface SharedSequencerState {
   bpm: number;
   swing: number;
   scale?: string;
+  timeSignature?: string;
+  resolution?: "1/8" | "1/16" | "1/32";
+  totalSteps?: number;
   tracks: Array<{
     track_id: string;
     name: string;
@@ -29,9 +32,9 @@ export interface SharedSequencerState {
 export function encodeSharedSequencer(state: SharedSequencerState): string {
   try {
     const compactTracks = state.tracks.map((t) => {
-      const hasMultiVal = t.steps.some((s) => s > 1);
+      const hasMultiVal = t.steps.some((s) => s > 1) || t.steps.length !== 16;
       let mask = 0;
-      for (let i = 0; i < 16; i++) {
+      for (let i = 0; i < Math.min(16, t.steps.length); i++) {
         if (t.steps[i] > 0) {
           mask |= (1 << i);
         }
@@ -56,6 +59,9 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
       b: state.bpm,
       s: state.swing,
       sc: state.scale || "C minor",
+      ts: state.timeSignature || "4/4",
+      rs: state.resolution || "1/16",
+      stLen: state.totalSteps || state.tracks[0]?.steps?.length || 16,
       t: compactTracks,
     };
 
@@ -89,7 +95,7 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
 
     const tracks = payload.t.map((ct: any) => {
       let steps: number[];
-      if (Array.isArray(ct.st) && ct.st.length === 16) {
+      if (Array.isArray(ct.st) && ct.st.length > 0) {
         steps = ct.st;
       } else {
         const mask = ct.m || 0;
@@ -99,13 +105,14 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
         }
       }
 
+      const stepsLen = steps.length;
       return {
         track_id: ct.id || "track",
         name: ct.n || "Track",
         instrument: ct.ins || "synth",
         steps,
-        velocity: ct.v || Array(16).fill(100),
-        pitch: ct.p || Array(16).fill(null),
+        velocity: ct.v || Array(stepsLen).fill(100),
+        pitch: ct.p || Array(stepsLen).fill(null),
         mute: Boolean(ct.mu),
         solo: Boolean(ct.so),
         volume: ct.vol !== undefined ? ct.vol / 100 : 0.8,
@@ -117,6 +124,9 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
       bpm: Number(payload.b) || 120,
       swing: Number(payload.s) || 0,
       scale: payload.sc || "C minor",
+      timeSignature: payload.ts || "4/4",
+      resolution: payload.rs || "1/16",
+      totalSteps: Number(payload.stLen) || (tracks[0] ? tracks[0].steps.length : 16),
       tracks,
     };
   } catch (err) {

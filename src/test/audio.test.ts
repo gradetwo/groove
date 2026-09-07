@@ -93,6 +93,39 @@ describe("Audio & Sequencer Utilities", () => {
       }
     });
 
+    it("encodes and decodes extended meter and resolution states", () => {
+      const extendedState: SharedSequencerState = {
+        genreId: sampleGenre.id,
+        bpm: 140,
+        swing: 25,
+        scale: "D dorian",
+        timeSignature: "6/8",
+        resolution: "1/32",
+        totalSteps: 24,
+        tracks: [
+          {
+            track_id: "kick",
+            name: "Kick",
+            instrument: "kick",
+            steps: Array(24).fill(0).map((_, i) => (i % 6 === 0 ? 1 : 0)),
+            mute: false,
+            solo: false,
+            volume: 0.9,
+          },
+        ],
+      };
+
+      const encoded = encodeSharedSequencer(extendedState);
+      const decoded = decodeSharedSequencer(encoded);
+      expect(decoded).not.toBeNull();
+      expect(decoded!.timeSignature).toBe("6/8");
+      expect(decoded!.resolution).toBe("1/32");
+      expect(decoded!.totalSteps).toBe(24);
+      expect(decoded!.tracks[0].steps.length).toBe(24);
+      expect(decoded!.tracks[0].steps[0]).toBe(1);
+      expect(decoded!.tracks[0].steps[6]).toBe(1);
+    });
+
     it("handles corrupted or invalid base64 gracefully", () => {
       expect(decodeSharedSequencer("")).toBeNull();
       expect(decodeSharedSequencer("invalid-base-64-string!!@@")).toBeNull();
@@ -100,7 +133,7 @@ describe("Audio & Sequencer Utilities", () => {
     });
   });
 
-  describe("Audio Engine Lifecycle", () => {
+  describe("Audio Engine Lifecycle & Configuration", () => {
     it("creates an instance and configures parameters without errors", () => {
       const engine = new AudioEngine();
       engine.setBpm(130);
@@ -111,7 +144,37 @@ describe("Audio & Sequencer Utilities", () => {
       expect(engine.getIsPlaying()).toBe(false);
       expect(engine.getCurrentStep()).toBe(0);
 
+      // Verify dynamic steps and resolution setters
+      engine.setTotalSteps(32);
+      expect(engine.getTotalSteps()).toBe(32);
+
+      engine.setResolution("1/32");
+      expect(engine.getResolution()).toBe("1/32");
+
+      engine.setTimeSignature("3/8");
+      expect(engine.getTimeSignature()).toBe("3/8");
+
       engine.destroy();
+    });
+  });
+
+  describe("Extended MIDI Exporter", () => {
+    it("exports MIDI with custom resolution and step counts", () => {
+      const customPattern = {
+        ...sampleGenre.sequencer_pattern,
+        timeSignature: "3/4",
+        resolution: "1/8" as const,
+        totalSteps: 24,
+      };
+
+      const bytes = generateMidiBytes({
+        bpm: 110,
+        pattern: customPattern,
+        genreName: "Waltz Groove",
+      });
+
+      expect(bytes).toBeInstanceOf(Uint8Array);
+      expect(bytes.length).toBeGreaterThan(30);
     });
   });
 });
