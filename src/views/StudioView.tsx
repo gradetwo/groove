@@ -117,6 +117,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Visualizer canvas ref
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Sequencer matrix scroll container ref
+  const matrixContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isRulerDragging, setIsRulerDragging] = useState(false);
+  const rulerDragStartXRef = useRef(0);
+  const rulerDragScrollLeftRef = useRef(0);
+
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
 
@@ -249,6 +255,55 @@ export const StudioView: React.FC<StudioViewProps> = ({
       engineRef.current.setResolution(resolution);
     }
   }, [resolution]);
+
+  // Horizontal mouse wheel pan listener on matrix container
+  useEffect(() => {
+    const el = matrixContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (el.scrollWidth > el.clientWidth) {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.preventDefault();
+          el.scrollLeft += e.deltaY;
+        }
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  // Ruler horizontal drag-to-scroll handler and effect
+  const handleRulerMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsRulerDragging(true);
+    rulerDragStartXRef.current = e.clientX;
+    if (matrixContainerRef.current) {
+      rulerDragScrollLeftRef.current = matrixContainerRef.current.scrollLeft;
+    }
+  };
+
+  useEffect(() => {
+    if (!isRulerDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!matrixContainerRef.current) return;
+      const dx = e.clientX - rulerDragStartXRef.current;
+      matrixContainerRef.current.scrollLeft = rulerDragScrollLeftRef.current - dx;
+    };
+
+    const handleMouseUp = () => {
+      setIsRulerDragging(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isRulerDragging]);
 
   // Real-time oscilloscope / spectrum canvas visualizer
   useEffect(() => {
@@ -590,6 +645,129 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const barCount = Math.max(1, Math.ceil(stepCount / stepsPerBar));
 
+  // Change time signature and adapt grid length accordingly
+  const handleTimeSignatureChange = (newSig: string) => {
+    setTimeSignature(newSig);
+
+    const parts = newSig.split("/");
+    const newNum = parseInt(parts[0], 10) || 4;
+    const newDenom = parseInt(parts[1], 10) || 4;
+
+    const stepsPerQuarter = resolution === "1/8" ? 2 : resolution === "1/32" ? 8 : 4;
+    const newStepsPerBeat = Math.max(1, Math.round(stepsPerQuarter * (4 / newDenom)));
+    const newStepsPerBar = newNum * newStepsPerBeat;
+
+    // Calculate current number of bars, preserving bar structure
+    const currentBars = Math.max(1, Math.round(stepCount / stepsPerBar));
+    const targetSteps = Math.max(newStepsPerBar, currentBars * newStepsPerBar);
+
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.timeSignature = newSig;
+      copy.totalSteps = targetSteps;
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        const oldSteps = tr.steps || [];
+        const oldVel = tr.velocity || [];
+        const oldPitch = tr.pitch || [];
+
+        if (targetSteps > oldSteps.length) {
+          const diff = targetSteps - oldSteps.length;
+          tr.steps = [...oldSteps, ...Array(diff).fill(0)];
+          tr.velocity = [...oldVel, ...Array(diff).fill(100)];
+          tr.pitch = [...oldPitch, ...Array(diff).fill(null)];
+        } else {
+          tr.steps = oldSteps.slice(0, targetSteps);
+          tr.velocity = oldVel.slice(0, targetSteps);
+          tr.pitch = oldPitch.slice(0, targetSteps);
+        }
+      });
+
+      if (engineRef.current) {
+        engineRef.current.setTimeSignature(newSig);
+        engineRef.current.setTotalSteps(targetSteps);
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+
+    showToast(
+      language === "zh"
+        ? `已切换至 ${newSig} 节拍：网格自适应为 ${targetSteps} 步 (${currentBars} 小节，每小节 ${newStepsPerBar} 步)`
+        : `Switched to ${newSig}: Grid adapted to ${targetSteps} steps (${currentBars} bars, ${newStepsPerBar} steps/bar)`
+    );
+  };
+
+  // Change resolution and adapt grid length accordingly
+  const handleResolutionChange = (newRes: "1/8" | "1/16" | "1/32") => {
+    setResolution(newRes);
+
+    const stepsPerQuarter = newRes === "1/8" ? 2 : newRes === "1/32" ? 8 : 4;
+    const newStepsPerBeat = Math.max(1, Math.round(stepsPerQuarter * (4 / timeDenom)));
+    const newStepsPerBar = timeNum * newStepsPerBeat;
+
+    const currentBars = Math.max(1, Math.round(stepCount / stepsPerBar));
+    const targetSteps = Math.max(newStepsPerBar, currentBars * newStepsPerBar);
+
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      copy.resolution = newRes;
+      copy.totalSteps = targetSteps;
+      copy.tracks.forEach((tr: SequencerTrack) => {
+        const oldSteps = tr.steps || [];
+        const oldVel = tr.velocity || [];
+        const oldPitch = tr.pitch || [];
+
+        if (targetSteps > oldSteps.length) {
+          const diff = targetSteps - oldSteps.length;
+          tr.steps = [...oldSteps, ...Array(diff).fill(0)];
+          tr.velocity = [...oldVel, ...Array(diff).fill(100)];
+          tr.pitch = [...oldPitch, ...Array(diff).fill(null)];
+        } else {
+          tr.steps = oldSteps.slice(0, targetSteps);
+          tr.velocity = oldVel.slice(0, targetSteps);
+          tr.pitch = oldPitch.slice(0, targetSteps);
+        }
+      });
+
+      if (engineRef.current) {
+        engineRef.current.setResolution(newRes);
+        engineRef.current.setTotalSteps(targetSteps);
+        engineRef.current.setPattern(copy);
+      }
+      return copy;
+    });
+
+    showToast(
+      language === "zh"
+        ? `量化精度设为 ${newRes}：网格调整为 ${targetSteps} 步`
+        : `Quantization set to ${newRes} (${targetSteps} steps)`
+    );
+  };
+
+  // Auto-scrolling and navigation helpers
+  const scrollByPixels = (px: number) => {
+    if (matrixContainerRef.current) {
+      matrixContainerRef.current.scrollBy({ left: px, behavior: "smooth" });
+    }
+  };
+
+  const scrollToBar = (barIdx: number) => {
+    if (!matrixContainerRef.current) return;
+    const targetStep = barIdx * stepsPerBar;
+    const targetEl = matrixContainerRef.current.querySelector(`[data-step-idx="${targetStep}"]`) as HTMLElement | null;
+    if (targetEl) {
+      const containerRect = matrixContainerRef.current.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const offset = targetRect.left - containerRect.left - 180;
+      matrixContainerRef.current.scrollBy({ left: offset, behavior: "smooth" });
+    } else {
+      matrixContainerRef.current.scrollTo({
+        left: targetStep * 32,
+        behavior: "smooth",
+      });
+    }
+  };
+
   // Step adding & trimming (+4 steps / -4 steps / +1 bar / +4 bars)
   const handleAddSteps = (count = 4) => {
     setPattern((prev) => {
@@ -607,6 +785,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
+
+    // Auto scroll right to reveal newly added steps
+    setTimeout(() => {
+      if (matrixContainerRef.current) {
+        matrixContainerRef.current.scrollTo({
+          left: matrixContainerRef.current.scrollWidth,
+          behavior: "smooth",
+        });
+      }
+    }, 60);
+
     showToast(language === "zh" ? `已添加 +${count} 步 (共 ${stepCount + count} 步)` : `Added +${count} steps (${stepCount + count} total)`);
   };
 
@@ -635,6 +824,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const handleSetStepCount = (target: number) => {
     if (target === stepCount) return;
+    const isExpanding = target > stepCount;
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
       copy.tracks.forEach((tr: SequencerTrack) => {
@@ -656,6 +846,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
+
+    if (isExpanding) {
+      setTimeout(() => {
+        if (matrixContainerRef.current) {
+          matrixContainerRef.current.scrollTo({
+            left: matrixContainerRef.current.scrollWidth,
+            behavior: "smooth",
+          });
+        }
+      }, 60);
+    }
+
     showToast(language === "zh" ? `步长设置为 ${target} 步` : `Grid set to ${target} steps`);
   };
 
@@ -1275,7 +1477,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 </span>
                 <select
                   value={timeSignature}
-                  onChange={(e) => setTimeSignature(e.target.value)}
+                  onChange={(e) => handleTimeSignatureChange(e.target.value)}
                   className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-bold focus:outline-none cursor-pointer"
                 >
                   <option value="4/4" className="bg-[#121317]">4/4</option>
@@ -1296,7 +1498,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 {(["1/8", "1/16", "1/32"] as const).map((res) => (
                   <button
                     key={res}
-                    onClick={() => setResolution(res)}
+                    onClick={() => handleResolutionChange(res)}
                     className={`px-2 py-0.5 rounded font-['JetBrains_Mono'] text-xs transition-colors ${
                       resolution === res
                         ? "bg-[#f5b73d] text-[#0a0b0d] font-bold shadow-sm"
@@ -1391,44 +1593,109 @@ export const StudioView: React.FC<StudioViewProps> = ({
             </div>
           </div>
 
+          {/* Measure / Bar Quick-Jump Navigator & Scroll Bar Controls */}
+          <div className="flex items-center justify-between gap-2 pb-2 mb-1.5 text-xs select-none">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1">
+                {language === "zh" ? "小节定位:" : "MEASURES:"}
+              </span>
+              {Array.from({ length: barCount }, (_, bIdx) => {
+                const isCurrentBar = isPlaying && Math.floor(currentStep / stepsPerBar) === bIdx;
+                const startStep = bIdx * stepsPerBar + 1;
+                const endStep = Math.min(stepCount, (bIdx + 1) * stepsPerBar);
+                return (
+                  <button
+                    key={bIdx}
+                    onClick={() => scrollToBar(bIdx)}
+                    className={`px-2.5 py-1 rounded-md font-['JetBrains_Mono'] text-xs font-semibold transition-all border ${
+                      isCurrentBar
+                        ? "bg-[#f5b73d] text-[#0a0b0d] border-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.4)] scale-[1.03]"
+                        : "bg-[#0d0e12] border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48]"
+                    }`}
+                    title={language === "zh" ? `跳转至第 ${bIdx + 1} 小节 (${startStep}-${endStep} 步)` : `Jump to Bar ${bIdx + 1} (Steps ${startStep}-${endStep})`}
+                  >
+                    Bar {bIdx + 1} <span className="text-[10px] opacity-75">({startStep}-{endStep})</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Left / Right Pan Buttons & Drag hint */}
+            <div className="flex items-center gap-1.5 text-[#5a5e68]">
+              <span className="hidden sm:inline font-['JetBrains_Mono'] text-[10px]">
+                {language === "zh" ? "滚轮/标尺拖拽可平移" : "Wheel/drag ruler to pan"}
+              </span>
+              <button
+                onClick={() => scrollByPixels(-240)}
+                className="w-6 h-6 rounded bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
+                title={language === "zh" ? "向左滚动" : "Scroll left"}
+              >
+                ◀
+              </button>
+              <button
+                onClick={() => scrollByPixels(240)}
+                className="w-6 h-6 rounded bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
+                title={language === "zh" ? "向右滚动" : "Scroll right"}
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+
           {/* 8 Tracks Sequencer Matrix (#tracks) */}
-          <div className="space-y-1 overflow-x-auto min-w-[620px] pb-2 relative">
+          <div
+            ref={matrixContainerRef}
+            className="w-full space-y-1 overflow-x-auto pb-3 relative custom-sequencer-scroll select-none"
+          >
             {/* Step Indicator Ruler Header */}
             <div className="flex items-center gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-max">
-              {/* Left Label aligned with 172px track headers */}
-              <div className="flex-none w-[172px] pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none">
+              {/* Left Label aligned with 172px track headers - Sticky Left */}
+              <div className="sticky left-0 z-30 bg-[#121317] flex-none w-[172px] pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                 <span>{stepCount} STEPS</span>
                 <span className="text-[#3a3e48]">{timeSignature}</span>
               </div>
 
-              {/* Dynamic Ruler Step Badges */}
-              <div className="flex-1 flex gap-1 relative">
+              {/* Dynamic Ruler Step Badges with Drag-to-Scroll */}
+              <div
+                className={`flex-1 flex gap-1 relative cursor-grab select-none ${
+                  isRulerDragging ? "cursor-grabbing" : ""
+                }`}
+                onMouseDown={handleRulerMouseDown}
+                title={language === "zh" ? "按住左右拖拽可平移时间线" : "Click and drag to scroll timeline"}
+              >
                 {Array.from({ length: stepCount }, (_, stepIdx) => {
-                  const beatIdx = Math.floor(stepIdx / stepsPerBeat);
+                  const beatIdx = Math.floor((stepIdx % stepsPerBar) / stepsPerBeat) + 1;
                   const subStep = (stepIdx % stepsPerBeat) + 1;
+                  const barIdx = Math.floor(stepIdx / stepsPerBar) + 1;
                   const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
+                  const isFirstStepOfBar = stepIdx % stepsPerBar === 0;
                   const isBeatStart = stepIdx % stepsPerBeat === 0;
-                  const isSubBeatBreak = !isBarStart && isBeatStart && stepsPerBeat >= 4;
+                  const compoundBeatSteps = (timeDenom === 8 && (timeNum === 6 || timeNum === 12)) ? 3 * stepsPerBeat : stepsPerBeat;
+                  const isCompoundBeatStart = stepIdx % compoundBeatSteps === 0;
+                  const isSubBeatBreak = !isBarStart && isCompoundBeatStart && !isFirstStepOfBar;
                   const isCurrent = isPlaying && currentStep === stepIdx;
                   const stepStr = String(stepIdx + 1).padStart(2, "0");
 
                   return (
                     <div
                       key={stepIdx}
-                      className={`min-w-[24px] flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border ${
+                      data-step-idx={stepIdx}
+                      className={`min-w-[28px] sm:min-w-[32px] flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border ${
                         isBarStart
-                          ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/70"
+                          ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/80"
                           : isSubBeatBreak
-                          ? "ml-1.5 sm:ml-2"
+                          ? "ml-1.5 sm:ml-2 border-l border-[#3a3e48]"
                           : ""
                       } ${
                         isCurrent
                           ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] font-bold scale-[1.03]"
+                          : isFirstStepOfBar
+                          ? "bg-[#1f222b] border-[#3a3e48] text-[#f5b73d] font-bold"
                           : isBeatStart
                           ? "bg-[#171920] border-[#2b2e38] text-[#e9e7e0]"
                           : "bg-[#101115] border-[#1c1d22] text-[#5a5e68]"
                       }`}
-                      title={`Step ${stepIdx + 1} (Beat ${beatIdx + 1}.${subStep})`}
+                      title={`Step ${stepIdx + 1} (Bar ${barIdx}, Beat ${beatIdx}.${subStep})`}
                     >
                       <span className="font-['JetBrains_Mono'] text-[10px] leading-tight font-bold tracking-tight">
                         {stepStr}
@@ -1437,12 +1704,14 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         className={`font-['JetBrains_Mono'] text-[7.5px] leading-none ${
                           isCurrent
                             ? "text-[#f5b73d]"
+                            : isFirstStepOfBar
+                            ? "text-[#f5b73d] font-bold"
                             : isBeatStart
                             ? "text-[#8b8f99]"
                             : "text-[#3e424d]"
                         }`}
                       >
-                        {isBeatStart ? `B${beatIdx + 1}` : `.${subStep}`}
+                        {isFirstStepOfBar ? `M${barIdx}` : isBeatStart ? `B${beatIdx}` : `.${subStep}`}
                       </span>
                     </div>
                   );
@@ -1467,8 +1736,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   }`}
                   style={{ ["--tc" as any]: meta.color }}
                 >
-                  {/* Track Header (.trk-head) - 172px width */}
-                  <div className="flex-none w-[172px] pr-2 flex flex-col justify-center gap-1 select-none">
+                  {/* Track Header (.trk-head) - 172px width - Sticky Left */}
+                  <div className="sticky left-0 z-20 bg-[#121317] flex-none w-[172px] pr-2 flex flex-col justify-center gap-1 select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                     {/* Upper row: Swatch + Title + Mute / Solo */}
                     <div className="flex items-center gap-1.5">
                       <span
@@ -1561,8 +1830,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       const isAcc = vel >= 115;
                       const isPlayhead = isPlaying && currentStep === stepIdx;
                       const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
+                      const isFirstStepOfBar = stepIdx % stepsPerBar === 0;
                       const isBeatStart = stepIdx % stepsPerBeat === 0;
-                      const isSubBeatBreak = !isBarStart && isBeatStart && stepsPerBeat >= 4;
+                      const compoundBeatSteps = (timeDenom === 8 && (timeNum === 6 || timeNum === 12)) ? 3 * stepsPerBeat : stepsPerBeat;
+                      const isCompoundBeatStart = stepIdx % compoundBeatSteps === 0;
+                      const isSubBeatBreak = !isBarStart && isCompoundBeatStart && !isFirstStepOfBar;
 
                       // Hat shapes: 1 = closed, 2 = open (round), 3 = triplet roll (striped)
                       const isHatRound = isHatTrack && stepVal === 2;
@@ -1574,11 +1846,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onClick={(e) => handleCellClick(trackIdx, stepIdx, e)}
                           onPointerDown={(e) => handlePointerDown(trackIdx, stepIdx, e)}
                           onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
-                          className={`min-w-[24px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none ${
+                          className={`min-w-[28px] sm:min-w-[32px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none ${
                             isBarStart
-                              ? "ml-3 sm:ml-4"
+                              ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/70"
                               : isSubBeatBreak
-                              ? "ml-1.5 sm:ml-2"
+                              ? "ml-1.5 sm:ml-2 border-l border-[#3a3e48]"
                               : ""
                           } ${
                             isHatRound ? "rounded-full" : "rounded"

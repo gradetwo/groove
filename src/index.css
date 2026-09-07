@@ -105,3 +105,22 @@ input[type=range]::-moz-range-thumb {
 ::-webkit-scrollbar-thumb:hover {
   background: #393d46;
 }
+
+/* Sequencer Matrix Horizontal Scrollbar */
+.custom-sequencer-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+.custom-sequencer-scroll::-webkit-scrollbar-track {
+  background: #0a0b0e;
+  border-radius: 5px;
+  margin-left: 172px; /* aligns track with step cells */
+}
+.custom-sequencer-scroll::-webkit-scrollbar-thumb {
+  background: #323642;
+  border-radius: 5px;
+  border: 2px solid #0a0b0e;
+}
+.custom-sequencer-scroll::-webkit-scrollbar-thumb:hover {
+  background: #f5b73d;
+}
+
