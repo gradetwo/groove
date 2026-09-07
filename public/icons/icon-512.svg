@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#4facfe" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f355da" />
+      <stop offset="100%" stop-color="#f9d423" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="38" fill="#0a0d17"/>
+  <circle cx="96" cy="96" r="76" fill="none" stroke="#1e2746" stroke-width="3"/>
+  <circle cx="96" cy="96" r="54" fill="none" stroke="#2b3760" stroke-width="2" stroke-dasharray="4 6"/>
+  
+  <!-- Waveform & Equalizer Bars -->
+  <rect x="42" y="86" width="12" height="20" rx="6" fill="url(#grad1)"/>
+  <rect x="62" y="66" width="12" height="60" rx="6" fill="url(#grad1)"/>
+  <rect x="82" y="46" width="12" height="100" rx="6" fill="url(#grad2)"/>
+  <rect x="102" y="70" width="12" height="52" rx="6" fill="url(#grad2)"/>
+  <rect x="122" y="56" width="12" height="80" rx="6" fill="url(#grad1)"/>
+  <rect x="142" y="82" width="12" height="28" rx="6" fill="url(#grad1)"/>
+</svg>
