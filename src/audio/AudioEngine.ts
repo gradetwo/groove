@@ -168,12 +168,16 @@ export class AudioEngine {
 
   public getStepDuration(): number {
     const beatSec = 60.0 / this.bpm;
+    const parts = (this.timeSignature || "4/4").split("/");
+    const denom = parseInt(parts[1], 10) || 4;
+    const baseSec = denom === 8 ? beatSec / 2 : denom === 2 ? beatSec * 2 : beatSec;
+
     if (this.resolution === "1/8") {
-      return beatSec / 2;
+      return baseSec / 2;
     } else if (this.resolution === "1/32") {
-      return beatSec / 8;
+      return baseSec / 8;
     }
-    return beatSec / 4;
+    return baseSec / 4;
   }
 
   public setBpm(bpm: number): void {

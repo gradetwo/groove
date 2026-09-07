@@ -66,6 +66,106 @@ function getGenreAccent(genre: Genre): string {
   return "#f5b73d";
 }
 
+const DEMO_GENRE_TAGS: Record<string, string> = {
+  "chicago-house": "HOUSE · 1985",
+  "house": "HOUSE · 1985",
+  "trap": "HIP-HOP × EDM",
+  "edm-trap": "HIP-HOP × EDM",
+  "atlanta-trap": "TRAP · 140",
+  "uk-drill": "UK STREET",
+  "drill": "UK STREET",
+  "future-bass": "EDM · MELODIC",
+  "liquid-dnb": "JUNGLE · 174",
+  "dnb": "JUNGLE · 174",
+  "reggaeton": "LATIN · URBAN",
+  "detroit-techno": "TECHNO · 1985",
+  "berlin-techno": "TECHNO · 1989",
+  "acid-house": "ACID · 1987",
+  "deep-house": "HOUSE · 1988",
+  "tech-house": "HOUSE · 1994",
+  "progressive-house": "HOUSE · 1992",
+  "french-house": "DISCO · 1997",
+  "afro-house": "AFRO · 1996",
+  "hard-techno": "TECHNO · 1992",
+  "dub-techno": "TECHNO · 1993",
+  "psytrance": "TRANCE · 1995",
+  "uplifting-trance": "TRANCE · 1997",
+  "dubstep": "BASS · 2006",
+  "melodic-dubstep": "BASS · 2012",
+  "riddim": "BASS · 2015",
+  "jungle": "JUNGLE · 1992",
+  "jump-up-dnb": "DNB · 1996",
+  "neurofunk": "DNB · 1997",
+  "uk-garage": "GARAGE · 1994",
+  "speed-garage": "GARAGE · 1997",
+  "grime": "UK BASS · 140",
+  "boom-bap": "HIP-HOP · 1990",
+  "lofi-hiphop": "CHILL · 2015",
+  "synthwave": "RETRO · 2010",
+  "cyberpunk-midtempo": "CYBER · 100",
+  "ambient": "AMBIENT · 1978",
+  "trip-hop": "DOWNTEMPO · 1990",
+  "disco": "DISCO · 1974",
+  "nu-disco": "DISCO · 2002",
+  "funk": "FUNK · 1967",
+  "r-and-b": "R&B · 1990",
+  "city-pop": "RETRO · 1980",
+  "bossa-nova": "LATIN · 1958",
+  "afrobeat": "AFRO · 1968",
+  "amapiano": "AFRO · 2019",
+};
+
+export const getGenreChipTag = (g: Genre): string => {
+  if (DEMO_GENRE_TAGS[g.id]) {
+    return DEMO_GENRE_TAGS[g.id];
+  }
+
+  const id = g.id.toLowerCase();
+  const name = g.name.toLowerCase();
+  let prefix = "";
+
+  if (id.includes("house") || name.includes("house")) prefix = "HOUSE";
+  else if (id.includes("techno") || name.includes("techno")) prefix = "TECHNO";
+  else if (id.includes("trance") || name.includes("trance")) prefix = "TRANCE";
+  else if (id.includes("dnb") || id.includes("drum-and-bass") || id.includes("jungle")) prefix = "DNB";
+  else if (id.includes("dubstep") || id.includes("riddim") || id.includes("bass")) prefix = "BASS";
+  else if (id.includes("garage") || id.includes("2-step")) prefix = "GARAGE";
+  else if (id.includes("trap")) prefix = "TRAP";
+  else if (id.includes("drill")) prefix = "DRILL";
+  else if (id.includes("hip-hop") || id.includes("hiphop") || id.includes("rap")) prefix = "HIP-HOP";
+  else if (id.includes("disco")) prefix = "DISCO";
+  else if (id.includes("funk")) prefix = "FUNK";
+  else if (id.includes("jazz")) prefix = "JAZZ";
+  else if (id.includes("blues")) prefix = "BLUES";
+  else if (id.includes("rock")) prefix = "ROCK";
+  else if (id.includes("metal")) prefix = "METAL";
+  else if (id.includes("ambient") || id.includes("chill") || id.includes("downtempo")) prefix = "AMBIENT";
+  else if (id.includes("latin") || id.includes("salsa") || id.includes("samba")) prefix = "LATIN";
+  else if (id.includes("afro") || id.includes("amapiano")) prefix = "AFRO";
+  else if (id.includes("synth") || id.includes("cyber") || id.includes("wave")) prefix = "SYNTH";
+  else if (id.includes("pop")) prefix = "POP";
+  else if (id.includes("rnb") || id.includes("r-and-b")) prefix = "R&B";
+  else if (g.category === "Electronic") prefix = "EDM";
+  else if (g.category === "Rock/Metal") prefix = "ROCK";
+  else if (g.category === "Hip Hop") prefix = "HIP-HOP";
+  else if (g.category === "Jazz/Blues") prefix = "JAZZ";
+  else if (g.category === "Pop/R&B") prefix = "POP";
+  else prefix = "WORLD";
+
+  let suffix = "";
+  if (g.origin_year) {
+    suffix = g.origin_year.replace(/[^0-9s–-]/g, "").trim() || g.origin_year;
+  } else if (g.origin_decade) {
+    suffix = `${g.origin_decade}s`;
+  } else if (g.default_bpm) {
+    suffix = `${g.default_bpm}`;
+  } else {
+    suffix = "GROOVE";
+  }
+
+  return `${prefix} · ${suffix}`;
+};
+
 interface StudioViewProps {
   selectedGenre?: Genre;
   onSelectGenre: (genre: Genre) => void;
@@ -627,21 +727,52 @@ export const StudioView: React.FC<StudioViewProps> = ({
   };
 
   // Step & meter calculations
+  // Step & meter calculations
   const stepCount = pattern.tracks[0]?.steps?.length || 16;
 
   const [timeNum, timeDenom] = useMemo(() => {
-    const parts = timeSignature.split("/");
+    const parts = (timeSignature || "4/4").split("/");
     return [parseInt(parts[0], 10) || 4, parseInt(parts[1], 10) || 4];
   }, [timeSignature]);
 
+  // Group size defines how many steps form a visual chunk (e.g. 3 for 3/4, 2 for 2/4, 4 for 4/4)
+  const groupSize = useMemo(() => {
+    if (timeNum === 3 || timeNum === 6 || timeNum === 9 || timeNum === 12) return 3;
+    if (timeNum === 2) return 2;
+    if (timeNum === 5) return 5;
+    if (timeNum === 7) return 7;
+    return 4;
+  }, [timeNum]);
+
+  // Steps per bar in the sequencer
+  const stepsPerBar = useMemo(() => {
+    if (timeNum === 3) {
+      if (resolution === "1/8") return 6;
+      if (resolution === "1/32") return 24;
+      return stepCount <= 6 ? 3 : 12;
+    }
+    if (timeNum === 2) {
+      if (resolution === "1/8") return 4;
+      if (resolution === "1/32") return 16;
+      return stepCount <= 4 ? 2 : 8;
+    }
+    if (timeNum === 6) return resolution === "1/8" ? 6 : 12;
+    if (timeNum === 3 && timeDenom === 8) return 3;
+    if (timeNum === 5) return 5;
+    if (timeNum === 7) return 7;
+    if (timeNum === 9) return 9;
+    if (timeNum === 12) return 12;
+
+    const stepsPerQuarter = resolution === "1/8" ? 2 : resolution === "1/32" ? 8 : 4;
+    return timeNum * stepsPerQuarter;
+  }, [timeNum, timeDenom, resolution, stepCount]);
+
   const stepsPerBeat = useMemo(() => {
+    if (timeNum === 3) return groupSize;
+    if (timeNum === 2) return 4;
     const stepsPerQuarter = resolution === "1/8" ? 2 : resolution === "1/32" ? 8 : 4;
     return Math.max(1, Math.round(stepsPerQuarter * (4 / timeDenom)));
-  }, [resolution, timeDenom]);
-
-  const stepsPerBar = useMemo(() => {
-    return timeNum * stepsPerBeat;
-  }, [timeNum, stepsPerBeat]);
+  }, [timeNum, groupSize, resolution, timeDenom]);
 
   const barCount = Math.max(1, Math.ceil(stepCount / stepsPerBar));
 
@@ -653,13 +784,28 @@ export const StudioView: React.FC<StudioViewProps> = ({
     const newNum = parseInt(parts[0], 10) || 4;
     const newDenom = parseInt(parts[1], 10) || 4;
 
-    const stepsPerQuarter = resolution === "1/8" ? 2 : resolution === "1/32" ? 8 : 4;
-    const newStepsPerBeat = Math.max(1, Math.round(stepsPerQuarter * (4 / newDenom)));
-    const newStepsPerBar = newNum * newStepsPerBeat;
-
-    // Calculate current number of bars, preserving bar structure
-    const currentBars = Math.max(1, Math.round(stepCount / stepsPerBar));
-    const targetSteps = Math.max(newStepsPerBar, currentBars * newStepsPerBar);
+    let targetSteps = 16;
+    if (newNum === 3) {
+      // 3/4: 12 steps (4 groups of 3) or 24 steps
+      targetSteps = stepCount > 15 ? 24 : 12;
+    } else if (newNum === 2) {
+      // 2/4: 16 steps (8 groups of 2, or 2 bars of 8) or 8 steps
+      targetSteps = stepCount <= 8 ? 8 : 16;
+    } else if (newNum === 6) {
+      // 6/8: 12 steps (4 groups of 3) or 24
+      targetSteps = stepCount > 15 ? 24 : 12;
+    } else if (newNum === 5) {
+      targetSteps = stepCount > 15 ? 20 : 15;
+    } else if (newNum === 7) {
+      targetSteps = stepCount > 14 ? 21 : 14;
+    } else if (newNum === 9) {
+      targetSteps = stepCount > 12 ? 18 : 9;
+    } else if (newNum === 12) {
+      targetSteps = stepCount > 16 ? 24 : 12;
+    } else {
+      // 4/4, 2/2 etc.
+      targetSteps = stepCount > 20 ? 32 : 16;
+    }
 
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
@@ -690,10 +836,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
       return copy;
     });
 
+    const meterDesc = newNum === 3 
+      ? (language === "zh" ? "三拍子 (3格一组)" : "3 steps/group")
+      : newNum === 2 
+      ? (language === "zh" ? "二拍子 (2格一组)" : "2 steps/group")
+      : (language === "zh" ? "四拍子 (4格一组)" : "4 steps/group");
+
     showToast(
       language === "zh"
-        ? `已切换至 ${newSig} 节拍：网格自适应为 ${targetSteps} 步 (${currentBars} 小节，每小节 ${newStepsPerBar} 步)`
-        : `Switched to ${newSig}: Grid adapted to ${targetSteps} steps (${currentBars} bars, ${newStepsPerBar} steps/bar)`
+        ? `已切换至 ${newSig} 节拍：${meterDesc}，网格已自适应为 ${targetSteps} 步`
+        : `Switched to ${newSig} (${meterDesc}, ${targetSteps} steps)`
     );
   };
 
@@ -1011,7 +1163,23 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Filtered chip list for rail
   const railGenres = useMemo(() => {
     if (activeCategoryFilter === "ALL") {
-      return ALL_GENRES.slice(0, 36);
+      const demoHeadIds = [
+        "chicago-house",
+        "edm-trap",
+        "uk-drill",
+        "future-bass",
+        "liquid-dnb",
+        "reggaeton",
+        "detroit-techno",
+        "boom-bap",
+        "synthwave",
+        "dubstep",
+        "nu-disco",
+        "acid-house",
+      ];
+      const headList = demoHeadIds.map((id) => GENRES_MAP[id]).filter(Boolean) as Genre[];
+      const others = ALL_GENRES.filter((g) => !demoHeadIds.includes(g.id));
+      return [...headList, ...others].slice(0, 48);
     }
     return ALL_GENRES.filter((g) => g.category === activeCategoryFilter);
   }, [activeCategoryFilter]);
@@ -1062,7 +1230,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               <button
                 key={g.id}
                 onClick={() => switchGenre(g, true)}
-                className={`flex-none flex flex-col gap-0.5 px-3.5 py-2 border rounded-xl bg-[#121317] min-w-[136px] text-left transition-all relative ${
+                className={`flex-none flex flex-col gap-0.5 px-3.5 py-2 border rounded-xl bg-[#121317] min-w-[124px] text-left transition-all relative ${
                   isCurrent
                     ? "border-[var(--g)] shadow-[0_0_14px_rgba(245,183,61,0.2)] bg-[#171920]"
                     : "border-[#23262d] hover:border-[#3a3e48] hover:-translate-y-0.5"
@@ -1070,18 +1238,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 style={{ ["--g" as any]: accent }}
               >
                 <span 
-                  className={`font-semibold text-sm tracking-wide truncate ${
-                    isCurrent ? "text-[var(--g)] font-bold" : "text-[#f0ede6]"
+                  className={`font-['Space_Grotesk'] font-bold text-sm tracking-wide truncate ${
+                    isCurrent ? "text-[var(--g)]" : "text-[#f0ede6]"
                   }`}
                 >
                   {g.name}
                 </span>
                 <span 
-                  className={`text-[11px] font-medium tracking-normal truncate ${
-                    isCurrent ? "text-[var(--g)] opacity-95 font-semibold" : "text-[#8b8f99]"
+                  className={`font-mono text-[9.5px] uppercase tracking-[0.14em] truncate ${
+                    isCurrent ? "text-[var(--g)] opacity-95 font-bold" : "text-[#8b8f99]"
                   }`}
                 >
-                  {g.aliases[0] || g.category}
+                  {getGenreChipTag(g)}
                 </span>
               </button>
             );
@@ -1465,13 +1633,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   onChange={(e) => handleTimeSignatureChange(e.target.value)}
                   className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-bold focus:outline-none cursor-pointer"
                 >
-                  <option value="4/4" className="bg-[#121317]">4/4</option>
-                  <option value="3/4" className="bg-[#121317]">3/4</option>
-                  <option value="6/8" className="bg-[#121317]">6/8</option>
-                  <option value="3/8" className="bg-[#121317]">3/8</option>
-                  <option value="5/4" className="bg-[#121317]">5/4</option>
-                  <option value="7/8" className="bg-[#121317]">7/8</option>
-                  <option value="12/8" className="bg-[#121317]">12/8</option>
+                  <option value="4/4" className="bg-[#121317]">4/4 (四四拍 · 4格一组)</option>
+                  <option value="2/4" className="bg-[#121317]">2/4 (二四拍 · 2格一组)</option>
+                  <option value="3/4" className="bg-[#121317]">3/4 (三四拍 · 3格一组)</option>
+                  <option value="2/2" className="bg-[#121317]">2/2 (二二拍 · 2格一组)</option>
+                  <option value="6/8" className="bg-[#121317]">6/8 (六八拍 · 3格一组)</option>
+                  <option value="3/8" className="bg-[#121317]">3/8 (三八拍 · 3格一组)</option>
+                  <option value="9/8" className="bg-[#121317]">9/8 (九八拍 · 3格一组)</option>
+                  <option value="12/8" className="bg-[#121317]">12/8 (十二八拍 · 3格一组)</option>
+                  <option value="5/4" className="bg-[#121317]">5/4 (五四拍 · 5格一组)</option>
+                  <option value="7/8" className="bg-[#121317]">7/8 (七八拍 · 7格一组)</option>
                 </select>
               </div>
 
@@ -1501,16 +1672,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   {stepCount} {language === "zh" ? "步" : "STEPS"} ({barCount} {barCount === 1 ? "BAR" : "BARS"})
                 </span>
                 <button
-                  onClick={() => handleRemoveSteps(4)}
+                  onClick={() => handleRemoveSteps(groupSize)}
                   className="w-5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
-                  title={language === "zh" ? "删减 4 步" : "Remove 4 steps"}
+                  title={language === "zh" ? `删减 ${groupSize} 步 (1组)` : `Remove ${groupSize} steps`}
                 >
                   <Minus className="w-3 h-3" />
                 </button>
+                <span className="font-['JetBrains_Mono'] text-[10px] font-bold text-[#f5b73d] px-0.5" title={language === "zh" ? "每组步进数" : "Group step size"}>
+                  ±{groupSize}
+                </span>
                 <button
-                  onClick={() => handleAddSteps(4)}
+                  onClick={() => handleAddSteps(groupSize)}
                   className="w-5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
-                  title={language === "zh" ? "添加 4 步" : "Add 4 steps"}
+                  title={language === "zh" ? `添加 ${groupSize} 步 (1组)` : `Add ${groupSize} steps`}
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -1522,11 +1696,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   +1 Bar
                 </button>
                 <button
-                  onClick={() => handleAddSteps(stepsPerBar * 4)}
+                  onClick={() => handleAddSteps(stepsPerBar * 2)}
                   className="px-1.5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[10px] font-['JetBrains_Mono'] text-[#f5b73d] border border-[#23262d] hidden xl:flex"
-                  title={language === "zh" ? `添加 4 小节 (+${stepsPerBar * 4} 步)` : `Add 4 Bars (+${stepsPerBar * 4} steps)`}
+                  title={language === "zh" ? `添加 2 小节 (+${stepsPerBar * 2} 步)` : `Add 2 Bars (+${stepsPerBar * 2} steps)`}
                 >
-                  +4 Bars
+                  +2 Bars
                 </button>
               </div>
 
@@ -1649,15 +1823,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 title={language === "zh" ? "按住左右拖拽可平移时间线" : "Click and drag to scroll timeline"}
               >
                 {Array.from({ length: stepCount }, (_, stepIdx) => {
-                  const beatIdx = Math.floor((stepIdx % stepsPerBar) / stepsPerBeat) + 1;
-                  const subStep = (stepIdx % stepsPerBeat) + 1;
+                  const groupIdx = Math.floor(stepIdx / groupSize) + 1;
+                  const stepInGroup = (stepIdx % groupSize) + 1;
                   const barIdx = Math.floor(stepIdx / stepsPerBar) + 1;
                   const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
                   const isFirstStepOfBar = stepIdx % stepsPerBar === 0;
-                  const isBeatStart = stepIdx % stepsPerBeat === 0;
-                  const compoundBeatSteps = (timeDenom === 8 && (timeNum === 6 || timeNum === 12)) ? 3 * stepsPerBeat : stepsPerBeat;
-                  const isCompoundBeatStart = stepIdx % compoundBeatSteps === 0;
-                  const isSubBeatBreak = !isBarStart && isCompoundBeatStart && !isFirstStepOfBar;
+                  const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
+                  const isFirstStepOfGroup = stepIdx % groupSize === 0;
                   const isCurrent = isPlaying && currentStep === stepIdx;
                   const stepStr = String(stepIdx + 1).padStart(2, "0");
 
@@ -1668,19 +1840,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       className={`min-w-[28px] sm:min-w-[32px] flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border ${
                         isBarStart
                           ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/80"
-                          : isSubBeatBreak
-                          ? "ml-1.5 sm:ml-2 border-l border-[#3a3e48]"
+                          : isGroupStart
+                          ? "ml-2 sm:ml-2.5 border-l border-[#3a3e48]"
                           : ""
                       } ${
                         isCurrent
                           ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] font-bold scale-[1.03]"
                           : isFirstStepOfBar
                           ? "bg-[#1f222b] border-[#3a3e48] text-[#f5b73d] font-bold"
-                          : isBeatStart
+                          : isFirstStepOfGroup
                           ? "bg-[#171920] border-[#2b2e38] text-[#e9e7e0]"
                           : "bg-[#101115] border-[#1c1d22] text-[#5a5e68]"
                       }`}
-                      title={`Step ${stepIdx + 1} (Bar ${barIdx}, Beat ${beatIdx}.${subStep})`}
+                      title={`Step ${stepIdx + 1} (Bar ${barIdx}, Group ${groupIdx}.${stepInGroup})`}
                     >
                       <span className="font-['JetBrains_Mono'] text-[10px] leading-tight font-bold tracking-tight">
                         {stepStr}
@@ -1691,12 +1863,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
                             ? "text-[#f5b73d]"
                             : isFirstStepOfBar
                             ? "text-[#f5b73d] font-bold"
-                            : isBeatStart
-                            ? "text-[#8b8f99]"
+                            : isFirstStepOfGroup
+                            ? "text-[#8b8f99] font-semibold"
                             : "text-[#3e424d]"
                         }`}
                       >
-                        {isFirstStepOfBar ? `M${barIdx}` : isBeatStart ? `B${beatIdx}` : `.${subStep}`}
+                        {isFirstStepOfBar ? `M${barIdx}` : `.${stepInGroup}`}
                       </span>
                     </div>
                   );
@@ -1816,10 +1988,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       const isPlayhead = isPlaying && currentStep === stepIdx;
                       const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
                       const isFirstStepOfBar = stepIdx % stepsPerBar === 0;
-                      const isBeatStart = stepIdx % stepsPerBeat === 0;
-                      const compoundBeatSteps = (timeDenom === 8 && (timeNum === 6 || timeNum === 12)) ? 3 * stepsPerBeat : stepsPerBeat;
-                      const isCompoundBeatStart = stepIdx % compoundBeatSteps === 0;
-                      const isSubBeatBreak = !isBarStart && isCompoundBeatStart && !isFirstStepOfBar;
+                      const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
 
                       // Hat shapes: 1 = closed, 2 = open (round), 3 = triplet roll (striped)
                       const isHatRound = isHatTrack && stepVal === 2;
@@ -1833,9 +2002,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
                           className={`min-w-[28px] sm:min-w-[32px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none ${
                             isBarStart
-                              ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/70"
-                              : isSubBeatBreak
-                              ? "ml-1.5 sm:ml-2 border-l border-[#3a3e48]"
+                              ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
+                              : isGroupStart
+                              ? "ml-2 sm:ml-2.5 border-l border-[#3a3e48]"
                               : ""
                           } ${
                             isHatRound ? "rounded-full" : "rounded"
