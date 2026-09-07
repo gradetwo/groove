@@ -75,7 +75,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'HOUSE',
     color: 0xE05A7A,
     hexColor: '#e05a7a',
-    anchor: [-260, 50, -120],
+    anchor: [-430, 90, -220],
     spiral: [-0.2, 0.45, -0.15],
     desc: {
       zh: '发源于芝加哥 The Warehouse 俱乐部，四四拍与反拍开镲构筑起现代舞曲的永动机。',
@@ -89,7 +89,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'TECHNO',
     color: 0x4AD8C8,
     hexColor: '#4ad8c8',
-    anchor: [-300, 110, 100],
+    anchor: [-500, 190, 180],
     spiral: [-0.55, 0.4, 0.1],
     desc: {
       zh: '底特律工业机器的钢铁灵魂，极简音序与深邃循环的科幻图景。',
@@ -103,7 +103,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'TRANCE',
     color: 0x5C8DF6,
     hexColor: '#5c8df6',
-    anchor: [-190, 230, -170],
+    anchor: [-280, 430, -290],
     spiral: [0.35, -0.4, 0.25],
     desc: {
       zh: '欧洲派对的高潮律动，史诗般的和弦进行与潮汐般层叠的琶音。',
@@ -117,7 +117,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'DUBSTEP',
     color: 0x9D7BE8,
     hexColor: '#9d7be8',
-    anchor: [140, 190, 190],
+    anchor: [300, 340, 280],
     spiral: [-0.25, 0.35, 0.3],
     desc: {
       zh: '南伦敦黑夜里的重低音地震，半速下潜节拍与激变低频撕裂感。',
@@ -131,7 +131,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'DRUM & BASS',
     color: 0xF08A46,
     hexColor: '#f08a46',
-    anchor: [-60, 260, 180],
+    anchor: [-100, 470, 270],
     spiral: [-0.15, 0.5, 0.35],
     desc: {
       zh: '174 BPM 的超速心跳，复杂碎拍重组与亚低频的物理轰鸣。',
@@ -145,7 +145,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'UK BASS & GARAGE',
     color: 0x4AC88A,
     hexColor: '#4ac88a',
-    anchor: [30, 150, 290],
+    anchor: [60, 220, 530],
     spiral: [0.2, 0.35, -0.2],
     desc: {
       zh: '海盗电台与车库切分，2-Step、Grime 与低频游走的地下先锋。',
@@ -159,7 +159,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'TRAP & DRILL',
     color: 0xE5A93C,
     hexColor: '#e5a93c',
-    anchor: [210, -50, 240],
+    anchor: [370, -80, 420],
     desc: {
       zh: '亚特兰大与芝加哥寒夜，滚奏三连踩镲、滑音808与冷峻节拍。',
       en: 'Rolling hi-hat triplets, sliding 808 subs, and dark street narratives.'
@@ -172,7 +172,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'FUTURE & DOWNTEMPO',
     color: 0xD47FA6,
     hexColor: '#d47fa6',
-    anchor: [-130, -180, -210],
+    anchor: [-240, -350, -370],
     spiral: [0.4, 0.3, -0.2],
     desc: {
       zh: '失重混响、摇摆切片与赛博梦境，从 Vaporwave、Lo-Fi 到 Future Bass 的诗意流动。',
@@ -186,7 +186,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'HARD & ELECTRO',
     color: 0xE84855,
     hexColor: '#e84855',
-    anchor: [-310, -110, -120],
+    anchor: [-530, -210, -210],
     spiral: [-0.3, 0.2, 0.4],
     desc: {
       zh: '极限失真反向反弹音、失速硬舞与高压脉冲的冲击波。',
@@ -200,7 +200,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'ROCK & METAL',
     color: 0xD85A6A,
     hexColor: '#d85a6a',
-    anchor: [40, -20, -320],
+    anchor: [80, -40, -540],
     spiral: [-0.35, -0.5, 0.2],
     desc: {
       zh: '通电吉他的狂怒轰鸣，半个世纪叛逆之声与壮丽旋臂。',
@@ -214,7 +214,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'HIP-HOP',
     color: 0xE06A3C,
     hexColor: '#e06a3c',
-    anchor: [110, -160, 180],
+    anchor: [190, -330, 240],
     spiral: [0.25, -0.3, 0.4],
     desc: {
       zh: '布朗克斯派对的两台黑胶唱机，采样重组、繁复押韵与街头编年史。',
@@ -228,7 +228,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'JAZZ & BLUES',
     color: 0x6E8CD8,
     hexColor: '#6e8cd8',
-    anchor: [-190, -50, 160],
+    anchor: [-350, -130, 290],
     spiral: [-0.2, -0.4, 0.3],
     desc: {
       zh: '密西西比河与新奥尔良的即兴源流，近现代所有流行音乐的引力源泉。',
@@ -242,7 +242,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'POP & R&B',
     color: 0xD878AC,
     hexColor: '#d878ac',
-    anchor: [260, 60, -170],
+    anchor: [450, 140, -300],
     spiral: [0.3, -0.35, 0.15],
     desc: {
       zh: '闪烁迪斯科球、灵魂放克与黄金旋律，触及亿万听众的感染力引擎。',
@@ -256,7 +256,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     en: 'LATIN & WORLD',
     color: 0xAEC06A,
     hexColor: '#aec06a',
-    anchor: [300, -80, 110],
+    anchor: [540, -190, 110],
     spiral: [-0.3, 0.4, -0.2],
     desc: {
       zh: '加勒比阳光、非洲复节奏与多米尼加切分，跨越海洋的原始跳动。',
@@ -456,19 +456,19 @@ export function buildNebulaGraph() {
       const p = n.parent && byId[n.parent] ? byId[n.parent] : null;
       if (p) {
         const cross = (p.cluster !== n.cluster) || (p.type === 'origin');
-        const rest = p.type === 'origin' ? 240 : (cross ? 280 : 55 + n.depth * 10);
-        const k = p.type === 'origin' ? 0.0015 : (cross ? 0.0025 : 0.035);
+        const rest = p.type === 'origin' ? 440 : (cross ? 480 : 60 + n.depth * 10);
+        const k = p.type === 'origin' ? 0.0012 : (cross ? 0.002 : 0.035);
         const d = n.pos.distanceTo(p.pos);
         const f = (d - rest) * k;
         const dir = n.pos.clone().sub(p.pos).normalize();
         F[n.idx].addScaledVector(dir, -f);
       }
       if (n.type === 'core') {
-        F[n.idx].addScaledVector(n.pos.clone().sub(n.anchor), -n.pos.distanceTo(n.anchor) * 0.06);
+        F[n.idx].addScaledVector(n.pos.clone().sub(n.anchor), -n.pos.distanceTo(n.anchor) * 0.08);
       } else {
         const core = byId[`${n.cluster}-core`];
         if (core) {
-          F[n.idx].addScaledVector(n.pos.clone().sub(core.pos), -(n.pos.distanceTo(core.pos) - 85) * 0.004);
+          F[n.idx].addScaledVector(n.pos.clone().sub(core.pos), -(n.pos.distanceTo(core.pos) - 95) * 0.004);
         }
       }
     });
@@ -480,8 +480,8 @@ export function buildNebulaGraph() {
         const core = byId[`${n.cluster}-core`];
         if (core) {
           const d = n.pos.distanceTo(core.pos);
-          if (d > 160) {
-            n.pos.copy(core.pos).lerp(n.pos, 160 / d);
+          if (d > 185) {
+            n.pos.copy(core.pos).lerp(n.pos, 185 / d);
           }
         }
       }

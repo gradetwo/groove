@@ -56,16 +56,16 @@ varying float vStar;
 
 void main(){
   vec3 p = position;
-  float t = uTime * 0.32;
+  float t = uTime * 0.30;
   
   // Harmonic multi-octave cosmic breathing undulation
-  float wave1 = sin(t * 0.65 + aSeed) * 1.8;
-  float wave2 = sin(t * 0.45 + aSeed * 1.7) * 1.4;
-  float wave3 = cos(t * 0.55 + aSeed * 2.3) * 1.8;
-  float field = sin(dot(position, vec3(0.0035, 0.0025, 0.004)) + t * 0.38) * 1.2;
-  p.x += wave1 + field * 0.5;
-  p.y += wave2 + field * 0.35;
-  p.z += wave3 + field * 0.5;
+  float wave1 = sin(t * 0.60 + aSeed) * 1.6;
+  float wave2 = sin(t * 0.42 + aSeed * 1.7) * 1.2;
+  float wave3 = cos(t * 0.52 + aSeed * 2.3) * 1.6;
+  float field = sin(dot(position, vec3(0.0025, 0.002, 0.003)) + t * 0.32) * 1.1;
+  p.x += wave1 + field * 0.45;
+  p.y += wave2 + field * 0.3;
+  p.z += wave3 + field * 0.45;
 
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   float dz = -mv.z;
@@ -78,68 +78,73 @@ void main(){
 
   float bg = (aNode < -0.5) ? 1.0 : 0.0;
   float isSm = (aSize <= 6.0) ? 1.0 : 0.0;
-  float twA = 0.18 + 0.32 * bg * isSm;
-  alpha *= (1.0 - twA) + twA * (0.5 + 0.5 * sin(uTime * (0.7 + fract(aSeed * 0.31) * 2.4) + aSeed * 9.0));
+  float twA = 0.16 + 0.30 * bg * isSm;
+  alpha *= (1.0 - twA) + twA * (0.5 + 0.5 * sin(uTime * (0.65 + fract(aSeed * 0.31) * 2.2) + aSeed * 9.0));
 
   // Chiaroscuro interstellar lighting gradient (宇宙明暗光影对比)
   vec3 lightDir = normalize(vec3(0.42, 0.72, 0.50));
   vec3 normP = normalize(p + vec3(15.0, 10.0, 20.0));
-  float chiaroscuro = dot(normP, lightDir) * 0.26 + 0.88;
+  float chiaroscuro = dot(normP, lightDir) * 0.22 + 0.88;
 
   // Cosmic breathing: slow multi-octave harmonic pulsation across galaxies
-  float breathPhase = uTime * 0.52 + aSeed * 2.6 + (aCluster >= 0.0 ? aCluster * 0.85 : 0.0);
-  float breathSize = 1.0 + 0.075 * sin(breathPhase * 0.65) + 0.04 * sin(uTime * 0.24);
-  float breathAlpha = 1.0 + 0.14 * sin(breathPhase) + 0.07 * sin(uTime * 0.30 + aSeed * 1.3);
+  float breathPhase = uTime * 0.48 + aSeed * 2.4 + (aCluster >= 0.0 ? aCluster * 0.85 : 0.0);
+  float breathSize = 1.0 + 0.065 * sin(breathPhase * 0.65) + 0.035 * sin(uTime * 0.22);
+  float breathAlpha = 1.0 + 0.12 * sin(breathPhase) + 0.06 * sin(uTime * 0.28 + aSeed * 1.3);
 
   // Traveling cosmic light wave sweeping through deep space (星际光潮与以太流风)
-  float lightSweep = sin(dot(p, vec3(0.0032, 0.002, 0.0036)) - uTime * 0.35) * 0.16 + 0.90;
+  float lightSweep = sin(dot(p, vec3(0.0025, 0.0018, 0.0028)) - uTime * 0.30) * 0.14 + 0.90;
 
-  // Interstellar structural density variation (疏密变化)
-  float spatialDensity = sin(p.x * 0.012 + p.z * 0.008) * cos(p.y * 0.014) * 0.15 + 0.94;
+  // Macro Cosmic Density Web: high contrast between dense filamental streams and transparent void pockets (疏密大开大合)
+  vec3 pF = p * 0.0022;
+  float macroWave1 = sin(pF.x * 2.2 + pF.z * 1.6 + uTime * 0.06);
+  float macroWave2 = cos(pF.y * 2.4 - pF.x * 1.4 - uTime * 0.05);
+  float macroWave3 = sin(dot(pF, vec3(1.4, 1.1, 1.6)));
+  float macroField = macroWave1 * macroWave2 + macroWave3 * 0.42;
+  float spatialDensity = smoothstep(-0.60, 0.72, macroField) * 0.86 + 0.18;
 
   alpha *= breathAlpha * chiaroscuro * lightSweep * spatialDensity;
   sz *= breathSize;
 
-  // Selected cluster highlighting with dreamlike depth preservation
+  // Selected cluster highlighting: gentle luminous focus without overexposure
   if (uSelectedCluster >= -0.5) {
     if (abs(aCluster - uSelectedCluster) < 0.5) {
-      alpha *= 1.48;
-      sz *= 1.28;
-      col = mix(col, vec3(1.0, 0.96, 0.88), 0.15);
+      alpha *= 1.20;
+      sz *= 1.12;
+      col = mix(col, vec3(1.0, 0.97, 0.92), 0.10);
     } else if (aCluster >= -0.5) {
-      alpha *= 0.60;
-      sz *= 0.92;
+      alpha *= 0.42;
+      sz *= 0.88;
     } else {
-      alpha *= 0.85;
+      alpha *= 0.70;
     }
   }
 
   // Node selection highlighting modes
   if (aMode > 2.5) {
-    col = mix(col, vec3(1.0, 0.87, 0.62), 0.18);
-    alpha *= 1.35;
-    sz *= 1.2;
+    col = mix(col, vec3(1.0, 0.88, 0.68), 0.14);
+    alpha *= 1.22;
+    sz *= 1.15;
   } else if (aMode > 1.5) {
-    col = mix(col, vec3(1.0, 0.94, 0.78), 0.32);
-    alpha *= 1.75 * (1.06 + 0.16 * sin(uTime * 2.4 + aSeed * 0.7));
-    sz *= 1.4;
+    col = mix(col, vec3(1.0, 0.94, 0.82), 0.24);
+    alpha *= 1.38 * (1.04 + 0.12 * sin(uTime * 2.2 + aSeed * 0.7));
+    sz *= 1.22;
   }
 
   if (uHoverNode > -0.5 && abs(aNode - uHoverNode) < 0.5) {
-    alpha *= 1.85;
-    sz *= 1.4;
-    col = mix(col, vec3(1.0), 0.28);
+    alpha *= 1.40;
+    sz *= 1.25;
+    col = mix(col, vec3(1.0), 0.20);
   }
   if (uHoverCluster > -0.5 && abs(aCluster - uHoverCluster) < 0.5) {
-    alpha *= 1.35;
-    sz *= 1.18;
+    alpha *= 1.20;
+    sz *= 1.12;
   }
 
-  alpha *= (1.0 + pulse * 1.7);
-  sz *= (1.0 + pulse * 1.2);
-  alpha *= clamp(1.55 - dz / 1700.0, 0.18, 1.0);
+  alpha *= (1.0 + pulse * 1.4);
+  sz *= (1.0 + pulse * 1.1);
+  alpha *= clamp(1.45 - dz / 2200.0, 0.12, 0.90);
 
-  gl_PointSize = clamp(sz * uScale / dz, 0.0, 260.0);
+  gl_PointSize = clamp(sz * uScale / dz, 0.0, 240.0);
   gl_Position = projectionMatrix * mv;
   vColor = col;
   vAlpha = alpha;
@@ -156,31 +161,35 @@ void main(){
   vec2 uv = gl_PointCoord - 0.5;
   float d = length(uv) * 2.0;
   float a;
+  
   if (vStar > 0.5) {
-    // Star nodes & bright spangles: sharp diamond specular core + soft halo + diffraction flares
-    float core = exp(-d * d * 28.0) * 1.85;
-    float halo = exp(-d * d * 3.2) * 0.40;
-    float rx = max(0.0, 1.0 - abs(uv.y) * 9.5) * max(0.0, 1.0 - abs(uv.x) * 2.0);
-    float ry = max(0.0, 1.0 - abs(uv.x) * 9.5) * max(0.0, 1.0 - abs(uv.y) * 2.0);
-    a = (core + halo + (rx + ry) * 0.42) * vAlpha;
+    // Star nodes: crystalline diamond core + soft chromatic corona + delicate cross diffraction
+    float starCore = exp(-d * d * 32.0) * 0.92;
+    float starHalo = exp(-d * 3.4) * 0.24;
+    float rx = max(0.0, 1.0 - abs(uv.y) * 11.0) * max(0.0, 1.0 - abs(uv.x) * 2.2);
+    float ry = max(0.0, 1.0 - abs(uv.x) * 11.0) * max(0.0, 1.0 - abs(uv.y) * 2.2);
+    float flare = (rx + ry) * 0.20 * exp(-d * 2.8);
+    a = (starCore + starHalo + flare) * vAlpha;
   } else {
-    // Nebular dust & planetary halos: quad-layer volumetric dispersion for dreamy optical haze (真实宇宙蒙眬美)
-    float core = exp(-d * d * 8.0);
-    float halo = exp(-d * d * 2.2) * 0.38;
-    float mist = exp(-d * 1.45) * 0.15;
-    float gossamer = exp(-d * 0.78) * 0.048; // soft ethereal atmospheric haze
-    a = (core + halo + mist + gossamer) * vAlpha;
+    // Nebular dust & planetary halos: velvet-smooth continuous halo gradient (光晕渐变，避免生硬色块与大团过曝)
+    // Multi-tier exponential decay: luminous but transparent core, velvety gradient, ethereal feather edge
+    float innerGlow = exp(-d * d * 6.5) * 0.32;
+    float smoothHalo = exp(-d * 2.6) * 0.42;
+    float outerVeil = exp(-d * 1.1) * 0.12;
+    a = (innerGlow + smoothHalo + outerVeil) * vAlpha;
   }
-  if (a < 0.0022) discard;
+  
+  if (a < 0.002) discard;
 
   vec3 col = vColor;
   if (vStar > 0.5) {
-    // White-hot specular core
-    col = mix(col, vec3(1.0, 0.98, 0.94), clamp(exp(-d * d * 20.0) * 0.95, 0.0, 0.88));
+    // Specular warm highlight only at the absolute pinpoint center
+    col = mix(col, vec3(1.0, 0.98, 0.95), clamp(exp(-d * d * 24.0) * 0.85, 0.0, 0.85));
   } else {
-    // Soft core temperature warm-up
-    col = mix(col, vec3(1.0, 0.96, 0.90), clamp(exp(-d * d * 5.5) * 0.24, 0.0, 0.38));
+    // Ethereal chromatic preservation: keep rich hue without bleaching into solid white
+    col = mix(col, vec3(1.0, 0.98, 0.94), clamp(exp(-d * d * 14.0) * 0.18, 0.0, 0.22));
   }
+  
   gl_FragColor = vec4(col * a, a);
 }
 `;
@@ -415,7 +424,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     }
 
     // Center camera on node
-    const radius = n.type === "sub" ? 210 : n.type === "core" ? 340 : 250;
+    const radius = n.type === "sub" ? 210 : n.type === "core" ? 420 : 260;
     flyTo(n.pos.clone(), radius, 1.2);
   }, [flyTo, graphData, lineageOf]);
 
@@ -435,7 +444,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       th.modeAttr.needsUpdate = true;
       setSelectedNode(null);
       setIsCardOpen(false);
-      flyTo(new THREE.Vector3(0, 0, 0), 720, 1.3);
+      flyTo(new THREE.Vector3(0, 0, 0), 1250, 1.3);
       return;
     }
 
@@ -452,8 +461,8 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     const coreNode = graphData.byId[`${cluster.id}-core`];
     const targetPos = coreNode ? coreNode.pos.clone() : new THREE.Vector3(...cluster.anchor);
 
-    // Smoothly fly camera to center of this cluster at distance ~330
-    flyTo(targetPos, 330, 1.25);
+    // Smoothly fly camera to center of this cluster at distance ~420
+    flyTo(targetPos, 420, 1.25);
     th.lastInteract = performance.now();
   }, [flyTo, graphData]);
 
@@ -537,92 +546,100 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     graphData.clusters.forEach((c, ci) => {
       const core = graphData.byId[`${c.id}-core`];
       if (!core) return;
-      const R = c.spiral ? 78 : 62;
+      const R = c.spiral ? 92 : 78;
 
       span(core.idx, () => {
-        // High-density stellar nursery condensation in cluster core (致密恒星托儿所与核心发光原核)
-        const nurseryN = Math.round(140 * Q);
+        // High-density stellar nursery: organic ring / eye distribution rather than a single solid clump (空心气眼与有机流光)
+        const nurseryN = Math.round(52 * Q);
         for (let i = 0; i < nurseryN; i++) {
-          const rn = Math.pow(Math.random(), 2.8) * (R * 0.32);
+          // Hollow central eye: distribution peaks at r = 8 ~ 26, avoiding an opaque solid clump in the center
+          const rn = 7.5 + Math.pow(Math.random(), 1.25) * (R * 0.32);
           const an = Math.random() * Math.PI * 2;
-          const yn = gauss() * (R * 0.12);
+          const yn = gauss() * (R * 0.10);
           V.set(Math.cos(an) * rn, yn, Math.sin(an) * rn).add(core.pos);
-          const tcCore = tint(c.color, 0.72, 0.88, (Math.random() - 0.5) * 0.05);
-          push(V.x, V.y, V.z, tcCore[0], tcCore[1], tcCore[2], 2.2 + Math.random() * 2.2, Math.random() * 100, core.year, 0, core.idx, ci, Math.random() < 0.28 ? 1 : 0);
+          const tcCore = tint(c.color, 0.40, 0.46, (Math.random() - 0.5) * 0.05);
+          push(V.x, V.y, V.z, tcCore[0], tcCore[1], tcCore[2], 1.6 + Math.random() * 1.5, Math.random() * 100, core.year, 0, core.idx, ci, Math.random() < 0.22 ? 1 : 0);
         }
 
-        // Main cluster dust envelope with structural density wave ridges (疏密起伏的气态星际脊)
-        const nd = Math.round(680 * Q);
+        // Main cluster dust envelope with dramatic density waves and dark void spaces (疏密悬殊的气态星际网络)
+        const nd = Math.round(560 * Q);
         for (let i = 0; i < nd; i++) {
-          const outer = Math.random() < 0.44;
-          const arm = Math.random() < 0.55;
-          let r: number, dirA: number;
-          if (outer && arm) {
-            const t = Math.random();
-            r = R * (0.42 + t * 0.68);
-            dirA = t * 3.6 + ci * 1.3;
-          } else {
-            r = Math.abs(gauss()) * (outer ? R * 1.05 : R * 0.40);
-            dirA = Math.random() * Math.PI * 2;
+          const tArm = Math.random();
+          const armIdx = i % 3;
+          const armAngle = armIdx * (Math.PI * 2 / 3) + tArm * 3.8 + ci * 1.1;
+          const r = 10 + Math.pow(tArm, 1.15) * (R * 1.25) + gauss() * 6.5;
+          
+          // Density wave void filtering: produces true cavernous voids (疏) and condensed filaments (密)
+          const densityRidge = Math.sin(armAngle * 2.2 + r * 0.048);
+          if (densityRidge < -0.32 && Math.random() < 0.62) {
+            // Drop particles in dark voids to maintain ethereal transparency
+            continue;
           }
-          // Harmonic density wave modulation (气体密度波产生明暗与疏密层次)
-          const ridge = Math.sin(dirA * 3.2 + r * 0.075);
-          const yv = gauss() * (outer ? R * 0.38 : R * 0.28) * (1.0 + ridge * 0.22);
-          V.set(Math.cos(dirA) * r, yv, Math.sin(dirA) * r).add(core.pos);
-          const rr = Math.abs(r) / (R * 1.15);
-          const big = Math.random() < 0.08, mid2 = Math.random() < 0.32;
-          const s = (big ? 6.5 + Math.random() * 3.5 : (mid2 ? 3.2 + Math.random() * 2.2 : 1.6 + Math.random() * 1.2)) * (1.0 + ridge * 0.18);
-          const b = (big ? 0.18 : (mid2 ? 0.36 : 0.62)) * (0.82 + ridge * 0.32);
-          const tc = tint(c.color, clamp(1 - rr * 0.88, 0.1, 0.88), b, (Math.random() - 0.5) * 0.07);
+
+          const yv = gauss() * (R * 0.26) * (1.0 + densityRidge * 0.25);
+          V.set(Math.cos(armAngle) * r, yv, Math.sin(armAngle) * r).add(core.pos);
+
+          const rr = Math.abs(r) / (R * 1.25);
+          const big = Math.random() < 0.06, mid2 = Math.random() < 0.28;
+          // Particle size and brightness: soft, translucent, avoiding overexposed solid discs
+          const s = (big ? 5.5 + Math.random() * 2.8 : (mid2 ? 2.6 + Math.random() * 1.8 : 1.3 + Math.random() * 0.9)) * (1.0 + densityRidge * 0.15);
+          const b = (big ? 0.12 : (mid2 ? 0.22 : 0.42)) * (0.85 + densityRidge * 0.25);
+          const tc = tint(c.color, clamp(1 - rr * 0.85, 0.08, 0.70), b, (Math.random() - 0.5) * 0.06);
           push(V.x, V.y, V.z, tc[0], tc[1], tc[2], s, Math.random() * 100, core.year, 0, core.idx, ci);
         }
 
         // Dark absorption dust silhouettes for depth and chiaroscuro contrast (暗星云吸光带)
-        const darkN = Math.round(40 * Q);
+        const darkN = Math.round(35 * Q);
         for (let k = 0; k < darkN; k++) {
           const td = Math.random();
-          const rd = 16 + td * (R * 0.85);
+          const rd = 18 + td * (R * 0.90);
           const ad = td * 3.8 + ci * 1.3 + (Math.random() - 0.5) * 0.35;
-          V.set(Math.cos(ad) * rd, gauss() * (R * 0.18), Math.sin(ad) * rd).add(core.pos);
-          push(V.x, V.y, V.z, 0.012, 0.016, 0.028, 24.0 + Math.random() * 16.0, Math.random() * 100, core.year, 0, core.idx, ci, 0);
+          V.set(Math.cos(ad) * rd, gauss() * (R * 0.16), Math.sin(ad) * rd).add(core.pos);
+          push(V.x, V.y, V.z, 0.008, 0.012, 0.022, 22.0 + Math.random() * 14.0, Math.random() * 100, core.year, 0, core.idx, ci, 0);
         }
 
-        // Central luminous stellar core
-        push(core.pos.x, core.pos.y, core.pos.z, 1, 0.98, 0.9, 22, Math.random() * 100, core.year, 0, core.idx, ci, 0);
+        // Central crystalline stellar core: replaces the giant opaque white blob with a sparkling star + soft translucent halo
+        const coreCol = tint(c.color, 0.75, 0.82, 0);
+        push(core.pos.x, core.pos.y, core.pos.z, coreCol[0], coreCol[1], coreCol[2], 11.5, Math.random() * 100, core.year, 0, core.idx, ci, 1);
         
-        // Inner crown flares
-        for (let k = 0; k < 4; k++) {
-          W.set(gauss(), gauss(), gauss()).multiplyScalar(6).add(core.pos);
-          const tc2 = tint(c.color, 0.7, 1.4, 0);
-          push(W.x, W.y, W.z, tc2[0], tc2[1], tc2[2], 6 + Math.random() * 5, Math.random() * 100, core.year, 0, core.idx, ci, 1);
+        // Inner crown flares (subtle pinpoint diffraction)
+        for (let k = 0; k < 3; k++) {
+          W.set(gauss(), gauss(), gauss()).multiplyScalar(4.5).add(core.pos);
+          const tc2 = tint(c.color, 0.55, 0.55, 0);
+          push(W.x, W.y, W.z, tc2[0], tc2[1], tc2[2], 4.5 + Math.random() * 3.0, Math.random() * 100, core.year, 0, core.idx, ci, 1);
         }
         
-        // Mid-range soft volumetric aura clouds
-        for (let k = 0; k < 4; k++) {
-          W.set(gauss(), gauss(), gauss()).multiplyScalar(14).add(core.pos);
-          const th = tint(c.color, 0.14, 0.095, (Math.random() - 0.5) * 0.06);
-          push(W.x, W.y, W.z, th[0], th[1], th[2], 58 + Math.random() * 36, Math.random() * 100, core.year, 0, core.idx, ci, 0);
+        // Mid-range soft volumetric halo: gentle translucent glow (光晕渐变)
+        for (let k = 0; k < 3; k++) {
+          W.set(gauss(), gauss(), gauss()).multiplyScalar(12).add(core.pos);
+          const th = tint(c.color, 0.20, 0.065, (Math.random() - 0.5) * 0.05);
+          push(W.x, W.y, W.z, th[0], th[1], th[2], 42 + Math.random() * 26, Math.random() * 100, core.year, 0, core.idx, ci, 0);
         }
-        // Vast outer gossamer clouds (梦幻蒙眬宏大云气)
+        // Vast outer gossamer veil (梦幻蒙眬宏大透明薄雾)
         for (let k = 0; k < 2; k++) {
-          W.set(gauss(), gauss(), gauss()).multiplyScalar(28).add(core.pos);
-          const th2 = tint(c.color, 0.08, 0.045, (Math.random() - 0.5) * 0.04);
-          push(W.x, W.y, W.z, th2[0], th2[1], th2[2], 120 + Math.random() * 60, Math.random() * 100, core.year, 0, core.idx, ci, 0);
+          W.set(gauss(), gauss(), gauss()).multiplyScalar(24).add(core.pos);
+          const th2 = tint(c.color, 0.10, 0.032, (Math.random() - 0.5) * 0.04);
+          push(W.x, W.y, W.z, th2[0], th2[1], th2[2], 85 + Math.random() * 45, Math.random() * 100, core.year, 0, core.idx, ci, 0);
         }
 
         // Sweeping logarithmic spiral arms with density ripples
         if (c.spiral) {
           const eu = new THREE.Euler(c.spiral[0], c.spiral[1], c.spiral[2]);
-          const nd2 = Math.round(950 * Q);
+          const nd2 = Math.round(720 * Q);
           for (let i = 0; i < nd2; i++) {
             const t2 = Math.random();
             const arm2 = i % 2;
             const jit = gauss() * 0.28;
             const ang = arm2 * Math.PI + t2 * 4.4 * Math.PI + jit * 3;
-            const rad = 16 + t2 * 82 + gauss() * 5;
-            V.set(Math.cos(ang) * rad, gauss() * (2 + t2 * 3), Math.sin(ang) * rad).applyEuler(eu).add(core.pos);
-            const tc3 = tint(c.color, clamp(0.9 - t2 * 0.75, 0, 0.9), 0.42 - t2 * 0.12, jit * 0.5);
-            push(V.x, V.y, V.z, tc3[0], tc3[1], tc3[2], 1.3 + Math.random() * 1.4, Math.random() * 100, core.year, 0, core.idx, ci);
+            const rad = 18 + t2 * 96 + gauss() * 5;
+
+            // Spiral void density modulation
+            const armWave = Math.sin(ang * 1.5 + rad * 0.06);
+            if (armWave < -0.40 && Math.random() < 0.55) continue;
+
+            V.set(Math.cos(ang) * rad, gauss() * (2 + t2 * 3.5), Math.sin(ang) * rad).applyEuler(eu).add(core.pos);
+            const tc3 = tint(c.color, clamp(0.75 - t2 * 0.60, 0, 0.75), 0.28 - t2 * 0.08, jit * 0.4);
+            push(V.x, V.y, V.z, tc3[0], tc3[1], tc3[2], 1.1 + Math.random() * 1.2, Math.random() * 100, core.year, 0, core.idx, ci);
           }
         }
       });
@@ -642,38 +659,38 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       const prominence = clamp(0.62 + childCount * 0.18 + starJitter * 0.32, 0.58, 1.38);
 
       span(n.idx, () => {
-        // Layer 1: Core Hero Star Node (晶莹钻石星核，大小随重要度变化 5.8 ~ 8.1)
-        const coreSize = 4.4 + prominence * 2.7;
-        const coreTc = tint(c.color, 0.85, 0.82 + prominence * 0.16, 0);
+        // Layer 1: Core Hero Star Node (晶莹钻石星核，大小随重要度变化 3.6 ~ 5.8，避免刺眼白斑)
+        const coreSize = 3.6 + prominence * 2.2;
+        const coreTc = tint(c.color, 0.65, 0.62 + prominence * 0.14, 0);
         push(n.pos.x, n.pos.y, n.pos.z, coreTc[0], coreTc[1], coreTc[2], coreSize, Math.random() * 100, n.year, 0, n.idx, ci, 1);
         
-        // Layer 2: Inner Photospheric Corona (紧致紧凑光球层，尺寸缩小至 11 ~ 16，亮度柔和 0.32 ~ 0.54)
-        const coronaSize = 7.5 + prominence * 6.5;
-        const coronaCol = tint(c.color, 0.55, 0.32 + prominence * 0.22, 0);
+        // Layer 2: Inner Photospheric Corona (轻柔光球光晕，避免白化大团)
+        const coronaSize = 6.0 + prominence * 4.5;
+        const coronaCol = tint(c.color, 0.40, 0.22 + prominence * 0.14, 0);
         push(n.pos.x, n.pos.y, n.pos.z, coronaCol[0], coronaCol[1], coronaCol[2], coronaSize, Math.random() * 100, n.year, 0, n.idx, ci, 0);
 
-        // Layer 3: Outer Atmospheric Gossamer Veil (飘逸外层大气晕，尺寸缩减至 22 ~ 32，极柔和通透 0.10 ~ 0.19)
-        const veilSize = 16.0 + prominence * 11.5;
-        const veilCol = tint(c.color, 0.20, 0.10 + prominence * 0.09, 0.01);
+        // Layer 3: Outer Atmospheric Gossamer Veil (极轻盈通透外晕)
+        const veilSize = 14.0 + prominence * 8.0;
+        const veilCol = tint(c.color, 0.15, 0.06 + prominence * 0.05, 0.01);
         push(n.pos.x, n.pos.y, n.pos.z, veilCol[0], veilCol[1], veilCol[2], veilSize, Math.random() * 100, n.year, 0, n.idx, ci, 0);
 
         // Layer 4: Satellite Companion Micro-Spangles (仅重点星体配备 1-2 颗微光伴星)
-        if (prominence > 0.88) {
-          const spangleCount = prominence > 1.15 ? 2 : 1;
+        if (prominence > 0.95) {
+          const spangleCount = prominence > 1.2 ? 2 : 1;
           for (let k = 0; k < spangleCount; k++) {
-            W.set(gauss(), gauss(), gauss()).multiplyScalar(2.2 + prominence * 0.6).add(n.pos);
-            const spkCol = tint(c.color, 0.85, 0.65, (Math.random() - 0.5) * 0.05);
-            push(W.x, W.y, W.z, spkCol[0], spkCol[1], spkCol[2], 1.6 + Math.random() * 0.8, Math.random() * 100, n.year, 0, n.idx, ci, 1);
+            W.set(gauss(), gauss(), gauss()).multiplyScalar(2.4 + prominence * 0.6).add(n.pos);
+            const spkCol = tint(c.color, 0.70, 0.48, (Math.random() - 0.5) * 0.05);
+            push(W.x, W.y, W.z, spkCol[0], spkCol[1], spkCol[2], 1.3 + Math.random() * 0.7, Math.random() * 100, n.year, 0, n.idx, ci, 1);
           }
         }
 
-        // Surrounding delicate subgenre stardust cloud (点云疏密随曲风辐射度差异化)
-        const nd = Math.round((24 + prominence * 28) * Q);
+        // Surrounding delicate subgenre stardust cloud (疏密大开大合，透明星尘)
+        const nd = Math.round((14 + prominence * 16) * Q);
         for (let i = 0; i < nd; i++) {
-          V.set(gauss(), gauss(), gauss()).multiplyScalar(7.5 + prominence * 3.5).add(n.pos);
+          V.set(gauss(), gauss(), gauss()).multiplyScalar(7.0 + prominence * 3.2).add(n.pos);
           const rr = Math.random();
-          const tc = tint(c.color, clamp(1 - rr, 0.15, 0.80), 0.28 + prominence * 0.16, (Math.random() - 0.5) * 0.07);
-          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 0.9 + Math.random() * 1.1, Math.random() * 100, n.year, 0, n.idx, ci);
+          const tc = tint(c.color, clamp(1 - rr, 0.10, 0.65), 0.18 + prominence * 0.10, (Math.random() - 0.5) * 0.07);
+          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 0.8 + Math.random() * 0.9, Math.random() * 100, n.year, 0, n.idx, ci);
         }
       });
     });
@@ -909,7 +926,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     scene.add(shockPts);
 
     // Camera orbit controls state
-    const orbit = { theta: 0.9, phi: 1.12, radius: 720, target: new THREE.Vector3() };
+    const orbit = { theta: 0.9, phi: 1.12, radius: 1250, target: new THREE.Vector3() };
     const vel = { t: 0, p: 0 };
 
     threeRef.current = {
@@ -1008,7 +1025,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         if (th.pinch && th.pointers.size === 2) {
           const arr = Array.from(th.pointers.values());
           const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
-          th.orbit.radius = clamp((th.pinch.r * th.pinch.d) / Math.max(d, 20), 80, 1600);
+          th.orbit.radius = clamp((th.pinch.r * th.pinch.d) / Math.max(d, 20), 100, 2800);
           th.mx = e.clientX;
           th.my = e.clientY;
           return;
@@ -1057,7 +1074,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       if (!th) return;
       th.lastInteract = performance.now();
       th.fly = null;
-      th.orbit.radius = clamp(th.orbit.radius * (1 + e.deltaY * 0.0011), 80, 1600);
+      th.orbit.radius = clamp(th.orbit.radius * (1 + e.deltaY * 0.0011), 100, 2800);
     };
 
     canvas.addEventListener("pointerdown", handlePointerDown);
