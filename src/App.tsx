@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
 import { GlobalSearch } from "./components/GlobalSearch";
-import { Breadcrumbs } from "./components/Breadcrumbs";
 import { StudioView } from "./views/StudioView";
 import { GalaxyView } from "./views/GalaxyView";
 import { HorizontalTimelineView } from "./views/HorizontalTimelineView";
@@ -104,14 +103,6 @@ const MainApp: React.FC = () => {
         onClose={() => setSearchOpen(false)}
         onSelectGenre={handleSelectGenre}
       />
-
-      {/* Breadcrumbs Navigation - Only shown on genre detail view to avoid redundancy with top navbar */}
-      {currentTab === "detail" && (
-        <Breadcrumbs
-          genre={selectedGenre}
-          onNavigateHome={() => setCurrentTab("studio")}
-        />
-      )}
 
       {/* Main Viewport */}
       <main className="flex-1 w-full pb-12">
