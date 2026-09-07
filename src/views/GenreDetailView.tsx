@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Play, 
   Pause, 
@@ -14,9 +14,11 @@ import {
   Disc3, 
   Layers, 
   Headphones, 
-  GitCommit,
+  GitCommit, 
   Flame,
-  Volume2
+  Volume2,
+  Radio,
+  Activity
 } from "lucide-react";
 import { Genre, SequencerTrack } from "../types/genre";
 import { GENRES_MAP } from "../data/genres";
@@ -51,6 +53,33 @@ const applyAudioMutes = (engine: AudioEngine, mode: "drums" | "full", genre: Gen
     engine.setTrackState(idx, { mute: shouldMute });
   });
 };
+
+// 4-Beat rich color variations for 16-step rhythm spectrum
+const STEP_COLORS = [
+  // Beat 1: Amber & Gold
+  { border: "border-amber-500/40", glow: "shadow-[0_0_12px_rgba(245,183,61,0.6)]", bar: "from-amber-400 to-amber-600", dot: "bg-amber-400" },
+  { border: "border-amber-500/30", glow: "shadow-[0_0_10px_rgba(245,183,61,0.5)]", bar: "from-amber-400 to-amber-500", dot: "bg-amber-400" },
+  { border: "border-amber-500/30", glow: "shadow-[0_0_10px_rgba(245,183,61,0.5)]", bar: "from-amber-400 to-amber-500", dot: "bg-amber-400" },
+  { border: "border-amber-500/30", glow: "shadow-[0_0_10px_rgba(245,183,61,0.5)]", bar: "from-amber-400 to-amber-500", dot: "bg-amber-400" },
+
+  // Beat 2: Cyan & Aqua
+  { border: "border-cyan-500/40", glow: "shadow-[0_0_12px_rgba(6,182,212,0.6)]", bar: "from-cyan-400 to-cyan-600", dot: "bg-cyan-400" },
+  { border: "border-cyan-500/30", glow: "shadow-[0_0_10px_rgba(6,182,212,0.5)]", bar: "from-cyan-400 to-cyan-500", dot: "bg-cyan-400" },
+  { border: "border-cyan-500/30", glow: "shadow-[0_0_10px_rgba(6,182,212,0.5)]", bar: "from-cyan-400 to-cyan-500", dot: "bg-cyan-400" },
+  { border: "border-cyan-500/30", glow: "shadow-[0_0_10px_rgba(6,182,212,0.5)]", bar: "from-cyan-400 to-cyan-500", dot: "bg-cyan-400" },
+
+  // Beat 3: Rose & Coral
+  { border: "border-rose-500/40", glow: "shadow-[0_0_12px_rgba(244,63,94,0.6)]", bar: "from-rose-400 to-rose-600", dot: "bg-rose-400" },
+  { border: "border-rose-500/30", glow: "shadow-[0_0_10px_rgba(244,63,94,0.5)]", bar: "from-rose-400 to-rose-500", dot: "bg-rose-400" },
+  { border: "border-rose-500/30", glow: "shadow-[0_0_10px_rgba(244,63,94,0.5)]", bar: "from-rose-400 to-rose-500", dot: "bg-rose-400" },
+  { border: "border-rose-500/30", glow: "shadow-[0_0_10px_rgba(244,63,94,0.5)]", bar: "from-rose-400 to-rose-500", dot: "bg-rose-400" },
+
+  // Beat 4: Acid Violet & Purple
+  { border: "border-purple-500/40", glow: "shadow-[0_0_12px_rgba(168,85,247,0.6)]", bar: "from-purple-400 to-purple-600", dot: "bg-purple-400" },
+  { border: "border-purple-500/30", glow: "shadow-[0_0_10px_rgba(168,85,247,0.5)]", bar: "from-purple-400 to-purple-500", dot: "bg-purple-400" },
+  { border: "border-purple-500/30", glow: "shadow-[0_0_10px_rgba(168,85,247,0.5)]", bar: "from-purple-400 to-purple-500", dot: "bg-purple-400" },
+  { border: "border-purple-500/30", glow: "shadow-[0_0_10px_rgba(168,85,247,0.5)]", bar: "from-purple-400 to-purple-500", dot: "bg-purple-400" },
+];
 
 export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   genre,
@@ -124,6 +153,52 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     if (engineRef.current) {
       engineRef.current.setBpm(clamped);
     }
+  };
+
+  // Analyze step hits per instrument to drive colorful animation
+  const stepInfo = useMemo(() => {
+    const tracks = genre.sequencer_pattern?.tracks || [];
+    const info = Array.from({ length: 16 }, () => ({
+      hasKick: false,
+      hasSnare: false,
+      hasHihat: false,
+      hasPerc: false,
+      hasBass: false,
+      totalHits: 0,
+    }));
+
+    tracks.forEach((track, idx) => {
+      const isDrum = isDrumTrack(track, idx);
+      const id = `${track.track_id || ""} ${track.name || ""}`.toLowerCase();
+      const isKick = id.includes("kick");
+      const isSnare = id.includes("snare") || id.includes("clap");
+      const isHihat = id.includes("hat") || id.includes("hihat");
+      const isPerc = isDrum && !isKick && !isSnare && !isHihat;
+      const isBass = id.includes("bass") || id.includes("sub");
+
+      const steps = track.steps || [];
+      for (let s = 0; s < 16; s++) {
+        const stepIdx = steps.length > 0 ? s % steps.length : s;
+        if (steps[stepIdx] > 0) {
+          info[s].totalHits += 1;
+          if (isKick) info[s].hasKick = true;
+          if (isSnare) info[s].hasSnare = true;
+          if (isHihat) info[s].hasHihat = true;
+          if (isPerc) info[s].hasPerc = true;
+          if (isBass) info[s].hasBass = true;
+        }
+      }
+    });
+
+    return info;
+  }, [genre]);
+
+  const currentHits = stepInfo[currentStep] || {
+    hasKick: false,
+    hasSnare: false,
+    hasHihat: false,
+    hasPerc: false,
+    hasBass: false,
   };
 
   return (
@@ -203,7 +278,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         </div>
       </div>
 
-      {/* Groove Audition Bar: Directly provides Full Tracks & Drums Only modes without track lanes */}
+      {/* Groove Audition Bar: Dual Mode (Full Band & Drums Only) with Rich Colorful Spectrum */}
       <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -321,37 +396,130 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           </button>
         </div>
 
-        {/* Dynamic Beat / Step Pulse Indicator Bar */}
-        <div className="p-3.5 rounded-2xl bg-[#0d0e12] border border-[#23262d] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
-          <div className="flex items-center space-x-2 text-[#8b8f99]">
-            <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? "bg-[#f5b73d] shadow-[0_0_8px_#f5b73d] animate-pulse" : "bg-neutral-700"}`} />
-            <span className="font-semibold text-[#c4c7cf]">
-              {isPlaying 
-                ? (auditionMode === "drums" 
-                    ? (language === "zh" ? "正在试听纯鼓组节奏 (底鼓/军鼓/踩镲/打击乐)" : "Auditioning Drums Only (Kick/Snare/Hats/Perc)") 
-                    : (language === "zh" ? "正在试听全部音轨 (包含低音、和声与合成器导奏)" : "Auditioning Full Tracks (Drums, Bass, Chords & Leads)"))
-                : (language === "zh" ? "准备就绪 · 点击上方按钮即时播放" : "Ready · Click button above to audition")}
-            </span>
+        {/* Dynamic Multi-color Beat Spectrum & Status Console (No blank space, rich color transitions) */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#0c0d11] border border-[#23262d] space-y-3.5">
+          {/* Status Bar & Active Channels Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2.5">
+              <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? "bg-[#f5b73d] shadow-[0_0_10px_#f5b73d] animate-pulse" : "bg-neutral-700"}`} />
+              <span className="font-bold text-sm text-[#f0ede6]">
+                {isPlaying 
+                  ? (auditionMode === "drums" 
+                      ? (language === "zh" ? "正在试听纯鼓组节奏 (底鼓 / 军鼓 / 踩镲 / 打击乐)" : "Auditioning Drums Only (Kick / Snare / Hats / Perc)") 
+                      : (language === "zh" ? "正在试听全部音轨 (完整底鼓、低音与合成器)" : "Auditioning Full Arrangement (Drums, Bass & Synths)"))
+                  : (language === "zh" ? "准备就绪 · 点击上方按钮即时播放" : "Ready · Click button above to audition")}
+              </span>
+            </div>
+
+            {/* Beat Readout & Measure Counter */}
+            <div className="flex items-center gap-2 font-mono">
+              <span className="px-2.5 py-1 rounded-lg bg-[#14161e] border border-[#282c38] text-xs font-bold text-[#f5b73d]">
+                BEAT {Math.floor(currentStep / 4) + 1} / 4
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-[#14161e] border border-[#282c38] text-xs font-bold text-[#06b6d4]">
+                STEP {currentStep + 1} / 16
+              </span>
+            </div>
           </div>
 
-          {/* 16 Step Beat Light Meter */}
-          <div className="flex items-center gap-1 self-center sm:self-auto">
+          {/* Full-width 16-Step Dynamic Spectrum Bar (Rich 4-Beat Colors, No Blank Space) */}
+          <div className="grid grid-cols-16 gap-1 sm:gap-2 h-16 sm:h-20 bg-[#07080a] p-2 sm:p-2.5 rounded-xl border border-[#1b1e26] items-end">
             {Array.from({ length: 16 }).map((_, stepIdx) => {
-              const isActive = isPlaying && currentStep === stepIdx;
-              const isBeat = stepIdx % 4 === 0;
+              const isCurrent = isPlaying && currentStep === stepIdx;
+              const isBeatStart = stepIdx % 4 === 0;
+              const theme = STEP_COLORS[stepIdx];
+              const hits = stepInfo[stepIdx];
+              const hasHits = auditionMode === "drums" 
+                ? (hits.hasKick || hits.hasSnare || hits.hasHihat || hits.hasPerc) 
+                : hits.totalHits > 0;
+
+              // Dynamic calculated height based on rhythm presence
+              const baseHeight = hasHits ? (isBeatStart ? "h-9 sm:h-11" : "h-6 sm:h-8") : (isBeatStart ? "h-3.5" : "h-2.5");
+              const activeHeight = isCurrent ? (hasHits ? "h-14 sm:h-16" : "h-9") : baseHeight;
+
               return (
-                <div
-                  key={stepIdx}
-                  className={`h-2.5 rounded-full transition-all duration-75 ${
-                    isActive
-                      ? "w-3 bg-[#f5b73d] shadow-[0_0_8px_#f5b73d]"
-                      : isBeat
-                      ? "w-2 bg-[#2c303c]"
-                      : "w-1.5 bg-[#1a1c22]"
-                  }`}
-                />
+                <div key={stepIdx} className="flex flex-col items-center justify-end h-full relative group">
+                  {/* EQ Light Bar with Multi-Color Gradients */}
+                  <div
+                    className={`w-full rounded-t-md transition-all duration-75 flex flex-col justify-between p-0.5 ${activeHeight} ${
+                      isCurrent
+                        ? `bg-gradient-to-t ${theme.bar} ${theme.glow} ring-1 ring-white scale-105 z-10`
+                        : hasHits
+                        ? `bg-gradient-to-t ${theme.bar} opacity-40 group-hover:opacity-80`
+                        : isBeatStart
+                        ? "bg-neutral-800/80 opacity-30"
+                        : "bg-neutral-900/60 opacity-20"
+                    }`}
+                  >
+                    {/* Top LED Pip */}
+                    <span
+                      className={`w-full h-1 rounded-full ${
+                        isCurrent ? "bg-white" : hasHits ? theme.dot : "bg-neutral-700"
+                      }`}
+                    />
+                  </div>
+
+                  {/* Step Number Indicator */}
+                  <span
+                    className={`text-[9px] font-mono mt-1 ${
+                      isCurrent
+                        ? "font-extrabold text-white scale-110"
+                        : isBeatStart
+                        ? "font-bold text-[#8b8f99]"
+                        : "text-neutral-600"
+                    }`}
+                  >
+                    {stepIdx + 1}
+                  </span>
+                </div>
               );
             })}
+          </div>
+
+          {/* Active Instrument Trigger Badges Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#181a22] text-[11px]">
+            <span className="text-[#686d7c] font-semibold">
+              {language === "zh" ? "实时打击通道:" : "Live Sound Channels:"}
+            </span>
+            <div className="flex flex-wrap items-center gap-2 font-mono">
+              <span className={`px-2 py-0.5 rounded-md border transition-all ${
+                isPlaying && currentHits.hasKick 
+                  ? "bg-amber-500/25 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,183,61,0.5)] font-bold scale-105" 
+                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+              }`}>
+                KICK 底鼓
+              </span>
+              <span className={`px-2 py-0.5 rounded-md border transition-all ${
+                isPlaying && currentHits.hasSnare 
+                  ? "bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.5)] font-bold scale-105" 
+                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+              }`}>
+                SNARE 军鼓
+              </span>
+              <span className={`px-2 py-0.5 rounded-md border transition-all ${
+                isPlaying && currentHits.hasHihat 
+                  ? "bg-yellow-500/25 border-yellow-400 text-yellow-300 shadow-[0_0_8px_rgba(234,179,8,0.5)] font-bold scale-105" 
+                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+              }`}>
+                HI-HAT 踩镲
+              </span>
+              <span className={`px-2 py-0.5 rounded-md border transition-all ${
+                isPlaying && currentHits.hasPerc 
+                  ? "bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.5)] font-bold scale-105" 
+                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+              }`}>
+                PERC 打击乐
+              </span>
+              {auditionMode === "full" && (
+                <span className={`px-2 py-0.5 rounded-md border transition-all ${
+                  isPlaying && currentHits.hasBass 
+                    ? "bg-purple-500/25 border-purple-400 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.5)] font-bold scale-105" 
+                    : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+                }`}>
+                  BASS 低音
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
