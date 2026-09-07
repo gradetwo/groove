@@ -109,11 +109,6 @@ export const Header: React.FC<HeaderProps> = ({
             GROOVE&nbsp;ATLAS
           </span>
         </div>
-
-        {/* Tagline */}
-        <div className="hidden lg:block text-xs text-[#8b8f99] border-l border-[#23262d] pl-4 leading-none">
-          {language === "zh" ? "曲风步进实验室 · 159 种全合成音源" : "Genre Groove Lab · 159 Synthetic Genres"}
-        </div>
       </div>
 
       {/* Navigation Links */}
