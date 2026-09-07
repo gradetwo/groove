@@ -14,13 +14,12 @@ import {
   Disc3, 
   Layers, 
   Headphones, 
-  Share2,
-  ChevronRight,
   GitCommit,
-  Flame
+  Flame,
+  Volume2
 } from "lucide-react";
-import { Genre, SequencerPattern } from "../types/genre";
-import { GENRES_MAP, ALL_GENRES } from "../data/genres";
+import { Genre, SequencerTrack } from "../types/genre";
+import { GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useLanguage } from "../i18n/LanguageContext";
 
@@ -32,16 +31,26 @@ interface GenreDetailViewProps {
   onAddToCompare: (genre: Genre) => void;
 }
 
-const MINI_TRACK_COLORS = [
-  "bg-[#ff5964]",
-  "bg-[#ffb65c]",
-  "bg-[#45e0c9]",
-  "bg-[#c8e06a]",
-  "bg-[#ff8a5c]",
-  "bg-[#f06ec4]",
-  "bg-[#7ee787]",
-  "bg-[#9aa5ce]",
-];
+const DRUM_TRACK_IDS = new Set(["kick", "snare", "hihat", "percussion"]);
+
+const isDrumTrack = (track: SequencerTrack, index: number): boolean => {
+  if (track.track_id && DRUM_TRACK_IDS.has(track.track_id)) return true;
+  const id = `${track.track_id || ""} ${track.name || ""} ${track.instrument || ""}`.toLowerCase();
+  const drumKeywords = ["kick", "snare", "clap", "hat", "hihat", "perc", "tom", "rim", "shaker", "cymbal", "ride", "crash", "conga", "bongo"];
+  if (drumKeywords.some((k) => id.includes(k))) return true;
+  const nonDrumKeywords = ["bass", "sub", "chord", "lead", "synth", "pad", "arp", "organ", "piano", "fx", "vocal"];
+  if (nonDrumKeywords.some((k) => id.includes(k))) return false;
+  return index < 4;
+};
+
+const applyAudioMutes = (engine: AudioEngine, mode: "drums" | "full", genre: Genre) => {
+  const tracks = genre.sequencer_pattern?.tracks || [];
+  tracks.forEach((track, idx) => {
+    const isDrum = isDrumTrack(track, idx);
+    const shouldMute = mode === "drums" ? !isDrum : false;
+    engine.setTrackState(idx, { mute: shouldMute });
+  });
+};
 
 export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   genre,
@@ -52,8 +61,9 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 }) => {
   const { t, language } = useLanguage();
 
-  // Mini sequencer player state
+  // Groove player state
   const [isPlaying, setIsPlaying] = useState(false);
+  const [auditionMode, setAuditionMode] = useState<"drums" | "full">("full");
   const [currentStep, setCurrentStep] = useState(0);
   const [bpm, setBpm] = useState(genre.default_bpm || 124);
   const engineRef = useRef<AudioEngine | null>(null);
@@ -73,18 +83,32 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
     return () => {
       engine.destroy();
+      engineRef.current = null;
     };
   }, [genre]);
 
-  const handleTogglePlay = () => {
+  const handlePlayMode = (mode: "drums" | "full") => {
     if (!engineRef.current) return;
-    if (isPlaying) {
-      engineRef.current.pause();
+
+    // If clicking same mode while playing, stop
+    if (isPlaying && auditionMode === mode) {
+      engineRef.current.stop();
       setIsPlaying(false);
-    } else {
-      engineRef.current.play();
-      setIsPlaying(true);
+      return;
     }
+
+    // If currently playing in the other mode, switch mutes in realtime without interruption
+    if (isPlaying && auditionMode !== mode) {
+      setAuditionMode(mode);
+      applyAudioMutes(engineRef.current, mode, genre);
+      return;
+    }
+
+    // Otherwise start playback in this mode
+    setAuditionMode(mode);
+    applyAudioMutes(engineRef.current, mode, genre);
+    engineRef.current.play();
+    setIsPlaying(true);
   };
 
   const handleStop = () => {
@@ -95,9 +119,10 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   };
 
   const handleBpmChange = (newBpm: number) => {
-    setBpm(newBpm);
+    const clamped = Math.max(40, Math.min(240, newBpm));
+    setBpm(clamped);
     if (engineRef.current) {
-      engineRef.current.setBpm(newBpm);
+      engineRef.current.setBpm(clamped);
     }
   };
 
@@ -178,44 +203,37 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         </div>
       </div>
 
-      {/* Embedded Mini Groove Player */}
-      <div className="bg-[#121317] border border-[#23262d]/90 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-[#f5b73d]" />
-            <h2 className="font-bold text-[#e9e7e0] text-base sm:text-lg">
-              {language === "zh" ? "8 轨合成律动试听" : "Interactive 8-Track Groove"}
-            </h2>
-            <span className="text-xs text-[#8b8f99]">
-              ({genre.sequencer_pattern.scale || "C minor"})
-            </span>
+      {/* Groove Audition Bar: Directly provides Full Tracks & Drums Only modes without track lanes */}
+      <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-5 h-5 text-[#f5b73d]" />
+              <h2 className="font-bold text-[#e9e7e0] text-lg sm:text-xl tracking-wide">
+                {language === "zh" ? "曲风律动即时试听" : "Genre Groove Audition"}
+              </h2>
+              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#f5b73d]/15 text-[#f5b73d] border border-[#f5b73d]/30">
+                {genre.sequencer_pattern?.scale || "C Minor"}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-[#8b8f99] mt-1">
+              {language === "zh" 
+                ? "支持直接试听完整编曲或单独试听纯鼓组节奏" 
+                : "Listen to the complete synthetic arrangement or isolate the drum groove"}
+            </p>
           </div>
 
-          <div className="flex items-center space-x-3">
-            {/* Play / Pause */}
-            <button
-              onClick={handleTogglePlay}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl font-bold text-xs transition-colors shadow-lg ${
-                isPlaying
-                  ? "bg-amber-500 hover:bg-amber-400 text-black"
-                  : "bg-emerald-600 hover:bg-emerald-500 text-[#e9e7e0]"
-              }`}
-            >
-              {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-              <span>{isPlaying ? t("pause") : t("play")}</span>
-            </button>
-
-            <button
-              onClick={handleStop}
-              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#b9b7b0]"
-              title={t("stop")}
-            >
-              <Square className="w-3.5 h-3.5 fill-current" />
-            </button>
-
-            {/* Tempo */}
-            <div className="flex items-center space-x-1.5 bg-[#0d0e12] px-3 py-1.5 rounded-xl border border-[#23262d] text-xs font-mono text-[#b9b7b0]">
-              <span className="text-[#5a5e68]">BPM</span>
+          {/* Tempo Controls & Stop */}
+          <div className="flex items-center space-x-3 self-start sm:self-auto">
+            <div className="flex items-center space-x-2 bg-[#0d0e12] px-3.5 py-2 rounded-2xl border border-[#23262d] text-xs font-mono text-[#b9b7b0]">
+              <span className="text-[#5a5e68] font-bold">BPM</span>
+              <button
+                onClick={() => handleBpmChange(bpm - 2)}
+                className="w-5 h-5 rounded bg-[#181a20] hover:bg-[#252834] text-[#e9e7e0] font-bold flex items-center justify-center transition-colors"
+                title="Decrease BPM"
+              >
+                -
+              </button>
               <input
                 type="number"
                 min="40"
@@ -224,40 +242,117 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                 onChange={(e) => handleBpmChange(Number(e.target.value))}
                 className="w-12 bg-transparent text-[#e9e7e0] font-bold text-center focus:outline-none"
               />
+              <button
+                onClick={() => handleBpmChange(bpm + 2)}
+                className="w-5 h-5 rounded bg-[#181a20] hover:bg-[#252834] text-[#e9e7e0] font-bold flex items-center justify-center transition-colors"
+                title="Increase BPM"
+              >
+                +
+              </button>
             </div>
+
+            {isPlaying && (
+              <button
+                onClick={handleStop}
+                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold text-xs transition-colors border border-red-500/30"
+                title={t("stop")}
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+                <span>{t("stop")}</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* 8 Track Mini Matrix */}
-        <div className="space-y-1.5 overflow-x-auto pb-1">
-          {genre.sequencer_pattern.tracks.map((track, trackIdx) => {
-            const colorClass = MINI_TRACK_COLORS[trackIdx % MINI_TRACK_COLORS.length];
-            return (
-              <div key={track.track_id} className="flex items-center space-x-2 min-w-[500px]">
-                <div className="w-24 text-[11px] font-semibold text-[#8b8f99] truncate">
-                  {track.name}
+        {/* Dual Audition Action Buttons: Full Band & Drums Only */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {/* Full Band Audition Button */}
+          <button
+            onClick={() => handlePlayMode("full")}
+            className={`flex items-center justify-center space-x-2.5 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all shadow-md ${
+              isPlaying && auditionMode === "full"
+                ? "bg-[#f5b73d] text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
+                : "bg-[#161820] hover:bg-[#20232c] text-[#e9e7e0] border border-[#2b2e38] hover:border-[#f5b73d]/50"
+            }`}
+          >
+            {isPlaying && auditionMode === "full" ? (
+              <>
+                <Square className="w-4 h-4 fill-current" />
+                <span>{language === "zh" ? "停止全部音轨" : "Stop Full Tracks"}</span>
+                <div className="flex items-end gap-0.5 h-3.5 ml-1.5">
+                  <span className="w-1 h-3.5 bg-black rounded-full animate-pulse" />
+                  <span className="w-1 h-2 bg-black rounded-full animate-ping" />
+                  <span className="w-1 h-3.5 bg-black rounded-full animate-pulse" />
                 </div>
-                <div className="flex-1 grid grid-cols-16 gap-1">
-                  {track.steps.map((stepVal, stepIdx) => {
-                    const isActive = stepVal === 1;
-                    const isPlayhead = isPlaying && currentStep === stepIdx;
-                    return (
-                      <div
-                        key={stepIdx}
-                        className={`h-5 rounded transition-all ${
-                          isActive
-                            ? `${colorClass} shadow-sm`
-                            : stepIdx % 4 === 0
-                            ? "bg-neutral-800/60"
-                            : "bg-[#121317]/60"
-                        } ${isPlayhead ? "ring-2 ring-white" : ""}`}
-                      />
-                    );
-                  })}
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-current text-[#f5b73d]" />
+                <span>{language === "zh" ? "试听全部音轨 (完整编曲)" : "Audition Full Tracks"}</span>
+              </>
+            )}
+          </button>
+
+          {/* Drums Only Audition Button */}
+          <button
+            onClick={() => handlePlayMode("drums")}
+            className={`flex items-center justify-center space-x-2.5 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all shadow-md ${
+              isPlaying && auditionMode === "drums"
+                ? "bg-[#f5b73d] text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
+                : "bg-[#161820] hover:bg-[#20232c] text-[#e9e7e0] border border-[#2b2e38] hover:border-[#f5b73d]/50"
+            }`}
+          >
+            {isPlaying && auditionMode === "drums" ? (
+              <>
+                <Square className="w-4 h-4 fill-current" />
+                <span>{language === "zh" ? "停止鼓组试听" : "Stop Drums"}</span>
+                <div className="flex items-end gap-0.5 h-3.5 ml-1.5">
+                  <span className="w-1 h-3.5 bg-black rounded-full animate-pulse" />
+                  <span className="w-1 h-2 bg-black rounded-full animate-ping" />
+                  <span className="w-1 h-3.5 bg-black rounded-full animate-pulse" />
                 </div>
-              </div>
-            );
-          })}
+              </>
+            ) : (
+              <>
+                <Disc3 className="w-4 h-4 text-[#f5b73d]" />
+                <span>{language === "zh" ? "只试听鼓组 (纯节奏骨架)" : "Audition Drums Only"}</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Dynamic Beat / Step Pulse Indicator Bar */}
+        <div className="p-3.5 rounded-2xl bg-[#0d0e12] border border-[#23262d] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-2 text-[#8b8f99]">
+            <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? "bg-[#f5b73d] shadow-[0_0_8px_#f5b73d] animate-pulse" : "bg-neutral-700"}`} />
+            <span className="font-semibold text-[#c4c7cf]">
+              {isPlaying 
+                ? (auditionMode === "drums" 
+                    ? (language === "zh" ? "正在试听纯鼓组节奏 (底鼓/军鼓/踩镲/打击乐)" : "Auditioning Drums Only (Kick/Snare/Hats/Perc)") 
+                    : (language === "zh" ? "正在试听全部音轨 (包含低音、和声与合成器导奏)" : "Auditioning Full Tracks (Drums, Bass, Chords & Leads)"))
+                : (language === "zh" ? "准备就绪 · 点击上方按钮即时播放" : "Ready · Click button above to audition")}
+            </span>
+          </div>
+
+          {/* 16 Step Beat Light Meter */}
+          <div className="flex items-center gap-1 self-center sm:self-auto">
+            {Array.from({ length: 16 }).map((_, stepIdx) => {
+              const isActive = isPlaying && currentStep === stepIdx;
+              const isBeat = stepIdx % 4 === 0;
+              return (
+                <div
+                  key={stepIdx}
+                  className={`h-2.5 rounded-full transition-all duration-75 ${
+                    isActive
+                      ? "w-3 bg-[#f5b73d] shadow-[0_0_8px_#f5b73d]"
+                      : isBeat
+                      ? "w-2 bg-[#2c303c]"
+                      : "w-1.5 bg-[#1a1c22]"
+                  }`}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
 
