@@ -179,28 +179,28 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header & Stats Banner */}
-      <div className="bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-[#f5b73d] text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Blind Ear Training Arena</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-white mt-1">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#e9e7e0] mt-1">
             {t("challenge_title")}
           </h2>
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-xs text-[#8b8f99] mt-0.5">
             {t("challenge_subtitle")}
           </p>
         </div>
 
         {/* Stats Pill Box */}
-        <div className="flex items-center space-x-3 bg-neutral-950 p-2 rounded-2xl border border-neutral-800">
+        <div className="flex items-center space-x-3 bg-[#0d0e12] p-2 rounded-2xl border border-[#23262d]">
           {/* Score */}
           <div className="px-3 py-1 text-center">
-            <span className="text-[10px] text-neutral-500 font-bold uppercase block">
+            <span className="text-[10px] text-[#5a5e68] font-bold uppercase block">
               {t("score")}
             </span>
-            <span className="text-sm sm:text-base font-extrabold text-indigo-400 font-mono">
+            <span className="text-sm sm:text-base font-extrabold text-[#f5b73d] font-mono">
               {score}
             </span>
           </div>
@@ -222,7 +222,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
           {/* Rank */}
           <div className="px-3 py-1 text-center hidden sm:block">
-            <span className="text-[10px] text-neutral-500 font-bold uppercase block">
+            <span className="text-[10px] text-[#5a5e68] font-bold uppercase block">
               Rank
             </span>
             <span className="text-xs font-bold text-emerald-400">
@@ -240,8 +240,8 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             onClick={() => handleDifficultyChange(d)}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
               difficulty === d
-                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                : "bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800"
+                ? "bg-[#f5b73d] text-[#0a0b0d] text-[#e9e7e0] shadow-lg shadow-indigo-600/30"
+                : "bg-[#121317] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
             }`}
           >
             {d === "easy" ? t("difficulty_easy") : d === "medium" ? t("difficulty_medium") : t("difficulty_hard")}
@@ -250,27 +250,27 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
       </div>
 
       {/* Audio Playback Deck */}
-      <div className="bg-neutral-900/80 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center space-y-4 relative overflow-hidden">
+      <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 sm:p-8 shadow-xl text-center space-y-4 relative overflow-hidden">
         {/* Animated pulse background while playing */}
         {isPlaying && (
           <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none" />
         )}
 
         <div className="relative z-10 space-y-3">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 mx-auto flex items-center justify-center text-white shadow-xl shadow-indigo-500/30">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 mx-auto flex items-center justify-center text-[#e9e7e0] shadow-xl shadow-indigo-500/30">
             <Volume2 className={`w-8 h-8 ${isPlaying ? "animate-bounce" : ""}`} />
           </div>
 
-          <p className="text-xs sm:text-sm text-neutral-300 font-medium">
+          <p className="text-xs sm:text-sm text-[#b9b7b0] font-medium">
             {isPlaying 
               ? (language === "zh" ? "正在播放神秘律动，仔细聆听鼓点节奏与贝斯..." : "Listening to the blind groove... Identify the genre!") 
               : (language === "zh" ? "已暂停，点击播放继续试听" : "Paused. Click play to resume listening")}
           </p>
 
           {/* Clue: Tempo in medium/hard mode */}
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-neutral-950 border border-neutral-800 text-xs text-neutral-400 font-mono">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#0d0e12] border border-[#23262d] text-xs text-[#8b8f99] font-mono">
             <span>TEMPO CLUE:</span>
-            <span className="text-white font-bold">{question.correctGenre.default_bpm} BPM</span>
+            <span className="text-[#e9e7e0] font-bold">{question.correctGenre.default_bpm} BPM</span>
           </div>
 
           <div>
@@ -279,7 +279,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
               className={`inline-flex items-center space-x-2 px-6 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-xl ${
                 isPlaying
                   ? "bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/30"
-                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-[#e9e7e0] shadow-emerald-600/30"
               }`}
             >
               {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
@@ -295,7 +295,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           const isSelected = selectedAnswerId === opt.id;
           const isCorrectAnswer = opt.id === question.correctGenre.id;
 
-          let cardStyle = "bg-neutral-900/90 border-neutral-800 hover:border-indigo-500/80 hover:bg-neutral-850 text-white";
+          let cardStyle = "bg-[#121317]/90 border-[#23262d] hover:border-indigo-500/80 hover:bg-neutral-850 text-[#e9e7e0]";
           let badge = String.fromCharCode(65 + idx); // A, B, C, D
 
           if (isAnswered) {
@@ -304,7 +304,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             } else if (isSelected && !isCorrectAnswer) {
               cardStyle = "bg-rose-600/20 border-rose-500 text-rose-200";
             } else {
-              cardStyle = "bg-neutral-950/40 border-neutral-900 text-neutral-600 opacity-40";
+              cardStyle = "bg-[#0d0e12]/40 border-neutral-900 text-neutral-600 opacity-40";
             }
           }
 
@@ -317,7 +317,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             >
               <div className="space-y-1 min-w-0 pr-3">
                 <div className="flex items-center space-x-2">
-                  <span className="w-6 h-6 rounded-lg bg-neutral-800 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center font-bold text-xs text-neutral-400 shrink-0">
+                  <span className="w-6 h-6 rounded-lg bg-neutral-800 group-hover:bg-[#f5b73d] text-[#0a0b0d] group-hover:text-[#e9e7e0] flex items-center justify-center font-bold text-xs text-[#8b8f99] shrink-0">
                     {badge}
                   </span>
                   <span className="font-bold text-base sm:text-lg tracking-wide truncate">
@@ -325,11 +325,11 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                   </span>
                 </div>
                 {opt.aliases[0] && language === "zh" && (
-                  <p className="text-xs text-neutral-400 pl-8">
+                  <p className="text-xs text-[#8b8f99] pl-8">
                     {opt.aliases[0]}
                   </p>
                 )}
-                <div className="text-[11px] text-neutral-500 pl-8">
+                <div className="text-[11px] text-[#5a5e68] pl-8">
                   {opt.category} • {opt.bpm_range} BPM
                 </div>
               </div>
@@ -347,11 +347,11 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
       {/* Answer Explanation & Next Question Drawer */}
       {isAnswered && (
-        <div className="bg-neutral-900/90 border border-neutral-700 rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
+        <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center space-x-2">
-              <Zap className="w-5 h-5 text-indigo-400" />
-              <h3 className="font-extrabold text-white text-base sm:text-lg">
+              <Zap className="w-5 h-5 text-[#f5b73d]" />
+              <h3 className="font-extrabold text-[#e9e7e0] text-base sm:text-lg">
                 {selectedAnswerId === question.correctGenre.id
                   ? (language === "zh" ? "🎉 恭喜回答正确！" : "🎉 Brilliant! Correct Answer!")
                   : (language === "zh" ? "💡 差一点！正确答案是: " + question.correctGenre.name : "💡 Not quite! The correct answer was: " + question.correctGenre.name)}
@@ -360,41 +360,41 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
             <button
               onClick={() => startNewQuestion()}
-              className="flex items-center space-x-1.5 px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xl shadow-indigo-600/30 transition-transform hover:scale-105"
+              className="flex items-center space-x-1.5 px-5 py-2.5 rounded-2xl bg-[#f5b73d] text-[#0a0b0d] hover:bg-indigo-500 text-[#e9e7e0] font-bold text-xs shadow-xl shadow-indigo-600/30 transition-transform hover:scale-105"
             >
               <span>{t("next_question")}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#b9b7b0] leading-relaxed">
             {question.correctGenre.cultural_context[language]}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-            <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800">
-              <span className="text-neutral-500 font-bold block mb-1 uppercase text-[10px]">
+            <div className="p-3 bg-[#0d0e12] rounded-xl border border-[#23262d]">
+              <span className="text-[#5a5e68] font-bold block mb-1 uppercase text-[10px]">
                 {t("kick_placement")}
               </span>
-              <p className="text-neutral-200">
+              <p className="text-[#e9e7e0]">
                 {question.correctGenre.drum_pattern.kick[language]}
               </p>
             </div>
 
-            <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800">
-              <span className="text-neutral-500 font-bold block mb-1 uppercase text-[10px]">
+            <div className="p-3 bg-[#0d0e12] rounded-xl border border-[#23262d]">
+              <span className="text-[#5a5e68] font-bold block mb-1 uppercase text-[10px]">
                 {t("snare_placement")}
               </span>
-              <p className="text-neutral-200">
+              <p className="text-[#e9e7e0]">
                 {question.correctGenre.drum_pattern.snare_clap[language]}
               </p>
             </div>
 
-            <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800">
-              <span className="text-neutral-500 font-bold block mb-1 uppercase text-[10px]">
+            <div className="p-3 bg-[#0d0e12] rounded-xl border border-[#23262d]">
+              <span className="text-[#5a5e68] font-bold block mb-1 uppercase text-[10px]">
                 {t("bass_design")}
               </span>
-              <p className="text-neutral-200">
+              <p className="text-[#e9e7e0]">
                 {question.correctGenre.bass_pattern[language]}
               </p>
             </div>
@@ -403,17 +403,17 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           <div className="flex items-center justify-end space-x-2 pt-2">
             <button
               onClick={() => onOpenStudio(question.correctGenre)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white text-xs font-semibold transition-colors"
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#e9e7e0] hover:text-[#e9e7e0] text-xs font-semibold transition-colors"
             >
-              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+              <Sliders className="w-3.5 h-3.5 text-[#f5b73d]" />
               <span>{t("open_in_studio")}</span>
             </button>
 
             <button
               onClick={() => onSelectGenre(question.correctGenre)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white text-xs font-semibold transition-colors"
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#e9e7e0] hover:text-[#e9e7e0] text-xs font-semibold transition-colors"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+              <ExternalLink className="w-3.5 h-3.5 text-[#f5b73d]" />
               <span>{t("view_detail")}</span>
             </button>
           </div>

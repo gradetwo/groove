@@ -214,7 +214,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       ctx.clearRect(0, 0, width, height);
 
       // 1. Draw Deep Space Background
-      ctx.fillStyle = "#090a0f";
+      ctx.fillStyle = "#0a0b0d";
       ctx.fillRect(0, 0, width, height);
 
       // Draw subtle space grid
@@ -449,7 +449,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-4.5rem)] bg-neutral-950 overflow-hidden select-none">
+    <div className="relative w-full h-[calc(100vh-4.5rem)] bg-[#0d0e12] overflow-hidden select-none">
       {/* Canvas Viewport */}
       <canvas
         ref={canvasRef}
@@ -463,12 +463,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       {/* Floating Header Toolbar */}
       <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Filter Controls (Category & Decade) */}
-        <div className="pointer-events-auto flex items-center space-x-2 bg-neutral-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-neutral-800 shadow-xl overflow-x-auto max-w-full">
+        <div className="pointer-events-auto flex items-center space-x-2 bg-[#121317]/95 backdrop-blur-md p-1.5 rounded-2xl border border-[#23262d] shadow-xl overflow-x-auto max-w-full">
           {/* Category Dropdown */}
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-neutral-950 text-neutral-200 text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral-700/80 focus:outline-none"
+            className="bg-[#0d0e12] text-[#e9e7e0] text-xs font-semibold px-3 py-1.5 rounded-xl border border-[#393d46]/80 focus:outline-none"
           >
             <option value="ALL">{t("all_categories")}</option>
             {categories.filter((c) => c !== "ALL").map((c) => (
@@ -482,7 +482,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           <select
             value={selectedDecade}
             onChange={(e) => setSelectedDecade(e.target.value)}
-            className="bg-neutral-950 text-neutral-200 text-xs font-semibold px-3 py-1.5 rounded-xl border border-neutral-700/80 focus:outline-none"
+            className="bg-[#0d0e12] text-[#e9e7e0] text-xs font-semibold px-3 py-1.5 rounded-xl border border-[#393d46]/80 focus:outline-none"
           >
             <option value="ALL">{t("all_decades")}</option>
             {decades.filter((d) => d !== "ALL").map((d) => (
@@ -499,30 +499,30 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               placeholder="Find in Galaxy..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-36 bg-neutral-950 text-xs text-white placeholder-neutral-500 px-2.5 py-1.5 rounded-xl border border-neutral-700/80 focus:outline-none focus:w-48 transition-all"
+              className="w-36 bg-[#0d0e12] text-xs text-[#e9e7e0] placeholder-neutral-500 px-2.5 py-1.5 rounded-xl border border-[#393d46]/80 focus:outline-none focus:w-48 transition-all"
             />
           </div>
         </div>
 
         {/* Zoom & View Controls */}
-        <div className="pointer-events-auto flex items-center space-x-1.5 bg-neutral-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-neutral-800 shadow-xl">
+        <div className="pointer-events-auto flex items-center space-x-1.5 bg-[#121317]/95 backdrop-blur-md p-1.5 rounded-2xl border border-[#23262d] shadow-xl">
           <button
             onClick={() => handleZoom(1)}
-            className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#b9b7b0] hover:text-[#e9e7e0] transition-colors"
             title={t("zoom_in")}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={() => handleZoom(-1)}
-            className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#b9b7b0] hover:text-[#e9e7e0] transition-colors"
             title={t("zoom_out")}
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
             onClick={handleResetView}
-            className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#b9b7b0] hover:text-[#e9e7e0] transition-colors"
             title={t("reset_view")}
           >
             <RotateCcw className="w-4 h-4" />
@@ -531,11 +531,11 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       </div>
 
       {/* Legend Card */}
-      <div className="absolute bottom-4 left-4 z-20 hidden md:block bg-neutral-900/85 backdrop-blur-md border border-neutral-800 p-3 rounded-2xl shadow-xl text-xs space-y-2 pointer-events-none">
-        <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+      <div className="absolute bottom-4 left-4 z-20 hidden md:block bg-[#121317]/90 backdrop-blur-md border border-[#23262d] p-3 rounded-2xl shadow-xl text-xs space-y-2 pointer-events-none">
+        <div className="text-[11px] font-bold text-[#8b8f99] uppercase tracking-wider">
           {t("galaxy_title")}
         </div>
-        <div className="space-y-1.5 text-neutral-300">
+        <div className="space-y-1.5 text-[#b9b7b0]">
           <div className="flex items-center space-x-2">
             <span className="w-5 h-0.5 bg-sky-400" />
             <span>{t("legend_direct_origin")}</span>
@@ -549,59 +549,59 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
       {/* Selected Genre Floating Info Card */}
       {selectedNode && (
-        <div className="absolute bottom-4 right-4 z-30 w-full max-w-sm bg-neutral-900/95 backdrop-blur-xl border border-neutral-700/80 rounded-2xl shadow-2xl p-4 animate-slide-up">
+        <div className="absolute bottom-4 right-4 z-30 w-full max-w-sm bg-[#121317]/95 backdrop-blur-xl border border-[#393d46]/80 rounded-2xl shadow-2xl p-4 animate-slide-up">
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-600/30 text-indigo-400 border border-indigo-500/30">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#f5b73d] text-[#0a0b0d]/30 text-[#f5b73d] border border-indigo-500/30">
                 {selectedNode.category}
               </span>
-              <h3 className="font-extrabold text-white text-lg mt-1 tracking-wide">
+              <h3 className="font-extrabold text-[#e9e7e0] text-lg mt-1 tracking-wide">
                 {selectedNode.name}
               </h3>
               {selectedNode.aliases.length > 0 && (
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-[#8b8f99]">
                   {selectedNode.aliases[0]}
                 </p>
               )}
             </div>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800"
+              className="text-[#8b8f99] hover:text-[#e9e7e0] p-1 rounded-lg hover:bg-neutral-800"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="my-3 py-2 border-y border-neutral-800 text-xs text-neutral-300 space-y-1">
+          <div className="my-3 py-2 border-y border-[#23262d] text-xs text-[#b9b7b0] space-y-1">
             <div className="flex justify-between">
-              <span className="text-neutral-500">{t("origin_year")}:</span>
-              <span className="font-semibold text-neutral-200">{selectedNode.origin_year}</span>
+              <span className="text-[#5a5e68]">{t("origin_year")}:</span>
+              <span className="font-semibold text-[#e9e7e0]">{selectedNode.origin_year}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-neutral-500">{t("origin_place")}:</span>
-              <span className="font-semibold text-neutral-200">{selectedNode.origin_place[language]}</span>
+              <span className="text-[#5a5e68]">{t("origin_place")}:</span>
+              <span className="font-semibold text-[#e9e7e0]">{selectedNode.origin_place[language]}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-neutral-500">{t("bpm")}:</span>
-              <span className="font-semibold text-neutral-200">{selectedNode.bpm_range} BPM</span>
+              <span className="text-[#5a5e68]">{t("bpm")}:</span>
+              <span className="font-semibold text-[#e9e7e0]">{selectedNode.bpm_range} BPM</span>
             </div>
           </div>
 
-          <p className="text-xs text-neutral-400 line-clamp-3 mb-4 leading-relaxed">
+          <p className="text-xs text-[#8b8f99] line-clamp-3 mb-4 leading-relaxed">
             {selectedNode.cultural_context[language]}
           </p>
 
           <div className="flex items-center space-x-2">
             <button
               onClick={() => onOpenStudio(selectedNode)}
-              className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-indigo-600/30"
+              className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl bg-[#f5b73d] text-[#0a0b0d] hover:bg-indigo-500 text-[#e9e7e0] font-semibold text-xs transition-colors shadow-lg shadow-indigo-600/30"
             >
               <Sliders className="w-3.5 h-3.5" />
               <span>{t("open_in_studio")}</span>
             </button>
             <button
               onClick={() => onSelectGenre(selectedNode)}
-              className="flex items-center justify-center space-x-1 py-2 px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white font-semibold text-xs border border-neutral-700 transition-colors"
+              className="flex items-center justify-center space-x-1 py-2 px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-[#b9b7b0] hover:text-[#e9e7e0] font-semibold text-xs border border-[#393d46] transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>{t("view_detail")}</span>

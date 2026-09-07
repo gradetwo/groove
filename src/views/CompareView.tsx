@@ -26,7 +26,7 @@ interface CompareViewProps {
 }
 
 const COMPARE_COLORS = [
-  { stroke: "#6366f1", fill: "rgba(99, 102, 241, 0.25)", text: "text-indigo-400", badge: "bg-indigo-500/20 border-indigo-500/40" },
+  { stroke: "#6366f1", fill: "rgba(99, 102, 241, 0.25)", text: "text-[#f5b73d]", badge: "bg-indigo-500/20 border-indigo-500/40" },
   { stroke: "#ec4899", fill: "rgba(236, 72, 153, 0.25)", text: "text-pink-400", badge: "bg-pink-500/20 border-pink-500/40" },
   { stroke: "#06b6d4", fill: "rgba(6, 182, 212, 0.25)", text: "text-cyan-400", badge: "bg-cyan-500/20 border-cyan-500/40" },
   { stroke: "#f59e0b", fill: "rgba(245, 158, 11, 0.25)", text: "text-amber-400", badge: "bg-amber-500/20 border-amber-500/40" },
@@ -161,15 +161,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-neutral-900/90 border border-neutral-800 p-5 rounded-3xl shadow-xl">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-[#121317] border border-[#23262d] p-5 rounded-3xl shadow-xl">
         <div>
           <div className="flex items-center space-x-2">
-            <Columns className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-xl font-bold text-white tracking-wide">
+            <Columns className="w-5 h-5 text-[#f5b73d]" />
+            <h2 className="text-xl font-bold text-[#e9e7e0] tracking-wide">
               {t("compare_title")}
             </h2>
           </div>
-          <p className="text-xs text-neutral-400 mt-1">
+          <p className="text-xs text-[#8b8f99] mt-1">
             Compare 2 to 4 music genres across tempo, rhythm, sound design, and acoustic radar
           </p>
         </div>
@@ -179,22 +179,22 @@ export const CompareView: React.FC<CompareViewProps> = ({
           <div className="relative">
             <button
               onClick={() => setAddDropdownOpen(!addDropdownOpen)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-indigo-600/30"
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#f5b73d] hover:brightness-110 text-[#0a0b0d] text-[#e9e7e0] font-semibold text-xs transition-colors shadow-lg shadow-indigo-600/30"
             >
               <Plus className="w-4 h-4" />
               <span>{t("compare_add")}</span>
             </button>
 
             {addDropdownOpen && (
-              <div className="absolute right-0 top-12 z-30 w-64 bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl p-2 max-h-72 overflow-y-auto space-y-1 animate-slide-up">
+              <div className="absolute right-0 top-12 z-30 w-64 bg-[#121317] border border-[#23262d] rounded-2xl shadow-2xl p-2 max-h-72 overflow-y-auto space-y-1 animate-slide-up">
                 {ALL_GENRES.filter((g) => !genres.some((sel) => sel.id === g.id)).map((g) => (
                   <button
                     key={g.id}
                     onClick={() => handleAddGenre(g)}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-neutral-800 text-xs text-neutral-200 hover:text-white flex items-center justify-between"
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-neutral-800 text-xs text-[#e9e7e0] hover:text-[#e9e7e0] flex items-center justify-between"
                   >
                     <span className="font-semibold truncate">{g.name}</span>
-                    <span className="text-[10px] text-neutral-500 ml-2">{g.category}</span>
+                    <span className="text-[10px] text-[#5a5e68] ml-2">{g.category}</span>
                   </button>
                 ))}
               </div>
@@ -204,10 +204,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
       </div>
 
       {/* Radar Chart & DNA Similarity Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-neutral-900/80 border border-neutral-800 rounded-3xl p-6 shadow-xl">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl">
         {/* Radar SVG */}
         <div className="lg:col-span-5 flex flex-col items-center justify-center">
-          <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-bold text-[#8b8f99] uppercase tracking-wider mb-2">
             {t("radar_chart")}
           </h4>
           <svg width="240" height="240" className="overflow-visible">
@@ -278,7 +278,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               return (
                 <div key={g.id} className="flex items-center space-x-1.5 text-xs">
                   <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color.stroke }} />
-                  <span className="font-semibold text-neutral-300">{g.name}</span>
+                  <span className="font-semibold text-[#b9b7b0]">{g.name}</span>
                 </div>
               );
             })}
@@ -286,17 +286,17 @@ export const CompareView: React.FC<CompareViewProps> = ({
         </div>
 
         {/* DNA Match Bar & Key Insights */}
-        <div className="lg:col-span-7 flex flex-col justify-center space-y-5 lg:border-l lg:border-neutral-800 lg:pl-8">
+        <div className="lg:col-span-7 flex flex-col justify-center space-y-5 lg:border-l lg:border-[#23262d] lg:pl-8">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#8b8f99]">
                 {t("similarity_score")} ({genres[0].name} vs {genres[1].name})
               </span>
-              <span className="text-lg font-mono font-extrabold text-indigo-400">
+              <span className="text-lg font-mono font-extrabold text-[#f5b73d]">
                 {similarityInfo.score}%
               </span>
             </div>
-            <div className="w-full bg-neutral-950 rounded-full h-3 border border-neutral-800 overflow-hidden">
+            <div className="w-full bg-[#0d0e12] rounded-full h-3 border border-[#23262d] overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-500"
                 style={{ width: `${similarityInfo.score}%` }}
@@ -305,11 +305,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-1">
-              <span className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">
+            <div className="p-3.5 rounded-2xl bg-[#0d0e12] border border-[#23262d] space-y-1">
+              <span className="font-bold text-[#5a5e68] uppercase tracking-wider text-[10px]">
                 {t("bpm_overlap")}
               </span>
-              <p className="text-neutral-200">
+              <p className="text-[#e9e7e0]">
                 {genres[0].bpm_range} BPM vs {genres[1].bpm_range} BPM
               </p>
               <span className={`text-[11px] font-semibold ${similarityInfo.bpmOverlap ? "text-emerald-400" : "text-amber-400"}`}>
@@ -317,14 +317,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
               </span>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-1">
-              <span className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">
+            <div className="p-3.5 rounded-2xl bg-[#0d0e12] border border-[#23262d] space-y-1">
+              <span className="font-bold text-[#5a5e68] uppercase tracking-wider text-[10px]">
                 Category Kinship
               </span>
-              <p className="text-neutral-200">
+              <p className="text-[#e9e7e0]">
                 {genres[0].category} & {genres[1].category}
               </p>
-              <span className="text-[11px] text-neutral-400">
+              <span className="text-[11px] text-[#8b8f99]">
                 {genres[0].category === genres[1].category ? "Same Family Lineage" : "Cross-Genre Contrast"}
               </span>
             </div>
@@ -341,13 +341,13 @@ export const CompareView: React.FC<CompareViewProps> = ({
           return (
             <div
               key={genre.id}
-              className="bg-neutral-900/80 border border-neutral-800 rounded-3xl p-5 shadow-xl space-y-5 relative"
+              className="bg-[#121317] border border-[#23262d] rounded-3xl p-5 shadow-xl space-y-5 relative"
             >
               {/* Remove button */}
               {genres.length > 2 && (
                 <button
                   onClick={() => handleRemoveGenre(genre.id)}
-                  className="absolute top-4 right-4 text-neutral-500 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors"
+                  className="absolute top-4 right-4 text-[#5a5e68] hover:text-[#e9e7e0] p-1 rounded-lg hover:bg-neutral-800 transition-colors"
                   title="Remove from comparison"
                 >
                   <X className="w-4 h-4" />
@@ -359,11 +359,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${color.badge} ${color.text}`}>
                   {genre.category}
                 </span>
-                <h3 className="font-extrabold text-white text-lg sm:text-xl mt-2 tracking-wide">
+                <h3 className="font-extrabold text-[#e9e7e0] text-lg sm:text-xl mt-2 tracking-wide">
                   {genre.name}
                 </h3>
                 {genre.aliases.length > 0 && (
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <p className="text-xs text-[#8b8f99] mt-0.5">
                     {genre.aliases[0]}
                   </p>
                 )}
@@ -375,8 +375,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   onClick={() => handleTogglePlay(genre)}
                   className={`flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl font-bold text-xs transition-colors shadow-md ${
                     isCurrentPlaying
-                      ? "bg-amber-500 hover:bg-amber-400 text-black"
-                      : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white border border-neutral-700"
+                      ? "bg-[#f5b73d] hover:brightness-110 text-[#0a0b0d]"
+                      : "bg-neutral-800 hover:bg-neutral-700 text-[#e9e7e0] hover:text-[#e9e7e0] border border-neutral-700"
                   }`}
                 >
                   {isCurrentPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
@@ -385,7 +385,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
                 <button
                   onClick={() => onOpenStudio(genre)}
-                  className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+                  className="p-2 rounded-xl bg-[#f5b73d] hover:brightness-110 text-[#0a0b0d] text-[#e9e7e0] transition-colors"
                   title={t("open_in_studio")}
                 >
                   <Sliders className="w-4 h-4" />
@@ -393,48 +393,48 @@ export const CompareView: React.FC<CompareViewProps> = ({
               </div>
 
               {/* Attributes List */}
-              <div className="space-y-3 text-xs border-t border-neutral-800 pt-4">
+              <div className="space-y-3 text-xs border-t border-[#23262d] pt-4">
                 <div>
-                  <span className="text-neutral-500 block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-[#5a5e68] block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
                     Origin & Era
                   </span>
-                  <p className="text-neutral-200">
+                  <p className="text-[#e9e7e0]">
                     {genre.origin_year} ({genre.origin_place[language]})
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-neutral-500 block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-[#5a5e68] block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
                     BPM & Time
                   </span>
-                  <p className="text-neutral-200 font-mono">
+                  <p className="text-[#e9e7e0] font-mono">
                     {genre.bpm_range} BPM • {genre.time_signature}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-neutral-500 block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-[#5a5e68] block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
                     {t("kick_placement")}
                   </span>
-                  <p className="text-neutral-300 leading-relaxed">
+                  <p className="text-[#b9b7b0] leading-relaxed">
                     {genre.drum_pattern.kick[language]}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-neutral-500 block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-[#5a5e68] block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
                     {t("snare_placement")}
                   </span>
-                  <p className="text-neutral-300 leading-relaxed">
+                  <p className="text-[#b9b7b0] leading-relaxed">
                     {genre.drum_pattern.snare_clap[language]}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-neutral-500 block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-[#5a5e68] block mb-0.5 uppercase tracking-wider text-[10px] font-bold">
                     {t("bass_design")}
                   </span>
-                  <p className="text-neutral-300 leading-relaxed">
+                  <p className="text-[#b9b7b0] leading-relaxed">
                     {genre.bass_pattern[language]}
                   </p>
                 </div>
@@ -443,7 +443,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               {/* View detail button */}
               <button
                 onClick={() => onSelectGenre(genre)}
-                className="w-full py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-neutral-400 hover:text-white text-xs font-semibold border border-neutral-800 flex items-center justify-center space-x-1 transition-colors"
+                className="w-full py-2 rounded-xl bg-[#0d0e12] hover:bg-neutral-800 text-[#8b8f99] hover:text-[#e9e7e0] text-xs font-semibold border border-[#23262d] flex items-center justify-center space-x-1 transition-colors"
               >
                 <span>{t("view_detail")}</span>
                 <ExternalLink className="w-3.5 h-3.5" />

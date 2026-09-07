@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+# Update StudioView.tsx
+import os
+
+content = r"""import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { 
   Play, 
   Pause, 
@@ -905,3 +908,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     </div>
   );
 };
+"""
+
+with open("src/views/StudioView.tsx", "w", encoding="utf-8") as f:
+    f.write(content)
+print("Updated StudioView.tsx via script successfully")

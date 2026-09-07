@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -12,20 +12,25 @@ import { ChallengeView } from "./views/ChallengeView";
 import { GenreDetailView } from "./views/GenreDetailView";
 import { Genre } from "./types/genre";
 import { ALL_GENRES, GENRES_MAP } from "./data/genres";
-import { Sparkles, Disc3, Music2, Heart } from "lucide-react";
+import { AudioEngine } from "./audio/AudioEngine";
+import { Disc3, Sparkles } from "lucide-react";
 
 const MainApp: React.FC = () => {
   const { t, language } = useLanguage();
 
   const [currentTab, setCurrentTab] = useState<NavTab>("studio");
-  const [selectedGenre, setSelectedGenre] = useState<Genre>(() => GENRES_MAP["chicago-house"] || ALL_GENRES[0]);
+  const [selectedGenre, setSelectedGenre] = useState<Genre>(() => GENRES_MAP["future-bass"] || GENRES_MAP["chicago-house"] || ALL_GENRES[0]);
   const [comparePool, setComparePool] = useState<Genre[]>(() => [
     GENRES_MAP["chicago-house"] || ALL_GENRES[0],
     GENRES_MAP["berlin-techno"] || ALL_GENRES[1],
   ]);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Sync with browser URL search params on mount or popstate
+  // Audio analyser for Header live spectrum visualizer
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Sync with browser URL search params
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -68,8 +73,18 @@ const MainApp: React.FC = () => {
     setCurrentTab("compare");
   };
 
+  const handleEngineReady = (engine: AudioEngine) => {
+    setAnalyser(engine.getAnalyser());
+    // Interval check for playing state for header visualizer
+    const checkPlaying = () => {
+      setIsPlaying(engine.getIsPlaying());
+    };
+    const id = setInterval(checkPlaying, 100);
+    return () => clearInterval(id);
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#0a0b0d] text-[#e9e7e0] flex flex-col font-sans selection:bg-[#f5b73d]/25 selection:text-[#f5b73d]">
       {/* Header */}
       <Header
         currentTab={currentTab}
@@ -79,6 +94,8 @@ const MainApp: React.FC = () => {
           setSelectedGenre(genre);
           setCurrentTab("studio");
         }}
+        analyser={analyser}
+        isPlaying={isPlaying}
       />
 
       {/* Global Search Dialog */}
@@ -119,6 +136,8 @@ const MainApp: React.FC = () => {
               setSelectedGenre(g);
               setCurrentTab("detail");
             }}
+            onAddToCompare={handleAddToCompare}
+            onAudioEngineReady={handleEngineReady}
           />
         )}
 
@@ -185,47 +204,46 @@ const MainApp: React.FC = () => {
       </main>
 
       {/* Persistent Footer */}
-      <footer className="w-full bg-neutral-950 border-t border-neutral-900 py-6 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
-          <div className="flex items-center space-x-2">
-            <Disc3 className="w-4 h-4 text-indigo-400" />
-            <span className="font-semibold text-neutral-400">
-              Groove & Genre Odyssey
+      <footer className="w-full bg-[#0a0b0d] border-t border-[#23262d] py-6 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#5a5e68]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#f5b73d] shadow-[0_0_8px_#f5b73d]" />
+            <span className="font-[Space_Grotesk] font-bold text-[#e9e7e0]">
+              GROOVE ATLAS
             </span>
-            <span>•</span>
-            <span>159 Genres & Realtime Audio Synthesis</span>
+            <span>·</span>
+            <span>159 Synthetic Genres & Realtime Audio Synthesis</span>
           </div>
 
-          <div className="flex items-center space-x-4 text-neutral-400">
+          <div className="flex items-center gap-4 text-[#8b8f99]">
             <button
               onClick={() => setCurrentTab("studio")}
-              className="hover:text-white transition-colors"
+              className="hover:text-[#e9e7e0] transition-colors"
             >
               {t("nav_studio")}
             </button>
             <button
               onClick={() => setCurrentTab("galaxy")}
-              className="hover:text-white transition-colors"
+              className="hover:text-[#e9e7e0] transition-colors"
             >
               {t("nav_galaxy")}
             </button>
             <button
               onClick={() => setCurrentTab("compare")}
-              className="hover:text-white transition-colors"
+              className="hover:text-[#e9e7e0] transition-colors"
             >
               {t("nav_compare")}
             </button>
             <button
               onClick={() => setCurrentTab("challenge")}
-              className="hover:text-white transition-colors"
+              className="hover:text-[#e9e7e0] transition-colors"
             >
               {t("nav_challenge")}
             </button>
           </div>
 
-          <div className="flex items-center space-x-1 text-neutral-600">
-            <span>Crafted with Web Audio API</span>
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="flex items-center gap-1 text-[#5a5e68]">
+            <span>Web Audio Pure Synthesis</span>
           </div>
         </div>
       </footer>

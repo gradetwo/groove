@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Sliders, 
   Orbit, 
@@ -10,7 +10,6 @@ import {
   Shuffle, 
   Menu, 
   X,
-  Disc3,
   AlignVerticalJustifyStart
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -31,6 +30,8 @@ interface HeaderProps {
   onSelectTab: (tab: NavTab) => void;
   onOpenSearch: () => void;
   onRandomGenre: (genre: Genre) => void;
+  analyser?: AnalyserNode | null;
+  isPlaying?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,17 +39,54 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab,
   onOpenSearch,
   onRandomGenre,
+  analyser,
+  isPlaying = false,
 }) => {
   const { t, language, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Live frequency visualizer
+  useEffect(() => {
+    let animationFrameId: number;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const render = () => {
+      animationFrameId = requestAnimationFrame(render);
+      ctx.clearRect(0, 0, 192, 60);
+
+      if (analyser && isPlaying) {
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        for (let i = 0; i < 32; i++) {
+          const h = (data[i + 2] / 255) * 54;
+          const alpha = 0.25 + (data[i + 2] / 255) * 0.75;
+          ctx.fillStyle = `rgba(245, 183, 61, ${alpha})`;
+          ctx.fillRect(i * 6, 60 - h, 4, h);
+        }
+      } else {
+        // Idle ambient bars
+        for (let i = 0; i < 32; i++) {
+          ctx.fillStyle = "rgba(139, 143, 153, 0.15)";
+          ctx.fillRect(i * 6, 56, 4, 3);
+        }
+      }
+    };
+
+    render();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [analyser, isPlaying]);
 
   const navItems: Array<{ tab: NavTab; labelKey: string; icon: React.ReactNode }> = [
-    { tab: "studio", labelKey: "nav_studio", icon: <Sliders className="w-4 h-4" /> },
-    { tab: "galaxy", labelKey: "nav_galaxy", icon: <Orbit className="w-4 h-4" /> },
-    { tab: "horizontal-timeline", labelKey: "nav_timeline_h", icon: <Clock className="w-4 h-4" /> },
-    { tab: "vertical-timeline", labelKey: "nav_timeline_v", icon: <AlignVerticalJustifyStart className="w-4 h-4" /> },
-    { tab: "compare", labelKey: "nav_compare", icon: <Columns className="w-4 h-4" /> },
-    { tab: "challenge", labelKey: "nav_challenge", icon: <HelpCircle className="w-4 h-4" /> },
+    { tab: "studio", labelKey: "nav_studio", icon: <Sliders className="w-3.5 h-3.5" /> },
+    { tab: "galaxy", labelKey: "nav_galaxy", icon: <Orbit className="w-3.5 h-3.5" /> },
+    { tab: "horizontal-timeline", labelKey: "nav_timeline_h", icon: <Clock className="w-3.5 h-3.5" /> },
+    { tab: "vertical-timeline", labelKey: "nav_timeline_v", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
+    { tab: "compare", labelKey: "nav_compare", icon: <Columns className="w-3.5 h-3.5" /> },
+    { tab: "challenge", labelKey: "nav_challenge", icon: <HelpCircle className="w-3.5 h-3.5" /> },
   ];
 
   const handleRandom = () => {
@@ -58,99 +96,97 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800/80">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand / Logo */}
+    <header className="sticky top-0 z-40 w-full bg-[#0a0b0d]/95 backdrop-blur-md border-b border-[#23262d] px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+      {/* Brand / Logo */}
+      <div className="flex items-center gap-4">
         <div 
           onClick={() => onSelectTab("studio")} 
-          className="flex items-center space-x-2.5 cursor-pointer group select-none"
+          className="flex items-center gap-2.5 cursor-pointer select-none group"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-200">
-            <Disc3 className="w-5 h-5 animate-spin-slow" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-extrabold text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400">
-                GROOVE
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                ODYSSEY
-              </span>
-            </div>
-            <p className="text-[10px] text-neutral-400 hidden sm:block leading-none">
-              159 Genres & Realtime Synthesizer
-            </p>
-          </div>
+          {/* Glowing amber dot */}
+          <span className="w-2.5 h-2.5 rounded-full bg-[#f5b73d] shadow-[0_0_10px_#f5b73d] shrink-0 group-hover:scale-125 transition-transform" />
+          <span className="font-[Space_Grotesk] font-bold text-base sm:text-lg tracking-[0.06em] text-[#e9e7e0]">
+            GROOVE&nbsp;ATLAS
+          </span>
         </div>
 
-        {/* Desktop Navigation Tabs */}
-        <nav className="hidden lg:flex items-center space-x-1 bg-neutral-900/60 p-1 rounded-xl border border-neutral-800/60">
-          {navItems.map((item) => {
-            const isActive = currentTab === item.tab;
-            return (
-              <button
-                key={item.tab}
-                onClick={() => onSelectTab(item.tab)}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                    : "text-neutral-400 hover:text-white hover:bg-neutral-800/50"
-                }`}
-              >
-                {item.icon}
-                <span>{t(item.labelKey)}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Right Tools: Search, Random, i18n, Mobile Toggle */}
-        <div className="flex items-center space-x-2">
-          {/* Quick Search Button */}
-          <button
-            onClick={onOpenSearch}
-            className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white text-xs sm:text-sm transition-colors"
-            title="Search Genres (Cmd+K)"
-          >
-            <Search className="w-4 h-4 text-indigo-400" />
-            <span className="hidden md:inline">{t("search_placeholder").slice(0, 8)}...</span>
-            <kbd className="hidden md:inline px-1.5 py-0.5 text-[10px] rounded bg-neutral-800 border border-neutral-700 text-neutral-400">
-              ⌘K
-            </kbd>
-          </button>
-
-          {/* Random Genre */}
-          <button
-            onClick={handleRandom}
-            className="p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-amber-400 transition-colors"
-            title={t("random_genre")}
-          >
-            <Shuffle className="w-4 h-4" />
-          </button>
-
-          {/* Language Toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white text-xs font-semibold transition-colors"
-            title="Toggle Language / 切换语言"
-          >
-            <Globe className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{language === "zh" ? "中" : "EN"}</span>
-          </button>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+        {/* Tagline */}
+        <div className="hidden lg:block text-xs text-[#8b8f99] border-l border-[#23262d] pl-4 leading-none">
+          {language === "zh" ? "曲风步进实验室 · 159 种全合成音源" : "Genre Groove Lab · 159 Synthetic Genres"}
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Navigation Links */}
+      <nav className="hidden md:flex items-center gap-1.5">
+        {navItems.map((item) => {
+          const isActive = currentTab === item.tab;
+          return (
+            <button
+              key={item.tab}
+              onClick={() => onSelectTab(item.tab)}
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
+                isActive
+                  ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+                  : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
+              }`}
+            >
+              {item.icon}
+              <span>{t(item.labelKey)}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Right Tools: Spectrum, Search, Dice, Lang, Mobile Menu */}
+      <div className="flex items-center gap-2.5">
+        {/* Spectrum Canvas */}
+        <canvas
+          ref={canvasRef}
+          width={192}
+          height={60}
+          className="w-20 h-6 sm:w-24 sm:h-7 opacity-90 hidden sm:block pointer-events-none"
+        />
+
+        {/* Global Search Button */}
+        <button
+          onClick={onOpenSearch}
+          className="flex items-center gap-2 text-xs text-[#8b8f99] hover:text-[#e9e7e0] px-2.5 py-1.5 border border-[#23262d] hover:border-[#393d46] rounded-lg bg-[#0d0e12] transition-colors"
+          title="Search (Cmd+K)"
+        >
+          <Search className="w-3.5 h-3.5 text-[#8b8f99]" />
+          <span className="hidden xl:inline text-[#5a5e68]">Cmd+K</span>
+        </button>
+
+        {/* Random Dice */}
+        <button
+          onClick={handleRandom}
+          className="p-1.5 border border-dashed border-[#23262d] hover:border-[#f5b73d] rounded-lg text-[#8b8f99] hover:text-[#f5b73d] bg-[#0d0e12] transition-colors"
+          title={t("random_genre")}
+        >
+          <Shuffle className="w-4 h-4" />
+        </button>
+
+        {/* Language Switch */}
+        <button
+          onClick={toggleLanguage}
+          className="flex items-center gap-1 text-xs font-mono font-bold text-[#8b8f99] hover:text-[#e9e7e0] px-2 py-1.5 border border-[#23262d] hover:border-[#393d46] rounded-lg bg-[#0d0e12] transition-colors"
+          title="Switch Language"
+        >
+          <span className="text-[#f5b73d]">{language === "zh" ? "EN" : "中"}</span>
+        </button>
+
+        {/* Mobile menu toggle */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-1.5 border border-[#23262d] rounded-lg text-[#8b8f99] hover:text-[#e9e7e0] bg-[#0d0e12]"
+        >
+          {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-neutral-950/95 border-b border-neutral-800 px-4 pt-2 pb-4 space-y-1 backdrop-blur-xl">
+        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0d0e12] border-b border-[#23262d] p-3 space-y-1.5 shadow-2xl">
           {navItems.map((item) => {
             const isActive = currentTab === item.tab;
             return (
@@ -160,10 +196,10 @@ export const Header: React.FC<HeaderProps> = ({
                   onSelectTab(item.tab);
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
                   isActive
-                    ? "bg-indigo-600 text-white"
-                    : "text-neutral-400 hover:text-white hover:bg-neutral-900"
+                    ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10"
+                    : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#121317]"
                 }`}
               >
                 {item.icon}

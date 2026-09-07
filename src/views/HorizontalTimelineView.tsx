@@ -95,27 +95,27 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 space-y-4">
       {/* Top Header & Evolution Controls Bar */}
-      <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-[#121317] border border-[#23262d] rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <Clock className="w-5 h-5 text-[#f5b73d]" />
+            <h2 className="text-lg font-bold text-[#e9e7e0] tracking-wide">
               {t("nav_timeline_h")}
             </h2>
           </div>
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-xs text-[#8b8f99] mt-0.5">
             1920 — 2024 Music Genealogy & Family Evolution
           </p>
         </div>
 
         {/* Evolution Player Transport */}
-        <div className="flex items-center space-x-3 bg-neutral-950 px-4 py-2 rounded-2xl border border-neutral-800">
+        <div className="flex items-center space-x-3 bg-[#0d0e12] px-4 py-2 rounded-2xl border border-[#23262d]">
           <button
             onClick={handleTogglePlay}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl font-semibold text-xs transition-colors ${
               animationPlaying
-                ? "bg-amber-500 hover:bg-amber-400 text-black"
-                : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                ? "bg-amber-500 hover:bg-[#f5b73d] text-black"
+                : "bg-indigo-600 hover:bg-indigo-500 text-[#e9e7e0]"
             }`}
           >
             {animationPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
@@ -124,16 +124,16 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
 
           <button
             onClick={handleStartEvolution}
-            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-[#b9b7b0] hover:text-[#e9e7e0] transition-colors"
             title="Restart from 1920"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
 
           {/* Current Year Display */}
-          <div className="flex items-center space-x-2 pl-2 border-l border-neutral-800">
-            <span className="text-xs text-neutral-500 font-semibold uppercase">Year:</span>
-            <span className="text-sm font-mono font-extrabold text-indigo-400 w-12">
+          <div className="flex items-center space-x-2 pl-2 border-l border-[#23262d]">
+            <span className="text-xs text-[#5a5e68] font-semibold uppercase">Year:</span>
+            <span className="text-sm font-mono font-extrabold text-[#f5b73d] w-12">
               {currentYear}
             </span>
           </div>
@@ -151,11 +151,11 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
 
         {/* Lane Selector */}
         <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-neutral-500" />
+          <Filter className="w-4 h-4 text-[#5a5e68]" />
           <select
             value={activeLaneFilter}
             onChange={(e) => setActiveLaneFilter(e.target.value)}
-            className="bg-neutral-950 border border-neutral-800 text-neutral-300 text-xs font-semibold px-3 py-1.5 rounded-xl focus:outline-none focus:border-indigo-500"
+            className="bg-[#0d0e12] border border-[#23262d] text-[#b9b7b0] text-xs font-semibold px-3 py-1.5 rounded-xl focus:outline-none focus:border-indigo-500"
           >
             <option value="ALL">All Evolution Lanes ({LANES.length})</option>
             {LANES.map((l) => (
@@ -170,18 +170,18 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
       {/* Horizontal Scrollable Timeline Matrix */}
       <div 
         ref={scrollContainerRef}
-        className="bg-neutral-900/80 border border-neutral-800/90 rounded-2xl p-4 shadow-2xl overflow-x-auto overflow-y-hidden"
+        className="bg-[#121317] border border-[#23262d]/90 rounded-2xl p-4 shadow-2xl overflow-x-auto overflow-y-hidden"
       >
         <div className="min-w-[1900px] space-y-6">
           {/* Decade Header Ruler */}
-          <div className="flex items-center border-b border-neutral-800 pb-3 pl-48">
+          <div className="flex items-center border-b border-[#23262d] pb-3 pl-48">
             {DECADES.map((decade, idx) => {
               const isPast = decade <= currentYear;
               return (
                 <div 
                   key={decade} 
                   className={`flex-1 flex flex-col items-center relative transition-colors ${
-                    isPast ? "text-indigo-400 font-bold" : "text-neutral-600 font-medium"
+                    isPast ? "text-[#f5b73d] font-bold" : "text-neutral-600 font-medium"
                   }`}
                 >
                   <div className="text-sm font-mono tracking-wider">{decade}s</div>
@@ -200,17 +200,17 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
               return (
                 <div 
                   key={lane.id}
-                  className="flex items-center p-2 rounded-2xl bg-neutral-950/60 border border-neutral-800/60 hover:border-neutral-750 transition-colors"
+                  className="flex items-center p-2 rounded-2xl bg-[#0d0e12] border border-[#23262d]/60 hover:border-neutral-750 transition-colors"
                 >
                   {/* Lane Title & Badge */}
                   <div className="w-48 shrink-0 pr-4 pl-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-neutral-800 text-[#8b8f99] border border-[#393d46]">
                       {lane.category}
                     </span>
-                    <h4 className="font-bold text-white text-sm mt-1 truncate" title={lane.name}>
+                    <h4 className="font-bold text-[#e9e7e0] text-sm mt-1 truncate" title={lane.name}>
                       {lane.name}
                     </h4>
-                    <span className="text-[11px] text-neutral-500">
+                    <span className="text-[11px] text-[#5a5e68]">
                       {laneGenres.length} genres
                     </span>
                   </div>
@@ -227,7 +227,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                       return (
                         <div 
                           key={decade} 
-                          className="flex-1 min-h-[90px] border-r border-neutral-800/40 p-1 flex flex-wrap gap-1.5 items-center justify-start"
+                          className="flex-1 min-h-[90px] border-r border-[#23262d]/40 p-1 flex flex-wrap gap-1.5 items-center justify-start"
                         >
                           {inDecade.map((genre) => {
                             const isRevealed = (genre.origin_decade || 1980) <= currentYear;
@@ -237,21 +237,21 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                 key={genre.id}
                                 className={`group relative p-2 rounded-xl transition-all duration-300 ${
                                   isRevealed 
-                                    ? "bg-neutral-900 border border-neutral-700/80 hover:border-indigo-500/80 shadow-md cursor-pointer scale-100 opacity-100" 
-                                    : "opacity-15 bg-neutral-950 border border-neutral-900 scale-90 pointer-events-none"
+                                    ? "bg-[#121317] border border-[#393d46]/80 hover:border-indigo-500/80 shadow-md cursor-pointer scale-100 opacity-100" 
+                                    : "opacity-15 bg-[#0d0e12] border border-neutral-900 scale-90 pointer-events-none"
                                 }`}
                                 onClick={() => onSelectGenre(genre)}
                               >
                                 <div className="flex items-center space-x-1.5">
-                                  <span className="font-bold text-xs text-neutral-100 group-hover:text-indigo-400 transition-colors">
+                                  <span className="font-bold text-xs text-[#e9e7e0] group-hover:text-[#f5b73d] transition-colors">
                                     {genre.name}
                                   </span>
-                                  <span className="text-[10px] px-1 py-0.2 rounded bg-neutral-800 text-neutral-400 font-mono">
+                                  <span className="text-[10px] px-1 py-0.2 rounded bg-neutral-800 text-[#8b8f99] font-mono">
                                     {genre.origin_year}
                                   </span>
                                 </div>
 
-                                <div className="flex items-center space-x-2 mt-1 text-[10px] text-neutral-400">
+                                <div className="flex items-center space-x-2 mt-1 text-[10px] text-[#8b8f99]">
                                   <span>{genre.bpm_range} BPM</span>
                                   <span>•</span>
                                   <span className="truncate max-w-[80px]">{genre.origin_place[language]}</span>
@@ -263,7 +263,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                     e.stopPropagation();
                                     onOpenStudio(genre);
                                   }}
-                                  className="mt-1.5 w-full flex items-center justify-center space-x-1 py-1 rounded-lg bg-neutral-800/90 group-hover:bg-indigo-600 group-hover:text-white text-[10px] text-neutral-300 font-semibold transition-colors"
+                                  className="mt-1.5 w-full flex items-center justify-center space-x-1 py-1 rounded-lg bg-neutral-800/90 group-hover:bg-indigo-600 group-hover:text-[#e9e7e0] text-[10px] text-[#b9b7b0] font-semibold transition-colors"
                                 >
                                   <Sliders className="w-3 h-3" />
                                   <span>{t("open_in_studio")}</span>

@@ -19,6 +19,7 @@ export interface AudioEngineOptions {
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
   private isPlaying: boolean = false;
 
   // Scheduler state
@@ -66,7 +67,11 @@ export class AudioEngine {
         this.ctx = new AudioContextClass();
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
-        this.masterGain.connect(this.ctx.destination);
+        this.analyser = this.ctx.createAnalyser();
+        this.analyser.fftSize = 128;
+        this.analyser.smoothingTimeConstant = 0.75;
+        this.masterGain.connect(this.analyser);
+        this.analyser.connect(this.ctx.destination);
         this.createNoiseBuffer();
       }
     }
@@ -169,6 +174,10 @@ export class AudioEngine {
 
   public getIsPlaying(): boolean {
     return this.isPlaying;
+  }
+
+  public getAnalyser(): AnalyserNode | null {
+    return this.analyser;
   }
 
   public getCurrentStep(): number {
