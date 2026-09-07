@@ -1202,11 +1202,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
       {/* Genre Rail Wrapper (.rail-wrap) */}
       <div className="px-4 sm:px-7 pt-4 pb-1 flex items-center gap-3">
-        <span className="font-['Space_Grotesk'] text-xs font-bold text-[#b9b7b0] tracking-wider uppercase whitespace-nowrap hidden sm:flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#f5b73d]" />
-          <span>{t("pickGenre")}</span>
-        </span>
-
         {/* Category selector */}
         <select
           value={activeCategoryFilter}
@@ -1966,7 +1961,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#45e0c9] flex items-center justify-center text-[10px]"
                           title={language === "zh" ? "智能生成常规节拍" : "Smart fill rhythm"}
                         >
-                          🎲
+                          <Wand2 className="w-2.5 h-2.5" />
                         </button>
                         <button
                           onClick={() => handleClearTrack(trackIdx)}
@@ -2057,8 +2052,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
           <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-[0.04em] leading-relaxed border-t border-[#1a1c21] pt-3 flex items-center justify-between flex-wrap gap-2">
             <div>
               {language === "zh"
-                ? "点击 / 拖动步进格编辑 · SHIFT+点击 = 重音 · HI-HAT 轨单击循环：闭镲 → 开镲 → 三连滚 · ◀/▶ 位移 · 🎲 智能填充"
-                : "Click / drag cells to edit · SHIFT+click = accent · HI-HAT lane cycles: closed → open → triplet roll · ◀/▶ shift · 🎲 smart fill"}
+                ? "点击 / 拖动步进格编辑 · SHIFT+点击 = 重音 · HI-HAT 轨单击循环：闭镲 → 开镲 → 三连滚 · ◀/▶ 位移 · 智能填充"
+                : "Click / drag cells to edit · SHIFT+click = accent · HI-HAT lane cycles: closed → open → triplet roll · ◀/▶ shift · Smart fill"}
             </div>
             <div className="text-[#8b8f99]">
               {isEditorMaximized ? (language === "zh" ? "按 Esc 退出最大化" : "Press Esc to exit fullscreen") : ""}
