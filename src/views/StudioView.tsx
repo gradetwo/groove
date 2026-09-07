@@ -214,9 +214,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [timeSignature, setTimeSignature] = useState<string>(() => currentGenre.time_signature || "4/4");
   const [resolution, setResolution] = useState<"1/8" | "1/16" | "1/32">("1/16");
 
-  // Visualizer canvas ref
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
   // Sequencer matrix scroll container ref
   const matrixContainerRef = useRef<HTMLDivElement | null>(null);
   const [isRulerDragging, setIsRulerDragging] = useState(false);
@@ -404,55 +401,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isRulerDragging]);
-
-  // Real-time oscilloscope / spectrum canvas visualizer
-  useEffect(() => {
-    let animId: number;
-    const renderVisualizer = () => {
-      animId = requestAnimationFrame(renderVisualizer);
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      const analyser = engineRef.current?.getAnalyser();
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      if (!isPlaying || !analyser) {
-        ctx.fillStyle = "#1e2128";
-        const barCount = 18;
-        const bw = (w - (barCount - 1) * 2) / barCount;
-        for (let i = 0; i < barCount; i++) {
-          ctx.fillRect(i * (bw + 2), h - 3, bw, 3);
-        }
-        return;
-      }
-
-      const freqData = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(freqData);
-
-      const barCount = 18;
-      const bw = (w - (barCount - 1) * 2) / barCount;
-      const step = Math.max(1, Math.floor(freqData.length / barCount));
-
-      for (let i = 0; i < barCount; i++) {
-        const val = freqData[i * step] || 0;
-        const percent = val / 255;
-        const bh = Math.max(3, percent * (h - 2));
-
-        const grad = ctx.createLinearGradient(0, h, 0, 0);
-        grad.addColorStop(0, genreAccent || "#f5b73d");
-        grad.addColorStop(1, "#fff");
-        ctx.fillStyle = grad;
-        ctx.fillRect(i * (bw + 2), h - bh, bw, bh);
-      }
-    };
-
-    animId = requestAnimationFrame(renderVisualizer);
-    return () => cancelAnimationFrame(animId);
-  }, [isPlaying, genreAccent]);
 
   // Switch genre (hot swap)
   const switchGenre = (genre: Genre, andPlay = false) => {
@@ -1529,14 +1477,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 <Play className="w-5 h-5 fill-[#0a0b0d] text-[#0a0b0d] ml-0.5" />
               )}
             </button>
-
-            {/* Real-time Spectrum / Oscilloscope Visualizer Canvas */}
-            <div
-              className="flex items-center gap-1 px-2 py-1 bg-[#0d0e12] border border-[#1a1c21] rounded-lg h-[48px] shrink-0 hidden md:flex"
-              title="Real-time Audio Spectrum / 实时音频频谱"
-            >
-              <canvas ref={canvasRef} width={80} height={36} className="w-[80px] h-[36px] block rounded" />
-            </div>
 
             {/* BPM Slider Knob */}
             <div className="flex flex-col gap-1 min-w-[130px] flex-1 sm:flex-initial">
