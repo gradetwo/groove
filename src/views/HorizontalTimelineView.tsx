@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Disc,
   Compass,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from "lucide-react";
 import { Genre, GenreCategory } from "../types/genre";
 import { 
@@ -338,14 +339,14 @@ interface TimelineColumnDef {
   yearThreshold: number;
 }
 
-// 1. Non-linear adaptive epoch scale: expands dense eras, compacts early roots, eliminates blank space
+// 1. Refined Compact Adaptive Epoch scale: tight, balanced, and readable
 const NONLINEAR_EPOCHS: TimelineColumnDef[] = [
   {
     id: "roots",
     label: "1900–1960s",
-    tag: { zh: "根源奠基", en: "Roots Era" },
+    tag: { zh: "根源奠基", en: "Roots" },
     desc: { zh: "Jazz, Blues, Rock'n'Roll & Bossa", en: "Acoustic Foundations" },
-    widthClass: "min-w-[240px] flex-[1.4]",
+    widthClass: "min-w-[170px] flex-[1.2]",
     filter: (g: Genre) => (g.origin_decade || 1980) <= 1960,
     yearThreshold: 1960,
   },
@@ -354,16 +355,16 @@ const NONLINEAR_EPOCHS: TimelineColumnDef[] = [
     label: "1970s",
     tag: { zh: "电子启蒙", en: "Synth Dawn" },
     desc: { zh: "Disco, Funk, Krautrock & Synth-Pop", en: "Disco & Funk Pulse" },
-    widthClass: "min-w-[280px] flex-[1.8]",
+    widthClass: "min-w-[190px] flex-[1.4]",
     filter: (g: Genre) => g.origin_decade === 1970,
     yearThreshold: 1970,
   },
   {
     id: "80s",
     label: "1980s",
-    tag: { zh: "黄金诞生", en: "Golden Birth" },
+    tag: { zh: "黄金诞生", en: "Genesis" },
     desc: { zh: "House, Techno & Golden Hip-Hop", en: "House & Techno Genesis" },
-    widthClass: "min-w-[460px] flex-[3.8]",
+    widthClass: "min-w-[270px] flex-[2.2]",
     filter: (g: Genre) => g.origin_decade === 1980,
     yearThreshold: 1980,
   },
@@ -372,7 +373,7 @@ const NONLINEAR_EPOCHS: TimelineColumnDef[] = [
     label: "1990s",
     tag: { zh: "全球大爆发", en: "Explosion" },
     desc: { zh: "Trance, Jungle, DnB, IDM & Garage", en: "The Electronic Explosion" },
-    widthClass: "min-w-[700px] flex-[5.8]",
+    widthClass: "min-w-[340px] flex-[2.8]",
     filter: (g: Genre) => g.origin_decade === 1990,
     yearThreshold: 1990,
   },
@@ -381,16 +382,16 @@ const NONLINEAR_EPOCHS: TimelineColumnDef[] = [
     label: "2000s",
     tag: { zh: "千禧浪潮", en: "Millennium" },
     desc: { zh: "Dubstep, Grime & Electro House", en: "Bass Revolution" },
-    widthClass: "min-w-[420px] flex-[3.2]",
+    widthClass: "min-w-[240px] flex-[1.9]",
     filter: (g: Genre) => g.origin_decade === 2000,
     yearThreshold: 2000,
   },
   {
     id: "10s_now",
     label: "2010s–2020s+",
-    tag: { zh: "现代微流派", en: "Modern Era" },
-    desc: { zh: "Trap, Drill, Future Bass & Hyperpop", en: "Internet & Hybrid Grooves" },
-    widthClass: "min-w-[540px] flex-[4.4]",
+    tag: { zh: "现代微流派", en: "Modern" },
+    desc: { zh: "Trap, Drill, Future Bass & Hybrids", en: "Internet & Hybrid Grooves" },
+    widthClass: "min-w-[290px] flex-[2.4]",
     filter: (g: Genre) => (g.origin_decade || 1980) >= 2010,
     yearThreshold: 2024,
   },
@@ -402,7 +403,7 @@ const LINEAR_COLUMNS: TimelineColumnDef[] = [1920, 1940, 1960, 1970, 1980, 1990,
   label: `${decade}s`,
   tag: { zh: `${decade} 年代`, en: `${decade}s` },
   desc: { zh: `${decade} 年代典型曲风`, en: `Decade of ${decade}s` },
-  widthClass: "min-w-[280px] flex-1",
+  widthClass: "min-w-[190px] flex-1",
   filter: (g: Genre) => {
     if (decade <= 1940) return (g.origin_decade || 1980) <= 1950;
     return g.origin_decade === decade;
@@ -472,7 +473,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
           }
           return prev + 2;
         });
-      }, 280 / playbackSpeed);
+      }, 260 / playbackSpeed);
     }
     return () => {
       if (timer) clearInterval(timer);
@@ -525,282 +526,253 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
     if (colElement && scrollContainerRef.current) {
       const containerRect = scrollContainerRef.current.getBoundingClientRect();
       const colRect = colElement.getBoundingClientRect();
-      const scrollOffset = colRect.left - containerRect.left + scrollContainerRef.current.scrollLeft - 240;
+      const scrollOffset = colRect.left - containerRect.left + scrollContainerRef.current.scrollLeft - 180;
       scrollContainerRef.current.scrollTo({ left: Math.max(0, scrollOffset), behavior: "smooth" });
     }
   };
 
   return (
-    <div className="w-full max-w-[1580px] mx-auto px-2 sm:px-4 py-4 space-y-5">
-      {/* Luxury Master Control Deck (高端数字演变控制台) */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#141622] via-[#0f1118] to-[#141622] border border-white/[0.08] p-5 shadow-2xl">
-        {/* Subtle ambient lighting glows */}
-        <div className="absolute top-0 left-1/3 w-80 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
-          {/* Brand & Scale Spec */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/40 flex items-center justify-center text-[#f5b73d] shadow-[0_0_16px_rgba(245,183,61,0.25)]">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-extrabold text-[#f5f4ef] tracking-wide">
-                  {t("nav_timeline_h")}
-                </h1>
-                <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/15 text-[#f5b73d] border border-amber-500/30 font-bold shadow-sm">
-                  159 GENRES · 1900–2024
-                </span>
-              </div>
-              <p className="text-xs text-[#8e93a0] mt-0.5">
-                {language === "zh" 
-                  ? "非线性历史自适应尺度 · 消除留白 · 完整呈现 14 大家族演进脉络与律动细节" 
-                  : "Non-linear adaptive scale · 14 Music Genealogies & Detailed Groove DNA"}
-              </p>
+    <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-4 py-3 space-y-3">
+      {/* Compact Master Deck (精致高雅主控面板) */}
+      <div className="rounded-2xl bg-[#0f1117]/95 border border-white/[0.08] p-3.5 shadow-xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-3">
+        {/* Left: Branding & Metrics */}
+        <div className="flex items-center space-x-2.5">
+          <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[#f5b73d]">
+            <Clock className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-extrabold text-[#f5f4ef] tracking-wide">
+                {t("nav_timeline_h")}
+              </h1>
+              <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-amber-500/15 text-[#f5b73d] border border-amber-500/30 font-bold">
+                159 GENRES
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* Scale Mode Switcher & Category Filters */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Non-linear vs Linear Mode Toggle */}
-            <div className="flex items-center bg-[#090a0e] border border-white/[0.08] rounded-2xl p-1 text-xs font-semibold shadow-inner">
-              <button
-                onClick={() => setScaleMode("nonlinear")}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-                  scaleMode === "nonlinear"
-                    ? "bg-[#f5b73d] text-black shadow-[0_0_14px_rgba(245,183,61,0.4)] font-bold"
-                    : "text-[#8e93a0] hover:text-[#f5f4ef]"
-                }`}
-                title={language === "zh" ? "根据各时代曲风密度自适应扩展，消除留白" : "Adaptive density-weighted non-linear scale"}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>{t("timeline_scale_nonlinear")}</span>
-              </button>
-              <button
-                onClick={() => setScaleMode("linear")}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
-                  scaleMode === "linear"
-                    ? "bg-[#f5b73d] text-black shadow-[0_0_14px_rgba(245,183,61,0.4)] font-bold"
-                    : "text-[#8e93a0] hover:text-[#f5f4ef]"
-                }`}
-                title={language === "zh" ? "传统等距年代分布" : "Linear equal-width decades"}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>{t("timeline_scale_linear")}</span>
-              </button>
-            </div>
+        {/* Middle Toolbar: Mode Switcher & Category Dropdown */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Non-linear vs Linear Mode Toggle */}
+          <div className="flex items-center bg-[#090a0e] border border-white/[0.08] rounded-xl p-0.5 text-xs font-semibold">
+            <button
+              onClick={() => setScaleMode("nonlinear")}
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                scaleMode === "nonlinear"
+                  ? "bg-[#f5b73d] text-black font-bold shadow-sm"
+                  : "text-[#8e93a0] hover:text-[#f5f4ef]"
+              }`}
+              title={language === "zh" ? "根据各时代曲风密度自适应扩展，消除留白" : "Adaptive density-weighted non-linear scale"}
+            >
+              <Layers className="w-3 h-3" />
+              <span className="text-[11px]">{t("timeline_scale_nonlinear")}</span>
+            </button>
+            <button
+              onClick={() => setScaleMode("linear")}
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                scaleMode === "linear"
+                  ? "bg-[#f5b73d] text-black font-bold shadow-sm"
+                  : "text-[#8e93a0] hover:text-[#f5f4ef]"
+              }`}
+              title={language === "zh" ? "传统等距年代分布" : "Linear equal-width decades"}
+            >
+              <Clock className="w-3 h-3" />
+              <span className="text-[11px]">{t("timeline_scale_linear")}</span>
+            </button>
+          </div>
 
-            {/* Category Filter */}
-            <div className="flex items-center space-x-1.5 bg-[#090a0e] px-3 py-1.5 rounded-2xl border border-white/[0.08]">
-              <Filter className="w-3.5 h-3.5 text-[#636875]" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setActiveLaneFilter("ALL");
-                }}
-                className="bg-transparent text-[#c4c7cf] text-xs font-semibold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL" className="bg-[#12131a]">
-                  {language === "zh" ? "全部大类 (6)" : "All Categories (6)"}
-                </option>
-                <option value="Electronic" className="bg-[#12131a]">Electronic 电子舞曲</option>
-                <option value="Hip Hop" className="bg-[#12131a]">Hip Hop 嘻哈说唱</option>
-                <option value="Rock/Metal" className="bg-[#12131a]">Rock & Metal 摇滚金属</option>
-                <option value="Jazz/Blues" className="bg-[#12131a]">Jazz & Blues 爵士蓝调</option>
-                <option value="Pop/R&B" className="bg-[#12131a]">Pop & R&B 流行节奏蓝调</option>
-                <option value="Latin/World" className="bg-[#12131a]">Latin & World 拉丁世界</option>
-              </select>
-            </div>
-
-            {/* Lane Selector */}
+          {/* Category Filter */}
+          <div className="flex items-center space-x-1.5 bg-[#090a0e] px-2.5 py-1 rounded-xl border border-white/[0.08]">
+            <Filter className="w-3 h-3 text-[#636875]" />
             <select
-              value={activeLaneFilter}
-              onChange={(e) => setActiveLaneFilter(e.target.value)}
-              className="bg-[#090a0e] border border-white/[0.08] text-[#c4c7cf] text-xs font-semibold px-3 py-1.5 rounded-2xl focus:outline-none focus:border-[#f5b73d] cursor-pointer"
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setActiveLaneFilter("ALL");
+              }}
+              className="bg-transparent text-[#c4c7cf] text-xs font-semibold focus:outline-none cursor-pointer"
             >
               <option value="ALL" className="bg-[#12131a]">
-                {language === "zh" ? `全部演化泳道 (${LANES.length})` : `All Lanes (${LANES.length})`}
+                {language === "zh" ? "全大类 (6)" : "All Categories"}
               </option>
-              {LANES.map((l) => (
-                <option key={l.id} value={l.id} className="bg-[#12131a]">
-                  {l.name[language]} ({l.genres.length})
-                </option>
-              ))}
+              <option value="Electronic" className="bg-[#12131a]">Electronic 电子</option>
+              <option value="Hip Hop" className="bg-[#12131a]">Hip Hop 嘻哈</option>
+              <option value="Rock/Metal" className="bg-[#12131a]">Rock & Metal 摇滚</option>
+              <option value="Jazz/Blues" className="bg-[#12131a]">Jazz & Blues 爵士</option>
+              <option value="Pop/R&B" className="bg-[#12131a]">Pop & R&B 流行</option>
+              <option value="Latin/World" className="bg-[#12131a]">Latin & World 拉丁</option>
             </select>
           </div>
 
-          {/* Master Transport Console (播放与年历巡航) */}
-          <div className="flex items-center space-x-3 bg-[#090a0e]/95 px-4 py-2 rounded-2xl border border-white/[0.08] shadow-inner">
-            <button
-              onClick={handleTogglePlay}
-              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all ${
-                animationPlaying
-                  ? "bg-[#f5b73d] text-black shadow-[0_0_14px_rgba(245,183,61,0.5)]"
-                  : "bg-indigo-600 hover:bg-indigo-500 text-[#f5f4ef]"
-              }`}
-            >
-              {animationPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-              <span>{animationPlaying ? t("pause") : (language === "zh" ? "演进播放" : "Play Evolution")}</span>
-            </button>
-
-            <button
-              onClick={handleStartEvolution}
-              className="p-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors"
-              title={language === "zh" ? "从 1920 重置" : "Restart from 1920"}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Current Year Illuminated Display */}
-            <div className="flex items-center space-x-2 pl-2 border-l border-white/[0.08]">
-              <span className="text-[10px] text-[#636875] font-mono uppercase font-bold tracking-wider">YEAR:</span>
-              <span className="text-base font-mono font-extrabold text-[#f5b73d] w-12 drop-shadow-[0_0_8px_rgba(245,183,61,0.4)]">
-                {currentYear}
-              </span>
-            </div>
-
-            {/* Year Range Slider */}
-            <input
-              type="range"
-              min="1920"
-              max="2024"
-              value={currentYear}
-              onChange={(e) => setCurrentYear(Number(e.target.value))}
-              className="w-24 sm:w-32 accent-[#f5b73d] cursor-pointer"
-            />
-
-            {/* Speed Selector */}
-            <div className="flex items-center gap-1 border-l border-white/[0.08] pl-2">
-              {[1, 2, 4].map((spd) => (
-                <button
-                  key={spd}
-                  onClick={() => setPlaybackSpeed(spd)}
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors ${
-                    playbackSpeed === spd
-                      ? "bg-amber-500/20 text-[#f5b73d] font-bold border border-amber-500/40"
-                      : "text-[#636875] hover:text-[#9ca1ad]"
-                  }`}
-                >
-                  {spd}x
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Lane Selector */}
+          <select
+            value={activeLaneFilter}
+            onChange={(e) => setActiveLaneFilter(e.target.value)}
+            className="bg-[#090a0e] border border-white/[0.08] text-[#c4c7cf] text-xs font-semibold px-2.5 py-1 rounded-xl focus:outline-none focus:border-[#f5b73d] cursor-pointer max-w-[160px] truncate"
+          >
+            <option value="ALL" className="bg-[#12131a]">
+              {language === "zh" ? `全部泳道 (${LANES.length})` : `All Lanes (${LANES.length})`}
+            </option>
+            {LANES.map((l) => (
+              <option key={l.id} value={l.id} className="bg-[#12131a]">
+                {l.name[language]} ({l.genres.length})
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Epoch Quick Jump Bar */}
-        <div className="relative z-10 mt-4 pt-3 border-t border-white/[0.06] flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          <span className="text-[10px] font-mono uppercase text-[#636875] tracking-wider shrink-0 mr-1">
-            {language === "zh" ? "纪元跳转:" : "JUMP:"}
-          </span>
-          {activeColumns.map((col) => (
-            <button
-              key={col.id}
-              onClick={() => scrollToColumn(col.id)}
-              className="px-2.5 py-0.5 rounded-lg bg-[#090a0e] hover:bg-[#1a1d28] border border-white/[0.06] hover:border-white/20 text-[11px] font-mono text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors shrink-0"
-            >
-              {col.label} · {col.tag[language]}
-            </button>
-          ))}
+        {/* Right: Master Transport Console */}
+        <div className="flex items-center space-x-2.5 bg-[#090a0e] px-3 py-1 rounded-xl border border-white/[0.08]">
+          <button
+            onClick={handleTogglePlay}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold text-xs transition-all ${
+              animationPlaying
+                ? "bg-[#f5b73d] text-black shadow-sm"
+                : "bg-indigo-600 hover:bg-indigo-500 text-[#f5f4ef]"
+            }`}
+          >
+            {animationPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+            <span className="text-[11px]">{animationPlaying ? t("pause") : (language === "zh" ? "播放" : "Play")}</span>
+          </button>
+
+          <button
+            onClick={handleStartEvolution}
+            className="p-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors"
+            title={language === "zh" ? "从 1920 重置" : "Restart from 1920"}
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+
+          {/* Current Year Display */}
+          <div className="flex items-center space-x-1 pl-2 border-l border-white/[0.08]">
+            <span className="text-[9px] text-[#636875] font-mono font-bold">YEAR:</span>
+            <span className="text-sm font-mono font-extrabold text-[#f5b73d] w-10 text-center">
+              {currentYear}
+            </span>
+          </div>
+
+          <input
+            type="range"
+            min="1920"
+            max="2024"
+            value={currentYear}
+            onChange={(e) => setCurrentYear(Number(e.target.value))}
+            className="w-20 sm:w-28 accent-[#f5b73d] cursor-pointer"
+          />
+
+          {/* Speed */}
+          <div className="flex items-center gap-0.5 border-l border-white/[0.08] pl-1.5">
+            {[1, 2].map((spd) => (
+              <button
+                key={spd}
+                onClick={() => setPlaybackSpeed(spd)}
+                className={`text-[9px] font-mono px-1 py-0.5 rounded ${
+                  playbackSpeed === spd
+                    ? "bg-amber-500/20 text-[#f5b73d] font-bold"
+                    : "text-[#636875] hover:text-[#9ca1ad]"
+                }`}
+              >
+                {spd}x
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Horizontal Scrollable Timeline Matrix (横向演化流光矩阵) */}
+      {/* Quick Epoch Navigation Jump Line */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none px-1">
+        <span className="text-[10px] font-mono uppercase text-[#636875] tracking-wider shrink-0 mr-1">
+          {language === "zh" ? "纪元速达:" : "EPOCH:"}
+        </span>
+        {activeColumns.map((col) => (
+          <button
+            key={col.id}
+            onClick={() => scrollToColumn(col.id)}
+            className="px-2 py-0.5 rounded-lg bg-[#0e1017] hover:bg-[#181b24] border border-white/[0.06] hover:border-white/20 text-[10.5px] font-mono text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors shrink-0 flex items-center gap-1"
+          >
+            <span className="text-[#f5b73d] font-bold">{col.label}</span>
+            <span className="text-[#636875]">·</span>
+            <span>{col.tag[language]}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Horizontal Scrollable Timeline Matrix (精致紧凑矩阵) */}
       <div 
         ref={scrollContainerRef}
-        className="bg-[#0b0c11] border border-white/[0.08] rounded-3xl p-4 sm:p-5 shadow-2xl overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-white/10"
+        className="bg-[#0b0c11] border border-white/[0.08] rounded-2xl p-3 sm:p-4 shadow-xl overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-white/10"
       >
-        <div className="min-w-[1780px] space-y-6">
-          {/* Precision Chronological Ruler */}
-          <div className="flex items-stretch border-b border-white/[0.08] pb-4 pl-60">
+        <div className="min-w-[1500px] space-y-3">
+          {/* Precision Chronological Ruler Header */}
+          <div className="flex items-stretch border-b border-white/[0.08] pb-2 pl-44">
             {activeColumns.map((col) => {
               const isPast = col.yearThreshold <= currentYear;
               return (
                 <div 
                   key={col.id} 
                   id={`timeline-col-${col.id}`}
-                  className={`${col.widthClass} px-3 flex flex-col items-center justify-between relative transition-colors border-r border-white/[0.05] last:border-none`}
+                  className={`${col.widthClass} px-2 flex flex-col items-center justify-between relative transition-colors border-r border-white/[0.05] last:border-none`}
                 >
                   <div className="text-center">
-                    <div className={`text-sm font-mono tracking-wider font-extrabold ${isPast ? "text-[#f5b73d] drop-shadow-[0_0_8px_rgba(245,183,61,0.3)]" : "text-[#555a68]"}`}>
+                    <div className={`text-xs font-mono font-extrabold ${isPast ? "text-[#f5b73d]" : "text-[#555a68]"}`}>
                       {col.label}
                     </div>
-                    <div className="text-[10px] font-semibold text-[#8e93a0] uppercase tracking-wider mt-0.5">
+                    <div className="text-[9.5px] font-semibold text-[#8e93a0] uppercase tracking-wider mt-0.5">
                       {col.tag[language]}
-                    </div>
-                    <div className="text-[9.5px] text-[#555a68] truncate max-w-[210px] mt-0.5 font-sans">
-                      {col.desc[language]}
                     </div>
                   </div>
 
-                  {/* Laser graduation tick */}
-                  <div className="flex flex-col items-center mt-3">
-                    <div className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                      isPast 
-                        ? "bg-[#f5b73d] shadow-[0_0_10px_#f5b73d] scale-110" 
-                        : "bg-[#181a24] border border-white/[0.1]"
-                    }`} />
-                  </div>
+                  {/* Tick Dot */}
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 transition-all ${
+                    isPast ? "bg-[#f5b73d] shadow-[0_0_6px_#f5b73d]" : "bg-[#181a24]"
+                  }`} />
                 </div>
               );
             })}
           </div>
 
           {/* Swimlanes */}
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             {displayLanes.map((lane) => {
               return (
                 <div 
                   key={lane.id}
-                  className="flex items-stretch p-3 rounded-2xl bg-[#0e1017]/90 border border-white/[0.06] hover:border-white/[0.18] transition-all relative shadow-lg"
+                  className="flex items-stretch rounded-xl bg-[#0e1017]/90 border border-white/[0.06] hover:border-white/[0.15] transition-all relative shadow-sm"
                 >
-                  {/* Lane Title & Family Info Column */}
-                  <div className="w-60 shrink-0 pr-4 pl-2 flex flex-col justify-between border-r border-white/[0.07]">
+                  {/* Left Lane Title Header (精简紧凑) */}
+                  <div className="w-44 shrink-0 p-2.5 flex flex-col justify-between border-r border-white/[0.07] bg-[#090a0e]/40 rounded-l-xl">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <span 
-                          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
-                          style={{ backgroundColor: lane.color.primary, boxShadow: `0 0 10px ${lane.color.glow}` }}
+                          className="w-2 h-2 rounded-full shrink-0 shadow-sm"
+                          style={{ backgroundColor: lane.color.primary, boxShadow: `0 0 8px ${lane.color.glow}` }}
                         />
                         <span 
-                          className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
+                          className="text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border"
                           style={{ 
                             color: lane.color.secondary, 
-                            borderColor: `${lane.color.primary}40`,
-                            backgroundColor: `${lane.color.primary}15`
+                            borderColor: `${lane.color.primary}35`,
+                            backgroundColor: `${lane.color.primary}12`
                           }}
                         >
                           {lane.category}
                         </span>
                       </div>
 
-                      <h4 className="font-extrabold text-[#f5f4ef] text-sm mt-2.5 leading-snug tracking-wide" title={lane.name[language]}>
+                      <h4 className="font-bold text-[#f5f4ef] text-xs mt-1.5 leading-tight truncate" title={lane.name[language]}>
                         {lane.name[language]}
                       </h4>
-                      <p className="text-[11px] text-[#8e93a0] mt-1 font-mono">
-                        {lane.genres.length} {language === "zh" ? "种代表曲风" : "genres"}
-                      </p>
                     </div>
 
-                    {/* Lane Inception Badge */}
-                    <div className="mt-3 pt-2 border-t border-white/[0.06] text-[10.5px] text-[#636875] flex items-center justify-between">
-                      <span>{language === "zh" ? "发源起始纪元:" : "Inception:"}</span>
-                      <span 
-                        className="font-mono font-bold px-1.5 py-0.5 rounded text-[10px]"
-                        style={{
-                          color: lane.color.secondary,
-                          backgroundColor: `${lane.color.primary}12`,
-                        }}
-                      >
-                        {lane.birthDecade}s
-                      </span>
+                    <div className="mt-1 pt-1 border-t border-white/[0.05] flex items-center justify-between text-[9.5px] text-[#636875] font-mono">
+                      <span>{lane.genres.length} 曲风</span>
+                      <span className="font-bold text-[#9ca1ad]">{lane.birthDecade}s</span>
                     </div>
                   </div>
 
                   {/* Columns for this lane */}
-                  <div className="flex-1 flex items-stretch divide-x divide-white/[0.04] pl-2">
+                  <div className="flex-1 flex items-stretch divide-x divide-white/[0.04] p-1.5">
                     {activeColumns.map((col) => {
                       const colGenres = lane.genres.filter(col.filter);
                       const hasGenres = colGenres.length > 0;
@@ -809,11 +781,11 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                       return (
                         <div 
                           key={col.id} 
-                          className={`${col.widthClass} p-2 flex flex-col justify-center`}
+                          className={`${col.widthClass} p-1 flex flex-col justify-center`}
                         >
                           {hasGenres ? (
-                            /* Genre Cards Grid */
-                            <div className="flex flex-wrap gap-3 items-stretch content-start w-full">
+                            /* Genre Chips Grid (紧凑精致芯片矩阵) */
+                            <div className="flex flex-wrap gap-1.5 items-center content-center w-full">
                               {colGenres.map((genre) => {
                                 const isRevealed = (genre.origin_decade || 1980) <= currentYear;
                                 const isPlayingThis = playingGenreId === genre.id;
@@ -822,157 +794,121 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                   <div
                                     key={genre.id}
                                     onClick={() => onSelectGenre(genre)}
-                                    className={`group relative p-3.5 rounded-2xl transition-all duration-300 flex flex-col justify-between w-full sm:min-w-[210px] sm:max-w-[290px] flex-1 ${
+                                    className={`group/chip relative px-2.5 py-1.5 rounded-xl transition-all duration-200 flex flex-col justify-between w-[150px] sm:w-[168px] shrink-0 border ${
                                       isRevealed 
-                                        ? "bg-gradient-to-b from-[#141622] to-[#0c0d12] border border-white/[0.08] shadow-lg cursor-pointer scale-100 opacity-100 hover:border-white/25 hover:-translate-y-0.5" 
-                                        : "opacity-20 bg-[#08090d] border-white/[0.03] scale-95 pointer-events-none"
+                                        ? "bg-[#11131a]/90 hover:bg-[#181a24] border-white/[0.08] hover:border-white/30 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5" 
+                                        : "opacity-20 bg-[#07080b] border-white/[0.03] scale-95 pointer-events-none"
                                     } ${
                                       isPlayingThis 
-                                        ? "ring-2 ring-[#f5b73d] shadow-[0_0_24px_rgba(245,183,61,0.4)]" 
+                                        ? "ring-1.5 ring-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] bg-[#181b28]" 
                                         : ""
                                     }`}
                                     style={{
-                                      borderTopColor: lane.color.primary,
-                                      borderTopWidth: 2,
+                                      borderLeftColor: lane.color.primary,
+                                      borderLeftWidth: 3,
                                     }}
                                   >
-                                    {/* Card Top: Name & Origin Year */}
-                                    <div>
-                                      <div className="flex items-start justify-between gap-1.5">
-                                        <h5 
-                                          className="font-bold text-xs sm:text-sm text-[#f5f4ef] group-hover:text-[#f5b73d] transition-colors leading-snug line-clamp-1"
-                                          title={genre.name}
+                                    {/* Top: Name and Year */}
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span 
+                                        className="font-bold text-xs text-[#f5f4ef] group-hover/chip:text-[#f5b73d] transition-colors truncate"
+                                        title={genre.name}
+                                      >
+                                        {genre.name}
+                                      </span>
+                                      <span className="text-[9.5px] font-mono font-bold text-[#8e93a0] shrink-0">
+                                        {genre.origin_year}
+                                      </span>
+                                    </div>
+
+                                    {/* Bottom: BPM & Micro Action Buttons */}
+                                    <div className="flex items-center justify-between gap-1 mt-1 pt-1 border-t border-white/[0.04]">
+                                      <span className="text-[9px] font-mono text-[#8e93a0] px-1 py-0.2 rounded bg-white/[0.04]">
+                                        {genre.default_bpm || genre.bpm_range.split("-")[0]} BPM
+                                      </span>
+
+                                      <div className="flex items-center gap-1">
+                                        {/* 1-click Audio Audition button */}
+                                        <button
+                                          onClick={(e) => handleToggleAudition(genre, e)}
+                                          className={`p-1 rounded-lg transition-all ${
+                                            isPlayingThis
+                                              ? "bg-[#f5b73d] text-black shadow-sm"
+                                              : "bg-white/[0.06] hover:bg-white/[0.15] text-[#b9b7b0] hover:text-[#f5f4ef]"
+                                          }`}
+                                          title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
                                         >
-                                          {genre.name}
-                                        </h5>
-                                        <span 
-                                          className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold shrink-0"
-                                          style={{
-                                            color: lane.color.secondary,
-                                            backgroundColor: `${lane.color.primary}18`,
-                                            border: `1px solid ${lane.color.primary}35`
+                                          {isPlayingThis ? (
+                                            <Square className="w-2.5 h-2.5 fill-current" />
+                                          ) : (
+                                            <Play className="w-2.5 h-2.5 fill-current" />
+                                          )}
+                                        </button>
+
+                                        {/* Studio button */}
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onOpenStudio(genre);
                                           }}
+                                          className="p-1 rounded-lg bg-white/[0.06] hover:bg-[#f5b73d] hover:text-black text-[#8e93a0] transition-colors"
+                                          title={t("open_in_studio")}
                                         >
+                                          <Sliders className="w-2.5 h-2.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Floating Inspection Tooltip Popover (悬浮精致细节浮层) */}
+                                    <div className="absolute bottom-[calc(100%+6px)] left-0 z-50 w-72 p-3 rounded-2xl bg-[#12141c]/95 backdrop-blur-xl border border-white/20 shadow-[0_12px_32px_rgba(0,0,0,0.85)] opacity-0 group-hover/chip:opacity-100 pointer-events-none transition-all duration-200 translate-y-1.5 group-hover/chip:translate-y-0 text-left">
+                                      <div className="flex items-start justify-between gap-1.5 pb-2 border-b border-white/[0.08]">
+                                        <div>
+                                          <h6 className="text-xs font-extrabold text-[#f5f4ef]">{genre.name}</h6>
+                                          {genre.aliases[0] && language === "zh" && (
+                                            <span className="text-[10px] text-[#8e93a0]">{genre.aliases[0]}</span>
+                                          )}
+                                        </div>
+                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-[#f5b73d] border border-amber-500/30">
                                           {genre.origin_year}
                                         </span>
                                       </div>
 
-                                      {/* Tempo, Meter & Origin Place */}
-                                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#8e93a0]">
-                                        <span className="font-mono bg-[#090a0e] px-1.5 py-0.5 rounded border border-white/[0.06] text-[#d6d4ce]">
-                                          {genre.time_signature || "4/4"} · {genre.bpm_range} BPM
-                                        </span>
-                                        <span className="truncate max-w-[100px] text-[#737887]">
-                                          {genre.origin_place[language]}
-                                        </span>
-                                      </div>
-
-                                      {/* Groove Core Box */}
-                                      <div className="bg-[#090a0e]/90 border border-white/[0.06] rounded-xl p-2 mt-2.5 group-hover:border-white/15 transition-colors">
-                                        <div className="flex items-center justify-between text-[10px] font-bold text-[#8e93a0]">
-                                          <span className="flex items-center gap-1 text-[#f5b73d]">
-                                            <Sparkles className="w-3 h-3" />
-                                            <span>{t("timeline_groove_core")}</span>
-                                          </span>
+                                      <div className="mt-2 space-y-1.5 text-[10.5px]">
+                                        <div className="text-[#8e93a0] flex items-center justify-between font-mono">
+                                          <span>{genre.origin_place[language]}</span>
+                                          <span className="text-[#f5b73d]">{genre.time_signature} · {genre.bpm_range} BPM</span>
                                         </div>
-                                        <p className="text-[10.5px] text-[#b4b7c2] leading-relaxed line-clamp-2 mt-1 font-sans">
+                                        <p className="text-[#c4c7cf] leading-relaxed line-clamp-2">
                                           {genre.key_characteristics[language] || genre.rhythm_features[language]}
                                         </p>
-                                      </div>
-
-                                      {/* Iconic Gear Badges */}
-                                      {genre.instrumentation && genre.instrumentation.length > 0 && (
-                                        <div className="mt-2 flex flex-wrap gap-1 items-center">
-                                          {genre.instrumentation.slice(0, 3).map((gear, idx) => (
-                                            <span 
-                                              key={idx}
-                                              className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-[#161822] text-[#9ca1ad] border border-white/[0.06]"
-                                            >
-                                              {gear}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-
-                                      {/* Representative Artists */}
-                                      {genre.representative_artists && genre.representative_artists.length > 0 && (
-                                        <div className="mt-1.5 text-[10px] text-[#737887] truncate">
-                                          <span className="text-[#555a68] font-medium">{t("timeline_pioneers")}: </span>
-                                          <span className="text-[#9ca1ad]">{genre.representative_artists.slice(0, 2).join(", ")}</span>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* Action Buttons: Audition & Studio */}
-                                    <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-2">
-                                      <button
-                                        onClick={(e) => handleToggleAudition(genre, e)}
-                                        className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 rounded-xl font-bold text-[11px] transition-all ${
-                                          isPlayingThis
-                                            ? "bg-[#f5b73d] text-black shadow-[0_0_12px_rgba(245,183,61,0.5)]"
-                                            : "bg-[#181a24] hover:bg-[#222534] text-[#d6d4ce] border border-white/[0.08]"
-                                        }`}
-                                        title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
-                                      >
-                                        {isPlayingThis ? (
-                                          <>
-                                            <Square className="w-3 h-3 fill-current text-black" />
-                                            <span>{t("timeline_stop_preview")}</span>
-                                            <div className="flex items-end gap-0.5 h-3 ml-1">
-                                              <span className="w-0.5 h-3 bg-black animate-pulse" />
-                                              <span className="w-0.5 h-1.5 bg-black animate-ping" />
-                                              <span className="w-0.5 h-2.5 bg-black animate-pulse" />
-                                            </div>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Volume2 className="w-3.5 h-3.5 text-[#f5b73d]" />
-                                            <span>{t("timeline_play_preview")}</span>
-                                          </>
+                                        {genre.instrumentation && genre.instrumentation.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 pt-1">
+                                            {genre.instrumentation.slice(0, 3).map((gear, gIdx) => (
+                                              <span key={gIdx} className="px-1.5 py-0.5 rounded bg-[#181a24] text-[#9ca1ad] font-mono text-[9px] border border-white/[0.06]">
+                                                {gear}
+                                              </span>
+                                            ))}
+                                          </div>
                                         )}
-                                      </button>
-
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onOpenStudio(genre);
-                                        }}
-                                        className="p-1.5 rounded-xl bg-[#181a24] hover:bg-[#f5b73d] hover:text-black text-[#8e93a0] border border-white/[0.08] transition-all shrink-0"
-                                        title={t("open_in_studio")}
-                                      >
-                                        <Sliders className="w-3.5 h-3.5" />
-                                      </button>
+                                      </div>
                                     </div>
                                   </div>
                                 );
                               })}
                             </div>
                           ) : (
-                            /* Smart Lineage Ribbon: Fills empty space with high-end historical narrative */
-                            <div className="h-full min-h-[140px] w-full rounded-2xl border border-dashed border-white/[0.08] bg-gradient-to-r from-[#10121a]/70 via-[#151722]/40 to-[#10121a]/70 p-3.5 flex flex-col justify-center items-center text-center group/bridge hover:border-amber-500/40 transition-colors">
+                            /* Slim Lineage Ribbon (极简紧凑谱系源流导轨) */
+                            <div className="h-full min-h-[44px] w-full flex items-center justify-center px-1.5">
                               {isPreBirth ? (
-                                <>
-                                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#f5b73d] uppercase tracking-wider bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/25">
-                                    <GitBranch className="w-3 h-3" />
-                                    <span>{t("timeline_lineage")}</span>
-                                  </div>
-                                  <p className="text-[11px] text-[#8e93a0] leading-relaxed mt-2 max-w-[280px] font-sans">
+                                <div className="w-full flex items-center gap-1.5 py-1 px-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[9.5px] text-[#636875] font-sans">
+                                  <GitBranch className="w-3 h-3 text-[#f5b73d] shrink-0" />
+                                  <span className="truncate max-w-[200px]" title={lane.predecessor[language]}>
                                     {lane.predecessor[language]}
-                                  </p>
-                                  <div className="flex items-center gap-1.5 text-[10px] text-[#f5b73d] font-mono mt-2 font-semibold">
-                                    <span>➔</span>
-                                    <span>
-                                      {language === "zh" ? `孕育 ${lane.birthDecade}s 破晓诞生` : `Leads to ${lane.birthDecade}s genesis`}
-                                    </span>
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="flex flex-col items-center justify-center text-[#555a68] space-y-1">
-                                  <Activity className="w-4 h-4 opacity-40" />
-                                  <span className="text-[10px] font-mono">
-                                    {language === "zh" ? "流派跨界融合与演进" : "Evolution & Cross-fusion"}
                                   </span>
+                                  <span className="text-[#f5b73d] font-mono text-[9px] shrink-0 ml-auto font-bold">➔ {lane.birthDecade}s</span>
                                 </div>
+                              ) : (
+                                <div className="w-full border-t border-dashed border-white/[0.06]" />
                               )}
                             </div>
                           )}
