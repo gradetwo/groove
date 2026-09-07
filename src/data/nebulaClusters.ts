@@ -73,10 +73,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'house',
     name: '浩室',
     en: 'HOUSE',
-    color: 0xF43F5E,
-    hexColor: '#f43f5e',
+    color: 0xE05A7A,
+    hexColor: '#e05a7a',
     anchor: [-260, 50, -120],
-    spiral: [-0.2, 0.4, -0.1],
+    spiral: [-0.2, 0.45, -0.15],
     desc: {
       zh: '发源于芝加哥 The Warehouse 俱乐部，四四拍与反拍开镲构筑起现代舞曲的永动机。',
       en: 'Born in Chicago warehouses, the hypnotic four-on-the-floor beat powering global dance floors.'
@@ -87,8 +87,8 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'techno',
     name: '铁克诺',
     en: 'TECHNO',
-    color: 0x06B6D4,
-    hexColor: '#06b6d4',
+    color: 0x4AD8C8,
+    hexColor: '#4ad8c8',
     anchor: [-300, 110, 100],
     spiral: [-0.55, 0.4, 0.1],
     desc: {
@@ -101,9 +101,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'trance',
     name: '出神',
     en: 'TRANCE',
-    color: 0x3B82F6,
-    hexColor: '#3b82f6',
+    color: 0x5C8DF6,
+    hexColor: '#5c8df6',
     anchor: [-190, 230, -170],
+    spiral: [0.35, -0.4, 0.25],
     desc: {
       zh: '欧洲派对的高潮律动，史诗般的和弦进行与潮汐般层叠的琶音。',
       en: 'Epic build-ups, emotional melodies, and soaring euphoric arpeggios.'
@@ -114,9 +115,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'dubstep',
     name: '回响重拍',
     en: 'DUBSTEP',
-    color: 0xA855F7,
-    hexColor: '#a855f7',
+    color: 0x9D7BE8,
+    hexColor: '#9d7be8',
     anchor: [140, 190, 190],
+    spiral: [-0.25, 0.35, 0.3],
     desc: {
       zh: '南伦敦黑夜里的重低音地震，半速下潜节拍与激变低频撕裂感。',
       en: "South London's sub-bass tremors, half-time beats, and devastating wobble bass."
@@ -127,9 +129,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'dnb',
     name: '鼓打贝斯',
     en: 'DRUM & BASS',
-    color: 0xF97316,
-    hexColor: '#f97316',
+    color: 0xF08A46,
+    hexColor: '#f08a46',
     anchor: [-60, 260, 180],
+    spiral: [-0.15, 0.5, 0.35],
     desc: {
       zh: '174 BPM 的超速心跳，复杂碎拍重组与亚低频的物理轰鸣。',
       en: 'High-octane 174 BPM breakbeats combined with heavy sub-bass pressure.'
@@ -140,9 +143,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'uk_bass',
     name: '英伦低音',
     en: 'UK BASS & GARAGE',
-    color: 0x10B981,
-    hexColor: '#10b981',
+    color: 0x4AC88A,
+    hexColor: '#4ac88a',
     anchor: [30, 150, 290],
+    spiral: [0.2, 0.35, -0.2],
     desc: {
       zh: '海盗电台与车库切分，2-Step、Grime 与低频游走的地下先锋。',
       en: 'Syncopated 2-Step swing, Grime grit, and dynamic UK underground low-end.'
@@ -153,8 +157,8 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'trap_drill',
     name: '陷阱与钻音',
     en: 'TRAP & DRILL',
-    color: 0xEAB308,
-    hexColor: '#eab308',
+    color: 0xE5A93C,
+    hexColor: '#e5a93c',
     anchor: [210, -50, 240],
     desc: {
       zh: '亚特兰大与芝加哥寒夜，滚奏三连踩镲、滑音808与冷峻节拍。',
@@ -166,9 +170,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'future_downtempo',
     name: '未来与慢拍',
     en: 'FUTURE & DOWNTEMPO',
-    color: 0xEC4899,
-    hexColor: '#ec4899',
+    color: 0xD47FA6,
+    hexColor: '#d47fa6',
     anchor: [-130, -180, -210],
+    spiral: [0.4, 0.3, -0.2],
     desc: {
       zh: '失重混响、摇摆切片与赛博梦境，从 Vaporwave、Lo-Fi 到 Future Bass 的诗意流动。',
       en: 'Sidechained lush supersaws, lo-fi textures, and ambient sonic voyages.'
@@ -179,9 +184,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'hard_electro',
     name: '硬核与电波',
     en: 'HARD & ELECTRO',
-    color: 0xEF4444,
-    hexColor: '#ef4444',
+    color: 0xE84855,
+    hexColor: '#e84855',
     anchor: [-310, -110, -120],
+    spiral: [-0.3, 0.2, 0.4],
     desc: {
       zh: '极限失真反向反弹音、失速硬舞与高压脉冲的冲击波。',
       en: 'Distorted kicks, high-BPM gabber, raw phonk, and electro breaks.'
@@ -192,8 +198,8 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'rock_metal',
     name: '摇滚与金属',
     en: 'ROCK & METAL',
-    color: 0xDC2626,
-    hexColor: '#dc2626',
+    color: 0xD85A6A,
+    hexColor: '#d85a6a',
     anchor: [40, -20, -320],
     spiral: [-0.35, -0.5, 0.2],
     desc: {
@@ -206,9 +212,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'hiphop',
     name: '嘻哈',
     en: 'HIP-HOP',
-    color: 0xD97706,
-    hexColor: '#d97706',
+    color: 0xE06A3C,
+    hexColor: '#e06a3c',
     anchor: [110, -160, 180],
+    spiral: [0.25, -0.3, 0.4],
     desc: {
       zh: '布朗克斯派对的两台黑胶唱机，采样重组、繁复押韵与街头编年史。',
       en: 'Two turntables, dusty vinyl breaks, urban storytelling, and timeless groove.'
@@ -219,9 +226,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'jazz_blues',
     name: '爵士与蓝调',
     en: 'JAZZ & BLUES',
-    color: 0x6366F1,
-    hexColor: '#6366f1',
+    color: 0x6E8CD8,
+    hexColor: '#6e8cd8',
     anchor: [-190, -50, 160],
+    spiral: [-0.2, -0.4, 0.3],
     desc: {
       zh: '密西西比河与新奥尔良的即兴源流，近现代所有流行音乐的引力源泉。',
       en: 'The delta blues and street improvisations that seeded modern Western harmony.'
@@ -235,6 +243,7 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     color: 0xD878AC,
     hexColor: '#d878ac',
     anchor: [260, 60, -170],
+    spiral: [0.3, -0.35, 0.15],
     desc: {
       zh: '闪烁迪斯科球、灵魂放克与黄金旋律，触及亿万听众的感染力引擎。',
       en: 'Catchy hooks, dance-pop synth sheen, and silky vocal harmonies.'
@@ -245,9 +254,10 @@ export const MAJOR_CLUSTERS: MajorCluster[] = [
     id: 'latin_world',
     name: '拉丁与世界',
     en: 'LATIN & WORLD',
-    color: 0x4AC88A,
-    hexColor: '#4ac88a',
+    color: 0xAEC06A,
+    hexColor: '#aec06a',
     anchor: [300, -80, 110],
+    spiral: [-0.3, 0.4, -0.2],
     desc: {
       zh: '加勒比阳光、非洲复节奏与多米尼加切分，跨越海洋的原始跳动。',
       en: 'Polyrhythmic hand percussion, syncopated montunos, and irresistible island sway.'

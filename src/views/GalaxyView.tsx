@@ -7,6 +7,9 @@ import {
   X, 
   Music, 
   ChevronRight, 
+  ChevronUp,
+  ChevronDown,
+  Layers,
   Sparkles, 
   Compass, 
   Search, 
@@ -72,35 +75,35 @@ void main(){
   float twA = 0.18 + 0.32 * bg * isSm;
   alpha *= (1.0 - twA) + twA * (0.5 + 0.5 * sin(uTime * (0.7 + fract(aSeed * 0.31) * 2.4) + aSeed * 9.0));
 
-  // If a major cluster is selected, bring its stars forward and softly dim the others
+  // Selected cluster highlighting with dreamlike depth preservation
   if (uSelectedCluster >= -0.5) {
     if (abs(aCluster - uSelectedCluster) < 0.5) {
       alpha *= 1.45;
-      sz *= 1.28;
-      col = mix(col, vec3(1.0, 0.95, 0.85), 0.12);
+      sz *= 1.26;
+      col = mix(col, vec3(1.0, 0.96, 0.88), 0.14);
     } else if (aCluster >= -0.5) {
-      alpha *= 0.18;
-      sz *= 0.82;
+      alpha *= 0.65;
+      sz *= 0.95;
     } else {
-      alpha *= 0.35;
+      alpha *= 0.88;
     }
   }
 
   // Node selection highlighting modes
   if (aMode > 2.5) {
-    col = mix(col, vec3(1.0, 0.87, 0.62), 0.2);
+    col = mix(col, vec3(1.0, 0.87, 0.62), 0.18);
     alpha *= 1.35;
     sz *= 1.2;
   } else if (aMode > 1.5) {
     col = mix(col, vec3(1.0, 0.94, 0.78), 0.32);
-    alpha *= 1.8 * (1.06 + 0.16 * sin(uTime * 2.4 + aSeed * 0.7));
-    sz *= 1.45;
+    alpha *= 1.75 * (1.06 + 0.16 * sin(uTime * 2.4 + aSeed * 0.7));
+    sz *= 1.4;
   }
 
   if (uHoverNode > -0.5 && abs(aNode - uHoverNode) < 0.5) {
-    alpha *= 1.9;
-    sz *= 1.45;
-    col = mix(col, vec3(1.0), 0.3);
+    alpha *= 1.85;
+    sz *= 1.4;
+    col = mix(col, vec3(1.0), 0.28);
   }
   if (uHoverCluster > -0.5 && abs(aCluster - uHoverCluster) < 0.5) {
     alpha *= 1.35;
@@ -109,7 +112,7 @@ void main(){
 
   alpha *= (1.0 + pulse * 1.7);
   sz *= (1.0 + pulse * 1.2);
-  alpha *= clamp(1.55 - dz / 1800.0, 0.15, 1.0);
+  alpha *= clamp(1.55 - dz / 1700.0, 0.18, 1.0);
 
   gl_PointSize = clamp(sz * uScale / dz, 0.0, 240.0);
   gl_Position = projectionMatrix * mv;
@@ -129,18 +132,23 @@ void main(){
   float d = length(uv) * 2.0;
   float a;
   if (vStar > 0.5) {
-    float c = exp(-d * d * 22.0) * 1.5;
+    float c = exp(-d * d * 22.0) * 1.6;
     float rx = max(0.0, 1.0 - abs(uv.y) * 9.0) * max(0.0, 1.0 - abs(uv.x) * 2.1);
     float ry = max(0.0, 1.0 - abs(uv.x) * 9.0) * max(0.0, 1.0 - abs(uv.y) * 2.1);
-    a = (c + (rx + ry) * 0.45) * vAlpha;
+    a = (c + (rx + ry) * 0.48) * vAlpha;
   } else {
     float core = exp(-d * d * 7.0);
-    float halo = exp(-d * d * 2.0) * 0.3;
-    float wide = exp(-d * 1.8) * 0.05;
+    float halo = exp(-d * d * 2.0) * 0.32;
+    float wide = exp(-d * 1.8) * 0.055;
     a = (core + halo + wide) * vAlpha;
   }
-  if (a < 0.003) discard;
-  gl_FragColor = vec4(vColor * a, a);
+  if (a < 0.0028) discard;
+
+  vec3 col = vColor;
+  if (vStar > 0.5) {
+    col = mix(col, vec3(1.0, 0.98, 0.92), clamp(a * 0.55, 0.0, 0.75));
+  }
+  gl_FragColor = vec4(col * a, a);
 }
 `;
 
@@ -188,6 +196,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [subgenreFilter, setSubgenreFilter] = useState("");
   const [viewMode, setViewMode] = useState<"rail" | "grid">("rail");
+  const [isSubgenresPanelOpen, setIsSubgenresPanelOpen] = useState<boolean>(false);
 
   // Timeline state
   const Y_MIN = 1850;
@@ -381,6 +390,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   const selectMajorCluster = useCallback((cluster: MajorCluster | null) => {
     setSelectedCluster(cluster);
     setSubgenreFilter("");
+    setIsSubgenresPanelOpen(false);
     const th = threeRef.current;
     if (!th) return;
 
@@ -484,6 +494,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       B.ranges.push({ node: id, s, e: B.n });
     }
 
+    const UPV = new THREE.Vector3(0, 1, 0);
     const V = new THREE.Vector3();
     const W = new THREE.Vector3();
     const mixA = new THREE.Color();
@@ -496,7 +507,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       const R = c.spiral ? 78 : 62;
 
       span(core.idx, () => {
-        const nd = Math.round(560 * Q);
+        const nd = Math.round(620 * Q);
         for (let i = 0; i < nd; i++) {
           const outer = Math.random() < 0.42;
           const arm = Math.random() < 0.55;
@@ -519,8 +530,8 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           push(V.x, V.y, V.z, tc[0], tc[1], tc[2], s, Math.random() * 100, core.year, 0, core.idx, ci);
         }
 
-        // Central bright stellar core
-        push(core.pos.x, core.pos.y, core.pos.z, 1, 0.98, 0.9, 24, Math.random() * 100, core.year, 0, core.idx, ci, 1);
+        // Central luminous stellar core
+        push(core.pos.x, core.pos.y, core.pos.z, 1, 0.98, 0.9, 22, Math.random() * 100, core.year, 0, core.idx, ci, 0);
         
         // Inner crown flares
         for (let k = 0; k < 4; k++) {
@@ -528,16 +539,17 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           const tc2 = tint(c.color, 0.7, 1.4, 0);
           push(W.x, W.y, W.z, tc2[0], tc2[1], tc2[2], 6 + Math.random() * 5, Math.random() * 100, core.year, 0, core.idx, ci, 1);
         }
+        // Vast volumetric aura dust
         for (let k = 0; k < 3; k++) {
           W.set(gauss(), gauss(), gauss()).multiplyScalar(15).add(core.pos);
           const th = tint(c.color, 0.12, 0.085, (Math.random() - 0.5) * 0.06);
-          push(W.x, W.y, W.z, th[0], th[1], th[2], 62 + Math.random() * 42, Math.random() * 100, core.year, 0, core.idx, ci);
+          push(W.x, W.y, W.z, th[0], th[1], th[2], 62 + Math.random() * 42, Math.random() * 100, core.year, 0, core.idx, ci, 0);
         }
 
-        // Spiral arms if defined
+        // Sweeping logarithmic spiral arms
         if (c.spiral) {
           const eu = new THREE.Euler(c.spiral[0], c.spiral[1], c.spiral[2]);
-          const nd2 = Math.round(750 * Q);
+          const nd2 = Math.round(950 * Q);
           for (let i = 0; i < nd2; i++) {
             const t2 = Math.random();
             const arm2 = i % 2;
@@ -552,7 +564,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       });
     });
 
-    // 2. Generate particles for 159 subgenre stars
+    // 2. Generate particles for 159 subgenre stars with rich volumetric halos
     graphData.nodes.forEach((n) => {
       if (n.type !== "sub") return;
       const ci = graphData.clusters.findIndex((cl) => cl.id === n.cluster);
@@ -560,16 +572,16 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       const mag = n.children.length + 1;
 
       span(n.idx, () => {
-        // Hero Star Node with Cross Flare
-        push(n.pos.x, n.pos.y, n.pos.z, 1, 1, 1, 10, Math.random() * 100, n.year, 0, n.idx, ci, 1);
+        // Hero Star Node with intense cross diffraction spike
+        push(n.pos.x, n.pos.y, n.pos.z, 1, 1, 1, 9.5, Math.random() * 100, n.year, 0, n.idx, ci, 1);
         
-        // Surrounding subgenre star dust
-        const nd = Math.round((60 + mag * 16) * Q);
+        // Surrounding rich subgenre star dust
+        const nd = Math.round((85 + mag * 22) * Q);
         for (let i = 0; i < nd; i++) {
-          V.set(gauss(), gauss(), gauss()).multiplyScalar(9 + mag * 2.2).add(n.pos);
+          V.set(gauss(), gauss(), gauss()).multiplyScalar(11 + mag * 2.5).add(n.pos);
           const rr = Math.random();
           const tc = tint(c.color, clamp(1 - rr, 0.15, 0.8), 0.55, (Math.random() - 0.5) * 0.08);
-          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 1.2 + Math.random() * 1.5, Math.random() * 100, n.year, 0, n.idx, ci);
+          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 1.2 + Math.random() * 1.6, Math.random() * 100, n.year, 0, n.idx, ci);
         }
       });
     });
@@ -577,7 +589,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     // 3. Origin Singularity particles
     const originNode = graphData.byId["origin"];
     span(originNode.idx, () => {
-      push(0, 0, 0, 1, 0.92, 0.72, 18, 0, 0, 0, originNode.idx, -1, 1);
+      push(0, 0, 0, 1, 0.92, 0.72, 16, 0, 0, 0, originNode.idx, -1, 1);
       for (let i = 0; i < Math.round(70 * Q); i++) {
         V.set(gauss(), gauss(), gauss()).multiplyScalar(20);
         const tc = tint(0xD8B988, 0.4, 0.5, (Math.random() - 0.5) * 0.06);
@@ -634,14 +646,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       });
     });
 
-    // 5. Deep space background stars & cosmic dust
+    // 5. Deep space background stars, Milky Way River, Island Galaxies, and Vast Nebular Fogs
     const heroCols = [
       [0.85, 0.92, 1.0],
       [1.0, 0.94, 0.8],
       [1.0, 0.86, 0.84],
       [0.82, 0.95, 1.0],
     ];
-    const nb = Math.round(2000 * Q);
+    const nb = Math.round(2600 * Q);
     for (let i = 0; i < nb; i++) {
       V.set(gauss(), gauss(), gauss()).normalize().multiplyScalar(700 + Math.random() * 850);
       if (Math.random() < 0.04) {
@@ -653,13 +665,58 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       }
     }
 
-    // Distant background nebular fog
+    // Grand Milky Way River (银河主轴星带)
+    const ax = new THREE.Vector3(0.62, 0.3, -0.72).normalize();
+    const c0 = new THREE.Vector3(-430, 190, 320);
+    const p1 = new THREE.Vector3().crossVectors(ax, UPV).normalize();
+    const p2 = new THREE.Vector3().crossVectors(ax, p1).normalize();
+    const nm = Math.round(2100 * Q);
+    for (let i = 0; i < nm; i++) {
+      const t = (Math.random() * 2 - 1) * 820;
+      V.copy(c0).addScaledVector(ax, t).addScaledVector(p1, gauss() * 72).addScaledVector(p2, gauss() * 26);
+      if (Math.random() < 0.018) {
+        const hc2 = heroCols[(Math.random() * heroCols.length) | 0];
+        push(V.x, V.y, V.z, hc2[0], hc2[1], hc2[2], 5.0 + Math.random() * 3.0, Math.random() * 100, 0, 0, -1, -1, 1);
+      } else {
+        const w = Math.random();
+        push(V.x, V.y, V.z, 0.76 + w * 0.2, 0.82 + w * 0.14, 0.96, 0.7 + Math.random() * 1.5, Math.random() * 100, 0, 0, -1, -1, 0);
+      }
+    }
+    const ndM = Math.round(420 * Q);
+    for (let i = 0; i < ndM; i++) {
+      const t = (Math.random() * 2 - 1) * 780;
+      V.copy(c0).addScaledVector(ax, t).addScaledVector(p1, gauss() * 58).addScaledVector(p2, gauss() * 20);
+      push(V.x, V.y, V.z, 0.05, 0.07, 0.13, 26 + Math.random() * 46, Math.random() * 100, 0, 0, -1, -1, 0);
+    }
+
+    // Distant Island Galaxies (远方岛状星系)
+    const galaxies = [
+      [ 820,  260, -700, 26, 0.72, 0.78, 0.95, 60],
+      [-900, -180,  500, 34, 0.95, 0.85, 0.72, 70],
+      [ 420, -520, -880, 22, 0.78, 0.90, 0.90, 50],
+      [-620,  520,  820, 30, 0.90, 0.80, 0.92, 62],
+      [  60,  720,-1000, 42, 0.82, 0.84, 1.00, 80],
+      [-240, -820,  260, 28, 0.90, 0.88, 0.95, 55]
+    ];
+    galaxies.forEach((g) => {
+      push(g[0], g[1], g[2], g[4] * 0.5, g[5] * 0.5, g[6] * 0.5, 34, 0, 0, 0, -1, -1, 0);
+      for (let k = 0; k < g[7]; k++) {
+        V.set(gauss(), gauss(), gauss()).multiplyScalar(g[3]);
+        V.x += g[0]; V.y += g[1]; V.z += g[2];
+        push(V.x, V.y, V.z, g[4] * 0.4, g[5] * 0.4, g[6] * 0.4, 0.9 + Math.random() * 1.1, Math.random() * 100, 0, 0, -1, -1, 0);
+      }
+    });
+
+    // 8 Vast Atmospheric Nebular Fogs (宏大深空星际云气)
     const fogs = [
       [-560, -280, -360, 0.030, 0.042, 0.095],
-      [640, 200, -460, 0.020, 0.062, 0.075],
-      [240, 430, 520, 0.060, 0.032, 0.075],
-      [-460, 380, 340, 0.022, 0.052, 0.072],
-      [700, -360, 300, 0.052, 0.030, 0.065],
+      [ 640,  200, -460, 0.020, 0.062, 0.075],
+      [ 240,  430,  520, 0.060, 0.032, 0.075],
+      [-460,  380,  340, 0.022, 0.052, 0.072],
+      [ 700, -360,  300, 0.052, 0.030, 0.065],
+      [-360, -520, -520, 0.022, 0.034, 0.085],
+      [ 120,  620, -220, 0.030, 0.030, 0.070],
+      [ 520,  160,  720, 0.020, 0.050, 0.062]
     ];
     fogs.forEach((f) => {
       for (let k = 0; k < 2; k++) {
@@ -1304,6 +1361,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                   {selectedCluster.name}星云 ({clusterSubgenres.length} 个子曲风)
                 </span>
                 <button
+                  onClick={() => setIsSubgenresPanelOpen((prev) => !prev)}
+                  className="px-2 py-0.5 rounded bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] hover:border-[#d8b988]/50 text-[10px] text-[#eae6dc]/80 hover:text-[#d8b988] transition-colors flex items-center gap-1"
+                  title="展开或隐藏子曲风分支列表"
+                >
+                  <Layers className="w-3 h-3 text-[#d8b988]" />
+                  <span>{isSubgenresPanelOpen ? "隐藏分支" : "展开分支"}</span>
+                </button>
+                <button
                   onClick={() => selectMajorCluster(null)}
                   className="px-2 py-0.5 rounded bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] text-[10px] text-[#eae6dc]/80 hover:text-white transition-colors"
                 >
@@ -1417,8 +1482,27 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         </div>
       )}
 
+      {/* Bottom Floating Trigger: Expand Subgenre Branch Panel (默认隐藏状态，可点击展开) */}
+      {selectedCluster && !isSubgenresPanelOpen && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-auto animate-fade-in">
+          <button
+            onClick={() => setIsSubgenresPanelOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#080b12]/85 hover:bg-[#121622] border border-[#2b2e38] hover:border-[#d8b988] text-xs text-[#eae6dc] hover:text-white backdrop-blur-xl shadow-2xl transition-all hover:scale-105 group"
+          >
+            <span
+              className="w-2 h-2 rounded-full shadow-sm"
+              style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 8px ${selectedCluster.hexColor}` }}
+            />
+            <span className="font-medium tracking-wide">
+              展开子曲风分支 ({clusterSubgenres.length})
+            </span>
+            <ChevronUp className="w-3.5 h-3.5 text-[#d8b988] group-hover:-translate-y-0.5 transition-transform" />
+          </button>
+        </div>
+      )}
+
       {/* Selected Major Cluster: Subgenre Constellation Showcase Panel (清晰美观呈现大曲风下的各种子曲风) */}
-      {selectedCluster && (
+      {selectedCluster && isSubgenresPanelOpen && (
         <div className="absolute bottom-6 inset-x-6 z-30 pointer-events-auto bg-[#080b12]/90 backdrop-blur-xl border border-[#2b2e38] rounded-2xl shadow-2xl p-4 sm:p-5 flex flex-col gap-3 max-h-[46vh] overflow-hidden animate-slide-up">
           {/* Panel Header */}
           <div className="flex items-center justify-between gap-4 border-b border-[#1f222a] pb-3">
@@ -1473,6 +1557,16 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                   <Grid className="w-3.5 h-3.5" />
                 </button>
               </div>
+
+              {/* Collapse Subgenres Panel Button */}
+              <button
+                onClick={() => setIsSubgenresPanelOpen(false)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#15171e] hover:bg-[#20232c] border border-[#2b2e38] hover:border-[#d8b988] text-xs text-[#eae6dc] hover:text-[#d8b988] transition-colors"
+                title="隐藏子曲风分支面板"
+              >
+                <ChevronDown className="w-3.5 h-3.5 text-[#d8b988]" />
+                <span>收起</span>
+              </button>
 
               <button
                 onClick={() => selectMajorCluster(null)}
