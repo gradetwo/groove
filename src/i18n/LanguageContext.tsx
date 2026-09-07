@@ -30,6 +30,9 @@ export const DICTIONARY: Translations = {
   all_categories: { en: "All Categories", zh: "所有分类" },
   all_decades: { en: "All Decades", zh: "全部年代" },
   clear_filter: { en: "Clear Filters", zh: "清除筛选" },
+  pickGenre: { en: "Quick Select", zh: "快速选曲" },
+  drums_only: { en: "Drums Only", zh: "只播放鼓组" },
+  full_band: { en: "Full Tracks", zh: "全部音轨" },
 
   // Sequencer Studio
   bpm: { en: "BPM", zh: "速度 (BPM)" },
@@ -78,6 +81,16 @@ export const DICTIONARY: Translations = {
   bpm_overlap: { en: "BPM Overlap", zh: "速度交叠区间" },
   radar_chart: { en: "Sonic Radar Analysis", zh: "声学特性多维雷达图" },
   sync_play: { en: "Play Both Grooves (A/B Test)", zh: "同步试听 (A/B 对比)" },
+  audition_mode: { en: "Audition Playback Mode", zh: "音频试听模式" },
+  core_specs: { en: "Core Specifications", zh: "基础核心规格" },
+  groove_dna: { en: "Rhythm & Drum DNA", zh: "律动与鼓组 DNA" },
+  bass_harmony: { en: "Bass & Harmonic Architecture", zh: "低频与和声架构" },
+  sonic_radar: { en: "Acoustic Radar Metrics", zh: "声学特性雷达指标" },
+  milestones: { en: "Essential Tracks & Milestones", zh: "里程碑代表作品" },
+  compare_presets: { en: "Classic Matchups", zh: "经典对比预设" },
+  stop_audition: { en: "Stop Audition", zh: "停止试听" },
+  audition_btn: { en: "Audition Groove", zh: "试听律动" },
+  now_playing: { en: "Now Playing", zh: "正在试听" },
 
   // Quiz Challenge
   challenge_title: { en: "Genre Ear Training Challenge", zh: "曲风听力大师挑战赛" },

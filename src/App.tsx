@@ -105,23 +105,10 @@ const MainApp: React.FC = () => {
         onSelectGenre={handleSelectGenre}
       />
 
-      {/* Breadcrumbs Navigation */}
-      {currentTab !== "studio" && (
+      {/* Breadcrumbs Navigation - Only shown on genre detail view to avoid redundancy with top navbar */}
+      {currentTab === "detail" && (
         <Breadcrumbs
-          genre={currentTab === "detail" ? selectedGenre : null}
-          currentSection={
-            currentTab === "galaxy"
-              ? t("nav_galaxy")
-              : currentTab === "horizontal-timeline"
-              ? t("nav_timeline_h")
-              : currentTab === "vertical-timeline"
-              ? t("nav_timeline_v")
-              : currentTab === "compare"
-              ? t("nav_compare")
-              : currentTab === "challenge"
-              ? t("nav_challenge")
-              : undefined
-          }
+          genre={selectedGenre}
           onNavigateHome={() => setCurrentTab("studio")}
         />
       )}

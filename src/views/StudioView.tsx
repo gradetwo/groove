@@ -1034,15 +1034,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
       {/* Genre Rail Wrapper (.rail-wrap) */}
       <div className="px-4 sm:px-7 pt-4 pb-1 flex items-center gap-3">
-        <span className="font-['JetBrains_Mono'] text-[10px] tracking-[0.2em] text-[#5a5e68] uppercase whitespace-nowrap hidden sm:inline">
-          {t("pickGenre")}
+        <span className="font-['Space_Grotesk'] text-xs font-bold text-[#b9b7b0] tracking-wider uppercase whitespace-nowrap hidden sm:flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-[#f5b73d]" />
+          <span>{t("pickGenre")}</span>
         </span>
 
         {/* Category selector */}
         <select
           value={activeCategoryFilter}
           onChange={(e) => setActiveCategoryFilter(e.target.value)}
-          className="bg-[#0d0e12] border border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] text-xs font-['Space_Grotesk'] font-medium px-2.5 py-2 rounded-lg outline-none cursor-pointer"
+          className="bg-[#121317] border border-[#2b2e38] hover:border-[#f5b73d] text-[#e9e7e0] text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer transition-colors shadow-sm"
         >
           {categories.map((cat) => (
             <option key={cat} value={cat}>
@@ -1061,23 +1062,23 @@ export const StudioView: React.FC<StudioViewProps> = ({
               <button
                 key={g.id}
                 onClick={() => switchGenre(g, true)}
-                className={`flex-none flex flex-col gap-0.5 px-4 py-2 border rounded-xl bg-[#0d0e12] min-w-[124px] text-left transition-all relative ${
+                className={`flex-none flex flex-col gap-0.5 px-3.5 py-2 border rounded-xl bg-[#121317] min-w-[136px] text-left transition-all relative ${
                   isCurrent
-                    ? "border-[var(--g)] shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+                    ? "border-[var(--g)] shadow-[0_0_14px_rgba(245,183,61,0.2)] bg-[#171920]"
                     : "border-[#23262d] hover:border-[#3a3e48] hover:-translate-y-0.5"
                 }`}
                 style={{ ["--g" as any]: accent }}
               >
                 <span 
-                  className={`font-['Space_Grotesk'] font-bold text-xs sm:text-sm tracking-wide truncate ${
-                    isCurrent ? "text-[var(--g)]" : "text-[#e9e7e0]"
+                  className={`font-semibold text-sm tracking-wide truncate ${
+                    isCurrent ? "text-[var(--g)] font-bold" : "text-[#f0ede6]"
                   }`}
                 >
                   {g.name}
                 </span>
                 <span 
-                  className={`font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] uppercase truncate ${
-                    isCurrent ? "text-[var(--g)] opacity-80" : "text-[#5a5e68]"
+                  className={`text-[11px] font-medium tracking-normal truncate ${
+                    isCurrent ? "text-[var(--g)] opacity-95 font-semibold" : "text-[#8b8f99]"
                   }`}
                 >
                   {g.aliases[0] || g.category}
@@ -1434,35 +1435,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 <Share2 className="w-3.5 h-3.5" />
               </button>
 
-              {/* Fullscreen Maximize Toggle */}
-              <button
-                onClick={() => setIsEditorMaximized(!isEditorMaximized)}
-                className={`flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2 border rounded-lg transition-colors bg-[#0d0e12] ${
-                  isEditorMaximized
-                    ? "border-[#f5b73d] text-[#f5b73d]"
-                    : "border-[#23262d] text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d]"
-                }`}
-                title={
-                  isEditorMaximized
-                    ? language === "zh"
-                      ? "退出最大化 (Esc)"
-                      : "Exit Fullscreen (Esc)"
-                    : language === "zh"
-                    ? "最大化编辑器"
-                    : "Maximize Editor"
-                }
-              >
-                {isEditorMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                <span className="hidden md:inline">
-                  {isEditorMaximized
-                    ? language === "zh"
-                      ? "退出"
-                      : "Exit"
-                    : language === "zh"
-                    ? "最大化"
-                    : "Maximize"}
-                </span>
-              </button>
+              {/* Fullscreen Maximize Toggle (Only shown when not maximized; in maximized mode top banner provides full exit control) */}
+              {!isEditorMaximized && (
+                <button
+                  onClick={() => setIsEditorMaximized(true)}
+                  className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2 border border-[#23262d] text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] rounded-lg transition-colors bg-[#0d0e12]"
+                  title={language === "zh" ? "最大化编辑器" : "Maximize Editor"}
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">
+                    {language === "zh" ? "全屏" : "Maximize"}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
