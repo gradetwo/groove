@@ -591,7 +591,7 @@ export function buildNebulaGraph() {
       ));
     }
     e.len = len;
-    e.speed = (e.kind === 'inner' ? 44 : (e.kind === 'seed' ? 26 : 74)) / Math.max(len, 30);
+    e.speed = (e.kind === 'inner' ? 14 : (e.kind === 'seed' ? 8 : 22)) / Math.max(len, 30);
     e.phase = [];
     e.clock = 0;
     for (let k = 0; k < e.flowN; k++) {
