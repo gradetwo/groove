@@ -13,6 +13,7 @@ export interface StepCallbackInfo {
 
 export interface AudioEngineOptions {
   onStep?: (info: StepCallbackInfo) => void;
+  onTrackTrigger?: (trackIndices: number[]) => void;
   onStop?: () => void;
 }
 
@@ -28,7 +29,7 @@ export class AudioEngine {
   private currentStep: number = 0;
   private nextStepTime: number = 0;
   private scheduleTimerId: any = null;
-  private stepQueue: Array<{ step: number; time: number }> = [];
+  private stepQueue: Array<{ step: number; time: number; activeTracks: number[] }> = [];
   private lastReportedStep: number = -1;
   private rafId: number | null = null;
 
@@ -51,6 +52,7 @@ export class AudioEngine {
 
   // Callbacks
   private onStepCallback?: (info: StepCallbackInfo) => void;
+  private onTrackTriggerCallback?: (trackIndices: number[]) => void;
   private onStopCallback?: () => void;
 
   // Noise buffers cache
@@ -58,6 +60,7 @@ export class AudioEngine {
 
   constructor(options?: AudioEngineOptions) {
     if (options?.onStep) this.onStepCallback = options.onStep;
+    if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
     if (options?.onStop) this.onStopCallback = options.onStop;
     this.initAudioContext();
   }
@@ -279,6 +282,9 @@ export class AudioEngine {
         const item = this.stepQueue.shift()!;
         latestStep = item.step;
         latestTime = item.time;
+        if (item.activeTracks.length > 0 && this.onTrackTriggerCallback) {
+          this.onTrackTriggerCallback(item.activeTracks);
+        }
       }
 
       if (latestStep !== -1 && latestStep !== this.lastReportedStep) {
@@ -305,6 +311,10 @@ export class AudioEngine {
     }
   }
 
+  public setOnTrackTrigger(callback?: (trackIndices: number[]) => void): void {
+    this.onTrackTriggerCallback = callback;
+  }
+
   private schedulerLoop(): void {
     if (!this.ctx || !this.isPlaying || !this.pattern) return;
 
@@ -317,8 +327,8 @@ export class AudioEngine {
       const swingOffset = (step % 2 === 1 && this.swing > 0) ? (this.swing * 0.5) * stepDur : 0;
       const actualStepTime = this.nextStepTime + swingOffset;
 
-      this.scheduleStep(step, actualStepTime, stepDur);
-      this.stepQueue.push({ step, time: actualStepTime });
+      const activeTracks = this.scheduleStep(step, actualStepTime, stepDur);
+      this.stepQueue.push({ step, time: actualStepTime, activeTracks });
 
       // Keep monotonic un-swung grid advancement
       this.nextStepTime += stepDur;
@@ -326,8 +336,9 @@ export class AudioEngine {
     }
   }
 
-  private scheduleStep(step: number, time: number, stepDur: number): void {
-    if (!this.pattern || !this.ctx) return;
+  private scheduleStep(step: number, time: number, stepDur: number): number[] {
+    const activeTracks: number[] = [];
+    if (!this.pattern || !this.ctx) return activeTracks;
 
     const anySolo = this.trackStates.some((t) => t.solo);
 
@@ -336,17 +347,49 @@ export class AudioEngine {
       if (state.mute) return;
       if (anySolo && !state.solo) return;
 
-      const trackStepsLen = track.steps ? track.steps.length : 16;
-      const stepIdx = trackStepsLen > 0 ? step % trackStepsLen : step;
+      // Independent track loop length (Polymeter)
+      const trackLen = (track.trackLength && track.trackLength > 0)
+        ? track.trackLength
+        : (track.steps ? track.steps.length : 16);
+      const stepIdx = trackLen > 0 ? step % trackLen : step;
+
       const stepVal = track.steps ? track.steps[stepIdx] : 0;
       const isStepActive = stepVal > 0;
-      if (isStepActive) {
-        const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
-        const normalizedVel = (velVal / 127) * state.volume;
-        const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
+      if (!isStepActive) return;
+
+      // Probability check (Chance: 0 - 100)
+      const prob = (track.probability && track.probability[stepIdx] !== undefined)
+        ? track.probability[stepIdx]
+        : 100;
+      if (prob < 100 && Math.random() * 100 > prob) {
+        return;
+      }
+
+      const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
+      const normalizedVel = (velVal / 127) * state.volume;
+      const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
+
+      // Ratchet / Subdivisions
+      const isHatTriplet = (track.track_id === "hihat" || track.name.toLowerCase().includes("hat")) && stepVal === 3;
+      const ratchet = (track.ratchet && track.ratchet[stepIdx] && track.ratchet[stepIdx] > 1)
+        ? track.ratchet[stepIdx]
+        : (isHatTriplet ? 3 : 1);
+
+      activeTracks.push(trackIdx);
+
+      if (ratchet > 1) {
+        const subDur = stepDur / ratchet;
+        for (let r = 0; r < ratchet; r++) {
+          const subTime = time + r * subDur;
+          const subVel = normalizedVel * (0.85 + (r / ratchet) * 0.15);
+          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur);
+        }
+      } else {
         this.triggerInstrument(trackIdx, track.name, time, normalizedVel, pitchVal, stepVal, stepDur);
       }
     });
+
+    return activeTracks;
   }
 
   /**

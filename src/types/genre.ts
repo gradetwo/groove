@@ -41,6 +41,9 @@ export interface SequencerTrack {
   velocity?: number[]; // 0 - 127
   pitch?: (number | null)[]; // MIDI note (e.g. 36 for C2, 60 for C4)
   gate?: number[]; // note duration (1 = 1 step)
+  ratchet?: number[]; // subdivisions per step (1, 2, 3, 4, 8)
+  probability?: number[]; // trigger probability 0 - 100 (%)
+  trackLength?: number; // independent track loop length for polymeter (defaults to pattern steps)
   mute?: boolean;
   solo?: boolean;
   volume?: number; // 0 - 1

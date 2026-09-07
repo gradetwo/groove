@@ -26,7 +26,8 @@ import {
   Sparkles,
   Wand2,
   Activity,
-  Layers
+  Layers,
+  Music
 } from "lucide-react";
 import { Genre, SequencerPattern, SequencerTrack } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
@@ -34,6 +35,9 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { downloadMidiFile } from "../audio/MidiExporter";
 import { encodeSharedSequencer, decodeSharedSequencer, getShareUrl, SharedSequencerState } from "../audio/SequencerUrlShare";
 import { useLanguage } from "../i18n/LanguageContext";
+import { VelocityLane } from "../components/sequencer/VelocityLane";
+import { EuclideanModal } from "../components/sequencer/EuclideanModal";
+import { PitchPickerModal, midiToNoteName } from "../components/sequencer/PitchPickerModal";
 
 // Color mappings matching /tmp/demo.html
 export const DEMO_TRACKS_CONFIG = [
@@ -220,6 +224,25 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const rulerDragStartXRef = useRef(0);
   const rulerDragScrollLeftRef = useRef(0);
 
+  // Pro Sequencer Extensions: Velocity Lane, Euclidean Generator, Pitch Picker & P-Locks
+  const [isVelocityLaneOpen, setIsVelocityLaneOpen] = useState(false);
+  const [velocityActiveTrackIdx, setVelocityActiveTrackIdx] = useState(0);
+  const [isEuclideanOpen, setIsEuclideanOpen] = useState(false);
+  const [pitchPicker, setPitchPicker] = useState<{
+    isOpen: boolean;
+    trackIdx: number;
+    stepIdx: number;
+    initialNote: number | null;
+  }>({ isOpen: false, trackIdx: 0, stepIdx: 0, initialNote: null });
+  const [stepContextMenu, setStepContextMenu] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    trackIdx: number;
+    stepIdx: number;
+  } | null>(null);
+  const [trackFlashTimes, setTrackFlashTimes] = useState<Record<number, number>>({});
+
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
 
@@ -241,6 +264,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
     const engine = new AudioEngine({
       onStep: ({ step }) => {
         setCurrentStep(step);
+      },
+      onTrackTrigger: (trackIndices) => {
+        const now = Date.now();
+        setTrackFlashTimes((prev) => {
+          const next = { ...prev };
+          trackIndices.forEach((idx) => {
+            next[idx] = now;
+          });
+          return next;
+        });
       },
       onStop: () => {
         setCurrentStep(0);
@@ -450,21 +483,46 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   };
 
-  // Keyboard shortcut: Space to play/pause, Esc to exit maximize
+  // Keyboard shortcuts: Space (play/pause), Esc (exit/close), V (Velocity), E (Euclidean)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.code === "Space") {
         e.preventDefault();
         handleTogglePlay();
-      } else if (e.key === "Escape" && isEditorMaximized) {
+      } else if (e.key === "Escape") {
+        if (stepContextMenu) {
+          setStepContextMenu(null);
+        } else if (pitchPicker.isOpen) {
+          setPitchPicker((prev) => ({ ...prev, isOpen: false }));
+        } else if (isEuclideanOpen) {
+          setIsEuclideanOpen(false);
+        } else if (isVelocityLaneOpen) {
+          setIsVelocityLaneOpen(false);
+        } else if (isEditorMaximized) {
+          e.preventDefault();
+          setIsEditorMaximized(false);
+        }
+      } else if ((e.key === "v" || e.key === "V") && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        setIsEditorMaximized(false);
+        setIsVelocityLaneOpen((prev) => !prev);
+      } else if ((e.key === "e" || e.key === "E") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setIsEuclideanOpen(true);
       }
     };
+
+    const handleGlobalClick = () => {
+      setStepContextMenu(null);
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, isEditorMaximized]);
+    window.addEventListener("click", handleGlobalClick);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("click", handleGlobalClick);
+    };
+  }, [isPlaying, isEditorMaximized, stepContextMenu, pitchPicker.isOpen, isEuclideanOpen, isVelocityLaneOpen]);
 
   // Step Cell interaction
   const handleCellClick = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
@@ -496,6 +554,53 @@ export const StudioView: React.FC<StudioViewProps> = ({
       return;
     }
 
+    // ALT + click = Ratchet / Subdivisions cycle (1x -> 2x -> 3x -> 4x -> 1x)
+    if (e.altKey) {
+      let nextRatchet = 2;
+      setPattern((prev) => {
+        const copy = JSON.parse(JSON.stringify(prev));
+        const t = copy.tracks[trackIdx];
+        if (t.steps[stepIdx] === 0) {
+          t.steps[stepIdx] = 1;
+          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          t.velocity[stepIdx] = 100;
+        }
+        if (!t.ratchet) t.ratchet = Array(stepCount).fill(1);
+        const curR = t.ratchet[stepIdx] || 1;
+        nextRatchet = curR === 1 ? 2 : curR === 2 ? 3 : curR === 3 ? 4 : 1;
+        t.ratchet[stepIdx] = nextRatchet;
+        return copy;
+      });
+      if (engineRef.current) {
+        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, cur || 1);
+      }
+      return;
+    }
+
+    // Melodic track note picker shortcut (Cmd/Ctrl + click on step)
+    if ((e.metaKey || e.ctrlKey) && (tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead")) {
+      if (cur === 0) {
+        setPattern((prev) => {
+          const copy = JSON.parse(JSON.stringify(prev));
+          const t = copy.tracks[trackIdx];
+          t.steps[stepIdx] = 1;
+          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          t.velocity[stepIdx] = 100;
+          return copy;
+        });
+      }
+      const currentPitch = tr.pitch?.[stepIdx] || (tr.track_id === "bass" ? 36 : 60);
+      setPitchPicker({
+        isOpen: true,
+        trackIdx,
+        stepIdx,
+        initialNote: currentPitch,
+      });
+      return;
+    }
+
     // Hi-Hat multi-state cycling: 0 -> 1 (closed) -> 2 (open) -> 3 (triplet) -> 0
     if (isHat) {
       const nextVal = cur === 0 ? 1 : cur === 1 ? 2 : cur === 2 ? 3 : 0;
@@ -504,8 +609,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
         const t = copy.tracks[trackIdx];
         t.steps[stepIdx] = nextVal;
         if (nextVal > 0) {
-          if (!t.velocity) t.velocity = Array(16).fill(100);
-          if (!t.velocity[stepIdx]) t.velocity[stepIdx] = 100;
+          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          t.velocity[stepIdx] = 100;
         }
         return copy;
       });
@@ -515,6 +620,33 @@ export const StudioView: React.FC<StudioViewProps> = ({
         engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
       }
     }
+  };
+
+  // Right-click step context menu (P-Locks & Parameters)
+  const handleStepContextMenu = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setStepContextMenu({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+      trackIdx,
+      stepIdx,
+    });
+  };
+
+  // Polymeter: cycle independent track length
+  const handleCycleTrackLength = (trackIdx: number) => {
+    const lengths = [stepCount, 12, 8, 7, 5, 3];
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const t = copy.tracks[trackIdx];
+      const curLen = t.trackLength || stepCount;
+      const curIdx = lengths.indexOf(curLen);
+      const nextLen = lengths[(curIdx + 1) % lengths.length];
+      t.trackLength = nextLen === stepCount ? undefined : nextLen;
+      return copy;
+    });
   };
 
   // Pointer drag painting
@@ -527,8 +659,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     if (!tr) return;
     const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
 
-    // Let click handler process shiftKey and hi-hat cycling
-    if (e.shiftKey || isHat) return;
+    // Let click handler process shiftKey, altKey, ctrlKey, metaKey, and hi-hat cycling
+    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || isHat) return;
 
     const cur = tr.steps[stepIdx] || 0;
     const nextVal = cur > 0 ? 0 : 1;
@@ -1657,8 +1789,32 @@ export const StudioView: React.FC<StudioViewProps> = ({
               </div>
             </div>
 
-            {/* Right group: Pro Sequence Operations (Duplicate Bar, Humanize, Clear All) */}
-            <div className="flex items-center gap-1.5 ml-auto">
+            {/* Right group: Pro Sequence Operations (Velocity, Euclidean, Duplicate Bar, Humanize, Clear All) */}
+            <div className="flex items-center gap-1.5 ml-auto flex-wrap">
+              {/* Toggle Velocity Drawer */}
+              <button
+                onClick={() => setIsVelocityLaneOpen(!isVelocityLaneOpen)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs transition-colors border ${
+                  isVelocityLaneOpen
+                    ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
+                    : "bg-[#0d0e12] border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0]"
+                }`}
+                title={language === "zh" ? "展开/收起力度编辑抽屉 (快捷键 V)" : "Toggle velocity drawer (Key: V)"}
+              >
+                <Sliders className="w-3 h-3 text-[#45e0c9]" />
+                <span className="hidden sm:inline">{language === "zh" ? "力度" : "VEL"}</span>
+              </button>
+
+              {/* Euclidean Rhythm Generator */}
+              <button
+                onClick={() => setIsEuclideanOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d]/60 rounded-lg text-xs text-[#8b8f99] hover:text-[#f5b73d] transition-colors"
+                title={language === "zh" ? "打开欧几里得律动生成器 (快捷键 E)" : "Open Euclidean rhythm generator (Key: E)"}
+              >
+                <Sparkles className="w-3 h-3 text-[#f5b73d]" />
+                <span className="hidden sm:inline">{language === "zh" ? "欧几里得" : "EUCLID"}</span>
+              </button>
+
               <button
                 onClick={handleDuplicateBar1}
                 className="flex items-center gap-1 px-2.5 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#3a3e48] rounded-lg text-xs text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
@@ -1772,7 +1928,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     <div
                       key={stepIdx}
                       data-step-idx={stepIdx}
-                      className={`min-w-[28px] sm:min-w-[32px] flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border ${
+                      className={`min-w-[28px] sm:min-w-[32px] flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border relative ${
                         isBarStart
                           ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/80"
                           : isGroupStart
@@ -1780,7 +1936,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           : ""
                       } ${
                         isCurrent
-                          ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] font-bold scale-[1.03]"
+                          ? "bg-[#f5b73d]/25 border-[#f5b73d] text-[#f5b73d] shadow-[0_0_14px_rgba(245,183,61,0.5)] font-bold scale-[1.03]"
                           : isFirstStepOfBar
                           ? "bg-[#1f222b] border-[#3a3e48] text-[#f5b73d] font-bold"
                           : isFirstStepOfGroup
@@ -1789,6 +1945,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       }`}
                       title={`Step ${stepIdx + 1} (Bar ${barIdx}, Group ${groupIdx}.${stepInGroup})`}
                     >
+                      {/* Laser Beacon Arrow / Dot on Playhead */}
+                      {isCurrent && (
+                        <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-1 bg-[#f5b73d] rounded-full shadow-[0_0_8px_#f5b73d]" />
+                      )}
                       <span className="font-['JetBrains_Mono'] text-[10px] leading-tight font-bold tracking-tight">
                         {stepStr}
                       </span>
@@ -1819,6 +1979,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
               const isSilenced = isMute || (anySolo && !isSolo);
               const isHatTrack = track.track_id === "hihat" || track.name.toLowerCase().includes("hat");
               const trackVol = track.volume !== undefined ? track.volume : 0.8;
+              const lastTrigger = trackFlashTimes[trackIdx] || 0;
+              const isFlashing = Date.now() - lastTrigger < 160;
 
               return (
                 <div
@@ -1830,16 +1992,48 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 >
                   {/* Track Header (.trk-head) - 172px width - Sticky Left */}
                   <div className="sticky left-0 z-20 bg-[#121317] flex-none w-[172px] pr-2 flex flex-col justify-center gap-1 select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
-                    {/* Upper row: Swatch + Title + Mute / Solo */}
+                    {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
                     <div className="flex items-center gap-1.5">
                       <span
                         className="w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0"
                         style={{ backgroundColor: meta.color }}
                       />
-                      <span className="font-['JetBrains_Mono'] text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate flex-1">
+                      {/* Mini 4-Segment Activity Meter */}
+                      <div className="flex gap-[1.5px] items-center h-3 px-1 py-0.5 bg-[#0a0b0d] rounded border border-[#1a1c21] shrink-0" title="Audio Activity Peak">
+                        {[1, 2, 3, 4].map((seg) => {
+                          const active = isFlashing && (seg <= 2 || (trackVol > 0.5 && seg <= 3) || trackVol > 0.85);
+                          return (
+                            <span
+                              key={seg}
+                              className={`w-0.5 h-2 rounded-[0.5px] transition-all duration-75 ${
+                                active
+                                  ? seg === 4
+                                    ? "bg-[#ff5964] shadow-[0_0_4px_#ff5964]"
+                                    : seg === 3
+                                    ? "bg-[#f5b73d] shadow-[0_0_4px_#f5b73d]"
+                                    : "bg-[#45e0c9] shadow-[0_0_4px_#45e0c9]"
+                                  : "bg-[#1f222b]"
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <span className="font-['JetBrains_Mono'] text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate flex-1" title={meta.name}>
                         {meta.name}
                       </span>
                       <div className="flex gap-1 shrink-0">
+                        {/* Polymeter Loop Length Selector */}
+                        <button
+                          onClick={() => handleCycleTrackLength(trackIdx)}
+                          className={`px-1 h-4 rounded text-[8px] font-['JetBrains_Mono'] border transition-colors flex items-center justify-center ${
+                            track.trackLength && track.trackLength !== stepCount
+                              ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
+                              : "bg-[#17181c] border-[#23262d] text-[#5a5e68] hover:text-[#8b8f99]"
+                          }`}
+                          title={language === "zh" ? `独立轨道循环长度: ${track.trackLength || stepCount} 步 (点击切换)` : `Polymeter length: ${track.trackLength || stepCount} steps (Click to cycle)`}
+                        >
+                          L:{track.trackLength || stepCount}
+                        </button>
                         <button
                           onClick={() => toggleMute(trackIdx)}
                           className={`w-4 h-4 font-['JetBrains_Mono'] text-[8.5px] border rounded transition-colors flex items-center justify-center ${
@@ -1865,7 +2059,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Lower row: Volume slider + Track actions (Shift, Smart Fill, Clear) */}
+                    {/* Lower row: Volume slider + Track actions (Velocity Focus, Shift, Smart Fill, Clear) */}
                     <div className="flex items-center justify-between gap-1 text-[#5a5e68]">
                       {/* Mini Volume Slider */}
                       <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%`}>
@@ -1876,12 +2070,26 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           step="0.05"
                           value={trackVol}
                           onChange={(e) => handleTrackVolumeChange(trackIdx, +e.target.value)}
-                          className="w-12 h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer"
+                          className="w-11 h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer"
                         />
                       </div>
 
                       {/* Track Quick Actions */}
                       <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => {
+                            setVelocityActiveTrackIdx(trackIdx);
+                            setIsVelocityLaneOpen(true);
+                          }}
+                          className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${
+                            isVelocityLaneOpen && velocityActiveTrackIdx === trackIdx
+                              ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
+                              : "border-[#23262d] text-[#5a5e68] hover:text-[#45e0c9]"
+                          }`}
+                          title={language === "zh" ? "在力度抽屉中编辑" : "Edit velocity in drawer"}
+                        >
+                          <Sliders className="w-2.5 h-2.5" />
+                        </button>
                         <button
                           onClick={() => handleShiftTrack(trackIdx, -1)}
                           className="w-4 h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-[10px]"
@@ -1920,19 +2128,29 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       const isOn = stepVal > 0;
                       const vel = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
                       const isAcc = vel >= 115;
-                      const isPlayhead = isPlaying && currentStep === stepIdx;
-                      const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
-                      const isFirstStepOfBar = stepIdx % stepsPerBar === 0;
-                      const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
 
                       // Hat shapes: 1 = closed, 2 = open (round), 3 = triplet roll (striped)
                       const isHatRound = isHatTrack && stepVal === 2;
                       const isHatTriplet = isHatTrack && stepVal === 3;
 
+                      const ratchet = track.ratchet?.[stepIdx] || (isHatTriplet ? 3 : 1);
+                      const prob = track.probability?.[stepIdx] ?? 100;
+                      const isMelodic = track.track_id === "bass" || track.track_id === "chords" || track.track_id === "lead";
+                      const midiNote = track.pitch?.[stepIdx];
+
+                      const trackLen = track.trackLength || stepCount;
+                      const isOutsideLoop = stepIdx >= trackLen;
+
+                      const isPlayhead = isPlaying && currentStep === stepIdx;
+                      const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
+                      const isFirstStepOfBar = stepIdx % stepsPerBar === 0;
+                      const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
+
                       return (
                         <div
                           key={stepIdx}
                           onClick={(e) => handleCellClick(trackIdx, stepIdx, e)}
+                          onContextMenu={(e) => handleStepContextMenu(trackIdx, stepIdx, e)}
                           onPointerDown={(e) => handlePointerDown(trackIdx, stepIdx, e)}
                           onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
                           className={`min-w-[28px] sm:min-w-[32px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none ${
@@ -1942,42 +2160,81 @@ export const StudioView: React.FC<StudioViewProps> = ({
                               ? "ml-2 sm:ml-2.5 border-l border-[#3a3e48]"
                               : ""
                           } ${
-                            isHatRound ? "rounded-full" : "rounded"
+                            isHatRound ? "rounded-full" : "rounded-md"
                           } ${
-                            isOn
-                              ? "border-transparent shadow-[0_0_9px_var(--tc)]"
-                              : "bg-[#17181c] border-[#232529] hover:border-[#3a3e48]"
+                            isOutsideLoop
+                              ? "opacity-25 bg-[#0e0f13] border-[#181920] cursor-not-allowed"
+                              : isOn
+                              ? "border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_10px_var(--tc)]"
+                              : "bg-[#141519] border-[#22242c] hover:border-[#383c48] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
                           }`}
                           style={{
-                            backgroundColor: isOn ? meta.color : undefined,
-                            opacity: isOn ? 0.45 + (vel / 127) * 0.55 : 1,
+                            backgroundColor: !isOutsideLoop && isOn ? meta.color : undefined,
+                            opacity: isOutsideLoop ? 0.25 : isOn ? 0.45 + (vel / 127) * 0.55 : 1,
                           }}
                         >
-                          {/* Bevel specular highlight on active cells */}
-                          {isOn && (
+                          {/* Tactile hardware bevel specular acrylic highlight */}
+                          {isOn && !isOutsideLoop && (
                             <span 
-                              className={`absolute inset-0 pointer-events-none ${isHatRound ? "rounded-full" : "rounded"}`}
+                              className={`absolute inset-0 pointer-events-none ${isHatRound ? "rounded-full" : "rounded-md"}`}
                               style={{
                                 background: isAcc
-                                  ? "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.08) 60%)"
-                                  : "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 45%)",
+                                  ? "linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.1) 50%, transparent 100%)"
+                                  : "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 45%)",
                               }}
                             />
+                          )}
+
+                          {/* Accent LED pip */}
+                          {isOn && isAcc && !isOutsideLoop && (
+                            <span className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_#ffffff] pointer-events-none" />
+                          )}
+
+                          {/* Ratchet division tick marks and badge */}
+                          {isOn && ratchet > 1 && !isOutsideLoop && (
+                            <>
+                              <div className="absolute inset-0 flex pointer-events-none">
+                                {Array.from({ length: ratchet - 1 }).map((_, rIdx) => (
+                                  <div
+                                    key={rIdx}
+                                    className="h-full border-r border-black/40"
+                                    style={{ width: `${100 / ratchet}%` }}
+                                  />
+                                ))}
+                              </div>
+                              <span className="absolute bottom-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-black bg-black/70 text-[#e9e7e0] leading-none pointer-events-none">
+                                {ratchet}x
+                              </span>
+                            </>
+                          )}
+
+                          {/* Probability badge */}
+                          {isOn && prob < 100 && !isOutsideLoop && (
+                            <span className="absolute top-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-bold bg-[#f5b73d]/90 text-black leading-none pointer-events-none">
+                              {prob}%
+                            </span>
+                          )}
+
+                          {/* Melodic note name readout */}
+                          {isOn && isMelodic && typeof midiNote === "number" && midiNote > 0 && !isOutsideLoop && (
+                            <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[8px] font-extrabold text-[#0a0b0d] tracking-tighter leading-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
+                              {midiToNoteName(midiNote)}
+                            </span>
                           )}
 
                           {/* Triplet roll inner stripes for Hat = 3 */}
-                          {isHatTriplet && (
+                          {isHatTriplet && !isOutsideLoop && (
                             <span 
-                              className="absolute inset-x-1.5 inset-y-2 pointer-events-none opacity-80"
+                              className="absolute inset-x-1 inset-y-1.5 pointer-events-none opacity-75"
                               style={{
-                                background: "repeating-linear-gradient(180deg, transparent 0 3px, rgba(10,11,13,0.8) 3px 6px)",
+                                background: "repeating-linear-gradient(180deg, transparent 0 3px, rgba(10,11,13,0.85) 3px 6px)",
                               }}
                             />
                           )}
 
-                          {/* Playhead glow cursor line on this cell */}
+                          {/* Synchronized Global Laser Playhead Beam on this cell */}
                           {isPlayhead && (
-                            <span className="absolute inset-0 border border-[#f5b73d] bg-[#f5b73d]/20 rounded pointer-events-none" />
+                            <span className="absolute inset-0 border-2 border-[#f5b73d] bg-[#f5b73d]/25 shadow-[0_0_14px_rgba(245,183,61,0.5)] rounded-md pointer-events-none z-10" />
                           )}
                         </div>
                       );
@@ -1988,18 +2245,302 @@ export const StudioView: React.FC<StudioViewProps> = ({
             })}
           </div>
 
+          {/* Collapsible Velocity Drawer (FL Studio style) */}
+          {isVelocityLaneOpen && (
+            <div className="mt-3 pt-3 border-t border-[#1a1c21]">
+              <VelocityLane
+                tracks={pattern.tracks}
+                activeTrackIdx={velocityActiveTrackIdx}
+                onSelectTrack={(idx) => setVelocityActiveTrackIdx(idx)}
+                onUpdateVelocity={(trackIdx, stepIdx, newVel) => {
+                  setPattern((prev) => {
+                    const copy = JSON.parse(JSON.stringify(prev));
+                    const t = copy.tracks[trackIdx];
+                    if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+                    t.velocity[stepIdx] = newVel;
+                    return copy;
+                  });
+                }}
+                onBatchUpdateVelocity={(trackIdx, newVelocities) => {
+                  setPattern((prev) => {
+                    const copy = JSON.parse(JSON.stringify(prev));
+                    const t = copy.tracks[trackIdx];
+                    t.velocity = [...newVelocities];
+                    return copy;
+                  });
+                }}
+                onClose={() => setIsVelocityLaneOpen(false)}
+                currentStep={isPlaying ? currentStep : -1}
+                isPlaying={isPlaying}
+                language={language}
+                stepCount={stepCount}
+                stepsPerBar={stepsPerBar}
+                groupSize={groupSize}
+                tracksConfig={DEMO_TRACKS_CONFIG}
+              />
+            </div>
+          )}
+
           {/* Bottom Hint Note (.seq-note) */}
           <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-[0.04em] leading-relaxed border-t border-[#1a1c21] pt-3 flex items-center justify-between flex-wrap gap-2">
             <div>
               {language === "zh"
-                ? "点击 / 拖动步进格编辑 · SHIFT+点击 = 重音 · HI-HAT 轨单击循环：闭镲 → 开镲 → 三连滚 · ◀/▶ 位移 · 智能填充"
-                : "Click / drag cells to edit · SHIFT+click = accent · HI-HAT lane cycles: closed → open → triplet roll · ◀/▶ shift · Smart fill"}
+                ? "点击 / 拖拽编辑 · 右键参数锁 (P-Locks) · SHIFT+点击重音 · ALT+点击连音 (1x-4x) · CMD+点击选音高 · V 力度抽屉 · E 欧几里得律动"
+                : "Click / drag to edit · Right-click P-Locks · SHIFT+click accent · ALT+click ratchet (1x-4x) · CMD+click pitch · V Velocity drawer · E Euclidean generator"}
             </div>
             <div className="text-[#8b8f99]">
               {isEditorMaximized ? (language === "zh" ? "按 Esc 退出最大化" : "Press Esc to exit fullscreen") : ""}
             </div>
           </div>
+
+          {/* Step Context Menu (P-Locks & Parameters) */}
+          {stepContextMenu && (
+            <div 
+              className="fixed inset-0 z-50 bg-black/25 select-none"
+              onClick={() => setStepContextMenu(null)}
+              onContextMenu={(e) => { e.preventDefault(); setStepContextMenu(null); }}
+            >
+              <div
+                className="absolute bg-[#121317] border border-[#2b2e38] rounded-xl shadow-2xl p-3 w-56 text-xs font-['JetBrains_Mono'] z-50 text-[#e9e7e0]"
+                style={{
+                  top: Math.min(window.innerHeight - 340, Math.max(12, stepContextMenu.y)),
+                  left: Math.min(window.innerWidth - 240, Math.max(12, stepContextMenu.x)),
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-[#1f222a] mb-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: DEMO_TRACKS_CONFIG[stepContextMenu.trackIdx % DEMO_TRACKS_CONFIG.length].color }}
+                    />
+                    <span className="font-bold text-[#e9e7e0]">
+                      {pattern.tracks[stepContextMenu.trackIdx]?.name}
+                    </span>
+                    <span className="text-[#8b8f99]">
+                      #{(stepContextMenu.stepIdx + 1).toString().padStart(2, "0")}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setStepContextMenu(null)}
+                    className="w-4 h-4 rounded text-[#8b8f99] hover:text-[#e9e7e0] flex items-center justify-center text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Note Trigger Toggle */}
+                <div className="mb-2.5">
+                  <button
+                    onClick={() => {
+                      const tr = pattern.tracks[stepContextMenu.trackIdx];
+                      const cur = tr.steps[stepContextMenu.stepIdx] || 0;
+                      const next = cur > 0 ? 0 : 1;
+                      setPattern((prev) => {
+                        const copy = JSON.parse(JSON.stringify(prev));
+                        const t = copy.tracks[stepContextMenu.trackIdx];
+                        t.steps[stepContextMenu.stepIdx] = next;
+                        if (next > 0 && (!t.velocity || !t.velocity[stepContextMenu.stepIdx])) {
+                          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+                          t.velocity[stepContextMenu.stepIdx] = 100;
+                        }
+                        return copy;
+                      });
+                      if (next > 0 && engineRef.current) {
+                        const pitch = tr.pitch?.[stepContextMenu.stepIdx] || 0;
+                        engineRef.current.triggerNote(stepContextMenu.trackIdx, tr.name, 0.8, pitch, 1);
+                      }
+                      setStepContextMenu(null);
+                    }}
+                    className="w-full py-1.5 px-2 rounded-lg bg-[#1a1c22] hover:bg-[#23262e] border border-[#262932] text-center font-bold text-xs text-[#e9e7e0] transition-colors"
+                  >
+                    {pattern.tracks[stepContextMenu.trackIdx]?.steps[stepContextMenu.stepIdx] > 0
+                      ? (language === "zh" ? "关闭此步音符 (OFF)" : "Turn Off Step")
+                      : (language === "zh" ? "开启此步音符 (ON)" : "Turn On Step")}
+                  </button>
+                </div>
+
+                {/* Velocity / Dynamics */}
+                <div className="mb-2.5">
+                  <div className="text-[9px] text-[#5a5e68] tracking-wider uppercase mb-1">
+                    {language === "zh" ? "力度 / 动态 (VELOCITY)" : "VELOCITY / DYNAMICS"}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { label: "Soft", val: 64 },
+                      { label: "Norm", val: 100 },
+                      { label: "Accent", val: 127 },
+                    ].map((item) => (
+                      <button
+                        key={item.val}
+                        onClick={() => {
+                          setPattern((prev) => {
+                            const copy = JSON.parse(JSON.stringify(prev));
+                            const t = copy.tracks[stepContextMenu.trackIdx];
+                            if (t.steps[stepContextMenu.stepIdx] === 0) t.steps[stepContextMenu.stepIdx] = 1;
+                            if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+                            t.velocity[stepContextMenu.stepIdx] = item.val;
+                            return copy;
+                          });
+                          setStepContextMenu(null);
+                        }}
+                        className={`py-1 rounded text-[10px] border transition-colors ${
+                          (pattern.tracks[stepContextMenu.trackIdx]?.velocity?.[stepContextMenu.stepIdx] ?? 100) === item.val
+                            ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold"
+                            : "bg-[#16171d] border-[#22242c] text-[#8b8f99] hover:text-[#e9e7e0]"
+                        }`}
+                      >
+                        {item.label} ({item.val})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Ratchet / Subdivisions */}
+                <div className="mb-2.5">
+                  <div className="text-[9px] text-[#5a5e68] tracking-wider uppercase mb-1">
+                    {language === "zh" ? "连音滚奏 (RATCHET)" : "RATCHET / SUBDIVISION"}
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[1, 2, 3, 4].map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => {
+                          setPattern((prev) => {
+                            const copy = JSON.parse(JSON.stringify(prev));
+                            const t = copy.tracks[stepContextMenu.trackIdx];
+                            if (t.steps[stepContextMenu.stepIdx] === 0) t.steps[stepContextMenu.stepIdx] = 1;
+                            if (!t.ratchet) t.ratchet = Array(stepCount).fill(1);
+                            t.ratchet[stepContextMenu.stepIdx] = r;
+                            return copy;
+                          });
+                          setStepContextMenu(null);
+                        }}
+                        className={`py-1 rounded text-[10px] border transition-colors ${
+                          (pattern.tracks[stepContextMenu.trackIdx]?.ratchet?.[stepContextMenu.stepIdx] ?? 1) === r
+                            ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold"
+                            : "bg-[#16171d] border-[#22242c] text-[#8b8f99] hover:text-[#e9e7e0]"
+                        }`}
+                      >
+                        {r}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Probability / Chance */}
+                <div className="mb-2.5">
+                  <div className="text-[9px] text-[#5a5e68] tracking-wider uppercase mb-1">
+                    {language === "zh" ? "触发概率 (CHANCE)" : "PROBABILITY"}
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[100, 75, 50, 25].map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setPattern((prev) => {
+                            const copy = JSON.parse(JSON.stringify(prev));
+                            const t = copy.tracks[stepContextMenu.trackIdx];
+                            if (t.steps[stepContextMenu.stepIdx] === 0) t.steps[stepContextMenu.stepIdx] = 1;
+                            if (!t.probability) t.probability = Array(stepCount).fill(100);
+                            t.probability[stepContextMenu.stepIdx] = p;
+                            return copy;
+                          });
+                          setStepContextMenu(null);
+                        }}
+                        className={`py-1 rounded text-[10px] border transition-colors ${
+                          (pattern.tracks[stepContextMenu.trackIdx]?.probability?.[stepContextMenu.stepIdx] ?? 100) === p
+                            ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold"
+                            : "bg-[#16171d] border-[#22242c] text-[#8b8f99] hover:text-[#e9e7e0]"
+                        }`}
+                      >
+                        {p}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pitch / Chromatic Note (For Bass, Chord, Lead) */}
+                {(() => {
+                  const tr = pattern.tracks[stepContextMenu.trackIdx];
+                  const isMelodic = tr && (tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead");
+                  if (!isMelodic) return null;
+                  return (
+                    <button
+                      onClick={() => {
+                        const curNote = tr.pitch?.[stepContextMenu.stepIdx] || (tr.track_id === "bass" ? 36 : 60);
+                        const savedTrackIdx = stepContextMenu.trackIdx;
+                        const savedStepIdx = stepContextMenu.stepIdx;
+                        setStepContextMenu(null);
+                        setPitchPicker({
+                          isOpen: true,
+                          trackIdx: savedTrackIdx,
+                          stepIdx: savedStepIdx,
+                          initialNote: curNote,
+                        });
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#1f222a] hover:bg-[#282c36] border border-[#2f333f] text-[#45e0c9] text-xs font-bold transition-colors"
+                    >
+                      <Music className="w-3.5 h-3.5" />
+                      <span>{language === "zh" ? "设置音高 / 键盘" : "Choose Pitch Note"}</span>
+                    </button>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
         </section>
+
+        {/* Euclidean Modal */}
+        {isEuclideanOpen && (
+          <EuclideanModal
+            isOpen={isEuclideanOpen}
+            onClose={() => setIsEuclideanOpen(false)}
+            tracks={pattern.tracks}
+            tracksConfig={DEMO_TRACKS_CONFIG}
+            initialTrackIdx={velocityActiveTrackIdx}
+            onApplyEuclidean={(trackIdx, steps) => {
+              setPattern((prev) => {
+                const copy = JSON.parse(JSON.stringify(prev));
+                const t = copy.tracks[trackIdx];
+                t.steps = steps.slice(0, stepCount);
+                return copy;
+              });
+              showToast(language === "zh" ? "已生成欧几里得律动" : "Euclidean rhythm applied");
+            }}
+            language={language}
+            stepCount={stepCount}
+          />
+        )}
+
+        {/* Pitch Picker Modal */}
+        {pitchPicker.isOpen && (
+          <PitchPickerModal
+            isOpen={pitchPicker.isOpen}
+            onClose={() => setPitchPicker((prev) => ({ ...prev, isOpen: false }))}
+            trackName={pattern.tracks[pitchPicker.trackIdx]?.name || "TRACK"}
+            trackColor={DEMO_TRACKS_CONFIG[pitchPicker.trackIdx % DEMO_TRACKS_CONFIG.length].color}
+            stepIdx={pitchPicker.stepIdx}
+            initialNote={pitchPicker.initialNote}
+            onSelectPitch={(stepIdx, midiNote) => {
+              setPattern((prev) => {
+                const copy = JSON.parse(JSON.stringify(prev));
+                const t = copy.tracks[pitchPicker.trackIdx];
+                if (!t.pitch) t.pitch = Array(stepCount).fill(0);
+                t.pitch[stepIdx] = midiNote;
+                return copy;
+              });
+            }}
+            onPreviewNote={(midiNote) => {
+              if (engineRef.current) {
+                const tr = pattern.tracks[pitchPicker.trackIdx];
+                engineRef.current.triggerNote(pitchPicker.trackIdx, tr.name, 0.85, midiNote, 1);
+              }
+            }}
+            language={language}
+          />
+        )}
       </main>
     </div>
   );

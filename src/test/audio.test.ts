@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { generateMidiBytes } from "../audio/MidiExporter";
 import { encodeSharedSequencer, decodeSharedSequencer, SharedSequencerState } from "../audio/SequencerUrlShare";
 import { AudioEngine } from "../audio/AudioEngine";
+import { generateEuclidean } from "../audio/Euclidean";
 import { ALL_GENRES } from "../data/genres";
 
 describe("Audio & Sequencer Utilities", () => {
@@ -175,6 +176,25 @@ describe("Audio & Sequencer Utilities", () => {
 
       expect(bytes).toBeInstanceOf(Uint8Array);
       expect(bytes.length).toBeGreaterThan(30);
+    });
+  });
+
+  describe("Euclidean Rhythm Generator", () => {
+    it("generates correct Euclidean distribution for classic rhythms", () => {
+      // 3 in 8 (Tresillo): [1, 0, 0, 1, 0, 0, 1, 0]
+      const tresillo = generateEuclidean(8, 3, 0);
+      expect(tresillo).toHaveLength(8);
+      expect(tresillo.filter((x) => x === 1)).toHaveLength(3);
+
+      // 4 in 16 (Four on the Floor): should hit every 4 steps
+      const four = generateEuclidean(16, 4, 0);
+      expect(four).toHaveLength(16);
+      expect(four.filter((x) => x === 1)).toHaveLength(4);
+
+      // Rotation works properly
+      const rotated = generateEuclidean(8, 3, 1);
+      expect(rotated).toHaveLength(8);
+      expect(rotated.filter((x) => x === 1)).toHaveLength(3);
     });
   });
 });
