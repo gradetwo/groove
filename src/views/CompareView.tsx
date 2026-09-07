@@ -827,17 +827,6 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     </div>
                   )}
                 </div>
-
-                {/* Bottom Action */}
-                <div className="pt-4 mt-4 border-t border-[#23262d]">
-                  <button
-                    onClick={() => onOpenStudio(genre)}
-                    className="w-full py-3 rounded-2xl bg-[#f5b73d] hover:brightness-110 text-[#0a0b0d] text-sm font-black flex items-center justify-center space-x-2 transition-all shadow-md shadow-amber-500/20"
-                  >
-                    <Sliders className="w-4 h-4" />
-                    <span>{language === "zh" ? "在工作台打开并在音序器中编辑" : "Open & Edit in Studio"}</span>
-                  </button>
-                </div>
               </div>
             );
           })}
