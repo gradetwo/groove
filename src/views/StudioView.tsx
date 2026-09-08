@@ -27,7 +27,10 @@ import {
   Wand2,
   Activity,
   Layers,
-  Music
+  Music,
+  Undo2,
+  Redo2,
+  SlidersHorizontal
 } from "lucide-react";
 import { Genre, SequencerPattern, SequencerTrack } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
@@ -38,6 +41,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { VelocityLane } from "../components/sequencer/VelocityLane";
 import { EuclideanModal } from "../components/sequencer/EuclideanModal";
 import { PitchPickerModal, midiToNoteName } from "../components/sequencer/PitchPickerModal";
+import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 
 // Color mappings matching /tmp/demo.html
 export const DEMO_TRACKS_CONFIG = [
@@ -247,8 +251,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   type MobileEditMode = "step" | "accent" | "ratchet" | "pitch" | "plocks";
   const [mobileEditMode, setMobileEditMode] = useState<MobileEditMode>("step");
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const longPressTimerRef = useRef<any>(null);
   const isLongPressRef = useRef(false);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const hasTouchMovedRef = useRef(false);
 
   useEffect(() => {
     const checkTouch = () => {
@@ -277,6 +284,53 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2400);
   };
+
+  // Operation History Stack for Undo/Redo (Ctrl+Z / Cmd+Z / Ctrl+Y)
+  const historyRef = useRef<SequencerPattern[]>([]);
+  const futureRef = useRef<SequencerPattern[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const updateUndoRedoState = useCallback(() => {
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(futureRef.current.length > 0);
+  }, []);
+
+  const pushHistorySnapshot = useCallback((prevPattern: SequencerPattern) => {
+    const copy = JSON.parse(JSON.stringify(prevPattern));
+    historyRef.current.push(copy);
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift();
+    }
+    futureRef.current = [];
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
+
+  const handleUndo = useCallback(() => {
+    if (historyRef.current.length === 0) return;
+    const previous = historyRef.current.pop()!;
+    futureRef.current.push(JSON.parse(JSON.stringify(pattern)));
+    setPattern(previous);
+    if (engineRef.current) {
+      engineRef.current.setPattern(previous);
+    }
+    updateUndoRedoState();
+    triggerHaptic(HapticPatterns.undoRedo);
+    showToast(language === "zh" ? "已撤销上一步操作 (Undo) ✓" : "Undone previous action ✓");
+  }, [pattern, language, updateUndoRedoState]);
+
+  const handleRedo = useCallback(() => {
+    if (futureRef.current.length === 0) return;
+    const next = futureRef.current.pop()!;
+    historyRef.current.push(JSON.parse(JSON.stringify(pattern)));
+    setPattern(next);
+    if (engineRef.current) {
+      engineRef.current.setPattern(next);
+    }
+    updateUndoRedoState();
+    triggerHaptic(HapticPatterns.undoRedo);
+    showToast(language === "zh" ? "已重做操作 (Redo) ✓" : "Redone action ✓");
+  }, [pattern, language, updateUndoRedoState]);
 
   // Initialize engine
   useEffect(() => {
@@ -405,14 +459,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   }, [resolution]);
 
-  // Horizontal mouse wheel pan listener on matrix container
+  // Mouse wheel listener: allow natural vertical scrolling across the tracks.
+  // Shift + Wheel converts to horizontal pan (standard DAW behavior).
   useEffect(() => {
     const el = matrixContainerRef.current;
     if (!el) return;
 
     const handleWheel = (e: WheelEvent) => {
-      if (el.scrollWidth > el.clientWidth) {
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      if (e.shiftKey && e.deltaY !== 0) {
+        if (el.scrollWidth > el.clientWidth) {
           e.preventDefault();
           el.scrollLeft += e.deltaY;
         }
@@ -423,36 +478,37 @@ export const StudioView: React.FC<StudioViewProps> = ({
     return () => el.removeEventListener("wheel", handleWheel);
   }, []);
 
-  // Ruler horizontal drag-to-scroll handler and effect
-  const handleRulerMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+  // Ruler horizontal drag-to-scroll handler with pointer capture and mobile gesture safety
+  const handleRulerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
     setIsRulerDragging(true);
     rulerDragStartXRef.current = e.clientX;
     if (matrixContainerRef.current) {
       rulerDragScrollLeftRef.current = matrixContainerRef.current.scrollLeft;
     }
+    triggerHaptic(HapticPatterns.slider);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignored
+    }
   };
 
-  useEffect(() => {
+  const handleRulerPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isRulerDragging || !matrixContainerRef.current) return;
+    const dx = e.clientX - rulerDragStartXRef.current;
+    matrixContainerRef.current.scrollLeft = rulerDragScrollLeftRef.current - dx;
+  };
+
+  const handleRulerPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isRulerDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!matrixContainerRef.current) return;
-      const dx = e.clientX - rulerDragStartXRef.current;
-      matrixContainerRef.current.scrollLeft = rulerDragScrollLeftRef.current - dx;
-    };
-
-    const handleMouseUp = () => {
-      setIsRulerDragging(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isRulerDragging]);
+    setIsRulerDragging(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignored
+    }
+  };
 
   // Switch genre (hot swap)
   const switchGenre = (genre: Genre, andPlay = false) => {
@@ -528,6 +584,21 @@ export const StudioView: React.FC<StudioViewProps> = ({
       } else if ((e.key === "e" || e.key === "E") && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setIsEuclideanOpen(true);
+      } else {
+        const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
+        const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+        if (isCmdOrCtrl && (e.key === "z" || e.key === "Z")) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+        } else if (isCmdOrCtrl && (e.key === "y" || e.key === "Y")) {
+          e.preventDefault();
+          handleRedo();
+        }
       }
     };
 
@@ -541,14 +612,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("click", handleGlobalClick);
     };
-  }, [isPlaying, isEditorMaximized, stepContextMenu, pitchPicker.isOpen, isEuclideanOpen, isVelocityLaneOpen]);
+  }, [isPlaying, isEditorMaximized, stepContextMenu, pitchPicker.isOpen, isEuclideanOpen, isVelocityLaneOpen, handleUndo, handleRedo]);
 
   // Step Touch Handlers for Mobile / iPad
   const handleStepTouchStart = (trackIdx: number, stepIdx: number, e: React.TouchEvent) => {
     isLongPressRef.current = false;
+    hasTouchMovedRef.current = false;
     const touch = e.touches[0];
     const clientX = touch.clientX;
     const clientY = touch.clientY;
+    touchStartPosRef.current = { x: clientX, y: clientY };
 
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -556,9 +629,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
     longPressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(35);
-      }
+      triggerHaptic(HapticPatterns.doubleTap);
       setStepContextMenu({
         isOpen: true,
         x: clientX,
@@ -569,10 +640,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }, 450);
   };
 
-  const handleStepTouchMove = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
+  const handleStepTouchMove = (e: React.TouchEvent) => {
+    if (touchStartPosRef.current && e.touches.length > 0) {
+      const touch = e.touches[0];
+      const dist = Math.hypot(
+        touch.clientX - touchStartPosRef.current.x,
+        touch.clientY - touchStartPosRef.current.y
+      );
+      if (dist > 8) {
+        hasTouchMovedRef.current = true;
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      }
     }
   };
 
@@ -581,12 +662,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    touchStartPosRef.current = null;
   };
 
   // Step Cell interaction
   const handleCellClick = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
     if (isLongPressRef.current) {
       isLongPressRef.current = false;
+      return;
+    }
+    if (hasTouchMovedRef.current) {
+      hasTouchMovedRef.current = false;
       return;
     }
     if (hasDraggedRef.current) {
@@ -599,6 +685,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
     const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
     const isMelodic = tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead";
     const cur = tr.steps[stepIdx] || 0;
+
+    pushHistorySnapshot(pattern);
+    triggerHaptic(mobileEditMode === "accent" ? HapticPatterns.accent : HapticPatterns.tap);
 
     // Dedicated Tool Mode Actions (Mobile Touch Ribbon or Desktop Click)
     if (mobileEditMode === "accent") {
@@ -827,6 +916,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
     const nextVal = cur > 0 ? 0 : 1;
     dragValRef.current = nextVal;
 
+    pushHistorySnapshot(pattern);
+    triggerHaptic(HapticPatterns.tap);
+
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
       const t = copy.tracks[trackIdx];
@@ -911,7 +1003,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Reset preset
   const handleResetPreset = () => {
+    pushHistorySnapshot(pattern);
     switchGenre(currentGenre, false);
+    triggerHaptic(HapticPatterns.undoRedo);
     showToast(t("restore") + " ✓");
   };
 
@@ -1256,6 +1350,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Duplicate Bar 1 to subsequent bars
   const handleDuplicateBar1 = () => {
+    pushHistorySnapshot(pattern);
+    triggerHaptic(HapticPatterns.tap);
     if (stepCount <= stepsPerBar) {
       handleAddSteps(stepsPerBar);
     }
@@ -1282,6 +1378,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Clear all steps
   const handleClearAll = () => {
+    pushHistorySnapshot(pattern);
+    triggerHaptic(HapticPatterns.undoRedo);
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
       copy.tracks.forEach((tr: SequencerTrack) => {
@@ -1297,6 +1395,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Humanize velocity
   const handleHumanize = () => {
+    pushHistorySnapshot(pattern);
+    triggerHaptic(HapticPatterns.tap);
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
       copy.tracks.forEach((tr: SequencerTrack) => {
@@ -1319,6 +1419,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Track shift left/right
   const handleShiftTrack = (trackIdx: number, dir: -1 | 1) => {
+    pushHistorySnapshot(pattern);
+    triggerHaptic(HapticPatterns.slider);
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
       const tr = copy.tracks[trackIdx];
@@ -1713,411 +1815,447 @@ export const StudioView: React.FC<StudioViewProps> = ({
         <section
           className={
             isEditorMaximized
-              ? "fixed inset-0 z-50 overflow-y-auto bg-[#0a0b0d] p-4 sm:p-7 flex flex-col"
-              : "bg-[#121317] border border-[#23262d] rounded-2xl p-4 sm:p-5 min-w-0 order-1 lg:order-2 shadow-2xl"
+              ? "fixed inset-0 z-50 overflow-y-auto bg-[#0a0b0d] p-2.5 sm:p-3.5 flex flex-col"
+              : "bg-[#121317] border border-[#23262d] rounded-2xl p-3 sm:p-4 min-w-0 order-1 lg:order-2 shadow-2xl"
           }
         >
-          {/* Maximize Top Banner (Only visible in fullscreen mode) */}
-          {isEditorMaximized && (
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#1a1c21] shrink-0">
-              <div className="flex items-center gap-3">
-                <span
-                  className="w-3 h-3 rounded-full shadow-[0_0_10px_var(--g)]"
-                  style={{ backgroundColor: "var(--g)" }}
-                />
-                <span className="font-['Space_Grotesk'] font-bold text-xl text-[#e9e7e0]">
-                  {currentGenre.name}
-                </span>
-                <span className="font-['JetBrains_Mono'] text-xs text-[#8b8f99] px-2.5 py-0.5 rounded-lg bg-[#17181c] border border-[#23262d]">
-                  {timeSignature} · {bpm} BPM · {stepCount} STEPS ({barCount} BARS) · {resolution}
-                </span>
-              </div>
-              <button
-                onClick={() => setIsEditorMaximized(false)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] text-xs text-[#e9e7e0] rounded-xl font-medium transition-colors shadow-lg"
-              >
-                <Minimize2 className="w-4 h-4 text-[#f5b73d]" />
-                <span>{language === "zh" ? "退出全屏 (Esc)" : "Exit Fullscreen (Esc)"}</span>
-              </button>
-            </div>
-          )}
-
-          {/* Transport Bar (.transport) */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap pb-4 border-b border-[#1a1c21] mb-3">
-            {/* Sidebar toggle button when collapsed */}
-            {isSidebarCollapsed && !isEditorMaximized && (
-              <button
-                onClick={() => setIsSidebarCollapsed(false)}
-                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#f5b73d] px-2.5 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
-                title={language === "zh" ? "展开风格档案" : "Expand genre dossier"}
-              >
-                <PanelLeftOpen className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{language === "zh" ? "风格" : "Info"}</span>
-              </button>
-            )}
-
-            {/* Round Play Button (#playBtn) */}
-            <button
-              onClick={handleTogglePlay}
-              className={`w-[52px] h-[52px] rounded-full bg-[#f5b73d] flex items-center justify-center transition-transform hover:brightness-110 shrink-0 shadow-[0_0_20px_rgba(245,183,61,0.25)] ${
-                isPlaying ? "animate-pulse-play" : ""
-              }`}
-              aria-label="Play / Pause"
-            >
-              {isPlaying ? (
-                <div className="w-4 h-4 rounded-sm bg-[#0a0b0d]" />
-              ) : (
-                <Play className="w-5 h-5 fill-[#0a0b0d] text-[#0a0b0d] ml-0.5" />
-              )}
-            </button>
-
-            {/* BPM Slider Knob */}
-            <div className="flex flex-col gap-1 min-w-[130px] flex-1 sm:flex-initial">
-              <div className="flex justify-between font-['JetBrains_Mono'] text-[10px] tracking-[0.14em] text-[#5a5e68]">
-                <span>{t("bpm")}</span>
-                <b className="text-[#e9e7e0] font-normal tracking-normal">{bpm}</b>
-              </div>
-              <input
-                type="range"
-                min="40"
-                max="220"
-                value={bpm}
-                onChange={(e) => setBpm(+e.target.value)}
-              />
-            </div>
-
-            {/* Swing Slider Knob */}
-            <div className="flex flex-col gap-1 min-w-[120px] flex-1 sm:flex-initial">
-              <div className="flex justify-between font-['JetBrains_Mono'] text-[10px] tracking-[0.14em] text-[#5a5e68]">
-                <span>{t("swing")}</span>
-                <b className="text-[#e9e7e0] font-normal tracking-normal">{swing}%</b>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="75"
-                value={swing}
-                onChange={(e) => setSwing(+e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap ml-auto">
-              {/* Reset Preset (.t-btn) */}
-              <button
-                onClick={handleResetPreset}
-                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] px-2.5 sm:px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
-                title={t("restore")}
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t("restore")}</span>
-              </button>
-
-              {/* Export MIDI (.t-btn) */}
-              <button
-                onClick={handleExportMidi}
-                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] px-2.5 sm:px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
-                title={t("export")}
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t("export")}</span>
-              </button>
-
-              {/* Share Groove */}
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] px-2.5 sm:px-3 py-2 border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12]"
-                title={t("share_groove")}
-              >
-                <Share2 className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Fullscreen Maximize Toggle (Only shown when not maximized; in maximized mode top banner provides full exit control) */}
-              {!isEditorMaximized && (
-                <button
-                  onClick={() => setIsEditorMaximized(true)}
-                  className="flex items-center gap-1.5 text-xs px-2.5 sm:px-3 py-2 border border-[#23262d] text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] rounded-lg transition-colors bg-[#0d0e12]"
-                  title={language === "zh" ? "最大化编辑器" : "Maximize Editor"}
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">
-                    {language === "zh" ? "全屏" : "Maximize"}
+          {/* Sequencer Unified Toolbar (Scales to a single line in Fullscreen, streamlined in Normal mode) */}
+          <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2 pb-2.5 mb-2 border-b border-[#1a1c21] overflow-x-auto whitespace-nowrap scrollbar-none select-none shrink-0">
+            {/* Left Section: Playback & Primary Sequencer Selectors */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Fullscreen Mode: Genre Badge */}
+              {isEditorMaximized ? (
+                <div className="flex items-center gap-1.5 h-8 px-2 sm:px-2.5 bg-[#14151a] border border-[#23262d] rounded-lg shrink-0">
+                  <span
+                    className="w-2 h-2 rounded-full shadow-[0_0_8px_var(--g)] shrink-0"
+                    style={{ backgroundColor: "var(--g)" }}
+                  />
+                  <span className="font-['Space_Grotesk'] font-bold text-xs text-[#e9e7e0] truncate max-w-[100px] sm:max-w-[150px]">
+                    {currentGenre.name}
                   </span>
-                </button>
+                </div>
+              ) : (
+                isSidebarCollapsed && (
+                  <button
+                    onClick={() => setIsSidebarCollapsed(false)}
+                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-[#8b8f99] hover:text-[#f5b73d] border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
+                    title={language === "zh" ? "展开风格档案" : "Expand dossier"}
+                  >
+                    <PanelLeftOpen className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{language === "zh" ? "风格" : "Info"}</span>
+                  </button>
+                )
               )}
-            </div>
-          </div>
 
-          {/* Sequencer Pro Toolbar: Time Sig, Resolution, Step Length & Pro DAW Operations */}
-          <div className="flex items-center justify-between gap-2.5 flex-wrap pb-3 mb-3 border-b border-[#1a1c21] text-xs">
-            {/* Left group: Time Sig & Resolution & Steps */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Time Signature */}
-              <div className="flex items-center gap-1.5 bg-[#0d0e12] border border-[#23262d] px-2.5 py-1 rounded-lg">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase">
-                  {language === "zh" ? "节拍" : "METER"}
+              {/* Play / Pause Button */}
+              <button
+                onClick={handleTogglePlay}
+                className={`h-8 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all hover:brightness-110 shrink-0 ${
+                  isPlaying
+                    ? "bg-[#ff5964] text-white shadow-[0_0_12px_rgba(255,89,100,0.35)] animate-pulse-play"
+                    : "bg-[#f5b73d] text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
+                }`}
+                aria-label="Play / Pause"
+                title={isPlaying ? "Space: Pause" : "Space: Play"}
+              >
+                {isPlaying ? (
+                  <div className="w-2.5 h-2.5 rounded-xs bg-current" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                )}
+                <span className="font-['JetBrains_Mono'] text-xs">
+                  {isPlaying ? (language === "zh" ? "暂停" : "PAUSE") : (language === "zh" ? "播放" : "PLAY")}
+                </span>
+              </button>
+
+              {/* BPM Input */}
+              <div className="flex items-center gap-1 h-8 bg-[#0d0e12] border border-[#23262d] px-2 rounded-lg shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider select-none">BPM</span>
+                <input
+                  type="number"
+                  min="40"
+                  max="240"
+                  value={bpm}
+                  onChange={(e) => setBpm(Math.max(40, Math.min(240, Number(e.target.value) || 120)))}
+                  className="w-10 bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-bold text-center focus:outline-none focus:text-[#f5b73d]"
+                  title={language === "zh" ? "节奏速度 (40-240 BPM)" : "Tempo (40-240 BPM)"}
+                />
+              </div>
+
+              {/* Meter Select Dropdown */}
+              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+                  {language === "zh" ? "拍号" : "METER"}
                 </span>
                 <select
                   value={timeSignature}
                   onChange={(e) => handleTimeSignatureChange(e.target.value)}
-                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-bold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  aria-label={language === "zh" ? "选择拍号" : "Select time signature"}
                 >
-                  <option value="4/4" className="bg-[#121317]">
-                    {language === "zh" ? "4/4 (四四拍 · 4格一组)" : "4/4 (Common · 4-step group)"}
+                  <option value="4/4" className="bg-[#121317] text-[#e9e7e0]">4/4 {language === "zh" ? "(四四拍 · 4格)" : "(Common)"}</option>
+                  <option value="2/4" className="bg-[#121317] text-[#e9e7e0]">2/4 {language === "zh" ? "(二四拍 · 2格)" : "(March)"}</option>
+                  <option value="3/4" className="bg-[#121317] text-[#e9e7e0]">3/4 {language === "zh" ? "(三四拍 · 3格)" : "(Waltz)"}</option>
+                  <option value="2/2" className="bg-[#121317] text-[#e9e7e0]">2/2 {language === "zh" ? "(二二拍 · 2格)" : "(Cut Time)"}</option>
+                  <option value="6/8" className="bg-[#121317] text-[#e9e7e0]">6/8 {language === "zh" ? "(六八拍 · 3格)" : "(Compound)"}</option>
+                  <option value="3/8" className="bg-[#121317] text-[#e9e7e0]">3/8 {language === "zh" ? "(三八拍 · 3格)" : "(Single)"}</option>
+                  <option value="9/8" className="bg-[#121317] text-[#e9e7e0]">9/8 {language === "zh" ? "(九八拍 · 3格)" : "(Triple)"}</option>
+                  <option value="12/8" className="bg-[#121317] text-[#e9e7e0]">12/8 {language === "zh" ? "(十二八 · 3格)" : "(Shuffle)"}</option>
+                  <option value="5/4" className="bg-[#121317] text-[#e9e7e0]">5/4 {language === "zh" ? "(五四拍 · 5格)" : "(Take Five)"}</option>
+                  <option value="7/8" className="bg-[#121317] text-[#e9e7e0]">7/8 {language === "zh" ? "(七八拍 · 7格)" : "(Balkan)"}</option>
+                </select>
+              </div>
+
+              {/* Quantize Resolution Select Dropdown */}
+              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+                  {language === "zh" ? "精度" : "GRID"}
+                </span>
+                <select
+                  value={resolution}
+                  onChange={(e) => handleResolutionChange(e.target.value as "1/8" | "1/16" | "1/32")}
+                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  aria-label={language === "zh" ? "选择量化精度" : "Select quantization resolution"}
+                >
+                  <option value="1/16" className="bg-[#121317] text-[#e9e7e0]">1/16 {language === "zh" ? "(标准)" : "(Default)"}</option>
+                  <option value="1/8" className="bg-[#121317] text-[#e9e7e0]">1/8 {language === "zh" ? "(半速)" : "(Half)"}</option>
+                  <option value="1/32" className="bg-[#121317] text-[#e9e7e0]">1/32 {language === "zh" ? "(双速)" : "(Double)"}</option>
+                </select>
+              </div>
+
+              {/* Step Length Select Dropdown */}
+              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+                  {language === "zh" ? "长度" : "LEN"}
+                </span>
+                <select
+                  value={stepCount}
+                  onChange={(e) => handleSetStepCount(Number(e.target.value))}
+                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  aria-label={language === "zh" ? "选择步长与小节" : "Select step length"}
+                >
+                  <option value={16} className="bg-[#121317] text-[#e9e7e0]">16 {language === "zh" ? "步 (1小节)" : "Steps (1 Bar)"}</option>
+                  <option value={32} className="bg-[#121317] text-[#e9e7e0]">32 {language === "zh" ? "步 (2小节)" : "Steps (2 Bars)"}</option>
+                  <option value={48} className="bg-[#121317] text-[#e9e7e0]">48 {language === "zh" ? "步 (3小节)" : "Steps (3 Bars)"}</option>
+                  <option value={64} className="bg-[#121317] text-[#e9e7e0]">64 {language === "zh" ? "步 (4小节)" : "Steps (4 Bars)"}</option>
+                  {![16, 32, 48, 64].includes(stepCount) && (
+                    <option value={stepCount} className="bg-[#121317] text-[#e9e7e0]">
+                      {stepCount} {language === "zh" ? `步 (${barCount}小节)` : `Steps (${barCount} Bars)`}
+                    </option>
+                  )}
+                </select>
+              </div>
+
+              {/* Tool Mode Select Dropdown */}
+              <div
+                className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0"
+                title={
+                  mobileEditMode === "step"
+                    ? (language === "zh" ? "普通步进：点按开关音符，长按打开参数锁" : "Step Note: Tap to toggle, long press for P-Locks")
+                    : mobileEditMode === "accent"
+                    ? (language === "zh" ? "重音模式：点按步进切换最大重音 (Vel 127)" : "Accent: Tap to toggle max accent velocity")
+                    : mobileEditMode === "ratchet"
+                    ? (language === "zh" ? "连音滚奏：点按步进循环细分 (1x-4x)" : "Ratchet: Tap to cycle ratchets")
+                    : mobileEditMode === "pitch"
+                    ? (language === "zh" ? "音高选择：点按旋律步进选取音高" : "Pitch: Tap to pick pitch")
+                    : (language === "zh" ? "参数锁：点按步进调出参数锁面板" : "P-Locks: Tap to open parameters menu")
+                }
+              >
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+                  {language === "zh" ? "工具" : "TOOL"}
+                </span>
+                <select
+                  value={mobileEditMode}
+                  onChange={(e) => setMobileEditMode(e.target.value as MobileEditMode)}
+                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  aria-label={language === "zh" ? "选择步进编辑工具" : "Select step edit mode"}
+                >
+                  <option value="step" className="bg-[#121317] text-[#e9e7e0]">● {language === "zh" ? "普通步进" : "Step Note"}</option>
+                  <option value="accent" className="bg-[#121317] text-[#e9e7e0]">▲ {language === "zh" ? "重音 (Vel 127)" : "Accent"}</option>
+                  <option value="ratchet" className="bg-[#121317] text-[#e9e7e0]">⫸ {language === "zh" ? "连音滚奏" : "Ratchet"}</option>
+                  <option value="pitch" className="bg-[#121317] text-[#e9e7e0]">♩ {language === "zh" ? "音高选择" : "Pitch Picker"}</option>
+                  <option value="plocks" className="bg-[#121317] text-[#e9e7e0]">⚙ {language === "zh" ? "参数锁" : "P-Locks"}</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Right Section: Bar Navigation & Pro Operations */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+              {/* Bar Navigation Select (shown when barCount > 1) */}
+              {barCount > 1 && (
+                <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+                    {language === "zh" ? "小节" : "BAR"}
+                  </span>
+                  <select
+                    value={Math.min(barCount - 1, Math.floor(currentStep / stepsPerBar))}
+                    onChange={(e) => scrollToBar(Number(e.target.value))}
+                    className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                    aria-label={language === "zh" ? "跳转到小节" : "Jump to bar"}
+                  >
+                    {Array.from({ length: barCount }, (_, bIdx) => {
+                      const startStep = bIdx * stepsPerBar + 1;
+                      const endStep = Math.min(stepCount, (bIdx + 1) * stepsPerBar);
+                      return (
+                        <option key={bIdx} value={bIdx} className="bg-[#121317] text-[#e9e7e0]">
+                          Bar {bIdx + 1} ({startStep}-{endStep})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {/* Velocity Lane Toggle */}
+              <button
+                onClick={() => setIsVelocityLaneOpen(!isVelocityLaneOpen)}
+                className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                  isVelocityLaneOpen
+                    ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
+                    : "bg-[#0d0e12] border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0]"
+                }`}
+                title={language === "zh" ? "力度编辑抽屉 (快捷键 V)" : "Toggle velocity drawer (Key: V)"}
+              >
+                <Sliders className="w-3.5 h-3.5 text-[#45e0c9]" />
+                <span className="hidden sm:inline font-['JetBrains_Mono']">{language === "zh" ? "力度" : "VEL"}</span>
+              </button>
+
+              {/* Euclidean Rhythm Generator */}
+              <button
+                onClick={() => setIsEuclideanOpen(true)}
+                className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d]/60 rounded-lg text-xs text-[#8b8f99] hover:text-[#f5b73d] transition-colors shrink-0"
+                title={language === "zh" ? "欧几里得律动生成器 (快捷键 E)" : "Euclidean rhythm generator (Key: E)"}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#f5b73d]" />
+                <span className="hidden sm:inline font-['JetBrains_Mono']">{language === "zh" ? "欧几里得" : "EUCLID"}</span>
+              </button>
+
+              {/* Undo & Redo (Placed before Tools...) */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={handleUndo}
+                  disabled={!canUndo}
+                  className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
+                    canUndo
+                      ? "bg-[#0d0e12] text-[#e9e7e0] border-[#23262d] hover:border-[#f5b73d] hover:text-[#f5b73d] cursor-pointer"
+                      : "bg-[#0a0b0d] text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                  }`}
+                  title={language === "zh" ? "撤销 (Ctrl+Z)" : "Undo (Ctrl+Z)"}
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handleRedo}
+                  disabled={!canRedo}
+                  className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
+                    canRedo
+                      ? "bg-[#0d0e12] text-[#e9e7e0] border-[#23262d] hover:border-[#f5b73d] hover:text-[#f5b73d] cursor-pointer"
+                      : "bg-[#0a0b0d] text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                  }`}
+                  title={language === "zh" ? "重做 (Ctrl+Shift+Z)" : "Redo (Ctrl+Shift+Z)"}
+                >
+                  <Redo2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Fullscreen Maximize / Minimize Toggle (Placed before Tools...) */}
+              <button
+                onClick={() => {
+                  setIsEditorMaximized(!isEditorMaximized);
+                  setShowAdvancedControls(false);
+                }}
+                className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
+                  isEditorMaximized
+                    ? "bg-[#17181c] hover:bg-[#23262d] border-[#2b2e38] text-[#e9e7e0] shadow-sm"
+                    : "bg-[#0d0e12] border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d]"
+                }`}
+                title={
+                  isEditorMaximized
+                    ? (language === "zh" ? "退出全屏 (Esc)" : "Exit Fullscreen (Esc)")
+                    : (language === "zh" ? "全屏沉浸模式 (Esc 退出)" : "Fullscreen (Esc to exit)")
+                }
+              >
+                {isEditorMaximized ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-[#f5b73d]" />
+                    <span className="hidden sm:inline font-['JetBrains_Mono']">
+                      {language === "zh" ? "退出" : "Exit"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 text-[#f5b73d]" />
+                    <span className="hidden sm:inline font-['JetBrains_Mono']">
+                      {language === "zh" ? "全屏" : "Full"}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              {/* Quick Tools Dropdown */}
+              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const act = e.target.value;
+                    if (act === "dup_bar1") handleDuplicateBar1();
+                    else if (act === "humanize") handleHumanize();
+                    else if (act === "clear_all") handleClearAll();
+                    else if (act === "reset_preset") handleResetPreset();
+                  }}
+                  className="bg-transparent text-[#8b8f99] hover:text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  aria-label={language === "zh" ? "快捷操作" : "Quick actions"}
+                >
+                  <option value="" disabled className="bg-[#121317] text-[#8b8f99]">
+                    ⚡ {language === "zh" ? "操作..." : "Tools..."}
                   </option>
-                  <option value="2/4" className="bg-[#121317]">
-                    {language === "zh" ? "2/4 (二四拍 · 2格一组)" : "2/4 (March/Polka · 2-step group)"}
+                  <option value="dup_bar1" className="bg-[#121317] text-[#e9e7e0]">
+                    📋 {language === "zh" ? "复制小节1至整段" : "Duplicate Bar 1"}
                   </option>
-                  <option value="3/4" className="bg-[#121317]">
-                    {language === "zh" ? "3/4 (三四拍 · 3格一组)" : "3/4 (Waltz · 3-step group)"}
+                  <option value="humanize" className="bg-[#121317] text-[#e9e7e0]">
+                    ✨ {language === "zh" ? "人性化力度抖动" : "Humanize Velocity"}
                   </option>
-                  <option value="2/2" className="bg-[#121317]">
-                    {language === "zh" ? "2/2 (二二拍 · 2格一组)" : "2/2 (Cut Time · 2-step group)"}
+                  <option value="clear_all" className="bg-[#121317] text-[#ff5964]">
+                    🗑️ {language === "zh" ? "清空全部步进" : "Clear All Steps"}
                   </option>
-                  <option value="6/8" className="bg-[#121317]">
-                    {language === "zh" ? "6/8 (六八拍 · 3格一组)" : "6/8 (Compound · 3-step group)"}
-                  </option>
-                  <option value="3/8" className="bg-[#121317]">
-                    {language === "zh" ? "3/8 (三八拍 · 3格一组)" : "3/8 (Single Compound · 3-step group)"}
-                  </option>
-                  <option value="9/8" className="bg-[#121317]">
-                    {language === "zh" ? "9/8 (九八拍 · 3格一组)" : "9/8 (Triple Compound · 3-step group)"}
-                  </option>
-                  <option value="12/8" className="bg-[#121317]">
-                    {language === "zh" ? "12/8 (十二八拍 · 3格一组)" : "12/8 (Shuffle · 3-step group)"}
-                  </option>
-                  <option value="5/4" className="bg-[#121317]">
-                    {language === "zh" ? "5/4 (五四拍 · 5格一组)" : "5/4 (Take Five · 5-step group)"}
-                  </option>
-                  <option value="7/8" className="bg-[#121317]">
-                    {language === "zh" ? "7/8 (七八拍 · 7格一组)" : "7/8 (Balkan · 7-step group)"}
+                  <option value="reset_preset" className="bg-[#121317] text-[#e9e7e0]">
+                    🔄 {language === "zh" ? "恢复默认预设" : "Reset Preset"}
                   </option>
                 </select>
               </div>
 
-              {/* Quantize Resolution */}
-              <div className="flex items-center gap-1 bg-[#0d0e12] border border-[#23262d] p-0.5 rounded-lg">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase pl-2 pr-1">
-                  {language === "zh" ? "精度" : "GRID"}
+              {/* Export MIDI */}
+              <button
+                onClick={handleExportMidi}
+                className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
+                title={t("export")}
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline font-['JetBrains_Mono']">{t("export")}</span>
+              </button>
+
+              {/* Share Groove (shown in standard mode) */}
+              {!isEditorMaximized && (
+                <button
+                  onClick={handleShare}
+                  className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
+                  title={t("share_groove")}
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Collapsible Advanced Settings (Swing, Fine Steps, Pan) */}
+              <button
+                onClick={() => setShowAdvancedControls(!showAdvancedControls)}
+                className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
+                  showAdvancedControls
+                    ? "bg-[#1f232b] text-[#f5b73d] border-[#f5b73d]/50"
+                    : "bg-[#0d0e12] text-[#8b8f99] hover:text-[#e9e7e0] border-[#23262d] hover:border-[#3a3e48]"
+                }`}
+                title={language === "zh" ? "展开/收起高级设置 (摇摆度、步进微调、平移)" : "Toggle advanced settings"}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline font-['JetBrains_Mono']">
+                  {language === "zh" ? "高级" : "More"}
                 </span>
-                {(["1/8", "1/16", "1/32"] as const).map((res) => (
-                  <button
-                    key={res}
-                    onClick={() => handleResolutionChange(res)}
-                    className={`px-2 py-0.5 rounded font-['JetBrains_Mono'] text-xs transition-colors ${
-                      resolution === res
-                        ? "bg-[#f5b73d] text-[#0a0b0d] font-bold shadow-sm"
-                        : "text-[#8b8f99] hover:text-[#e9e7e0]"
-                    }`}
-                  >
-                    {res}
-                  </button>
-                ))}
+                {swing > 0 && !showAdvancedControls && (
+                  <span className="text-[10px] text-[#f5b73d] font-['JetBrains_Mono'] hidden sm:inline">
+                    {swing}%
+                  </span>
+                )}
+                <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedControls ? "rotate-180" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible Advanced Settings Bar (Drawer) */}
+          {showAdvancedControls && (
+            <div className="flex items-center justify-between gap-3 p-2 bg-[#0a0b0e] border border-[#23262d] rounded-xl mb-2 text-xs select-none transition-all shrink-0">
+              {/* Swing Slider Knob */}
+              <div className="flex items-center gap-2 bg-[#121317] px-2.5 py-1 rounded-lg border border-[#1a1c21]">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase whitespace-nowrap">
+                  {t("swing")}: <b className="text-[#e9e7e0] font-normal">{swing}%</b>
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="75"
+                  value={swing}
+                  onChange={(e) => setSwing(+e.target.value)}
+                  className="w-20 sm:w-28 accent-[#f5b73d] cursor-pointer"
+                />
               </div>
 
-              {/* Step Length Controls */}
-              <div className="flex items-center gap-1 bg-[#0d0e12] border border-[#23262d] px-2 py-1 rounded-lg">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1">
-                  {stepCount} {language === "zh" ? "步" : "STEPS"} ({barCount} {barCount === 1 ? "BAR" : "BARS"})
+              {/* Fine-grained Step adjustments */}
+              <div className="flex items-center gap-1 bg-[#121317] px-2 py-1 rounded-lg border border-[#1a1c21]">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] mr-1 hidden sm:inline whitespace-nowrap">
+                  {language === "zh" ? "步数微调:" : "FINE STEPS:"}
                 </span>
                 <button
                   onClick={() => handleRemoveSteps(groupSize)}
-                  className="w-5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d] font-['JetBrains_Mono'] text-[10px]"
                   title={language === "zh" ? `删减 ${groupSize} 步 (1组)` : `Remove ${groupSize} steps`}
                 >
-                  <Minus className="w-3 h-3" />
+                  -{groupSize}
                 </button>
-                <span className="font-['JetBrains_Mono'] text-[10px] font-bold text-[#f5b73d] px-0.5" title={language === "zh" ? "每组步进数" : "Group step size"}>
-                  ±{groupSize}
-                </span>
                 <button
                   onClick={() => handleAddSteps(groupSize)}
-                  className="w-5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d] font-['JetBrains_Mono'] text-[10px]"
                   title={language === "zh" ? `添加 ${groupSize} 步 (1组)` : `Add ${groupSize} steps`}
                 >
-                  <Plus className="w-3 h-3" />
+                  +{groupSize}
                 </button>
                 <button
                   onClick={() => handleAddSteps(stepsPerBar)}
-                  className="px-1.5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[10px] font-['JetBrains_Mono'] text-[#f5b73d] border border-[#23262d]"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#f5b73d] border border-[#23262d] font-['JetBrains_Mono'] text-[10px]"
                   title={language === "zh" ? `添加 1 小节 (+${stepsPerBar} 步)` : `Add 1 Bar (+${stepsPerBar} steps)`}
                 >
                   +1 Bar
                 </button>
                 <button
                   onClick={() => handleAddSteps(stepsPerBar * 2)}
-                  className="px-1.5 h-5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[10px] font-['JetBrains_Mono'] text-[#f5b73d] border border-[#23262d] hidden xl:flex"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#f5b73d] border border-[#23262d] font-['JetBrains_Mono'] text-[10px] hidden md:inline-flex"
                   title={language === "zh" ? `添加 2 小节 (+${stepsPerBar * 2} 步)` : `Add 2 Bars (+${stepsPerBar * 2} steps)`}
                 >
                   +2 Bars
                 </button>
               </div>
 
-              {/* Quick Step Length Presets */}
-              <div className="hidden lg:flex items-center gap-1">
-                {[16, 32, 48, 64].map((cnt) => (
-                  <button
-                    key={cnt}
-                    onClick={() => handleSetStepCount(cnt)}
-                    className={`px-1.5 py-0.5 rounded font-['JetBrains_Mono'] text-[10px] border transition-colors ${
-                      stepCount === cnt
-                        ? "bg-[#23262d] text-[#f5b73d] border-[#f5b73d]/50 font-bold"
-                        : "bg-[#0d0e12] text-[#5a5e68] border-[#1a1c21] hover:text-[#8b8f99]"
-                    }`}
-                  >
-                    {cnt}
-                  </button>
-                ))}
+              {/* Pan Navigation */}
+              <div className="flex items-center gap-1.5 ml-auto text-[#5a5e68]">
+                <span className="hidden lg:inline font-['JetBrains_Mono'] text-[10px] whitespace-nowrap">
+                  {language === "zh" ? "滚轮/标尺拖拽可平移" : "Wheel/drag to pan"}
+                </span>
+                <button
+                  onClick={() => scrollByPixels(-240)}
+                  className="w-6 h-6 rounded bg-[#121317] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
+                  title={language === "zh" ? "向左滚动" : "Scroll left"}
+                >
+                  ◀
+                </button>
+                <button
+                  onClick={() => scrollByPixels(240)}
+                  className="w-6 h-6 rounded bg-[#121317] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
+                  title={language === "zh" ? "向右滚动" : "Scroll right"}
+                >
+                  ▶
+                </button>
+                <button
+                  onClick={() => setShowAdvancedControls(false)}
+                  className="ml-2 text-[10px] text-[#8b8f99] hover:text-[#e9e7e0] font-['JetBrains_Mono'] px-1.5 py-0.5 rounded bg-[#17181c] border border-[#23262d]"
+                  title={language === "zh" ? "收起设置抽屉" : "Close"}
+                >
+                  ✕
+                </button>
               </div>
             </div>
-
-            {/* Right group: Pro Sequence Operations (Velocity, Euclidean, Duplicate Bar, Humanize, Clear All) */}
-            <div className="flex items-center gap-1.5 ml-auto flex-wrap">
-              {/* Toggle Velocity Drawer */}
-              <button
-                onClick={() => setIsVelocityLaneOpen(!isVelocityLaneOpen)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs transition-colors border ${
-                  isVelocityLaneOpen
-                    ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
-                    : "bg-[#0d0e12] border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0]"
-                }`}
-                title={language === "zh" ? "展开/收起力度编辑抽屉 (快捷键 V)" : "Toggle velocity drawer (Key: V)"}
-              >
-                <Sliders className="w-3 h-3 text-[#45e0c9]" />
-                <span className="hidden sm:inline">{language === "zh" ? "力度" : "VEL"}</span>
-              </button>
-
-              {/* Euclidean Rhythm Generator */}
-              <button
-                onClick={() => setIsEuclideanOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d]/60 rounded-lg text-xs text-[#8b8f99] hover:text-[#f5b73d] transition-colors"
-                title={language === "zh" ? "打开欧几里得律动生成器 (快捷键 E)" : "Open Euclidean rhythm generator (Key: E)"}
-              >
-                <Sparkles className="w-3 h-3 text-[#f5b73d]" />
-                <span className="hidden sm:inline">{language === "zh" ? "欧几里得" : "EUCLID"}</span>
-              </button>
-
-              <button
-                onClick={handleDuplicateBar1}
-                className="flex items-center gap-1 px-2.5 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#3a3e48] rounded-lg text-xs text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
-                title={language === "zh" ? "将第 1 小节节奏平铺复制到整段" : "Duplicate Bar 1 across all bars"}
-              >
-                <Copy className="w-3 h-3 text-[#ffb65c]" />
-                <span className="hidden sm:inline">{language === "zh" ? "复制小节1" : "Dup Bar 1"}</span>
-              </button>
-
-              <button
-                onClick={handleHumanize}
-                className="flex items-center gap-1 px-2.5 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#3a3e48] rounded-lg text-xs text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
-                title={language === "zh" ? "微随机化触发力度 (±10%)，带来真实人性律动" : "Humanize velocity jitter (±10%)"}
-              >
-                <Sparkles className="w-3 h-3 text-[#45e0c9]" />
-                <span className="hidden sm:inline">{language === "zh" ? "人性化" : "Humanize"}</span>
-              </button>
-
-              <button
-                onClick={handleClearAll}
-                className="flex items-center gap-1 px-2 py-1 bg-[#0d0e12] border border-[#23262d] hover:border-[#ff5964]/50 rounded-lg text-xs text-[#8b8f99] hover:text-[#ff5964] transition-colors"
-                title={language === "zh" ? "清空所有步进" : "Clear all steps"}
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Measure / Bar Quick-Jump Navigator & Scroll Bar Controls */}
-          <div className="flex items-center justify-between gap-2 pb-2 mb-1.5 text-xs select-none">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1">
-                {language === "zh" ? "小节定位:" : "MEASURES:"}
-              </span>
-              {Array.from({ length: barCount }, (_, bIdx) => {
-                const isCurrentBar = isPlaying && Math.floor(currentStep / stepsPerBar) === bIdx;
-                const startStep = bIdx * stepsPerBar + 1;
-                const endStep = Math.min(stepCount, (bIdx + 1) * stepsPerBar);
-                return (
-                  <button
-                    key={bIdx}
-                    onClick={() => scrollToBar(bIdx)}
-                    className={`px-2.5 py-1 rounded-md font-['JetBrains_Mono'] text-xs font-semibold transition-all border ${
-                      isCurrentBar
-                        ? "bg-[#f5b73d] text-[#0a0b0d] border-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.4)] scale-[1.03]"
-                        : "bg-[#0d0e12] border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48]"
-                    }`}
-                    title={language === "zh" ? `跳转至第 ${bIdx + 1} 小节 (${startStep}-${endStep} 步)` : `Jump to Bar ${bIdx + 1} (Steps ${startStep}-${endStep})`}
-                  >
-                    Bar {bIdx + 1} <span className="text-[10px] opacity-75">({startStep}-{endStep})</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Left / Right Pan Buttons & Drag hint */}
-            <div className="flex items-center gap-1.5 text-[#5a5e68]">
-              <span className="hidden sm:inline font-['JetBrains_Mono'] text-[10px]">
-                {language === "zh" ? "滚轮/标尺拖拽可平移" : "Wheel/drag ruler to pan"}
-              </span>
-              <button
-                onClick={() => scrollByPixels(-240)}
-                className="w-6 h-6 rounded bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
-                title={language === "zh" ? "向左滚动" : "Scroll left"}
-              >
-                ◀
-              </button>
-              <button
-                onClick={() => scrollByPixels(240)}
-                className="w-6 h-6 rounded bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
-                title={language === "zh" ? "向右滚动" : "Scroll right"}
-              >
-                ▶
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile & Touch Workflow Tool Ribbon */}
-          <div className="flex items-center justify-between gap-2 p-2 bg-[#0a0b0e] border border-[#23262d] rounded-xl mb-3 overflow-x-auto select-none shadow-inner">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="font-['JetBrains_Mono'] text-[9px] text-[#5a5e68] tracking-wider uppercase px-1.5 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#f5b73d] animate-pulse" />
-                {language === "zh" ? "步进工具" : "TOOL MODE"}:
-              </span>
-              {([
-                { id: "step", labelZh: "普通步进", labelEn: "Step Note", icon: "●", descZh: "点按开/关步进音符", descEn: "Tap step to toggle on/off" },
-                { id: "accent", labelZh: "重音", labelEn: "Accent", icon: "▲", descZh: "设为最大重音 (Vel 127)", descEn: "Toggle max accent velocity" },
-                { id: "ratchet", labelZh: "连音滚奏", labelEn: "Ratchet", icon: "⫸", descZh: "循环细分滚奏 (1x-4x)", descEn: "Cycle rolls / ratchet (1x-4x)" },
-                { id: "pitch", labelZh: "音高选择", labelEn: "Pitch", icon: "♩", descZh: "为贝斯/旋律点选音高", descEn: "Pick pitch for bass/synth" },
-                { id: "plocks", labelZh: "参数锁", labelEn: "P-Locks", icon: "⚙", descZh: "单步独立参数 (长按也可呼出)", descEn: "Step parameter locks (or long-press)" },
-              ] as const).map((tool) => {
-                const isActive = mobileEditMode === tool.id;
-                return (
-                  <button
-                    key={tool.id}
-                    onClick={() => setMobileEditMode(tool.id)}
-                    className={`px-2.5 py-1.5 rounded-lg font-['JetBrains_Mono'] text-xs font-semibold flex items-center gap-1.5 transition-all touch-manipulation ${
-                      isActive
-                        ? "bg-[#f5b73d] text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.4)] font-bold scale-[1.02]"
-                        : "bg-[#14151a] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d] hover:border-[#3a3e48]"
-                    }`}
-                    title={language === "zh" ? tool.descZh : tool.descEn}
-                  >
-                    <span className="text-[11px] leading-none opacity-80">{tool.icon}</span>
-                    <span className="text-[11px] whitespace-nowrap">{language === "zh" ? tool.labelZh : tool.labelEn}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="hidden lg:flex items-center text-[10px] text-[#5a5e68] font-['JetBrains_Mono'] pr-2 shrink-0">
-              {mobileEditMode === "step" && (language === "zh" ? "模式：点按切换开关，长按打开参数锁" : "Mode: Tap step to toggle, long-press for P-Locks")}
-              {mobileEditMode === "accent" && (language === "zh" ? "模式：点按步进切换重音 (127 / 90)" : "Mode: Tap step to toggle accent velocity (127 / 90)")}
-              {mobileEditMode === "ratchet" && (language === "zh" ? "模式：点按步进循环连音细分 (1x-4x)" : "Mode: Tap step to cycle ratchets (1x-4x)")}
-              {mobileEditMode === "pitch" && (language === "zh" ? "模式：点按贝斯/和弦步进选取音高" : "Mode: Tap bass/chords step to pick pitch")}
-              {mobileEditMode === "plocks" && (language === "zh" ? "模式：点按步进调出参数锁面板" : "Mode: Tap step to open step parameters menu")}
-            </div>
-          </div>
+          )}
 
           {/* 8 Tracks Sequencer Matrix (#tracks) */}
           <div
             ref={matrixContainerRef}
-            className="w-full space-y-1 overflow-x-auto pb-3 relative custom-sequencer-scroll select-none"
+            className="w-full space-y-1 overflow-x-auto pb-3 relative custom-sequencer-scroll select-none overscroll-x-contain"
           >
             {/* Step Indicator Ruler Header */}
             <div className="flex items-center gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-max">
@@ -2129,10 +2267,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
               {/* Dynamic Ruler Step Badges with Drag-to-Scroll */}
               <div
-                className={`flex-1 flex gap-1 relative cursor-grab select-none ${
+                className={`flex-1 flex gap-1 relative cursor-grab select-none touch-action-manipulation ${
                   isRulerDragging ? "cursor-grabbing" : ""
                 }`}
-                onMouseDown={handleRulerMouseDown}
+                onPointerDown={handleRulerPointerDown}
+                onPointerMove={handleRulerPointerMove}
+                onPointerUp={handleRulerPointerUp}
+                onPointerCancel={handleRulerPointerUp}
                 title={language === "zh" ? "按住左右拖拽可平移时间线" : "Click and drag to scroll timeline"}
               >
                 {Array.from({ length: stepCount }, (_, stepIdx) => {
@@ -2150,7 +2291,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     <div
                       key={stepIdx}
                       data-step-idx={stepIdx}
-                      className={`min-w-[28px] sm:min-w-[32px] flex-1 h-7 rounded flex flex-col items-center justify-center transition-all select-none border relative ${
+                      className={`min-w-[32px] sm:min-w-[36px] flex-1 h-8 rounded flex flex-col items-center justify-center transition-all select-none border relative touch-action-manipulation touch-hit-44 ${
                         isBarStart
                           ? "ml-3 sm:ml-4 border-l-2 border-l-[#f5b73d]/80"
                           : isGroupStart
@@ -2391,7 +2532,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onTouchMove={handleStepTouchMove}
                           onTouchEnd={handleStepTouchEnd}
                           onTouchCancel={handleStepTouchEnd}
-                          className={`min-w-[28px] sm:min-w-[32px] flex-1 h-[34px] border cursor-pointer relative transition-all duration-75 select-none touch-manipulation ${
+                          className={`min-w-[32px] sm:min-w-[36px] flex-1 h-11 sm:h-10 border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation touch-hit-44 ${
                             isBarStart
                               ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
                               : isGroupStart

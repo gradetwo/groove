@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Glowing amber dot */}
           <span className="w-2.5 h-2.5 rounded-full bg-[#f5b73d] shadow-[0_0_10px_#f5b73d] shrink-0 group-hover:scale-125 transition-transform" />
           <span className="font-[Space_Grotesk] font-bold text-base sm:text-lg tracking-[0.06em] text-[#e9e7e0]">
-            GROOVE&nbsp;ATLAS
+            GROOVE&nbsp;LAB
           </span>
         </div>
       </div>

@@ -1991,7 +1991,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
     },
     "rhythm_features": {
       "en": "Swinging two-beat or four-beat rhythm with bright banjo strums and syncopated snare work.",
-      "zh": "跳跃的二拍或四拍摇摆律动，伴随欢快班卓琴扫弦与切分小军鼓。"
+      "zh": "跳跃的二拍或四拍摇摆律动，伴随欢快班卓琴扫弦与切分军鼓。"
     },
     "drum_pattern": {
       "kick": {

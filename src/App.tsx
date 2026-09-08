@@ -2,18 +2,20 @@ import React, { useState, useEffect, useRef } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
 import { GlobalSearch } from "./components/GlobalSearch";
-import { StudioView } from "./views/StudioView";
-import { ChordProgressionsView } from "./views/ChordProgressionsView";
-import { GalaxyView } from "./views/GalaxyView";
-import { HorizontalTimelineView } from "./views/HorizontalTimelineView";
-import { VerticalTimelineView } from "./views/VerticalTimelineView";
-import { CompareView } from "./views/CompareView";
-import { ChallengeView } from "./views/ChallengeView";
-import { GenreDetailView } from "./views/GenreDetailView";
 import { Genre } from "./types/genre";
 import { ALL_GENRES, GENRES_MAP } from "./data/genres";
 import { AudioEngine } from "./audio/AudioEngine";
 import { Disc3, Sparkles } from "lucide-react";
+
+// Code splitting & lazy loading chunks for optimal performance
+const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
+const ChordProgressionsView = React.lazy(() => import("./views/ChordProgressionsView").then((m) => ({ default: m.ChordProgressionsView })));
+const GalaxyView = React.lazy(() => import("./views/GalaxyView").then((m) => ({ default: m.GalaxyView })));
+const HorizontalTimelineView = React.lazy(() => import("./views/HorizontalTimelineView").then((m) => ({ default: m.HorizontalTimelineView })));
+const VerticalTimelineView = React.lazy(() => import("./views/VerticalTimelineView").then((m) => ({ default: m.VerticalTimelineView })));
+const CompareView = React.lazy(() => import("./views/CompareView").then((m) => ({ default: m.CompareView })));
+const ChallengeView = React.lazy(() => import("./views/ChallengeView").then((m) => ({ default: m.ChallengeView })));
+const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then((m) => ({ default: m.GenreDetailView })));
 
 const MainApp: React.FC = () => {
   const { t, language } = useLanguage();
@@ -105,89 +107,100 @@ const MainApp: React.FC = () => {
         onSelectGenre={handleSelectGenre}
       />
 
-      {/* Main Viewport */}
+      {/* Main Viewport with Suspense fallback for async chunks */}
       <main className="flex-1 w-full pb-12">
-        {currentTab === "studio" && (
-          <StudioView
-            selectedGenre={selectedGenre}
-            onSelectGenre={(g) => setSelectedGenre(g)}
-            onViewDetail={(g) => {
-              setSelectedGenre(g);
-              setCurrentTab("detail");
-            }}
-            onAddToCompare={handleAddToCompare}
-            onAudioEngineReady={handleEngineReady}
-          />
-        )}
+        <React.Suspense
+          fallback={
+            <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-[#f5b73d]">
+              <div className="w-8 h-8 rounded-full border-2 border-[#f5b73d]/30 border-t-[#f5b73d] animate-spin" />
+              <span className="font-mono text-xs tracking-widest text-[#8b8f99] uppercase">
+                {language === "zh" ? "正在按需加载曲风模块..." : "Loading Chunk..."}
+              </span>
+            </div>
+          }
+        >
+          {currentTab === "studio" && (
+            <StudioView
+              selectedGenre={selectedGenre}
+              onSelectGenre={(g) => setSelectedGenre(g)}
+              onViewDetail={(g) => {
+                setSelectedGenre(g);
+                setCurrentTab("detail");
+              }}
+              onAddToCompare={handleAddToCompare}
+              onAudioEngineReady={handleEngineReady}
+            />
+          )}
 
-        {currentTab === "chords" && (
-          <ChordProgressionsView
-            onOpenStudioWithChords={(chords) => {
-              setCurrentTab("studio");
-            }}
-          />
-        )}
+          {currentTab === "chords" && (
+            <ChordProgressionsView
+              onOpenStudioWithChords={(chords) => {
+                setCurrentTab("studio");
+              }}
+            />
+          )}
 
-        {currentTab === "galaxy" && (
-          <GalaxyView
-            onSelectGenre={(g) => {
-              setSelectedGenre(g);
-              setCurrentTab("detail");
-            }}
-            onOpenStudio={handleOpenStudioWithGenre}
-          />
-        )}
+          {currentTab === "galaxy" && (
+            <GalaxyView
+              onSelectGenre={(g) => {
+                setSelectedGenre(g);
+                setCurrentTab("detail");
+              }}
+              onOpenStudio={handleOpenStudioWithGenre}
+            />
+          )}
 
-        {currentTab === "horizontal-timeline" && (
-          <HorizontalTimelineView
-            onSelectGenre={(g) => {
-              setSelectedGenre(g);
-              setCurrentTab("detail");
-            }}
-            onOpenStudio={handleOpenStudioWithGenre}
-          />
-        )}
+          {currentTab === "horizontal-timeline" && (
+            <HorizontalTimelineView
+              onSelectGenre={(g) => {
+                setSelectedGenre(g);
+                setCurrentTab("detail");
+              }}
+              onOpenStudio={handleOpenStudioWithGenre}
+            />
+          )}
 
-        {currentTab === "vertical-timeline" && (
-          <VerticalTimelineView
-            onSelectGenre={(g) => {
-              setSelectedGenre(g);
-              setCurrentTab("detail");
-            }}
-            onOpenStudio={handleOpenStudioWithGenre}
-          />
-        )}
+          {currentTab === "vertical-timeline" && (
+            <VerticalTimelineView
+              onSelectGenre={(g) => {
+                setSelectedGenre(g);
+                setCurrentTab("detail");
+              }}
+              onOpenStudio={handleOpenStudioWithGenre}
+            />
+          )}
 
-        {currentTab === "compare" && (
-          <CompareView
-            initialGenres={comparePool}
-            onSelectGenre={(g) => {
-              setSelectedGenre(g);
-              setCurrentTab("detail");
-            }}
-            onOpenStudio={handleOpenStudioWithGenre}
-          />
-        )}
+          {currentTab === "compare" && (
+            <CompareView
+              initialGenres={comparePool}
+              onSelectGenre={(g) => {
+                setSelectedGenre(g);
+                setCurrentTab("detail");
+              }}
+              onOpenStudio={handleOpenStudioWithGenre}
+            />
+          )}
 
-        {currentTab === "challenge" && (
-          <ChallengeView
-            onSelectGenre={(g) => {
-              setSelectedGenre(g);
-              setCurrentTab("detail");
-            }}
-            onOpenStudio={handleOpenStudioWithGenre}
-          />
-        )}
+          {currentTab === "challenge" && (
+            <ChallengeView
+              onSelectGenre={(g) => {
+                setSelectedGenre(g);
+                setCurrentTab("detail");
+              }}
+              onOpenStudio={handleOpenStudioWithGenre}
+            />
+          )}
 
-        {currentTab === "detail" && (
-          <GenreDetailView
-            genre={selectedGenre}
-            onBack={() => setCurrentTab("studio")}
-            onSelectGenre={(g) => setSelectedGenre(g)}
-            onOpenStudio={handleOpenStudioWithGenre}
-            onAddToCompare={handleAddToCompare}
-          />
-        )}
+          {currentTab === "detail" && (
+            <GenreDetailView
+              genre={selectedGenre}
+              onBack={() => setCurrentTab("studio")}
+              onSelectGenre={(g) => setSelectedGenre(g)}
+              onOpenStudio={handleOpenStudioWithGenre}
+              onAddToCompare={handleAddToCompare}
+            />
+          )}
+        </React.Suspense>
       </main>
 
       {/* Persistent Footer */}
@@ -196,7 +209,7 @@ const MainApp: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#f5b73d] shadow-[0_0_8px_#f5b73d]" />
             <span className="font-[Space_Grotesk] font-bold text-[#e9e7e0]">
-              GROOVE ATLAS
+              GROOVE LAB
             </span>
             <span>·</span>
             <span>159 Synthetic Genres & Realtime Audio Synthesis</span>

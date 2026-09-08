@@ -3005,7 +3005,7 @@ export const POP_RNB_GENRES: Genre[] = [
         "Layer 4-8 tracks of tight vocal harmonies with subtle stereo panning"
       ],
       "zh": [
-        "将小军鼓比标准量化网格刻意延后 10-25 毫秒营造经典后倾拖泥带水感",
+        "将军鼓比标准量化网格刻意延后 10-25 毫秒营造经典后倾拖泥带水感",
         "在温暖 Rhodes 电钢琴上弹奏延展的小九与大九和弦",
         "叠录 4-8 轨极其严谨的人声和声并做细腻立体声展开"
       ]

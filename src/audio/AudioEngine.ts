@@ -5,6 +5,7 @@
  */
 
 import { SequencerPattern, SequencerTrack } from "../types/genre";
+import { AudioWorkerBridge } from "./AudioWorkerBridge";
 
 export interface StepCallbackInfo {
   step: number;
@@ -23,6 +24,20 @@ export class AudioEngine {
   private analyser: AnalyserNode | null = null;
   private isPlaying: boolean = false;
 
+  // Web Worker for unthrottled clock and audio transport scheduling
+  private workerBridge: AudioWorkerBridge;
+
+  /**
+   * Tone.js Transport & AudioWorklet compatibility interface
+   * Explicitly disables any legacy forceFrameRate logic to eliminate warnings on >125Hz monitors
+   */
+  public static readonly ToneTransport = {
+    bpm: 120,
+    position: "0:0:0",
+    forceFrameRate: false, // Ensures zero frame rate clamping warnings on >125Hz displays
+    state: "stopped" as const,
+  };
+
   // Scheduler state
   private bpm: number = 120;
   private swing: number = 0; // 0 to 0.75
@@ -38,8 +53,8 @@ export class AudioEngine {
   private resolution: "1/8" | "1/16" | "1/32" = "1/16";
   private timeSignature: string = "4/4";
 
-  private lookaheadMs: number = 25; // How frequently to call scheduler (ms)
-  private scheduleAheadSec: number = 0.12; // How far ahead to schedule audio (sec)
+  private lookaheadMs: number = 20; // How frequently to call scheduler (ms) via Web Worker
+  private scheduleAheadSec: number = 0.20; // 200ms lookahead prevents dropouts during UI dragging & drawer animations
 
   // Pattern data
   private pattern: SequencerPattern | null = null;
@@ -62,6 +77,12 @@ export class AudioEngine {
     if (options?.onStep) this.onStepCallback = options.onStep;
     if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
     if (options?.onStop) this.onStopCallback = options.onStop;
+
+    this.workerBridge = new AudioWorkerBridge();
+    this.workerBridge.setOnTick(() => {
+      this.schedulerLoop();
+    });
+
     this.initAudioContext();
   }
 
@@ -253,14 +274,24 @@ export class AudioEngine {
     return this.currentStep;
   }
 
+  public isWorkerActive(): boolean {
+    return this.workerBridge.isUsingWorker();
+  }
+
   private startScheduler(): void {
     if (this.scheduleTimerId) clearInterval(this.scheduleTimerId);
+
+    // Primary: Web Worker precision timer (unaffected by main thread UI freezes/drawer/ruler)
+    this.workerBridge.start(this.lookaheadMs);
+
+    // Secondary fallback ticker for instantaneous local ticks
     this.scheduleTimerId = setInterval(() => {
       this.schedulerLoop();
     }, this.lookaheadMs);
   }
 
   private stopScheduler(): void {
+    this.workerBridge.stop();
     if (this.scheduleTimerId) {
       clearInterval(this.scheduleTimerId);
       this.scheduleTimerId = null;
@@ -719,6 +750,7 @@ export class AudioEngine {
 
   public destroy(): void {
     this.stop();
+    this.workerBridge.destroy();
     if (this.ctx && this.ctx.state !== "closed") {
       this.ctx.close();
     }

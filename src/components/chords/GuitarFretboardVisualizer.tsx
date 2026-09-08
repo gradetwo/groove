@@ -1,5 +1,6 @@
 import React from "react";
 import { getGuitarFretboardChord, ChordQuality, GUITAR_TUNING_MIDI, midiToNoteName } from "../../utils/chordTheory";
+import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
 
 interface GuitarFretboardVisualizerProps {
   rootNote: string;
@@ -19,8 +20,15 @@ export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps>
   const stringNames = ["6 (E)", "5 (A)", "4 (D)", "3 (G)", "2 (B)", "1 (e)"];
   const fretMarkers = [3, 5, 7, 9, 12];
 
+  const handleStringTap = (midi: number) => {
+    triggerHaptic(HapticPatterns.tap);
+    if (onStringClick) {
+      onStringClick(midi);
+    }
+  };
+
   return (
-    <div className="w-full bg-[#0e1117] rounded-xl p-3 border border-[#23262d] shadow-inner select-none overflow-x-auto">
+    <div className="w-full bg-[#0e1117] rounded-xl p-3 border border-[#23262d] shadow-inner select-none overflow-x-auto overscroll-contain-all">
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-2 text-xs text-[#8b8f99]">
           <span className="w-2 h-2 rounded-full bg-[#e5a93c] shadow-[0_0_6px_#e5a93c]" />
@@ -100,9 +108,9 @@ export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps>
                 {/* Open String Action Zone */}
                 <button
                   type="button"
-                  onClick={() => onStringClick && activeMidi && onStringClick(activeMidi)}
+                  onClick={() => activeMidi && handleStringTap(activeMidi)}
                   disabled={isMuted}
-                  className={`w-8 h-6 flex items-center justify-center rounded border border-[#2b2420] text-[10px] font-mono transition-all mr-1 ${
+                  className={`w-8 h-6 flex items-center justify-center rounded border border-[#2b2420] text-[10px] font-mono transition-all mr-1 touch-action-none select-none ${
                     isOpen 
                       ? "bg-[#4ad8c8]/20 border-[#4ad8c8] text-[#4ad8c8] font-bold shadow-[0_0_8px_rgba(74,216,200,0.4)]"
                       : isMuted
@@ -114,7 +122,7 @@ export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps>
                 </button>
 
                 {/* Fretted Neck Grid */}
-                <div className="relative flex-1 flex items-center h-full">
+                <div className="relative flex-1 flex items-center h-full touch-action-none">
                   {/* Metal String Wire */}
                   <div 
                     className="absolute inset-x-0 bg-gradient-to-r from-[#d8b988] via-[#e5e3dc] to-[#c2b9a7] shadow-[0_1px_2px_rgba(0,0,0,0.8)] pointer-events-none"
@@ -131,8 +139,8 @@ export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps>
                       <button
                         key={f}
                         type="button"
-                        onClick={() => onStringClick && onStringClick(fretMidi)}
-                        className="relative flex-1 h-6 border-r border-[#695d52]/60 hover:bg-white/5 flex items-center justify-center transition-colors group/fret"
+                        onClick={() => handleStringTap(fretMidi)}
+                        className="relative flex-1 h-6 border-r border-[#695d52]/60 hover:bg-white/5 flex items-center justify-center transition-colors group/fret touch-action-none select-none"
                       >
                         {isCurrentFret && (
                           <div className="w-5 h-5 rounded-full bg-[#f5b73d] text-zinc-950 font-bold text-[10px] flex items-center justify-center shadow-[0_0_12px_rgba(245,183,61,0.9)] animate-pulse z-20">

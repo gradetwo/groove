@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { SequencerTrack } from "../../types/genre";
 import { Sliders, Sparkles, TrendingUp, TrendingDown, X } from "lucide-react";
+import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
 
 interface VelocityLaneProps {
   tracks: SequencerTrack[];
@@ -58,6 +59,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
   const handlePointerDown = (stepIdx: number, e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsPainting(true);
+    triggerHaptic(HapticPatterns.slider);
     const rect = e.currentTarget.getBoundingClientRect();
     updateFromPointer(e, stepIdx, rect);
   };
@@ -69,6 +71,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
   };
 
   const handleTouchStart = (stepIdx: number, e: React.TouchEvent<HTMLDivElement>) => {
+    triggerHaptic(HapticPatterns.slider);
     const touch = e.touches[0];
     const rect = e.currentTarget.getBoundingClientRect();
     const clientY = touch.clientY;

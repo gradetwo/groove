@@ -54,6 +54,13 @@ export const DICTIONARY: Translations = {
   stop: { en: "Stop", zh: "停止" },
   clear_pattern: { en: "Clear", zh: "清空" },
   reset_pattern: { en: "Reset to Preset", zh: "重置预设" },
+  restore: { en: "Reset to preset", zh: "已重置为预设" },
+  undo: { en: "Undo", zh: "撤销" },
+  redo: { en: "Redo", zh: "重做" },
+  undo_tip: { en: "Undo (Ctrl+Z / Cmd+Z)", zh: "撤销 (Ctrl+Z / Cmd+Z)" },
+  redo_tip: { en: "Redo (Ctrl+Shift+Z / Cmd+Shift+Z)", zh: "重做 (Ctrl+Shift+Z / Cmd+Shift+Z)" },
+  undo_done: { en: "Undone", zh: "已撤销" },
+  redo_done: { en: "Redone", zh: "已重做" },
   export_midi: { en: "Export MIDI", zh: "导出 MIDI" },
   share_groove: { en: "Share Pattern", zh: "分享律动" },
   share_copied: { en: "Share link copied to clipboard!", zh: "分享链接已复制到剪贴板！" },
@@ -154,6 +161,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+    }
+  }, [language]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

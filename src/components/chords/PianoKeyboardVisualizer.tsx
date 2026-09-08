@@ -1,5 +1,6 @@
 import React from "react";
 import { midiToNoteName } from "../../utils/chordTheory";
+import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
 
 interface PianoKeyboardVisualizerProps {
   activeNotes: number[]; // Array of MIDI note numbers
@@ -33,8 +34,15 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
 
   const whiteKeys = keys.filter(k => !k.isBlack);
 
+  const handleKeyTap = (midi: number) => {
+    triggerHaptic(HapticPatterns.tap);
+    if (onKeyClick) {
+      onKeyClick(midi);
+    }
+  };
+
   return (
-    <div className="w-full bg-[#0a0d14] rounded-xl p-3 border border-[#23262d] shadow-inner select-none overflow-x-auto">
+    <div className="w-full bg-[#0a0d14] rounded-xl p-3 border border-[#23262d] shadow-inner select-none overflow-x-auto overscroll-contain-all">
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-2 text-xs text-[#8b8f99]">
           <span className="w-2 h-2 rounded-full bg-[#f5b73d] shadow-[0_0_6px_#f5b73d]" />
@@ -58,7 +66,7 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
       </div>
 
       {/* Keyboard Container */}
-      <div className="relative h-28 sm:h-32 flex justify-center min-w-[560px]">
+      <div className="relative h-28 sm:h-32 flex justify-center min-w-[560px] touch-action-none">
         {/* White Keys */}
         <div className="flex w-full h-full">
           {whiteKeys.map((k) => {
@@ -80,8 +88,8 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
               <button
                 key={k.midi}
                 type="button"
-                onClick={() => onKeyClick && onKeyClick(k.midi)}
-                className={`relative flex-1 h-full rounded-b border border-zinc-400/40 transition-colors flex flex-col justify-end items-center pb-1.5 text-[10px] cursor-pointer active:brightness-90 ${bgColor}`}
+                onClick={() => handleKeyTap(k.midi)}
+                className={`relative flex-1 h-full rounded-b border border-zinc-400/40 transition-colors flex flex-col justify-end items-center pb-1.5 text-[10px] cursor-pointer active:brightness-90 touch-action-none select-none ${bgColor}`}
               >
                 {k.note === "C" && (
                   <span className="absolute bottom-5 text-[8px] font-mono text-zinc-400">
@@ -130,9 +138,9 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
               <div key={bk.midi} className="relative flex-1 flex justify-center">
                 <button
                   type="button"
-                  onClick={() => onKeyClick && onKeyClick(bk.midi)}
+                  onClick={() => handleKeyTap(bk.midi)}
                   style={{ left: "50%" }}
-                  className={`absolute -translate-x-1/2 top-0 w-3/5 h-[62%] rounded-b-sm border border-black/80 pointer-events-auto transition-colors flex flex-col justify-end items-center pb-1 text-[9px] cursor-pointer active:brightness-90 z-20 ${bkColor}`}
+                  className={`absolute -translate-x-1/2 top-0 w-3/5 h-[62%] rounded-b-sm border border-black/80 pointer-events-auto transition-colors flex flex-col justify-end items-center pb-1 text-[9px] cursor-pointer active:brightness-90 z-20 touch-action-none select-none ${bkColor}`}
                 >
                   <span className="font-mono leading-none">
                     {bk.note}
