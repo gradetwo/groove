@@ -1,7 +1,26 @@
 {
-  "version": "1.3.5",
+  "version": "1.3.6",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.6",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.3.6 首帧语言同步初始化与网页标题双语持久化",
+        "en": "v1.3.6 Synchronous First-Frame Language Init & Bilingual Title Sync"
+      },
+      "highlights": [
+        {
+          "zh": "首帧语言防闪烁同步解析（P1-12）：在 React 首帧渲染前同步读取 localStorage 或系统语言，消除英文与国际用户首屏闪烁中文文本（FOUC）的体验缺陷，避免多余二次重渲染",
+          "en": "FOUC elimination via synchronous language resolution: read localStorage/navigator before first React render to prevent 1-frame Chinese flash for international users and redundant mount re-renders"
+        },
+        {
+          "zh": "HTML 根标签与标题动态绑定：在 index.html 注入首屏同步轻量脚本并在语言切换时动态同步 document.title 与 lang 属性",
+          "en": "Dynamic HTML lang & title binding: synchronized document.title and document.documentElement.lang on bootstrap and language toggles"
+        }
+      ]
+    },
     {
       "version": "1.3.5",
       "date": "2026-09-11",

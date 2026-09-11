@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0" />
     <title>GROOVE LAB</title>
+    <!-- Inline first-frame language sync to prevent FOUC (P1-12) -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem("groove_language");
+          var isZh = saved === "zh" || (!saved && (navigator.language || "").toLowerCase().startsWith("zh"));
+          document.documentElement.lang = isZh ? "zh-CN" : "en";
+          document.title = isZh ? "GROOVE LAB | 音乐曲风探索与律动工作台" : "GROOVE LAB | Music Genre Learning & Sequencer";
+        } catch (e) {}
+      })();
+    </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />

@@ -167,28 +167,50 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>("zh");
+export function getInitialLanguage(): Language {
+  const storage = typeof window !== "undefined" && window.localStorage
+    ? window.localStorage
+    : typeof localStorage !== "undefined"
+    ? localStorage
+    : null;
 
-  useEffect(() => {
-    // 1. Check local storage
-    const saved = localStorage.getItem("groove_language") as Language | null;
-    if (saved === "en" || saved === "zh") {
-      setLanguageState(saved);
-    } else {
-      // 2. Check browser language
-      const navLang = navigator.language || (navigator as any).userLanguage || "";
-      if (navLang.toLowerCase().startsWith("zh")) {
-        setLanguageState("zh");
-      } else {
-        setLanguageState("en");
+  if (storage) {
+    try {
+      const saved = storage.getItem("groove_language") as Language | null;
+      if (saved === "en" || saved === "zh") {
+        return saved;
+      }
+    } catch {
+      // Ignore localStorage read errors
+    }
+  }
+
+  const nav = typeof navigator !== "undefined" ? navigator : null;
+  if (nav) {
+    const navLang = nav.language || (nav as any).userLanguage || "";
+    const resolved: Language = navLang.toLowerCase().startsWith("zh") ? "zh" : "en";
+    if (storage) {
+      try {
+        storage.setItem("groove_language", resolved);
+      } catch {
+        // Ignore localStorage write errors
       }
     }
-  }, []);
+    return resolved;
+  }
+
+  return "zh";
+}
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+      document.title = language === "zh" 
+        ? "GROOVE LAB | 音乐曲风探索与律动工作台" 
+        : "GROOVE LAB | Music Genre Learning & Sequencer";
     }
   }, [language]);
 
