@@ -24,6 +24,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 
 export type MobileEditMode = "step" | "accent" | "ratchet" | "pitch" | "plocks";
 
@@ -89,6 +90,12 @@ export interface ToolbarProps {
   onToggleMetronome?: () => void;
   onToggleCountIn?: () => void;
   onTapTempo?: () => void;
+  drumKit?: DrumKitType;
+  onChangeDrumKit?: (kit: DrumKitType) => void;
+  isRecordArmed?: boolean;
+  onToggleRecordArmed?: () => void;
+  effectsRackState?: EffectsRackState;
+  onChangeEffectsRack?: (state: Partial<EffectsRackState>) => void;
 }
 
 export const Toolbar = memo<ToolbarProps>(function Toolbar({
@@ -116,6 +123,12 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   blindCompare = false,
   isMetronome = false,
   isCountIn = false,
+  drumKit = "808",
+  onChangeDrumKit,
+  isRecordArmed = false,
+  onToggleRecordArmed,
+  effectsRackState,
+  onChangeEffectsRack,
   onTogglePlay,
   onChangeBpm,
   onChangeSwing,
@@ -280,6 +293,44 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             >
               <span className="font-['JetBrains_Mono'] font-bold text-[10px]">1-4</span>
             </button>
+          )}
+
+          {/* Live Recording Toggle (P5-05) */}
+          {onToggleRecordArmed && (
+            <button
+              type="button"
+              onClick={onToggleRecordArmed}
+              className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-colors shrink-0 ${
+                isRecordArmed
+                  ? "bg-red-500/25 border-red-500 text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.35)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={isZh ? "实时录制模式开关 (录制打击垫/键盘触发)" : "Toggle Live Recording (Record triggers into grid)"}
+              aria-label="Live Recording"
+            >
+              <div className={`w-2 h-2 rounded-full ${isRecordArmed ? "bg-red-500 animate-ping" : "bg-red-500/70"}`} />
+              <span>REC</span>
+            </button>
+          )}
+
+          {/* Drum Kit Model Selector (P5-02) */}
+          {onChangeDrumKit && (
+            <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+              <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none hidden sm:inline">
+                {isZh ? "鼓机" : "KIT"}
+              </span>
+              <select
+                value={drumKit}
+                onChange={(e) => onChangeDrumKit(e.target.value as DrumKitType)}
+                className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                aria-label={isZh ? "选择硬件鼓机模型" : "Select Drum Machine Model"}
+              >
+                <option value="808" className="bg-panel text-text">TR-808 (Analog)</option>
+                <option value="909" className="bg-panel text-text">TR-909 (Punch)</option>
+                <option value="acoustic" className="bg-panel text-text">Acoustic (Warm)</option>
+                <option value="cyber" className="bg-panel text-text">Cyber (Wave)</option>
+              </select>
+            </div>
           )}
 
           {/* Meter Select Dropdown */}
@@ -828,6 +879,71 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               +2 Bars
             </button>
           </div>
+
+          {/* Master DSP Effects Rack Controls (P5-04) */}
+          {effectsRackState && onChangeEffectsRack && (
+            <div className="flex items-center gap-1.5 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
+              <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-0.5 whitespace-nowrap">
+                {isZh ? "母带DSP:" : "FX:"}
+              </span>
+
+              {/* Filter */}
+              <button
+                type="button"
+                onClick={() => onChangeEffectsRack({ filterEnabled: !effectsRackState.filterEnabled })}
+                className={`h-6 px-2 rounded text-[10px] font-['JetBrains_Mono'] border transition-colors ${
+                  effectsRackState.filterEnabled
+                    ? "bg-accent/20 border-accent text-accent font-bold"
+                    : "bg-[#17181c] border-line text-text-sub hover:text-text"
+                }`}
+                title={isZh ? "高阶谐振滤波器" : "Resonant Filter"}
+              >
+                FLT
+              </button>
+
+              {/* Saturation */}
+              <button
+                type="button"
+                onClick={() => onChangeEffectsRack({ saturationEnabled: !effectsRackState.saturationEnabled })}
+                className={`h-6 px-2 rounded text-[10px] font-['JetBrains_Mono'] border transition-colors ${
+                  effectsRackState.saturationEnabled
+                    ? "bg-amber-500/20 border-amber-500 text-amber-400 font-bold"
+                    : "bg-[#17181c] border-line text-text-sub hover:text-text"
+                }`}
+                title={isZh ? "磁带饱和温暖感 (Tanh Soft Clip)" : "Tape Saturation"}
+              >
+                DRIVE
+              </button>
+
+              {/* Chorus */}
+              <button
+                type="button"
+                onClick={() => onChangeEffectsRack({ chorusEnabled: !effectsRackState.chorusEnabled })}
+                className={`h-6 px-2 rounded text-[10px] font-['JetBrains_Mono'] border transition-colors ${
+                  effectsRackState.chorusEnabled
+                    ? "bg-cyan-500/20 border-cyan-500 text-cyan-400 font-bold"
+                    : "bg-[#17181c] border-line text-text-sub hover:text-text"
+                }`}
+                title={isZh ? "立体声合唱空间化" : "Stereo Chorus"}
+              >
+                CHORUS
+              </button>
+
+              {/* Bitcrusher */}
+              <button
+                type="button"
+                onClick={() => onChangeEffectsRack({ bitcrusherEnabled: !effectsRackState.bitcrusherEnabled })}
+                className={`h-6 px-2 rounded text-[10px] font-['JetBrains_Mono'] border transition-colors ${
+                  effectsRackState.bitcrusherEnabled
+                    ? "bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-400 font-bold"
+                    : "bg-[#17181c] border-line text-text-sub hover:text-text"
+                }`}
+                title={isZh ? "低比特数字失真 (Bitcrusher)" : "Lo-Fi Bitcrusher"}
+              >
+                LO-FI
+              </button>
+            </div>
+          )}
 
           {/* Pan Navigation */}
           <div className="flex items-center gap-1.5 ml-auto text-text-dim">

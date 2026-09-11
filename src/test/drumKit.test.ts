@@ -1,0 +1,161 @@
+import { describe, it, expect, vi } from "vitest";
+import {
+  DrumKitType,
+  synthesizeKick,
+  synthesizeSnare,
+  synthesizeHiHat,
+  synthesizePercussion,
+} from "../audio/DrumKitModels";
+
+// Lightweight Web Audio API Mock for Node/Vitest
+function createMockAudioContext() {
+  const createdNodes: any[] = [];
+
+  const createAudioParam = (initial = 0) => {
+    return {
+      value: initial,
+      setValueAtTime: vi.fn(),
+      exponentialRampToValueAtTime: vi.fn(),
+      linearRampToValueAtTime: vi.fn(),
+      cancelScheduledValues: vi.fn(),
+    };
+  };
+
+  const createNode = (type: string) => {
+    const node: any = {
+      _type: type,
+      connect: vi.fn((dest) => dest),
+      disconnect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+
+    if (type === "oscillator") {
+      node.type = "sine";
+      node.frequency = createAudioParam(440);
+      node.detune = createAudioParam(0);
+    } else if (type === "gain") {
+      node.gain = createAudioParam(1.0);
+    } else if (type === "biquadFilter") {
+      node.type = "lowpass";
+      node.frequency = createAudioParam(1000);
+      node.Q = createAudioParam(1.0);
+      node.gain = createAudioParam(0.0);
+    } else if (type === "bufferSource") {
+      node.buffer = null;
+    }
+
+    createdNodes.push(node);
+    return node;
+  };
+
+  const ctx: any = {
+    currentTime: 0.1,
+    sampleRate: 44100,
+    createOscillator: vi.fn(() => createNode("oscillator")),
+    createGain: vi.fn(() => createNode("gain")),
+    createBiquadFilter: vi.fn(() => createNode("biquadFilter")),
+    createBufferSource: vi.fn(() => createNode("bufferSource")),
+    createBuffer: vi.fn((channels, length, sampleRate) => ({
+      numberOfChannels: channels,
+      length,
+      sampleRate,
+      getChannelData: vi.fn(() => new Float32Array(length)),
+    })),
+    destination: { _type: "destination" },
+  };
+
+  const mockNoiseBuffer = ctx.createBuffer(1, 44100, 44100);
+
+  return { ctx, createdNodes, mockNoiseBuffer };
+}
+
+describe("Hardware Drum Machine Models (P5-02)", () => {
+  const kits: DrumKitType[] = ["808", "909", "acoustic", "cyber"];
+
+  kits.forEach((kit) => {
+    describe(`Drum Kit Model: ${kit.toUpperCase()}`, () => {
+      it(`synthesizes Kick drum for ${kit} without throwing and schedules sources`, () => {
+        const { ctx, mockNoiseBuffer } = createMockAudioContext();
+        const dest = ctx.createGain();
+
+        const result = synthesizeKick(ctx, dest, 0.5, 0.9, 0, kit, mockNoiseBuffer);
+
+        expect(result).toBeDefined();
+        expect(result.sources.length).toBeGreaterThan(0);
+        expect(result.gains.length).toBeGreaterThan(0);
+        expect(result.stopTime).toBeGreaterThan(0.5);
+
+        // Ensure all scheduled sources received start() and stop() calls
+        result.sources.forEach((src) => {
+          expect(src.start).toHaveBeenCalledWith(0.5);
+          expect(src.stop).toHaveBeenCalled();
+        });
+      });
+
+      it(`synthesizes Snare drum for ${kit} with tone and noise components`, () => {
+        const { ctx, mockNoiseBuffer } = createMockAudioContext();
+        const dest = ctx.createGain();
+
+        const result = synthesizeSnare(ctx, dest, 0.5, 0.85, 0, kit, mockNoiseBuffer);
+
+        expect(result).toBeDefined();
+        expect(result.sources.length).toBeGreaterThan(0);
+        expect(result.stopTime).toBeGreaterThan(0.5);
+      });
+
+      it(`synthesizes Hi-Hat (closed, open, triplet) for ${kit}`, () => {
+        const { ctx, mockNoiseBuffer } = createMockAudioContext();
+        const dest = ctx.createGain();
+
+        // StepVal: 1 = closed, 2 = open, 3 = triplet
+        [1, 2, 3].forEach((stepVal) => {
+          const result = synthesizeHiHat(ctx, dest, 0.5, 0.8, 0, kit, stepVal, 0.125, 0.8, mockNoiseBuffer);
+          expect(result).toBeDefined();
+          expect(result.sources.length).toBeGreaterThan(0);
+          expect(result.stopTime).toBeGreaterThan(0.5);
+        });
+      });
+
+      it(`synthesizes Percussion for ${kit}`, () => {
+        const { ctx, mockNoiseBuffer } = createMockAudioContext();
+        const dest = ctx.createGain();
+
+        const result = synthesizePercussion(ctx, dest, 0.5, 0.75, 0, kit, mockNoiseBuffer);
+
+        expect(result).toBeDefined();
+        expect(result.sources.length).toBeGreaterThan(0);
+        expect(result.stopTime).toBeGreaterThan(0.5);
+      });
+    });
+  });
+
+  describe("808 Specific Circuit Modeling", () => {
+    it("configures deep Bridged-T oscillator pitch sweep down to 42Hz", () => {
+      const { ctx, createdNodes, mockNoiseBuffer } = createMockAudioContext();
+      const dest = ctx.createGain();
+
+      synthesizeKick(ctx, dest, 0.1, 1.0, 0, "808", mockNoiseBuffer);
+
+      const osc = createdNodes.find((n) => n._type === "oscillator");
+      expect(osc).toBeDefined();
+      expect(osc.type).toBe("sine");
+      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(160, 0.1);
+      expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(42, 0.38);
+    });
+  });
+
+  describe("909 Specific Attack Transient & Punch", () => {
+    it("features punchy attack sweep down to 48Hz", () => {
+      const { ctx, createdNodes, mockNoiseBuffer } = createMockAudioContext();
+      const dest = ctx.createGain();
+
+      synthesizeKick(ctx, dest, 0.1, 1.0, 0, "909", mockNoiseBuffer);
+
+      const osc = createdNodes.find((n) => n._type === "oscillator");
+      expect(osc).toBeDefined();
+      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(260, 0.1);
+      expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(48, expect.closeTo(0.15, 2));
+    });
+  });
+});

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Check } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
-import { AudioEngine } from "../audio/AudioEngine";
+import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
+import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { downloadMidiFile } from "../audio/MidiExporter";
 import { decodeSharedSequencer, getShareUrl } from "../audio/SequencerUrlShare";
 import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../audio/WavExporter";
@@ -192,6 +193,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [isKeyboardMode, setIsKeyboardMode] = useState(false);
   const [midiDevices, setMidiDevices] = useState<MidiDevice[]>([]);
 
+  // Phase 5 States (P5-01 ~ P5-05)
+  const [drumKit, setDrumKit] = useState<DrumKitType>("808");
+  const [isRecordArmed, setIsRecordArmed] = useState<boolean>(false);
+  const [effectsRackState, setEffectsRackState] = useState<EffectsRackState>(DEFAULT_FX_STATE);
+
   // Pointer drag painting & event delegation refs (P2-02 & P2-05)
   const isPointerDownRef = useRef(false);
   const dragValRef = useRef<number | null>(null);
@@ -319,6 +325,35 @@ export const StudioView: React.FC<StudioViewProps> = ({
     engine.setLoopRange(seqState.loopRange);
     engine.setMetronome(seqState.isMetronome);
     engine.setCountIn(seqState.isCountIn);
+    engine.setDrumKit(drumKit);
+    engine.setRecordArmed(isRecordArmed);
+
+    // P5-05: Real-time Live Recording Callback
+    engine.getLiveRecorder().setOnQuantizedStep((rec) => {
+      dispatch({
+        type: "SET_STEP",
+        trackIdx: rec.trackIdx,
+        stepIdx: rec.stepIdx,
+        value: rec.stepVal,
+      });
+      if (rec.velocity !== undefined) {
+        dispatch({
+          type: "SET_VELOCITY",
+          trackIdx: rec.trackIdx,
+          stepIdx: rec.stepIdx,
+          velocity: Math.round(rec.velocity * 127),
+        });
+      }
+      if (rec.pitch > 0) {
+        dispatch({
+          type: "SET_PITCH",
+          trackIdx: rec.trackIdx,
+          stepIdx: rec.stepIdx,
+          pitch: rec.pitch,
+        });
+      }
+      triggerHaptic(HapticPatterns.accent);
+    });
 
     const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
@@ -347,6 +382,45 @@ export const StudioView: React.FC<StudioViewProps> = ({
       engineRef.current.setCountIn(seqState.isCountIn);
     }
   }, [seqState.isCountIn]);
+
+  // Sync Drum Kit Model to AudioEngine (P5-02)
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setDrumKit(drumKit);
+    }
+  }, [drumKit]);
+
+  // Sync Live Recording Arm state to AudioEngine (P5-05)
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setRecordArmed(isRecordArmed);
+    }
+  }, [isRecordArmed]);
+
+  // Sync Master DSP Effects Rack to AudioEngine (P5-04)
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setMasterFilter(
+        effectsRackState.filterEnabled,
+        effectsRackState.filterCutoff,
+        effectsRackState.filterQ,
+        effectsRackState.filterType
+      );
+      engineRef.current.setMasterSaturation(
+        effectsRackState.saturationEnabled,
+        effectsRackState.saturationDrive
+      );
+      engineRef.current.setMasterChorus(
+        effectsRackState.chorusEnabled,
+        effectsRackState.chorusMix,
+        effectsRackState.chorusRate
+      );
+      engineRef.current.setMasterBitcrusher(
+        effectsRackState.bitcrusherEnabled,
+        effectsRackState.bitDepth
+      );
+    }
+  }, [effectsRackState]);
 
   // Tap tempo calculator (P3-07)
   const tapTimestampsRef = useRef<number[]>([]);
@@ -948,6 +1022,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       const result = await exportMasterWav(pattern, currentGenre.id, {
         bpm,
         swing,
+        drumKit,
       });
       triggerWavDownload(result.blob, result.filename);
       showToast(isZh ? `母带 WAV 导出完成: ${result.filename} ✓` : `Exported Master WAV: ${result.filename} ✓`);
@@ -956,7 +1031,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     } finally {
       setIsExportingAudio(false);
     }
-  }, [pattern, currentGenre.id, bpm, swing, isZh, showToast]);
+  }, [pattern, currentGenre.id, bpm, swing, drumKit, isZh, showToast]);
 
   const handleExportStems = useCallback(async () => {
     try {
@@ -965,6 +1040,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       const result = await exportStemsZip(pattern, currentGenre.id, {
         bpm,
         swing,
+        drumKit,
       });
       triggerWavDownload(result.blob, result.filename);
       showToast(isZh ? `分轨打包导出完成: ${result.filename} ✓` : `Exported Stems ZIP: ${result.filename} ✓`);
@@ -973,7 +1049,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     } finally {
       setIsExportingAudio(false);
     }
-  }, [pattern, currentGenre.id, bpm, swing, isZh, showToast]);
+  }, [pattern, currentGenre.id, bpm, swing, drumKit, isZh, showToast]);
 
   const handleImportMidi = useCallback(
     async (file: File) => {
@@ -1229,6 +1305,29 @@ export const StudioView: React.FC<StudioViewProps> = ({
             blindCompare={seqState.blindTestMode}
             isMetronome={seqState.isMetronome}
             isCountIn={seqState.isCountIn}
+            drumKit={drumKit}
+            onChangeDrumKit={(k) => {
+              setDrumKit(k);
+              showToast(isZh ? `已切换硬件鼓机: ${k.toUpperCase()}` : `Switched drum kit: ${k.toUpperCase()}`);
+            }}
+            isRecordArmed={isRecordArmed}
+            onToggleRecordArmed={() => {
+              const next = !isRecordArmed;
+              setIsRecordArmed(next);
+              showToast(
+                isZh
+                  ? next
+                    ? "🔴 实时录制已就绪 (点击打击垫或键盘即时写入网格)"
+                    : "实时录制已关闭"
+                  : next
+                  ? "🔴 Live recording armed"
+                  : "Live recording disarmed"
+              );
+            }}
+            effectsRackState={effectsRackState}
+            onChangeEffectsRack={(partial) => {
+              setEffectsRackState((prev) => ({ ...prev, ...partial }));
+            }}
             onTogglePlay={handleTogglePlay}
             onChangeBpm={(b) => commit({ type: "SET_BPM", bpm: b })}
             onChangeSwing={(s) => commit({ type: "SET_SWING", swing: s })}

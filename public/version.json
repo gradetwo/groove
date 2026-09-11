@@ -1,7 +1,42 @@
 {
-  "version": "1.13.0",
+  "version": "1.14.0",
   "releaseDate": "2026-09-12",
   "changelog": [
+    {
+      "version": "1.14.0",
+      "date": "2026-09-12",
+      "category": "audio",
+      "title": {
+        "zh": "v1.14.0 Phase 5 声音引擎重构：AudioWorklet 零抖动时钟、硬件鼓机物理建模、4复音合成器、DSP母带效果器架与实时录制",
+        "en": "v1.14.0 Phase 5 Sound Engine Overhaul: AudioWorklet Clock, Hardware Drum Kits, 4-Voice PolySynth, Master DSP Rack & Live Recording"
+      },
+      "highlights": [
+        {
+          "zh": "AudioWorklet 样本级高精度零抖动时钟（P5-01）：自研独立线程 AudioWorkletProcessor 采样计数器，彻底根除主线程 UI 渲染引起的调度卡顿，支持无缝优雅降级至专用定时 Web Worker",
+          "en": "AudioWorklet sample-accurate zero-jitter clock (P5-01): dedicated AudioWorkletProcessor sample counter eliminating UI render jitter with seamless Web Worker fallback"
+        },
+        {
+          "zh": "四大硬件经典鼓机电路物理建模（P5-02）：深度模拟 TR-808 (桥式 T 型网络低音共振与六振荡器非谐波金属铜钹)、TR-909 (冲头打击瞬态与双脉冲拍手)、Vintage Acoustic (天然木质共鸣箱体与沙带嗡鸣)、Cyber Wave (高饱和现代波表)",
+          "en": "Hardware drum machine physical modeling (P5-02): authentic circuit modeling for TR-808, TR-909, Vintage Acoustic, and Cyber Wave kits"
+        },
+        {
+          "zh": "4 复音双振荡器合成器引擎（P5-03）：支持独立双波形混合、音分级微失谐、4 阶段 ADSR 振幅包络与动态谐振低通滤波扫频，预置 Analog Lead、Warm Pad、Deep Pluck、Acid 303 Bass",
+          "en": "4-voice polyphonic dual-oscillator synth (P5-03): dual-oscillator detuning, 4-stage ADSR amp envelope, and resonant lowpass sweep with built-in presets"
+        },
+        {
+          "zh": "母带级专业 DSP 效果器架（P5-04）：集成可调 Q 值的双二阶谐振滤波器 (FLT)、Tanh 磁带饱和温暖感模拟 (DRIVE)、多级正交调制立体声合唱 (CHORUS) 与阶梯量化数字降比特 (LO-FI)",
+          "en": "Master DSP effects rack (P5-04): Resonant Biquad Filter, Tanh tape saturation warm overdrive, quadrature stereo chorus, and stepped Lo-Fi bitcrusher"
+        },
+        {
+          "zh": "实时演奏录音与自适应网格量化（P5-05）：支持在播放过程中通过打击垫或键盘实时录音 [REC]，自动量化捕获事件至最近步进网格并生成可撤销工程快照",
+          "en": "Live recording & adaptive grid quantizer (P5-05): real-time [REC] mode capturing live pad/keyboard triggers with automatic grid quantization and undo history"
+        },
+        {
+          "zh": "离线 WAV 母带与分轨 ZIP 深度升级：离线渲染器全量集成硬件鼓机模型与复音合成算法，母带导出与分轨打包完美呈现 808/909/Acoustic/Cyber 纯正声学质感",
+          "en": "WAV/Stems offline renderers upgraded: offline export fully incorporates physical drum kit models and polyphonic synthesizers with exact parity"
+        }
+      ]
+    },
     {
       "version": "1.13.0",
       "date": "2026-09-12",

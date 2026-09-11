@@ -6,6 +6,13 @@
 
 import { SequencerPattern, SequencerTrack } from "../types/genre";
 import { AudioWorkerBridge } from "./AudioWorkerBridge";
+import { AudioWorkletClock } from "./AudioWorkletClock";
+import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "./DrumKitModels";
+import { playPolySynthNote, DEFAULT_SYNTH_PRESETS, SynthPreset } from "./PolySynth";
+import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
+import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
+
+export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
 
 export interface StepCallbackInfo {
   step: number;
@@ -63,8 +70,18 @@ export class AudioEngine {
   // Unlock event handler reference for clean removal
   private unlockHandler: (() => void) | null = null;
 
-  // Web Worker for unthrottled clock and audio transport scheduling
+  // AudioWorklet Clock & Web Worker Fallback (P5-01)
+  private workletClock: AudioWorkletClock;
   private workerBridge: AudioWorkerBridge;
+
+  // Drum Kit Models (P5-02)
+  private drumKit: DrumKitType = "808";
+
+  // Master DSP Effects Rack (P5-04)
+  private masterFxRack: EffectsRack | null = null;
+
+  // Live Sequencer Recording (P5-05)
+  private liveRecorder: LiveRecorder = new LiveRecorder();
 
   // Scheduler state
   private bpm: number = 120;
@@ -115,7 +132,8 @@ export class AudioEngine {
     if (options?.onStop) this.onStopCallback = options.onStop;
 
     this.workerBridge = new AudioWorkerBridge();
-    this.workerBridge.setOnTick((_now) => {
+    this.workletClock = new AudioWorkletClock();
+    this.workletClock.setOnTick((_now) => {
       this.schedulerLoop();
     });
 
@@ -149,13 +167,20 @@ export class AudioEngine {
           this.analyser.fftSize = 128;
           this.analyser.smoothingTimeConstant = 0.75;
 
-          // Audio chain: masterGain -> limiter -> analyser -> destination
-          this.masterGain.connect(this.limiter);
+          // Master DSP Effects Rack (P5-04)
+          this.masterFxRack = new EffectsRack(this.ctx);
+
+          // Audio chain: masterGain -> masterFxRack -> limiter -> analyser -> destination
+          this.masterGain.connect(this.masterFxRack.inputNode);
+          this.masterFxRack.outputNode.connect(this.limiter);
           this.limiter.connect(this.analyser);
           this.analyser.connect(this.ctx.destination);
           this.createNoiseBuffer();
           this.setupSendBuses();
           this.setupTrackStrips(16);
+
+          // Async init AudioWorklet clock (P5-01)
+          this.workletClock.init(this.ctx).catch(() => {});
         }
       }
 
@@ -646,12 +671,13 @@ export class AudioEngine {
       this.scheduleTimerId = null;
     }
 
-    // Primary clock source: AudioWorkerBridge (worker precision timer with internal fallback)
-    this.workerBridge.start(this.lookaheadMs);
+    // Primary clock source: AudioWorkletClock (sample-accurate AudioWorklet with Worker fallback, P5-01)
+    const rate = this.ctx ? this.ctx.sampleRate : 44100;
+    this.workletClock.start(this.lookaheadMs, rate);
   }
 
   private stopScheduler(): void {
-    this.workerBridge.stop();
+    this.workletClock.stop();
     if (this.scheduleTimerId) {
       clearInterval(this.scheduleTimerId);
       this.scheduleTimerId = null;
@@ -828,6 +854,12 @@ export class AudioEngine {
     if (this.ctx.state === "suspended") this.ctx.resume();
     const stepDur = this.getStepDuration();
     const pitchVal = pitch !== null && pitch !== undefined && pitch > 0 ? pitch : 0;
+
+    // P5-05: Real-time Live Sequencer Recording
+    if (this.isPlaying && this.liveRecorder.getIsArmed()) {
+      this.liveRecorder.recordTrigger(trackIdx, pitchVal, velocity, this.currentStep, this.totalSteps);
+    }
+
     this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal);
   }
 
@@ -868,273 +900,112 @@ export class AudioEngine {
     }
   }
 
-  // --- SYNTHESIZER VOICES ROUTED TO TRACK DESTINATION & SHAPED BY GATE ---
+  // --- HARDWARE DRUM MACHINE MODELS (P5-02) & POLYPHONIC SYNTH (P5-03) ---
+
+  public setDrumKit(kit: DrumKitType): void {
+    this.drumKit = kit;
+  }
+
+  public getDrumKit(): DrumKitType {
+    return this.drumKit;
+  }
+
+  public getMasterFxRack(): EffectsRack | null {
+    return this.masterFxRack;
+  }
+
+  public setMasterFilter(enabled: boolean, cutoff: number, q: number, type?: BiquadFilterType): void {
+    if (this.masterFxRack) this.masterFxRack.setFilter(enabled, cutoff, q, type);
+  }
+
+  public setMasterSaturation(enabled: boolean, drive: number): void {
+    if (this.masterFxRack) this.masterFxRack.setSaturation(enabled, drive);
+  }
+
+  public setMasterChorus(enabled: boolean, mix: number, rate?: number): void {
+    if (this.masterFxRack) this.masterFxRack.setChorus(enabled, mix, rate);
+  }
+
+  public setMasterBitcrusher(enabled: boolean, bitDepth: number): void {
+    if (this.masterFxRack) this.masterFxRack.setBitcrusher(enabled, bitDepth);
+  }
+
+  public getLiveRecorder(): LiveRecorder {
+    return this.liveRecorder;
+  }
+
+  public setRecordArmed(armed: boolean): void {
+    this.liveRecorder.setArmed(armed);
+  }
+
+  public getIsRecordArmed(): boolean {
+    return this.liveRecorder.getIsArmed();
+  }
 
   private playKick(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx) return;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    const basePitch = (pitchOffset > 24) ? (pitchOffset - 36) : pitchOffset;
-    const startFreq = 150 * Math.pow(2, basePitch / 12);
-    const endFreq = 42;
-
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(startFreq, time);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.08);
-
-    const kickVol = vel * 1.2;
-    gain.gain.setValueAtTime(kickVol, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.32);
-
-    osc.connect(gain);
-    gain.connect(dest);
-
-    if (this.noiseBuffer) {
-      const clickSrc = this.ctx.createBufferSource();
-      clickSrc.buffer = this.noiseBuffer;
-      const clickFilter = this.ctx.createBiquadFilter();
-      clickFilter.type = "bandpass";
-      clickFilter.frequency.value = 1200;
-      clickFilter.Q.value = 3;
-      const clickGain = this.ctx.createGain();
-      clickGain.gain.setValueAtTime(vel * 0.4, time);
-      clickGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
-      clickSrc.connect(clickFilter);
-      clickFilter.connect(clickGain);
-      clickGain.connect(dest);
-      clickSrc.start(time);
-      clickSrc.stop(time + 0.03);
-      this.registerVoice(clickSrc, clickGain, time + 0.03);
-    }
-
-    osc.start(time);
-    osc.stop(time + 0.35);
-    this.registerVoice(osc, gain, time + 0.35);
+    const voice = synthesizeKick(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer);
+    voice.sources.forEach((src, idx) => {
+      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+    });
   }
 
   private playSnare(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
     if (!this.ctx) return;
-
-    const osc = this.ctx.createOscillator();
-    const toneGain = this.ctx.createGain();
-    const basePitch = (pitchOffset > 24) ? (pitchOffset - 60) : pitchOffset;
-    const startFreq = 180 * Math.pow(2, basePitch / 12);
-
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(startFreq, time);
-    osc.frequency.exponentialRampToValueAtTime(80, time + 0.09);
-
-    toneGain.gain.setValueAtTime(vel * 0.7, time);
-    toneGain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
-
-    osc.connect(toneGain);
-    toneGain.connect(dest);
-    osc.start(time);
-    osc.stop(time + 0.15);
-    this.registerVoice(osc, toneGain, time + 0.15);
-
-    if (this.noiseBuffer) {
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = this.noiseBuffer;
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = "bandpass";
-      filter.frequency.value = 1600;
-      filter.Q.value = 1.2;
-
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(vel * 0.8, time);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.24);
-
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(dest);
-
-      noise.start(time);
-      noise.stop(time + 0.26);
-      this.registerVoice(noise, noiseGain, time + 0.26);
-    }
+    const voice = synthesizeSnare(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer);
+    voice.sources.forEach((src, idx) => {
+      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+    });
   }
 
-  private playHiHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, hatType = 1, stepDur = 0.125, gateVal = 0.8): void {
-    if (!this.ctx || !this.noiseBuffer) return;
-
-    const gateScale = Math.max(0.2, Math.min(2.0, gateVal));
-    if (hatType === 3) {
-      // Triplet roll: 3 hits
-      const offsets = [0, stepDur / 3, (stepDur * 2) / 3];
-      offsets.forEach((off, i) => {
-        this.triggerSingleHat(dest, time + off, vel * (i === 0 ? 1 : i === 1 ? 0.8 : 0.65), pitchOffset, 0.035 * gateScale);
-      });
-    } else if (hatType === 2) {
-      // Open hat: long decay shaped by gate
-      this.triggerSingleHat(dest, time, vel * 0.9, pitchOffset, 0.35 * gateScale);
-    } else {
-      // Closed hat: snappy decay shaped by gate
-      this.triggerSingleHat(dest, time, vel * 0.65, pitchOffset, 0.05 * gateScale);
-    }
-  }
-
-  private triggerSingleHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, decay: number): void {
-    if (!this.ctx || !this.noiseBuffer) return;
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = this.noiseBuffer;
-
-    const highpass = this.ctx.createBiquadFilter();
-    highpass.type = "highpass";
-    const hpFreq = Math.min(16000, 7500 * Math.pow(2, pitchOffset / 24));
-    highpass.frequency.value = hpFreq;
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(vel * 0.6, time);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + decay);
-
-    noise.connect(highpass);
-    highpass.connect(gain);
-    gain.connect(dest);
-
-    noise.start(time);
-    noise.stop(time + decay + 0.02);
-    this.registerVoice(noise, gain, time + decay + 0.02);
+  private playHiHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepVal = 1, stepDur = 0.125, gateVal = 0.8): void {
+    if (!this.ctx) return;
+    const voice = synthesizeHiHat(this.ctx, dest, time, vel, pitchOffset, this.drumKit, stepVal, stepDur, gateVal, this.noiseBuffer);
+    voice.sources.forEach((src, idx) => {
+      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+    });
   }
 
   private playPercussion(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.noiseBuffer) return;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = 1100 * Math.pow(2, pitchOffset / 12);
-    filter.Q.value = 2.0;
-
-    const gain = this.ctx.createGain();
-    filter.connect(gain);
-    gain.connect(dest);
-
-    const burstTimes = [0, 0.012, 0.024];
-    burstTimes.forEach((bt) => {
-      const src = this.ctx!.createBufferSource();
-      src.buffer = this.noiseBuffer;
-      const burstGain = this.ctx!.createGain();
-      burstGain.gain.setValueAtTime(vel * 0.5, time + bt);
-      burstGain.gain.exponentialRampToValueAtTime(0.001, time + bt + 0.015);
-      src.connect(burstGain);
-      burstGain.connect(filter);
-      src.start(time + bt);
-      src.stop(time + bt + 0.02);
-      this.registerVoice(src, burstGain, time + bt + 0.02);
+    if (!this.ctx) return;
+    const voice = synthesizePercussion(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer);
+    voice.sources.forEach((src, idx) => {
+      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
-
-    const tailSrc = this.ctx.createBufferSource();
-    tailSrc.buffer = this.noiseBuffer;
-    const tailGain = this.ctx.createGain();
-    tailGain.gain.setValueAtTime(vel * 0.7, time + 0.03);
-    tailGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.2);
-    tailSrc.connect(tailGain);
-    tailGain.connect(filter);
-    tailSrc.start(time + 0.03);
-    tailSrc.stop(time + 0.22);
-    this.registerVoice(tailSrc, tailGain, time + 0.22);
   }
 
   private playBass(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
     if (!this.ctx) return;
-
-    const freq = AudioEngine.midiToFreq(pitchOffset, 36);
-    const noteDuration = Math.max(0.05, Math.min(2.5, stepDur * gateVal));
-
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    const filter = this.ctx.createBiquadFilter();
-
-    osc1.type = "sine";
-    osc1.frequency.setValueAtTime(freq, time);
-
-    osc2.type = "triangle";
-    osc2.frequency.setValueAtTime(freq, time);
-
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(Math.min(1200, freq * 3.5), time);
-    filter.frequency.exponentialRampToValueAtTime(Math.min(400, freq * 1.5), time + Math.min(0.25, noteDuration));
-
-    gain.gain.setValueAtTime(vel * 0.85, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + noteDuration);
-
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(gain);
-    gain.connect(dest);
-
-    osc1.start(time);
-    osc2.start(time);
-    osc1.stop(time + noteDuration + 0.03);
-    osc2.stop(time + noteDuration + 0.03);
-    this.registerVoice(osc1, gain, time + noteDuration + 0.03);
-    this.registerVoice(osc2, gain, time + noteDuration + 0.03);
+    const midi = pitchOffset > 0 ? pitchOffset : 36;
+    const dur = stepDur * gateVal;
+    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, DEFAULT_SYNTH_PRESETS.acidBass);
+    voice.sources.forEach((src, idx) => {
+      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+    });
   }
 
   private playChord(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
     if (!this.ctx) return;
-
-    const baseFreq = AudioEngine.midiToFreq(pitchOffset, 60);
-    const chordIntervals = [0, 3, 7];
-    const noteDuration = Math.max(0.08, Math.min(3.0, stepDur * gateVal * 1.4));
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(1400, time);
-    filter.frequency.exponentialRampToValueAtTime(500, time + Math.min(0.3, noteDuration));
-
-    const chordGain = this.ctx.createGain();
-    chordGain.gain.setValueAtTime(vel * 0.4, time);
-    chordGain.gain.exponentialRampToValueAtTime(0.001, time + noteDuration);
-
-    filter.connect(chordGain);
-    chordGain.connect(dest);
-
-    chordIntervals.forEach((interval) => {
-      const osc = this.ctx!.createOscillator();
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(baseFreq * Math.pow(2, interval / 12), time);
-      osc.connect(filter);
-      osc.start(time);
-      osc.stop(time + noteDuration + 0.03);
-      this.registerVoice(osc, chordGain, time + noteDuration + 0.03);
+    const midi = pitchOffset > 0 ? pitchOffset : 60;
+    const dur = stepDur * gateVal * 1.5;
+    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, DEFAULT_SYNTH_PRESETS.warmPad);
+    voice.sources.forEach((src, idx) => {
+      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
   }
 
   private playLead(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
     if (!this.ctx) return;
-
-    const baseFreq = AudioEngine.midiToFreq(pitchOffset, 72);
-    const noteDuration = Math.max(0.05, Math.min(2.5, stepDur * gateVal));
-
-    const osc = this.ctx.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(baseFreq, time);
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(Math.min(5000, baseFreq * 3), time);
-    filter.frequency.exponentialRampToValueAtTime(Math.min(2000, baseFreq * 1.5), time + Math.min(0.2, noteDuration));
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(vel * 0.5, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + noteDuration);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(dest);
-
-    osc.start(time);
-    osc.stop(time + noteDuration + 0.02);
-    this.registerVoice(osc, gain, time + noteDuration + 0.02);
+    const midi = pitchOffset > 0 ? pitchOffset : 72;
+    const dur = stepDur * gateVal * 1.5;
+    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, DEFAULT_SYNTH_PRESETS.analogLead);
+    voice.sources.forEach((src, idx) => {
+      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+    });
   }
 
   private playFX(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
     if (!this.ctx) return;
-
     const osc = this.ctx.createOscillator();
     osc.type = "sawtooth";
     const startF = pitchOffset > 24 
@@ -1167,7 +1038,12 @@ export class AudioEngine {
     this.stop();
     this.panic();
     this.cleanupUnlockListeners();
+    this.workletClock.destroy();
     this.workerBridge.destroy();
+    if (this.masterFxRack) {
+      this.masterFxRack.destroy();
+      this.masterFxRack = null;
+    }
     if (this.ctx && this.ctx.state !== "closed") {
       this.ctx.close().catch(() => {});
     }

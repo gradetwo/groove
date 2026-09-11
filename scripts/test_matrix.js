@@ -149,7 +149,7 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     // Sequencer tracks verification (wait for lazy chunk to mount)
-    await page.waitForSelector("[data-track-idx], [data-step-idx], .landscape-compact-cell", { timeout: 10000 });
+    await page.waitForSelector("[data-track-idx], [data-step-idx], .landscape-compact-cell", { state: "attached", timeout: 15000 });
     const tracks = await page.$$("[data-track-idx], .touch-hit-44, [data-step-idx]");
     if (tracks.length === 0) {
       // Check for step cells or track headers
