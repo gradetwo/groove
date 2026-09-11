@@ -298,9 +298,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }, 2400);
   }, []);
 
+  interface StudioHistorySnapshot {
+    pattern: SequencerPattern;
+    bpm: number;
+    swing: number;
+    timeSignature: string;
+    resolution: "1/8" | "1/16" | "1/32";
+    mutes: number[];
+    solos: number[];
+  }
+
   // Operation History Stack for Undo/Redo (Ctrl+Z / Cmd+Z / Ctrl+Y)
-  const historyRef = useRef<SequencerPattern[]>([]);
-  const futureRef = useRef<SequencerPattern[]>([]);
+  const historyRef = useRef<StudioHistorySnapshot[]>([]);
+  const futureRef = useRef<StudioHistorySnapshot[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
@@ -309,41 +319,70 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setCanRedo(futureRef.current.length > 0);
   }, []);
 
-  const pushHistorySnapshot = useCallback((prevPattern: SequencerPattern) => {
-    const copy = JSON.parse(JSON.stringify(prevPattern));
-    historyRef.current.push(copy);
+  const createStudioSnapshot = useCallback((overridePattern?: SequencerPattern): StudioHistorySnapshot => {
+    return {
+      pattern: JSON.parse(JSON.stringify(overridePattern || pattern)),
+      bpm,
+      swing,
+      timeSignature,
+      resolution,
+      mutes: Array.from(mutes),
+      solos: Array.from(solos),
+    };
+  }, [pattern, bpm, swing, timeSignature, resolution, mutes, solos]);
+
+  const pushHistorySnapshot = useCallback((overridePattern?: SequencerPattern) => {
+    const snapshot = createStudioSnapshot(overridePattern);
+    historyRef.current.push(snapshot);
     if (historyRef.current.length > 50) {
       historyRef.current.shift();
     }
     futureRef.current = [];
     updateUndoRedoState();
-  }, [updateUndoRedoState]);
+  }, [createStudioSnapshot, updateUndoRedoState]);
+
+  const applyStudioSnapshot = useCallback((snapshot: StudioHistorySnapshot) => {
+    setPattern(snapshot.pattern);
+    setBpm(snapshot.bpm);
+    setSwing(snapshot.swing);
+    setTimeSignature(snapshot.timeSignature);
+    setResolution(snapshot.resolution);
+    setMutes(new Set(snapshot.mutes));
+    setSolos(new Set(snapshot.solos));
+
+    if (engineRef.current) {
+      engineRef.current.setPattern(snapshot.pattern);
+      engineRef.current.setBpm(snapshot.bpm);
+      engineRef.current.setSwing(snapshot.swing / 100);
+      engineRef.current.setTimeSignature(snapshot.timeSignature);
+      engineRef.current.setResolution(snapshot.resolution);
+      snapshot.pattern.tracks.forEach((_, idx) => {
+        const isMuted = snapshot.mutes.includes(idx);
+        const isSolo = snapshot.solos.includes(idx);
+        engineRef.current?.setTrackState(idx, { mute: isMuted, solo: isSolo });
+      });
+    }
+  }, []);
 
   const handleUndo = useCallback(() => {
     if (historyRef.current.length === 0) return;
     const previous = historyRef.current.pop()!;
-    futureRef.current.push(JSON.parse(JSON.stringify(pattern)));
-    setPattern(previous);
-    if (engineRef.current) {
-      engineRef.current.setPattern(previous);
-    }
+    futureRef.current.push(createStudioSnapshot());
+    applyStudioSnapshot(previous);
     updateUndoRedoState();
     triggerHaptic(HapticPatterns.undoRedo);
-    showToast(language === "zh" ? "已撤销上一步操作 (Undo) ✓" : "Undone previous action ✓");
-  }, [pattern, language, updateUndoRedoState]);
+    showToast(language === "zh" ? "已撤销 (Undo) ✓" : "Undone ✓");
+  }, [createStudioSnapshot, applyStudioSnapshot, language, updateUndoRedoState]);
 
   const handleRedo = useCallback(() => {
     if (futureRef.current.length === 0) return;
     const next = futureRef.current.pop()!;
-    historyRef.current.push(JSON.parse(JSON.stringify(pattern)));
-    setPattern(next);
-    if (engineRef.current) {
-      engineRef.current.setPattern(next);
-    }
+    historyRef.current.push(createStudioSnapshot());
+    applyStudioSnapshot(next);
     updateUndoRedoState();
     triggerHaptic(HapticPatterns.undoRedo);
-    showToast(language === "zh" ? "已重做操作 (Redo) ✓" : "Redone action ✓");
-  }, [pattern, language, updateUndoRedoState]);
+    showToast(language === "zh" ? "已重做 (Redo) ✓" : "Redone ✓");
+  }, [createStudioSnapshot, applyStudioSnapshot, language, updateUndoRedoState]);
 
   // Initialize engine
   useEffect(() => {
@@ -1065,6 +1104,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Mute & Solo handlers
   const toggleMute = (idx: number) => {
+    pushHistorySnapshot();
     setMutes((prev) => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx);
@@ -1077,6 +1117,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   };
 
   const toggleSolo = (idx: number) => {
+    pushHistorySnapshot();
     setSolos((prev) => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx);
@@ -2976,6 +3017,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
             tracksConfig={DEMO_TRACKS_CONFIG}
             initialTrackIdx={velocityActiveTrackIdx}
             onApplyEuclidean={(trackIdx, steps) => {
+              pushHistorySnapshot();
               setPattern((prev) => {
                 const copy = JSON.parse(JSON.stringify(prev));
                 const t = copy.tracks[trackIdx];

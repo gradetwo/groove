@@ -1,7 +1,30 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.2.0",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.2.0 全局 URL 深链路由与工作台全状态撤销重做系统",
+        "en": "v1.2.0 Deep Linking URL Router & Full Studio State Undo/Redo"
+      },
+      "highlights": [
+        {
+          "zh": "全局 URL 深链路由系统（P1-08）：支持地址栏双向联动、历史记录前进/后退、以及直接通过链接分享或书签收藏任意视图与曲风（?tab=galaxy / ?tab=detail&genre=detroit-techno）",
+          "en": "Bidirectional URL deep linking & browser history navigation: bookmark or share any view & genre directly"
+        },
+        {
+          "zh": "工作台全状态撤销/重做快照引擎（P0-17）：撤销重做覆盖范围扩展至速度 BPM、摇摆度 Swing、拍号、精度、欧几里得生成与静音独奏状态，音频底层无缝同步",
+          "en": "Full studio state Undo/Redo engine: captures pattern, BPM, swing, meter, quantize, and mute/solo states with audio engine synchronization"
+        },
+        {
+          "zh": "键盘快捷键防冲突保护（P0-16）：表单输入框、下拉菜单与可编辑区域深度隔离，彻底防止 Space 播放键误劫持输入",
+          "en": "Hotkeys isolation: comprehensive input & select field guard preventing Space key conflicts during text editing"
+        }
+      ]
+    },
     {
       "version": "1.1.1",
       "date": "2026-09-11",

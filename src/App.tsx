@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -23,8 +23,53 @@ const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then(
 const MainApp: React.FC = () => {
   const { t, language } = useLanguage();
 
-  const [currentTab, setCurrentTab] = useState<NavTab>("studio");
-  const [selectedGenre, setSelectedGenre] = useState<Genre>(() => GENRES_MAP["future-bass"] || GENRES_MAP["chicago-house"] || ALL_GENRES[0]);
+  const VALID_TABS: NavTab[] = useMemo(() => [
+    "studio",
+    "chords",
+    "galaxy",
+    "horizontal-timeline",
+    "vertical-timeline",
+    "compare",
+    "challenge",
+    "detail",
+  ], []);
+
+  // Initialize currentTab from URL search param if present
+  const [currentTab, setCurrentTab] = useState<NavTab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab") as NavTab | null;
+      if (tab && [
+        "studio",
+        "chords",
+        "galaxy",
+        "horizontal-timeline",
+        "vertical-timeline",
+        "compare",
+        "challenge",
+        "detail",
+      ].includes(tab)) {
+        return tab;
+      }
+      if (params.get("genre") && GENRES_MAP[params.get("genre")!]) {
+        return "detail";
+      }
+    }
+    return "studio";
+  });
+
+  // Initialize selectedGenre from URL search param if present
+  const [selectedGenre, setSelectedGenre] = useState<Genre>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const genreId = params.get("genre");
+      if (genreId && GENRES_MAP[genreId]) {
+        return GENRES_MAP[genreId];
+      }
+    }
+    return GENRES_MAP["future-bass"] || GENRES_MAP["chicago-house"] || ALL_GENRES[0];
+  });
+
   const [comparePool, setComparePool] = useState<Genre[]>(() => [
     GENRES_MAP["chicago-house"] || ALL_GENRES[0],
     GENRES_MAP["berlin-techno"] || ALL_GENRES[1],
@@ -36,6 +81,34 @@ const MainApp: React.FC = () => {
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Synchronize state changes to browser address bar URL (P1-08)
+  const syncUrl = useCallback((tab: NavTab, genreId?: string, replace = false) => {
+    if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      if (tab === "studio" && !genreId) {
+        url.searchParams.delete("tab");
+        url.searchParams.delete("genre");
+      } else {
+        url.searchParams.set("tab", tab);
+        if (genreId) {
+          url.searchParams.set("genre", genreId);
+        } else if (tab !== "detail") {
+          url.searchParams.delete("genre");
+        }
+      }
+      const newUrl = url.pathname + (url.search ? url.search : "");
+      const currentUrl = window.location.pathname + (window.location.search ? window.location.search : "");
+      if (replace) {
+        window.history.replaceState({ tab, genreId }, "", newUrl);
+      } else if (newUrl !== currentUrl) {
+        window.history.pushState({ tab, genreId }, "", newUrl);
+      }
+    } catch {
+      // Ignored in environments where window.history is restricted
+    }
+  }, []);
 
   // Global hotkey: Cmd+K / Ctrl+K opens search dialog from ANY page (P0-23)
   useEffect(() => {
@@ -49,7 +122,7 @@ const MainApp: React.FC = () => {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  // Sync with browser URL search params
+  // Sync with browser URL search params & back/forward navigation (P1-08)
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -58,39 +131,51 @@ const MainApp: React.FC = () => {
 
       if (genreId && GENRES_MAP[genreId]) {
         setSelectedGenre(GENRES_MAP[genreId]);
-        if (tabParam === "detail") {
-          setCurrentTab("detail");
-        }
-      } else if (tabParam) {
+      }
+      if (tabParam && VALID_TABS.includes(tabParam)) {
         setCurrentTab(tabParam);
+      } else if (genreId && GENRES_MAP[genreId]) {
+        setCurrentTab("detail");
+      } else {
+        setCurrentTab("studio");
       }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [VALID_TABS]);
 
-  const handleSelectGenre = (genre: Genre, action?: "detail" | "studio") => {
+  // Normalize URL on initial mount
+  useEffect(() => {
+    syncUrl(currentTab, currentTab === "detail" ? selectedGenre.id : undefined, true);
+  }, [currentTab, selectedGenre.id, syncUrl]);
+
+  const handleSelectTab = useCallback((tab: NavTab) => {
+    setCurrentTab(tab);
+    syncUrl(tab, tab === "detail" ? selectedGenre.id : undefined);
+  }, [selectedGenre.id, syncUrl]);
+
+  const handleSelectGenre = useCallback((genre: Genre, action?: "detail" | "studio") => {
     setSelectedGenre(genre);
-    if (action === "studio") {
-      setCurrentTab("studio");
-    } else {
-      setCurrentTab("detail");
-    }
-  };
+    const targetTab: NavTab = action === "studio" ? "studio" : "detail";
+    setCurrentTab(targetTab);
+    syncUrl(targetTab, genre.id);
+  }, [syncUrl]);
 
-  const handleOpenStudioWithGenre = (genre: Genre) => {
+  const handleOpenStudioWithGenre = useCallback((genre: Genre) => {
     setSelectedGenre(genre);
     setCurrentTab("studio");
-  };
+    syncUrl("studio", genre.id);
+  }, [syncUrl]);
 
-  const handleAddToCompare = (genre: Genre) => {
+  const handleAddToCompare = useCallback((genre: Genre) => {
     setComparePool((prev) => {
       if (prev.some((g) => g.id === genre.id)) return prev;
       return [...prev, genre].slice(0, 4);
     });
     setCurrentTab("compare");
-  };
+    syncUrl("compare");
+  }, [syncUrl]);
 
   const handleEngineReady = (engine: AudioEngine) => {
     setAnalyser(engine.getAnalyser());
@@ -109,12 +194,9 @@ const MainApp: React.FC = () => {
       {/* Header */}
       <Header
         currentTab={currentTab}
-        onSelectTab={(tab) => setCurrentTab(tab)}
+        onSelectTab={handleSelectTab}
         onOpenSearch={() => setSearchOpen(true)}
-        onRandomGenre={(genre) => {
-          setSelectedGenre(genre);
-          setCurrentTab("studio");
-        }}
+        onRandomGenre={handleOpenStudioWithGenre}
         onOpenUpdates={() => setUpdatesOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
