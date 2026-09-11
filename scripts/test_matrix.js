@@ -159,11 +159,25 @@ async function runTestOnTarget(target, baseUrl) {
       }
     }
 
-    // Play button interaction
+    // Play button interaction & Playhead beam alignment check
     const playBtn = await page.$("button:has-text('播放'), button:has-text('Play'), button:has-text('暂停'), button:has-text('Pause')");
     if (playBtn) {
       await playBtn.click();
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(250);
+      const playheadCheck = await page.evaluate(() => {
+        const beam = document.querySelector(".playhead-laser-beam");
+        const activeCell = document.querySelector(".playhead-active");
+        if (!beam || !activeCell) return { ok: true };
+        const bRect = beam.getBoundingClientRect();
+        const cRect = activeCell.getBoundingClientRect();
+        const diff = Math.abs(Math.round(bRect.left) - Math.round(cRect.left));
+        return { ok: diff <= 1, diff, beamLeft: bRect.left, cellLeft: cRect.left };
+      });
+      if (!playheadCheck.ok) {
+        throw new Error(
+          `Playhead beam misalignment on ${target.name}: beamLeft=${playheadCheck.beamLeft}, cellLeft=${playheadCheck.cellLeft}, diff=${playheadCheck.diff}px`
+        );
+      }
       await playBtn.click(); // Pause back
     }
 

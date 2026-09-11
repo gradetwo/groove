@@ -261,8 +261,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
       lastActiveRulerStepRef.current = rulerCell;
 
       if (playheadBeamRef.current) {
-        const left = rulerCell.offsetLeft;
-        const width = rulerCell.offsetWidth;
+        const cRect = container.getBoundingClientRect();
+        const rRect = rulerCell.getBoundingClientRect();
+        // Calculate true offset relative to matrixContainer scroll coordinate space
+        const left = rRect.left - cRect.left - container.clientLeft + container.scrollLeft;
+        const width = rRect.width;
+
         playheadBeamRef.current.style.transform = `translate3d(${left}px, 0, 0)`;
         playheadBeamRef.current.style.width = `${width}px`;
         playheadBeamRef.current.style.display = "block";
@@ -277,6 +281,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
     if (playheadBeamRef.current) {
       playheadBeamRef.current.style.display = "none";
+      playheadBeamRef.current.style.transition = "none";
     }
     lastStepRef.current = -1;
   }, []);
@@ -1168,7 +1173,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         );
         if (targetCell) {
           matrixContainerRef.current.scrollTo({
-            left: targetCell.offsetLeft - 180,
+            left: Math.max(0, targetCell.offsetLeft),
             behavior: "smooth",
           });
         }

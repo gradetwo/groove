@@ -317,12 +317,12 @@ html.reduced-motion .animate-orbit {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: 0;
   border: 2px solid #f5b73d;
   background-color: rgba(245, 183, 61, 0.25);
   box-shadow: 0 0 14px rgba(245, 183, 61, 0.5);
   border-radius: 6px;
   pointer-events: none;
   z-index: 15;
-  transition: transform 75ms linear;
   will-change: transform;
 }
