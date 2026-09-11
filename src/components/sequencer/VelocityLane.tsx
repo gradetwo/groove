@@ -205,8 +205,8 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
 
       {/* Main Interactive Velocity Slider Columns */}
       <div className="pt-3 flex items-center gap-3 overflow-x-auto min-w-max pb-1">
-        {/* Left Track Label Space aligned with 172px matrix headers */}
-        <div className="w-[172px] flex-none text-right pr-3 font-mono text-[11px] text-[#6b7280]">
+        {/* Left Track Label Space aligned with matrix headers */}
+        <div className="w-[126px] sm:w-[172px] flex-none text-right pr-2 sm:pr-3 font-mono text-[11px] text-[#6b7280]">
           <span className="font-bold text-[#e9e7e0]">{meta.name}</span>
           <span className="block text-[10px] text-[#4a5060]">
             {language === "zh" ? "滑动绘制力度" : "Drag to paint"}

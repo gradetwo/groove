@@ -1,0 +1,122 @@
+{
+  "version": "1.1.0",
+  "releaseDate": "2026-09-11",
+  "changelog": [
+    {
+      "version": "1.1.0",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.1.0 移动端横竖屏深度优化与在线更新系统",
+        "en": "v1.1.0 Responsive Mobile/Landscape Architecture & Update System"
+      },
+      "highlights": [
+        {
+          "zh": "新增「检查更新」与「更新记录」：支持一键在线检测最新版本、即时对比与热更新提示",
+          "en": "Added Check for Updates & Release Notes drawer with live version check and one-click reload"
+        },
+        {
+          "zh": "移动端横屏硬件机架级沉浸体验：针对 360px-450px 低矮横屏深度压缩顶栏与轨道间距，一屏纵览 8 轨全矩阵",
+          "en": "Mobile landscape hardware groovebox mode: ultra-compact transport bar and auto-collapsed dossier"
+        },
+        {
+          "zh": "移动端竖屏人体工学优化：步进单元 44px 黄金触摸靶区，紧凑轨道控制，底部 Safe Area 防遮挡保护",
+          "en": "Mobile portrait ergonomic tuning: 44px touch targets, compact track headers, iOS safe area insets"
+        },
+        {
+          "zh": "和弦工作台一键导入编曲台：从和弦进行库直达 Studio 和弦轨道，快速开启全曲编创",
+          "en": "One-click Chord Import to Studio: seamlessly transfer progression voicing into studio chord track"
+        }
+      ]
+    },
+    {
+      "version": "1.0.2",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.0.2 步进编曲与核心交互稳定性修复",
+        "en": "v1.0.2 Sequencer Timing & Core Interaction Bugfixes"
+      },
+      "highlights": [
+        {
+          "zh": "修复 StudioView 正在播放时小节跳转下拉菜单不断跳变的问题（viewedBar 解耦）",
+          "en": "Fixed bar navigation dropdown jitter during playback by decoupling viewedBar state"
+        },
+        {
+          "zh": "修复多拍子（Polymeter）步进光标位置对齐：视觉光效与实际发声节拍严格同步",
+          "en": "Fixed polymeter playhead alignment: visual indicator strictly synchronized with audio playback"
+        },
+        {
+          "zh": "统一输入事件模型为 Pointer Events，彻底根除移动端触摸与合成点击双重触发问题",
+          "en": "Unified touch/pointer input model, eliminating synthetic double-triggering on mobile devices"
+        },
+        {
+          "zh": "盲听挑战赛题优化：未作答前隐藏速度线索与选项流派详情，修复初次静音播放问题",
+          "en": "Blind challenge hardening: hidden tempo clues & metadata before answer, user gesture audio start"
+        },
+        {
+          "zh": "横向时间线线性年代轴修复：消除 1920 与 1940 重复过滤，完整补齐 1950 年代",
+          "en": "Timeline linear scale fix: eliminated duplicate bins and completed the 1950s decade column"
+        },
+        {
+          "zh": "曲风详情页切换曲风时 BPM 同步重置，优化速度输入框退格与防抖",
+          "en": "Genre detail BPM state synchronization and buffered smooth numerical input"
+        },
+        {
+          "zh": "新增全局 ErrorBoundary 赛博朋克风格错误保护兜底卡片",
+          "en": "Added cyberpunk ErrorBoundary fallback card with retry and reset mechanisms"
+        }
+      ]
+    },
+    {
+      "version": "1.0.1",
+      "date": "2026-09-11",
+      "category": "audio",
+      "title": {
+        "zh": "v1.0.1 音频引擎架构强化与防爆音重构",
+        "en": "v1.0.1 Audio Engine Hardening & Anti-Clipping Overhaul"
+      },
+      "highlights": [
+        {
+          "zh": "重构欧几里得节奏算法：采用 Bjorklund 迭代余数分组，输出正统均匀节奏分布",
+          "en": "Rebuilt Euclidean algorithm using iterative Bjorklund distribution matching world rhythms"
+        },
+        {
+          "zh": "加入 DynamicsCompressorNode 主通道母带级压限器，8 轨齐鸣 0 爆音",
+          "en": "Master limiter with DynamicsCompressorNode, preventing digital clipping on heavy tracks"
+        },
+        {
+          "zh": "实现 Active Voice 注册表与 5ms 平滑渐弱 Panic 机制，彻底杜绝切歌悬挂音与爆鸣",
+          "en": "Active voice registry and 5ms gain ramp panic system, eliminating hanging notes and clicks"
+        },
+        {
+          "zh": "统一主线程与 Web Worker 音频时钟，移除无效 Tone.Transport 假时钟",
+          "en": "Unified audio clock bridge between Web Worker and main thread, removing fake transports"
+        }
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2026-09-10",
+      "category": "feature",
+      "title": {
+        "zh": "v1.0.0 正式版本发布",
+        "en": "v1.0.0 Initial Release"
+      },
+      "highlights": [
+        {
+          "zh": "收录 150+ 世界音乐流派与纯正节拍律动档案",
+          "en": "Curated library of 150+ music genres with authentic cultural contexts and rhythms"
+        },
+        {
+          "zh": "专业 8 轨步进鼓机编曲工作台（带力度、三连音、概率与参数锁定）",
+          "en": "Professional 8-track step sequencer with velocity, ratchets, probability, and p-locks"
+        },
+        {
+          "zh": "3D 星系图谱、双流派 AB 对比视窗与盲听耳力训练场",
+          "en": "3D Galaxy view, dual-genre compare matrix, and blind ear training challenge arena"
+        }
+      ]
+    }
+  ]
+}

@@ -11,7 +11,8 @@ import {
   Menu, 
   X,
   AlignVerticalJustifyStart,
-  Music2
+  Music2,
+  History
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { ALL_GENRES } from "../data/genres";
@@ -32,6 +33,7 @@ interface HeaderProps {
   onSelectTab: (tab: NavTab) => void;
   onOpenSearch: () => void;
   onRandomGenre: (genre: Genre) => void;
+  onOpenUpdates?: () => void;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
 }
@@ -41,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab,
   onOpenSearch,
   onRandomGenre,
+  onOpenUpdates,
   analyser,
   isPlaying = false,
 }) => {
@@ -173,6 +176,18 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-[#f5b73d]">{language === "zh" ? "EN" : "中"}</span>
         </button>
 
+        {/* Updates / Version Button */}
+        {onOpenUpdates && (
+          <button
+            onClick={onOpenUpdates}
+            className="flex items-center gap-1.5 text-xs font-mono font-medium text-[#8b8f99] hover:text-[#f5b73d] px-2 py-1.5 border border-[#23262d] hover:border-[#f5b73d]/40 rounded-lg bg-[#0d0e12] transition-colors"
+            title={language === "zh" ? "检查更新与更新记录" : "Check for updates & changelog"}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d] animate-pulse" />
+            <span className="hidden sm:inline">v1.1.0</span>
+          </button>
+        )}
+
         {/* Mobile menu toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -205,6 +220,20 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             );
           })}
+
+          {onOpenUpdates && (
+            <button
+              onClick={() => {
+                onOpenUpdates();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-[#23262d] text-[#8b8f99] hover:text-[#f5b73d] hover:bg-[#121317] transition-colors pt-2.5 mt-2 border-t border-t-[#23262d]"
+            >
+              <History className="w-3.5 h-3.5 text-[#f5b73d]" />
+              <span>{language === "zh" ? "检查更新 & 更新记录" : "Updates & Changelog"}</span>
+              <span className="ml-auto font-mono text-[10px] text-[#5a5e68]">v1.1.0</span>
+            </button>
+          )}
         </div>
       )}
     </header>

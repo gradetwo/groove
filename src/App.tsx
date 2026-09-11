@@ -8,6 +8,7 @@ import { AudioEngine } from "./audio/AudioEngine";
 import { Disc3, Sparkles } from "lucide-react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ChordDefinition } from "./utils/chordTheory";
+import { UpdatesModal } from "./components/UpdatesModal";
 
 // Code splitting & lazy loading chunks for optimal performance
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
@@ -29,6 +30,7 @@ const MainApp: React.FC = () => {
     GENRES_MAP["berlin-techno"] || ALL_GENRES[1],
   ]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
 
   // Audio analyser for Header live spectrum visualizer
@@ -113,6 +115,7 @@ const MainApp: React.FC = () => {
           setSelectedGenre(genre);
           setCurrentTab("studio");
         }}
+        onOpenUpdates={() => setUpdatesOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
       />
@@ -264,11 +267,27 @@ const MainApp: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-1 text-[#5a5e68]">
+          <div className="flex items-center gap-3 text-[#5a5e68]">
+            <button
+              onClick={() => setUpdatesOpen(true)}
+              className="hover:text-[#f5b73d] transition-colors flex items-center gap-1.5 font-mono text-[11px]"
+              title={language === "zh" ? "检查更新与版本记录" : "Check updates & changelog"}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d] animate-pulse" />
+              <span>v1.1.0</span>
+              <span className="ml-1">{language === "zh" ? "更新记录" : "Updates"}</span>
+            </button>
+            <span>•</span>
             <span>Web Audio Pure Synthesis</span>
           </div>
         </div>
       </footer>
+
+      {/* In-App Check Updates & Changelog Modal */}
+      <UpdatesModal
+        isOpen={updatesOpen}
+        onClose={() => setUpdatesOpen(false)}
+      />
     </div>
   );
 };

@@ -108,16 +108,21 @@ input[type=range]::-moz-range-thumb {
 
 /* Sequencer Matrix Horizontal Scrollbar */
 .custom-sequencer-scroll::-webkit-scrollbar {
-  height: 10px;
+  height: 8px;
 }
 .custom-sequencer-scroll::-webkit-scrollbar-track {
   background: #0a0b0e;
-  border-radius: 5px;
-  margin-left: 172px; /* aligns track with step cells */
+  border-radius: 4px;
+  margin-left: 126px; /* aligns with compact mobile track header */
+}
+@media (min-width: 640px) {
+  .custom-sequencer-scroll::-webkit-scrollbar-track {
+    margin-left: 172px; /* aligns with full desktop track header */
+  }
 }
 .custom-sequencer-scroll::-webkit-scrollbar-thumb {
   background: #323642;
-  border-radius: 5px;
+  border-radius: 4px;
   border: 2px solid #0a0b0e;
 }
 .custom-sequencer-scroll::-webkit-scrollbar-thumb:hover {
@@ -173,6 +178,47 @@ input[type=range]::-moz-range-thumb {
   height: 100%;
   pointer-events: auto;
   z-index: 1;
+}
+
+/* iOS Safe Area insets */
+.safe-pb {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+.safe-pt {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+.safe-pl {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+}
+.safe-pr {
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+/* Mobile Landscape Hardware Groovebox Experience (Height <= 500px & Landscape) */
+@media (max-height: 500px) and (orientation: landscape) {
+  header.sticky {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  .landscape-hide-sidebar {
+    display: none !important;
+  }
+  .landscape-compact-bar {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .landscape-compact-row {
+    padding-top: 0.125rem !important;
+    padding-bottom: 0.125rem !important;
+  }
+  .landscape-compact-cell {
+    height: 1.85rem !important;
+    min-width: 1.85rem !important;
+  }
+  .landscape-compact-header {
+    height: 1.85rem !important;
+  }
 }
 
 

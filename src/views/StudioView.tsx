@@ -1679,11 +1679,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
           isSidebarCollapsed || isEditorMaximized
             ? "grid-cols-1"
             : "grid-cols-1 lg:grid-cols-[352px_1fr]"
-        } gap-5 px-4 sm:px-7 py-3 pb-16 items-start`}
+        } gap-5 px-3 sm:px-7 py-3 pb-16 safe-pb items-start`}
       >
         {/* Left Column: Info Dossier (.info) */}
         {!isSidebarCollapsed && !isEditorMaximized && (
-          <aside className="sticky top-16 flex flex-col gap-3.5 order-2 lg:order-1">
+          <aside className="sticky top-16 flex flex-col gap-3.5 order-2 lg:order-1 landscape-hide-sidebar">
             {/* Hero Genre Card (.blk.g-head) */}
             <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
               <div className="flex items-start justify-between gap-2">
@@ -1889,7 +1889,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           }
         >
           {/* Sequencer Unified Toolbar (Scales to a single line in Fullscreen, streamlined in Normal mode) */}
-          <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2 pb-2.5 mb-2 border-b border-[#1a1c21] overflow-x-auto whitespace-nowrap scrollbar-none select-none shrink-0">
+          <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2 pb-2.5 mb-2 border-b border-[#1a1c21] overflow-x-auto whitespace-nowrap scrollbar-none select-none shrink-0 landscape-compact-bar">
             {/* Left Section: Playback & Primary Sequencer Selectors */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Fullscreen Mode: Genre Badge */}
@@ -2327,9 +2327,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
             className="w-full space-y-1 overflow-x-auto pb-3 relative custom-sequencer-scroll select-none overscroll-x-contain"
           >
             {/* Step Indicator Ruler Header */}
-            <div className="flex items-center gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-max">
-              {/* Left Label aligned with 172px track headers - Sticky Left */}
-              <div className="sticky left-0 z-30 bg-[#121317] flex-none w-[172px] pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-2 sm:gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-max">
+              {/* Left Label aligned with track headers - Sticky Left */}
+              <div className="sticky left-0 z-30 bg-[#121317] flex-none w-[126px] sm:w-[172px] pr-1.5 sm:pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                 <span>{stepCount} STEPS</span>
                 <span className="text-[#3a3e48]">{timeSignature}</span>
               </div>
@@ -2417,13 +2417,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
               return (
                 <div
                   key={track.track_id}
-                  className={`flex items-center gap-3 py-1.5 transition-opacity min-w-max ${
+                  className={`flex items-center gap-2 sm:gap-3 py-1 sm:py-1.5 landscape-compact-row transition-opacity min-w-max ${
                     isSilenced ? "opacity-30" : "opacity-100"
                   }`}
                   style={{ ["--tc" as any]: meta.color }}
                 >
-                  {/* Track Header (.trk-head) - 172px width - Sticky Left */}
-                  <div className="sticky left-0 z-20 bg-[#121317] flex-none w-[172px] pr-2 flex flex-col justify-center gap-1 select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
+                  {/* Track Header (.trk-head) - 126px on mobile / 172px on sm+ - Sticky Left */}
+                  <div className="sticky left-0 z-20 bg-[#121317] flex-none w-[126px] sm:w-[172px] pr-1.5 sm:pr-2 flex flex-col justify-center gap-1 select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                     {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
                     <div className="flex items-center gap-1.5">
                       <div
@@ -2456,20 +2456,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           })}
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
-                          <span className="font-['JetBrains_Mono'] text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate">
+                          <span className="font-['JetBrains_Mono'] text-[10.5px] sm:text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate">
                             {meta.name}
                           </span>
-                          <span className="font-['JetBrains_Mono'] text-[8.5px] text-[#5a5e68] truncate leading-none">
+                          <span className="font-['JetBrains_Mono'] text-[8.5px] text-[#5a5e68] truncate leading-none hidden sm:block">
                             {meta.sub ? meta.sub[language] : ""}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex gap-1 shrink-0 items-center">
+                      <div className="flex gap-0.5 sm:gap-1 shrink-0 items-center">
                         {/* Polymeter Loop Length Selector */}
                         <button
                           onClick={() => handleCycleTrackLength(trackIdx)}
-                          className={`px-1.5 h-6 sm:h-4 rounded text-[9px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors flex items-center justify-center touch-manipulation ${
+                          className={`px-1 sm:px-1.5 h-6 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors flex items-center justify-center touch-manipulation ${
                             track.trackLength && track.trackLength !== stepCount
                               ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
                               : "bg-[#17181c] border-[#23262d] text-[#5a5e68] hover:text-[#8b8f99]"
@@ -2480,7 +2480,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         </button>
                         <button
                           onClick={() => toggleMute(trackIdx)}
-                          className={`w-6 h-6 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
+                          className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
                             isMute
                               ? "border-[var(--tc)] text-[var(--tc)] bg-transparent font-bold"
                               : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
@@ -2491,7 +2491,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         </button>
                         <button
                           onClick={() => toggleSolo(trackIdx)}
-                          className={`w-6 h-6 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
+                          className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
                             isSolo
                               ? "border-[#f5b73d] text-[#f5b73d] bg-[#f5b73d]/10 font-bold"
                               : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
@@ -2514,12 +2514,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           step="0.05"
                           value={trackVol}
                           onChange={(e) => handleTrackVolumeChange(trackIdx, +e.target.value)}
-                          className="w-12 sm:w-11 h-2 sm:h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer touch-manipulation"
+                          className="w-10 sm:w-11 h-2 sm:h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer touch-manipulation"
                         />
                       </div>
 
                       {/* Track Quick Actions */}
-                      <div className="flex items-center gap-1 sm:gap-0.5 shrink-0">
+                      <div className="flex items-center gap-0.5 sm:gap-0.5 shrink-0">
                         <button
                           onClick={() => {
                             setVelocityActiveTrackIdx(trackIdx);
@@ -2600,7 +2600,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onPointerUp={handleStepPointerUp}
                           onPointerCancel={handleStepPointerUp}
                           onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
-                          className={`min-w-[32px] sm:min-w-[36px] flex-1 h-11 sm:h-10 border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation touch-hit-44 ${
+                          className={`min-w-[28px] sm:min-w-[36px] flex-1 h-10 sm:h-10 landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation touch-hit-44 ${
                             isBarStart
                               ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
                               : isGroupStart
