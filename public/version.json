@@ -1,7 +1,26 @@
 {
-  "version": "1.3.6",
+  "version": "1.3.7",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.7",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.3.7 小节跳转状态解耦与组件卸载定时器全面回收",
+        "en": "v1.3.7 Independent Bar Selector State & Timer Unmount Lifecycle Guard"
+      },
+      "highlights": [
+        {
+          "zh": "小节跳转下拉菜单独立状态（P0-11）：播放过程中用户选定小节不再被 currentStep 步进时钟强行覆盖；暂停时自适应呈现当前停靠小节，彻底解决恒定显示 Bar 1 的状态失步",
+          "en": "Independent bar navigation selector state: user manual bar selection during playback is preserved without playhead step clock overrides; accurately displays current paused bar instead of freezing at Bar 1"
+        },
+        {
+          "zh": "异步定时器卸载生命周期保护（P0-12）：为步进扩展平滑滚动、长按交互及通知 Toast 建立统一引用生命周期，视图切换卸载时严格回收全部未结定时器，根除内存泄漏风险",
+          "en": "Timer lifecycle & unmount safety guard: captured and cleared all pending timers across step auto-scroll, long-press gestures, and toasts on unmount"
+        }
+      ]
+    },
     {
       "version": "1.3.6",
       "date": "2026-09-11",

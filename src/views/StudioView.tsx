@@ -212,6 +212,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [viewedBar, setViewedBar] = useState<number>(0);
+  const [userSelectedBar, setUserSelectedBar] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Mute & Solo sets
@@ -303,6 +304,23 @@ export const StudioView: React.FC<StudioViewProps> = ({
       setToastMessage(null);
       toastTimerRef.current = null;
     }, 2400);
+  }, []);
+
+  const scrollTimerRef = useRef<any>(null);
+
+  // Clean up all pending timers on unmount (P0-12)
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
+    };
   }, []);
 
   interface StudioHistorySnapshot {
@@ -1232,6 +1250,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
   }, [resolution, timeDenom]);
 
   const barCount = Math.max(1, Math.ceil(stepCount / stepsPerBar));
+  const currentBar = Math.floor(currentStep / stepsPerBar);
+  const activeBarIndex = Math.min(
+    barCount - 1,
+    userSelectedBar !== null ? userSelectedBar : currentBar
+  );
+
+  // When paused, release manual bar override so it displays the bar where playhead stopped (P0-11)
+  useEffect(() => {
+    if (!isPlaying) {
+      setUserSelectedBar(null);
+    }
+  }, [isPlaying]);
 
   // Change time signature and adapt grid length accordingly
   const handleTimeSignatureChange = (newSig: string) => {
@@ -1361,6 +1391,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   };
 
   const scrollToBar = (barIdx: number) => {
+    setUserSelectedBar(barIdx);
     setViewedBar(barIdx);
     if (!matrixContainerRef.current) return;
     const targetStep = barIdx * stepsPerBar;
@@ -1397,13 +1428,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
     });
 
     // Auto scroll right to reveal newly added steps
-    setTimeout(() => {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
       if (matrixContainerRef.current) {
         matrixContainerRef.current.scrollTo({
           left: matrixContainerRef.current.scrollWidth,
           behavior: "smooth",
         });
       }
+      scrollTimerRef.current = null;
     }, 60);
 
     showToast(language === "zh" ? `已添加 +${count} 步 (共 ${stepCount + count} 步)` : `Added +${count} steps (${stepCount + count} total)`);
@@ -1458,13 +1491,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
     });
 
     if (isExpanding) {
-      setTimeout(() => {
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = setTimeout(() => {
         if (matrixContainerRef.current) {
           matrixContainerRef.current.scrollTo({
             left: matrixContainerRef.current.scrollWidth,
             behavior: "smooth",
           });
         }
+        scrollTimerRef.current = null;
       }, 60);
     }
 
@@ -2135,7 +2170,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     {language === "zh" ? "小节" : "BAR"}
                   </span>
                   <select
-                    value={Math.min(barCount - 1, viewedBar)}
+                    value={activeBarIndex}
                     onChange={(e) => scrollToBar(Number(e.target.value))}
                     className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                     aria-label={language === "zh" ? "跳转到小节" : "Jump to bar"}
