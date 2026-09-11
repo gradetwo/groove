@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { generateMidiBytes } from "../audio/MidiExporter";
 import { encodeSharedSequencer, decodeSharedSequencer, SharedSequencerState } from "../audio/SequencerUrlShare";
 import { AudioEngine } from "../audio/AudioEngine";
-import { generateEuclidean } from "../audio/Euclidean";
+import { generateEuclidean, EUCLIDEAN_PRESETS } from "../audio/Euclidean";
+import { ChordAudioEngine } from "../audio/ChordAudioEngine";
 import { ALL_GENRES } from "../data/genres";
 
 describe("Audio & Sequencer Utilities", () => {
@@ -180,21 +181,62 @@ describe("Audio & Sequencer Utilities", () => {
   });
 
   describe("Euclidean Rhythm Generator", () => {
-    it("generates correct Euclidean distribution for classic rhythms", () => {
+    it("generates exact element-by-element Bjorklund distribution for classic rhythms", () => {
       // 3 in 8 (Tresillo): [1, 0, 0, 1, 0, 0, 1, 0]
       const tresillo = generateEuclidean(8, 3, 0);
-      expect(tresillo).toHaveLength(8);
-      expect(tresillo.filter((x) => x === 1)).toHaveLength(3);
+      expect(tresillo).toEqual([1, 0, 0, 1, 0, 0, 1, 0]);
 
-      // 4 in 16 (Four on the Floor): should hit every 4 steps
+      // 4 in 16 (Four on the Floor)
       const four = generateEuclidean(16, 4, 0);
-      expect(four).toHaveLength(16);
-      expect(four.filter((x) => x === 1)).toHaveLength(4);
+      expect(four).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]);
 
-      // Rotation works properly
-      const rotated = generateEuclidean(8, 3, 1);
-      expect(rotated).toHaveLength(8);
-      expect(rotated.filter((x) => x === 1)).toHaveLength(3);
+      // 5 in 8 (Cinquillo)
+      const cinquillo = generateEuclidean(8, 5, 0);
+      expect(cinquillo).toEqual([1, 0, 1, 1, 0, 1, 1, 0]);
+
+      // 2 in 5
+      const twoInFive = generateEuclidean(5, 2, 0);
+      expect(twoInFive).toEqual([1, 0, 1, 0, 0]);
+
+      // Edge cases: k = 0 and k = n
+      expect(generateEuclidean(4, 0)).toEqual([0, 0, 0, 0]);
+      expect(generateEuclidean(4, 4)).toEqual([1, 1, 1, 1]);
+
+      // Rotation shifts elements forward
+      const rotatedTresillo = generateEuclidean(8, 3, 1);
+      // Shifted by 1 position: index 0 gets 0 (from end), index 1 gets 1
+      expect(rotatedTresillo).toEqual([0, 1, 0, 0, 1, 0, 0, 1]);
+    });
+
+    it("verifies all 8 built-in EUCLIDEAN_PRESETS produce non-empty valid patterns", () => {
+      expect(EUCLIDEAN_PRESETS).toHaveLength(8);
+      EUCLIDEAN_PRESETS.forEach((preset) => {
+        const pattern = generateEuclidean(preset.n, preset.k, preset.rot);
+        expect(pattern).toHaveLength(preset.n);
+        const activeCount = pattern.filter((x) => x === 1).length;
+        expect(activeCount).toBe(preset.k);
+      });
+    });
+  });
+
+  describe("Audio Engine Master Safety & Panic", () => {
+    it("safely clamps master volume and executes panic without throwing", () => {
+      const engine = new AudioEngine();
+      engine.setMasterVolume(2.5); // Should clamp to <= 1.0 internally
+      engine.setMasterVolume(-1.0); // Should clamp to >= 0.0 internally
+
+      // Calling panic and stop when not playing should be no-op safe
+      expect(() => engine.panic()).not.toThrow();
+      expect(() => engine.stop()).not.toThrow();
+      expect(() => engine.destroy()).not.toThrow();
+    });
+
+    it("ChordAudioEngine stop and destroy cleanly without leaking", () => {
+      const chordEngine = new ChordAudioEngine();
+      expect(chordEngine.getIsPlaying()).toBe(false);
+      expect(() => chordEngine.panic()).not.toThrow();
+      expect(() => chordEngine.stop()).not.toThrow();
+      expect(() => chordEngine.destroy()).not.toThrow();
     });
   });
 });

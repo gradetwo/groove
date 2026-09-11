@@ -1,14 +1,15 @@
 {
   "name": "groove-music-genre-learning",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "package": "npm run build && python3 scripts/package.py"
+    "package": "npm run build && python3 scripts/package.py",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@types/three": "^0.185.4",
@@ -29,6 +30,7 @@
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "wrangler": "^4.131.0"
   }
 }

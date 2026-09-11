@@ -21,22 +21,18 @@ export interface AudioEngineOptions {
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
   private isPlaying: boolean = false;
 
+  // Active voice registry for panic() and scheduled voice cancellations
+  private activeVoices: Array<{ source: AudioScheduledSourceNode; gain: GainNode; stopTime: number }> = [];
+
+  // Unlock event handler reference for clean removal
+  private unlockHandler: (() => void) | null = null;
+
   // Web Worker for unthrottled clock and audio transport scheduling
   private workerBridge: AudioWorkerBridge;
-
-  /**
-   * Tone.js Transport & AudioWorklet compatibility interface
-   * Explicitly disables any legacy forceFrameRate logic to eliminate warnings on >125Hz monitors
-   */
-  public static readonly ToneTransport = {
-    bpm: 120,
-    position: "0:0:0",
-    forceFrameRate: false, // Ensures zero frame rate clamping warnings on >125Hz displays
-    state: "stopped" as const,
-  };
 
   // Scheduler state
   private bpm: number = 120;
@@ -79,7 +75,7 @@ export class AudioEngine {
     if (options?.onStop) this.onStopCallback = options.onStop;
 
     this.workerBridge = new AudioWorkerBridge();
-    this.workerBridge.setOnTick(() => {
+    this.workerBridge.setOnTick((_now) => {
       this.schedulerLoop();
     });
 
@@ -92,41 +88,68 @@ export class AudioEngine {
   public initAudioContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
 
-    if (!this.ctx) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        this.ctx = new AudioContextClass();
-        this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
-        this.analyser = this.ctx.createAnalyser();
-        this.analyser.fftSize = 128;
-        this.analyser.smoothingTimeConstant = 0.75;
-        this.masterGain.connect(this.analyser);
-        this.analyser.connect(this.ctx.destination);
-        this.createNoiseBuffer();
-      }
-    }
+    try {
+      if (!this.ctx) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          this.ctx = new AudioContextClass();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
 
-    if (this.ctx && this.ctx.state === "suspended") {
-      const unlock = () => {
-        if (this.ctx && this.ctx.state === "suspended") {
-          this.ctx.resume();
+          // P0-02: Master Limiter (DynamicsCompressor) prevents harsh digital clipping
+          this.limiter = this.ctx.createDynamicsCompressor();
+          this.limiter.threshold.setValueAtTime(-1.0, this.ctx.currentTime);
+          this.limiter.knee.setValueAtTime(0.0, this.ctx.currentTime);
+          this.limiter.ratio.setValueAtTime(20.0, this.ctx.currentTime);
+          this.limiter.attack.setValueAtTime(0.003, this.ctx.currentTime);
+          this.limiter.release.setValueAtTime(0.05, this.ctx.currentTime);
+
+          this.analyser = this.ctx.createAnalyser();
+          this.analyser.fftSize = 128;
+          this.analyser.smoothingTimeConstant = 0.75;
+
+          // Audio chain: masterGain -> limiter -> analyser -> destination
+          this.masterGain.connect(this.limiter);
+          this.limiter.connect(this.analyser);
+          this.analyser.connect(this.ctx.destination);
+          this.createNoiseBuffer();
         }
-        window.removeEventListener("click", unlock);
-        window.removeEventListener("touchstart", unlock);
-        window.removeEventListener("keydown", unlock);
-      };
-      window.addEventListener("click", unlock, { once: true });
-      window.addEventListener("touchstart", unlock, { once: true });
-      window.addEventListener("keydown", unlock, { once: true });
+      }
+
+      if (this.ctx && this.ctx.state === "suspended") {
+        this.cleanupUnlockListeners();
+        this.unlockHandler = () => {
+          if (this.ctx && this.ctx.state === "suspended") {
+            this.ctx.resume().catch(() => {});
+          }
+          this.cleanupUnlockListeners();
+        };
+        window.addEventListener("click", this.unlockHandler, { once: true });
+        window.addEventListener("touchstart", this.unlockHandler, { once: true });
+        window.addEventListener("keydown", this.unlockHandler, { once: true });
+      }
+    } catch (e) {
+      console.warn("[AudioEngine] Error initializing AudioContext:", e);
     }
 
     return this.ctx;
   }
 
+  private cleanupUnlockListeners(): void {
+    if (typeof window === "undefined" || !this.unlockHandler) return;
+    window.removeEventListener("click", this.unlockHandler);
+    window.removeEventListener("touchstart", this.unlockHandler);
+    window.removeEventListener("keydown", this.unlockHandler);
+    this.unlockHandler = null;
+  }
+
   public async resume(): Promise<void> {
     if (this.ctx && this.ctx.state === "suspended") {
-      await this.ctx.resume();
+      try {
+        await this.ctx.resume();
+      } catch (e) {
+        console.warn("[AudioEngine] Error resuming AudioContext:", e);
+      }
     }
   }
 
@@ -214,7 +237,8 @@ export class AudioEngine {
 
   public setMasterVolume(vol: number): void {
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1.5, vol)), this.ctx.currentTime);
+      // Clamped to 1.0 to guarantee headroom and avoid clipping
+      this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1.0, vol)), this.ctx.currentTime);
     }
   }
 
@@ -222,6 +246,36 @@ export class AudioEngine {
     if (this.trackStates[trackIdx]) {
       this.trackStates[trackIdx] = { ...this.trackStates[trackIdx], ...state };
     }
+  }
+
+  /**
+   * Registers a scheduled voice to allow immediate cancellation on stop/pause (panic)
+   */
+  private registerVoice(source: AudioScheduledSourceNode, gain: GainNode, stopTime: number): void {
+    if (this.ctx) {
+      const now = this.ctx.currentTime;
+      this.activeVoices = this.activeVoices.filter((v) => v.stopTime > now);
+    }
+    this.activeVoices.push({ source, gain, stopTime });
+  }
+
+  /**
+   * Cancels all scheduled voices with a fast 5ms release ramp to prevent hanging notes and clicks
+   */
+  public panic(): void {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    for (const voice of this.activeVoices) {
+      try {
+        voice.gain.gain.cancelScheduledValues(now);
+        voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
+        voice.gain.gain.linearRampToValueAtTime(0.0001, now + 0.005);
+        voice.source.stop(now + 0.006);
+      } catch {
+        // Source node might already have ended
+      }
+    }
+    this.activeVoices = [];
   }
 
   public async play(): Promise<void> {
@@ -248,12 +302,14 @@ export class AudioEngine {
     this.isPlaying = false;
     this.stopScheduler();
     this.stopPlayheadSync();
+    this.panic();
   }
 
   public stop(): void {
     this.isPlaying = false;
     this.stopScheduler();
     this.stopPlayheadSync();
+    this.panic();
     this.currentStep = 0;
     this.lastReportedStep = -1;
     this.stepQueue = [];
@@ -274,20 +330,21 @@ export class AudioEngine {
     return this.currentStep;
   }
 
-  public isWorkerActive(): boolean {
-    return this.workerBridge.isUsingWorker();
-  }
-
   private startScheduler(): void {
-    if (this.scheduleTimerId) clearInterval(this.scheduleTimerId);
+    if (this.scheduleTimerId) {
+      clearInterval(this.scheduleTimerId);
+      this.scheduleTimerId = null;
+    }
 
-    // Primary: Web Worker precision timer (unaffected by main thread UI freezes/drawer/ruler)
+    // Primary: Web Worker precision timer (unaffected by main thread UI freezes)
     this.workerBridge.start(this.lookaheadMs);
 
-    // Secondary fallback ticker for instantaneous local ticks
-    this.scheduleTimerId = setInterval(() => {
-      this.schedulerLoop();
-    }, this.lookaheadMs);
+    // Fallback ticker only if Web Worker is inactive/unsupported
+    if (!this.workerBridge.isUsingWorker()) {
+      this.scheduleTimerId = setInterval(() => {
+        this.schedulerLoop();
+      }, this.lookaheadMs);
+    }
   }
 
   private stopScheduler(): void {
@@ -508,10 +565,12 @@ export class AudioEngine {
       clickGain.connect(this.masterGain);
       clickSrc.start(time);
       clickSrc.stop(time + 0.03);
+      this.registerVoice(clickSrc, clickGain, time + 0.03);
     }
 
     osc.start(time);
     osc.stop(time + 0.35);
+    this.registerVoice(osc, gain, time + 0.35);
   }
 
   private playSnare(time: number, vel: number, pitchOffset: number): void {
@@ -533,6 +592,7 @@ export class AudioEngine {
     toneGain.connect(this.masterGain);
     osc.start(time);
     osc.stop(time + 0.15);
+    this.registerVoice(osc, toneGain, time + 0.15);
 
     if (this.noiseBuffer) {
       const noise = this.ctx.createBufferSource();
@@ -552,6 +612,7 @@ export class AudioEngine {
 
       noise.start(time);
       noise.stop(time + 0.26);
+      this.registerVoice(noise, noiseGain, time + 0.26);
     }
   }
 
@@ -593,6 +654,7 @@ export class AudioEngine {
 
     noise.start(time);
     noise.stop(time + decay + 0.02);
+    this.registerVoice(noise, gain, time + decay + 0.02);
   }
 
   private playPercussion(time: number, vel: number, pitchOffset: number): void {
@@ -618,6 +680,7 @@ export class AudioEngine {
       burstGain.connect(filter);
       src.start(time + bt);
       src.stop(time + bt + 0.02);
+      this.registerVoice(src, burstGain, time + bt + 0.02);
     });
 
     const tailSrc = this.ctx.createBufferSource();
@@ -629,6 +692,7 @@ export class AudioEngine {
     tailGain.connect(filter);
     tailSrc.start(time + 0.03);
     tailSrc.stop(time + 0.22);
+    this.registerVoice(tailSrc, tailGain, time + 0.22);
   }
 
   private playBass(time: number, vel: number, pitchOffset: number): void {
@@ -663,6 +727,8 @@ export class AudioEngine {
     osc2.start(time);
     osc1.stop(time + 0.38);
     osc2.stop(time + 0.38);
+    this.registerVoice(osc1, gain, time + 0.38);
+    this.registerVoice(osc2, gain, time + 0.38);
   }
 
   private playChord(time: number, vel: number, pitchOffset: number): void {
@@ -690,6 +756,7 @@ export class AudioEngine {
       osc.connect(filter);
       osc.start(time);
       osc.stop(time + 0.48);
+      this.registerVoice(osc, chordGain, time + 0.48);
     });
   }
 
@@ -717,6 +784,7 @@ export class AudioEngine {
 
     osc.start(time);
     osc.stop(time + 0.32);
+    this.registerVoice(osc, gain, time + 0.32);
   }
 
   private playFX(time: number, vel: number, pitchOffset: number): void {
@@ -746,13 +814,20 @@ export class AudioEngine {
 
     osc.start(time);
     osc.stop(time + 0.4);
+    this.registerVoice(osc, gain, time + 0.4);
   }
 
   public destroy(): void {
     this.stop();
+    this.panic();
+    this.cleanupUnlockListeners();
     this.workerBridge.destroy();
     if (this.ctx && this.ctx.state !== "closed") {
-      this.ctx.close();
+      this.ctx.close().catch(() => {});
     }
+    this.ctx = null;
+    this.masterGain = null;
+    this.limiter = null;
+    this.analyser = null;
   }
 }

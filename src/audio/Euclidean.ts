@@ -10,42 +10,36 @@ export function generateEuclidean(totalSteps: number, pulses: number, rotation: 
   if (k === 0) return new Array(n).fill(0);
   if (k === n) return new Array(n).fill(1);
 
-  // Initialize sequences: k ones and (n - k) zeros
-  let sequences: number[][] = [];
-  for (let i = 0; i < k; i++) {
-    sequences.push([1]);
-  }
-  for (let i = 0; i < n - k; i++) {
-    sequences.push([0]);
-  }
+  // Initialize groups of 1s and remainders of 0s
+  let groups: number[][] = Array.from({ length: k }, () => [1]);
+  let remainders: number[][] = Array.from({ length: n - k }, () => [0]);
 
-  // Iteratively combine remainders
-  while (true) {
-    // Find count of remainder sequences that match the last element's length
-    const lastSeq = sequences[sequences.length - 1];
-    let remainderCount = 0;
-    for (let i = sequences.length - 1; i >= 0; i--) {
-      if (sequences[i].length === lastSeq.length) {
-        remainderCount++;
-      } else {
-        break;
+  // Iteratively distribute remainders into groups
+  while (remainders.length > 1) {
+    const minLen = Math.min(groups.length, remainders.length);
+    const newGroups: number[][] = [];
+
+    for (let i = 0; i < minLen; i++) {
+      newGroups.push([...groups[i], ...remainders[i]]);
+    }
+
+    const newRemainders: number[][] = [];
+    if (groups.length > remainders.length) {
+      for (let i = minLen; i < groups.length; i++) {
+        newRemainders.push(groups[i]);
+      }
+    } else {
+      for (let i = minLen; i < remainders.length; i++) {
+        newRemainders.push(remainders[i]);
       }
     }
 
-    const headCount = sequences.length - remainderCount;
-    if (remainderCount <= 1 || headCount === 0) {
-      break;
-    }
-
-    const stepsToDistribute = Math.min(headCount, remainderCount);
-    for (let i = 0; i < stepsToDistribute; i++) {
-      const remainder = sequences.pop()!;
-      sequences[i] = sequences[i].concat(remainder);
-    }
+    groups = newGroups;
+    remainders = newRemainders;
   }
 
-  // Flatten the result
-  const pattern = sequences.flat();
+  // Flatten the result: combine remaining groups and remainders
+  const pattern = [...groups, ...remainders].flat();
 
   // Apply rotation
   if (rotation !== 0) {

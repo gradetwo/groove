@@ -4,13 +4,10 @@
  * Provides fallback to high-precision timer if Web Workers are unavailable or restricted.
  */
 
-import { WorkerStepCalcRequest, WorkerStepCalcResult } from "./audioClockWorker";
-
 export class AudioWorkerBridge {
   private worker: Worker | null = null;
   private fallbackTimerId: any = null;
   private onTickCallback?: (now: number) => void;
-  private onCalcCallback?: (results: WorkerStepCalcResult[], finalNextTime: number, finalStep: number) => void;
   private intervalMs: number = 20;
 
   constructor() {
@@ -35,10 +32,6 @@ export class AudioWorkerBridge {
           if (this.onTickCallback) {
             this.onTickCallback(data.now || performance.now());
           }
-        } else if (data.type === "TRANSPORT_STEP_CALCULATED") {
-          if (this.onCalcCallback) {
-            this.onCalcCallback(data.results, data.finalNextStepTime, data.finalCurrentStep);
-          }
         }
       };
 
@@ -54,10 +47,6 @@ export class AudioWorkerBridge {
 
   public setOnTick(cb: (now: number) => void): void {
     this.onTickCallback = cb;
-  }
-
-  public setOnCalc(cb: (results: WorkerStepCalcResult[], finalNextTime: number, finalStep: number) => void): void {
-    this.onCalcCallback = cb;
   }
 
   public start(intervalMs: number = 20): void {
@@ -79,59 +68,6 @@ export class AudioWorkerBridge {
       this.worker.postMessage({ type: "STOP" });
     }
     this.stopFallback();
-  }
-
-  public calculateTransportStep(payload: WorkerStepCalcRequest): void {
-    if (this.worker) {
-      this.worker.postMessage({ type: "CALCULATE_TRANSPORT_STEP", payload });
-    } else {
-      // Synchronous fallback calculation
-      const {
-        bpm,
-        swing,
-        resolution,
-        timeSignature,
-        totalSteps,
-        currentStep,
-        currentTime,
-        scheduleAheadSec,
-        nextStepTime,
-      } = payload;
-
-      const beatSec = 60.0 / Math.max(30, Math.min(300, bpm));
-      const parts = (timeSignature || "4/4").split("/");
-      const denom = parseInt(parts[1], 10) || 4;
-      const baseSec = denom === 8 ? beatSec / 2 : denom === 2 ? beatSec * 2 : beatSec;
-
-      let stepDur = baseSec / 4;
-      if (resolution === "1/8") stepDur = baseSec / 2;
-      else if (resolution === "1/32") stepDur = baseSec / 8;
-
-      const results: WorkerStepCalcResult[] = [];
-      let nextTime = nextStepTime;
-      let s = currentStep;
-      const stepsCount = totalSteps > 0 ? totalSteps : 16;
-
-      while (nextTime < currentTime + scheduleAheadSec) {
-        const swingOffset = s % 2 === 1 && swing > 0 ? swing * 0.5 * stepDur : 0;
-        const actualStepTime = nextTime + swingOffset;
-
-        results.push({
-          step: s,
-          actualStepTime,
-          stepDur,
-          nextStepTime: nextTime + stepDur,
-          nextStep: (s + 1) % stepsCount,
-        });
-
-        nextTime += stepDur;
-        s = (s + 1) % stepsCount;
-      }
-
-      if (this.onCalcCallback) {
-        this.onCalcCallback(results, nextTime, s);
-      }
-    }
   }
 
   private stopFallback(): void {
