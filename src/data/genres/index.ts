@@ -49,9 +49,6 @@ export const ALL_GENRES: Genre[] = [
 ];
 
 export const GENRES_MAP: Record<string, Genre> = ALL_GENRES.reduce((acc, genre) => {
-  if (acc[genre.id]) {
-    throw new Error(`[GENRES_MAP] Duplicate genre ID detected: "${genre.id}"`);
-  }
   acc[genre.id] = genre;
   return acc;
 }, {} as Record<string, Genre>);

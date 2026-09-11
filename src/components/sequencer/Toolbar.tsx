@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState, useRef, useEffect } from "react";
 import {
   Play,
   Download,
@@ -17,6 +17,11 @@ import {
   EyeOff,
   Repeat,
   Copy,
+  Upload,
+  Keyboard,
+  FileAudio,
+  Package,
+  Loader2,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 
@@ -65,6 +70,14 @@ export interface ToolbarProps {
   onToggleAdvancedControls: () => void;
   onQuickAction: (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved") => void;
   onExportMidi: () => void;
+  onExportWav?: () => void;
+  onExportStems?: () => void;
+  isExportingAudio?: boolean;
+  onImportMidi?: (file: File) => void;
+  onInspireMe?: () => void;
+  isKeyboardMode?: boolean;
+  onToggleKeyboardMode?: () => void;
+  midiDeviceCount?: number;
   onShare: () => void;
   onAddSteps: (count: number) => void;
   onRemoveSteps: (count: number) => void;
@@ -120,6 +133,14 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onToggleAdvancedControls,
   onQuickAction,
   onExportMidi,
+  onExportWav,
+  onExportStems,
+  isExportingAudio = false,
+  onImportMidi,
+  onInspireMe,
+  isKeyboardMode = false,
+  onToggleKeyboardMode,
+  midiDeviceCount = 0,
   onShare,
   onAddSteps,
   onRemoveSteps,
@@ -133,6 +154,20 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onTapTempo,
 }) {
   const { t } = useLanguage();
+  const [exportOpen, setExportOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!exportOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", handleClickOutside);
+    return () => window.removeEventListener("pointerdown", handleClickOutside);
+  }, [exportOpen]);
 
   return (
     <div className="flex flex-col gap-2 min-w-0 w-full">
@@ -572,15 +607,137 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             </select>
           </div>
 
-          {/* Export MIDI */}
-          <button
-            onClick={onExportMidi}
-            className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0"
-            title={t("export")}
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline font-['JetBrains_Mono']">{t("export")}</span>
-          </button>
+          {/* Inspire Me controlled generative groove variation (P4-06) */}
+          {onInspireMe && (
+            <button
+              onClick={onInspireMe}
+              className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-accent hover:bg-accent/15 border border-accent/40 rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+              title={isZh ? "受控灵感变异 (Inspire Me - 保留底鼓骨架，变奏踩镲/打击乐/低音)" : "Inspire Me controlled variation"}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-accent animate-pulse" />
+              <span className="hidden xl:inline">{isZh ? "灵感变异" : "Inspire"}</span>
+            </button>
+          )}
+
+          {/* Import MIDI (P4-03) */}
+          {onImportMidi && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".mid,.midi"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onImportMidi(file);
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+                title={isZh ? "导入标准 MIDI 文件 (.mid)" : "Import MIDI file (.mid)"}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">{isZh ? "导入" : "Import"}</span>
+              </button>
+            </>
+          )}
+
+          {/* Live Keyboard / Web MIDI Input (P4-04) */}
+          {onToggleKeyboardMode && (
+            <button
+              onClick={onToggleKeyboardMode}
+              className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 font-['JetBrains_Mono'] ${
+                isKeyboardMode
+                  ? "bg-accent/20 text-accent border-accent/60 shadow-[0_0_12px_rgba(255,100,50,0.2)]"
+                  : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
+              }`}
+              title={
+                isZh
+                  ? `电脑键盘演奏 (1-8轨 / Z-M键)${midiDeviceCount > 0 ? ` · 已连接 ${midiDeviceCount} 台 MIDI 设备` : ""}`
+                  : `Computer keyboard play (1-8 tracks / Z-M keys)${midiDeviceCount > 0 ? ` · ${midiDeviceCount} MIDI device(s) connected` : ""}`
+              }
+            >
+              <Keyboard className="w-3.5 h-3.5" />
+              <span className="hidden 2xl:inline">{isZh ? "演奏" : "Play"}</span>
+              {midiDeviceCount > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" title="MIDI Connected" />
+              )}
+            </button>
+          )}
+
+          {/* Export Menu Dropdown (P4-01 & P4-02: MIDI, Master WAV, and Stems ZIP) */}
+          <div className="relative shrink-0" ref={exportMenuRef}>
+            <button
+              onClick={() => setExportOpen((prev) => !prev)}
+              disabled={isExportingAudio}
+              className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono'] disabled:opacity-50"
+              title={t("export")}
+              aria-haspopup="true"
+              aria-expanded={exportOpen}
+            >
+              {isExportingAudio ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden lg:inline">{t("export")}</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {exportOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-52 py-1 bg-[#0f1118] border border-line-strong rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.9)] z-50 text-xs font-['JetBrains_Mono'] divide-y divide-line/40">
+                <div className="p-1 space-y-0.5">
+                  <button
+                    onClick={() => {
+                      onExportMidi();
+                      setExportOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 text-accent shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-text">{isZh ? "导出 MIDI 文件" : "Export MIDI"}</span>
+                      <span className="text-[10px] text-text-dim">.mid (8 轨完整伴奏)</span>
+                    </div>
+                  </button>
+                </div>
+
+                <div className="p-1 space-y-0.5">
+                  <button
+                    onClick={() => {
+                      onExportWav?.();
+                      setExportOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+                  >
+                    <FileAudio className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-text">{isZh ? "导出母带 WAV" : "Export Master WAV"}</span>
+                      <span className="text-[10px] text-text-dim">16-bit 44.1kHz PCM (.wav)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onExportStems?.();
+                      setExportOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+                  >
+                    <Package className="w-3.5 h-3.5 text-[#a78bfa] shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-text">{isZh ? "导出分轨 Stems 打包" : "Export Stems Pack"}</span>
+                      <span className="text-[10px] text-text-dim">8 轨独立 WAV 打包 (.zip)</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Share Groove */}
           {!isEditorMaximized && (

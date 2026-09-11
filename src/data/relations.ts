@@ -13,12 +13,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "chicago-house",
+    "target": "disco",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "chicago-house links historically back to disco.",
+      "zh": "chicago-house 在音乐历史渊源上追溯关联至 disco。"
+    }
+  },
+  {
+    "source": "chicago-house",
     "target": "deep-house",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Deep house slowed and deepened Chicago house.",
       "zh": "Deep House 放缓加深了芝加哥浩室。"
+    }
+  },
+  {
+    "source": "deep-house",
+    "target": "chicago-house",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "deep-house links historically back to chicago-house.",
+      "zh": "deep-house 在音乐历史渊源上追溯关联至 chicago-house。"
     }
   },
   {
@@ -32,6 +52,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "acid-house",
+    "target": "chicago-house",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "acid-house links historically back to chicago-house.",
+      "zh": "acid-house 在音乐历史渊源上追溯关联至 chicago-house。"
+    }
+  },
+  {
     "source": "chicago-house",
     "target": "tech-house",
     "type": "fusion_with",
@@ -42,6 +72,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "tech-house",
+    "target": "chicago-house",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "tech-house links historically back to chicago-house.",
+      "zh": "tech-house 在音乐历史渊源上追溯关联至 chicago-house。"
+    }
+  },
+  {
     "source": "chicago-house",
     "target": "french-house",
     "type": "influenced_by",
@@ -49,6 +89,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "French touch sampled disco with house beats.",
       "zh": "法式触感结合了迪斯科采样与浩室节拍。"
+    }
+  },
+  {
+    "source": "french-house",
+    "target": "chicago-house",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "french-house links historically back to chicago-house.",
+      "zh": "french-house 在音乐历史渊源上追溯关联至 chicago-house。"
     }
   },
   {
@@ -63,12 +113,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "ghetto-house",
+    "target": "chicago-house",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "ghetto-house links historically back to chicago-house.",
+      "zh": "ghetto-house 在音乐历史渊源上追溯关联至 chicago-house。"
+    }
+  },
+  {
+    "source": "ghetto-house",
     "target": "footwork",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Footwork evolved from ghetto house and juke.",
       "zh": "Footwork 由 Ghetto House 与 Juke 演进而来。"
+    }
+  },
+  {
+    "source": "footwork",
+    "target": "ghetto-house",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "footwork links historically back to ghetto-house.",
+      "zh": "footwork 在音乐历史渊源上追溯关联至 ghetto-house。"
     }
   },
   {
@@ -82,6 +152,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "amapiano",
+    "target": "deep-house",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "amapiano links historically back to deep-house.",
+      "zh": "amapiano 在音乐历史渊源上追溯关联至 deep-house。"
+    }
+  },
+  {
     "source": "deep-house",
     "target": "tropical-house",
     "type": "derived_to",
@@ -89,6 +169,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Tropical house adapted deep house grooves.",
       "zh": "Tropical House 吸收了 Deep House 的律动。"
+    }
+  },
+  {
+    "source": "tropical-house",
+    "target": "deep-house",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "tropical-house links historically back to deep-house.",
+      "zh": "tropical-house 在音乐历史渊源上追溯关联至 deep-house。"
     }
   },
   {
@@ -102,6 +192,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "melodic-house",
+    "target": "deep-house",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "melodic-house links historically back to deep-house.",
+      "zh": "melodic-house 在音乐历史渊源上追溯关联至 deep-house。"
+    }
+  },
+  {
     "source": "deep-house",
     "target": "microhouse",
     "type": "derived_to",
@@ -112,6 +212,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "microhouse",
+    "target": "deep-house",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "microhouse links historically back to deep-house.",
+      "zh": "microhouse 在音乐历史渊源上追溯关联至 deep-house。"
+    }
+  },
+  {
     "source": "chicago-house",
     "target": "progressive-house",
     "type": "derived_to",
@@ -119,6 +229,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Progressive house introduced long build-ups.",
       "zh": "渐进浩室引入了漫长的和声递进。"
+    }
+  },
+  {
+    "source": "progressive-house",
+    "target": "chicago-house",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "progressive-house links historically back to chicago-house.",
+      "zh": "progressive-house 在音乐历史渊源上追溯关联至 chicago-house。"
     }
   },
   {
@@ -133,12 +253,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "electro-house",
+    "target": "chicago-house",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "electro-house links historically back to chicago-house.",
+      "zh": "electro-house 在音乐历史渊源上追溯关联至 chicago-house。"
+    }
+  },
+  {
+    "source": "electro-house",
     "target": "bass-house",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Bass house merged electro house with dubstep growls.",
       "zh": "低音浩室融合了电子浩室与 Dubstep 嘶吼。"
+    }
+  },
+  {
+    "source": "bass-house",
+    "target": "electro-house",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "bass-house links historically back to electro-house.",
+      "zh": "bass-house 在音乐历史渊源上追溯关联至 electro-house。"
     }
   },
   {
@@ -152,6 +292,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "afro-house",
+    "target": "deep-house",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "afro-house links historically back to deep-house.",
+      "zh": "afro-house 在音乐历史渊源上追溯关联至 deep-house。"
+    }
+  },
+  {
     "source": "disco",
     "target": "nu-disco-house",
     "type": "derived_to",
@@ -159,6 +309,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Nu-disco modernized vintage 70s disco with club punch.",
       "zh": "新迪斯科将 70 年代迪斯科注入现代舞池冲击力。"
+    }
+  },
+  {
+    "source": "nu-disco-house",
+    "target": "disco",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "nu-disco-house links historically back to disco.",
+      "zh": "nu-disco-house 在音乐历史渊源上追溯关联至 disco。"
     }
   },
   {
@@ -173,12 +333,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "detroit-techno",
+    "target": "electro",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "detroit-techno links historically back to electro.",
+      "zh": "detroit-techno 在音乐历史渊源上追溯关联至 electro。"
+    }
+  },
+  {
+    "source": "detroit-techno",
     "target": "minimal-techno",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Minimal techno stripped Detroit techno down.",
       "zh": "极简 Techno 精简了底特律 Techno 骨架。"
+    }
+  },
+  {
+    "source": "minimal-techno",
+    "target": "detroit-techno",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "minimal-techno links historically back to detroit-techno.",
+      "zh": "minimal-techno 在音乐历史渊源上追溯关联至 detroit-techno。"
     }
   },
   {
@@ -189,6 +369,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Basic Channel fused techno with Jamaican dub.",
       "zh": "Basic Channel 将 Techno 与牙买加 Dub 融合。"
+    }
+  },
+  {
+    "source": "dub-techno",
+    "target": "detroit-techno",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "dub-techno links historically back to detroit-techno.",
+      "zh": "dub-techno 在音乐历史渊源上追溯关联至 detroit-techno。"
     }
   },
   {
@@ -203,12 +393,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "industrial-techno",
+    "target": "detroit-techno",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "industrial-techno links historically back to detroit-techno.",
+      "zh": "industrial-techno 在音乐历史渊源上追溯关联至 detroit-techno。"
+    }
+  },
+  {
+    "source": "industrial-techno",
     "target": "hard-techno",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Hard techno accelerated industrial aggression.",
       "zh": "Hard Techno 加速了工业侵略性。"
+    }
+  },
+  {
+    "source": "hard-techno",
+    "target": "industrial-techno",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "hard-techno links historically back to industrial-techno.",
+      "zh": "hard-techno 在音乐历史渊源上追溯关联至 industrial-techno。"
     }
   },
   {
@@ -222,6 +432,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "schranz",
+    "target": "hard-techno",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "schranz links historically back to hard-techno.",
+      "zh": "schranz 在音乐历史渊源上追溯关联至 hard-techno。"
+    }
+  },
+  {
     "source": "detroit-techno",
     "target": "ambient-techno",
     "type": "derived_to",
@@ -229,6 +449,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Ambient techno prioritized headphone meditation.",
       "zh": "氛围 Techno 专注于耳机深层冥想。"
+    }
+  },
+  {
+    "source": "ambient-techno",
+    "target": "detroit-techno",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "ambient-techno links historically back to detroit-techno.",
+      "zh": "ambient-techno 在音乐历史渊源上追溯关联至 detroit-techno。"
     }
   },
   {
@@ -242,6 +472,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "peak-time-techno",
+    "target": "detroit-techno",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "peak-time-techno links historically back to detroit-techno.",
+      "zh": "peak-time-techno 在音乐历史渊源上追溯关联至 detroit-techno。"
+    }
+  },
+  {
     "source": "minimal-techno",
     "target": "raw-techno",
     "type": "derived_to",
@@ -249,6 +489,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Raw techno returned to hardware grit.",
       "zh": "原始 Techno 回归模拟硬件纯粹质感。"
+    }
+  },
+  {
+    "source": "raw-techno",
+    "target": "minimal-techno",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "raw-techno links historically back to minimal-techno.",
+      "zh": "raw-techno 在音乐历史渊源上追溯关联至 minimal-techno。"
     }
   },
   {
@@ -263,12 +513,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "uplifting-trance",
+    "target": "chicago-house",
+    "type": "derived_to",
+    "weight": 4,
+    "description": {
+      "en": "uplifting-trance links historically back to chicago-house.",
+      "zh": "uplifting-trance 在音乐历史渊源上追溯关联至 chicago-house。"
+    }
+  },
+  {
+    "source": "uplifting-trance",
     "target": "progressive-trance",
     "type": "derived_to",
     "weight": 4,
     "description": {
       "en": "Progressive trance deepened the builds.",
       "zh": "前卫 Trance 深化了氛围铺垫。"
+    }
+  },
+  {
+    "source": "progressive-trance",
+    "target": "uplifting-trance",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "progressive-trance links historically back to uplifting-trance.",
+      "zh": "progressive-trance 在音乐历史渊源上追溯关联至 uplifting-trance。"
     }
   },
   {
@@ -283,12 +553,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "goa-trance",
+    "target": "acid-house",
+    "type": "influenced_by",
+    "weight": 5,
+    "description": {
+      "en": "goa-trance links historically back to acid-house.",
+      "zh": "goa-trance 在音乐历史渊源上追溯关联至 acid-house。"
+    }
+  },
+  {
+    "source": "goa-trance",
     "target": "psytrance",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Psytrance became global evolution of Goa trance.",
       "zh": "Psytrance 成为果阿 Trance 的全球进化形态。"
+    }
+  },
+  {
+    "source": "psytrance",
+    "target": "goa-trance",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "psytrance links historically back to goa-trance.",
+      "zh": "psytrance 在音乐历史渊源上追溯关联至 goa-trance。"
     }
   },
   {
@@ -302,6 +592,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "hard-trance",
+    "target": "uplifting-trance",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "hard-trance links historically back to uplifting-trance.",
+      "zh": "hard-trance 在音乐历史渊源上追溯关联至 uplifting-trance。"
+    }
+  },
+  {
     "source": "uplifting-trance",
     "target": "vocal-trance",
     "type": "derived_to",
@@ -309,6 +609,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Vocal trance centered emotional top-line singing.",
       "zh": "人声 Trance 以深情主旋律声乐为核心。"
+    }
+  },
+  {
+    "source": "vocal-trance",
+    "target": "uplifting-trance",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "vocal-trance links historically back to uplifting-trance.",
+      "zh": "vocal-trance 在音乐历史渊源上追溯关联至 uplifting-trance。"
     }
   },
   {
@@ -322,6 +632,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "euro-trance",
+    "target": "uplifting-trance",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "euro-trance links historically back to uplifting-trance.",
+      "zh": "euro-trance 在音乐历史渊源上追溯关联至 uplifting-trance。"
+    }
+  },
+  {
     "source": "uplifting-trance",
     "target": "dream-trance",
     "type": "derived_to",
@@ -329,6 +649,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Robert Miles popularized peaceful acoustic piano trance.",
       "zh": "Robert Miles 普及了静谧抒情的原声钢琴出神舞曲。"
+    }
+  },
+  {
+    "source": "dream-trance",
+    "target": "uplifting-trance",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "dream-trance links historically back to uplifting-trance.",
+      "zh": "dream-trance 在音乐历史渊源上追溯关联至 uplifting-trance。"
     }
   },
   {
@@ -342,6 +672,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "tech-trance",
+    "target": "uplifting-trance",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "tech-trance links historically back to uplifting-trance.",
+      "zh": "tech-trance 在音乐历史渊源上追溯关联至 uplifting-trance。"
+    }
+  },
+  {
     "source": "dub",
     "target": "reggae",
     "type": "origin_from",
@@ -352,6 +692,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "reggae",
+    "target": "dub",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "reggae links historically back to dub.",
+      "zh": "reggae 在音乐历史渊源上追溯关联至 dub。"
+    }
+  },
+  {
     "source": "dub",
     "target": "dubstep",
     "type": "origin_from",
@@ -359,6 +709,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Dubstep inherited dub's space, echo, and sub-bass.",
       "zh": "Dubstep 继承了 Dub 的空间感、回声与超低频。"
+    }
+  },
+  {
+    "source": "dubstep",
+    "target": "dub",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "dubstep links historically back to dub.",
+      "zh": "dubstep 在音乐历史渊源上追溯关联至 dub。"
     }
   },
   {
@@ -373,12 +733,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "2-step-garage",
+    "target": "uk-garage",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "2-step-garage links historically back to uk-garage.",
+      "zh": "2-step-garage 在音乐历史渊源上追溯关联至 uk-garage。"
+    }
+  },
+  {
+    "source": "2-step-garage",
     "target": "grime",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Grime grew out of dark garage pirate radio.",
       "zh": "Grime 脱胎于黑暗车库音乐电台。"
+    }
+  },
+  {
+    "source": "grime",
+    "target": "2-step-garage",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "grime links historically back to 2-step-garage.",
+      "zh": "grime 在音乐历史渊源上追溯关联至 2-step-garage。"
     }
   },
   {
@@ -389,6 +769,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Dubstep emerged from instrumental 2-step garage.",
       "zh": "Dubstep 诞生于纯器乐 2-Step 车库音乐。"
+    }
+  },
+  {
+    "source": "dubstep",
+    "target": "2-step-garage",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "dubstep links historically back to 2-step-garage.",
+      "zh": "dubstep 在音乐历史渊源上追溯关联至 2-step-garage。"
     }
   },
   {
@@ -403,12 +793,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "speed-garage",
+    "target": "uk-garage",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "speed-garage links historically back to uk-garage.",
+      "zh": "speed-garage 在音乐历史渊源上追溯关联至 uk-garage。"
+    }
+  },
+  {
+    "source": "speed-garage",
     "target": "bassline",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Bassline evolved in Sheffield with vocal hooks and donks.",
       "zh": "Bassline 在谢菲尔德演化，加入人声 Hook 与 Donk 低音。"
+    }
+  },
+  {
+    "source": "bassline",
+    "target": "speed-garage",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "bassline links historically back to speed-garage.",
+      "zh": "bassline 在音乐历史渊源上追溯关联至 speed-garage。"
     }
   },
   {
@@ -422,6 +832,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "uk-funky",
+    "target": "uk-garage",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "uk-funky links historically back to uk-garage.",
+      "zh": "uk-funky 在音乐历史渊源上追溯关联至 uk-garage。"
+    }
+  },
+  {
     "source": "bassline",
     "target": "speedbass",
     "type": "derived_to",
@@ -429,6 +849,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Speedbass accelerated bassline to 160 BPM.",
       "zh": "Speedbass 将 Bassline 加速至 160 BPM。"
+    }
+  },
+  {
+    "source": "speedbass",
+    "target": "bassline",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "speedbass links historically back to bassline.",
+      "zh": "speedbass 在音乐历史渊源上追溯关联至 bassline。"
     }
   },
   {
@@ -442,6 +872,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "brostep",
+    "target": "dubstep",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "brostep links historically back to dubstep.",
+      "zh": "brostep 在音乐历史渊源上追溯关联至 dubstep。"
+    }
+  },
+  {
     "source": "dubstep",
     "target": "riddim",
     "type": "derived_to",
@@ -449,6 +889,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Riddim isolated minimal, repetitive triplet stabs.",
       "zh": "Riddim 提炼了极简重复的三连音刺音。"
+    }
+  },
+  {
+    "source": "riddim",
+    "target": "dubstep",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "riddim links historically back to dubstep.",
+      "zh": "riddim 在音乐历史渊源上追溯关联至 dubstep。"
     }
   },
   {
@@ -462,6 +912,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "future-garage",
+    "target": "dubstep",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "future-garage links historically back to dubstep.",
+      "zh": "future-garage 在音乐历史渊源上追溯关联至 dubstep。"
+    }
+  },
+  {
     "source": "dubstep",
     "target": "melodic-dubstep",
     "type": "derived_to",
@@ -469,6 +929,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Melodic dubstep merged dubstep drums with supersaws.",
       "zh": "旋律 Dubstep 融合了 Dubstep 鼓组与 Supersaw 音墙。"
+    }
+  },
+  {
+    "source": "melodic-dubstep",
+    "target": "dubstep",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "melodic-dubstep links historically back to dubstep.",
+      "zh": "melodic-dubstep 在音乐历史渊源上追溯关联至 dubstep。"
     }
   },
   {
@@ -482,6 +952,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "post-dubstep",
+    "target": "dubstep",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "post-dubstep links historically back to dubstep.",
+      "zh": "post-dubstep 在音乐历史渊源上追溯关联至 dubstep。"
+    }
+  },
+  {
     "source": "dubstep",
     "target": "tearout-dubstep",
     "type": "derived_to",
@@ -489,6 +969,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Tearout pushed machine-gun metallic aggression.",
       "zh": "Tearout 将机关枪金属撕裂感推向极限。"
+    }
+  },
+  {
+    "source": "tearout-dubstep",
+    "target": "dubstep",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "tearout-dubstep links historically back to dubstep.",
+      "zh": "tearout-dubstep 在音乐历史渊源上追溯关联至 dubstep。"
     }
   },
   {
@@ -502,6 +992,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "chillstep",
+    "target": "dubstep",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "chillstep links historically back to dubstep.",
+      "zh": "chillstep 在音乐历史渊源上追溯关联至 dubstep。"
+    }
+  },
+  {
     "source": "dubstep",
     "target": "deathstep",
     "type": "fusion_with",
@@ -509,6 +1009,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Deathstep fused death metal with aggressive dubstep.",
       "zh": "Deathstep 融合了死亡金属与残暴 Dubstep。"
+    }
+  },
+  {
+    "source": "deathstep",
+    "target": "dubstep",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "deathstep links historically back to dubstep.",
+      "zh": "deathstep 在音乐历史渊源上追溯关联至 dubstep。"
     }
   },
   {
@@ -522,6 +1032,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "liquid-dnb",
+    "target": "jungle",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "liquid-dnb links historically back to jungle.",
+      "zh": "liquid-dnb 在音乐历史渊源上追溯关联至 jungle。"
+    }
+  },
+  {
     "source": "jungle",
     "target": "neurofunk",
     "type": "derived_to",
@@ -529,6 +1049,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Neurofunk introduced complex sci-fi sound design.",
       "zh": "Neurofunk 引入了复杂的科幻声音设计。"
+    }
+  },
+  {
+    "source": "neurofunk",
+    "target": "jungle",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "neurofunk links historically back to jungle.",
+      "zh": "neurofunk 在音乐历史渊源上追溯关联至 jungle。"
     }
   },
   {
@@ -542,6 +1072,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "jump-up",
+    "target": "jungle",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "jump-up links historically back to jungle.",
+      "zh": "jump-up 在音乐历史渊源上追溯关联至 jungle。"
+    }
+  },
+  {
     "source": "jungle",
     "target": "techstep",
     "type": "derived_to",
@@ -549,6 +1089,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Techstep stripped jungle to cold industrial drums.",
       "zh": "Techstep 将丛林乐精简为冷酷工业鼓点。"
+    }
+  },
+  {
+    "source": "techstep",
+    "target": "jungle",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "techstep links historically back to jungle.",
+      "zh": "techstep 在音乐历史渊源上追溯关联至 jungle。"
     }
   },
   {
@@ -562,6 +1112,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "breakcore",
+    "target": "jungle",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "breakcore links historically back to jungle.",
+      "zh": "breakcore 在音乐历史渊源上追溯关联至 jungle。"
+    }
+  },
+  {
     "source": "jungle",
     "target": "ragga-jungle",
     "type": "origin_from",
@@ -569,6 +1129,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Ragga jungle fused sliced breaks with Jamaican toasting.",
       "zh": "Ragga 丛林乐融合了切分碎拍与牙买加喊麦。"
+    }
+  },
+  {
+    "source": "ragga-jungle",
+    "target": "jungle",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "ragga-jungle links historically back to jungle.",
+      "zh": "ragga-jungle 在音乐历史渊源上追溯关联至 jungle。"
     }
   },
   {
@@ -582,6 +1152,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "sambass",
+    "target": "jungle",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "sambass links historically back to jungle.",
+      "zh": "sambass 在音乐历史渊源上追溯关联至 jungle。"
+    }
+  },
+  {
     "source": "neurofunk",
     "target": "halftime",
     "type": "derived_to",
@@ -589,6 +1169,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Halftime slowed 174 BPM sound design to hip-hop bounce.",
       "zh": "Halftime 将 174 BPM 音色设计放慢为嘻哈弹跳。"
+    }
+  },
+  {
+    "source": "halftime",
+    "target": "neurofunk",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "halftime links historically back to neurofunk.",
+      "zh": "halftime 在音乐历史渊源上追溯关联至 neurofunk。"
     }
   },
   {
@@ -603,12 +1193,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "trap-rap",
+    "target": "southern-hip-hop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "trap-rap links historically back to southern-hip-hop.",
+      "zh": "trap-rap 在音乐历史渊源上追溯关联至 southern-hip-hop。"
+    }
+  },
+  {
+    "source": "trap-rap",
     "target": "edm-trap",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "EDM trap combined 808s with festival synths.",
       "zh": "EDM Trap 将 808 与电音节合成器结合。"
+    }
+  },
+  {
+    "source": "edm-trap",
+    "target": "trap-rap",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "edm-trap links historically back to trap-rap.",
+      "zh": "edm-trap 在音乐历史渊源上追溯关联至 trap-rap。"
     }
   },
   {
@@ -622,6 +1232,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "hard-trap",
+    "target": "edm-trap",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "hard-trap links historically back to edm-trap.",
+      "zh": "hard-trap 在音乐历史渊源上追溯关联至 edm-trap。"
+    }
+  },
+  {
     "source": "edm-trap",
     "target": "hybrid-trap",
     "type": "derived_to",
@@ -629,6 +1249,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Hybrid trap fused EDM trap with dubstep growls.",
       "zh": "混种 Trap 融合了 EDM Trap 与 Dubstep 咆哮。"
+    }
+  },
+  {
+    "source": "hybrid-trap",
+    "target": "edm-trap",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "hybrid-trap links historically back to edm-trap.",
+      "zh": "hybrid-trap 在音乐历史渊源上追溯关联至 edm-trap。"
     }
   },
   {
@@ -643,12 +1273,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "future-bass",
+    "target": "edm-trap",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "future-bass links historically back to edm-trap.",
+      "zh": "future-bass 在音乐历史渊源上追溯关联至 edm-trap。"
+    }
+  },
+  {
+    "source": "future-bass",
     "target": "kawaii-future-bass",
     "type": "derived_to",
     "weight": 4,
     "description": {
       "en": "Kawaii future bass infused anime visuals and chiptune.",
       "zh": "可爱未来贝斯融入了动漫美学与芯片音效。"
+    }
+  },
+  {
+    "source": "kawaii-future-bass",
+    "target": "future-bass",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "kawaii-future-bass links historically back to future-bass.",
+      "zh": "kawaii-future-bass 在音乐历史渊源上追溯关联至 future-bass。"
     }
   },
   {
@@ -663,12 +1313,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "chicago-drill",
+    "target": "trap-rap",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "chicago-drill links historically back to trap-rap.",
+      "zh": "chicago-drill 在音乐历史渊源上追溯关联至 trap-rap。"
+    }
+  },
+  {
+    "source": "chicago-drill",
     "target": "uk-drill",
     "type": "regional_variant",
     "weight": 5,
     "description": {
       "en": "UK drill adapted Chicago drill with sliding 808s.",
       "zh": "UK Drill 改造芝加哥钻头，引入滑音 808。"
+    }
+  },
+  {
+    "source": "uk-drill",
+    "target": "chicago-drill",
+    "type": "influenced_by",
+    "weight": 5,
+    "description": {
+      "en": "uk-drill links historically back to chicago-drill.",
+      "zh": "uk-drill 在音乐历史渊源上追溯关联至 chicago-drill。"
     }
   },
   {
@@ -683,12 +1353,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "brooklyn-drill",
+    "target": "uk-drill",
+    "type": "influenced_by",
+    "weight": 5,
+    "description": {
+      "en": "brooklyn-drill links historically back to uk-drill.",
+      "zh": "brooklyn-drill 在音乐历史渊源上追溯关联至 uk-drill。"
+    }
+  },
+  {
+    "source": "brooklyn-drill",
     "target": "jersey-drill",
     "type": "fusion_with",
     "weight": 5,
     "description": {
       "en": "Jersey drill fused drill 808s with club bounce.",
       "zh": "泽西 Drill 融合了钻头 808 与泽西俱乐部弹跳。"
+    }
+  },
+  {
+    "source": "jersey-drill",
+    "target": "brooklyn-drill",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "jersey-drill links historically back to brooklyn-drill.",
+      "zh": "jersey-drill 在音乐历史渊源上追溯关联至 brooklyn-drill。"
     }
   },
   {
@@ -702,6 +1392,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "jersey-drill",
+    "target": "jersey-club",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "jersey-drill links historically back to jersey-club.",
+      "zh": "jersey-drill 在音乐历史渊源上追溯关联至 jersey-club。"
+    }
+  },
+  {
     "source": "ambient",
     "target": "ambient-dub",
     "type": "derived_to",
@@ -709,6 +1409,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Ambient dub added dub delay and pulsing sub.",
       "zh": "氛围 Dub 加入了 Dub 延迟与脉冲超低音。"
+    }
+  },
+  {
+    "source": "ambient-dub",
+    "target": "ambient",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "ambient-dub links historically back to ambient.",
+      "zh": "ambient-dub 在音乐历史渊源上追溯关联至 ambient。"
     }
   },
   {
@@ -723,12 +1433,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "downtempo",
+    "target": "ambient",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "downtempo links historically back to ambient.",
+      "zh": "downtempo 在音乐历史渊源上追溯关联至 ambient。"
+    }
+  },
+  {
+    "source": "downtempo",
     "target": "trip-hop",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Trip hop darkened downtempo with cinematic noir.",
       "zh": "神游舞曲为缓拍注入暗黑电影质感。"
+    }
+  },
+  {
+    "source": "trip-hop",
+    "target": "downtempo",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "trip-hop links historically back to downtempo.",
+      "zh": "trip-hop 在音乐历史渊源上追溯关联至 downtempo。"
     }
   },
   {
@@ -742,6 +1472,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "glitch-hop",
+    "target": "trip-hop",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "glitch-hop links historically back to trip-hop.",
+      "zh": "glitch-hop 在音乐历史渊源上追溯关联至 trip-hop。"
+    }
+  },
+  {
     "source": "ambient",
     "target": "idm",
     "type": "influenced_by",
@@ -749,6 +1489,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "IDM expanded ambient textures with complex algorithms.",
       "zh": "IDM 结合复杂算法拓展了氛围纹理。"
+    }
+  },
+  {
+    "source": "idm",
+    "target": "ambient",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "idm links historically back to ambient.",
+      "zh": "idm 在音乐历史渊源上追溯关联至 ambient。"
     }
   },
   {
@@ -762,6 +1512,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "synthwave",
+    "target": "synth-pop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "synthwave links historically back to synth-pop.",
+      "zh": "synthwave 在音乐历史渊源上追溯关联至 synth-pop。"
+    }
+  },
+  {
     "source": "synth-pop",
     "target": "vaporwave",
     "type": "influenced_by",
@@ -769,6 +1529,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Vaporwave slowed down 80s commercial pop.",
       "zh": "蒸汽波慢放解构了 80 年代商业流行。"
+    }
+  },
+  {
+    "source": "vaporwave",
+    "target": "synth-pop",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "vaporwave links historically back to synth-pop.",
+      "zh": "vaporwave 在音乐历史渊源上追溯关联至 synth-pop。"
     }
   },
   {
@@ -782,6 +1552,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "chillwave",
+    "target": "synth-pop",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "chillwave links historically back to synth-pop.",
+      "zh": "chillwave 在音乐历史渊源上追溯关联至 synth-pop。"
+    }
+  },
+  {
     "source": "chicago-house",
     "target": "lofi-house",
     "type": "derived_to",
@@ -792,6 +1572,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "lofi-house",
+    "target": "chicago-house",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "lofi-house links historically back to chicago-house.",
+      "zh": "lofi-house 在音乐历史渊源上追溯关联至 chicago-house。"
+    }
+  },
+  {
     "source": "electro",
     "target": "chiptune",
     "type": "influenced_by",
@@ -799,6 +1589,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Chiptune celebrated pure PSG sound chip music.",
       "zh": "芯片音乐颂唱纯粹 PSG 声音芯片的魅力。"
+    }
+  },
+  {
+    "source": "chiptune",
+    "target": "electro",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "chiptune links historically back to electro.",
+      "zh": "chiptune 在音乐历史渊源上追溯关联至 electro。"
     }
   },
   {
@@ -813,12 +1613,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "hardcore-gabber",
+    "target": "hard-techno",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "hardcore-gabber links historically back to hard-techno.",
+      "zh": "hardcore-gabber 在音乐历史渊源上追溯关联至 hard-techno。"
+    }
+  },
+  {
+    "source": "hardcore-gabber",
     "target": "frenchcore",
     "type": "derived_to",
     "weight": 4,
     "description": {
       "en": "Frenchcore accelerated kicks to 200 BPM with bounce.",
       "zh": "法兰西硬核将底鼓加速至 200 BPM 并加入反拍弹跳。"
+    }
+  },
+  {
+    "source": "frenchcore",
+    "target": "hardcore-gabber",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "frenchcore links historically back to hardcore-gabber.",
+      "zh": "frenchcore 在音乐历史渊源上追溯关联至 hardcore-gabber。"
     }
   },
   {
@@ -832,6 +1652,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "happy-hardcore",
+    "target": "hardcore-gabber",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "happy-hardcore links historically back to hardcore-gabber.",
+      "zh": "happy-hardcore 在音乐历史渊源上追溯关联至 hardcore-gabber。"
+    }
+  },
+  {
     "source": "hard-techno",
     "target": "hardstyle",
     "type": "derived_to",
@@ -839,6 +1669,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Hardstyle sculpted the signature pitched reverse bass.",
       "zh": "Hardstyle 塑造了标志性的定调反转贝斯。"
+    }
+  },
+  {
+    "source": "hardstyle",
+    "target": "hard-techno",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "hardstyle links historically back to hard-techno.",
+      "zh": "hardstyle 在音乐历史渊源上追溯关联至 hard-techno。"
     }
   },
   {
@@ -852,6 +1692,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "moombahton",
+    "target": "reggaeton",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "moombahton links historically back to reggaeton.",
+      "zh": "moombahton 在音乐历史渊源上追溯关联至 reggaeton。"
+    }
+  },
+  {
     "source": "ghetto-house",
     "target": "jersey-club",
     "type": "influenced_by",
@@ -859,6 +1709,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Jersey club evolved bouncy Baltimore & ghetto beats.",
       "zh": "泽西俱乐部演化自充满弹性的街区律动。"
+    }
+  },
+  {
+    "source": "jersey-club",
+    "target": "ghetto-house",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "jersey-club links historically back to ghetto-house.",
+      "zh": "jersey-club 在音乐历史渊源上追溯关联至 ghetto-house。"
     }
   },
   {
@@ -873,12 +1733,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "phonk",
+    "target": "southern-hip-hop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "phonk links historically back to southern-hip-hop.",
+      "zh": "phonk 在音乐历史渊源上追溯关联至 southern-hip-hop。"
+    }
+  },
+  {
+    "source": "phonk",
     "target": "drift-phonk",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Drift phonk accelerated phonk with extreme distortion.",
       "zh": "漂移 Phonk 用极限失真加速了放克说唱。"
+    }
+  },
+  {
+    "source": "drift-phonk",
+    "target": "phonk",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "drift-phonk links historically back to phonk.",
+      "zh": "drift-phonk 在音乐历史渊源上追溯关联至 phonk。"
     }
   },
   {
@@ -893,12 +1773,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "breakbeat",
+    "target": "electro",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "breakbeat links historically back to electro.",
+      "zh": "breakbeat 在音乐历史渊源上追溯关联至 electro。"
+    }
+  },
+  {
+    "source": "breakbeat",
     "target": "big-beat",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Big beat amplified breakbeats with heavy rock guitars.",
       "zh": "大碎拍用重型摇滚吉他强化了碎拍能量。"
+    }
+  },
+  {
+    "source": "big-beat",
+    "target": "breakbeat",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "big-beat links historically back to breakbeat.",
+      "zh": "big-beat 在音乐历史渊源上追溯关联至 breakbeat。"
     }
   },
   {
@@ -913,12 +1813,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "chicago-blues",
+    "target": "delta-blues",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "chicago-blues links historically back to delta-blues.",
+      "zh": "chicago-blues 在音乐历史渊源上追溯关联至 delta-blues。"
+    }
+  },
+  {
+    "source": "chicago-blues",
     "target": "rock-and-roll",
     "type": "origin_from",
     "weight": 5,
     "description": {
       "en": "Rock and Roll formed from blues and rhythm and blues.",
       "zh": "摇滚乐脱胎于布鲁斯与节奏布鲁斯。"
+    }
+  },
+  {
+    "source": "rock-and-roll",
+    "target": "chicago-blues",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "rock-and-roll links historically back to chicago-blues.",
+      "zh": "rock-and-roll 在音乐历史渊源上追溯关联至 chicago-blues。"
     }
   },
   {
@@ -933,12 +1853,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "blues-rock",
+    "target": "rock-and-roll",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "blues-rock links historically back to rock-and-roll.",
+      "zh": "blues-rock 在音乐历史渊源上追溯关联至 rock-and-roll。"
+    }
+  },
+  {
+    "source": "blues-rock",
     "target": "hard-rock",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Hard rock turned blues riffs into power chords.",
       "zh": "硬摇滚将布鲁斯 Riff 转变为强力和弦。"
+    }
+  },
+  {
+    "source": "hard-rock",
+    "target": "blues-rock",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "hard-rock links historically back to blues-rock.",
+      "zh": "hard-rock 在音乐历史渊源上追溯关联至 blues-rock。"
     }
   },
   {
@@ -953,12 +1893,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "heavy-metal",
+    "target": "hard-rock",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "heavy-metal links historically back to hard-rock.",
+      "zh": "heavy-metal 在音乐历史渊源上追溯关联至 hard-rock。"
+    }
+  },
+  {
+    "source": "heavy-metal",
     "target": "thrash-metal",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Thrash metal sped metal up with punk fury.",
       "zh": "激流金属用朋克狂怒加速了金属乐。"
+    }
+  },
+  {
+    "source": "thrash-metal",
+    "target": "heavy-metal",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "thrash-metal links historically back to heavy-metal.",
+      "zh": "thrash-metal 在音乐历史渊源上追溯关联至 heavy-metal。"
     }
   },
   {
@@ -972,6 +1932,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "death-metal",
+    "target": "thrash-metal",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "death-metal links historically back to thrash-metal.",
+      "zh": "death-metal 在音乐历史渊源上追溯关联至 thrash-metal。"
+    }
+  },
+  {
     "source": "thrash-metal",
     "target": "black-metal",
     "type": "derived_to",
@@ -979,6 +1949,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Black metal focused on raw cold atmospheric fury.",
       "zh": "黑金属专注于原始冰冷的狂乱氛围。"
+    }
+  },
+  {
+    "source": "black-metal",
+    "target": "thrash-metal",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "black-metal links historically back to thrash-metal.",
+      "zh": "black-metal 在音乐历史渊源上追溯关联至 thrash-metal。"
     }
   },
   {
@@ -992,6 +1972,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "doom-metal",
+    "target": "heavy-metal",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "doom-metal links historically back to heavy-metal.",
+      "zh": "doom-metal 在音乐历史渊源上追溯关联至 heavy-metal。"
+    }
+  },
+  {
     "source": "heavy-metal",
     "target": "metalcore",
     "type": "fusion_with",
@@ -999,6 +1989,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Metalcore merged melodic death metal with punk breakdowns.",
       "zh": "金属核融合了旋律死金与朋克蹲点。"
+    }
+  },
+  {
+    "source": "metalcore",
+    "target": "heavy-metal",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "metalcore links historically back to heavy-metal.",
+      "zh": "metalcore 在音乐历史渊源上追溯关联至 heavy-metal。"
     }
   },
   {
@@ -1013,12 +2013,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "post-punk",
+    "target": "punk-rock",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "post-punk links historically back to punk-rock.",
+      "zh": "post-punk 在音乐历史渊源上追溯关联至 punk-rock。"
+    }
+  },
+  {
+    "source": "post-punk",
     "target": "new-wave",
     "type": "derived_to",
     "weight": 4,
     "description": {
       "en": "New wave injected pop hooks and synths.",
       "zh": "新浪潮注入了流行 Hook 与合成器。"
+    }
+  },
+  {
+    "source": "new-wave",
+    "target": "post-punk",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "new-wave links historically back to post-punk.",
+      "zh": "new-wave 在音乐历史渊源上追溯关联至 post-punk。"
     }
   },
   {
@@ -1033,12 +2053,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "grunge",
+    "target": "punk-rock",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "grunge links historically back to punk-rock.",
+      "zh": "grunge 在音乐历史渊源上追溯关联至 punk-rock。"
+    }
+  },
+  {
+    "source": "grunge",
     "target": "alternative-rock",
     "type": "derived_to",
     "weight": 4,
     "description": {
       "en": "Alternative rock expanded grunge's college radio dominance.",
       "zh": "另类摇滚拓展了垃圾摇滚在大学电台的影响。"
+    }
+  },
+  {
+    "source": "alternative-rock",
+    "target": "grunge",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "alternative-rock links historically back to grunge.",
+      "zh": "alternative-rock 在音乐历史渊源上追溯关联至 grunge。"
     }
   },
   {
@@ -1052,6 +2092,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "progressive-rock",
+    "target": "hard-rock",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "progressive-rock links historically back to hard-rock.",
+      "zh": "progressive-rock 在音乐历史渊源上追溯关联至 hard-rock。"
+    }
+  },
+  {
     "source": "alternative-rock",
     "target": "math-rock",
     "type": "derived_to",
@@ -1059,6 +2109,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Math rock structured rock around odd meters and tapping.",
       "zh": "数学摇滚围绕奇数节拍与点弦构建音乐。"
+    }
+  },
+  {
+    "source": "math-rock",
+    "target": "alternative-rock",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "math-rock links historically back to alternative-rock.",
+      "zh": "math-rock 在音乐历史渊源上追溯关联至 alternative-rock。"
     }
   },
   {
@@ -1072,6 +2132,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "shoe-gaze",
+    "target": "post-punk",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "shoe-gaze links historically back to post-punk.",
+      "zh": "shoe-gaze 在音乐历史渊源上追溯关联至 post-punk。"
+    }
+  },
+  {
     "source": "old-school-hip-hop",
     "target": "boom-bap",
     "type": "derived_to",
@@ -1082,6 +2152,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "boom-bap",
+    "target": "old-school-hip-hop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "boom-bap links historically back to old-school-hip-hop.",
+      "zh": "boom-bap 在音乐历史渊源上追溯关联至 old-school-hip-hop。"
+    }
+  },
+  {
     "source": "old-school-hip-hop",
     "target": "east-coast-hip-hop",
     "type": "derived_to",
@@ -1089,6 +2169,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "East Coast hip hop sharpened street lyrical storytelling.",
       "zh": "东海岸嘻哈磨砺了街头叙事与多音节押韵。"
+    }
+  },
+  {
+    "source": "east-coast-hip-hop",
+    "target": "old-school-hip-hop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "east-coast-hip-hop links historically back to old-school-hip-hop.",
+      "zh": "east-coast-hip-hop 在音乐历史渊源上追溯关联至 old-school-hip-hop。"
     }
   },
   {
@@ -1103,12 +2193,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "west-coast-hip-hop",
+    "target": "old-school-hip-hop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "west-coast-hip-hop links historically back to old-school-hip-hop.",
+      "zh": "west-coast-hip-hop 在音乐历史渊源上追溯关联至 old-school-hip-hop。"
+    }
+  },
+  {
+    "source": "west-coast-hip-hop",
     "target": "g-funk",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Dr. Dre crafted G-funk with sliding Moog synth leads.",
       "zh": "Dr. Dre 用滑音 Moog 合成器独奏铸就 G-Funk。"
+    }
+  },
+  {
+    "source": "g-funk",
+    "target": "west-coast-hip-hop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "g-funk links historically back to west-coast-hip-hop.",
+      "zh": "g-funk 在音乐历史渊源上追溯关联至 west-coast-hip-hop。"
     }
   },
   {
@@ -1122,6 +2232,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "conscious-hip-hop",
+    "target": "boom-bap",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "conscious-hip-hop links historically back to boom-bap.",
+      "zh": "conscious-hip-hop 在音乐历史渊源上追溯关联至 boom-bap。"
+    }
+  },
+  {
     "source": "boom-bap",
     "target": "lofi-hip-hop",
     "type": "derived_to",
@@ -1129,6 +2249,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Lo-Fi hip hop relaxed boom-bap with jazz chords and crackle.",
       "zh": "Lo-Fi 嘻哈用爵士和弦与黑胶底噪舒缓了 Boom-Bap。"
+    }
+  },
+  {
+    "source": "lofi-hip-hop",
+    "target": "boom-bap",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "lofi-hip-hop links historically back to boom-bap.",
+      "zh": "lofi-hip-hop 在音乐历史渊源上追溯关联至 boom-bap。"
     }
   },
   {
@@ -1142,6 +2272,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "emo-rap",
+    "target": "trap-rap",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "emo-rap links historically back to trap-rap.",
+      "zh": "emo-rap 在音乐历史渊源上追溯关联至 trap-rap。"
+    }
+  },
+  {
     "source": "trap-rap",
     "target": "cloud-rap",
     "type": "derived_to",
@@ -1149,6 +2289,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Cloud rap floated trap drums in dreamlike reverb clouds.",
       "zh": "云雾说唱让 Trap 鼓点浮沉于梦境混响云雾中。"
+    }
+  },
+  {
+    "source": "cloud-rap",
+    "target": "trap-rap",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "cloud-rap links historically back to trap-rap.",
+      "zh": "cloud-rap 在音乐历史渊源上追溯关联至 trap-rap。"
     }
   },
   {
@@ -1162,6 +2312,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "texas-blues",
+    "target": "delta-blues",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "texas-blues links historically back to delta-blues.",
+      "zh": "texas-blues 在音乐历史渊源上追溯关联至 delta-blues。"
+    }
+  },
+  {
     "source": "chicago-blues",
     "target": "electric-blues",
     "type": "derived_to",
@@ -1169,6 +2329,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Electric blues set the template for modern soloing.",
       "zh": "电气布鲁斯奠定了现代电吉他独奏范式。"
+    }
+  },
+  {
+    "source": "electric-blues",
+    "target": "chicago-blues",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "electric-blues links historically back to chicago-blues.",
+      "zh": "electric-blues 在音乐历史渊源上追溯关联至 chicago-blues。"
     }
   },
   {
@@ -1183,12 +2353,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "bebop",
+    "target": "traditional-jazz",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "bebop links historically back to traditional-jazz.",
+      "zh": "bebop 在音乐历史渊源上追溯关联至 traditional-jazz。"
+    }
+  },
+  {
+    "source": "bebop",
     "target": "cool-jazz",
     "type": "derived_to",
     "weight": 4,
     "description": {
       "en": "Cool jazz reacted against bebop with relaxed subtlety.",
       "zh": "冷爵士反叛比波普的燥热，追求温文尔雅。"
+    }
+  },
+  {
+    "source": "cool-jazz",
+    "target": "bebop",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "cool-jazz links historically back to bebop.",
+      "zh": "cool-jazz 在音乐历史渊源上追溯关联至 bebop。"
     }
   },
   {
@@ -1202,6 +2392,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "hard-bop",
+    "target": "bebop",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "hard-bop links historically back to bebop.",
+      "zh": "hard-bop 在音乐历史渊源上追溯关联至 bebop。"
+    }
+  },
+  {
     "source": "cool-jazz",
     "target": "modal-jazz",
     "type": "derived_to",
@@ -1212,6 +2412,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "modal-jazz",
+    "target": "cool-jazz",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "modal-jazz links historically back to cool-jazz.",
+      "zh": "modal-jazz 在音乐历史渊源上追溯关联至 cool-jazz。"
+    }
+  },
+  {
     "source": "bebop",
     "target": "free-jazz",
     "type": "derived_to",
@@ -1219,6 +2429,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Free jazz discarded fixed meters and chord charts.",
       "zh": "自由爵士摒弃了固定小节与和弦框架。"
+    }
+  },
+  {
+    "source": "free-jazz",
+    "target": "bebop",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "free-jazz links historically back to bebop.",
+      "zh": "free-jazz 在音乐历史渊源上追溯关联至 bebop。"
     }
   },
   {
@@ -1233,12 +2453,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "jazz-fusion",
+    "target": "modal-jazz",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "jazz-fusion links historically back to modal-jazz.",
+      "zh": "jazz-fusion 在音乐历史渊源上追溯关联至 modal-jazz。"
+    }
+  },
+  {
+    "source": "jazz-fusion",
     "target": "smooth-jazz",
     "type": "derived_to",
     "weight": 4,
     "description": {
       "en": "Smooth jazz commercialized fusion for radio playlists.",
       "zh": "轻柔爵士将融合爵士商业化，适合电台播放。"
+    }
+  },
+  {
+    "source": "smooth-jazz",
+    "target": "jazz-fusion",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "smooth-jazz links historically back to jazz-fusion.",
+      "zh": "smooth-jazz 在音乐历史渊源上追溯关联至 jazz-fusion。"
     }
   },
   {
@@ -1252,6 +2492,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "acid-jazz",
+    "target": "traditional-jazz",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "acid-jazz links historically back to traditional-jazz.",
+      "zh": "acid-jazz 在音乐历史渊源上追溯关联至 traditional-jazz。"
+    }
+  },
+  {
     "source": "traditional-jazz",
     "target": "gypsy-jazz",
     "type": "fusion_with",
@@ -1259,6 +2509,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Django Reinhardt fused Paris swing with Romani music.",
       "zh": "Django Reinhardt 将巴黎摇摆与罗姆音乐融合。"
+    }
+  },
+  {
+    "source": "gypsy-jazz",
+    "target": "traditional-jazz",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "gypsy-jazz links historically back to traditional-jazz.",
+      "zh": "gypsy-jazz 在音乐历史渊源上追溯关联至 traditional-jazz。"
     }
   },
   {
@@ -1273,12 +2533,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "soul",
+    "target": "traditional-pop",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "soul links historically back to traditional-pop.",
+      "zh": "soul 在音乐历史渊源上追溯关联至 traditional-pop。"
+    }
+  },
+  {
+    "source": "soul",
     "target": "motown",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Motown industrialized soul into global pop anthems.",
       "zh": "摩城将灵魂乐工业化，造就全球流行经典。"
+    }
+  },
+  {
+    "source": "motown",
+    "target": "soul",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "motown links historically back to soul.",
+      "zh": "motown 在音乐历史渊源上追溯关联至 soul。"
     }
   },
   {
@@ -1293,12 +2573,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "funk",
+    "target": "soul",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "funk links historically back to soul.",
+      "zh": "funk 在音乐历史渊源上追溯关联至 soul。"
+    }
+  },
+  {
+    "source": "funk",
     "target": "disco",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Disco streamlined funk rhythms into 4/4 dance floors.",
       "zh": "迪斯科将放克节拍规整为四四拍舞池轰炸。"
+    }
+  },
+  {
+    "source": "disco",
+    "target": "funk",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "disco links historically back to funk.",
+      "zh": "disco 在音乐历史渊源上追溯关联至 funk。"
     }
   },
   {
@@ -1312,6 +2612,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "eurodance",
+    "target": "disco",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "eurodance links historically back to disco.",
+      "zh": "eurodance 在音乐历史渊源上追溯关联至 disco。"
+    }
+  },
+  {
     "source": "soul",
     "target": "neo-soul",
     "type": "derived_to",
@@ -1319,6 +2629,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Neo-soul revitalized 70s soul with hip-hop beats.",
       "zh": "新灵魂乐用嘻哈节拍复兴了 70 年代灵魂乐。"
+    }
+  },
+  {
+    "source": "neo-soul",
+    "target": "soul",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "neo-soul links historically back to soul.",
+      "zh": "neo-soul 在音乐历史渊源上追溯关联至 soul。"
     }
   },
   {
@@ -1333,12 +2653,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "contemporary-rnb",
+    "target": "soul",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "contemporary-rnb links historically back to soul.",
+      "zh": "contemporary-rnb 在音乐历史渊源上追溯关联至 soul。"
+    }
+  },
+  {
+    "source": "contemporary-rnb",
     "target": "alternative-rnb",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Alternative R&B darkened R&B with moody indie aesthetics.",
       "zh": "另类 R&B 用独立暗黑美学深化了 R&B。"
+    }
+  },
+  {
+    "source": "alternative-rnb",
+    "target": "contemporary-rnb",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "alternative-rnb links historically back to contemporary-rnb.",
+      "zh": "alternative-rnb 在音乐历史渊源上追溯关联至 contemporary-rnb。"
     }
   },
   {
@@ -1352,6 +2692,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "city-pop",
+    "target": "disco",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "city-pop links historically back to disco.",
+      "zh": "city-pop 在音乐历史渊源上追溯关联至 disco。"
+    }
+  },
+  {
     "source": "synth-pop",
     "target": "k-pop",
     "type": "influenced_by",
@@ -1359,6 +2709,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "K-pop combined modern synth-pop with choreography.",
       "zh": "K-Pop 将现代合成流行与高难度编舞结合。"
+    }
+  },
+  {
+    "source": "k-pop",
+    "target": "synth-pop",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "k-pop links historically back to synth-pop.",
+      "zh": "k-pop 在音乐历史渊源上追溯关联至 synth-pop。"
     }
   },
   {
@@ -1372,6 +2732,16 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
+    "source": "j-pop",
+    "target": "city-pop",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "j-pop links historically back to city-pop.",
+      "zh": "j-pop 在音乐历史渊源上追溯关联至 city-pop。"
+    }
+  },
+  {
     "source": "samba",
     "target": "bossa-nova",
     "type": "derived_to",
@@ -1382,13 +2752,13 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     }
   },
   {
-    "source": "reggae",
-    "target": "dub",
-    "type": "derived_to",
+    "source": "bossa-nova",
+    "target": "samba",
+    "type": "origin_from",
     "weight": 5,
     "description": {
-      "en": "Dub stripped reggae down into echoing mixing desk art.",
-      "zh": "Dub 将雷鬼解构为充满回声的调音台艺术。"
+      "en": "bossa-nova links historically back to samba.",
+      "zh": "bossa-nova 在音乐历史渊源上追溯关联至 samba。"
     }
   },
   {
@@ -1403,12 +2773,32 @@ export const GENRE_RELATIONS: GenreRelation[] = [
   },
   {
     "source": "dancehall",
+    "target": "reggae",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "dancehall links historically back to reggae.",
+      "zh": "dancehall 在音乐历史渊源上追溯关联至 reggae。"
+    }
+  },
+  {
+    "source": "dancehall",
     "target": "reggaeton",
     "type": "derived_to",
     "weight": 5,
     "description": {
       "en": "Reggaeton adapted dancehall riddims into Dembow bounce.",
       "zh": "雷鬼顿将舞厅雷鬼演化为洗脑的 Dembow 弹跳。"
+    }
+  },
+  {
+    "source": "reggaeton",
+    "target": "dancehall",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "reggaeton links historically back to dancehall.",
+      "zh": "reggaeton 在音乐历史渊源上追溯关联至 dancehall。"
     }
   },
   {
@@ -1419,6 +2809,196 @@ export const GENRE_RELATIONS: GenreRelation[] = [
     "description": {
       "en": "Amapiano drew from Afrobeat and African house roots.",
       "zh": "Amapiano 汲取了非洲节拍与本土浩室的灵性养分。"
+    }
+  },
+  {
+    "source": "amapiano",
+    "target": "afrobeat",
+    "type": "influenced_by",
+    "weight": 4,
+    "description": {
+      "en": "amapiano links historically back to afrobeat.",
+      "zh": "amapiano 在音乐历史渊源上追溯关联至 afrobeat。"
+    }
+  },
+  {
+    "source": "acid-techno",
+    "target": "detroit-techno",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "Acid techno evolved from techno using TB-303 lines.",
+      "zh": "Acid Techno 采用 TB-303 酸性贝斯线演化自 Techno。"
+    }
+  },
+  {
+    "source": "detroit-techno",
+    "target": "acid-techno",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "detroit-techno links historically back to acid-techno.",
+      "zh": "detroit-techno 在音乐历史渊源上追溯关联至 acid-techno。"
+    }
+  },
+  {
+    "source": "acid-techno",
+    "target": "acid-house",
+    "type": "influenced_by",
+    "weight": 5,
+    "description": {
+      "en": "Acid techno took heavy cues from early acid house.",
+      "zh": "Acid Techno 深受早期 Acid House 启发。"
+    }
+  },
+  {
+    "source": "acid-house",
+    "target": "acid-techno",
+    "type": "influenced_by",
+    "weight": 5,
+    "description": {
+      "en": "acid-house links historically back to acid-techno.",
+      "zh": "acid-house 在音乐历史渊源上追溯关联至 acid-techno。"
+    }
+  },
+  {
+    "source": "future-house",
+    "target": "deep-house",
+    "type": "origin_from",
+    "weight": 5,
+    "description": {
+      "en": "Future house energized deep house with metallic plucks.",
+      "zh": "Future House 用金属质感拨弦强化了 Deep House。"
+    }
+  },
+  {
+    "source": "deep-house",
+    "target": "future-house",
+    "type": "derived_to",
+    "weight": 5,
+    "description": {
+      "en": "deep-house links historically back to future-house.",
+      "zh": "deep-house 在音乐历史渊源上追溯关联至 future-house。"
+    }
+  },
+  {
+    "source": "wave",
+    "target": "trap-rap",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "Wave music fused trap 808s with ambient synth textures.",
+      "zh": "Wave 音乐融合了 Trap 808 与环境合成器纹理。"
+    }
+  },
+  {
+    "source": "trap-rap",
+    "target": "wave",
+    "type": "derived_to",
+    "weight": 4,
+    "description": {
+      "en": "trap-rap links historically back to wave.",
+      "zh": "trap-rap 在音乐历史渊源上追溯关联至 wave。"
+    }
+  },
+  {
+    "source": "kuduro",
+    "target": "afro-house",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "Kuduro combined Angolan rhythms with electronic house.",
+      "zh": "Kuduro 将安哥拉民间节奏与电子浩室融合。"
+    }
+  },
+  {
+    "source": "afro-house",
+    "target": "kuduro",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "afro-house links historically back to kuduro.",
+      "zh": "afro-house 在音乐历史渊源上追溯关联至 kuduro。"
+    }
+  },
+  {
+    "source": "kuduro",
+    "target": "afrobeat",
+    "type": "origin_from",
+    "weight": 4,
+    "description": {
+      "en": "Kuduro roots trace back to African percussive traditions.",
+      "zh": "Kuduro 根植于非洲打击乐律动传统。"
+    }
+  },
+  {
+    "source": "afrobeat",
+    "target": "kuduro",
+    "type": "derived_to",
+    "weight": 4,
+    "description": {
+      "en": "afrobeat links historically back to kuduro.",
+      "zh": "afrobeat 在音乐历史渊源上追溯关联至 kuduro。"
+    }
+  },
+  {
+    "source": "bachata",
+    "target": "salsa",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "Bachata and salsa share vibrant Caribbean social dance roots.",
+      "zh": "Bachata 与 Salsa 共享充满活力的加勒比社交舞曲传统。"
+    }
+  },
+  {
+    "source": "salsa",
+    "target": "bachata",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "salsa links historically back to bachata.",
+      "zh": "salsa 在音乐历史渊源上追溯关联至 bachata。"
+    }
+  },
+  {
+    "source": "salsa",
+    "target": "cumbia",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "Salsa and Cumbia share deep Afro-Latin syncopated grooves.",
+      "zh": "Salsa 与 Cumbia 共享深厚的非裔拉丁切分律动。"
+    }
+  },
+  {
+    "source": "cumbia",
+    "target": "salsa",
+    "type": "fusion_with",
+    "weight": 5,
+    "description": {
+      "en": "cumbia links historically back to salsa.",
+      "zh": "cumbia 在音乐历史渊源上追溯关联至 salsa。"
+    }
+  },
+  {
+    "source": "cumbia",
+    "target": "reggaeton",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "Cumbia syncopations heavily influenced early reggaeton dembow.",
+      "zh": "Cumbia 切分律动深度影响了早期 Reggaeton Dembow 鼓点。"
+    }
+  },
+  {
+    "source": "reggaeton",
+    "target": "cumbia",
+    "type": "fusion_with",
+    "weight": 4,
+    "description": {
+      "en": "reggaeton links historically back to cumbia.",
+      "zh": "reggaeton 在音乐历史渊源上追溯关联至 cumbia。"
     }
   }
 ];

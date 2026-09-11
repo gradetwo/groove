@@ -3,21 +3,10 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// Unregister legacy Service Worker and clear cache to avoid stale offline assets
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
-    }
-  });
-}
-if ("caches" in window) {
-  caches.keys().then((keys) => {
-    for (const key of keys) {
-      caches.delete(key);
-    }
-  });
-}
+import { initPwa } from "./utils/pwa";
+
+// Initialize PWA Service Worker & App Shell offline caching (P4-07)
+initPwa();
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 

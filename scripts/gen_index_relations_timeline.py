@@ -24,13 +24,19 @@ modules = [
 
 import_lines = []
 all_vars = []
+var_names = []
 for mod, var in modules:
     mod_name = mod.replace(".ts", "")
     import_lines.append(f"import {{ {var} }} from './{mod_name}';")
     all_vars.append(f"...{var}")
+    var_names.append(var)
 
 index_content = f"""import {{ Genre }} from '../../types/genre';
 {chr(10).join(import_lines)}
+
+export {{
+  {f',{chr(10)}  '.join(var_names)}
+}};
 
 export const ALL_GENRES: Genre[] = [
   {f',{chr(10)}  '.join(all_vars)}
@@ -257,11 +263,26 @@ fusions = [
     ("reggae", "dub", "derived_to", 5, "Dub stripped reggae down into echoing mixing desk art.", "Dub 将雷鬼解构为充满回声的调音台艺术。"),
     ("reggae", "dancehall", "derived_to", 5, "Dancehall digitalized reggae riddims for sound-clashes.", "舞厅雷鬼将雷鬼音乐数字化为斗歌利器。"),
     ("dancehall", "reggaeton", "derived_to", 5, "Reggaeton adapted dancehall riddims into Dembow bounce.", "雷鬼顿将舞厅雷鬼演化为洗脑的 Dembow 弹跳。"),
-    ("afrobeat", "amapiano", "influenced_by", 4, "Amapiano drew from Afrobeat and African house roots.", "Amapiano 汲取了非洲节拍与本土浩室的灵性养分。")
+    ("afrobeat", "amapiano", "influenced_by", 4, "Amapiano drew from Afrobeat and African house roots.", "Amapiano 汲取了非洲节拍与本土浩室的灵性养分。"),
+    # Complete remaining genre bridges (P4-09: 100% 159 sources graph coverage)
+    ("acid-techno", "detroit-techno", "origin_from", 5, "Acid techno evolved from techno using TB-303 lines.", "Acid Techno 采用 TB-303 酸性贝斯线演化自 Techno。"),
+    ("acid-techno", "acid-house", "influenced_by", 5, "Acid techno took heavy cues from early acid house.", "Acid Techno 深受早期 Acid House 启发。"),
+    ("future-house", "deep-house", "origin_from", 5, "Future house energized deep house with metallic plucks.", "Future House 用金属质感拨弦强化了 Deep House。"),
+    ("wave", "trap-rap", "origin_from", 4, "Wave music fused trap 808s with ambient synth textures.", "Wave 音乐融合了 Trap 808 与环境合成器纹理。"),
+    ("kuduro", "afro-house", "fusion_with", 5, "Kuduro combined Angolan rhythms with electronic house.", "Kuduro 将安哥拉民间节奏与电子浩室融合。"),
+    ("kuduro", "afrobeat", "origin_from", 4, "Kuduro roots trace back to African percussive traditions.", "Kuduro 根植于非洲打击乐律动传统。"),
+    ("bachata", "salsa", "fusion_with", 5, "Bachata and salsa share vibrant Caribbean social dance roots.", "Bachata 与 Salsa 共享充满活力的加勒比社交舞曲传统。"),
+    ("salsa", "cumbia", "fusion_with", 5, "Salsa and Cumbia share deep Afro-Latin syncopated grooves.", "Salsa 与 Cumbia 共享深厚的非裔拉丁切分律动。"),
+    ("cumbia", "reggaeton", "fusion_with", 4, "Cumbia syncopations heavily influenced early reggaeton dembow.", "Cumbia 切分律动深度影响了早期 Reggaeton Dembow 鼓点。"),
 ]
 
 for s, t, r, w, de, dz in fusions:
     add_rel(s, t, r, w, de, dz)
+    # Automatically add reciprocal relationship to guarantee bidirectional graph traversal (P4-09)
+    recip = "origin_from" if r == "derived_to" else ("derived_to" if r == "origin_from" else ("fusion_with" if r == "fusion_with" else "influenced_by"))
+    rde = f"{t} links historically back to {s}."
+    rdz = f"{t} 在音乐历史渊源上追溯关联至 {s}。"
+    add_rel(t, s, recip, w, rde, rdz)
 
 relations_content = f"""import {{ GenreRelation }} from '../types/genre';
 
@@ -270,7 +291,7 @@ export const GENRE_RELATIONS: GenreRelation[] = {json.dumps(relations, ensure_as
 
 with open(os.path.join(SRC_DATA, "relations.ts"), "w", encoding="utf-8") as f:
     f.write(relations_content)
-print(f"Created src/data/relations.ts with {len(relations)} relations.")
+print(f"Created src/data/relations.ts with {len(relations)} relations, covering {len(set(r['source'] for r in relations))} unique sources.")
 
 # 4. Generate timeline_stories.ts for vertical timeline
 stories = [

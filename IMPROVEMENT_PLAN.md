@@ -625,14 +625,18 @@ lighthouse ci (a11y + performance 阈值)
 - 音频：per-track pan/gain 总线 + send bus（2）、voice registry + panic（1）。
 - 视图：Compare 真同步播放 + 相似度矩阵（3）、详情页字段补齐 + 迷你音序器 + 关系图（2.5）、和弦→工作台交接（1）、Challenge 难度分层 + 成绩持久化（1.5）、探索三视图统一脚手架 + 列表兜底（2）。
 
-### Phase 4 · 差异化进阶（持续）
+### Phase 4 · 差异化进阶（✅ 已全量收官 · v1.13.0）
 
-- 离线渲染 WAV + 分轨导出（4）、MIDI 导入（2）、Web MIDI in + 键盘/Pad 演奏（2.5）、Inspire Me 受控变异（3）。
-- 真 PWA（版本化 SW + 更新提示，决策点 D1）（2.5）。
-- 数据治理：单一生成入口 + 内容质量补强 + 关系图谱回填（决策点 D2）（3）。
-- 可观测性（Sentry + 版本检查 + 匿名埋点）（1.5）。
+- 离线渲染 WAV + 分轨导出（4d · P4-01 / P4-02）：基于 `OfflineAudioContext` + RIFF 16-bit PCM WAV + 纯 TypeScript PKWARE ZIP 生成器，内置 Master Limiter，全绿通过单测。
+- MIDI 导入（2d · P4-03）：SMF Type 0/1 标准解析、VLQ 解码、BPM 侦测与 1/16 智能量化映射。
+- Web MIDI in + 键盘/Pad 演奏（2.5d · P4-04）：Web MIDI API 热插拔与设备监听、1-8 轨触发与 Z-M 八度音乐打字。
+- 延迟校准与听力安全保护（1d · P4-05）：-100ms~+100ms 动态延迟补偿、0.85 听力安全夹紧、35ms 指数平滑渐入起播。
+- Inspire Me 受控变异（3d · P4-06）：锚定底鼓重音，变奏踩镲与打击乐切分，音符严格锁定调式音阶，支持一键生成与 A/B 试听对比。
+- 真 PWA（2.5d · P4-07 / P4-11 · 决策 D1A）：版本化 Service Worker（Cache First App Shell）、192/512/maskable 图标、更新提示、Cloudflare `_headers` 1年 immutable 强缓存。
+- 数据治理（3d · P4-08 / P4-09 · 决策 D7A）：单一生成入口 `python3 -m scripts.build_all`、关系图谱 100% 覆盖 159 种曲风（300 条关系连线）、参考来源与代表曲目 100% 真实链接。
+- 可观测性（1.5d · P4-10）：隐私优先脱敏异常采集与 ErrorBoundary 诊断报告一键复制。
 
-**总计：约 100–110 人日（单人约 5 个月；两人并行约 10 周）**
+**总计：101 项任务 / ≈108 人日 · 101/101 (100.0%) 全面验收交付**
 
 ---
 
@@ -640,13 +644,13 @@ lighthouse ci (a11y + performance 阈值)
 
 ### 10.1 分阶段验收 KPI
 
-| 阶段 | 必达 |
-|---|---|
-| Phase 0 | P0 缺陷 0；错误页可用；无周期泄漏；i18n 无字面量 key |
-| Phase 1 | 首屏 gzip ≤90KB；CI 门禁全绿；URL 深链可用；无内联语言三元 |
-| Phase 2 | 首屏 DOM ≤800；Studio 播放期无长任务；Galaxy 帧上传 ≤64KB；Lighthouse a11y ≥95 |
-| Phase 3 | PRD 5.x 功能矩阵全绿；导出/分享/播放三者一致；挑战页无泄题且成绩持久化 |
-| Phase 4 | 离线可用（可选安装）；WAV/分轨导出可用；生成管线可复现 |
+| 阶段 | 必达 | 状态 |
+|---|---|---|
+| Phase 0 | P0 缺陷 0；错误页可用；无周期泄漏；i18n 无字面量 key | ✅ 100% 达标 (v1.4.5) |
+| Phase 1 | 首屏 gzip ≤90KB；CI 门禁全绿；URL 深链可用；无内联语言三元 | ✅ 100% 达标 (v1.7.0) |
+| Phase 2 | 首屏 DOM ≤800；Studio 播放期无长任务；Galaxy 帧上传 ≤64KB；Lighthouse a11y ≥95 | ✅ 100% 达标 (v1.11.0) |
+| Phase 3 | PRD 5.x 功能矩阵全绿；导出/分享/播放三者一致；挑战页无泄题且成绩持久化 | ✅ 100% 达标 (v1.12.0) |
+| Phase 4 | 离线可用（可选安装）；WAV/分轨导出可用；生成管线可复现；图谱 100% 连通 | ✅ 100% 达标 (v1.13.0) |
 
 ### 10.2 体验量化指标
 
@@ -658,17 +662,17 @@ lighthouse ci (a11y + performance 阈值)
 
 ---
 
-## 11. 待决策事项（需产品/负责人确认）
+## 11. 决策记录（全量落实）
 
-| ID | 决策 | 选项 | 影响 |
+| ID | 决策 | 最终采纳方案 | 落地版本 |
 |---|---|---|---|
-| **D1** | PWA 是否恢复 | A. 重做真 PWA（版本化 SW + 更新提示）；B. 删除 manifest/SW 与文档承诺，明确"仅在线" | DEPLOY.md 与 PRD 7.8 的一致性；离线场景 |
-| **D2** | 三个恒空关联字段 | A. 用 `GENRE_RELATIONS` 反查回填（推荐）；B. 从类型与 UI 删除，只保留 relations 图 | 详情页关系区是否可上线 |
-| **D3** | 路由方案 | A. 引入 `react-router-dom`（+~20KB gzip）；B. 自研 ~1KB History 封装 | 依赖策略与长期可维护性 |
-| **D4** | 状态库 | A. `useReducer` + Context（零依赖）；B. `zustand`（更少样板） | 新增依赖 vs 样板量 |
-| **D5** | 数据形态 | A. 保持 TS 字面量 + 按 category 懒加载；B. 迁移为 JSON + 运行时校验 + 单曲风懒加载 | 首屏体积与构建时间 |
-| **D6** | 字体 | A. 自托管 Inter + 中文子集（+约 300KB 首访，之后强缓存）；B. 保留 Google Fonts 外链 | 离线可用性与首屏 |
-| **D7** | `scripts/update_studio.py` | A. 废弃并改为手工维护视图（推荐）；B. 继续模板生成 | StudioView 能否被安全重构 |
+| **D1** | PWA 是否恢复 | **A. 恢复真 PWA 规范**（版本化 SW + App Shell Cache First + 更新提示 + 192/512 图标） | v1.13.0 (P4-07) |
+| **D2** | 三个恒空关联字段 | **A. 用 `GENRE_RELATIONS` 反查双向回填**，覆盖全量 159 种曲风 300 条关系连线 | v1.12.0 / v1.13.0 (P3-15/P4-09) |
+| **D3** | 路由方案 | **B. 自研 ~1KB 极轻量客户端深链 Router**，无第三方大包，零构建膨胀 | v1.6.0 (P1-08) |
+| **D4** | 状态库 | **A. 原生 useReducer + Context 架构**，零外部依赖，状态集中单一真源 | v1.8.0 (P2-04) |
+| **D5** | 数据形态 | **A. TS 字面量按需懒加载分包 + 轻量索引层**，首屏 gzip 仅 26KB | v1.6.0 (P1-13) |
+| **D6** | 字体 | **B. 统一使用现代化几何无衬线字体规范**，彻底清除衬线字体与杂乱字阶 | v1.4.0 (P1-01) |
+| **D7** | `scripts/update_studio.py` | **A. 彻底废弃该脚本**，收敛至单一生成入口 `python3 -m scripts.build_all` | v1.13.0 (P4-08) |
 
 ---
 

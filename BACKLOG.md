@@ -298,40 +298,40 @@
 
 ## Phase 4 · 差异化进阶
 
-- [ ] **P4-01** 离线渲染 WAV 导出 ｜ 2d
+- [x] **P4-01** 离线渲染 WAV 导出 ｜ 2d (v1.13.0)
   验收：`OfflineAudioContext` 渲染当前 pattern 为 WAV 下载；与实时听感一致。
-- [ ] **P4-02** 分轨 stem 导出 ｜ 2d
+- [x] **P4-02** 分轨 stem 导出 ｜ 2d (v1.13.0)
   验收：逐轨渲染并打包（zip）或逐轨下载；命名规范含曲风/轨名/BPM。
-- [ ] **P4-03** MIDI 导入 ｜ 2d
+- [x] **P4-03** MIDI 导入 ｜ 2d (v1.13.0)
   验收：`.mid` 解析为 pattern；轨道映射与量化选项。
-- [ ] **P4-04** Web MIDI in + 键盘/Pad 演奏 ｜ 2.5d
+- [x] **P4-04** Web MIDI in + 键盘/Pad 演奏 ｜ 2.5d (v1.13.0)
   验收：外接 MIDI 键盘可实时触发当前轨音色；电脑键盘演奏模式；设备热插拔。
-- [ ] **P4-05** 延迟校准与听力保护 ｜ 1d
+- [x] **P4-05** 延迟校准与听力保护 ｜ 1d (v1.13.0)
   验收：测量 `outputLatency` 并提供补偿；最大音量保护 + 渐入；设置持久化。
-- [ ] **P4-06** Inspire Me 受控变异 ｜ 3d
+- [x] **P4-06** Inspire Me 受控变异 ｜ 3d (v1.13.0)
   验收：按曲风特征对 seed pattern 做受控随机（保留 kick 骨架，变奏 hat/perc）；一键生成并 A/B 试听。
-- [ ] **P4-07** 真 PWA（决策 D1A） ｜ 2.5d
+- [x] **P4-07** 真 PWA（决策 D1A） ｜ 2.5d (v1.13.0)
   验收：版本化 SW + `skipWaiting` + 更新提示；App Shell Cache First；核心数据 Stale While Revalidate；断网可用；可安装；修正图标为 PNG 192/512 + maskable。
-- [ ] **P4-08** 数据生成管线治理 ｜ 2d
+- [x] **P4-08** 数据生成管线治理 ｜ 2d (v1.13.0)
   验收：单一入口 `python3 -m scripts.build_all`；修复 `sys.path`；删除空壳 Node 脚本；**废弃 `scripts/update_studio.py`（决策 D7）**；CI 校验生成结果 == 仓库数据。
-- [ ] **P4-09** 内容质量补强 ｜ 3d
+- [x] **P4-09** 内容质量补强 ｜ 3d (v1.13.0)
   验收：`representative_tracks.link` 升级为可校验链接或明确标注；`sources` 扩展为真实来源（每曲风 ≥2）；关系图谱覆盖 159 个 source（现仅 65）。
-- [ ] **P4-10** 可观测性 ｜ 1.5d
+- [x] **P4-10** 可观测性 ｜ 1.5d (v1.13.0)
   验收：ErrorBoundary + 全局异常上报（仅堆栈/版本，无用户数据）；版本号注入 + "检查更新"；可选匿名埋点。
-- [ ] **P4-11** `_headers` 与缓存策略 ｜ 0.5d
+- [x] **P4-11** `_headers` 与缓存策略 ｜ 0.5d (v1.13.0)
   验收：hashed 资源 `immutable`；`index.html` 短缓存；`sw.js` 不缓存。
 
 ---
 
 ## 决策待办（阻塞 Phase 1 排期）
 
-- [ ] **D1** PWA 恢复还是移除？
-- [ ] **D2** 三个恒空关联字段：反查回填 or 删除？
-- [ ] **D3** 路由：`react-router` or 自研？
-- [ ] **D4** 状态库：`useReducer`+Context or `zustand`？
-- [ ] **D5** 数据形态：TS 字面量懒加载 or JSON + 校验？
-- [ ] **D6** 字体：自托管 or 保留 Google Fonts？
-- [ ] **D7** `scripts/update_studio.py`：废弃 or 保留？
+- [x] **D1** PWA 恢复还是移除？→ **决策 D1A：恢复真 PWA 规范（v1.13.0 完成）**
+- [x] **D2** 三个恒空关联字段：反查回填 or 删除？→ **决策 D2A：通过 GENRE_RELATIONS 反查双向回填（v1.12.0/v1.13.0 完成）**
+- [x] **D3** 路由：`react-router` or 自研？→ **决策 D3B：自研 ~1KB 极轻量客户端深链 Router（v1.6.0 完成）**
+- [x] **D4** 状态库：`useReducer`+Context or `zustand`？→ **决策 D4A：原生 useReducer + Context 零外部依赖（v1.8.0 完成）**
+- [x] **D5** 数据形态：TS 字面量懒加载 or JSON + 校验？→ **决策 D5A：TS 字面量按需懒加载分包（v1.6.0 完成）**
+- [x] **D6** 字体：自托管 or 保留 Google Fonts？→ **决策 D6B：保留 Google Fonts 现代几何无衬线规范（v1.4.0 完成）**
+- [x] **D7** `scripts/update_studio.py`：废弃 or 保留？→ **决策 D7A：彻底废弃该脚本，统一至 build_all.py（v1.13.0 完成）**
 
 ---
 
@@ -343,5 +343,5 @@
 | Phase 1 打地基 | 19 | ≈17d | ✅ 100% 已验收 (v1.7.0) |
 | Phase 2 性能与无障碍 | 23 | ≈24d | ✅ 100% 已验收 (v1.11.0) |
 | Phase 3 功能补全 | 20 | ≈33d | ✅ 100% 已验收 (v1.12.0) |
-| Phase 4 进阶 | 11 | ≈21d | 待排期 |
-| **合计** | **101** | **≈108 人日** | **已完成 90/101 项任务 (89.1%)，跨端 7 平台自动化矩阵与性能预算门禁 100% 全绿** |
+| Phase 4 进阶 | 11 | ≈21d | ✅ 100% 已验收 (v1.13.0) |
+| **合计** | **101** | **≈108 人日** | **🎉 全量 101/101 项任务 100% 验收收官，跨端 7 平台自动化矩阵与性能预算门禁 100% 全绿，已线上部署交付** |

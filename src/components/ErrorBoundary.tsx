@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { AlertTriangle, RefreshCw, RotateCcw, Compass, Home } from "lucide-react";
+import { AlertTriangle, RefreshCw, RotateCcw, Compass, Home, Copy, Check } from "lucide-react";
+import { reportException, createDiagnosticReport, APP_VERSION } from "../utils/telemetry";
 
 interface Props {
   children: ReactNode;
@@ -17,6 +18,7 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  isCopied?: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -24,6 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
     hasError: false,
     error: null,
     errorInfo: null,
+    isCopied: false,
   };
 
   public static getDerivedStateFromError(error: Error): Partial<State> {
@@ -32,6 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary caught unhandled exception]:", error, errorInfo);
+    reportException(error, errorInfo);
     this.setState({ errorInfo });
   }
 
@@ -135,6 +139,36 @@ export class ErrorBoundary extends Component<Props, State> {
                   <span className="truncate">刷新 / Reload</span>
                 </button>
               )}
+            </div>
+
+            {/* Diagnostic Report Copy Button (P4-10) */}
+            <div className="mt-3 pt-3 border-t border-line/40 flex items-center justify-between text-[11px] text-text-dim">
+              <span>Groove Lab v{APP_VERSION}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (this.state.error) {
+                    const report = createDiagnosticReport(this.state.error, this.state.errorInfo?.componentStack);
+                    navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+                    this.setState({ isCopied: true });
+                    setTimeout(() => this.setState({ isCopied: false }), 2000);
+                  }
+                }}
+                className="flex items-center gap-1 text-text-sub hover:text-accent font-['JetBrains_Mono'] transition-colors"
+                title="复制匿名诊断报告"
+              >
+                {this.state.isCopied ? (
+                  <>
+                    <Check className="w-3 h-3 text-[#10b981]" />
+                    <span className="text-[#10b981]">已复制诊断信息</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>复制诊断报告</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

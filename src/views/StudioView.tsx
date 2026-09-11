@@ -5,6 +5,10 @@ import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { downloadMidiFile } from "../audio/MidiExporter";
 import { decodeSharedSequencer, getShareUrl } from "../audio/SequencerUrlShare";
+import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../audio/WavExporter";
+import { importMidiToPattern } from "../audio/MidiImporter";
+import { generateVariation } from "../audio/InspireMe";
+import { midiInputManager, MidiDevice } from "../audio/MidiInputManager";
 import { useLanguage } from "../i18n/LanguageContext";
 import { VelocityLane } from "../components/sequencer/VelocityLane";
 import { EuclideanModal } from "../components/sequencer/EuclideanModal";
@@ -182,6 +186,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [mobileEditMode, setMobileEditMode] = useState<MobileEditMode>("step");
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
+
+  // Phase 4 States (P4-01 ~ P4-04 & P4-06)
+  const [isExportingAudio, setIsExportingAudio] = useState(false);
+  const [isKeyboardMode, setIsKeyboardMode] = useState(false);
+  const [midiDevices, setMidiDevices] = useState<MidiDevice[]>([]);
 
   // Pointer drag painting & event delegation refs (P2-02 & P2-05)
   const isPointerDownRef = useRef(false);
@@ -932,6 +941,122 @@ export const StudioView: React.FC<StudioViewProps> = ({
     showToast(isZh ? `已导出 MIDI: ${currentGenre.name}.mid ✓` : `Exported ${currentGenre.name}.mid ✓`);
   }, [pattern, bpm, currentGenre.name, isZh, showToast]);
 
+  const handleExportWav = useCallback(async () => {
+    try {
+      setIsExportingAudio(true);
+      showToast(isZh ? "正在离线高质量渲染 WAV 母带..." : "Rendering offline WAV master...");
+      const result = await exportMasterWav(pattern, currentGenre.id, {
+        bpm,
+        swing,
+      });
+      triggerWavDownload(result.blob, result.filename);
+      showToast(isZh ? `母带 WAV 导出完成: ${result.filename} ✓` : `Exported Master WAV: ${result.filename} ✓`);
+    } catch (err: any) {
+      showToast(isZh ? `WAV 导出失败: ${err?.message || err}` : `WAV export failed: ${err?.message || err}`);
+    } finally {
+      setIsExportingAudio(false);
+    }
+  }, [pattern, currentGenre.id, bpm, swing, isZh, showToast]);
+
+  const handleExportStems = useCallback(async () => {
+    try {
+      setIsExportingAudio(true);
+      showToast(isZh ? "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..." : "Rendering 8 stems and packaging ZIP...");
+      const result = await exportStemsZip(pattern, currentGenre.id, {
+        bpm,
+        swing,
+      });
+      triggerWavDownload(result.blob, result.filename);
+      showToast(isZh ? `分轨打包导出完成: ${result.filename} ✓` : `Exported Stems ZIP: ${result.filename} ✓`);
+    } catch (err: any) {
+      showToast(isZh ? `分轨导出失败: ${err?.message || err}` : `Stems export failed: ${err?.message || err}`);
+    } finally {
+      setIsExportingAudio(false);
+    }
+  }, [pattern, currentGenre.id, bpm, swing, isZh, showToast]);
+
+  const handleImportMidi = useCallback(
+    async (file: File) => {
+      try {
+        const buffer = await file.arrayBuffer();
+        const result = importMidiToPattern(buffer, { quantization: resolution, totalSteps: stepCount });
+        commit({ type: "COMMIT_PATTERN", pattern: result.pattern });
+        if (result.bpm && result.bpm !== bpm) {
+          commit({ type: "SET_BPM", bpm: result.bpm });
+        }
+        if (engineRef.current) {
+          engineRef.current.setPattern(result.pattern);
+          if (result.bpm) engineRef.current.setBpm(result.bpm);
+        }
+        showToast(
+          isZh
+            ? `已成功导入 MIDI: 识别到 ${result.notesFound} 个音符 ✓`
+            : `Imported MIDI: parsed ${result.notesFound} notes ✓`
+        );
+      } catch (err: any) {
+        showToast(isZh ? `MIDI 导入失败: ${err?.message || err}` : `MIDI import failed: ${err?.message || err}`);
+      }
+    },
+    [resolution, stepCount, bpm, commit, isZh, showToast]
+  );
+
+  const handleInspireMe = useCallback(() => {
+    const mutated = generateVariation(pattern, {
+      intensity: "medium",
+      preserveKick: true,
+      mutateMelodic: true,
+      mutatePercussion: true,
+      addRatchets: true,
+    });
+    commit({ type: "COMMIT_PATTERN", pattern: mutated });
+    if (engineRef.current) {
+      engineRef.current.setPattern(mutated);
+    }
+    showToast(isZh ? "✨ 已应用 Inspire Me 受控灵感变异！" : "✨ Applied Inspire Me groove variation!");
+  }, [pattern, commit, isZh, showToast]);
+
+  // Web MIDI & Keyboard Play (P4-04)
+  useEffect(() => {
+    midiInputManager.initMidi().then(() => {
+      setMidiDevices(midiInputManager.getDevices());
+    });
+
+    const unsubDevices = midiInputManager.onDevicesChanged((devices) => {
+      setMidiDevices(devices);
+      if (devices.length > 0) {
+        showToast(isZh ? `🎹 检测到 MIDI 设备: ${devices[0].name}` : `🎹 MIDI device connected: ${devices[0].name}`);
+      }
+    });
+
+    const unsubNoteOn = (note: number, velocity: number, trackIdx?: number) => {
+      let targetIdx = trackIdx !== undefined ? trackIdx : 0;
+      if (trackIdx === undefined) {
+        if (note < 48) targetIdx = 4;
+        else if (note <= 65) targetIdx = 5;
+        else targetIdx = 6;
+      }
+      const tr = pattern.tracks[targetIdx];
+      if (engineRef.current && tr) {
+        const normalizedVel = (velocity / 127) * (tr.volume || 0.8);
+        engineRef.current.triggerNote(targetIdx, tr.name, normalizedVel, note, 1);
+      }
+    };
+
+    const unsub = midiInputManager.onNoteOn(unsubNoteOn);
+
+    return () => {
+      unsubDevices();
+      unsub();
+    };
+  }, [pattern.tracks, isZh, showToast]);
+
+  // Computer keyboard play listener
+  useEffect(() => {
+    if (!isKeyboardMode) return;
+    const stopListener = midiInputManager.startKeyboardListener(0);
+    return () => stopListener();
+  }, [isKeyboardMode]);
+
   const handleShare = useCallback(() => {
     const url = getShareUrl({
       genreId: currentGenre.id,
@@ -1070,6 +1195,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
               ? "fixed inset-0 z-50 overflow-y-auto bg-bg p-2.5 sm:p-3.5 flex flex-col"
               : "bg-panel border border-line rounded-2xl p-3 sm:p-4 min-w-0 order-1 lg:order-2 shadow-2xl"
           }
+          style={isEditorMaximized ? {
+            paddingTop: "max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.375rem))",
+            paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))",
+            paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
+            paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
+          } : undefined}
         >
           {/* Sequencer Unified Toolbar */}
           <Toolbar
@@ -1118,6 +1249,26 @@ export const StudioView: React.FC<StudioViewProps> = ({
             onToggleAdvancedControls={() => setShowAdvancedControls((prev) => !prev)}
             onQuickAction={handleQuickAction}
             onExportMidi={handleExportMidi}
+            onExportWav={handleExportWav}
+            onExportStems={handleExportStems}
+            isExportingAudio={isExportingAudio}
+            onImportMidi={handleImportMidi}
+            onInspireMe={handleInspireMe}
+            isKeyboardMode={isKeyboardMode}
+            onToggleKeyboardMode={() => {
+              const next = !isKeyboardMode;
+              setIsKeyboardMode(next);
+              showToast(
+                isZh
+                  ? next
+                    ? "🎹 键盘演奏模式已启用 (按 1-8 触发轨道，Z-M 弹奏音符)"
+                    : "键盘演奏模式已关闭"
+                  : next
+                  ? "🎹 Keyboard play enabled (1-8 trigger tracks, Z-M play notes)"
+                  : "Keyboard play disabled"
+              );
+            }}
+            midiDeviceCount={midiDevices.length}
             onShare={handleShare}
             onAddSteps={(count) => commit({ type: "SET_STEP_COUNT", count: stepCount + count })}
             onRemoveSteps={(count) =>

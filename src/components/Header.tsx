@@ -128,7 +128,14 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className={`sticky top-0 z-50 w-full ${mobileMenuOpen ? "bg-[#0a0b0d]" : "bg-bg/95 backdrop-blur-md"} border-b border-line px-4 sm:px-6 py-3 flex items-center justify-between gap-4`}>
+    <header 
+      className={`sticky top-0 z-50 w-full ${mobileMenuOpen ? "bg-[#0a0b0d]" : "bg-bg/95 backdrop-blur-md"} border-b border-line px-4 sm:px-6 pb-3 flex items-center justify-between gap-4`}
+      style={{
+        paddingTop: "max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.375rem))",
+        paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",
+        paddingRight: "max(1rem, env(safe-area-inset-right, 0px))",
+      }}
+    >
       {/* Brand / Logo */}
       <div className="flex items-center gap-4">
         <button 
@@ -344,7 +351,14 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile dropdown: 100% opaque solid dark panel with solid button cards */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#090b10] border-b-2 border-line-strong p-3 space-y-2 shadow-[0_25px_60px_rgba(0,0,0,0.98)] max-h-[85vh] overflow-y-auto z-50 overscroll-contain">
+        <div 
+          className="md:hidden absolute top-full left-0 right-0 bg-[#090b10] border-b-2 border-line-strong p-3 space-y-2 shadow-[0_25px_60px_rgba(0,0,0,0.98)] max-h-[85vh] overflow-y-auto z-50 overscroll-contain"
+          style={{
+            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.25rem)",
+            paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
+            paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
+          }}
+        >
           {/* Primary Tabs */}
           <button
             onClick={() => {

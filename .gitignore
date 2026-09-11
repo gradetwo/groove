@@ -34,3 +34,4 @@ __pycache__/
 *.zip
 deploy-package/
 release/
+scratch/

@@ -1,7 +1,50 @@
 {
-  "version": "1.12.0",
+  "version": "1.13.0",
   "releaseDate": "2026-09-12",
   "changelog": [
+    {
+      "version": "1.13.0",
+      "date": "2026-09-12",
+      "category": "feature",
+      "title": {
+        "zh": "v1.13.0 Phase 4 差异化进阶收官：离线 WAV/分轨 ZIP 导出、MIDI 导入与 Web MIDI 演奏、Inspire Me 智能变奏与真 PWA 落地",
+        "en": "v1.13.0 Phase 4 Differential Milestone: Offline WAV/Stem ZIP Export, MIDI Import & Web MIDI Playing, Inspire Me & True PWA"
+      },
+      "highlights": [
+        {
+          "zh": "离线 WAV 母带与分轨 ZIP 导出（P4-01 / P4-02）：基于 OfflineAudioContext 离线音频渲染器与 RIFF 16-bit PCM WAV 编码器，内置 Master Limiter 母带限幅；自研零依赖纯 TypeScript PKWARE 格式无压缩 ZIP 生成器，支持 8 轨独立 Stems 一键分轨打包下载",
+          "en": "Offline Master WAV & Stem ZIP Export (P4-01 / P4-02): OfflineAudioContext rendering with RIFF 16-bit PCM WAV encoder and Master Limiter; zero-dependency pure TypeScript PKWARE ZIP packager for 8-track stems export"
+        },
+        {
+          "zh": "标准 MIDI 文件导入（P4-03）：支持 SMF Type 0 与 Type 1 标准 MIDI 解析、VLQ 变长编码解码与速度 BPM 自动侦测，自适应 1/16、1/8、1/32 智能量化映射至 8 轨步进与音高矩阵",
+          "en": "Standard MIDI File Import (P4-03): Type 0/1 SMF parser with VLQ decoding, automatic BPM detection, and adaptive 1/16/1/8 quantization mapped to 8 tracks and pitch matrix"
+        },
+        {
+          "zh": "Web MIDI 输入与电脑键盘实时演奏（P4-04）：封装 Web MIDI API，支持硬件 MIDI 键盘/鼓垫热插拔监听与动态映射；电脑键盘 1-8 键快速击发鼓机轨道，Z-M 白键/黑键实时音阶弹奏与录入",
+          "en": "Web MIDI input & keyboard musical typing (P4-04): hot-plug Web MIDI API integration for hardware pads/keyboards; computer keyboard 1-8 track triggers and Z-M octave musical typing"
+        },
+        {
+          "zh": "延迟校准与听力安全保护（P4-05）：自动读取音频硬件 outputLatency / baseLatency，支持 -100ms ~ +100ms 动态延迟校准补偿；Master Volume 强制 0.85 听力安全夹紧，起播 35ms 平滑指数渐入彻底消除爆音与电击声；配置支持 localStorage 永久记忆",
+          "en": "Audio latency calibration & hearing protection (P4-05): dynamic output latency compensation (-100ms to +100ms), 0.85 safe master ceiling, 35ms exponential gain ramp anti-pop, and localStorage persistence"
+        },
+        {
+          "zh": "Inspire Me 音乐性受控智能变奏（P4-06）：锚定底鼓骨架重音与曲风 DNA，对踩镲引入微动态力度与转身 Ratchet，切分打击乐受控抖动，贝斯与合成器严格在当前调式（小调五声/多利亚等）音阶内做受控变奏，支持一键生成与 A/B 试听对比",
+          "en": "Inspire Me musicality-preserving mutation (P4-06): preserves kick anchor beats, mutating hi-hat dynamics and ratchets, percussion syncopations, and scale-locked synth variations"
+        },
+        {
+          "zh": "真 PWA 离线架构与资源缓存策略（P4-07 / P4-11）：版本化 Service Worker（groove-app-shell-v1.13.0），App Shell 优先 Cache First，离线网络断网优雅降级与更新即时提示；补齐标准 192/512 及 maskable PNG 应用图标；配置 Cloudflare _headers 实现 hashed 静态资源 1 年 immutable 强缓存",
+          "en": "True PWA & edge caching (P4-07 / P4-11): versioned service worker with Cache First App Shell and offline fallback, PWA installable manifest with 192/512/maskable icons, and Cloudflare _headers 1-year immutable caching"
+        },
+        {
+          "zh": "数据生成管线单一化治理与全库图谱补全（P4-08 / P4-09）：收敛至 python3 -m scripts.build_all 统一入口，彻底清理废弃空壳脚本；159 种曲风在关系图谱中实现 100% 具备有效出度连接（覆盖率自 65 种跃升至 159 种，共 300 条关系连线），权威参考来源与代表作品试听链接 100% 真实有效",
+          "en": "Unified build pipeline & 100% graph completeness (P4-08 / P4-09): single Python build pipeline, 159/159 genres connected in relations graph (300 bi-directional edges), and 100% verified sources & audio links"
+        },
+        {
+          "zh": "隐私优先轻量可观测性（P4-10）：内置本地路径自动脱敏与系统环境采集，全局 ErrorBoundary 集成一键复制格式化诊断报告，保障问题极速定位与零隐私泄露",
+          "en": "Privacy-first diagnostics & telemetry (P4-10): automated filesystem path sanitization, environment fingerprinting, and one-click diagnostic report copying in ErrorBoundary"
+        }
+      ]
+    },
     {
       "version": "1.12.0",
       "date": "2026-09-12",

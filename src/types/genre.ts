@@ -125,3 +125,8 @@ export interface Genre {
   // Sequencer Pattern
   sequencer_pattern: SequencerPattern;
 }
+
+// Ergonomic aliases for sequencer pattern and tracks (P4)
+export type DrumPattern = SequencerPattern;
+export type Track = SequencerTrack;
+

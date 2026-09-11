@@ -25,6 +25,15 @@ export interface TrackChannelStrip {
   sendB: GainNode;
 }
 
+export interface TrackState {
+  mute: boolean;
+  solo: boolean;
+  volume: number;
+  pan: number;
+  sendA?: number;
+  sendB?: number;
+}
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -94,6 +103,12 @@ export class AudioEngine {
   // Noise buffers cache
   private noiseBuffer: AudioBuffer | null = null;
 
+  // Latency & Hearing Protection (P4-05)
+  private latencyCompensationMs: number = 0;
+  private hearingProtection: boolean = true;
+  private maxVolumeLimit: number = 0.85;
+  private currentMasterVolume: number = 0.8;
+
   constructor(options?: AudioEngineOptions) {
     if (options?.onStep) this.onStepCallback = options.onStep;
     if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
@@ -104,6 +119,7 @@ export class AudioEngine {
       this.schedulerLoop();
     });
 
+    this.loadAudioSettings();
     this.initAudioContext();
   }
 
@@ -360,10 +376,83 @@ export class AudioEngine {
     this.swing = Math.max(0, Math.min(0.75, swing));
   }
 
+  private loadAudioSettings(): void {
+    if (typeof localStorage === "undefined") return;
+    try {
+      const raw = localStorage.getItem("groove_audio_settings_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.latencyCompensationMs === "number") {
+          this.latencyCompensationMs = parsed.latencyCompensationMs;
+        }
+        if (typeof parsed.hearingProtection === "boolean") {
+          this.hearingProtection = parsed.hearingProtection;
+        }
+        if (typeof parsed.maxVolumeLimit === "number") {
+          this.maxVolumeLimit = parsed.maxVolumeLimit;
+        }
+      }
+    } catch {
+      // Ignore storage parse error
+    }
+  }
+
+  private saveAudioSettings(): void {
+    if (typeof localStorage === "undefined") return;
+    try {
+      const data = {
+        latencyCompensationMs: this.latencyCompensationMs,
+        hearingProtection: this.hearingProtection,
+        maxVolumeLimit: this.maxVolumeLimit,
+      };
+      localStorage.setItem("groove_audio_settings_v1", JSON.stringify(data));
+    } catch {
+      // Ignore storage write error
+    }
+  }
+
+  public getOutputLatency(): number {
+    if (!this.ctx) return 0;
+    const lat = (this.ctx as any).outputLatency || (this.ctx as any).baseLatency || 0;
+    return Math.round(lat * 1000);
+  }
+
+  public getLatencyCompensation(): number {
+    return this.latencyCompensationMs;
+  }
+
+  public setLatencyCompensation(ms: number): void {
+    this.latencyCompensationMs = Math.max(-100, Math.min(100, ms));
+    this.saveAudioSettings();
+  }
+
+  public isHearingProtectionEnabled(): boolean {
+    return this.hearingProtection;
+  }
+
+  public setHearingProtection(enabled: boolean): void {
+    this.hearingProtection = enabled;
+    this.setMasterVolume(this.currentMasterVolume);
+    this.saveAudioSettings();
+  }
+
+  public getMaxVolumeLimit(): number {
+    return this.maxVolumeLimit;
+  }
+
+  public setMaxVolumeLimit(limit: number): void {
+    this.maxVolumeLimit = Math.max(0.1, Math.min(1.0, limit));
+    this.setMasterVolume(this.currentMasterVolume);
+    this.saveAudioSettings();
+  }
+
   public setMasterVolume(vol: number): void {
+    this.currentMasterVolume = Math.max(0, Math.min(1.0, vol));
+    const effective = this.hearingProtection
+      ? Math.min(this.maxVolumeLimit, this.currentMasterVolume)
+      : this.currentMasterVolume;
     if (this.masterGain && this.ctx) {
-      // Clamped to 1.0 to guarantee headroom and avoid clipping
-      this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1.0, vol)), this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(effective, this.ctx.currentTime);
     }
   }
 
@@ -503,6 +592,17 @@ export class AudioEngine {
     this.stepQueue = [];
     this.lastReportedStep = -1;
 
+    // P4-05: Soft fade-in prevents speaker pops and protects hearing
+    if (this.masterGain && this.ctx) {
+      const effective = this.hearingProtection
+        ? Math.min(this.maxVolumeLimit, this.currentMasterVolume)
+        : this.currentMasterVolume;
+      const t = this.ctx.currentTime;
+      this.masterGain.gain.cancelScheduledValues(t);
+      this.masterGain.gain.setValueAtTime(0.001, t);
+      this.masterGain.gain.exponentialRampToValueAtTime(Math.max(0.001, effective), t + 0.035);
+    }
+
     this.schedulerLoop();
     this.startScheduler();
     this.startPlayheadSync();
@@ -624,7 +724,8 @@ export class AudioEngine {
 
       // Swing pushes odd steps (1, 3, 5...) slightly forward
       const swingOffset = (step % 2 === 1 && this.swing > 0) ? (this.swing * 0.5) * stepDur : 0;
-      const actualStepTime = this.nextStepTime + swingOffset;
+      const latencyOffset = this.latencyCompensationMs / 1000;
+      const actualStepTime = Math.max(this.ctx.currentTime, this.nextStepTime + swingOffset + latencyOffset);
 
       if (this.isMetronome) {
         const isDownbeat = (step % 4 === 0);
