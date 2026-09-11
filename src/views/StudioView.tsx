@@ -41,6 +41,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { VelocityLane } from "../components/sequencer/VelocityLane";
 import { EuclideanModal } from "../components/sequencer/EuclideanModal";
 import { PitchPickerModal, midiToNoteName } from "../components/sequencer/PitchPickerModal";
+import { StepCell } from "../components/sequencer/StepCell";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { noteToMidi, ChordDefinition } from "../utils/chordTheory";
 
@@ -277,6 +278,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
+
+  // Synchronous state refs for stable event callbacks (P2-01 / P2-02)
+  const patternRef = useRef(pattern);
+  patternRef.current = pattern;
+  const mobileEditModeRef = useRef(mobileEditMode);
+  mobileEditModeRef.current = mobileEditMode;
 
   // Drag-to-paint state
   const isPointerDownRef = useRef(false);
@@ -734,8 +741,80 @@ export const StudioView: React.FC<StudioViewProps> = ({
     };
   }, [isPlaying, isEditorMaximized, stepContextMenu, pitchPicker.isOpen, isEuclideanOpen, isVelocityLaneOpen, handleUndo, handleRedo]);
 
+  // Pointer drag painting (for mouse desktop)
+  const handlePointerDown = useCallback((trackIdx: number, stepIdx: number, e: React.PointerEvent) => {
+    if (isTouchDevice || e.pointerType === "touch") return;
+    if (e.button !== 0) return;
+    isPointerDownRef.current = true;
+    hasDraggedRef.current = false;
+
+    const tr = patternRef.current.tracks[trackIdx];
+    if (!tr) return;
+    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
+    const curMobileEditMode = mobileEditModeRef.current;
+    const curStepCount = patternRef.current.tracks[0]?.steps?.length || 16;
+
+    // Let click handler process shiftKey, altKey, ctrlKey, metaKey, hi-hat cycling, and dedicated tool modes
+    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || isHat || curMobileEditMode !== "step") return;
+
+    const cur = tr.steps[stepIdx] || 0;
+    const nextVal = cur > 0 ? 0 : 1;
+    dragValRef.current = nextVal;
+
+    pushHistorySnapshot(patternRef.current);
+    triggerHaptic(HapticPatterns.tap);
+
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const t = copy.tracks[trackIdx];
+      t.steps[stepIdx] = nextVal;
+      if (nextVal > 0) {
+        if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
+        if (!t.velocity[stepIdx]) t.velocity[stepIdx] = 100;
+      }
+      return copy;
+    });
+
+    if (nextVal > 0 && engineRef.current) {
+      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
+    }
+  }, [isTouchDevice, pushHistorySnapshot]);
+
+  const handlePointerEnter = useCallback((trackIdx: number, stepIdx: number) => {
+    if (!isPointerDownRef.current || dragValRef.current === null) return;
+    const tr = patternRef.current.tracks[trackIdx];
+    if (!tr) return;
+    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
+    if (isHat) return;
+
+    hasDraggedRef.current = true;
+    const val = dragValRef.current;
+    const curStepCount = patternRef.current.tracks[0]?.steps?.length || 16;
+
+    setPattern((prev) => {
+      const copy = JSON.parse(JSON.stringify(prev));
+      const t = copy.tracks[trackIdx];
+      if (t.steps[stepIdx] !== val) {
+        t.steps[stepIdx] = val;
+        if (val > 0 && (!t.velocity || !t.velocity[stepIdx])) {
+          if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
+          t.velocity[stepIdx] = 100;
+        }
+      }
+      return copy;
+    });
+
+    if (val > 0 && engineRef.current) {
+      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
+      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, val);
+    }
+  }, []);
+
   // Step Pointer & Long-Press Handlers (Unifies Touch & Mouse, Eliminating Synthetic Double Triggers - P0-13)
-  const handleStepPointerDown = (trackIdx: number, stepIdx: number, e: React.PointerEvent) => {
+  const handleStepPointerDown = useCallback((trackIdx: number, stepIdx: number, e: React.PointerEvent) => {
     if (e.pointerType === "touch") {
       isLongPressRef.current = false;
       hasTouchMovedRef.current = false;
@@ -763,9 +842,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
     // Mouse pointer down: desktop drag-paint or modifier clicks
     handlePointerDown(trackIdx, stepIdx, e);
-  };
+  }, [handlePointerDown]);
 
-  const handleStepPointerMove = (e: React.PointerEvent) => {
+  const handleStepPointerMove = useCallback((e: React.PointerEvent) => {
     if (e.pointerType === "touch" && touchStartPosRef.current) {
       const dist = Math.hypot(
         e.clientX - touchStartPosRef.current.x,
@@ -779,18 +858,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
         }
       }
     }
-  };
+  }, []);
 
-  const handleStepPointerUp = () => {
+  const handleStepPointerUp = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
     touchStartPosRef.current = null;
-  };
+  }, []);
 
   // Step Cell interaction
-  const handleCellClick = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
+  const handleCellClick = useCallback((trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
     if (isLongPressRef.current) {
       isLongPressRef.current = false;
       return;
@@ -804,23 +883,25 @@ export const StudioView: React.FC<StudioViewProps> = ({
       return;
     }
 
-    const tr = pattern.tracks[trackIdx];
+    const tr = patternRef.current.tracks[trackIdx];
     if (!tr) return;
     const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
     const isMelodic = tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead";
     const cur = tr.steps[stepIdx] || 0;
+    const curStepCount = patternRef.current.tracks[0]?.steps?.length || 16;
+    const curMobileEditMode = mobileEditModeRef.current;
 
-    pushHistorySnapshot(pattern);
-    triggerHaptic(mobileEditMode === "accent" ? HapticPatterns.accent : HapticPatterns.tap);
+    pushHistorySnapshot(patternRef.current);
+    triggerHaptic(curMobileEditMode === "accent" ? HapticPatterns.accent : HapticPatterns.tap);
 
     // Dedicated Tool Mode Actions (Mobile Touch Ribbon or Desktop Click)
-    if (mobileEditMode === "accent") {
+    if (curMobileEditMode === "accent") {
       let newVel = 100;
       setPattern((prev) => {
         const copy = JSON.parse(JSON.stringify(prev));
         const t = copy.tracks[trackIdx];
         if (t.steps[stepIdx] === 0) t.steps[stepIdx] = 1;
-        if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+        if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
         newVel = (t.velocity[stepIdx] || 100) >= 115 ? 90 : 127;
         t.velocity[stepIdx] = newVel;
         return copy;
@@ -832,17 +913,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
       return;
     }
 
-    if (mobileEditMode === "ratchet") {
+    if (curMobileEditMode === "ratchet") {
       let nextRatchet = 2;
       setPattern((prev) => {
         const copy = JSON.parse(JSON.stringify(prev));
         const t = copy.tracks[trackIdx];
         if (t.steps[stepIdx] === 0) {
           t.steps[stepIdx] = 1;
-          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
           t.velocity[stepIdx] = 100;
         }
-        if (!t.ratchet) t.ratchet = Array(stepCount).fill(1);
+        if (!t.ratchet) t.ratchet = Array(curStepCount).fill(1);
         const curR = t.ratchet[stepIdx] || 1;
         nextRatchet = curR === 1 ? 2 : curR === 2 ? 3 : curR === 3 ? 4 : 1;
         t.ratchet[stepIdx] = nextRatchet;
@@ -856,13 +937,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
       return;
     }
 
-    if (mobileEditMode === "pitch" && isMelodic) {
+    if (curMobileEditMode === "pitch" && isMelodic) {
       if (cur === 0) {
         setPattern((prev) => {
           const copy = JSON.parse(JSON.stringify(prev));
           const t = copy.tracks[trackIdx];
           t.steps[stepIdx] = 1;
-          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
           t.velocity[stepIdx] = 100;
           return copy;
         });
@@ -877,7 +958,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       return;
     }
 
-    if (mobileEditMode === "plocks") {
+    if (curMobileEditMode === "plocks") {
       setStepContextMenu({
         isOpen: true,
         x: e.clientX || window.innerWidth / 2,
@@ -894,7 +975,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       setPattern((prev) => {
         const copy = JSON.parse(JSON.stringify(prev));
         const t = copy.tracks[trackIdx];
-        if (!t.velocity) t.velocity = Array(16).fill(100);
+        if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
         newVel = (t.velocity[stepIdx] || 100) >= 115 ? 90 : 127;
         t.velocity[stepIdx] = newVel;
         return copy;
@@ -914,10 +995,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
         const t = copy.tracks[trackIdx];
         if (t.steps[stepIdx] === 0) {
           t.steps[stepIdx] = 1;
-          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
           t.velocity[stepIdx] = 100;
         }
-        if (!t.ratchet) t.ratchet = Array(stepCount).fill(1);
+        if (!t.ratchet) t.ratchet = Array(curStepCount).fill(1);
         const curR = t.ratchet[stepIdx] || 1;
         nextRatchet = curR === 1 ? 2 : curR === 2 ? 3 : curR === 3 ? 4 : 1;
         t.ratchet[stepIdx] = nextRatchet;
@@ -938,7 +1019,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           const copy = JSON.parse(JSON.stringify(prev));
           const t = copy.tracks[trackIdx];
           t.steps[stepIdx] = 1;
-          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
           t.velocity[stepIdx] = 100;
           return copy;
         });
@@ -961,7 +1042,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         const t = copy.tracks[trackIdx];
         t.steps[stepIdx] = nextVal;
         if (nextVal > 0) {
-          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
           t.velocity[stepIdx] = 100;
         }
         return copy;
@@ -983,7 +1064,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         const t = copy.tracks[trackIdx];
         t.steps[stepIdx] = nextVal;
         if (nextVal > 0) {
-          if (!t.velocity) t.velocity = Array(stepCount).fill(100);
+          if (!t.velocity) t.velocity = Array(curStepCount).fill(100);
           t.velocity[stepIdx] = 100;
         }
         return copy;
@@ -995,10 +1076,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
     }
     dragValRef.current = null;
-  };
+  }, [isTouchDevice, pushHistorySnapshot]);
 
   // Right-click step context menu (P-Locks & Parameters)
-  const handleStepContextMenu = (trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
+  const handleStepContextMenu = useCallback((trackIdx: number, stepIdx: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setStepContextMenu({
@@ -1008,90 +1089,22 @@ export const StudioView: React.FC<StudioViewProps> = ({
       trackIdx,
       stepIdx,
     });
-  };
+  }, []);
 
   // Polymeter: cycle independent track length
-  const handleCycleTrackLength = (trackIdx: number) => {
-    const lengths = [stepCount, 12, 8, 7, 5, 3];
+  const handleCycleTrackLength = useCallback((trackIdx: number) => {
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
       const t = copy.tracks[trackIdx];
-      const curLen = t.trackLength || stepCount;
+      const curStepCount = prev.tracks[0]?.steps?.length || 16;
+      const lengths = [curStepCount, 12, 8, 7, 5, 3];
+      const curLen = t.trackLength || curStepCount;
       const curIdx = lengths.indexOf(curLen);
       const nextLen = lengths[(curIdx + 1) % lengths.length];
-      t.trackLength = nextLen === stepCount ? undefined : nextLen;
+      t.trackLength = nextLen === curStepCount ? undefined : nextLen;
       return copy;
     });
-  };
-
-  // Pointer drag painting (for mouse desktop)
-  const handlePointerDown = (trackIdx: number, stepIdx: number, e: React.PointerEvent) => {
-    if (isTouchDevice || e.pointerType === "touch") return;
-    if (e.button !== 0) return;
-    isPointerDownRef.current = true;
-    hasDraggedRef.current = false;
-
-    const tr = pattern.tracks[trackIdx];
-    if (!tr) return;
-    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
-
-    // Let click handler process shiftKey, altKey, ctrlKey, metaKey, hi-hat cycling, and dedicated tool modes
-    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || isHat || mobileEditMode !== "step") return;
-
-    const cur = tr.steps[stepIdx] || 0;
-    const nextVal = cur > 0 ? 0 : 1;
-    dragValRef.current = nextVal;
-
-    pushHistorySnapshot(pattern);
-    triggerHaptic(HapticPatterns.tap);
-
-    setPattern((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
-      const t = copy.tracks[trackIdx];
-      t.steps[stepIdx] = nextVal;
-      if (nextVal > 0) {
-        if (!t.velocity) t.velocity = Array(16).fill(100);
-        if (!t.velocity[stepIdx]) t.velocity[stepIdx] = 100;
-      }
-      return copy;
-    });
-
-    if (nextVal > 0 && engineRef.current) {
-      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
-    }
-  };
-
-  const handlePointerEnter = (trackIdx: number, stepIdx: number) => {
-    if (!isPointerDownRef.current || dragValRef.current === null) return;
-    const tr = pattern.tracks[trackIdx];
-    if (!tr) return;
-    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
-    if (isHat) return;
-
-    hasDraggedRef.current = true;
-    const val = dragValRef.current;
-
-    setPattern((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
-      const t = copy.tracks[trackIdx];
-      if (t.steps[stepIdx] !== val) {
-        t.steps[stepIdx] = val;
-        if (val > 0 && (!t.velocity || !t.velocity[stepIdx])) {
-          if (!t.velocity) t.velocity = Array(16).fill(100);
-          t.velocity[stepIdx] = 100;
-        }
-      }
-      return copy;
-    });
-
-    if (val > 0 && engineRef.current) {
-      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, val);
-    }
-  };
+  }, []);
 
   useEffect(() => {
     const handlePointerUp = () => {
@@ -1551,8 +1564,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
     });
   };
 
-  // Smart Fill for a track
+  // Smart Fill for a track with accurate meter and backbeat positioning (P0-10)
   const handleSmartFillTrack = (trackIdx: number) => {
+    pushHistorySnapshot(patternRef.current);
     setPattern((prev) => {
       const copy = JSON.parse(JSON.stringify(prev));
       const tr = copy.tracks[trackIdx];
@@ -1564,14 +1578,37 @@ export const StudioView: React.FC<StudioViewProps> = ({
       for (let i = 0; i < len; i++) {
         const beatPos = i % stepsPerBeat;
         const beatNum = Math.floor(i / stepsPerBeat) % timeNum;
+
+        // Snare backbeat calculation for standard and odd meters
+        const isSnareBackbeat = (() => {
+          if (timeNum === 4 && timeDenom === 4) return beatNum === 1 || beatNum === 3; // Beats 2 & 4
+          if (timeNum === 3 && timeDenom === 4) return beatNum === 1 || beatNum === 2; // Waltz / pop 3/4
+          if (timeNum === 6 && timeDenom === 8) return beatNum === 3;                   // 6/8 compound duple (2nd dotted beat)
+          if (timeNum === 5) return beatNum === 2 || beatNum === 4;                    // 5/4 3+2 meter backbeats (beats 3 & 5)
+          if (timeNum === 7 && timeDenom === 8) return beatNum === 2 || beatNum === 5; // 7/8 2+2+3 meter backbeats
+          if (timeNum === 2) return beatNum === 1;                                     // 2/4 2nd beat
+          return beatNum % 2 === 1;
+        })();
+
+        // Kick downbeat / groove placement
+        const isKickHit = (() => {
+          if (timeNum === 4 && timeDenom === 4) return true;                           // Four-on-the-floor
+          if (timeNum === 3 && timeDenom === 4) return beatNum === 0;                  // 1st beat downbeat
+          if (timeNum === 6 && timeDenom === 8) return beatNum === 0;                  // 1st beat downbeat
+          if (timeNum === 5) return beatNum === 0 || beatNum === 3;                    // 5/4 3+2 downbeats (beats 1 & 4)
+          if (timeNum === 7 && timeDenom === 8) return beatNum === 0 || beatNum === 4; // 7/8 2+2+3 downbeats (beats 1 & 5)
+          if (timeNum === 2) return beatNum === 0;                                     // 2/4 1st beat
+          return beatNum === 0;
+        })();
+
         if (tid === "kick") {
-          if (beatPos === 0) { tr.steps[i] = 1; tr.velocity[i] = 120; }
+          if (isKickHit && beatPos === 0) { tr.steps[i] = 1; tr.velocity[i] = 120; }
         } else if (tid === "snare") {
-          if ((beatNum === 1 || beatNum === 3) && beatPos === 0) { tr.steps[i] = 1; tr.velocity[i] = 115; }
+          if (isSnareBackbeat && beatPos === 0) { tr.steps[i] = 1; tr.velocity[i] = 115; }
         } else if (tid === "hihat") {
           if (i % 2 === 0) { tr.steps[i] = (i % 4 === 2) ? 2 : 1; tr.velocity[i] = (i % 4 === 2) ? 90 : 75; }
         } else if (tid === "bass") {
-          if (beatPos === 2 || (beatPos === 0 && beatNum % 2 === 0)) { tr.steps[i] = 1; tr.velocity[i] = 110; }
+          if (beatPos === 2 || (isKickHit && beatPos === 0)) { tr.steps[i] = 1; tr.velocity[i] = 110; }
         } else if (tid === "chords") {
           if (beatPos === 2) { tr.steps[i] = 1; tr.velocity[i] = 95; }
         } else if (tid === "percussion") {
@@ -2632,99 +2669,31 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
 
                       return (
-                        <div
+                        <StepCell
                           key={stepIdx}
-                          onClick={(e) => handleCellClick(trackIdx, stepIdx, e)}
-                          onContextMenu={(e) => handleStepContextMenu(trackIdx, stepIdx, e)}
-                          onPointerDown={(e) => handleStepPointerDown(trackIdx, stepIdx, e)}
+                          trackIdx={trackIdx}
+                          stepIdx={stepIdx}
+                          stepVal={stepVal}
+                          velocity={vel}
+                          isAcc={isAcc}
+                          isHatRound={isHatRound}
+                          isHatTriplet={isHatTriplet}
+                          ratchet={ratchet}
+                          prob={prob}
+                          isMelodic={isMelodic}
+                          midiNote={midiNote}
+                          isOutsideLoop={isOutsideLoop}
+                          isPlayhead={isPlayhead}
+                          isBarStart={isBarStart}
+                          isGroupStart={isGroupStart}
+                          trackColor={meta.color}
+                          onClick={handleCellClick}
+                          onContextMenu={handleStepContextMenu}
+                          onPointerDown={handleStepPointerDown}
                           onPointerMove={handleStepPointerMove}
                           onPointerUp={handleStepPointerUp}
-                          onPointerCancel={handleStepPointerUp}
-                          onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
-                          className={`min-w-[28px] sm:min-w-[36px] flex-1 h-10 sm:h-10 landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation touch-hit-44 ${
-                            isBarStart
-                              ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
-                              : isGroupStart
-                              ? "ml-2 sm:ml-2.5 border-l border-[#3a3e48]"
-                              : ""
-                          } ${
-                            isHatRound ? "rounded-full" : "rounded-md"
-                          } ${
-                            isOutsideLoop
-                              ? "opacity-25 bg-[#0e0f13] border-[#181920] cursor-not-allowed"
-                              : isOn
-                              ? "border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_10px_var(--tc)]"
-                              : "bg-[#141519] border-[#22242c] hover:border-[#383c48] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
-                          }`}
-                          style={{
-                            backgroundColor: !isOutsideLoop && isOn ? meta.color : undefined,
-                            opacity: isOutsideLoop ? 0.25 : isOn ? 0.45 + (vel / 127) * 0.55 : 1,
-                          }}
-                        >
-                          {/* Tactile hardware bevel specular acrylic highlight */}
-                          {isOn && !isOutsideLoop && (
-                            <span 
-                              className={`absolute inset-0 pointer-events-none ${isHatRound ? "rounded-full" : "rounded-md"}`}
-                              style={{
-                                background: isAcc
-                                  ? "linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.1) 50%, transparent 100%)"
-                                  : "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 45%)",
-                              }}
-                            />
-                          )}
-
-                          {/* Accent LED pip */}
-                          {isOn && isAcc && !isOutsideLoop && (
-                            <span className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_#ffffff] pointer-events-none" />
-                          )}
-
-                          {/* Ratchet division tick marks and badge */}
-                          {isOn && ratchet > 1 && !isOutsideLoop && (
-                            <>
-                              <div className="absolute inset-0 flex pointer-events-none">
-                                {Array.from({ length: ratchet - 1 }).map((_, rIdx) => (
-                                  <div
-                                    key={rIdx}
-                                    className="h-full border-r border-black/40"
-                                    style={{ width: `${100 / ratchet}%` }}
-                                  />
-                                ))}
-                              </div>
-                              <span className="absolute bottom-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-black bg-black/70 text-[#e9e7e0] leading-none pointer-events-none">
-                                {ratchet}x
-                              </span>
-                            </>
-                          )}
-
-                          {/* Probability badge */}
-                          {isOn && prob < 100 && !isOutsideLoop && (
-                            <span className="absolute top-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-bold bg-[#f5b73d]/90 text-black leading-none pointer-events-none">
-                              {prob}%
-                            </span>
-                          )}
-
-                          {/* Melodic note name readout */}
-                          {isOn && isMelodic && typeof midiNote === "number" && midiNote > 0 && !isOutsideLoop && (
-                            <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[8px] font-extrabold text-[#0a0b0d] tracking-tighter leading-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
-                              {midiToNoteName(midiNote)}
-                            </span>
-                          )}
-
-                          {/* Triplet roll inner stripes for Hat = 3 */}
-                          {isHatTriplet && !isOutsideLoop && (
-                            <span 
-                              className="absolute inset-x-1 inset-y-1.5 pointer-events-none opacity-75"
-                              style={{
-                                background: "repeating-linear-gradient(180deg, transparent 0 3px, rgba(10,11,13,0.85) 3px 6px)",
-                              }}
-                            />
-                          )}
-
-                          {/* Synchronized Global Laser Playhead Beam on this cell */}
-                          {isPlayhead && (
-                            <span className="absolute inset-0 border-2 border-[#f5b73d] bg-[#f5b73d]/25 shadow-[0_0_14px_rgba(245,183,61,0.5)] rounded-md pointer-events-none z-10" />
-                          )}
-                        </div>
+                          onPointerEnter={handlePointerEnter}
+                        />
                       );
                     })}
                   </div>
