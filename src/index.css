@@ -305,12 +305,8 @@ html.reduced-motion .animate-orbit {
 }
 
 [data-ruler-step-idx].playhead-active {
-  background-color: rgba(245, 183, 61, 0.25) !important;
-  border-color: #f5b73d !important;
   color: #f5b73d !important;
-  box-shadow: 0 0 14px rgba(245, 183, 61, 0.5) !important;
   font-weight: 700 !important;
-  transform: scale(1.03);
 }
 
 .playhead-laser-beam {

@@ -212,10 +212,6 @@ export const StepCell = memo<StepCellProps>(function StepCell({
         />
       )}
 
-      {/* Synchronized Global Laser Playhead Beam on this cell */}
-      {isPlayhead && (
-        <span className="absolute inset-0 border-2 border-accent bg-accent/25 shadow-[0_0_14px_rgba(245,183,61,0.5)] rounded-md pointer-events-none z-10" />
-      )}
     </div>
   );
 });
