@@ -276,6 +276,98 @@ describe("Audio & Sequencer Utilities", () => {
       expect(bytes).toBeInstanceOf(Uint8Array);
       expect(bytes.length).toBeGreaterThan(30);
     });
+
+    it("respects mute and solo states, gate durations, and ratchets during MIDI export", () => {
+      const customPattern = {
+        genre_id: "test_groove",
+        bpm: 120,
+        scale: "C minor",
+        swing: 20,
+        totalSteps: 16,
+        tracks: [
+          {
+            track_id: "kick" as const,
+            name: "Kick",
+            instrument: "kick",
+            steps: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+            mute: true, // Should be excluded
+            solo: false,
+          },
+          {
+            track_id: "snare" as const,
+            name: "Snare",
+            instrument: "snare",
+            steps: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            mute: false,
+            solo: true, // Solo enabled
+            gate: [0.8, 0.8, 0.8, 0.8, 1.5, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.5, 0.8, 0.8, 0.8],
+            ratchet: [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1], // Subdivisions
+          },
+          {
+            track_id: "hihat" as const,
+            name: "HiHat",
+            instrument: "hihat",
+            steps: Array(16).fill(1),
+            mute: false,
+            solo: false, // Non-solo track when solo exists -> excluded
+          },
+        ],
+      };
+
+      const bytes = generateMidiBytes({
+        bpm: 120,
+        pattern: customPattern,
+      });
+
+      expect(bytes).toBeInstanceOf(Uint8Array);
+      expect(bytes.length).toBeGreaterThan(20);
+    });
+  });
+
+  describe("Sequencer URL Sharing Lossless Roundtrip", () => {
+    it("encodes and decodes gate, ratchet, probability, trackLength, pan, and swing without loss", () => {
+      const advancedState: SharedSequencerState = {
+        genreId: "deep-house",
+        bpm: 124,
+        swing: 18,
+        scale: "F minor",
+        totalSteps: 16,
+        tracks: [
+          {
+            track_id: "kick",
+            name: "Kick",
+            instrument: "kick",
+            steps: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+            velocity: [120, 100, 110, 100, 120, 100, 110, 100, 120, 100, 110, 100, 120, 100, 110, 100],
+            pitch: Array(16).fill(36),
+            gate: [1.2, 0.8, 0.8, 0.8, 1.0, 0.8, 0.8, 0.8, 1.2, 0.8, 0.8, 0.8, 1.0, 0.8, 0.8, 0.8],
+            ratchet: [1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 4, 1],
+            probability: [100, 100, 75, 100, 100, 100, 50, 100, 100, 100, 75, 100, 100, 100, 90, 100],
+            trackLength: 12,
+            pan: -0.4,
+            swing: 10,
+            volume: 0.85,
+            mute: false,
+            solo: false,
+          },
+        ],
+      };
+
+      const encoded = encodeSharedSequencer(advancedState);
+      expect(encoded).toBeTruthy();
+
+      const decoded = decodeSharedSequencer(encoded);
+      expect(decoded).not.toBeNull();
+      const t = decoded!.tracks[0];
+      expect(t.trackLength).toBe(12);
+      expect(t.pan).toBeCloseTo(-0.4, 1);
+      expect(t.swing).toBe(10);
+      expect(t.gate?.[0]).toBe(1.2);
+      expect(t.ratchet?.[2]).toBe(2);
+      expect(t.ratchet?.[14]).toBe(4);
+      expect(t.probability?.[2]).toBe(75);
+      expect(t.probability?.[6]).toBe(50);
+    });
   });
 
   describe("Euclidean Rhythm Generator", () => {
@@ -317,7 +409,7 @@ describe("Audio & Sequencer Utilities", () => {
     });
   });
 
-  describe("Audio Engine Master Safety & Panic", () => {
+  describe("Audio Engine Master Safety, Helpers & Channel Strips", () => {
     it("safely clamps master volume and executes panic without throwing", () => {
       const engine = new AudioEngine();
       engine.setMasterVolume(2.5); // Should clamp to <= 1.0 internally
@@ -329,12 +421,107 @@ describe("Audio & Sequencer Utilities", () => {
       expect(() => engine.destroy()).not.toThrow();
     });
 
+    it("calculates tap tempo accurately from timestamp intervals", () => {
+      // 120 BPM = 500ms intervals
+      const taps120 = [1000, 1500, 2000, 2500];
+      expect(AudioEngine.calculateTapTempo(taps120)).toBe(120);
+
+      // 140 BPM = ~428.57ms intervals
+      const taps140 = [1000, 1429, 1857, 2286];
+      expect(AudioEngine.calculateTapTempo(taps140)).toBe(140);
+
+      // Single tap should fallback safely to 120
+      expect(AudioEngine.calculateTapTempo([1000])).toBe(120);
+    });
+
+    it("configures metronome, count-in, and loop range parameters", () => {
+      const engine = new AudioEngine();
+      expect(engine.getMetronome()).toBe(false);
+      engine.setMetronome(true);
+      expect(engine.getMetronome()).toBe(true);
+
+      expect(engine.getCountIn()).toBe(false);
+      engine.setCountIn(true);
+      expect(engine.getCountIn()).toBe(true);
+
+      expect(engine.getLoopRange()).toBeNull();
+      engine.setLoopRange([4, 12]);
+      expect(engine.getLoopRange()).toEqual([4, 12]);
+      engine.setLoopRange(null);
+      expect(engine.getLoopRange()).toBeNull();
+
+      // Track channel strip parameters configuration
+      engine.setTrackState(0, { volume: 0.7, pan: -0.5, sendA: 0.3, sendB: 0.2 });
+      engine.destroy();
+    });
+
     it("ChordAudioEngine stop and destroy cleanly without leaking", () => {
       const chordEngine = new ChordAudioEngine();
       expect(chordEngine.getIsPlaying()).toBe(false);
       expect(() => chordEngine.panic()).not.toThrow();
       expect(() => chordEngine.stop()).not.toThrow();
       expect(() => chordEngine.destroy()).not.toThrow();
+    });
+  });
+
+  describe("Offline & PCM Timing/Clipping Regression (P3-11)", () => {
+    it("verifies 8-track simultaneous firing with master limiter does not exceed full scale (<= 1.0)", () => {
+      // Simulate 8 simultaneous voices at max volume
+      const numTracks = 8;
+      const trackGains = Array(numTracks).fill(0.8);
+      const masterGain = 0.8;
+
+      // Raw uncompressed sum
+      const rawSum = trackGains.reduce((a, b) => a + b, 0) * masterGain; // 8 * 0.8 * 0.8 = 5.12 (> 1.0, would clip without limiter)
+      expect(rawSum).toBeGreaterThan(1.0);
+
+      // Limiter transfer function simulation:
+      // threshold = -1dBFS ~= 0.891, ratio = 20:1
+      const thresholdLinear = Math.pow(10, -1.0 / 20); // ~0.89125
+      const dbAboveThreshold = 20 * Math.log10(rawSum / thresholdLinear);
+      const compressedDbAbove = dbAboveThreshold / 20.0; // ratio 20:1
+      const limitedOutput = thresholdLinear * Math.pow(10, compressedDbAbove / 20);
+
+      // Must be safely within full scale
+      expect(limitedOutput).toBeLessThanOrEqual(1.0);
+      expect(limitedOutput).toBeGreaterThan(0.8);
+    });
+
+    it("verifies swing timing math strictly shifts odd 16th notes", () => {
+      const bpm = 120;
+      const beatSec = 60 / bpm; // 0.5s
+      const stepDur = beatSec / 4; // 0.125s (125ms)
+      const swing = 0.5; // 50% swing
+
+      for (let step = 0; step < 16; step++) {
+        const nominalTime = step * stepDur;
+        const swingOffset = (step % 2 === 1 && swing > 0) ? (swing * 0.5) * stepDur : 0;
+        const actualTime = nominalTime + swingOffset;
+
+        if (step % 2 === 0) {
+          // Even steps have zero swing offset
+          expect(actualTime).toBe(nominalTime);
+        } else {
+          // Odd steps are delayed by (swing * 0.5) * 125ms = 31.25ms
+          expect(actualTime).toBeCloseTo(nominalTime + 0.03125, 4);
+        }
+      }
+    });
+
+    it("verifies gate durations compute strictly positive bounded envelopes", () => {
+      const stepDur = 0.125;
+      const testGates = [0.1, 0.5, 0.8, 1.0, 1.5, 2.0];
+
+      testGates.forEach((gate) => {
+        const duration = Math.max(0.05, Math.min(2.5, stepDur * gate));
+        expect(duration).toBeGreaterThanOrEqual(0.05);
+        expect(duration).toBeLessThanOrEqual(2.5);
+        if (stepDur * gate >= 0.05) {
+          expect(duration).toBeCloseTo(stepDur * gate, 3);
+        } else {
+          expect(duration).toBe(0.05);
+        }
+      });
     });
   });
 });

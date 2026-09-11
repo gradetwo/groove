@@ -33,6 +33,12 @@ export interface TrackRowProps {
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
   onSmartFill: (trackIdx: number) => void;
   onClearTrack: (trackIdx: number) => void;
+  onMoveUp?: (trackIdx: number) => void;
+  onMoveDown?: (trackIdx: number) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onChangePan?: (trackIdx: number, pan: number) => void;
+  onChangeSwing?: (trackIdx: number, swing: number) => void;
 }
 
 export const TrackRow = memo<TrackRowProps>(function TrackRow({
@@ -58,8 +64,15 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   onShiftTrack,
   onSmartFill,
   onClearTrack,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false,
+  onChangePan,
+  onChangeSwing,
 }) {
   const trackVol = track.volume !== undefined ? track.volume : 0.8;
+  const trackPan = track.pan !== undefined ? track.pan : 0;
   const trackLen = track.trackLength || stepCount;
 
   return (
@@ -152,8 +165,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
 
         {/* Lower row: Volume slider + Track actions (Velocity Focus, Shift, Smart Fill, Clear) */}
         <div className="flex items-center justify-between gap-1 text-text-dim">
-          {/* Mini Volume Slider */}
-          <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%`}>
+          {/* Mini Volume & Pan Slider */}
+          <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%, Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}>
             <input
               type="range"
               min="0"
@@ -161,12 +174,49 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               step="0.05"
               value={trackVol}
               onChange={(e) => onChangeVolume(trackIdx, +e.target.value)}
-              className="w-10 sm:w-11 h-2 sm:h-1 accent-accent bg-line-subtle rounded cursor-pointer touch-manipulation"
+              className="w-9 sm:w-10 h-2 sm:h-1 accent-accent bg-line-subtle rounded cursor-pointer touch-manipulation"
+              title={`Vol: ${Math.round(trackVol * 100)}%`}
+              aria-label={`${meta.name} Volume`}
             />
+            {onChangePan && (
+              <input
+                type="range"
+                min="-1"
+                max="1"
+                step="0.1"
+                value={trackPan}
+                onChange={(e) => onChangePan(trackIdx, +e.target.value)}
+                className="w-8 sm:w-9 h-2 sm:h-1 accent-[#45e0c9] bg-line-subtle rounded cursor-pointer hidden lg:block"
+                title={`Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}
+                aria-label={`${meta.name} Pan`}
+              />
+            )}
           </div>
 
-          {/* Track Quick Actions */}
+          {/* Track Quick Actions & Reorder */}
           <div className="flex items-center gap-0.5 shrink-0">
+            {onMoveUp && canMoveUp && (
+              <button
+                type="button"
+                onClick={() => onMoveUp(trackIdx)}
+                className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
+                title={isZh ? "上移轨道" : "Move track up"}
+                aria-label={isZh ? "上移轨道" : "Move track up"}
+              >
+                ▲
+              </button>
+            )}
+            {onMoveDown && canMoveDown && (
+              <button
+                type="button"
+                onClick={() => onMoveDown(trackIdx)}
+                className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
+                title={isZh ? "下移轨道" : "Move track down"}
+                aria-label={isZh ? "下移轨道" : "Move track down"}
+              >
+                ▼
+              </button>
+            )}
             <button
               onClick={() => onOpenVelocity(trackIdx)}
               className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation ${
@@ -174,7 +224,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                   ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
                   : "border-line text-text-dim hover:text-[#45e0c9]"
               }`}
-              title={isZh ? "在力度抽屉中编辑" : "Edit velocity in drawer"}
+              title={isZh ? "在多维抽屉中编辑" : "Edit in lane drawer"}
             >
               <Sliders className="w-2.5 h-2.5" />
             </button>
@@ -225,6 +275,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
           const isOutsideLoop = stepIdx >= trackLen;
           const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
           const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
+          const gate = track.gate?.[stepIdx];
 
           return (
             <StepCell
@@ -240,6 +291,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               prob={prob}
               isMelodic={isMelodic}
               midiNote={midiNote}
+              gate={gate}
               isOutsideLoop={isOutsideLoop}
               isPlayhead={false}
               isBarStart={isBarStart}

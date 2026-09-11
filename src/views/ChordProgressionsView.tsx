@@ -48,6 +48,13 @@ import { PianoKeyboardVisualizer } from "../components/chords/PianoKeyboardVisua
 import { GuitarFretboardVisualizer } from "../components/chords/GuitarFretboardVisualizer";
 import { MidiExporter } from "../audio/MidiExporter";
 
+const getScaleNotes = (root: string, isMinor: boolean): string[] => {
+  const rootIdx = (NOTE_NAMES as readonly string[]).indexOf(root);
+  if (rootIdx === -1) return [root];
+  const intervals = isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+  return intervals.map((interval) => NOTE_NAMES[(rootIdx + interval) % 12]);
+};
+
 interface ChordProgressionsViewProps {
   onOpenStudioWithChords?: (chords: ChordDefinition[]) => void;
 }
@@ -113,6 +120,13 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
       engineRef.current.setLoop(isLooping);
     }
   }, [bpm, timbre, style, isLooping]);
+
+  // Safety clamp to ensure selectedChordIdx is always valid (P3-19)
+  useEffect(() => {
+    if (selectedChordIdx >= customChords.length) {
+      setSelectedChordIdx(Math.max(0, customChords.length - 1));
+    }
+  }, [customChords.length, selectedChordIdx]);
 
   // Selected chord object
   const currentChord = customChords[selectedChordIdx] || customChords[0];
@@ -245,21 +259,32 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
     });
   }, []);
 
-  // Add a chord block
+  // Add a chord block (P3-19: race-condition free)
   const handleAddChord = useCallback(() => {
-    setCustomChords((prev) => [
-      ...prev,
-      { root: keyRoot, quality: "maj", duration: 4 },
-    ]);
-    setSelectedChordIdx(customChords.length);
-  }, [keyRoot, customChords.length]);
+    setCustomChords((prev) => {
+      const next: ChordDefinition[] = [
+        ...prev,
+        { root: keyRoot, quality: "maj" as ChordQuality, duration: 4 },
+      ];
+      setSelectedChordIdx(next.length - 1);
+      return next;
+    });
+  }, [keyRoot]);
 
-  // Remove chord block
+  // Remove chord block (P3-19: race-condition free)
   const handleRemoveChord = useCallback((idx: number) => {
-    if (customChords.length <= 1) return;
-    setCustomChords((prev) => prev.filter((_, i) => i !== idx));
-    setSelectedChordIdx((prev) => Math.max(0, Math.min(prev, customChords.length - 2)));
-  }, [customChords.length]);
+    setCustomChords((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter((_, i) => i !== idx);
+      setSelectedChordIdx((cur) => {
+        if (cur >= next.length) return next.length - 1;
+        if (cur === idx) return Math.max(0, idx - 1);
+        if (cur > idx) return cur - 1;
+        return cur;
+      });
+      return next;
+    });
+  }, []);
 
   // Copy chord progression text
   const handleCopyText = useCallback(() => {
@@ -351,8 +376,8 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
             <div className="text-[11px] text-text-sub flex items-center justify-between pt-1">
               <span>{t("chords_scale_notes")}</span>
-              <span className="font-mono text-zinc-300 text-[10px]">
-                {keyRoot} · {isMinorKey ? "D · Eb · F · G · Ab · Bb" : "D · E · F · G · A · B"}
+              <span className="font-mono text-accent text-[11px] font-bold truncate max-w-[200px] text-right">
+                {getScaleNotes(keyRoot, isMinorKey).join(" · ")}
               </span>
             </div>
           </div>
@@ -674,6 +699,21 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       e.preventDefault();
                       setSelectedChordIdx(idx);
                       handleAuditionChord(chord);
+                    } else if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      const prevIdx = Math.max(0, idx - 1);
+                      setSelectedChordIdx(prevIdx);
+                      handleAuditionChord(customChords[prevIdx]);
+                    } else if (e.key === "ArrowRight") {
+                      e.preventDefault();
+                      const nextIdx = Math.min(customChords.length - 1, idx + 1);
+                      setSelectedChordIdx(nextIdx);
+                      handleAuditionChord(customChords[nextIdx]);
+                    } else if (e.key === "Delete" || e.key === "Backspace") {
+                      if (customChords.length > 1) {
+                        e.preventDefault();
+                        handleRemoveChord(idx);
+                      }
                     }
                   }}
                   className={`relative shrink-0 w-32 sm:w-36 rounded-xl p-3.5 flex flex-col justify-between cursor-pointer transition-all duration-200 border select-none group outline-none focus-visible:ring-2 focus-visible:ring-accent ${
@@ -1004,7 +1044,8 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               language={language}
               onKeyClick={(midi) => {
                 if (engineRef.current) {
-                  engineRef.current.triggerChord({ root: currentChord.root, quality: currentChord.quality });
+                  engineRef.current.triggerNote(midi, timbre);
+                  setActivePlaybackNotes([midi]);
                 }
               }}
             />
@@ -1015,7 +1056,8 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               language={language}
               onStringClick={(midi) => {
                 if (engineRef.current) {
-                  engineRef.current.triggerChord({ root: currentChord.root, quality: currentChord.quality });
+                  engineRef.current.triggerNote(midi, timbre);
+                  setActivePlaybackNotes([midi]);
                 }
               }}
             />

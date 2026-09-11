@@ -34,17 +34,68 @@ interface QuizQuestion {
   options: Genre[];
 }
 
+const STORAGE_KEY = "groove_challenge_stats_v1";
+
+interface StoredStats {
+  score: number;
+  streak: number;
+  bestStreak: number;
+  totalAnswered: number;
+  correctCount: number;
+  recentTested: string[];
+}
+
+const loadStoredStats = (): StoredStats => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      return {
+        score: typeof p.score === "number" ? p.score : 0,
+        streak: typeof p.streak === "number" ? p.streak : 0,
+        bestStreak: typeof p.bestStreak === "number" ? p.bestStreak : 0,
+        totalAnswered: typeof p.totalAnswered === "number" ? p.totalAnswered : 0,
+        correctCount: typeof p.correctCount === "number" ? p.correctCount : 0,
+        recentTested: Array.isArray(p.recentTested) ? p.recentTested : [],
+      };
+    }
+  } catch {}
+  return { score: 0, streak: 0, bestStreak: 0, totalAnswered: 0, correctCount: 0, recentTested: [] };
+};
+
+// Strict 3-Tier Difficulty Pool Partitioning (P3-17: Easy !== Medium !== Hard)
+const EASY_IDS = new Set([
+  "chicago-house", "berlin-techno", "uplifting-trance", "brostep", "liquid-funk",
+  "boom-bap", "trap", "synthpop", "reggaeton", "disco", "funk", "classic-rock",
+  "heavy-metal", "grunge", "punk-rock", "delta-blues", "chicago-blues",
+  "bebop", "bossa-nova", "afrobeats", "r-and-b", "contemporary-r-and-b",
+  "eurodance", "progressive-house", "ambient"
+]);
+
+const HARD_IDS = new Set([
+  "breakcore", "idm", "glitch-hop", "neurofunk", "footwork", "jersey-club",
+  "gabber", "speedcore", "math-rock", "post-rock", "shoegaze", "djent",
+  "black-metal", "death-metal", "grindcore", "free-jazz", "hard-bop",
+  "vaporwave", "witch-house", "chiptune", "dark-ambient", "phonk",
+  "uk-drill", "gqom", "amapiano", "hyperpop", "hardstyle", "jump-up"
+]);
+
 export const ChallengeView: React.FC<ChallengeViewProps> = ({
   onSelectGenre,
   onOpenStudio,
 }) => {
   const { t, isZh } = useLanguage();
 
+  const [initialStats] = useState<StoredStats>(loadStoredStats);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [bestStreak, setBestStreak] = useState(0);
-  const [totalAnswered, setTotalAnswered] = useState(0);
+  const [score, setScore] = useState(initialStats.score);
+  const [streak, setStreak] = useState(initialStats.streak);
+  const [bestStreak, setBestStreak] = useState(initialStats.bestStreak);
+  const [totalAnswered, setTotalAnswered] = useState(initialStats.totalAnswered);
+  const [correctCount, setCorrectCount] = useState(initialStats.correctCount);
+
+  // Anti-repeat buffer: exclude last 10 tested genres (P3-17)
+  const recentTestedRef = useRef<string[]>(initialStats.recentTested);
 
   // Current question
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
@@ -55,43 +106,58 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
   const engineRef = useRef<AudioEngine | null>(null);
 
-  // Pool of genres based on difficulty
+  const persistStats = (updated: Partial<StoredStats>) => {
+    try {
+      const current: StoredStats = {
+        score,
+        streak,
+        bestStreak,
+        totalAnswered,
+        correctCount,
+        recentTested: recentTestedRef.current,
+        ...updated,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+    } catch {}
+  };
+
+  // Disjoint pools based on difficulty
   const getPool = (diff: Difficulty): Genre[] => {
     if (diff === "easy") {
-      // Pick major recognizable genres
-      const majorIds = [
-        "chicago-house", "berlin-techno", "uplifting-trance", "brostep", 
-        "liquid-funk", "boom-bap", "classic-rock", "delta-blues", 
-        "synthpop", "reggaeton", "trap"
-      ];
-      const pool = ALL_GENRES.filter((g) => majorIds.includes(g.id) || g.subgenres.length >= 2);
-      return pool.length >= 8 ? pool : ALL_GENRES;
-    } else if (diff === "medium") {
-      return ELECTRONIC_GENRES.length > 20 ? ELECTRONIC_GENRES : ALL_GENRES;
+      return ALL_GENRES.filter((g) => EASY_IDS.has(g.id));
+    } else if (diff === "hard") {
+      return ALL_GENRES.filter((g) => HARD_IDS.has(g.id));
     } else {
-      // Hard: underground, drill, neurofunk, hardstyle, math rock, etc.
-      return ALL_GENRES;
+      // Medium: established subgenres not in easy or hard
+      return ALL_GENRES.filter((g) => !EASY_IDS.has(g.id) && !HARD_IDS.has(g.id));
     }
   };
 
-  // Generate question
+  // Generate question with 10-question anti-repeat rule
   const generateQuestion = (diff = difficulty): QuizQuestion => {
     const pool = getPool(diff);
-    const correctIdx = Math.floor(Math.random() * pool.length);
-    const correct = pool[correctIdx];
+    // Exclude recently tested genres
+    const available = pool.filter((g) => !recentTestedRef.current.includes(g.id));
+    const candidatePool = available.length >= 4 ? available : pool;
 
-    // Pick 3 distractors
+    const correctIdx = Math.floor(Math.random() * candidatePool.length);
+    const correct = candidatePool[correctIdx];
+
+    // Push into anti-repeat queue and keep max 10
+    recentTestedRef.current = [correct.id, ...recentTestedRef.current.filter((id) => id !== correct.id)].slice(0, 10);
+    persistStats({ recentTested: recentTestedRef.current });
+
+    // Pick 3 distractors from candidate pool or full pool
     const distractors: Genre[] = [];
     const poolWithoutCorrect = pool.filter((g) => g.id !== correct.id);
 
-    // Prefer similar BPM or category
+    // Prefer similar BPM or category for realistic distractors
     const similar = poolWithoutCorrect.filter(
-      (g) => g.category === correct.category || Math.abs(g.default_bpm - correct.default_bpm) <= 15
+      (g) => g.category === correct.category || Math.abs(g.default_bpm - correct.default_bpm) <= 18
     );
-    const candidatePool = similar.length >= 3 ? similar : poolWithoutCorrect;
+    const distractorPool = similar.length >= 3 ? similar : poolWithoutCorrect;
 
-    // Shuffle and pick 3
-    const shuffled = [...candidatePool].sort(() => Math.random() - 0.5);
+    const shuffled = [...distractorPool].sort(() => Math.random() - 0.5);
     distractors.push(...shuffled.slice(0, 3));
 
     const options = [correct, ...distractors].sort(() => Math.random() - 0.5);
@@ -164,24 +230,39 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
     setSelectedAnswerId(genre.id);
     setIsAnswered(true);
-    setTotalAnswered((prev) => prev + 1);
-
+    const nextTotal = totalAnswered + 1;
     const isCorrect = genre.id === question.correctGenre.id;
+    const nextCorrect = isCorrect ? correctCount + 1 : correctCount;
+
+    setTotalAnswered(nextTotal);
+
     if (isCorrect) {
+      setCorrectCount(nextCorrect);
       const pointGain = difficulty === "easy" ? 100 : difficulty === "medium" ? 200 : 350;
       const newScore = score + pointGain;
       const newStreak = streak + 1;
+      const newBestStreak = Math.max(bestStreak, newStreak);
       setScore(newScore);
       setStreak(newStreak);
-      if (newStreak > bestStreak) {
-        setBestStreak(newStreak);
-      }
+      setBestStreak(newBestStreak);
+      persistStats({
+        score: newScore,
+        streak: newStreak,
+        bestStreak: newBestStreak,
+        totalAnswered: nextTotal,
+        correctCount: nextCorrect,
+      });
       announcer.announce(
         isZh ? `回答正确！+${pointGain}分` : `Correct! +${pointGain} points`,
         "assertive"
       );
     } else {
       setStreak(0);
+      persistStats({
+        streak: 0,
+        totalAnswered: nextTotal,
+        correctCount: nextCorrect,
+      });
       announcer.announce(
         isZh
           ? `回答错误。正确答案是：${question.correctGenre.name}`
@@ -196,11 +277,29 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     setDifficulty(newDiff);
   };
 
+  const handleResetStats = () => {
+    setScore(0);
+    setStreak(0);
+    setBestStreak(0);
+    setTotalAnswered(0);
+    setCorrectCount(0);
+    recentTestedRef.current = [];
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+  };
+
+  const accuracy = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
+
+  // Normalized rank threshold based on score, difficulty multiplier & accuracy (P3-17)
   const rankTitle = () => {
-    if (score >= 1500) return "Sonic Sorcerer (声学传奇)";
-    if (score >= 900) return "Groove Maestro (律动大师)";
-    if (score >= 400) return "Beat Explorer (节拍探索家)";
-    return "Rhythm Novice (节奏学徒)";
+    const multiplier = difficulty === "hard" ? 1.5 : difficulty === "medium" ? 1.2 : 1.0;
+    const normalizedScore = score * multiplier;
+
+    if (normalizedScore >= 1200 && accuracy >= 70) return isZh ? "声学传奇 (Sonic Sorcerer)" : "Sonic Sorcerer";
+    if (normalizedScore >= 700 && accuracy >= 60) return isZh ? "律动大师 (Groove Maestro)" : "Groove Maestro";
+    if (normalizedScore >= 300 || streak >= 3) return isZh ? "节拍探索家 (Beat Explorer)" : "Beat Explorer";
+    return isZh ? "节奏学徒 (Rhythm Novice)" : "Rhythm Novice";
   };
 
   if (!question) return null;
@@ -223,9 +322,9 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
         </div>
 
         {/* Stats Pill Box */}
-        <div className="flex items-center space-x-3 bg-panel2 p-2 rounded-2xl border border-line">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-panel2 p-2 rounded-2xl border border-line">
           {/* Score */}
-          <div className="px-3 py-1 text-center">
+          <div className="px-2.5 py-1 text-center">
             <span className="text-[10px] text-text-dim font-bold uppercase block">
               {t("score")}
             </span>
@@ -234,10 +333,10 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             </span>
           </div>
 
-          <div className="w-px h-8 bg-neutral-800" />
+          <div className="w-px h-7 bg-neutral-800" />
 
           {/* Streak */}
-          <div className="px-3 py-1 text-center flex flex-col items-center">
+          <div className="px-2.5 py-1 text-center flex flex-col items-center">
             <div className="flex items-center space-x-1 text-[10px] text-amber-500 font-bold uppercase">
               <Flame className="w-3 h-3 fill-current" />
               <span>{t("streak")}</span>
@@ -247,17 +346,51 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             </span>
           </div>
 
-          <div className="w-px h-8 bg-neutral-800" />
+          <div className="w-px h-7 bg-neutral-800" />
+
+          {/* Accuracy (P3-17) */}
+          <div className="px-2.5 py-1 text-center">
+            <span className="text-[10px] text-text-dim font-bold uppercase block">
+              {t("accuracy")}
+            </span>
+            <span className="text-sm sm:text-base font-extrabold text-cyan-400 font-mono">
+              {accuracy}%
+            </span>
+          </div>
+
+          <div className="w-px h-7 bg-neutral-800" />
+
+          {/* Best Streak */}
+          <div className="px-2.5 py-1 text-center hidden sm:block">
+            <span className="text-[10px] text-text-dim font-bold uppercase block">
+              {t("best_streak")}
+            </span>
+            <span className="text-sm sm:text-base font-extrabold text-emerald-400 font-mono">
+              {bestStreak}
+            </span>
+          </div>
+
+          <div className="w-px h-7 bg-neutral-800 hidden sm:block" />
 
           {/* Rank */}
-          <div className="px-3 py-1 text-center hidden sm:block">
+          <div className="px-2.5 py-1 text-center hidden md:block">
             <span className="text-[10px] text-text-dim font-bold uppercase block">
               Rank
             </span>
-            <span className="text-xs font-bold text-emerald-400">
+            <span className="text-xs font-bold text-indigo-300">
               {rankTitle().split(" ")[0]}
             </span>
           </div>
+
+          {/* Reset Stats Action */}
+          <button
+            onClick={handleResetStats}
+            className="p-2 rounded-xl bg-[#13141a] hover:bg-neutral-800 text-text-dim hover:text-rose-400 border border-line transition-colors ml-1"
+            title={isZh ? "重置所有成绩数据" : "Reset stats"}
+            aria-label="Reset challenge stats"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 

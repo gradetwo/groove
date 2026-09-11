@@ -1,7 +1,26 @@
 {
-  "version": "1.11.0",
+  "version": "1.12.0",
   "releaseDate": "2026-09-12",
   "changelog": [
+    {
+      "version": "1.12.0",
+      "date": "2026-09-12",
+      "category": "feature",
+      "title": {
+        "zh": "v1.12.0 移动端菜单 100% 纯实体高对比度加固与 Phase 3 全功能特性落地",
+        "en": "v1.12.0 100% Solid High-Contrast Mobile Menu & Full Phase 3 Feature Delivery"
+      },
+      "highlights": [
+        {
+          "zh": "移动端展开菜单纯实体不透明加固：彻底消除移动端竖屏展开菜单背景透明、底层高亮元素透字的问题。Header 与菜单容器采用 100% 实体深色面板（#090b10），每个功能选项升级为独立实体卡片背景（#13151d），遮罩层升级为 85% 纯黑遮罩（bg-black/85），文字色彩对比度全面达标，无论底层是 3D 星系粒子还是高亮音序网格均清晰易读",
+          "en": "100% Solid High-Contrast Mobile Menu: completely eradicated translucent background bleed-through on mobile portrait screens. Container upgraded to 100% solid dark panel (#090b10), each navigation item styled with its own opaque card background (#13151d), backed by an 85% solid black scrim for razor-sharp legibility"
+        },
+        {
+          "zh": "Phase 3 核心功能收官：完成律动工作台摇摆与概率参数锁（P3-01~P3-11）、曲风对比多列独立试听调度（P3-12~P3-13）、曲风详情节点演化血统图（P3-14~P3-16）、听音答题挑战题库持久化（P3-17）、全局搜索防抖与快捷定位（P3-18）、和弦走向 36 键真实音源试听（P3-19）、无障碍曲风列表视图与 WebGL 优雅降级（P3-20）",
+          "en": "Phase 3 feature completion: dynamic swing and parameter locks (P3-01~P3-11), multi-column compare playback (P3-12~P3-13), genre detail lineage graph (P3-14~P3-16), challenge quiz persistence (P3-17), global search (P3-18), chord progression 36-key real synth (P3-19), and accessible explore list view with WebGL fallback (P3-20)"
+        }
+      ]
+    },
     {
       "version": "1.11.0",
       "date": "2026-09-12",

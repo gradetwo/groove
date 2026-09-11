@@ -5,7 +5,7 @@ export const chordsMessages = {
   guitar_fretted: { en: "Fretted", zh: "按弦品位" },
   guitar_open_string: { en: "Open String", zh: "空弦发音" },
   guitar_muted: { en: "Muted (X)", zh: "护弦/闷音" },
-  piano_keyboard_title: { en: "Interactive Acoustic Grand Piano (C3 - B5)", zh: "88键立体钢琴琴键映射 (C3 - B5)" },
+  piano_keyboard_title: { en: "Interactive Grand Piano (36 Keys · C3 - B5)", zh: "立体声钢琴琴键映射 (36键 · C3 - B5)" },
   piano_keyboard_sub: { en: "· Active chord tone lighting", zh: "· 点亮当前和弦发音键位" },
   piano_root_note: { en: "Root Note", zh: "根音 (Root)" },
   piano_chord_tone: { en: "Chord Tone", zh: "和弦组成音 (Chord Notes)" },

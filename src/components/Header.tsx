@@ -128,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-bg/95 backdrop-blur-md border-b border-line px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+    <header className={`sticky top-0 z-50 w-full ${mobileMenuOpen ? "bg-[#0a0b0d]" : "bg-bg/95 backdrop-blur-md"} border-b border-line px-4 sm:px-6 py-3 flex items-center justify-between gap-4`}>
       {/* Brand / Logo */}
       <div className="flex items-center gap-4">
         <button 
@@ -333,32 +333,32 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      {/* Mobile backdrop scrim */}
+      {/* Mobile backdrop scrim (completely solid dimming layer) */}
       {mobileMenuOpen && (
         <div 
-          className="md:hidden fixed inset-0 top-[57px] bg-black/60 backdrop-blur-sm z-40"
+          className="md:hidden fixed inset-0 top-0 bg-black/85 z-40"
           onClick={() => setMobileMenuOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* Mobile dropdown */}
+      {/* Mobile dropdown: 100% opaque solid dark panel with solid button cards */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0d0e12] border-b border-line p-3 space-y-1.5 shadow-2xl max-h-[85vh] overflow-y-auto z-50">
+        <div className="md:hidden absolute top-full left-0 right-0 bg-[#090b10] border-b-2 border-line-strong p-3 space-y-2 shadow-[0_25px_60px_rgba(0,0,0,0.98)] max-h-[85vh] overflow-y-auto z-50 overscroll-contain">
           {/* Primary Tabs */}
           <button
             onClick={() => {
               onSelectTab("studio");
               setMobileMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
               currentTab === "studio"
-                ? "border-accent/50 text-accent bg-accent/10"
-                : "border-line text-text-sub hover:text-text hover:bg-panel"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
             }`}
           >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>{t("nav_studio")}</span>
+            <Sliders className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{t("nav_studio")}</span>
           </button>
 
           <button
@@ -366,24 +366,24 @@ export const Header: React.FC<HeaderProps> = ({
               onSelectTab("chords");
               setMobileMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
               currentTab === "chords"
-                ? "border-accent/50 text-accent bg-accent/10"
-                : "border-line text-text-sub hover:text-text hover:bg-panel"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
             }`}
           >
-            <Music2 className="w-3.5 h-3.5" />
-            <span>{t("nav_chords")}</span>
+            <Music2 className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{t("nav_chords")}</span>
           </button>
 
           {/* Explore Subgroup */}
-          <div className="pt-2 pb-1">
+          <div className="pt-2 pb-0.5">
             <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-text-dim flex items-center gap-1.5">
-              <Compass className="w-3 h-3 text-accent" />
-              <span>{t("nav_explore")}</span>
+              <Compass className="w-3.5 h-3.5 text-accent" />
+              <span className="font-bold">{t("nav_explore")}</span>
             </div>
           </div>
-          <div className="pl-2 space-y-1 border-l border-line ml-2">
+          <div className="space-y-1.5 pl-2.5 border-l-2 border-[#262a38] ml-1">
             {exploreItems.map((item) => {
               const isSubActive = currentTab === item.tab;
               return (
@@ -393,15 +393,15 @@ export const Header: React.FC<HeaderProps> = ({
                     onSelectTab(item.tab);
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                  className={`w-full flex items-center justify-between text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
                     isSubActive
-                      ? "border-accent/50 text-accent bg-accent/10"
-                      : "border-transparent text-text-sub hover:text-text hover:bg-panel"
+                      ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_10px_rgba(245,183,61,0.15)]"
+                      : "border-line/70 text-text-sub hover:text-text bg-[#0f1118] hover:bg-[#161922]"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    {item.icon}
-                    <span>{t(item.labelKey)}</span>
+                    <span className="text-accent">{item.icon}</span>
+                    <span className={isSubActive ? "text-accent font-semibold" : "text-text font-medium"}>{t(item.labelKey)}</span>
                   </div>
                   <span className="text-[10px] font-mono text-text-dim">
                     {t(item.descKey)}
@@ -417,14 +417,14 @@ export const Header: React.FC<HeaderProps> = ({
               onSelectTab("compare");
               setMobileMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
               currentTab === "compare"
-                ? "border-accent/50 text-accent bg-accent/10"
-                : "border-line text-text-sub hover:text-text hover:bg-panel"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
             }`}
           >
-            <Columns className="w-3.5 h-3.5" />
-            <span>{t("nav_compare")}</span>
+            <Columns className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{t("nav_compare")}</span>
           </button>
 
           <button
@@ -432,14 +432,14 @@ export const Header: React.FC<HeaderProps> = ({
               onSelectTab("challenge");
               setMobileMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
               currentTab === "challenge"
-                ? "border-accent/50 text-accent bg-accent/10"
-                : "border-line text-text-sub hover:text-text hover:bg-panel"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
             }`}
           >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>{t("nav_challenge")}</span>
+            <HelpCircle className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{t("nav_challenge")}</span>
           </button>
 
           {onOpenShortcuts && (
@@ -448,11 +448,11 @@ export const Header: React.FC<HeaderProps> = ({
                 onOpenShortcuts();
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-line text-text-sub hover:text-accent hover:bg-panel transition-colors"
+              className="w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27] transition-all"
             >
-              <Keyboard className="w-3.5 h-3.5 text-accent" />
+              <Keyboard className="w-4 h-4 text-accent shrink-0" />
               <span>{isZh ? "键盘快捷键指南 (?)" : "Keyboard Shortcuts (?)"}</span>
-              <kbd className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-panel border border-line">?</kbd>
+              <kbd className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#1c1f2b] border border-line text-text-sub">?</kbd>
             </button>
           )}
 
@@ -462,11 +462,11 @@ export const Header: React.FC<HeaderProps> = ({
                 onOpenUpdates();
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-line text-text-sub hover:text-accent hover:bg-panel transition-colors pt-2.5 mt-2 border-t border-t-[#23262d]"
+              className="w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27] transition-all pt-2.5 mt-2 border-t border-t-[#2b2f3d]"
             >
-              <History className="w-3.5 h-3.5 text-accent" />
+              <History className="w-4 h-4 text-accent shrink-0" />
               <span>{t("header_updates_btn")}</span>
-              <span className="ml-auto font-mono text-[10px] text-text-dim">v{CURRENT_CLIENT_VERSION}</span>
+              <span className="ml-auto font-mono text-[10px] text-accent font-semibold px-2 py-0.5 rounded bg-accent/10 border border-accent/30">v{CURRENT_CLIENT_VERSION}</span>
             </button>
           )}
         </div>

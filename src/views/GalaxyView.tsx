@@ -27,6 +27,7 @@ import {
   NebulaNode 
 } from "../data/nebulaClusters";
 import { useLanguage } from "../i18n/LanguageContext";
+import { ExploreListView } from "./ExploreListView";
 
 interface GalaxyViewProps {
   onSelectGenre: (genre: Genre) => void;
@@ -260,6 +261,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   const [viewMode, setViewMode] = useState<"rail" | "grid">("rail");
   const [isSubgenresPanelOpen, setIsSubgenresPanelOpen] = useState<boolean>(false);
   const [webglError, setWebglError] = useState<string | null>(null);
+  const [displayMode, setDisplayMode] = useState<"3d" | "list">("3d");
 
   // Timeline state (P2-07: currentYear removed from React state to eliminate 60fps re-renders)
   const Y_MIN = 1850;
@@ -1522,110 +1524,17 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isCardOpen, selectedNode, selectedCluster, selectMajorCluster]);
 
-  if (webglError) {
+  if (webglError || displayMode === "list") {
     return (
-      <div className="relative w-full min-h-[calc(100vh-64px)] bg-[#04060a] flex items-center justify-center p-6 text-center select-none overflow-y-auto">
-        <div className="max-w-xl w-full rounded-2xl bg-panel border border-cyan-500/30 p-8 shadow-2xl flex flex-col items-center">
-          <div className="w-14 h-14 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/10 shrink-0">
-            <Compass className="w-7 h-7" />
-          </div>
-          <h2 className="text-base sm:text-lg font-bold text-text mb-2 font-mono">
-            {t("galaxy_unavailable")}
-          </h2>
-          <p className="text-xs text-text-sub mb-6 leading-relaxed">
-            {webglError}
-            <br />
-            {t("galaxy_fallback_hint")}
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-2.5 w-full mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("tab", "horizontal-timeline");
-                window.history.pushState({}, "", url.toString());
-                window.dispatchEvent(new PopStateEvent("popstate"));
-              }}
-              className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl text-xs font-bold bg-accent hover:bg-[#ffc24b] text-zinc-950 transition-colors shadow-lg shadow-[#f5b73d]/10 whitespace-nowrap"
-            >
-              <Compass className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{t("browse_timeline")}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("tab", "studio");
-                window.history.pushState({}, "", url.toString());
-                window.dispatchEvent(new PopStateEvent("popstate"));
-              }}
-              className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl text-xs font-medium bg-[#1e222b] hover:bg-[#282d39] text-text border border-[#323846] transition-colors whitespace-nowrap"
-            >
-              <RotateCcw className="w-3.5 h-3.5 shrink-0 text-text-sub" />
-              <span className="truncate">{t("return_to_studio")}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setWebglError(null);
-              }}
-              className="flex-1 min-w-[95px] flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl text-xs font-medium bg-[#1a1c22] hover:bg-[#252834] text-text-sub hover:text-text border border-[#2d3139] transition-colors whitespace-nowrap"
-            >
-              <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{t("retry")}</span>
-            </button>
-          </div>
-
-          {/* WebGL Fallback Genre List View (P2-10) */}
-          <div className="w-full max-h-[42vh] overflow-y-auto rounded-xl bg-panel/70 border border-panel-border p-3 text-left">
-            <div className="text-[11px] font-bold text-text-sub uppercase tracking-wider mb-2.5">
-              {isZh ? "星系曲风一览（列表视图）" : "Genre Galaxy (List View)"}
-            </div>
-            <div className="space-y-2">
-              {graphData.clusters.map((c) => {
-                const subs = graphData.nodes.filter((n) => n.type === "sub" && n.cluster === c.id);
-                return (
-                  <details key={c.id} className="group rounded-lg bg-black/20 border border-panel-border p-2">
-                    <summary className="cursor-pointer text-xs font-semibold flex items-center justify-between text-text list-none select-none">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.hexColor }} />
-                        <span>{isZh ? c.name : c.en}</span>
-                        <span className="text-[10px] text-text-sub opacity-70">({isZh ? c.en : c.name})</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-text-sub">{subs.length}</span>
-                    </summary>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-panel-border/60">
-                      {subs.map((sub) => (
-                        <div key={sub.id} className="flex items-center justify-between p-1.5 rounded hover:bg-white/5 text-xs text-text-sub">
-                          <span className="truncate mr-2 text-text font-medium">{isZh ? sub.zhName || sub.name : sub.en || sub.name}</span>
-                          {sub.genre && (
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => onOpenStudio(sub.genre!)}
-                                className="px-2 py-0.5 text-[10px] font-medium rounded bg-[#45e0c9]/15 text-[#45e0c9] hover:bg-[#45e0c9]/30 transition-colors"
-                              >
-                                {t("nav_studio")}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onSelectGenre(sub.genre!)}
-                                className="px-2 py-0.5 text-[10px] font-medium rounded bg-white/10 hover:bg-white/20 text-zinc-200 transition-colors"
-                              >
-                                {t("galaxy_details_btn")}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
+      <ExploreListView
+        onSelectGenre={onSelectGenre}
+        onOpenStudio={onOpenStudio}
+        isFallback={Boolean(webglError)}
+        onSwitchTo3D={() => {
+          setWebglError(null);
+          setDisplayMode("3d");
+        }}
+      />
     );
   }
 
@@ -1831,6 +1740,15 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             </button>
           );
         })}
+        <div className="w-[1px] h-4 bg-white/20 mx-0.5 shrink-0" />
+        <button
+          onClick={() => setDisplayMode("list")}
+          className="px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 text-accent hover:text-white hover:bg-white/10 shrink-0"
+          title={isZh ? "切换到无障碍列表视图" : "Switch to accessible list view"}
+        >
+          <List className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{isZh ? "列表视图" : "List View"}</span>
+        </button>
       </div>
 
       {/* Top Right: Era Timeline (纪元 1850 - 2025) (P2-07: ref-based DOM updates) */}

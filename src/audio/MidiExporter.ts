@@ -97,19 +97,44 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
   });
 
   // 3. Scan each track and generate NoteOn / NoteOff events
+  const anySolo = pattern.tracks.some((t) => t.solo);
+  const totalSteps = pattern.totalSteps || (pattern.tracks[0]?.steps?.length || 16);
+  const globalSwing = (pattern.swing !== undefined ? pattern.swing / 100 : 0);
+
   pattern.tracks.forEach((track: SequencerTrack, trackIdx: number) => {
+    if (track.mute) return;
+    if (anySolo && !track.solo) return;
+
     const mapping = TRACK_MIDI_MAPPINGS[trackIdx] || TRACK_MIDI_MAPPINGS[0];
     const steps = track.steps || [];
     const velocities = track.velocity || [];
     const pitches = track.pitch || [];
+    const gates = track.gate || [];
+    const ratchets = track.ratchet || [];
+    const probabilities = track.probability || [];
+    const trackSwing = (track.swing !== undefined ? track.swing / 100 : 0);
+    const effSwing = Math.max(0, Math.min(0.75, globalSwing + trackSwing));
+
     const isHat = track.track_id === "hihat" || track.name.toLowerCase().includes("hat");
+    const trackLen = (track.trackLength && track.trackLength > 0) ? track.trackLength : (steps.length || 16);
 
-    steps.forEach((stepVal, stepIdx) => {
-      if (stepVal <= 0) return;
+    for (let step = 0; step < totalSteps; step++) {
+      const stepIdx = trackLen > 0 ? step % trackLen : step;
+      const stepVal = steps[stepIdx] || 0;
+      if (stepVal <= 0) continue;
 
-      const tickStart = stepIdx * ticksPerStep;
-      const tickEnd = tickStart + noteDurationTicks;
-      const vel = velocities[stepIdx] !== undefined ? velocities[stepIdx] : 100;
+      const prob = (probabilities[stepIdx] !== undefined) ? probabilities[stepIdx] : 100;
+      if (prob <= 0) continue;
+
+      // Base tick position with swing offset on odd steps
+      let stepTick = step * ticksPerStep;
+      if (step % 2 === 1 && effSwing > 0) {
+        stepTick += Math.round(effSwing * 0.5 * ticksPerStep);
+      }
+
+      const vel = Math.max(1, Math.min(127, velocities[stepIdx] !== undefined ? velocities[stepIdx] : 100));
+      const gateVal = (gates[stepIdx] !== undefined) ? Math.max(0.1, Math.min(2.0, gates[stepIdx])) : 0.8;
+
       let pitchOffset = (pitches[stepIdx] !== undefined && pitches[stepIdx] !== null) 
         ? pitches[stepIdx]! 
         : mapping.baseNote;
@@ -118,46 +143,100 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
         if (stepVal === 2) pitchOffset = 46; // GM Open Hi-Hat
         else if (stepVal === 3) pitchOffset = 44; // GM Pedal Hi-Hat
         else pitchOffset = 42; // GM Closed Hi-Hat
+      } else if (!mapping.isDrum && pitchOffset <= 24 && pitchOffset > 0) {
+        pitchOffset = mapping.baseNote + pitchOffset;
       }
 
       const noteNumber = Math.max(0, Math.min(127, pitchOffset));
 
-      // For chords, generate triad
-      if (track.track_id === "chords" || track.name.toLowerCase().includes("chord")) {
-        const chordNotes = [noteNumber, noteNumber + 3, noteNumber + 7];
-        chordNotes.forEach((n) => {
+      const isHatTriplet = isHat && stepVal === 3;
+      const ratchet = (ratchets[stepIdx] && ratchets[stepIdx] > 1)
+        ? ratchets[stepIdx]
+        : (isHatTriplet ? 3 : 1);
+
+      if (ratchet > 1) {
+        const subTicks = Math.round(ticksPerStep / ratchet);
+        const subNoteTicks = Math.max(12, Math.round(subTicks * gateVal));
+        for (let r = 0; r < ratchet; r++) {
+          const subStart = stepTick + r * subTicks;
+          const subEnd = subStart + subNoteTicks;
+          const subVel = Math.min(127, Math.round(vel * (0.85 + (r / ratchet) * 0.15)));
+
+          if (track.track_id === "chords" || track.name.toLowerCase().includes("chord")) {
+            const chordNotes = [noteNumber, noteNumber + 3, noteNumber + 7];
+            chordNotes.forEach((n) => {
+              allEvents.push({
+                tick: subStart,
+                type: "noteOn",
+                channel: mapping.channel,
+                note: Math.min(127, n),
+                velocity: subVel,
+              });
+              allEvents.push({
+                tick: subEnd,
+                type: "noteOff",
+                channel: mapping.channel,
+                note: Math.min(127, n),
+                velocity: 0,
+              });
+            });
+          } else {
+            allEvents.push({
+              tick: subStart,
+              type: "noteOn",
+              channel: mapping.channel,
+              note: noteNumber,
+              velocity: subVel,
+            });
+            allEvents.push({
+              tick: subEnd,
+              type: "noteOff",
+              channel: mapping.channel,
+              note: noteNumber,
+              velocity: 0,
+            });
+          }
+        }
+      } else {
+        const noteTicks = Math.max(16, Math.round(ticksPerStep * gateVal));
+        const tickEnd = stepTick + noteTicks;
+
+        if (track.track_id === "chords" || track.name.toLowerCase().includes("chord")) {
+          const chordNotes = [noteNumber, noteNumber + 3, noteNumber + 7];
+          chordNotes.forEach((n) => {
+            allEvents.push({
+              tick: stepTick,
+              type: "noteOn",
+              channel: mapping.channel,
+              note: Math.min(127, n),
+              velocity: vel,
+            });
+            allEvents.push({
+              tick: tickEnd,
+              type: "noteOff",
+              channel: mapping.channel,
+              note: Math.min(127, n),
+              velocity: 0,
+            });
+          });
+        } else {
           allEvents.push({
-            tick: tickStart,
+            tick: stepTick,
             type: "noteOn",
             channel: mapping.channel,
-            note: Math.min(127, n),
+            note: noteNumber,
             velocity: vel,
           });
           allEvents.push({
             tick: tickEnd,
             type: "noteOff",
             channel: mapping.channel,
-            note: Math.min(127, n),
+            note: noteNumber,
             velocity: 0,
           });
-        });
-      } else {
-        allEvents.push({
-          tick: tickStart,
-          type: "noteOn",
-          channel: mapping.channel,
-          note: noteNumber,
-          velocity: vel,
-        });
-        allEvents.push({
-          tick: tickEnd,
-          type: "noteOff",
-          channel: mapping.channel,
-          note: noteNumber,
-          velocity: 0,
-        });
+        }
       }
-    });
+    }
   });
 
   // 4. Sort events chronologically

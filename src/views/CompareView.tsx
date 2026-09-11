@@ -21,7 +21,9 @@ import {
   Clock,
   Layers,
   Zap,
-  Info
+  Info,
+  Mic2,
+  Users
 } from "lucide-react";
 import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
@@ -160,64 +162,66 @@ export const CompareView: React.FC<CompareViewProps> = ({
     setIsSyncPlaying(false);
   };
 
-  // Helper to mute/unmute channels in sync engine
-  const applySyncModeToEngine = (
+  // Per-column solo and mute states for synchronous comparison playback (P3-12)
+  const [columnMutes, setColumnMutes] = useState<boolean[]>([false, false, false, false]);
+  const [columnSolos, setColumnSolos] = useState<boolean[]>([false, false, false, false]);
+  const [showRadarDataTable, setShowRadarDataTable] = useState<boolean>(false);
+
+  // Helper to mute/unmute channels across all active comparison columns
+  const applySyncMutesToEngine = (
     engine: AudioEngine,
     mode: SyncPlaybackMode,
-    countA: number,
-    countB: number,
-    tracksA: SequencerTrack[],
-    tracksB: SequencerTrack[]
+    activeGenres: Genre[],
+    mutes: boolean[],
+    solos: boolean[]
   ) => {
-    for (let i = 0; i < countA; i++) {
-      let mute = false;
-      if (mode === "solo_b") mute = true;
-      else if (mode === "drums_only") mute = !isDrumTrack(tracksA[i], i);
-      engine.setTrackState(i, { mute, solo: false });
-    }
-    for (let j = 0; j < countB; j++) {
-      const idx = countA + j;
-      let mute = false;
-      if (mode === "solo_a") mute = true;
-      else if (mode === "drums_only") mute = !isDrumTrack(tracksB[j], j);
-      engine.setTrackState(idx, { mute, solo: false });
-    }
+    let globalTrackIdx = 0;
+    const hasAnySolo = solos.some((s, idx) => s && idx < activeGenres.length);
+
+    activeGenres.forEach((g, gIdx) => {
+      let isColumnSilenced = Boolean(mutes[gIdx]) || (hasAnySolo && !solos[gIdx]);
+      if (mode === "solo_a" && gIdx !== 0) isColumnSilenced = true;
+      if (mode === "solo_b" && gIdx !== 1) isColumnSilenced = true;
+
+      const tracks = g.sequencer_pattern?.tracks || [];
+      tracks.forEach((t, tIdx) => {
+        const isDrum = isDrumTrack(t, tIdx);
+        let trackMute = isColumnSilenced;
+        if (mode === "drums_only" && !isDrum) {
+          trackMute = true;
+        }
+        engine.setTrackState(globalTrackIdx, { mute: trackMute, solo: false });
+        globalTrackIdx++;
+      });
+    });
   };
 
-  // Start synchronized A/B playback for Genre 0 & Genre 1
+  // Start synchronized playback across all active comparison columns (P3-12)
   const handleStartSyncPlayback = (overrideBpm?: number) => {
     if (genres.length < 2) return;
     handleStopAudio();
 
-    const gA = genres[0];
-    const gB = genres[1];
     const bpmToUse = overrideBpm || syncBpm;
+    let maxLen = 16;
+    const mergedTracks: SequencerTrack[] = [];
 
-    const tracksA = gA.sequencer_pattern?.tracks || [];
-    const tracksB = gB.sequencer_pattern?.tracks || [];
-
-    const maxLen = Math.max(
-      tracksA[0]?.steps?.length || 16,
-      tracksB[0]?.steps?.length || 16
-    );
-
-    const mergedTracks: SequencerTrack[] = [
-      ...tracksA.map((t) => ({
-        ...JSON.parse(JSON.stringify(t)),
-        name: `[A] ${t.name}`,
-        track_id: t.track_id || t.name.toLowerCase(),
-      })),
-      ...tracksB.map((t) => ({
-        ...JSON.parse(JSON.stringify(t)),
-        name: `[B] ${t.name}`,
-        track_id: t.track_id || t.name.toLowerCase(),
-      })),
-    ];
+    genres.forEach((g, gIdx) => {
+      const tracks = g.sequencer_pattern?.tracks || [];
+      const tag = String.fromCharCode(65 + gIdx); // A, B, C, D
+      tracks.forEach((t) => {
+        maxLen = Math.max(maxLen, t.steps?.length || 16);
+        mergedTracks.push({
+          ...JSON.parse(JSON.stringify(t)),
+          name: `[${tag}] ${t.name}`,
+          track_id: t.track_id || t.name.toLowerCase(),
+        });
+      });
+    });
 
     const compositePattern: SequencerPattern = {
-      genre_id: `${gA.id}_${gB.id}_sync`,
+      genre_id: `sync_${genres.map((g) => g.id).join("_")}`,
       bpm: bpmToUse,
-      scale: gA.sequencer_pattern?.scale || "C Minor",
+      scale: genres[0].sequencer_pattern?.scale || "C Minor",
       totalSteps: maxLen,
       tracks: mergedTracks,
     };
@@ -233,7 +237,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
     engine.setBpm(bpmToUse);
     engine.setTotalSteps(maxLen);
 
-    applySyncModeToEngine(engine, syncMode, tracksA.length, tracksB.length, tracksA, tracksB);
+    applySyncMutesToEngine(engine, syncMode, genres, columnMutes, columnSolos);
 
     engine.play();
     syncEngineRef.current = engine;
@@ -241,12 +245,32 @@ export const CompareView: React.FC<CompareViewProps> = ({
     setPlayingId(null);
   };
 
+  const handleToggleColumnMute = (colIdx: number) => {
+    setColumnMutes((prev) => {
+      const next = [...prev];
+      next[colIdx] = !next[colIdx];
+      if (syncEngineRef.current && isSyncPlaying) {
+        applySyncMutesToEngine(syncEngineRef.current, syncMode, genres, next, columnSolos);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleColumnSolo = (colIdx: number) => {
+    setColumnSolos((prev) => {
+      const next = [...prev];
+      next[colIdx] = !next[colIdx];
+      if (syncEngineRef.current && isSyncPlaying) {
+        applySyncMutesToEngine(syncEngineRef.current, syncMode, genres, columnMutes, next);
+      }
+      return next;
+    });
+  };
+
   const handleSetSyncMode = (newMode: SyncPlaybackMode) => {
     setSyncMode(newMode);
-    if (syncEngineRef.current && isSyncPlaying && genres.length >= 2) {
-      const tracksA = genres[0].sequencer_pattern?.tracks || [];
-      const tracksB = genres[1].sequencer_pattern?.tracks || [];
-      applySyncModeToEngine(syncEngineRef.current, newMode, tracksA.length, tracksB.length, tracksA, tracksB);
+    if (syncEngineRef.current && isSyncPlaying) {
+      applySyncMutesToEngine(syncEngineRef.current, newMode, genres, columnMutes, columnSolos);
     }
   };
 
@@ -323,30 +347,109 @@ export const CompareView: React.FC<CompareViewProps> = ({
     }
   };
 
-  // Calculate similarity between genre 0 and genre 1
-  const similarityInfo = useMemo(() => {
-    if (genres.length < 2) return { score: 100, bpmOverlap: true };
-    const g1 = genres[0];
-    const g2 = genres[1];
+  // Pairwise Similarity Matrix calculation & overall cohort consistency (P3-13)
+  const similarityData = useMemo(() => {
+    if (genres.length < 2) {
+      return {
+        matrix: [[100]],
+        pairs: [],
+        overallScore: 100,
+        affinityLevel: "high" as const,
+        primaryPair: { score: 100, bpmOverlap: true, overlapMin: 120, overlapMax: 120, radarSim: 100, bpmSim: 100, categoryAffinity: 100 },
+      };
+    }
 
-    let sumSq = 0;
-    RADAR_AXES.forEach((axis) => {
-      const v1 = g1.radar_metrics ? g1.radar_metrics[axis.key] || 5 : 5;
-      const v2 = g2.radar_metrics ? g2.radar_metrics[axis.key] || 5 : 5;
-      sumSq += Math.pow((v1 - v2) / 10, 2);
-    });
-    const radarDist = Math.sqrt(sumSq / RADAR_AXES.length);
-    const radarSim = Math.max(0, 1 - radarDist) * 100;
+    const n = genres.length;
+    const matrix: number[][] = Array.from({ length: n }, () => Array(n).fill(100));
+    const pairs: Array<{
+      idxA: number;
+      idxB: number;
+      genreA: Genre;
+      genreB: Genre;
+      score: number;
+      radarSim: number;
+      bpmSim: number;
+      categoryAffinity: number;
+      bpmOverlap: boolean;
+      overlapMin: number;
+      overlapMax: number;
+    }> = [];
 
-    const { overlaps, min, max } = getBpmOverlap(g1.bpm_range, g2.bpm_range);
+    let totalScore = 0;
+    let pairCount = 0;
 
-    return {
-      score: Math.round(radarSim),
-      bpmOverlap: overlaps,
-      overlapMin: min,
-      overlapMax: max,
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const g1 = genres[i];
+        const g2 = genres[j];
+
+        // 1. Radar distance
+        let sumSq = 0;
+        RADAR_AXES.forEach((axis) => {
+          const v1 = g1.radar_metrics ? g1.radar_metrics[axis.key] || 5 : 5;
+          const v2 = g2.radar_metrics ? g2.radar_metrics[axis.key] || 5 : 5;
+          sumSq += Math.pow((v1 - v2) / 10, 2);
+        });
+        const radarDist = Math.sqrt(sumSq / RADAR_AXES.length);
+        const radarSim = Math.max(0, 1 - radarDist) * 100;
+
+        // 2. BPM overlap
+        const { overlaps, min, max } = getBpmOverlap(g1.bpm_range, g2.bpm_range);
+        let bpmSim = 50;
+        if (overlaps) {
+          const overlapSpan = max - min;
+          bpmSim = Math.min(100, 60 + overlapSpan * 2);
+        } else {
+          const avg1 = g1.default_bpm || 120;
+          const avg2 = g2.default_bpm || 120;
+          const diff = Math.abs(avg1 - avg2);
+          bpmSim = Math.max(0, 50 - diff);
+        }
+
+        // 3. Category affinity
+        const catAffinity = g1.category === g2.category ? 100 : 40;
+
+        // Composite formula: 50% Radar + 25% BPM + 25% Category
+        const composite = Math.round(0.5 * radarSim + 0.25 * bpmSim + 0.25 * catAffinity);
+        matrix[i][j] = composite;
+        matrix[j][i] = composite;
+
+        pairs.push({
+          idxA: i,
+          idxB: j,
+          genreA: g1,
+          genreB: g2,
+          score: composite,
+          radarSim: Math.round(radarSim),
+          bpmSim: Math.round(bpmSim),
+          categoryAffinity: catAffinity,
+          bpmOverlap: overlaps,
+          overlapMin: min,
+          overlapMax: max,
+        });
+
+        totalScore += composite;
+        pairCount++;
+      }
+    }
+
+    const overallScore = pairCount > 0 ? Math.round(totalScore / pairCount) : 100;
+    const affinityLevel =
+      overallScore >= 75 ? ("high" as const) : overallScore >= 50 ? ("medium" as const) : ("diverse" as const);
+    const primaryPair = pairs[0] || {
+      score: 100,
+      bpmOverlap: true,
+      overlapMin: 120,
+      overlapMax: 120,
+      radarSim: 100,
+      bpmSim: 100,
+      categoryAffinity: 100,
     };
+
+    return { matrix, pairs, overallScore, affinityLevel, primaryPair };
   }, [genres]);
+
+  const similarityInfo = similarityData.primaryPair;
 
   // SVG Radar Polygon coordinates & vertex generator
   const getRadarVertexList = (genre: Genre) => {
@@ -681,98 +784,150 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
       {/* Overview Analytics Bar: DNA Radar & Similarity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Radar Chart Overlay */}
-        <div className="bg-panel border border-line rounded-2xl p-4 flex flex-col items-center justify-center relative shadow-lg">
-          <h4 className="text-sm font-bold text-text-sub uppercase tracking-wider mb-2 flex items-center space-x-1.5 self-start">
-            <Activity className="w-4 h-4 text-accent" />
-            <span>{t("radar_chart")}</span>
-          </h4>
-
-          <div className="relative w-[220px] h-[220px]">
-            <svg className="w-full h-full" viewBox="0 0 220 220">
-              {/* Radar concentric web circles */}
-              {[0.25, 0.5, 0.75, 1].map((scale, i) => (
-                <circle
-                  key={i}
-                  cx="110"
-                  cy="110"
-                  r={80 * scale}
-                  fill="none"
-                  stroke="#23262d"
-                  strokeDasharray={scale === 1 ? "none" : "2,3"}
-                  strokeWidth="1"
-                />
-              ))}
-
-              {/* Radial axis lines */}
-              {RADAR_AXES.map((_, i) => {
-                const angle = (Math.PI * 2 * i) / RADAR_AXES.length - Math.PI / 2;
-                const x2 = 110 + 80 * Math.cos(angle);
-                const y2 = 110 + 80 * Math.sin(angle);
-                return (
-                  <line
-                    key={i}
-                    x1="110"
-                    y1="110"
-                    x2={x2}
-                    y2={y2}
-                    stroke="#23262d"
-                    strokeWidth="1"
-                  />
-                );
-              })}
-
-              {/* Render Polygons and Vertex nodes for each active genre */}
-              {genres.map((genre, idx) => {
-                const color = COMPARE_COLORS[idx % COMPARE_COLORS.length];
-                const vertices = getRadarVertexList(genre);
-                const pointsStr = vertices.map((v) => `${v.x},${v.y}`).join(" ");
-                return (
-                  <g key={genre.id} className="transition-all duration-300">
-                    <polygon
-                      points={pointsStr}
-                      fill={color.fill}
-                      stroke={color.stroke}
-                      strokeWidth="2.2"
-                      className="transition-all duration-300 hover:opacity-95"
-                    />
-                    {vertices.map((v, vIdx) => (
-                      <circle
-                        key={vIdx}
-                        cx={v.x}
-                        cy={v.y}
-                        r="3.2"
-                        fill={color.stroke}
-                        stroke="#0d0e12"
-                        strokeWidth="1.5"
-                        className="transition-all duration-300"
-                      />
-                    ))}
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Radar Label badges */}
-            {RADAR_AXES.map((axis, i) => {
-              const angle = (Math.PI * 2 * i) / RADAR_AXES.length - Math.PI / 2;
-              const r = 98;
-              const x = 110 + r * Math.cos(angle);
-              const y = 110 + r * Math.sin(angle);
-              return (
-                <div
-                  key={axis.key}
-                  className="absolute text-[11px] font-bold text-text-sub transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ left: `${x}px`, top: `${y}px` }}
-                >
-                  {isZh ? axis.labelZh : axis.labelEn}
-                </div>
-              );
-            })}
+      {/* Overview Analytics Bar: DNA Radar & Similarity Matrix (P3-13) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Radar Chart Overlay (Col 1-5 on LG) */}
+        <div className="lg:col-span-5 bg-panel border border-line rounded-2xl p-4 flex flex-col items-center justify-between relative shadow-lg">
+          <div className="w-full flex items-center justify-between mb-2">
+            <h4 className="text-sm font-bold text-text-sub uppercase tracking-wider flex items-center space-x-1.5">
+              <Activity className="w-4 h-4 text-accent" />
+              <span>{t("radar_chart")}</span>
+            </h4>
+            <button
+              type="button"
+              onClick={() => setShowRadarDataTable((prev) => !prev)}
+              className="text-[11px] font-mono px-2 py-0.5 rounded bg-panel2 border border-line hover:border-accent/60 text-text-sub hover:text-text transition-colors"
+              title={t("compare_radar_table")}
+            >
+              {showRadarDataTable ? (isZh ? "返回图表" : "Chart") : (isZh ? "数值表" : "Table")}
+            </button>
           </div>
 
+          {!showRadarDataTable ? (
+            <div className="relative w-[220px] h-[220px]">
+              <svg
+                className="w-full h-full"
+                viewBox="0 0 220 220"
+                role="img"
+                aria-label={t("radar_chart")}
+              >
+                <title>{genres.map((g) => g.name).join(" vs ")}</title>
+                {/* Radar concentric web circles */}
+                {[0.25, 0.5, 0.75, 1].map((scale, i) => (
+                  <circle
+                    key={i}
+                    cx="110"
+                    cy="110"
+                    r={80 * scale}
+                    fill="none"
+                    stroke="#23262d"
+                    strokeDasharray={scale === 1 ? "none" : "2,3"}
+                    strokeWidth="1"
+                  />
+                ))}
+
+                {/* Radial axis lines */}
+                {RADAR_AXES.map((_, i) => {
+                  const angle = (Math.PI * 2 * i) / RADAR_AXES.length - Math.PI / 2;
+                  const x2 = 110 + 80 * Math.cos(angle);
+                  const y2 = 110 + 80 * Math.sin(angle);
+                  return (
+                    <line
+                      key={i}
+                      x1="110"
+                      y1="110"
+                      x2={x2}
+                      y2={y2}
+                      stroke="#23262d"
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+
+                {/* Render Polygons and Vertex nodes for each active genre */}
+                {genres.map((genre, idx) => {
+                  const color = COMPARE_COLORS[idx % COMPARE_COLORS.length];
+                  const vertices = getRadarVertexList(genre);
+                  const pointsStr = vertices.map((v) => `${v.x},${v.y}`).join(" ");
+                  return (
+                    <g key={genre.id} className="transition-all duration-300">
+                      <polygon
+                        points={pointsStr}
+                        fill={color.fill}
+                        stroke={color.stroke}
+                        strokeWidth="2.2"
+                        className="transition-all duration-300 hover:opacity-95"
+                      />
+                      {vertices.map((v, vIdx) => (
+                        <circle
+                          key={vIdx}
+                          cx={v.x}
+                          cy={v.y}
+                          r="3.2"
+                          fill={color.stroke}
+                          stroke="#0d0e12"
+                          strokeWidth="1.5"
+                          className="transition-all duration-300"
+                        />
+                      ))}
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* Radar Label badges */}
+              {RADAR_AXES.map((axis, i) => {
+                const angle = (Math.PI * 2 * i) / RADAR_AXES.length - Math.PI / 2;
+                const r = 98;
+                const x = 110 + r * Math.cos(angle);
+                const y = 110 + r * Math.sin(angle);
+                return (
+                  <div
+                    key={axis.key}
+                    className="absolute text-[11px] font-bold text-text-sub transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ left: `${x}px`, top: `${y}px` }}
+                  >
+                    {isZh ? axis.labelZh : axis.labelEn}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="w-full overflow-x-auto my-2">
+              <table className="w-full text-[11px] text-left border border-line rounded-lg overflow-hidden">
+                <thead className="bg-[#14151a] text-text-dim border-b border-line">
+                  <tr>
+                    <th className="p-1.5 font-mono">{isZh ? "指标" : "Axis"}</th>
+                    {genres.map((g, idx) => (
+                      <th key={g.id} className="p-1.5 font-bold truncate max-w-[80px]">
+                        [{String.fromCharCode(65 + idx)}] {g.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {RADAR_AXES.map((axis) => (
+                    <tr key={axis.key} className="hover:bg-panel2">
+                      <td className="p-1.5 font-medium text-text-sub">
+                        {isZh ? axis.labelZh : axis.labelEn}
+                      </td>
+                      {genres.map((g) => {
+                        const val = g.radar_metrics ? g.radar_metrics[axis.key] || 5 : 5;
+                        return (
+                          <td key={g.id} className="p-1.5 font-mono font-bold text-accent">
+                            {val}/10
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* Legend */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-3 pt-2 border-t border-line-subtle w-full">
             {genres.map((g, idx) => {
               const color = COMPARE_COLORS[idx % COMPARE_COLORS.length];
               return (
@@ -781,61 +936,158 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     className="w-2.5 h-2.5 rounded-full"
                     style={{ backgroundColor: color.stroke }}
                   />
-                  <span className="text-text">{g.name}</span>
+                  <span className="text-text">
+                    [{String.fromCharCode(65 + idx)}] {g.name}
+                  </span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* DNA Match Metrics */}
-        <div className="lg:col-span-2 bg-panel border border-line rounded-2xl p-5 shadow-lg flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold uppercase tracking-wider text-text-sub flex items-center space-x-1.5">
+        {/* Pairwise Similarity Matrix & Cohort Consistency (Col 6-12 on LG) */}
+        <div className="lg:col-span-7 bg-panel border border-line rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col justify-between space-y-3">
+          <div className="space-y-3">
+            {/* Header with Consistency & Affinity Badge */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle pb-2.5">
+              <div className="flex items-center space-x-2">
                 <Flame className="w-4 h-4 text-accent" />
-                <span>{t("similarity_score")}</span>
-              </span>
+                <span className="text-sm font-bold uppercase tracking-wider text-text-sub">
+                  {t("compare_cohort_consistency")}
+                </span>
+                <span
+                  className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                    similarityData.affinityLevel === "high"
+                      ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                      : similarityData.affinityLevel === "medium"
+                      ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
+                      : "bg-rose-500/15 border-rose-500/40 text-rose-300"
+                  }`}
+                >
+                  {similarityData.affinityLevel === "high"
+                    ? t("compare_high_affinity")
+                    : similarityData.affinityLevel === "medium"
+                    ? t("compare_moderate_overlap")
+                    : t("compare_diverse_cohort")}
+                </span>
+              </div>
               <span className="text-2xl font-mono font-extrabold text-accent">
-                {similarityInfo.score}%
+                {similarityData.overallScore}%
               </span>
             </div>
 
-            {/* Match score bar */}
-            <div className="w-full bg-panel2 rounded-full h-2.5 overflow-hidden border border-line">
+            {/* Overall Consistency Bar */}
+            <div className="w-full bg-panel2 rounded-full h-2 overflow-hidden border border-line">
               <div
                 className="bg-gradient-to-r from-amber-500 via-[#f5b73d] to-emerald-400 h-full rounded-full transition-all duration-700"
-                style={{ width: `${similarityInfo.score}%` }}
+                style={{ width: `${similarityData.overallScore}%` }}
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div className="bg-panel2 p-3.5 rounded-xl border border-line">
-                <span className="font-bold text-[#737887] uppercase tracking-wider text-xs flex items-center space-x-1">
+            {/* Pairwise Matrix Grid (P3-13) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs text-[#737887]">
+                <span className="font-bold uppercase tracking-wider">
+                  {t("compare_similarity_matrix")} ({genres.length}×{genres.length})
+                </span>
+                <span className="text-[11px] font-mono">
+                  {genres.length > 2 ? (isZh ? "全列两两交叉" : "Pairwise Matrix") : "A ⟷ B"}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-center border-collapse text-xs">
+                  <thead>
+                    <tr>
+                      <th className="p-1.5 bg-[#121319] text-[#717684] font-mono border border-line rounded-tl-lg">
+                        #
+                      </th>
+                      {genres.map((g, j) => (
+                        <th
+                          key={g.id}
+                          className="p-1.5 bg-[#121319] font-bold border border-line truncate max-w-[100px]"
+                          style={{ color: COMPARE_COLORS[j % COMPARE_COLORS.length].stroke }}
+                        >
+                          [{String.fromCharCode(65 + j)}] {g.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {genres.map((gRow, rIdx) => (
+                      <tr key={gRow.id}>
+                        <th
+                          className="p-1.5 bg-[#121319] font-bold border border-line text-left truncate max-w-[100px]"
+                          style={{ color: COMPARE_COLORS[rIdx % COMPARE_COLORS.length].stroke }}
+                        >
+                          [{String.fromCharCode(65 + rIdx)}] {gRow.name}
+                        </th>
+                        {genres.map((gCol, cIdx) => {
+                          const score = similarityData.matrix[rIdx][cIdx];
+                          const isDiag = rIdx === cIdx;
+                          return (
+                            <td
+                              key={gCol.id}
+                              className={`p-2 border border-line font-mono font-bold transition-colors ${
+                                isDiag
+                                  ? "bg-[#181a22] text-[#8e93a0]"
+                                  : score >= 75
+                                  ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+                                  : score >= 50
+                                  ? "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
+                                  : "bg-rose-500/15 text-rose-300 hover:bg-rose-500/25"
+                              }`}
+                              title={
+                                isDiag
+                                  ? `${gRow.name} (100%)`
+                                  : `${gRow.name} ⟷ ${gCol.name}: ${score}%`
+                              }
+                            >
+                              {score}%
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Primary Pair BPM & Meter Overlap Badges */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div className="bg-panel2 p-2.5 rounded-xl border border-line">
+                <span className="font-bold text-[#737887] uppercase tracking-wider text-[11px] flex items-center space-x-1">
                   <Clock className="w-3.5 h-3.5 text-accent" />
                   <span>{t("bpm_overlap")}</span>
                 </span>
-                <p className="text-text font-mono text-sm font-bold mt-1">
-                  {similarityInfo.bpmOverlap ? `${similarityInfo.overlapMin} - ${similarityInfo.overlapMax} BPM` : "无直接重叠"}
+                <p className="text-text font-mono text-xs font-bold mt-0.5">
+                  {similarityInfo.bpmOverlap
+                    ? `${similarityInfo.overlapMin} - ${similarityInfo.overlapMax} BPM`
+                    : (isZh ? "无直接重叠" : "No overlap")}
                 </p>
-                <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md mt-1 ${
-                  similarityInfo.bpmOverlap ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"
-                }`}>
-                  {similarityInfo.bpmOverlap 
-                    ? t("compare_seamless_transition") 
+                <span
+                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded mt-1 ${
+                    similarityInfo.bpmOverlap
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : "bg-red-500/15 text-red-300"
+                  }`}
+                >
+                  {similarityInfo.bpmOverlap
+                    ? t("compare_seamless_transition")
                     : t("compare_wide_jump")}
                 </span>
               </div>
 
-              <div className="bg-panel2 p-3.5 rounded-xl border border-line">
-                <span className="font-bold text-[#737887] uppercase tracking-wider text-xs flex items-center space-x-1">
+              <div className="bg-panel2 p-2.5 rounded-xl border border-line">
+                <span className="font-bold text-[#737887] uppercase tracking-wider text-[11px] flex items-center space-x-1">
                   <Layers className="w-3.5 h-3.5 text-accent" />
                   <span>{t("compare_dna_compat")}</span>
                 </span>
-                <p className="text-text font-bold text-sm mt-1">
+                <p className="text-text font-bold text-xs mt-0.5">
                   {genres[0]?.time_signature} vs {genres[1]?.time_signature}
                 </p>
-                <span className="text-xs text-text-sub block mt-1">
+                <span className="text-[10px] text-text-sub block mt-1">
                   {genres[0]?.time_signature === genres[1]?.time_signature
                     ? t("compare_identical_meter")
                     : t("compare_polymetric")}
@@ -844,13 +1096,18 @@ export const CompareView: React.FC<CompareViewProps> = ({
             </div>
           </div>
 
-          <div className="text-xs text-[#737887] mt-3 pt-3 border-t border-[#1a1c22] flex items-center space-x-1.5">
-            <Info className="w-4 h-4 text-accent shrink-0" />
-            <span>
-              {t("compare_audition_hint")}
-            </span>
+          {/* Algorithm Methodology Footnote Card (P3-13 explicit methodology) */}
+          <div className="p-2 rounded-xl bg-[#0e0f14] border border-line-subtle text-[11px] text-[#8e93a0] flex items-start space-x-2">
+            <Info className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+            <div className="leading-snug">
+              <span className="font-bold text-text-sub mr-1">
+                {isZh ? "算法口径说明" : "Methodology"}:
+              </span>
+              <span>{t("compare_methodology")}</span>
+            </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Side-by-Side Columnar Comparison Matrix */}
@@ -886,9 +1143,38 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 {/* Column Header */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${color.badge}`}>
-                      {genre.category}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${color.badge}`}>
+                        {genre.category}
+                      </span>
+                      {/* Column Solo & Mute (P3-12) */}
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => handleToggleColumnSolo(idx)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                            columnSolos[idx]
+                              ? "bg-amber-400 text-black border-amber-400 font-black shadow-sm"
+                              : "bg-[#181a20] text-text-sub border-line hover:text-amber-300"
+                          }`}
+                          title={t("compare_solo_column")}
+                          aria-label={`${t("compare_solo_column")} ${genre.name}`}
+                        >
+                          S
+                        </button>
+                        <button
+                          onClick={() => handleToggleColumnMute(idx)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                            columnMutes[idx]
+                              ? "bg-rose-500 text-white border-rose-500 font-black shadow-sm"
+                              : "bg-[#181a20] text-text-sub border-line hover:text-rose-400"
+                          }`}
+                          title={t("compare_mute_column")}
+                          aria-label={`${t("compare_mute_column")} ${genre.name}`}
+                        >
+                          M
+                        </button>
+                      </div>
+                    </div>
                     <div className="flex items-center space-x-1">
                       <span className="text-xs text-text-sub font-mono">
                         #{idx + 1}
@@ -1164,6 +1450,66 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     </div>
                   </div>
 
+                  {/* Spec Block: 典型配器与音色设计 (Instrumentation & Sound Design) */}
+                  {((genre.instrumentation && genre.instrumentation.length > 0) || genre.sound_design) && (
+                    <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-3">
+                      <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
+                        <Mic2 className="w-3.5 h-3.5" />
+                        <span>{t("compare_instrumentation")}</span>
+                      </div>
+                      <div className="space-y-2.5 pt-2 border-t border-[#1a1c22]">
+                        {genre.instrumentation && genre.instrumentation.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {genre.instrumentation.map((inst, iIdx) => (
+                              <span
+                                key={iIdx}
+                                className="px-2 py-0.5 bg-[#14151b] border border-[#2b2e3a] rounded-md text-[11px] font-medium text-[#d0d3dc]"
+                              >
+                                {inst}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {genre.sound_design && (
+                          <p className="text-sm text-[#b8b5ad] leading-relaxed font-sans">
+                            {genre.sound_design[language]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Spec Block: 典型曲式架构与和声转位 (Structure & Chord Inversions) */}
+                  {((genre.structure && genre.structure.length > 0) || genre.chord_inversions) && (
+                    <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-3">
+                      <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>{t("compare_structure_harmony")}</span>
+                      </div>
+                      <div className="space-y-2.5 pt-2 border-t border-[#1a1c22]">
+                        {genre.structure && genre.structure.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 text-[11px] font-mono text-[#c7cbd6]">
+                            {genre.structure.map((sec, sIdx) => (
+                              <React.Fragment key={sIdx}>
+                                <span className="px-2 py-0.5 bg-[#16171f] border border-[#2c2f3d] rounded text-accent font-bold">
+                                  {sec}
+                                </span>
+                                {sIdx < genre.structure.length - 1 && (
+                                  <span className="text-[#626775]">→</span>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        )}
+                        {genre.chord_inversions && (
+                          <p className="text-sm text-[#b8b5ad] leading-relaxed font-sans">
+                            {genre.chord_inversions[language]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Spec Block 4: 六维声学特性雷达指标 (Sonic Radar Breakdown) */}
                   <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-3">
                     <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
@@ -1224,6 +1570,26 @@ export const CompareView: React.FC<CompareViewProps> = ({
                               <span className="text-xs text-[#737887] font-mono">{track.year}</span>
                             )}
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Spec Block: 代表艺术家 (Representative Artists) */}
+                  {genre.representative_artists && genre.representative_artists.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-2.5">
+                      <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
+                        <Users className="w-3.5 h-3.5" />
+                        <span>{t("compare_artists")}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#1a1c22]">
+                        {genre.representative_artists.map((artist, aIdx) => (
+                          <span
+                            key={aIdx}
+                            className="px-2.5 py-1 bg-[#151720] border border-[#2b2e3a] rounded-lg text-xs font-medium text-[#e2e0d8]"
+                          >
+                            {artist}
+                          </span>
                         ))}
                       </div>
                     </div>

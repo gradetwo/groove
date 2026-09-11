@@ -82,6 +82,8 @@ export class AudioEngine {
     solo: boolean;
     volume: number;
     pan: number;
+    sendA?: number;
+    sendB?: number;
   }> = [];
 
   // Callbacks
@@ -288,12 +290,27 @@ export class AudioEngine {
       this.timeSignature = pattern.timeSignature;
     }
     if (resetStates || this.trackStates.length !== pattern.tracks.length) {
-      this.trackStates = pattern.tracks.map((t) => ({
-        mute: t.mute || false,
-        solo: t.solo || false,
-        volume: t.volume !== undefined ? t.volume : 0.8,
-        pan: t.pan !== undefined ? t.pan : 0,
-      }));
+      this.trackStates = pattern.tracks.map((t, idx) => {
+        const volume = t.volume !== undefined ? t.volume : 0.8;
+        const pan = t.pan !== undefined ? t.pan : 0;
+        const sendA = t.sendA !== undefined ? t.sendA : 0;
+        const sendB = t.sendB !== undefined ? t.sendB : 0;
+        const strip = this.trackStrips[idx];
+        if (strip && this.ctx) {
+          strip.gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+          if (strip.panner) strip.panner.pan.setValueAtTime(pan, this.ctx.currentTime);
+          strip.sendA.gain.setValueAtTime(sendA, this.ctx.currentTime);
+          strip.sendB.gain.setValueAtTime(sendB, this.ctx.currentTime);
+        }
+        return {
+          mute: t.mute || false,
+          solo: t.solo || false,
+          volume,
+          pan,
+          sendA,
+          sendB,
+        };
+      });
     }
   }
 
@@ -472,8 +489,17 @@ export class AudioEngine {
     if (this.isPlaying) return;
 
     this.isPlaying = true;
-    this.currentStep = 0;
-    this.nextStepTime = (this.ctx ? this.ctx.currentTime : 0) + 0.035;
+    this.currentStep = (this.loopRange && this.loopRange[0] >= 0) ? this.loopRange[0] : 0;
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    if (this.isCountIn) {
+      const beatSec = 60.0 / this.bpm;
+      for (let b = 0; b < 4; b++) {
+        this.playMetronome(now + 0.035 + b * beatSec, b === 0);
+      }
+      this.nextStepTime = now + 0.035 + 4 * beatSec;
+    } else {
+      this.nextStepTime = now + 0.035;
+    }
     this.stepQueue = [];
     this.lastReportedStep = -1;
 
@@ -587,17 +613,36 @@ export class AudioEngine {
     const stepsCount = this.totalSteps > 0 ? this.totalSteps : 16;
 
     while (this.nextStepTime < this.ctx.currentTime + this.scheduleAheadSec) {
-      const step = this.currentStep;
+      let step = this.currentStep;
+      if (this.loopRange) {
+        const [lStart, lEnd] = this.loopRange;
+        if (step < lStart || step >= lEnd) {
+          step = lStart;
+          this.currentStep = lStart;
+        }
+      }
+
       // Swing pushes odd steps (1, 3, 5...) slightly forward
       const swingOffset = (step % 2 === 1 && this.swing > 0) ? (this.swing * 0.5) * stepDur : 0;
       const actualStepTime = this.nextStepTime + swingOffset;
+
+      if (this.isMetronome) {
+        const isDownbeat = (step % 4 === 0);
+        this.playMetronome(actualStepTime, isDownbeat);
+      }
 
       const activeTracks = this.scheduleStep(step, actualStepTime, stepDur);
       this.stepQueue.push({ step, time: actualStepTime, activeTracks });
 
       // Keep monotonic un-swung grid advancement
       this.nextStepTime += stepDur;
-      this.currentStep = (this.currentStep + 1) % stepsCount;
+      if (this.loopRange) {
+        const [lStart, lEnd] = this.loopRange;
+        const loopLen = Math.max(1, lEnd - lStart);
+        this.currentStep = lStart + ((this.currentStep - lStart + 1) % loopLen);
+      } else {
+        this.currentStep = (this.currentStep + 1) % stepsCount;
+      }
     }
   }
 
@@ -633,6 +678,14 @@ export class AudioEngine {
       const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
       const normalizedVel = (velVal / 127) * state.volume;
       const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
+      const gateVal = (track.gate && track.gate[stepIdx] !== undefined) ? track.gate[stepIdx] : 0.8;
+
+      // Independent per-track swing offset
+      const trackSwingOffset = (track.swing !== undefined ? track.swing / 100 : 0);
+      const effSwing = Math.max(0, Math.min(0.75, this.swing + trackSwingOffset));
+      const trackStepTime = (step % 2 === 1 && effSwing !== this.swing)
+        ? (this.nextStepTime + (effSwing * 0.5) * stepDur)
+        : time;
 
       // Ratchet / Subdivisions
       const isHatTriplet = (track.track_id === "hihat" || track.name.toLowerCase().includes("hat")) && stepVal === 3;
@@ -645,12 +698,12 @@ export class AudioEngine {
       if (ratchet > 1) {
         const subDur = stepDur / ratchet;
         for (let r = 0; r < ratchet; r++) {
-          const subTime = time + r * subDur;
+          const subTime = trackStepTime + r * subDur;
           const subVel = normalizedVel * (0.85 + (r / ratchet) * 0.15);
-          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur);
+          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal);
         }
       } else {
-        this.triggerInstrument(trackIdx, track.name, time, normalizedVel, pitchVal, stepVal, stepDur);
+        this.triggerInstrument(trackIdx, track.name, trackStepTime, normalizedVel, pitchVal, stepVal, stepDur, gateVal);
       }
     });
 
@@ -668,46 +721,56 @@ export class AudioEngine {
   /**
    * Preview a single track note immediately
    */
-  public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch: number | null = 0, stepVal = 1): void {
+  public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch: number | null = 0, stepVal = 1, gateVal = 0.8): void {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
     if (this.ctx.state === "suspended") this.ctx.resume();
     const stepDur = this.getStepDuration();
     const pitchVal = pitch !== null && pitch !== undefined && pitch > 0 ? pitch : 0;
-    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur);
+    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal);
   }
 
-  private triggerInstrument(trackIdx: number, trackName: string, time: number, vel: number, pitch: number, stepVal = 1, stepDur = 0.125): void {
-    if (!this.ctx || !this.masterGain) return;
+  private triggerInstrument(
+    trackIdx: number,
+    trackName: string,
+    time: number,
+    vel: number,
+    pitch: number,
+    stepVal = 1,
+    stepDur = 0.125,
+    gateVal = 0.8
+  ): void {
+    if (!this.ctx) return;
+    const dest = this.getTrackDestination(trackIdx);
 
     const trackId = (this.pattern?.tracks[trackIdx]?.track_id || "").toLowerCase();
     const lowerName = trackName.toLowerCase();
 
     if (trackId === "kick" || lowerName.includes("kick")) {
-      this.playKick(time, vel, pitch);
+      this.playKick(dest, time, vel, pitch);
     } else if (trackId === "snare" || lowerName.includes("snare")) {
-      this.playSnare(time, vel, pitch);
+      this.playSnare(dest, time, vel, pitch);
     } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
-      this.playHiHat(time, vel, pitch, stepVal, stepDur);
+      this.playHiHat(dest, time, vel, pitch, stepVal, stepDur, gateVal);
     } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
-      this.playPercussion(time, vel, pitch);
+      this.playPercussion(dest, time, vel, pitch);
     } else if (trackId === "bass" || lowerName.includes("bass")) {
-      this.playBass(time, vel, pitch);
+      this.playBass(dest, time, vel, pitch, stepDur, gateVal);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
-      this.playChord(time, vel, pitch);
+      this.playChord(dest, time, vel, pitch, stepDur, gateVal);
     } else if (trackId === "lead" || lowerName.includes("lead")) {
-      this.playLead(time, vel, pitch);
+      this.playLead(dest, time, vel, pitch, stepDur, gateVal);
     } else if (trackId === "fx" || lowerName.includes("fx")) {
-      this.playFX(time, vel, pitch);
+      this.playFX(dest, time, vel, pitch, stepDur, gateVal);
     } else {
-      this.playPercussion(time, vel, pitch);
+      this.playPercussion(dest, time, vel, pitch);
     }
   }
 
-  // --- SYNTHESIZER VOICES ---
+  // --- SYNTHESIZER VOICES ROUTED TO TRACK DESTINATION & SHAPED BY GATE ---
 
-  private playKick(time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.masterGain) return;
+  private playKick(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
+    if (!this.ctx) return;
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -725,7 +788,7 @@ export class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.32);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(dest);
 
     if (this.noiseBuffer) {
       const clickSrc = this.ctx.createBufferSource();
@@ -739,7 +802,7 @@ export class AudioEngine {
       clickGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
       clickSrc.connect(clickFilter);
       clickFilter.connect(clickGain);
-      clickGain.connect(this.masterGain);
+      clickGain.connect(dest);
       clickSrc.start(time);
       clickSrc.stop(time + 0.03);
       this.registerVoice(clickSrc, clickGain, time + 0.03);
@@ -750,8 +813,8 @@ export class AudioEngine {
     this.registerVoice(osc, gain, time + 0.35);
   }
 
-  private playSnare(time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.masterGain) return;
+  private playSnare(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
+    if (!this.ctx) return;
 
     const osc = this.ctx.createOscillator();
     const toneGain = this.ctx.createGain();
@@ -766,7 +829,7 @@ export class AudioEngine {
     toneGain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
 
     osc.connect(toneGain);
-    toneGain.connect(this.masterGain);
+    toneGain.connect(dest);
     osc.start(time);
     osc.stop(time + 0.15);
     this.registerVoice(osc, toneGain, time + 0.15);
@@ -785,7 +848,7 @@ export class AudioEngine {
 
       noise.connect(filter);
       filter.connect(noiseGain);
-      noiseGain.connect(this.masterGain);
+      noiseGain.connect(dest);
 
       noise.start(time);
       noise.stop(time + 0.26);
@@ -793,26 +856,27 @@ export class AudioEngine {
     }
   }
 
-  private playHiHat(time: number, vel: number, pitchOffset: number, hatType = 1, stepDur = 0.125): void {
-    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
+  private playHiHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, hatType = 1, stepDur = 0.125, gateVal = 0.8): void {
+    if (!this.ctx || !this.noiseBuffer) return;
 
+    const gateScale = Math.max(0.2, Math.min(2.0, gateVal));
     if (hatType === 3) {
       // Triplet roll: 3 hits
       const offsets = [0, stepDur / 3, (stepDur * 2) / 3];
       offsets.forEach((off, i) => {
-        this.triggerSingleHat(time + off, vel * (i === 0 ? 1 : i === 1 ? 0.8 : 0.65), pitchOffset, 0.035);
+        this.triggerSingleHat(dest, time + off, vel * (i === 0 ? 1 : i === 1 ? 0.8 : 0.65), pitchOffset, 0.035 * gateScale);
       });
     } else if (hatType === 2) {
-      // Open hat: long decay
-      this.triggerSingleHat(time, vel * 0.9, pitchOffset, 0.35);
+      // Open hat: long decay shaped by gate
+      this.triggerSingleHat(dest, time, vel * 0.9, pitchOffset, 0.35 * gateScale);
     } else {
-      // Closed hat: snappy decay
-      this.triggerSingleHat(time, vel * 0.65, pitchOffset, 0.05);
+      // Closed hat: snappy decay shaped by gate
+      this.triggerSingleHat(dest, time, vel * 0.65, pitchOffset, 0.05 * gateScale);
     }
   }
 
-  private triggerSingleHat(time: number, vel: number, pitchOffset: number, decay: number): void {
-    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
+  private triggerSingleHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, decay: number): void {
+    if (!this.ctx || !this.noiseBuffer) return;
     const noise = this.ctx.createBufferSource();
     noise.buffer = this.noiseBuffer;
 
@@ -827,15 +891,15 @@ export class AudioEngine {
 
     noise.connect(highpass);
     highpass.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(dest);
 
     noise.start(time);
     noise.stop(time + decay + 0.02);
     this.registerVoice(noise, gain, time + decay + 0.02);
   }
 
-  private playPercussion(time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
+  private playPercussion(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
+    if (!this.ctx || !this.noiseBuffer) return;
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = "bandpass";
@@ -844,7 +908,7 @@ export class AudioEngine {
 
     const gain = this.ctx.createGain();
     filter.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(dest);
 
     const burstTimes = [0, 0.012, 0.024];
     burstTimes.forEach((bt) => {
@@ -872,10 +936,11 @@ export class AudioEngine {
     this.registerVoice(tailSrc, tailGain, time + 0.22);
   }
 
-  private playBass(time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.masterGain) return;
+  private playBass(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+    if (!this.ctx) return;
 
     const freq = AudioEngine.midiToFreq(pitchOffset, 36);
+    const noteDuration = Math.max(0.05, Math.min(2.5, stepDur * gateVal));
 
     const osc1 = this.ctx.createOscillator();
     const osc2 = this.ctx.createOscillator();
@@ -890,41 +955,42 @@ export class AudioEngine {
 
     filter.type = "lowpass";
     filter.frequency.setValueAtTime(Math.min(1200, freq * 3.5), time);
-    filter.frequency.exponentialRampToValueAtTime(Math.min(400, freq * 1.5), time + 0.25);
+    filter.frequency.exponentialRampToValueAtTime(Math.min(400, freq * 1.5), time + Math.min(0.25, noteDuration));
 
     gain.gain.setValueAtTime(vel * 0.85, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + noteDuration);
 
     osc1.connect(filter);
     osc2.connect(filter);
     filter.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(dest);
 
     osc1.start(time);
     osc2.start(time);
-    osc1.stop(time + 0.38);
-    osc2.stop(time + 0.38);
-    this.registerVoice(osc1, gain, time + 0.38);
-    this.registerVoice(osc2, gain, time + 0.38);
+    osc1.stop(time + noteDuration + 0.03);
+    osc2.stop(time + noteDuration + 0.03);
+    this.registerVoice(osc1, gain, time + noteDuration + 0.03);
+    this.registerVoice(osc2, gain, time + noteDuration + 0.03);
   }
 
-  private playChord(time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.masterGain) return;
+  private playChord(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+    if (!this.ctx) return;
 
     const baseFreq = AudioEngine.midiToFreq(pitchOffset, 60);
     const chordIntervals = [0, 3, 7];
+    const noteDuration = Math.max(0.08, Math.min(3.0, stepDur * gateVal * 1.4));
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
     filter.frequency.setValueAtTime(1400, time);
-    filter.frequency.exponentialRampToValueAtTime(500, time + 0.3);
+    filter.frequency.exponentialRampToValueAtTime(500, time + Math.min(0.3, noteDuration));
 
     const chordGain = this.ctx.createGain();
     chordGain.gain.setValueAtTime(vel * 0.4, time);
-    chordGain.gain.exponentialRampToValueAtTime(0.001, time + 0.45);
+    chordGain.gain.exponentialRampToValueAtTime(0.001, time + noteDuration);
 
     filter.connect(chordGain);
-    chordGain.connect(this.masterGain);
+    chordGain.connect(dest);
 
     chordIntervals.forEach((interval) => {
       const osc = this.ctx!.createOscillator();
@@ -932,15 +998,16 @@ export class AudioEngine {
       osc.frequency.setValueAtTime(baseFreq * Math.pow(2, interval / 12), time);
       osc.connect(filter);
       osc.start(time);
-      osc.stop(time + 0.48);
-      this.registerVoice(osc, chordGain, time + 0.48);
+      osc.stop(time + noteDuration + 0.03);
+      this.registerVoice(osc, chordGain, time + noteDuration + 0.03);
     });
   }
 
-  private playLead(time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.masterGain) return;
+  private playLead(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+    if (!this.ctx) return;
 
     const baseFreq = AudioEngine.midiToFreq(pitchOffset, 72);
+    const noteDuration = Math.max(0.05, Math.min(2.5, stepDur * gateVal));
 
     const osc = this.ctx.createOscillator();
     osc.type = "sawtooth";
@@ -949,23 +1016,23 @@ export class AudioEngine {
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
     filter.frequency.setValueAtTime(Math.min(5000, baseFreq * 3), time);
-    filter.frequency.exponentialRampToValueAtTime(Math.min(2000, baseFreq * 1.5), time + 0.2);
+    filter.frequency.exponentialRampToValueAtTime(Math.min(2000, baseFreq * 1.5), time + Math.min(0.2, noteDuration));
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(vel * 0.5, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + noteDuration);
 
     osc.connect(filter);
     filter.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(dest);
 
     osc.start(time);
-    osc.stop(time + 0.32);
-    this.registerVoice(osc, gain, time + 0.32);
+    osc.stop(time + noteDuration + 0.02);
+    this.registerVoice(osc, gain, time + noteDuration + 0.02);
   }
 
-  private playFX(time: number, vel: number, pitchOffset: number): void {
-    if (!this.ctx || !this.masterGain) return;
+  private playFX(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+    if (!this.ctx) return;
 
     const osc = this.ctx.createOscillator();
     osc.type = "sawtooth";
@@ -973,25 +1040,26 @@ export class AudioEngine {
       ? AudioEngine.midiToFreq(pitchOffset, 69) 
       : 880 * Math.pow(2, pitchOffset / 12);
     osc.frequency.setValueAtTime(startF, time);
-    osc.frequency.exponentialRampToValueAtTime(90, time + 0.35);
+    const noteDuration = Math.max(0.1, Math.min(3.0, stepDur * gateVal * 1.2));
+    osc.frequency.exponentialRampToValueAtTime(90, time + noteDuration * 0.9);
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = "bandpass";
     filter.frequency.setValueAtTime(2000, time);
-    filter.frequency.exponentialRampToValueAtTime(200, time + 0.35);
+    filter.frequency.exponentialRampToValueAtTime(200, time + noteDuration * 0.9);
     filter.Q.value = 5.0;
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(vel * 0.5, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.38);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + noteDuration);
 
     osc.connect(filter);
     filter.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(dest);
 
     osc.start(time);
-    osc.stop(time + 0.4);
-    this.registerVoice(osc, gain, time + 0.4);
+    osc.stop(time + noteDuration + 0.02);
+    this.registerVoice(osc, gain, time + noteDuration + 0.02);
   }
 
   public destroy(): void {

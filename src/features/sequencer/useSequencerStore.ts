@@ -1,6 +1,11 @@
-import { useReducer, useCallback, useRef } from "react";
+import { useReducer, useCallback, useRef, useEffect } from "react";
 import { Genre, SequencerPattern, SequencerTrack } from "../../types/genre";
 import { ChordDefinition, noteToMidi } from "../../utils/chordTheory";
+import {
+  debounceSaveProject,
+  loadSavedProject,
+  clearSavedProject,
+} from "./projectStorage";
 
 export interface StudioHistorySnapshot {
   pattern: SequencerPattern;
@@ -8,16 +13,33 @@ export interface StudioHistorySnapshot {
   swing: number;
   timeSignature: string;
   resolution: "1/8" | "1/16" | "1/32";
+  patterns?: {
+    A: SequencerPattern;
+    B: SequencerPattern;
+  };
+  activeSlot?: "A" | "B";
 }
 
 export interface SequencerState {
   currentGenre: Genre;
   pattern: SequencerPattern;
+  patterns: {
+    A: SequencerPattern;
+    B: SequencerPattern;
+  };
+  activeSlot: "A" | "B";
+  songMode: boolean;
+  songChain: ("A" | "B")[];
+  blindTestMode: boolean;
   bpm: number;
   swing: number;
   timeSignature: string;
   resolution: "1/8" | "1/16" | "1/32";
   stepCount: number;
+  loopRange: [number, number] | null;
+  isMetronome: boolean;
+  isCountIn: boolean;
+  parameterDimension: "velocity" | "probability" | "ratchet" | "gate";
   canUndo: boolean;
   canRedo: boolean;
 }
@@ -30,7 +52,16 @@ export type SequencerAction =
   | { type: "BATCH_SET_VELOCITY"; trackIdx: number; velocities: number[] }
   | { type: "SET_PITCH"; trackIdx: number; stepIdx: number; pitch: number | null }
   | { type: "SET_RATCHET"; trackIdx: number; stepIdx: number; ratchet: number }
+  | { type: "BATCH_SET_RATCHET"; trackIdx: number; ratchets: number[] }
   | { type: "SET_PROBABILITY"; trackIdx: number; stepIdx: number; probability: number }
+  | { type: "BATCH_SET_PROBABILITY"; trackIdx: number; probabilities: number[] }
+  | { type: "SET_GATE"; trackIdx: number; stepIdx: number; gate: number }
+  | { type: "BATCH_SET_GATE"; trackIdx: number; gates: number[] }
+  | { type: "SET_TRACK_PAN"; trackIdx: number; pan: number }
+  | { type: "SET_TRACK_SWING"; trackIdx: number; swing: number }
+  | { type: "SET_TRACK_SENDS"; trackIdx: number; sendA?: number; sendB?: number }
+  | { type: "SET_TRACK_INSTRUMENT"; trackIdx: number; instrument: string }
+  | { type: "REORDER_TRACKS"; fromIndex: number; toIndex: number }
   | { type: "TOGGLE_MUTE"; trackIdx: number }
   | { type: "TOGGLE_SOLO"; trackIdx: number }
   | { type: "SET_VOLUME"; trackIdx: number; volume: number }
@@ -45,6 +76,16 @@ export type SequencerAction =
   | { type: "SET_RESOLUTION"; resolution: "1/8" | "1/16" | "1/32" }
   | { type: "SET_STEP_COUNT"; count: number }
   | { type: "LOAD_CHORDS"; chords: ChordDefinition[] }
+  | { type: "SWITCH_PATTERN_SLOT"; slot: "A" | "B" }
+  | { type: "COPY_PATTERN_SLOT"; from: "A" | "B"; to: "A" | "B" }
+  | { type: "TOGGLE_SONG_MODE" }
+  | { type: "SET_SONG_CHAIN"; chain: ("A" | "B")[] }
+  | { type: "TOGGLE_BLIND_TEST" }
+  | { type: "SET_LOOP_RANGE"; range: [number, number] | null }
+  | { type: "SET_METRONOME"; enabled: boolean }
+  | { type: "SET_COUNT_IN"; enabled: boolean }
+  | { type: "SET_PARAMETER_DIMENSION"; dimension: "velocity" | "probability" | "ratchet" | "gate" }
+  | { type: "RESET_TO_GENRE_DEFAULT" }
   | { type: "RESTORE_SNAPSHOT"; snapshot: StudioHistorySnapshot };
 
 /**
@@ -56,8 +97,14 @@ function cloneTrack(track: SequencerTrack): SequencerTrack {
     steps: [...track.steps],
     velocity: track.velocity ? [...track.velocity] : undefined,
     pitch: track.pitch ? [...track.pitch] : undefined,
+    gate: track.gate ? [...track.gate] : undefined,
     ratchet: track.ratchet ? [...track.ratchet] : undefined,
     probability: track.probability ? [...track.probability] : undefined,
+    pan: track.pan,
+    swing: track.swing,
+    sendA: track.sendA,
+    sendB: track.sendB,
+    instrument: track.instrument,
   };
 }
 
@@ -80,44 +127,171 @@ function updateTrack(
 }
 
 export function createInitialSequencerState(genre: Genre): SequencerState {
-  const pattern = clonePattern(genre.sequencer_pattern);
-  const stepCount = pattern.tracks[0]?.steps?.length || 16;
+  const saved = loadSavedProject();
+  const patternA = clonePattern(genre.sequencer_pattern);
+  const patternB = clonePattern(genre.sequencer_pattern);
+
+  if (saved && saved.genreId === genre.id) {
+    const activeSlot = saved.activeSlot || "A";
+    const currentPattern = activeSlot === "B" ? clonePattern(saved.patterns.B) : clonePattern(saved.patterns.A);
+    return {
+      currentGenre: genre,
+      pattern: currentPattern,
+      patterns: {
+        A: clonePattern(saved.patterns.A),
+        B: clonePattern(saved.patterns.B),
+      },
+      activeSlot,
+      songMode: saved.songMode || false,
+      songChain: saved.songChain || ["A", "B"],
+      blindTestMode: false,
+      bpm: saved.bpm || genre.default_bpm || 120,
+      swing: saved.swing || 0,
+      timeSignature: saved.timeSignature || genre.time_signature || "4/4",
+      resolution: saved.resolution || "1/16",
+      stepCount: saved.stepCount || 16,
+      loopRange: saved.loopRange || null,
+      isMetronome: saved.isMetronome || false,
+      isCountIn: saved.isCountIn || false,
+      parameterDimension: "velocity",
+      canUndo: false,
+      canRedo: false,
+    };
+  }
+
+  const stepCount = patternA.tracks[0]?.steps?.length || 16;
   return {
     currentGenre: genre,
-    pattern,
+    pattern: patternA,
+    patterns: {
+      A: patternA,
+      B: patternB,
+    },
+    activeSlot: "A",
+    songMode: false,
+    songChain: ["A", "B"],
+    blindTestMode: false,
     bpm: genre.default_bpm || 140,
-    swing: pattern.swing || 0,
+    swing: patternA.swing || 0,
     timeSignature: genre.time_signature || "4/4",
     resolution: "1/16",
     stepCount,
+    loopRange: null,
+    isMetronome: false,
+    isCountIn: false,
+    parameterDimension: "velocity",
     canUndo: false,
     canRedo: false,
   };
 }
 
 export function sequencerReducer(state: SequencerState, action: SequencerAction): SequencerState {
+  // Helper to update active pattern while keeping patterns[activeSlot] in sync
+  const withUpdatedPattern = (nextPattern: SequencerPattern): SequencerState => {
+    return {
+      ...state,
+      pattern: nextPattern,
+      patterns: {
+        ...state.patterns,
+        [state.activeSlot]: nextPattern,
+      },
+    };
+  };
+
   switch (action.type) {
     case "SET_GENRE": {
       const g = action.genre;
-      const pattern = clonePattern(g.sequencer_pattern);
-      const stepCount = pattern.tracks[0]?.steps?.length || 16;
+      const patternA = clonePattern(g.sequencer_pattern);
+      const patternB = clonePattern(g.sequencer_pattern);
+      const stepCount = patternA.tracks[0]?.steps?.length || 16;
       return {
         ...state,
         currentGenre: g,
-        pattern,
+        pattern: patternA,
+        patterns: {
+          A: patternA,
+          B: patternB,
+        },
+        activeSlot: "A",
         bpm: g.default_bpm || 120,
-        swing: pattern.swing || 0,
+        swing: patternA.swing || 0,
         timeSignature: g.time_signature || "4/4",
         resolution: "1/16",
         stepCount,
       };
     }
 
+    case "RESET_TO_GENRE_DEFAULT": {
+      clearSavedProject();
+      const patternA = clonePattern(state.currentGenre.sequencer_pattern);
+      const patternB = clonePattern(state.currentGenre.sequencer_pattern);
+      const stepCount = patternA.tracks[0]?.steps?.length || 16;
+      return {
+        ...state,
+        pattern: patternA,
+        patterns: {
+          A: patternA,
+          B: patternB,
+        },
+        activeSlot: "A",
+        bpm: state.currentGenre.default_bpm || 120,
+        swing: patternA.swing || 0,
+        timeSignature: state.currentGenre.time_signature || "4/4",
+        resolution: "1/16",
+        stepCount,
+        loopRange: null,
+      };
+    }
+
+    case "SWITCH_PATTERN_SLOT": {
+      if (action.slot === state.activeSlot) return state;
+      const updatedPatterns = {
+        ...state.patterns,
+        [state.activeSlot]: state.pattern,
+      };
+      const nextPattern = clonePattern(updatedPatterns[action.slot]);
+      const stepCount = nextPattern.tracks[0]?.steps?.length || state.stepCount;
+      return {
+        ...state,
+        patterns: updatedPatterns,
+        activeSlot: action.slot,
+        pattern: nextPattern,
+        stepCount,
+      };
+    }
+
+    case "COPY_PATTERN_SLOT": {
+      const sourcePattern = clonePattern(action.from === state.activeSlot ? state.pattern : state.patterns[action.from]);
+      const updatedPatterns = {
+        ...state.patterns,
+        [action.to]: sourcePattern,
+      };
+      if (action.to === state.activeSlot) {
+        return {
+          ...state,
+          patterns: updatedPatterns,
+          pattern: sourcePattern,
+        };
+      }
+      return {
+        ...state,
+        patterns: updatedPatterns,
+      };
+    }
+
+    case "TOGGLE_SONG_MODE":
+      return { ...state, songMode: !state.songMode };
+
+    case "SET_SONG_CHAIN":
+      return { ...state, songChain: [...action.chain] };
+
+    case "TOGGLE_BLIND_TEST":
+      return { ...state, blindTestMode: !state.blindTestMode };
+
     case "COMMIT_PATTERN": {
       const stepCount = action.pattern.tracks[0]?.steps?.length || state.stepCount;
       return {
-        ...state,
-        pattern: action.pattern,
+        ...withUpdatedPattern(action.pattern),
         stepCount,
       };
     }
@@ -132,10 +306,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         }
         return { ...t, steps, velocity };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SET_VELOCITY": {
@@ -144,10 +315,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         velocity[action.stepIdx] = action.velocity;
         return { ...t, velocity };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "BATCH_SET_VELOCITY": {
@@ -155,10 +323,67 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         velocity: [...action.velocities],
       }));
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "SET_GATE": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
+        const gate = t.gate ? [...t.gate] : Array(t.steps.length).fill(0.8);
+        gate[action.stepIdx] = action.gate;
+        return { ...t, gate };
+      });
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "BATCH_SET_GATE": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        gate: [...action.gates],
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "SET_TRACK_PAN": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        pan: action.pan,
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "SET_TRACK_SWING": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        swing: action.swing,
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "SET_TRACK_SENDS": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        sendA: action.sendA !== undefined ? action.sendA : t.sendA,
+        sendB: action.sendB !== undefined ? action.sendB : t.sendB,
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "SET_TRACK_INSTRUMENT": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        instrument: action.instrument,
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "REORDER_TRACKS": {
+      const { fromIndex, toIndex } = action;
+      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return state;
+      const tracks = [...state.pattern.tracks];
+      const [moved] = tracks.splice(fromIndex, 1);
+      if (!moved) return state;
+      tracks.splice(toIndex, 0, moved);
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SET_PITCH": {
@@ -167,10 +392,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         pitch[action.stepIdx] = action.pitch;
         return { ...t, pitch };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SET_RATCHET": {
@@ -179,10 +401,15 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ratchet[action.stepIdx] = action.ratchet;
         return { ...t, ratchet };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "BATCH_SET_RATCHET": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        ratchet: [...action.ratchets],
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SET_PROBABILITY": {
@@ -191,10 +418,15 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         probability[action.stepIdx] = action.probability;
         return { ...t, probability };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "BATCH_SET_PROBABILITY": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        probability: [...action.probabilities],
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "TOGGLE_MUTE": {
@@ -202,10 +434,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         mute: !t.mute,
       }));
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "TOGGLE_SOLO": {
@@ -213,10 +442,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         solo: !t.solo,
       }));
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SET_VOLUME": {
@@ -224,10 +450,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         volume: action.volume,
       }));
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SET_TRACK_LENGTH": {
@@ -235,10 +458,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         trackLength: action.length,
       }));
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "CLEAR_TRACK": {
@@ -246,10 +466,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         steps: Array(t.steps.length).fill(0),
       }));
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SHIFT_TRACK": {
@@ -269,14 +486,12 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
           steps: shiftArr(t.steps)!,
           velocity: shiftArr(t.velocity),
           pitch: shiftArr(t.pitch),
+          gate: shiftArr(t.gate),
           ratchet: shiftArr(t.ratchet),
           probability: shiftArr(t.probability),
         };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SMART_FILL_TRACK": {
@@ -311,10 +526,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
 
         return { ...t, steps, velocity };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "APPLY_EUCLIDEAN": {
@@ -350,10 +562,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
 
         return { ...t, steps, velocity };
       });
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "SET_BPM":
@@ -378,11 +587,11 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
           trackLength: targetSteps,
         };
       });
+      const nextPattern = { ...state.pattern, tracks, totalSteps: targetSteps };
       return {
-        ...state,
+        ...withUpdatedPattern(nextPattern),
         timeSignature: action.timeSignature,
         stepCount: targetSteps,
-        pattern: { ...state.pattern, tracks, totalSteps: targetSteps },
       };
     }
 
@@ -395,6 +604,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         let steps = [...t.steps];
         let velocity = t.velocity ? [...t.velocity] : Array(steps.length).fill(100);
         let pitch = t.pitch ? [...t.pitch] : Array(steps.length).fill(null);
+        let gate = t.gate ? [...t.gate] : Array(steps.length).fill(0.8);
         let ratchet = t.ratchet ? [...t.ratchet] : Array(steps.length).fill(1);
         let probability = t.probability ? [...t.probability] : Array(steps.length).fill(100);
 
@@ -403,12 +613,14 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
           steps = [...steps, ...steps.slice(0, diff)];
           velocity = [...velocity, ...velocity.slice(0, diff)];
           pitch = [...pitch, ...pitch.slice(0, diff)];
+          gate = [...gate, ...gate.slice(0, diff)];
           ratchet = [...ratchet, ...ratchet.slice(0, diff)];
           probability = [...probability, ...probability.slice(0, diff)];
         } else if (targetSteps < steps.length) {
           steps = steps.slice(0, targetSteps);
           velocity = velocity.slice(0, targetSteps);
           pitch = pitch.slice(0, targetSteps);
+          gate = gate.slice(0, targetSteps);
           ratchet = ratchet.slice(0, targetSteps);
           probability = probability.slice(0, targetSteps);
         }
@@ -418,15 +630,16 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
           steps,
           velocity,
           pitch,
+          gate,
           ratchet,
           probability,
           trackLength: targetSteps,
         };
       });
+      const nextPattern = { ...state.pattern, tracks, totalSteps: targetSteps };
       return {
-        ...state,
+        ...withUpdatedPattern(nextPattern),
         stepCount: targetSteps,
-        pattern: { ...state.pattern, tracks, totalSteps: targetSteps },
       };
     }
 
@@ -463,17 +676,35 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         return { ...t, steps, pitch, velocity };
       });
 
-      return {
-        ...state,
-        pattern: { ...state.pattern, tracks },
-      };
+      return withUpdatedPattern({ ...state.pattern, tracks });
     }
+
+    case "SET_LOOP_RANGE":
+      return { ...state, loopRange: action.range };
+
+    case "SET_METRONOME":
+      return { ...state, isMetronome: action.enabled };
+
+    case "SET_COUNT_IN":
+      return { ...state, isCountIn: action.enabled };
+
+    case "SET_PARAMETER_DIMENSION":
+      return { ...state, parameterDimension: action.dimension };
 
     case "RESTORE_SNAPSHOT": {
       const s = action.snapshot;
+      const restoredPattern = clonePattern(s.pattern);
       return {
         ...state,
-        pattern: clonePattern(s.pattern),
+        pattern: restoredPattern,
+        patterns: s.patterns ? {
+          A: clonePattern(s.patterns.A),
+          B: clonePattern(s.patterns.B),
+        } : {
+          ...state.patterns,
+          [state.activeSlot]: restoredPattern,
+        },
+        activeSlot: s.activeSlot || state.activeSlot,
         bpm: s.bpm,
         swing: s.swing,
         timeSignature: s.timeSignature,
@@ -493,6 +724,28 @@ export function useSequencerStore(initialGenre: Genre) {
   const historyRef = useRef<StudioHistorySnapshot[]>([]);
   const futureRef = useRef<StudioHistorySnapshot[]>([]);
 
+  // Debounced auto-save project on state change (P3-04)
+  useEffect(() => {
+    debounceSaveProject({
+      genreId: state.currentGenre.id,
+      bpm: state.bpm,
+      swing: state.swing,
+      timeSignature: state.timeSignature,
+      resolution: state.resolution,
+      stepCount: state.stepCount,
+      patterns: {
+        A: state.activeSlot === "A" ? state.pattern : state.patterns.A,
+        B: state.activeSlot === "B" ? state.pattern : state.patterns.B,
+      },
+      activeSlot: state.activeSlot,
+      songMode: state.songMode,
+      songChain: state.songChain,
+      loopRange: state.loopRange,
+      isMetronome: state.isMetronome,
+      isCountIn: state.isCountIn,
+    });
+  }, [state]);
+
   const createSnapshot = useCallback(
     (overridePattern?: SequencerPattern): StudioHistorySnapshot => ({
       pattern: clonePattern(overridePattern || state.pattern),
@@ -500,6 +753,11 @@ export function useSequencerStore(initialGenre: Genre) {
       swing: state.swing,
       timeSignature: state.timeSignature,
       resolution: state.resolution,
+      patterns: {
+        A: clonePattern(state.patterns.A),
+        B: clonePattern(state.patterns.B),
+      },
+      activeSlot: state.activeSlot,
     }),
     [state]
   );

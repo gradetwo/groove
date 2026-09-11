@@ -48,6 +48,9 @@ export interface SequencerTrack {
   solo?: boolean;
   volume?: number; // 0 - 1
   pan?: number; // -1 to 1
+  swing?: number; // per-track swing offset (-50 to 50)
+  sendA?: number; // Reverb send level 0 - 1
+  sendB?: number; // Delay send level 0 - 1
 }
 
 export interface SequencerPattern {

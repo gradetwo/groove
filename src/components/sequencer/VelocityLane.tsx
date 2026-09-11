@@ -1,15 +1,25 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { SequencerTrack } from "../../types/genre";
-import { Sliders, Sparkles, TrendingUp, TrendingDown, X } from "lucide-react";
+import { Sliders, Sparkles, TrendingUp, TrendingDown, X, Dices, Repeat, Clock } from "lucide-react";
 import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
 import { useLanguage } from "../../i18n/LanguageContext";
 
-interface VelocityLaneProps {
+export type ParameterDimension = "velocity" | "probability" | "ratchet" | "gate";
+
+export interface VelocityLaneProps {
   tracks: SequencerTrack[];
   activeTrackIdx: number;
+  dimension?: ParameterDimension;
+  onSelectDimension?: (dim: ParameterDimension) => void;
   onSelectTrack: (trackIdx: number) => void;
   onUpdateVelocity: (trackIdx: number, stepIdx: number, newVel: number) => void;
   onBatchUpdateVelocity: (trackIdx: number, newVelocities: number[]) => void;
+  onUpdateProbability?: (trackIdx: number, stepIdx: number, prob: number) => void;
+  onBatchUpdateProbability?: (trackIdx: number, probs: number[]) => void;
+  onUpdateRatchet?: (trackIdx: number, stepIdx: number, ratchet: number) => void;
+  onBatchUpdateRatchet?: (trackIdx: number, ratchets: number[]) => void;
+  onUpdateGate?: (trackIdx: number, stepIdx: number, gate: number) => void;
+  onBatchUpdateGate?: (trackIdx: number, gates: number[]) => void;
   onClose: () => void;
   currentStep: number;
   isPlaying: boolean;
@@ -23,9 +33,17 @@ interface VelocityLaneProps {
 export const VelocityLane: React.FC<VelocityLaneProps> = ({
   tracks,
   activeTrackIdx,
+  dimension = "velocity",
+  onSelectDimension,
   onSelectTrack,
   onUpdateVelocity,
   onBatchUpdateVelocity,
+  onUpdateProbability,
+  onBatchUpdateProbability,
+  onUpdateRatchet,
+  onBatchUpdateRatchet,
+  onUpdateGate,
+  onBatchUpdateGate,
   onClose,
   currentStep,
   isPlaying,
@@ -40,22 +58,59 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
   const meta = tracksConfig[activeTrackIdx % tracksConfig.length];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isPainting, setIsPainting] = useState(false);
+  const [localDimension, setLocalDimension] = useState<ParameterDimension>(dimension);
 
-  // Velocity values for active track, defaulting to 100
-  const velocities = Array.from({ length: stepCount }, (_, i) => {
+  const activeDim = onSelectDimension ? dimension : localDimension;
+  const switchDim = (d: ParameterDimension) => {
+    setLocalDimension(d);
+    onSelectDimension?.(d);
+  };
+
+  // Values array for active track based on dimension
+  const values = Array.from({ length: stepCount }, (_, i) => {
+    if (activeDim === "probability") {
+      return currentTrack?.probability?.[i] !== undefined ? currentTrack.probability[i] : 100;
+    }
+    if (activeDim === "ratchet") {
+      return currentTrack?.ratchet?.[i] !== undefined ? currentTrack.ratchet[i] : 1;
+    }
+    if (activeDim === "gate") {
+      return currentTrack?.gate?.[i] !== undefined ? currentTrack.gate[i] : 0.8;
+    }
     return currentTrack?.velocity?.[i] !== undefined ? currentTrack.velocity[i] : 100;
   });
+
+  const commitValue = useCallback(
+    (stepIdx: number, rawRatio: number) => {
+      const ratio = Math.max(0, Math.min(1, rawRatio));
+      if (activeDim === "probability") {
+        const prob = Math.round(ratio * 100);
+        onUpdateProbability?.(activeTrackIdx, stepIdx, prob);
+      } else if (activeDim === "ratchet") {
+        // Discrete ratchet steps: 1, 2, 3, 4, 8
+        const rVal = ratio < 0.2 ? 1 : ratio < 0.4 ? 2 : ratio < 0.65 ? 3 : ratio < 0.85 ? 4 : 8;
+        onUpdateRatchet?.(activeTrackIdx, stepIdx, rVal);
+      } else if (activeDim === "gate") {
+        // Gate: 0.1 to 2.0
+        const gateVal = Math.round((0.1 + ratio * 1.9) * 10) / 10;
+        onUpdateGate?.(activeTrackIdx, stepIdx, gateVal);
+      } else {
+        const vel = Math.round(ratio * 127);
+        onUpdateVelocity(activeTrackIdx, stepIdx, Math.max(1, Math.min(127, vel)));
+      }
+    },
+    [activeDim, activeTrackIdx, onUpdateVelocity, onUpdateProbability, onUpdateRatchet, onUpdateGate]
+  );
 
   const updateFromPointer = useCallback(
     (e: React.PointerEvent | PointerEvent, stepIdx: number, targetRect: DOMRect) => {
       const clientY = e.clientY;
       const bottom = targetRect.bottom;
       const height = targetRect.height;
-      const ratio = Math.max(0, Math.min(1, (bottom - clientY) / height));
-      const newVel = Math.round(ratio * 127);
-      onUpdateVelocity(activeTrackIdx, stepIdx, Math.max(1, Math.min(127, newVel)));
+      const ratio = (bottom - clientY) / height;
+      commitValue(stepIdx, ratio);
     },
-    [activeTrackIdx, onUpdateVelocity]
+    [commitValue]
   );
 
   const handlePointerDown = (stepIdx: number, e: React.PointerEvent<HTMLDivElement>) => {
@@ -83,9 +138,8 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
       const clientY = touch.clientY;
       const bottom = rect.bottom;
       const height = rect.height;
-      const ratio = Math.max(0, Math.min(1, (bottom - clientY) / height));
-      const newVel = Math.round(ratio * 127);
-      onUpdateVelocity(activeTrackIdx, idx, Math.max(1, Math.min(127, newVel)));
+      const ratio = (bottom - clientY) / height;
+      commitValue(idx, ratio);
     }
   };
 
@@ -95,81 +149,194 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
     return () => window.removeEventListener("pointerup", handleGlobalPointerUp);
   }, []);
 
-  // Preset Handlers
-  const handlePresetFlat = () => {
-    onBatchUpdateVelocity(activeTrackIdx, new Array(stepCount).fill(100));
+  // Preset Handlers tailored to active dimension
+  const handlePresetReset = () => {
+    if (activeDim === "probability") {
+      onBatchUpdateProbability?.(activeTrackIdx, new Array(stepCount).fill(100));
+    } else if (activeDim === "ratchet") {
+      onBatchUpdateRatchet?.(activeTrackIdx, new Array(stepCount).fill(1));
+    } else if (activeDim === "gate") {
+      onBatchUpdateGate?.(activeTrackIdx, new Array(stepCount).fill(0.8));
+    } else {
+      onBatchUpdateVelocity(activeTrackIdx, new Array(stepCount).fill(100));
+    }
   };
 
   const handlePresetAccent = () => {
-    const updated = velocities.map((_, i) => (i % 4 === 0 ? 122 : 90));
-    onBatchUpdateVelocity(activeTrackIdx, updated);
+    if (activeDim === "probability") {
+      const updated = values.map((_, i) => (i % 4 === 0 ? 100 : 70));
+      onBatchUpdateProbability?.(activeTrackIdx, updated);
+    } else if (activeDim === "ratchet") {
+      const updated = values.map((_, i) => (i % 8 === 7 ? 4 : i % 4 === 3 ? 2 : 1));
+      onBatchUpdateRatchet?.(activeTrackIdx, updated);
+    } else if (activeDim === "gate") {
+      const updated = values.map((_, i) => (i % 4 === 0 ? 1.4 : 0.6));
+      onBatchUpdateGate?.(activeTrackIdx, updated);
+    } else {
+      const updated = values.map((_, i) => (i % 4 === 0 ? 122 : 90));
+      onBatchUpdateVelocity(activeTrackIdx, updated);
+    }
   };
 
   const handlePresetRampUp = () => {
-    const updated = velocities.map((_, i) => Math.round(40 + (i / (stepCount - 1 || 1)) * 85));
-    onBatchUpdateVelocity(activeTrackIdx, updated);
+    if (activeDim === "probability") {
+      const updated = values.map((_, i) => Math.round(30 + (i / (stepCount - 1 || 1)) * 70));
+      onBatchUpdateProbability?.(activeTrackIdx, updated);
+    } else if (activeDim === "ratchet") {
+      const updated = values.map((_, i) => (i < stepCount / 2 ? 1 : 2));
+      onBatchUpdateRatchet?.(activeTrackIdx, updated);
+    } else if (activeDim === "gate") {
+      const updated = values.map((_, i) => Math.round((0.3 + (i / (stepCount - 1 || 1)) * 1.4) * 10) / 10);
+      onBatchUpdateGate?.(activeTrackIdx, updated);
+    } else {
+      const updated = values.map((_, i) => Math.round(40 + (i / (stepCount - 1 || 1)) * 85));
+      onBatchUpdateVelocity(activeTrackIdx, updated);
+    }
   };
 
   const handlePresetRampDown = () => {
-    const updated = velocities.map((_, i) => Math.round(125 - (i / (stepCount - 1 || 1)) * 85));
-    onBatchUpdateVelocity(activeTrackIdx, updated);
+    if (activeDim === "probability") {
+      const updated = values.map((_, i) => Math.round(100 - (i / (stepCount - 1 || 1)) * 70));
+      onBatchUpdateProbability?.(activeTrackIdx, updated);
+    } else if (activeDim === "ratchet") {
+      const updated = values.map((_, i) => (i < stepCount / 2 ? 2 : 1));
+      onBatchUpdateRatchet?.(activeTrackIdx, updated);
+    } else if (activeDim === "gate") {
+      const updated = values.map((_, i) => Math.round((1.7 - (i / (stepCount - 1 || 1)) * 1.4) * 10) / 10);
+      onBatchUpdateGate?.(activeTrackIdx, updated);
+    } else {
+      const updated = values.map((_, i) => Math.round(125 - (i / (stepCount - 1 || 1)) * 85));
+      onBatchUpdateVelocity(activeTrackIdx, updated);
+    }
   };
 
   const handlePresetHumanize = () => {
-    const updated = velocities.map((v) => {
-      const jitter = Math.round((Math.random() - 0.5) * 24);
-      return Math.max(20, Math.min(127, v + jitter));
-    });
-    onBatchUpdateVelocity(activeTrackIdx, updated);
+    if (activeDim === "probability") {
+      const updated = values.map(() => Math.round(40 + Math.random() * 60));
+      onBatchUpdateProbability?.(activeTrackIdx, updated);
+    } else if (activeDim === "ratchet") {
+      const updated = values.map(() => (Math.random() > 0.7 ? 2 : 1));
+      onBatchUpdateRatchet?.(activeTrackIdx, updated);
+    } else if (activeDim === "gate") {
+      const updated = values.map((g) => Math.max(0.2, Math.min(1.8, Math.round((g + (Math.random() - 0.5) * 0.4) * 10) / 10)));
+      onBatchUpdateGate?.(activeTrackIdx, updated);
+    } else {
+      const updated = values.map((v) => {
+        const jitter = Math.round((Math.random() - 0.5) * 24);
+        return Math.max(20, Math.min(127, v + jitter));
+      });
+      onBatchUpdateVelocity(activeTrackIdx, updated);
+    }
+  };
+
+  // Label and formatted display helper
+  const formatValue = (val: number) => {
+    if (activeDim === "probability") return `${val}%`;
+    if (activeDim === "ratchet") return `${val}x`;
+    if (activeDim === "gate") return `${Math.round(val * 100)}%`;
+    return `${val}`;
+  };
+
+  const getHeightPercent = (val: number) => {
+    if (activeDim === "probability") return Math.max(5, val);
+    if (activeDim === "ratchet") return Math.max(12, (val / 8) * 100);
+    if (activeDim === "gate") return Math.max(5, Math.min(100, (val / 2.0) * 100));
+    return Math.max(5, (val / 127) * 100);
   };
 
   return (
     <div className="bg-[#0e1014] border-t border-line p-3 sm:p-4 rounded-b-2xl select-none animate-in fade-in slide-in-from-top-2 duration-200">
       {/* Top Header Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#1c1e26]">
-        {/* Track Selector Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 scrollbar-none">
-          <div className="flex items-center gap-1.5 mr-2 font-['JetBrains_Mono'] text-xs font-bold text-accent shrink-0">
-            <Sliders className="w-3.5 h-3.5" />
-            <span>{t("vel_drawer_title")}</span>
+        {/* Dimension Tabs & Track Selector */}
+        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 scrollbar-none">
+          {/* Dimension Selector (P3-03) */}
+          <div className="flex items-center bg-[#14161f] p-0.5 rounded-lg border border-line-subtle mr-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => switchDim("velocity")}
+              className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors flex items-center gap-1 ${
+                activeDim === "velocity" ? "bg-accent text-black shadow-sm" : "text-text-dim hover:text-text"
+              }`}
+              title="Edit Velocity (力度)"
+            >
+              <Sliders className="w-3 h-3" />
+              <span>Vel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => switchDim("gate")}
+              className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors flex items-center gap-1 ${
+                activeDim === "gate" ? "bg-accent text-black shadow-sm" : "text-text-dim hover:text-text"
+              }`}
+              title="Edit Gate Duration (时长)"
+            >
+              <Clock className="w-3 h-3" />
+              <span>Gate</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => switchDim("probability")}
+              className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors flex items-center gap-1 ${
+                activeDim === "probability" ? "bg-accent text-black shadow-sm" : "text-text-dim hover:text-text"
+              }`}
+              title="Edit Probability (概率)"
+            >
+              <Dices className="w-3 h-3" />
+              <span>Prob</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => switchDim("ratchet")}
+              className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors flex items-center gap-1 ${
+                activeDim === "ratchet" ? "bg-accent text-black shadow-sm" : "text-text-dim hover:text-text"
+              }`}
+              title="Edit Ratchet (滚奏)"
+            >
+              <Repeat className="w-3 h-3" />
+              <span>Roll</span>
+            </button>
           </div>
 
-          {tracks.map((tItem, idx) => {
-            const trackMeta = tracksConfig[idx % tracksConfig.length];
-            const isSelected = idx === activeTrackIdx;
-            return (
-              <button
-                key={tItem.track_id}
-                onClick={() => onSelectTrack(idx)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-['JetBrains_Mono'] font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
-                  isSelected
-                    ? "bg-[#181a22] text-[#f0ede6] shadow-[0_0_10px_rgba(0,0,0,0.5)] scale-105"
-                    : "bg-bg text-[#717684] border-[#1e212b] hover:text-text"
-                }`}
-                style={{
-                  borderColor: isSelected ? trackMeta.color : undefined,
-                }}
-              >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: trackMeta.color }} />
-                <span>{trackMeta.name}</span>
-              </button>
-            );
-          })}
+          {/* Track Selector Tabs */}
+          <div className="flex items-center gap-1 shrink-0">
+            {tracks.map((tItem, idx) => {
+              const trackMeta = tracksConfig[idx % tracksConfig.length];
+              const isSelected = idx === activeTrackIdx;
+              return (
+                <button
+                  key={tItem.track_id}
+                  onClick={() => onSelectTrack(idx)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-['JetBrains_Mono'] font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
+                    isSelected
+                      ? "bg-[#181a22] text-[#f0ede6] shadow-[0_0_10px_rgba(0,0,0,0.5)] scale-105"
+                      : "bg-bg text-[#717684] border-[#1e212b] hover:text-text"
+                  }`}
+                  style={{
+                    borderColor: isSelected ? trackMeta.color : undefined,
+                  }}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: trackMeta.color }} />
+                  <span>{trackMeta.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Quick Shape Presets & Close */}
         <div className="flex items-center gap-1.5 ml-auto">
           <button
-            onClick={handlePresetFlat}
+            onClick={handlePresetReset}
             className="px-2 py-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text text-[11px] font-mono transition-colors"
-            title={t("vel_reset_100")}
+            title="Reset to default value"
           >
-            Flat 100
+            {activeDim === "gate" ? "80%" : activeDim === "ratchet" ? "1x" : "100"}
           </button>
           <button
             onClick={handlePresetAccent}
             className="px-2 py-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text text-[11px] font-mono transition-colors"
-            title={t("vel_accent_downbeats")}
+            title="Accent Downbeats"
           >
             Accent
           </button>
@@ -177,8 +344,8 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
             type="button"
             onClick={handlePresetRampUp}
             className="p-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text transition-colors"
-            title={t("vel_crescendo")}
-            aria-label={t("vel_crescendo")}
+            title="Ramp Up"
+            aria-label="Ramp Up"
           >
             <TrendingUp className="w-3.5 h-3.5" />
           </button>
@@ -186,8 +353,8 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
             type="button"
             onClick={handlePresetRampDown}
             className="p-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text transition-colors"
-            title={t("vel_decrescendo")}
-            aria-label={t("vel_decrescendo")}
+            title="Ramp Down"
+            aria-label="Ramp Down"
           >
             <TrendingDown className="w-3.5 h-3.5" />
           </button>
@@ -195,7 +362,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
             type="button"
             onClick={handlePresetHumanize}
             className="px-2 py-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text text-[11px] font-mono transition-colors flex items-center gap-1"
-            title={t("vel_humanize")}
+            title="Humanize / Jitter"
           >
             <Sparkles className="w-3 h-3 text-[#45e0c9]" />
             <span>Jitter</span>
@@ -212,23 +379,26 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
         </div>
       </div>
 
-      {/* Main Interactive Velocity Slider Columns */}
+      {/* Main Interactive Parameter Slider Columns */}
       <div className="pt-3 flex items-center gap-3 overflow-x-auto min-w-max pb-1">
         {/* Left Track Label Space aligned with matrix headers */}
         <div className="w-[126px] sm:w-[172px] flex-none text-right pr-2 sm:pr-3 font-mono text-[11px] text-[#6b7280]">
           <span className="font-bold text-text">{meta.name}</span>
-          <span className="block text-[10px] text-[#4a5060]">
+          <span className="block text-[10px] text-accent uppercase font-bold">
+            {activeDim}
+          </span>
+          <span className="block text-[9.5px] text-[#4a5060]">
             {t("vel_drag_hint")}
           </span>
         </div>
 
-        {/* Step Velocity Bar Grid */}
+        {/* Step Parameter Bar Grid */}
         <div 
           ref={containerRef} 
           onTouchMove={handleTouchMove}
           className="flex-1 flex gap-1 items-end h-24 sm:h-28 bg-[#090a0d] p-2 rounded-xl border border-[#1a1c22] touch-none"
         >
-          {velocities.map((vel, stepIdx) => {
+          {values.map((val, stepIdx) => {
             const stepVal = currentTrack?.steps?.[stepIdx] || 0;
             const isOn = stepVal > 0;
             const trackLen = currentTrack?.trackLength || stepCount;
@@ -236,8 +406,8 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
             const isPlayhead = isPlaying && !isOutsideLoop && (currentStep % trackLen === stepIdx);
             const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
             const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
-            const heightPercent = (vel / 127) * 100;
-            const isAcc = vel >= 115;
+            const heightPercent = getHeightPercent(val);
+            const isHighlighted = activeDim === "velocity" ? val >= 115 : activeDim === "probability" ? val === 100 : activeDim === "ratchet" ? val > 1 : val >= 1.0;
 
             return (
               <div
@@ -251,13 +421,13 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
               >
                 {/* Numeric readout tooltip on hover or playhead */}
                 <div
-                  className={`absolute -top-5 font-mono text-[9px] font-bold px-1 rounded transition-opacity ${
+                  className={`absolute -top-5 font-mono text-[9px] font-bold px-1 rounded transition-opacity pointer-events-none z-20 ${
                     isPlayhead
                       ? "opacity-100 bg-accent text-black"
                       : "opacity-0 group-hover:opacity-100 bg-line text-text"
                   }`}
                 >
-                  {vel}
+                  {formatValue(val)}
                 </div>
 
                 {/* Background Track Guide Line */}
@@ -267,7 +437,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
                 <div
                   className={`w-full rounded-t-sm transition-all duration-75 relative z-10 ${
                     isOn
-                      ? isAcc
+                      ? isHighlighted
                         ? "shadow-[0_0_10px_var(--tc)]"
                         : "opacity-90"
                       : "opacity-25"
@@ -279,11 +449,11 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
                   }}
                 >
                   {/* Top LED pip */}
-                  <span className={`w-full h-1 block rounded-t-sm ${isAcc ? "bg-white" : "bg-white/40"}`} />
+                  <span className={`w-full h-1 block rounded-t-sm ${isHighlighted ? "bg-white" : "bg-white/40"}`} />
                 </div>
 
                 {/* Step index subscript */}
-                <span className="font-mono text-[8px] text-[#4a5060] mt-1">
+                <span className="font-mono text-[8px] text-[#4a5060] mt-1 pointer-events-none">
                   {stepIdx + 1}
                 </span>
               </div>

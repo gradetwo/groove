@@ -400,6 +400,30 @@ export class ChordAudioEngine {
   }
 
   /**
+   * Plays a single note by MIDI number (P3-19)
+   */
+  public triggerNote(
+    midi: number, 
+    timbre?: InstrumentTimbre, 
+    durationSec = 1.2, 
+    velocity = 0.85
+  ): void {
+    if (!this.ctx) this.initAudioContext();
+    if (!this.ctx) return;
+    if (this.ctx.state === "suspended") this.ctx.resume();
+
+    const t = timbre || this.timbre;
+    const now = this.ctx.currentTime;
+    if (t === "piano") {
+      this.playPianoNote(midi, now, durationSec, velocity);
+    } else if (t === "power-guitar") {
+      this.playPowerGuitarNote(midi, now, durationSec, velocity);
+    } else {
+      this.playGuitarNote(midi, now, durationSec, velocity);
+    }
+  }
+
+  /**
    * Dispatches notes across time according to playing style (Strumming, Arpeggio, Ballad, Block)
    */
   private playVoicing(

@@ -38,7 +38,7 @@ export interface VersionInfo {
   changelog: ChangelogEntry[];
 }
 
-export const CURRENT_CLIENT_VERSION = "1.11.0";
+export const CURRENT_CLIENT_VERSION = "1.12.0";
 
 interface UpdatesModalProps {
   isOpen: boolean;
@@ -143,7 +143,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
       className="max-h-[90vh]"
       ariaLabel={t("updates_modal_title")}
     >
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col h-full overflow-hidden bg-[#0d0f16]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[#1f222b] bg-[#121319]">
           <div className="flex items-center gap-3">
@@ -244,7 +244,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
         </div>
 
         {/* Scrollable Changelog List */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 divide-y divide-[#1f222b]/60">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 divide-y divide-[#1f222b]/60 bg-[#0d0f16]">
           {(versionData?.changelog || []).map((entry, idx) => {
             const badge = getCategoryBadge(entry.category);
             const isCurrent = entry.version === CURRENT_CLIENT_VERSION;

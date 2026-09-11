@@ -15,6 +15,8 @@ import { Toolbar, MobileEditMode } from "../components/sequencer/Toolbar";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
+import { clearSavedProject } from "../features/sequencer/projectStorage";
+import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
 import { announcer } from "../ui";
@@ -205,6 +207,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const engineRef = useRef<AudioEngine | null>(null);
   const patternRef = useRef(pattern);
   patternRef.current = pattern;
+  const seqStateRef = useRef(seqState);
+  seqStateRef.current = seqState;
+  const lastStepRef = useRef(-1);
 
   const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
 
@@ -258,6 +263,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     if (playheadBeamRef.current) {
       playheadBeamRef.current.style.display = "none";
     }
+    lastStepRef.current = -1;
   }, []);
 
   const triggerTrackMeters = useCallback((trackIndices: number[]) => {
@@ -279,6 +285,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
     const engine = new AudioEngine({
       onStep: ({ step }) => {
         updatePlayhead(step);
+        // Song Mode auto-transition between pattern slots on loop wrap-around (P3-02)
+        if (seqStateRef.current.songMode && lastStepRef.current > step && step === 0) {
+          const nextSlot = seqStateRef.current.activeSlot === "A" ? "B" : "A";
+          commit({ type: "SWITCH_PATTERN_SLOT", slot: nextSlot });
+          engine.setPattern(seqStateRef.current.patterns[nextSlot]);
+        }
+        lastStepRef.current = step;
       },
       onTrackTrigger: (trackIndices) => {
         triggerTrackMeters(trackIndices);
@@ -294,6 +307,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
     engine.setSwing(swing / 100);
     engine.setTimeSignature(timeSignature);
     engine.setResolution(resolution);
+    engine.setLoopRange(seqState.loopRange);
+    engine.setMetronome(seqState.isMetronome);
+    engine.setCountIn(seqState.isCountIn);
 
     const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
@@ -303,6 +319,43 @@ export const StudioView: React.FC<StudioViewProps> = ({
       engineRef.current = null;
     };
   }, []);
+
+  // Sync Loop Range, Metronome & Count-In to AudioEngine (P3-07)
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setLoopRange(seqState.loopRange);
+    }
+  }, [seqState.loopRange]);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setMetronome(seqState.isMetronome);
+    }
+  }, [seqState.isMetronome]);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setCountIn(seqState.isCountIn);
+    }
+  }, [seqState.isCountIn]);
+
+  // Tap tempo calculator (P3-07)
+  const tapTimestampsRef = useRef<number[]>([]);
+  const handleTapTempo = useCallback(() => {
+    const now = performance.now();
+    tapTimestampsRef.current = tapTimestampsRef.current.filter((t) => now - t < 2500);
+    tapTimestampsRef.current.push(now);
+    if (tapTimestampsRef.current.length >= 2) {
+      const calculatedBpm = AudioEngine.calculateTapTempo(tapTimestampsRef.current);
+      if (calculatedBpm >= 40 && calculatedBpm <= 240) {
+        commit({ type: "SET_BPM", bpm: calculatedBpm });
+        if (engineRef.current) {
+          engineRef.current.setBpm(calculatedBpm);
+        }
+        showToast(`${isZh ? "测速 BPM" : "Tap BPM"}: ${calculatedBpm}`);
+      }
+    }
+  }, [commit, isZh, showToast]);
 
   // Handle chords transferred from ChordProgressionsView
   useEffect(() => {
@@ -813,7 +866,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Quick actions
   const handleQuickAction = useCallback(
-    (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset") => {
+    (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved") => {
       if (action === "dup_bar1") {
         const next = clonePattern(pattern);
         next.tracks.forEach((t) => {
@@ -848,6 +901,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
       } else if (action === "reset_preset") {
         commit({ type: "SET_GENRE", genre: currentGenre });
         showToast(isZh ? "已恢复默认预设 🔄" : "Preset reset 🔄");
+      } else if (action === "clear_saved") {
+        clearSavedProject();
+        commit({ type: "SET_GENRE", genre: currentGenre });
+        showToast(isZh ? "已清除本地工程缓存并重置预设 🧹" : "Cleared local project cache & reset 🧹");
       }
     },
     [pattern, stepsPerBar, commit, showToast, isZh, currentGenre]
@@ -1036,6 +1093,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
             isZh={isZh}
             stepsPerBar={stepsPerBar}
             groupSize={groupSize}
+            activeSlot={seqState.activeSlot}
+            songMode={seqState.songMode}
+            blindCompare={seqState.blindTestMode}
+            isMetronome={seqState.isMetronome}
+            isCountIn={seqState.isCountIn}
             onTogglePlay={handleTogglePlay}
             onChangeBpm={(b) => commit({ type: "SET_BPM", bpm: b })}
             onChangeSwing={(s) => commit({ type: "SET_SWING", swing: s })}
@@ -1062,6 +1124,25 @@ export const StudioView: React.FC<StudioViewProps> = ({
               commit({ type: "SET_STEP_COUNT", count: Math.max(groupSize, stepCount - count) })
             }
             onScrollByPixels={scrollByPixels}
+            onSwitchSlot={(slot) => {
+              commit({ type: "SWITCH_PATTERN_SLOT", slot });
+              if (engineRef.current) engineRef.current.setPattern(seqState.patterns[slot]);
+            }}
+            onCopySlot={(from, to) => {
+              commit({ type: "COPY_PATTERN_SLOT", from, to });
+              showToast(isZh ? `已将 Pattern ${from} 复制至 ${to} ✓` : `Copied Pattern ${from} to ${to} ✓`);
+            }}
+            onToggleSongMode={() => commit({ type: "TOGGLE_SONG_MODE" })}
+            onToggleBlindCompare={() => commit({ type: "TOGGLE_BLIND_TEST" })}
+            onToggleMetronome={() => {
+              const next = !seqState.isMetronome;
+              commit({ type: "SET_METRONOME", enabled: next });
+            }}
+            onToggleCountIn={() => {
+              const next = !seqState.isCountIn;
+              commit({ type: "SET_COUNT_IN", enabled: next });
+            }}
+            onTapTempo={handleTapTempo}
           />
 
           {/* 8 Tracks Sequencer Matrix (#tracks) with Event Delegation (P2-02, P2-05, P2-20) */}
@@ -1087,6 +1168,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
               groupSize={groupSize}
               isRulerDragging={isRulerDragging}
               isZh={isZh}
+              loopRange={seqState.loopRange}
+              onSelectLoopRange={(rng) => commit({ type: "SET_LOOP_RANGE", range: rng })}
               onPointerDown={handleRulerPointerDown}
               onPointerMove={handleRulerPointerMove}
               onPointerUp={handleRulerPointerUp}
@@ -1128,6 +1211,25 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   onShiftTrack={(idx, dir) => commit({ type: "SHIFT_TRACK", trackIdx: idx, direction: dir })}
                   onSmartFill={(idx) => commit({ type: "SMART_FILL_TRACK", trackIdx: idx })}
                   onClearTrack={(idx) => commit({ type: "CLEAR_TRACK", trackIdx: idx })}
+                  onMoveUp={(idx: number) =>
+                    commit({ type: "REORDER_TRACKS", fromIndex: idx, toIndex: Math.max(0, idx - 1) })
+                  }
+                  onMoveDown={(idx: number) =>
+                    commit({
+                      type: "REORDER_TRACKS",
+                      fromIndex: idx,
+                      toIndex: Math.min(pattern.tracks.length - 1, idx + 1),
+                    })
+                  }
+                  canMoveUp={trackIdx > 0}
+                  canMoveDown={trackIdx < pattern.tracks.length - 1}
+                  onChangePan={(idx: number, pan: number) => {
+                    commit({ type: "SET_TRACK_PAN", trackIdx: idx, pan });
+                    if (engineRef.current) engineRef.current.setTrackState(idx, { pan });
+                  }}
+                  onChangeSwing={(idx: number, trackSwing: number) => {
+                    commit({ type: "SET_TRACK_SWING", trackIdx: idx, swing: trackSwing });
+                  }}
                 />
               );
             })}
@@ -1139,12 +1241,32 @@ export const StudioView: React.FC<StudioViewProps> = ({
               <VelocityLane
                 tracks={pattern.tracks}
                 activeTrackIdx={velocityActiveTrackIdx}
+                dimension={seqState.parameterDimension}
+                onSelectDimension={(dim) => commit({ type: "SET_PARAMETER_DIMENSION", dimension: dim })}
                 onSelectTrack={(idx) => setVelocityActiveTrackIdx(idx)}
                 onUpdateVelocity={(trackIdx, stepIdx, newVel) =>
                   commit({ type: "SET_VELOCITY", trackIdx, stepIdx, velocity: newVel })
                 }
                 onBatchUpdateVelocity={(trackIdx, newVelocities) =>
                   commit({ type: "BATCH_SET_VELOCITY", trackIdx, velocities: newVelocities })
+                }
+                onUpdateProbability={(trackIdx, stepIdx, p) =>
+                  commit({ type: "SET_PROBABILITY", trackIdx, stepIdx, probability: p })
+                }
+                onBatchUpdateProbability={(trackIdx, probs) =>
+                  commit({ type: "BATCH_SET_PROBABILITY", trackIdx, probabilities: probs })
+                }
+                onUpdateRatchet={(trackIdx, stepIdx, r) =>
+                  commit({ type: "SET_RATCHET", trackIdx, stepIdx, ratchet: r })
+                }
+                onBatchUpdateRatchet={(trackIdx, ratchets) =>
+                  commit({ type: "BATCH_SET_RATCHET", trackIdx, ratchets })
+                }
+                onUpdateGate={(trackIdx, stepIdx, g) =>
+                  commit({ type: "SET_GATE", trackIdx, stepIdx, gate: g })
+                }
+                onBatchUpdateGate={(trackIdx, gates) =>
+                  commit({ type: "BATCH_SET_GATE", trackIdx, gates })
                 }
                 onClose={() => setIsVelocityLaneOpen(false)}
                 currentStep={-1}

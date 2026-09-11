@@ -12,6 +12,11 @@ import {
   Redo2,
   SlidersHorizontal,
   ChevronDown,
+  Bell,
+  Eye,
+  EyeOff,
+  Repeat,
+  Copy,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 
@@ -38,6 +43,11 @@ export interface ToolbarProps {
   isZh: boolean;
   stepsPerBar: number;
   groupSize: number;
+  activeSlot?: "A" | "B";
+  songMode?: boolean;
+  blindCompare?: boolean;
+  isMetronome?: boolean;
+  isCountIn?: boolean;
   onTogglePlay: () => void;
   onChangeBpm: (bpm: number) => void;
   onChangeSwing: (swing: number) => void;
@@ -53,12 +63,19 @@ export interface ToolbarProps {
   onToggleMaximize: () => void;
   onToggleSidebar: () => void;
   onToggleAdvancedControls: () => void;
-  onQuickAction: (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset") => void;
+  onQuickAction: (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved") => void;
   onExportMidi: () => void;
   onShare: () => void;
   onAddSteps: (count: number) => void;
   onRemoveSteps: (count: number) => void;
   onScrollByPixels: (delta: number) => void;
+  onSwitchSlot?: (slot: "A" | "B") => void;
+  onCopySlot?: (from: "A" | "B", to: "A" | "B") => void;
+  onToggleSongMode?: () => void;
+  onToggleBlindCompare?: () => void;
+  onToggleMetronome?: () => void;
+  onToggleCountIn?: () => void;
+  onTapTempo?: () => void;
 }
 
 export const Toolbar = memo<ToolbarProps>(function Toolbar({
@@ -81,6 +98,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   isZh,
   stepsPerBar,
   groupSize,
+  activeSlot = "A",
+  songMode = false,
+  blindCompare = false,
+  isMetronome = false,
+  isCountIn = false,
   onTogglePlay,
   onChangeBpm,
   onChangeSwing,
@@ -102,6 +124,13 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onAddSteps,
   onRemoveSteps,
   onScrollByPixels,
+  onSwitchSlot,
+  onCopySlot,
+  onToggleSongMode,
+  onToggleBlindCompare,
+  onToggleMetronome,
+  onToggleCountIn,
+  onTapTempo,
 }) {
   const { t } = useLanguage();
 
@@ -169,6 +198,54 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               title={isZh ? "节奏速度 (40-240 BPM)" : "Tempo (40-240 BPM)"}
             />
           </div>
+
+          {/* Tap Tempo Button (P3-07) */}
+          {onTapTempo && (
+            <button
+              type="button"
+              onClick={onTapTempo}
+              className="h-8 px-2 bg-panel2 hover:bg-[#14151a] border border-line hover:border-accent rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-accent transition-colors shrink-0 active:scale-95"
+              title={isZh ? "点击测速 (连续点击2次以上计算 BPM)" : "Tap Tempo (Tap ≥2 times to calculate BPM)"}
+              aria-label="Tap Tempo"
+            >
+              TAP
+            </button>
+          )}
+
+          {/* Metronome Toggle (P3-07) */}
+          {onToggleMetronome && (
+            <button
+              type="button"
+              onClick={onToggleMetronome}
+              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+                isMetronome
+                  ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.25)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={isZh ? "节拍器开关" : "Toggle Metronome"}
+              aria-label={isZh ? "节拍器" : "Metronome"}
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline font-['JetBrains_Mono']">{isZh ? "节拍" : "METRO"}</span>
+            </button>
+          )}
+
+          {/* Count-In Toggle (P3-07) */}
+          {onToggleCountIn && (
+            <button
+              type="button"
+              onClick={onToggleCountIn}
+              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+                isCountIn
+                  ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={isZh ? "4拍预备拍开关 (播放开始前倒数 1-2-3-4)" : "Toggle 4-Beat Count-In"}
+              aria-label={isZh ? "预备拍" : "Count-In"}
+            >
+              <span className="font-['JetBrains_Mono'] font-bold text-[10px]">1-4</span>
+            </button>
+          )}
 
           {/* Meter Select Dropdown */}
           <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
@@ -265,6 +342,91 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               <option value="plocks" className="bg-panel text-text">⚙ {isZh ? "参数锁" : "P-Locks"}</option>
             </select>
           </div>
+
+          {/* Pattern Slots Switcher (P3-02) */}
+          {onSwitchSlot && (
+            <div className="flex items-center bg-panel2 border border-line rounded-lg p-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => onSwitchSlot("A")}
+                className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
+                  activeSlot === "A"
+                    ? "bg-accent text-[#0a0b0d] shadow-sm"
+                    : "text-text-sub hover:text-text"
+                }`}
+                title={isZh ? "切换至 Pattern A" : "Switch to Pattern A"}
+              >
+                {blindCompare ? "?1" : "PTN A"}
+              </button>
+              <button
+                type="button"
+                onClick={() => onSwitchSlot("B")}
+                className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
+                  activeSlot === "B"
+                    ? "bg-accent text-[#0a0b0d] shadow-sm"
+                    : "text-text-sub hover:text-text"
+                }`}
+                title={isZh ? "切换至 Pattern B" : "Switch to Pattern B"}
+              >
+                {blindCompare ? "?2" : "PTN B"}
+              </button>
+              {onCopySlot && (
+                <button
+                  type="button"
+                  onClick={() => onCopySlot(activeSlot === "A" ? "A" : "B", activeSlot === "A" ? "B" : "A")}
+                  className="h-7 px-1.5 text-text-sub hover:text-accent transition-colors ml-0.5"
+                  title={
+                    isZh
+                      ? activeSlot === "A"
+                        ? "复制 A 到 B"
+                        : "复制 B 到 A"
+                      : activeSlot === "A"
+                      ? "Copy A to B"
+                      : "Copy B to A"
+                  }
+                  aria-label="Copy pattern slot"
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Song Mode Toggle (P3-02) */}
+          {onToggleSongMode && (
+            <button
+              type="button"
+              onClick={onToggleSongMode}
+              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+                songMode
+                  ? "bg-[#a855f7]/20 border-[#a855f7] text-[#c084fc] font-bold shadow-[0_0_8px_rgba(168,85,247,0.3)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={isZh ? "Song Mode：A/B 链式循环连续播放" : "Song Mode: Chain A and B patterns"}
+              aria-label="Song Mode"
+            >
+              <Repeat className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline font-['JetBrains_Mono']">SONG</span>
+            </button>
+          )}
+
+          {/* Blind Compare Toggle (P3-02) */}
+          {onToggleBlindCompare && (
+            <button
+              type="button"
+              onClick={onToggleBlindCompare}
+              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+                blindCompare
+                  ? "bg-[#ec4899]/20 border-[#ec4899] text-[#f472b6] font-bold shadow-[0_0_8px_rgba(236,72,153,0.3)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={isZh ? "A/B 盲听对比评估模式" : "A/B Blind Listening Comparison Mode"}
+              aria-label="Blind Test Mode"
+            >
+              {blindCompare ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span className="hidden md:inline font-['JetBrains_Mono']">{isZh ? "盲听" : "BLIND"}</span>
+            </button>
+          )}
         </div>
 
         {/* Right Section: Bar Navigation & Pro Operations */}
@@ -403,6 +565,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               </option>
               <option value="reset_preset" className="bg-panel text-text">
                 🔄 {isZh ? "恢复默认预设" : "Reset Preset"}
+              </option>
+              <option value="clear_saved" className="bg-panel text-[#f87171]">
+                🧹 {isZh ? "清除本地工程缓存" : "Clear Saved Project"}
               </option>
             </select>
           </div>

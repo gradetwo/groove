@@ -20,9 +20,17 @@ export interface SharedSequencerState {
     steps: number[];
     velocity?: number[];
     pitch?: (number | null)[];
+    gate?: number[];
+    ratchet?: number[];
+    probability?: number[];
+    trackLength?: number;
     mute?: boolean;
     solo?: boolean;
     volume?: number;
+    pan?: number;
+    swing?: number;
+    sendA?: number;
+    sendB?: number;
   }>;
 }
 
@@ -34,9 +42,17 @@ interface CompactTrackPayload {
   st?: number[];
   v?: number[];
   p?: (number | null)[];
+  gt?: number[];
+  r?: number[];
+  pr?: number[];
+  tl?: number;
   mu?: number;
   so?: number;
   vol?: number;
+  pn?: number;
+  sw?: number;
+  sA?: number;
+  sB?: number;
 }
 
 interface CompactSharePayload {
@@ -109,9 +125,25 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
         p: Array.isArray(t.pitch) && t.pitch.some((p) => p !== null && p !== undefined)
           ? t.pitch.slice(0, MAX_STEPS).map((p) => (p !== null && !isNaN(Number(p))) ? Math.max(0, Math.min(127, Math.round(Number(p)))) : null)
           : undefined,
+        gt: Array.isArray(t.gate) && t.gate.some((g) => g !== 0.8 && g !== 1.0)
+          ? t.gate.slice(0, MAX_STEPS).map((g) => Math.round(Math.max(0.1, Math.min(2.0, Number(g) || 0.8)) * 10) / 10)
+          : undefined,
+        r: Array.isArray(t.ratchet) && t.ratchet.some((r) => r > 1)
+          ? t.ratchet.slice(0, MAX_STEPS).map((r) => Math.max(1, Math.min(8, Math.round(Number(r) || 1))))
+          : undefined,
+        pr: Array.isArray(t.probability) && t.probability.some((pr) => pr < 100)
+          ? t.probability.slice(0, MAX_STEPS).map((pr) => Math.max(0, Math.min(100, Math.round(Number(pr) || 100))))
+          : undefined,
+        tl: (t.trackLength && t.trackLength !== totalSteps && t.trackLength >= MIN_STEPS && t.trackLength <= MAX_STEPS)
+          ? t.trackLength
+          : undefined,
         mu: t.mute ? 1 : undefined,
         so: t.solo ? 1 : undefined,
         vol: t.volume !== undefined && t.volume !== 0.8 ? Math.round(Math.max(0, Math.min(1, t.volume)) * 100) : undefined,
+        pn: t.pan !== undefined && t.pan !== 0 ? Math.round(Math.max(-1, Math.min(1, t.pan)) * 100) : undefined,
+        sw: t.swing !== undefined && t.swing !== 0 ? Math.round(Math.max(-50, Math.min(50, t.swing))) : undefined,
+        sA: t.sendA !== undefined && t.sendA !== 0 ? Math.round(Math.max(0, Math.min(1, t.sendA)) * 100) : undefined,
+        sB: t.sendB !== undefined && t.sendB !== 0 ? Math.round(Math.max(0, Math.min(1, t.sendB)) * 100) : undefined,
       });
     }
 
@@ -254,6 +286,59 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
       const rawVol = ct.vol !== undefined ? Number(ct.vol) : 80;
       const vol = !isNaN(rawVol) ? Math.max(0, Math.min(1, rawVol / 100)) : 0.8;
 
+      let gate: number[];
+      if (Array.isArray(ct.gt)) {
+        if (ct.gt.length > MAX_STEPS) return null;
+        gate = ct.gt.slice(0, stepsLen).map((g) => {
+          const num = Number(g);
+          return (!isNaN(num) && num >= 0.1 && num <= 2.0) ? num : 0.8;
+        });
+      } else {
+        gate = Array(stepsLen).fill(0.8);
+      }
+      while (gate.length < stepsLen) gate.push(0.8);
+
+      let ratchet: number[];
+      if (Array.isArray(ct.r)) {
+        if (ct.r.length > MAX_STEPS) return null;
+        ratchet = ct.r.slice(0, stepsLen).map((r) => {
+          const num = Number(r);
+          return (!isNaN(num) && num >= 1 && num <= 8) ? Math.floor(num) : 1;
+        });
+      } else {
+        ratchet = Array(stepsLen).fill(1);
+      }
+      while (ratchet.length < stepsLen) ratchet.push(1);
+
+      let probability: number[];
+      if (Array.isArray(ct.pr)) {
+        if (ct.pr.length > MAX_STEPS) return null;
+        probability = ct.pr.slice(0, stepsLen).map((pr) => {
+          const num = Number(pr);
+          return (!isNaN(num) && num >= 0 && num <= 100) ? Math.round(num) : 100;
+        });
+      } else {
+        probability = Array(stepsLen).fill(100);
+      }
+      while (probability.length < stepsLen) probability.push(100);
+
+      const rawPan = ct.pn !== undefined ? Number(ct.pn) : 0;
+      const pan = !isNaN(rawPan) ? Math.max(-1, Math.min(1, rawPan / 100)) : 0;
+
+      const rawTrackSwing = ct.sw !== undefined ? Number(ct.sw) : 0;
+      const trackSwing = !isNaN(rawTrackSwing) ? Math.max(-50, Math.min(50, rawTrackSwing)) : 0;
+
+      const rawSendA = ct.sA !== undefined ? Number(ct.sA) : 0;
+      const sendA = !isNaN(rawSendA) ? Math.max(0, Math.min(1, rawSendA / 100)) : 0;
+
+      const rawSendB = ct.sB !== undefined ? Number(ct.sB) : 0;
+      const sendB = !isNaN(rawSendB) ? Math.max(0, Math.min(1, rawSendB / 100)) : 0;
+
+      const rawTl = ct.tl !== undefined ? Number(ct.tl) : undefined;
+      const trackLength = (rawTl !== undefined && !isNaN(rawTl) && rawTl >= MIN_STEPS && rawTl <= MAX_STEPS)
+        ? rawTl
+        : totalSteps;
+
       tracks.push({
         track_id: String(ct.id || "track").slice(0, 32),
         name: String(ct.n || "Track").slice(0, 48),
@@ -261,9 +346,17 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
         steps,
         velocity,
         pitch,
+        gate,
+        ratchet,
+        probability,
+        trackLength,
         mute: Boolean(ct.mu),
         solo: Boolean(ct.so),
         volume: vol,
+        pan,
+        swing: trackSwing,
+        sendA,
+        sendB,
       });
     }
 

@@ -20,12 +20,42 @@ import {
   Radio,
   Activity,
   Users,
-  Wrench
+  Wrench,
+  GitBranch,
+  ArrowUpRight,
+  Share2
 } from "lucide-react";
 import { Genre, SequencerTrack } from "../types/genre";
 import { GENRES_MAP } from "../data/genres";
+import { GENRE_RELATIONS } from "../data/relations";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useLanguage } from "../i18n/LanguageContext";
+
+const getTrackMiniTheme = (track: SequencerTrack, idx: number) => {
+  const id = `${track.track_id || ""} ${track.name || ""}`.toLowerCase();
+  if (id.includes("kick")) {
+    return { activeBg: "bg-amber-500", activeBorder: "border-amber-400", dot: "bg-black" };
+  }
+  if (id.includes("snare") || id.includes("clap")) {
+    return { activeBg: "bg-cyan-400", activeBorder: "border-cyan-300", dot: "bg-black" };
+  }
+  if (id.includes("hat")) {
+    return { activeBg: "bg-yellow-400", activeBorder: "border-yellow-300", dot: "bg-black" };
+  }
+  if (id.includes("perc") || id.includes("tom") || id.includes("rim")) {
+    return { activeBg: "bg-emerald-400", activeBorder: "border-emerald-300", dot: "bg-black" };
+  }
+  if (id.includes("bass") || id.includes("sub")) {
+    return { activeBg: "bg-purple-500", activeBorder: "border-purple-400", dot: "bg-white" };
+  }
+  if (id.includes("chord") || id.includes("piano") || id.includes("keys")) {
+    return { activeBg: "bg-indigo-500", activeBorder: "border-indigo-400", dot: "bg-white" };
+  }
+  if (id.includes("lead")) {
+    return { activeBg: "bg-pink-500", activeBorder: "border-pink-400", dot: "bg-white" };
+  }
+  return { activeBg: "bg-sky-400", activeBorder: "border-sky-300", dot: "bg-black" };
+};
 
 interface GenreDetailViewProps {
   genre: Genre;
@@ -189,6 +219,54 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     hasPerc: false,
     hasBass: false,
   };
+
+  // Reverse query GENRE_RELATIONS for genealogy & connections (P3-15, Decision D2-A)
+  const relatedRelations = useMemo(() => {
+    const inbound = GENRE_RELATIONS.filter((r) => r.target === genre.id);
+    const outbound = GENRE_RELATIONS.filter((r) => r.source === genre.id);
+
+    const parentIds = new Set<string>(genre.parent_genres || []);
+    inbound.forEach((r) => {
+      if (r.type === "origin_from" || r.type === "derived_to") parentIds.add(r.source);
+    });
+
+    const subgenreIds = new Set<string>(genre.subgenres || []);
+    outbound.forEach((r) => {
+      if (r.type === "derived_to" || r.type === "origin_from") subgenreIds.add(r.target);
+    });
+
+    const relatedIds = new Set<string>(genre.related_genres || []);
+    [...inbound, ...outbound].forEach((r) => {
+      const otherId = r.source === genre.id ? r.target : r.source;
+      if (!parentIds.has(otherId) && !subgenreIds.has(otherId) && otherId !== genre.id) {
+        relatedIds.add(otherId);
+      }
+    });
+
+    const descriptions: Record<string, { type: string; desc: string }> = {};
+    [...inbound, ...outbound].forEach((r) => {
+      const otherId = r.source === genre.id ? r.target : r.source;
+      if (r.description && r.description[language]) {
+        descriptions[otherId] = {
+          type: r.type,
+          desc: r.description[language],
+        };
+      }
+    });
+
+    return {
+      parents: Array.from(parentIds)
+        .map((id) => GENRES_MAP[id] || ({ id, name: id } as Genre))
+        .filter(Boolean),
+      subgenres: Array.from(subgenreIds)
+        .map((id) => GENRES_MAP[id] || ({ id, name: id } as Genre))
+        .filter(Boolean),
+      related: Array.from(relatedIds)
+        .map((id) => GENRES_MAP[id] || ({ id, name: id } as Genre))
+        .filter(Boolean),
+      descriptions,
+    };
+  }, [genre, language]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-6 space-y-8">
@@ -499,6 +577,106 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         </div>
       </div>
 
+      {/* P3-16 Embedded 8-Track Mini Step Sequencer Matrix */}
+      <div className="bg-panel border border-line rounded-3xl p-5 sm:p-7 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-line-subtle pb-3">
+          <div className="flex items-center space-x-2">
+            <Sliders className="w-5 h-5 text-accent" />
+            <h3 className="font-bold text-text text-base sm:text-lg">
+              {t("mini_sequencer_title")}
+            </h3>
+            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30 font-semibold">
+              {genre.sequencer_pattern?.totalSteps || 16} Steps · {genre.sequencer_pattern?.tracks?.length || 0} Tracks
+            </span>
+          </div>
+
+          <button
+            onClick={() => onOpenStudio(genre)}
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-text text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all self-start sm:self-auto hover:scale-105"
+            title={t("mini_sequencer_open_studio")}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>{t("mini_sequencer_open_studio")}</span>
+            <ExternalLink className="w-3.5 h-3.5 ml-0.5" />
+          </button>
+        </div>
+
+        {/* 8-Track Grid Rows */}
+        <div className="overflow-x-auto pb-1">
+          <div className="min-w-[620px] space-y-1.5">
+            {/* Header step numbers */}
+            <div className="flex items-center pl-28 pr-1 text-[10px] font-mono text-text-dim">
+              {Array.from({ length: 16 }).map((_, stepIdx) => (
+                <div
+                  key={stepIdx}
+                  className={`flex-1 text-center font-bold ${
+                    stepIdx % 4 === 0 ? "text-accent font-black" : "text-[#5e6372]"
+                  } ${stepIdx % 4 === 3 && stepIdx !== 15 ? "mr-1.5" : ""}`}
+                >
+                  {stepIdx + 1}
+                </div>
+              ))}
+            </div>
+
+            {/* Track rows */}
+            {(genre.sequencer_pattern?.tracks || []).map((track, trackIdx) => {
+              const trackTheme = getTrackMiniTheme(track, trackIdx);
+              const steps = track.steps || [];
+
+              return (
+                <div
+                  key={track.track_id || trackIdx}
+                  className="flex items-center gap-2 py-1 px-2.5 rounded-xl bg-panel2/60 border border-line-subtle hover:border-line transition-colors"
+                >
+                  {/* Track label */}
+                  <div className="w-24 shrink-0 flex flex-col justify-center">
+                    <span className="text-xs font-bold text-text truncate">
+                      {track.name}
+                    </span>
+                    <span className="text-[10px] text-text-dim font-mono truncate">
+                      {track.instrument}
+                    </span>
+                  </div>
+
+                  {/* 16 Step cells */}
+                  <div className="flex-1 flex items-center gap-1">
+                    {Array.from({ length: 16 }).map((_, sIdx) => {
+                      const stepVal = steps[sIdx % (steps.length || 16)] || 0;
+                      const isActiveStep = isPlaying && currentStep === sIdx;
+                      const isBeatStart = sIdx % 4 === 0;
+
+                      return (
+                        <div
+                          key={sIdx}
+                          className={`flex-1 h-7 rounded-md flex items-center justify-center transition-all ${
+                            sIdx % 4 === 3 && sIdx !== 15 ? "mr-1.5" : ""
+                          } ${
+                            isActiveStep
+                              ? "ring-2 ring-white scale-105 z-10 brightness-125"
+                              : ""
+                          } ${
+                            stepVal > 0
+                              ? `${trackTheme.activeBg} border ${trackTheme.activeBorder} shadow-xs`
+                              : isBeatStart
+                              ? "bg-[#161822] border border-[#262a3a]"
+                              : "bg-[#0d0e13] border border-[#1b1d26]"
+                          }`}
+                          title={`${track.name} - Step ${sIdx + 1} (${stepVal > 0 ? "Active" : "Off"})`}
+                        >
+                          {stepVal > 0 && (
+                            <span className={`w-1.5 h-1.5 rounded-full ${trackTheme.dot} shadow-xs`} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* Production Guide & Dossier Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: History & Culture */}
@@ -577,6 +755,29 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                   </span>
                   <p className="text-text leading-relaxed">
                     {genre.drum_pattern.percussion[language]}
+                  </p>
+                </div>
+              )}
+
+              {/* P3-14 Drum Pattern Swing & Tempo Feel */}
+              {genre.drum_pattern.swing && (
+                <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
+                  <span className="font-bold text-amber-300 uppercase tracking-wider text-[10px]">
+                    {t("drum_swing")}
+                  </span>
+                  <p className="text-text leading-relaxed">
+                    {genre.drum_pattern.swing[language]}
+                  </p>
+                </div>
+              )}
+
+              {genre.drum_pattern.tempo && (
+                <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
+                  <span className="font-bold text-cyan-300 uppercase tracking-wider text-[10px]">
+                    {t("drum_tempo")}
+                  </span>
+                  <p className="text-text leading-relaxed font-mono font-bold">
+                    {genre.drum_pattern.tempo}
                   </p>
                 </div>
               )}
@@ -764,76 +965,129 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             </div>
           )}
 
-          {/* Genealogy & Related Connections */}
-          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-text text-base flex items-center space-x-2">
-              <GitCommit className="w-4 h-4 text-purple-400" />
-              <span>{t("related_genres")}</span>
-            </h3>
+          {/* Genealogy & Related Connections (P3-15, Decision D2-A) */}
+          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-5">
+            <div className="flex items-center justify-between border-b border-line-subtle pb-3">
+              <h3 className="font-bold text-text text-base flex items-center space-x-2">
+                <GitCommit className="w-4 h-4 text-purple-400" />
+                <span>{t("relation_graph_title")}</span>
+              </h3>
+              <span className="text-[11px] font-mono text-text-dim">
+                {relatedRelations.parents.length + relatedRelations.subgenres.length + relatedRelations.related.length} Connected
+              </span>
+            </div>
 
-            {/* Direct Ancestors */}
-            {genre.parent_genres.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">
-                  {t("parents")}
+            {/* Mini Visual Network Flow */}
+            <div className="p-3.5 bg-[#0e0f14] border border-line-subtle rounded-2xl flex flex-col items-center gap-3">
+              {/* Layer 1: Ancestors */}
+              {relatedRelations.parents.length > 0 && (
+                <div className="w-full flex flex-col items-center space-y-1">
+                  <span className="text-[10px] font-mono uppercase font-bold text-amber-400/90 tracking-wider">
+                    ↑ {t("relation_type_origin")} ({relatedRelations.parents.length})
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-1.5 max-h-24 overflow-y-auto">
+                    {relatedRelations.parents.slice(0, 6).map((pg) => (
+                      <button
+                        key={pg.id}
+                        onClick={() => pg.category && onSelectGenre(pg)}
+                        className="text-[11px] px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-colors font-medium flex items-center space-x-1"
+                        title={pg.name}
+                      >
+                        <span>{pg.name}</span>
+                        <ArrowUpRight className="w-3 h-3 opacity-60" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Connecting arrow down */}
+              {relatedRelations.parents.length > 0 && (
+                <div className="w-0.5 h-4 bg-gradient-to-b from-amber-500/40 to-accent" />
+              )}
+
+              {/* Layer 2: Current Genre (Active Central Node) */}
+              <div className="px-4 py-2 rounded-2xl bg-accent/20 border-2 border-accent text-accent font-black text-sm tracking-wide shadow-[0_0_15px_rgba(245,183,61,0.3)] flex items-center space-x-2">
+                <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                <span>{genre.name}</span>
+              </div>
+
+              {/* Connecting arrow down */}
+              {relatedRelations.subgenres.length > 0 && (
+                <div className="w-0.5 h-4 bg-gradient-to-b from-accent to-indigo-500/40" />
+              )}
+
+              {/* Layer 3: Subgenres & Derivatives */}
+              {relatedRelations.subgenres.length > 0 && (
+                <div className="w-full flex flex-col items-center space-y-1">
+                  <span className="text-[10px] font-mono uppercase font-bold text-indigo-400/90 tracking-wider">
+                    ↓ {t("relation_type_derived")} ({relatedRelations.subgenres.length})
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-1.5 max-h-28 overflow-y-auto">
+                    {relatedRelations.subgenres.slice(0, 8).map((sg) => (
+                      <button
+                        key={sg.id}
+                        onClick={() => sg.category && onSelectGenre(sg)}
+                        className="text-[11px] px-2.5 py-1 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/25 transition-colors font-medium flex items-center space-x-1"
+                        title={sg.name}
+                      >
+                        <span>{sg.name}</span>
+                        <ArrowUpRight className="w-3 h-3 opacity-60" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Related & Cross Influence Pill List */}
+            {relatedRelations.related.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-text-sub uppercase tracking-wider block">
+                  {t("relation_type_influenced")} / {t("relation_type_fusion")}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {genre.parent_genres.map((pg) => {
-                    const match = GENRES_MAP[pg];
-                    return (
-                      <button
-                        key={pg}
-                        onClick={() => match && onSelectGenre(match)}
-                        className="text-xs px-2.5 py-1 rounded-xl bg-panel2 hover:bg-neutral-800 text-[#b9b7b0] hover:text-text border border-line transition-colors"
-                      >
-                        {match ? match.name : pg}
-                      </button>
-                    );
-                  })}
+                  {relatedRelations.related.map((rg) => (
+                    <button
+                      key={rg.id}
+                      onClick={() => rg.category && onSelectGenre(rg)}
+                      className="text-xs px-2.5 py-1 rounded-xl bg-panel2 hover:bg-neutral-800 text-[#b9b7b0] hover:text-text border border-line transition-colors flex items-center space-x-1"
+                    >
+                      <span>{rg.name}</span>
+                      <Share2 className="w-3 h-3 text-text-dim" />
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* Subgenres */}
-            {genre.subgenres.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">
-                  {t("subgenres")}
+            {/* Specific Relationship Context Breakdown */}
+            {Object.keys(relatedRelations.descriptions).length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-line-subtle">
+                <span className="text-[11px] font-bold text-[#8d92a0] uppercase tracking-wider block">
+                  {language === "zh" ? "渊源脉络考证" : "Historical Lineage Context"}
                 </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {genre.subgenres.map((sg) => {
-                    const match = GENRES_MAP[sg];
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {Object.entries(relatedRelations.descriptions).slice(0, 5).map(([targetId, info]) => {
+                    const match = GENRES_MAP[targetId];
                     return (
-                      <button
-                        key={sg}
+                      <div
+                        key={targetId}
                         onClick={() => match && onSelectGenre(match)}
-                        className="text-xs px-2.5 py-1 rounded-xl bg-panel2 hover:bg-neutral-800 text-[#b9b7b0] hover:text-text border border-line transition-colors"
+                        className="p-2 rounded-xl bg-[#111218] border border-[#232632] hover:border-accent/40 text-xs transition-colors cursor-pointer"
                       >
-                        {match ? match.name : sg}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Related */}
-            {genre.related_genres.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">
-                  {t("related_genres")}
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {genre.related_genres.map((rg) => {
-                    const match = GENRES_MAP[rg];
-                    return (
-                      <button
-                        key={rg}
-                        onClick={() => match && onSelectGenre(match)}
-                        className="text-xs px-2.5 py-1 rounded-xl bg-panel2 hover:bg-neutral-800 text-[#b9b7b0] hover:text-text border border-line transition-colors"
-                      >
-                        {match ? match.name : rg}
-                      </button>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-text hover:text-accent">
+                            {match ? match.name : targetId}
+                          </span>
+                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-panel border border-line text-text-dim">
+                            {info.type}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#9ca1af] mt-1 leading-snug">
+                          {info.desc}
+                        </p>
+                      </div>
                     );
                   })}
                 </div>

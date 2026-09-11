@@ -98,23 +98,29 @@ const MainApp: React.FC = () => {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  const handleSelectGenre = useCallback((genre: { id: string; name?: string }, action?: "detail" | "studio") => {
-    const targetTab: NavTab = action === "studio" ? "studio" : "detail";
-    navigate({ tab: targetTab, genreId: genre.id });
-    const gName = genre.name || genre.id;
-    announcer.announce(isZh ? `已切换至曲风：${gName}` : `Switched to genre: ${gName}`);
-  }, [navigate, isZh]);
-
-  const handleOpenStudioWithGenre = useCallback((genre: { id: string }) => {
-    navigate({ tab: "studio", genreId: genre.id });
-  }, [navigate]);
-
   const handleAddToCompare = useCallback((genre: Genre) => {
     setComparePool((prev) => {
       const next = prev.some((g) => g.id === genre.id) ? prev : [...prev, genre].slice(0, 4);
       navigate({ tab: "compare", compareIds: next.map((g) => g.id) });
       return next;
     });
+  }, [navigate]);
+
+  const handleSelectGenre = useCallback((genre: { id: string; name?: string }, action?: "detail" | "studio" | "galaxy" | "compare") => {
+    if (action === "compare") {
+      loadGenre(genre.id).then((g) => {
+        if (g) handleAddToCompare(g);
+      });
+      return;
+    }
+    const targetTab: NavTab = action === "studio" ? "studio" : action === "galaxy" ? "galaxy" : "detail";
+    navigate({ tab: targetTab, genreId: genre.id });
+    const gName = genre.name || genre.id;
+    announcer.announce(isZh ? `已切换至曲风：${gName}` : `Switched to genre: ${gName}`);
+  }, [navigate, isZh, handleAddToCompare]);
+
+  const handleOpenStudioWithGenre = useCallback((genre: { id: string }) => {
+    navigate({ tab: "studio", genreId: genre.id });
   }, [navigate]);
 
   const handleEngineReady = (engine: AudioEngine) => {

@@ -13,6 +13,7 @@ export interface StepCellProps {
   prob: number;
   isMelodic: boolean;
   midiNote?: number | null;
+  gate?: number;
   isOutsideLoop: boolean;
   isPlayhead: boolean;
   isBarStart: boolean;
@@ -38,6 +39,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
   prob,
   isMelodic,
   midiNote,
+  gate,
   isOutsideLoop,
   isPlayhead,
   isBarStart,
@@ -190,6 +192,14 @@ export const StepCell = memo<StepCellProps>(function StepCell({
         <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[8px] font-extrabold text-[#0a0b0d] tracking-tighter leading-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
           {midiToNoteName(midiNote)}
         </span>
+      )}
+
+      {/* Gate Duration Indicator Bar (P3-01) */}
+      {isOn && gate !== undefined && gate !== 0.8 && !isOutsideLoop && (
+        <span
+          className="absolute bottom-0 left-0 h-[2.5px] bg-white/80 rounded-b-sm pointer-events-none shadow-[0_0_4px_rgba(255,255,255,0.6)]"
+          style={{ width: `${Math.min(100, Math.max(10, gate * 100))}%` }}
+        />
       )}
 
       {/* Triplet roll inner stripes for Hat = 3 */}
