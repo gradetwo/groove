@@ -1,7 +1,69 @@
 {
-  "version": "1.7.0",
+  "version": "1.11.0",
   "releaseDate": "2026-09-12",
   "changelog": [
+    {
+      "version": "1.11.0",
+      "date": "2026-09-12",
+      "category": "feature",
+      "title": {
+        "zh": "v1.11.0 全站无障碍无死角升级、键盘全流程漫游与移动端横屏硬件级体验（Phase 2 全量收官）",
+        "en": "v1.11.0 Accessibility Overhaul, Full Keyboard Navigation & Mobile Landscape Groovebox Optimization"
+      },
+      "highlights": [
+        {
+          "zh": "交互元素全量语义化（P2-15）：所有可点击容器升级为 button 或 WAI-ARIA role='button' + tabIndex={0} + 回车/空格键盘激活，全站图标按钮 100% 补齐标准 aria-label",
+          "en": "Semantic interactive elements (P2-15): all clickable containers upgraded to standard buttons or WAI-ARIA role='button' with tabIndex={0} and Enter/Space keyboard handlers, all icon buttons equipped with aria-label"
+        },
+        {
+          "zh": "屏幕阅读器 live 区域播报（P2-17）：引入 AriaLiveRegion 与 announcer 全局单例，实现曲风切换、播放与暂停、听音答题对错的实时多级别状态播报",
+          "en": "Aria-live announcements (P2-17): introduced AriaLiveRegion and global announcer singleton, broadcasting real-time status for genre switches, playback play/stop, and quiz accuracy"
+        },
+        {
+          "zh": "WCAG AA 对比度与色彩审计（P2-18）：文本与背景色对比度全面达到 ≥4.5:1 标准，升级 --dim 设计令牌并清理硬编码低对比度占位符",
+          "en": "WCAG AA contrast audit (P2-18): updated all text contrast to >= 4.5:1, upgraded --dim design token, and replaced low-contrast placeholders"
+        },
+        {
+          "zh": "Reduced-Motion 减弱动态支持（P2-19）：提供 useReducedMotion Hook 与系统/用户自定义减弱动效偏好覆盖，在 prefers-reduced-motion 下冻结星系着色器呼吸脉冲、相机漂移与过度动画",
+          "en": "Reduced-Motion support (P2-19): provided useReducedMotion hook with system and user override options, stopping 3D shader breathing pulses, camera drift, and non-essential CSS keyframes"
+        },
+        {
+          "zh": "键盘全流程漫游与快捷键面板（P2-20）：音序网格接入 role='grid' / role='row' / role='gridcell' 与上下左右方向键单元格漫游；引入 Gmail 式 'g' + 字母（s/c/g/t/v/m/q）秒级视图跳转，提供 '?' 快捷键指南全景面板与 Header 快捷入口",
+          "en": "Full keyboard navigation & shortcuts modal (P2-20): sequencer matrix equipped with role='grid' / 'row' / 'gridcell' and arrow key cell navigation; added Gmail-style 'g' + key navigation and '?' keyboard shortcuts guide modal"
+        },
+        {
+          "zh": "移动端 44px 真实热区与横屏工装排版（P2-21, P2-22, P2-23）：废弃 ::after 伪元素避免热区重叠冲突，滑条与控制按钮具备真实 ≥44px 点击区域；接入 viewport-fit=cover 与 safe-area-inset-* 安全区沉浸适配；重构 Studio 横屏工具栏，所有控制组件直接呈现在视口内，彻底消除水平滚动遮挡",
+          "en": "True 44px touch targets & landscape layout (P2-21, P2-22, P2-23): deprecated ::after pseudo-elements eliminating touch target overlap, native 44px sliders, viewport-fit=cover safe-area integration, and responsive landscape toolbar eliminating off-screen horizontal scrolls"
+        }
+      ]
+    },
+    {
+      "version": "1.10.0",
+      "date": "2026-09-12",
+      "category": "feature",
+      "title": {
+        "zh": "v1.10.0 水平时间线虚拟化重构、垂直时间轴性能优化与探索视图共享架构落地",
+        "en": "v1.10.0 Horizontal Timeline Virtualization, Vertical Timeline Optimization & Explore Shared Architecture"
+      },
+      "highlights": [
+        {
+          "zh": "水平时间线虚拟化与极致 DOM 瘦身（P2-12）：首屏 DOM 由 3,700+ 骤降至 793（时间线容器仅 581 节点），将 159 个常驻 tooltip 重构为视口全局单例 fixed 浮层彻底解决 overflow 裁切，泳道标题与时间尺左上角角标 sticky 粘性冻结，列宽按各泳道曲风密度自适应分配",
+          "en": "Horizontal timeline virtualization & DOM slimming (P2-12): initial DOM slashed from 3,700+ to 793 (container at 581 nodes), upgraded 159 permanent tooltips to a single fixed viewport singleton popover eliminating overflow clippings, sticky lane headers, and dynamic density-proportional column widths"
+        },
+        {
+          "zh": "垂直时间轴渲染重构（P2-13）：曲风过滤与分类映射全量 useMemo 缓存，消除渲染期高频 re-filter；移除大开销 blur-3xl 栅格化惩罚改为原生 radial-gradient；scrollToStory 解除全局 DOM id 强耦合改为 React useRef 引用驱动",
+          "en": "Vertical timeline rendering optimization (P2-13): memoized story genre mapping eliminating re-filtering, replaced blur-3xl rasterization overhead with radial-gradient, and converted scrollToStory to React ref-driven navigation"
+        },
+        {
+          "zh": "探索视图共享架构落地（P2-14）：抽取 useGenreAudition() 统一音频引擎试听生命周期，抽取 useGenreGraph() 统一全站三大分类法体系，落地 ExploreScaffold 通用探索脚手架与 100% 单元测试覆盖",
+          "en": "Explore shared architecture (P2-14): extracted useGenreAudition() for unified audio audition lifecycles, unified genre taxonomy in useGenreGraph(), and built ExploreScaffold with 100% test coverage"
+        },
+        {
+          "zh": "跨端与跨浏览器矩阵 100% 验证：Playwright 7 平台自动化矩阵测试（Desktop Chromium, Desktop Firefox, Desktop WebKit, iPhone 14 竖/横, iPad Pro 11 竖/横）全绿通过，双语布局零溢出",
+          "en": "Full cross-browser & cross-device verification: 7-target automated Playwright matrix passed across Chrome, Firefox, Safari WebKit, iPhone 14 portrait/landscape, and iPad Pro 11 portrait/landscape with zero layout overflow"
+        }
+      ]
+    },
     {
       "version": "1.7.0",
       "date": "2026-09-12",

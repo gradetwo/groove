@@ -42,8 +42,18 @@ export const Chip: React.FC<ChipProps> = ({
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       onClick={onClick}
+      onKeyDown={
+        clickable && onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+              }
+            }
+          : undefined
+      }
       className={`inline-flex items-center border transition-all duration-150 select-none ${
-        clickable ? "cursor-pointer active:scale-95" : ""
+        clickable ? "cursor-pointer active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-accent" : ""
       } ${VARIANT_MAP[variant]} ${SIZE_MAP[size]} ${className}`}
       {...rest}
     >

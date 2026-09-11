@@ -38,7 +38,7 @@ export interface VersionInfo {
   changelog: ChangelogEntry[];
 }
 
-export const CURRENT_CLIENT_VERSION = "1.7.0";
+export const CURRENT_CLIENT_VERSION = "1.11.0";
 
 interface UpdatesModalProps {
   isOpen: boolean;
@@ -164,9 +164,11 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-[#1c1f27] hover:bg-[#282d38] border border-[#2d313d] flex items-center justify-center text-text-sub hover:text-text transition-colors"
             title="Close"
+            aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>

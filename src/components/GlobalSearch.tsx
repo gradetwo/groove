@@ -110,7 +110,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
           <input
             ref={inputRef}
             type="text"
-            className="w-full bg-transparent text-text placeholder-[#5a5e68] text-base sm:text-lg focus:outline-none"
+            className="w-full bg-transparent text-text placeholder-text-dim text-base sm:text-lg focus:outline-none"
             placeholder={t("search_placeholder")}
             value={query}
             onChange={(e) => {
@@ -122,7 +122,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
           {query && (
             <button
               onClick={() => setQuery("")}
-              className="text-neutral-500 hover:text-white p-1 mr-1"
+              className="text-text-sub hover:text-white p-1 mr-1"
             >
               <X className="w-4 h-4" />
             </button>
@@ -148,18 +148,22 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
               return (
                 <div
                   key={genre.id}
-                  className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-150 ${
+                  className={`group flex items-center justify-between p-2.5 rounded-xl transition-all duration-150 ${
                     isSelected
                       ? "bg-accent/10 border border-accent/40 text-text"
                       : "hover:bg-panel2 text-[#b9b7b0]"
                   }`}
-                  onClick={() => {
-                    onSelectGenre(genre, "detail");
-                    onClose();
-                  }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                 >
-                  <div className="flex items-center space-x-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectGenre(genre, "detail");
+                      onClose();
+                    }}
+                    aria-label={`${t("view_detail")}: ${genre.name}`}
+                    className="flex items-center space-x-3 min-w-0 flex-1 text-left bg-transparent border-0 p-0.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
+                  >
                     <div className="w-9 h-9 rounded-lg bg-panel2 border border-line flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-[#0a0b0d] transition-colors shrink-0">
                       <Music className="w-4 h-4" />
                     </div>
@@ -180,14 +184,15 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
                         <span>{genre.origin_year}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Actions */}
                   <div className="flex items-center space-x-1.5 shrink-0 ml-3">
                     <button
+                      type="button"
                       title={t("open_in_studio")}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      aria-label={`${t("open_in_studio")} ${genre.name}`}
+                      onClick={() => {
                         onSelectGenre(genre, "studio");
                         onClose();
                       }}
@@ -197,9 +202,10 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
                       <span className="hidden sm:inline">{t("open_in_studio")}</span>
                     </button>
                     <button
+                      type="button"
                       title={t("view_detail")}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      aria-label={`${t("view_detail")} ${genre.name}`}
+                      onClick={() => {
                         onSelectGenre(genre, "detail");
                         onClose();
                       }}

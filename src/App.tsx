@@ -9,7 +9,9 @@ import { AudioEngine } from "./audio/AudioEngine";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ChordDefinition } from "./utils/chordTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
-import { ToastContainer, Skeleton } from "./ui";
+import { ShortcutsModal } from "./components/ShortcutsModal";
+import { useAppShortcuts } from "./hooks/useAppShortcuts";
+import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
 
 // Code splitting & lazy loading chunks for optimal performance
@@ -23,7 +25,7 @@ const ChallengeView = React.lazy(() => import("./views/ChallengeView").then((m) 
 const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then((m) => ({ default: m.GenreDetailView })));
 
 const MainApp: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, isZh } = useLanguage();
   const { route, navigate } = useRouter();
 
   const currentTab = route.tab;
@@ -70,6 +72,16 @@ const MainApp: React.FC = () => {
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
 
+  const handleSelectTab = useCallback((tab: NavTab) => {
+    navigate({ tab, genreId: tab === "detail" ? selectedGenre?.id : undefined });
+  }, [navigate, selectedGenre?.id]);
+
+  // Global Keyboard Shortcuts (P2-20: '?' help panel and 'g'+key navigation)
+  const { shortcutsOpen, setShortcutsOpen } = useAppShortcuts({
+    onNavigateTab: handleSelectTab,
+    isZh,
+  });
+
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -86,14 +98,12 @@ const MainApp: React.FC = () => {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  const handleSelectTab = useCallback((tab: NavTab) => {
-    navigate({ tab, genreId: tab === "detail" ? selectedGenre?.id : undefined });
-  }, [navigate, selectedGenre?.id]);
-
-  const handleSelectGenre = useCallback((genre: { id: string }, action?: "detail" | "studio") => {
+  const handleSelectGenre = useCallback((genre: { id: string; name?: string }, action?: "detail" | "studio") => {
     const targetTab: NavTab = action === "studio" ? "studio" : "detail";
     navigate({ tab: targetTab, genreId: genre.id });
-  }, [navigate]);
+    const gName = genre.name || genre.id;
+    announcer.announce(isZh ? `已切换至曲风：${gName}` : `Switched to genre: ${gName}`);
+  }, [navigate, isZh]);
 
   const handleOpenStudioWithGenre = useCallback((genre: { id: string }) => {
     navigate({ tab: "studio", genreId: genre.id });
@@ -128,6 +138,7 @@ const MainApp: React.FC = () => {
         onOpenSearch={() => setSearchOpen(true)}
         onRandomGenre={handleOpenStudioWithGenre}
         onOpenUpdates={() => setUpdatesOpen(true)}
+        onOpenShortcuts={() => setShortcutsOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
       />
@@ -353,8 +364,17 @@ const MainApp: React.FC = () => {
         onClose={() => setUpdatesOpen(false)}
       />
 
+      {/* Keyboard Shortcuts Guide Modal (P2-20) */}
+      <ShortcutsModal
+        isOpen={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+      />
+
       {/* Global Singleton Toast Container */}
       <ToastContainer position="bottom" />
+
+      {/* Screen Reader Live Region (P2-17) */}
+      <AriaLiveRegion />
     </div>
   );
 };

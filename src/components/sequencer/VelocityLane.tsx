@@ -174,20 +174,25 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
             Accent
           </button>
           <button
+            type="button"
             onClick={handlePresetRampUp}
             className="p-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text transition-colors"
             title={t("vel_crescendo")}
+            aria-label={t("vel_crescendo")}
           >
             <TrendingUp className="w-3.5 h-3.5" />
           </button>
           <button
+            type="button"
             onClick={handlePresetRampDown}
             className="p-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text transition-colors"
             title={t("vel_decrescendo")}
+            aria-label={t("vel_decrescendo")}
           >
             <TrendingDown className="w-3.5 h-3.5" />
           </button>
           <button
+            type="button"
             onClick={handlePresetHumanize}
             className="px-2 py-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text text-[11px] font-mono transition-colors flex items-center gap-1"
             title={t("vel_humanize")}
@@ -196,9 +201,11 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
             <span>Jitter</span>
           </button>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded hover:bg-[#20222a] text-text-sub hover:text-[#ff5964] transition-colors ml-1"
             title={t("vel_close")}
+            aria-label={t("vel_close")}
           >
             <X className="w-4 h-4" />
           </button>

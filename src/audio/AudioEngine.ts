@@ -18,12 +18,35 @@ export interface AudioEngineOptions {
   onStop?: () => void;
 }
 
+export interface TrackChannelStrip {
+  gain: GainNode;
+  panner: StereoPannerNode | null;
+  sendA: GainNode;
+  sendB: GainNode;
+}
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
   private isPlaying: boolean = false;
+
+  // Per-track channel strips (P3-09)
+  private trackStrips: TrackChannelStrip[] = [];
+
+  // Send effect buses (P3-10)
+  private reverbBus: ConvolverNode | null = null;
+  private reverbGain: GainNode | null = null;
+  private delayBus: DelayNode | null = null;
+  private delayFeedback: GainNode | null = null;
+  private delayGain: GainNode | null = null;
+
+  // Metronome, Count-In, and Loop Region (P3-07)
+  private isMetronome: boolean = false;
+  private isCountIn: boolean = false;
+  private countInRemaining: number = 0;
+  private loopRange: [number, number] | null = null;
 
   // Active voice registry for panic() and scheduled voice cancellations
   private activeVoices: Array<{ source: AudioScheduledSourceNode; gain: GainNode; stopTime: number }> = [];
@@ -113,6 +136,8 @@ export class AudioEngine {
           this.limiter.connect(this.analyser);
           this.analyser.connect(this.ctx.destination);
           this.createNoiseBuffer();
+          this.setupSendBuses();
+          this.setupTrackStrips(16);
         }
       }
 
@@ -162,6 +187,89 @@ export class AudioEngine {
       data[i] = Math.random() * 2 - 1;
     }
     this.noiseBuffer = buffer;
+  }
+
+  private createReverbImpulse(seconds = 1.6, decay = 2.0): AudioBuffer | null {
+    if (!this.ctx) return null;
+    const rate = this.ctx.sampleRate;
+    const length = rate * seconds;
+    const impulse = this.ctx.createBuffer(2, length, rate);
+    const left = impulse.getChannelData(0);
+    const right = impulse.getChannelData(1);
+    for (let i = 0; i < length; i++) {
+      const factor = Math.exp(-decay * (i / length));
+      left[i] = (Math.random() * 2 - 1) * factor;
+      right[i] = (Math.random() * 2 - 1) * factor;
+    }
+    return impulse;
+  }
+
+  private setupSendBuses(): void {
+    if (!this.ctx || !this.masterGain) return;
+    try {
+      // Reverb Convolver Send Bus (P3-10)
+      this.reverbBus = this.ctx.createConvolver();
+      const impulse = this.createReverbImpulse(1.5, 2.2);
+      if (impulse) this.reverbBus.buffer = impulse;
+      this.reverbGain = this.ctx.createGain();
+      this.reverbGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+      this.reverbBus.connect(this.reverbGain);
+      this.reverbGain.connect(this.masterGain);
+
+      // Stereo Feedback Delay Send Bus (P3-10)
+      this.delayBus = this.ctx.createDelay(1.0);
+      this.delayBus.delayTime.setValueAtTime(0.25, this.ctx.currentTime);
+      this.delayFeedback = this.ctx.createGain();
+      this.delayFeedback.gain.setValueAtTime(0.32, this.ctx.currentTime);
+      this.delayGain = this.ctx.createGain();
+      this.delayGain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+
+      this.delayBus.connect(this.delayFeedback);
+      this.delayFeedback.connect(this.delayBus);
+      this.delayBus.connect(this.delayGain);
+      this.delayGain.connect(this.masterGain);
+    } catch (e) {
+      console.warn("[AudioEngine] Send buses init warning:", e);
+    }
+  }
+
+  private setupTrackStrips(numTracks = 16): void {
+    if (!this.ctx || !this.masterGain) return;
+    this.trackStrips = [];
+    for (let i = 0; i < numTracks; i++) {
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+
+      let panner: StereoPannerNode | null = null;
+      if (typeof this.ctx.createStereoPanner === "function") {
+        panner = this.ctx.createStereoPanner();
+        panner.pan.setValueAtTime(0, this.ctx.currentTime);
+        gain.connect(panner);
+        panner.connect(this.masterGain);
+      } else {
+        gain.connect(this.masterGain);
+      }
+
+      const sendA = this.ctx.createGain();
+      sendA.gain.setValueAtTime(0, this.ctx.currentTime);
+      if (this.reverbBus) {
+        gain.connect(sendA);
+        sendA.connect(this.reverbBus);
+      }
+
+      const sendB = this.ctx.createGain();
+      sendB.gain.setValueAtTime(0, this.ctx.currentTime);
+      if (this.delayBus) {
+        gain.connect(sendB);
+        sendB.connect(this.delayBus);
+      }
+
+      this.trackStrips.push({ gain, panner, sendA, sendB });
+    }
+  }
+
+  public getTrackDestination(trackIdx: number): AudioNode {
+    return this.trackStrips[trackIdx]?.gain || this.masterGain!;
   }
 
   public setPattern(pattern: SequencerPattern, resetStates = false): void {
@@ -242,10 +350,86 @@ export class AudioEngine {
     }
   }
 
-  public setTrackState(trackIdx: number, state: Partial<{ mute: boolean; solo: boolean; volume: number; pan: number }>): void {
+  public setTrackState(
+    trackIdx: number,
+    state: Partial<{ mute: boolean; solo: boolean; volume: number; pan: number; sendA: number; sendB: number }>
+  ): void {
     if (this.trackStates[trackIdx]) {
       this.trackStates[trackIdx] = { ...this.trackStates[trackIdx], ...state };
     }
+    const strip = this.trackStrips[trackIdx];
+    if (strip && this.ctx) {
+      if (state.volume !== undefined) {
+        strip.gain.gain.setValueAtTime(Math.max(0, Math.min(1.0, state.volume)), this.ctx.currentTime);
+      }
+      if (state.pan !== undefined && strip.panner) {
+        strip.panner.pan.setValueAtTime(Math.max(-1.0, Math.min(1.0, state.pan)), this.ctx.currentTime);
+      }
+      if (state.sendA !== undefined) {
+        strip.sendA.gain.setValueAtTime(Math.max(0, Math.min(1.0, state.sendA)), this.ctx.currentTime);
+      }
+      if (state.sendB !== undefined) {
+        strip.sendB.gain.setValueAtTime(Math.max(0, Math.min(1.0, state.sendB)), this.ctx.currentTime);
+      }
+    }
+  }
+
+  public setMetronome(enabled: boolean): void {
+    this.isMetronome = enabled;
+  }
+
+  public getMetronome(): boolean {
+    return this.isMetronome;
+  }
+
+  public setCountIn(enabled: boolean): void {
+    this.isCountIn = enabled;
+  }
+
+  public getCountIn(): boolean {
+    return this.isCountIn;
+  }
+
+  public setLoopRange(range: [number, number] | null): void {
+    if (range && range[0] < range[1]) {
+      this.loopRange = range;
+    } else {
+      this.loopRange = null;
+    }
+  }
+
+  public getLoopRange(): [number, number] | null {
+    return this.loopRange;
+  }
+
+  public static calculateTapTempo(taps: number[]): number {
+    if (taps.length < 2) return 120;
+    const intervals: number[] = [];
+    for (let i = 1; i < taps.length; i++) {
+      intervals.push(taps[i] - taps[i - 1]);
+    }
+    const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    if (avg <= 0) return 120;
+    const bpm = Math.round(60000 / avg);
+    return Math.max(40, Math.min(240, bpm));
+  }
+
+  private playMetronome(time: number, isDownbeat: boolean): void {
+    if (!this.ctx || !this.masterGain) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(isDownbeat ? 1200 : 800, time);
+
+    gain.gain.setValueAtTime(0.5, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(time);
+    osc.stop(time + 0.05);
+    this.registerVoice(osc, gain, time + 0.05);
   }
 
   /**

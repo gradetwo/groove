@@ -18,6 +18,8 @@ import {
   ErrorState,
   RadarChart,
   GenreCard,
+  AriaLiveRegion,
+  announcer,
 } from "../ui";
 import { Genre } from "../types";
 
@@ -400,6 +402,43 @@ describe("UI Component Library (P1-05 & P1-07)", () => {
       const playBtn = screen.getByRole("button", { name: "试听 Chicago House" });
       fireEvent.click(playBtn);
       expect(handlePlay).toHaveBeenCalledWith(mockGenre);
+    });
+  });
+
+  describe("AriaLiveRegion & Announcer (P2-17)", () => {
+    it("renders polite and assertive live regions and updates message on announcement", async () => {
+      render(React.createElement(AriaLiveRegion));
+
+      const politeRegion = screen.getByTestId("aria-live-polite");
+      const assertiveRegion = screen.getByTestId("aria-live-assertive");
+
+      expect(politeRegion).toBeTruthy();
+      expect(assertiveRegion).toBeTruthy();
+      expect(politeRegion.getAttribute("aria-live")).toBe("polite");
+      expect(assertiveRegion.getAttribute("aria-live")).toBe("assertive");
+
+      // Announce polite message
+      act(() => {
+        announcer.announce("Switched to House");
+      });
+
+      // Advance animation frame
+      await act(async () => {
+        await new Promise((r) => requestAnimationFrame(r));
+      });
+
+      expect(politeRegion.textContent).toBe("Switched to House");
+
+      // Announce assertive message
+      act(() => {
+        announcer.announce("Correct Answer!", "assertive");
+      });
+
+      await act(async () => {
+        await new Promise((r) => requestAnimationFrame(r));
+      });
+
+      expect(assertiveRegion.textContent).toBe("Correct Answer!");
     });
   });
 });

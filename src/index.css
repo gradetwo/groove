@@ -11,7 +11,7 @@
     --line2: #1a1c21;
     --txt: #e9e7e0;
     --sub: #8b8f99;
-    --dim: #5a5e68;
+    --dim: #828794;
     --amber: #f5b73d;
     --c-kick: #ff5964;
     --c-snare: #ffb65c;
@@ -43,31 +43,44 @@
   }
 }
 
-/* Sliders */
+/* Sliders (P2-21: Real 44px minimum touch target without overlapping pseudo-elements) */
 input[type=range] {
   -webkit-appearance: none;
   appearance: none;
-  height: 3px;
+  height: 44px;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  touch-action: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px;
   background: var(--line);
   border-radius: 2px;
-  outline: none;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
   border-radius: 50%;
   background: var(--txt);
   border: 3px solid var(--bg);
   box-shadow: 0 0 0 1px var(--line);
   cursor: grab;
 }
+input[type=range]::-moz-range-track {
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+}
 input[type=range]::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--txt);
-  border: none;
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--line);
   cursor: grab;
 }
 
@@ -162,36 +175,59 @@ input[type=range]::-moz-range-thumb {
   -webkit-overflow-scrolling: touch;
 }
 
-/* 44x44 Minimum Touch Target for WCAG AAA & iOS HIG */
-.touch-hit-44 {
-  position: relative;
-}
-.touch-hit-44::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 44px;
+/* 44x44 Real Minimum Touch Target for WCAG AAA & iOS HIG (P2-21: No overlapping ::after) */
+.touch-hit-44,
+.touch-target-44 {
   min-height: 44px;
-  width: 100%;
-  height: 100%;
-  pointer-events: auto;
-  z-index: 1;
+  min-width: 44px;
 }
 
-/* iOS Safe Area insets */
-.safe-pb {
-  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+/* iOS Safe Area insets (P2-22) */
+.safe-pb, .pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
 }
-.safe-pt {
-  padding-top: max(0.5rem, env(safe-area-inset-top));
+.safe-pt, .pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
 }
-.safe-pl {
-  padding-left: max(0.75rem, env(safe-area-inset-left));
+.safe-pl, .pl-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
 }
-.safe-pr {
-  padding-right: max(0.75rem, env(safe-area-inset-right));
+.safe-pr, .pr-safe {
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+.bottom-safe {
+  bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Reduced Motion Support (P2-19: Media Query & User Override) */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse-play,
+  .animate-pulse,
+  .animate-pulse-glow,
+  .animate-orbit {
+    animation: none !important;
+  }
+}
+
+html.reduced-motion *,
+html.reduced-motion *::before,
+html.reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html.reduced-motion .animate-pulse-play,
+html.reduced-motion .animate-pulse,
+html.reduced-motion .animate-pulse-glow,
+html.reduced-motion .animate-orbit {
+  animation: none !important;
 }
 
 /* Mobile Landscape Hardware Groovebox Experience (Height <= 500px & Landscape) */
@@ -204,9 +240,15 @@ input[type=range]::-moz-range-thumb {
     display: none !important;
   }
   .landscape-compact-bar {
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
+    padding-top: 0.125rem !important;
+    padding-bottom: 0.125rem !important;
     margin-bottom: 0.25rem !important;
+    gap: 0.25rem !important;
+  }
+  .landscape-compact-bar button,
+  .landscape-compact-bar select,
+  .landscape-compact-bar input {
+    height: 1.75rem !important;
   }
   .landscape-compact-row {
     padding-top: 0.125rem !important;
@@ -245,4 +287,42 @@ input[type=range]::-moz-range-thumb {
 }
 .custom-scroll::-webkit-scrollbar-thumb:hover {
   background: #f5b73d;
+}
+
+/* Decoupled Playhead & Meter (P2-03) */
+.track-meter.is-flashing .meter-seg[data-meter-seg="1"],
+.track-meter.is-flashing .meter-seg[data-meter-seg="2"] {
+  background-color: #45e0c9 !important;
+  box-shadow: 0 0 4px #45e0c9 !important;
+}
+.track-meter.is-flashing .meter-seg[data-meter-seg="3"] {
+  background-color: #f5b73d !important;
+  box-shadow: 0 0 4px #f5b73d !important;
+}
+.track-meter.is-flashing .meter-seg[data-meter-seg="4"] {
+  background-color: #ff5964 !important;
+  box-shadow: 0 0 4px #ff5964 !important;
+}
+
+[data-ruler-step-idx].playhead-active {
+  background-color: rgba(245, 183, 61, 0.25) !important;
+  border-color: #f5b73d !important;
+  color: #f5b73d !important;
+  box-shadow: 0 0 14px rgba(245, 183, 61, 0.5) !important;
+  font-weight: 700 !important;
+  transform: scale(1.03);
+}
+
+.playhead-laser-beam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 2px solid #f5b73d;
+  background-color: rgba(245, 183, 61, 0.25);
+  box-shadow: 0 0 14px rgba(245, 183, 61, 0.5);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 15;
+  transition: transform 75ms linear;
+  will-change: transform;
 }

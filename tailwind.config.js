@@ -20,7 +20,7 @@ export default {
         text: {
           DEFAULT: '#e9e7e0',
           sub: '#8b8f99',
-          dim: '#5a5e68',
+          dim: '#828794',
         },
         accent: {
           DEFAULT: '#f5b73d',

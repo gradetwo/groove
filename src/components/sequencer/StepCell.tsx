@@ -18,12 +18,12 @@ export interface StepCellProps {
   isBarStart: boolean;
   isGroupStart: boolean;
   trackColor: string;
-  onClick: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
-  onContextMenu: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
-  onPointerDown: (trackIdx: number, stepIdx: number, e: React.PointerEvent) => void;
-  onPointerMove: (e: React.PointerEvent) => void;
-  onPointerUp: () => void;
-  onPointerEnter: (trackIdx: number, stepIdx: number) => void;
+  onClick?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
+  onContextMenu?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
+  onPointerDown?: (trackIdx: number, stepIdx: number, e: React.PointerEvent) => void;
+  onPointerMove?: (e: React.PointerEvent) => void;
+  onPointerUp?: () => void;
+  onPointerEnter?: (trackIdx: number, stepIdx: number) => void;
 }
 
 export const StepCell = memo<StepCellProps>(function StepCell({
@@ -52,18 +52,77 @@ export const StepCell = memo<StepCellProps>(function StepCell({
 }) {
   const isOn = stepVal > 0;
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const parentGrid = e.currentTarget.closest('[role="grid"]');
+    let targetTrack = trackIdx;
+    let targetStep = stepIdx;
+    let handled = false;
+
+    switch (e.key) {
+      case "ArrowRight":
+        targetStep = stepIdx + 1;
+        handled = true;
+        break;
+      case "ArrowLeft":
+        targetStep = Math.max(0, stepIdx - 1);
+        handled = true;
+        break;
+      case "ArrowDown":
+        targetTrack = trackIdx + 1;
+        handled = true;
+        break;
+      case "ArrowUp":
+        targetTrack = Math.max(0, trackIdx - 1);
+        handled = true;
+        break;
+      case "Home":
+        targetStep = 0;
+        handled = true;
+        break;
+      case "End":
+        if (parentGrid) {
+          const cellsInRow = parentGrid.querySelectorAll(`[data-track-idx="${trackIdx}"]`);
+          if (cellsInRow.length > 0) targetStep = cellsInRow.length - 1;
+        }
+        handled = true;
+        break;
+      case " ":
+      case "Enter":
+        e.preventDefault();
+        onClick?.(trackIdx, stepIdx, e as any);
+        return;
+      default:
+        return;
+    }
+
+    if (handled && parentGrid) {
+      e.preventDefault();
+      const targetEl = parentGrid.querySelector<HTMLElement>(
+        `[data-track-idx="${targetTrack}"][data-step-idx="${targetStep}"]`
+      );
+      if (targetEl) {
+        targetEl.focus();
+      }
+    }
+  };
+
   return (
     <div
+      role="gridcell"
+      tabIndex={0}
+      aria-selected={isOn}
+      aria-label={`Track ${trackIdx + 1} Step ${stepIdx + 1}, ${isOn ? "Active" : "Empty"}`}
       data-track-idx={trackIdx}
       data-step-idx={stepIdx}
-      onClick={(e) => onClick(trackIdx, stepIdx, e)}
-      onContextMenu={(e) => onContextMenu(trackIdx, stepIdx, e)}
-      onPointerDown={(e) => onPointerDown(trackIdx, stepIdx, e)}
+      onClick={onClick ? (e) => onClick(trackIdx, stepIdx, e) : undefined}
+      onKeyDown={handleKeyDown}
+      onContextMenu={onContextMenu ? (e) => onContextMenu(trackIdx, stepIdx, e) : undefined}
+      onPointerDown={onPointerDown ? (e) => onPointerDown(trackIdx, stepIdx, e) : undefined}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onPointerEnter={() => onPointerEnter(trackIdx, stepIdx)}
-      className={`min-w-[28px] sm:min-w-[36px] flex-1 h-10 sm:h-10 landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation touch-hit-44 ${
+      onPointerEnter={onPointerEnter ? () => onPointerEnter(trackIdx, stepIdx) : undefined}
+      className={`min-w-[28px] sm:min-w-[36px] flex-1 h-10 sm:h-10 landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:z-20 ${
         isBarStart
           ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
           : isGroupStart

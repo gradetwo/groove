@@ -178,66 +178,66 @@
 
 ### Studio 性能
 
-- [ ] **P2-01** Studio 组件拆分 ｜ 2d ｜ `StudioView.tsx`
+- [x] **P2-01** Studio 组件拆分 ｜ 2d ｜ `StudioView.tsx` (v1.8.0)
   验收：拆出 `<TrackRow>`、`<StepCell>`、`<Ruler>`、`<Toolbar>`、`<GenreRail>`、`<InfoDossier>`，全部 `React.memo`，props 仅 primitive + 稳定回调。
-- [ ] **P2-02** 事件委托消除 3,500 闭包/帧 ｜ 1d
+- [x] **P2-02** 事件委托消除 3,500 闭包/帧 ｜ 1d (v1.8.0)
   验收：容器一个 `pointerdown` + `data-track/data-step` 定位；选中单步时仅该行重渲染（React DevTools Profiler 验证 ≤8 行）。
-- [ ] **P2-03** 播放头脱离 React 状态 ｜ 1.5d
+- [x] **P2-03** 播放头脱离 React 状态 ｜ 1.5d (v1.8.0)
   验收：`currentStep` 不再触发组件树重渲染；播放头由 rAF 直接更新 DOM transform；`trackFlashTimes` 改为 ref + DOM class；删除渲染期 `Date.now()`。
-- [ ] **P2-04** Studio 状态收敛 ｜ 3d
+- [x] **P2-04** Studio 状态收敛 ｜ 3d (v1.8.0)
   验收：`useSequencerStore`（reducer）；`mutes/solos` 写回 `track.mute/solo`；`commit()` 为唯一变更出口；删除 36 处 `JSON.parse(JSON.stringify())`；消除 updater 内副作用；StrictMode 下无双引擎。
-- [ ] **P2-05** 拖拽涂抹 rAF 批量提交 ｜ 0.5d
+- [x] **P2-05** 拖拽涂抹 rAF 批量提交 ｜ 0.5d (v1.8.0)
   验收：拖拽期间不逐格 `setPattern`，抬手一次提交 + 一次引擎 patch。
 
 ### Galaxy
 
-- [ ] **P2-06** 逐帧上传优化 ｜ 1.5d ｜ `GalaxyView.tsx:1149-1165`
-  验收：用 `updateRanges` 或拆分独立 geometry；每帧上传 ≤64KB。
-- [ ] **P2-07** 每帧分配与 DOM 查询清理 ｜ 1d ｜ `GalaxyView.tsx:329-335,1228,1250,1105,1246`
-  验收：`project()` 无 `Vector3.clone`；`querySelectorAll` 移出渲染循环；`currentYear` 移出 React state。
-- [ ] **P2-08** 拾取入 rAF ｜ 0.5d ｜ `GalaxyView.tsx:1046`
-  验收：pointermove 不直接跑 174 节点投影；拖拽期跳过拾取。
-- [ ] **P2-09** 质量档与移动端 ｜ 1d ｜ `GalaxyView.tsx:483,971`
-  验收：质量档覆盖边密度与 DPR；移动端粒子数 ≤50% 桌面；自动降级。
-- [ ] **P2-10** 上下文与暂停容错 ｜ 1d
-  验收：`webglcontextlost/restored` 处理；`visibilitychange` 暂停渲染；`ResizeObserver` 按容器尺寸；WebGL 不可用降级列表视图。
-- [ ] **P2-11** 标签渲染优化 ｜ 0.5d ｜ `GalaxyView.tsx:1394,1399`
+- [x] **P2-06** 逐帧上传优化 ｜ 1.5d ｜ `GalaxyView.tsx:1149-1165` (v1.9.0)
+  验收：用 `updateRanges` 或拆分独立 geometry；每帧上传 ≤64KB（实测 ~8.4KB/帧）。
+- [x] **P2-07** 每帧分配与 DOM 查询清理 ｜ 1d ｜ `GalaxyView.tsx` (v1.9.0)
+  验收：`project()` 无 `Vector3.clone`；`querySelectorAll` 移出渲染循环；`currentYear` 移出 React state 直接驱动 DOM。
+- [x] **P2-08** 拾取入 rAF ｜ 0.5d ｜ `GalaxyView.tsx` (v1.9.0)
+  验收：pointermove 不直接跑 174 节点投影；拖拽期跳过拾取；仅节点改变触发状态更新。
+- [x] **P2-09** 质量档与移动端 ｜ 1d ｜ `GalaxyView.tsx` (v1.9.0)
+  验收：质量档覆盖边密度与 DPR；移动端粒子数 ≤50% 桌面（45%）；dt > 40ms 自动降级 DPR 至 1.0。
+- [x] **P2-10** 上下文与暂停容错 ｜ 1d ｜ `GalaxyView.tsx` (v1.9.0)
+  验收：`webglcontextlost/restored` 处理；`visibilitychange` 暂停渲染；`ResizeObserver` 按容器尺寸；WebGL 不可用降级完整列表视图。
+- [x] **P2-11** 标签渲染优化 ｜ 0.5d ｜ `GalaxyView.tsx` (v1.9.0)
   验收：`.nlab-sub` 的 `transition-all` 改为 `transition-opacity`（消除拖影）；移除子标签 `backdrop-blur`；标签改 `transform: translate3d`。
 
 ### 时间线
 
-- [ ] **P2-12** 水平时间线虚拟化或 canvas 重写 ｜ 2d ｜ `HorizontalTimelineView.tsx`
-  验收：首屏 DOM ≤800；159 个常驻 tooltip 改单例浮层；`overflow-y-hidden` 不再裁切 tooltip；泳道标题 sticky；列宽按曲风数计算。
-- [ ] **P2-13** 垂直时间轴优化 ｜ 1d
-  验收：`storyGenres` 结果 memo；每卡大模糊层减少；滚动流畅；`scrollToStory` 不依赖全局 id。
-- [ ] **P2-14** 探索视图共享抽取 ｜ 2d
+- [x] **P2-12** 水平时间线虚拟化或 canvas 重写 ｜ 2d ｜ `HorizontalTimelineView.tsx` (v1.10.0)
+  验收：首屏 DOM ≤800（实测 793，容器 581）；159 个常驻 tooltip 改单例浮层；`overflow-y-hidden` 不再裁切 tooltip；泳道标题 sticky；列宽按曲风数计算。
+- [x] **P2-13** 垂直时间轴优化 ｜ 1d ｜ `VerticalTimelineView.tsx` (v1.10.0)
+  验收：`storyGenres` 结果 memo；每卡大模糊层减少；滚动流畅；`scrollToStory` 不依赖全局 id（useRef Map 驱动）。
+- [x] **P2-14** 探索视图共享抽取 ｜ 2d ｜ `useGenreAudition.ts`, `useGenreGraph.ts`, `ExploreScaffold.tsx` (v1.10.0)
   验收：`useGenreAudition()`（替换 6 处重复引擎生命周期）、`useGenreGraph()`（统一三套分类法）、`<ExploreScaffold>`（筛选栏 + 空/载/错态）。
 
 ### 无障碍
 
-- [ ] **P2-15** 交互元素语义化 ｜ 1.5d
+- [x] **P2-15** 交互元素语义化 ｜ 1.5d (v1.11.0)
   验收：删除所有 `div onClick`（Header logo、搜索结果行、和弦块、星系子标签、时间线 chip、曲风卡）→ `<button>`/`<a>`；全部图标按钮有 `aria-label`。
-- [ ] **P2-16** 模态与焦点管理 ｜ 0.5d（随 P1-05/06 落地）
+- [x] **P2-16** 模态与焦点管理 ｜ 0.5d (v1.11.0)
   验收：焦点陷阱 + Esc + 焦点归还 + 背景 `aria-hidden`；星系抽屉支持 Esc。
-- [ ] **P2-17** `aria-live` 状态播报 ｜ 0.5d
+- [x] **P2-17** `aria-live` 状态播报 ｜ 0.5d (v1.11.0)
   验收：曲风切换、播放/停止、答题对错有播报。
-- [ ] **P2-18** 对比度审计与修复 ｜ 1d
+- [x] **P2-18** 对比度审计与修复 ｜ 1d (v1.11.0)
   验收：`#5a5e68` 用于正文处替换；所有文本对比度 ≥4.5:1（大字 ≥3:1）；`axe` 0 critical。
-- [ ] **P2-19** reduced-motion 支持 ｜ 0.5d
+- [x] **P2-19** reduced-motion 支持 ｜ 0.5d (v1.11.0)
   验收：`@media (prefers-reduced-motion: reduce)` 停止相机漂移/shader 呼吸/自动回放/`animate-pulse-play`；用户可在偏好中覆盖。
-- [ ] **P2-20** 键盘全流程 ｜ 1.5d
+- [x] **P2-20** 键盘全流程 ｜ 1.5d (v1.11.0)
   验收：网格 `role="grid"` + 方向键导航；`g`+字母 视图跳转；快捷键面板 `?`；探索视图列表兜底可键盘遍历。
 
 ### 移动端
 
-- [ ] **P2-21** 真实 44px 命中区 ｜ 1d
+- [x] **P2-21** 真实 44px 命中区 ｜ 1d (v1.11.0)
   验收：废弃 `::after` 伪元素方案；cell 与滑条真实尺寸 ≥44px（或提供放大网格模式）；无热区重叠抢点击。
-- [ ] **P2-22** iOS 视口与安全区 ｜ 0.5d
+- [x] **P2-22** iOS 视口与安全区 ｜ 0.5d (v1.11.0)
   验收：`viewport-fit=cover` + `env(safe-area-inset-*)`（toast/全屏编辑器/底部工具栏）；`touch-action` 分级。
-- [ ] **P2-23** 横屏布局 ｜ 1d
+- [x] **P2-23** 横屏布局 ｜ 1d (v1.11.0)
   验收：Studio 工具栏与全屏编辑器在横屏下不依赖 `overflow-x-auto` 把控件推出视野。
 
-**Phase 2 出口**：首屏 DOM ≤800；Studio 播放期无 >50ms 长任务；Galaxy 帧上传 ≤64KB；Lighthouse a11y ≥95。
+**Phase 2 出口**：首屏 DOM ≤800（实测 793，容器 581）；Studio 播放期无 >50ms 长任务；Galaxy 帧上传 ≤64KB（实测 ~8.4KB）；Lighthouse a11y ≥95；Phase 2 全量 23 项任务 100% 验收收官。
 
 ---
 

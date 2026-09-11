@@ -488,13 +488,15 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               <span className="text-text-sub text-[11px]">{t("chords_current_chords_label")}</span>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {customChords.map((chord, i) => (
-                  <span
+                  <button
+                    type="button"
                     key={i}
                     onClick={() => {
                       setSelectedChordIdx(i);
                       setIsBuilderCollapsed(false);
                     }}
-                    className={`px-2 py-0.5 rounded text-xs font-mono font-bold cursor-pointer transition-colors ${
+                    aria-label={`${t("chords_click_to_edit")}: ${formatChordName(chord.root, chord.quality, chord.inversion)}`}
+                    className={`px-2 py-0.5 rounded text-xs font-mono font-bold cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                       activePlaybackChordIdx === i && isPlaying
                         ? "bg-accent text-black shadow-[0_0_8px_rgba(245,183,61,0.6)]"
                         : "bg-[#181d28] text-white hover:bg-[#23293a] border border-[#2a3244]"
@@ -502,7 +504,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     title={t("chords_click_to_edit")}
                   >
                     {formatChordName(chord.root, chord.quality, chord.inversion)}
-                  </span>
+                  </button>
                 ))}
               </div>
               <span className="text-text-sub font-mono">· {bpm} BPM</span>
@@ -660,11 +662,21 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               return (
                 <div
                   key={idx}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${chordName}, ${t("chords_bar_prefix")} ${idx + 1}`}
                   onClick={() => {
                     setSelectedChordIdx(idx);
                     handleAuditionChord(chord);
                   }}
-                  className={`relative shrink-0 w-32 sm:w-36 rounded-xl p-3.5 flex flex-col justify-between cursor-pointer transition-all duration-200 border select-none group ${
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedChordIdx(idx);
+                      handleAuditionChord(chord);
+                    }
+                  }}
+                  className={`relative shrink-0 w-32 sm:w-36 rounded-xl p-3.5 flex flex-col justify-between cursor-pointer transition-all duration-200 border select-none group outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     isCurrentlyPlaying
                       ? "bg-[#1a2336] border-accent shadow-[0_0_18px_rgba(245,183,61,0.4)] scale-105"
                       : isSelected
@@ -1036,7 +1048,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("chords_search_placeholder")}
-              className="w-full bg-[#121622] border border-line rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-[#5a5e68] focus:outline-none focus:border-accent"
+              className="w-full bg-[#121622] border border-line rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-text-dim focus:outline-none focus:border-accent"
             />
           </div>
         </div>

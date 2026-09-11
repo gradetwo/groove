@@ -97,7 +97,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-text-sub hover:text-text">
+          <button type="button" onClick={onClose} title="Close" aria-label="Close" className="p-1 rounded-lg text-text-sub hover:text-text">
             <X className="w-4 h-4" />
           </button>
         </div>

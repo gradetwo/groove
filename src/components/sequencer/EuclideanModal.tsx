@@ -94,7 +94,10 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            title="Close"
+            aria-label="Close"
             className="p-1.5 rounded-lg hover:bg-[#1a1c22] text-text-sub hover:text-text transition-colors"
           >
             <X className="w-4 h-4" />

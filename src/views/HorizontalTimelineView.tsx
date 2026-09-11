@@ -35,7 +35,7 @@ import {
   POP_RNB_GENRES,
   LATIN_WORLD_GENRES,
 } from "../data/genres";
-import { AudioEngine } from "../audio/AudioEngine";
+import { useGenreAudition } from "../hooks/useGenreAudition";
 import { useLanguage } from "../i18n/LanguageContext";
 
 interface HorizontalTimelineViewProps {
@@ -432,19 +432,15 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [activeLaneFilter, setActiveLaneFilter] = useState<string>("ALL");
 
-  // Realtime audio audition state
-  const engineRef = useRef<AudioEngine | null>(null);
-  const [playingGenreId, setPlayingGenreId] = useState<string | null>(null);
+  // Realtime audio audition state via shared hook
+  const { playingGenreId, isPlaying, toggleAudition } = useGenreAudition();
 
-  // Clean up audio engine on unmount
-  useEffect(() => {
-    return () => {
-      if (engineRef.current) {
-        engineRef.current.stop();
-        engineRef.current = null;
-      }
-    };
-  }, []);
+  // Floating inspection tooltip singleton
+  interface HoveredGenreTooltip {
+    genre: Genre;
+    rect: DOMRect;
+  }
+  const [hoveredTooltip, setHoveredTooltip] = useState<HoveredGenreTooltip | null>(null);
 
   // Filtered lanes
   const displayLanes = useMemo(() => {
@@ -462,6 +458,92 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
   const activeColumns = useMemo(() => {
     return scaleMode === "nonlinear" ? NONLINEAR_EPOCHS : LINEAR_COLUMNS;
   }, [scaleMode]);
+
+  // Dynamic column widths calculated by genre density (P2-12)
+  const columnWidthStyles = useMemo(() => {
+    const styles: Record<string, { minWidth: string; flex: string }> = {};
+    for (const col of activeColumns) {
+      let maxLaneCount = 0;
+      let totalCount = 0;
+      for (const lane of displayLanes) {
+        const count = lane.genres.filter(col.filter).length;
+        if (count > maxLaneCount) maxLaneCount = count;
+        totalCount += count;
+      }
+
+      if (scaleMode === "nonlinear") {
+        if (maxLaneCount <= 1) {
+          styles[col.id] = { minWidth: "170px", flex: "1.2 1 0%" };
+        } else if (maxLaneCount === 2) {
+          styles[col.id] = { minWidth: "220px", flex: "1.6 1 0%" };
+        } else if (maxLaneCount === 3) {
+          styles[col.id] = { minWidth: "290px", flex: "2.3 1 0%" };
+        } else if (maxLaneCount <= 5) {
+          styles[col.id] = { minWidth: "360px", flex: "3.0 1 0%" };
+        } else {
+          styles[col.id] = { minWidth: `${Math.min(520, 360 + (maxLaneCount - 5) * 50)}px`, flex: "4.0 1 0%" };
+        }
+      } else {
+        if (maxLaneCount === 0 && totalCount === 0) {
+          styles[col.id] = { minWidth: "130px", flex: "0.8 1 0%" };
+        } else if (maxLaneCount <= 1) {
+          styles[col.id] = { minWidth: "180px", flex: "1 1 0%" };
+        } else if (maxLaneCount === 2) {
+          styles[col.id] = { minWidth: "240px", flex: "1.5 1 0%" };
+        } else {
+          styles[col.id] = { minWidth: `${Math.min(460, 240 + (maxLaneCount - 2) * 50)}px`, flex: "2.5 1 0%" };
+        }
+      }
+    }
+    return styles;
+  }, [activeColumns, displayLanes, scaleMode]);
+
+  // Lane virtualization for initial DOM <= 800 & ultra-smooth 60fps scrolling
+  const [visibleLaneIds, setVisibleLaneIds] = useState<Set<string>>(() => {
+    return new Set(displayLanes.slice(0, 2).map((l) => l.id));
+  });
+
+  const laneObserverRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") {
+      setVisibleLaneIds(new Set(displayLanes.map((l) => l.id)));
+      return;
+    }
+
+    laneObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const laneId = entry.target.getAttribute("data-lane-id");
+            if (laneId) {
+              setVisibleLaneIds((prev) => {
+                if (prev.has(laneId)) return prev;
+                const next = new Set(prev);
+                next.add(laneId);
+                return next;
+              });
+            }
+          }
+        });
+      },
+      { rootMargin: "-160px 0px" }
+    );
+
+    return () => {
+      if (laneObserverRef.current) {
+        laneObserverRef.current.disconnect();
+      }
+    };
+  }, [displayLanes]);
+
+  useEffect(() => {
+    setVisibleLaneIds((prev) => {
+      const next = new Set(prev);
+      displayLanes.slice(0, 2).forEach((l) => next.add(l.id));
+      return next;
+    });
+  }, [displayLanes]);
 
   // Animation player loop
   useEffect(() => {
@@ -495,31 +577,6 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
       setCurrentYear(1920);
     }
     setAnimationPlaying(!animationPlaying);
-  };
-
-  // Handle instant audition
-  const handleToggleAudition = async (genre: Genre, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (playingGenreId === genre.id) {
-      if (engineRef.current) {
-        engineRef.current.stop();
-      }
-      setPlayingGenreId(null);
-      return;
-    }
-
-    if (!engineRef.current) {
-      engineRef.current = new AudioEngine({
-        onStop: () => setPlayingGenreId(null),
-      });
-    }
-
-    const engine = engineRef.current;
-    engine.stop();
-    engine.setPattern(genre.sequencer_pattern);
-    setPlayingGenreId(genre.id);
-    await engine.play();
   };
 
   // Scroll smoothly to a column
@@ -639,9 +696,11 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={handleStartEvolution}
             className="p-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors"
             title={t("timeline_restart_1920")}
+            aria-label={t("timeline_restart_1920")}
           >
             <RotateCcw className="w-3 h-3" />
           </button>
@@ -691,11 +750,10 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
           <button
             key={col.id}
             onClick={() => scrollToColumn(col.id)}
-            className="px-2 py-0.5 rounded-lg bg-[#0e1017] hover:bg-[#181b24] border border-white/[0.06] hover:border-white/20 text-[10.5px] font-mono text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors shrink-0 flex items-center gap-1"
+            className="px-2 py-0.5 rounded-lg bg-[#0e1017] hover:bg-[#181b24] border border-white/[0.06] hover:border-white/20 text-[10.5px] font-mono text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors shrink-0"
           >
-            <span className="text-accent font-bold">{col.label}</span>
-            <span className="text-[#636875]">·</span>
-            <span>{col.tag[language]}</span>
+            <span className="text-accent font-bold mr-1">{col.label}</span>
+            · {col.tag[language]}
           </button>
         ))}
       </div>
@@ -703,47 +761,70 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
       {/* Horizontal Scrollable Timeline Matrix (精致紧凑矩阵) */}
       <div 
         ref={scrollContainerRef}
+        data-testid="timeline-scroll-container"
+        onScroll={() => { if (hoveredTooltip) setHoveredTooltip(null); }}
         className="bg-[#0b0c11] border border-white/[0.08] rounded-2xl p-3 sm:p-4 shadow-xl overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-white/10"
       >
         <div className="min-w-[1500px] space-y-3">
           {/* Precision Chronological Ruler Header */}
-          <div className="flex items-stretch border-b border-white/[0.08] pb-2 pl-44">
-            {activeColumns.map((col) => {
-              const isPast = col.yearThreshold <= currentYear;
-              return (
-                <div 
-                  key={col.id} 
-                  id={`timeline-col-${col.id}`}
-                  className={`${col.widthClass} px-2 flex flex-col items-center justify-between relative transition-colors border-r border-white/[0.05] last:border-none`}
-                >
-                  <div className="text-center">
-                    <div className={`text-xs font-mono font-extrabold ${isPast ? "text-accent" : "text-[#555a68]"}`}>
-                      {col.label}
-                    </div>
-                    <div className="text-[9.5px] font-semibold text-[#8e93a0] uppercase tracking-wider mt-0.5">
-                      {col.tag[language]}
-                    </div>
-                  </div>
+          <div className="flex items-stretch border-b border-white/[0.08] pb-2">
+            {/* Sticky Corner Header */}
+            <div className="sticky left-0 z-20 w-44 shrink-0 bg-[#0b0c11] border-r border-white/[0.08] pr-2.5 flex items-center justify-between">
+              <span className="text-[10px] font-mono font-extrabold uppercase text-[#8e93a0] tracking-wider">
+                {t("timeline_all_lanes", { count: displayLanes.length })}
+              </span>
+              <span className="text-[9px] font-mono text-accent">ERA / DECADE</span>
+            </div>
 
-                  {/* Tick Dot */}
-                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 transition-all ${
-                    isPast ? "bg-accent shadow-[0_0_6px_#f5b73d]" : "bg-[#181a24]"
-                  }`} />
-                </div>
-              );
-            })}
+            {/* Active Column Headers */}
+            <div className="flex-1 flex items-stretch">
+              {activeColumns.map((col) => {
+                const isPast = col.yearThreshold <= currentYear;
+                const colStyle = columnWidthStyles[col.id] || { minWidth: "180px", flex: "1 1 0%" };
+                return (
+                  <div 
+                    key={col.id} 
+                    id={`timeline-col-${col.id}`}
+                    style={colStyle}
+                    className="px-2 flex flex-col items-center justify-between relative transition-colors border-r border-white/[0.05] last:border-none"
+                  >
+                    <div className="text-center">
+                      <div className={`text-xs font-mono font-extrabold ${isPast ? "text-accent" : "text-[#555a68]"}`}>
+                        {col.label}
+                      </div>
+                      <div className="text-[9.5px] font-semibold text-[#8e93a0] uppercase tracking-wider mt-0.5">
+                        {col.tag[language]}
+                      </div>
+                    </div>
+
+                    {/* Tick Dot */}
+                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 transition-all ${
+                      isPast ? "bg-accent shadow-[0_0_6px_#f5b73d]" : "bg-[#181a24]"
+                    }`} />
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Swimlanes */}
           <div className="space-y-2.5">
             {displayLanes.map((lane) => {
+              const isLaneVisible = visibleLaneIds.has(lane.id);
+
               return (
                 <div 
                   key={lane.id}
-                  className="flex items-stretch rounded-xl bg-[#0e1017]/90 border border-white/[0.06] hover:border-white/[0.15] transition-all relative shadow-sm"
+                  data-lane-id={lane.id}
+                  ref={(el) => {
+                    if (el && laneObserverRef.current) {
+                      laneObserverRef.current.observe(el);
+                    }
+                  }}
+                  className="flex items-stretch rounded-xl bg-[#0e1017]/90 border border-white/[0.06] hover:border-white/[0.15] transition-all relative shadow-sm min-h-[88px]"
                 >
-                  {/* Left Lane Title Header (精简紧凑) */}
-                  <div className="w-44 shrink-0 p-2.5 flex flex-col justify-between border-r border-white/[0.07] bg-[#090a0e]/40 rounded-l-xl">
+                  {/* Left Lane Title Header (Sticky on horizontal scroll) */}
+                  <div className="sticky left-0 z-10 w-44 shrink-0 p-2.5 flex flex-col justify-between border-r border-white/[0.07] bg-[#0d0f17] shadow-lg rounded-l-xl">
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span 
@@ -774,156 +855,194 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                   </div>
 
                   {/* Columns for this lane */}
-                  <div className="flex-1 flex items-stretch divide-x divide-white/[0.04] p-1.5">
-                    {activeColumns.map((col) => {
-                      const colGenres = lane.genres.filter(col.filter);
-                      const hasGenres = colGenres.length > 0;
-                      const isPreBirth = col.yearThreshold < lane.birthDecade;
+                  {isLaneVisible ? (
+                    <div className="flex-1 flex items-stretch divide-x divide-white/[0.04] p-1.5">
+                      {activeColumns.map((col) => {
+                        const colGenres = lane.genres.filter(col.filter);
+                        const hasGenres = colGenres.length > 0;
+                        const isPreBirth = col.yearThreshold < lane.birthDecade;
+                        const colStyle = columnWidthStyles[col.id] || { minWidth: "180px", flex: "1 1 0%" };
 
-                      return (
-                        <div 
-                          key={col.id} 
-                          className={`${col.widthClass} p-1 flex flex-col justify-center`}
-                        >
-                          {hasGenres ? (
-                            /* Genre Chips Grid (紧凑精致芯片矩阵) */
-                            <div className="flex flex-wrap gap-1.5 items-center content-center w-full">
-                              {colGenres.map((genre) => {
-                                const isRevealed = (genre.origin_decade || 1980) <= currentYear;
-                                const isPlayingThis = playingGenreId === genre.id;
+                        return (
+                          <div 
+                            key={col.id} 
+                            style={colStyle}
+                            className="p-1 flex flex-col justify-center"
+                          >
+                            {hasGenres ? (
+                              /* Genre Chips Grid */
+                              <div className="flex flex-wrap gap-1.5 items-center content-center w-full">
+                                {colGenres.map((genre) => {
+                                  const isRevealed = (genre.origin_decade || 1980) <= currentYear;
+                                  const isPlayingThis = isPlaying(genre.id);
 
-                                return (
-                                  <div
-                                    key={genre.id}
-                                    onClick={() => onSelectGenre(genre)}
-                                    className={`group/chip relative px-2.5 py-1.5 rounded-xl transition-all duration-200 flex flex-col justify-between w-[150px] sm:w-[168px] shrink-0 border ${
-                                      isRevealed 
-                                        ? "bg-[#11131a]/90 hover:bg-[#181a24] border-white/[0.08] hover:border-white/30 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5" 
-                                        : "opacity-20 bg-[#07080b] border-white/[0.03] scale-95 pointer-events-none"
-                                    } ${
-                                      isPlayingThis 
-                                        ? "ring-1.5 ring-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] bg-[#181b28]" 
-                                        : ""
-                                    }`}
-                                    style={{
-                                      borderLeftColor: lane.color.primary,
-                                      borderLeftWidth: 3,
-                                    }}
-                                  >
-                                    {/* Top: Name and Year */}
-                                    <div className="flex items-center justify-between gap-1">
-                                      <span 
-                                        className="font-bold text-xs text-[#f5f4ef] group-hover/chip:text-accent transition-colors truncate"
-                                        title={genre.name}
-                                      >
-                                        {genre.name}
-                                      </span>
-                                      <span className="text-[9.5px] font-mono font-bold text-[#8e93a0] shrink-0">
-                                        {genre.origin_year}
-                                      </span>
-                                    </div>
-
-                                    {/* Bottom: BPM & Micro Action Buttons */}
-                                    <div className="flex items-center justify-between gap-1 mt-1 pt-1 border-t border-white/[0.04]">
-                                      <span className="text-[9px] font-mono text-[#8e93a0] px-1 py-0.2 rounded bg-white/[0.04]">
-                                        {genre.default_bpm || genre.bpm_range.split("-")[0]} BPM
-                                      </span>
-
-                                      <div className="flex items-center gap-1">
-                                        {/* 1-click Audio Audition button */}
-                                        <button
-                                          onClick={(e) => handleToggleAudition(genre, e)}
-                                          className={`p-1 rounded-lg transition-all ${
-                                            isPlayingThis
-                                              ? "bg-accent text-black shadow-sm"
-                                              : "bg-white/[0.06] hover:bg-white/[0.15] text-[#b9b7b0] hover:text-[#f5f4ef]"
-                                          }`}
-                                          title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
+                                  return (
+                                    <div
+                                      key={genre.id}
+                                      data-genre-id={genre.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => onSelectGenre(genre)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                          e.preventDefault();
+                                          onSelectGenre(genre);
+                                        }
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        setHoveredTooltip({
+                                          genre,
+                                          rect: e.currentTarget.getBoundingClientRect(),
+                                        });
+                                      }}
+                                      onMouseLeave={() => setHoveredTooltip(null)}
+                                      className={`group/chip relative px-2.5 py-1.5 rounded-xl transition-all duration-200 flex flex-col justify-between w-[150px] sm:w-[168px] shrink-0 border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                        isRevealed 
+                                          ? "bg-[#11131a]/90 hover:bg-[#181a24] border-white/[0.08] hover:border-white/30 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5" 
+                                          : "opacity-20 bg-[#07080b] border-white/[0.03] scale-95 pointer-events-none"
+                                      } ${
+                                        isPlayingThis 
+                                          ? "ring-1.5 ring-[#f5b73d] shadow-[0_0_12px_rgba(245,183,61,0.35)] bg-[#181b28]" 
+                                          : ""
+                                      }`}
+                                      style={{
+                                        borderLeftColor: lane.color.primary,
+                                        borderLeftWidth: 3,
+                                      }}
+                                      aria-label={`${genre.name} (${genre.origin_year})`}
+                                    >
+                                      {/* Top: Name and Year */}
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span 
+                                          className="font-bold text-xs text-[#f5f4ef] group-hover/chip:text-accent transition-colors truncate"
+                                          title={genre.name}
                                         >
-                                          {isPlayingThis ? (
-                                            <Square className="w-2.5 h-2.5 fill-current" />
-                                          ) : (
-                                            <Play className="w-2.5 h-2.5 fill-current" />
-                                          )}
-                                        </button>
-
-                                        {/* Studio button */}
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            onOpenStudio(genre);
-                                          }}
-                                          className="p-1 rounded-lg bg-white/[0.06] hover:bg-accent hover:text-black text-[#8e93a0] transition-colors"
-                                          title={t("open_in_studio")}
-                                        >
-                                          <Sliders className="w-2.5 h-2.5" />
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {/* Floating Inspection Tooltip Popover (悬浮精致细节浮层) */}
-                                    <div className="absolute bottom-[calc(100%+6px)] left-0 z-50 w-72 p-3 rounded-2xl bg-[#12141c]/95 backdrop-blur-xl border border-white/20 shadow-[0_12px_32px_rgba(0,0,0,0.85)] opacity-0 group-hover/chip:opacity-100 pointer-events-none transition-all duration-200 translate-y-1.5 group-hover/chip:translate-y-0 text-left">
-                                      <div className="flex items-start justify-between gap-1.5 pb-2 border-b border-white/[0.08]">
-                                        <div>
-                                          <h6 className="text-xs font-extrabold text-[#f5f4ef]">{genre.name}</h6>
-                                          {genre.aliases[0] && isZh && (
-                                            <span className="text-[10px] text-[#8e93a0]">{genre.aliases[0]}</span>
-                                          )}
-                                        </div>
-                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-accent border border-amber-500/30">
+                                          {genre.name}
+                                        </span>
+                                        <span className="text-[9.5px] font-mono font-bold text-[#8e93a0] shrink-0">
                                           {genre.origin_year}
                                         </span>
                                       </div>
 
-                                      <div className="mt-2 space-y-1.5 text-[10.5px]">
-                                        <div className="text-[#8e93a0] flex items-center justify-between font-mono">
-                                          <span>{genre.origin_place[language]}</span>
-                                          <span className="text-accent">{genre.time_signature} · {genre.bpm_range} BPM</span>
+                                      {/* Bottom: BPM & Micro Action Buttons */}
+                                      <div className="flex items-center justify-between gap-1 mt-1 pt-1 border-t border-white/[0.04]">
+                                        <span className="text-[9px] font-mono text-[#8e93a0] px-1 py-0.2 rounded bg-white/[0.04]">
+                                          {genre.default_bpm || genre.bpm_range.split("-")[0]} BPM
+                                        </span>
+
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => toggleAudition(genre, e)}
+                                            className={`p-1 rounded-lg transition-all ${
+                                              isPlayingThis
+                                                ? "bg-accent text-black shadow-sm"
+                                                : "bg-white/[0.06] hover:bg-white/[0.15] text-[#b9b7b0] hover:text-[#f5f4ef]"
+                                            }`}
+                                            title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
+                                            aria-label={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
+                                          >
+                                            {isPlayingThis ? (
+                                              <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
+                                            ) : (
+                                              <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3" /></svg>
+                                            )}
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onOpenStudio(genre);
+                                            }}
+                                            className="p-1 rounded-lg bg-white/[0.06] hover:bg-accent hover:text-black text-[#8e93a0] transition-colors"
+                                            title={t("open_in_studio")}
+                                            aria-label={t("open_in_studio")}
+                                          >
+                                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M4 21v-7m0-4V3m8 14v-4m0-4V3m8 14v-1m0-4V3M1 14h6m2-6h6m2 8h6" /></svg>
+                                          </button>
                                         </div>
-                                        <p className="text-[#c4c7cf] leading-relaxed line-clamp-2">
-                                          {genre.key_characteristics[language] || genre.rhythm_features[language]}
-                                        </p>
-                                        {genre.instrumentation && genre.instrumentation.length > 0 && (
-                                          <div className="flex flex-wrap gap-1 pt-1">
-                                            {genre.instrumentation.slice(0, 3).map((gear, gIdx) => (
-                                              <span key={gIdx} className="px-1.5 py-0.5 rounded bg-[#181a24] text-[#9ca1ad] font-mono text-[9px] border border-white/[0.06]">
-                                                {gear}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        )}
                                       </div>
                                     </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              /* Slim Lineage Ribbon */
+                              <div className="h-full min-h-[44px] w-full flex items-center justify-center px-1.5">
+                                {isPreBirth ? (
+                                  <div className="w-full flex items-center gap-1.5 py-1 px-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[9.5px] text-[#636875] font-sans">
+                                    <GitBranch className="w-3 h-3 text-accent shrink-0" />
+                                    <span className="truncate max-w-[200px]" title={lane.predecessor[language]}>
+                                      {lane.predecessor[language]}
+                                    </span>
+                                    <span className="text-accent font-mono text-[9px] shrink-0 ml-auto font-bold">➔ {lane.birthDecade}s</span>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            /* Slim Lineage Ribbon (极简紧凑谱系源流导轨) */
-                            <div className="h-full min-h-[44px] w-full flex items-center justify-center px-1.5">
-                              {isPreBirth ? (
-                                <div className="w-full flex items-center gap-1.5 py-1 px-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[9.5px] text-[#636875] font-sans">
-                                  <GitBranch className="w-3 h-3 text-accent shrink-0" />
-                                  <span className="truncate max-w-[200px]" title={lane.predecessor[language]}>
-                                    {lane.predecessor[language]}
-                                  </span>
-                                  <span className="text-accent font-mono text-[9px] shrink-0 ml-auto font-bold">➔ {lane.birthDecade}s</span>
-                                </div>
-                              ) : (
-                                <div className="w-full border-t border-dashed border-white/[0.06]" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                                ) : (
+                                  <div className="w-full border-t border-dashed border-white/[0.06]" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center px-4 text-xs text-[#555a68] font-mono">
+                      <span>Loading {lane.name[language]}...</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
       </div>
+
+      {/* Floating Singleton Tooltip Popover (P2-12: Uncropped by overflow-y-hidden) */}
+      {hoveredTooltip && (
+        <div
+          className="fixed z-50 w-72 p-3 rounded-2xl bg-[#12141c]/95 backdrop-blur-xl border border-white/20 shadow-[0_12px_32px_rgba(0,0,0,0.85)] pointer-events-none text-left animate-in fade-in zoom-in-95 duration-150"
+          style={{
+            left: `${Math.max(16, Math.min(window.innerWidth - 304, hoveredTooltip.rect.left + hoveredTooltip.rect.width / 2 - 144))}px`,
+            ...(hoveredTooltip.rect.top >= 220
+              ? { bottom: `${window.innerHeight - hoveredTooltip.rect.top + 8}px` }
+              : { top: `${hoveredTooltip.rect.bottom + 8}px` }),
+          }}
+          role="tooltip"
+        >
+          <div className="flex items-start justify-between gap-1.5 pb-2 border-b border-white/[0.08]">
+            <div>
+              <h6 className="text-xs font-extrabold text-[#f5f4ef]">{hoveredTooltip.genre.name}</h6>
+              {hoveredTooltip.genre.aliases[0] && isZh && (
+                <span className="text-[10px] text-[#8e93a0]">{hoveredTooltip.genre.aliases[0]}</span>
+              )}
+            </div>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-accent border border-amber-500/30">
+              {hoveredTooltip.genre.origin_year}
+            </span>
+          </div>
+
+          <div className="mt-2 space-y-1.5 text-[10.5px]">
+            <div className="text-[#8e93a0] flex items-center justify-between font-mono">
+              <span>{hoveredTooltip.genre.origin_place[language]}</span>
+              <span className="text-accent">{hoveredTooltip.genre.time_signature} · {hoveredTooltip.genre.bpm_range} BPM</span>
+            </div>
+            <p className="text-[#c4c7cf] leading-relaxed line-clamp-2">
+              {hoveredTooltip.genre.key_characteristics[language] || hoveredTooltip.genre.rhythm_features[language]}
+            </p>
+            {hoveredTooltip.genre.instrumentation && hoveredTooltip.genre.instrumentation.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {hoveredTooltip.genre.instrumentation.slice(0, 3).map((gear, gIdx) => (
+                  <span key={gIdx} className="px-1.5 py-0.5 rounded bg-[#181a24] text-[#9ca1ad] font-mono text-[9px] border border-white/[0.06]">
+                    {gear}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

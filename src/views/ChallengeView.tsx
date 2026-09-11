@@ -20,6 +20,7 @@ import { Genre } from "../types/genre";
 import { ALL_GENRES, ELECTRONIC_GENRES } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useLanguage } from "../i18n/LanguageContext";
+import { announcer } from "../ui";
 
 interface ChallengeViewProps {
   onSelectGenre: (genre: Genre) => void;
@@ -167,15 +168,26 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
     const isCorrect = genre.id === question.correctGenre.id;
     if (isCorrect) {
-      const newScore = score + (difficulty === "easy" ? 100 : difficulty === "medium" ? 200 : 350);
+      const pointGain = difficulty === "easy" ? 100 : difficulty === "medium" ? 200 : 350;
+      const newScore = score + pointGain;
       const newStreak = streak + 1;
       setScore(newScore);
       setStreak(newStreak);
       if (newStreak > bestStreak) {
         setBestStreak(newStreak);
       }
+      announcer.announce(
+        isZh ? `回答正确！+${pointGain}分` : `Correct! +${pointGain} points`,
+        "assertive"
+      );
     } else {
       setStreak(0);
+      announcer.announce(
+        isZh
+          ? `回答错误。正确答案是：${question.correctGenre.name}`
+          : `Incorrect. The correct answer was: ${question.correctGenre.name}`,
+        "assertive"
+      );
     }
   };
 

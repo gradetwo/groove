@@ -19,7 +19,7 @@ import { TIMELINE_STORIES, TimelineStory } from "../data/timeline_stories";
 import { GENRES_MAP } from "../data/genres";
 import { Genre, GenreCategory } from "../types/genre";
 import { useLanguage } from "../i18n/LanguageContext";
-import { AudioEngine } from "../audio/AudioEngine";
+import { useGenreAudition } from "../hooks/useGenreAudition";
 
 interface VerticalTimelineViewProps {
   onSelectGenre: (genre: Genre) => void;
@@ -191,57 +191,41 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
 }) => {
   const { t, language, isZh } = useLanguage();
   
-  // Realtime audio engine playback for immediate auditioning
-  const engineRef = useRef<AudioEngine | null>(null);
-  const [playingGenreId, setPlayingGenreId] = useState<string | null>(null);
+  // Realtime audio audition state via shared hook (P2-14)
+  const { playingGenreId, isPlaying, toggleAudition } = useGenreAudition();
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [activeStoryId, setActiveStoryId] = useState<string>(TIMELINE_STORIES[0].id);
 
-  // Clean up audio on unmount
-  useEffect(() => {
-    return () => {
-      if (engineRef.current) {
-        engineRef.current.stop();
-        engineRef.current = null;
-      }
-    };
-  }, []);
+  // Decoupled story elements ref to remove global document.getElementById (P2-13)
+  const storyElementsRef = useRef<Record<string, HTMLElement | null>>({});
 
-  // Audio audition toggle
-  const handleToggleAudition = async (genre: Genre, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (playingGenreId === genre.id) {
-      if (engineRef.current) {
-        engineRef.current.stop();
-      }
-      setPlayingGenreId(null);
-      return;
-    }
-
-    if (!engineRef.current) {
-      engineRef.current = new AudioEngine({
-        onStop: () => setPlayingGenreId(null),
-      });
-    }
-
-    const engine = engineRef.current;
-    engine.stop();
-    engine.setPattern(genre.sequencer_pattern);
-    setPlayingGenreId(genre.id);
-    await engine.play();
-  };
-
-  // Scroll to decade story
+  // Scroll to decade story using element ref
   const scrollToStory = (storyId: string) => {
     setActiveStoryId(storyId);
-    const element = document.getElementById(storyId);
+    const element = storyElementsRef.current[storyId];
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   };
 
+  // Precompute and memoize storyGenresMap per selected category (P2-13)
+  const storyGenresMap = useMemo(() => {
+    const map = new Map<string, Genre[]>();
+    for (const story of TIMELINE_STORIES) {
+      const genres = story.genre_ids
+        .map((gid) => GENRES_MAP[gid])
+        .filter((g): g is Genre => {
+          if (!g) return false;
+          if (selectedCategory !== "ALL" && g.category !== selectedCategory) return false;
+          return true;
+        });
+      map.set(story.id, genres);
+    }
+    return map;
+  }, [selectedCategory]);
+
   return (
-    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-6 space-y-8">
+    <div data-testid="vertical-timeline" className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-6 space-y-8">
       {/* Luxury Curator Header */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#161822] via-[#101217] to-[#0a0b0e] border border-white/[0.08] p-6 sm:p-8 shadow-2xl">
         {/* Ambient background light gradients */}
@@ -269,19 +253,19 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
 
           {/* Metric Stats Display */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+            <div className="px-4 py-2.5 rounded-2xl bg-[#13151f]/90 border border-white/[0.08] text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-accent">120+</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
                 {t("timeline_span")}
               </div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+            <div className="px-4 py-2.5 rounded-2xl bg-[#13151f]/90 border border-white/[0.08] text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-cyan-400">14</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
                 {t("timeline_genealogies")}
               </div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+            <div className="px-4 py-2.5 rounded-2xl bg-[#13151f]/90 border border-white/[0.08] text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-pink-400">159</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
                 {t("timeline_milestone_genres")}
@@ -303,6 +287,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
               return (
                 <button
                   key={story.id}
+                  data-story-idx={story.id}
                   onClick={() => scrollToStory(story.id)}
                   className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all shrink-0 border ${
                     isActive
@@ -351,19 +336,16 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
         {TIMELINE_STORIES.map((story, storyIdx) => {
           const aesthetic = ERA_AESTHETICS[story.decade] || ERA_AESTHETICS[1980];
           
-          // Filtered genres for this story
-          const storyGenres = story.genre_ids
-            .map((gid) => GENRES_MAP[gid])
-            .filter((g): g is Genre => {
-              if (!g) return false;
-              if (selectedCategory !== "ALL" && g.category !== selectedCategory) return false;
-              return true;
-            });
+          // Filtered genres for this story (memoized in storyGenresMap - P2-13)
+          const storyGenres = storyGenresMap.get(story.id) || [];
 
           return (
             <div 
               key={story.id} 
               id={story.id}
+              ref={(el) => {
+                storyElementsRef.current[story.id] = el;
+              }}
               className="relative group scroll-mt-28"
             >
               {/* Left Chronological Hub (Timeline Node) */}
@@ -409,10 +391,12 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                   borderLeftWidth: 3,
                 }}
               >
-                {/* Subtle chromatic corner gradient glow */}
+                {/* Subtle chromatic corner gradient glow (zero blur raster penalty - P2-13) */}
                 <div 
-                  className="absolute -top-24 -right-24 w-60 h-60 rounded-full blur-3xl pointer-events-none opacity-20"
-                  style={{ backgroundColor: aesthetic.accentColor }}
+                  className="absolute -top-24 -right-24 w-60 h-60 rounded-full pointer-events-none opacity-20"
+                  style={{ 
+                    background: `radial-gradient(circle, ${aesthetic.accentColor} 0%, transparent 70%)` 
+                  }}
                 />
 
                 {/* Card Top Title & Cultural Movement Header */}
@@ -491,12 +475,21 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                         return (
                           <div
                             key={genre.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => onSelectGenre(genre)}
-                            className={`group/card relative p-3 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between border ${
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onSelectGenre(genre);
+                              }
+                            }}
+                            className={`group/card relative p-3 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between border text-left outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                               isPlayingThis
                                 ? "bg-[#181b26] border-accent shadow-[0_0_16px_rgba(245,183,61,0.35)] scale-[1.01]"
                                 : "bg-[#0b0c11]/80 hover:bg-[#13151f] border-white/[0.06] hover:border-white/20 shadow-md"
                             }`}
+                            aria-label={`${genre.name} (${genre.origin_year})`}
                           >
                             <div>
                               <div className="flex items-start justify-between gap-1.5">
@@ -536,13 +529,15 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                             <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-1.5">
                               {/* Audio preview audition button */}
                               <button
-                                onClick={(e) => handleToggleAudition(genre, e)}
+                                type="button"
+                                onClick={(e) => toggleAudition(genre, e)}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1 rounded-xl text-xs font-bold transition-all ${
                                   isPlayingThis
                                     ? "bg-accent text-black shadow-md"
                                     : "bg-[#161824] hover:bg-[#202334] text-[#d6d4ce] border border-white/[0.08]"
                                 }`}
                                 title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
+                                aria-label={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
                               >
                                 {isPlayingThis ? (
                                   <>
@@ -565,12 +560,14 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
 
                               {/* Open in Studio button */}
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onOpenStudio(genre);
                                 }}
                                 className="p-1 rounded-xl bg-[#161824] hover:bg-accent hover:text-black text-[#8e93a0] border border-white/[0.08] transition-colors shrink-0"
                                 title={t("open_in_studio")}
+                                aria-label={t("open_in_studio")}
                               >
                                 <Sliders className="w-3.5 h-3.5" />
                               </button>

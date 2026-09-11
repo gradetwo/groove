@@ -13,7 +13,8 @@ import {
   Music2,
   History,
   Compass,
-  ChevronDown
+  ChevronDown,
+  Keyboard,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
@@ -35,6 +36,7 @@ interface HeaderProps {
   onOpenSearch: () => void;
   onRandomGenre: (genre: { id: string }) => void;
   onOpenUpdates?: () => void;
+  onOpenShortcuts?: () => void;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
 }
@@ -45,10 +47,11 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearch,
   onRandomGenre,
   onOpenUpdates,
+  onOpenShortcuts,
   analyser,
   isPlaying = false,
 }) => {
-  const { t, toggleLanguage } = useLanguage();
+  const { t, toggleLanguage, isZh } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const exploreRef = useRef<HTMLDivElement | null>(null);
@@ -276,9 +279,11 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Random Dice */}
         <button
+          type="button"
           onClick={handleRandom}
           className="p-1.5 border border-dashed border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
           title={t("random_genre")}
+          aria-label={t("random_genre")}
         >
           <Shuffle className="w-4 h-4" />
         </button>
@@ -301,6 +306,19 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             <span className="hidden sm:inline">v{CURRENT_CLIENT_VERSION}</span>
+          </button>
+        )}
+
+        {/* Keyboard Shortcuts Guide Button (P2-20) */}
+        {onOpenShortcuts && (
+          <button
+            type="button"
+            onClick={onOpenShortcuts}
+            className="hidden sm:flex items-center justify-center p-1.5 border border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
+            title={t("shortcuts_guide_title" as any) || "Keyboard Shortcuts (?)"}
+            aria-label="Keyboard Shortcuts Guide"
+          >
+            <Keyboard className="w-4 h-4" />
           </button>
         )}
 
@@ -423,6 +441,20 @@ export const Header: React.FC<HeaderProps> = ({
             <HelpCircle className="w-3.5 h-3.5" />
             <span>{t("nav_challenge")}</span>
           </button>
+
+          {onOpenShortcuts && (
+            <button
+              onClick={() => {
+                onOpenShortcuts();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-line text-text-sub hover:text-accent hover:bg-panel transition-colors"
+            >
+              <Keyboard className="w-3.5 h-3.5 text-accent" />
+              <span>{isZh ? "键盘快捷键指南 (?)" : "Keyboard Shortcuts (?)"}</span>
+              <kbd className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-panel border border-line">?</kbd>
+            </button>
+          )}
 
           {onOpenUpdates && (
             <button

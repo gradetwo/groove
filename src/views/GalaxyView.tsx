@@ -10,6 +10,7 @@ import {
   ChevronUp,
   ChevronDown,
   Layers,
+  List,
   Sparkles, 
   Compass, 
   Search, 
@@ -230,6 +231,11 @@ void main(){
 }
 `;
 
+// Pre-allocated scratch vectors and objects to eliminate per-frame allocations (P2-07)
+const _scratchPv = new THREE.Vector3();
+const _scratchProj = new THREE.Vector3();
+const _scratchScreenPt = { x: 0, y: 0 };
+
 export const GalaxyView: React.FC<GalaxyViewProps> = ({
   onSelectGenre,
   onOpenStudio,
@@ -255,10 +261,19 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   const [isSubgenresPanelOpen, setIsSubgenresPanelOpen] = useState<boolean>(false);
   const [webglError, setWebglError] = useState<string | null>(null);
 
-  // Timeline state
+  // Timeline state (P2-07: currentYear removed from React state to eliminate 60fps re-renders)
   const Y_MIN = 1850;
   const Y_MAX = 2025;
-  const [currentYear, setCurrentYear] = useState<number>(Y_MAX);
+  const currentYearRef = useRef<number>(Y_MAX);
+  const yearBadgeRef = useRef<HTMLDivElement | null>(null);
+  const yearSliderRef = useRef<HTMLInputElement | null>(null);
+  const lastHoveredIdRef = useRef<string | null>(null);
+  const coreElementsMapRef = useRef<Map<string, HTMLElement>>(new Map());
+  const subElementsMapRef = useRef<Map<string, HTMLElement>>(new Map());
+  const [liveAnnouncement, setLiveAnnouncement] = useState<string>("");
+  const slowFrameCountRef = useRef<number>(0);
+  const hasDowngradedRef = useRef<boolean>(false);
+
   const [isPlayingYear, setIsPlayingYear] = useState<boolean>(false);
   const yearPlayRef = useRef<{ from: number; to: number; t: number; dur: number } | null>(null);
 
@@ -269,8 +284,6 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   selectedNodeRef.current = selectedNode;
   const hoveredNodeRef = useRef<NebulaNode | null>(null);
   hoveredNodeRef.current = hoveredNode;
-  const currentYearRef = useRef<number>(Y_MAX);
-  currentYearRef.current = currentYear;
 
   // Subgenres of currently selected cluster
   const clusterSubgenres = useMemo(() => {
@@ -335,31 +348,38 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     mx: number;
     my: number;
     animId: number;
+    flowStartIndex: number;
+    flowCount: number;
+    pendingPick: boolean;
   } | null>(null);
 
-  // Screen space projection (P0-14: projected to canvas bounds, eliminating 64px vertical header offset)
-  const project = useCallback((p: THREE.Vector3) => {
+  // Screen space projection (P2-07: zero-allocation screen space projection)
+  const project = useCallback((p: THREE.Vector3, out?: { x: number; y: number }) => {
     const th = threeRef.current;
     if (!th) return null;
-    const pv = p.clone().applyMatrix4(th.camera.matrixWorldInverse);
-    if (pv.z > -4) return null;
-    const proj = p.clone().project(th.camera);
+    _scratchPv.copy(p).applyMatrix4(th.camera.matrixWorldInverse);
+    if (_scratchPv.z > -4) return null;
+    _scratchProj.copy(p).project(th.camera);
     const canvas = th.renderer.domElement;
     const w = canvas ? canvas.clientWidth : window.innerWidth;
     const h = canvas ? canvas.clientHeight : (window.innerHeight - 64);
-    return {
-      x: (proj.x * 0.5 + 0.5) * w,
-      y: (-proj.y * 0.5 + 0.5) * h,
-    };
+    const res = out || _scratchScreenPt;
+    res.x = (_scratchProj.x * 0.5 + 0.5) * w;
+    res.y = (-_scratchProj.y * 0.5 + 0.5) * h;
+    return res;
   }, []);
 
-  // Smooth flyTo camera helper
+  // Smooth flyTo camera helper (P2-19: reduced-motion support)
   const flyTo = useCallback((target: THREE.Vector3, radius: number, dur = 1.25, theta?: number) => {
     const th = threeRef.current;
     if (!th) return;
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const actualDur = prefersReducedMotion ? 0.05 : (dur || 1.15);
     th.fly = {
       t: 0,
-      dur: dur || 1.15,
+      dur: actualDur,
       ease: smooth,
       fr: th.orbit.radius,
       ft: th.orbit.theta,
@@ -399,6 +419,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   // Select a specific node (subgenre or core)
   const selectNode = useCallback((n: NebulaNode, openCard = true) => {
     setSelectedNode(n);
+    setLiveAnnouncement(isZh ? `已选择曲风：${n.zhName || n.name}` : `Selected genre: ${n.en || n.name}`);
     const th = threeRef.current;
     if (!th) return;
 
@@ -445,7 +466,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     // Center camera on node
     const radius = n.type === "sub" ? 210 : n.type === "core" ? 420 : 260;
     flyTo(n.pos.clone(), radius, 1.2);
-  }, [flyTo, graphData, lineageOf]);
+  }, [flyTo, graphData, isZh, lineageOf]);
 
   // Select Major Genre Nebula (移动到屏幕中心，清晰美观呈现大曲风下的各种子曲风)
   const selectMajorCluster = useCallback((cluster: MajorCluster | null) => {
@@ -456,6 +477,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     if (!th) return;
 
     if (!cluster) {
+      setLiveAnnouncement(isZh ? "已返回全星系概览" : "Returned to galaxy overview");
       // Reset to whole galaxy overview
       th.uniforms.uSelectedCluster.value = -1;
       th.uniforms.uSelectedNode.value = -1;
@@ -467,6 +489,8 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       flyTo(new THREE.Vector3(0, 0, 0), 1250, 1.3);
       return;
     }
+
+    setLiveAnnouncement(isZh ? `已进入分类：${cluster.name}` : `Entered category: ${cluster.en}`);
 
     // Set shader uniform to highlight this cluster and softly dim the rest
     const clusterIdx = graphData.clusters.findIndex((c) => c.id === cluster.id);
@@ -520,7 +544,13 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, 1, 1, 5000);
 
-    const Q = (window.matchMedia && window.matchMedia("(pointer:coarse)").matches) || (window.innerWidth < 760) ? 0.6 : 1;
+    const isMobile =
+      (typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(pointer:coarse)").matches) ||
+      (typeof window !== "undefined" && window.innerWidth < 768);
+    // Mobile particle count <= 50% of desktop (P2-09)
+    const Q = isMobile ? 0.45 : 1.0;
     const WHITE = new THREE.Color(1, 1, 1);
     const _tint = new THREE.Color();
     const _hsl = { h: 0, s: 0, l: 0 };
@@ -618,105 +648,51 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
           const yv = gauss() * (R * 0.26) * (1.0 + densityRidge * 0.25);
           V.set(Math.cos(armAngle) * r, yv, Math.sin(armAngle) * r).add(core.pos);
-
-          const rr = Math.abs(r) / (R * 1.25);
-          const big = Math.random() < 0.06, mid2 = Math.random() < 0.28;
-          // Particle size and brightness: soft, translucent, avoiding overexposed solid discs
-          const s = (big ? 5.5 + Math.random() * 2.8 : (mid2 ? 2.6 + Math.random() * 1.8 : 1.3 + Math.random() * 0.9)) * (1.0 + densityRidge * 0.15);
-          const b = (big ? 0.12 : (mid2 ? 0.22 : 0.42)) * (0.85 + densityRidge * 0.25);
-          const tc = tint(c.color, clamp(1 - rr * 0.85, 0.08, 0.70), b, (Math.random() - 0.5) * 0.06);
-          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], s, Math.random() * 100, core.year, 0, core.idx, ci);
+          const rr = Math.random();
+          const tc = tint(c.color, clamp(1 - rr, 0.08, 0.72), 0.22 + Math.random() * 0.58, (Math.random() - 0.5) * 0.08);
+          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 0.9 + Math.random() * 1.8, Math.random() * 100, core.year, 0, core.idx, ci);
         }
 
-        // Dark absorption dust silhouettes for depth and chiaroscuro contrast (暗星云吸光带)
-        const darkN = Math.round(35 * Q);
-        for (let k = 0; k < darkN; k++) {
-          const td = Math.random();
-          const rd = 18 + td * (R * 0.90);
-          const ad = td * 3.8 + ci * 1.3 + (Math.random() - 0.5) * 0.35;
-          V.set(Math.cos(ad) * rd, gauss() * (R * 0.16), Math.sin(ad) * rd).add(core.pos);
-          push(V.x, V.y, V.z, 0.008, 0.012, 0.022, 22.0 + Math.random() * 14.0, Math.random() * 100, core.year, 0, core.idx, ci, 0);
-        }
-
-        // Central crystalline stellar core: replaces the giant opaque white blob with a sparkling star + soft translucent halo
-        const coreCol = tint(c.color, 0.75, 0.82, 0);
-        push(core.pos.x, core.pos.y, core.pos.z, coreCol[0], coreCol[1], coreCol[2], 11.5, Math.random() * 100, core.year, 0, core.idx, ci, 1);
-        
-        // Inner crown flares (subtle pinpoint diffraction)
-        for (let k = 0; k < 3; k++) {
-          W.set(gauss(), gauss(), gauss()).multiplyScalar(4.5).add(core.pos);
-          const tc2 = tint(c.color, 0.55, 0.55, 0);
-          push(W.x, W.y, W.z, tc2[0], tc2[1], tc2[2], 4.5 + Math.random() * 3.0, Math.random() * 100, core.year, 0, core.idx, ci, 1);
-        }
-        
-        // Mid-range soft volumetric halo: gentle translucent glow (光晕渐变)
-        for (let k = 0; k < 3; k++) {
-          W.set(gauss(), gauss(), gauss()).multiplyScalar(12).add(core.pos);
-          const th = tint(c.color, 0.20, 0.065, (Math.random() - 0.5) * 0.05);
-          push(W.x, W.y, W.z, th[0], th[1], th[2], 42 + Math.random() * 26, Math.random() * 100, core.year, 0, core.idx, ci, 0);
-        }
-        // Vast outer gossamer veil (梦幻蒙眬宏大透明薄雾)
-        for (let k = 0; k < 2; k++) {
-          W.set(gauss(), gauss(), gauss()).multiplyScalar(24).add(core.pos);
-          const th2 = tint(c.color, 0.10, 0.032, (Math.random() - 0.5) * 0.04);
-          push(W.x, W.y, W.z, th2[0], th2[1], th2[2], 85 + Math.random() * 45, Math.random() * 100, core.year, 0, core.idx, ci, 0);
-        }
-
-        // Sweeping logarithmic spiral arms with density ripples
-        if (c.spiral) {
-          const eu = new THREE.Euler(c.spiral[0], c.spiral[1], c.spiral[2]);
-          const nd2 = Math.round(720 * Q);
-          for (let i = 0; i < nd2; i++) {
-            const t2 = Math.random();
-            const arm2 = i % 2;
-            const jit = gauss() * 0.28;
-            const ang = arm2 * Math.PI + t2 * 4.4 * Math.PI + jit * 3;
-            const rad = 18 + t2 * 96 + gauss() * 5;
-
-            // Spiral void density modulation
-            const armWave = Math.sin(ang * 1.5 + rad * 0.06);
-            if (armWave < -0.40 && Math.random() < 0.55) continue;
-
-            V.set(Math.cos(ang) * rad, gauss() * (2 + t2 * 3.5), Math.sin(ang) * rad).applyEuler(eu).add(core.pos);
-            const tc3 = tint(c.color, clamp(0.75 - t2 * 0.60, 0, 0.75), 0.28 - t2 * 0.08, jit * 0.4);
-            push(V.x, V.y, V.z, tc3[0], tc3[1], tc3[2], 1.1 + Math.random() * 1.2, Math.random() * 100, core.year, 0, core.idx, ci);
-          }
+        // Outlying faint stellar halo
+        const nh = Math.round(180 * Q);
+        for (let i = 0; i < nh; i++) {
+          V.set(gauss(), gauss() * 0.4, gauss()).multiplyScalar(R * 1.65).add(core.pos);
+          const tcH = tint(c.color, 0.5, 0.24, 0);
+          push(V.x, V.y, V.z, tcH[0], tcH[1], tcH[2], 0.7 + Math.random() * 1.2, Math.random() * 100, core.year, 0, core.idx, ci);
         }
       });
     });
 
-    // 2. Generate particles for 159 subgenre stars with refined, delicate halos and distinct astronomical variations
+    // 2. Generate particles for individual Subgenre Stars & Micro-nebulae
     graphData.nodes.forEach((n) => {
       if (n.type !== "sub") return;
-      const ci = graphData.clusters.findIndex((cl) => cl.id === n.cluster);
-      const c = graphData.clusters[ci] || graphData.clusters[0];
-      const childCount = n.children.length;
-
-      // Deterministic astronomical personality variation (亮度和大小差异化)
-      const starHash = Math.abs(Math.sin(n.idx * 17.13 + (n.year || 1990) * 0.19)) * 10000;
-      const starJitter = starHash - Math.floor(starHash); // 0.0 ~ 1.0
-      // Prominence factor (0.58 ~ 1.38): landmark/parent subgenres are more radiant, niche subgenres are delicate
-      const prominence = clamp(0.62 + childCount * 0.18 + starJitter * 0.32, 0.58, 1.38);
+      const c = graphData.clusters.find((cl) => cl.id === n.cluster);
+      if (!c) return;
+      const ci = graphData.clusters.indexOf(c);
+      const isHero = n.idx % 5 === 0;
+      const prominence = isHero ? 1.0 : 0.6;
 
       span(n.idx, () => {
-        // Layer 1: Core Hero Star Node (晶莹钻石星核，大小随重要度变化 3.6 ~ 5.8，避免刺眼白斑)
-        const coreSize = 3.6 + prominence * 2.2;
-        const coreTc = tint(c.color, 0.65, 0.62 + prominence * 0.14, 0);
-        push(n.pos.x, n.pos.y, n.pos.z, coreTc[0], coreTc[1], coreTc[2], coreSize, Math.random() * 100, n.year, 0, n.idx, ci, 1);
-        
-        // Layer 2: Inner Photospheric Corona (轻柔光球光晕，避免白化大团)
-        const coronaSize = 6.0 + prominence * 4.5;
-        const coronaCol = tint(c.color, 0.40, 0.22 + prominence * 0.14, 0);
-        push(n.pos.x, n.pos.y, n.pos.z, coronaCol[0], coronaCol[1], coronaCol[2], coronaSize, Math.random() * 100, n.year, 0, n.idx, ci, 0);
+        // Bright primary subgenre star
+        push(
+          n.pos.x, n.pos.y, n.pos.z,
+          1, 0.95, 0.88,
+          isHero ? 7.2 : 4.6,
+          Math.random() * 100, n.year, 0, n.idx, ci, 1
+        );
 
-        // Layer 3: Outer Atmospheric Gossamer Veil (极轻盈通透外晕)
-        const veilSize = 14.0 + prominence * 8.0;
-        const veilCol = tint(c.color, 0.15, 0.06 + prominence * 0.05, 0.01);
-        push(n.pos.x, n.pos.y, n.pos.z, veilCol[0], veilCol[1], veilCol[2], veilSize, Math.random() * 100, n.year, 0, n.idx, ci, 0);
+        // Core star aura halo
+        const haloColor = tint(c.color, 0.28, 0.82, 0);
+        push(
+          n.pos.x, n.pos.y, n.pos.z,
+          haloColor[0], haloColor[1], haloColor[2],
+          isHero ? 16 : 10,
+          Math.random() * 100, n.year, 0, n.idx, ci, 1
+        );
 
-        // Layer 4: Satellite Companion Micro-Spangles (仅重点星体配备 1-2 颗微光伴星)
-        if (prominence > 0.95) {
-          const spangleCount = prominence > 1.2 ? 2 : 1;
+        // Hero subgenre spangle sparks
+        if (isHero) {
+          const spangleCount = Math.round(5 * Q);
           for (let k = 0; k < spangleCount; k++) {
             W.set(gauss(), gauss(), gauss()).multiplyScalar(2.4 + prominence * 0.6).add(n.pos);
             const spkCol = tint(c.color, 0.70, 0.48, (Math.random() - 0.5) * 0.05);
@@ -724,13 +700,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           }
         }
 
-        // Surrounding delicate subgenre stardust cloud (疏密大开大合，透明星尘)
-        const nd = Math.round((14 + prominence * 16) * Q);
+        // Surrounding micro-nebula stardust
+        const nd = Math.round(32 * Q);
         for (let i = 0; i < nd; i++) {
-          V.set(gauss(), gauss(), gauss()).multiplyScalar(7.0 + prominence * 3.2).add(n.pos);
-          const rr = Math.random();
-          const tc = tint(c.color, clamp(1 - rr, 0.10, 0.65), 0.18 + prominence * 0.10, (Math.random() - 0.5) * 0.07);
-          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 0.8 + Math.random() * 0.9, Math.random() * 100, n.year, 0, n.idx, ci);
+          V.set(gauss(), gauss(), gauss()).multiplyScalar(12 * prominence).add(n.pos);
+          const tc2 = tint(c.color, 0.2, 0.35, (Math.random() - 0.5) * 0.05);
+          push(V.x, V.y, V.z, tc2[0], tc2[1], tc2[2], 1.1 + Math.random() * 1.4, Math.random() * 100, n.year, 0, n.idx, ci);
         }
       });
     });
@@ -749,7 +724,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       }
     });
 
-    // 4. Gravitational filaments static dust & animated flowing pulse packets
+    // 4. Gravitational filaments static dust
     graphData.edges.forEach((e) => {
       const fromCluster = graphData.clusters.find((cl) => cl.id === e.from.cluster);
       const toCluster = graphData.clusters.find((cl) => cl.id === e.to.cluster);
@@ -775,22 +750,6 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             e.kind === "inner" ? 1.4 + Math.random() * 0.8 : 2.2 + Math.random() * 1.4,
             Math.random() * 100, bornAttr, t, target.idx, clI
           );
-        }
-      });
-
-      // Flowing packets
-      e.flowIdx = [];
-      span(EDGE_BASE + e.i, () => {
-        for (let k = 0; k < e.flowN; k++) {
-          const i0 = B.n;
-          mixA.setHex(cf);
-          mixB.setHex(ct);
-          mixA.lerp(mixB, 0.5);
-          const m = 1.25;
-          push(0, 0, 0, Math.min(mixA.r * m, 1.4), Math.min(mixA.g * m, 1.4), Math.min(mixA.b * m, 1.4), 3.6, Math.random() * 100, e.born, 0, target.idx, clI);
-          push(0, 0, 0, mixA.r * 0.5, mixA.g * 0.5, mixA.b * 0.5, 2.4, Math.random() * 100, e.born, 0, target.idx, clI);
-          push(0, 0, 0, mixA.r * 0.22, mixA.g * 0.22, mixA.b * 0.22, 1.5, Math.random() * 100, e.born, 0, target.idx, clI);
-          e.flowIdx.push(i0);
         }
       });
     });
@@ -872,6 +831,33 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         push(f[0] + gauss() * 90, f[1] + gauss() * 90, f[2] + gauss() * 90, f[3], f[4], f[5], 120 + Math.random() * 70, Math.random() * 100, 0, 0, -1, -1, 0);
       }
     });
+
+    // 6. Flowing pulse packets (all contiguous at the end of B buffer - P2-06 per-frame upload <= 64KB)
+    const flowStartIndex = B.n;
+    graphData.edges.forEach((e) => {
+      const fromCluster = graphData.clusters.find((cl) => cl.id === e.from.cluster);
+      const toCluster = graphData.clusters.find((cl) => cl.id === e.to.cluster);
+      const cf = fromCluster ? fromCluster.color : 0xD8B988;
+      const ct = toCluster ? toCluster.color : 0xD8B988;
+      const target = e.to;
+      const clI = toCluster ? graphData.clusters.indexOf(toCluster) : -1;
+
+      e.flowIdx = [];
+      span(EDGE_BASE + e.i, () => {
+        for (let k = 0; k < e.flowN; k++) {
+          const i0 = B.n;
+          mixA.setHex(cf);
+          mixB.setHex(ct);
+          mixA.lerp(mixB, 0.5);
+          const m = 1.25;
+          push(0, 0, 0, Math.min(mixA.r * m, 1.4), Math.min(mixA.g * m, 1.4), Math.min(mixA.b * m, 1.4), 3.6, Math.random() * 100, e.born, 0, target.idx, clI);
+          push(0, 0, 0, mixA.r * 0.5, mixA.g * 0.5, mixA.b * 0.5, 2.4, Math.random() * 100, e.born, 0, target.idx, clI);
+          push(0, 0, 0, mixA.r * 0.22, mixA.g * 0.22, mixA.b * 0.22, 1.5, Math.random() * 100, e.born, 0, target.idx, clI);
+          e.flowIdx.push(i0);
+        }
+      });
+    });
+    const flowCount = B.n - flowStartIndex;
 
     // Create BufferGeometry
     const geo = new THREE.BufferGeometry();
@@ -1001,16 +987,19 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       mx: -1,
       my: -1,
       animId: 0,
+      flowStartIndex,
+      flowCount,
+      pendingPick: false,
     };
 
-    // Resize handler (P0-14: container bounds instead of window)
+    // Resize handler (P0-14: container bounds instead of window; P2-09: mobile DPR cap)
     const handleResize = () => {
       const w = containerRef.current ? containerRef.current.clientWidth : window.innerWidth;
       const h = containerRef.current ? containerRef.current.clientHeight : (window.innerHeight - 64);
       if (w <= 0 || h <= 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
       renderer.setPixelRatio(dpr);
       renderer.setSize(w, h);
       uniforms.uScale.value = (h * dpr) / (2 * Math.tan(THREE.MathUtils.degToRad(30)));
@@ -1034,14 +1023,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       };
     };
 
-    // Node raycast picker
+    // Node raycast picker (P2-07: uses currentYearRef and zero-allocation project)
     const pickNode = (mx: number, my: number) => {
       if (mx < 0 || my < 0) return null;
       let best: NebulaNode | null = null;
       let bd = 36;
       for (let i = 0; i < graphData.nodes.length; i++) {
         const n = graphData.nodes[i];
-        if (uniforms.uYear.value < n.year) continue;
+        if (currentYearRef.current < n.year) continue;
         const s = project(n.pos);
         if (!s) continue;
         const d = Math.hypot(s.x - mx, s.y - my);
@@ -1099,15 +1088,15 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           th.orbit.phi = clamp(th.orbit.phi - dy * k, 0.2, Math.PI - 0.2);
           th.vel.t = dx * k * 0.4;
           th.vel.p = -dy * k * 0.4;
+          th.mx = pt.x;
+          th.my = pt.y;
+          // While dragging or rotating, completely skip hover detection (P2-08)
+          return;
         }
       }
       th.mx = pt.x;
       th.my = pt.y;
-
-      // Hover detection
-      const hovered = pickNode(pt.x, pt.y);
-      setHoveredNode(hovered);
-      th.uniforms.uHoverNode.value = hovered ? hovered.idx : -1;
+      th.pendingPick = true;
     };
 
     const handlePointerUp = (e: PointerEvent) => {
@@ -1200,12 +1189,31 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       prev = now;
       const time = now / 1000;
 
-      // Timeline automated replay
+      const prefersReducedMotion =
+        typeof window !== "undefined" &&
+        (document.documentElement.classList.contains("reduced-motion") ||
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+      // Dynamic performance monitoring & auto-downgrade (P2-09)
+      if (dt > 0.040) {
+        slowFrameCountRef.current++;
+        if (slowFrameCountRef.current > 60 && !hasDowngradedRef.current) {
+          hasDowngradedRef.current = true;
+          renderer.setPixelRatio(1);
+        }
+      } else {
+        slowFrameCountRef.current = Math.max(0, slowFrameCountRef.current - 1);
+      }
+
+      // Timeline automated replay (P2-07: direct DOM updates without React re-render)
       if (yearPlayRef.current) {
         yearPlayRef.current.t += dt * 1000;
         const p = clamp(yearPlayRef.current.t / yearPlayRef.current.dur, 0, 1);
         const y = lerp(yearPlayRef.current.from, yearPlayRef.current.to, smooth(p));
-        setCurrentYear(Math.round(y));
+        const roundedY = Math.round(y);
+        currentYearRef.current = roundedY;
+        if (yearBadgeRef.current) yearBadgeRef.current.textContent = String(roundedY);
+        if (yearSliderRef.current) yearSliderRef.current.value = String(roundedY);
         th.uniforms.uYear.value = y;
         if (p >= 1) {
           yearPlayRef.current = null;
@@ -1213,7 +1221,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         }
       }
 
-      // Camera motion update
+      // Camera motion update (P2-19: reduced motion stops idle drift & breathing)
       if (th.fly) {
         th.fly.t += dt / th.fly.dur;
         const k = th.fly.ease(Math.min(th.fly.t, 1));
@@ -1227,7 +1235,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         th.vel.t *= 0.93;
         th.vel.p *= 0.93;
         // Idle drifting rotation & living camera breathing
-        if (performance.now() - th.lastInteract > 4000) {
+        if (!prefersReducedMotion && performance.now() - th.lastInteract > 4000) {
           th.idleRamp = Math.min(th.idleRamp + dt / 3, 1);
           th.orbit.theta += dt * 0.018 * th.idleRamp;
           th.orbit.phi += Math.sin(now * 0.0006) * dt * 0.003 * th.idleRamp;
@@ -1237,7 +1245,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       }
 
       // Subtle breathing in camera distance when idle
-      const idleBreathingR = th.fly ? 0 : Math.sin(now * 0.0008) * 4.5 * th.idleRamp;
+      const idleBreathingR = (!prefersReducedMotion && !th.fly) ? Math.sin(now * 0.0008) * 4.5 * th.idleRamp : 0;
       const currentRadius = th.orbit.radius + idleBreathingR;
 
       th.camera.position.set(
@@ -1265,7 +1273,26 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           }
         }
       }
-      geo.attributes.position.needsUpdate = true;
+
+      // Per-frame upload optimization: only update contiguous flow packet buffer range (P2-06 <= 64KB)
+      const posAttr = geo.attributes.position as any;
+      if (posAttr.clearUpdateRanges && posAttr.addUpdateRange) {
+        posAttr.clearUpdateRanges();
+        posAttr.addUpdateRange(th.flowStartIndex * 3, th.flowCount * 3);
+      }
+      posAttr.needsUpdate = true;
+
+      // Hover detection scheduled inside rAF (P2-08)
+      if (th.pendingPick && !th.down) {
+        th.pendingPick = false;
+        const hovered = pickNode(th.mx, th.my);
+        const hoveredId = hovered ? hovered.id : null;
+        if (hoveredId !== lastHoveredIdRef.current) {
+          lastHoveredIdRef.current = hoveredId;
+          setHoveredNode(hovered);
+          th.uniforms.uHoverNode.value = hovered ? hovered.idx : -1;
+        }
+      }
 
       // Reticle rings and shockwave
       const curSel = selectedNodeRef.current;
@@ -1320,74 +1347,72 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         th.shockPts.visible = false;
       }
 
-      // Update 3D projected HTML labels
+      // Update 3D projected HTML labels (P2-07: map iteration without querySelectorAll; P2-11: translate3d)
       const labelsBox = labelsContainerRef.current;
       if (labelsBox) {
         const selCluster = selectedClusterRef.current;
+        const curHover = hoveredNodeRef.current;
+        const curSel = selectedNodeRef.current;
         const w = labelsBox.clientWidth || window.innerWidth;
         const h = labelsBox.clientHeight || (window.innerHeight - 64);
 
-        // 1. Cluster overview labels (visible when in overview mode)
-        const coreEls = labelsBox.querySelectorAll<HTMLElement>(".nlab-core");
-        coreEls.forEach((el) => {
-          const coreId = el.dataset.coreId;
-          const node = coreId ? graphData.byId[coreId] : null;
-          if (!node || selCluster) {
-            el.style.opacity = "0";
-            el.style.pointerEvents = "none";
-            return;
-          }
-          const s = project(node.pos);
-          if (!s || s.x < -80 || s.x > w + 80 || s.y < -60 || s.y > h + 80) {
-            el.style.opacity = "0";
-            el.style.pointerEvents = "none";
-            return;
-          }
-          const vis = currentYearRef.current >= node.year;
-          el.style.opacity = vis ? "0.85" : "0";
-          el.style.pointerEvents = vis ? "auto" : "none";
-          el.style.transform = `translate(-50%, -100%) translate(${s.x}px, ${s.y - 28}px)`;
-        });
+        if (!selCluster) {
+          // 1. Cluster overview labels
+          coreElementsMapRef.current.forEach((el, coreId) => {
+            const node = graphData.byId[coreId];
+            if (!node) {
+              el.style.opacity = "0";
+              el.style.pointerEvents = "none";
+              return;
+            }
+            const s = project(node.pos);
+            if (!s || s.x < -80 || s.x > w + 80 || s.y < -60 || s.y > h + 80) {
+              el.style.opacity = "0";
+              el.style.pointerEvents = "none";
+              return;
+            }
+            const vis = currentYearRef.current >= node.year;
+            el.style.opacity = vis ? "0.85" : "0";
+            el.style.pointerEvents = vis ? "auto" : "none";
+            el.style.transform = `translate3d(${s.x}px, ${s.y - 28}px, 0) translate(-50%, -100%)`;
+          });
+        } else {
+          // 2. Subgenre 3D labels
+          const hasFocus = Boolean(curHover || curSel);
+          const focusedId = curHover ? curHover.id : curSel ? curSel.id : null;
 
-        // 2. Subgenre 3D labels (visible when a major cluster is selected)
-        const subEls = labelsBox.querySelectorAll<HTMLElement>(".nlab-sub");
-        const curHover = hoveredNodeRef.current;
-        const curSel = selectedNodeRef.current;
-        const hasFocus = Boolean(curHover || curSel);
-        const focusedId = curHover ? curHover.id : curSel ? curSel.id : null;
-
-        subEls.forEach((el) => {
-          const subId = el.dataset.subId;
-          const node = subId ? graphData.byId[subId] : null;
-          if (!node || !selCluster || node.cluster !== selCluster.id) {
-            el.style.opacity = "0";
-            el.style.pointerEvents = "none";
-            return;
-          }
-          const s = project(node.pos);
-          if (!s || s.x < -100 || s.x > w + 100 || s.y < -80 || s.y > h + 100) {
-            el.style.opacity = "0";
-            el.style.pointerEvents = "none";
-            return;
-          }
-          const vis = currentYearRef.current >= node.year;
-          if (!vis) {
-            el.style.opacity = "0";
-            el.style.pointerEvents = "none";
-            return;
-          }
-          const isFocused = focusedId === node.id;
-          if (hasFocus) {
-            el.style.opacity = isFocused ? "1" : "0.15";
-            el.style.transform = isFocused
-              ? `translate(-50%, -100%) translate(${s.x}px, ${s.y - 8}px) scale(1.15)`
-              : `translate(-50%, -100%) translate(${s.x}px, ${s.y - 8}px) scale(0.92)`;
-          } else {
-            el.style.opacity = "0.80";
-            el.style.transform = `translate(-50%, -100%) translate(${s.x}px, ${s.y - 8}px) scale(1)`;
-          }
-          el.style.pointerEvents = "auto";
-        });
+          subElementsMapRef.current.forEach((el, subId) => {
+            const node = graphData.byId[subId];
+            if (!node || node.cluster !== selCluster.id) {
+              el.style.opacity = "0";
+              el.style.pointerEvents = "none";
+              return;
+            }
+            const s = project(node.pos);
+            if (!s || s.x < -100 || s.x > w + 100 || s.y < -80 || s.y > h + 100) {
+              el.style.opacity = "0";
+              el.style.pointerEvents = "none";
+              return;
+            }
+            const vis = currentYearRef.current >= node.year;
+            if (!vis) {
+              el.style.opacity = "0";
+              el.style.pointerEvents = "none";
+              return;
+            }
+            const isFocused = focusedId === node.id;
+            if (hasFocus) {
+              el.style.opacity = isFocused ? "1" : "0.15";
+              el.style.transform = isFocused
+                ? `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(1.15)`
+                : `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(0.92)`;
+            } else {
+              el.style.opacity = "0.80";
+              el.style.transform = `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(1)`;
+            }
+            el.style.pointerEvents = "auto";
+          });
+        }
 
         // 3. Pin target anchor
         const pinEl = pinRef.current;
@@ -1396,7 +1421,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             const s = project(curSel.pos);
             if (s) {
               pinEl.style.display = "block";
-              pinEl.style.transform = `translate(${s.x}px, ${s.y}px)`;
+              pinEl.style.transform = `translate3d(${s.x}px, ${s.y}px, 0)`;
             } else {
               pinEl.style.display = "none";
             }
@@ -1412,7 +1437,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             const s = project(curHover.pos);
             if (s) {
               tagEl.style.display = "block";
-              tagEl.style.transform = `translate(${s.x + 16}px, ${s.y - 20}px)`;
+              tagEl.style.transform = `translate3d(${s.x + 16}px, ${s.y - 20}px, 0)`;
             } else {
               tagEl.style.display = "none";
             }
@@ -1422,7 +1447,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         }
       }
 
-      th.uniforms.uTime.value = time;
+      th.uniforms.uTime.value = prefersReducedMotion ? 0 : time;
       renderer.render(scene, camera);
     };
 
@@ -1452,9 +1477,15 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     };
   }, [graphData, project, selectMajorCluster, selectNode]);
 
-  // Timeline year scrubber
+  // Timeline year scrubber (P2-07: ref and direct DOM updates without React re-render)
   const handleTimelineChange = (year: number) => {
-    setCurrentYear(year);
+    currentYearRef.current = year;
+    if (yearBadgeRef.current) {
+      yearBadgeRef.current.textContent = String(year);
+    }
+    if (yearSliderRef.current && Number(yearSliderRef.current.value) !== year) {
+      yearSliderRef.current.value = String(year);
+    }
     if (threeRef.current) {
       threeRef.current.uniforms.uYear.value = year;
     }
@@ -1464,18 +1495,37 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     if (isPlayingYear) {
       yearPlayRef.current = null;
       setIsPlayingYear(false);
+      setLiveAnnouncement(isZh ? "已暂停纪元演化回放" : "Paused era evolution replay");
     } else {
-      const from = currentYear < Y_MAX - 5 ? currentYear : Y_MIN;
+      const from = currentYearRef.current < Y_MAX - 5 ? currentYearRef.current : Y_MIN;
       yearPlayRef.current = { from, to: Y_MAX, t: 0, dur: 7000 };
       setIsPlayingYear(true);
       flyTo(new THREE.Vector3(0, 0, 0), 720, 2.2);
+      setLiveAnnouncement(isZh ? "正在回放 1850-2025 现代音乐曲风演化史" : "Replaying modern music genre evolution 1850-2025");
     }
   };
 
+  // Keyboard Accessibility: Esc key closes modal / card or resets cluster (P2-16)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isCardOpen) {
+          setIsCardOpen(false);
+        } else if (selectedNode) {
+          setSelectedNode(null);
+        } else if (selectedCluster) {
+          selectMajorCluster(null);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCardOpen, selectedNode, selectedCluster, selectMajorCluster]);
+
   if (webglError) {
     return (
-      <div className="relative w-full h-[calc(100vh-64px)] bg-[#04060a] flex items-center justify-center p-6 text-center select-none">
-        <div className="max-w-md w-full rounded-2xl bg-panel border border-cyan-500/30 p-8 shadow-2xl flex flex-col items-center">
+      <div className="relative w-full min-h-[calc(100vh-64px)] bg-[#04060a] flex items-center justify-center p-6 text-center select-none overflow-y-auto">
+        <div className="max-w-xl w-full rounded-2xl bg-panel border border-cyan-500/30 p-8 shadow-2xl flex flex-col items-center">
           <div className="w-14 h-14 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/10 shrink-0">
             <Compass className="w-7 h-7" />
           </div>
@@ -1487,7 +1537,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             <br />
             {t("galaxy_fallback_hint")}
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2.5 w-full">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 w-full mb-6">
             <button
               type="button"
               onClick={() => {
@@ -1525,6 +1575,55 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <span className="truncate">{t("retry")}</span>
             </button>
           </div>
+
+          {/* WebGL Fallback Genre List View (P2-10) */}
+          <div className="w-full max-h-[42vh] overflow-y-auto rounded-xl bg-panel/70 border border-panel-border p-3 text-left">
+            <div className="text-[11px] font-bold text-text-sub uppercase tracking-wider mb-2.5">
+              {isZh ? "星系曲风一览（列表视图）" : "Genre Galaxy (List View)"}
+            </div>
+            <div className="space-y-2">
+              {graphData.clusters.map((c) => {
+                const subs = graphData.nodes.filter((n) => n.type === "sub" && n.cluster === c.id);
+                return (
+                  <details key={c.id} className="group rounded-lg bg-black/20 border border-panel-border p-2">
+                    <summary className="cursor-pointer text-xs font-semibold flex items-center justify-between text-text list-none select-none">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.hexColor }} />
+                        <span>{isZh ? c.name : c.en}</span>
+                        <span className="text-[10px] text-text-sub opacity-70">({isZh ? c.en : c.name})</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-text-sub">{subs.length}</span>
+                    </summary>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2 pt-2 border-t border-panel-border/60">
+                      {subs.map((sub) => (
+                        <div key={sub.id} className="flex items-center justify-between p-1.5 rounded hover:bg-white/5 text-xs text-text-sub">
+                          <span className="truncate mr-2 text-text font-medium">{isZh ? sub.zhName || sub.name : sub.en || sub.name}</span>
+                          {sub.genre && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => onOpenStudio(sub.genre!)}
+                                className="px-2 py-0.5 text-[10px] font-medium rounded bg-[#45e0c9]/15 text-[#45e0c9] hover:bg-[#45e0c9]/30 transition-colors"
+                              >
+                                {t("nav_studio")}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onSelectGenre(sub.genre!)}
+                                className="px-2 py-0.5 text-[10px] font-medium rounded bg-white/10 hover:bg-white/20 text-zinc-200 transition-colors"
+                              >
+                                {t("galaxy_details_btn")}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1542,14 +1641,16 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           const core = graphData.byId[`${c.id}-core`];
           if (!core) return null;
           return (
-            <div
+            <button
+              type="button"
               key={c.id}
               data-core-id={core.id}
               onClick={(e) => {
                 e.stopPropagation();
                 selectMajorCluster(c);
               }}
-              className="nlab-core absolute transition-opacity duration-300 pointer-events-auto cursor-pointer text-center group"
+              aria-label={`${c.name} ${c.en}`}
+              className="nlab-core absolute transition-opacity duration-300 pointer-events-auto cursor-pointer text-center group bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
             >
               <b className="block font-light text-xs sm:text-[13px] tracking-[0.32em] text-[#eae6dc]/80 group-hover:text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.9)] transition-colors">
                 {c.name}
@@ -1557,7 +1658,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <em className="block not-italic font-[Space_Grotesk] font-medium text-[8.5px] tracking-[0.25em] text-[#d8b988]/80 group-hover:text-accent transition-colors">
                 {c.en}
               </em>
-            </div>
+            </button>
           );
         })}
 
@@ -1569,13 +1670,15 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           const displayName = isZh ? (sub.zhName || sub.name) : (sub.en || sub.name);
 
           return (
-            <div
+            <button
+              type="button"
               key={sub.id}
               data-sub-id={sub.id}
               onClick={(e) => {
                 e.stopPropagation();
                 selectNode(sub, true);
               }}
+              aria-label={displayName}
               onPointerEnter={() => {
                 setHoveredNode(sub);
                 const th = threeRef.current;
@@ -1586,7 +1689,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 const th = threeRef.current;
                 if (th) th.uniforms.uHoverNode.value = -1;
               }}
-              className="nlab-sub absolute pointer-events-auto cursor-pointer select-none z-10 transition-all duration-200"
+              className="nlab-sub absolute pointer-events-auto cursor-pointer select-none text-left transition-opacity duration-150 bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
             >
               <div
                 className={`transition-all duration-200 px-2 py-0.5 rounded-full flex items-center justify-center ${
@@ -1605,7 +1708,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                   {displayName}
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
 
@@ -1657,52 +1760,52 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <Sparkles className="w-3 h-3" />
               {t("galaxy_subtitle")}
             </span>
-            {selectedCluster && (
+            {selectedCluster ? (
               <>
                 <span className="text-[#eae6dc]/30">/</span>
-                <span className="text-xs font-bold text-accent flex items-center gap-1.5">
+                <span className="font-[Space_Grotesk] tracking-wider text-accent font-semibold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full ring-2 ring-white/10" style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 6px ${selectedCluster.hexColor}` }} />
-                  <span>
-                    {isZh
-                      ? `${selectedCluster.name}星云 (${clusterSubgenres.length} 个子曲风)`
-                      : `${selectedCluster.en} Nebula (${clusterSubgenres.length} Subgenres)`}
-                  </span>
+                  {selectedCluster.en}
                 </span>
+                <span>•</span>
+                <span>{clusterSubgenres.length} {t("galaxy_subgenres_count")}</span>
                 <button
                   onClick={() => setIsSubgenresPanelOpen((prev) => !prev)}
-                  className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-[#d8b988]/50 text-[10px] text-zinc-300 hover:text-white transition-all flex items-center gap-1 shadow-sm"
-                  title={t("galaxy_toggle_branches_title")}
+                  className={`ml-2 px-2.5 py-0.5 rounded-full border text-[11px] transition-all flex items-center gap-1.5 shadow-sm ${
+                    isSubgenresPanelOpen
+                      ? "bg-accent text-zinc-950 border-accent font-bold"
+                      : "bg-[#0d121d]/80 text-[#eae6dc] border-[#eae6dc]/25 hover:border-accent hover:text-accent"
+                  }`}
+                  aria-expanded={isSubgenresPanelOpen}
                 >
-                  <Layers className="w-3 h-3 text-[#d8b988]" />
-                  <span className="whitespace-nowrap">
-                    {isSubgenresPanelOpen 
-                      ? t("galaxy_hide_branches") 
-                      : t("galaxy_expand_branches")}
-                  </span>
+                  <List className="w-3 h-3" />
+                  <span>{isSubgenresPanelOpen ? t("galaxy_close_subgenres") : t("galaxy_open_subgenres")}</span>
                 </button>
                 <button
                   onClick={() => selectMajorCluster(null)}
-                  className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-[10px] text-zinc-300 hover:text-white transition-all shadow-sm"
+                  className="px-2 py-0.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-[#eae6dc]/80 hover:text-white transition-colors"
                 >
-                  <span className="whitespace-nowrap">{t("galaxy_return_overview")}</span>
+                  {t("galaxy_back_overview")}
                 </button>
               </>
+            ) : (
+              <span>{t("galaxy_drag_hint")}</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Top Center: Major Genre Capsule Switcher Rail */}
+      {/* Top Center: Major Nebula Quick Switcher Chips */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-[92vw] overflow-x-auto no-scrollbar flex items-center gap-1.5 bg-[#0a0d14]/85 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-[#eae6dc]/15 shadow-2xl">
         <button
           onClick={() => selectMajorCluster(null)}
           className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
             !selectedCluster
-              ? "bg-[#d8b988] text-[#0a0d14] font-bold shadow-[0_0_12px_rgba(216,185,136,0.5)]"
-              : "text-[#eae6dc]/70 hover:text-white hover:bg-white/5"
+              ? "bg-[#eae6dc] text-zinc-950 font-bold shadow-md shadow-white/10"
+              : "text-[#eae6dc]/60 hover:text-white hover:bg-white/5"
           }`}
         >
-          {t("galaxy_overview")}
+          {t("galaxy_filter_all")}
         </button>
         {graphData.clusters.map((c) => {
           const isSelected = selectedCluster?.id === c.id;
@@ -1710,10 +1813,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             <button
               key={c.id}
               onClick={() => selectMajorCluster(c)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 isSelected
-                  ? "text-black font-bold shadow-lg scale-105"
-                  : "text-[#eae6dc]/75 hover:text-white hover:bg-white/10"
+                  ? "text-zinc-950 font-bold"
+                  : "text-[#eae6dc]/60 hover:text-white hover:bg-white/5"
               }`}
               style={{
                 backgroundColor: isSelected ? c.hexColor : undefined,
@@ -1730,21 +1833,23 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         })}
       </div>
 
-      {/* Top Right: Era Timeline (纪元 1850 - 2025) */}
+      {/* Top Right: Era Timeline (纪元 1850 - 2025) (P2-07: ref-based DOM updates) */}
       <div className="absolute top-6 right-6 z-20 pointer-events-auto flex flex-col items-end text-right">
-        <div className="text-3xl sm:text-4xl font-bold font-[Space_Grotesk] tabular-nums text-[#eae6dc] drop-shadow-[0_0_24px_rgba(216,185,136,0.35)] leading-none">
-          {currentYear}
+        <div ref={yearBadgeRef} className="text-3xl sm:text-4xl font-bold font-[Space_Grotesk] tabular-nums text-[#eae6dc] drop-shadow-[0_0_24px_rgba(216,185,136,0.35)] leading-none">
+          {Y_MAX}
         </div>
         <div className="text-[10px] tracking-[0.4em] text-[#eae6dc]/50 mt-1 uppercase">
           {t("galaxy_era_timeline")}
         </div>
         <div className="w-48 sm:w-56 mt-2 relative py-1 cursor-pointer">
           <input
+            ref={yearSliderRef}
             type="range"
             min={Y_MIN}
             max={Y_MAX}
-            value={currentYear}
-            onChange={(e) => handleTimelineChange(+e.target.value)}
+            defaultValue={Y_MAX}
+            aria-label={t("galaxy_era_timeline")}
+            onInput={(e) => handleTimelineChange(+e.currentTarget.value)}
             className="w-full h-1 accent-[#d8b988] bg-[#eae6dc]/20 rounded cursor-pointer"
           />
         </div>
@@ -1758,23 +1863,26 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               isPlayingYear ? "text-[#d8b988] border-[#d8b988] shadow-[0_0_10px_rgba(216,185,136,0.4)]" : "hover:text-[#d8b988] hover:border-[#d8b988]"
             }`}
             title={t("galaxy_replay_evolution")}
+            aria-label={t("galaxy_replay_evolution")}
           >
             {isPlayingYear ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-0.5" />}
           </button>
         </div>
       </div>
 
-      {/* Left Bottom: Major Clusters Legend (Overview Mode) */}
+      {/* Left Bottom: Major Clusters Legend (Overview Mode) (P2-15: semantic button) */}
       {!selectedCluster && (
         <div className="absolute bottom-8 left-6 z-20 pointer-events-auto hidden md:flex flex-col gap-1 bg-[#05070c]/70 backdrop-blur-md p-3.5 rounded-xl border border-[#eae6dc]/15 shadow-2xl max-h-[48vh] overflow-y-auto no-scrollbar">
           <div className="text-[10px] tracking-[0.4em] text-[#eae6dc]/45 uppercase pb-1 border-b border-[#eae6dc]/10 mb-1">
             {t("galaxy_nebulae")}
           </div>
           {graphData.clusters.map((c) => (
-            <div
+            <button
+              type="button"
               key={c.id}
               onClick={() => selectMajorCluster(c)}
-              className="flex items-center gap-2 py-1 px-1.5 rounded cursor-pointer transition-all text-[#eae6dc]/70 hover:text-white hover:bg-white/5"
+              aria-label={`${c.name} (${c.en})`}
+              className="flex items-center gap-2 py-1 px-1.5 rounded cursor-pointer transition-all text-[#eae6dc]/70 hover:text-white hover:bg-white/5 text-left border-0 bg-transparent w-full"
             >
               <span
                 className="w-2 h-2 rounded-full shadow-sm shrink-0"
@@ -1784,7 +1892,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <span className="text-[9.5px] font-[Space_Grotesk] tracking-wider opacity-60 ml-auto">
                 {isZh ? c.en : c.name}
               </span>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -1923,8 +2031,17 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 return (
                   <div
                     key={sub.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={isZh ? (sub.zhName || sub.name) : (sub.en || sub.name)}
                     onClick={() => selectNode(sub, true)}
-                    className={`group relative p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        selectNode(sub, true);
+                      }
+                    }}
+                    className={`group relative p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                       viewMode === "rail" ? "w-64 sm:w-72 shrink-0" : "w-full"
                     } ${
                       isCurrentActive
