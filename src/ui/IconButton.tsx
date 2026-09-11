@@ -7,6 +7,7 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   variant?: "primary" | "secondary" | "ghost" | "outline" | "danger";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
+  icon?: React.ReactNode;
 }
 
 const VARIANT_MAP = {
@@ -30,6 +31,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       variant = "ghost",
       size = "md",
       isLoading = false,
+      icon,
       className = "",
       disabled,
       children,
@@ -47,9 +49,9 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         {...rest}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-current" />
+          <Loader2 className="w-4 h-4 animate-spin text-accent" />
         ) : (
-          children
+          icon || children
         )}
       </button>
     );

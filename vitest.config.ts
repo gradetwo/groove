@@ -11,6 +11,18 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**'],
+      exclude: [
+        'node_modules/',
+        'dist/**',
+        'scripts/**',
+        'src/test/**',
+        '**/*.d.ts',
+      ],
+    },
   },
 });

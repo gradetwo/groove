@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X, Music, Sliders, ExternalLink, Sparkles } from "lucide-react";
-import { ALL_GENRES } from "../data/genres";
-import { Genre } from "../types/genre";
+import { GENRE_INDEX, GenreIndexItem } from "../data/index/genresIndex";
 import { useLanguage } from "../i18n/LanguageContext";
 import { isBpmInRange } from "../utils/bpm";
 import { Modal } from "../ui";
@@ -9,7 +8,7 @@ import { Modal } from "../ui";
 interface GlobalSearchProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectGenre: (genre: Genre, action?: "detail" | "studio") => void;
+  onSelectGenre: (genre: { id: string }, action?: "detail" | "studio") => void;
 }
 
 export const GlobalSearch: React.FC<GlobalSearchProps> = ({
@@ -49,14 +48,14 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
   }, [isOpen, onClose]);
 
   // Filtered genres
-  const filteredGenres = React.useMemo(() => {
+  const filteredGenres = React.useMemo<GenreIndexItem[]>(() => {
     if (!query.trim()) {
-      return ALL_GENRES.slice(0, 8); // Top recommendations
+      return GENRE_INDEX.slice(0, 8); // Top recommendations
     }
     const q = query.trim().toLowerCase();
     const numQ = parseInt(q, 10);
 
-    return ALL_GENRES.filter((g) => {
+    return GENRE_INDEX.filter((g) => {
       // Name match
       if (g.name.toLowerCase().includes(q)) return true;
       // Aliases match (e.g. 中文别名)
@@ -64,9 +63,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
       // Category match
       if (g.category.toLowerCase().includes(q)) return true;
       // Subgenres match
-      if (g.subgenres.some((s) => s.toLowerCase().includes(q))) return true;
-      // Origin place
-      if (g.origin_place.en.toLowerCase().includes(q) || g.origin_place.zh.toLowerCase().includes(q)) return true;
+      if (g.subgenres && g.subgenres.some((s) => s.toLowerCase().includes(q))) return true;
       // BPM match
       if (!isNaN(numQ) && numQ > 20 && numQ < 400) {
         if (isBpmInRange(numQ, g.bpm_range, 4)) return true;
@@ -178,7 +175,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
                       <div className="flex items-center space-x-2 text-xs text-neutral-400 mt-0.5">
                         <span className="text-accent font-medium">{genre.category}</span>
                         <span>•</span>
-                        <span>{genre.bpm_range[0]}-{genre.bpm_range[1]} BPM</span>
+                        <span>{genre.bpm_range.includes("BPM") ? genre.bpm_range : `${genre.bpm_range} BPM`}</span>
                         <span>•</span>
                         <span>{genre.origin_year}</span>
                       </div>

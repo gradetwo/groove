@@ -1,7 +1,34 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.6.0",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.6.0 第二批 UI 组件库、客户端深链路由、按需加载轻量索引与多端自动化测试",
+        "en": "v1.6.0 Second UI Batch, Deep Link Router, On-Demand Genre Index & Multi-Device Testing"
+      },
+      "highlights": [
+        {
+          "zh": "src/ui/ 第二批现代化原子组件库（P1-07）：全面落地 Slider（44px 触控热区、WAI-ARIA、全键盘步进/PageUp/Down/Home/End）、Select（自定义无障碍下拉菜单、键盘循环导航）、Tooltip（气泡浮层与快捷键提示）、Skeleton（骨架屏 Line/Rect/Circle/Card 降级加载）、ErrorState（区域容灾卡片与重试）、GenreCard（现代化曲风卡片与试听交互）、RadarChart（SVG 六维雷达图与屏幕阅读器表格对照）",
+          "en": "Batch 2 atomic UI library: deployed Slider (44px touch target, WAI-ARIA slider role, full keyboard arrows/PageUp/Down/Home/End navigation), Select (accessible dropdown, keyboard cycling), Tooltip, Skeleton, ErrorState, GenreCard, and accessible SVG RadarChart with sr-only data table"
+        },
+        {
+          "zh": "全链路客户端路由与深链体系（P1-08）：落地 src/app/router.tsx，支持 /studio?genre=、/genre/:id、/compare?ids=、/challenge?difficulty=、/explore/galaxy?genre=、/explore/timeline?decade=&category=、/chords?progression=&key=、/s/:payload 等语义化 URL 与浏览器前进/后退历史深度联动",
+          "en": "Client-side routing & deep linking system: implemented src/app/router.tsx supporting clean URLs (/studio, /genre/:id, /compare, /challenge, /explore/galaxy, /explore/timeline, /chords, /s/:payload) with full browser history synchronization"
+        },
+        {
+          "zh": "极速轻量索引层与按需加载分包（P1-13）：生成 GENRE_INDEX（~15KB 紧凑元数据），彻底将全站 14 个沉重曲风数据 chunk 与首屏解耦，首屏 modulepreload 剔除全量曲风数据，首屏 gzip 仅 26KB，页面秒开",
+          "en": "On-demand loading with lightweight genre index: decoupled 14 heavy genre data chunks from initial bundle, reducing initial gzip entry script to only 26KB with instant first frame rendering"
+        },
+        {
+          "zh": "测试基建与代码规范工程化（P1-16 / P1-17）：升级 Vitest 至 JSDOM 环境，引入 @testing-library/react 与 @vitest/coverage-v8，配置 ESLint 0 警告严格标准，全站 11 个测试套件 105 个单测与 7 大平台 Playwright 矩阵全绿通过",
+          "en": "Testing infrastructure & code standards: upgraded Vitest to JSDOM environment, added @testing-library/react and coverage tooling, enforced 0-error ESLint configuration, passing 105 unit tests and full 7-environment Playwright matrix"
+        }
+      ]
+    },
     {
       "version": "1.5.0",
       "date": "2026-09-11",

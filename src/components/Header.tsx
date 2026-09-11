@@ -16,8 +16,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
-import { ALL_GENRES } from "../data/genres";
-import { Genre } from "../types/genre";
+import { GENRE_INDEX } from "../data/index/genresIndex";
 import { CURRENT_CLIENT_VERSION } from "./UpdatesModal";
 
 export type NavTab = 
@@ -34,7 +33,7 @@ interface HeaderProps {
   currentTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   onOpenSearch: () => void;
-  onRandomGenre: (genre: Genre) => void;
+  onRandomGenre: (genre: { id: string }) => void;
   onOpenUpdates?: () => void;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
@@ -120,8 +119,8 @@ export const Header: React.FC<HeaderProps> = ({
   const isExploreActive = ["galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
 
   const handleRandom = () => {
-    const randomIndex = Math.floor(Math.random() * ALL_GENRES.length);
-    const g = ALL_GENRES[randomIndex];
+    const randomIndex = Math.floor(Math.random() * GENRE_INDEX.length);
+    const g = GENRE_INDEX[randomIndex];
     onRandomGenre(g);
   };
 

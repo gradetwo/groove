@@ -2,8 +2,9 @@ import React from "react";
 import { X } from "lucide-react";
 
 export interface ChipProps extends React.HTMLAttributes<HTMLDivElement> {
-  label: React.ReactNode;
-  variant?: "default" | "active" | "subtle" | "outline";
+  label?: React.ReactNode;
+  children?: React.ReactNode;
+  variant?: "default" | "active" | "subtle" | "outline" | "accent";
   size?: "sm" | "md";
   icon?: React.ReactNode;
   onRemove?: () => void;
@@ -13,6 +14,7 @@ export interface ChipProps extends React.HTMLAttributes<HTMLDivElement> {
 const VARIANT_MAP = {
   default: "bg-[#161820] text-text-sub border-line hover:text-text hover:border-line-strong",
   active: "bg-accent/10 text-accent border-accent/40 shadow-[0_0_8px_rgba(245,183,61,0.15)] font-medium",
+  accent: "bg-accent/10 text-accent border-accent/40 shadow-[0_0_8px_rgba(245,183,61,0.15)] font-medium",
   subtle: "bg-white/[0.04] text-text-sub border-transparent",
   outline: "bg-transparent text-text-sub border-line hover:text-text",
 };
@@ -24,6 +26,7 @@ const SIZE_MAP = {
 
 export const Chip: React.FC<ChipProps> = ({
   label,
+  children,
   variant = "default",
   size = "md",
   icon,
@@ -33,6 +36,7 @@ export const Chip: React.FC<ChipProps> = ({
   onClick,
   ...rest
 }) => {
+  const content = label ?? children;
   return (
     <div
       role={clickable ? "button" : undefined}
@@ -44,7 +48,7 @@ export const Chip: React.FC<ChipProps> = ({
       {...rest}
     >
       {icon && <span className="shrink-0">{icon}</span>}
-      <span className="truncate">{label}</span>
+      <span className="truncate">{content}</span>
       {onRemove && (
         <button
           type="button"

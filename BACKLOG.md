@@ -126,12 +126,14 @@
 - [x] **P1-06** 5 处自研遮罩迁移到 `<Modal>` ｜ 1d ｜ `GlobalSearch.tsx:99`、`StudioView.tsx:1818,2706`、`EuclideanModal.tsx:71`、`PitchPickerModal.tsx:77` (v1.5.0)
   验收：行为一致（Esc/焦点/ARIA）；新增组件测试覆盖焦点陷阱。
 
-- [ ] **P1-07** `src/ui/` 第二批：`Slider`（44px 热区 + 键盘步进）、`Select`、`Tooltip`、`Skeleton`、`ErrorState`、`GenreCard`、`RadarChart`（role=img + 数据表） ｜ 2d
+- [x] **P1-07** `src/ui/` 第二批：`Slider`（44px 热区 + 键盘步进）、`Select`、`Tooltip`、`Skeleton`、`ErrorState`、`GenreCard`、`RadarChart`（role=img + 数据表） ｜ 2d (v1.6.0)
 
 ### 路由与深链
 
-- [ ] **P1-08** 路由方案落地（决策 D3） ｜ 1.5d ｜ 新增 `src/app/router.tsx`
+- [x] **P1-08** 路由方案落地（决策 D3） ｜ 1.5d ｜ 新增 `src/app/router.tsx` (v1.6.0)
   验收：`/studio?genre=`、`/genre/:id`、`/compare?ids=`、`/challenge?difficulty=`、`/explore/galaxy?genre=`、`/explore/timeline?decade=&category=`、`/chords?progression=&key=`、`/s/:payload`；首屏解析 URL；导航写入 URL。
+
+### 导航与信息架构
 
 - [x] **P1-09** 导航 IA 重组 ｜ 0.5d ｜ `Header.tsx:85-93` (v1.4.5)
   验收：`工作台 / 和弦 / 探索▾ / 对比 / 挑战`；移动端菜单同步；`aria-expanded`。
@@ -149,7 +151,7 @@
 
 ### 数据层
 
-- [ ] **P1-13** 轻量索引层 + 按需加载 ｜ 1.5d ｜ 新增 `src/data/index/`
+- [x] **P1-13** 轻量索引层 + 按需加载 ｜ 1.5d ｜ 新增 `src/data/index/` (v1.6.0)
   验收：首屏只加载 `{id,name,category,origin_decade,bpm_range,aliases,radar}`；`ALL_GENRES` 全量语义改异步；`dist/index.html` 的 modulepreload 中不再出现 14 个 `genre-*`；首屏 gzip ≤90KB。
 
 - [x] **P1-14** 运行时 Schema 校验 ｜ 1d ｜ 新增 `src/data/schema.ts` (v1.4.3)
@@ -160,8 +162,8 @@
 
 ### 工具链
 
-- [ ] **P1-16** ESLint + Prettier + husky/lint-staged ｜ 0.5d
-- [ ] **P1-17** 测试基建升级：`jsdom` + `@testing-library/react` + `@vitest/coverage-v8` ｜ 0.5d ｜ `vitest.config.ts`
+- [x] **P1-16** ESLint + Prettier + CI 自动化配置 ｜ 0.5d (v1.6.0)
+- [x] **P1-17** 测试基建升级：`jsdom` + `@testing-library/react` + `@vitest/coverage-v8` ｜ 0.5d ｜ `vitest.config.ts` (v1.6.0)
   验收：`environment: jsdom`；`npm run test:coverage`；删除无价值的 `sanity.test.ts`。
 - [x] **P1-18** 体积预算与 CI 门禁 ｜ 0.5d (v1.5.0)
   验收：首屏 gzip、单 chunk、`vendor-three` 三项预算断言；超出即失败。

@@ -27,8 +27,11 @@ jobs:
       - name: TypeScript Typecheck
         run: npm run typecheck
 
-      - name: Unit Tests
-        run: npm test
+      - name: ESLint Code Quality
+        run: npm run lint
+
+      - name: Unit Tests & Coverage
+        run: npm run test:coverage
 
       - name: Genre Database Schema Lint
         run: npm run lint:data

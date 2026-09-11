@@ -1,10 +1,12 @@
-import React from "react";
+import { Button } from "./Button";
 
 export interface EmptyStateProps {
   icon?: React.ReactNode;
   title: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  actionLabel?: string;
+  onAction?: () => void;
   className?: string;
 }
 
@@ -13,6 +15,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   action,
+  actionLabel,
+  onAction,
   className = "",
 }) => {
   return (
@@ -30,7 +34,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           {description}
         </p>
       )}
-      {action && <div className="mt-1">{action}</div>}
+      {action ? (
+        <div className="mt-1">{action}</div>
+      ) : actionLabel && onAction ? (
+        <div className="mt-1">
+          <Button variant="secondary" size="sm" onClick={onAction}>
+            {actionLabel}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 };

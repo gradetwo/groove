@@ -173,7 +173,7 @@ export interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
-  t: (key: MessageKey | (string & {}), vars?: Record<string, string | number>) => string;
+  t: (key: MessageKey | (string & Record<never, never>), vars?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -238,7 +238,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLanguage(language === "en" ? "zh" : "en");
   };
 
-  const t = (key: MessageKey | (string & {}), vars?: Record<string, string | number>): string => {
+  const t = (key: MessageKey | (string & Record<never, never>), vars?: Record<string, string | number>): string => {
     const keyStr = String(key);
     const entry = (DICTIONARY as Record<string, { en: string; zh: string }>)[keyStr];
     if (!entry) {

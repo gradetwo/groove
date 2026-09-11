@@ -6,7 +6,7 @@ export interface ModalProps {
   onClose: () => void;
   title?: React.ReactNode;
   description?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   overlayClassName?: string;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
@@ -99,11 +99,11 @@ export const Modal: React.FC<ModalProps> = ({
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
       if (previouslyFocusedElementRef.current && typeof previouslyFocusedElementRef.current.focus === "function") {
         previouslyFocusedElementRef.current.focus();
       }

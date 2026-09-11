@@ -3,12 +3,14 @@ import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { Genre } from "./types/genre";
-import { ALL_GENRES, GENRES_MAP } from "./data/genres";
+import { GENRE_INDEX_MAP } from "./data/index/genresIndex";
+import { loadGenre } from "./data/index/loader";
 import { AudioEngine } from "./audio/AudioEngine";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ChordDefinition } from "./utils/chordTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
-import { ToastContainer } from "./ui";
+import { ToastContainer, Skeleton } from "./ui";
+import { RouterProvider, useRouter } from "./app/router";
 
 // Code splitting & lazy loading chunks for optimal performance
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
@@ -22,58 +24,48 @@ const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then(
 
 const MainApp: React.FC = () => {
   const { t, language } = useLanguage();
+  const { route, navigate } = useRouter();
 
-  const VALID_TABS: NavTab[] = useMemo(() => [
-    "studio",
-    "chords",
-    "galaxy",
-    "horizontal-timeline",
-    "vertical-timeline",
-    "compare",
-    "challenge",
-    "detail",
-  ], []);
+  const currentTab = route.tab;
 
-  // Initialize currentTab from URL search param if present
-  const [currentTab, setCurrentTab] = useState<NavTab>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab") as NavTab | null;
-      if (tab && [
-        "studio",
-        "chords",
-        "galaxy",
-        "horizontal-timeline",
-        "vertical-timeline",
-        "compare",
-        "challenge",
-        "detail",
-      ].includes(tab)) {
-        return tab;
+  // On-demand asynchronous genre loading (P1-13)
+  const targetGenreId = route.genreId || "chicago-house";
+  const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    loadGenre(targetGenreId).then((g) => {
+      if (isMounted && g) {
+        setSelectedGenre(g);
       }
-      if (params.get("genre") && GENRES_MAP[params.get("genre")!]) {
-        return "detail";
-      }
-    }
-    return "studio";
-  });
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [targetGenreId]);
 
-  // Initialize selectedGenre from URL search param if present
-  const [selectedGenre, setSelectedGenre] = useState<Genre>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const genreId = params.get("genre");
-      if (genreId && GENRES_MAP[genreId]) {
-        return GENRES_MAP[genreId];
-      }
-    }
-    return GENRES_MAP["future-bass"] || GENRES_MAP["chicago-house"] || ALL_GENRES[0];
-  });
+  const [comparePool, setComparePool] = useState<Genre[]>([]);
 
-  const [comparePool, setComparePool] = useState<Genre[]>(() => [
-    GENRES_MAP["chicago-house"] || ALL_GENRES[0],
-    GENRES_MAP["berlin-techno"] || ALL_GENRES[1],
-  ]);
+  useEffect(() => {
+    let isMounted = true;
+    const ids = route.compareIds && route.compareIds.length > 0
+      ? route.compareIds
+      : ["chicago-house", "detroit-techno"];
+
+    Promise.all(ids.map(loadGenre)).then((loaded) => {
+      if (isMounted) {
+        const valid = loaded.filter(Boolean) as Genre[];
+        if (valid.length > 0) {
+          setComparePool(valid.slice(0, 4));
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [route.compareIds]);
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
@@ -81,34 +73,6 @@ const MainApp: React.FC = () => {
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-
-  // Synchronize state changes to browser address bar URL (P1-08)
-  const syncUrl = useCallback((tab: NavTab, genreId?: string, replace = false) => {
-    if (typeof window === "undefined") return;
-    try {
-      const url = new URL(window.location.href);
-      if (tab === "studio" && !genreId) {
-        url.searchParams.delete("tab");
-        url.searchParams.delete("genre");
-      } else {
-        url.searchParams.set("tab", tab);
-        if (genreId) {
-          url.searchParams.set("genre", genreId);
-        } else if (tab !== "detail") {
-          url.searchParams.delete("genre");
-        }
-      }
-      const newUrl = url.pathname + (url.search ? url.search : "");
-      const currentUrl = window.location.pathname + (window.location.search ? window.location.search : "");
-      if (replace) {
-        window.history.replaceState({ tab, genreId }, "", newUrl);
-      } else if (newUrl !== currentUrl) {
-        window.history.pushState({ tab, genreId }, "", newUrl);
-      }
-    } catch {
-      // Ignored in environments where window.history is restricted
-    }
-  }, []);
 
   // Global hotkey: Cmd+K / Ctrl+K opens search dialog from ANY page (P0-23)
   useEffect(() => {
@@ -122,60 +86,26 @@ const MainApp: React.FC = () => {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  // Sync with browser URL search params & back/forward navigation (P1-08)
-  useEffect(() => {
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const genreId = params.get("genre");
-      const tabParam = params.get("tab") as NavTab | null;
-
-      if (genreId && GENRES_MAP[genreId]) {
-        setSelectedGenre(GENRES_MAP[genreId]);
-      }
-      if (tabParam && VALID_TABS.includes(tabParam)) {
-        setCurrentTab(tabParam);
-      } else if (genreId && GENRES_MAP[genreId]) {
-        setCurrentTab("detail");
-      } else {
-        setCurrentTab("studio");
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [VALID_TABS]);
-
-  // Normalize URL on initial mount
-  useEffect(() => {
-    syncUrl(currentTab, currentTab === "detail" ? selectedGenre.id : undefined, true);
-  }, [currentTab, selectedGenre.id, syncUrl]);
-
   const handleSelectTab = useCallback((tab: NavTab) => {
-    setCurrentTab(tab);
-    syncUrl(tab, tab === "detail" ? selectedGenre.id : undefined);
-  }, [selectedGenre.id, syncUrl]);
+    navigate({ tab, genreId: tab === "detail" ? selectedGenre?.id : undefined });
+  }, [navigate, selectedGenre?.id]);
 
-  const handleSelectGenre = useCallback((genre: Genre, action?: "detail" | "studio") => {
-    setSelectedGenre(genre);
+  const handleSelectGenre = useCallback((genre: { id: string }, action?: "detail" | "studio") => {
     const targetTab: NavTab = action === "studio" ? "studio" : "detail";
-    setCurrentTab(targetTab);
-    syncUrl(targetTab, genre.id);
-  }, [syncUrl]);
+    navigate({ tab: targetTab, genreId: genre.id });
+  }, [navigate]);
 
-  const handleOpenStudioWithGenre = useCallback((genre: Genre) => {
-    setSelectedGenre(genre);
-    setCurrentTab("studio");
-    syncUrl("studio", genre.id);
-  }, [syncUrl]);
+  const handleOpenStudioWithGenre = useCallback((genre: { id: string }) => {
+    navigate({ tab: "studio", genreId: genre.id });
+  }, [navigate]);
 
   const handleAddToCompare = useCallback((genre: Genre) => {
     setComparePool((prev) => {
-      if (prev.some((g) => g.id === genre.id)) return prev;
-      return [...prev, genre].slice(0, 4);
+      const next = prev.some((g) => g.id === genre.id) ? prev : [...prev, genre].slice(0, 4);
+      navigate({ tab: "compare", compareIds: next.map((g) => g.id) });
+      return next;
     });
-    setCurrentTab("compare");
-    syncUrl("compare");
-  }, [syncUrl]);
+  }, [navigate]);
 
   const handleEngineReady = (engine: AudioEngine) => {
     setAnalyser(engine.getAnalyser());
@@ -230,18 +160,25 @@ const MainApp: React.FC = () => {
                     : "Audio engine or sequencer matrix encountered an unexpected error."
                 }
               >
-                <StudioView
-                  selectedGenre={selectedGenre}
-                  onSelectGenre={(g) => setSelectedGenre(g)}
-                  onViewDetail={(g) => {
-                    setSelectedGenre(g);
-                    setCurrentTab("detail");
-                  }}
-                  onAddToCompare={handleAddToCompare}
-                  onAudioEngineReady={handleEngineReady}
-                  initialChords={initialChords}
-                  onClearInitialChords={() => setInitialChords(null)}
-                />
+                {selectedGenre ? (
+                  <StudioView
+                    selectedGenre={selectedGenre}
+                    onSelectGenre={(g) => handleSelectGenre(g, "studio")}
+                    onViewDetail={(g) => handleSelectGenre(g, "detail")}
+                    onAddToCompare={handleAddToCompare}
+                    onAudioEngineReady={handleEngineReady}
+                    initialChords={initialChords}
+                    onClearInitialChords={() => setInitialChords(null)}
+                  />
+                ) : (
+                  <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <Skeleton variant="line" className="w-48 h-10" />
+                      <Skeleton variant="rect" className="w-32 h-10" />
+                    </div>
+                    <Skeleton variant="card" className="h-96" />
+                  </div>
+                )}
               </ErrorBoundary>
             )}
 
@@ -259,7 +196,7 @@ const MainApp: React.FC = () => {
                 <ChordProgressionsView
                   onOpenStudioWithChords={(chords) => {
                     setInitialChords(chords);
-                    setCurrentTab("studio");
+                    handleSelectTab("studio");
                   }}
                 />
               </ErrorBoundary>
@@ -279,10 +216,7 @@ const MainApp: React.FC = () => {
                 alternativeLabel={language === "zh" ? "浏览时间线" : "Timeline"}
               >
                 <GalaxyView
-                  onSelectGenre={(g) => {
-                    setSelectedGenre(g);
-                    setCurrentTab("detail");
-                  }}
+                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -295,10 +229,7 @@ const MainApp: React.FC = () => {
                 homeLabel={language === "zh" ? "返回工作台" : "Studio"}
               >
                 <HorizontalTimelineView
-                  onSelectGenre={(g) => {
-                    setSelectedGenre(g);
-                    setCurrentTab("detail");
-                  }}
+                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -311,10 +242,7 @@ const MainApp: React.FC = () => {
                 homeLabel={language === "zh" ? "返回工作台" : "Studio"}
               >
                 <VerticalTimelineView
-                  onSelectGenre={(g) => {
-                    setSelectedGenre(g);
-                    setCurrentTab("detail");
-                  }}
+                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -328,10 +256,7 @@ const MainApp: React.FC = () => {
               >
                 <CompareView
                   initialGenres={comparePool}
-                  onSelectGenre={(g) => {
-                    setSelectedGenre(g);
-                    setCurrentTab("detail");
-                  }}
+                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -344,10 +269,7 @@ const MainApp: React.FC = () => {
                 homeLabel={language === "zh" ? "返回工作台" : "Studio"}
               >
                 <ChallengeView
-                  onSelectGenre={(g) => {
-                    setSelectedGenre(g);
-                    setCurrentTab("detail");
-                  }}
+                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -359,13 +281,24 @@ const MainApp: React.FC = () => {
                 onNavigateHome={() => handleSelectTab("studio")}
                 homeLabel={language === "zh" ? "返回工作台" : "Studio"}
               >
-                <GenreDetailView
-                  genre={selectedGenre}
-                  onBack={() => setCurrentTab("studio")}
-                  onSelectGenre={(g) => setSelectedGenre(g)}
-                  onOpenStudio={handleOpenStudioWithGenre}
-                  onAddToCompare={handleAddToCompare}
-                />
+                {selectedGenre ? (
+                  <GenreDetailView
+                    genre={selectedGenre}
+                    onBack={() => handleSelectTab("studio")}
+                    onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                    onOpenStudio={handleOpenStudioWithGenre}
+                    onAddToCompare={handleAddToCompare}
+                  />
+                ) : (
+                  <div className="max-w-5xl mx-auto px-4 py-12 space-y-6">
+                    <Skeleton variant="line" className="w-1/3 h-8" />
+                    <Skeleton variant="card" className="h-64" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Skeleton variant="card" className="h-48" />
+                      <Skeleton variant="card" className="h-48" />
+                    </div>
+                  </div>
+                )}
               </ErrorBoundary>
             )}
         </React.Suspense>
@@ -385,25 +318,25 @@ const MainApp: React.FC = () => {
 
           <div className="flex items-center gap-4 text-text-sub">
             <button
-              onClick={() => setCurrentTab("studio")}
+              onClick={() => handleSelectTab("studio")}
               className="hover:text-text transition-colors"
             >
               {t("nav_studio")}
             </button>
             <button
-              onClick={() => setCurrentTab("galaxy")}
+              onClick={() => handleSelectTab("galaxy")}
               className="hover:text-text transition-colors"
             >
               {t("nav_galaxy")}
             </button>
             <button
-              onClick={() => setCurrentTab("compare")}
+              onClick={() => handleSelectTab("compare")}
               className="hover:text-text transition-colors"
             >
               {t("nav_compare")}
             </button>
             <button
-              onClick={() => setCurrentTab("challenge")}
+              onClick={() => handleSelectTab("challenge")}
               className="hover:text-text transition-colors"
             >
               {t("nav_challenge")}
@@ -442,7 +375,9 @@ export function App() {
   return (
     <ErrorBoundary fallbackTitle="应用遇到未知错误 / Application Error">
       <LanguageProvider>
-        <MainApp />
+        <RouterProvider>
+          <MainApp />
+        </RouterProvider>
       </LanguageProvider>
     </ErrorBoundary>
   );

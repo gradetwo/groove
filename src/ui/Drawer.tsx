@@ -5,7 +5,7 @@ export interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
   title?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   position?: "bottom" | "right";
   className?: string;
   ariaLabel?: string;

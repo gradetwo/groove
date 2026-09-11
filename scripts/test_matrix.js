@@ -133,7 +133,7 @@ async function runTestOnTarget(target, baseUrl) {
 
   try {
     // 1. Initial Load & Studio View
-    await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(500);
 
     // Title check
@@ -210,7 +210,7 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     // 3. Chord Studio View Check
-    await page.goto(`${baseUrl}/?tab=chords`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/?tab=chords`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(400);
 
     // Verify Chord Studio builder and catalog render
@@ -223,7 +223,7 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     // 4. Galaxy View Check
-    await page.goto(`${baseUrl}/?tab=galaxy`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/?tab=galaxy`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(600);
     const canvasOrFallback = await page.$("canvas, div:has-text('WebGL')");
     if (!canvasOrFallback) {
@@ -231,17 +231,17 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     // 5. Timeline Views Check
-    await page.goto(`${baseUrl}/?tab=horizontal-timeline`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/?tab=horizontal-timeline`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
 
-    await page.goto(`${baseUrl}/?tab=vertical-timeline`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/?tab=vertical-timeline`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
 
     // 6. Compare & Challenge Views Check
-    await page.goto(`${baseUrl}/?tab=compare`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/?tab=compare`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
 
-    await page.goto(`${baseUrl}/?tab=challenge`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/?tab=challenge`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
 
     if (errors.length > 0) {
