@@ -49,7 +49,7 @@
 - [x] **P0-12** 计时器与卸载清理 ｜ 0.5d ｜ `StudioView.tsx:283-286,1277,1338,630-640`, `VelocityLane.tsx` (v1.3.7)
   验收：`showToast` 保存并清理旧 timer；`longPressTimerRef` 卸载时 clear；`setTimeout(...,60)` 全部可取消。
 
-- [ ] **P0-13** 触摸双触发去重 ｜ 0.5d ｜ `StudioView.tsx:2529-2532`、`VelocityLane.tsx:247-249`
+- [x] **P0-13** 触摸双触发去重 ｜ 0.5d ｜ `StudioView.tsx:2529-2532`、`VelocityLane.tsx:247-249`
   验收：cell 与力度条只保留 Pointer Events；触摸一次只写一次值、只触发一次触感。
 
 - [x] **P0-14** 死代码清理 ｜ 0.5d ｜ `StudioView.tsx:1-34`、`components/Breadcrumbs.tsx`、`GalaxyView.tsx` `searchQuery`、`SoundBankManager.ts:82-110`、`ChordProgressionsView.tsx:799,816` (v1.4.2)
@@ -57,7 +57,7 @@
 
 ### 全局正确性
 
-- [ ] **P0-15** i18n 缺失 key 补全 + `t()` 开发期警告 ｜ 0.5d ｜ `StudioView.tsx:1022,1641-1806,2131`、`i18n/LanguageContext.tsx:184-188`
+- [x] **P0-15** i18n 缺失 key 补全 + `t()` 开发期警告 ｜ 0.5d ｜ `StudioView.tsx:1022,1641-1806,2131`、`i18n/LanguageContext.tsx:184-188`
   验收：`era/place/range/keyLabel/time/dna/harm/tips/refs/compare/export` 全部补齐；`t()` 未命中时 `console.warn`（仅 dev）；界面无字面量 key 渲染。
 
 - [x] **P0-16** `parseBpmRange()` 抽离并修复解析 ｜ 0.5d ｜ `GlobalSearch.tsx:69,175`、`CompareView.tsx:203-206`、新增 `src/utils/bpm.ts`
