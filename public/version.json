@@ -1,7 +1,26 @@
 {
-  "version": "1.3.8",
+  "version": "1.4.0",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.4.0",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.4.0 和弦工坊层级重构折叠支持与星云子曲风专业级视觉重塑",
+        "en": "v1.4.0 Chord Studio Reorder/Collapse & Pro-Audio Galaxy Redesign"
+      },
+      "highlights": [
+        {
+          "zh": "和弦走向创作工作台布局前置与折叠收起：将和弦创作工作台置于常见分类和弦走向之上，支持一键折叠/展开；折叠态提供极简走带光效摘要栏（实时和弦卡片、BPM与音色速览、独立循环播放），下方卡片点击「载入工作台」自动展开并平滑吸顶",
+          "en": "Chord Progression Builder repositioned above catalog with smart collapse/expand: streamlined header with instant playhead summary bar, active chord tags, and auto-expanding anchor link from curated cards"
+        },
+        {
+          "zh": "星云子曲风全界面专业级视觉重塑：彻底清除衬线字体（Noto Serif），统一升级为现代几何无衬线字体（Space Grotesk）；重构子曲风卡片为双层发光玻璃拟物卡，全面剔除生硬圆点，引入微型霓虹光环与脉冲粒子星核；升级曲风分支抽屉顶栏与交互按钮",
+          "en": "Galaxy subgenre showcase pro-audio aesthetic overhaul: eliminated clunky serif fonts, upgraded to sleek Space Grotesk sans, replaced raw dots with luminous neon core rings and cybernetic badges, and enhanced glassmorphism cards"
+        }
+      ]
+    },
     {
       "version": "1.3.8",
       "date": "2026-09-11",

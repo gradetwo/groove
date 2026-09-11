@@ -1457,21 +1457,21 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               }`}
             >
               <div
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full backdrop-blur-md shadow-lg transition-all ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full backdrop-blur-xl shadow-lg transition-all ${
                   isCurrentActive
-                    ? "bg-[#181d28]/95 border border-[#f5b73d] text-white shadow-[0_0_15px_rgba(245,183,61,0.4)]"
-                    : "bg-[#090c14]/80 border border-[#eae6dc]/15 text-[#eae6dc]/85 group-hover:bg-[#121622]/90 group-hover:border-[#d8b988]/60 group-hover:text-white"
+                    ? "bg-[#182032]/95 border border-[#f5b73d] text-white shadow-[0_0_16px_rgba(245,183,61,0.4)] scale-105"
+                    : "bg-[#0a0d16]/85 border border-white/10 text-zinc-200 group-hover:bg-[#121624]/95 group-hover:border-[#d8b988]/60 group-hover:text-white"
                 }`}
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0 shadow-sm"
+                  className="w-1.5 h-1.5 rounded-full shrink-0 ring-2 ring-white/10"
                   style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 6px ${selectedCluster.hexColor}` }}
                 />
-                <span className="text-[11px] font-medium tracking-wide whitespace-nowrap">
+                <span className="text-[11px] font-medium tracking-tight whitespace-nowrap">
                   {sub.name}
                 </span>
                 {sub.year > 0 && (
-                  <span className="text-[9px] font-mono opacity-60 font-light">
+                  <span className="text-[9px] font-mono text-zinc-400 font-light">
                     {sub.year}
                   </span>
                 )}
@@ -1520,7 +1520,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           <span className="font-['Cormorant_Garamond'] tracking-[0.25em]">GENESIS ATLAS OF SOUND</span>
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-light tracking-[0.25em] text-[#eae6dc] drop-shadow-[0_0_20px_rgba(216,185,136,0.35)] m-0 font-['Noto_Serif_SC']">
+          <h1 className="text-2xl sm:text-3xl font-light tracking-[0.25em] text-[#eae6dc] drop-shadow-[0_0_20px_rgba(216,185,136,0.35)] m-0 font-[Space_Grotesk]">
             {language === "zh" ? "曲风星谱" : "Genre Galaxy"}
           </h1>
           <div className="flex items-center gap-2 mt-1 text-xs text-[#eae6dc]/60">
@@ -1531,29 +1531,31 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             {selectedCluster && (
               <>
                 <span className="text-[#eae6dc]/30">/</span>
-                <span className="text-xs font-bold text-[#f5b73d] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedCluster.hexColor }} />
-                  {language === "zh"
-                    ? `${selectedCluster.name}星云 (${clusterSubgenres.length} 个子曲风)`
-                    : `${selectedCluster.en} Nebula (${clusterSubgenres.length} Subgenres)`}
+                <span className="text-xs font-bold text-[#f5b73d] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full ring-2 ring-white/10" style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 6px ${selectedCluster.hexColor}` }} />
+                  <span>
+                    {language === "zh"
+                      ? `${selectedCluster.name}星云 (${clusterSubgenres.length} 个子曲风)`
+                      : `${selectedCluster.en} Nebula (${clusterSubgenres.length} Subgenres)`}
+                  </span>
                 </span>
                 <button
                   onClick={() => setIsSubgenresPanelOpen((prev) => !prev)}
-                  className="px-2 py-0.5 rounded bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] hover:border-[#d8b988]/50 text-[10px] text-[#eae6dc]/80 hover:text-[#d8b988] transition-colors flex items-center gap-1"
+                  className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-[#d8b988]/50 text-[10px] text-zinc-300 hover:text-white transition-all flex items-center gap-1 shadow-sm"
                   title={language === "zh" ? "展开或隐藏子曲风分支列表" : "Toggle subgenres branch list"}
                 >
                   <Layers className="w-3 h-3 text-[#d8b988]" />
-                  <span>
+                  <span className="whitespace-nowrap">
                     {isSubgenresPanelOpen 
-                      ? (language === "zh" ? "隐藏分支" : "Hide Branches") 
-                      : (language === "zh" ? "展开分支" : "Explore Branches")}
+                      ? (language === "zh" ? "隐藏分支" : "Hide") 
+                      : (language === "zh" ? "展开分支" : "Branches")}
                   </span>
                 </button>
                 <button
                   onClick={() => selectMajorCluster(null)}
-                  className="px-2 py-0.5 rounded bg-[#17181c] hover:bg-[#23262d] border border-[#2b2e38] text-[10px] text-[#eae6dc]/80 hover:text-white transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-[10px] text-zinc-300 hover:text-white transition-all shadow-sm"
                 >
-                  {language === "zh" ? "返回全景 ✕" : "Overview ✕"}
+                  <span className="whitespace-nowrap">{language === "zh" ? "返回全景 ✕" : "Overview ✕"}</span>
                 </button>
               </>
             )}
@@ -1678,13 +1680,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-auto animate-fade-in">
           <button
             onClick={() => setIsSubgenresPanelOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#080b12]/85 hover:bg-[#121622] border border-[#2b2e38] hover:border-[#d8b988] text-xs text-[#eae6dc] hover:text-white backdrop-blur-xl shadow-2xl transition-all hover:scale-105 group"
+            className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#0a0d16]/90 hover:bg-[#141926] border border-white/[0.15] hover:border-[#d8b988] text-xs text-zinc-200 hover:text-white backdrop-blur-xl shadow-2xl transition-all hover:scale-105 group"
           >
-            <span
-              className="w-2 h-2 rounded-full shadow-sm"
-              style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 8px ${selectedCluster.hexColor}` }}
-            />
-            <span className="font-medium tracking-wide">
+            <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 8px ${selectedCluster.hexColor}` }} />
+            </div>
+            <span className="font-semibold tracking-tight whitespace-nowrap">
               {language === "zh" 
                 ? `展开子曲风分支 (${clusterSubgenres.length})` 
                 : `Explore Subgenres (${clusterSubgenres.length})`}
@@ -1696,24 +1697,31 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
       {/* Selected Major Cluster: Subgenre Constellation Showcase Panel (清晰美观呈现大曲风下的各种子曲风) */}
       {selectedCluster && isSubgenresPanelOpen && (
-        <div className="absolute bottom-6 inset-x-6 z-30 pointer-events-auto bg-[#080b12]/90 backdrop-blur-xl border border-[#2b2e38] rounded-2xl shadow-2xl p-4 sm:p-5 flex flex-col gap-3 max-h-[46vh] overflow-hidden animate-slide-up">
+        <div className="absolute bottom-6 inset-x-4 sm:inset-x-6 z-30 pointer-events-auto bg-[#080c16]/95 backdrop-blur-2xl border border-white/[0.1] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-4 sm:p-5 flex flex-col gap-3.5 max-h-[48vh] overflow-hidden animate-slide-up">
           {/* Panel Header */}
-          <div className="flex items-center justify-between gap-4 border-b border-[#1f222a] pb-3">
-            <div className="flex items-center gap-3">
-              <span
-                className="w-3.5 h-3.5 rounded-full shrink-0 shadow-[0_0_12px_var(--cc)]"
-                style={{ backgroundColor: selectedCluster.hexColor, ["--cc" as any]: selectedCluster.hexColor }}
-              />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-bold text-white m-0 tracking-wide font-['Noto_Serif_SC']">
+          <div className="flex items-center justify-between gap-4 border-b border-white/[0.08] pb-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Luminous Cluster Gem */}
+              <div 
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-md"
+                style={{
+                  backgroundColor: `${selectedCluster.hexColor}20`,
+                  borderColor: `${selectedCluster.hexColor}50`,
+                  boxShadow: `0 0 16px ${selectedCluster.hexColor}30`,
+                }}
+              >
+                <Sparkles className="w-4 h-4" style={{ color: selectedCluster.hexColor }} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-bold text-white m-0 tracking-tight font-[Space_Grotesk]">
                     {language === "zh" ? `${selectedCluster.name}星云 · ${selectedCluster.en}` : `${selectedCluster.en} Nebula`}
                   </h2>
-                  <span className="px-2 py-0.5 rounded bg-[#17181f] border border-[#2a2d38] font-['JetBrains_Mono'] text-xs font-semibold text-[#f5b73d]">
+                  <span className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.1] font-mono text-xs font-semibold text-[#f5b73d]">
                     {language === "zh" ? `${clusterSubgenres.length} 个子曲风分支` : `${clusterSubgenres.length} Subgenres`}
                   </span>
                 </div>
-                <p className="text-xs text-[#8b8f99] mt-0.5 line-clamp-1 max-w-2xl">
+                <p className="text-xs text-zinc-400 mt-1 line-clamp-1 max-w-2xl font-normal leading-relaxed">
                   {selectedCluster.desc[language]}
                 </p>
               </div>
@@ -1723,28 +1731,28 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             <div className="flex items-center gap-2 shrink-0">
               {/* Filter search in cluster */}
               <div className="relative hidden sm:block">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8b8f99]" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
                   placeholder={language === "zh" ? "筛选子曲风..." : "Filter subgenres..."}
                   value={subgenreFilter}
                   onChange={(e) => setSubgenreFilter(e.target.value)}
-                  className="w-36 lg:w-44 pl-8 pr-2.5 py-1 text-xs bg-[#12151e] border border-[#252834] rounded-lg text-white placeholder:text-[#5a5e6a] focus:outline-none focus:border-[#d8b988]"
+                  className="w-36 lg:w-44 pl-8 pr-2.5 py-1.5 text-xs bg-white/[0.04] border border-white/[0.1] rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#f5b73d] transition-colors"
                 />
               </div>
 
               {/* View mode toggle */}
-              <div className="flex items-center bg-[#13161f] border border-[#232632] rounded-lg p-0.5">
+              <div className="flex items-center bg-white/[0.04] border border-white/[0.08] rounded-xl p-0.5">
                 <button
                   onClick={() => setViewMode("rail")}
-                  className={`p-1 rounded ${viewMode === "rail" ? "bg-[#252936] text-white" : "text-[#7a7e8a] hover:text-white"}`}
+                  className={`p-1.5 rounded-lg transition-colors ${viewMode === "rail" ? "bg-white/[0.12] text-white" : "text-zinc-400 hover:text-white"}`}
                   title={language === "zh" ? "横向滑轨视图" : "Horizontal Rail View"}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-1 rounded ${viewMode === "grid" ? "bg-[#252936] text-white" : "text-[#7a7e8a] hover:text-white"}`}
+                  className={`p-1.5 rounded-lg transition-colors ${viewMode === "grid" ? "bg-white/[0.12] text-white" : "text-zinc-400 hover:text-white"}`}
                   title={language === "zh" ? "网格矩阵视图" : "Grid Matrix View"}
                 >
                   <Grid className="w-3.5 h-3.5" />
@@ -1754,31 +1762,31 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               {/* Collapse Subgenres Panel Button */}
               <button
                 onClick={() => setIsSubgenresPanelOpen(false)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#15171e] hover:bg-[#20232c] border border-[#2b2e38] hover:border-[#d8b988] text-xs text-[#eae6dc] hover:text-[#d8b988] transition-colors"
-                title={language === "zh" ? "隐藏子曲风分支面板" : "Collapse subgenre panel"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-[#f5b73d]/40 text-xs text-zinc-300 hover:text-white transition-all shadow-sm"
+                title={language === "zh" ? "收起子曲风分支面板" : "Collapse subgenre panel"}
               >
-                <ChevronDown className="w-3.5 h-3.5 text-[#d8b988]" />
-                <span>{language === "zh" ? "收起" : "Collapse"}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#f5b73d]" />
+                <span className="whitespace-nowrap">{language === "zh" ? "收起" : "Fold"}</span>
               </button>
 
               <button
                 onClick={() => selectMajorCluster(null)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#15171e] hover:bg-[#20232c] border border-[#2b2e38] text-xs text-[#eae6dc] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-xs text-zinc-300 hover:text-white transition-all shadow-sm"
                 title={language === "zh" ? "返回全景星图" : "Return to Overview"}
               >
                 <RotateCcw className="w-3 h-3 text-[#d8b988]" />
-                <span>{language === "zh" ? "返回全景" : "Overview"}</span>
+                <span className="whitespace-nowrap">{language === "zh" ? "返回全景" : "Overview"}</span>
               </button>
             </div>
           </div>
 
           {/* Subgenres Cards Showcase */}
-          <div className="overflow-y-auto no-scrollbar max-h-[30vh]">
+          <div className="overflow-y-auto no-scrollbar max-h-[32vh]">
             <div
               className={
                 viewMode === "rail"
-                  ? "flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-1 min-w-max"
-                  : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-1"
+                  ? "flex items-stretch gap-3.5 overflow-x-auto no-scrollbar pb-1.5 min-w-max"
+                  : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 pb-1.5"
               }
             >
               {filteredSubgenres.map((sub) => {
@@ -1787,63 +1795,77 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                   <div
                     key={sub.id}
                     onClick={() => selectNode(sub, true)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
-                      viewMode === "rail" ? "w-64 sm:w-72" : "w-full"
+                    className={`group relative p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                      viewMode === "rail" ? "w-64 sm:w-72 shrink-0" : "w-full"
                     } ${
                       isCurrentActive
-                        ? "bg-[#161a24] border-[#f5b73d] shadow-[0_0_16px_rgba(245,183,61,0.25)] scale-[1.01]"
-                        : "bg-[#0d1017]/90 border-[#1f222a] hover:border-[#383c48] hover:bg-[#12151f]"
+                        ? "bg-gradient-to-b from-[#182032] to-[#0f1424] border-[#f5b73d] shadow-[0_0_24px_rgba(245,183,61,0.22)] ring-1 ring-[#f5b73d]/40 scale-[1.01]"
+                        : "bg-gradient-to-b from-[#111522]/90 to-[#0b0e18]/95 border-white/[0.08] hover:border-white/[0.2] hover:from-[#161c2c] hover:to-[#0e1220] shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.55)]"
                     }`}
                   >
                     <div>
-                      {/* Top badges */}
-                      <div className="flex items-center justify-between gap-1 mb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: selectedCluster.hexColor }}
-                          />
-                          <span className="text-[10px] font-mono text-[#8b8f99]">
-                            {sub.genre?.origin_place ? sub.genre.origin_place[language] : ""}
+                      {/* Top Badges Row */}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        {/* Luminous Glow Micro Indicator */}
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
+                            <span
+                              className="absolute w-2.5 h-2.5 rounded-full opacity-35"
+                              style={{ backgroundColor: selectedCluster.hexColor }}
+                            />
+                            <span
+                              className="relative w-1.5 h-1.5 rounded-full"
+                              style={{
+                                backgroundColor: selectedCluster.hexColor,
+                                boxShadow: `0 0 8px ${selectedCluster.hexColor}`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono text-zinc-400 truncate tracking-wide">
+                            {sub.genre?.origin_place ? sub.genre.origin_place[language] : selectedCluster.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded bg-[#16181f] text-[#f5b73d] font-bold">
+
+                        {/* Year & BPM metrics pill */}
+                        <div className="flex items-center gap-1 font-mono text-[10px] shrink-0">
+                          <span className="px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] text-[#f5b73d] font-semibold">
                             {sub.year > 0 ? sub.year : "ROOT"}
                           </span>
                           {sub.bpm && (
-                            <span className="px-1.5 py-0.5 rounded bg-[#16181f] text-[#8b8f99]">
+                            <span className="px-1.5 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-zinc-400">
                               {sub.bpm} BPM
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* Title */}
-                      <h3 className="text-sm font-bold text-white tracking-wide truncate">
-                        {language === "zh" ? (sub.zhName || sub.name) : (sub.en || sub.name)}
-                      </h3>
-                      <div className="text-[11px] text-[#8b8f99] truncate font-['Noto_Serif_SC']">
-                        {language === "zh" ? (sub.en || sub.name) : (sub.zhName || sub.name)}
+                      {/* Title & Subtitle */}
+                      <div className="flex flex-col gap-0.5">
+                        <h3 className="text-sm font-bold text-white tracking-tight truncate group-hover:text-[#f5b73d] transition-colors font-[Space_Grotesk]">
+                          {language === "zh" ? (sub.zhName || sub.name) : (sub.en || sub.name)}
+                        </h3>
+                        <div className="text-[11px] text-zinc-400 truncate font-normal tracking-normal">
+                          {language === "zh" ? (sub.en || sub.name) : (sub.zhName || sub.name)}
+                        </div>
                       </div>
 
-                      {/* Key snippet */}
-                      <p className="text-[11px] text-[#a0a5b2] line-clamp-2 mt-1.5 leading-relaxed">
+                      {/* Curated Description Snippet */}
+                      <p className="text-[11px] text-zinc-400/90 line-clamp-2 mt-2 leading-relaxed font-normal">
                         {sub.desc[language] || sub.artists}
                       </p>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-[#1a1c24]">
+                    {/* Pro Action Buttons */}
+                    <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-white/[0.06]">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           selectNode(sub, true);
                         }}
-                        className="text-[10px] font-medium text-[#d8b988] hover:underline flex items-center gap-0.5"
+                        className="text-[11px] font-medium text-zinc-400 hover:text-[#d8b988] flex items-center gap-1 transition-colors"
                       >
-                        <Compass className="w-3 h-3" />
-                        {language === "zh" ? "聚焦星体" : "Focus"}
+                        <Compass className="w-3 h-3 text-[#d8b988]" />
+                        <span className="whitespace-nowrap">{language === "zh" ? "聚焦星体" : "Focus"}</span>
                       </button>
 
                       <div className="flex items-center gap-1.5">
@@ -1853,11 +1875,11 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                               e.stopPropagation();
                               onOpenStudio(sub.genre!);
                             }}
-                            className="px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#252a36] text-[#45e0c9] hover:text-white border border-[#2b303d] text-[10px] font-semibold transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1 rounded-lg bg-[#45e0c9]/10 hover:bg-[#45e0c9]/20 text-[#45e0c9] hover:text-white border border-[#45e0c9]/25 text-[10px] font-semibold transition-all flex items-center gap-1 shadow-sm"
                             title={language === "zh" ? "在 Studio 编曲机中试听与编辑" : "Audition in Studio"}
                           >
-                            <Music className="w-2.5 h-2.5" />
-                            {language === "zh" ? "试听" : "Studio"}
+                            <Music className="w-2.5 h-2.5 shrink-0" />
+                            <span className="whitespace-nowrap">{language === "zh" ? "试听" : "Studio"}</span>
                           </button>
                         )}
                         {sub.genre && (
@@ -1866,10 +1888,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                               e.stopPropagation();
                               onSelectGenre(sub.genre!);
                             }}
-                            className="px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#252a36] text-[#e9e7e0] border border-[#2b303d] text-[10px] transition-colors flex items-center gap-0.5"
+                            className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white border border-white/[0.08] text-[10px] font-medium transition-all flex items-center gap-1 shadow-sm"
                             title={language === "zh" ? "查看曲风详细百科" : "View Encyclopedia Dossier"}
                           >
-                            {language === "zh" ? "详情 →" : "Details →"}
+                            <span className="whitespace-nowrap">{language === "zh" ? "详情 →" : "Details →"}</span>
                           </button>
                         )}
                       </div>
@@ -1918,7 +1940,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl sm:text-3xl font-normal tracking-wide text-white m-0 font-['Noto_Serif_SC'] drop-shadow-[0_0_20px_rgba(216,185,136,0.25)]">
+            <h2 className="text-2xl sm:text-3xl font-normal tracking-wide text-white m-0 font-[Space_Grotesk] drop-shadow-[0_0_20px_rgba(216,185,136,0.25)]">
               {language === "zh" ? selectedNode.name : selectedNode.en}
             </h2>
             <div className="font-['Cormorant_Garamond'] text-sm tracking-[0.25em] text-[#d8b988] mt-1 mb-3">

@@ -91,4 +91,21 @@ describe("Chord Theory & Progression Engine", () => {
       expect(prog.suggestedBpm).toBeGreaterThan(0);
     });
   });
+
+  it("should map popular progressions to valid ChordDefinition arrays for Studio workbench", () => {
+    const sampleProg = POPULAR_PROGRESSIONS[0];
+    const mapped = sampleProg.roman.map((rom) => {
+      const { root, quality } = romanToChord(rom, "C", false);
+      return { root, quality, duration: 4 };
+    });
+
+    expect(mapped.length).toBe(sampleProg.roman.length);
+    mapped.forEach((c) => {
+      expect(c.root).toBeTruthy();
+      expect(c.quality).toBeTruthy();
+      expect(c.duration).toBe(4);
+      const midiNotes = getChordMidiNotes(c.root, c.quality);
+      expect(midiNotes.length).toBeGreaterThanOrEqual(3);
+    });
+  });
 });
