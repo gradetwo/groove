@@ -100,5 +100,14 @@ docker run -d -p 80:80 --name groove-odyssey groove-odyssey
 - **曲风库容量**: 159 个独立曲风（包含 93 个电子音乐曲风，66 个其他主流曲风），均配备中英双语制作指南与 8 轨节奏模板。
 - **纯合成音频**: 原生 Web Audio API 振荡器与滤镜实时生成，支持 MIDI 文件导出与 Base64 URL 分享。
 - **PWA 与离线现状**: 当前主动注销旧版 Service Worker 以杜绝静态资源死锁；静态资源依托 Cloudflare Edge CDN 全球强缓存与 Vite 产物 Hash 版本控制；现代化 Workbox 离线精细缓存策略规划于 Phase 5 实施。
-- **测试与质量验证**: 62 项严格单元与集成测试（覆盖音频限幅/Panic、时钟/Worker、和弦生成、BPM 解析、URL 编解码安全、全站 ErrorBoundary 容灾与 159 曲风数据完整性），通过 GitHub Actions CI 及本地 `npm test` 双重门禁校验。
+- **测试与质量验证**: 67 项严格单元与集成测试（覆盖音频限幅/Panic、时钟/Worker、和弦生成、BPM 解析、URL 编解码安全、全站 ErrorBoundary 容灾与 159 曲风运行时 Schema），并通过 GitHub Actions CI 及本地 `npm test` + `npm run lint:data` 双重门禁校验。
+- **发布全自动化门禁 (Pre-Release Test Matrix)**: 每次发布（`npm run deploy` / `npm run package`）前自动触发 `npm run verify`，集成 Playwright 自动化测试矩阵（`npm run test:e2e`），在真实的无头引擎中并行验证 7 大关键运行环境：
+  1. **Desktop Chromium / Google Chrome** (1280x800)
+  2. **Desktop Firefox** (1280x800)
+  3. **Desktop WebKit (Safari Engine)** (1280x800)
+  4. **iPhone 14 竖屏 (Portrait)** (390x844, Touch/Mobile WebKit)
+  5. **iPhone 14 横屏 (Landscape)** (844x390, Touch/Mobile WebKit)
+  6. **iPad Pro 11 竖屏 (Portrait)** (834x1194, Touch/Tablet WebKit)
+  7. **iPad Pro 11 横屏 (Landscape)** (1194x834, Touch/Tablet WebKit)
+  - 自动化断言：Studio 走带交互与发声、和弦工坊折叠与展开、Galaxy 3D WebGL 画布渲染与优雅回退、全站 8 大视图无白屏与无未捕获异常、中文设计基线及中英双语切换无视口横向滚动溢出。
 

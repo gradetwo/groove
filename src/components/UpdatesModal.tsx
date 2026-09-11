@@ -37,7 +37,7 @@ export interface VersionInfo {
   changelog: ChangelogEntry[];
 }
 
-export const CURRENT_CLIENT_VERSION = "1.4.3";
+export const CURRENT_CLIENT_VERSION = "1.4.4";
 
 interface UpdatesModalProps {
   isOpen: boolean;

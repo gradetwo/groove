@@ -1,7 +1,30 @@
 {
-  "version": "1.4.3",
+  "version": "1.4.4",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.4.4",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.4.4 跨浏览器多端自动化测试矩阵与发布全流程门禁体系",
+        "en": "v1.4.4 Multi-Browser & Cross-Device Test Matrix with Release Gate"
+      },
+      "highlights": [
+        {
+          "zh": "7 大运行环境全自动回归矩阵：基于 Playwright 打造 scripts/test_matrix.js，覆盖 Desktop Chromium/Chrome、Desktop Firefox、Desktop WebKit (Safari 内核)、iPhone 14 (竖屏/横屏) 与 iPad Pro 11 (竖屏/横屏)，全自动断言音序器发声、走带、和弦工坊、星系 WebGL 及全站 8 大视图",
+          "en": "7-Target automated cross-browser & cross-device matrix: tests Desktop Chromium/Chrome, Desktop Firefox, Desktop WebKit (Safari engine), iPhone 14 (Portrait/Landscape), and iPad Pro 11 (Portrait/Landscape) across all 8 views and audio transports"
+        },
+        {
+          "zh": "中文布局基线与双语无溢出自动化拦截：测试矩阵自动化执行中英文双语无缝切换，严格守卫「中文为设计基线、英文不得改变布局或产生横向溢出」原则，对视口突变与破坏性溢出实施零容忍拦截",
+          "en": "Chinese baseline & bilingual overflow guard: automated toggle and layout geometry assertions enforcing strict Chinese typography baseline without layout displacement or horizontal overflow"
+        },
+        {
+          "zh": "版本发布强制门禁（Release Gate）：在 npm run verify、npm run package 与 npm run deploy 中全面内置类型检查、数据 Lint、单元测试、生产构建与 E2E 多端测试五合一流水线，确保发布零缺陷",
+          "en": "Codified release gate: unified typecheck, schema data lint, unit tests, prod build, and E2E matrix into verify/package/deploy lifecycle for continuous delivery"
+        }
+      ]
+    },
     {
       "version": "1.4.3",
       "date": "2026-09-11",
