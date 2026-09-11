@@ -18,7 +18,9 @@ import {
   Flame,
   Volume2,
   Radio,
-  Activity
+  Activity,
+  Users,
+  Wrench
 } from "lucide-react";
 import { Genre, SequencerTrack } from "../types/genre";
 import { GENRES_MAP } from "../data/genres";
@@ -521,6 +523,18 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               <span>{t("drum_features")}</span>
             </h3>
 
+            {/* Core Rhythm Features / DNA Summary */}
+            {genre.rhythm_features && (
+              <div className="p-3.5 bg-amber-500/10 rounded-2xl border border-amber-500/30 space-y-1">
+                <span className="font-bold text-[#f5b73d] uppercase tracking-wider text-[10px]">
+                  {t("rhythm_features")}
+                </span>
+                <p className="text-[#f3f1ec] text-xs leading-relaxed font-sans">
+                  {genre.rhythm_features[language]}
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
                 <span className="font-bold text-[#8b8f99] uppercase tracking-wider text-[10px]">
@@ -557,25 +571,62 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                   {genre.bass_pattern[language]}
                 </p>
               </div>
+
+              {genre.drum_pattern.percussion && (
+                <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1 sm:col-span-2">
+                  <span className="font-bold text-[#8b8f99] uppercase tracking-wider text-[10px]">
+                    {language === "zh" ? "打击乐加花" : "Percussion"}
+                  </span>
+                  <p className="text-[#e9e7e0] leading-relaxed">
+                    {genre.drum_pattern.percussion[language]}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Sound Design & Production Tips */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-3">
+          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">
             <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-pink-400" />
               <span>{t("sound_design_tips")}</span>
             </h3>
-            <p className="text-sm text-[#b9b7b0] leading-relaxed">
-              {genre.key_characteristics[language]}
-            </p>
 
-            {genre.common_chords.length > 0 && (
-              <div className="pt-2">
-                <span className="text-xs font-semibold text-[#8b8f99] block mb-1.5">
-                  {t("harmonic_rules")}
+            {/* Sound Design Deep Dive */}
+            {genre.sound_design && (
+              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
+                <span className="font-bold text-[#f5b73d] uppercase tracking-wider text-[10px]">
+                  {t("sound_design")}
                 </span>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-[#e9e7e0] leading-relaxed text-xs">
+                  {genre.sound_design[language]}
+                </p>
+              </div>
+            )}
+
+            {/* Chord Inversions & Voicings */}
+            {genre.chord_inversions && (
+              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
+                <span className="font-bold text-indigo-300 uppercase tracking-wider text-[10px]">
+                  {t("chord_inversions")}
+                </span>
+                <p className="text-[#e9e7e0] leading-relaxed text-xs">
+                  {genre.chord_inversions[language]}
+                </p>
+              </div>
+            )}
+
+            {/* Key characteristics & Harmonic progression rules */}
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-[#8b8f99] block">
+                {t("harmonic_rules")}
+              </span>
+              <p className="text-sm text-[#b9b7b0] leading-relaxed">
+                {genre.key_characteristics[language]}
+              </p>
+
+              {genre.common_chords.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
                   {genre.common_chords.map((chord, i) => (
                     <span
                       key={i}
@@ -583,6 +634,71 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                     >
                       {chord}
                     </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Practical Production Tips List */}
+            {genre.production_tips && genre.production_tips[language] && genre.production_tips[language].length > 0 && (
+              <div className="pt-2 border-t border-[#1a1c22] space-y-2">
+                <span className="text-xs font-semibold text-[#8b8f99] block">
+                  {language === "zh" ? "制作实战秘诀" : "Pro Tips"}
+                </span>
+                <ul className="space-y-1.5 text-xs text-[#b8b5ad]">
+                  {genre.production_tips[language].map((tip, tIdx) => (
+                    <li key={tIdx} className="flex items-start space-x-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d] shrink-0 mt-1.5" />
+                      <span className="leading-relaxed">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Instrumentation & Arrangement Structure (PRD 5.6.1.2) */}
+          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+              <Wrench className="w-4 h-4 text-emerald-400" />
+              <span>{language === "zh" ? "核心配器与典型曲式" : "Instruments & Structure"}</span>
+            </h3>
+
+            {/* Instruments */}
+            {genre.instrumentation && genre.instrumentation.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-[#8b8f99] uppercase tracking-wider block">
+                  {t("instrumentation")}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {genre.instrumentation.map((inst, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 rounded-xl bg-[#0d0e12] text-emerald-300 font-mono text-xs border border-emerald-500/30 font-semibold"
+                    >
+                      {inst}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Arrangement Structure */}
+            {genre.structure && genre.structure.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-[#1a1c22]">
+                <span className="text-xs font-semibold text-[#8b8f99] uppercase tracking-wider block">
+                  {t("structure")}
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+                  {genre.structure.map((part, pIdx) => (
+                    <React.Fragment key={pIdx}>
+                      <span className="px-2.5 py-1 rounded-lg bg-[#0d0e12] text-[#c4c7cf] border border-[#23262d]">
+                        {part}
+                      </span>
+                      {pIdx < genre.structure.length - 1 && (
+                        <span className="text-zinc-600 font-bold">→</span>
+                      )}
+                    </React.Fragment>
                   ))}
                 </div>
               </div>
@@ -629,6 +745,26 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Pioneering Artists */}
+          {genre.representative_artists && genre.representative_artists.length > 0 && (
+            <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-3">
+              <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+                <Users className="w-4 h-4 text-amber-300" />
+                <span>{t("representative_artists")}</span>
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {genre.representative_artists.map((artist, aIdx) => (
+                  <span
+                    key={aIdx}
+                    className="px-2.5 py-1 rounded-xl bg-[#0d0e12] text-[#d4d1c9] border border-[#23262d] text-xs font-medium"
+                  >
+                    {artist}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Genealogy & Related Connections */}
           <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">

@@ -1,7 +1,26 @@
 {
-  "version": "1.3.0",
+  "version": "1.3.1",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.1",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.3.1 曲风详情页深度编曲档案与全局搜索快捷键强化",
+        "en": "v1.3.1 Genre Detail Arrangement Dossier & Search Shortcut Guard"
+      },
+      "highlights": [
+        {
+          "zh": "曲风详情页全字段展示（PRD 5.6.1.2）：补齐核心配器（Instrumentation）、典型曲式（Structure）、音色调制（Sound Design）、和弦转位（Inversions）、核心律动（Rhythm DNA）、先锋音乐人（Artists）与制作秘诀",
+          "en": "Complete genre production dossier: rendering instrumentation, arrangement structure, sound design, chord inversions, rhythm DNA, pioneering artists, and pro tips"
+        },
+        {
+          "zh": "全局搜索快捷键平台适配（P0-23）：Header 快捷键根据系统动态展示 ⌘K / Ctrl K，全局 Esc 键退出窗口",
+          "en": "Search shortcut platform adaptation: dynamic ⌘K / Ctrl K indicator in header, reliable window-level Escape key dismissal"
+        }
+      ]
+    },
     {
       "version": "1.3.0",
       "date": "2026-09-11",

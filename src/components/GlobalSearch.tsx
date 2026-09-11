@@ -30,16 +30,17 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
     }
   }, [isOpen]);
 
-  // Global hotkey: Cmd+K or Ctrl+K
+  // Global hotkey: Cmd+K or Ctrl+K & Escape (P0-23)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         if (isOpen) {
           onClose();
-        } else {
-          // Open search triggered by parent
         }
+      } else if (e.key === "Escape" && isOpen) {
+        e.preventDefault();
+        onClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);

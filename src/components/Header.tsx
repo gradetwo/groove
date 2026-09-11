@@ -51,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
   const { t, language, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
   // Live frequency visualizer
   useEffect(() => {
@@ -150,14 +151,14 @@ export const Header: React.FC<HeaderProps> = ({
           className="w-20 h-6 sm:w-24 sm:h-7 opacity-90 hidden sm:block pointer-events-none"
         />
 
-        {/* Global Search Button */}
+        {/* Global Search Button (P0-23) */}
         <button
           onClick={onOpenSearch}
           className="flex items-center gap-2 text-xs text-[#8b8f99] hover:text-[#e9e7e0] px-2.5 py-1.5 border border-[#23262d] hover:border-[#393d46] rounded-lg bg-[#0d0e12] transition-colors"
-          title="Search (Cmd+K)"
+          title={`Search (${isMac ? "⌘K" : "Ctrl+K"})`}
         >
           <Search className="w-3.5 h-3.5 text-[#8b8f99]" />
-          <span className="hidden xl:inline text-[#5a5e68]">Cmd+K</span>
+          <span className="hidden xl:inline text-[#5a5e68] font-mono text-[11px]">{isMac ? "⌘K" : "Ctrl K"}</span>
         </button>
 
         {/* Random Dice */}
