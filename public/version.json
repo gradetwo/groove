@@ -1,7 +1,26 @@
 {
-  "version": "1.3.3",
+  "version": "1.3.4",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.4",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.3.4 基础设计系统动效补全与滚动条原子样式修复",
+        "en": "v1.3.4 Design System Animation & Scrollbar Utilities Fix"
+      },
+      "highlights": [
+        {
+          "zh": "Tailwind 关键帧与入场动效补齐（P1-03）：补全 animate-fade-in、animate-slide-up 与 animate-slide-left 动画令牌，弹窗与卡片平滑淡入",
+          "en": "Tailwind keyframe & animation tokens: implemented missing fade-in, slide-up and slide-left animations across modals and view transitions"
+        },
+        {
+          "zh": "跨浏览器滚动条原子类标准化（P1-03）：补齐 no-scrollbar、scrollbar-none 与 custom-scroll，消除各视图滚动条样式异常",
+          "en": "Cross-browser scrollbar utilities: added no-scrollbar, scrollbar-none, and custom-scroll classes across all horizontal and vertical views"
+        }
+      ]
+    },
     {
       "version": "1.3.3",
       "date": "2026-09-11",
