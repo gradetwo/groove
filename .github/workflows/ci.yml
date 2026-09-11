@@ -36,3 +36,6 @@ jobs:
       - name: Production Build
         run: npm run build
 
+      - name: Bundle Budget & Performance Gate
+        run: npm run check:budget
+

@@ -38,7 +38,7 @@ interface CompareViewProps {
 export type SyncPlaybackMode = "both" | "solo_a" | "solo_b" | "drums_only";
 
 const COMPARE_COLORS = [
-  { stroke: "#f5b73d", fill: "rgba(245, 183, 61, 0.22)", text: "text-[#f5b73d]", badge: "bg-amber-500/20 border-amber-500/40 text-amber-300", bar: "bg-[#f5b73d]", border: "border-[#f5b73d]" },
+  { stroke: "#f5b73d", fill: "rgba(245, 183, 61, 0.22)", text: "text-accent", badge: "bg-amber-500/20 border-amber-500/40 text-amber-300", bar: "bg-accent", border: "border-accent" },
   { stroke: "#6366f1", fill: "rgba(99, 102, 241, 0.22)", text: "text-indigo-400", badge: "bg-indigo-500/20 border-indigo-500/40 text-indigo-300", bar: "bg-indigo-500", border: "border-indigo-500" },
   { stroke: "#ec4899", fill: "rgba(236, 72, 153, 0.22)", text: "text-pink-400", badge: "bg-pink-500/20 border-pink-500/40 text-pink-300", bar: "bg-pink-500", border: "border-pink-500" },
   { stroke: "#06b6d4", fill: "rgba(6, 182, 212, 0.22)", text: "text-cyan-400", badge: "bg-cyan-500/20 border-cyan-500/40 text-cyan-300", bar: "bg-cyan-500", border: "border-cyan-500" },
@@ -367,16 +367,16 @@ export const CompareView: React.FC<CompareViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 space-y-6">
       {/* Top Header & Toolbar */}
-      <div className="bg-[#121317] border border-[#23262d] rounded-2xl p-5 shadow-xl space-y-4">
+      <div className="bg-panel border border-line rounded-2xl p-5 shadow-xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2.5">
-              <Columns className="w-5 h-5 text-[#f5b73d]" />
-              <h2 className="text-xl font-black text-[#e9e7e0] tracking-wide">
+              <Columns className="w-5 h-5 text-accent" />
+              <h2 className="text-xl font-black text-text tracking-wide">
                 {t("compare_title")}
               </h2>
             </div>
-            <p className="text-sm text-[#8b8f99] mt-1">
+            <p className="text-sm text-text-sub mt-1">
               {language === "zh" 
                 ? "左右并排对比不同曲风的鼓组切分、和声架构与声学特性" 
                 : "Side-by-side columnar comparison of drum syncopation, harmonic structure & radar DNA"}
@@ -398,7 +398,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all shadow-sm active:scale-95 ${
                   isSyncPlaying
                     ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_12px_rgba(245,183,61,0.25)]"
-                    : "bg-[#1c1e24] hover:bg-[#252830] border-[#2b2e38] hover:border-amber-500/40 text-[#f5b73d]"
+                    : "bg-[#1c1e24] hover:bg-[#252830] border-[#2b2e38] hover:border-amber-500/40 text-accent"
                 }`}
                 title={language === "zh" ? "对齐拍子与小节，同步播放对比曲风 A 与曲风 B" : "Phase-locked dual-genre sync playback"}
               >
@@ -409,7 +409,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   </>
                 ) : (
                   <>
-                    <Volume2 className="w-4 h-4 text-[#f5b73d] shrink-0" />
+                    <Volume2 className="w-4 h-4 text-accent shrink-0" />
                     <span className="truncate max-w-[120px] whitespace-nowrap">{t("sync_play")}</span>
                   </>
                 )}
@@ -421,26 +421,26 @@ export const CompareView: React.FC<CompareViewProps> = ({
               <div className="relative">
                 <button
                   onClick={() => setAddDropdownOpen(!addDropdownOpen)}
-                  className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#1c1e24] hover:bg-[#252830] border border-[#2b2e38] text-[#e9e7e0] font-bold text-sm transition-colors shadow-sm"
+                  className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#1c1e24] hover:bg-[#252830] border border-[#2b2e38] text-text font-bold text-sm transition-colors shadow-sm"
                 >
-                  <Plus className="w-4 h-4 text-[#f5b73d] shrink-0" />
+                  <Plus className="w-4 h-4 text-accent shrink-0" />
                   <span className="truncate max-w-[120px] whitespace-nowrap">{t("compare_add")}</span>
-                  <span className="ml-1 text-xs text-[#8b8f99] font-mono shrink-0">({genres.length}/4)</span>
+                  <span className="ml-1 text-xs text-text-sub font-mono shrink-0">({genres.length}/4)</span>
                 </button>
 
                 {addDropdownOpen && (
-                  <div className="absolute right-0 top-12 z-40 w-72 bg-[#121317] border border-[#2b2e38] rounded-2xl shadow-2xl p-2 max-h-72 overflow-y-auto space-y-1 animate-slide-up">
-                    <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#5a5e68]">
+                  <div className="absolute right-0 top-12 z-40 w-72 bg-panel border border-[#2b2e38] rounded-2xl shadow-2xl p-2 max-h-72 overflow-y-auto space-y-1 animate-slide-up">
+                    <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-text-dim">
                       {language === "zh" ? "可添加曲风" : "Select Genre"}
                     </div>
                     {ALL_GENRES.filter((g) => !genres.some((sel) => sel.id === g.id)).map((g) => (
                       <button
                         key={g.id}
                         onClick={() => handleAddGenre(g)}
-                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#1a1b20] text-sm text-[#e9e7e0] hover:text-[#f5b73d] flex items-center justify-between transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#1a1b20] text-sm text-text hover:text-accent flex items-center justify-between transition-colors"
                       >
                         <span className="font-semibold truncate">{g.name}</span>
-                        <span className="text-xs text-[#8b8f99] ml-2 px-1.5 py-0.5 rounded bg-[#0d0e12]">
+                        <span className="text-xs text-text-sub ml-2 px-1.5 py-0.5 rounded bg-panel2">
                           {g.category}
                         </span>
                       </button>
@@ -459,22 +459,22 @@ export const CompareView: React.FC<CompareViewProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#232630] pb-3">
               <div className="flex items-center space-x-3">
                 <div className="flex items-end space-x-0.5 h-5">
-                  <span className="w-1 bg-[#f5b73d] rounded-full animate-pulse h-5" />
+                  <span className="w-1 bg-accent rounded-full animate-pulse h-5" />
                   <span className="w-1 bg-indigo-400 rounded-full animate-pulse h-3" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1 bg-[#f5b73d] rounded-full animate-pulse h-4" style={{ animationDelay: "300ms" }} />
+                  <span className="w-1 bg-accent rounded-full animate-pulse h-4" style={{ animationDelay: "300ms" }} />
                   <span className="w-1 bg-indigo-400 rounded-full animate-pulse h-2.5" style={{ animationDelay: "450ms" }} />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h4 className="text-sm sm:text-base font-black text-[#e9e7e0] tracking-wide">
+                    <h4 className="text-sm sm:text-base font-black text-text tracking-wide">
                       {language === "zh" ? "A/B 双曲风锁相实时同步试听" : "Synchronized A/B Audition"}
                     </h4>
                     <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold">
                       LIVE
                     </span>
                   </div>
-                  <p className="text-xs text-[#8b8f99] mt-0.5">
-                    <span className="text-[#f5b73d] font-semibold">[A] {genres[0].name}</span>
+                  <p className="text-xs text-text-sub mt-0.5">
+                    <span className="text-accent font-semibold">[A] {genres[0].name}</span>
                     <span className="mx-1.5 text-zinc-600">⟷</span>
                     <span className="text-indigo-400 font-semibold">[B] {genres[1].name}</span>
                   </p>
@@ -503,7 +503,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
                       syncMode === "both"
                         ? "bg-amber-500 text-black border-amber-500 shadow-md font-black"
-                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                        : "bg-panel2 text-[#9ca3af] border-line hover:text-text hover:bg-[#1a1c24]"
                     }`}
                   >
                     {t("sync_mix")}
@@ -513,8 +513,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     onClick={() => handleSetSyncMode("solo_a")}
                     className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
                       syncMode === "solo_a"
-                        ? "bg-[#f5b73d] text-black border-[#f5b73d] shadow-md font-black"
-                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                        ? "bg-accent text-black border-accent shadow-md font-black"
+                        : "bg-panel2 text-[#9ca3af] border-line hover:text-text hover:bg-[#1a1c24]"
                     }`}
                   >
                     {t("sync_solo_a")}
@@ -525,7 +525,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
                       syncMode === "solo_b"
                         ? "bg-indigo-500 text-white border-indigo-500 shadow-md font-black"
-                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                        : "bg-panel2 text-[#9ca3af] border-line hover:text-text hover:bg-[#1a1c24]"
                     }`}
                   >
                     {t("sync_solo_b")}
@@ -536,7 +536,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
                       syncMode === "drums_only"
                         ? "bg-emerald-500 text-black border-emerald-500 shadow-md font-black"
-                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                        : "bg-panel2 text-[#9ca3af] border-line hover:text-text hover:bg-[#1a1c24]"
                     }`}
                   >
                     {t("sync_drums_only")}
@@ -550,14 +550,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   <span className="text-xs font-bold text-[#737887] uppercase tracking-wider">
                     {language === "zh" ? "对齐同步速度 (BPM)" : "Synchronized Tempo"}
                   </span>
-                  <span className="font-mono text-xs font-bold text-[#f5b73d]">
+                  <span className="font-mono text-xs font-bold text-accent">
                     {syncBpm} BPM
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleSetSyncBpm(syncBpm - 2)}
-                    className="p-1.5 rounded-lg bg-[#0d0e12] hover:bg-[#1f2229] border border-[#23262d] text-[#c4c7cf] hover:text-white transition-colors shrink-0"
+                    className="p-1.5 rounded-lg bg-panel2 hover:bg-[#1f2229] border border-line text-[#c4c7cf] hover:text-white transition-colors shrink-0"
                     title="-2 BPM"
                   >
                     <Minus className="w-3.5 h-3.5" />
@@ -568,11 +568,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     max={180}
                     value={syncBpm}
                     onChange={(e) => handleSetSyncBpm(Number(e.target.value))}
-                    className="flex-1 accent-amber-400 cursor-pointer h-1.5 bg-[#0d0e12] rounded-lg"
+                    className="flex-1 accent-amber-400 cursor-pointer h-1.5 bg-panel2 rounded-lg"
                   />
                   <button
                     onClick={() => handleSetSyncBpm(syncBpm + 2)}
-                    className="p-1.5 rounded-lg bg-[#0d0e12] hover:bg-[#1f2229] border border-[#23262d] text-[#c4c7cf] hover:text-white transition-colors shrink-0"
+                    className="p-1.5 rounded-lg bg-panel2 hover:bg-[#1f2229] border border-line text-[#c4c7cf] hover:text-white transition-colors shrink-0"
                     title="+2 BPM"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -582,19 +582,19 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   <button
                     onClick={() => handleSetSyncBpm(genres[0].default_bpm || 120)}
-                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#0d0e12] hover:bg-[#1c1e24] border border-[#23262d] text-[#a4a9b5] hover:text-white"
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-panel2 hover:bg-[#1c1e24] border border-line text-[#a4a9b5] hover:text-white"
                   >
                     A: {genres[0].default_bpm}
                   </button>
                   <button
                     onClick={() => handleSetSyncBpm(genres[1].default_bpm || 120)}
-                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#0d0e12] hover:bg-[#1c1e24] border border-[#23262d] text-[#a4a9b5] hover:text-white"
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-panel2 hover:bg-[#1c1e24] border border-line text-[#a4a9b5] hover:text-white"
                   >
                     B: {genres[1].default_bpm}
                   </button>
                   <button
                     onClick={() => handleSetSyncBpm(Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2))}
-                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#0d0e12] hover:bg-[#1c1e24] border border-[#23262d] text-[#f5b73d] hover:text-white"
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-panel2 hover:bg-[#1c1e24] border border-line text-accent hover:text-white"
                   >
                     {language === "zh" ? "平均" : "Avg"}: {Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2)}
                   </button>
@@ -636,20 +636,20 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
         {/* Live Audition Indicator Bar when music is playing */}
         {currentPlayingGenre && (
-          <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 text-sm text-[#f5b73d] animate-fade-in">
+          <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 text-sm text-accent animate-fade-in">
             <div className="flex items-center space-x-3">
               <div className="flex items-end space-x-0.5 h-4">
-                <span className="w-1 bg-[#f5b73d] rounded-full animate-pulse h-4" />
-                <span className="w-1 bg-[#f5b73d] rounded-full animate-pulse h-2.5" style={{ animationDelay: "150ms" }} />
-                <span className="w-1 bg-[#f5b73d] rounded-full animate-pulse h-3.5" style={{ animationDelay: "300ms" }} />
+                <span className="w-1 bg-accent rounded-full animate-pulse h-4" />
+                <span className="w-1 bg-accent rounded-full animate-pulse h-2.5" style={{ animationDelay: "150ms" }} />
+                <span className="w-1 bg-accent rounded-full animate-pulse h-3.5" style={{ animationDelay: "300ms" }} />
               </div>
-              <span className="font-bold text-[#e9e7e0]">
-                {t("now_playing")}: <span className="text-[#f5b73d]">{currentPlayingGenre.name}</span>
+              <span className="font-bold text-text">
+                {t("now_playing")}: <span className="text-accent">{currentPlayingGenre.name}</span>
               </span>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-[#f5b73d] font-bold border border-amber-500/40">
+              <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-accent font-bold border border-amber-500/40">
                 {playingMode === "drums" ? t("drums_only") : t("full_band")}
               </span>
-              <span className="text-xs text-[#8b8f99] hidden sm:inline">
+              <span className="text-xs text-text-sub hidden sm:inline">
                 ({currentPlayingGenre.default_bpm} BPM · {currentPlayingGenre.time_signature})
               </span>
             </div>
@@ -666,14 +666,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
         {/* Presets Quick Matchup Buttons */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1f2229]">
           <span className="text-xs font-bold text-[#737887] uppercase tracking-wider flex items-center space-x-1 mr-1">
-            <Sparkles className="w-3.5 h-3.5 text-[#f5b73d]" />
+            <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span>{t("compare_presets")}:</span>
           </span>
           {PRESET_MATCHUPS.map((preset, idx) => (
             <button
               key={idx}
               onClick={() => handleSelectPreset(preset.ids)}
-              className="text-xs px-3 py-1.5 rounded-xl bg-[#0d0e12] hover:bg-[#1c1e24] border border-[#23262d] hover:border-[#383d4a] text-[#a4a9b5] hover:text-[#e9e7e0] font-semibold transition-colors"
+              className="text-xs px-3 py-1.5 rounded-xl bg-panel2 hover:bg-[#1c1e24] border border-line hover:border-[#383d4a] text-[#a4a9b5] hover:text-text font-semibold transition-colors"
             >
               {language === "zh" ? preset.labelZh : preset.labelEn}
             </button>
@@ -684,9 +684,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
       {/* Overview Analytics Bar: DNA Radar & Similarity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Radar Chart Overlay */}
-        <div className="bg-[#121317] border border-[#23262d] rounded-2xl p-4 flex flex-col items-center justify-center relative shadow-lg">
-          <h4 className="text-sm font-bold text-[#8b8f99] uppercase tracking-wider mb-2 flex items-center space-x-1.5 self-start">
-            <Activity className="w-4 h-4 text-[#f5b73d]" />
+        <div className="bg-panel border border-line rounded-2xl p-4 flex flex-col items-center justify-center relative shadow-lg">
+          <h4 className="text-sm font-bold text-text-sub uppercase tracking-wider mb-2 flex items-center space-x-1.5 self-start">
+            <Activity className="w-4 h-4 text-accent" />
             <span>{t("radar_chart")}</span>
           </h4>
 
@@ -764,7 +764,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               return (
                 <div
                   key={axis.key}
-                  className="absolute text-[11px] font-bold text-[#8b8f99] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                  className="absolute text-[11px] font-bold text-text-sub transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
                   style={{ left: `${x}px`, top: `${y}px` }}
                 >
                   {language === "zh" ? axis.labelZh : axis.labelEn}
@@ -783,7 +783,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     className="w-2.5 h-2.5 rounded-full"
                     style={{ backgroundColor: color.stroke }}
                   />
-                  <span className="text-[#e9e7e0]">{g.name}</span>
+                  <span className="text-text">{g.name}</span>
                 </div>
               );
             })}
@@ -791,20 +791,20 @@ export const CompareView: React.FC<CompareViewProps> = ({
         </div>
 
         {/* DNA Match Metrics */}
-        <div className="lg:col-span-2 bg-[#121317] border border-[#23262d] rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-panel border border-line rounded-2xl p-5 shadow-lg flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold uppercase tracking-wider text-[#8b8f99] flex items-center space-x-1.5">
-                <Flame className="w-4 h-4 text-[#f5b73d]" />
+              <span className="text-sm font-bold uppercase tracking-wider text-text-sub flex items-center space-x-1.5">
+                <Flame className="w-4 h-4 text-accent" />
                 <span>{t("similarity_score")}</span>
               </span>
-              <span className="text-2xl font-mono font-extrabold text-[#f5b73d]">
+              <span className="text-2xl font-mono font-extrabold text-accent">
                 {similarityInfo.score}%
               </span>
             </div>
 
             {/* Match score bar */}
-            <div className="w-full bg-[#0d0e12] rounded-full h-2.5 overflow-hidden border border-[#23262d]">
+            <div className="w-full bg-panel2 rounded-full h-2.5 overflow-hidden border border-line">
               <div
                 className="bg-gradient-to-r from-amber-500 via-[#f5b73d] to-emerald-400 h-full rounded-full transition-all duration-700"
                 style={{ width: `${similarityInfo.score}%` }}
@@ -812,12 +812,12 @@ export const CompareView: React.FC<CompareViewProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div className="bg-[#0d0e12] p-3.5 rounded-xl border border-[#23262d]">
+              <div className="bg-panel2 p-3.5 rounded-xl border border-line">
                 <span className="font-bold text-[#737887] uppercase tracking-wider text-xs flex items-center space-x-1">
-                  <Clock className="w-3.5 h-3.5 text-[#f5b73d]" />
+                  <Clock className="w-3.5 h-3.5 text-accent" />
                   <span>{t("bpm_overlap")}</span>
                 </span>
-                <p className="text-[#e9e7e0] font-mono text-sm font-bold mt-1">
+                <p className="text-text font-mono text-sm font-bold mt-1">
                   {similarityInfo.bpmOverlap ? `${similarityInfo.overlapMin} - ${similarityInfo.overlapMax} BPM` : "无直接重叠"}
                 </p>
                 <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md mt-1 ${
@@ -829,15 +829,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 </span>
               </div>
 
-              <div className="bg-[#0d0e12] p-3.5 rounded-xl border border-[#23262d]">
+              <div className="bg-panel2 p-3.5 rounded-xl border border-line">
                 <span className="font-bold text-[#737887] uppercase tracking-wider text-xs flex items-center space-x-1">
-                  <Layers className="w-3.5 h-3.5 text-[#f5b73d]" />
+                  <Layers className="w-3.5 h-3.5 text-accent" />
                   <span>{language === "zh" ? "节奏律动骨架对比" : "Rhythm DNA Compatibility"}</span>
                 </span>
-                <p className="text-[#e9e7e0] font-bold text-sm mt-1">
+                <p className="text-text font-bold text-sm mt-1">
                   {genres[0]?.time_signature} vs {genres[1]?.time_signature}
                 </p>
-                <span className="text-xs text-[#8b8f99] block mt-1">
+                <span className="text-xs text-text-sub block mt-1">
                   {genres[0]?.time_signature === genres[1]?.time_signature
                     ? (language === "zh" ? "拍号一致，可对齐鼓机网格" : "Identical meter, compatible grids")
                     : (language === "zh" ? "复节拍差异，具有多拍对位特征" : "Polymetric contrast")}
@@ -847,7 +847,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
           </div>
 
           <div className="text-xs text-[#737887] mt-3 pt-3 border-t border-[#1a1c22] flex items-center space-x-1.5">
-            <Info className="w-4 h-4 text-[#f5b73d] shrink-0" />
+            <Info className="w-4 h-4 text-accent shrink-0" />
             <span>
               {language === "zh"
                 ? "点击下方各曲风列中的【只播放鼓组】或【全部音轨】，即可即时孤立听辨底层律动或完整编曲。"
@@ -860,11 +860,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
       {/* Side-by-Side Columnar Comparison Matrix */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-black text-[#e9e7e0] tracking-wide flex items-center space-x-2">
-            <Columns className="w-4 h-4 text-[#f5b73d]" />
+          <h3 className="text-base font-black text-text tracking-wide flex items-center space-x-2">
+            <Columns className="w-4 h-4 text-accent" />
             <span>{language === "zh" ? "曲风多维并排对比矩阵" : "Multi-Dimensional Genre Comparison Matrix"}</span>
           </h3>
-          <span className="text-xs text-[#8b8f99] font-mono">
+          <span className="text-xs text-text-sub font-mono">
             {genres.length} {language === "zh" ? "组并排对比中" : "Columns Active"}
           </span>
         </div>
@@ -882,7 +882,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
             return (
               <div
                 key={genre.id}
-                className={`bg-[#121317] border-2 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4 relative transition-all duration-200 ${
+                className={`bg-panel border-2 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4 relative transition-all duration-200 ${
                   isCurrentPlaying ? "ring-2 ring-amber-400/40 shadow-amber-500/10" : ""
                 }`}
                 style={{ borderColor: isCurrentPlaying ? "#f5b73d" : color.stroke }}
@@ -894,13 +894,13 @@ export const CompareView: React.FC<CompareViewProps> = ({
                       {genre.category}
                     </span>
                     <div className="flex items-center space-x-1">
-                      <span className="text-xs text-[#8b8f99] font-mono">
+                      <span className="text-xs text-text-sub font-mono">
                         #{idx + 1}
                       </span>
                       {genres.length > 2 && (
                         <button
                           onClick={() => handleRemoveGenre(genre.id)}
-                          className="text-[#5a5e68] hover:text-[#e9e7e0] p-1 rounded-lg hover:bg-[#1f222a] transition-colors ml-1"
+                          className="text-text-dim hover:text-text p-1 rounded-lg hover:bg-[#1f222a] transition-colors ml-1"
                           title="Remove from comparison"
                         >
                           <X className="w-4 h-4" />
@@ -910,10 +910,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   </div>
 
                   <div>
-                    <h3 className="font-black text-[#e9e7e0] text-xl tracking-wide">
+                    <h3 className="font-black text-text text-xl tracking-wide">
                       {genre.name}
                     </h3>
-                    <p className="text-xs text-[#8b8f99] font-medium mt-1">
+                    <p className="text-xs text-text-sub font-medium mt-1">
                       {genre.origin_year} · {genre.origin_place[language]}
                     </p>
                   </div>
@@ -976,8 +976,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
                         onClick={() => handlePlayMode(genre, "drums")}
                         className={`flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all border shadow-sm ${
                           isCurrentPlaying && playingMode === "drums"
-                            ? "bg-[#f5b73d] text-black border-[#f5b73d] shadow-[0_0_15px_rgba(245,183,61,0.4)]"
-                            : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-[#f5b73d]/50"
+                            ? "bg-accent text-black border-accent shadow-[0_0_15px_rgba(245,183,61,0.4)]"
+                            : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-accent/50"
                         }`}
                         title={language === "zh" ? "仅试听底鼓、军鼓、踩镲与打击乐" : "Audition drums & percussion only"}
                       >
@@ -993,7 +993,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                           </>
                         ) : (
                           <>
-                            <Disc3 className="w-3.5 h-3.5 text-[#f5b73d]" />
+                            <Disc3 className="w-3.5 h-3.5 text-accent" />
                             <span>{t("drums_only")}</span>
                           </>
                         )}
@@ -1004,8 +1004,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
                         onClick={() => handlePlayMode(genre, "full")}
                         className={`flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all border shadow-sm ${
                           isCurrentPlaying && playingMode === "full"
-                            ? "bg-[#f5b73d] text-black border-[#f5b73d] shadow-[0_0_15px_rgba(245,183,61,0.4)]"
-                            : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-[#f5b73d]/50"
+                            ? "bg-accent text-black border-accent shadow-[0_0_15px_rgba(245,183,61,0.4)]"
+                            : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-accent/50"
                         }`}
                         title={language === "zh" ? "播放包含底鼓、贝斯、和声与合成器的完整配器" : "Audition full arrangement"}
                       >
@@ -1021,7 +1021,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                           </>
                         ) : (
                           <>
-                            <Play className="w-3.5 h-3.5 fill-current text-[#f5b73d]" />
+                            <Play className="w-3.5 h-3.5 fill-current text-accent" />
                             <span>{t("full_band")}</span>
                           </>
                         )}
@@ -1032,15 +1032,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => onOpenStudio(genre)}
-                        className="py-2 px-2.5 rounded-xl bg-[#0d0e12] hover:bg-[#1a1b20] border border-[#23262d] text-[#e9e7e0] hover:text-[#f5b73d] text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
+                        className="py-2 px-2.5 rounded-xl bg-panel2 hover:bg-[#1a1b20] border border-line text-text hover:text-accent text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
                         title={t("open_in_studio")}
                       >
-                        <Sliders className="w-3.5 h-3.5 text-[#f5b73d]" />
+                        <Sliders className="w-3.5 h-3.5 text-accent" />
                         <span>{t("open_in_studio")}</span>
                       </button>
                       <button
                         onClick={() => onSelectGenre(genre)}
-                        className="py-2 px-2.5 rounded-xl bg-[#0d0e12] hover:bg-[#1a1b20] border border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
+                        className="py-2 px-2.5 rounded-xl bg-panel2 hover:bg-[#1a1b20] border border-line text-text-sub hover:text-text text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
                         title={t("view_detail")}
                       >
                         <span>{t("view_detail")}</span>
@@ -1050,8 +1050,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   </div>
 
                   {/* Spec Block 1: 核心基础规格 (Core Specs) */}
-                  <div className="p-4 rounded-2xl bg-[#0d0e12] border border-[#23262d] space-y-2.5">
-                    <div className="text-xs font-black uppercase tracking-wider text-[#f5b73d] flex items-center space-x-1.5">
+                  <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-2.5">
+                    <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
                       <Clock className="w-3.5 h-3.5" />
                       <span>{t("core_specs")}</span>
                     </div>
@@ -1078,15 +1078,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   </div>
 
                   {/* Spec Block 2: 律动与鼓组 DNA (Drum & Rhythm DNA) */}
-                  <div className="p-4 rounded-2xl bg-[#0d0e12] border border-[#23262d] space-y-3">
-                    <div className="text-xs font-black uppercase tracking-wider text-[#f5b73d] flex items-center space-x-1.5">
+                  <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-3">
+                    <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
                       <Zap className="w-3.5 h-3.5" />
                       <span>{t("groove_dna")}</span>
                     </div>
 
                     <div className="space-y-3 pt-2 border-t border-[#1a1c22]">
                       <div>
-                        <span className="text-xs font-bold text-[#f5b73d] uppercase tracking-wide block">
+                        <span className="text-xs font-bold text-accent uppercase tracking-wide block">
                           {t("kick_placement")}
                         </span>
                         <p className="text-sm text-[#d4d1c9] leading-relaxed mt-1 font-sans">
@@ -1126,15 +1126,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   </div>
 
                   {/* Spec Block 3: 低频与和声架构 (Bass & Harmonics) */}
-                  <div className="p-4 rounded-2xl bg-[#0d0e12] border border-[#23262d] space-y-3">
-                    <div className="text-xs font-black uppercase tracking-wider text-[#f5b73d] flex items-center space-x-1.5">
+                  <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-3">
+                    <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
                       <Music className="w-3.5 h-3.5" />
                       <span>{t("bass_harmony")}</span>
                     </div>
 
                     <div className="space-y-3 pt-2 border-t border-[#1a1c22]">
                       <div>
-                        <span className="text-xs font-bold text-[#f5b73d] uppercase tracking-wide block">
+                        <span className="text-xs font-bold text-accent uppercase tracking-wide block">
                           {t("bass_design")}
                         </span>
                         <p className="text-sm text-[#d4d1c9] leading-relaxed mt-1 font-sans">
@@ -1169,8 +1169,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   </div>
 
                   {/* Spec Block 4: 六维声学特性雷达指标 (Sonic Radar Breakdown) */}
-                  <div className="p-4 rounded-2xl bg-[#0d0e12] border border-[#23262d] space-y-3">
-                    <div className="text-xs font-black uppercase tracking-wider text-[#f5b73d] flex items-center space-x-1.5">
+                  <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-3">
+                    <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
                       <Activity className="w-3.5 h-3.5" />
                       <span>{t("sonic_radar")}</span>
                     </div>
@@ -1188,7 +1188,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                                 {val}/10
                               </span>
                             </div>
-                            <div className="w-full bg-[#181a20] rounded-full h-2 overflow-hidden border border-[#23262d]">
+                            <div className="w-full bg-[#181a20] rounded-full h-2 overflow-hidden border border-line">
                               <div
                                 className={`h-full ${color.bar} rounded-full transition-all duration-500`}
                                 style={{ width: `${(val / 10) * 100}%` }}
@@ -1202,8 +1202,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
                   {/* Spec Block 5: 经典代表作 (Milestones) */}
                   {genre.representative_tracks && genre.representative_tracks.length > 0 && (
-                    <div className="p-4 rounded-2xl bg-[#0d0e12] border border-[#23262d] space-y-2.5">
-                      <div className="text-xs font-black uppercase tracking-wider text-[#f5b73d] flex items-center space-x-1.5">
+                    <div className="p-4 rounded-2xl bg-panel2 border border-line space-y-2.5">
+                      <div className="text-xs font-black uppercase tracking-wider text-accent flex items-center space-x-1.5">
                         <Disc3 className="w-3.5 h-3.5" />
                         <span>{t("milestones")}</span>
                       </div>
@@ -1219,7 +1219,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                                 href={track.link}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-xs text-[#f5b73d] hover:underline flex items-center space-x-1 flex-shrink-0 font-bold"
+                                className="text-xs text-accent hover:underline flex items-center space-x-1 flex-shrink-0 font-bold"
                               >
                                 <span>{t("listen_link")}</span>
                                 <ExternalLink className="w-3 h-3" />

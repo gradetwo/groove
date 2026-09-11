@@ -122,12 +122,12 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
   };
 
   return (
-    <div className="bg-[#0e1014] border-t border-[#23262d] p-3 sm:p-4 rounded-b-2xl select-none animate-in fade-in slide-in-from-top-2 duration-200">
+    <div className="bg-[#0e1014] border-t border-line p-3 sm:p-4 rounded-b-2xl select-none animate-in fade-in slide-in-from-top-2 duration-200">
       {/* Top Header Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#1c1e26]">
         {/* Track Selector Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 scrollbar-none">
-          <div className="flex items-center gap-1.5 mr-2 font-['JetBrains_Mono'] text-xs font-bold text-[#f5b73d] shrink-0">
+          <div className="flex items-center gap-1.5 mr-2 font-['JetBrains_Mono'] text-xs font-bold text-accent shrink-0">
             <Sliders className="w-3.5 h-3.5" />
             <span>{language === "zh" ? "力度抽屉 (0-127)" : "VELOCITY (0-127)"}</span>
           </div>
@@ -142,7 +142,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
                 className={`px-2.5 py-1 rounded-lg text-xs font-['JetBrains_Mono'] font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
                   isSelected
                     ? "bg-[#181a22] text-[#f0ede6] shadow-[0_0_10px_rgba(0,0,0,0.5)] scale-105"
-                    : "bg-[#0a0b0d] text-[#717684] border-[#1e212b] hover:text-[#e9e7e0]"
+                    : "bg-bg text-[#717684] border-[#1e212b] hover:text-text"
                 }`}
                 style={{
                   borderColor: isSelected ? trackMeta.color : undefined,
@@ -159,35 +159,35 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
         <div className="flex items-center gap-1.5 ml-auto">
           <button
             onClick={handlePresetFlat}
-            className="px-2 py-1 rounded bg-[#151720] border border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0] text-[11px] font-mono transition-colors"
+            className="px-2 py-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text text-[11px] font-mono transition-colors"
             title={language === "zh" ? "重置为标准力度 100" : "Reset flat 100"}
           >
             Flat 100
           </button>
           <button
             onClick={handlePresetAccent}
-            className="px-2 py-1 rounded bg-[#151720] border border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0] text-[11px] font-mono transition-colors"
+            className="px-2 py-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text text-[11px] font-mono transition-colors"
             title={language === "zh" ? "正拍重音 (122/90)" : "Accent downbeats"}
           >
             Accent
           </button>
           <button
             onClick={handlePresetRampUp}
-            className="p-1 rounded bg-[#151720] border border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
+            className="p-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text transition-colors"
             title={language === "zh" ? "渐强曲线" : "Crescendo"}
           >
             <TrendingUp className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handlePresetRampDown}
-            className="p-1 rounded bg-[#151720] border border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
+            className="p-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text transition-colors"
             title={language === "zh" ? "渐弱曲线" : "Decrescendo"}
           >
             <TrendingDown className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handlePresetHumanize}
-            className="px-2 py-1 rounded bg-[#151720] border border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0] text-[11px] font-mono transition-colors flex items-center gap-1"
+            className="px-2 py-1 rounded bg-[#151720] border border-line hover:border-[#3a3e48] text-text-sub hover:text-text text-[11px] font-mono transition-colors flex items-center gap-1"
             title={language === "zh" ? "微随机人性化" : "Humanize ±15%"}
           >
             <Sparkles className="w-3 h-3 text-[#45e0c9]" />
@@ -195,7 +195,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
           </button>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-[#20222a] text-[#8b8f99] hover:text-[#ff5964] transition-colors ml-1"
+            className="p-1 rounded hover:bg-[#20222a] text-text-sub hover:text-[#ff5964] transition-colors ml-1"
             title={language === "zh" ? "关闭力度抽屉" : "Close drawer"}
           >
             <X className="w-4 h-4" />
@@ -207,7 +207,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
       <div className="pt-3 flex items-center gap-3 overflow-x-auto min-w-max pb-1">
         {/* Left Track Label Space aligned with matrix headers */}
         <div className="w-[126px] sm:w-[172px] flex-none text-right pr-2 sm:pr-3 font-mono text-[11px] text-[#6b7280]">
-          <span className="font-bold text-[#e9e7e0]">{meta.name}</span>
+          <span className="font-bold text-text">{meta.name}</span>
           <span className="block text-[10px] text-[#4a5060]">
             {language === "zh" ? "滑动绘制力度" : "Drag to paint"}
           </span>
@@ -244,8 +244,8 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
                 <div
                   className={`absolute -top-5 font-mono text-[9px] font-bold px-1 rounded transition-opacity ${
                     isPlayhead
-                      ? "opacity-100 bg-[#f5b73d] text-black"
-                      : "opacity-0 group-hover:opacity-100 bg-[#23262d] text-[#e9e7e0]"
+                      ? "opacity-100 bg-accent text-black"
+                      : "opacity-0 group-hover:opacity-100 bg-line text-text"
                   }`}
                 >
                   {vel}

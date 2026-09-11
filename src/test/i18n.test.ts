@@ -62,4 +62,12 @@ describe("Language Initialization & Persistence (P1-12)", () => {
     expect(DICTIONARY["app_title"].zh).toBeTruthy();
     expect(DICTIONARY["app_title"].en).toBeTruthy();
   });
+
+  it("interpolates template variables in formatMessage", async () => {
+    const { formatMessage } = await import("../i18n/LanguageContext");
+    expect(formatMessage("Hello {name}!", { name: "Producer" })).toBe("Hello Producer!");
+    expect(formatMessage("Pattern {bar}/{total}", { bar: 1, total: 4 })).toBe("Pattern 1/4");
+    expect(formatMessage("Static text")).toBe("Static text");
+    expect(formatMessage("Missing {missing} var", {})).toBe("Missing {missing} var");
+  });
 });

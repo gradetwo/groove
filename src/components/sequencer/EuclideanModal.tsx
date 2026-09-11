@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { SequencerTrack } from "../../types/genre";
 import { generateEuclidean, EUCLIDEAN_PRESETS } from "../../audio/Euclidean";
 import { Sparkles, RotateCw, Play, Check, X, Disc3 } from "lucide-react";
+import { Modal } from "../../ui";
 
 interface EuclideanModalProps {
   isOpen: boolean;
@@ -68,19 +69,24 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#12141a] border border-[#23262d] rounded-2xl w-full max-w-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="xl"
+      showCloseButton={false}
+      ariaLabel={language === "zh" ? "欧几里得数学节奏生成器" : "Euclidean Rhythm Generator"}
+    >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f222b]">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-[#f5b73d]" />
+              <Sparkles className="w-4 h-4 text-accent" />
             </div>
             <div>
-              <h3 className="font-['Space_Grotesk'] text-base font-bold text-[#e9e7e0]">
+              <h3 className="font-['Space_Grotesk'] text-base font-bold text-text">
                 {language === "zh" ? "欧几里得数学节奏生成器" : "Euclidean Rhythm Generator"}
               </h3>
-              <p className="text-[11px] text-[#8b8f99]">
+              <p className="text-[11px] text-text-sub">
                 {language === "zh"
                   ? "基于 Bjorklund 算法将 K 次击打在 N 步内均匀分布"
                   : "Generates maximally even polyrhythms (K pulses in N steps)"}
@@ -89,7 +95,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[#1a1c22] text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#1a1c22] text-text-sub hover:text-text transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -99,7 +105,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
         <div className="p-6 space-y-5">
           {/* Target Track Selector */}
           <div>
-            <label className="block text-xs font-mono uppercase tracking-wider text-[#8b8f99] mb-2">
+            <label className="block text-xs font-mono uppercase tracking-wider text-text-sub mb-2">
               {language === "zh" ? "目标乐器音轨:" : "Target Track:"}
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -113,7 +119,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                     className={`px-3 py-1.5 rounded-lg text-xs font-['JetBrains_Mono'] font-bold border transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? "bg-[#181a22] text-[#f0ede6] shadow-[0_0_10px_rgba(0,0,0,0.5)] scale-105"
-                        : "bg-[#0a0b0d] text-[#717684] border-[#1e212b] hover:text-[#e9e7e0]"
+                        : "bg-bg text-[#717684] border-[#1e212b] hover:text-text"
                     }`}
                     style={{ borderColor: isSelected ? meta.color : undefined }}
                   >
@@ -132,8 +138,8 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
               {/* Pulses (K) */}
               <div>
                 <div className="flex justify-between font-mono text-xs mb-1">
-                  <span className="text-[#8b8f99]">{language === "zh" ? "击打次数 (K):" : "Pulses (Hits K):"}</span>
-                  <span className="font-bold text-[#f5b73d]">{pulses}</span>
+                  <span className="text-text-sub">{language === "zh" ? "击打次数 (K):" : "Pulses (Hits K):"}</span>
+                  <span className="font-bold text-accent">{pulses}</span>
                 </div>
                 <input
                   type="range"
@@ -141,14 +147,14 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                   max={totalSteps}
                   value={pulses}
                   onChange={(e) => setPulses(+e.target.value)}
-                  className="w-full accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer"
+                  className="w-full accent-accent bg-line-subtle rounded cursor-pointer"
                 />
               </div>
 
               {/* Total Steps (N) */}
               <div>
                 <div className="flex justify-between font-mono text-xs mb-1">
-                  <span className="text-[#8b8f99]">{language === "zh" ? "总步进数 (N):" : "Total Steps (N):"}</span>
+                  <span className="text-text-sub">{language === "zh" ? "总步进数 (N):" : "Total Steps (N):"}</span>
                   <span className="font-bold text-[#45e0c9]">{totalSteps}</span>
                 </div>
                 <input
@@ -161,14 +167,14 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                     setTotalSteps(val);
                     if (pulses > val) setPulses(val);
                   }}
-                  className="w-full accent-[#45e0c9] bg-[#1a1c21] rounded cursor-pointer"
+                  className="w-full accent-[#45e0c9] bg-line-subtle rounded cursor-pointer"
                 />
               </div>
 
               {/* Rotation (R) */}
               <div>
                 <div className="flex justify-between font-mono text-xs mb-1">
-                  <span className="text-[#8b8f99]">{language === "zh" ? "相位偏移 (Rotation):" : "Rotation Shift:"}</span>
+                  <span className="text-text-sub">{language === "zh" ? "相位偏移 (Rotation):" : "Rotation Shift:"}</span>
                   <span className="font-bold text-[#ffb65c]">{rotation >= 0 ? `+${rotation}` : rotation}</span>
                 </div>
                 <input
@@ -177,7 +183,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                   max={totalSteps}
                   value={rotation}
                   onChange={(e) => setRotation(+e.target.value)}
-                  className="w-full accent-[#ffb65c] bg-[#1a1c21] rounded cursor-pointer"
+                  className="w-full accent-[#ffb65c] bg-line-subtle rounded cursor-pointer"
                 />
               </div>
             </div>
@@ -229,7 +235,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                   </g>
                 ))}
               </svg>
-              <div className="font-mono text-[11px] text-[#8b8f99] mt-1">
+              <div className="font-mono text-[11px] text-text-sub mt-1">
                 E({pulses}, {totalSteps}) {rotation !== 0 ? `rot ${rotation}` : ""}
               </div>
             </div>
@@ -245,7 +251,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                 <button
                   key={idx}
                   onClick={() => handleSelectPreset(p)}
-                  className="px-2.5 py-1 rounded bg-[#0a0b0d] hover:bg-[#181a22] border border-[#23262d] text-[11px] text-[#8b8f99] hover:text-[#e9e7e0] font-mono transition-colors"
+                  className="px-2.5 py-1 rounded bg-bg hover:bg-[#181a22] border border-line text-[11px] text-text-sub hover:text-text font-mono transition-colors"
                 >
                   {p.name[language]}
                 </button>
@@ -258,19 +264,18 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#1f222b] bg-[#0c0d12]">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-mono font-semibold text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#1a1c22] transition-colors"
+            className="px-4 py-2 rounded-xl text-xs font-mono font-semibold text-text-sub hover:text-text hover:bg-[#1a1c22] transition-colors"
           >
             {language === "zh" ? "取消" : "Cancel"}
           </button>
           <button
             onClick={handleApply}
-            className="px-5 py-2 rounded-xl text-xs font-['Space_Grotesk'] font-bold bg-[#f5b73d] text-black hover:brightness-110 transition-transform shadow-[0_0_15px_rgba(245,183,61,0.3)] flex items-center gap-1.5"
+            className="px-5 py-2 rounded-xl text-xs font-['Space_Grotesk'] font-bold bg-accent text-black hover:brightness-110 transition-transform shadow-[0_0_15px_rgba(245,183,61,0.3)] flex items-center gap-1.5"
           >
             <Check className="w-4 h-4" />
             <span>{language === "zh" ? "应用到当前音轨" : "Apply to Track"}</span>
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

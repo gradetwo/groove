@@ -111,7 +111,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
               />
             ))}
           </div>
-          <span className="absolute bottom-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-black bg-black/70 text-[#e9e7e0] leading-none pointer-events-none">
+          <span className="absolute bottom-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-black bg-black/70 text-text leading-none pointer-events-none">
             {ratchet}x
           </span>
         </>
@@ -119,7 +119,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
 
       {/* Probability badge */}
       {isOn && prob < 100 && !isOutsideLoop && (
-        <span className="absolute top-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-bold bg-[#f5b73d]/90 text-black leading-none pointer-events-none">
+        <span className="absolute top-0.5 right-0.5 px-0.5 rounded text-[7px] font-['JetBrains_Mono'] font-bold bg-accent/90 text-black leading-none pointer-events-none">
           {prob}%
         </span>
       )}
@@ -143,7 +143,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
 
       {/* Synchronized Global Laser Playhead Beam on this cell */}
       {isPlayhead && (
-        <span className="absolute inset-0 border-2 border-[#f5b73d] bg-[#f5b73d]/25 shadow-[0_0_14px_rgba(245,183,61,0.5)] rounded-md pointer-events-none z-10" />
+        <span className="absolute inset-0 border-2 border-accent bg-accent/25 shadow-[0_0_14px_rgba(245,183,61,0.5)] rounded-md pointer-events-none z-10" />
       )}
     </div>
   );

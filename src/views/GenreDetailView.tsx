@@ -195,34 +195,34 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="inline-flex items-center space-x-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
+        className="inline-flex items-center space-x-1.5 text-xs text-text-sub hover:text-text transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>{t("back")}</span>
       </button>
 
       {/* Hero Header Banner */}
-      <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <div className="bg-panel border border-line rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
         {/* Ambient background glow */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-3xl rounded-full pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-indigo-600/30 text-[#f5b73d] border border-indigo-500/30">
+              <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-indigo-600/30 text-accent border border-indigo-500/30">
                 {genre.category}
               </span>
               {genre.aliases.map((alias) => (
                 <span
                   key={alias}
-                  className="text-xs px-2.5 py-1 rounded-full bg-neutral-800 text-[#b9b7b0] border border-[#393d46]"
+                  className="text-xs px-2.5 py-1 rounded-full bg-neutral-800 text-[#b9b7b0] border border-line-strong"
                 >
                   {alias}
                 </span>
               ))}
             </div>
 
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-[#e9e7e0] tracking-tight">
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-text tracking-tight">
               {genre.name}
             </h1>
 
@@ -250,7 +250,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           <div className="flex flex-wrap md:flex-col gap-2.5 shrink-0">
             <button
               onClick={() => onOpenStudio(genre)}
-              className="flex-1 md:flex-initial flex items-center justify-center space-x-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-[#e9e7e0] font-bold text-sm shadow-xl shadow-indigo-600/30 transition-all hover:scale-105"
+              className="flex-1 md:flex-initial flex items-center justify-center space-x-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-text font-bold text-sm shadow-xl shadow-indigo-600/30 transition-all hover:scale-105"
             >
               <Sliders className="w-4 h-4" />
               <span>{t("open_in_studio")}</span>
@@ -258,7 +258,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
             <button
               onClick={() => onAddToCompare(genre)}
-              className="flex-1 md:flex-initial flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-[#e9e7e0] font-semibold text-xs border border-[#393d46] transition-colors"
+              className="flex-1 md:flex-initial flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-text font-semibold text-xs border border-line-strong transition-colors"
             >
               <Columns className="w-3.5 h-3.5" />
               <span>{t("compare_add")}</span>
@@ -268,19 +268,19 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
       </div>
 
       {/* Groove Audition Bar: Dual Mode (Full Band & Drums Only) with Rich Colorful Spectrum */}
-      <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
+      <div className="bg-panel border border-line rounded-3xl p-6 sm:p-7 shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2">
-              <Sparkles className="w-5 h-5 text-[#f5b73d]" />
-              <h2 className="font-bold text-[#e9e7e0] text-lg sm:text-xl tracking-wide">
+              <Sparkles className="w-5 h-5 text-accent" />
+              <h2 className="font-bold text-text text-lg sm:text-xl tracking-wide">
                 {language === "zh" ? "曲风律动即时试听" : "Genre Groove Audition"}
               </h2>
-              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#f5b73d]/15 text-[#f5b73d] border border-[#f5b73d]/30">
+              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
                 {genre.sequencer_pattern?.scale || "C Minor"}
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#8b8f99] mt-1">
+            <p className="text-xs sm:text-sm text-text-sub mt-1">
               {language === "zh" 
                 ? "支持直接试听完整编曲或单独试听纯鼓组节奏" 
                 : "Listen to the complete synthetic arrangement or isolate the drum groove"}
@@ -289,11 +289,11 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
           {/* Tempo Controls & Stop */}
           <div className="flex items-center space-x-3 self-start sm:self-auto">
-            <div className="flex items-center space-x-2 bg-[#0d0e12] px-3.5 py-2 rounded-2xl border border-[#23262d] text-xs font-mono text-[#b9b7b0]">
-              <span className="text-[#5a5e68] font-bold">BPM</span>
+            <div className="flex items-center space-x-2 bg-panel2 px-3.5 py-2 rounded-2xl border border-line text-xs font-mono text-[#b9b7b0]">
+              <span className="text-text-dim font-bold">BPM</span>
               <button
                 onClick={() => handleBpmChange(bpm - 2)}
-                className="w-5 h-5 rounded bg-[#181a20] hover:bg-[#252834] text-[#e9e7e0] font-bold flex items-center justify-center transition-colors"
+                className="w-5 h-5 rounded bg-[#181a20] hover:bg-[#252834] text-text font-bold flex items-center justify-center transition-colors"
                 title="Decrease BPM"
               >
                 -
@@ -321,11 +321,11 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                     (e.target as HTMLInputElement).blur();
                   }
                 }}
-                className="w-12 bg-transparent text-[#e9e7e0] font-bold text-center focus:outline-none"
+                className="w-12 bg-transparent text-text font-bold text-center focus:outline-none"
               />
               <button
                 onClick={() => handleBpmChange(bpm + 2)}
-                className="w-5 h-5 rounded bg-[#181a20] hover:bg-[#252834] text-[#e9e7e0] font-bold flex items-center justify-center transition-colors"
+                className="w-5 h-5 rounded bg-[#181a20] hover:bg-[#252834] text-text font-bold flex items-center justify-center transition-colors"
                 title="Increase BPM"
               >
                 +
@@ -352,8 +352,8 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             onClick={() => handlePlayMode("full")}
             className={`flex items-center justify-center space-x-2.5 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all shadow-md ${
               isPlaying && auditionMode === "full"
-                ? "bg-[#f5b73d] text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
-                : "bg-[#161820] hover:bg-[#20232c] text-[#e9e7e0] border border-[#2b2e38] hover:border-[#f5b73d]/50"
+                ? "bg-accent text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
+                : "bg-[#161820] hover:bg-[#20232c] text-text border border-[#2b2e38] hover:border-accent/50"
             }`}
           >
             {isPlaying && auditionMode === "full" ? (
@@ -368,7 +368,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               </>
             ) : (
               <>
-                <Play className="w-4 h-4 fill-current text-[#f5b73d]" />
+                <Play className="w-4 h-4 fill-current text-accent" />
                 <span>{language === "zh" ? "试听全部音轨 (完整编曲)" : "Audition Full Tracks"}</span>
               </>
             )}
@@ -379,8 +379,8 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             onClick={() => handlePlayMode("drums")}
             className={`flex items-center justify-center space-x-2.5 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all shadow-md ${
               isPlaying && auditionMode === "drums"
-                ? "bg-[#f5b73d] text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
-                : "bg-[#161820] hover:bg-[#20232c] text-[#e9e7e0] border border-[#2b2e38] hover:border-[#f5b73d]/50"
+                ? "bg-accent text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
+                : "bg-[#161820] hover:bg-[#20232c] text-text border border-[#2b2e38] hover:border-accent/50"
             }`}
           >
             {isPlaying && auditionMode === "drums" ? (
@@ -395,7 +395,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               </>
             ) : (
               <>
-                <Disc3 className="w-4 h-4 text-[#f5b73d]" />
+                <Disc3 className="w-4 h-4 text-accent" />
                 <span>{language === "zh" ? "只试听鼓组 (纯节奏骨架)" : "Audition Drums Only"}</span>
               </>
             )}
@@ -403,11 +403,11 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         </div>
 
         {/* Dynamic Multi-color Beat Spectrum & Status Console (No blank space, rich color transitions) */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-[#0c0d11] border border-[#23262d] space-y-3.5">
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#0c0d11] border border-line space-y-3.5">
           {/* Status Bar & Active Channels Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-2.5">
-              <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? "bg-[#f5b73d] shadow-[0_0_10px_#f5b73d] animate-pulse" : "bg-neutral-700"}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? "bg-accent shadow-[0_0_10px_#f5b73d] animate-pulse" : "bg-neutral-700"}`} />
               <span className="font-bold text-sm text-[#f0ede6]">
                 {isPlaying 
                   ? (auditionMode === "drums" 
@@ -419,7 +419,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
             {/* Beat Readout & Measure Counter with Colorful Jumping Dots */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono">
-              <span className="px-2.5 py-1 rounded-lg bg-[#14161e] border border-[#282c38] text-xs font-bold text-[#f5b73d]">
+              <span className="px-2.5 py-1 rounded-lg bg-[#14161e] border border-[#282c38] text-xs font-bold text-accent">
                 BEAT {Math.floor(currentStep / 4) + 1} / 4
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-[#14161e] border border-[#282c38] text-xs font-bold text-[#06b6d4]">
@@ -506,8 +506,8 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         {/* Left Column: History & Culture */}
         <div className="lg:col-span-2 space-y-6">
           {/* Cultural Context */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-3">
-            <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-3">
+            <h3 className="font-bold text-text text-base flex items-center space-x-2">
               <Flame className="w-4 h-4 text-amber-400" />
               <span>{t("culture_background")}</span>
             </h3>
@@ -517,16 +517,16 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           </div>
 
           {/* Drum & Rhythm Architecture */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
-              <Layers className="w-4 h-4 text-[#f5b73d]" />
+          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-text text-base flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-accent" />
               <span>{t("drum_features")}</span>
             </h3>
 
             {/* Core Rhythm Features / DNA Summary */}
             {genre.rhythm_features && (
               <div className="p-3.5 bg-amber-500/10 rounded-2xl border border-amber-500/30 space-y-1">
-                <span className="font-bold text-[#f5b73d] uppercase tracking-wider text-[10px]">
+                <span className="font-bold text-accent uppercase tracking-wider text-[10px]">
                   {t("rhythm_features")}
                 </span>
                 <p className="text-[#f3f1ec] text-xs leading-relaxed font-sans">
@@ -536,48 +536,48 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
-                <span className="font-bold text-[#8b8f99] uppercase tracking-wider text-[10px]">
+              <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
+                <span className="font-bold text-text-sub uppercase tracking-wider text-[10px]">
                   {t("kick_placement")}
                 </span>
-                <p className="text-[#e9e7e0] leading-relaxed">
+                <p className="text-text leading-relaxed">
                   {genre.drum_pattern.kick[language]}
                 </p>
               </div>
 
-              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
-                <span className="font-bold text-[#8b8f99] uppercase tracking-wider text-[10px]">
+              <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
+                <span className="font-bold text-text-sub uppercase tracking-wider text-[10px]">
                   {t("snare_placement")}
                 </span>
-                <p className="text-[#e9e7e0] leading-relaxed">
+                <p className="text-text leading-relaxed">
                   {genre.drum_pattern.snare_clap[language]}
                 </p>
               </div>
 
-              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
-                <span className="font-bold text-[#8b8f99] uppercase tracking-wider text-[10px]">
+              <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
+                <span className="font-bold text-text-sub uppercase tracking-wider text-[10px]">
                   {t("hihat_pattern")}
                 </span>
-                <p className="text-[#e9e7e0] leading-relaxed">
+                <p className="text-text leading-relaxed">
                   {genre.drum_pattern.hihats[language]}
                 </p>
               </div>
 
-              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
-                <span className="font-bold text-[#8b8f99] uppercase tracking-wider text-[10px]">
+              <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
+                <span className="font-bold text-text-sub uppercase tracking-wider text-[10px]">
                   {t("bass_design")}
                 </span>
-                <p className="text-[#e9e7e0] leading-relaxed">
+                <p className="text-text leading-relaxed">
                   {genre.bass_pattern[language]}
                 </p>
               </div>
 
               {genre.drum_pattern.percussion && (
-                <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1 sm:col-span-2">
-                  <span className="font-bold text-[#8b8f99] uppercase tracking-wider text-[10px]">
+                <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1 sm:col-span-2">
+                  <span className="font-bold text-text-sub uppercase tracking-wider text-[10px]">
                     {language === "zh" ? "打击乐加花" : "Percussion"}
                   </span>
-                  <p className="text-[#e9e7e0] leading-relaxed">
+                  <p className="text-text leading-relaxed">
                     {genre.drum_pattern.percussion[language]}
                   </p>
                 </div>
@@ -586,19 +586,19 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           </div>
 
           {/* Sound Design & Production Tips */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-text text-base flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-pink-400" />
               <span>{t("sound_design_tips")}</span>
             </h3>
 
             {/* Sound Design Deep Dive */}
             {genre.sound_design && (
-              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
-                <span className="font-bold text-[#f5b73d] uppercase tracking-wider text-[10px]">
+              <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
+                <span className="font-bold text-accent uppercase tracking-wider text-[10px]">
                   {t("sound_design")}
                 </span>
-                <p className="text-[#e9e7e0] leading-relaxed text-xs">
+                <p className="text-text leading-relaxed text-xs">
                   {genre.sound_design[language]}
                 </p>
               </div>
@@ -606,11 +606,11 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
             {/* Chord Inversions & Voicings */}
             {genre.chord_inversions && (
-              <div className="p-3.5 bg-[#0d0e12]/70 rounded-2xl border border-[#23262d]/70 space-y-1">
+              <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1">
                 <span className="font-bold text-indigo-300 uppercase tracking-wider text-[10px]">
                   {t("chord_inversions")}
                 </span>
-                <p className="text-[#e9e7e0] leading-relaxed text-xs">
+                <p className="text-text leading-relaxed text-xs">
                   {genre.chord_inversions[language]}
                 </p>
               </div>
@@ -618,7 +618,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
             {/* Key characteristics & Harmonic progression rules */}
             <div className="space-y-2">
-              <span className="text-xs font-semibold text-[#8b8f99] block">
+              <span className="text-xs font-semibold text-text-sub block">
                 {t("harmonic_rules")}
               </span>
               <p className="text-sm text-[#b9b7b0] leading-relaxed">
@@ -630,7 +630,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                   {genre.common_chords.map((chord, i) => (
                     <span
                       key={i}
-                      className="px-2.5 py-1 rounded-xl bg-[#0d0e12] text-indigo-300 font-mono text-xs border border-[#23262d]"
+                      className="px-2.5 py-1 rounded-xl bg-panel2 text-indigo-300 font-mono text-xs border border-line"
                     >
                       {chord}
                     </span>
@@ -642,13 +642,13 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {/* Practical Production Tips List */}
             {genre.production_tips && genre.production_tips[language] && genre.production_tips[language].length > 0 && (
               <div className="pt-2 border-t border-[#1a1c22] space-y-2">
-                <span className="text-xs font-semibold text-[#8b8f99] block">
+                <span className="text-xs font-semibold text-text-sub block">
                   {language === "zh" ? "制作实战秘诀" : "Pro Tips"}
                 </span>
                 <ul className="space-y-1.5 text-xs text-[#b8b5ad]">
                   {genre.production_tips[language].map((tip, tIdx) => (
                     <li key={tIdx} className="flex items-start space-x-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d] shrink-0 mt-1.5" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 mt-1.5" />
                       <span className="leading-relaxed">{tip}</span>
                     </li>
                   ))}
@@ -658,8 +658,8 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           </div>
 
           {/* Instrumentation & Arrangement Structure (PRD 5.6.1.2) */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-text text-base flex items-center space-x-2">
               <Wrench className="w-4 h-4 text-emerald-400" />
               <span>{language === "zh" ? "核心配器与典型曲式" : "Instruments & Structure"}</span>
             </h3>
@@ -667,14 +667,14 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {/* Instruments */}
             {genre.instrumentation && genre.instrumentation.length > 0 && (
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-[#8b8f99] uppercase tracking-wider block">
+                <span className="text-xs font-semibold text-text-sub uppercase tracking-wider block">
                   {t("instrumentation")}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {genre.instrumentation.map((inst, i) => (
                     <span
                       key={i}
-                      className="px-3 py-1 rounded-xl bg-[#0d0e12] text-emerald-300 font-mono text-xs border border-emerald-500/30 font-semibold"
+                      className="px-3 py-1 rounded-xl bg-panel2 text-emerald-300 font-mono text-xs border border-emerald-500/30 font-semibold"
                     >
                       {inst}
                     </span>
@@ -686,13 +686,13 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {/* Arrangement Structure */}
             {genre.structure && genre.structure.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-[#1a1c22]">
-                <span className="text-xs font-semibold text-[#8b8f99] uppercase tracking-wider block">
+                <span className="text-xs font-semibold text-text-sub uppercase tracking-wider block">
                   {t("structure")}
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
                   {genre.structure.map((part, pIdx) => (
                     <React.Fragment key={pIdx}>
-                      <span className="px-2.5 py-1 rounded-lg bg-[#0d0e12] text-[#c4c7cf] border border-[#23262d]">
+                      <span className="px-2.5 py-1 rounded-lg bg-panel2 text-[#c4c7cf] border border-line">
                         {part}
                       </span>
                       {pIdx < genre.structure.length - 1 && (
@@ -709,8 +709,8 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         {/* Right Column: Tracks & Family Tree */}
         <div className="space-y-6">
           {/* Milestone Tracks */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-text text-base flex items-center space-x-2">
               <Headphones className="w-4 h-4 text-sky-400" />
               <span>{t("representative_tracks")}</span>
             </h3>
@@ -719,13 +719,13 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               {genre.representative_tracks.map((track, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-2xl bg-[#0d0e12] border border-[#1a1c21] flex items-center justify-between hover:border-[#393d46] transition-colors"
+                  className="p-3 rounded-2xl bg-panel2 border border-line-subtle flex items-center justify-between hover:border-line-strong transition-colors"
                 >
                   <div className="min-w-0 pr-2">
-                    <h5 className="font-bold text-[#e9e7e0] text-xs truncate">
+                    <h5 className="font-bold text-text text-xs truncate">
                       {track.title}
                     </h5>
-                    <p className="text-[11px] text-[#8b8f99] truncate mt-0.5">
+                    <p className="text-[11px] text-text-sub truncate mt-0.5">
                       {track.artist} • <span className="font-mono">{track.year}</span>
                     </p>
                   </div>
@@ -735,7 +735,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                       href={track.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 rounded-xl bg-[#121317] hover:bg-indigo-600 text-[#8b8f99] hover:text-[#e9e7e0] transition-colors shrink-0"
+                      className="p-1.5 rounded-xl bg-panel hover:bg-indigo-600 text-text-sub hover:text-text transition-colors shrink-0"
                       title={t("listen_link")}
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -748,8 +748,8 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
           {/* Pioneering Artists */}
           {genre.representative_artists && genre.representative_artists.length > 0 && (
-            <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-3">
-              <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+            <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-3">
+              <h3 className="font-bold text-text text-base flex items-center space-x-2">
                 <Users className="w-4 h-4 text-amber-300" />
                 <span>{t("representative_artists")}</span>
               </h3>
@@ -757,7 +757,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                 {genre.representative_artists.map((artist, aIdx) => (
                   <span
                     key={aIdx}
-                    className="px-2.5 py-1 rounded-xl bg-[#0d0e12] text-[#d4d1c9] border border-[#23262d] text-xs font-medium"
+                    className="px-2.5 py-1 rounded-xl bg-panel2 text-[#d4d1c9] border border-line text-xs font-medium"
                   >
                     {artist}
                   </span>
@@ -767,8 +767,8 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           )}
 
           {/* Genealogy & Related Connections */}
-          <div className="bg-[#121317] border border-[#23262d] rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="font-bold text-[#e9e7e0] text-base flex items-center space-x-2">
+          <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-text text-base flex items-center space-x-2">
               <GitCommit className="w-4 h-4 text-purple-400" />
               <span>{t("related_genres")}</span>
             </h3>
@@ -776,7 +776,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {/* Direct Ancestors */}
             {genre.parent_genres.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-[#5a5e68] uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">
                   {t("parents")}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -786,7 +786,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                       <button
                         key={pg}
                         onClick={() => match && onSelectGenre(match)}
-                        className="text-xs px-2.5 py-1 rounded-xl bg-[#0d0e12] hover:bg-neutral-800 text-[#b9b7b0] hover:text-[#e9e7e0] border border-[#23262d] transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-xl bg-panel2 hover:bg-neutral-800 text-[#b9b7b0] hover:text-text border border-line transition-colors"
                       >
                         {match ? match.name : pg}
                       </button>
@@ -799,7 +799,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {/* Subgenres */}
             {genre.subgenres.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-[#5a5e68] uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">
                   {t("subgenres")}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -809,7 +809,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                       <button
                         key={sg}
                         onClick={() => match && onSelectGenre(match)}
-                        className="text-xs px-2.5 py-1 rounded-xl bg-[#0d0e12] hover:bg-neutral-800 text-[#b9b7b0] hover:text-[#e9e7e0] border border-[#23262d] transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-xl bg-panel2 hover:bg-neutral-800 text-[#b9b7b0] hover:text-text border border-line transition-colors"
                       >
                         {match ? match.name : sg}
                       </button>
@@ -822,7 +822,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {/* Related */}
             {genre.related_genres.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-[#5a5e68] uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">
                   {t("related_genres")}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -832,7 +832,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                       <button
                         key={rg}
                         onClick={() => match && onSelectGenre(match)}
-                        className="text-xs px-2.5 py-1 rounded-xl bg-[#0d0e12] hover:bg-neutral-800 text-[#b9b7b0] hover:text-[#e9e7e0] border border-[#23262d] transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-xl bg-panel2 hover:bg-neutral-800 text-[#b9b7b0] hover:text-text border border-line transition-colors"
                       >
                         {match ? match.name : rg}
                       </button>

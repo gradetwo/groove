@@ -42,20 +42,20 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
   };
 
   return (
-    <div className="w-full bg-[#0a0d14] rounded-xl p-3 border border-[#23262d] shadow-inner select-none overflow-x-auto overscroll-contain-all">
+    <div className="w-full bg-[#0a0d14] rounded-xl p-3 border border-line shadow-inner select-none overflow-x-auto overscroll-contain-all">
       <div className="flex items-center justify-between mb-2 px-1">
-        <div className="flex items-center gap-2 text-xs text-[#8b8f99]">
-          <span className="w-2 h-2 rounded-full bg-[#f5b73d] shadow-[0_0_6px_#f5b73d]" />
+        <div className="flex items-center gap-2 text-xs text-text-sub">
+          <span className="w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_#f5b73d]" />
           <span className="font-semibold text-[#eae6dc]">
             {language === "zh" ? "88键立体钢琴琴键映射 (C3 - B5)" : "Interactive Acoustic Grand Piano (C3 - B5)"}
           </span>
-          <span className="text-[10px] text-[#5a5e68]">
+          <span className="text-[10px] text-text-dim">
             {language === "zh" ? "· 点亮当前和弦发音键位" : "· Active chord tone lighting"}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-[#8b8f99]">
+        <div className="flex items-center gap-3 text-[11px] text-text-sub">
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded bg-[#f5b73d]" />
+            <span className="w-2.5 h-2.5 rounded bg-accent" />
             <span>{language === "zh" ? "根音 (Root)" : "Root Note"}</span>
           </div>
           <div className="flex items-center gap-1">
@@ -77,7 +77,7 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
 
             let bgColor = "bg-[#f3f1eb] hover:bg-[#ffffff] text-zinc-700";
             if (isExactRoot) {
-              bgColor = "bg-[#f5b73d] text-zinc-950 font-bold shadow-[0_0_12px_rgba(245,183,61,0.8)] z-10";
+              bgColor = "bg-accent text-zinc-950 font-bold shadow-[0_0_12px_rgba(245,183,61,0.8)] z-10";
             } else if (isExactActive) {
               bgColor = "bg-[#4ad8c8] text-zinc-950 font-semibold shadow-[0_0_10px_rgba(74,216,200,0.7)] z-10";
             } else if (isActive) {
@@ -127,7 +127,7 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
 
             let bkColor = "bg-[#181a20] hover:bg-[#2c303c] text-white";
             if (isExactRoot) {
-              bkColor = "bg-[#f5b73d] text-zinc-950 font-bold shadow-[0_0_14px_rgba(245,183,61,0.9)]";
+              bkColor = "bg-accent text-zinc-950 font-bold shadow-[0_0_14px_rgba(245,183,61,0.9)]";
             } else if (isExactActive) {
               bkColor = "bg-[#4ad8c8] text-zinc-950 font-semibold shadow-[0_0_12px_rgba(74,216,200,0.8)]";
             } else if (isActive) {

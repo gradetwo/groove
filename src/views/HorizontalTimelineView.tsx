@@ -539,7 +539,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
       <div className="rounded-2xl bg-[#0f1117]/95 border border-white/[0.08] p-3.5 shadow-xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-3">
         {/* Left: Branding & Metrics */}
         <div className="flex items-center space-x-2.5">
-          <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[#f5b73d]">
+          <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-accent">
             <Clock className="w-4 h-4" />
           </div>
           <div>
@@ -547,7 +547,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
               <h1 className="text-base font-extrabold text-[#f5f4ef] tracking-wide">
                 {t("nav_timeline_h")}
               </h1>
-              <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-amber-500/15 text-[#f5b73d] border border-amber-500/30 font-bold">
+              <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-amber-500/15 text-accent border border-amber-500/30 font-bold">
                 159 GENRES
               </span>
             </div>
@@ -562,7 +562,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
               onClick={() => setScaleMode("nonlinear")}
               className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
                 scaleMode === "nonlinear"
-                  ? "bg-[#f5b73d] text-black font-bold shadow-sm"
+                  ? "bg-accent text-black font-bold shadow-sm"
                   : "text-[#8e93a0] hover:text-[#f5f4ef]"
               }`}
               title={language === "zh" ? "根据各时代曲风密度自适应扩展，消除留白" : "Adaptive density-weighted non-linear scale"}
@@ -574,7 +574,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
               onClick={() => setScaleMode("linear")}
               className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 shrink-0 ${
                 scaleMode === "linear"
-                  ? "bg-[#f5b73d] text-black font-bold shadow-sm"
+                  ? "bg-accent text-black font-bold shadow-sm"
                   : "text-[#8e93a0] hover:text-[#f5f4ef]"
               }`}
               title={language === "zh" ? "传统等距年代分布" : "Linear equal-width decades"}
@@ -611,7 +611,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
           <select
             value={activeLaneFilter}
             onChange={(e) => setActiveLaneFilter(e.target.value)}
-            className="bg-[#090a0e] border border-white/[0.08] text-[#c4c7cf] text-xs font-semibold px-2.5 py-1 rounded-xl focus:outline-none focus:border-[#f5b73d] cursor-pointer max-w-[160px] truncate"
+            className="bg-[#090a0e] border border-white/[0.08] text-[#c4c7cf] text-xs font-semibold px-2.5 py-1 rounded-xl focus:outline-none focus:border-accent cursor-pointer max-w-[160px] truncate"
           >
             <option value="ALL" className="bg-[#12131a]">
               {language === "zh" ? `全部泳道 (${LANES.length})` : `All Lanes (${LANES.length})`}
@@ -630,7 +630,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
             onClick={handleTogglePlay}
             className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold text-xs transition-all ${
               animationPlaying
-                ? "bg-[#f5b73d] text-black shadow-sm"
+                ? "bg-accent text-black shadow-sm"
                 : "bg-indigo-600 hover:bg-indigo-500 text-[#f5f4ef]"
             }`}
           >
@@ -649,7 +649,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
           {/* Current Year Display */}
           <div className="flex items-center space-x-1 pl-2 border-l border-white/[0.08]">
             <span className="text-[9px] text-[#636875] font-mono font-bold">YEAR:</span>
-            <span className="text-sm font-mono font-extrabold text-[#f5b73d] w-10 text-center">
+            <span className="text-sm font-mono font-extrabold text-accent w-10 text-center">
               {currentYear}
             </span>
           </div>
@@ -660,7 +660,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
             max="2024"
             value={currentYear}
             onChange={(e) => setCurrentYear(Number(e.target.value))}
-            className="w-20 sm:w-28 accent-[#f5b73d] cursor-pointer"
+            className="w-20 sm:w-28 accent-accent cursor-pointer"
           />
 
           {/* Speed */}
@@ -671,7 +671,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                 onClick={() => setPlaybackSpeed(spd)}
                 className={`text-[9px] font-mono px-1 py-0.5 rounded ${
                   playbackSpeed === spd
-                    ? "bg-amber-500/20 text-[#f5b73d] font-bold"
+                    ? "bg-amber-500/20 text-accent font-bold"
                     : "text-[#636875] hover:text-[#9ca1ad]"
                 }`}
               >
@@ -693,7 +693,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
             onClick={() => scrollToColumn(col.id)}
             className="px-2 py-0.5 rounded-lg bg-[#0e1017] hover:bg-[#181b24] border border-white/[0.06] hover:border-white/20 text-[10.5px] font-mono text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors shrink-0 flex items-center gap-1"
           >
-            <span className="text-[#f5b73d] font-bold">{col.label}</span>
+            <span className="text-accent font-bold">{col.label}</span>
             <span className="text-[#636875]">·</span>
             <span>{col.tag[language]}</span>
           </button>
@@ -717,7 +717,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                   className={`${col.widthClass} px-2 flex flex-col items-center justify-between relative transition-colors border-r border-white/[0.05] last:border-none`}
                 >
                   <div className="text-center">
-                    <div className={`text-xs font-mono font-extrabold ${isPast ? "text-[#f5b73d]" : "text-[#555a68]"}`}>
+                    <div className={`text-xs font-mono font-extrabold ${isPast ? "text-accent" : "text-[#555a68]"}`}>
                       {col.label}
                     </div>
                     <div className="text-[9.5px] font-semibold text-[#8e93a0] uppercase tracking-wider mt-0.5">
@@ -727,7 +727,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
 
                   {/* Tick Dot */}
                   <div className={`w-1.5 h-1.5 rounded-full mt-1.5 transition-all ${
-                    isPast ? "bg-[#f5b73d] shadow-[0_0_6px_#f5b73d]" : "bg-[#181a24]"
+                    isPast ? "bg-accent shadow-[0_0_6px_#f5b73d]" : "bg-[#181a24]"
                   }`} />
                 </div>
               );
@@ -813,7 +813,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                     {/* Top: Name and Year */}
                                     <div className="flex items-center justify-between gap-1">
                                       <span 
-                                        className="font-bold text-xs text-[#f5f4ef] group-hover/chip:text-[#f5b73d] transition-colors truncate"
+                                        className="font-bold text-xs text-[#f5f4ef] group-hover/chip:text-accent transition-colors truncate"
                                         title={genre.name}
                                       >
                                         {genre.name}
@@ -835,7 +835,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                           onClick={(e) => handleToggleAudition(genre, e)}
                                           className={`p-1 rounded-lg transition-all ${
                                             isPlayingThis
-                                              ? "bg-[#f5b73d] text-black shadow-sm"
+                                              ? "bg-accent text-black shadow-sm"
                                               : "bg-white/[0.06] hover:bg-white/[0.15] text-[#b9b7b0] hover:text-[#f5f4ef]"
                                           }`}
                                           title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
@@ -853,7 +853,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                             e.stopPropagation();
                                             onOpenStudio(genre);
                                           }}
-                                          className="p-1 rounded-lg bg-white/[0.06] hover:bg-[#f5b73d] hover:text-black text-[#8e93a0] transition-colors"
+                                          className="p-1 rounded-lg bg-white/[0.06] hover:bg-accent hover:text-black text-[#8e93a0] transition-colors"
                                           title={t("open_in_studio")}
                                         >
                                           <Sliders className="w-2.5 h-2.5" />
@@ -870,7 +870,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                             <span className="text-[10px] text-[#8e93a0]">{genre.aliases[0]}</span>
                                           )}
                                         </div>
-                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-[#f5b73d] border border-amber-500/30">
+                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-accent border border-amber-500/30">
                                           {genre.origin_year}
                                         </span>
                                       </div>
@@ -878,7 +878,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                       <div className="mt-2 space-y-1.5 text-[10.5px]">
                                         <div className="text-[#8e93a0] flex items-center justify-between font-mono">
                                           <span>{genre.origin_place[language]}</span>
-                                          <span className="text-[#f5b73d]">{genre.time_signature} · {genre.bpm_range} BPM</span>
+                                          <span className="text-accent">{genre.time_signature} · {genre.bpm_range} BPM</span>
                                         </div>
                                         <p className="text-[#c4c7cf] leading-relaxed line-clamp-2">
                                           {genre.key_characteristics[language] || genre.rhythm_features[language]}
@@ -903,11 +903,11 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                             <div className="h-full min-h-[44px] w-full flex items-center justify-center px-1.5">
                               {isPreBirth ? (
                                 <div className="w-full flex items-center gap-1.5 py-1 px-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[9.5px] text-[#636875] font-sans">
-                                  <GitBranch className="w-3 h-3 text-[#f5b73d] shrink-0" />
+                                  <GitBranch className="w-3 h-3 text-accent shrink-0" />
                                   <span className="truncate max-w-[200px]" title={lane.predecessor[language]}>
                                     {lane.predecessor[language]}
                                   </span>
-                                  <span className="text-[#f5b73d] font-mono text-[9px] shrink-0 ml-auto font-bold">➔ {lane.birthDecade}s</span>
+                                  <span className="text-accent font-mono text-[9px] shrink-0 ml-auto font-bold">➔ {lane.birthDecade}s</span>
                                 </div>
                               ) : (
                                 <div className="w-full border-t border-dashed border-white/[0.06]" />

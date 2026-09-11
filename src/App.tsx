@@ -5,10 +5,10 @@ import { GlobalSearch } from "./components/GlobalSearch";
 import { Genre } from "./types/genre";
 import { ALL_GENRES, GENRES_MAP } from "./data/genres";
 import { AudioEngine } from "./audio/AudioEngine";
-import { Disc3, Sparkles } from "lucide-react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ChordDefinition } from "./utils/chordTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
+import { ToastContainer } from "./ui";
 
 // Code splitting & lazy loading chunks for optimal performance
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
@@ -190,7 +190,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0b0d] text-[#e9e7e0] flex flex-col font-sans selection:bg-[#f5b73d]/25 selection:text-[#f5b73d]">
+    <div className="min-h-screen bg-bg text-text flex flex-col font-sans selection:bg-accent/25 selection:text-accent">
       {/* Header */}
       <Header
         currentTab={currentTab}
@@ -213,9 +213,9 @@ const MainApp: React.FC = () => {
       <main className="flex-1 w-full pb-12">
         <React.Suspense
           fallback={
-            <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-[#f5b73d]">
-              <div className="w-8 h-8 rounded-full border-2 border-[#f5b73d]/30 border-t-[#f5b73d] animate-spin" />
-              <span className="font-mono text-xs tracking-widest text-[#8b8f99] uppercase">
+            <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-accent">
+              <div className="w-8 h-8 rounded-full border-2 border-accent/30 border-t-[#f5b73d] animate-spin" />
+              <span className="font-mono text-xs tracking-widest text-text-sub uppercase">
                 {language === "zh" ? "正在按需加载曲风模块..." : "Loading Chunk..."}
               </span>
             </div>
@@ -372,51 +372,51 @@ const MainApp: React.FC = () => {
       </main>
 
       {/* Persistent Footer */}
-      <footer className="w-full bg-[#0a0b0d] border-t border-[#23262d] py-6 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#5a5e68]">
+      <footer className="w-full bg-bg border-t border-line py-6 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-dim">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#f5b73d] shadow-[0_0_8px_#f5b73d]" />
-            <span className="font-[Space_Grotesk] font-bold text-[#e9e7e0]">
+            <span className="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_#f5b73d]" />
+            <span className="font-[Space_Grotesk] font-bold text-text">
               GROOVE LAB
             </span>
             <span>·</span>
             <span>159 Synthetic Genres & Realtime Audio Synthesis</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[#8b8f99]">
+          <div className="flex items-center gap-4 text-text-sub">
             <button
               onClick={() => setCurrentTab("studio")}
-              className="hover:text-[#e9e7e0] transition-colors"
+              className="hover:text-text transition-colors"
             >
               {t("nav_studio")}
             </button>
             <button
               onClick={() => setCurrentTab("galaxy")}
-              className="hover:text-[#e9e7e0] transition-colors"
+              className="hover:text-text transition-colors"
             >
               {t("nav_galaxy")}
             </button>
             <button
               onClick={() => setCurrentTab("compare")}
-              className="hover:text-[#e9e7e0] transition-colors"
+              className="hover:text-text transition-colors"
             >
               {t("nav_compare")}
             </button>
             <button
               onClick={() => setCurrentTab("challenge")}
-              className="hover:text-[#e9e7e0] transition-colors"
+              className="hover:text-text transition-colors"
             >
               {t("nav_challenge")}
             </button>
           </div>
 
-          <div className="flex items-center gap-3 text-[#5a5e68]">
+          <div className="flex items-center gap-3 text-text-dim">
             <button
               onClick={() => setUpdatesOpen(true)}
-              className="hover:text-[#f5b73d] transition-colors flex items-center gap-1.5 font-mono text-[11px]"
+              className="hover:text-accent transition-colors flex items-center gap-1.5 font-mono text-[11px]"
               title={language === "zh" ? "检查更新与版本记录" : "Check updates & changelog"}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d] animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               <span>v{CURRENT_CLIENT_VERSION}</span>
               <span className="ml-1">{language === "zh" ? "更新记录" : "Updates"}</span>
             </button>
@@ -431,6 +431,9 @@ const MainApp: React.FC = () => {
         isOpen={updatesOpen}
         onClose={() => setUpdatesOpen(false)}
       />
+
+      {/* Global Singleton Toast Container */}
+      <ToastContainer position="bottom" />
     </div>
   );
 };

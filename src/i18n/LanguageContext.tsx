@@ -160,11 +160,20 @@ export const DICTIONARY: Translations = {
   export: { en: "MIDI", zh: "导出 MIDI" },
 };
 
-interface LanguageContextType {
+export type MessageKey = Extract<keyof typeof DICTIONARY, string>;
+
+export function formatMessage(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (match, key) => {
+    return vars[key] !== undefined ? String(vars[key]) : match;
+  });
+}
+
+export interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
-  t: (key: string) => string;
+  t: (key: MessageKey | (string & {}), vars?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -229,15 +238,17 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLanguage(language === "en" ? "zh" : "en");
   };
 
-  const t = (key: string): string => {
-    const entry = DICTIONARY[key];
+  const t = (key: MessageKey | (string & {}), vars?: Record<string, string | number>): string => {
+    const keyStr = String(key);
+    const entry = (DICTIONARY as Record<string, { en: string; zh: string }>)[keyStr];
     if (!entry) {
       if (import.meta.env.DEV) {
-        console.warn(`[i18n] Missing translation key: "${key}"`);
+        console.warn(`[i18n] Missing translation key: "${keyStr}"`);
       }
-      return key;
+      return vars ? formatMessage(keyStr, vars) : keyStr;
     }
-    return entry[language] || entry.en || key;
+    const raw = String(entry[language] || entry.en || keyStr);
+    return vars ? formatMessage(raw, vars) : raw;
   };
 
   return (

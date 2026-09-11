@@ -107,23 +107,23 @@
 
 ### 设计系统
 
-- [ ] **P1-01** Tailwind 设计令牌落地 ｜ 1d ｜ `tailwind.config.js`
+- [x] **P1-01** Tailwind 设计令牌落地 ｜ 1d ｜ `tailwind.config.js` (v1.5.0)
   验收：色板（bg/panel/line/text/accent/track/cat）、字阶（display/title/body/label/micro）、圆角 3 档、间距、动效时长全部进配置。
 
-- [ ] **P1-02** codemod 替换 1,707 处硬编码 hex ｜ 1d ｜ 全 `src/**/*.tsx`
+- [x] **P1-02** codemod 替换 1,707 处硬编码 hex ｜ 1d ｜ 全 `src/**/*.tsx` (v1.5.0)
   验收：`grep -c '#[0-9a-f]\{6\}' src --include=*.tsx` 降至 <200（仅剩 shader/特殊场景）；CI 加上限门禁。
 
 - [x] **P1-03** 修复不存在的 Tailwind 类名 ｜ 0.25d ｜ `GalaxyView.tsx:1617,1638,1827`、`VerticalTimelineView.tsx:297` (v1.3.4)
   验收：`animate-fade-in`、`animate-slide-up`、`animate-slide-left`、`no-scrollbar`、`scrollbar-none`、`custom-scroll` 要么在 config 中定义、要么替换为已存在的 `.touch-action-none` 等；入场动画真实生效。
 
-- [ ] **P1-04** 字体策略落地（决策 D6） ｜ 1d ｜ `index.html`、`index.css`、`tailwind.config.js`
+- [x] **P1-04** 字体策略落地（决策 D6） ｜ 1d ｜ `index.html`、`index.css`、`tailwind.config.js` (v1.5.0)
   验收：自托管字体子集或明确移除外链；`font-sans` 与实际字体一致；`font-display: swap`。
 
-- [ ] **P1-05** `src/ui/` 组件库（第一批） ｜ 2d
+- [x] **P1-05** `src/ui/` 组件库（第一批） ｜ 2d (v1.5.0)
   验收：`Modal`（role=dialog/aria-modal/焦点陷阱/Esc/焦点归还/遮罩点击）、`Drawer`、`Button`、`IconButton`（强制 aria-label）、`Chip`、`Card`、`EmptyState`、`Toast`（单例）。
   依赖：P1-01。
 
-- [ ] **P1-06** 5 处自研遮罩迁移到 `<Modal>` ｜ 1d ｜ `GlobalSearch.tsx:99`、`StudioView.tsx:1818,2706`、`EuclideanModal.tsx:71`、`PitchPickerModal.tsx:77`
+- [x] **P1-06** 5 处自研遮罩迁移到 `<Modal>` ｜ 1d ｜ `GlobalSearch.tsx:99`、`StudioView.tsx:1818,2706`、`EuclideanModal.tsx:71`、`PitchPickerModal.tsx:77` (v1.5.0)
   验收：行为一致（Esc/焦点/ARIA）；新增组件测试覆盖焦点陷阱。
 
 - [ ] **P1-07** `src/ui/` 第二批：`Slider`（44px 热区 + 键盘步进）、`Select`、`Tooltip`、`Skeleton`、`ErrorState`、`GenreCard`、`RadarChart`（role=img + 数据表） ｜ 2d
@@ -138,7 +138,7 @@
 
 ### i18n
 
-- [ ] **P1-10** i18n 类型安全重构 ｜ 1d ｜ `src/i18n/`
+- [x] **P1-10** i18n 类型安全重构 ｜ 1d ｜ `src/i18n/` (v1.5.0)
   验收：`MessageKey = keyof typeof zh`；`t(key: MessageKey, vars?)`；消息按 feature 分文件；缺失 key 编译期报错。
 
 - [ ] **P1-11** 迁移 321 处内联语言三元 ｜ 2d ｜ 全 `src/**/*.tsx`
@@ -163,9 +163,9 @@
 - [ ] **P1-16** ESLint + Prettier + husky/lint-staged ｜ 0.5d
 - [ ] **P1-17** 测试基建升级：`jsdom` + `@testing-library/react` + `@vitest/coverage-v8` ｜ 0.5d ｜ `vitest.config.ts`
   验收：`environment: jsdom`；`npm run test:coverage`；删除无价值的 `sanity.test.ts`。
-- [ ] **P1-18** 体积预算与 CI 门禁 ｜ 0.5d
+- [x] **P1-18** 体积预算与 CI 门禁 ｜ 0.5d (v1.5.0)
   验收：首屏 gzip、单 chunk、`vendor-three` 三项预算断言；超出即失败。
-- [ ] **P1-19** CI 完整门禁 ｜ 0.5d
+- [x] **P1-19** CI 完整门禁 ｜ 0.5d (v1.5.0)
   验收：`typecheck + lint + format + test + coverage + data lint + build + budget` 全绿。
 
 **Phase 1 出口**：首屏 ≤90KB gzip；无内联语言三元；URL 深链可用；CI 全绿。
@@ -338,8 +338,8 @@
 | 阶段 | 任务数 | 工时 | 状态 |
 |---|---|---|---|
 | Phase 0 止血 | 28 | ≈13d | ✅ 已完成 (28/28 100%) |
-| Phase 1 打地基 | 19 | ≈17d | 🔄 进行中 (5/19 已完成: P1-03, P1-09, P1-12, P1-14, P1-15) |
+| Phase 1 打地基 | 19 | ≈17d | 🔄 进行中 (13/19 已完成: P1-01, P1-02, P1-03, P1-04, P1-05, P1-06, P1-09, P1-10, P1-12, P1-14, P1-15, P1-18, P1-19) |
 | Phase 2 性能与无障碍 | 23 | ≈24d | 待排期 |
 | Phase 3 功能补全 | 20 | ≈33d | 待排期 |
 | Phase 4 进阶 | 11 | ≈21d | 待排期 |
-| **合计** | **101** | **≈108 人日** | **已完成 33 项任务，跨端 E2E 矩阵与发布门禁已上线** |
+| **合计** | **101** | **≈108 人日** | **已完成 41 项任务，跨端 7 平台 E2E 矩阵与预算门禁全部验证通过** |

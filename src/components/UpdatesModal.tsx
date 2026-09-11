@@ -14,6 +14,7 @@ import {
   ArrowUpCircle
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { Modal } from "../ui";
 
 export interface ChangelogHighlight {
   zh: string;
@@ -37,7 +38,7 @@ export interface VersionInfo {
   changelog: ChangelogEntry[];
 }
 
-export const CURRENT_CLIENT_VERSION = "1.4.5";
+export const CURRENT_CLIENT_VERSION = "1.5.0";
 
 interface UpdatesModalProps {
   isOpen: boolean;
@@ -106,25 +107,12 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
     }
   }, [isOpen]);
 
-  // Handle ESC key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   const getCategoryBadge = (category: ChangelogEntry["category"]) => {
     switch (category) {
       case "feature":
         return {
           label: language === "zh" ? "全新功能" : "Feature",
-          classes: "bg-[#f5b73d]/15 text-[#f5b73d] border-[#f5b73d]/30",
+          classes: "bg-accent/15 text-accent border-accent/30",
           icon: <Sparkles className="w-3 h-3" />,
         };
       case "audio":
@@ -143,27 +131,29 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
   };
 
   const handleReloadToUpdate = () => {
-    // Bust cache and force reload
     if (typeof window !== "undefined") {
       window.location.reload();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fade-in">
-      {/* Modal Card */}
-      <div 
-        className="w-full max-w-2xl max-h-[90vh] bg-[#0e0f14] border border-[#262832] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="2xl"
+      showCloseButton={false}
+      className="max-h-[90vh]"
+      ariaLabel={language === "zh" ? "检查更新 & 更新记录" : "Updates & Release Notes"}
+    >
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-[#1f222b] bg-[#121319]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#f5b73d]/20 to-amber-500/10 border border-[#f5b73d]/30 flex items-center justify-center text-[#f5b73d]">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#f5b73d]/20 to-amber-500/10 border border-accent/30 flex items-center justify-center text-accent">
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-[#e9e7e0] flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-text flex items-center gap-2">
                 <span>{language === "zh" ? "检查更新 & 更新记录" : "Updates & Release Notes"}</span>
                 <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-[#1c1f26] border border-[#2d313d] text-[#a0a4b0]">
                   v{CURRENT_CLIENT_VERSION}
@@ -177,7 +167,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#1c1f27] hover:bg-[#282d38] border border-[#2d313d] flex items-center justify-center text-[#8b8f99] hover:text-[#e9e7e0] transition-colors"
+            className="w-8 h-8 rounded-full bg-[#1c1f27] hover:bg-[#282d38] border border-[#2d313d] flex items-center justify-center text-text-sub hover:text-text transition-colors"
             title="Close"
           >
             <X className="w-4 h-4" />
@@ -188,7 +178,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
         <div className="px-5 sm:px-6 py-3.5 bg-[#14161f] border-b border-[#1f222b] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs">
             {checkStatus === "idle" && (
-              <span className="text-[#8b8f99]">
+              <span className="text-text-sub">
                 {language === "zh" ? "点击右侧按钮立即检查云端版本" : "Click check to discover latest cloud updates"}
               </span>
             )}
@@ -205,7 +195,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
             )}
 
             {checkStatus === "update_available" && (
-              <span className="inline-flex items-center gap-1.5 text-[#f5b73d] font-bold animate-pulse">
+              <span className="inline-flex items-center gap-1.5 text-accent font-bold animate-pulse">
                 <ArrowUpCircle className="w-4 h-4 shrink-0" />
                 <span>
                   {language === "zh" 
@@ -243,9 +233,9 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
             <button
               onClick={() => checkForUpdates(false)}
               disabled={isChecking}
-              className="px-3.5 py-1.5 rounded-xl bg-[#1d202a] hover:bg-[#272b38] border border-[#2d313d] text-xs font-semibold text-[#e9e7e0] hover:text-[#f5b73d] flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl bg-[#1d202a] hover:bg-[#272b38] border border-[#2d313d] text-xs font-semibold text-text hover:text-accent flex items-center gap-1.5 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? "animate-spin text-[#f5b73d]" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? "animate-spin text-accent" : ""}`} />
               <span>
                 {isChecking 
                   ? (language === "zh" ? "检查中..." : "Checking...") 
@@ -266,7 +256,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
                 {/* Release Header */}
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-2.5">
                   <div className="flex items-center gap-2.5">
-                    <span className="font-['JetBrains_Mono'] text-sm sm:text-base font-extrabold text-[#e9e7e0]">
+                    <span className="font-['JetBrains_Mono'] text-sm sm:text-base font-extrabold text-text">
                       v{entry.version}
                     </span>
                     {isCurrent && (
@@ -294,7 +284,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
                 <ul className="space-y-1.5 text-xs text-[#8e92a0]">
                   {entry.highlights.map((h, hIdx) => (
                     <li key={hIdx} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d]/70 shrink-0 mt-1.5" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent/70 shrink-0 mt-1.5" />
                       <span className="leading-relaxed">
                         {h[language] || h.en}
                       </span>
@@ -311,12 +301,12 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
           <span>Groove Lab • Cloudflare Edge Distribution</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-[#1d202a] hover:bg-[#272b38] border border-[#2d313d] text-xs text-[#e9e7e0] font-medium transition-colors"
+            className="px-4 py-1.5 rounded-xl bg-[#1d202a] hover:bg-[#272b38] border border-[#2d313d] text-xs text-text font-medium transition-colors"
           >
             {language === "zh" ? "关闭" : "Close"}
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

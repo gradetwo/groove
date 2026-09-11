@@ -1,7 +1,34 @@
 {
-  "version": "1.4.5",
+  "version": "1.5.0",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.5.0",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.5.0 设计系统令牌落地、共享 UI 组件库、类型安全 i18n 与产物体积门禁",
+        "en": "v1.5.0 Design Tokens, Shared UI Library, Type-Safe i18n & Bundle Budget Gate"
+      },
+      "highlights": [
+        {
+          "zh": "Tailwind 设计令牌落地与 1,145 处 Hex Codemod 替换（P1-01 / P1-02）：建立完整主题色板（bg/panel/line/text/accent/track/cat）、字阶微调尺度与圆角过渡规范，批量收拢千处硬编码色号至统一设计令牌体系",
+          "en": "Design tokens architecture & 1,145 hex codemod: codified complete color palette (bg/panel/line/text/accent/track/cat), typography scale, border radiuses and transitioned over 1,000 hardcoded hex classes to design tokens"
+        },
+        {
+          "zh": "src/ui/ 现代化原子组件库与自研遮罩标准收拢（P1-05 / P1-06）：推出 Modal、Drawer、Button、IconButton（强制 aria-label）、Chip、Card、EmptyState 与 Toast 单例通知体系，全站搜索、欧几里得生成器、音高选择器与更新日志弹窗全面纳管，原生支持 WAI-ARIA、焦点陷阱、焦点归还与 Esc 快速退出",
+          "en": "Shared src/ui/ atomic library & modal convergence: implemented Modal, Drawer, Button, IconButton, Chip, Card, EmptyState, and singleton Toast, migrating all custom dialogs into accessible WAI-ARIA dialogs with focus trapping and restore"
+        },
+        {
+          "zh": "i18n 类型安全重构与模板插值引擎（P1-10）：升级 MessageKey 为严格提取联合类型，t() 函数支持动态模板变量插值（formatMessage），实现开发期无死角缺失键提示与安全回退",
+          "en": "Type-safe i18n & template interpolation engine: extracted strict MessageKey union types and enabled dynamic template interpolation via formatMessage"
+        },
+        {
+          "zh": "生产产物体积预算与 CI 全链路门禁（P1-18 / P1-19）：编写 scripts/check_budgets.js，全自动严密守护 index.html (gzip <10KB)、vendor-three (gzip <145KB) 以及单 chunk gzip 上限，并全链路贯通 7 大浏览器与移动端多环境端到端验证",
+          "en": "Production bundle budgets & end-to-end CI gate: scripts/check_budgets.js enforcing strict gzip ceilings for entry HTML, Three.js chunk, and vendor libraries alongside full 7-target Playwright release verification"
+        }
+      ]
+    },
     {
       "version": "1.4.5",
       "date": "2026-09-11",

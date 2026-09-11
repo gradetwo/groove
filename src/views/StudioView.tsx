@@ -1757,11 +1757,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
   }, []);
 
   return (
-    <div className="w-full text-[#e9e7e0]" style={{ ["--g" as any]: genreAccent }}>
+    <div className="w-full text-text" style={{ ["--g" as any]: genreAccent }}>
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-50 bg-[#1a1c22] border border-[#23262d] text-[#e9e7e0] px-4 py-2.5 rounded-lg text-xs font-mono shadow-[0_8px_30px_rgba(0,0,0,0.6)] flex items-center gap-2">
-          <Check className="w-3.5 h-3.5 text-[#f5b73d]" />
+        <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-50 bg-[#1a1c22] border border-line text-text px-4 py-2.5 rounded-lg text-xs font-mono shadow-[0_8px_30px_rgba(0,0,0,0.6)] flex items-center gap-2">
+          <Check className="w-3.5 h-3.5 text-accent" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1772,7 +1772,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         <select
           value={activeCategoryFilter}
           onChange={(e) => setActiveCategoryFilter(e.target.value)}
-          className="bg-[#121317] border border-[#2b2e38] hover:border-[#f5b73d] text-[#e9e7e0] text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer transition-colors shadow-sm"
+          className="bg-panel border border-[#2b2e38] hover:border-accent text-text text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer transition-colors shadow-sm"
         >
           {categories.map((cat) => (
             <option key={cat} value={cat}>
@@ -1791,10 +1791,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
               <button
                 key={g.id}
                 onClick={() => switchGenre(g, true)}
-                className={`flex-none flex flex-col gap-0.5 px-3.5 py-2 border rounded-xl bg-[#121317] min-w-[124px] text-left transition-all relative ${
+                className={`flex-none flex flex-col gap-0.5 px-3.5 py-2 border rounded-xl bg-panel min-w-[124px] text-left transition-all relative ${
                   isCurrent
                     ? "border-[var(--g)] shadow-[0_0_14px_rgba(245,183,61,0.2)] bg-[#171920]"
-                    : "border-[#23262d] hover:border-[#3a3e48] hover:-translate-y-0.5"
+                    : "border-line hover:border-[#3a3e48] hover:-translate-y-0.5"
                 }`}
                 style={{ ["--g" as any]: accent }}
               >
@@ -1807,7 +1807,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 </span>
                 <span 
                   className={`font-mono text-[9.5px] uppercase tracking-[0.14em] truncate ${
-                    isCurrent ? "text-[var(--g)] opacity-95 font-bold" : "text-[#8b8f99]"
+                    isCurrent ? "text-[var(--g)] opacity-95 font-bold" : "text-text-sub"
                   }`}
                 >
                   {getGenreChipTag(g)}
@@ -1820,7 +1820,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         {/* Dice Random Button (#dice) */}
         <button
           onClick={handleDiceRandom}
-          className="flex-none w-9 h-9 border border-dashed border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] rounded-xl flex items-center justify-center transition-colors bg-[#0d0e12]"
+          className="flex-none w-9 h-9 border border-dashed border-line hover:border-accent text-text-sub hover:text-accent rounded-xl flex items-center justify-center transition-colors bg-panel2"
           title="Random Genre"
         >
           <Shuffle className="w-4 h-4" />
@@ -1839,19 +1839,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
         {!isSidebarCollapsed && !isEditorMaximized && (
           <aside className="sticky top-16 flex flex-col gap-3.5 order-2 lg:order-1 landscape-hide-sidebar">
             {/* Hero Genre Card (.blk.g-head) */}
-            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
+            <div className="bg-panel border border-line rounded-xl p-4 sm:p-4.5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-['Space_Grotesk'] font-bold text-2xl sm:text-[26px] leading-[1.15] text-[var(--g)] tracking-tight">
                     {currentGenre.name}
                   </div>
-                  <div className="text-xs text-[#8b8f99] mt-1 font-medium">
+                  <div className="text-xs text-text-sub mt-1 font-medium">
                     {currentGenre.aliases.length > 0 ? currentGenre.aliases[0] : currentGenre.category}
                   </div>
                 </div>
                 <button
                   onClick={() => setIsSidebarCollapsed(true)}
-                  className="p-1.5 text-[#8b8f99] hover:text-[#e9e7e0] rounded-lg hover:bg-[#1a1c21] transition-colors shrink-0"
+                  className="p-1.5 text-text-sub hover:text-text rounded-lg hover:bg-line-subtle transition-colors shrink-0"
                   title={language === "zh" ? "收起左侧信息栏" : "Collapse sidebar"}
                 >
                   <PanelLeftClose className="w-4 h-4" />
@@ -1859,12 +1859,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
               </div>
 
               {/* Era & Place */}
-              <div className="flex gap-3.5 mt-2.5 font-['JetBrains_Mono'] text-xs text-[#8b8f99] flex-wrap">
+              <div className="flex gap-3.5 mt-2.5 font-['JetBrains_Mono'] text-xs text-text-sub flex-wrap">
                 <span>
-                  {t("era")}: <b className="text-[#e9e7e0] font-normal">{currentGenre.origin_year}</b>
+                  {t("era")}: <b className="text-text font-normal">{currentGenre.origin_year}</b>
                 </span>
                 <span>
-                  {t("place")}: <b className="text-[#e9e7e0] font-normal">{currentGenre.origin_place[language]}</b>
+                  {t("place")}: <b className="text-text font-normal">{currentGenre.origin_place[language]}</b>
                 </span>
               </div>
 
@@ -1875,29 +1875,29 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
               {/* 3 Stats Grid */}
               <div className="grid grid-cols-3 gap-2 mt-3.5">
-                <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
-                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
+                <div className="bg-panel2 border border-line-subtle rounded-lg p-2">
+                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-text-dim uppercase">
                     {t("range")}
                   </div>
-                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5">
+                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-text mt-0.5">
                     {currentGenre.bpm_range}
                   </div>
                 </div>
 
-                <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
-                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
+                <div className="bg-panel2 border border-line-subtle rounded-lg p-2">
+                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-text-dim uppercase">
                     {t("keyLabel")}
                   </div>
-                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5 truncate">
+                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-text mt-0.5 truncate">
                     {pattern.scale || "C minor"}
                   </div>
                 </div>
 
-                <div className="bg-[#0d0e12] border border-[#1a1c21] rounded-lg p-2">
-                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-[#5a5e68] uppercase">
+                <div className="bg-panel2 border border-line-subtle rounded-lg p-2">
+                  <div className="font-['JetBrains_Mono'] text-[9px] tracking-[0.12em] text-text-dim uppercase">
                     {t("time")}
                   </div>
-                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#e9e7e0] mt-0.5">
+                  <div className="font-['JetBrains_Mono'] text-xs font-bold text-text mt-0.5">
                     {timeSignature || currentGenre.time_signature || "4/4"}
                   </div>
                 </div>
@@ -1905,8 +1905,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
             </div>
 
             {/* Drum DNA Card (.blk) */}
-            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+            <div className="bg-panel border border-line rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-text-dim uppercase mb-2.5">
                 {t("dna")}
               </h3>
               <div className="divide-y divide-[#1a1c21]">
@@ -1949,8 +1949,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
             </div>
 
             {/* Harmony & Sound (.blk) */}
-            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+            <div className="bg-panel border border-line rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-text-dim uppercase mb-2.5">
                 {t("harm")}
               </h3>
               <p className="text-[12.5px] text-[#b9b7b0] leading-[1.75]">
@@ -1959,8 +1959,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
             </div>
 
             {/* Pro Tips (.blk) */}
-            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+            <div className="bg-panel border border-line rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-text-dim uppercase mb-2.5">
                 {t("tips")}
               </h3>
               <div className="space-y-2">
@@ -1983,29 +1983,29 @@ export const StudioView: React.FC<StudioViewProps> = ({
             </div>
 
             {/* Essential Tracks (.blk) */}
-            <div className="bg-[#121317] border border-[#23262d] rounded-xl p-4 sm:p-4.5">
-              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-[#5a5e68] uppercase mb-2.5">
+            <div className="bg-panel border border-line rounded-xl p-4 sm:p-4.5">
+              <h3 className="font-['JetBrains_Mono'] text-[10px] tracking-[0.22em] text-text-dim uppercase mb-2.5">
                 {t("refs")}
               </h3>
               <div className="divide-y divide-[#1a1c21]">
                 {currentGenre.representative_tracks.slice(0, 3).map((track, i) => (
                   <div key={i} className="flex justify-between gap-2.5 py-2 text-xs">
-                    <span className="text-[#e9e7e0] truncate">
+                    <span className="text-text truncate">
                       {track.link ? (
                         <a
                           href={track.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#e9e7e0] hover:text-[var(--g)] hover:underline"
+                          className="text-text hover:text-[var(--g)] hover:underline"
                         >
                           {track.title}
                         </a>
                       ) : (
                         track.title
                       )}{" "}
-                      · <span className="text-[#8b8f99]">{track.artist}</span>
+                      · <span className="text-text-sub">{track.artist}</span>
                     </span>
-                    <span className="font-['JetBrains_Mono'] text-[11px] text-[#5a5e68] shrink-0">
+                    <span className="font-['JetBrains_Mono'] text-[11px] text-text-dim shrink-0">
                       {track.year}
                     </span>
                   </div>
@@ -2016,14 +2016,14 @@ export const StudioView: React.FC<StudioViewProps> = ({
               <div className="flex items-center gap-2 mt-3 pt-2">
                 <button
                   onClick={() => onViewDetail(currentGenre)}
-                  className="flex-1 text-xs text-[#8b8f99] hover:text-[var(--g)] hover:border-[var(--g)] p-2 border border-[#23262d] rounded-lg transition-colors text-center"
+                  className="flex-1 text-xs text-text-sub hover:text-[var(--g)] hover:border-[var(--g)] p-2 border border-line rounded-lg transition-colors text-center"
                 >
                   {t("view_detail")} →
                 </button>
                 {onAddToCompare && (
                   <button
                     onClick={() => onAddToCompare(currentGenre)}
-                    className="text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] p-2 border border-[#23262d] rounded-lg transition-colors"
+                    className="text-xs text-text-sub hover:text-accent hover:border-accent p-2 border border-line rounded-lg transition-colors"
                     title={t("compare_add")}
                   >
                     {t("compare")} +
@@ -2038,22 +2038,22 @@ export const StudioView: React.FC<StudioViewProps> = ({
         <section
           className={
             isEditorMaximized
-              ? "fixed inset-0 z-50 overflow-y-auto bg-[#0a0b0d] p-2.5 sm:p-3.5 flex flex-col"
-              : "bg-[#121317] border border-[#23262d] rounded-2xl p-3 sm:p-4 min-w-0 order-1 lg:order-2 shadow-2xl"
+              ? "fixed inset-0 z-50 overflow-y-auto bg-bg p-2.5 sm:p-3.5 flex flex-col"
+              : "bg-panel border border-line rounded-2xl p-3 sm:p-4 min-w-0 order-1 lg:order-2 shadow-2xl"
           }
         >
           {/* Sequencer Unified Toolbar (Scales to a single line in Fullscreen, streamlined in Normal mode) */}
-          <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2 pb-2.5 mb-2 border-b border-[#1a1c21] overflow-x-auto whitespace-nowrap scrollbar-none select-none shrink-0 landscape-compact-bar">
+          <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2 pb-2.5 mb-2 border-b border-line-subtle overflow-x-auto whitespace-nowrap scrollbar-none select-none shrink-0 landscape-compact-bar">
             {/* Left Section: Playback & Primary Sequencer Selectors */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Fullscreen Mode: Genre Badge */}
               {isEditorMaximized ? (
-                <div className="flex items-center gap-1.5 h-8 px-2 sm:px-2.5 bg-[#14151a] border border-[#23262d] rounded-lg shrink-0">
+                <div className="flex items-center gap-1.5 h-8 px-2 sm:px-2.5 bg-[#14151a] border border-line rounded-lg shrink-0">
                   <span
                     className="w-2 h-2 rounded-full shadow-[0_0_8px_var(--g)] shrink-0"
                     style={{ backgroundColor: "var(--g)" }}
                   />
-                  <span className="font-['Space_Grotesk'] font-bold text-xs text-[#e9e7e0] truncate max-w-[100px] sm:max-w-[150px]">
+                  <span className="font-['Space_Grotesk'] font-bold text-xs text-text truncate max-w-[100px] sm:max-w-[150px]">
                     {currentGenre.name}
                   </span>
                 </div>
@@ -2061,7 +2061,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 isSidebarCollapsed && (
                   <button
                     onClick={() => setIsSidebarCollapsed(false)}
-                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-[#8b8f99] hover:text-[#f5b73d] border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
+                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-text-sub hover:text-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
                     title={language === "zh" ? "展开风格档案" : "Expand dossier"}
                   >
                     <PanelLeftOpen className="w-3.5 h-3.5" />
@@ -2076,7 +2076,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 className={`h-8 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all hover:brightness-110 shrink-0 ${
                   isPlaying
                     ? "bg-[#ff5964] text-white shadow-[0_0_12px_rgba(255,89,100,0.35)] animate-pulse-play"
-                    : "bg-[#f5b73d] text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
+                    : "bg-accent text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
                 }`}
                 aria-label="Play / Pause"
                 title={isPlaying ? "Space: Pause" : "Space: Play"}
@@ -2092,77 +2092,77 @@ export const StudioView: React.FC<StudioViewProps> = ({
               </button>
 
               {/* BPM Input */}
-              <div className="flex items-center gap-1 h-8 bg-[#0d0e12] border border-[#23262d] px-2 rounded-lg shrink-0">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider select-none">BPM</span>
+              <div className="flex items-center gap-1 h-8 bg-panel2 border border-line px-2 rounded-lg shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider select-none">BPM</span>
                 <input
                   type="number"
                   min="40"
                   max="240"
                   value={bpm}
                   onChange={(e) => setBpm(Math.max(40, Math.min(240, Number(e.target.value) || 120)))}
-                  className="w-10 bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-bold text-center focus:outline-none focus:text-[#f5b73d]"
+                  className="w-10 bg-transparent text-text font-['JetBrains_Mono'] text-xs font-bold text-center focus:outline-none focus:text-accent"
                   title={language === "zh" ? "节奏速度 (40-240 BPM)" : "Tempo (40-240 BPM)"}
                 />
               </div>
 
               {/* Meter Select Dropdown */}
-              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+              <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
                   {language === "zh" ? "拍号" : "METER"}
                 </span>
                 <select
                   value={timeSignature}
                   onChange={(e) => handleTimeSignatureChange(e.target.value)}
-                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                   aria-label={language === "zh" ? "选择拍号" : "Select time signature"}
                 >
-                  <option value="4/4" className="bg-[#121317] text-[#e9e7e0]">4/4 {language === "zh" ? "(四四拍 · 4格)" : "(Common)"}</option>
-                  <option value="2/4" className="bg-[#121317] text-[#e9e7e0]">2/4 {language === "zh" ? "(二四拍 · 2格)" : "(March)"}</option>
-                  <option value="3/4" className="bg-[#121317] text-[#e9e7e0]">3/4 {language === "zh" ? "(三四拍 · 3格)" : "(Waltz)"}</option>
-                  <option value="2/2" className="bg-[#121317] text-[#e9e7e0]">2/2 {language === "zh" ? "(二二拍 · 2格)" : "(Cut Time)"}</option>
-                  <option value="6/8" className="bg-[#121317] text-[#e9e7e0]">6/8 {language === "zh" ? "(六八拍 · 3格)" : "(Compound)"}</option>
-                  <option value="3/8" className="bg-[#121317] text-[#e9e7e0]">3/8 {language === "zh" ? "(三八拍 · 3格)" : "(Single)"}</option>
-                  <option value="9/8" className="bg-[#121317] text-[#e9e7e0]">9/8 {language === "zh" ? "(九八拍 · 3格)" : "(Triple)"}</option>
-                  <option value="12/8" className="bg-[#121317] text-[#e9e7e0]">12/8 {language === "zh" ? "(十二八 · 3格)" : "(Shuffle)"}</option>
-                  <option value="5/4" className="bg-[#121317] text-[#e9e7e0]">5/4 {language === "zh" ? "(五四拍 · 5格)" : "(Take Five)"}</option>
-                  <option value="7/8" className="bg-[#121317] text-[#e9e7e0]">7/8 {language === "zh" ? "(七八拍 · 7格)" : "(Balkan)"}</option>
+                  <option value="4/4" className="bg-panel text-text">4/4 {language === "zh" ? "(四四拍 · 4格)" : "(Common)"}</option>
+                  <option value="2/4" className="bg-panel text-text">2/4 {language === "zh" ? "(二四拍 · 2格)" : "(March)"}</option>
+                  <option value="3/4" className="bg-panel text-text">3/4 {language === "zh" ? "(三四拍 · 3格)" : "(Waltz)"}</option>
+                  <option value="2/2" className="bg-panel text-text">2/2 {language === "zh" ? "(二二拍 · 2格)" : "(Cut Time)"}</option>
+                  <option value="6/8" className="bg-panel text-text">6/8 {language === "zh" ? "(六八拍 · 3格)" : "(Compound)"}</option>
+                  <option value="3/8" className="bg-panel text-text">3/8 {language === "zh" ? "(三八拍 · 3格)" : "(Single)"}</option>
+                  <option value="9/8" className="bg-panel text-text">9/8 {language === "zh" ? "(九八拍 · 3格)" : "(Triple)"}</option>
+                  <option value="12/8" className="bg-panel text-text">12/8 {language === "zh" ? "(十二八 · 3格)" : "(Shuffle)"}</option>
+                  <option value="5/4" className="bg-panel text-text">5/4 {language === "zh" ? "(五四拍 · 5格)" : "(Take Five)"}</option>
+                  <option value="7/8" className="bg-panel text-text">7/8 {language === "zh" ? "(七八拍 · 7格)" : "(Balkan)"}</option>
                 </select>
               </div>
 
               {/* Quantize Resolution Select Dropdown */}
-              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+              <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
                   {language === "zh" ? "精度" : "GRID"}
                 </span>
                 <select
                   value={resolution}
                   onChange={(e) => handleResolutionChange(e.target.value as "1/8" | "1/16" | "1/32")}
-                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                   aria-label={language === "zh" ? "选择量化精度" : "Select quantization resolution"}
                 >
-                  <option value="1/16" className="bg-[#121317] text-[#e9e7e0]">1/16 {language === "zh" ? "(标准)" : "(Default)"}</option>
-                  <option value="1/8" className="bg-[#121317] text-[#e9e7e0]">1/8 {language === "zh" ? "(半速)" : "(Half)"}</option>
-                  <option value="1/32" className="bg-[#121317] text-[#e9e7e0]">1/32 {language === "zh" ? "(双速)" : "(Double)"}</option>
+                  <option value="1/16" className="bg-panel text-text">1/16 {language === "zh" ? "(标准)" : "(Default)"}</option>
+                  <option value="1/8" className="bg-panel text-text">1/8 {language === "zh" ? "(半速)" : "(Half)"}</option>
+                  <option value="1/32" className="bg-panel text-text">1/32 {language === "zh" ? "(双速)" : "(Double)"}</option>
                 </select>
               </div>
 
               {/* Step Length Select Dropdown */}
-              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+              <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
                   {language === "zh" ? "长度" : "LEN"}
                 </span>
                 <select
                   value={stepCount}
                   onChange={(e) => handleSetStepCount(Number(e.target.value))}
-                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                   aria-label={language === "zh" ? "选择步长与小节" : "Select step length"}
                 >
-                  <option value={16} className="bg-[#121317] text-[#e9e7e0]">16 {language === "zh" ? "步 (1小节)" : "Steps (1 Bar)"}</option>
-                  <option value={32} className="bg-[#121317] text-[#e9e7e0]">32 {language === "zh" ? "步 (2小节)" : "Steps (2 Bars)"}</option>
-                  <option value={48} className="bg-[#121317] text-[#e9e7e0]">48 {language === "zh" ? "步 (3小节)" : "Steps (3 Bars)"}</option>
-                  <option value={64} className="bg-[#121317] text-[#e9e7e0]">64 {language === "zh" ? "步 (4小节)" : "Steps (4 Bars)"}</option>
+                  <option value={16} className="bg-panel text-text">16 {language === "zh" ? "步 (1小节)" : "Steps (1 Bar)"}</option>
+                  <option value={32} className="bg-panel text-text">32 {language === "zh" ? "步 (2小节)" : "Steps (2 Bars)"}</option>
+                  <option value={48} className="bg-panel text-text">48 {language === "zh" ? "步 (3小节)" : "Steps (3 Bars)"}</option>
+                  <option value={64} className="bg-panel text-text">64 {language === "zh" ? "步 (4小节)" : "Steps (4 Bars)"}</option>
                   {![16, 32, 48, 64].includes(stepCount) && (
-                    <option value={stepCount} className="bg-[#121317] text-[#e9e7e0]">
+                    <option value={stepCount} className="bg-panel text-text">
                       {stepCount} {language === "zh" ? `步 (${barCount}小节)` : `Steps (${barCount} Bars)`}
                     </option>
                   )}
@@ -2171,7 +2171,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
               {/* Tool Mode Select Dropdown */}
               <div
-                className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0"
+                className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0"
                 title={
                   mobileEditMode === "step"
                     ? (language === "zh" ? "普通步进：点按开关音符，长按打开参数锁" : "Step Note: Tap to toggle, long press for P-Locks")
@@ -2184,20 +2184,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     : (language === "zh" ? "参数锁：点按步进调出参数锁面板" : "P-Locks: Tap to open parameters menu")
                 }
               >
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
                   {language === "zh" ? "工具" : "TOOL"}
                 </span>
                 <select
                   value={mobileEditMode}
                   onChange={(e) => setMobileEditMode(e.target.value as MobileEditMode)}
-                  className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                   aria-label={language === "zh" ? "选择步进编辑工具" : "Select step edit mode"}
                 >
-                  <option value="step" className="bg-[#121317] text-[#e9e7e0]">● {language === "zh" ? "普通步进" : "Step Note"}</option>
-                  <option value="accent" className="bg-[#121317] text-[#e9e7e0]">▲ {language === "zh" ? "重音 (Vel 127)" : "Accent"}</option>
-                  <option value="ratchet" className="bg-[#121317] text-[#e9e7e0]">⫸ {language === "zh" ? "连音滚奏" : "Ratchet"}</option>
-                  <option value="pitch" className="bg-[#121317] text-[#e9e7e0]">♩ {language === "zh" ? "音高选择" : "Pitch Picker"}</option>
-                  <option value="plocks" className="bg-[#121317] text-[#e9e7e0]">⚙ {language === "zh" ? "参数锁" : "P-Locks"}</option>
+                  <option value="step" className="bg-panel text-text">● {language === "zh" ? "普通步进" : "Step Note"}</option>
+                  <option value="accent" className="bg-panel text-text">▲ {language === "zh" ? "重音 (Vel 127)" : "Accent"}</option>
+                  <option value="ratchet" className="bg-panel text-text">⫸ {language === "zh" ? "连音滚奏" : "Ratchet"}</option>
+                  <option value="pitch" className="bg-panel text-text">♩ {language === "zh" ? "音高选择" : "Pitch Picker"}</option>
+                  <option value="plocks" className="bg-panel text-text">⚙ {language === "zh" ? "参数锁" : "P-Locks"}</option>
                 </select>
               </div>
             </div>
@@ -2206,21 +2206,21 @@ export const StudioView: React.FC<StudioViewProps> = ({
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
               {/* Bar Navigation Select (shown when barCount > 1) */}
               {barCount > 1 && (
-                <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-                  <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase mr-1 select-none">
+                <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
                     {language === "zh" ? "小节" : "BAR"}
                   </span>
                   <select
                     value={activeBarIndex}
                     onChange={(e) => scrollToBar(Number(e.target.value))}
-                    className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                    className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                     aria-label={language === "zh" ? "跳转到小节" : "Jump to bar"}
                   >
                     {Array.from({ length: barCount }, (_, bIdx) => {
                       const startStep = bIdx * stepsPerBar + 1;
                       const endStep = Math.min(stepCount, (bIdx + 1) * stepsPerBar);
                       return (
-                        <option key={bIdx} value={bIdx} className="bg-[#121317] text-[#e9e7e0]">
+                        <option key={bIdx} value={bIdx} className="bg-panel text-text">
                           Bar {bIdx + 1} ({startStep}-{endStep})
                         </option>
                       );
@@ -2235,7 +2235,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
                   isVelocityLaneOpen
                     ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
-                    : "bg-[#0d0e12] border-[#23262d] hover:border-[#3a3e48] text-[#8b8f99] hover:text-[#e9e7e0]"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
                 }`}
                 title={language === "zh" ? "力度编辑抽屉 (快捷键 V)" : "Toggle velocity drawer (Key: V)"}
               >
@@ -2246,10 +2246,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {/* Euclidean Rhythm Generator */}
               <button
                 onClick={() => setIsEuclideanOpen(true)}
-                className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-[#0d0e12] border border-[#23262d] hover:border-[#f5b73d]/60 rounded-lg text-xs text-[#8b8f99] hover:text-[#f5b73d] transition-colors shrink-0"
+                className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-panel2 border border-line hover:border-accent/60 rounded-lg text-xs text-text-sub hover:text-accent transition-colors shrink-0"
                 title={language === "zh" ? "欧几里得律动生成器 (快捷键 E)" : "Euclidean rhythm generator (Key: E)"}
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#f5b73d]" />
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
                 <span className="hidden sm:inline font-['JetBrains_Mono']">{language === "zh" ? "欧几里得" : "EUCLID"}</span>
               </button>
 
@@ -2260,8 +2260,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   disabled={!canUndo}
                   className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
                     canUndo
-                      ? "bg-[#0d0e12] text-[#e9e7e0] border-[#23262d] hover:border-[#f5b73d] hover:text-[#f5b73d] cursor-pointer"
-                      : "bg-[#0a0b0d] text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                      ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
+                      : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
                   }`}
                   title={language === "zh" ? "撤销 (Ctrl+Z)" : "Undo (Ctrl+Z)"}
                 >
@@ -2272,8 +2272,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   disabled={!canRedo}
                   className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
                     canRedo
-                      ? "bg-[#0d0e12] text-[#e9e7e0] border-[#23262d] hover:border-[#f5b73d] hover:text-[#f5b73d] cursor-pointer"
-                      : "bg-[#0a0b0d] text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                      ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
+                      : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
                   }`}
                   title={language === "zh" ? "重做 (Ctrl+Shift+Z)" : "Redo (Ctrl+Shift+Z)"}
                 >
@@ -2289,8 +2289,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 }}
                 className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
                   isEditorMaximized
-                    ? "bg-[#17181c] hover:bg-[#23262d] border-[#2b2e38] text-[#e9e7e0] shadow-sm"
-                    : "bg-[#0d0e12] border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d]"
+                    ? "bg-[#17181c] hover:bg-line border-[#2b2e38] text-text shadow-sm"
+                    : "bg-panel2 border-line hover:border-accent text-text-sub hover:text-accent"
                 }`}
                 title={
                   isEditorMaximized
@@ -2300,14 +2300,14 @@ export const StudioView: React.FC<StudioViewProps> = ({
               >
                 {isEditorMaximized ? (
                   <>
-                    <Minimize2 className="w-3.5 h-3.5 text-[#f5b73d]" />
+                    <Minimize2 className="w-3.5 h-3.5 text-accent" />
                     <span className="hidden sm:inline font-['JetBrains_Mono']">
                       {language === "zh" ? "退出" : "Exit"}
                     </span>
                   </>
                 ) : (
                   <>
-                    <Maximize2 className="w-3.5 h-3.5 text-[#f5b73d]" />
+                    <Maximize2 className="w-3.5 h-3.5 text-accent" />
                     <span className="hidden sm:inline font-['JetBrains_Mono']">
                       {language === "zh" ? "全屏" : "Full"}
                     </span>
@@ -2316,7 +2316,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               </button>
 
               {/* Quick Tools Dropdown */}
-              <div className="flex items-center h-8 bg-[#0d0e12] hover:bg-[#14151a] border border-[#23262d] hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+              <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
                 <select
                   value=""
                   onChange={(e) => {
@@ -2326,22 +2326,22 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     else if (act === "clear_all") handleClearAll();
                     else if (act === "reset_preset") handleResetPreset();
                   }}
-                  className="bg-transparent text-[#8b8f99] hover:text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-text-sub hover:text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                   aria-label={language === "zh" ? "快捷操作" : "Quick actions"}
                 >
-                  <option value="" disabled className="bg-[#121317] text-[#8b8f99]">
+                  <option value="" disabled className="bg-panel text-text-sub">
                     ⚡ {language === "zh" ? "操作..." : "Tools..."}
                   </option>
-                  <option value="dup_bar1" className="bg-[#121317] text-[#e9e7e0]">
+                  <option value="dup_bar1" className="bg-panel text-text">
                     📋 {language === "zh" ? "复制小节1至整段" : "Duplicate Bar 1"}
                   </option>
-                  <option value="humanize" className="bg-[#121317] text-[#e9e7e0]">
+                  <option value="humanize" className="bg-panel text-text">
                     ✨ {language === "zh" ? "人性化力度抖动" : "Humanize Velocity"}
                   </option>
-                  <option value="clear_all" className="bg-[#121317] text-[#ff5964]">
+                  <option value="clear_all" className="bg-panel text-[#ff5964]">
                     🗑️ {language === "zh" ? "清空全部步进" : "Clear All Steps"}
                   </option>
-                  <option value="reset_preset" className="bg-[#121317] text-[#e9e7e0]">
+                  <option value="reset_preset" className="bg-panel text-text">
                     🔄 {language === "zh" ? "恢复默认预设" : "Reset Preset"}
                   </option>
                 </select>
@@ -2350,7 +2350,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {/* Export MIDI */}
               <button
                 onClick={handleExportMidi}
-                className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#3a3e48] border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
+                className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0"
                 title={t("export")}
               >
                 <Download className="w-3.5 h-3.5" />
@@ -2361,7 +2361,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {!isEditorMaximized && (
                 <button
                   onClick={handleShare}
-                  className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d] border border-[#23262d] rounded-lg transition-colors bg-[#0d0e12] shrink-0"
+                  className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
                   title={t("share_groove")}
                 >
                   <Share2 className="w-3.5 h-3.5" />
@@ -2373,8 +2373,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 onClick={() => setShowAdvancedControls(!showAdvancedControls)}
                 className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
                   showAdvancedControls
-                    ? "bg-[#1f232b] text-[#f5b73d] border-[#f5b73d]/50"
-                    : "bg-[#0d0e12] text-[#8b8f99] hover:text-[#e9e7e0] border-[#23262d] hover:border-[#3a3e48]"
+                    ? "bg-[#1f232b] text-accent border-accent/50"
+                    : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
                 }`}
                 title={language === "zh" ? "展开/收起高级设置 (摇摆度、步进微调、平移)" : "Toggle advanced settings"}
               >
@@ -2383,7 +2383,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   {language === "zh" ? "高级" : "More"}
                 </span>
                 {swing > 0 && !showAdvancedControls && (
-                  <span className="text-[10px] text-[#f5b73d] font-['JetBrains_Mono'] hidden sm:inline">
+                  <span className="text-[10px] text-accent font-['JetBrains_Mono'] hidden sm:inline">
                     {swing}%
                   </span>
                 )}
@@ -2394,11 +2394,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
           {/* Collapsible Advanced Settings Bar (Drawer) */}
           {showAdvancedControls && (
-            <div className="flex items-center justify-between gap-3 p-2 bg-[#0a0b0e] border border-[#23262d] rounded-xl mb-2 text-xs select-none transition-all shrink-0">
+            <div className="flex items-center justify-between gap-3 p-2 bg-[#0a0b0e] border border-line rounded-xl mb-2 text-xs select-none transition-all shrink-0">
               {/* Swing Slider Knob */}
-              <div className="flex items-center gap-2 bg-[#121317] px-2.5 py-1 rounded-lg border border-[#1a1c21]">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-wider uppercase whitespace-nowrap">
-                  {t("swing")}: <b className="text-[#e9e7e0] font-normal">{swing}%</b>
+              <div className="flex items-center gap-2 bg-panel px-2.5 py-1 rounded-lg border border-line-subtle">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase whitespace-nowrap">
+                  {t("swing")}: <b className="text-text font-normal">{swing}%</b>
                 </span>
                 <input
                   type="range"
@@ -2406,39 +2406,39 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   max="75"
                   value={swing}
                   onChange={(e) => setSwing(+e.target.value)}
-                  className="w-20 sm:w-28 accent-[#f5b73d] cursor-pointer"
+                  className="w-20 sm:w-28 accent-accent cursor-pointer"
                 />
               </div>
 
               {/* Fine-grained Step adjustments */}
-              <div className="flex items-center gap-1 bg-[#121317] px-2 py-1 rounded-lg border border-[#1a1c21]">
-                <span className="font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] mr-1 hidden sm:inline whitespace-nowrap">
+              <div className="flex items-center gap-1 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim mr-1 hidden sm:inline whitespace-nowrap">
                   {language === "zh" ? "步数微调:" : "FINE STEPS:"}
                 </span>
                 <button
                   onClick={() => handleRemoveSteps(groupSize)}
-                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d] font-['JetBrains_Mono'] text-[10px]"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-text-sub hover:text-text border border-line font-['JetBrains_Mono'] text-[10px]"
                   title={language === "zh" ? `删减 ${groupSize} 步 (1组)` : `Remove ${groupSize} steps`}
                 >
                   -{groupSize}
                 </button>
                 <button
                   onClick={() => handleAddSteps(groupSize)}
-                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d] font-['JetBrains_Mono'] text-[10px]"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-text-sub hover:text-text border border-line font-['JetBrains_Mono'] text-[10px]"
                   title={language === "zh" ? `添加 ${groupSize} 步 (1组)` : `Add ${groupSize} steps`}
                 >
                   +{groupSize}
                 </button>
                 <button
                   onClick={() => handleAddSteps(stepsPerBar)}
-                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#f5b73d] border border-[#23262d] font-['JetBrains_Mono'] text-[10px]"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-accent border border-line font-['JetBrains_Mono'] text-[10px]"
                   title={language === "zh" ? `添加 1 小节 (+${stepsPerBar} 步)` : `Add 1 Bar (+${stepsPerBar} steps)`}
                 >
                   +1 Bar
                 </button>
                 <button
                   onClick={() => handleAddSteps(stepsPerBar * 2)}
-                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-[#23262d] text-[#f5b73d] border border-[#23262d] font-['JetBrains_Mono'] text-[10px] hidden md:inline-flex"
+                  className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-accent border border-line font-['JetBrains_Mono'] text-[10px] hidden md:inline-flex"
                   title={language === "zh" ? `添加 2 小节 (+${stepsPerBar * 2} 步)` : `Add 2 Bars (+${stepsPerBar * 2} steps)`}
                 >
                   +2 Bars
@@ -2446,27 +2446,27 @@ export const StudioView: React.FC<StudioViewProps> = ({
               </div>
 
               {/* Pan Navigation */}
-              <div className="flex items-center gap-1.5 ml-auto text-[#5a5e68]">
+              <div className="flex items-center gap-1.5 ml-auto text-text-dim">
                 <span className="hidden lg:inline font-['JetBrains_Mono'] text-[10px] whitespace-nowrap">
                   {language === "zh" ? "滚轮/标尺拖拽可平移" : "Wheel/drag to pan"}
                 </span>
                 <button
                   onClick={() => scrollByPixels(-240)}
-                  className="w-6 h-6 rounded bg-[#121317] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
+                  className="w-6 h-6 rounded bg-panel border border-line hover:border-accent text-text-sub hover:text-accent flex items-center justify-center text-xs transition-colors"
                   title={language === "zh" ? "向左滚动" : "Scroll left"}
                 >
                   ◀
                 </button>
                 <button
                   onClick={() => scrollByPixels(240)}
-                  className="w-6 h-6 rounded bg-[#121317] border border-[#23262d] hover:border-[#f5b73d] text-[#8b8f99] hover:text-[#f5b73d] flex items-center justify-center text-xs transition-colors"
+                  className="w-6 h-6 rounded bg-panel border border-line hover:border-accent text-text-sub hover:text-accent flex items-center justify-center text-xs transition-colors"
                   title={language === "zh" ? "向右滚动" : "Scroll right"}
                 >
                   ▶
                 </button>
                 <button
                   onClick={() => setShowAdvancedControls(false)}
-                  className="ml-2 text-[10px] text-[#8b8f99] hover:text-[#e9e7e0] font-['JetBrains_Mono'] px-1.5 py-0.5 rounded bg-[#17181c] border border-[#23262d]"
+                  className="ml-2 text-[10px] text-text-sub hover:text-text font-['JetBrains_Mono'] px-1.5 py-0.5 rounded bg-[#17181c] border border-line"
                   title={language === "zh" ? "收起设置抽屉" : "Close"}
                 >
                   ✕
@@ -2481,9 +2481,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
             className="w-full space-y-1 overflow-x-auto pb-3 relative custom-sequencer-scroll select-none overscroll-x-contain"
           >
             {/* Step Indicator Ruler Header */}
-            <div className="flex items-center gap-2 sm:gap-3 pb-2 pt-1 border-b border-[#1a1c21] mb-2 min-w-max">
+            <div className="flex items-center gap-2 sm:gap-3 pb-2 pt-1 border-b border-line-subtle mb-2 min-w-max">
               {/* Left Label aligned with track headers - Sticky Left */}
-              <div className="sticky left-0 z-30 bg-[#121317] flex-none w-[126px] sm:w-[172px] pr-1.5 sm:pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-[#5a5e68] uppercase select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
+              <div className="sticky left-0 z-30 bg-panel flex-none w-[126px] sm:w-[172px] pr-1.5 sm:pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-text-dim uppercase select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                 <span>{stepCount} STEPS</span>
                 <span className="text-[#3a3e48]">{timeSignature}</span>
               </div>
@@ -2522,18 +2522,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           : ""
                       } ${
                         isCurrent
-                          ? "bg-[#f5b73d]/25 border-[#f5b73d] text-[#f5b73d] shadow-[0_0_14px_rgba(245,183,61,0.5)] font-bold scale-[1.03]"
+                          ? "bg-accent/25 border-accent text-accent shadow-[0_0_14px_rgba(245,183,61,0.5)] font-bold scale-[1.03]"
                           : isFirstStepOfBar
-                          ? "bg-[#1f222b] border-[#3a3e48] text-[#f5b73d] font-bold"
+                          ? "bg-[#1f222b] border-[#3a3e48] text-accent font-bold"
                           : isFirstStepOfGroup
-                          ? "bg-[#171920] border-[#2b2e38] text-[#e9e7e0]"
-                          : "bg-[#101115] border-[#1c1d22] text-[#5a5e68]"
+                          ? "bg-[#171920] border-[#2b2e38] text-text"
+                          : "bg-[#101115] border-[#1c1d22] text-text-dim"
                       }`}
                       title={`Step ${stepIdx + 1} (Bar ${barIdx}, Group ${groupIdx}.${stepInGroup})`}
                     >
                       {/* Laser Beacon Arrow / Dot on Playhead */}
                       {isCurrent && (
-                        <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-1 bg-[#f5b73d] rounded-full shadow-[0_0_8px_#f5b73d]" />
+                        <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-1 bg-accent rounded-full shadow-[0_0_8px_#f5b73d]" />
                       )}
                       <span className="font-['JetBrains_Mono'] text-[10px] leading-tight font-bold tracking-tight">
                         {stepStr}
@@ -2541,11 +2541,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       <span
                         className={`font-['JetBrains_Mono'] text-[7.5px] leading-none ${
                           isCurrent
-                            ? "text-[#f5b73d]"
+                            ? "text-accent"
                             : isFirstStepOfBar
-                            ? "text-[#f5b73d] font-bold"
+                            ? "text-accent font-bold"
                             : isFirstStepOfGroup
-                            ? "text-[#8b8f99] font-semibold"
+                            ? "text-text-sub font-semibold"
                             : "text-[#3e424d]"
                         }`}
                       >
@@ -2577,7 +2577,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   style={{ ["--tc" as any]: meta.color }}
                 >
                   {/* Track Header (.trk-head) - 126px on mobile / 172px on sm+ - Sticky Left */}
-                  <div className="sticky left-0 z-20 bg-[#121317] flex-none w-[126px] sm:w-[172px] pr-1.5 sm:pr-2 flex flex-col justify-center gap-1 select-none border-r border-[#1a1c21] shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
+                  <div className="sticky left-0 z-20 bg-panel flex-none w-[126px] sm:w-[172px] pr-1.5 sm:pr-2 flex flex-col justify-center gap-1 select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
                     {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
                     <div className="flex items-center gap-1.5">
                       <div
@@ -2590,7 +2590,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           style={{ backgroundColor: meta.color }}
                         />
                         {/* Mini 4-Segment Activity Meter */}
-                        <div className="flex gap-[1.5px] items-center h-3 px-1 py-0.5 bg-[#0a0b0d] rounded border border-[#1a1c21] shrink-0" title="Audio Activity Peak">
+                        <div className="flex gap-[1.5px] items-center h-3 px-1 py-0.5 bg-bg rounded border border-line-subtle shrink-0" title="Audio Activity Peak">
                           {[1, 2, 3, 4].map((seg) => {
                             const active = isFlashing && (seg <= 2 || (trackVol > 0.5 && seg <= 3) || trackVol > 0.85);
                             return (
@@ -2601,7 +2601,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                                     ? seg === 4
                                       ? "bg-[#ff5964] shadow-[0_0_4px_#ff5964]"
                                       : seg === 3
-                                      ? "bg-[#f5b73d] shadow-[0_0_4px_#f5b73d]"
+                                      ? "bg-accent shadow-[0_0_4px_#f5b73d]"
                                       : "bg-[#45e0c9] shadow-[0_0_4px_#45e0c9]"
                                     : "bg-[#1f222b]"
                                 }`}
@@ -2610,10 +2610,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           })}
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
-                          <span className="font-['JetBrains_Mono'] text-[10.5px] sm:text-[11px] tracking-[0.05em] text-[#e9e7e0] font-bold truncate">
+                          <span className="font-['JetBrains_Mono'] text-[10.5px] sm:text-[11px] tracking-[0.05em] text-text font-bold truncate">
                             {meta.name}
                           </span>
-                          <span className="font-['JetBrains_Mono'] text-[8.5px] text-[#5a5e68] truncate leading-none hidden sm:block">
+                          <span className="font-['JetBrains_Mono'] text-[8.5px] text-text-dim truncate leading-none hidden sm:block">
                             {meta.sub ? meta.sub[language] : ""}
                           </span>
                         </div>
@@ -2625,8 +2625,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onClick={() => handleCycleTrackLength(trackIdx)}
                           className={`px-1 sm:px-1.5 h-6 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors flex items-center justify-center touch-manipulation ${
                             track.trackLength && track.trackLength !== stepCount
-                              ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
-                              : "bg-[#17181c] border-[#23262d] text-[#5a5e68] hover:text-[#8b8f99]"
+                              ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
+                              : "bg-[#17181c] border-line text-text-dim hover:text-text-sub"
                           }`}
                           title={language === "zh" ? `独立轨道循环长度: ${track.trackLength || stepCount} 步 (点击切换)` : `Polymeter length: ${track.trackLength || stepCount} steps (Click to cycle)`}
                         >
@@ -2637,7 +2637,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
                             isMute
                               ? "border-[var(--tc)] text-[var(--tc)] bg-transparent font-bold"
-                              : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
+                              : "border-line text-text-dim hover:text-text"
                           }`}
                           title={language === "zh" ? "静音轨道" : "Mute track"}
                         >
@@ -2647,8 +2647,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           onClick={() => toggleSolo(trackIdx)}
                           className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
                             isSolo
-                              ? "border-[#f5b73d] text-[#f5b73d] bg-[#f5b73d]/10 font-bold"
-                              : "border-[#23262d] text-[#5a5e68] hover:text-[#e9e7e0]"
+                              ? "border-accent text-accent bg-accent/10 font-bold"
+                              : "border-line text-text-dim hover:text-text"
                           }`}
                           title={language === "zh" ? "独奏轨道" : "Solo track"}
                         >
@@ -2658,7 +2658,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     </div>
 
                     {/* Lower row: Volume slider + Track actions (Velocity Focus, Shift, Smart Fill, Clear) */}
-                    <div className="flex items-center justify-between gap-1 text-[#5a5e68]">
+                    <div className="flex items-center justify-between gap-1 text-text-dim">
                       {/* Mini Volume Slider */}
                       <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%`}>
                         <input
@@ -2668,7 +2668,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           step="0.05"
                           value={trackVol}
                           onChange={(e) => handleTrackVolumeChange(trackIdx, +e.target.value)}
-                          className="w-10 sm:w-11 h-2 sm:h-1 accent-[#f5b73d] bg-[#1a1c21] rounded cursor-pointer touch-manipulation"
+                          className="w-10 sm:w-11 h-2 sm:h-1 accent-accent bg-line-subtle rounded cursor-pointer touch-manipulation"
                         />
                       </div>
 
@@ -2682,7 +2682,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           className={`w-6 h-6 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation ${
                             isVelocityLaneOpen && velocityActiveTrackIdx === trackIdx
                               ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
-                              : "border-[#23262d] text-[#5a5e68] hover:text-[#45e0c9]"
+                              : "border-line text-text-dim hover:text-[#45e0c9]"
                           }`}
                           title={language === "zh" ? "在力度抽屉中编辑" : "Edit velocity in drawer"}
                         >
@@ -2690,28 +2690,28 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         </button>
                         <button
                           onClick={() => handleShiftTrack(trackIdx, -1)}
-                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "向左位移 1 步" : "Shift left 1 step"}
                         >
                           ◀
                         </button>
                         <button
                           onClick={() => handleShiftTrack(trackIdx, 1)}
-                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#e9e7e0] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "向右位移 1 步" : "Shift right 1 step"}
                         >
                           ▶
                         </button>
                         <button
                           onClick={() => handleSmartFillTrack(trackIdx)}
-                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#45e0c9] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#45e0c9] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "智能生成常规节拍" : "Smart fill rhythm"}
                         >
                           <Wand2 className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
                         </button>
                         <button
                           onClick={() => handleClearTrack(trackIdx)}
-                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-[#1a1c21] text-[#5a5e68] hover:text-[#ff5964] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
+                          className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#ff5964] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
                           title={language === "zh" ? "清空轨道" : "Clear track"}
                         >
                           ✕
@@ -2780,7 +2780,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
           {/* Collapsible Velocity Drawer (FL Studio style) */}
           {isVelocityLaneOpen && (
-            <div className="mt-3 pt-3 border-t border-[#1a1c21]">
+            <div className="mt-3 pt-3 border-t border-line-subtle">
               <VelocityLane
                 tracks={pattern.tracks}
                 activeTrackIdx={velocityActiveTrackIdx}
@@ -2815,33 +2815,33 @@ export const StudioView: React.FC<StudioViewProps> = ({
           )}
 
           {/* Bottom Hint Note (.seq-note) */}
-          <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-[#5a5e68] tracking-[0.04em] leading-relaxed border-t border-[#1a1c21] pt-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-[0.04em] leading-relaxed border-t border-line-subtle pt-3 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               {isTouchDevice ? (
                 language === "zh" ? (
                   <span>
-                    <strong className="text-[#f5b73d] font-bold">📱 触控/移动端操作：</strong> 点按步进开/关 · 长按步进调出参数锁 (P-Locks) · 顶部步进工具栏切换重音/连音/音高模式 · 点按轨道名试听音色 · 左右滑动浏览小节
+                    <strong className="text-accent font-bold">📱 触控/移动端操作：</strong> 点按步进开/关 · 长按步进调出参数锁 (P-Locks) · 顶部步进工具栏切换重音/连音/音高模式 · 点按轨道名试听音色 · 左右滑动浏览小节
                   </span>
                 ) : (
                   <span>
-                    <strong className="text-[#f5b73d] font-bold">📱 Touch & Mobile:</strong> Tap step to toggle · Long-press for P-Locks · Switch Tool Mode ribbon for accent/ratchet/pitch · Tap track name to audition · Swipe to scroll bars
+                    <strong className="text-accent font-bold">📱 Touch & Mobile:</strong> Tap step to toggle · Long-press for P-Locks · Switch Tool Mode ribbon for accent/ratchet/pitch · Tap track name to audition · Swipe to scroll bars
                   </span>
                 )
               ) : (
                 language === "zh" ? (
                   <span>
-                    <strong className="text-[#f5b73d] font-bold">💻 电脑端快捷键：</strong> 点击/拖拽涂抹 · 右键参数锁 (P-Locks) · SHIFT+点击重音 · ALT+点击连音 (1x-4x) · CMD+点击选音高 · 空格 播放/暂停 · V 力度抽屉 · E 欧几里得律动
+                    <strong className="text-accent font-bold">💻 电脑端快捷键：</strong> 点击/拖拽涂抹 · 右键参数锁 (P-Locks) · SHIFT+点击重音 · ALT+点击连音 (1x-4x) · CMD+点击选音高 · 空格 播放/暂停 · V 力度抽屉 · E 欧几里得律动
                   </span>
                 ) : (
                   <span>
-                    <strong className="text-[#f5b73d] font-bold">💻 Desktop Shortcuts:</strong> Click / drag to paint · Right-click P-Locks · SHIFT+click accent · ALT+click ratchet (1x-4x) · CMD+click pitch · Space Play/Stop · V Velocity drawer · E Euclidean generator
+                    <strong className="text-accent font-bold">💻 Desktop Shortcuts:</strong> Click / drag to paint · Right-click P-Locks · SHIFT+click accent · ALT+click ratchet (1x-4x) · CMD+click pitch · Space Play/Stop · V Velocity drawer · E Euclidean generator
                   </span>
                 )
               )}
               {/* Manual Device Hint Switcher Button */}
               <button
                 onClick={() => setIsTouchDevice(!isTouchDevice)}
-                className="px-1.5 py-0.5 text-[9px] rounded bg-[#17181d] border border-[#23262d] text-[#8b8f99] hover:text-[#f5b73d] hover:border-[#f5b73d]/50 transition-colors ml-1 touch-manipulation"
+                className="px-1.5 py-0.5 text-[9px] rounded bg-[#17181d] border border-line text-text-sub hover:text-accent hover:border-accent/50 transition-colors ml-1 touch-manipulation"
                 title={language === "zh" ? "手动切换电脑端 / 触控端提示视图" : "Toggle desktop / mobile hint view"}
               >
                 {isTouchDevice
@@ -2849,7 +2849,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   : (language === "zh" ? "触控操作指南 ↗" : "Mobile Gestures ↗")}
               </button>
             </div>
-            <div className="text-[#8b8f99]">
+            <div className="text-text-sub">
               {isEditorMaximized ? (language === "zh" ? "按 Esc 退出最大化" : "Press Esc to exit fullscreen") : ""}
             </div>
           </div>
@@ -2862,7 +2862,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               onContextMenu={(e) => { e.preventDefault(); setStepContextMenu(null); }}
             >
               <div
-                className="absolute bg-[#121317] border border-[#2b2e38] rounded-xl shadow-2xl p-3 w-56 text-xs font-['JetBrains_Mono'] z-50 text-[#e9e7e0]"
+                className="absolute bg-panel border border-[#2b2e38] rounded-xl shadow-2xl p-3 w-56 text-xs font-['JetBrains_Mono'] z-50 text-text"
                 style={{
                   top: Math.min(window.innerHeight - 340, Math.max(12, stepContextMenu.y)),
                   left: Math.min(window.innerWidth - 240, Math.max(12, stepContextMenu.x)),
@@ -2876,16 +2876,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: DEMO_TRACKS_CONFIG[stepContextMenu.trackIdx % DEMO_TRACKS_CONFIG.length].color }}
                     />
-                    <span className="font-bold text-[#e9e7e0]">
+                    <span className="font-bold text-text">
                       {pattern.tracks[stepContextMenu.trackIdx]?.name}
                     </span>
-                    <span className="text-[#8b8f99]">
+                    <span className="text-text-sub">
                       #{(stepContextMenu.stepIdx + 1).toString().padStart(2, "0")}
                     </span>
                   </div>
                   <button
                     onClick={() => setStepContextMenu(null)}
-                    className="w-4 h-4 rounded text-[#8b8f99] hover:text-[#e9e7e0] flex items-center justify-center text-xs"
+                    className="w-4 h-4 rounded text-text-sub hover:text-text flex items-center justify-center text-xs"
                   >
                     ✕
                   </button>
@@ -2914,7 +2914,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       }
                       setStepContextMenu(null);
                     }}
-                    className="w-full py-1.5 px-2 rounded-lg bg-[#1a1c22] hover:bg-[#23262e] border border-[#262932] text-center font-bold text-xs text-[#e9e7e0] transition-colors"
+                    className="w-full py-1.5 px-2 rounded-lg bg-[#1a1c22] hover:bg-[#23262e] border border-[#262932] text-center font-bold text-xs text-text transition-colors"
                   >
                     {pattern.tracks[stepContextMenu.trackIdx]?.steps[stepContextMenu.stepIdx] > 0
                       ? (language === "zh" ? "关闭此步音符 (OFF)" : "Turn Off Step")
@@ -2924,7 +2924,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
                 {/* Velocity / Dynamics */}
                 <div className="mb-2.5">
-                  <div className="text-[9px] text-[#5a5e68] tracking-wider uppercase mb-1">
+                  <div className="text-[9px] text-text-dim tracking-wider uppercase mb-1">
                     {language === "zh" ? "力度 / 动态 (VELOCITY)" : "VELOCITY / DYNAMICS"}
                   </div>
                   <div className="grid grid-cols-3 gap-1">
@@ -2948,8 +2948,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         }}
                         className={`py-1 rounded text-[10px] border transition-colors ${
                           (pattern.tracks[stepContextMenu.trackIdx]?.velocity?.[stepContextMenu.stepIdx] ?? 100) === item.val
-                            ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold"
-                            : "bg-[#16171d] border-[#22242c] text-[#8b8f99] hover:text-[#e9e7e0]"
+                            ? "bg-accent/20 border-accent text-accent font-bold"
+                            : "bg-[#16171d] border-[#22242c] text-text-sub hover:text-text"
                         }`}
                       >
                         {item.label} ({item.val})
@@ -2960,7 +2960,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
                 {/* Ratchet / Subdivisions */}
                 <div className="mb-2.5">
-                  <div className="text-[9px] text-[#5a5e68] tracking-wider uppercase mb-1">
+                  <div className="text-[9px] text-text-dim tracking-wider uppercase mb-1">
                     {language === "zh" ? "连音滚奏 (RATCHET)" : "RATCHET / SUBDIVISION"}
                   </div>
                   <div className="grid grid-cols-4 gap-1">
@@ -2981,7 +2981,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         className={`py-1 rounded text-[10px] border transition-colors ${
                           (pattern.tracks[stepContextMenu.trackIdx]?.ratchet?.[stepContextMenu.stepIdx] ?? 1) === r
                             ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold"
-                            : "bg-[#16171d] border-[#22242c] text-[#8b8f99] hover:text-[#e9e7e0]"
+                            : "bg-[#16171d] border-[#22242c] text-text-sub hover:text-text"
                         }`}
                       >
                         {r}x
@@ -2992,7 +2992,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
                 {/* Probability / Chance */}
                 <div className="mb-2.5">
-                  <div className="text-[9px] text-[#5a5e68] tracking-wider uppercase mb-1">
+                  <div className="text-[9px] text-text-dim tracking-wider uppercase mb-1">
                     {language === "zh" ? "触发概率 (CHANCE)" : "PROBABILITY"}
                   </div>
                   <div className="grid grid-cols-4 gap-1">
@@ -3012,8 +3012,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
                         }}
                         className={`py-1 rounded text-[10px] border transition-colors ${
                           (pattern.tracks[stepContextMenu.trackIdx]?.probability?.[stepContextMenu.stepIdx] ?? 100) === p
-                            ? "bg-[#f5b73d]/20 border-[#f5b73d] text-[#f5b73d] font-bold"
-                            : "bg-[#16171d] border-[#22242c] text-[#8b8f99] hover:text-[#e9e7e0]"
+                            ? "bg-accent/20 border-accent text-accent font-bold"
+                            : "bg-[#16171d] border-[#22242c] text-text-sub hover:text-text"
                         }`}
                       >
                         {p}%

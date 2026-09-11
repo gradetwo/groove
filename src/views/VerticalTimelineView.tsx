@@ -250,7 +250,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 text-[#f5b73d] text-xs font-semibold tracking-wide shadow-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 text-accent text-xs font-semibold tracking-wide shadow-sm">
               <Sparkles className="w-3.5 h-3.5" />
               <span>CENTURY SONIC REVOLUTION · 1900 — 2026</span>
             </div>
@@ -271,19 +271,19 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
 
           {/* Metric Stats Display */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            <div className="px-4 py-2.5 rounded-2xl bg-[#0d0e12]/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
-              <div className="text-lg sm:text-xl font-mono font-extrabold text-[#f5b73d]">120+</div>
+            <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+              <div className="text-lg sm:text-xl font-mono font-extrabold text-accent">120+</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
                 {language === "zh" ? "年演进跨度" : "Years Span"}
               </div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-[#0d0e12]/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+            <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-cyan-400">14</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
                 {language === "zh" ? "大家族支系" : "Genealogies"}
               </div>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-[#0d0e12]/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
+            <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-pink-400">159</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
                 {language === "zh" ? "经典曲风" : "Milestone Genres"}
@@ -496,14 +496,14 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                             onClick={() => onSelectGenre(genre)}
                             className={`group/card relative p-3 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between border ${
                               isPlayingThis
-                                ? "bg-[#181b26] border-[#f5b73d] shadow-[0_0_16px_rgba(245,183,61,0.35)] scale-[1.01]"
+                                ? "bg-[#181b26] border-accent shadow-[0_0_16px_rgba(245,183,61,0.35)] scale-[1.01]"
                                 : "bg-[#0b0c11]/80 hover:bg-[#13151f] border-white/[0.06] hover:border-white/20 shadow-md"
                             }`}
                           >
                             <div>
                               <div className="flex items-start justify-between gap-1.5">
                                 <div className="flex-1 min-w-0">
-                                  <h4 className="font-bold text-xs sm:text-sm text-[#f5f4ef] group-hover/card:text-[#f5b73d] transition-colors truncate">
+                                  <h4 className="font-bold text-xs sm:text-sm text-[#f5f4ef] group-hover/card:text-accent transition-colors truncate">
                                     {genre.name}
                                   </h4>
                                   {genre.aliases[0] && language === "zh" && (
@@ -523,7 +523,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                                 <span className="px-1.5 py-0.5 rounded bg-[#161822] border border-white/[0.06] text-[#d6d4ce]">
                                   {genre.time_signature || "4/4"}
                                 </span>
-                                <span className="px-1.5 py-0.5 rounded bg-[#161822] border border-white/[0.06] text-[#f5b73d] font-bold">
+                                <span className="px-1.5 py-0.5 rounded bg-[#161822] border border-white/[0.06] text-accent font-bold">
                                   {genre.bpm_range} BPM
                                 </span>
                               </div>
@@ -541,7 +541,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                                 onClick={(e) => handleToggleAudition(genre, e)}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-1 rounded-xl text-xs font-bold transition-all ${
                                   isPlayingThis
-                                    ? "bg-[#f5b73d] text-black shadow-md"
+                                    ? "bg-accent text-black shadow-md"
                                     : "bg-[#161824] hover:bg-[#202334] text-[#d6d4ce] border border-white/[0.08]"
                                 }`}
                                 title={isPlayingThis ? t("timeline_stop_preview") : t("timeline_play_preview")}
@@ -559,7 +559,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                                   </>
                                 ) : (
                                   <>
-                                    <Volume2 className="w-3 h-3 text-[#f5b73d]" />
+                                    <Volume2 className="w-3 h-3 text-accent" />
                                     <span>{t("timeline_play_preview")}</span>
                                   </>
                                 )}
@@ -571,7 +571,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                                   e.stopPropagation();
                                   onOpenStudio(genre);
                                 }}
-                                className="p-1 rounded-xl bg-[#161824] hover:bg-[#f5b73d] hover:text-black text-[#8e93a0] border border-white/[0.08] transition-colors shrink-0"
+                                className="p-1 rounded-xl bg-[#161824] hover:bg-accent hover:text-black text-[#8e93a0] border border-white/[0.08] transition-colors shrink-0"
                                 title={t("open_in_studio")}
                               >
                                 <Sliders className="w-3.5 h-3.5" />

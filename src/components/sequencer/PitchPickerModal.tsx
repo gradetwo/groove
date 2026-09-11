@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Music, X, Check, Volume2 } from "lucide-react";
+import { Modal } from "../../ui";
 
 interface PitchPickerModalProps {
   isOpen: boolean;
@@ -74,22 +75,27 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#12141a] border border-[#23262d] rounded-2xl w-full max-w-md shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="md"
+      showCloseButton={false}
+      ariaLabel={language === "zh" ? "音高选择" : "Note Pitch Picker"}
+    >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f222b]">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-6 rounded" style={{ backgroundColor: trackColor }} />
             <div>
-              <h3 className="font-['Space_Grotesk'] text-sm font-bold text-[#e9e7e0]">
+              <h3 className="font-['Space_Grotesk'] text-sm font-bold text-text">
                 {trackName} · Step {stepIdx + 1} {language === "zh" ? "音高选择" : "Note Pitch"}
               </h3>
-              <p className="text-[11px] font-mono text-[#8b8f99]">
-                MIDI Note: <b className="text-[#f5b73d]">{currentNoteName}</b> ({selectedNote})
+              <p className="text-[11px] font-mono text-text-sub">
+                MIDI Note: <b className="text-accent">{currentNoteName}</b> ({selectedNote})
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-[#8b8f99] hover:text-[#e9e7e0]">
+          <button onClick={onClose} className="p-1 rounded-lg text-text-sub hover:text-text">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -98,7 +104,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
         <div className="p-5 space-y-4">
           {/* Octave Selector */}
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-[#8b8f99]">{language === "zh" ? "八度音区 (Octave):" : "Octave Range:"}</span>
+            <span className="text-text-sub">{language === "zh" ? "八度音区 (Octave):" : "Octave Range:"}</span>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5, 6].map((oct) => (
                 <button
@@ -106,8 +112,8 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
                   onClick={() => setOctave(oct)}
                   className={`px-2 py-1 rounded text-xs transition-colors ${
                     octave === oct
-                      ? "bg-[#f5b73d] text-black font-bold"
-                      : "bg-[#0a0b0d] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#23262d]"
+                      ? "bg-accent text-black font-bold"
+                      : "bg-bg text-text-sub hover:text-text border border-line"
                   }`}
                 >
                   C{oct}
@@ -131,7 +137,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
                       onClick={() => handleKeyClick(k.idx)}
                       className={`flex-1 h-full rounded-b-md border border-[#2a2d36] transition-all flex flex-col justify-end items-center pb-2 ${
                         isCurrent
-                          ? "bg-[#f5b73d] text-black shadow-[0_0_12px_rgba(245,183,61,0.5)] font-bold scale-[0.98]"
+                          ? "bg-accent text-black shadow-[0_0_12px_rgba(245,183,61,0.5)] font-bold scale-[0.98]"
                           : "bg-[#e5e3dc] text-neutral-800 hover:bg-white active:bg-neutral-300"
                       }`}
                     >
@@ -149,7 +155,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
                   onClick={() => handleKeyClick(1)}
                   className={`pointer-events-auto w-6 h-full rounded-b border border-black transition-all flex flex-col justify-end items-center pb-1 ml-4 ${
                     selectedNote === (octave + 1) * 12 + 1
-                      ? "bg-[#f5b73d] text-black font-bold shadow-[0_0_10px_#f5b73d]"
+                      ? "bg-accent text-black font-bold shadow-[0_0_10px_#f5b73d]"
                       : "bg-[#18191f] text-white hover:bg-[#252833]"
                   }`}
                 >
@@ -160,7 +166,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
                   onClick={() => handleKeyClick(3)}
                   className={`pointer-events-auto w-6 h-full rounded-b border border-black transition-all flex flex-col justify-end items-center pb-1 ml-2 ${
                     selectedNote === (octave + 1) * 12 + 3
-                      ? "bg-[#f5b73d] text-black font-bold shadow-[0_0_10px_#f5b73d]"
+                      ? "bg-accent text-black font-bold shadow-[0_0_10px_#f5b73d]"
                       : "bg-[#18191f] text-white hover:bg-[#252833]"
                   }`}
                 >
@@ -175,7 +181,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
                   onClick={() => handleKeyClick(6)}
                   className={`pointer-events-auto w-6 h-full rounded-b border border-black transition-all flex flex-col justify-end items-center pb-1 ${
                     selectedNote === (octave + 1) * 12 + 6
-                      ? "bg-[#f5b73d] text-black font-bold shadow-[0_0_10px_#f5b73d]"
+                      ? "bg-accent text-black font-bold shadow-[0_0_10px_#f5b73d]"
                       : "bg-[#18191f] text-white hover:bg-[#252833]"
                   }`}
                 >
@@ -186,7 +192,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
                   onClick={() => handleKeyClick(8)}
                   className={`pointer-events-auto w-6 h-full rounded-b border border-black transition-all flex flex-col justify-end items-center pb-1 ml-2 ${
                     selectedNote === (octave + 1) * 12 + 8
-                      ? "bg-[#f5b73d] text-black font-bold shadow-[0_0_10px_#f5b73d]"
+                      ? "bg-accent text-black font-bold shadow-[0_0_10px_#f5b73d]"
                       : "bg-[#18191f] text-white hover:bg-[#252833]"
                   }`}
                 >
@@ -197,7 +203,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
                   onClick={() => handleKeyClick(10)}
                   className={`pointer-events-auto w-6 h-full rounded-b border border-black transition-all flex flex-col justify-end items-center pb-1 ml-2 ${
                     selectedNote === (octave + 1) * 12 + 10
-                      ? "bg-[#f5b73d] text-black font-bold shadow-[0_0_10px_#f5b73d]"
+                      ? "bg-accent text-black font-bold shadow-[0_0_10px_#f5b73d]"
                       : "bg-[#18191f] text-white hover:bg-[#252833]"
                   }`}
                 >
@@ -212,28 +218,27 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
         <div className="flex items-center justify-between px-5 py-3 border-t border-[#1f222b] bg-[#0d0e13]">
           <button
             onClick={() => onPreviewNote(selectedNote)}
-            className="flex items-center gap-1.5 text-xs text-[#8b8f99] hover:text-[#e9e7e0] font-mono"
+            className="flex items-center gap-1.5 text-xs text-text-sub hover:text-text font-mono"
           >
-            <Volume2 className="w-3.5 h-3.5 text-[#f5b73d]" />
+            <Volume2 className="w-3.5 h-3.5 text-accent" />
             <span>{language === "zh" ? "试听" : "Audition"}</span>
           </button>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 rounded-lg text-xs font-mono text-[#8b8f99] hover:text-[#e9e7e0]"
+              className="px-3 py-1.5 rounded-lg text-xs font-mono text-text-sub hover:text-text"
             >
               {language === "zh" ? "取消" : "Cancel"}
             </button>
             <button
               onClick={handleApply}
-              className="px-4 py-1.5 rounded-lg text-xs font-mono font-bold bg-[#f5b73d] text-black hover:brightness-110 flex items-center gap-1"
+              className="px-4 py-1.5 rounded-lg text-xs font-mono font-bold bg-accent text-black hover:brightness-110 flex items-center gap-1"
             >
               <Check className="w-3.5 h-3.5" />
               <span>{language === "zh" ? "确定设置" : "Set Note"}</span>
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
