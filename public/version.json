@@ -1,7 +1,30 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.0",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.3.0 双曲风锁相实时同步试听与通道监听路由系统",
+        "en": "v1.3.0 Dual Groove Synchronized Audition & Live Channel Routing"
+      },
+      "highlights": [
+        {
+          "zh": "双曲风锁相实时同步试听（PRD 5.7.2.3）：曲风 A 与曲风 B 跨网格小节对齐，单引擎实例混音驱动，消除多时钟飘移",
+          "en": "Dual groove phase-locked audition: sample-accurate sync playback of Genre A & B within unified audio engine"
+        },
+        {
+          "zh": "声轨监听通道路由矩阵：支持【A+B 混合】、【仅曲风 A】、【仅曲风 B】与【仅骨架鼓组】即时独奏静音切换与状态指示",
+          "en": "Channel routing matrix: instant switching between A+B Mix, Solo A, Solo B, and Drums Only with visual active badges"
+        },
+        {
+          "zh": "动态同步调速控制台：支持 BPM 步进增减、滑块微调、原曲速度与平均速度一键吸附，兼具 16 步硬件级 LED 走带走位跟踪",
+          "en": "Synchronized tempo console: ±2 BPM steppers, slider, tempo snaps (A, B, Avg), and 16-step LED playhead tracker"
+        }
+      ]
+    },
     {
       "version": "1.2.0",
       "date": "2026-09-11",

@@ -6,6 +6,7 @@ import {
   Play, 
   Pause, 
   Square, 
+  Minus,
   Sliders, 
   ExternalLink, 
   Sparkles, 
@@ -22,7 +23,7 @@ import {
   Zap,
   Info
 } from "lucide-react";
-import { Genre, GenreRadarMetrics, SequencerTrack } from "../types/genre";
+import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { getBpmOverlap } from "../utils/bpm";
@@ -33,6 +34,8 @@ interface CompareViewProps {
   onSelectGenre: (genre: Genre) => void;
   onOpenStudio: (genre: Genre) => void;
 }
+
+export type SyncPlaybackMode = "both" | "solo_a" | "solo_b" | "drums_only";
 
 const COMPARE_COLORS = [
   { stroke: "#f5b73d", fill: "rgba(245, 183, 61, 0.22)", text: "text-[#f5b73d]", badge: "bg-amber-500/20 border-amber-500/40 text-amber-300", bar: "bg-[#f5b73d]", border: "border-[#f5b73d]" },
@@ -108,18 +111,159 @@ export const CompareView: React.FC<CompareViewProps> = ({
   const [playingMode, setPlayingMode] = useState<"drums" | "full">("full");
   const engineRef = useRef<AudioEngine | null>(null);
 
-  // Stop audio on unmount
+  // A/B Synchronous Comparative Playback State (PRD 5.7.2.3)
+  const [isSyncPlaying, setIsSyncPlaying] = useState(false);
+  const [syncMode, setSyncMode] = useState<SyncPlaybackMode>("both");
+  const [syncStep, setSyncStep] = useState(0);
+  const [syncBpm, setSyncBpm] = useState<number>(() => {
+    if (initialGenres && initialGenres.length >= 2) {
+      return Math.round(((initialGenres[0].default_bpm || 120) + (initialGenres[1].default_bpm || 120)) / 2);
+    }
+    return 120;
+  });
+  const syncEngineRef = useRef<AudioEngine | null>(null);
+
+  // Update default sync BPM when genre pair changes
+  useEffect(() => {
+    if (genres.length >= 2) {
+      const avg = Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2);
+      setSyncBpm(avg);
+    }
+  }, [genres]);
+
+  // Stop all audio on unmount
   useEffect(() => {
     return () => {
       if (engineRef.current) {
         engineRef.current.destroy();
         engineRef.current = null;
       }
+      if (syncEngineRef.current) {
+        syncEngineRef.current.destroy();
+        syncEngineRef.current = null;
+      }
     };
   }, []);
 
+  const handleStopAudio = () => {
+    if (engineRef.current) {
+      engineRef.current.stop();
+      engineRef.current.destroy();
+      engineRef.current = null;
+    }
+    if (syncEngineRef.current) {
+      syncEngineRef.current.stop();
+      syncEngineRef.current.destroy();
+      syncEngineRef.current = null;
+    }
+    setPlayingId(null);
+    setIsSyncPlaying(false);
+  };
+
+  // Helper to mute/unmute channels in sync engine
+  const applySyncModeToEngine = (
+    engine: AudioEngine,
+    mode: SyncPlaybackMode,
+    countA: number,
+    countB: number,
+    tracksA: SequencerTrack[],
+    tracksB: SequencerTrack[]
+  ) => {
+    for (let i = 0; i < countA; i++) {
+      let mute = false;
+      if (mode === "solo_b") mute = true;
+      else if (mode === "drums_only") mute = !isDrumTrack(tracksA[i], i);
+      engine.setTrackState(i, { mute, solo: false });
+    }
+    for (let j = 0; j < countB; j++) {
+      const idx = countA + j;
+      let mute = false;
+      if (mode === "solo_a") mute = true;
+      else if (mode === "drums_only") mute = !isDrumTrack(tracksB[j], j);
+      engine.setTrackState(idx, { mute, solo: false });
+    }
+  };
+
+  // Start synchronized A/B playback for Genre 0 & Genre 1
+  const handleStartSyncPlayback = (overrideBpm?: number) => {
+    if (genres.length < 2) return;
+    handleStopAudio();
+
+    const gA = genres[0];
+    const gB = genres[1];
+    const bpmToUse = overrideBpm || syncBpm;
+
+    const tracksA = gA.sequencer_pattern?.tracks || [];
+    const tracksB = gB.sequencer_pattern?.tracks || [];
+
+    const maxLen = Math.max(
+      tracksA[0]?.steps?.length || 16,
+      tracksB[0]?.steps?.length || 16
+    );
+
+    const mergedTracks: SequencerTrack[] = [
+      ...tracksA.map((t) => ({
+        ...JSON.parse(JSON.stringify(t)),
+        name: `[A] ${t.name}`,
+        track_id: t.track_id || t.name.toLowerCase(),
+      })),
+      ...tracksB.map((t) => ({
+        ...JSON.parse(JSON.stringify(t)),
+        name: `[B] ${t.name}`,
+        track_id: t.track_id || t.name.toLowerCase(),
+      })),
+    ];
+
+    const compositePattern: SequencerPattern = {
+      genre_id: `${gA.id}_${gB.id}_sync`,
+      bpm: bpmToUse,
+      scale: gA.sequencer_pattern?.scale || "C Minor",
+      totalSteps: maxLen,
+      tracks: mergedTracks,
+    };
+
+    const engine = new AudioEngine({
+      onStep: ({ step }) => setSyncStep(step),
+      onStop: () => {
+        setIsSyncPlaying(false);
+      },
+    });
+
+    engine.setPattern(compositePattern);
+    engine.setBpm(bpmToUse);
+    engine.setTotalSteps(maxLen);
+
+    applySyncModeToEngine(engine, syncMode, tracksA.length, tracksB.length, tracksA, tracksB);
+
+    engine.play();
+    syncEngineRef.current = engine;
+    setIsSyncPlaying(true);
+    setPlayingId(null);
+  };
+
+  const handleSetSyncMode = (newMode: SyncPlaybackMode) => {
+    setSyncMode(newMode);
+    if (syncEngineRef.current && isSyncPlaying && genres.length >= 2) {
+      const tracksA = genres[0].sequencer_pattern?.tracks || [];
+      const tracksB = genres[1].sequencer_pattern?.tracks || [];
+      applySyncModeToEngine(syncEngineRef.current, newMode, tracksA.length, tracksB.length, tracksA, tracksB);
+    }
+  };
+
+  const handleSetSyncBpm = (val: number) => {
+    const clamped = Math.max(40, Math.min(240, val));
+    setSyncBpm(clamped);
+    if (syncEngineRef.current) {
+      syncEngineRef.current.setBpm(clamped);
+    }
+  };
+
   // Handle explicit playback per mode (Drums Only or Full Band)
   const handlePlayMode = (genre: Genre, mode: "drums" | "full") => {
+    if (isSyncPlaying) {
+      handleStopAudio();
+    }
+
     // If clicking same genre and same mode, stop it
     if (playingId === genre.id && playingMode === mode) {
       if (engineRef.current) {
@@ -129,7 +273,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
       return;
     }
 
-    // If already playing this genre but switching mode (e.g. from full to drums or vice versa)
+    // If already playing this genre but switching mode
     if (playingId === genre.id && engineRef.current) {
       setPlayingMode(mode);
       applyAudioMutes(engineRef.current, mode, genre);
@@ -151,13 +295,6 @@ export const CompareView: React.FC<CompareViewProps> = ({
     engineRef.current = engine;
     setPlayingId(genre.id);
     setPlayingMode(mode);
-  };
-
-  const handleStopAudio = () => {
-    if (engineRef.current) {
-      engineRef.current.stop();
-    }
-    setPlayingId(null);
   };
 
   const handleRemoveGenre = (id: string) => {
@@ -248,6 +385,37 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
           {/* Right Action Group: Add Genre & Active Count */}
           <div className="flex flex-wrap items-center gap-3">
+            {/* Synchronized A/B Playback Trigger Button */}
+            {genres.length >= 2 && (
+              <button
+                onClick={() => {
+                  if (isSyncPlaying) {
+                    handleStopAudio();
+                  } else {
+                    handleStartSyncPlayback();
+                  }
+                }}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all shadow-sm active:scale-95 ${
+                  isSyncPlaying
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_12px_rgba(245,183,61,0.25)]"
+                    : "bg-[#1c1e24] hover:bg-[#252830] border-[#2b2e38] hover:border-amber-500/40 text-[#f5b73d]"
+                }`}
+                title={language === "zh" ? "对齐拍子与小节，同步播放对比曲风 A 与曲风 B" : "Phase-locked dual-genre sync playback"}
+              >
+                {isSyncPlaying ? (
+                  <>
+                    <Square className="w-4 h-4 fill-current text-amber-300 shrink-0" />
+                    <span className="truncate max-w-[120px] whitespace-nowrap">{t("sync_stop")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-4 h-4 text-[#f5b73d] shrink-0" />
+                    <span className="truncate max-w-[120px] whitespace-nowrap">{t("sync_play")}</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {/* Add genre dropdown */}
             {genres.length < 4 && (
               <div className="relative">
@@ -283,6 +451,188 @@ export const CompareView: React.FC<CompareViewProps> = ({
             )}
           </div>
         </div>
+
+        {/* Synchronized Playback Deck (PRD 5.7.2.3) */}
+        {isSyncPlaying && genres.length >= 2 && (
+          <div className="bg-[#15161c] border-2 border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4 animate-fade-in">
+            {/* Top Row: Title, active badges & Stop Button */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#232630] pb-3">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-end space-x-0.5 h-5">
+                  <span className="w-1 bg-[#f5b73d] rounded-full animate-pulse h-5" />
+                  <span className="w-1 bg-indigo-400 rounded-full animate-pulse h-3" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1 bg-[#f5b73d] rounded-full animate-pulse h-4" style={{ animationDelay: "300ms" }} />
+                  <span className="w-1 bg-indigo-400 rounded-full animate-pulse h-2.5" style={{ animationDelay: "450ms" }} />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="text-sm sm:text-base font-black text-[#e9e7e0] tracking-wide">
+                      {language === "zh" ? "A/B 双曲风锁相实时同步试听" : "Synchronized A/B Audition"}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold">
+                      LIVE
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#8b8f99] mt-0.5">
+                    <span className="text-[#f5b73d] font-semibold">[A] {genres[0].name}</span>
+                    <span className="mx-1.5 text-zinc-600">⟷</span>
+                    <span className="text-indigo-400 font-semibold">[B] {genres[1].name}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleStopAudio}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold transition-all shrink-0"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+                <span className="truncate max-w-[80px] whitespace-nowrap">{t("sync_stop")}</span>
+              </button>
+            </div>
+
+            {/* Middle Row: Channel Routing + Synchronized BPM */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              {/* Channel Routing Mode Buttons */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-[#737887] uppercase tracking-wider block">
+                  {language === "zh" ? "声轨监听通道路由" : "Channel Routing"}
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <button
+                    onClick={() => handleSetSyncMode("both")}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
+                      syncMode === "both"
+                        ? "bg-amber-500 text-black border-amber-500 shadow-md font-black"
+                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                    }`}
+                  >
+                    {t("sync_mix")}
+                  </button>
+
+                  <button
+                    onClick={() => handleSetSyncMode("solo_a")}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
+                      syncMode === "solo_a"
+                        ? "bg-[#f5b73d] text-black border-[#f5b73d] shadow-md font-black"
+                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                    }`}
+                  >
+                    {t("sync_solo_a")}
+                  </button>
+
+                  <button
+                    onClick={() => handleSetSyncMode("solo_b")}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
+                      syncMode === "solo_b"
+                        ? "bg-indigo-500 text-white border-indigo-500 shadow-md font-black"
+                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                    }`}
+                  >
+                    {t("sync_solo_b")}
+                  </button>
+
+                  <button
+                    onClick={() => handleSetSyncMode("drums_only")}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all text-center truncate ${
+                      syncMode === "drums_only"
+                        ? "bg-emerald-500 text-black border-emerald-500 shadow-md font-black"
+                        : "bg-[#0d0e12] text-[#9ca3af] border-[#23262d] hover:text-[#e9e7e0] hover:bg-[#1a1c24]"
+                    }`}
+                  >
+                    {t("sync_drums_only")}
+                  </button>
+                </div>
+              </div>
+
+              {/* Synchronized Tempo (BPM) Adjustment */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#737887] uppercase tracking-wider">
+                    {language === "zh" ? "对齐同步速度 (BPM)" : "Synchronized Tempo"}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-[#f5b73d]">
+                    {syncBpm} BPM
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleSetSyncBpm(syncBpm - 2)}
+                    className="p-1.5 rounded-lg bg-[#0d0e12] hover:bg-[#1f2229] border border-[#23262d] text-[#c4c7cf] hover:text-white transition-colors shrink-0"
+                    title="-2 BPM"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="range"
+                    min={60}
+                    max={180}
+                    value={syncBpm}
+                    onChange={(e) => handleSetSyncBpm(Number(e.target.value))}
+                    className="flex-1 accent-amber-400 cursor-pointer h-1.5 bg-[#0d0e12] rounded-lg"
+                  />
+                  <button
+                    onClick={() => handleSetSyncBpm(syncBpm + 2)}
+                    className="p-1.5 rounded-lg bg-[#0d0e12] hover:bg-[#1f2229] border border-[#23262d] text-[#c4c7cf] hover:text-white transition-colors shrink-0"
+                    title="+2 BPM"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {/* Tempo snap chips */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <button
+                    onClick={() => handleSetSyncBpm(genres[0].default_bpm || 120)}
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#0d0e12] hover:bg-[#1c1e24] border border-[#23262d] text-[#a4a9b5] hover:text-white"
+                  >
+                    A: {genres[0].default_bpm}
+                  </button>
+                  <button
+                    onClick={() => handleSetSyncBpm(genres[1].default_bpm || 120)}
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#0d0e12] hover:bg-[#1c1e24] border border-[#23262d] text-[#a4a9b5] hover:text-white"
+                  >
+                    B: {genres[1].default_bpm}
+                  </button>
+                  <button
+                    onClick={() => handleSetSyncBpm(Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2))}
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#0d0e12] hover:bg-[#1c1e24] border border-[#23262d] text-[#f5b73d] hover:text-white"
+                  >
+                    {language === "zh" ? "平均" : "Avg"}: {Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2)}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Row: 16-Step LED Sequence Tracker */}
+            <div className="pt-2 border-t border-[#1f222a] space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] text-[#737887]">
+                <span className="uppercase tracking-wider font-mono font-bold">
+                  {language === "zh" ? "16分音符节拍走带" : "16-Step Sequence Phase"}
+                </span>
+                <span className="font-mono text-amber-400 font-bold">
+                  STEP {(syncStep % 16) + 1}/16
+                </span>
+              </div>
+              <div className="flex gap-1 w-full">
+                {Array.from({ length: 16 }).map((_, sIdx) => {
+                  const isActive = (syncStep % 16) === sIdx;
+                  const isBeat = sIdx % 4 === 0;
+                  return (
+                    <div
+                      key={sIdx}
+                      className={`flex-1 h-2 rounded-sm transition-all duration-75 ${
+                        isActive
+                          ? "bg-amber-400 shadow-[0_0_8px_rgba(245,183,61,0.9)] scale-y-125"
+                          : isBeat
+                          ? "bg-[#282c37]"
+                          : "bg-[#181a20]"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Live Audition Indicator Bar when music is playing */}
         {currentPlayingGenre && (
@@ -567,6 +917,56 @@ export const CompareView: React.FC<CompareViewProps> = ({
                       {genre.origin_year} · {genre.origin_place[language]}
                     </p>
                   </div>
+
+                  {/* Sync Audition Status Badge */}
+                  {isSyncPlaying && (
+                    <div className="pt-0.5">
+                      {idx === 0 && (
+                        <div className={`flex items-center space-x-2 px-2.5 py-1 rounded-xl text-xs font-bold border transition-colors ${
+                          syncMode === "solo_b"
+                            ? "bg-zinc-800/60 border-zinc-700 text-zinc-400"
+                            : syncMode === "drums_only"
+                            ? "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                            : "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: syncMode === "solo_b" ? "#71717a" : "#f5b73d" }} />
+                          <span className="truncate max-w-[180px] whitespace-nowrap">
+                            {syncMode === "solo_b"
+                              ? (language === "zh" ? "同步: 已静音 (Solo B)" : "Sync: Muted (Solo B)")
+                              : syncMode === "drums_only"
+                              ? (language === "zh" ? "同步: 仅鼓组" : "Sync: Drums Only")
+                              : (language === "zh" ? "同步: 实时混音 [A]" : "Sync: Active [A]")}
+                          </span>
+                        </div>
+                      )}
+                      {idx === 1 && (
+                        <div className={`flex items-center space-x-2 px-2.5 py-1 rounded-xl text-xs font-bold border transition-colors ${
+                          syncMode === "solo_a"
+                            ? "bg-zinc-800/60 border-zinc-700 text-zinc-400"
+                            : syncMode === "drums_only"
+                            ? "bg-indigo-500/15 border-indigo-500/30 text-indigo-300"
+                            : "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: syncMode === "solo_a" ? "#71717a" : "#818cf8" }} />
+                          <span className="truncate max-w-[180px] whitespace-nowrap">
+                            {syncMode === "solo_a"
+                              ? (language === "zh" ? "同步: 已静音 (Solo A)" : "Sync: Muted (Solo A)")
+                              : syncMode === "drums_only"
+                              ? (language === "zh" ? "同步: 仅鼓组" : "Sync: Drums Only")
+                              : (language === "zh" ? "同步: 实时混音 [B]" : "Sync: Active [B]")}
+                          </span>
+                        </div>
+                      )}
+                      {idx >= 2 && (
+                        <div className="flex items-center space-x-2 px-2.5 py-1 rounded-xl text-xs font-bold border bg-zinc-800/40 border-zinc-700 text-zinc-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 shrink-0" />
+                          <span className="truncate max-w-[180px] whitespace-nowrap">
+                            {language === "zh" ? "未加入 A/B 同步" : "Not in A/B Sync"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Dual Audition Action Buttons: Dedicated Drums Only & Full Band */}
                   <div className="space-y-2 pt-1">
