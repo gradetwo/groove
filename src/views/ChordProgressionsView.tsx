@@ -47,7 +47,7 @@ import { GuitarFretboardVisualizer } from "../components/chords/GuitarFretboardV
 import { MidiExporter } from "../audio/MidiExporter";
 
 interface ChordProgressionsViewProps {
-  onOpenStudioWithChords?: (chords: string[]) => void;
+  onOpenStudioWithChords?: (chords: ChordDefinition[]) => void;
 }
 
 export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
@@ -630,6 +630,19 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               <Download className="w-3.5 h-3.5" />
               <span>{language === "zh" ? "导出 MIDI" : "Export MIDI"}</span>
             </button>
+
+            {/* Load to Studio */}
+            {onOpenStudioWithChords && (
+              <button
+                type="button"
+                onClick={() => onOpenStudioWithChords(customChords)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#f5b73d] hover:bg-[#ffc24b] text-zinc-950 font-bold text-xs transition-colors shadow-lg shadow-[#f5b73d]/10"
+                title={language === "zh" ? "将此和弦走向载入音序工作台" : "Load this chord progression into Sequencer Studio"}
+              >
+                <Music className="w-3.5 h-3.5" />
+                <span>{language === "zh" ? "载入编曲工作台" : "Open in Studio"}</span>
+              </button>
+            )}
           </div>
         </div>
 

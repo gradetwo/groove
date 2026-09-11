@@ -70,18 +70,6 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
     updateFromPointer(e, stepIdx, rect);
   };
 
-  const handleTouchStart = (stepIdx: number, e: React.TouchEvent<HTMLDivElement>) => {
-    triggerHaptic(HapticPatterns.slider);
-    const touch = e.touches[0];
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clientY = touch.clientY;
-    const bottom = rect.bottom;
-    const height = rect.height;
-    const ratio = Math.max(0, Math.min(1, (bottom - clientY) / height));
-    const newVel = Math.round(ratio * 127);
-    onUpdateVelocity(activeTrackIdx, stepIdx, Math.max(1, Math.min(127, newVel)));
-  };
-
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.touches[0];
     const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -234,7 +222,9 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
           {velocities.map((vel, stepIdx) => {
             const stepVal = currentTrack?.steps?.[stepIdx] || 0;
             const isOn = stepVal > 0;
-            const isPlayhead = isPlaying && currentStep === stepIdx;
+            const trackLen = currentTrack?.trackLength || stepCount;
+            const isOutsideLoop = stepIdx >= trackLen;
+            const isPlayhead = isPlaying && !isOutsideLoop && (currentStep % trackLen === stepIdx);
             const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
             const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
             const heightPercent = (vel / 127) * 100;
@@ -246,7 +236,6 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
                 data-step-idx={stepIdx}
                 onPointerDown={(e) => handlePointerDown(stepIdx, e)}
                 onPointerEnter={(e) => handlePointerEnter(stepIdx, e)}
-                onTouchStart={(e) => handleTouchStart(stepIdx, e)}
                 className={`min-w-[28px] sm:min-w-[32px] flex-1 h-full flex flex-col justify-end items-center relative cursor-ns-resize group select-none touch-none ${
                   isBarStart ? "ml-3 sm:ml-4 border-l border-[#3a3e48]" : isGroupStart ? "ml-1.5 sm:ml-2" : ""
                 }`}

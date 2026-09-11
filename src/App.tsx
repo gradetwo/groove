@@ -6,6 +6,8 @@ import { Genre } from "./types/genre";
 import { ALL_GENRES, GENRES_MAP } from "./data/genres";
 import { AudioEngine } from "./audio/AudioEngine";
 import { Disc3, Sparkles } from "lucide-react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ChordDefinition } from "./utils/chordTheory";
 
 // Code splitting & lazy loading chunks for optimal performance
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
@@ -27,10 +29,23 @@ const MainApp: React.FC = () => {
     GENRES_MAP["berlin-techno"] || ALL_GENRES[1],
   ]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
 
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Global hotkey: Cmd+K / Ctrl+K opens search dialog from ANY page (P0-23)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
   // Sync with browser URL search params
   useEffect(() => {
@@ -77,12 +92,14 @@ const MainApp: React.FC = () => {
 
   const handleEngineReady = (engine: AudioEngine) => {
     setAnalyser(engine.getAnalyser());
-    // Interval check for playing state for header visualizer
-    const checkPlaying = () => {
+    const id = setInterval(() => {
       setIsPlaying(engine.getIsPlaying());
+    }, 100);
+    return () => {
+      clearInterval(id);
+      setIsPlaying(false);
+      setAnalyser(null);
     };
-    const id = setInterval(checkPlaying, 100);
-    return () => clearInterval(id);
   };
 
   return (
@@ -119,87 +136,92 @@ const MainApp: React.FC = () => {
             </div>
           }
         >
-          {currentTab === "studio" && (
-            <StudioView
-              selectedGenre={selectedGenre}
-              onSelectGenre={(g) => setSelectedGenre(g)}
-              onViewDetail={(g) => {
-                setSelectedGenre(g);
-                setCurrentTab("detail");
-              }}
-              onAddToCompare={handleAddToCompare}
-              onAudioEngineReady={handleEngineReady}
-            />
-          )}
+          <ErrorBoundary>
+            {currentTab === "studio" && (
+              <StudioView
+                selectedGenre={selectedGenre}
+                onSelectGenre={(g) => setSelectedGenre(g)}
+                onViewDetail={(g) => {
+                  setSelectedGenre(g);
+                  setCurrentTab("detail");
+                }}
+                onAddToCompare={handleAddToCompare}
+                onAudioEngineReady={handleEngineReady}
+                initialChords={initialChords}
+                onClearInitialChords={() => setInitialChords(null)}
+              />
+            )}
 
-          {currentTab === "chords" && (
-            <ChordProgressionsView
-              onOpenStudioWithChords={(chords) => {
-                setCurrentTab("studio");
-              }}
-            />
-          )}
+            {currentTab === "chords" && (
+              <ChordProgressionsView
+                onOpenStudioWithChords={(chords) => {
+                  setInitialChords(chords);
+                  setCurrentTab("studio");
+                }}
+              />
+            )}
 
-          {currentTab === "galaxy" && (
-            <GalaxyView
-              onSelectGenre={(g) => {
-                setSelectedGenre(g);
-                setCurrentTab("detail");
-              }}
-              onOpenStudio={handleOpenStudioWithGenre}
-            />
-          )}
+            {currentTab === "galaxy" && (
+              <GalaxyView
+                onSelectGenre={(g) => {
+                  setSelectedGenre(g);
+                  setCurrentTab("detail");
+                }}
+                onOpenStudio={handleOpenStudioWithGenre}
+              />
+            )}
 
-          {currentTab === "horizontal-timeline" && (
-            <HorizontalTimelineView
-              onSelectGenre={(g) => {
-                setSelectedGenre(g);
-                setCurrentTab("detail");
-              }}
-              onOpenStudio={handleOpenStudioWithGenre}
-            />
-          )}
+            {currentTab === "horizontal-timeline" && (
+              <HorizontalTimelineView
+                onSelectGenre={(g) => {
+                  setSelectedGenre(g);
+                  setCurrentTab("detail");
+                }}
+                onOpenStudio={handleOpenStudioWithGenre}
+              />
+            )}
 
-          {currentTab === "vertical-timeline" && (
-            <VerticalTimelineView
-              onSelectGenre={(g) => {
-                setSelectedGenre(g);
-                setCurrentTab("detail");
-              }}
-              onOpenStudio={handleOpenStudioWithGenre}
-            />
-          )}
+            {currentTab === "vertical-timeline" && (
+              <VerticalTimelineView
+                onSelectGenre={(g) => {
+                  setSelectedGenre(g);
+                  setCurrentTab("detail");
+                }}
+                onOpenStudio={handleOpenStudioWithGenre}
+              />
+            )}
 
-          {currentTab === "compare" && (
-            <CompareView
-              initialGenres={comparePool}
-              onSelectGenre={(g) => {
-                setSelectedGenre(g);
-                setCurrentTab("detail");
-              }}
-              onOpenStudio={handleOpenStudioWithGenre}
-            />
-          )}
+            {currentTab === "compare" && (
+              <CompareView
+                initialGenres={comparePool}
+                onSelectGenre={(g) => {
+                  setSelectedGenre(g);
+                  setCurrentTab("detail");
+                }}
+                onOpenStudio={handleOpenStudioWithGenre}
+              />
+            )}
 
-          {currentTab === "challenge" && (
-            <ChallengeView
-              onSelectGenre={(g) => {
-                setSelectedGenre(g);
-                setCurrentTab("detail");
-              }}
-              onOpenStudio={handleOpenStudioWithGenre}
-            />
-          )}
+            {currentTab === "challenge" && (
+              <ChallengeView
+                onSelectGenre={(g) => {
+                  setSelectedGenre(g);
+                  setCurrentTab("detail");
+                }}
+                onOpenStudio={handleOpenStudioWithGenre}
+              />
+            )}
 
-          {currentTab === "detail" && (
-            <GenreDetailView
-              genre={selectedGenre}
-              onBack={() => setCurrentTab("studio")}
-              onSelectGenre={(g) => setSelectedGenre(g)}
-              onOpenStudio={handleOpenStudioWithGenre}
-              onAddToCompare={handleAddToCompare}
-            />
-          )}
+            {currentTab === "detail" && (
+              <GenreDetailView
+                genre={selectedGenre}
+                onBack={() => setCurrentTab("studio")}
+                onSelectGenre={(g) => setSelectedGenre(g)}
+                onOpenStudio={handleOpenStudioWithGenre}
+                onAddToCompare={handleAddToCompare}
+              />
+            )}
+          </ErrorBoundary>
         </React.Suspense>
       </main>
 
@@ -253,9 +275,11 @@ const MainApp: React.FC = () => {
 
 export function App() {
   return (
-    <LanguageProvider>
-      <MainApp />
-    </LanguageProvider>
+    <ErrorBoundary fallbackTitle="应用遇到未知错误 / Application Error">
+      <LanguageProvider>
+        <MainApp />
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 }
 

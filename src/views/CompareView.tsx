@@ -25,6 +25,7 @@ import {
 import { Genre, GenreRadarMetrics, SequencerTrack } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
+import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
 
 interface CompareViewProps {
@@ -200,19 +201,13 @@ export const CompareView: React.FC<CompareViewProps> = ({
     const radarDist = Math.sqrt(sumSq / RADAR_AXES.length);
     const radarSim = Math.max(0, 1 - radarDist) * 100;
 
-    const parseBpm = (range: string) => {
-      const parts = range.split("-").map((s) => parseInt(s.trim()));
-      return { min: parts[0] || 120, max: parts[1] || parts[0] || 120 };
-    };
-    const b1 = parseBpm(g1.bpm_range);
-    const b2 = parseBpm(g2.bpm_range);
-    const bpmOverlap = Math.max(b1.min, b2.min) <= Math.min(b1.max, b2.max);
+    const { overlaps, min, max } = getBpmOverlap(g1.bpm_range, g2.bpm_range);
 
     return {
       score: Math.round(radarSim),
-      bpmOverlap,
-      overlapMin: Math.max(b1.min, b2.min),
-      overlapMax: Math.min(b1.max, b2.max),
+      bpmOverlap: overlaps,
+      overlapMin: min,
+      overlapMax: max,
     };
   }, [genres]);
 

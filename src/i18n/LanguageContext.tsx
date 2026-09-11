@@ -132,6 +132,19 @@ export const DICTIONARY: Translations = {
   zoom_in: { en: "Zoom In (+)", zh: "放大 (+)" },
   zoom_out: { en: "Zoom Out (-)", zh: "缩小 (-)" },
   reset_view: { en: "Reset View", zh: "重置视角" },
+
+  // Studio Dossier & Info Cards
+  era: { en: "ERA", zh: "时期" },
+  place: { en: "ORIGIN", zh: "发源地" },
+  range: { en: "TEMPO", zh: "速度范围" },
+  keyLabel: { en: "SCALE / KEY", zh: "调式 / 调号" },
+  time: { en: "METER", zh: "拍号" },
+  dna: { en: "DRUM & GROOVE DNA", zh: "节奏与鼓组 DNA" },
+  harm: { en: "HARMONY & TEXTURE", zh: "和声与质感" },
+  tips: { en: "PRODUCTION TIPS", zh: "制作要点" },
+  refs: { en: "KEY TRACKS", zh: "代表作品" },
+  compare: { en: "Compare", zh: "加入对比" },
+  export: { en: "Export MIDI", zh: "导出 MIDI" },
 };
 
 interface LanguageContextType {
@@ -183,7 +196,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const t = (key: string): string => {
     const entry = DICTIONARY[key];
-    if (!entry) return key;
+    if (!entry) {
+      if (import.meta.env.DEV) {
+        console.warn(`[i18n] Missing translation key: "${key}"`);
+      }
+      return key;
+    }
     return entry[language] || entry.en || key;
   };
 

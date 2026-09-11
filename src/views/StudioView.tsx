@@ -42,6 +42,7 @@ import { VelocityLane } from "../components/sequencer/VelocityLane";
 import { EuclideanModal } from "../components/sequencer/EuclideanModal";
 import { PitchPickerModal, midiToNoteName } from "../components/sequencer/PitchPickerModal";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
+import { noteToMidi, ChordDefinition } from "../utils/chordTheory";
 
 // Color mappings matching /tmp/demo.html
 export const DEMO_TRACKS_CONFIG = [
@@ -179,7 +180,9 @@ interface StudioViewProps {
   onSelectGenre: (genre: Genre) => void;
   onViewDetail: (genre: Genre) => void;
   onAddToCompare?: (genre: Genre) => void;
-  onAudioEngineReady?: (engine: AudioEngine) => void;
+  onAudioEngineReady?: (engine: AudioEngine) => (() => void) | void;
+  initialChords?: ChordDefinition[] | null;
+  onClearInitialChords?: () => void;
 }
 
 export const StudioView: React.FC<StudioViewProps> = ({
@@ -188,6 +191,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onViewDetail,
   onAddToCompare,
   onAudioEngineReady,
+  initialChords,
+  onClearInitialChords,
 }) => {
   const { t, language } = useLanguage();
 
@@ -205,6 +210,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [swing, setSwing] = useState<number>(currentGenre.sequencer_pattern.swing || 0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [viewedBar, setViewedBar] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Mute & Solo sets
@@ -280,10 +286,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
 
   // Toast notification
-  const showToast = (msg: string) => {
+  const toastTimerRef = useRef<any>(null);
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2400);
-  };
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+      toastTimerRef.current = null;
+    }, 2400);
+  }, []);
 
   // Operation History Stack for Undo/Redo (Ctrl+Z / Cmd+Z / Ctrl+Y)
   const historyRef = useRef<SequencerPattern[]>([]);
@@ -360,14 +373,72 @@ export const StudioView: React.FC<StudioViewProps> = ({
     engine.setTimeSignature(timeSignature);
     engine.setResolution(resolution);
 
-    if (onAudioEngineReady) {
-      onAudioEngineReady(engine);
-    }
+    const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
     return () => {
+      cleanup?.();
       engine.destroy();
     };
   }, []);
+
+  // Cleanup timers on unmount (P0-12)
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
+  }, []);
+
+  // Handle chords transferred from ChordProgressionsView (P0-22)
+  useEffect(() => {
+    if (!initialChords || initialChords.length === 0) return;
+
+    setPattern((prev) => {
+      const copy: SequencerPattern = JSON.parse(JSON.stringify(prev));
+      let chordTrack = copy.tracks.find(
+        (t) => t.track_id === "chords" || t.name.toLowerCase().includes("chord")
+      );
+
+      if (!chordTrack && copy.tracks.length > 0) {
+        chordTrack = copy.tracks[copy.tracks.length - 1];
+      }
+
+      if (chordTrack) {
+        const total = chordTrack.steps.length;
+        chordTrack.steps = Array(total).fill(0);
+        if (!chordTrack.pitch) chordTrack.pitch = Array(total).fill(null);
+        if (!chordTrack.velocity) chordTrack.velocity = Array(total).fill(100);
+
+        const chordCount = initialChords.length;
+        const stepInterval = Math.max(1, Math.floor(total / chordCount));
+
+        initialChords.forEach((chordDef, idx) => {
+          const stepPos = idx * stepInterval;
+          if (stepPos < total) {
+            chordTrack!.steps[stepPos] = 1;
+            chordTrack!.pitch![stepPos] = noteToMidi(chordDef.root, 4);
+            chordTrack!.velocity![stepPos] = 105;
+          }
+        });
+
+        if (engineRef.current) {
+          engineRef.current.setPattern(copy);
+        }
+      }
+
+      return copy;
+    });
+
+    showToast(
+      language === "zh"
+        ? `已成功载入 ${initialChords.length} 个和弦到和弦轨道 ✓`
+        : `Loaded ${initialChords.length} chords into track ✓`
+    );
+
+    if (onClearInitialChords) {
+      onClearInitialChords();
+    }
+  }, [initialChords, language, onClearInitialChords, showToast]);
 
   // Sync external genre
   useEffect(() => {
@@ -561,7 +632,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Keyboard shortcuts: Space (play/pause), Esc (exit/close), V (Velocity), E (Euclidean)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+         target.tagName === "TEXTAREA" ||
+         target.tagName === "SELECT" ||
+         target.isContentEditable ||
+         Boolean(target.closest("input, textarea, select, [contenteditable]")))
+      ) {
+        return;
+      }
       if (e.code === "Space") {
         e.preventDefault();
         handleTogglePlay();
@@ -614,38 +695,42 @@ export const StudioView: React.FC<StudioViewProps> = ({
     };
   }, [isPlaying, isEditorMaximized, stepContextMenu, pitchPicker.isOpen, isEuclideanOpen, isVelocityLaneOpen, handleUndo, handleRedo]);
 
-  // Step Touch Handlers for Mobile / iPad
-  const handleStepTouchStart = (trackIdx: number, stepIdx: number, e: React.TouchEvent) => {
-    isLongPressRef.current = false;
-    hasTouchMovedRef.current = false;
-    const touch = e.touches[0];
-    const clientX = touch.clientX;
-    const clientY = touch.clientY;
-    touchStartPosRef.current = { x: clientX, y: clientY };
+  // Step Pointer & Long-Press Handlers (Unifies Touch & Mouse, Eliminating Synthetic Double Triggers - P0-13)
+  const handleStepPointerDown = (trackIdx: number, stepIdx: number, e: React.PointerEvent) => {
+    if (e.pointerType === "touch") {
+      isLongPressRef.current = false;
+      hasTouchMovedRef.current = false;
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+      touchStartPosRef.current = { x: clientX, y: clientY };
 
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+
+      longPressTimerRef.current = setTimeout(() => {
+        isLongPressRef.current = true;
+        triggerHaptic(HapticPatterns.doubleTap);
+        setStepContextMenu({
+          isOpen: true,
+          x: clientX,
+          y: clientY,
+          trackIdx,
+          stepIdx,
+        });
+      }, 450);
+      return;
     }
 
-    longPressTimerRef.current = setTimeout(() => {
-      isLongPressRef.current = true;
-      triggerHaptic(HapticPatterns.doubleTap);
-      setStepContextMenu({
-        isOpen: true,
-        x: clientX,
-        y: clientY,
-        trackIdx,
-        stepIdx,
-      });
-    }, 450);
+    // Mouse pointer down: desktop drag-paint or modifier clicks
+    handlePointerDown(trackIdx, stepIdx, e);
   };
 
-  const handleStepTouchMove = (e: React.TouchEvent) => {
-    if (touchStartPosRef.current && e.touches.length > 0) {
-      const touch = e.touches[0];
+  const handleStepPointerMove = (e: React.PointerEvent) => {
+    if (e.pointerType === "touch" && touchStartPosRef.current) {
       const dist = Math.hypot(
-        touch.clientX - touchStartPosRef.current.x,
-        touch.clientY - touchStartPosRef.current.y
+        e.clientX - touchStartPosRef.current.x,
+        e.clientY - touchStartPosRef.current.y
       );
       if (dist > 8) {
         hasTouchMovedRef.current = true;
@@ -657,7 +742,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   };
 
-  const handleStepTouchEnd = () => {
+  const handleStepPointerUp = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -850,8 +935,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
       return;
     }
 
-    // Touch tap standard note toggle
-    if (isTouchDevice) {
+    // Touch tap standard note toggle (or fallback if pointerdown did not already toggle it)
+    const isTouchInteraction = isTouchDevice || (e.nativeEvent && (e.nativeEvent as any).pointerType === "touch");
+    if (isTouchInteraction || dragValRef.current === null) {
       const nextVal = cur > 0 ? 0 : 1;
       setPattern((prev) => {
         const copy = JSON.parse(JSON.stringify(prev));
@@ -869,6 +955,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
       }
     }
+    dragValRef.current = null;
   };
 
   // Right-click step context menu (P-Locks & Parameters)
@@ -1079,35 +1166,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
     return 4;
   }, [timeNum]);
 
-  // Steps per bar in the sequencer
+  // Steps per bar in the sequencer (P0-10: universal formula for any meter & resolution)
   const stepsPerBar = useMemo(() => {
-    if (timeNum === 3) {
-      if (resolution === "1/8") return 6;
-      if (resolution === "1/32") return 24;
-      return stepCount <= 6 ? 3 : 12;
-    }
-    if (timeNum === 2) {
-      if (resolution === "1/8") return 4;
-      if (resolution === "1/32") return 16;
-      return stepCount <= 4 ? 2 : 8;
-    }
-    if (timeNum === 6) return resolution === "1/8" ? 6 : 12;
-    if (timeNum === 3 && timeDenom === 8) return 3;
-    if (timeNum === 5) return 5;
-    if (timeNum === 7) return 7;
-    if (timeNum === 9) return 9;
-    if (timeNum === 12) return 12;
-
-    const stepsPerQuarter = resolution === "1/8" ? 2 : resolution === "1/32" ? 8 : 4;
-    return timeNum * stepsPerQuarter;
-  }, [timeNum, timeDenom, resolution, stepCount]);
+    const stepsPerWholeNote = resolution === "1/8" ? 8 : resolution === "1/32" ? 32 : 16;
+    return Math.max(1, Math.round(timeNum * (stepsPerWholeNote / timeDenom)));
+  }, [timeNum, timeDenom, resolution]);
 
   const stepsPerBeat = useMemo(() => {
-    if (timeNum === 3) return groupSize;
-    if (timeNum === 2) return 4;
-    const stepsPerQuarter = resolution === "1/8" ? 2 : resolution === "1/32" ? 8 : 4;
-    return Math.max(1, Math.round(stepsPerQuarter * (4 / timeDenom)));
-  }, [timeNum, groupSize, resolution, timeDenom]);
+    const stepsPerWholeNote = resolution === "1/8" ? 8 : resolution === "1/32" ? 32 : 16;
+    return Math.max(1, Math.round(stepsPerWholeNote / timeDenom));
+  }, [resolution, timeDenom]);
 
   const barCount = Math.max(1, Math.ceil(stepCount / stepsPerBar));
 
@@ -1239,6 +1307,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   };
 
   const scrollToBar = (barIdx: number) => {
+    setViewedBar(barIdx);
     if (!matrixContainerRef.current) return;
     const targetStep = barIdx * stepsPerBar;
     const targetEl = matrixContainerRef.current.querySelector(`[data-step-idx="${targetStep}"]`) as HTMLElement | null;
@@ -1988,7 +2057,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     {language === "zh" ? "小节" : "BAR"}
                   </span>
                   <select
-                    value={Math.min(barCount - 1, Math.floor(currentStep / stepsPerBar))}
+                    value={Math.min(barCount - 1, viewedBar)}
                     onChange={(e) => scrollToBar(Number(e.target.value))}
                     className="bg-transparent text-[#e9e7e0] font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
                     aria-label={language === "zh" ? "跳转到小节" : "Jump to bar"}
@@ -2516,7 +2585,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       const trackLen = track.trackLength || stepCount;
                       const isOutsideLoop = stepIdx >= trackLen;
 
-                      const isPlayhead = isPlaying && currentStep === stepIdx;
+                      const isPlayhead = isPlaying && !isOutsideLoop && (currentStep % trackLen === stepIdx);
                       const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
                       const isFirstStepOfBar = stepIdx % stepsPerBar === 0;
                       const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
@@ -2526,12 +2595,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
                           key={stepIdx}
                           onClick={(e) => handleCellClick(trackIdx, stepIdx, e)}
                           onContextMenu={(e) => handleStepContextMenu(trackIdx, stepIdx, e)}
-                          onPointerDown={(e) => handlePointerDown(trackIdx, stepIdx, e)}
+                          onPointerDown={(e) => handleStepPointerDown(trackIdx, stepIdx, e)}
+                          onPointerMove={handleStepPointerMove}
+                          onPointerUp={handleStepPointerUp}
+                          onPointerCancel={handleStepPointerUp}
                           onPointerEnter={() => handlePointerEnter(trackIdx, stepIdx)}
-                          onTouchStart={(e) => handleStepTouchStart(trackIdx, stepIdx, e)}
-                          onTouchMove={handleStepTouchMove}
-                          onTouchEnd={handleStepTouchEnd}
-                          onTouchCancel={handleStepTouchEnd}
                           className={`min-w-[32px] sm:min-w-[36px] flex-1 h-11 sm:h-10 border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation touch-hit-44 ${
                             isBarStart
                               ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"

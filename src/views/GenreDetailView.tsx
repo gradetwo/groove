@@ -76,10 +76,15 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   const [auditionMode, setAuditionMode] = useState<"drums" | "full">("full");
   const [currentStep, setCurrentStep] = useState(0);
   const [bpm, setBpm] = useState(genre.default_bpm || 124);
+  const [bpmInput, setBpmInput] = useState<string>(String(genre.default_bpm || 124));
   const engineRef = useRef<AudioEngine | null>(null);
 
   // Initialize audio engine for preview
   useEffect(() => {
+    const defaultBpm = genre.default_bpm || 124;
+    setBpm(defaultBpm);
+    setBpmInput(String(defaultBpm));
+
     const engine = new AudioEngine({
       onStep: ({ step }) => setCurrentStep(step),
       onStop: () => {
@@ -89,7 +94,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     });
     engineRef.current = engine;
     engine.setPattern(genre.sequencer_pattern);
-    engine.setBpm(genre.default_bpm || 124);
+    engine.setBpm(defaultBpm);
 
     return () => {
       engine.destroy();
@@ -129,8 +134,9 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   };
 
   const handleBpmChange = (newBpm: number) => {
-    const clamped = Math.max(40, Math.min(240, newBpm));
+    const clamped = Math.max(40, Math.min(260, newBpm));
     setBpm(clamped);
+    setBpmInput(String(clamped));
     if (engineRef.current) {
       engineRef.current.setBpm(clamped);
     }
@@ -291,11 +297,28 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                 -
               </button>
               <input
-                type="number"
-                min="40"
-                max="240"
-                value={bpm}
-                onChange={(e) => handleBpmChange(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={bpmInput}
+                onChange={(e) => {
+                  setBpmInput(e.target.value);
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 40 && val <= 260) {
+                    setBpm(val);
+                    if (engineRef.current) engineRef.current.setBpm(val);
+                  }
+                }}
+                onBlur={() => {
+                  const val = parseInt(bpmInput, 10);
+                  const finalBpm = isNaN(val) ? (genre.default_bpm || 124) : Math.max(40, Math.min(260, val));
+                  handleBpmChange(finalBpm);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 className="w-12 bg-transparent text-[#e9e7e0] font-bold text-center focus:outline-none"
               />
               <button

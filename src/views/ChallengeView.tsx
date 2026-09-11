@@ -50,6 +50,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const engineRef = useRef<AudioEngine | null>(null);
 
@@ -101,7 +102,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   };
 
   // Start new round
-  const startNewQuestion = (diff = difficulty) => {
+  const startNewQuestion = (diff = difficulty, autoPlay = hasStarted) => {
     if (engineRef.current) {
       engineRef.current.destroy();
       engineRef.current = null;
@@ -111,18 +112,23 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     setSelectedAnswerId(null);
     setIsAnswered(false);
 
-    // Auto start playback
+    // Prepare audio engine
     const engine = new AudioEngine();
     engine.setPattern(q.correctGenre.sequencer_pattern);
     engine.setBpm(q.correctGenre.default_bpm || 120);
-    engine.play();
     engineRef.current = engine;
-    setIsPlaying(true);
+
+    if (autoPlay) {
+      engine.play();
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(false);
+    }
   };
 
   // Initialize first question on mount
   useEffect(() => {
-    startNewQuestion(difficulty);
+    startNewQuestion(difficulty, false);
     return () => {
       if (engineRef.current) {
         engineRef.current.destroy();
@@ -132,6 +138,12 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
   const handleTogglePlay = () => {
     if (!engineRef.current || !question) return;
+    if (!hasStarted) {
+      setHasStarted(true);
+      engineRef.current.play();
+      setIsPlaying(true);
+      return;
+    }
     if (isPlaying) {
       engineRef.current.pause();
       setIsPlaying(false);
@@ -262,28 +274,36 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           </div>
 
           <p className="text-xs sm:text-sm text-[#b9b7b0] font-medium">
-            {isPlaying 
+            {!hasStarted
+              ? (language === "zh" ? "准备好测试你的乐感了吗？点击下方按钮开启盲听挑战！" : "Ready to test your ear? Click below to start listening!")
+              : isPlaying 
               ? (language === "zh" ? "正在播放神秘律动，仔细聆听鼓点节奏与贝斯..." : "Listening to the blind groove... Identify the genre!") 
               : (language === "zh" ? "已暂停，点击播放继续试听" : "Paused. Click play to resume listening")}
           </p>
 
-          {/* Clue: Tempo in medium/hard mode */}
+          {/* Clue: Tempo in easy mode or after answered */}
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#0d0e12] border border-[#23262d] text-xs text-[#8b8f99] font-mono">
-            <span>TEMPO CLUE:</span>
-            <span className="text-[#e9e7e0] font-bold">{question.correctGenre.default_bpm} BPM</span>
+            <span>TEMPO:</span>
+            <span className="text-[#e9e7e0] font-bold">
+              {isAnswered || difficulty === "easy"
+                ? `${question.correctGenre.default_bpm} BPM`
+                : (language === "zh" ? "答题后揭晓" : "Hidden during quiz")}
+            </span>
           </div>
 
           <div>
             <button
               onClick={handleTogglePlay}
               className={`inline-flex items-center space-x-2 px-6 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-xl ${
-                isPlaying
+                !hasStarted
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-indigo-500/30 scale-105"
+                  : isPlaying
                   ? "bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/30"
                   : "bg-emerald-600 hover:bg-emerald-500 text-[#e9e7e0] shadow-emerald-600/30"
               }`}
             >
-              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-              <span>{isPlaying ? t("pause") : t("play")}</span>
+              {!hasStarted ? <Play className="w-4 h-4 fill-current" /> : isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+              <span>{!hasStarted ? (language === "zh" ? "点击开始听辨" : "Start Listening") : isPlaying ? t("pause") : t("play")}</span>
             </button>
           </div>
         </div>
@@ -330,7 +350,11 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                   </p>
                 )}
                 <div className="text-[11px] text-[#5a5e68] pl-8">
-                  {opt.category} • {opt.bpm_range} BPM
+                  {isAnswered ? (
+                    `${opt.category} • ${opt.bpm_range} BPM`
+                  ) : (
+                    <span className="text-[#4a4e58]">{language === "zh" ? "点击选择此流派" : "Select this genre"}</span>
+                  )}
                 </div>
               </div>
 
@@ -359,7 +383,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             </div>
 
             <button
-              onClick={() => startNewQuestion()}
+              onClick={() => startNewQuestion(difficulty, true)}
               className="flex items-center space-x-1.5 px-5 py-2.5 rounded-2xl bg-[#f5b73d] text-[#0a0b0d] hover:bg-indigo-500 text-[#e9e7e0] font-bold text-xs shadow-xl shadow-indigo-600/30 transition-transform hover:scale-105"
             >
               <span>{t("next_question")}</span>

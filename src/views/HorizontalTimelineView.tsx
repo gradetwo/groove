@@ -397,16 +397,18 @@ const NONLINEAR_EPOCHS: TimelineColumnDef[] = [
   },
 ];
 
-// 2. Linear equal-width decade scale
-const LINEAR_COLUMNS: TimelineColumnDef[] = [1920, 1940, 1960, 1970, 1980, 1990, 2000, 2010, 2020].map((decade) => ({
+// 2. Linear equal-width decade scale (P0-24: complete decades without duplicate <=1950 filtering)
+const LINEAR_COLUMNS: TimelineColumnDef[] = [1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020].map((decade) => ({
   id: String(decade),
   label: `${decade}s`,
   tag: { zh: `${decade} 年代`, en: `${decade}s` },
   desc: { zh: `${decade} 年代典型曲风`, en: `Decade of ${decade}s` },
   widthClass: "min-w-[190px] flex-1",
   filter: (g: Genre) => {
-    if (decade <= 1940) return (g.origin_decade || 1980) <= 1950;
-    return g.origin_decade === decade;
+    const d = g.origin_decade || 1980;
+    if (decade === 1920) return d <= 1929;
+    if (decade === 2020) return d >= 2020;
+    return d === decade || (d >= decade && d <= decade + 9);
   },
   yearThreshold: decade,
 }));

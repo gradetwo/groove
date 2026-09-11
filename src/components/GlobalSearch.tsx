@@ -3,6 +3,7 @@ import { Search, X, Music, Sliders, ExternalLink, Sparkles } from "lucide-react"
 import { ALL_GENRES } from "../data/genres";
 import { Genre } from "../types/genre";
 import { useLanguage } from "../i18n/LanguageContext";
+import { isBpmInRange } from "../utils/bpm";
 
 interface GlobalSearchProps {
   isOpen: boolean;
@@ -65,10 +66,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
       // Origin place
       if (g.origin_place.en.toLowerCase().includes(q) || g.origin_place.zh.toLowerCase().includes(q)) return true;
       // BPM match
-      if (!isNaN(numQ)) {
-        const parts = g.bpm_range.split("-").map((p) => parseInt(p.trim(), 10)).filter((n) => !isNaN(n));
-        if (parts.length >= 2 && numQ >= parts[0] && numQ <= parts[1]) return true;
-        if (parts.length === 1 && Math.abs(numQ - parts[0]) <= 5) return true;
+      if (!isNaN(numQ) && numQ > 20 && numQ < 400) {
+        if (isBpmInRange(numQ, g.bpm_range, 4)) return true;
       }
       // Year match
       if (!isNaN(numQ) && g.origin_year.includes(q)) return true;
