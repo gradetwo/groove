@@ -11,50 +11,48 @@
 
 ### 音频正确性
 
-- [ ] **P0-01** 修复 Euclidean Bjorklund 算法 ｜ 0.5d ｜ `src/audio/Euclidean.ts:23-45`
+- [x] **P0-01** 修复 Euclidean Bjorklund 算法 ｜ 0.5d ｜ `src/audio/Euclidean.ts:23-45`
   验收：`generateEuclidean(8,3) === [1,0,0,1,0,0,1,0]`、`(16,4)`、`(5,2)`、8 个预置节奏全部精确断言；`audio.test.ts` 从"只数 1 的个数"升级为逐元素比较。
-  （根因：用 `lastSeq.length` 判 remainder，初始序列长度恒为 1 → `headCount=0` 立即 break。）
 
-- [ ] **P0-02** master 总线加入限幅与安全上限 ｜ 0.5d ｜ `src/audio/AudioEngine.ts:100,217`
+- [x] **P0-02** master 总线加入限幅与安全上限 ｜ 0.5d ｜ `src/audio/AudioEngine.ts:100,217`
   验收：`track gain → bus → DynamicsCompressor → master gain → analyser → destination`；`setMasterVolume` 上限收敛为 1.0；OfflineAudioContext 渲染 8 轨齐响，峰值 ≤ 1.0 无削波。
-  依赖：无。
 
-- [ ] **P0-03** stop/pause 时 panic（取消已排程 voice） ｜ 1d ｜ `src/audio/AudioEngine.ts:253-263`、`ChordAudioEngine.ts:387-398,462-468`
+- [x] **P0-03** stop/pause 时 panic（取消已排程 voice） ｜ 1d ｜ `src/audio/AudioEngine.ts:253-263`、`ChordAudioEngine.ts:387-398,462-468`
   验收：建立 voice registry；`stop()` 对所有活跃源做 5ms gain ramp + `source.stop()`；停止后 50ms 内无输出；ChordAudioEngine ballad 预排音符可被取消。
 
 - [ ] **P0-04** 音频时钟单一来源 + 移除伪造 API ｜ 0.5d ｜ `AudioEngine.ts:285-290,31-39`、`audioClockWorker.ts:76-126`、`AudioWorkerBridge.ts:59,84`
   验收：删除与 worker 同频的 `setInterval` 与从未调用的 `CALCULATE_TRANSPORT_STEP`；删除 `ToneTransport` 伪造对象；worker 的 tick 时间戳被使用。
 
-- [ ] **P0-05** AudioContext 生命周期与 iOS 解锁加固 ｜ 0.5d ｜ `AudioEngine.ts:92-131,751-757`、`ChordAudioEngine.ts:51-57,63,322,412`
+- [x] **P0-05** AudioContext 生命周期与 iOS 解锁加固 ｜ 0.5d ｜ `AudioEngine.ts:92-131,751-757`、`ChordAudioEngine.ts:51-57,63,322,412`
   验收：创建包 try/catch；所有 `resume()` `await` + catch；`destroy()` 移除 window unlock 监听、置空引用、`await close()`。
 
 ### Studio 正确性
 
-- [ ] **P0-06** 修复 App↔Studio 定时器泄漏 ｜ 0.25d ｜ `src/App.tsx:78-86`、`src/views/StudioView.tsx:363-365`
+- [x] **P0-06** 修复 App↔Studio 定时器泄漏 ｜ 0.25d ｜ `src/App.tsx:78-86`、`src/views/StudioView.tsx:363-365`
   验收：`onAudioEngineReady` 的返回值被 effect 消费；进出 studio 10 次，`setInterval` 活跃数不增长；不再对已销毁引擎 setState。
 
-- [ ] **P0-07** 键盘快捷键修正 ｜ 0.5d ｜ `src/views/StudioView.tsx:562-615`
+- [x] **P0-07** 键盘快捷键修正 ｜ 0.5d ｜ `src/views/StudioView.tsx:562-615` (v1.4.2)
   验收：`Space/V/E` 在 `input/textarea/select/button/[contenteditable]` 聚焦时不拦截；`onKeyDown` 依赖数组收为 `[]`（回调 ref 化），编辑步进时不再 remove/add 监听。
 
-- [ ] **P0-08** 撤销/重做覆盖与快照语义 ｜ 1d ｜ `StudioView.tsx:299-333,689,919,1006,1353,1381,1398,1422`
+- [x] **P0-08** 撤销/重做覆盖与快照语义 ｜ 1d ｜ `StudioView.tsx:299-333,689,919,1006,1353,1381,1398,1422` (v1.2.0)
   验收：抽 `commitPattern(mutator,{snapshot})` 单一入口；力度绘制、P-Lock、Euclidean、轨音量、polymeter、M/S、拍号/精度/步长全部入栈；快照包含 `bpm/swing/meter/resolution/mutes/solos`；撤销后引擎 `trackStates` 同步。
 
-- [ ] **P0-09** Polymeter 播放头对齐 ｜ 0.25d ｜ `StudioView.tsx:2519`、`VelocityLane.tsx:237`
+- [x] **P0-09** Polymeter 播放头对齐 ｜ 0.25d ｜ `StudioView.tsx:2519`、`VelocityLane.tsx:237`
   验收：高亮公式改为 `currentStep % (trackLength ?? stepCount) === stepIdx`；L:5/L:7 轨道灯板与听感一致。
 
-- [ ] **P0-10** 拍号与步数计算修正 ｜ 0.5d ｜ `StudioView.tsx:1083-1110,1454-1471`
+- [x] **P0-10** 拍号与步数计算修正 ｜ 0.5d ｜ `StudioView.tsx:1083-1110,1454-1471` (v1.3.5)
   验收：删除 `:1095` 死分支；`stepsPerBar = groupSize × (16 / denominator)`；3/8 在 1/16 下 = 6 步/小节；5/4、7/8 下 `smartFill` 的 backbeat 落点正确。
 
-- [ ] **P0-11** 小节跳转 select 独立状态 ｜ 0.25d ｜ `StudioView.tsx:1990-1991`
+- [x] **P0-11** 小节跳转 select 独立状态 ｜ 0.25d ｜ `StudioView.tsx:1990-1991` (v1.3.7)
   验收：播放中不再被 `currentStep` 覆盖；暂停时显示当前小节而非恒为 Bar 1。
 
-- [ ] **P0-12** 计时器与卸载清理 ｜ 0.5d ｜ `StudioView.tsx:283-286,1277,1338,630-640`, `VelocityLane.tsx`
+- [x] **P0-12** 计时器与卸载清理 ｜ 0.5d ｜ `StudioView.tsx:283-286,1277,1338,630-640`, `VelocityLane.tsx` (v1.3.7)
   验收：`showToast` 保存并清理旧 timer；`longPressTimerRef` 卸载时 clear；`setTimeout(...,60)` 全部可取消。
 
 - [ ] **P0-13** 触摸双触发去重 ｜ 0.5d ｜ `StudioView.tsx:2529-2532`、`VelocityLane.tsx:247-249`
   验收：cell 与力度条只保留 Pointer Events；触摸一次只写一次值、只触发一次触感。
 
-- [ ] **P0-14** 死代码清理 ｜ 0.5d ｜ `StudioView.tsx:1-34`、`components/Breadcrumbs.tsx`、`GalaxyView.tsx` `searchQuery`、`SoundBankManager.ts:82-110`、`ChordProgressionsView.tsx:799,816`
+- [x] **P0-14** 死代码清理 ｜ 0.5d ｜ `StudioView.tsx:1-34`、`components/Breadcrumbs.tsx`、`GalaxyView.tsx` `searchQuery`、`SoundBankManager.ts:82-110`、`ChordProgressionsView.tsx:799,816` (v1.4.2)
   验收：删除 14 个未使用 lucide 导入、恒 null 的 `Breadcrumbs`、死 state、无调用者的采样合成、伪造的 `ToneTransport`；`duration || 4` 改为 `?? 4`。
 
 ### 全局正确性
@@ -62,43 +60,43 @@
 - [ ] **P0-15** i18n 缺失 key 补全 + `t()` 开发期警告 ｜ 0.5d ｜ `StudioView.tsx:1022,1641-1806,2131`、`i18n/LanguageContext.tsx:184-188`
   验收：`era/place/range/keyLabel/time/dna/harm/tips/refs/compare/export` 全部补齐；`t()` 未命中时 `console.warn`（仅 dev）；界面无字面量 key 渲染。
 
-- [ ] **P0-16** `parseBpmRange()` 抽离并修复解析 ｜ 0.5d ｜ `GlobalSearch.tsx:69,175`、`CompareView.tsx:203-206`、新增 `src/utils/bpm.ts`
+- [x] **P0-16** `parseBpmRange()` 抽离并修复解析 ｜ 0.5d ｜ `GlobalSearch.tsx:69,175`、`CompareView.tsx:203-206`、新增 `src/utils/bpm.ts`
   验收：支持 en-dash `–`/连字符/单值/非数值特例（ambient、free-jazz、progressive-rock、math-rock、grime）；BPM 数字搜索恢复；`120–128 BPM` 正确渲染；相似度 BPM 判定恢复；≥8 条单测。
 
 - [x] **P0-17** 分享链接白名单与上限校验 ｜ 0.5d ｜ `src/audio/SequencerUrlShare.ts:82-135` (v1.3.8)
   验收：tracks ≤16、steps 长度 ∈{16,24,32}、bpm 20–300、swing 0–100、step ∈0..3、totalSteps ≤64；恶意 payload（超长 `t`、`stLen=1e9`、`step=-5`）全部被拒；`catch` 不再返回空字符串导致 `?groove=` 空链接。
 
-- [ ] **P0-18** ErrorBoundary 全站接入 ｜ 0.5d ｜ 新增 `src/app/ErrorBoundary.tsx`、`src/main.tsx`
-  验收：App 级 + 每个 lazy 视图级边界；人为抛错显示可恢复错误页（重试 + 返回工作台）；GalaxyView WebGL 不可用时降级到列表视图。
+- [x] **P0-18** ErrorBoundary 全站接入 ｜ 0.5d ｜ 新增 `src/components/ErrorBoundary.tsx`、`src/main.tsx`、`src/App.tsx` (v1.4.2)
+  验收：App 级 + 每个 lazy 视图级边界；人为抛错显示可恢复错误页（重试 + 返回工作台）；GalaxyView WebGL 不可用时降级到时间线/工作台引导视图。
 
-- [ ] **P0-19** ChallengeView 引擎泄漏与难度双触发 ｜ 0.5d ｜ `ChallengeView.tsx:104-131,165-168`
+- [x] **P0-19** ChallengeView 引擎泄漏与难度双触发 ｜ 0.5d ｜ `ChallengeView.tsx:104-131,165-168` (v1.3.2)
   验收：难度切换 10 次后仅存在 1 个 AudioContext；旧引擎必 destroy。
 
-- [ ] **P0-20** ChallengeView 泄题修复 ｜ 0.5d ｜ `ChallengeView.tsx:270-274,332-333`
+- [x] **P0-20** ChallengeView 泄题修复 ｜ 0.5d ｜ `ChallengeView.tsx:270-274,332-333` (v1.3.2)
   验收：默认隐藏 TEMPO CLUE 与选项的 category/BPM，答后解锁；盲听有效性恢复。
 
-- [ ] **P0-21** ChallengeView 手势启动播放 ｜ 0.5d ｜ `ChallengeView.tsx:118,124-127`
+- [x] **P0-21** ChallengeView 手势启动播放 ｜ 0.5d ｜ `ChallengeView.tsx:118,124-127` (v1.3.2)
   验收：iOS Safari 首题有声；未手势前不调用 `play()`；`isPlaying` 与实际一致。
 
-- [ ] **P0-22** 和弦 → 工作台交接实现 ｜ 1d ｜ `App.tsx:137-139`、`ChordProgressionsView.tsx:50,54,205-231`、`StudioView.tsx:177-191`
+- [x] **P0-22** 和弦 → 工作台交接实现 ｜ 1d ｜ `App.tsx:137-139`、`ChordProgressionsView.tsx:50,54,205-231`、`StudioView.tsx:177-191`
   验收：`pendingChords` 状态提升；StudioView 接收 `initialChords` 并写入 chord 轨；类型由 `string[]` 改为 `ChordDefinition[]`；从和弦页点击"载入工作台"后能在 Studio 听到该走向。
 
-- [ ] **P0-23** Cmd/Ctrl+K 全局搜索快捷键 ｜ 0.25d ｜ `GlobalSearch.tsx:33-46`、`App.tsx`
+- [x] **P0-23** Cmd/Ctrl+K 全局搜索快捷键 ｜ 0.25d ｜ `GlobalSearch.tsx:33-46`、`App.tsx` (v1.3.1)
   验收：任意页面按 `⌘/Ctrl+K` 打开搜索，`Esc` 关闭；Header 提示按平台显示 `⌘K` / `Ctrl K`。
 
-- [ ] **P0-24** 水平时间线分桶修复 ｜ 0.25d ｜ `HorizontalTimelineView.tsx:408`
+- [x] **P0-24** 水平时间线分桶修复 ｜ 0.25d ｜ `HorizontalTimelineView.tsx:408`
   验收：区间按 `[start, end)`；1900–1950 曲风不再重复渲染；补 1950s 列。
 
-- [ ] **P0-25** Galaxy 投影/拾取坐标系修正 ｜ 0.5d ｜ `GalaxyView.tsx:329-335,966-975`
+- [x] **P0-25** Galaxy 投影/拾取坐标系修正 ｜ 0.5d ｜ `GalaxyView.tsx:329-335,966-975` (v1.1.1)
   验收：`project()` 以 `canvas.getBoundingClientRect()` 为基准；标签与星点像素对齐；滚动后不产生偏移。
 
-- [ ] **P0-26** 详情页 BPM 状态与输入校验 ｜ 0.5d ｜ `GenreDetailView.tsx:78,82-98,293-300`
+- [x] **P0-26** 详情页 BPM 状态与输入校验 ｜ 0.5d ｜ `GenreDetailView.tsx:78,82-98,293-300` (v1.3.1)
   验收：BPM 显示值随 genre 重置并与引擎一致；空输入不提交、不显示空白与 40 不一致；非法输入有行内提示。
 
 - [ ] **P0-27** 文档与实现对齐 ｜ 0.25d ｜ `DEPLOY.md`、`prd.md`
   验收：修正"12 项测试"→实际数量；标注 PWA 现状（见 D1 决策后更新）。
 
-- [ ] **P0-28** 最小 CI 骨架 ｜ 0.5d ｜ 新增 `.github/workflows/ci.yml`、`package.json` scripts
+- [x] **P0-28** 最小 CI 骨架 ｜ 0.5d ｜ 新增 `.github/workflows/ci.yml`、`package.json` scripts (v1.4.2)
   验收：`typecheck` + `test` 两个必过检查；`lint` 待 Phase 1 接入。
 
 **Phase 0 出口**：P0-01 ~ P0-28 全部完成；`npm test` ≥30 用例；确认无白屏路径。
