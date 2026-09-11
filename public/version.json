@@ -1,7 +1,30 @@
 {
-  "version": "1.4.4",
+  "version": "1.4.5",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.4.5",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.4.5 核心导航信息架构重组（五大核心支柱）与无障碍探索菜单",
+        "en": "v1.4.5 Navigation IA Reorganization (5 Core Pillars) & Accessible Explore Menu"
+      },
+      "highlights": [
+        {
+          "zh": "导航 IA 体系重构（P1-09）：将顶部原本臃肿的 7 个平级标签聚合为【工作台 / 和弦 / 探索▾ / 对比 / 挑战】五大核心业务支柱，彻底消除中低分辨率屏幕下顶栏工具拥挤错位缺陷",
+          "en": "Navigation IA overhaul: consolidated 7 cluttered tabs into 5 core pillars [Studio / Chords / Explore▾ / Compare / Challenge], preventing tool bar congestion on medium displays"
+        },
+        {
+          "zh": "探索多维子视图交互菜单：集成「3D 星系图谱」、「年代编年演变轴」与「流派故事脉络」三维探索体系，支持点击展开、失焦外部点击关闭、Esc 全局键退出与状态高亮回显",
+          "en": "Multi-dimensional exploration dropdown: encapsulates Galaxy 3D, Timeline Chronology, and Storylines with outside click dismissal, Escape hotkey, and active view indicator"
+        },
+        {
+          "zh": "移动端抽屉层级同步与无障碍规范增强：移动端抽屉同步采用探索分组层级与左侧引导线；全站 Logo 升级为语义化 Button，主菜单与探索抽屉全面注入 aria-expanded 与 aria-haspopup 规范",
+          "en": "Mobile navigation sync & accessibility upgrades: aligned mobile drawer with indented explore group, upgraded Logo to semantic button, and added full ARIA expanded/haspopup attributes"
+        }
+      ]
+    },
     {
       "version": "1.4.4",
       "date": "2026-09-11",

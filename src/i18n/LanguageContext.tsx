@@ -15,6 +15,7 @@ export const DICTIONARY: Translations = {
   app_subtitle: { en: "Interactive Music Genre Learning & Sequencer", zh: "沉浸式交互曲风百科与步进音序器" },
   nav_studio: { en: "Studio", zh: "律动工作台" },
   nav_chords: { en: "Chords", zh: "和弦走向" },
+  nav_explore: { en: "Explore", zh: "探索" },
   nav_galaxy: { en: "Galaxy", zh: "星系云团" },
   nav_timeline_h: { en: "Timeline H", zh: "水平演变轴" },
   nav_timeline_v: { en: "Timeline V", zh: "垂直时间轴" },

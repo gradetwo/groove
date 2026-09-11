@@ -6,13 +6,14 @@ import {
   Columns, 
   HelpCircle, 
   Search, 
-  Globe, 
   Shuffle, 
   Menu, 
   X,
   AlignVerticalJustifyStart,
   Music2,
-  History
+  History,
+  Compass,
+  ChevronDown
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { ALL_GENRES } from "../data/genres";
@@ -50,8 +51,31 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t, language, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const exploreRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
+  // Close explore dropdown on click outside or Escape
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exploreRef.current && !exploreRef.current.contains(e.target as Node)) {
+        setExploreOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setExploreOpen(false);
+        setMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Live frequency visualizer
   useEffect(() => {
@@ -87,15 +111,13 @@ export const Header: React.FC<HeaderProps> = ({
     return () => cancelAnimationFrame(animationFrameId);
   }, [analyser, isPlaying]);
 
-  const navItems: Array<{ tab: NavTab; labelKey: string; icon: React.ReactNode }> = [
-    { tab: "studio", labelKey: "nav_studio", icon: <Sliders className="w-3.5 h-3.5" /> },
-    { tab: "chords", labelKey: "nav_chords", icon: <Music2 className="w-3.5 h-3.5" /> },
-    { tab: "galaxy", labelKey: "nav_galaxy", icon: <Orbit className="w-3.5 h-3.5" /> },
-    { tab: "horizontal-timeline", labelKey: "nav_timeline_h", icon: <Clock className="w-3.5 h-3.5" /> },
-    { tab: "vertical-timeline", labelKey: "nav_timeline_v", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
-    { tab: "compare", labelKey: "nav_compare", icon: <Columns className="w-3.5 h-3.5" /> },
-    { tab: "challenge", labelKey: "nav_challenge", icon: <HelpCircle className="w-3.5 h-3.5" /> },
+  const exploreItems: Array<{ tab: NavTab; labelKey: string; descZh: string; descEn: string; icon: React.ReactNode }> = [
+    { tab: "galaxy", labelKey: "nav_galaxy", descZh: "3D 星系图谱", descEn: "3D Cosmic Map", icon: <Orbit className="w-3.5 h-3.5" /> },
+    { tab: "horizontal-timeline", labelKey: "nav_timeline_h", descZh: "年代编年演变轴", descEn: "Chronology", icon: <Clock className="w-3.5 h-3.5" /> },
+    { tab: "vertical-timeline", labelKey: "nav_timeline_v", descZh: "流派故事脉络", descEn: "Storylines", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
   ];
+
+  const isExploreActive = ["galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
 
   const handleRandom = () => {
     const randomIndex = Math.floor(Math.random() * ALL_GENRES.length);
@@ -107,38 +129,130 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 w-full bg-[#0a0b0d]/95 backdrop-blur-md border-b border-[#23262d] px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
       {/* Brand / Logo */}
       <div className="flex items-center gap-4">
-        <div 
+        <button 
           onClick={() => onSelectTab("studio")} 
-          className="flex items-center gap-2.5 cursor-pointer select-none group"
+          aria-label="GROOVE LAB Home"
+          className="flex items-center gap-2.5 cursor-pointer select-none group border-0 bg-transparent p-0 text-left"
         >
           {/* Glowing amber dot */}
           <span className="w-2.5 h-2.5 rounded-full bg-[#f5b73d] shadow-[0_0_10px_#f5b73d] shrink-0 group-hover:scale-125 transition-transform" />
           <span className="font-[Space_Grotesk] font-bold text-base sm:text-lg tracking-[0.06em] text-[#e9e7e0]">
             GROOVE&nbsp;LAB
           </span>
-        </div>
+        </button>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="hidden md:flex items-center gap-1.5">
-        {navItems.map((item) => {
-          const isActive = currentTab === item.tab;
-          return (
-            <button
-              key={item.tab}
-              onClick={() => onSelectTab(item.tab)}
-              title={t(item.labelKey)}
-              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
-                isActive
-                  ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
-                  : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
-              }`}
-            >
-              {item.icon}
-              <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t(item.labelKey)}</span>
-            </button>
-          );
-        })}
+      {/* Navigation Links: Reorganized IA (P1-09) */}
+      <nav className="hidden md:flex items-center gap-1.5" aria-label="Main Navigation">
+        {/* 1. Studio */}
+        <button
+          onClick={() => onSelectTab("studio")}
+          title={t("nav_studio")}
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+            currentTab === "studio"
+              ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+              : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
+          }`}
+        >
+          <Sliders className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_studio")}</span>
+        </button>
+
+        {/* 2. Chords */}
+        <button
+          onClick={() => onSelectTab("chords")}
+          title={t("nav_chords")}
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+            currentTab === "chords"
+              ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+              : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
+          }`}
+        >
+          <Music2 className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_chords")}</span>
+        </button>
+
+        {/* 3. Explore Dropdown (P1-09 IA Reorganization) */}
+        <div className="relative" ref={exploreRef}>
+          <button
+            onClick={() => setExploreOpen(!exploreOpen)}
+            aria-expanded={exploreOpen}
+            aria-haspopup="true"
+            title={t("nav_explore")}
+            className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+              isExploreActive
+                ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+                : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_explore")}</span>
+            <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${exploreOpen ? "rotate-180 text-[#f5b73d]" : "text-[#8b8f99]"}`} />
+          </button>
+
+          {exploreOpen && (
+            <div className="absolute top-full left-0 mt-1.5 w-52 bg-[#0d0e12]/98 backdrop-blur-md border border-[#23262d] rounded-xl p-1.5 shadow-2xl z-50 animate-fade-in">
+              <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-[#5a5e68] select-none">
+                {language === "zh" ? "曲风探索视图" : "Exploration Views"}
+              </div>
+              <div className="space-y-0.5 mt-0.5">
+                {exploreItems.map((item) => {
+                  const isItemActive = currentTab === item.tab;
+                  return (
+                    <button
+                      key={item.tab}
+                      onClick={() => {
+                        onSelectTab(item.tab);
+                        setExploreOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors text-left ${
+                        isItemActive
+                          ? "bg-[#f5b73d]/15 text-[#f5b73d] font-medium"
+                          : "text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#181a22]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {item.icon}
+                        <span className="font-medium">{t(item.labelKey)}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#5a5e68]">
+                        {language === "zh" ? item.descZh : item.descEn}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Compare */}
+        <button
+          onClick={() => onSelectTab("compare")}
+          title={t("nav_compare")}
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+            currentTab === "compare"
+              ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+              : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
+          }`}
+        >
+          <Columns className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_compare")}</span>
+        </button>
+
+        {/* 5. Challenge */}
+        <button
+          onClick={() => onSelectTab("challenge")}
+          title={t("nav_challenge")}
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+            currentTab === "challenge"
+              ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+              : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
+          }`}
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_challenge")}</span>
+        </button>
       </nav>
 
       {/* Right Tools: Spectrum, Search, Dice, Lang, Mobile Menu */}
@@ -194,6 +308,8 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Mobile menu toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileMenuOpen}
           className="md:hidden p-1.5 border border-[#23262d] rounded-lg text-[#8b8f99] hover:text-[#e9e7e0] bg-[#0d0e12]"
         >
           {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -202,27 +318,103 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0d0e12] border-b border-[#23262d] p-3 space-y-1.5 shadow-2xl">
-          {navItems.map((item) => {
-            const isActive = currentTab === item.tab;
-            return (
-              <button
-                key={item.tab}
-                onClick={() => {
-                  onSelectTab(item.tab);
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
-                  isActive
-                    ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10"
-                    : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#121317]"
-                }`}
-              >
-                {item.icon}
-                <span>{t(item.labelKey)}</span>
-              </button>
-            );
-          })}
+        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0d0e12]/98 backdrop-blur-lg border-b border-[#23262d] p-3 space-y-1.5 shadow-2xl max-h-[85vh] overflow-y-auto">
+          {/* Primary Tabs */}
+          <button
+            onClick={() => {
+              onSelectTab("studio");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+              currentTab === "studio"
+                ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10"
+                : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#121317]"
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>{t("nav_studio")}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onSelectTab("chords");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+              currentTab === "chords"
+                ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10"
+                : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#121317]"
+            }`}
+          >
+            <Music2 className="w-3.5 h-3.5" />
+            <span>{t("nav_chords")}</span>
+          </button>
+
+          {/* Explore Subgroup */}
+          <div className="pt-2 pb-1">
+            <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-[#5a5e68] flex items-center gap-1.5">
+              <Compass className="w-3 h-3 text-[#f5b73d]" />
+              <span>{t("nav_explore")}</span>
+            </div>
+          </div>
+          <div className="pl-2 space-y-1 border-l border-[#23262d] ml-2">
+            {exploreItems.map((item) => {
+              const isSubActive = currentTab === item.tab;
+              return (
+                <button
+                  key={item.tab}
+                  onClick={() => {
+                    onSelectTab(item.tab);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                    isSubActive
+                      ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10"
+                      : "border-transparent text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#121317]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {item.icon}
+                    <span>{t(item.labelKey)}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-[#5a5e68]">
+                    {language === "zh" ? item.descZh : item.descEn}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Compare & Challenge */}
+          <button
+            onClick={() => {
+              onSelectTab("compare");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+              currentTab === "compare"
+                ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10"
+                : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#121317]"
+            }`}
+          >
+            <Columns className="w-3.5 h-3.5" />
+            <span>{t("nav_compare")}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onSelectTab("challenge");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+              currentTab === "challenge"
+                ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10"
+                : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:bg-[#121317]"
+            }`}
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>{t("nav_challenge")}</span>
+          </button>
 
           {onOpenUpdates && (
             <button
@@ -242,3 +434,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

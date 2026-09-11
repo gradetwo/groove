@@ -194,6 +194,21 @@ async function runTestOnTarget(target, baseUrl) {
       await page.waitForTimeout(150);
     }
 
+    // 2.2 Navigation IA Check (Explore dropdown test on desktop/tablet)
+    if (!target.isMobile) {
+      const exploreBtn = await page.$("button[title*='探索'], button[title*='Explore']");
+      if (exploreBtn) {
+        await exploreBtn.click();
+        await page.waitForTimeout(150);
+        const dropdown = await page.$("div:has-text('曲风探索视图'), div:has-text('Exploration Views')");
+        if (!dropdown) {
+          throw new Error("Explore dropdown did not render upon click");
+        }
+        await exploreBtn.click(); // Close dropdown
+        await page.waitForTimeout(100);
+      }
+    }
+
     // 3. Chord Studio View Check
     await page.goto(`${baseUrl}/?tab=chords`, { waitUntil: "networkidle" });
     await page.waitForTimeout(400);
