@@ -1,7 +1,26 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.2",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.3.2 听力大师音频引擎生命周期修复与盲听防泄题保护",
+        "en": "v1.3.2 Ear Challenge Engine Lifecycle Fix & Blind Test Leak Guard"
+      },
+      "highlights": [
+        {
+          "zh": "听力挑战音频引擎生命周期修复（P0-19）：消除难度切换时的双触发问题，切换难度与卸载时深度回收旧 AudioContext 实例，彻底杜绝实例泄漏",
+          "en": "Challenge audio engine lifecycle guard: eliminated difficulty double-trigger, added strict stop() & destroy() audio context cleanup"
+        },
+        {
+          "zh": "盲听测试防泄题保护（P0-20）：答题前隐藏速度线索（TEMPO CLUE），杜绝利用 BPM 与分类提早猜中答案，恢复 100% 盲听有效性",
+          "en": "Blind test spoiler protection: hidden tempo clue during quiz until answered, ensuring 100% blind listening validity"
+        }
+      ]
+    },
     {
       "version": "1.3.1",
       "date": "2026-09-11",

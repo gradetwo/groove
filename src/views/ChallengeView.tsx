@@ -104,6 +104,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   // Start new round
   const startNewQuestion = (diff = difficulty, autoPlay = hasStarted) => {
     if (engineRef.current) {
+      engineRef.current.stop();
       engineRef.current.destroy();
       engineRef.current = null;
     }
@@ -113,7 +114,9 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     setIsAnswered(false);
 
     // Prepare audio engine
-    const engine = new AudioEngine();
+    const engine = new AudioEngine({
+      onStop: () => setIsPlaying(false),
+    });
     engine.setPattern(q.correctGenre.sequencer_pattern);
     engine.setBpm(q.correctGenre.default_bpm || 120);
     engineRef.current = engine;
@@ -126,12 +129,14 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     }
   };
 
-  // Initialize first question on mount
+  // Initialize first question on mount or when difficulty changes
   useEffect(() => {
     startNewQuestion(difficulty, false);
     return () => {
       if (engineRef.current) {
+        engineRef.current.stop();
         engineRef.current.destroy();
+        engineRef.current = null;
       }
     };
   }, [difficulty]);
@@ -175,8 +180,8 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   };
 
   const handleDifficultyChange = (newDiff: Difficulty) => {
+    if (newDiff === difficulty) return;
     setDifficulty(newDiff);
-    startNewQuestion(newDiff);
   };
 
   const rankTitle = () => {
@@ -281,13 +286,13 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
               : (language === "zh" ? "已暂停，点击播放继续试听" : "Paused. Click play to resume listening")}
           </p>
 
-          {/* Clue: Tempo in easy mode or after answered */}
+          {/* Clue: Tempo hidden until answered to prevent blind test leaks (P0-20) */}
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#0d0e12] border border-[#23262d] text-xs text-[#8b8f99] font-mono">
-            <span>TEMPO:</span>
-            <span className="text-[#e9e7e0] font-bold">
-              {isAnswered || difficulty === "easy"
-                ? `${question.correctGenre.default_bpm} BPM`
-                : (language === "zh" ? "答题后揭晓" : "Hidden during quiz")}
+            <span>TEMPO CLUE:</span>
+            <span className={isAnswered ? "text-[#f5b73d] font-bold" : "text-[#5a5e68]"}>
+              {isAnswered
+                ? `${question.correctGenre.default_bpm} BPM (${question.correctGenre.bpm_range})`
+                : (language === "zh" ? "答题后揭晓 (盲听防泄)" : "Hidden during quiz")}
             </span>
           </div>
 
