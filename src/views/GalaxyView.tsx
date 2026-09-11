@@ -14,7 +14,8 @@ import {
   Compass, 
   Search, 
   Grid, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  RefreshCw 
 } from "lucide-react";
 import { Genre } from "../types/genre";
 import { 
@@ -252,6 +253,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   const [subgenreFilter, setSubgenreFilter] = useState("");
   const [viewMode, setViewMode] = useState<"rail" | "grid">("rail");
   const [isSubgenresPanelOpen, setIsSubgenresPanelOpen] = useState<boolean>(false);
+  const [webglError, setWebglError] = useState<string | null>(null);
 
   // Timeline state
   const Y_MIN = 1850;
@@ -490,11 +492,37 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: false,
-      powerPreference: "high-performance",
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      const testCanvas = document.createElement("canvas");
+      const gl =
+        testCanvas.getContext("webgl2") ||
+        testCanvas.getContext("webgl") ||
+        testCanvas.getContext("experimental-webgl");
+      if (!gl) {
+        setWebglError(
+          language === "zh"
+            ? "当前浏览器或设备未开启 WebGL 3D 硬件加速"
+            : "WebGL 3D hardware acceleration is unavailable"
+        );
+        return;
+      }
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: false,
+        powerPreference: "high-performance",
+      });
+    } catch (err: any) {
+      console.error("[GalaxyView] Failed to initialize WebGLRenderer:", err);
+      setWebglError(
+        err?.message ||
+          (language === "zh"
+            ? "WebGL 3D 图形引擎初始化失败"
+            : "Failed to initialize WebGL 3D engine")
+      );
+      return;
+    }
+
     renderer.setClearColor(0x04060a, 1);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, 1, 1, 5000);
@@ -1450,6 +1478,66 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       flyTo(new THREE.Vector3(0, 0, 0), 720, 2.2);
     }
   };
+
+  if (webglError) {
+    return (
+      <div className="relative w-full h-[calc(100vh-64px)] bg-[#04060a] flex items-center justify-center p-6 text-center select-none">
+        <div className="max-w-md w-full rounded-2xl bg-[#121317] border border-cyan-500/30 p-8 shadow-2xl flex flex-col items-center">
+          <div className="w-14 h-14 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4 shadow-lg shadow-cyan-500/10 shrink-0">
+            <Compass className="w-7 h-7" />
+          </div>
+          <h2 className="text-base sm:text-lg font-bold text-[#e9e7e0] mb-2 font-mono">
+            {language === "zh" ? "WebGL 3D 星系视图不可用" : "WebGL 3D Galaxy Unavailable"}
+          </h2>
+          <p className="text-xs text-[#8b8f99] mb-6 leading-relaxed">
+            {webglError}
+            <br />
+            {language === "zh"
+              ? "您可以切换到年代演化时间线或编曲工作台继续探索全部 159 种曲风脉络。"
+              : "You can switch to the Timeline or Studio to explore all 159 music genres."}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2.5 w-full">
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("tab", "horizontal-timeline");
+                window.history.pushState({}, "", url.toString());
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+              className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl text-xs font-bold bg-[#f5b73d] hover:bg-[#ffc24b] text-zinc-950 transition-colors shadow-lg shadow-[#f5b73d]/10 whitespace-nowrap"
+            >
+              <Compass className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{language === "zh" ? "浏览时间线" : "Timeline"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("tab", "studio");
+                window.history.pushState({}, "", url.toString());
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+              className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl text-xs font-medium bg-[#1e222b] hover:bg-[#282d39] text-[#e9e7e0] border border-[#323846] transition-colors whitespace-nowrap"
+            >
+              <RotateCcw className="w-3.5 h-3.5 shrink-0 text-[#8b8f99]" />
+              <span className="truncate">{language === "zh" ? "返回工作台" : "Studio"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWebglError(null);
+              }}
+              className="flex-1 min-w-[95px] flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl text-xs font-medium bg-[#1a1c22] hover:bg-[#252834] text-[#8b8f99] hover:text-[#e9e7e0] border border-[#2d3139] transition-colors whitespace-nowrap"
+            >
+              <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{language === "zh" ? "重新检测" : "Retry"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="relative w-full h-[calc(100vh-64px)] overflow-hidden bg-[#04060a] select-none text-[#eae6dc]">

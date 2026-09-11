@@ -695,7 +695,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   <div className="flex items-center justify-between text-[10px] text-[#8b8f99] mb-2 font-mono">
                     <span>{language === "zh" ? `小节 ${idx + 1}` : `Bar ${idx + 1}`}</span>
                     <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5">
-                      {chord.duration || 4} {language === "zh" ? "拍" : "Beats"}
+                      {chord.duration ?? 4} {language === "zh" ? "拍" : "Beats"}
                     </span>
                   </div>
 
@@ -963,7 +963,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     type="button"
                     onClick={() => handleUpdateChord(selectedChordIdx, { duration: 4 })}
                     className={`py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      (currentChord.duration || 4) === 4
+                      (currentChord.duration ?? 4) === 4
                         ? "bg-[#4ad8c8] text-zinc-950 font-bold border-[#4ad8c8]"
                         : "bg-[#181c28] border-[#293042] text-[#eae6dc]"
                     }`}
@@ -974,7 +974,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     type="button"
                     onClick={() => handleUpdateChord(selectedChordIdx, { duration: 2 })}
                     className={`py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      (currentChord.duration || 4) === 2
+                      (currentChord.duration ?? 4) === 2
                         ? "bg-[#4ad8c8] text-zinc-950 font-bold border-[#4ad8c8]"
                         : "bg-[#181c28] border-[#293042] text-[#eae6dc]"
                     }`}

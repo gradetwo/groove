@@ -221,92 +221,153 @@ const MainApp: React.FC = () => {
             </div>
           }
         >
-          <ErrorBoundary>
             {currentTab === "studio" && (
-              <StudioView
-                selectedGenre={selectedGenre}
-                onSelectGenre={(g) => setSelectedGenre(g)}
-                onViewDetail={(g) => {
-                  setSelectedGenre(g);
-                  setCurrentTab("detail");
-                }}
-                onAddToCompare={handleAddToCompare}
-                onAudioEngineReady={handleEngineReady}
-                initialChords={initialChords}
-                onClearInitialChords={() => setInitialChords(null)}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "编曲工作台运行异常" : "Studio View Error"}
+                fallbackDescription={
+                  language === "zh"
+                    ? "音频引擎或音序矩阵遇到意外异常，您可以尝试重试。"
+                    : "Audio engine or sequencer matrix encountered an unexpected error."
+                }
+              >
+                <StudioView
+                  selectedGenre={selectedGenre}
+                  onSelectGenre={(g) => setSelectedGenre(g)}
+                  onViewDetail={(g) => {
+                    setSelectedGenre(g);
+                    setCurrentTab("detail");
+                  }}
+                  onAddToCompare={handleAddToCompare}
+                  onAudioEngineReady={handleEngineReady}
+                  initialChords={initialChords}
+                  onClearInitialChords={() => setInitialChords(null)}
+                />
+              </ErrorBoundary>
             )}
 
             {currentTab === "chords" && (
-              <ChordProgressionsView
-                onOpenStudioWithChords={(chords) => {
-                  setInitialChords(chords);
-                  setCurrentTab("studio");
-                }}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "和弦工作台运行异常" : "Chord Studio Error"}
+                fallbackDescription={
+                  language === "zh"
+                    ? "和弦走向或理论分析模块遇到异常，可重试或返回主工作台。"
+                    : "Chord progression analysis encountered an error. You can retry or return to Studio."
+                }
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+              >
+                <ChordProgressionsView
+                  onOpenStudioWithChords={(chords) => {
+                    setInitialChords(chords);
+                    setCurrentTab("studio");
+                  }}
+                />
+              </ErrorBoundary>
             )}
 
             {currentTab === "galaxy" && (
-              <GalaxyView
-                onSelectGenre={(g) => {
-                  setSelectedGenre(g);
-                  setCurrentTab("detail");
-                }}
-                onOpenStudio={handleOpenStudioWithGenre}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "3D 星系星云运行异常" : "3D Galaxy View Error"}
+                fallbackDescription={
+                  language === "zh"
+                    ? "WebGL 3D 渲染器或粒子系统遇到异常，可尝试重试或切换至时间线浏览曲风。"
+                    : "WebGL renderer encountered an issue. You can retry or switch to Timeline view."
+                }
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                onNavigateAlternative={() => handleSelectTab("horizontal-timeline")}
+                alternativeLabel={language === "zh" ? "浏览时间线" : "Timeline"}
+              >
+                <GalaxyView
+                  onSelectGenre={(g) => {
+                    setSelectedGenre(g);
+                    setCurrentTab("detail");
+                  }}
+                  onOpenStudio={handleOpenStudioWithGenre}
+                />
+              </ErrorBoundary>
             )}
 
             {currentTab === "horizontal-timeline" && (
-              <HorizontalTimelineView
-                onSelectGenre={(g) => {
-                  setSelectedGenre(g);
-                  setCurrentTab("detail");
-                }}
-                onOpenStudio={handleOpenStudioWithGenre}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "年代演化时间线异常" : "Timeline View Error"}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+              >
+                <HorizontalTimelineView
+                  onSelectGenre={(g) => {
+                    setSelectedGenre(g);
+                    setCurrentTab("detail");
+                  }}
+                  onOpenStudio={handleOpenStudioWithGenre}
+                />
+              </ErrorBoundary>
             )}
 
             {currentTab === "vertical-timeline" && (
-              <VerticalTimelineView
-                onSelectGenre={(g) => {
-                  setSelectedGenre(g);
-                  setCurrentTab("detail");
-                }}
-                onOpenStudio={handleOpenStudioWithGenre}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "纵向编年史异常" : "Vertical Timeline Error"}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+              >
+                <VerticalTimelineView
+                  onSelectGenre={(g) => {
+                    setSelectedGenre(g);
+                    setCurrentTab("detail");
+                  }}
+                  onOpenStudio={handleOpenStudioWithGenre}
+                />
+              </ErrorBoundary>
             )}
 
             {currentTab === "compare" && (
-              <CompareView
-                initialGenres={comparePool}
-                onSelectGenre={(g) => {
-                  setSelectedGenre(g);
-                  setCurrentTab("detail");
-                }}
-                onOpenStudio={handleOpenStudioWithGenre}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "双曲风对比工作台异常" : "Compare View Error"}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+              >
+                <CompareView
+                  initialGenres={comparePool}
+                  onSelectGenre={(g) => {
+                    setSelectedGenre(g);
+                    setCurrentTab("detail");
+                  }}
+                  onOpenStudio={handleOpenStudioWithGenre}
+                />
+              </ErrorBoundary>
             )}
 
             {currentTab === "challenge" && (
-              <ChallengeView
-                onSelectGenre={(g) => {
-                  setSelectedGenre(g);
-                  setCurrentTab("detail");
-                }}
-                onOpenStudio={handleOpenStudioWithGenre}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "听辨挑战模块异常" : "Challenge View Error"}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+              >
+                <ChallengeView
+                  onSelectGenre={(g) => {
+                    setSelectedGenre(g);
+                    setCurrentTab("detail");
+                  }}
+                  onOpenStudio={handleOpenStudioWithGenre}
+                />
+              </ErrorBoundary>
             )}
 
             {currentTab === "detail" && (
-              <GenreDetailView
-                genre={selectedGenre}
-                onBack={() => setCurrentTab("studio")}
-                onSelectGenre={(g) => setSelectedGenre(g)}
-                onOpenStudio={handleOpenStudioWithGenre}
-                onAddToCompare={handleAddToCompare}
-              />
+              <ErrorBoundary
+                fallbackTitle={language === "zh" ? "曲风档案详情异常" : "Genre Detail Error"}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+              >
+                <GenreDetailView
+                  genre={selectedGenre}
+                  onBack={() => setCurrentTab("studio")}
+                  onSelectGenre={(g) => setSelectedGenre(g)}
+                  onOpenStudio={handleOpenStudioWithGenre}
+                  onAddToCompare={handleAddToCompare}
+                />
+              </ErrorBoundary>
             )}
-          </ErrorBoundary>
         </React.Suspense>
       </main>
 

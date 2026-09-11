@@ -392,7 +392,7 @@ export class ChordAudioEngine {
     const t = timbre || this.timbre;
     const s = style || this.style;
     const notes = getChordMidiNotes(chord.root, chord.quality, 4, chord.inversion || 0, t);
-    const dur = durationSec || (60 / this.bpm) * (chord.duration || 4);
+    const dur = durationSec || (60 / this.bpm) * (chord.duration ?? 4);
     const now = this.ctx.currentTime;
 
     this.playVoicing(notes, now, dur, t, s, velocity);
@@ -494,7 +494,7 @@ export class ChordAudioEngine {
     if (!this.isPlaying || !this.ctx || this.activeChords.length === 0) return;
 
     const chord = this.activeChords[this.currentChordIdx];
-    const chordBeats = chord.duration || 4;
+    const chordBeats = chord.duration ?? 4;
     const beatDur = 60 / this.bpm;
     const chordDurationSec = chordBeats * beatDur;
 

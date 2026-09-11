@@ -19,8 +19,13 @@ if ("caches" in window) {
   });
 }
 
+import { ErrorBoundary } from "./components/ErrorBoundary";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary fallbackTitle="Groove Lab 系统初始化异常 / Application Init Error">
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );
+

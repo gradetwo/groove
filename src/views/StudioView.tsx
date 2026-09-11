@@ -693,6 +693,28 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   };
 
+  // Stable ref for keyboard shortcuts to avoid churn and listener cycling (P0-07)
+  const shortcutsRef = useRef({
+    stepContextMenu,
+    pitchPicker,
+    isEuclideanOpen,
+    isVelocityLaneOpen,
+    isEditorMaximized,
+    handleTogglePlay,
+    handleUndo,
+    handleRedo,
+  });
+  shortcutsRef.current = {
+    stepContextMenu,
+    pitchPicker,
+    isEuclideanOpen,
+    isVelocityLaneOpen,
+    isEditorMaximized,
+    handleTogglePlay,
+    handleUndo,
+    handleRedo,
+  };
+
   // Keyboard shortcuts: Space (play/pause), Esc (exit/close), V (Velocity), E (Euclidean)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -700,26 +722,39 @@ export const StudioView: React.FC<StudioViewProps> = ({
       if (
         target &&
         (target.tagName === "INPUT" ||
-         target.tagName === "TEXTAREA" ||
-         target.tagName === "SELECT" ||
-         target.isContentEditable ||
-         Boolean(target.closest("input, textarea, select, [contenteditable]")))
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.tagName === "BUTTON" ||
+          target.isContentEditable ||
+          Boolean(target.closest("input, textarea, select, button, [contenteditable]")))
       ) {
         return;
       }
+
+      const {
+        stepContextMenu: curContextMenu,
+        pitchPicker: curPitchPicker,
+        isEuclideanOpen: curEuclideanOpen,
+        isVelocityLaneOpen: curVelocityOpen,
+        isEditorMaximized: curMaximized,
+        handleTogglePlay: curTogglePlay,
+        handleUndo: curUndo,
+        handleRedo: curRedo,
+      } = shortcutsRef.current;
+
       if (e.code === "Space") {
         e.preventDefault();
-        handleTogglePlay();
+        curTogglePlay();
       } else if (e.key === "Escape") {
-        if (stepContextMenu) {
+        if (curContextMenu) {
           setStepContextMenu(null);
-        } else if (pitchPicker.isOpen) {
+        } else if (curPitchPicker.isOpen) {
           setPitchPicker((prev) => ({ ...prev, isOpen: false }));
-        } else if (isEuclideanOpen) {
+        } else if (curEuclideanOpen) {
           setIsEuclideanOpen(false);
-        } else if (isVelocityLaneOpen) {
+        } else if (curVelocityOpen) {
           setIsVelocityLaneOpen(false);
-        } else if (isEditorMaximized) {
+        } else if (curMaximized) {
           e.preventDefault();
           setIsEditorMaximized(false);
         }
@@ -736,19 +771,21 @@ export const StudioView: React.FC<StudioViewProps> = ({
         if (isCmdOrCtrl && (e.key === "z" || e.key === "Z")) {
           e.preventDefault();
           if (e.shiftKey) {
-            handleRedo();
+            curRedo();
           } else {
-            handleUndo();
+            curUndo();
           }
         } else if (isCmdOrCtrl && (e.key === "y" || e.key === "Y")) {
           e.preventDefault();
-          handleRedo();
+          curRedo();
         }
       }
     };
 
     const handleGlobalClick = () => {
-      setStepContextMenu(null);
+      if (shortcutsRef.current.stepContextMenu) {
+        setStepContextMenu(null);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -757,7 +794,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("click", handleGlobalClick);
     };
-  }, [isPlaying, isEditorMaximized, stepContextMenu, pitchPicker.isOpen, isEuclideanOpen, isVelocityLaneOpen, handleUndo, handleRedo]);
+  }, []);
 
   // Pointer drag painting (for mouse desktop)
   const handlePointerDown = useCallback((trackIdx: number, stepIdx: number, e: React.PointerEvent) => {

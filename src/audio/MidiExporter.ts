@@ -273,7 +273,7 @@ export function exportChordsMidi(
 
   let currentTick = 0;
   chords.forEach((chord) => {
-    const beats = chord.duration || 4;
+    const beats = chord.duration ?? 4;
     const durTicks = beats * TICKS_PER_QUARTER;
     const noteDur = Math.max(TICKS_PER_QUARTER, durTicks - 40);
 

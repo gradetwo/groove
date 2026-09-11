@@ -1,7 +1,34 @@
 {
-  "version": "1.4.1",
+  "version": "1.4.2",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.4.2",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.4.2 全站弹性容灾 ErrorBoundary 体系、WebGL 自动回退与快捷键防抖",
+        "en": "v1.4.2 Resilient ErrorBoundary Architecture, WebGL Auto-Fallback & Key Event Ref-Stabilization"
+      },
+      "highlights": [
+        {
+          "zh": "全站视图级隔离容灾：主程序入口与全部 8 个按需加载视图全面接入定制级 ErrorBoundary，单视图异常不影响全局，支持一键重试、切换备选视图与安全返回主工作台",
+          "en": "Per-view ErrorBoundary resilience: root app and all 8 lazy views wrapped in tailored fault boundaries with instant retry, alternate view navigation, and safe return to Studio"
+        },
+        {
+          "zh": "Galaxy 3D WebGL 硬件加速自动回退系统：启动前主动校验 WebGL/WebGL2 运行环境，在不支持硬件加速或驱动受限环境下平滑降级为引导界面，提供时间线与工作台一键快捷跳转，彻底告别白屏崩溃",
+          "en": "Galaxy WebGL auto-fallback system: proactively verifies 3D capabilities before scene init; gracefully falls back to guidance view with one-click jump to Timeline or Studio when WebGL is unavailable"
+        },
+        {
+          "zh": "工作台快捷键监听防抖与焦点保护：彻底解决 Space/V/E 与按钮或输入控件焦点冲突问题；重构快捷键监听器为 ref 驱动的单次装载模式，消除播放状态切换时的频繁事件解绑重绑",
+          "en": "Studio hotkey stabilization & focus protection: eliminated Space/V/E stealing from button/input focus; ref-stabilized keydown listener to eliminate re-binding cycles on playhead ticks"
+        },
+        {
+          "zh": "死代码清理与最小 CI 门禁集成：移除冗余空组件与死函数，和弦时长统一为严格空值合并运算符（?? 4），正式接入 GitHub Actions CI 自动化代码检查与单测门禁",
+          "en": "Dead code purge & CI pipeline: removed obsolete component stubs, unified chord duration with nullish coalescing (?? 4), and integrated GitHub Actions CI for typecheck and unit testing"
+        }
+      ]
+    },
     {
       "version": "1.4.1",
       "date": "2026-09-11",
