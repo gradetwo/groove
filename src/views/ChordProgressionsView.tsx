@@ -571,13 +571,13 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             >
               {isPlaying && previewingProgId === null ? (
                 <>
-                  <Square className="w-4 h-4 fill-current" />
-                  <span>{language === "zh" ? "停止播放" : "Stop"}</span>
+                  <Square className="w-4 h-4 fill-current shrink-0" />
+                  <span className="whitespace-nowrap">{language === "zh" ? "停止播放" : "Stop"}</span>
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 fill-current" />
-                  <span>{language === "zh" ? "循环播放进行" : "Play Progression"}</span>
+                  <Play className="w-4 h-4 fill-current shrink-0" />
+                  <span className="whitespace-nowrap">{language === "zh" ? "循环播放进行" : "Play"}</span>
                 </>
               )}
             </button>
@@ -586,7 +586,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <button
               type="button"
               onClick={() => setIsLooping(!isLooping)}
-              className={`p-2 rounded-xl border text-xs transition-colors ${
+              className={`p-2 rounded-xl border text-xs transition-colors shrink-0 ${
                 isLooping 
                   ? "bg-[#4ad8c8]/20 border-[#4ad8c8] text-[#4ad8c8]" 
                   : "bg-[#181d28] border-[#2b3242] text-[#8b8f99]"
@@ -597,7 +597,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             </button>
 
             {/* BPM Slider */}
-            <div className="flex items-center gap-2 bg-[#141824] px-3 py-1.5 rounded-xl border border-[#232a3b]">
+            <div className="flex items-center gap-2 bg-[#141824] px-3 py-1.5 rounded-xl border border-[#232a3b] shrink-0">
               <span className="text-[10px] text-[#8b8f99]">BPM</span>
               <input
                 type="range"
@@ -614,21 +614,22 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <button
               type="button"
               onClick={handleCopyText}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-[#d8b988] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-[#d8b988] transition-colors shrink-0"
+              title={language === "zh" ? "复制和弦走向文本" : "Copy chord progression"}
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? (language === "zh" ? "已复制" : "Copied!") : (language === "zh" ? "复制和弦" : "Copy Chords")}</span>
+              {copied ? <Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
+              <span className="whitespace-nowrap">{copied ? (language === "zh" ? "已复制" : "Copied") : (language === "zh" ? "复制和弦" : "Copy")}</span>
             </button>
 
             {/* Export MIDI */}
             <button
               type="button"
               onClick={handleExportMidi}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-white transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-white transition-colors shrink-0"
               title={language === "zh" ? "导出为标准 MIDI 文件" : "Export as Standard MIDI File"}
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>{language === "zh" ? "导出 MIDI" : "Export MIDI"}</span>
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span className="whitespace-nowrap">{language === "zh" ? "导出 MIDI" : "MIDI"}</span>
             </button>
 
             {/* Load to Studio */}
@@ -636,11 +637,11 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenStudioWithChords(customChords)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#f5b73d] hover:bg-[#ffc24b] text-zinc-950 font-bold text-xs transition-colors shadow-lg shadow-[#f5b73d]/10"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#f5b73d] hover:bg-[#ffc24b] text-zinc-950 font-bold text-xs transition-colors shadow-lg shadow-[#f5b73d]/10 shrink-0"
                 title={language === "zh" ? "将此和弦走向载入音序工作台" : "Load this chord progression into Sequencer Studio"}
               >
-                <Music className="w-3.5 h-3.5" />
-                <span>{language === "zh" ? "载入编曲工作台" : "Open in Studio"}</span>
+                <Music className="w-3.5 h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">{language === "zh" ? "载入编曲工作台" : "To Studio"}</span>
               </button>
             )}
           </div>

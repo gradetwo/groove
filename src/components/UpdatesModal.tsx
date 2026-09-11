@@ -37,7 +37,7 @@ export interface VersionInfo {
   changelog: ChangelogEntry[];
 }
 
-export const CURRENT_CLIENT_VERSION = "1.1.0";
+export const CURRENT_CLIENT_VERSION = "1.1.1";
 
 interface UpdatesModalProps {
   isOpen: boolean;
@@ -249,7 +249,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
               <span>
                 {isChecking 
                   ? (language === "zh" ? "检查中..." : "Checking...") 
-                  : (language === "zh" ? "检查更新" : "Check for Updates")}
+                  : (language === "zh" ? "检查更新" : "Check")}
               </span>
             </button>
           </div>

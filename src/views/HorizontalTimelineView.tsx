@@ -567,20 +567,20 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
               }`}
               title={language === "zh" ? "根据各时代曲风密度自适应扩展，消除留白" : "Adaptive density-weighted non-linear scale"}
             >
-              <Layers className="w-3 h-3" />
-              <span className="text-[11px]">{t("timeline_scale_nonlinear")}</span>
+              <Layers className="w-3 h-3 shrink-0" />
+              <span className="text-[11px] whitespace-nowrap truncate max-w-[80px]">{t("timeline_scale_nonlinear")}</span>
             </button>
             <button
               onClick={() => setScaleMode("linear")}
-              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 shrink-0 ${
                 scaleMode === "linear"
                   ? "bg-[#f5b73d] text-black font-bold shadow-sm"
                   : "text-[#8e93a0] hover:text-[#f5f4ef]"
               }`}
               title={language === "zh" ? "传统等距年代分布" : "Linear equal-width decades"}
             >
-              <Clock className="w-3 h-3" />
-              <span className="text-[11px]">{t("timeline_scale_linear")}</span>
+              <Clock className="w-3 h-3 shrink-0" />
+              <span className="text-[11px] whitespace-nowrap truncate max-w-[80px]">{t("timeline_scale_linear")}</span>
             </button>
           </div>
 

@@ -255,9 +255,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   onClick={() => setAddDropdownOpen(!addDropdownOpen)}
                   className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#1c1e24] hover:bg-[#252830] border border-[#2b2e38] text-[#e9e7e0] font-bold text-sm transition-colors shadow-sm"
                 >
-                  <Plus className="w-4 h-4 text-[#f5b73d]" />
-                  <span>{t("compare_add")}</span>
-                  <span className="ml-1 text-xs text-[#8b8f99] font-mono">({genres.length}/4)</span>
+                  <Plus className="w-4 h-4 text-[#f5b73d] shrink-0" />
+                  <span className="truncate max-w-[120px] whitespace-nowrap">{t("compare_add")}</span>
+                  <span className="ml-1 text-xs text-[#8b8f99] font-mono shrink-0">({genres.length}/4)</span>
                 </button>
 
                 {addDropdownOpen && (

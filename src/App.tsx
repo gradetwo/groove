@@ -8,7 +8,7 @@ import { AudioEngine } from "./audio/AudioEngine";
 import { Disc3, Sparkles } from "lucide-react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ChordDefinition } from "./utils/chordTheory";
-import { UpdatesModal } from "./components/UpdatesModal";
+import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
 
 // Code splitting & lazy loading chunks for optimal performance
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
@@ -274,7 +274,7 @@ const MainApp: React.FC = () => {
               title={language === "zh" ? "检查更新与版本记录" : "Check updates & changelog"}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d] animate-pulse" />
-              <span>v1.1.0</span>
+              <span>v{CURRENT_CLIENT_VERSION}</span>
               <span className="ml-1">{language === "zh" ? "更新记录" : "Updates"}</span>
             </button>
             <span>•</span>

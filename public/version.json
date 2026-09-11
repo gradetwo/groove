@@ -1,7 +1,30 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.1.1",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.1.1 星谱光线投射对齐修复与中英文布局基线锁定",
+        "en": "v1.1.1 Galaxy Raycast Alignment & Layout Baseline Lock"
+      },
+      "highlights": [
+        {
+          "zh": "修复 3D 星谱（GalaxyView）在非全屏导航栏下 64px 纵向坐标偏移：修正射线拾取、悬浮标签与视口投影几何",
+          "en": "Resolved 64px vertical projection offset in GalaxyView 3D canvas raycasting and HTML labels"
+        },
+        {
+          "zh": "建立中文宽度设计基线：中英文切换严格保持布局网格与宽度一致，英文过长统一采用精炼缩写与省略截断，杜绝布局漂移",
+          "en": "Locked Chinese text width as UI design baseline; English labels use compact terms & truncation to prevent layout shifts"
+        },
+        {
+          "zh": "引入容器级 ResizeObserver：自适应屏幕方向旋转、视口缩放与侧边栏抽屉展开收起",
+          "en": "Integrated container ResizeObserver for seamless viewport resize and orientation changes"
+        }
+      ]
+    },
     {
       "version": "1.1.0",
       "date": "2026-09-11",

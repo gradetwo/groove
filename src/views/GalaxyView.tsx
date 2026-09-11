@@ -322,16 +322,19 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     animId: number;
   } | null>(null);
 
-  // Screen space projection
+  // Screen space projection (P0-14: projected to canvas bounds, eliminating 64px vertical header offset)
   const project = useCallback((p: THREE.Vector3) => {
     const th = threeRef.current;
     if (!th) return null;
     const pv = p.clone().applyMatrix4(th.camera.matrixWorldInverse);
     if (pv.z > -4) return null;
     const proj = p.clone().project(th.camera);
+    const canvas = th.renderer.domElement;
+    const w = canvas ? canvas.clientWidth : window.innerWidth;
+    const h = canvas ? canvas.clientHeight : (window.innerHeight - 64);
     return {
-      x: (proj.x * 0.5 + 0.5) * window.innerWidth,
-      y: (-proj.y * 0.5 + 0.5) * window.innerHeight,
+      x: (proj.x * 0.5 + 0.5) * w,
+      y: (-proj.y * 0.5 + 0.5) * h,
     };
   }, []);
 
@@ -962,10 +965,11 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       animId: 0,
     };
 
-    // Resize handler
+    // Resize handler (P0-14: container bounds instead of window)
     const handleResize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const w = containerRef.current ? containerRef.current.clientWidth : window.innerWidth;
+      const h = containerRef.current ? containerRef.current.clientHeight : (window.innerHeight - 64);
+      if (w <= 0 || h <= 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -974,7 +978,23 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       uniforms.uScale.value = (h * dpr) / (2 * Math.tan(THREE.MathUtils.degToRad(30)));
     };
     window.addEventListener("resize", handleResize);
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        handleResize();
+      });
+      resizeObserver.observe(containerRef.current);
+    }
     handleResize();
+
+    // Helper for canvas relative coordinates
+    const getCanvasCoords = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    };
 
     // Node raycast picker
     const pickNode = (mx: number, my: number) => {
@@ -1000,14 +1020,17 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     const handlePointerDown = (e: PointerEvent) => {
       const th = threeRef.current;
       if (!th) return;
+      const pt = getCanvasCoords(e);
       th.lastInteract = performance.now();
       th.fly = null;
       th.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (th.pointers.size === 1) th.down = { x: e.clientX, y: e.clientY, moved: false };
+      if (th.pointers.size === 1) th.down = { x: pt.x, y: pt.y, moved: false };
       if (th.pointers.size === 2) {
         const arr = Array.from(th.pointers.values());
         th.pinch = { d: Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y), r: th.orbit.radius };
       }
+      th.mx = pt.x;
+      th.my = pt.y;
       try {
         canvas.setPointerCapture(e.pointerId);
       } catch (err) {}
@@ -1016,6 +1039,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     const handlePointerMove = (e: PointerEvent) => {
       const th = threeRef.current;
       if (!th) return;
+      const pt = getCanvasCoords(e);
       th.lastInteract = performance.now();
       if (th.pointers.has(e.pointerId)) {
         const prev = th.pointers.get(e.pointerId)!;
@@ -1026,12 +1050,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           const arr = Array.from(th.pointers.values());
           const d = Math.hypot(arr[0].x - arr[1].x, arr[0].y - arr[1].y);
           th.orbit.radius = clamp((th.pinch.r * th.pinch.d) / Math.max(d, 20), 100, 2800);
-          th.mx = e.clientX;
-          th.my = e.clientY;
+          th.mx = pt.x;
+          th.my = pt.y;
           return;
         }
         if (th.down) {
-          if (Math.hypot(e.clientX - th.down.x, e.clientY - th.down.y) > 6) th.down.moved = true;
+          if (Math.hypot(pt.x - th.down.x, pt.y - th.down.y) > 6) th.down.moved = true;
           const k = 0.0042 * (th.orbit.radius / 600 + 0.4);
           th.orbit.theta += dx * k;
           th.orbit.phi = clamp(th.orbit.phi - dy * k, 0.2, Math.PI - 0.2);
@@ -1039,11 +1063,11 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           th.vel.p = -dy * k * 0.4;
         }
       }
-      th.mx = e.clientX;
-      th.my = e.clientY;
+      th.mx = pt.x;
+      th.my = pt.y;
 
       // Hover detection
-      const hovered = pickNode(e.clientX, e.clientY);
+      const hovered = pickNode(pt.x, pt.y);
       setHoveredNode(hovered);
       th.uniforms.uHoverNode.value = hovered ? hovered.idx : -1;
     };
@@ -1221,8 +1245,8 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       const labelsBox = labelsContainerRef.current;
       if (labelsBox) {
         const selCluster = selectedClusterRef.current;
-        const w = window.innerWidth;
-        const h = window.innerHeight;
+        const w = labelsBox.clientWidth || window.innerWidth;
+        const h = labelsBox.clientHeight || (window.innerHeight - 64);
 
         // 1. Cluster overview labels (visible when in overview mode)
         const coreEls = labelsBox.querySelectorAll<HTMLElement>(".nlab-core");
@@ -1311,6 +1335,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (resizeObserver) resizeObserver.disconnect();
       canvas.removeEventListener("pointerdown", handlePointerDown);
       canvas.removeEventListener("pointermove", handlePointerMove);
       canvas.removeEventListener("pointerup", handlePointerUp);

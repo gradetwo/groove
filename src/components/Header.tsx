@@ -17,6 +17,7 @@ import {
 import { useLanguage } from "../i18n/LanguageContext";
 import { ALL_GENRES } from "../data/genres";
 import { Genre } from "../types/genre";
+import { CURRENT_CLIENT_VERSION } from "./UpdatesModal";
 
 export type NavTab = 
   | "studio" 
@@ -125,14 +126,15 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               key={item.tab}
               onClick={() => onSelectTab(item.tab)}
-              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all ${
+              title={t(item.labelKey)}
+              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
                 isActive
                   ? "border-[#f5b73d]/50 text-[#f5b73d] bg-[#f5b73d]/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
                   : "border-[#23262d] text-[#8b8f99] hover:text-[#e9e7e0] hover:border-[#393d46] bg-[#0d0e12]"
               }`}
             >
               {item.icon}
-              <span>{t(item.labelKey)}</span>
+              <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t(item.labelKey)}</span>
             </button>
           );
         })}
@@ -184,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={language === "zh" ? "检查更新与更新记录" : "Check for updates & changelog"}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#f5b73d] animate-pulse" />
-            <span className="hidden sm:inline">v1.1.0</span>
+            <span className="hidden sm:inline">v{CURRENT_CLIENT_VERSION}</span>
           </button>
         )}
 
@@ -231,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <History className="w-3.5 h-3.5 text-[#f5b73d]" />
               <span>{language === "zh" ? "检查更新 & 更新记录" : "Updates & Changelog"}</span>
-              <span className="ml-auto font-mono text-[10px] text-[#5a5e68]">v1.1.0</span>
+              <span className="ml-auto font-mono text-[10px] text-[#5a5e68]">v{CURRENT_CLIENT_VERSION}</span>
             </button>
           )}
         </div>
