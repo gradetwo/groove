@@ -113,7 +113,7 @@
 - [ ] **P1-02** codemod 替换 1,707 处硬编码 hex ｜ 1d ｜ 全 `src/**/*.tsx`
   验收：`grep -c '#[0-9a-f]\{6\}' src --include=*.tsx` 降至 <200（仅剩 shader/特殊场景）；CI 加上限门禁。
 
-- [ ] **P1-03** 修复不存在的 Tailwind 类名 ｜ 0.25d ｜ `GalaxyView.tsx:1617,1638,1827`、`VerticalTimelineView.tsx:297`
+- [x] **P1-03** 修复不存在的 Tailwind 类名 ｜ 0.25d ｜ `GalaxyView.tsx:1617,1638,1827`、`VerticalTimelineView.tsx:297` (v1.3.4)
   验收：`animate-fade-in`、`animate-slide-up`、`animate-slide-left`、`no-scrollbar`、`scrollbar-none`、`custom-scroll` 要么在 config 中定义、要么替换为已存在的 `.touch-action-none` 等；入场动画真实生效。
 
 - [ ] **P1-04** 字体策略落地（决策 D6） ｜ 1d ｜ `index.html`、`index.css`、`tailwind.config.js`
@@ -144,7 +144,7 @@
 - [ ] **P1-11** 迁移 321 处内联语言三元 ｜ 2d ｜ 全 `src/**/*.tsx`
   验收：`grep -rc 'language === "zh"' src` 仅剩 `LanguageContext` 内部；518 行硬编码 CJK 迁移为 `t()`。
 
-- [ ] **P1-12** 首帧语言与语言持久化修正 ｜ 0.5d ｜ `LanguageContext.tsx:147-163`、`main.tsx`、`index.html`
+- [x] **P1-12** 首帧语言与语言持久化修正 ｜ 0.5d ｜ `LanguageContext.tsx:147-163`、`main.tsx`、`index.html` (v1.3.6)
   验收：渲染前同步解析语言，消除英文用户首帧闪中文；检测结果回写 `localStorage`；`index.html` title/manifest 随语言。
 
 ### 数据层
@@ -338,8 +338,8 @@
 | 阶段 | 任务数 | 工时 | 状态 |
 |---|---|---|---|
 | Phase 0 止血 | 28 | ≈13d | ✅ 已完成 (28/28 100%) |
-| Phase 1 打地基 | 19 | ≈17d | 🔄 进行中 (P1-14, P1-15 已就绪) |
+| Phase 1 打地基 | 19 | ≈17d | 🔄 进行中 (4/19 已完成: P1-03, P1-12, P1-14, P1-15) |
 | Phase 2 性能与无障碍 | 23 | ≈24d | 待排期 |
 | Phase 3 功能补全 | 20 | ≈33d | 待排期 |
 | Phase 4 进阶 | 11 | ≈21d | 待排期 |
-| **合计** | **101** | **≈108 人日** | **已完成 30 项任务，跨端 E2E 矩阵与发布门禁已上线** |
+| **合计** | **101** | **≈108 人日** | **已完成 32 项任务，跨端 E2E 矩阵与发布门禁已上线** |
