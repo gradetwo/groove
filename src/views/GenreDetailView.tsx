@@ -274,16 +274,14 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             <div className="flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-accent" />
               <h2 className="font-bold text-text text-lg sm:text-xl tracking-wide">
-                {language === "zh" ? "曲风律动即时试听" : "Genre Groove Audition"}
+                {t("detail_groove_audition")}
               </h2>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
                 {genre.sequencer_pattern?.scale || "C Minor"}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-text-sub mt-1">
-              {language === "zh" 
-                ? "支持直接试听完整编曲或单独试听纯鼓组节奏" 
-                : "Listen to the complete synthetic arrangement or isolate the drum groove"}
+              {t("detail_groove_audition_subtitle")}
             </p>
           </div>
 
@@ -359,7 +357,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {isPlaying && auditionMode === "full" ? (
               <>
                 <Square className="w-4 h-4 fill-current" />
-                <span>{language === "zh" ? "停止全部音轨" : "Stop Full Tracks"}</span>
+                <span>{t("detail_stop_full")}</span>
                 <div className="flex items-end gap-0.5 h-3.5 ml-1.5">
                   <span className="w-1 h-3.5 bg-black rounded-full animate-pulse" />
                   <span className="w-1 h-2 bg-black rounded-full animate-ping" />
@@ -369,7 +367,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             ) : (
               <>
                 <Play className="w-4 h-4 fill-current text-accent" />
-                <span>{language === "zh" ? "试听全部音轨 (完整编曲)" : "Audition Full Tracks"}</span>
+                <span>{t("detail_audition_full")}</span>
               </>
             )}
           </button>
@@ -386,7 +384,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {isPlaying && auditionMode === "drums" ? (
               <>
                 <Square className="w-4 h-4 fill-current" />
-                <span>{language === "zh" ? "停止鼓组试听" : "Stop Drums"}</span>
+                <span>{t("detail_stop_drums")}</span>
                 <div className="flex items-end gap-0.5 h-3.5 ml-1.5">
                   <span className="w-1 h-3.5 bg-black rounded-full animate-pulse" />
                   <span className="w-1 h-2 bg-black rounded-full animate-ping" />
@@ -396,7 +394,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             ) : (
               <>
                 <Disc3 className="w-4 h-4 text-accent" />
-                <span>{language === "zh" ? "只试听鼓组 (纯节奏骨架)" : "Audition Drums Only"}</span>
+                <span>{t("detail_audition_drums")}</span>
               </>
             )}
           </button>
@@ -411,9 +409,9 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               <span className="font-bold text-sm text-[#f0ede6]">
                 {isPlaying 
                   ? (auditionMode === "drums" 
-                      ? (language === "zh" ? "正在试听纯鼓组节奏 (底鼓 / 军鼓 / 踩镲 / 打击乐)" : "Auditioning Drums Only (Kick / Snare / Hats / Perc)") 
-                      : (language === "zh" ? "正在试听全部音轨 (完整底鼓、低音与合成器)" : "Auditioning Full Arrangement (Drums, Bass & Synths)"))
-                  : (language === "zh" ? "准备就绪 · 点击上方按钮即时播放" : "Ready · Click button above to audition")}
+                      ? t("detail_status_drums") 
+                      : t("detail_status_full"))
+                  : t("detail_status_ready")}
               </span>
             </div>
 
@@ -575,7 +573,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               {genre.drum_pattern.percussion && (
                 <div className="p-3.5 bg-panel2/70 rounded-2xl border border-line/70 space-y-1 sm:col-span-2">
                   <span className="font-bold text-text-sub uppercase tracking-wider text-[10px]">
-                    {language === "zh" ? "打击乐加花" : "Percussion"}
+                    {t("detail_percussion")}
                   </span>
                   <p className="text-text leading-relaxed">
                     {genre.drum_pattern.percussion[language]}
@@ -643,7 +641,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
             {genre.production_tips && genre.production_tips[language] && genre.production_tips[language].length > 0 && (
               <div className="pt-2 border-t border-[#1a1c22] space-y-2">
                 <span className="text-xs font-semibold text-text-sub block">
-                  {language === "zh" ? "制作实战秘诀" : "Pro Tips"}
+                  {t("detail_pro_tips")}
                 </span>
                 <ul className="space-y-1.5 text-xs text-[#b8b5ad]">
                   {genre.production_tips[language].map((tip, tIdx) => (
@@ -661,7 +659,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           <div className="bg-panel border border-line rounded-3xl p-6 shadow-xl space-y-4">
             <h3 className="font-bold text-text text-base flex items-center space-x-2">
               <Wrench className="w-4 h-4 text-emerald-400" />
-              <span>{language === "zh" ? "核心配器与典型曲式" : "Instruments & Structure"}</span>
+              <span>{t("detail_instruments_structure")}</span>
             </h3>
 
             {/* Instruments */}

@@ -1,5 +1,6 @@
 import React from "react";
 import { GenreRadarMetrics } from "../types";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export interface RadarAxis {
   key: keyof GenreRadarMetrics;
@@ -35,8 +36,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   size = 240,
   className = "",
   "aria-label": ariaLabel,
-  language = "zh",
+  language: _propLanguage,
 }) => {
+  const { t } = useLanguage();
   const center = size / 2;
   const radius = (size / 2) * 0.68;
   const totalAxes = RADAR_AXES.length;
@@ -101,7 +103,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           const lx = center + labelDist * Math.cos(angle);
           const ly = center + labelDist * Math.sin(angle);
 
-          const labelText = language === "zh" ? axis.labelZh : axis.labelEn;
+          const labelText = t(`radar_${axis.key}` as any) || axis.labelEn;
 
           return (
             <g key={`axis-${String(axis.key)}`}>
@@ -183,7 +185,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         <tbody>
           {RADAR_AXES.map((axis) => (
             <tr key={`sr-${String(axis.key)}`}>
-              <td>{language === "zh" ? axis.labelZh : axis.labelEn}</td>
+              <td>{t(`radar_${axis.key}` as any) || axis.labelEn}</td>
               <td>{metrics[axis.key] ?? 5} / 10</td>
               {comparisonMetrics && <td>{comparisonMetrics[axis.key] ?? 5} / 10</td>}
             </tr>

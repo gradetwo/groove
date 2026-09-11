@@ -1,6 +1,7 @@
 import React from "react";
 import { getGuitarFretboardChord, ChordQuality, GUITAR_TUNING_MIDI, midiToNoteName } from "../../utils/chordTheory";
 import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface GuitarFretboardVisualizerProps {
   rootNote: string;
@@ -13,8 +14,9 @@ export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps>
   rootNote,
   quality,
   onStringClick,
-  language = "zh",
+  language: _propLanguage,
 }) => {
+  const { t } = useLanguage();
   const fretChord = getGuitarFretboardChord(rootNote, quality);
   const totalFrets = 12;
   const stringNames = ["6 (E)", "5 (A)", "4 (D)", "3 (G)", "2 (B)", "1 (e)"];
@@ -33,24 +35,24 @@ export const GuitarFretboardVisualizer: React.FC<GuitarFretboardVisualizerProps>
         <div className="flex items-center gap-2 text-xs text-text-sub">
           <span className="w-2 h-2 rounded-full bg-[#e5a93c] shadow-[0_0_6px_#e5a93c]" />
           <span className="font-semibold text-[#eae6dc]">
-            {language === "zh" ? "标准吉他指板和弦图 (E2 - e4 · 0-12品)" : "6-String Guitar Fretboard (E2 - E4 · 0-12 Frets)"}
+            {t("guitar_fretboard_title")}
           </span>
           <span className="text-[10px] text-text-dim">
-            {language === "zh" ? "· 真实扫弦指法与按弦品位" : "· Authentic chord voicing & fret positions"}
+            {t("guitar_fretboard_sub")}
           </span>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-text-sub">
           <div className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full bg-accent text-black font-bold flex items-center justify-center text-[8px]">●</span>
-            <span>{language === "zh" ? "按弦品位" : "Fretted"}</span>
+            <span>{t("guitar_fretted")}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[#4ad8c8] font-bold">O</span>
-            <span>{language === "zh" ? "空弦发音" : "Open String"}</span>
+            <span>{t("guitar_open_string")}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[#e84855] font-bold">✕</span>
-            <span>{language === "zh" ? "护弦/闷音" : "Muted (X)"}</span>
+            <span>{t("guitar_muted")}</span>
           </div>
         </div>
       </div>

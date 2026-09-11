@@ -143,8 +143,8 @@
 - [x] **P1-10** i18n 类型安全重构 ｜ 1d ｜ `src/i18n/` (v1.5.0)
   验收：`MessageKey = keyof typeof zh`；`t(key: MessageKey, vars?)`；消息按 feature 分文件；缺失 key 编译期报错。
 
-- [ ] **P1-11** 迁移 321 处内联语言三元 ｜ 2d ｜ 全 `src/**/*.tsx`
-  验收：`grep -rc 'language === "zh"' src` 仅剩 `LanguageContext` 内部；518 行硬编码 CJK 迁移为 `t()`。
+- [x] **P1-11** 迁移 321 处内联语言三元 ｜ 2d ｜ 全 `src/**/*.tsx` (v1.7.0)
+  验收：`grep -rc 'language === "zh"' src` 仅剩 `LanguageContext` 内部；518 行硬编码 CJK 迁移为 `t()`。全站 17 个文件彻底清零。
 
 - [x] **P1-12** 首帧语言与语言持久化修正 ｜ 0.5d ｜ `LanguageContext.tsx:147-163`、`main.tsx`、`index.html` (v1.3.6)
   验收：渲染前同步解析语言，消除英文用户首帧闪中文；检测结果回写 `localStorage`；`index.html` title/manifest 随语言。

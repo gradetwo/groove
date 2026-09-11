@@ -3,6 +3,7 @@ import { SequencerTrack } from "../../types/genre";
 import { generateEuclidean, EUCLIDEAN_PRESETS } from "../../audio/Euclidean";
 import { Sparkles, RotateCw, Play, Check, X, Disc3 } from "lucide-react";
 import { Modal } from "../../ui";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface EuclideanModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface EuclideanModalProps {
   tracksConfig: Array<{ id: string; name: string; color: string }>;
   initialTrackIdx?: number;
   onApplyEuclidean: (trackIdx: number, steps: number[]) => void;
-  language: "zh" | "en";
+  language?: "zh" | "en";
   stepCount: number;
 }
 
@@ -22,9 +23,10 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
   tracksConfig,
   initialTrackIdx = 0,
   onApplyEuclidean,
-  language,
+  language: _propLanguage,
   stepCount,
 }) => {
+  const { t, isZh } = useLanguage();
   const [selectedTrackIdx, setSelectedTrackIdx] = useState(initialTrackIdx);
   const [totalSteps, setTotalSteps] = useState(stepCount || 16);
   const [pulses, setPulses] = useState(5);
@@ -74,7 +76,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
       onClose={onClose}
       maxWidth="xl"
       showCloseButton={false}
-      ariaLabel={language === "zh" ? "欧几里得数学节奏生成器" : "Euclidean Rhythm Generator"}
+      ariaLabel={t("euclidean_modal_aria")}
     >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f222b]">
@@ -84,12 +86,10 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
             </div>
             <div>
               <h3 className="font-['Space_Grotesk'] text-base font-bold text-text">
-                {language === "zh" ? "欧几里得数学节奏生成器" : "Euclidean Rhythm Generator"}
+                {t("euclidean_modal_title")}
               </h3>
               <p className="text-[11px] text-text-sub">
-                {language === "zh"
-                  ? "基于 Bjorklund 算法将 K 次击打在 N 步内均匀分布"
-                  : "Generates maximally even polyrhythms (K pulses in N steps)"}
+                {t("euclidean_desc")}
               </p>
             </div>
           </div>
@@ -106,7 +106,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
           {/* Target Track Selector */}
           <div>
             <label className="block text-xs font-mono uppercase tracking-wider text-text-sub mb-2">
-              {language === "zh" ? "目标乐器音轨:" : "Target Track:"}
+              {t("euclidean_target_track")}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {tracks.map((t, idx) => {
@@ -138,7 +138,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
               {/* Pulses (K) */}
               <div>
                 <div className="flex justify-between font-mono text-xs mb-1">
-                  <span className="text-text-sub">{language === "zh" ? "击打次数 (K):" : "Pulses (Hits K):"}</span>
+                  <span className="text-text-sub">{t("euclidean_pulses")}</span>
                   <span className="font-bold text-accent">{pulses}</span>
                 </div>
                 <input
@@ -154,7 +154,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
               {/* Total Steps (N) */}
               <div>
                 <div className="flex justify-between font-mono text-xs mb-1">
-                  <span className="text-text-sub">{language === "zh" ? "总步进数 (N):" : "Total Steps (N):"}</span>
+                  <span className="text-text-sub">{t("euclidean_steps")}</span>
                   <span className="font-bold text-[#45e0c9]">{totalSteps}</span>
                 </div>
                 <input
@@ -174,7 +174,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
               {/* Rotation (R) */}
               <div>
                 <div className="flex justify-between font-mono text-xs mb-1">
-                  <span className="text-text-sub">{language === "zh" ? "相位偏移 (Rotation):" : "Rotation Shift:"}</span>
+                  <span className="text-text-sub">{t("euclidean_rotation")}</span>
                   <span className="font-bold text-[#ffb65c]">{rotation >= 0 ? `+${rotation}` : rotation}</span>
                 </div>
                 <input
@@ -244,7 +244,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
           {/* Quick World Rhythms Presets */}
           <div>
             <label className="block text-[11px] font-mono text-[#6b7280] uppercase tracking-wider mb-2">
-              {language === "zh" ? "经典世界律动预设:" : "Classic Euclidean Rhythms:"}
+              {t("euclidean_presets")}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {EUCLIDEAN_PRESETS.map((p, idx) => (
@@ -253,7 +253,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                   onClick={() => handleSelectPreset(p)}
                   className="px-2.5 py-1 rounded bg-bg hover:bg-[#181a22] border border-line text-[11px] text-text-sub hover:text-text font-mono transition-colors"
                 >
-                  {p.name[language]}
+                  {isZh ? p.name.zh : p.name.en}
                 </button>
               ))}
             </div>
@@ -266,14 +266,14 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-mono font-semibold text-text-sub hover:text-text hover:bg-[#1a1c22] transition-colors"
           >
-            {language === "zh" ? "取消" : "Cancel"}
+            {t("cancel")}
           </button>
           <button
             onClick={handleApply}
             className="px-5 py-2 rounded-xl text-xs font-['Space_Grotesk'] font-bold bg-accent text-black hover:brightness-110 transition-transform shadow-[0_0_15px_rgba(245,183,61,0.3)] flex items-center gap-1.5"
           >
             <Check className="w-4 h-4" />
-            <span>{language === "zh" ? "应用到当前音轨" : "Apply to Track"}</span>
+            <span>{t("euclidean_apply")}</span>
           </button>
         </div>
     </Modal>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Music, X, Check, Volume2 } from "lucide-react";
 import { Modal } from "../../ui";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface PitchPickerModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface PitchPickerModalProps {
   initialNote?: number | null;
   onSelectPitch: (stepIdx: number, midiNote: number) => void;
   onPreviewNote: (midiNote: number) => void;
-  language: "zh" | "en";
+  language?: "zh" | "en";
 }
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -31,8 +32,9 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
   initialNote = 36,
   onSelectPitch,
   onPreviewNote,
-  language,
+  language: _propLanguage,
 }) => {
+  const { t } = useLanguage();
   const isBass = trackName.toLowerCase().includes("bass");
   const defaultOctave = isBass ? 2 : 4;
   const [octave, setOctave] = useState<number>(() => {
@@ -80,7 +82,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
       onClose={onClose}
       maxWidth="md"
       showCloseButton={false}
-      ariaLabel={language === "zh" ? "音高选择" : "Note Pitch Picker"}
+      ariaLabel={t("pitch_modal_aria")}
     >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f222b]">
@@ -88,7 +90,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
             <div className="w-2.5 h-6 rounded" style={{ backgroundColor: trackColor }} />
             <div>
               <h3 className="font-['Space_Grotesk'] text-sm font-bold text-text">
-                {trackName} · Step {stepIdx + 1} {language === "zh" ? "音高选择" : "Note Pitch"}
+                {trackName} · Step {stepIdx + 1} {t("pitch_modal_title")}
               </h3>
               <p className="text-[11px] font-mono text-text-sub">
                 MIDI Note: <b className="text-accent">{currentNoteName}</b> ({selectedNote})
@@ -104,7 +106,7 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
         <div className="p-5 space-y-4">
           {/* Octave Selector */}
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-text-sub">{language === "zh" ? "八度音区 (Octave):" : "Octave Range:"}</span>
+            <span className="text-text-sub">{t("pitch_octave_range")}</span>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5, 6].map((oct) => (
                 <button
@@ -221,21 +223,21 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
             className="flex items-center gap-1.5 text-xs text-text-sub hover:text-text font-mono"
           >
             <Volume2 className="w-3.5 h-3.5 text-accent" />
-            <span>{language === "zh" ? "试听" : "Audition"}</span>
+            <span>{t("pitch_audition")}</span>
           </button>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
               className="px-3 py-1.5 rounded-lg text-xs font-mono text-text-sub hover:text-text"
             >
-              {language === "zh" ? "取消" : "Cancel"}
+              {t("cancel")}
             </button>
             <button
               onClick={handleApply}
               className="px-4 py-1.5 rounded-lg text-xs font-mono font-bold bg-accent text-black hover:brightness-110 flex items-center gap-1"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>{language === "zh" ? "确定设置" : "Set Note"}</span>
+              <span>{t("pitch_set")}</span>
             </button>
           </div>
         </div>

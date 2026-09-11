@@ -1,0 +1,62 @@
+export const studioMessages = {
+  // Transport & Sequencer
+  bpm: { en: "BPM", zh: "速度 (BPM)" },
+  swing: { en: "Swing", zh: "摇摆度" },
+  master_vol: { en: "Master", zh: "总音量" },
+  clear_pattern: { en: "Clear", zh: "清空" },
+  reset_pattern: { en: "Reset", zh: "重置预设" },
+  restore: { en: "Preset", zh: "已重置为预设" },
+  undo: { en: "Undo", zh: "撤销" },
+  redo: { en: "Redo", zh: "重做" },
+  undo_tip: { en: "Undo (Ctrl+Z)", zh: "撤销 (Ctrl+Z / Cmd+Z)" },
+  redo_tip: { en: "Redo (Ctrl+Shift+Z)", zh: "重做 (Ctrl+Shift+Z / Cmd+Shift+Z)" },
+  undo_done: { en: "Undone", zh: "已撤销" },
+  redo_done: { en: "Redone", zh: "已重做" },
+  export_midi: { en: "MIDI", zh: "导出 MIDI" },
+  share_groove: { en: "Share", zh: "分享律动" },
+  share_copied: { en: "Link copied!", zh: "分享链接已复制到剪贴板！" },
+  share_failed: { en: "Failed to create link", zh: "分享链接生成失败" },
+  mode_demo: { en: "Demo", zh: "演示模式" },
+  mode_edit: { en: "Edit", zh: "编辑模式" },
+  solo: { en: "S", zh: "独奏" },
+  mute: { en: "M", zh: "静音" },
+  velocity: { en: "Velocity", zh: "力度" },
+  pitch: { en: "Pitch", zh: "音高" },
+  scale: { en: "Scale", zh: "调式 / 音阶" },
+  root_key: { en: "Key", zh: "基调" },
+
+  // Velocity Lane
+  vel_drawer_title: { en: "VELOCITY (0-127)", zh: "力度抽屉 (0-127)" },
+  vel_reset_100: { en: "Reset flat 100", zh: "重置为标准力度 100" },
+  vel_accent_downbeats: { en: "Accent downbeats", zh: "正拍重音 (122/90)" },
+  vel_crescendo: { en: "Crescendo", zh: "渐强曲线" },
+  vel_decrescendo: { en: "Decrescendo", zh: "渐弱曲线" },
+  vel_humanize: { en: "Humanize ±15%", zh: "微随机人性化" },
+  vel_close: { en: "Close drawer", zh: "关闭力度抽屉" },
+  vel_drag_hint: { en: "Drag to paint", zh: "滑动绘制力度" },
+
+  // Pitch Picker
+  pitch_modal_aria: { en: "Note Pitch Picker", zh: "音高选择" },
+  pitch_modal_title: { en: "Note Pitch", zh: "音高选择" },
+  pitch_octave_range: { en: "Octave Range:", zh: "八度音区 (Octave):" },
+  pitch_audition: { en: "Audition", zh: "试听" },
+  pitch_set: { en: "Set Note", zh: "确定设置" },
+
+  // Euclidean Rhythm Generator
+  euclidean_modal_aria: { en: "Euclidean Rhythm Generator", zh: "欧几里得数学节奏生成器" },
+  euclidean_modal_title: { en: "Euclidean Rhythm Generator", zh: "欧几里得数学节奏生成器" },
+  euclidean_desc: { en: "Distribute hits evenly across steps using Bjorklund mathematical algorithm", zh: "利用 Bjorklund 数学算法将击打均匀分布于步进环上，衍生世界各地经典多聚节拍" },
+  euclidean_target_track: { en: "Target Track:", zh: "目标乐器音轨:" },
+  euclidean_pulses: { en: "Pulses (Hits K):", zh: "击打次数 (K):" },
+  euclidean_steps: { en: "Total Steps (N):", zh: "总步进数 (N):" },
+  euclidean_rotation: { en: "Rotation Shift:", zh: "相位偏移 (Rotation):" },
+  euclidean_presets: { en: "Classic Euclidean Rhythms:", zh: "经典世界律动预设:" },
+  euclidean_apply: { en: "Apply to Track", zh: "应用到当前音轨" },
+
+  // Studio Controls & Info
+  studio_title: { en: "Synthesizer Sequencer Studio", zh: "全功能步进音序编曲工作台" },
+  studio_view_dossier: { en: "View Dossier", zh: "查看详情" },
+  studio_load_initial_chords: { en: "Chord Progression Active", zh: "已载入定制和弦走向" },
+  studio_clear_chords: { en: "Clear Chords", zh: "清除和弦" },
+  studio_tap_tempo: { en: "TAP", zh: "测速" },
+} as const;

@@ -55,7 +55,7 @@ interface ChordProgressionsViewProps {
 export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
   onOpenStudioWithChords,
 }) => {
-  const { t, language } = useLanguage();
+  const { t, language, isZh } = useLanguage();
 
   // Audio Engine instance (lazy singleton)
   const engineRef = useRef<ChordAudioEngine | null>(null);
@@ -291,30 +291,28 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               </span>
               <span className="text-xs text-text-sub">·</span>
               <span className="text-xs text-text-sub">
-                {language === "zh" ? "全功能和弦走向库与物理音色合成" : "Acoustic Modeling & Chord Progression Engine"}
+                {t("chords_studio_sub")}
               </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-white font-[Space_Grotesk]">
-              {language === "zh" ? "和弦走向与律动工坊" : "Popular Chord Progressions"}
+              {t("chords_studio_title")}
               <span className="block text-sm sm:text-base font-normal text-[#d8b988] mt-1 font-serif">
                 Chord Progressions & Harmonic Voicing Studio
               </span>
             </h1>
 
             <p className="text-xs sm:text-sm text-text-sub leading-relaxed">
-              {language === "zh"
-                ? "汇聚百年来流行金曲、影视卡农、J-Pop 王道、爵士 2-5-1 与朋克金属 Power 和弦的代表性走向。内置真实物理声学钢琴与原声/失真吉他合成模型，随时挑选具体和弦进行二次创作。"
-                : "Explore legendary chord progressions from global pop anthems, cinematic canons, J-Pop royal roads, jazz 2-5-1s, and punk/metal power chords. Powered by real physical acoustic modeling for piano and guitars."}
+              {t("chords_hero_desc")}
             </p>
           </div>
 
           {/* Quick Key & Scale Configurator */}
           <div className="bg-[#181d28]/80 backdrop-blur-md rounded-xl p-4 border border-[#2a303f] flex flex-col gap-3 min-w-[260px] shadow-lg">
             <div className="flex items-center justify-between text-xs text-text-sub pb-2 border-b border-white/5">
-              <span>{language === "zh" ? "全局基础调性 (Key)" : "Global Base Key"}</span>
+              <span>{t("chords_global_key")}</span>
               <span className="font-mono text-accent font-bold">
-                {keyRoot} {isMinorKey ? (language === "zh" ? "小调 Minor" : "Minor") : (language === "zh" ? "大调 Major" : "Major")}
+                {keyRoot} {isMinorKey ? t("chords_minor") : t("chords_major")}
               </span>
             </div>
 
@@ -322,7 +320,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               {/* Root Key Selector */}
               <div className="flex-1">
                 <label className="block text-[10px] text-text-sub mb-1">
-                  {language === "zh" ? "主音 (Root)" : "Root Note"}
+                  {t("chords_key_root")}
                 </label>
                 <select
                   value={keyRoot}
@@ -338,21 +336,21 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               {/* Mode Selector */}
               <div className="flex-1">
                 <label className="block text-[10px] text-text-sub mb-1">
-                  {language === "zh" ? "调式 (Mode)" : "Scale Mode"}
+                  {t("chords_scale_mode")}
                 </label>
                 <select
                   value={isMinorKey ? "minor" : "major"}
                   onChange={(e) => setIsMinorKey(e.target.value === "minor")}
                   className="w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent"
                 >
-                  <option value="major">{language === "zh" ? "自然大调 (Major)" : "Natural Major"}</option>
-                  <option value="minor">{language === "zh" ? "自然小调 (Minor)" : "Natural Minor"}</option>
+                  <option value="major">{t("chords_mode_major")}</option>
+                  <option value="minor">{t("chords_mode_minor")}</option>
                 </select>
               </div>
             </div>
 
             <div className="text-[11px] text-text-sub flex items-center justify-between pt-1">
-              <span>{language === "zh" ? "当前对应音阶：" : "Scale Notes: "}</span>
+              <span>{t("chords_scale_notes")}</span>
               <span className="font-mono text-zinc-300 text-[10px]">
                 {keyRoot} · {isMinorKey ? "D · Eb · F · G · Ab · Bb" : "D · E · F · G · A · B"}
               </span>
@@ -371,18 +369,16 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#4ad8c8] shadow-[0_0_8px_#4ad8c8]" />
               <h2 className="text-xl sm:text-2xl font-semibold text-white font-[Space_Grotesk]">
-                {language === "zh" ? "和弦走向创作工作台" : "Progression Studio"}
+                {t("chords_builder_title")}
               </h2>
               {isBuilderCollapsed && (
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#4ad8c8]/20 text-[#4ad8c8] border border-[#4ad8c8]/30">
-                  {customChords.length} {language === "zh" ? "和弦" : "Chords"}
+                  {customChords.length} {t("chords_count")}
                 </span>
               )}
             </div>
             <p className="text-xs text-text-sub mt-1">
-              {language === "zh"
-                ? "自由搭配任意和弦（Power 和弦、大/小三和弦、七和弦、扩展和弦），选择钢琴或吉他音色，即时伴奏试听并导出 MIDI。"
-                : "Assemble custom chord progressions with Power chords, triads, 7ths, and 9ths. Switch between piano & guitar timbres, adjust tempo, and export MIDI."}
+              {t("chords_studio_desc")}
             </p>
           </div>
 
@@ -401,12 +397,12 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               {isPlaying && previewingProgId === null ? (
                 <>
                   <Square className="w-4 h-4 fill-current shrink-0" />
-                  <span className="whitespace-nowrap">{language === "zh" ? "停止播放" : "Stop"}</span>
+                  <span className="whitespace-nowrap">{t("chords_builder_stop")}</span>
                 </>
               ) : (
                 <>
                   <Play className="w-4 h-4 fill-current shrink-0" />
-                  <span className="whitespace-nowrap">{language === "zh" ? "循环播放进行" : "Play"}</span>
+                  <span className="whitespace-nowrap">{t("chords_builder_loop")}</span>
                 </>
               )}
             </button>
@@ -420,7 +416,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   ? "bg-[#4ad8c8]/20 border-[#4ad8c8] text-[#4ad8c8]" 
                   : "bg-[#181d28] border-[#2b3242] text-text-sub"
               }`}
-              title={language === "zh" ? "循环开关 (Loop)" : "Toggle Loop"}
+              title={t("chords_builder_loop_toggle")}
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -444,10 +440,10 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               type="button"
               onClick={handleCopyText}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-[#d8b988] transition-colors shrink-0"
-              title={language === "zh" ? "复制和弦走向文本" : "Copy chord progression"}
+              title={t("chords_copy_title")}
             >
               {copied ? <Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
-              <span className="whitespace-nowrap">{copied ? (language === "zh" ? "已复制" : "Copied") : (language === "zh" ? "复制和弦" : "Copy")}</span>
+              <span className="whitespace-nowrap">{copied ? t("chords_copied") : t("chords_copy_text")}</span>
             </button>
 
             {/* Export MIDI */}
@@ -455,10 +451,10 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               type="button"
               onClick={handleExportMidi}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1a2030] border border-[#232a3b] text-xs text-white transition-colors shrink-0"
-              title={language === "zh" ? "导出为标准 MIDI 文件" : "Export as Standard MIDI File"}
+              title={t("chords_export_midi_title")}
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="whitespace-nowrap">{language === "zh" ? "导出 MIDI" : "MIDI"}</span>
+              <span className="whitespace-nowrap">{t("chords_export_midi")}</span>
             </button>
 
             {/* Load to Studio */}
@@ -467,10 +463,10 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 type="button"
                 onClick={() => onOpenStudioWithChords(customChords)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent hover:bg-[#ffc24b] text-zinc-950 font-bold text-xs transition-colors shadow-lg shadow-[#f5b73d]/10 shrink-0"
-                title={language === "zh" ? "将此和弦走向载入音序工作台" : "Load this chord progression into Sequencer Studio"}
+                title={t("chords_to_studio_title")}
               >
                 <Music className="w-3.5 h-3.5 shrink-0" />
-                <span className="whitespace-nowrap">{language === "zh" ? "载入编曲工作台" : "To Studio"}</span>
+                <span className="whitespace-nowrap">{t("chords_to_studio")}</span>
               </button>
             )}
             {/* Collapse / Expand Toggle Button */}
@@ -478,10 +474,10 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               type="button"
               onClick={() => setIsBuilderCollapsed(!isBuilderCollapsed)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1f2638] border border-[#2b3348] text-xs text-[#eae6dc] transition-colors shrink-0"
-              title={isBuilderCollapsed ? (language === "zh" ? "展开创作工作台" : "Expand builder") : (language === "zh" ? "收起工作台" : "Collapse builder")}
+              title={isBuilderCollapsed ? t("chords_expand_builder_title") : t("chords_collapse_builder_title")}
             >
               {isBuilderCollapsed ? <ChevronDown className="w-3.5 h-3.5 text-accent shrink-0" /> : <ChevronUp className="w-3.5 h-3.5 text-accent shrink-0" />}
-              <span className="whitespace-nowrap">{isBuilderCollapsed ? (language === "zh" ? "展开工作台" : "Expand") : (language === "zh" ? "收起" : "Fold")}</span>
+              <span className="whitespace-nowrap">{isBuilderCollapsed ? t("chords_expand_builder") : t("chords_collapse_builder")}</span>
             </button>
           </div>
         </div>
@@ -489,7 +485,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
         {isBuilderCollapsed && (
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#1f2533] text-xs">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-text-sub text-[11px]">{language === "zh" ? "当前和弦：" : "Chords: "}</span>
+              <span className="text-text-sub text-[11px]">{t("chords_current_chords_label")}</span>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {customChords.map((chord, i) => (
                   <span
@@ -503,7 +499,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         ? "bg-accent text-black shadow-[0_0_8px_rgba(245,183,61,0.6)]"
                         : "bg-[#181d28] text-white hover:bg-[#23293a] border border-[#2a3244]"
                     }`}
-                    title={language === "zh" ? "点击展开并编辑此和弦" : "Click to edit"}
+                    title={t("chords_click_to_edit")}
                   >
                     {formatChordName(chord.root, chord.quality, chord.inversion)}
                   </span>
@@ -512,7 +508,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               <span className="text-text-sub font-mono">· {bpm} BPM</span>
               <span className="text-text-sub">·</span>
               <span className="text-text-sub">
-                {timbre === "piano" ? (language === "zh" ? "声学钢琴" : "Acoustic Piano") : (language === "zh" ? "原声吉他" : "Guitar")}
+                {timbre === "piano" ? t("chords_timbre_piano") : t("chords_timbre_guitar")}
               </span>
             </div>
 
@@ -522,7 +518,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 onClick={() => setIsBuilderCollapsed(false)}
                 className="text-xs text-accent hover:underline font-medium flex items-center gap-1"
               >
-                <span>{language === "zh" ? "展开完整编辑与键盘指法" : "Open Full Editor & Fretboard"}</span>
+                <span>{t("chords_open_full_editor")}</span>
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -538,7 +534,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-[#d8b988] flex items-center gap-1.5">
               <Volume2 className="w-3.5 h-3.5" />
-              <span>{language === "zh" ? "乐器音色 (Instrument Timbre)" : "Instrument Timbre"}</span>
+              <span>{t("chords_timbre")}</span>
             </label>
             <div className="grid grid-cols-3 gap-1 bg-[#0a0d14] p-1 rounded-lg border border-[#232a3b]">
               <button
@@ -548,7 +544,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   timbre === "piano" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "钢琴 Piano" : "Grand Piano"}
+                {t("chords_timbre_piano")}
               </button>
               <button
                 type="button"
@@ -557,7 +553,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   timbre === "guitar" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "原声吉他 Guitar" : "Acoustic Guitar"}
+                {t("chords_timbre_guitar")}
               </button>
               <button
                 type="button"
@@ -566,7 +562,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   timbre === "power-guitar" ? "bg-accent text-zinc-950 font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "失真吉他 Power" : "Power Guitar"}
+                {t("chords_timbre_power")}
               </button>
             </div>
           </div>
@@ -575,7 +571,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-[#d8b988] flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5" />
-              <span>{language === "zh" ? "伴奏律动风格 (Playing Style)" : "Playing Style"}</span>
+              <span>{t("chords_style")}</span>
             </label>
             <div className="grid grid-cols-4 gap-1 bg-[#0a0d14] p-1 rounded-lg border border-[#232a3b]">
               <button
@@ -585,7 +581,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   style === "ballad" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "抒情 Pop" : "Ballad"}
+                {t("chords_style_pop")}
               </button>
               <button
                 type="button"
@@ -594,7 +590,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   style === "strum" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "扫弦 Strum" : "Strum"}
+                {t("chords_style_strum")}
               </button>
               <button
                 type="button"
@@ -603,7 +599,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   style === "arpeggio" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "琶音 Arp" : "Arpeggio"}
+                {t("chords_style_arp")}
               </button>
               <button
                 type="button"
@@ -612,7 +608,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   style === "block" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "柱式 Block" : "Block"}
+                {t("chords_style_block")}
               </button>
             </div>
           </div>
@@ -621,7 +617,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
           <div className="flex flex-col gap-1.5 lg:col-span-2">
             <label className="text-[11px] font-semibold text-[#d8b988] flex items-center gap-1.5">
               <PianoIcon className="w-3.5 h-3.5" />
-              <span>{language === "zh" ? "实时指板/琴键可视化模式 (Visualizer Display)" : "Live Voicing Visualizer"}</span>
+              <span>{t("chords_voicing_mode")}</span>
             </label>
             <div className="flex items-center gap-2 bg-[#0a0d14] p-1 rounded-lg border border-[#232a3b]">
               <button
@@ -631,7 +627,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   visualizerTab === "piano" ? "bg-[#2a3346] text-white font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "钢琴琴键 (Piano Keyboard)" : "Piano Keyboard"}
+                {t("chords_piano_keyboard")}
               </button>
               <button
                 type="button"
@@ -640,7 +636,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   visualizerTab === "guitar" ? "bg-[#2a3346] text-white font-bold" : "text-text-sub hover:text-white"
                 }`}
               >
-                {language === "zh" ? "吉他指板 (Guitar Fretboard)" : "Guitar Fretboard"}
+                {t("chords_guitar_fretboard")}
               </button>
             </div>
           </div>
@@ -649,9 +645,9 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
         {/* 3.1 Timeline Chord Blocks Sequence */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-text-sub">
-            <span>{language === "zh" ? "和弦音序通道 (点击和弦方块进行编辑调色)" : "Chord Timeline (Click block to edit parameters)"}</span>
+            <span>{t("chords_timeline_channel")}</span>
             <span className="font-mono">
-              {language === "zh" ? `共 ${customChords.length} 个小节和弦` : `${customChords.length} Chord Bars`}
+              {t("chords_bars_count", { count: customChords.length })}
             </span>
           </div>
 
@@ -685,7 +681,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         handleRemoveChord(idx);
                       }}
                       className="absolute top-2 right-2 w-5 h-5 rounded-full bg-black/40 hover:bg-[#e84855] text-zinc-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-xs"
-                      title={language === "zh" ? "删除此和弦" : "Delete this chord"}
+                      title={t("chords_delete_chord_title")}
                     >
                       ✕
                     </button>
@@ -693,9 +689,9 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
                   {/* Header: Bar Number & Duration */}
                   <div className="flex items-center justify-between text-[10px] text-text-sub mb-2 font-mono">
-                    <span>{language === "zh" ? `小节 ${idx + 1}` : `Bar ${idx + 1}`}</span>
+                    <span>{t("chords_bar_n", { n: idx + 1 })}</span>
                     <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5">
-                      {chord.duration ?? 4} {language === "zh" ? "拍" : "Beats"}
+                      {chord.duration ?? 4} {t("chords_beats_n")}
                     </span>
                   </div>
 
@@ -705,7 +701,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       {chordName}
                     </div>
                     <div className="text-[11px] text-text-sub font-serif mt-0.5">
-                      {language === "zh" ? CHORD_QUALITY_META[chord.quality]?.nameZh : CHORD_QUALITY_META[chord.quality]?.nameEn}
+                      {isZh ? CHORD_QUALITY_META[chord.quality]?.nameZh : CHORD_QUALITY_META[chord.quality]?.nameEn}
                     </div>
                   </div>
 
@@ -713,8 +709,8 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px]">
                     <span className="text-zinc-500 font-mono">
                       {chord.inversion 
-                        ? (language === "zh" ? `转位 ${chord.inversion}` : `Inv ${chord.inversion}`) 
-                        : (language === "zh" ? "原位" : "Root")}
+                        ? t("chords_inversion_n", { n: chord.inversion }) 
+                        : t("chords_inversion_root")}
                     </span>
                     <button
                       type="button"
@@ -724,7 +720,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       }}
                       className="text-accent hover:underline"
                     >
-                      {language === "zh" ? "试听音色" : "Audition"}
+                      {t("chords_audition_timbre")}
                     </button>
                   </div>
                 </div>
@@ -738,7 +734,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               className="shrink-0 w-28 sm:w-32 rounded-xl border-2 border-dashed border-[#2b3345] hover:border-accent hover:bg-[#181d28]/60 text-text-sub hover:text-white flex flex-col items-center justify-center gap-2 transition-all p-4"
             >
               <Plus className="w-5 h-5 text-accent" />
-              <span className="text-xs font-medium">{language === "zh" ? "添加和弦" : "Add Chord"}</span>
+              <span className="text-xs font-medium">{t("chords_add_chord")}</span>
             </button>
           </div>
         </div>
@@ -749,23 +745,21 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-accent text-black">
-                  {language === "zh" ? `正在编辑：小节 ${selectedChordIdx + 1}` : `Editing: Bar ${selectedChordIdx + 1}`}
+                  {t("chords_editing_bar", { n: selectedChordIdx + 1 })}
                 </span>
                 <span className="text-base font-bold text-white font-mono">
                   {formatChordName(currentChord.root, currentChord.quality, currentChord.inversion)}
                 </span>
               </div>
               <span className="text-xs text-text-sub">
-                {language === "zh" 
-                  ? "点击下方按钮即时切换根音、和弦家族与具体类型" 
-                  : "Select root note, quality family, inversion, and duration below"}
+                {t("chords_switch_hint")}
               </span>
             </div>
 
             {/* Root Note Picker (12 Semitones) */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] font-semibold text-text-sub">
-                {language === "zh" ? "1. 选择根音 (Root Note)" : "1. Select Root Note"}
+                {t("chords_step1_root")}
               </span>
               <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
                 {NOTE_NAMES.map((note) => (
@@ -791,18 +785,14 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             {/* Specific Chord Type Categories (Power和弦 / 3和弦 / 7和弦 / 扩展和弦) */}
             <div className="flex flex-col gap-3 pt-2">
               <span className="text-[11px] font-semibold text-text-sub">
-                {language === "zh" 
-                  ? "2. 选择具体和弦类型 (Power 和弦 / 3和弦 / 7和弦 / 扩展色彩和弦)" 
-                  : "2. Select Chord Quality (Power Chords / Triads / 7ths / Extensions)"}
+                {t("chords_step2_quality")}
               </span>
 
               {/* Category 1: Power 和弦 (Rock / Metal 必备) */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] text-[#e84855] font-bold flex items-center gap-1">
                   <span>
-                    {language === "zh" 
-                      ? "⚡ POWER 和弦 (Power Chords / 5和弦 · 纯五度摇滚)" 
-                      : "⚡ POWER CHORDS (5-Chords · Pure Root + 5th Rock Voicing)"}
+                    {t("chords_category_power")}
                   </span>
                 </span>
                 <div className="flex gap-2">
@@ -818,7 +808,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         : "bg-[#181c28] border-[#293042] text-[#eae6dc] hover:bg-[#222838]"
                     }`}
                   >
-                    {currentChord.root}5 ({language === "zh" ? "五和弦 · 纯根音+五音" : "Power Chord · Root + 5th"})
+                    {currentChord.root}5 ({t("chords_power_desc")})
                   </button>
                 </div>
               </div>
@@ -826,9 +816,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               {/* Category 2: 3 和弦 (Triads) */}
               <div className="flex flex-col gap-1 pt-1">
                 <span className="text-[10px] text-[#4ad8c8] font-bold">
-                  {language === "zh" 
-                    ? "● 基础 3 和弦 (Triads · 大三/小三/挂二/挂四/减/增)" 
-                    : "● TRIADS (Major / Minor / Sus2 / Sus4 / Dim / Aug)"}
+                  {t("chords_category_triads")}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                   {(["maj", "min", "sus2", "sus4", "dim", "aug"] as ChordQuality[]).map((q) => (
@@ -849,7 +837,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         {currentChord.root}{CHORD_QUALITY_META[q].symbol}
                       </div>
                       <div className="text-[10px] opacity-75 truncate">
-                        {language === "zh" ? CHORD_QUALITY_META[q].nameZh : CHORD_QUALITY_META[q].nameEn}
+                        {isZh ? CHORD_QUALITY_META[q].nameZh : CHORD_QUALITY_META[q].nameEn}
                       </div>
                     </button>
                   ))}
@@ -859,9 +847,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               {/* Category 3: 7 和弦 (7th Chords) */}
               <div className="flex flex-col gap-1 pt-1">
                 <span className="text-[10px] text-accent font-bold">
-                  {language === "zh" 
-                    ? "★ 经典 7 和弦 (7th Chords · 大七/小七/属七/半减七/减七)" 
-                    : "★ 7TH CHORDS (Maj7 / Min7 / Dominant 7 / m7b5 / Dim7)"}
+                  {t("chords_category_7ths")}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                   {(["maj7", "min7", "7", "m7b5", "dim7", "mMaj7"] as ChordQuality[]).map((q) => (
@@ -882,7 +868,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         {currentChord.root}{CHORD_QUALITY_META[q].symbol}
                       </div>
                       <div className="text-[10px] opacity-75 truncate">
-                        {language === "zh" ? CHORD_QUALITY_META[q].nameZh : CHORD_QUALITY_META[q].nameEn}
+                        {isZh ? CHORD_QUALITY_META[q].nameZh : CHORD_QUALITY_META[q].nameEn}
                       </div>
                     </button>
                   ))}
@@ -892,9 +878,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               {/* Category 4: 扩展/色彩和弦 (Extended & Color Chords) */}
               <div className="flex flex-col gap-1 pt-1">
                 <span className="text-[10px] text-[#d47fa6] font-bold">
-                  {language === "zh" 
-                    ? "◆ 扩展色彩和弦 (Extended & Ninth Chords · 加九/大九/小九/六和弦)" 
-                    : "◆ EXTENDED & COLOR CHORDS (Add9 / Maj9 / Min9 / 9 / 6 / m6)"}
+                  {t("chords_category_extended")}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                   {(["add9", "maj9", "min9", "9", "6", "m6"] as ChordQuality[]).map((q) => (
@@ -915,7 +899,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         {currentChord.root}{CHORD_QUALITY_META[q].symbol}
                       </div>
                       <div className="text-[10px] opacity-75 truncate">
-                        {language === "zh" ? CHORD_QUALITY_META[q].nameZh : CHORD_QUALITY_META[q].nameEn}
+                        {isZh ? CHORD_QUALITY_META[q].nameZh : CHORD_QUALITY_META[q].nameEn}
                       </div>
                     </button>
                   ))}
@@ -927,7 +911,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-white/5">
               <div className="flex flex-col gap-1.5">
                 <span className="text-[11px] font-semibold text-text-sub">
-                  {language === "zh" ? "3. 和弦转位 (Inversion)" : "3. Chord Inversion"}
+                  {t("chords_step3_inversion")}
                 </span>
                 <div className="grid grid-cols-3 gap-2">
                   {[0, 1, 2].map((inv) => (
@@ -945,10 +929,10 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                       }`}
                     >
                       {inv === 0 
-                        ? (language === "zh" ? "原位 Root" : "Root Position") 
+                        ? t("chords_inv_0") 
                         : inv === 1 
-                        ? (language === "zh" ? "第一转位 (3音)" : "1st Inv (3rd Bass)") 
-                        : (language === "zh" ? "第二转位 (5音)" : "2nd Inv (5th Bass)")}
+                        ? t("chords_inv_1") 
+                        : t("chords_inv_2")}
                     </button>
                   ))}
                 </div>
@@ -956,7 +940,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-[11px] font-semibold text-text-sub">
-                  {language === "zh" ? "4. 小节时值 (Duration)" : "4. Measure Duration"}
+                  {t("chords_step4_duration")}
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -968,7 +952,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         : "bg-[#181c28] border-[#293042] text-[#eae6dc]"
                     }`}
                   >
-                    {language === "zh" ? "4 拍 (完整 1 小节)" : "4 Beats (1 Full Bar)"}
+                    {t("chords_dur_4")}
                   </button>
                   <button
                     type="button"
@@ -979,7 +963,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         : "bg-[#181c28] border-[#293042] text-[#eae6dc]"
                     }`}
                   >
-                    {language === "zh" ? "2 拍 (半小节快速切换)" : "2 Beats (Half Bar)"}
+                    {t("chords_dur_2")}
                   </button>
                 </div>
               </div>
@@ -993,7 +977,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <span className="text-xs font-semibold text-white flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-accent" />
               <span>
-                {language === "zh" ? "当前和弦真实乐器指法与键盘映射" : "Live Instrument Voicing & Visualizer"}
+                {t("chords_live_voicing_title")}
               </span>
             </span>
             <span className="text-xs font-mono text-[#d8b988]">
@@ -1036,13 +1020,11 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="flex items-center gap-2 text-lg sm:text-xl font-medium text-white">
               <BookOpen className="w-5 h-5 text-accent" />
               <h2>
-                {language === "zh" ? "常见分类和弦走向 (Hooktheory 经典分类)" : "Popular Categorized Progressions (Hooktheory Curated)"}
+                {t("chords_categorized_title")}
               </h2>
             </div>
             <p className="text-xs text-text-sub mt-0.5">
-              {language === "zh" 
-                ? "点击试听或一键载入工作台进行自由拓展与乐器音色实验" 
-                : "Audition classic chord progressions or load into the studio builder to customize and experiment with piano/guitar timbres"}
+              {t("chords_categorized_sub")}
             </p>
           </div>
 
@@ -1053,7 +1035,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={language === "zh" ? "搜索走向、歌曲或艺术家..." : "Search progressions, songs or artists..."}
+              placeholder={t("chords_search_placeholder")}
               className="w-full bg-[#121622] border border-line rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-[#5a5e68] focus:outline-none focus:border-accent"
             />
           </div>
@@ -1071,7 +1053,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   : "bg-[#121622] text-text-sub hover:bg-[#181e2e] hover:text-white border border-line"
               }`}
             >
-              {language === "zh" ? cat.nameZh : cat.nameEn}
+              {isZh ? cat.nameZh : cat.nameEn}
             </button>
           ))}
         </div>
@@ -1104,9 +1086,9 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                         {prog.emotion[language]}
                       </span>
                       <h3 className="text-base font-semibold text-white group-hover:text-accent transition-colors leading-snug">
-                        {language === "zh" ? prog.name.zh : prog.name.en}
+                        {isZh ? prog.name.zh : prog.name.en}
                       </h3>
-                      {language === "zh" && (
+                      {isZh && (
                         <span className="text-[11px] text-text-sub font-serif block">
                           {prog.name.en}
                         </span>
@@ -1137,7 +1119,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     {/* Real translated chords in key */}
                     <div className="flex items-center gap-1 text-xs text-text-sub pt-1 border-t border-white/5">
                       <span className="text-[10px] text-text-dim">
-                        {language === "zh" ? `在 ${keyRoot} 调实装：` : `Voiced in ${keyRoot}: `}
+                        {t("chords_voiced_in", { key: keyRoot })}
                       </span>
                       <span className="font-mono text-white font-semibold">
                         {translatedChords.join(" ─ ")}
@@ -1153,7 +1135,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   {/* Famous Songs (Hooktheory Theorytab) */}
                   <div className="pt-2 border-t border-[#1f2533]">
                     <span className="text-[10px] text-text-dim block mb-1">
-                      {language === "zh" ? "代表热单与作品：" : "Notable Hits & TheoryTabs:"}
+                      {t("chords_notable_hits")}
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {prog.songs.slice(0, 3).map((s, si) => (
@@ -1183,12 +1165,12 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     {isThisPreviewing ? (
                       <>
                         <Square className="w-3.5 h-3.5 fill-current" />
-                        <span>{language === "zh" ? "停止试听" : "Stop Preview"}</span>
+                        <span>{t("chords_stop_preview")}</span>
                       </>
                     ) : (
                       <>
                         <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>{language === "zh" ? "试听走向" : "Preview"}</span>
+                        <span>{t("chords_preview")}</span>
                       </>
                     )}
                   </button>
@@ -1199,7 +1181,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     onClick={() => handleLoadProgression(prog)}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent/10 hover:bg-accent/20 text-accent border border-accent/30 transition-colors"
                   >
-                    <span>{language === "zh" ? "载入工作台" : "Load to Studio"}</span>
+                    <span>{t("chords_load_to_studio")}</span>
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>

@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   analyser,
   isPlaying = false,
 }) => {
-  const { t, language, toggleLanguage } = useLanguage();
+  const { t, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const exploreRef = useRef<HTMLDivElement | null>(null);
@@ -110,10 +110,10 @@ export const Header: React.FC<HeaderProps> = ({
     return () => cancelAnimationFrame(animationFrameId);
   }, [analyser, isPlaying]);
 
-  const exploreItems: Array<{ tab: NavTab; labelKey: string; descZh: string; descEn: string; icon: React.ReactNode }> = [
-    { tab: "galaxy", labelKey: "nav_galaxy", descZh: "3D 星系图谱", descEn: "3D Cosmic Map", icon: <Orbit className="w-3.5 h-3.5" /> },
-    { tab: "horizontal-timeline", labelKey: "nav_timeline_h", descZh: "年代编年演变轴", descEn: "Chronology", icon: <Clock className="w-3.5 h-3.5" /> },
-    { tab: "vertical-timeline", labelKey: "nav_timeline_v", descZh: "流派故事脉络", descEn: "Storylines", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
+  const exploreItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
+    { tab: "galaxy", labelKey: "nav_galaxy", descKey: "nav_galaxy_desc", icon: <Orbit className="w-3.5 h-3.5" /> },
+    { tab: "horizontal-timeline", labelKey: "nav_timeline_h", descKey: "nav_timeline_h_desc", icon: <Clock className="w-3.5 h-3.5" /> },
+    { tab: "vertical-timeline", labelKey: "nav_timeline_v", descKey: "nav_timeline_v_desc", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
   ];
 
   const isExploreActive = ["galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
@@ -190,9 +190,9 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {exploreOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-52 bg-panel2/98 backdrop-blur-md border border-line rounded-xl p-1.5 shadow-2xl z-50 animate-fade-in">
+            <div className="absolute top-full left-0 mt-1.5 w-52 bg-[#0d0e12] border border-line rounded-xl p-1.5 shadow-2xl z-50 animate-fade-in">
               <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-text-dim select-none">
-                {language === "zh" ? "曲风探索视图" : "Exploration Views"}
+                {t("header_explore_title")}
               </div>
               <div className="space-y-0.5 mt-0.5">
                 {exploreItems.map((item) => {
@@ -215,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <span className="font-medium">{t(item.labelKey)}</span>
                       </div>
                       <span className="text-[10px] font-mono text-text-dim">
-                        {language === "zh" ? item.descZh : item.descEn}
+                        {t(item.descKey)}
                       </span>
                     </button>
                   );
@@ -287,9 +287,9 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={toggleLanguage}
           className="flex items-center gap-1 text-xs font-mono font-bold text-text-sub hover:text-text px-2 py-1.5 border border-line hover:border-line-strong rounded-lg bg-panel2 transition-colors"
-          title="Switch Language"
+          title={t("lang_switch_title")}
         >
-          <span className="text-accent">{language === "zh" ? "EN" : "中"}</span>
+          <span className="text-accent">{t("lang_switch_target")}</span>
         </button>
 
         {/* Updates / Version Button */}
@@ -297,7 +297,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenUpdates}
             className="flex items-center gap-1.5 text-xs font-mono font-medium text-text-sub hover:text-accent px-2 py-1.5 border border-line hover:border-accent/40 rounded-lg bg-panel2 transition-colors"
-            title={language === "zh" ? "检查更新与更新记录" : "Check for updates & changelog"}
+            title={t("header_check_updates_title")}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             <span className="hidden sm:inline">v{CURRENT_CLIENT_VERSION}</span>
@@ -315,9 +315,18 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
+      {/* Mobile backdrop scrim */}
+      {mobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 top-[57px] bg-black/60 backdrop-blur-sm z-40"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-panel2/98 backdrop-blur-lg border-b border-line p-3 space-y-1.5 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0d0e12] border-b border-line p-3 space-y-1.5 shadow-2xl max-h-[85vh] overflow-y-auto z-50">
           {/* Primary Tabs */}
           <button
             onClick={() => {
@@ -377,7 +386,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>{t(item.labelKey)}</span>
                   </div>
                   <span className="text-[10px] font-mono text-text-dim">
-                    {language === "zh" ? item.descZh : item.descEn}
+                    {t(item.descKey)}
                   </span>
                 </button>
               );
@@ -424,7 +433,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-full flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-line text-text-sub hover:text-accent hover:bg-panel transition-colors pt-2.5 mt-2 border-t border-t-[#23262d]"
             >
               <History className="w-3.5 h-3.5 text-accent" />
-              <span>{language === "zh" ? "检查更新 & 更新记录" : "Updates & Changelog"}</span>
+              <span>{t("header_updates_btn")}</span>
               <span className="ml-auto font-mono text-[10px] text-text-dim">v{CURRENT_CLIENT_VERSION}</span>
             </button>
           )}

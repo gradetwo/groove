@@ -54,6 +54,8 @@ export const StepCell = memo<StepCellProps>(function StepCell({
 
   return (
     <div
+      data-track-idx={trackIdx}
+      data-step-idx={stepIdx}
       onClick={(e) => onClick(trackIdx, stepIdx, e)}
       onContextMenu={(e) => onContextMenu(trackIdx, stepIdx, e)}
       onPointerDown={(e) => onPointerDown(trackIdx, stepIdx, e)}

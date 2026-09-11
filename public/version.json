@@ -1,7 +1,30 @@
 {
-  "version": "1.6.0",
-  "releaseDate": "2026-09-11",
+  "version": "1.7.0",
+  "releaseDate": "2026-09-12",
   "changelog": [
+    {
+      "version": "1.7.0",
+      "date": "2026-09-12",
+      "category": "feature",
+      "title": {
+        "zh": "v1.7.0 全站内联语言三元清零、移动端菜单视觉高对比修复与 Phase 1 完整收官",
+        "en": "v1.7.0 Inline Language Ternary Eradication, Mobile Menu High-Contrast Fix & Phase 1 Completion"
+      },
+      "highlights": [
+        {
+          "zh": "全站内联语言三元彻底清零（P1-11）：全站 17 个核心业务视图与组件累计 321 处 language === 'zh' 全部迁移至类型安全 t() 字典与 isZh 响应式状态，除 LanguageContext 内部 3 处基础设施外业务代码完全归零",
+          "en": "Eradication of inline language ternaries (P1-11): migrated 321 inline language ternaries across 17 views and components to type-safe t() dictionary and reactive isZh states, fully centralizing internationalization"
+        },
+        {
+          "zh": "移动端顶部菜单高对比度与背景遮罩修复：消除无效的 Tailwind /98 类名引起的背景透明问题，为移动端下拉菜单提供完全不透明的现代化深黑面板（#0d0e12）与暗化模糊遮罩（Backdrop Scrim），大幅改善移动端竖屏与平板下的文本可读性与点击退出体验",
+          "en": "Mobile menu high-contrast & backdrop scrim fix: resolved transparent background defect caused by missing /98 opacity token, deploying fully opaque dark surface (#0d0e12) and backdrop scrim for crisp legibility and effortless dismissal on phones and tablets"
+        },
+        {
+          "zh": "Phase 1 全部架构与工程化任务 100% 验收达标：完成全部设计令牌、原子组件库、按需索引加载、客户端路由与 ESLint 0 警告规范，Playwright 7 平台跨端矩阵测试全绿通过",
+          "en": "Phase 1 100% milestone completion: all design tokens, atomic UI libraries, on-demand index loading, router, and lint/coverage baselines verified, passing full 7-target Playwright cross-device test matrix"
+        }
+      ]
+    },
     {
       "version": "1.6.0",
       "date": "2026-09-11",

@@ -87,7 +87,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
   onSelectGenre,
   onOpenStudio,
 }) => {
-  const { t, language } = useLanguage();
+  const { t, language, isZh } = useLanguage();
 
   // Compare pool: 2 to 4 genres
   const [genres, setGenres] = useState<Genre[]>(() => {
@@ -377,9 +377,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               </h2>
             </div>
             <p className="text-sm text-text-sub mt-1">
-              {language === "zh" 
-                ? "左右并排对比不同曲风的鼓组切分、和声架构与声学特性" 
-                : "Side-by-side columnar comparison of drum syncopation, harmonic structure & radar DNA"}
+              {t("compare_subtitle")}
             </p>
           </div>
 
@@ -400,7 +398,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_12px_rgba(245,183,61,0.25)]"
                     : "bg-[#1c1e24] hover:bg-[#252830] border-[#2b2e38] hover:border-amber-500/40 text-accent"
                 }`}
-                title={language === "zh" ? "对齐拍子与小节，同步播放对比曲风 A 与曲风 B" : "Phase-locked dual-genre sync playback"}
+                title={t("compare_sync_title")}
               >
                 {isSyncPlaying ? (
                   <>
@@ -431,7 +429,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 {addDropdownOpen && (
                   <div className="absolute right-0 top-12 z-40 w-72 bg-panel border border-[#2b2e38] rounded-2xl shadow-2xl p-2 max-h-72 overflow-y-auto space-y-1 animate-slide-up">
                     <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-text-dim">
-                      {language === "zh" ? "可添加曲风" : "Select Genre"}
+                      {t("compare_select_genre")}
                     </div>
                     {ALL_GENRES.filter((g) => !genres.some((sel) => sel.id === g.id)).map((g) => (
                       <button
@@ -467,7 +465,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 <div>
                   <div className="flex items-center space-x-2">
                     <h4 className="text-sm sm:text-base font-black text-text tracking-wide">
-                      {language === "zh" ? "A/B 双曲风锁相实时同步试听" : "Synchronized A/B Audition"}
+                      {t("compare_sync_audition")}
                     </h4>
                     <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold">
                       LIVE
@@ -495,7 +493,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               {/* Channel Routing Mode Buttons */}
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-[#737887] uppercase tracking-wider block">
-                  {language === "zh" ? "声轨监听通道路由" : "Channel Routing"}
+                  {t("compare_channel_routing")}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   <button
@@ -548,7 +546,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#737887] uppercase tracking-wider">
-                    {language === "zh" ? "对齐同步速度 (BPM)" : "Synchronized Tempo"}
+                    {t("compare_sync_tempo")}
                   </span>
                   <span className="font-mono text-xs font-bold text-accent">
                     {syncBpm} BPM
@@ -596,7 +594,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     onClick={() => handleSetSyncBpm(Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2))}
                     className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-panel2 hover:bg-[#1c1e24] border border-line text-accent hover:text-white"
                   >
-                    {language === "zh" ? "平均" : "Avg"}: {Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2)}
+                    {t("compare_avg_tempo")}: {Math.round(((genres[0].default_bpm || 120) + (genres[1].default_bpm || 120)) / 2)}
                   </button>
                 </div>
               </div>
@@ -606,7 +604,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
             <div className="pt-2 border-t border-[#1f222a] space-y-1.5">
               <div className="flex items-center justify-between text-[11px] text-[#737887]">
                 <span className="uppercase tracking-wider font-mono font-bold">
-                  {language === "zh" ? "16分音符节拍走带" : "16-Step Sequence Phase"}
+                  {t("compare_16_phase")}
                 </span>
                 <span className="font-mono text-amber-400 font-bold">
                   STEP {(syncStep % 16) + 1}/16
@@ -675,7 +673,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               onClick={() => handleSelectPreset(preset.ids)}
               className="text-xs px-3 py-1.5 rounded-xl bg-panel2 hover:bg-[#1c1e24] border border-line hover:border-[#383d4a] text-[#a4a9b5] hover:text-text font-semibold transition-colors"
             >
-              {language === "zh" ? preset.labelZh : preset.labelEn}
+              {isZh ? preset.labelZh : preset.labelEn}
             </button>
           ))}
         </div>
@@ -767,7 +765,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   className="absolute text-[11px] font-bold text-text-sub transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
                   style={{ left: `${x}px`, top: `${y}px` }}
                 >
-                  {language === "zh" ? axis.labelZh : axis.labelEn}
+                  {isZh ? axis.labelZh : axis.labelEn}
                 </div>
               );
             })}
@@ -824,23 +822,23 @@ export const CompareView: React.FC<CompareViewProps> = ({
                   similarityInfo.bpmOverlap ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"
                 }`}>
                   {similarityInfo.bpmOverlap 
-                    ? (language === "zh" ? "适合现场混音无缝衔接" : "Seamless DJ Transition") 
-                    : (language === "zh" ? "速度跳跃大，需降速/提速过渡" : "Wide BPM jump")}
+                    ? t("compare_seamless_transition") 
+                    : t("compare_wide_jump")}
                 </span>
               </div>
 
               <div className="bg-panel2 p-3.5 rounded-xl border border-line">
                 <span className="font-bold text-[#737887] uppercase tracking-wider text-xs flex items-center space-x-1">
                   <Layers className="w-3.5 h-3.5 text-accent" />
-                  <span>{language === "zh" ? "节奏律动骨架对比" : "Rhythm DNA Compatibility"}</span>
+                  <span>{t("compare_dna_compat")}</span>
                 </span>
                 <p className="text-text font-bold text-sm mt-1">
                   {genres[0]?.time_signature} vs {genres[1]?.time_signature}
                 </p>
                 <span className="text-xs text-text-sub block mt-1">
                   {genres[0]?.time_signature === genres[1]?.time_signature
-                    ? (language === "zh" ? "拍号一致，可对齐鼓机网格" : "Identical meter, compatible grids")
-                    : (language === "zh" ? "复节拍差异，具有多拍对位特征" : "Polymetric contrast")}
+                    ? t("compare_identical_meter")
+                    : t("compare_polymetric")}
                 </span>
               </div>
             </div>
@@ -849,9 +847,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
           <div className="text-xs text-[#737887] mt-3 pt-3 border-t border-[#1a1c22] flex items-center space-x-1.5">
             <Info className="w-4 h-4 text-accent shrink-0" />
             <span>
-              {language === "zh"
-                ? "点击下方各曲风列中的【只播放鼓组】或【全部音轨】，即可即时孤立听辨底层律动或完整编曲。"
-                : "Click [Drums Only] or [Full Tracks] in any column below to instantly audition isolated drums or the complete arrangement."}
+              {t("compare_audition_hint")}
             </span>
           </div>
         </div>
@@ -862,10 +858,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
         <div className="flex items-center justify-between">
           <h3 className="text-base font-black text-text tracking-wide flex items-center space-x-2">
             <Columns className="w-4 h-4 text-accent" />
-            <span>{language === "zh" ? "曲风多维并排对比矩阵" : "Multi-Dimensional Genre Comparison Matrix"}</span>
+            <span>{t("compare_matrix_title")}</span>
           </h3>
           <span className="text-xs text-text-sub font-mono">
-            {genres.length} {language === "zh" ? "组并排对比中" : "Columns Active"}
+            {t("compare_columns_active", { count: genres.length })}
           </span>
         </div>
 
@@ -932,10 +928,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
                           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: syncMode === "solo_b" ? "#71717a" : "#f5b73d" }} />
                           <span className="truncate max-w-[180px] whitespace-nowrap">
                             {syncMode === "solo_b"
-                              ? (language === "zh" ? "同步: 已静音 (Solo B)" : "Sync: Muted (Solo B)")
+                              ? t("compare_sync_muted_solo_b")
                               : syncMode === "drums_only"
-                              ? (language === "zh" ? "同步: 仅鼓组" : "Sync: Drums Only")
-                              : (language === "zh" ? "同步: 实时混音 [A]" : "Sync: Active [A]")}
+                              ? t("compare_sync_drums")
+                              : t("compare_sync_active_a")}
                           </span>
                         </div>
                       )}
@@ -950,10 +946,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
                           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: syncMode === "solo_a" ? "#71717a" : "#818cf8" }} />
                           <span className="truncate max-w-[180px] whitespace-nowrap">
                             {syncMode === "solo_a"
-                              ? (language === "zh" ? "同步: 已静音 (Solo A)" : "Sync: Muted (Solo A)")
+                              ? t("compare_sync_muted_solo_a")
                               : syncMode === "drums_only"
-                              ? (language === "zh" ? "同步: 仅鼓组" : "Sync: Drums Only")
-                              : (language === "zh" ? "同步: 实时混音 [B]" : "Sync: Active [B]")}
+                              ? t("compare_sync_drums")
+                              : t("compare_sync_active_b")}
                           </span>
                         </div>
                       )}
@@ -961,7 +957,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                         <div className="flex items-center space-x-2 px-2.5 py-1 rounded-xl text-xs font-bold border bg-zinc-800/40 border-zinc-700 text-zinc-500">
                           <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 shrink-0" />
                           <span className="truncate max-w-[180px] whitespace-nowrap">
-                            {language === "zh" ? "未加入 A/B 同步" : "Not in A/B Sync"}
+                            {t("compare_not_in_sync")}
                           </span>
                         </div>
                       )}
@@ -979,12 +975,12 @@ export const CompareView: React.FC<CompareViewProps> = ({
                             ? "bg-accent text-black border-accent shadow-[0_0_15px_rgba(245,183,61,0.4)]"
                             : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-accent/50"
                         }`}
-                        title={language === "zh" ? "仅试听底鼓、军鼓、踩镲与打击乐" : "Audition drums & percussion only"}
+                        title={t("compare_audition_drums_title")}
                       >
                         {isCurrentPlaying && playingMode === "drums" ? (
                           <>
                             <Square className="w-3.5 h-3.5 fill-current" />
-                            <span>{language === "zh" ? "停止鼓组" : "Stop Drums"}</span>
+                            <span>{t("compare_stop_drums")}</span>
                             <div className="flex items-end gap-0.5 h-3 ml-1">
                               <span className="w-0.5 h-3 bg-black animate-pulse" />
                               <span className="w-0.5 h-1.5 bg-black animate-ping" />
@@ -1007,12 +1003,12 @@ export const CompareView: React.FC<CompareViewProps> = ({
                             ? "bg-accent text-black border-accent shadow-[0_0_15px_rgba(245,183,61,0.4)]"
                             : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-accent/50"
                         }`}
-                        title={language === "zh" ? "播放包含底鼓、贝斯、和声与合成器的完整配器" : "Audition full arrangement"}
+                        title={t("compare_audition_full_title")}
                       >
                         {isCurrentPlaying && playingMode === "full" ? (
                           <>
                             <Square className="w-3.5 h-3.5 fill-current" />
-                            <span>{language === "zh" ? "停止全轨" : "Stop Full"}</span>
+                            <span>{t("compare_stop_full")}</span>
                             <div className="flex items-end gap-0.5 h-3 ml-1">
                               <span className="w-0.5 h-3 bg-black animate-pulse" />
                               <span className="w-0.5 h-1.5 bg-black animate-ping" />
@@ -1115,7 +1111,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                       {genre.drum_pattern.percussion && (
                         <div>
                           <span className="text-xs font-bold text-amber-400 uppercase tracking-wide block">
-                            {language === "zh" ? "打击乐加花" : "Percussion"}
+                            {t("detail_percussion")}
                           </span>
                           <p className="text-sm text-[#d4d1c9] leading-relaxed mt-1 font-sans">
                             {genre.drum_pattern.percussion[language]}
@@ -1182,7 +1178,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                           <div key={axis.key} className="space-y-1">
                             <div className="flex items-center justify-between text-xs sm:text-sm">
                               <span className="text-[#9ca3af] font-medium">
-                                {language === "zh" ? axis.labelZh : axis.labelEn}
+                                {isZh ? axis.labelZh : axis.labelEn}
                               </span>
                               <span className="font-mono font-bold text-[#f3f1ec]">
                                 {val}/10

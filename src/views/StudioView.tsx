@@ -195,7 +195,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   initialChords,
   onClearInitialChords,
 }) => {
-  const { t, language } = useLanguage();
+  const { t, language, isZh } = useLanguage();
 
   // Current selected genre
   const [currentGenre, setCurrentGenre] = useState<Genre>(() => {
@@ -396,7 +396,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     applyStudioSnapshot(previous);
     updateUndoRedoState();
     triggerHaptic(HapticPatterns.undoRedo);
-    showToast(language === "zh" ? "已撤销 (Undo) ✓" : "Undone ✓");
+    showToast(isZh ? "已撤销 (Undo) ✓" : "Undone ✓");
   }, [createStudioSnapshot, applyStudioSnapshot, language, updateUndoRedoState]);
 
   const handleRedo = useCallback(() => {
@@ -406,7 +406,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     applyStudioSnapshot(next);
     updateUndoRedoState();
     triggerHaptic(HapticPatterns.undoRedo);
-    showToast(language === "zh" ? "已重做 (Redo) ✓" : "Redone ✓");
+    showToast(isZh ? "已重做 (Redo) ✓" : "Redone ✓");
   }, [createStudioSnapshot, applyStudioSnapshot, language, updateUndoRedoState]);
 
   // Initialize engine
@@ -494,7 +494,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     });
 
     showToast(
-      language === "zh"
+      isZh
         ? `已成功载入 ${initialChords.length} 个和弦到和弦轨道 ✓`
         : `Loaded ${initialChords.length} chords into track ✓`
     );
@@ -1365,13 +1365,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
     });
 
     const meterDesc = newNum === 3 
-      ? (language === "zh" ? "三拍子 (3格一组)" : "3 steps/group")
+      ? (isZh ? "三拍子 (3格一组)" : "3 steps/group")
       : newNum === 2 
-      ? (language === "zh" ? "二拍子 (2格一组)" : "2 steps/group")
-      : (language === "zh" ? "四拍子 (4格一组)" : "4 steps/group");
+      ? (isZh ? "二拍子 (2格一组)" : "2 steps/group")
+      : (isZh ? "四拍子 (4格一组)" : "4 steps/group");
 
     showToast(
-      language === "zh"
+      isZh
         ? `已切换至 ${newSig} 节拍：${meterDesc}，网格已自适应为 ${targetSteps} 步`
         : `Switched to ${newSig} (${meterDesc}, ${targetSteps} steps)`
     );
@@ -1418,7 +1418,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     });
 
     showToast(
-      language === "zh"
+      isZh
         ? `量化精度设为 ${newRes}：网格调整为 ${targetSteps} 步`
         : `Quantization set to ${newRes} (${targetSteps} steps)`
     );
@@ -1480,12 +1480,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
       scrollTimerRef.current = null;
     }, 60);
 
-    showToast(language === "zh" ? `已添加 +${count} 步 (共 ${stepCount + count} 步)` : `Added +${count} steps (${stepCount + count} total)`);
+    showToast(isZh ? `已添加 +${count} 步 (共 ${stepCount + count} 步)` : `Added +${count} steps (${stepCount + count} total)`);
   };
 
   const handleRemoveSteps = (count = 4) => {
     if (stepCount <= 4) {
-      showToast(language === "zh" ? "最少保留 4 步" : "Minimum 4 steps");
+      showToast(isZh ? "最少保留 4 步" : "Minimum 4 steps");
       return;
     }
     const newLen = Math.max(4, stepCount - count);
@@ -1503,7 +1503,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
-    showToast(language === "zh" ? `已删减 -${count} 步 (共 ${newLen} 步)` : `Removed -${count} steps (${newLen} total)`);
+    showToast(isZh ? `已删减 -${count} 步 (共 ${newLen} 步)` : `Removed -${count} steps (${newLen} total)`);
   };
 
   const handleSetStepCount = (target: number) => {
@@ -1544,7 +1544,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }, 60);
     }
 
-    showToast(language === "zh" ? `步长设置为 ${target} 步` : `Grid set to ${target} steps`);
+    showToast(isZh ? `步长设置为 ${target} 步` : `Grid set to ${target} steps`);
   };
 
   // Duplicate Bar 1 to subsequent bars
@@ -1572,7 +1572,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
-    showToast(language === "zh" ? "已将第 1 小节复制到全部小节" : "Duplicated Bar 1 to all bars");
+    showToast(isZh ? "已将第 1 小节复制到全部小节" : "Duplicated Bar 1 to all bars");
   };
 
   // Clear all steps
@@ -1589,7 +1589,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
-    showToast(language === "zh" ? "已清空所有轨道步进" : "Cleared all pattern steps");
+    showToast(isZh ? "已清空所有轨道步进" : "Cleared all pattern steps");
   };
 
   // Humanize velocity
@@ -1613,7 +1613,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
-    showToast(language === "zh" ? "已注入微力度拟人化 (±10%)" : "Humanized note velocities (±10%)");
+    showToast(isZh ? "已注入微力度拟人化 (±10%)" : "Humanized note velocities (±10%)");
   };
 
   // Track shift left/right
@@ -1698,7 +1698,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
-    showToast(language === "zh" ? `已智能填充 ${pattern.tracks[trackIdx].name}` : `Smart filled ${pattern.tracks[trackIdx].name}`);
+    showToast(isZh ? `已智能填充 ${pattern.tracks[trackIdx].name}` : `Smart filled ${pattern.tracks[trackIdx].name}`);
   };
 
   // Clear single track
@@ -1711,7 +1711,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
       return copy;
     });
-    showToast(language === "zh" ? `已清空 ${pattern.tracks[trackIdx].name}` : `Cleared ${pattern.tracks[trackIdx].name}`);
+    showToast(isZh ? `已清空 ${pattern.tracks[trackIdx].name}` : `Cleared ${pattern.tracks[trackIdx].name}`);
   };
 
   // Track volume change
@@ -1776,7 +1776,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         >
           {categories.map((cat) => (
             <option key={cat} value={cat}>
-              {cat === "ALL" ? (language === "zh" ? "全部大类 (159)" : "All Categories (159)") : cat}
+              {cat === "ALL" ? (isZh ? "全部大类 (159)" : "All Categories (159)") : cat}
             </option>
           ))}
         </select>
@@ -1852,7 +1852,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 <button
                   onClick={() => setIsSidebarCollapsed(true)}
                   className="p-1.5 text-text-sub hover:text-text rounded-lg hover:bg-line-subtle transition-colors shrink-0"
-                  title={language === "zh" ? "收起左侧信息栏" : "Collapse sidebar"}
+                  title={isZh ? "收起左侧信息栏" : "Collapse sidebar"}
                 >
                   <PanelLeftClose className="w-4 h-4" />
                 </button>
@@ -1972,7 +1972,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   <div className="flex gap-2 text-xs text-[#b9b7b0] leading-relaxed">
                     <span className="text-[var(--g)] shrink-0">▸</span>
                     <span>
-                      {language === "zh" ? "经典走向: " : "Progressions: "}
+                      {isZh ? "经典走向: " : "Progressions: "}
                       <code className="font-mono text-[var(--g)] font-bold">
                         {currentGenre.common_chords.join(" → ")}
                       </code>
@@ -2062,10 +2062,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   <button
                     onClick={() => setIsSidebarCollapsed(false)}
                     className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-text-sub hover:text-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
-                    title={language === "zh" ? "展开风格档案" : "Expand dossier"}
+                    title={isZh ? "展开风格档案" : "Expand dossier"}
                   >
                     <PanelLeftOpen className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{language === "zh" ? "风格" : "Info"}</span>
+                    <span className="hidden sm:inline">{isZh ? "风格" : "Info"}</span>
                   </button>
                 )
               )}
@@ -2087,7 +2087,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                 )}
                 <span className="font-['JetBrains_Mono'] text-xs">
-                  {isPlaying ? (language === "zh" ? "暂停" : "PAUSE") : (language === "zh" ? "播放" : "PLAY")}
+                  {isPlaying ? (isZh ? "暂停" : "PAUSE") : (isZh ? "播放" : "PLAY")}
                 </span>
               </button>
 
@@ -2101,69 +2101,69 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   value={bpm}
                   onChange={(e) => setBpm(Math.max(40, Math.min(240, Number(e.target.value) || 120)))}
                   className="w-10 bg-transparent text-text font-['JetBrains_Mono'] text-xs font-bold text-center focus:outline-none focus:text-accent"
-                  title={language === "zh" ? "节奏速度 (40-240 BPM)" : "Tempo (40-240 BPM)"}
+                  title={isZh ? "节奏速度 (40-240 BPM)" : "Tempo (40-240 BPM)"}
                 />
               </div>
 
               {/* Meter Select Dropdown */}
               <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-                  {language === "zh" ? "拍号" : "METER"}
+                  {isZh ? "拍号" : "METER"}
                 </span>
                 <select
                   value={timeSignature}
                   onChange={(e) => handleTimeSignatureChange(e.target.value)}
                   className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                  aria-label={language === "zh" ? "选择拍号" : "Select time signature"}
+                  aria-label={isZh ? "选择拍号" : "Select time signature"}
                 >
-                  <option value="4/4" className="bg-panel text-text">4/4 {language === "zh" ? "(四四拍 · 4格)" : "(Common)"}</option>
-                  <option value="2/4" className="bg-panel text-text">2/4 {language === "zh" ? "(二四拍 · 2格)" : "(March)"}</option>
-                  <option value="3/4" className="bg-panel text-text">3/4 {language === "zh" ? "(三四拍 · 3格)" : "(Waltz)"}</option>
-                  <option value="2/2" className="bg-panel text-text">2/2 {language === "zh" ? "(二二拍 · 2格)" : "(Cut Time)"}</option>
-                  <option value="6/8" className="bg-panel text-text">6/8 {language === "zh" ? "(六八拍 · 3格)" : "(Compound)"}</option>
-                  <option value="3/8" className="bg-panel text-text">3/8 {language === "zh" ? "(三八拍 · 3格)" : "(Single)"}</option>
-                  <option value="9/8" className="bg-panel text-text">9/8 {language === "zh" ? "(九八拍 · 3格)" : "(Triple)"}</option>
-                  <option value="12/8" className="bg-panel text-text">12/8 {language === "zh" ? "(十二八 · 3格)" : "(Shuffle)"}</option>
-                  <option value="5/4" className="bg-panel text-text">5/4 {language === "zh" ? "(五四拍 · 5格)" : "(Take Five)"}</option>
-                  <option value="7/8" className="bg-panel text-text">7/8 {language === "zh" ? "(七八拍 · 7格)" : "(Balkan)"}</option>
+                  <option value="4/4" className="bg-panel text-text">4/4 {isZh ? "(四四拍 · 4格)" : "(Common)"}</option>
+                  <option value="2/4" className="bg-panel text-text">2/4 {isZh ? "(二四拍 · 2格)" : "(March)"}</option>
+                  <option value="3/4" className="bg-panel text-text">3/4 {isZh ? "(三四拍 · 3格)" : "(Waltz)"}</option>
+                  <option value="2/2" className="bg-panel text-text">2/2 {isZh ? "(二二拍 · 2格)" : "(Cut Time)"}</option>
+                  <option value="6/8" className="bg-panel text-text">6/8 {isZh ? "(六八拍 · 3格)" : "(Compound)"}</option>
+                  <option value="3/8" className="bg-panel text-text">3/8 {isZh ? "(三八拍 · 3格)" : "(Single)"}</option>
+                  <option value="9/8" className="bg-panel text-text">9/8 {isZh ? "(九八拍 · 3格)" : "(Triple)"}</option>
+                  <option value="12/8" className="bg-panel text-text">12/8 {isZh ? "(十二八 · 3格)" : "(Shuffle)"}</option>
+                  <option value="5/4" className="bg-panel text-text">5/4 {isZh ? "(五四拍 · 5格)" : "(Take Five)"}</option>
+                  <option value="7/8" className="bg-panel text-text">7/8 {isZh ? "(七八拍 · 7格)" : "(Balkan)"}</option>
                 </select>
               </div>
 
               {/* Quantize Resolution Select Dropdown */}
               <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-                  {language === "zh" ? "精度" : "GRID"}
+                  {isZh ? "精度" : "GRID"}
                 </span>
                 <select
                   value={resolution}
                   onChange={(e) => handleResolutionChange(e.target.value as "1/8" | "1/16" | "1/32")}
                   className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                  aria-label={language === "zh" ? "选择量化精度" : "Select quantization resolution"}
+                  aria-label={isZh ? "选择量化精度" : "Select quantization resolution"}
                 >
-                  <option value="1/16" className="bg-panel text-text">1/16 {language === "zh" ? "(标准)" : "(Default)"}</option>
-                  <option value="1/8" className="bg-panel text-text">1/8 {language === "zh" ? "(半速)" : "(Half)"}</option>
-                  <option value="1/32" className="bg-panel text-text">1/32 {language === "zh" ? "(双速)" : "(Double)"}</option>
+                  <option value="1/16" className="bg-panel text-text">1/16 {isZh ? "(标准)" : "(Default)"}</option>
+                  <option value="1/8" className="bg-panel text-text">1/8 {isZh ? "(半速)" : "(Half)"}</option>
+                  <option value="1/32" className="bg-panel text-text">1/32 {isZh ? "(双速)" : "(Double)"}</option>
                 </select>
               </div>
 
               {/* Step Length Select Dropdown */}
               <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-                  {language === "zh" ? "长度" : "LEN"}
+                  {isZh ? "长度" : "LEN"}
                 </span>
                 <select
                   value={stepCount}
                   onChange={(e) => handleSetStepCount(Number(e.target.value))}
                   className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                  aria-label={language === "zh" ? "选择步长与小节" : "Select step length"}
+                  aria-label={isZh ? "选择步长与小节" : "Select step length"}
                 >
-                  <option value={16} className="bg-panel text-text">16 {language === "zh" ? "步 (1小节)" : "Steps (1 Bar)"}</option>
-                  <option value={32} className="bg-panel text-text">32 {language === "zh" ? "步 (2小节)" : "Steps (2 Bars)"}</option>
-                  <option value={48} className="bg-panel text-text">48 {language === "zh" ? "步 (3小节)" : "Steps (3 Bars)"}</option>
-                  <option value={64} className="bg-panel text-text">64 {language === "zh" ? "步 (4小节)" : "Steps (4 Bars)"}</option>
+                  <option value={16} className="bg-panel text-text">16 {isZh ? "步 (1小节)" : "Steps (1 Bar)"}</option>
+                  <option value={32} className="bg-panel text-text">32 {isZh ? "步 (2小节)" : "Steps (2 Bars)"}</option>
+                  <option value={48} className="bg-panel text-text">48 {isZh ? "步 (3小节)" : "Steps (3 Bars)"}</option>
+                  <option value={64} className="bg-panel text-text">64 {isZh ? "步 (4小节)" : "Steps (4 Bars)"}</option>
                   {![16, 32, 48, 64].includes(stepCount) && (
                     <option value={stepCount} className="bg-panel text-text">
-                      {stepCount} {language === "zh" ? `步 (${barCount}小节)` : `Steps (${barCount} Bars)`}
+                      {stepCount} {isZh ? `步 (${barCount}小节)` : `Steps (${barCount} Bars)`}
                     </option>
                   )}
                 </select>
@@ -2174,30 +2174,30 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0"
                 title={
                   mobileEditMode === "step"
-                    ? (language === "zh" ? "普通步进：点按开关音符，长按打开参数锁" : "Step Note: Tap to toggle, long press for P-Locks")
+                    ? (isZh ? "普通步进：点按开关音符，长按打开参数锁" : "Step Note: Tap to toggle, long press for P-Locks")
                     : mobileEditMode === "accent"
-                    ? (language === "zh" ? "重音模式：点按步进切换最大重音 (Vel 127)" : "Accent: Tap to toggle max accent velocity")
+                    ? (isZh ? "重音模式：点按步进切换最大重音 (Vel 127)" : "Accent: Tap to toggle max accent velocity")
                     : mobileEditMode === "ratchet"
-                    ? (language === "zh" ? "连音滚奏：点按步进循环细分 (1x-4x)" : "Ratchet: Tap to cycle ratchets")
+                    ? (isZh ? "连音滚奏：点按步进循环细分 (1x-4x)" : "Ratchet: Tap to cycle ratchets")
                     : mobileEditMode === "pitch"
-                    ? (language === "zh" ? "音高选择：点按旋律步进选取音高" : "Pitch: Tap to pick pitch")
-                    : (language === "zh" ? "参数锁：点按步进调出参数锁面板" : "P-Locks: Tap to open parameters menu")
+                    ? (isZh ? "音高选择：点按旋律步进选取音高" : "Pitch: Tap to pick pitch")
+                    : (isZh ? "参数锁：点按步进调出参数锁面板" : "P-Locks: Tap to open parameters menu")
                 }
               >
                 <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-                  {language === "zh" ? "工具" : "TOOL"}
+                  {isZh ? "工具" : "TOOL"}
                 </span>
                 <select
                   value={mobileEditMode}
                   onChange={(e) => setMobileEditMode(e.target.value as MobileEditMode)}
                   className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                  aria-label={language === "zh" ? "选择步进编辑工具" : "Select step edit mode"}
+                  aria-label={isZh ? "选择步进编辑工具" : "Select step edit mode"}
                 >
-                  <option value="step" className="bg-panel text-text">● {language === "zh" ? "普通步进" : "Step Note"}</option>
-                  <option value="accent" className="bg-panel text-text">▲ {language === "zh" ? "重音 (Vel 127)" : "Accent"}</option>
-                  <option value="ratchet" className="bg-panel text-text">⫸ {language === "zh" ? "连音滚奏" : "Ratchet"}</option>
-                  <option value="pitch" className="bg-panel text-text">♩ {language === "zh" ? "音高选择" : "Pitch Picker"}</option>
-                  <option value="plocks" className="bg-panel text-text">⚙ {language === "zh" ? "参数锁" : "P-Locks"}</option>
+                  <option value="step" className="bg-panel text-text">● {isZh ? "普通步进" : "Step Note"}</option>
+                  <option value="accent" className="bg-panel text-text">▲ {isZh ? "重音 (Vel 127)" : "Accent"}</option>
+                  <option value="ratchet" className="bg-panel text-text">⫸ {isZh ? "连音滚奏" : "Ratchet"}</option>
+                  <option value="pitch" className="bg-panel text-text">♩ {isZh ? "音高选择" : "Pitch Picker"}</option>
+                  <option value="plocks" className="bg-panel text-text">⚙ {isZh ? "参数锁" : "P-Locks"}</option>
                 </select>
               </div>
             </div>
@@ -2208,13 +2208,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {barCount > 1 && (
                 <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
                   <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-                    {language === "zh" ? "小节" : "BAR"}
+                    {isZh ? "小节" : "BAR"}
                   </span>
                   <select
                     value={activeBarIndex}
                     onChange={(e) => scrollToBar(Number(e.target.value))}
                     className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                    aria-label={language === "zh" ? "跳转到小节" : "Jump to bar"}
+                    aria-label={isZh ? "跳转到小节" : "Jump to bar"}
                   >
                     {Array.from({ length: barCount }, (_, bIdx) => {
                       const startStep = bIdx * stepsPerBar + 1;
@@ -2237,20 +2237,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
                     : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
                 }`}
-                title={language === "zh" ? "力度编辑抽屉 (快捷键 V)" : "Toggle velocity drawer (Key: V)"}
+                title={isZh ? "力度编辑抽屉 (快捷键 V)" : "Toggle velocity drawer (Key: V)"}
               >
                 <Sliders className="w-3.5 h-3.5 text-[#45e0c9]" />
-                <span className="hidden sm:inline font-['JetBrains_Mono']">{language === "zh" ? "力度" : "VEL"}</span>
+                <span className="hidden sm:inline font-['JetBrains_Mono']">{isZh ? "力度" : "VEL"}</span>
               </button>
 
               {/* Euclidean Rhythm Generator */}
               <button
                 onClick={() => setIsEuclideanOpen(true)}
                 className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-panel2 border border-line hover:border-accent/60 rounded-lg text-xs text-text-sub hover:text-accent transition-colors shrink-0"
-                title={language === "zh" ? "欧几里得律动生成器 (快捷键 E)" : "Euclidean rhythm generator (Key: E)"}
+                title={isZh ? "欧几里得律动生成器 (快捷键 E)" : "Euclidean rhythm generator (Key: E)"}
               >
                 <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span className="hidden sm:inline font-['JetBrains_Mono']">{language === "zh" ? "欧几里得" : "EUCLID"}</span>
+                <span className="hidden sm:inline font-['JetBrains_Mono']">{isZh ? "欧几里得" : "EUCLID"}</span>
               </button>
 
               {/* Undo & Redo (Placed before Tools...) */}
@@ -2263,7 +2263,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
                       : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
                   }`}
-                  title={language === "zh" ? "撤销 (Ctrl+Z)" : "Undo (Ctrl+Z)"}
+                  title={isZh ? "撤销 (Ctrl+Z)" : "Undo (Ctrl+Z)"}
                 >
                   <Undo2 className="w-3.5 h-3.5" />
                 </button>
@@ -2275,7 +2275,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
                       : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
                   }`}
-                  title={language === "zh" ? "重做 (Ctrl+Shift+Z)" : "Redo (Ctrl+Shift+Z)"}
+                  title={isZh ? "重做 (Ctrl+Shift+Z)" : "Redo (Ctrl+Shift+Z)"}
                 >
                   <Redo2 className="w-3.5 h-3.5" />
                 </button>
@@ -2294,22 +2294,22 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 }`}
                 title={
                   isEditorMaximized
-                    ? (language === "zh" ? "退出全屏 (Esc)" : "Exit Fullscreen (Esc)")
-                    : (language === "zh" ? "全屏沉浸模式 (Esc 退出)" : "Fullscreen (Esc to exit)")
+                    ? (isZh ? "退出全屏 (Esc)" : "Exit Fullscreen (Esc)")
+                    : (isZh ? "全屏沉浸模式 (Esc 退出)" : "Fullscreen (Esc to exit)")
                 }
               >
                 {isEditorMaximized ? (
                   <>
                     <Minimize2 className="w-3.5 h-3.5 text-accent" />
                     <span className="hidden sm:inline font-['JetBrains_Mono']">
-                      {language === "zh" ? "退出" : "Exit"}
+                      {isZh ? "退出" : "Exit"}
                     </span>
                   </>
                 ) : (
                   <>
                     <Maximize2 className="w-3.5 h-3.5 text-accent" />
                     <span className="hidden sm:inline font-['JetBrains_Mono']">
-                      {language === "zh" ? "全屏" : "Full"}
+                      {isZh ? "全屏" : "Full"}
                     </span>
                   </>
                 )}
@@ -2327,22 +2327,22 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     else if (act === "reset_preset") handleResetPreset();
                   }}
                   className="bg-transparent text-text-sub hover:text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                  aria-label={language === "zh" ? "快捷操作" : "Quick actions"}
+                  aria-label={isZh ? "快捷操作" : "Quick actions"}
                 >
                   <option value="" disabled className="bg-panel text-text-sub">
-                    ⚡ {language === "zh" ? "操作..." : "Tools..."}
+                    ⚡ {isZh ? "操作..." : "Tools..."}
                   </option>
                   <option value="dup_bar1" className="bg-panel text-text">
-                    📋 {language === "zh" ? "复制小节1至整段" : "Duplicate Bar 1"}
+                    📋 {isZh ? "复制小节1至整段" : "Duplicate Bar 1"}
                   </option>
                   <option value="humanize" className="bg-panel text-text">
-                    ✨ {language === "zh" ? "人性化力度抖动" : "Humanize Velocity"}
+                    ✨ {isZh ? "人性化力度抖动" : "Humanize Velocity"}
                   </option>
                   <option value="clear_all" className="bg-panel text-[#ff5964]">
-                    🗑️ {language === "zh" ? "清空全部步进" : "Clear All Steps"}
+                    🗑️ {isZh ? "清空全部步进" : "Clear All Steps"}
                   </option>
                   <option value="reset_preset" className="bg-panel text-text">
-                    🔄 {language === "zh" ? "恢复默认预设" : "Reset Preset"}
+                    🔄 {isZh ? "恢复默认预设" : "Reset Preset"}
                   </option>
                 </select>
               </div>
@@ -2376,11 +2376,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     ? "bg-[#1f232b] text-accent border-accent/50"
                     : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
                 }`}
-                title={language === "zh" ? "展开/收起高级设置 (摇摆度、步进微调、平移)" : "Toggle advanced settings"}
+                title={isZh ? "展开/收起高级设置 (摇摆度、步进微调、平移)" : "Toggle advanced settings"}
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span className="hidden xl:inline font-['JetBrains_Mono']">
-                  {language === "zh" ? "高级" : "More"}
+                  {isZh ? "高级" : "More"}
                 </span>
                 {swing > 0 && !showAdvancedControls && (
                   <span className="text-[10px] text-accent font-['JetBrains_Mono'] hidden sm:inline">
@@ -2413,33 +2413,33 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {/* Fine-grained Step adjustments */}
               <div className="flex items-center gap-1 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim mr-1 hidden sm:inline whitespace-nowrap">
-                  {language === "zh" ? "步数微调:" : "FINE STEPS:"}
+                  {isZh ? "步数微调:" : "FINE STEPS:"}
                 </span>
                 <button
                   onClick={() => handleRemoveSteps(groupSize)}
                   className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-text-sub hover:text-text border border-line font-['JetBrains_Mono'] text-[10px]"
-                  title={language === "zh" ? `删减 ${groupSize} 步 (1组)` : `Remove ${groupSize} steps`}
+                  title={isZh ? `删减 ${groupSize} 步 (1组)` : `Remove ${groupSize} steps`}
                 >
                   -{groupSize}
                 </button>
                 <button
                   onClick={() => handleAddSteps(groupSize)}
                   className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-text-sub hover:text-text border border-line font-['JetBrains_Mono'] text-[10px]"
-                  title={language === "zh" ? `添加 ${groupSize} 步 (1组)` : `Add ${groupSize} steps`}
+                  title={isZh ? `添加 ${groupSize} 步 (1组)` : `Add ${groupSize} steps`}
                 >
                   +{groupSize}
                 </button>
                 <button
                   onClick={() => handleAddSteps(stepsPerBar)}
                   className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-accent border border-line font-['JetBrains_Mono'] text-[10px]"
-                  title={language === "zh" ? `添加 1 小节 (+${stepsPerBar} 步)` : `Add 1 Bar (+${stepsPerBar} steps)`}
+                  title={isZh ? `添加 1 小节 (+${stepsPerBar} 步)` : `Add 1 Bar (+${stepsPerBar} steps)`}
                 >
                   +1 Bar
                 </button>
                 <button
                   onClick={() => handleAddSteps(stepsPerBar * 2)}
                   className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-accent border border-line font-['JetBrains_Mono'] text-[10px] hidden md:inline-flex"
-                  title={language === "zh" ? `添加 2 小节 (+${stepsPerBar * 2} 步)` : `Add 2 Bars (+${stepsPerBar * 2} steps)`}
+                  title={isZh ? `添加 2 小节 (+${stepsPerBar * 2} 步)` : `Add 2 Bars (+${stepsPerBar * 2} steps)`}
                 >
                   +2 Bars
                 </button>
@@ -2448,26 +2448,26 @@ export const StudioView: React.FC<StudioViewProps> = ({
               {/* Pan Navigation */}
               <div className="flex items-center gap-1.5 ml-auto text-text-dim">
                 <span className="hidden lg:inline font-['JetBrains_Mono'] text-[10px] whitespace-nowrap">
-                  {language === "zh" ? "滚轮/标尺拖拽可平移" : "Wheel/drag to pan"}
+                  {isZh ? "滚轮/标尺拖拽可平移" : "Wheel/drag to pan"}
                 </span>
                 <button
                   onClick={() => scrollByPixels(-240)}
                   className="w-6 h-6 rounded bg-panel border border-line hover:border-accent text-text-sub hover:text-accent flex items-center justify-center text-xs transition-colors"
-                  title={language === "zh" ? "向左滚动" : "Scroll left"}
+                  title={isZh ? "向左滚动" : "Scroll left"}
                 >
                   ◀
                 </button>
                 <button
                   onClick={() => scrollByPixels(240)}
                   className="w-6 h-6 rounded bg-panel border border-line hover:border-accent text-text-sub hover:text-accent flex items-center justify-center text-xs transition-colors"
-                  title={language === "zh" ? "向右滚动" : "Scroll right"}
+                  title={isZh ? "向右滚动" : "Scroll right"}
                 >
                   ▶
                 </button>
                 <button
                   onClick={() => setShowAdvancedControls(false)}
                   className="ml-2 text-[10px] text-text-sub hover:text-text font-['JetBrains_Mono'] px-1.5 py-0.5 rounded bg-[#17181c] border border-line"
-                  title={language === "zh" ? "收起设置抽屉" : "Close"}
+                  title={isZh ? "收起设置抽屉" : "Close"}
                 >
                   ✕
                 </button>
@@ -2497,7 +2497,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 onPointerMove={handleRulerPointerMove}
                 onPointerUp={handleRulerPointerUp}
                 onPointerCancel={handleRulerPointerUp}
-                title={language === "zh" ? "按住左右拖拽可平移时间线" : "Click and drag to scroll timeline"}
+                title={isZh ? "按住左右拖拽可平移时间线" : "Click and drag to scroll timeline"}
               >
                 {Array.from({ length: stepCount }, (_, stepIdx) => {
                   const groupIdx = Math.floor(stepIdx / groupSize) + 1;
@@ -2583,7 +2583,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       <div
                         onClick={() => engineRef.current?.triggerNote(trackIdx, track.name, 0.9, 0, 1)}
                         className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer group/trk hover:opacity-90 transition-opacity touch-manipulation"
-                        title={language === "zh" ? "点击试听音色" : "Tap to audition sound"}
+                        title={isZh ? "点击试听音色" : "Tap to audition sound"}
                       >
                         <span
                           className="w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0 group-hover/trk:scale-y-110 transition-transform"
@@ -2628,7 +2628,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                               ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
                               : "bg-[#17181c] border-line text-text-dim hover:text-text-sub"
                           }`}
-                          title={language === "zh" ? `独立轨道循环长度: ${track.trackLength || stepCount} 步 (点击切换)` : `Polymeter length: ${track.trackLength || stepCount} steps (Click to cycle)`}
+                          title={isZh ? `独立轨道循环长度: ${track.trackLength || stepCount} 步 (点击切换)` : `Polymeter length: ${track.trackLength || stepCount} steps (Click to cycle)`}
                         >
                           L:{track.trackLength || stepCount}
                         </button>
@@ -2639,7 +2639,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                               ? "border-[var(--tc)] text-[var(--tc)] bg-transparent font-bold"
                               : "border-line text-text-dim hover:text-text"
                           }`}
-                          title={language === "zh" ? "静音轨道" : "Mute track"}
+                          title={isZh ? "静音轨道" : "Mute track"}
                         >
                           M
                         </button>
@@ -2650,7 +2650,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                               ? "border-accent text-accent bg-accent/10 font-bold"
                               : "border-line text-text-dim hover:text-text"
                           }`}
-                          title={language === "zh" ? "独奏轨道" : "Solo track"}
+                          title={isZh ? "独奏轨道" : "Solo track"}
                         >
                           S
                         </button>
@@ -2684,35 +2684,35 @@ export const StudioView: React.FC<StudioViewProps> = ({
                               ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
                               : "border-line text-text-dim hover:text-[#45e0c9]"
                           }`}
-                          title={language === "zh" ? "在力度抽屉中编辑" : "Edit velocity in drawer"}
+                          title={isZh ? "在力度抽屉中编辑" : "Edit velocity in drawer"}
                         >
                           <Sliders className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
                         </button>
                         <button
                           onClick={() => handleShiftTrack(trackIdx, -1)}
                           className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
-                          title={language === "zh" ? "向左位移 1 步" : "Shift left 1 step"}
+                          title={isZh ? "向左位移 1 步" : "Shift left 1 step"}
                         >
                           ◀
                         </button>
                         <button
                           onClick={() => handleShiftTrack(trackIdx, 1)}
                           className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
-                          title={language === "zh" ? "向右位移 1 步" : "Shift right 1 step"}
+                          title={isZh ? "向右位移 1 步" : "Shift right 1 step"}
                         >
                           ▶
                         </button>
                         <button
                           onClick={() => handleSmartFillTrack(trackIdx)}
                           className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#45e0c9] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
-                          title={language === "zh" ? "智能生成常规节拍" : "Smart fill rhythm"}
+                          title={isZh ? "智能生成常规节拍" : "Smart fill rhythm"}
                         >
                           <Wand2 className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
                         </button>
                         <button
                           onClick={() => handleClearTrack(trackIdx)}
                           className="w-6 h-6 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#ff5964] flex items-center justify-center text-xs sm:text-[10px] touch-manipulation"
-                          title={language === "zh" ? "清空轨道" : "Clear track"}
+                          title={isZh ? "清空轨道" : "Clear track"}
                         >
                           ✕
                         </button>
@@ -2818,7 +2818,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-[0.04em] leading-relaxed border-t border-line-subtle pt-3 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               {isTouchDevice ? (
-                language === "zh" ? (
+                isZh ? (
                   <span>
                     <strong className="text-accent font-bold">📱 触控/移动端操作：</strong> 点按步进开/关 · 长按步进调出参数锁 (P-Locks) · 顶部步进工具栏切换重音/连音/音高模式 · 点按轨道名试听音色 · 左右滑动浏览小节
                   </span>
@@ -2828,7 +2828,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   </span>
                 )
               ) : (
-                language === "zh" ? (
+                isZh ? (
                   <span>
                     <strong className="text-accent font-bold">💻 电脑端快捷键：</strong> 点击/拖拽涂抹 · 右键参数锁 (P-Locks) · SHIFT+点击重音 · ALT+点击连音 (1x-4x) · CMD+点击选音高 · 空格 播放/暂停 · V 力度抽屉 · E 欧几里得律动
                   </span>
@@ -2842,15 +2842,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
               <button
                 onClick={() => setIsTouchDevice(!isTouchDevice)}
                 className="px-1.5 py-0.5 text-[9px] rounded bg-[#17181d] border border-line text-text-sub hover:text-accent hover:border-accent/50 transition-colors ml-1 touch-manipulation"
-                title={language === "zh" ? "手动切换电脑端 / 触控端提示视图" : "Toggle desktop / mobile hint view"}
+                title={isZh ? "手动切换电脑端 / 触控端提示视图" : "Toggle desktop / mobile hint view"}
               >
                 {isTouchDevice
-                  ? (language === "zh" ? "电脑快捷键 ↗" : "Desktop Keys ↗")
-                  : (language === "zh" ? "触控操作指南 ↗" : "Mobile Gestures ↗")}
+                  ? (isZh ? "电脑快捷键 ↗" : "Desktop Keys ↗")
+                  : (isZh ? "触控操作指南 ↗" : "Mobile Gestures ↗")}
               </button>
             </div>
             <div className="text-text-sub">
-              {isEditorMaximized ? (language === "zh" ? "按 Esc 退出最大化" : "Press Esc to exit fullscreen") : ""}
+              {isEditorMaximized ? (isZh ? "按 Esc 退出最大化" : "Press Esc to exit fullscreen") : ""}
             </div>
           </div>
 
@@ -2917,15 +2917,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
                     className="w-full py-1.5 px-2 rounded-lg bg-[#1a1c22] hover:bg-[#23262e] border border-[#262932] text-center font-bold text-xs text-text transition-colors"
                   >
                     {pattern.tracks[stepContextMenu.trackIdx]?.steps[stepContextMenu.stepIdx] > 0
-                      ? (language === "zh" ? "关闭此步音符 (OFF)" : "Turn Off Step")
-                      : (language === "zh" ? "开启此步音符 (ON)" : "Turn On Step")}
+                      ? (isZh ? "关闭此步音符 (OFF)" : "Turn Off Step")
+                      : (isZh ? "开启此步音符 (ON)" : "Turn On Step")}
                   </button>
                 </div>
 
                 {/* Velocity / Dynamics */}
                 <div className="mb-2.5">
                   <div className="text-[9px] text-text-dim tracking-wider uppercase mb-1">
-                    {language === "zh" ? "力度 / 动态 (VELOCITY)" : "VELOCITY / DYNAMICS"}
+                    {isZh ? "力度 / 动态 (VELOCITY)" : "VELOCITY / DYNAMICS"}
                   </div>
                   <div className="grid grid-cols-3 gap-1">
                     {[
@@ -2961,7 +2961,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 {/* Ratchet / Subdivisions */}
                 <div className="mb-2.5">
                   <div className="text-[9px] text-text-dim tracking-wider uppercase mb-1">
-                    {language === "zh" ? "连音滚奏 (RATCHET)" : "RATCHET / SUBDIVISION"}
+                    {isZh ? "连音滚奏 (RATCHET)" : "RATCHET / SUBDIVISION"}
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {[1, 2, 3, 4].map((r) => (
@@ -2993,7 +2993,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 {/* Probability / Chance */}
                 <div className="mb-2.5">
                   <div className="text-[9px] text-text-dim tracking-wider uppercase mb-1">
-                    {language === "zh" ? "触发概率 (CHANCE)" : "PROBABILITY"}
+                    {isZh ? "触发概率 (CHANCE)" : "PROBABILITY"}
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {[100, 75, 50, 25].map((p) => (
@@ -3044,7 +3044,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                       className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#1f222a] hover:bg-[#282c36] border border-[#2f333f] text-[#45e0c9] text-xs font-bold transition-colors"
                     >
                       <Music className="w-3.5 h-3.5" />
-                      <span>{language === "zh" ? "设置音高 / 键盘" : "Choose Pitch Note"}</span>
+                      <span>{isZh ? "设置音高 / 键盘" : "Choose Pitch Note"}</span>
                     </button>
                   );
                 })()}
@@ -3069,7 +3069,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 t.steps = steps.slice(0, stepCount);
                 return copy;
               });
-              showToast(language === "zh" ? "已生成欧几里得律动" : "Euclidean rhythm applied");
+              showToast(isZh ? "已生成欧几里得律动" : "Euclidean rhythm applied");
             }}
             language={language}
             stepCount={stepCount}

@@ -37,7 +37,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   onSelectGenre,
   onOpenStudio,
 }) => {
-  const { t, language } = useLanguage();
+  const { t, isZh } = useLanguage();
 
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [score, setScore] = useState(0);
@@ -280,10 +280,10 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
           <p className="text-xs sm:text-sm text-[#b9b7b0] font-medium">
             {!hasStarted
-              ? (language === "zh" ? "准备好测试你的乐感了吗？点击下方按钮开启盲听挑战！" : "Ready to test your ear? Click below to start listening!")
+              ? t("challenge_start_prompt")
               : isPlaying 
-              ? (language === "zh" ? "正在播放神秘律动，仔细聆听鼓点节奏与贝斯..." : "Listening to the blind groove... Identify the genre!") 
-              : (language === "zh" ? "已暂停，点击播放继续试听" : "Paused. Click play to resume listening")}
+              ? t("challenge_listening_prompt") 
+              : t("challenge_paused_prompt")}
           </p>
 
           {/* Clue: Tempo hidden until answered to prevent blind test leaks (P0-20) */}
@@ -292,7 +292,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             <span className={isAnswered ? "text-accent font-bold" : "text-text-dim"}>
               {isAnswered
                 ? `${question.correctGenre.default_bpm} BPM (${question.correctGenre.bpm_range})`
-                : (language === "zh" ? "答题后揭晓 (盲听防泄)" : "Hidden during quiz")}
+                : t("challenge_hidden_quiz")}
             </span>
           </div>
 
@@ -308,7 +308,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
               }`}
             >
               {!hasStarted ? <Play className="w-4 h-4 fill-current" /> : isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-              <span>{!hasStarted ? (language === "zh" ? "点击开始听辨" : "Start Listening") : isPlaying ? t("pause") : t("play")}</span>
+              <span>{!hasStarted ? t("challenge_start_btn") : isPlaying ? t("pause") : t("play")}</span>
             </button>
           </div>
         </div>
@@ -349,7 +349,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                     {opt.name}
                   </span>
                 </div>
-                {opt.aliases[0] && language === "zh" && (
+                {opt.aliases[0] && isZh && (
                   <p className="text-xs text-text-sub pl-8">
                     {opt.aliases[0]}
                   </p>
@@ -358,7 +358,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                   {isAnswered ? (
                     `${opt.category} • ${opt.bpm_range} BPM`
                   ) : (
-                    <span className="text-[#4a4e58]">{language === "zh" ? "点击选择此流派" : "Select this genre"}</span>
+                    <span className="text-[#4a4e58]">{t("challenge_select_genre")}</span>
                   )}
                 </div>
               </div>
@@ -382,8 +382,8 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
               <Zap className="w-5 h-5 text-accent" />
               <h3 className="font-extrabold text-text text-base sm:text-lg">
                 {selectedAnswerId === question.correctGenre.id
-                  ? (language === "zh" ? "🎉 恭喜回答正确！" : "🎉 Brilliant! Correct Answer!")
-                  : (language === "zh" ? "💡 差一点！正确答案是: " + question.correctGenre.name : "💡 Not quite! The correct answer was: " + question.correctGenre.name)}
+                  ? t("challenge_correct")
+                  : t("challenge_incorrect", { genre: question.correctGenre.name })}
               </h3>
             </div>
 
@@ -397,7 +397,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           </div>
 
           <p className="text-xs sm:text-sm text-[#b9b7b0] leading-relaxed">
-            {question.correctGenre.cultural_context[language]}
+            {isZh ? question.correctGenre.cultural_context.zh : question.correctGenre.cultural_context.en}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
@@ -406,7 +406,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                 {t("kick_placement")}
               </span>
               <p className="text-text">
-                {question.correctGenre.drum_pattern.kick[language]}
+                {isZh ? question.correctGenre.drum_pattern.kick.zh : question.correctGenre.drum_pattern.kick.en}
               </p>
             </div>
 
@@ -415,7 +415,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                 {t("snare_placement")}
               </span>
               <p className="text-text">
-                {question.correctGenre.drum_pattern.snare_clap[language]}
+                {isZh ? question.correctGenre.drum_pattern.snare_clap.zh : question.correctGenre.drum_pattern.snare_clap.en}
               </p>
             </div>
 
@@ -424,7 +424,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                 {t("bass_design")}
               </span>
               <p className="text-text">
-                {question.correctGenre.bass_pattern[language]}
+                {isZh ? question.correctGenre.bass_pattern.zh : question.correctGenre.bass_pattern.en}
               </p>
             </div>
           </div>

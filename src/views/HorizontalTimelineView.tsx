@@ -417,7 +417,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
   onSelectGenre,
   onOpenStudio,
 }) => {
-  const { t, language } = useLanguage();
+  const { t, language, isZh } = useLanguage();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Scale mode: "nonlinear" (adaptive, eliminates blank space) vs "linear" (fixed decades)
@@ -565,7 +565,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                   ? "bg-accent text-black font-bold shadow-sm"
                   : "text-[#8e93a0] hover:text-[#f5f4ef]"
               }`}
-              title={language === "zh" ? "根据各时代曲风密度自适应扩展，消除留白" : "Adaptive density-weighted non-linear scale"}
+              title={t("timeline_adaptive_density_tooltip")}
             >
               <Layers className="w-3 h-3 shrink-0" />
               <span className="text-[11px] whitespace-nowrap truncate max-w-[80px]">{t("timeline_scale_nonlinear")}</span>
@@ -577,7 +577,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                   ? "bg-accent text-black font-bold shadow-sm"
                   : "text-[#8e93a0] hover:text-[#f5f4ef]"
               }`}
-              title={language === "zh" ? "传统等距年代分布" : "Linear equal-width decades"}
+              title={t("timeline_linear_tooltip")}
             >
               <Clock className="w-3 h-3 shrink-0" />
               <span className="text-[11px] whitespace-nowrap truncate max-w-[80px]">{t("timeline_scale_linear")}</span>
@@ -596,7 +596,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
               className="bg-transparent text-[#c4c7cf] text-xs font-semibold focus:outline-none cursor-pointer"
             >
               <option value="ALL" className="bg-[#12131a]">
-                {language === "zh" ? "全大类 (6)" : "All Categories"}
+                {t("all_categories_six")}
               </option>
               <option value="Electronic" className="bg-[#12131a]">Electronic 电子</option>
               <option value="Hip Hop" className="bg-[#12131a]">Hip Hop 嘻哈</option>
@@ -614,7 +614,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
             className="bg-[#090a0e] border border-white/[0.08] text-[#c4c7cf] text-xs font-semibold px-2.5 py-1 rounded-xl focus:outline-none focus:border-accent cursor-pointer max-w-[160px] truncate"
           >
             <option value="ALL" className="bg-[#12131a]">
-              {language === "zh" ? `全部泳道 (${LANES.length})` : `All Lanes (${LANES.length})`}
+              {t("timeline_all_lanes", { count: LANES.length })}
             </option>
             {LANES.map((l) => (
               <option key={l.id} value={l.id} className="bg-[#12131a]">
@@ -635,13 +635,13 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
             }`}
           >
             {animationPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
-            <span className="text-[11px]">{animationPlaying ? t("pause") : (language === "zh" ? "播放" : "Play")}</span>
+            <span className="text-[11px]">{animationPlaying ? t("pause") : t("play")}</span>
           </button>
 
           <button
             onClick={handleStartEvolution}
             className="p-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[#9ca1ad] hover:text-[#f5f4ef] transition-colors"
-            title={language === "zh" ? "从 1920 重置" : "Restart from 1920"}
+            title={t("timeline_restart_1920")}
           >
             <RotateCcw className="w-3 h-3" />
           </button>
@@ -685,7 +685,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
       {/* Quick Epoch Navigation Jump Line */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none px-1">
         <span className="text-[10px] font-mono uppercase text-[#636875] tracking-wider shrink-0 mr-1">
-          {language === "zh" ? "纪元速达:" : "EPOCH:"}
+          {t("timeline_epoch")}
         </span>
         {activeColumns.map((col) => (
           <button
@@ -866,7 +866,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                                       <div className="flex items-start justify-between gap-1.5 pb-2 border-b border-white/[0.08]">
                                         <div>
                                           <h6 className="text-xs font-extrabold text-[#f5f4ef]">{genre.name}</h6>
-                                          {genre.aliases[0] && language === "zh" && (
+                                          {genre.aliases[0] && isZh && (
                                             <span className="text-[10px] text-[#8e93a0]">{genre.aliases[0]}</span>
                                           )}
                                         </div>

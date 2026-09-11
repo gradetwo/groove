@@ -189,7 +189,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
   onSelectGenre,
   onOpenStudio,
 }) => {
-  const { t, language } = useLanguage();
+  const { t, language, isZh } = useLanguage();
   
   // Realtime audio engine playback for immediate auditioning
   const engineRef = useRef<AudioEngine | null>(null);
@@ -263,9 +263,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
             </h1>
 
             <p className="text-xs sm:text-sm text-[#8e93a0] max-w-2xl leading-relaxed">
-              {language === "zh"
-                ? "横跨一个世纪的声波革命殿堂：从密西西比原声三角洲蓝调与留声机，经历电气化冲击、放克基石、机器觉醒到全球无界数字浪潮。点击曲风试听即时合成律动，感悟百年音乐进化法则。"
-                : "A century of sonic evolution: from raw Mississippi Delta Blues to funk pockets, machine awakenings and algorithmic futures. Audition rhythms in real time and explore historical breakthroughs."}
+              {t("timeline_summary_desc")}
             </p>
           </div>
 
@@ -274,19 +272,19 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
             <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-accent">120+</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
-                {language === "zh" ? "年演进跨度" : "Years Span"}
+                {t("timeline_span")}
               </div>
             </div>
             <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-cyan-400">14</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
-                {language === "zh" ? "大家族支系" : "Genealogies"}
+                {t("timeline_genealogies")}
               </div>
             </div>
             <div className="px-4 py-2.5 rounded-2xl bg-panel2/80 border border-white/[0.08] backdrop-blur-md text-center shadow-lg">
               <div className="text-lg sm:text-xl font-mono font-extrabold text-pink-400">159</div>
               <div className="text-[10px] text-[#8e93a0] uppercase tracking-wider font-semibold">
-                {language === "zh" ? "经典曲风" : "Milestone Genres"}
+                {t("timeline_milestone_genres")}
               </div>
             </div>
           </div>
@@ -297,7 +295,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
           <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
             <span className="text-[11px] font-mono uppercase tracking-wider text-[#636875] mr-1 flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              <span>{language === "zh" ? "纪元速查:" : "DECADE:"}</span>
+              <span>{t("timeline_decade_quick")}</span>
             </span>
             {TIMELINE_STORIES.map((story) => {
               const aesthetic = ERA_AESTHETICS[story.decade] || ERA_AESTHETICS[1980];
@@ -332,7 +330,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
               className="bg-transparent text-xs font-semibold text-[#b9b7b0] focus:outline-none cursor-pointer"
             >
               <option value="ALL" className="bg-[#12131a]">
-                {language === "zh" ? "全类别曲风" : "All Categories"}
+                {t("timeline_all_categories_genres")}
               </option>
               <option value="Electronic" className="bg-[#12131a]">Electronic 电子</option>
               <option value="Hip Hop" className="bg-[#12131a]">Hip Hop 嘻哈</option>
@@ -453,7 +451,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                 <div className="mt-4 pt-3.5 border-t border-white/[0.06]">
                   <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#7e8494] mb-2">
                     <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>{language === "zh" ? "时代技术革新与标志性乐器" : "Technological & Gear Breakthroughs"}</span>
+                    <span>{t("timeline_tech_gear")}</span>
                   </div>
                   
                   <div className="flex flex-wrap gap-1.5">
@@ -474,14 +472,14 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#f5f4ef]">
                       <Disc className="w-3.5 h-3.5" style={{ color: aesthetic.accentColor }} />
-                      <span>{language === "zh" ? "该纪元里程碑代表曲风" : "Milestone Genres in this Epoch"}</span>
+                      <span>{t("timeline_epoch_genres")}</span>
                       <span className="text-[10px] font-mono text-[#7e8494]">
                         ({storyGenres.length})
                       </span>
                     </div>
 
                     <span className="text-[10px] text-[#7e8494] font-sans hidden sm:inline">
-                      {language === "zh" ? "点击试听音序器律动 · 双击探索曲风详情" : "Click to audition groove · Click Studio to customize"}
+                      {t("timeline_audition_hint")}
                     </span>
                   </div>
 
@@ -506,7 +504,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                                   <h4 className="font-bold text-xs sm:text-sm text-[#f5f4ef] group-hover/card:text-accent transition-colors truncate">
                                     {genre.name}
                                   </h4>
-                                  {genre.aliases[0] && language === "zh" && (
+                                  {genre.aliases[0] && isZh && (
                                     <div className="text-[10px] text-[#7e8494] truncate">
                                       {genre.aliases[0]}
                                     </div>
@@ -583,7 +581,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                     </div>
                   ) : (
                     <div className="py-6 text-center text-xs text-[#636875]">
-                      {language === "zh" ? "当前大类筛选下无此年代代表曲风" : "No genres in this era match category filter"}
+                      {t("timeline_no_genres_in_era")}
                     </div>
                   )}
                 </div>

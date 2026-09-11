@@ -38,7 +38,7 @@ export interface VersionInfo {
   changelog: ChangelogEntry[];
 }
 
-export const CURRENT_CLIENT_VERSION = "1.6.0";
+export const CURRENT_CLIENT_VERSION = "1.7.0";
 
 interface UpdatesModalProps {
   isOpen: boolean;
@@ -51,7 +51,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
   onClose,
   onUpdateAvailable,
 }) => {
-  const { language } = useLanguage();
+  const { t, isZh, language } = useLanguage();
 
   const [versionData, setVersionData] = useState<VersionInfo | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -75,25 +75,23 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
   const checkForUpdates = async (silent = false) => {
     if (!silent) setIsChecking(true);
     try {
-      const res = await fetch(`/version.json?t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to fetch version info");
       const data: VersionInfo = await res.json();
       setVersionData(data);
       setLatestVersion(data.version);
 
-      const hasUpdate = isNewerVersion(data.version, CURRENT_CLIENT_VERSION);
-      if (hasUpdate) {
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+      setLastCheckedTime(timeStr);
+
+      if (data.version !== CURRENT_CLIENT_VERSION) {
         setCheckStatus("update_available");
         if (onUpdateAvailable) onUpdateAvailable(data.version);
       } else {
         setCheckStatus("latest");
       }
-      setLastCheckedTime(new Date().toLocaleTimeString());
-    } catch (err) {
-      console.warn("Failed to check for updates:", err);
+    } catch {
       if (!silent) setCheckStatus("error");
     } finally {
       if (!silent) setIsChecking(false);
@@ -103,7 +101,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
   // Load changelog when opened
   useEffect(() => {
     if (isOpen) {
-      checkForUpdates(true);
+      checkForUpdates(false);
     }
   }, [isOpen]);
 
@@ -111,19 +109,19 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
     switch (category) {
       case "feature":
         return {
-          label: language === "zh" ? "全新功能" : "Feature",
+          label: t("updates_category_feature"),
           classes: "bg-accent/15 text-accent border-accent/30",
           icon: <Sparkles className="w-3 h-3" />,
         };
       case "audio":
         return {
-          label: language === "zh" ? "音频重构" : "Audio Engine",
+          label: t("updates_category_audio"),
           classes: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
           icon: <Zap className="w-3 h-3" />,
         };
       case "fix":
         return {
-          label: language === "zh" ? "稳定修复" : "Bug Fix",
+          label: t("updates_category_fix"),
           classes: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
           icon: <ShieldCheck className="w-3 h-3" />,
         };
@@ -143,7 +141,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
       maxWidth="2xl"
       showCloseButton={false}
       className="max-h-[90vh]"
-      ariaLabel={language === "zh" ? "检查更新 & 更新记录" : "Updates & Release Notes"}
+      ariaLabel={t("updates_modal_title")}
     >
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
@@ -154,13 +152,13 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-text flex items-center gap-2">
-                <span>{language === "zh" ? "检查更新 & 更新记录" : "Updates & Release Notes"}</span>
+                <span>{t("updates_modal_title")}</span>
                 <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-[#1c1f26] border border-[#2d313d] text-[#a0a4b0]">
                   v{CURRENT_CLIENT_VERSION}
                 </span>
               </h2>
               <p className="text-[11px] text-[#717684]">
-                {language === "zh" ? "查看最新功能特性、音频算法进化与更新日志" : "Check for latest features, audio engine updates and changelogs"}
+                {t("updates_modal_subtitle")}
               </p>
             </div>
           </div>
@@ -179,7 +177,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
           <div className="flex items-center gap-2 text-xs">
             {checkStatus === "idle" && (
               <span className="text-text-sub">
-                {language === "zh" ? "点击右侧按钮立即检查云端版本" : "Click check to discover latest cloud updates"}
+                {t("updates_idle_hint")}
               </span>
             )}
 
@@ -187,7 +185,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
               <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>
-                  {language === "zh" 
+                  {isZh 
                     ? `当前已是最新版本 (v${CURRENT_CLIENT_VERSION}) ✓` 
                     : `You are on the latest version (v${CURRENT_CLIENT_VERSION}) ✓`}
                 </span>
@@ -198,7 +196,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
               <span className="inline-flex items-center gap-1.5 text-accent font-bold animate-pulse">
                 <ArrowUpCircle className="w-4 h-4 shrink-0" />
                 <span>
-                  {language === "zh" 
+                  {isZh 
                     ? `发现新版本 v${latestVersion} 可用！` 
                     : `New version v${latestVersion} available!`}
                 </span>
@@ -208,7 +206,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
             {checkStatus === "error" && (
               <span className="inline-flex items-center gap-1.5 text-rose-400 text-xs">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{language === "zh" ? "检查更新失败，请重试" : "Failed to check updates, please retry"}</span>
+                <span>{t("updates_failed")}</span>
               </span>
             )}
 
@@ -226,7 +224,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
                 className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#f5b73d] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center gap-1.5 transition-transform hover:scale-105"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>{language === "zh" ? "立即刷新更新" : "Update Now"}</span>
+                <span>{t("updates_btn_update")}</span>
               </button>
             )}
 
@@ -237,9 +235,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? "animate-spin text-accent" : ""}`} />
               <span>
-                {isChecking 
-                  ? (language === "zh" ? "检查中..." : "Checking...") 
-                  : (language === "zh" ? "检查更新" : "Check")}
+                {isChecking ? t("updates_btn_checking") : t("updates_btn_check")}
               </span>
             </button>
           </div>
@@ -261,7 +257,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
                     </span>
                     {isCurrent && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        {language === "zh" ? "当前运行" : "Current"}
+                        {t("updates_badge_current")}
                       </span>
                     )}
                     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.classes}`}>
@@ -303,7 +299,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-[#1d202a] hover:bg-[#272b38] border border-[#2d313d] text-xs text-text font-medium transition-colors"
           >
-            {language === "zh" ? "关闭" : "Close"}
+            {t("close")}
           </button>
         </div>
       </div>

@@ -23,7 +23,7 @@ const ChallengeView = React.lazy(() => import("./views/ChallengeView").then((m) 
 const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then((m) => ({ default: m.GenreDetailView })));
 
 const MainApp: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { route, navigate } = useRouter();
 
   const currentTab = route.tab;
@@ -146,19 +146,15 @@ const MainApp: React.FC = () => {
             <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-accent">
               <div className="w-8 h-8 rounded-full border-2 border-accent/30 border-t-[#f5b73d] animate-spin" />
               <span className="font-mono text-xs tracking-widest text-text-sub uppercase">
-                {language === "zh" ? "正在按需加载曲风模块..." : "Loading Chunk..."}
+                {t("loading_chunk")}
               </span>
             </div>
           }
         >
             {currentTab === "studio" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "编曲工作台运行异常" : "Studio View Error"}
-                fallbackDescription={
-                  language === "zh"
-                    ? "音频引擎或音序矩阵遇到意外异常，您可以尝试重试。"
-                    : "Audio engine or sequencer matrix encountered an unexpected error."
-                }
+                fallbackTitle={t("error_studio_title")}
+                fallbackDescription={t("error_studio_desc")}
               >
                 {selectedGenre ? (
                   <StudioView
@@ -184,14 +180,10 @@ const MainApp: React.FC = () => {
 
             {currentTab === "chords" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "和弦工作台运行异常" : "Chord Studio Error"}
-                fallbackDescription={
-                  language === "zh"
-                    ? "和弦走向或理论分析模块遇到异常，可重试或返回主工作台。"
-                    : "Chord progression analysis encountered an error. You can retry or return to Studio."
-                }
+                fallbackTitle={t("error_chord_title")}
+                fallbackDescription={t("error_chord_desc")}
                 onNavigateHome={() => handleSelectTab("studio")}
-                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                homeLabel={t("btn_return_studio")}
               >
                 <ChordProgressionsView
                   onOpenStudioWithChords={(chords) => {
@@ -204,16 +196,12 @@ const MainApp: React.FC = () => {
 
             {currentTab === "galaxy" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "3D 星系星云运行异常" : "3D Galaxy View Error"}
-                fallbackDescription={
-                  language === "zh"
-                    ? "WebGL 3D 渲染器或粒子系统遇到异常，可尝试重试或切换至时间线浏览曲风。"
-                    : "WebGL renderer encountered an issue. You can retry or switch to Timeline view."
-                }
+                fallbackTitle={t("error_galaxy_title")}
+                fallbackDescription={t("error_galaxy_desc")}
                 onNavigateHome={() => handleSelectTab("studio")}
-                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                homeLabel={t("btn_return_studio")}
                 onNavigateAlternative={() => handleSelectTab("horizontal-timeline")}
-                alternativeLabel={language === "zh" ? "浏览时间线" : "Timeline"}
+                alternativeLabel={t("btn_browse_timeline")}
               >
                 <GalaxyView
                   onSelectGenre={(g) => handleSelectGenre(g, "detail")}
@@ -224,9 +212,9 @@ const MainApp: React.FC = () => {
 
             {currentTab === "horizontal-timeline" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "年代演化时间线异常" : "Timeline View Error"}
+                fallbackTitle={t("error_timeline_h_title")}
                 onNavigateHome={() => handleSelectTab("studio")}
-                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                homeLabel={t("btn_return_studio")}
               >
                 <HorizontalTimelineView
                   onSelectGenre={(g) => handleSelectGenre(g, "detail")}
@@ -237,9 +225,9 @@ const MainApp: React.FC = () => {
 
             {currentTab === "vertical-timeline" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "纵向编年史异常" : "Vertical Timeline Error"}
+                fallbackTitle={t("error_timeline_v_title")}
                 onNavigateHome={() => handleSelectTab("studio")}
-                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                homeLabel={t("btn_return_studio")}
               >
                 <VerticalTimelineView
                   onSelectGenre={(g) => handleSelectGenre(g, "detail")}
@@ -250,9 +238,9 @@ const MainApp: React.FC = () => {
 
             {currentTab === "compare" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "双曲风对比工作台异常" : "Compare View Error"}
+                fallbackTitle={t("error_compare_title")}
                 onNavigateHome={() => handleSelectTab("studio")}
-                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                homeLabel={t("btn_return_studio")}
               >
                 <CompareView
                   initialGenres={comparePool}
@@ -264,9 +252,9 @@ const MainApp: React.FC = () => {
 
             {currentTab === "challenge" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "听辨挑战模块异常" : "Challenge View Error"}
+                fallbackTitle={t("error_challenge_title")}
                 onNavigateHome={() => handleSelectTab("studio")}
-                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                homeLabel={t("btn_return_studio")}
               >
                 <ChallengeView
                   onSelectGenre={(g) => handleSelectGenre(g, "detail")}
@@ -277,9 +265,9 @@ const MainApp: React.FC = () => {
 
             {currentTab === "detail" && (
               <ErrorBoundary
-                fallbackTitle={language === "zh" ? "曲风档案详情异常" : "Genre Detail Error"}
+                fallbackTitle={t("error_detail_title")}
                 onNavigateHome={() => handleSelectTab("studio")}
-                homeLabel={language === "zh" ? "返回工作台" : "Studio"}
+                homeLabel={t("btn_return_studio")}
               >
                 {selectedGenre ? (
                   <GenreDetailView
@@ -347,11 +335,11 @@ const MainApp: React.FC = () => {
             <button
               onClick={() => setUpdatesOpen(true)}
               className="hover:text-accent transition-colors flex items-center gap-1.5 font-mono text-[11px]"
-              title={language === "zh" ? "检查更新与版本记录" : "Check updates & changelog"}
+              title={t("footer_check_updates")}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               <span>v{CURRENT_CLIENT_VERSION}</span>
-              <span className="ml-1">{language === "zh" ? "更新记录" : "Updates"}</span>
+              <span className="ml-1">{t("footer_updates_btn")}</span>
             </button>
             <span>•</span>
             <span>Web Audio Pure Synthesis</span>
