@@ -1,7 +1,30 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.4.1",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.4.1 星系全局光辉渲染强化与子曲风聚焦渐隐系统",
+        "en": "v1.4.1 Nebula Brilliant Bloom & Subgenre Focus-Dimming System"
+      },
+      "highlights": [
+        {
+          "zh": "星云全星系璀璨绽放：进入曲风星云时，全星系粒子亮度大幅跃升（粒子尺寸提升 70%、发光度倍增、饱和度与白光核心交融），深空背景星云与非相关曲风深度暗化，呈现壮丽宇宙星系沉浸感",
+          "en": "Nebula cluster cosmic bloom: entire selected galaxy shines with 170% particle volume, radiant alpha boost, and saturated stellar cores while ambient space dims deeply"
+        },
+        {
+          "zh": "悬浮子曲风标签极简轻量化：彻底剔除阻挡星系的生硬黑底药丸边框与扁平粉色实心圆点，去除冗余年份数字；默认状态呈现轻量纯净星体排版，中英文采用精炼紧凑曲风原名",
+          "en": "Minimal celestial typography: purged heavy capsule borders, background blocks, and flat colored dots; default state displays clean, unobtrusive astronomical labels"
+        },
+        {
+          "zh": "子曲风智能聚焦与其余节点平滑暗化：在 3D 视图与界面层实现统一聚焦状态机，鼠标 Hover 或选中特定子曲风节点时，该节点耀眼高亮（115% 放大与金色星环），星系内其余所有子曲风节点及其标签平滑暗化至 15% 透明度，彻底解决视觉喧宾夺主问题",
+          "en": "Intelligent subgenre focus & mutual dimming: hovering or selecting any subgenre star activates brilliant highlight, smoothly dimming all other subgenre nodes to 15% opacity"
+        }
+      ]
+    },
     {
       "version": "1.4.0",
       "date": "2026-09-11",

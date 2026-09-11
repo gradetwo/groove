@@ -49,7 +49,7 @@ function clamp(v: number, min: number, max: number): number {
 const VSH = `
 attribute vec3 aColor;
 attribute float aSize, aSeed, aYear, aGrow, aNode, aCluster, aMode, aStar;
-uniform float uTime, uYear, uScale, uHoverNode, uHoverCluster, uSelectedCluster;
+uniform float uTime, uYear, uScale, uHoverNode, uHoverCluster, uSelectedCluster, uSelectedNode;
 varying vec3 vColor;
 varying float vAlpha;
 varying float vStar;
@@ -105,36 +105,49 @@ void main(){
   alpha *= breathAlpha * chiaroscuro * lightSweep * spatialDensity;
   sz *= breathSize;
 
-  // Selected cluster highlighting: gentle luminous focus without overexposure
+  // Selected cluster highlighting: the entire galaxy cluster lights up brilliantly!
   if (uSelectedCluster >= -0.5) {
     if (abs(aCluster - uSelectedCluster) < 0.5) {
-      alpha *= 1.20;
-      sz *= 1.12;
-      col = mix(col, vec3(1.0, 0.97, 0.92), 0.10);
+      alpha = min(1.0, alpha * 2.6 + 0.22);
+      sz *= 1.70;
+      col = mix(col * 1.35, vec3(1.0, 0.98, 0.95), 0.25);
     } else if (aCluster >= -0.5) {
-      alpha *= 0.42;
-      sz *= 0.88;
+      alpha *= 0.06;
+      sz *= 0.55;
     } else {
-      alpha *= 0.70;
+      alpha *= 0.18;
+      sz *= 0.65;
     }
   }
 
   // Node selection highlighting modes
   if (aMode > 2.5) {
-    col = mix(col, vec3(1.0, 0.88, 0.68), 0.14);
-    alpha *= 1.22;
-    sz *= 1.15;
+    col = mix(col, vec3(1.0, 0.88, 0.68), 0.25);
+    alpha = min(1.0, alpha * 1.8);
+    sz *= 1.40;
   } else if (aMode > 1.5) {
-    col = mix(col, vec3(1.0, 0.94, 0.82), 0.24);
-    alpha *= 1.38 * (1.04 + 0.12 * sin(uTime * 2.2 + aSeed * 0.7));
-    sz *= 1.22;
+    col = mix(col, vec3(1.0, 0.94, 0.82), 0.40);
+    alpha = min(1.0, alpha * 2.2 * (1.04 + 0.12 * sin(uTime * 2.2 + aSeed * 0.7)));
+    sz *= 1.80;
   }
 
-  if (uHoverNode > -0.5 && abs(aNode - uHoverNode) < 0.5) {
-    alpha *= 1.40;
-    sz *= 1.25;
-    col = mix(col, vec3(1.0), 0.20);
+  // Node hover / selection focus: highlighted node shines brilliantly, other subgenre nodes dim down
+  float activeFocusNode = (uHoverNode >= -0.5) ? uHoverNode : uSelectedNode;
+  if (activeFocusNode >= -0.5) {
+    if (abs(aNode - activeFocusNode) < 0.5) {
+      alpha = min(1.0, alpha * 2.8 + 0.35);
+      sz *= 2.2;
+      col = mix(col, vec3(1.0, 0.96, 0.88), 0.45);
+    } else if (aNode >= 0.0) {
+      // Other subgenre nodes dim down
+      alpha *= 0.18;
+      sz *= 0.70;
+    } else {
+      // Surrounding nebula gas softly frames the focused node
+      alpha *= 0.75;
+    }
   }
+
   if (uHoverCluster > -0.5 && abs(aCluster - uHoverCluster) < 0.5) {
     alpha *= 1.20;
     sz *= 1.12;
@@ -389,6 +402,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
     th.selectTime = performance.now();
     th.lastInteract = performance.now();
+    th.uniforms.uSelectedNode.value = n.idx;
 
     // If subgenre belongs to a cluster and that cluster isn't active, activate cluster view
     if (n.cluster && n.cluster !== "origin") {
@@ -442,6 +456,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     if (!cluster) {
       // Reset to whole galaxy overview
       th.uniforms.uSelectedCluster.value = -1;
+      th.uniforms.uSelectedNode.value = -1;
       const modeArr = th.modeAttr.array as Float32Array;
       modeArr.fill(0);
       th.modeAttr.needsUpdate = true;
@@ -454,6 +469,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     // Set shader uniform to highlight this cluster and softly dim the rest
     const clusterIdx = graphData.clusters.findIndex((c) => c.id === cluster.id);
     th.uniforms.uSelectedCluster.value = clusterIdx;
+    th.uniforms.uSelectedNode.value = -1;
 
     // Reset mode buffer to normal, so entire cluster shines cleanly
     const modeArr = th.modeAttr.array as Float32Array;
@@ -862,6 +878,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       uHoverNode: { value: -1 },
       uHoverCluster: { value: -1 },
       uSelectedCluster: { value: -1 },
+      uSelectedNode: { value: -1 },
     };
 
     const mat = new THREE.ShaderMaterial({
@@ -1087,6 +1104,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           } else {
             selectNode(clicked, true);
           }
+        } else {
+          // Deselect node on clicking empty space
+          setSelectedNode(null);
+          setIsCardOpen(false);
+          th.uniforms.uSelectedNode.value = -1;
+          const modeArr = th.modeAttr.array as Float32Array;
+          modeArr.fill(0);
+          th.modeAttr.needsUpdate = true;
         }
       }
       if (th.pointers.size === 0) th.down = null;
@@ -1305,6 +1330,11 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
         // 2. Subgenre 3D labels (visible when a major cluster is selected)
         const subEls = labelsBox.querySelectorAll<HTMLElement>(".nlab-sub");
+        const curHover = hoveredNodeRef.current;
+        const curSel = selectedNodeRef.current;
+        const hasFocus = Boolean(curHover || curSel);
+        const focusedId = curHover ? curHover.id : curSel ? curSel.id : null;
+
         subEls.forEach((el) => {
           const subId = el.dataset.subId;
           const node = subId ? graphData.byId[subId] : null;
@@ -1320,10 +1350,22 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             return;
           }
           const vis = currentYearRef.current >= node.year;
-          const isAct = curSel?.id === node.id;
-          el.style.opacity = vis ? (isAct ? "1" : "0.88") : "0";
-          el.style.pointerEvents = vis ? "auto" : "none";
-          el.style.transform = `translate(-50%, -100%) translate(${s.x}px, ${s.y - 16}px)`;
+          if (!vis) {
+            el.style.opacity = "0";
+            el.style.pointerEvents = "none";
+            return;
+          }
+          const isFocused = focusedId === node.id;
+          if (hasFocus) {
+            el.style.opacity = isFocused ? "1" : "0.15";
+            el.style.transform = isFocused
+              ? `translate(-50%, -100%) translate(${s.x}px, ${s.y - 8}px) scale(1.15)`
+              : `translate(-50%, -100%) translate(${s.x}px, ${s.y - 8}px) scale(0.92)`;
+          } else {
+            el.style.opacity = "0.80";
+            el.style.transform = `translate(-50%, -100%) translate(${s.x}px, ${s.y - 8}px) scale(1)`;
+          }
+          el.style.pointerEvents = "auto";
         });
 
         // 3. Pin target anchor
@@ -1344,7 +1386,6 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
 
         // 4. Hover tag tooltip
         const tagEl = tagRef.current;
-        const curHover = hoveredNodeRef.current;
         if (tagEl) {
           if (curHover && (!curSel || curSel.id !== curHover.id)) {
             const s = project(curHover.pos);
@@ -1441,9 +1482,13 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           );
         })}
 
-        {/* Selected Cluster: 3D Floating Subgenre Constellation Badges */}
+        {/* Selected Cluster: 3D Floating Subgenre Constellation Labels (clean, dot-free, non-intrusive) */}
         {selectedCluster && clusterSubgenres.map((sub) => {
           const isCurrentActive = selectedNode?.id === sub.id;
+          const isHovered = hoveredNode?.id === sub.id;
+          const isHighlighted = isCurrentActive || isHovered;
+          const displayName = language === "zh" ? (sub.zhName || sub.name) : (sub.en || sub.name);
+
           return (
             <div
               key={sub.id}
@@ -1452,29 +1497,34 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 e.stopPropagation();
                 selectNode(sub, true);
               }}
-              className={`nlab-sub absolute transition-all duration-200 pointer-events-auto cursor-pointer group ${
-                isCurrentActive ? "scale-110 z-20" : "hover:scale-105 z-10"
-              }`}
+              onPointerEnter={() => {
+                setHoveredNode(sub);
+                const th = threeRef.current;
+                if (th) th.uniforms.uHoverNode.value = sub.idx;
+              }}
+              onPointerLeave={() => {
+                setHoveredNode(null);
+                const th = threeRef.current;
+                if (th) th.uniforms.uHoverNode.value = -1;
+              }}
+              className="nlab-sub absolute pointer-events-auto cursor-pointer select-none z-10 transition-all duration-200"
             >
               <div
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full backdrop-blur-xl shadow-lg transition-all ${
-                  isCurrentActive
-                    ? "bg-[#182032]/95 border border-[#f5b73d] text-white shadow-[0_0_16px_rgba(245,183,61,0.4)] scale-105"
-                    : "bg-[#0a0d16]/85 border border-white/10 text-zinc-200 group-hover:bg-[#121624]/95 group-hover:border-[#d8b988]/60 group-hover:text-white"
+                className={`transition-all duration-200 px-2 py-0.5 rounded-full flex items-center justify-center ${
+                  isHighlighted
+                    ? "bg-black/60 backdrop-blur-md border border-[#f5b73d]/60 shadow-[0_0_16px_rgba(245,183,61,0.5)] scale-110 z-30"
+                    : "hover:bg-white/[0.08]"
                 }`}
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0 ring-2 ring-white/10"
-                  style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 6px ${selectedCluster.hexColor}` }}
-                />
-                <span className="text-[11px] font-medium tracking-tight whitespace-nowrap">
-                  {sub.name}
+                  className={`text-[11px] sm:text-xs tracking-tight whitespace-nowrap transition-colors ${
+                    isHighlighted
+                      ? "text-[#f5b73d] font-bold drop-shadow-[0_0_10px_rgba(245,183,61,0.8)]"
+                      : "text-zinc-200 font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)]"
+                  }`}
+                >
+                  {displayName}
                 </span>
-                {sub.year > 0 && (
-                  <span className="text-[9px] font-mono text-zinc-400 font-light">
-                    {sub.year}
-                  </span>
-                )}
               </div>
             </div>
           );
