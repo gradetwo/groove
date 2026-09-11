@@ -1,7 +1,26 @@
 {
-  "version": "1.3.2",
+  "version": "1.3.3",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.3",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.3.3 声学星系 WebGL 上下文恢复与后台节能优化",
+        "en": "v1.3.3 Sonic Galaxy WebGL Context Recovery & Background Energy Saver"
+      },
+      "highlights": [
+        {
+          "zh": "WebGL 上下文丢失与平滑恢复（P1-04）：监听 webglcontextlost 与 webglcontextrestored，自动暂停与恢复渲染循环，杜绝显卡重置导致页面白屏",
+          "en": "WebGL context loss & recovery: listening for webglcontextlost / webglcontextrestored with graceful render loop restart"
+        },
+        {
+          "zh": "后台标签页能耗节约机制（P1-04）：页面切入后台时暂停 requestAnimationFrame 粒子演算，恢复聚焦时无跳帧续播，极大降低移动端发热与能耗",
+          "en": "Background tab power saving: automatically halts 3D RAF loop when tab is hidden, saving battery & GPU on mobile"
+        }
+      ]
+    },
     {
       "version": "1.3.2",
       "date": "2026-09-11",

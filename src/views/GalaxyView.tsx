@@ -1112,6 +1112,39 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     const posArr = geo.attributes.position.array as Float32Array;
     let prev = performance.now();
 
+    // WebGL Context Loss & Recovery Guard (P1-04)
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      if (threeRef.current) {
+        cancelAnimationFrame(threeRef.current.animId);
+      }
+    };
+
+    const handleContextRestored = () => {
+      if (threeRef.current) {
+        const dom = threeRef.current.renderer.domElement;
+        threeRef.current.renderer.setSize(dom.clientWidth || 800, dom.clientHeight || 600, false);
+        prev = performance.now();
+        threeRef.current.animId = requestAnimationFrame(renderLoop);
+      }
+    };
+
+    canvas.addEventListener("webglcontextlost", handleContextLost, false);
+    canvas.addEventListener("webglcontextrestored", handleContextRestored, false);
+
+    // Tab visibility change: pause RAF when hidden to preserve GPU/battery (P1-04)
+    const handleVisibilityChange = () => {
+      const th = threeRef.current;
+      if (!th) return;
+      if (document.hidden) {
+        cancelAnimationFrame(th.animId);
+      } else {
+        prev = performance.now();
+        th.animId = requestAnimationFrame(renderLoop);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     const renderLoop = (now: number) => {
       const th = threeRef.current;
       if (!th) return;
@@ -1336,6 +1369,9 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     return () => {
       window.removeEventListener("resize", handleResize);
       if (resizeObserver) resizeObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
       canvas.removeEventListener("pointerdown", handlePointerDown);
       canvas.removeEventListener("pointermove", handlePointerMove);
       canvas.removeEventListener("pointerup", handlePointerUp);
