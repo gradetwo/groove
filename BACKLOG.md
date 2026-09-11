@@ -245,54 +245,54 @@
 
 ### 音序器
 
-- [ ] **P3-01** Gate（步长）全链路 ｜ 2d
+- [x] **P3-01** Gate（步长）全链路 ｜ 2d
   验收：每步 gate 编辑 UI；引擎读 gate 控制发声时长；MIDI 导出与分享链接携带 gate。
-- [ ] **P3-02** Pattern A/B 与链式 Song Mode ｜ 4d
+- [x] **P3-02** Pattern A/B 与链式 Song Mode ｜ 4d
   验收：`patterns: {A,B}` + 序列编辑（A→B→A→…）；切换/复制 pattern；A/B 盲比模式。
-- [ ] **P3-03** 力度/概率/Ratchet 画布化 Lane ｜ 3d
+- [x] **P3-03** 力度/概率/Ratchet 画布化 Lane ｜ 3d
   验收：现有 VelocityLane 泛化为可切维度 lane，支持画笔/曲线/缩放；数值可视化与网格联动。
-- [ ] **P3-04** 自动保存与工程持久化 ｜ 1.5d
+- [x] **P3-04** 自动保存与工程持久化 ｜ 1.5d
   验收：`groove_project_v1` + 版本迁移；刷新后恢复当前工程；提供"清除本地数据"。
-- [ ] **P3-05** MIDI 导出与听感一致 ｜ 1d
+- [x] **P3-05** MIDI 导出与听感一致 ｜ 1d
   验收：导出含 swing 偏移、gate、ratchet、probability、trackLength（polymeter）、mute/solo；pitch 语义与引擎统一。
-- [ ] **P3-06** 分享无损化 ｜ 1d
+- [x] **P3-06** 分享无损化 ｜ 1d
   验收：payload 携带 ratchet/probability/gate/trackLength；位打包压缩长度；往返测试属性化。
-- [ ] **P3-07** 节拍器 / 预备拍 / Tap Tempo / 循环区间 ｜ 1.5d
+- [x] **P3-07** 节拍器 / 预备拍 / Tap Tempo / 循环区间 ｜ 1.5d
   验收：四项均可开关；预备拍不录音只计数；循环区间可在 ruler 上拖拽。
-- [ ] **P3-08** Track 拖拽排序 / 乐器选择 / 每轨 Swing ｜ 2d
+- [x] **P3-08** Track 拖拽排序 / 乐器选择 / 每轨 Swing ｜ 2d
   验收：拖拽重排轨道；每轨可选音色；每轨 swing 偏移独立。
 
 ### 音频
 
-- [ ] **P3-09** per-track gain/pan 总线 ｜ 1.5d
+- [x] **P3-09** per-track gain/pan 总线 ｜ 1.5d
   验收：引入 `StereoPannerNode`（`pan` 不再是死状态）；每轨 gain 节点；混音结果与 UI 一致。
-- [ ] **P3-10** send bus（Reverb / Delay） ｜ 1.5d
+- [x] **P3-10** send bus（Reverb / Delay） ｜ 1.5d
   验收：`sendA/sendB` 两条发送总线；每轨发送量可调；ConvolverNode 脉冲合成。
-- [ ] **P3-11** 音频测试真实化 ｜ 1d
+- [x] **P3-11** 音频测试真实化 ｜ 1d
   验收：`OfflineAudioContext` 渲染快照 + 8 轨齐响不削波回归 + swing 时序断言。
 
 ### 视图
 
-- [ ] **P3-12** Compare 真·同步播放 ｜ 3d ｜ `CompareView.tsx:139-152`
+- [x] **P3-12** Compare 真·同步播放 ｜ 3d ｜ `CompareView.tsx:139-152`
   验收：每列独立引擎 + 共享 transport 时钟；支持 A/B 同步播放与逐列 solo/静音；PRD 5.7.2.3 达标。
-- [ ] **P3-13** Compare 相似度矩阵 + 字段补全 ｜ 1.5d ｜ `CompareView.tsx:189-217,493-498`
+- [x] **P3-13** Compare 相似度矩阵 + 字段补全 ｜ 1.5d ｜ `CompareView.tsx:189-217,493-498`
   验收：全列两两相似度 + 整体一致性；补齐结构/配器/代表艺术家；算法口径在 UI 标注。
-- [ ] **P3-14** 详情页字段补齐 ｜ 1.5d ｜ `GenreDetailView.tsx`
+- [x] **P3-14** 详情页字段补齐 ｜ 1.5d ｜ `GenreDetailView.tsx`
   验收：渲染 `instrumentation / chord_inversions / sound_design / rhythm_features / structure / representative_artists / drum_pattern.swing / drum_pattern.tempo`。
-- [ ] **P3-15** 详情页关系区 + 关系图 ｜ 1.5d ｜ `GenreDetailView.tsx:614-684`
+- [x] **P3-15** 详情页关系区 + 关系图 ｜ 1.5d ｜ `GenreDetailView.tsx:614-684`
   验收：由 `GENRE_RELATIONS` 反查父/子/相关（决策 D2 选 A）；小型关系图可点击跳转。
-- [ ] **P3-16** 详情页内嵌迷你音序器 ｜ 1d
+- [x] **P3-16** 详情页内嵌迷你音序器 ｜ 1d
   验收：只读播放该曲风鼓组/贝斯/和弦 pattern；"在完整音序器中打开"跳转并携带曲风。
-- [ ] **P3-17** Challenge 难度分层与成绩持久化 ｜ 1.5d
+- [x] **P3-17** Challenge 难度分层与成绩持久化 ｜ 1.5d
   验收：三难度池真正分层（medium ≠ hard）；anti-repeat（最近 N 题排除）；`localStorage` 存分数/连胜/正确率；排位阈值按难度归一。
-- [ ] **P3-18** GlobalSearch 增强 ｜ 1d
+- [x] **P3-18** GlobalSearch 增强 ｜ 1d
   验收：结果 >15 条提示"还有 N 条"；最近搜索；结果行可键盘操作；"在星图中定位"「加入对比」动作。
-- [ ] **P3-19** 和弦页交互修复 ｜ 1d
+- [x] **P3-19** 和弦页交互修复 ｜ 1d
   验收：`selectedChordIdx` 无竞态；`duration ?? 4`；音阶提示随 `keyRoot`；琴键/琴弦按传入 midi 发音；钢琴标题与实际音域一致；和弦块可键盘操作。
-- [ ] **P3-20** Explore 列表/筛选视图（兜底 + 无障碍入口 + 聚类） ｜ 2d
+- [x] **P3-20** Explore 列表/筛选视图（兜底 + 无障碍入口 + 聚类） ｜ 2d
   验收：可作为 WebGL 与大 DOM 的降级视图；支持年代/地域/大类/子曲风数筛选；键盘可达。
 
-**Phase 3 出口**：PRD 第 5 章功能矩阵全绿；导出/分享/播放三者一致。
+**Phase 3 出口**：PRD 第 5 章功能矩阵全绿；导出/分享/播放三者一致；Phase 3 全量 20 项任务 100% 验收收官（v1.12.0）。
 
 ---
 
@@ -339,9 +339,9 @@
 
 | 阶段 | 任务数 | 工时 | 状态 |
 |---|---|---|---|
-| Phase 0 止血 | 28 | ≈13d | ✅ 已完成 (28/28 100%) |
-| Phase 1 打地基 | 19 | ≈17d | 🔄 进行中 (13/19 已完成: P1-01, P1-02, P1-03, P1-04, P1-05, P1-06, P1-09, P1-10, P1-12, P1-14, P1-15, P1-18, P1-19) |
-| Phase 2 性能与无障碍 | 23 | ≈24d | 待排期 |
-| Phase 3 功能补全 | 20 | ≈33d | 待排期 |
+| Phase 0 止血 | 28 | ≈13d | ✅ 100% 已验收 (v1.4.5) |
+| Phase 1 打地基 | 19 | ≈17d | ✅ 100% 已验收 (v1.7.0) |
+| Phase 2 性能与无障碍 | 23 | ≈24d | ✅ 100% 已验收 (v1.11.0) |
+| Phase 3 功能补全 | 20 | ≈33d | ✅ 100% 已验收 (v1.12.0) |
 | Phase 4 进阶 | 11 | ≈21d | 待排期 |
-| **合计** | **101** | **≈108 人日** | **已完成 41 项任务，跨端 7 平台 E2E 矩阵与预算门禁全部验证通过** |
+| **合计** | **101** | **≈108 人日** | **已完成 90/101 项任务 (89.1%)，跨端 7 平台自动化矩阵与性能预算门禁 100% 全绿** |
