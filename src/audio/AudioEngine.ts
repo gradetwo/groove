@@ -336,15 +336,8 @@ export class AudioEngine {
       this.scheduleTimerId = null;
     }
 
-    // Primary: Web Worker precision timer (unaffected by main thread UI freezes)
+    // Primary clock source: AudioWorkerBridge (worker precision timer with internal fallback)
     this.workerBridge.start(this.lookaheadMs);
-
-    // Fallback ticker only if Web Worker is inactive/unsupported
-    if (!this.workerBridge.isUsingWorker()) {
-      this.scheduleTimerId = setInterval(() => {
-        this.schedulerLoop();
-      }, this.lookaheadMs);
-    }
   }
 
   private stopScheduler(): void {

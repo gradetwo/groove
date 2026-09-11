@@ -3515,13 +3515,13 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       {
         "title": "Pulse & Groove",
         "artist": "Sha EK",
-        "year": 2028,
+        "year": 2023,
         "link": "https://www.youtube.com/results?search_query=Sha+EK+Jersey+Drill"
       },
       {
         "title": "Essential Jersey Drill",
         "artist": "DD Osama",
-        "year": 2030,
+        "year": 2023,
         "link": "https://www.youtube.com/results?search_query=DD+Osama+Jersey+Drill"
       }
     ],

@@ -1,11 +1,12 @@
 {
   "name": "groove-music-genre-learning",
   "private": true,
-  "version": "1.4.2",
+  "version": "1.4.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
+    "lint:data": "vitest run src/test/schema.test.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",

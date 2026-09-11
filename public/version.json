@@ -1,7 +1,30 @@
 {
-  "version": "1.4.2",
+  "version": "1.4.3",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.4.3",
+      "date": "2026-09-11",
+      "category": "feature",
+      "title": {
+        "zh": "v1.4.3 运行时曲风 Schema 校验系统、数据自愈与自动化 Lint 门禁",
+        "en": "v1.4.3 Runtime Genre Schema Validation, Data Healing & CI Database Lint"
+      },
+      "highlights": [
+        {
+          "zh": "运行时严格曲风 Schema 校验器：构建全新 src/data/schema.ts，全覆盖验证 159 种曲风的 ID 规范、音序器 8 轨定义、步进合法值 {0,1,2,3}、力度数组等长、BPM 区间与 6 维声学雷达指标",
+          "en": "Runtime strict genre schema validator: validates all 159 genres against strict audio specifications, track structures, valid step states, and 6D radar metrics"
+        },
+        {
+          "zh": "曲风数据库数据清洗与自愈：Schema 校验器成功侦测并修正 Jersey Drill 代表作品中的年份数据笔误（2028/2030 -> 2023），GENRES_MAP 构建时主动注入重复 ID 阻断保护",
+          "en": "Genre database data healing: detected and corrected release year typos in Jersey Drill representative tracks, and added duplicate ID throw guards during GENRES_MAP compilation"
+        },
+        {
+          "zh": "CI 自动化数据 Lint 与单测门禁全覆盖：编写独立 scripts/lint_genres.ts 与 npm run lint:data，接入 GitHub Actions 工作流，全库 159 曲风、关联图谱与编年史故事进入全天候自动化质量守卫",
+          "en": "Automated CI data linter: integrated lint_genres and schema test suite into GitHub Actions, safeguarding 159 genres, graph relations, and timeline stories"
+        }
+      ]
+    },
     {
       "version": "1.4.2",
       "date": "2026-09-11",

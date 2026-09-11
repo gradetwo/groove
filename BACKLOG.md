@@ -20,7 +20,7 @@
 - [x] **P0-03** stop/pause 时 panic（取消已排程 voice） ｜ 1d ｜ `src/audio/AudioEngine.ts:253-263`、`ChordAudioEngine.ts:387-398,462-468`
   验收：建立 voice registry；`stop()` 对所有活跃源做 5ms gain ramp + `source.stop()`；停止后 50ms 内无输出；ChordAudioEngine ballad 预排音符可被取消。
 
-- [ ] **P0-04** 音频时钟单一来源 + 移除伪造 API ｜ 0.5d ｜ `AudioEngine.ts:285-290,31-39`、`audioClockWorker.ts:76-126`、`AudioWorkerBridge.ts:59,84`
+- [x] **P0-04** 音频时钟单一来源 + 移除伪造 API ｜ 0.5d ｜ `AudioEngine.ts:285-290,31-39`、`audioClockWorker.ts:76-126`、`AudioWorkerBridge.ts:59,84`
   验收：删除与 worker 同频的 `setInterval` 与从未调用的 `CALCULATE_TRANSPORT_STEP`；删除 `ToneTransport` 伪造对象；worker 的 tick 时间戳被使用。
 
 - [x] **P0-05** AudioContext 生命周期与 iOS 解锁加固 ｜ 0.5d ｜ `AudioEngine.ts:92-131,751-757`、`ChordAudioEngine.ts:51-57,63,322,412`
@@ -93,7 +93,7 @@
 - [x] **P0-26** 详情页 BPM 状态与输入校验 ｜ 0.5d ｜ `GenreDetailView.tsx:78,82-98,293-300` (v1.3.1)
   验收：BPM 显示值随 genre 重置并与引擎一致；空输入不提交、不显示空白与 40 不一致；非法输入有行内提示。
 
-- [ ] **P0-27** 文档与实现对齐 ｜ 0.25d ｜ `DEPLOY.md`、`prd.md`
+- [x] **P0-27** 文档与实现对齐 ｜ 0.25d ｜ `DEPLOY.md`、`prd.md`
   验收：修正"12 项测试"→实际数量；标注 PWA 现状（见 D1 决策后更新）。
 
 - [x] **P0-28** 最小 CI 骨架 ｜ 0.5d ｜ 新增 `.github/workflows/ci.yml`、`package.json` scripts (v1.4.2)
@@ -152,10 +152,10 @@
 - [ ] **P1-13** 轻量索引层 + 按需加载 ｜ 1.5d ｜ 新增 `src/data/index/`
   验收：首屏只加载 `{id,name,category,origin_decade,bpm_range,aliases,radar}`；`ALL_GENRES` 全量语义改异步；`dist/index.html` 的 modulepreload 中不再出现 14 个 `genre-*`；首屏 gzip ≤90KB。
 
-- [ ] **P1-14** 运行时 Schema 校验 ｜ 1d ｜ 新增 `src/data/schema.ts`
+- [x] **P1-14** 运行时 Schema 校验 ｜ 1d ｜ 新增 `src/data/schema.ts` (v1.4.3)
   验收：`validateGenre` 覆盖 id 唯一、`steps∈{0,1,2,3}`、`velocity.length===steps.length`、`default_bpm` 落在 `bpm_range`、`radar∈1..10` 整数、`origin_year≤当前年`、`representative_tracks.length≥5`；`GENRES_MAP` 构建检测重复 id 抛错。
 
-- [ ] **P1-15** CI 数据 lint ｜ 0.5d ｜ 新增 `scripts/lint_genres.ts`
+- [x] **P1-15** CI 数据 lint ｜ 0.5d ｜ 新增 `scripts/lint_genres.ts` (v1.4.3)
   验收：把已知 77 条数据问题规则化并可失败；CI 接入。
 
 ### 工具链
