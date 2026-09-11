@@ -1211,6 +1211,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
       })),
     };
     const url = getShareUrl(shareState);
+    if (!url) {
+      showToast(t("share_failed"));
+      return;
+    }
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
         showToast(t("share_copied"));

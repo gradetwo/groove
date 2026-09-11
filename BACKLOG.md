@@ -65,7 +65,7 @@
 - [ ] **P0-16** `parseBpmRange()` 抽离并修复解析 ｜ 0.5d ｜ `GlobalSearch.tsx:69,175`、`CompareView.tsx:203-206`、新增 `src/utils/bpm.ts`
   验收：支持 en-dash `–`/连字符/单值/非数值特例（ambient、free-jazz、progressive-rock、math-rock、grime）；BPM 数字搜索恢复；`120–128 BPM` 正确渲染；相似度 BPM 判定恢复；≥8 条单测。
 
-- [ ] **P0-17** 分享链接白名单与上限校验 ｜ 0.5d ｜ `src/audio/SequencerUrlShare.ts:82-135`
+- [x] **P0-17** 分享链接白名单与上限校验 ｜ 0.5d ｜ `src/audio/SequencerUrlShare.ts:82-135` (v1.3.8)
   验收：tracks ≤16、steps 长度 ∈{16,24,32}、bpm 20–300、swing 0–100、step ∈0..3、totalSteps ≤64；恶意 payload（超长 `t`、`stLen=1e9`、`step=-5`）全部被拒；`catch` 不再返回空字符串导致 `?groove=` 空链接。
 
 - [ ] **P0-18** ErrorBoundary 全站接入 ｜ 0.5d ｜ 新增 `src/app/ErrorBoundary.tsx`、`src/main.tsx`

@@ -64,6 +64,7 @@ export const DICTIONARY: Translations = {
   export_midi: { en: "MIDI", zh: "导出 MIDI" },
   share_groove: { en: "Share", zh: "分享律动" },
   share_copied: { en: "Link copied!", zh: "分享链接已复制到剪贴板！" },
+  share_failed: { en: "Failed to create link", zh: "分享链接生成失败" },
   mode_demo: { en: "Demo", zh: "演示模式" },
   mode_edit: { en: "Edit", zh: "编辑模式" },
   solo: { en: "S", zh: "独奏" },

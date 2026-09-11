@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { generateMidiBytes } from "../audio/MidiExporter";
-import { encodeSharedSequencer, decodeSharedSequencer, SharedSequencerState } from "../audio/SequencerUrlShare";
+import { encodeSharedSequencer, decodeSharedSequencer, getShareUrl, SharedSequencerState } from "../audio/SequencerUrlShare";
 import { AudioEngine } from "../audio/AudioEngine";
 import { generateEuclidean, EUCLIDEAN_PRESETS } from "../audio/Euclidean";
 import { ChordAudioEngine } from "../audio/ChordAudioEngine";
@@ -132,6 +132,104 @@ describe("Audio & Sequencer Utilities", () => {
       expect(decodeSharedSequencer("")).toBeNull();
       expect(decodeSharedSequencer("invalid-base-64-string!!@@")).toBeNull();
       expect(decodeSharedSequencer("e30=")).toBeNull(); // empty object {}
+    });
+
+    it("rejects malicious or out-of-bounds payloads (DoS prevention)", () => {
+      // Helper to encode a raw object to base64
+      const encodeRaw = (obj: any) => {
+        const json = JSON.stringify(obj);
+        return Buffer.from(json).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      };
+
+      // Malicious stLen = 1e9
+      const hugeStepsPayload = encodeRaw({
+        g: "techno",
+        b: 130,
+        s: 0,
+        stLen: 1e9,
+        t: [{ id: "kick", n: "Kick", ins: "kick", m: 1 }],
+      });
+      expect(decodeSharedSequencer(hugeStepsPayload)).toBeNull();
+
+      // Negative step value in ct.st
+      const negativeStepPayload = encodeRaw({
+        g: "techno",
+        b: 130,
+        s: 0,
+        stLen: 16,
+        t: [{ id: "kick", n: "Kick", ins: "kick", st: [-5, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }],
+      });
+      expect(decodeSharedSequencer(negativeStepPayload)).toBeNull();
+
+      // Step value > 3 in ct.st
+      const excessiveStepValPayload = encodeRaw({
+        g: "techno",
+        b: 130,
+        s: 0,
+        stLen: 16,
+        t: [{ id: "kick", n: "Kick", ins: "kick", st: [99, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }],
+      });
+      expect(decodeSharedSequencer(excessiveStepValPayload)).toBeNull();
+
+      // Excessive tracks (> 16)
+      const tooManyTracksPayload = encodeRaw({
+        g: "techno",
+        b: 130,
+        s: 0,
+        stLen: 16,
+        t: Array(20).fill({ id: "track", n: "Track", ins: "kick", m: 1 }),
+      });
+      expect(decodeSharedSequencer(tooManyTracksPayload)).toBeNull();
+
+      // Out-of-bounds BPM (< 20 or > 300)
+      expect(decodeSharedSequencer(encodeRaw({ g: "house", b: 10, s: 0, t: [{ m: 1 }] }))).toBeNull();
+      expect(decodeSharedSequencer(encodeRaw({ g: "house", b: 9999, s: 0, t: [{ m: 1 }] }))).toBeNull();
+
+      // Out-of-bounds swing (< 0 or > 100)
+      expect(decodeSharedSequencer(encodeRaw({ g: "house", b: 120, s: -10, t: [{ m: 1 }] }))).toBeNull();
+      expect(decodeSharedSequencer(encodeRaw({ g: "house", b: 120, s: 150, t: [{ m: 1 }] }))).toBeNull();
+
+      // String exceeding max length (> 8192)
+      const oversizedString = "A".repeat(9000);
+      expect(decodeSharedSequencer(oversizedString)).toBeNull();
+    });
+
+    it("rejects invalid state on encodeSharedSequencer and getShareUrl", () => {
+      const invalidBpmState: SharedSequencerState = {
+        genreId: "techno",
+        bpm: 999,
+        swing: 0,
+        tracks: [{ track_id: "kick", name: "Kick", instrument: "kick", steps: [1, 0, 0, 0] }],
+      };
+      expect(encodeSharedSequencer(invalidBpmState)).toBe("");
+      expect(getShareUrl(invalidBpmState)).toBe("");
+
+      const invalidSwingState: SharedSequencerState = {
+        genreId: "techno",
+        bpm: 120,
+        swing: -5,
+        tracks: [{ track_id: "kick", name: "Kick", instrument: "kick", steps: [1, 0, 0, 0] }],
+      };
+      expect(encodeSharedSequencer(invalidSwingState)).toBe("");
+      expect(getShareUrl(invalidSwingState)).toBe("");
+
+      const invalidStepsState: SharedSequencerState = {
+        genreId: "techno",
+        bpm: 120,
+        swing: 0,
+        tracks: [{ track_id: "kick", name: "Kick", instrument: "kick", steps: [-1, 0, 0, 0] }],
+      };
+      expect(encodeSharedSequencer(invalidStepsState)).toBe("");
+      expect(getShareUrl(invalidStepsState)).toBe("");
+
+      const emptyTracksState: SharedSequencerState = {
+        genreId: "techno",
+        bpm: 120,
+        swing: 0,
+        tracks: [],
+      };
+      expect(encodeSharedSequencer(emptyTracksState)).toBe("");
+      expect(getShareUrl(emptyTracksState)).toBe("");
     });
   });
 

@@ -1,7 +1,26 @@
 {
-  "version": "1.3.7",
+  "version": "1.3.8",
   "releaseDate": "2026-09-11",
   "changelog": [
+    {
+      "version": "1.3.8",
+      "date": "2026-09-11",
+      "category": "fix",
+      "title": {
+        "zh": "v1.3.8 分享链接严格白名单与超限恶意攻击防护",
+        "en": "v1.3.8 Sequencer Share Whitelist & DoS Vulnerability Hardening"
+      },
+      "highlights": [
+        {
+          "zh": "分享链接白名单与上限校验（P0-17）：严格校验 URL base64 载荷，对 tracks ≤16、步数 4–64、BPM 20–300、Swing 0–100、步进值 0..3 建立完备数据校验与白名单机制；杜绝超限恶意 payload（如巨量轨道、stLen=1e9、负数步进）造成的页面卡死与 DoS 拒绝服务隐患",
+          "en": "Strict URL share whitelist & bounds validation: enforces hard limits on tracks (≤16), steps (4–64), BPM (20–300), swing (0–100), and step values (0..3); rejects malicious DoS payloads (1e9 steps, negative step indices, oversized tracks)"
+        },
+        {
+          "zh": "分享异常链路保护与空链接拦截：编码失败时返回空值并弹出友善失败提示，彻底阻断复制 ?groove= 无效空链接",
+          "en": "Share generation guard & clipboard fallback: prevents blank ?groove= link generation and clipboard pollution upon invalid sequencer states"
+        }
+      ]
+    },
     {
       "version": "1.3.7",
       "date": "2026-09-11",
