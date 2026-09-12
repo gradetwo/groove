@@ -1,7 +1,38 @@
 {
-  "version": "1.14.0",
+  "version": "1.14.1",
   "releaseDate": "2026-09-12",
   "changelog": [
+    {
+      "version": "1.14.1",
+      "date": "2026-09-12",
+      "category": "fix",
+      "title": {
+        "zh": "v1.14.1 忽略硬件静音开关、安全区适配与播放高亮对齐修复",
+        "en": "v1.14.1 Hardware Silent Switch Bypass, Safe-Area & Playhead Alignment Hotfix"
+      },
+      "highlights": [
+        {
+          "zh": "忽略 iOS 硬件静音开关（Silent Switch Bypass）：自研极轻量高质量静音音轨激活机制，在用户手势触发时自动将 iOS WebProcess 音频会话提升至媒体播放通道（AVAudioSessionCategoryPlayback），彻底解决 iPhone 开启静音开关或动作按钮静音模式时 Web Audio 扬声器静音无声的问题",
+          "en": "iOS hardware silent switch bypass: ultra-lightweight silent track activation promoting iOS WebProcess audio session to AVAudioSessionCategoryPlayback on user gestures, ensuring Web Audio plays aloud even when hardware mute switch / Action Button silent mode is enabled"
+        },
+        {
+          "zh": "音序器播放高亮条绝对坐标校准：修复外层滚动容器与内部弹性盒参照系错位导致的整拍滞后问题（由 0px 相对偏移改为绝对滚动坐标计算），Web Audio 发音与垂直高亮光束实现毫秒级 100% 绝对对齐",
+          "en": "Sequencer playhead absolute coordinate calibration: fixed container offsetParent reference mismatch causing a 1-beat visual lag, aligning audio events with vertical laser beam with millisecond accuracy"
+        },
+        {
+          "zh": "消除 Step 步进单元格高亮方格重影：彻底移除激活步进单元的独立黄色边框、背景及 scale(1.03) 样式，消除与全局垂直高亮长条重叠产生的双层边框与微小错位，使高亮光束贯通统一",
+          "en": "Eliminated duplicate step highlight square: removed standalone border, background, and scale(1.03) from active ruler cells, eliminating contour ghosting and misalignment with the playhead beam"
+        },
+        {
+          "zh": "iPhone 灵动岛与刘海屏安全区避让：全局导航与 Studio 顶栏全面适配 pt-[max(env(safe-area-inset-top),...)] 与 pb-[max(env(safe-area-inset-bottom),...)]，彻底根除 iPhone 14/15/16 Pro 灵动岛遮挡内容的问题",
+          "en": "iPhone Dynamic Island safe-area accommodation: full support for env(safe-area-inset-top/bottom), completely preventing Dynamic Island from obscuring navigation controls in portrait mode"
+        },
+        {
+          "zh": "移动端展开菜单深色实色高对比度优化：全面优化移动端展开菜单、全局侧栏及弹窗的背景底色与毛玻璃层级（提升至 bg-[#0d0f16]/98 + backdrop-blur-2xl），彻底解决展开菜单文字看不清的问题",
+          "en": "Mobile menu opaque high-contrast styling: upgraded mobile dropdown and drawer background opacity (bg-[#0d0f16]/98 + backdrop-blur-2xl) to guarantee crystal-clear text readability"
+        }
+      ]
+    },
     {
       "version": "1.14.0",
       "date": "2026-09-12",

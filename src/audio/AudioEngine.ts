@@ -11,6 +11,7 @@ import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesi
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS, SynthPreset } from "./PolySynth";
 import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
 import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
+import { initIosAudioUnlock } from "./iosAudioUnlock";
 
 export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
 
@@ -184,12 +185,17 @@ export class AudioEngine {
         }
       }
 
+      if (this.ctx) {
+        initIosAudioUnlock(this.ctx);
+      }
+
       if (this.ctx && this.ctx.state === "suspended") {
         this.cleanupUnlockListeners();
         this.unlockHandler = () => {
           if (this.ctx && this.ctx.state === "suspended") {
             this.ctx.resume().catch(() => {});
           }
+          initIosAudioUnlock(this.ctx).unlock();
           this.cleanupUnlockListeners();
         };
         window.addEventListener("click", this.unlockHandler, { once: true });
@@ -212,6 +218,7 @@ export class AudioEngine {
   }
 
   public async resume(): Promise<void> {
+    initIosAudioUnlock(this.ctx).unlock();
     if (this.ctx && this.ctx.state === "suspended") {
       try {
         await this.ctx.resume();
@@ -597,6 +604,7 @@ export class AudioEngine {
     if (!this.ctx) {
       this.initAudioContext();
     }
+    initIosAudioUnlock(this.ctx).unlock();
     if (this.ctx && this.ctx.state === "suspended") {
       await this.ctx.resume();
     }
@@ -851,6 +859,7 @@ export class AudioEngine {
   public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch: number | null = 0, stepVal = 1, gateVal = 0.8): void {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
+    initIosAudioUnlock(this.ctx).unlock();
     if (this.ctx.state === "suspended") this.ctx.resume();
     const stepDur = this.getStepDuration();
     const pitchVal = pitch !== null && pitch !== undefined && pitch > 0 ? pitch : 0;

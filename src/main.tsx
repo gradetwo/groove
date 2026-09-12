@@ -4,9 +4,13 @@ import App from "./App";
 import "./index.css";
 
 import { initPwa } from "./utils/pwa";
+import { initIosAudioUnlock } from "./audio/iosAudioUnlock";
 
 // Initialize PWA Service Worker & App Shell offline caching (P4-07)
 initPwa();
+
+// Initialize iOS Silent Switch Bypass & Web Audio Unmute
+initIosAudioUnlock();
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
