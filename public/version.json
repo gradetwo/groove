@@ -1,7 +1,34 @@
 {
-  "version": "1.14.3",
-  "releaseDate": "2026-09-12",
+  "version": "1.14.4",
+  "releaseDate": "2026-09-13",
   "changelog": [
+    {
+      "version": "1.14.4",
+      "date": "2026-09-13",
+      "category": "feature",
+      "title": {
+        "zh": "v1.14.4 3D 曲风星系星云流光重构、全景星系琥珀微标与空间标签定位校准",
+        "en": "v1.14.4 3D Genre Galaxy Nebular Radiance Overhaul, Cosmic Filter Pill & 3D Spatial Label Calibration"
+      },
+      "highlights": [
+        {
+          "zh": "3D 银河星系星云与曲风星体全域光辉渲染重构：彻底解决默认视角下星系黑布隆冬看不清的声学天体渲染缺陷。大幅增强着色器内辉光（Inner Glow）与外层星云气溶胶（Smooth Halo）透光度，扩充 14 大流派星云的粒子基底密度、核心辐射光环（Core Radiant Aura）与 159 种曲风星体粒子尺度，呈现宏大深邃、流光溢彩的宇宙声学图谱",
+          "en": "3D Genre Galaxy Nebular Radiance Overhaul: completely resolved the pitch-black visibility issue from the default camera perspective. Re-engineered vertex and fragment shaders with high-luminance halo curves, enhanced nebular aerosol densities across all 14 major genre clusters, and scaled stellar nurseries to create a vivid, glowing celestial atlas of sound"
+        },
+        {
+          "zh": "全景星系切换胶囊与多语言国际化修复：移除原先突兀的白色无样式方块（galaxy_filter_all），换装为暗黑星际美学的半透明琥珀辉光胶囊按钮（All Nebulae / 全景星系），并补齐包括拖拽漫游、分支列表与全景返回等缺失的多语言文案",
+          "en": "Cosmic All-Nebulae Pill & Localization Completeness: replaced the raw unstyled white strip with a refined cosmic amber glow pill button. Fully localized all missing galaxy labels including 'All Nebulae', navigation hints, branch controls, and overview returns across both English and Chinese"
+        },
+        {
+          "zh": "3D 投影标签空间定位与初始层叠消除：重构 DOM 标签与 3D 空间坐标变换绑定通道（coreElementsMapRef / subElementsMapRef），彻底修复初始渲染时 14 大核心标签堆叠在左上角遮挡主标题的幽灵层级 BUG，实现标签随 3D 镜头漫游、缩放与聚焦的丝滑贴合",
+          "en": "3D Spatial Label Mapping & Zero-Glitch Initial Projection: wired up reactive element reference maps for core nebulae and subgenres, eliminating the initial frame label accumulation glitch at top-left. Labels now track their exact 3D star clusters in space during camera fly-bys, zooms, and rotations"
+        },
+        {
+          "zh": "子曲风分支计数插值语法校准：修正子曲风展开栏中「15 {count} 个子曲风分支」的多重插值错误，确保中英双语下数字与分支单位文案准确呈现",
+          "en": "Subgenre Counter Localization Fix: resolved redundant count template interpolation in the cluster branch header, ensuring crisp and accurate count formatting across all languages"
+        }
+      ]
+    },
     {
       "version": "1.14.3",
       "date": "2026-09-12",

@@ -103,7 +103,7 @@ void main(){
   float macroWave2 = cos(pF.y * 2.4 - pF.x * 1.4 - uTime * 0.05);
   float macroWave3 = sin(dot(pF, vec3(1.4, 1.1, 1.6)));
   float macroField = macroWave1 * macroWave2 + macroWave3 * 0.42;
-  float spatialDensity = smoothstep(-0.60, 0.72, macroField) * 0.86 + 0.18;
+  float spatialDensity = smoothstep(-0.65, 0.65, macroField) * 0.35 + 0.75;
 
   alpha *= breathAlpha * chiaroscuro * lightSweep * spatialDensity;
   sz *= breathSize;
@@ -158,7 +158,7 @@ void main(){
 
   alpha *= (1.0 + pulse * 1.4);
   sz *= (1.0 + pulse * 1.1);
-  alpha *= clamp(1.45 - dz / 2200.0, 0.12, 0.90);
+  alpha *= clamp(1.65 - dz / 2600.0, 0.40, 1.0);
 
   gl_PointSize = clamp(sz * uScale / dz, 0.0, 240.0);
   gl_Position = projectionMatrix * mv;
@@ -180,18 +180,18 @@ void main(){
   
   if (vStar > 0.5) {
     // Star nodes: crystalline diamond core + soft chromatic corona + delicate cross diffraction
-    float starCore = exp(-d * d * 32.0) * 0.92;
-    float starHalo = exp(-d * 3.4) * 0.24;
-    float rx = max(0.0, 1.0 - abs(uv.y) * 11.0) * max(0.0, 1.0 - abs(uv.x) * 2.2);
-    float ry = max(0.0, 1.0 - abs(uv.x) * 11.0) * max(0.0, 1.0 - abs(uv.y) * 2.2);
-    float flare = (rx + ry) * 0.20 * exp(-d * 2.8);
+    float starCore = exp(-d * d * 28.0) * 1.45;
+    float starHalo = exp(-d * 2.8) * 0.65;
+    float rx = max(0.0, 1.0 - abs(uv.y) * 9.0) * max(0.0, 1.0 - abs(uv.x) * 2.0);
+    float ry = max(0.0, 1.0 - abs(uv.x) * 9.0) * max(0.0, 1.0 - abs(uv.y) * 2.0);
+    float flare = (rx + ry) * 0.35 * exp(-d * 2.4);
     a = (starCore + starHalo + flare) * vAlpha;
   } else {
     // Nebular dust & planetary halos: velvet-smooth continuous halo gradient (光晕渐变，避免生硬色块与大团过曝)
-    // Multi-tier exponential decay: luminous but transparent core, velvety gradient, ethereal feather edge
-    float innerGlow = exp(-d * d * 6.5) * 0.32;
-    float smoothHalo = exp(-d * 2.6) * 0.42;
-    float outerVeil = exp(-d * 1.1) * 0.12;
+    // Multi-tier exponential decay: luminous core, velvety gradient, ethereal feather edge
+    float innerGlow = exp(-d * d * 4.2) * 0.95;
+    float smoothHalo = exp(-d * 2.2) * 0.70;
+    float outerVeil = exp(-d * 1.0) * 0.32;
     a = (innerGlow + smoothHalo + outerVeil) * vAlpha;
   }
   
@@ -200,10 +200,10 @@ void main(){
   vec3 col = vColor;
   if (vStar > 0.5) {
     // Specular warm highlight only at the absolute pinpoint center
-    col = mix(col, vec3(1.0, 0.98, 0.95), clamp(exp(-d * d * 24.0) * 0.85, 0.0, 0.85));
+    col = mix(col, vec3(1.0, 0.98, 0.95), clamp(exp(-d * d * 20.0) * 0.90, 0.0, 0.90));
   } else {
-    // Ethereal chromatic preservation: keep rich hue without bleaching into solid white
-    col = mix(col, vec3(1.0, 0.98, 0.94), clamp(exp(-d * d * 14.0) * 0.18, 0.0, 0.22));
+    // Ethereal chromatic preservation: keep rich vibrant hue with luminous core
+    col = mix(col, vec3(1.0, 0.98, 0.94), clamp(exp(-d * d * 10.0) * 0.32, 0.0, 0.45));
   }
   
   gl_FragColor = vec4(col * a, a);
@@ -621,46 +621,50 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       const R = c.spiral ? 92 : 78;
 
       span(core.idx, () => {
+        // Radiant luminous cluster heart aura
+        push(core.pos.x, core.pos.y, core.pos.z, 1.0, 0.98, 0.92, 26, Math.random() * 100, core.year, 0, core.idx, ci, 1);
+        const coreAuraColor = tint(c.color, 0.15, 1.25, 0);
+        push(core.pos.x, core.pos.y, core.pos.z, coreAuraColor[0], coreAuraColor[1], coreAuraColor[2], 48, Math.random() * 100, core.year, 0, core.idx, ci, 0);
+
         // High-density stellar nursery: organic ring / eye distribution rather than a single solid clump (空心气眼与有机流光)
-        const nurseryN = Math.round(52 * Q);
+        const nurseryN = Math.round(85 * Q);
         for (let i = 0; i < nurseryN; i++) {
           // Hollow central eye: distribution peaks at r = 8 ~ 26, avoiding an opaque solid clump in the center
           const rn = 7.5 + Math.pow(Math.random(), 1.25) * (R * 0.32);
           const an = Math.random() * Math.PI * 2;
           const yn = gauss() * (R * 0.10);
           V.set(Math.cos(an) * rn, yn, Math.sin(an) * rn).add(core.pos);
-          const tcCore = tint(c.color, 0.40, 0.46, (Math.random() - 0.5) * 0.05);
-          push(V.x, V.y, V.z, tcCore[0], tcCore[1], tcCore[2], 1.6 + Math.random() * 1.5, Math.random() * 100, core.year, 0, core.idx, ci, Math.random() < 0.22 ? 1 : 0);
+          const tcCore = tint(c.color, 0.25, 0.95, (Math.random() - 0.5) * 0.05);
+          push(V.x, V.y, V.z, tcCore[0], tcCore[1], tcCore[2], 2.8 + Math.random() * 2.6, Math.random() * 100, core.year, 0, core.idx, ci, Math.random() < 0.35 ? 1 : 0);
         }
 
         // Main cluster dust envelope with dramatic density waves and dark void spaces (疏密悬殊的气态星际网络)
-        const nd = Math.round(560 * Q);
+        const nd = Math.round(720 * Q);
         for (let i = 0; i < nd; i++) {
           const tArm = Math.random();
           const armIdx = i % 3;
           const armAngle = armIdx * (Math.PI * 2 / 3) + tArm * 3.8 + ci * 1.1;
-          const r = 10 + Math.pow(tArm, 1.15) * (R * 1.25) + gauss() * 6.5;
+          const r = 8 + Math.pow(tArm, 1.15) * (R * 1.25) + gauss() * 6.0;
           
-          // Density wave void filtering: produces true cavernous voids (疏) and condensed filaments (密)
+          // Density wave void filtering: produces organic filaments with balanced transparency
           const densityRidge = Math.sin(armAngle * 2.2 + r * 0.048);
-          if (densityRidge < -0.32 && Math.random() < 0.62) {
-            // Drop particles in dark voids to maintain ethereal transparency
+          if (densityRidge < -0.55 && Math.random() < 0.45) {
             continue;
           }
 
           const yv = gauss() * (R * 0.26) * (1.0 + densityRidge * 0.25);
           V.set(Math.cos(armAngle) * r, yv, Math.sin(armAngle) * r).add(core.pos);
           const rr = Math.random();
-          const tc = tint(c.color, clamp(1 - rr, 0.08, 0.72), 0.22 + Math.random() * 0.58, (Math.random() - 0.5) * 0.08);
-          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 0.9 + Math.random() * 1.8, Math.random() * 100, core.year, 0, core.idx, ci);
+          const tc = tint(c.color, clamp(1 - rr, 0.05, 0.55), 0.72 + Math.random() * 0.55, (Math.random() - 0.5) * 0.08);
+          push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 2.2 + Math.random() * 3.2, Math.random() * 100, core.year, 0, core.idx, ci);
         }
 
         // Outlying faint stellar halo
-        const nh = Math.round(180 * Q);
+        const nh = Math.round(220 * Q);
         for (let i = 0; i < nh; i++) {
           V.set(gauss(), gauss() * 0.4, gauss()).multiplyScalar(R * 1.65).add(core.pos);
-          const tcH = tint(c.color, 0.5, 0.24, 0);
-          push(V.x, V.y, V.z, tcH[0], tcH[1], tcH[2], 0.7 + Math.random() * 1.2, Math.random() * 100, core.year, 0, core.idx, ci);
+          const tcH = tint(c.color, 0.35, 0.65, 0);
+          push(V.x, V.y, V.z, tcH[0], tcH[1], tcH[2], 1.6 + Math.random() * 2.2, Math.random() * 100, core.year, 0, core.idx, ci);
         }
       });
     });
@@ -672,42 +676,42 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       if (!c) return;
       const ci = graphData.clusters.indexOf(c);
       const isHero = n.idx % 5 === 0;
-      const prominence = isHero ? 1.0 : 0.6;
+      const prominence = isHero ? 1.0 : 0.65;
 
       span(n.idx, () => {
         // Bright primary subgenre star
         push(
           n.pos.x, n.pos.y, n.pos.z,
-          1, 0.95, 0.88,
-          isHero ? 7.2 : 4.6,
+          1, 0.98, 0.90,
+          isHero ? 11.0 : 7.0,
           Math.random() * 100, n.year, 0, n.idx, ci, 1
         );
 
         // Core star aura halo
-        const haloColor = tint(c.color, 0.28, 0.82, 0);
+        const haloColor = tint(c.color, 0.15, 1.10, 0);
         push(
           n.pos.x, n.pos.y, n.pos.z,
           haloColor[0], haloColor[1], haloColor[2],
-          isHero ? 16 : 10,
+          isHero ? 26 : 16,
           Math.random() * 100, n.year, 0, n.idx, ci, 1
         );
 
         // Hero subgenre spangle sparks
         if (isHero) {
-          const spangleCount = Math.round(5 * Q);
+          const spangleCount = Math.round(6 * Q);
           for (let k = 0; k < spangleCount; k++) {
-            W.set(gauss(), gauss(), gauss()).multiplyScalar(2.4 + prominence * 0.6).add(n.pos);
-            const spkCol = tint(c.color, 0.70, 0.48, (Math.random() - 0.5) * 0.05);
-            push(W.x, W.y, W.z, spkCol[0], spkCol[1], spkCol[2], 1.3 + Math.random() * 0.7, Math.random() * 100, n.year, 0, n.idx, ci, 1);
+            W.set(gauss(), gauss(), gauss()).multiplyScalar(2.8 + prominence * 0.8).add(n.pos);
+            const spkCol = tint(c.color, 0.50, 0.85, (Math.random() - 0.5) * 0.05);
+            push(W.x, W.y, W.z, spkCol[0], spkCol[1], spkCol[2], 2.2 + Math.random() * 1.4, Math.random() * 100, n.year, 0, n.idx, ci, 1);
           }
         }
 
         // Surrounding micro-nebula stardust
-        const nd = Math.round(32 * Q);
+        const nd = Math.round(45 * Q);
         for (let i = 0; i < nd; i++) {
-          V.set(gauss(), gauss(), gauss()).multiplyScalar(12 * prominence).add(n.pos);
-          const tc2 = tint(c.color, 0.2, 0.35, (Math.random() - 0.5) * 0.05);
-          push(V.x, V.y, V.z, tc2[0], tc2[1], tc2[2], 1.1 + Math.random() * 1.4, Math.random() * 100, n.year, 0, n.idx, ci);
+          V.set(gauss(), gauss(), gauss()).multiplyScalar(13 * prominence).add(n.pos);
+          const tc2 = tint(c.color, 0.15, 0.80, (Math.random() - 0.5) * 0.05);
+          push(V.x, V.y, V.z, tc2[0], tc2[1], tc2[2], 2.2 + Math.random() * 2.8, Math.random() * 100, n.year, 0, n.idx, ci);
         }
       });
     });
@@ -715,14 +719,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     // 3. Origin Singularity particles
     const originNode = graphData.byId["origin"];
     span(originNode.idx, () => {
-      push(0, 0, 0, 1, 0.92, 0.72, 16, 0, 0, 0, originNode.idx, -1, 1);
-      for (let i = 0; i < Math.round(70 * Q); i++) {
-        V.set(gauss(), gauss(), gauss()).multiplyScalar(20);
-        const tc = tint(0xD8B988, 0.4, 0.5, (Math.random() - 0.5) * 0.06);
-        push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 1.4 + Math.random() * 1.8, Math.random() * 100, 0, 0, originNode.idx, -1);
+      push(0, 0, 0, 1, 0.95, 0.85, 28, 0, 0, 0, originNode.idx, -1, 1);
+      for (let i = 0; i < Math.round(90 * Q); i++) {
+        V.set(gauss(), gauss(), gauss()).multiplyScalar(22);
+        const tc = tint(0xD8B988, 0.3, 0.95, (Math.random() - 0.5) * 0.06);
+        push(V.x, V.y, V.z, tc[0], tc[1], tc[2], 2.8 + Math.random() * 3.2, Math.random() * 100, 0, 0, originNode.idx, -1);
       }
-      for (let k = 0; k < 5; k++) {
-        push(gauss() * 30, gauss() * 30, gauss() * 30, 0.35, 0.3, 0.22, 34, Math.random() * 100, 0, 0, originNode.idx, -1);
+      for (let k = 0; k < 6; k++) {
+        push(gauss() * 30, gauss() * 30, gauss() * 30, 0.65, 0.55, 0.38, 52, Math.random() * 100, 0, 0, originNode.idx, -1);
       }
     });
 
@@ -734,7 +738,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       const ct = toCluster ? toCluster.color : 0xD8B988;
       const target = e.to;
       const clI = toCluster ? graphData.clusters.indexOf(toCluster) : -1;
-      const bright = e.note ? 1.25 : e.kind === "inner" ? 0.66 : 0.9;
+      const bright = e.note ? 1.45 : e.kind === "inner" ? 0.95 : 1.15;
       const bornAttr = e.born - 8;
 
       span(EDGE_BASE + e.i, () => {
@@ -749,7 +753,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           push(
             V.x, V.y, V.z,
             mixA.r * bright, mixA.g * bright, mixA.b * bright,
-            e.kind === "inner" ? 1.4 + Math.random() * 0.8 : 2.2 + Math.random() * 1.4,
+            e.kind === "inner" ? 2.4 + Math.random() * 1.4 : 3.4 + Math.random() * 2.2,
             Math.random() * 100, bornAttr, t, target.idx, clI
           );
         }
@@ -883,7 +887,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     const uniforms = {
       uTime: { value: 0 },
       uYear: { value: Y_MAX },
-      uScale: { value: 800 },
+      uScale: { value: 1400 },
       uHoverNode: { value: -1 },
       uHoverCluster: { value: -1 },
       uSelectedCluster: { value: -1 },
@@ -955,7 +959,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     scene.add(shockPts);
 
     // Camera orbit controls state
-    const orbit = { theta: 0.9, phi: 1.12, radius: 1250, target: new THREE.Vector3() };
+    const orbit = { theta: 0.9, phi: 1.12, radius: 960, target: new THREE.Vector3() };
     const vel = { t: 0, p: 0 };
 
     threeRef.current = {
@@ -1553,12 +1557,17 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             <button
               type="button"
               key={c.id}
+              ref={(el) => {
+                if (el) coreElementsMapRef.current.set(core.id, el);
+                else coreElementsMapRef.current.delete(core.id);
+              }}
               data-core-id={core.id}
               onClick={(e) => {
                 e.stopPropagation();
                 selectMajorCluster(c);
               }}
               aria-label={`${c.name} ${c.en}`}
+              style={{ opacity: 0 }}
               className="nlab-core absolute transition-opacity duration-300 pointer-events-auto cursor-pointer text-center group bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
             >
               <b className="block font-light text-xs sm:text-[13px] tracking-[0.32em] text-[#eae6dc]/80 group-hover:text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.9)] transition-colors">
@@ -1582,6 +1591,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             <button
               type="button"
               key={sub.id}
+              ref={(el) => {
+                if (el) subElementsMapRef.current.set(sub.id, el);
+                else subElementsMapRef.current.delete(sub.id);
+              }}
               data-sub-id={sub.id}
               onClick={(e) => {
                 e.stopPropagation();
@@ -1598,6 +1611,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 const th = threeRef.current;
                 if (th) th.uniforms.uHoverNode.value = -1;
               }}
+              style={{ opacity: 0 }}
               className="nlab-sub absolute pointer-events-auto cursor-pointer select-none text-left transition-opacity duration-150 bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
             >
               <div
@@ -1652,10 +1666,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       </div>
 
       {/* Radial Vignette Veil */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_50%_42%,transparent_52%,rgba(2,3,6,0.6)_100%)]" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_50%_48%,transparent_62%,rgba(2,3,6,0.35)_100%)]" />
 
       {/* Top Left: Masthead */}
-      <div className="absolute top-6 left-6 z-20 pointer-events-auto flex items-start gap-4">
+      <div className="absolute top-5 left-6 z-20 pointer-events-auto flex items-start gap-4">
         <div className="hidden sm:flex flex-col gap-1 border-r border-[#eae6dc]/15 pr-3 text-[10px] font-light tracking-[0.35em] text-[#eae6dc]/55 uppercase">
           <span>{t("galaxy_genesis")}</span>
           <span className="font-mono text-[9px] tracking-[0.2em] text-[#d8b988]/80">GENESIS ATLAS OF SOUND</span>
@@ -1677,7 +1691,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                   {selectedCluster.en}
                 </span>
                 <span>•</span>
-                <span>{clusterSubgenres.length} {t("galaxy_subgenres_count")}</span>
+                <span>{t("galaxy_subgenres_count", { count: clusterSubgenres.length })}</span>
                 <button
                   onClick={() => setIsSubgenresPanelOpen((prev) => !prev)}
                   className={`ml-2 px-2.5 py-0.5 rounded-full border text-[11px] transition-all flex items-center gap-1.5 shadow-sm ${
@@ -1705,16 +1719,19 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       </div>
 
       {/* Top Center: Major Nebula Quick Switcher Chips */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-[92vw] overflow-x-auto no-scrollbar flex items-center gap-1.5 bg-[#0a0d14]/85 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-[#eae6dc]/15 shadow-2xl">
+      <div className="absolute top-[4.85rem] left-1/2 -translate-x-1/2 z-20 pointer-events-auto max-w-[92vw] overflow-x-auto no-scrollbar flex items-center gap-1.5 bg-[#080b12]/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
         <button
+          type="button"
           onClick={() => selectMajorCluster(null)}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
             !selectedCluster
-              ? "bg-[#eae6dc] text-zinc-950 font-bold shadow-md shadow-white/10"
-              : "text-[#eae6dc]/60 hover:text-white hover:bg-white/5"
+              ? "bg-accent/20 border border-accent/70 text-accent font-bold shadow-[0_0_12px_rgba(245,183,61,0.35)]"
+              : "text-[#eae6dc]/60 hover:text-white hover:bg-white/5 border border-transparent"
           }`}
+          title={isZh ? "显示全景星系" : "Show all nebulae clusters"}
         >
-          {t("galaxy_filter_all")}
+          <span className={`w-1.5 h-1.5 rounded-full ${!selectedCluster ? "bg-accent shadow-[0_0_6px_#f5b73d]" : "bg-white/40"}`} />
+          <span>{t("galaxy_filter_all")}</span>
         </button>
         {graphData.clusters.map((c) => {
           const isSelected = selectedCluster?.id === c.id;
