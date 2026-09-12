@@ -28,6 +28,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
 
   const studioShortcuts = [
     { keys: ["Space"], desc: isZh ? "播放 / 暂停" : "Play / Pause playback" },
+    { keys: ["D"], desc: isZh ? "只听鼓组快捷切换 (Drums Only)" : "Toggle Drums Only mode" },
     { keys: [modKey, "Z"], desc: isZh ? "撤销步进修改" : "Undo pattern change" },
     { keys: [modKey, isMac ? "⇧Z" : "Y"], desc: isZh ? "重做步进修改" : "Redo pattern change" },
     { keys: ["↑", "↓", "←", "→"], desc: isZh ? "音序网格步进键位漫游" : "Navigate grid step cells" },

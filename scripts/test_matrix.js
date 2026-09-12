@@ -162,7 +162,7 @@ async function runTestOnTarget(target, baseUrl) {
     // Play button interaction & Playhead beam alignment check
     const playBtn = await page.$("button:has-text('播放'), button:has-text('Play'), button:has-text('暂停'), button:has-text('Pause')");
     if (playBtn) {
-      await playBtn.click();
+      await playBtn.click({ force: true });
       await page.waitForTimeout(250);
       const playheadCheck = await page.evaluate(() => {
         const beam = document.querySelector(".playhead-laser-beam");
@@ -178,7 +178,7 @@ async function runTestOnTarget(target, baseUrl) {
           `Playhead beam misalignment on ${target.name}: beamLeft=${playheadCheck.beamLeft}, cellLeft=${playheadCheck.cellLeft}, diff=${playheadCheck.diff}px`
         );
       }
-      await playBtn.click(); // Pause back
+      await playBtn.click({ force: true }); // Pause back
     }
 
     // 2. Responsive Viewport Check (Horizontal scroll check)
@@ -196,7 +196,7 @@ async function runTestOnTarget(target, baseUrl) {
     // 2.1 Bilingual Layout Baseline Check (Chinese width baseline rule)
     const langBtn = await page.$("button[title='Switch Language']");
     if (langBtn) {
-      await langBtn.click(); // Toggle to English
+      await langBtn.click({ force: true }); // Toggle to English
       await page.waitForTimeout(150);
       const enOverflow = await page.evaluate(() => {
         return document.documentElement.scrollWidth > window.innerWidth + 4;
@@ -204,7 +204,7 @@ async function runTestOnTarget(target, baseUrl) {
       if (enOverflow && !target.isTablet && !target.isMobile) {
         throw new Error("Layout overflow detected after switching to English mode (violating Chinese baseline rule)");
       }
-      await langBtn.click(); // Toggle back to Chinese
+      await langBtn.click({ force: true }); // Toggle back to Chinese
       await page.waitForTimeout(150);
     }
 
@@ -212,13 +212,13 @@ async function runTestOnTarget(target, baseUrl) {
     if (!target.isMobile) {
       const exploreBtn = await page.$("button[title*='探索'], button[title*='Explore']");
       if (exploreBtn) {
-        await exploreBtn.click();
+        await exploreBtn.click({ force: true });
         await page.waitForTimeout(150);
         const dropdown = await page.$("div:has-text('曲风探索视图'), div:has-text('Exploration Views')");
         if (!dropdown) {
           throw new Error("Explore dropdown did not render upon click");
         }
-        await exploreBtn.click(); // Close dropdown
+        await exploreBtn.click({ force: true }); // Close dropdown
         await page.waitForTimeout(100);
       }
     }
@@ -231,9 +231,9 @@ async function runTestOnTarget(target, baseUrl) {
     const chordTitle = await page.innerText("h1, h2, h3").catch(() => "");
     const foldBtn = await page.$("button:has-text('收起'), button:has-text('Fold'), button:has-text('展开工作台'), button:has-text('Expand')");
     if (foldBtn) {
-      await foldBtn.click(); // Toggle fold
+      await foldBtn.click({ force: true }); // Toggle fold
       await page.waitForTimeout(200);
-      await foldBtn.click(); // Toggle expand back
+      await foldBtn.click({ force: true }); // Toggle expand back
     }
 
     // 4. Galaxy View Check

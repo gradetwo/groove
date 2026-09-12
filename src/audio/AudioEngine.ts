@@ -13,6 +13,7 @@ import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
 import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
 import { ecosystemBus } from "./ecosystemBus";
+import { isDrumTrack } from "../utils/trackUtils";
 
 export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
 
@@ -78,6 +79,7 @@ export class AudioEngine {
 
   // Drum Kit Models (P5-02)
   private drumKit: DrumKitType = "808";
+  private isDrumsOnly: boolean = false;
 
   // Master DSP Effects Rack (P5-04)
   private masterFxRack: EffectsRack | null = null;
@@ -378,7 +380,9 @@ export class AudioEngine {
     this.trackStates.forEach((state, idx) => {
       const strip = this.trackStrips[idx];
       if (!strip) return;
-      const isSilenced = Boolean(state.mute) || (anySolo && !state.solo);
+      const track = this.pattern?.tracks[idx];
+      const isDrum = track ? isDrumTrack(track, idx) : idx < 4;
+      const isSilenced = Boolean(state.mute) || (anySolo && !state.solo) || (this.isDrumsOnly && !isDrum);
       const targetGain = isSilenced ? 0 : (state.volume !== undefined ? Math.max(0, Math.min(1.0, state.volume)) : 0.8);
 
       try {
@@ -612,6 +616,15 @@ export class AudioEngine {
 
   public getLoopRange(): [number, number] | null {
     return this.loopRange;
+  }
+
+  public setDrumsOnly(enabled: boolean): void {
+    this.isDrumsOnly = enabled;
+    this.syncTrackGains();
+  }
+
+  public getDrumsOnly(): boolean {
+    return this.isDrumsOnly;
   }
 
   public static calculateTapTempo(taps: number[]): number {
@@ -875,6 +888,7 @@ export class AudioEngine {
       const state = this.trackStates[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
       if (state.mute) return;
       if (anySolo && !state.solo) return;
+      if (this.isDrumsOnly && !isDrumTrack(track, trackIdx)) return;
 
       // Independent track loop length (Polymeter)
       const trackLen = (track.trackLength && track.trackLength > 0)

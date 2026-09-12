@@ -105,6 +105,7 @@ export interface Genre {
   bpm_range: string;
   default_bpm: number;
   time_signature: string;
+  default_drum_kit?: string;
   key_characteristics: I18nString;
   common_chords: string[];
   chord_inversions: I18nString;

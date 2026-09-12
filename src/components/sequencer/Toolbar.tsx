@@ -22,6 +22,7 @@ import {
   FileAudio,
   Package,
   Loader2,
+  Disc3,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -97,6 +98,8 @@ export interface ToolbarProps {
   onToggleRecordArmed?: () => void;
   effectsRackState?: EffectsRackState;
   onChangeEffectsRack?: (state: Partial<EffectsRackState>) => void;
+  isDrumsOnly?: boolean;
+  onToggleDrumsOnly?: () => void;
 }
 
 export const Toolbar = memo<ToolbarProps>(function Toolbar({
@@ -126,6 +129,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   isCountIn = false,
   drumKit = "808",
   onChangeDrumKit,
+  isDrumsOnly = false,
+  onToggleDrumsOnly,
   isRecordArmed = false,
   onToggleRecordArmed,
   effectsRackState,
@@ -373,6 +378,30 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 )}
               </select>
             </div>
+          )}
+
+          {/* Drums Only Toggle */}
+          {onToggleDrumsOnly && (
+            <button
+              type="button"
+              onClick={onToggleDrumsOnly}
+              className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-all shrink-0 active:scale-95 ${
+                isDrumsOnly
+                  ? "bg-accent/25 border-accent text-accent font-bold shadow-[0_0_10px_rgba(245,183,61,0.35)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={
+                isZh
+                  ? `只听鼓组轨道 (快捷键 D · 当前: ${isDrumsOnly ? "已开启" : "已关闭"})`
+                  : `Drums Only (Key: D · Current: ${isDrumsOnly ? "ON" : "OFF"})`
+              }
+              aria-label={isZh ? "只听鼓组模式" : "Drums Only Mode"}
+              aria-pressed={isDrumsOnly}
+            >
+              <Disc3 className={`w-3.5 h-3.5 ${isDrumsOnly ? "text-accent animate-spin-slow" : "text-text-dim"}`} />
+              <span className="font-semibold">{isZh ? "只听鼓组" : "DRUMS"}</span>
+              {isDrumsOnly && <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
+            </button>
           )}
 
           {/* Meter Select Dropdown */}

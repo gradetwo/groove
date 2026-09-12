@@ -25,6 +25,7 @@ import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
 import { announcer } from "../ui";
+import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
 
 // Color mappings matching demo design
 export const DEMO_TRACKS_CONFIG = [
@@ -194,7 +195,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [midiDevices, setMidiDevices] = useState<MidiDevice[]>([]);
 
   // Phase 5 States (P5-01 ~ P5-05)
-  const [drumKit, setDrumKit] = useState<DrumKitType>("808");
+  const [drumKit, setDrumKit] = useState<DrumKitType>(() => getDefaultDrumKitForGenre(currentGenre));
+  const [isDrumsOnly, setIsDrumsOnly] = useState<boolean>(false);
+  const lastGenreIdRef = useRef(currentGenre.id);
   const [isRecordArmed, setIsRecordArmed] = useState<boolean>(false);
   const [effectsRackState, setEffectsRackState] = useState<EffectsRackState>(DEFAULT_FX_STATE);
 
@@ -331,6 +334,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     engine.setMetronome(seqState.isMetronome);
     engine.setCountIn(seqState.isCountIn);
     engine.setDrumKit(drumKit);
+    engine.setDrumsOnly(isDrumsOnly);
     engine.setRecordArmed(isRecordArmed);
 
     // P5-05: Real-time Live Recording Callback
@@ -394,6 +398,26 @@ export const StudioView: React.FC<StudioViewProps> = ({
       engineRef.current.setDrumKit(drumKit);
     }
   }, [drumKit]);
+
+  // Sync Drums-Only Mode to AudioEngine
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setDrumsOnly(isDrumsOnly);
+    }
+  }, [isDrumsOnly]);
+
+  // Sync Default Drum Kit on Genre Change
+  useEffect(() => {
+    if (lastGenreIdRef.current !== currentGenre.id) {
+      lastGenreIdRef.current = currentGenre.id;
+      const defaultKit = getDefaultDrumKitForGenre(currentGenre);
+      setDrumKit(defaultKit);
+      if (engineRef.current) {
+        engineRef.current.setDrumKit(defaultKit);
+        engineRef.current.setDrumsOnly(isDrumsOnly);
+      }
+    }
+  }, [currentGenre.id, isDrumsOnly]);
 
   // Sync Live Recording Arm state to AudioEngine (P5-05)
   useEffect(() => {
@@ -605,11 +629,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Switch genre
   const switchGenre = useCallback(
     (genre: Genre, andPlay = false) => {
+      lastGenreIdRef.current = genre.id;
+      const defaultKit = getDefaultDrumKitForGenre(genre);
+      setDrumKit(defaultKit);
+
       onSelectGenre(genre);
       commit({ type: "SET_GENRE", genre });
 
       if (engineRef.current) {
         engineRef.current.setPattern(genre.sequencer_pattern, true);
+        engineRef.current.setDrumKit(defaultKit);
+        engineRef.current.setDrumsOnly(isDrumsOnly);
         engineRef.current.setBpm(genre.default_bpm || 120);
         engineRef.current.setSwing((genre.sequencer_pattern.swing || 0) / 100);
         engineRef.current.setTimeSignature(genre.time_signature || "4/4");
@@ -625,8 +655,29 @@ export const StudioView: React.FC<StudioViewProps> = ({
         }
       }
     },
-    [commit, onSelectGenre, isPlaying, clearPlayhead]
+    [commit, onSelectGenre, isPlaying, clearPlayhead, isDrumsOnly]
   );
+
+  // Toggle Drums-Only mode
+  const handleToggleDrumsOnly = useCallback(() => {
+    setIsDrumsOnly((prev) => {
+      const next = !prev;
+      if (engineRef.current) {
+        engineRef.current.setDrumsOnly(next);
+      }
+      showToast(
+        next
+          ? (isZh ? "已开启【只听鼓组】模式 (快捷键 D) ✓" : "Drums Only Mode Enabled (Key: D) ✓")
+          : (isZh ? "已恢复全频段播放 (Full Band) ✓" : "Full Band Mode Restored ✓")
+      );
+      announcer.announce(
+        next
+          ? (isZh ? "已开启只听鼓组" : "Drums only mode enabled")
+          : (isZh ? "已关闭只听鼓组" : "Drums only mode disabled")
+      );
+      return next;
+    });
+  }, [isZh, showToast]);
 
   // Transport toggle play
   const handleTogglePlay = useCallback(() => {
@@ -673,19 +724,21 @@ export const StudioView: React.FC<StudioViewProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (
+      const isTextInput =
         target &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT" ||
-          target.tagName === "BUTTON" ||
           target.isContentEditable ||
-          Boolean(target.closest("input, textarea, select, button, [contenteditable]")))
-      ) {
+          Boolean(target.closest("input, textarea, select, [contenteditable]")));
+      if (isTextInput) {
         return;
       }
 
       if (e.code === "Space") {
+        if (target && (target.tagName === "BUTTON" || Boolean(target.closest("button")))) {
+          return;
+        }
         e.preventDefault();
         handleTogglePlay();
       } else if (e.key === "Escape") {
@@ -701,6 +754,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
           e.preventDefault();
           setIsEditorMaximized(false);
         }
+      } else if ((e.key === "d" || e.key === "D") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleToggleDrumsOnly();
       } else if ((e.key === "v" || e.key === "V") && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setIsVelocityLaneOpen((prev) => !prev);
@@ -744,6 +800,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     isVelocityLaneOpen,
     isEditorMaximized,
     handleTogglePlay,
+    handleToggleDrumsOnly,
     handleUndo,
     handleRedo,
   ]);
@@ -1315,6 +1372,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
               setDrumKit(k);
               showToast(isZh ? `已切换硬件鼓机: ${k.toUpperCase()}` : `Switched drum kit: ${k.toUpperCase()}`);
             }}
+            isDrumsOnly={isDrumsOnly}
+            onToggleDrumsOnly={handleToggleDrumsOnly}
             isRecordArmed={isRecordArmed}
             onToggleRecordArmed={() => {
               const next = !isRecordArmed;
@@ -1435,7 +1494,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
               const meta = DEMO_TRACKS_CONFIG[trackIdx % DEMO_TRACKS_CONFIG.length];
               const isSolo = Boolean(track.solo);
               const isMute = Boolean(track.mute);
-              const isSilenced = isMute || (anySolo && !isSolo);
+              const isDrum = isDrumTrack(track, trackIdx);
+              const isSilenced = isMute || (anySolo && !isSolo) || (isDrumsOnly && !isDrum);
               const isHatTrack = track.track_id === "hihat" || track.name.toLowerCase().includes("hat");
 
               return (
