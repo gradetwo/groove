@@ -97,6 +97,11 @@ export function useAppShortcuts({ onNavigateTab, isZh }: UseAppShortcutsOptions)
             tabNameZh = "听音挑战";
             tabNameEn = "Challenge";
             break;
+          case "k":
+            targetTab = "kick";
+            tabNameZh = "底鼓解剖";
+            tabNameEn = "Kick Anatomy";
+            break;
           default:
             break;
         }

@@ -10,6 +10,8 @@ export const commonMessages = {
   nav_timeline_v: { en: "Timeline V", zh: "垂直时间轴" },
   nav_compare: { en: "Compare", zh: "曲风对比" },
   nav_challenge: { en: "Challenge", zh: "听辨挑战" },
+  nav_kick: { en: "Kick Anatomy", zh: "底鼓解剖" },
+  nav_kick_desc: { en: "The Somatic Triad", zh: "底鼓声学与哲学" },
   nav_galaxy_desc: { en: "3D Cosmic Map", zh: "3D 星系图谱" },
   nav_timeline_h_desc: { en: "Chronology", zh: "年代编年演变轴" },
   nav_timeline_v_desc: { en: "Storylines", zh: "流派故事脉络" },

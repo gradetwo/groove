@@ -15,6 +15,7 @@ import {
   Compass,
   ChevronDown,
   Keyboard,
+  Activity,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
@@ -23,6 +24,7 @@ import { CURRENT_CLIENT_VERSION } from "./UpdatesModal";
 export type NavTab = 
   | "studio" 
   | "chords"
+  | "kick"
   | "galaxy" 
   | "horizontal-timeline" 
   | "vertical-timeline" 
@@ -181,7 +183,21 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_chords")}</span>
         </button>
 
-        {/* 3. Explore Dropdown (P1-09 IA Reorganization) */}
+        {/* 3. Kick Anatomy */}
+        <button
+          onClick={() => onSelectTab("kick")}
+          title={t("nav_kick")}
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+            currentTab === "kick"
+              ? "border-accent/50 text-accent bg-accent/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+              : "border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_kick")}</span>
+        </button>
+
+        {/* 4. Explore Dropdown (P1-09 IA Reorganization) */}
         <div className="relative" ref={exploreRef}>
           <button
             onClick={() => setExploreOpen(!exploreOpen)}
@@ -388,6 +404,21 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Music2 className="w-4 h-4 text-accent shrink-0" />
             <span className="font-semibold">{t("nav_chords")}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onSelectTab("kick");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
+              currentTab === "kick"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
+            }`}
+          >
+            <Activity className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{t("nav_kick")}</span>
           </button>
 
           {/* Explore Subgroup */}

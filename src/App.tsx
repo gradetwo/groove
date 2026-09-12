@@ -23,6 +23,7 @@ const VerticalTimelineView = React.lazy(() => import("./views/VerticalTimelineVi
 const CompareView = React.lazy(() => import("./views/CompareView").then((m) => ({ default: m.CompareView })));
 const ChallengeView = React.lazy(() => import("./views/ChallengeView").then((m) => ({ default: m.ChallengeView })));
 const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then((m) => ({ default: m.GenreDetailView })));
+const KickAnatomyView = React.lazy(() => import("./views/KickAnatomyView").then((m) => ({ default: m.KickAnatomyView })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
@@ -208,6 +209,17 @@ const MainApp: React.FC = () => {
                     handleSelectTab("studio");
                   }}
                 />
+              </ErrorBoundary>
+            )}
+
+            {currentTab === "kick" && (
+              <ErrorBoundary
+                fallbackTitle={isZh ? "底鼓解剖实验室运行异常" : "Kick Anatomy View Error"}
+                fallbackDescription={isZh ? "音频引擎或可视化渲染异常，可尝试重试或返回主工作台。" : "Audio engine or visualizer encountered an error."}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={t("btn_return_studio")}
+              >
+                <KickAnatomyView />
               </ErrorBoundary>
             )}
 

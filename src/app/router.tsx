@@ -67,6 +67,11 @@ export function parseUrlToRoute(pathname: string, search: string): RouteState {
     };
   }
 
+  // Check kick anatomy: /kick or /anatomy
+  if (cleanPath === "/kick" || cleanPath.startsWith("/kick/") || cleanPath === "/anatomy" || cleanPath.startsWith("/anatomy/")) {
+    return { tab: "kick" };
+  }
+
   // Check studio: /studio?genre=
   if (cleanPath === "/studio" || cleanPath.startsWith("/studio/")) {
     const gParam = params.get("genre");
@@ -148,6 +153,8 @@ export function formatRouteToUrl(route: RouteState): string {
       const q = params.toString();
       return `/chords${q ? `?${q}` : ""}`;
     }
+    case "kick":
+      return `/kick`;
     case "studio":
     default: {
       if (route.sequencerPayload) {

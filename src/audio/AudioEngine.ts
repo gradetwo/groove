@@ -12,6 +12,7 @@ import { playPolySynthNote, DEFAULT_SYNTH_PRESETS, SynthPreset } from "./PolySyn
 import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
 import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
+import { ecosystemBus } from "./ecosystemBus";
 
 export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
 
@@ -402,6 +403,7 @@ export class AudioEngine {
 
   public setBpm(bpm: number): void {
     this.bpm = Math.max(30, Math.min(300, bpm));
+    ecosystemBus.publishClockSync(this.bpm, this.isPlaying, this.currentStep);
   }
 
   public setSwing(swing: number): void {
@@ -611,6 +613,7 @@ export class AudioEngine {
     if (this.isPlaying) return;
 
     this.isPlaying = true;
+    ecosystemBus.publishClockStart(this.bpm);
     this.currentStep = (this.loopRange && this.loopRange[0] >= 0) ? this.loopRange[0] : 0;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (this.isCountIn) {
@@ -643,6 +646,7 @@ export class AudioEngine {
 
   public pause(): void {
     this.isPlaying = false;
+    ecosystemBus.publishClockStop();
     this.stopScheduler();
     this.stopPlayheadSync();
     this.panic();
@@ -650,6 +654,7 @@ export class AudioEngine {
 
   public stop(): void {
     this.isPlaying = false;
+    ecosystemBus.publishClockStop();
     this.stopScheduler();
     this.stopPlayheadSync();
     this.panic();
@@ -890,6 +895,7 @@ export class AudioEngine {
 
     if (trackId === "kick" || lowerName.includes("kick")) {
       this.playKick(dest, time, vel, pitch);
+      ecosystemBus.publishTransientHit("master", vel, pitch);
     } else if (trackId === "snare" || lowerName.includes("snare")) {
       this.playSnare(dest, time, vel, pitch);
     } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
