@@ -16,6 +16,10 @@
           "en": "3D Genre Galaxy Nebular Radiance Overhaul: completely resolved the pitch-black visibility issue from the default camera perspective. Re-engineered vertex and fragment shaders with high-luminance halo curves, enhanced nebular aerosol densities across all 14 major genre clusters, and scaled stellar nurseries to create a vivid, glowing celestial atlas of sound"
         },
         {
+          "zh": "子曲风星系聚焦过曝消除与结构文字可视性校准：针对进入具体子曲风分类时因着色器叠加与近景高密粒子造成的白光过曝问题，重构着色器簇内光效。母体星核与环境星尘自动柔化为通透背景，星轨连线与各子曲风星体结构分明、文字清晰易辨；仅在当前 hover 悬停或点击选中特定子曲风时进行克制聚焦高亮，彻底杜绝大片死白",
+          "en": "Subgenre Cluster Anti-Glare & Typography Visibility Calibration: eliminated the white wash in close-up cluster view by softening parent core dust into a gentle nebula veil, rendering crisp constellation filaments and legible typography. Selectively highlights only the currently hovered or active subgenre star while maintaining dark cosmic contrast"
+        },
+        {
           "zh": "全景星系切换胶囊与多语言国际化修复：移除原先突兀的白色无样式方块（galaxy_filter_all），换装为暗黑星际美学的半透明琥珀辉光胶囊按钮（All Nebulae / 全景星系），并补齐包括拖拽漫游、分支列表与全景返回等缺失的多语言文案",
           "en": "Cosmic All-Nebulae Pill & Localization Completeness: replaced the raw unstyled white strip with a refined cosmic amber glow pill button. Fully localized all missing galaxy labels including 'All Nebulae', navigation hints, branch controls, and overview returns across both English and Chinese"
         },

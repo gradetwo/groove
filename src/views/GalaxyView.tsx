@@ -108,46 +108,68 @@ void main(){
   alpha *= breathAlpha * chiaroscuro * lightSweep * spatialDensity;
   sz *= breathSize;
 
-  // Selected cluster highlighting: the entire galaxy cluster lights up brilliantly!
+  // Selected cluster highlighting: focused cluster remains crisp, rich in color and legible;
+  // background clusters and ambient deep space are gently dimmed
   if (uSelectedCluster >= -0.5) {
     if (abs(aCluster - uSelectedCluster) < 0.5) {
-      alpha = min(1.0, alpha * 2.6 + 0.22);
-      sz *= 1.70;
-      col = mix(col * 1.35, vec3(1.0, 0.98, 0.95), 0.25);
+      if (aNode < 14.5) {
+        // Parent cluster core & nursery: soften significantly inside subgenre view
+        // so it acts as a gentle background anchor rather than a blinding flare
+        alpha *= 0.12;
+        sz *= 0.40;
+      } else if (aStar < 0.5) {
+        // Ambient dust within cluster: soft, ethereal, transparent nebula veil
+        alpha *= 0.28;
+        sz *= 0.70;
+      } else {
+        // Subgenre stars & filaments: crisp, distinct, clear structure
+        alpha *= 0.85;
+        sz *= 0.85;
+      }
     } else if (aCluster >= -0.5) {
-      alpha *= 0.06;
-      sz *= 0.55;
+      // Outside clusters in the background: dim down to quiet cosmic dark
+      alpha *= 0.04;
+      sz *= 0.50;
     } else {
-      alpha *= 0.18;
-      sz *= 0.65;
+      // Deep space ambient particles: gently dimmed
+      alpha *= 0.15;
+      sz *= 0.60;
     }
   }
 
-  // Node selection highlighting modes
+  // Node selection highlighting modes (lineage chain)
   if (aMode > 2.5) {
-    col = mix(col, vec3(1.0, 0.88, 0.68), 0.25);
-    alpha = min(1.0, alpha * 1.8);
-    sz *= 1.40;
+    col = mix(col, vec3(1.0, 0.92, 0.78), 0.20);
+    alpha = min(1.0, alpha * 1.3);
+    sz *= 1.20;
   } else if (aMode > 1.5) {
-    col = mix(col, vec3(1.0, 0.94, 0.82), 0.40);
-    alpha = min(1.0, alpha * 2.2 * (1.04 + 0.12 * sin(uTime * 2.2 + aSeed * 0.7)));
-    sz *= 1.80;
+    col = mix(col, vec3(1.0, 0.95, 0.85), 0.25);
+    alpha = min(1.0, alpha * 1.5);
+    sz *= 1.35;
   }
 
-  // Node hover / selection focus: highlighted node shines brilliantly, other subgenre nodes dim down
+  // Node hover / selection focus:
+  // "只要当前选中或者hover的比其它的亮一些就好，不好现在这样一大片白色看不见结构和文字了"
   float activeFocusNode = (uHoverNode >= -0.5) ? uHoverNode : uSelectedNode;
   if (activeFocusNode >= -0.5) {
     if (abs(aNode - activeFocusNode) < 0.5) {
-      alpha = min(1.0, alpha * 2.8 + 0.35);
-      sz *= 2.2;
-      col = mix(col, vec3(1.0, 0.96, 0.88), 0.45);
-    } else if (aNode >= 0.0) {
-      // Other subgenre nodes dim down
-      alpha *= 0.18;
-      sz *= 0.70;
+      if (aStar > 0.5) {
+        // Currently hovered or selected subgenre star: brighter and distinctly glowing
+        alpha = min(1.0, alpha * 1.8 + 0.25);
+        sz *= 1.45;
+        col = mix(col, vec3(1.0, 0.97, 0.90), 0.30);
+      } else {
+        // Connected incoming branch/filament: clear and luminous
+        alpha = min(1.0, alpha * 1.4 + 0.15);
+        sz *= 1.25;
+      }
+    } else if (aStar > 0.5 && aNode >= 14.5) {
+      // Other subgenre stars: slightly toned down so the active one stands out cleanly
+      alpha *= 0.50;
+      sz *= 0.85;
     } else {
-      // Surrounding nebula gas softly frames the focused node
-      alpha *= 0.75;
+      // Ambient nebular background dust
+      alpha *= 0.55;
     }
   }
 
@@ -200,10 +222,10 @@ void main(){
   vec3 col = vColor;
   if (vStar > 0.5) {
     // Specular warm highlight only at the absolute pinpoint center
-    col = mix(col, vec3(1.0, 0.98, 0.95), clamp(exp(-d * d * 20.0) * 0.90, 0.0, 0.90));
+    col = mix(col, vec3(1.0, 0.98, 0.95), clamp(exp(-d * d * 24.0) * 0.75, 0.0, 0.80));
   } else {
-    // Ethereal chromatic preservation: keep rich vibrant hue with luminous core
-    col = mix(col, vec3(1.0, 0.98, 0.94), clamp(exp(-d * d * 10.0) * 0.32, 0.0, 0.45));
+    // Ethereal chromatic preservation: keep rich vibrant hue without white wash
+    col = mix(col, vec3(1.0, 0.98, 0.94), clamp(exp(-d * d * 16.0) * 0.20, 0.0, 0.25));
   }
   
   gl_FragColor = vec4(col * a, a);
@@ -1408,12 +1430,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             }
             const isFocused = focusedId === node.id;
             if (hasFocus) {
-              el.style.opacity = isFocused ? "1" : "0.15";
+              el.style.opacity = isFocused ? "1" : "0.50";
               el.style.transform = isFocused
                 ? `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(1.15)`
-                : `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(0.92)`;
+                : `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(0.95)`;
             } else {
-              el.style.opacity = "0.80";
+              el.style.opacity = "0.85";
               el.style.transform = `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(1)`;
             }
             el.style.pointerEvents = "auto";
