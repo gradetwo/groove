@@ -1,7 +1,42 @@
 {
-  "version": "1.14.1",
+  "version": "1.14.2",
   "releaseDate": "2026-09-12",
   "changelog": [
+    {
+      "version": "1.14.2",
+      "date": "2026-09-12",
+      "category": "feature",
+      "title": {
+        "zh": "v1.14.2 律动工作台静音/独奏修复、底鼓设计三层架构与预设系统升级",
+        "en": "v1.14.2 Studio Mute/Solo Audio Sync, Kick Design Anatomy & Custom Preset Architecture"
+      },
+      "highlights": [
+        {
+          "zh": "律动工作台 Mute (M) 与 Solo (S) 声学校准：修复 setPattern 音轨状态不同步导致的静音/独奏无效问题，新增 ChannelStrip 混音增益调度器（syncTrackGains），实现即时静音/独奏切除与平滑淡入淡出",
+          "en": "Studio Mute/Solo Audio Synchronization: resolved track state desync in setPattern, introduced real-time channel strip gain scheduler (syncTrackGains) ensuring instant zero-latency mute and solo isolation"
+        },
+        {
+          "zh": "Mute/Solo UI 视觉状态重构：重构 TrackRow 样式逻辑，Mute 激活采用高可视警戒红发光 Badge，Solo 激活采用暖金发光 Badge，仅步进网格优雅暗化，彻底消除旧版整行 30% 透明度导致按钮模糊失焦的问题",
+          "en": "Mute/Solo UI Overhaul: replaced legacy full-row 30% opacity with vivid glowing status badges for M (crimson) and S (amber gold) while dimming only the step sequence grid"
+        },
+        {
+          "zh": "底鼓设计（Kick Design）三层声学架构：基于音乐声学与身体现象学，解构底鼓为 Sub（低频正弦基底与音高骤降）、Thump（瞬态冲头与饱和扫频）与 Click（高频微瞬态卡嗒声），并配备 Stereo Rumble 空间轰鸣引擎",
+          "en": "Kick Design Tri-Layer Acoustic Anatomy: deconstructed kicks into Sub (sine foundation & pitch drops), Thump (transient punch & drive sweeps), and Click (transient micro-clicks) with Stereo Rumble synthesis"
+        },
+        {
+          "zh": "自定义预设持久化与鼓机无缝打通：底鼓设计支持用户自定义参数保存至本地预设库（localStorage），并即时同步注入律动工作台音色选择列表，在鼓机中一键调用",
+          "en": "Custom Preset Persistence & Studio Kit Bridge: user-crafted kicks can now be saved to localStorage and seamlessly selected within the Studio drum kit selector"
+        },
+        {
+          "zh": "曲风比对（Compare View）布局与试听修复：修复顶部雷达图宽度只占左侧窄条的布局缺陷，修复 drums_only / full_band 试听仅能触发单音的时钟提升竞争问题",
+          "en": "Compare View Radar & Audition Fix: restored full-width responsive radar charts and resolved AudioWorklet clock promotion races ensuring continuous loop audition"
+        },
+        {
+          "zh": "致敬声学哲学家 Bahadırhan Koçer：于底鼓设计底部设立专属致敬卡片，致敬其 YouTube 频道及声音现象学与律动契约理论",
+          "en": "Tribute to Acoustic Philosopher Bahadırhan Koçer: dedicated tribute card honoring his YouTube channel and acoustic phenomenology concepts"
+        }
+      ]
+    },
     {
       "version": "1.14.1",
       "date": "2026-09-12",

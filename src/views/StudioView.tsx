@@ -1456,9 +1456,26 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   isZh={isZh}
                   onAudition={handleAudition}
                   onCycleLength={handleCycleTrackLength}
-                  onToggleMute={(idx) => commit({ type: "TOGGLE_MUTE", trackIdx: idx })}
-                  onToggleSolo={(idx) => commit({ type: "TOGGLE_SOLO", trackIdx: idx })}
-                  onChangeVolume={(idx, vol) => commit({ type: "SET_VOLUME", trackIdx: idx, volume: vol })}
+                  onToggleMute={(idx) => {
+                    const nextMute = !pattern.tracks[idx]?.mute;
+                    commit({ type: "TOGGLE_MUTE", trackIdx: idx });
+                    if (engineRef.current) {
+                      engineRef.current.setTrackState(idx, { mute: nextMute });
+                    }
+                  }}
+                  onToggleSolo={(idx) => {
+                    const nextSolo = !pattern.tracks[idx]?.solo;
+                    commit({ type: "TOGGLE_SOLO", trackIdx: idx });
+                    if (engineRef.current) {
+                      engineRef.current.setTrackState(idx, { solo: nextSolo });
+                    }
+                  }}
+                  onChangeVolume={(idx, vol) => {
+                    commit({ type: "SET_VOLUME", trackIdx: idx, volume: vol });
+                    if (engineRef.current) {
+                      engineRef.current.setTrackState(idx, { volume: vol });
+                    }
+                  }}
                   onOpenVelocity={(idx) => {
                     setVelocityActiveTrackIdx(idx);
                     setIsVelocityLaneOpen(true);

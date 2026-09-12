@@ -317,6 +317,7 @@ export class AudioEngine {
 
       this.trackStrips.push({ gain, panner, sendA, sendB });
     }
+    this.syncTrackGains();
   }
 
   public getTrackDestination(trackIdx: number): AudioNode {
@@ -339,28 +340,88 @@ export class AudioEngine {
       this.timeSignature = pattern.timeSignature;
     }
     if (resetStates || this.trackStates.length !== pattern.tracks.length) {
-      this.trackStates = pattern.tracks.map((t, idx) => {
+      this.trackStates = pattern.tracks.map((t) => {
         const volume = t.volume !== undefined ? t.volume : 0.8;
         const pan = t.pan !== undefined ? t.pan : 0;
         const sendA = t.sendA !== undefined ? t.sendA : 0;
         const sendB = t.sendB !== undefined ? t.sendB : 0;
-        const strip = this.trackStrips[idx];
-        if (strip && this.ctx) {
-          strip.gain.gain.setValueAtTime(volume, this.ctx.currentTime);
-          if (strip.panner) strip.panner.pan.setValueAtTime(pan, this.ctx.currentTime);
-          strip.sendA.gain.setValueAtTime(sendA, this.ctx.currentTime);
-          strip.sendB.gain.setValueAtTime(sendB, this.ctx.currentTime);
-        }
         return {
-          mute: t.mute || false,
-          solo: t.solo || false,
+          mute: Boolean(t.mute),
+          solo: Boolean(t.solo),
           volume,
           pan,
           sendA,
           sendB,
         };
       });
+    } else {
+      // Synchronize trackStates (mute, solo, volume, pan, sends) with pattern tracks
+      pattern.tracks.forEach((t, idx) => {
+        if (this.trackStates[idx]) {
+          if (t.mute !== undefined) this.trackStates[idx].mute = Boolean(t.mute);
+          if (t.solo !== undefined) this.trackStates[idx].solo = Boolean(t.solo);
+          if (t.volume !== undefined) this.trackStates[idx].volume = t.volume;
+          if (t.pan !== undefined) this.trackStates[idx].pan = t.pan;
+          if (t.sendA !== undefined) this.trackStates[idx].sendA = t.sendA;
+          if (t.sendB !== undefined) this.trackStates[idx].sendB = t.sendB;
+        }
+      });
     }
+    this.syncTrackGains();
+  }
+
+  public syncTrackGains(): void {
+    if (!this.ctx || this.trackStrips.length === 0) return;
+    const anySolo = this.trackStates.some((t) => t.solo);
+    const now = this.ctx.currentTime;
+
+    this.trackStates.forEach((state, idx) => {
+      const strip = this.trackStrips[idx];
+      if (!strip) return;
+      const isSilenced = Boolean(state.mute) || (anySolo && !state.solo);
+      const targetGain = isSilenced ? 0 : (state.volume !== undefined ? Math.max(0, Math.min(1.0, state.volume)) : 0.8);
+
+      try {
+        if (typeof strip.gain.gain.cancelScheduledValues === "function") {
+          strip.gain.gain.cancelScheduledValues(now);
+        }
+        if (typeof strip.gain.gain.setTargetAtTime === "function") {
+          strip.gain.gain.setTargetAtTime(targetGain, now, 0.005);
+        } else if (typeof strip.gain.gain.setValueAtTime === "function") {
+          strip.gain.gain.setValueAtTime(targetGain, now);
+        }
+      } catch (_) {
+        try {
+          if (typeof strip.gain.gain.setValueAtTime === "function") {
+            strip.gain.gain.setValueAtTime(targetGain, now);
+          }
+        } catch (_) {}
+      }
+
+      if (state.pan !== undefined && strip.panner) {
+        try {
+          if (typeof strip.panner.pan.setValueAtTime === "function") {
+            strip.panner.pan.setValueAtTime(Math.max(-1.0, Math.min(1.0, state.pan)), now);
+          }
+        } catch (_) {}
+      }
+      if (state.sendA !== undefined && strip.sendA) {
+        try {
+          const sendVal = isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendA));
+          if (typeof strip.sendA.gain.setValueAtTime === "function") {
+            strip.sendA.gain.setValueAtTime(sendVal, now);
+          }
+        } catch (_) {}
+      }
+      if (state.sendB !== undefined && strip.sendB) {
+        try {
+          const sendVal = isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendB));
+          if (typeof strip.sendB.gain.setValueAtTime === "function") {
+            strip.sendB.gain.setValueAtTime(sendVal, now);
+          }
+        } catch (_) {}
+      }
+    });
   }
 
   public setTotalSteps(steps: number): void {
@@ -494,24 +555,35 @@ export class AudioEngine {
     trackIdx: number,
     state: Partial<{ mute: boolean; solo: boolean; volume: number; pan: number; sendA: number; sendB: number }>
   ): void {
-    if (this.trackStates[trackIdx]) {
-      this.trackStates[trackIdx] = { ...this.trackStates[trackIdx], ...state };
+    if (!this.trackStates[trackIdx]) {
+      this.trackStates[trackIdx] = {
+        mute: false,
+        solo: false,
+        volume: 0.8,
+        pan: 0,
+        sendA: 0,
+        sendB: 0,
+      };
     }
-    const strip = this.trackStrips[trackIdx];
-    if (strip && this.ctx) {
-      if (state.volume !== undefined) {
-        strip.gain.gain.setValueAtTime(Math.max(0, Math.min(1.0, state.volume)), this.ctx.currentTime);
-      }
-      if (state.pan !== undefined && strip.panner) {
-        strip.panner.pan.setValueAtTime(Math.max(-1.0, Math.min(1.0, state.pan)), this.ctx.currentTime);
-      }
-      if (state.sendA !== undefined) {
-        strip.sendA.gain.setValueAtTime(Math.max(0, Math.min(1.0, state.sendA)), this.ctx.currentTime);
-      }
-      if (state.sendB !== undefined) {
-        strip.sendB.gain.setValueAtTime(Math.max(0, Math.min(1.0, state.sendB)), this.ctx.currentTime);
-      }
-    }
+    this.trackStates[trackIdx] = { ...this.trackStates[trackIdx], ...state };
+    this.syncTrackGains();
+  }
+
+  public getTrackState(
+    trackIdx: number
+  ): { mute: boolean; solo: boolean; volume: number; pan: number; sendA?: number; sendB?: number } | undefined {
+    return this.trackStates[trackIdx];
+  }
+
+  public getTrackStates(): Array<{
+    mute: boolean;
+    solo: boolean;
+    volume: number;
+    pan: number;
+    sendA?: number;
+    sendB?: number;
+  }> {
+    return [...this.trackStates];
   }
 
   public setMetronome(enabled: boolean): void {
@@ -881,7 +953,7 @@ export class AudioEngine {
       this.liveRecorder.recordTrigger(trackIdx, pitchVal, velocity, this.currentStep, this.totalSteps);
     }
 
-    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal);
+    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal, true);
   }
 
   private triggerInstrument(
@@ -892,10 +964,11 @@ export class AudioEngine {
     pitch: number,
     stepVal = 1,
     stepDur = 0.125,
-    gateVal = 0.8
+    gateVal = 0.8,
+    isAudition = false
   ): void {
     if (!this.ctx) return;
-    const dest = this.getTrackDestination(trackIdx);
+    const dest = isAudition ? (this.masterGain || this.getTrackDestination(trackIdx)) : this.getTrackDestination(trackIdx);
 
     const trackId = (this.pattern?.tracks[trackIdx]?.track_id || "").toLowerCase();
     const lowerName = trackName.toLowerCase();

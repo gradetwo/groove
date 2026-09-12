@@ -79,13 +79,13 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
     <div
       role="row"
       aria-label={meta.name}
-      className={`flex items-center gap-2 sm:gap-3 py-1 sm:py-1.5 landscape-compact-row transition-opacity min-w-max track-row-${trackIdx} ${
-        isSilenced ? "opacity-30" : "opacity-100"
-      }`}
+      className={`flex items-center gap-2 sm:gap-3 py-1 sm:py-1.5 landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
       style={{ ["--tc" as any]: meta.color }}
     >
       {/* Track Header (.trk-head) - 138px on mobile / 172px on sm+ - Sticky Left */}
-      <div className="sticky left-0 z-20 bg-panel flex-none w-[138px] sm:w-[172px] pr-1.5 sm:pr-2 flex flex-col justify-center gap-1 select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className={`sticky left-0 z-20 bg-panel flex-none w-[138px] sm:w-[172px] pr-1.5 sm:pr-2 flex flex-col justify-center gap-1 select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-opacity ${
+        isSilenced && !isMute && !isSolo ? "opacity-60" : "opacity-100"
+      }`}>
         {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
         <div className="flex items-center gap-1.5">
           <div
@@ -94,7 +94,9 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             title={isZh ? "点击试听音色" : "Tap to audition sound"}
           >
             <span
-              className="w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0 group-hover/trk:scale-y-110 transition-transform"
+              className={`w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0 group-hover/trk:scale-y-110 transition-transform ${
+                isSilenced ? "opacity-40" : "opacity-100"
+              }`}
               style={{ backgroundColor: meta.color }}
             />
             {/* Mini 4-Segment Activity Meter (Decoupled from React State - P2-03) */}
@@ -112,7 +114,9 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               ))}
             </div>
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="font-['JetBrains_Mono'] text-[10.5px] sm:text-[11px] tracking-[0.05em] text-text font-bold truncate">
+              <span className={`font-['JetBrains_Mono'] text-[10.5px] sm:text-[11px] tracking-[0.05em] font-bold truncate transition-colors ${
+                isSilenced ? "text-text-dim" : "text-text"
+              }`}>
                 {meta.name}
               </span>
               <span className="font-['JetBrains_Mono'] text-[8.5px] text-text-dim truncate leading-none hidden sm:block">
@@ -139,24 +143,34 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               L:{track.trackLength || stepCount}
             </button>
             <button
-              onClick={() => onToggleMute(trackIdx)}
-              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMute(trackIdx);
+              }}
+              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-all flex items-center justify-center touch-manipulation select-none ${
                 isMute
-                  ? "border-[var(--tc)] text-[var(--tc)] bg-transparent font-bold"
-                  : "border-line text-text-dim hover:text-text"
+                  ? "border-[#ff5964] text-[#ff5964] bg-[#ff5964]/20 font-bold shadow-[0_0_8px_rgba(255,89,100,0.35)] scale-105"
+                  : "border-line text-text-dim hover:text-text hover:border-text-dim/60"
               }`}
-              title={isZh ? "静音轨道" : "Mute track"}
+              title={isZh ? (isMute ? "取消静音轨道 (M)" : "静音轨道 (M)") : (isMute ? "Unmute track (M)" : "Mute track (M)")}
+              aria-label={isZh ? (isMute ? "取消静音" : "静音") : (isMute ? "Unmute" : "Mute")}
+              aria-pressed={isMute}
             >
               M
             </button>
             <button
-              onClick={() => onToggleSolo(trackIdx)}
-              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-colors flex items-center justify-center touch-manipulation ${
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSolo(trackIdx);
+              }}
+              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-all flex items-center justify-center touch-manipulation select-none ${
                 isSolo
-                  ? "border-accent text-accent bg-accent/10 font-bold"
-                  : "border-line text-text-dim hover:text-text"
+                  ? "border-accent text-accent bg-accent/25 font-bold shadow-[0_0_8px_rgba(245,183,61,0.4)] scale-105"
+                  : "border-line text-text-dim hover:text-text hover:border-text-dim/60"
               }`}
-              title={isZh ? "独奏轨道" : "Solo track"}
+              title={isZh ? (isSolo ? "取消独奏轨道 (S)" : "独奏轨道 (S)") : (isSolo ? "Unsolo track (S)" : "Solo track (S)")}
+              aria-label={isZh ? (isSolo ? "取消独奏" : "独奏") : (isSolo ? "Unsolo" : "Solo")}
+              aria-pressed={isSolo}
             >
               S
             </button>
@@ -261,7 +275,9 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
       </div>
 
       {/* Step Grid (.grid) */}
-      <div className="flex-1 flex gap-1 relative">
+      <div className={`flex-1 flex gap-1 relative transition-all duration-150 ${
+        isSilenced ? "opacity-25 grayscale saturate-50" : "opacity-100"
+      }`}>
         {track.steps.map((stepVal, stepIdx) => {
           const vel = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
           const isAcc = vel >= 115;

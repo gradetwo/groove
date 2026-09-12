@@ -452,6 +452,57 @@ describe("Audio & Sequencer Utilities", () => {
 
       // Track channel strip parameters configuration
       engine.setTrackState(0, { volume: 0.7, pan: -0.5, sendA: 0.3, sendB: 0.2 });
+      expect(engine.getTrackState(0)?.volume).toBe(0.7);
+      expect(engine.getTrackState(0)?.pan).toBe(-0.5);
+
+      // Verify Mute and Solo updates via setTrackState
+      engine.setTrackState(0, { mute: true });
+      expect(engine.getTrackState(0)?.mute).toBe(true);
+      engine.setTrackState(0, { mute: false, solo: true });
+      expect(engine.getTrackState(0)?.mute).toBe(false);
+      expect(engine.getTrackState(0)?.solo).toBe(true);
+
+      engine.destroy();
+    });
+
+    it("synchronizes trackStates mute and solo when setPattern is invoked", () => {
+      const engine = new AudioEngine();
+      const testPattern = {
+        name: "Test Beat",
+        tracks: [
+          { track_id: "kick", name: "Kick", steps: [1, 0, 0, 0], mute: false, solo: false },
+          { track_id: "snare", name: "Snare", steps: [0, 0, 1, 0], mute: false, solo: false },
+        ],
+      };
+
+      engine.setPattern(testPattern as any);
+      expect(engine.getTrackState(0)?.mute).toBe(false);
+      expect(engine.getTrackState(1)?.mute).toBe(false);
+
+      // Toggle mute on Kick
+      const mutedPattern = {
+        ...testPattern,
+        tracks: [
+          { ...testPattern.tracks[0], mute: true },
+          testPattern.tracks[1],
+        ],
+      };
+      engine.setPattern(mutedPattern as any);
+      expect(engine.getTrackState(0)?.mute).toBe(true);
+      expect(engine.getTrackState(1)?.mute).toBe(false);
+
+      // Toggle solo on Snare
+      const soloPattern = {
+        ...testPattern,
+        tracks: [
+          { ...testPattern.tracks[0], mute: false },
+          { ...testPattern.tracks[1], solo: true },
+        ],
+      };
+      engine.setPattern(soloPattern as any);
+      expect(engine.getTrackState(0)?.solo).toBe(false);
+      expect(engine.getTrackState(1)?.solo).toBe(true);
+
       engine.destroy();
     });
 
