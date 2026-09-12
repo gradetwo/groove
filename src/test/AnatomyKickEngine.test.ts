@@ -135,4 +135,28 @@ describe("The Anatomy Kick Engine & Ecosystem Bus (P-NEXT)", () => {
       expect(url).toBe("/kick");
     });
   });
+
+  describe("Custom Kick Presets Management & Storage", () => {
+    it("saves, retrieves, and deletes custom kick presets via localStorage", () => {
+      engine.setParams({
+        basePitch: 45,
+        softness: 0.2,
+        boomToWhere: 0.75,
+        grit: 0.5,
+      });
+
+      const saved = engine.saveCustomPreset("Custom Heavy Sub");
+      expect(saved.id).toContain("custom-");
+      expect(saved.name).toBe("Custom Heavy Sub");
+      expect(saved.params.basePitch).toBe(45);
+
+      const presets = engine.getCustomPresets();
+      expect(presets.length).toBeGreaterThan(0);
+      expect(presets.find((p) => p.id === saved.id)).toBeDefined();
+
+      engine.deleteCustomPreset(saved.id);
+      const afterDelete = engine.getCustomPresets();
+      expect(afterDelete.find((p) => p.id === saved.id)).toBeUndefined();
+    });
+  });
 });

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
+import { CustomKickPreset, loadCustomKickPresets } from "../../audio/AnatomyKickEngine";
 
 export type MobileEditMode = "step" | "accent" | "ratchet" | "pitch" | "plocks";
 
@@ -182,6 +183,16 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
     return () => window.removeEventListener("pointerdown", handleClickOutside);
   }, [exportOpen]);
 
+  const [customKicks, setCustomKicks] = useState<CustomKickPreset[]>(() => loadCustomKickPresets());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCustomKicks(loadCustomKickPresets());
+    };
+    window.addEventListener("groove_kick_presets_changed", handleUpdate);
+    return () => window.removeEventListener("groove_kick_presets_changed", handleUpdate);
+  }, []);
+
   return (
     <div className="flex flex-col gap-2 min-w-0 w-full">
       {/* Top Toolbar Header (P2-23: flex-wrap in landscape ensures all controls stay visible without horizontal scroll pushing) */}
@@ -323,12 +334,43 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 value={drumKit}
                 onChange={(e) => onChangeDrumKit(e.target.value as DrumKitType)}
                 className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                aria-label={isZh ? "选择硬件鼓机模型" : "Select Drum Machine Model"}
+                aria-label={isZh ? "选择硬件鼓机模型与底鼓设计" : "Select Drum Machine & Kick Design"}
               >
-                <option value="808" className="bg-panel text-text">TR-808 (Analog)</option>
-                <option value="909" className="bg-panel text-text">TR-909 (Punch)</option>
-                <option value="acoustic" className="bg-panel text-text">Acoustic (Warm)</option>
-                <option value="cyber" className="bg-panel text-text">Cyber (Wave)</option>
+                <optgroup label={isZh ? "经典硬件鼓机" : "Hardware Kits"}>
+                  <option value="808" className="bg-panel text-text">TR-808 (Analog)</option>
+                  <option value="909" className="bg-panel text-text">TR-909 (Punch)</option>
+                  <option value="acoustic" className="bg-panel text-text">Acoustic (Warm)</option>
+                  <option value="cyber" className="bg-panel text-text">Cyber (Wave)</option>
+                </optgroup>
+                <optgroup label={isZh ? "底鼓设计官方预设" : "Kick Design Presets"}>
+                  <option value="kick:berlin-orphic" className="bg-panel text-text">
+                    {isZh ? "底鼓: 柏林奥菲斯巨柱" : "Kick: Berlin Orphic"}
+                  </option>
+                  <option value="kick:detroit-mechanical" className="bg-panel text-text">
+                    {isZh ? "底鼓: 底特律机械脉冲" : "Kick: Detroit Mechanical"}
+                  </option>
+                  <option value="kick:somatic-808-gravity" className="bg-panel text-text">
+                    {isZh ? "底鼓: 躯体 808 内脏引力" : "Kick: Visceral 808"}
+                  </option>
+                  <option value="kick:industrial-revolt" className="bg-panel text-text">
+                    {isZh ? "底鼓: 工业阶级抵抗" : "Kick: Industrial Revolt"}
+                  </option>
+                  <option value="kick:acoustic-beater-skin" className="bg-panel text-text">
+                    {isZh ? "底鼓: 真皮鼓锤敲击" : "Kick: Acoustic Skin"}
+                  </option>
+                  <option value="kick:neural-click-clock" className="bg-panel text-text">
+                    {isZh ? "底鼓: 神经时钟微瞬态" : "Kick: Neural Click"}
+                  </option>
+                </optgroup>
+                {customKicks.length > 0 && (
+                  <optgroup label={isZh ? "自定义底鼓预设" : "Custom Kick Presets"}>
+                    {customKicks.map((k) => (
+                      <option key={k.id} value={`kick:${k.id}`} className="bg-panel text-text">
+                        {isZh ? `自定义: ${k.name}` : `Custom: ${k.name}`}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           )}

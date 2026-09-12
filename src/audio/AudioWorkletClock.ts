@@ -13,6 +13,9 @@ export class AudioWorkletClock {
   private isUsingWorklet: boolean = false;
   private onTickCallback?: (time: number) => void;
   private dummyGain: GainNode | null = null;
+  private isRunning: boolean = false;
+  private currentIntervalMs: number = 20;
+  private currentSampleRate: number = 44100;
 
   constructor() {
     this.workerFallback = new AudioWorkerBridge();
@@ -49,6 +52,18 @@ export class AudioWorkletClock {
       this.dummyGain.connect(ctx.destination);
 
       this.isUsingWorklet = true;
+
+      // If clock was already started while init was in flight, seamlessly promote to Worklet
+      if (this.isRunning) {
+        this.workerFallback.stop();
+        const intervalSamples = Math.floor((this.currentIntervalMs / 1000) * this.currentSampleRate);
+        this.workletNode.port.postMessage({
+          type: "START",
+          sampleRate: this.currentSampleRate,
+          intervalSamples,
+        });
+      }
+
       return true;
     } catch {
       this.isUsingWorklet = false;
@@ -57,6 +72,10 @@ export class AudioWorkletClock {
   }
 
   public start(intervalMs = 20, sampleRate = 44100): void {
+    this.isRunning = true;
+    this.currentIntervalMs = intervalMs;
+    this.currentSampleRate = sampleRate;
+
     if (this.isUsingWorklet && this.workletNode) {
       const intervalSamples = Math.floor((intervalMs / 1000) * sampleRate);
       this.workletNode.port.postMessage({
@@ -70,6 +89,7 @@ export class AudioWorkletClock {
   }
 
   public stop(): void {
+    this.isRunning = false;
     if (this.isUsingWorklet && this.workletNode) {
       this.workletNode.port.postMessage({ type: "STOP" });
     } else {

@@ -214,7 +214,7 @@ const MainApp: React.FC = () => {
 
             {currentTab === "kick" && (
               <ErrorBoundary
-                fallbackTitle={isZh ? "底鼓解剖实验室运行异常" : "Kick Anatomy View Error"}
+                fallbackTitle={isZh ? "底鼓设计实验室运行异常" : "Kick Design View Error"}
                 fallbackDescription={isZh ? "音频引擎或可视化渲染异常，可尝试重试或返回主工作台。" : "Audio engine or visualizer encountered an error."}
                 onNavigateHome={() => handleSelectTab("studio")}
                 homeLabel={t("btn_return_studio")}

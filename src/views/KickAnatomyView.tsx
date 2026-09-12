@@ -12,7 +12,7 @@ import { WaterfallSpectrogram } from "../components/kick/WaterfallSpectrogram";
 import { GravitationalSequencer } from "../components/kick/GravitationalSequencer";
 import { SomaticControls } from "../components/kick/SomaticControls";
 import { KickPhilosophyDossier } from "../components/kick/KickPhilosophyDossier";
-import { Activity, Layers, Disc, Sparkles, Radio, Cpu, Network } from "lucide-react";
+import { Activity, Layers, Disc, Sparkles, Radio, Cpu, Network, ExternalLink } from "lucide-react";
 
 export const KickAnatomyView: React.FC = () => {
   const { isZh } = useLanguage();
@@ -104,7 +104,7 @@ export const KickAnatomyView: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#f5b73d] shadow-[0_0_8px_#f5b73d] animate-pulse" />
             <span className="font-bold text-text uppercase">
-              ANALYZING THE KICK // SOMATIC LAB
+              {isZh ? "底鼓设计 // 躯体声学实验室" : "KICK DESIGN // SOMATIC ACOUSTIC LAB"}
             </span>
           </div>
           <span className="text-text-dim text-[10px] hidden sm:inline">|</span>
@@ -210,6 +210,69 @@ export const KickAnatomyView: React.FC = () => {
       {/* Bottom Full-Width Section: Philosophical & Anatomical Dossier */}
       <div className="mt-8">
         <KickPhilosophyDossier isZh={isZh} />
+      </div>
+
+      {/* Tribute & Philosophical Attribution Footer */}
+      <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-[#090b12] to-[#121622] border border-[#f5b73d]/30 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#f5b73d]/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative z-10">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#f5b73d]/20 text-[#f5b73d] border border-[#f5b73d]/40">
+                TRIBUTE & INSPIRATION
+              </span>
+              <h3 className="text-base sm:text-lg font-bold text-text flex items-center gap-2">
+                {isZh ? "特别致敬：声学解剖与身体现象学探索" : "Special Tribute: Acoustic Anatomy & Bodily Phenomenology"}
+              </h3>
+            </div>
+            <p className="text-xs text-text-sub max-w-3xl leading-relaxed">
+              {isZh
+                ? "本项目「底鼓设计」中的三层身体解剖（次低频 Sub、肌肉打击 Thump、神经时钟 Click）、听觉脑干锁相值（PLV）测量、微瞬态微雕以及极简示波器视觉交互哲学，深度启发自艺术家与声音哲学家 Bahadırhan Koçer 的经典研究视频《Analyzing The Kick》。特向作者致敬！"
+                : "The 3-layer somatic decomposition (Visceral Sub, Muscular Thump, Neural Click), auditory brainstem phase-locking value (PLV) metrics, and CRT phosphor visual aesthetic in this kick design lab are deeply inspired by the groundbreaking acoustic research video 'Analyzing The Kick' by Bahadırhan Koçer. Special thanks and tribute to the author!"}
+            </p>
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-xs">
+              <div className="flex items-center gap-1.5 text-text-dim">
+                <span>{isZh ? "原作者" : "Author"}:</span>
+                <span className="font-bold text-text">Bahadırhan Koçer</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-text-dim">
+                <span>YouTube ID:</span>
+                <a
+                  href="https://www.youtube.com/@Bahadirhankocer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[#f5b73d] hover:underline flex items-center gap-1"
+                >
+                  <span>Bahadirhankocer</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <a
+              href="https://www.youtube.com/watch?v=mTGI15msfrE"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold transition-all shadow-md hover:shadow-red-600/30"
+            >
+              <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              <span>{isZh ? "观看原版视频" : "Watch Video"}</span>
+            </a>
+            <a
+              href="https://www.youtube.com/@Bahadirhankocer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1c202d] hover:bg-[#252b3d] border border-line text-text text-xs font-bold transition-all"
+            >
+              <span>{isZh ? "访问频道" : "Channel"}</span>
+              <ExternalLink className="w-3.5 h-3.5 text-text-dim" />
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

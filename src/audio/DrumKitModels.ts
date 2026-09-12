@@ -10,7 +10,18 @@
  * - Cyber Wave: Modern punchy transient-saturated hyperpop / synthwave kit.
  */
 
-export type DrumKitType = "808" | "909" | "acoustic" | "cyber";
+import { synthesizeAnatomyKickVoice } from "./AnatomyKickEngine";
+
+export type DrumKitType = "808" | "909" | "acoustic" | "cyber" | string;
+
+export function getBaseDrumKit(kit: DrumKitType): "808" | "909" | "acoustic" | "cyber" {
+  if (kit === "808" || kit === "909" || kit === "acoustic" || kit === "cyber") return kit;
+  const lower = kit.toLowerCase();
+  if (lower.includes("808") || lower.includes("orphic")) return "808";
+  if (lower.includes("acoustic") || lower.includes("skin")) return "acoustic";
+  if (lower.includes("neural") || lower.includes("cyber")) return "cyber";
+  return "909";
+}
 
 export interface DrumVoiceCleanup {
   sources: AudioScheduledSourceNode[];
@@ -30,6 +41,11 @@ export function synthesizeKick(
   kit: DrumKitType,
   noiseBuffer: AudioBuffer | null
 ): DrumVoiceCleanup {
+  if (kit.startsWith("kick:")) {
+    const presetId = kit.slice(5);
+    return synthesizeAnatomyKickVoice(ctx, dest, time, vel, presetId, noiseBuffer);
+  }
+
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
   const basePitch = pitchOffset > 24 ? pitchOffset - 36 : pitchOffset;
@@ -199,8 +215,9 @@ export function synthesizeSnare(
   const gains: GainNode[] = [];
   const basePitch = pitchOffset > 24 ? pitchOffset - 60 : pitchOffset;
   const pitchMultiplier = Math.pow(2, basePitch / 12);
+  const effectiveKit = getBaseDrumKit(kit);
 
-  if (kit === "808") {
+  if (effectiveKit === "808") {
     // 808 Snare: Two tuned sine oscillators (180Hz & 330Hz) + soft bandpassed white noise
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
@@ -247,7 +264,7 @@ export function synthesizeSnare(
     }
 
     return { sources, gains, stopTime: time + 0.24 };
-  } else if (kit === "909") {
+  } else if (effectiveKit === "909") {
     // 909 Snare: Distinct body tone with sharper punch + rich snappy high-end sizzle
     const osc = ctx.createOscillator();
     const oscGain = ctx.createGain();
@@ -350,8 +367,9 @@ export function synthesizeHiHat(
   const isRatchet = stepVal === 3;
   const baseDecay = isOpen ? Math.min(stepDur * 3.5, 0.45) : isRatchet ? Math.min(stepDur * 0.45, 0.06) : 0.065;
   const decayTime = Math.max(0.02, baseDecay * gateVal);
+  const effectiveKit = getBaseDrumKit(kit);
 
-  if (kit === "808") {
+  if (effectiveKit === "808") {
     // 808 Hi-Hat: 6 inharmonic square wave oscillators clustered together
     // Frequencies modeled from Roland TR-808 service manual:
     const inharmonicFreqs = [245, 306, 368, 412, 538, 845];
@@ -399,7 +417,7 @@ export function synthesizeHiHat(
 
     const hpFilter = ctx.createBiquadFilter();
     hpFilter.type = "highpass";
-    hpFilter.frequency.value = kit === "909" ? 8200 : 7000;
+    hpFilter.frequency.value = effectiveKit === "909" ? 8200 : 7000;
 
     const peakFilter = ctx.createBiquadFilter();
     peakFilter.type = "peaking";
@@ -440,8 +458,9 @@ export function synthesizePercussion(
 ): DrumVoiceCleanup {
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
+  const effectiveKit = getBaseDrumKit(kit);
 
-  if (kit === "808") {
+  if (effectiveKit === "808") {
     // 808 Cowbell / Conga
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();

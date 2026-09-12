@@ -687,6 +687,13 @@ export class AudioEngine {
     // Primary clock source: AudioWorkletClock (sample-accurate AudioWorklet with Worker fallback, P5-01)
     const rate = this.ctx ? this.ctx.sampleRate : 44100;
     this.workletClock.start(this.lookaheadMs, rate);
+
+    // Watchdog backup interval ensures scheduling loop keeps running without any stalls
+    this.scheduleTimerId = setInterval(() => {
+      if (this.isPlaying) {
+        this.schedulerLoop();
+      }
+    }, 25);
   }
 
   private stopScheduler(): void {

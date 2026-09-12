@@ -150,13 +150,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
   const handleStopAudio = () => {
     if (engineRef.current) {
       engineRef.current.stop();
-      engineRef.current.destroy();
-      engineRef.current = null;
     }
     if (syncEngineRef.current) {
       syncEngineRef.current.stop();
-      syncEngineRef.current.destroy();
-      syncEngineRef.current = null;
     }
     setPlayingId(null);
     setIsSyncPlaying(false);
@@ -197,7 +193,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
   };
 
   // Start synchronized playback across all active comparison columns (P3-12)
-  const handleStartSyncPlayback = (overrideBpm?: number) => {
+  const handleStartSyncPlayback = async (overrideBpm?: number) => {
     if (genres.length < 2) return;
     handleStopAudio();
 
@@ -226,21 +222,26 @@ export const CompareView: React.FC<CompareViewProps> = ({
       tracks: mergedTracks,
     };
 
-    const engine = new AudioEngine({
-      onStep: ({ step }) => setSyncStep(step),
-      onStop: () => {
-        setIsSyncPlaying(false);
-      },
-    });
+    let engine = syncEngineRef.current;
+    if (!engine) {
+      engine = new AudioEngine({
+        onStep: ({ step }) => setSyncStep(step),
+        onStop: () => {
+          setIsSyncPlaying(false);
+        },
+      });
+      syncEngineRef.current = engine;
+    } else {
+      engine.stop();
+    }
 
-    engine.setPattern(compositePattern);
+    engine.setPattern(compositePattern, true);
     engine.setBpm(bpmToUse);
     engine.setTotalSteps(maxLen);
 
     applySyncMutesToEngine(engine, syncMode, genres, columnMutes, columnSolos);
 
-    engine.play();
-    syncEngineRef.current = engine;
+    await engine.play();
     setIsSyncPlaying(true);
     setPlayingId(null);
   };
@@ -283,7 +284,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
   };
 
   // Handle explicit playback per mode (Drums Only or Full Band)
-  const handlePlayMode = (genre: Genre, mode: "drums" | "full") => {
+  const handlePlayMode = async (genre: Genre, mode: "drums" | "full") => {
     if (isSyncPlaying) {
       handleStopAudio();
     }
@@ -305,18 +306,20 @@ export const CompareView: React.FC<CompareViewProps> = ({
     }
 
     // Otherwise start new playback for this genre & mode
-    if (engineRef.current) {
-      engineRef.current.destroy();
+    let engine = engineRef.current;
+    if (!engine) {
+      engine = new AudioEngine({
+        onStop: () => setPlayingId(null),
+      });
+      engineRef.current = engine;
+    } else {
+      engine.stop();
     }
 
-    const engine = new AudioEngine({
-      onStop: () => setPlayingId(null),
-    });
-    engine.setPattern(genre.sequencer_pattern);
+    engine.setPattern(genre.sequencer_pattern, true);
     engine.setBpm(genre.default_bpm || 120);
     applyAudioMutes(engine, mode, genre);
-    engine.play();
-    engineRef.current = engine;
+    await engine.play();
     setPlayingId(genre.id);
     setPlayingMode(mode);
   };
@@ -782,8 +785,6 @@ export const CompareView: React.FC<CompareViewProps> = ({
         </div>
       </div>
 
-      {/* Overview Analytics Bar: DNA Radar & Similarity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Overview Analytics Bar: DNA Radar & Similarity Matrix (P3-13) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Radar Chart Overlay (Col 1-5 on LG) */}
@@ -1107,7 +1108,6 @@ export const CompareView: React.FC<CompareViewProps> = ({
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Side-by-Side Columnar Comparison Matrix */}

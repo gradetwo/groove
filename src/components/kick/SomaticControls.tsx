@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Sliders, 
   Volume2, 
@@ -8,12 +8,20 @@ import {
   ShieldAlert, 
   Cpu, 
   Waves,
-  Zap
+  Zap,
+  BookmarkPlus,
+  Trash2,
+  Check,
+  X
 } from "lucide-react";
 import { 
   SomaticKickParams, 
   KICK_PRESETS, 
   KickPreset,
+  CustomKickPreset,
+  loadCustomKickPresets,
+  saveCustomKickPreset,
+  deleteCustomKickPreset,
   AnatomyKickEngine 
 } from "../../audio/AnatomyKickEngine";
 
@@ -35,11 +43,47 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
   className = "",
 }) => {
   const [activePresetId, setActivePresetId] = useState<string>("berlin-orphic");
+  const [customPresets, setCustomPresets] = useState<CustomKickPreset[]>(() => loadCustomKickPresets());
+  const [isSavingCustom, setIsSavingCustom] = useState(false);
+  const [customNameInput, setCustomNameInput] = useState("");
   const [isExporting, setIsExporting] = useState(false);
 
-  const handleSelectPreset = (preset: KickPreset) => {
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCustomPresets(loadCustomKickPresets());
+    };
+    window.addEventListener("groove_kick_presets_changed", handleUpdate);
+    return () => window.removeEventListener("groove_kick_presets_changed", handleUpdate);
+  }, []);
+
+  const handleSelectCuratedPreset = (preset: KickPreset) => {
     setActivePresetId(preset.id);
     onParamsChange(preset.params);
+  };
+
+  const handleSelectCustomPreset = (preset: CustomKickPreset) => {
+    setActivePresetId(preset.id);
+    onParamsChange(preset.params);
+  };
+
+  const handleSaveCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    const fallbackName = isZh
+      ? `自定义底鼓 ${customPresets.length + 1}`
+      : `Custom Kick ${customPresets.length + 1}`;
+    const name = customNameInput.trim() || fallbackName;
+    const created = saveCustomKickPreset(name, params);
+    setActivePresetId(created.id);
+    setIsSavingCustom(false);
+    setCustomNameInput("");
+  };
+
+  const handleDeleteCustom = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    deleteCustomKickPreset(id);
+    if (activePresetId === id) {
+      setActivePresetId("berlin-orphic");
+    }
   };
 
   const handleExportWav = async () => {
@@ -49,7 +93,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `kick_anatomy_${activePresetId}_${params.basePitch}Hz.wav`;
+      a.download = `kick_design_${activePresetId}_${params.basePitch}Hz.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -61,52 +105,153 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
     }
   };
 
+  const activeCurated = KICK_PRESETS.find((p) => p.id === activePresetId);
+  const activeCustom = customPresets.find((p) => p.id === activePresetId);
+
   return (
     <div className={`space-y-4 font-mono select-none ${className}`}>
       {/* Somatic Preset Browser */}
-      <div className="bg-[#080a0f] border border-line/50 rounded-lg p-3 shadow-sm">
-        <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-line/40 text-xs">
+      <div className="bg-[#080a0f] border border-line/50 rounded-lg p-3 shadow-sm space-y-2.5">
+        <div className="flex items-center justify-between pb-2 border-b border-line/40 text-xs">
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-[#f5b73d]" />
             <span className="font-bold text-text uppercase">
-              {isZh ? "声学哲学预设库" : "SOMATIC PRESETS"}
+              {isZh ? "底鼓预设库" : "KICK PRESETS"}
             </span>
           </div>
-          <span className="text-[10px] text-text-dim">6 CURATED MODELS</span>
+
+          <button
+            type="button"
+            onClick={() => setIsSavingCustom((prev) => !prev)}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#f5b73d]/15 hover:bg-[#f5b73d]/25 text-[#f5b73d] border border-[#f5b73d]/40 transition-colors"
+            title={isZh ? "将当前调整的参数保存为新预设" : "Save current parameters as custom preset"}
+          >
+            <BookmarkPlus className="w-3 h-3" />
+            <span>{isZh ? "保存当前预设" : "SAVE AS NEW"}</span>
+          </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-          {KICK_PRESETS.map((preset) => {
-            const isSelected = activePresetId === preset.id;
-            return (
+        {/* Inline Save Custom Preset Dialog */}
+        {isSavingCustom && (
+          <form onSubmit={handleSaveCustom} className="p-2.5 rounded bg-[#10131d] border border-[#f5b73d]/40 space-y-2">
+            <div className="text-[11px] font-bold text-text flex items-center justify-between">
+              <span>{isZh ? "保存自定义底鼓预设" : "Save Custom Kick Preset"}</span>
+              <span className="text-[9px] text-[#f5b73d]">
+                {isZh ? "保存后可直接在鼓机中调用" : "Available in Drum Machine Kits"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                autoFocus
+                placeholder={isZh ? "预设名称（例如：重低音穿透底鼓）" : "Preset Name (e.g. Heavy Thump Kick)"}
+                value={customNameInput}
+                onChange={(e) => setCustomNameInput(e.target.value)}
+                className="flex-1 px-2 py-1 rounded bg-[#06080d] border border-line text-xs text-text focus:outline-none focus:border-[#f5b73d]"
+              />
               <button
-                key={preset.id}
-                onClick={() => handleSelectPreset(preset)}
-                className={`flex flex-col text-left px-2.5 py-1.5 rounded transition-all border ${
-                  isSelected
-                    ? "bg-[#f5b73d]/15 border-[#f5b73d] text-white shadow-[0_0_8px_rgba(245,183,61,0.25)]"
-                    : "bg-[#11141c] border-line/40 text-text-sub hover:bg-[#181d28] hover:text-text"
-                }`}
+                type="submit"
+                className="flex items-center gap-1 px-3 py-1 rounded bg-[#f5b73d] text-black font-bold text-xs hover:bg-[#ffc657] transition-colors"
               >
-                <span className="text-[11px] font-bold truncate">
-                  {isZh ? preset.name.zh : preset.name.en}
-                </span>
-                <span className="text-[8px] text-[#f5b73d]/80 uppercase">
-                  {preset.category}
-                </span>
+                <Check className="w-3 h-3" />
+                <span>{isZh ? "保存" : "Save"}</span>
               </button>
-            );
-          })}
+              <button
+                type="button"
+                onClick={() => setIsSavingCustom(false)}
+                className="p-1 rounded text-text-dim hover:text-text hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Curated Presets Grid */}
+        <div className="space-y-1">
+          <span className="text-[9px] text-text-dim uppercase tracking-wider">
+            {isZh ? "官方精选模型" : "CURATED MODELS"}
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {KICK_PRESETS.map((preset) => {
+              const isSelected = activePresetId === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => handleSelectCuratedPreset(preset)}
+                  className={`flex flex-col text-left px-2.5 py-1.5 rounded transition-all border ${
+                    isSelected
+                      ? "bg-[#f5b73d]/15 border-[#f5b73d] text-white shadow-[0_0_8px_rgba(245,183,61,0.25)]"
+                      : "bg-[#11141c] border-line/40 text-text-sub hover:bg-[#181d28] hover:text-text"
+                  }`}
+                >
+                  <span className="text-[11px] font-bold truncate">
+                    {isZh ? preset.name.zh : preset.name.en}
+                  </span>
+                  <span className="text-[8px] text-[#f5b73d]/80 uppercase">
+                    {preset.category}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Custom Presets Grid (if any) */}
+        {customPresets.length > 0 && (
+          <div className="space-y-1 pt-1.5 border-t border-line/30">
+            <span className="text-[9px] text-[#f5b73d] uppercase tracking-wider flex items-center justify-between">
+              <span>{isZh ? "我的自定义预设 (可在鼓机中选用)" : "MY CUSTOM PRESETS"}</span>
+              <span className="text-[8px] text-text-dim font-mono">{customPresets.length} PRESETS</span>
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {customPresets.map((preset) => {
+                const isSelected = activePresetId === preset.id;
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => handleSelectCustomPreset(preset)}
+                    className={`group flex items-center justify-between px-2.5 py-1.5 rounded transition-all border cursor-pointer ${
+                      isSelected
+                        ? "bg-[#f5b73d]/15 border-[#f5b73d] text-white shadow-[0_0_8px_rgba(245,183,61,0.25)]"
+                        : "bg-[#11141c] border-line/40 text-text-sub hover:bg-[#181d28] hover:text-text"
+                    }`}
+                  >
+                    <div className="flex flex-col truncate pr-1">
+                      <span className="text-[11px] font-bold truncate">
+                        {preset.name}
+                      </span>
+                      <span className="text-[8px] text-text-dim">
+                        {preset.params.basePitch}Hz · CUSTOM
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteCustom(e, preset.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded text-text-dim hover:text-red-400 hover:bg-red-400/10 transition-opacity"
+                      title={isZh ? "删除此预设" : "Delete preset"}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Selected Preset Philosophical Context */}
-        {activePresetId && (
-          <div className="mt-2.5 pt-2 border-t border-line/30 text-[10px] text-text-sub leading-relaxed italic bg-black/30 p-2 rounded">
-            "
-            {isZh
-              ? KICK_PRESETS.find((p) => p.id === activePresetId)?.philosophy.zh
-              : KICK_PRESETS.find((p) => p.id === activePresetId)?.philosophy.en}
-            "
+        {activeCurated && (
+          <div className="pt-2 border-t border-line/30 text-[10px] text-text-sub leading-relaxed italic bg-black/30 p-2 rounded">
+            "{isZh ? activeCurated.philosophy.zh : activeCurated.philosophy.en}"
+          </div>
+        )}
+        {activeCustom && (
+          <div className="pt-2 border-t border-line/30 text-[10px] text-[#f5b73d]/90 leading-relaxed bg-black/30 p-2 rounded flex items-center justify-between">
+            <span>
+              {isZh ? `已载入自定义底鼓：「${activeCustom.name}」，可在主工作台鼓机中直接选用。` : `Loaded custom kick "${activeCustom.name}". Available in Drum Machine kits.`}
+            </span>
           </div>
         )}
       </div>

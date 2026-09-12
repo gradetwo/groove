@@ -48,6 +48,66 @@ export const DEFAULT_SOMATIC_PARAMS: SomaticKickParams = {
   clickSolo: false,
 };
 
+export interface CustomKickPreset {
+  id: string;
+  name: string;
+  createdAt: number;
+  params: SomaticKickParams;
+}
+
+export const CUSTOM_KICK_PRESETS_KEY = "groove_custom_kick_presets_v1";
+
+export function loadCustomKickPresets(): CustomKickPreset[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_KICK_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomKickPreset(name: string, params: SomaticKickParams): CustomKickPreset {
+  const existing = loadCustomKickPresets();
+  const id = `custom-${Date.now()}`;
+  const trimmedName = name.trim() || `Custom Kick ${existing.length + 1}`;
+  const newPreset: CustomKickPreset = {
+    id,
+    name: trimmedName,
+    createdAt: Date.now(),
+    params: { ...params },
+  };
+  const next = [newPreset, ...existing];
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem(CUSTOM_KICK_PRESETS_KEY, JSON.stringify(next));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("groove_kick_presets_changed"));
+      }
+    } catch {
+      // ignore write error
+    }
+  }
+  return newPreset;
+}
+
+export function deleteCustomKickPreset(id: string): void {
+  const existing = loadCustomKickPresets();
+  const next = existing.filter((p) => p.id !== id);
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem(CUSTOM_KICK_PRESETS_KEY, JSON.stringify(next));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("groove_kick_presets_changed"));
+      }
+    } catch {
+      // ignore write error
+    }
+  }
+}
+
 export interface KickPreset {
   id: string;
   name: { zh: string; en: string };
@@ -193,6 +253,17 @@ function makeDistortionCurve(amount: number, n_samples = 4096): Float32Array {
   return curve;
 }
 
+/**
+ * Resolves preset parameters from curated or custom presets
+ */
+export function resolveKickPresetParams(presetId: string): Partial<SomaticKickParams> | undefined {
+  const builtIn = KICK_PRESETS.find((p) => p.id === presetId);
+  if (builtIn) return builtIn.params;
+  const custom = loadCustomKickPresets().find((p) => p.id === presetId);
+  if (custom) return custom.params;
+  return undefined;
+}
+
 export class AnatomyKickEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -209,6 +280,18 @@ export class AnatomyKickEngine {
       this.ctx = externalCtx;
       this.initNodes();
     }
+  }
+
+  public getCustomPresets(): CustomKickPreset[] {
+    return loadCustomKickPresets();
+  }
+
+  public saveCustomPreset(name: string): CustomKickPreset {
+    return saveCustomKickPreset(name, this.params);
+  }
+
+  public deleteCustomPreset(id: string): void {
+    deleteCustomKickPreset(id);
   }
 
   public init(ctx: AudioContext): void {
@@ -601,3 +684,179 @@ function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
 }
 
 export const globalAnatomyKickEngine = new AnatomyKickEngine();
+
+export interface KickVoiceCleanup {
+  sources: AudioScheduledSourceNode[];
+  gains: GainNode[];
+  stopTime: number;
+}
+
+/**
+ * Synthesizes a kick drum voice using the 3-Layer Somatic Decomposition.
+ * Routes directly to the specified destination node at the scheduled audio time.
+ */
+export function synthesizeAnatomyKickVoice(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  time: number,
+  vel: number,
+  presetIdOrParams: string | Partial<SomaticKickParams>,
+  _noiseBuffer?: AudioBuffer | null
+): KickVoiceCleanup {
+  const sources: AudioScheduledSourceNode[] = [];
+  const gains: GainNode[] = [];
+
+  const rawParams =
+    typeof presetIdOrParams === "string"
+      ? resolveKickPresetParams(presetIdOrParams)
+      : presetIdOrParams;
+
+  const p: SomaticKickParams = {
+    ...DEFAULT_SOMATIC_PARAMS,
+    ...(rawParams || {}),
+  };
+
+  const t = Math.max(ctx.currentTime, time);
+  const anySolo = p.subSolo || p.thumpSolo || p.clickSolo;
+  const playSub = !p.subMute && (!anySolo || p.subSolo);
+  const playThump = !p.thumpMute && (!anySolo || p.thumpSolo);
+  const playClick = !p.clickMute && (!anySolo || p.clickSolo);
+
+  let busNode: AudioNode = dest;
+  if (p.grit > 0.05 && typeof (ctx as any).createWaveShaper === "function") {
+    try {
+      const shaper = ctx.createWaveShaper();
+      shaper.curve = makeDistortionCurve(p.grit * 0.4) as Float32Array<ArrayBuffer>;
+      shaper.connect(dest);
+      busNode = shaper;
+    } catch {
+      busNode = dest;
+    }
+  }
+
+  let maxDecay = 0.4;
+
+  // 1. SUB (30-60 Hz)
+  if (playSub) {
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    const subFilter = ctx.createBiquadFilter();
+
+    subOsc.type = "sine";
+    const startPitch = p.basePitch * (1 + 2.2 * (1 - p.softness));
+    const endPitch = p.basePitch;
+
+    subOsc.frequency.setValueAtTime(startPitch, t);
+    const pitchDropTime = 0.025 + p.softness * 0.04;
+    subOsc.frequency.exponentialRampToValueAtTime(endPitch, t + pitchDropTime);
+
+    subFilter.type = "lowpass";
+    subFilter.frequency.setValueAtTime(140, t);
+
+    const subDecay = 0.2 + p.boomToWhere * 0.9;
+    if (subDecay > maxDecay) maxDecay = subDecay;
+    const subPeak = vel * 1.25 * p.volume;
+
+    subGain.gain.setValueAtTime(0.0001, t);
+    subGain.gain.linearRampToValueAtTime(subPeak, t + 0.002);
+    subGain.gain.exponentialRampToValueAtTime(subPeak * 0.45, t + 0.08);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, t + subDecay);
+
+    subOsc.connect(subFilter);
+    subFilter.connect(subGain);
+    subGain.connect(busNode);
+
+    subOsc.start(t);
+    subOsc.stop(t + subDecay + 0.05);
+    sources.push(subOsc);
+    gains.push(subGain);
+
+    if (p.rumble > 0.2) {
+      const rumbleOsc = ctx.createOscillator();
+      const rumbleGain = ctx.createGain();
+      rumbleOsc.type = "sine";
+      rumbleOsc.frequency.setValueAtTime(p.basePitch * 0.75, t);
+      const rumbleDecay = subDecay * 1.1;
+      const rumbleAmp = vel * p.rumble * 0.4 * p.volume;
+      rumbleGain.gain.setValueAtTime(0.0001, t);
+      rumbleGain.gain.linearRampToValueAtTime(rumbleAmp, t + 0.04);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.0001, t + rumbleDecay);
+
+      rumbleOsc.connect(rumbleGain);
+      rumbleGain.connect(busNode);
+      rumbleOsc.start(t);
+      rumbleOsc.stop(t + rumbleDecay + 0.05);
+      sources.push(rumbleOsc);
+      gains.push(rumbleGain);
+    }
+  }
+
+  // 2. THUMP (100-200 Hz)
+  if (playThump) {
+    const thumpOsc = ctx.createOscillator();
+    const thumpGain = ctx.createGain();
+    const thumpFilter = ctx.createBiquadFilter();
+
+    thumpOsc.type = "triangle";
+    const thumpStart = 380 * (1 - p.softness * 0.3);
+    const thumpEnd = 110;
+
+    thumpOsc.frequency.setValueAtTime(thumpStart, t);
+    thumpOsc.frequency.exponentialRampToValueAtTime(thumpEnd, t + 0.022);
+
+    thumpFilter.type = "bandpass";
+    thumpFilter.frequency.setValueAtTime(160, t);
+    thumpFilter.Q.setValueAtTime(1.8, t);
+
+    const thumpDecay = 0.05 + p.hitSkin * 0.18;
+    if (thumpDecay > maxDecay) maxDecay = thumpDecay;
+    const thumpPeak = vel * (0.8 + p.hitSkin * 0.5) * p.volume;
+
+    thumpGain.gain.setValueAtTime(0.0001, t);
+    thumpGain.gain.linearRampToValueAtTime(thumpPeak, t + 0.001);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0001, t + thumpDecay);
+
+    thumpOsc.connect(thumpFilter);
+    thumpFilter.connect(thumpGain);
+    thumpGain.connect(busNode);
+
+    thumpOsc.start(t);
+    thumpOsc.stop(t + thumpDecay + 0.05);
+    sources.push(thumpOsc);
+    gains.push(thumpGain);
+  }
+
+  // 3. CLICK (1-2.5 kHz)
+  if (playClick && p.clickAmount > 0.01) {
+    const clickOsc = ctx.createOscillator();
+    const clickFilter = ctx.createBiquadFilter();
+    const clickGain = ctx.createGain();
+
+    clickOsc.type = "square";
+    clickOsc.frequency.setValueAtTime(1800, t);
+    clickOsc.frequency.exponentialRampToValueAtTime(750, t + 0.008);
+
+    clickFilter.type = "bandpass";
+    const centerFreq = 1600 + (1 - p.tameHighs) * 1200;
+    clickFilter.frequency.setValueAtTime(centerFreq, t);
+    clickFilter.Q.setValueAtTime(4.5, t);
+
+    const clickDecay = 0.008 + (1 - p.softness) * 0.007;
+    const clickPeak = vel * p.clickAmount * 0.95 * p.volume;
+
+    clickGain.gain.setValueAtTime(0.0001, t);
+    clickGain.gain.linearRampToValueAtTime(clickPeak, t + 0.0003);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, t + clickDecay);
+
+    clickOsc.connect(clickFilter);
+    clickFilter.connect(clickGain);
+    clickGain.connect(busNode);
+
+    clickOsc.start(t);
+    clickOsc.stop(t + clickDecay + 0.02);
+    sources.push(clickOsc);
+    gains.push(clickGain);
+  }
+
+  return { sources, gains, stopTime: t + maxDecay + 0.05 };
+}

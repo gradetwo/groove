@@ -99,8 +99,8 @@ export function useAppShortcuts({ onNavigateTab, isZh }: UseAppShortcutsOptions)
             break;
           case "k":
             targetTab = "kick";
-            tabNameZh = "底鼓解剖";
-            tabNameEn = "Kick Anatomy";
+            tabNameZh = "底鼓设计";
+            tabNameEn = "Kick Design";
             break;
           default:
             break;

@@ -158,4 +158,41 @@ describe("Hardware Drum Machine Models (P5-02)", () => {
       expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(48, expect.closeTo(0.15, 2));
     });
   });
+
+  describe("Kick Design Presets & Custom Presets Integration (P-NEXT)", () => {
+    it("synthesizes kick drum using built-in Kick Design presets", () => {
+      const { ctx, mockNoiseBuffer } = createMockAudioContext();
+      const dest = ctx.createGain();
+
+      const presets = [
+        "kick:berlin-orphic",
+        "kick:detroit-mechanical",
+        "kick:somatic-808-gravity",
+        "kick:industrial-revolt",
+        "kick:acoustic-beater-skin",
+        "kick:neural-click-clock",
+      ];
+
+      presets.forEach((kit) => {
+        const result = synthesizeKick(ctx, dest, 0.2, 0.9, 0, kit, mockNoiseBuffer);
+        expect(result).toBeDefined();
+        expect(result.sources.length).toBeGreaterThan(0);
+        expect(result.stopTime).toBeGreaterThan(0.2);
+      });
+    });
+
+    it("synthesizes snare, hihat, and percussion when a Kick Design preset is selected", () => {
+      const { ctx, mockNoiseBuffer } = createMockAudioContext();
+      const dest = ctx.createGain();
+
+      const snareResult = synthesizeSnare(ctx, dest, 0.2, 0.8, 0, "kick:berlin-orphic", mockNoiseBuffer);
+      expect(snareResult.sources.length).toBeGreaterThan(0);
+
+      const hatResult = synthesizeHiHat(ctx, dest, 0.2, 0.8, 0, "kick:detroit-mechanical", 1, 0.125, 0.8, mockNoiseBuffer);
+      expect(hatResult.sources.length).toBeGreaterThan(0);
+
+      const percResult = synthesizePercussion(ctx, dest, 0.2, 0.8, 0, "kick:acoustic-beater-skin", mockNoiseBuffer);
+      expect(percResult.sources.length).toBeGreaterThan(0);
+    });
+  });
 });
