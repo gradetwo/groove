@@ -14,42 +14,56 @@ import {
   ArrowRight,
   Sparkles,
   Volume2,
-  Zap
+  Zap,
+  ShieldCheck
 } from "lucide-react";
 import { Genre } from "../types/genre";
-import { ALL_GENRES, ELECTRONIC_GENRES } from "../data/genres";
+import { ALL_GENRES } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useLanguage } from "../i18n/LanguageContext";
 import { announcer } from "../ui";
+import {
+  calculateEloDelta,
+  getRankTier,
+  updateSM2Memory,
+  selectAdaptiveQuestion,
+  SM2GenreMemory,
+  ChallengeDifficulty,
+  DEFAULT_INITIAL_ELO,
+} from "../utils/challengeAlgorithm";
+import { ChallengeCertificateModal } from "../components/ChallengeCertificateModal";
 
 interface ChallengeViewProps {
   onSelectGenre: (genre: Genre) => void;
   onOpenStudio: (genre: Genre) => void;
 }
 
-type Difficulty = "easy" | "medium" | "hard";
-
 interface QuizQuestion {
   correctGenre: Genre;
   options: Genre[];
+  dueForReview?: boolean;
+  confusionTarget?: string;
 }
 
-const STORAGE_KEY = "groove_challenge_stats_v1";
+const STORAGE_KEY_V2 = "groove_challenge_stats_v2";
+const LEGACY_STORAGE_KEY = "groove_challenge_stats_v1";
 
-interface StoredStats {
+interface StoredStatsV2 {
   score: number;
   streak: number;
   bestStreak: number;
   totalAnswered: number;
   correctCount: number;
   recentTested: string[];
+  elo: number;
+  sm2Memory: Record<string, SM2GenreMemory>;
 }
 
-const loadStoredStats = (): StoredStats => {
+const loadStoredStats = (): StoredStatsV2 => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const p = JSON.parse(raw);
+    const rawV2 = localStorage.getItem(STORAGE_KEY_V2);
+    if (rawV2) {
+      const p = JSON.parse(rawV2);
       return {
         score: typeof p.score === "number" ? p.score : 0,
         streak: typeof p.streak === "number" ? p.streak : 0,
@@ -57,27 +71,51 @@ const loadStoredStats = (): StoredStats => {
         totalAnswered: typeof p.totalAnswered === "number" ? p.totalAnswered : 0,
         correctCount: typeof p.correctCount === "number" ? p.correctCount : 0,
         recentTested: Array.isArray(p.recentTested) ? p.recentTested : [],
+        elo: typeof p.elo === "number" ? p.elo : DEFAULT_INITIAL_ELO,
+        sm2Memory: p.sm2Memory && typeof p.sm2Memory === "object" ? p.sm2Memory : {},
+      };
+    }
+    // Fallback: migrate from legacy v1 stats
+    const rawV1 = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (rawV1) {
+      const p = JSON.parse(rawV1);
+      return {
+        score: typeof p.score === "number" ? p.score : 0,
+        streak: typeof p.streak === "number" ? p.streak : 0,
+        bestStreak: typeof p.bestStreak === "number" ? p.bestStreak : 0,
+        totalAnswered: typeof p.totalAnswered === "number" ? p.totalAnswered : 0,
+        correctCount: typeof p.correctCount === "number" ? p.correctCount : 0,
+        recentTested: Array.isArray(p.recentTested) ? p.recentTested : [],
+        elo: DEFAULT_INITIAL_ELO,
+        sm2Memory: {},
       };
     }
   } catch {}
-  return { score: 0, streak: 0, bestStreak: 0, totalAnswered: 0, correctCount: 0, recentTested: [] };
+  return {
+    score: 0,
+    streak: 0,
+    bestStreak: 0,
+    totalAnswered: 0,
+    correctCount: 0,
+    recentTested: [],
+    elo: DEFAULT_INITIAL_ELO,
+    sm2Memory: {},
+  };
 };
 
-// Strict 3-Tier Difficulty Pool Partitioning (P3-17: Easy !== Medium !== Hard)
+// Strict 3-Tier Difficulty Pool Partitioning (P3-17 & P6-04)
 const EASY_IDS = new Set([
-  "chicago-house", "berlin-techno", "uplifting-trance", "brostep", "liquid-funk",
-  "boom-bap", "trap", "synthpop", "reggaeton", "disco", "funk", "classic-rock",
+  "chicago-house", "detroit-techno", "uplifting-trance", "brostep", "liquid-dnb",
+  "boom-bap", "edm-trap", "synth-pop", "reggaeton", "disco", "funk", "rock-and-roll",
   "heavy-metal", "grunge", "punk-rock", "delta-blues", "chicago-blues",
-  "bebop", "bossa-nova", "afrobeats", "r-and-b", "contemporary-r-and-b",
-  "eurodance", "progressive-house", "ambient"
+  "bebop", "bossa-nova", "afrobeat", "eurodance", "progressive-house", "ambient"
 ]);
 
 const HARD_IDS = new Set([
   "breakcore", "idm", "glitch-hop", "neurofunk", "footwork", "jersey-club",
-  "gabber", "speedcore", "math-rock", "post-rock", "shoegaze", "djent",
-  "black-metal", "death-metal", "grindcore", "free-jazz", "hard-bop",
-  "vaporwave", "witch-house", "chiptune", "dark-ambient", "phonk",
-  "uk-drill", "gqom", "amapiano", "hyperpop", "hardstyle", "jump-up"
+  "math-rock", "black-metal", "death-metal", "free-jazz",
+  "vaporwave", "chiptune", "uk-drill", "amapiano", "hardstyle", "jump-up",
+  "techstep", "halftime", "ragga-jungle", "industrial-techno"
 ]);
 
 export const ChallengeView: React.FC<ChallengeViewProps> = ({
@@ -86,85 +124,81 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 }) => {
   const { t, isZh } = useLanguage();
 
-  const [initialStats] = useState<StoredStats>(loadStoredStats);
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [initialStats] = useState<StoredStatsV2>(loadStoredStats);
+  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>("medium");
   const [score, setScore] = useState(initialStats.score);
   const [streak, setStreak] = useState(initialStats.streak);
   const [bestStreak, setBestStreak] = useState(initialStats.bestStreak);
   const [totalAnswered, setTotalAnswered] = useState(initialStats.totalAnswered);
   const [correctCount, setCorrectCount] = useState(initialStats.correctCount);
+  const [elo, setElo] = useState(initialStats.elo);
+  const [sm2Memory, setSm2Memory] = useState<Record<string, SM2GenreMemory>>(initialStats.sm2Memory);
 
   // Anti-repeat buffer: exclude last 10 tested genres (P3-17)
   const recentTestedRef = useRef<string[]>(initialStats.recentTested);
 
-  // Current question
+  // Current question & outcome feedback
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [lastEloDelta, setLastEloDelta] = useState<{ delta: number; bonus: number } | null>(null);
+  const [confusionNotification, setConfusionNotification] = useState<string | null>(null);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   const engineRef = useRef<AudioEngine | null>(null);
 
-  const persistStats = (updated: Partial<StoredStats>) => {
+  const persistStats = (updated: Partial<StoredStatsV2>) => {
     try {
-      const current: StoredStats = {
+      const current: StoredStatsV2 = {
         score,
         streak,
         bestStreak,
         totalAnswered,
         correctCount,
         recentTested: recentTestedRef.current,
+        elo,
+        sm2Memory,
         ...updated,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+      localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(current));
     } catch {}
   };
 
   // Disjoint pools based on difficulty
-  const getPool = (diff: Difficulty): Genre[] => {
-    if (diff === "easy") {
-      return ALL_GENRES.filter((g) => EASY_IDS.has(g.id));
-    } else if (diff === "hard") {
-      return ALL_GENRES.filter((g) => HARD_IDS.has(g.id));
-    } else {
-      // Medium: established subgenres not in easy or hard
-      return ALL_GENRES.filter((g) => !EASY_IDS.has(g.id) && !HARD_IDS.has(g.id));
-    }
+  const getDifficultyPool = (diff: ChallengeDifficulty): Set<string> => {
+    if (diff === "easy") return EASY_IDS;
+    if (diff === "hard") return HARD_IDS;
+    return new Set(
+      ALL_GENRES.filter((g) => !EASY_IDS.has(g.id) && !HARD_IDS.has(g.id)).map((g) => g.id)
+    );
   };
 
-  // Generate question with 10-question anti-repeat rule
+  // Generate question using SuperMemo-2 Spaced Repetition and intelligent distractor matrix
   const generateQuestion = (diff = difficulty): QuizQuestion => {
-    const pool = getPool(diff);
-    // Exclude recently tested genres
-    const available = pool.filter((g) => !recentTestedRef.current.includes(g.id));
-    const candidatePool = available.length >= 4 ? available : pool;
-
-    const correctIdx = Math.floor(Math.random() * candidatePool.length);
-    const correct = candidatePool[correctIdx];
+    const pool = getDifficultyPool(diff);
+    const result = selectAdaptiveQuestion({
+      allGenres: ALL_GENRES,
+      difficultyPool: pool,
+      difficulty: diff,
+      currentRound: totalAnswered,
+      sm2Memory,
+      recentTestedIds: recentTestedRef.current,
+    });
 
     // Push into anti-repeat queue and keep max 10
-    recentTestedRef.current = [correct.id, ...recentTestedRef.current.filter((id) => id !== correct.id)].slice(0, 10);
+    recentTestedRef.current = [
+      result.correctGenre.id,
+      ...recentTestedRef.current.filter((id) => id !== result.correctGenre.id),
+    ].slice(0, 10);
     persistStats({ recentTested: recentTestedRef.current });
 
-    // Pick 3 distractors from candidate pool or full pool
-    const distractors: Genre[] = [];
-    const poolWithoutCorrect = pool.filter((g) => g.id !== correct.id);
-
-    // Prefer similar BPM or category for realistic distractors
-    const similar = poolWithoutCorrect.filter(
-      (g) => g.category === correct.category || Math.abs(g.default_bpm - correct.default_bpm) <= 18
-    );
-    const distractorPool = similar.length >= 3 ? similar : poolWithoutCorrect;
-
-    const shuffled = [...distractorPool].sort(() => Math.random() - 0.5);
-    distractors.push(...shuffled.slice(0, 3));
-
-    const options = [correct, ...distractors].sort(() => Math.random() - 0.5);
-
     return {
-      correctGenre: correct,
-      options,
+      correctGenre: result.correctGenre,
+      options: result.options,
+      dueForReview: result.dueForReview,
+      confusionTarget: result.confusionTarget,
     };
   };
 
@@ -179,6 +213,8 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     setQuestion(q);
     setSelectedAnswerId(null);
     setIsAnswered(false);
+    setLastEloDelta(null);
+    setConfusionNotification(null);
 
     // Prepare audio engine
     const engine = new AudioEngine({
@@ -236,6 +272,29 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
     setTotalAnswered(nextTotal);
 
+    // Calculate Elo delta with placement and streak multiplier
+    const eloOutcome = calculateEloDelta({
+      playerElo: elo,
+      difficulty,
+      isCorrect,
+      totalAnswered,
+      streak,
+    });
+    const nextElo = eloOutcome.newElo;
+    setElo(nextElo);
+    setLastEloDelta({ delta: eloOutcome.delta, bonus: eloOutcome.bonus });
+
+    // Update SuperMemo-2 spaced repetition memory & confusion matrix
+    const nextSm2 = updateSM2Memory({
+      memory: sm2Memory,
+      targetGenreId: question.correctGenre.id,
+      isCorrect,
+      currentRound: nextTotal,
+      pickedGenreId: genre.id,
+      difficulty,
+    });
+    setSm2Memory(nextSm2);
+
     if (isCorrect) {
       setCorrectCount(nextCorrect);
       const pointGain = difficulty === "easy" ? 100 : difficulty === "medium" ? 200 : 350;
@@ -245,34 +304,51 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
       setScore(newScore);
       setStreak(newStreak);
       setBestStreak(newBestStreak);
+      setConfusionNotification(null);
+
       persistStats({
         score: newScore,
         streak: newStreak,
         bestStreak: newBestStreak,
         totalAnswered: nextTotal,
         correctCount: nextCorrect,
+        elo: nextElo,
+        sm2Memory: nextSm2,
       });
+
+      const eloGainMsg = eloOutcome.bonus > 0
+        ? `+${eloOutcome.delta} Elo (${t("challenge_streak_bonus")} +${eloOutcome.bonus})`
+        : `+${eloOutcome.delta} Elo`;
       announcer.announce(
-        isZh ? `回答正确！+${pointGain}分` : `Correct! +${pointGain} points`,
+        isZh ? `回答正确！+${pointGain}分，${eloGainMsg}` : `Correct! +${pointGain} points, ${eloGainMsg}`,
         "assertive"
       );
     } else {
       setStreak(0);
+      const timesConfused = nextSm2[question.correctGenre.id]?.confusedWith[genre.id] || 1;
+      const confusionMsg = isZh
+        ? `已记录与「${genre.name}」的第 ${timesConfused} 次混淆，已根据艾宾浩斯遗忘曲线排入后续间隔复习池。`
+        : `Recorded confusion with "${genre.name}" (${timesConfused}x). Prioritized for SuperMemo-2 spaced repetition.`;
+      setConfusionNotification(confusionMsg);
+
       persistStats({
         streak: 0,
         totalAnswered: nextTotal,
         correctCount: nextCorrect,
+        elo: nextElo,
+        sm2Memory: nextSm2,
       });
+
       announcer.announce(
         isZh
-          ? `回答错误。正确答案是：${question.correctGenre.name}`
-          : `Incorrect. The correct answer was: ${question.correctGenre.name}`,
+          ? `回答错误。正确答案是：${question.correctGenre.name}，${eloOutcome.delta} Elo`
+          : `Incorrect. The correct answer was: ${question.correctGenre.name}, ${eloOutcome.delta} Elo`,
         "assertive"
       );
     }
   };
 
-  const handleDifficultyChange = (newDiff: Difficulty) => {
+  const handleDifficultyChange = (newDiff: ChallengeDifficulty) => {
     if (newDiff === difficulty) return;
     setDifficulty(newDiff);
   };
@@ -283,126 +359,171 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     setBestStreak(0);
     setTotalAnswered(0);
     setCorrectCount(0);
+    setElo(DEFAULT_INITIAL_ELO);
+    setSm2Memory({});
+    setLastEloDelta(null);
+    setConfusionNotification(null);
     recentTestedRef.current = [];
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY_V2);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {}
   };
 
   const accuracy = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
-
-  // Normalized rank threshold based on score, difficulty multiplier & accuracy (P3-17)
-  const rankTitle = () => {
-    const multiplier = difficulty === "hard" ? 1.5 : difficulty === "medium" ? 1.2 : 1.0;
-    const normalizedScore = score * multiplier;
-
-    if (normalizedScore >= 1200 && accuracy >= 70) return isZh ? "声学传奇 (Sonic Sorcerer)" : "Sonic Sorcerer";
-    if (normalizedScore >= 700 && accuracy >= 60) return isZh ? "律动大师 (Groove Maestro)" : "Groove Maestro";
-    if (normalizedScore >= 300 || streak >= 3) return isZh ? "节拍探索家 (Beat Explorer)" : "Beat Explorer";
-    return isZh ? "节奏学徒 (Rhythm Novice)" : "Rhythm Novice";
-  };
+  const tierInfo = getRankTier(elo);
 
   if (!question) return null;
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8 space-y-6">
       {/* Header & Stats Banner */}
-      <div className="bg-panel border border-line rounded-3xl p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-accent text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Blind Ear Training Arena</span>
+      <div className="bg-panel border border-line rounded-3xl p-6 shadow-2xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-accent text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Blind Ear Training Arena</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-text mt-1">
+              {t("challenge_title")}
+            </h2>
+            <p className="text-xs text-text-sub mt-0.5">
+              {t("challenge_subtitle")}
+            </p>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-text mt-1">
-            {t("challenge_title")}
-          </h2>
-          <p className="text-xs text-text-sub mt-0.5">
-            {t("challenge_subtitle")}
-          </p>
+
+          {/* Certificate Action Button */}
+          <button
+            onClick={() => setIsCertificateOpen(true)}
+            className="inline-flex items-center space-x-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all shadow-lg shadow-amber-500/10"
+          >
+            <Award className="w-4 h-4 text-amber-400" />
+            <span>{t("challenge_certificate_btn")}</span>
+          </button>
         </div>
 
-        {/* Stats Pill Box */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-panel2 p-2 rounded-2xl border border-line">
-          {/* Score */}
-          <div className="px-2.5 py-1 text-center">
-            <span className="text-[10px] text-text-dim font-bold uppercase block">
-              {t("score")}
-            </span>
-            <span className="text-sm sm:text-base font-extrabold text-accent font-mono">
-              {score}
-            </span>
-          </div>
-
-          <div className="w-px h-7 bg-neutral-800" />
-
-          {/* Streak */}
-          <div className="px-2.5 py-1 text-center flex flex-col items-center">
-            <div className="flex items-center space-x-1 text-[10px] text-amber-500 font-bold uppercase">
-              <Flame className="w-3 h-3 fill-current" />
-              <span>{t("streak")}</span>
+        {/* Stats Pill Box & Elo Ladder Status */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-panel2 p-3 rounded-2xl border border-line">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Elo Rating */}
+            <div className="px-2.5 py-1 text-center">
+              <span className="text-[10px] text-text-dim font-bold uppercase block">
+                {t("challenge_elo")}
+              </span>
+              <span className="text-sm sm:text-base font-extrabold text-amber-400 font-mono">
+                {elo}
+              </span>
             </div>
-            <span className="text-sm sm:text-base font-extrabold text-amber-400 font-mono">
-              {streak}
-            </span>
+
+            <div className="w-px h-7 bg-neutral-800" />
+
+            {/* Rank Tier Badge */}
+            <div className="px-2.5 py-1 text-center">
+              <span className="text-[10px] text-text-dim font-bold uppercase block">
+                {t("challenge_rank_tier")}
+              </span>
+              <span
+                className="text-xs sm:text-sm font-black flex items-center space-x-1"
+                style={{ color: tierInfo.tier.color }}
+              >
+                <span>{tierInfo.tier.icon}</span>
+                <span>{isZh ? tierInfo.tier.nameZh : tierInfo.tier.nameEn}</span>
+              </span>
+            </div>
+
+            <div className="w-px h-7 bg-neutral-800" />
+
+            {/* Score */}
+            <div className="px-2.5 py-1 text-center">
+              <span className="text-[10px] text-text-dim font-bold uppercase block">
+                {t("score")}
+              </span>
+              <span className="text-sm sm:text-base font-extrabold text-accent font-mono">
+                {score}
+              </span>
+            </div>
+
+            <div className="w-px h-7 bg-neutral-800" />
+
+            {/* Streak */}
+            <div className="px-2.5 py-1 text-center flex flex-col items-center">
+              <div className="flex items-center space-x-1 text-[10px] text-amber-500 font-bold uppercase">
+                <Flame className="w-3 h-3 fill-current" />
+                <span>{t("streak")}</span>
+              </div>
+              <span className="text-sm sm:text-base font-extrabold text-amber-400 font-mono">
+                {streak}
+              </span>
+            </div>
+
+            <div className="w-px h-7 bg-neutral-800" />
+
+            {/* Accuracy */}
+            <div className="px-2.5 py-1 text-center">
+              <span className="text-[10px] text-text-dim font-bold uppercase block">
+                {t("accuracy")}
+              </span>
+              <span className="text-sm sm:text-base font-extrabold text-cyan-400 font-mono">
+                {accuracy}%
+              </span>
+            </div>
+
+            <div className="w-px h-7 bg-neutral-800 hidden sm:block" />
+
+            {/* Best Streak */}
+            <div className="px-2.5 py-1 text-center hidden sm:block">
+              <span className="text-[10px] text-text-dim font-bold uppercase block">
+                {t("best_streak")}
+              </span>
+              <span className="text-sm sm:text-base font-extrabold text-emerald-400 font-mono">
+                {bestStreak}
+              </span>
+            </div>
           </div>
 
-          <div className="w-px h-7 bg-neutral-800" />
+          {/* Tier Progress & Reset */}
+          <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-line">
+            {tierInfo.nextTier ? (
+              <div className="flex items-center space-x-2 text-[11px] text-text-sub">
+                <div className="w-24 sm:w-28 bg-neutral-800 rounded-full h-2 overflow-hidden border border-neutral-700">
+                  <div
+                    className="bg-gradient-to-r from-amber-400 to-indigo-500 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${tierInfo.progressPercent}%` }}
+                  />
+                </div>
+                <span className="font-mono text-text-dim">
+                  {tierInfo.progressPercent}% {isZh ? `距${tierInfo.nextTier.nameZh}` : `to ${tierInfo.nextTier.nameEn}`}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[11px] text-amber-400 font-bold">
+                {t("challenge_max_tier")}
+              </span>
+            )}
 
-          {/* Accuracy (P3-17) */}
-          <div className="px-2.5 py-1 text-center">
-            <span className="text-[10px] text-text-dim font-bold uppercase block">
-              {t("accuracy")}
-            </span>
-            <span className="text-sm sm:text-base font-extrabold text-cyan-400 font-mono">
-              {accuracy}%
-            </span>
+            {/* Reset Stats Action */}
+            <button
+              onClick={handleResetStats}
+              className="p-2 rounded-xl bg-[#13141a] hover:bg-neutral-800 text-text-dim hover:text-rose-400 border border-line transition-colors"
+              title={isZh ? "重置所有成绩数据" : "Reset stats"}
+              aria-label="Reset challenge stats"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
           </div>
-
-          <div className="w-px h-7 bg-neutral-800" />
-
-          {/* Best Streak */}
-          <div className="px-2.5 py-1 text-center hidden sm:block">
-            <span className="text-[10px] text-text-dim font-bold uppercase block">
-              {t("best_streak")}
-            </span>
-            <span className="text-sm sm:text-base font-extrabold text-emerald-400 font-mono">
-              {bestStreak}
-            </span>
-          </div>
-
-          <div className="w-px h-7 bg-neutral-800 hidden sm:block" />
-
-          {/* Rank */}
-          <div className="px-2.5 py-1 text-center hidden md:block">
-            <span className="text-[10px] text-text-dim font-bold uppercase block">
-              Rank
-            </span>
-            <span className="text-xs font-bold text-indigo-300">
-              {rankTitle().split(" ")[0]}
-            </span>
-          </div>
-
-          {/* Reset Stats Action */}
-          <button
-            onClick={handleResetStats}
-            className="p-2 rounded-xl bg-[#13141a] hover:bg-neutral-800 text-text-dim hover:text-rose-400 border border-line transition-colors ml-1"
-            title={isZh ? "重置所有成绩数据" : "Reset stats"}
-            aria-label="Reset challenge stats"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
       {/* Difficulty Tabs */}
       <div className="flex items-center justify-center space-x-2">
-        {(["easy", "medium", "hard"] as Difficulty[]).map((d) => (
+        {(["easy", "medium", "hard"] as ChallengeDifficulty[]).map((d) => (
           <button
             key={d}
             onClick={() => handleDifficultyChange(d)}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
               difficulty === d
-                ? "bg-accent text-[#0a0b0d] text-text shadow-lg shadow-indigo-600/30"
+                ? "bg-accent text-[#0a0b0d] shadow-lg shadow-indigo-600/30"
                 : "bg-panel text-text-sub hover:text-text border border-line"
             }`}
           >
@@ -419,7 +540,15 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
         )}
 
         <div className="relative z-10 space-y-3">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 mx-auto flex items-center justify-center text-text shadow-xl shadow-indigo-500/30">
+          {/* Spaced Repetition Due Badge */}
+          {question.dueForReview && (
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold animate-pulse">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{t("challenge_sm2_review")}</span>
+            </div>
+          )}
+
+          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 mx-auto flex items-center justify-center text-white shadow-xl shadow-indigo-500/30">
             <Volume2 className={`w-8 h-8 ${isPlaying ? "animate-bounce" : ""}`} />
           </div>
 
@@ -449,7 +578,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                   ? "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-indigo-500/30 scale-105"
                   : isPlaying
                   ? "bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/30"
-                  : "bg-emerald-600 hover:bg-emerald-500 text-text shadow-emerald-600/30"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
               }`}
             >
               {!hasStarted ? <Play className="w-4 h-4 fill-current" /> : isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
@@ -466,7 +595,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           const isCorrectAnswer = opt.id === question.correctGenre.id;
 
           let cardStyle = "bg-panel/90 border-line hover:border-indigo-500/80 hover:bg-neutral-850 text-text";
-          let badge = String.fromCharCode(65 + idx); // A, B, C, D
+          const badge = String.fromCharCode(65 + idx); // A, B, C, D
 
           if (isAnswered) {
             if (isCorrectAnswer) {
@@ -487,7 +616,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             >
               <div className="space-y-1 min-w-0 pr-3">
                 <div className="flex items-center space-x-2">
-                  <span className="w-6 h-6 rounded-lg bg-neutral-800 group-hover:bg-accent text-[#0a0b0d] group-hover:text-text flex items-center justify-center font-bold text-xs text-text-sub shrink-0">
+                  <span className="w-6 h-6 rounded-lg bg-neutral-800 group-hover:bg-accent text-text group-hover:text-black flex items-center justify-center font-bold text-xs shrink-0">
                     {badge}
                   </span>
                   <span className="font-bold text-base sm:text-lg tracking-wide truncate">
@@ -523,23 +652,54 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
       {isAnswered && (
         <div className="bg-panel border border-line rounded-3xl p-6 shadow-2xl space-y-4 animate-slide-up">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Zap className="w-5 h-5 text-accent" />
-              <h3 className="font-extrabold text-text text-base sm:text-lg">
-                {selectedAnswerId === question.correctGenre.id
-                  ? t("challenge_correct")
-                  : t("challenge_incorrect", { genre: question.correctGenre.name })}
-              </h3>
+              <div>
+                <h3 className="font-extrabold text-text text-base sm:text-lg">
+                  {selectedAnswerId === question.correctGenre.id
+                    ? t("challenge_correct")
+                    : t("challenge_incorrect", { genre: question.correctGenre.name })}
+                </h3>
+                {lastEloDelta && (
+                  <div className="flex items-center space-x-2 mt-0.5">
+                    <span
+                      className={`text-xs font-mono font-black ${
+                        lastEloDelta.delta > 0 ? "text-emerald-400" : "text-rose-400"
+                      }`}
+                    >
+                      {lastEloDelta.delta > 0 ? `+${lastEloDelta.delta}` : lastEloDelta.delta} ELO
+                    </span>
+                    {lastEloDelta.bonus > 0 && (
+                      <span className="text-[10px] text-amber-400 font-bold px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                        {t("challenge_streak_bonus")} +{lastEloDelta.bonus}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
               onClick={() => startNewQuestion(difficulty, true)}
-              className="flex items-center space-x-1.5 px-5 py-2.5 rounded-2xl bg-accent text-[#0a0b0d] hover:bg-indigo-500 text-text font-bold text-xs shadow-xl shadow-indigo-600/30 transition-transform hover:scale-105"
+              className="flex items-center space-x-1.5 px-5 py-2.5 rounded-2xl bg-accent text-[#0a0b0d] hover:bg-indigo-500 text-white font-bold text-xs shadow-xl shadow-indigo-600/30 transition-transform hover:scale-105"
             >
               <span>{t("next_question")}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
+
+          {/* SM-2 Confusion Memory Notification Callout */}
+          {confusionNotification && (
+            <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-start space-x-2.5 text-xs text-indigo-200 leading-relaxed">
+              <Sparkles className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block text-accent mb-0.5">
+                  {isZh ? "艾宾浩斯智能间隔记忆已收录" : "SuperMemo-2 Memory Tracking Active"}
+                </span>
+                <span>{confusionNotification}</span>
+              </div>
+            </div>
+          )}
 
           <p className="text-xs sm:text-sm text-[#b9b7b0] leading-relaxed">
             {isZh ? question.correctGenre.cultural_context.zh : question.correctGenre.cultural_context.en}
@@ -577,7 +737,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           <div className="flex items-center justify-end space-x-2 pt-2">
             <button
               onClick={() => onOpenStudio(question.correctGenre)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text hover:text-text text-xs font-semibold transition-colors"
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text text-xs font-semibold transition-colors"
             >
               <Sliders className="w-3.5 h-3.5 text-accent" />
               <span>{t("open_in_studio")}</span>
@@ -585,7 +745,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
             <button
               onClick={() => onSelectGenre(question.correctGenre)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text hover:text-text text-xs font-semibold transition-colors"
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text text-xs font-semibold transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5 text-accent" />
               <span>{t("view_detail")}</span>
@@ -593,6 +753,22 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Certificate Modal */}
+      <ChallengeCertificateModal
+        isOpen={isCertificateOpen}
+        onClose={() => setIsCertificateOpen(false)}
+        elo={elo}
+        tierInfo={tierInfo}
+        stats={{
+          totalAnswered,
+          correctCount,
+          bestStreak,
+          streak,
+        }}
+        sm2Memory={sm2Memory}
+        isZh={isZh}
+      />
     </div>
   );
 };

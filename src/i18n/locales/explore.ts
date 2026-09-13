@@ -197,6 +197,22 @@ export const exploreMessages = {
   next_question: { en: "Next Question", zh: "下一题" },
   restart_quiz: { en: "Play Again", zh: "再玩一次" },
   quiz_explanation: { en: "Analysis", zh: "曲风深度解析" },
+  challenge_elo: { en: "Elo Rating", zh: "天梯积分" },
+  challenge_rank_tier: { en: "Rank Tier", zh: "竞技段位" },
+  challenge_progress_to_next: { en: "to next rank", zh: "距下个段位" },
+  challenge_max_tier: { en: "Apex Rank", zh: "已达最高巅峰段位" },
+  challenge_sm2_review: { en: "Spaced Repetition Review", zh: "艾宾浩斯遗忘曲线强化" },
+  challenge_confusion_recorded: { 
+    en: "Recorded confusion with {distractor} ({count}x). Prioritized for SuperMemo-2 spaced repetition.", 
+    zh: "已记录与「{distractor}」的第 {count} 次混淆，已根据艾宾浩斯遗忘曲线排入后续间隔复习池。" 
+  },
+  challenge_certificate_btn: { en: "Rank Certificate", zh: "生成听力大师段位证书" },
+  challenge_certificate_title: { en: "GROOVE ACOUSTIC ASSESSMENT CERTIFICATE", zh: "GROOVE 听力大师声学段位证书" },
+  challenge_certificate_subtitle: { en: "Official Certification of Ear Training & Genre Acumen", zh: "音乐风格盲听辨析与声学敏锐度官方认证" },
+  challenge_certificate_copy: { en: "Copy Certificate Text", zh: "复制段位证书战报" },
+  challenge_certificate_copied: { en: "Copied to clipboard!", zh: "已复制到剪贴板！" },
+  challenge_certificate_close: { en: "Close Certificate", zh: "关闭" },
+  challenge_streak_bonus: { en: "Streak Bonus", zh: "连胜加成" },
 
   // Compare extra
   compare_title: { en: "Genre Comparison", zh: "曲风多维并排对比" },

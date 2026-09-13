@@ -47,8 +47,8 @@ flowchart TD
 |---|---|---|---|---|
 | **P6-01** | **律动解构：世界节奏沉浸工作坊（Rhythm Masterclasses）** | 3.5d | 新增「律动大师课」互动专区：<br>1. **复节奏（Polyrhythm）**：3 against 4、5 against 4 环形声光对撞机。<br>2. **Clave 节奏演化树**：从西非 Bell Pattern 到古巴 Son Clave（3-2 / 2-3）、Rumba Clave 与 Bossa Nova 的动态脉络与交互式解构。<br>3. **切分与摇摆动力学**：Afrobeat 与 Funk 的下拍避让（Downbeat Omission）实测体验。 | 提供 5 组深度互动课件，包含实时对拍打卡、节拍拆解与一键载入 Studio。 |
 | **P6-02** | **调式锁定网格（Scale-Locked Sequencer Matrix）** | 2.0d | 在音序器音高编辑与琴键模式中引入「调式锁定（Scale Lock）」：<br>支持小调五声、自然大调、自然小调、Dorian、Phrygian Dominant、Blues、平调子（Hirajoshi）等。<br>网格纵轴音高仅渲染调内音，消除新手编曲误触走音。 | 切换调式时，音高选择器与旋律网格智能过滤非法音符，一键将当前乐句对齐至最近调内音（Quantize Pitch）。 |
-| **P6-03** | **智能旋律琶音器（Smart Arpeggiator）与扫弦引擎** | 2.5d | 和弦工坊与工作台联动：<br>1. 支持对和弦走向一键应用琶音模式（Up, Down, Up-Down, Random, Converge）。<br>2. 拟真扫弦引擎（Strumming Speed & Direction 控制）。<br>3. 自动将和弦转化为 16 步合成器旋律轨并载入工作台。 | 琶音与扫弦能精准同步全局时钟，支持一键烘焙到音序器。 |
-| **P6-04** | **听力大师 Elo 竞技天梯与艾宾浩斯记忆算法** | 2.5d | 升级盲听挑战：<br>1. 引入类似国际象棋的 **Elo Rating（听力竞技积分体系）**。<br>2. 接入 **SuperMemo-2 (SM-2) 间隔重复算法**，系统自动记录用户易混淆的近亲曲风（如 Deep House vs Tech House、Trap vs Drill），在后续轮次智能优先强化。<br>3. 生成高颜值双语段位证书（可保存长图或分享）。 | 错题重现率符合遗忘曲线，听力积分与段位计算精准持久化。 |
+| **P6-03** | **智能旋律琶音器（Smart Arpeggiator）与扫弦引擎** | 2.5d | 和弦工坊与工作台联动：<br>1. 支持对和弦走向一键应用琶音模式（Up, Down, Up-Down, Random, Converge）。<br>2. 拟真扫弦引擎（Strumming Speed & Direction 控制）。<br>3. 自动将和弦转化为 16 步合成器旋律轨并载入工作台。 | 琶音与扫弦能精准同步全局时钟，支持一键烘焙到音序器。（**v1.14.6 已完成**） |
+| **P6-04** | **听力大师 Elo 竞技天梯与艾宾浩斯记忆算法** | 2.5d | 升级盲听挑战：<br>1. 引入类似国际象棋的 **Elo Rating（听力竞技积分体系）**。<br>2. 接入 **SuperMemo-2 (SM-2) 间隔重复算法**，系统自动记录用户易混淆的近亲曲风（如 Deep House vs Tech House、Trap vs Drill），在后续轮次智能优先强化。<br>3. 生成高颜值双语段位证书（可保存长图或分享）。 | 错题重现率符合遗忘曲线，听力积分与段位计算精准持久化。（**v1.14.7 已完成**） |
 | **P6-05** | **全景声谱分析仪与李萨如图示波器（Realtime FFT & Spectrogram）** | 2.0d | 在专业控制台提供 60fps 实时音频可视化分析：<br>1. **Waterfall FFT Spectrogram**：高精瀑布流频率谱图（20Hz - 20kHz）。<br>2. **Lissajous X-Y 示波器**：检测立体声相位宽广度与单声道兼容性。 | 动画采用 WebGL 或高性能 Canvas 渲染，不造成音序器走带丢帧。 |
 
 ---

@@ -1,7 +1,34 @@
 {
-  "version": "1.14.6",
+  "version": "1.14.7",
   "releaseDate": "2026-09-13",
   "changelog": [
+    {
+      "version": "1.14.7",
+      "date": "2026-09-13",
+      "category": "feature",
+      "title": {
+        "zh": "v1.14.7 听力大师 Elo 竞技天梯与艾宾浩斯间隔记忆（P6-04）、混淆矩阵智能复习与全息段位证书",
+        "en": "v1.14.7 Ear Training Elo Competitive Ladder, SuperMemo-2 Spaced Repetition (P6-04) & Holographic Rank Certificate"
+      },
+      "highlights": [
+        {
+          "zh": "Elo Rating 竞技天梯体系（P6-04）：引入国际象棋级 Elo 竞技积分系统，动态匹配题目难度对应分值（1100~1650 Elo 对手强度）与动态 K-Factor 权重（前 10 局定位赛 K=32，高段位 K=16），支持 3 局以上连胜乘数激励与即时浮动分值反馈。划分青铜聆听者（800~1199）、白银鉴赏家（1200~1399）、黄金辨音手（1400~1599）、铂金声学士（1600~1799）、钻石律动宗师（1800~1999）与传奇怪物大师（2000+）六大段位与实时晋级进度条",
+          "en": "Elo Rating Competitive Ladder (P6-04): chess-grade Elo competitive rating engine dynamically calibrated against opponent difficulty baselines (1100~1650 Elo) and adaptive K-Factors (K=32 placement, K=16 elite) with streak multipliers and real-time floating delta feedback. Features 6 competitive tiers (Bronze, Silver, Gold, Platinum, Diamond, Legendary Master) with live advancement progress bars"
+        },
+        {
+          "zh": "SuperMemo-2 (SM-2) 艾宾浩斯间隔记忆算法：将认知科学与声学听辨深度融合，追踪每位用户的流派记忆间隔（Interval）、轻松度因子（EF）与连续答对次数。根据遗忘曲线自动在最佳认知拐点安排间隔复习（Spaced Review Due），攻克听力盲区",
+          "en": "SuperMemo-2 (SM-2) Spaced Repetition Engine: cognitive science meets blind ear training, tracking review intervals, Easiness Factors (EF), and consecutive correct streaks to intelligently schedule review questions right at memory decay thresholds"
+        },
+        {
+          "zh": "智能亲缘混淆矩阵与自适应干扰项生成：系统自动记录用户历史上容易混淆的近亲流派（如 Liquid DnB 误判为 Neurofunk、Deep House 误判为 Tech House）。在生成题目时，智能从候选池中优先提取历史上多次混淆的干扰项，并在答错时提供专属声学混淆追踪提示",
+          "en": "Intelligent Confusion Matrix & Adaptive Distractor Generation: tracks historically confused genre pairs (e.g. Liquid DnB vs Neurofunk) and prioritizes confused siblings when generating multiple-choice options, with real-time feedback detailing spaced repetition scheduling"
+        },
+        {
+          "zh": "全息高颜值段位证书（Holographic Rank Certificate）：支持一键生成极具仪式感的官方声学段位证书。包含专属段位奖章、当前天梯 Elo 积分、命中率、最佳连胜纪录、攻克流派统计、官方防伪数字指纹哈希（GRV-CERT-*）与评定日期，支持一键复制战报分享",
+          "en": "Holographic Ear Training Rank Certificate: one-click generation of official acoustic assessment certificates featuring glowing rank badges, Elo rating, accuracy, best streak, mastered genres, cryptographic verification hash (GRV-CERT-*), and one-click shareable text formatting"
+        }
+      ]
+    },
     {
       "version": "1.14.6",
       "date": "2026-09-13",
