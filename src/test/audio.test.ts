@@ -513,6 +513,35 @@ describe("Audio & Sequencer Utilities", () => {
       expect(() => chordEngine.stop()).not.toThrow();
       expect(() => chordEngine.destroy()).not.toThrow();
     });
+
+    it("ChordAudioEngine configures and plays arpeggiator and strumming (P6-03)", () => {
+      const chordEngine = new ChordAudioEngine();
+      chordEngine.setArpConfig({ pattern: "up_down", rate: "1/16", octaves: 2, gate: 0.7 });
+      expect(chordEngine.getArpConfig()).toEqual({
+        pattern: "up_down",
+        rate: "1/16",
+        octaves: 2,
+        gate: 0.7,
+      });
+
+      chordEngine.setStrumConfig({ direction: "alternate", speedMs: 35 });
+      expect(chordEngine.getStrumConfig()).toEqual({
+        direction: "alternate",
+        speedMs: 35,
+      });
+
+      // Audition chord in strum mode
+      chordEngine.setStyle("strum");
+      const strumNotes = chordEngine.triggerChord({ root: "C", quality: "maj", duration: 4 }, "guitar", "strum");
+      expect(strumNotes.length).toBeGreaterThan(0);
+
+      // Audition chord in arpeggio mode
+      chordEngine.setStyle("arpeggio");
+      const arpNotes = chordEngine.triggerChord({ root: "A", quality: "min", duration: 4 }, "piano", "arpeggio");
+      expect(arpNotes.length).toBeGreaterThan(0);
+
+      chordEngine.destroy();
+    });
   });
 
   describe("Offline & PCM Timing/Clipping Regression (P3-11)", () => {

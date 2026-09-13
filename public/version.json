@@ -1,7 +1,34 @@
 {
-  "version": "1.14.5",
+  "version": "1.14.6",
   "releaseDate": "2026-09-13",
   "changelog": [
+    {
+      "version": "1.14.6",
+      "date": "2026-09-13",
+      "category": "feature",
+      "title": {
+        "zh": "v1.14.6 智能琶音器与扫弦微动态引擎（P6-03）、一键旋律烘焙与星系星云暖色再平衡",
+        "en": "v1.14.6 Smart Arpeggiator & Strumming Engine (P6-03), One-Click Melody Baking & Galaxy Nebula Warmth Recalibration"
+      },
+      "highlights": [
+        {
+          "zh": "智能琶音器引擎（P6-03）：和弦工坊全面搭载 5 大经典琶音模式——上行（Up ↗）、下行（Down ↘）、折返（Up-Down ⥱，智能消除顶点与底点停滞）、收敛（Converge ⇥⇤，由外至内八度收敛）与受控随机（Random ⚄），提供流畅奔涌的电子舞曲与合成波琶音脉冲",
+          "en": "Smart Arpeggiator Engine (P6-03): Chord Workshop now features 5 classic arpeggiation patterns—Up ↗, Down ↘, Up-Down ⥱ (without peak/valley stutter), Converge ⇥⇤ (outside-in octave convergence), and musical Random ⚄ for flowing dance synth lines"
+        },
+        {
+          "zh": "扫弦微动态物理模拟与拨片方向：深度仿真原声民谣吉他与电吉他的弹拨微延迟，支持下扫（Downstroke ⬇）、上扫（Upstroke ⬆）与双向交替扫弦（Alternate ⇅），并配备 15ms~75ms 拨片扫弦间隙精细滑条与首弦物理重音衰减",
+          "en": "Strumming Micro-Dynamics & Pick Modeling: authentic physical simulation of acoustic and electric guitar pick sweeps, supporting Downstroke ⬇, Upstroke ⬆, and Alternate ⇅ directions with 15ms~75ms customizable pick delay and dynamic string decay"
+        },
+        {
+          "zh": "一键烘焙至律动工作台（Bake Arpeggio to Studio）：在琶音模式下，点击「一键烘焙至 Lead 轨」或「烘焙至 Chords 轨」，即可将当前和弦走向与所选琶音模式、八度跨度（1-3 Octaves）、门限时值（顿音/自然/连音）瞬间转换为 16 步旋律事件，自动注入律动工作台对应音轨并即时弹奏",
+          "en": "One-Click Bake Arpeggio to Studio: with one click, bake the progression with active arpeggio pattern, octaves (1-3), rate (1/8, 1/16, 1/8T, 1/16T), and gate directly into the Studio's Lead or Chords track as a playable 16-step sequence"
+        },
+        {
+          "zh": "3D 星系星云暖色深度再平衡：彻底修复子曲风星团着色器将环境气体粒子误判为中心星核导致星云变暗的问题。精准限定中心柔化判定（aNode < 14.5 && aStar > 0.5），使各大流派气溶胶与星轨长丝恢复饱和明艳的宇宙星云光晕（House 暖品红、Techno 暖金等），星体璀璨，文字清晰易读，实现无过曝无死暗的黄金视觉观感",
+          "en": "3D Galaxy Nebula Warmth & Radiance Recalibration: resolved shader classification bug where ambient cluster dust was mistakenly crushed. Restored vivid, saturated cosmic halos and radiant filaments (warm magenta for House, gold for Techno) with crisp typography and zero glare blowout"
+        }
+      ]
+    },
     {
       "version": "1.14.5",
       "date": "2026-09-13",

@@ -24,6 +24,7 @@ import { clearSavedProject } from "../features/sequencer/projectStorage";
 import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
+import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { parseScaleString, quantizePitchToScale } from "../utils/scaleTheory";
 import { announcer } from "../ui";
 import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
@@ -108,6 +109,8 @@ interface StudioViewProps {
   onAudioEngineReady?: (engine: AudioEngine) => (() => void) | void;
   initialChords?: ChordDefinition[] | null;
   onClearInitialChords?: () => void;
+  initialArpeggio?: { baked: BakedArpeggioResult; label?: string } | null;
+  onClearInitialArpeggio?: () => void;
 }
 
 export const StudioView: React.FC<StudioViewProps> = ({
@@ -118,6 +121,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onAudioEngineReady,
   initialChords,
   onClearInitialChords,
+  initialArpeggio,
+  onClearInitialArpeggio,
 }) => {
   const { t, language, isZh } = useLanguage();
 
@@ -503,6 +508,31 @@ export const StudioView: React.FC<StudioViewProps> = ({
       onClearInitialChords();
     }
   }, [initialChords, isZh, onClearInitialChords, showToast, commit]);
+
+  // Handle arpeggios transferred from ChordProgressionsView (P6-03)
+  useEffect(() => {
+    if (!initialArpeggio || !initialArpeggio.baked) return;
+    commit({ type: "LOAD_ARPEGGIATED_SEQUENCE", baked: initialArpeggio.baked });
+    if (engineRef.current) {
+      engineRef.current.setPattern(patternRef.current);
+    }
+    const trackName =
+      initialArpeggio.baked.targetTrackId === "lead"
+        ? isZh
+          ? "Lead 领奏"
+          : "Lead"
+        : isZh
+        ? "Chords 和弦"
+        : "Chords";
+    showToast(
+      isZh
+        ? `已将 ${initialArpeggio.label || "琶音旋律"} 烘焙至 ${trackName} 轨 ✓`
+        : `Baked ${initialArpeggio.label || "arpeggio"} to ${trackName} track ✓`
+    );
+    if (onClearInitialArpeggio) {
+      onClearInitialArpeggio();
+    }
+  }, [initialArpeggio, isZh, onClearInitialArpeggio, showToast, commit]);
 
   // Sync external genre
   useEffect(() => {

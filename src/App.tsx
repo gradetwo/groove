@@ -8,6 +8,7 @@ import { loadGenre } from "./data/index/loader";
 import { AudioEngine } from "./audio/AudioEngine";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ChordDefinition } from "./utils/chordTheory";
+import { BakedArpeggioResult } from "./utils/arpeggiatorTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
 import { ShortcutsModal } from "./components/ShortcutsModal";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
@@ -72,6 +73,10 @@ const MainApp: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
+  const [initialArpeggio, setInitialArpeggio] = useState<{
+    baked: BakedArpeggioResult;
+    label?: string;
+  } | null>(null);
 
   const handleSelectTab = useCallback((tab: NavTab) => {
     navigate({ tab, genreId: tab === "detail" ? selectedGenre?.id : undefined });
@@ -183,6 +188,8 @@ const MainApp: React.FC = () => {
                     onAudioEngineReady={handleEngineReady}
                     initialChords={initialChords}
                     onClearInitialChords={() => setInitialChords(null)}
+                    initialArpeggio={initialArpeggio}
+                    onClearInitialArpeggio={() => setInitialArpeggio(null)}
                   />
                 ) : (
                   <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
@@ -206,6 +213,10 @@ const MainApp: React.FC = () => {
                 <ChordProgressionsView
                   onOpenStudioWithChords={(chords) => {
                     setInitialChords(chords);
+                    handleSelectTab("studio");
+                  }}
+                  onOpenStudioWithArpeggio={(baked, label) => {
+                    setInitialArpeggio({ baked, label });
                     handleSelectTab("studio");
                   }}
                 />

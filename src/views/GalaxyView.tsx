@@ -110,30 +110,31 @@ void main(){
 
   // Selected cluster highlighting: focused cluster remains crisp, rich in color and legible;
   // background clusters and ambient deep space are gently dimmed
+  // Selected cluster highlighting: focused cluster remains luminous, rich in color and legible;
+  // background clusters and ambient deep space are gently dimmed
   if (uSelectedCluster >= -0.5) {
     if (abs(aCluster - uSelectedCluster) < 0.5) {
-      if (aNode < 14.5) {
-        // Parent cluster core & nursery: soften significantly inside subgenre view
-        // so it acts as a gentle background anchor rather than a blinding flare
-        alpha *= 0.12;
-        sz *= 0.40;
+      if (aNode < 14.5 && aStar > 0.5) {
+        // Parent cluster core star: soften just enough so it does not wash out into an opaque white flare
+        alpha *= 0.40;
+        sz *= 0.65;
       } else if (aStar < 0.5) {
-        // Ambient dust within cluster: soft, ethereal, transparent nebula veil
-        alpha *= 0.28;
-        sz *= 0.70;
+        // Ambient nebular dust & connecting filaments within cluster: luminous, colorful, rich gas veil
+        alpha *= 0.88;
+        sz *= 1.05;
       } else {
-        // Subgenre stars & filaments: crisp, distinct, clear structure
-        alpha *= 0.85;
-        sz *= 0.85;
+        // Subgenre stars: crisp, bright, colorful gems
+        alpha *= 1.25;
+        sz *= 1.20;
       }
     } else if (aCluster >= -0.5) {
       // Outside clusters in the background: dim down to quiet cosmic dark
-      alpha *= 0.04;
-      sz *= 0.50;
+      alpha *= 0.08;
+      sz *= 0.55;
     } else {
       // Deep space ambient particles: gently dimmed
-      alpha *= 0.15;
-      sz *= 0.60;
+      alpha *= 0.25;
+      sz *= 0.70;
     }
   }
 
@@ -149,27 +150,28 @@ void main(){
   }
 
   // Node hover / selection focus:
-  // "只要当前选中或者hover的比其它的亮一些就好，不好现在这样一大片白色看不见结构和文字了"
+  // "只要当前选中或者hover的比其它的亮一些就好"
   float activeFocusNode = (uHoverNode >= -0.5) ? uHoverNode : uSelectedNode;
   if (activeFocusNode >= -0.5) {
     if (abs(aNode - activeFocusNode) < 0.5) {
       if (aStar > 0.5) {
-        // Currently hovered or selected subgenre star: brighter and distinctly glowing
-        alpha = min(1.0, alpha * 1.8 + 0.25);
-        sz *= 1.45;
-        col = mix(col, vec3(1.0, 0.97, 0.90), 0.30);
+        // Currently hovered or selected subgenre star: brilliant golden core and radiant aura
+        alpha = min(1.0, alpha * 2.0 + 0.30);
+        sz *= 1.50;
+        col = mix(col, vec3(1.0, 0.96, 0.88), 0.35);
       } else {
         // Connected incoming branch/filament: clear and luminous
-        alpha = min(1.0, alpha * 1.4 + 0.15);
-        sz *= 1.25;
+        alpha = min(1.0, alpha * 1.6 + 0.20);
+        sz *= 1.35;
       }
     } else if (aStar > 0.5 && aNode >= 14.5) {
-      // Other subgenre stars: slightly toned down so the active one stands out cleanly
-      alpha *= 0.50;
-      sz *= 0.85;
+      // Other subgenre stars: comfortably luminous so they remain clear and colorful
+      alpha *= 0.75;
+      sz *= 0.95;
     } else {
       // Ambient nebular background dust
-      alpha *= 0.55;
+      alpha *= 0.80;
+      sz *= 0.95;
     }
   }
 
@@ -1430,12 +1432,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             }
             const isFocused = focusedId === node.id;
             if (hasFocus) {
-              el.style.opacity = isFocused ? "1" : "0.50";
+              el.style.opacity = isFocused ? "1" : "0.65";
               el.style.transform = isFocused
                 ? `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(1.15)`
                 : `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(0.95)`;
             } else {
-              el.style.opacity = "0.85";
+              el.style.opacity = "0.92";
               el.style.transform = `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(1)`;
             }
             el.style.pointerEvents = "auto";

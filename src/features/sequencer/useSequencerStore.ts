@@ -1,6 +1,7 @@
 import { useReducer, useCallback, useRef, useEffect } from "react";
 import { Genre, SequencerPattern, SequencerTrack } from "../../types/genre";
 import { ChordDefinition, noteToMidi } from "../../utils/chordTheory";
+import { BakedArpeggioResult } from "../../utils/arpeggiatorTheory";
 import {
   debounceSaveProject,
   loadSavedProject,
@@ -78,6 +79,7 @@ export type SequencerAction =
   | { type: "SET_RESOLUTION"; resolution: "1/8" | "1/16" | "1/32" }
   | { type: "SET_STEP_COUNT"; count: number }
   | { type: "LOAD_CHORDS"; chords: ChordDefinition[] }
+  | { type: "LOAD_ARPEGGIATED_SEQUENCE"; baked: BakedArpeggioResult }
   | { type: "SWITCH_PATTERN_SLOT"; slot: "A" | "B" }
   | { type: "COPY_PATTERN_SLOT"; from: "A" | "B"; to: "A" | "B" }
   | { type: "TOGGLE_SONG_MODE" }
@@ -686,6 +688,43 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
             velocity[stepPos] = 105;
           }
         });
+
+        return { ...t, steps, pitch, velocity };
+      });
+
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "LOAD_ARPEGGIATED_SEQUENCE": {
+      const { baked } = action;
+      if (!baked || baked.steps.length === 0) return state;
+
+      const targetId = baked.targetTrackId || "lead";
+      let targetTrackIdx = state.pattern.tracks.findIndex(
+        (t) => t.track_id === targetId || t.name.toLowerCase().includes(targetId)
+      );
+      if (targetTrackIdx === -1) {
+        targetTrackIdx = state.pattern.tracks.findIndex(
+          (t) => t.track_id === "lead" || t.track_id === "chords" || t.name.toLowerCase().includes("synth")
+        );
+      }
+      if (targetTrackIdx === -1 && state.pattern.tracks.length > 0) {
+        targetTrackIdx = state.pattern.tracks.length - 1;
+      }
+      if (targetTrackIdx === -1) return state;
+
+      const tracks = updateTrack(state.pattern.tracks, targetTrackIdx, (t) => {
+        const total = t.steps.length;
+        const steps = Array(total).fill(0);
+        const pitch = Array(total).fill(null);
+        const velocity = Array(total).fill(100);
+
+        for (let i = 0; i < total; i++) {
+          const srcIdx = i % baked.steps.length;
+          steps[i] = baked.steps[srcIdx];
+          pitch[i] = baked.pitches[srcIdx];
+          velocity[i] = baked.velocities[srcIdx] ?? 105;
+        }
 
         return { ...t, steps, pitch, velocity };
       });

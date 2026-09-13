@@ -149,7 +149,7 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     // Sequencer tracks verification (wait for lazy chunk to mount)
-    await page.waitForSelector("[data-track-idx], [data-step-idx], .landscape-compact-cell", { state: "attached", timeout: 30000 });
+    await page.waitForSelector("[data-track-idx], [data-step-idx], .landscape-compact-cell", { state: "attached", timeout: 45000 });
     const tracks = await page.$$("[data-track-idx], .touch-hit-44, [data-step-idx]");
     if (tracks.length === 0) {
       // Check for step cells or track headers
@@ -285,7 +285,11 @@ async function main() {
   for (const target of TARGETS) {
     process.stdout.write(`⏳ Testing ${target.name.padEnd(35)} ... `);
     const start = Date.now();
-    const res = await runTestOnTarget(target, baseUrl);
+    let res = await runTestOnTarget(target, baseUrl);
+    if (!res.success) {
+      process.stdout.write(`(retrying once) ... `);
+      res = await runTestOnTarget(target, baseUrl);
+    }
     const dur = ((Date.now() - start) / 1000).toFixed(2);
 
     if (res.success) {

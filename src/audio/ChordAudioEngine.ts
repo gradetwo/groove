@@ -6,6 +6,15 @@
  */
 
 import { getChordMidiNotes, ChordDefinition, Inversion } from "../utils/chordTheory";
+import {
+  ArpConfig,
+  StrumConfig,
+  DEFAULT_ARP_CONFIG,
+  DEFAULT_STRUM_CONFIG,
+  expandVoicingAcrossOctaves,
+  buildArpeggioPattern,
+  calculateStrumTiming,
+} from "../utils/arpeggiatorTheory";
 
 export type InstrumentTimbre = "piano" | "guitar" | "power-guitar";
 export type PlayingStyle = "block" | "strum" | "arpeggio" | "ballad";
@@ -33,6 +42,8 @@ export class ChordAudioEngine {
   private style: PlayingStyle = "block";
   private bpm = 110;
   private isLooping = true;
+  private arpConfig: ArpConfig = { ...DEFAULT_ARP_CONFIG };
+  private strumConfig: StrumConfig = { ...DEFAULT_STRUM_CONFIG };
 
   // Distortion curve cache for power guitar
   private distortionCurve: Float32Array | null = null;
@@ -146,6 +157,22 @@ export class ChordAudioEngine {
 
   public setStyle(style: PlayingStyle): void {
     this.style = style;
+  }
+
+  public setArpConfig(config: Partial<ArpConfig>): void {
+    this.arpConfig = { ...this.arpConfig, ...config };
+  }
+
+  public getArpConfig(): ArpConfig {
+    return { ...this.arpConfig };
+  }
+
+  public setStrumConfig(config: Partial<StrumConfig>): void {
+    this.strumConfig = { ...this.strumConfig, ...config };
+  }
+
+  public getStrumConfig(): StrumConfig {
+    return { ...this.strumConfig };
   }
 
   public setBpm(bpm: number): void {
@@ -385,17 +412,17 @@ export class ChordAudioEngine {
     durationSec?: number,
     velocity = 0.85
   ): number[] {
-    if (!this.ctx) this.initAudioContext();
-    if (!this.ctx) return [];
-    if (this.ctx.state === "suspended") this.ctx.resume();
-
     const t = timbre || this.timbre;
     const s = style || this.style;
     const notes = getChordMidiNotes(chord.root, chord.quality, 4, chord.inversion || 0, t);
     const dur = durationSec || (60 / this.bpm) * (chord.duration ?? 4);
-    const now = this.ctx.currentTime;
 
-    this.playVoicing(notes, now, dur, t, s, velocity);
+    if (!this.ctx) this.initAudioContext();
+    if (this.ctx) {
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      const now = this.ctx.currentTime;
+      this.playVoicing(notes, now, dur, t, s, velocity);
+    }
     return notes;
   }
 
@@ -453,21 +480,43 @@ export class ChordAudioEngine {
         playNote(midi, time + microJitter, duration, velocity);
       });
     } else if (style === "strum") {
-      // Natural guitar downstroke strumming delay (18 - 25ms between consecutive strings)
-      const strumDelay = timbre === "guitar" ? 0.024 : 0.016;
-      notes.forEach((midi, i) => {
-        const noteTime = time + i * strumDelay;
-        const noteVel = velocity * (0.9 + (i / notes.length) * 0.2);
-        playNote(midi, noteTime, duration - (i * strumDelay), noteVel);
+      // Natural acoustic/electric strumming simulation with direction & speed
+      const timings = calculateStrumTiming(
+        notes,
+        this.strumConfig.direction,
+        this.strumConfig.speedMs,
+        this.currentChordIdx
+      );
+      timings.forEach((item) => {
+        const noteTime = time + item.delaySec;
+        const noteVel = velocity * item.velocityScale;
+        playNote(item.midi, noteTime, Math.max(0.2, duration - item.delaySec), noteVel);
       });
     } else if (style === "arpeggio") {
-      // Flowing 8th-note or 16th-note arpeggio steps
-      const stepDur = (60 / this.bpm) * 0.5; // Eighth note
-      const totalSteps = Math.max(4, Math.floor(duration / stepDur));
+      // Flowing arpeggio steps using smart pattern and octave expansion (P6-03)
+      const upperVoicing = notes.filter((n) => n >= 48);
+      const baseNotes = upperVoicing.length > 0 ? upperVoicing : notes;
+      const expanded = expandVoicingAcrossOctaves(baseNotes, this.arpConfig.octaves);
+      const arpSequence = buildArpeggioPattern(expanded, this.arpConfig.pattern);
+
+      let stepRatio = 0.25; // 1/16 default
+      if (this.arpConfig.rate === "1/8") stepRatio = 0.5;
+      else if (this.arpConfig.rate === "1/8T") stepRatio = 1 / 3;
+      else if (this.arpConfig.rate === "1/16T") stepRatio = 1 / 6;
+
+      const stepDur = (60 / this.bpm) * stepRatio;
+      const totalSteps = Math.max(2, Math.floor(duration / stepDur));
+      const noteDur = stepDur * Math.max(0.3, Math.min(1.8, this.arpConfig.gate * 1.4));
+
       for (let s = 0; s < totalSteps; s++) {
-        const noteIdx = s % notes.length;
+        let midi = arpSequence[s % arpSequence.length];
+        if (this.arpConfig.pattern === "random") {
+          midi = expanded[Math.floor(Math.random() * expanded.length)];
+        }
         const noteTime = time + s * stepDur;
-        playNote(notes[noteIdx], noteTime, stepDur * 1.8, velocity * (s % 2 === 0 ? 0.95 : 0.75));
+        const isAccent = s % 4 === 0;
+        const noteVel = velocity * (isAccent ? 1.05 : 0.88);
+        playNote(midi, noteTime, noteDur, noteVel);
       }
     } else if (style === "ballad") {
       // Pop ballad: Deep bass root on beat 1, upper chord keys on beats 1, 2, 3, 4

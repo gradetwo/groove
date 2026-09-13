@@ -33,6 +33,17 @@ import {
   romanToChord, 
   getChordMidiNotes 
 } from "../utils/chordTheory";
+import {
+  ArpConfig,
+  StrumConfig,
+  DEFAULT_ARP_CONFIG,
+  DEFAULT_STRUM_CONFIG,
+  ArpPatternType,
+  ArpRate,
+  StrumDirection,
+  bakeProgressionToSequencer,
+  BakedArpeggioResult,
+} from "../utils/arpeggiatorTheory";
 import { 
   POPULAR_PROGRESSIONS, 
   POPULAR_PROGRESSION_CATEGORIES, 
@@ -57,10 +68,12 @@ const getScaleNotes = (root: string, isMinor: boolean): string[] => {
 
 interface ChordProgressionsViewProps {
   onOpenStudioWithChords?: (chords: ChordDefinition[]) => void;
+  onOpenStudioWithArpeggio?: (baked: BakedArpeggioResult, label?: string) => void;
 }
 
 export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
   onOpenStudioWithChords,
+  onOpenStudioWithArpeggio,
 }) => {
   const { t, language, isZh } = useLanguage();
 
@@ -77,6 +90,10 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
   const [timbre, setTimbre] = useState<InstrumentTimbre>("piano");
   const [style, setStyle] = useState<PlayingStyle>("ballad");
   const [isLooping, setIsLooping] = useState<boolean>(true);
+
+  // Arpeggiator & Strumming Config (P6-03)
+  const [arpConfig, setArpConfig] = useState<ArpConfig>({ ...DEFAULT_ARP_CONFIG });
+  const [strumConfig, setStrumConfig] = useState<StrumConfig>({ ...DEFAULT_STRUM_CONFIG });
 
   // Active progression chords in workspace
   const [customChords, setCustomChords] = useState<ChordDefinition[]>([
@@ -118,8 +135,10 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
       engineRef.current.setTimbre(timbre);
       engineRef.current.setStyle(style);
       engineRef.current.setLoop(isLooping);
+      engineRef.current.setArpConfig(arpConfig);
+      engineRef.current.setStrumConfig(strumConfig);
     }
-  }, [bpm, timbre, style, isLooping]);
+  }, [bpm, timbre, style, isLooping, arpConfig, strumConfig]);
 
   // Safety clamp to ensure selectedChordIdx is always valid (P3-19)
   useEffect(() => {
@@ -299,6 +318,32 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
     const chordNames = customChords.map(c => formatChordName(c.root, c.quality));
     MidiExporter.exportChordsMidi(customChords, bpm, `Groove_Progression_${keyRoot}.mid`);
   }, [customChords, bpm, keyRoot]);
+
+  // Bake arpeggiated sequence to Studio (P6-03)
+  const handleBakeToStudio = useCallback(
+    (targetTrackId: "lead" | "chords" = "lead") => {
+      const baked = bakeProgressionToSequencer({
+        chords: customChords,
+        arpConfig,
+        totalSteps: 16,
+        targetTrackId,
+      });
+      const patternNameZh: Record<ArpPatternType, string> = {
+        up: "上行",
+        down: "下行",
+        up_down: "折返",
+        converge: "收敛",
+        random: "随机",
+      };
+      const label = isZh
+        ? `${patternNameZh[arpConfig.pattern]} 琶音`
+        : `${arpConfig.pattern.toUpperCase()} Arp`;
+      if (onOpenStudioWithArpeggio) {
+        onOpenStudioWithArpeggio(baked, label);
+      }
+    },
+    [customChords, arpConfig, isZh, onOpenStudioWithArpeggio]
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10 text-[#eae6dc]">
@@ -494,6 +539,19 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 <span className="whitespace-nowrap">{t("chords_to_studio")}</span>
               </button>
             )}
+
+            {/* Quick Bake Arpeggio to Studio (P6-03) */}
+            {onOpenStudioWithArpeggio && style === "arpeggio" && (
+              <button
+                type="button"
+                onClick={() => handleBakeToStudio("lead")}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:brightness-110 text-zinc-950 font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 shrink-0"
+                title={t("chords_bake_tooltip")}
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">{t("chords_bake_to_lead")}</span>
+              </button>
+            )}
             {/* Collapse / Expand Toggle Button */}
             <button
               type="button"
@@ -668,6 +726,199 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Arpeggiator Interactive Engine Sub-Panel (P6-03) */}
+        {style === "arpeggio" && (
+          <div className="p-4 rounded-xl bg-gradient-to-b from-[#141b2b] to-[#10141f] border border-[#2b3a55] shadow-md flex flex-col gap-3 transition-all animate-fadeIn">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-xs font-bold text-white tracking-wide">
+                  {t("chords_arp_panel_title")}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                  P6-03 Active
+                </span>
+              </div>
+              {onOpenStudioWithArpeggio && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleBakeToStudio("lead")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold transition-all shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer"
+                    title={t("chords_bake_tooltip")}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    <span>{t("chords_bake_to_lead")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBakeToStudio("chords")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1f293d] hover:bg-[#2a3752] text-zinc-200 hover:text-white border border-[#3b4b6b] text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                    title={t("chords_bake_tooltip")}
+                  >
+                    <span>{t("chords_bake_to_chords")}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+              {/* Pattern Type */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_pattern")}</span>
+                <div className="grid grid-cols-5 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
+                  {(["up", "down", "up_down", "converge", "random"] as ArpPatternType[]).map((pat) => (
+                    <button
+                      key={pat}
+                      type="button"
+                      onClick={() => setArpConfig((prev) => ({ ...prev, pattern: pat }))}
+                      className={`px-1 py-1.5 rounded text-[10px] font-medium transition-all text-center cursor-pointer ${
+                        arpConfig.pattern === pat
+                          ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {pat === "up" && (isZh ? "上行" : "Up")}
+                      {pat === "down" && (isZh ? "下行" : "Down")}
+                      {pat === "up_down" && (isZh ? "折返" : "UpDn")}
+                      {pat === "converge" && (isZh ? "收敛" : "Conv")}
+                      {pat === "random" && (isZh ? "随机" : "Rand")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rate */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_rate")}</span>
+                <div className="grid grid-cols-4 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
+                  {(["1/8", "1/16", "1/8T", "1/16T"] as ArpRate[]).map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => setArpConfig((prev) => ({ ...prev, rate }))}
+                      className={`px-1.5 py-1.5 rounded text-[11px] font-mono transition-all text-center cursor-pointer ${
+                        arpConfig.rate === rate
+                          ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {rate}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Octaves */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_octaves")}</span>
+                <div className="grid grid-cols-3 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
+                  {[1, 2, 3].map((oct) => (
+                    <button
+                      key={oct}
+                      type="button"
+                      onClick={() => setArpConfig((prev) => ({ ...prev, octaves: oct }))}
+                      className={`px-2 py-1.5 rounded text-[11px] font-mono transition-all text-center cursor-pointer ${
+                        arpConfig.octaves === oct
+                          ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {oct} Oct
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Gate */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_gate")}</span>
+                <div className="grid grid-cols-3 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
+                  {[
+                    { val: 0.4, label: isZh ? "顿音" : "Stacc" },
+                    { val: 0.75, label: isZh ? "自然" : "Nat" },
+                    { val: 1.0, label: isZh ? "连音" : "Leg" },
+                  ].map((g) => (
+                    <button
+                      key={g.val}
+                      type="button"
+                      onClick={() => setArpConfig((prev) => ({ ...prev, gate: g.val }))}
+                      className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-all text-center cursor-pointer ${
+                        Math.abs(arpConfig.gate - g.val) < 0.1
+                          ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Strumming Micro-Dynamics Sub-Panel */}
+        {style === "strum" && (
+          <div className="p-4 rounded-xl bg-gradient-to-b from-[#171a24] to-[#11141c] border border-[#2d3445] shadow-md flex flex-col gap-3 transition-all animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="text-xs font-bold text-white tracking-wide">
+                {isZh ? "吉他扫弦拨片微动态" : "Strumming Pick Micro-Dynamics"}
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                {strumConfig.speedMs}ms
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Direction */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-zinc-300">{t("chords_strum_direction")}</span>
+                <div className="grid grid-cols-3 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
+                  {(["down", "up", "alternate"] as StrumDirection[]).map((dir) => (
+                    <button
+                      key={dir}
+                      type="button"
+                      onClick={() => setStrumConfig((prev) => ({ ...prev, direction: dir }))}
+                      className={`px-2 py-1.5 rounded text-xs font-medium transition-all text-center cursor-pointer ${
+                        strumConfig.direction === dir
+                          ? "bg-amber-500 text-zinc-950 font-bold shadow-sm"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {dir === "down" && (isZh ? "下扫 ⬇" : "Down ⬇")}
+                      {dir === "up" && (isZh ? "上扫 ⬆" : "Up ⬆")}
+                      {dir === "alternate" && (isZh ? "交替 ⇅" : "Alt ⇅")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Speed Slider */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-zinc-300">{t("chords_strum_speed")}</span>
+                  <span className="text-xs font-mono text-amber-400 font-bold">{strumConfig.speedMs} ms</span>
+                </div>
+                <div className="flex items-center gap-3 bg-[#090d14] px-3 py-2 rounded-lg border border-[#20293d]">
+                  <span className="text-[10px] text-zinc-500 shrink-0">{isZh ? "紧凑 15ms" : "Fast 15ms"}</span>
+                  <input
+                    type="range"
+                    min={15}
+                    max={75}
+                    step={5}
+                    value={strumConfig.speedMs}
+                    onChange={(e) => setStrumConfig((prev) => ({ ...prev, speedMs: Number(e.target.value) }))}
+                    className="flex-1 accent-amber-400 h-1.5 bg-[#232a3b] rounded cursor-pointer"
+                  />
+                  <span className="text-[10px] text-zinc-500 shrink-0">{isZh ? "松弛 75ms" : "Slow 75ms"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 3.1 Timeline Chord Blocks Sequence */}
         <div className="flex flex-col gap-2">

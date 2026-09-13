@@ -315,5 +315,32 @@ describe("Sequencer Store & Pure Immutable Reducer (P2-04)", () => {
       // Other tracks reference preserved
       expect(withPitches.pattern.tracks[0]).toBe(state.pattern.tracks[0]);
     });
+
+    it("handles LOAD_ARPEGGIATED_SEQUENCE to load baked arpeggios onto melodic tracks (P6-03)", () => {
+      const state = createInitialSequencerState(testGenre);
+      const baked = {
+        steps: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+        pitches: [60, null, 64, null, 67, null, 71, null, 72, null, 67, null, 64, null, 60, null],
+        velocities: [120, 0, 105, 0, 105, 0, 105, 0, 120, 0, 105, 0, 105, 0, 105, 0],
+        gates: Array(16).fill(0.8),
+        targetTrackId: "lead" as const,
+        totalHits: 8,
+      };
+
+      const withArp = sequencerReducer(state, {
+        type: "LOAD_ARPEGGIATED_SEQUENCE",
+        baked,
+      });
+
+      // Find the track that received the arpeggio
+      const leadTrack = withArp.pattern.tracks.find(
+        (t) => t.track_id === "lead" || t.name.toLowerCase().includes("lead")
+      ) || withArp.pattern.tracks[withArp.pattern.tracks.length - 1];
+
+      expect(leadTrack.steps[0]).toBe(1);
+      expect(leadTrack.pitch?.[0]).toBe(60);
+      expect(leadTrack.pitch?.[2]).toBe(64);
+      expect(leadTrack.velocity?.[0]).toBe(120);
+    });
   });
 });
