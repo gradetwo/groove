@@ -24,6 +24,7 @@ import {
   Loader2,
   Disc3,
   Activity,
+  Layers,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -74,6 +75,7 @@ export interface ToolbarProps {
   onToggleAdvancedControls: () => void;
   onQuickAction: (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved") => void;
   onExportMidi: () => void;
+  onExportAls?: () => void;
   onExportWav?: () => void;
   onExportStems?: () => void;
   isExportingAudio?: boolean;
@@ -157,6 +159,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onToggleAdvancedControls,
   onQuickAction,
   onExportMidi,
+  onExportAls,
   onExportWav,
   onExportStems,
   isExportingAudio = false,
@@ -847,6 +850,20 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     <div className="flex flex-col">
                       <span className="font-medium text-text">{isZh ? "导出 MIDI 文件" : "Export MIDI"}</span>
                       <span className="text-[10px] text-text-dim">.mid (8 轨完整伴奏)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onExportAls?.();
+                      setExportOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-[#fbbf24] shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-text">{isZh ? "导出 Ableton 工程" : "Export Ableton Set"}</span>
+                      <span className="text-[10px] text-text-dim">.als (8 轨独立 MIDI Clip)</span>
                     </div>
                   </button>
                 </div>

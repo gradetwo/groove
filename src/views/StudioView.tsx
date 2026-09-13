@@ -5,6 +5,7 @@ import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { downloadMidiFile } from "../audio/MidiExporter";
+import { downloadAbletonProject } from "../audio/AbletonExporter";
 import { decodeSharedSequencer, getShareUrl } from "../audio/SequencerUrlShare";
 import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../audio/WavExporter";
 import { importMidiToPattern } from "../audio/MidiImporter";
@@ -1162,6 +1163,28 @@ export const StudioView: React.FC<StudioViewProps> = ({
     showToast(isZh ? `已导出 MIDI: ${currentGenre.name}.mid ✓` : `Exported ${currentGenre.name}.mid ✓`);
   }, [pattern, bpm, currentGenre.name, isZh, showToast]);
 
+  const handleExportAls = useCallback(async () => {
+    try {
+      showToast(isZh ? "正在生成 Ableton Live (.als) 工程包..." : "Generating Ableton Live (.als) set...");
+      const result = await downloadAbletonProject(
+        {
+          bpm,
+          pattern,
+          genreName: currentGenre.name,
+          scaleName: pattern.scale,
+        },
+        `${currentGenre.name.replace(/[^a-zA-Z0-9_-]/g, "_")}_Groove`
+      );
+      showToast(
+        isZh
+          ? `已导出 Ableton Live 工程: ${result.filename} ✓ (可直接在 Live 10/11/12 中打开)`
+          : `Exported Ableton Live Set: ${result.filename} ✓ (Compatible with Live 10/11/12)`
+      );
+    } catch (err: any) {
+      showToast(isZh ? `Ableton 工程导出失败: ${err?.message || err}` : `Ableton export failed: ${err?.message || err}`);
+    }
+  }, [bpm, pattern, currentGenre.name, isZh, showToast]);
+
   const handleExportWav = useCallback(async () => {
     try {
       setIsExportingAudio(true);
@@ -1497,6 +1520,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
             onToggleAdvancedControls={() => setShowAdvancedControls((prev) => !prev)}
             onQuickAction={handleQuickAction}
             onExportMidi={handleExportMidi}
+            onExportAls={handleExportAls}
             onExportWav={handleExportWav}
             onExportStems={handleExportStems}
             isExportingAudio={isExportingAudio}

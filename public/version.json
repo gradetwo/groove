@@ -1,7 +1,34 @@
 {
-  "version": "1.15.0",
+  "version": "1.15.1",
   "releaseDate": "2026-09-13",
   "changelog": [
+    {
+      "version": "1.15.1",
+      "date": "2026-09-13",
+      "category": "feature",
+      "title": {
+        "zh": "v1.15.1 Ableton Live 工程文件（.als）直接导出（P7-01）",
+        "en": "v1.15.1 Ableton Live Set (.als) Direct Project Exporter (P7-01)"
+      },
+      "highlights": [
+        {
+          "zh": "突破常规 MIDI/WAV 格式边界，利用纯 TypeScript 原生构建 Gzip 压缩的标准 Ableton XML Schema，一键导出完整 .als 工程文件",
+          "en": "Direct Ableton Live Set (.als) export: pure TypeScript Gzip XML schema generation for instant DAW project integration"
+        },
+        {
+          "zh": "预置 8 条专属 MIDI 音轨：完整映射 Kick、Snare、Hi-Hat、Percussion、Bass、Chords、Lead、FX，带轨道命名、Ableton 70 色调色盘、音量电平与立体声像",
+          "en": "8 dedicated MIDI tracks: complete mapping for Kick, Snare, Hi-Hat, Percussion, Bass, Chords, Lead, FX with Ableton 70-color palette, volume, and panning"
+        },
+        {
+          "zh": "高精度 MIDI Clip 与音符事件映射：完美还原摇摆度（Swing）、多拍子（Polymeter）、步进滚奏（Ratchets）、门限长短与和弦扩展三和弦/七和弦",
+          "en": "Precision MIDI clips & KeyTracks: bit-exact preservation of swing offsets, polymeter loop lengths, ratchets, gates, velocities, and chord triad/seventh voicings"
+        },
+        {
+          "zh": "母带总线与辅助混响延迟总线对齐：预置 A-Reverb 与 B-Delay 辅助返回轨及各轨 Send 发送电平，支持 Ableton Live 10 / 11 / 12 双击直接秒开",
+          "en": "Master bus & Return sends: includes Master BPM tempo, time signature, A-Reverb/B-Delay return tracks with double-click support in Ableton Live 10, 11, and 12"
+        }
+      ]
+    },
     {
       "version": "1.15.0",
       "date": "2026-09-13",
