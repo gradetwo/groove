@@ -610,6 +610,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           return (
             <button
               key={opt.id}
+              data-testid="challenge-option"
               disabled={isAnswered}
               onClick={() => handleSelectOption(opt)}
               className={`p-5 rounded-2xl border text-left transition-all duration-200 flex items-center justify-between group ${cardStyle}`}
