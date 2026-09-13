@@ -1,7 +1,38 @@
 {
-  "version": "1.14.4",
+  "version": "1.14.5",
   "releaseDate": "2026-09-13",
   "changelog": [
+    {
+      "version": "1.14.5",
+      "date": "2026-09-13",
+      "category": "feature",
+      "title": {
+        "zh": "v1.14.5 调式锁定音序网格（Scale-Locked Sequencer Matrix）、11大音乐调式引擎与一键全轨对齐",
+        "en": "v1.14.5 Scale-Locked Sequencer Matrix (P6-02), 11-Scale Music Theory Engine & One-Click Track Pitch Quantization"
+      },
+      "highlights": [
+        {
+          "zh": "调式锁定音序网格（P6-02）：在步进音序器音高编辑（Pitch Picker）与琴键演奏模式中正式引入「调式锁定（Scale Lock）」。内置完整的调式乐理引擎，支持小调五声、自然大调、自然小调、多利亚（Dorian）、弗里吉亚属调式（Phrygian Dominant）、布鲁斯（Blues）、平调子（Hirajoshi）、混合多利亚（Mixolydian）、和声小调等 11 大经典调式",
+          "en": "Scale-Locked Sequencer Matrix (P6-02): introduced dynamic Scale Lock in both step pitch editing and musical keyboard play mode. Powered by comprehensive music theory engine supporting 11 classic musical scales (Minor Pentatonic, Natural Major, Natural Minor, Dorian, Phrygian Dominant, Blues, Hirajoshi, Mixolydian, Harmonic Minor, etc.)"
+        },
+        {
+          "zh": "调内音阶度数标记与防误触锁定：在交互式琴键上清晰标注当前调式音级徽标（★ 根音 R、b3/3 音、5 度音等），一目了然。开启调式锁定时，智能过滤并暗化调外音，彻底消除初学者与即兴编曲误触走音的烦恼；关闭时支持自由 12 半音阶自由创作",
+          "en": "In-Scale Degree Badges & Anti-Clash Lock: interactive piano keys display clear harmonic degree badges (★ Root R, 3rd, 5th, 7th). When locked, out-of-scale keys are disabled to eliminate off-key notes during rapid composition, with seamless unlocked chromatic fallback"
+        },
+        {
+          "zh": "一键对齐全轨调内音（Quantize Track Pitch）：旋律与贝斯音轨支持一键智能量化，将音轨中现存的所有音符根据声学亲和度与最近半音距离，批量自动对齐至当前设定调式，并支持撤销重做与即时听觉反馈",
+          "en": "One-Click Track Pitch Quantization: melodic and bass tracks now feature one-click intelligent quantization, snapping existing out-of-scale notes to their nearest in-scale harmonic equivalent with full undo/redo history"
+        },
+        {
+          "zh": "Web MIDI 与电脑键盘实时音阶自适应过滤：在键盘演奏模式下（Z-M 键及外接 MIDI 键盘），实时根据当前曲目调式进行动态音阶过滤与最近音量化，弹奏即和谐",
+          "en": "Real-Time Scale-Filtered MIDI & Musical Typing: computer keyboard typing (Z-M row) and external MIDI controllers automatically adapt to the active scale, quantizing incoming notes in real time"
+        },
+        {
+          "zh": "曲目调式智能识别与跨曲风双向同步：从 159 种曲风自带的 scale 属性中自动解析主音与调式（如 'C minor', 'F# dorian'），调式切换时全局同步至当前工程 pattern.scale",
+          "en": "Intelligent Scale Parsing & Cross-Genre Sync: automatically extracts root notes and mode IDs from all 159 genre specifications, keeping pattern.scale synchronized when exploring and modifying tracks"
+        }
+      ]
+    },
     {
       "version": "1.14.4",
       "date": "2026-09-13",

@@ -294,5 +294,26 @@ describe("Sequencer Store & Pure Immutable Reducer (P2-04)", () => {
       });
       expect(withDim.parameterDimension).toBe("gate");
     });
+
+    it("handles BATCH_SET_PITCH and SET_SCALE for scale-locked matrix (P6-02)", () => {
+      const state = createInitialSequencerState(testGenre);
+
+      const withScale = sequencerReducer(state, {
+        type: "SET_SCALE",
+        scale: "D dorian",
+      });
+      expect(withScale.pattern.scale).toBe("D dorian");
+
+      const pitches = [38, 40, null, 43, 45, null, 48, 50];
+      const withPitches = sequencerReducer(withScale, {
+        type: "BATCH_SET_PITCH",
+        trackIdx: 4, // Bass track
+        pitches,
+      });
+
+      expect(withPitches.pattern.tracks[4].pitch).toEqual(pitches);
+      // Other tracks reference preserved
+      expect(withPitches.pattern.tracks[0]).toBe(state.pattern.tracks[0]);
+    });
   });
 });

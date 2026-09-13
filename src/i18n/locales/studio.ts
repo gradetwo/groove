@@ -35,12 +35,22 @@ export const studioMessages = {
   vel_close: { en: "Close drawer", zh: "关闭力度抽屉" },
   vel_drag_hint: { en: "Drag to paint", zh: "滑动绘制力度" },
 
-  // Pitch Picker
-  pitch_modal_aria: { en: "Note Pitch Picker", zh: "音高选择" },
-  pitch_modal_title: { en: "Note Pitch", zh: "音高选择" },
+  // Pitch Picker & Scale Lock (P6-02)
+  pitch_modal_aria: { en: "Scale-Locked Note Pitch Picker", zh: "调式锁定音高选择器" },
+  pitch_modal_title: { en: "Pitch & Scale Matrix", zh: "音高与调式网格" },
   pitch_octave_range: { en: "Octave Range:", zh: "八度音区 (Octave):" },
-  pitch_audition: { en: "Audition", zh: "试听" },
-  pitch_set: { en: "Set Note", zh: "确定设置" },
+  pitch_audition: { en: "Audition Note", zh: "试听当前音" },
+  pitch_set: { en: "Apply Note", zh: "填入音符" },
+  pitch_scale_lock: { en: "Scale Lock", zh: "调式锁定" },
+  pitch_scale_locked_desc: { en: "Only in-scale notes can be played. Prevents off-key notes.", zh: "仅允许弹奏调内音符，彻底告别走音误触" },
+  pitch_scale_unlocked_desc: { en: "Chromatic mode: all 12 semitones freely accessible.", zh: "半音阶自由模式：可随意使用全部 12 个半音" },
+  pitch_root_note: { en: "Root Note:", zh: "调式主音 (Root):" },
+  pitch_scale_type: { en: "Scale Mode:", zh: "调式音阶 (Scale):" },
+  pitch_quantize_track: { en: "Quantize Track to Scale", zh: "一键对齐全轨调内音" },
+  pitch_quantize_done: { en: "Quantized track notes to scale ✓", zh: "全轨音符已对齐调内音 ✓" },
+  pitch_in_scale: { en: "In Scale", zh: "调内音" },
+  pitch_out_of_scale: { en: "Out of Scale", zh: "离调音" },
+  pitch_degree_root: { en: "Root (1st)", zh: "主音 (1st)" },
 
   // Euclidean Rhythm Generator
   euclidean_modal_aria: { en: "Euclidean Rhythm Generator", zh: "欧几里得数学节奏生成器" },

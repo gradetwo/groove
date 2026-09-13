@@ -165,12 +165,24 @@ export class MidiInputManager {
     return () => this.onDevicesChangedListeners.delete(fn);
   }
 
+  private scaleFilter: ((note: number) => number) | null = null;
+
+  public setScaleFilter(filter: ((note: number) => number) | null): void {
+    this.scaleFilter = filter;
+  }
+
   public triggerNoteOn(note: number, velocity: number, trackIndex?: number): void {
-    this.onNoteOnListeners.forEach((fn) => (trackIndex !== undefined ? fn(note, velocity, trackIndex) : fn(note, velocity)));
+    const finalNote = this.scaleFilter && (trackIndex === undefined || trackIndex >= 4)
+      ? this.scaleFilter(note)
+      : note;
+    this.onNoteOnListeners.forEach((fn) => (trackIndex !== undefined ? fn(finalNote, velocity, trackIndex) : fn(finalNote, velocity)));
   }
 
   public triggerNoteOff(note: number, trackIndex?: number): void {
-    this.onNoteOffListeners.forEach((fn) => (trackIndex !== undefined ? fn(note, trackIndex) : fn(note)));
+    const finalNote = this.scaleFilter && (trackIndex === undefined || trackIndex >= 4)
+      ? this.scaleFilter(note)
+      : note;
+    this.onNoteOffListeners.forEach((fn) => (trackIndex !== undefined ? fn(finalNote, trackIndex) : fn(finalNote)));
   }
 
   /**

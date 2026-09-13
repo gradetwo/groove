@@ -24,6 +24,7 @@ import { clearSavedProject } from "../features/sequencer/projectStorage";
 import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
+import { parseScaleString, quantizePitchToScale } from "../utils/scaleTheory";
 import { announcer } from "../ui";
 import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
 
@@ -425,6 +426,23 @@ export const StudioView: React.FC<StudioViewProps> = ({
       engineRef.current.setRecordArmed(isRecordArmed);
     }
   }, [isRecordArmed]);
+
+  // Sync Active Scale Filter to Midi & Keyboard Input (P6-02)
+  useEffect(() => {
+    if (!pattern.scale) {
+      midiInputManager.setScaleFilter(null);
+      return;
+    }
+    const { root, scaleId } = parseScaleString(pattern.scale);
+    if (scaleId === "chromatic") {
+      midiInputManager.setScaleFilter(null);
+    } else {
+      midiInputManager.setScaleFilter((note) => quantizePitchToScale(note, root, scaleId));
+    }
+    return () => {
+      midiInputManager.setScaleFilter(null);
+    };
+  }, [pattern.scale]);
 
   // Sync Master DSP Effects Rack to AudioEngine (P5-04)
   useEffect(() => {
@@ -1675,6 +1693,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
           stepIdx={pitchPicker.stepIdx}
           initialNote={pitchPicker.initialNote}
           language={language}
+          currentScale={pattern.scale}
+          trackPitches={pattern.tracks[pitchPicker.trackIdx]?.pitch}
+          onQuantizeTrack={(quantizedPitches) => {
+            commit({
+              type: "BATCH_SET_PITCH",
+              trackIdx: pitchPicker.trackIdx,
+              pitches: quantizedPitches,
+            });
+            showToast(isZh ? "已将全轨音高对齐至当前调式 ✓" : "Track pitches quantized to scale ✓");
+          }}
+          onScaleChange={(newScale) => {
+            commit({ type: "SET_SCALE", scale: newScale });
+            showToast(isZh ? `已切换曲目调式: ${newScale} ✓` : `Scale set: ${newScale} ✓`);
+          }}
           onSelectPitch={(stepIdx, midiNote) => {
             commit({ type: "SET_PITCH", trackIdx: pitchPicker.trackIdx, stepIdx, pitch: midiNote });
             showToast(isZh ? "音高已设定 ✓" : "Pitch set ✓");

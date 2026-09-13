@@ -51,6 +51,8 @@ export type SequencerAction =
   | { type: "SET_VELOCITY"; trackIdx: number; stepIdx: number; velocity: number }
   | { type: "BATCH_SET_VELOCITY"; trackIdx: number; velocities: number[] }
   | { type: "SET_PITCH"; trackIdx: number; stepIdx: number; pitch: number | null }
+  | { type: "BATCH_SET_PITCH"; trackIdx: number; pitches: (number | null)[] }
+  | { type: "SET_SCALE"; scale: string }
   | { type: "SET_RATCHET"; trackIdx: number; stepIdx: number; ratchet: number }
   | { type: "BATCH_SET_RATCHET"; trackIdx: number; ratchets: number[] }
   | { type: "SET_PROBABILITY"; trackIdx: number; stepIdx: number; probability: number }
@@ -393,6 +395,18 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         return { ...t, pitch };
       });
       return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "BATCH_SET_PITCH": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        pitch: [...action.pitches],
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "SET_SCALE": {
+      return withUpdatedPattern({ ...state.pattern, scale: action.scale });
     }
 
     case "SET_RATCHET": {
