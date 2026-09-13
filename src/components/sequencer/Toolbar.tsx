@@ -23,6 +23,7 @@ import {
   Package,
   Loader2,
   Disc3,
+  Activity,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -100,6 +101,8 @@ export interface ToolbarProps {
   onChangeEffectsRack?: (state: Partial<EffectsRackState>) => void;
   isDrumsOnly?: boolean;
   onToggleDrumsOnly?: () => void;
+  isAnalyzerOpen?: boolean;
+  onToggleAnalyzer?: () => void;
 }
 
 export const Toolbar = memo<ToolbarProps>(function Toolbar({
@@ -131,6 +134,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onChangeDrumKit,
   isDrumsOnly = false,
   onToggleDrumsOnly,
+  isAnalyzerOpen = false,
+  onToggleAnalyzer,
   isRecordArmed = false,
   onToggleRecordArmed,
   effectsRackState,
@@ -636,6 +641,24 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline font-['JetBrains_Mono']">{isZh ? "欧几里得" : "EUCLID"}</span>
           </button>
+
+          {/* Master Panoramic Analyzer Toggle (P6-05) */}
+          {onToggleAnalyzer && (
+            <button
+              type="button"
+              onClick={onToggleAnalyzer}
+              className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                isAnalyzerOpen
+                  ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.3)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={isZh ? "全景声谱与李萨如图示波器 (快捷键 O)" : "Panoramic Spectrogram & Lissajous Phase Scope (Key: O)"}
+              aria-label="Toggle Master Analyzer"
+            >
+              <Activity className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline font-['JetBrains_Mono']">{isZh ? "示波器" : "SCOPE"}</span>
+            </button>
+          )}
 
           {/* Undo & Redo */}
           <div className="flex items-center gap-1 shrink-0">

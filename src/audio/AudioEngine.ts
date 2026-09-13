@@ -49,6 +49,10 @@ export class AudioEngine {
   private masterGain: GainNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
+  private masterAnalyser: AnalyserNode | null = null;
+  private channelSplitter: ChannelSplitterNode | null = null;
+  private analyserL: AnalyserNode | null = null;
+  private analyserR: AnalyserNode | null = null;
   private isPlaying: boolean = false;
 
   // Per-track channel strips (P3-09)
@@ -171,13 +175,37 @@ export class AudioEngine {
           this.analyser.fftSize = 128;
           this.analyser.smoothingTimeConstant = 0.75;
 
+          // P6-05: Master High-Resolution FFT Analyser (2048 bins, 20Hz - 20kHz)
+          this.masterAnalyser = this.ctx.createAnalyser();
+          this.masterAnalyser.fftSize = 2048;
+          this.masterAnalyser.smoothingTimeConstant = 0.8;
+
+          // P6-05: Stereo Channel Splitter & Lissajous X-Y Phase Analysers
+          if (typeof this.ctx.createChannelSplitter === "function") {
+            try {
+              this.channelSplitter = this.ctx.createChannelSplitter(2);
+              this.analyserL = this.ctx.createAnalyser();
+              this.analyserL.fftSize = 1024;
+              this.analyserR = this.ctx.createAnalyser();
+              this.analyserR.fftSize = 1024;
+            } catch (e) {
+              console.warn("[AudioEngine] Stereo analysers init warning:", e);
+            }
+          }
+
           // Master DSP Effects Rack (P5-04)
           this.masterFxRack = new EffectsRack(this.ctx);
 
-          // Audio chain: masterGain -> masterFxRack -> limiter -> analyser -> destination
+          // Audio chain: masterGain -> masterFxRack -> limiter -> analysers -> destination
           this.masterGain.connect(this.masterFxRack.inputNode);
           this.masterFxRack.outputNode.connect(this.limiter);
           this.limiter.connect(this.analyser);
+          this.limiter.connect(this.masterAnalyser);
+          if (this.channelSplitter && this.analyserL && this.analyserR) {
+            this.limiter.connect(this.channelSplitter);
+            this.channelSplitter.connect(this.analyserL, 0);
+            this.channelSplitter.connect(this.analyserR, 1);
+          }
           this.analyser.connect(this.ctx.destination);
           this.createNoiseBuffer();
           this.setupSendBuses();
@@ -759,6 +787,21 @@ export class AudioEngine {
     return this.analyser;
   }
 
+  public getMasterAnalyser(): AnalyserNode | null {
+    return this.masterAnalyser || this.analyser;
+  }
+
+  public getStereoAnalysers(): { left: AnalyserNode | null; right: AnalyserNode | null } {
+    return {
+      left: this.analyserL || this.analyser,
+      right: this.analyserR || this.analyser,
+    };
+  }
+
+  public getAudioContext(): AudioContext | null {
+    return this.ctx;
+  }
+
   public getCurrentStep(): number {
     return this.currentStep;
   }
@@ -1160,5 +1203,9 @@ export class AudioEngine {
     this.masterGain = null;
     this.limiter = null;
     this.analyser = null;
+    this.masterAnalyser = null;
+    this.channelSplitter = null;
+    this.analyserL = null;
+    this.analyserR = null;
   }
 }

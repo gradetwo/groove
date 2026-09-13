@@ -26,6 +26,7 @@ const ChallengeView = React.lazy(() => import("./views/ChallengeView").then((m) 
 const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then((m) => ({ default: m.GenreDetailView })));
 const KickAnatomyView = React.lazy(() => import("./views/KickAnatomyView").then((m) => ({ default: m.KickAnatomyView })));
 const MasterclassView = React.lazy(() => import("./views/MasterclassView").then((m) => ({ default: m.MasterclassView })));
+const AnalyzerView = React.lazy(() => import("./views/AnalyzerView").then((m) => ({ default: m.AnalyzerView })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
@@ -95,6 +96,7 @@ const MainApp: React.FC = () => {
 
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [engineInstance, setEngineInstance] = useState<AudioEngine | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Global hotkey: Cmd+K / Ctrl+K opens search dialog from ANY page (P0-23)
@@ -135,6 +137,7 @@ const MainApp: React.FC = () => {
   }, [navigate]);
 
   const handleEngineReady = (engine: AudioEngine) => {
+    setEngineInstance(engine);
     setAnalyser(engine.getAnalyser());
     const id = setInterval(() => {
       setIsPlaying(engine.getIsPlaying());
@@ -143,6 +146,7 @@ const MainApp: React.FC = () => {
       clearInterval(id);
       setIsPlaying(false);
       setAnalyser(null);
+      setEngineInstance(null);
     };
   };
 
@@ -238,6 +242,23 @@ const MainApp: React.FC = () => {
                 homeLabel={t("btn_return_studio")}
               >
                 <KickAnatomyView />
+              </ErrorBoundary>
+            )}
+
+            {currentTab === "analyzer" && (
+              <ErrorBoundary
+                fallbackTitle={isZh ? "全景声谱分析仪加载异常" : "Analyzer Loading Error"}
+                fallbackDescription={isZh ? "声学分析模块初始化发生错误" : "An error occurred initializing the acoustic analyzer."}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={t("btn_return_studio")}
+              >
+                <AnalyzerView
+                  onOpenStudio={() => handleSelectTab("studio")}
+                  externalAnalyser={engineInstance?.getMasterAnalyser()}
+                  externalAnalyserL={engineInstance?.getStereoAnalysers().left}
+                  externalAnalyserR={engineInstance?.getStereoAnalysers().right}
+                  isExternalPlaying={isPlaying}
+                />
               </ErrorBoundary>
             )}
 
@@ -381,6 +402,12 @@ const MainApp: React.FC = () => {
               className="hover:text-text transition-colors"
             >
               {t("nav_masterclass")}
+            </button>
+            <button
+              onClick={() => handleSelectTab("analyzer")}
+              className="hover:text-text transition-colors"
+            >
+              {t("nav_analyzer")}
             </button>
             <button
               onClick={() => handleSelectTab("galaxy")}

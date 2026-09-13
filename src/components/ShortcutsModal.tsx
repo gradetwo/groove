@@ -22,6 +22,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
     { keys: ["g", "m"], desc: isZh ? "跳转至 曲风对比" : "Go to Compare" },
     { keys: ["g", "q"], desc: isZh ? "跳转至 听音挑战" : "Go to Challenge" },
     { keys: ["g", "r"], desc: isZh ? "跳转至 节奏大师课" : "Go to Masterclasses" },
+    { keys: ["g", "z"], desc: isZh ? "跳转至 声谱示波器" : "Go to Analyzer & Scope" },
     { keys: ["g", "k"], desc: isZh ? "跳转至 底鼓设计" : "Go to Kick Design" },
     { keys: [modKey, "K"], desc: isZh ? "打开全局搜索" : "Open Global Search" },
     { keys: ["?"], desc: isZh ? "打开此快捷键面板" : "Show Keyboard Shortcuts" },
@@ -31,6 +32,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
   const studioShortcuts = [
     { keys: ["Space"], desc: isZh ? "播放 / 暂停" : "Play / Pause playback" },
     { keys: ["D"], desc: isZh ? "只听鼓组快捷切换 (Drums Only)" : "Toggle Drums Only mode" },
+    { keys: ["O"], desc: isZh ? "开闭全景声谱示波器 (Scope)" : "Toggle Panoramic Analyzer & Scope" },
     { keys: [modKey, "Z"], desc: isZh ? "撤销步进修改" : "Undo pattern change" },
     { keys: [modKey, isMac ? "⇧Z" : "Y"], desc: isZh ? "重做步进修改" : "Redo pattern change" },
     { keys: ["↑", "↓", "←", "→"], desc: isZh ? "音序网格步进键位漫游" : "Navigate grid step cells" },

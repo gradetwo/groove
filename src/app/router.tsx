@@ -87,6 +87,18 @@ export function parseUrlToRoute(pathname: string, search: string): RouteState {
     return { tab: "kick" };
   }
 
+  // Check analyzer: /analyzer, /scope, /explore/analyzer
+  if (
+    cleanPath === "/analyzer" ||
+    cleanPath.startsWith("/analyzer/") ||
+    cleanPath === "/scope" ||
+    cleanPath.startsWith("/scope/") ||
+    cleanPath === "/explore/analyzer" ||
+    cleanPath.startsWith("/explore/analyzer/")
+  ) {
+    return { tab: "analyzer" };
+  }
+
   // Check studio: /studio?genre=
   if (cleanPath === "/studio" || cleanPath.startsWith("/studio/")) {
     const gParam = params.get("genre");
@@ -176,6 +188,8 @@ export function formatRouteToUrl(route: RouteState): string {
     }
     case "kick":
       return `/kick`;
+    case "analyzer":
+      return `/analyzer`;
     case "masterclass": {
       return route.masterclassId ? `/masterclass/${encodeURIComponent(route.masterclassId)}` : `/masterclass`;
     }

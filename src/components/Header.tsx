@@ -26,6 +26,7 @@ export type NavTab =
   | "studio" 
   | "chords"
   | "kick"
+  | "analyzer"
   | "masterclass"
   | "galaxy" 
   | "horizontal-timeline" 
@@ -118,13 +119,14 @@ export const Header: React.FC<HeaderProps> = ({
   }, [analyser, isPlaying]);
 
   const exploreItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
+    { tab: "analyzer", labelKey: "nav_analyzer", descKey: "nav_analyzer_desc", icon: <Activity className="w-3.5 h-3.5" /> },
     { tab: "masterclass", labelKey: "nav_masterclass", descKey: "nav_masterclass_desc", icon: <Disc className="w-3.5 h-3.5" /> },
     { tab: "galaxy", labelKey: "nav_galaxy", descKey: "nav_galaxy_desc", icon: <Orbit className="w-3.5 h-3.5" /> },
     { tab: "horizontal-timeline", labelKey: "nav_timeline_h", descKey: "nav_timeline_h_desc", icon: <Clock className="w-3.5 h-3.5" /> },
     { tab: "vertical-timeline", labelKey: "nav_timeline_v", descKey: "nav_timeline_v_desc", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
   ];
 
-  const isExploreActive = ["masterclass", "galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
+  const isExploreActive = ["analyzer", "masterclass", "galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
 
   const handleRandom = () => {
     const randomIndex = Math.floor(Math.random() * GENRE_INDEX.length);
@@ -285,13 +287,21 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Tools: Spectrum, Search, Dice, Lang, Mobile Menu */}
       <div className="flex items-center gap-2.5">
-        {/* Spectrum Canvas */}
-        <canvas
-          ref={canvasRef}
-          width={192}
-          height={60}
-          className="w-20 h-6 sm:w-24 sm:h-7 opacity-90 hidden sm:block pointer-events-none"
-        />
+        {/* Spectrum Canvas - click opens full Panoramic Analyzer */}
+        <button
+          type="button"
+          onClick={() => onSelectTab("analyzer")}
+          className="cursor-pointer group flex items-center hidden sm:block p-0.5 rounded hover:bg-white/5 transition-all"
+          title={isZh ? "点击打开全景声谱分析仪与示波器 (P6-05)" : "Open Panoramic Spectrogram & Lissajous Scope (P6-05)"}
+          aria-label="Open Analyzer"
+        >
+          <canvas
+            ref={canvasRef}
+            width={192}
+            height={60}
+            className="w-20 h-6 sm:w-24 sm:h-7 opacity-90 group-hover:opacity-100 group-hover:brightness-125 transition-all pointer-events-none"
+          />
+        </button>
 
         {/* Global Search Button (P0-23) */}
         <button

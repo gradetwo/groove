@@ -17,6 +17,8 @@ export const commonMessages = {
   nav_timeline_v_desc: { en: "Storylines", zh: "流派故事脉络" },
   nav_masterclass: { en: "Masterclasses", zh: "节奏大师课" },
   nav_masterclass_desc: { en: "World Rhythm Labs", zh: "世界节奏沉浸工作坊" },
+  nav_analyzer: { en: "Analyzer & Scope", zh: "全景示波器" },
+  nav_analyzer_desc: { en: "FFT & Phase Scope", zh: "全景声谱与李萨如图" },
 
   // Language Switch
   lang_switch_target: { en: "中", zh: "EN" },

@@ -1,7 +1,46 @@
 {
-  "version": "1.14.8",
+  "version": "1.15.0",
   "releaseDate": "2026-09-13",
   "changelog": [
+    {
+      "version": "1.15.0",
+      "date": "2026-09-13",
+      "category": "feature",
+      "title": {
+        "zh": "v1.15.0 全景声谱分析仪与李萨如图示波器（P6-05）、Phase 6 阶段全面达成",
+        "en": "v1.15.0 Panoramic Spectrogram & Lissajous Phase Scope (P6-05) - Phase 6 Complete"
+      },
+      "highlights": [
+        {
+          "zh": "高精瀑布流全景声谱分析仪 (Waterfall FFT Spectrogram)：60fps 实时对数频率谱图（20Hz - 20,000Hz）+ 连续滚动瀑布历史热力图。提供 4 款声学配色方案（Obsidian Gold、Cyberpunk Neon、Plasma Heat、Phosphor Green CRT），支持瞬态定格分析（Freeze Frame）、峰值驻留监测（Peak Hold）与鼠标悬停精确读数（Hz、音高八度、音分偏差与 dBFS 电平）",
+          "en": "Waterfall FFT Spectrogram: 60fps real-time logarithmic frequency spectrum (20Hz - 20kHz) with continuous rolling waterfall heatmap. Features 4 color themes, transient freeze frame, peak hold tracking, and cursor inspection tooltip (Hz, musical note octave, cents deviation, and dBFS)"
+        },
+        {
+          "zh": "45° 旋转立体声李萨如图示波器 (Lissajous Goniometer)：基于时域 Mid/Side 正交分解的专业级测角仪，模拟 CRT 磷光余辉衰减质感，直观呈现单声道垂直中置脊线与宽广立体声场展开",
+          "en": "Lissajous Goniometer & Phase Scope: 45-degree rotated Mid/Side coordinate scope with analog CRT phosphor persistence, visualizing mono center alignment and spatial stereo expansion"
+        },
+        {
+          "zh": "实时相位相关系数 (r) 与单声道抵消警报：毫秒级计算皮尔逊相关系数 r ∈ [-1.0, +1.0]，配备高精动态电平指示条与红区告警，彻底杜绝在夜店单声道超低音炮与手机扬声器下的声波抵消与梳状滤波",
+          "en": "Real-time Phase Correlation (r) & Mono Compatibility Alert: computes Pearson correlation r in [-1.0, +1.0] with dynamic meter bar and anti-phase warnings, preventing destructive comb filtering on mono systems"
+        },
+        {
+          "zh": "双轨时域波形示波器 (Dual-Trace Oscilloscope)：左/右声道双轨时域电压波形监测，内置过零锁相触发器（Zero-Crossing Sync Trigger），确保波形稳固不漂移，支持 1x/2x/4x 时基缩放",
+          "en": "Dual-Trace Waveform Oscilloscope: Left/Right time-domain voltage monitoring with zero-crossing sync trigger for jitter-free waveform stabilization and 1x/2x/4x timebase zoom"
+        },
+        {
+          "zh": "Studio 工作台无缝停靠 (Pro Console Master Dock)：在音序器工具栏一键呼出/折叠（快捷键 O 或 g+z），无缝接驳母带总线 2048 频段高精度分析，零丢帧稳定渲染",
+          "en": "Studio Master Dock: toggleable directly from sequencer toolbar or shortcut O / g+z, monitoring master output with zero frame drops"
+        },
+        {
+          "zh": "独立声学工作台与参考信号发生器 (/analyzer)：全新设立独立工作台与纯 Web Audio 声学信号发生器（20Hz-20kHz 扫频、808 Sub 重低音、Stereo Chorus 垫乐、180° 反相测试音、粉红噪声与白噪声），配套傅里叶变换与 7 大混音黄金频段深度声学档案",
+          "en": "Dedicated Workstation & Signal Generator: accessible at /analyzer with pure Web Audio test tones (Sine Sweep, 808 Sub, Stereo Chorus, Anti-Phase, Pink/White Noise) and acoustic physics dossier"
+        },
+        {
+          "zh": "Phase 6 里程碑圆满收官：调式锁定网格（P6-02）、智能琶音器与扫弦（P6-03）、Elo 听力天梯与记忆算法（P6-04）、世界节奏大师课（P6-01）与全景声谱分析仪（P6-05）全部高标准交付，迈向 Phase 7 DAW 生产力闭环！",
+          "en": "Phase 6 Milestone Complete: Scale-Locked Matrix, Smart Arpeggiator, Ear Training Elo Ladder, World Rhythm Masterclasses, and Panoramic Analyzer fully delivered!"
+        }
+      ]
+    },
     {
       "version": "1.14.8",
       "date": "2026-09-13",

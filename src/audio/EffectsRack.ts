@@ -135,8 +135,20 @@ export class EffectsRack {
 
     this.crusherNode.connect(this.chorusDelayL);
     this.crusherNode.connect(this.chorusDelayR);
-    this.chorusDelayL.connect(this.chorusWet);
-    this.chorusDelayR.connect(this.chorusWet);
+    if (typeof ctx.createChannelMerger === "function") {
+      try {
+        const merger = ctx.createChannelMerger(2);
+        this.chorusDelayL.connect(merger, 0, 0); // Left
+        this.chorusDelayR.connect(merger, 0, 1); // Right
+        merger.connect(this.chorusWet);
+      } catch {
+        this.chorusDelayL.connect(this.chorusWet);
+        this.chorusDelayR.connect(this.chorusWet);
+      }
+    } else {
+      this.chorusDelayL.connect(this.chorusWet);
+      this.chorusDelayR.connect(this.chorusWet);
+    }
     this.chorusWet.connect(this.outputNode);
 
     this.updateChorusRouting();

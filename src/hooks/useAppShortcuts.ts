@@ -108,6 +108,12 @@ export function useAppShortcuts({ onNavigateTab, isZh }: UseAppShortcutsOptions)
             tabNameZh = "节奏大师课";
             tabNameEn = "Masterclasses";
             break;
+          case "z":
+          case "l":
+            targetTab = "analyzer";
+            tabNameZh = "声谱示波器";
+            tabNameEn = "Analyzer & Scope";
+            break;
           default:
             break;
         }

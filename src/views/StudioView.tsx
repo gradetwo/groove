@@ -19,6 +19,7 @@ import { TrackRow } from "../components/sequencer/TrackRow";
 import { Toolbar, MobileEditMode } from "../components/sequencer/Toolbar";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
+import { MasterAnalyzerSuite } from "../components/analyzer/MasterAnalyzerSuite";
 import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
 import { clearSavedProject } from "../features/sequencer/projectStorage";
 import { ParameterDimension } from "../components/sequencer/VelocityLane";
@@ -179,6 +180,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [isVelocityLaneOpen, setIsVelocityLaneOpen] = useState(false);
   const [velocityActiveTrackIdx, setVelocityActiveTrackIdx] = useState(0);
   const [isEuclideanOpen, setIsEuclideanOpen] = useState(false);
+  const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
   const [pitchPicker, setPitchPicker] = useState<{
     isOpen: boolean;
     trackIdx: number;
@@ -827,6 +829,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
           setIsEuclideanOpen(false);
         } else if (isVelocityLaneOpen) {
           setIsVelocityLaneOpen(false);
+        } else if (isAnalyzerOpen) {
+          setIsAnalyzerOpen(false);
         } else if (isEditorMaximized) {
           e.preventDefault();
           setIsEditorMaximized(false);
@@ -840,6 +844,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
       } else if ((e.key === "e" || e.key === "E") && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setIsEuclideanOpen(true);
+      } else if ((e.key === "o" || e.key === "O") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setIsAnalyzerOpen((prev) => !prev);
       } else {
         const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
         const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
@@ -875,6 +882,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     pitchPicker.isOpen,
     isEuclideanOpen,
     isVelocityLaneOpen,
+    isAnalyzerOpen,
     isEditorMaximized,
     handleTogglePlay,
     handleToggleDrumsOnly,
@@ -1533,8 +1541,23 @@ export const StudioView: React.FC<StudioViewProps> = ({
               const next = !seqState.isCountIn;
               commit({ type: "SET_COUNT_IN", enabled: next });
             }}
+            isAnalyzerOpen={isAnalyzerOpen}
+            onToggleAnalyzer={() => setIsAnalyzerOpen((prev) => !prev)}
             onTapTempo={handleTapTempo}
           />
+
+          {/* Master Panoramic Analyzer Dock (P6-05) */}
+          {isAnalyzerOpen && (
+            <div className="w-full my-2">
+              <MasterAnalyzerSuite
+                analyser={engineRef.current?.getMasterAnalyser() || null}
+                analyserL={engineRef.current?.getStereoAnalysers().left || null}
+                analyserR={engineRef.current?.getStereoAnalysers().right || null}
+                isPlaying={isPlaying}
+                onClose={() => setIsAnalyzerOpen(false)}
+              />
+            </div>
+          )}
 
           {/* 8 Tracks Sequencer Matrix (#tracks) with Event Delegation (P2-02, P2-05, P2-20) */}
           <div
