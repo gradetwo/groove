@@ -102,6 +102,12 @@ export function useAppShortcuts({ onNavigateTab, isZh }: UseAppShortcutsOptions)
             tabNameZh = "底鼓设计";
             tabNameEn = "Kick Design";
             break;
+          case "r":
+          case "w":
+            targetTab = "masterclass";
+            tabNameZh = "节奏大师课";
+            tabNameEn = "Masterclasses";
+            break;
           default:
             break;
         }

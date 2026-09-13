@@ -11,6 +11,7 @@ export interface RouteState {
   chordProgression?: string;
   chordKey?: string;
   sequencerPayload?: string;
+  masterclassId?: string;
 }
 
 export function parseUrlToRoute(pathname: string, search: string): RouteState {
@@ -67,6 +68,20 @@ export function parseUrlToRoute(pathname: string, search: string): RouteState {
     };
   }
 
+  // Check masterclass: /masterclass, /rhythm, /explore/masterclass
+  if (
+    cleanPath === "/masterclass" ||
+    cleanPath.startsWith("/masterclass/") ||
+    cleanPath === "/rhythm" ||
+    cleanPath.startsWith("/rhythm/") ||
+    cleanPath === "/explore/masterclass" ||
+    cleanPath.startsWith("/explore/masterclass/")
+  ) {
+    const parts = cleanPath.split("/");
+    const mId = params.get("lesson") || (parts.length > 2 ? parts[2] : undefined);
+    return { tab: "masterclass", masterclassId: mId };
+  }
+
   // Check kick anatomy: /kick or /anatomy
   if (cleanPath === "/kick" || cleanPath.startsWith("/kick/") || cleanPath === "/anatomy" || cleanPath.startsWith("/anatomy/")) {
     return { tab: "kick" };
@@ -109,6 +124,12 @@ export function parseUrlToRoute(pathname: string, search: string): RouteState {
         tab: "chords",
         chordProgression: params.get("progression") || undefined,
         chordKey: params.get("key") || undefined,
+      };
+    }
+    if (tabParam === "masterclass") {
+      return {
+        tab: "masterclass",
+        masterclassId: params.get("lesson") || undefined,
       };
     }
     return { tab: tabParam, genreId: genreParam };
@@ -155,6 +176,9 @@ export function formatRouteToUrl(route: RouteState): string {
     }
     case "kick":
       return `/kick`;
+    case "masterclass": {
+      return route.masterclassId ? `/masterclass/${encodeURIComponent(route.masterclassId)}` : `/masterclass`;
+    }
     case "studio":
     default: {
       if (route.sequencerPayload) {

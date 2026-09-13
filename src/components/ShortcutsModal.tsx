@@ -21,6 +21,8 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
     { keys: ["g", "v"], desc: isZh ? "跳转至 垂直时间轴" : "Go to Story" },
     { keys: ["g", "m"], desc: isZh ? "跳转至 曲风对比" : "Go to Compare" },
     { keys: ["g", "q"], desc: isZh ? "跳转至 听音挑战" : "Go to Challenge" },
+    { keys: ["g", "r"], desc: isZh ? "跳转至 节奏大师课" : "Go to Masterclasses" },
+    { keys: ["g", "k"], desc: isZh ? "跳转至 底鼓设计" : "Go to Kick Design" },
     { keys: [modKey, "K"], desc: isZh ? "打开全局搜索" : "Open Global Search" },
     { keys: ["?"], desc: isZh ? "打开此快捷键面板" : "Show Keyboard Shortcuts" },
     { keys: ["Esc"], desc: isZh ? "关闭当前弹窗 / 抽屉" : "Close Dialog / Drawer" },

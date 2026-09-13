@@ -1,7 +1,46 @@
 {
-  "version": "1.14.7",
+  "version": "1.14.8",
   "releaseDate": "2026-09-13",
   "changelog": [
+    {
+      "version": "1.14.8",
+      "date": "2026-09-13",
+      "category": "feature",
+      "title": {
+        "zh": "v1.14.8 律动解构：世界节奏沉浸工作坊（P6-01）、毫秒级对拍打卡与一键载入 Studio",
+        "en": "v1.14.8 World Rhythm Masterclasses (P6-01), Live Tap Sync Check & One-Click Studio Baking"
+      },
+      "highlights": [
+        {
+          "zh": "复节奏声光对撞机（Polyrhythm Collider）：双环多轨同心圆可视化渲染，动态模拟 3:4、4:3、5:4 与 2:3 脉冲交叉干涉与相位碰撞。当双轨光臂在第 1 拍交汇时触发声光核爆与金属对撞音色，直观领悟「Pass the golden butter」声学奇迹",
+          "en": "Polyrhythm Collider: dual-ring concentric visualizer simulating 3:4, 4:3, 5:4, and 2:3 phase interference and cycle convergence. Triggers explosive visual and acoustic feedback when pulses collide on beat 1"
+        },
+        {
+          "zh": "Clave 节奏演化树与西非起源（Clave Evolution Tree）：跨越西非 12/8 铁钟神圣母题、古巴 Son Clave 3-2、Rumba Clave 3-2 到巴西 Bossa Nova Clave。高亮呈现 Son 与 Rumba 之间第 3 击半拍微移（Step 6 → Step 7）的声学魔力与 Tresillo/Dos 极性呼应",
+          "en": "Clave Evolution Tree & African Roots: explores West African 12/8 bell arch-pattern, Cuban Son Clave 3-2, Rumba Clave 3-2, and Brazilian Bossa Nova Clave, spotlighting the half-beat shift of stroke 3 from step 6 to step 7"
+        },
+        {
+          "zh": "下拍避让与放克切分动力学（Downbeat Omission Lab）：解构 Fela Kuti 与 Tony Allen 故意空出第一拍（Downbeat Rest）催生的无限推进动力，对照雷鬼 One Drop 在第 3 拍的极重下潜与 James Brown 'The One' 的绝对重力地基",
+          "en": "Downbeat Omission Lab: deconstructs Tony Allen and Fela Kuti leaving beat 1 empty for hypnotic forward momentum, compared against Reggae One Drop on beat 3 and James Brown The One ground anchor"
+        },
+        {
+          "zh": "巴尔干奇数拍与 Aksak 非对称细分（Balkan Odd Meters）：深入解析希腊 7/8 Kalamatianos（2+2+3 短-短-长）、马其顿 7/8 Lesnoto（3+2+2 长-短-短）与土耳其 9/8 Karsilama，基于比例时值方块与 Davul 重低音动态演示民俗步伐舞蹈",
+          "en": "Balkan Odd Meters & Aksak Additive Rhythms: breaks down Greek 7/8 Kalamatianos (2+2+3 Short-Short-Long), Macedonian 7/8 Lesnoto (3+2+2 Long-Short-Short), and 9/8 Karsilama with proportional pulse blocks and Davul bass modeling"
+        },
+        {
+          "zh": "J Dilla 微时序与非量化拟人摇摆（Dilla Microtiming）：解构 Akai MPC3000 关闭自动量化后的醉酒微时序步态，配备底鼓前冲（-50ms ~ +50ms）、军鼓迟滞（+35ms Deep Pocket）与 MPC 62% 摇摆滑块，并在物理位移车道上直观展示人脑时间弹性",
+          "en": "J Dilla Microtiming & Human Swing: deconstructs unquantized MPC drunk timing with interactive kick push (-50ms to +50ms), laid-back snare drag (+35ms), and MPC 62% swing slider over physical displacement lanes"
+        },
+        {
+          "zh": "实时对拍打卡与毫秒级时序评测（Live Tap Sync Check）：支持在各课程中敲击 Space 空格键或打击板进行实时对拍打卡，毫秒级计算偏差（Δt ms），提供 PERFECT（≤30ms）、GREAT、GOOD、MISS 判定、连击连胜激励与全课程统计",
+          "en": "Live Tap Sync Check: tap Spacebar or the interactive pad on rhythm accents to test millisecond time feel, computing signed delta ms with PERFECT (<=30ms), GREAT, GOOD, and MISS ratings alongside streak counters"
+        },
+        {
+          "zh": "一键载入 Studio 工作台（Bake into Studio Sequencer）：全套 5 门大师课均支持一键将当前节奏模式与对应预设参数烘焙至 Studio 工作台，自动装载音轨步进、BPM、摇摆与拍号，开启自由混音编曲",
+          "en": "One-Click Studio Baking: all 5 masterclasses support one-click baking into Studio Sequencer, automatically transferring multitrack step patterns, tempo, swing, and time signatures for further creation"
+        }
+      ]
+    },
     {
       "version": "1.14.7",
       "date": "2026-09-13",

@@ -15,6 +15,8 @@ export const commonMessages = {
   nav_galaxy_desc: { en: "3D Cosmic Map", zh: "3D 星系图谱" },
   nav_timeline_h_desc: { en: "Chronology", zh: "年代编年演变轴" },
   nav_timeline_v_desc: { en: "Storylines", zh: "流派故事脉络" },
+  nav_masterclass: { en: "Masterclasses", zh: "节奏大师课" },
+  nav_masterclass_desc: { en: "World Rhythm Labs", zh: "世界节奏沉浸工作坊" },
 
   // Language Switch
   lang_switch_target: { en: "中", zh: "EN" },

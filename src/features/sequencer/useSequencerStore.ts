@@ -80,6 +80,7 @@ export type SequencerAction =
   | { type: "SET_STEP_COUNT"; count: number }
   | { type: "LOAD_CHORDS"; chords: ChordDefinition[] }
   | { type: "LOAD_ARPEGGIATED_SEQUENCE"; baked: BakedArpeggioResult }
+  | { type: "LOAD_MASTERCLASS_PATTERN"; pattern: SequencerPattern; bpm?: number; timeSignature?: string }
   | { type: "SWITCH_PATTERN_SLOT"; slot: "A" | "B" }
   | { type: "COPY_PATTERN_SLOT"; from: "A" | "B"; to: "A" | "B" }
   | { type: "TOGGLE_SONG_MODE" }
@@ -730,6 +731,20 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
       });
 
       return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "LOAD_MASTERCLASS_PATTERN": {
+      const stepCount = action.pattern.tracks[0]?.steps?.length || state.stepCount;
+      const bpm = action.bpm || action.pattern.bpm || state.bpm;
+      const swing = action.pattern.swing !== undefined ? action.pattern.swing : state.swing;
+      const timeSignature = action.timeSignature || action.pattern.timeSignature || state.timeSignature;
+      return {
+        ...withUpdatedPattern(action.pattern),
+        bpm,
+        swing,
+        timeSignature,
+        stepCount,
+      };
     }
 
     case "SET_LOOP_RANGE":

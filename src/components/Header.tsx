@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Keyboard,
   Activity,
+  Disc,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
@@ -25,6 +26,7 @@ export type NavTab =
   | "studio" 
   | "chords"
   | "kick"
+  | "masterclass"
   | "galaxy" 
   | "horizontal-timeline" 
   | "vertical-timeline" 
@@ -116,12 +118,13 @@ export const Header: React.FC<HeaderProps> = ({
   }, [analyser, isPlaying]);
 
   const exploreItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
+    { tab: "masterclass", labelKey: "nav_masterclass", descKey: "nav_masterclass_desc", icon: <Disc className="w-3.5 h-3.5" /> },
     { tab: "galaxy", labelKey: "nav_galaxy", descKey: "nav_galaxy_desc", icon: <Orbit className="w-3.5 h-3.5" /> },
     { tab: "horizontal-timeline", labelKey: "nav_timeline_h", descKey: "nav_timeline_h_desc", icon: <Clock className="w-3.5 h-3.5" /> },
     { tab: "vertical-timeline", labelKey: "nav_timeline_v", descKey: "nav_timeline_v_desc", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
   ];
 
-  const isExploreActive = ["galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
+  const isExploreActive = ["masterclass", "galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
 
   const handleRandom = () => {
     const randomIndex = Math.floor(Math.random() * GENRE_INDEX.length);

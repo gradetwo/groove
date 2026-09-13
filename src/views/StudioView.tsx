@@ -111,6 +111,8 @@ interface StudioViewProps {
   onClearInitialChords?: () => void;
   initialArpeggio?: { baked: BakedArpeggioResult; label?: string } | null;
   onClearInitialArpeggio?: () => void;
+  initialMasterclassPattern?: { pattern: SequencerPattern; label?: string } | null;
+  onClearInitialMasterclassPattern?: () => void;
 }
 
 export const StudioView: React.FC<StudioViewProps> = ({
@@ -123,6 +125,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onClearInitialChords,
   initialArpeggio,
   onClearInitialArpeggio,
+  initialMasterclassPattern,
+  onClearInitialMasterclassPattern,
 }) => {
   const { t, language, isZh } = useLanguage();
 
@@ -533,6 +537,31 @@ export const StudioView: React.FC<StudioViewProps> = ({
       onClearInitialArpeggio();
     }
   }, [initialArpeggio, isZh, onClearInitialArpeggio, showToast, commit]);
+
+  // Handle rhythm masterclass pattern transferred from MasterclassView (P6-01)
+  useEffect(() => {
+    if (!initialMasterclassPattern || !initialMasterclassPattern.pattern) return;
+    commit({
+      type: "LOAD_MASTERCLASS_PATTERN",
+      pattern: initialMasterclassPattern.pattern,
+      bpm: initialMasterclassPattern.pattern.bpm,
+      timeSignature: initialMasterclassPattern.pattern.timeSignature,
+    });
+    if (engineRef.current) {
+      engineRef.current.setPattern(initialMasterclassPattern.pattern);
+      if (initialMasterclassPattern.pattern.bpm) {
+        engineRef.current.setBpm(initialMasterclassPattern.pattern.bpm);
+      }
+    }
+    showToast(
+      isZh
+        ? `已成功载入「${initialMasterclassPattern.label || "律动工作坊节奏"}」至 Studio！✓`
+        : `Baked "${initialMasterclassPattern.label || "Masterclass Pattern"}" into Studio! ✓`
+    );
+    if (onClearInitialMasterclassPattern) {
+      onClearInitialMasterclassPattern();
+    }
+  }, [initialMasterclassPattern, isZh, onClearInitialMasterclassPattern, showToast, commit]);
 
   // Sync external genre
   useEffect(() => {

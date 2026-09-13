@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
 import { GlobalSearch } from "./components/GlobalSearch";
-import { Genre } from "./types/genre";
+import { Genre, SequencerPattern } from "./types/genre";
 import { GENRE_INDEX_MAP } from "./data/index/genresIndex";
 import { loadGenre } from "./data/index/loader";
 import { AudioEngine } from "./audio/AudioEngine";
@@ -25,6 +25,7 @@ const CompareView = React.lazy(() => import("./views/CompareView").then((m) => (
 const ChallengeView = React.lazy(() => import("./views/ChallengeView").then((m) => ({ default: m.ChallengeView })));
 const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then((m) => ({ default: m.GenreDetailView })));
 const KickAnatomyView = React.lazy(() => import("./views/KickAnatomyView").then((m) => ({ default: m.KickAnatomyView })));
+const MasterclassView = React.lazy(() => import("./views/MasterclassView").then((m) => ({ default: m.MasterclassView })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
@@ -76,6 +77,10 @@ const MainApp: React.FC = () => {
   const [initialArpeggio, setInitialArpeggio] = useState<{
     baked: BakedArpeggioResult;
     label?: string;
+  } | null>(null);
+  const [initialMasterclassPattern, setInitialMasterclassPattern] = useState<{
+    pattern: SequencerPattern;
+    label: string;
   } | null>(null);
 
   const handleSelectTab = useCallback((tab: NavTab) => {
@@ -190,6 +195,8 @@ const MainApp: React.FC = () => {
                     onClearInitialChords={() => setInitialChords(null)}
                     initialArpeggio={initialArpeggio}
                     onClearInitialArpeggio={() => setInitialArpeggio(null)}
+                    initialMasterclassPattern={initialMasterclassPattern}
+                    onClearInitialMasterclassPattern={() => setInitialMasterclassPattern(null)}
                   />
                 ) : (
                   <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
@@ -231,6 +238,24 @@ const MainApp: React.FC = () => {
                 homeLabel={t("btn_return_studio")}
               >
                 <KickAnatomyView />
+              </ErrorBoundary>
+            )}
+
+            {currentTab === "masterclass" && (
+              <ErrorBoundary
+                fallbackTitle={t("error_masterclass_title")}
+                fallbackDescription={t("error_masterclass_desc")}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={t("btn_return_studio")}
+              >
+                <MasterclassView
+                  initialLessonId={route.masterclassId}
+                  onOpenStudio={({ pattern, label }) => {
+                    setInitialMasterclassPattern({ pattern, label });
+                    handleSelectTab("studio");
+                  }}
+                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                />
               </ErrorBoundary>
             )}
 
@@ -350,6 +375,12 @@ const MainApp: React.FC = () => {
               className="hover:text-text transition-colors"
             >
               {t("nav_studio")}
+            </button>
+            <button
+              onClick={() => handleSelectTab("masterclass")}
+              className="hover:text-text transition-colors"
+            >
+              {t("nav_masterclass")}
             </button>
             <button
               onClick={() => handleSelectTab("galaxy")}

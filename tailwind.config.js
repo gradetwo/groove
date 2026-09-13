@@ -65,6 +65,9 @@ export default {
           green: '#00f5a0',
         }
       },
+      gridTemplateColumns: {
+        '16': 'repeat(16, minmax(0, 1fr))',
+      },
       fontFamily: {
         sans: ['"Space Grotesk"', '"Noto Sans SC"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'Fira Code', 'Roboto Mono', 'monospace'],
