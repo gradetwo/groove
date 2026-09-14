@@ -17,8 +17,11 @@
   Content-Type: application/manifest+json; charset=utf-8
 
 # 3b. Version check + changelog archive (A-08)
+# The update check must never be stale: a 5-minute max-age meant "check for updates"
+# reported the previous version for up to 5 minutes after a deploy (observed during
+# the v1.16.7 release). It is a 3KB file, so revalidation is cheap.
 /version.json
-  Cache-Control: public, max-age=300
+  Cache-Control: no-cache, must-revalidate
   Content-Type: application/json; charset=utf-8
 
 /changelog.json
