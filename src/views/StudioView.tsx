@@ -762,7 +762,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   }, []);
 
   // Ruler horizontal drag-to-scroll handler
-  const handleRulerPointerDown = (e: React.PointerEvent) => {
+  const handleRulerPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
     setIsRulerDragging(true);
     rulerDragStartXRef.current = e.clientX;
@@ -775,23 +775,34 @@ export const StudioView: React.FC<StudioViewProps> = ({
     } catch {
       // Ignored
     }
-  };
+  }, []);
 
-  const handleRulerPointerMove = (e: React.PointerEvent) => {
-    if (!isRulerDragging || !matrixContainerRef.current) return;
-    const dx = e.clientX - rulerDragStartXRef.current;
-    matrixContainerRef.current.scrollLeft = rulerDragScrollLeftRef.current - dx;
-  };
+  const handleRulerPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isRulerDragging || !matrixContainerRef.current) return;
+      const dx = e.clientX - rulerDragStartXRef.current;
+      matrixContainerRef.current.scrollLeft = rulerDragScrollLeftRef.current - dx;
+    },
+    [isRulerDragging]
+  );
 
-  const handleRulerPointerUp = (e: React.PointerEvent) => {
-    if (!isRulerDragging) return;
-    setIsRulerDragging(false);
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignored
-    }
-  };
+  const handleRulerPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isRulerDragging) return;
+      setIsRulerDragging(false);
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignored
+      }
+    },
+    [isRulerDragging]
+  );
+
+  const handleSelectLoopRange = useCallback(
+    (rng: [number, number] | null) => commit({ type: "SET_LOOP_RANGE", range: rng }),
+    [commit]
+  );
 
   // Switch genre
   const switchGenre = useCallback(
@@ -1260,12 +1271,100 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const handleCycleTrackLength = useCallback(
     (trackIdx: number) => {
-      const cur = pattern.tracks[trackIdx]?.trackLength || stepCount;
+      const tracks = patternRef.current.tracks;
+      const cur = tracks[trackIdx]?.trackLength || stepCount;
       const opts = [12, 14, 16, 24, 32].filter((n) => n <= stepCount);
       let nextLen = opts[(opts.indexOf(cur) + 1) % opts.length] || stepCount;
       commit({ type: "SET_TRACK_LENGTH", trackIdx, length: nextLen });
     },
-    [pattern.tracks, stepCount, commit]
+    [stepCount, commit]
+  );
+
+  // A-03: TrackRow is memoized, so every handler it receives must keep a stable
+  // identity across unrelated StudioView re-renders. Each handler takes the track
+  // index from its caller (instead of being an inline arrow in the JSX) and reads
+  // live pattern data through `patternRef`, so toggling one step no longer changes
+  // the callback identity of every other row.
+  const handleToggleTrackMute = useCallback(
+    (idx: number) => {
+      const nextMute = !patternRef.current.tracks[idx]?.mute;
+      commit({ type: "TOGGLE_MUTE", trackIdx: idx });
+      if (engineRef.current) {
+        engineRef.current.setTrackState(idx, { mute: nextMute });
+      }
+    },
+    [commit]
+  );
+
+  const handleToggleTrackSolo = useCallback(
+    (idx: number) => {
+      const nextSolo = !patternRef.current.tracks[idx]?.solo;
+      commit({ type: "TOGGLE_SOLO", trackIdx: idx });
+      if (engineRef.current) {
+        engineRef.current.setTrackState(idx, { solo: nextSolo });
+      }
+    },
+    [commit]
+  );
+
+  const handleChangeTrackVolume = useCallback(
+    (idx: number, vol: number) => {
+      commit({ type: "SET_VOLUME", trackIdx: idx, volume: vol });
+      if (engineRef.current) {
+        engineRef.current.setTrackState(idx, { volume: vol });
+      }
+    },
+    [commit]
+  );
+
+  const handleChangeTrackPan = useCallback(
+    (idx: number, pan: number) => {
+      commit({ type: "SET_TRACK_PAN", trackIdx: idx, pan });
+      if (engineRef.current) engineRef.current.setTrackState(idx, { pan });
+    },
+    [commit]
+  );
+
+  const handleChangeTrackSwing = useCallback(
+    (idx: number, trackSwing: number) => {
+      commit({ type: "SET_TRACK_SWING", trackIdx: idx, swing: trackSwing });
+    },
+    [commit]
+  );
+
+  const handleOpenVelocityLane = useCallback((idx: number) => {
+    setVelocityActiveTrackIdx(idx);
+    setIsVelocityLaneOpen(true);
+  }, []);
+
+  const handleShiftTrack = useCallback(
+    (idx: number, dir: -1 | 1) => commit({ type: "SHIFT_TRACK", trackIdx: idx, direction: dir }),
+    [commit]
+  );
+
+  const handleSmartFillTrack = useCallback(
+    (idx: number) => commit({ type: "SMART_FILL_TRACK", trackIdx: idx }),
+    [commit]
+  );
+
+  const handleClearTrack = useCallback(
+    (idx: number) => commit({ type: "CLEAR_TRACK", trackIdx: idx }),
+    [commit]
+  );
+
+  const handleMoveTrackUp = useCallback(
+    (idx: number) => commit({ type: "REORDER_TRACKS", fromIndex: idx, toIndex: Math.max(0, idx - 1) }),
+    [commit]
+  );
+
+  const handleMoveTrackDown = useCallback(
+    (idx: number) =>
+      commit({
+        type: "REORDER_TRACKS",
+        fromIndex: idx,
+        toIndex: Math.min(patternRef.current.tracks.length - 1, idx + 1),
+      }),
+    [commit]
   );
 
   const handleExportMidi = useCallback(() => {
@@ -1671,6 +1770,75 @@ export const StudioView: React.FC<StudioViewProps> = ({
     if (rand) void switchGenreById(rand.id, true);
   }, [switchGenreById]);
 
+  // A-03: stable props for the memoized rail / drawer leaves.
+  const handleSelectGenreFromRail = useCallback(
+    (genreId: string) => {
+      void switchGenreById(genreId, true);
+    },
+    [switchGenreById]
+  );
+
+  const handleCollapseSidebar = useCallback(() => setIsSidebarCollapsed(true), []);
+
+  const handleSelectParameterDimension = useCallback(
+    (dim: ParameterDimension) => commit({ type: "SET_PARAMETER_DIMENSION", dimension: dim }),
+    [commit]
+  );
+
+  const handleSelectVelocityTrack = useCallback((idx: number) => setVelocityActiveTrackIdx(idx), []);
+
+  const handleUpdateVelocity = useCallback(
+    (trackIdx: number, stepIdx: number, newVel: number) =>
+      commitCoalesced(
+        { type: "SET_VELOCITY", trackIdx, stepIdx, velocity: newVel },
+        `velocity:${trackIdx}`
+      ),
+    [commitCoalesced]
+  );
+
+  const handleBatchUpdateVelocity = useCallback(
+    (trackIdx: number, newVelocities: number[]) =>
+      commit({ type: "BATCH_SET_VELOCITY", trackIdx, velocities: newVelocities }),
+    [commit]
+  );
+
+  const handleUpdateProbability = useCallback(
+    (trackIdx: number, stepIdx: number, p: number) =>
+      commit({ type: "SET_PROBABILITY", trackIdx, stepIdx, probability: p }),
+    [commit]
+  );
+
+  const handleBatchUpdateProbability = useCallback(
+    (trackIdx: number, probs: number[]) =>
+      commit({ type: "BATCH_SET_PROBABILITY", trackIdx, probabilities: probs }),
+    [commit]
+  );
+
+  const handleUpdateRatchet = useCallback(
+    (trackIdx: number, stepIdx: number, r: number) =>
+      commit({ type: "SET_RATCHET", trackIdx, stepIdx, ratchet: r }),
+    [commit]
+  );
+
+  const handleBatchUpdateRatchet = useCallback(
+    (trackIdx: number, ratchets: number[]) =>
+      commit({ type: "BATCH_SET_RATCHET", trackIdx, ratchets }),
+    [commit]
+  );
+
+  const handleUpdateGate = useCallback(
+    (trackIdx: number, stepIdx: number, g: number) =>
+      commit({ type: "SET_GATE", trackIdx, stepIdx, gate: g }),
+    [commit]
+  );
+
+  const handleBatchUpdateGate = useCallback(
+    (trackIdx: number, gates: number[]) => commit({ type: "BATCH_SET_GATE", trackIdx, gates }),
+    [commit]
+  );
+
+  const handleCloseVelocityLane = useCallback(() => setIsVelocityLaneOpen(false), []);
+
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
   return (
@@ -1692,7 +1860,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         genreAccent={genreAccent}
         isZh={isZh}
         onSelectCategory={setActiveCategoryFilter}
-        onSelectGenre={(genreId) => void switchGenreById(genreId, true)}
+        onSelectGenre={handleSelectGenreFromRail}
         onRandomGenre={handleDiceRandom}
         getGenreAccent={getGenreAccent}
         getGenreChipTag={getGenreChipTag}
@@ -1712,7 +1880,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
             timeSignature={timeSignature}
             isZh={isZh}
             language={language}
-            onClose={() => setIsSidebarCollapsed(true)}
+            onClose={handleCollapseSidebar}
             onViewDetail={onViewDetail}
             onAddToCompare={onAddToCompare}
           />
@@ -1895,7 +2063,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
               isRulerDragging={isRulerDragging}
               isZh={isZh}
               loopRange={seqState.loopRange}
-              onSelectLoopRange={(rng) => commit({ type: "SET_LOOP_RANGE", range: rng })}
+              onSelectLoopRange={handleSelectLoopRange}
               onPointerDown={handleRulerPointerDown}
               onPointerMove={handleRulerPointerMove}
               onPointerUp={handleRulerPointerUp}
@@ -1928,52 +2096,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
                   isZh={isZh}
                   onAudition={handleAudition}
                   onCycleLength={handleCycleTrackLength}
-                  onToggleMute={(idx) => {
-                    const nextMute = !pattern.tracks[idx]?.mute;
-                    commit({ type: "TOGGLE_MUTE", trackIdx: idx });
-                    if (engineRef.current) {
-                      engineRef.current.setTrackState(idx, { mute: nextMute });
-                    }
-                  }}
-                  onToggleSolo={(idx) => {
-                    const nextSolo = !pattern.tracks[idx]?.solo;
-                    commit({ type: "TOGGLE_SOLO", trackIdx: idx });
-                    if (engineRef.current) {
-                      engineRef.current.setTrackState(idx, { solo: nextSolo });
-                    }
-                  }}
-                  onChangeVolume={(idx, vol) => {
-                    commit({ type: "SET_VOLUME", trackIdx: idx, volume: vol });
-                    if (engineRef.current) {
-                      engineRef.current.setTrackState(idx, { volume: vol });
-                    }
-                  }}
-                  onOpenVelocity={(idx) => {
-                    setVelocityActiveTrackIdx(idx);
-                    setIsVelocityLaneOpen(true);
-                  }}
-                  onShiftTrack={(idx, dir) => commit({ type: "SHIFT_TRACK", trackIdx: idx, direction: dir })}
-                  onSmartFill={(idx) => commit({ type: "SMART_FILL_TRACK", trackIdx: idx })}
-                  onClearTrack={(idx) => commit({ type: "CLEAR_TRACK", trackIdx: idx })}
-                  onMoveUp={(idx: number) =>
-                    commit({ type: "REORDER_TRACKS", fromIndex: idx, toIndex: Math.max(0, idx - 1) })
-                  }
-                  onMoveDown={(idx: number) =>
-                    commit({
-                      type: "REORDER_TRACKS",
-                      fromIndex: idx,
-                      toIndex: Math.min(pattern.tracks.length - 1, idx + 1),
-                    })
-                  }
+                  onToggleMute={handleToggleTrackMute}
+                  onToggleSolo={handleToggleTrackSolo}
+                  onChangeVolume={handleChangeTrackVolume}
+                  onOpenVelocity={handleOpenVelocityLane}
+                  onShiftTrack={handleShiftTrack}
+                  onSmartFill={handleSmartFillTrack}
+                  onClearTrack={handleClearTrack}
+                  onMoveUp={handleMoveTrackUp}
+                  onMoveDown={handleMoveTrackDown}
                   canMoveUp={trackIdx > 0}
                   canMoveDown={trackIdx < pattern.tracks.length - 1}
-                  onChangePan={(idx: number, pan: number) => {
-                    commit({ type: "SET_TRACK_PAN", trackIdx: idx, pan });
-                    if (engineRef.current) engineRef.current.setTrackState(idx, { pan });
-                  }}
-                  onChangeSwing={(idx: number, trackSwing: number) => {
-                    commit({ type: "SET_TRACK_SWING", trackIdx: idx, swing: trackSwing });
-                  }}
+                  onChangePan={handleChangeTrackPan}
+                  onChangeSwing={handleChangeTrackSwing}
                 />
               );
             })}
@@ -1986,36 +2121,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 tracks={pattern.tracks}
                 activeTrackIdx={velocityActiveTrackIdx}
                 dimension={seqState.parameterDimension}
-                onSelectDimension={(dim) => commit({ type: "SET_PARAMETER_DIMENSION", dimension: dim })}
-                onSelectTrack={(idx) => setVelocityActiveTrackIdx(idx)}
-                onUpdateVelocity={(trackIdx, stepIdx, newVel) =>
-                  commitCoalesced(
-                    { type: "SET_VELOCITY", trackIdx, stepIdx, velocity: newVel },
-                    `velocity:${trackIdx}`
-                  )
-                }
-                onBatchUpdateVelocity={(trackIdx, newVelocities) =>
-                  commit({ type: "BATCH_SET_VELOCITY", trackIdx, velocities: newVelocities })
-                }
-                onUpdateProbability={(trackIdx, stepIdx, p) =>
-                  commit({ type: "SET_PROBABILITY", trackIdx, stepIdx, probability: p })
-                }
-                onBatchUpdateProbability={(trackIdx, probs) =>
-                  commit({ type: "BATCH_SET_PROBABILITY", trackIdx, probabilities: probs })
-                }
-                onUpdateRatchet={(trackIdx, stepIdx, r) =>
-                  commit({ type: "SET_RATCHET", trackIdx, stepIdx, ratchet: r })
-                }
-                onBatchUpdateRatchet={(trackIdx, ratchets) =>
-                  commit({ type: "BATCH_SET_RATCHET", trackIdx, ratchets })
-                }
-                onUpdateGate={(trackIdx, stepIdx, g) =>
-                  commit({ type: "SET_GATE", trackIdx, stepIdx, gate: g })
-                }
-                onBatchUpdateGate={(trackIdx, gates) =>
-                  commit({ type: "BATCH_SET_GATE", trackIdx, gates })
-                }
-                onClose={() => setIsVelocityLaneOpen(false)}
+                onSelectDimension={handleSelectParameterDimension}
+                onSelectTrack={handleSelectVelocityTrack}
+                onUpdateVelocity={handleUpdateVelocity}
+                onBatchUpdateVelocity={handleBatchUpdateVelocity}
+                onUpdateProbability={handleUpdateProbability}
+                onBatchUpdateProbability={handleBatchUpdateProbability}
+                onUpdateRatchet={handleUpdateRatchet}
+                onBatchUpdateRatchet={handleBatchUpdateRatchet}
+                onUpdateGate={handleUpdateGate}
+                onBatchUpdateGate={handleBatchUpdateGate}
+                onClose={handleCloseVelocityLane}
                 currentStep={-1}
                 isPlaying={isPlaying}
                 language={language}
