@@ -37,6 +37,7 @@ import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
 import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { parseScaleString, quantizePitchToScale } from "../utils/scaleTheory";
+import { calculateGroupSize, calculateStepsPerBar } from "../utils/meter";
 import { announcer } from "../ui";
 import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
 
@@ -1135,22 +1136,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   };
 
-  // Math for Bars & Steps
-  const timeDenom = useMemo(() => {
-    const parts = timeSignature.split("/");
-    return parseInt(parts[1], 10) || 4;
-  }, [timeSignature]);
+  // Math for Bars & Steps (pure helpers live in ../utils/meter)
+  const groupSize = useMemo(() => calculateGroupSize(resolution), [resolution]);
 
-  const groupSize = useMemo(() => {
-    if (resolution === "1/8") return 4;
-    if (resolution === "1/32") return 8;
-    return 4;
-  }, [resolution]);
-
-  const stepsPerBar = useMemo(() => {
-    const stepsPerWholeNote = resolution === "1/32" ? 32 : resolution === "1/8" ? 8 : 16;
-    return Math.max(1, Math.round(stepsPerWholeNote / timeDenom));
-  }, [resolution, timeDenom]);
+  const stepsPerBar = useMemo(
+    () => calculateStepsPerBar(timeSignature, resolution),
+    [timeSignature, resolution]
+  );
 
   const barCount = Math.max(1, Math.ceil(stepCount / stepsPerBar));
 
