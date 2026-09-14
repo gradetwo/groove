@@ -228,3 +228,64 @@ describe("master volume · persisted level", () => {
     engine.destroy();
   });
 });
+
+describe("per-channel analysers · real console meters", () => {
+  let restore: (() => void) | null = null;
+  beforeEach(() => {
+    restore = installFakeAudioContext();
+  });
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  it("creates no analysers until a view asks for them", () => {
+    const engine = new AudioEngine();
+    expect(engine.areTrackAnalysersEnabled()).toBe(false);
+    expect(engine.getTrackAnalyser(0)).toBeNull();
+    engine.destroy();
+  });
+
+  it("creates one pass-through analyser per channel on demand", () => {
+    const engine = new AudioEngine();
+    engine.enableTrackAnalysers(true);
+
+    expect(engine.areTrackAnalysersEnabled()).toBe(true);
+    const first = engine.getTrackAnalyser(0);
+    const second = engine.getTrackAnalyser(1);
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+    expect(first).not.toBe(second);
+    // 256-point window keeps the per-frame read cheap for 8 channels.
+    expect(first!.fftSize).toBe(256);
+
+    // The analyser sits in the signal path (it has both an input and an output edge).
+    const strip = (engine as unknown as { trackStrips: Array<{ polarity: { incoming: unknown[] }; analyser: { incoming: unknown[] } | null }> })
+      .trackStrips[0];
+    expect(strip.polarity.incoming.length).toBeGreaterThan(0);
+    expect(strip.analyser!.incoming.length).toBe(1);
+
+    engine.destroy();
+  });
+
+  it("removes them again when the view unmounts", () => {
+    const engine = new AudioEngine();
+    engine.enableTrackAnalysers(true);
+    expect(engine.getTrackAnalyser(0)).toBeTruthy();
+
+    engine.enableTrackAnalysers(false);
+    expect(engine.areTrackAnalysersEnabled()).toBe(false);
+    expect(engine.getTrackAnalyser(0)).toBeNull();
+    engine.destroy();
+  });
+
+  it("keeps analysers when the monitoring mode is switched", () => {
+    const engine = new AudioEngine();
+    engine.enableTrackAnalysers(true);
+    engine.setSpatialMode(true);
+    expect(engine.getTrackAnalyser(0)).toBeTruthy();
+    engine.setSpatialMode(false);
+    expect(engine.getTrackAnalyser(0)).toBeTruthy();
+    engine.destroy();
+  });
+});

@@ -72,6 +72,8 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
   const masterMeterLeftRef = useRef<HTMLDivElement | null>(null);
   const masterMeterRightRef = useRef<HTMLDivElement | null>(null);
   const masterPeakRef = useRef({ left: 0, right: 0 });
+  // Real per-channel meters (N-01 follow-up): buffers reused across frames.
+  const trackAnalyserBuffersRef = useRef<Array<Uint8Array<ArrayBuffer> | null>>([]);
   const masterBuffersRef = useRef<{
     left: Uint8Array<ArrayBuffer> | null;
     right: Uint8Array<ArrayBuffer> | null;
@@ -135,6 +137,17 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
   useEffect(() => {
     engineRef.current?.setSpatialMode(spatialEnabled);
   }, [spatialEnabled]);
+
+  // ----- Real channel meters: analysers exist only while this view is mounted ---
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    engine.enableTrackAnalysers(true);
+    return () => {
+      engine.enableTrackAnalysers(false);
+      trackAnalyserBuffersRef.current = [];
+    };
+  }, []);
 
   // ----- Store -> engine sync (audio always matches the console) ------------
   useEffect(() => {
@@ -225,9 +238,32 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
 
       const channelCount = trackCountRef.current;
       for (let trackIdx = 0; trackIdx < channelCount; trackIdx += 1) {
-        const pulse = trackPulseRef.current[trackIdx];
         const refs = channelMeterRefs[trackIdx];
-        if (!pulse || !refs) continue;
+        if (!refs) continue;
+
+        // Prefer the channel's real analyser; if meters are unavailable, fall back to
+        // the trigger-derived envelope so the UI still shows something meaningful.
+        const channelAnalyser = engine?.getTrackAnalyser(trackIdx);
+        if (channelAnalyser) {
+          const size = channelAnalyser.fftSize || 256;
+          let buffer = trackAnalyserBuffersRef.current[trackIdx];
+          if (!buffer || buffer.length !== size) {
+            buffer = new Uint8Array(new ArrayBuffer(size));
+            trackAnalyserBuffersRef.current[trackIdx] = buffer;
+          }
+          channelAnalyser.getByteTimeDomainData(buffer);
+          const peak = followPeak(
+            trackPulseRef.current[trackIdx]?.peakL ?? 0,
+            peakFromTimeDomain(buffer)
+          );
+          trackPulseRef.current[trackIdx] = { peakL: peak, peakR: peak, at: now };
+          applyLevel(refs.left.current, peak);
+          applyLevel(refs.right.current, peak);
+          continue;
+        }
+
+        const pulse = trackPulseRef.current[trackIdx];
+        if (!pulse) continue;
         const age = now - pulse.at;
         applyLevel(refs.left.current, levelAtAge(pulse.peakL, age));
         applyLevel(refs.right.current, levelAtAge(pulse.peakR, age));

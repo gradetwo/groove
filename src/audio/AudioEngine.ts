@@ -43,6 +43,11 @@ export interface TrackChannelStrip {
    */
   polarity: GainNode;
   /**
+   * Per-channel analyser, created only while a view asks for real meters
+   * (`enableTrackAnalysers`). Pass-through: it does not colour the signal.
+   */
+  analyser: AnalyserNode | null;
+  /**
    * Stereo mode panner. Exactly one of `panner` / `spatialPanner` is active:
    * the strip is rebuilt when the monitoring mode changes (N-02).
    */
@@ -93,6 +98,8 @@ export class AudioEngine {
 
   /** N-02: binaural (HRTF) monitoring toggle; off by default. */
   private spatialEnabled: boolean = false;
+  /** Per-channel analysers for the console meters; off unless a view needs them. */
+  private trackAnalysersEnabled: boolean = false;
 
   // A-05: voice bookkeeping now lives in the shared VoiceRegistry (also used by the
   // chord engine) instead of a private copy per engine.
@@ -394,6 +401,28 @@ export class AudioEngine {
     this.setupTrackStrips(16);
   }
 
+  /**
+   * Creates (or removes) a pass-through analyser per channel so a mixing view can show
+   * real signal meters instead of an approximation. Off by default: 16 analysers cost
+   * CPU and are only useful while such a view is mounted.
+   */
+  public enableTrackAnalysers(enabled: boolean): void {
+    if (this.trackAnalysersEnabled === enabled) return;
+    this.trackAnalysersEnabled = enabled;
+    if (!this.ctx) return;
+    this.releaseTrackStrips();
+    this.setupTrackStrips(16);
+  }
+
+  public areTrackAnalysersEnabled(): boolean {
+    return this.trackAnalysersEnabled;
+  }
+
+  /** Real per-channel analyser, or null when meters are not enabled/available. */
+  public getTrackAnalyser(trackIdx: number): AnalyserNode | null {
+    return this.trackStrips[trackIdx]?.analyser ?? null;
+  }
+
   public getSpatialMode(): boolean {
     return this.spatialEnabled;
   }
@@ -409,6 +438,7 @@ export class AudioEngine {
       try {
         strip.gain.disconnect();
         strip.polarity.disconnect();
+        strip.analyser?.disconnect();
         strip.panner?.disconnect();
         strip.spatialPanner?.disconnect();
         strip.sendA.disconnect();
@@ -430,6 +460,17 @@ export class AudioEngine {
       const polarity = this.ctx.createGain();
       polarity.gain.setValueAtTime(1, this.ctx.currentTime);
 
+      // Optional per-channel analyser: inserting it is transparent to the audio path.
+      let analyser: AnalyserNode | null = null;
+      let stripOut: AudioNode = polarity;
+      if (this.trackAnalysersEnabled && typeof this.ctx.createAnalyser === "function") {
+        analyser = this.ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.6;
+        polarity.connect(analyser);
+        stripOut = analyser;
+      }
+
       let panner: StereoPannerNode | null = null;
       let spatialPanner: PannerNode | null = null;
 
@@ -445,34 +486,34 @@ export class AudioEngine {
         const slot = this.getSpatialSlot(i, numTracks);
         this.applyPannerPosition(spatialPanner, slot);
         gain.connect(polarity);
-        polarity.connect(spatialPanner);
+        stripOut.connect(spatialPanner);
         spatialPanner.connect(this.masterGain);
       } else if (typeof this.ctx.createStereoPanner === "function") {
         panner = this.ctx.createStereoPanner();
         panner.pan.setValueAtTime(0, this.ctx.currentTime);
         gain.connect(polarity);
-        polarity.connect(panner);
+        stripOut.connect(panner);
         panner.connect(this.masterGain);
       } else {
         gain.connect(polarity);
-        polarity.connect(this.masterGain);
+        stripOut.connect(this.masterGain);
       }
 
       const sendA = this.ctx.createGain();
       sendA.gain.setValueAtTime(0, this.ctx.currentTime);
       if (this.reverbBus) {
-        polarity.connect(sendA);
+        stripOut.connect(sendA);
         sendA.connect(this.reverbBus);
       }
 
       const sendB = this.ctx.createGain();
       sendB.gain.setValueAtTime(0, this.ctx.currentTime);
       if (this.delayBus) {
-        polarity.connect(sendB);
+        stripOut.connect(sendB);
         sendB.connect(this.delayBus);
       }
 
-      this.trackStrips.push({ gain, polarity, panner, spatialPanner, sendA, sendB });
+      this.trackStrips.push({ gain, polarity, analyser, panner, spatialPanner, sendA, sendB });
     }
     this.syncTrackGains();
   }
