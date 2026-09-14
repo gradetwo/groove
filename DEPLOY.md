@@ -138,17 +138,11 @@ docker run -d -p 80:80 --name groove-odyssey groove-odyssey
 
 ## 端到端测试依赖（Playwright）
 
-`playwright` **尚未**写入 `devDependencies`，因为本仓库的 `package-lock.json` 需要在有网络的机器上重新生成；直接声明会导致 CI 的 `npm ci` 因"package.json 与 lockfile 不一致"而失败。
+`playwright` 是正式的 `devDependencies`（`^1.63.0`，lockfile 已同步），因此：
 
-当前状态：
-
-- **CI**：e2e job 使用 `npm install --no-save playwright@1.63.0` 临时安装（不改动 lockfile），再 `npx playwright install --with-deps`。
-- **本地**：若 Playwright 已存在于其他位置（如全局安装），可用环境变量指向其 `node_modules`：
-
-  ```bash
-  PLAYWRIGHT_MODULE_PATH=/path/to/node_modules npm run test:e2e
-  ```
-
-- **收敛方式**（需要网络，一次性）：`npm install -D playwright`，随后删除 CI 中的临时安装步骤。
+- **CI**：`npm ci` 会装上它，e2e job 只需 `npx playwright install --with-deps chromium firefox webkit`。
+- **本地**：`npm ci`（或 `npm install`）后直接 `npm run test:e2e`。
+- `scripts/test_matrix.js` 仍支持 `PLAYWRIGHT_MODULE_PATH` 环境变量指向别处的
+  `node_modules`，作为"本机已在全局装了 Playwright"时的可选捷径，但不再是必需路径。
 
 `scripts/test_matrix.js` 的静态服务器始终使用 `listen(0)` 的内核临时端口，多实例并行不会互相抢占端口。
