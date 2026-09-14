@@ -8,6 +8,7 @@ import { getShareUrlResult } from "../../../audio/SequencerUrlShare";
 import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../../../audio/WavExporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
+import { useLanguage } from "../../../i18n/LanguageContext";
 
 export interface UseExportActionsOptions {
   patternRef: React.MutableRefObject<SequencerPattern>;
@@ -52,9 +53,9 @@ export function useExportActions({
   activeProject,
   effectsRackState,
   drumKit,
-  isZh,
   showToast,
 }: UseExportActionsOptions): UseExportActionsResult {
+  const { t } = useLanguage();
   const [isExportingAudio, setIsExportingAudio] = useState(false);
 
   const handleExportMidi = useCallback(() => {
@@ -63,14 +64,14 @@ export function useExportActions({
       currentGenre.name
     );
     showToast(
-      isZh ? `已导出 MIDI: ${currentGenre.name}.mid ✓` : `Exported ${currentGenre.name}.mid ✓`
+      t("export_midi_done", { name: currentGenre.name })
     );
-  }, [bpm, currentGenre.name, isZh, showToast]);
+  }, [bpm, currentGenre.name, t, showToast]);
 
   const handleExportAls = useCallback(async () => {
     try {
       showToast(
-        isZh ? "正在生成 Ableton Live (.als) 工程包..." : "Generating Ableton Live (.als) set..."
+        t("export_als_generating")
       );
       const result = await downloadAbletonProject(
         {
@@ -82,18 +83,14 @@ export function useExportActions({
         `${currentGenre.name.replace(/[^a-zA-Z0-9_-]/g, "_")}_Groove`
       );
       showToast(
-        isZh
-          ? `已导出 Ableton Live 工程: ${result.filename} ✓ (可直接在 Live 10/11/12 中打开)`
-          : `Exported Ableton Live Set: ${result.filename} ✓ (Compatible with Live 10/11/12)`
+        t("export_als_done", { filename: result.filename })
       );
     } catch (err: any) {
       showToast(
-        isZh
-          ? `Ableton 工程导出失败: ${err?.message || err}`
-          : `Ableton export failed: ${err?.message || err}`
+        t("export_als_failed", { error: err?.message || err })
       );
     }
-  }, [bpm, currentGenre.name, isZh, showToast]);
+  }, [bpm, currentGenre.name, t, showToast]);
 
   const handleExportGroove = useCallback(() => {
     const projToExport: GrooveProject = activeProject
@@ -162,9 +159,7 @@ export function useExportActions({
 
     exportProjectToGrooveFile(projToExport);
     showToast(
-      isZh
-        ? `已导出 .groove 工程包: ${projToExport.name} ✓`
-        : `Exported .groove: ${projToExport.name} ✓`
+      t("export_groove_done", { name: projToExport.name })
     );
   }, [
     activeProject,
@@ -177,13 +172,13 @@ export function useExportActions({
     effectsRackState,
     drumKit,
     showToast,
-    isZh,
+    t,
   ]);
 
   const handleExportWav = useCallback(async () => {
     try {
       setIsExportingAudio(true);
-      showToast(isZh ? "正在离线高质量渲染 WAV 母带..." : "Rendering offline WAV master...");
+      showToast(t("export_wav_rendering"));
       const result = await exportMasterWav(patternRef.current, currentGenre.id, {
         bpm,
         swing,
@@ -191,26 +186,22 @@ export function useExportActions({
       });
       triggerWavDownload(result.blob, result.filename);
       showToast(
-        isZh
-          ? `母带 WAV 导出完成: ${result.filename} ✓`
-          : `Exported Master WAV: ${result.filename} ✓`
+        t("export_wav_done", { filename: result.filename })
       );
     } catch (err: any) {
       showToast(
-        isZh ? `WAV 导出失败: ${err?.message || err}` : `WAV export failed: ${err?.message || err}`
+        t("export_wav_failed", { error: err?.message || err })
       );
     } finally {
       setIsExportingAudio(false);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, isZh, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, t, showToast]);
 
   const handleExportStems = useCallback(async () => {
     try {
       setIsExportingAudio(true);
       showToast(
-        isZh
-          ? "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..."
-          : "Rendering 8 stems and packaging ZIP..."
+        t("export_stems_rendering")
       );
       const result = await exportStemsZip(patternRef.current, currentGenre.id, {
         bpm,
@@ -219,18 +210,16 @@ export function useExportActions({
       });
       triggerWavDownload(result.blob, result.filename);
       showToast(
-        isZh ? `分轨打包导出完成: ${result.filename} ✓` : `Exported Stems ZIP: ${result.filename} ✓`
+        t("export_stems_done", { filename: result.filename })
       );
     } catch (err: any) {
       showToast(
-        isZh
-          ? `分轨导出失败: ${err?.message || err}`
-          : `Stems export failed: ${err?.message || err}`
+        t("export_stems_failed", { error: err?.message || err })
       );
     } finally {
       setIsExportingAudio(false);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, isZh, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, t, showToast]);
 
   const handleShare = useCallback(() => {
     const result = getShareUrlResult({
@@ -256,26 +245,18 @@ export function useExportActions({
     if (!result.url) {
       showToast(
         result.reason === "too-large"
-          ? isZh
-            ? "工程过大，无法装入分享链接；请改用 .groove 工程包导出"
-            : "Pattern is too large for a share link — export a .groove package instead"
-          : isZh
-            ? "分享失败：当前音序器内容无法编码"
-            : "Share failed: this pattern cannot be encoded"
+          ? t("export_share_too_large")
+          : t("export_share_encode_failed")
       );
       return;
     }
     navigator.clipboard.writeText(result.url);
     showToast(
       result.degraded
-        ? isZh
-          ? "链接已复制（内容较大，已省略音高/门限等细节）🔗"
-          : "Link copied (too large — pitch/gate detail omitted) 🔗"
-        : isZh
-          ? "链接已复制到剪贴板 🔗"
-          : "Share URL copied to clipboard 🔗"
+        ? t("export_share_copied_degraded")
+        : t("export_share_copied")
     );
-  }, [currentGenre.id, bpm, swing, timeSignature, resolution, stepCount, isZh, showToast]);
+  }, [currentGenre.id, bpm, swing, timeSignature, resolution, stepCount, t, showToast]);
 
   return {
     isExportingAudio,

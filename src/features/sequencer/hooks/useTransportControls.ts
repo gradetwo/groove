@@ -3,6 +3,7 @@ import { AudioEngine } from "../../../audio/AudioEngine";
 import type { SequencerAction, SequencerState, StudioHistorySnapshot } from "../useSequencerStore";
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { announcer } from "../../../ui";
+import { useLanguage } from "../../../i18n/LanguageContext";
 
 export interface UseTransportControlsOptions {
   engineRef: React.MutableRefObject<AudioEngine | null>;
@@ -47,9 +48,9 @@ export function useTransportControls({
   commit,
   undo,
   redo,
-  isZh,
   showToast,
 }: UseTransportControlsOptions): UseTransportControlsResult {
+  const { t } = useLanguage();
   // Tap tempo calculator (P3-07)
   const tapTimestampsRef = useRef<number[]>([]);
   const handleTapTempo = useCallback(() => {
@@ -63,10 +64,10 @@ export function useTransportControls({
         if (engineRef.current) {
           engineRef.current.setBpm(calculatedBpm);
         }
-        showToast(`${isZh ? "测速 BPM" : "Tap BPM"}: ${calculatedBpm}`);
+        showToast(`${t("transport_tap_bpm")}: ${calculatedBpm}`);
       }
     }
-  }, [commit, isZh, showToast]);
+  }, [commit, t, showToast]);
 
   // Toggle Drums-Only mode
   const handleToggleDrumsOnly = useCallback(() => {
@@ -77,25 +78,17 @@ export function useTransportControls({
       }
       showToast(
         next
-          ? isZh
-            ? "已开启【只听鼓组】模式 (快捷键 D) ✓"
-            : "Drums Only Mode Enabled (Key: D) ✓"
-          : isZh
-            ? "已恢复全频段播放 (Full Band) ✓"
-            : "Full Band Mode Restored ✓"
+          ? t("transport_drums_only_on")
+          : t("transport_full_band_on")
       );
       announcer.announce(
         next
-          ? isZh
-            ? "已开启只听鼓组"
-            : "Drums only mode enabled"
-          : isZh
-            ? "已关闭只听鼓组"
-            : "Drums only mode disabled"
+          ? t("transport_announce_drums_only_on")
+          : t("transport_announce_drums_only_off")
       );
       return next;
     });
-  }, [isZh, showToast]);
+  }, [t, showToast]);
 
   // Transport toggle play
   const handleTogglePlay = useCallback(() => {
@@ -105,13 +98,13 @@ export function useTransportControls({
       engineRef.current.stop();
       setIsPlaying(false);
       clearPlayhead();
-      announcer.announce(isZh ? "已停止播放" : "Playback stopped");
+      announcer.announce(t("transport_playback_stopped"));
     } else {
       engineRef.current.play();
       setIsPlaying(true);
-      announcer.announce(isZh ? "开始播放" : "Playback started");
+      announcer.announce(t("transport_playback_started"));
     }
-  }, [isPlaying, clearPlayhead, isZh]);
+  }, [isPlaying, clearPlayhead, t]);
 
   const handleUndo = useCallback(() => {
     const prev = undo();
@@ -122,9 +115,9 @@ export function useTransportControls({
       engineRef.current.setTimeSignature(prev.timeSignature);
       engineRef.current.setResolution(prev.resolution);
       triggerHaptic(HapticPatterns.undoRedo);
-      showToast(isZh ? "已撤销 (Undo) ✓" : "Undone ✓");
+      showToast(t("transport_undo_done"));
     }
-  }, [undo, isZh, showToast]);
+  }, [undo, t, showToast]);
 
   const handleRedo = useCallback(() => {
     const next = redo();
@@ -135,9 +128,9 @@ export function useTransportControls({
       engineRef.current.setTimeSignature(next.timeSignature);
       engineRef.current.setResolution(next.resolution);
       triggerHaptic(HapticPatterns.undoRedo);
-      showToast(isZh ? "已重做 (Redo) ✓" : "Redone ✓");
+      showToast(t("transport_redo_done"));
     }
-  }, [redo, isZh, showToast]);
+  }, [redo, t, showToast]);
 
   const handleSwitchSlot = useCallback(
     (slot: "A" | "B") => {
@@ -150,9 +143,9 @@ export function useTransportControls({
   const handleCopySlot = useCallback(
     (from: "A" | "B", to: "A" | "B") => {
       commit({ type: "COPY_PATTERN_SLOT", from, to });
-      showToast(isZh ? `已将 Pattern ${from} 复制至 ${to} ✓` : `Copied Pattern ${from} to ${to} ✓`);
+      showToast(t("transport_slot_copied", { from, to }));
     },
-    [commit, isZh, showToast]
+    [commit, t, showToast]
   );
 
   const handleToggleSongMode = useCallback(() => commit({ type: "TOGGLE_SONG_MODE" }), [commit]);
