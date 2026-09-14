@@ -12,13 +12,27 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 let playwright;
 try {
+  // Playwright is a regular devDependency; resolve it the normal way.
   playwright = require("playwright");
-} catch {
-  try {
-    playwright = require("/home/crow/.hermes/node/lib/node_modules/playwright");
-  } catch (err) {
-    throw new Error("Could not load Playwright from local node_modules or hermes path: " + err.message);
-  }
+} catch (err) {
+  console.error(
+    [
+      "",
+      "❌ Could not load Playwright.",
+      "",
+      "Playwright is declared in devDependencies but is not installed (or its",
+      "browsers are missing). From the repository root run:",
+      "",
+      "    npm install",
+      "    npx playwright install --with-deps chromium firefox webkit",
+      "",
+      "Then re-run: npm run test:e2e",
+      "",
+      `Original error: ${err.message}`,
+      "",
+    ].join("\n")
+  );
+  process.exit(1);
 }
 
 const MIME_TYPES = {
