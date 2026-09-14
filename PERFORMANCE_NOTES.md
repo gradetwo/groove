@@ -87,6 +87,9 @@ initial route gzip 134.6 KB / 220 KB、单块最大 124.32 KB / 150 KB。
 
 - **StudioView 本体仍是 2400+ 行单组件**：任何 store 变更都会重跑其函数体（子级虽已回退，
   父级 diff 成本仍在）。彻底解法是拆分容器/视图，超出 A-03 的允许文件与「纯 memo 化」范围。
+  → **A-02 已完成**：`StudioView.tsx` 拆为 18 个 hook + 4 个子组件，**2440 → 658 行**，
+  零行为变更（AST 标记集 0 丢失 / 0 新增、jsdom DOM 逐字节一致、55 文件 432 用例全绿、
+  7 目标 E2E 全过）。详情见 [REFACTOR_NOTES.md](./REFACTOR_NOTES.md)。
 - **`pattern.tracks` 数组标识每次编辑都变**：reducer 的 `updateTrack` 用 `map` 生成新数组。
   因此单轨编辑仍会让 `anySolo` 重算、StudioView 重渲染；这是数据模型层面的事，改动会触及
   禁止修改的 `useSequencerStore.ts`。
