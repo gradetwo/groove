@@ -1,31 +1,39 @@
 {
-  "version": "1.16.4",
+  "version": "1.16.5",
   "releaseDate": "2026-09-14",
-  "changelogCount": 46,
+  "changelogCount": 47,
   "latest": {
-    "version": "1.16.4",
+    "version": "1.16.5",
     "date": "2026-09-14",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v1.16.4 导出结果三格式一致，且不再每次都不一样",
-      "en": "v1.16.4 Exports agree across formats — and no longer change on every render"
+      "zh": "v1.16.5 音序器渲染性能、文档防漂移与清理",
+      "en": "v1.16.5 Sequencer render performance, documentation anti-drift, and cleanup"
     },
     "highlights": [
       {
-        "zh": "修复导出不一致：MIDI/Ableton 此前忽略概率（30% 的鼓点 100% 被导出），WAV 则每次随机取舍；现在三种格式共用同一套确定性判定，导出的音符集合完全一致",
-        "en": "Fixed export divergence: MIDI/Ableton ignored probability (a 30% hit was always exported) while WAV rolled randomly each render; all three now share one deterministic decision, so they export the same notes"
+        "zh": "音序器渲染：修好被内联 props 击穿的记忆化（TrackRow/StepCell/Ruler/GenreRail/InfoDossier/Toolbar），并把 Toolbar 拆成高频/低频分片；单轨编辑现在只重渲染那一行",
+        "en": "Sequencer rendering: fixed memoization that was defeated by inline props across TrackRow/StepCell/Ruler/GenreRail/InfoDossier/Toolbar, and split the Toolbar into high/low-frequency pieces; editing one track now re-renders only that row"
       },
       {
-        "zh": "同一工程重复导出现在完全可复现（不再因随机数产生不同结果）",
-        "en": "Re-exporting the same project is now fully reproducible (no more random divergence)"
+        "zh": "首屏再减负：对比页的曲风数据不再在任意页面预取，首屏只加载默认曲风本身那一个分包",
+        "en": "Lighter first paint: compare-view genre data is no longer prefetched on every page; the first paint now loads only the default genre's own chunk"
       },
       {
-        "zh": "新增硬编码曲风 id 守卫测试：任何查表或预设数组引用了不存在的曲风 id 都会立即失败，杜绝“点了没反应”这类静默 bug 再次出现",
-        "en": "Added a hardcoded genre-id guard: any lookup or preset list referencing an unknown genre id now fails immediately, so silent dead buttons cannot come back"
+        "zh": "新增真实浏览器性能测量脚本（Playwright），把“首屏不加载多余曲风数据”变成可回归验证的指标，并输出 FCP/LCP/CLS",
+        "en": "Added a real-browser performance script (Playwright) that turns 'no unnecessary genre data on first paint' into a regression gate and reports FCP/LCP/CLS"
       },
       {
-        "zh": "修订审查报告中的一处错误结论：React.memo 并非 0 处，而是 6 处且被内联 props 击穿（结论不变，原因已更正）",
-        "en": "Corrected an inaccurate finding in the review document: React.memo is used in 6 components and defeated by inline props (the conclusion stands, the cause is now accurate)"
+        "zh": "文档防漂移：三份规划文档的基线改为自动同步，并新增 docs:check 纳入 CI 与慢轨，杜绝“文档说已交付、实际没做”",
+        "en": "Documentation anti-drift: the three planning docs' baselines are now synced automatically, and a new docs:check runs in CI and the slow track"
+      },
+      {
+        "zh": "数据门禁增强：轻量索引与曲风库的漂移检查、硬编码曲风 id 必须可解析，均已纳入 lint:data",
+        "en": "Stronger data gates: index-vs-database drift and hardcoded genre-id resolution are now part of lint:data"
+      },
+      {
+        "zh": "清理：删除 9 个零引用的设计系统组件、失效的 useGenreGraph hook 及其仅剩的测试",
+        "en": "Cleanup: removed 9 unused design-system components and the dead useGenreGraph hook together with its tests"
       }
     ]
   }
