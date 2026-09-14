@@ -160,6 +160,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     redo,
     canUndo,
     canRedo,
+    invalidateRedo,
+    commitCoalesced,
   } = useSequencerStore(startingGenre);
 
   const {
@@ -405,6 +407,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
     // P5-05: Real-time Live Recording Callback
     engine.getLiveRecorder().setOnQuantizedStep((rec) => {
+      // F-04: recording writes straight through `dispatch`, so any pending redo
+      // snapshot now describes a pattern the user can no longer get back to.
+      invalidateRedo();
       dispatch({
         type: "SET_STEP",
         trackIdx: rec.trackIdx,
@@ -1671,8 +1676,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
               setEffectsRackState((prev) => ({ ...prev, ...partial }));
             }}
             onTogglePlay={handleTogglePlay}
-            onChangeBpm={(b) => commit({ type: "SET_BPM", bpm: b })}
-            onChangeSwing={(s) => commit({ type: "SET_SWING", swing: s })}
+            onChangeBpm={(b) => commitCoalesced({ type: "SET_BPM", bpm: b }, "bpm")}
+            onChangeSwing={(s) => commitCoalesced({ type: "SET_SWING", swing: s }, "swing")}
             onChangeTimeSignature={(sig) => commit({ type: "SET_TIME_SIGNATURE", timeSignature: sig })}
             onChangeResolution={(res) => commit({ type: "SET_RESOLUTION", resolution: res })}
             onChangeStepCount={(count) => commit({ type: "SET_STEP_COUNT", count })}
@@ -1875,7 +1880,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
                 onSelectDimension={(dim) => commit({ type: "SET_PARAMETER_DIMENSION", dimension: dim })}
                 onSelectTrack={(idx) => setVelocityActiveTrackIdx(idx)}
                 onUpdateVelocity={(trackIdx, stepIdx, newVel) =>
-                  commit({ type: "SET_VELOCITY", trackIdx, stepIdx, velocity: newVel })
+                  commitCoalesced(
+                    { type: "SET_VELOCITY", trackIdx, stepIdx, velocity: newVel },
+                    `velocity:${trackIdx}`
+                  )
                 }
                 onBatchUpdateVelocity={(trackIdx, newVelocities) =>
                   commit({ type: "BATCH_SET_VELOCITY", trackIdx, velocities: newVelocities })

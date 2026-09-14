@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useRef, useEffect } from "react";
+import { useReducer, useCallback, useRef, useEffect, useState } from "react";
 import { Genre, SequencerPattern, SequencerTrack } from "../../types/genre";
 import { ChordDefinition, noteToMidi } from "../../utils/chordTheory";
 import { BakedArpeggioResult } from "../../utils/arpeggiatorTheory";
@@ -19,6 +19,14 @@ export interface StudioHistorySnapshot {
     B: SequencerPattern;
   };
   activeSlot?: "A" | "B";
+  /** F-04: transport/song settings that used to consume a history entry without being restored. */
+  stepCount?: number;
+  songMode?: boolean;
+  songChain?: Array<"A" | "B">;
+  loopRange?: [number, number] | null;
+  isMetronome?: boolean;
+  isCountIn?: boolean;
+  parameterDimension?: "velocity" | "probability" | "ratchet" | "gate";
 }
 
 export interface SequencerState {
@@ -822,7 +830,16 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         swing: s.swing,
         timeSignature: s.timeSignature,
         resolution: s.resolution,
-        stepCount: s.pattern.tracks[0]?.steps?.length || state.stepCount,
+        // F-04: restore everything the snapshot captured. These fields used to
+        // consume a history entry (and a visible "undo did nothing") without ever
+        // being put back.
+        stepCount: s.stepCount ?? s.pattern.tracks[0]?.steps?.length ?? state.stepCount,
+        songMode: s.songMode ?? state.songMode,
+        songChain: s.songChain ? [...s.songChain] : state.songChain,
+        loopRange: s.loopRange !== undefined ? s.loopRange : state.loopRange,
+        isMetronome: s.isMetronome ?? state.isMetronome,
+        isCountIn: s.isCountIn ?? state.isCountIn,
+        parameterDimension: s.parameterDimension ?? state.parameterDimension,
       };
     }
 
@@ -859,20 +876,51 @@ export function useSequencerStore(initialGenre: Genre) {
     });
   }, [state]);
 
+  // F-04: history is driven by the *live* state, not by the render closure the
+  // handler was created in. `stateRef` always points at the newest state object,
+  // so several `commit` calls inside one tick all describe the same "before" state.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // Snapshot identity dedupe: while the state object has not actually been replaced
+  // (i.e. all commits in this tick), only the first one records history.
+  const lastRecordedStateRef = useRef<SequencerState | null>(null);
+
+  // `canUndo`/`canRedo` used to be read straight off refs during render, so the
+  // toolbar's disabled state never updated. They now live in React state.
+  const [historyFlags, setHistoryFlags] = useState({ canUndo: false, canRedo: false });
+  const syncHistoryFlags = useCallback(() => {
+    setHistoryFlags((prev) => {
+      const canUndo = historyRef.current.length > 0;
+      const canRedo = futureRef.current.length > 0;
+      return prev.canUndo === canUndo && prev.canRedo === canRedo ? prev : { canUndo, canRedo };
+    });
+  }, []);
+
   const createSnapshot = useCallback(
-    (overridePattern?: SequencerPattern): StudioHistorySnapshot => ({
-      pattern: clonePattern(overridePattern || state.pattern),
-      bpm: state.bpm,
-      swing: state.swing,
-      timeSignature: state.timeSignature,
-      resolution: state.resolution,
-      patterns: {
-        A: clonePattern(state.patterns.A),
-        B: clonePattern(state.patterns.B),
-      },
-      activeSlot: state.activeSlot,
-    }),
-    [state]
+    (overridePattern?: SequencerPattern): StudioHistorySnapshot => {
+      const s = stateRef.current;
+      return {
+        pattern: clonePattern(overridePattern || s.pattern),
+        bpm: s.bpm,
+        swing: s.swing,
+        timeSignature: s.timeSignature,
+        resolution: s.resolution,
+        patterns: {
+          A: clonePattern(s.patterns.A),
+          B: clonePattern(s.patterns.B),
+        },
+        activeSlot: s.activeSlot,
+        stepCount: s.stepCount,
+        songMode: s.songMode,
+        songChain: [...s.songChain],
+        loopRange: s.loopRange ? ([s.loopRange[0], s.loopRange[1]] as [number, number]) : null,
+        isMetronome: s.isMetronome,
+        isCountIn: s.isCountIn,
+        parameterDimension: s.parameterDimension,
+      };
+    },
+    []
   );
 
   const commit = useCallback(
@@ -880,37 +928,98 @@ export function useSequencerStore(initialGenre: Genre) {
       if (action.type === "LOAD_PROJECT") {
         historyRef.current = [];
         futureRef.current = [];
+        lastRecordedStateRef.current = null;
         recordHistory = false;
       } else if (recordHistory) {
-        historyRef.current.push(createSnapshot());
-        if (historyRef.current.length > 50) {
-          historyRef.current.shift();
+        const source = stateRef.current;
+        if (lastRecordedStateRef.current !== source) {
+          historyRef.current.push(createSnapshot());
+          if (historyRef.current.length > 50) {
+            historyRef.current.shift();
+          }
+          lastRecordedStateRef.current = source;
+          futureRef.current = [];
+          lastCoalescedRef.current = null;
         }
-        futureRef.current = [];
       }
       dispatch(action);
+      syncHistoryFlags();
     },
-    [createSnapshot]
+    [createSnapshot, syncHistoryFlags]
   );
 
   const undo = useCallback((): StudioHistorySnapshot | null => {
     if (historyRef.current.length === 0) return null;
     const prev = historyRef.current.pop()!;
     futureRef.current.push(createSnapshot());
+    lastRecordedStateRef.current = null;
+    lastCoalescedRef.current = null;
     dispatch({ type: "RESTORE_SNAPSHOT", snapshot: prev });
+    syncHistoryFlags();
     return prev;
-  }, [createSnapshot]);
+  }, [createSnapshot, syncHistoryFlags]);
 
   const redo = useCallback((): StudioHistorySnapshot | null => {
     if (futureRef.current.length === 0) return null;
     const next = futureRef.current.pop()!;
     historyRef.current.push(createSnapshot());
+    lastRecordedStateRef.current = null;
+    lastCoalescedRef.current = null;
     dispatch({ type: "RESTORE_SNAPSHOT", snapshot: next });
+    syncHistoryFlags();
     return next;
-  }, [createSnapshot]);
+  }, [createSnapshot, syncHistoryFlags]);
 
-  const canUndo = historyRef.current.length > 0;
-  const canRedo = futureRef.current.length > 0;
+  // F-05: high-frequency controls (BPM typing, swing dragging, velocity painting)
+  // used to push one history entry per event, so a single gesture evicted the whole
+  // 50-entry undo stack. Coalescing by key collapses a continuous gesture into one
+  // undo step without changing how the value itself is applied.
+  const lastCoalescedRef = useRef<{ key: string; at: number } | null>(null);
+
+  const commitCoalesced = useCallback(
+    (action: SequencerAction, key: string, windowMs = 600) => {
+      const now = Date.now();
+      const last = lastCoalescedRef.current;
+      const source = stateRef.current;
+      // Never record twice for the same state object: several commits inside one
+      // tick all describe the same "before" state and must share one undo entry.
+      const alreadyRecorded = lastRecordedStateRef.current === source;
+      const shouldRecord = !alreadyRecorded && (!last || last.key !== key || now - last.at > windowMs);
+
+      if (shouldRecord) {
+        historyRef.current.push(createSnapshot());
+        if (historyRef.current.length > 50) {
+          historyRef.current.shift();
+        }
+        futureRef.current = [];
+        lastRecordedStateRef.current = source;
+        lastCoalescedRef.current = { key, at: now };
+      } else if (last && last.key === key) {
+        last.at = now;
+      }
+
+      dispatch(action);
+      syncHistoryFlags();
+    },
+    [createSnapshot, syncHistoryFlags]
+  );
+
+  /** Drops the redo stack — call after changes made outside `commit` (e.g. live recording). */
+  const invalidateRedo = useCallback(() => {
+    if (futureRef.current.length === 0) return;
+    futureRef.current = [];
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
+
+  const resetHistory = useCallback(() => {
+    historyRef.current = [];
+    futureRef.current = [];
+    lastRecordedStateRef.current = null;
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
+
+  const canUndo = historyFlags.canUndo;
+  const canRedo = historyFlags.canRedo;
 
   return {
     state,
@@ -921,5 +1030,8 @@ export function useSequencerStore(initialGenre: Genre) {
     canUndo,
     canRedo,
     createSnapshot,
+    invalidateRedo,
+    resetHistory,
+    commitCoalesced,
   };
 }
