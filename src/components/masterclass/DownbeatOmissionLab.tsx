@@ -68,7 +68,7 @@ export const DownbeatOmissionLab: React.FC<DownbeatOmissionLabProps> = ({
   onBpmChange,
   onTapResult,
 }) => {
-  const { isZh } = useLanguage();
+  const { t, isZh } = useLanguage();
   const [selectedPresetId, setSelectedPresetId] = useState<string>("tony_allen_afrobeat");
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState<number | null>(null);
@@ -161,7 +161,7 @@ export const DownbeatOmissionLab: React.FC<DownbeatOmissionLabProps> = ({
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-accent" />
           <span className="text-xs font-mono font-semibold text-text-sub uppercase">
-            {isZh ? "避让模式" : "Omission Mode"}:
+            {t("downbeat_mode_label")}:
           </span>
           {DOWNBEAT_PRESETS.map((p) => (
             <button
@@ -206,12 +206,12 @@ export const DownbeatOmissionLab: React.FC<DownbeatOmissionLabProps> = ({
             {isPlaying ? (
               <>
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "停止" : "Stop"}</span>
+                <span>{t("downbeat_stop")}</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "试听避让动力" : "Play Groove"}</span>
+                <span>{t("downbeat_play")}</span>
               </>
             )}
           </button>
@@ -243,7 +243,7 @@ export const DownbeatOmissionLab: React.FC<DownbeatOmissionLabProps> = ({
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>{isZh ? "跟随对拍 (SPACE)" : "TAP SYNC (SPACE)"}</span>
+            <span>{t("downbeat_tap_btn")}</span>
             {streak > 0 && <span className="text-emerald-400 font-bold">({streak}x)</span>}
           </button>
         </div>
@@ -251,8 +251,8 @@ export const DownbeatOmissionLab: React.FC<DownbeatOmissionLabProps> = ({
         {/* Dynamic Metric Gravity Curve (4 Beats) */}
         <div>
           <div className="flex items-center justify-between text-xs font-mono text-text-dim mb-2">
-            <span>{isZh ? "小节重力与动量曲线 (Metric Gravity Curve)" : "Metric Gravity Curve"}</span>
-            <span>{isZh ? "Beat 1 ~ 4 动量分布" : "Beat 1 - 4 Kinetic Distribution"}</span>
+            <span>{t("downbeat_curve_title")}</span>
+            <span>{t("downbeat_curve_subtitle")}</span>
           </div>
 
           <div className="grid grid-cols-4 gap-3">
@@ -294,10 +294,10 @@ export const DownbeatOmissionLab: React.FC<DownbeatOmissionLabProps> = ({
 
                   <div className="mt-2 text-[10px] font-mono text-center text-text-dim">
                     {isBeat1 && gravity < 20
-                      ? isZh ? "【下拍避让·悬空】" : "[OMITTED REST]"
+                      ? t("downbeat_omitted_rest")
                       : bIdx === 2 && gravity > 80
-                      ? isZh ? "【One Drop 下沉】" : "[ONE DROP SLAM]"
-                      : isZh ? "推进切分" : "Propulsion"}
+                      ? t("downbeat_one_drop")
+                      : t("downbeat_propulsion")}
                   </div>
                 </div>
               );
@@ -308,7 +308,7 @@ export const DownbeatOmissionLab: React.FC<DownbeatOmissionLabProps> = ({
         {/* 16-step Drum Track Strips */}
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between text-[11px] font-mono text-text-dim px-2">
-            <span className="w-24">{isZh ? "分轨" : "Track"}</span>
+            <span className="w-24">{t("downbeat_track")}</span>
             <div className="flex-1 grid grid-cols-16 gap-1.5 text-center">
               {Array.from({ length: 16 }).map((_, i) => (
                 <span

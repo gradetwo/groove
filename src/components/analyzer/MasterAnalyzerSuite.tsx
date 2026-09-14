@@ -37,7 +37,7 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
   className = "",
   defaultMode = "split",
 }) => {
-  const { isZh } = useLanguage();
+  const { t, isZh } = useLanguage();
   const [viewMode, setViewMode] = useState<AnalyzerViewMode>(defaultMode);
   const [theme, setTheme] = useState<SpectrogramTheme>("obsidian");
   const [isFrozen, setIsFrozen] = useState<boolean>(false);
@@ -58,7 +58,7 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-accent/15 border border-accent/30 text-accent font-['JetBrains_Mono'] font-bold text-xs">
             <Activity className="w-3.5 h-3.5" />
-            <span>{isZh ? "全景声谱分析仪" : "PANORAMIC ANALYZER"}</span>
+            <span>{t("analyzer_suite_badge")}</span>
             <span className="text-[10px] text-text-sub font-normal hidden md:inline">
               P6-05 · 60 FPS
             </span>
@@ -74,10 +74,10 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
                   ? "bg-accent text-[#0a0b0d] font-bold shadow"
                   : "text-text-sub hover:text-text"
               }`}
-              title={isZh ? "双重视图 (瀑布流 + 李萨如)" : "Dual Split View"}
+              title={t("analyzer_suite_split_title")}
             >
               <Layers className="w-3 h-3" />
-              <span className="hidden sm:inline">{isZh ? "双联分屏" : "Split"}</span>
+              <span className="hidden sm:inline">{t("analyzer_suite_split")}</span>
             </button>
 
             <button
@@ -88,10 +88,10 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
                   ? "bg-accent text-[#0a0b0d] font-bold shadow"
                   : "text-text-sub hover:text-text"
               }`}
-              title={isZh ? "高精瀑布流频谱图" : "Waterfall Spectrogram"}
+              title={t("analyzer_suite_spectrogram_title")}
             >
               <Radio className="w-3 h-3" />
-              <span>{isZh ? "瀑布谱" : "FFT"}</span>
+              <span>{t("analyzer_suite_spectrogram")}</span>
             </button>
 
             <button
@@ -102,10 +102,10 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
                   ? "bg-accent text-[#0a0b0d] font-bold shadow"
                   : "text-text-sub hover:text-text"
               }`}
-              title={isZh ? "李萨如图立体声示波器" : "Lissajous Phase Scope"}
+              title={t("analyzer_suite_lissajous_title")}
             >
               <Compass className="w-3 h-3" />
-              <span>{isZh ? "李萨如" : "Phase"}</span>
+              <span>{t("analyzer_suite_lissajous")}</span>
             </button>
 
             <button
@@ -116,10 +116,10 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
                   ? "bg-accent text-[#0a0b0d] font-bold shadow"
                   : "text-text-sub hover:text-text"
               }`}
-              title={isZh ? "双轨时域波形示波器" : "Waveform Oscilloscope"}
+              title={t("analyzer_suite_oscilloscope_title")}
             >
               <Activity className="w-3 h-3" />
-              <span>{isZh ? "波形" : "Wave"}</span>
+              <span>{t("analyzer_suite_oscilloscope")}</span>
             </button>
           </div>
         </div>
@@ -161,10 +161,10 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
                 ? "bg-cyan-500/20 border-cyan-500 text-cyan-300 font-bold"
                 : "bg-panel2 border-line text-text-sub hover:text-text"
             }`}
-            title={isZh ? "冻结当前瞬态波形进行定格分析" : "Freeze Frame for forensic inspection"}
+            title={t("analyzer_suite_freeze_title")}
           >
             <Snowflake className="w-3 h-3" />
-            <span className="hidden md:inline">{isFrozen ? (isZh ? "定格中" : "Frozen") : (isZh ? "定格" : "Freeze")}</span>
+            <span className="hidden md:inline">{isFrozen ? t("analyzer_frozen") : t("analyzer_freeze")}</span>
           </button>
 
           {/* Peak Hold Switch */}
@@ -176,7 +176,7 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
                 ? "bg-accent/15 border-accent text-accent font-bold"
                 : "bg-panel2 border-line text-text-dim hover:text-text"
             }`}
-            title={isZh ? "显示音轨峰值驻留点" : "Toggle peak hold points"}
+            title={t("analyzer_suite_peak_title")}
           >
             PEAK
           </button>
@@ -186,7 +186,7 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
             type="button"
             onClick={() => setIsMaximized(!isMaximized)}
             className="h-7 w-7 rounded-lg bg-panel2 border border-line hover:border-accent text-text-sub hover:text-accent flex items-center justify-center transition-colors"
-            title={isMaximized ? (isZh ? "恢复窗口" : "Restore") : (isZh ? "全屏沉浸" : "Maximize")}
+            title={isMaximized ? t("analyzer_suite_restore") : t("analyzer_suite_maximize")}
           >
             {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -197,7 +197,7 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
               type="button"
               onClick={onClose}
               className="h-7 w-7 rounded-lg bg-panel2 border border-line hover:border-red-500 hover:text-red-400 text-text-sub flex items-center justify-center transition-colors"
-              title={isZh ? "关闭分析仪" : "Close"}
+              title={t("analyzer_suite_close_title")}
             >
               <X className="w-3.5 h-3.5" />
             </button>

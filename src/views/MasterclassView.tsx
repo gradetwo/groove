@@ -107,7 +107,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
         <div className="relative z-10 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 text-[11px] font-mono font-bold uppercase rounded-full bg-accent/15 text-accent border border-accent/30 tracking-wider">
-              {isZh ? "世界节奏沉浸工作坊" : "World Rhythm Masterclasses"}
+              {t("masterclass_hero_title")}
             </span>
             <span className="px-2.5 py-0.5 text-[10px] font-mono text-text-dim rounded-md bg-panel border border-line">
               P6-01 · Pure Web Audio
@@ -115,13 +115,11 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-text tracking-tight">
-            {isZh ? "律动解构：跨越世纪的大师节奏实验室" : "Rhythm Deconstruction & Masterclasses"}
+            {t("masterclass_page_title")}
           </h1>
 
           <p className="text-xs sm:text-sm text-text-sub max-w-3xl leading-relaxed">
-            {isZh
-              ? "解构跨越大洋与世代的五大终极律动形态：从西非约鲁巴复节奏对冲、古巴 Clave 演化树，到 Tony Allen 避让第一拍与 J Dilla 拟人化醉酒微时序。支持实时对拍打卡与一键载入 Studio 工作台。"
-              : "Deconstruct five transcendent rhythmic archetypes: West African polyrhythms, Cuban clave mutation tree, downbeat omission dynamics, Balkan aksak odd meters, and J Dilla's unquantized drunk feel."}
+            {t("masterclass_page_desc")}
           </p>
         </div>
       </div>
@@ -165,7 +163,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-panel2 p-5 rounded-2xl border border-line">
           <div>
             <div className="text-xs font-mono text-accent font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <span>{isZh ? `课程 0${lesson.index}` : `Lesson 0${lesson.index}`}</span>
+              <span>{t("masterclass_lesson_index", { index: lesson.index })}</span>
               <span>·</span>
               <span>{isZh ? lesson.tag.zh : lesson.tag.en}</span>
             </div>
@@ -183,7 +181,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-accent to-[#ffc65c] text-black hover:brightness-110 active:scale-95 transition-all shadow-[0_0_15px_rgba(245,183,61,0.3)] shrink-0 self-start sm:self-auto"
           >
             <Sliders className="w-4 h-4" />
-            <span>{isZh ? "一键载入 Studio 工作台" : "Bake to Studio"}</span>
+            <span>{t("masterclass_bake_btn")}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -243,7 +241,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2 text-accent text-sm font-bold">
                 <Globe className="w-4 h-4" />
-                <span>{isZh ? "文化溯源与历史脉络" : "Cultural Roots & Origins"}</span>
+                <span>{t("masterclass_cultural_title")}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs font-mono text-text-dim">
                 <Clock className="w-3.5 h-3.5" />
@@ -252,7 +250,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
             </div>
 
             <div className="text-xs text-text-dim font-mono">
-              <span className="text-text-sub font-bold">{isZh ? "发源流布" : "Origins"}: </span>
+              <span className="text-text-sub font-bold">{t("masterclass_origins_label")}: </span>
               {isZh ? lesson.originPlace.zh : lesson.originPlace.en}
             </div>
 
@@ -266,7 +264,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2 text-[#45e0c9] text-sm font-bold">
                 <BookOpen className="w-4 h-4" />
-                <span>{isZh ? "声学物理与律动机制" : "Acoustic Physics & Groove Mechanics"}</span>
+                <span>{t("masterclass_acoustic_title")}</span>
               </div>
               <div className="text-xs font-mono text-text-dim">
                 {lesson.defaultBpm} BPM
@@ -281,12 +279,12 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
             <div className="p-3 rounded-2xl bg-surface/80 border border-line flex items-center justify-between text-xs font-mono">
               <div className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-accent" />
-                <span className="text-text-sub">{isZh ? "工坊对拍统计" : "Session Tap Stats"}</span>
+                <span className="text-text-sub">{t("masterclass_tap_stats_title")}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span>{isZh ? "总击打" : "Taps"}: <b className="text-text">{totalTaps}</b></span>
-                <span>{isZh ? "完美率" : "Perfect"}: <b className="text-emerald-400">{accuracyRate}%</b></span>
-                <span>{isZh ? "连击" : "Streak"}: <b className="text-accent">{sessionStreak}x</b></span>
+                <span>{t("masterclass_tap_stats_total")}: <b className="text-text">{totalTaps}</b></span>
+                <span>{t("masterclass_tap_stats_perfect")}: <b className="text-emerald-400">{accuracyRate}%</b></span>
+                <span>{t("masterclass_tap_stats_streak")}: <b className="text-accent">{sessionStreak}x</b></span>
               </div>
             </div>
           </div>

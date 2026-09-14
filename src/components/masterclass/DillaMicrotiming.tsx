@@ -16,7 +16,7 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
   onBpmChange,
   onTapResult,
 }) => {
-  const { isZh } = useLanguage();
+  const { t } = useLanguage();
   const [kickShiftMs, setKickShiftMs] = useState(-20); // -20ms rush
   const [snareShiftMs, setSnareShiftMs] = useState(35); // +35ms drag
   const [swingAmount, setSwingAmount] = useState(58); // 58% Dilla swing
@@ -130,7 +130,7 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
         <div className="flex items-center gap-2">
           <Disc className="w-4 h-4 text-accent" />
           <span className="text-xs font-mono font-semibold text-text-sub uppercase">
-            {isZh ? "预设调校" : "Feel Presets"}:
+            {t("dilla_presets_label")}:
           </span>
           {[
             { name: "Dilla Drunk", kick: -20, snare: 35, swing: 58 },
@@ -184,12 +184,12 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
             {isPlaying ? (
               <>
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "停止" : "Stop"}</span>
+                <span>{t("dilla_stop")}</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "试听 Dilla 醉酒感" : "Play Dilla Pocket"}</span>
+                <span>{t("dilla_play")}</span>
               </>
             )}
           </button>
@@ -201,15 +201,13 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-4">
           <div>
             <h4 className="text-base font-bold text-text flex items-center gap-2">
-              <span>{isZh ? "MPC 非量化微时序引擎" : "MPC Unquantized Microtiming Engine"}</span>
+              <span>{t("dilla_engine_title")}</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30 font-mono">
                 Detroit 1996
               </span>
             </h4>
             <p className="text-xs text-text-sub mt-1">
-              {isZh
-                ? "底鼓微幅抢拍提供前冲驱动力（Rush），军鼓深陷迟滞构建极致松弛感（Drag）。拖动下方滑块实时解构人脑时间感知。"
-                : "Kick nudges forward for aggressive drive; snare lags behind for laid-back groove. Adjust sliders to feel time elasticity."}
+              {t("dilla_engine_desc")}
             </p>
           </div>
 
@@ -223,7 +221,7 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>{isZh ? "跟随对拍 (SPACE)" : "TAP GROOVE (SPACE)"}</span>
+            <span>{t("dilla_tap_btn")}</span>
             {streak > 0 && <span className="text-emerald-400 font-bold">({streak}x)</span>}
           </button>
         </div>
@@ -233,7 +231,7 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
           {/* Kick Shift */}
           <div className="p-4 rounded-2xl bg-surface/70 border border-line space-y-2">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="font-bold text-rose-400">{isZh ? "底鼓抢拍 / 拖后偏移" : "Kick Micro-Shift"}</span>
+              <span className="font-bold text-rose-400">{t("masterclass_dilla_kick_shift")}</span>
               <span className="text-text font-bold">{kickShiftMs > 0 ? `+${kickShiftMs}` : kickShiftMs} ms</span>
             </div>
             <input
@@ -246,16 +244,16 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
               className="w-full accent-rose-400"
             />
             <div className="flex justify-between text-[10px] font-mono text-text-dim">
-              <span>{isZh ? "-50ms 前冲抢拍" : "-50ms Push"}</span>
+              <span>{t("dilla_kick_minus50")}</span>
               <span>0ms</span>
-              <span>{isZh ? "+50ms 拖后" : "+50ms Drag"}</span>
+              <span>{t("dilla_kick_plus50")}</span>
             </div>
           </div>
 
           {/* Snare Shift */}
           <div className="p-4 rounded-2xl bg-surface/70 border border-line space-y-2">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="font-bold text-amber-400">{isZh ? "军鼓深陷迟滞" : "Snare Laid-Back Drag"}</span>
+              <span className="font-bold text-amber-400">{t("dilla_snare_title")}</span>
               <span className="text-text font-bold">{snareShiftMs > 0 ? `+${snareShiftMs}` : snareShiftMs} ms</span>
             </div>
             <input
@@ -270,14 +268,14 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
             <div className="flex justify-between text-[10px] font-mono text-text-dim">
               <span>-50ms</span>
               <span>0ms</span>
-              <span>{isZh ? "+50ms 慵懒下沉" : "+50ms Deep Pocket"}</span>
+              <span>{t("dilla_snare_plus50")}</span>
             </div>
           </div>
 
           {/* Swing Amount */}
           <div className="p-4 rounded-2xl bg-surface/70 border border-line space-y-2">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="font-bold text-accent">{isZh ? "MPC 摇摆系数" : "MPC Swing"}</span>
+              <span className="font-bold text-accent">{t("dilla_swing_label")}</span>
               <span className="text-text font-bold">{swingAmount}%</span>
             </div>
             <input
@@ -302,10 +300,10 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
           <div className="flex items-center justify-between text-xs font-mono text-text-dim">
             <span className="flex items-center gap-1.5">
               <MoveHorizontal className="w-3.5 h-3.5 text-accent" />
-              <span>{isZh ? "毫秒级物理微位移对比 (Physical Micro-Displacement)" : "Physical Micro-Displacement"}</span>
+              <span>{t("dilla_visualizer_title")}</span>
             </span>
             <span className="text-[10px] text-text-dim">
-              {isZh ? "虚线为机械量化网格 · 色块为实际人手触发位置" : "Dashed = Rigid Grid · Filled = Human Trigger Position"}
+              {t("dilla_visualizer_legend")}
             </span>
           </div>
 
