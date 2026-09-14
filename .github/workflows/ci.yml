@@ -95,3 +95,9 @@ jobs:
 
       - name: Cross-Browser & Cross-Device Test Matrix
         run: npm run test:e2e
+
+      # E-10: Lighthouse is not installable in this environment, so the performance
+      # gate is a real-browser measurement with deterministic assertions (no genre
+      # data on first paint) plus reported FCP/LCP/CLS.
+      - name: Performance Gate (real browser, local build)
+        run: npm run perf:check

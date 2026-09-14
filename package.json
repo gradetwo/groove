@@ -25,7 +25,8 @@
     "verify": "npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run check:budget && npm run test:e2e",
     "package": "npm run verify && python3 scripts/package.py",
     "deploy": "npm run verify && npm run deploy:only",
-    "deploy:only": "node scripts/deploy.mjs"
+    "deploy:only": "node scripts/deploy.mjs",
+    "perf:check": "node scripts/measure_live_perf.mjs --local"
   },
   "dependencies": {
     "@types/three": "^0.185.4",

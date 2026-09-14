@@ -133,5 +133,6 @@ run("Full suite + coverage", "npx", ["vitest", "run", "--coverage", "--reporter=
 run("Production build", "npm", ["run", "build"]);
 run("Bundle budget gate", "node", ["scripts/check_budgets.js"]);
 run("Cross-device E2E matrix", "node", ["scripts/test_matrix.js"]);
+run("Real-browser performance gate", "node", ["scripts/measure_live_perf.mjs", "--local"]);
 runRedlinesIfPresent();
 console.log("\n\ud83c\udf89 SLOW TRACK PASSED");
