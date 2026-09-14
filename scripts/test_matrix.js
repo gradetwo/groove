@@ -290,6 +290,30 @@ async function runTestOnTarget(target, baseUrl) {
     await page.goto(`${baseUrl}/?tab=vertical-timeline`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
 
+    // 5b. Hardware Console View Check (N-01 / P8-02)
+    await page.goto(`${baseUrl}/?tab=console`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("[data-testid='hardware-console']", { timeout: 20000 }).catch(async () => {
+      throw new Error("Hardware console view did not render at ?tab=console");
+    });
+    const consoleStrips = await page.$$("[data-console-channel]");
+    if (consoleStrips.length === 0) {
+      // Fall back to counting the fader inputs, which are real <input type="range">.
+      const faders = await page.$$("input[type='range']");
+      if (faders.length === 0) {
+        throw new Error("Hardware console rendered without any channel strip or fader");
+      }
+    }
+    // The spatial monitoring toggle must exist and be off by default (N-02).
+    const spatialToggle = await page.$("[data-testid='console-spatial-toggle']");
+    if (!spatialToggle) {
+      throw new Error("Hardware console is missing the binaural monitoring toggle");
+    }
+    const spatialPressed = await spatialToggle.getAttribute("aria-pressed");
+    if (spatialPressed !== "false") {
+      throw new Error(`Binaural monitoring should default to off, got aria-pressed=${spatialPressed}`);
+    }
+    await page.waitForTimeout(200);
+
     // 6. Compare & Challenge Views Check
     await page.goto(`${baseUrl}/?tab=compare`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);

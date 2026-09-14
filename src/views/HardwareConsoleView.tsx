@@ -299,6 +299,7 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
           </span>
           <button
             type="button"
+            data-testid="console-spatial-toggle"
             onClick={() => setSpatialEnabled((prev) => !prev)}
             aria-pressed={spatialEnabled}
             title={t("console_spatial_hint")}
