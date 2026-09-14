@@ -3,7 +3,9 @@
  * Collects zero PII. Records only sanitized crash stack, app version, and OS platform.
  */
 
-export const APP_VERSION = "1.13.0";
+import { APP_VERSION } from "../version";
+
+export { APP_VERSION };
 
 export interface DiagnosticReport {
   version: string;

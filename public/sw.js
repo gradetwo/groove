@@ -4,7 +4,7 @@
  * Offline-first progressive web application.
  */
 
-const CACHE_VERSION = "groove-v1.13.0";
+const CACHE_VERSION = "groove-v1.16.0";
 const CACHE_NAME = `groove-app-shell-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -17,13 +17,15 @@ const PRECACHE_ASSETS = [
   "/icons/icon-192.svg",
 ];
 
-// Install: precache App Shell
+// Install: precache App Shell.
+// NOTE: deliberately does NOT call skipWaiting() here — the new worker waits until
+// the page asks for it (`applyUpdate()` posts SKIP_WAITING), so "update available"
+// stays a user-driven decision instead of swapping assets under a running session.
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
       .then((cache) => cache.addAll(PRECACHE_ASSETS))
-      .then(() => self.skipWaiting())
   );
 });
 

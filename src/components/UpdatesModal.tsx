@@ -38,7 +38,10 @@ export interface VersionInfo {
   changelog: ChangelogEntry[];
 }
 
-export const CURRENT_CLIENT_VERSION = "1.16.0";
+import { APP_VERSION } from "../version";
+
+/** Single source of truth lives in package.json → src/version.ts (E-05). */
+export const CURRENT_CLIENT_VERSION = APP_VERSION;
 
 interface UpdatesModalProps {
   isOpen: boolean;

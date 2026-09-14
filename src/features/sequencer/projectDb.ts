@@ -8,6 +8,7 @@ import { GrooveProject, GrooveProjectPackage, ProjectSnapshotSummary, ProjectSor
 import { Genre, SequencerPattern } from "../../types/genre";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
+import { APP_VERSION } from "../../version";
 import { clonePattern } from "./useSequencerStore";
 
 export const GROOVE_DB_NAME = "groove_projects_db";
@@ -397,7 +398,7 @@ export function validateGroovePackage(data: unknown): GrooveProjectPackage {
 /**
  * Serializes a project into a standard .groove exchange package
  */
-export function exportProjectPackage(project: GrooveProject, appVersion = "1.15.2"): GrooveProjectPackage {
+export function exportProjectPackage(project: GrooveProject, appVersion: string = APP_VERSION): GrooveProjectPackage {
   return {
     format: "groove-project",
     version: 1,
