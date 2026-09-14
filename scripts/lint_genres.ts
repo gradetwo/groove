@@ -3,7 +3,7 @@
  * Can be run in CI or pre-commit hooks
  */
 import { ALL_GENRES } from "../src/data/genres";
-import { validateGenresDatabase } from "../src/data/schema";
+import { auditGenreContent, MIN_GENRE_SOURCES, validateGenresDatabase } from "../src/data/schema";
 import { GENRE_RELATIONS } from "../src/data/relations";
 import { TIMELINE_STORIES } from "../src/data/timeline_stories";
 
@@ -26,6 +26,39 @@ if (errorCount > 0) {
     errs.forEach((err) => console.error(`      * ${err}`));
   });
   failed = true;
+}
+
+// Content audit (E-11b): empty taxonomy arrays, templated copy, thin citations.
+// Hard vs report-only is decided inside auditGenreContent:
+//   - fewer than MIN_GENRE_SOURCES sources  => HARD failure (exits non-zero)
+//   - empty taxonomy arrays                 => warning count only (known baseline)
+//   - templated placeholder copy            => warning count only
+const contentAudit = auditGenreContent(ALL_GENRES);
+
+console.log(`\n[Genre Linter] Content audit summary:`);
+console.log(
+  `  · taxonomy arrays all empty: ${contentAudit.emptyTaxonomy.count}/${contentAudit.totalGenres}` +
+    ` (warning; not a failure)`
+);
+console.log(
+  `  · templated / placeholder copy: ${contentAudit.templatedText.count}/${contentAudit.totalGenres}` +
+    ` (warning; not a failure)`
+);
+console.log(
+  `  · fewer than ${MIN_GENRE_SOURCES} sources: ${contentAudit.insufficientSources.count}/${contentAudit.totalGenres}` +
+    ` (hard rule)`
+);
+
+contentAudit.warnings.forEach((warning) => console.warn(`⚠️  ${warning}`));
+contentAudit.hardViolations.forEach((violation) => {
+  console.error(`❌ ${violation}`);
+  failed = true;
+});
+
+if (contentAudit.insufficientSources.count > 0) {
+  const sample = contentAudit.insufficientSources.genreIds.slice(0, 20).join(", ");
+  const suffix = contentAudit.insufficientSources.genreIds.length > 20 ? ", …" : "";
+  console.error(`   offending genres: ${sample}${suffix}`);
 }
 
 // Validate relations
@@ -57,9 +90,13 @@ TIMELINE_STORIES.forEach((story, idx) => {
 });
 
 if (failed) {
-  console.error(`\n❌ Genre database audit FAILED.`);
+  console.error(`\n❌ Genre database audit FAILED (hard threshold exceeded).`);
   process.exit(1);
 } else {
-  console.log(`\n✅ All ${ALL_GENRES.length} genres, ${GENRE_RELATIONS.length} relations, and ${TIMELINE_STORIES.length} timeline stories passed audit cleanly!`);
+  console.log(
+    `\n✅ All ${ALL_GENRES.length} genres, ${GENRE_RELATIONS.length} relations, and ` +
+      `${TIMELINE_STORIES.length} timeline stories passed the hard audit. ` +
+      `${contentAudit.warnings.length} report-only warning(s) above.`
+  );
   process.exit(0);
 }
