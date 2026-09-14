@@ -203,6 +203,23 @@ export const studioMessages = {
   toolbar_copy_a_to_b: { en: "Copy A to B", zh: "复制 A 到 B" },
   toolbar_copy_b_to_a: { en: "Copy B to A", zh: "复制 B 到 A" },
 
+  // Sequencer Action Toasts (U-11: migrated from inline bilingual ternaries)
+  export_midi_done: { en: "Exported {name}.mid ✓", zh: "已导出 MIDI: {name}.mid ✓" },
+  export_als_generating: { en: "Generating Ableton Live (.als) set...", zh: "正在生成 Ableton Live (.als) 工程包..." },
+  export_als_done: { en: "Exported Ableton Live Set: {filename} ✓ (Compatible with Live 10/11/12)", zh: "已导出 Ableton Live 工程: {filename} ✓ (可直接在 Live 10/11/12 中打开)" },
+  export_als_failed: { en: "Ableton export failed: {error}", zh: "Ableton 工程导出失败: {error}" },
+  export_groove_done: { en: "Exported .groove: {name} ✓", zh: "已导出 .groove 工程包: {name} ✓" },
+  export_wav_rendering: { en: "Rendering offline WAV master...", zh: "正在离线高质量渲染 WAV 母带..." },
+  export_wav_done: { en: "Exported Master WAV: {filename} ✓", zh: "母带 WAV 导出完成: {filename} ✓" },
+  export_wav_failed: { en: "WAV export failed: {error}", zh: "WAV 导出失败: {error}" },
+  export_stems_rendering: { en: "Rendering 8 stems and packaging ZIP...", zh: "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..." },
+  export_stems_done: { en: "Exported Stems ZIP: {filename} ✓", zh: "分轨打包导出完成: {filename} ✓" },
+  export_stems_failed: { en: "Stems export failed: {error}", zh: "分轨导出失败: {error}" },
+  export_share_too_large: { en: "Pattern is too large for a share link — export a .groove package instead", zh: "工程过大，无法装入分享链接；请改用 .groove 工程包导出" },
+  export_share_encode_failed: { en: "Share failed: this pattern cannot be encoded", zh: "分享失败：当前音序器内容无法编码" },
+  export_share_copied_degraded: { en: "Link copied (too large — pitch/gate detail omitted) 🔗", zh: "链接已复制（内容较大，已省略音高/门限等细节）🔗" },
+  export_share_copied: { en: "Share URL copied to clipboard 🔗", zh: "链接已复制到剪贴板 🔗" },
+
   // Kick / Somatic controls (U-11: migrated from inline bilingual ternaries)
   kick_custom_fallback_name: { en: "Custom Kick {count}", zh: "自定义底鼓 {count}" },
   somatic_presets_heading: { en: "KICK PRESETS", zh: "底鼓预设库" },
