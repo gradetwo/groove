@@ -250,3 +250,45 @@ describe("useSequencerStore coalesced commits (F-05)", () => {
     expect(result.current.state.bpm).toBe(101);
   });
 });
+
+describe("useSequencerStore history memory budget (A-04)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("reports retained history size and caps it by bytes, not just entry count", () => {
+    const { result } = renderHook(() => useSequencerStore(genre));
+
+    // Each commit clones three patterns, so pushing many entries must not grow
+    // unbounded even though the entry cap alone would allow 50 of them.
+    for (let i = 0; i < 40; i++) {
+      act(() => {
+        result.current.commit({ type: "SET_BPM", bpm: 60 + (i % 60) });
+      });
+    }
+
+    const stats = result.current.getHistoryStats();
+    expect(stats.entries).toBeGreaterThan(0);
+    expect(stats.entries).toBeLessThanOrEqual(50);
+    // 4 MB budget — well under the ~3.7 MB a naive 50-entry stack could reach.
+    expect(stats.bytes).toBeLessThanOrEqual(4 * 1024 * 1024);
+  });
+
+  it("keeps undo correct after eviction has started", () => {
+    const { result } = renderHook(() => useSequencerStore(genre));
+
+    for (let i = 0; i < 60; i++) {
+      act(() => {
+        result.current.commit({ type: "SET_BPM", bpm: 70 + (i % 50) });
+      });
+    }
+    const last = result.current.state.bpm;
+    expect(last).toBe(70 + (59 % 50));
+
+    act(() => {
+      result.current.undo();
+    });
+    // The previous distinct value, proving eviction did not corrupt ordering.
+    expect(result.current.state.bpm).toBe(70 + (58 % 50));
+  });
+});

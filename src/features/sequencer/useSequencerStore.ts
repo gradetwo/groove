@@ -29,6 +29,36 @@ export interface StudioHistorySnapshot {
   parameterDimension?: "velocity" | "probability" | "ratchet" | "gate";
 }
 
+/**
+ * A-04: undo history used to be capped at a fixed 50 *entries*, but one entry is a
+ * deep clone of three patterns (current + slots A/B). At 8 tracks × 64 steps × 6
+ * arrays that is roughly 75 KB per entry, so a full stack retained several MB of
+ * plain JS arrays. We now also cap by an estimated byte budget and evict oldest-first.
+ */
+const HISTORY_MAX_ENTRIES = 50;
+const HISTORY_MAX_BYTES = 4 * 1024 * 1024;
+const BYTES_PER_NUMBER = 8; // JS number slots in a typed-ish dense array
+const SNAPSHOT_FIXED_OVERHEAD = 2048;
+
+export function estimateSnapshotBytes(snapshot: StudioHistorySnapshot): number {
+  let numbers = 0;
+  const countPattern = (pattern?: SequencerPattern) => {
+    if (!pattern?.tracks) return;
+    for (const track of pattern.tracks) {
+      numbers += track.steps?.length ?? 0;
+      numbers += track.velocity?.length ?? 0;
+      numbers += track.pitch?.length ?? 0;
+      numbers += track.gate?.length ?? 0;
+      numbers += track.ratchet?.length ?? 0;
+      numbers += track.probability?.length ?? 0;
+    }
+  };
+  countPattern(snapshot.pattern);
+  countPattern(snapshot.patterns?.A);
+  countPattern(snapshot.patterns?.B);
+  return numbers * BYTES_PER_NUMBER + SNAPSHOT_FIXED_OVERHEAD;
+}
+
 export interface SequencerState {
   currentGenre: Genre;
   pattern: SequencerPattern;
@@ -853,6 +883,28 @@ export function useSequencerStore(initialGenre: Genre) {
 
   const historyRef = useRef<StudioHistorySnapshot[]>([]);
   const futureRef = useRef<StudioHistorySnapshot[]>([]);
+  const historyBytesRef = useRef(0);
+
+  /** Pushes a snapshot and trims the stack to the entry/byte budget (oldest first). */
+  const pushHistory = useCallback((snapshot: StudioHistorySnapshot) => {
+    historyRef.current.push(snapshot);
+    historyBytesRef.current += estimateSnapshotBytes(snapshot);
+    while (
+      historyRef.current.length > HISTORY_MAX_ENTRIES ||
+      (historyBytesRef.current > HISTORY_MAX_BYTES && historyRef.current.length > 1)
+    ) {
+      const evicted = historyRef.current.shift();
+      if (!evicted) break;
+      historyBytesRef.current -= estimateSnapshotBytes(evicted);
+    }
+    if (historyBytesRef.current < 0) historyBytesRef.current = 0;
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    historyRef.current = [];
+    futureRef.current = [];
+    historyBytesRef.current = 0;
+  }, []);
 
   // Debounced auto-save project on state change (P3-04)
   useEffect(() => {
@@ -926,17 +978,13 @@ export function useSequencerStore(initialGenre: Genre) {
   const commit = useCallback(
     (action: SequencerAction, recordHistory = true) => {
       if (action.type === "LOAD_PROJECT") {
-        historyRef.current = [];
-        futureRef.current = [];
+        clearHistory();
         lastRecordedStateRef.current = null;
         recordHistory = false;
       } else if (recordHistory) {
         const source = stateRef.current;
         if (lastRecordedStateRef.current !== source) {
-          historyRef.current.push(createSnapshot());
-          if (historyRef.current.length > 50) {
-            historyRef.current.shift();
-          }
+          pushHistory(createSnapshot());
           lastRecordedStateRef.current = source;
           futureRef.current = [];
           lastCoalescedRef.current = null;
@@ -945,7 +993,7 @@ export function useSequencerStore(initialGenre: Genre) {
       dispatch(action);
       syncHistoryFlags();
     },
-    [createSnapshot, syncHistoryFlags]
+    [createSnapshot, pushHistory, syncHistoryFlags, clearHistory]
   );
 
   const undo = useCallback((): StudioHistorySnapshot | null => {
@@ -987,10 +1035,7 @@ export function useSequencerStore(initialGenre: Genre) {
       const shouldRecord = !alreadyRecorded && (!last || last.key !== key || now - last.at > windowMs);
 
       if (shouldRecord) {
-        historyRef.current.push(createSnapshot());
-        if (historyRef.current.length > 50) {
-          historyRef.current.shift();
-        }
+        pushHistory(createSnapshot());
         futureRef.current = [];
         lastRecordedStateRef.current = source;
         lastCoalescedRef.current = { key, at: now };
@@ -1001,7 +1046,7 @@ export function useSequencerStore(initialGenre: Genre) {
       dispatch(action);
       syncHistoryFlags();
     },
-    [createSnapshot, syncHistoryFlags]
+    [createSnapshot, pushHistory, syncHistoryFlags]
   );
 
   /** Drops the redo stack — call after changes made outside `commit` (e.g. live recording). */
@@ -1012,11 +1057,21 @@ export function useSequencerStore(initialGenre: Genre) {
   }, [syncHistoryFlags]);
 
   const resetHistory = useCallback(() => {
-    historyRef.current = [];
-    futureRef.current = [];
+    clearHistory();
     lastRecordedStateRef.current = null;
+    lastCoalescedRef.current = null;
     syncHistoryFlags();
-  }, [syncHistoryFlags]);
+  }, [clearHistory, syncHistoryFlags]);
+
+  /** Retained undo-history size estimate in bytes (A-04 diagnostics). */
+  const getHistoryStats = useCallback(
+    () => ({
+      entries: historyRef.current.length,
+      bytes: historyBytesRef.current,
+      futureEntries: futureRef.current.length,
+    }),
+    []
+  );
 
   const canUndo = historyFlags.canUndo;
   const canRedo = historyFlags.canRedo;
@@ -1033,5 +1088,6 @@ export function useSequencerStore(initialGenre: Genre) {
     invalidateRedo,
     resetHistory,
     commitCoalesced,
+    getHistoryStats,
   };
 }
