@@ -1,31 +1,27 @@
 {
-  "version": "1.16.14",
+  "version": "1.16.15",
   "releaseDate": "2026-09-14",
-  "changelogCount": 56,
+  "changelogCount": 57,
   "latest": {
-    "version": "1.16.14",
+    "version": "1.16.15",
     "date": "2026-09-15",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v1.16.14 调音台三处补完：反相可用、主推子真实电平、通道表真实分析器",
-      "en": "v1.16.14 Console completed: working polarity, real master level, real channel meters"
+      "zh": "v1.16.15 修复调音台未播放即满格的假电平，通道控件补到 44px",
+      "en": "v1.16.15 Fixed phantom full-scale console meters and enlarged channel controls to 44px"
     },
     "highlights": [
       {
-        "zh": "反相（Ø）真正可用：新增每通道极性级 GainNode（±1），打通数据模型 → 实时引擎 → 离线 WAV 渲染 → 存储（可撤销、随工程持久化）→ 调音台按钮的完整链路；send A/B 也跟随极性",
-        "en": "Polarity (Ø) now works end to end: a per-channel ±1 gain stage wired through the data model, realtime engine, offline WAV renderer, store (undoable and persisted) and the console button; the A/B sends follow the polarity too"
+        "zh": "修复真实缺陷：AudioContext 挂起时（首次交互前）WebAudio 返回全 0 帧，而字节时域缓冲以 128 为零线，全 0 被读成 0 dBFS——刚打开页面什么都没播放，所有通道表却顶在红区。现在完全平坦的缓冲一律视为静音（母带表此前也有同样问题）",
+        "en": "Fixed a real defect: while the AudioContext is suspended (before the first interaction) WebAudio returns all-zero frames, and since byte time-domain buffers are centred on 128, those read as 0 dBFS — every channel meter sat in the red on load with nothing playing. Flat buffers are now treated as silence (the master meter had the same latent issue)"
       },
       {
-        "zh": "主推子不再猜测：引擎暴露 getMasterVolume() 并把主音量纳入音频设置持久化，调音台挂载时读取真实电平（此前硬编码 0.8）",
-        "en": "The master fader no longer guesses: the engine exposes getMasterVolume() and persists the level in audio settings, so the console mounts with the real value instead of a hard-coded 0.8"
+        "zh": "调音台的 M/S/Ø 控件从 28px 提升到 44×44px，通道条相应加宽；目标设备（iPad / 横屏平板）是触摸屏，28px 控件实测难以点中",
+        "en": "Console M/S/Ø controls grew from 28px to 44×44px with wider channel strips; the target devices (iPad / landscape tablets) are touch screens where 28px targets are genuinely hard to hit"
       },
       {
-        "zh": "通道电平表改用真实分析器：引擎按需为每通道插入 fftSize=256 的直通分析器（视图卸载即移除），通道表显示真实信号峰值而非音量×声像的估算",
-        "en": "Channel meters now read real analysers: the engine inserts a pass-through 256-point analyser per channel on demand (removed when the view unmounts), so the meters show the true signal instead of a volume×pan estimate"
-      },
-      {
-        "zh": "孤儿审计脚本接入门禁：脚本可查的 159 曲风 + 300 关系 + 11 条时间线故事审计，此前从未被任何流程调用；同时清理 5 个一次性 JS 脚本（scripts/ 由 41 项精简到 17 项）",
-        "en": "An orphan audit script is now a real gate: 159 genres + 300 relations + 11 timeline stories, previously never invoked by any pipeline; plus 5 one-off JS scripts removed (scripts/ down from 41 to 17 entries)"
+        "zh": "实测：静止 0.0% → 播放 99.9%，电平表由真实信号驱动；触摸目标 26×28px → 44×44px",
+        "en": "Measured: meter travel 0.0% idle → 99.9% playing, driven by the real signal; touch targets 26×28px → 44×44px"
       }
     ]
   }
