@@ -354,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenShortcuts}
             className="hidden sm:flex items-center justify-center p-1.5 border border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
-            title={t("shortcuts_guide_title" as any) || "Keyboard Shortcuts (?)"}
+            title={t("shortcuts_guide_title") || "Keyboard Shortcuts (?)"}
             aria-label="Keyboard Shortcuts Guide"
           >
             <Keyboard className="w-4 h-4" />

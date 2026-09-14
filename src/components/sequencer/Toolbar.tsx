@@ -243,10 +243,10 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               <button
                 onClick={onToggleSidebar}
                 className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-text-sub hover:text-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
-                title={isZh ? "展开风格档案" : "Expand dossier"}
+                title={t("toolbar_dossier_expand_title")}
               >
                 <PanelLeftOpen className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isZh ? "风格" : "Info"}</span>
+                <span className="hidden sm:inline">{t("toolbar_dossier_short")}</span>
               </button>
             )
           )}
@@ -268,7 +268,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
             )}
             <span className="font-['JetBrains_Mono'] text-xs">
-              {isPlaying ? (isZh ? "暂停" : "PAUSE") : (isZh ? "播放" : "PLAY")}
+              {isPlaying ? (t("toolbar_pause")) : (t("toolbar_play"))}
             </span>
           </button>
 
@@ -282,7 +282,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               value={bpm}
               onChange={(e) => onChangeBpm(Math.max(40, Math.min(240, Number(e.target.value) || 120)))}
               className="w-10 bg-transparent text-text font-['JetBrains_Mono'] text-xs font-bold text-center focus:outline-none focus:text-accent"
-              title={isZh ? "节奏速度 (40-240 BPM)" : "Tempo (40-240 BPM)"}
+              title={t("toolbar_bpm_title")}
             />
           </div>
 
@@ -292,7 +292,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               type="button"
               onClick={onTapTempo}
               className="h-8 px-2 bg-panel2 hover:bg-[#14151a] border border-line hover:border-accent rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-accent transition-colors shrink-0 active:scale-95"
-              title={isZh ? "点击测速 (连续点击2次以上计算 BPM)" : "Tap Tempo (Tap ≥2 times to calculate BPM)"}
+              title={t("toolbar_tap_tempo_title")}
               aria-label="Tap Tempo"
             >
               TAP
@@ -309,11 +309,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.25)]"
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
-              title={isZh ? "节拍器开关" : "Toggle Metronome"}
-              aria-label={isZh ? "节拍器" : "Metronome"}
+              title={t("toolbar_metronome_title")}
+              aria-label={t("toolbar_metronome_aria")}
             >
               <Bell className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline font-['JetBrains_Mono']">{isZh ? "节拍" : "METRO"}</span>
+              <span className="hidden xl:inline font-['JetBrains_Mono']">{t("toolbar_metronome_label")}</span>
             </button>
           )}
 
@@ -327,8 +327,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
-              title={isZh ? "4拍预备拍开关 (播放开始前倒数 1-2-3-4)" : "Toggle 4-Beat Count-In"}
-              aria-label={isZh ? "预备拍" : "Count-In"}
+              title={t("toolbar_count_in_title")}
+              aria-label={t("toolbar_count_in_aria")}
             >
               <span className="font-['JetBrains_Mono'] font-bold text-[10px]">1-4</span>
             </button>
@@ -344,7 +344,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-red-500/25 border-red-500 text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.35)]"
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
-              title={isZh ? "实时录制模式开关 (录制打击垫/键盘触发)" : "Toggle Live Recording (Record triggers into grid)"}
+              title={t("toolbar_record_title")}
               aria-label="Live Recording"
             >
               <div className={`w-2 h-2 rounded-full ${isRecordArmed ? "bg-red-500 animate-ping" : "bg-red-500/70"}`} />
@@ -356,45 +356,45 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {onChangeDrumKit && (
             <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
               <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none hidden sm:inline">
-                {isZh ? "鼓机" : "KIT"}
+                {t("toolbar_drum_kit_label")}
               </span>
               <select
                 value={drumKit}
                 onChange={(e) => onChangeDrumKit(e.target.value as DrumKitType)}
                 className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                aria-label={isZh ? "选择硬件鼓机模型与底鼓设计" : "Select Drum Machine & Kick Design"}
+                aria-label={t("toolbar_drum_kit_aria")}
               >
-                <optgroup label={isZh ? "经典硬件鼓机" : "Hardware Kits"}>
+                <optgroup label={t("toolbar_drum_kit_hardware_group")}>
                   <option value="808" className="bg-panel text-text">TR-808 (Analog)</option>
                   <option value="909" className="bg-panel text-text">TR-909 (Punch)</option>
                   <option value="acoustic" className="bg-panel text-text">Acoustic (Warm)</option>
                   <option value="cyber" className="bg-panel text-text">Cyber (Wave)</option>
                 </optgroup>
-                <optgroup label={isZh ? "底鼓设计官方预设" : "Kick Design Presets"}>
+                <optgroup label={t("toolbar_drum_kit_kick_group")}>
                   <option value="kick:berlin-orphic" className="bg-panel text-text">
-                    {isZh ? "底鼓: 柏林奥菲斯巨柱" : "Kick: Berlin Orphic"}
+                    {t("toolbar_kick_berlin_orphic")}
                   </option>
                   <option value="kick:detroit-mechanical" className="bg-panel text-text">
-                    {isZh ? "底鼓: 底特律机械脉冲" : "Kick: Detroit Mechanical"}
+                    {t("toolbar_kick_detroit_mechanical")}
                   </option>
                   <option value="kick:somatic-808-gravity" className="bg-panel text-text">
-                    {isZh ? "底鼓: 躯体 808 内脏引力" : "Kick: Visceral 808"}
+                    {t("toolbar_kick_visceral_808")}
                   </option>
                   <option value="kick:industrial-revolt" className="bg-panel text-text">
-                    {isZh ? "底鼓: 工业阶级抵抗" : "Kick: Industrial Revolt"}
+                    {t("toolbar_kick_industrial_revolt")}
                   </option>
                   <option value="kick:acoustic-beater-skin" className="bg-panel text-text">
-                    {isZh ? "底鼓: 真皮鼓锤敲击" : "Kick: Acoustic Skin"}
+                    {t("toolbar_kick_acoustic_skin")}
                   </option>
                   <option value="kick:neural-click-clock" className="bg-panel text-text">
-                    {isZh ? "底鼓: 神经时钟微瞬态" : "Kick: Neural Click"}
+                    {t("toolbar_kick_neural_click")}
                   </option>
                 </optgroup>
                 {customKicks.length > 0 && (
-                  <optgroup label={isZh ? "自定义底鼓预设" : "Custom Kick Presets"}>
+                  <optgroup label={t("toolbar_kick_custom_group")}>
                     {customKicks.map((k) => (
                       <option key={k.id} value={`kick:${k.id}`} className="bg-panel text-text">
-                        {isZh ? `自定义: ${k.name}` : `Custom: ${k.name}`}
+                        {t("toolbar_kick_custom_option", { name: k.name })}
                       </option>
                     ))}
                   </optgroup>
@@ -414,15 +414,13 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
               title={
-                isZh
-                  ? `只听鼓组轨道 (快捷键 D · 当前: ${isDrumsOnly ? "已开启" : "已关闭"})`
-                  : `Drums Only (Key: D · Current: ${isDrumsOnly ? "ON" : "OFF"})`
+                t("toolbar_drums_only_title", { state: isDrumsOnly ? t("toolbar_state_on") : t("toolbar_state_off") })
               }
-              aria-label={isZh ? "只听鼓组模式" : "Drums Only Mode"}
+              aria-label={t("toolbar_drums_only_aria")}
               aria-pressed={isDrumsOnly}
             >
               <Disc3 className={`w-3.5 h-3.5 ${isDrumsOnly ? "text-accent animate-spin-slow" : "text-text-dim"}`} />
-              <span className="font-semibold">{isZh ? "只听鼓组" : "DRUMS"}</span>
+              <span className="font-semibold">{t("toolbar_drums_only_label")}</span>
               {isDrumsOnly && <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
             </button>
           )}
@@ -430,62 +428,62 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {/* Meter Select Dropdown */}
           <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
             <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {isZh ? "拍号" : "METER"}
+              {t("toolbar_meter_label")}
             </span>
             <select
               value={timeSignature}
               onChange={(e) => onChangeTimeSignature(e.target.value)}
               className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={isZh ? "选择拍号" : "Select time signature"}
+              aria-label={t("toolbar_meter_aria")}
             >
-              <option value="4/4" className="bg-panel text-text">4/4 {isZh ? "(四四拍 · 4格)" : "(Common)"}</option>
-              <option value="2/4" className="bg-panel text-text">2/4 {isZh ? "(二四拍 · 2格)" : "(March)"}</option>
-              <option value="3/4" className="bg-panel text-text">3/4 {isZh ? "(三四拍 · 3格)" : "(Waltz)"}</option>
-              <option value="2/2" className="bg-panel text-text">2/2 {isZh ? "(二二拍 · 2格)" : "(Cut Time)"}</option>
-              <option value="6/8" className="bg-panel text-text">6/8 {isZh ? "(六八拍 · 3格)" : "(Compound)"}</option>
-              <option value="3/8" className="bg-panel text-text">3/8 {isZh ? "(三八拍 · 3格)" : "(Single)"}</option>
-              <option value="9/8" className="bg-panel text-text">9/8 {isZh ? "(九八拍 · 3格)" : "(Triple)"}</option>
-              <option value="12/8" className="bg-panel text-text">12/8 {isZh ? "(十二八 · 3格)" : "(Shuffle)"}</option>
-              <option value="5/4" className="bg-panel text-text">5/4 {isZh ? "(五四拍 · 5格)" : "(Take Five)"}</option>
-              <option value="7/8" className="bg-panel text-text">7/8 {isZh ? "(七八拍 · 7格)" : "(Balkan)"}</option>
+              <option value="4/4" className="bg-panel text-text">4/4 {t("toolbar_meter_44")}</option>
+              <option value="2/4" className="bg-panel text-text">2/4 {t("toolbar_meter_24")}</option>
+              <option value="3/4" className="bg-panel text-text">3/4 {t("toolbar_meter_34")}</option>
+              <option value="2/2" className="bg-panel text-text">2/2 {t("toolbar_meter_22")}</option>
+              <option value="6/8" className="bg-panel text-text">6/8 {t("toolbar_meter_68")}</option>
+              <option value="3/8" className="bg-panel text-text">3/8 {t("toolbar_meter_38")}</option>
+              <option value="9/8" className="bg-panel text-text">9/8 {t("toolbar_meter_98")}</option>
+              <option value="12/8" className="bg-panel text-text">12/8 {t("toolbar_meter_128")}</option>
+              <option value="5/4" className="bg-panel text-text">5/4 {t("toolbar_meter_54")}</option>
+              <option value="7/8" className="bg-panel text-text">7/8 {t("toolbar_meter_78")}</option>
             </select>
           </div>
 
           {/* Quantize Resolution Select Dropdown */}
           <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
             <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {isZh ? "精度" : "GRID"}
+              {t("toolbar_grid_label")}
             </span>
             <select
               value={resolution}
               onChange={(e) => onChangeResolution(e.target.value as "1/8" | "1/16" | "1/32")}
               className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={isZh ? "选择量化精度" : "Select quantization resolution"}
+              aria-label={t("toolbar_grid_aria")}
             >
-              <option value="1/16" className="bg-panel text-text">1/16 {isZh ? "(标准)" : "(Default)"}</option>
-              <option value="1/8" className="bg-panel text-text">1/8 {isZh ? "(半速)" : "(Half)"}</option>
-              <option value="1/32" className="bg-panel text-text">1/32 {isZh ? "(双速)" : "(Double)"}</option>
+              <option value="1/16" className="bg-panel text-text">1/16 {t("toolbar_grid_116")}</option>
+              <option value="1/8" className="bg-panel text-text">1/8 {t("toolbar_grid_18")}</option>
+              <option value="1/32" className="bg-panel text-text">1/32 {t("toolbar_grid_132")}</option>
             </select>
           </div>
 
           {/* Step Length Select Dropdown */}
           <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
             <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {isZh ? "长度" : "LEN"}
+              {t("toolbar_length_label")}
             </span>
             <select
               value={stepCount}
               onChange={(e) => onChangeStepCount(Number(e.target.value))}
               className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={isZh ? "选择步长与小节" : "Select step length"}
+              aria-label={t("toolbar_length_aria")}
             >
-              <option value={16} className="bg-panel text-text">16 {isZh ? "步 (1小节)" : "Steps (1 Bar)"}</option>
-              <option value={32} className="bg-panel text-text">32 {isZh ? "步 (2小节)" : "Steps (2 Bars)"}</option>
-              <option value={48} className="bg-panel text-text">48 {isZh ? "步 (3小节)" : "Steps (3 Bars)"}</option>
-              <option value={64} className="bg-panel text-text">64 {isZh ? "步 (4小节)" : "Steps (4 Bars)"}</option>
+              <option value={16} className="bg-panel text-text">16 {t("toolbar_steps_1_bar")}</option>
+              <option value={32} className="bg-panel text-text">32 {t("toolbar_steps_2_bars")}</option>
+              <option value={48} className="bg-panel text-text">48 {t("toolbar_steps_3_bars")}</option>
+              <option value={64} className="bg-panel text-text">64 {t("toolbar_steps_4_bars")}</option>
               {![16, 32, 48, 64].includes(stepCount) && (
                 <option value={stepCount} className="bg-panel text-text">
-                  {stepCount} {isZh ? `步 (${barCount}小节)` : `Steps (${barCount} Bars)`}
+                  {stepCount} {t("toolbar_steps_n_bars", { count: barCount })}
                 </option>
               )}
             </select>
@@ -496,30 +494,30 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0"
             title={
               mobileEditMode === "step"
-                ? (isZh ? "普通步进：点按开关音符，长按打开参数锁" : "Step Note: Tap to toggle, long press for P-Locks")
+                ? (t("toolbar_tool_step_tip"))
                 : mobileEditMode === "accent"
-                ? (isZh ? "重音模式：点按步进切换最大重音 (Vel 127)" : "Accent: Tap to toggle max accent velocity")
+                ? (t("toolbar_tool_accent_tip"))
                 : mobileEditMode === "ratchet"
-                ? (isZh ? "连音滚奏：点按步进循环细分 (1x-4x)" : "Ratchet: Tap to cycle ratchets")
+                ? (t("toolbar_tool_ratchet_tip"))
                 : mobileEditMode === "pitch"
-                ? (isZh ? "音高选择：点按旋律步进选取音高" : "Pitch: Tap to pick pitch")
-                : (isZh ? "参数锁：点按步进调出参数锁面板" : "P-Locks: Tap to open parameters menu")
+                ? (t("toolbar_tool_pitch_tip"))
+                : (t("toolbar_tool_plocks_tip"))
             }
           >
             <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {isZh ? "工具" : "TOOL"}
+              {t("toolbar_tool_label")}
             </span>
             <select
               value={mobileEditMode}
               onChange={(e) => onChangeMobileEditMode(e.target.value as MobileEditMode)}
               className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={isZh ? "选择步进编辑工具" : "Select step edit mode"}
+              aria-label={t("toolbar_tool_aria")}
             >
-              <option value="step" className="bg-panel text-text">● {isZh ? "普通步进" : "Step Note"}</option>
-              <option value="accent" className="bg-panel text-text">▲ {isZh ? "重音 (Vel 127)" : "Accent"}</option>
-              <option value="ratchet" className="bg-panel text-text">⫸ {isZh ? "连音滚奏" : "Ratchet"}</option>
-              <option value="pitch" className="bg-panel text-text">♩ {isZh ? "音高选择" : "Pitch Picker"}</option>
-              <option value="plocks" className="bg-panel text-text">⚙ {isZh ? "参数锁" : "P-Locks"}</option>
+              <option value="step" className="bg-panel text-text">● {t("toolbar_tool_step")}</option>
+              <option value="accent" className="bg-panel text-text">▲ {t("toolbar_tool_accent")}</option>
+              <option value="ratchet" className="bg-panel text-text">⫸ {t("toolbar_tool_ratchet")}</option>
+              <option value="pitch" className="bg-panel text-text">♩ {t("toolbar_tool_pitch")}</option>
+              <option value="plocks" className="bg-panel text-text">⚙ {t("toolbar_tool_plocks")}</option>
             </select>
           </div>
 
@@ -534,7 +532,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     ? "bg-accent text-[#0a0b0d] shadow-sm"
                     : "text-text-sub hover:text-text"
                 }`}
-                title={isZh ? "切换至 Pattern A" : "Switch to Pattern A"}
+                title={t("toolbar_pattern_a_title")}
               >
                 {blindCompare ? "?1" : "PTN A"}
               </button>
@@ -546,7 +544,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     ? "bg-accent text-[#0a0b0d] shadow-sm"
                     : "text-text-sub hover:text-text"
                 }`}
-                title={isZh ? "切换至 Pattern B" : "Switch to Pattern B"}
+                title={t("toolbar_pattern_b_title")}
               >
                 {blindCompare ? "?2" : "PTN B"}
               </button>
@@ -556,13 +554,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   onClick={() => onCopySlot(activeSlot === "A" ? "A" : "B", activeSlot === "A" ? "B" : "A")}
                   className="h-7 px-1.5 text-text-sub hover:text-accent transition-colors ml-0.5"
                   title={
-                    isZh
-                      ? activeSlot === "A"
-                        ? "复制 A 到 B"
-                        : "复制 B 到 A"
-                      : activeSlot === "A"
-                      ? "Copy A to B"
-                      : "Copy B to A"
+                    activeSlot === "A" ? t("toolbar_copy_a_to_b") : t("toolbar_copy_b_to_a")
                   }
                   aria-label="Copy pattern slot"
                 >
@@ -582,7 +574,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-[#a855f7]/20 border-[#a855f7] text-[#c084fc] font-bold shadow-[0_0_8px_rgba(168,85,247,0.3)]"
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
-              title={isZh ? "Song Mode：A/B 链式循环连续播放" : "Song Mode: Chain A and B patterns"}
+              title={t("toolbar_song_mode_title")}
               aria-label="Song Mode"
             >
               <Repeat className="w-3.5 h-3.5" />
@@ -600,11 +592,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-[#ec4899]/20 border-[#ec4899] text-[#f472b6] font-bold shadow-[0_0_8px_rgba(236,72,153,0.3)]"
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
-              title={isZh ? "A/B 盲听对比评估模式" : "A/B Blind Listening Comparison Mode"}
+              title={t("toolbar_blind_title")}
               aria-label="Blind Test Mode"
             >
               {blindCompare ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span className="hidden md:inline font-['JetBrains_Mono']">{isZh ? "盲听" : "BLIND"}</span>
+              <span className="hidden md:inline font-['JetBrains_Mono']">{t("toolbar_blind_label")}</span>
             </button>
           )}
         </div>
@@ -615,13 +607,13 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {barCount > 1 && (
             <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
               <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-                {isZh ? "小节" : "BAR"}
+                {t("toolbar_bar_label")}
               </span>
               <select
                 value={viewedBar}
                 onChange={(e) => onSelectBar(Number(e.target.value))}
                 className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                aria-label={isZh ? "跳转到小节" : "Jump to bar"}
+                aria-label={t("toolbar_bar_aria")}
               >
                 {Array.from({ length: barCount }, (_, bIdx) => {
                   const startStep = bIdx * stepsPerBar + 1;
@@ -644,20 +636,20 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
                 : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
             }`}
-            title={isZh ? "力度编辑抽屉 (快捷键 V)" : "Toggle velocity drawer (Key: V)"}
+            title={t("toolbar_velocity_title")}
           >
             <Sliders className="w-3.5 h-3.5 text-[#45e0c9]" />
-            <span className="hidden sm:inline font-['JetBrains_Mono']">{isZh ? "力度" : "VEL"}</span>
+            <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_velocity_label")}</span>
           </button>
 
           {/* Euclidean Rhythm Generator */}
           <button
             onClick={onOpenEuclidean}
             className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-panel2 border border-line hover:border-accent/60 rounded-lg text-xs text-text-sub hover:text-accent transition-colors shrink-0"
-            title={isZh ? "欧几里得律动生成器 (快捷键 E)" : "Euclidean rhythm generator (Key: E)"}
+            title={t("toolbar_euclid_title")}
           >
             <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline font-['JetBrains_Mono']">{isZh ? "欧几里得" : "EUCLID"}</span>
+            <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_euclid_label")}</span>
           </button>
 
           {/* Master Panoramic Analyzer Toggle (P6-05) */}
@@ -670,11 +662,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.3)]"
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
-              title={isZh ? "全景声谱与李萨如图示波器 (快捷键 O)" : "Panoramic Spectrogram & Lissajous Phase Scope (Key: O)"}
+              title={t("toolbar_analyzer_title")}
               aria-label="Toggle Master Analyzer"
             >
               <Activity className="w-3.5 h-3.5 text-accent" />
-              <span className="hidden sm:inline font-['JetBrains_Mono']">{isZh ? "示波器" : "SCOPE"}</span>
+              <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_analyzer_label")}</span>
             </button>
           )}
 
@@ -689,8 +681,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
                   : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
               }`}
-              title={isZh ? "撤销 (Ctrl+Z)" : "Undo (Ctrl+Z)"}
-              aria-label={isZh ? "撤销 (Ctrl+Z)" : "Undo (Ctrl+Z)"}
+              title={t("toolbar_undo_title")}
+              aria-label={t("toolbar_undo_title")}
             >
               <Undo2 className="w-3.5 h-3.5" />
             </button>
@@ -703,8 +695,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
                   : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
               }`}
-              title={isZh ? "重做 (Ctrl+Shift+Z)" : "Redo (Ctrl+Shift+Z)"}
-              aria-label={isZh ? "重做 (Ctrl+Shift+Z)" : "Redo (Ctrl+Shift+Z)"}
+              title={t("toolbar_redo_title")}
+              aria-label={t("toolbar_redo_title")}
             >
               <Redo2 className="w-3.5 h-3.5" />
             </button>
@@ -720,22 +712,22 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             }`}
             title={
               isEditorMaximized
-                ? (isZh ? "退出全屏 (Esc)" : "Exit Fullscreen (Esc)")
-                : (isZh ? "全屏沉浸模式 (Esc 退出)" : "Fullscreen (Esc to exit)")
+                ? (t("toolbar_fullscreen_exit_title"))
+                : (t("toolbar_fullscreen_enter_title"))
             }
           >
             {isEditorMaximized ? (
               <>
                 <Minimize2 className="w-3.5 h-3.5 text-accent" />
                 <span className="hidden sm:inline font-['JetBrains_Mono']">
-                  {isZh ? "退出" : "Exit"}
+                  {t("toolbar_fullscreen_exit_label")}
                 </span>
               </>
             ) : (
               <>
                 <Maximize2 className="w-3.5 h-3.5 text-accent" />
                 <span className="hidden sm:inline font-['JetBrains_Mono']">
-                  {isZh ? "全屏" : "Full"}
+                  {t("toolbar_fullscreen_enter_label")}
                 </span>
               </>
             )}
@@ -747,28 +739,28 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               value=""
               onChange={(e) => onQuickAction(e.target.value as any)}
               className="bg-transparent text-text-sub hover:text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={isZh ? "快捷操作" : "Quick actions"}
+              aria-label={t("toolbar_quick_actions_aria")}
             >
               <option value="" disabled className="bg-panel text-text-sub">
-                ⚡ {isZh ? "操作..." : "Tools..."}
+                ⚡ {t("toolbar_quick_tools_placeholder")}
               </option>
               <option value="open_hub" className="bg-panel text-accent font-bold">
-                📁 {isZh ? "工程管理中心 (P)" : "Project Hub (P)"}
+                📁 {t("toolbar_quick_project_hub")}
               </option>
               <option value="dup_bar1" className="bg-panel text-text">
-                📋 {isZh ? "复制小节1至整段" : "Duplicate Bar 1"}
+                📋 {t("toolbar_quick_duplicate_bar1")}
               </option>
               <option value="humanize" className="bg-panel text-text">
-                ✨ {isZh ? "人性化力度抖动" : "Humanize Velocity"}
+                ✨ {t("toolbar_quick_humanize")}
               </option>
               <option value="clear_all" className="bg-panel text-[#ff5964]">
-                🗑️ {isZh ? "清空全部步进" : "Clear All Steps"}
+                🗑️ {t("toolbar_quick_clear_all")}
               </option>
               <option value="reset_preset" className="bg-panel text-text">
-                🔄 {isZh ? "恢复默认预设" : "Reset Preset"}
+                🔄 {t("toolbar_quick_reset_preset")}
               </option>
               <option value="clear_saved" className="bg-panel text-[#f87171]">
-                🧹 {isZh ? "清除本地工程缓存" : "Clear Saved Project"}
+                🧹 {t("toolbar_quick_clear_saved")}
               </option>
             </select>
           </div>
@@ -778,10 +770,10 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             <button
               onClick={onInspireMe}
               className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-accent hover:bg-accent/15 border border-accent/40 rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-              title={isZh ? "受控灵感变异 (Inspire Me - 保留底鼓骨架，变奏踩镲/打击乐/低音)" : "Inspire Me controlled variation"}
+              title={t("toolbar_inspire_title")}
             >
               <Sparkles className="w-3.5 h-3.5 text-accent animate-pulse" />
-              <span className="hidden xl:inline">{isZh ? "灵感变异" : "Inspire"}</span>
+              <span className="hidden xl:inline">{t("toolbar_inspire_label")}</span>
             </button>
           )}
 
@@ -804,10 +796,10 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-                title={isZh ? "导入标准 MIDI 文件 (.mid)" : "Import MIDI file (.mid)"}
+                title={t("toolbar_import_midi_title")}
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">{isZh ? "导入" : "Import"}</span>
+                <span className="hidden xl:inline">{t("toolbar_import_label")}</span>
               </button>
             </>
           )}
@@ -822,13 +814,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
               }`}
               title={
-                isZh
-                  ? `电脑键盘演奏 (1-8轨 / Z-M键)${midiDeviceCount > 0 ? ` · 已连接 ${midiDeviceCount} 台 MIDI 设备` : ""}`
-                  : `Computer keyboard play (1-8 tracks / Z-M keys)${midiDeviceCount > 0 ? ` · ${midiDeviceCount} MIDI device(s) connected` : ""}`
+                t("toolbar_keyboard_play_title", { devices: midiDeviceCount > 0 ? t("toolbar_keyboard_devices", { count: midiDeviceCount }) : "" })
               }
             >
               <Keyboard className="w-3.5 h-3.5" />
-              <span className="hidden 2xl:inline">{isZh ? "演奏" : "Play"}</span>
+              <span className="hidden 2xl:inline">{t("toolbar_keyboard_label")}</span>
               {midiDeviceCount > 0 && (
                 <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" title="MIDI Connected" />
               )}
@@ -841,12 +831,12 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               type="button"
               onClick={onOpenProjectHub}
               className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-              title={isZh ? "工程管理中心 (快捷键: P)" : "Project Hub (Shortcut: P)"}
-              aria-label={isZh ? "工程管理中心" : "Project Hub"}
+              title={t("toolbar_project_hub_title")}
+              aria-label={t("toolbar_project_hub_aria")}
             >
               <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
               <span className="hidden lg:inline max-w-[90px] xl:max-w-[120px] truncate text-text font-medium">
-                {activeProjectName || (isZh ? "工程" : "Projects")}
+                {activeProjectName || (t("toolbar_projects_fallback"))}
               </span>
             </button>
           )}
@@ -857,12 +847,12 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               type="button"
               onClick={onOpenGenreMaker}
               className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-              title={isZh ? "自定义曲风工坊 (P7-03)" : "Custom Genre Maker (P7-03)"}
-              aria-label={isZh ? "曲风工坊" : "Genre Maker"}
+              title={t("toolbar_genre_maker_title")}
+              aria-label={t("toolbar_genre_maker_aria")}
             >
               <Wand2 className="w-3.5 h-3.5 text-accent shrink-0" />
               <span className="hidden xl:inline text-text font-medium">
-                {isZh ? "曲风工坊" : "Maker"}
+                {t("toolbar_genre_maker_label")}
               </span>
             </button>
           )}
@@ -898,7 +888,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   >
                     <Download className="w-3.5 h-3.5 text-accent shrink-0" />
                     <div className="flex flex-col">
-                      <span className="font-medium text-text">{isZh ? "导出 MIDI 文件" : "Export MIDI"}</span>
+                      <span className="font-medium text-text">{t("toolbar_export_midi")}</span>
                       <span className="text-[10px] text-text-dim">.mid (8 轨完整伴奏)</span>
                     </div>
                   </button>
@@ -912,7 +902,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   >
                     <Layers className="w-3.5 h-3.5 text-[#fbbf24] shrink-0" />
                     <div className="flex flex-col">
-                      <span className="font-medium text-text">{isZh ? "导出 Ableton 工程" : "Export Ableton Set"}</span>
+                      <span className="font-medium text-text">{t("toolbar_export_als")}</span>
                       <span className="text-[10px] text-text-dim">.als (8 轨独立 MIDI Clip)</span>
                     </div>
                   </button>
@@ -926,7 +916,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   >
                     <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
                     <div className="flex flex-col">
-                      <span className="font-medium text-text">{isZh ? "导出 .groove 工程包" : "Export .groove Set"}</span>
+                      <span className="font-medium text-text">{t("toolbar_export_groove")}</span>
                       <span className="text-[10px] text-text-dim">.groove (离线全工程数据)</span>
                     </div>
                   </button>
@@ -942,7 +932,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   >
                     <FileAudio className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
                     <div className="flex flex-col">
-                      <span className="font-medium text-text">{isZh ? "导出母带 WAV" : "Export Master WAV"}</span>
+                      <span className="font-medium text-text">{t("toolbar_export_wav")}</span>
                       <span className="text-[10px] text-text-dim">16-bit 44.1kHz PCM (.wav)</span>
                     </div>
                   </button>
@@ -956,7 +946,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   >
                     <Package className="w-3.5 h-3.5 text-[#a78bfa] shrink-0" />
                     <div className="flex flex-col">
-                      <span className="font-medium text-text">{isZh ? "导出分轨 Stems 打包" : "Export Stems Pack"}</span>
+                      <span className="font-medium text-text">{t("toolbar_export_stems")}</span>
                       <span className="text-[10px] text-text-dim">8 轨独立 WAV 打包 (.zip)</span>
                     </div>
                   </button>
@@ -986,11 +976,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 ? "bg-[#1f232b] text-accent border-accent/50"
                 : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
             }`}
-            title={isZh ? "展开/收起高级设置 (摇摆度、步进微调、平移)" : "Toggle advanced settings"}
+            title={t("toolbar_advanced_title")}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span className="hidden xl:inline font-['JetBrains_Mono']">
-              {isZh ? "高级" : "More"}
+              {t("toolbar_advanced_label")}
             </span>
             {swing > 0 && !showAdvancedControls && (
               <span className="text-[10px] text-accent font-['JetBrains_Mono'] hidden sm:inline">
@@ -1023,33 +1013,33 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {/* Fine-grained Step adjustments */}
           <div className="flex items-center gap-1 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
             <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim mr-1 hidden sm:inline whitespace-nowrap">
-              {isZh ? "步数微调:" : "FINE STEPS:"}
+              {t("toolbar_fine_steps_label")}
             </span>
             <button
               onClick={() => onRemoveSteps(groupSize)}
               className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-text-sub hover:text-text border border-line font-['JetBrains_Mono'] text-[10px]"
-              title={isZh ? `删减 ${groupSize} 步 (1组)` : `Remove ${groupSize} steps`}
+              title={t("toolbar_remove_steps", { count: groupSize })}
             >
               -{groupSize}
             </button>
             <button
               onClick={() => onAddSteps(groupSize)}
               className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-text-sub hover:text-text border border-line font-['JetBrains_Mono'] text-[10px]"
-              title={isZh ? `添加 ${groupSize} 步 (1组)` : `Add ${groupSize} steps`}
+              title={t("toolbar_add_steps", { count: groupSize })}
             >
               +{groupSize}
             </button>
             <button
               onClick={() => onAddSteps(stepsPerBar)}
               className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-accent border border-line font-['JetBrains_Mono'] text-[10px]"
-              title={isZh ? `添加 1 小节 (+${stepsPerBar} 步)` : `Add 1 Bar (+${stepsPerBar} steps)`}
+              title={t("toolbar_add_1_bar", { count: stepsPerBar })}
             >
               +1 Bar
             </button>
             <button
               onClick={() => onAddSteps(stepsPerBar * 2)}
               className="h-6 px-1.5 flex items-center justify-center rounded bg-[#17181c] hover:bg-line text-accent border border-line font-['JetBrains_Mono'] text-[10px] hidden md:inline-flex"
-              title={isZh ? `添加 2 小节 (+${stepsPerBar * 2} 步)` : `Add 2 Bars (+${stepsPerBar * 2} steps)`}
+              title={t("toolbar_add_2_bars", { count: stepsPerBar * 2 })}
             >
               +2 Bars
             </button>
@@ -1059,7 +1049,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {effectsRackState && onChangeEffectsRack && (
             <div className="flex items-center gap-1.5 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
               <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-0.5 whitespace-nowrap">
-                {isZh ? "母带DSP:" : "FX:"}
+                {t("toolbar_fx_label")}
               </span>
 
               {/* Filter */}
@@ -1071,7 +1061,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     ? "bg-accent/20 border-accent text-accent font-bold"
                     : "bg-[#17181c] border-line text-text-sub hover:text-text"
                 }`}
-                title={isZh ? "高阶谐振滤波器" : "Resonant Filter"}
+                title={t("toolbar_fx_filter")}
               >
                 FLT
               </button>
@@ -1085,7 +1075,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     ? "bg-amber-500/20 border-amber-500 text-amber-400 font-bold"
                     : "bg-[#17181c] border-line text-text-sub hover:text-text"
                 }`}
-                title={isZh ? "磁带饱和温暖感 (Tanh Soft Clip)" : "Tape Saturation"}
+                title={t("toolbar_fx_saturation")}
               >
                 DRIVE
               </button>
@@ -1099,7 +1089,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     ? "bg-cyan-500/20 border-cyan-500 text-cyan-400 font-bold"
                     : "bg-[#17181c] border-line text-text-sub hover:text-text"
                 }`}
-                title={isZh ? "立体声合唱空间化" : "Stereo Chorus"}
+                title={t("toolbar_fx_chorus")}
               >
                 CHORUS
               </button>
@@ -1113,7 +1103,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     ? "bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-400 font-bold"
                     : "bg-[#17181c] border-line text-text-sub hover:text-text"
                 }`}
-                title={isZh ? "低比特数字失真 (Bitcrusher)" : "Lo-Fi Bitcrusher"}
+                title={t("toolbar_fx_bitcrusher")}
               >
                 LO-FI
               </button>
@@ -1123,7 +1113,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {/* Haptic Feedback Control (P8-01) */}
           <div className="flex items-center gap-1.5 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
             <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-0.5 whitespace-nowrap">
-              {isZh ? "触感:" : "HAPTIC:"}
+              {t("toolbar_haptic_label")}
             </span>
             <button
               type="button"
@@ -1138,7 +1128,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   ? "bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold"
                   : "bg-[#17181c] border-line text-text-sub hover:text-text"
               }`}
-              title={isZh ? "触觉震动反馈开关" : "Toggle Haptic Feedback"}
+              title={t("toolbar_haptic_title")}
             >
               {hapticOn ? "ON" : "OFF"}
             </button>
@@ -1155,7 +1145,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   triggerHaptic(HapticPatterns.slider);
                 }}
                 className="w-14 sm:w-20 accent-emerald-400 cursor-pointer"
-                title={isZh ? `震动强度: ${Math.round(hapticLevel * 100)}%` : `Intensity: ${Math.round(hapticLevel * 100)}%`}
+                title={t("toolbar_haptic_intensity", { value: Math.round(hapticLevel * 100) })}
               />
             )}
           </div>
@@ -1163,26 +1153,26 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {/* Pan Navigation */}
           <div className="flex items-center gap-1.5 ml-auto text-text-dim">
             <span className="hidden lg:inline font-['JetBrains_Mono'] text-[10px] whitespace-nowrap">
-              {isZh ? "滚轮/标尺拖拽可平移" : "Wheel/drag to pan"}
+              {t("toolbar_pan_hint")}
             </span>
             <button
               onClick={() => onScrollByPixels(-240)}
               className="w-6 h-6 rounded bg-panel border border-line hover:border-accent text-text-sub hover:text-accent flex items-center justify-center text-xs transition-colors"
-              title={isZh ? "向左滚动" : "Scroll left"}
+              title={t("toolbar_scroll_left")}
             >
               ◀
             </button>
             <button
               onClick={() => onScrollByPixels(240)}
               className="w-6 h-6 rounded bg-panel border border-line hover:border-accent text-text-sub hover:text-accent flex items-center justify-center text-xs transition-colors"
-              title={isZh ? "向右滚动" : "Scroll right"}
+              title={t("toolbar_scroll_right")}
             >
               ▶
             </button>
             <button
               onClick={onToggleAdvancedControls}
               className="ml-2 text-[10px] text-text-sub hover:text-text font-['JetBrains_Mono'] px-1.5 py-0.5 rounded bg-[#17181c] border border-line"
-              title={isZh ? "收起设置抽屉" : "Close"}
+              title={t("toolbar_drawer_close")}
             >
               ✕
             </button>

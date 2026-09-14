@@ -236,6 +236,8 @@ export const exploreMessages = {
   stop_audition: { en: "Stop", zh: "停止试听" },
   audition_btn: { en: "Audition", zh: "试听律动" },
   now_playing: { en: "Playing", zh: "正在试听" },
+  drums_only: { en: "Drums Only", zh: "仅鼓组" },
+  full_band: { en: "Full Band", zh: "全编制" },
   listen_link: { en: "Listen", zh: "试听" },
 
   // Galaxy extra
