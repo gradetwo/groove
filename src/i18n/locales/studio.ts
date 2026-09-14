@@ -236,4 +236,42 @@ export const studioMessages = {
   somatic_dispatch_transient: { en: "DISPATCH TRANSIENT [SPACE]", zh: "击发瞬态脉冲 [SPACE]" },
   somatic_exporting: { en: "EXPORTING...", zh: "正在导出..." },
   somatic_export_wav: { en: "EXPORT WAV", zh: "导出 WAV" },
+
+  // Hardware Console View (N-01 / P8-02)
+  console_nav_label: { en: "Console", zh: "调音台" },
+  console_nav_desc: { en: "Desk", zh: "混音" },
+  console_title: { en: "Hardware Console", zh: "硬件调音台" },
+  console_subtitle: {
+    en: "Mixing desk for the current sequencer pattern",
+    zh: "当前音序 Pattern 的混音控制台",
+  },
+  console_channel_count: { en: "{count} channels", zh: "{count} 个通道" },
+  console_open_studio: { en: "Open in Studio", zh: "在工作台打开" },
+  console_empty_title: { en: "No channels", zh: "暂无通道" },
+  console_empty_desc: {
+    en: "This pattern has no tracks to mix yet.",
+    zh: "当前 Pattern 还没有可混音的音轨。",
+  },
+  console_master_label: { en: "MASTER", zh: "总输出" },
+  console_master_volume_aria: { en: "Master volume", zh: "总音量" },
+  console_play: { en: "PLAY", zh: "播放" },
+  console_stop: { en: "STOP", zh: "停止" },
+  console_transport_aria: { en: "Play or stop the pattern", zh: "播放或停止当前 Pattern" },
+  console_mute: { en: "MUTE", zh: "静音" },
+  console_solo: { en: "SOLO", zh: "独奏" },
+  console_phase: { en: "Phase invert", zh: "相位反转" },
+  console_phase_unsupported: {
+    en: "Phase invert is not supported by the audio engine yet",
+    zh: "音频引擎暂不支持相位反转",
+  },
+  console_send_a: { en: "SEND A", zh: "发送 A" },
+  console_send_b: { en: "SEND B", zh: "发送 B" },
+  console_volume_aria: { en: "{name} volume fader", zh: "{name} 音量推子" },
+  console_pan_aria: { en: "{name} pan", zh: "{name} 声像" },
+  console_send_a_aria: { en: "{name} send A level", zh: "{name} 发送 A 电平" },
+  console_send_b_aria: { en: "{name} send B level", zh: "{name} 发送 B 电平" },
+  console_small_screen_hint: {
+    en: "The console is tuned for medium and large screens — scroll sideways to reach every channel.",
+    zh: "调音台针对中等及大尺寸屏幕优化，可左右滚动查看全部通道。",
+  },
 } as const;

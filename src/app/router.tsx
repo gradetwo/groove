@@ -126,6 +126,12 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
     };
   }
 
+  // Check console (N-01 / P8-02): /console?genre=
+  if (cleanPath === "/console" || cleanPath.startsWith("/console/")) {
+    const gParam = params.get("genre");
+    return { tab: "console", genreId: gParam || undefined };
+  }
+
   // Check studio: /studio?genre=
   if (cleanPath === "/studio" || cleanPath.startsWith("/studio/")) {
     const gParam = params.get("genre");
@@ -224,6 +230,8 @@ export function formatRouteToUrl(route: RouteState): string {
       return `/kick`;
     case "analyzer":
       return `/analyzer`;
+    case "console":
+      return route.genreId ? `/console?genre=${encodeURIComponent(route.genreId)}` : `/console`;
     case "masterclass": {
       return route.masterclassId ? `/masterclass/${encodeURIComponent(route.masterclassId)}` : `/masterclass`;
     }
