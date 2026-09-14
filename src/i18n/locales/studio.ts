@@ -232,6 +232,16 @@ export const studioMessages = {
   transport_redo_done: { en: "Redone ✓", zh: "已重做 (Redo) ✓" },
   transport_slot_copied: { en: "Copied Pattern {from} to {to} ✓", zh: "已将 Pattern {from} 复制至 {to} ✓" },
 
+  // Sequencer Pattern Action Toasts (U-11: migrated from inline bilingual ternaries)
+  pattern_dup_bar1_done: { en: "Duplicated Bar 1 to all bars ✓", zh: "已复制小节 1 至后续小节 ✓" },
+  pattern_humanize_done: { en: "Humanized velocity ✓", zh: "已应用人性化力度微调 ✨" },
+  pattern_clear_all_done: { en: "Cleared all steps ✕", zh: "已清空全部轨道步进 ✕" },
+  pattern_reset_done: { en: "Preset reset 🔄", zh: "已恢复默认预设 🔄" },
+  pattern_clear_saved_done: { en: "Cleared local project cache & reset 🧹", zh: "已清除本地工程缓存并重置预设 🧹" },
+  pattern_import_done: { en: "Imported MIDI: parsed {count} notes ✓", zh: "已成功导入 MIDI: 识别到 {count} 个音符 ✓" },
+  pattern_import_failed: { en: "MIDI import failed: {error}", zh: "MIDI 导入失败: {error}" },
+  pattern_inspire_done: { en: "✨ Applied Inspire Me groove variation!", zh: "✨ 已应用 Inspire Me 受控灵感变异！" },
+
   // Kick / Somatic controls (U-11: migrated from inline bilingual ternaries)
   kick_custom_fallback_name: { en: "Custom Kick {count}", zh: "自定义底鼓 {count}" },
   somatic_presets_heading: { en: "KICK PRESETS", zh: "底鼓预设库" },

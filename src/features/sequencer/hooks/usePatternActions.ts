@@ -6,6 +6,7 @@ import type { SequencerAction } from "../useSequencerStore";
 import { importMidiToPattern } from "../../../audio/MidiImporter";
 import { generateVariation } from "../../../audio/InspireMe";
 import { clearSavedProject } from "../projectStorage";
+import { useLanguage } from "../../../i18n/LanguageContext";
 
 export interface UsePatternActionsOptions {
   patternRef: React.MutableRefObject<SequencerPattern>;
@@ -46,9 +47,9 @@ export function usePatternActions({
   engineRef,
   commit,
   setIsProjectHubOpen,
-  isZh,
   showToast,
 }: UsePatternActionsOptions): UsePatternActionsResult {
+  const { t } = useLanguage();
   // Quick actions
   const handleQuickAction = useCallback(
     (
@@ -69,7 +70,7 @@ export function usePatternActions({
           }
         });
         commit({ type: "COMMIT_PATTERN", pattern: next });
-        showToast(isZh ? "已复制小节 1 至后续小节 ✓" : "Duplicated Bar 1 to all bars ✓");
+        showToast(t("pattern_dup_bar1_done"));
       } else if (action === "humanize") {
         const next = clonePattern(patternRef.current);
         next.tracks.forEach((t) => {
@@ -81,26 +82,26 @@ export function usePatternActions({
           });
         });
         commit({ type: "COMMIT_PATTERN", pattern: next });
-        showToast(isZh ? "已应用人性化力度微调 ✨" : "Humanized velocity ✓");
+        showToast(t("pattern_humanize_done"));
       } else if (action === "clear_all") {
         const next = clonePattern(patternRef.current);
         next.tracks.forEach((t) => {
           t.steps = Array(t.steps.length).fill(0);
         });
         commit({ type: "COMMIT_PATTERN", pattern: next });
-        showToast(isZh ? "已清空全部轨道步进 ✕" : "Cleared all steps ✕");
+        showToast(t("pattern_clear_all_done"));
       } else if (action === "reset_preset") {
         commit({ type: "SET_GENRE", genre: currentGenre });
-        showToast(isZh ? "已恢复默认预设 🔄" : "Preset reset 🔄");
+        showToast(t("pattern_reset_done"));
       } else if (action === "clear_saved") {
         clearSavedProject();
         commit({ type: "SET_GENRE", genre: currentGenre });
         showToast(
-          isZh ? "已清除本地工程缓存并重置预设 🧹" : "Cleared local project cache & reset 🧹"
+          t("pattern_clear_saved_done")
         );
       }
     },
-    [stepsPerBar, commit, showToast, isZh, currentGenre]
+    [stepsPerBar, commit, showToast, t, currentGenre]
   );
 
   const handleImportMidi = useCallback(
@@ -120,19 +121,15 @@ export function usePatternActions({
           if (result.bpm) engineRef.current.setBpm(result.bpm);
         }
         showToast(
-          isZh
-            ? `已成功导入 MIDI: 识别到 ${result.notesFound} 个音符 ✓`
-            : `Imported MIDI: parsed ${result.notesFound} notes ✓`
+          t("pattern_import_done", { count: result.notesFound })
         );
       } catch (err: any) {
         showToast(
-          isZh
-            ? `MIDI 导入失败: ${err?.message || err}`
-            : `MIDI import failed: ${err?.message || err}`
+          t("pattern_import_failed", { error: err?.message || err })
         );
       }
     },
-    [resolution, stepCount, bpm, commit, isZh, showToast]
+    [resolution, stepCount, bpm, commit, t, showToast]
   );
 
   const handleInspireMe = useCallback(() => {
@@ -148,9 +145,9 @@ export function usePatternActions({
       engineRef.current.setPattern(mutated);
     }
     showToast(
-      isZh ? "✨ 已应用 Inspire Me 受控灵感变异！" : "✨ Applied Inspire Me groove variation!"
+      t("pattern_inspire_done")
     );
-  }, [commit, isZh, showToast]);
+  }, [commit, t, showToast]);
 
   const handleAudition = useCallback((trackIdx: number, trackName: string) => {
     engineRef.current?.triggerNote(trackIdx, trackName, 0.9, 0, 1);
