@@ -1,0 +1,240 @@
+/**
+ * Shared Web Audio doubles for unit tests.
+ *
+ * jsdom ships no AudioContext at all, which is why the audio layer historically had
+ * only getter-level tests. These doubles are deliberately strict about the one rule
+ * browsers enforce hard: `exponentialRampToValueAtTime` rejects a target <= 0.
+ */
+
+export class FakeAudioParam {
+  value = 0;
+  events: Array<{ type: string; value: number; time: number }> = [];
+  exponentialTargets: number[] = [];
+
+  setValueAtTime(value: number, time = 0) {
+    this.events.push({ type: "setValueAtTime", value, time });
+    this.value = value;
+    return this;
+  }
+  linearRampToValueAtTime(value: number, time = 0) {
+    if (!Number.isFinite(value)) throw new RangeError(`linearRampToValueAtTime: ${value}`);
+    this.events.push({ type: "linearRampToValueAtTime", value, time });
+    this.value = value;
+    return this;
+  }
+  exponentialRampToValueAtTime(value: number, time = 0) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError(`exponentialRampToValueAtTime target must be > 0, got ${value}`);
+    }
+    this.exponentialTargets.push(value);
+    this.events.push({ type: "exponentialRampToValueAtTime", value, time });
+    this.value = value;
+    return this;
+  }
+  setTargetAtTime(value: number, time = 0) {
+    this.events.push({ type: "setTargetAtTime", value, time });
+    this.value = value;
+    return this;
+  }
+  setValueCurveAtTime() {
+    return this;
+  }
+  cancelScheduledValues() {
+    return this;
+  }
+  cancelAndHoldAtTime() {
+    return this;
+  }
+}
+
+export class FakeNode {
+  /** Nodes that were connected INTO this node — lets tests assert routing. */
+  incoming: FakeNode[] = [];
+  connect(destination?: unknown) {
+    if (destination instanceof FakeNode) destination.incoming.push(this);
+    return destination ?? this;
+  }
+  disconnect() {
+    return this;
+  }
+}
+
+export class FakeGainNode extends FakeNode {
+  gain = new FakeAudioParam();
+}
+
+export class FakeOscillatorNode extends FakeNode {
+  type = "sine";
+  frequency = new FakeAudioParam();
+  detune = new FakeAudioParam();
+  started = false;
+  start() {
+    this.started = true;
+  }
+  stop() {}
+}
+
+export class FakeFilterNode extends FakeNode {
+  type = "lowpass";
+  frequency = new FakeAudioParam();
+  Q = new FakeAudioParam();
+}
+
+export class FakeBufferSourceNode extends FakeNode {
+  buffer: unknown = null;
+  playbackRate = new FakeAudioParam();
+  loop = false;
+  start() {}
+  stop() {}
+}
+
+export class FakeStereoPannerNode extends FakeNode {
+  pan = new FakeAudioParam();
+}
+
+export class FakeWaveShaperNode extends FakeNode {
+  curve: unknown = null;
+  oversample = "none";
+}
+
+export class FakeConvolverNode extends FakeNode {
+  buffer: unknown = null;
+}
+
+export class FakeDelayNode extends FakeNode {
+  delayTime = new FakeAudioParam();
+}
+
+export class FakeCompressorNode extends FakeNode {
+  threshold = new FakeAudioParam();
+  knee = new FakeAudioParam();
+  ratio = new FakeAudioParam();
+  attack = new FakeAudioParam();
+  release = new FakeAudioParam();
+  reduction = 0;
+}
+
+export class FakeAnalyserNode extends FakeNode {
+  fftSize = 2048;
+  frequencyBinCount = 1024;
+  getByteFrequencyData() {}
+  getByteTimeDomainData() {}
+  getFloatFrequencyData() {}
+}
+
+export class FakeAudioBuffer {
+  constructor(
+    public numberOfChannels: number,
+    public length: number,
+    public sampleRate: number
+  ) {}
+  private channels = new Map<number, Float32Array>();
+  getChannelData(channel: number): Float32Array {
+    if (!this.channels.has(channel)) this.channels.set(channel, new Float32Array(this.length));
+    return this.channels.get(channel)!;
+  }
+}
+
+/** Base graph API shared by the realtime and offline doubles. */
+export class FakeAudioGraph {
+  destination = new FakeNode();
+  createdGains: FakeGainNode[] = [];
+  createdOscillators: FakeOscillatorNode[] = [];
+  createdPanners: FakeStereoPannerNode[] = [];
+
+  createGain() {
+    const node = new FakeGainNode();
+    this.createdGains.push(node);
+    return node;
+  }
+  createOscillator() {
+    const node = new FakeOscillatorNode();
+    this.createdOscillators.push(node);
+    return node;
+  }
+  createBiquadFilter() {
+    return new FakeFilterNode();
+  }
+  createBufferSource() {
+    return new FakeBufferSourceNode();
+  }
+  createStereoPanner() {
+    const node = new FakeStereoPannerNode();
+    this.createdPanners.push(node);
+    return node;
+  }
+  createWaveShaper() {
+    return new FakeWaveShaperNode();
+  }
+  createConvolver() {
+    return new FakeConvolverNode();
+  }
+  createDelay() {
+    return new FakeDelayNode();
+  }
+  createDynamicsCompressor() {
+    return new FakeCompressorNode();
+  }
+  createAnalyser() {
+    return new FakeAnalyserNode();
+  }
+  createBuffer(numberOfChannels: number, length: number, sampleRate: number) {
+    return new FakeAudioBuffer(numberOfChannels, length, sampleRate);
+  }
+}
+
+/** Stand-in used by tests that call the realtime engine's construction path. */
+export class FakeAudioContext extends FakeAudioGraph {
+  currentTime = 0;
+  sampleRate = 44100;
+  state: AudioContextState = "running";
+  resume() {
+    this.state = "running";
+    return Promise.resolve();
+  }
+  suspend() {
+    this.state = "suspended";
+    return Promise.resolve();
+  }
+  close() {
+    this.state = "closed";
+    return Promise.resolve();
+  }
+}
+
+/** Stand-in for OfflineAudioContext used by the WAV renderer. */
+export class FakeOfflineAudioContext extends FakeAudioGraph {
+  currentTime = 0;
+  state: AudioContextState = "suspended";
+  /** Most recently constructed instance — lets tests inspect the graph after a render. */
+  static lastInstance: FakeOfflineAudioContext | null = null;
+
+  constructor(
+    public numberOfChannels: number,
+    public length: number,
+    public sampleRate: number
+  ) {
+    super();
+    FakeOfflineAudioContext.lastInstance = this;
+  }
+
+  startRendering() {
+    return Promise.resolve(new FakeAudioBuffer(this.numberOfChannels, this.length, this.sampleRate));
+  }
+}
+
+/** Installs a fake OfflineAudioContext on globalThis and returns a restore function. */
+export function installFakeOfflineAudioContext(): () => void {
+  const originalWindow = (globalThis as any).window?.OfflineAudioContext;
+  const originalGlobal = (globalThis as any).OfflineAudioContext;
+  (globalThis as any).OfflineAudioContext = FakeOfflineAudioContext;
+  if ((globalThis as any).window) {
+    (globalThis as any).window.OfflineAudioContext = FakeOfflineAudioContext;
+  }
+  return () => {
+    (globalThis as any).OfflineAudioContext = originalGlobal;
+    if ((globalThis as any).window) {
+      (globalThis as any).window.OfflineAudioContext = originalWindow;
+    }
+  };
+}

@@ -8,10 +8,10 @@
  */
 
 import { DrumPattern, Track } from "../types/genre";
-import { TrackState } from "./AudioEngine";
 import { createZipArchive } from "../utils/zip";
 import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "./DrumKitModels";
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
+import { TrackState, deriveTrackStates } from "./trackStates";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -86,16 +86,20 @@ export function encodeAudioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
   let offset = 44;
   for (let i = 0; i < numSamples; i++) {
     // Left sample clamp & convert
-    let sL = Math.max(-1, Math.min(1, leftChannel[i]));
+    let sL = Math.max(-1, Math.min(1, leftChannel[i] || 0));
     const intL = sL < 0 ? sL * 0x8000 : sL * 0x7fff;
     view.setInt16(offset, intL, true);
     offset += 2;
 
-    // Right sample clamp & convert
-    let sR = Math.max(-1, Math.min(1, rightChannel[i]));
-    const intR = sR < 0 ? sR * 0x8000 : sR * 0x7fff;
-    view.setInt16(offset, intR, true);
-    offset += 2;
+    // Right sample clamp & convert — only when the buffer really is stereo.
+    // F-10: writing a second channel into a mono allocation used to overflow the
+    // DataView (RangeError) and lose the whole export.
+    if (numChannels > 1) {
+      let sR = Math.max(-1, Math.min(1, rightChannel[i] || 0));
+      const intR = sR < 0 ? sR * 0x8000 : sR * 0x7fff;
+      view.setInt16(offset, intR, true);
+      offset += 2;
+    }
   }
 
   return arrayBuffer;
@@ -114,9 +118,11 @@ export async function renderPatternOffline(
   options: RenderWavOptions = {}
 ): Promise<AudioBuffer> {
   const sampleRate = options.sampleRate || 44100;
-  const bpm = options.bpm || pattern.bpm || 120;
-  const swing = options.swing !== undefined ? options.swing : (pattern.swing || 0);
-  const bars = Math.max(1, options.bars || 1);
+  // F-10: clamp render parameters — a negative bpm produced a negative
+  // `lengthInSamples`, and an unbounded `bars` could allocate gigabytes.
+  const bpm = Math.max(20, Math.min(300, options.bpm || pattern.bpm || 120));
+  const bars = Math.max(1, Math.min(64, Math.floor(options.bars || 1)));
+  const swing = Math.max(0, Math.min(0.75, options.swing !== undefined ? options.swing : (pattern.swing || 0)));
   const stepDur = 60 / bpm / 4;
   const patternSteps =
     (pattern as any).totalSteps && (pattern as any).totalSteps > 0
@@ -157,14 +163,18 @@ export async function renderPatternOffline(
     noiseData[i] = Math.random() * 2 - 1;
   }
 
-  // Pre-configure track channel strips (Gain + Stereo Panner)
+  // Pre-configure track channel strips (Gain + Stereo Panner).
+  // F-03: when the caller does not supply mixer state we derive it from the pattern
+  // itself (same helper the live engine uses), so a rendered master honours
+  // mute / solo / volume / pan instead of silently exporting everything at 0.8 centre.
+  const mixerStates: TrackState[] = options.trackStates ?? deriveTrackStates(pattern);
   const trackStrips: Array<{ gain: GainNode; pan: StereoPannerNode }> = [];
   const numTracks = pattern.tracks.length;
 
   for (let t = 0; t < numTracks; t++) {
-    const tState = options.trackStates?.[t] || { mute: false, solo: false, volume: 0.8, pan: 0 };
+    const tState = mixerStates[t] || { mute: false, solo: false, volume: 0.8, pan: 0 };
     const tGain = ctx.createGain();
-    tGain.gain.setValueAtTime(tState.volume, 0);
+    tGain.gain.setValueAtTime(Math.max(0, Math.min(2, tState.volume)), 0);
 
     const tPan = ctx.createStereoPanner();
     tPan.pan.setValueAtTime(Math.max(-1, Math.min(1, tState.pan)), 0);
@@ -174,14 +184,12 @@ export async function renderPatternOffline(
     trackStrips.push({ gain: tGain, pan: tPan });
   }
 
-  const anySolo = options.trackStates?.some((s) => s.solo);
+  const anySolo = mixerStates.some((s) => s.solo);
   const drumKit: DrumKitType = options.drumKit || "808";
 
   // Step scheduling loop
   for (let step = 0; step < totalSteps; step++) {
     const unswungTime = step * stepDur;
-    const swingOffset = step % 2 === 1 && swing > 0 ? (swing * 0.5) * stepDur : 0;
-    const stepTime = unswungTime + swingOffset;
 
     pattern.tracks.forEach((track: Track, trackIdx: number) => {
       // Stem mode check: only render requested track if stemTrackIdx is specified
@@ -189,7 +197,7 @@ export async function renderPatternOffline(
         return;
       }
 
-      const state = options.trackStates?.[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
+      const state = mixerStates[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
       if (state.mute) return;
       if (anySolo && !state.solo) return;
 
@@ -198,8 +206,22 @@ export async function renderPatternOffline(
       const stepVal = track.steps[stepIdx] || 0;
       if (stepVal <= 0) return;
 
+      // F-03: probability must gate offline rendering exactly like it gates playback,
+      // otherwise exports contain notes the user never hears.
+      const probability = track.probability?.[stepIdx];
+      if (probability !== undefined && probability < 100 && Math.random() * 100 > probability) {
+        return;
+      }
+
+      // F-03: per-track swing offset, mirroring AudioEngine.scheduleStep.
+      const trackSwingOffset = track.swing !== undefined ? track.swing / 100 : 0;
+      const effSwing = Math.max(0, Math.min(0.75, swing + trackSwingOffset));
+      const swingOffset =
+        step % 2 === 1 && effSwing > 0 ? (effSwing * 0.5) * stepDur : 0;
+      const stepTime = unswungTime + swingOffset;
+
       const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
-      const normalizedVel = (velVal / 127) * 1.0;
+      const normalizedVel = velVal / 127;
       const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
       const gateVal = track.gate && track.gate[stepIdx] !== undefined ? track.gate[stepIdx] : 0.8;
 

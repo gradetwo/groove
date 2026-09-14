@@ -15,6 +15,8 @@ import { initIosAudioUnlock } from "./iosAudioUnlock";
 import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp } from "./schedulerMath";
+import { TrackState, deriveTrackStates } from "./trackStates";
+export type { TrackState } from "./trackStates";
 import { isDrumTrack } from "../utils/trackUtils";
 
 export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
@@ -39,14 +41,6 @@ export interface TrackChannelStrip {
   sendB: GainNode;
 }
 
-export interface TrackState {
-  mute: boolean;
-  solo: boolean;
-  volume: number;
-  pan: number;
-  sendA?: number;
-  sendB?: number;
-}
 
 export class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -381,20 +375,7 @@ export class AudioEngine {
       this.timeSignature = pattern.timeSignature;
     }
     if (resetStates || this.trackStates.length !== pattern.tracks.length) {
-      this.trackStates = pattern.tracks.map((t) => {
-        const volume = t.volume !== undefined ? t.volume : 0.8;
-        const pan = t.pan !== undefined ? t.pan : 0;
-        const sendA = t.sendA !== undefined ? t.sendA : 0;
-        const sendB = t.sendB !== undefined ? t.sendB : 0;
-        return {
-          mute: Boolean(t.mute),
-          solo: Boolean(t.solo),
-          volume,
-          pan,
-          sendA,
-          sendB,
-        };
-      });
+      this.trackStates = deriveTrackStates(pattern);
     } else {
       // Synchronize trackStates (mute, solo, volume, pan, sends) with pattern tracks
       pattern.tracks.forEach((t, idx) => {
@@ -1003,7 +984,10 @@ export class AudioEngine {
       }
 
       const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
-      const normalizedVel = (velVal / 127) * state.volume;
+      // H-01/F-03: track volume is applied exactly once, by the track strip gain node.
+      // It used to be multiplied into the velocity as well (amplitude ∝ volume²),
+      // which made live playback disagree with the offline WAV renderer.
+      const normalizedVel = velVal / 127;
       const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
       const gateVal = (track.gate && track.gate[stepIdx] !== undefined) ? track.gate[stepIdx] : 0.8;
 
