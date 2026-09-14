@@ -1,27 +1,31 @@
 {
-  "version": "1.16.13",
+  "version": "1.16.14",
   "releaseDate": "2026-09-14",
-  "changelogCount": 55,
+  "changelogCount": 56,
   "latest": {
-    "version": "1.16.13",
+    "version": "1.16.14",
     "date": "2026-09-15",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v1.16.13 依赖收口与仓库清理：Playwright 转正、删除 21 个一次性生成器",
-      "en": "v1.16.13 Dependency tidy-up and repo cleanup: Playwright promoted, 21 one-off generators removed"
+      "zh": "v1.16.14 调音台三处补完：反相可用、主推子真实电平、通道表真实分析器",
+      "en": "v1.16.14 Console completed: working polarity, real master level, real channel meters"
     },
     "highlights": [
       {
-        "zh": "Playwright 成为正式 devDependency（lockfile 已同步）：CI 不再需要临时安装步骤，`npm ci && npm run test:e2e` 即可，本地也不需要任何环境变量——已实测 7/7 通过",
-        "en": "Playwright is now a proper devDependency with a synced lockfile: CI no longer needs an ad-hoc install and `npm ci && npm run test:e2e` just works locally with no environment variables — verified 7/7"
+        "zh": "反相（Ø）真正可用：新增每通道极性级 GainNode（±1），打通数据模型 → 实时引擎 → 离线 WAV 渲染 → 存储（可撤销、随工程持久化）→ 调音台按钮的完整链路；send A/B 也跟随极性",
+        "en": "Polarity (Ø) now works end to end: a per-channel ±1 gain stage wired through the data model, realtime engine, offline WAV renderer, store (undoable and persisted) and the console button; the A/B sends follow the polarity too"
       },
       {
-        "zh": "删除 21 个一次性 Python 生成器（约 485 KB）。删除前逐一核实无任何引用，删除后 `python3 -m scripts.build_all` 仍校验 159 条曲风、`python3 scripts/package.py` 仍能打出发布包",
-        "en": "Removed 21 one-off Python generators (~485 KB) after verifying none is referenced; afterwards `python3 -m scripts.build_all` still validates all 159 genres and `python3 scripts/package.py` still produces the release archive"
+        "zh": "主推子不再猜测：引擎暴露 getMasterVolume() 并把主音量纳入音频设置持久化，调音台挂载时读取真实电平（此前硬编码 0.8）",
+        "en": "The master fader no longer guesses: the engine exposes getMasterVolume() and persists the level in audio settings, so the console mounts with the real value instead of a hard-coded 0.8"
       },
       {
-        "zh": "清理本地产物 release/（39 MB）与 scratch/（16 KB），仓库工作区回到干净状态",
-        "en": "Removed the local artifacts release/ (39 MB) and scratch/ (16 KB), returning the working tree to a clean state"
+        "zh": "通道电平表改用真实分析器：引擎按需为每通道插入 fftSize=256 的直通分析器（视图卸载即移除），通道表显示真实信号峰值而非音量×声像的估算",
+        "en": "Channel meters now read real analysers: the engine inserts a pass-through 256-point analyser per channel on demand (removed when the view unmounts), so the meters show the true signal instead of a volume×pan estimate"
+      },
+      {
+        "zh": "孤儿审计脚本接入门禁：脚本可查的 159 曲风 + 300 关系 + 11 条时间线故事审计，此前从未被任何流程调用；同时清理 5 个一次性 JS 脚本（scripts/ 由 41 项精简到 17 项）",
+        "en": "An orphan audit script is now a real gate: 159 genres + 300 relations + 11 timeline stories, previously never invoked by any pipeline; plus 5 one-off JS scripts removed (scripts/ down from 41 to 17 entries)"
       }
     ]
   }
