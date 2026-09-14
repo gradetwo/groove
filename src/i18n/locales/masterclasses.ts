@@ -293,4 +293,51 @@ export const masterclassMessages = {
     zh: "虚线为机械量化网格 · 色块为实际人手触发位置",
     en: "Dashed = Rigid Grid · Filled = Human Trigger Position",
   },
+  // ---------------------------------------------------------------------------
+  // MasterclassView.tsx
+  // ---------------------------------------------------------------------------
+  masterclass_page_title: {
+    zh: "律动解构：跨越世纪的大师节奏实验室",
+    en: "Rhythm Deconstruction & Masterclasses",
+  },
+  masterclass_page_desc: {
+    zh: "解构跨越大洋与世代的五大终极律动形态：从西非约鲁巴复节奏对冲、古巴 Clave 演化树，到 Tony Allen 避让第一拍与 J Dilla 拟人化醉酒微时序。支持实时对拍打卡与一键载入 Studio 工作台。",
+    en: "Deconstruct five transcendent rhythmic archetypes: West African polyrhythms, Cuban clave mutation tree, downbeat omission dynamics, Balkan aksak odd meters, and J Dilla's unquantized drunk feel.",
+  },
+  masterclass_lesson_index: {
+    zh: "课程 0{index}",
+    en: "Lesson 0{index}",
+  },
+  masterclass_bake_btn: {
+    zh: "一键载入 Studio 工作台",
+    en: "Bake to Studio",
+  },
+  masterclass_cultural_title: {
+    zh: "文化溯源与历史脉络",
+    en: "Cultural Roots & Origins",
+  },
+  masterclass_origins_label: {
+    zh: "发源流布",
+    en: "Origins",
+  },
+  masterclass_acoustic_title: {
+    zh: "声学物理与律动机制",
+    en: "Acoustic Physics & Groove Mechanics",
+  },
+  masterclass_tap_stats_title: {
+    zh: "工坊对拍统计",
+    en: "Session Tap Stats",
+  },
+  masterclass_tap_stats_total: {
+    zh: "总击打",
+    en: "Taps",
+  },
+  masterclass_tap_stats_perfect: {
+    zh: "完美率",
+    en: "Perfect",
+  },
+  masterclass_tap_stats_streak: {
+    zh: "连击",
+    en: "Streak",
+  },
 };
