@@ -94,11 +94,34 @@ const currentChangelog = fs.existsSync(changelogJsonPath) ? fs.readFileSync(chan
 
 const split = splitVersionFiles(currentJson, currentChangelog);
 
+/**
+ * E-09: the planning documents state the current version in their headers, and
+ * `scripts/check_docs.mjs` fails when they drift. Rather than hand-editing three
+ * files on every release, `sync` rewrites those specific header claims.
+ */
+const DOC_VERSION_PATTERNS = [
+  { file: "IMPROVEMENT_PLAN.md", re: /版本 \*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `版本 **v${version}**` },
+  { file: "ROADMAP_V2.md", re: /\*\*当前基线\*\*：v\d+\.\d+\.\d+/, replacement: () => `**当前基线**：v${version}` },
+  { file: "BACKLOG.md", re: /当前基线：\*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `当前基线：**v${version}**` },
+];
+
+const docTargets = DOC_VERSION_PATTERNS.map(({ file, re, replacement }) => {
+  const abs = path.join(ROOT, file);
+  const current = fs.existsSync(abs) ? fs.readFileSync(abs, "utf8") : "";
+  return {
+    label: file,
+    path: abs,
+    current,
+    desired: re.test(current) ? current.replace(re, replacement()) : current,
+  };
+});
+
 const targets = [
   { label: "src/version.ts", path: versionTsPath, desired: desiredTs, current: currentTs },
   { label: "public/sw.js", path: swPath, desired: desiredSw(currentSw), current: currentSw },
   { label: "public/version.json", path: versionJsonPath, desired: split.versionJson, current: currentJson },
   { label: "public/changelog.json", path: changelogJsonPath, desired: split.changelogJson, current: currentChangelog },
+  ...docTargets,
 ];
 
 const mode = process.argv[2] ?? "check";

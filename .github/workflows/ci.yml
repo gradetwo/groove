@@ -28,6 +28,9 @@ jobs:
       - name: Version Single-Source Check
         run: npm run version:check
 
+      - name: Documentation Baseline Check
+        run: npm run docs:check
+
       - name: TypeScript Typecheck
         run: npm run typecheck
 
