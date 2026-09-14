@@ -1,37 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { 
-  Columns, 
-  Plus, 
-  X, 
-  Play, 
-  Pause, 
-  Square, 
-  Minus,
-  Sliders, 
-  ExternalLink, 
-  Sparkles, 
-  Activity, 
-  ArrowRightLeft,
-  Music,
-  CheckCircle,
-  Volume2,
-  Disc3,
-  Flame,
-  Radio,
-  Clock,
-  Layers,
-  Zap,
-  Info,
-  Mic2,
-  Users,
-  Loader2
-} from "lucide-react";
+import { Columns, Plus, X, Play, Pause, Square, Minus, Sliders, ExternalLink, Sparkles, Activity, ArrowRightLeft, Music, CheckCircle, Volume2, Disc3, Flame, Radio, Clock, Layers, Zap, Info, Mic2, Users, Loader2, GitBranch } from "lucide-react";
 import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
 import { EmptyState } from "../ui/EmptyState";
+import { getLineage } from "../data/lineage";
 import { toast } from "../ui/Toast";
 import { announcer } from "../ui/AriaLiveRegion";
 import { ErrorState } from "../ui/ErrorState";
@@ -386,6 +361,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
     setGenres((prev) => [...prev, genre]);
     setAddDropdownOpen(false);
   };
+
+  // N-06: same-origin teaching aid. Derived from the relation graph for whichever
+  // genre is currently first in the comparison.
+  const lineage = useMemo(() => getLineage(genres[0]?.id ?? ""), [genres]);
 
   const handleSelectPreset = (ids: string[]) => {
     const resolved = ids.map((id) => ({ id, genre: GENRES_MAP[id] }));
@@ -894,6 +873,43 @@ export const CompareView: React.FC<CompareViewProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Same-origin (lineage) comparison — N-06 */}
+        {(lineage.ancestors.length > 0 || lineage.descendants.length > 0 || lineage.related.length > 0) && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1f2229]">
+            <span className="text-xs font-bold text-[#737887] uppercase tracking-wider flex items-center space-x-1 mr-1">
+              <GitBranch className="w-3.5 h-3.5 text-accent" />
+              <span>{t("compare_lineage")}:</span>
+            </span>
+            {[
+              { key: "ancestors" as const, labelKey: "compare_lineage_ancestors", items: lineage.ancestors },
+              { key: "descendants" as const, labelKey: "compare_lineage_descendants", items: lineage.descendants },
+              { key: "related" as const, labelKey: "compare_lineage_related", items: lineage.related },
+            ].flatMap((group) =>
+              group.items.slice(0, 4).map((sibling) => {
+                const siblingGenre = GENRES_MAP[sibling.id];
+                if (!siblingGenre) return null;
+                const alreadyCompared = genres.some((g) => g.id === sibling.id);
+                return (
+                  <button
+                    key={`${group.key}-${sibling.id}`}
+                    onClick={() => handleAddGenre(siblingGenre)}
+                    disabled={alreadyCompared || genres.length >= 4}
+                    title={`${t(group.labelKey)}: ${siblingGenre.name}`}
+                    className={`text-xs px-3 py-1.5 rounded-xl border transition-colors ${
+                      alreadyCompared
+                        ? "border-line bg-panel2 text-text-dim cursor-default"
+                        : "border-line bg-panel2 hover:border-accent/50 hover:text-accent text-[#a4a9b5]"
+                    } disabled:opacity-60`}
+                  >
+                    <span className="font-mono text-[10px] text-text-dim mr-1">{t(group.labelKey)}</span>
+                    {siblingGenre.name}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
 
       {/* Overview Analytics Bar: DNA Radar & Similarity Matrix (P3-13) */}

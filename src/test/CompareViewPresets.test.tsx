@@ -144,3 +144,42 @@ describe("CompareView classic matchup presets (click path)", () => {
     expect(within(document.body).getByText(/经典预设对比|Presets/i)).toBeTruthy();
   }, TEST_TIMEOUT);
 });
+
+describe("CompareView same-origin (lineage) comparison (N-06)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("offers the lineage of the compared genre and adds a relative on click", async () => {
+    const pair = await initialPair();
+    render(
+      <LanguageProvider>
+        <CompareView initialGenres={pair} onSelectGenre={vi.fn()} onOpenStudio={vi.fn()} />
+      </LanguageProvider>
+    );
+
+    // Chicago House derives from Disco, so the lineage row must surface it.
+    const lineageRow = await screen.findByText(/Same origin|同源对比/i, {}, { timeout: ASYNC_TIMEOUT });
+    expect(lineageRow).toBeTruthy();
+
+    // The accessible name is "from Disco" / "源自 Disco"; matching bare /Disco/i would
+    // also hit the "Nu-Disco vs Funk" preset button.
+    const discoChip = await screen.findByRole(
+      "button",
+      { name: (name: string) => /^(from|源自)\s*Disco$/i.test(name.trim()) },
+      { timeout: ASYNC_TIMEOUT }
+    );
+    expect((discoChip as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(discoChip);
+
+    // Disco joins the comparison pool (max four) rather than replacing the pair.
+    await waitFor(
+      () => {
+        expect(screen.getAllByText(/^Disco$/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Chicago House/i).length).toBeGreaterThan(0);
+      },
+      { timeout: ASYNC_TIMEOUT }
+    );
+  }, TEST_TIMEOUT);
+});
