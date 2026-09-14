@@ -94,12 +94,18 @@ export const Header: React.FC<HeaderProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // A-07: allocate once per effect instead of ~60 times per second.
+    let frequencyData: Uint8Array<ArrayBuffer> | null = null;
+
     const render = () => {
       animationFrameId = requestAnimationFrame(render);
       ctx.clearRect(0, 0, 192, 60);
 
       if (analyser && isPlaying) {
-        const data = new Uint8Array(analyser.frequencyBinCount);
+        if (!frequencyData || frequencyData.length !== analyser.frequencyBinCount) {
+          frequencyData = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
+        }
+        const data = frequencyData;
         analyser.getByteFrequencyData(data);
         for (let i = 0; i < 32; i++) {
           const h = (data[i + 2] / 255) * 54;

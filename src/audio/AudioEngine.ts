@@ -96,6 +96,8 @@ export class AudioEngine {
   private nextStepTime: number = 0;
   private scheduleTimerId: any = null;
   private stepQueue: Array<{ step: number; time: number; activeTracks: number[] }> = [];
+  /** A-07: hard cap so a hidden tab (rAF paused) cannot grow this without bound. */
+  private static readonly MAX_STEP_QUEUE = 128;
   private lastReportedStep: number = -1;
   private rafId: number | null = null;
 
@@ -837,6 +839,16 @@ export class AudioEngine {
     const sync = () => {
       if (!this.isPlaying || !this.ctx) return;
 
+      // A-07: a hidden tab keeps scheduling audio but needs no visual playhead, so
+      // drop the backlog instead of letting it accumulate for hours.
+      if (typeof document !== "undefined" && document.hidden) {
+        this.stepQueue.length = 0;
+        if (typeof requestAnimationFrame !== "undefined") {
+          this.rafId = requestAnimationFrame(sync);
+        }
+        return;
+      }
+
       const now = this.ctx.currentTime;
       // Anticipation offset of 25ms aligns visual playhead with monitor refresh
       const visualLeadSec = 0.025;
@@ -934,6 +946,9 @@ export class AudioEngine {
 
         const activeTracks = this.scheduleStep(step, actualStepTime, stepDur);
         this.stepQueue.push({ step, time: actualStepTime, activeTracks });
+        if (this.stepQueue.length > AudioEngine.MAX_STEP_QUEUE) {
+          this.stepQueue.splice(0, this.stepQueue.length - AudioEngine.MAX_STEP_QUEUE);
+        }
       } catch (err) {
         this.schedulingErrorCount += 1;
         if (this.schedulingErrorCount <= 5) {
