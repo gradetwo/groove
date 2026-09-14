@@ -24,6 +24,7 @@ import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { MasterAnalyzerSuite } from "../components/analyzer/MasterAnalyzerSuite";
 import { ProjectHubModal } from "../components/sequencer/ProjectHubModal";
 import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
+import { useToast } from "../features/sequencer/hooks/useToast";
 import { clearSavedProject, saveProjectImmediate } from "../features/sequencer/projectStorage";
 import {
   getActiveProjectId,
@@ -177,7 +178,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [viewedBar, setViewedBar] = useState<number>(0);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Category filter for the chip rail
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>("ALL");
@@ -287,21 +287,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
 
-  // Toast notification
-  const toastTimerRef = useRef<any>(null);
-  const showToast = useCallback((msg: string) => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToastMessage(msg);
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage(null);
-      toastTimerRef.current = null;
-    }, 2400);
-  }, []);
+  // Toast notification (state + timer live in useToast)
+  const { toastMessage, showToast } = useToast();
 
-  // Clean up all pending timers on unmount
+  // Clean up pending long-press timer on unmount (the toast timer is owned by useToast)
   useEffect(() => {
     return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     };
   }, []);
