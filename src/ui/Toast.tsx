@@ -56,6 +56,22 @@ class ToastManager {
     return id;
   }
 
+  success(message: string, duration = 3000) {
+    return this.show(message, "success", duration);
+  }
+
+  error(message: string, duration = 4000) {
+    return this.show(message, "error", duration);
+  }
+
+  info(message: string, duration = 3000) {
+    return this.show(message, "info", duration);
+  }
+
+  warning(message: string, duration = 3500) {
+    return this.show(message, "warning", duration);
+  }
+
   dismiss(id: string) {
     const timer = this.timers.get(id);
     if (timer) clearTimeout(timer);

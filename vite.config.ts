@@ -29,6 +29,9 @@ export default defineConfig({
           if (id.includes('node_modules/lucide-react')) {
             return 'vendor-icons';
           }
+          if (id.includes('node_modules/qrcode')) {
+            return 'vendor-qrcode';
+          }
           if (id.includes('/src/data/genres/house')) return 'genre-house';
           if (id.includes('/src/data/genres/techno')) return 'genre-techno';
           if (id.includes('/src/data/genres/trance')) return 'genre-trance';

@@ -26,6 +26,7 @@ import {
   Activity,
   Layers,
   FolderKanban,
+  Wand2,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -82,6 +83,7 @@ export interface ToolbarProps {
   onExportStems?: () => void;
   activeProjectName?: string;
   onOpenProjectHub?: () => void;
+  onOpenGenreMaker?: () => void;
   isExportingAudio?: boolean;
   onImportMidi?: (file: File) => void;
   onInspireMe?: () => void;
@@ -169,6 +171,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onExportStems,
   activeProjectName,
   onOpenProjectHub,
+  onOpenGenreMaker,
   isExportingAudio = false,
   onImportMidi,
   onInspireMe,
@@ -839,6 +842,22 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
               <span className="hidden lg:inline max-w-[90px] xl:max-w-[120px] truncate text-text font-medium">
                 {activeProjectName || (isZh ? "工程" : "Projects")}
+              </span>
+            </button>
+          )}
+
+          {/* Custom Genre Maker Button (P7-03) */}
+          {onOpenGenreMaker && (
+            <button
+              type="button"
+              onClick={onOpenGenreMaker}
+              className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+              title={isZh ? "自定义曲风工坊 (P7-03)" : "Custom Genre Maker (P7-03)"}
+              aria-label={isZh ? "曲风工坊" : "Genre Maker"}
+            >
+              <Wand2 className="w-3.5 h-3.5 text-accent shrink-0" />
+              <span className="hidden xl:inline text-text font-medium">
+                {isZh ? "曲风工坊" : "Maker"}
               </span>
             </button>
           )}

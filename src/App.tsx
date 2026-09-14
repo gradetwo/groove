@@ -27,6 +27,7 @@ const GenreDetailView = React.lazy(() => import("./views/GenreDetailView").then(
 const KickAnatomyView = React.lazy(() => import("./views/KickAnatomyView").then((m) => ({ default: m.KickAnatomyView })));
 const MasterclassView = React.lazy(() => import("./views/MasterclassView").then((m) => ({ default: m.MasterclassView })));
 const AnalyzerView = React.lazy(() => import("./views/AnalyzerView").then((m) => ({ default: m.AnalyzerView })));
+const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerView").then((m) => ({ default: m.CustomGenreMakerView })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
@@ -195,6 +196,7 @@ const MainApp: React.FC = () => {
                     onViewDetail={(g) => handleSelectGenre(g, "detail")}
                     onAddToCompare={handleAddToCompare}
                     onAudioEngineReady={handleEngineReady}
+                    onOpenGenreMaker={() => navigate({ tab: "maker", customGenreFork: selectedGenre?.id })}
                     initialChords={initialChords}
                     onClearInitialChords={() => setInitialChords(null)}
                     initialArpeggio={initialArpeggio}
@@ -349,6 +351,22 @@ const MainApp: React.FC = () => {
               </ErrorBoundary>
             )}
 
+            {currentTab === "maker" && (
+              <ErrorBoundary
+                fallbackTitle={isZh ? "曲风工坊加载异常" : "Custom Genre Maker Error"}
+                fallbackDescription={isZh ? "工坊工作区初始化异常，可尝试返回主工作台。" : "Custom Genre Maker failed to initialize."}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={t("btn_return_studio")}
+              >
+                <CustomGenreMakerView
+                  initialSharePayload={route.customGenreShare}
+                  initialForkId={route.customGenreFork}
+                  onOpenStudio={handleOpenStudioWithGenre}
+                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                />
+              </ErrorBoundary>
+            )}
+
             {currentTab === "detail" && (
               <ErrorBoundary
                 fallbackTitle={t("error_detail_title")}
@@ -362,6 +380,7 @@ const MainApp: React.FC = () => {
                     onSelectGenre={(g) => handleSelectGenre(g, "detail")}
                     onOpenStudio={handleOpenStudioWithGenre}
                     onAddToCompare={handleAddToCompare}
+                    onForkInMaker={(g) => navigate({ tab: "maker", customGenreFork: g.id })}
                   />
                 ) : (
                   <div className="max-w-5xl mx-auto px-4 py-12 space-y-6">

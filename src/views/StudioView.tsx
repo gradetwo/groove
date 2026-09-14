@@ -31,6 +31,7 @@ import {
   migrateLegacyLocalStorage,
 } from "../features/sequencer/projectDb";
 import { GrooveProject } from "../types/project";
+import { useCustomGenres } from "../features/customGenre/useCustomGenres";
 import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
@@ -95,6 +96,7 @@ const DEMO_GENRE_TAGS: Record<string, string> = {
 };
 
 const getGenreChipTag = (g: Genre): string => {
+  if (g.isCustom) return "CUSTOM";
   if (DEMO_GENRE_TAGS[g.id]) return DEMO_GENRE_TAGS[g.id];
   let prefix = g.category.toUpperCase();
   if (prefix.length > 8) {
@@ -117,6 +119,7 @@ interface StudioViewProps {
   onViewDetail: (genre: Genre) => void;
   onAddToCompare?: (genre: Genre) => void;
   onAudioEngineReady?: (engine: AudioEngine) => (() => void) | void;
+  onOpenGenreMaker?: () => void;
   initialChords?: ChordDefinition[] | null;
   onClearInitialChords?: () => void;
   initialArpeggio?: { baked: BakedArpeggioResult; label?: string } | null;
@@ -131,6 +134,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onViewDetail,
   onAddToCompare,
   onAudioEngineReady,
+  onOpenGenreMaker,
   initialChords,
   onClearInitialChords,
   initialArpeggio,
@@ -143,6 +147,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const startingGenre = useMemo(() => {
     return initialGenre || GENRES_MAP["future-bass"] || GENRES_MAP["chicago-house"] || ALL_GENRES[0];
   }, [initialGenre]);
+
+  const { customGenres } = useCustomGenres();
 
   // Central Sequencer Store (P2-04)
   const {
@@ -1506,10 +1512,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const categories = useMemo(() => {
     const set = new Set<string>();
     ALL_GENRES.forEach((g) => set.add(g.category));
-    return ["ALL", ...Array.from(set)];
-  }, []);
+    const list = ["ALL", ...Array.from(set)];
+    if (customGenres.length > 0) {
+      list.splice(1, 0, "CUSTOM");
+    }
+    return list;
+  }, [customGenres.length]);
 
   const railGenres = useMemo(() => {
+    if (activeCategoryFilter === "CUSTOM") {
+      return customGenres;
+    }
     if (activeCategoryFilter === "ALL") {
       const demoHeadIds = [
         "chicago-house",
@@ -1527,10 +1540,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
       ];
       const headList = demoHeadIds.map((id) => GENRES_MAP[id]).filter(Boolean) as Genre[];
       const others = ALL_GENRES.filter((g) => !demoHeadIds.includes(g.id));
-      return [...headList, ...others].slice(0, 48);
+      const combined = [...customGenres, ...headList, ...others];
+      return combined.slice(0, 48 + customGenres.length);
     }
     return ALL_GENRES.filter((g) => g.category === activeCategoryFilter);
-  }, [activeCategoryFilter]);
+  }, [activeCategoryFilter, customGenres]);
 
   const handleDiceRandom = useCallback(() => {
     const rand = ALL_GENRES[Math.floor(Math.random() * ALL_GENRES.length)];
@@ -1674,6 +1688,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
             onExportGroove={handleExportGroove}
             activeProjectName={activeProject?.name}
             onOpenProjectHub={() => setIsProjectHubOpen(true)}
+            onOpenGenreMaker={onOpenGenreMaker}
             onExportWav={handleExportWav}
             onExportStems={handleExportStems}
             isExportingAudio={isExportingAudio}

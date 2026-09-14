@@ -12,9 +12,18 @@ export interface RouteState {
   chordKey?: string;
   sequencerPayload?: string;
   masterclassId?: string;
+  customGenreShare?: string;
+  customGenreFork?: string;
 }
 
-export function parseUrlToRoute(pathname: string, search: string): RouteState {
+export function parseUrlToRoute(pathname: string, search: string, hash: string = ""): RouteState {
+  // Support hash routing (e.g. #/maker?share=... or #/studio?genre=...)
+  if (hash && hash.startsWith("#/")) {
+    const rawHash = hash.slice(1);
+    const [hPath, hSearch] = rawHash.split("?");
+    return parseUrlToRoute(hPath || "/", hSearch ? `?${hSearch}` : "", "");
+  }
+
   const params = new URLSearchParams(search);
   const cleanPath = pathname.replace(/\/+$/, "") || "/";
 
@@ -99,6 +108,24 @@ export function parseUrlToRoute(pathname: string, search: string): RouteState {
     return { tab: "analyzer" };
   }
 
+  // Check custom genre maker (P7-03): /maker, /create, /explore/maker
+  if (
+    cleanPath === "/maker" ||
+    cleanPath.startsWith("/maker/") ||
+    cleanPath === "/create" ||
+    cleanPath.startsWith("/create/") ||
+    cleanPath === "/explore/maker" ||
+    cleanPath.startsWith("/explore/maker/")
+  ) {
+    const parts = cleanPath.split("/");
+    const forkId = params.get("fork") || (parts.length > 2 && parts[1] === "maker" ? parts[2] : undefined);
+    return {
+      tab: "maker",
+      customGenreShare: params.get("share") || params.get("share_genre") || undefined,
+      customGenreFork: forkId,
+    };
+  }
+
   // Check studio: /studio?genre=
   if (cleanPath === "/studio" || cleanPath.startsWith("/studio/")) {
     const gParam = params.get("genre");
@@ -110,6 +137,13 @@ export function parseUrlToRoute(pathname: string, search: string): RouteState {
   const genreParam = params.get("genre") || undefined;
 
   if (tabParam) {
+    if (tabParam === "maker") {
+      return {
+        tab: "maker",
+        customGenreShare: params.get("share") || undefined,
+        customGenreFork: params.get("fork") || undefined,
+      };
+    }
     if (tabParam === "detail") {
       return { tab: "detail", genreId: genreParam };
     }
@@ -193,6 +227,13 @@ export function formatRouteToUrl(route: RouteState): string {
     case "masterclass": {
       return route.masterclassId ? `/masterclass/${encodeURIComponent(route.masterclassId)}` : `/masterclass`;
     }
+    case "maker": {
+      const params = new URLSearchParams();
+      if (route.customGenreShare) params.set("share", route.customGenreShare);
+      if (route.customGenreFork) params.set("fork", route.customGenreFork);
+      const q = params.toString();
+      return `/maker${q ? `?${q}` : ""}`;
+    }
     case "studio":
     default: {
       if (route.sequencerPayload) {
@@ -216,20 +257,24 @@ const RouterContext = createContext<RouterContextType | null>(null);
 export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window !== "undefined") {
-      return parseUrlToRoute(window.location.pathname, window.location.search);
+      return parseUrlToRoute(window.location.pathname, window.location.search, window.location.hash);
     }
     return { tab: "studio" };
   });
 
-  // Listen to browser popstate (back/forward history)
+  // Listen to browser popstate (back/forward history) and hashchange
   useEffect(() => {
     const handlePopState = () => {
-      const nextRoute = parseUrlToRoute(window.location.pathname, window.location.search);
+      const nextRoute = parseUrlToRoute(window.location.pathname, window.location.search, window.location.hash);
       setRoute(nextRoute);
     };
 
     window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    window.addEventListener("hashchange", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("hashchange", handlePopState);
+    };
   }, []);
 
   const navigate = useCallback(

@@ -14,9 +14,10 @@ import {
   History,
   Compass,
   ChevronDown,
-  Keyboard,
   Activity,
   Disc,
+  Wand2,
+  Keyboard,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
@@ -26,6 +27,7 @@ export type NavTab =
   | "studio" 
   | "chords"
   | "kick"
+  | "maker"
   | "analyzer"
   | "masterclass"
   | "galaxy" 
@@ -119,6 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [analyser, isPlaying]);
 
   const exploreItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
+    { tab: "maker", labelKey: "nav_maker", descKey: "nav_maker_desc", icon: <Wand2 className="w-3.5 h-3.5" /> },
     { tab: "analyzer", labelKey: "nav_analyzer", descKey: "nav_analyzer_desc", icon: <Activity className="w-3.5 h-3.5" /> },
     { tab: "masterclass", labelKey: "nav_masterclass", descKey: "nav_masterclass_desc", icon: <Disc className="w-3.5 h-3.5" /> },
     { tab: "galaxy", labelKey: "nav_galaxy", descKey: "nav_galaxy_desc", icon: <Orbit className="w-3.5 h-3.5" /> },
@@ -126,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
     { tab: "vertical-timeline", labelKey: "nav_timeline_v", descKey: "nav_timeline_v_desc", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
   ];
 
-  const isExploreActive = ["analyzer", "masterclass", "galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
+  const isExploreActive = ["maker", "analyzer", "masterclass", "galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
 
   const handleRandom = () => {
     const randomIndex = Math.floor(Math.random() * GENRE_INDEX.length);

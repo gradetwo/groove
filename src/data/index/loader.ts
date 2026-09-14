@@ -1,5 +1,6 @@
 import { Genre } from "../../types/genre";
 import { GENRE_INDEX, GENRE_INDEX_MAP, GenreIndexItem } from "./genresIndex";
+import { getCustomGenre } from "../../features/customGenre/customGenreDb";
 
 export { GENRE_INDEX, GENRE_INDEX_MAP };
 export type { GenreIndexItem };
@@ -24,11 +25,20 @@ const CATEGORY_LOADERS: Record<string, () => Promise<Genre[]>> = {
 };
 
 /**
- * Loads a full genre by ID asynchronously on-demand (P1-13)
+ * Loads a full genre by ID asynchronously on-demand (P1-13, P7-03)
  */
 export async function loadGenre(id: string): Promise<Genre | null> {
   if (cache.has(id)) {
     return cache.get(id)!;
+  }
+
+  // Fast-track resolution for custom genres (P7-03)
+  if (id.startsWith("custom-")) {
+    const custom = await getCustomGenre(id);
+    if (custom) {
+      cache.set(id, custom);
+      return custom;
+    }
   }
 
   const item = GENRE_INDEX_MAP[id];
@@ -43,6 +53,13 @@ export async function loadGenre(id: string): Promise<Genre | null> {
     const list = await CATEGORY_LOADERS[key]();
     list.forEach((g) => cache.set(g.id, g));
     if (cache.has(id)) return cache.get(id)!;
+  }
+
+  // Final check for custom genres without prefix
+  const custom = await getCustomGenre(id);
+  if (custom) {
+    cache.set(id, custom);
+    return custom;
   }
 
   return null;

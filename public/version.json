@@ -1,7 +1,34 @@
 {
-  "version": "1.15.2",
+  "version": "1.15.3",
   "releaseDate": "2026-09-14",
   "changelog": [
+    {
+      "version": "1.15.3",
+      "date": "2026-09-14",
+      "category": "feature",
+      "title": {
+        "zh": "v1.15.3 用户自定义曲风与变奏工坊（Custom Genre Maker - P7-03）",
+        "en": "v1.15.3 Custom Genre Maker & Variation Workshop (P7-03)"
+      },
+      "highlights": [
+        {
+          "zh": "全新「曲风工坊」重磅上线：既可从 159 种内置世界曲风一键分叉变奏（Fork），也可从空白从零定义全新专属曲风与声音美学",
+          "en": "All-new Genre Workshop: fork any of the 159 built-in world genres with one click or sculpt entirely new custom genres from scratch"
+        },
+        {
+          "zh": "6 维声学雷达交互调优：动态调节律动感（Groove）、明亮度（Brightness）、和声复杂度（Harmonic）、节奏密度（Rhythm）、低频能量（Bass）与旋律重心（Melodic），实时 SVG 渲染",
+          "en": "Interactive 6-axis acoustic radar: dynamically tune Groove, Brightness, Harmonic Complexity, Rhythm Density, Bass Energy, and Melodic Focus with real-time SVG visualizer"
+        },
+        {
+          "zh": "8 轨 16 步专属种子 Pattern 步进矩阵：直接绑定 Kick/Snare/Hi-Hat/Perc/Bass/Chords/Lead/FX 核心骨架，支持实时 Web Audio 循环试听与一键导入编曲室",
+          "en": "Integrated 8-track 16-step seed pattern matrix: sculpt groove skeletons for all core tracks with live Web Audio auditioning and instant Studio handoff"
+        },
+        {
+          "zh": "Deflate 压缩免服务端 URL 跨端分享与高清海报卡片：纯客户端压缩深链实现离线即时分享，内置 Canvas 2D 离线海报生成器带动态二维码，一键导出 PNG",
+          "en": "Zero-backend URL deep sharing & high-res poster cards: deflate-raw compressed URL payloads for offline sharing, paired with Canvas poster generator featuring live dynamic QR code and one-click PNG export"
+        }
+      ]
+    },
     {
       "version": "1.15.2",
       "date": "2026-09-14",

@@ -63,6 +63,7 @@ interface GenreDetailViewProps {
   onSelectGenre: (genre: Genre) => void;
   onOpenStudio: (genre: Genre) => void;
   onAddToCompare: (genre: Genre) => void;
+  onForkInMaker?: (genre: Genre) => void;
 }
 
 const DRUM_TRACK_IDS = new Set(["kick", "snare", "hihat", "percussion"]);
@@ -100,6 +101,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   onSelectGenre,
   onOpenStudio,
   onAddToCompare,
+  onForkInMaker,
 }) => {
   const { t, language } = useLanguage();
 
@@ -341,6 +343,17 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
               <Columns className="w-3.5 h-3.5" />
               <span>{t("compare_add")}</span>
             </button>
+
+            {onForkInMaker && (
+              <button
+                onClick={() => onForkInMaker(genre)}
+                className="flex-1 md:flex-initial flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl bg-accent/15 hover:bg-accent/25 text-accent font-semibold text-xs border border-accent/30 transition-colors"
+                title={t("fork_in_maker")}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t("fork_in_maker")}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

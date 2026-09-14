@@ -125,6 +125,10 @@ export interface Genre {
   
   // Sequencer Pattern
   sequencer_pattern: SequencerPattern;
+
+  // Custom Genre Extensions (P7-03)
+  isCustom?: boolean;
+  forkedFromId?: string;
 }
 
 // Ergonomic aliases for sequencer pattern and tracks (P4)
