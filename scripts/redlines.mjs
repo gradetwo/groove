@@ -91,6 +91,33 @@ check(
   !/self\.skipWaiting\(\)/.test(swInstallBlock)
 );
 
+/* R8 \u2014 genre data must stay out of the first paint (A-01) ---------------------- */
+const distAssets = path.join(ROOT, "dist/assets");
+if (fs.existsSync(distAssets)) {
+  const files = fs.readdirSync(distAssets);
+  const entryHtml = read("dist/index.html");
+  const entryChunk = entryHtml.match(/src="\/assets\/(index-[^"]+\.js)"/)?.[1];
+  const studioChunk = files.find((f) => f.startsWith("StudioView-") && f.endsWith(".js"));
+
+  const staticallyImportsGenres = (file) => {
+    if (!file) return false;
+    const source = fs.readFileSync(path.join(distAssets, file), "utf8");
+    return /from"\.\/genre-/.test(source) || /from '\.\/genre-/.test(source);
+  };
+
+  check(
+    "R8a default route does not statically import genre chunks",
+    !staticallyImportsGenres(entryChunk) && !staticallyImportsGenres(studioChunk),
+    "genre-* reachable from the entry/StudioView chunk"
+  );
+  check(
+    "R8b genre chunks still exist for on-demand loading",
+    files.some((f) => f.startsWith("genre-") && f.endsWith(".js"))
+  );
+} else {
+  notes.push("\u23ed  R8 skipped (no dist/ \u2014 run npm run build)");
+}
+
 /* R7 \u2014 version check payload stays small (A-08) ------------------------------ */
 const versionJsonSize = fs.statSync(path.join(ROOT, "public/version.json")).size;
 check(

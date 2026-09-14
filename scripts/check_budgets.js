@@ -8,6 +8,13 @@ const BUDGETS = {
   vendorThreeGzipKb: 145,
   vendorReactGzipKb: 60,
   maxSingleChunkGzipKb: 150,
+  /**
+   * E-14: what the browser must download before the default route is interactive —
+   * entry chunk + modulepreloads + CSS. This is the number users actually feel, and
+   * it is the one that regressed silently before (every genre chunk was pulled into
+   * the first paint). Measured 186 KB after A-01, down from ~358 KB.
+   */
+  initialRouteGzipKb: 220,
 };
 
 function getGzipSizeKb(filePath) {
@@ -75,6 +82,31 @@ function runBudgetCheck() {
       );
       passed = false;
     }
+  }
+
+  // 5. Initial route payload: entry + preloaded modules + CSS (E-14)
+  if (fs.existsSync(indexPath)) {
+    const html = fs.readFileSync(indexPath, "utf8");
+    const referenced = new Set();
+    for (const match of html.matchAll(/(?:src|href)="\/assets\/([^"]+)"/g)) referenced.add(match[1]);
+    for (const match of html.matchAll(/modulepreload[^>]*href="\/assets\/([^"]+)"/g)) referenced.add(match[1]);
+
+    let initialKb = getGzipSizeKb(indexPath);
+    const breakdown = [];
+    for (const file of referenced) {
+      const filePath = path.join(assetsDir, file);
+      if (!fs.existsSync(filePath)) continue;
+      const kb = getGzipSizeKb(filePath);
+      initialKb += kb;
+      breakdown.push(`${file.replace(/-[A-Za-z0-9_-]{8}\./, ".")} ${kb.toFixed(1)}KB`);
+    }
+
+    const ok = initialKb <= BUDGETS.initialRouteGzipKb;
+    console.log(
+      `  ${ok ? "✅" : "❌"} initial route (html + entry + preloads + css, gzip): ${initialKb.toFixed(1)} KB / limit ${BUDGETS.initialRouteGzipKb} KB`
+    );
+    console.log(`      └─ ${breakdown.join("  ")}`);
+    if (!ok) passed = false;
   }
 
   console.log("\n===============================================================");
