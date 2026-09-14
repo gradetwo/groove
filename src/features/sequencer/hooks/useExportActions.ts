@@ -10,6 +10,21 @@ import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
 import { useLanguage } from "../../../i18n/LanguageContext";
 
+/**
+ * Turns anything that can be thrown into a user-safe string. Interpolating an
+ * `undefined` would leave the literal `{error}` placeholder on screen, because
+ * `formatMessage` deliberately preserves unknown placeholders.
+ */
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message || err.name;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 export interface UseExportActionsOptions {
   patternRef: React.MutableRefObject<SequencerPattern>;
   seqStateRef: React.MutableRefObject<SequencerState>;
@@ -87,7 +102,7 @@ export function useExportActions({
       );
     } catch (err: any) {
       showToast(
-        t("export_als_failed", { error: err?.message || err })
+        t("export_als_failed", { error: describeError(err) })
       );
     }
   }, [bpm, currentGenre.name, t, showToast]);
@@ -190,7 +205,7 @@ export function useExportActions({
       );
     } catch (err: any) {
       showToast(
-        t("export_wav_failed", { error: err?.message || err })
+        t("export_wav_failed", { error: describeError(err) })
       );
     } finally {
       setIsExportingAudio(false);
@@ -214,7 +229,7 @@ export function useExportActions({
       );
     } catch (err: any) {
       showToast(
-        t("export_stems_failed", { error: err?.message || err })
+        t("export_stems_failed", { error: describeError(err) })
       );
     } finally {
       setIsExportingAudio(false);

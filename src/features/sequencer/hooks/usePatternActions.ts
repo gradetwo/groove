@@ -8,6 +8,21 @@ import { generateVariation } from "../../../audio/InspireMe";
 import { clearSavedProject } from "../projectStorage";
 import { useLanguage } from "../../../i18n/LanguageContext";
 
+/**
+ * Turns anything that can be thrown into a user-safe string. Interpolating an
+ * `undefined` would leave the literal `{error}` placeholder on screen, because
+ * `formatMessage` deliberately preserves unknown placeholders.
+ */
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message || err.name;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 export interface UsePatternActionsOptions {
   patternRef: React.MutableRefObject<SequencerPattern>;
   stepsPerBar: number;
@@ -125,7 +140,7 @@ export function usePatternActions({
         );
       } catch (err: any) {
         showToast(
-          t("pattern_import_failed", { error: err?.message || err })
+          t("pattern_import_failed", { error: describeError(err) })
         );
       }
     },
