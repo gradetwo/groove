@@ -183,7 +183,7 @@ describe("HardwareConsoleView (N-01 / P8-02)", () => {
     expect(masterMeter.querySelectorAll("[data-meter-bar]").length).toBe(2);
   }, TEST_TIMEOUT);
 
-  it("writes the master fader to the engine and leaves phase-invert disabled", async () => {
+  it("writes the master fader to the engine", async () => {
     const genre = await chicagoHouse();
     renderConsole(genre);
 
@@ -198,11 +198,36 @@ describe("HardwareConsoleView (N-01 / P8-02)", () => {
       { timeout: ASYNC_TIMEOUT }
     );
 
-    // The store/engine expose no polarity flag, so the control must be honestly
-    // disabled with an explanatory tooltip rather than faked.
-    const phaseButton = screen.getByTestId("console-phase-0");
-    expect(phaseButton).toBeDisabled();
-    expect(phaseButton).toHaveAttribute("title", expect.stringContaining("not supported"));
+  }, TEST_TIMEOUT);
+
+  it("toggles channel polarity (Ø) and keeps the button in sync with the pattern", async () => {
+    const genre = await chicagoHouse();
+    renderConsole(genre);
+
+    const phaseButton = (await screen.findByTestId("console-phase-0", undefined, {
+      timeout: ASYNC_TIMEOUT,
+    })) as HTMLButtonElement;
+    // The engine now exposes a real polarity stage, so this control is live.
+    expect(phaseButton.disabled).toBe(false);
+    expect(phaseButton.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(phaseButton);
+
+    await waitFor(
+      () => {
+        expect(phaseButton.getAttribute("aria-pressed")).toBe("true");
+      },
+      { timeout: ASYNC_TIMEOUT }
+    );
+
+    // Clicking again flips it back.
+    fireEvent.click(phaseButton);
+    await waitFor(
+      () => {
+        expect(phaseButton.getAttribute("aria-pressed")).toBe("false");
+      },
+      { timeout: ASYNC_TIMEOUT }
+    );
   }, TEST_TIMEOUT);
 });
 

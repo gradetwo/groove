@@ -3,6 +3,15 @@ import { encodeAudioBufferToWav, renderPatternOffline } from "../audio/WavExport
 import { deriveTrackStates } from "../audio/trackStates";
 import { FakeAudioBuffer, FakeOfflineAudioContext, FakeGainNode, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 
+/**
+ * Volume stages of the two rendered tracks (track 0 then track 1). Each track builds a
+ * volume gain and a polarity gain, so position alone is no longer meaningful.
+ */
+function stripVolumeGains(): FakeGainNode[] {
+  const gains = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1) as FakeGainNode[];
+  return gains.filter((g) => g.gain.events[0]?.value !== 1);
+}
+
 function makePattern(overrides: Partial<Record<string, unknown>> = {}) {
   const steps = new Array(16).fill(0);
   steps[0] = 1;
@@ -98,9 +107,15 @@ describe("F-03 · offline renderer honours the mixer", () => {
     restore = installFakeOfflineAudioContext();
     await renderPatternOffline(makePattern());
 
-    const stripGains = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1, 3) as FakeGainNode[];
-    expect(stripGains[0].gain.events[0].value).toBe(0.5);
-    expect(stripGains[1].gain.events[0].value).toBe(0.9);
+    // Each track now contributes two gain nodes (volume, then polarity ±1), so pick
+    // the volume stages by their value rather than by position.
+    const gains = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1) as FakeGainNode[];
+    const volumeStages = gains.filter((g) => g.gain.events[0]?.value !== 1).map((g) => g.gain.events[0].value);
+    expect(volumeStages).toContain(0.5);
+    expect(volumeStages).toContain(0.9);
+    // And the polarity stages sit at unity by default.
+    const polarityStages = gains.filter((g) => g.gain.events[0]?.value === 1);
+    expect(polarityStages.length).toBeGreaterThanOrEqual(2);
   });
 
   it("drops muted tracks and keeps soloed ones", async () => {
@@ -109,14 +124,14 @@ describe("F-03 · offline renderer honours the mixer", () => {
     const muted = makePattern();
     muted.tracks[0].mute = true;
     await renderPatternOffline(muted);
-    const mutedStrips = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1, 3);
+    const mutedStrips = stripVolumeGains();
     expect(mutedStrips[0].incoming.length).toBe(0);
     expect(mutedStrips[1].incoming.length).toBeGreaterThan(0);
 
     const soloed = makePattern();
     soloed.tracks[1].solo = true;
     await renderPatternOffline(soloed);
-    const soloStrips = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1, 3);
+    const soloStrips = stripVolumeGains();
     expect(soloStrips[0].incoming.length).toBe(0);
     expect(soloStrips[1].incoming.length).toBeGreaterThan(0);
   });
@@ -126,7 +141,7 @@ describe("F-03 · offline renderer honours the mixer", () => {
     const pattern = makePattern();
     pattern.tracks[0].probability = new Array(16).fill(0);
     await renderPatternOffline(pattern);
-    const strips = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1, 3);
+    const strips = stripVolumeGains();
     expect(strips[0].incoming.length).toBe(0);
   });
 

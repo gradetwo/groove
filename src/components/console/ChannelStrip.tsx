@@ -22,6 +22,8 @@ export interface ChannelStripProps {
   onSendBChange: (trackIdx: number, send: number) => void;
   onToggleMute: (trackIdx: number) => void;
   onToggleSolo: (trackIdx: number) => void;
+  isPhaseInverted: boolean;
+  onTogglePhase: (trackIdx: number) => void;
 }
 
 const FADER_TICKS_DB = [0, -6, -12, -24, -48];
@@ -116,6 +118,8 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
   onSendBChange,
   onToggleMute,
   onToggleSolo,
+  isPhaseInverted,
+  onTogglePhase,
 }) => {
   const panInfo = panLabel(pan);
 
@@ -243,16 +247,19 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
         >
           S
         </button>
-        {/* Store/engine expose no polarity flag, so this is surfaced disabled
-            rather than faked as a working control. */}
+        {/* Polarity inversion (Ø): flips the channel sign via a dedicated gain stage. */}
         <button
           type="button"
-          disabled
-          aria-disabled="true"
+          onClick={() => onTogglePhase(trackIdx)}
+          aria-pressed={isPhaseInverted}
           aria-label={`${name} ${t("console_phase")}`}
-          title={t("console_phase_unsupported")}
+          title={t("console_phase_hint")}
           data-testid={`console-phase-${trackIdx}`}
-          className="h-7 w-7 cursor-not-allowed rounded-md border border-line bg-[#15171d] font-['JetBrains_Mono'] text-[10px] font-bold text-text-dim opacity-40"
+          className={`h-7 w-7 rounded-md border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
+            isPhaseInverted
+              ? "border-amber-400/70 bg-amber-500/20 text-amber-300"
+              : "border-line bg-[#15171d] text-text-sub hover:text-text"
+          }`}
         >
           Ø
         </button>

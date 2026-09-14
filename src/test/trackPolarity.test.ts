@@ -1,0 +1,186 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { AudioEngine } from "../audio/AudioEngine";
+import { deriveTrackStates } from "../audio/trackStates";
+import { renderPatternOffline } from "../audio/WavExporter";
+import { useSequencerStore } from "../features/sequencer/useSequencerStore";
+import { GENRES_MAP } from "../data/genres";
+import type { SequencerPattern } from "../types/genre";
+import {
+  FakeAudioContext,
+  FakeGainNode,
+  FakeOfflineAudioContext,
+  installFakeAudioContext,
+  installFakeOfflineAudioContext,
+} from "./helpers/fakeAudio";
+
+/**
+ * N-01 follow-up: channel polarity inversion (Ø).
+ *
+ * Previously the console surfaced this control disabled because no layer supported it.
+ * It is now a real mixing feature: a dedicated gain stage per channel that flips the
+ * sign, honoured by the realtime engine, the offline WAV renderer and the store (so it
+ * persists in projects and is undoable).
+ */
+function makePattern(phaseInvert = false): SequencerPattern {
+  const steps = 8;
+  return {
+    genre_id: "polarity-test",
+    bpm: 120,
+    swing: 0,
+    scale: "C minor",
+    totalSteps: steps,
+    tracks: [
+      {
+        track_id: "kick",
+        name: "Kick",
+        instrument: "drum",
+        steps: [1, 0, 0, 0, 1, 0, 0, 0],
+        velocity: new Array(steps).fill(100),
+        pitch: new Array(steps).fill(0),
+        gate: new Array(steps).fill(0.8),
+        volume: 0.8,
+        pan: 0,
+        mute: false,
+        solo: false,
+        phaseInvert,
+      },
+    ],
+  } as unknown as SequencerPattern;
+}
+
+describe("polarity · deriveTrackStates", () => {
+  it("maps the track flag and defaults to non-inverted", () => {
+    const [normal] = deriveTrackStates({ tracks: [{ volume: 0.8 }] } as never);
+    expect(normal.phaseInvert).toBe(false);
+
+    const [inverted] = deriveTrackStates({ tracks: [{ volume: 0.8, phaseInvert: true }] } as never);
+    expect(inverted.phaseInvert).toBe(true);
+  });
+});
+
+describe("polarity · realtime engine", () => {
+  let restore: (() => void) | null = null;
+  beforeEach(() => {
+    restore = installFakeAudioContext();
+  });
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  function strip(engine: AudioEngine, idx: number) {
+    return (engine as unknown as { trackStrips: Array<{ polarity: FakeGainNode }> }).trackStrips[idx];
+  }
+
+  it("creates a unity polarity stage per channel", () => {
+    const engine = new AudioEngine();
+    expect(strip(engine, 0).polarity.gain.value).toBe(1);
+    engine.destroy();
+  });
+
+  it("inverts and restores the channel sign without touching the volume", () => {
+    const engine = new AudioEngine();
+    engine.setPattern(makePattern());
+    const volumeBefore = (engine as unknown as { trackStrips: Array<{ gain: FakeGainNode }> }).trackStrips[0]
+      .gain.gain.value;
+
+    engine.setTrackState(0, { phaseInvert: true });
+    const events = strip(engine, 0).polarity.gain.events;
+    const last = events[events.length - 1];
+    expect(["linearRampToValueAtTime", "setValueAtTime"]).toContain(last.type);
+    expect(last.value).toBe(-1);
+
+    engine.setTrackState(0, { phaseInvert: false });
+    const back = strip(engine, 0).polarity.gain.events;
+    expect(back[back.length - 1].value).toBe(1);
+
+    // The volume stage never moves because of a polarity flip.
+    expect(
+      (engine as unknown as { trackStrips: Array<{ gain: FakeGainNode }> }).trackStrips[0].gain.gain.value
+    ).toBe(volumeBefore);
+    engine.destroy();
+  });
+
+  it("keeps polarity across a spatial/stereo mode switch (strips are rebuilt)", () => {
+    const engine = new AudioEngine();
+    engine.setPattern(makePattern());
+    engine.setTrackState(0, { phaseInvert: true });
+
+    engine.setSpatialMode(true);
+    // The rebuilt strip is re-synced from the track state, so it stays inverted.
+    engine.syncTrackGains();
+    const events = strip(engine, 0).polarity.gain.events;
+    expect(events.some((e) => e.value === -1)).toBe(true);
+
+    engine.destroy();
+  });
+
+  it("never emits a ramp to exactly zero", () => {
+    const engine = new AudioEngine();
+    engine.setPattern(makePattern());
+    engine.setTrackState(0, { phaseInvert: true });
+    for (const event of strip(engine, 0).polarity.gain.events) {
+      if (event.type === "linearRampToValueAtTime") expect(event.value).not.toBe(0);
+    }
+    engine.destroy();
+  });
+});
+
+describe("polarity · offline WAV renderer", () => {
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  it("renders an inverted channel with a negative polarity stage", async () => {
+    restore = installFakeOfflineAudioContext();
+    await renderPatternOffline(makePattern(true));
+
+    const gains = FakeOfflineAudioContext.lastInstance!.createdGains as FakeGainNode[];
+    const polarityStage = gains.find((g) => g.gain.events[0]?.value === -1);
+    expect(polarityStage, "no polarity stage set to -1 was created").toBeTruthy();
+  });
+
+  it("keeps unity polarity for a normal channel", async () => {
+    restore = installFakeOfflineAudioContext();
+    await renderPatternOffline(makePattern(false));
+
+    const gains = FakeOfflineAudioContext.lastInstance!.createdGains as FakeGainNode[];
+    expect(gains.some((g) => g.gain.events[0]?.value === -1)).toBe(false);
+  });
+});
+
+describe("polarity · sequencer store", () => {
+  const genre = GENRES_MAP["chicago-house"] ?? Object.values(GENRES_MAP)[0];
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("toggles the flag and is undoable", () => {
+    const { result } = renderHook(() => useSequencerStore(genre));
+    expect(result.current.state.pattern.tracks[0].phaseInvert).toBeFalsy();
+
+    act(() => {
+      result.current.commit({ type: "TOGGLE_PHASE_INVERT", trackIdx: 0 });
+    });
+    expect(result.current.state.pattern.tracks[0].phaseInvert).toBe(true);
+
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.state.pattern.tracks[0].phaseInvert).toBeFalsy();
+  });
+
+  it("round-trips through the engine track states", () => {
+    const { result } = renderHook(() => useSequencerStore(genre));
+    act(() => {
+      result.current.commit({ type: "TOGGLE_PHASE_INVERT", trackIdx: 1 });
+    });
+    const states = deriveTrackStates(result.current.state.pattern);
+    expect(states[1].phaseInvert).toBe(true);
+    expect(states[0].phaseInvert).toBe(false);
+  });
+});

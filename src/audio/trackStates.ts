@@ -15,6 +15,8 @@ export interface TrackState {
   pan: number;
   sendA?: number;
   sendB?: number;
+  /** Polarity inversion (Ø): multiplies the channel by -1. */
+  phaseInvert?: boolean;
 }
 
 export const DEFAULT_TRACK_VOLUME = 0.8;
@@ -28,5 +30,6 @@ export function deriveTrackStates(pattern: Pick<SequencerPattern, "tracks"> | nu
     pan: Number.isFinite(t.pan) ? (t.pan as number) : 0,
     sendA: Number.isFinite(t.sendA) ? (t.sendA as number) : 0,
     sendB: Number.isFinite(t.sendB) ? (t.sendB as number) : 0,
+    phaseInvert: Boolean(t.phaseInvert),
   }));
 }

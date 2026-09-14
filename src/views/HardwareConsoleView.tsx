@@ -266,6 +266,11 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
     [commit]
   );
 
+  const handleTogglePhase = useCallback(
+    (trackIdx: number) => commit({ type: "TOGGLE_PHASE_INVERT", trackIdx }),
+    [commit]
+  );
+
   const handleToggleTransport = useCallback(() => {
     const engine = engineRef.current;
     if (!engine) return;
@@ -357,6 +362,8 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
                   onSendBChange={handleSendBChange}
                   onToggleMute={handleToggleMute}
                   onToggleSolo={handleToggleSolo}
+                  isPhaseInverted={Boolean(track.phaseInvert)}
+                  onTogglePhase={handleTogglePhase}
                 />
               );
             })}

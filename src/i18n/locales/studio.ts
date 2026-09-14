@@ -324,9 +324,9 @@ export const studioMessages = {
   console_mute: { en: "MUTE", zh: "静音" },
   console_solo: { en: "SOLO", zh: "独奏" },
   console_phase: { en: "Phase invert", zh: "相位反转" },
-  console_phase_unsupported: {
-    en: "Phase invert is not supported by the audio engine yet",
-    zh: "音频引擎暂不支持相位反转",
+  console_phase_hint: {
+    en: "Polarity inversion (Ø): flips this channel's sign without changing its level. Useful for checking phase cancellation against another track.",
+    zh: "极性反转（Ø）：翻转该通道的正负极性而不改变音量，常用于与另一轨对拍检查相位抵消。",
   },
   console_send_a: { en: "SEND A", zh: "发送 A" },
   console_send_b: { en: "SEND B", zh: "发送 B" },

@@ -105,6 +105,7 @@ export type SequencerAction =
   | { type: "REORDER_TRACKS"; fromIndex: number; toIndex: number }
   | { type: "TOGGLE_MUTE"; trackIdx: number }
   | { type: "TOGGLE_SOLO"; trackIdx: number }
+  | { type: "TOGGLE_PHASE_INVERT"; trackIdx: number }
   | { type: "SET_VOLUME"; trackIdx: number; volume: number }
   | { type: "SET_TRACK_LENGTH"; trackIdx: number; length: number }
   | { type: "CLEAR_TRACK"; trackIdx: number }
@@ -512,6 +513,14 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
         ...t,
         solo: !t.solo,
+      }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "TOGGLE_PHASE_INVERT": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
+        ...t,
+        phaseInvert: !t.phaseInvert,
       }));
       return withUpdatedPattern({ ...state.pattern, tracks });
     }

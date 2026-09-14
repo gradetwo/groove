@@ -169,7 +169,7 @@ export async function renderPatternOffline(
   // itself (same helper the live engine uses), so a rendered master honours
   // mute / solo / volume / pan instead of silently exporting everything at 0.8 centre.
   const mixerStates: TrackState[] = options.trackStates ?? deriveTrackStates(pattern);
-  const trackStrips: Array<{ gain: GainNode; pan: StereoPannerNode }> = [];
+  const trackStrips: Array<{ gain: GainNode; polarity: GainNode; pan: StereoPannerNode }> = [];
   const numTracks = pattern.tracks.length;
 
   for (let t = 0; t < numTracks; t++) {
@@ -177,12 +177,18 @@ export async function renderPatternOffline(
     const tGain = ctx.createGain();
     tGain.gain.setValueAtTime(Math.max(0, Math.min(2, tState.volume)), 0);
 
+    // N-01 follow-up: polarity must be honoured offline too, otherwise an inverted
+    // channel would sound different in the exported master than in the console.
+    const tPolarity = ctx.createGain();
+    tPolarity.gain.setValueAtTime(tState.phaseInvert ? -1 : 1, 0);
+
     const tPan = ctx.createStereoPanner();
     tPan.pan.setValueAtTime(Math.max(-1, Math.min(1, tState.pan)), 0);
 
-    tGain.connect(tPan);
+    tGain.connect(tPolarity);
+    tPolarity.connect(tPan);
     tPan.connect(masterGain);
-    trackStrips.push({ gain: tGain, pan: tPan });
+    trackStrips.push({ gain: tGain, polarity: tPolarity, pan: tPan });
   }
 
   const anySolo = mixerStates.some((s) => s.solo);

@@ -38,6 +38,11 @@ export interface AudioEngineOptions {
 export interface TrackChannelStrip {
   gain: GainNode;
   /**
+   * Polarity stage (Ø). Held at +1 normally and -1 when the channel is inverted, so
+   * the sign can be flipped without touching the volume stage (N-01 follow-up).
+   */
+  polarity: GainNode;
+  /**
    * Stereo mode panner. Exactly one of `panner` / `spatialPanner` is active:
    * the strip is rebuilt when the monitoring mode changes (N-02).
    */
@@ -137,14 +142,9 @@ export class AudioEngine {
 
   // Pattern data
   private pattern: SequencerPattern | null = null;
-  private trackStates: Array<{
-    mute: boolean;
-    solo: boolean;
-    volume: number;
-    pan: number;
-    sendA?: number;
-    sendB?: number;
-  }> = [];
+  // Shares the canonical TrackState shape with the offline renderers (A-05); an
+  // inline copy here silently drifted the moment a field was added.
+  private trackStates: TrackState[] = [];
 
   // Callbacks
   private onStepCallback?: (info: StepCallbackInfo) => void;
@@ -408,6 +408,7 @@ export class AudioEngine {
     for (const strip of this.trackStrips) {
       try {
         strip.gain.disconnect();
+        strip.polarity.disconnect();
         strip.panner?.disconnect();
         strip.spatialPanner?.disconnect();
         strip.sendA.disconnect();
@@ -426,6 +427,9 @@ export class AudioEngine {
       const gain = this.ctx.createGain();
       gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
 
+      const polarity = this.ctx.createGain();
+      polarity.gain.setValueAtTime(1, this.ctx.currentTime);
+
       let panner: StereoPannerNode | null = null;
       let spatialPanner: PannerNode | null = null;
 
@@ -440,32 +444,35 @@ export class AudioEngine {
         spatialPanner.rolloffFactor = 0.6;
         const slot = this.getSpatialSlot(i, numTracks);
         this.applyPannerPosition(spatialPanner, slot);
-        gain.connect(spatialPanner);
+        gain.connect(polarity);
+        polarity.connect(spatialPanner);
         spatialPanner.connect(this.masterGain);
       } else if (typeof this.ctx.createStereoPanner === "function") {
         panner = this.ctx.createStereoPanner();
         panner.pan.setValueAtTime(0, this.ctx.currentTime);
-        gain.connect(panner);
+        gain.connect(polarity);
+        polarity.connect(panner);
         panner.connect(this.masterGain);
       } else {
-        gain.connect(this.masterGain);
+        gain.connect(polarity);
+        polarity.connect(this.masterGain);
       }
 
       const sendA = this.ctx.createGain();
       sendA.gain.setValueAtTime(0, this.ctx.currentTime);
       if (this.reverbBus) {
-        gain.connect(sendA);
+        polarity.connect(sendA);
         sendA.connect(this.reverbBus);
       }
 
       const sendB = this.ctx.createGain();
       sendB.gain.setValueAtTime(0, this.ctx.currentTime);
       if (this.delayBus) {
-        gain.connect(sendB);
+        polarity.connect(sendB);
         sendB.connect(this.delayBus);
       }
 
-      this.trackStrips.push({ gain, panner, spatialPanner, sendA, sendB });
+      this.trackStrips.push({ gain, polarity, panner, spatialPanner, sendA, sendB });
     }
     this.syncTrackGains();
   }
@@ -535,6 +542,24 @@ export class AudioEngine {
             strip.gain.gain.setValueAtTime(targetGain, now);
           }
         } catch (_) {}
+      }
+
+      // Polarity (Ø): a 1 ms ramp keeps the flip click-free while staying effectively
+      // instantaneous for the listener.
+      try {
+        const target = state.phaseInvert ? -1 : 1;
+        if (strip.polarity.gain.value !== target) {
+          if (typeof strip.polarity.gain.cancelScheduledValues === "function") {
+            strip.polarity.gain.cancelScheduledValues(now);
+          }
+          if (typeof strip.polarity.gain.linearRampToValueAtTime === "function") {
+            strip.polarity.gain.linearRampToValueAtTime(target, now + 0.001);
+          } else {
+            strip.polarity.gain.setValueAtTime(target, now);
+          }
+        }
+      } catch {
+        /* polarity is cosmetic for the mix; never let it break playback */
       }
 
       if (state.pan !== undefined && strip.panner) {
@@ -699,10 +724,7 @@ export class AudioEngine {
     }
   }
 
-  public setTrackState(
-    trackIdx: number,
-    state: Partial<{ mute: boolean; solo: boolean; volume: number; pan: number; sendA: number; sendB: number }>
-  ): void {
+  public setTrackState(trackIdx: number, state: Partial<TrackState>): void {
     if (!this.trackStates[trackIdx]) {
       this.trackStates[trackIdx] = {
         mute: false,
@@ -711,26 +733,18 @@ export class AudioEngine {
         pan: 0,
         sendA: 0,
         sendB: 0,
+        phaseInvert: false,
       };
     }
     this.trackStates[trackIdx] = { ...this.trackStates[trackIdx], ...state };
     this.syncTrackGains();
   }
 
-  public getTrackState(
-    trackIdx: number
-  ): { mute: boolean; solo: boolean; volume: number; pan: number; sendA?: number; sendB?: number } | undefined {
+  public getTrackState(trackIdx: number): TrackState | undefined {
     return this.trackStates[trackIdx];
   }
 
-  public getTrackStates(): Array<{
-    mute: boolean;
-    solo: boolean;
-    volume: number;
-    pan: number;
-    sendA?: number;
-    sendB?: number;
-  }> {
+  public getTrackStates(): TrackState[] {
     return [...this.trackStates];
   }
 

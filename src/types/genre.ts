@@ -51,6 +51,8 @@ export interface SequencerTrack {
   swing?: number; // per-track swing offset (-50 to 50)
   sendA?: number; // Reverb send level 0 - 1
   sendB?: number; // Delay send level 0 - 1
+  /** Polarity inversion (Ø). Flips the channel's sign without changing its level. */
+  phaseInvert?: boolean;
 }
 
 export interface SequencerPattern {
