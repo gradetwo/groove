@@ -132,3 +132,23 @@ docker run -d -p 80:80 --name groove-odyssey groove-odyssey
   7. **iPad Pro 11 横屏 (Landscape)** (1194x834, Touch/Tablet WebKit)
   - 自动化断言：Studio 走带交互与发声、和弦工坊折叠与展开、Galaxy 3D WebGL 画布渲染与优雅回退、全站 8 大视图无白屏与无未捕获异常、中文设计基线及中英双语切换无视口横向滚动溢出。
 
+
+
+---
+
+## 端到端测试依赖（Playwright）
+
+`playwright` **尚未**写入 `devDependencies`，因为本仓库的 `package-lock.json` 需要在有网络的机器上重新生成；直接声明会导致 CI 的 `npm ci` 因"package.json 与 lockfile 不一致"而失败。
+
+当前状态：
+
+- **CI**：e2e job 使用 `npm install --no-save playwright@1.63.0` 临时安装（不改动 lockfile），再 `npx playwright install --with-deps`。
+- **本地**：若 Playwright 已存在于其他位置（如全局安装），可用环境变量指向其 `node_modules`：
+
+  ```bash
+  PLAYWRIGHT_MODULE_PATH=/path/to/node_modules npm run test:e2e
+  ```
+
+- **收敛方式**（需要网络，一次性）：`npm install -D playwright`，随后删除 CI 中的临时安装步骤。
+
+`scripts/test_matrix.js` 的静态服务器始终使用 `listen(0)` 的内核临时端口，多实例并行不会互相抢占端口。

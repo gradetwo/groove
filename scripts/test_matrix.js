@@ -10,30 +10,55 @@ import path from "path";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-let playwright;
-try {
-  // Playwright is a regular devDependency; resolve it the normal way.
-  playwright = require("playwright");
-} catch (err) {
-  console.error(
-    [
-      "",
-      "❌ Could not load Playwright.",
-      "",
-      "Playwright is declared in devDependencies but is not installed (or its",
-      "browsers are missing). From the repository root run:",
-      "",
-      "    npm install",
-      "    npx playwright install --with-deps chromium firefox webkit",
-      "",
-      "Then re-run: npm run test:e2e",
-      "",
-      `Original error: ${err.message}`,
-      "",
-    ].join("\n")
-  );
-  process.exit(1);
+
+/**
+ * Playwright resolution order:
+ *   1. normal resolution (a real devDependency in a fully installed checkout)
+ *   2. PLAYWRIGHT_MODULE_PATH (opt-in escape hatch for machines where Playwright is
+ *      installed globally, e.g. this development box — no personal path is hardcoded)
+ *
+ * Note for maintainers: `playwright` is intentionally NOT listed in package.json
+ * devDependencies yet, because this repository's package-lock.json could not be
+ * regenerated offline. Add it with a single `npm install -D playwright` on a machine
+ * with network access (which also refreshes the lockfile); CI installs it ad-hoc with
+ * `npm install --no-save` in the e2e job until then.
+ */
+function loadPlaywright() {
+  try {
+    return require("playwright");
+  } catch (primaryError) {
+    const extraPath = process.env.PLAYWRIGHT_MODULE_PATH;
+    if (extraPath) {
+      try {
+        const requireFromPath = createRequire(path.join(extraPath, "noop.js"));
+        return requireFromPath("playwright");
+      } catch {
+        /* fall through to the actionable error below */
+      }
+    }
+    console.error(
+      [
+        "",
+        "\u274c Could not load Playwright.",
+        "",
+        "Install it (this also refreshes package-lock.json):",
+        "",
+        "    npm install -D playwright",
+        "    npx playwright install --with-deps chromium firefox webkit",
+        "",
+        "Or, if Playwright already exists somewhere on this machine, point at it:",
+        "",
+        "    PLAYWRIGHT_MODULE_PATH=/path/to/node_modules npm run test:e2e",
+        "",
+        `Original error: ${primaryError.message}`,
+        "",
+      ].join("\n")
+    );
+    process.exit(1);
+  }
 }
+
+const playwright = loadPlaywright();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
