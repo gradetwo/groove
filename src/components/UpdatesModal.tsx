@@ -35,6 +35,14 @@ export interface ChangelogEntry {
 export interface VersionInfo {
   version: string;
   releaseDate: string;
+  /** A-08: the update check only ships the newest entry. */
+  changelog: ChangelogEntry[];
+  changelogCount?: number;
+}
+
+/** Full archive, fetched lazily only when the user opens the history. */
+export interface ChangelogArchive {
+  version: string;
   changelog: ChangelogEntry[];
 }
 
@@ -57,6 +65,8 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
   const { t, isZh, language } = useLanguage();
 
   const [versionData, setVersionData] = useState<VersionInfo | null>(null);
+  // A-08: `version.json` is now ~3KB; the 83KB archive loads only on demand.
+  const [changelog, setChangelog] = useState<ChangelogEntry[] | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [checkStatus, setCheckStatus] = useState<"idle" | "latest" | "update_available" | "error">("idle");
   const [latestVersion, setLatestVersion] = useState<string>(CURRENT_CLIENT_VERSION);
@@ -80,8 +90,9 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
     try {
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch version info");
-      const data: VersionInfo = await res.json();
-      setVersionData(data);
+      const data = (await res.json()) as VersionInfo & { latest?: ChangelogEntry; changelogCount?: number };
+      const latestEntries = data.latest ? [data.latest] : (data.changelog || []);
+      setVersionData({ ...data, changelog: latestEntries });
       setLatestVersion(data.version);
 
       const now = new Date();
@@ -107,6 +118,24 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
       checkForUpdates(false);
     }
   }, [isOpen]);
+
+  // A-08: fetch the full bilingual archive only when the modal is actually opened.
+  // Uses the HTTP/SW cache (no `no-store`) so repeat opens are free.
+  useEffect(() => {
+    if (!isOpen || changelog !== null) return;
+    let cancelled = false;
+    fetch("/changelog.json")
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("changelog fetch failed"))))
+      .then((data: ChangelogArchive) => {
+        if (!cancelled && Array.isArray(data?.changelog)) setChangelog(data.changelog);
+      })
+      .catch(() => {
+        // Falls back to the single entry embedded in version.json.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, changelog]);
 
   const getCategoryBadge = (category: ChangelogEntry["category"]) => {
     switch (category) {
@@ -248,7 +277,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
 
         {/* Scrollable Changelog List */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 divide-y divide-[#1f222b]/60 bg-[#0d0f16]">
-          {(versionData?.changelog || []).map((entry, idx) => {
+          {(changelog || versionData?.changelog || []).map((entry, idx) => {
             const badge = getCategoryBadge(entry.category);
             const isCurrent = entry.version === CURRENT_CLIENT_VERSION;
 

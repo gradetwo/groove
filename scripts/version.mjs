@@ -18,6 +18,7 @@ const ROOT = process.cwd();
 const pkgPath = path.join(ROOT, "package.json");
 const versionTsPath = path.join(ROOT, "src/version.ts");
 const versionJsonPath = path.join(ROOT, "public/version.json");
+const changelogJsonPath = path.join(ROOT, "public/changelog.json");
 const swPath = path.join(ROOT, "public/sw.js");
 
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
@@ -46,21 +47,43 @@ function desiredSw(current) {
   return current.replace(re, `const CACHE_VERSION = "groove-v${version}";`);
 }
 
-function desiredVersionJson(current) {
-  const data = JSON.parse(current);
-  data.version = version;
-  data.releaseDate = today;
-  return `${JSON.stringify(data, null, 2)}\n`;
+/**
+ * A-08: the update CHECK only needs the current version, so `version.json` stays
+ * tiny. The full (and ever-growing) bilingual changelog lives in `changelog.json`
+ * and is fetched only when the user actually opens the history.
+ */
+function splitVersionFiles(currentVersionJson) {
+  const data = JSON.parse(currentVersionJson);
+  const changelog = Array.isArray(data.changelog) ? data.changelog : [];
+  const latest = changelog.find((e) => e.version === version) || changelog[0] || null;
+
+  const small = {
+    version,
+    releaseDate: today,
+    changelogCount: changelog.length,
+    latest,
+  };
+  const full = { version, changelog };
+
+  return {
+    versionJson: `${JSON.stringify(small, null, 2)}\n`,
+    changelogJson: `${JSON.stringify(full)}
+`,
+  };
 }
 
 const currentTs = fs.existsSync(versionTsPath) ? fs.readFileSync(versionTsPath, "utf8") : "";
 const currentSw = fs.readFileSync(swPath, "utf8");
 const currentJson = fs.readFileSync(versionJsonPath, "utf8");
+const currentChangelog = fs.existsSync(changelogJsonPath) ? fs.readFileSync(changelogJsonPath, "utf8") : "";
+
+const split = splitVersionFiles(currentJson);
 
 const targets = [
   { label: "src/version.ts", path: versionTsPath, desired: desiredTs, current: currentTs },
   { label: "public/sw.js", path: swPath, desired: desiredSw(currentSw), current: currentSw },
-  { label: "public/version.json", path: versionJsonPath, desired: desiredVersionJson(currentJson), current: currentJson },
+  { label: "public/version.json", path: versionJsonPath, desired: split.versionJson, current: currentJson },
+  { label: "public/changelog.json", path: changelogJsonPath, desired: split.changelogJson, current: currentChangelog },
 ];
 
 const mode = process.argv[2] ?? "check";
