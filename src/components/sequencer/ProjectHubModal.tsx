@@ -17,8 +17,11 @@ import {
   Tag,
   ArrowUpDown,
   Sparkles,
+  QrCode,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import QRCode from "qrcode";
+import { getShareUrlResult } from "../../audio/SequencerUrlShare";
 import { GrooveProject, ProjectSortField, ProjectSortOrder } from "../../types/project";
 import { Genre, SequencerPattern } from "../../types/genre";
 import { EffectsRackState, DrumKitType } from "../../audio/AudioEngine";
@@ -102,6 +105,11 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   const [renameTitle, setRenameTitle] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<GrooveProject | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  // N-05: share a project as a deep link + QR (encoded through the sequencer share codec).
+  const [shareTarget, setShareTarget] = useState<GrooveProject | null>(null);
+  const [shareUrl, setShareUrl] = useState<string>("");
+  const [shareDegraded, setShareDegraded] = useState(false);
+  const [shareQr, setShareQr] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -285,6 +293,69 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     await reloadProjects();
     onToast(t("project_hub_deleted", { name: name }));
   };
+
+  /**
+   * N-05: builds a deep link for a project and renders it as a QR code so it can be
+   * opened on a phone by scanning. The payload goes through the sequencer share codec,
+   * which caps URL size — when a project is too large we say so instead of producing a
+   * link the decoder would refuse.
+   */
+  const handleShare = useCallback(
+    async (project: GrooveProject) => {
+      setShareTarget(project);
+      setShareUrl("");
+      setShareQr("");
+      setShareDegraded(false);
+
+      const pattern = project.activeSlot === "B" ? project.patterns.B : project.patterns.A;
+      const result = getShareUrlResult({
+        genreId: project.genreId,
+        bpm: project.bpm,
+        swing: project.swing,
+        scale: pattern.scale,
+        timeSignature: project.timeSignature,
+        resolution: project.resolution,
+        totalSteps: project.stepCount,
+        tracks: pattern.tracks.map((track) => ({
+          track_id: track.track_id,
+          name: track.name,
+          instrument: track.instrument || "synth",
+          steps: track.steps,
+          velocity: track.velocity,
+          pitch: track.pitch,
+          gate: track.gate,
+          ratchet: track.ratchet,
+          probability: track.probability,
+          trackLength: track.trackLength,
+          mute: track.mute,
+          solo: track.solo,
+          volume: track.volume,
+          pan: track.pan,
+          swing: track.swing,
+          sendA: track.sendA,
+          sendB: track.sendB,
+        })),
+      });
+
+      setShareUrl(result.url);
+      setShareDegraded(result.degraded);
+      if (!result.url) return;
+
+      try {
+        const dataUrl = await QRCode.toDataURL(result.url, {
+          errorCorrectionLevel: "L",
+          margin: 1,
+          width: 240,
+          color: { dark: "#0a0b0d", light: "#e9e7e0" },
+        });
+        setShareQr(dataUrl);
+      } catch {
+        // QR is a convenience; the copyable link below still works.
+        setShareQr("");
+      }
+    },
+    []
+  );
 
   // Export .groove file
   const handleExport = (project: GrooveProject) => {
@@ -681,6 +752,15 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                           <Copy className="w-3 h-3" />
                         </button>
 
+                        {/* Share link + QR (N-05) */}
+                        <button
+                          onClick={() => void handleShare(project)}
+                          className="h-7 w-7 rounded-lg bg-panel2 hover:bg-line border border-line text-text-sub hover:text-accent flex items-center justify-center transition-colors"
+                          title={t("project_hub_share")}
+                        >
+                          <QrCode className="w-3 h-3" />
+                        </button>
+
                         {/* Export .groove */}
                         <button
                           onClick={() => handleExport(project)}
@@ -796,6 +876,87 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       )}
 
       {/* Sub-Dialog: Delete Confirmation */}
+      {shareTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md bg-[#12141a] border border-line rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-2.5 text-accent">
+              <QrCode className="w-5 h-5 shrink-0" />
+              <h3 className="text-base font-bold font-['JetBrains_Mono'] text-text">
+                {t("project_hub_share")}
+              </h3>
+            </div>
+            <p className="text-xs font-['JetBrains_Mono'] text-text-sub leading-relaxed">
+              {shareTarget.name}
+            </p>
+
+            {shareUrl ? (
+              <>
+                {shareQr && (
+                  <img
+                    src={shareQr}
+                    alt={t("project_hub_share_qr_alt")}
+                    className="mx-auto h-48 w-48 rounded-xl border border-line bg-[#e9e7e0] p-1"
+                  />
+                )}
+                <input
+                  readOnly
+                  value={shareUrl}
+                  aria-label={t("project_hub_share_link")}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="w-full rounded-lg border border-line bg-panel2 px-3 py-2 font-['JetBrains_Mono'] text-[10px] text-text-sub"
+                />
+                {shareDegraded && (
+                  <p className="text-[10px] font-['JetBrains_Mono'] text-amber-400">
+                    {t("project_hub_share_degraded")}
+                  </p>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShareTarget(null)}
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-text hover:bg-line"
+                  >
+                    {t("project_hub_close")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      void navigator.clipboard.writeText(shareUrl);
+                      onToast(isZh ? "链接已复制 ✓" : "Link copied ✓");
+                    }}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold font-['JetBrains_Mono'] bg-accent text-black hover:bg-accent/90"
+                  >
+                    {t("project_hub_copy_link")}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-['JetBrains_Mono'] text-amber-400 leading-relaxed">
+                  {t("project_hub_share_too_large")}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShareTarget(null)}
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-text hover:bg-line"
+                  >
+                    {t("project_hub_close")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const target = shareTarget;
+                      setShareTarget(null);
+                      if (target) handleExport(target);
+                    }}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold font-['JetBrains_Mono'] bg-accent text-black hover:bg-accent/90"
+                  >
+                    {t("project_export_groove")}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
           <div className="w-full max-w-md bg-[#141014] border border-[#ff5964]/40 rounded-2xl p-5 shadow-2xl space-y-4">
