@@ -29,6 +29,16 @@ export default defineConfig({
         'src/test/**',
         '**/*.d.ts',
       ],
+      // Real gate, not a formality: thresholds sit a few points below the measured
+      // baseline so normal churn passes but a genuine regression turns CI red.
+      // Measured on this branch: lines 82.56%, statements 82.56%,
+      // branches 65.90%, functions 63.55%.
+      thresholds: {
+        lines: 78,
+        statements: 78,
+        branches: 60,
+        functions: 58,
+      },
     },
   },
 });
