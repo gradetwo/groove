@@ -23,13 +23,17 @@ import {
   Zap,
   Info,
   Mic2,
-  Users
+  Users,
+  Loader2
 } from "lucide-react";
 import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
+import { EmptyState } from "../ui/EmptyState";
+import { ErrorState } from "../ui/ErrorState";
+import { Skeleton } from "../ui/Skeleton";
 
 interface CompareViewProps {
   initialGenres?: Genre[];
@@ -113,6 +117,33 @@ export const CompareView: React.FC<CompareViewProps> = ({
   const [playingMode, setPlayingMode] = useState<"drums" | "full">("full");
   const engineRef = useRef<AudioEngine | null>(null);
 
+  // Initial genre-catalog resolution drives the loading / empty / error states (U-08)
+  const [genresLoadState, setGenresLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [reloadKey, setReloadKey] = useState(0);
+  // Engine start-up guards: block re-entrant clicks before `engine.play()` resolves (U-08)
+  const [startingAuditionKey, setStartingAuditionKey] = useState<string | null>(null);
+  const [isSyncStarting, setIsSyncStarting] = useState(false);
+
+  // Resolve the initial comparison pool. The catalog is bundled today, but the
+  // resolution stays async so the view can render honest loading / error states.
+  useEffect(() => {
+    let cancelled = false;
+    setGenresLoadState("loading");
+    Promise.resolve()
+      .then(() => {
+        if (!Array.isArray(ALL_GENRES) || ALL_GENRES.length === 0) {
+          throw new Error("genre catalog unavailable");
+        }
+        if (!cancelled) setGenresLoadState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setGenresLoadState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
   // A/B Synchronous Comparative Playback State (PRD 5.7.2.3)
   const [isSyncPlaying, setIsSyncPlaying] = useState(false);
   const [syncMode, setSyncMode] = useState<SyncPlaybackMode>("both");
@@ -195,55 +226,62 @@ export const CompareView: React.FC<CompareViewProps> = ({
   // Start synchronized playback across all active comparison columns (P3-12)
   const handleStartSyncPlayback = async (overrideBpm?: number) => {
     if (genres.length < 2) return;
+    // Re-entrancy guard: never start a second engine while one is still starting (U-08)
+    if (isSyncStarting || startingAuditionKey) return;
     handleStopAudio();
+    setIsSyncStarting(true);
 
-    const bpmToUse = overrideBpm || syncBpm;
-    let maxLen = 16;
-    const mergedTracks: SequencerTrack[] = [];
+    try {
+      const bpmToUse = overrideBpm || syncBpm;
+      let maxLen = 16;
+      const mergedTracks: SequencerTrack[] = [];
 
-    genres.forEach((g, gIdx) => {
-      const tracks = g.sequencer_pattern?.tracks || [];
-      const tag = String.fromCharCode(65 + gIdx); // A, B, C, D
-      tracks.forEach((t) => {
-        maxLen = Math.max(maxLen, t.steps?.length || 16);
-        mergedTracks.push({
-          ...JSON.parse(JSON.stringify(t)),
-          name: `[${tag}] ${t.name}`,
-          track_id: t.track_id || t.name.toLowerCase(),
+      genres.forEach((g, gIdx) => {
+        const tracks = g.sequencer_pattern?.tracks || [];
+        const tag = String.fromCharCode(65 + gIdx); // A, B, C, D
+        tracks.forEach((t) => {
+          maxLen = Math.max(maxLen, t.steps?.length || 16);
+          mergedTracks.push({
+            ...JSON.parse(JSON.stringify(t)),
+            name: `[${tag}] ${t.name}`,
+            track_id: t.track_id || t.name.toLowerCase(),
+          });
         });
       });
-    });
 
-    const compositePattern: SequencerPattern = {
-      genre_id: `sync_${genres.map((g) => g.id).join("_")}`,
-      bpm: bpmToUse,
-      scale: genres[0].sequencer_pattern?.scale || "C Minor",
-      totalSteps: maxLen,
-      tracks: mergedTracks,
-    };
+      const compositePattern: SequencerPattern = {
+        genre_id: `sync_${genres.map((g) => g.id).join("_")}`,
+        bpm: bpmToUse,
+        scale: genres[0].sequencer_pattern?.scale || "C Minor",
+        totalSteps: maxLen,
+        tracks: mergedTracks,
+      };
 
-    let engine = syncEngineRef.current;
-    if (!engine) {
-      engine = new AudioEngine({
-        onStep: ({ step }) => setSyncStep(step),
-        onStop: () => {
-          setIsSyncPlaying(false);
-        },
-      });
-      syncEngineRef.current = engine;
-    } else {
-      engine.stop();
+      let engine = syncEngineRef.current;
+      if (!engine) {
+        engine = new AudioEngine({
+          onStep: ({ step }) => setSyncStep(step),
+          onStop: () => {
+            setIsSyncPlaying(false);
+          },
+        });
+        syncEngineRef.current = engine;
+      } else {
+        engine.stop();
+      }
+
+      engine.setPattern(compositePattern, true);
+      engine.setBpm(bpmToUse);
+      engine.setTotalSteps(maxLen);
+
+      applySyncMutesToEngine(engine, syncMode, genres, columnMutes, columnSolos);
+
+      await engine.play();
+      setIsSyncPlaying(true);
+      setPlayingId(null);
+    } finally {
+      setIsSyncStarting(false);
     }
-
-    engine.setPattern(compositePattern, true);
-    engine.setBpm(bpmToUse);
-    engine.setTotalSteps(maxLen);
-
-    applySyncMutesToEngine(engine, syncMode, genres, columnMutes, columnSolos);
-
-    await engine.play();
-    setIsSyncPlaying(true);
-    setPlayingId(null);
   };
 
   const handleToggleColumnMute = (colIdx: number) => {
@@ -285,6 +323,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
   // Handle explicit playback per mode (Drums Only or Full Band)
   const handlePlayMode = async (genre: Genre, mode: "drums" | "full") => {
+    // Re-entrancy guard: ignore clicks while any engine is still starting (U-08)
+    if (startingAuditionKey || isSyncStarting) return;
+
     if (isSyncPlaying) {
       handleStopAudio();
     }
@@ -306,22 +347,27 @@ export const CompareView: React.FC<CompareViewProps> = ({
     }
 
     // Otherwise start new playback for this genre & mode
-    let engine = engineRef.current;
-    if (!engine) {
-      engine = new AudioEngine({
-        onStop: () => setPlayingId(null),
-      });
-      engineRef.current = engine;
-    } else {
-      engine.stop();
-    }
+    setStartingAuditionKey(`${genre.id}:${mode}`);
+    try {
+      let engine = engineRef.current;
+      if (!engine) {
+        engine = new AudioEngine({
+          onStop: () => setPlayingId(null),
+        });
+        engineRef.current = engine;
+      } else {
+        engine.stop();
+      }
 
-    engine.setPattern(genre.sequencer_pattern, true);
-    engine.setBpm(genre.default_bpm || 120);
-    applyAudioMutes(engine, mode, genre);
-    await engine.play();
-    setPlayingId(genre.id);
-    setPlayingMode(mode);
+      engine.setPattern(genre.sequencer_pattern, true);
+      engine.setBpm(genre.default_bpm || 120);
+      applyAudioMutes(engine, mode, genre);
+      await engine.play();
+      setPlayingId(genre.id);
+      setPlayingMode(mode);
+    } finally {
+      setStartingAuditionKey(null);
+    }
   };
 
   const handleRemoveGenre = (id: string) => {
@@ -470,6 +516,49 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
   const currentPlayingGenre = genres.find((g) => g.id === playingId);
 
+  // Loading state while the initial genre catalog resolves (U-08)
+  if (genresLoadState === "loading") {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 space-y-4" aria-busy="true">
+        <p className="flex items-center gap-2 text-sm text-text-sub">
+          <Loader2 className="w-4 h-4 animate-spin text-accent shrink-0" />
+          <span>{t("compare_loading")}</span>
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton variant="card" aria-label={t("compare_loading")} />
+          <Skeleton variant="card" aria-label={t("compare_loading")} />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state when the genre catalog could not be resolved (U-08)
+  if (genresLoadState === "error") {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4">
+        <ErrorState
+          title={t("compare_load_error_title")}
+          description={t("compare_load_error_desc")}
+          retryLabel={t("retry")}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
+      </div>
+    );
+  }
+
+  // Empty state when there is nothing to compare (U-08)
+  if (genres.length === 0) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4">
+        <EmptyState
+          icon={<Columns className="w-6 h-6" />}
+          title={t("compare_empty_title")}
+          description={t("compare_empty_desc")}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 space-y-6">
       {/* Top Header & Toolbar */}
@@ -499,14 +588,21 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     handleStartSyncPlayback();
                   }
                 }}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all shadow-sm active:scale-95 ${
+                disabled={isSyncStarting || startingAuditionKey !== null}
+                aria-busy={isSyncStarting}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${
                   isSyncPlaying
                     ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_12px_rgba(245,183,61,0.25)]"
                     : "bg-[#1c1e24] hover:bg-[#252830] border-[#2b2e38] hover:border-amber-500/40 text-accent"
                 }`}
                 title={t("compare_sync_title")}
               >
-                {isSyncPlaying ? (
+                {isSyncStarting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-accent shrink-0" />
+                    <span className="truncate max-w-[120px] whitespace-nowrap">{t("compare_starting")}</span>
+                  </>
+                ) : isSyncPlaying ? (
                   <>
                     <Square className="w-4 h-4 fill-current text-amber-300 shrink-0" />
                     <span className="truncate max-w-[120px] whitespace-nowrap">{t("sync_stop")}</span>
@@ -1256,14 +1352,21 @@ export const CompareView: React.FC<CompareViewProps> = ({
                       {/* Audition Drums Only Button */}
                       <button
                         onClick={() => handlePlayMode(genre, "drums")}
-                        className={`flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all border shadow-sm ${
+                        disabled={startingAuditionKey !== null || isSyncStarting}
+                        aria-busy={startingAuditionKey === `${genre.id}:drums`}
+                        className={`flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all border shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                           isCurrentPlaying && playingMode === "drums"
                             ? "bg-accent text-black border-accent shadow-[0_0_15px_rgba(245,183,61,0.4)]"
                             : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-accent/50"
                         }`}
                         title={t("compare_audition_drums_title")}
                       >
-                        {isCurrentPlaying && playingMode === "drums" ? (
+                        {startingAuditionKey === `${genre.id}:drums` ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+                            <span>{t("compare_starting")}</span>
+                          </>
+                        ) : isCurrentPlaying && playingMode === "drums" ? (
                           <>
                             <Square className="w-3.5 h-3.5 fill-current" />
                             <span>{t("compare_stop_drums")}</span>
@@ -1284,14 +1387,21 @@ export const CompareView: React.FC<CompareViewProps> = ({
                       {/* Audition Full Band Button */}
                       <button
                         onClick={() => handlePlayMode(genre, "full")}
-                        className={`flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all border shadow-sm ${
+                        disabled={startingAuditionKey !== null || isSyncStarting}
+                        aria-busy={startingAuditionKey === `${genre.id}:full`}
+                        className={`flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all border shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                           isCurrentPlaying && playingMode === "full"
                             ? "bg-accent text-black border-accent shadow-[0_0_15px_rgba(245,183,61,0.4)]"
                             : "bg-[#181a22] hover:bg-[#222530] text-[#e0ded8] border-[#2c303c] hover:border-accent/50"
                         }`}
                         title={t("compare_audition_full_title")}
                       >
-                        {isCurrentPlaying && playingMode === "full" ? (
+                        {startingAuditionKey === `${genre.id}:full` ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+                            <span>{t("compare_starting")}</span>
+                          </>
+                        ) : isCurrentPlaying && playingMode === "full" ? (
                           <>
                             <Square className="w-3.5 h-3.5 fill-current" />
                             <span>{t("compare_stop_full")}</span>
