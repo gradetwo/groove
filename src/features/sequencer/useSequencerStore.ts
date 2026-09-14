@@ -81,6 +81,22 @@ export type SequencerAction =
   | { type: "LOAD_CHORDS"; chords: ChordDefinition[] }
   | { type: "LOAD_ARPEGGIATED_SEQUENCE"; baked: BakedArpeggioResult }
   | { type: "LOAD_MASTERCLASS_PATTERN"; pattern: SequencerPattern; bpm?: number; timeSignature?: string }
+  | {
+      type: "LOAD_PROJECT";
+      genre: Genre;
+      patterns: { A: SequencerPattern; B: SequencerPattern };
+      activeSlot: "A" | "B";
+      bpm: number;
+      swing: number;
+      timeSignature: string;
+      resolution: "1/8" | "1/16" | "1/32";
+      stepCount: number;
+      songMode?: boolean;
+      songChain?: ("A" | "B")[];
+      loopRange?: [number, number] | null;
+      isMetronome?: boolean;
+      isCountIn?: boolean;
+    }
   | { type: "SWITCH_PATTERN_SLOT"; slot: "A" | "B" }
   | { type: "COPY_PATTERN_SLOT"; from: "A" | "B"; to: "A" | "B" }
   | { type: "TOGGLE_SONG_MODE" }
@@ -747,6 +763,35 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
       };
     }
 
+    case "LOAD_PROJECT": {
+      const activeSlot = action.activeSlot || "A";
+      const patA = clonePattern(action.patterns.A);
+      const patB = clonePattern(action.patterns.B || action.patterns.A);
+      const currentPattern = activeSlot === "B" ? clonePattern(patB) : clonePattern(patA);
+      return {
+        ...state,
+        currentGenre: action.genre,
+        pattern: currentPattern,
+        patterns: {
+          A: patA,
+          B: patB,
+        },
+        activeSlot,
+        bpm: action.bpm,
+        swing: action.swing,
+        timeSignature: action.timeSignature,
+        resolution: action.resolution,
+        stepCount: action.stepCount,
+        songMode: Boolean(action.songMode),
+        songChain: action.songChain || ["A", "B"],
+        loopRange: action.loopRange !== undefined ? action.loopRange : null,
+        isMetronome: Boolean(action.isMetronome),
+        isCountIn: Boolean(action.isCountIn),
+        canUndo: false,
+        canRedo: false,
+      };
+    }
+
     case "SET_LOOP_RANGE":
       return { ...state, loopRange: action.range };
 
@@ -832,7 +877,11 @@ export function useSequencerStore(initialGenre: Genre) {
 
   const commit = useCallback(
     (action: SequencerAction, recordHistory = true) => {
-      if (recordHistory) {
+      if (action.type === "LOAD_PROJECT") {
+        historyRef.current = [];
+        futureRef.current = [];
+        recordHistory = false;
+      } else if (recordHistory) {
         historyRef.current.push(createSnapshot());
         if (historyRef.current.length > 50) {
           historyRef.current.shift();

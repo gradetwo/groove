@@ -21,8 +21,16 @@ import { Toolbar, MobileEditMode } from "../components/sequencer/Toolbar";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { MasterAnalyzerSuite } from "../components/analyzer/MasterAnalyzerSuite";
+import { ProjectHubModal } from "../components/sequencer/ProjectHubModal";
 import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
 import { clearSavedProject } from "../features/sequencer/projectStorage";
+import {
+  getActiveProjectId,
+  getProject,
+  exportProjectToGrooveFile,
+  migrateLegacyLocalStorage,
+} from "../features/sequencer/projectDb";
+import { GrooveProject } from "../types/project";
 import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
@@ -213,6 +221,31 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const lastGenreIdRef = useRef(currentGenre.id);
   const [isRecordArmed, setIsRecordArmed] = useState<boolean>(false);
   const [effectsRackState, setEffectsRackState] = useState<EffectsRackState>(DEFAULT_FX_STATE);
+
+  // Multi-Project Hub State (P7-02)
+  const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
+  const [activeProject, setActiveProject] = useState<GrooveProject | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        await migrateLegacyLocalStorage();
+        const activeId = getActiveProjectId();
+        if (activeId) {
+          const proj = await getProject(activeId);
+          if (proj && isMounted) {
+            setActiveProject(proj);
+          }
+        }
+      } catch (e) {
+        console.warn("[StudioView] Failed to initialize active project:", e);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Pointer drag painting & event delegation refs (P2-02 & P2-05)
   const isPointerDownRef = useRef(false);
@@ -822,7 +855,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
         e.preventDefault();
         handleTogglePlay();
       } else if (e.key === "Escape") {
-        if (stepContextMenu) {
+        if (isProjectHubOpen) {
+          setIsProjectHubOpen(false);
+        } else if (stepContextMenu) {
           setStepContextMenu(null);
         } else if (pitchPicker.isOpen) {
           setPitchPicker((prev) => ({ ...prev, isOpen: false }));
@@ -836,6 +871,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
           e.preventDefault();
           setIsEditorMaximized(false);
         }
+      } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setIsProjectHubOpen((prev) => !prev);
       } else if ((e.key === "d" || e.key === "D") && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         handleToggleDrumsOnly();
@@ -879,6 +917,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       window.removeEventListener("click", handleGlobalClick);
     };
   }, [
+    isProjectHubOpen,
     stepContextMenu,
     pitchPicker.isOpen,
     isEuclideanOpen,
@@ -1097,7 +1136,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Quick actions
   const handleQuickAction = useCallback(
-    (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved") => {
+    (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved" | "open_hub") => {
+      if (action === "open_hub") {
+        setIsProjectHubOpen(true);
+        return;
+      }
       if (action === "dup_bar1") {
         const next = clonePattern(pattern);
         next.tracks.forEach((t) => {
@@ -1184,6 +1227,113 @@ export const StudioView: React.FC<StudioViewProps> = ({
       showToast(isZh ? `Ableton 工程导出失败: ${err?.message || err}` : `Ableton export failed: ${err?.message || err}`);
     }
   }, [bpm, pattern, currentGenre.name, isZh, showToast]);
+
+  const handleExportGroove = useCallback(() => {
+    const projToExport: GrooveProject = activeProject
+      ? {
+          ...activeProject,
+          genreId: currentGenre.id,
+          genreName: currentGenre.name,
+          bpm,
+          swing,
+          timeSignature,
+          resolution,
+          stepCount,
+          patterns: {
+            A: seqState.activeSlot === "A" ? pattern : seqState.patterns.A,
+            B: seqState.activeSlot === "B" ? pattern : seqState.patterns.B,
+          },
+          activeSlot: seqState.activeSlot,
+          songMode: seqState.songMode,
+          songChain: seqState.songChain,
+          loopRange: seqState.loopRange,
+          effectsRack: effectsRackState,
+          drumKit,
+          isMetronome: seqState.isMetronome,
+          isCountIn: seqState.isCountIn,
+          updatedAt: Date.now(),
+        }
+      : {
+          id: `proj_${Date.now()}`,
+          name: `${currentGenre.name} Session`,
+          genreId: currentGenre.id,
+          genreName: currentGenre.name,
+          bpm,
+          swing,
+          timeSignature,
+          resolution,
+          stepCount,
+          patterns: {
+            A: seqState.activeSlot === "A" ? pattern : seqState.patterns.A,
+            B: seqState.activeSlot === "B" ? pattern : seqState.patterns.B,
+          },
+          activeSlot: seqState.activeSlot,
+          songMode: seqState.songMode,
+          songChain: seqState.songChain,
+          loopRange: seqState.loopRange,
+          effectsRack: effectsRackState,
+          drumKit,
+          isMetronome: seqState.isMetronome,
+          isCountIn: seqState.isCountIn,
+          tags: [currentGenre.name, "Exported"],
+          isFavorite: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+    exportProjectToGrooveFile(projToExport);
+    showToast(isZh ? `已导出 .groove 工程包: ${projToExport.name} ✓` : `Exported .groove: ${projToExport.name} ✓`);
+  }, [
+    activeProject,
+    currentGenre,
+    bpm,
+    swing,
+    timeSignature,
+    resolution,
+    stepCount,
+    seqState,
+    pattern,
+    effectsRackState,
+    drumKit,
+    showToast,
+    isZh,
+  ]);
+
+  const handleLoadProject = useCallback(
+    (project: GrooveProject) => {
+      setActiveProject(project);
+      const genre = GENRES_MAP[project.genreId] || currentGenre;
+      commit({
+        type: "LOAD_PROJECT",
+        genre,
+        patterns: project.patterns,
+        activeSlot: project.activeSlot,
+        bpm: project.bpm,
+        swing: project.swing,
+        timeSignature: project.timeSignature,
+        resolution: project.resolution,
+        stepCount: project.stepCount,
+        songMode: project.songMode,
+        songChain: project.songChain,
+        loopRange: project.loopRange,
+        isMetronome: project.isMetronome,
+        isCountIn: project.isCountIn,
+      });
+
+      if (project.drumKit) {
+        setDrumKit(project.drumKit);
+      }
+      if (project.effectsRack) {
+        setEffectsRackState(project.effectsRack);
+      }
+
+      if (engineRef.current) {
+        const activePat = project.activeSlot === "B" ? project.patterns.B : project.patterns.A;
+        engineRef.current.setPattern(activePat);
+      }
+    },
+    [commit, currentGenre]
+  );
 
   const handleExportWav = useCallback(async () => {
     try {
@@ -1521,6 +1671,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
             onQuickAction={handleQuickAction}
             onExportMidi={handleExportMidi}
             onExportAls={handleExportAls}
+            onExportGroove={handleExportGroove}
+            activeProjectName={activeProject?.name}
+            onOpenProjectHub={() => setIsProjectHubOpen(true)}
             onExportWav={handleExportWav}
             onExportStems={handleExportStems}
             isExportingAudio={isExportingAudio}
@@ -1825,6 +1978,32 @@ export const StudioView: React.FC<StudioViewProps> = ({
           }}
         />
       )}
+
+      {/* Multi-Project Hub Modal (P7-02) */}
+      <ProjectHubModal
+        isOpen={isProjectHubOpen}
+        onClose={() => setIsProjectHubOpen(false)}
+        currentGenre={currentGenre}
+        currentPatterns={{
+          A: seqState.activeSlot === "A" ? pattern : seqState.patterns.A,
+          B: seqState.activeSlot === "B" ? pattern : seqState.patterns.B,
+        }}
+        activeSlot={seqState.activeSlot}
+        bpm={bpm}
+        swing={swing}
+        timeSignature={timeSignature}
+        resolution={resolution}
+        stepCount={stepCount}
+        songMode={seqState.songMode}
+        songChain={seqState.songChain}
+        loopRange={seqState.loopRange}
+        effectsRackState={effectsRackState}
+        drumKit={drumKit}
+        isMetronome={seqState.isMetronome}
+        isCountIn={seqState.isCountIn}
+        onLoadProject={handleLoadProject}
+        onToast={showToast}
+      />
 
       {/* Step Context Menu (P-Locks) */}
       {stepContextMenu && (

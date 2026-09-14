@@ -25,6 +25,7 @@ import {
   Disc3,
   Activity,
   Layers,
+  FolderKanban,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -73,11 +74,14 @@ export interface ToolbarProps {
   onToggleMaximize: () => void;
   onToggleSidebar: () => void;
   onToggleAdvancedControls: () => void;
-  onQuickAction: (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved") => void;
+  onQuickAction: (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved" | "open_hub") => void;
   onExportMidi: () => void;
   onExportAls?: () => void;
+  onExportGroove?: () => void;
   onExportWav?: () => void;
   onExportStems?: () => void;
+  activeProjectName?: string;
+  onOpenProjectHub?: () => void;
   isExportingAudio?: boolean;
   onImportMidi?: (file: File) => void;
   onInspireMe?: () => void;
@@ -160,8 +164,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onQuickAction,
   onExportMidi,
   onExportAls,
+  onExportGroove,
   onExportWav,
   onExportStems,
+  activeProjectName,
+  onOpenProjectHub,
   isExportingAudio = false,
   onImportMidi,
   onInspireMe,
@@ -737,6 +744,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               <option value="" disabled className="bg-panel text-text-sub">
                 ⚡ {isZh ? "操作..." : "Tools..."}
               </option>
+              <option value="open_hub" className="bg-panel text-accent font-bold">
+                📁 {isZh ? "工程管理中心 (P)" : "Project Hub (P)"}
+              </option>
               <option value="dup_bar1" className="bg-panel text-text">
                 📋 {isZh ? "复制小节1至整段" : "Duplicate Bar 1"}
               </option>
@@ -817,6 +827,22 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             </button>
           )}
 
+          {/* Multi-Project Hub Button (P7-02) */}
+          {onOpenProjectHub && (
+            <button
+              type="button"
+              onClick={onOpenProjectHub}
+              className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+              title={isZh ? "工程管理中心 (快捷键: P)" : "Project Hub (Shortcut: P)"}
+              aria-label={isZh ? "工程管理中心" : "Project Hub"}
+            >
+              <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
+              <span className="hidden lg:inline max-w-[90px] xl:max-w-[120px] truncate text-text font-medium">
+                {activeProjectName || (isZh ? "工程" : "Projects")}
+              </span>
+            </button>
+          )}
+
           {/* Export Menu Dropdown (P4-01 & P4-02: MIDI, Master WAV, and Stems ZIP) */}
           <div className="relative shrink-0" ref={exportMenuRef}>
             <button
@@ -864,6 +890,20 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     <div className="flex flex-col">
                       <span className="font-medium text-text">{isZh ? "导出 Ableton 工程" : "Export Ableton Set"}</span>
                       <span className="text-[10px] text-text-dim">.als (8 轨独立 MIDI Clip)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onExportGroove?.();
+                      setExportOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+                  >
+                    <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-text">{isZh ? "导出 .groove 工程包" : "Export .groove Set"}</span>
+                      <span className="text-[10px] text-text-dim">.groove (离线全工程数据)</span>
                     </div>
                   </button>
                 </div>

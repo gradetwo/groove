@@ -1,7 +1,7 @@
 {
   "name": "groove-music-genre-learning",
   "private": true,
-  "version": "1.15.1",
+  "version": "1.15.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -41,6 +41,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
     "postcss": "^8.4.49",
     "prettier": "^3.9.6",

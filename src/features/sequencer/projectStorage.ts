@@ -44,8 +44,11 @@ export function debounceSaveProject(project: Omit<PersistedProject, "version" | 
   }, 500);
 }
 
+import { getActiveProjectId, getProject, saveProject } from "./projectDb";
+export * from "./projectDb";
+
 /**
- * Saves project state immediately to localStorage
+ * Saves project state immediately to localStorage and syncs to IndexedDB if active project exists
  */
 export function saveProjectImmediate(project: Omit<PersistedProject, "version" | "updatedAt">): void {
   if (typeof window === "undefined") return;
@@ -56,6 +59,31 @@ export function saveProjectImmediate(project: Omit<PersistedProject, "version" |
       updatedAt: Date.now(),
     };
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(payload));
+
+    const activeId = getActiveProjectId();
+    if (activeId) {
+      getProject(activeId).then((existing) => {
+        if (existing) {
+          saveProject({
+            ...existing,
+            genreId: project.genreId,
+            bpm: project.bpm,
+            swing: project.swing,
+            timeSignature: project.timeSignature,
+            resolution: project.resolution,
+            stepCount: project.stepCount,
+            patterns: project.patterns,
+            activeSlot: project.activeSlot,
+            songMode: project.songMode,
+            songChain: project.songChain,
+            loopRange: project.loopRange,
+            isMetronome: project.isMetronome,
+            isCountIn: project.isCountIn,
+            updatedAt: payload.updatedAt,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   } catch (e) {
     console.warn("[projectStorage] Failed to save project:", e);
   }
