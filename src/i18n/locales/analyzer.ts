@@ -67,4 +67,63 @@ export const analyzerMessages = {
     zh: "进入 Studio 实时母带监测",
     en: "Monitor Studio Output",
   },
+  // ---------------------------------------------------------------------------
+  // MasterAnalyzerSuite.tsx
+  // ---------------------------------------------------------------------------
+  analyzer_suite_badge: {
+    zh: "全景声谱分析仪",
+    en: "PANORAMIC ANALYZER",
+  },
+  analyzer_suite_split_title: {
+    zh: "双重视图 (瀑布流 + 李萨如)",
+    en: "Dual Split View",
+  },
+  analyzer_suite_split: {
+    zh: "双联分屏",
+    en: "Split",
+  },
+  analyzer_suite_spectrogram_title: {
+    zh: "高精瀑布流频谱图",
+    en: "Waterfall Spectrogram",
+  },
+  analyzer_suite_spectrogram: {
+    zh: "瀑布谱",
+    en: "FFT",
+  },
+  analyzer_suite_lissajous_title: {
+    zh: "李萨如图立体声示波器",
+    en: "Lissajous Phase Scope",
+  },
+  analyzer_suite_lissajous: {
+    zh: "李萨如",
+    en: "Phase",
+  },
+  analyzer_suite_oscilloscope_title: {
+    zh: "双轨时域波形示波器",
+    en: "Waveform Oscilloscope",
+  },
+  analyzer_suite_oscilloscope: {
+    zh: "波形",
+    en: "Wave",
+  },
+  analyzer_suite_freeze_title: {
+    zh: "冻结当前瞬态波形进行定格分析",
+    en: "Freeze Frame for forensic inspection",
+  },
+  analyzer_suite_peak_title: {
+    zh: "显示音轨峰值驻留点",
+    en: "Toggle peak hold points",
+  },
+  analyzer_suite_restore: {
+    zh: "恢复窗口",
+    en: "Restore",
+  },
+  analyzer_suite_maximize: {
+    zh: "全屏沉浸",
+    en: "Maximize",
+  },
+  analyzer_suite_close_title: {
+    zh: "关闭分析仪",
+    en: "Close",
+  },
 };
