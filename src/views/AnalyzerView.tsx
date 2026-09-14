@@ -111,7 +111,7 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
   externalAnalyserR = null,
   isExternalPlaying = false,
 }) => {
-  const { isZh } = useLanguage();
+  const { t, isZh } = useLanguage();
 
   const generatorRef = useRef<AnalyzerSignalGenerator | null>(null);
   const [internalAnalyser, setInternalAnalyser] = useState<AnalyserNode | null>(null);
@@ -202,7 +202,7 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
         <div className="flex flex-col gap-1.5 max-w-3xl">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-full bg-accent/15 border border-accent/30 text-accent font-['JetBrains_Mono'] text-xs font-bold">
-              {isZh ? "声学分析工作台" : "ACOUSTIC WORKSTATION"}
+              {t("analyzer_badge_workstation")}
             </span>
             <span className="text-text-dim text-xs font-['JetBrains_Mono']">
               Phase 6 · P6-05
@@ -210,17 +210,15 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
             {isUsingExternal && (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-['JetBrains_Mono'] font-bold animate-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                {isZh ? "正在监测 Studio 音序器输出" : "Monitoring Studio Output"}
+                {t("analyzer_monitoring_studio")}
               </span>
             )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-text tracking-tight font-['Space_Grotesk']">
-            {isZh ? "全景声谱分析仪与李萨如图示波器" : "Panoramic Spectrogram & Lissajous Phase Scope"}
+            {t("analyzer_title")}
           </h1>
           <p className="text-sm text-text-sub leading-relaxed">
-            {isZh
-              ? "提供 60fps 实时对数瀑布流频率谱图（20Hz - 20kHz）与 45° 旋转立体声李萨如测角仪。支持实时相位相关系数（r）监测、单声道兼容性警报与内置声学参考信号发生器。"
-              : "High-precision 60fps logarithmic waterfall spectrogram (20Hz - 20kHz) & 45° rotated Lissajous goniometer. Real-time phase correlation (r) detection, mono compatibility alerts, and built-in acoustic test signals."}
+            {t("analyzer_page_desc")}
           </p>
         </div>
 
@@ -230,7 +228,7 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
             onClick={onOpenStudio}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-[#0a0b0d] font-bold text-sm hover:brightness-110 shadow-[0_0_16px_rgba(245,183,61,0.25)] transition-all shrink-0"
           >
-            <span>{isZh ? "进入 Studio 实时监测" : "Open Studio Monitor"}</span>
+            <span>{t("analyzer_open_studio_monitor")}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         )}
@@ -252,10 +250,10 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
           <div className="flex items-center gap-2">
             <Volume2 className="w-4 h-4 text-accent" />
             <h2 className="font-bold text-base text-text">
-              {isZh ? "内置声学参考测试信号发生器" : "Acoustic Test Signal Generator"}
+              {t("analyzer_signal_gen_heading")}
             </h2>
             <span className="text-xs text-text-dim font-['JetBrains_Mono']">
-              {isZh ? "(点击立即试听并观察声学响应)" : "(Click to audition & observe)"}
+              {t("analyzer_signal_gen_hint")}
             </span>
           </div>
 
@@ -265,7 +263,7 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 font-['JetBrains_Mono'] text-xs font-bold hover:bg-red-500/25 transition-colors"
             >
               <Square className="w-3 h-3 fill-current" />
-              <span>{isZh ? "停止发声" : "Mute Signal"}</span>
+              <span>{t("analyzer_stop_signal")}</span>
             </button>
           )}
         </div>
@@ -316,7 +314,7 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
 
                 <div className="mt-3 pt-2.5 border-t border-white/5 flex items-start gap-1.5 text-[11px] text-text-dim">
                   <span className="text-accent font-bold shrink-0">
-                    {isZh ? "观测预期:" : "Observation:"}
+                    {t("analyzer_observation_label")}
                   </span>
                   <span className="leading-normal">
                     {isZh ? sig.expectedZh : sig.expectedEn}
@@ -334,12 +332,10 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
         <div className="flex flex-col gap-2.5 bg-panel p-5 rounded-2xl border border-line">
           <div className="flex items-center gap-2 text-accent font-bold text-sm">
             <Radio className="w-4 h-4" />
-            <h3>{isZh ? "傅里叶变换与对数瀑布流 (FFT Mechanics)" : "Fourier Transform & FFT Mechanics"}</h3>
+            <h3>{t("analyzer_card_fft_title")}</h3>
           </div>
           <p className="text-xs text-text-sub leading-relaxed">
-            {isZh
-              ? "快速傅里叶变换 (FFT) 将时域连续振动信号离散化为 1024 个频段的能量切片。人耳耳蜗基底膜感知音高呈对数尺度分布（每跨越一个八度频宽翻倍），因此分析仪采用 20Hz - 20,000Hz 对数横轴，完美匹配音乐音阶分布。"
-              : "Fast Fourier Transform (FFT) decomposes time-domain signals into discrete frequency bins. Because human cochlear hearing perceives pitch logarithmically (frequency doubles per octave), our analyzer maps 20Hz - 20,000Hz on a logarithmic scale matching musical intervals."}
+            {t("analyzer_card_fft_desc")}
           </p>
           <div className="bg-[#0f1118] p-3 rounded-lg border border-white/5 text-[11px] font-['JetBrains_Mono'] text-text-dim">
             <code>f(x) = f_min · (f_max / f_min)^(x / width) · 20Hz ~ 20kHz</code>
@@ -350,12 +346,10 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
         <div className="flex flex-col gap-2.5 bg-panel p-5 rounded-2xl border border-line">
           <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm">
             <Waves className="w-4 h-4" />
-            <h3>{isZh ? "李萨如图与 45° 旋转测角仪 (Lissajous & Phase Scope)" : "Lissajous & 45° Goniometer"}</h3>
+            <h3>{t("analyzer_card_lissajous_title")}</h3>
           </div>
           <p className="text-xs text-text-sub leading-relaxed">
-            {isZh
-              ? "经典立体声测角仪通过 45° 坐标旋转，将左声道 (L) 与右声道 (R) 转化为中置单声道 (Mid = L+R) 与侧向差分 (Side = L-R)。纯单声道信号在垂直 Y 轴呈现紧致细线，宽广立体声展开为椭圆云团，极端反相呈现水平展开。"
-              : "Standard audio goniometers apply a 45° rotation to decompose L and R into Mid (L+R) and Side (L-R). Mono signals form a razor-sharp vertical spine on the Y axis, balanced stereo forms an upright elliptical cloud, and anti-phase expands horizontally."}
+            {t("analyzer_card_lissajous_desc")}
           </p>
           <div className="bg-[#0f1118] p-3 rounded-lg border border-white/5 text-[11px] font-['JetBrains_Mono'] text-text-dim">
             <code>Mid = (L + R) / √2 (垂直轴) | Side = (L - R) / √2 (水平轴)</code>
@@ -366,12 +360,10 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
         <div className="flex flex-col gap-2.5 bg-panel p-5 rounded-2xl border border-line">
           <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
             <AlertTriangle className="w-4 h-4" />
-            <h3>{isZh ? "相位相关系数 (r) 与梳状滤波 (Comb Filtering)" : "Phase Correlation (r) & Comb Filtering"}</h3>
+            <h3>{t("analyzer_card_phase_title")}</h3>
           </div>
           <p className="text-xs text-text-sub leading-relaxed">
-            {isZh
-              ? "皮尔逊相位相关系数 r 范围在 -1.0 到 +1.0 之间。当 r > +0.5 时混音具有出色的单声道兼容性。如果 r < 0，左右声道相位冲突，在夜店单声道超重低音炮或手机单扬声器播放时，低频声波将相互抵消消失！"
-              : "Pearson phase correlation r ranges from -1.0 to +1.0. When r > +0.5, mono compatibility is rock solid. When r < 0, anti-phase cancellation causes basslines and drums to completely vanish on club mono subwoofers and mobile phone speakers!"}
+            {t("analyzer_card_phase_desc")}
           </p>
           <div className="flex items-center gap-2 text-[11px] font-['JetBrains_Mono']">
             <span className="text-red-400 font-bold">r &lt; 0: 严重抵消</span>
@@ -384,7 +376,7 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
         <div className="flex flex-col gap-2.5 bg-panel p-5 rounded-2xl border border-line">
           <div className="flex items-center gap-2 text-fuchsia-400 font-bold text-sm">
             <Sliders className="w-4 h-4" />
-            <h3>{isZh ? "混音黄金七频段法则 (The 7 Acoustic Bands)" : "The 7 Acoustic Frequency Bands"}</h3>
+            <h3>{t("analyzer_card_bands_title")}</h3>
           </div>
           <div className="grid grid-cols-2 gap-1.5 text-[11px] font-['JetBrains_Mono']">
             {FREQUENCY_BANDS.slice(0, 6).map((b) => (
@@ -396,9 +388,7 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
             ))}
           </div>
           <p className="text-xs text-text-sub leading-relaxed mt-1">
-            {isZh
-              ? "底鼓与 808 避开 60Hz 频点对冲；军鼓箱体稳固在 200-250Hz；踩镲与扫频混响延伸至 10kHz+ 展现顶级空气光泽。"
-              : "Kick and 808 carve out space around 60Hz; snare body anchors at 200-250Hz; hi-hats and air sheens shimmer at 10kHz+."}
+            {t("analyzer_card_bands_desc")}
           </p>
         </div>
       </section>
