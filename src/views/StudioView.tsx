@@ -1,20 +1,16 @@
 import React, { useState, useRef, useMemo } from "react";
-import { Check } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { useLanguage } from "../i18n/LanguageContext";
-import { VelocityLane } from "../components/sequencer/VelocityLane";
-import { EuclideanModal } from "../components/sequencer/EuclideanModal";
-import { PitchPickerModal } from "../components/sequencer/PitchPickerModal";
-import { Ruler } from "../components/sequencer/Ruler";
-import { TrackRow } from "../components/sequencer/TrackRow";
-import { Toolbar, MobileEditMode } from "../components/sequencer/Toolbar";
+import { MobileEditMode } from "../components/sequencer/Toolbar";
+import { ToastBanner } from "../components/sequencer/ToastBanner";
+import { StepContextMenu } from "../components/sequencer/StepContextMenu";
+import { SequencerPanel } from "../components/sequencer/SequencerPanel";
+import { SequencerModals } from "../components/sequencer/SequencerModals";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
-import { MasterAnalyzerSuite } from "../components/analyzer/MasterAnalyzerSuite";
-import { ProjectHubModal } from "../components/sequencer/ProjectHubModal";
-import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
+import { useSequencerStore } from "../features/sequencer/useSequencerStore";
 import { useToast } from "../features/sequencer/hooks/useToast";
 import { useGenreSwitching } from "../features/sequencer/hooks/useGenreSwitching";
 import { useUrlShareLoad } from "../features/sequencer/hooks/useUrlShareLoad";
@@ -40,19 +36,11 @@ import { usePanelToggles } from "../features/sequencer/hooks/usePanelToggles";
 import { ChordDefinition } from "../utils/chordTheory";
 import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { calculateGroupSize, calculateStepsPerBar } from "../utils/meter";
-import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
+import { getDefaultDrumKitForGenre } from "../utils/trackUtils";
 
-// Color mappings matching demo design
-export const DEMO_TRACKS_CONFIG = [
-  { id: "kick", name: "KICK", sub: { zh: "底鼓", en: "Kick" }, color: "#ff5964" },
-  { id: "snare", name: "SNARE", sub: { zh: "军鼓/拍手", en: "Snare/Clap" }, color: "#ffb65c" },
-  { id: "hat", name: "HI-HAT", sub: { zh: "踩镲", en: "Hi-Hat" }, color: "#45e0c9" },
-  { id: "perc", name: "PERC", sub: { zh: "打击乐", en: "Percussion" }, color: "#c8e06a" },
-  { id: "bass", name: "808 BASS", sub: { zh: "贝斯", en: "Bass" }, color: "#ff8a5c" },
-  { id: "chord", name: "CHORD", sub: { zh: "和弦", en: "Chords" }, color: "#f06ec4" },
-  { id: "lead", name: "LEAD", sub: { zh: "主音", en: "Lead" }, color: "#7ee787" },
-  { id: "fx", name: "FX", sub: { zh: "效果", en: "FX" }, color: "#9aa5ce" },
-];
+// A-02: the track colour/name mapping moved to components/sequencer/trackConfig.
+// Re-exported here so this module's public surface is unchanged.
+export { DEMO_TRACKS_CONFIG } from "../components/sequencer/trackConfig";
 
 interface StudioViewProps {
   selectedGenre?: Genre;
@@ -476,13 +464,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   return (
     <div className="w-full text-text" style={{ ["--g" as any]: genreAccent }}>
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-50 bg-[#1a1c22] border border-line text-text px-4 py-2.5 rounded-lg text-xs font-mono shadow-[0_8px_30px_rgba(0,0,0,0.6)] flex items-center gap-2">
-          <Check className="w-3.5 h-3.5 text-accent" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      <ToastBanner message={toastMessage} />
 
       {/* Genre Rail Wrapper (.rail-wrap) */}
       <GenreRail
@@ -520,434 +502,156 @@ export const StudioView: React.FC<StudioViewProps> = ({
         )}
 
         {/* Right Column: The Sequencer (.seq) */}
-        <section
-          className={
-            isEditorMaximized
-              ? "fixed inset-0 z-50 overflow-y-auto bg-bg p-2.5 sm:p-3.5 flex flex-col"
-              : "bg-panel border border-line rounded-2xl p-3 sm:p-4 min-w-0 order-1 lg:order-2 shadow-2xl"
-          }
-          style={isEditorMaximized ? {
-            paddingTop: "max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.375rem))",
-            paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))",
-            paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
-            paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
-          } : undefined}
-        >
-          {/* Sequencer Unified Toolbar */}
-          <Toolbar
-            isPlaying={isPlaying}
-            bpm={bpm}
-            swing={swing}
-            timeSignature={timeSignature}
-            resolution={resolution}
-            stepCount={stepCount}
-            barCount={barCount}
-            viewedBar={viewedBar}
-            mobileEditMode={mobileEditMode}
-            showAdvancedControls={showAdvancedControls}
-            isVelocityLaneOpen={isVelocityLaneOpen}
-            isSidebarCollapsed={isSidebarCollapsed}
-            isEditorMaximized={isEditorMaximized}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            genreName={currentGenre.name}
-            genreAccent={genreAccent}
-            isZh={isZh}
-            stepsPerBar={stepsPerBar}
-            groupSize={groupSize}
-            activeSlot={seqState.activeSlot}
-            songMode={seqState.songMode}
-            blindCompare={seqState.blindTestMode}
-            isMetronome={seqState.isMetronome}
-            isCountIn={seqState.isCountIn}
-            drumKit={drumKit}
-            onChangeDrumKit={handleChangeDrumKit}
-            isDrumsOnly={isDrumsOnly}
-            onToggleDrumsOnly={handleToggleDrumsOnly}
-            isRecordArmed={isRecordArmed}
-            onToggleRecordArmed={handleToggleRecordArmed}
-            effectsRackState={effectsRackState}
-            onChangeEffectsRack={handleChangeEffectsRack}
-            onTogglePlay={handleTogglePlay}
-            onChangeBpm={handleChangeBpm}
-            onChangeSwing={handleChangeSwing}
-            onChangeTimeSignature={handleChangeTimeSignature}
-            onChangeResolution={handleChangeResolution}
-            onChangeStepCount={handleChangeStepCount}
-            onChangeMobileEditMode={setMobileEditMode}
-            onSelectBar={scrollToBar}
-            onToggleVelocityLane={handleToggleVelocityLane}
-            onOpenEuclidean={handleOpenEuclidean}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onToggleMaximize={handleToggleMaximize}
-            onToggleSidebar={handleToggleSidebar}
-            onToggleAdvancedControls={handleToggleAdvancedControls}
-            onQuickAction={handleQuickAction}
-            onExportMidi={handleExportMidi}
-            onExportAls={handleExportAls}
-            onExportGroove={handleExportGroove}
-            activeProjectName={activeProject?.name}
-            onOpenProjectHub={handleOpenProjectHub}
-            onOpenGenreMaker={onOpenGenreMaker}
-            onExportWav={handleExportWav}
-            onExportStems={handleExportStems}
-            isExportingAudio={isExportingAudio}
-            onImportMidi={handleImportMidi}
-            onInspireMe={handleInspireMe}
-            isKeyboardMode={isKeyboardMode}
-            onToggleKeyboardMode={handleToggleKeyboardMode}
-            midiDeviceCount={midiDevices.length}
-            onShare={handleShare}
-            onAddSteps={handleAddSteps}
-            onRemoveSteps={handleRemoveSteps}
-            onScrollByPixels={scrollByPixels}
-            onSwitchSlot={handleSwitchSlot}
-            onCopySlot={handleCopySlot}
-            onToggleSongMode={handleToggleSongMode}
-            onToggleBlindCompare={handleToggleBlindCompare}
-            onToggleMetronome={handleToggleMetronome}
-            onToggleCountIn={handleToggleCountIn}
-            isAnalyzerOpen={isAnalyzerOpen}
-            onToggleAnalyzer={handleToggleAnalyzer}
-            onTapTempo={handleTapTempo}
-          />
-
-          {/* Master Panoramic Analyzer Dock (P6-05) */}
-          {isAnalyzerOpen && (
-            <div className="w-full my-2">
-              <MasterAnalyzerSuite
-                analyser={engineRef.current?.getMasterAnalyser() || null}
-                analyserL={engineRef.current?.getStereoAnalysers().left || null}
-                analyserR={engineRef.current?.getStereoAnalysers().right || null}
-                isPlaying={isPlaying}
-                onClose={() => setIsAnalyzerOpen(false)}
-              />
-            </div>
-          )}
-
-          {/* 8 Tracks Sequencer Matrix (#tracks) with Event Delegation (P2-02, P2-05, P2-20) */}
-          <div
-            ref={matrixContainerRef}
-            role="grid"
-            aria-label={isZh ? "打击乐与合成器音序步进网格" : "Sequencer Step Matrix Grid"}
-            onPointerDown={handleGridPointerDown}
-            onPointerMove={handleGridPointerMove}
-            onPointerUp={handleGridPointerUp}
-            onPointerCancel={handleGridPointerUp}
-            onContextMenu={handleGridContextMenu}
-            className="w-full space-y-1 overflow-x-auto pb-3 relative custom-sequencer-scroll select-none overscroll-x-contain mt-2"
-          >
-            {/* Playhead Laser Overlay Beam (P2-03) */}
-            <div ref={playheadBeamRef} className="playhead-laser-beam hidden" />
-
-            {/* Step Indicator Ruler Header */}
-            <Ruler
-              stepCount={stepCount}
-              timeSignature={timeSignature}
-              stepsPerBar={stepsPerBar}
-              groupSize={groupSize}
-              isRulerDragging={isRulerDragging}
-              isZh={isZh}
-              loopRange={seqState.loopRange}
-              onSelectLoopRange={handleSelectLoopRange}
-              onPointerDown={handleRulerPointerDown}
-              onPointerMove={handleRulerPointerMove}
-              onPointerUp={handleRulerPointerUp}
-            />
-
-            {/* Track Rows */}
-            {pattern.tracks.map((track, trackIdx) => {
-              const meta = DEMO_TRACKS_CONFIG[trackIdx % DEMO_TRACKS_CONFIG.length];
-              const isSolo = Boolean(track.solo);
-              const isMute = Boolean(track.mute);
-              const isDrum = isDrumTrack(track, trackIdx);
-              const isSilenced = isMute || (anySolo && !isSolo) || (isDrumsOnly && !isDrum);
-              const isHatTrack = track.track_id === "hihat" || track.name.toLowerCase().includes("hat");
-
-              return (
-                <TrackRow
-                  key={track.track_id}
-                  track={track}
-                  trackIdx={trackIdx}
-                  meta={meta}
-                  isSolo={isSolo}
-                  isMute={isMute}
-                  isSilenced={isSilenced}
-                  isHatTrack={isHatTrack}
-                  stepCount={stepCount}
-                  stepsPerBar={stepsPerBar}
-                  groupSize={groupSize}
-                  isVelocityLaneOpen={isVelocityLaneOpen}
-                  isVelocityActiveTrack={velocityActiveTrackIdx === trackIdx}
-                  isZh={isZh}
-                  onAudition={handleAudition}
-                  onCycleLength={handleCycleTrackLength}
-                  onToggleMute={handleToggleTrackMute}
-                  onToggleSolo={handleToggleTrackSolo}
-                  onChangeVolume={handleChangeTrackVolume}
-                  onOpenVelocity={handleOpenVelocityLane}
-                  onShiftTrack={handleShiftTrack}
-                  onSmartFill={handleSmartFillTrack}
-                  onClearTrack={handleClearTrack}
-                  onMoveUp={handleMoveTrackUp}
-                  onMoveDown={handleMoveTrackDown}
-                  canMoveUp={trackIdx > 0}
-                  canMoveDown={trackIdx < pattern.tracks.length - 1}
-                  onChangePan={handleChangeTrackPan}
-                  onChangeSwing={handleChangeTrackSwing}
-                />
-              );
-            })}
-          </div>
-
-          {/* Collapsible Velocity Drawer */}
-          {isVelocityLaneOpen && (
-            <div className="mt-3 pt-3 border-t border-line-subtle">
-              <VelocityLane
-                tracks={pattern.tracks}
-                activeTrackIdx={velocityActiveTrackIdx}
-                dimension={seqState.parameterDimension}
-                onSelectDimension={handleSelectParameterDimension}
-                onSelectTrack={handleSelectVelocityTrack}
-                onUpdateVelocity={handleUpdateVelocity}
-                onBatchUpdateVelocity={handleBatchUpdateVelocity}
-                onUpdateProbability={handleUpdateProbability}
-                onBatchUpdateProbability={handleBatchUpdateProbability}
-                onUpdateRatchet={handleUpdateRatchet}
-                onBatchUpdateRatchet={handleBatchUpdateRatchet}
-                onUpdateGate={handleUpdateGate}
-                onBatchUpdateGate={handleBatchUpdateGate}
-                onClose={handleCloseVelocityLane}
-                currentStep={-1}
-                isPlaying={isPlaying}
-                language={language}
-                stepCount={stepCount}
-                stepsPerBar={stepsPerBar}
-                groupSize={groupSize}
-                tracksConfig={DEMO_TRACKS_CONFIG}
-              />
-            </div>
-          )}
-
-          {/* Bottom Hint Note */}
-          <div className="mt-3.5 font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-[0.04em] leading-relaxed border-t border-line-subtle pt-3 flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {isTouchDevice ? (
-                isZh ? (
-                  <span>
-                    <strong className="text-accent font-bold">📱 触控/移动端操作：</strong> 点按步进开/关 · 长按步进调出参数锁 (P-Locks) · 顶部步进工具栏切换重音/连音/音高模式 · 点按轨道名试听音色 · 左右滑动浏览小节
-                  </span>
-                ) : (
-                  <span>
-                    <strong className="text-accent font-bold">📱 Touch & Mobile:</strong> Tap step to toggle · Long-press for P-Locks · Switch Tool Mode ribbon for accent/ratchet/pitch · Tap track name to audition · Swipe to scroll bars
-                  </span>
-                )
-              ) : (
-                isZh ? (
-                  <span>
-                    <strong className="text-accent font-bold">💡 桌面快捷操作：</strong> 空格键播放/停止 · V 键力度抽屉 · E 键欧几里得 · Ctrl/Cmd+Z 撤销 · 左右拖拽直接涂抹步进 · 滚轮/标尺拖动水平平移
-                  </span>
-                ) : (
-                  <span>
-                    <strong className="text-accent font-bold">💡 Desktop Shortcuts:</strong> Space to Play/Pause · V for Velocity · E for Euclidean · Ctrl/Cmd+Z Undo · Drag to paint steps · Wheel/ruler drag to pan
-                  </span>
-                )
-              )}
-            </div>
-            <div className="text-text-dim text-[9.5px]">
-              Groove v1.7.0 · FL Studio Pattern Engine
-            </div>
-          </div>
-        </section>
+        <SequencerPanel
+          pattern={pattern}
+          seqState={seqState}
+          isPlaying={isPlaying}
+          viewedBar={viewedBar}
+          barCount={barCount}
+          stepsPerBar={stepsPerBar}
+          groupSize={groupSize}
+          anySolo={anySolo}
+          velocityActiveTrackIdx={velocityActiveTrackIdx}
+          isSidebarCollapsed={isSidebarCollapsed}
+          isEditorMaximized={isEditorMaximized}
+          isVelocityLaneOpen={isVelocityLaneOpen}
+          isAnalyzerOpen={isAnalyzerOpen}
+          language={language}
+          isZh={isZh}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          genreName={currentGenre.name}
+          genreAccent={genreAccent}
+          activeProjectName={activeProject?.name}
+          isDrumsOnly={isDrumsOnly}
+          isRecordArmed={isRecordArmed}
+          drumKit={drumKit}
+          effectsRackState={effectsRackState}
+          isExportingAudio={isExportingAudio}
+          isKeyboardMode={isKeyboardMode}
+          midiDeviceCount={midiDevices.length}
+          mobileEditMode={mobileEditMode}
+          showAdvancedControls={showAdvancedControls}
+          isTouchDevice={isTouchDevice}
+          isRulerDragging={isRulerDragging}
+          matrixContainerRef={matrixContainerRef}
+          playheadBeamRef={playheadBeamRef}
+          analyser={engineRef.current?.getMasterAnalyser() || null}
+          analyserL={engineRef.current?.getStereoAnalysers().left || null}
+          analyserR={engineRef.current?.getStereoAnalysers().right || null}
+          onOpenGenreMaker={onOpenGenreMaker}
+          onChangeMobileEditMode={setMobileEditMode}
+          onCloseAnalyzer={() => setIsAnalyzerOpen(false)}
+          onTogglePlay={handleTogglePlay}
+          onChangeBpm={handleChangeBpm}
+          onChangeSwing={handleChangeSwing}
+          onChangeTimeSignature={handleChangeTimeSignature}
+          onChangeResolution={handleChangeResolution}
+          onChangeStepCount={handleChangeStepCount}
+          onChangeDrumKit={handleChangeDrumKit}
+          onToggleDrumsOnly={handleToggleDrumsOnly}
+          onToggleRecordArmed={handleToggleRecordArmed}
+          onChangeEffectsRack={handleChangeEffectsRack}
+          onSelectBar={scrollToBar}
+          onToggleVelocityLane={handleToggleVelocityLane}
+          onOpenEuclidean={handleOpenEuclidean}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onToggleMaximize={handleToggleMaximize}
+          onToggleSidebar={handleToggleSidebar}
+          onToggleAdvancedControls={handleToggleAdvancedControls}
+          onQuickAction={handleQuickAction}
+          onExportMidi={handleExportMidi}
+          onExportAls={handleExportAls}
+          onExportGroove={handleExportGroove}
+          onOpenProjectHub={handleOpenProjectHub}
+          onExportWav={handleExportWav}
+          onExportStems={handleExportStems}
+          onImportMidi={handleImportMidi}
+          onInspireMe={handleInspireMe}
+          onToggleKeyboardMode={handleToggleKeyboardMode}
+          onShare={handleShare}
+          onAddSteps={handleAddSteps}
+          onRemoveSteps={handleRemoveSteps}
+          onScrollByPixels={scrollByPixels}
+          onSwitchSlot={handleSwitchSlot}
+          onCopySlot={handleCopySlot}
+          onToggleSongMode={handleToggleSongMode}
+          onToggleBlindCompare={handleToggleBlindCompare}
+          onToggleMetronome={handleToggleMetronome}
+          onToggleCountIn={handleToggleCountIn}
+          onToggleAnalyzer={handleToggleAnalyzer}
+          onTapTempo={handleTapTempo}
+          handleGridPointerDown={handleGridPointerDown}
+          handleGridPointerMove={handleGridPointerMove}
+          handleGridPointerUp={handleGridPointerUp}
+          handleGridContextMenu={handleGridContextMenu}
+          handleSelectLoopRange={handleSelectLoopRange}
+          handleRulerPointerDown={handleRulerPointerDown}
+          handleRulerPointerMove={handleRulerPointerMove}
+          handleRulerPointerUp={handleRulerPointerUp}
+          onAudition={handleAudition}
+          onCycleLength={handleCycleTrackLength}
+          onToggleMute={handleToggleTrackMute}
+          onToggleSolo={handleToggleTrackSolo}
+          onChangeTrackVolume={handleChangeTrackVolume}
+          onOpenVelocity={handleOpenVelocityLane}
+          onShiftTrack={handleShiftTrack}
+          onSmartFill={handleSmartFillTrack}
+          onClearTrack={handleClearTrack}
+          onMoveTrackUp={handleMoveTrackUp}
+          onMoveTrackDown={handleMoveTrackDown}
+          onChangeTrackPan={handleChangeTrackPan}
+          onChangeTrackSwing={handleChangeTrackSwing}
+          onSelectParameterDimension={handleSelectParameterDimension}
+          onSelectVelocityTrack={handleSelectVelocityTrack}
+          onUpdateVelocity={handleUpdateVelocity}
+          onBatchUpdateVelocity={handleBatchUpdateVelocity}
+          onUpdateProbability={handleUpdateProbability}
+          onBatchUpdateProbability={handleBatchUpdateProbability}
+          onUpdateRatchet={handleUpdateRatchet}
+          onBatchUpdateRatchet={handleBatchUpdateRatchet}
+          onUpdateGate={handleUpdateGate}
+          onBatchUpdateGate={handleBatchUpdateGate}
+          onCloseVelocityLane={handleCloseVelocityLane}
+        />
       </main>
 
-      {/* Euclidean Modal */}
-      {isEuclideanOpen && (
-        <EuclideanModal
-          isOpen={isEuclideanOpen}
-          onClose={() => setIsEuclideanOpen(false)}
-          tracks={pattern.tracks}
-          tracksConfig={DEMO_TRACKS_CONFIG}
-          initialTrackIdx={0}
-          stepCount={stepCount}
-          language={language}
-          onApplyEuclidean={(targetTrackIdx, steps) => {
-            const next = clonePattern(pattern);
-            if (next.tracks[targetTrackIdx]) {
-              next.tracks[targetTrackIdx].steps = [...steps];
-            }
-            commit({ type: "COMMIT_PATTERN", pattern: next });
-            showToast(isZh ? "已生成欧几里得律动 ✓" : "Euclidean rhythm applied ✓");
-          }}
-        />
-      )}
-
-      {/* Pitch Picker Modal */}
-      {pitchPicker.isOpen && (
-        <PitchPickerModal
-          isOpen={pitchPicker.isOpen}
-          onClose={() => setPitchPicker((prev) => ({ ...prev, isOpen: false }))}
-          trackName={pattern.tracks[pitchPicker.trackIdx]?.name || "Track"}
-          trackColor={DEMO_TRACKS_CONFIG[pitchPicker.trackIdx % DEMO_TRACKS_CONFIG.length].color}
-          stepIdx={pitchPicker.stepIdx}
-          initialNote={pitchPicker.initialNote}
-          language={language}
-          currentScale={pattern.scale}
-          trackPitches={pattern.tracks[pitchPicker.trackIdx]?.pitch}
-          onQuantizeTrack={(quantizedPitches) => {
-            commit({
-              type: "BATCH_SET_PITCH",
-              trackIdx: pitchPicker.trackIdx,
-              pitches: quantizedPitches,
-            });
-            showToast(isZh ? "已将全轨音高对齐至当前调式 ✓" : "Track pitches quantized to scale ✓");
-          }}
-          onScaleChange={(newScale) => {
-            commit({ type: "SET_SCALE", scale: newScale });
-            showToast(isZh ? `已切换曲目调式: ${newScale} ✓` : `Scale set: ${newScale} ✓`);
-          }}
-          onSelectPitch={(stepIdx, midiNote) => {
-            commit({ type: "SET_PITCH", trackIdx: pitchPicker.trackIdx, stepIdx, pitch: midiNote });
-            showToast(isZh ? "音高已设定 ✓" : "Pitch set ✓");
-          }}
-          onPreviewNote={(midiNote) => {
-            const tr = pattern.tracks[pitchPicker.trackIdx];
-            if (engineRef.current && tr) {
-              engineRef.current.triggerNote(pitchPicker.trackIdx, tr.name, 0.9, midiNote, 1);
-            }
-          }}
-        />
-      )}
-
-      {/* Multi-Project Hub Modal (P7-02) */}
-      <ProjectHubModal
-        isOpen={isProjectHubOpen}
-        onClose={() => setIsProjectHubOpen(false)}
+      <SequencerModals
+        pattern={pattern}
+        seqState={seqState}
+        isZh={isZh}
+        language={language}
+        showToast={showToast}
+        commit={commit}
+        engineRef={engineRef}
+        isEuclideanOpen={isEuclideanOpen}
+        setIsEuclideanOpen={setIsEuclideanOpen}
+        pitchPicker={pitchPicker}
+        setPitchPicker={setPitchPicker}
+        isProjectHubOpen={isProjectHubOpen}
+        setIsProjectHubOpen={setIsProjectHubOpen}
         currentGenre={currentGenre}
-        currentPatterns={{
-          A: seqState.activeSlot === "A" ? pattern : seqState.patterns.A,
-          B: seqState.activeSlot === "B" ? pattern : seqState.patterns.B,
-        }}
-        activeSlot={seqState.activeSlot}
         bpm={bpm}
         swing={swing}
         timeSignature={timeSignature}
         resolution={resolution}
         stepCount={stepCount}
-        songMode={seqState.songMode}
-        songChain={seqState.songChain}
-        loopRange={seqState.loopRange}
         effectsRackState={effectsRackState}
         drumKit={drumKit}
-        isMetronome={seqState.isMetronome}
-        isCountIn={seqState.isCountIn}
-        onLoadProject={handleLoadProject}
-        onToast={showToast}
+        handleLoadProject={handleLoadProject}
       />
 
       {/* Step Context Menu (P-Locks) */}
       {stepContextMenu && (
-        <div
-          className="fixed z-50 bg-[#15171d] border border-line rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] p-3 text-xs w-60 animate-fade-in"
-          style={{
-            left: Math.min(window.innerWidth - 250, Math.max(10, stepContextMenu.x)),
-            top: Math.min(window.innerHeight - 280, Math.max(10, stepContextMenu.y)),
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="font-['JetBrains_Mono'] text-[10px] text-accent font-bold pb-2 border-b border-line flex items-center justify-between">
-            <span>
-              {isZh ? "参数锁 (P-LOCKS)" : "PARAM LOCKS"} - T{stepContextMenu.trackIdx + 1}:S{stepContextMenu.stepIdx + 1}
-            </span>
-            <button
-              onClick={() => setStepContextMenu(null)}
-              className="text-text-dim hover:text-text px-1"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-2.5 mt-2.5">
-            {/* Ratchet Subdivisions */}
-            <div className="flex items-center justify-between">
-              <span className="text-text-dim">{isZh ? "连音滚奏" : "Ratchet"}:</span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4].map((r) => {
-                  const cur = pattern.tracks[stepContextMenu.trackIdx]?.ratchet?.[stepContextMenu.stepIdx] || 1;
-                  return (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        commit({
-                          type: "SET_RATCHET",
-                          trackIdx: stepContextMenu.trackIdx,
-                          stepIdx: stepContextMenu.stepIdx,
-                          ratchet: r,
-                        });
-                        setStepContextMenu(null);
-                      }}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${
-                        cur === r ? "bg-accent text-black font-bold border-accent" : "bg-panel2 border-line text-text"
-                      }`}
-                    >
-                      {r}x
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Trigger Probability */}
-            <div className="flex items-center justify-between">
-              <span className="text-text-dim">{isZh ? "触发概率" : "Prob"}:</span>
-              <div className="flex gap-1">
-                {[100, 75, 50, 25].map((p) => {
-                  const cur = pattern.tracks[stepContextMenu.trackIdx]?.probability?.[stepContextMenu.stepIdx] ?? 100;
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => {
-                        commit({
-                          type: "SET_PROBABILITY",
-                          trackIdx: stepContextMenu.trackIdx,
-                          stepIdx: stepContextMenu.stepIdx,
-                          probability: p,
-                        });
-                        setStepContextMenu(null);
-                      }}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${
-                        cur === p ? "bg-accent text-black font-bold border-accent" : "bg-panel2 border-line text-text"
-                      }`}
-                    >
-                      {p}%
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Pitch Selection for Melodic Tracks */}
-            <div className="pt-2 border-t border-line flex items-center justify-between">
-              <span className="text-text-dim">{isZh ? "独立音高" : "Pitch"}:</span>
-              <button
-                onClick={() => {
-                  const tr = pattern.tracks[stepContextMenu.trackIdx];
-                  setPitchPicker({
-                    isOpen: true,
-                    trackIdx: stepContextMenu.trackIdx,
-                    stepIdx: stepContextMenu.stepIdx,
-                    initialNote: tr?.pitch?.[stepContextMenu.stepIdx] ?? 60,
-                  });
-                  setStepContextMenu(null);
-                }}
-                className="px-2 py-1 rounded bg-panel2 hover:bg-line border border-line text-accent font-mono text-[10px]"
-              >
-                {isZh ? "打开音高键盘 ♩" : "Open Keyboard ♩"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <StepContextMenu
+          state={stepContextMenu}
+          pattern={pattern}
+          commit={commit}
+          onClose={() => setStepContextMenu(null)}
+          onOpenPitchPicker={setPitchPicker}
+          isZh={isZh}
+        />
       )}
     </div>
   );
