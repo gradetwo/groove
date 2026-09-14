@@ -1,47 +1,35 @@
 {
-  "version": "1.16.2",
+  "version": "1.16.3",
   "releaseDate": "2026-09-14",
-  "changelogCount": 44,
+  "changelogCount": 45,
   "latest": {
-    "version": "1.16.2",
+    "version": "1.16.3",
     "date": "2026-09-14",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v1.16.2 性能与工程化冲刺：首屏体积减半、状态与导出加固、CI 门禁成型",
-      "en": "v1.16.2 Performance & Tooling Sprint: first paint halved, state/export hardening, CI gates"
+      "zh": "v1.16.3 修复「经典预设对比」两个按钮点击无反应",
+      "en": "v1.16.3 Fix: two classic matchup presets did nothing when clicked"
     },
     "highlights": [
       {
-        "zh": "首屏体积：打断曲风数据的静态引用，首屏 JS 从 336KB 降到 164KB gzip（-51%），14 个曲风分包改为点击时按需加载",
-        "en": "First paint: broke the static genre-data import — first-paint JS drops from 336KB to 164KB gzip (-51%); the 14 genre chunks now load on demand"
+        "zh": "修复经典预设对比：Synthwave 对决 Cyberpunk 与 Nu-Disco 对决 Funk 引用了不存在的曲风 id，点击后完全无反应；现已修正为 Industrial Techno 与 Nu-Disco House",
+        "en": "Fixed the classic matchup presets: 'Synthwave vs Cyberpunk' and 'Nu-Disco vs Funk' pointed at genre ids that do not exist, so clicking them did nothing; they now use Industrial Techno and Nu-Disco House"
       },
       {
-        "zh": "小节长度修复：恢复拍号分子参与计算（4/4 = 16 步/小节，3/4 = 12，7/8 = 14），标尺分组、小节跳转与复制小节随之正确",
-        "en": "Meter fix: bars now count the time-signature numerator (4/4 = 16 steps, 3/4 = 12, 7/8 = 14), correcting the ruler, bar jump and copy-bar"
+        "zh": "预设解析失败不再静默：缺失的曲风 id 会打印到控制台、播报给读屏并弹出错误提示",
+        "en": "Preset resolution no longer fails silently: unknown genre ids are logged, announced to screen readers and surfaced as an error toast"
       },
       {
-        "zh": "工程与分享安全：分享载荷逐字段校验、分享链接不再自不兼容、IndexedDB 失败不再假成功、工程快照按 ID 隔离",
-        "en": "Project & share safety: field-level payload validation, self-consistent share links, IndexedDB failures surface, per-project scratch snapshots"
+        "zh": "新增两层回归测试：预设 id 必须存在于曲风库，且点击预设后对比对象确实发生切换（含反向验证）",
+        "en": "Two layers of regression coverage: preset ids must exist in the genre database, and clicking a preset must actually swap the compared pair"
       },
       {
-        "zh": "版本检查载荷从 91KB 降到 3KB，完整变更日志改为打开弹窗时按需加载（并带缓存）",
-        "en": "Update check payload drops from 91KB to 3KB; the full changelog archive loads on demand (and is cached)"
+        "zh": "撤销历史改为按字节预算裁剪（≤4MB），长时间编辑不再常驻数 MB 的深拷贝快照",
+        "en": "Undo history is now trimmed by a byte budget (≤4MB) so long sessions no longer retain megabytes of deep-copied snapshots"
       },
       {
-        "zh": "工程化门禁：CI 覆盖 next 分支并补齐 e2e/红线/覆盖率阈值，体积门禁纳入首屏总量，新增 18 条红线兜底",
-        "en": "Tooling gates: CI now covers next with e2e, red lines and coverage thresholds; the bundle budget includes total first paint; 18 red lines guard the baseline"
-      },
-      {
-        "zh": "交互与国际化：Compare 补齐载入/空/错三态与防重入、弹窗打开时全局快捷键失效、原生 window.confirm 换成自研弹窗、4 个文件迁移出内联双语三元",
-        "en": "UX & i18n: Compare gained loading/empty/error states and double-click guards, global shortcuts are gated behind dialogs, window.confirm replaced, and four more files moved off inline bilingual ternaries"
-      },
-      {
-        "zh": "SEO 与元数据：补齐描述、Open Graph、Twitter 卡片与运行时 canonical，iOS 图标改用 PNG",
-        "en": "SEO: description, Open Graph, Twitter cards and a runtime-derived canonical URL, plus a PNG apple-touch-icon"
-      },
-      {
-        "zh": "稳定性：消除覆盖率下的大用例超时抖动；实时播放后台队列有界、画布缓冲复用，长时间挂机不再累积",
-        "en": "Stability: eliminated the coverage-only timeout flake; bounded the playhead queue and reused the canvas buffer so long sessions stop accumulating"
+        "zh": "新增真实走带测试：用假 AudioContext 真正调用 play()，覆盖调度、静音、循环区间、停顿恢复与销毁",
+        "en": "Added real transport tests: a fake AudioContext now exercises play(), scheduling, mute/solo, loop range, stall recovery and teardown"
       }
     ]
   }
