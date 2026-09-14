@@ -1,6 +1,7 @@
 # GROOVE LAB 改进任务清单（BACKLOG）
 
-> 配套文档：`IMPROVEMENT_PLAN.md`
+> 配套文档：`IMPROVEMENT_PLAN.md`（历史 v1.0 基线）、`CODE_REVIEW_AND_PLAN_v1.16.0.md`（当前审阅与规划）
+> 当前基线：**v1.16.3**（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
 > 优先级：**P0** 正确性/安全 ｜ **P1** 体验/性能/可维护 ｜ **P2** 增强
 > 工时单位：人·天（含自测）
 > 使用方式：每个任务一条 PR；`ID` 可直接用于 commit message，如 `fix(P0-01): correct Bjorklund euclidean generator`
@@ -212,6 +213,7 @@
   验收：`storyGenres` 结果 memo；每卡大模糊层减少；滚动流畅；`scrollToStory` 不依赖全局 id（useRef Map 驱动）。
 - [x] **P2-14** 探索视图共享抽取 ｜ 2d ｜ `useGenreAudition.ts`, `useGenreGraph.ts`, `ExploreScaffold.tsx` (v1.10.0)
   验收：`useGenreAudition()`（替换 6 处重复引擎生命周期）、`useGenreGraph()`（统一三套分类法）、`<ExploreScaffold>`（筛选栏 + 空/载/错态）。
+  ⚠️ **A-06 复核（v1.16.x）**：`useGenreGraph.ts` 与 `ExploreScaffold.tsx` 已无任何生产引用并被删除（`useGenreGraph` 仅剩测试引用且静态导入整个曲风 barrel）；`useGenreAudition.ts` 仍被时间线视图使用，保留。
 
 ### 无障碍
 
@@ -228,6 +230,17 @@
 - [x] **P2-20** 键盘全流程 ｜ 1.5d (v1.11.0)
   验收：网格 `role="grid"` + 方向键导航；`g`+字母 视图跳转；快捷键面板 `?`；探索视图列表兜底可键盘遍历。
 
+> ⚠️ **E-09 复核修正（基线 v1.16.3）**：本节 `[x]` 仅表示"当轮已实现并自测"，**不等于 WCAG 2.1 AA 达标**。
+> 实测结论：**无障碍并未达到 WCAG 2.1 AA**。三个可复现的硬缺口：
+> 1. **表单标签未绑定控件**：`grep -rn "htmlFor" src --include=*.tsx | wc -l` → **0**（全仓无 `htmlFor`）。
+> 2. **图标按钮缺可访问名**：静态扫描 `<button>` 开标签，无 `aria-label`/`aria-labelledby`/`title` 且元素内无文本 → **32 / 368** 个按钮没有可访问名（审计原文另一口径计 22）。复现命令（项目根执行）：
+>    ```bash
+>    node -e "const fs=require('fs'),p=require('path');let t=0,n=0;const w=d=>fs.readdirSync(d,{withFileTypes:true}).forEach(e=>{const f=p.join(d,e.name);if(e.isDirectory())return w(f);if(!f.endsWith('.tsx'))return;const s=fs.readFileSync(f,'utf8');let m;const re=/<button\b([^>]*)>/g;while(m=re.exec(s)){t++;if(/aria-label|aria-labelledby|\btitle=/.test(m[1])){n++;continue}const e2=s.indexOf('</button>',re.lastIndex);const b=e2<0?'':s.slice(re.lastIndex,e2);if(b.replace(/\{[^{}]*\}/g,' ').replace(/<[^>]*>/g,' ').trim())n++}});w('src');console.log('total',t,'named',n,'unnamed',t-n)"
+>    ```
+> 3. **canvas 缺文本替代**：`grep -rn "<canvas" src --include=*.tsx | wc -l` → **9**；这 9 个所在文件中 `role="img"` 命中数为 **0**。
+>
+> 因此下文"Phase 2 出口：Lighthouse a11y ≥95 / 100% 验收收官"的表述需降级看待；对应 `CODE_REVIEW_AND_PLAN_v1.16.0.md` 的 U-01 / U-04 / U-06 / U-07 仍属未完成项（详见该文档 §5.3）。
+
 ### 移动端
 
 - [x] **P2-21** 真实 44px 命中区 ｜ 1d (v1.11.0)
@@ -237,7 +250,7 @@
 - [x] **P2-23** 横屏布局 ｜ 1d (v1.11.0)
   验收：Studio 工具栏与全屏编辑器在横屏下不依赖 `overflow-x-auto` 把控件推出视野。
 
-**Phase 2 出口**：首屏 DOM ≤800（实测 793，容器 581）；Studio 播放期无 >50ms 长任务；Galaxy 帧上传 ≤64KB（实测 ~8.4KB）；Lighthouse a11y ≥95；Phase 2 全量 23 项任务 100% 验收收官。
+**Phase 2 出口**：首屏 DOM ≤800（实测 793，容器 581）；Studio 播放期无 >50ms 长任务；Galaxy 帧上传 ≤64KB（实测 ~8.4KB）；Phase 2 全量 23 项任务"当轮实现"100% 收官。⚠️ **其中"Lighthouse a11y ≥95 / WCAG 2.1 AA"一项经 E-09 复核不成立**（见上方§无障碍修正），本节不再据此宣称无障碍达标。
 
 ---
 
@@ -316,6 +329,8 @@
   验收：单一入口 `python3 -m scripts.build_all`；修复 `sys.path`；删除空壳 Node 脚本；**废弃 `scripts/update_studio.py`（决策 D7）**；CI 校验生成结果 == 仓库数据。
 - [x] **P4-09** 内容质量补强 ｜ 3d (v1.13.0)
   验收：`representative_tracks.link` 升级为可校验链接或明确标注；`sources` 扩展为真实来源（每曲风 ≥2）；关系图谱覆盖 159 个 source（现仅 65）。
+  ⚠️ **E-09 复核修正（基线 v1.16.3）**：`scripts/build_all.py:69-73` 的"每曲风 ≥2 来源"检查**至今仍是空实现（`pass`）**，不能作为该验收的证据。真正生效的校验是 E-11b 引入的 `src/data/schema.ts#auditGenreContent` + `src/test/genreContentAudit.test.ts`（`MIN_GENRE_SOURCES = 2`，对全库断言 `insufficientSources.count === 0`），门禁命令 `npm run lint:data`（实测 3 文件 / 24 用例全绿）。
+  ⚠️ 该门禁只校验"每曲风 ≥2 条非空来源"，**不校验来源的真实性、权威性或可达性**，因此"真实来源"仍属未验证声明。
 - [x] **P4-10** 可观测性 ｜ 1.5d (v1.13.0)
   验收：ErrorBoundary + 全局异常上报（仅堆栈/版本，无用户数据）；版本号注入 + "检查更新"；可选匿名埋点。
 - [x] **P4-11** `_headers` 与缓存策略 ｜ 0.5d (v1.13.0)
@@ -361,3 +376,53 @@
 | Phase 4 进阶 | 11 | ≈21d | ✅ 100% 已验收 (v1.13.0) |
 | Phase 5 声音引擎重构 | 5 | ≈13d | ✅ 100% 已验收 (v1.14.0) |
 | **合计** | **106** | **≈121 人日** | **🎉 全量 106/106 项任务 100% 验收收官，跨端 7 平台自动化矩阵与性能预算门禁 100% 全绿，已线上部署交付** |
+
+> ⚠️ 上表停留在 Phase 0–5（截至 v1.14.0）的口径，未包含 v1.16.x 批次。v1.16.x 的交付明细见下节。
+
+---
+
+## Phase 6 · v1.16.x 实施批次（本轮）
+
+> **基线**：v1.16.3（`package.json` / `public/version.json` 实测，基线 commit `d480684`）。
+> **来源**：ID → 任务名映射取自 `CODE_REVIEW_AND_PLAN_v1.16.0.md` §7（S0–S4）；发布版本取自包含该 ID 提交的 release commit（`390a764` v1.16.0 / `87d6bad` v1.16.1 / `206599c` v1.16.2 / `d480684` v1.16.3），由 `git log <prev>..<release>` 提取。
+> **说明**：`E-14` / `F-11` 不在 v1.16.0 审阅文档 §7 中，任务名取自对应 commit subject；`A-06` 与 `E-09` 在本分支（`docs/baseline-refresh`）完成，尚未随版本发布。
+
+| 任务 ID | 任务名称 | 发布版本 | 验证命令 |
+|---|---|---|---|
+| **P8-01** | Web 触觉震颤力反馈（Vibration API + 全局开关） | v1.16.0 | `npx vitest run src/test/haptics.test.ts` |
+| **F-01** | 音频零值钳制 + 调度器异常隔离 | v1.16.1 | `npx vitest run src/test/audio.test.ts` |
+| **F-02** | 停顿后追赶风暴重同步 | v1.16.1 | `npx vitest run src/test/audioScheduler.test.ts` |
+| **F-03** | WAV 导出接入混音器并对齐实时行为 | v1.16.1 | `npx vitest run src/test/wavMixerParity.test.ts` |
+| **F-04** | 撤销/重做语义重建 | v1.16.1 | `npx vitest run src/test/sequencerHistory.test.tsx` |
+| **F-05** | 手势批量提交（力度 / swing / BPM） | v1.16.1 | `npx vitest run src/test/sequencerHistory.test.tsx` |
+| **F-06** | 工程切换单一真相源 + legacy 键同步 | v1.16.1 | `npx vitest run src/test/projectStorage.test.ts` |
+| **F-07** | IndexedDB 事务语义与降级提示 | v1.16.1 | `npx vitest run src/test/projectDb.test.ts` |
+| **F-08** | 分享/导入载荷运行时校验 + 大小上限 | v1.16.1 | `npx vitest run src/test/sharePayloadSecurity.test.ts` |
+| **F-09** | 分享编码/解码上限对齐 | v1.16.1 | `npx vitest run src/test/sharePayloadSecurity.test.ts` |
+| **F-10** | 单声道 WAV 修复 + 导出参数钳制 | v1.16.1 | `npx vitest run src/test/wavExport.test.ts` |
+| **F-11** | 恢复拍号分子参与小节步数计算 | v1.16.1 | `npx vitest run src/test/sequencerMeter.test.ts` |
+| **U-03** | 补齐 4 个缺失 i18n key + 词条守卫测试 | v1.16.1 | `npx vitest run src/test/i18nKeys.test.ts` |
+| **U-08** | Compare 载入/空/错三态 + 试听防重入 | v1.16.1 | `git log --oneline --grep=U-08` |
+| **U-09** | 弹窗打开时禁用全局快捷键并尊重 defaultPrevented | v1.16.1 | `npx vitest run src/test/shortcuts.test.ts` |
+| **U-10** | `window.confirm` → 自研 ConfirmDialog | v1.16.1 | `grep -rn "window.confirm(" src`（应为 0 命中） |
+| **E-01** | 消除 ProjectHubModal / CustomGenreMaker 用例抖动 | v1.16.1 / v1.16.2 收尾 | `npx vitest run src/test/ProjectHubModal.test.tsx src/test/CustomGenreMakerView.test.tsx` |
+| **E-02** | 用真实实现替换自造 helper 与空断言 | v1.16.1 | `npx vitest run src/test/audio.test.ts src/test/sequencerMeter.test.ts` |
+| **E-05** | 版本单一来源（消除 3 处漂移与 SW 静默接管） | v1.16.1 | `npm run version:check` |
+| **E-06** | 开发/测试端口隔离（PORT / VITE_PORT） | v1.16.1 | `grep -c VITE_PORT vite.config.ts`（应为 2） |
+| **E-11** | Genre schema 全字段校验 + 内容审计门禁 | v1.16.1 | `npm run lint:data` |
+| **E-13** | 测试基建补全（jest-dom + 自动 cleanup） | v1.16.1 | `grep -c setupFiles vitest.config.ts`（应为 1） |
+| **E-14** | 体积门禁纳入首屏总量 + 曲风分包红线 | v1.16.2 | `node scripts/redlines.mjs` |
+| **A-01** | 打断曲风数据静态导入（首屏 JS -51%） | v1.16.2 | `git log --oneline --grep=A-01` |
+| **A-08** | `version.json` 拆分 + 变更日志按需加载 | v1.16.2 | `node scripts/redlines.mjs`（R7a/R7b/R7c） |
+| **U-11** | i18n 债务：迁移内联双语三元至词表 | v1.16.2 | `node scripts/analyze_ternaries.js` |
+| **E-04** | CI 加固（覆盖 next + e2e + 覆盖率门槛） | v1.16.2 | `grep -c next .github/workflows/ci.yml`（应为 2） |
+| **E-08** | 可观测性落地（移除无出口埋点 API） | v1.16.2 | `npx vitest run src/test/telemetry.test.ts` |
+| **E-12** | 仓库卫生（.gitignore / 清理本地产物） | v1.16.2 | `git ls-files '*.pyc'`（应为空） |
+| **N-07** | SEO / 社交分享卡片与元数据 | v1.16.2 | `grep -c "og:" index.html`（应为 9） |
+| **E-03** | fake-AudioContext 夹具 + 音频调度单测 | v1.16.3 | `npx vitest run src/test/audioScheduler.test.ts` |
+| **A-04** | 撤销历史按字节预算裁剪 | v1.16.3 | `npx vitest run src/test/sequencerHistory.test.tsx` |
+| **A-07** | 播放队列有界 + 画布缓冲复用 | v1.16.3 | `git log --oneline --grep=A-07` |
+| **A-06** | 删除零引用设计系统组件与失效 hook | 本分支未发布（`f6b6ed0`） | `npx vitest run src/test/ui.test.ts` |
+| **E-09** | 文档基线刷新与自检脚本 | 本分支未发布（本轮） | `node scripts/check_docs.mjs` |
+
+> 本批次的已知回归：`src/test/CompareViewPresets.test.tsx` 的 2 条用例计时超时（5000ms），在 v1.16.3 基线上即为红色（见 E-03 之后并入的 compare 用例）；`npx vitest run` 当前为 **407 passed / 2 failed（共 409）**。
