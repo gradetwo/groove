@@ -23,7 +23,7 @@ import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { MasterAnalyzerSuite } from "../components/analyzer/MasterAnalyzerSuite";
 import { ProjectHubModal } from "../components/sequencer/ProjectHubModal";
 import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
-import { clearSavedProject } from "../features/sequencer/projectStorage";
+import { clearSavedProject, saveProjectImmediate } from "../features/sequencer/projectStorage";
 import {
   getActiveProjectId,
   getProject,
@@ -1348,6 +1348,26 @@ export const StudioView: React.FC<StudioViewProps> = ({
         const activePat = project.activeSlot === "B" ? project.patterns.B : project.patterns.A;
         engineRef.current.setPattern(activePat);
       }
+
+      // F-06: the scratch snapshot in localStorage is scoped to one project id.
+      // Re-seed it right away so a reload restores THIS project instead of the
+      // previously active one (which the debounced autosave would then write into
+      // this project's record).
+      saveProjectImmediate({
+        genreId: project.genreId,
+        bpm: project.bpm,
+        swing: project.swing,
+        timeSignature: project.timeSignature,
+        resolution: project.resolution,
+        stepCount: project.stepCount,
+        patterns: project.patterns,
+        activeSlot: project.activeSlot,
+        songMode: project.songMode,
+        songChain: project.songChain,
+        loopRange: project.loopRange,
+        isMetronome: project.isMetronome,
+        isCountIn: project.isCountIn,
+      });
     },
     [commit, currentGenre]
   );

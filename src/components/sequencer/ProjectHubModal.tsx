@@ -60,6 +60,11 @@ export interface ProjectHubModalProps {
   onToast: (msg: string) => void;
 }
 
+/** F-07: storage errors are now surfaced to the user instead of being swallowed. */
+function storageErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   isOpen,
   onClose,
@@ -168,7 +173,12 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   // Create new blank project
   const handleCreateNew = async () => {
     const newProj = createBlankProject(currentGenre, undefined, drumKit);
-    await saveProject(newProj);
+    try {
+      await saveProject(newProj);
+    } catch (err) {
+      onToast(isZh ? `创建工程失败：${storageErrorMessage(err)}` : `Could not create project: ${storageErrorMessage(err)}`);
+      return;
+    }
     setActiveProjectId(newProj.id);
     setActiveId(newProj.id);
     onLoadProject(newProj);
@@ -199,7 +209,12 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     newProj.isCountIn = isCountIn;
     newProj.tags = [currentGenre.name, "Custom"];
 
-    await saveProject(newProj);
+    try {
+      await saveProject(newProj);
+    } catch (err) {
+      onToast(isZh ? `另存失败：${storageErrorMessage(err)}` : `Could not save as new project: ${storageErrorMessage(err)}`);
+      return;
+    }
     setActiveProjectId(newProj.id);
     setActiveId(newProj.id);
     setSaveAsOpen(false);
@@ -219,15 +234,23 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
 
   // Duplicate project
   const handleDuplicate = async (project: GrooveProject) => {
-    const copy = await duplicateProject(project.id);
-    await reloadProjects();
-    onToast(isZh ? `已复制工程: ${copy.name}` : `Duplicated: ${copy.name}`);
+    try {
+      const copy = await duplicateProject(project.id);
+      await reloadProjects();
+      onToast(isZh ? `已复制工程: ${copy.name}` : `Duplicated: ${copy.name}`);
+    } catch (err) {
+      onToast(isZh ? `复制失败：${storageErrorMessage(err)}` : `Could not duplicate: ${storageErrorMessage(err)}`);
+    }
   };
 
   // Toggle favorite
   const handleToggleFavorite = async (project: GrooveProject) => {
-    await toggleProjectFavorite(project.id);
-    await reloadProjects();
+    try {
+      await toggleProjectFavorite(project.id);
+      await reloadProjects();
+    } catch (err) {
+      onToast(isZh ? `收藏状态保存失败：${storageErrorMessage(err)}` : `Could not update favorite: ${storageErrorMessage(err)}`);
+    }
   };
 
   // Confirm rename
@@ -235,9 +258,14 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     if (!renameTarget) return;
     const title = renameTitle.trim();
     if (title && title !== renameTarget.name) {
-      await renameProject(renameTarget.id, title);
-      onToast(isZh ? `工程已重命名为: ${title}` : `Renamed to: ${title}`);
-      await reloadProjects();
+      try {
+        await renameProject(renameTarget.id, title);
+        onToast(isZh ? `工程已重命名为: ${title}` : `Renamed to: ${title}`);
+        await reloadProjects();
+      } catch (err) {
+        onToast(isZh ? `重命名失败：${storageErrorMessage(err)}` : `Could not rename: ${storageErrorMessage(err)}`);
+        return;
+      }
     }
     setRenameTarget(null);
     setRenameTitle("");
@@ -247,7 +275,12 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     const name = deleteTarget.name;
-    await deleteProject(deleteTarget.id);
+    try {
+      await deleteProject(deleteTarget.id);
+    } catch (err) {
+      onToast(isZh ? `删除失败：${storageErrorMessage(err)}` : `Could not delete: ${storageErrorMessage(err)}`);
+      return;
+    }
     setDeleteTarget(null);
     await reloadProjects();
     onToast(isZh ? `已删除工程: ${name}` : `Deleted project: ${name}`);

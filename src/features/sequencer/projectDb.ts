@@ -22,6 +22,82 @@ export const LEGACY_MIGRATED_FLAG = "groove_legacy_migrated_v1";
 const memoryStore = new Map<string, GrooveProject>();
 
 /**
+ * F-07: IndexedDB availability is tracked explicitly so the UI can tell the
+ * difference between "no projects yet" and "persistence is broken".
+ */
+export interface ProjectsStorageStatus {
+  mode: "indexeddb" | "memory";
+  lastError: string | null;
+}
+
+const storageStatus: ProjectsStorageStatus = { mode: "indexeddb", lastError: null };
+
+export function getProjectsStorageStatus(): ProjectsStorageStatus {
+  return { ...storageStatus };
+}
+
+function markDegraded(err: unknown): void {
+  storageStatus.mode = "memory";
+  storageStatus.lastError = err instanceof Error ? err.message : String(err);
+}
+
+function isIndexedDbUnavailable(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /IndexedDB is not supported|indexedDB is unavailable|not supported in this environment/i.test(message);
+}
+
+/**
+ * Runs a request inside a transaction and resolves only once the transaction has
+ * actually COMMITTED.
+ *
+ * F-07: resolving on `request.onsuccess` reported success before the commit, so a
+ * QuotaExceeded abort looked like a successful save and the UI happily dropped the
+ * user's work.
+ */
+function runTx<T>(
+  db: IDBDatabase,
+  mode: IDBTransactionMode,
+  operation: (store: IDBObjectStore) => IDBRequest<T>
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let tx: IDBTransaction;
+    try {
+      tx = db.transaction(GROOVE_STORE_NAME, mode);
+    } catch (err) {
+      reject(err);
+      return;
+    }
+
+    let result: T;
+    let requestFailed = false;
+
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed"));
+    tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
+
+    try {
+      const req = operation(tx.objectStore(GROOVE_STORE_NAME));
+      req.onsuccess = () => {
+        result = req.result as T;
+      };
+      req.onerror = () => {
+        requestFailed = true;
+        reject(req.error || new Error("IndexedDB request failed"));
+      };
+    } catch (err) {
+      requestFailed = true;
+      try {
+        tx.abort();
+      } catch {
+        /* already aborting */
+      }
+      if (!requestFailed) reject(err);
+      else reject(err);
+    }
+  });
+}
+
+/**
  * Generates a unique, URL-safe project identifier
  */
 export function generateProjectId(): string {
@@ -80,8 +156,19 @@ export function openProjectsDb(): Promise<IDBDatabase> {
       }
     };
 
+    request.onblocked = () => {
+      reject(new Error("IndexedDB upgrade blocked by another open tab"));
+    };
+
     request.onsuccess = () => {
-      resolve(request.result);
+      const db = request.result;
+      // Another tab is upgrading the schema: release our connection instead of
+      // hanging every future open request behind it.
+      db.onversionchange = () => {
+        db.close();
+        storageStatus.lastError = "Database closed to allow an upgrade in another tab";
+      };
+      resolve(db);
     };
 
     request.onerror = () => {
@@ -109,8 +196,15 @@ export async function getAllProjects(
     });
 
     return sortProjects(projects, sortField, sortOrder);
-  } catch {
-    // Fallback to memory store
+  } catch (err) {
+    // F-07: only degrade when IndexedDB itself is unavailable. A real read failure
+    // (corrupt DB, blocked upgrade) must surface — silently returning an empty list
+    // looked like "you have no projects" and invited the user to overwrite data.
+    if (!isIndexedDbUnavailable(err)) {
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
     const projects = Array.from(memoryStore.values());
     return sortProjects(projects, sortField, sortOrder);
   }
@@ -143,15 +237,14 @@ function sortProjects(
 export async function getProject(id: string): Promise<GrooveProject | null> {
   try {
     const db = await openProjectsDb();
-    return await new Promise<GrooveProject | null>((resolve, reject) => {
-      const tx = db.transaction(GROOVE_STORE_NAME, "readonly");
-      const store = tx.objectStore(GROOVE_STORE_NAME);
-      const req = store.get(id);
-
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
-    });
-  } catch {
+    const found = await runTx<GrooveProject | undefined>(db, "readonly", (store) => store.get(id));
+    return found || null;
+  } catch (err) {
+    if (!isIndexedDbUnavailable(err)) {
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
     return memoryStore.get(id) || null;
   }
 }
@@ -168,17 +261,17 @@ export async function saveProject(project: GrooveProject): Promise<GrooveProject
 
   try {
     const db = await openProjectsDb();
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(GROOVE_STORE_NAME, "readwrite");
-      const store = tx.objectStore(GROOVE_STORE_NAME);
-      const req = store.put(prepared);
-
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
-    });
+    await runTx(db, "readwrite", (store) => store.put(prepared));
     memoryStore.set(prepared.id, prepared);
     return prepared;
-  } catch {
+  } catch (err) {
+    if (!isIndexedDbUnavailable(err)) {
+      // Quota exceeded / aborted transaction: the write did NOT happen. Report it
+      // instead of pretending the project was saved.
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
     memoryStore.set(prepared.id, prepared);
     return prepared;
   }
@@ -190,17 +283,18 @@ export async function saveProject(project: GrooveProject): Promise<GrooveProject
 export async function deleteProject(id: string): Promise<void> {
   try {
     const db = await openProjectsDb();
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(GROOVE_STORE_NAME, "readwrite");
-      const store = tx.objectStore(GROOVE_STORE_NAME);
-      const req = store.delete(id);
-
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
-    });
-  } catch {
-    // ignore
+    await runTx(db, "readwrite", (store) => store.delete(id));
+  } catch (err) {
+    if (!isIndexedDbUnavailable(err)) {
+      // F-07: a failed delete used to be swallowed while the in-memory entry was
+      // still dropped, so the card disappeared and then came back after reload.
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
   }
+
+  // Only mirror the delete locally once the durable write is known to have landed.
   memoryStore.delete(id);
 
   if (getActiveProjectId() === id) {
