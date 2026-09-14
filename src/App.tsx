@@ -184,7 +184,12 @@ const MainApp: React.FC = () => {
       <main className="flex-1 w-full pb-12">
         <React.Suspense
           fallback={
-            <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-accent">
+            /* Reserve a full viewport while the lazy chunk loads. With a 50vh box the
+               footer sat at ~683px (inside an 844px phone viewport) and was then pushed
+               to ~2446px once StudioView mounted — a 0.19 layout shift on mobile. Keeping
+               the placeholder at least one viewport tall means the footer starts and
+               stays below the fold, so the swap produces no CLS. */
+            <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 text-accent">
               <div className="w-8 h-8 rounded-full border-2 border-accent/30 border-t-[#f5b73d] animate-spin" />
               <span className="font-mono text-xs tracking-widest text-text-sub uppercase">
                 {t("loading_chunk")}
@@ -213,7 +218,7 @@ const MainApp: React.FC = () => {
                     onClearInitialMasterclassPattern={() => setInitialMasterclassPattern(null)}
                   />
                 ) : (
-                  <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+                  <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 min-h-[100dvh]">
                     <div className="flex items-center justify-between">
                       <Skeleton variant="line" className="w-48 h-10" />
                       <Skeleton variant="rect" className="w-32 h-10" />
@@ -411,7 +416,7 @@ const MainApp: React.FC = () => {
                     onForkInMaker={(g) => navigate({ tab: "maker", customGenreFork: g.id })}
                   />
                 ) : (
-                  <div className="max-w-5xl mx-auto px-4 py-12 space-y-6">
+                  <div className="max-w-5xl mx-auto px-4 py-12 space-y-6 min-h-[100dvh]">
                     <Skeleton variant="line" className="w-1/3 h-8" />
                     <Skeleton variant="card" className="h-64" />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
