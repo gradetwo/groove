@@ -4,6 +4,8 @@
  * and tap-along precision calculation.
  */
 
+import { createEngineAudioContext, rampBusMute } from "./voiceRegistry";
+
 export type PercussionSound =
   | "woodblock"
   | "bell"
@@ -38,6 +40,8 @@ export class MasterclassAudioEngine {
 
   // Scheduled pulse timestamps for tap accuracy check
   private scheduledPulseTimes: number[] = [];
+  /** Master bus level; also the value restored when unmuting after stop(). */
+  private masterVolume = 0.85;
 
   constructor() {
     // Lazy AudioContext initialization on first user interaction
@@ -45,14 +49,14 @@ export class MasterclassAudioEngine {
 
   private initContext() {
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.ctx = new AudioCtx();
+      this.ctx = createEngineAudioContext();
+      if (!this.ctx) return;
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
     }
     if (this.ctx.state === "suspended") {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
   }
 
@@ -342,6 +346,8 @@ export class MasterclassAudioEngine {
   public start() {
     this.initContext();
     if (this.isPlaying || !this.ctx) return;
+    // A-05: undo any bus mute left behind by a previous stop().
+    if (this.masterGain) rampBusMute(this.masterGain, this.ctx, false, this.masterVolume);
     this.isPlaying = true;
     this.nextNoteTime = this.ctx.currentTime + 0.05;
     this.currentCycle = 0;
@@ -373,6 +379,12 @@ export class MasterclassAudioEngine {
       this.timerId = null;
     }
     this.scheduledPulseTimes = [];
+    // A-05 / H-06: every voice here is a short one-shot scheduled ahead of time, so
+    // clearing the timer alone left a look-ahead window of sound playing after
+    // "stop". Silencing the bus stops it immediately and without a click.
+    if (this.masterGain && this.ctx) {
+      rampBusMute(this.masterGain, this.ctx, true, this.masterVolume);
+    }
   }
 
   public getIsPlaying(): boolean {
@@ -453,8 +465,11 @@ export class MasterclassAudioEngine {
   public destroy() {
     this.stop();
     if (this.ctx) {
-      this.ctx.close();
+      // Closing an already-closed context rejects; swallow it rather than producing an
+      // unhandled rejection on every unmount (A-05).
+      this.ctx.close().catch(() => {});
       this.ctx = null;
+      this.masterGain = null;
     }
   }
 }

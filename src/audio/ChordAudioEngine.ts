@@ -6,6 +6,8 @@
  */
 
 import { getChordMidiNotes, ChordDefinition, Inversion } from "../utils/chordTheory";
+import { VoiceRegistry, applyMasterLimiter, createEngineAudioContext } from "./voiceRegistry";
+import { initIosAudioUnlock } from "./iosAudioUnlock";
 import {
   ArpConfig,
   StrumConfig,
@@ -33,9 +35,9 @@ export class ChordAudioEngine {
   private limiter: DynamicsCompressorNode | null = null;
   private isPlaying = false;
 
-  // Active voice registry for panic() and scheduled voice cancellations
-  private activeVoices: Array<{ source: AudioScheduledSourceNode; gain: GainNode; stopTime: number }> = [];
-  private unlockHandler: (() => void) | null = null;
+  // A-05: shared voice bookkeeping + no bespoke unlock listeners (the iOS unlocker
+  // module already owns that behaviour and is used by the main engine too).
+  private voiceRegistry: VoiceRegistry = new VoiceRegistry(() => (this.ctx ? this.ctx.currentTime : 0));
 
   // Timbre & Style
   private timbre: InstrumentTimbre = "piano";
@@ -61,54 +63,30 @@ export class ChordAudioEngine {
   }
 
   public initAudioContext(): AudioContext | null {
-    if (typeof window === "undefined") return null;
-
     try {
       if (!this.ctx) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          this.ctx = new AudioContextClass();
+        this.ctx = createEngineAudioContext();
+        if (this.ctx) {
           this.masterGain = this.ctx.createGain();
           this.masterGain.gain.setValueAtTime(0.75, this.ctx.currentTime);
 
-          // Limiter DynamicsCompressor to avoid clipping during dense voicings
+          // Shared master limiter so dense voicings cannot clip.
           this.limiter = this.ctx.createDynamicsCompressor();
-          this.limiter.threshold.setValueAtTime(-1.0, this.ctx.currentTime);
-          this.limiter.knee.setValueAtTime(0.0, this.ctx.currentTime);
-          this.limiter.ratio.setValueAtTime(20.0, this.ctx.currentTime);
-          this.limiter.attack.setValueAtTime(0.003, this.ctx.currentTime);
-          this.limiter.release.setValueAtTime(0.05, this.ctx.currentTime);
+          applyMasterLimiter(this.limiter, this.ctx);
 
           this.masterGain.connect(this.limiter);
           this.limiter.connect(this.ctx.destination);
         }
       }
 
-      if (this.ctx && this.ctx.state === "suspended") {
-        this.cleanupUnlockListeners();
-        this.unlockHandler = () => {
-          if (this.ctx && this.ctx.state === "suspended") {
-            this.ctx.resume().catch(() => {});
-          }
-          this.cleanupUnlockListeners();
-        };
-        window.addEventListener("click", this.unlockHandler, { once: true });
-        window.addEventListener("touchstart", this.unlockHandler, { once: true });
-        window.addEventListener("keydown", this.unlockHandler, { once: true });
+      if (this.ctx) {
+        initIosAudioUnlock(this.ctx);
       }
     } catch (e) {
       console.warn("[ChordAudioEngine] Error initializing AudioContext:", e);
     }
 
     return this.ctx;
-  }
-
-  private cleanupUnlockListeners(): void {
-    if (typeof window === "undefined" || !this.unlockHandler) return;
-    window.removeEventListener("click", this.unlockHandler);
-    window.removeEventListener("touchstart", this.unlockHandler);
-    window.removeEventListener("keydown", this.unlockHandler);
-    this.unlockHandler = null;
   }
 
   public async resume(): Promise<void> {
@@ -125,30 +103,11 @@ export class ChordAudioEngine {
    * Registers scheduled voice nodes for cancellation
    */
   private registerVoice(source: AudioScheduledSourceNode, gain: GainNode, stopTime: number): void {
-    if (this.ctx) {
-      const now = this.ctx.currentTime;
-      this.activeVoices = this.activeVoices.filter((v) => v.stopTime > now);
-    }
-    this.activeVoices.push({ source, gain, stopTime });
+    this.voiceRegistry.register(source, gain, stopTime);
   }
 
-  /**
-   * Panic: cancels all actively scheduled voices smoothly
-   */
   public panic(): void {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    for (const voice of this.activeVoices) {
-      try {
-        voice.gain.gain.cancelScheduledValues(now);
-        voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
-        voice.gain.gain.linearRampToValueAtTime(0.0001, now + 0.005);
-        voice.source.stop(now + 0.006);
-      } catch {
-        // Voice might already be stopped
-      }
-    }
-    this.activeVoices = [];
+    this.voiceRegistry.panic();
   }
 
   public setTimbre(timbre: InstrumentTimbre): void {
@@ -611,7 +570,6 @@ export class ChordAudioEngine {
 
   public destroy(): void {
     this.stop();
-    this.cleanupUnlockListeners();
     if (this.ctx && this.ctx.state !== "closed") {
       this.ctx.close().catch(() => {});
     }

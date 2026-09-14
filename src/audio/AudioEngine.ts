@@ -16,6 +16,7 @@ import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp } from "./schedulerMath";
 import { TrackState, deriveTrackStates } from "./trackStates";
+import { VoiceRegistry, applyMasterLimiter } from "./voiceRegistry";
 export type { TrackState } from "./trackStates";
 import { isDrumTrack } from "../utils/trackUtils";
 
@@ -69,8 +70,9 @@ export class AudioEngine {
   private countInRemaining: number = 0;
   private loopRange: [number, number] | null = null;
 
-  // Active voice registry for panic() and scheduled voice cancellations
-  private activeVoices: Array<{ source: AudioScheduledSourceNode; gain: GainNode; stopTime: number }> = [];
+  // A-05: voice bookkeeping now lives in the shared VoiceRegistry (also used by the
+  // chord engine) instead of a private copy per engine.
+  private voiceRegistry: VoiceRegistry = new VoiceRegistry(() => (this.ctx ? this.ctx.currentTime : 0));
 
   // Unlock event handler reference for clean removal
   private unlockHandler: (() => void) | null = null;
@@ -172,11 +174,7 @@ export class AudioEngine {
 
           // P0-02: Master Limiter (DynamicsCompressor) prevents harsh digital clipping
           this.limiter = this.ctx.createDynamicsCompressor();
-          this.limiter.threshold.setValueAtTime(-1.0, this.ctx.currentTime);
-          this.limiter.knee.setValueAtTime(0.0, this.ctx.currentTime);
-          this.limiter.ratio.setValueAtTime(20.0, this.ctx.currentTime);
-          this.limiter.attack.setValueAtTime(0.003, this.ctx.currentTime);
-          this.limiter.release.setValueAtTime(0.05, this.ctx.currentTime);
+          applyMasterLimiter(this.limiter, this.ctx);
 
           this.analyser = this.ctx.createAnalyser();
           this.analyser.fftSize = 128;
@@ -683,30 +681,14 @@ export class AudioEngine {
    * Registers a scheduled voice to allow immediate cancellation on stop/pause (panic)
    */
   private registerVoice(source: AudioScheduledSourceNode, gain: GainNode, stopTime: number): void {
-    if (this.ctx) {
-      const now = this.ctx.currentTime;
-      this.activeVoices = this.activeVoices.filter((v) => v.stopTime > now);
-    }
-    this.activeVoices.push({ source, gain, stopTime });
+    this.voiceRegistry.register(source, gain, stopTime);
   }
 
   /**
    * Cancels all scheduled voices with a fast 5ms release ramp to prevent hanging notes and clicks
    */
   public panic(): void {
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    for (const voice of this.activeVoices) {
-      try {
-        voice.gain.gain.cancelScheduledValues(now);
-        voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
-        voice.gain.gain.linearRampToValueAtTime(0.0001, now + 0.005);
-        voice.source.stop(now + 0.006);
-      } catch {
-        // Source node might already have ended
-      }
-    }
-    this.activeVoices = [];
+    this.voiceRegistry.panic();
   }
 
   public async play(): Promise<void> {
