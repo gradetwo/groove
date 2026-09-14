@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Check } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
-import { loadGenre } from "../data/index/loader";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { importMidiToPattern } from "../audio/MidiImporter";
 import { generateVariation } from "../audio/InspireMe";
-import { midiInputManager, MidiDevice } from "../audio/MidiInputManager";
 import { useLanguage } from "../i18n/LanguageContext";
 import { VelocityLane } from "../components/sequencer/VelocityLane";
 import { EuclideanModal } from "../components/sequencer/EuclideanModal";
@@ -30,13 +28,11 @@ import {
   type StepContextMenuState,
 } from "../features/sequencer/hooks/useTransportShortcuts";
 import { useExportActions } from "../features/sequencer/hooks/useExportActions";
-import { clearSavedProject, saveProjectImmediate } from "../features/sequencer/projectStorage";
-import {
-  getActiveProjectId,
-  getProject,
-  migrateLegacyLocalStorage,
-} from "../features/sequencer/projectDb";
-import { GrooveProject } from "../types/project";
+import { useProjectHub } from "../features/sequencer/hooks/useProjectHub";
+import { useMidiInput } from "../features/sequencer/hooks/useMidiInput";
+import { useInitialPatternLoad } from "../features/sequencer/hooks/useInitialPatternLoad";
+import { useMatrixScroll } from "../features/sequencer/hooks/useMatrixScroll";
+import { clearSavedProject } from "../features/sequencer/projectStorage";
 import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
@@ -127,10 +123,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const playheadBeamRef = useRef<HTMLDivElement | null>(null);
   const lastActiveRulerStepRef = useRef<HTMLElement | null>(null);
 
-  const [isRulerDragging, setIsRulerDragging] = useState(false);
-  const rulerDragStartXRef = useRef(0);
-  const rulerDragScrollLeftRef = useRef(0);
-
   // Pro Sequencer Extensions: Velocity Lane, Euclidean Generator, Pitch Picker & P-Locks
   const [isVelocityLaneOpen, setIsVelocityLaneOpen] = useState(false);
   const [velocityActiveTrackIdx, setVelocityActiveTrackIdx] = useState(0);
@@ -152,7 +144,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Phase 4 States (P4-01 ~ P4-04 & P4-06)
   const [isKeyboardMode, setIsKeyboardMode] = useState(false);
-  const [midiDevices, setMidiDevices] = useState<MidiDevice[]>([]);
 
   // Phase 5 States (P5-01 ~ P5-05)
   const [drumKit, setDrumKit] = useState<DrumKitType>(() => getDefaultDrumKitForGenre(currentGenre));
@@ -162,28 +153,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Multi-Project Hub State (P7-02)
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
-  const [activeProject, setActiveProject] = useState<GrooveProject | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        await migrateLegacyLocalStorage();
-        const activeId = getActiveProjectId();
-        if (activeId) {
-          const proj = await getProject(activeId);
-          if (proj && isMounted) {
-            setActiveProject(proj);
-          }
-        }
-      } catch (e) {
-        console.warn("[StudioView] Failed to initialize active project:", e);
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // Pointer drag painting & event delegation refs (P2-02 & P2-05)
   const isPointerDownRef = useRef(false);
@@ -214,6 +183,24 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Toast notification (state + timer live in useToast)
   const { toastMessage, showToast } = useToast();
+
+  // Multi-project hub: active project restore + loader (A-02)
+  const { activeProject, handleLoadProject } = useProjectHub({
+    commit,
+    currentGenre,
+    setDrumKit,
+    setEffectsRackState,
+    engineRef,
+  });
+
+  // Web MIDI devices + keyboard performance listener (A-02)
+  const { midiDevices } = useMidiInput({
+    pattern,
+    engineRef,
+    isZh,
+    showToast,
+    isKeyboardMode,
+  });
 
   // Clean up pending long-press timer on unmount (the toast timer is owned by useToast)
   useEffect(() => {
@@ -313,136 +300,23 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   }, [commit, isZh, showToast]);
 
-  // Handle chords transferred from ChordProgressionsView
-  useEffect(() => {
-    if (!initialChords || initialChords.length === 0) return;
-    commit({ type: "LOAD_CHORDS", chords: initialChords });
-    if (engineRef.current) {
-      engineRef.current.setPattern(patternRef.current);
-    }
-    showToast(
-      isZh
-        ? `已成功载入 ${initialChords.length} 个和弦到和弦轨道 ✓`
-        : `Loaded ${initialChords.length} chords into track ✓`
-    );
-    if (onClearInitialChords) {
-      onClearInitialChords();
-    }
-  }, [initialChords, isZh, onClearInitialChords, showToast, commit]);
-
-  // Handle arpeggios transferred from ChordProgressionsView (P6-03)
-  useEffect(() => {
-    if (!initialArpeggio || !initialArpeggio.baked) return;
-    commit({ type: "LOAD_ARPEGGIATED_SEQUENCE", baked: initialArpeggio.baked });
-    if (engineRef.current) {
-      engineRef.current.setPattern(patternRef.current);
-    }
-    const trackName =
-      initialArpeggio.baked.targetTrackId === "lead"
-        ? isZh
-          ? "Lead 领奏"
-          : "Lead"
-        : isZh
-        ? "Chords 和弦"
-        : "Chords";
-    showToast(
-      isZh
-        ? `已将 ${initialArpeggio.label || "琶音旋律"} 烘焙至 ${trackName} 轨 ✓`
-        : `Baked ${initialArpeggio.label || "arpeggio"} to ${trackName} track ✓`
-    );
-    if (onClearInitialArpeggio) {
-      onClearInitialArpeggio();
-    }
-  }, [initialArpeggio, isZh, onClearInitialArpeggio, showToast, commit]);
-
-  // Handle rhythm masterclass pattern transferred from MasterclassView (P6-01)
-  useEffect(() => {
-    if (!initialMasterclassPattern || !initialMasterclassPattern.pattern) return;
-    commit({
-      type: "LOAD_MASTERCLASS_PATTERN",
-      pattern: initialMasterclassPattern.pattern,
-      bpm: initialMasterclassPattern.pattern.bpm,
-      timeSignature: initialMasterclassPattern.pattern.timeSignature,
-    });
-    if (engineRef.current) {
-      engineRef.current.setPattern(initialMasterclassPattern.pattern);
-      if (initialMasterclassPattern.pattern.bpm) {
-        engineRef.current.setBpm(initialMasterclassPattern.pattern.bpm);
-      }
-    }
-    showToast(
-      isZh
-        ? `已成功载入「${initialMasterclassPattern.label || "律动工作坊节奏"}」至 Studio！✓`
-        : `Baked "${initialMasterclassPattern.label || "Masterclass Pattern"}" into Studio! ✓`
-    );
-    if (onClearInitialMasterclassPattern) {
-      onClearInitialMasterclassPattern();
-    }
-  }, [initialMasterclassPattern, isZh, onClearInitialMasterclassPattern, showToast, commit]);
+  // Patterns handed over from other views (chords / arpeggio / masterclass) (A-02)
+  useInitialPatternLoad({
+    initialChords,
+    onClearInitialChords,
+    initialArpeggio,
+    onClearInitialArpeggio,
+    initialMasterclassPattern,
+    onClearInitialMasterclassPattern,
+    isZh,
+    showToast,
+    commit,
+    engineRef,
+    patternRef,
+  });
 
   // Boot-time `?groove=` / `?genre=` load (A-02)
   useUrlShareLoad({ commit, engineRef, currentGenre, showToast });
-
-  // Mouse wheel listener: horizontal scrolling on Shift+Wheel
-  useEffect(() => {
-    const el = matrixContainerRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.shiftKey && e.deltaY !== 0) {
-        if (el.scrollWidth > el.clientWidth) {
-          e.preventDefault();
-          el.scrollLeft += e.deltaY;
-        }
-      }
-    };
-
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => el.removeEventListener("wheel", handleWheel);
-  }, []);
-
-  // Ruler horizontal drag-to-scroll handler
-  const handleRulerPointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0 && e.pointerType === "mouse") return;
-    setIsRulerDragging(true);
-    rulerDragStartXRef.current = e.clientX;
-    if (matrixContainerRef.current) {
-      rulerDragScrollLeftRef.current = matrixContainerRef.current.scrollLeft;
-    }
-    triggerHaptic(HapticPatterns.slider);
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // Ignored
-    }
-  }, []);
-
-  const handleRulerPointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!isRulerDragging || !matrixContainerRef.current) return;
-      const dx = e.clientX - rulerDragStartXRef.current;
-      matrixContainerRef.current.scrollLeft = rulerDragScrollLeftRef.current - dx;
-    },
-    [isRulerDragging]
-  );
-
-  const handleRulerPointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      if (!isRulerDragging) return;
-      setIsRulerDragging(false);
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {
-        // Ignored
-      }
-    },
-    [isRulerDragging]
-  );
-
-  const handleSelectLoopRange = useCallback(
-    (rng: [number, number] | null) => commit({ type: "SET_LOOP_RANGE", range: rng }),
-    [commit]
-  );
 
   // Toggle Drums-Only mode
   const handleToggleDrumsOnly = useCallback(() => {
@@ -724,6 +598,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const barCount = Math.max(1, Math.ceil(stepCount / stepsPerBar));
 
+  // Matrix viewport: Shift+wheel, ruler drag, loop range, bar/pixel scroll (A-02)
+  const {
+    isRulerDragging,
+    handleRulerPointerDown,
+    handleRulerPointerMove,
+    handleRulerPointerUp,
+    handleSelectLoopRange,
+    scrollToBar,
+    scrollByPixels,
+  } = useMatrixScroll({ matrixContainerRef, stepsPerBar, setViewedBar, commit });
+
   // Quick actions
   const handleQuickAction = useCallback(
     (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved" | "open_hub") => {
@@ -879,63 +764,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
     [commit]
   );
 
-  const handleLoadProject = useCallback(
-    async (project: GrooveProject) => {
-      setActiveProject(project);
-      // A-01: the project stores a genre id, so resolve it on demand.
-      const genre = (await loadGenre(project.genreId)) || currentGenre;
-      commit({
-        type: "LOAD_PROJECT",
-        genre,
-        patterns: project.patterns,
-        activeSlot: project.activeSlot,
-        bpm: project.bpm,
-        swing: project.swing,
-        timeSignature: project.timeSignature,
-        resolution: project.resolution,
-        stepCount: project.stepCount,
-        songMode: project.songMode,
-        songChain: project.songChain,
-        loopRange: project.loopRange,
-        isMetronome: project.isMetronome,
-        isCountIn: project.isCountIn,
-      });
-
-      if (project.drumKit) {
-        setDrumKit(project.drumKit);
-      }
-      if (project.effectsRack) {
-        setEffectsRackState(project.effectsRack);
-      }
-
-      if (engineRef.current) {
-        const activePat = project.activeSlot === "B" ? project.patterns.B : project.patterns.A;
-        engineRef.current.setPattern(activePat);
-      }
-
-      // F-06: the scratch snapshot in localStorage is scoped to one project id.
-      // Re-seed it right away so a reload restores THIS project instead of the
-      // previously active one (which the debounced autosave would then write into
-      // this project's record).
-      saveProjectImmediate({
-        genreId: project.genreId,
-        bpm: project.bpm,
-        swing: project.swing,
-        timeSignature: project.timeSignature,
-        resolution: project.resolution,
-        stepCount: project.stepCount,
-        patterns: project.patterns,
-        activeSlot: project.activeSlot,
-        songMode: project.songMode,
-        songChain: project.songChain,
-        loopRange: project.loopRange,
-        isMetronome: project.isMetronome,
-        isCountIn: project.isCountIn,
-      });
-    },
-    [commit, currentGenre]
-  );
-
   const handleImportMidi = useCallback(
     async (file: File) => {
       try {
@@ -975,73 +803,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
     showToast(isZh ? "✨ 已应用 Inspire Me 受控灵感变异！" : "✨ Applied Inspire Me groove variation!");
   }, [commit, isZh, showToast]);
-
-  // Web MIDI & Keyboard Play (P4-04)
-  useEffect(() => {
-    midiInputManager.initMidi().then(() => {
-      setMidiDevices(midiInputManager.getDevices());
-    });
-
-    const unsubDevices = midiInputManager.onDevicesChanged((devices) => {
-      setMidiDevices(devices);
-      if (devices.length > 0) {
-        showToast(isZh ? `🎹 检测到 MIDI 设备: ${devices[0].name}` : `🎹 MIDI device connected: ${devices[0].name}`);
-      }
-    });
-
-    const unsubNoteOn = (note: number, velocity: number, trackIdx?: number) => {
-      let targetIdx = trackIdx !== undefined ? trackIdx : 0;
-      if (trackIdx === undefined) {
-        if (note < 48) targetIdx = 4;
-        else if (note <= 65) targetIdx = 5;
-        else targetIdx = 6;
-      }
-      const tr = pattern.tracks[targetIdx];
-      if (engineRef.current && tr) {
-        const normalizedVel = (velocity / 127) * (tr.volume || 0.8);
-        engineRef.current.triggerNote(targetIdx, tr.name, normalizedVel, note, 1);
-      }
-    };
-
-    const unsub = midiInputManager.onNoteOn(unsubNoteOn);
-
-    return () => {
-      unsubDevices();
-      unsub();
-    };
-  }, [pattern.tracks, isZh, showToast]);
-
-  // Computer keyboard play listener
-  useEffect(() => {
-    if (!isKeyboardMode) return;
-    const stopListener = midiInputManager.startKeyboardListener(0);
-    return () => stopListener();
-  }, [isKeyboardMode]);
-
-  const scrollToBar = useCallback(
-    (bIdx: number) => {
-      setViewedBar(bIdx);
-      if (matrixContainerRef.current) {
-        const targetStep = bIdx * stepsPerBar;
-        const targetCell = matrixContainerRef.current.querySelector<HTMLElement>(
-          `[data-ruler-step-idx="${targetStep}"]`
-        );
-        if (targetCell) {
-          matrixContainerRef.current.scrollTo({
-            left: Math.max(0, targetCell.offsetLeft),
-            behavior: "smooth",
-          });
-        }
-      }
-    },
-    [stepsPerBar]
-  );
-
-  const scrollByPixels = useCallback((delta: number) => {
-    if (matrixContainerRef.current) {
-      matrixContainerRef.current.scrollBy({ left: delta, behavior: "smooth" });
-    }
-  }, []);
 
   const handleCollapseSidebar = useCallback(() => setIsSidebarCollapsed(true), []);
 
