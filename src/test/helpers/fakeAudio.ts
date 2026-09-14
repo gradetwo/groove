@@ -97,6 +97,28 @@ export class FakeWaveShaperNode extends FakeNode {
   oversample = "none";
 }
 
+export class FakePannerNode extends FakeNode {
+  panningModel: PanningModelType = "equalpower";
+  distanceModel: DistanceModelType = "inverse";
+  refDistance = 1;
+  maxDistance = 10000;
+  rolloffFactor = 1;
+  coneInnerAngle = 360;
+  coneOuterAngle = 360;
+  coneOuterGain = 0;
+  positionX = new FakeAudioParam();
+  positionY = new FakeAudioParam();
+  positionZ = new FakeAudioParam();
+  orientationX = new FakeAudioParam();
+  orientationY = new FakeAudioParam();
+  orientationZ = new FakeAudioParam();
+  /** Legacy API recorded so tests can assert positions on either path. */
+  legacyPosition: { x: number; y: number; z: number } | null = null;
+  setPosition(x: number, y: number, z: number) {
+    this.legacyPosition = { x, y, z };
+  }
+}
+
 export class FakeConvolverNode extends FakeNode {
   buffer: unknown = null;
 }
@@ -153,6 +175,7 @@ export class FakeAudioGraph {
   createdGains: FakeGainNode[] = [];
   createdOscillators: FakeOscillatorNode[] = [];
   createdPanners: FakeStereoPannerNode[] = [];
+  createdSpatialPanners: FakePannerNode[] = [];
 
   createGain() {
     const node = new FakeGainNode();
@@ -173,6 +196,11 @@ export class FakeAudioGraph {
   createStereoPanner() {
     const node = new FakeStereoPannerNode();
     this.createdPanners.push(node);
+    return node;
+  }
+  createPanner() {
+    const node = new FakePannerNode();
+    this.createdSpatialPanners.push(node);
     return node;
   }
   createWaveShaper() {

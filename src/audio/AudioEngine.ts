@@ -37,9 +37,25 @@ export interface AudioEngineOptions {
 
 export interface TrackChannelStrip {
   gain: GainNode;
+  /**
+   * Stereo mode panner. Exactly one of `panner` / `spatialPanner` is active:
+   * the strip is rebuilt when the monitoring mode changes (N-02).
+   */
   panner: StereoPannerNode | null;
+  /** Binaural (HRTF) panner used when spatial monitoring is enabled. */
+  spatialPanner: PannerNode | null;
   sendA: GainNode;
   sendB: GainNode;
+}
+
+/** Binaural monitoring layout for the 8 sequencer tracks (N-02 / roadmap P8-03). */
+export interface SpatialLayoutEntry {
+  /** Degrees, -90 = hard left, 0 = front, +90 = hard right. */
+  azimuth: number;
+  /** Metres; 1 = on the reference circle. */
+  distance: number;
+  /** Degrees above the listener plane. */
+  elevation: number;
 }
 
 
@@ -69,6 +85,9 @@ export class AudioEngine {
   private isCountIn: boolean = false;
   private countInRemaining: number = 0;
   private loopRange: [number, number] | null = null;
+
+  /** N-02: binaural (HRTF) monitoring toggle; off by default. */
+  private spatialEnabled: boolean = false;
 
   // A-05: voice bookkeeping now lives in the shared VoiceRegistry (also used by the
   // chord engine) instead of a private copy per engine.
@@ -319,6 +338,87 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Semicircular slot for track `idx` (N-02). Drums sit in front, melodic tracks fan
+   * out to the sides so the mix keeps a natural "band in front of you" image.
+   */
+  public getSpatialSlot(idx: number, total = 8): SpatialLayoutEntry {
+    const clampedTotal = Math.max(2, total);
+    const t = clampedTotal === 1 ? 0.5 : idx / (clampedTotal - 1);
+    const azimuth = -70 + t * 140; // -70° (left) .. +70° (right)
+    const distance = 1 + (idx % 3) * 0.25;
+    const elevation = idx % 2 === 0 ? 4 : -4;
+    return { azimuth, distance, elevation };
+  }
+
+  /** Writes a spatial slot onto a PannerNode using the AudioParams API. */
+  private applyPannerPosition(panner: PannerNode, slot: SpatialLayoutEntry): void {
+    const { azimuth, distance, elevation } = slot;
+    const azimuthRad = (azimuth * Math.PI) / 180;
+    const elevationRad = (elevation * Math.PI) / 180;
+    const x = Math.sin(azimuthRad) * Math.cos(elevationRad) * distance;
+    const y = Math.sin(elevationRad) * distance;
+    const z = -Math.cos(azimuthRad) * Math.cos(elevationRad) * distance;
+
+    try {
+      const anyPanner = panner as unknown as {
+        positionX?: AudioParam;
+        positionY?: AudioParam;
+        positionZ?: AudioParam;
+      };
+      if (anyPanner.positionX && anyPanner.positionY && anyPanner.positionZ) {
+        const now = this.ctx ? this.ctx.currentTime : 0;
+        anyPanner.positionX.setValueAtTime(x, now);
+        anyPanner.positionY.setValueAtTime(y, now);
+        anyPanner.positionZ.setValueAtTime(z, now);
+      } else if (typeof (panner as unknown as { setPosition?: (x: number, y: number, z: number) => void }).setPosition === "function") {
+        // Deprecated but still the only option on older engines.
+        (panner as unknown as { setPosition: (x: number, y: number, z: number) => void }).setPosition(x, y, z);
+      }
+    } catch {
+      // Position is cosmetic for the mix; never let it break playback.
+    }
+  }
+
+  /**
+   * Enables/disables binaural (HRTF) monitoring (N-02). Rebuilds the channel strips
+   * with the appropriate panner, so the unused model costs no CPU. Voices scheduled
+   * after this call use the new chain; currently sounding voices may be cut briefly,
+   * which is why this is a monitoring-mode toggle and not a per-note effect.
+   */
+  public setSpatialMode(enabled: boolean): void {
+    if (this.spatialEnabled === enabled) return;
+    this.spatialEnabled = enabled;
+    if (!this.ctx) return;
+    this.releaseTrackStrips();
+    this.setupTrackStrips(16);
+  }
+
+  public getSpatialMode(): boolean {
+    return this.spatialEnabled;
+  }
+
+  /** Current spatial slot of every track, for UI display. */
+  public getSpatialLayout(trackCount = 8): SpatialLayoutEntry[] {
+    return Array.from({ length: trackCount }, (_, i) => this.getSpatialSlot(i, trackCount));
+  }
+
+  /** Disconnects and drops the current strips (used when switching panner model). */
+  private releaseTrackStrips(): void {
+    for (const strip of this.trackStrips) {
+      try {
+        strip.gain.disconnect();
+        strip.panner?.disconnect();
+        strip.spatialPanner?.disconnect();
+        strip.sendA.disconnect();
+        strip.sendB.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+    }
+    this.trackStrips = [];
+  }
+
   private setupTrackStrips(numTracks = 16): void {
     if (!this.ctx || !this.masterGain) return;
     this.trackStrips = [];
@@ -327,7 +427,22 @@ export class AudioEngine {
       gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
 
       let panner: StereoPannerNode | null = null;
-      if (typeof this.ctx.createStereoPanner === "function") {
+      let spatialPanner: PannerNode | null = null;
+
+      if (this.spatialEnabled && typeof this.ctx.createPanner === "function") {
+        // N-02: binaural monitoring — every track sits on a semicircle around the
+        // listener instead of being hard-panned in stereo.
+        spatialPanner = this.ctx.createPanner();
+        spatialPanner.panningModel = "HRTF";
+        spatialPanner.distanceModel = "inverse";
+        spatialPanner.refDistance = 1;
+        spatialPanner.maxDistance = 12;
+        spatialPanner.rolloffFactor = 0.6;
+        const slot = this.getSpatialSlot(i, numTracks);
+        this.applyPannerPosition(spatialPanner, slot);
+        gain.connect(spatialPanner);
+        spatialPanner.connect(this.masterGain);
+      } else if (typeof this.ctx.createStereoPanner === "function") {
         panner = this.ctx.createStereoPanner();
         panner.pan.setValueAtTime(0, this.ctx.currentTime);
         gain.connect(panner);
@@ -350,7 +465,7 @@ export class AudioEngine {
         sendB.connect(this.delayBus);
       }
 
-      this.trackStrips.push({ gain, panner, sendA, sendB });
+      this.trackStrips.push({ gain, panner, spatialPanner, sendA, sendB });
     }
     this.syncTrackGains();
   }
@@ -428,6 +543,15 @@ export class AudioEngine {
             strip.panner.pan.setValueAtTime(Math.max(-1.0, Math.min(1.0, state.pan)), now);
           }
         } catch (_) {}
+      }
+      // N-02: in binaural mode the pan control shifts the track's azimuth instead.
+      if (state.pan !== undefined && strip.spatialPanner) {
+        const base = this.getSpatialSlot(idx, this.trackStates.length || 8);
+        const shifted: SpatialLayoutEntry = {
+          ...base,
+          azimuth: Math.max(-90, Math.min(90, base.azimuth + Math.max(-1, Math.min(1, state.pan)) * 30)),
+        };
+        this.applyPannerPosition(strip.spatialPanner, shifted);
       }
       if (state.sendA !== undefined && strip.sendA) {
         try {
