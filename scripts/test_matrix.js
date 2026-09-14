@@ -312,6 +312,30 @@ async function runTestOnTarget(target, baseUrl) {
     if (spatialPressed !== "false") {
       throw new Error(`Binaural monitoring should default to off, got aria-pressed=${spatialPressed}`);
     }
+
+    // Polarity (Ø) must be a live control on every device: it used to be surfaced
+    // disabled. Tapping it must flip its pressed state.
+    const phaseButton = await page.$("[data-testid='console-phase-0']");
+    if (!phaseButton) {
+      throw new Error("Hardware console is missing the channel polarity control");
+    }
+    if (await phaseButton.isDisabled()) {
+      throw new Error("Channel polarity control is disabled although the engine supports it");
+    }
+    await phaseButton.click({ force: true });
+    await page.waitForTimeout(150);
+    const phasePressed = await phaseButton.getAttribute("aria-pressed");
+    if (phasePressed !== "true") {
+      throw new Error(`Clicking Ø should invert the channel, got aria-pressed=${phasePressed}`);
+    }
+    await phaseButton.click({ force: true });
+    await page.waitForTimeout(150);
+
+    // Real channel meters: each strip must expose a stereo meter element.
+    const channelMeters = await page.$$("[data-meter-bar]");
+    if (channelMeters.length < 2) {
+      throw new Error(`Expected stereo meter bars on the console, found ${channelMeters.length}`);
+    }
     await page.waitForTimeout(200);
 
     // 6. Compare & Challenge Views Check
