@@ -74,7 +74,11 @@ const tracked = execSync("git ls-files", { cwd: ROOT, encoding: "utf8" }).split(
 check("R4a no tracked .pyc / binary caches", !tracked.some((f) => /\.pyc$/.test(f)));
 check(
   "R4b no tracked credential files",
-  !tracked.some((f) => /(^|\/)\.env(\.|$)/.test(f) || /\.dev\.vars$/.test(f))
+  !tracked.some(
+    (f) =>
+      !f.endsWith(".example") &&
+      (/(^|\/)\.env(\.|$)/.test(f) || /\.dev\.vars$/.test(f))
+  )
 );
 
 /* R5 \u2014 deploy / cache red lines ------------------------------------------------ */

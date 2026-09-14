@@ -13,6 +13,7 @@
 import { synthesizeAnatomyKickVoice } from "./AnatomyKickEngine";
 
 export type DrumKitType = "808" | "909" | "acoustic" | "cyber" | string;
+import { safeVelocity } from "./dspGuards";
 
 export function getBaseDrumKit(kit: DrumKitType): "808" | "909" | "acoustic" | "cyber" {
   if (kit === "808" || kit === "909" || kit === "acoustic" || kit === "cyber") return kit;
@@ -41,6 +42,8 @@ export function synthesizeKick(
   kit: DrumKitType,
   noiseBuffer: AudioBuffer | null
 ): DrumVoiceCleanup {
+  // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
+  vel = safeVelocity(vel);
   if (kit.startsWith("kick:")) {
     const presetId = kit.slice(5);
     return synthesizeAnatomyKickVoice(ctx, dest, time, vel, presetId, noiseBuffer);
@@ -211,6 +214,8 @@ export function synthesizeSnare(
   kit: DrumKitType,
   noiseBuffer: AudioBuffer | null
 ): DrumVoiceCleanup {
+  // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
+  vel = safeVelocity(vel);
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
   const basePitch = pitchOffset > 24 ? pitchOffset - 60 : pitchOffset;
@@ -360,6 +365,8 @@ export function synthesizeHiHat(
   gateVal = 0.8,
   noiseBuffer: AudioBuffer | null
 ): DrumVoiceCleanup {
+  // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
+  vel = safeVelocity(vel);
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
 
@@ -456,6 +463,8 @@ export function synthesizePercussion(
   kit: DrumKitType,
   noiseBuffer: AudioBuffer | null
 ): DrumVoiceCleanup {
+  // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
+  vel = safeVelocity(vel);
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
   const effectiveKit = getBaseDrumKit(kit);

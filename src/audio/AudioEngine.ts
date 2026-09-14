@@ -13,6 +13,8 @@ import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
 import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
 import { ecosystemBus } from "./ecosystemBus";
+import { safeVelocity, safeTime } from "./dspGuards";
+import { computeCatchUp } from "./schedulerMath";
 import { isDrumTrack } from "../utils/trackUtils";
 
 export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
@@ -26,6 +28,8 @@ export interface AudioEngineOptions {
   onStep?: (info: StepCallbackInfo) => void;
   onTrackTrigger?: (trackIndices: number[]) => void;
   onStop?: () => void;
+  /** Fires when the scheduler had to skip steps after a stall (F-02 diagnostics). */
+  onDroppedSteps?: (droppedSteps: number) => void;
 }
 
 export interface TrackChannelStrip {
@@ -109,6 +113,11 @@ export class AudioEngine {
   private lookaheadMs: number = 20; // How frequently to call scheduler (ms) via Web Worker
   private scheduleAheadSec: number = 0.20; // 200ms lookahead prevents dropouts during UI dragging & drawer animations
 
+  // Scheduler health (F-01/F-02): observable counters so stalls and bad steps are
+  // diagnosable instead of silently degrading playback.
+  private droppedStepCount: number = 0;
+  private schedulingErrorCount: number = 0;
+
   // Pattern data
   private pattern: SequencerPattern | null = null;
   private trackStates: Array<{
@@ -124,6 +133,7 @@ export class AudioEngine {
   private onStepCallback?: (info: StepCallbackInfo) => void;
   private onTrackTriggerCallback?: (trackIndices: number[]) => void;
   private onStopCallback?: () => void;
+  private onDroppedStepsCallback?: (droppedSteps: number) => void;
 
   // Noise buffers cache
   private noiseBuffer: AudioBuffer | null = null;
@@ -138,6 +148,7 @@ export class AudioEngine {
     if (options?.onStep) this.onStepCallback = options.onStep;
     if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
     if (options?.onStop) this.onStopCallback = options.onStop;
+    if (options?.onDroppedSteps) this.onDroppedStepsCallback = options.onDroppedSteps;
 
     this.workerBridge = new AudioWorkerBridge();
     this.workletClock = new AudioWorkletClock();
@@ -806,6 +817,15 @@ export class AudioEngine {
     return this.currentStep;
   }
 
+  /** Scheduler health snapshot (F-01/F-02) — used by tests and diagnostics. */
+  public getSchedulerHealth(): { droppedSteps: number; schedulingErrors: number; queuedSteps: number } {
+    return {
+      droppedSteps: this.droppedStepCount,
+      schedulingErrors: this.schedulingErrorCount,
+      queuedSteps: this.stepQueue.length,
+    };
+  }
+
   private startScheduler(): void {
     if (this.scheduleTimerId) {
       clearInterval(this.scheduleTimerId);
@@ -886,6 +906,28 @@ export class AudioEngine {
     const stepDur = this.getStepDuration();
     const stepsCount = this.totalSteps > 0 ? this.totalSteps : 16;
 
+    // F-02: recover from a stall (backgrounded tab, GC pause, iOS suspend → resume,
+    // a heavy render pass) instead of firing every missed step at "now".
+    // Without this, `Math.max(currentTime, …)` below clamps a whole backlog onto the
+    // same instant and the result is a burst of coincident voices, not music.
+    const now = this.ctx.currentTime;
+    const catchUp = computeCatchUp({
+      currentStep: this.currentStep,
+      nextStepTime: this.nextStepTime,
+      now,
+      stepDur,
+      stepsCount,
+      loopRange: this.loopRange,
+    });
+    if (catchUp.droppedSteps > 0) {
+      this.currentStep = catchUp.currentStep;
+      this.nextStepTime = catchUp.nextStepTime;
+      this.droppedStepCount += catchUp.droppedSteps;
+      if (this.onDroppedStepsCallback) {
+        this.onDroppedStepsCallback(catchUp.droppedSteps);
+      }
+    }
+
     while (this.nextStepTime < this.ctx.currentTime + this.scheduleAheadSec) {
       let step = this.currentStep;
       if (this.loopRange) {
@@ -901,13 +943,22 @@ export class AudioEngine {
       const latencyOffset = this.latencyCompensationMs / 1000;
       const actualStepTime = Math.max(this.ctx.currentTime, this.nextStepTime + swingOffset + latencyOffset);
 
-      if (this.isMetronome) {
-        const isDownbeat = (step % 4 === 0);
-        this.playMetronome(actualStepTime, isDownbeat);
-      }
+      // F-01: a throw from any single voice must never wedge the transport.
+      // The grid advances unconditionally below, so a bad step is skipped, not replayed forever.
+      try {
+        if (this.isMetronome) {
+          const isDownbeat = (step % 4 === 0);
+          this.playMetronome(actualStepTime, isDownbeat);
+        }
 
-      const activeTracks = this.scheduleStep(step, actualStepTime, stepDur);
-      this.stepQueue.push({ step, time: actualStepTime, activeTracks });
+        const activeTracks = this.scheduleStep(step, actualStepTime, stepDur);
+        this.stepQueue.push({ step, time: actualStepTime, activeTracks });
+      } catch (err) {
+        this.schedulingErrorCount += 1;
+        if (this.schedulingErrorCount <= 5) {
+          console.warn(`[AudioEngine] step ${step} failed to schedule; continuing transport`, err);
+        }
+      }
 
       // Keep monotonic un-swung grid advancement
       this.nextStepTime += stepDur;
@@ -1027,28 +1078,35 @@ export class AudioEngine {
     if (!this.ctx) return;
     const dest = isAudition ? (this.masterGain || this.getTrackDestination(trackIdx)) : this.getTrackDestination(trackIdx);
 
+    // F-01: every voice funnels through here, so this is the single choke point that
+    // keeps user-controlled zeros (muted fader, velocity 0, NaN from a bad import)
+    // out of `exponentialRampToValueAtTime`, which would otherwise throw and wedge
+    // the scheduler loop for the rest of the session.
+    const safeVel = safeVelocity(vel);
+    const safeStartTime = Math.max(this.ctx.currentTime, safeTime(time, this.ctx.currentTime));
+
     const trackId = (this.pattern?.tracks[trackIdx]?.track_id || "").toLowerCase();
     const lowerName = trackName.toLowerCase();
 
     if (trackId === "kick" || lowerName.includes("kick")) {
-      this.playKick(dest, time, vel, pitch);
-      ecosystemBus.publishTransientHit("master", vel, pitch);
+      this.playKick(dest, safeStartTime, safeVel, pitch);
+      ecosystemBus.publishTransientHit("master", safeVel, pitch);
     } else if (trackId === "snare" || lowerName.includes("snare")) {
-      this.playSnare(dest, time, vel, pitch);
+      this.playSnare(dest, safeStartTime, safeVel, pitch);
     } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
-      this.playHiHat(dest, time, vel, pitch, stepVal, stepDur, gateVal);
+      this.playHiHat(dest, safeStartTime, safeVel, pitch, stepVal, stepDur, gateVal);
     } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
-      this.playPercussion(dest, time, vel, pitch);
+      this.playPercussion(dest, safeStartTime, safeVel, pitch);
     } else if (trackId === "bass" || lowerName.includes("bass")) {
-      this.playBass(dest, time, vel, pitch, stepDur, gateVal);
+      this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
-      this.playChord(dest, time, vel, pitch, stepDur, gateVal);
+      this.playChord(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
     } else if (trackId === "lead" || lowerName.includes("lead")) {
-      this.playLead(dest, time, vel, pitch, stepDur, gateVal);
+      this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
     } else if (trackId === "fx" || lowerName.includes("fx")) {
-      this.playFX(dest, time, vel, pitch, stepDur, gateVal);
+      this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
     } else {
-      this.playPercussion(dest, time, vel, pitch);
+      this.playPercussion(dest, safeStartTime, safeVel, pitch);
     }
   }
 

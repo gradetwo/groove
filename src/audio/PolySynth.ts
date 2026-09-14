@@ -9,6 +9,8 @@
  * - Dynamic resonant lowpass filter per voice
  */
 
+import { safeGain, safeFreq, safeVelocity } from "./dspGuards";
+
 export interface Adsrenvelope {
   attack: number;  // seconds, >= 0.001
   decay: number;   // seconds, >= 0.01
@@ -98,8 +100,12 @@ export function playPolySynthNote(
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
 
-  const freq = midiToFreq(midiNote);
-  const { osc1Type, osc2Type, osc2DetuneCents, osc2Mix, filterCutoff, filterQ, adsr } = preset;
+  const freq = safeFreq(midiToFreq(midiNote), 440);
+  // F-01: velocity drives exponential ramps; a zero (or a preset with cutoff 0)
+  // would throw a RangeError and take the whole scheduler down with it.
+  const safeVel = safeVelocity(velocity);
+  const { osc1Type, osc2Type, osc2DetuneCents, osc2Mix, filterQ, adsr } = preset;
+  const filterCutoff = safeFreq(preset.filterCutoff, 12000);
 
   // Dual Oscillators
   const osc1 = ctx.createOscillator();
@@ -128,7 +134,7 @@ export function playPolySynthNote(
   filter.Q.setValueAtTime(filterQ, time);
 
   // Dynamic filter sweep matching attack/decay
-  const peakFilter = Math.min(filterCutoff * 2.5, 18000);
+  const peakFilter = safeFreq(Math.min(filterCutoff * 2.5, 18000));
   filter.frequency.exponentialRampToValueAtTime(peakFilter, time + adsr.attack);
   filter.frequency.exponentialRampToValueAtTime(filterCutoff, time + adsr.attack + adsr.decay);
 
@@ -137,7 +143,7 @@ export function playPolySynthNote(
 
   // ADSR Amp Envelope
   const ampGain = ctx.createGain();
-  const maxVolume = velocity * 0.8;
+  const maxVolume = safeGain(safeVel * 0.8, 0.001);
   const attackEnd = time + Math.max(0.002, adsr.attack);
   const decayEnd = attackEnd + Math.max(0.01, adsr.decay);
   const sustainLevel = Math.max(0.0001, maxVolume * adsr.sustain);

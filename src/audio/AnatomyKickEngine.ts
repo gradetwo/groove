@@ -10,6 +10,7 @@
  */
 
 import { ecosystemBus } from "./ecosystemBus";
+import { safeGain, safeVelocity } from "./dspGuards";
 
 export interface SomaticKickParams {
   softness: number; // 0 (razor sharp pitch dip) to 1 (velvety soft curve)
@@ -427,7 +428,7 @@ export class AnatomyKickEngine {
 
       // Amplitude decay (governed by Boom to Where)
       const subDecay = 0.2 + p.boomToWhere * 0.9;
-      const subPeak = velocity * 1.25;
+      const subPeak = safeGain(velocity * 1.25);
       subGain.gain.setValueAtTime(0.0001, t);
       subGain.gain.linearRampToValueAtTime(subPeak, t + 0.002);
       subGain.gain.exponentialRampToValueAtTime(subPeak * 0.45, t + 0.08);
@@ -483,7 +484,7 @@ export class AnatomyKickEngine {
       thumpFilter.Q.value = 1.8;
 
       const thumpDecay = 0.05 + p.hitSkin * 0.18;
-      const thumpPeak = velocity * (0.8 + p.hitSkin * 0.5);
+      const thumpPeak = safeGain(velocity * (0.8 + p.hitSkin * 0.5));
 
       thumpGain.gain.setValueAtTime(0.0001, t);
       thumpGain.gain.linearRampToValueAtTime(thumpPeak, t + 0.001);
@@ -516,7 +517,7 @@ export class AnatomyKickEngine {
       clickFilter.Q.value = 4.5;
 
       const clickDecay = 0.008 + (1 - p.softness) * 0.007;
-      const clickPeak = velocity * p.clickAmount * 0.95;
+      const clickPeak = safeGain(velocity * p.clickAmount * 0.95);
 
       clickGain.gain.setValueAtTime(0.0001, t);
       clickGain.gain.linearRampToValueAtTime(clickPeak, t + 0.0003);
@@ -706,6 +707,9 @@ export function synthesizeAnatomyKickVoice(
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
 
+  // F-01: user-controlled velocity/volume can be 0; exponential ramps require > 0.
+  vel = safeVelocity(vel);
+
   const rawParams =
     typeof presetIdOrParams === "string"
       ? resolveKickPresetParams(presetIdOrParams)
@@ -755,7 +759,7 @@ export function synthesizeAnatomyKickVoice(
 
     const subDecay = 0.2 + p.boomToWhere * 0.9;
     if (subDecay > maxDecay) maxDecay = subDecay;
-    const subPeak = vel * 1.25 * p.volume;
+    const subPeak = safeGain(vel * 1.25 * p.volume);
 
     subGain.gain.setValueAtTime(0.0001, t);
     subGain.gain.linearRampToValueAtTime(subPeak, t + 0.002);
@@ -810,7 +814,7 @@ export function synthesizeAnatomyKickVoice(
 
     const thumpDecay = 0.05 + p.hitSkin * 0.18;
     if (thumpDecay > maxDecay) maxDecay = thumpDecay;
-    const thumpPeak = vel * (0.8 + p.hitSkin * 0.5) * p.volume;
+    const thumpPeak = safeGain(vel * (0.8 + p.hitSkin * 0.5) * p.volume);
 
     thumpGain.gain.setValueAtTime(0.0001, t);
     thumpGain.gain.linearRampToValueAtTime(thumpPeak, t + 0.001);
@@ -842,7 +846,7 @@ export function synthesizeAnatomyKickVoice(
     clickFilter.Q.setValueAtTime(4.5, t);
 
     const clickDecay = 0.008 + (1 - p.softness) * 0.007;
-    const clickPeak = vel * p.clickAmount * 0.95 * p.volume;
+    const clickPeak = safeGain(vel * p.clickAmount * 0.95 * p.volume);
 
     clickGain.gain.setValueAtTime(0.0001, t);
     clickGain.gain.linearRampToValueAtTime(clickPeak, t + 0.0003);
