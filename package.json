@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint 'src/**/*.{ts,tsx}' --quiet",
     "format": "prettier --write 'src/**/*.{ts,tsx}'",
-    "lint:data": "vitest run src/test/schema.test.ts src/test/schemaFields.test.ts src/test/genreContentAudit.test.ts",
+    "lint:data": "vitest run src/test/schema.test.ts src/test/schemaFields.test.ts src/test/genreContentAudit.test.ts src/test/genreIndexDrift.test.ts src/test/genreIdReferences.test.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
