@@ -445,7 +445,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   // Select a specific node (subgenre or core)
   const selectNode = useCallback((n: NebulaNode, openCard = true) => {
     setSelectedNode(n);
-    setLiveAnnouncement(isZh ? `已选择曲风：${n.zhName || n.name}` : `Selected genre: ${n.en || n.name}`);
+    setLiveAnnouncement(t("galaxy_announce_selected", { name: isZh ? (n.zhName || n.name) : (n.en || n.name) }));
     const th = threeRef.current;
     if (!th) return;
 
@@ -503,7 +503,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     if (!th) return;
 
     if (!cluster) {
-      setLiveAnnouncement(isZh ? "已返回全星系概览" : "Returned to galaxy overview");
+      setLiveAnnouncement(t("galaxy_announce_overview"));
       // Reset to whole galaxy overview
       th.uniforms.uSelectedCluster.value = -1;
       th.uniforms.uSelectedNode.value = -1;
@@ -516,7 +516,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       return;
     }
 
-    setLiveAnnouncement(isZh ? `已进入分类：${cluster.name}` : `Entered category: ${cluster.en}`);
+    setLiveAnnouncement(t("galaxy_announce_entered_category", { name: isZh ? cluster.name : cluster.en }));
 
     // Set shader uniform to highlight this cluster and softly dim the rest
     const clusterIdx = graphData.clusters.findIndex((c) => c.id === cluster.id);
@@ -1525,13 +1525,13 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
     if (isPlayingYear) {
       yearPlayRef.current = null;
       setIsPlayingYear(false);
-      setLiveAnnouncement(isZh ? "已暂停纪元演化回放" : "Paused era evolution replay");
+      setLiveAnnouncement(t("galaxy_announce_replay_paused"));
     } else {
       const from = currentYearRef.current < Y_MAX - 5 ? currentYearRef.current : Y_MIN;
       yearPlayRef.current = { from, to: Y_MAX, t: 0, dur: 7000 };
       setIsPlayingYear(true);
       flyTo(new THREE.Vector3(0, 0, 0), 720, 2.2);
-      setLiveAnnouncement(isZh ? "正在回放 1850-2025 现代音乐曲风演化史" : "Replaying modern music genre evolution 1850-2025");
+      setLiveAnnouncement(t("galaxy_announce_replay_evolution"));
     }
   };
 
@@ -1752,7 +1752,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               ? "bg-accent/20 border border-accent/70 text-accent font-bold shadow-[0_0_12px_rgba(245,183,61,0.35)]"
               : "text-[#eae6dc]/60 hover:text-white hover:bg-white/5 border border-transparent"
           }`}
-          title={isZh ? "显示全景星系" : "Show all nebulae clusters"}
+          title={t("galaxy_toggle_all_title")}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${!selectedCluster ? "bg-accent shadow-[0_0_6px_#f5b73d]" : "bg-white/40"}`} />
           <span>{t("galaxy_filter_all")}</span>
@@ -1785,10 +1785,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         <button
           onClick={() => setDisplayMode("list")}
           className="px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 text-accent hover:text-white hover:bg-white/10 shrink-0"
-          title={isZh ? "切换到无障碍列表视图" : "Switch to accessible list view"}
+          title={t("galaxy_switch_list_title")}
         >
           <List className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{isZh ? "列表视图" : "List View"}</span>
+          <span className="hidden sm:inline">{t("galaxy_list_view")}</span>
         </button>
       </div>
 
@@ -1859,15 +1859,9 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       {/* Bottom Center: Operational Hint */}
       {!selectedCluster && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center text-xs text-[#eae6dc]/50 tracking-[0.2em] font-light hidden lg:block bg-[#05070c]/60 px-4 py-1.5 rounded-full border border-[#eae6dc]/10 backdrop-blur-sm">
-          {isZh ? (
-            <>
-              <b>拖拽</b> 旋转 · <b>滚轮</b> 缩放 · <b>点击星云/星体</b> 居中探索 · <b>纪元</b> 回看演化史
-            </>
-          ) : (
-            <>
-              <b>Drag</b> to rotate · <b>Scroll</b> to zoom · <b>Click star/cluster</b> to focus · <b>Era</b> to explore timeline
-            </>
-          )}
+          <>
+            <b>{t("galaxy_hint_drag")}</b> {t("galaxy_hint_rotate")} <b>{t("galaxy_hint_scroll")}</b> {t("galaxy_hint_zoom")} <b>{t("galaxy_hint_click")}</b> {t("galaxy_hint_focus")} <b>{t("galaxy_hint_era")}</b> {t("galaxy_hint_explore")}
+          </>
         </div>
       )}
 
@@ -1882,9 +1876,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: selectedCluster.hexColor, boxShadow: `0 0 8px ${selectedCluster.hexColor}` }} />
             </div>
             <span className="font-semibold tracking-tight whitespace-nowrap">
-              {isZh 
-                ? `展开子曲风分支 (${clusterSubgenres.length})` 
-                : `Explore Subgenres (${clusterSubgenres.length})`}
+              {t("galaxy_explore_subgenres", { count: clusterSubgenres.length })}
             </span>
             <ChevronUp className="w-3.5 h-3.5 text-[#d8b988] group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -1911,7 +1903,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-lg sm:text-xl font-bold text-white m-0 tracking-tight font-[Space_Grotesk]">
-                    {isZh ? `${selectedCluster.name}星云 · ${selectedCluster.en}` : `${selectedCluster.en} Nebula`}
+                    {t("galaxy_nebula_named", { nebula: selectedCluster.name, name: selectedCluster.en })}
                   </h2>
                   <span className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.1] font-mono text-xs font-semibold text-accent">
                     {t("galaxy_subgenres_count", { count: clusterSubgenres.length })}
@@ -2137,10 +2129,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               />
               <span className="text-xs tracking-[0.2em] font-light text-text-sub uppercase">
                 {selectedNode.type === "origin"
-                  ? (isZh ? "奇点 · 万物之源" : "Singularity · Origin of Sound")
-                  : (isZh
-                    ? `${graphData.clusters.find((c) => c.id === selectedNode.cluster)?.name || "电子"}星云分支`
-                    : `${graphData.clusters.find((c) => c.id === selectedNode.cluster)?.en || "Electronic"} Nebula Branch`)}
+                  ? (t("galaxy_singularity"))
+                  : t("galaxy_branch_label", {
+                    name:
+                      (isZh
+                        ? graphData.clusters.find((c) => c.id === selectedNode.cluster)?.name
+                        : graphData.clusters.find((c) => c.id === selectedNode.cluster)?.en) ||
+                      t("galaxy_branch_unnamed"),
+                  })}
               </span>
             </div>
 
@@ -2155,9 +2151,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             {/* Year & Place */}
             <div className="flex items-center gap-2 text-xs text-text-sub mb-4 pb-3 border-b border-[#1f222a]">
               <span>
-                {isZh
-                  ? `诞生年代: ${selectedNode.year > 0 ? `${selectedNode.year} 年` : "太初 · 有录音之前"}`
-                  : `Origin: ${selectedNode.year > 0 ? `${selectedNode.year}` : "Pre-Recording Roots"}`}
+                {t("galaxy_origin_label", {
+                  value:
+                    selectedNode.year > 0
+                      ? t("galaxy_origin_year", { year: selectedNode.year })
+                      : t("galaxy_origin_prerecording"),
+                })}
               </span>
               {selectedNode.genre?.origin_place && (
                 <>
@@ -2211,7 +2210,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             {selectedNode.children.length > 0 && (
               <div className="mb-5">
                 <span className="block text-[9.5px] tracking-[0.3em] text-text-dim uppercase mb-2">
-                  {isZh ? "演化分支 · EVOLVES" : "EVOLUTIONARY BRANCHES"}
+                  {t("galaxy_evolutionary_branches")}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedNode.children.map((k) => (
@@ -2232,14 +2231,14 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               <div className="mb-5 p-3.5 rounded-xl bg-[#0a0d14] border border-[#1d2029] space-y-2">
                 <div className="text-xs text-[#a0a5b2] leading-relaxed">
                   <span className="text-[#d8b988] font-semibold mr-1">
-                    {isZh ? "声音设计:" : "Sound Design:"}
+                    {t("galaxy_sound_design")}
                   </span>
                   {selectedNode.genre.sound_design[language]}
                 </div>
                 {selectedNode.genre.common_chords.length > 0 && (
                   <div className="text-xs text-[#a0a5b2] leading-relaxed">
                     <span className="text-[#45e0c9] font-semibold mr-1">
-                      {isZh ? "经典和弦:" : "Common Chords:"}
+                      {t("galaxy_common_chords")}
                     </span>
                     <code className="font-mono text-accent">{selectedNode.genre.common_chords.join(" → ")}</code>
                   </div>
@@ -2251,7 +2250,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             {selectedNode.genre?.representative_tracks && selectedNode.genre.representative_tracks.length > 0 && (
               <div className="mb-5">
                 <span className="block text-[9.5px] tracking-[0.3em] text-text-dim uppercase mb-2">
-                  {isZh ? "代表引力 · ARTISTS & TRACKS" : "KEY ARTISTS & TRACKS"}
+                  {t("galaxy_key_artists")}
                 </span>
                 <div className="space-y-1.5">
                   {selectedNode.genre.representative_tracks.slice(0, 4).map((t, i) => (

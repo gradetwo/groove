@@ -176,14 +176,14 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     try {
       await saveProject(newProj);
     } catch (err) {
-      onToast(isZh ? `创建工程失败：${storageErrorMessage(err)}` : `Could not create project: ${storageErrorMessage(err)}`);
+      onToast(t("project_hub_create_failed", { error: storageErrorMessage(err) }));
       return;
     }
     setActiveProjectId(newProj.id);
     setActiveId(newProj.id);
     onLoadProject(newProj);
     await reloadProjects();
-    onToast(isZh ? `已创建新工程: ${newProj.name}` : `Created project: ${newProj.name}`);
+    onToast(t("project_hub_created", { name: newProj.name }));
     onClose();
   };
 
@@ -212,7 +212,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     try {
       await saveProject(newProj);
     } catch (err) {
-      onToast(isZh ? `另存失败：${storageErrorMessage(err)}` : `Could not save as new project: ${storageErrorMessage(err)}`);
+      onToast(t("project_hub_save_as_failed", { error: storageErrorMessage(err) }));
       return;
     }
     setActiveProjectId(newProj.id);
@@ -220,7 +220,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setSaveAsOpen(false);
     setSaveAsTitle("");
     await reloadProjects();
-    onToast(isZh ? `已另存为新工程: ${newProj.name}` : `Saved as new project: ${newProj.name}`);
+    onToast(t("project_hub_saved_as", { name: newProj.name }));
   };
 
   // Load project
@@ -228,7 +228,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setActiveProjectId(project.id);
     setActiveId(project.id);
     onLoadProject(project);
-    onToast(isZh ? `已载入工程: ${project.name} ✓` : `Loaded project: ${project.name} ✓`);
+    onToast(t("project_hub_loaded", { name: project.name }));
     onClose();
   };
 
@@ -237,9 +237,9 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     try {
       const copy = await duplicateProject(project.id);
       await reloadProjects();
-      onToast(isZh ? `已复制工程: ${copy.name}` : `Duplicated: ${copy.name}`);
+      onToast(t("project_hub_duplicated", { name: copy.name }));
     } catch (err) {
-      onToast(isZh ? `复制失败：${storageErrorMessage(err)}` : `Could not duplicate: ${storageErrorMessage(err)}`);
+      onToast(t("project_hub_duplicate_failed", { error: storageErrorMessage(err) }));
     }
   };
 
@@ -249,7 +249,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       await toggleProjectFavorite(project.id);
       await reloadProjects();
     } catch (err) {
-      onToast(isZh ? `收藏状态保存失败：${storageErrorMessage(err)}` : `Could not update favorite: ${storageErrorMessage(err)}`);
+      onToast(t("project_hub_favorite_failed", { error: storageErrorMessage(err) }));
     }
   };
 
@@ -260,10 +260,10 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     if (title && title !== renameTarget.name) {
       try {
         await renameProject(renameTarget.id, title);
-        onToast(isZh ? `工程已重命名为: ${title}` : `Renamed to: ${title}`);
+        onToast(t("project_hub_renamed", { name: title }));
         await reloadProjects();
       } catch (err) {
-        onToast(isZh ? `重命名失败：${storageErrorMessage(err)}` : `Could not rename: ${storageErrorMessage(err)}`);
+        onToast(t("project_hub_rename_failed", { error: storageErrorMessage(err) }));
         return;
       }
     }
@@ -278,18 +278,18 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     try {
       await deleteProject(deleteTarget.id);
     } catch (err) {
-      onToast(isZh ? `删除失败：${storageErrorMessage(err)}` : `Could not delete: ${storageErrorMessage(err)}`);
+      onToast(t("project_hub_delete_failed", { error: storageErrorMessage(err) }));
       return;
     }
     setDeleteTarget(null);
     await reloadProjects();
-    onToast(isZh ? `已删除工程: ${name}` : `Deleted project: ${name}`);
+    onToast(t("project_hub_deleted", { name: name }));
   };
 
   // Export .groove file
   const handleExport = (project: GrooveProject) => {
     exportProjectToGrooveFile(project);
-    onToast(isZh ? `已导出 .groove 工程包: ${project.name}` : `Exported .groove: ${project.name}`);
+    onToast(t("project_hub_exported", { name: project.name }));
   };
 
   // File import
@@ -299,9 +299,9 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     try {
       const imported = await importGrooveFile(file);
       await reloadProjects();
-      onToast(isZh ? `已成功导入工程: ${imported.name}` : `Imported project: ${imported.name}`);
+      onToast(t("project_hub_imported", { name: imported.name }));
     } catch (err: any) {
-      onToast(isZh ? `导入失败: ${err?.message || "格式不正确"}` : `Import failed: ${err?.message || "Invalid file"}`);
+      onToast(t("project_hub_import_failed", { reason: err?.message || t("project_hub_import_invalid_file") }));
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -329,9 +329,9 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     try {
       const imported = await importGrooveFile(file);
       await reloadProjects();
-      onToast(isZh ? `已成功导入工程: ${imported.name}` : `Imported project: ${imported.name}`);
+      onToast(t("project_hub_imported", { name: imported.name }));
     } catch (err: any) {
-      onToast(isZh ? `导入失败: ${err?.message || "格式不正确"}` : `Import failed: ${err?.message || "Invalid file"}`);
+      onToast(t("project_hub_import_failed", { reason: err?.message || t("project_hub_import_invalid_file") }));
     }
   };
 
@@ -352,7 +352,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
         <div className="absolute inset-0 z-50 bg-[#0d1117]/90 border-4 border-dashed border-accent flex flex-col items-center justify-center pointer-events-none">
           <Upload className="w-16 h-16 text-accent animate-bounce mb-3" />
           <p className="text-xl font-bold text-text font-['JetBrains_Mono']">
-            {isZh ? "松开鼠标立即导入 .groove 工程包" : "Drop .groove file to import"}
+            {t("project_hub_drop_hint")}
           </p>
         </div>
       )}
@@ -476,7 +476,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
         {/* Tag Filter Pills */}
         <div className="px-4 sm:px-6 py-2.5 bg-[#090a0f] border-b border-line/30 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap scrollbar-none text-xs">
           <span className="text-[10px] text-text-dim font-['JetBrains_Mono'] uppercase tracking-wider mr-1">
-            {isZh ? "过滤:" : "Filter:"}
+            {t("project_hub_filter_label")}
           </span>
           <button
             onClick={() => setSelectedTag("all")}
@@ -521,7 +521,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
             <div className="h-64 flex flex-col items-center justify-center gap-3 text-text-dim">
               <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin" />
               <span className="text-xs font-['JetBrains_Mono']">
-                {isZh ? "正在载入工程库..." : "Loading projects database..."}
+                {t("project_hub_loading")}
               </span>
             </div>
           ) : filteredProjects.length === 0 ? (
@@ -617,11 +617,11 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                           <span className="font-bold text-text">{project.bpm}</span>
                         </div>
                         <div className="bg-[#151824]/60 px-2 py-1 rounded-md">
-                          <span className="text-text-dim block text-[9px] uppercase">{isZh ? "步数" : "Steps"}</span>
+                          <span className="text-text-dim block text-[9px] uppercase">{t("project_hub_steps_label")}</span>
                           <span className="font-bold text-text">{project.stepCount} ({project.timeSignature})</span>
                         </div>
                         <div className="bg-[#151824]/60 px-2 py-1 rounded-md">
-                          <span className="text-text-dim block text-[9px] uppercase">{isZh ? "套件" : "Kit"}</span>
+                          <span className="text-text-dim block text-[9px] uppercase">{t("project_hub_kit_label")}</span>
                           <span className="font-bold text-accent uppercase">{project.drumKit || "808"}</span>
                         </div>
                       </div>
@@ -647,7 +647,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                         <span>{formattedDate}</span>
                         {project.snapshotSummary && (
                           <span className="text-text-dim/80">
-                            {project.snapshotSummary.activeSteps} {isZh ? "音符" : "hits"}
+                            {project.snapshotSummary.activeSteps} {t("project_hub_hits")}
                           </span>
                         )}
                       </div>
@@ -665,7 +665,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                           {isActive ? (
                             <>
                               <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                              <span>{isZh ? "使用中" : "Active"}</span>
+                              <span>{t("project_hub_in_use")}</span>
                             </>
                           ) : (
                             <span>{t("project_load")}</span>
@@ -712,14 +712,12 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
             <span>
-              {isZh
-                ? `已存 ${projects.length} 个工程 · 500MB+ 离线持久化 (支持拖拽 .groove 文件导入)`
-                : `${projects.length} saved projects · 500MB+ offline capacity (Drop .groove file to import)`}
+              {t("project_hub_storage_hint", { count: projects.length })}
             </span>
           </div>
 
           <div className="hidden sm:block text-[11px] text-text-dim/80">
-            {isZh ? "按 Esc 关闭" : "Press Esc to exit"}
+            {t("project_hub_esc_hint")}
           </div>
         </div>
       </div>
@@ -748,13 +746,13 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                 onClick={() => setSaveAsOpen(false)}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-text hover:bg-line"
               >
-                {isZh ? "取消" : "Cancel"}
+                {t("project_hub_cancel")}
               </button>
               <button
                 onClick={handleSaveCurrentAs}
                 className="px-4 py-1.5 rounded-lg text-xs font-bold font-['JetBrains_Mono'] bg-accent text-black hover:bg-accent/90"
               >
-                {isZh ? "确认保存" : "Save"}
+                {t("project_hub_confirm_save")}
               </button>
             </div>
           </div>
@@ -784,13 +782,13 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                 onClick={() => setRenameTarget(null)}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-text hover:bg-line"
               >
-                {isZh ? "取消" : "Cancel"}
+                {t("project_hub_cancel")}
               </button>
               <button
                 onClick={handleConfirmRename}
                 className="px-4 py-1.5 rounded-lg text-xs font-bold font-['JetBrains_Mono'] bg-accent text-black hover:bg-accent/90"
               >
-                {isZh ? "保存重命名" : "Rename"}
+                {t("project_hub_confirm_rename")}
               </button>
             </div>
           </div>
@@ -808,22 +806,20 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
               </h3>
             </div>
             <p className="text-xs font-['JetBrains_Mono'] text-text-sub leading-relaxed">
-              {isZh
-                ? `确定永久删除工程 "${deleteTarget.name}" 吗？此操作不可撤销，且无法恢复。`
-                : `Are you sure you want to permanently delete project "${deleteTarget.name}"? This action cannot be undone.`}
+              {t("project_hub_delete_confirm", { name: deleteTarget.name })}
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setDeleteTarget(null)}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-text hover:bg-line"
               >
-                {isZh ? "取消" : "Cancel"}
+                {t("project_hub_cancel")}
               </button>
               <button
                 onClick={handleConfirmDelete}
                 className="px-4 py-1.5 rounded-lg text-xs font-bold font-['JetBrains_Mono'] bg-[#ff5964] text-black hover:bg-[#ff5964]/90"
               >
-                {isZh ? "彻底删除" : "Delete"}
+                {t("project_hub_confirm_delete")}
               </button>
             </div>
           </div>

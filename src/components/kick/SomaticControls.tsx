@@ -24,6 +24,7 @@ import {
   deleteCustomKickPreset,
   AnatomyKickEngine 
 } from "../../audio/AnatomyKickEngine";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface SomaticControlsProps {
   engine: AnatomyKickEngine;
@@ -42,6 +43,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
   isZh,
   className = "",
 }) => {
+  const { t } = useLanguage();
   const [activePresetId, setActivePresetId] = useState<string>("berlin-orphic");
   const [customPresets, setCustomPresets] = useState<CustomKickPreset[]>(() => loadCustomKickPresets());
   const [isSavingCustom, setIsSavingCustom] = useState(false);
@@ -68,9 +70,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
 
   const handleSaveCustom = (e: React.FormEvent) => {
     e.preventDefault();
-    const fallbackName = isZh
-      ? `自定义底鼓 ${customPresets.length + 1}`
-      : `Custom Kick ${customPresets.length + 1}`;
+    const fallbackName = t("kick_custom_fallback_name", { count: customPresets.length + 1 });
     const name = customNameInput.trim() || fallbackName;
     const created = saveCustomKickPreset(name, params);
     setActivePresetId(created.id);
@@ -116,7 +116,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-[#f5b73d]" />
             <span className="font-bold text-text uppercase">
-              {isZh ? "底鼓预设库" : "KICK PRESETS"}
+              {t("somatic_presets_heading")}
             </span>
           </div>
 
@@ -124,10 +124,10 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
             type="button"
             onClick={() => setIsSavingCustom((prev) => !prev)}
             className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#f5b73d]/15 hover:bg-[#f5b73d]/25 text-[#f5b73d] border border-[#f5b73d]/40 transition-colors"
-            title={isZh ? "将当前调整的参数保存为新预设" : "Save current parameters as custom preset"}
+            title={t("somatic_save_preset_title")}
           >
             <BookmarkPlus className="w-3 h-3" />
-            <span>{isZh ? "保存当前预设" : "SAVE AS NEW"}</span>
+            <span>{t("somatic_save_as_new")}</span>
           </button>
         </div>
 
@@ -135,16 +135,16 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
         {isSavingCustom && (
           <form onSubmit={handleSaveCustom} className="p-2.5 rounded bg-[#10131d] border border-[#f5b73d]/40 space-y-2">
             <div className="text-[11px] font-bold text-text flex items-center justify-between">
-              <span>{isZh ? "保存自定义底鼓预设" : "Save Custom Kick Preset"}</span>
+              <span>{t("somatic_save_custom_preset")}</span>
               <span className="text-[9px] text-[#f5b73d]">
-                {isZh ? "保存后可直接在鼓机中调用" : "Available in Drum Machine Kits"}
+                {t("somatic_save_custom_hint")}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 autoFocus
-                placeholder={isZh ? "预设名称（例如：重低音穿透底鼓）" : "Preset Name (e.g. Heavy Thump Kick)"}
+                placeholder={t("somatic_preset_name_placeholder")}
                 value={customNameInput}
                 onChange={(e) => setCustomNameInput(e.target.value)}
                 className="flex-1 px-2 py-1 rounded bg-[#06080d] border border-line text-xs text-text focus:outline-none focus:border-[#f5b73d]"
@@ -154,7 +154,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
                 className="flex items-center gap-1 px-3 py-1 rounded bg-[#f5b73d] text-black font-bold text-xs hover:bg-[#ffc657] transition-colors"
               >
                 <Check className="w-3 h-3" />
-                <span>{isZh ? "保存" : "Save"}</span>
+                <span>{t("somatic_save")}</span>
               </button>
               <button
                 type="button"
@@ -170,7 +170,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
         {/* Curated Presets Grid */}
         <div className="space-y-1">
           <span className="text-[9px] text-text-dim uppercase tracking-wider">
-            {isZh ? "官方精选模型" : "CURATED MODELS"}
+            {t("somatic_curated_models")}
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
             {KICK_PRESETS.map((preset) => {
@@ -201,7 +201,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
         {customPresets.length > 0 && (
           <div className="space-y-1 pt-1.5 border-t border-line/30">
             <span className="text-[9px] text-[#f5b73d] uppercase tracking-wider flex items-center justify-between">
-              <span>{isZh ? "我的自定义预设 (可在鼓机中选用)" : "MY CUSTOM PRESETS"}</span>
+              <span>{t("somatic_my_custom_presets")}</span>
               <span className="text-[8px] text-text-dim font-mono">{customPresets.length} PRESETS</span>
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -230,7 +230,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
                       type="button"
                       onClick={(e) => handleDeleteCustom(e, preset.id)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded text-text-dim hover:text-red-400 hover:bg-red-400/10 transition-opacity"
-                      title={isZh ? "删除此预设" : "Delete preset"}
+                      title={t("somatic_delete_preset_title")}
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -250,7 +250,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
         {activeCustom && (
           <div className="pt-2 border-t border-line/30 text-[10px] text-[#f5b73d]/90 leading-relaxed bg-black/30 p-2 rounded flex items-center justify-between">
             <span>
-              {isZh ? `已载入自定义底鼓：「${activeCustom.name}」，可在主工作台鼓机中直接选用。` : `Loaded custom kick "${activeCustom.name}". Available in Drum Machine kits.`}
+              {t("somatic_custom_loaded", { name: activeCustom.name })}
             </span>
           </div>
         )}
@@ -262,7 +262,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
           <div className="flex items-center gap-2">
             <Disc className="w-3.5 h-3.5 text-[#f5b73d]" />
             <span className="font-bold text-text uppercase">
-              {isZh ? "三层身体解剖分轨" : "THE SOMATIC TRIAD CHANNELS"}
+              {t("somatic_triad_channels")}
             </span>
           </div>
           <span className="text-[9px] text-[#f5b73d]">SOLO / MUTE ISOLATION</span>
@@ -278,7 +278,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
             </span>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-text">1. SUB</span>
-              <span className="text-[9px] text-text-dim">30–60 Hz · {isZh ? "躯体与内脏" : "Viscera"}</span>
+              <span className="text-[9px] text-text-dim">30–60 Hz · {t("somatic_layer_viscera")}</span>
             </div>
           </div>
 
@@ -333,7 +333,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
             </span>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-text">2. THUMP</span>
-              <span className="text-[9px] text-text-dim">100–200 Hz · {isZh ? "肌肉与冲击" : "Mass"}</span>
+              <span className="text-[9px] text-text-dim">100–200 Hz · {t("somatic_layer_mass")}</span>
             </div>
           </div>
 
@@ -389,7 +389,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
             </span>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-text">3. CLICK</span>
-              <span className="text-[9px] text-text-dim">1–2.5 kHz · {isZh ? "神经锁相" : "PLV"}</span>
+              <span className="text-[9px] text-text-dim">1–2.5 kHz · {t("somatic_layer_plv")}</span>
             </div>
           </div>
 
@@ -442,7 +442,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
           <div className="flex items-center gap-2">
             <Sliders className="w-3.5 h-3.5 text-[#f5b73d]" />
             <span className="font-bold text-text uppercase">
-              {isZh ? "身体感知化宏控参数" : "SOMATIC MACRO PARAMETERS"}
+              {t("somatic_macro_params_heading")}
             </span>
           </div>
           <span className="text-[9px] text-text-dim">NON-LINEAR DSP</span>
@@ -452,7 +452,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
           {/* Softness */}
           <div className="flex flex-col gap-1 p-2 rounded bg-black/40 border border-line/30">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-text">{isZh ? "柔软度" : "Softness"}</span>
+              <span className="font-semibold text-text">{t("somatic_softness")}</span>
               <span className="text-[#f5b73d] font-bold">{Math.round(params.softness * 100)}%</span>
             </div>
             <input
@@ -465,14 +465,14 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
               className="accent-[#f5b73d] h-1"
             />
             <span className="text-[8px] text-text-dim">
-              {isZh ? "音高下潜曲率与起音阻尼" : "Pitch dive curve & attack damping"}
+              {t("somatic_softness_desc")}
             </span>
           </div>
 
           {/* Grit */}
           <div className="flex flex-col gap-1 p-2 rounded bg-black/40 border border-line/30">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-text">{isZh ? "砂砾粗糙度" : "Grit / Saturation"}</span>
+              <span className="font-semibold text-text">{t("somatic_grit")}</span>
               <span className="text-red-400 font-bold">{Math.round(params.grit * 100)}%</span>
             </div>
             <input
@@ -485,14 +485,14 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
               className="accent-red-400 h-1"
             />
             <span className="text-[8px] text-text-dim">
-              {isZh ? "非线性 Tanh 曲线饱和与阶级抵抗" : "Non-linear tanh curve & class revolt"}
+              {t("somatic_grit_desc")}
             </span>
           </div>
 
           {/* Boom to Where */}
           <div className="flex flex-col gap-1 p-2 rounded bg-black/40 border border-line/30">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-text">{isZh ? "低频去向" : "Boom to Where"}</span>
+              <span className="font-semibold text-text">{t("somatic_boom_to_where")}</span>
               <span className="text-[#f5b73d] font-bold">{Math.round(params.boomToWhere * 100)}%</span>
             </div>
             <input
@@ -505,14 +505,14 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
               className="accent-[#f5b73d] h-1"
             />
             <span className="text-[8px] text-text-dim">
-              {isZh ? "次低频持续衰减与内向建筑尾音" : "Sub-bass decay length & inner architecture"}
+              {t("somatic_boom_to_where_desc")}
             </span>
           </div>
 
           {/* Tame Highs */}
           <div className="flex flex-col gap-1 p-2 rounded bg-black/40 border border-line/30">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-text">{isZh ? "驯化高频" : "Tame Highs"}</span>
+              <span className="font-semibold text-text">{t("somatic_tame_highs")}</span>
               <span className="text-blue-400 font-bold">{Math.round(params.tameHighs * 100)}%</span>
             </div>
             <input
@@ -525,14 +525,14 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
               className="accent-blue-400 h-1"
             />
             <span className="text-[8px] text-text-dim">
-              {isZh ? "低通滤波驯服刺耳瞬态" : "Lowpass filter taming harsh transience"}
+              {t("somatic_tame_highs_desc")}
             </span>
           </div>
 
           {/* Rumble */}
           <div className="flex flex-col gap-1 p-2 rounded bg-black/40 border border-line/30">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-text">{isZh ? "次低频隆隆感" : "Rumble"}</span>
+              <span className="font-semibold text-text">{t("somatic_rumble")}</span>
               <span className="text-purple-400 font-bold">{Math.round(params.rumble * 100)}%</span>
             </div>
             <input
@@ -545,14 +545,14 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
               className="accent-purple-400 h-1"
             />
             <span className="text-[8px] text-text-dim">
-              {isZh ? "35Hz 亚音速副波震荡" : "Sub-harmonic 35Hz secondary vibration"}
+              {t("somatic_rumble_desc")}
             </span>
           </div>
 
           {/* Master Volume */}
           <div className="flex flex-col gap-1 p-2 rounded bg-black/40 border border-line/30">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-text">{isZh ? "输出总电平" : "Master Level"}</span>
+              <span className="font-semibold text-text">{t("somatic_master_level")}</span>
               <span className="text-emerald-400 font-bold">{Math.round(params.volume * 100)}%</span>
             </div>
             <input
@@ -565,7 +565,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
               className="accent-emerald-400 h-1"
             />
             <span className="text-[8px] text-text-dim">
-              {isZh ? "总线 DC 隔直与增益控制" : "Bus DC blocker & master gain"}
+              {t("somatic_master_level_desc")}
             </span>
           </div>
         </div>
@@ -578,7 +578,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
           className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded bg-[#f5b73d] text-black font-bold text-xs hover:bg-[#ffc95c] shadow-[0_0_15px_rgba(245,183,61,0.4)] active:scale-98 transition-all"
         >
           <Zap className="w-4 h-4 fill-current" />
-          <span>{isZh ? "击发瞬态脉冲 [SPACE]" : "DISPATCH TRANSIENT [SPACE]"}</span>
+          <span>{t("somatic_dispatch_transient")}</span>
         </button>
 
         <button
@@ -588,7 +588,7 @@ export const SomaticControls: React.FC<SomaticControlsProps> = ({
           title="Export offline 24-bit 44.1kHz WAV sample"
         >
           <Download className="w-4 h-4 text-[#f5b73d]" />
-          <span>{isExporting ? (isZh ? "正在导出..." : "EXPORTING...") : (isZh ? "导出 WAV" : "EXPORT WAV")}</span>
+          <span>{isExporting ? (t("somatic_exporting")) : (t("somatic_export_wav"))}</span>
         </button>
       </div>
     </div>
