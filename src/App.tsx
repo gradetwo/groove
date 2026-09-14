@@ -54,6 +54,13 @@ const MainApp: React.FC = () => {
   const [comparePool, setComparePool] = useState<Genre[]>([]);
 
   useEffect(() => {
+    // A-01 follow-up: this used to run on every app mount, so landing on the studio
+    // tab still downloaded two genre chunks for a comparison view the user had not
+    // opened. Only resolve the compare pool when that tab is actually shown.
+    if (route.tab !== "compare" && (!route.compareIds || route.compareIds.length === 0)) {
+      return;
+    }
+
     let isMounted = true;
     const ids = route.compareIds && route.compareIds.length > 0
       ? route.compareIds
