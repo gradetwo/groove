@@ -2,6 +2,18 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// Port isolation for parallel dev instances / git worktrees (E-06).
+// PORT (or VITE_PORT) wins over the default; PREVIEW_PORT for `vite preview`.
+// strictPort stays false so a busy port degrades to the next free one instead of
+// blocking development, and Vite always prints the port it actually bound.
+const resolvePort = (value: string | undefined, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const DEV_PORT = resolvePort(process.env.PORT ?? process.env.VITE_PORT, 3000);
+const PREVIEW_PORT = resolvePort(process.env.PREVIEW_PORT, 4173);
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -10,8 +22,13 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: DEV_PORT,
+    strictPort: false,
     host: true,
+  },
+  preview: {
+    port: PREVIEW_PORT,
+    strictPort: false,
   },
   build: {
     target: 'es2020',
