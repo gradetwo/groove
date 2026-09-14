@@ -1,31 +1,27 @@
 {
-  "version": "1.16.12",
+  "version": "1.16.13",
   "releaseDate": "2026-09-14",
-  "changelogCount": 54,
+  "changelogCount": 55,
   "latest": {
-    "version": "1.16.12",
-    "date": "2026-09-14",
+    "version": "1.16.13",
+    "date": "2026-09-15",
     "category": "fix",
     "title": {
-      "zh": "v1.16.12 i18n 债务清理完成：硬编码双语三元降到 100 处以内",
-      "en": "v1.16.12 i18n debt cleared: hardcoded bilingual ternaries down to under 100"
+      "zh": "v1.16.13 依赖收口与仓库清理：Playwright 转正、删除 21 个一次性生成器",
+      "en": "v1.16.13 Dependency tidy-up and repo cleanup: Playwright promoted, 21 one-off generators removed"
     },
     "highlights": [
       {
-        "zh": "把 12 个文件中 229 处硬编码的双语文案迁移到词表（AST 口径：259 → 97），全部逐字节校验；新增 229 个中英词条，合并词典达到 1169 项且无重名",
-        "en": "Migrated 229 hardcoded bilingual strings across 12 files into the dictionary (AST-measured: 259 → 97), all byte-verified; 229 new en/zh entries bring the merged dictionary to 1169 with no duplicates"
+        "zh": "Playwright 成为正式 devDependency（lockfile 已同步）：CI 不再需要临时安装步骤，`npm ci && npm run test:e2e` 即可，本地也不需要任何环境变量——已实测 7/7 通过",
+        "en": "Playwright is now a proper devDependency with a synced lockfile: CI no longer needs an ad-hoc install and `npm ci && npm run test:e2e` just works locally with no environment variables — verified 7/7"
       },
       {
-        "zh": "其余 72 处内联三元是数据字段选择（`isZh ? item.name : item.en`），不属于文案债务，已在文档中明确区分",
-        "en": "The remaining 72 inline ternaries select data fields (`isZh ? item.name : item.en`) rather than copy, and the documentation now distinguishes the two"
+        "zh": "删除 21 个一次性 Python 生成器（约 485 KB）。删除前逐一核实无任何引用，删除后 `python3 -m scripts.build_all` 仍校验 159 条曲风、`python3 scripts/package.py` 仍能打出发布包",
+        "en": "Removed 21 one-off Python generators (~485 KB) after verifying none is referenced; afterwards `python3 -m scripts.build_all` still validates all 159 genres and `python3 scripts/package.py` still produces the release archive"
       },
       {
-        "zh": "修正度量方法：行级 grep 会漏掉跨行三元与一行两处，比 AST 口径少 20–30%——首轮审计的 556/259 都是行级数字，已在规划文档中更正",
-        "en": "Corrected the metric: line-based grep misses multi-line ternaries and two-per-line cases, undercounting by 20–30% versus AST. The original 556/259 figures were line-based and the plan document now says so"
-      },
-      {
-        "zh": "导出/导入失败提示不再可能显示原始的 {error} 占位符（统一经 describeError 生成）",
-        "en": "Export/import failure messages can no longer surface a raw {error} placeholder — they now go through a shared describeError helper"
+        "zh": "清理本地产物 release/（39 MB）与 scratch/（16 KB），仓库工作区回到干净状态",
+        "en": "Removed the local artifacts release/ (39 MB) and scratch/ (16 KB), returning the working tree to a clean state"
       }
     ]
   }
