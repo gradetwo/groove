@@ -70,7 +70,12 @@
     <!-- Modern Sans & Monospace Fonts with display=swap (P1-04) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+    <!-- N-08: the Google Fonts stylesheet used to include Noto Sans SC, a CJK family
+         whose @font-face block is ~347 KB decoded / ~92 KB brotli on EVERY page load,
+         while zero font files were ever actually fetched. We now request only the two
+         small Latin families and let CJK text use the platform's own high-quality
+         system fonts (PingFang SC / Hiragino / Microsoft YaHei). -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#0a0b0d] text-[#e9e7e0] antialiased selection:bg-neon-cyan/30 selection:text-neon-cyan min-h-screen overflow-x-hidden">
     <div id="root"></div>

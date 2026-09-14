@@ -1,39 +1,27 @@
 {
-  "version": "1.16.5",
+  "version": "1.16.6",
   "releaseDate": "2026-09-14",
-  "changelogCount": 47,
+  "changelogCount": 48,
   "latest": {
-    "version": "1.16.5",
+    "version": "1.16.6",
     "date": "2026-09-14",
-    "category": "feature",
+    "category": "audio",
     "title": {
-      "zh": "v1.16.5 音序器渲染性能、文档防漂移与清理",
-      "en": "v1.16.5 Sequencer render performance, documentation anti-drift, and cleanup"
+      "zh": "v1.16.6 去掉 92KB 的中文字体 CSS，首屏请求更轻",
+      "en": "v1.16.6 Dropped 92KB of CJK font CSS for a lighter first load"
     },
     "highlights": [
       {
-        "zh": "音序器渲染：修好被内联 props 击穿的记忆化（TrackRow/StepCell/Ruler/GenreRail/InfoDossier/Toolbar），并把 Toolbar 拆成高频/低频分片；单轨编辑现在只重渲染那一行",
-        "en": "Sequencer rendering: fixed memoization that was defeated by inline props across TrackRow/StepCell/Ruler/GenreRail/InfoDossier/Toolbar, and split the Toolbar into high/low-frequency pieces; editing one track now re-renders only that row"
+        "zh": "实测发现每次访问都会下载约 92KB 的 Google Fonts 样式表（其中包含 Noto Sans SC 的中文 @font-face 声明，解码后 347KB），但实际字体文件一个都没被下载——纯属浪费",
+        "en": "Measurement showed ~92KB of Google Fonts CSS on every visit (the Noto Sans SC CJK @font-face block is 347KB decoded) while not a single font file was ever fetched"
       },
       {
-        "zh": "首屏再减负：对比页的曲风数据不再在任意页面预取，首屏只加载默认曲风本身那一个分包",
-        "en": "Lighter first paint: compare-view genre data is no longer prefetched on every page; the first paint now loads only the default genre's own chunk"
+        "zh": "现在只请求两个体积很小的拉丁字体（Space Grotesk / JetBrains Mono），中文改用系统自带的高质量中文字体（PingFang SC / 微软雅黑 / 思源黑体等）",
+        "en": "Only the two small Latin families are requested now (Space Grotesk / JetBrains Mono); Chinese text uses the platform's own high-quality CJK fonts"
       },
       {
-        "zh": "新增真实浏览器性能测量脚本（Playwright），把“首屏不加载多余曲风数据”变成可回归验证的指标，并输出 FCP/LCP/CLS",
-        "en": "Added a real-browser performance script (Playwright) that turns 'no unnecessary genre data on first paint' into a regression gate and reports FCP/LCP/CLS"
-      },
-      {
-        "zh": "文档防漂移：三份规划文档的基线改为自动同步，并新增 docs:check 纳入 CI 与慢轨，杜绝“文档说已交付、实际没做”",
-        "en": "Documentation anti-drift: the three planning docs' baselines are now synced automatically, and a new docs:check runs in CI and the slow track"
-      },
-      {
-        "zh": "数据门禁增强：轻量索引与曲风库的漂移检查、硬编码曲风 id 必须可解析，均已纳入 lint:data",
-        "en": "Stronger data gates: index-vs-database drift and hardcoded genre-id resolution are now part of lint:data"
-      },
-      {
-        "zh": "清理：删除 9 个零引用的设计系统组件、失效的 useGenreGraph hook 及其仅剩的测试",
-        "en": "Cleanup: removed 9 unused design-system components and the dead useGenreGraph hook together with its tests"
+        "zh": "首屏传输量因此再降约 92KB（原先 339KB 中约 27% 是这一项）",
+        "en": "First-load transfer drops by a further ~92KB (that single request was ~27% of the previous 339KB)"
       }
     ]
   }

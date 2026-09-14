@@ -69,9 +69,22 @@ export default {
         '16': 'repeat(16, minmax(0, 1fr))',
       },
       fontFamily: {
-        sans: ['"Space Grotesk"', '"Noto Sans SC"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        // N-08: no CJK webfont — the platform's system CJK faces are used instead.
+        sans: [
+          '"Space Grotesk"',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          '"Noto Sans CJK SC"',
+          'sans-serif',
+        ],
         mono: ['"JetBrains Mono"', 'Fira Code', 'Roboto Mono', 'monospace'],
-        display: ['"Space Grotesk"', '"Noto Sans SC"', 'sans-serif'],
+        display: ['"Space Grotesk"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
       },
       fontSize: {
         'display-2xl': ['28px', { lineHeight: '36px', letterSpacing: '-0.02em', fontWeight: '700' }],
