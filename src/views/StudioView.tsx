@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { Check } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
-import { importMidiToPattern } from "../audio/MidiImporter";
-import { generateVariation } from "../audio/InspireMe";
 import { useLanguage } from "../i18n/LanguageContext";
 import { VelocityLane } from "../components/sequencer/VelocityLane";
 import { EuclideanModal } from "../components/sequencer/EuclideanModal";
@@ -32,13 +30,16 @@ import { useProjectHub } from "../features/sequencer/hooks/useProjectHub";
 import { useMidiInput } from "../features/sequencer/hooks/useMidiInput";
 import { useInitialPatternLoad } from "../features/sequencer/hooks/useInitialPatternLoad";
 import { useMatrixScroll } from "../features/sequencer/hooks/useMatrixScroll";
-import { clearSavedProject } from "../features/sequencer/projectStorage";
-import { ParameterDimension } from "../components/sequencer/VelocityLane";
-import { triggerHaptic, HapticPatterns } from "../utils/haptics";
+import { useGridInteraction } from "../features/sequencer/hooks/useGridInteraction";
+import { usePatternActions } from "../features/sequencer/hooks/usePatternActions";
+import { useTrackControls } from "../features/sequencer/hooks/useTrackControls";
+import { useVelocityLaneEditing } from "../features/sequencer/hooks/useVelocityLaneEditing";
+import { useTransportControls } from "../features/sequencer/hooks/useTransportControls";
+import { useToolbarControls } from "../features/sequencer/hooks/useToolbarControls";
+import { usePanelToggles } from "../features/sequencer/hooks/usePanelToggles";
 import { ChordDefinition } from "../utils/chordTheory";
 import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { calculateGroupSize, calculateStepsPerBar } from "../utils/meter";
-import { announcer } from "../ui";
 import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
 
 // Color mappings matching demo design
@@ -137,8 +138,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const [stepContextMenu, setStepContextMenu] = useState<StepContextMenuState | null>(null);
 
-  // Mobile / Tablet touch detection & dedicated mobile tools
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  // Mobile / Tablet dedicated mobile tools (touch detection lives in useGridInteraction)
   const [mobileEditMode, setMobileEditMode] = useState<MobileEditMode>("step");
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
 
@@ -153,26 +153,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Multi-Project Hub State (P7-02)
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
-
-  // Pointer drag painting & event delegation refs (P2-02 & P2-05)
-  const isPointerDownRef = useRef(false);
-  const dragValRef = useRef<number | null>(null);
-  const pendingPaintMapRef = useRef<Map<string, { trackIdx: number; stepIdx: number; val: number }>>(new Map());
-  const longPressTimerRef = useRef<any>(null);
-  const isLongPressRef = useRef(false);
-  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    const checkTouch = () => {
-      const hasTouch =
-        typeof window !== "undefined" &&
-        ("ontouchstart" in window ||
-          navigator.maxTouchPoints > 0 ||
-          (window.matchMedia && window.matchMedia("(pointer: coarse)").matches));
-      setIsTouchDevice(hasTouch);
-    };
-    checkTouch();
-  }, []);
 
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
@@ -201,13 +181,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
     showToast,
     isKeyboardMode,
   });
-
-  // Clean up pending long-press timer on unmount (the toast timer is owned by useToast)
-  useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    };
-  }, []);
 
   // P5-05 live-recording bridge + AudioEngine lifecycle (A-02)
   const { handleQuantizedStep } = useLiveRecordingBridge({ invalidateRedo, dispatch });
@@ -282,23 +255,32 @@ export const StudioView: React.FC<StudioViewProps> = ({
     showToast,
   });
 
-  // Tap tempo calculator (P3-07)
-  const tapTimestampsRef = useRef<number[]>([]);
-  const handleTapTempo = useCallback(() => {
-    const now = performance.now();
-    tapTimestampsRef.current = tapTimestampsRef.current.filter((t) => now - t < 2500);
-    tapTimestampsRef.current.push(now);
-    if (tapTimestampsRef.current.length >= 2) {
-      const calculatedBpm = AudioEngine.calculateTapTempo(tapTimestampsRef.current);
-      if (calculatedBpm >= 40 && calculatedBpm <= 240) {
-        commit({ type: "SET_BPM", bpm: calculatedBpm });
-        if (engineRef.current) {
-          engineRef.current.setBpm(calculatedBpm);
-        }
-        showToast(`${isZh ? "测速 BPM" : "Tap BPM"}: ${calculatedBpm}`);
-      }
-    }
-  }, [commit, isZh, showToast]);
+  // Transport & playback modes: play, drums-only, undo/redo, tap, song, slots (A-02)
+  const {
+    handleTapTempo,
+    handleToggleDrumsOnly,
+    handleTogglePlay,
+    handleUndo,
+    handleRedo,
+    handleSwitchSlot,
+    handleCopySlot,
+    handleToggleSongMode,
+    handleToggleBlindCompare,
+    handleToggleMetronome,
+    handleToggleCountIn,
+  } = useTransportControls({
+    engineRef,
+    seqStateRef,
+    isPlaying,
+    setIsPlaying,
+    setIsDrumsOnly,
+    clearPlayhead,
+    commit,
+    undo,
+    redo,
+    isZh,
+    showToast,
+  });
 
   // Patterns handed over from other views (chords / arpeggio / masterclass) (A-02)
   useInitialPatternLoad({
@@ -317,69 +299,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Boot-time `?groove=` / `?genre=` load (A-02)
   useUrlShareLoad({ commit, engineRef, currentGenre, showToast });
-
-  // Toggle Drums-Only mode
-  const handleToggleDrumsOnly = useCallback(() => {
-    setIsDrumsOnly((prev) => {
-      const next = !prev;
-      if (engineRef.current) {
-        engineRef.current.setDrumsOnly(next);
-      }
-      showToast(
-        next
-          ? (isZh ? "已开启【只听鼓组】模式 (快捷键 D) ✓" : "Drums Only Mode Enabled (Key: D) ✓")
-          : (isZh ? "已恢复全频段播放 (Full Band) ✓" : "Full Band Mode Restored ✓")
-      );
-      announcer.announce(
-        next
-          ? (isZh ? "已开启只听鼓组" : "Drums only mode enabled")
-          : (isZh ? "已关闭只听鼓组" : "Drums only mode disabled")
-      );
-      return next;
-    });
-  }, [isZh, showToast]);
-
-  // Transport toggle play
-  const handleTogglePlay = useCallback(() => {
-    if (!engineRef.current) return;
-    triggerHaptic(HapticPatterns.playPause);
-    if (isPlaying) {
-      engineRef.current.stop();
-      setIsPlaying(false);
-      clearPlayhead();
-      announcer.announce(isZh ? "已停止播放" : "Playback stopped");
-    } else {
-      engineRef.current.play();
-      setIsPlaying(true);
-      announcer.announce(isZh ? "开始播放" : "Playback started");
-    }
-  }, [isPlaying, clearPlayhead, isZh]);
-
-  const handleUndo = useCallback(() => {
-    const prev = undo();
-    if (prev && engineRef.current) {
-      engineRef.current.setPattern(prev.pattern);
-      engineRef.current.setBpm(prev.bpm);
-      engineRef.current.setSwing(prev.swing / 100);
-      engineRef.current.setTimeSignature(prev.timeSignature);
-      engineRef.current.setResolution(prev.resolution);
-      triggerHaptic(HapticPatterns.undoRedo);
-      showToast(isZh ? "已撤销 (Undo) ✓" : "Undone ✓");
-    }
-  }, [undo, isZh, showToast]);
-
-  const handleRedo = useCallback(() => {
-    const next = redo();
-    if (next && engineRef.current) {
-      engineRef.current.setPattern(next.pattern);
-      engineRef.current.setBpm(next.bpm);
-      engineRef.current.setSwing(next.swing / 100);
-      engineRef.current.setTimeSignature(next.timeSignature);
-      engineRef.current.setResolution(next.resolution);
-      triggerHaptic(HapticPatterns.undoRedo);
-      showToast(isZh ? "已重做 (Redo) ✓" : "Redone ✓");
-    }
-  }, [redo, isZh, showToast]);
 
   // Global transport/grid shortcuts (A-02)
   useTransportShortcuts({
@@ -403,191 +322,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
     onRedo: handleRedo,
   });
 
-  // Event Delegation & Drag-to-paint batching (P2-02 & P2-05)
-  const handleGridPointerDown = (e: React.PointerEvent) => {
-    const target = (e.target as HTMLElement).closest("[data-track-idx][data-step-idx]");
-    if (!target) return;
-
-    const trackIdx = parseInt(target.getAttribute("data-track-idx") || "-1", 10);
-    const stepIdx = parseInt(target.getAttribute("data-step-idx") || "-1", 10);
-    if (trackIdx < 0 || stepIdx < 0) return;
-
-    const tr = pattern.tracks[trackIdx];
-    if (!tr) return;
-
-    if (e.pointerType === "touch") {
-      isLongPressRef.current = false;
-      touchStartPosRef.current = { x: e.clientX, y: e.clientY };
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-
-      longPressTimerRef.current = setTimeout(() => {
-        isLongPressRef.current = true;
-        triggerHaptic(HapticPatterns.doubleTap);
-        setStepContextMenu({
-          isOpen: true,
-          x: e.clientX,
-          y: e.clientY,
-          trackIdx,
-          stepIdx,
-        });
-      }, 450);
-      return;
-    }
-
-    // Desktop Mouse Drag-Paint
-    isPointerDownRef.current = true;
-    pendingPaintMapRef.current.clear();
-    const curVal = tr.steps[stepIdx] || 0;
-    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
-    const nextVal = isHat ? (curVal === 0 ? 1 : curVal === 1 ? 2 : curVal === 2 ? 3 : 0) : curVal > 0 ? 0 : 1;
-
-    dragValRef.current = nextVal;
-    pendingPaintMapRef.current.set(`${trackIdx}:${stepIdx}`, { trackIdx, stepIdx, val: nextVal });
-
-    // Audition sound
-    if (nextVal > 0 && engineRef.current) {
-      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
-    }
-  };
-
-  const handleGridPointerMove = (e: React.PointerEvent) => {
-    if (e.pointerType === "touch" && touchStartPosRef.current) {
-      const dist = Math.hypot(e.clientX - touchStartPosRef.current.x, e.clientY - touchStartPosRef.current.y);
-      if (dist > 8 && longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      return;
-    }
-
-    if (!isPointerDownRef.current || dragValRef.current === null) return;
-
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const target = el?.closest("[data-track-idx][data-step-idx]");
-    if (!target) return;
-
-    const trackIdx = parseInt(target.getAttribute("data-track-idx") || "-1", 10);
-    const stepIdx = parseInt(target.getAttribute("data-step-idx") || "-1", 10);
-    if (trackIdx < 0 || stepIdx < 0) return;
-
-    const key = `${trackIdx}:${stepIdx}`;
-    if (!pendingPaintMapRef.current.has(key)) {
-      const val = dragValRef.current;
-      pendingPaintMapRef.current.set(key, { trackIdx, stepIdx, val });
-      const tr = pattern.tracks[trackIdx];
-      if (tr && val > 0 && engineRef.current) {
-        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, val);
-      }
-    }
-  };
-
-  const handleGridPointerUp = (e: React.PointerEvent) => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-
-    if (e.pointerType === "touch") {
-      if (!isLongPressRef.current) {
-        const target = (e.target as HTMLElement).closest("[data-track-idx][data-step-idx]");
-        if (target) {
-          const trackIdx = parseInt(target.getAttribute("data-track-idx") || "-1", 10);
-          const stepIdx = parseInt(target.getAttribute("data-step-idx") || "-1", 10);
-          if (trackIdx >= 0 && stepIdx >= 0) {
-            handleMobileStepAction(trackIdx, stepIdx);
-          }
-        }
-      }
-      isLongPressRef.current = false;
-      return;
-    }
-
-    // Flush batch paint changes once (P2-05)
-    if (isPointerDownRef.current && pendingPaintMapRef.current.size > 0) {
-      const nextPattern = clonePattern(patternRef.current);
-      pendingPaintMapRef.current.forEach(({ trackIdx, stepIdx, val }) => {
-        const t = nextPattern.tracks[trackIdx];
-        if (t) {
-          t.steps[stepIdx] = val;
-          if (val > 0 && (!t.velocity || !t.velocity[stepIdx])) {
-            if (!t.velocity) t.velocity = Array(t.steps.length).fill(100);
-            t.velocity[stepIdx] = 100;
-          }
-        }
-      });
-      commit({ type: "COMMIT_PATTERN", pattern: nextPattern });
-      if (engineRef.current) {
-        engineRef.current.setPattern(nextPattern);
-      }
-    }
-
-    isPointerDownRef.current = false;
-    dragValRef.current = null;
-    pendingPaintMapRef.current.clear();
-  };
-
-  const handleGridContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const target = (e.target as HTMLElement).closest("[data-track-idx][data-step-idx]");
-    if (!target) return;
-    const trackIdx = parseInt(target.getAttribute("data-track-idx") || "-1", 10);
-    const stepIdx = parseInt(target.getAttribute("data-step-idx") || "-1", 10);
-    if (trackIdx >= 0 && stepIdx >= 0) {
-      setStepContextMenu({
-        isOpen: true,
-        x: e.clientX,
-        y: e.clientY,
-        trackIdx,
-        stepIdx,
-      });
-    }
-  };
-
-  const handleMobileStepAction = (trackIdx: number, stepIdx: number) => {
-    const tr = pattern.tracks[trackIdx];
-    if (!tr) return;
-    const isHat = tr.track_id === "hihat" || tr.name.toLowerCase().includes("hat");
-    const curVal = tr.steps[stepIdx] || 0;
-
-    if (mobileEditMode === "step") {
-      const nextVal = isHat ? (curVal === 0 ? 1 : curVal === 1 ? 2 : curVal === 2 ? 3 : 0) : curVal > 0 ? 0 : 1;
-      commit({ type: "SET_STEP", trackIdx, stepIdx, value: nextVal });
-      if (nextVal > 0 && engineRef.current) {
-        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
-      }
-    } else if (mobileEditMode === "accent") {
-      commit({ type: "SET_STEP", trackIdx, stepIdx, value: 1 });
-      commit({ type: "SET_VELOCITY", trackIdx, stepIdx, velocity: 127 });
-      triggerHaptic(HapticPatterns.accent);
-    } else if (mobileEditMode === "ratchet") {
-      const curRatchet = tr.ratchet?.[stepIdx] || 1;
-      const nextRatchet = curRatchet >= 4 ? 1 : curRatchet + 1;
-      commit({ type: "SET_STEP", trackIdx, stepIdx, value: 1 });
-      commit({ type: "SET_RATCHET", trackIdx, stepIdx, ratchet: nextRatchet });
-    } else if (mobileEditMode === "pitch") {
-      setPitchPicker({
-        isOpen: true,
-        trackIdx,
-        stepIdx,
-        initialNote: tr.pitch?.[stepIdx] ?? 60,
-      });
-    } else if (mobileEditMode === "plocks") {
-      setStepContextMenu({
-        isOpen: true,
-        x: window.innerWidth / 2 - 120,
-        y: window.innerHeight / 2 - 140,
-        trackIdx,
-        stepIdx,
-      });
-    }
-  };
-
   // Math for Bars & Steps (pure helpers live in ../utils/meter)
   const groupSize = useMemo(() => calculateGroupSize(resolution), [resolution]);
 
@@ -609,382 +343,134 @@ export const StudioView: React.FC<StudioViewProps> = ({
     scrollByPixels,
   } = useMatrixScroll({ matrixContainerRef, stepsPerBar, setViewedBar, commit });
 
-  // Quick actions
-  const handleQuickAction = useCallback(
-    (action: "dup_bar1" | "humanize" | "clear_all" | "reset_preset" | "clear_saved" | "open_hub") => {
-      if (action === "open_hub") {
-        setIsProjectHubOpen(true);
-        return;
-      }
-      if (action === "dup_bar1") {
-        const next = clonePattern(patternRef.current);
-        next.tracks.forEach((t) => {
-          const bar1Steps = t.steps.slice(0, stepsPerBar);
-          const bar1Vel = t.velocity?.slice(0, stepsPerBar) || Array(stepsPerBar).fill(100);
-          for (let i = stepsPerBar; i < t.steps.length; i++) {
-            t.steps[i] = bar1Steps[i % stepsPerBar];
-            if (t.velocity) t.velocity[i] = bar1Vel[i % stepsPerBar];
-          }
-        });
-        commit({ type: "COMMIT_PATTERN", pattern: next });
-        showToast(isZh ? "已复制小节 1 至后续小节 ✓" : "Duplicated Bar 1 to all bars ✓");
-      } else if (action === "humanize") {
-        const next = clonePattern(patternRef.current);
-        next.tracks.forEach((t) => {
-          if (!t.velocity) t.velocity = Array(t.steps.length).fill(100);
-          t.velocity = t.velocity.map((v, i) => {
-            if (t.steps[i] === 0) return v;
-            const delta = Math.floor((Math.random() - 0.5) * 24);
-            return Math.max(40, Math.min(127, v + delta));
-          });
-        });
-        commit({ type: "COMMIT_PATTERN", pattern: next });
-        showToast(isZh ? "已应用人性化力度微调 ✨" : "Humanized velocity ✓");
-      } else if (action === "clear_all") {
-        const next = clonePattern(patternRef.current);
-        next.tracks.forEach((t) => {
-          t.steps = Array(t.steps.length).fill(0);
-        });
-        commit({ type: "COMMIT_PATTERN", pattern: next });
-        showToast(isZh ? "已清空全部轨道步进 ✕" : "Cleared all steps ✕");
-      } else if (action === "reset_preset") {
-        commit({ type: "SET_GENRE", genre: currentGenre });
-        showToast(isZh ? "已恢复默认预设 🔄" : "Preset reset 🔄");
-      } else if (action === "clear_saved") {
-        clearSavedProject();
-        commit({ type: "SET_GENRE", genre: currentGenre });
-        showToast(isZh ? "已清除本地工程缓存并重置预设 🧹" : "Cleared local project cache & reset 🧹");
-      }
-    },
-    [stepsPerBar, commit, showToast, isZh, currentGenre]
-  );
+  // Grid input layer: drag-paint, long-press P-Locks, mobile tap modes (A-02)
+  const {
+    isTouchDevice,
+    handleGridPointerDown,
+    handleGridPointerMove,
+    handleGridPointerUp,
+    handleGridContextMenu,
+  } = useGridInteraction({
+    pattern,
+    patternRef,
+    commit,
+    engineRef,
+    mobileEditMode,
+    setStepContextMenu,
+    setPitchPicker,
+  });
 
-  const handleAudition = useCallback(
-    (trackIdx: number, trackName: string) => {
-      engineRef.current?.triggerNote(trackIdx, trackName, 0.9, 0, 1);
-    },
-    []
-  );
+  // Pattern-level actions: quick actions, MIDI import, Inspire Me, audition (A-02)
+  const {
+    handleQuickAction,
+    handleImportMidi,
+    handleInspireMe,
+    handleAudition,
+    handleCycleTrackLength,
+  } = usePatternActions({
+    patternRef,
+    stepsPerBar,
+    stepCount,
+    resolution,
+    bpm,
+    currentGenre,
+    engineRef,
+    commit,
+    setIsProjectHubOpen,
+    isZh,
+    showToast,
+  });
 
-  const handleCycleTrackLength = useCallback(
-    (trackIdx: number) => {
-      const tracks = patternRef.current.tracks;
-      const cur = tracks[trackIdx]?.trackLength || stepCount;
-      const opts = [12, 14, 16, 24, 32].filter((n) => n <= stepCount);
-      let nextLen = opts[(opts.indexOf(cur) + 1) % opts.length] || stepCount;
-      commit({ type: "SET_TRACK_LENGTH", trackIdx, length: nextLen });
-    },
-    [stepCount, commit]
-  );
-
-  // A-03: TrackRow is memoized, so every handler it receives must keep a stable
-  // identity across unrelated StudioView re-renders. Each handler takes the track
-  // index from its caller (instead of being an inline arrow in the JSX) and reads
-  // live pattern data through `patternRef`, so toggling one step no longer changes
-  // the callback identity of every other row.
-  const handleToggleTrackMute = useCallback(
-    (idx: number) => {
-      const nextMute = !patternRef.current.tracks[idx]?.mute;
-      commit({ type: "TOGGLE_MUTE", trackIdx: idx });
-      if (engineRef.current) {
-        engineRef.current.setTrackState(idx, { mute: nextMute });
-      }
-    },
-    [commit]
-  );
-
-  const handleToggleTrackSolo = useCallback(
-    (idx: number) => {
-      const nextSolo = !patternRef.current.tracks[idx]?.solo;
-      commit({ type: "TOGGLE_SOLO", trackIdx: idx });
-      if (engineRef.current) {
-        engineRef.current.setTrackState(idx, { solo: nextSolo });
-      }
-    },
-    [commit]
-  );
-
-  const handleChangeTrackVolume = useCallback(
-    (idx: number, vol: number) => {
-      commit({ type: "SET_VOLUME", trackIdx: idx, volume: vol });
-      if (engineRef.current) {
-        engineRef.current.setTrackState(idx, { volume: vol });
-      }
-    },
-    [commit]
-  );
-
-  const handleChangeTrackPan = useCallback(
-    (idx: number, pan: number) => {
-      commit({ type: "SET_TRACK_PAN", trackIdx: idx, pan });
-      if (engineRef.current) engineRef.current.setTrackState(idx, { pan });
-    },
-    [commit]
-  );
-
-  const handleChangeTrackSwing = useCallback(
-    (idx: number, trackSwing: number) => {
-      commit({ type: "SET_TRACK_SWING", trackIdx: idx, swing: trackSwing });
-    },
-    [commit]
-  );
-
-  const handleOpenVelocityLane = useCallback((idx: number) => {
-    setVelocityActiveTrackIdx(idx);
-    setIsVelocityLaneOpen(true);
-  }, []);
-
-  const handleShiftTrack = useCallback(
-    (idx: number, dir: -1 | 1) => commit({ type: "SHIFT_TRACK", trackIdx: idx, direction: dir }),
-    [commit]
-  );
-
-  const handleSmartFillTrack = useCallback(
-    (idx: number) => commit({ type: "SMART_FILL_TRACK", trackIdx: idx }),
-    [commit]
-  );
-
-  const handleClearTrack = useCallback(
-    (idx: number) => commit({ type: "CLEAR_TRACK", trackIdx: idx }),
-    [commit]
-  );
-
-  const handleMoveTrackUp = useCallback(
-    (idx: number) => commit({ type: "REORDER_TRACKS", fromIndex: idx, toIndex: Math.max(0, idx - 1) }),
-    [commit]
-  );
-
-  const handleMoveTrackDown = useCallback(
-    (idx: number) =>
-      commit({
-        type: "REORDER_TRACKS",
-        fromIndex: idx,
-        toIndex: Math.min(patternRef.current.tracks.length - 1, idx + 1),
-      }),
-    [commit]
-  );
-
-  const handleImportMidi = useCallback(
-    async (file: File) => {
-      try {
-        const buffer = await file.arrayBuffer();
-        const result = importMidiToPattern(buffer, { quantization: resolution, totalSteps: stepCount });
-        commit({ type: "COMMIT_PATTERN", pattern: result.pattern });
-        if (result.bpm && result.bpm !== bpm) {
-          commit({ type: "SET_BPM", bpm: result.bpm });
-        }
-        if (engineRef.current) {
-          engineRef.current.setPattern(result.pattern);
-          if (result.bpm) engineRef.current.setBpm(result.bpm);
-        }
-        showToast(
-          isZh
-            ? `已成功导入 MIDI: 识别到 ${result.notesFound} 个音符 ✓`
-            : `Imported MIDI: parsed ${result.notesFound} notes ✓`
-        );
-      } catch (err: any) {
-        showToast(isZh ? `MIDI 导入失败: ${err?.message || err}` : `MIDI import failed: ${err?.message || err}`);
-      }
-    },
-    [resolution, stepCount, bpm, commit, isZh, showToast]
-  );
-
-  const handleInspireMe = useCallback(() => {
-    const mutated = generateVariation(patternRef.current, {
-      intensity: "medium",
-      preserveKick: true,
-      mutateMelodic: true,
-      mutatePercussion: true,
-      addRatchets: true,
-    });
-    commit({ type: "COMMIT_PATTERN", pattern: mutated });
-    if (engineRef.current) {
-      engineRef.current.setPattern(mutated);
-    }
-    showToast(isZh ? "✨ 已应用 Inspire Me 受控灵感变异！" : "✨ Applied Inspire Me groove variation!");
-  }, [commit, isZh, showToast]);
-
-  const handleCollapseSidebar = useCallback(() => setIsSidebarCollapsed(true), []);
-
-  const handleSelectParameterDimension = useCallback(
-    (dim: ParameterDimension) => commit({ type: "SET_PARAMETER_DIMENSION", dimension: dim }),
-    [commit]
-  );
-
-  const handleSelectVelocityTrack = useCallback((idx: number) => setVelocityActiveTrackIdx(idx), []);
-
-  const handleUpdateVelocity = useCallback(
-    (trackIdx: number, stepIdx: number, newVel: number) =>
-      commitCoalesced(
-        { type: "SET_VELOCITY", trackIdx, stepIdx, velocity: newVel },
-        `velocity:${trackIdx}`
-      ),
-    [commitCoalesced]
-  );
-
-  const handleBatchUpdateVelocity = useCallback(
-    (trackIdx: number, newVelocities: number[]) =>
-      commit({ type: "BATCH_SET_VELOCITY", trackIdx, velocities: newVelocities }),
-    [commit]
-  );
-
-  const handleUpdateProbability = useCallback(
-    (trackIdx: number, stepIdx: number, p: number) =>
-      commit({ type: "SET_PROBABILITY", trackIdx, stepIdx, probability: p }),
-    [commit]
-  );
-
-  const handleBatchUpdateProbability = useCallback(
-    (trackIdx: number, probs: number[]) =>
-      commit({ type: "BATCH_SET_PROBABILITY", trackIdx, probabilities: probs }),
-    [commit]
-  );
-
-  const handleUpdateRatchet = useCallback(
-    (trackIdx: number, stepIdx: number, r: number) =>
-      commit({ type: "SET_RATCHET", trackIdx, stepIdx, ratchet: r }),
-    [commit]
-  );
-
-  const handleBatchUpdateRatchet = useCallback(
-    (trackIdx: number, ratchets: number[]) =>
-      commit({ type: "BATCH_SET_RATCHET", trackIdx, ratchets }),
-    [commit]
-  );
-
-  const handleUpdateGate = useCallback(
-    (trackIdx: number, stepIdx: number, g: number) =>
-      commit({ type: "SET_GATE", trackIdx, stepIdx, gate: g }),
-    [commit]
-  );
-
-  const handleBatchUpdateGate = useCallback(
-    (trackIdx: number, gates: number[]) => commit({ type: "BATCH_SET_GATE", trackIdx, gates }),
-    [commit]
-  );
-
-  const handleCloseVelocityLane = useCallback(() => setIsVelocityLaneOpen(false), []);
+  // Per-track mixer/edit handlers for the memoized TrackRow (A-02)
+  const {
+    handleToggleTrackMute,
+    handleToggleTrackSolo,
+    handleChangeTrackVolume,
+    handleChangeTrackPan,
+    handleChangeTrackSwing,
+    handleOpenVelocityLane,
+    handleShiftTrack,
+    handleSmartFillTrack,
+    handleClearTrack,
+    handleMoveTrackUp,
+    handleMoveTrackDown,
+  } = useTrackControls({
+    patternRef,
+    engineRef,
+    commit,
+    setVelocityActiveTrackIdx,
+    setIsVelocityLaneOpen,
+  });
 
   // A-03: Toolbar is memoized, so every prop it receives needs a stable identity.
-  // Grouped here so the genuinely high-frequency transport props
-  // (isPlaying / bpm / swing / viewedBar) stay the only things that can invalidate
-  // the Toolbar memo. Handlers read live store data through `seqStateRef`.
-  const handleChangeDrumKit = useCallback(
-    (k: DrumKitType) => {
-      setDrumKit(k);
-      showToast(isZh ? `已切换硬件鼓机: ${k.toUpperCase()}` : `Switched drum kit: ${k.toUpperCase()}`);
-    },
-    [isZh, showToast]
-  );
+  // These low-frequency controls are grouped in their own hook so a transport tick
+  // (isPlaying / bpm / viewedBar) cannot invalidate the Toolbar memo through them.
+  const {
+    handleChangeDrumKit,
+    handleToggleRecordArmed,
+    handleChangeEffectsRack,
+    handleChangeBpm,
+    handleChangeSwing,
+    handleChangeTimeSignature,
+    handleChangeResolution,
+    handleChangeStepCount,
+    handleAddSteps,
+    handleRemoveSteps,
+    handleToggleKeyboardMode,
+  } = useToolbarControls({
+    setDrumKit,
+    setEffectsRackState,
+    isRecordArmed,
+    setIsRecordArmed,
+    isKeyboardMode,
+    setIsKeyboardMode,
+    commit,
+    commitCoalesced,
+    stepCount,
+    groupSize,
+    isZh,
+    showToast,
+  });
 
-  const handleToggleRecordArmed = useCallback(() => {
-    const next = !isRecordArmed;
-    setIsRecordArmed(next);
-    showToast(
-      isZh
-        ? next
-          ? "🔴 实时录制已就绪 (点击打击垫或键盘即时写入网格)"
-          : "实时录制已关闭"
-        : next
-        ? "🔴 Live recording armed"
-        : "Live recording disarmed"
-    );
-  }, [isRecordArmed, isZh, showToast]);
+  // Panel/overlay visibility toggles (A-02)
+  const {
+    handleCollapseSidebar,
+    handleToggleSidebar,
+    handleToggleVelocityLane,
+    handleOpenEuclidean,
+    handleToggleAnalyzer,
+    handleOpenProjectHub,
+    handleToggleMaximize,
+    handleToggleAdvancedControls,
+  } = usePanelToggles({
+    setIsSidebarCollapsed,
+    setIsEditorMaximized,
+    setShowAdvancedControls,
+    setIsVelocityLaneOpen,
+    setIsEuclideanOpen,
+    setIsAnalyzerOpen,
+    setIsProjectHubOpen,
+  });
 
-  const handleChangeEffectsRack = useCallback((partial: Partial<EffectsRackState>) => {
-    setEffectsRackState((prev) => ({ ...prev, ...partial }));
-  }, []);
-
-  const handleChangeBpm = useCallback(
-    (b: number) => commitCoalesced({ type: "SET_BPM", bpm: b }, "bpm"),
-    [commitCoalesced]
-  );
-
-  const handleChangeSwing = useCallback(
-    (s: number) => commitCoalesced({ type: "SET_SWING", swing: s }, "swing"),
-    [commitCoalesced]
-  );
-
-  const handleChangeTimeSignature = useCallback(
-    (sig: string) => commit({ type: "SET_TIME_SIGNATURE", timeSignature: sig }),
-    [commit]
-  );
-
-  const handleChangeResolution = useCallback(
-    (res: "1/8" | "1/16" | "1/32") => commit({ type: "SET_RESOLUTION", resolution: res }),
-    [commit]
-  );
-
-  const handleChangeStepCount = useCallback(
-    (count: number) => commit({ type: "SET_STEP_COUNT", count }),
-    [commit]
-  );
-
-  const handleToggleVelocityLane = useCallback(() => setIsVelocityLaneOpen((prev) => !prev), []);
-  const handleOpenEuclidean = useCallback(() => setIsEuclideanOpen(true), []);
-  const handleToggleAnalyzer = useCallback(() => setIsAnalyzerOpen((prev) => !prev), []);
-  const handleOpenProjectHub = useCallback(() => setIsProjectHubOpen(true), []);
-
-  const handleToggleMaximize = useCallback(() => {
-    setIsEditorMaximized((prev) => !prev);
-    setShowAdvancedControls(false);
-  }, []);
-
-  const handleToggleSidebar = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
-
-  const handleToggleAdvancedControls = useCallback(() => setShowAdvancedControls((prev) => !prev), []);
-
-  const handleToggleKeyboardMode = useCallback(() => {
-    const next = !isKeyboardMode;
-    setIsKeyboardMode(next);
-    showToast(
-      isZh
-        ? next
-          ? "🎹 键盘演奏模式已启用 (按 1-8 触发轨道，Z-M 弹奏音符)"
-          : "键盘演奏模式已关闭"
-        : next
-        ? "🎹 Keyboard play enabled (1-8 trigger tracks, Z-M play notes)"
-        : "Keyboard play disabled"
-    );
-  }, [isKeyboardMode, isZh, showToast]);
-
-  const handleAddSteps = useCallback(
-    (count: number) => commit({ type: "SET_STEP_COUNT", count: stepCount + count }),
-    [commit, stepCount]
-  );
-
-  const handleRemoveSteps = useCallback(
-    (count: number) => commit({ type: "SET_STEP_COUNT", count: Math.max(groupSize, stepCount - count) }),
-    [commit, groupSize, stepCount]
-  );
-
-  const handleSwitchSlot = useCallback(
-    (slot: "A" | "B") => {
-      commit({ type: "SWITCH_PATTERN_SLOT", slot });
-      if (engineRef.current) engineRef.current.setPattern(seqStateRef.current.patterns[slot]);
-    },
-    [commit]
-  );
-
-  const handleCopySlot = useCallback(
-    (from: "A" | "B", to: "A" | "B") => {
-      commit({ type: "COPY_PATTERN_SLOT", from, to });
-      showToast(isZh ? `已将 Pattern ${from} 复制至 ${to} ✓` : `Copied Pattern ${from} to ${to} ✓`);
-    },
-    [commit, isZh, showToast]
-  );
-
-  const handleToggleSongMode = useCallback(() => commit({ type: "TOGGLE_SONG_MODE" }), [commit]);
-
-  const handleToggleBlindCompare = useCallback(() => commit({ type: "TOGGLE_BLIND_TEST" }), [commit]);
-
-  const handleToggleMetronome = useCallback(() => {
-    commit({ type: "SET_METRONOME", enabled: !seqStateRef.current.isMetronome });
-  }, [commit]);
-
-  const handleToggleCountIn = useCallback(() => {
-    commit({ type: "SET_COUNT_IN", enabled: !seqStateRef.current.isCountIn });
-  }, [commit]);
+  // Velocity / probability / ratchet / gate drawer handlers (A-02)
+  const {
+    handleSelectParameterDimension,
+    handleSelectVelocityTrack,
+    handleUpdateVelocity,
+    handleBatchUpdateVelocity,
+    handleUpdateProbability,
+    handleBatchUpdateProbability,
+    handleUpdateRatchet,
+    handleBatchUpdateRatchet,
+    handleUpdateGate,
+    handleBatchUpdateGate,
+    handleCloseVelocityLane,
+  } = useVelocityLaneEditing({
+    commit,
+    commitCoalesced,
+    setVelocityActiveTrackIdx,
+    setIsVelocityLaneOpen,
+  });
 
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
