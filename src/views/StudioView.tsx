@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Check } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
-import { GENRE_INDEX, GENRE_INDEX_MAP, loadGenre } from "../data/index/loader";
-import type { GenreRailItem } from "../components/sequencer/GenreRail";
+import { loadGenre } from "../data/index/loader";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { downloadMidiFile } from "../audio/MidiExporter";
@@ -25,6 +24,7 @@ import { MasterAnalyzerSuite } from "../components/analyzer/MasterAnalyzerSuite"
 import { ProjectHubModal } from "../components/sequencer/ProjectHubModal";
 import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
 import { useToast } from "../features/sequencer/hooks/useToast";
+import { useGenreSwitching } from "../features/sequencer/hooks/useGenreSwitching";
 import { clearSavedProject, saveProjectImmediate } from "../features/sequencer/projectStorage";
 import {
   getActiveProjectId,
@@ -33,7 +33,6 @@ import {
   migrateLegacyLocalStorage,
 } from "../features/sequencer/projectDb";
 import { GrooveProject } from "../types/project";
-import { useCustomGenres } from "../features/customGenre/useCustomGenres";
 import { ParameterDimension } from "../components/sequencer/VelocityLane";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChordDefinition } from "../utils/chordTheory";
@@ -54,67 +53,6 @@ export const DEMO_TRACKS_CONFIG = [
   { id: "lead", name: "LEAD", sub: { zh: "主音", en: "Lead" }, color: "#7ee787" },
   { id: "fx", name: "FX", sub: { zh: "效果", en: "FX" }, color: "#9aa5ce" },
 ];
-
-function getGenreAccent(genre: GenreRailItem): string {
-  const cat = genre.category.toLowerCase();
-  const id = genre.id.toLowerCase();
-  if (id.includes("house")) return "#3ddc97";
-  if (id.includes("techno")) return "#45e0c9";
-  if (id.includes("trance")) return "#43d9e8";
-  if (id.includes("trap")) return "#ff5964";
-  if (id.includes("drill")) return "#ff9f3d";
-  if (id.includes("future")) return "#ffd166";
-  if (id.includes("dnb") || id.includes("jungle")) return "#43d9e8";
-  if (id.includes("dubstep") || id.includes("bass")) return "#a855f7";
-  if (id.includes("reggaeton") || id.includes("latin")) return "#f26bd8";
-  if (cat.includes("rock")) return "#ff5964";
-  if (cat.includes("hip hop")) return "#ffb65c";
-  if (cat.includes("jazz") || cat.includes("blues")) return "#38bdf8";
-  if (cat.includes("pop") || cat.includes("r&b")) return "#f06ec4";
-  return "#f5b73d";
-}
-
-const DEMO_GENRE_TAGS: Record<string, string> = {
-  "chicago-house": "HOUSE · 1985",
-  house: "HOUSE · 1985",
-  trap: "HIP-HOP × EDM",
-  "edm-trap": "HIP-HOP × EDM",
-  "atlanta-trap": "TRAP · 140",
-  "uk-drill": "UK STREET",
-  drill: "UK STREET",
-  "future-bass": "EDM · MELODIC",
-  "liquid-dnb": "JUNGLE · 174",
-  dnb: "JUNGLE · 174",
-  reggaeton: "LATIN · URBAN",
-  "detroit-techno": "TECHNO · 1985",
-  "berlin-techno": "TECHNO · 1989",
-  "acid-house": "ACID · 1987",
-  "deep-house": "HOUSE · 1988",
-  "tech-house": "HOUSE · 1994",
-  "progressive-house": "HOUSE · 1992",
-  "french-house": "DISCO · 1997",
-  "afro-house": "AFRO · 1996",
-  "hard-techno": "TECHNO · 1992",
-  "dub-techno": "TECHNO · 1993",
-};
-
-const getGenreChipTag = (g: GenreRailItem): string => {
-  if (g.isCustom) return "CUSTOM";
-  if (DEMO_GENRE_TAGS[g.id]) return DEMO_GENRE_TAGS[g.id];
-  let prefix = g.category.toUpperCase();
-  if (prefix.length > 8) {
-    prefix = prefix.split(" ")[0].substring(0, 7);
-  }
-  let suffix = "";
-  if (g.origin_year) {
-    suffix = `${g.origin_year}`;
-  } else if (g.default_bpm) {
-    suffix = `${g.default_bpm}`;
-  } else {
-    suffix = "GROOVE";
-  }
-  return `${prefix} · ${suffix}`;
-};
 
 interface StudioViewProps {
   selectedGenre?: Genre;
@@ -151,8 +89,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // so there is no need to statically pull the whole genre database as a fallback.
   const startingGenre = initialGenre as Genre;
 
-  const { customGenres } = useCustomGenres();
-
   // Central Sequencer Store (P2-04)
   const {
     state: seqState,
@@ -178,9 +114,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [viewedBar, setViewedBar] = useState<number>(0);
-
-  // Category filter for the chip rail
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>("ALL");
 
   // Sidebar collapse & Maximize states
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
@@ -228,7 +161,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Phase 5 States (P5-01 ~ P5-05)
   const [drumKit, setDrumKit] = useState<DrumKitType>(() => getDefaultDrumKitForGenre(currentGenre));
   const [isDrumsOnly, setIsDrumsOnly] = useState<boolean>(false);
-  const lastGenreIdRef = useRef(currentGenre.id);
   const [isRecordArmed, setIsRecordArmed] = useState<boolean>(false);
   const [effectsRackState, setEffectsRackState] = useState<EffectsRackState>(DEFAULT_FX_STATE);
 
@@ -284,8 +216,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const seqStateRef = useRef(seqState);
   seqStateRef.current = seqState;
   const lastStepRef = useRef(-1);
-
-  const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
 
   // Toast notification (state + timer live in useToast)
   const { toastMessage, showToast } = useToast();
@@ -349,6 +279,30 @@ export const StudioView: React.FC<StudioViewProps> = ({
       }
     });
   }, []);
+
+  // Genre rail: categories, chip list, accent colour, on-demand switch & dice (A-02)
+  const {
+    activeCategoryFilter,
+    setActiveCategoryFilter,
+    categories,
+    railGenres,
+    genreAccent,
+    handleDiceRandom,
+    handleSelectGenreFromRail,
+    getGenreAccent,
+    getGenreChipTag,
+  } = useGenreSwitching({
+    currentGenre,
+    initialGenre,
+    onSelectGenre,
+    engineRef,
+    isPlaying,
+    setIsPlaying,
+    isDrumsOnly,
+    setDrumKit,
+    clearPlayhead,
+    commit,
+  });
 
   // Initialize AudioEngine (StrictMode safe, decoupled playhead & peak meter - P2-03 / P2-04)
   useEffect(() => {
@@ -468,19 +422,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
       engineRef.current.setDrumsOnly(isDrumsOnly);
     }
   }, [isDrumsOnly]);
-
-  // Sync Default Drum Kit on Genre Change
-  useEffect(() => {
-    if (lastGenreIdRef.current !== currentGenre.id) {
-      lastGenreIdRef.current = currentGenre.id;
-      const defaultKit = getDefaultDrumKitForGenre(currentGenre);
-      setDrumKit(defaultKit);
-      if (engineRef.current) {
-        engineRef.current.setDrumKit(defaultKit);
-        engineRef.current.setDrumsOnly(isDrumsOnly);
-      }
-    }
-  }, [currentGenre.id, isDrumsOnly]);
 
   // Sync Live Recording Arm state to AudioEngine (P5-05)
   useEffect(() => {
@@ -615,13 +556,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
       onClearInitialMasterclassPattern();
     }
   }, [initialMasterclassPattern, isZh, onClearInitialMasterclassPattern, showToast, commit]);
-
-  // Sync external genre
-  useEffect(() => {
-    if (initialGenre && initialGenre.id !== currentGenre.id) {
-      commit({ type: "SET_GENRE", genre: initialGenre });
-    }
-  }, [initialGenre, currentGenre.id, commit]);
 
   // Handle URL share params
   useEffect(() => {
@@ -793,38 +727,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const handleSelectLoopRange = useCallback(
     (rng: [number, number] | null) => commit({ type: "SET_LOOP_RANGE", range: rng }),
     [commit]
-  );
-
-  // Switch genre
-  const switchGenre = useCallback(
-    (genre: Genre, andPlay = false) => {
-      lastGenreIdRef.current = genre.id;
-      const defaultKit = getDefaultDrumKitForGenre(genre);
-      setDrumKit(defaultKit);
-
-      onSelectGenre(genre);
-      commit({ type: "SET_GENRE", genre });
-
-      if (engineRef.current) {
-        engineRef.current.setPattern(genre.sequencer_pattern, true);
-        engineRef.current.setDrumKit(defaultKit);
-        engineRef.current.setDrumsOnly(isDrumsOnly);
-        engineRef.current.setBpm(genre.default_bpm || 120);
-        engineRef.current.setSwing((genre.sequencer_pattern.swing || 0) / 100);
-        engineRef.current.setTimeSignature(genre.time_signature || "4/4");
-        engineRef.current.setResolution("1/16");
-        if (andPlay) {
-          if (!isPlaying) {
-            engineRef.current.play();
-            setIsPlaying(true);
-          }
-        } else if (!isPlaying) {
-          engineRef.current.stop();
-          clearPlayhead();
-        }
-      }
-    },
-    [commit, onSelectGenre, isPlaying, clearPlayhead, isDrumsOnly]
   );
 
   // Toggle Drums-Only mode
@@ -1698,74 +1600,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
       matrixContainerRef.current.scrollBy({ left: delta, behavior: "smooth" });
     }
   }, []);
-
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    GENRE_INDEX.forEach((g) => set.add(g.category));
-    const list = ["ALL", ...Array.from(set)];
-    if (customGenres.length > 0) {
-      list.splice(1, 0, "CUSTOM");
-    }
-    return list;
-  }, [customGenres.length]);
-
-  const railGenres = useMemo(() => {
-    if (activeCategoryFilter === "CUSTOM") {
-      return customGenres;
-    }
-    if (activeCategoryFilter === "ALL") {
-      const demoHeadIds = [
-        "chicago-house",
-        "edm-trap",
-        "uk-drill",
-        "future-bass",
-        "liquid-dnb",
-        "reggaeton",
-        "detroit-techno",
-        "boom-bap",
-        "synthwave",
-        "dubstep",
-        "nu-disco-house",
-        "acid-house",
-      ];
-      const headList = demoHeadIds
-        .map((id) => GENRE_INDEX_MAP[id])
-        .filter(Boolean) as GenreRailItem[];
-      const others = GENRE_INDEX.filter((g) => !demoHeadIds.includes(g.id));
-      const combined = [...(customGenres as GenreRailItem[]), ...headList, ...others];
-      return combined.slice(0, 48 + customGenres.length);
-    }
-    return GENRE_INDEX.filter((g) => g.category === activeCategoryFilter);
-  }, [activeCategoryFilter, customGenres]);
-
-  /**
-   * A-01: genre data is loaded on demand. Selecting a chip resolves the full genre
-   * (pattern + metadata) before switching, so nothing heavy ships in the entry chunk.
-   */
-  const switchGenreById = useCallback(
-    async (genreId: string, andPlay = false) => {
-      if (genreId === currentGenre.id) {
-        // Re-clicking the active chip must not reset the user's edited pattern.
-        return;
-      }
-      const full = await loadGenre(genreId);
-      if (full) switchGenre(full, andPlay);
-    },
-    [currentGenre.id, switchGenre]
-  );
-
-  const handleDiceRandom = useCallback(() => {
-    const rand = GENRE_INDEX[Math.floor(Math.random() * GENRE_INDEX.length)];
-    if (rand) void switchGenreById(rand.id, true);
-  }, [switchGenreById]);
-
-  // A-03: stable props for the memoized rail / drawer leaves.
-  const handleSelectGenreFromRail = useCallback(
-    (genreId: string) => {
-      void switchGenreById(genreId, true);
-    },
-    [switchGenreById]
-  );
 
   const handleCollapseSidebar = useCallback(() => setIsSidebarCollapsed(true), []);
 
