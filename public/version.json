@@ -1,27 +1,27 @@
 {
-  "version": "1.16.9",
+  "version": "1.16.10",
   "releaseDate": "2026-09-14",
-  "changelogCount": 51,
+  "changelogCount": 52,
   "latest": {
-    "version": "1.16.9",
+    "version": "1.16.10",
     "date": "2026-09-14",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v1.16.9 消除移动端 0.19 的布局位移，并补上真实浏览器性能门禁",
-      "en": "v1.16.9 Eliminated the 0.19 mobile layout shift and added a real-browser performance gate"
+      "zh": "v1.16.10 同源曲风对比：把关系图谱变成可操作课件",
+      "en": "v1.16.10 Same-origin comparison: the relation graph becomes a usable lesson"
     },
     "highlights": [
       {
-        "zh": "定位并修复移动端 CLS 0.191：逐条 layout-shift 记录显示全部来自页脚——懒加载视图挂载前文档刚好一屏高、页脚可见，挂载后被推走 1763px。现在加载占位预留整屏高度，页脚在首屏即位于折叠线以下，位移不再计入",
-        "en": "Diagnosed and fixed the 0.19 mobile CLS: every layout-shift record pointed at the footer, which was visible at one-screen height before the lazy view mounted and then pushed down 1763px. Loading placeholders now reserve a full viewport, so the footer starts below the fold and the swap no longer counts"
+        "zh": "对比视图新增「同源对比」行：针对当前曲风列出其源自/衍生/相关的曲风，点击即可加入对比，直接 A/B 比较律动源流",
+        "en": "The compare view gained a 'same origin' row: for the current genre it lists what it derives from, what it led to and what it is related to — click to add any of them to the comparison and A/B the lineage"
       },
       {
-        "zh": "星系视图画布高度改用 dvh，移动端浏览器地址栏不再遮挡画布底部",
-        "en": "The galaxy canvas now sizes with dvh so mobile browser chrome no longer covers its bottom edge"
+        "zh": "关系图谱此前只作为装饰性的谱系图存在，现在被解析成结构化的三组同源关系（去重、过滤未知 id 与自环），并新增 9 例完整性测试",
+        "en": "The relation graph used to be decorative; it is now resolved into three structured groups (deduped, with unknown ids and self-loops filtered) with 9 integrity tests"
       },
       {
-        "zh": "CI 与慢轨新增真实浏览器性能门禁（Playwright + 浏览器性能 API），硬性断言首屏不加载多余曲风数据，并打印 FCP/LCP/CLS 供回归对比——替代本机无法安装的 Lighthouse",
-        "en": "CI and the slow track gained a real-browser performance gate (Playwright + browser performance APIs) that hard-asserts no unnecessary genre data on first paint and reports FCP/LCP/CLS — replacing the Lighthouse step that cannot be installed here"
+        "zh": "如实说明：159 条代表性曲目外链需要真实内容创作，未凭空生成；本轮交付的是把现有关系数据变成教学功能",
+        "en": "Stated honestly: the 159 representative-track links need real content authoring and were not invented; this release turns the existing relation data into a teaching feature instead"
       }
     ]
   }
