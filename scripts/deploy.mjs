@@ -38,19 +38,22 @@ const fileEnv = fs.existsSync(ENV_FILE) ? parseEnvFile(ENV_FILE) : {};
 const env = { ...process.env, ...fileEnv };
 const dryRun = process.argv.includes("--dry-run");
 
+// Credentials are optional here: if neither the environment nor .env.deploy provides
+// a token we still try, because wrangler may already hold its own authenticated
+// session (OAuth / previously stored credentials). Only a wrangler auth failure is
+// reported as a credential problem.
 if (!env.CLOUDFLARE_API_TOKEN) {
-  console.error(
+  console.log(
     [
-      "\u274c CLOUDFLARE_API_TOKEN is not set.",
+      "\u2139\ufe0f  CLOUDFLARE_API_TOKEN not found in the environment or .env.deploy.",
+      "   Falling back to wrangler's own stored authentication.",
+      "   If this fails, create ./.env.deploy (git-ignored):",
+      "     CLOUDFLARE_API_TOKEN=<your token>",
+      "     CLOUDFLARE_ACCOUNT_ID=<your account id>   # optional but recommended",
+      "   See .env.deploy.example.",
       "",
-      "Create ./.env.deploy (git-ignored) with:",
-      "  CLOUDFLARE_API_TOKEN=<your token>",
-      "  CLOUDFLARE_ACCOUNT_ID=<your account id>   # optional but recommended",
-      "",
-      "Or export them in the shell before running. See .env.deploy.example.",
     ].join("\n")
   );
-  process.exit(1);
 }
 
 if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
@@ -61,15 +64,28 @@ if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
 const args = ["wrangler", "deploy", ...(dryRun ? ["--dry-run"] : [])];
 console.log(`\u25b6\ufe0f  npx ${args.join(" ")}${dryRun ? " (dry run)" : ""}`);
 
+const childEnv = { ...env };
+if (!childEnv.CLOUDFLARE_API_TOKEN) delete childEnv.CLOUDFLARE_API_TOKEN;
+if (!childEnv.CLOUDFLARE_ACCOUNT_ID) delete childEnv.CLOUDFLARE_ACCOUNT_ID;
+
 const res = spawnSync("npx", args, {
   cwd: ROOT,
   stdio: "inherit",
-  env: {
-    ...env,
-    // Wrangler reads these; keep them out of any file we write.
-    CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
-    ...(env.CLOUDFLARE_ACCOUNT_ID ? { CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID } : {}),
-  },
+  env: childEnv,
 });
+
+if ((res.status ?? 1) !== 0) {
+  const combined = `${res.stdout ?? ""}${res.stderr ?? ""}`;
+  if (/not authenticated|authentication error|10000|Invalid API Token/i.test(String(combined))) {
+    console.error(
+      [
+        "",
+        "\u274c Wrangler is not authenticated.",
+        "   Either run `npx wrangler login`, or create ./.env.deploy with",
+        "   CLOUDFLARE_API_TOKEN=<token> (see .env.deploy.example).",
+      ].join("\n")
+    );
+  }
+}
 
 process.exit(res.status ?? 1);
