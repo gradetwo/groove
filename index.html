@@ -4,6 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, viewport-fit=cover" />
     <title>GROOVE LAB</title>
+    <!-- SEO / social preview (N-07) -->
+    <meta
+      name="description"
+      content="GROOVE LAB — explore 159 music genres and build grooves in your browser: 8-track step sequencer, chord workshop, rhythm masterclasses, WAV/MIDI/Ableton export. 音乐曲风探索与律动工作台。"
+    />
+    <meta name="keywords" content="music genres, step sequencer, groove, drum machine, music production, 曲风, 音序器, 编曲" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="GROOVE LAB" />
+    <meta property="og:title" content="GROOVE LAB | Music Genre Explorer &amp; Browser Sequencer" />
+    <meta
+      property="og:description"
+      content="159 music genres, an 8-track step sequencer, chord workshop and rhythm masterclasses — all in the browser, no install."
+    />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GROOVE LAB | Music Genre Explorer &amp; Browser Sequencer" />
+    <meta
+      name="twitter:description"
+      content="159 music genres, an 8-track step sequencer, chord workshop and rhythm masterclasses — all in the browser."
+    />
+    <!-- Canonical / og:url / og:image are filled at runtime from location.origin so
+         they stay correct on workers.dev, preview URLs and custom domains (N-07). -->
     <!-- Inline first-frame language sync to prevent FOUC (P1-12) -->
     <script>
       (function() {
@@ -12,6 +37,18 @@
           var isZh = saved === "zh" || (!saved && (navigator.language || "").toLowerCase().startsWith("zh"));
           document.documentElement.lang = isZh ? "zh-CN" : "en";
           document.title = isZh ? "GROOVE LAB | 音乐曲风探索与律动工作台" : "GROOVE LAB | Music Genre Learning & Sequencer";
+
+          // N-07: absolute URLs derived at runtime — never hardcode a domain.
+          var origin = location.origin;
+          var canonical = origin + location.pathname;
+          var setMeta = function (selector, attr, value) {
+            var el = document.querySelector(selector);
+            if (el) el.setAttribute(attr, value);
+          };
+          setMeta('link[rel="canonical"]', "href", canonical);
+          setMeta('meta[property="og:url"]', "content", canonical);
+          setMeta('meta[property="og:image"]', "content", origin + "/icons/icon-512.png");
+          setMeta('meta[name="twitter:image"]', "content", origin + "/icons/icon-512.png");
         } catch (e) {}
       })();
     </script>
@@ -25,7 +62,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Groove Lab" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+    <!-- iOS ignores SVG apple-touch-icons, so point at the PNG (N-07). -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg" />
 
     <!-- Modern Sans & Monospace Fonts with display=swap (P1-04) -->
