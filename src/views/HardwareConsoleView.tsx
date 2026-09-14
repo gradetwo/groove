@@ -61,7 +61,9 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
   // channel strips when this changes, so the unused panner model costs no CPU.
   const [spatialEnabled, setSpatialEnabled] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [masterVolume, setMasterVolume] = useState(DEFAULT_TRACK_VOLUME);
+  // Seeded from the engine's persisted level rather than a hard-coded default, so the
+  // fader shows the real master level on mount (the engine keeps it in audio settings).
+  const [masterVolume, setMasterVolume] = useState(() => engineRef.current?.getMasterVolume() ?? DEFAULT_TRACK_VOLUME);
 
   // ----- Meter state (refs only: the rAF loop must not trigger renders) -----
   const trackPulseRef = useRef<Array<{ peakL: number; peakR: number; at: number }>>([]);
@@ -178,6 +180,13 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
   useEffect(() => {
     engineRef.current?.setMasterVolume(masterVolume);
   }, [masterVolume]);
+
+  // The engine is created in a mount effect, so read its persisted level once it exists.
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    setMasterVolume(engine.getMasterVolume());
+  }, []);
 
   // ----- Single 60fps meter loop -------------------------------------------
   useEffect(() => {

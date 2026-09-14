@@ -184,3 +184,47 @@ describe("polarity · sequencer store", () => {
     expect(states[0].phaseInvert).toBe(false);
   });
 });
+
+describe("master volume · persisted level", () => {
+  let restore: (() => void) | null = null;
+  beforeEach(() => {
+    localStorage.clear();
+    restore = installFakeAudioContext();
+  });
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  it("defaults to 0.8 and exposes the value the console should mount with", () => {
+    const engine = new AudioEngine();
+    expect(engine.getMasterVolume()).toBe(0.8);
+    engine.destroy();
+  });
+
+  it("clamps, applies and persists the master level across engine instances", () => {
+    const engine = new AudioEngine();
+    engine.setMasterVolume(0.42);
+    expect(engine.getMasterVolume()).toBeCloseTo(0.42);
+
+    engine.setMasterVolume(5);
+    expect(engine.getMasterVolume()).toBe(1);
+    engine.setMasterVolume(-3);
+    expect(engine.getMasterVolume()).toBe(0);
+
+    engine.setMasterVolume(0.33);
+    engine.destroy();
+
+    // A freshly constructed engine (e.g. the console view mounting later) restores it.
+    const next = new AudioEngine();
+    expect(next.getMasterVolume()).toBeCloseTo(0.33);
+    next.destroy();
+  });
+
+  it("reports the effective level after hearing protection", () => {
+    const engine = new AudioEngine();
+    engine.setMasterVolume(0.95);
+    expect(engine.getEffectiveMasterVolume()).toBeLessThanOrEqual(0.95);
+    engine.destroy();
+  });
+});

@@ -32,6 +32,8 @@ const engineMock = vi.hoisted(() => ({
   getMasterAnalyser: vi.fn(() => null),
   getStereoAnalysers: vi.fn(() => ({ left: null, right: null })),
   setMasterVolume: vi.fn(),
+  getMasterVolume: vi.fn(() => 0.8),
+  getEffectiveMasterVolume: vi.fn(() => 0.8),
   // N-02 spatial monitoring surface (added after this mock was first written).
   setSpatialMode: vi.fn(),
   getSpatialMode: vi.fn(() => false),

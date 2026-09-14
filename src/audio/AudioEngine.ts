@@ -659,6 +659,9 @@ export class AudioEngine {
         if (typeof parsed.maxVolumeLimit === "number") {
           this.maxVolumeLimit = parsed.maxVolumeLimit;
         }
+        if (typeof parsed.masterVolume === "number") {
+          this.currentMasterVolume = Math.max(0, Math.min(1, parsed.masterVolume));
+        }
       }
     } catch {
       // Ignore storage parse error
@@ -672,6 +675,7 @@ export class AudioEngine {
         latencyCompensationMs: this.latencyCompensationMs,
         hearingProtection: this.hearingProtection,
         maxVolumeLimit: this.maxVolumeLimit,
+        masterVolume: this.currentMasterVolume,
       };
       localStorage.setItem("groove_audio_settings_v1", JSON.stringify(data));
     } catch {
@@ -714,6 +718,21 @@ export class AudioEngine {
     this.saveAudioSettings();
   }
 
+  /**
+   * Master fader position (0..1). Reflects the persisted value, so a UI that mounts
+   * later (the hardware console) shows the real level instead of guessing a default.
+   */
+  public getMasterVolume(): number {
+    return this.currentMasterVolume;
+  }
+
+  /** Level actually applied to the master bus after hearing protection is enforced. */
+  public getEffectiveMasterVolume(): number {
+    return this.hearingProtection
+      ? Math.min(this.maxVolumeLimit, this.currentMasterVolume)
+      : this.currentMasterVolume;
+  }
+
   public setMasterVolume(vol: number): void {
     this.currentMasterVolume = Math.max(0, Math.min(1.0, vol));
     const effective = this.hearingProtection
@@ -722,6 +741,8 @@ export class AudioEngine {
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(effective, this.ctx.currentTime);
     }
+    // Persisted so the level survives a reload and stays consistent across views.
+    this.saveAudioSettings();
   }
 
   public setTrackState(trackIdx: number, state: Partial<TrackState>): void {
