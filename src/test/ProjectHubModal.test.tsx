@@ -1,12 +1,18 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import "fake-indexeddb/auto";
+import { IDBFactory as FakeIDBFactory } from "fake-indexeddb";
 import { ProjectHubModal } from "../components/sequencer/ProjectHubModal";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { GENRES_MAP } from "../data/genres";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { saveProject, createBlankProject } from "../features/sequencer/projectDb";
+
+// Under coverage instrumentation a single fake IndexedDB round-trip can exceed
+// the 1s default waitFor budget, so give every async DOM signal an explicit,
+// bounded window instead of relying on the default.
+const ASYNC_UI_TIMEOUT = 5000;
 
 describe("ProjectHubModal Component (P7-02)", () => {
   const sampleGenre = Object.values(GENRES_MAP)[0];
@@ -17,6 +23,12 @@ describe("ProjectHubModal Component (P7-02)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    // Per-test isolation: projectDb.ts opens a new IndexedDB connection on every
+    // call and never closes it, so `indexedDB.deleteDatabase("groove_projects_db")`
+    // fires `onblocked` and waits forever for those connections. Replacing the
+    // fake-indexeddb factory gives each test a brand-new in-memory backend, which
+    // discards both leaked rows and leaked connections deterministically.
+    globalThis.indexedDB = new FakeIDBFactory() as unknown as IDBFactory;
   });
 
   const defaultProps = {
@@ -58,7 +70,8 @@ describe("ProjectHubModal Component (P7-02)", () => {
   });
 
   it("lists saved projects and filters by search query", async () => {
-    // Save two projects into IndexedDB
+    // Seed this test explicitly (fresh DB per test) instead of relying on
+    // whatever a previous test/case happened to leave behind.
     await saveProject(createBlankProject(sampleGenre, "Cyberpunk Odyssey"));
     await saveProject(createBlankProject(sampleGenre, "Acoustic Folk"));
 
@@ -68,11 +81,13 @@ describe("ProjectHubModal Component (P7-02)", () => {
       </LanguageProvider>
     );
 
-    // Wait for projects to load
-    await waitFor(() => {
-      expect(screen.getByText("Cyberpunk Odyssey")).toBeTruthy();
-      expect(screen.getByText("Acoustic Folk")).toBeTruthy();
-    });
+    // Wait for the two seeded projects to be rendered from IndexedDB.
+    expect(
+      await screen.findByText("Cyberpunk Odyssey", {}, { timeout: ASYNC_UI_TIMEOUT })
+    ).toBeTruthy();
+    expect(
+      await screen.findByText("Acoustic Folk", {}, { timeout: ASYNC_UI_TIMEOUT })
+    ).toBeTruthy();
 
     // Search query
     const searchInput = screen.getByPlaceholderText(/快速搜索|Search/i);
@@ -91,9 +106,9 @@ describe("ProjectHubModal Component (P7-02)", () => {
       </LanguageProvider>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Load Target Beat")).toBeTruthy();
-    });
+    expect(
+      await screen.findByText("Load Target Beat", {}, { timeout: ASYNC_UI_TIMEOUT })
+    ).toBeTruthy();
 
     const loadBtns = screen.getAllByRole("button", { name: /载入工程|Load/i });
     fireEvent.click(loadBtns[0]);
