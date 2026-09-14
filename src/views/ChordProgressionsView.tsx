@@ -335,9 +335,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
         converge: "收敛",
         random: "随机",
       };
-      const label = isZh
-        ? `${patternNameZh[arpConfig.pattern]} 琶音`
-        : `${arpConfig.pattern.toUpperCase()} Arp`;
+      const label = t("chords_arp_label", { pattern: isZh ? patternNameZh[arpConfig.pattern] : arpConfig.pattern.toUpperCase() });
       if (onOpenStudioWithArpeggio) {
         onOpenStudioWithArpeggio(baked, label);
       }
@@ -779,11 +777,11 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                           : "text-zinc-400 hover:text-white"
                       }`}
                     >
-                      {pat === "up" && (isZh ? "上行" : "Up")}
-                      {pat === "down" && (isZh ? "下行" : "Down")}
-                      {pat === "up_down" && (isZh ? "折返" : "UpDn")}
-                      {pat === "converge" && (isZh ? "收敛" : "Conv")}
-                      {pat === "random" && (isZh ? "随机" : "Rand")}
+                      {pat === "up" && (t("chords_arp_short_up"))}
+                      {pat === "down" && (t("chords_arp_short_down"))}
+                      {pat === "up_down" && (t("chords_arp_short_up_down"))}
+                      {pat === "converge" && (t("chords_arp_short_converge"))}
+                      {pat === "random" && (t("chords_arp_short_random"))}
                     </button>
                   ))}
                 </div>
@@ -836,9 +834,9 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 <span className="text-[11px] font-semibold text-zinc-300">{t("chords_arp_gate")}</span>
                 <div className="grid grid-cols-3 gap-1 bg-[#090d14] p-1 rounded-lg border border-[#20293d]">
                   {[
-                    { val: 0.4, label: isZh ? "顿音" : "Stacc" },
-                    { val: 0.75, label: isZh ? "自然" : "Nat" },
-                    { val: 1.0, label: isZh ? "连音" : "Leg" },
+                    { val: 0.4, label: t("chords_gate_stacc") },
+                    { val: 0.75, label: t("chords_gate_nat") },
+                    { val: 1.0, label: t("chords_gate_leg") },
                   ].map((g) => (
                     <button
                       key={g.val}
@@ -865,7 +863,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             <div className="flex items-center gap-2">
               <Sliders className="w-4 h-4 text-amber-400 shrink-0" />
               <span className="text-xs font-bold text-white tracking-wide">
-                {isZh ? "吉他扫弦拨片微动态" : "Strumming Pick Micro-Dynamics"}
+                {t("chords_strum_micro")}
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
                 {strumConfig.speedMs}ms
@@ -888,9 +886,9 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                           : "text-zinc-400 hover:text-white"
                       }`}
                     >
-                      {dir === "down" && (isZh ? "下扫 ⬇" : "Down ⬇")}
-                      {dir === "up" && (isZh ? "上扫 ⬆" : "Up ⬆")}
-                      {dir === "alternate" && (isZh ? "交替 ⇅" : "Alt ⇅")}
+                      {dir === "down" && (t("chords_strum_dir_down"))}
+                      {dir === "up" && (t("chords_strum_dir_up"))}
+                      {dir === "alternate" && (t("chords_strum_dir_alt"))}
                     </button>
                   ))}
                 </div>
@@ -903,7 +901,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   <span className="text-xs font-mono text-amber-400 font-bold">{strumConfig.speedMs} ms</span>
                 </div>
                 <div className="flex items-center gap-3 bg-[#090d14] px-3 py-2 rounded-lg border border-[#20293d]">
-                  <span className="text-[10px] text-zinc-500 shrink-0">{isZh ? "紧凑 15ms" : "Fast 15ms"}</span>
+                  <span className="text-[10px] text-zinc-500 shrink-0">{t("chords_strum_fast")}</span>
                   <input
                     type="range"
                     min={15}
@@ -913,7 +911,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                     onChange={(e) => setStrumConfig((prev) => ({ ...prev, speedMs: Number(e.target.value) }))}
                     className="flex-1 accent-amber-400 h-1.5 bg-[#232a3b] rounded cursor-pointer"
                   />
-                  <span className="text-[10px] text-zinc-500 shrink-0">{isZh ? "松弛 75ms" : "Slow 75ms"}</span>
+                  <span className="text-[10px] text-zinc-500 shrink-0">{t("chords_strum_slow")}</span>
                 </div>
               </div>
             </div>

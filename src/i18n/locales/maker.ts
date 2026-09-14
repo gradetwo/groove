@@ -51,4 +51,22 @@ export const makerMessages = {
   fork_in_maker: { en: "Fork in Maker", zh: "工坊分叉变奏" },
   save_as_genre: { en: "Save as Custom Genre", zh: "保存为新曲风" },
   custom_badge: { en: "CUSTOM", zh: "自定义" },
+
+  // Custom Genre Maker View (toasts, labels & previews)
+  maker_save_failed: { en: "Failed to save", zh: "保存失败，请重试" },
+  maker_fork_success: { en: "Forked variation from {name}!", zh: "已基于 {name} 生成变奏曲风！" },
+  maker_default_name: { en: "Custom Genre {n}", zh: "自定义流派 {n}" },
+  maker_blank_created: { en: "Created blank genre!", zh: "已新建空白曲风！" },
+  maker_duplicate_success: { en: "Duplicated: {name}", zh: "已创建副本: {name}" },
+  maker_deleted: { en: "Genre deleted", zh: "曲风已删除" },
+  maker_copy_failed: { en: "Copy failed, please copy manually", zh: "复制失败，请手动选取复制" },
+  maker_poster_started: { en: "Poster download started!", zh: "已启动高清海报下载！" },
+  maker_import_success: { en: "Imported: {name}", zh: "已成功导入并载入: {name}" },
+  maker_unsaved: { en: "Unsaved", zh: "未保存修改" },
+  maker_fork_action: { en: "Fork", zh: "分叉" },
+  maker_sec_pattern_desc: { en: "Craft the signature 16-step rhythm DNA and voicing skeleton.", zh: "为新流派注入最具辨识度的 16 步进律动基因与复音矩阵" },
+  maker_forked_from: { en: "from", zh: "分叉自" },
+  maker_original: { en: "Original", zh: "独立原创" },
+  maker_poster_preview: { en: "Poster Preview", zh: "专属海报预览" },
+  maker_author: { en: "Author", zh: "制作人" },
 } as const;

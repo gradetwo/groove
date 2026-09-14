@@ -110,4 +110,18 @@ export const commonMessages = {
   shortcut_modal_title: { en: "Keyboard Shortcuts Guide", zh: "键盘快捷键指南" },
   shortcut_section_navigation: { en: "Global Navigation (Press g followed by key)", zh: "全局导航快捷键 (按 g 后快速按字母)" },
   shortcut_section_studio: { en: "Studio Sequencer Shortcuts", zh: "工作台音序器快捷键" },
+
+  // Challenge Certificate Modal (shared global modal)
+  cert_share_text: { en: "🎧 My Groove Ear Training Rank is [{tier}] ({elo} ELO)!\n🎯 Accuracy: {accuracy}% | ⚡ Best Streak: {streak} | 🧠 Mastered Genres: {mastered}\nChallenge your acoustic perception at: https://groove.wangda.today", zh: "🎧 我的 Groove 音乐盲听听力天梯已达到【{tier}】({elo} ELO)！\n🎯 正确率: {accuracy}% | ⚡ 最高连胜: {streak} 局 | 🧠 攻克曲风: {mastered} 种\n快来挑战你的声学辨识力：https://groove.wangda.today" },
+  cert_close_aria: { en: "Close Certificate", zh: "关闭证书" },
+  cert_title: { en: "Ear Acumen Rank Certificate", zh: "听力大师声学段位认证" },
+  cert_subtitle: { en: "Official Certification of Acoustic Perception", zh: "音乐感知与风格辨识官方评级体系" },
+  cert_current_tier: { en: "Current Rank Tier", zh: "当前天梯段位" },
+  cert_accuracy: { en: "Accuracy", zh: "命中率" },
+  cert_best_streak: { en: "Best Streak", zh: "最佳连胜" },
+  cert_answered: { en: "Answered", zh: "总辨识" },
+  cert_issued: { en: "Issued: ", zh: "评定日期: " },
+  cert_copied: { en: "Copied to clipboard!", zh: "已复制战报到剪贴板！" },
+  cert_copy: { en: "Copy Shareable Text", zh: "复制段位证书战报" },
+  cert_close: { en: "Close", zh: "关闭" },
 } as const;

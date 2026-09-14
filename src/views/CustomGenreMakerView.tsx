@@ -245,7 +245,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
       toast.success(t("maker_saved_success"));
     } catch (err) {
       console.error("Failed to save custom genre:", err);
-      toast.error(isZh ? "保存失败，请重试" : "Failed to save");
+      toast.error(t("maker_save_failed"));
     } finally {
       setIsSaving(false);
     }
@@ -258,18 +258,18 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
       const forked = await forkGenre(base);
       setActiveGenre(forked);
       setIsDirty(false);
-      toast.success(isZh ? `已基于 ${base.name} 生成变奏曲风！` : `Forked variation from ${base.name}!`);
+      toast.success(t("maker_fork_success", { name: base.name }));
     }
   };
 
   // Create new blank handler
   const handleCreateBlank = async () => {
     const blank = await createBlankCustomGenre(
-      isZh ? `自定义流派 ${customGenres.length + 1}` : `Custom Genre ${customGenres.length + 1}`
+      t("maker_default_name", { n: customGenres.length + 1 })
     );
     setActiveGenre(blank);
     setIsDirty(false);
-    toast.success(isZh ? "已新建空白曲风！" : "Created blank genre!");
+    toast.success(t("maker_blank_created"));
   };
 
   // Duplicate active handler
@@ -279,7 +279,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
     if (copy) {
       setActiveGenre(copy);
       setIsDirty(false);
-      toast.success(isZh ? `已创建副本: ${copy.name}` : `Duplicated: ${copy.name}`);
+      toast.success(t("maker_duplicate_success", { name: copy.name }));
     }
   };
 
@@ -297,7 +297,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
 
     await deleteCustomGenre(target.id);
     if (target.notify) {
-      toast.success(isZh ? "曲风已删除" : "Genre deleted");
+      toast.success(t("maker_deleted"));
     }
 
     if (target.notify || target.id === activeGenre?.id) {
@@ -346,7 +346,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
       toast.success(t("maker_share_url_copied"));
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      toast.error(isZh ? "复制失败，请手动选取复制" : "Copy failed, please copy manually");
+      toast.error(t("maker_copy_failed"));
     }
   };
 
@@ -357,7 +357,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
     link.download = `groove-${slug}-poster.png`;
     link.href = posterCanvasRef.current.toDataURL("image/png");
     link.click();
-    toast.success(isZh ? "已启动高清海报下载！" : "Poster download started!");
+    toast.success(t("maker_poster_started"));
   };
 
   // Confirm pending import
@@ -366,7 +366,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
     await saveCustomGenre(pendingImportGenre);
     setActiveGenre(pendingImportGenre);
     setPendingImportGenre(null);
-    toast.success(isZh ? `已成功导入并载入: ${pendingImportGenre.name}` : `Imported: ${pendingImportGenre.name}`);
+    toast.success(t("maker_import_success", { name: pendingImportGenre.name }));
   };
 
   if (!activeGenre) {
@@ -397,7 +397,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                 </span>
                 {isDirty && (
                   <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                    ● {isZh ? "未保存修改" : "Unsaved"}
+                    ● {t("maker_unsaved")}
                   </span>
                 )}
               </div>
@@ -431,7 +431,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
               className="px-2 py-1 rounded-lg bg-accent/20 hover:bg-accent text-accent hover:text-black text-xs font-bold transition-colors"
               title={t("fork_in_maker")}
             >
-              {isZh ? "分叉" : "Fork"}
+              {t("maker_fork_action")}
             </button>
           </div>
 
@@ -708,9 +708,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                   <span>{t("maker_sec_pattern")}</span>
                 </h2>
                 <p className="text-xs text-text-sub mt-0.5">
-                  {isZh 
-                    ? "为新流派注入最具辨识度的 16 步进律动基因与复音矩阵" 
-                    : "Craft the signature 16-step rhythm DNA and voicing skeleton."}
+                  {t("maker_sec_pattern_desc")}
                 </p>
               </div>
 
@@ -861,7 +859,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                       </div>
 
                       <div className="flex items-center justify-between text-[10px] font-mono text-text-dim pt-1 border-t border-line/60">
-                        <span>{genre.forkedFromName ? `${isZh ? "分叉自" : "from"}: ${genre.forkedFromName}` : (isZh ? "独立原创" : "Original")}</span>
+                        <span>{genre.forkedFromName ? `${t("maker_forked_from")}: ${genre.forkedFromName}` : (t("maker_original"))}</span>
                         <span>{new Date(genre.updatedAt).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -931,7 +929,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-text-sub uppercase tracking-wider">
-                  {isPosterRendering ? t("maker_generating_poster") : (isZh ? "专属海报预览" : "Poster Preview")}
+                  {isPosterRendering ? t("maker_generating_poster") : (t("maker_poster_preview"))}
                 </span>
                 <button
                   onClick={handleDownloadPoster}
@@ -981,7 +979,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
               </p>
               {pendingImportGenre.authorName && (
                 <p className="text-[11px] text-text-sub">
-                  {isZh ? "制作人" : "Author"}: {pendingImportGenre.authorName}
+                  {t("maker_author")}: {pendingImportGenre.authorName}
                 </p>
               )}
             </div>

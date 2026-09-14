@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Award, Trophy, Sparkles, Copy, Check, ShieldCheck, Flame, Zap, Target } from "lucide-react";
 import { RankTier, SM2GenreMemory } from "../utils/challengeAlgorithm";
+import { useLanguage } from "../i18n/LanguageContext";
 
 interface ChallengeCertificateModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
   isZh,
 }) => {
   const [copied, setCopied] = useState(false);
+  const { t } = useLanguage();
 
   if (!isOpen) return null;
 
@@ -47,9 +49,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
   const issueDate = new Date().toISOString().split("T")[0];
 
   const handleCopyShare = async () => {
-    const shareText = isZh
-      ? `🎧 我的 Groove 音乐盲听听力天梯已达到【${tier.nameZh}】(${elo} ELO)！\n🎯 正确率: ${accuracy}% | ⚡ 最高连胜: ${stats.bestStreak} 局 | 🧠 攻克曲风: ${masteredCount} 种\n快来挑战你的声学辨识力：https://groove.wangda.today`
-      : `🎧 My Groove Ear Training Rank is [${tier.nameEn}] (${elo} ELO)!\n🎯 Accuracy: ${accuracy}% | ⚡ Best Streak: ${stats.bestStreak} | 🧠 Mastered Genres: ${masteredCount}\nChallenge your acoustic perception at: https://groove.wangda.today`;
+    const shareText = t("cert_share_text", { tier: isZh ? tier.nameZh : tier.nameEn, elo, accuracy, streak: stats.bestStreak, mastered: masteredCount });
 
     try {
       if (navigator.clipboard) {
@@ -82,7 +82,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-text-dim hover:text-text rounded-xl bg-panel hover:bg-neutral-800 transition-colors z-20"
-          aria-label={isZh ? "关闭证书" : "Close Certificate"}
+          aria-label={t("cert_close_aria")}
         >
           <X className="w-5 h-5" />
         </button>
@@ -96,10 +96,10 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
               <span>Groove Acoustic Board</span>
             </div>
             <h2 id="cert-title" className="text-base sm:text-lg font-black tracking-wider text-text uppercase">
-              {isZh ? "听力大师声学段位认证" : "Ear Acumen Rank Certificate"}
+              {t("cert_title")}
             </h2>
             <p className="text-[11px] text-text-sub font-mono">
-              {isZh ? "音乐感知与风格辨识官方评级体系" : "Official Certification of Acoustic Perception"}
+              {t("cert_subtitle")}
             </p>
           </div>
 
@@ -116,7 +116,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
 
             <div className="pt-2">
               <div className="text-xs font-bold uppercase tracking-widest text-text-dim">
-                {isZh ? "当前天梯段位" : "Current Rank Tier"}
+                {t("cert_current_tier")}
               </div>
               <div className="text-2xl sm:text-3xl font-black text-text tracking-wide mt-0.5">
                 {isZh ? tier.nameZh : tier.nameEn}
@@ -132,7 +132,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
             <div className="text-center p-2 rounded-xl bg-panel2/60 border border-line">
               <div className="flex items-center justify-center space-x-1 text-[10px] text-text-dim font-bold uppercase">
                 <Target className="w-3 h-3 text-cyan-400" />
-                <span>{isZh ? "命中率" : "Accuracy"}</span>
+                <span>{t("cert_accuracy")}</span>
               </div>
               <div className="text-sm sm:text-base font-black text-cyan-300 font-mono mt-0.5">
                 {accuracy}%
@@ -142,7 +142,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
             <div className="text-center p-2 rounded-xl bg-panel2/60 border border-line">
               <div className="flex items-center justify-center space-x-1 text-[10px] text-text-dim font-bold uppercase">
                 <Flame className="w-3 h-3 text-amber-400" />
-                <span>{isZh ? "最佳连胜" : "Best Streak"}</span>
+                <span>{t("cert_best_streak")}</span>
               </div>
               <div className="text-sm sm:text-base font-black text-amber-300 font-mono mt-0.5">
                 {stats.bestStreak}
@@ -152,7 +152,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
             <div className="text-center p-2 rounded-xl bg-panel2/60 border border-line">
               <div className="flex items-center justify-center space-x-1 text-[10px] text-text-dim font-bold uppercase">
                 <Zap className="w-3 h-3 text-purple-400" />
-                <span>{isZh ? "总辨识" : "Answered"}</span>
+                <span>{t("cert_answered")}</span>
               </div>
               <div className="text-sm sm:text-base font-black text-purple-300 font-mono mt-0.5">
                 {stats.totalAnswered}
@@ -167,7 +167,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
               <span>{certificateId}</span>
             </div>
             <div>
-              <span>{isZh ? "评定日期: " : "Issued: "}</span>
+              <span>{t("cert_issued")}</span>
               <span>{issueDate}</span>
             </div>
           </div>
@@ -186,8 +186,8 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             <span>
               {copied
-                ? (isZh ? "已复制战报到剪贴板！" : "Copied to clipboard!")
-                : (isZh ? "复制段位证书战报" : "Copy Shareable Text")}
+                ? (t("cert_copied"))
+                : (t("cert_copy"))}
             </span>
           </button>
 
@@ -195,7 +195,7 @@ export const ChallengeCertificateModal: React.FC<ChallengeCertificateModalProps>
             onClick={onClose}
             className="px-5 py-3 rounded-2xl bg-panel border border-line text-text-sub hover:text-text text-xs font-semibold hover:bg-neutral-800 transition-colors"
           >
-            {isZh ? "关闭" : "Close"}
+            {t("cert_close")}
           </button>
         </div>
       </div>

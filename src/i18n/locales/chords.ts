@@ -126,4 +126,21 @@ export const chordsMessages = {
   chords_bake_to_lead: { en: "Bake to Lead Track", zh: "一键烘焙至 Lead 领奏轨" },
   chords_bake_to_chords: { en: "Bake to Chords Track", zh: "一键烘焙至 Chords 伴奏轨" },
   chords_bake_tooltip: { en: "Bake current arpeggiated melodic line into 16-step sequencer matrix", zh: "将当前走向按选定琶音模式转换为 16 步旋律并加载到工作台" },
+
+  // Chord Progressions View — Arp / Strum Controls
+  chords_arp_label: { en: "{pattern} Arp", zh: "{pattern} 琶音" },
+  chords_arp_short_up: { en: "Up", zh: "上行" },
+  chords_arp_short_down: { en: "Down", zh: "下行" },
+  chords_arp_short_up_down: { en: "UpDn", zh: "折返" },
+  chords_arp_short_converge: { en: "Conv", zh: "收敛" },
+  chords_arp_short_random: { en: "Rand", zh: "随机" },
+  chords_gate_stacc: { en: "Stacc", zh: "顿音" },
+  chords_gate_nat: { en: "Nat", zh: "自然" },
+  chords_gate_leg: { en: "Leg", zh: "连音" },
+  chords_strum_micro: { en: "Strumming Pick Micro-Dynamics", zh: "吉他扫弦拨片微动态" },
+  chords_strum_dir_down: { en: "Down ⬇", zh: "下扫 ⬇" },
+  chords_strum_dir_up: { en: "Up ⬆", zh: "上扫 ⬆" },
+  chords_strum_dir_alt: { en: "Alt ⇅", zh: "交替 ⇅" },
+  chords_strum_fast: { en: "Fast 15ms", zh: "紧凑 15ms" },
+  chords_strum_slow: { en: "Slow 75ms", zh: "松弛 75ms" },
 } as const;

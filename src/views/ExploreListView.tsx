@@ -122,7 +122,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
     if (groupBy === "flat") {
       return [{ 
         groupKey: "all", 
-        title: isZh ? "全部流派" : "All Genres", 
+        title: t("explore_list_group_all"), 
         color: { badge: "bg-accent/20 border-accent/40 text-accent", text: "text-accent", border: "border-accent/40" },
         genres: filteredGenres 
       }];
@@ -203,7 +203,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/30 flex items-center space-x-1">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isFallback ? (isZh ? "WebGL 降级兜底模式" : "WebGL Fallback View") : (isZh ? "无障碍聚合矩阵" : "Accessible Catalog")}</span>
+              <span>{isFallback ? (t("explore_list_fallback_badge")) : (t("explore_list_catalog_badge"))}</span>
             </span>
             <span className="text-xs text-text-sub font-mono">
               {t("genre_count_matches", { count: filteredGenres.length })}
@@ -239,7 +239,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line-subtle pb-3.5">
           <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-text-sub">
             <Filter className="w-4 h-4 text-accent" />
-            <span>{isZh ? "多维筛选器" : "Multi-Dimensional Filters"}</span>
+            <span>{t("explore_list_filters_title")}</span>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -249,7 +249,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
               title="Reset all filters"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>{isZh ? "重置筛选" : "Reset"}</span>
+              <span>{t("explore_list_reset")}</span>
             </button>
           </div>
         </div>
@@ -261,7 +261,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isZh ? "搜索流派名称、别名、地域、年代或代表关键词..." : "Search genres by name, alias, place, year, or keyword..."}
+            placeholder={t("explore_list_search_placeholder")}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-panel2 border border-line text-sm text-text placeholder-text-dim focus:outline-none focus:border-accent"
           />
         </div>
@@ -278,7 +278,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text focus:outline-none focus:border-accent"
             >
-              <option value="all">{t("filter_all")} ({isZh ? "全大类" : "All Categories"})</option>
+              <option value="all">{t("filter_all")} ({t("explore_list_all_categories")})</option>
               <option value="Electronic">Electronic (电子舞曲)</option>
               <option value="Rock/Metal">Rock/Metal (摇滚与金属)</option>
               <option value="Hip Hop">Hip Hop (嘻哈与说唱)</option>
@@ -298,7 +298,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
               onChange={(e) => setDecadeFilter(e.target.value)}
               className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text focus:outline-none focus:border-accent"
             >
-              <option value="all">{t("filter_all")} ({isZh ? "全年代" : "All Decades"})</option>
+              <option value="all">{t("filter_all")} ({t("explore_list_all_decades")})</option>
               {DECADES.map((dec) => (
                 <option key={dec} value={String(dec)}>{dec}s</option>
               ))}
@@ -333,10 +333,10 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
               onChange={(e) => setSubgenreMin(parseInt(e.target.value, 10))}
               className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text focus:outline-none focus:border-accent"
             >
-              <option value={0}>{t("filter_all")} ({isZh ? "包含全部母体与末梢" : "All Nodes"})</option>
-              <option value={1}>{isZh ? "有子流派分支 (≥ 1)" : "Has Subgenres (≥ 1)"}</option>
-              <option value={3}>{isZh ? "高衍生谱系分支 (≥ 3)" : "High Derivative (≥ 3)"}</option>
-              <option value={5}>{isZh ? "核心源流基石 (≥ 5)" : "Major Family Root (≥ 5)"}</option>
+              <option value={0}>{t("filter_all")} ({t("explore_list_all_nodes")})</option>
+              <option value={1}>{t("explore_list_min_subgenres")}</option>
+              <option value={3}>{t("explore_list_min_high_derivative")}</option>
+              <option value={5}>{t("explore_list_min_major_root")}</option>
             </select>
           </div>
         </div>
@@ -345,7 +345,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-line-subtle text-xs">
           <div className="flex items-center space-x-2">
             <span className="text-text-dim font-bold uppercase text-[10px]">
-              {isZh ? "分组方式:" : "Group By:"}
+              {t("explore_list_group_by")}
             </span>
             <div className="flex items-center bg-panel2 rounded-xl p-1 border border-line">
               <button
@@ -370,24 +370,24 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
                   groupBy === "flat" ? "bg-accent text-black shadow-xs" : "text-text-sub hover:text-text"
                 }`}
               >
-                {isZh ? "平铺列表" : "Flat"}
+                {t("explore_list_group_flat")}
               </button>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
             <span className="text-text-dim font-bold uppercase text-[10px]">
-              {isZh ? "排序:" : "Sort:"}
+              {t("explore_list_sort_by")}
             </span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
               className="bg-panel2 border border-line rounded-xl px-2.5 py-1 text-xs text-text focus:outline-none focus:border-accent"
             >
-              <option value="year_asc">{isZh ? "年份 (从早到晚)" : "Year (Earliest)"}</option>
-              <option value="year_desc">{isZh ? "年份 (从新到旧)" : "Year (Latest)"}</option>
-              <option value="name_asc">{isZh ? "名称 (A - Z)" : "Name (A-Z)"}</option>
-              <option value="subgenres_desc">{isZh ? "子流派数量 (从多到少)" : "Subgenres Count"}</option>
+              <option value="year_asc">{t("explore_list_sort_year_asc")}</option>
+              <option value="year_desc">{t("explore_list_sort_year_desc")}</option>
+              <option value="name_asc">{t("explore_list_sort_name_asc")}</option>
+              <option value="subgenres_desc">{t("explore_list_sort_subgenres")}</option>
             </select>
           </div>
         </div>
@@ -399,16 +399,16 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
           <div className="p-12 text-center bg-panel border border-line rounded-3xl text-text-sub space-y-3">
             <Music className="w-8 h-8 text-accent mx-auto opacity-60" />
             <p className="text-base font-bold text-text">
-              {isZh ? "未找到符合当前多维筛选条件的音乐流派" : "No genres found matching filters"}
+              {t("explore_list_empty_title")}
             </p>
             <p className="text-xs text-text-dim">
-              {isZh ? "请尝试放宽筛选范围或清空关键词后重试" : "Try relaxing your filters or clearing search query"}
+              {t("explore_list_empty_hint")}
             </p>
             <button
               onClick={handleResetFilters}
               className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-[#ffc24b] transition-colors"
             >
-              {isZh ? "重置所有筛选器" : "Reset Filters"}
+              {t("explore_list_empty_reset")}
             </button>
           </div>
         ) : (
@@ -493,7 +493,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
                         {/* Card Actions Footer */}
                         <div className="flex items-center justify-between pt-2.5 border-t border-line-subtle text-xs">
                           <span className="text-[11px] font-mono text-text-dim">
-                            {genre.subgenres?.length || 0} {isZh ? "分支" : "branches"}
+                            {genre.subgenres?.length || 0} {t("explore_list_branches")}
                           </span>
 
                           <div className="flex items-center space-x-1.5">
