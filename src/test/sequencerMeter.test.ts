@@ -3,6 +3,7 @@ import {
   calculateGroupSize,
   calculateStepsPerBar,
   getTimeSignatureDenominator,
+  getTimeSignatureNumerator,
   stepsPerWholeNote,
 } from "../utils/meter";
 
@@ -20,16 +21,18 @@ import {
  * `sequencerStore.test.ts`). Those self-fulfilling cases are deleted rather than
  * kept against local copies.
  *
- * KNOWN DEFECT (documented here, deliberately NOT fixed by this test-hardening
- * change): `calculateStepsPerBar` ignores the time-signature numerator, so it
- * returns steps per BEAT. v1.3.5 shipped
- * `timeNum * (stepsPerWholeNote / timeDenom)`; the v1.11.0 refactor dropped
- * `timeNum`. The expectations below pin the current shipped behaviour so that a
- * future fix surfaces as a deliberate diff instead of silent drift.
+ * F-11: the extraction also surfaced a live regression — `calculateStepsPerBar`
+ * ignored the time-signature numerator and returned steps per BEAT (4/4 at 1/16
+ * => 4, so a 16-step pattern rendered as four bars). That is fixed in
+ * `src/utils/meter.ts`; the expectations below pin the correct per-bar values.
  */
-describe("Sequencer meter math (P0-10 / E-02)", () => {
-  describe("getTimeSignatureDenominator", () => {
-    it("reads the denominator from a time signature string", () => {
+describe("Sequencer meter math (P0-10 / E-02 / F-11)", () => {
+  describe("getTimeSignatureNumerator / getTimeSignatureDenominator", () => {
+    it("reads both halves of a time signature string", () => {
+      expect(getTimeSignatureNumerator("4/4")).toBe(4);
+      expect(getTimeSignatureNumerator("3/4")).toBe(3);
+      expect(getTimeSignatureNumerator("6/8")).toBe(6);
+      expect(getTimeSignatureNumerator("7/8")).toBe(7);
       expect(getTimeSignatureDenominator("4/4")).toBe(4);
       expect(getTimeSignatureDenominator("3/4")).toBe(4);
       expect(getTimeSignatureDenominator("6/8")).toBe(8);
@@ -40,6 +43,9 @@ describe("Sequencer meter math (P0-10 / E-02)", () => {
       expect(getTimeSignatureDenominator("")).toBe(4);
       expect(getTimeSignatureDenominator("4")).toBe(4);
       expect(getTimeSignatureDenominator("4/x")).toBe(4);
+      expect(getTimeSignatureNumerator("")).toBe(4);
+      expect(getTimeSignatureNumerator("/4")).toBe(4);
+      expect(getTimeSignatureNumerator("x/4")).toBe(4);
     });
   });
 
@@ -57,37 +63,40 @@ describe("Sequencer meter math (P0-10 / E-02)", () => {
     });
   });
 
-  describe("calculateStepsPerBar (current shipped behaviour)", () => {
-    it("returns steps per beat at 1/16: only the denominator matters", () => {
-      // The numerator is ignored, so 4/4, 3/4 and 5/4 all resolve to 4.
-      expect(calculateStepsPerBar("4/4", "1/16")).toBe(4);
-      expect(calculateStepsPerBar("3/4", "1/16")).toBe(4); // mathematically 12 if the numerator counted
-      expect(calculateStepsPerBar("5/4", "1/16")).toBe(4);
+  describe("calculateStepsPerBar (F-11 regression fix)", () => {
+    it("counts every beat of the bar, not just the denominator", () => {
+      expect(calculateStepsPerBar("4/4", "1/16")).toBe(16);
+      expect(calculateStepsPerBar("3/4", "1/16")).toBe(12);
+      expect(calculateStepsPerBar("5/4", "1/16")).toBe(20);
+      expect(calculateStepsPerBar("2/4", "1/16")).toBe(8);
     });
 
-    it("scales inversely with the denominator", () => {
-      expect(calculateStepsPerBar("3/8", "1/16")).toBe(2);
-      expect(calculateStepsPerBar("6/8", "1/16")).toBe(2);
-      expect(calculateStepsPerBar("7/8", "1/16")).toBe(2);
+    it("handles compound and odd meters", () => {
+      expect(calculateStepsPerBar("3/8", "1/16")).toBe(6);
+      expect(calculateStepsPerBar("6/8", "1/16")).toBe(12);
+      expect(calculateStepsPerBar("7/8", "1/16")).toBe(14);
+      expect(calculateStepsPerBar("9/8", "1/16")).toBe(18);
     });
 
     it("honours the 1/8 and 1/32 resolutions", () => {
-      expect(calculateStepsPerBar("4/4", "1/8")).toBe(2);
-      expect(calculateStepsPerBar("3/4", "1/8")).toBe(2);
-      expect(calculateStepsPerBar("7/8", "1/8")).toBe(1);
-      expect(calculateStepsPerBar("4/4", "1/32")).toBe(8);
-      expect(calculateStepsPerBar("7/8", "1/32")).toBe(4);
+      expect(calculateStepsPerBar("4/4", "1/8")).toBe(8);
+      expect(calculateStepsPerBar("3/4", "1/8")).toBe(6);
+      expect(calculateStepsPerBar("7/8", "1/8")).toBe(7);
+      expect(calculateStepsPerBar("4/4", "1/32")).toBe(32);
+      expect(calculateStepsPerBar("7/8", "1/32")).toBe(28);
     });
 
     it("never returns zero (clamped to a minimum of 1)", () => {
+      // 1/128 at 1/32 is 0.25 steps per bar -> clamped to 1.
       expect(calculateStepsPerBar("1/128", "1/32")).toBe(1);
+      // A zero/missing numerator falls back to 4, and 1/64 still clamps to 1.
+      expect(calculateStepsPerBar("0/4", "1/16")).toBe(16);
+      expect(calculateStepsPerBar("1/64", "1/16")).toBe(1);
     });
 
-    it("documents the 3/4 regression instead of hiding it behind a local copy", () => {
-      // v1.3.5 shipped `timeNum * (stepsPerWholeNote / timeDenom)` => 12 for 3/4.
-      // Current StudioView drops `timeNum`, so the shipped value is 4.
-      expect(calculateStepsPerBar("3/4", "1/16")).not.toBe(12);
-      expect(calculateStepsPerBar("3/4", "1/16")).toBe(4);
+    it("keeps 4/4 at exactly one bar for the default 16-step pattern", () => {
+      const stepsPerBar = calculateStepsPerBar("4/4", "1/16");
+      expect(Math.ceil(16 / stepsPerBar)).toBe(1);
     });
   });
 });
