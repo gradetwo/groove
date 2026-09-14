@@ -12,6 +12,7 @@ import { createZipArchive } from "../utils/zip";
 import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "./DrumKitModels";
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
 import { TrackState, deriveTrackStates } from "./trackStates";
+import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -186,6 +187,7 @@ export async function renderPatternOffline(
 
   const anySolo = mixerStates.some((s) => s.solo);
   const drumKit: DrumKitType = options.drumKit || "808";
+  const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
 
   // Step scheduling loop
   for (let step = 0; step < totalSteps; step++) {
@@ -206,10 +208,10 @@ export async function renderPatternOffline(
       const stepVal = track.steps[stepIdx] || 0;
       if (stepVal <= 0) return;
 
-      // F-03: probability must gate offline rendering exactly like it gates playback,
-      // otherwise exports contain notes the user never hears.
+      // F-03/N-04: probability gates offline rendering, but with a DETERMINISTIC roll
+      // so re-exporting the same project is reproducible and every exporter agrees.
       const probability = track.probability?.[stepIdx];
-      if (probability !== undefined && probability < 100 && Math.random() * 100 > probability) {
+      if (!probabilityPasses(probability, exportSeed, trackIdx, stepIdx)) {
         return;
       }
 
@@ -231,14 +233,12 @@ export async function renderPatternOffline(
 
       // Ratchet
       const isHatTriplet = (trackId === "hihat" || lowerName.includes("hat")) && stepVal === 3;
-      const ratchet = track.ratchet && track.ratchet[stepIdx] && track.ratchet[stepIdx] > 1
-        ? track.ratchet[stepIdx]
-        : (isHatTriplet ? 3 : 1);
+      const ratchet = resolveRatchet(track.ratchet?.[stepIdx], isHatTriplet);
 
       const subDur = stepDur / ratchet;
       for (let r = 0; r < ratchet; r++) {
         const subTime = stepTime + r * subDur;
-        const subVel = normalizedVel * (0.85 + (r / ratchet) * 0.15);
+        const subVel = normalizedVel * ratchetVelocityScale(r, ratchet);
 
         // Synthesis Dispatch with physical drum kit modeling and polyphonic synth
         if (trackId === "kick" || lowerName.includes("kick")) {

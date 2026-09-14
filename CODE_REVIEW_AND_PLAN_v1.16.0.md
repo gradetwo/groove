@@ -197,7 +197,7 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 | H-08 | 撤销历史静默 50 条上限 + 深拷贝快照（3 pattern × 轨 × 6 数组）≈ 10 MB 常驻 | `useSequencerStore.ts:886-888` |
 | H-09 | 实时录音走 `dispatch` 不入历史且不清 `futureRef` → 之后 Redo 会用陈旧快照覆盖录音 | `StudioView.tsx:407-428` |
 | H-10 | `TrackRow` 不向 `StepCell` 传任何 handler → 格子可聚焦但 Space/Enter 激活是死代码；方向键导航无边界钳制且会静默丢焦点 | `TrackRow.tsx:297-316`；`StepCell.tsx:65,73,91-95` |
-| H-11 | **全仓 0 个 `React.memo`**（已 grep 验证），叠加 `TrackRow`/`Toolbar`/`GenreRail`/`Ruler` 每次传入新建的 track 对象与内联箭头 → 每次 store 变更重渲染 8×32 = 256+ 个格子与 1194 行 Toolbar | `grep -rn "memo(" src --include=*.tsx` = 0；`TrackRow.tsx:281-318`、`Toolbar.tsx:117`、`GenreRail.tsx:19`、`Ruler.tsx:17` |
+| H-11 | **6 个记忆化组件（StepCell/Ruler/TrackRow/GenreRail/InfoDossier/Toolbar）全部被内联箭头 + 每次新建的 track 对象击穿**，等价于未记忆化 → 每次 store 变更重渲染 8×32 = 256+ 个格子与 1194 行 Toolbar | `grep -rn "memo<" src/components/sequencer` 命中 6 处（`StepCell.tsx:30`、`Ruler.tsx:17`、`TrackRow.tsx:44`、`GenreRail.tsx:33`、`InfoDossier.tsx:17`、`Toolbar.tsx:117`）；击穿点见 `TrackRow.tsx:281-318`、`StudioView.tsx` 内联 handler |
 | H-12 | Euclidean 应用只替换 `steps`，`velocity/pitch/gate/ratchet` 全部错位；reducer 里已有且被测过的 `APPLY_EUCLIDEAN` 从未被 dispatch | `StudioView.tsx:1963-1970` vs `useSequencerStore.ts` |
 | H-13 | `PitchPickerModal` 的 `octave`/`selectedNote` 只在首次 lazy init，组件无 `key` → 打开第二个步进时显示并编辑上一个步进的音高 | `PitchPickerModal.tsx:75-82` |
 | H-14 | 点击当前已选曲风 chip 会 `switchGenre(g, true)` 静默重置用户已编辑的 pattern | `GenreRail.tsx:54-56` |
@@ -258,7 +258,7 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 | 内联 `isZh ?` 三元 / `t()` 调用 | 556 / 723 |
 | 硬编码十六进制色值出现次数 / 唯一色值 | 1,220 / 357 |
 | 任意值 `shadow-[…]` | 194 |
-| `React.memo` 使用 | **0** |
+| `React.memo` 使用 | 6（但全部被内联 props 击穿，等效为 0） |
 | `key={index}` | 18 |
 
 ### 5.2 交互一致性
@@ -518,3 +518,11 @@ $ 仓库卫生                       → git ls-files | grep pyc → scripts/__p
 ---
 
 *报告生成于 2026-09-14，基于 `next` @ `390a764`（v1.16.0）。所有结论均可通过上述命令与 `file:line` 复核。*
+
+---
+
+## 勘误（2026-09-14，v1.16.3 期间修订）
+
+- **§4.2 H-11 与 §5.1 的 `React.memo` 计数有误。** 初版用 `grep -rn "memo(" src` 判定为 0，但实际写法是 `memo<Props>(function ...)`，`memo(` 无法匹配 `memo<`。
+  实际情况：`StepCell`、`Ruler`、`TrackRow`、`GenreRail`、`InfoDossier`、`Toolbar` **共 6 个组件已使用 `React.memo`**，但它们被 StudioView 每次渲染新建的内联箭头函数与 track 对象击穿，**等效于没有记忆化**——结论（整格重渲染）不变，原因描述已更正为"记忆化被击穿"。
+  教训：对"某 API 未被使用"这类否定性结论，grep 模式必须覆盖泛型调用等写法（本例应为 `memo<\|memo(`），否则会得出与事实相反的结论。

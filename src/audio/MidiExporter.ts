@@ -5,6 +5,7 @@
  */
 
 import { SequencerPattern, SequencerTrack } from "../types/genre";
+import { patternSeed, probabilityPasses } from "./noteEvents";
 
 export interface ExportMidiOptions {
   bpm: number;
@@ -100,6 +101,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
   const anySolo = pattern.tracks.some((t) => t.solo);
   const totalSteps = pattern.totalSteps || (pattern.tracks[0]?.steps?.length || 16);
   const globalSwing = (pattern.swing !== undefined ? pattern.swing / 100 : 0);
+  const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
 
   pattern.tracks.forEach((track: SequencerTrack, trackIdx: number) => {
     if (track.mute) return;
@@ -123,8 +125,9 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
       const stepVal = steps[stepIdx] || 0;
       if (stepVal <= 0) continue;
 
-      const prob = (probabilities[stepIdx] !== undefined) ? probabilities[stepIdx] : 100;
-      if (prob <= 0) continue;
+      // N-04: honour per-step probability deterministically so MIDI matches the WAV
+      // render (which used to roll Math.random) and re-exporting is reproducible.
+      if (!probabilityPasses(probabilities[stepIdx], exportSeed, trackIdx, stepIdx)) continue;
 
       // Base tick position with swing offset on odd steps
       let stepTick = step * ticksPerStep;

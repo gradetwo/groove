@@ -10,6 +10,7 @@
  */
 
 import { SequencerPattern, SequencerTrack } from "../types/genre";
+import { patternSeed, probabilityPasses } from "./noteEvents";
 
 export interface ExportAlsOptions {
   bpm: number;
@@ -77,6 +78,7 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
   const totalSteps = pattern.totalSteps || (pattern.tracks[0]?.steps?.length || 16);
   const loopLengthBeats = totalSteps * stepBeats;
   const globalSwing = pattern.swing !== undefined ? pattern.swing / 100 : 0;
+  const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
 
   // Parse time signature (default: 4/4)
   const [numStr, denStr] = (pattern.timeSignature || "4/4").split("/");
@@ -152,8 +154,8 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
       const stepVal = steps[stepIdx] || 0;
       if (stepVal <= 0) continue;
 
-      const prob = probabilities[stepIdx] !== undefined ? probabilities[stepIdx] : 100;
-      if (prob <= 0) continue;
+      // N-04: deterministic probability so the .als clip matches the MIDI and WAV exports.
+      if (!probabilityPasses(probabilities[stepIdx], exportSeed, trackIdx, stepIdx)) continue;
 
       let stepTimeBeats = step * stepBeats;
       if (step % 2 === 1 && effSwing > 0) {
