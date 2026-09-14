@@ -1,27 +1,23 @@
 {
-  "version": "1.16.10",
+  "version": "1.16.11",
   "releaseDate": "2026-09-14",
-  "changelogCount": 52,
+  "changelogCount": 53,
   "latest": {
-    "version": "1.16.10",
+    "version": "1.16.11",
     "date": "2026-09-14",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v1.16.10 同源曲风对比：把关系图谱变成可操作课件",
-      "en": "v1.16.10 Same-origin comparison: the relation graph becomes a usable lesson"
+      "zh": "v1.16.11 曲目外链与来源数量纳入数据门禁",
+      "en": "v1.16.11 Track links and source counts join the data gate"
     },
     "highlights": [
       {
-        "zh": "对比视图新增「同源对比」行：针对当前曲风列出其源自/衍生/相关的曲风，点击即可加入对比，直接 A/B 比较律动源流",
-        "en": "The compare view gained a 'same origin' row: for the current genre it lists what it derives from, what it led to and what it is related to — click to add any of them to the comparison and A/B the lineage"
+        "zh": "N-06 验收的\"外链可校验\"落地为数据门禁：795/795 条代表性曲目链接均为 https 且主机在允许列表内，标题/艺人/年份齐全，每个曲风的来源数量达标，并纳入 lint:data",
+        "en": "The 'verifiable links' half of N-06 is now a data gate: all 795 representative-track links are https on an allow-listed host with complete title/artist/year metadata, every genre meets the source minimum, and it runs in lint:data"
       },
       {
-        "zh": "关系图谱此前只作为装饰性的谱系图存在，现在被解析成结构化的三组同源关系（去重、过滤未知 id 与自环），并新增 9 例完整性测试",
-        "en": "The relation graph used to be decorative; it is now resolved into three structured groups (deduped, with unknown ids and self-loops filtered) with 9 integrity tests"
-      },
-      {
-        "zh": "如实说明：159 条代表性曲目外链需要真实内容创作，未凭空生成；本轮交付的是把现有关系数据变成教学功能",
-        "en": "Stated honestly: the 159 representative-track links need real content authoring and were not invented; this release turns the existing relation data into a teaching feature instead"
+        "zh": "关系覆盖 159/159 由红线 R3c 持续守住；逐曲目的规范链接仍需人工考证，未凭空生成",
+        "en": "Relation coverage of all 159 genres stays protected by red line R3c; canonical per-track URLs still need human research and were not invented"
       }
     ]
   }
