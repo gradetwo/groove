@@ -5,6 +5,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { useSequencerStore } from "../features/sequencer/useSequencerStore";
 import { getDefaultDrumKitForGenre } from "../utils/trackUtils";
 import { EmptyState } from "../ui";
+import { Headphones } from "lucide-react";
 import { ChannelStrip } from "../components/console/ChannelStrip";
 import { MasterStrip } from "../components/console/MasterStrip";
 import { getTrackVisual } from "../components/console/trackVisuals";
@@ -56,6 +57,9 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
   const tracks = useMemo(() => pattern.tracks.slice(0, 8), [pattern.tracks]);
 
   const engineRef = useRef<AudioEngine | null>(null);
+  // N-02: binaural (HRTF) monitoring toggle. Off by default; the engine rebuilds its
+  // channel strips when this changes, so the unused panner model costs no CPU.
+  const [spatialEnabled, setSpatialEnabled] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [masterVolume, setMasterVolume] = useState(DEFAULT_TRACK_VOLUME);
 
@@ -107,6 +111,9 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
 
   const onTrackTriggerRef = useRef(pulseTracks);
   onTrackTriggerRef.current = pulseTracks;
+  // Read inside the mount-only effect without making it a dependency.
+  const spatialEnabledRef = useRef(spatialEnabled);
+  spatialEnabledRef.current = spatialEnabled;
 
   // ----- Engine lifecycle (mirrors StudioView's StrictMode-safe creation) ---
   useEffect(() => {
@@ -114,12 +121,18 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
       onTrackTrigger: (trackIndices) => onTrackTriggerRef.current(trackIndices),
       onStop: () => setIsPlaying(false),
     });
+    engine.setSpatialMode(spatialEnabledRef.current);
     engineRef.current = engine;
     return () => {
       engine.destroy();
       engineRef.current = null;
     };
   }, []);
+
+  // ----- Spatial monitoring mode (N-02) -------------------------------------
+  useEffect(() => {
+    engineRef.current?.setSpatialMode(spatialEnabled);
+  }, [spatialEnabled]);
 
   // ----- Store -> engine sync (audio always matches the console) ------------
   useEffect(() => {
@@ -284,6 +297,20 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
           <span className="rounded-lg border border-line bg-panel2 px-2.5 py-1 font-['JetBrains_Mono'] text-[10px] text-text-sub">
             {t("console_channel_count", { count: tracks.length })}
           </span>
+          <button
+            type="button"
+            onClick={() => setSpatialEnabled((prev) => !prev)}
+            aria-pressed={spatialEnabled}
+            title={t("console_spatial_hint")}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] transition-colors ${
+              spatialEnabled
+                ? "border-accent/60 bg-accent/15 text-accent"
+                : "border-line bg-panel2 text-text-sub hover:border-accent/50 hover:text-accent"
+            }`}
+          >
+            <Headphones className="h-3.5 w-3.5" />
+            <span>{t("console_spatial_toggle")}</span>
+          </button>
           {onOpenStudio && (
             <button
               type="button"

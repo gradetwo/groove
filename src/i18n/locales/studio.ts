@@ -246,6 +246,11 @@ export const studioMessages = {
     zh: "当前音序 Pattern 的混音控制台",
   },
   console_channel_count: { en: "{count} channels", zh: "{count} 个通道" },
+  console_spatial_toggle: { en: "Binaural (HRTF)", zh: "双耳空间监听" },
+  console_spatial_hint: {
+    en: "Place the 8 tracks on a semicircle around you using HRTF binaural panning. Best with headphones; switching briefly interrupts playback.",
+    zh: "使用 HRTF 双耳定位把 8 条轨道分布在你前方的半圆声场上。建议佩戴耳机；切换时会短暂中断播放。",
+  },
   console_open_studio: { en: "Open in Studio", zh: "在工作台打开" },
   console_empty_title: { en: "No channels", zh: "暂无通道" },
   console_empty_desc: {

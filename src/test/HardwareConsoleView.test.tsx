@@ -32,6 +32,10 @@ const engineMock = vi.hoisted(() => ({
   getMasterAnalyser: vi.fn(() => null),
   getStereoAnalysers: vi.fn(() => ({ left: null, right: null })),
   setMasterVolume: vi.fn(),
+  // N-02 spatial monitoring surface (added after this mock was first written).
+  setSpatialMode: vi.fn(),
+  getSpatialMode: vi.fn(() => false),
+  getSpatialLayout: vi.fn(() => []),
   getLiveRecorder: vi.fn(() => ({ setOnQuantizedStep: vi.fn() })),
   play: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn(),
@@ -199,5 +203,39 @@ describe("HardwareConsoleView (N-01 / P8-02)", () => {
     const phaseButton = screen.getByTestId("console-phase-0");
     expect(phaseButton).toBeDisabled();
     expect(phaseButton).toHaveAttribute("title", expect.stringContaining("not supported"));
+  }, TEST_TIMEOUT);
+});
+
+describe("HardwareConsoleView · spatial monitoring toggle (N-02)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem("groove_language", "en");
+  });
+
+  it("starts in stereo mode and switches the engine to HRTF when toggled", async () => {
+    const genre = await chicagoHouse();
+    renderConsole(genre);
+
+    const toggle = await screen.findByRole("button", { name: /Binaural|双耳/i }, { timeout: ASYNC_TIMEOUT });
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(toggle);
+
+    await waitFor(
+      () => {
+        expect(toggle.getAttribute("aria-pressed")).toBe("true");
+        expect(engineMock.setSpatialMode).toHaveBeenCalledWith(true);
+      },
+      { timeout: ASYNC_TIMEOUT }
+    );
+
+    fireEvent.click(toggle);
+    await waitFor(
+      () => {
+        expect(engineMock.setSpatialMode).toHaveBeenCalledWith(false);
+      },
+      { timeout: ASYNC_TIMEOUT }
+    );
   }, TEST_TIMEOUT);
 });
