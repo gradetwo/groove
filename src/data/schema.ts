@@ -4,6 +4,12 @@ import { isBpmInRange, parseBpmRange } from "../utils/bpm";
 export interface GenreValidationResult {
   isValid: boolean;
   errors: string[];
+  /**
+   * Non-fatal findings. These never flip `isValid`; they surface data-quality
+   * problems that exist in the current database baseline and must stay
+   * report-only so the fast data gate is not permanently red.
+   */
+  warnings: string[];
 }
 
 export interface DatabaseValidationResult {
@@ -11,6 +17,8 @@ export interface DatabaseValidationResult {
   totalGenres: number;
   duplicateIds: string[];
   genreErrors: Record<string, string[]>;
+  /** Per-genre non-fatal findings, mirroring `genreErrors`. */
+  genreWarnings: Record<string, string[]>;
 }
 
 const REQUIRED_TRACK_IDS = [
@@ -33,11 +41,120 @@ const REQUIRED_RADAR_KEYS = [
   "melodicFocus",
 ] as const;
 
+/** Bilingual rhythm slots that make up `drum_pattern`. */
+const REQUIRED_DRUM_PATTERN_FIELDS = [
+  "kick",
+  "snare_clap",
+  "hihats",
+  "percussion",
+  "swing",
+] as const;
+
+/** `"4/4"`, `"3/4"`, `"6/8"`, `"7/8"` … — numerator over 4 or 8. */
+const TIME_SIGNATURE_PATTERN = /^\d+\/[48]$/;
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 /**
- * Validates a single Genre against PRD and runtime specs
+ * Validates an `{ en, zh }` bilingual pair, requiring both halves to be
+ * non-empty strings. Returns true only when the whole pair is usable.
+ */
+function validateI18nField(value: unknown, field: string, errors: string[]): boolean {
+  if (!value || typeof value !== "object") {
+    errors.push(`'${field}' must be an { en, zh } bilingual object`);
+    return false;
+  }
+  const pair = value as { en?: unknown; zh?: unknown };
+  let ok = true;
+  if (!isNonEmptyString(pair.en)) {
+    errors.push(`'${field}.en' must be a non-empty string`);
+    ok = false;
+  }
+  if (!isNonEmptyString(pair.zh)) {
+    errors.push(`'${field}.zh' must be a non-empty string`);
+    ok = false;
+  }
+  return ok;
+}
+
+/** Validates a `string[]` field, requiring every entry to be a non-empty string. */
+function validateStringArrayField(value: unknown, field: string, errors: string[]): value is string[] {
+  if (!Array.isArray(value)) {
+    errors.push(`'${field}' must be an array of strings`);
+    return false;
+  }
+  let ok = true;
+  value.forEach((entry, i) => {
+    if (!isNonEmptyString(entry)) {
+      errors.push(`'${field}[${i}]' must be a non-empty string`);
+      ok = false;
+    }
+  });
+  return ok;
+}
+
+/** Validates `I18nStringArray` (`{ en: string[], zh: string[] }`). */
+function validateI18nStringArrayField(value: unknown, field: string, errors: string[]): boolean {
+  if (!value || typeof value !== "object") {
+    errors.push(`'${field}' must be an { en, zh } bilingual string-array object`);
+    return false;
+  }
+  const pair = value as { en?: unknown; zh?: unknown };
+  const enOk = validateStringArrayField(pair.en, `${field}.en`, errors);
+  const zhOk = validateStringArrayField(pair.zh, `${field}.zh`, errors);
+  return enOk && zhOk;
+}
+
+/**
+ * Validates `common_chords`.
+ *
+ * The `Genre` type models this as `string[]` (e.g. `"i–VI–III–VII"`), which is
+ * what the shipped database uses. Structured `{ roman, chords }` entries — the
+ * shape used by `popularProgressions.ts` — are also accepted so tooling that
+ * feeds richer progression data through a `Genre`-shaped object is checked;
+ * when present, `roman` and `chords` must be arrays of equal length.
+ */
+function validateCommonChords(value: unknown, errors: string[]): void {
+  if (!Array.isArray(value)) {
+    errors.push("'common_chords' must be an array");
+    return;
+  }
+  value.forEach((entry, i) => {
+    if (typeof entry === "string") {
+      if (!isNonEmptyString(entry)) {
+        errors.push(`'common_chords[${i}]' must be a non-empty string`);
+      }
+      return;
+    }
+    if (entry && typeof entry === "object") {
+      const structured = entry as { roman?: unknown; chords?: unknown };
+      const roman = structured.roman;
+      const chords = structured.chords;
+      if (!Array.isArray(roman)) errors.push(`'common_chords[${i}].roman' must be an array`);
+      if (!Array.isArray(chords)) errors.push(`'common_chords[${i}].chords' must be an array`);
+      if (Array.isArray(roman) && Array.isArray(chords) && roman.length !== chords.length) {
+        errors.push(
+          `'common_chords[${i}]' roman/chords length mismatch (${roman.length} vs ${chords.length})`
+        );
+      }
+      return;
+    }
+    errors.push(`'common_chords[${i}]' must be a string or a { roman, chords } object`);
+  });
+}
+
+/**
+ * Validates a single Genre against PRD and runtime specs.
+ *
+ * Errors are fatal and drive `isValid`; warnings are report-only signals about
+ * content quality that is currently known to be incomplete across the whole
+ * database (see `auditGenreContent` for the aggregate report).
  */
 export function validateGenre(genre: Genre): GenreValidationResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   // 1. Basic identifiers
   if (!genre.id || typeof genre.id !== "string" || !genre.id.trim()) {
@@ -50,7 +167,78 @@ export function validateGenre(genre: Genre): GenreValidationResult {
     errors.push("Missing or invalid 'category'");
   }
 
-  // 2. Representative tracks (PRD §10.2: >= 5 required)
+  // 2. Taxonomy arrays + aliases (string[])
+  validateStringArrayField(genre.aliases, "aliases", errors);
+  validateStringArrayField(genre.parent_genres, "parent_genres", errors);
+  validateStringArrayField(genre.subgenres, "subgenres", errors);
+  validateStringArrayField(genre.related_genres, "related_genres", errors);
+
+  // Taxonomy coverage is a known empty baseline (159/159 at time of writing):
+  // report it, but never let it fail the gate.
+  if (
+    Array.isArray(genre.parent_genres) &&
+    Array.isArray(genre.subgenres) &&
+    Array.isArray(genre.related_genres) &&
+    genre.parent_genres.length === 0 &&
+    genre.subgenres.length === 0 &&
+    genre.related_genres.length === 0
+  ) {
+    warnings.push(
+      "'parent_genres', 'subgenres' and 'related_genres' are all empty (taxonomy not yet populated)"
+    );
+  }
+
+  // 3. Origin / cultural narrative (bilingual)
+  if (!isNonEmptyString(genre.origin_year)) {
+    errors.push("'origin_year' must be a non-empty string (e.g. \"1984\" or \"1990s\")");
+  }
+  if (typeof genre.origin_decade !== "number" || !Number.isInteger(genre.origin_decade)) {
+    errors.push(`'origin_decade' value ${genre.origin_decade} must be an integer year`);
+  } else if (genre.origin_decade < 1900 || genre.origin_decade > 2100) {
+    errors.push(`'origin_decade' value ${genre.origin_decade} is outside the plausible range 1900–2100`);
+  }
+  validateI18nField(genre.origin_place, "origin_place", errors);
+  validateI18nField(genre.cultural_context, "cultural_context", errors);
+
+  // 4. Production details
+  if (!isNonEmptyString(genre.bpm_range)) {
+    errors.push("'bpm_range' must be a non-empty string");
+  }
+  if (typeof genre.default_bpm !== "number" || !Number.isFinite(genre.default_bpm)) {
+    errors.push(`'default_bpm' value ${genre.default_bpm} must be a finite number`);
+  }
+  if (!isNonEmptyString(genre.time_signature) || !TIME_SIGNATURE_PATTERN.test(genre.time_signature)) {
+    errors.push(
+      `'time_signature' value ${JSON.stringify(genre.time_signature)} must match "n/4" or "n/8"`
+    );
+  }
+  if (genre.default_drum_kit !== undefined && !isNonEmptyString(genre.default_drum_kit)) {
+    errors.push("'default_drum_kit' must be a non-empty string when present");
+  }
+  validateI18nField(genre.key_characteristics, "key_characteristics", errors);
+  validateCommonChords(genre.common_chords, errors);
+  validateI18nField(genre.chord_inversions, "chord_inversions", errors);
+  validateStringArrayField(genre.instrumentation, "instrumentation", errors);
+  validateI18nField(genre.sound_design, "sound_design", errors);
+  validateI18nField(genre.rhythm_features, "rhythm_features", errors);
+
+  // 5. Drum pattern shape
+  if (!genre.drum_pattern || typeof genre.drum_pattern !== "object") {
+    errors.push("Missing or invalid 'drum_pattern' object");
+  } else {
+    for (const field of REQUIRED_DRUM_PATTERN_FIELDS) {
+      validateI18nField(genre.drum_pattern[field], `drum_pattern.${field}`, errors);
+    }
+    if (!isNonEmptyString(genre.drum_pattern.tempo)) {
+      errors.push("'drum_pattern.tempo' must be a non-empty string");
+    }
+  }
+
+  validateI18nField(genre.bass_pattern, "bass_pattern", errors);
+  validateStringArrayField(genre.structure, "structure", errors);
+  validateI18nStringArrayField(genre.production_tips, "production_tips", errors);
+
+  // 6. References
   if (!Array.isArray(genre.representative_tracks) || genre.representative_tracks.length < 5) {
     errors.push(
       `'representative_tracks' must have at least 5 tracks (received ${genre.representative_tracks?.length ?? 0})`
@@ -67,8 +255,28 @@ export function validateGenre(genre: Genre): GenreValidationResult {
       }
     });
   }
+  validateStringArrayField(genre.representative_artists, "representative_artists", errors);
+  validateStringArrayField(genre.sources, "sources", errors);
 
-  // 3. Sequencer Pattern & Steps
+  // 7. Acoustic Radar Metrics (1 to 10 finite integer range)
+  if (!genre.radar_metrics) {
+    errors.push("Missing 'radar_metrics' object");
+  } else {
+    for (const key of REQUIRED_RADAR_KEYS) {
+      const val = genre.radar_metrics[key];
+      if (
+        typeof val !== "number" ||
+        !Number.isFinite(val) ||
+        !Number.isInteger(val) ||
+        val < 1 ||
+        val > 10
+      ) {
+        errors.push(`Radar metric '${key}' value ${val} must be a finite integer between 1 and 10`);
+      }
+    }
+  }
+
+  // 8. Sequencer Pattern & Steps
   if (!genre.sequencer_pattern) {
     errors.push("Missing 'sequencer_pattern'");
   } else {
@@ -107,19 +315,7 @@ export function validateGenre(genre: Genre): GenreValidationResult {
     }
   }
 
-  // 4. Acoustic Radar Metrics (1 to 10 integer range)
-  if (!genre.radar_metrics) {
-    errors.push("Missing 'radar_metrics' object");
-  } else {
-    for (const key of REQUIRED_RADAR_KEYS) {
-      const val = genre.radar_metrics[key];
-      if (typeof val !== "number" || val < 1 || val > 10) {
-        errors.push(`Radar metric '${key}' value ${val} must be a number between 1 and 10`);
-      }
-    }
-  }
-
-  // 5. Default BPM vs BPM Range
+  // 9. Default BPM vs BPM Range
   if (genre.default_bpm && genre.bpm_range) {
     const parsed = parseBpmRange(genre.bpm_range);
     if (parsed.isValid) {
@@ -135,6 +331,7 @@ export function validateGenre(genre: Genre): GenreValidationResult {
   return {
     isValid: errors.length === 0,
     errors,
+    warnings,
   };
 }
 
@@ -145,6 +342,7 @@ export function validateGenresDatabase(genres: Genre[]): DatabaseValidationResul
   const seenIds = new Set<string>();
   const duplicateIds: string[] = [];
   const genreErrors: Record<string, string[]> = {};
+  const genreWarnings: Record<string, string[]> = {};
 
   genres.forEach((genre) => {
     if (seenIds.has(genre.id)) {
@@ -156,6 +354,9 @@ export function validateGenresDatabase(genres: Genre[]): DatabaseValidationResul
     if (!result.isValid) {
       genreErrors[genre.id] = result.errors;
     }
+    if (result.warnings.length > 0) {
+      genreWarnings[genre.id] = result.warnings;
+    }
   });
 
   return {
@@ -163,5 +364,6 @@ export function validateGenresDatabase(genres: Genre[]): DatabaseValidationResul
     totalGenres: genres.length,
     duplicateIds,
     genreErrors,
+    genreWarnings,
   };
 }
