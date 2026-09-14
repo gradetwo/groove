@@ -7,6 +7,7 @@ import { masterclassMessages } from "./masterclasses";
 import { analyzerMessages } from "./analyzer";
 import { projectsMessages } from "./projects";
 import { makerMessages } from "./maker";
+import { hapticsMessages } from "./haptics";
 
 export const DICTIONARY = {
   ...commonMessages,
@@ -18,6 +19,7 @@ export const DICTIONARY = {
   ...analyzerMessages,
   ...projectsMessages,
   ...makerMessages,
+  ...hapticsMessages,
 } as const;
 
 export type MessageKey = keyof typeof DICTIONARY;

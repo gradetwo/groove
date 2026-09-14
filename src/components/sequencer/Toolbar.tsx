@@ -31,6 +31,7 @@ import {
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { CustomKickPreset, loadCustomKickPresets } from "../../audio/AnatomyKickEngine";
+import { triggerHaptic, HapticPatterns, getHapticSettings, setHapticEnabled, setHapticIntensity } from "../../utils/haptics";
 
 export type MobileEditMode = "step" | "accent" | "ratchet" | "pitch" | "plocks";
 
@@ -207,6 +208,10 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   }, [exportOpen]);
 
   const [customKicks, setCustomKicks] = useState<CustomKickPreset[]>(() => loadCustomKickPresets());
+
+  // P8-01: Haptic feedback toggle & intensity state
+  const [hapticOn, setHapticOn] = useState(() => getHapticSettings().enabled);
+  const [hapticLevel, setHapticLevel] = useState(() => getHapticSettings().intensity);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -1114,6 +1119,46 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               </button>
             </div>
           )}
+
+          {/* Haptic Feedback Control (P8-01) */}
+          <div className="flex items-center gap-1.5 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
+            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-0.5 whitespace-nowrap">
+              {isZh ? "触感:" : "HAPTIC:"}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !hapticOn;
+                setHapticEnabled(next);
+                setHapticOn(next);
+                if (next) triggerHaptic(HapticPatterns.tap);
+              }}
+              className={`h-6 px-2 rounded text-[10px] font-['JetBrains_Mono'] border transition-colors ${
+                hapticOn
+                  ? "bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold"
+                  : "bg-[#17181c] border-line text-text-sub hover:text-text"
+              }`}
+              title={isZh ? "触觉震动反馈开关" : "Toggle Haptic Feedback"}
+            >
+              {hapticOn ? "ON" : "OFF"}
+            </button>
+            {hapticOn && (
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={Math.round(hapticLevel * 100)}
+                onChange={(e) => {
+                  const v = +e.target.value / 100;
+                  setHapticIntensity(v);
+                  setHapticLevel(v);
+                  triggerHaptic(HapticPatterns.slider);
+                }}
+                className="w-14 sm:w-20 accent-emerald-400 cursor-pointer"
+                title={isZh ? `震动强度: ${Math.round(hapticLevel * 100)}%` : `Intensity: ${Math.round(hapticLevel * 100)}%`}
+              />
+            )}
+          </div>
 
           {/* Pan Navigation */}
           <div className="flex items-center gap-1.5 ml-auto text-text-dim">

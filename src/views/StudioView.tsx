@@ -360,6 +360,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
     const engine = new AudioEngine({
       onStep: ({ step }) => {
         updatePlayhead(step);
+        // P8-01: Haptic downbeat pulse during playback
+        const sig = seqStateRef.current.timeSignature;
+        const res = seqStateRef.current.resolution;
+        const denom = parseInt(sig.split("/")[1]) || 4;
+        const beatsPerBar = parseInt(sig.split("/")[0]) || 4;
+        const stepsPerWhole = res === "1/32" ? 32 : res === "1/8" ? 8 : 16;
+        const spb = Math.max(1, Math.round(stepsPerWhole / denom));
+        const stepsPerBeat = Math.max(1, Math.round(spb / beatsPerBar));
+        if (step % spb === 0) {
+          triggerHaptic(HapticPatterns.heavyThud);
+        } else if (stepsPerBeat > 1 && step % stepsPerBeat === 0) {
+          triggerHaptic(HapticPatterns.metronomeClick);
+        }
         // Song Mode auto-transition between pattern slots on loop wrap-around (P3-02)
         if (seqStateRef.current.songMode && lastStepRef.current > step && step === 0) {
           const nextSlot = seqStateRef.current.activeSlot === "A" ? "B" : "A";
@@ -801,6 +814,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Transport toggle play
   const handleTogglePlay = useCallback(() => {
     if (!engineRef.current) return;
+    triggerHaptic(HapticPatterns.playPause);
     if (isPlaying) {
       engineRef.current.stop();
       setIsPlaying(false);

@@ -31,6 +31,7 @@ import {
   ChallengeDifficulty,
   DEFAULT_INITIAL_ELO,
 } from "../utils/challengeAlgorithm";
+import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChallengeCertificateModal } from "../components/ChallengeCertificateModal";
 
 interface ChallengeViewProps {
@@ -297,6 +298,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
     if (isCorrect) {
       setCorrectCount(nextCorrect);
+      triggerHaptic(HapticPatterns.correctAnswer);
       const pointGain = difficulty === "easy" ? 100 : difficulty === "medium" ? 200 : 350;
       const newScore = score + pointGain;
       const newStreak = streak + 1;
@@ -325,6 +327,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
       );
     } else {
       setStreak(0);
+      triggerHaptic(HapticPatterns.wrongAnswer);
       const timesConfused = nextSm2[question.correctGenre.id]?.confusedWith[genre.id] || 1;
       const confusionMsg = isZh
         ? `已记录与「${genre.name}」的第 ${timesConfused} 次混淆，已根据艾宾浩斯遗忘曲线排入后续间隔复习池。`

@@ -1,7 +1,34 @@
 {
-  "version": "1.15.3",
+  "version": "1.16.0",
   "releaseDate": "2026-09-14",
   "changelog": [
+    {
+      "version": "1.16.0",
+      "date": "2026-09-14",
+      "category": "feature",
+      "title": {
+        "zh": "v1.16.0 Web 触觉震颤力反馈引擎（Haptic Engine - P8-01）",
+        "en": "v1.16.0 Web Haptic Engine & Tactile Feedback System (P8-01)"
+      },
+      "highlights": [
+        {
+          "zh": "全新触觉力反馈引擎：基于 Web Vibration API 的完整打击乐级物理触感系统，支持全局开关与强度调节（10%–100%），设置自动持久化至 localStorage",
+          "en": "Full Haptic Engine powered by Web Vibration API: hardware-grade percussion impact system with global toggle and intensity slider (10%–100%), auto-persisted to localStorage"
+        },
+        {
+          "zh": "播放走带实时触感：每小节下拍（Beat 1）触发沉稳重击（25ms Heavy Thud），小节内各拍触发极微轻点（5ms Metronome Click），打造掌上节拍器物理感",
+          "en": "Transport playback haptics: bar downbeats fire heavy thud pulses (25ms), sub-beats trigger ultra-subtle metronome clicks (5ms) for a pocket metronome feel"
+        },
+        {
+          "zh": "听力挑战触觉反馈：答对时双脉冲庆祝震动（Correct Double Pulse），答错时长震警告（Wrong Answer Buzz），配合 Elo 积分系统增强沉浸感",
+          "en": "Challenge mode haptics: correct answers trigger celebratory double-pulse vibration, wrong answers fire warning buzz, enhancing the Elo rating experience"
+        },
+        {
+          "zh": "Toolbar 高级面板一键控制：在 More 设置抽屉新增翡翠绿触感开关与强度滑块，实时调整、即时生效、跨会话记忆",
+          "en": "Toolbar advanced controls: emerald-green haptic ON/OFF toggle and intensity slider in the More settings drawer with instant feedback and cross-session persistence"
+        }
+      ]
+    },
     {
       "version": "1.15.3",
       "date": "2026-09-14",
