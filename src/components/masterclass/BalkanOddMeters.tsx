@@ -68,7 +68,7 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
   onBpmChange,
   onTapResult,
 }) => {
-  const { isZh } = useLanguage();
+  const { t, isZh } = useLanguage();
   const [selectedMeterId, setSelectedMeterId] = useState<string>("kalamatianos_78");
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeSubdivIdx, setActiveSubdivIdx] = useState<number | null>(null);
@@ -170,7 +170,7 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
         <div className="flex items-center gap-2">
           <Footprints className="w-4 h-4 text-accent" />
           <span className="text-xs font-mono font-semibold text-text-sub uppercase">
-            {isZh ? "巴尔干 Aksak 节拍" : "Aksak Meter"}:
+            {t("balkan_meter_label")}:
           </span>
           {BALKAN_METERS.map((m) => (
             <button
@@ -215,12 +215,12 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
             {isPlaying ? (
               <>
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "停止" : "Stop"}</span>
+                <span>{t("balkan_stop")}</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "起跳 Aksak" : "Play Dance"}</span>
+                <span>{t("balkan_play")}</span>
               </>
             )}
           </button>
@@ -252,7 +252,7 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>{isZh ? "对拍打卡 (SPACE)" : "TAP AKSAK (SPACE)"}</span>
+            <span>{t("balkan_tap_btn")}</span>
             {streak > 0 && <span className="text-emerald-400 font-bold">({streak}x)</span>}
           </button>
         </div>
@@ -260,7 +260,7 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
         {/* Mnemonic Pulse Banner */}
         <div className="p-4 rounded-2xl bg-panel flex items-center justify-between border border-line">
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-text-dim uppercase">{isZh ? "步伐口诀" : "Gait Mnemonic"}:</span>
+            <span className="text-text-dim uppercase">{t("balkan_mnemonic_label")}:</span>
             <span className="text-accent font-bold text-sm tracking-wider">
               {isZh ? meter.mnemonicZh : meter.mnemonicEn}
             </span>
@@ -273,7 +273,7 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
         {/* Proportional Metric Blocks */}
         <div className="space-y-3">
           <div className="text-xs font-mono text-text-dim flex items-center justify-between">
-            <span>{isZh ? "短拍 (2) 与长拍 (3) 物理长度比对" : "Proportional Pulse Blocks (Short 2 vs Long 3)"}</span>
+            <span>{t("balkan_blocks_title")}</span>
             <span>{meter.timeSignature}</span>
           </div>
 
@@ -303,7 +303,7 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
                           : "bg-surface text-text-sub border border-line"
                       }`}
                     >
-                      {isLong ? (isZh ? "长拍 LONG" : "LONG") : (isZh ? "短拍 SHORT" : "SHORT")}
+                      {isLong ? t("balkan_long") : t("balkan_short")}
                     </span>
                     <span className="text-base font-extrabold font-mono text-text">
                       {subdiv}
@@ -328,10 +328,10 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
 
                   <div className="text-center font-mono text-xs font-bold text-text-sub">
                     {idx === 0
-                      ? isZh ? "Davul 重低音" : "Davul Kick"
+                      ? t("balkan_davul")
                       : isLong
-                      ? isZh ? "长拍腾空跃步" : "Airborne Lift"
-                      : isZh ? "切分短步" : "Short Step"}
+                      ? t("balkan_lift")
+                      : t("balkan_step")}
                   </div>
                 </div>
               );

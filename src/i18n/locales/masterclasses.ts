@@ -383,4 +383,51 @@ export const masterclassMessages = {
     zh: "分轨",
     en: "Track",
   },
+  // ---------------------------------------------------------------------------
+  // BalkanOddMeters.tsx
+  // ---------------------------------------------------------------------------
+  balkan_meter_label: {
+    zh: "巴尔干 Aksak 节拍",
+    en: "Aksak Meter",
+  },
+  balkan_stop: {
+    zh: "停止",
+    en: "Stop",
+  },
+  balkan_play: {
+    zh: "起跳 Aksak",
+    en: "Play Dance",
+  },
+  balkan_tap_btn: {
+    zh: "对拍打卡 (SPACE)",
+    en: "TAP AKSAK (SPACE)",
+  },
+  balkan_mnemonic_label: {
+    zh: "步伐口诀",
+    en: "Gait Mnemonic",
+  },
+  balkan_blocks_title: {
+    zh: "短拍 (2) 与长拍 (3) 物理长度比对",
+    en: "Proportional Pulse Blocks (Short 2 vs Long 3)",
+  },
+  balkan_long: {
+    zh: "长拍 LONG",
+    en: "LONG",
+  },
+  balkan_short: {
+    zh: "短拍 SHORT",
+    en: "SHORT",
+  },
+  balkan_davul: {
+    zh: "Davul 重低音",
+    en: "Davul Kick",
+  },
+  balkan_lift: {
+    zh: "长拍腾空跃步",
+    en: "Airborne Lift",
+  },
+  balkan_step: {
+    zh: "切分短步",
+    en: "Short Step",
+  },
 };
