@@ -220,6 +220,18 @@ export const studioMessages = {
   export_share_copied_degraded: { en: "Link copied (too large — pitch/gate detail omitted) 🔗", zh: "链接已复制（内容较大，已省略音高/门限等细节）🔗" },
   export_share_copied: { en: "Share URL copied to clipboard 🔗", zh: "链接已复制到剪贴板 🔗" },
 
+  // Sequencer Transport Toasts & Announcements (U-11: migrated from inline bilingual ternaries)
+  transport_tap_bpm: { en: "Tap BPM", zh: "测速 BPM" },
+  transport_drums_only_on: { en: "Drums Only Mode Enabled (Key: D) ✓", zh: "已开启【只听鼓组】模式 (快捷键 D) ✓" },
+  transport_full_band_on: { en: "Full Band Mode Restored ✓", zh: "已恢复全频段播放 (Full Band) ✓" },
+  transport_announce_drums_only_on: { en: "Drums only mode enabled", zh: "已开启只听鼓组" },
+  transport_announce_drums_only_off: { en: "Drums only mode disabled", zh: "已关闭只听鼓组" },
+  transport_playback_stopped: { en: "Playback stopped", zh: "已停止播放" },
+  transport_playback_started: { en: "Playback started", zh: "开始播放" },
+  transport_undo_done: { en: "Undone ✓", zh: "已撤销 (Undo) ✓" },
+  transport_redo_done: { en: "Redone ✓", zh: "已重做 (Redo) ✓" },
+  transport_slot_copied: { en: "Copied Pattern {from} to {to} ✓", zh: "已将 Pattern {from} 复制至 {to} ✓" },
+
   // Kick / Somatic controls (U-11: migrated from inline bilingual ternaries)
   kick_custom_fallback_name: { en: "Custom Kick {count}", zh: "自定义底鼓 {count}" },
   somatic_presets_heading: { en: "KICK PRESETS", zh: "底鼓预设库" },
