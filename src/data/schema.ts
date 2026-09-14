@@ -367,3 +367,145 @@ export function validateGenresDatabase(genres: Genre[]): DatabaseValidationResul
     genreWarnings,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Content audit (E-11b)
+//
+// `validateGenre` only checks shape. This audit reports content-quality facts
+// that are invisible to a shape validator: empty taxonomy arrays, templated
+// placeholder copy, and thin citation lists. Hard vs report-only is explicit:
+// a genre with fewer than `MIN_GENRE_SOURCES` sources is a HARD failure, while
+// the empty-taxonomy and templated-copy counts are the current known baseline
+// and are therefore report-only warnings.
+// ---------------------------------------------------------------------------
+
+/** Literal fragments that betray copy-pasted / templated placeholder copy. */
+export const TEMPLATE_TEXT_MARKERS = ["signature kick character"] as const;
+
+/** Minimum citations expected per genre before the content gate turns red. */
+export const MIN_GENRE_SOURCES = 2;
+
+export interface GenreAuditBucket {
+  count: number;
+  genreIds: string[];
+}
+
+export interface GenreContentAuditResult {
+  totalGenres: number;
+  /** Known empty baseline (159/159 at time of writing): report-only. */
+  emptyTaxonomy: GenreAuditBucket;
+  /** Templated placeholder copy (159/159 at time of writing): report-only. */
+  templatedText: GenreAuditBucket;
+  /** HARD rule: a genre should cite at least `MIN_GENRE_SOURCES` sources. */
+  insufficientSources: GenreAuditBucket;
+  warnings: string[];
+  hardViolations: string[];
+  passed: boolean;
+}
+
+/** Collects the free-text (narrative) fields scanned for template markers. */
+function collectNarrativeText(genre: Genre): string[] {
+  const parts: string[] = [];
+  const pushPair = (pair?: { en?: unknown; zh?: unknown } | null) => {
+    if (!pair) return;
+    if (typeof pair.en === "string") parts.push(pair.en);
+    if (typeof pair.zh === "string") parts.push(pair.zh);
+  };
+
+  pushPair(genre.origin_place);
+  pushPair(genre.cultural_context);
+  pushPair(genre.key_characteristics);
+  pushPair(genre.chord_inversions);
+  pushPair(genre.sound_design);
+  pushPair(genre.rhythm_features);
+  pushPair(genre.bass_pattern);
+
+  const tips = genre.production_tips;
+  if (Array.isArray(tips?.en)) {
+    parts.push(...tips.en.filter((s): s is string => typeof s === "string"));
+  }
+  if (Array.isArray(tips?.zh)) {
+    parts.push(...tips.zh.filter((s): s is string => typeof s === "string"));
+  }
+
+  const drum = genre.drum_pattern;
+  if (drum) {
+    for (const field of REQUIRED_DRUM_PATTERN_FIELDS) {
+      pushPair(drum[field]);
+    }
+    if (typeof drum.tempo === "string") parts.push(drum.tempo);
+  }
+
+  return parts;
+}
+
+/**
+ * Content-level audit of the genre database. Never throws, never mutates.
+ * `passed` only reflects hard violations so callers can gate on it directly.
+ */
+export function auditGenreContent(genres: Genre[]): GenreContentAuditResult {
+  const emptyTaxonomyIds: string[] = [];
+  const templatedIds: string[] = [];
+  const insufficientSourceIds: string[] = [];
+
+  for (const genre of genres) {
+    const id = genre.id;
+
+    // 1. Taxonomy arrays all empty.
+    if (
+      Array.isArray(genre.parent_genres) &&
+      Array.isArray(genre.subgenres) &&
+      Array.isArray(genre.related_genres) &&
+      genre.parent_genres.length === 0 &&
+      genre.subgenres.length === 0 &&
+      genre.related_genres.length === 0
+    ) {
+      emptyTaxonomyIds.push(id);
+    }
+
+    // 2. Repeated-template placeholder copy.
+    const narrative = collectNarrativeText(genre).join("\n").toLowerCase();
+    if (TEMPLATE_TEXT_MARKERS.some((marker) => narrative.includes(marker.toLowerCase()))) {
+      templatedIds.push(id);
+    }
+
+    // 3. Citation depth (hard rule).
+    const sourceCount = Array.isArray(genre.sources)
+      ? genre.sources.filter((s) => typeof s === "string" && s.trim().length > 0).length
+      : 0;
+    if (sourceCount < MIN_GENRE_SOURCES) {
+      insufficientSourceIds.push(id);
+    }
+  }
+
+  const warnings: string[] = [];
+  if (emptyTaxonomyIds.length > 0) {
+    warnings.push(
+      `[warn] ${emptyTaxonomyIds.length}/${genres.length} genres have empty parent_genres/subgenres/related_genres ` +
+        `(known baseline; report-only, not a failure)`
+    );
+  }
+  if (templatedIds.length > 0) {
+    warnings.push(
+      `[warn] ${templatedIds.length}/${genres.length} genres contain templated copy matching ` +
+        `${TEMPLATE_TEXT_MARKERS.map((m) => `"${m}"`).join(", ")} (report-only, not a failure)`
+    );
+  }
+
+  const hardViolations: string[] = [];
+  if (insufficientSourceIds.length > 0) {
+    hardViolations.push(
+      `[hard] ${insufficientSourceIds.length}/${genres.length} genres cite fewer than ${MIN_GENRE_SOURCES} sources`
+    );
+  }
+
+  return {
+    totalGenres: genres.length,
+    emptyTaxonomy: { count: emptyTaxonomyIds.length, genreIds: emptyTaxonomyIds },
+    templatedText: { count: templatedIds.length, genreIds: templatedIds },
+    insufficientSources: { count: insufficientSourceIds.length, genreIds: insufficientSourceIds },
+    warnings,
+    hardViolations,
+    passed: hardViolations.length === 0,
+  };
+}
