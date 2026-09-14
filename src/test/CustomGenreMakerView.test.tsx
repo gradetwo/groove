@@ -20,10 +20,29 @@ vi.mock("../audio/AudioEngine", () => {
   };
 });
 
-// Coverage instrumentation makes a single fake IndexedDB round-trip slower than
-// the 1s default waitFor budget, so bound async DOM signals explicitly instead
-// of leaning on the 15s test-level wall clock that used to hide the problem.
-const ASYNC_UI_TIMEOUT = 5000;
+// Coverage instrumentation plus a loaded full-suite run can make a single fake
+// IndexedDB round-trip slower than testing-library's 1s default. Bound each async
+// DOM signal explicitly, and give the whole test enough head-room that a slow CI
+// runner does not turn a passing assertion into a timeout (this test used to flake
+// at exactly its 10s test-level ceiling under `vitest run --coverage`).
+const ASYNC_UI_TIMEOUT = 8000;
+const TEST_TIMEOUT = 30000;
+
+/**
+ * Polls the fake IndexedDB until `predicate` holds. `waitFor` with an async
+ * callback does not retry reliably, so database assertions poll explicitly.
+ */
+async function waitForDatabase(
+  predicate: () => Promise<boolean>,
+  timeout = ASYNC_UI_TIMEOUT
+): Promise<boolean> {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    if (await predicate()) return true;
+    if (Date.now() > deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
 
 describe("CustomGenreMakerView Component (P7-03)", () => {
   const mockOpenStudio = vi.fn();
@@ -70,7 +89,7 @@ describe("CustomGenreMakerView Component (P7-03)", () => {
     expect(screen.getAllByText(/节奏密度|Density/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/低频能量|Bass/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/旋律性|Melodic/i).length).toBeGreaterThanOrEqual(1);
-  }, 10000);
+  }, TEST_TIMEOUT);
 
   it("modifies genre name and marks as unsaved until saved", async () => {
     render(
@@ -105,11 +124,12 @@ describe("CustomGenreMakerView Component (P7-03)", () => {
     }, { timeout: ASYNC_UI_TIMEOUT });
 
     // And prove the rename actually reached the database, not just React state.
-    await waitFor(async () => {
-      const persisted = await getAllCustomGenres();
-      expect(persisted.some((g) => g.name === "Neon Synth Funk")).toBe(true);
-    }, { timeout: ASYNC_UI_TIMEOUT });
-  }, 10000);
+    const persisted = await waitForDatabase(async () => {
+      const rows = await getAllCustomGenres();
+      return rows.some((g) => g.name === "Neon Synth Funk");
+    });
+    expect(persisted).toBe(true);
+  }, TEST_TIMEOUT);
 
   it("toggles pattern steps and auditions pattern", async () => {
     render(
@@ -133,7 +153,7 @@ describe("CustomGenreMakerView Component (P7-03)", () => {
     fireEvent.click(auditionBtn);
 
     expect(screen.getByText(/停止试听|Stop Audition/i)).toBeTruthy();
-  }, 10000);
+  }, TEST_TIMEOUT);
 
   it("navigates to studio with active custom genre", async () => {
     render(
@@ -155,5 +175,5 @@ describe("CustomGenreMakerView Component (P7-03)", () => {
     expect(mockOpenStudio).toHaveBeenCalledWith(
       expect.objectContaining({ isCustom: true })
     );
-  }, 10000);
+  }, TEST_TIMEOUT);
 });
