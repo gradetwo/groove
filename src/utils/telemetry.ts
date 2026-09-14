@@ -1,6 +1,14 @@
 /**
- * Privacy-First Telemetry & Error Reporting (P4-10)
- * Collects zero PII. Records only sanitized crash stack, app version, and OS platform.
+ * Privacy-first crash diagnostics (P4-10 / E-08).
+ *
+ * Scope is deliberately narrow: this module only builds and retains sanitised
+ * diagnostic reports for errors the app actually caught. There is no analytics
+ * pipeline and no network transmission — the review removed a `trackEvent` API
+ * that had zero production callers and no sink, because keeping it implied an
+ * observability capability the app does not have.
+ *
+ * Collected data: sanitised stack, app version, platform string, viewport size.
+ * Never collected: user content, projects, patterns or identifiers.
  */
 
 import { APP_VERSION } from "../version";
@@ -18,15 +26,7 @@ export interface DiagnosticReport {
   screenResolution: string;
 }
 
-export interface TelemetryEvent {
-  category: string;
-  action: string;
-  label?: string;
-  timestamp: number;
-}
-
 const errorReports: DiagnosticReport[] = [];
-const eventQueue: TelemetryEvent[] = [];
 
 /**
  * Strips personal paths (e.g. /home/username) from stack trace
@@ -66,25 +66,6 @@ export function reportException(error: Error, errorInfo?: { componentStack?: str
   return report;
 }
 
-/**
- * Opt-in anonymous action tracking
- */
-export function trackEvent(category: string, action: string, label?: string): void {
-  eventQueue.push({
-    category,
-    action,
-    label,
-    timestamp: Date.now(),
-  });
-  if (eventQueue.length > 50) {
-    eventQueue.shift();
-  }
-}
-
 export function getRecentErrors(): DiagnosticReport[] {
   return [...errorReports];
-}
-
-export function getRecentEvents(): TelemetryEvent[] {
-  return [...eventQueue];
 }

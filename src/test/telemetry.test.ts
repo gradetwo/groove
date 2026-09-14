@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createDiagnosticReport, sanitizeStackTrace, reportException, trackEvent, getRecentErrors, getRecentEvents, APP_VERSION } from "../utils/telemetry";
+import { createDiagnosticReport, sanitizeStackTrace, reportException, getRecentErrors, APP_VERSION } from "../utils/telemetry";
 
 describe("Privacy-First Telemetry & Observability (P4-10)", () => {
   it("sanitizes user file system paths from stack traces", () => {
@@ -19,12 +19,21 @@ describe("Privacy-First Telemetry & Observability (P4-10)", () => {
     expect(report.platform).toBeDefined();
   });
 
-  it("records unhandled exceptions and telemetry events", () => {
-    reportException(new Error("Test crash"));
-    expect(getRecentErrors().length).toBeGreaterThanOrEqual(1);
+  it("retains caught exceptions and never leaks raw user paths", () => {
+    const before = getRecentErrors().length;
+    const report = reportException(new Error("Test crash"));
 
-    trackEvent("studio", "export_wav", "master");
-    const events = getRecentEvents();
-    expect(events.some((e) => e.action === "export_wav")).toBe(true);
+    const after = getRecentErrors();
+    expect(after.length).toBeGreaterThanOrEqual(1);
+    // Captured reports carry the running app version and are sanitised.
+    expect(report.version).toBe(APP_VERSION);
+    expect(report.stack ?? "").not.toMatch(/\/home\/[a-z]+\//);
+    expect(after[after.length - 1].errorMessage).toBe("Test crash");
+    expect(after.length).toBeGreaterThanOrEqual(before);
+  });
+
+  it("caps retained crash reports so a crash loop cannot grow memory unbounded", () => {
+    for (let i = 0; i < 40; i++) reportException(new Error(`crash ${i}`));
+    expect(getRecentErrors().length).toBeLessThanOrEqual(20);
   });
 });
