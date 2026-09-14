@@ -114,6 +114,383 @@ export interface ToolbarProps {
   onToggleAnalyzer?: () => void;
 }
 
+interface MeterControlsProps {
+  timeSignature: string;
+  resolution: "1/8" | "1/16" | "1/32";
+  stepCount: number;
+  barCount: number;
+  mobileEditMode: MobileEditMode;
+  onChangeTimeSignature: (sig: string) => void;
+  onChangeResolution: (res: "1/8" | "1/16" | "1/32") => void;
+  onChangeStepCount: (count: number) => void;
+  onChangeMobileEditMode: (mode: MobileEditMode) => void;
+}
+
+/**
+ * A-03: metre / resolution / length / tool-mode are low-frequency controls.
+ * Keeping them in a memo component means a transport tick (isPlaying, bpm,
+ * viewedBar) no longer re-renders this whole block.
+ */
+const MeterControls = memo<MeterControlsProps>(function MeterControls({
+  timeSignature,
+  resolution,
+  stepCount,
+  barCount,
+  mobileEditMode,
+  onChangeTimeSignature,
+  onChangeResolution,
+  onChangeStepCount,
+  onChangeMobileEditMode,
+}) {
+  const { t } = useLanguage();
+
+  return (
+    <>
+      {/* Meter Select Dropdown */}
+      <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+        <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
+          {t("toolbar_meter_label")}
+        </span>
+        <select
+          value={timeSignature}
+          onChange={(e) => onChangeTimeSignature(e.target.value)}
+          className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+          aria-label={t("toolbar_meter_aria")}
+        >
+          <option value="4/4" className="bg-panel text-text">4/4 {t("toolbar_meter_44")}</option>
+          <option value="2/4" className="bg-panel text-text">2/4 {t("toolbar_meter_24")}</option>
+          <option value="3/4" className="bg-panel text-text">3/4 {t("toolbar_meter_34")}</option>
+          <option value="2/2" className="bg-panel text-text">2/2 {t("toolbar_meter_22")}</option>
+          <option value="6/8" className="bg-panel text-text">6/8 {t("toolbar_meter_68")}</option>
+          <option value="3/8" className="bg-panel text-text">3/8 {t("toolbar_meter_38")}</option>
+          <option value="9/8" className="bg-panel text-text">9/8 {t("toolbar_meter_98")}</option>
+          <option value="12/8" className="bg-panel text-text">12/8 {t("toolbar_meter_128")}</option>
+          <option value="5/4" className="bg-panel text-text">5/4 {t("toolbar_meter_54")}</option>
+          <option value="7/8" className="bg-panel text-text">7/8 {t("toolbar_meter_78")}</option>
+        </select>
+      </div>
+
+      {/* Quantize Resolution Select Dropdown */}
+      <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+        <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
+          {t("toolbar_grid_label")}
+        </span>
+        <select
+          value={resolution}
+          onChange={(e) => onChangeResolution(e.target.value as "1/8" | "1/16" | "1/32")}
+          className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+          aria-label={t("toolbar_grid_aria")}
+        >
+          <option value="1/16" className="bg-panel text-text">1/16 {t("toolbar_grid_116")}</option>
+          <option value="1/8" className="bg-panel text-text">1/8 {t("toolbar_grid_18")}</option>
+          <option value="1/32" className="bg-panel text-text">1/32 {t("toolbar_grid_132")}</option>
+        </select>
+      </div>
+
+      {/* Step Length Select Dropdown */}
+      <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+        <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
+          {t("toolbar_length_label")}
+        </span>
+        <select
+          value={stepCount}
+          onChange={(e) => onChangeStepCount(Number(e.target.value))}
+          className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+          aria-label={t("toolbar_length_aria")}
+        >
+          <option value={16} className="bg-panel text-text">16 {t("toolbar_steps_1_bar")}</option>
+          <option value={32} className="bg-panel text-text">32 {t("toolbar_steps_2_bars")}</option>
+          <option value={48} className="bg-panel text-text">48 {t("toolbar_steps_3_bars")}</option>
+          <option value={64} className="bg-panel text-text">64 {t("toolbar_steps_4_bars")}</option>
+          {![16, 32, 48, 64].includes(stepCount) && (
+            <option value={stepCount} className="bg-panel text-text">
+              {stepCount} {t("toolbar_steps_n_bars", { count: barCount })}
+            </option>
+          )}
+        </select>
+      </div>
+
+      {/* Tool Mode Select Dropdown */}
+      <div
+        className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0"
+        title={
+          mobileEditMode === "step"
+            ? (t("toolbar_tool_step_tip"))
+            : mobileEditMode === "accent"
+            ? (t("toolbar_tool_accent_tip"))
+            : mobileEditMode === "ratchet"
+            ? (t("toolbar_tool_ratchet_tip"))
+            : mobileEditMode === "pitch"
+            ? (t("toolbar_tool_pitch_tip"))
+            : (t("toolbar_tool_plocks_tip"))
+        }
+      >
+        <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
+          {t("toolbar_tool_label")}
+        </span>
+        <select
+          value={mobileEditMode}
+          onChange={(e) => onChangeMobileEditMode(e.target.value as MobileEditMode)}
+          className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+          aria-label={t("toolbar_tool_aria")}
+        >
+          <option value="step" className="bg-panel text-text">● {t("toolbar_tool_step")}</option>
+          <option value="accent" className="bg-panel text-text">▲ {t("toolbar_tool_accent")}</option>
+          <option value="ratchet" className="bg-panel text-text">⫸ {t("toolbar_tool_ratchet")}</option>
+          <option value="pitch" className="bg-panel text-text">♩ {t("toolbar_tool_pitch")}</option>
+          <option value="plocks" className="bg-panel text-text">⚙ {t("toolbar_tool_plocks")}</option>
+        </select>
+      </div>
+    </>
+  );
+});
+
+interface PatternSlotControlsProps {
+  activeSlot: "A" | "B";
+  songMode: boolean;
+  blindCompare: boolean;
+  onSwitchSlot?: (slot: "A" | "B") => void;
+  onCopySlot?: (from: "A" | "B", to: "A" | "B") => void;
+  onToggleSongMode?: () => void;
+  onToggleBlindCompare?: () => void;
+}
+
+/**
+ * A-03: pattern slots / song mode / blind compare only change on an explicit
+ * user action, so they are sharded out of the transport re-render path.
+ */
+const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotControls({
+  activeSlot,
+  songMode,
+  blindCompare,
+  onSwitchSlot,
+  onCopySlot,
+  onToggleSongMode,
+  onToggleBlindCompare,
+}) {
+  const { t } = useLanguage();
+
+  return (
+    <>
+      {/* Pattern Slots Switcher (P3-02) */}
+      {onSwitchSlot && (
+        <div className="flex items-center bg-panel2 border border-line rounded-lg p-0.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => onSwitchSlot("A")}
+            className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
+              activeSlot === "A"
+                ? "bg-accent text-[#0a0b0d] shadow-sm"
+                : "text-text-sub hover:text-text"
+            }`}
+            title={t("toolbar_pattern_a_title")}
+          >
+            {blindCompare ? "?1" : "PTN A"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onSwitchSlot("B")}
+            className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
+              activeSlot === "B"
+                ? "bg-accent text-[#0a0b0d] shadow-sm"
+                : "text-text-sub hover:text-text"
+            }`}
+            title={t("toolbar_pattern_b_title")}
+          >
+            {blindCompare ? "?2" : "PTN B"}
+          </button>
+          {onCopySlot && (
+            <button
+              type="button"
+              onClick={() => onCopySlot(activeSlot === "A" ? "A" : "B", activeSlot === "A" ? "B" : "A")}
+              className="h-7 px-1.5 text-text-sub hover:text-accent transition-colors ml-0.5"
+              title={
+                activeSlot === "A" ? t("toolbar_copy_a_to_b") : t("toolbar_copy_b_to_a")
+              }
+              aria-label="Copy pattern slot"
+            >
+              <Copy className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Song Mode Toggle (P3-02) */}
+      {onToggleSongMode && (
+        <button
+          type="button"
+          onClick={onToggleSongMode}
+          className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+            songMode
+              ? "bg-[#a855f7]/20 border-[#a855f7] text-[#c084fc] font-bold shadow-[0_0_8px_rgba(168,85,247,0.3)]"
+              : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+          }`}
+          title={t("toolbar_song_mode_title")}
+          aria-label="Song Mode"
+        >
+          <Repeat className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline font-['JetBrains_Mono']">SONG</span>
+        </button>
+      )}
+
+      {/* Blind Compare Toggle (P3-02) */}
+      {onToggleBlindCompare && (
+        <button
+          type="button"
+          onClick={onToggleBlindCompare}
+          className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+            blindCompare
+              ? "bg-[#ec4899]/20 border-[#ec4899] text-[#f472b6] font-bold shadow-[0_0_8px_rgba(236,72,153,0.3)]"
+              : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+          }`}
+          title={t("toolbar_blind_title")}
+          aria-label="Blind Test Mode"
+        >
+          {blindCompare ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          <span className="hidden md:inline font-['JetBrains_Mono']">{t("toolbar_blind_label")}</span>
+        </button>
+      )}
+    </>
+  );
+});
+
+interface ExportMenuProps {
+  isExportingAudio?: boolean;
+  onExportMidi: () => void;
+  onExportAls?: () => void;
+  onExportGroove?: () => void;
+  onExportWav?: () => void;
+  onExportStems?: () => void;
+}
+
+/**
+ * A-03: the export dropdown carries its own open state and outside-click listener,
+ * so it is fully isolated from every other toolbar concern. Only a change to
+ * `isExportingAudio` or to the export callbacks can re-render it.
+ */
+const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
+  isExportingAudio = false,
+  onExportMidi,
+  onExportAls,
+  onExportGroove,
+  onExportWav,
+  onExportStems,
+}) {
+  const { t } = useLanguage();
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!exportOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", handleClickOutside);
+    return () => window.removeEventListener("pointerdown", handleClickOutside);
+  }, [exportOpen]);
+
+  return (
+    <div className="relative shrink-0" ref={exportMenuRef}>
+      <button
+        onClick={() => setExportOpen((prev) => !prev)}
+        disabled={isExportingAudio}
+        className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono'] disabled:opacity-50"
+        title={t("export")}
+        aria-haspopup="true"
+        aria-expanded={exportOpen}
+      >
+        {isExportingAudio ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+        ) : (
+          <Download className="w-3.5 h-3.5" />
+        )}
+        <span className="hidden lg:inline">{t("export")}</span>
+        <ChevronDown className={`w-3 h-3 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {exportOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-52 py-1 bg-[#0f1118] border border-line-strong rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.9)] z-50 text-xs font-['JetBrains_Mono'] divide-y divide-line/40">
+          <div className="p-1 space-y-0.5">
+            <button
+              onClick={() => {
+                onExportMidi();
+                setExportOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-accent shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-medium text-text">{t("toolbar_export_midi")}</span>
+                <span className="text-[10px] text-text-dim">.mid (8 轨完整伴奏)</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                onExportAls?.();
+                setExportOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+            >
+              <Layers className="w-3.5 h-3.5 text-[#fbbf24] shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-medium text-text">{t("toolbar_export_als")}</span>
+                <span className="text-[10px] text-text-dim">.als (8 轨独立 MIDI Clip)</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                onExportGroove?.();
+                setExportOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+            >
+              <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-medium text-text">{t("toolbar_export_groove")}</span>
+                <span className="text-[10px] text-text-dim">.groove (离线全工程数据)</span>
+              </div>
+            </button>
+          </div>
+
+          <div className="p-1 space-y-0.5">
+            <button
+              onClick={() => {
+                onExportWav?.();
+                setExportOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+            >
+              <FileAudio className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-medium text-text">{t("toolbar_export_wav")}</span>
+                <span className="text-[10px] text-text-dim">16-bit 44.1kHz PCM (.wav)</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                onExportStems?.();
+                setExportOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+            >
+              <Package className="w-3.5 h-3.5 text-[#a78bfa] shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-medium text-text">{t("toolbar_export_stems")}</span>
+                <span className="text-[10px] text-text-dim">8 轨独立 WAV 打包 (.zip)</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
 export const Toolbar = memo<ToolbarProps>(function Toolbar({
   isPlaying,
   bpm,
@@ -192,20 +569,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onTapTempo,
 }) {
   const { t } = useLanguage();
-  const [exportOpen, setExportOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const exportMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!exportOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-        setExportOpen(false);
-      }
-    };
-    window.addEventListener("pointerdown", handleClickOutside);
-    return () => window.removeEventListener("pointerdown", handleClickOutside);
-  }, [exportOpen]);
 
   const [customKicks, setCustomKicks] = useState<CustomKickPreset[]>(() => loadCustomKickPresets());
 
@@ -425,180 +789,28 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             </button>
           )}
 
-          {/* Meter Select Dropdown */}
-          <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {t("toolbar_meter_label")}
-            </span>
-            <select
-              value={timeSignature}
-              onChange={(e) => onChangeTimeSignature(e.target.value)}
-              className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={t("toolbar_meter_aria")}
-            >
-              <option value="4/4" className="bg-panel text-text">4/4 {t("toolbar_meter_44")}</option>
-              <option value="2/4" className="bg-panel text-text">2/4 {t("toolbar_meter_24")}</option>
-              <option value="3/4" className="bg-panel text-text">3/4 {t("toolbar_meter_34")}</option>
-              <option value="2/2" className="bg-panel text-text">2/2 {t("toolbar_meter_22")}</option>
-              <option value="6/8" className="bg-panel text-text">6/8 {t("toolbar_meter_68")}</option>
-              <option value="3/8" className="bg-panel text-text">3/8 {t("toolbar_meter_38")}</option>
-              <option value="9/8" className="bg-panel text-text">9/8 {t("toolbar_meter_98")}</option>
-              <option value="12/8" className="bg-panel text-text">12/8 {t("toolbar_meter_128")}</option>
-              <option value="5/4" className="bg-panel text-text">5/4 {t("toolbar_meter_54")}</option>
-              <option value="7/8" className="bg-panel text-text">7/8 {t("toolbar_meter_78")}</option>
-            </select>
-          </div>
+          <MeterControls
+            timeSignature={timeSignature}
+            resolution={resolution}
+            stepCount={stepCount}
+            barCount={barCount}
+            mobileEditMode={mobileEditMode}
+            onChangeTimeSignature={onChangeTimeSignature}
+            onChangeResolution={onChangeResolution}
+            onChangeStepCount={onChangeStepCount}
+            onChangeMobileEditMode={onChangeMobileEditMode}
+          />
 
-          {/* Quantize Resolution Select Dropdown */}
-          <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {t("toolbar_grid_label")}
-            </span>
-            <select
-              value={resolution}
-              onChange={(e) => onChangeResolution(e.target.value as "1/8" | "1/16" | "1/32")}
-              className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={t("toolbar_grid_aria")}
-            >
-              <option value="1/16" className="bg-panel text-text">1/16 {t("toolbar_grid_116")}</option>
-              <option value="1/8" className="bg-panel text-text">1/8 {t("toolbar_grid_18")}</option>
-              <option value="1/32" className="bg-panel text-text">1/32 {t("toolbar_grid_132")}</option>
-            </select>
-          </div>
+          <PatternSlotControls
+            activeSlot={activeSlot}
+            songMode={songMode}
+            blindCompare={blindCompare}
+            onSwitchSlot={onSwitchSlot}
+            onCopySlot={onCopySlot}
+            onToggleSongMode={onToggleSongMode}
+            onToggleBlindCompare={onToggleBlindCompare}
+          />
 
-          {/* Step Length Select Dropdown */}
-          <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {t("toolbar_length_label")}
-            </span>
-            <select
-              value={stepCount}
-              onChange={(e) => onChangeStepCount(Number(e.target.value))}
-              className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={t("toolbar_length_aria")}
-            >
-              <option value={16} className="bg-panel text-text">16 {t("toolbar_steps_1_bar")}</option>
-              <option value={32} className="bg-panel text-text">32 {t("toolbar_steps_2_bars")}</option>
-              <option value={48} className="bg-panel text-text">48 {t("toolbar_steps_3_bars")}</option>
-              <option value={64} className="bg-panel text-text">64 {t("toolbar_steps_4_bars")}</option>
-              {![16, 32, 48, 64].includes(stepCount) && (
-                <option value={stepCount} className="bg-panel text-text">
-                  {stepCount} {t("toolbar_steps_n_bars", { count: barCount })}
-                </option>
-              )}
-            </select>
-          </div>
-
-          {/* Tool Mode Select Dropdown */}
-          <div
-            className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0"
-            title={
-              mobileEditMode === "step"
-                ? (t("toolbar_tool_step_tip"))
-                : mobileEditMode === "accent"
-                ? (t("toolbar_tool_accent_tip"))
-                : mobileEditMode === "ratchet"
-                ? (t("toolbar_tool_ratchet_tip"))
-                : mobileEditMode === "pitch"
-                ? (t("toolbar_tool_pitch_tip"))
-                : (t("toolbar_tool_plocks_tip"))
-            }
-          >
-            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-              {t("toolbar_tool_label")}
-            </span>
-            <select
-              value={mobileEditMode}
-              onChange={(e) => onChangeMobileEditMode(e.target.value as MobileEditMode)}
-              className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={t("toolbar_tool_aria")}
-            >
-              <option value="step" className="bg-panel text-text">● {t("toolbar_tool_step")}</option>
-              <option value="accent" className="bg-panel text-text">▲ {t("toolbar_tool_accent")}</option>
-              <option value="ratchet" className="bg-panel text-text">⫸ {t("toolbar_tool_ratchet")}</option>
-              <option value="pitch" className="bg-panel text-text">♩ {t("toolbar_tool_pitch")}</option>
-              <option value="plocks" className="bg-panel text-text">⚙ {t("toolbar_tool_plocks")}</option>
-            </select>
-          </div>
-
-          {/* Pattern Slots Switcher (P3-02) */}
-          {onSwitchSlot && (
-            <div className="flex items-center bg-panel2 border border-line rounded-lg p-0.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => onSwitchSlot("A")}
-                className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
-                  activeSlot === "A"
-                    ? "bg-accent text-[#0a0b0d] shadow-sm"
-                    : "text-text-sub hover:text-text"
-                }`}
-                title={t("toolbar_pattern_a_title")}
-              >
-                {blindCompare ? "?1" : "PTN A"}
-              </button>
-              <button
-                type="button"
-                onClick={() => onSwitchSlot("B")}
-                className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
-                  activeSlot === "B"
-                    ? "bg-accent text-[#0a0b0d] shadow-sm"
-                    : "text-text-sub hover:text-text"
-                }`}
-                title={t("toolbar_pattern_b_title")}
-              >
-                {blindCompare ? "?2" : "PTN B"}
-              </button>
-              {onCopySlot && (
-                <button
-                  type="button"
-                  onClick={() => onCopySlot(activeSlot === "A" ? "A" : "B", activeSlot === "A" ? "B" : "A")}
-                  className="h-7 px-1.5 text-text-sub hover:text-accent transition-colors ml-0.5"
-                  title={
-                    activeSlot === "A" ? t("toolbar_copy_a_to_b") : t("toolbar_copy_b_to_a")
-                  }
-                  aria-label="Copy pattern slot"
-                >
-                  <Copy className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Song Mode Toggle (P3-02) */}
-          {onToggleSongMode && (
-            <button
-              type="button"
-              onClick={onToggleSongMode}
-              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
-                songMode
-                  ? "bg-[#a855f7]/20 border-[#a855f7] text-[#c084fc] font-bold shadow-[0_0_8px_rgba(168,85,247,0.3)]"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={t("toolbar_song_mode_title")}
-              aria-label="Song Mode"
-            >
-              <Repeat className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline font-['JetBrains_Mono']">SONG</span>
-            </button>
-          )}
-
-          {/* Blind Compare Toggle (P3-02) */}
-          {onToggleBlindCompare && (
-            <button
-              type="button"
-              onClick={onToggleBlindCompare}
-              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
-                blindCompare
-                  ? "bg-[#ec4899]/20 border-[#ec4899] text-[#f472b6] font-bold shadow-[0_0_8px_rgba(236,72,153,0.3)]"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={t("toolbar_blind_title")}
-              aria-label="Blind Test Mode"
-            >
-              {blindCompare ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span className="hidden md:inline font-['JetBrains_Mono']">{t("toolbar_blind_label")}</span>
-            </button>
-          )}
         </div>
 
         {/* Right Section: Bar Navigation & Pro Operations */}
@@ -857,103 +1069,14 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             </button>
           )}
 
-          {/* Export Menu Dropdown (P4-01 & P4-02: MIDI, Master WAV, and Stems ZIP) */}
-          <div className="relative shrink-0" ref={exportMenuRef}>
-            <button
-              onClick={() => setExportOpen((prev) => !prev)}
-              disabled={isExportingAudio}
-              className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono'] disabled:opacity-50"
-              title={t("export")}
-              aria-haspopup="true"
-              aria-expanded={exportOpen}
-            >
-              {isExportingAudio ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
-              ) : (
-                <Download className="w-3.5 h-3.5" />
-              )}
-              <span className="hidden lg:inline">{t("export")}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {exportOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-52 py-1 bg-[#0f1118] border border-line-strong rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.9)] z-50 text-xs font-['JetBrains_Mono'] divide-y divide-line/40">
-                <div className="p-1 space-y-0.5">
-                  <button
-                    onClick={() => {
-                      onExportMidi();
-                      setExportOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5 text-accent shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="font-medium text-text">{t("toolbar_export_midi")}</span>
-                      <span className="text-[10px] text-text-dim">.mid (8 轨完整伴奏)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      onExportAls?.();
-                      setExportOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-[#fbbf24] shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="font-medium text-text">{t("toolbar_export_als")}</span>
-                      <span className="text-[10px] text-text-dim">.als (8 轨独立 MIDI Clip)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      onExportGroove?.();
-                      setExportOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
-                  >
-                    <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="font-medium text-text">{t("toolbar_export_groove")}</span>
-                      <span className="text-[10px] text-text-dim">.groove (离线全工程数据)</span>
-                    </div>
-                  </button>
-                </div>
-
-                <div className="p-1 space-y-0.5">
-                  <button
-                    onClick={() => {
-                      onExportWav?.();
-                      setExportOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
-                  >
-                    <FileAudio className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="font-medium text-text">{t("toolbar_export_wav")}</span>
-                      <span className="text-[10px] text-text-dim">16-bit 44.1kHz PCM (.wav)</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      onExportStems?.();
-                      setExportOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
-                  >
-                    <Package className="w-3.5 h-3.5 text-[#a78bfa] shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="font-medium text-text">{t("toolbar_export_stems")}</span>
-                      <span className="text-[10px] text-text-dim">8 轨独立 WAV 打包 (.zip)</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <ExportMenu
+            isExportingAudio={isExportingAudio}
+            onExportMidi={onExportMidi}
+            onExportAls={onExportAls}
+            onExportGroove={onExportGroove}
+            onExportWav={onExportWav}
+            onExportStems={onExportStems}
+          />
 
           {/* Share Groove */}
           {!isEditorMaximized && (

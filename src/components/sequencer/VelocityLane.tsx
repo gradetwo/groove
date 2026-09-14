@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { memo, useRef, useState, useCallback, useEffect } from "react";
 import { SequencerTrack } from "../../types/genre";
 import { Sliders, Sparkles, TrendingUp, TrendingDown, X, Dices, Repeat, Clock } from "lucide-react";
 import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
@@ -30,7 +30,7 @@ export interface VelocityLaneProps {
   tracksConfig: Array<{ id: string; name: string; color: string }>;
 }
 
-export const VelocityLane: React.FC<VelocityLaneProps> = ({
+export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
   tracks,
   activeTrackIdx,
   dimension = "velocity",
@@ -52,7 +52,7 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
   stepsPerBar,
   groupSize,
   tracksConfig,
-}) => {
+}) {
   const { t } = useLanguage();
   const currentTrack = tracks[activeTrackIdx] || tracks[0];
   const meta = tracksConfig[activeTrackIdx % tracksConfig.length];
@@ -463,4 +463,4 @@ export const VelocityLane: React.FC<VelocityLaneProps> = ({
       </div>
     </div>
   );
-};
+});
