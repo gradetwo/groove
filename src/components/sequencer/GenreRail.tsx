@@ -1,19 +1,33 @@
 import React, { memo } from "react";
 import { Shuffle } from "lucide-react";
-import { Genre } from "../../types/genre";
+
+/**
+ * A-01: the rail only needs display metadata, so it must not require full `Genre`
+ * objects. StudioView feeds it the lightweight `GENRE_INDEX` entries and loads the
+ * full genre (with its sequencer pattern) only when a chip is actually clicked.
+ * This is what keeps the 14 genre data chunks out of the first paint.
+ */
+export interface GenreRailItem {
+  id: string;
+  name: string;
+  category: string;
+  origin_year?: string;
+  default_bpm?: number;
+  isCustom?: boolean;
+}
 
 export interface GenreRailProps {
   currentGenreId: string;
   activeCategoryFilter: string;
   categories: string[];
-  railGenres: Genre[];
+  railGenres: GenreRailItem[];
   genreAccent: string;
   isZh: boolean;
   onSelectCategory: (category: string) => void;
-  onSelectGenre: (genre: Genre) => void;
+  onSelectGenre: (genreId: string) => void;
   onRandomGenre: () => void;
-  getGenreAccent: (genre: Genre) => string;
-  getGenreChipTag: (genre: Genre) => string;
+  getGenreAccent: (genre: GenreRailItem) => string;
+  getGenreChipTag: (genre: GenreRailItem) => string;
 }
 
 export const GenreRail = memo<GenreRailProps>(function GenreRail({
@@ -53,7 +67,7 @@ export const GenreRail = memo<GenreRailProps>(function GenreRail({
           return (
             <button
               key={g.id}
-              onClick={() => onSelectGenre(g)}
+              onClick={() => onSelectGenre(g.id)}
               className={`flex-none flex flex-col gap-0.5 px-3.5 py-2 border rounded-xl bg-panel min-w-[124px] text-left transition-all relative ${
                 isCurrent
                   ? "border-[var(--g)] shadow-[0_0_14px_rgba(245,183,61,0.2)] bg-[#171920]"

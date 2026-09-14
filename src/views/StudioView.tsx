@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Check } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
-import { ALL_GENRES, GENRES_MAP } from "../data/genres";
+import { GENRE_INDEX, GENRE_INDEX_MAP, loadGenre } from "../data/index/loader";
+import type { GenreRailItem } from "../components/sequencer/GenreRail";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { downloadMidiFile } from "../audio/MidiExporter";
@@ -53,7 +54,7 @@ export const DEMO_TRACKS_CONFIG = [
   { id: "fx", name: "FX", sub: { zh: "效果", en: "FX" }, color: "#9aa5ce" },
 ];
 
-function getGenreAccent(genre: Genre): string {
+function getGenreAccent(genre: GenreRailItem): string {
   const cat = genre.category.toLowerCase();
   const id = genre.id.toLowerCase();
   if (id.includes("house")) return "#3ddc97";
@@ -96,7 +97,7 @@ const DEMO_GENRE_TAGS: Record<string, string> = {
   "dub-techno": "TECHNO · 1993",
 };
 
-const getGenreChipTag = (g: Genre): string => {
+const getGenreChipTag = (g: GenreRailItem): string => {
   if (g.isCustom) return "CUSTOM";
   if (DEMO_GENRE_TAGS[g.id]) return DEMO_GENRE_TAGS[g.id];
   let prefix = g.category.toUpperCase();
@@ -145,9 +146,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
 }) => {
   const { t, language, isZh } = useLanguage();
 
-  const startingGenre = useMemo(() => {
-    return initialGenre || GENRES_MAP["future-bass"] || GENRES_MAP["chicago-house"] || ALL_GENRES[0];
-  }, [initialGenre]);
+  // A-01: App only mounts StudioView once it has resolved a genre via `loadGenre`,
+  // so there is no need to statically pull the whole genre database as a fallback.
+  const startingGenre = initialGenre as Genre;
 
   const { customGenres } = useCustomGenres();
 
@@ -641,7 +642,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
     if (sharedCode) {
       const decoded = decodeSharedSequencer(sharedCode);
       if (decoded) {
-        const found = GENRES_MAP[decoded.genreId] || currentGenre;
+        // A-01: resolve the shared genre on demand instead of from a static map.
+        let cancelled = false;
+        void loadGenre(decoded.genreId).then((loaded) => {
+          if (cancelled) return;
+          const found = loaded || currentGenre;
         const newPattern: SequencerPattern = {
           genre_id: decoded.genreId,
           bpm: decoded.bpm,
@@ -688,9 +693,22 @@ export const StudioView: React.FC<StudioViewProps> = ({
           if (decoded.resolution) engineRef.current.setResolution(decoded.resolution as any);
         }
         showToast("Shared Pattern Loaded");
+        });
+        return () => {
+          cancelled = true;
+        };
       }
-    } else if (genreParam && GENRES_MAP[genreParam]) {
-      commit({ type: "SET_GENRE", genre: GENRES_MAP[genreParam] });
+      return;
+    }
+
+    if (genreParam) {
+      let cancelled = false;
+      void loadGenre(genreParam).then((loaded) => {
+        if (!cancelled && loaded) commit({ type: "SET_GENRE", genre: loaded });
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, []);
 
@@ -1349,9 +1367,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
   ]);
 
   const handleLoadProject = useCallback(
-    (project: GrooveProject) => {
+    async (project: GrooveProject) => {
       setActiveProject(project);
-      const genre = GENRES_MAP[project.genreId] || currentGenre;
+      // A-01: the project stores a genre id, so resolve it on demand.
+      const genre = (await loadGenre(project.genreId)) || currentGenre;
       commit({
         type: "LOAD_PROJECT",
         genre,
@@ -1594,7 +1613,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    ALL_GENRES.forEach((g) => set.add(g.category));
+    GENRE_INDEX.forEach((g) => set.add(g.category));
     const list = ["ALL", ...Array.from(set)];
     if (customGenres.length > 0) {
       list.splice(1, 0, "CUSTOM");
@@ -1621,18 +1640,36 @@ export const StudioView: React.FC<StudioViewProps> = ({
         "nu-disco",
         "acid-house",
       ];
-      const headList = demoHeadIds.map((id) => GENRES_MAP[id]).filter(Boolean) as Genre[];
-      const others = ALL_GENRES.filter((g) => !demoHeadIds.includes(g.id));
-      const combined = [...customGenres, ...headList, ...others];
+      const headList = demoHeadIds
+        .map((id) => GENRE_INDEX_MAP[id])
+        .filter(Boolean) as GenreRailItem[];
+      const others = GENRE_INDEX.filter((g) => !demoHeadIds.includes(g.id));
+      const combined = [...(customGenres as GenreRailItem[]), ...headList, ...others];
       return combined.slice(0, 48 + customGenres.length);
     }
-    return ALL_GENRES.filter((g) => g.category === activeCategoryFilter);
+    return GENRE_INDEX.filter((g) => g.category === activeCategoryFilter);
   }, [activeCategoryFilter, customGenres]);
 
+  /**
+   * A-01: genre data is loaded on demand. Selecting a chip resolves the full genre
+   * (pattern + metadata) before switching, so nothing heavy ships in the entry chunk.
+   */
+  const switchGenreById = useCallback(
+    async (genreId: string, andPlay = false) => {
+      if (genreId === currentGenre.id) {
+        // Re-clicking the active chip must not reset the user's edited pattern.
+        return;
+      }
+      const full = await loadGenre(genreId);
+      if (full) switchGenre(full, andPlay);
+    },
+    [currentGenre.id, switchGenre]
+  );
+
   const handleDiceRandom = useCallback(() => {
-    const rand = ALL_GENRES[Math.floor(Math.random() * ALL_GENRES.length)];
-    switchGenre(rand, true);
-  }, [switchGenre]);
+    const rand = GENRE_INDEX[Math.floor(Math.random() * GENRE_INDEX.length)];
+    if (rand) void switchGenreById(rand.id, true);
+  }, [switchGenreById]);
 
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
@@ -1655,7 +1692,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         genreAccent={genreAccent}
         isZh={isZh}
         onSelectCategory={setActiveCategoryFilter}
-        onSelectGenre={(g) => switchGenre(g, true)}
+        onSelectGenre={(genreId) => void switchGenreById(genreId, true)}
         onRandomGenre={handleDiceRandom}
         getGenreAccent={getGenreAccent}
         getGenreChipTag={getGenreChipTag}
