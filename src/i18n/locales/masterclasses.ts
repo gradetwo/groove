@@ -163,4 +163,79 @@ export const masterclassMessages = {
     zh: "音频引擎或可视化渲染异常，可尝试重试或返回主工作台。",
     en: "Masterclass audio engine or visualizer encountered an error.",
   },
+  // ---------------------------------------------------------------------------
+  // PolyrhythmCollider.tsx
+  // ---------------------------------------------------------------------------
+  poly_ratios_label: {
+    zh: "预设比例",
+    en: "Ratios",
+  },
+  poly_stop: {
+    zh: "停止",
+    en: "Stop",
+  },
+  poly_start: {
+    zh: "启动对撞机",
+    en: "Start Collider",
+  },
+  poly_voice_a: {
+    zh: "声部 A ({ratioA} 拍)",
+    en: "Voice A ({ratioA})",
+  },
+  poly_voice_b: {
+    zh: "声部 B ({ratioB} 拍)",
+    en: "Voice B ({ratioB})",
+  },
+  poly_tap_title: {
+    zh: "实时对拍打卡 (Tap Sync)",
+    en: "Live Tap Sync Check",
+  },
+  poly_streak: {
+    zh: "连击",
+    en: "Streak",
+  },
+  poly_tap_desc: {
+    zh: "在两道光臂重合击中顶部黄色标记（第一拍碰撞点）的瞬间，按下空格键或点击大按键。系统将计算出您的毫秒级对拍咬合度！",
+    en: "Hit Spacebar or the pad precisely as both scanner arms collide at the top apex marker. Evaluates your millisecond microtiming sensitivity!",
+  },
+  poly_tap_btn: {
+    zh: "击打对撞点 (SPACE)",
+    en: "TAP CONVERGENCE (SPACE)",
+  },
+  poly_tap_ready: {
+    zh: "随时敲击对拍",
+    en: "Tap on beat 1 collision",
+  },
+  poly_tap_disabled: {
+    zh: "请先启动对撞机",
+    en: "Start collider first",
+  },
+  poly_rating: {
+    zh: "判定结果",
+    en: "Rating",
+  },
+  poly_rating_perfect: {
+    zh: "完美咬合 (PERFECT)",
+    en: "PERFECT!",
+  },
+  poly_rating_great: {
+    zh: "极佳时序 (GREAT)",
+    en: "GREAT!",
+  },
+  poly_rating_good: {
+    zh: "良好 (GOOD)",
+    en: "GOOD",
+  },
+  poly_rating_miss: {
+    zh: "偏差 (MISS)",
+    en: "MISS",
+  },
+  poly_delta_offset: {
+    zh: "时差位移",
+    en: "Delta Offset",
+  },
+  poly_best_streak: {
+    zh: "最高连击",
+    en: "Best Streak",
+  },
 };

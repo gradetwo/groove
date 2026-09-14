@@ -16,7 +16,7 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
   onBpmChange,
   onTapResult,
 }) => {
-  const { isZh } = useLanguage();
+  const { t } = useLanguage();
   const [ratioA, setRatioA] = useState(4);
   const [ratioB, setRatioB] = useState(3);
   const [soundA] = useState<"kick" | "davul">("kick");
@@ -182,7 +182,7 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 bg-panel2 p-3.5 rounded-2xl border border-line">
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-semibold text-text-sub uppercase">
-            {isZh ? "预设比例" : "Ratios"}:
+            {t("poly_ratios_label")}:
           </span>
           {[
             { a: 4, b: 3, label: "4:3 (Spinach)" },
@@ -237,12 +237,12 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
             {isPlaying ? (
               <>
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "停止" : "Stop"}</span>
+                <span>{t("poly_stop")}</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{isZh ? "启动对撞机" : "Start Collider"}</span>
+                <span>{t("poly_start")}</span>
               </>
             )}
           </button>
@@ -434,7 +434,7 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
           <div className="w-full flex items-center justify-around gap-4 mt-4 pt-4 border-t border-line/60">
             <div className="flex items-center gap-2 text-xs font-mono">
               <span className="w-2.5 h-2.5 rounded-full bg-accent inline-block" />
-              <span className="text-text-sub">{isZh ? `声部 A (${ratioA} 拍)` : `Voice A (${ratioA})`}</span>
+              <span className="text-text-sub">{t("poly_voice_a", { ratioA })}</span>
               <Volume2 className="w-3.5 h-3.5 text-text-dim" />
               <input
                 type="range"
@@ -448,7 +448,7 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
             </div>
             <div className="flex items-center gap-2 text-xs font-mono">
               <span className="w-2.5 h-2.5 rounded-full bg-[#45e0c9] inline-block" />
-              <span className="text-text-sub">{isZh ? `声部 B (${ratioB} 拍)` : `Voice B (${ratioB})`}</span>
+              <span className="text-text-sub">{t("poly_voice_b", { ratioB })}</span>
               <Volume2 className="w-3.5 h-3.5 text-text-dim" />
               <input
                 type="range"
@@ -468,20 +468,18 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-accent text-sm font-bold">
               <Zap className="w-4 h-4" />
-              <span>{isZh ? "实时对拍打卡 (Tap Sync)" : "Live Tap Sync Check"}</span>
+              <span>{t("poly_tap_title")}</span>
             </div>
             {streak > 0 && (
               <div className="flex items-center gap-1 text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30">
                 <Sparkles className="w-3 h-3" />
-                <span>{streak}x {isZh ? "连击" : "Streak"}</span>
+                <span>{streak}x {t("poly_streak")}</span>
               </div>
             )}
           </div>
 
           <p className="text-xs text-text-sub leading-relaxed">
-            {isZh
-              ? "在两道光臂重合击中顶部黄色标记（第一拍碰撞点）的瞬间，按下空格键或点击大按键。系统将计算出您的毫秒级对拍咬合度！"
-              : "Hit Spacebar or the pad precisely as both scanner arms collide at the top apex marker. Evaluates your millisecond microtiming sensitivity!"}
+            {t("poly_tap_desc")}
           </p>
 
           {/* Interactive Giant Tap Pad */}
@@ -503,10 +501,10 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
           >
             <Zap className="w-6 h-6 animate-pulse text-accent" />
             <span className="text-base font-bold font-mono tracking-wide">
-              {isZh ? "击打对撞点 (SPACE)" : "TAP CONVERGENCE (SPACE)"}
+              {t("poly_tap_btn")}
             </span>
             <span className="text-[11px] font-mono text-text-sub">
-              {isPlaying ? (isZh ? "随时敲击对拍" : "Tap on beat 1 collision") : (isZh ? "请先启动对撞机" : "Start collider first")}
+              {isPlaying ? t("poly_tap_ready") : t("poly_tap_disabled")}
             </span>
           </button>
 
@@ -514,7 +512,7 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
           {lastTapResult && (
             <div className="p-3.5 rounded-xl bg-surface border border-line flex items-center justify-between text-xs font-mono">
               <div>
-                <div className="text-text-dim uppercase text-[10px]">{isZh ? "判定结果" : "Rating"}</div>
+                <div className="text-text-dim uppercase text-[10px]">{t("poly_rating")}</div>
                 <div
                   className={`text-sm font-bold uppercase tracking-wider ${
                     lastTapResult.rating === "perfect"
@@ -527,24 +525,24 @@ export const PolyrhythmCollider: React.FC<PolyrhythmColliderProps> = ({
                   }`}
                 >
                   {lastTapResult.rating === "perfect"
-                    ? isZh ? "完美咬合 (PERFECT)" : "PERFECT!"
+                    ? t("poly_rating_perfect")
                     : lastTapResult.rating === "great"
-                    ? isZh ? "极佳时序 (GREAT)" : "GREAT!"
+                    ? t("poly_rating_great")
                     : lastTapResult.rating === "good"
-                    ? isZh ? "良好 (GOOD)" : "GOOD"
-                    : isZh ? "偏差 (MISS)" : "MISS"}
+                    ? t("poly_rating_good")
+                    : t("poly_rating_miss")}
                 </div>
               </div>
 
               <div className="text-right">
-                <div className="text-text-dim uppercase text-[10px]">{isZh ? "时差位移" : "Delta Offset"}</div>
+                <div className="text-text-dim uppercase text-[10px]">{t("poly_delta_offset")}</div>
                 <div className="text-sm font-bold text-text">
                   {lastTapResult.offsetMs > 0 ? `+${lastTapResult.offsetMs}` : lastTapResult.offsetMs} ms
                 </div>
               </div>
 
               <div className="text-right">
-                <div className="text-text-dim uppercase text-[10px]">{isZh ? "最高连击" : "Best Streak"}</div>
+                <div className="text-text-dim uppercase text-[10px]">{t("poly_best_streak")}</div>
                 <div className="text-sm font-bold text-accent flex items-center gap-1 justify-end">
                   <Award className="w-3.5 h-3.5" />
                   <span>{bestStreak}</span>
