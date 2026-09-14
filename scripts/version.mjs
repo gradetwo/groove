@@ -133,15 +133,24 @@ const DOC_VERSION_PATTERNS = [
   },
 ];
 
-const docTargets = DOC_VERSION_PATTERNS.map(({ file, re, replacement }) => {
+// Group by file first: several patterns target the same document, and computing each
+// "desired" content independently from the original text meant the later write silently
+// reverted the earlier fix (observed on IMPROVEMENT_PLAN.md, whose header then claimed
+// the previous version). Apply every pattern to one shared buffer per file.
+const patternsByFile = new Map();
+for (const entry of DOC_VERSION_PATTERNS) {
+  if (!patternsByFile.has(entry.file)) patternsByFile.set(entry.file, []);
+  patternsByFile.get(entry.file).push(entry);
+}
+
+const docTargets = [...patternsByFile.entries()].map(([file, patterns]) => {
   const abs = path.join(ROOT, file);
   const current = fs.existsSync(abs) ? fs.readFileSync(abs, "utf8") : "";
-  return {
-    label: file,
-    path: abs,
-    current,
-    desired: re.test(current) ? current.replace(re, replacement(current)) : current,
-  };
+  let desired = current;
+  for (const { re, replacement } of patterns) {
+    if (re.test(desired)) desired = desired.replace(re, replacement(desired));
+  }
+  return { label: file, path: abs, current, desired };
 });
 
 const targets = [
