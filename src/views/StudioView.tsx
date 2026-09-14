@@ -6,7 +6,7 @@ import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { downloadMidiFile } from "../audio/MidiExporter";
 import { downloadAbletonProject } from "../audio/AbletonExporter";
-import { decodeSharedSequencer, getShareUrl } from "../audio/SequencerUrlShare";
+import { decodeSharedSequencer, getShareUrlResult } from "../audio/SequencerUrlShare";
 import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../audio/WavExporter";
 import { importMidiToPattern } from "../audio/MidiImporter";
 import { generateVariation } from "../audio/InspireMe";
@@ -657,9 +657,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
             steps: t.steps,
             velocity: t.velocity,
             pitch: t.pitch,
+            // F-09: the decoder has always returned these; the view used to drop
+            // them, so a shared pattern silently lost its gate/ratchet/probability,
+            // per-track length, pan, swing and sends.
+            gate: t.gate,
+            ratchet: t.ratchet,
+            probability: t.probability,
+            trackLength: t.trackLength,
             mute: t.mute,
             solo: t.solo,
             volume: t.volume,
+            pan: t.pan,
+            swing: t.swing,
+            sendA: t.sendA,
+            sendB: t.sendB,
           })),
         };
         commit({ type: "SET_GENRE", genre: found });
@@ -1491,7 +1502,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   }, [isKeyboardMode]);
 
   const handleShare = useCallback(() => {
-    const url = getShareUrl({
+    const result = getShareUrlResult({
       genreId: currentGenre.id,
       bpm,
       swing,
@@ -1511,8 +1522,28 @@ export const StudioView: React.FC<StudioViewProps> = ({
         volume: t.volume,
       })),
     });
-    navigator.clipboard.writeText(url);
-    showToast(isZh ? "链接已复制到剪贴板 🔗" : "Share URL copied to clipboard 🔗");
+    if (!result.url) {
+      showToast(
+        result.reason === "too-large"
+          ? isZh
+            ? "工程过大，无法装入分享链接；请改用 .groove 工程包导出"
+            : "Pattern is too large for a share link — export a .groove package instead"
+          : isZh
+          ? "分享失败：当前音序器内容无法编码"
+          : "Share failed: this pattern cannot be encoded"
+      );
+      return;
+    }
+    navigator.clipboard.writeText(result.url);
+    showToast(
+      result.degraded
+        ? isZh
+          ? "链接已复制（内容较大，已省略音高/门限等细节）🔗"
+          : "Link copied (too large — pitch/gate detail omitted) 🔗"
+        : isZh
+        ? "链接已复制到剪贴板 🔗"
+        : "Share URL copied to clipboard 🔗"
+    );
   }, [currentGenre.id, pattern, bpm, swing, timeSignature, resolution, stepCount, isZh, showToast]);
 
   const scrollToBar = useCallback(

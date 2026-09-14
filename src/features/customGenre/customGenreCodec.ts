@@ -1,5 +1,6 @@
 import { CustomGenre, ShareableCustomGenrePayload, RADAR_KEYS_ORDER } from "../../types/customGenre";
 import { Genre, GenreCategory, GenreRadarMetrics, SequencerTrack } from "../../types/genre";
+import { MAX_DECOMPRESSED_BYTES, MAX_ENCODED_LENGTH, validateSharePayload } from "./sharePayloadGuard";
 
 /**
  * Standard 8 track definitions used to reconstruct full track objects
@@ -88,6 +89,8 @@ export async function encodeGenreToSharePayload(genre: CustomGenre | Genre): Pro
  */
 export async function decodeSharePayloadToGenre(encoded: string): Promise<CustomGenre | null> {
   if (!encoded || typeof encoded !== "string") return null;
+  // F-08: reject absurd inputs before doing any base64/decompression work.
+  if (encoded.length > MAX_ENCODED_LENGTH) return null;
 
   try {
     let rawBytes: Uint8Array;
@@ -109,20 +112,25 @@ export async function decodeSharePayloadToGenre(encoded: string): Promise<Custom
       rawBytes = fromBase64Url(encoded);
     }
 
-    const json = new TextDecoder().decode(rawBytes);
-    const payload = JSON.parse(json) as ShareableCustomGenrePayload;
+    // F-08: a small compressed payload can expand without bound. Bail out before
+    // decoding if the decompressed size is not plausible.
+    if (rawBytes.byteLength > MAX_DECOMPRESSED_BYTES) return null;
 
-    if (payload.v !== 1 || !payload.n || !payload.tracks) {
-      return null;
-    }
+    const json = new TextDecoder().decode(rawBytes);
+
+    // F-08: the payload comes from the URL, so it is untrusted input. Validate and
+    // rebuild it field by field instead of casting the parsed object.
+    const validation = validateSharePayload(json);
+    if (!validation.ok) return null;
+    const payload = validation.payload;
 
     const radar: GenreRadarMetrics = {
-      groove: payload.r?.[0] ?? 5,
-      brightness: payload.r?.[1] ?? 5,
-      harmonicComplexity: payload.r?.[2] ?? 5,
-      rhythmDensity: payload.r?.[3] ?? 5,
-      bassEnergy: payload.r?.[4] ?? 5,
-      melodicFocus: payload.r?.[5] ?? 5,
+      groove: payload.r[0],
+      brightness: payload.r[1],
+      harmonicComplexity: payload.r[2],
+      rhythmDensity: payload.r[3],
+      bassEnergy: payload.r[4],
+      melodicFocus: payload.r[5],
     };
 
     const tracks: SequencerTrack[] = payload.tracks.map((t) => ({

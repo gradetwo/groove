@@ -67,7 +67,12 @@ interface CompactSharePayload {
 }
 
 const VALID_RESOLUTIONS = new Set(["1/8", "1/16", "1/32"]);
-const MAX_BASE64_LENGTH = 8192;
+/**
+ * Hard ceiling for a shareable URL payload. The decoder rejects anything longer,
+ * so the encoder must never emit more than this either (F-09) — otherwise the app
+ * generated links it could not open itself.
+ */
+export const MAX_BASE64_LENGTH = 8192;
 const MAX_TRACKS = 16;
 const MIN_STEPS = 4;
 const MAX_STEPS = 64;
@@ -378,9 +383,60 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
 /**
  * Returns full shareable URL with encoded query parameter
  */
-export function getShareUrl(state: SharedSequencerState): string {
-  const code = encodeSharedSequencer(state);
-  if (!code) return "";
+export interface ShareUrlResult {
+  url: string;
+  /** True when optional detail (pitch/gate/ratchet/probability/mixer) had to be dropped. */
+  degraded: boolean;
+  /** Machine-readable failure reason when `url` is empty. */
+  reason?: "too-large" | "invalid-input";
+}
+
+/**
+ * Builds a share URL and reports whether fidelity had to be reduced (F-09).
+ *
+ * The full-fidelity payload is tried first; if it exceeds the URL budget we retry
+ * with the optional per-step arrays stripped, which is still a playable pattern.
+ * If even that does not fit we fail loudly instead of producing a link the decoder
+ * would silently reject.
+ */
+export function getShareUrlResult(state: SharedSequencerState): ShareUrlResult {
   const baseUrl = typeof window !== "undefined" ? window.location.origin + window.location.pathname : "";
-  return `${baseUrl}?groove=${code}`;
+
+  const full = encodeSharedSequencer(state);
+  if (full && full.length <= MAX_BASE64_LENGTH) {
+    return { url: `${baseUrl}?groove=${full}`, degraded: false };
+  }
+
+  const reduced: SharedSequencerState = {
+    ...state,
+    tracks: state.tracks.map((t) => ({
+      track_id: t.track_id,
+      name: t.name,
+      instrument: t.instrument,
+      steps: t.steps,
+      velocity: t.velocity,
+      pitch: undefined,
+      gate: undefined,
+      ratchet: undefined,
+      probability: undefined,
+      trackLength: undefined,
+      mute: t.mute,
+      solo: t.solo,
+      volume: t.volume,
+    })),
+  };
+  const lean = encodeSharedSequencer(reduced);
+  if (lean && lean.length <= MAX_BASE64_LENGTH) {
+    return { url: `${baseUrl}?groove=${lean}`, degraded: true };
+  }
+
+  return {
+    url: "",
+    degraded: false,
+    reason: full === "" ? "invalid-input" : "too-large",
+  };
+}
+
+export function getShareUrl(state: SharedSequencerState): string {
+  return getShareUrlResult(state).url;
 }
