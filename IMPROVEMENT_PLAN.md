@@ -14,10 +14,14 @@
 > `genres_electronic.py` / `update_genre_radar.py` / `generate_real_radar.py` /
 > `apply_authentic_grooves.py` / `gen_index_relations_timeline.py` / `gen_p1.py`）
 > 已确认无任何引用（既不互相 import，也不被 `build_all.py`、`package.py`、npm 脚本或 CI 调用），
-> 因此在本版本中删除，仓库减重约 485 KB。
-> 当前数据管线只剩两个入口：`python3 -m scripts.build_all`（校验 159 条曲风）与
-> `python3 scripts/package.py`（`npm run package` 使用）；数据正确性由 `npm run lint:data`
-> 的 6 个 Vitest 门禁（schema 全字段、内容审计、索引漂移、曲风 id 引用、外链可校验）承担。
+> 因此在本版本中删除，仓库减重约 485 KB。同类的一次性 JS 脚本
+> （`analyze_ternaries.js`、`build_genre_data.js`、`data_builder_core.js`、
+> `codemod_tokens.js`、`genres_def.js`）同样已无引用，一并删除。
+> 当前数据管线入口：
+> - `python3 -m scripts.build_all`（校验 159 条曲风）与 `python3 scripts/package.py`（`npm run package`）
+> - `npm run data:lint`（`vite-node scripts/lint_genres.ts`：159 曲风 + 300 关系 + 11 条时间线故事的硬规则审计，此前是无人调用的孤儿脚本，v1.16.13 起接入 CI 与慢轨）
+> - `npm run data:index`（`vite-node scripts/build_genre_index.ts`：重新生成轻量索引，实测重新生成后与仓库文件逐字节一致）
+> - 数据正确性由 `npm run lint:data` 的 6 个 Vitest 门禁承担（schema 全字段、内容审计、索引漂移、曲风 id 引用、外链可校验）
 > 下文 §P1-14 与 §570–571 提到的文件名属于 v1.0 当时的状态，保留作为历史记录。
 
 ---

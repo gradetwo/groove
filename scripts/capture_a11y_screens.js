@@ -8,7 +8,13 @@ let playwright;
 try {
   playwright = require("playwright");
 } catch {
-  playwright = require("/home/crow/.hermes/node/lib/node_modules/playwright");
+  // Optional escape hatch for machines where Playwright lives elsewhere; it is a
+  // regular devDependency now, so the normal resolve above is the expected path.
+  const modulePath = process.env.PLAYWRIGHT_MODULE_PATH;
+  if (!modulePath) {
+    throw new Error("Playwright not found. Run `npm install`, or set PLAYWRIGHT_MODULE_PATH.");
+  }
+  playwright = createRequire(`${modulePath}/noop.js`)("playwright");
 }
 
 const MIME_TYPES = {

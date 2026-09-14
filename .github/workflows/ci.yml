@@ -55,6 +55,11 @@ jobs:
       - name: Genre Database Schema Lint
         run: npm run lint:data
 
+      # Cross-database audit (159 genres, 300 relations, timeline stories) that used to
+      # be an orphan script nothing invoked.
+      - name: Genre Database Audit
+        run: npm run data:lint
+
       - name: Production Build
         run: npm run build
 

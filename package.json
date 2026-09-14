@@ -26,7 +26,9 @@
     "package": "npm run verify && python3 scripts/package.py",
     "deploy": "npm run verify && npm run deploy:only",
     "deploy:only": "node scripts/deploy.mjs",
-    "perf:check": "node scripts/measure_live_perf.mjs --local"
+    "perf:check": "node scripts/measure_live_perf.mjs --local",
+    "data:lint": "vite-node scripts/lint_genres.ts",
+    "data:index": "vite-node scripts/build_genre_index.ts"
   },
   "dependencies": {
     "@types/three": "^0.185.4",

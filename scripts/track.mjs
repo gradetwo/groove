@@ -128,6 +128,7 @@ console.log("===============================================================");
 run("TypeScript typecheck", "npx", ["tsc", "--noEmit"]);
 run("ESLint (all sources)", "npx", ["eslint", "src/**/*.{ts,tsx}"]);
 run("Genre data lint", "npx", ["vitest", "run", "src/test/schema.test.ts", "--reporter=dot"]);
+run("Genre database audit (relations + timeline)", "npx", ["vite-node", "scripts/lint_genres.ts"]);
 run("Documentation baseline check", "node", ["scripts/check_docs.mjs"]);
 run("Full suite + coverage", "npx", ["vitest", "run", "--coverage", "--reporter=dot"]);
 run("Production build", "npm", ["run", "build"]);
