@@ -16,6 +16,7 @@
     "test:e2e": "node scripts/test_matrix.js",
     "check:budget": "node scripts/check_budgets.js",
     "redlines": "node scripts/redlines.mjs",
+    "docs:check": "node scripts/check_docs.mjs",
     "version:sync": "node scripts/version.mjs sync",
     "version:check": "node scripts/version.mjs check",
     "fast": "node scripts/track.mjs fast",
