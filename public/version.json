@@ -1,35 +1,31 @@
 {
-  "version": "1.16.7",
+  "version": "1.16.8",
   "releaseDate": "2026-09-14",
-  "changelogCount": 49,
+  "changelogCount": 50,
   "latest": {
-    "version": "1.16.7",
+    "version": "1.16.8",
     "date": "2026-09-14",
     "category": "feature",
     "title": {
-      "zh": "v1.16.7 硬件调音台视窗、双耳空间监听、工程二维码分享与音频架构收敛",
-      "en": "v1.16.7 Hardware console, binaural monitoring, project QR sharing, and audio architecture convergence"
+      "zh": "v1.16.8 音序器容器拆分：StudioView 从 2440 行降到 658 行",
+      "en": "v1.16.8 Sequencer container split: StudioView down from 2440 to 658 lines"
     },
     "highlights": [
       {
-        "zh": "新增「硬件调音台」视窗（路线图 P8-02）：8 条通道条含长行程推子与 dB 刻度、声像旋钮、Send A/B、独奏/静音/反相（引擎暂不支持反相，按实情禁用并给出说明）、独立立体声峰值表与红区，主推子与母带表，全部与音序器双向同步",
-        "en": "New Hardware Console view (roadmap P8-02): 8 channel strips with long-throw faders and dB scales, pan, Send A/B, solo/mute/phase-invert (honestly disabled — the engine has no polarity control), independent stereo peak meters with a red zone, plus master strip — all bidirectionally synced with the sequencer"
+        "zh": "StudioView 拆分为 18 个领域 hook 与 5 个子组件/配置模块，容器内 useEffect 从 28 个降到 0；单文件 2440 → 658 行，可读性与可测试性大幅提升",
+        "en": "StudioView was split into 18 domain hooks and 5 sub-components/config modules; container useEffect count dropped from 28 to 0 and the file went from 2440 to 658 lines"
       },
       {
-        "zh": "母带电平表取自真实音频分析器（L/R 时域峰值），通道表由引擎真实的轨道触发回调驱动，均为单条 rAF 直接写 DOM，不产生每帧 React 重渲染",
-        "en": "The master meter reads the real stereo analysers (L/R time-domain peak) and channel meters are driven by the engine's real track-trigger callback — one rAF loop writing the DOM directly, with no per-frame React renders"
+        "zh": "零行为变更，且用三层证据证明：AST 字符串集合对比（0 增 0 失）、jsdom 中拆分前后视图的 innerHTML 逐字节比对（5 个交互状态全部一致）、7 端 e2e 全过",
+        "en": "Zero behaviour change, proven three ways: AST string-set diff (0 added, 0 lost), byte-for-byte innerHTML comparison of the pre/post-refactor view across five interaction states in jsdom, and a full 7-target e2e pass"
       },
       {
-        "zh": "新增双耳 HRTF 空间监听（路线图 P8-03）：8 条轨道以 PannerNode 分布在听众前方半圆声场，声像控制映射为方位角；默认关闭，未启用时不消耗 HRTF 卷积开销",
-        "en": "Added binaural HRTF monitoring (roadmap P8-03): the 8 tracks are placed on a semicircle via PannerNode with pan mapped to azimuth; off by default, so the HRTF convolution costs nothing until enabled"
+        "zh": "跨端测试矩阵新增硬件调音台与空间监听开关检查，新视图不再只靠开发者本机验证",
+        "en": "The cross-device matrix now checks the hardware console and the binaural toggle, so the new view is no longer verified only on the developer's machine"
       },
       {
-        "zh": "工程中心支持分享链接与二维码：手机扫码即可打开工程；链接过大时明确说明并引导改用 .groove 工程包",
-        "en": "The project hub can now share a link and QR code so a project opens by scanning on a phone; oversized patterns explain the limit and point at the .groove package export"
-      },
-      {
-        "zh": "音频架构收敛：三套引擎共用同一套 VoiceRegistry、主限幅器配置、上下文工厂与总线静音工具，删除重复实现；顺带修复大师课引擎 stop() 之后仍有声音、destroy() 产生未处理 rejection 的问题",
-        "en": "Audio architecture convergence: the three engines now share one VoiceRegistry, limiter configuration, context factory and bus-mute helper, removing duplicated implementations — and fixing the masterclass engine leaving sound playing after stop() plus unhandled rejections on destroy()"
+        "zh": "文档基线自检纳入慢轨，源码规模（文件数/行数）由 version:sync 自动维护，避免文档声称与实现再次漂移",
+        "en": "The documentation baseline check joined the slow track, and the stated source size is now maintained automatically by version:sync"
       }
     ]
   }
