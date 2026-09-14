@@ -114,6 +114,18 @@ export class FakeCompressorNode extends FakeNode {
   reduction = 0;
 }
 
+export class FakeChannelSplitterNode extends FakeNode {
+  constructor(public numberOfOutputs = 2) {
+    super();
+  }
+}
+
+export class FakeChannelMergerNode extends FakeNode {
+  constructor(public numberOfInputs = 2) {
+    super();
+  }
+}
+
 export class FakeAnalyserNode extends FakeNode {
   fftSize = 2048;
   frequencyBinCount = 1024;
@@ -178,6 +190,12 @@ export class FakeAudioGraph {
   createAnalyser() {
     return new FakeAnalyserNode();
   }
+  createChannelSplitter(numberOfOutputs = 2) {
+    return new FakeChannelSplitterNode(numberOfOutputs);
+  }
+  createChannelMerger(numberOfInputs = 2) {
+    return new FakeChannelMergerNode(numberOfInputs);
+  }
   createBuffer(numberOfChannels: number, length: number, sampleRate: number) {
     return new FakeAudioBuffer(numberOfChannels, length, sampleRate);
   }
@@ -221,6 +239,31 @@ export class FakeOfflineAudioContext extends FakeAudioGraph {
   startRendering() {
     return Promise.resolve(new FakeAudioBuffer(this.numberOfChannels, this.length, this.sampleRate));
   }
+}
+
+/**
+ * Installs the fake realtime AudioContext on `window`/`globalThis` so the realtime
+ * engine's `initAudioContext()` succeeds inside jsdom. Returns a restore function.
+ */
+export function installFakeAudioContext(): () => void {
+  const g = globalThis as any;
+  const originalGlobal = g.AudioContext;
+  const originalWindow = g.window?.AudioContext;
+  const originalWebkit = g.window?.webkitAudioContext;
+
+  g.AudioContext = FakeAudioContext;
+  if (g.window) {
+    g.window.AudioContext = FakeAudioContext;
+    g.window.webkitAudioContext = FakeAudioContext;
+  }
+
+  return () => {
+    g.AudioContext = originalGlobal;
+    if (g.window) {
+      g.window.AudioContext = originalWindow;
+      g.window.webkitAudioContext = originalWebkit;
+    }
+  };
 }
 
 /** Installs a fake OfflineAudioContext on globalThis and returns a restore function. */
