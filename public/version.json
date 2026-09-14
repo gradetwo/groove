@@ -1,23 +1,31 @@
 {
-  "version": "1.16.11",
+  "version": "1.16.12",
   "releaseDate": "2026-09-14",
-  "changelogCount": 53,
+  "changelogCount": 54,
   "latest": {
-    "version": "1.16.11",
+    "version": "1.16.12",
     "date": "2026-09-14",
     "category": "fix",
     "title": {
-      "zh": "v1.16.11 曲目外链与来源数量纳入数据门禁",
-      "en": "v1.16.11 Track links and source counts join the data gate"
+      "zh": "v1.16.12 i18n 债务清理完成：硬编码双语三元降到 100 处以内",
+      "en": "v1.16.12 i18n debt cleared: hardcoded bilingual ternaries down to under 100"
     },
     "highlights": [
       {
-        "zh": "N-06 验收的\"外链可校验\"落地为数据门禁：795/795 条代表性曲目链接均为 https 且主机在允许列表内，标题/艺人/年份齐全，每个曲风的来源数量达标，并纳入 lint:data",
-        "en": "The 'verifiable links' half of N-06 is now a data gate: all 795 representative-track links are https on an allow-listed host with complete title/artist/year metadata, every genre meets the source minimum, and it runs in lint:data"
+        "zh": "把 12 个文件中 229 处硬编码的双语文案迁移到词表（AST 口径：259 → 97），全部逐字节校验；新增 229 个中英词条，合并词典达到 1169 项且无重名",
+        "en": "Migrated 229 hardcoded bilingual strings across 12 files into the dictionary (AST-measured: 259 → 97), all byte-verified; 229 new en/zh entries bring the merged dictionary to 1169 with no duplicates"
       },
       {
-        "zh": "关系覆盖 159/159 由红线 R3c 持续守住；逐曲目的规范链接仍需人工考证，未凭空生成",
-        "en": "Relation coverage of all 159 genres stays protected by red line R3c; canonical per-track URLs still need human research and were not invented"
+        "zh": "其余 72 处内联三元是数据字段选择（`isZh ? item.name : item.en`），不属于文案债务，已在文档中明确区分",
+        "en": "The remaining 72 inline ternaries select data fields (`isZh ? item.name : item.en`) rather than copy, and the documentation now distinguishes the two"
+      },
+      {
+        "zh": "修正度量方法：行级 grep 会漏掉跨行三元与一行两处，比 AST 口径少 20–30%——首轮审计的 556/259 都是行级数字，已在规划文档中更正",
+        "en": "Corrected the metric: line-based grep misses multi-line ternaries and two-per-line cases, undercounting by 20–30% versus AST. The original 556/259 figures were line-based and the plan document now says so"
+      },
+      {
+        "zh": "导出/导入失败提示不再可能显示原始的 {error} 占位符（统一经 describeError 生成）",
+        "en": "Export/import failure messages can no longer surface a raw {error} placeholder — they now go through a shared describeError helper"
       }
     ]
   }
