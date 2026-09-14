@@ -7,6 +7,55 @@ import {
 import { ecosystemBus, WangdaAudioMessage } from "../audio/ecosystemBus";
 import { parseUrlToRoute, formatRouteToUrl } from "../app/router";
 
+/**
+ * jsdom has no real Web Audio API, so `new AnatomyKickEngine()` never creates an
+ * AudioContext and `trigger()` returns early. These minimal Param/Node/Context
+ * stand-ins satisfy exactly the surface `initNodes()` and `trigger()` touch, so
+ * the engine's real trigger -> notifyTransientHit path can be exercised instead
+ * of asserting on a locally re-implemented copy.
+ */
+function fakeAudioParam() {
+  return {
+    value: 0,
+    setValueAtTime: vi.fn(),
+    linearRampToValueAtTime: vi.fn(),
+    exponentialRampToValueAtTime: vi.fn(),
+    setTargetAtTime: vi.fn(),
+    cancelScheduledValues: vi.fn(),
+  };
+}
+
+function fakeAudioNode() {
+  return {
+    type: "",
+    curve: null as Float32Array | null,
+    oversample: "none",
+    fftSize: 0,
+    smoothingTimeConstant: 0,
+    frequency: fakeAudioParam(),
+    Q: fakeAudioParam(),
+    gain: fakeAudioParam(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+  };
+}
+
+function createFakeAudioContext(): AudioContext {
+  return {
+    state: "running",
+    currentTime: 0,
+    destination: fakeAudioNode(),
+    createOscillator: fakeAudioNode,
+    createGain: fakeAudioNode,
+    createBiquadFilter: fakeAudioNode,
+    createWaveShaper: fakeAudioNode,
+    createAnalyser: fakeAudioNode,
+    resume: vi.fn().mockResolvedValue(undefined),
+  } as unknown as AudioContext;
+}
+
 describe("The Anatomy Kick Engine & Ecosystem Bus (P-NEXT)", () => {
   let engine: AnatomyKickEngine;
 
@@ -104,13 +153,38 @@ describe("The Anatomy Kick Engine & Ecosystem Bus (P-NEXT)", () => {
     });
 
     it("publishes transient hit callback from engine", () => {
+      const audioEngine = new AnatomyKickEngine(createFakeAudioContext());
       const hitFn = vi.fn();
-      const unsub = engine.onTransientHit(hitFn);
+      const busMessages: WangdaAudioMessage[] = [];
+      const unsubBus = ecosystemBus.subscribe((msg) => busMessages.push(msg));
+      const unsub = audioEngine.onTransientHit(hitFn);
 
-      // Trigger should notify listeners
-      engine.trigger(0, 0.85);
+      // Drive the real trigger path, which must dispatch exactly one "master"
+      // transient to every registered listener.
+      audioEngine.trigger(0, 0.85);
 
+      expect(hitFn).toHaveBeenCalledTimes(1);
+      const [layer, velocity, plv] = hitFn.mock.calls[0];
+      expect(layer).toBe("master");
+      expect(velocity).toBe(0.85);
+      expect(plv).toBe(audioEngine.calculatePLV());
+
+      // ...and mirror it onto the Wangda ecosystem bus.
+      const busHit = busMessages.find(
+        (m): m is Extract<WangdaAudioMessage, { type: "TRANSIENT_HIT" }> =>
+          m.type === "TRANSIENT_HIT"
+      );
+      expect(busHit).toBeDefined();
+      expect(busHit?.layer).toBe("master");
+      expect(busHit?.velocity).toBe(0.85);
+
+      // Unsubscribing stops delivery for subsequent triggers.
+      hitFn.mockClear();
       unsub();
+      audioEngine.trigger(0, 0.5);
+      expect(hitFn).not.toHaveBeenCalled();
+
+      unsubBus();
     });
   });
 

@@ -545,63 +545,43 @@ describe("Audio & Sequencer Utilities", () => {
   });
 
   describe("Offline & PCM Timing/Clipping Regression (P3-11)", () => {
-    it("verifies 8-track simultaneous firing with master limiter does not exceed full scale (<= 1.0)", () => {
-      // Simulate 8 simultaneous voices at max volume
-      const numTracks = 8;
-      const trackGains = Array(numTracks).fill(0.8);
-      const masterGain = 0.8;
+    // The master limiter is a real DynamicsCompressorNode created inside
+    // AudioEngine.initAudioContext() (threshold -1dBFS, knee 0, ratio 20:1), but
+    // jsdom has no AudioContext (`'AudioContext' in window === false`), so it
+    // cannot be exercised here. Covering it needs a Web Audio harness: install a
+    // mock (or node-web-audio-api OfflineAudioContext), render 8 simultaneous
+    // voices and measure the master-bus peak. The previous version of this test
+    // re-implemented the limiter transfer function inline and asserted on that
+    // copy, which proved nothing about the shipped engine.
 
-      // Raw uncompressed sum
-      const rawSum = trackGains.reduce((a, b) => a + b, 0) * masterGain; // 8 * 0.8 * 0.8 = 5.12 (> 1.0, would clip without limiter)
-      expect(rawSum).toBeGreaterThan(1.0);
+    it("derives step duration from BPM, time signature and resolution", () => {
+      const engine = new AudioEngine();
+      engine.setBpm(120);
+      engine.setTimeSignature("4/4");
+      engine.setResolution("1/16");
+      expect(engine.getStepDuration()).toBeCloseTo(0.125, 6); // 120 BPM, 16th notes
 
-      // Limiter transfer function simulation:
-      // threshold = -1dBFS ~= 0.891, ratio = 20:1
-      const thresholdLinear = Math.pow(10, -1.0 / 20); // ~0.89125
-      const dbAboveThreshold = 20 * Math.log10(rawSum / thresholdLinear);
-      const compressedDbAbove = dbAboveThreshold / 20.0; // ratio 20:1
-      const limitedOutput = thresholdLinear * Math.pow(10, compressedDbAbove / 20);
+      engine.setResolution("1/8");
+      expect(engine.getStepDuration()).toBeCloseTo(0.25, 6);
+      engine.setResolution("1/32");
+      expect(engine.getStepDuration()).toBeCloseTo(0.0625, 6);
 
-      // Must be safely within full scale
-      expect(limitedOutput).toBeLessThanOrEqual(1.0);
-      expect(limitedOutput).toBeGreaterThan(0.8);
+      // 7/8 counts eighths, so one denominator unit is half as long.
+      engine.setTimeSignature("7/8");
+      engine.setResolution("1/16");
+      expect(engine.getStepDuration()).toBeCloseTo(0.0625, 6);
+
+      engine.setBpm(60);
+      expect(engine.getStepDuration()).toBeCloseTo(0.125, 6);
+      engine.destroy();
     });
 
-    it("verifies swing timing math strictly shifts odd 16th notes", () => {
-      const bpm = 120;
-      const beatSec = 60 / bpm; // 0.5s
-      const stepDur = beatSec / 4; // 0.125s (125ms)
-      const swing = 0.5; // 50% swing
-
-      for (let step = 0; step < 16; step++) {
-        const nominalTime = step * stepDur;
-        const swingOffset = (step % 2 === 1 && swing > 0) ? (swing * 0.5) * stepDur : 0;
-        const actualTime = nominalTime + swingOffset;
-
-        if (step % 2 === 0) {
-          // Even steps have zero swing offset
-          expect(actualTime).toBe(nominalTime);
-        } else {
-          // Odd steps are delayed by (swing * 0.5) * 125ms = 31.25ms
-          expect(actualTime).toBeCloseTo(nominalTime + 0.03125, 4);
-        }
-      }
-    });
-
-    it("verifies gate durations compute strictly positive bounded envelopes", () => {
-      const stepDur = 0.125;
-      const testGates = [0.1, 0.5, 0.8, 1.0, 1.5, 2.0];
-
-      testGates.forEach((gate) => {
-        const duration = Math.max(0.05, Math.min(2.5, stepDur * gate));
-        expect(duration).toBeGreaterThanOrEqual(0.05);
-        expect(duration).toBeLessThanOrEqual(2.5);
-        if (stepDur * gate >= 0.05) {
-          expect(duration).toBeCloseTo(stepDur * gate, 3);
-        } else {
-          expect(duration).toBe(0.05);
-        }
-      });
-    });
+    // The odd-step swing offset (`(swing * 0.5) * stepDur` in AudioEngine's
+    // private schedulerLoop) and the per-track gate envelope
+    // (`stepDur * gateVal` inside the private playBass/playChord/playLead/playFX
+    // voices) only run while a real AudioContext drives the scheduler. Both need
+    // the same Web Audio mock harness described above; asserting an inline copy
+    // of that arithmetic would be a self-fulfilling test, so those cases were
+    // removed rather than left in place.
   });
 });
