@@ -238,4 +238,59 @@ export const masterclassMessages = {
     zh: "最高连击",
     en: "Best Streak",
   },
+  // ---------------------------------------------------------------------------
+  // DillaMicrotiming.tsx
+  // ---------------------------------------------------------------------------
+  dilla_presets_label: {
+    zh: "预设调校",
+    en: "Feel Presets",
+  },
+  dilla_stop: {
+    zh: "停止",
+    en: "Stop",
+  },
+  dilla_play: {
+    zh: "试听 Dilla 醉酒感",
+    en: "Play Dilla Pocket",
+  },
+  dilla_engine_title: {
+    zh: "MPC 非量化微时序引擎",
+    en: "MPC Unquantized Microtiming Engine",
+  },
+  dilla_engine_desc: {
+    zh: "底鼓微幅抢拍提供前冲驱动力（Rush），军鼓深陷迟滞构建极致松弛感（Drag）。拖动下方滑块实时解构人脑时间感知。",
+    en: "Kick nudges forward for aggressive drive; snare lags behind for laid-back groove. Adjust sliders to feel time elasticity.",
+  },
+  dilla_tap_btn: {
+    zh: "跟随对拍 (SPACE)",
+    en: "TAP GROOVE (SPACE)",
+  },
+  dilla_kick_minus50: {
+    zh: "-50ms 前冲抢拍",
+    en: "-50ms Push",
+  },
+  dilla_kick_plus50: {
+    zh: "+50ms 拖后",
+    en: "+50ms Drag",
+  },
+  dilla_snare_title: {
+    zh: "军鼓深陷迟滞",
+    en: "Snare Laid-Back Drag",
+  },
+  dilla_snare_plus50: {
+    zh: "+50ms 慵懒下沉",
+    en: "+50ms Deep Pocket",
+  },
+  dilla_swing_label: {
+    zh: "MPC 摇摆系数",
+    en: "MPC Swing",
+  },
+  dilla_visualizer_title: {
+    zh: "毫秒级物理微位移对比 (Physical Micro-Displacement)",
+    en: "Physical Micro-Displacement",
+  },
+  dilla_visualizer_legend: {
+    zh: "虚线为机械量化网格 · 色块为实际人手触发位置",
+    en: "Dashed = Rigid Grid · Filled = Human Trigger Position",
+  },
 };
