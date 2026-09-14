@@ -2,6 +2,7 @@ import React, { memo } from "react";
 import { Sliders, Wand2 } from "lucide-react";
 import { SequencerTrack } from "../../types/genre";
 import { StepCell } from "./StepCell";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 export interface TrackMetaConfig {
   id: string;
@@ -71,6 +72,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   onChangePan,
   onChangeSwing,
 }) {
+  const { t } = useLanguage();
   const trackVol = track.volume !== undefined ? track.volume : 0.8;
   const trackPan = track.pan !== undefined ? track.pan : 0;
   const trackLen = track.trackLength || stepCount;
@@ -91,7 +93,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
           <div
             onClick={() => onAudition(trackIdx, track.name)}
             className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer group/trk hover:opacity-90 transition-opacity touch-manipulation"
-            title={isZh ? "点击试听音色" : "Tap to audition sound"}
+            title={t("track_audition_title")}
           >
             <span
               className={`w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0 group-hover/trk:scale-y-110 transition-transform ${
@@ -135,9 +137,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                   : "hidden sm:flex bg-[#17181c] border-line text-text-dim hover:text-text-sub"
               }`}
               title={
-                isZh
-                  ? `独立轨道循环长度: ${track.trackLength || stepCount} 步 (点击切换)`
-                  : `Polymeter length: ${track.trackLength || stepCount} steps (Click to cycle)`
+                t("track_polymeter_title", { steps: track.trackLength || stepCount })
               }
             >
               L:{track.trackLength || stepCount}
@@ -152,8 +152,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                   ? "border-[#ff5964] text-[#ff5964] bg-[#ff5964]/20 font-bold shadow-[0_0_8px_rgba(255,89,100,0.35)] scale-105"
                   : "border-line text-text-dim hover:text-text hover:border-text-dim/60"
               }`}
-              title={isZh ? (isMute ? "取消静音轨道 (M)" : "静音轨道 (M)") : (isMute ? "Unmute track (M)" : "Mute track (M)")}
-              aria-label={isZh ? (isMute ? "取消静音" : "静音") : (isMute ? "Unmute" : "Mute")}
+              title={isMute ? t("track_unmute_title") : t("track_mute_title")}
+              aria-label={isMute ? t("track_unmute_aria") : t("track_mute_aria")}
               aria-pressed={isMute}
             >
               M
@@ -168,8 +168,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                   ? "border-accent text-accent bg-accent/25 font-bold shadow-[0_0_8px_rgba(245,183,61,0.4)] scale-105"
                   : "border-line text-text-dim hover:text-text hover:border-text-dim/60"
               }`}
-              title={isZh ? (isSolo ? "取消独奏轨道 (S)" : "独奏轨道 (S)") : (isSolo ? "Unsolo track (S)" : "Solo track (S)")}
-              aria-label={isZh ? (isSolo ? "取消独奏" : "独奏") : (isSolo ? "Unsolo" : "Solo")}
+              title={isSolo ? t("track_unsolo_title") : t("track_solo_title")}
+              aria-label={isSolo ? t("track_unsolo_aria") : t("track_solo_aria")}
               aria-pressed={isSolo}
             >
               S
@@ -214,8 +214,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 type="button"
                 onClick={() => onMoveUp(trackIdx)}
                 className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
-                title={isZh ? "上移轨道" : "Move track up"}
-                aria-label={isZh ? "上移轨道" : "Move track up"}
+                title={t("track_move_up")}
+                aria-label={t("track_move_up_aria")}
               >
                 ▲
               </button>
@@ -225,8 +225,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 type="button"
                 onClick={() => onMoveDown(trackIdx)}
                 className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
-                title={isZh ? "下移轨道" : "Move track down"}
-                aria-label={isZh ? "下移轨道" : "Move track down"}
+                title={t("track_move_down")}
+                aria-label={t("track_move_down_aria")}
               >
                 ▼
               </button>
@@ -238,35 +238,35 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                   ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
                   : "border-line text-text-dim hover:text-[#45e0c9]"
               }`}
-              title={isZh ? "在多维抽屉中编辑" : "Edit in lane drawer"}
+              title={t("track_edit_drawer")}
             >
               <Sliders className="w-2.5 h-2.5" />
             </button>
             <button
               onClick={() => onShiftTrack(trackIdx, -1)}
               className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
-              title={isZh ? "向左位移 1 步" : "Shift left 1 step"}
+              title={t("track_shift_left")}
             >
               ◀
             </button>
             <button
               onClick={() => onShiftTrack(trackIdx, 1)}
               className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
-              title={isZh ? "向右位移 1 步" : "Shift right 1 step"}
+              title={t("track_shift_right")}
             >
               ▶
             </button>
             <button
               onClick={() => onSmartFill(trackIdx)}
               className="hidden md:flex w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#45e0c9] items-center justify-center text-[10px] touch-manipulation"
-              title={isZh ? "智能生成常规节拍" : "Smart fill rhythm"}
+              title={t("track_smart_fill")}
             >
               <Wand2 className="w-2.5 h-2.5" />
             </button>
             <button
               onClick={() => onClearTrack(trackIdx)}
               className="hidden md:flex w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#ff5964] items-center justify-center text-[10px] touch-manipulation"
-              title={isZh ? "清空轨道" : "Clear track"}
+              title={t("track_clear")}
             >
               ✕
             </button>
