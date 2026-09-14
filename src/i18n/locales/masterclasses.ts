@@ -340,4 +340,47 @@ export const masterclassMessages = {
     zh: "连击",
     en: "Streak",
   },
+  // ---------------------------------------------------------------------------
+  // DownbeatOmissionLab.tsx
+  // ---------------------------------------------------------------------------
+  downbeat_mode_label: {
+    zh: "避让模式",
+    en: "Omission Mode",
+  },
+  downbeat_stop: {
+    zh: "停止",
+    en: "Stop",
+  },
+  downbeat_play: {
+    zh: "试听避让动力",
+    en: "Play Groove",
+  },
+  downbeat_tap_btn: {
+    zh: "跟随对拍 (SPACE)",
+    en: "TAP SYNC (SPACE)",
+  },
+  downbeat_curve_title: {
+    zh: "小节重力与动量曲线 (Metric Gravity Curve)",
+    en: "Metric Gravity Curve",
+  },
+  downbeat_curve_subtitle: {
+    zh: "Beat 1 ~ 4 动量分布",
+    en: "Beat 1 - 4 Kinetic Distribution",
+  },
+  downbeat_omitted_rest: {
+    zh: "【下拍避让·悬空】",
+    en: "[OMITTED REST]",
+  },
+  downbeat_one_drop: {
+    zh: "【One Drop 下沉】",
+    en: "[ONE DROP SLAM]",
+  },
+  downbeat_propulsion: {
+    zh: "推进切分",
+    en: "Propulsion",
+  },
+  downbeat_track: {
+    zh: "分轨",
+    en: "Track",
+  },
 };
