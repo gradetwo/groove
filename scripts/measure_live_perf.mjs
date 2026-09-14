@@ -167,10 +167,13 @@ async function measure(browser, profile) {
             const kind = entry.initiatorType || "other";
             byType[kind] = (byType[kind] || 0) + (entry.transferSize || 0);
           }
+          const sizeByUrl = {};
+          for (const entry of entries) sizeByUrl[entry.name] = entry.transferSize || 0;
           resolve({
             fcp,
             lcp,
             cls,
+            sizeByUrl,
             domContentLoaded: nav ? nav.domContentLoadedEventEnd : null,
             loadEvent: nav ? nav.loadEventEnd : null,
             resourceCount: entries.length,
@@ -183,9 +186,14 @@ async function measure(browser, profile) {
 
   const wallMs = Date.now() - started;
   // transferSize from the Resource Timing API is authoritative (HTTP/2 responses
-  // often omit content-length, which made header-based accounting report 0).
-  const jsBytes = metrics.byType?.script || 0;
-  const cssBytes = metrics.byType?.link || 0;
+  // often omit content-length), while Playwright classifies each request by type.
+  // Joining the two gives accurate per-type transferred bytes.
+  const sizeByUrl = metrics.sizeByUrl || {};
+  const bytesOfType = (type) =>
+    resources.filter((r) => r.type === type).reduce((sum, r) => sum + (sizeByUrl[r.url] || 0), 0);
+  const jsBytes = bytesOfType("script");
+  const cssBytes = bytesOfType("stylesheet");
+  const imageBytes = bytesOfType("image");
   const genreChunks = resources.filter((r) => /genre-/.test(r.url)).map((r) => r.url.split("/").pop());
 
   await context.close();
@@ -200,6 +208,7 @@ async function measure(browser, profile) {
     wallMs,
     jsKb: jsBytes / 1024,
     cssKb: cssBytes / 1024,
+    imageKb: imageBytes / 1024,
     totalTransferredKb: metrics.transferredBytes / 1024,
     resources: resources.length,
     genreChunksOnLoad: genreChunks.length,
@@ -248,7 +257,9 @@ function kb(bytes) {
       `  FCP ${fmt(r.fcp)}${r.fcpFallback ? " (first-paint fallback)" : ""}   LCP ${fmt(r.lcp)}   CLS ${r.cls.toFixed(3)}`
     );
     console.log(`  DOMContentLoaded ${fmt(r.dcl)}   load ${fmt(r.load)}   wall ${fmt(r.wallMs)}`);
-    console.log(`  transferred ${kb(r.totalTransferredKb)}  (JS ${kb(r.jsKb)}, CSS ${kb(r.cssKb)}) over ${r.resources} requests`);
+    console.log(
+      `  transferred ${kb(r.totalTransferredKb)}  (JS ${kb(r.jsKb)}, CSS ${kb(r.cssKb)}, images ${kb(r.imageKb)}) over ${r.resources} requests`
+    );
     console.log(
       `  genre chunks fetched on first load: ${r.genreChunksOnLoad} (max ${maxGenreChunks})` +
         (r.genreChunkNames.length ? ` → ${r.genreChunkNames.join(", ")}` : "")
