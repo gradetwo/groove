@@ -46,6 +46,7 @@ export const chordsMessages = {
   chords_inversion_root: { en: "Root", zh: "原位" },
   chords_inversion_n: { en: "Inv {n}", zh: "转位 {n}" },
   chords_bar_n: { en: "Bar {n}", zh: "小节 {n}" },
+  chords_bar_prefix: { en: "Bar", zh: "小节" },
   chords_beats_n: { en: "Beats", zh: "拍" },
   chords_studio_desc: {
     en: "Audition classic chord progressions or load into the studio builder to customize and experiment with piano/guitar timbres",

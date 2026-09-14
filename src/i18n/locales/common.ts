@@ -76,6 +76,7 @@ export const commonMessages = {
   // Header & Footer
   header_explore_title: { en: "Exploration Views", zh: "曲风探索视图" },
   header_check_updates_title: { en: "Check for updates & changelog", zh: "检查更新与更新记录" },
+  shortcuts_guide_title: { en: "Keyboard shortcuts", zh: "键盘快捷键" },
   header_updates_btn: { en: "Updates & Changelog", zh: "检查更新 & 更新记录" },
   footer_check_updates: { en: "Check updates & changelog", zh: "检查更新与版本记录" },
   footer_updates_btn: { en: "Updates", zh: "更新记录" },
