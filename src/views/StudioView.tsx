@@ -1637,7 +1637,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         "boom-bap",
         "synthwave",
         "dubstep",
-        "nu-disco",
+        "nu-disco-house",
         "acid-house",
       ];
       const headList = demoHeadIds

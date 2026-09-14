@@ -32,6 +32,8 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
 import { EmptyState } from "../ui/EmptyState";
+import { toast } from "../ui/Toast";
+import { announcer } from "../ui/AriaLiveRegion";
 import { ErrorState } from "../ui/ErrorState";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -80,12 +82,12 @@ const applyAudioMutes = (engine: AudioEngine, mode: "drums" | "full", genre: Gen
   });
 };
 
-const PRESET_MATCHUPS = [
+export const PRESET_MATCHUPS = [
   { labelZh: "House 对决 Techno", labelEn: "House vs Techno", ids: ["chicago-house", "detroit-techno"] },
   { labelZh: "Boom Bap 对决 Trap", labelEn: "Boom Bap vs Trap", ids: ["boom-bap", "edm-trap"] },
   { labelZh: "Liquid DnB 对决 Jungle", labelEn: "Liquid DnB vs Jungle", ids: ["liquid-dnb", "jungle"] },
-  { labelZh: "Synthwave 对决 Cyberpunk", labelEn: "Synthwave vs Cyberpunk", ids: ["synthwave", "cyberpunk-midtempo"] },
-  { labelZh: "Nu-Disco 对决 Funk", labelEn: "Nu-Disco vs Funk", ids: ["nu-disco", "funk"] },
+  { labelZh: "Synthwave 对决 Industrial Techno", labelEn: "Synthwave vs Industrial Techno", ids: ["synthwave", "industrial-techno"] },
+  { labelZh: "Nu-Disco 对决 Funk", labelEn: "Nu-Disco vs Funk", ids: ["nu-disco-house", "funk"] },
 ];
 
 export const CompareView: React.FC<CompareViewProps> = ({
@@ -386,14 +388,27 @@ export const CompareView: React.FC<CompareViewProps> = ({
   };
 
   const handleSelectPreset = (ids: string[]) => {
-    const selected = ids.map((id) => GENRES_MAP[id]).filter(Boolean) as Genre[];
-    if (selected.length >= 2) {
-      if (engineRef.current) {
-        engineRef.current.stop();
-        setPlayingId(null);
-      }
-      setGenres(selected);
+    const resolved = ids.map((id) => ({ id, genre: GENRES_MAP[id] }));
+    const selected = resolved.map((r) => r.genre).filter(Boolean) as Genre[];
+
+    if (selected.length < 2) {
+      // A preset pointing at an unknown genre id used to be a completely silent
+      // no-op ("the button does nothing"). Never swallow it again.
+      const missing = resolved.filter((r) => !r.genre).map((r) => r.id);
+      const message = isZh
+        ? `预设数据缺失，无法载入：${missing.join("、")}`
+        : `Preset cannot be loaded, unknown genre id: ${missing.join(", ")}`;
+      console.error("[CompareView] preset genre ids not found:", missing);
+      announcer.announce(message);
+      toast.error(message);
+      return;
     }
+
+    if (engineRef.current) {
+      engineRef.current.stop();
+      setPlayingId(null);
+    }
+    setGenres(selected);
   };
 
   // Pairwise Similarity Matrix calculation & overall cohort consistency (P3-13)
