@@ -125,7 +125,19 @@ check(
   versionJsonSize <= 8 * 1024,
   `${(versionJsonSize / 1024).toFixed(1)}KB`
 );
-check("R7b changelog archive exists separately", fs.existsSync(path.join(ROOT, "public/changelog.json")));
+const changelogPath = path.join(ROOT, "public/changelog.json");
+check("R7b changelog archive exists separately", fs.existsSync(changelogPath));
+if (fs.existsSync(changelogPath)) {
+  // A sync must never shrink the release history (it once did: `version:sync`
+  // regenerated the archive from a file that no longer carried it).
+  const archive = JSON.parse(fs.readFileSync(changelogPath, "utf8"));
+  const count = Array.isArray(archive.changelog) ? archive.changelog.length : 0;
+  check(
+    "R7c release history never shrinks",
+    count >= baseline.changelogEntries,
+    `${count} entries (baseline ${baseline.changelogEntries})`
+  );
+}
 
 /* R6 \u2014 gates must stay wired ------------------------------------------------ */
 const scripts = JSON.parse(read("package.json")).scripts;

@@ -1,43 +1,47 @@
 {
-  "version": "1.16.1",
+  "version": "1.16.2",
   "releaseDate": "2026-09-14",
-  "changelogCount": 43,
+  "changelogCount": 44,
   "latest": {
-    "version": "1.16.1",
+    "version": "1.16.2",
     "date": "2026-09-14",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v1.16.1 正确性与数据安全冲刺（S0）：音频调度、导出、撤销、工程持久化与分享安全",
-      "en": "v1.16.1 Correctness & Data-Safety Sprint (S0): audio scheduling, export, undo, project persistence, share security"
+      "zh": "v1.16.2 性能与工程化冲刺：首屏体积减半、状态与导出加固、CI 门禁成型",
+      "en": "v1.16.2 Performance & Tooling Sprint: first paint halved, state/export hardening, CI gates"
     },
     "highlights": [
       {
-        "zh": "音频：消除零音量导致的走带永久卡死（exponentialRamp 非法入参），停顿后按相位跳过积压步进而不是全部齐响",
-        "en": "Audio: zero-velocity no longer wedges the transport (illegal exponential ramp targets); stalls now resync in phase instead of firing every missed step at once"
+        "zh": "首屏体积：打断曲风数据的静态引用，首屏 JS 从 336KB 降到 164KB gzip（-51%），14 个曲风分包改为点击时按需加载",
+        "en": "First paint: broke the static genre-data import — first-paint JS drops from 336KB to 164KB gzip (-51%); the 14 genre chunks now load on demand"
       },
       {
-        "zh": "导出：WAV 母带/分轨现在真正遵循静音/独奏/音量/声像与 probability/swing，与实时听感一致；修复单声道越界与参数越界",
-        "en": "Export: WAV master/stems now honour mute/solo/volume/pan plus probability/swing, matching what you hear; fixed mono buffer overflow and out-of-range render params"
+        "zh": "小节长度修复：恢复拍号分子参与计算（4/4 = 16 步/小节，3/4 = 12，7/8 = 14），标尺分组、小节跳转与复制小节随之正确",
+        "en": "Meter fix: bars now count the time-signature numerator (4/4 = 16 steps, 3/4 = 12, 7/8 = 14), correcting the ruler, bar jump and copy-bar"
       },
       {
-        "zh": "撤销：一个手势只产生一条历史，撤销不再空转；歌曲模式/循环区间/节拍器等设置可被正确还原；重做不再覆盖实时录音",
-        "en": "Undo: one gesture records one step and undo no longer no-ops; song mode/loop range/metronome are restored; redo can no longer overwrite a live recording"
+        "zh": "工程与分享安全：分享载荷逐字段校验、分享链接不再自不兼容、IndexedDB 失败不再假成功、工程快照按 ID 隔离",
+        "en": "Project & share safety: field-level payload validation, self-consistent share links, IndexedDB failures surface, per-project scratch snapshots"
       },
       {
-        "zh": "工程：草稿按工程 ID 隔离，切换工程后刷新不会再串档；IndexedDB 写入失败不再假成功，失败原因会明确提示",
-        "en": "Projects: scratch snapshots are scoped per project so switching projects no longer cross-contaminates; IndexedDB failures surface instead of pretending to save"
+        "zh": "版本检查载荷从 91KB 降到 3KB，完整变更日志改为打开弹窗时按需加载（并带缓存）",
+        "en": "Update check payload drops from 91KB to 3KB; the full changelog archive loads on demand (and is cached)"
       },
       {
-        "zh": "分享：对 URL 载荷做逐字段校验与白名单重建（防崩溃/防解压炸弹/防原型污染），分享链接不再生成自己打不开的地址，还原时不再丢失门限等细节",
-        "en": "Sharing: URL payloads are validated field-by-field and rebuilt from a whitelist (no crashes, no decompression bombs, no prototype pollution); links the app generates are always decodable and no longer drop gate/ratchet detail"
+        "zh": "工程化门禁：CI 覆盖 next 分支并补齐 e2e/红线/覆盖率阈值，体积门禁纳入首屏总量，新增 18 条红线兜底",
+        "en": "Tooling gates: CI now covers next with e2e, red lines and coverage thresholds; the bundle budget includes total first paint; 18 red lines guard the baseline"
       },
       {
-        "zh": "小节：修复拍号分子被忽略导致的小节长度错误（4/4 每小节恢复为 16 步、3/4 为 12 步、7/8 为 14 步）",
-        "en": "Meter: fixed bars ignoring the time-signature numerator (4/4 back to 16 steps per bar, 3/4 to 12, 7/8 to 14)"
+        "zh": "交互与国际化：Compare 补齐载入/空/错三态与防重入、弹窗打开时全局快捷键失效、原生 window.confirm 换成自研弹窗、4 个文件迁移出内联双语三元",
+        "en": "UX & i18n: Compare gained loading/empty/error states and double-click guards, global shortcuts are gated behind dialogs, window.confirm replaced, and four more files moved off inline bilingual ternaries"
       },
       {
-        "zh": "工程化：版本号单一来源、快轨/慢轨门禁、14 条红线兜底、端口可配置、部署凭据注入、测试隔离与 4 个缺失词条补齐",
-        "en": "Tooling: single-source version, fast/slow track gates, 14 red lines, configurable ports, deploy credential injection, test isolation, and the 4 missing i18n keys"
+        "zh": "SEO 与元数据：补齐描述、Open Graph、Twitter 卡片与运行时 canonical，iOS 图标改用 PNG",
+        "en": "SEO: description, Open Graph, Twitter cards and a runtime-derived canonical URL, plus a PNG apple-touch-icon"
+      },
+      {
+        "zh": "稳定性：消除覆盖率下的大用例超时抖动；实时播放后台队列有界、画布缓冲复用，长时间挂机不再累积",
+        "en": "Stability: eliminated the coverage-only timeout flake; bounded the playhead queue and reused the canvas buffer so long sessions stop accumulating"
       }
     ]
   }

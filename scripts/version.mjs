@@ -52,9 +52,24 @@ function desiredSw(current) {
  * tiny. The full (and ever-growing) bilingual changelog lives in `changelog.json`
  * and is fetched only when the user actually opens the history.
  */
-function splitVersionFiles(currentVersionJson) {
+function splitVersionFiles(currentVersionJson, currentChangelogJson) {
   const data = JSON.parse(currentVersionJson);
-  const changelog = Array.isArray(data.changelog) ? data.changelog : [];
+
+  // The archive lives in changelog.json. Older layouts kept it inside version.json,
+  // so accept both — but NEVER let a sync wipe the archive just because the small
+  // file no longer carries it.
+  let changelog = [];
+  if (currentChangelogJson) {
+    try {
+      const parsed = JSON.parse(currentChangelogJson);
+      if (Array.isArray(parsed?.changelog)) changelog = parsed.changelog;
+    } catch {
+      /* fall through to version.json */
+    }
+  }
+  if (changelog.length === 0 && Array.isArray(data.changelog)) {
+    changelog = data.changelog;
+  }
   const latest = changelog.find((e) => e.version === version) || changelog[0] || null;
 
   const small = {
@@ -77,7 +92,7 @@ const currentSw = fs.readFileSync(swPath, "utf8");
 const currentJson = fs.readFileSync(versionJsonPath, "utf8");
 const currentChangelog = fs.existsSync(changelogJsonPath) ? fs.readFileSync(changelogJsonPath, "utf8") : "";
 
-const split = splitVersionFiles(currentJson);
+const split = splitVersionFiles(currentJson, currentChangelog);
 
 const targets = [
   { label: "src/version.ts", path: versionTsPath, desired: desiredTs, current: currentTs },
