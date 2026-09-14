@@ -31,6 +31,7 @@ import { useCustomGenres } from "../features/customGenre/useCustomGenres";
 import { encodeGenreToSharePayload, decodeSharePayloadToGenre } from "../features/customGenre/customGenreCodec";
 import { renderGenrePoster } from "../features/customGenre/posterGenerator";
 import { RadarChart } from "../ui/RadarChart";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useLanguage } from "../i18n/LanguageContext";
 import { toast } from "../ui/Toast";
@@ -111,6 +112,9 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
 
   // Shared payload import prompt
   const [pendingImportGenre, setPendingImportGenre] = useState<CustomGenre | null>(null);
+
+  // Pending destructive action awaiting confirmation via the in-app dialog
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; notify: boolean } | null>(null);
 
   // Selected fork genre id for the dropdown
   const [selectedForkBaseId, setSelectedForkBaseId] = useState<string>("chicago-house");
@@ -280,14 +284,24 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
   };
 
   // Delete active handler
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!activeGenre) return;
-    if (window.confirm(t("maker_delete_confirm"))) {
-      const idToDelete = activeGenre.id;
-      await deleteCustomGenre(idToDelete);
+    setDeleteTarget({ id: activeGenre.id, notify: true });
+  };
+
+  // Perform the deletion once the user confirms the in-app dialog
+  const handleConfirmDelete = async () => {
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    if (!target) return;
+
+    await deleteCustomGenre(target.id);
+    if (target.notify) {
       toast.success(isZh ? "曲风已删除" : "Genre deleted");
-      // Pick another
-      const remaining = customGenres.filter((g) => g.id !== idToDelete);
+    }
+
+    if (target.notify || target.id === activeGenre?.id) {
+      const remaining = customGenres.filter((g) => g.id !== target.id);
       if (remaining.length > 0) {
         setActiveGenre(remaining[0]);
       } else {
@@ -837,14 +851,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm(t("maker_delete_confirm"))) {
-                              deleteCustomGenre(genre.id);
-                              if (genre.id === activeGenre.id) {
-                                const remaining = customGenres.filter((g) => g.id !== genre.id);
-                                if (remaining.length > 0) setActiveGenre(remaining[0]);
-                                else handleCreateBlank();
-                              }
-                            }
+                            setDeleteTarget({ id: genre.id, notify: false });
                           }}
                           className="p-1 rounded-lg text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title={t("maker_delete")}
@@ -996,6 +1003,18 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Destructive-action confirmation dialog (no native confirm prompt) */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title={t("maker_delete")}
+        description={t("maker_delete_confirm")}
+        confirmLabel={t("delete")}
+        cancelLabel={t("cancel")}
+        tone="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

@@ -173,6 +173,18 @@ export const exploreMessages = {
   compare_diverse_cohort: { en: "Diverse Cohort", zh: "风格迥异" },
   compare_solo_column: { en: "Solo Column", zh: "独奏本列" },
   compare_mute_column: { en: "Mute Column", zh: "静音本列" },
+  compare_loading: { en: "Loading genre comparison data...", zh: "正在载入曲风对比数据..." },
+  compare_starting: { en: "Starting...", zh: "启动中..." },
+  compare_load_error_title: { en: "Failed to load comparison data", zh: "曲风对比数据加载失败" },
+  compare_load_error_desc: {
+    en: "The genre catalog could not be read. Please retry.",
+    zh: "无法读取曲风数据，请重试。"
+  },
+  compare_empty_title: { en: "No genres to compare yet", zh: "暂无可对比的曲风" },
+  compare_empty_desc: {
+    en: "Add at least two genres to start a side-by-side comparison.",
+    zh: "请至少添加两种曲风以开始并排对比。"
+  },
 
   // Challenge
   challenge_start_prompt: { en: "Ready to test your ear? Click below to start listening!", zh: "准备好测试你的乐感了吗？点击下方按钮开启盲听挑战！" },

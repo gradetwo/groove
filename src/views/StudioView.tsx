@@ -872,16 +872,37 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Keyboard shortcuts (Space, Esc, V, E, Undo/Redo)
   useEffect(() => {
+    // A focused control swallows transport keys only when it is a text-entry
+    // control: text/number/search inputs, textarea, select or contentEditable.
+    // A focused range slider must NOT permanently kill transport shortcuts (U-09).
+    const isTextEntryTarget = (el: HTMLElement | null): boolean => {
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      const editableHost = el.closest<HTMLElement>("[contenteditable]");
+      if (editableHost && editableHost.isContentEditable) return true;
+      const control = el.closest<HTMLElement>("input, textarea, select");
+      if (!control) return false;
+      if (control.tagName === "TEXTAREA" || control.tagName === "SELECT") return true;
+      const type = (control as HTMLInputElement).type?.toLowerCase() || "text";
+      return type !== "range";
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Respect handlers that already consumed the event (U-09)
+      if (e.defaultPrevented) {
+        return;
+      }
+
+      // Transport/grid shortcuts must not fire behind an open modal dialog (U-09)
+      if (
+        typeof document !== "undefined" &&
+        document.querySelector('[role="dialog"][aria-modal="true"]') !== null
+      ) {
+        return;
+      }
+
       const target = e.target as HTMLElement | null;
-      const isTextInput =
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable ||
-          Boolean(target.closest("input, textarea, select, [contenteditable]")));
-      if (isTextInput) {
+      if (isTextEntryTarget(target)) {
         return;
       }
 

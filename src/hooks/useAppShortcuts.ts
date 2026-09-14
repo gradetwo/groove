@@ -14,6 +14,25 @@ export function useAppShortcuts({ onNavigateTab, isZh }: UseAppShortcutsOptions)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Respect handlers that already consumed the event (U-09)
+      if (e.defaultPrevented) {
+        return;
+      }
+
+      // Never drive global shortcuts behind an open modal dialog (U-09).
+      // The shared Modal renders role="dialog" aria-modal="true"; detect it via
+      // the DOM so this hook stays independent of any specific component.
+      const hasOpenDialog =
+        typeof document !== "undefined" &&
+        document.querySelector('[role="dialog"][aria-modal="true"]') !== null;
+      if (hasOpenDialog) {
+        // Exception: '?' still closes the shortcuts panel this hook owns.
+        const isShortcutsToggle = e.key === "?" || (e.shiftKey && e.key === "/");
+        if (!(shortcutsOpen && isShortcutsToggle)) {
+          return;
+        }
+      }
+
       // Ignore when inside input / textarea / select or contentEditable
       const target = e.target as HTMLElement;
       if (
@@ -133,7 +152,7 @@ export function useAppShortcuts({ onNavigateTab, isZh }: UseAppShortcutsOptions)
       window.removeEventListener("keydown", handleKeyDown);
       if (gTimerRef.current) clearTimeout(gTimerRef.current);
     };
-  }, [onNavigateTab, isZh]);
+  }, [onNavigateTab, isZh, shortcutsOpen]);
 
   return {
     shortcutsOpen,
