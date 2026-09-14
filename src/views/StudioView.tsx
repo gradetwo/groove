@@ -28,6 +28,11 @@ import { useGenreSwitching } from "../features/sequencer/hooks/useGenreSwitching
 import { useUrlShareLoad } from "../features/sequencer/hooks/useUrlShareLoad";
 import { useLiveRecordingBridge } from "../features/sequencer/hooks/useLiveRecordingBridge";
 import { useAudioEngineLifecycle } from "../features/sequencer/hooks/useAudioEngineLifecycle";
+import {
+  useTransportShortcuts,
+  type PitchPickerState,
+  type StepContextMenuState,
+} from "../features/sequencer/hooks/useTransportShortcuts";
 import { clearSavedProject, saveProjectImmediate } from "../features/sequencer/projectStorage";
 import {
   getActiveProjectId,
@@ -135,20 +140,14 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [velocityActiveTrackIdx, setVelocityActiveTrackIdx] = useState(0);
   const [isEuclideanOpen, setIsEuclideanOpen] = useState(false);
   const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
-  const [pitchPicker, setPitchPicker] = useState<{
-    isOpen: boolean;
-    trackIdx: number;
-    stepIdx: number;
-    initialNote: number | null;
-  }>({ isOpen: false, trackIdx: 0, stepIdx: 0, initialNote: null });
+  const [pitchPicker, setPitchPicker] = useState<PitchPickerState>({
+    isOpen: false,
+    trackIdx: 0,
+    stepIdx: 0,
+    initialNote: null,
+  });
 
-  const [stepContextMenu, setStepContextMenu] = useState<{
-    isOpen: boolean;
-    x: number;
-    y: number;
-    trackIdx: number;
-    stepIdx: number;
-  } | null>(null);
+  const [stepContextMenu, setStepContextMenu] = useState<StepContextMenuState | null>(null);
 
   // Mobile / Tablet touch detection & dedicated mobile tools
   const [isTouchDevice, setIsTouchDevice] = useState(false);
@@ -488,123 +487,27 @@ export const StudioView: React.FC<StudioViewProps> = ({
     }
   }, [redo, isZh, showToast]);
 
-  // Keyboard shortcuts (Space, Esc, V, E, Undo/Redo)
-  useEffect(() => {
-    // A focused control swallows transport keys only when it is a text-entry
-    // control: text/number/search inputs, textarea, select or contentEditable.
-    // A focused range slider must NOT permanently kill transport shortcuts (U-09).
-    const isTextEntryTarget = (el: HTMLElement | null): boolean => {
-      if (!el) return false;
-      if (el.isContentEditable) return true;
-      const editableHost = el.closest<HTMLElement>("[contenteditable]");
-      if (editableHost && editableHost.isContentEditable) return true;
-      const control = el.closest<HTMLElement>("input, textarea, select");
-      if (!control) return false;
-      if (control.tagName === "TEXTAREA" || control.tagName === "SELECT") return true;
-      const type = (control as HTMLInputElement).type?.toLowerCase() || "text";
-      return type !== "range";
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Respect handlers that already consumed the event (U-09)
-      if (e.defaultPrevented) {
-        return;
-      }
-
-      // Transport/grid shortcuts must not fire behind an open modal dialog (U-09)
-      if (
-        typeof document !== "undefined" &&
-        document.querySelector('[role="dialog"][aria-modal="true"]') !== null
-      ) {
-        return;
-      }
-
-      const target = e.target as HTMLElement | null;
-      if (isTextEntryTarget(target)) {
-        return;
-      }
-
-      if (e.code === "Space") {
-        if (target && (target.tagName === "BUTTON" || Boolean(target.closest("button")))) {
-          return;
-        }
-        e.preventDefault();
-        handleTogglePlay();
-      } else if (e.key === "Escape") {
-        if (isProjectHubOpen) {
-          setIsProjectHubOpen(false);
-        } else if (stepContextMenu) {
-          setStepContextMenu(null);
-        } else if (pitchPicker.isOpen) {
-          setPitchPicker((prev) => ({ ...prev, isOpen: false }));
-        } else if (isEuclideanOpen) {
-          setIsEuclideanOpen(false);
-        } else if (isVelocityLaneOpen) {
-          setIsVelocityLaneOpen(false);
-        } else if (isAnalyzerOpen) {
-          setIsAnalyzerOpen(false);
-        } else if (isEditorMaximized) {
-          e.preventDefault();
-          setIsEditorMaximized(false);
-        }
-      } else if ((e.key === "p" || e.key === "P") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault();
-        setIsProjectHubOpen((prev) => !prev);
-      } else if ((e.key === "d" || e.key === "D") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault();
-        handleToggleDrumsOnly();
-      } else if ((e.key === "v" || e.key === "V") && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setIsVelocityLaneOpen((prev) => !prev);
-      } else if ((e.key === "e" || e.key === "E") && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setIsEuclideanOpen(true);
-      } else if ((e.key === "o" || e.key === "O") && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setIsAnalyzerOpen((prev) => !prev);
-      } else {
-        const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
-        const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
-
-        if (isCmdOrCtrl && (e.key === "z" || e.key === "Z")) {
-          e.preventDefault();
-          if (e.shiftKey) {
-            handleRedo();
-          } else {
-            handleUndo();
-          }
-        } else if (isCmdOrCtrl && (e.key === "y" || e.key === "Y")) {
-          e.preventDefault();
-          handleRedo();
-        }
-      }
-    };
-
-    const handleGlobalClick = () => {
-      if (stepContextMenu) {
-        setStepContextMenu(null);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("click", handleGlobalClick);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("click", handleGlobalClick);
-    };
-  }, [
+  // Global transport/grid shortcuts (A-02)
+  useTransportShortcuts({
     isProjectHubOpen,
     stepContextMenu,
-    pitchPicker.isOpen,
+    setStepContextMenu,
+    isPitchPickerOpen: pitchPicker.isOpen,
+    setPitchPicker,
     isEuclideanOpen,
+    setIsEuclideanOpen,
     isVelocityLaneOpen,
+    setIsVelocityLaneOpen,
     isAnalyzerOpen,
+    setIsAnalyzerOpen,
     isEditorMaximized,
-    handleTogglePlay,
-    handleToggleDrumsOnly,
-    handleUndo,
-    handleRedo,
-  ]);
+    setIsEditorMaximized,
+    setIsProjectHubOpen,
+    onTogglePlay: handleTogglePlay,
+    onToggleDrumsOnly: handleToggleDrumsOnly,
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+  });
 
   // Event Delegation & Drag-to-paint batching (P2-02 & P2-05)
   const handleGridPointerDown = (e: React.PointerEvent) => {
