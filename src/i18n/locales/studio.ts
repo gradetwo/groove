@@ -237,6 +237,26 @@ export const studioMessages = {
   somatic_exporting: { en: "EXPORTING...", zh: "正在导出..." },
   somatic_export_wav: { en: "EXPORT WAV", zh: "导出 WAV" },
 
+  // Kick Philosophy Dossier (U-11: migrated from inline bilingual ternaries)
+  kick_dossier_title: { en: "THE ONTOLOGY OF THE KICK // DOSSIER", zh: "声学哲学、神经科学与底鼓本体论档案" },
+  kick_dossier_ch0_title: { en: "THE BODILY CONTRACT // GROOVE AS COMPROMISE", zh: "契约与时间结晶：律动即身体妥协" },
+  kick_dossier_ch0_quote: { en: "“What is groove? A pact, a time agreement between our minds and sound.” — Bahadırhan Koçer", zh: "“什么是律动？是一份契约，是我们心智与声音之间达成的一份时间流动契约。” —— Bahadırhan Koçer" },
+  kick_dossier_ch0_body: { en: "Pulse defines time. Without a rhythmic pulse, time diffuses like formless water; once the pulse strikes, time crystallizes, bends, and acquires directional momentum. The kick is not merely a percussion element, but the chronological anchor of modern acoustic architecture.", zh: "脉冲定义时间。没有节奏脉冲，时间就会像无定形的水一样散开、流失；一旦加入脉冲，时间便被定格、弯曲，并被赋予了方向。底鼓不是简单的低音打击乐器，而是整个电子音乐建筑的时间锚点（Chronological Anchor）。" },
+  kick_dossier_ch1_title: { en: "THE SOMATIC TRIAD // VISCERA, MASS & NEURAL PLV", zh: "三层身体解剖学：Sub、Thump 与神经锁相（PLV）" },
+  kick_dossier_ch1_sub_body: { en: "At sub-bass frequencies, the cochlear basilar membrane ceases normal auditory vibration, yielding perception to mechanoreceptors across the skin and visceral organs. It activates the biological organism before conscious cognition recognizes 'music'—pure gravity and somatic weight.", zh: "在次低频段，耳蜗基底膜几乎停止常规震动，听觉神经让位于皮肤与内脏的机械感受器（Mechanoreceptors）。它在人类意识判定‘这是音乐’之前就已经激活了躯体，是重力与生理的终极地基。" },
+  kick_dossier_ch1_thump_body: { en: "The physical mediator where ear meets torso. Through microsecond non-linear saturation and triangular wave curvature, it bestows the psychoacoustic illusion of mass and density, delivering kinetic chest thump.", zh: "耳朵与身体相遇的中介频段。通过微秒级的非线性饱和（Saturation）与三角波形，赋予声音‘质量与密度（Mass）’的物理错觉，带来胸腔冲击感与撞击动量。" },
+  kick_dossier_ch1_click_body: { en: "A transient micro-spike lasting mere milliseconds. It elicits the Auditory Brainstem Response (ABR) and drives cortical neurons into Phase-Locking (PLV). Without it, sound is an unintelligible sonic blur; with it, the neural clock locks to the exact millisecond of the beat.", zh: "持续仅数毫秒的极短尖刺，触发听觉脑干反应（Auditory Brainstem Response, ABR），使大脑皮层神经元产生锁相（Phase-Locking Value, PLV）。没有它，声音只是一团浑浊的低频泥浆；有了它，神经系统才能在时间轴上实现毫秒级绝对对齐。" },
+  kick_dossier_ch2_title: { en: "ONTOLOGICAL EVOLUTION // MARCHING RITUAL TO SILICON", zh: "本体论变迁：从 19 世纪军乐仪式到硅基单子" },
+  kick_dossier_ch2_body_1: { en: "From the physical percussion of 19th-century marching drums, to the ergonomic pedal in jazz, to the analog Bridged-T oscillation of the TR-808/909, the kick drum underwent a profound ontological migration.", zh: "从 19 世纪军乐队大军鼓（Bass Drum）的物理敲击，到 20 世纪爵士乐踏板（Bass Drum Pedal）的人体工学结合，再到 TR-808/909 模拟电路的电荷震荡，底鼓经历了一次深刻的本体论跃迁。" },
+  kick_dossier_ch2_body_2: { en: "The primal collective ritual was decomposed in the digital era, replaced by the solitary producer manipulating silicon chips and DSP algorithms in isolation. Yet even within virtual circuits, the kick retains the transcendental power to re-weave isolated individuals into a collective resonance field.", zh: "原初的集体仪式感在数字时代被消解，转而由卧室中孤独的制作人通过硅基芯片与参数算法进行微观操纵。然而，即使置身于虚拟电路之中，底鼓依然承载着将孤独个体重新编织进集体共振场（Resonance Field）的超验力量。" },
+  kick_dossier_ch3_title: { en: "RESISTING THE MCPULSE // BAUDRILLARD & ORPHIC SPACE", zh: "抵抗“麦克脉冲”与奥菲斯内向建筑（鲍德里亚与麦克卢汉）" },
+  kick_dossier_ch3_quote: { en: "“Pre-packaged kick samples are industrial fast food… The copy has long forgotten if it was ever an imitation.” — Baudrillard's Simulacra perspective", zh: "“商业采样包是工业预制菜……拟像的复制品早已忘记了自己是否曾经是对真实的摹仿。” —— 鲍德里亚《拟像与仿真》视角" },
+  kick_dossier_ch3_body_1: { en: "Modern commercial production is flooded with hyper-polished, over-compressed 'McPulses'. Such fast-food samples eradicate acoustic friction and class tension ('Timbre carries class'). Designing sound from scratch is a deliberate act of revolt against homogenized consumerism.", zh: "现代商业制作充斥着高度抛光、过度压缩的‘麦克脉冲（McPulse）’。这种快餐式采样抹杀了声音的摩擦力（Friction）与阶级张力（Timbre carries class）。坚持原生合成（Synthesis from scratch）就是对这种均质化消费主义的抵抗。" },
+  kick_dossier_ch3_body_2: { en: "In Koçer's work 'Dub Techno: The Orphic Experience of Sound', headphones are not passive isolation tools, but Orphic Media constructing an internal subterranean cathedral inside the mind. Sub-bass resonance becomes the emotional infrastructure of inner architecture.", zh: "在 Koçer 著作《Dub Techno: The Orphic Experience of Sound》中，耳机并非隔离外界的被动工具，而是向内构筑宏大精神神殿的奥菲斯媒介（Orphic Media）。低频的深渊与回响，是大脑内部建筑的情绪骨架。" },
+  kick_dossier_ch4_title: { en: "ABLETON OPERATOR // 3-LAYER SYNTHESIS BLUEPRINT", zh: "Ableton Operator 三层合成工程蓝图" },
+  kick_dossier_ch4_intro: { en: "Standard Ableton Operator routing matrix to replicate this 3-layer somatic kick drum:", zh: "在 Ableton Live 中使用 Operator 或类似 FM/加法合成器构建三层解剖底鼓的标准机架配置：" },
+  kick_dossier_ch4_tip: { en: "Tip: The 'EXPORT WAV' button exports your customized algorithmic kick as a studio-grade 24-bit PCM WAV sample ready for your DAW or hardware sampler.", zh: "提示：本工作台右上角提供了「导出 WAV」功能，可直接将当前调节的纯算法底鼓导出为 24-bit 无损采样，拖拽进 Ableton 或任何硬件采样器中直接使用。" },
+
   // Hardware Console View (N-01 / P8-02)
   console_nav_label: { en: "Console", zh: "调音台" },
   console_nav_desc: { en: "Desk", zh: "混音" },
