@@ -1,31 +1,27 @@
 {
-  "version": "1.16.8",
+  "version": "1.16.9",
   "releaseDate": "2026-09-14",
-  "changelogCount": 50,
+  "changelogCount": 51,
   "latest": {
-    "version": "1.16.8",
+    "version": "1.16.9",
     "date": "2026-09-14",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v1.16.8 音序器容器拆分：StudioView 从 2440 行降到 658 行",
-      "en": "v1.16.8 Sequencer container split: StudioView down from 2440 to 658 lines"
+      "zh": "v1.16.9 消除移动端 0.19 的布局位移，并补上真实浏览器性能门禁",
+      "en": "v1.16.9 Eliminated the 0.19 mobile layout shift and added a real-browser performance gate"
     },
     "highlights": [
       {
-        "zh": "StudioView 拆分为 18 个领域 hook 与 5 个子组件/配置模块，容器内 useEffect 从 28 个降到 0；单文件 2440 → 658 行，可读性与可测试性大幅提升",
-        "en": "StudioView was split into 18 domain hooks and 5 sub-components/config modules; container useEffect count dropped from 28 to 0 and the file went from 2440 to 658 lines"
+        "zh": "定位并修复移动端 CLS 0.191：逐条 layout-shift 记录显示全部来自页脚——懒加载视图挂载前文档刚好一屏高、页脚可见，挂载后被推走 1763px。现在加载占位预留整屏高度，页脚在首屏即位于折叠线以下，位移不再计入",
+        "en": "Diagnosed and fixed the 0.19 mobile CLS: every layout-shift record pointed at the footer, which was visible at one-screen height before the lazy view mounted and then pushed down 1763px. Loading placeholders now reserve a full viewport, so the footer starts below the fold and the swap no longer counts"
       },
       {
-        "zh": "零行为变更，且用三层证据证明：AST 字符串集合对比（0 增 0 失）、jsdom 中拆分前后视图的 innerHTML 逐字节比对（5 个交互状态全部一致）、7 端 e2e 全过",
-        "en": "Zero behaviour change, proven three ways: AST string-set diff (0 added, 0 lost), byte-for-byte innerHTML comparison of the pre/post-refactor view across five interaction states in jsdom, and a full 7-target e2e pass"
+        "zh": "星系视图画布高度改用 dvh，移动端浏览器地址栏不再遮挡画布底部",
+        "en": "The galaxy canvas now sizes with dvh so mobile browser chrome no longer covers its bottom edge"
       },
       {
-        "zh": "跨端测试矩阵新增硬件调音台与空间监听开关检查，新视图不再只靠开发者本机验证",
-        "en": "The cross-device matrix now checks the hardware console and the binaural toggle, so the new view is no longer verified only on the developer's machine"
-      },
-      {
-        "zh": "文档基线自检纳入慢轨，源码规模（文件数/行数）由 version:sync 自动维护，避免文档声称与实现再次漂移",
-        "en": "The documentation baseline check joined the slow track, and the stated source size is now maintained automatically by version:sync"
+        "zh": "CI 与慢轨新增真实浏览器性能门禁（Playwright + 浏览器性能 API），硬性断言首屏不加载多余曲风数据，并打印 FCP/LCP/CLS 供回归对比——替代本机无法安装的 Lighthouse",
+        "en": "CI and the slow track gained a real-browser performance gate (Playwright + browser performance APIs) that hard-asserts no unnecessary genre data on first paint and reports FCP/LCP/CLS — replacing the Lighthouse step that cannot be installed here"
       }
     ]
   }
