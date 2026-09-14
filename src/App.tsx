@@ -28,6 +28,7 @@ const KickAnatomyView = React.lazy(() => import("./views/KickAnatomyView").then(
 const MasterclassView = React.lazy(() => import("./views/MasterclassView").then((m) => ({ default: m.MasterclassView })));
 const AnalyzerView = React.lazy(() => import("./views/AnalyzerView").then((m) => ({ default: m.AnalyzerView })));
 const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerView").then((m) => ({ default: m.CustomGenreMakerView })));
+const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
@@ -93,7 +94,7 @@ const MainApp: React.FC = () => {
   } | null>(null);
 
   const handleSelectTab = useCallback((tab: NavTab) => {
-    navigate({ tab, genreId: tab === "detail" ? selectedGenre?.id : undefined });
+    navigate({ tab, genreId: tab === "detail" || tab === "console" ? selectedGenre?.id : undefined });
   }, [navigate, selectedGenre?.id]);
 
   // Global Keyboard Shortcuts (P2-20: '?' help panel and 'g'+key navigation)
@@ -268,6 +269,26 @@ const MainApp: React.FC = () => {
                   externalAnalyserR={engineInstance?.getStereoAnalysers().right}
                   isExternalPlaying={isPlaying}
                 />
+              </ErrorBoundary>
+            )}
+
+            {currentTab === "console" && (
+              <ErrorBoundary
+                fallbackTitle={t("console_title")}
+                fallbackDescription={t("console_subtitle")}
+                onNavigateHome={() => handleSelectTab("studio")}
+                homeLabel={t("btn_return_studio")}
+              >
+                {selectedGenre ? (
+                  <HardwareConsoleView
+                    selectedGenre={selectedGenre}
+                    onOpenStudio={handleOpenStudioWithGenre}
+                  />
+                ) : (
+                  <div className="max-w-7xl mx-auto px-4 py-8">
+                    <Skeleton variant="card" className="h-96" />
+                  </div>
+                )}
               </ErrorBoundary>
             )}
 
