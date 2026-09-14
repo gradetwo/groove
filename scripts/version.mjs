@@ -99,10 +99,38 @@ const split = splitVersionFiles(currentJson, currentChangelog);
  * `scripts/check_docs.mjs` fails when they drift. Rather than hand-editing three
  * files on every release, `sync` rewrites those specific header claims.
  */
+/**
+ * The baseline header also states the source size, which drifts on every feature and
+ * refactor. Measure it here so `docs:check` cannot fail on a stale count.
+ */
+function measureSourceSize() {
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.tsx?$/.test(entry.name)) files.push(full);
+    }
+  };
+  walk(path.join(ROOT, "src"));
+  let lines = 0;
+  for (const file of files) lines += fs.readFileSync(file, "utf8").split("\n").length;
+  return { files: files.length, lines };
+}
+
 const DOC_VERSION_PATTERNS = [
   { file: "IMPROVEMENT_PLAN.md", re: /版本 \*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `版本 **v${version}**` },
   { file: "ROADMAP_V2.md", re: /\*\*当前基线\*\*：v\d+\.\d+\.\d+/, replacement: () => `**当前基线**：v${version}` },
   { file: "BACKLOG.md", re: /当前基线：\*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `当前基线：**v${version}**` },
+  {
+    file: "IMPROVEMENT_PLAN.md",
+    re: /全部 \d+ 个 TS\/TSX 文件、[\d,]+ 行/,
+    replacement: (text) => {
+      const size = measureSourceSize();
+      if (!/全部 \d+ 个 TS\/TSX 文件、[\d,]+ 行/.test(text)) return text;
+      return `全部 ${size.files} 个 TS/TSX 文件、${size.lines.toLocaleString("en-US")} 行`;
+    },
+  },
 ];
 
 const docTargets = DOC_VERSION_PATTERNS.map(({ file, re, replacement }) => {
@@ -112,7 +140,7 @@ const docTargets = DOC_VERSION_PATTERNS.map(({ file, re, replacement }) => {
     label: file,
     path: abs,
     current,
-    desired: re.test(current) ? current.replace(re, replacement()) : current,
+    desired: re.test(current) ? current.replace(re, replacement(current)) : current,
   };
 });
 
