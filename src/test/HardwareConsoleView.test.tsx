@@ -269,3 +269,28 @@ describe("HardwareConsoleView · spatial monitoring toggle (N-02)", () => {
     );
   }, TEST_TIMEOUT);
 });
+
+describe("console meter maths · suspended-context safety", () => {
+  it("reads a flat buffer as silence, not full scale", async () => {
+    const { peakFromTimeDomain, formatDb, linearToMeterPosition } = await import(
+      "../components/console/meterMath"
+    );
+
+    // A suspended AudioContext hands back all-zero frames.
+    expect(peakFromTimeDomain(new Uint8Array(256))).toBe(0);
+    expect(peakFromTimeDomain(new Uint8Array(256).fill(128))).toBe(0);
+    expect(linearToMeterPosition(peakFromTimeDomain(new Uint8Array(256)))).toBe(0);
+    expect(formatDb(0)).toBe("-\u221E");
+
+    // A real bipolar waveform still measures normally.
+    const wave = new Uint8Array(8);
+    wave.set([128, 192, 128, 64, 128, 192, 128, 64]);
+    expect(peakFromTimeDomain(wave)).toBeCloseTo(0.5, 3);
+
+    // And a full-scale signal is still reported as such: byte 0 is full negative
+    // excursion (|0-128|/128 = 1) and 255 is 0.992, so the peak is 1.
+    const hot = new Uint8Array([128, 255, 128, 0]);
+    expect(peakFromTimeDomain(hot)).toBe(1);
+    expect(peakFromTimeDomain(new Uint8Array([128, 255]))).toBeCloseTo(0.992, 3);
+  });
+});

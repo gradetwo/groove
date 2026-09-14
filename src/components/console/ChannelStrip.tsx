@@ -127,7 +127,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
     <div
       data-console-channel={trackIdx}
       data-testid={`console-channel-${trackIdx}`}
-      className={`flex w-[104px] shrink-0 flex-col items-center gap-2 rounded-xl border border-line bg-panel px-2 py-3 transition-opacity ${
+      className={`flex w-[166px] shrink-0 flex-col items-center gap-2 rounded-xl border border-line bg-panel px-2 py-3 transition-opacity ${
         isSilenced ? "opacity-60" : "opacity-100"
       }`}
       style={{ ["--tc" as any]: color }}
@@ -216,7 +216,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
       </div>
 
       {/* Mute / Solo / Phase invert */}
-      <div className="flex w-full items-center justify-center gap-1 border-t border-line-subtle pt-2">
+      <div className="flex w-full items-center justify-center gap-1.5 border-t border-line-subtle pt-2">
         <button
           type="button"
           onClick={() => onToggleMute(trackIdx)}
@@ -224,7 +224,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
           aria-label={`${name} ${t("console_mute")}`}
           title={t("console_mute")}
           data-testid={`console-mute-${trackIdx}`}
-          className={`h-7 w-7 rounded-md border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
+          className={`h-11 w-11 shrink-0 rounded-lg border font-['JetBrains_Mono'] text-xs font-bold transition-colors ${
             isMute
               ? "border-[#ff5964] bg-[#ff5964]/25 text-[#ff5964]"
               : "border-line bg-[#15171d] text-text-sub hover:text-text"
@@ -239,7 +239,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
           aria-label={`${name} ${t("console_solo")}`}
           title={t("console_solo")}
           data-testid={`console-solo-${trackIdx}`}
-          className={`h-7 w-7 rounded-md border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
+          className={`h-11 w-11 shrink-0 rounded-lg border font-['JetBrains_Mono'] text-xs font-bold transition-colors ${
             isSolo
               ? "border-accent bg-accent/25 text-accent"
               : "border-line bg-[#15171d] text-text-sub hover:text-text"
@@ -255,7 +255,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
           aria-label={`${name} ${t("console_phase")}`}
           title={t("console_phase_hint")}
           data-testid={`console-phase-${trackIdx}`}
-          className={`h-7 w-7 rounded-md border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
+          className={`h-11 w-11 shrink-0 rounded-lg border font-['JetBrains_Mono'] text-xs font-bold transition-colors ${
             isPhaseInverted
               ? "border-amber-400/70 bg-amber-500/20 text-amber-300"
               : "border-line bg-[#15171d] text-text-sub hover:text-text"

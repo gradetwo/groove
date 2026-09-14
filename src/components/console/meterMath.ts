@@ -51,10 +51,20 @@ export function formatDb(linear: number): string {
  */
 export function peakFromTimeDomain(bytes: Uint8Array): number {
   let peak = 0;
+  let min = 255;
+  let max = 0;
   for (let i = 0; i < bytes.length; i += 1) {
-    const deviation = Math.abs(bytes[i] - 128) / 128;
+    const sample = bytes[i];
+    if (sample < min) min = sample;
+    if (sample > max) max = sample;
+    const deviation = Math.abs(sample - 128) / 128;
     if (deviation > peak) peak = deviation;
   }
+  // A perfectly flat buffer carries no signal. WebAudio returns all-zero frames while
+  // the context is suspended (i.e. before the first user gesture), and reading those as
+  // "128 - 0" would peg every meter at full scale in the red zone. Real digital silence
+  // is a flat 128 line; both cases must read as silence.
+  if (min === max) return 0;
   return peak;
 }
 
