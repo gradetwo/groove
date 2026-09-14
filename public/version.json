@@ -1,35 +1,31 @@
 {
-  "version": "1.16.3",
+  "version": "1.16.4",
   "releaseDate": "2026-09-14",
-  "changelogCount": 45,
+  "changelogCount": 46,
   "latest": {
-    "version": "1.16.3",
+    "version": "1.16.4",
     "date": "2026-09-14",
     "category": "fix",
     "title": {
-      "zh": "v1.16.3 修复「经典预设对比」两个按钮点击无反应",
-      "en": "v1.16.3 Fix: two classic matchup presets did nothing when clicked"
+      "zh": "v1.16.4 导出结果三格式一致，且不再每次都不一样",
+      "en": "v1.16.4 Exports agree across formats — and no longer change on every render"
     },
     "highlights": [
       {
-        "zh": "修复经典预设对比：Synthwave 对决 Cyberpunk 与 Nu-Disco 对决 Funk 引用了不存在的曲风 id，点击后完全无反应；现已修正为 Industrial Techno 与 Nu-Disco House",
-        "en": "Fixed the classic matchup presets: 'Synthwave vs Cyberpunk' and 'Nu-Disco vs Funk' pointed at genre ids that do not exist, so clicking them did nothing; they now use Industrial Techno and Nu-Disco House"
+        "zh": "修复导出不一致：MIDI/Ableton 此前忽略概率（30% 的鼓点 100% 被导出），WAV 则每次随机取舍；现在三种格式共用同一套确定性判定，导出的音符集合完全一致",
+        "en": "Fixed export divergence: MIDI/Ableton ignored probability (a 30% hit was always exported) while WAV rolled randomly each render; all three now share one deterministic decision, so they export the same notes"
       },
       {
-        "zh": "预设解析失败不再静默：缺失的曲风 id 会打印到控制台、播报给读屏并弹出错误提示",
-        "en": "Preset resolution no longer fails silently: unknown genre ids are logged, announced to screen readers and surfaced as an error toast"
+        "zh": "同一工程重复导出现在完全可复现（不再因随机数产生不同结果）",
+        "en": "Re-exporting the same project is now fully reproducible (no more random divergence)"
       },
       {
-        "zh": "新增两层回归测试：预设 id 必须存在于曲风库，且点击预设后对比对象确实发生切换（含反向验证）",
-        "en": "Two layers of regression coverage: preset ids must exist in the genre database, and clicking a preset must actually swap the compared pair"
+        "zh": "新增硬编码曲风 id 守卫测试：任何查表或预设数组引用了不存在的曲风 id 都会立即失败，杜绝“点了没反应”这类静默 bug 再次出现",
+        "en": "Added a hardcoded genre-id guard: any lookup or preset list referencing an unknown genre id now fails immediately, so silent dead buttons cannot come back"
       },
       {
-        "zh": "撤销历史改为按字节预算裁剪（≤4MB），长时间编辑不再常驻数 MB 的深拷贝快照",
-        "en": "Undo history is now trimmed by a byte budget (≤4MB) so long sessions no longer retain megabytes of deep-copied snapshots"
-      },
-      {
-        "zh": "新增真实走带测试：用假 AudioContext 真正调用 play()，覆盖调度、静音、循环区间、停顿恢复与销毁",
-        "en": "Added real transport tests: a fake AudioContext now exercises play(), scheduling, mute/solo, loop range, stall recovery and teardown"
+        "zh": "修订审查报告中的一处错误结论：React.memo 并非 0 处，而是 6 处且被内联 props 击穿（结论不变，原因已更正）",
+        "en": "Corrected an inaccurate finding in the review document: React.memo is used in 6 components and defeated by inline props (the conclusion stands, the cause is now accurate)"
       }
     ]
   }
