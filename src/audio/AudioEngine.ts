@@ -9,6 +9,7 @@ import { AudioWorkerBridge } from "./AudioWorkerBridge";
 import { AudioWorkletClock } from "./AudioWorkletClock";
 import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "./DrumKitModels";
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS, SynthPreset } from "./PolySynth";
+import { resolveInstrumentPreset } from "./instrumentPresets";
 import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
 import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
@@ -1268,6 +1269,10 @@ export class AudioEngine {
 
     const trackId = (this.pattern?.tracks[trackIdx]?.track_id || "").toLowerCase();
     const lowerName = trackName.toLowerCase();
+    // Timbre fix: the genre data declares a per-track instrument; resolve it once here
+    // instead of always reaching for the fixed per-role preset. Drum voices never use
+    // this preset — their dispatch below is untouched.
+    const synthPreset = resolveInstrumentPreset(this.pattern?.tracks[trackIdx]?.instrument, trackId);
 
     if (trackId === "kick" || lowerName.includes("kick")) {
       this.playKick(dest, safeStartTime, safeVel, pitch);
@@ -1279,13 +1284,13 @@ export class AudioEngine {
     } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
       this.playPercussion(dest, safeStartTime, safeVel, pitch);
     } else if (trackId === "bass" || lowerName.includes("bass")) {
-      this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
+      this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
-      this.playChord(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
+      this.playChord(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "lead" || lowerName.includes("lead")) {
-      this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
+      this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "fx" || lowerName.includes("fx")) {
-      this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal);
+      this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else {
       this.playPercussion(dest, safeStartTime, safeVel, pitch);
     }
@@ -1365,38 +1370,85 @@ export class AudioEngine {
     });
   }
 
-  private playBass(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+  private playBass(
+    dest: AudioNode,
+    time: number,
+    vel: number,
+    pitchOffset: number,
+    stepDur = 0.125,
+    gateVal = 0.8,
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.acidBass
+  ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 36;
     const dur = stepDur * gateVal;
-    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, DEFAULT_SYNTH_PRESETS.acidBass);
+    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
   }
 
-  private playChord(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+  private playChord(
+    dest: AudioNode,
+    time: number,
+    vel: number,
+    pitchOffset: number,
+    stepDur = 0.125,
+    gateVal = 0.8,
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.warmPad
+  ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 60;
     const dur = stepDur * gateVal * 1.5;
-    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, DEFAULT_SYNTH_PRESETS.warmPad);
+    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
   }
 
-  private playLead(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+  private playLead(
+    dest: AudioNode,
+    time: number,
+    vel: number,
+    pitchOffset: number,
+    stepDur = 0.125,
+    gateVal = 0.8,
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.analogLead
+  ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 72;
     const dur = stepDur * gateVal * 1.5;
-    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, DEFAULT_SYNTH_PRESETS.analogLead);
+    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
   }
 
-  private playFX(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur = 0.125, gateVal = 0.8): void {
+  private playFX(
+    dest: AudioNode,
+    time: number,
+    vel: number,
+    pitchOffset: number,
+    stepDur = 0.125,
+    gateVal = 0.8,
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.noiseSweep
+  ): void {
     if (!this.ctx) return;
+
+    // Every genre declares `noise_sweep` for its fx track, and the swept saw-through-
+    // bandpass riser below is exactly that sound — it is also byte-identical to
+    // WavExporter.synthFX, which the exporter-parity principle requires. Only a future
+    // non-sweep fx instrument takes the poly-synth path.
+    if (preset !== DEFAULT_SYNTH_PRESETS.noiseSweep) {
+      const midi = pitchOffset > 0 ? pitchOffset : 72;
+      const dur = stepDur * gateVal * 1.5;
+      const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
+      voice.sources.forEach((src, idx) => {
+        this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+      });
+      return;
+    }
+
     const osc = this.ctx.createOscillator();
     osc.type = "sawtooth";
     const startF = pitchOffset > 24 
