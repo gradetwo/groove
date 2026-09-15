@@ -10,6 +10,7 @@ import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { APP_VERSION } from "../../version";
 import { clonePattern } from "./useSequencerStore";
+import { patternFromGenre } from "../../data/genreMix";
 
 export const GROOVE_DB_NAME = "groove_projects_db";
 export const GROOVE_DB_VERSION = 1;
@@ -423,8 +424,8 @@ export function createBlankProject(
   name?: string,
   drumKit: DrumKitType = "808"
 ): GrooveProject {
-  const patternA = clonePattern(genre.sequencer_pattern);
-  const patternB = clonePattern(genre.sequencer_pattern);
+  const patternA = patternFromGenre(genre);
+  const patternB = patternFromGenre(genre);
   const now = Date.now();
 
   const stepCount = patternA.tracks[0]?.steps?.length || 16;

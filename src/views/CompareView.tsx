@@ -3,6 +3,7 @@ import { Columns, Plus, X, Play, Pause, Square, Minus, Sliders, ExternalLink, Sp
 import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
+import { patternFromGenre, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
 import { EmptyState } from "../ui/EmptyState";
@@ -172,6 +173,24 @@ export const CompareView: React.FC<CompareViewProps> = ({
   const [showRadarDataTable, setShowRadarDataTable] = useState<boolean>(false);
 
   // Helper to mute/unmute channels across all active comparison columns
+  /**
+   * True when a compared column is inaudible under the current routing matrix.
+   * Used both for the track mutes and for the loudness trim, so the two can never
+   * disagree about which genres are actually being heard.
+   */
+  const isColumnSilenced = (
+    mode: SyncPlaybackMode,
+    gIdx: number,
+    activeGenres: Genre[],
+    mutes: boolean[],
+    solos: boolean[]
+  ) => {
+    const hasAnySolo = solos.some((s, idx) => s && idx < activeGenres.length);
+    if (mode === "solo_a" && gIdx !== 0) return true;
+    if (mode === "solo_b" && gIdx !== 1) return true;
+    return Boolean(mutes[gIdx]) || (hasAnySolo && !solos[gIdx]);
+  };
+
   const applySyncMutesToEngine = (
     engine: AudioEngine,
     mode: SyncPlaybackMode,
@@ -180,17 +199,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
     solos: boolean[]
   ) => {
     let globalTrackIdx = 0;
-    const hasAnySolo = solos.some((s, idx) => s && idx < activeGenres.length);
 
     activeGenres.forEach((g, gIdx) => {
-      let isColumnSilenced = Boolean(mutes[gIdx]) || (hasAnySolo && !solos[gIdx]);
-      if (mode === "solo_a" && gIdx !== 0) isColumnSilenced = true;
-      if (mode === "solo_b" && gIdx !== 1) isColumnSilenced = true;
+      const isColumnSilencedNow = isColumnSilenced(mode, gIdx, activeGenres, mutes, solos);
 
       const tracks = g.sequencer_pattern?.tracks || [];
       tracks.forEach((t, tIdx) => {
         const isDrum = isDrumTrack(t, tIdx);
-        let trackMute = isColumnSilenced;
+        let trackMute = isColumnSilencedNow;
         if (mode === "drums_only" && !isDrum) {
           trackMute = true;
         }
@@ -198,6 +214,21 @@ export const CompareView: React.FC<CompareViewProps> = ({
         globalTrackIdx++;
       });
     });
+
+    // Loudness follows the *audible* set, not the composite's average. Isolating one
+    // column (solo A/B, a per-column solo, or muting the others) must play that
+    // genre at its own measured trim, otherwise the A/B comparison this view exists
+    // for is off by up to ~5 dB exactly when the user isolates a side.
+    // `drums_only` keeps the audible mean: a drum-only balance genuinely differs from
+    // the full arrangement it was trimmed against (documented residual).
+    const audibleTrims = activeGenres
+      .filter((_, gIdx) => !isColumnSilenced(mode, gIdx, activeGenres, mutes, solos))
+      .map((g) => getGenreLoudnessTrimDb(g.id));
+    engine.setLoudnessTrimDb(
+      audibleTrims.length > 0
+        ? audibleTrims.reduce((sum, trim) => sum + trim, 0) / audibleTrims.length
+        : 0
+    );
   };
 
   // Start synchronized playback across all active comparison columns (P3-12)
@@ -214,12 +245,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
       const mergedTracks: SequencerTrack[] = [];
 
       genres.forEach((g, gIdx) => {
-        const tracks = g.sequencer_pattern?.tracks || [];
+        // Each member contributes its own arranged mix, so the merged arrangement is
+        // not 8 x N identical channel strips; the A/B balance is then level-matched
+        // by the composite trim below.
+        const tracks = patternFromGenre(g).tracks;
         const tag = String.fromCharCode(65 + gIdx); // A, B, C, D
         tracks.forEach((t) => {
           maxLen = Math.max(maxLen, t.steps?.length || 16);
           mergedTracks.push({
-            ...JSON.parse(JSON.stringify(t)),
+            ...t,
             name: `[${tag}] ${t.name}`,
             track_id: t.track_id || t.name.toLowerCase(),
           });
@@ -248,6 +282,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
       }
 
       engine.setPattern(compositePattern, true);
+      // The composite carries a synthetic `sync_*` genre id, so the engine cannot
+      // derive a trim for it. `applySyncMutesToEngine` (called below) then sets the
+      // master trim from the genres that are actually audible — the mean of the
+      // members in full-mix mode, a single member's own trim when one is soloed.
       engine.setBpm(bpmToUse);
       engine.setTotalSteps(maxLen);
 
@@ -336,7 +374,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
         engine.stop();
       }
 
-      engine.setPattern(genre.sequencer_pattern, true);
+      // Clear any explicit override left by a previous sync composite on a shared
+      // engine, then let `setPattern` match this genre's own measured trim.
+      engine.setLoudnessTrimDb(null);
+      engine.setPattern(patternFromGenre(genre), true);
       engine.setBpm(genre.default_bpm || 120);
       applyAudioMutes(engine, mode, genre);
       await engine.play();

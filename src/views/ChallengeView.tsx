@@ -20,6 +20,7 @@ import {
 import { Genre } from "../types/genre";
 import { ALL_GENRES } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
+import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
 import { announcer } from "../ui";
 import {
@@ -221,7 +222,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     const engine = new AudioEngine({
       onStop: () => setIsPlaying(false),
     });
-    engine.setPattern(q.correctGenre.sequencer_pattern);
+    engine.setPattern(patternFromGenre(q.correctGenre));
     engine.setBpm(q.correctGenre.default_bpm || 120);
     engineRef.current = engine;
 

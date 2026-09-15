@@ -6,6 +6,7 @@ import { AudioEngine, DrumKitType } from "../../../audio/AudioEngine";
 import type { SequencerAction } from "../useSequencerStore";
 import { useCustomGenres } from "../../customGenre/useCustomGenres";
 import { getDefaultDrumKitForGenre } from "../../../utils/trackUtils";
+import { patternFromGenre } from "../../../data/genreMix";
 
 function getGenreAccent(genre: GenreRailItem): string {
   const cat = genre.category.toLowerCase();
@@ -155,7 +156,7 @@ export function useGenreSwitching({
       commit({ type: "SET_GENRE", genre });
 
       if (engineRef.current) {
-        engineRef.current.setPattern(genre.sequencer_pattern, true);
+        engineRef.current.setPattern(patternFromGenre(genre), true);
         engineRef.current.setDrumKit(defaultKit);
         engineRef.current.setDrumsOnly(isDrumsOnly);
         engineRef.current.setBpm(genre.default_bpm || 120);

@@ -136,4 +136,7 @@ run("Bundle budget gate", "node", ["scripts/check_budgets.js"]);
 run("Cross-device E2E matrix", "node", ["scripts/test_matrix.js"]);
 run("Real-browser performance gate", "node", ["scripts/measure_live_perf.mjs", "--local"]);
 runRedlinesIfPresent();
+// Reads the committed loudness baseline only (no browser), so the fast track stays
+// browser-free; the measurement itself is `node scripts/measure_genre_loudness.mjs`.
+run("Genre loudness spread gate", "node", ["scripts/check_loudness_spread.mjs"]);
 console.log("\n\ud83c\udf89 SLOW TRACK PASSED");

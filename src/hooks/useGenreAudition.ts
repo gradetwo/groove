@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Genre } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
+import { patternFromGenre } from "../data/genreMix";
 import { announcer } from "../ui/AriaLiveRegion";
 
 export interface UseGenreAuditionReturn {
@@ -56,7 +57,7 @@ export function useGenreAudition(): UseGenreAuditionReturn {
 
       const engine = engineRef.current;
       engine.stop();
-      engine.setPattern(genre.sequencer_pattern);
+      engine.setPattern(patternFromGenre(genre));
       setPlayingGenreId(genre.id);
       announcer.announce(`正在试听：${genre.name} / Auditioning: ${genre.name}`);
       await engine.play();

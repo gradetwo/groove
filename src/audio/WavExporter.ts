@@ -14,6 +14,7 @@ import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
+import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -23,6 +24,12 @@ export interface RenderWavOptions {
   trackStates?: TrackState[];
   stemTrackIdx?: number;
   drumKit?: DrumKitType;
+  /**
+   * Master loudness-match trim in dB. When omitted it is derived from the pattern's
+   * `genre_id` (0 dB for custom/unknown ids), exactly like the live engine's
+   * `setPattern`, so an exported master matches what the user just heard.
+   */
+  loudnessTrimDb?: number;
 }
 
 export interface ExportedWav {
@@ -155,7 +162,23 @@ export async function renderPatternOffline(
   limiter.attack.setValueAtTime(0.003, 0);
   limiter.release.setValueAtTime(0.05, 0);
 
-  masterGain.connect(limiter);
+  // Genre loudness-match stage. Exporter parity: the live engine applies the same
+  // trim in the same relative position (after the fader, before the limiter), so a
+  // bounced master is not louder or quieter than the audition that produced it.
+  const loudnessTrimDb = Math.max(
+    LOUDNESS_TRIM_MIN_DB,
+    Math.min(
+      LOUDNESS_TRIM_MAX_DB,
+      options.loudnessTrimDb !== undefined && Number.isFinite(options.loudnessTrimDb)
+        ? options.loudnessTrimDb
+        : getGenreLoudnessTrimDb(pattern.genre_id)
+    )
+  );
+  const loudnessTrim = ctx.createGain();
+  loudnessTrim.gain.setValueAtTime(Math.pow(10, loudnessTrimDb / 20), 0);
+
+  masterGain.connect(loudnessTrim);
+  loudnessTrim.connect(limiter);
   limiter.connect(ctx.destination);
 
   // Generate 2-second white noise buffer

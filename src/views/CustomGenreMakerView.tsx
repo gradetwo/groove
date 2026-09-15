@@ -33,6 +33,7 @@ import { renderGenrePoster } from "../features/customGenre/posterGenerator";
 import { RadarChart } from "../ui/RadarChart";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { AudioEngine } from "../audio/AudioEngine";
+import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
 import { toast } from "../ui/Toast";
 
@@ -176,7 +177,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
   // Sync engine pattern when activeGenre pattern or bpm changes
   useEffect(() => {
     if (engineRef.current && activeGenre) {
-      engineRef.current.setPattern(activeGenre.sequencer_pattern);
+      engineRef.current.setPattern(patternFromGenre(activeGenre));
       engineRef.current.setBpm(activeGenre.default_bpm);
     }
   }, [activeGenre?.sequencer_pattern, activeGenre?.default_bpm]);
@@ -188,7 +189,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
       setIsPlaying(false);
       setCurrentStep(0);
     } else {
-      engineRef.current.setPattern(activeGenre.sequencer_pattern);
+      engineRef.current.setPattern(patternFromGenre(activeGenre));
       engineRef.current.setBpm(activeGenre.default_bpm);
       engineRef.current.play();
       setIsPlaying(true);
