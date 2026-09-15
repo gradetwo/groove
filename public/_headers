@@ -25,13 +25,17 @@
   Content-Type: application/json; charset=utf-8
 
 /changelog.json
-  # Cacheable ONLY because every consumer now requests it with a version key
-  # (`/changelog.json?v=<version>`, see src/utils/changelog.ts#changelogArchiveUrl):
-  # a new release is a new URL, so a previous release's cached copy can never be
-  # served for it. An unversioned request would go stale here for up to an hour —
-  # which is how an updated client ended up with a changelog one release behind.
-  # `public/sw.js` additionally serves this path network-first.
-  Cache-Control: public, max-age=3600, must-revalidate
+  # Must NOT be given a max-age. The intent was that a version key
+  # (`/changelog.json?v=<version>`, src/utils/changelog.ts#changelogArchiveUrl) would
+  # make a new release a new URL — but **this zone's CDN ignores the query string when
+  # caching**, which was measured directly during the v2.0.1 release: a request for a
+  # never-before-seen `?novel=<random>` came back `cf-cache-status: HIT` and served the
+  # previous release's archive. So the version key alone cannot guarantee edge freshness.
+  # With `no-cache` the edge revalidates on every request, which is what makes the
+  # update-record path provably fresh; `public/sw.js` also serves it network-first.
+  # The file only loads when the user opens the release history, so the revalidation
+  # cost is paid at most once per opening.
+  Cache-Control: no-cache, must-revalidate
   Content-Type: application/json; charset=utf-8
 
 # 4. Main HTML document -> Must revalidate
