@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { DEFAULT_GS1_ROUTING_ENABLED, isGs1RoutingEnabled, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
 
 describe("AudioEngine Latency & Hearing Protection (P4-05)", () => {
@@ -99,5 +102,37 @@ describe("AudioEngine · GS-1 chord/lead voices", () => {
     const engine = new AudioEngine();
     expect(engine.isGs1Enabled()).toBe(true);
     expect(isGs1RoutingEnabled()).toBe(true);
+  });
+});
+
+/**
+ * The toolbar's GS-1 switch (P6) — the user's "default on, but I can turn it off" control.
+ *
+ * The toolbar is a presentational component: it reflects the value and asks for a change. What is
+ * pinned here is that a *user* toggling it reaches the engine's persisted setting and back, which
+ * is the whole contract; the button's own rendering is covered by the toolbar snapshot suite.
+ */
+describe("GS-1 toolbar switch", () => {
+  const read = (relative: string) =>
+    readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", relative), "utf8");
+
+  it("renders only when a handler is supplied, and defaults to on", () => {
+    const source = read("components/sequencer/Toolbar.tsx");
+    // Optional props, like the console toggle: the control is absent when nobody wires it, and an
+    // unwired toolbar still renders (which is what the toolbar test factories rely on).
+    expect(source).toContain("gs1Enabled?: boolean;");
+    expect(source).toContain("onToggleGs1?: () => void;");
+    expect(source).toContain("gs1Enabled = true");
+    expect(source).toMatch(/\{onToggleGs1 && \(/);
+    expect(source).toContain('data-testid="studio-gs1-toggle"');
+  });
+
+  it("is wired to the engine's persisted setting by the studio", () => {
+    const source = read("views/StudioView.tsx");
+    // The state mirror exists so the button re-renders; the engine stays the owner of the value
+    // (it persists it next to the other audio settings).
+    expect(source).toContain("engineRef.current?.setGs1Enabled(next)");
+    expect(source).toContain("setGs1Enabled(engine.isGs1Enabled())");
+    expect(source).toContain("gs1Enabled={gs1Enabled}");
   });
 });

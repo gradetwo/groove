@@ -118,6 +118,9 @@ export interface SequencerPanelProps {
   onOpenVelocity: (trackIdx: number) => void;
   /** E-10: opens the per-track inspector (mix / insert chain / timbre). */
   onOpenInspector: (trackIdx: number) => void;
+  /** P6: GS-1 voices for chords/lead, reflected from the engine's persisted setting. */
+  gs1Enabled: boolean;
+  onToggleGs1: () => void;
   /** Which row the inspector currently shows, for selected-header styling. */
   inspectorTrackIdx?: number | null;
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
@@ -245,6 +248,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onChangeTrackVolume,
   onOpenVelocity,
   onOpenInspector,
+  gs1Enabled,
+  onToggleGs1,
   inspectorTrackIdx = null,
   onShiftTrack,
   onSmartFill,
@@ -285,6 +290,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
     >
       {/* Sequencer Unified Toolbar */}
       <Toolbar
+        gs1Enabled={gs1Enabled}
+        onToggleGs1={onToggleGs1}
         isPlaying={isPlaying}
         bpm={seqState.bpm}
         swing={seqState.swing}

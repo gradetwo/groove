@@ -228,6 +228,13 @@ export const studioMessages = {
   track_inspector_bypass_hint: { en: "Turn every insert stage off", zh: "关闭所有插入效果级" },
   track_inspector_bypassed: { en: "Bypassed", zh: "已旁通" },
   toolbar_haptic_label: { en: "HAPTIC:", zh: "触感:" },
+  // P6: GS-1 voices the chords and lead tracks. Defaults on; turning it off restores the
+  // previous (native) voices and the choice persists.
+  toolbar_gs1_label: { en: "GS-1:", zh: "GS-1 音色:" },
+  toolbar_gs1_title: {
+    en: "Voices the chords and lead tracks with the GS-1 synth. Turn off to use the original voices.",
+    zh: "用 GS-1 合成器演奏和弦与旋律轨。关闭则回到原来的音色。",
+  },
   toolbar_haptic_title: { en: "Toggle Haptic Feedback", zh: "触觉震动反馈开关" },
   toolbar_pan_hint: { en: "Wheel/drag to pan", zh: "滚轮/标尺拖拽可平移" },
   toolbar_scroll_left: { en: "Scroll left", zh: "向左滚动" },

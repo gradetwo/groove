@@ -249,6 +249,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
+
+  /**
+   * P6 mirror of the engine's GS-1 setting.
+   *
+   * The engine owns and persists the value; this state exists so flipping the toolbar toggle
+   * re-renders the button. Reading it straight from the engine during render would work once and
+   * then never update, because a ref mutation is not a render trigger.
+   */
+  const [gs1Enabled, setGs1Enabled] = useState(true);
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (engine) setGs1Enabled(engine.isGs1Enabled());
+  }, []);
   const patternRef = useRef(pattern);
   patternRef.current = pattern;
   const seqStateRef = useRef(seqState);
@@ -731,6 +744,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onOpenVelocity={handleOpenVelocityLane}
           onOpenInspector={setInspectorTrackIdx}
           inspectorTrackIdx={inspectorTrackIdx}
+          // P6: read through to the engine (the setting is persisted there) and toggle it there.
+          gs1Enabled={gs1Enabled}
+          onToggleGs1={() => {
+            const next = !gs1Enabled;
+            engineRef.current?.setGs1Enabled(next);
+            setGs1Enabled(next);
+          }}
           onShiftTrack={handleShiftTrack}
           onSmartFill={handleSmartFillTrack}
           onClearTrack={handleClearTrack}

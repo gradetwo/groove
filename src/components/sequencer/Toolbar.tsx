@@ -70,6 +70,15 @@ export type MobileEditMode = "step" | "accent" | "ratchet" | "pitch" | "plocks";
 
 export interface ToolbarProps {
   isPlaying: boolean;
+  /**
+   * P6: whether GS-1 voices `chords`/`lead`.
+   *
+   * Owned by the studio (the engine holds it, persisted with the other audio settings); the
+   * toolbar only reflects it and asks for a change, like every other control here.
+   */
+  /** Optional, like the console toggle: the control renders only when a handler is given. */
+  gs1Enabled?: boolean;
+  onToggleGs1?: () => void;
   bpm: number;
   swing: number;
   timeSignature: string;
@@ -528,6 +537,8 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
 });
 
 export const Toolbar = memo<ToolbarProps>(function Toolbar({
+  gs1Enabled = true,
+  onToggleGs1,
   isPlaying,
   bpm,
   swing,
@@ -1443,6 +1454,30 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 ADV
               </button>
             </div>
+          )}
+
+          {/* GS-1 voices for chords/lead (P6). Beside the haptics switch on purpose: both are
+              "how should the audio engine behave" settings, not per-track controls. */}
+          {onToggleGs1 && (
+          <div className="flex items-center gap-1.5 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
+            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-0.5 whitespace-nowrap">
+              {t("toolbar_gs1_label")}
+            </span>
+            <button
+              type="button"
+              onClick={onToggleGs1}
+              data-testid="studio-gs1-toggle"
+              aria-pressed={gs1Enabled}
+              className={`h-6 px-2 rounded text-[10px] font-['JetBrains_Mono'] border transition-colors ${
+                gs1Enabled
+                  ? "bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold"
+                  : "bg-[#17181c] border-line text-text-sub hover:text-text"
+              }`}
+              title={t("toolbar_gs1_title")}
+            >
+              {gs1Enabled ? "ON" : "OFF"}
+            </button>
+          </div>
           )}
 
           {/* Haptic Feedback Control (P8-01) */}
