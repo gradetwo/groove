@@ -174,6 +174,7 @@ export class FakeAudioGraph {
   destination = new FakeNode();
   createdGains: FakeGainNode[] = [];
   createdOscillators: FakeOscillatorNode[] = [];
+  createdFilters: FakeFilterNode[] = [];
   createdPanners: FakeStereoPannerNode[] = [];
   createdSpatialPanners: FakePannerNode[] = [];
 
@@ -188,7 +189,9 @@ export class FakeAudioGraph {
     return node;
   }
   createBiquadFilter() {
-    return new FakeFilterNode();
+    const node = new FakeFilterNode();
+    this.createdFilters.push(node);
+    return node;
   }
   createBufferSource() {
     return new FakeBufferSourceNode();

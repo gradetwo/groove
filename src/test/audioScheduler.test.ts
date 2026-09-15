@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
+import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
+import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import type { SequencerPattern } from "../types/genre";
 import { FakeAudioContext, installFakeAudioContext } from "./helpers/fakeAudio";
 
@@ -208,6 +210,138 @@ describe("E-03 · realtime transport on a fake AudioContext", () => {
 
     expect(engine.getCurrentStep()).toBeGreaterThanOrEqual(4);
     expect(engine.getCurrentStep()).toBeLessThan(8);
+
+    engine.destroy();
+  });
+});
+
+describe("genre timbres · the live engine voices the declared instrument", () => {
+  let restore: (() => void) | null = null;
+
+  beforeEach(() => {
+    restore = installFakeAudioContext();
+  });
+
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  function synthPattern(trackId: "bass" | "chords" | "lead" | "fx", instrument: string, pitch: number) {
+    const steps = 16;
+    return {
+      genre_id: "timbre-test",
+      bpm: 120,
+      swing: 0,
+      scale: "C minor",
+      totalSteps: steps,
+      tracks: [
+        {
+          track_id: trackId,
+          name: trackId === "lead" ? "Lead" : trackId,
+          instrument,
+          steps: Array.from({ length: steps }, (_, i) => (i === 0 ? 1 : 0)),
+          velocity: new Array(steps).fill(100),
+          pitch: new Array(steps).fill(pitch),
+          gate: new Array(steps).fill(0.8),
+          volume: 0.8,
+          pan: 0,
+          mute: false,
+          solo: false,
+        },
+      ],
+    } as unknown as SequencerPattern;
+  }
+
+  /** Triggers one note and returns only the nodes that trigger created. */
+  function triggerAndDiff(pattern: SequencerPattern) {
+    const engine = new AudioEngine();
+    engine.setPattern(pattern);
+    engine.initAudioContext();
+    const ctx = engine.getAudioContext() as unknown as FakeAudioContext;
+
+    const oscBefore = ctx.createdOscillators.length;
+    const filterBefore = ctx.createdFilters.length;
+    engine.triggerNote(0, pattern.tracks[0].name, 0.8, pattern.tracks[0].pitch?.[0] ?? 0);
+
+    return {
+      engine,
+      oscillators: ctx.createdOscillators.slice(oscBefore),
+      filters: ctx.createdFilters.slice(filterBefore),
+    };
+  }
+
+  it("plays a flute_lead with the flute preset instead of the analog lead", () => {
+    const { engine, oscillators, filters } = triggerAndDiff(synthPattern("lead", "flute_lead", 72));
+    const flute = resolveInstrumentPreset("flute_lead", "lead");
+
+    // Two oscillators were created by playPolySynthNote with the resolved waveform
+    // pair and the resolved detune — not the fixed analog lead (saw + square, 7 cents).
+    expect(oscillators.map((o) => o.type)).toEqual([flute.osc1Type, flute.osc2Type]);
+    expect(oscillators[1].detune.events[0]?.value).toBe(flute.osc2DetuneCents);
+    expect(oscillators.map((o) => o.type)).not.toEqual([
+      DEFAULT_SYNTH_PRESETS.analogLead.osc1Type,
+      DEFAULT_SYNTH_PRESETS.analogLead.osc2Type,
+    ]);
+
+    // The per-voice low-pass is opened to the flute cutoff.
+    expect(filters).toHaveLength(1);
+    expect(filters[0].frequency.events[0]?.value).toBe(flute.filterCutoff);
+
+    engine.destroy();
+  });
+
+  it("plays sub_bass on a sub_bass track with its own low-pass", () => {
+    const { engine, oscillators, filters } = triggerAndDiff(synthPattern("bass", "sub_bass", 36));
+    const sub = resolveInstrumentPreset("sub_bass", "bass");
+
+    expect(oscillators.map((o) => o.type)).toEqual([sub.osc1Type, sub.osc2Type]);
+    expect(filters[0].frequency.events[0]?.value).toBe(sub.filterCutoff);
+    // The old behaviour was acidBass (1200 Hz); sub_bass must be lower still.
+    expect(filters[0].frequency.events[0]?.value).toBeLessThan(
+      DEFAULT_SYNTH_PRESETS.acidBass.filterCutoff
+    );
+
+    engine.destroy();
+  });
+
+  it("plays a rhodes_ep chord with the EP preset", () => {
+    const { engine, oscillators, filters } = triggerAndDiff(synthPattern("chords", "rhodes_ep", 60));
+    const rhodes = resolveInstrumentPreset("rhodes_ep", "chords");
+
+    expect(oscillators.map((o) => o.type)).toEqual([rhodes.osc1Type, rhodes.osc2Type]);
+    expect(filters[0].frequency.events[0]?.value).toBe(rhodes.filterCutoff);
+    expect(rhodes).not.toBe(DEFAULT_SYNTH_PRESETS.warmPad);
+
+    engine.destroy();
+  });
+
+  it("keeps the legacy role preset for an unknown instrument", () => {
+    const { engine, filters } = triggerAndDiff(synthPattern("lead", "totally_unknown", 72));
+
+    expect(filters[0].frequency.events[0]?.value).toBe(
+      DEFAULT_SYNTH_PRESETS.analogLead.filterCutoff
+    );
+
+    engine.destroy();
+  });
+
+  it("keeps the dedicated noise-sweep path for the noise_sweep fx instrument", () => {
+    const engine = new AudioEngine();
+    engine.setPattern(synthPattern("fx", "noise_sweep", 12));
+    engine.initAudioContext();
+    const ctx = engine.getAudioContext() as unknown as FakeAudioContext;
+
+    const oscBefore = ctx.createdOscillators.length;
+    const filterBefore = ctx.createdFilters.length;
+    engine.triggerNote(0, "fx", 0.8, 12);
+
+    // The sweep is one oscillator through a bandpass that starts at 2000 Hz — the
+    // poly synth would have created two oscillators instead.
+    expect(ctx.createdOscillators.slice(oscBefore)).toHaveLength(1);
+    const filters = ctx.createdFilters.slice(filterBefore);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].frequency.events[0]?.value).toBe(2000);
 
     engine.destroy();
   });
