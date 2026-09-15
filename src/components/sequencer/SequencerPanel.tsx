@@ -51,6 +51,9 @@ export interface SequencerPanelProps {
   onOpenGenreMaker?: () => void;
   onChangeMobileEditMode: (mode: MobileEditMode) => void;
   onCloseAnalyzer: () => void;
+  /** Feature #2: float the mixing console over the studio. */
+  isConsoleOpen?: boolean;
+  onToggleConsole?: () => void;
 
   // Toolbar / transport / export handlers
   onTogglePlay: () => void;
@@ -181,6 +184,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onOpenGenreMaker,
   onChangeMobileEditMode,
   onCloseAnalyzer,
+  isConsoleOpen,
+  onToggleConsole,
   onTogglePlay,
   onChangeBpm,
   onChangeSwing,
@@ -349,6 +354,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         onToggleCountIn={onToggleCountIn}
         isAnalyzerOpen={isAnalyzerOpen}
         onToggleAnalyzer={onToggleAnalyzer}
+        isConsoleOpen={isConsoleOpen}
+        onToggleConsole={onToggleConsole}
         onTapTempo={onTapTempo}
       />
 

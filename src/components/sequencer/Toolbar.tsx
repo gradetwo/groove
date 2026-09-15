@@ -27,6 +27,7 @@ import {
   Layers,
   FolderKanban,
   Wand2,
+  AudioLines,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -112,6 +113,9 @@ export interface ToolbarProps {
   onToggleDrumsOnly?: () => void;
   isAnalyzerOpen?: boolean;
   onToggleAnalyzer?: () => void;
+  /** Feature #2: float the mixing console over the studio. */
+  isConsoleOpen?: boolean;
+  onToggleConsole?: () => void;
 }
 
 interface MeterControlsProps {
@@ -522,6 +526,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onToggleDrumsOnly,
   isAnalyzerOpen = false,
   onToggleAnalyzer,
+  isConsoleOpen = false,
+  onToggleConsole,
   isRecordArmed = false,
   onToggleRecordArmed,
   effectsRackState,
@@ -879,6 +885,28 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             >
               <Activity className="w-3.5 h-3.5 text-accent" />
               <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_analyzer_label")}</span>
+            </button>
+          )}
+
+          {/* Floating Mixing Console Toggle (feature #2) */}
+          {onToggleConsole && (
+            <button
+              type="button"
+              onClick={onToggleConsole}
+              aria-pressed={isConsoleOpen}
+              aria-label={t("console_float_toggle")}
+              data-testid="studio-console-toggle"
+              className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                isConsoleOpen
+                  ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.3)]"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={t("console_float_toggle_title")}
+            >
+              <AudioLines className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline font-['JetBrains_Mono']">
+                {t("console_float_toggle")}
+              </span>
             </button>
           )}
 
