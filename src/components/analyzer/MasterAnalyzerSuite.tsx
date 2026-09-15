@@ -9,14 +9,34 @@ import {
   Palette,
   Maximize2,
   Minimize2,
+  Power,
   X,
 } from "lucide-react";
 import { WaterfallSpectrogram, SpectrogramTheme } from "./WaterfallSpectrogram";
 import { LissajousPhaseScope } from "./LissajousPhaseScope";
 import { OscilloscopeWaveform } from "./OscilloscopeWaveform";
+import { TestSignalType } from "../../audio/AnalyzerSignalGenerator";
 import { useLanguage } from "../../i18n/LanguageContext";
 
 export type AnalyzerViewMode = "split" | "spectrogram" | "lissajous" | "oscilloscope";
+
+export interface AnalyzerSignalOption {
+  type: TestSignalType;
+  label: string;
+}
+
+export interface AnalyzerSignalGeneratorControl {
+  /** Whether the built-in generator is currently sounding. */
+  enabled: boolean;
+  /** Currently chosen built-in signal (drives the dropdown value). */
+  selected: TestSignalType;
+  /** Localised labels for the built-in signal list. */
+  options: ReadonlyArray<AnalyzerSignalOption>;
+  /** Power toggle: starts the selected signal, or stops the generator. */
+  onToggle: () => void;
+  /** Switch signal while the generator keeps playing. */
+  onSelect: (type: TestSignalType) => void;
+}
 
 export interface MasterAnalyzerSuiteProps {
   analyser: AnalyserNode | null;
@@ -26,6 +46,11 @@ export interface MasterAnalyzerSuiteProps {
   onClose?: () => void;
   className?: string;
   defaultMode?: AnalyzerViewMode;
+  /**
+   * Optional instrument-level built-in signal generator control. When omitted
+   * (e.g. the studio dock) the instrument renders exactly as before.
+   */
+  signalGenerator?: AnalyzerSignalGeneratorControl;
 }
 
 export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
@@ -36,6 +61,7 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
   onClose,
   className = "",
   defaultMode = "split",
+  signalGenerator,
 }) => {
   const { t, isZh } = useLanguage();
   const [viewMode, setViewMode] = useState<AnalyzerViewMode>(defaultMode);
@@ -204,6 +230,44 @@ export const MasterAnalyzerSuite: React.FC<MasterAnalyzerSuiteProps> = ({
           )}
         </div>
       </div>
+
+      {/* Instrument-level built-in signal generator control (Analyzer page only) */}
+      {signalGenerator && (
+        <div
+          data-testid="analyzer-signal-generator-control"
+          className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 bg-[#0d0f16] border-b border-line"
+        >
+          <button
+            type="button"
+            onClick={signalGenerator.onToggle}
+            aria-pressed={signalGenerator.enabled}
+            aria-label={t("analyzer_suite_signal_toggle")}
+            title={t("analyzer_suite_signal_toggle_title")}
+            className={`h-11 sm:h-9 min-w-11 shrink-0 px-2.5 rounded-lg border flex items-center justify-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-colors ${
+              signalGenerator.enabled
+                ? "bg-accent border-accent text-[#0a0b0d] font-bold shadow-[0_0_12px_rgba(245,183,61,0.25)]"
+                : "bg-panel2 border-line text-text-sub hover:text-text"
+            }`}
+          >
+            <Power className="w-3.5 h-3.5" />
+            <span>{t("analyzer_suite_signal_label")}</span>
+          </button>
+
+          <select
+            aria-label={t("analyzer_suite_signal_select")}
+            value={signalGenerator.selected}
+            disabled={!signalGenerator.enabled}
+            onChange={(e) => signalGenerator.onSelect(e.target.value as TestSignalType)}
+            className="h-11 sm:h-9 min-w-0 max-w-full flex-1 sm:flex-none sm:w-56 rounded-lg bg-panel2 border border-line px-2 text-xs font-['JetBrains_Mono'] text-text focus:outline-none focus:border-accent disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {signalGenerator.options.map((option) => (
+              <option key={option.type} value={option.type}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Main Analysis Display Viewport */}
       <div className="p-3 sm:p-4">
