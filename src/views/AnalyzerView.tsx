@@ -120,6 +120,8 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
 
   const [activeSignal, setActiveSignal] = useState<TestSignalType | null>(null);
   const [isPlayingSignal, setIsPlayingSignal] = useState<boolean>(false);
+  // Instrument-level selection: which built-in generator the power toggle starts.
+  const [selectedSignal, setSelectedSignal] = useState<TestSignalType>(TEST_SIGNALS[0].type);
 
   // Initialize internal signal generator and local analysers
   useEffect(() => {
@@ -176,6 +178,8 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
       gen.playSignal(type);
       setActiveSignal(type);
       setIsPlayingSignal(true);
+      // Keep the instrument dropdown pointing at whatever is actually sounding.
+      setSelectedSignal(type);
     }
   };
 
@@ -186,6 +190,38 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
       setIsPlayingSignal(false);
     }
   };
+
+  // Instrument-level power toggle: one shared generator instance drives both this
+  // cluster and the legacy reference card grid further down the page.
+  const handleInstrumentToggle = () => {
+    const gen = generatorRef.current;
+    if (!gen) return;
+
+    if (isPlayingSignal) {
+      gen.stop();
+      setActiveSignal(null);
+      setIsPlayingSignal(false);
+    } else {
+      gen.playSignal(selectedSignal);
+      setActiveSignal(selectedSignal);
+      setIsPlayingSignal(true);
+    }
+  };
+
+  // Switching the dropdown while enabled re-voices the running generator.
+  // playSignal() tears its own previous voice down, so there is no stop/start gap.
+  const handleInstrumentSelect = (type: TestSignalType) => {
+    setSelectedSignal(type);
+    const gen = generatorRef.current;
+    if (!gen || !isPlayingSignal) return;
+    gen.playSignal(type);
+    setActiveSignal(type);
+  };
+
+  const signalOptions = useMemo(
+    () => TEST_SIGNALS.map((sig) => ({ type: sig.type, label: isZh ? sig.labelZh : sig.labelEn })),
+    [isZh]
+  );
 
   // Determine active analyser source:
   // If user is auditioning external studio beat, prioritize studio; else use local generator
@@ -241,6 +277,13 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
           analyserL={currentAnalyserL}
           analyserR={currentAnalyserR}
           isPlaying={currentPlaying}
+          signalGenerator={{
+            enabled: isPlayingSignal,
+            selected: selectedSignal,
+            options: signalOptions,
+            onToggle: handleInstrumentToggle,
+            onSelect: handleInstrumentSelect,
+          }}
         />
       </section>
 
