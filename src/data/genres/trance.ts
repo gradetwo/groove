@@ -37,11 +37,11 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Detuned Supersaw Leads",
+      "Dramatic Piano Chords",
+      "Lush Strings",
+      "Soaring Sweeps",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Detuned supersaw synth leads, dramatic piano chords, lush strings, soaring sweeps.",
@@ -418,7 +418,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "supersaw",
           "steps": [
             0,
             0,
@@ -522,11 +522,10 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Plucked Synth Arpeggios",
+      "Filtered Analog Pads",
+      "Warm Sub Bass",
+      "Delay Tails"
     ],
     "sound_design": {
       "en": "Plucked synth arpeggios, filtered analog pads, warm low-end basslines, delay tails.",
@@ -1007,11 +1006,11 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Complex FM Squelch Lead",
+      "303 Acid Bass",
+      "Warm Pad",
+      "Resonant Pitch Zaps",
+      "Tribal Chants"
     ],
     "sound_design": {
       "en": "Complex FM squelches, resonant pitch zaps, granular audio glitches, tribal chants.",
@@ -1388,7 +1387,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "fm_lead",
           "steps": [
             0,
             0,
@@ -1431,7 +1430,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1492,11 +1491,11 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Sitar Lead",
+      "Layered 303 Acid Riffs",
+      "Warm Pad",
+      "Eastern Modal Textures",
+      "Tanpura Drone"
     ],
     "sound_design": {
       "en": "Multiple layered 303 acid riffs, eastern modal melodies, sitar/tanpura textures.",
@@ -1873,7 +1872,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "sitar_lead",
           "steps": [
             0,
             0,
@@ -1977,11 +1976,11 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Aggressive Saw Synth Stabs",
+      "Distorted Kicks",
+      "Metallic Percussive Clicks",
+      "Warm Pad",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Distorted kicks, metallic percussive clicks, short aggressive saw stabs, stutter FX.",
@@ -2462,11 +2461,10 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Screaming Acid Lead",
+      "Hoover Synths",
+      "Supersaw Chords",
+      "Compressed 909 Kicks"
     ],
     "sound_design": {
       "en": "Heavily compressed 909 kicks, screaming resonant acid leads, aggressive hoover synths.",
@@ -2843,7 +2841,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "acid_303",
           "steps": [
             0,
             0,
@@ -2947,11 +2945,11 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Warm Piano Lead",
+      "Massive Supersaws",
+      "Autotuned Vocal Chains",
+      "Sub Bass",
+      "Lush Delays"
     ],
     "sound_design": {
       "en": "Polished vocal chains with autotune and lush delays, warm pianos, massive supersaws.",
@@ -3328,7 +3326,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
@@ -3432,11 +3430,10 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Bright Supersaw Stabs",
+      "Bouncy Synth Leads",
+      "Commercial Pop Vocals",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Bright supersaw stabs, commercial pop vocal production, bouncy synth leads.",
@@ -3813,7 +3810,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "supersaw",
           "steps": [
             0,
             0,
@@ -3917,11 +3914,11 @@ export const TRANCE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Acoustic Grand Piano",
+      "Soft Synth Pads",
+      "Gentle String Sweeps",
+      "Warm Round Drum Hits",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Acoustic grand piano, soft synth pads, gentle string sweeps, warm round drum hits.",
@@ -4298,7 +4295,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "pluck_synth",
+          "instrument": "piano_lead",
           "steps": [
             1,
             0,
@@ -4341,7 +4338,7 @@ export const TRANCE_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,

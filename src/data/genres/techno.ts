@@ -37,11 +37,11 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Juno Synth Pads",
+      "Metallic String Stabs",
+      "Sawtooth Synth Lead",
+      "TR-909 / 808 Drums",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Roland TR-909/808 drums, Juno synths, Yamaha DX100, metallic string stabs.",
@@ -522,11 +522,12 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Short Metallic Clicks",
+      "Resonant Blips",
+      "Filtered Noise Bursts",
+      "Plucked Synth Stabs",
+      "Warm Pad",
+      "Dry Sub Bass"
     ],
     "sound_design": {
       "en": "Short metallic clicks, resonant blips, filtered noise bursts, dry sub-bass kicks.",
@@ -1007,11 +1008,10 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Overdriven TB-303",
+      "Warm Pad",
+      "Distorted 909 Kicks",
+      "Screaming Resonance"
     ],
     "sound_design": {
       "en": "Multiple overdriven TB-303 synths, screaming resonance, distorted 909 kicks.",
@@ -1388,7 +1388,7 @@ export const TECHNO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "acid_303",
           "steps": [
             1,
             1,
@@ -1492,11 +1492,11 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Tape-Delayed Chord Stabs",
+      "Warm Pad",
+      "Sawtooth Synth Lead",
+      "Analog Noise",
+      "Deep Sub Bass"
     ],
     "sound_design": {
       "en": "Tape-delayed minor chord stabs, sweeping filters with high feedback, analog noise.",
@@ -1977,11 +1977,12 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Crushed Anvil Impacts",
+      "Distorted 909 Kicks",
+      "Reese Bass",
+      "Harsh Metallic Feedback",
+      "Warm Pad",
+      "Sawtooth Synth Lead"
     ],
     "sound_design": {
       "en": "Crushed anvil impacts, distorted 909 kicks into analog mixers, harsh metallic feedback.",
@@ -2462,11 +2463,11 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Pulsing Rumble Kicks",
+      "Monosynth Hook Lines",
+      "Warm Pad",
+      "White-Noise Risers",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Pulsing rumble kicks, monosynth hook lines, white-noise risers, vocal chants.",
@@ -2947,11 +2948,11 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Hard Clipped Kicks",
+      "Screaming Screech Synth",
+      "303 Acid Bass",
+      "Warm Pad",
+      "Metallic Clatter"
     ],
     "sound_design": {
       "en": "Hard clipped kicks, screaming screech synths, metallic clatter, saturated rave stabs.",
@@ -3328,7 +3329,7 @@ export const TECHNO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -3432,11 +3433,11 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Ethereal String Washes",
+      "Warm Pad",
+      "Sub Bass",
+      "Nature Field Recordings",
+      "Pillowy Kicks"
     ],
     "sound_design": {
       "en": "Ethereal synth washes, shimmering reverbs, nature field recordings, pillowy kicks.",
@@ -3813,7 +3814,7 @@ export const TECHNO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "strings_lead",
           "steps": [
             0,
             0,
@@ -3856,7 +3857,7 @@ export const TECHNO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -3917,11 +3918,12 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Overdriven Analog Drum Synths",
+      "Eurorack Modular Squeals",
+      "Square-Wave Lead",
+      "Tape Hiss",
+      "Warm Pad",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Overdriven analog drum synths, Eurorack modular squeals, tape hiss, dark metal percussion.",
@@ -4298,7 +4300,7 @@ export const TECHNO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -4341,7 +4343,7 @@ export const TECHNO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -4402,11 +4404,12 @@ export const TECHNO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Massively Compressed Saturated Loops",
+      "Distorted Kicks",
+      "Grinding Metallic Noise",
+      "Sawtooth Synth Lead",
+      "Warm Pad",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Massively compressed saturated loops, heavily distorted kicks, grinding metallic noise.",
