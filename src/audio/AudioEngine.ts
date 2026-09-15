@@ -33,6 +33,7 @@ import { buildMasterGraph, dbToGain, type MasterGraph } from "./masterGraph";
 import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
+import { Gs1VoicePool } from "./gs1/Gs1VoicePool";
 import type { TrackInsertParams } from "../data/trackInsert";
 import { applyGenreFxToGraph, delayParamsAtTempo, resolveGenreFx, type GenreFxProfile } from "../data/genreFx";
 export type { TrackState } from "./trackStates";
@@ -139,6 +140,14 @@ export class AudioEngine {
    * loudness match to hold (see `masterGraph.ts`).
    */
   private masterGraph: MasterGraph | null = null;
+
+  /**
+   * P6: the GS-1 voices for `chords`/`lead`, or `null` until a context exists.
+   *
+   * It is inert while `isGs1RoutingEnabled()` is false (the default), so creating it changes
+   * nothing: every `tryPlay` returns `false` and the native path below runs exactly as before.
+   */
+  private gs1Pool: Gs1VoicePool | null = null;
 
   /**
    * The per-genre FX profile last applied by `setPattern` (N-14). `null` means the genre
@@ -274,6 +283,8 @@ export class AudioEngine {
           });
           this.masterGraph = graph;
           this.masterGain = graph.masterGain;
+          this.gs1Pool?.dispose();
+          this.gs1Pool = new Gs1VoicePool(this.ctx);
           this.limiter = graph.limiter.input;
           this.masterLimiter = graph.limiter;
           this.masterFxRack = graph.fxRack;
@@ -1524,10 +1535,11 @@ export class AudioEngine {
         resolveChordTreatment(
           this.pattern?.genre_id,
           this.pattern?.tracks[trackIdx]?.instrument
-        )
+        ),
+        trackIdx
       );
     } else if (trackId === "lead" || lowerName.includes("lead")) {
-      this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
+      this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset, trackIdx);
     } else if (trackId === "fx" || lowerName.includes("fx")) {
       this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else {
@@ -1675,7 +1687,8 @@ export class AudioEngine {
     stepDur = 0.125,
     gateVal = 0.8,
     preset: SynthPreset = DEFAULT_SYNTH_PRESETS.warmPad,
-    treatment?: ChordTreatment
+    treatment?: ChordTreatment,
+    trackIdx?: number
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 60;
@@ -1684,6 +1697,30 @@ export class AudioEngine {
       this.pattern?.scale,
       treatment ? { style: treatment.style } : {}
     );
+    // P6: if GS-1 voices this track, it takes the notes and the native path is skipped entirely
+    // — playing both would double the harmony. `tryPlay` returns false whenever GS-1 is disabled,
+    // not yet loaded, or has no patch for this instrument, which is the native fallback.
+    if (trackIdx !== undefined && this.gs1Pool) {
+      const treatmentGate = treatment?.gateScale ?? 1;
+      const gs1Notes = notes.map((note, i) => ({
+        note,
+        time: time + (treatment ? CHORD_STRUM_SEC * 0 : 0) + i * (treatment?.strumSeconds ?? 0),
+        duration:
+          chordNoteDuration(stepDur, gateVal, treatment ?? { gateScale: 1 }) * treatmentGate,
+        velocity: vel * chordVoiceGain(notes.length),
+      }));
+      if (
+        this.gs1Pool.tryPlay(
+          trackIdx,
+          "chords",
+          this.pattern?.tracks[trackIdx]?.instrument,
+          gs1Notes,
+          dest
+        )
+      ) {
+        return;
+      }
+    }
     // Note length and onset spread are part of the genre's answer, not fixed values: a
     // funk stab, a jazz comp, a strummed guitar chord and an ambient pad differ mainly
     // in how long they ring and whether the notes roll.
@@ -1710,11 +1747,19 @@ export class AudioEngine {
     pitchOffset: number,
     stepDur = 0.125,
     gateVal = 0.8,
-    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.analogLead
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.analogLead,
+    trackIdx?: number
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 72;
     const dur = stepDur * gateVal * 1.5;
+    // P6: same contract as `playChord` — GS-1 takes the note or the native engine does.
+    if (trackIdx !== undefined && this.gs1Pool) {
+      const instrument = this.pattern?.tracks[trackIdx]?.instrument;
+      if (this.gs1Pool.tryPlay(trackIdx, "lead", instrument, [{ note: midi, time, duration: dur, velocity: vel }], dest)) {
+        return;
+      }
+    }
     const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
@@ -1792,6 +1837,8 @@ export class AudioEngine {
       this.ctx.close().catch(() => {});
     }
     this.ctx = null;
+    this.gs1Pool?.dispose();
+    this.gs1Pool = null;
     this.masterGain = null;
     this.loudnessTrimGain = null;
     this.limiter = null;
