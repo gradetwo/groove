@@ -47,8 +47,15 @@ const MANIFEST_PATH = path.join(VENDOR_ROOT, "UPSTREAM.json");
 const PARAMS_REL = "src/audio/params.ts";
 const PRIMARY_WASM = "src/generated/synth_core.wasm";
 
-/** Files in vendor/gs1 that are ours, not upstream copies, and so unhashed. */
-const LOCAL_METADATA = new Set(["UPSTREAM.json", "README.md"]);
+/**
+ * Files in vendor/gs1 that are ours, not upstream copies, and so unhashed.
+ *
+ * `THIRD_PARTY_NOTICES.md` is here because the attribution for the libraries linked into the
+ * WASM core is a *compliance gap in the upstream artifacts*: GS-1 ships its own MIT LICENSE
+ * but neither DaisySP's nor Soundpipe's notice, so the bundled core cannot legally be
+ * redistributed without us supplying it. `gs1Attribution.test.ts` checks the content.
+ */
+const LOCAL_METADATA = new Set(["UPSTREAM.json", "README.md", "THIRD_PARTY_NOTICES.md"]);
 
 /** The published ABI contract this integration is written against (GS-1 v8). */
 const EXPECTED = {

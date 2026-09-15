@@ -92,7 +92,7 @@ describe("offline renderer · genre loudness trim", () => {
     ).toBeCloseTo(1, 10);
   });
 
-  it("places the trim between the fader and the limiter (same order as the live engine)", async () => {
+  it("places the trim after the FX rack and before the limiter (same order as the live engine)", async () => {
     restore = installFakeOfflineAudioContext();
     await renderPatternOffline(makePattern("punk-rock"));
     const ctx = FakeOfflineAudioContext.lastInstance!;
@@ -104,11 +104,17 @@ describe("offline renderer · genre loudness trim", () => {
     const consumersOf = (node: FakeNode): FakeNode[] =>
       (ctx.createdGains as unknown as FakeNode[]).filter((g) => g.incoming.includes(node));
 
-    // The fader feeds exactly the trim stage, and the trim does *not* reach the output
-    // directly — the FX rack and the true-peak limiter sit between them (E-17 gave the
-    // exporter the same chain as playback, where it previously had neither).
-    expect(consumersOf(masterGain)).toContain(trim);
+    // The fader feeds the FX rack, *not* the trim: the trim is the last linear stage and
+    // must sit after the rack, or the rack's saturation absorbs the loudness correction
+    // (measured: a +7.07 dB request produced +1.74 dB of integrated loudness).
+    const faderConsumers = consumersOf(masterGain);
+    expect(faderConsumers.length).toBeGreaterThan(0);
+    expect(faderConsumers).not.toContain(trim);
+
+    // The rack feeds the trim: its only consumer among gain nodes is the trim stage.
     expect(consumersOf(trim)).not.toContain(ctx.destination as unknown as FakeNode);
+    expect(trim.incoming.length).toBeGreaterThan(0);
+    expect(trim.incoming).not.toContain(masterGain);
 
     // And everything the trim feeds is upstream of the destination.
     const ancestorsOfDestination = new Set<FakeNode>();

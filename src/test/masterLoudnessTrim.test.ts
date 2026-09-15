@@ -22,7 +22,7 @@ describe("master loudness trim", () => {
     localStorage.clear();
   });
 
-  it("is inserted as a separate stage between the fader and the limiter", () => {
+  it("is the last linear stage: fader -> FX rack -> trim -> limiter", () => {
     const engine = new AudioEngine();
     const internals = engine as unknown as {
       masterGain: any;
@@ -32,10 +32,13 @@ describe("master loudness trim", () => {
     };
 
     expect(internals.loudnessTrimGain).toBeTruthy();
-    // masterGain -> loudnessTrim -> masterFxRack -> limiter
-    expect(internals.loudnessTrimGain.incoming).toContain(internals.masterGain);
-    expect(internals.masterFxRack.inputNode.incoming).toContain(internals.loudnessTrimGain);
-    expect(internals.limiter.incoming).toContain(internals.masterFxRack.outputNode);
+    // masterGain -> masterFxRack -> loudnessTrim -> limiter.
+    // The trim sits after the rack so it is a *linear* gain: before it, the rack's
+    // saturation absorbed the correction (a +7.07 dB match request produced +1.74 dB of
+    // measured loudness). See the topology note in masterGraph.ts.
+    expect(internals.masterFxRack.inputNode.incoming).toContain(internals.masterGain);
+    expect(internals.loudnessTrimGain.incoming).toContain(internals.masterFxRack.outputNode);
+    expect(internals.limiter.incoming).toContain(internals.loudnessTrimGain);
     // The trim is not the fader: they are two distinct nodes.
     expect(internals.loudnessTrimGain).not.toBe(internals.masterGain);
   });

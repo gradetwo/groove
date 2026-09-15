@@ -28,6 +28,18 @@ function stripVolumeGains(): FakeGainNode[] {
 }
 
 /**
+ * How many gain nodes actually received a connection during the render.
+ *
+ * This is the robust way to ask "did this track produce voices?": the strip's entry node
+ * is now the E-10 insert chain rather than the fader, so asserting on the fader's `incoming`
+ * no longer distinguishes a playing track from a silenced one — the insert always feeds it.
+ * Counting connected gains compares like with like and states the real intent.
+ */
+function routedGainCount(): number {
+  return FakeOfflineAudioContext.lastInstance!.createdGains.filter((g) => g.incoming.length > 0).length;
+}
+
+/**
  * The cutoff of every biquad the render created, in creation order.
  *
  * E-17 gave the offline renderer the shared master graph, which contributes several
@@ -146,29 +158,38 @@ describe("F-03 · offline renderer honours the mixer", () => {
 
   it("drops muted tracks and keeps soloed ones", async () => {
     restore = installFakeOfflineAudioContext();
+    await renderPatternOffline(makePattern());
+    const bothPlaying = routedGainCount();
 
+    restore();
+    restore = installFakeOfflineAudioContext();
     const muted = makePattern();
     muted.tracks[0].mute = true;
     await renderPatternOffline(muted);
-    const mutedStrips = stripVolumeGains();
-    expect(mutedStrips[0].incoming.length).toBe(0);
-    expect(mutedStrips[1].incoming.length).toBeGreaterThan(0);
+    const mutedCount = routedGainCount();
+    expect(mutedCount).toBeLessThan(bothPlaying);
 
+    // Soloing one of two tracks must be audibly identical to muting the other.
+    restore();
+    restore = installFakeOfflineAudioContext();
     const soloed = makePattern();
     soloed.tracks[1].solo = true;
     await renderPatternOffline(soloed);
-    const soloStrips = stripVolumeGains();
-    expect(soloStrips[0].incoming.length).toBe(0);
-    expect(soloStrips[1].incoming.length).toBeGreaterThan(0);
+    expect(routedGainCount()).toBe(mutedCount);
   });
 
   it("respects probability 0 so exports never contain unhearable notes", async () => {
     restore = installFakeOfflineAudioContext();
+    await renderPatternOffline(makePattern());
+    const bothPlaying = routedGainCount();
+
+    restore();
+    restore = installFakeOfflineAudioContext();
     const pattern = makePattern();
     pattern.tracks[0].probability = new Array(16).fill(0);
     await renderPatternOffline(pattern);
-    const strips = stripVolumeGains();
-    expect(strips[0].incoming.length).toBe(0);
+    // Track 0 can never fire, so strictly fewer gains receive a signal than when it can.
+    expect(routedGainCount()).toBeLessThan(bothPlaying);
   });
 
   it("clamps hostile render parameters instead of allocating absurd buffers", async () => {

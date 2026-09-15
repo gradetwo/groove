@@ -1,27 +1,27 @@
 {
-  "version": "2.0.2",
+  "version": "2.0.13",
   "releaseDate": "2026-09-15",
-  "changelogCount": 66,
+  "changelogCount": 77,
   "latest": {
-    "version": "2.0.2",
-    "date": "2026-09-15",
+    "version": "2.0.13",
+    "date": "2026-09-16",
     "category": "audio",
     "title": {
-      "zh": "v2.0.2 真混响与真延迟上线、逐曲风母带效果默认值（dub 长延迟 / ambient 长混响 / metal 饱和）、力度终于改变音色",
-      "en": "v2.0.2 Real reverb and delay, per-genre master FX defaults (dub's long delay, ambient's long reverb, metal's saturation), and velocity that finally changes timbre"
+      "zh": "v2.0.13 阻塞解除：上游 GS-1 v2.1.5 落地按帧寻址的 note 事件（noteAt/noteOffAt），本仓已同步并把守卫翻转为「必须存在定时事件」",
+      "en": "v2.0.13 Unblocked: upstream GS-1 v2.1.5 ships frame-addressed note events (noteAt/noteOffAt); the pin is synced and the guard flips to requiring them"
     },
     "highlights": [
       {
-        "zh": "**每个曲风终于有自己的母带效果默认值**（登记项 N-14）。此前全库共用一套机架、四个效果**全部默认关闭**，159 个曲风零声明——「混音按曲风特色」到效果这一层就断了。现在 6 个分类 profile + **55 条逐曲风编排**，三个点名案例：**dub** 用四分音符长延迟、反馈 0.68、反馈环低通 2 kHz（重复逐次变暗）加 ping-pong；**ambient** 用 **9 秒**混响、预延迟 70 ms、返回 0.50；**金属**（death/thrash/heavy/black/metalcore）**饱和开启**（drive 4.5–6）配极小房间。切换曲风即载入该曲风默认（与换 patch 同义）。",
-        "en": "**Every genre finally has its own master FX defaults** (registered as N-14). One shared rack with all four effects **off by default** and zero declarations across 159 genres meant \"the mix reflects the genre\" stopped at the effects layer. There are now six category profiles plus **55 per-genre arrangements**: **dub** gets a quarter-note delay at 0.68 feedback with a 2 kHz low-pass in the loop so repeats darken as they travel, plus ping-pong; **ambient** gets a **9-second** r…"
+        "zh": "**上游实现了 §5.9 的提案**（GS-1 **v2.1.5 @ e073df5**，**ABI 仍为 8**）：`worklet-processor.js` 现在接受 `noteAt`/`noteOffAt` 并携带**绝对帧号**，内部维护按帧排序、上限 1024 条的队列，并在 `process()` 里**按事件切分渲染块**，因此事件落在它指定的那一帧而不是下一个 128 帧边界。`panic` 清空队列；非法帧号被忽略而不是当成 0；静音期间帧游标仍推进（否则静音结束后所有事件整体迟到）。",
+        "en": "**Upstream implemented the §5.9 proposal** (GS-1 **v2.1.5 @ e073df5**, **ABI still 8**): `worklet-processor.js` now accepts `noteAt`/`noteOffAt` carrying an **absolute frame**, keeps a frame-sorted queue capped at 1024 entries, and **splits the render block at each due event**, so an event lands on the frame it names rather than on the next 128-frame boundary. A panic clears the queue; a malformed frame is ignored rather than treated as zero; the frame cursor advances while…"
       },
       {
-        "zh": "**混响和延迟本身也换掉了**。旧混响是一个固定 1.5 秒的**白噪声**脉冲响应：没有频率相关衰减，尾巴一直是亮的、像加了噪声而不是空间；也没有预延迟和早期反射，返回量硬编码。旧延迟固定 250 ms、反馈环里**没有滤波**（每次重复都全带宽、越来越刺耳）、单声道。现在：混响有预延迟 + 5 个早期反射 + **分频段衰减**（高频先衰减，这才是「尾巴随时间变暗」）、可控立体声宽度、确定性种子；延迟可设音乐分割、**反馈环内置低通**、可选 ping-pong。实测 RT60 精度 ~0.2%（0.6 s→0.599、10 s→9.988）。",
-        "en": "**The reverb and delay themselves were replaced.** The old reverb was a fixed 1.5 s **white-noise** impulse: no frequency-dependent decay, so the tail stayed bright and read as added noise rather than space, plus no pre-delay, no early reflections and a hard-coded return. The old delay was a fixed 250 ms with **no filter in the feedback loop** (every repeat full-bandwidth, progressively harsher) and mono. Now: pre-delay, five early reflections, **per-band decay** (highs fade…"
+        "zh": "**实测契约（已写进上游测试）**：声部起点恒为 `atFrame + 128`——一个渲染量子的**常数**延迟，且**与事件落在块内哪个位置无关**（`atFrame` = 0/100/128/200/384/500 全部如此），块内位置被逐样本保留。这个常数由 `ready` 消息的 `scheduledNoteLatencyFrames` **报告给宿主**，宿主提前寻址即可与采样精确的原生声部对齐，不必硬编码。上游新增 7 条测试，其中最关键的一条是**「早发/晚发消息产生逐样本相同的输出」**——这正是导出 parity 能成立的前提。",
+        "en": "**The measured contract, pinned by upstream tests**: the voice starts at exactly `atFrame + 128` — a **constant** one-quantum latency that is **independent of where in the block the event falls** (`atFrame` = 0/100/128/200/384/500 all behave this way) — while the in-block position is preserved sample-exactly. That constant is **reported to the host** in the `ready` message as `scheduledNoteLatencyFrames`, so a host can address events early and stay aligned with sample-accura…"
       },
       {
-        "zh": "**导出终于和试听是同一条链路**（关闭 N-16）。此前离线导出器**根本没有送出总线、也没有主 FX 机架**：159 个曲风精心编排的混响/延迟送出在成品里完全不存在，用户拧的 FLT/DRIVE/CHORUS/LO-FI 也不在成品里；而且导出用 0.85 推子、实时用 0.8，还有一个无关的 ~0.5 dB 偏差。现在实时与离线共用**同一个** `buildMasterGraph`，链路与逐曲风效果都由同一函数应用。",
-        "en": "**Export and audition are finally the same chain** (closing N-16). The offline renderer had **no send buses and no master FX rack at all**: the reverb/delay sends curated for all 159 genres simply were not in the file, and neither was anything dialled into FLT/DRIVE/CHORUS/LO-FI. It also ran a 0.85 fader against playback's 0.8 — an unrelated ~0.5 dB offset. Both now share one `buildMasterGraph`, and the per-genre effects are applied by one shared function."
+        "zh": "**本仓侧**：`scripts/sync-gs1.mjs --from ../synth` 单向同步完成（6 个文件重新哈希，22 项契约断言全绿）；`Gs1Host` 增加 `noteOnAt`/`noteOffAt` 与 `scheduledNoteLatencyFrames`；`gs1Scheduling.test.ts` 的守卫**按设计自动翻转**——从「协议必须没有时间字段」变为「协议必须有定时事件对」。**顺带修掉一个真实缺陷**：同步脚本的 `pruneToManagedSet` 会删除不在清单里的文件，于是它**静默删掉了 `vendor/gs1/THIRD_PARTY_NOTICES.md`**——正是用来补上游许可缺口的那份；现在 `KEEP_FILES` 显式列出我们自己的文档。",
+        "en": "**On this side**: the one-directional `sync-gs1.mjs --from ../synth` completed (six files re-hashed, all 22 contract assertions green); `Gs1Host` gained `noteOnAt`/`noteOffAt` and `scheduledNoteLatencyFrames`; and the `gs1Scheduling.test.ts` guard **flipped automatically by design**, from \\\"the protocol must have no time field\\\" to \\\"the protocol must have the timed pair\\\". **A real defect was fixed along the way**: the sync script's `pruneToManagedSet` deletes anything not…"
       }
     ],
     "truncated": true

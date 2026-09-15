@@ -132,6 +132,13 @@ describe("E-13 · velocity curve", () => {
   });
 });
 
+/**
+ * The sweep peak a preset declares: the historical `·2.5` unless the preset states a depth of its
+ * own (E-14 gave presets that control), in which case the preset's number wins.
+ */
+const expectedPeakCutoff = (preset: SynthPreset): number =>
+  Math.min(preset.filterCutoff * 2 ** (preset.filterEnvOctaves ?? Math.log2(2.5)), 18000);
+
 describe("E-13 · per-preset velocity → timbre response", () => {
   it("annotates exactly the acoustic/emulative presets the task names", () => {
     expect(ANNOTATED_KEYS).toHaveLength(21);
@@ -175,9 +182,9 @@ describe("E-13 · per-preset velocity → timbre response", () => {
       expect(baseCutoff(soft), `${key} base margin`).toBeLessThan(baseCutoff(hard) * 0.9);
       expect(peakCutoff(soft), `${key} peak`).toBeLessThanOrEqual(peakCutoff(hard));
 
-      // Full velocity still lands on the preset's own cutoff and 2.5x sweep peak.
+      // Full velocity still lands on the preset's own cutoff and its declared sweep peak.
       expect(baseCutoff(hard)).toBe(preset.filterCutoff);
-      expect(peakCutoff(hard)).toBeCloseTo(Math.min(preset.filterCutoff * 2.5, 18000), 9);
+      expect(peakCutoff(hard)).toBeCloseTo(expectedPeakCutoff(preset), 9);
     });
   }
 
@@ -190,10 +197,9 @@ describe("E-13 · per-preset velocity → timbre response", () => {
         // Same events, same values, same times — the mapping genuinely short-circuits.
         expect(events, `${key}@${velocity}`).toEqual(reference);
         expect(baseCutoff(events), `${key}@${velocity} base`).toBe(preset.filterCutoff);
-        expect(peakCutoff(events), `${key}@${velocity} peak`).toBeCloseTo(
-          Math.min(preset.filterCutoff * 2.5, 18000),
-          9
-        );
+        // The *velocity* mapping short-circuits; the preset's own envelope depth (if it declares
+        // one) is part of its voicing, not part of the velocity response.
+        expect(peakCutoff(events), `${key}@${velocity} peak`).toBeCloseTo(expectedPeakCutoff(preset), 9);
       }
     });
   }
