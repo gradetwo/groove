@@ -23,6 +23,13 @@
  *   node scripts/measure_live_loudness.mjs --genres=a,b,c
  *   node scripts/measure_live_loudness.mjs --compare=a,b        # also A/B the compare view
  *   LIVE_BASE=https://... node scripts/measure_live_loudness.mjs  # against the deployed site
+ *   --json=out.json        # write the raw measurements
+ *   --baseline=file.json   # print per-genre deltas against a stored run
+ *
+ * Run-to-run variance: the aggregate spread (max-min) repeats to ~0.1 dB, but INDIVIDUAL
+ * genre readings vary by up to ~0.9 dB, because the fixed 1.8s sampling window lands on
+ * different bars of the loop and pattern density varies within a genre. Judge acceptance
+ * on the spread, or sample the same genre over several windows -- not on single deltas.
  */
 import http from "http";
 import fs from "fs";
@@ -72,6 +79,8 @@ function startServer() {
     server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port }));
   });
 }
+
+const beforePathLabel = (p) => `${path.basename(p)}`;
 
 const liveBase = process.env.LIVE_BASE || null;
 let server = null;
@@ -217,11 +226,72 @@ console.log(`\n--- studio, ${finite.length}/${rows.length} genres produced audio
 console.log(`rms min=${pct(0).toFixed(1)}  p10=${pct(0.1).toFixed(1)}  median=${pct(0.5).toFixed(1)}  p90=${pct(0.9).toFixed(1)}  max=${pct(1).toFixed(1)} dBFS`);
 console.log(`max−min spread: ${spread.toFixed(1)} dB   p90−p10 spread: ${(pct(0.9) - pct(0.1)).toFixed(1)} dB`);
 
+let compareResult = null;
+
 if (compareIds && compareIds.length >= 2) {
   const a = await measureCompareSide(compareIds[0], compareIds[1], "a");
   const b = await measureCompareSide(compareIds[0], compareIds[1], "b");
   console.log(`\n--- compare view A/B ---`);
   console.log(`A(${compareIds[0]}) rms=${a.rmsDb.toFixed(1)} dBFS  B(${compareIds[1]}) rms=${b.rmsDb.toFixed(1)} dBFS  Δ=${Math.abs(a.rmsDb - b.rmsDb).toFixed(1)} dB  (controls found: ${a.controlCount})`);
+  compareResult = {
+    ids: [compareIds[0], compareIds[1]],
+    a: Number(a.rmsDb.toFixed(2)),
+    b: Number(b.rmsDb.toFixed(2)),
+    deltaDb: Number(Math.abs(a.rmsDb - b.rmsDb).toFixed(2)),
+  };
+}
+
+const report = {
+  base,
+  metric: "master output RMS over 1.8s of playback, dBFS, sampled post-limiter",
+  genres: rows.map((r) => ({ id: r.id, rmsDb: Number(r.rmsDb.toFixed(2)), peakDb: Number(r.peakDb.toFixed(2)) })),
+  spread: {
+    maxMinusMin: Number(spread.toFixed(2)),
+    p90MinusP10: Number((pct(0.9) - pct(0.1)).toFixed(2)),
+  },
+  compare: compareResult,
+};
+
+const jsonOut = argVal("json");
+if (jsonOut) {
+  fs.writeFileSync(jsonOut, JSON.stringify(report, null, 2) + "\n");
+  console.log(`\nwrote ${jsonOut}`);
+}
+
+const baselinePath = argVal("baseline");
+if (baselinePath && fs.existsSync(baselinePath)) {
+  const before = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+  const beforeById = new Map((before.genres || []).map((g) => [g.id, g.rmsDb]));
+  console.log(`\n--- delta vs baseline (${beforePathLabel(baselinePath)}) ---`);
+  let worst = 0;
+  for (const r of report.genres) {
+    const prev = beforeById.get(r.id);
+    if (prev === undefined) continue;
+    const delta = r.rmsDb - prev;
+    if (Math.abs(delta) > Math.abs(worst)) worst = delta;
+    console.log(`  ${r.id.padEnd(20)} ${prev.toFixed(1).padStart(7)} -> ${r.rmsDb.toFixed(1).padStart(7)}  Δ${delta >= 0 ? "+" : ""}${delta.toFixed(1)} dB`);
+  }
+  // Spreads are only comparable when the same genre set was measured: a 2-genre
+  // subset has a smaller (and differently distributed) spread by construction.
+  const sameSet =
+    (before.genres || []).length === report.genres.length &&
+    report.genres.every((g) => beforeById.has(g.id));
+  const bs = before.spread || {};
+  if (sameSet) {
+    console.log(
+      `  spread max−min ${bs.maxMinusMin?.toFixed?.(1) ?? "?"} -> ${report.spread.maxMinusMin.toFixed(1)} dB` +
+        `   p90−p10 ${bs.p90MinusP10?.toFixed?.(1) ?? "?"} -> ${report.spread.p90MinusP10.toFixed(1)} dB`
+    );
+  } else {
+    console.log(
+      `  spread NOT compared: this run measured ${report.genres.length} genre(s) vs ` +
+        `${(before.genres || []).length} in the baseline — re-run the full sample for a like-for-like spread.`
+    );
+  }
+  if (before.compare && report.compare) {
+    console.log(`  compare Δ ${before.compare.deltaDb.toFixed(1)} -> ${report.compare.deltaDb.toFixed(1)} dB`);
+  }
+  console.log(`  largest single-genre move: ${worst.toFixed(1)} dB`);
 }
 
 console.log(`\npage errors: ${pageErrors.length}${pageErrors.length ? " — " + pageErrors.slice(0, 2).join(" | ") : ""}`);
