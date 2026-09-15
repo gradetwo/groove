@@ -177,6 +177,7 @@ export class FakeAudioGraph {
   createdFilters: FakeFilterNode[] = [];
   createdPanners: FakeStereoPannerNode[] = [];
   createdSpatialPanners: FakePannerNode[] = [];
+  createdBufferSources: FakeBufferSourceNode[] = [];
 
   createGain() {
     const node = new FakeGainNode();
@@ -194,7 +195,9 @@ export class FakeAudioGraph {
     return node;
   }
   createBufferSource() {
-    return new FakeBufferSourceNode();
+    const node = new FakeBufferSourceNode();
+    this.createdBufferSources.push(node);
+    return node;
   }
   createStereoPanner() {
     const node = new FakeStereoPannerNode();
