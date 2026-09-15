@@ -1,6 +1,6 @@
 {
   "generatedBy": "scripts/measure_genre_loudness.mjs",
-  "generatedAt": "2026-09-15T21:04:16.770Z",
+  "generatedAt": "2026-09-15T23:36:37.472Z",
   "subset": false,
   "limit": null,
   "genreCount": 159,
@@ -19,82 +19,329 @@
     "maxRounds": 5,
     "stillOutside": [
       {
+        "id": "chicago-house",
+        "residualDb": -0.795,
+        "trimDb": -5.03,
+        "trimIterations": 1
+      },
+      {
+        "id": "deep-house",
+        "residualDb": -0.529,
+        "trimDb": -2.84,
+        "trimIterations": 1
+      },
+      {
+        "id": "tech-house",
+        "residualDb": -0.729,
+        "trimDb": -4.63,
+        "trimIterations": 1
+      },
+      {
+        "id": "progressive-house",
+        "residualDb": -1.034,
+        "trimDb": -7.36,
+        "trimIterations": 1
+      },
+      {
+        "id": "electro-house",
+        "residualDb": -0.5,
+        "trimDb": -2.35,
+        "trimIterations": 1
+      },
+      {
+        "id": "bass-house",
+        "residualDb": -0.698,
+        "trimDb": -2.23,
+        "trimIterations": 1
+      },
+      {
+        "id": "ghetto-house",
+        "residualDb": -1.493,
+        "trimDb": -6.72,
+        "trimIterations": 1
+      },
+      {
+        "id": "tropical-house",
+        "residualDb": -0.402,
+        "trimDb": -3.03,
+        "trimIterations": 1
+      },
+      {
+        "id": "acid-house",
+        "residualDb": -0.75,
+        "trimDb": -1.55,
+        "trimIterations": 1
+      },
+      {
+        "id": "french-house",
+        "residualDb": -1.262,
+        "trimDb": -5.9,
+        "trimIterations": 1
+      },
+      {
+        "id": "melodic-house",
+        "residualDb": -1.32,
+        "trimDb": -6.95,
+        "trimIterations": 1
+      },
+      {
+        "id": "afro-house",
+        "residualDb": -0.322,
+        "trimDb": -1.74,
+        "trimIterations": 1
+      },
+      {
+        "id": "nu-disco-house",
+        "residualDb": -0.648,
+        "trimDb": -2.83,
+        "trimIterations": 1
+      },
+      {
         "id": "microhouse",
-        "residualDb": 2.702,
+        "residualDb": 2.275,
         "trimDb": 9,
-        "trimIterations": 4
+        "trimIterations": 1
+      },
+      {
+        "id": "detroit-techno",
+        "residualDb": -0.807,
+        "trimDb": -5.65,
+        "trimIterations": 1
+      },
+      {
+        "id": "acid-techno",
+        "residualDb": -0.804,
+        "trimDb": -1.48,
+        "trimIterations": 1
       },
       {
         "id": "dub-techno",
-        "residualDb": 0.253,
-        "trimDb": 3.64,
-        "trimIterations": 5
+        "residualDb": 0.684,
+        "trimDb": 4.9,
+        "trimIterations": 1
+      },
+      {
+        "id": "industrial-techno",
+        "residualDb": -0.522,
+        "trimDb": -5.13,
+        "trimIterations": 1
+      },
+      {
+        "id": "peak-time-techno",
+        "residualDb": -0.458,
+        "trimDb": -4.9,
+        "trimIterations": 1
+      },
+      {
+        "id": "hard-techno",
+        "residualDb": 0.227,
+        "trimDb": 1.5,
+        "trimIterations": 1
       },
       {
         "id": "ambient-techno",
-        "residualDb": 0.421,
-        "trimDb": 4.51,
-        "trimIterations": 5
+        "residualDb": 0.639,
+        "trimDb": 5.24,
+        "trimIterations": 1
+      },
+      {
+        "id": "raw-techno",
+        "residualDb": -0.833,
+        "trimDb": -5.76,
+        "trimIterations": 1
       },
       {
         "id": "schranz",
-        "residualDb": 0.203,
-        "trimDb": 2.31,
-        "trimIterations": 5
+        "residualDb": 0.459,
+        "trimDb": 2.93,
+        "trimIterations": 1
+      },
+      {
+        "id": "uplifting-trance",
+        "residualDb": -0.434,
+        "trimDb": -6.15,
+        "trimIterations": 1
+      },
+      {
+        "id": "progressive-trance",
+        "residualDb": -1.067,
+        "trimDb": -8.88,
+        "trimIterations": 1
+      },
+      {
+        "id": "psytrance",
+        "residualDb": -0.694,
+        "trimDb": -3.85,
+        "trimIterations": 1
+      },
+      {
+        "id": "goa-trance",
+        "residualDb": -0.557,
+        "trimDb": -3.85,
+        "trimIterations": 1
+      },
+      {
+        "id": "tech-trance",
+        "residualDb": -0.236,
+        "trimDb": -5.24,
+        "trimIterations": 1
+      },
+      {
+        "id": "hard-trance",
+        "residualDb": -0.693,
+        "trimDb": -2.37,
+        "trimIterations": 1
+      },
+      {
+        "id": "vocal-trance",
+        "residualDb": -0.907,
+        "trimDb": -8.31,
+        "trimIterations": 1
+      },
+      {
+        "id": "euro-trance",
+        "residualDb": -0.976,
+        "trimDb": -7.46,
+        "trimIterations": 1
+      },
+      {
+        "id": "dream-trance",
+        "residualDb": -1.274,
+        "trimDb": -9,
+        "trimIterations": 1
       },
       {
         "id": "post-dubstep",
-        "residualDb": 0.602,
-        "trimDb": 6.68,
-        "trimIterations": 5
+        "residualDb": 1.235,
+        "trimDb": 8.68,
+        "trimIterations": 1
+      },
+      {
+        "id": "chillstep",
+        "residualDb": 0.67,
+        "trimDb": 4.59,
+        "trimIterations": 1
+      },
+      {
+        "id": "jungle",
+        "residualDb": -0.389,
+        "trimDb": -2.66,
+        "trimIterations": 1
+      },
+      {
+        "id": "jump-up",
+        "residualDb": 0.245,
+        "trimDb": 1.6,
+        "trimIterations": 1
+      },
+      {
+        "id": "techstep",
+        "residualDb": 0.576,
+        "trimDb": 4.44,
+        "trimIterations": 1
+      },
+      {
+        "id": "halftime",
+        "residualDb": 0.419,
+        "trimDb": 3.68,
+        "trimIterations": 1
+      },
+      {
+        "id": "breakcore",
+        "residualDb": -1.385,
+        "trimDb": -9,
+        "trimIterations": 1
+      },
+      {
+        "id": "sambass",
+        "residualDb": -0.479,
+        "trimDb": -4.03,
+        "trimIterations": 1
       },
       {
         "id": "2-step-garage",
-        "residualDb": 0.378,
-        "trimDb": 4.21,
-        "trimIterations": 5
+        "residualDb": 0.838,
+        "trimDb": 5.73,
+        "trimIterations": 1
+      },
+      {
+        "id": "speed-garage",
+        "residualDb": -0.507,
+        "trimDb": -3.96,
+        "trimIterations": 1
       },
       {
         "id": "bassline",
-        "residualDb": 0.279,
-        "trimDb": 3.8,
-        "trimIterations": 5
+        "residualDb": 0.76,
+        "trimDb": 4.97,
+        "trimIterations": 1
       },
       {
-        "id": "chillwave",
-        "residualDb": 0.775,
-        "trimDb": 6.12,
-        "trimIterations": 5
+        "id": "uk-funky",
+        "residualDb": -0.375,
+        "trimDb": -3.16,
+        "trimIterations": 1
       },
       {
-        "id": "breakbeat",
-        "residualDb": 0.708,
-        "trimDb": 4.94,
-        "trimIterations": 5
+        "id": "dub",
+        "residualDb": 0.501,
+        "trimDb": 4.13,
+        "trimIterations": 1
       },
       {
-        "id": "big-beat",
-        "residualDb": 0.341,
-        "trimDb": 3.07,
-        "trimIterations": 5
+        "id": "speedbass",
+        "residualDb": -0.217,
+        "trimDb": -2.25,
+        "trimIterations": 1
       },
       {
-        "id": "dancehall",
-        "residualDb": 0.363,
-        "trimDb": 3.75,
-        "trimIterations": 5
+        "id": "hard-trap",
+        "residualDb": -0.562,
+        "trimDb": -3.66,
+        "trimIterations": 1
+      },
+      {
+        "id": "hybrid-trap",
+        "residualDb": -0.254,
+        "trimDb": -1.77,
+        "trimIterations": 1
+      },
+      {
+        "id": "wave",
+        "residualDb": 0.592,
+        "trimDb": 4.01,
+        "trimIterations": 1
+      },
+      {
+        "id": "chicago-drill",
+        "residualDb": -0.739,
+        "trimDb": -5.63,
+        "trimIterations": 1
+      },
+      {
+        "id": "uk-drill",
+        "residualDb": -0.708,
+        "trimDb": -4.77,
+        "trimIterations": 1
+      },
+      {
+        "id": "brooklyn-drill",
+        "residualDb": -0.889,
+        "trimDb": -6.35,
+        "trimIterations": 1
+      },
+      {
+        "id": "jersey-drill",
+        "residualDb": -1.441,
+        "trimDb": -9,
+        "trimIterations": 1
       }
     ],
     "clampLimited": [
       {
         "id": "microhouse",
         "trimDb": 9,
-        "residualDb": 2.702
-      },
-      {
-        "id": "microhouse",
-        "trimDb": 9,
-        "residualDb": 2.702
+        "residualDb": 2.275
       }
     ]
   },
@@ -109,8 +356,8 @@
     "trimPlacement": "master trim applied pre-limiter (same relative position as the live engine)",
     "note": "the gate ignores silence-between-hits, which is why sparse genres read far higher in LUFS than in windowed RMS"
   },
-  "targetLufs": -15.641,
-  "target": -15.641,
+  "targetLufs": -15.716,
+  "target": -15.716,
   "targetMetric": "LUFS (ITU-R BS.1770-4 gated integrated loudness)",
   "trimRangeDb": {
     "min": -9,
@@ -124,253 +371,253 @@
   "spread": {
     "legacyBefore": {
       "count": 159,
-      "min": -23.10031086154756,
+      "min": -23.10031082410136,
       "minGenre": "doom-metal",
-      "max": -11.872329073172802,
-      "maxGenre": "vocal-trance",
-      "p10": -18.646583934751888,
-      "p90": -13.310303757164764,
-      "p90p10": 5.336280177587124,
-      "fullRange": 11.227981788374757
+      "max": -11.713822696183227,
+      "maxGenre": "uplifting-trance",
+      "p10": -18.646585089839693,
+      "p90": -13.345311333955554,
+      "p90p10": 5.301273755884139,
+      "fullRange": 11.386488127918133
     },
     "arrangedBefore": {
       "count": 159,
-      "min": -23.002266326019548,
+      "min": -23.002266130330195,
       "minGenre": "doom-metal",
-      "max": -11.859285732563093,
+      "max": -11.673314267920029,
       "maxGenre": "tech-trance",
-      "p10": -18.55691757821696,
-      "p90": -13.153352853385567,
-      "p90p10": 5.403564724831394,
-      "fullRange": 11.142980593456455
+      "p10": -18.55691822674202,
+      "p90": -13.159812941599478,
+      "p90p10": 5.397105285142542,
+      "fullRange": 11.328951862410166
     },
     "after": {
-      "count": 159,
-      "min": -18.343099936586636,
+      "count": 68,
+      "min": -17.991336230959114,
       "minGenre": "microhouse",
-      "max": -15.443178662082865,
-      "maxGenre": "progressive-house",
-      "p10": -15.827368288665685,
-      "p90": -15.489517852524793,
-      "p90p10": 0.33785043614089183,
-      "fullRange": 2.8999212745037717
+      "max": -14.222819261334681,
+      "maxGenre": "ghetto-house",
+      "p10": -16.322349594859038,
+      "p90": -14.672704699066912,
+      "p90p10": 1.6496448957921253,
+      "fullRange": 3.7685169696244323
     },
     "metric": "LUFS (ITU-R BS.1770-4 gated integrated loudness)",
     "lufs": {
       "legacyBefore": {
         "count": 159,
-        "min": -23.10031086154756,
+        "min": -23.10031082410136,
         "minGenre": "doom-metal",
-        "max": -11.872329073172802,
-        "maxGenre": "vocal-trance",
-        "p10": -18.646583934751888,
-        "p90": -13.310303757164764,
-        "p90p10": 5.336280177587124,
-        "fullRange": 11.227981788374757
+        "max": -11.713822696183227,
+        "maxGenre": "uplifting-trance",
+        "p10": -18.646585089839693,
+        "p90": -13.345311333955554,
+        "p90p10": 5.301273755884139,
+        "fullRange": 11.386488127918133
       },
       "arrangedBefore": {
         "count": 159,
-        "min": -23.002266326019548,
+        "min": -23.002266130330195,
         "minGenre": "doom-metal",
-        "max": -11.859285732563093,
+        "max": -11.673314267920029,
         "maxGenre": "tech-trance",
-        "p10": -18.55691757821696,
-        "p90": -13.153352853385567,
-        "p90p10": 5.403564724831394,
-        "fullRange": 11.142980593456455
+        "p10": -18.55691822674202,
+        "p90": -13.159812941599478,
+        "p90p10": 5.397105285142542,
+        "fullRange": 11.328951862410166
       },
       "after": {
-        "count": 159,
-        "min": -18.343099936586636,
+        "count": 68,
+        "min": -17.991336230959114,
         "minGenre": "microhouse",
-        "max": -15.443178662082865,
-        "maxGenre": "progressive-house",
-        "p10": -15.827368288665685,
-        "p90": -15.489517852524793,
-        "p90p10": 0.33785043614089183,
-        "fullRange": 2.8999212745037717
+        "max": -14.222819261334681,
+        "maxGenre": "ghetto-house",
+        "p10": -16.322349594859038,
+        "p90": -14.672704699066912,
+        "p90p10": 1.6496448957921253,
+        "fullRange": 3.7685169696244323
       }
     },
     "rms": {
       "legacyBefore": {
         "count": 159,
-        "min": -23.51370604873552,
+        "min": -23.513706088610974,
         "minGenre": "doom-metal",
-        "max": -9.423652045979647,
+        "max": -9.423653433079384,
         "maxGenre": "footwork",
-        "p10": -17.850335058992478,
-        "p90": -11.651064991071445,
-        "p90p10": 6.199270067921033,
-        "fullRange": 14.090054002755874
+        "p10": -17.850335116041183,
+        "p90": -11.543816584745118,
+        "p90p10": 6.306518531296065,
+        "fullRange": 14.09005265553159
       },
       "arrangedBefore": {
         "count": 159,
-        "min": -23.276502651920204,
+        "min": -23.27650239359608,
         "minGenre": "doom-metal",
-        "max": -9.36917285075192,
+        "max": -9.36918566223996,
         "maxGenre": "footwork",
-        "p10": -17.868344966420995,
-        "p90": -11.64727468786773,
-        "p90p10": 6.221070278553265,
-        "fullRange": 13.907329801168284
+        "p10": -17.86834481512951,
+        "p90": -11.496964713708735,
+        "p90p10": 6.371380101420776,
+        "fullRange": 13.907316731356119
       },
       "after": {
-        "count": 159,
-        "min": -18.087298631374566,
-        "minGenre": "ambient",
-        "max": -12.676116707296782,
-        "maxGenre": "disco",
-        "p10": -15.50050487474456,
-        "p90": -13.413850902303933,
-        "p90p10": 2.0866539724406277,
-        "fullRange": 5.411181924077784
+        "count": 68,
+        "min": -16.526978299259312,
+        "minGenre": "dub",
+        "max": -11.639535327574059,
+        "maxGenre": "jersey-drill",
+        "p10": -14.826387936207782,
+        "p90": -12.859050460190286,
+        "p90p10": 1.9673374760174962,
+        "fullRange": 4.887442971685253
       }
     }
   },
   "genres": {
     "chicago-house": {
       "category": "Electronic",
-      "legacyLufs": -14.343,
+      "legacyLufs": -14.762,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -12.299,
-      "arrangedLufs": -14.374,
+      "legacyRmsDb": -12.171,
+      "arrangedLufs": -14.634,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -12.317,
-      "trimDb": -2.16,
-      "trimmedLufs": -15.531,
+      "arrangedRmsDb": -12.11,
+      "trimDb": -5.03,
+      "trimmedLufs": -14.922,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.436,
+      "trimmedRmsDb": -12.853,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 57,
-      "trimIterations": 3
+      "gatedBlockCount": 56,
+      "trimIterations": 1
     },
     "deep-house": {
       "category": "Electronic",
-      "legacyLufs": -15.239,
+      "legacyLufs": -15.656,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.416,
-      "arrangedLufs": -15.092,
+      "legacyRmsDb": -13.653,
+      "arrangedLufs": -15.529,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.289,
-      "trimDb": -0.81,
-      "trimmedLufs": -15.528,
+      "arrangedRmsDb": -13.533,
+      "trimDb": -2.84,
+      "trimmedLufs": -15.187,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.717,
+      "trimmedRmsDb": -13.382,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 59,
-      "trimIterations": 2
+      "gatedBlockCount": 56,
+      "trimIterations": 1
     },
     "tech-house": {
       "category": "Electronic",
-      "legacyLufs": -14.483,
+      "legacyLufs": -14.886,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -12.418,
-      "arrangedLufs": -14.423,
+      "legacyRmsDb": -12.487,
+      "arrangedLufs": -14.736,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -12.321,
-      "trimDb": -1.72,
-      "trimmedLufs": -15.471,
+      "arrangedRmsDb": -12.334,
+      "trimDb": -4.63,
+      "trimmedLufs": -14.988,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.353,
+      "trimmedRmsDb": -12.878,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "future-house": {
       "category": "Electronic",
-      "legacyLufs": -15.904,
+      "legacyLufs": -16.255,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.935,
-      "arrangedLufs": -15.875,
+      "legacyRmsDb": -13.878,
+      "arrangedLufs": -16.137,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.897,
-      "trimDb": 0.23,
-      "trimmedLufs": -15.76,
+      "arrangedRmsDb": -13.755,
+      "trimDb": 0.42,
+      "trimmedLufs": -15.669,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.774,
+      "trimmedRmsDb": -13.677,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
       "trimIterations": 1
     },
     "progressive-house": {
       "category": "Electronic",
-      "legacyLufs": -13.361,
+      "legacyLufs": -13.588,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -11.842,
-      "arrangedLufs": -13.361,
+      "legacyRmsDb": -11.653,
+      "arrangedLufs": -13.506,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -11.858,
-      "trimDb": -3.19,
-      "trimmedLufs": -15.443,
+      "arrangedRmsDb": -11.565,
+      "trimDb": -7.36,
+      "trimmedLufs": -14.683,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.905,
+      "trimmedRmsDb": -13.152,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "electro-house": {
       "category": "Electronic",
-      "legacyLufs": -15.41,
+      "legacyLufs": -15.895,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.736,
-      "arrangedLufs": -15.283,
+      "legacyRmsDb": -13.743,
+      "arrangedLufs": -15.866,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.645,
-      "trimDb": -0.36,
-      "trimmedLufs": -15.474,
+      "arrangedRmsDb": -13.682,
+      "trimDb": -2.35,
+      "trimmedLufs": -15.216,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.822,
+      "trimmedRmsDb": -13.581,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 56,
+      "gatedBlockCount": 55,
       "trimIterations": 1
     },
     "bass-house": {
       "category": "Electronic",
-      "legacyLufs": -15.807,
+      "legacyLufs": -17.11,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.859,
-      "arrangedLufs": -15.759,
+      "legacyRmsDb": -14.486,
+      "arrangedLufs": -16.988,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.767,
-      "trimDb": 0.12,
-      "trimmedLufs": -15.684,
+      "arrangedRmsDb": -14.345,
+      "trimDb": -2.23,
+      "trimmedLufs": -15.019,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.691,
+      "trimmedRmsDb": -12.986,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
       "trimIterations": 1
     },
     "ghetto-house": {
       "category": "Electronic",
-      "legacyLufs": -14.338,
+      "legacyLufs": -16.52,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -12.501,
-      "arrangedLufs": -14.456,
+      "legacyRmsDb": -13.736,
+      "arrangedLufs": -16.446,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -12.534,
-      "trimDb": -2.39,
-      "trimmedLufs": -15.452,
+      "arrangedRmsDb": -13.645,
+      "trimDb": -6.72,
+      "trimmedLufs": -14.223,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.479,
+      "trimmedRmsDb": -12.316,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 52,
-      "trimIterations": 3
+      "gatedBlockCount": 50,
+      "trimIterations": 1
     },
     "tropical-house": {
       "category": "Electronic",
@@ -381,284 +628,284 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.998,
-      "trimDb": -1.33,
-      "trimmedLufs": -15.505,
+      "trimDb": -3.03,
+      "trimmedLufs": -15.314,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.741,
+      "trimmedRmsDb": -13.567,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 64,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "acid-house": {
       "category": "Electronic",
-      "legacyLufs": -17.246,
-      "legacyPeakDb": -8.074,
-      "legacyRmsDb": -15.148,
-      "arrangedLufs": -17.166,
-      "arrangedPeakDb": -8.073,
-      "arrangedTruePeakDb": -8.073,
-      "arrangedRmsDb": -15.063,
-      "trimDb": 1.53,
-      "trimmedLufs": -15.636,
-      "trimmedPeakDb": -6.543,
-      "trimmedTruePeakDb": -6.543,
-      "trimmedRmsDb": -13.533,
+      "legacyLufs": -18.006,
+      "legacyPeakDb": -8.073,
+      "legacyRmsDb": -15.587,
+      "arrangedLufs": -17.915,
+      "arrangedPeakDb": -8.074,
+      "arrangedTruePeakDb": -8.074,
+      "arrangedRmsDb": -15.49,
+      "trimDb": -1.55,
+      "trimmedLufs": -14.966,
+      "trimmedPeakDb": -5.873,
+      "trimmedTruePeakDb": -5.873,
+      "trimmedRmsDb": -12.863,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 57,
+      "gatedBlockCount": 56,
       "trimIterations": 1
     },
     "french-house": {
       "category": "Electronic",
-      "legacyLufs": -14.641,
+      "legacyLufs": -16.204,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.509,
-      "arrangedLufs": -14.653,
+      "legacyRmsDb": -14.183,
+      "arrangedLufs": -16.112,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.469,
-      "trimDb": -1.4,
-      "trimmedLufs": -15.503,
+      "arrangedRmsDb": -14.08,
+      "trimDb": -5.9,
+      "trimmedLufs": -14.455,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.282,
+      "trimmedRmsDb": -13.269,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 57,
-      "trimIterations": 2
+      "gatedBlockCount": 56,
+      "trimIterations": 1
     },
     "melodic-house": {
       "category": "Electronic",
-      "legacyLufs": -14.268,
+      "legacyLufs": -15.426,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -12.512,
-      "arrangedLufs": -14.211,
+      "legacyRmsDb": -13.175,
+      "arrangedLufs": -15.365,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -12.447,
-      "trimDb": -2.27,
-      "trimmedLufs": -15.566,
+      "arrangedRmsDb": -13.104,
+      "trimDb": -6.95,
+      "trimmedLufs": -14.396,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.747,
+      "trimmedRmsDb": -12.623,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 58,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "afro-house": {
       "category": "Electronic",
-      "legacyLufs": -15.294,
+      "legacyLufs": -15.635,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.47,
-      "arrangedLufs": -15.326,
+      "legacyRmsDb": -13.505,
+      "arrangedLufs": -15.576,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.478,
-      "trimDb": -0.32,
-      "trimmedLufs": -15.481,
+      "arrangedRmsDb": -13.436,
+      "trimDb": -1.74,
+      "trimmedLufs": -15.394,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.631,
+      "trimmedRmsDb": -13.545,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
       "trimIterations": 1
     },
     "nu-disco-house": {
       "category": "Electronic",
-      "legacyLufs": -15.329,
+      "legacyLufs": -16.205,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.857,
-      "arrangedLufs": -15.303,
+      "legacyRmsDb": -14.152,
+      "arrangedLufs": -16.14,
       "arrangedPeakDb": -1.3,
-      "arrangedTruePeakDb": -1.299,
-      "arrangedRmsDb": -13.814,
-      "trimDb": -0.34,
-      "trimmedLufs": -15.5,
+      "arrangedTruePeakDb": -1.3,
+      "arrangedRmsDb": -14.08,
+      "trimDb": -2.83,
+      "trimmedLufs": -15.069,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.299,
-      "trimmedRmsDb": -14.004,
+      "trimmedRmsDb": -13.591,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 58,
       "trimIterations": 1
     },
     "microhouse": {
       "category": "Electronic",
-      "legacyLufs": -17.822,
+      "legacyLufs": -17.842,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -15.291,
-      "arrangedLufs": -17.87,
+      "legacyRmsDb": -15.144,
+      "arrangedLufs": -17.757,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -15.293,
+      "arrangedRmsDb": -15.039,
       "trimDb": 9,
-      "trimmedLufs": -18.343,
+      "trimmedLufs": -17.991,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.699,
+      "trimmedRmsDb": -15.287,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 4
+      "trimIterations": 1
     },
     "detroit-techno": {
       "category": "Electronic",
-      "legacyLufs": -14.233,
+      "legacyLufs": -14.175,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -11.951,
-      "arrangedLufs": -14.274,
+      "legacyRmsDb": -11.593,
+      "arrangedLufs": -14.113,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -11.944,
-      "trimDb": -2.66,
-      "trimmedLufs": -15.516,
-      "trimmedPeakDb": -1.34,
-      "trimmedTruePeakDb": -1.301,
-      "trimmedRmsDb": -13.21,
+      "arrangedRmsDb": -11.519,
+      "trimDb": -5.65,
+      "trimmedLufs": -14.909,
+      "trimmedPeakDb": -1.3,
+      "trimmedTruePeakDb": -1.3,
+      "trimmedRmsDb": -12.597,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 56,
-      "trimIterations": 3
+      "gatedBlockCount": 55,
+      "trimIterations": 1
     },
     "minimal-techno": {
       "category": "Electronic",
-      "legacyLufs": -15.713,
+      "legacyLufs": -15.734,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -13.82,
-      "arrangedLufs": -15.641,
+      "legacyRmsDb": -13.684,
+      "arrangedLufs": -15.665,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.684,
-      "trimDb": 0,
-      "trimmedLufs": -15.641,
+      "arrangedRmsDb": -13.594,
+      "trimDb": -0.05,
+      "trimmedLufs": -15.669,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.684,
+      "trimmedRmsDb": -13.715,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
       "trimIterations": 1
     },
     "acid-techno": {
       "category": "Electronic",
-      "legacyLufs": -17.491,
+      "legacyLufs": -18.316,
       "legacyPeakDb": -9.585,
-      "legacyRmsDb": -15.64,
-      "arrangedLufs": -17.432,
+      "legacyRmsDb": -16.096,
+      "arrangedLufs": -18.234,
       "arrangedPeakDb": -9.585,
       "arrangedTruePeakDb": -9.585,
-      "arrangedRmsDb": -15.57,
-      "trimDb": 1.79,
-      "trimmedLufs": -15.642,
-      "trimmedPeakDb": -7.795,
-      "trimmedTruePeakDb": -7.795,
-      "trimmedRmsDb": -13.78,
+      "arrangedRmsDb": -16.008,
+      "trimDb": -1.48,
+      "trimmedLufs": -14.912,
+      "trimmedPeakDb": -7.065,
+      "trimmedTruePeakDb": -7.065,
+      "trimmedRmsDb": -13.05,
       "withinGenreSpreadDb": 0,
-      "gatedBlockCount": 53,
+      "gatedBlockCount": 51,
       "trimIterations": 1
     },
     "dub-techno": {
       "category": "Electronic",
-      "legacyLufs": -16.785,
+      "legacyLufs": -17.174,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -14.174,
-      "arrangedLufs": -16.864,
+      "legacyRmsDb": -14.318,
+      "arrangedLufs": -17.219,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -14.291,
-      "trimDb": 3.64,
-      "trimmedLufs": -15.894,
+      "arrangedRmsDb": -14.421,
+      "trimDb": 4.9,
+      "trimmedLufs": -16.4,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.233,
+      "trimmedRmsDb": -13.785,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 5
+      "trimIterations": 1
     },
     "industrial-techno": {
       "category": "Electronic",
-      "legacyLufs": -13.578,
+      "legacyLufs": -13.356,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -11.914,
-      "arrangedLufs": -13.434,
+      "legacyRmsDb": -11.554,
+      "arrangedLufs": -13.185,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -11.761,
-      "trimDb": -2.91,
-      "trimmedLufs": -15.507,
+      "arrangedRmsDb": -11.383,
+      "trimDb": -5.13,
+      "trimmedLufs": -15.194,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.801,
+      "trimmedRmsDb": -13.487,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "peak-time-techno": {
       "category": "Electronic",
-      "legacyLufs": -13.167,
+      "legacyLufs": -13.344,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -11.487,
-      "arrangedLufs": -13.052,
+      "legacyRmsDb": -11.268,
+      "arrangedLufs": -13.114,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -11.331,
-      "trimDb": -2.98,
-      "trimmedLufs": -15.638,
-      "trimmedPeakDb": -2.776,
-      "trimmedTruePeakDb": -2.704,
-      "trimmedRmsDb": -13.917,
+      "arrangedRmsDb": -11.029,
+      "trimDb": -4.9,
+      "trimmedLufs": -15.258,
+      "trimmedPeakDb": -2.396,
+      "trimmedTruePeakDb": -2.324,
+      "trimmedRmsDb": -13.537,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "hard-techno": {
       "category": "Electronic",
-      "legacyLufs": -16.31,
-      "legacyPeakDb": -1.3,
-      "legacyRmsDb": -14.518,
-      "arrangedLufs": -16.171,
-      "arrangedPeakDb": -1.3,
+      "legacyLufs": -16.324,
+      "legacyPeakDb": -1.302,
+      "legacyRmsDb": -14.068,
+      "arrangedLufs": -16.069,
+      "arrangedPeakDb": -1.301,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -14.307,
-      "trimDb": 0.53,
-      "trimmedLufs": -15.837,
+      "arrangedRmsDb": -13.785,
+      "trimDb": 1.5,
+      "trimmedLufs": -15.943,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.941,
+      "trimmedRmsDb": -14.058,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 48,
       "trimIterations": 1
     },
     "ambient-techno": {
       "category": "Electronic",
-      "legacyLufs": -17.142,
+      "legacyLufs": -17.579,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -14.702,
-      "arrangedLufs": -17.14,
+      "legacyRmsDb": -14.973,
+      "arrangedLufs": -17.753,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -14.885,
-      "trimDb": 4.51,
-      "trimmedLufs": -16.062,
+      "arrangedRmsDb": -15.277,
+      "trimDb": 5.24,
+      "trimmedLufs": -16.355,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.779,
+      "trimmedRmsDb": -14.072,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
-      "trimIterations": 5
+      "trimIterations": 1
     },
     "raw-techno": {
       "category": "Electronic",
-      "legacyLufs": -13.845,
+      "legacyLufs": -14.157,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -12.715,
-      "arrangedLufs": -13.947,
+      "legacyRmsDb": -12.49,
+      "arrangedLufs": -14.106,
       "arrangedPeakDb": -1.3,
-      "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -12.764,
-      "trimDb": -2.39,
-      "trimmedLufs": -15.517,
+      "arrangedTruePeakDb": -1.299,
+      "arrangedRmsDb": -12.427,
+      "trimDb": -5.76,
+      "trimmedLufs": -14.883,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.347,
+      "trimmedRmsDb": -13.701,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 53,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "schranz": {
       "category": "Electronic",
@@ -669,176 +916,176 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.297,
       "arrangedRmsDb": -13.664,
-      "trimDb": 2.31,
-      "trimmedLufs": -15.844,
+      "trimDb": 2.93,
+      "trimmedLufs": -16.175,
       "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.269,
-      "trimmedRmsDb": -13.075,
+      "trimmedTruePeakDb": -1.279,
+      "trimmedRmsDb": -13.472,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 44,
-      "trimIterations": 5
+      "trimIterations": 1
     },
     "uplifting-trance": {
       "category": "Electronic",
-      "legacyLufs": -11.988,
+      "legacyLufs": -11.714,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -10.362,
-      "arrangedLufs": -12.071,
+      "legacyRmsDb": -9.775,
+      "arrangedLufs": -11.713,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -10.511,
-      "trimDb": -4.34,
-      "trimmedLufs": -15.622,
-      "trimmedPeakDb": -1.731,
-      "trimmedTruePeakDb": -1.722,
-      "trimmedRmsDb": -14.094,
+      "arrangedRmsDb": -9.761,
+      "trimDb": -6.15,
+      "trimmedLufs": -15.282,
+      "trimmedPeakDb": -1.391,
+      "trimmedTruePeakDb": -1.382,
+      "trimmedRmsDb": -13.754,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "progressive-trance": {
       "category": "Electronic",
-      "legacyLufs": -12.252,
+      "legacyLufs": -12.245,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -10.76,
-      "arrangedLufs": -12.204,
+      "legacyRmsDb": -10.621,
+      "arrangedLufs": -12.182,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -10.722,
-      "trimDb": -4.51,
-      "trimmedLufs": -15.604,
-      "trimmedPeakDb": -1.606,
-      "trimmedTruePeakDb": -1.606,
-      "trimmedRmsDb": -14.088,
+      "arrangedRmsDb": -10.554,
+      "trimDb": -8.88,
+      "trimmedLufs": -14.649,
+      "trimmedPeakDb": -1.3,
+      "trimmedTruePeakDb": -1.3,
+      "trimmedRmsDb": -13.134,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "psytrance": {
       "category": "Electronic",
-      "legacyLufs": -14.971,
+      "legacyLufs": -15.55,
       "legacyPeakDb": -1.302,
-      "legacyRmsDb": -13.155,
-      "arrangedLufs": -14.73,
+      "legacyRmsDb": -13.363,
+      "arrangedLufs": -15.312,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -12.94,
-      "trimDb": -1.12,
-      "trimmedLufs": -15.618,
+      "arrangedRmsDb": -13.123,
+      "trimDb": -3.85,
+      "trimmedLufs": -15.022,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.831,
+      "trimmedRmsDb": -13.233,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "goa-trance": {
       "category": "Electronic",
-      "legacyLufs": -14.638,
+      "legacyLufs": -14.705,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -12.78,
-      "arrangedLufs": -14.583,
+      "legacyRmsDb": -12.832,
+      "arrangedLufs": -14.666,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -12.796,
-      "trimDb": -1.53,
-      "trimmedLufs": -15.489,
+      "arrangedRmsDb": -12.859,
+      "trimDb": -3.85,
+      "trimmedLufs": -15.159,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.797,
+      "trimmedRmsDb": -13.459,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "tech-trance": {
       "category": "Electronic",
-      "legacyLufs": -12.051,
+      "legacyLufs": -11.939,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -10.274,
-      "arrangedLufs": -11.859,
+      "legacyRmsDb": -10.022,
+      "arrangedLufs": -11.673,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -10.072,
-      "trimDb": -4.2,
-      "trimmedLufs": -15.641,
-      "trimmedPeakDb": -1.871,
-      "trimmedTruePeakDb": -1.816,
-      "trimmedRmsDb": -13.887,
+      "arrangedRmsDb": -9.747,
+      "trimDb": -5.24,
+      "trimmedLufs": -15.481,
+      "trimmedPeakDb": -1.711,
+      "trimmedTruePeakDb": -1.656,
+      "trimmedRmsDb": -13.727,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "hard-trance": {
       "category": "Electronic",
-      "legacyLufs": -16.085,
+      "legacyLufs": -16.983,
       "legacyPeakDb": -1.306,
-      "legacyRmsDb": -14.176,
-      "arrangedLufs": -15.792,
-      "arrangedPeakDb": -1.301,
+      "legacyRmsDb": -14.605,
+      "arrangedLufs": -16.795,
+      "arrangedPeakDb": -1.305,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -13.902,
-      "trimDb": 0.15,
-      "trimmedLufs": -15.669,
-      "trimmedPeakDb": -1.301,
+      "arrangedRmsDb": -14.379,
+      "trimDb": -2.37,
+      "trimmedLufs": -15.024,
+      "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.776,
+      "trimmedRmsDb": -13.111,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 49,
       "trimIterations": 1
     },
     "vocal-trance": {
       "category": "Electronic",
-      "legacyLufs": -11.872,
+      "legacyLufs": -11.869,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -10.567,
-      "arrangedLufs": -11.956,
+      "legacyRmsDb": -10.507,
+      "arrangedLufs": -11.955,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -10.701,
-      "trimDb": -4.59,
-      "trimmedLufs": -15.64,
-      "trimmedPeakDb": -2.47,
-      "trimmedTruePeakDb": -2.45,
-      "trimmedRmsDb": -14.406,
+      "arrangedRmsDb": -10.627,
+      "trimDb": -8.31,
+      "trimmedLufs": -14.81,
+      "trimmedPeakDb": -1.64,
+      "trimmedTruePeakDb": -1.62,
+      "trimmedRmsDb": -13.576,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 53,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "euro-trance": {
       "category": "Electronic",
-      "legacyLufs": -12.909,
+      "legacyLufs": -13.226,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -10.872,
-      "arrangedLufs": -12.875,
+      "legacyRmsDb": -10.636,
+      "arrangedLufs": -13.16,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
-      "arrangedRmsDb": -10.928,
-      "trimDb": -3.48,
-      "trimmedLufs": -15.589,
-      "trimmedPeakDb": -1.306,
+      "arrangedRmsDb": -10.561,
+      "trimDb": -7.46,
+      "trimmedLufs": -14.74,
+      "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.663,
+      "trimmedRmsDb": -12.811,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "dream-trance": {
       "category": "Electronic",
-      "legacyLufs": -12.106,
+      "legacyLufs": -12.122,
       "legacyPeakDb": -1.3,
-      "legacyRmsDb": -10.729,
+      "legacyRmsDb": -10.733,
       "arrangedLufs": -12.239,
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -10.977,
-      "trimDb": -4.66,
-      "trimmedLufs": -15.534,
+      "trimDb": -9,
+      "trimmedLufs": -14.442,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.217,
+      "trimmedRmsDb": -13.123,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "dubstep": {
       "category": "Electronic",
@@ -849,11 +1096,11 @@
       "arrangedPeakDb": -12.027,
       "arrangedTruePeakDb": -12.027,
       "arrangedRmsDb": -19.789,
-      "trimDb": 6.64,
-      "trimmedLufs": -15.644,
-      "trimmedPeakDb": -5.387,
-      "trimmedTruePeakDb": -5.387,
-      "trimmedRmsDb": -13.149,
+      "trimDb": 6.57,
+      "trimmedLufs": -15.714,
+      "trimmedPeakDb": -5.457,
+      "trimmedTruePeakDb": -5.457,
+      "trimmedRmsDb": -13.219,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 46,
       "trimIterations": 1
@@ -863,15 +1110,15 @@
       "legacyLufs": -20.289,
       "legacyPeakDb": -13.065,
       "legacyRmsDb": -18.302,
-      "arrangedLufs": -20.172,
+      "arrangedLufs": -20.173,
       "arrangedPeakDb": -13.065,
       "arrangedTruePeakDb": -13.065,
       "arrangedRmsDb": -18.161,
-      "trimDb": 4.53,
-      "trimmedLufs": -15.643,
-      "trimmedPeakDb": -8.535,
-      "trimmedTruePeakDb": -8.535,
-      "trimmedRmsDb": -13.631,
+      "trimDb": 4.46,
+      "trimmedLufs": -15.712,
+      "trimmedPeakDb": -8.605,
+      "trimmedTruePeakDb": -8.605,
+      "trimmedRmsDb": -13.701,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
       "trimIterations": 1
@@ -885,11 +1132,11 @@
       "arrangedPeakDb": -13.746,
       "arrangedTruePeakDb": -13.6,
       "arrangedRmsDb": -20.652,
-      "trimDb": 6.59,
-      "trimmedLufs": -15.64,
-      "trimmedPeakDb": -7.156,
-      "trimmedTruePeakDb": -7.01,
-      "trimmedRmsDb": -14.062,
+      "trimDb": 6.51,
+      "trimmedLufs": -15.72,
+      "trimmedPeakDb": -7.236,
+      "trimmedTruePeakDb": -7.09,
+      "trimmedRmsDb": -14.142,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
       "trimIterations": 1
@@ -903,11 +1150,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.992,
-      "trimDb": 0.08,
-      "trimmedLufs": -15.657,
+      "trimDb": 0,
+      "trimmedLufs": -15.716,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.942,
+      "trimmedRmsDb": -14.992,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
       "trimIterations": 1
@@ -921,11 +1168,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.469,
-      "trimDb": 0.29,
-      "trimmedLufs": -15.776,
+      "trimDb": 0.22,
+      "trimmedLufs": -15.81,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.322,
+      "trimmedRmsDb": -14.354,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
       "trimIterations": 1
@@ -939,14 +1186,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.291,
-      "trimDb": 6.68,
-      "trimmedLufs": -16.243,
+      "trimDb": 8.68,
+      "trimmedLufs": -16.951,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.669,
+      "trimmedRmsDb": -14.989,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 47,
-      "trimIterations": 5
+      "trimIterations": 1
     },
     "tearout-dubstep": {
       "category": "Electronic",
@@ -957,11 +1204,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.593,
-      "trimDb": 0.28,
-      "trimmedLufs": -15.765,
+      "trimDb": 0.21,
+      "trimmedLufs": -15.804,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.426,
+      "trimmedRmsDb": -13.467,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 50,
       "trimIterations": 1
@@ -975,14 +1222,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.695,
-      "trimDb": 2.76,
-      "trimmedLufs": -15.73,
+      "trimDb": 4.59,
+      "trimmedLufs": -16.386,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.646,
+      "trimmedRmsDb": -15.173,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 45,
-      "trimIterations": 4
+      "trimIterations": 1
     },
     "deathstep": {
       "category": "Electronic",
@@ -993,11 +1240,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.724,
-      "trimDb": -0.89,
-      "trimmedLufs": -15.515,
+      "trimDb": -0.96,
+      "trimmedLufs": -15.579,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.465,
+      "trimmedRmsDb": -13.528,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 50,
       "trimIterations": 1
@@ -1011,14 +1258,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.124,
-      "trimDb": -0.98,
-      "trimmedLufs": -15.467,
+      "trimDb": -2.66,
+      "trimmedLufs": -15.327,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.568,
+      "trimmedRmsDb": -13.434,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 43,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "liquid-dnb": {
       "category": "Electronic",
@@ -1029,11 +1276,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.196,
-      "trimDb": -0.11,
-      "trimmedLufs": -15.59,
+      "trimDb": -0.19,
+      "trimmedLufs": -15.637,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.255,
+      "trimmedRmsDb": -14.299,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 41,
       "trimIterations": 1
@@ -1047,11 +1294,11 @@
       "arrangedPeakDb": -12.006,
       "arrangedTruePeakDb": -11.946,
       "arrangedRmsDb": -18.327,
-      "trimDb": 3.64,
-      "trimmedLufs": -15.642,
-      "trimmedPeakDb": -8.366,
-      "trimmedTruePeakDb": -8.306,
-      "trimmedRmsDb": -14.687,
+      "trimDb": 3.57,
+      "trimmedLufs": -15.712,
+      "trimmedPeakDb": -8.436,
+      "trimmedTruePeakDb": -8.376,
+      "trimmedRmsDb": -14.757,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 41,
       "trimIterations": 1
@@ -1065,14 +1312,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.285,
-      "trimDb": 0.77,
-      "trimmedLufs": -15.839,
+      "trimDb": 1.6,
+      "trimmedLufs": -15.961,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.004,
+      "trimmedRmsDb": -15.125,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 41,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "techstep": {
       "category": "Electronic",
@@ -1083,14 +1330,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.291,
-      "trimDb": 2.48,
-      "trimmedLufs": -15.783,
+      "trimDb": 4.44,
+      "trimmedLufs": -16.292,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.903,
+      "trimmedRmsDb": -14.371,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 40,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "halftime": {
       "category": "Electronic",
@@ -1101,14 +1348,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.343,
-      "trimDb": 2.1,
-      "trimmedLufs": -15.827,
+      "trimDb": 3.68,
+      "trimmedLufs": -16.135,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.958,
+      "trimmedRmsDb": -14.249,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 80,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "breakcore": {
       "category": "Electronic",
@@ -1119,14 +1366,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.546,
-      "trimDb": -4.41,
-      "trimmedLufs": -15.535,
+      "trimDb": -9,
+      "trimmedLufs": -14.331,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.124,
+      "trimmedRmsDb": -12.862,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 38,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "ragga-jungle": {
       "category": "Electronic",
@@ -1137,11 +1384,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.278,
-      "trimDb": 0.21,
-      "trimmedLufs": -15.754,
+      "trimDb": 0.13,
+      "trimmedLufs": -15.789,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.182,
+      "trimmedRmsDb": -14.218,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 41,
       "trimIterations": 1
@@ -1155,14 +1402,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.706,
-      "trimDb": -2.01,
-      "trimmedLufs": -15.525,
+      "trimDb": -4.03,
+      "trimmedLufs": -15.238,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.061,
+      "trimmedRmsDb": -13.783,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 42,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "uk-garage": {
       "category": "Electronic",
@@ -1173,11 +1420,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.631,
-      "trimDb": 0.11,
-      "trimmedLufs": -15.709,
+      "trimDb": 0.04,
+      "trimmedLufs": -15.737,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.598,
+      "trimmedRmsDb": -14.619,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
       "trimIterations": 1
@@ -1191,14 +1438,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.727,
-      "trimDb": 4.21,
-      "trimmedLufs": -16.018,
+      "trimDb": 5.73,
+      "trimmedLufs": -16.554,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.692,
+      "trimmedRmsDb": -15.114,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 53,
-      "trimIterations": 5
+      "trimIterations": 1
     },
     "speed-garage": {
       "category": "Electronic",
@@ -1209,14 +1456,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.613,
-      "trimDb": -1.82,
-      "trimmedLufs": -15.508,
+      "trimDb": -3.96,
+      "trimmedLufs": -15.209,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.857,
+      "trimmedRmsDb": -13.543,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "grime": {
       "category": "Electronic",
@@ -1227,11 +1474,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.548,
-      "trimDb": 0.24,
-      "trimmedLufs": -15.8,
+      "trimDb": 0.16,
+      "trimmedLufs": -15.826,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.483,
+      "trimmedRmsDb": -14.505,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
       "trimIterations": 1
@@ -1245,14 +1492,14 @@
       "arrangedPeakDb": -1.301,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.541,
-      "trimDb": 3.8,
-      "trimmedLufs": -15.92,
-      "trimmedPeakDb": -1.3,
+      "trimDb": 4.97,
+      "trimmedLufs": -16.476,
+      "trimmedPeakDb": -1.301,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.307,
+      "trimmedRmsDb": -14.017,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 49,
-      "trimIterations": 5
+      "trimIterations": 1
     },
     "uk-funky": {
       "category": "Electronic",
@@ -1263,14 +1510,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.441,
-      "trimDb": -1.54,
-      "trimmedLufs": -15.552,
+      "trimDb": -3.16,
+      "trimmedLufs": -15.341,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.519,
+      "trimmedRmsDb": -14.31,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "dub": {
       "category": "Electronic",
@@ -1281,14 +1528,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -17.636,
-      "trimDb": 2.47,
-      "trimmedLufs": -15.748,
+      "trimDb": 4.13,
+      "trimmedLufs": -16.217,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -16.053,
+      "trimmedRmsDb": -16.527,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 69,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "speedbass": {
       "category": "Electronic",
@@ -1299,14 +1546,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.061,
-      "trimDb": -1.29,
-      "trimmedLufs": -15.634,
-      "trimmedPeakDb": -1.384,
+      "trimDb": -2.25,
+      "trimmedLufs": -15.499,
+      "trimmedPeakDb": -1.32,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.162,
+      "trimmedRmsDb": -14.027,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 49,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "edm-trap": {
       "category": "Electronic",
@@ -1317,11 +1564,11 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.861,
-      "trimDb": 0.11,
-      "trimmedLufs": -15.715,
+      "trimDb": 0.04,
+      "trimmedLufs": -15.74,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -12.821,
+      "trimmedRmsDb": -12.847,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 49,
       "trimIterations": 1
@@ -1335,14 +1582,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.876,
-      "trimDb": -1.59,
-      "trimmedLufs": -15.508,
+      "trimDb": -3.66,
+      "trimmedLufs": -15.154,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.563,
+      "trimmedRmsDb": -13.193,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 48,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "hybrid-trap": {
       "category": "Electronic",
@@ -1353,14 +1600,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.201,
-      "trimDb": -0.67,
-      "trimmedLufs": -15.543,
+      "trimDb": -1.77,
+      "trimmedLufs": -15.462,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.569,
+      "trimmedRmsDb": -13.484,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 48,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "wave": {
       "category": "Electronic",
@@ -1371,14 +1618,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.103,
-      "trimDb": 2.73,
-      "trimmedLufs": -15.798,
+      "trimDb": 4.01,
+      "trimmedLufs": -16.308,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.157,
+      "trimmedRmsDb": -14.651,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
-      "trimIterations": 5
+      "trimIterations": 1
     },
     "chicago-drill": {
       "category": "Electronic",
@@ -1389,14 +1636,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.214,
-      "trimDb": -2.57,
-      "trimmedLufs": -15.45,
+      "trimDb": -5.63,
+      "trimmedLufs": -14.977,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.57,
+      "trimmedRmsDb": -14.16,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
-      "trimIterations": 2
+      "trimIterations": 1
     },
     "uk-drill": {
       "category": "Electronic",
@@ -1407,14 +1654,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.389,
-      "trimDb": -2.17,
-      "trimmedLufs": -15.477,
+      "trimDb": -4.77,
+      "trimmedLufs": -15.008,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.376,
+      "trimmedRmsDb": -12.906,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 50,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "brooklyn-drill": {
       "category": "Electronic",
@@ -1425,14 +1672,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.296,
       "arrangedRmsDb": -12.402,
-      "trimDb": -3.03,
-      "trimmedLufs": -15.53,
+      "trimDb": -6.35,
+      "trimmedLufs": -14.827,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.962,
+      "trimmedRmsDb": -13.298,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 48,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "jersey-drill": {
       "category": "Electronic",
@@ -1443,14 +1690,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -10.516,
-      "trimDb": -4.37,
-      "trimmedLufs": -15.582,
+      "trimDb": -9,
+      "trimmedLufs": -14.275,
       "trimmedPeakDb": -1.3,
       "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -12.969,
+      "trimmedRmsDb": -11.64,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
-      "trimIterations": 3
+      "trimIterations": 1
     },
     "future-bass": {
       "category": "Electronic",
@@ -1461,14 +1708,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.126,
-      "trimDb": -0.3,
-      "trimmedLufs": -15.52,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.271,
+      "trimDb": -0.38,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 49,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "kawaii-future-bass": {
       "category": "Electronic",
@@ -1479,14 +1726,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.633,
-      "trimDb": -3.4,
-      "trimmedLufs": -15.571,
-      "trimmedPeakDb": -1.305,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.09,
+      "trimDb": -2.88,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 48,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "synthwave": {
       "category": "Electronic",
@@ -1497,14 +1744,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.81,
-      "trimDb": -3.35,
-      "trimmedLufs": -15.486,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.187,
+      "trimDb": -2.58,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 66,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "vaporwave": {
       "category": "Electronic",
@@ -1515,14 +1762,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.173,
-      "trimDb": 0.74,
-      "trimmedLufs": -15.798,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.898,
+      "trimDb": 0.4,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 67,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "chillwave": {
       "category": "Electronic",
@@ -1533,14 +1780,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.897,
-      "trimDb": 6.12,
-      "trimmedLufs": -16.416,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -16.133,
+      "trimDb": 1.76,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 61,
-      "trimIterations": 5
+      "trimIterations": 0
     },
     "downtempo": {
       "category": "Electronic",
@@ -1551,14 +1798,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.526,
-      "trimDb": 2.46,
-      "trimmedLufs": -15.807,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.641,
+      "trimDb": 1.03,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 58,
-      "trimIterations": 4
+      "trimIterations": 0
     },
     "trip-hop": {
       "category": "Electronic",
@@ -1569,14 +1816,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.072,
-      "trimDb": 1.72,
-      "trimmedLufs": -15.789,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.37,
+      "trimDb": 0.9,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 68,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "glitch-hop": {
       "category": "Electronic",
@@ -1587,14 +1834,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.299,
       "arrangedRmsDb": -14.139,
-      "trimDb": 0.05,
-      "trimmedLufs": -15.675,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.299,
-      "trimmedRmsDb": -14.127,
+      "trimDb": -0.03,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 59,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "idm": {
       "category": "Electronic",
@@ -1605,14 +1852,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.755,
-      "trimDb": -3.52,
-      "trimmedLufs": -15.644,
-      "trimmedPeakDb": -3.436,
-      "trimmedTruePeakDb": -3.421,
-      "trimmedRmsDb": -14.416,
+      "trimDb": -2.81,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 61,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "ambient": {
       "category": "Electronic",
@@ -1623,14 +1870,14 @@
       "arrangedPeakDb": -3.049,
       "arrangedTruePeakDb": -3.049,
       "arrangedRmsDb": -20.659,
-      "trimDb": 2.74,
-      "trimmedLufs": -15.785,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -18.087,
+      "trimDb": 2.66,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 35,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "ambient-dub": {
       "category": "Electronic",
@@ -1641,14 +1888,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.854,
-      "trimDb": 3.02,
-      "trimmedLufs": -15.772,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.549,
+      "trimDb": 2.45,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 75,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "lofi-house": {
       "category": "Electronic",
@@ -1659,14 +1906,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -10.301,
-      "trimDb": -3.78,
-      "trimmedLufs": -15.636,
-      "trimmedPeakDb": -3.7,
-      "trimmedTruePeakDb": -3.682,
-      "trimmedRmsDb": -13.39,
+      "trimDb": -3.15,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 58,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "chiptune": {
       "category": "Electronic",
@@ -1677,14 +1924,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -10.685,
-      "trimDb": -4.37,
-      "trimmedLufs": -15.644,
-      "trimmedPeakDb": -4.255,
-      "trimmedTruePeakDb": -4.186,
-      "trimmedRmsDb": -14.062,
+      "trimDb": -3.52,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "hardstyle": {
       "category": "Electronic",
@@ -1695,14 +1942,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.216,
-      "trimDb": -2.4,
-      "trimmedLufs": -15.578,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.988,
+      "trimDb": -1.86,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 48,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "hardcore-gabber": {
       "category": "Electronic",
@@ -1713,14 +1960,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.808,
-      "trimDb": 0.46,
-      "trimmedLufs": -15.798,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.688,
+      "trimDb": 0.18,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 38,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "frenchcore": {
       "category": "Electronic",
@@ -1731,14 +1978,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.769,
-      "trimDb": -2.79,
-      "trimmedLufs": -15.625,
-      "trimmedPeakDb": -1.839,
-      "trimmedTruePeakDb": -1.83,
-      "trimmedRmsDb": -13.78,
+      "trimDb": -2.18,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 37,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "happy-hardcore": {
       "category": "Electronic",
@@ -1749,14 +1996,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.41,
-      "trimDb": -3.26,
-      "trimmedLufs": -15.512,
-      "trimmedPeakDb": -1.312,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.696,
+      "trimDb": -2.47,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 42,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "moombahton": {
       "category": "Electronic",
@@ -1767,14 +2014,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.094,
       "arrangedRmsDb": -13.109,
-      "trimDb": -1.42,
-      "trimmedLufs": -15.471,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.094,
-      "trimmedRmsDb": -13.891,
+      "trimDb": -1.03,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 65,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "jersey-club": {
       "category": "Electronic",
@@ -1785,14 +2032,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.179,
-      "trimDb": -1.85,
-      "trimmedLufs": -15.447,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -12.927,
+      "trimDb": -1,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "footwork": {
       "category": "Electronic",
@@ -1803,14 +2050,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -9.369,
-      "trimDb": -5.01,
-      "trimmedLufs": -15.533,
-      "trimmedPeakDb": -1.322,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.056,
+      "trimDb": -3.79,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 45,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "phonk": {
       "category": "Electronic",
@@ -1821,14 +2068,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.511,
-      "trimDb": -0.06,
-      "trimmedLufs": -15.588,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.519,
+      "trimDb": -0.14,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 54,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "drift-phonk": {
       "category": "Electronic",
@@ -1839,14 +2086,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.712,
-      "trimDb": 0.05,
-      "trimmedLufs": -15.689,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.716,
+      "trimDb": -0.03,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 47,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "electro": {
       "category": "Electronic",
@@ -1857,14 +2104,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.969,
-      "trimDb": 0.12,
-      "trimmedLufs": -15.715,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.931,
+      "trimDb": 0.04,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "breakbeat": {
       "category": "Electronic",
@@ -1875,14 +2122,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.193,
-      "trimDb": 4.94,
-      "trimmedLufs": -16.349,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.785,
+      "trimDb": 1.07,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 48,
-      "trimIterations": 5
+      "trimIterations": 0
     },
     "big-beat": {
       "category": "Electronic",
@@ -1893,14 +2140,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.691,
-      "trimDb": 3.07,
-      "trimmedLufs": -15.982,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.992,
+      "trimDb": 0.82,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 53,
-      "trimIterations": 5
+      "trimIterations": 0
     },
     "rock-and-roll": {
       "category": "Rock/Metal",
@@ -1911,14 +2158,14 @@
       "arrangedPeakDb": -10.894,
       "arrangedTruePeakDb": -10.826,
       "arrangedRmsDb": -17.842,
-      "trimDb": 2.13,
-      "trimmedLufs": -15.641,
-      "trimmedPeakDb": -8.764,
-      "trimmedTruePeakDb": -8.696,
-      "trimmedRmsDb": -15.712,
+      "trimDb": 2.05,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 49,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "blues-rock": {
       "category": "Rock/Metal",
@@ -1929,14 +2176,14 @@
       "arrangedPeakDb": -10.896,
       "arrangedTruePeakDb": -10.896,
       "arrangedRmsDb": -19.301,
-      "trimDb": 4.22,
-      "trimmedLufs": -15.642,
-      "trimmedPeakDb": -6.676,
-      "trimmedTruePeakDb": -6.676,
-      "trimmedRmsDb": -15.081,
+      "trimDb": 4.15,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 60,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "hard-rock": {
       "category": "Rock/Metal",
@@ -1947,14 +2194,14 @@
       "arrangedPeakDb": -9.584,
       "arrangedTruePeakDb": -9.583,
       "arrangedRmsDb": -18.421,
-      "trimDb": 2.91,
-      "trimmedLufs": -15.641,
-      "trimmedPeakDb": -6.674,
-      "trimmedTruePeakDb": -6.673,
-      "trimmedRmsDb": -15.511,
+      "trimDb": 2.83,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "punk-rock": {
       "category": "Rock/Metal",
@@ -1965,14 +2212,14 @@
       "arrangedPeakDb": -10.889,
       "arrangedTruePeakDb": -10.889,
       "arrangedRmsDb": -17.692,
-      "trimDb": 3.23,
-      "trimmedLufs": -15.637,
-      "trimmedPeakDb": -7.659,
-      "trimmedTruePeakDb": -7.659,
-      "trimmedRmsDb": -14.462,
+      "trimDb": 3.15,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 42,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "post-punk": {
       "category": "Rock/Metal",
@@ -1983,14 +2230,14 @@
       "arrangedPeakDb": -10.894,
       "arrangedTruePeakDb": -10.894,
       "arrangedRmsDb": -17.371,
-      "trimDb": 2.6,
-      "trimmedLufs": -15.639,
-      "trimmedPeakDb": -8.294,
-      "trimmedTruePeakDb": -8.294,
-      "trimmedRmsDb": -14.771,
+      "trimDb": 2.52,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 53,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "new-wave": {
       "category": "Rock/Metal",
@@ -2001,14 +2248,14 @@
       "arrangedPeakDb": -10.874,
       "arrangedTruePeakDb": -10.798,
       "arrangedRmsDb": -17.415,
-      "trimDb": 2.4,
-      "trimmedLufs": -15.637,
-      "trimmedPeakDb": -8.474,
-      "trimmedTruePeakDb": -8.398,
-      "trimmedRmsDb": -15.015,
+      "trimDb": 2.32,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "heavy-metal": {
       "category": "Rock/Metal",
@@ -2019,14 +2266,14 @@
       "arrangedPeakDb": -13.066,
       "arrangedTruePeakDb": -13.066,
       "arrangedRmsDb": -17.973,
-      "trimDb": 3.52,
-      "trimmedLufs": -15.636,
-      "trimmedPeakDb": -9.546,
-      "trimmedTruePeakDb": -9.546,
-      "trimmedRmsDb": -14.453,
+      "trimDb": 3.44,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "thrash-metal": {
       "category": "Rock/Metal",
@@ -2037,14 +2284,14 @@
       "arrangedPeakDb": -13.978,
       "arrangedTruePeakDb": -13.978,
       "arrangedRmsDb": -17.118,
-      "trimDb": 2.94,
-      "trimmedLufs": -15.641,
-      "trimmedPeakDb": -11.038,
-      "trimmedTruePeakDb": -11.038,
-      "trimmedRmsDb": -14.178,
+      "trimDb": 2.87,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 38,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "death-metal": {
       "category": "Rock/Metal",
@@ -2055,14 +2302,14 @@
       "arrangedPeakDb": -14.807,
       "arrangedTruePeakDb": -14.807,
       "arrangedRmsDb": -17.512,
-      "trimDb": 3.53,
-      "trimmedLufs": -15.638,
-      "trimmedPeakDb": -11.277,
-      "trimmedTruePeakDb": -11.277,
-      "trimmedRmsDb": -13.982,
+      "trimDb": 3.45,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 36,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "black-metal": {
       "category": "Rock/Metal",
@@ -2073,14 +2320,14 @@
       "arrangedPeakDb": -15.132,
       "arrangedTruePeakDb": -15.067,
       "arrangedRmsDb": -18.242,
-      "trimDb": 3.94,
-      "trimmedLufs": -15.64,
-      "trimmedPeakDb": -11.192,
-      "trimmedTruePeakDb": -11.127,
-      "trimmedRmsDb": -14.302,
+      "trimDb": 3.86,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 41,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "doom-metal": {
       "category": "Rock/Metal",
@@ -2091,14 +2338,14 @@
       "arrangedPeakDb": -10.897,
       "arrangedTruePeakDb": -10.897,
       "arrangedRmsDb": -23.277,
-      "trimDb": 7.36,
-      "trimmedLufs": -15.703,
-      "trimmedPeakDb": -3.537,
-      "trimmedTruePeakDb": -3.537,
-      "trimmedRmsDb": -15.917,
+      "trimDb": 7.29,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 67,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "metalcore": {
       "category": "Rock/Metal",
@@ -2109,14 +2356,14 @@
       "arrangedPeakDb": -13.975,
       "arrangedTruePeakDb": -13.975,
       "arrangedRmsDb": -19.857,
-      "trimDb": 6.36,
-      "trimmedLufs": -15.639,
-      "trimmedPeakDb": -7.615,
-      "trimmedTruePeakDb": -7.615,
-      "trimmedRmsDb": -13.497,
+      "trimDb": 6.28,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 49,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "grunge": {
       "category": "Rock/Metal",
@@ -2127,14 +2374,14 @@
       "arrangedPeakDb": -10.896,
       "arrangedTruePeakDb": -10.896,
       "arrangedRmsDb": -19.808,
-      "trimDb": 4.65,
-      "trimmedLufs": -15.637,
-      "trimmedPeakDb": -6.246,
-      "trimmedTruePeakDb": -6.246,
-      "trimmedRmsDb": -15.158,
+      "trimDb": 4.57,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 61,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "alternative-rock": {
       "category": "Rock/Metal",
@@ -2145,14 +2392,14 @@
       "arrangedPeakDb": -10.893,
       "arrangedTruePeakDb": -10.893,
       "arrangedRmsDb": -19.222,
-      "trimDb": 4.12,
-      "trimmedLufs": -15.641,
-      "trimmedPeakDb": -6.773,
-      "trimmedTruePeakDb": -6.773,
-      "trimmedRmsDb": -15.102,
+      "trimDb": 4.04,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 60,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "progressive-rock": {
       "category": "Rock/Metal",
@@ -2163,14 +2410,14 @@
       "arrangedPeakDb": -10.896,
       "arrangedTruePeakDb": -10.896,
       "arrangedRmsDb": -18.003,
-      "trimDb": 3.13,
-      "trimmedLufs": -15.642,
-      "trimmedPeakDb": -7.766,
-      "trimmedTruePeakDb": -7.766,
-      "trimmedRmsDb": -14.873,
+      "trimDb": 3.06,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 59,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "math-rock": {
       "category": "Rock/Metal",
@@ -2181,14 +2428,14 @@
       "arrangedPeakDb": -10.896,
       "arrangedTruePeakDb": -10.896,
       "arrangedRmsDb": -17.413,
-      "trimDb": 2.17,
-      "trimmedLufs": -15.644,
-      "trimmedPeakDb": -8.726,
-      "trimmedTruePeakDb": -8.726,
-      "trimmedRmsDb": -15.243,
+      "trimDb": 2.1,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "shoe-gaze": {
       "category": "Rock/Metal",
@@ -2199,14 +2446,14 @@
       "arrangedPeakDb": -10.896,
       "arrangedTruePeakDb": -10.896,
       "arrangedRmsDb": -18.847,
-      "trimDb": 3.84,
-      "trimmedLufs": -15.643,
-      "trimmedPeakDb": -7.056,
-      "trimmedTruePeakDb": -7.056,
-      "trimmedRmsDb": -15.007,
+      "trimDb": 3.77,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 66,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "old-school-hip-hop": {
       "category": "Hip Hop",
@@ -2217,14 +2464,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.449,
-      "trimDb": -0.06,
-      "trimmedLufs": -15.607,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.472,
+      "trimDb": -0.13,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 67,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "boom-bap": {
       "category": "Hip Hop",
@@ -2235,14 +2482,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.473,
-      "trimDb": 1.69,
-      "trimmedLufs": -15.805,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.841,
+      "trimDb": 0.82,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 74,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "g-funk": {
       "category": "Hip Hop",
@@ -2253,14 +2500,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.381,
-      "trimDb": 0.85,
-      "trimmedLufs": -15.793,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.978,
+      "trimDb": 0.51,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 74,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "trap-rap": {
       "category": "Hip Hop",
@@ -2271,14 +2518,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.196,
-      "trimDb": -2.2,
-      "trimmedLufs": -15.566,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.381,
+      "trimDb": -1.43,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "conscious-hip-hop": {
       "category": "Hip Hop",
@@ -2289,14 +2536,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.209,
-      "trimDb": 1.17,
-      "trimmedLufs": -15.787,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.86,
+      "trimDb": 0.51,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 66,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "emo-rap": {
       "category": "Hip Hop",
@@ -2307,14 +2554,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.991,
-      "trimDb": 1,
-      "trimmedLufs": -15.769,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.653,
+      "trimDb": 0.42,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 53,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "lofi-hip-hop": {
       "category": "Hip Hop",
@@ -2325,14 +2572,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.587,
-      "trimDb": 0.2,
-      "trimmedLufs": -15.741,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.504,
+      "trimDb": 0.12,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 69,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "east-coast-hip-hop": {
       "category": "Hip Hop",
@@ -2343,14 +2590,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.411,
-      "trimDb": 0,
-      "trimmedLufs": -15.638,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.411,
+      "trimDb": -0.08,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 71,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "west-coast-hip-hop": {
       "category": "Hip Hop",
@@ -2361,14 +2608,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.284,
-      "trimDb": -0.23,
-      "trimmedLufs": -15.489,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.422,
+      "trimDb": -0.3,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 74,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "southern-hip-hop": {
       "category": "Hip Hop",
@@ -2379,14 +2626,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.69,
-      "trimDb": 0.02,
-      "trimmedLufs": -15.657,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.683,
+      "trimDb": -0.05,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 78,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "cloud-rap": {
       "category": "Hip Hop",
@@ -2397,14 +2644,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.897,
-      "trimDb": 1.02,
-      "trimmedLufs": -15.835,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.484,
+      "trimDb": 0.59,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 53,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "delta-blues": {
       "category": "Jazz/Blues",
@@ -2415,14 +2662,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -17.233,
-      "trimDb": 2.58,
-      "trimmedLufs": -15.721,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.589,
+      "trimDb": 1.7,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 89,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "chicago-blues": {
       "category": "Jazz/Blues",
@@ -2433,14 +2680,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.829,
-      "trimDb": -1.89,
-      "trimmedLufs": -15.642,
-      "trimmedPeakDb": -2.04,
-      "trimmedTruePeakDb": -2.04,
-      "trimmedRmsDb": -15.498,
+      "trimDb": -1.74,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 62,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "texas-blues": {
       "category": "Jazz/Blues",
@@ -2451,14 +2698,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.463,
-      "trimDb": -0.78,
-      "trimmedLufs": -15.58,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.965,
+      "trimDb": -0.62,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "electric-blues": {
       "category": "Jazz/Blues",
@@ -2469,14 +2716,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -17.062,
-      "trimDb": 1.87,
-      "trimmedLufs": -15.787,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.9,
+      "trimDb": 1.33,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 61,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "traditional-jazz": {
       "category": "Jazz/Blues",
@@ -2487,14 +2734,14 @@
       "arrangedPeakDb": -1.354,
       "arrangedTruePeakDb": -1.353,
       "arrangedRmsDb": -14.864,
-      "trimDb": -0.36,
-      "trimmedLufs": -15.636,
-      "trimmedPeakDb": -1.714,
-      "trimmedTruePeakDb": -1.713,
-      "trimmedRmsDb": -15.224,
+      "trimDb": -0.44,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "bebop": {
       "category": "Jazz/Blues",
@@ -2505,14 +2752,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.553,
-      "trimDb": -1.94,
-      "trimmedLufs": -15.56,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -16.01,
+      "trimDb": -1.67,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 35,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "hard-bop": {
       "category": "Jazz/Blues",
@@ -2523,14 +2770,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.211,
-      "trimDb": -0.35,
-      "trimmedLufs": -15.569,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.481,
+      "trimDb": -0.43,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "cool-jazz": {
       "category": "Jazz/Blues",
@@ -2541,14 +2788,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.848,
-      "trimDb": 2.96,
-      "trimmedLufs": -15.824,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.063,
+      "trimDb": 1.94,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 62,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "modal-jazz": {
       "category": "Jazz/Blues",
@@ -2559,14 +2806,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.78,
-      "trimDb": -0.05,
-      "trimmedLufs": -15.636,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.821,
+      "trimDb": -0.12,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 61,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "free-jazz": {
       "category": "Jazz/Blues",
@@ -2577,14 +2824,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.086,
-      "trimDb": -2.14,
-      "trimmedLufs": -15.612,
-      "trimmedPeakDb": -1.301,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.743,
+      "trimDb": -1.77,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 56,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "jazz-fusion": {
       "category": "Jazz/Blues",
@@ -2595,14 +2842,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.346,
-      "trimDb": -1.14,
-      "trimmedLufs": -15.559,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.149,
+      "trimDb": -0.94,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "smooth-jazz": {
       "category": "Jazz/Blues",
@@ -2613,14 +2860,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.884,
-      "trimDb": 1.48,
-      "trimmedLufs": -15.755,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.931,
+      "trimDb": 1.07,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 68,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "acid-jazz": {
       "category": "Jazz/Blues",
@@ -2631,14 +2878,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.567,
-      "trimDb": 2.38,
-      "trimmedLufs": -15.821,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.594,
+      "trimDb": 1.1,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 60,
-      "trimIterations": 4
+      "trimIterations": 0
     },
     "gypsy-jazz": {
       "category": "Jazz/Blues",
@@ -2649,14 +2896,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.601,
-      "trimDb": -1.76,
-      "trimmedLufs": -15.514,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.712,
+      "trimDb": -1.37,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 37,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "traditional-pop": {
       "category": "Pop/R&B",
@@ -2667,14 +2914,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.419,
-      "trimDb": -0.96,
-      "trimmedLufs": -15.597,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.035,
+      "trimDb": -0.83,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 62,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "synth-pop": {
       "category": "Pop/R&B",
@@ -2685,14 +2932,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.013,
-      "trimDb": -4.21,
-      "trimmedLufs": -15.562,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.045,
+      "trimDb": -3.2,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 60,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "disco": {
       "category": "Pop/R&B",
@@ -2703,14 +2950,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.795,
-      "trimDb": -1.41,
-      "trimmedLufs": -15.495,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -12.676,
+      "trimDb": -1.08,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 58,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "eurodance": {
       "category": "Pop/R&B",
@@ -2721,14 +2968,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.673,
-      "trimDb": -2.77,
-      "trimmedLufs": -15.558,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.696,
+      "trimDb": -2.16,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 52,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "funk": {
       "category": "Pop/R&B",
@@ -2739,14 +2986,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -15.791,
-      "trimDb": 1.97,
-      "trimmedLufs": -15.821,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.898,
+      "trimDb": 1.09,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 67,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "soul": {
       "category": "Pop/R&B",
@@ -2757,14 +3004,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.897,
-      "trimDb": -1.08,
-      "trimmedLufs": -15.488,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.464,
+      "trimDb": -0.82,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 72,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "neo-soul": {
       "category": "Pop/R&B",
@@ -2775,14 +3022,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -17.027,
-      "trimDb": 2.65,
-      "trimmedLufs": -15.794,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.626,
+      "trimDb": 1.54,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 67,
-      "trimIterations": 4
+      "trimIterations": 0
     },
     "contemporary-rnb": {
       "category": "Pop/R&B",
@@ -2793,14 +3040,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.812,
-      "trimDb": 0.72,
-      "trimmedLufs": -15.839,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.609,
+      "trimDb": 0.36,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 73,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "alternative-rnb": {
       "category": "Pop/R&B",
@@ -2811,14 +3058,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.844,
-      "trimDb": 0.26,
-      "trimmedLufs": -15.829,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.775,
+      "trimDb": 0.18,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "motown": {
       "category": "Pop/R&B",
@@ -2829,14 +3076,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.557,
-      "trimDb": -1.4,
-      "trimmedLufs": -15.489,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.341,
+      "trimDb": -1.02,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "city-pop": {
       "category": "Pop/R&B",
@@ -2847,14 +3094,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -12.599,
-      "trimDb": -1.14,
-      "trimmedLufs": -15.508,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.258,
+      "trimDb": -0.87,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 59,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "k-pop": {
       "category": "Pop/R&B",
@@ -2865,14 +3112,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.127,
-      "trimDb": -4.14,
-      "trimmedLufs": -15.616,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.744,
+      "trimDb": -2.69,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 57,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "j-pop": {
       "category": "Pop/R&B",
@@ -2883,14 +3130,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -11.399,
-      "trimDb": -3.17,
-      "trimmedLufs": -15.591,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.415,
+      "trimDb": -2.1,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "salsa": {
       "category": "Latin/World",
@@ -2901,14 +3148,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.415,
-      "trimDb": 2.73,
-      "trimmedLufs": -15.778,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.282,
-      "trimmedRmsDb": -15.199,
+      "trimDb": 1.42,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 71,
-      "trimIterations": 4
+      "trimIterations": 0
     },
     "bachata": {
       "category": "Latin/World",
@@ -2919,14 +3166,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -14.644,
-      "trimDb": -0.46,
-      "trimmedLufs": -15.504,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.942,
+      "trimDb": -0.53,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "reggae": {
       "category": "Latin/World",
@@ -2937,14 +3184,14 @@
       "arrangedPeakDb": -1.301,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -18.312,
-      "trimDb": 3.16,
-      "trimmedLufs": -15.784,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -16.103,
+      "trimDb": 2.24,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 65,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "dancehall": {
       "category": "Latin/World",
@@ -2955,14 +3202,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.661,
-      "trimDb": 3.75,
-      "trimmedLufs": -16.004,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -15.895,
+      "trimDb": 1.21,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 69,
-      "trimIterations": 5
+      "trimIterations": 0
     },
     "reggaeton": {
       "category": "Latin/World",
@@ -2973,14 +3220,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.769,
-      "trimDb": -0.08,
-      "trimmedLufs": -15.607,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.813,
+      "trimDb": -0.16,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 75,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "afrobeat": {
       "category": "Latin/World",
@@ -2991,14 +3238,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.2,
       "arrangedRmsDb": -14.486,
-      "trimDb": -0.23,
-      "trimmedLufs": -15.591,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.2,
-      "trimmedRmsDb": -14.653,
+      "trimDb": -0.3,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 62,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "amapiano": {
       "category": "Latin/World",
@@ -3009,14 +3256,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.298,
       "arrangedRmsDb": -13.964,
-      "trimDb": -0.34,
-      "trimmedLufs": -15.526,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.298,
-      "trimmedRmsDb": -14.192,
+      "trimDb": -0.42,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 61,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "bossa-nova": {
       "category": "Latin/World",
@@ -3027,14 +3274,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -16.4,
-      "trimDb": 2.63,
-      "trimmedLufs": -15.721,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.715,
+      "trimDb": 1.82,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 55,
-      "trimIterations": 3
+      "trimIterations": 0
     },
     "samba": {
       "category": "Latin/World",
@@ -3045,14 +3292,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.55,
-      "trimDb": -1.45,
-      "trimmedLufs": -15.561,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -14.612,
+      "trimDb": -1.24,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 69,
-      "trimIterations": 2
+      "trimIterations": 0
     },
     "cumbia": {
       "category": "Latin/World",
@@ -3063,14 +3310,14 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.295,
       "arrangedRmsDb": -14.685,
-      "trimDb": -0.42,
-      "trimmedLufs": -15.49,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.295,
-      "trimmedRmsDb": -14.929,
+      "trimDb": -0.49,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 75,
-      "trimIterations": 1
+      "trimIterations": 0
     },
     "kuduro": {
       "category": "Latin/World",
@@ -3081,15 +3328,1531 @@
       "arrangedPeakDb": -1.3,
       "arrangedTruePeakDb": -1.3,
       "arrangedRmsDb": -13.631,
-      "trimDb": -0.47,
-      "trimmedLufs": -15.453,
-      "trimmedPeakDb": -1.3,
-      "trimmedTruePeakDb": -1.3,
-      "trimmedRmsDb": -13.914,
+      "trimDb": -0.55,
+      "trimmedLufs": null,
+      "trimmedPeakDb": null,
+      "trimmedTruePeakDb": null,
+      "trimmedRmsDb": null,
       "withinGenreSpreadDb": 0,
       "gatedBlockCount": 51,
-      "trimIterations": 1
+      "trimIterations": 0
     }
   },
-  "unmeasured": []
+  "unmeasured": [
+    {
+      "genreId": "future-bass",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "kawaii-future-bass",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "synthwave",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "vaporwave",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chillwave",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "downtempo",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "trip-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "glitch-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "idm",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ambient",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ambient-dub",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "lofi-house",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chiptune",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hardstyle",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hardcore-gabber",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "frenchcore",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "happy-hardcore",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "moombahton",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jersey-club",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "footwork",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "phonk",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "drift-phonk",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "electro",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "breakbeat",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "big-beat",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "rock-and-roll",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "blues-rock",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-rock",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "punk-rock",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "post-punk",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "new-wave",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "heavy-metal",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "thrash-metal",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "death-metal",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "black-metal",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "doom-metal",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "metalcore",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "grunge",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "alternative-rock",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-rock",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "math-rock",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "shoe-gaze",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "old-school-hip-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "boom-bap",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "g-funk",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "trap-rap",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "conscious-hip-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "emo-rap",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "lofi-hip-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "east-coast-hip-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "west-coast-hip-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "southern-hip-hop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "cloud-rap",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "delta-blues",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-blues",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "texas-blues",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "electric-blues",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "traditional-jazz",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bebop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-bop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "cool-jazz",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "modal-jazz",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "free-jazz",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jazz-fusion",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "smooth-jazz",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-jazz",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "gypsy-jazz",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "traditional-pop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "synth-pop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "disco",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "eurodance",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "funk",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "soul",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "neo-soul",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "contemporary-rnb",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "alternative-rnb",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "motown",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "city-pop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "k-pop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "j-pop",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "salsa",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bachata",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "reggae",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dancehall",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "reggaeton",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "afrobeat",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "amapiano",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bossa-nova",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "samba",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "cumbia",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "kuduro",
+      "pass": "trim-round-1",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "deep-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "electro-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bass-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ghetto-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tropical-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "french-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "melodic-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "afro-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "nu-disco-house",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "microhouse",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "detroit-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "industrial-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "peak-time-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ambient-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "raw-techno",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "schranz",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uplifting-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "psytrance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "goa-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "vocal-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "euro-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dream-trance",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "post-dubstep",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chillstep",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jungle",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jump-up",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "techstep",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "halftime",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "breakcore",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "sambass",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "2-step-garage",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speed-garage",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bassline",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-funky",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speedbass",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trap",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hybrid-trap",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "wave",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-drill",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-drill",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "brooklyn-drill",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jersey-drill",
+      "pass": "trim-round-2",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "deep-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "electro-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bass-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ghetto-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tropical-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "french-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "melodic-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "afro-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "nu-disco-house",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "microhouse",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "detroit-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "industrial-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "peak-time-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ambient-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "raw-techno",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "schranz",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uplifting-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "psytrance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "goa-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "vocal-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "euro-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dream-trance",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "post-dubstep",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chillstep",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jungle",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jump-up",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "techstep",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "halftime",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "breakcore",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "sambass",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "2-step-garage",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speed-garage",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bassline",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-funky",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speedbass",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trap",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hybrid-trap",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "wave",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-drill",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-drill",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "brooklyn-drill",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jersey-drill",
+      "pass": "trim-round-3",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "deep-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "electro-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bass-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ghetto-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tropical-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "french-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "melodic-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "afro-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "nu-disco-house",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "microhouse",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "detroit-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "industrial-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "peak-time-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ambient-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "raw-techno",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "schranz",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uplifting-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "psytrance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "goa-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "vocal-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "euro-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dream-trance",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "post-dubstep",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chillstep",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jungle",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jump-up",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "techstep",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "halftime",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "breakcore",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "sambass",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "2-step-garage",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speed-garage",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bassline",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-funky",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speedbass",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trap",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hybrid-trap",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "wave",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-drill",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-drill",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "brooklyn-drill",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jersey-drill",
+      "pass": "trim-round-4",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "deep-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "electro-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bass-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ghetto-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tropical-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "french-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "melodic-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "afro-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "nu-disco-house",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "microhouse",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "detroit-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "acid-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "industrial-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "peak-time-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "ambient-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "raw-techno",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "schranz",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uplifting-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "progressive-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "psytrance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "goa-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "tech-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "vocal-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "euro-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dream-trance",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "post-dubstep",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chillstep",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jungle",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jump-up",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "techstep",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "halftime",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "breakcore",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "sambass",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "2-step-garage",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speed-garage",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "bassline",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-funky",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "dub",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "speedbass",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hard-trap",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "hybrid-trap",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "wave",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "chicago-drill",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "uk-drill",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "brooklyn-drill",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "genreId": "jersey-drill",
+      "pass": "trim-round-5",
+      "error": "page.evaluate: Target page, context or browser has been closed"
+    }
+  ]
 }
