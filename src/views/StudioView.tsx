@@ -1,7 +1,8 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { Genre, SequencerPattern } from "../types/genre";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
+import { loadLayoutPrefs, saveLayoutPrefs } from "../features/sequencer/layoutPrefs";
 import { useLanguage } from "../i18n/LanguageContext";
 import { MobileEditMode } from "../components/sequencer/Toolbar";
 import { ToastBanner } from "../components/sequencer/ToastBanner";
@@ -109,9 +110,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Feature #2: the mixing console floats over the studio, sharing this engine + store.
   const [isConsoleOpen, setIsConsoleOpen] = useState<boolean>(false);
 
+  // D-01/D-02: layout preferences are read **once** on mount (never on every render, so
+  // a stale or failing storage read cannot fight the user's clicks) and written back
+  // whenever one of them changes. Before this, all five were `useState(false)` with no
+  // persistence at all, so every refresh made the user re-collapse the sidebar and
+  // re-open the velocity lane.
+  const [bootLayoutPrefs] = useState(() => loadLayoutPrefs());
+
   // Sidebar collapse & Maximize states
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [isEditorMaximized, setIsEditorMaximized] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(
+    bootLayoutPrefs.isSidebarCollapsed
+  );
+  const [isEditorMaximized, setIsEditorMaximized] = useState<boolean>(
+    bootLayoutPrefs.isEditorMaximized
+  );
 
   // Sequencer matrix scroll container ref & playhead beam ref (P2-03)
   const matrixContainerRef = useRef<HTMLDivElement | null>(null);
@@ -119,10 +131,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const lastActiveRulerStepRef = useRef<HTMLElement | null>(null);
 
   // Pro Sequencer Extensions: Velocity Lane, Euclidean Generator, Pitch Picker & P-Locks
-  const [isVelocityLaneOpen, setIsVelocityLaneOpen] = useState(false);
+  const [isVelocityLaneOpen, setIsVelocityLaneOpen] = useState(bootLayoutPrefs.isVelocityLaneOpen);
   const [velocityActiveTrackIdx, setVelocityActiveTrackIdx] = useState(0);
   const [isEuclideanOpen, setIsEuclideanOpen] = useState(false);
-  const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
+  const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(bootLayoutPrefs.isAnalyzerOpen);
   const [pitchPicker, setPitchPicker] = useState<PitchPickerState>({
     isOpen: false,
     trackIdx: 0,
@@ -134,7 +146,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Mobile / Tablet dedicated mobile tools (touch detection lives in useGridInteraction)
   const [mobileEditMode, setMobileEditMode] = useState<MobileEditMode>("step");
-  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
+  const [showAdvancedControls, setShowAdvancedControls] = useState(
+    bootLayoutPrefs.showAdvancedControls
+  );
 
   // Phase 4 States (P4-01 ~ P4-04 & P4-06)
   const [isKeyboardMode, setIsKeyboardMode] = useState(false);
@@ -147,6 +161,29 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Multi-Project Hub State (P7-02)
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
+
+  /**
+   * D-02: persist the five layout toggles whenever one changes.
+   *
+   * `isDrumsOnly`, `isKeyboardMode` and `isRecordArmed` are deliberately absent — they
+   * describe live performance state, not layout, and silently restoring them would
+   * re-arm the recorder or re-enter drum-only mode on the next visit (D-06).
+   */
+  useEffect(() => {
+    saveLayoutPrefs({
+      isSidebarCollapsed,
+      isEditorMaximized,
+      isVelocityLaneOpen,
+      isAnalyzerOpen,
+      showAdvancedControls,
+    });
+  }, [
+    isSidebarCollapsed,
+    isEditorMaximized,
+    isVelocityLaneOpen,
+    isAnalyzerOpen,
+    showAdvancedControls,
+  ]);
 
   // AudioEngine ref
   const engineRef = useRef<AudioEngine | null>(null);
