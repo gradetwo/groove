@@ -1,0 +1,206 @@
+#!/usr/bin/env node
+/**
+ * Genre loudness spread gate (feat/genre-mix-loudness).
+ *
+ * Reads the committed baseline produced by `scripts/measure_genre_loudness.mjs` and
+ * fails when the post-trim loudness spread across the 159 genres grows past what the
+ * loudness-matching work claims. Deliberately offline and browser-free: the
+ * measurement itself needs Chromium (slow track), but *checking* the recorded numbers
+ * is a file read and must stay cheap.
+ *
+ *   node scripts/check_loudness_spread.mjs [--report=path] [--max-p90p10=1.5]
+ *
+ * Threshold justification (`MAX_P90P10_DB = 1.5`):
+ *  - the pre-trim spread measured by the same script is ~5 dB, so this is a real gate,
+ *    not a formality;
+ *  - the renderer's noise-based drum voices move a single genre by <0.1 dB across
+ *    repeats, so the gate is not sitting on measurement noise;
+ *  - ~2 dB is roughly where a level step becomes obvious when switching genres, and
+ *    1.5 dB keeps a margin under that while still being achievable with a pre-limiter
+ *    master trim (the limiter absorbs a fraction of large corrections).
+ */
+import fs from "node:fs";
+import path from "node:path";
+
+const ROOT = process.cwd();
+const argv = process.argv.slice(2);
+const argValue = (flag, fallback) => {
+  const inline = argv.find((a) => a.startsWith(`${flag}=`));
+  if (inline) return inline.slice(flag.length + 1);
+  const i = argv.indexOf(flag);
+  return i !== -1 && argv[i + 1] ? argv[i + 1] : fallback;
+};
+
+const MAX_P90P10_DB = Number(argValue("--max-p90p10", "1.5"));
+const MAX_FULL_RANGE_DB = Number(argValue("--max-range", "4"));
+const reportPath = path.resolve(ROOT, argValue("--report", "scripts/loudness.baseline.json"));
+const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
+
+const problems = [];
+const oks = [];
+
+if (!fs.existsSync(reportPath)) {
+  console.error(`❌ loudness report not found: ${path.relative(ROOT, reportPath)}`);
+  console.error("   run: node scripts/measure_genre_loudness.mjs");
+  process.exit(1);
+}
+
+const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+const rel = path.relative(ROOT, reportPath);
+
+if (report.subset || report.limit) {
+  problems.push(`${rel} is a SUBSET run (limit=${report.limit}); the gate needs the full 159-genre baseline`);
+}
+if (!report.genres || typeof report.genres !== "object") {
+  problems.push(`${rel} has no per-genre table`);
+}
+
+const entries = Object.entries(report.genres || {});
+const expectedCount = report.genreCount;
+if (entries.length !== expectedCount) {
+  problems.push(`${rel} declares ${expectedCount} genres but carries ${entries.length}`);
+}
+
+const missingTrim = entries.filter(([, g]) => !Number.isFinite(g.trimmedLufs));
+if (missingTrim.length > 0) {
+  problems.push(
+    `${missingTrim.length} genre(s) have no post-trim measurement: ${missingTrim
+      .slice(0, 8)
+      .map(([id]) => id)
+      .join(", ")}`
+  );
+}
+
+const { min, max } = report.trimRangeDb || {};
+const outOfRange = entries.filter(
+  ([, g]) => !Number.isFinite(g.trimDb) || g.trimDb < min || g.trimDb > max
+);
+if (outOfRange.length > 0) {
+  problems.push(
+    `${outOfRange.length} trim(s) outside [${min}, ${max}] dB: ${outOfRange
+      .slice(0, 8)
+      .map(([id]) => id)
+      .join(", ")}`
+  );
+}
+
+const after = report.spread?.after;
+const before = report.spread?.arrangedBefore;
+const gatedMetric = report.metric?.primary === "rms" ? "raw RMS (dBFS)" : "LUFS (BS.1770-4 gated integrated)";
+if (!after) {
+  problems.push(`${rel} has no spread.after block`);
+} else {
+  const okP90 = after.p90p10 <= MAX_P90P10_DB;
+  const okRange = after.fullRange <= MAX_FULL_RANGE_DB;
+  const line =
+    `post-trim ${gatedMetric} spread p90−p10 ${after.p90p10.toFixed(2)} dB (limit ${MAX_P90P10_DB})` +
+    `, full range ${after.fullRange.toFixed(2)} dB (limit ${MAX_FULL_RANGE_DB})` +
+    (before ? `, pre-trim ${before.p90p10.toFixed(2)} dB` : "");
+  if (okP90 && okRange) {
+    oks.push(`${rel}: ${line}`);
+  } else {
+    problems.push(
+      `[gated metric: ${gatedMetric}] ${rel}: ${line} — outliers: min ${after.minGenre} ` +
+        `${after.min.toFixed(2)}, max ${after.maxGenre} ${after.max.toFixed(2)}`
+    );
+  }
+}
+
+// A silent clamp is exactly how a real outlier hides: the report must state the count.
+if (!report.clampHits || !Number.isFinite(report.clampHits.total)) {
+  problems.push(`${rel} does not report clampHits — a silent clamp would hide an unmatchable genre`);
+} else {
+  oks.push(
+    `trim clamp hits: ${report.clampHits.total} of ${expectedCount} ` +
+      `(min ${report.clampHits.min}, max ${report.clampHits.max})`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Report <-> table agreement, and proof the feature is actually wired.
+//
+// The spread check above validates the report against itself; on its own it passes
+// happily while every genre plays at unity trim because `src/data/genreMix.ts` (what
+// playback and export read) was never updated. These checks close that loop.
+// ---------------------------------------------------------------------------
+const MIX_PATH = "src/data/genreMix.ts";
+const mixSource = read(MIX_PATH);
+const tableTrims = new Map(
+  [...mixSource.matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{\s*category:\s*"[^"]+",\s*loudnessTrimDb:\s*(-?[\d.]+)/gm)].map(
+    (m) => [m[1], Number(m[2])]
+  )
+);
+
+const missingFromTable = entries.filter(([id]) => !tableTrims.has(id)).map(([id]) => id);
+const orphansInTable = [...tableTrims.keys()].filter((id) => !report.genres[id]);
+const trimDrift = entries
+  .filter(([id, g]) => tableTrims.has(id) && Math.abs(tableTrims.get(id) - g.trimDb) > 0.01)
+  .map(([id, g]) => `${id}: table ${tableTrims.get(id)} vs report ${g.trimDb}`);
+
+if (missingFromTable.length || orphansInTable.length || trimDrift.length) {
+  problems.push(
+    `${MIX_PATH} and ${rel} disagree: ` +
+      `${missingFromTable.length} missing from table, ${orphansInTable.length} orphan(s) in table, ` +
+      `${trimDrift.length} drifted` +
+      (trimDrift.length ? ` (${trimDrift.slice(0, 5).join("; ")})` : "") +
+      " — run: node scripts/apply_loudness_trims.mjs"
+  );
+} else {
+  oks.push(`${MIX_PATH}: all ${tableTrims.size} trims match the report`);
+}
+
+const allTableTrimsZero = [...tableTrims.values()].every((v) => v === 0);
+const reportHasNonZero = entries.some(([, g]) => g.trimDb !== 0);
+if (allTableTrimsZero && reportHasNonZero) {
+  problems.push(
+    `${MIX_PATH} has 159 zero trims while ${rel} has non-zero trims — the loudness feature is inert`
+  );
+}
+
+/* Wiring: the master stage must exist between fader and FX rack, and the offline
+ * renderer must apply the same gain. If someone deletes either, this gate fails even
+ * though every number in the report still looks perfect. */
+const audioSource = read("src/audio/AudioEngine.ts");
+const wavSource = read("src/audio/WavExporter.ts");
+const storeSource = read("src/features/sequencer/useSequencerStore.ts");
+const wiring = [
+  ["AudioEngine declares the separate stage", /private loudnessTrimGain: GainNode/],
+  ["AudioEngine inserts it after the fader", /this\.masterGain\.connect\(this\.loudnessTrimGain\)/],
+  ["AudioEngine feeds the FX rack from the trim stage", /this\.loudnessTrimGain\.connect\(this\.masterFxRack\.inputNode\)/],
+  ["AudioEngine derives the trim from the pattern's genre", /getGenreLoudnessTrimDb\(pattern\.genre_id\)/],
+  ["WavExporter applies the same trim gain", /Math\.pow\(10, loudnessTrimDb \/ 20\)/],
+  ["WavExporter places it between fader and limiter", /masterGain\.connect\(loudnessTrim\)/],
+  ["WavExporter derives it from the genre id", /getGenreLoudnessTrimDb\(pattern\.genre_id\)/],
+  ["the studio seeds the arranged mix on genre entry", /patternFromGenre/],
+];
+const unwired = wiring.filter(([, pattern]) => !pattern.test(audioSource + wavSource + storeSource)).map(([label]) => label);
+if (unwired.length) {
+  problems.push(`loudness wiring missing: ${unwired.join(", ")}`);
+} else {
+  oks.push(`wiring: master trim stage + offline parity + genre-entry seeding present`);
+}
+oks.push(`target loudness: ${report.target ?? report.targetLufs} (${report.targetMetric ?? "median of the library"})`);
+// The gate always runs on the report's primary metric; the other metric's post-trim
+// spread is reported for transparency (see the metric notes in the report).
+const otherKey = report.metric?.primary === "rms" ? "lufs" : "rms";
+const other = report.spread?.[otherKey]?.after;
+if (other) {
+  oks.push(
+    `informational: post-trim spread in the OTHER metric (${otherKey}) ` +
+      `p90−p10 ${other.p90p10.toFixed(2)} dB, full range ${other.fullRange.toFixed(2)} dB`
+  );
+}
+
+console.log("===============================================================");
+console.log("  🔊 GENRE LOUDNESS SPREAD GATE");
+console.log("===============================================================");
+for (const line of oks) console.log(`✅ ${line}`);
+if (problems.length > 0) {
+  console.log("");
+  for (const line of problems) console.error(`❌ ${line}`);
+  console.error(
+    `\n❌ ${problems.length} loudness-spread problem(s). Re-run node scripts/measure_genre_loudness.mjs and update src/data/genreMix.ts trims before landing.`
+  );
+  process.exit(1);
+}
+console.log(`\n✅ Genre loudness is matched within the documented threshold.`);

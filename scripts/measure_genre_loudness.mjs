@@ -1,0 +1,475 @@
+#!/usr/bin/env node
+/**
+ * Genre loudness baseline measurement (feat/genre-mix-loudness).
+ *
+ * For every genre this renders that genre's default pattern through the app's OWN
+ * offline renderer (`renderPatternOffline` in `src/audio/WavExporter.ts`) and measures
+ * ITU-R BS.1770-4 gated integrated loudness (LUFS) plus sample peak. Then:
+ *
+ *   1. `legacy`  — the raw genre pattern (the pre-feature placeholder mix), trim 0 dB.
+ *                  This is the "before" the user complained about and is directly
+ *                  comparable with the live-path probe the integrator runs.
+ *   2. `arranged`— the pattern after `applyGenreMixDefaults`, trim 0 dB.
+ *   3. `trimmed` — the arranged pattern with `trimDb = clamp(target − arranged, −9, +6)`
+ *                  applied, where `target` is the MEDIAN arranged loudness across the
+ *                  whole library (so the library's overall level does not move).
+ *
+ * Why a Vite dev server instead of `dist` + a static server: reaching
+ * `renderPatternOffline` from a built page would need a test hook shipped in the
+ * production bundle, which is exactly what this project forbids. The dev server
+ * serves `src/**` as native ES modules, so the page can
+ * `await import("/src/audio/WavExporter.ts")` and friends with zero production
+ * surface. The BS.1770 implementation is the same module the unit suite validates
+ * (`src/test/helpers/loudness.ts`) — not an inline copy.
+ *
+ * Usage:
+ *   node scripts/measure_genre_loudness.mjs                 # full 159-genre run
+ *   node scripts/measure_genre_loudness.mjs --limit=8       # quick iteration
+ *   node scripts/measure_genre_loudness.mjs --bars=4 --repeats=3
+ *
+ * `--limit` writes `scripts/loudness.partial.json` (untracked scratch) so an
+ * iteration can never overwrite the committed baseline.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const ROOT = process.cwd();
+
+function loadPlaywright() {
+  try {
+    return require("playwright");
+  } catch (primaryError) {
+    const extraPath = process.env.PLAYWRIGHT_MODULE_PATH;
+    if (extraPath) {
+      try {
+        return createRequire(path.join(extraPath, "noop.js"))("playwright");
+      } catch {
+        /* fall through */
+      }
+    }
+    console.error(`❌ Could not load Playwright: ${primaryError.message}`);
+    process.exit(1);
+  }
+}
+
+const { chromium } = loadPlaywright();
+
+const argv = process.argv.slice(2);
+/** Accepts both `--flag value` and `--flag=value`. */
+const argValue = (flag, fallback) => {
+  const inline = argv.find((a) => a.startsWith(`${flag}=`));
+  if (inline) return inline.slice(flag.length + 1);
+  const i = argv.indexOf(flag);
+  return i !== -1 && argv[i + 1] ? argv[i + 1] : fallback;
+};
+
+const limit = Number(argValue("--limit", "0")) || 0;
+/** Optional explicit genre list (`--genres=a,b,c`) — handy for repeat/noise checks. */
+const genreFilter = (argValue("--genres", "") || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const bars = Math.max(1, Number(argValue("--bars", "3")) || 3);
+const repeats = Math.max(1, Number(argValue("--repeats", "2")) || 2);
+const port = Number(argValue("--port", process.env.PORT || "3150")) || 3150;
+/**
+ * Which measured quantity the trims are derived from.
+ *
+ * `lufs` (default) is BS.1770-4 gated integrated loudness — the broadcast/streaming
+ * standard, and the metric the brief prefers. Its gate deliberately ignores the
+ * silence *between* a sparse genre's hits, so ambient is not punished for being
+ * sparse. `rms` derives trims from the whole-render unweighted RMS instead, which is
+ * what a windowed live-path probe measures; the two views differ by ~7 dB of spread
+ * on this library. Both are always reported; the flag only decides which one the
+ * committed trims match.
+ */
+const metricKey = argValue("--metric", "lufs");
+if (!["lufs", "rms"].includes(metricKey)) {
+  console.error(`❌ --metric must be "lufs" or "rms" (got "${metricKey}")`);
+  process.exit(1);
+}
+const METRIC = {
+  lufs: {
+    label: "LUFS (ITU-R BS.1770-4 gated integrated loudness)",
+    legacy: "legacyLufs",
+    before: "arrangedLufs",
+    after: "trimmedLufs",
+  },
+  rms: {
+    label: "unweighted broadband RMS (dBFS, whole render)",
+    legacy: "legacyRmsDb",
+    before: "arrangedRmsDb",
+    after: "trimmedRmsDb",
+  },
+}[metricKey];
+const outPath = path.resolve(
+  ROOT,
+  argValue("--out", limit > 0 ? "scripts/loudness.partial.json" : "scripts/loudness.baseline.json")
+);
+
+// Must match `LOUDNESS_TRIM_MIN_DB` / `LOUDNESS_TRIM_MAX_DB` in src/data/genreMix.ts.
+// `src/test/loudnessReport.test.ts` fails if these drift from the committed report.
+const TRIM_MIN_DB = -9;
+const TRIM_MAX_DB = 6;
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+function percentile(sorted, p) {
+  if (sorted.length === 0) return NaN;
+  if (sorted.length === 1) return sorted[0];
+  const rank = (p / 100) * (sorted.length - 1);
+  const lower = Math.floor(rank);
+  const upper = Math.ceil(rank);
+  if (lower === upper) return sorted[lower];
+  return sorted[lower] + (sorted[upper] - sorted[lower]) * (rank - lower);
+}
+
+function spreadOf(entries, key) {
+  const values = entries
+    .map((e) => ({ id: e.id, value: e[key] }))
+    .filter((e) => Number.isFinite(e.value));
+  values.sort((a, b) => a.value - b.value);
+  const sorted = values.map((v) => v.value);
+  const min = values[0];
+  const max = values[values.length - 1];
+  const p10 = percentile(sorted, 10);
+  const p90 = percentile(sorted, 90);
+  return {
+    count: values.length,
+    min: min?.value ?? null,
+    minGenre: min?.id ?? null,
+    max: max?.value ?? null,
+    maxGenre: max?.id ?? null,
+    p10,
+    p90,
+    p90p10: p90 - p10,
+    fullRange: (max?.value ?? 0) - (min?.value ?? 0),
+  };
+}
+
+/** Renders + measures one genre in the page. Runs inside Chromium, so plain JS. */
+async function measureGenre(page, genreId, trimDb) {
+  return page.evaluate(
+    async ({ genreId: id, trimDb: trim, bars: barsArg, repeats: repeatsArg }) => {
+      const [wav, genresModule, mixModule, loudness, trackUtils] = await Promise.all([
+        import("/src/audio/WavExporter.ts"),
+        import("/src/data/genres/index.ts"),
+        import("/src/data/genreMix.ts"),
+        import("/src/test/helpers/loudness.ts"),
+        import("/src/utils/trackUtils.ts"),
+      ]);
+
+      const genre = genresModule.ALL_GENRES.find((g) => g.id === id);
+      if (!genre) throw new Error(`unknown genre id: ${id}`);
+
+      const drumKit = trackUtils.getDefaultDrumKitForGenre(genre);
+      const runs = [];
+
+      // `legacy` renders the genre file's own mix (the pre-feature placeholder);
+      // `arranged` renders the table's mix. `trim === null` means "measure the raw
+      // mix", otherwise the trim is applied by the same code path the exporter uses.
+      const render = async (pattern) => {
+        const buffer = await wav.renderPatternOffline(pattern, {
+          bars: barsArg,
+          drumKit,
+          loudnessTrimDb: trim === null ? 0 : trim,
+        });
+        const channels = [];
+        for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
+        const result = loudness.measureLoudness(channels, buffer.sampleRate);
+        return {
+          integratedLufs: result.integratedLufs,
+          samplePeakDb: result.samplePeakDb,
+          rmsDb: loudness.sampleRmsDb(channels),
+          gatedBlockCount: result.gatedBlockCount,
+          durationSec: buffer.duration,
+        };
+      };
+
+      for (let r = 0; r < repeatsArg; r++) {
+        runs.push(await render(mixModule.applyGenreMixDefaults(genre.sequencer_pattern, genre.id)));
+      }
+      // Median across repeats: the renderer's noise-based drum voices are not seeded,
+      // so a single render carries a few tenths of a dB of run-to-run variation.
+      const median = (key) => {
+        const sorted = runs.map((run) => run[key]).sort((a, b) => a - b);
+        return sorted[Math.floor(sorted.length / 2)];
+      };
+      const spread = Math.max(...runs.map((r) => r.integratedLufs)) -
+        Math.min(...runs.map((r) => r.integratedLufs));
+
+      return {
+        arrangedLufs: median("integratedLufs"),
+        arrangedPeakDb: median("samplePeakDb"),
+        arrangedRmsDb: median("rmsDb"),
+        gatedBlockCount: runs[0].gatedBlockCount,
+        withinGenreSpreadDb: spread,
+        durationSec: runs[0].durationSec,
+        sampleRate: 44100,
+      };
+    },
+    { genreId, trimDb, bars, repeats }
+  );
+}
+
+/** Renders the untouched genre file (legacy placeholder mix), trim 0. */
+async function measureLegacy(page, genreId) {
+  return page.evaluate(
+    async ({ genreId: id, bars: barsArg }) => {
+      const [wav, genresModule, loudness, trackUtils] = await Promise.all([
+        import("/src/audio/WavExporter.ts"),
+        import("/src/data/genres/index.ts"),
+        import("/src/test/helpers/loudness.ts"),
+        import("/src/utils/trackUtils.ts"),
+      ]);
+      const genre = genresModule.ALL_GENRES.find((g) => g.id === id);
+      const buffer = await wav.renderPatternOffline(genre.sequencer_pattern, {
+        bars: barsArg,
+        drumKit: trackUtils.getDefaultDrumKitForGenre(genre),
+        loudnessTrimDb: 0,
+      });
+      const channels = [];
+      for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
+      const result = loudness.measureLoudness(channels, buffer.sampleRate);
+      return {
+        legacyLufs: result.integratedLufs,
+        legacyPeakDb: result.samplePeakDb,
+        legacyRmsDb: loudness.sampleRmsDb(channels),
+      };
+    },
+    { genreId, bars }
+  );
+}
+
+async function listGenreIds(page) {
+  return page.evaluate(async () => {
+    const { ALL_GENRES } = await import("/src/data/genres/index.ts");
+    return ALL_GENRES.map((g) => ({ id: g.id, category: g.category }));
+  });
+}
+
+function startDevServer() {
+  return new Promise((resolve, reject) => {
+    const viteBin = path.join(ROOT, "node_modules/vite/bin/vite.js");
+    const child = spawn(process.execPath, [viteBin, "--port", String(port), "--strictPort"], {
+      cwd: ROOT,
+      env: { ...process.env, PORT: String(port) },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    const onData = (chunk) => {
+      output += chunk.toString();
+      if (/Local:\s+http/.test(output) || /ready in/.test(output)) resolve(child);
+    };
+    child.stdout.on("data", onData);
+    child.stderr.on("data", (chunk) => {
+      output += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => reject(new Error(`vite exited early (${code}):\n${output}`)));
+    setTimeout(() => reject(new Error(`vite did not become ready in 60s:\n${output}`)), 60000);
+  });
+}
+
+async function waitForServer(url) {
+  for (let attempt = 0; attempt < 120; attempt++) {
+    try {
+      const res = await fetch(url, { method: "GET" });
+      if (res.ok) return;
+    } catch {
+      /* not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`dev server never answered at ${url}`);
+}
+
+(async () => {
+  const baseUrl = `http://127.0.0.1:${port}`;
+  console.log("===============================================================");
+  console.log("  🔊 GROOVE LAB genre loudness baseline (BS.1770 LUFS, offline render)");
+  console.log(`  target: ${baseUrl}   bars=${bars}   repeats=${repeats}${limit ? `   limit=${limit}` : ""}`);
+  console.log("===============================================================\n");
+
+  const server = await startDevServer();
+  const browser = await chromium.launch({ args: ["--no-sandbox"] });
+  const results = [];
+  const failures = [];
+
+  try {
+    await waitForServer(baseUrl);
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    page.on("console", (msg) => {
+      if (msg.type() === "error") process.stderr.write(`  [page error] ${msg.text()}\n`);
+    });
+    // Serve a bare same-origin document instead of the app shell: the app boots React,
+    // registers a service worker and can navigate/reload, which destroys the evaluate
+    // context mid-run. This page exists only for this measurement and ships nothing.
+    await page.route("**/__loudness_probe__.html", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<!doctype html><html><head><meta charset=\"utf-8\"><title>groove loudness probe</title></head><body></body></html>",
+      })
+    );
+    await page.goto(`${baseUrl}/__loudness_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
+
+    let catalog = await listGenreIds(page);
+    if (genreFilter.length > 0) {
+      const wanted = new Set(genreFilter);
+      const unknown = genreFilter.filter((id) => !catalog.some((c) => c.id === id));
+      if (unknown.length) throw new Error(`unknown --genres id(s): ${unknown.join(", ")}`);
+      catalog = genreFilter.map((id) => catalog.find((c) => c.id === id));
+    } else if (limit > 0) {
+      catalog = catalog.slice(0, limit);
+    }
+    console.log(`Measuring ${catalog.length} genre(s)...`);
+
+    // Pass 1 — legacy (before) + arranged at unity trim.
+    const measured = [];
+    for (const [index, entry] of catalog.entries()) {
+      const startedAt = Date.now();
+      try {
+        const legacy = await measureLegacy(page, entry.id);
+        const arranged = await measureGenre(page, entry.id, null);
+        measured.push({ ...entry, ...legacy, ...arranged, trimDb: 0 });
+        process.stdout.write(
+          `  [${String(index + 1).padStart(3)}/${catalog.length}] ${entry.id.padEnd(24)}` +
+            ` legacy ${legacy.legacyLufs.toFixed(2)} LUFS   arranged ${arranged.arrangedLufs.toFixed(2)} LUFS` +
+            `   ±${arranged.withinGenreSpreadDb.toFixed(2)} dB  (${Date.now() - startedAt} ms)\n`
+        );
+      } catch (error) {
+        failures.push({ genreId: entry.id, pass: "unity", error: String(error.message || error) });
+        process.stdout.write(`  [${String(index + 1).padStart(3)}/${catalog.length}] ${entry.id} FAILED: ${error.message}\n`);
+      }
+    }
+
+    if (measured.length === 0) throw new Error("no genre could be measured");
+
+    // Target = median arranged loudness in the chosen metric, so the library's
+    // overall level stays put and only the spread is corrected.
+    const arrangedSorted = measured.map((m) => m[METRIC.before]).sort((a, b) => a - b);
+    const targetLufs = percentile(arrangedSorted, 50);
+    const clampHits = { min: 0, max: 0, total: 0 };
+    for (const entry of measured) {
+      const raw = targetLufs - entry[METRIC.before];
+      const trim = clamp(raw, TRIM_MIN_DB, TRIM_MAX_DB);
+      if (raw < TRIM_MIN_DB) clampHits.min++;
+      if (raw > TRIM_MAX_DB) clampHits.max++;
+      if (raw < TRIM_MIN_DB || raw > TRIM_MAX_DB) clampHits.total++;
+      entry.trimDb = Number(trim.toFixed(2));
+    }
+    console.log(`\nTarget (median arranged ${metricKey}): ${targetLufs.toFixed(2)}`);
+
+    // Pass 2 — arranged mix with the derived trims applied.
+    console.log("Second pass with trims applied...");
+    for (const [index, entry] of measured.entries()) {
+      try {
+        const trimmed = await measureGenre(page, entry.id, entry.trimDb);
+        entry.trimmedLufs = trimmed.arrangedLufs;
+        entry.trimmedPeakDb = trimmed.arrangedPeakDb;
+        entry.trimmedRmsDb = trimmed.arrangedRmsDb;
+      } catch (error) {
+        failures.push({ genreId: entry.id, pass: "trimmed", error: String(error.message || error) });
+      }
+      if ((index + 1) % 10 === 0 || index === measured.length - 1) {
+        process.stdout.write(`  trimmed ${index + 1}/${measured.length}\n`);
+      }
+    }
+
+    const spreadPass = (legacyKey, beforeKey, afterKey) => ({
+      legacyBefore: spreadOf(measured, legacyKey),
+      arrangedBefore: spreadOf(measured, beforeKey),
+      after: spreadOf(measured, afterKey),
+    });
+    const spread = {
+      ...spreadPass(METRIC.legacy, METRIC.before, METRIC.after),
+      metric: METRIC.label,
+      lufs: spreadPass("legacyLufs", "arrangedLufs", "trimmedLufs"),
+      rms: spreadPass("legacyRmsDb", "arrangedRmsDb", "trimmedRmsDb"),
+    };
+
+    const report = {
+      generatedBy: "scripts/measure_genre_loudness.mjs",
+      generatedAt: new Date().toISOString(),
+      subset: limit > 0,
+      limit: limit > 0 ? limit : null,
+      genreCount: measured.length,
+      bars,
+      repeats,
+      sampleRate: 44100,
+      path: "offline: renderPatternOffline() via Vite dev server (no live AudioContext, post-limiter)",
+      metric: {
+        primary: metricKey,
+        primaryLabel: METRIC.label,
+        loudness:
+          "ITU-R BS.1770-4 gated integrated loudness (LUFS), K-weighting designed analytically, 400 ms blocks / 75% overlap, -70 LUFS absolute + -10 LU relative gate",
+        rms: "unweighted broadband RMS over the whole render, dBFS (cross-check for windowed live-path probes)",
+        peak: "sample peak in dBFS (true-peak/oversampled metering is NOT implemented)",
+        trimPlacement: "master trim applied pre-limiter (same relative position as the live engine)",
+        note: "the gate ignores silence-between-hits, which is why sparse genres read far higher in LUFS than in windowed RMS",
+      },
+      targetLufs: Number(targetLufs.toFixed(3)),
+      target: Number(targetLufs.toFixed(3)),
+      targetMetric: METRIC.label,
+      trimRangeDb: { min: TRIM_MIN_DB, max: TRIM_MAX_DB },
+      clampHits,
+      spread,
+      genres: Object.fromEntries(
+        measured.map((entry) => [
+          entry.id,
+          {
+            category: entry.category,
+            legacyLufs: Number(entry.legacyLufs.toFixed(3)),
+            legacyPeakDb: Number(entry.legacyPeakDb.toFixed(3)),
+            legacyRmsDb: Number(entry.legacyRmsDb.toFixed(3)),
+            arrangedLufs: Number(entry.arrangedLufs.toFixed(3)),
+            arrangedPeakDb: Number(entry.arrangedPeakDb.toFixed(3)),
+            arrangedRmsDb: Number(entry.arrangedRmsDb.toFixed(3)),
+            trimDb: entry.trimDb,
+            trimmedLufs: Number.isFinite(entry.trimmedLufs) ? Number(entry.trimmedLufs.toFixed(3)) : null,
+            trimmedPeakDb: Number.isFinite(entry.trimmedPeakDb) ? Number(entry.trimmedPeakDb.toFixed(3)) : null,
+            trimmedRmsDb: Number.isFinite(entry.trimmedRmsDb) ? Number(entry.trimmedRmsDb.toFixed(3)) : null,
+            withinGenreSpreadDb: Number(entry.withinGenreSpreadDb.toFixed(3)),
+            gatedBlockCount: entry.gatedBlockCount,
+          },
+        ])
+      ),
+      unmeasured: failures,
+    };
+
+    fs.writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
+
+    console.log("\n---------------------------------------------------------------");
+    console.log(`  genres measured      : ${report.genreCount}${failures.length ? ` (${failures.length} failure(s))` : ""}`);
+    console.log(`  target (median LUFS) : ${report.targetLufs}`);
+    const printSpread = (label, s) =>
+      console.log(
+        `  ${label.padEnd(26)}: p10 ${s.p10.toFixed(2)}  p90 ${s.p90.toFixed(2)}  ` +
+          `p90−p10 ${s.p90p10.toFixed(2)} dB   min ${s.min.toFixed(2)} (${s.minGenre})  ` +
+          `max ${s.max.toFixed(2)} (${s.maxGenre})`
+      );
+    console.log(`  primary metric       : ${METRIC.label}`);
+    printSpread(`before/legacy [${metricKey}]`, spread.legacyBefore);
+    printSpread(`before/arranged [${metricKey}]`, spread.arrangedBefore);
+    printSpread(`after [${metricKey}]`, spread.after);
+    // The other view is always reported so the two metrics can be compared honestly.
+    const other = metricKey === "lufs" ? spread.rms : spread.lufs;
+    printSpread(`after [${metricKey === "lufs" ? "rms" : "lufs"}]`, other.after);
+    console.log(
+      `  clamp hits           : ${clampHits.total} (min ${clampHits.min}, max ${clampHits.max})`
+    );
+    console.log(`  report               : ${path.relative(ROOT, outPath)}`);
+    console.log("===============================================================");
+  } finally {
+    await browser.close();
+    server.kill("SIGTERM");
+  }
+
+  if (failures.length > 0) {
+    console.error(`\n⚠️  ${failures.length} measurement(s) failed — see report.unmeasured`);
+  }
+})();
