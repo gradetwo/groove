@@ -158,15 +158,22 @@ describe("no unseeded randomness in the render paths", () => {
     expect(readCode("src/audio/noise.ts")).not.toMatch(/Math\.random/);
   });
 
-  it("the live engine builds its noise bed and reverb impulse without Math.random", () => {
+  it("the live engine builds its noise bed without Math.random", () => {
     const src = readCode("src/audio/AudioEngine.ts");
-    // Scope the check to the two generators rather than the whole 1600-line file, so an
-    // unrelated future use elsewhere is not a false positive.
+    // Scope the check to the generator itself rather than the whole file, so an unrelated
+    // future use elsewhere is not a false positive.
     const start = src.indexOf("private createNoiseBuffer");
-    const end = src.indexOf("private setupSendBuses");
     expect(start).toBeGreaterThan(0);
+    const end = src.indexOf("private ", start + 10);
     expect(end).toBeGreaterThan(start);
     expect(src.slice(start, end)).not.toMatch(/Math\.random/);
+  });
+
+  it("the reverb bus generates its impulse without Math.random (E-09)", () => {
+    // The impulse generator moved out of `AudioEngine` into `ReverbBus` when the send bus
+    // was rewritten, so the guard has to follow it — otherwise the regression it exists to
+    // catch would be invisible in the new home.
+    expect(readCode("src/audio/ReverbBus.ts")).not.toMatch(/Math\.random/);
   });
 
   it("the offline exporter builds its noise bed without Math.random", () => {

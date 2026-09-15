@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useSequencerStore } from "../features/sequencer/useSequencerStore";
+import { useSequencerStore, clonePattern } from "../features/sequencer/useSequencerStore";
 import { GENRES_MAP } from "../data/genres";
+import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 
 /**
  * F-04: hook-level coverage for the undo/redo contract.
@@ -290,5 +291,163 @@ describe("useSequencerStore history memory budget (A-04)", () => {
     });
     // The previous distinct value, proving eviction did not corrupt ordering.
     expect(result.current.state.bpm).toBe(70 + (58 % 50));
+  });
+});
+
+/**
+ * D-03: the master FX rack is part of the undo stack.
+ *
+ * These pin the plan's acceptance clause: "改 FX → Ctrl+Z → FX 回退；且与 pattern 快照同
+ * 一次 commit 只占 1 条历史" — an FX edit must roll back, and an FX edit plus a pattern
+ * edit made in the same tick must still be exactly ONE history entry so a single Ctrl+Z
+ * restores both.
+ */
+describe("useSequencerStore FX history (D-03)", () => {
+  const fxGenre = GENRES_MAP["chicago-house"] ?? Object.values(GENRES_MAP)[0];
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("seeds the store with the documented rack defaults", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+    expect(result.current.state.effectsRack).toEqual(DEFAULT_FX_STATE);
+    // The defaults are the measured loudness baseline — this change must not move them.
+    expect(DEFAULT_FX_STATE.filterCutoff).toBe(16000);
+    expect(DEFAULT_FX_STATE.saturationDrive).toBe(1.5);
+    expect(DEFAULT_FX_STATE.chorusMix).toBe(0.35);
+    expect(DEFAULT_FX_STATE.bitDepth).toBe(12);
+  });
+
+  it("undoes an FX change instead of leaving a half-undo", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+
+    act(() => {
+      result.current.commit({ type: "SET_EFFECTS_RACK", effectsRack: { filterCutoff: 420 } });
+    });
+    expect(result.current.state.effectsRack.filterCutoff).toBe(420);
+    expect(result.current.canUndo).toBe(true);
+
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.state.effectsRack.filterCutoff).toBe(DEFAULT_FX_STATE.filterCutoff);
+    // The undo also restored *only* the FX field, not the whole rack identity semantics.
+    expect(result.current.state.effectsRack).toEqual(DEFAULT_FX_STATE);
+  });
+
+  it("merges a partial FX write without touching the other fields", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+
+    act(() => {
+      result.current.commit({ type: "SET_EFFECTS_RACK", effectsRack: { bitDepth: 6 } });
+    });
+    expect(result.current.state.effectsRack.bitDepth).toBe(6);
+    expect(result.current.state.effectsRack.filterCutoff).toBe(DEFAULT_FX_STATE.filterCutoff);
+    expect(result.current.state.effectsRack.chorusMix).toBe(DEFAULT_FX_STATE.chorusMix);
+  });
+
+  it("records exactly ONE history entry for an FX change and a pattern change in one tick", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+
+    const patternBefore = clonePattern(result.current.state.pattern);
+    const flipped = clonePattern(patternBefore);
+    flipped.tracks[0].steps[0] = flipped.tracks[0].steps[0] ? 0 : 1;
+
+    act(() => {
+      // Same "user commit": a rack edit and a grid edit applied together.
+      result.current.commit({ type: "SET_EFFECTS_RACK", effectsRack: { saturationDrive: 4.2 } });
+      result.current.commit({ type: "COMMIT_PATTERN", pattern: flipped });
+    });
+
+    expect(result.current.state.effectsRack.saturationDrive).toBe(4.2);
+    expect(result.current.state.pattern.tracks[0].steps[0]).toBe(flipped.tracks[0].steps[0]);
+    // One tick = one undo step (not one entry per dispatch).
+    expect(result.current.getHistoryStats().entries).toBe(1);
+
+    act(() => {
+      result.current.undo();
+    });
+    // A single undo rolls back BOTH halves.
+    expect(result.current.state.effectsRack.saturationDrive).toBe(DEFAULT_FX_STATE.saturationDrive);
+    expect(result.current.state.pattern.tracks[0].steps[0]).toBe(patternBefore.tracks[0].steps[0]);
+    expect(result.current.canUndo).toBe(false);
+  });
+
+  it("keeps separate ticks as separate FX undo entries", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+
+    act(() => {
+      result.current.commit({ type: "SET_EFFECTS_RACK", effectsRack: { filterCutoff: 1000 } });
+    });
+    act(() => {
+      result.current.commit({ type: "SET_EFFECTS_RACK", effectsRack: { filterCutoff: 250 } });
+    });
+    expect(result.current.getHistoryStats().entries).toBe(2);
+
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.state.effectsRack.filterCutoff).toBe(1000);
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.state.effectsRack.filterCutoff).toBe(DEFAULT_FX_STATE.filterCutoff);
+  });
+
+  it("coalesces an FX slider drag into a single undo entry", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+
+    act(() => {
+      // One drag of the cutoff slider = many events on the same coalescing key.
+      for (let hz = 16000; hz >= 4000; hz -= 1000) {
+        result.current.commitCoalesced(
+          { type: "SET_EFFECTS_RACK", effectsRack: { filterCutoff: hz } },
+          "fx:filterCutoff"
+        );
+      }
+    });
+    expect(result.current.state.effectsRack.filterCutoff).toBe(4000);
+
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.state.effectsRack.filterCutoff).toBe(DEFAULT_FX_STATE.filterCutoff);
+    expect(result.current.canUndo).toBe(false);
+  });
+
+  it("redo re-applies an undone FX change", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+
+    act(() => {
+      result.current.commit({ type: "SET_EFFECTS_RACK", effectsRack: { chorusMix: 0.8 } });
+    });
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.state.effectsRack.chorusMix).toBe(DEFAULT_FX_STATE.chorusMix);
+    expect(result.current.canRedo).toBe(true);
+
+    act(() => {
+      result.current.redo();
+    });
+    expect(result.current.state.effectsRack.chorusMix).toBe(0.8);
+  });
+
+  it("leaves the current rack untouched when restoring a legacy snapshot without FX", () => {
+    const { result } = renderHook(() => useSequencerStore(fxGenre));
+
+    act(() => {
+      result.current.commit({ type: "SET_EFFECTS_RACK", effectsRack: { bitDepth: 5 } });
+    });
+
+    // A snapshot captured by pre-D-03 code has no `effectsRack` field.
+    const legacy = { ...result.current.createSnapshot(), effectsRack: undefined };
+
+    act(() => {
+      result.current.commit({ type: "RESTORE_SNAPSHOT", snapshot: legacy });
+    });
+    // Not reset to defaults: a missing field means "this snapshot knows nothing about FX".
+    expect(result.current.state.effectsRack.bitDepth).toBe(5);
   });
 });

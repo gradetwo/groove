@@ -23,7 +23,8 @@ import {
   chordVoiceOnset,
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
-import { createMasterLimiter } from "./MasterLimiter";
+import { buildMasterGraph } from "./masterGraph";
+import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -160,13 +161,8 @@ export async function renderPatternOffline(
   const lengthInSamples = Math.ceil(totalDurationSec * sampleRate);
   const ctx = new OfflineContextClass(2, lengthInSamples, sampleRate);
 
-  // Master Limiter and Gain
-  const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0.85, 0);
-
-  // Genre loudness-match stage. Exporter parity: the live engine applies the same
-  // trim in the same relative position (after the fader, before the limiter), so a
-  // bounced master is not louder or quieter than the audition that produced it.
+  // Genre loudness-match trim. Applied through the shared graph below so the offline
+  // renderer uses the *same* stage, in the same relative position, as playback.
   const loudnessTrimDb = Math.max(
     LOUDNESS_TRIM_MIN_DB,
     Math.min(
@@ -176,18 +172,23 @@ export async function renderPatternOffline(
         : getGenreLoudnessTrimDb(pattern.genre_id)
     )
   );
-  const loudnessTrim = ctx.createGain();
-  loudnessTrim.gain.setValueAtTime(Math.pow(10, loudnessTrimDb / 20), 0);
 
-  // E-12: true-peak lookahead brickwall ceiling. Built after the two master gains so
-  // the offline node order (and every parity test that indexes `createdGains`) is
-  // unchanged, and awaited below so the bounce really renders through the worklet when
-  // the browser has one, falling back to the legacy compressor otherwise.
-  const limiter = createMasterLimiter(ctx);
+  // E-17 / N-16: the bounce now renders through the SAME master graph as playback —
+  // fader → trim → FX rack → true-peak limiter — and, crucially, through the same reverb
+  // and delay sends. Previously the exporter had neither sends nor an FX rack, so the
+  // per-genre `sendA`/`sendB` values (curated for all 159 genres) and anything the user
+  // dialled into FLT/DRIVE/CHORUS/LO-FI simply did not reach the file. It also used a
+  // 0.85 fader against the live engine's 0.8, an unrelated ~0.5 dB offset; both now come
+  // from `MASTER_FADER_DEFAULT`.
+  const graph = buildMasterGraph(ctx, { loudnessTrimDb });
+  const masterGain = graph.masterGain;
 
-  masterGain.connect(loudnessTrim);
-  loudnessTrim.connect(limiter.input);
-  limiter.output.connect(ctx.destination);
+  // N-14: the genre's master FX and bus character, applied through the same shared
+  // applier the live engine uses, at the same *playing* tempo (never the metadata
+  // `default_bpm`). An unknown/custom genre resolves to null and the graph keeps its
+  // defaults, exactly as playback does.
+  const genreFx = resolveGenreFx(pattern.genre_id);
+  if (genreFx) applyGenreFxToGraph(graph, genreFx, bpm);
 
   // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
   // export never matched the audition it was rendered from, which broke the project's
@@ -201,9 +202,15 @@ export async function renderPatternOffline(
   const mixerStates: TrackState[] = options.trackStates ?? deriveTrackStates(pattern);
   const trackStrips: Array<{ gain: GainNode; polarity: GainNode; pan: StereoPannerNode }> = [];
   const numTracks = pattern.tracks.length;
+  // Hoisted above the strip loop because the send taps below need to know whether the
+  // track is silenced — the live engine zeroes a muted/soloed-out track's sends too.
+  const anySolo = mixerStates.some((s) => s.solo);
+  const silenced = (state: TrackState): boolean => Boolean(state.mute) || (anySolo && !state.solo);
+  const clamp01 = (value: unknown): number =>
+    Number.isFinite(value) ? Math.max(0, Math.min(1, value as number)) : 0;
 
   for (let t = 0; t < numTracks; t++) {
-    const tState = mixerStates[t] || { mute: false, solo: false, volume: 0.8, pan: 0 };
+    const tState = mixerStates[t] || { mute: false, solo: false, volume: 0.8, pan: 0, sendA: 0, sendB: 0 };
     const tGain = ctx.createGain();
     tGain.gain.setValueAtTime(Math.max(0, Math.min(2, tState.volume)), 0);
 
@@ -218,10 +225,25 @@ export async function renderPatternOffline(
     tGain.connect(tPolarity);
     tPolarity.connect(tPan);
     tPan.connect(masterGain);
+
+    // Exporter parity for the send buses: the live engine taps post-pan into `sendA`
+    // (reverb) and `sendB` (delay), ramped with `setTargetAtTime`. The same tap point and
+    // the same ramps are used here so a genre's curated sends survive the bounce.
+    const sendA = ctx.createGain();
+    sendA.gain.setValueAtTime(0, 0);
+    sendA.gain.setTargetAtTime(silenced(tState) ? 0 : clamp01(tState.sendA), 0, 0.01);
+    tPan.connect(sendA);
+    sendA.connect(graph.reverb.input);
+
+    const sendB = ctx.createGain();
+    sendB.gain.setValueAtTime(0, 0);
+    sendB.gain.setTargetAtTime(silenced(tState) ? 0 : clamp01(tState.sendB), 0, 0.01);
+    tPan.connect(sendB);
+    sendB.connect(graph.delay.input);
+
     trackStrips.push({ gain: tGain, polarity: tPolarity, pan: tPan });
   }
 
-  const anySolo = mixerStates.some((s) => s.solo);
   const drumKit: DrumKitType = options.drumKit || "808";
   const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
 
@@ -288,7 +310,7 @@ export async function renderPatternOffline(
         } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
           synthesizeHiHat(ctx, trackDest, subTime, subVel, pitchVal, drumKit, stepVal, subDur, gateVal, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
         } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
-          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
+          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r), track.instrument);
         } else if (trackId === "bass" || lowerName.includes("bass")) {
           const midi = pitchVal > 0 ? pitchVal : 36;
           playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal, subVel, synthPreset);
@@ -328,7 +350,7 @@ export async function renderPatternOffline(
             playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
           }
         } else {
-          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
+          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r), track.instrument);
         }
       }
     });
@@ -337,7 +359,9 @@ export async function renderPatternOffline(
   // Wait for the limiter module before rendering: an OfflineAudioContext renders in
   // one shot, so a worklet that installed after `startRendering()` would silently
   // leave the whole bounce on the compressor fallback.
-  await limiter.ready;
+  // An OfflineAudioContext renders in one shot, so a worklet that installed after
+  // `startRendering()` would silently leave the whole bounce on the compressor fallback.
+  await graph.limiter.ready;
 
   return await ctx.startRendering();
 }

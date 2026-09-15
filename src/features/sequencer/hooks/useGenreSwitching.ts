@@ -7,6 +7,8 @@ import type { SequencerAction } from "../useSequencerStore";
 import { useCustomGenres } from "../../customGenre/useCustomGenres";
 import { getDefaultDrumKitForGenre } from "../../../utils/trackUtils";
 import { patternFromGenre } from "../../../data/genreMix";
+import { resolveGenreFx } from "../../../data/genreFx";
+import { EffectsRackState } from "../../../audio/AudioEngine";
 
 function getGenreAccent(genre: GenreRailItem): string {
   const cat = genre.category.toLowerCase();
@@ -81,6 +83,14 @@ export interface UseGenreSwitchingOptions {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   isDrumsOnly: boolean;
   setDrumKit: React.Dispatch<React.SetStateAction<DrumKitType>>;
+  /**
+   * Applies a genre's master FX defaults to the drawer's state (N-14).
+   *
+   * Without this the UI would show every effect switched off while the engine had the
+   * genre's rack engaged — a worse lie than having no genre defaults at all. The data
+   * module is the single source of truth for both sides.
+   */
+  setEffectsRackState?: React.Dispatch<React.SetStateAction<EffectsRackState>>;
   clearPlayhead: () => void;
   commit: (action: SequencerAction, recordHistory?: boolean) => void;
 }
@@ -113,6 +123,7 @@ export function useGenreSwitching({
   setIsPlaying,
   isDrumsOnly,
   setDrumKit,
+  setEffectsRackState,
   clearPlayhead,
   commit,
 }: UseGenreSwitchingOptions): UseGenreSwitchingResult {
@@ -123,18 +134,32 @@ export function useGenreSwitching({
 
   const lastGenreIdRef = useRef(currentGenre.id);
 
+  /**
+   * Pushes a genre's rack into the drawer state. Unknown/custom genres resolve to null and
+   * leave the user's settings alone.
+   */
+  const applyGenreFxDefaults = useCallback(
+    (genreId: string) => {
+      if (!setEffectsRackState) return;
+      const fx = resolveGenreFx(genreId);
+      if (fx) setEffectsRackState(fx.rack);
+    },
+    [setEffectsRackState]
+  );
+
   // Sync Default Drum Kit on Genre Change
   useEffect(() => {
     if (lastGenreIdRef.current !== currentGenre.id) {
       lastGenreIdRef.current = currentGenre.id;
       const defaultKit = getDefaultDrumKitForGenre(currentGenre);
       setDrumKit(defaultKit);
+      applyGenreFxDefaults(currentGenre.id);
       if (engineRef.current) {
         engineRef.current.setDrumKit(defaultKit);
         engineRef.current.setDrumsOnly(isDrumsOnly);
       }
     }
-  }, [currentGenre.id, isDrumsOnly]);
+  }, [currentGenre.id, isDrumsOnly, applyGenreFxDefaults]);
 
   // Sync external genre
   useEffect(() => {
@@ -151,6 +176,9 @@ export function useGenreSwitching({
       lastGenreIdRef.current = genre.id;
       const defaultKit = getDefaultDrumKitForGenre(genre);
       setDrumKit(defaultKit);
+      // Switching genre loads that genre's FX defaults, replacing any manual edits — the
+      // behaviour agreed for N-14, and the same thing Logic does when you change patch.
+      applyGenreFxDefaults(genre.id);
 
       onSelectGenre(genre);
       commit({ type: "SET_GENRE", genre });

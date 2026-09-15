@@ -78,9 +78,17 @@ export function useToolbarControls({
     );
   }, [isRecordArmed, isZh, showToast]);
 
-  const handleChangeEffectsRack = useCallback((partial: Partial<EffectsRackState>) => {
-    setEffectsRackState((prev) => ({ ...prev, ...partial }));
-  }, []);
+  /**
+   * D-03: FX edits go through the store, so they land in the undo stack. `StudioView`
+   * keeps a local mirror for the UI and commits the merged rack here; coalescing means a
+   * slider drag is one history entry, not one per frame.
+   */
+  const handleChangeEffectsRack = useCallback(
+    (partial: Partial<EffectsRackState>) => {
+      setEffectsRackState((prev) => ({ ...prev, ...partial }));
+    },
+    [setEffectsRackState]
+  );
 
   const handleChangeBpm = useCallback(
     (b: number) => commitCoalesced({ type: "SET_BPM", bpm: b }, "bpm"),

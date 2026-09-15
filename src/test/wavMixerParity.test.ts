@@ -10,9 +10,37 @@ import { FakeAudioBuffer, FakeOfflineAudioContext, FakeGainNode, installFakeOffl
  * Volume stages of the two rendered tracks (track 0 then track 1). Each track builds a
  * volume gain and a polarity gain, so position alone is no longer meaningful.
  */
+/**
+ * The per-track volume stage of each channel strip.
+ *
+ * Identified structurally rather than by creation order: a strip is the only place the
+ * renderer builds a `GainNode → GainNode(polarity ±1) → StereoPannerNode` chain, so the
+ * panners are the reliable anchor. The previous "skip the master gain, then filter by
+ * value" heuristic broke the moment E-17 gave the exporter the same master graph as
+ * playback — the master fader is 0.8, which collided with a track volume of 0.8.
+ */
 function stripVolumeGains(): FakeGainNode[] {
-  const gains = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1) as FakeGainNode[];
-  return gains.filter((g) => g.gain.events[0]?.value !== 1);
+  const ctx = FakeOfflineAudioContext.lastInstance!;
+  return ctx.createdPanners.map((pan) => {
+    const polarity = pan.incoming[0];
+    return polarity?.incoming[0] as FakeGainNode;
+  });
+}
+
+/**
+ * The cutoff of every biquad the render created, in creation order.
+ *
+ * E-17 gave the offline renderer the shared master graph, which contributes several
+ * biquads of its own (the FX rack's filter, the delay's damping stage, …). Selecting the
+ * *voice* filter by creation index therefore depends on how many nodes the master graph
+ * happens to build, which is not a fact these tests should encode. Asserting on the set
+ * of cutoffs pins the real claim — "this voice was rendered with this preset's low-pass"
+ * — and stays correct however the master graph grows.
+ */
+function filterCutoffs(): Array<number | undefined> {
+  return FakeOfflineAudioContext.lastInstance!.createdFilters.map(
+    (f) => f.frequency.events[0]?.value as number | undefined
+  );
 }
 
 function makePattern(overrides: Partial<Record<string, unknown>> = {}) {
@@ -110,15 +138,10 @@ describe("F-03 · offline renderer honours the mixer", () => {
     restore = installFakeOfflineAudioContext();
     await renderPatternOffline(makePattern());
 
-    // Each track now contributes two gain nodes (volume, then polarity ±1), so pick
-    // the volume stages by their value rather than by position.
-    const gains = FakeOfflineAudioContext.lastInstance!.createdGains.slice(1) as FakeGainNode[];
-    const volumeStages = gains.filter((g) => g.gain.events[0]?.value !== 1).map((g) => g.gain.events[0].value);
-    expect(volumeStages).toContain(0.5);
-    expect(volumeStages).toContain(0.9);
-    // And the polarity stages sit at unity by default.
-    const polarityStages = gains.filter((g) => g.gain.events[0]?.value === 1);
-    expect(polarityStages.length).toBeGreaterThanOrEqual(2);
+    // Strips are found through their panner, so this is exact rather than heuristic.
+    const strips = stripVolumeGains();
+    expect(strips).toHaveLength(2);
+    expect(strips.map((g) => g.gain.events[0]?.value)).toEqual([0.5, 0.9]);
   });
 
   it("drops muted tracks and keeps soloed ones", async () => {
@@ -208,9 +231,10 @@ describe("genre timbres · offline render voices the declared instrument", () =>
 
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual([flute.osc1Type, flute.osc2Type]);
     expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(flute.osc2DetuneCents);
-    // The renderer's only biquad for this pattern is the voice low-pass.
-    expect(ctx.createdFilters).toHaveLength(1);
-    expect(ctx.createdFilters[0].frequency.events[0]?.value).toBe(flute.filterCutoff);
+    const cutoffs = filterCutoffs();
+    expect(cutoffs).toContain(flute.filterCutoff);
+    // Exactly one voice, so exactly one filter carries the flute's cutoff.
+    expect(cutoffs.filter((c) => c === flute.filterCutoff)).toHaveLength(1);
   });
 
   it("renders sub_bass, not the legacy acidBass, on a sub_bass bass track", async () => {
@@ -221,9 +245,8 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     const sub = resolveInstrumentPreset("sub_bass", "bass");
 
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual([sub.osc1Type, sub.osc2Type]);
-    const cutoff = ctx.createdFilters[0].frequency.events[0]?.value;
-    expect(cutoff).toBe(sub.filterCutoff);
-    expect(cutoff).toBeLessThan(DEFAULT_SYNTH_PRESETS.acidBass.filterCutoff);
+    expect(filterCutoffs()).toContain(sub.filterCutoff);
+    expect(sub.filterCutoff).toBeLessThan(DEFAULT_SYNTH_PRESETS.acidBass.filterCutoff);
   });
 
   it("renders supersaw, not the legacy warmPad, on a supersaw chords track", async () => {
@@ -242,13 +265,12 @@ describe("genre timbres · offline render voices the declared instrument", () =>
       voicing.flatMap(() => [superSaw.osc1Type, superSaw.osc2Type])
     );
     expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(superSaw.osc2DetuneCents);
-    expect(ctx.createdFilters).toHaveLength(voicing.length);
-    for (const filter of ctx.createdFilters) {
-      expect(filter.frequency.events[0]?.value).toBe(superSaw.filterCutoff);
-      expect(filter.frequency.events[0]?.value).not.toBe(
-        DEFAULT_SYNTH_PRESETS.warmPad.filterCutoff
-      );
-    }
+    // One voice-level low-pass per chord tone, all at the supersaw cutoff — and none at
+    // the legacy warmPad value. Counted by cutoff rather than by array length, because
+    // the shared master graph (E-17) contributes biquads of its own.
+    const cutoffs = filterCutoffs();
+    expect(cutoffs.filter((c) => c === superSaw.filterCutoff)).toHaveLength(voicing.length);
+    expect(cutoffs).not.toContain(DEFAULT_SYNTH_PRESETS.warmPad.filterCutoff);
   });
 
   it("keeps the shared noise-sweep riser for the noise_sweep fx track", async () => {
@@ -259,7 +281,7 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     // synthFX is a single swept oscillator through a bandpass starting at 2 kHz;
     // the poly synth would have produced two oscillators instead.
     expect(ctx.createdOscillators).toHaveLength(1);
-    expect(ctx.createdFilters).toHaveLength(1);
-    expect(ctx.createdFilters[0].frequency.events[0]?.value).toBe(2000);
+    // `synthFX` is a single swept oscillator through a bandpass starting at 2 kHz.
+    expect(filterCutoffs()).toContain(2000);
   });
 });

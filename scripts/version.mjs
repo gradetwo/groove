@@ -48,6 +48,35 @@ function desiredSw(current) {
 }
 
 /**
+ * Caps a release entry so `version.json` can never outgrow its 8 KB budget (red line R7a).
+ *
+ * `version.json` exists to answer "is there a newer build?" cheaply; the full release text
+ * belongs in `changelog.json`, which the history panel fetches on demand. Writing the whole
+ * newest entry into the small file made the budget a function of how verbose one release's
+ * notes happened to be — it tripped twice. A summary plus a `truncated` flag keeps the
+ * check payload bounded no matter how detailed the notes are, and the panel still shows the
+ * complete text because it prefers the archive.
+ */
+const LATEST_MAX_HIGHLIGHTS = 3;
+const LATEST_MAX_CHARS = 480;
+
+function clip(text) {
+  if (typeof text !== "string" || text.length <= LATEST_MAX_CHARS) return text;
+  return `${text.slice(0, LATEST_MAX_CHARS - 1).trimEnd()}\u2026`;
+}
+
+function condenseLatest(entry) {
+  if (!entry) return null;
+  const all = Array.isArray(entry.highlights) ? entry.highlights : [];
+  return {
+    ...entry,
+    highlights: all.slice(0, LATEST_MAX_HIGHLIGHTS).map((h) => ({ zh: clip(h.zh), en: clip(h.en) })),
+    /** True when the archive holds more than this summary — the panel fetches it anyway. */
+    truncated: all.length > LATEST_MAX_HIGHLIGHTS,
+  };
+}
+
+/**
  * A-08: the update CHECK only needs the current version, so `version.json` stays
  * tiny. The full (and ever-growing) bilingual changelog lives in `changelog.json`
  * and is fetched only when the user actually opens the history.
@@ -70,7 +99,7 @@ function splitVersionFiles(currentVersionJson, currentChangelogJson) {
   if (changelog.length === 0 && Array.isArray(data.changelog)) {
     changelog = data.changelog;
   }
-  const latest = changelog.find((e) => e.version === version) || changelog[0] || null;
+  const latest = condenseLatest(changelog.find((e) => e.version === version) || changelog[0] || null);
 
   const small = {
     version,

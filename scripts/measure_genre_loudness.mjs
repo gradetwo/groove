@@ -116,7 +116,7 @@ const outPath = path.resolve(
 // Must match `LOUDNESS_TRIM_MIN_DB` / `LOUDNESS_TRIM_MAX_DB` in src/data/genreMix.ts.
 // `src/test/loudnessReport.test.ts` fails if these drift from the committed report.
 const TRIM_MIN_DB = -9;
-const TRIM_MAX_DB = 6;
+const TRIM_MAX_DB = 9;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 

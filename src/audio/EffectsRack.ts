@@ -193,25 +193,56 @@ export class EffectsRack {
     this.chorusWet.connect(this.outputNode);
 
     this.updateChorusRouting();
-    this.initLfoIfRealContext();
+    // The chorus LFO is created lazily (see `ensureChorusLfo`). Chorus defaults to off,
+    // and an oscillator that runs forever to modulate a bypassed effect is pure waste —
+    // it also put a stray oscillator into every offline render once the exporter started
+    // using this rack (E-17), which is how the waste was noticed.
+    if (this.state.chorusEnabled) this.ensureChorusLfo();
   }
 
-  private initLfoIfRealContext(): void {
+  /**
+   * Creates the chorus modulation LFO on first use.
+   *
+   * Idempotent: calling it when the LFO already exists is a no-op, so `setChorus(true)`
+   * can call it unconditionally.
+   */
+  private ensureChorusLfo(): void {
+    if (this.chorusLfo) return;
     if (typeof (this.ctx as any).createOscillator !== "function") return;
     try {
-      this.chorusLfo = this.ctx.createOscillator();
-      this.chorusLfoGain = this.ctx.createGain();
-      this.chorusLfo.type = "sine";
-      this.chorusLfo.frequency.value = this.state.chorusRate;
-      this.chorusLfoGain.gain.value = 0.003; // 3ms modulation depth
+      const lfo = this.ctx.createOscillator();
+      const depth = this.ctx.createGain();
+      lfo.type = "sine";
+      lfo.frequency.value = this.state.chorusRate;
+      depth.gain.value = 0.003; // 3ms modulation depth
 
-      this.chorusLfo.connect(this.chorusLfoGain);
-      this.chorusLfoGain.connect(this.chorusDelayL.delayTime);
-      this.chorusLfoGain.connect(this.chorusDelayR.delayTime);
-      this.chorusLfo.start();
+      lfo.connect(depth);
+      depth.connect(this.chorusDelayL.delayTime);
+      depth.connect(this.chorusDelayR.delayTime);
+      lfo.start();
+      this.chorusLfo = lfo;
+      this.chorusLfoGain = depth;
     } catch {
-      // OfflineAudioContext or test mock fallback
+      // OfflineAudioContext or test mock fallback: chorus simply stays unmodulated.
     }
+  }
+
+  /** Stops and releases the chorus LFO once chorus is switched off. */
+  private releaseChorusLfo(): void {
+    if (!this.chorusLfo) return;
+    try {
+      this.chorusLfo.stop();
+      this.chorusLfo.disconnect();
+    } catch {
+      // Already stopped, or a mock that does not implement stop().
+    }
+    try {
+      this.chorusLfoGain?.disconnect();
+    } catch {
+      /* already disconnected */
+    }
+    this.chorusLfo = null;
+    this.chorusLfoGain = null;
   }
 
   /**
@@ -284,8 +315,13 @@ export class EffectsRack {
     this.state.chorusEnabled = enabled;
     this.state.chorusMix = mix;
     this.state.chorusRate = rate;
-    if (this.chorusLfo) {
-      this.chorusLfo.frequency.value = rate;
+    if (this.state.chorusEnabled) {
+      // Create on first enable, then just retune.
+      this.ensureChorusLfo();
+      if (this.chorusLfo) this.chorusLfo.frequency.value = rate;
+    } else {
+      // Nothing is being modulated, so nothing should be running.
+      this.releaseChorusLfo();
     }
     this.updateChorusRouting();
   }
@@ -295,13 +331,7 @@ export class EffectsRack {
   }
 
   public destroy(): void {
-    if (this.chorusLfo) {
-      try {
-        this.chorusLfo.stop();
-        this.chorusLfo.disconnect();
-      } catch {}
-      this.chorusLfo = null;
-    }
+    this.releaseChorusLfo();
     this.inputNode.disconnect();
     this.outputNode.disconnect();
     this.filterNode.disconnect();

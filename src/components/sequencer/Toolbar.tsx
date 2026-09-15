@@ -34,6 +34,38 @@ import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { CustomKickPreset, loadCustomKickPresets } from "../../audio/AnatomyKickEngine";
 import { triggerHaptic, HapticPatterns, getHapticSettings, setHapticEnabled, setHapticIntensity } from "../../utils/haptics";
 
+/* ------------------------------------------------------------------------- *
+ * D-05: master-FX parameter mapping.
+ *
+ * The engine's cutoff range is 20 Hz – 20 kHz. A *linear* 20–20000 slider puts
+ * every musically useful value (a bassline's 200 Hz low-pass, a hi-hat's 8 kHz)
+ * inside the first few pixels, so the slider is mapped on a log scale: position
+ * 0 = 20 Hz, position 100 = 20 kHz, each unit a constant ratio (1000^(1/100)).
+ * Exported so the mapping can be unit-tested without rendering the toolbar.
+ * ------------------------------------------------------------------------- */
+export const FX_CUTOFF_MIN_HZ = 20;
+export const FX_CUTOFF_MAX_HZ = 20000;
+const FX_CUTOFF_RATIO = FX_CUTOFF_MAX_HZ / FX_CUTOFF_MIN_HZ;
+
+export const FX_FILTER_TYPES = ["lowpass", "highpass", "bandpass"] as const;
+
+/** Maps a cutoff in Hz onto the 0–100 log slider position. */
+export function fxCutoffToSliderPosition(hz: number): number {
+  const clamped = Math.min(FX_CUTOFF_MAX_HZ, Math.max(FX_CUTOFF_MIN_HZ, hz));
+  return Math.round((Math.log(clamped / FX_CUTOFF_MIN_HZ) / Math.log(FX_CUTOFF_RATIO)) * 100);
+}
+
+/** Maps a 0–100 log slider position back onto a cutoff in Hz (integer Hz). */
+export function fxSliderPositionToCutoff(position: number): number {
+  const clamped = Math.min(100, Math.max(0, position));
+  return Math.round(FX_CUTOFF_MIN_HZ * Math.pow(FX_CUTOFF_RATIO, clamped / 100));
+}
+
+/** Compact readout: `850 Hz` below 1 kHz, `16.0k` above. */
+export function formatFxCutoff(hz: number): string {
+  return hz >= 1000 ? `${(hz / 1000).toFixed(1)}k` : `${Math.round(hz)}`;
+}
+
 export type MobileEditMode = "step" | "accent" | "ratchet" | "pitch" | "plocks";
 
 export interface ToolbarProps {
@@ -582,6 +614,10 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   // P8-01: Haptic feedback toggle & intensity state
   const [hapticOn, setHapticOn] = useState(() => getHapticSettings().enabled);
   const [hapticLevel, setHapticLevel] = useState(() => getHapticSettings().intensity);
+
+  // D-05: the drawer's secondary FX parameters (filter Q, chorus rate) stay collapsed
+  // by default so the four primary effect parameters fit the one-line drawer.
+  const [showFxAdvanced, setShowFxAdvanced] = useState(false);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -1196,14 +1232,14 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             </button>
           </div>
 
-          {/* Master DSP Effects Rack Controls (P5-04) */}
+          {/* Master DSP Effects Rack Controls (P5-04 / D-05) */}
           {effectsRackState && onChangeEffectsRack && (
             <div className="flex items-center gap-1.5 bg-panel px-2 py-1 rounded-lg border border-line-subtle">
               <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-0.5 whitespace-nowrap">
                 {t("toolbar_fx_label")}
               </span>
 
-              {/* Filter */}
+              {/* Filter: bypass + log cutoff + type */}
               <button
                 type="button"
                 onClick={() => onChangeEffectsRack({ filterEnabled: !effectsRackState.filterEnabled })}
@@ -1216,8 +1252,65 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               >
                 FLT
               </button>
+              <div className="flex items-center gap-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={fxCutoffToSliderPosition(effectsRackState.filterCutoff)}
+                  onChange={(e) =>
+                    onChangeEffectsRack({ filterCutoff: fxSliderPositionToCutoff(+e.target.value) })
+                  }
+                  className="w-16 sm:w-20 accent-accent cursor-pointer"
+                  aria-label={t("toolbar_fx_filter_cutoff")}
+                  aria-valuetext={`${effectsRackState.filterCutoff} Hz`}
+                  title={t("toolbar_fx_filter_cutoff")}
+                  data-fx-param="filterCutoff"
+                />
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tabular-nums w-9 text-right">
+                  {formatFxCutoff(effectsRackState.filterCutoff)}
+                </span>
+                <select
+                  value={effectsRackState.filterType}
+                  onChange={(e) =>
+                    onChangeEffectsRack({ filterType: e.target.value as BiquadFilterType })
+                  }
+                  className="bg-transparent text-text font-['JetBrains_Mono'] text-[10px] focus:outline-none cursor-pointer"
+                  aria-label={t("toolbar_fx_filter_type")}
+                  title={t("toolbar_fx_filter_type")}
+                  data-fx-param="filterType"
+                >
+                  {FX_FILTER_TYPES.map((type) => (
+                    <option key={type} value={type} className="bg-panel text-text">
+                      {type === "lowpass" ? "LP" : type === "highpass" ? "HP" : "BP"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {showFxAdvanced && (
+                <div className="flex items-center gap-1">
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim">Q</span>
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={15}
+                    step={0.1}
+                    value={effectsRackState.filterQ}
+                    onChange={(e) => onChangeEffectsRack({ filterQ: +e.target.value })}
+                    className="w-14 sm:w-16 accent-accent cursor-pointer"
+                    aria-label={t("toolbar_fx_filter_q")}
+                    aria-valuetext={effectsRackState.filterQ.toFixed(1)}
+                    title={t("toolbar_fx_filter_q")}
+                    data-fx-param="filterQ"
+                  />
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tabular-nums w-6 text-right">
+                    {effectsRackState.filterQ.toFixed(1)}
+                  </span>
+                </div>
+              )}
 
-              {/* Saturation */}
+              {/* Saturation: bypass + drive */}
               <button
                 type="button"
                 onClick={() => onChangeEffectsRack({ saturationEnabled: !effectsRackState.saturationEnabled })}
@@ -1230,8 +1323,26 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               >
                 DRIVE
               </button>
+              <div className="flex items-center gap-1">
+                <input
+                  type="range"
+                  min={1}
+                  max={6}
+                  step={0.1}
+                  value={effectsRackState.saturationDrive}
+                  onChange={(e) => onChangeEffectsRack({ saturationDrive: +e.target.value })}
+                  className="w-14 sm:w-16 accent-amber-400 cursor-pointer"
+                  aria-label={t("toolbar_fx_saturation_drive")}
+                  aria-valuetext={`${effectsRackState.saturationDrive.toFixed(1)}x`}
+                  title={t("toolbar_fx_saturation_drive")}
+                  data-fx-param="saturationDrive"
+                />
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tabular-nums w-7 text-right">
+                  {effectsRackState.saturationDrive.toFixed(1)}x
+                </span>
+              </div>
 
-              {/* Chorus */}
+              {/* Chorus: bypass + mix (+ rate in the advanced row) */}
               <button
                 type="button"
                 onClick={() => onChangeEffectsRack({ chorusEnabled: !effectsRackState.chorusEnabled })}
@@ -1244,8 +1355,47 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               >
                 CHORUS
               </button>
+              <div className="flex items-center gap-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={effectsRackState.chorusMix}
+                  onChange={(e) => onChangeEffectsRack({ chorusMix: +e.target.value })}
+                  className="w-14 sm:w-16 accent-cyan-400 cursor-pointer"
+                  aria-label={t("toolbar_fx_chorus_mix")}
+                  aria-valuetext={`${Math.round(effectsRackState.chorusMix * 100)}%`}
+                  title={t("toolbar_fx_chorus_mix")}
+                  data-fx-param="chorusMix"
+                />
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tabular-nums w-8 text-right">
+                  {Math.round(effectsRackState.chorusMix * 100)}%
+                </span>
+              </div>
+              {showFxAdvanced && (
+                <div className="flex items-center gap-1">
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim">RATE</span>
+                  <input
+                    type="range"
+                    min={0.2}
+                    max={5}
+                    step={0.1}
+                    value={effectsRackState.chorusRate}
+                    onChange={(e) => onChangeEffectsRack({ chorusRate: +e.target.value })}
+                    className="w-14 sm:w-16 accent-cyan-400 cursor-pointer"
+                    aria-label={t("toolbar_fx_chorus_rate")}
+                    aria-valuetext={`${effectsRackState.chorusRate.toFixed(1)} Hz`}
+                    title={t("toolbar_fx_chorus_rate")}
+                    data-fx-param="chorusRate"
+                  />
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tabular-nums w-10 text-right">
+                    {effectsRackState.chorusRate.toFixed(1)}Hz
+                  </span>
+                </div>
+              )}
 
-              {/* Bitcrusher */}
+              {/* Bitcrusher: bypass + bit depth */}
               <button
                 type="button"
                 onClick={() => onChangeEffectsRack({ bitcrusherEnabled: !effectsRackState.bitcrusherEnabled })}
@@ -1257,6 +1407,40 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 title={t("toolbar_fx_bitcrusher")}
               >
                 LO-FI
+              </button>
+              <div className="flex items-center gap-1">
+                <input
+                  type="range"
+                  min={4}
+                  max={16}
+                  step={1}
+                  value={effectsRackState.bitDepth}
+                  onChange={(e) => onChangeEffectsRack({ bitDepth: +e.target.value })}
+                  className="w-14 sm:w-16 accent-fuchsia-400 cursor-pointer"
+                  aria-label={t("toolbar_fx_bit_depth")}
+                  aria-valuetext={`${effectsRackState.bitDepth} bit`}
+                  title={t("toolbar_fx_bit_depth")}
+                  data-fx-param="bitDepth"
+                />
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tabular-nums w-9 text-right">
+                  {effectsRackState.bitDepth}bit
+                </span>
+              </div>
+
+              {/* D-05 secondary row: filterQ / chorusRate live behind this toggle */}
+              <button
+                type="button"
+                onClick={() => setShowFxAdvanced((v) => !v)}
+                aria-expanded={showFxAdvanced}
+                aria-label={t("toolbar_fx_advanced")}
+                title={t("toolbar_fx_advanced")}
+                className={`h-6 px-1.5 rounded text-[10px] font-['JetBrains_Mono'] border transition-colors ${
+                  showFxAdvanced
+                    ? "bg-accent/20 border-accent text-accent font-bold"
+                    : "bg-[#17181c] border-line text-text-sub hover:text-text"
+                }`}
+              >
+                ADV
               </button>
             </div>
           )}

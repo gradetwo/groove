@@ -163,17 +163,27 @@ if (allTableTrimsZero && reportHasNonZero) {
 const audioSource = read("src/audio/AudioEngine.ts");
 const wavSource = read("src/audio/WavExporter.ts");
 const storeSource = read("src/features/sequencer/useSequencerStore.ts");
+/**
+ * E-17 moved the master chain (fader → trim → FX rack → limiter) into one shared builder,
+ * so asserting the chain edges inside each engine file would now fail on a graph that is
+ * *more* correct than before — the two engines can no longer diverge at all. The assertions
+ * below therefore check the builder for the topology and the engines for using it.
+ */
+const graphSource = read("src/audio/masterGraph.ts");
 const wiring = [
-  ["AudioEngine declares the separate stage", /private loudnessTrimGain: GainNode/],
-  ["AudioEngine inserts it after the fader", /this\.masterGain\.connect\(this\.loudnessTrimGain\)/],
-  ["AudioEngine feeds the FX rack from the trim stage", /this\.loudnessTrimGain\.connect\(this\.masterFxRack\.inputNode\)/],
+  ["masterGraph declares the separate trim stage", /loudnessTrimGain = ctx\.createGain\(\)/],
+  ["masterGraph inserts it after the fader", /masterGain\.connect\(loudnessTrimGain\)/],
+  ["masterGraph feeds the FX rack from the trim stage", /loudnessTrimGain\.connect\(fxRack\.inputNode\)/],
+  ["masterGraph places the limiter after the FX rack", /fxRack\.outputNode\.connect\(limiter\.input\)/],
+  ["the live engine builds the shared graph", /buildMasterGraph\(this\.ctx/],
+  ["the offline renderer builds the shared graph", /buildMasterGraph\(ctx/],
   ["AudioEngine derives the trim from the pattern's genre", /getGenreLoudnessTrimDb\(pattern\.genre_id\)/],
-  ["WavExporter applies the same trim gain", /Math\.pow\(10, loudnessTrimDb \/ 20\)/],
-  ["WavExporter places it between fader and limiter", /masterGain\.connect\(loudnessTrim\)/],
-  ["WavExporter derives it from the genre id", /getGenreLoudnessTrimDb\(pattern\.genre_id\)/],
+  ["the trim is written only through the graph", /setLoudnessTrimDb\(this\.appliedLoudnessTrimDb\)/],
   ["the studio seeds the arranged mix on genre entry", /patternFromGenre/],
 ];
-const unwired = wiring.filter(([, pattern]) => !pattern.test(audioSource + wavSource + storeSource)).map(([label]) => label);
+const unwired = wiring
+  .filter(([, pattern]) => !pattern.test(audioSource + wavSource + storeSource + graphSource))
+  .map(([label]) => label);
 if (unwired.length) {
   problems.push(`loudness wiring missing: ${unwired.join(", ")}`);
 } else {

@@ -139,13 +139,16 @@ describe("N-04 · probability is applied identically by every exporter", () => {
       const seed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
       const expected = probability.filter((p, step) => probabilityPasses(p, seed, 0, step)).length;
 
-      // The first GainNode after the master gain is track 0's strip; count the voices
-      // that were actually routed into it (one oscillator network per trigger).
+      // Track 0's strip, found through its panner rather than by creation index: E-17
+      // put the shared master graph (fader, trim, FX rack, reverb, delay, limiter) ahead
+      // of the strips, so "the second gain created" is now the trim stage — an assertion
+      // that still passed, but about the wrong node.
       const instance = FakeOfflineAudioContext.lastInstance!;
-      const stripGain = instance.createdGains[1];
+      const stripGain = instance.createdPanners[0]?.incoming[0]?.incoming[0];
       expect(ctx.length).toBeGreaterThan(0);
       expect(expected).toBeGreaterThan(0);
-      expect(stripGain.incoming.length).toBeGreaterThan(0);
+      expect(stripGain, "track 0's channel strip should exist").toBeDefined();
+      expect(stripGain!.incoming.length).toBeGreaterThan(0);
     } finally {
       restore();
     }

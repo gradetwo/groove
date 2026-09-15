@@ -40,6 +40,39 @@ export interface SynthPreset {
    * gate: negative values voice tape-stop / laser / sub-drop falls, positive values a riser.
    */
   pitchSweepCents?: number;
+
+  // --- Velocity → timbre response (E-13) -----------------------------------
+  // All four are depth controls measured against the `velocityCurve` output: 0 at the
+  // curve's floor and 1 at full velocity. Every one of them is a *no-op at full
+  // velocity* by construction, so annotating a preset never changes its level or its
+  // voicing on an ff note (the library's measured loudness baseline is untouched), and
+  // omitting them leaves the preset bit-for-bit unchanged at every velocity.
+
+  /**
+   * Velocity → low-pass cutoff depth, in octaves. The preset's `filterCutoff` is what a
+   * full-velocity note opens to; a note at the curve's floor closes by up to this many
+   * octaves (harder = brighter). `0` (default) disables the mapping.
+   */
+  velocityToCutoff?: number;
+  /**
+   * Extra velocity → filter-envelope depth, in octaves, on top of the fixed `cutoff ·
+   * 2.5` attack sweep. A full-velocity note keeps the full sweep; as velocity falls the
+   * sweep peak closes by up to this many octaves, floored at the (velocity-scaled) base
+   * cutoff so the sweep never becomes a downward ramp. `0` (default) disables it.
+   */
+  velocityToFilterEnv?: number;
+  /**
+   * Velocity → amp-attack response. The attack at the curve's floor is
+   * `adsr.attack · (1 + velocityToAttack)` and shortens linearly to `adsr.attack` at
+   * full velocity (harder = slightly faster). `0` (default) disables it.
+   */
+  velocityToAttack?: number;
+  /**
+   * Velocity → amp-decay response. The decay at the curve's floor is
+   * `adsr.decay · (1 + velocityToDecay)` and shortens to `adsr.decay` at full velocity
+   * (harder = slightly more percussive). `0` (default) disables it.
+   */
+  velocityToDecay?: number;
 }
 
 /**
@@ -132,6 +165,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2700,
     filterQ: 3.5,
     adsr: { attack: 0.005, decay: 0.35, sustain: 0.28, release: 0.28 },
+    velocityToCutoff: 1.6,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.3,
   },
   // `distorted_guitar`: the high-gain *rhythm* voice, deliberately not a louder
   // `guitar_lead`. Power chords and palm mutes live in the low-mids, so the cutoff sits
@@ -148,6 +185,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 1500,
     filterQ: 6.5,
     adsr: { attack: 0.003, decay: 0.18, sustain: 0.18, release: 0.12 },
+    velocityToCutoff: 1.7,
+    velocityToFilterEnv: 1.1,
+    velocityToAttack: 0.25,
+    velocityToDecay: 0.3,
   },
   // `flute_lead`: near-pure sine body with a triangle edge, slow soft attack,
   // low resonance and a 6-cent detune — enough movement for a breathy vibrato
@@ -161,6 +202,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2600,
     filterQ: 0.9,
     adsr: { attack: 0.12, decay: 0.18, sustain: 0.85, release: 0.32 },
+    velocityToCutoff: 1.8,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.6,
+    velocityToDecay: 0.25,
   },
   // `pluck_synth`: very short triangle/square bite, no sustain worth holding.
   pluckSynth: {
@@ -198,6 +243,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3200,
     filterQ: 1.1,
     adsr: { attack: 0.004, decay: 0.9, sustain: 0.3, release: 0.5 },
+    velocityToCutoff: 1.8,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.6,
+    velocityToDecay: 0.3,
   },
   // `m1_organ`: square + sine locked at 0 cents with a near-instant swell and
   // full sustain — drawbar organ, no decay.
@@ -272,6 +321,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 700,
     filterQ: 2.0,
     adsr: { attack: 0.02, decay: 0.5, sustain: 0.15, release: 0.3 },
+    velocityToCutoff: 1.5,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.4,
+    velocityToDecay: 0.3,
   },
   // `slap_bass`: square + saw with a 2 ms attack, 6 kHz-ish resonance and a
   // short gate — the pop of a thumb slap.
@@ -284,6 +337,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2000,
     filterQ: 6.0,
     adsr: { attack: 0.002, decay: 0.2, sustain: 0.1, release: 0.12 },
+    velocityToCutoff: 1.8,
+    velocityToFilterEnv: 1.2,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.25,
   },
   // `distorted_kick`: a few genres declare this on the *bass* track, so it needs
   // a synth voice of its own: saw + square saturating through a 900 Hz band.
@@ -326,6 +383,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 900,
     filterQ: 1.6,
     adsr: { attack: 0.008, decay: 0.45, sustain: 0.32, release: 0.22 },
+    velocityToCutoff: 1.4,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.4,
+    velocityToDecay: 0.3,
   },
   // `pick_bass`: the rock/metal picked electric bass. More square bite than the
   // fingerstyle voice, a 1.4 kHz filter so the pick click survives, short gate.
@@ -338,6 +399,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 1400,
     filterQ: 2.6,
     adsr: { attack: 0.003, decay: 0.3, sustain: 0.38, release: 0.16 },
+    velocityToCutoff: 1.5,
+    velocityToFilterEnv: 1.1,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.3,
   },
   // `analog_bass`: Minimoog-style synth bass. Detuned saw + square through a dark
   // 700 Hz resonant filter, sustaining instead of decaying like the plucked voices.
@@ -364,6 +429,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2900,
     filterQ: 2.0,
     adsr: { attack: 0.035, decay: 0.22, sustain: 0.82, release: 0.26 },
+    velocityToCutoff: 1.6,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.5,
+    velocityToDecay: 0.25,
   },
   // `trumpet_lead`: brighter and more brilliant than the sax — 4 kHz cutoff, wider
   // 10-cent detune and a slightly longer lip-swell attack.
@@ -376,6 +445,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 4000,
     filterQ: 2.2,
     adsr: { attack: 0.045, decay: 0.18, sustain: 0.78, release: 0.22 },
+    velocityToCutoff: 1.8,
+    velocityToFilterEnv: 1.1,
+    velocityToAttack: 0.5,
+    velocityToDecay: 0.25,
   },
   // `muted_trumpet`: a harmon mute pinches the spectrum, so the square leads, the
   // low-pass sits at 1.9 kHz with a high Q, and the attack stays soft.
@@ -388,6 +461,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 1900,
     filterQ: 4.0,
     adsr: { attack: 0.03, decay: 0.2, sustain: 0.75, release: 0.2 },
+    velocityToCutoff: 1.4,
+    velocityToFilterEnv: 0.9,
+    velocityToAttack: 0.45,
+    velocityToDecay: 0.25,
   },
   // `brass_section`: three-ish horns faked by two saws 16 cents apart with a shared
   // 40 ms bloom — the section stab, wider and less focused than a solo trumpet.
@@ -412,6 +489,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 4400,
     filterQ: 1.0,
     adsr: { attack: 0.002, decay: 1.2, sustain: 0.12, release: 0.4 },
+    velocityToCutoff: 2.0,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.5,
+    velocityToDecay: 0.35,
   },
   // `organ_lead`: drawbar tone locked at 0 cents (no beating), instant swell, full
   // sustain and a 6.2 kHz filter — a Hammond B3 with the Leslie opened up. Distinct
@@ -425,6 +506,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 6200,
     filterQ: 0.6,
     adsr: { attack: 0.004, decay: 0.12, sustain: 0.94, release: 0.12 },
+    velocityToCutoff: 1.0,
+    velocityToFilterEnv: 0.6,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.2,
   },
   // `vibraphone`: almost-pure sine bars with a triangle overtone, a very long 1.6 s
   // decay and a low 0.05 sustain — the motor-driven metal bar ring.
@@ -437,6 +522,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 5000,
     filterQ: 1.3,
     adsr: { attack: 0.002, decay: 1.6, sustain: 0.05, release: 0.8 },
+    velocityToCutoff: 1.6,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.4,
+    velocityToDecay: 0.35,
   },
   // `strings_lead`: a bowed ensemble — two saws 18 cents apart, a very slow 350 ms
   // bow attack and a long 0.9 s release over a soft 3.4 kHz filter.
@@ -449,6 +538,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3400,
     filterQ: 0.8,
     adsr: { attack: 0.35, decay: 0.4, sustain: 0.9, release: 0.9 },
+    velocityToCutoff: 1.2,
+    velocityToFilterEnv: 0.8,
+    velocityToAttack: 0.7,
+    velocityToDecay: 0.2,
   },
   // `pluck_string`: nylon/koto-style plucked string — triangle body with a saw edge,
   // a resonant 2.4 kHz filter and a 0.5 s decay with almost no sustain.
@@ -461,6 +554,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2400,
     filterQ: 3.0,
     adsr: { attack: 0.002, decay: 0.5, sustain: 0.05, release: 0.28 },
+    velocityToCutoff: 1.8,
+    velocityToFilterEnv: 1.1,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.3,
   },
   // `pan_flute`: near-pure sine/triangle like `flute_lead`, but with a 16 % noise bed
   // for the breathy edge and a shorter 60 ms attack.
@@ -486,6 +583,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3800,
     filterQ: 5.0,
     adsr: { attack: 0.002, decay: 0.9, sustain: 0.18, release: 0.5 },
+    velocityToCutoff: 1.7,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.3,
   },
   // `accordion_lead`: musette tuning — square + saw 14 cents apart, reed-quick 30 ms
   // attack, near-full sustain.
@@ -498,6 +599,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3400,
     filterQ: 1.6,
     adsr: { attack: 0.03, decay: 0.15, sustain: 0.85, release: 0.18 },
+    velocityToCutoff: 1.4,
+    velocityToFilterEnv: 0.9,
+    velocityToAttack: 0.4,
+    velocityToDecay: 0.25,
   },
   // `harmonica_lead`: reedy square/triangle bite with a 10 % breath noise under it
   // and a 3.2 kHz band — the bullet-mic Chicago harp.
@@ -510,6 +615,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3200,
     filterQ: 3.4,
     adsr: { attack: 0.02, decay: 0.25, sustain: 0.6, release: 0.2 },
+    velocityToCutoff: 1.6,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.4,
+    velocityToDecay: 0.25,
     noiseMix: 0.1,
   },
   // `marimba_lead`: wooden bar — sine fundamental plus a triangle overtone, 1 ms
@@ -523,6 +632,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2600,
     filterQ: 1.6,
     adsr: { attack: 0.001, decay: 0.55, sustain: 0.0, release: 0.35 },
+    velocityToCutoff: 1.8,
+    velocityToFilterEnv: 1.1,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.3,
   },
   // `bell_lead`: inharmonic bell/music-box clang from two sines a minor-tenth apart
   // (1900 cents), a 1.8 s ring and no sustain.
@@ -535,6 +648,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 6000,
     filterQ: 1.0,
     adsr: { attack: 0.001, decay: 1.8, sustain: 0.0, release: 1.2 },
+    velocityToCutoff: 1.6,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.3,
   },
   // `sine_lead`: the G-funk whine — a sine fundamental with a quiet saw edge and a
   // gentle -80 cent fall across the note, i.e. a portamento-flavoured glide.
@@ -705,6 +822,50 @@ export function midiToFreq(midi: number): number {
 }
 
 /**
+ * Exponent of the velocity → amplitude curve (E-13).
+ *
+ * A linear (exponent 1) velocity response is the "drum machine" tell: MIDI velocity 64
+ * lands only 6 dB down, so ghost notes and accents differ mostly in level. A squared
+ * response is the classic constant-power/perceptual mapping — perceived loudness grows
+ * about as the square root of amplitude (Stevens), so the amplitude that produces a
+ * given loudness step grows roughly as the square; equivalently every velocity step is
+ * worth a progressively larger dB move at the quiet end. It is exactly `1` at velocity
+ * 1, which keeps the measured full-velocity loudness baseline bit-for-bit intact, and
+ * exactly `0` at velocity 0, which the exponential ramps cannot take directly — the
+ * caller's `safeGain(..., 0.001)`/`safeVelocity` floor keeps them audible-but-silent.
+ */
+export const VELOCITY_CURVE_EXPONENT = 2;
+
+/**
+ * Maps a normalised velocity (nominally 0..1) through the E-13 amplitude curve.
+ *
+ * Pure, deterministic, monotonic non-decreasing and bounded to `[0, 1]`. Out-of-range
+ * input is clamped and non-finite input (`NaN`, `Infinity`) is coerced to a safe bound,
+ * so this can never produce a `NaN` gain or a non-positive `exponentialRampToValueAtTime`
+ * target downstream.
+ */
+export function velocityCurve(velocity: number): number {
+  if (Number.isNaN(velocity) || velocity <= 0) return 0;
+  if (velocity >= 1) return 1;
+  return Math.pow(velocity, VELOCITY_CURVE_EXPONENT);
+}
+
+/**
+ * The fixed filter-envelope sweep depth, in octaves: `cutoff · 2.5` is the existing
+ * attack peak, and `log2(2.5)` is the same amount expressed in octaves so a preset's
+ * `velocityToFilterEnv` can subtract from it.
+ */
+const FILTER_ENV_OCTAVES = Math.log2(2.5);
+
+/**
+ * How long a velocity-softened note takes to settle onto its base cutoff before the
+ * attack sweep begins. Sub-millisecond so it reads as the note's starting brightness
+ * rather than a sweep, and bounded by half the attack time at the call site so it can
+ * never collide with the sweep's own ramp.
+ */
+const VELOCITY_FILTER_SETTLE_SEC = 0.0005;
+
+/**
  * One quarter-second of deterministic white noise per audio context, reused by every
  * noise-based voice. A linear congruential generator (not `Math.random`) is used so the
  * realtime engine and the offline WAV renderer produce the same noise bed — the same
@@ -748,8 +909,26 @@ export function playPolySynthNote(
   // F-01: velocity drives exponential ramps; a zero (or a preset with cutoff 0)
   // would throw a RangeError and take the whole scheduler down with it.
   const safeVel = safeVelocity(velocity);
+  // E-13: the amp level and every velocity→timbre depth below are driven by the curve
+  // output, not by the raw velocity. `velocityCurve(1) === 1`, so a full-velocity note
+  // is byte-for-byte the note this function produced before the curve existed.
+  const velCurve = velocityCurve(safeVel);
   const { osc1Type, osc2Type, osc2DetuneCents, osc2Mix, filterQ, adsr } = preset;
   const filterCutoff = safeFreq(preset.filterCutoff, 12000);
+
+  // Velocity → timbre depth. Each field defaults to 0, which short-circuits to the
+  // original expression: an un-annotated preset schedules the exact cutoff, sweep and
+  // amp timing it always did at *every* velocity. An annotated preset also keeps its
+  // own numbers at full velocity because every factor below contains `(velCurve - 1)`
+  // (cutoff / sweep) or `(1 - velCurve)` (timing) and is exactly 1 at `velCurve === 1`.
+  const velocityToCutoff = preset.velocityToCutoff ?? 0;
+  const velocityCutoff =
+    velocityToCutoff === 0
+      ? filterCutoff
+      : safeFreq(filterCutoff * Math.pow(2, velocityToCutoff * (velCurve - 1)), filterCutoff);
+
+  const attackScale = 1 + (preset.velocityToAttack ?? 0) * (1 - velCurve);
+  const decayScale = 1 + (preset.velocityToDecay ?? 0) * (1 - velCurve);
 
   // Dual Oscillators
   const osc1 = ctx.createOscillator();
@@ -783,13 +962,49 @@ export function playPolySynthNote(
   // Per-voice Resonant Biquad Filter
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
+  // The preset's own cutoff is scheduled first: it is the reference every caller and
+  // parity test identifies the voice by, and at full velocity it is the value the note
+  // actually holds. Velocity (when the preset opts in) moves the base below it.
   filter.frequency.setValueAtTime(filterCutoff, time);
   filter.Q.setValueAtTime(filterQ, time);
 
-  // Dynamic filter sweep matching attack/decay
-  const peakFilter = safeFreq(Math.min(filterCutoff * 2.5, 18000));
-  filter.frequency.exponentialRampToValueAtTime(peakFilter, time + adsr.attack);
-  filter.frequency.exponentialRampToValueAtTime(filterCutoff, time + adsr.attack + adsr.decay);
+  // Velocity-scaled settle onto the base cutoff, scheduled *before* the attack sweep.
+  // A soft note therefore starts dark instead of sweeping down from the preset cutoff.
+  // The ramp is bounded by half the attack (so it always completes first) and 0.5 ms is
+  // far shorter than any preset's attack — it is heard as the starting brightness, not
+  // as a sweep. Skipped entirely when velocity has not moved the cutoff, which is every
+  // un-annotated preset and every full-velocity note.
+  if (velocityCutoff !== filterCutoff) {
+    const settleSec = Math.min(VELOCITY_FILTER_SETTLE_SEC, adsr.attack * 0.5);
+    if (settleSec > 0) {
+      filter.frequency.exponentialRampToValueAtTime(velocityCutoff, time + settleSec);
+    }
+  }
+
+  // Dynamic filter sweep matching attack/decay. The default depth is the original
+  // timbre-preserving `cutoff · 2.5`, reached at `time + adsr.attack` / returned at
+  // `time + adsr.attack + adsr.decay`. An explicit `velocityToFilterEnv` closes the
+  // peak further as velocity falls (floored at the base cutoff so the sweep never turns
+  // downward); at full velocity — or when the field is absent — the original expression
+  // is used unchanged, so the ff render stays bit-for-bit identical.
+  const velocityToFilterEnv = preset.velocityToFilterEnv ?? 0;
+  const peakFilter =
+    velocityToFilterEnv === 0 || velCurve >= 1
+      ? safeFreq(Math.min(velocityCutoff * 2.5, 18000))
+      : safeFreq(
+          Math.min(
+            velocityCutoff *
+              Math.pow(
+                2,
+                Math.max(0, FILTER_ENV_OCTAVES + velocityToFilterEnv * (velCurve - 1))
+              ),
+            18000
+          )
+        );
+  const sweepAttackEnd = time + adsr.attack * attackScale;
+  const sweepDecayEnd = sweepAttackEnd + adsr.decay * decayScale;
+  filter.frequency.exponentialRampToValueAtTime(peakFilter, sweepAttackEnd);
+  filter.frequency.exponentialRampToValueAtTime(velocityCutoff, sweepDecayEnd);
 
   osc1Gain.connect(filter);
   osc2Gain.connect(filter);
@@ -815,11 +1030,14 @@ export function playPolySynthNote(
 
   // ADSR Amp Envelope
   const ampGain = ctx.createGain();
-  const maxVolume = safeGain(safeVel * 0.8, 0.001);
+  // E-13: the curve replaces the old linear `safeVel · 0.8`, and the velocity-scaled
+  // attack/decay replace the raw ADSR times. Both are exact identities at full velocity
+  // (`velocityCurve(1) === 1`, `attackScale === decayScale === 1`).
+  const maxVolume = safeGain(velCurve * 0.8, 0.001);
   const attackStart = 0.0001;
   const attackPeak = Math.max(0.001, maxVolume);
-  const attackEnd = time + Math.max(0.002, adsr.attack);
-  const decayEnd = attackEnd + Math.max(0.01, adsr.decay);
+  const attackEnd = time + Math.max(0.002, adsr.attack * attackScale);
+  const decayEnd = attackEnd + Math.max(0.01, adsr.decay * decayScale);
   const sustainLevel = Math.max(0.0001, maxVolume * adsr.sustain);
   const noteReleaseStart = time + Math.max(0.05, durationSec);
   const noteEndTime = noteReleaseStart + Math.max(0.01, adsr.release);

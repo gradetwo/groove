@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
+import React, { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { Genre, SequencerPattern } from "../types/genre";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
@@ -157,7 +157,42 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [drumKit, setDrumKit] = useState<DrumKitType>(() => getDefaultDrumKitForGenre(currentGenre));
   const [isDrumsOnly, setIsDrumsOnly] = useState<boolean>(false);
   const [isRecordArmed, setIsRecordArmed] = useState<boolean>(false);
-  const [effectsRackState, setEffectsRackState] = useState<EffectsRackState>(DEFAULT_FX_STATE);
+  const [effectsRackState, setEffectsRackStateLocal] = useState<EffectsRackState>(DEFAULT_FX_STATE);
+
+  /**
+   * D-03: FX changes participate in the undo stack.
+   *
+   * The local state stays the UI's source of truth — every consumer already takes a React
+   * setter — and each change is mirrored into the store so Ctrl+Z rolls the rack back
+   * together with the notes. Before this, undo restored the pattern while leaving an FX
+   * change in place: a half-undo, which is worse than none.
+   *
+   * The next value is computed from a ref rather than inside a state updater, because
+   * committing from inside an updater is a side effect React may run twice in StrictMode.
+   */
+  const effectsRackRef = useRef(effectsRackState);
+  effectsRackRef.current = effectsRackState;
+  const setEffectsRackState = useCallback<React.Dispatch<React.SetStateAction<EffectsRackState>>>(
+    (action) => {
+      const prev = effectsRackRef.current;
+      const next = typeof action === "function" ? action(prev) : action;
+      effectsRackRef.current = next;
+      setEffectsRackStateLocal(next);
+      // Coalesced under one key, so dragging a slider is one history entry rather than
+      // one per frame.
+      commitCoalesced({ type: "SET_EFFECTS_RACK", effectsRack: next }, "fx");
+    },
+    [commitCoalesced]
+  );
+
+  // ...and when history restores a rack, the UI follows it.
+  const storedEffectsRack = seqState.effectsRack;
+  useEffect(() => {
+    if (storedEffectsRack && storedEffectsRack !== effectsRackRef.current) {
+      effectsRackRef.current = storedEffectsRack;
+      setEffectsRackStateLocal(storedEffectsRack);
+    }
+  }, [storedEffectsRack]);
 
   // Multi-Project Hub State (P7-02)
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
@@ -257,6 +292,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setIsPlaying,
     isDrumsOnly,
     setDrumKit,
+    setEffectsRackState,
     clearPlayhead,
     commit,
   });

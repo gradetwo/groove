@@ -10,6 +10,7 @@ import {
   loadSavedProject,
   clearSavedProject,
 } from "./projectStorage";
+import { EffectsRackState, DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 
 export interface StudioHistorySnapshot {
   pattern: SequencerPattern;
@@ -17,6 +18,13 @@ export interface StudioHistorySnapshot {
   swing: number;
   timeSignature: string;
   resolution: "1/8" | "1/16" | "1/32";
+  /**
+   * D-03: the master FX rack belongs in the undo stack too. Without it, "change FX →
+   * Ctrl+Z" rolled the notes back and silently kept the FX edit — a half-undo that made
+   * users distrust the button. Optional so snapshots captured by older code (and the
+   * existing tests) still type-check; `restore` treats a missing rack as "leave as is".
+   */
+  effectsRack?: EffectsRackState;
   patterns?: {
     A: SequencerPattern;
     B: SequencerPattern;
@@ -82,6 +90,11 @@ export interface SequencerState {
   isMetronome: boolean;
   isCountIn: boolean;
   parameterDimension: "velocity" | "probability" | "ratchet" | "gate";
+  /**
+   * D-03: master FX rack. Held in the store (not just in `StudioView`'s local state) so
+   * undo/redo — which only replays reducer snapshots — can restore it.
+   */
+  effectsRack: EffectsRackState;
   canUndo: boolean;
   canRedo: boolean;
 }
@@ -138,6 +151,11 @@ export type SequencerAction =
       loopRange?: [number, number] | null;
       isMetronome?: boolean;
       isCountIn?: boolean;
+      /**
+       * D-03/D-04: a project carries its FX rack. Optional so existing callers that do
+       * not have one keep the current rack instead of silently resetting it.
+       */
+      effectsRack?: EffectsRackState;
     }
   | { type: "SWITCH_PATTERN_SLOT"; slot: "A" | "B" }
   | { type: "COPY_PATTERN_SLOT"; from: "A" | "B"; to: "A" | "B" }
@@ -148,6 +166,12 @@ export type SequencerAction =
   | { type: "SET_METRONOME"; enabled: boolean }
   | { type: "SET_COUNT_IN"; enabled: boolean }
   | { type: "SET_PARAMETER_DIMENSION"; dimension: "velocity" | "probability" | "ratchet" | "gate" }
+  /**
+   * D-03: partial update of the master FX rack. Goes through `commit`/`commitCoalesced`
+   * like every other user edit, so it is captured by `StudioHistorySnapshot` and undone
+   * together with a pattern change made in the same tick (one tick = one history entry).
+   */
+  | { type: "SET_EFFECTS_RACK"; effectsRack: Partial<EffectsRackState> }
   | { type: "RESET_TO_GENRE_DEFAULT" }
   | { type: "RESTORE_SNAPSHOT"; snapshot: StudioHistorySnapshot };
 
@@ -224,6 +248,9 @@ export function createInitialSequencerState(genre: Genre): SequencerState {
       isMetronome: saved.isMetronome || false,
       isCountIn: saved.isCountIn || false,
       parameterDimension: "velocity",
+      // D-03: FX is not part of `PersistedProject` yet (that is D-04), so a reload always
+      // starts from the documented defaults; undo still restores it within the session.
+      effectsRack: { ...DEFAULT_FX_STATE },
       canUndo: false,
       canRedo: false,
     };
@@ -250,6 +277,7 @@ export function createInitialSequencerState(genre: Genre): SequencerState {
     isMetronome: false,
     isCountIn: false,
     parameterDimension: "velocity",
+    effectsRack: { ...DEFAULT_FX_STATE },
     canUndo: false,
     canRedo: false,
   };
@@ -844,6 +872,8 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         loopRange: action.loopRange !== undefined ? action.loopRange : null,
         isMetronome: Boolean(action.isMetronome),
         isCountIn: Boolean(action.isCountIn),
+        // D-03: keep the loaded rack when the project carries one.
+        effectsRack: action.effectsRack ? { ...action.effectsRack } : state.effectsRack,
         canUndo: false,
         canRedo: false,
       };
@@ -860,6 +890,10 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
 
     case "SET_PARAMETER_DIMENSION":
       return { ...state, parameterDimension: action.dimension };
+
+    case "SET_EFFECTS_RACK":
+      // D-03: merge, so a single slider only writes its own field.
+      return { ...state, effectsRack: { ...state.effectsRack, ...action.effectsRack } };
 
     case "RESTORE_SNAPSHOT": {
       const s = action.snapshot;
@@ -889,6 +923,10 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         isMetronome: s.isMetronome ?? state.isMetronome,
         isCountIn: s.isCountIn ?? state.isCountIn,
         parameterDimension: s.parameterDimension ?? state.parameterDimension,
+        // D-03: FX is restored on the same step as the pattern, so undoing a combined
+        // tick rolls notes and rack back together. A snapshot without a rack (older
+        // shape) leaves the current rack untouched rather than resetting it.
+        effectsRack: s.effectsRack ? { ...s.effectsRack } : state.effectsRack,
       };
     }
 
@@ -989,6 +1027,8 @@ export function useSequencerStore(initialGenre: Genre) {
         isMetronome: s.isMetronome,
         isCountIn: s.isCountIn,
         parameterDimension: s.parameterDimension,
+        // D-03: clone the rack so later slider edits cannot mutate the snapshot in place.
+        effectsRack: { ...s.effectsRack },
       };
     },
     []

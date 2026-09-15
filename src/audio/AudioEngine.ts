@@ -17,7 +17,7 @@ import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp } from "./schedulerMath";
 import { TrackState, deriveTrackStates } from "./trackStates";
-import { createSeededNoiseBuffer, DEFAULT_NOISE_SEED, noisePositionFor } from "./noise";
+import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
   chordVoicingForStep,
   chordVoiceGain,
@@ -28,7 +28,9 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { VoiceRegistry } from "./voiceRegistry";
-import { createMasterLimiter, type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
+import { type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
+import { buildMasterGraph, dbToGain, type MasterGraph } from "./masterGraph";
+import { applyGenreFxToGraph, delayParamsAtTempo, resolveGenreFx, type GenreFxProfile } from "../data/genreFx";
 export type { TrackState } from "./trackStates";
 import { isDrumTrack } from "../utils/trackUtils";
 import {
@@ -39,11 +41,6 @@ import {
 } from "../data/genreMix";
 
 export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
-
-/** Converts a dB offset to a linear gain factor (used by the loudness-match stage). */
-function dbToGain(db: number): number {
-  return Math.pow(10, db / 20);
-}
 
 export interface StepCallbackInfo {
   step: number;
@@ -121,11 +118,22 @@ export class AudioEngine {
   private trackStrips: TrackChannelStrip[] = [];
 
   // Send effect buses (P3-10)
-  private reverbBus: ConvolverNode | null = null;
-  private reverbGain: GainNode | null = null;
-  private delayBus: DelayNode | null = null;
-  private delayFeedback: GainNode | null = null;
-  private delayGain: GainNode | null = null;
+  /**
+   * E-17 / N-16: the whole master chain (fader → trim → FX rack → true-peak limiter →
+   * analyser taps) and both send buses now come from one shared builder that the offline
+   * renderer also uses. Before this the two graphs had drifted apart: the export contained
+   * no sends and no FX rack at all, so reverb-heavy genres bounced dry.
+   */
+  private masterGraph: MasterGraph | null = null;
+
+  /**
+   * The per-genre FX profile last applied by `setPattern` (N-14). `null` means the genre
+   * is unknown — a custom or imported genre keeps the global defaults rather than
+   * inheriting some other genre's character.
+   */
+  private appliedGenreFx: GenreFxProfile | null = null;
+  /** Explicit override for composite patterns (the compare view), like the trim's. */
+  private genreFxOverride: GenreFxProfile | null = null;
 
   // Metronome, Count-In, and Loop Region (P3-07)
   private isMetronome: boolean = false;
@@ -243,70 +251,27 @@ export class AudioEngine {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (AudioContextClass) {
           this.ctx = new AudioContextClass();
-          this.masterGain = this.ctx.createGain();
-          this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+          // E-17 / N-16: one shared master graph for playback and export. Chain:
+          //   fader → trim → FX rack → true-peak limiter → analyser taps → destination,
+          // with the reverb/delay returns summing into the fader, exactly as before.
+          const graph = buildMasterGraph(this.ctx, {
+            analysers: true,
+            loudnessTrimDb: this.appliedLoudnessTrimDb,
+          });
+          this.masterGraph = graph;
+          this.masterGain = graph.masterGain;
+          this.limiter = graph.limiter.input;
+          this.masterLimiter = graph.limiter;
+          this.masterFxRack = graph.fxRack;
+          this.loudnessTrimGain = graph.loudnessTrimGain;
 
-          // E-12 / N-15: true-peak lookahead brickwall ceiling. The handle falls back
-          // to the legacy DynamicsCompressorNode when AudioWorklet is unavailable, and
-          // swaps the worklet in asynchronously once its module has loaded — the
-          // handle's input/output nodes do not change identity across that swap.
-          const limiterHandle = createMasterLimiter(this.ctx);
-          this.masterLimiter = limiterHandle;
-          this.limiter = limiterHandle.input;
-
-          this.analyser = this.ctx.createAnalyser();
-          this.analyser.fftSize = 128;
-          this.analyser.smoothingTimeConstant = 0.75;
-
-          // P6-05: Master High-Resolution FFT Analyser (2048 bins, 20Hz - 20kHz)
-          this.masterAnalyser = this.ctx.createAnalyser();
-          this.masterAnalyser.fftSize = 2048;
-          this.masterAnalyser.smoothingTimeConstant = 0.8;
-
-          // P6-05: Stereo Channel Splitter & Lissajous X-Y Phase Analysers
-          if (typeof this.ctx.createChannelSplitter === "function") {
-            try {
-              this.channelSplitter = this.ctx.createChannelSplitter(2);
-              this.analyserL = this.ctx.createAnalyser();
-              this.analyserL.fftSize = 1024;
-              this.analyserR = this.ctx.createAnalyser();
-              this.analyserR.fftSize = 1024;
-            } catch (e) {
-              console.warn("[AudioEngine] Stereo analysers init warning:", e);
-            }
-          }
-
-          // Master DSP Effects Rack (P5-04)
-          this.masterFxRack = new EffectsRack(this.ctx);
-
-          // Genre loudness-match stage: a plain gain, separate from the fader.
-          this.loudnessTrimGain = this.ctx.createGain();
-          this.loudnessTrimGain.gain.setValueAtTime(
-            dbToGain(this.appliedLoudnessTrimDb),
-            this.ctx.currentTime
-          );
-
-          // Audio chain (feat/genre-mix-loudness):
-          //   masterGain (user fader, capped by hearing protection)
-          //     -> loudnessTrim (per-genre match, explicit separate stage)
-          //     -> masterFxRack -> limiter -> analysers -> destination
-          // The trim sits *before* the limiter on purpose: the limiter stays the
-          // absolute output ceiling, so a genre that needs a positive trim cannot
-          // push the master past its threshold, while the fader/hearing-protection
-          // clamp keeps its "user level" meaning untouched.
-          this.masterGain.connect(this.loudnessTrimGain);
-          this.loudnessTrimGain.connect(this.masterFxRack.inputNode);
-          this.masterFxRack.outputNode.connect(limiterHandle.input);
-          limiterHandle.output.connect(this.analyser);
-          limiterHandle.output.connect(this.masterAnalyser);
-          if (this.channelSplitter && this.analyserL && this.analyserR) {
-            limiterHandle.output.connect(this.channelSplitter);
-            this.channelSplitter.connect(this.analyserL, 0);
-            this.channelSplitter.connect(this.analyserR, 1);
-          }
-          this.analyser.connect(this.ctx.destination);
+          // Metering taps are owned by the graph; these references keep the rest of the
+          // engine (analyser getters, spectrum/phase consumers) unchanged.
+          this.analyser = graph.analyser;
+          this.masterAnalyser = graph.masterAnalyser;
+          this.analyserL = graph.analyserL;
+          this.analyserR = graph.analyserR;
           this.createNoiseBuffer();
-          this.setupSendBuses();
           this.setupTrackStrips(16);
 
           // Async init AudioWorklet clock (P5-01)
@@ -365,58 +330,10 @@ export class AudioEngine {
     this.noiseBuffer = createSeededNoiseBuffer(this.ctx, 2);
   }
 
-  private createReverbImpulse(seconds = 1.6, decay = 2.0): AudioBuffer | null {
-    if (!this.ctx) return null;
-    const rate = this.ctx.sampleRate;
-    const length = rate * seconds;
-    const impulse = this.ctx.createBuffer(2, length, rate);
-    const left = impulse.getChannelData(0);
-    const right = impulse.getChannelData(1);
-    // V-01: seeded. The two channels use different seeds so the tail stays decorrelated
-    // (a mono-correlated tail collapses to the centre), but the *same* seeds every time
-    // so the reverb is reproducible.
-    const seedL = DEFAULT_NOISE_SEED;
-    const seedR = (DEFAULT_NOISE_SEED ^ 0x9e3779b9) >>> 0;
-    let stateL = seedL >>> 0;
-    let stateR = seedR >>> 0;
-    for (let i = 0; i < length; i++) {
-      const factor = Math.exp(-decay * (i / length));
-      stateL = (stateL * 1664525 + 1013904223) >>> 0;
-      stateR = (stateR * 1664525 + 1013904223) >>> 0;
-      left[i] = ((stateL / 0xffffffff) * 2 - 1) * factor;
-      right[i] = ((stateR / 0xffffffff) * 2 - 1) * factor;
-    }
-    return impulse;
-  }
-
-  private setupSendBuses(): void {
-    if (!this.ctx || !this.masterGain) return;
-    try {
-      // Reverb Convolver Send Bus (P3-10)
-      this.reverbBus = this.ctx.createConvolver();
-      const impulse = this.createReverbImpulse(1.5, 2.2);
-      if (impulse) this.reverbBus.buffer = impulse;
-      this.reverbGain = this.ctx.createGain();
-      this.reverbGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
-      this.reverbBus.connect(this.reverbGain);
-      this.reverbGain.connect(this.masterGain);
-
-      // Stereo Feedback Delay Send Bus (P3-10)
-      this.delayBus = this.ctx.createDelay(1.0);
-      this.delayBus.delayTime.setValueAtTime(0.25, this.ctx.currentTime);
-      this.delayFeedback = this.ctx.createGain();
-      this.delayFeedback.gain.setValueAtTime(0.32, this.ctx.currentTime);
-      this.delayGain = this.ctx.createGain();
-      this.delayGain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-
-      this.delayBus.connect(this.delayFeedback);
-      this.delayFeedback.connect(this.delayBus);
-      this.delayBus.connect(this.delayGain);
-      this.delayGain.connect(this.masterGain);
-    } catch (e) {
-      console.warn("[AudioEngine] Send buses init warning:", e);
-    }
-  }
+  // The reverb and delay send buses used to live here as a hard-coded convolver and a
+  // 250 ms feedback delay with no damped loop and no reachable parameters. They are now
+  // `ReverbBus` / `DelayBus`, built by `buildMasterGraph` so the offline renderer gets the
+  // same buses (E-09 + E-17).
 
   /**
    * Semicircular slot for track `idx` (N-02). Drums sit in front, melodic tracks fan
@@ -574,16 +491,16 @@ export class AudioEngine {
 
       const sendA = this.ctx.createGain();
       sendA.gain.setValueAtTime(0, this.ctx.currentTime);
-      if (this.reverbBus) {
+      if (this.masterGraph) {
         stripOut.connect(sendA);
-        sendA.connect(this.reverbBus);
+        sendA.connect(this.masterGraph.reverb.input);
       }
 
       const sendB = this.ctx.createGain();
       sendB.gain.setValueAtTime(0, this.ctx.currentTime);
-      if (this.delayBus) {
+      if (this.masterGraph) {
         stripOut.connect(sendB);
-        sendB.connect(this.delayBus);
+        sendB.connect(this.masterGraph.delay.input);
       }
 
       this.trackStrips.push({ gain, polarity, analyser, panner, spatialPanner, sendA, sendB });
@@ -630,6 +547,9 @@ export class AudioEngine {
     // genre id, so centralising it here covers the studio, every audition path, the
     // detail preview, the challenge view and both offline exporters at once.
     this.applyLoudnessTrimForPattern(pattern);
+    // N-14: the genre's master FX and bus character, applied at the same moment and from
+    // the same `genre_id` as the loudness trim.
+    this.applyGenreFxForPattern(pattern);
   }
 
   /**
@@ -768,6 +688,11 @@ export class AudioEngine {
 
   public setBpm(bpm: number): void {
     this.bpm = Math.max(30, Math.min(300, bpm));
+    // A tempo-synced delay must follow the tempo, or a genre's dotted-eighth throw drifts
+    // off the beat the moment the user nudges the BPM.
+    if (this.appliedGenreFx?.delayDivision && this.masterGraph) {
+      this.masterGraph.delay.setParams(delayParamsAtTempo(this.appliedGenreFx, this.bpm));
+    }
     ecosystemBus.publishClockSync(this.bpm, this.isPlaying, this.currentStep);
   }
 
@@ -946,18 +871,54 @@ export class AudioEngine {
     this.applyLoudnessTrim(resolveGenreMix(pattern.genre_id) ? getGenreLoudnessTrimDb(pattern.genre_id) : 0);
   }
 
+  /**
+   * Applies a genre's master FX rack and send-bus character (N-14).
+   *
+   * Mirrors `applyLoudnessTrimForPattern`: same trigger point, same `genre_id`, same
+   * "unknown genre means do nothing" rule. The delay's musical division is converted with
+   * the **playing** tempo (`pattern.bpm`), never the genre's metadata `default_bpm` — 87 of
+   * 159 genres declare a pattern tempo that differs from their metadata tempo, so using
+   * the wrong one would put the repeats off the beat on more than half the library.
+   */
+  private applyGenreFxForPattern(pattern: SequencerPattern): void {
+    if (this.genreFxOverride) {
+      this.applyGenreFx(this.genreFxOverride, pattern.bpm || this.bpm);
+      return;
+    }
+    this.applyGenreFx(resolveGenreFx(pattern.genre_id), pattern.bpm || this.bpm);
+  }
+
+  private applyGenreFx(fx: GenreFxProfile | null, playingBpm: number): void {
+    this.appliedGenreFx = fx;
+    // Unknown genre: leave the rack and buses exactly as the user left them.
+    if (!fx) return;
+
+    // One shared applier (see `genreFx.ts`), so playback and the offline bounce cannot
+    // diverge in how a genre's FX are applied.
+    if (this.masterGraph) applyGenreFxToGraph(this.masterGraph, fx, playingBpm);
+  }
+
+  /** The genre FX profile currently in effect, or null for an unknown genre. */
+  public getAppliedGenreFx(): GenreFxProfile | null {
+    return this.appliedGenreFx;
+  }
+
+  /**
+   * Pins the FX profile explicitly (or `null` to return to deriving it from the pattern).
+   * Only the compare view's merged composite needs this today, exactly like the loudness
+   * trim override: a composite carries a synthetic genre id that resolves to no genre.
+   */
+  public setGenreFxOverride(fx: GenreFxProfile | null): void {
+    this.genreFxOverride = fx;
+    if (this.pattern) this.applyGenreFxForPattern(this.pattern);
+  }
+
   private applyLoudnessTrim(db: number): void {
     const clamped = Math.max(LOUDNESS_TRIM_MIN_DB, Math.min(LOUDNESS_TRIM_MAX_DB, db));
     this.appliedLoudnessTrimDb = Number.isFinite(clamped) ? clamped : 0;
-    if (this.loudnessTrimGain && this.ctx) {
-      const t = this.ctx.currentTime;
-      try {
-        this.loudnessTrimGain.gain.cancelScheduledValues(t);
-        this.loudnessTrimGain.gain.setValueAtTime(dbToGain(this.appliedLoudnessTrimDb), t);
-      } catch {
-        this.loudnessTrimGain.gain.value = dbToGain(this.appliedLoudnessTrimDb);
-      }
-    }
+    // Delegated to the shared graph so the offline renderer applies the trim through the
+    // identical code path (E-17). The graph ramps it, so a genre switch is silent.
+    this.masterGraph?.setLoudnessTrimDb(this.appliedLoudnessTrimDb);
   }
 
   public setTrackState(trackIdx: number, state: Partial<TrackState>): void {
@@ -1462,7 +1423,17 @@ export class AudioEngine {
     } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
       this.playHiHat(dest, safeStartTime, safeVel, pitch, stepVal, stepDur, gateVal, noisePosition);
     } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
-      this.playPercussion(dest, safeStartTime, safeVel, pitch, noisePosition);
+      // Defect A: hand the declared instrument (e.g. `rim_shaker`, `rimshot`) to the
+      // percussion model library so the genre's percussion track is what is heard,
+      // instead of every genre collapsing onto one cowbell / clap.
+      this.playPercussion(
+        dest,
+        safeStartTime,
+        safeVel,
+        pitch,
+        noisePosition,
+        this.pattern?.tracks[trackIdx]?.instrument
+      );
     } else if (trackId === "bass" || lowerName.includes("bass")) {
       this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
@@ -1489,7 +1460,14 @@ export class AudioEngine {
     } else if (trackId === "fx" || lowerName.includes("fx")) {
       this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else {
-      this.playPercussion(dest, safeStartTime, safeVel, pitch, noisePosition);
+      this.playPercussion(
+        dest,
+        safeStartTime,
+        safeVel,
+        pitch,
+        noisePosition,
+        this.pattern?.tracks[trackIdx]?.instrument
+      );
     }
   }
 
@@ -1559,9 +1537,26 @@ export class AudioEngine {
     });
   }
 
-  private playPercussion(dest: AudioNode, time: number, vel: number, pitchOffset: number, noisePosition = 0): void {
+  private playPercussion(
+    dest: AudioNode,
+    time: number,
+    vel: number,
+    pitchOffset: number,
+    noisePosition = 0,
+    instrument?: string | null
+  ): void {
     if (!this.ctx) return;
-    const voice = synthesizePercussion(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer, noisePosition);
+    const voice = synthesizePercussion(
+      this.ctx,
+      dest,
+      time,
+      vel,
+      pitchOffset,
+      this.drumKit,
+      this.noiseBuffer,
+      noisePosition,
+      instrument
+    );
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
@@ -1714,14 +1709,14 @@ export class AudioEngine {
     this.cleanupUnlockListeners();
     this.workletClock.destroy();
     this.workerBridge.destroy();
-    if (this.masterLimiter) {
-      this.masterLimiter.dispose();
-      this.masterLimiter = null;
+    // E-17: the graph owns the buses, the rack, the limiter and the analyser taps, so a
+    // single dispose covers them (disposing the rack separately would double-free).
+    if (this.masterGraph) {
+      this.masterGraph.dispose();
+      this.masterGraph = null;
     }
-    if (this.masterFxRack) {
-      this.masterFxRack.destroy();
-      this.masterFxRack = null;
-    }
+    this.masterLimiter = null;
+    this.masterFxRack = null;
     if (this.ctx && this.ctx.state !== "closed") {
       this.ctx.close().catch(() => {});
     }

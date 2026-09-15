@@ -1,12 +1,13 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { renderPatternOffline } from "../audio/WavExporter";
-import { getGenreLoudnessTrimDb } from "../data/genreMix";
+import { getGenreLoudnessTrimDb, LOUDNESS_TRIM_MAX_DB } from "../data/genreMix";
 import {
   FakeGainNode,
   FakeNode,
   FakeOfflineAudioContext,
   installFakeOfflineAudioContext,
 } from "./helpers/fakeAudio";
+import { MASTER_FADER_DEFAULT } from "../audio/masterGraph";
 import type { SequencerPattern } from "../types/genre";
 
 /**
@@ -57,7 +58,10 @@ describe("offline renderer · genre loudness trim", () => {
     const masterGain = ctx.createdGains[0] as FakeGainNode;
     const trim = ctx.createdGains[1] as FakeGainNode;
 
-    expect(masterGain.gain.value).toBeCloseTo(0.85, 10);
+    // E-17 / N-16: the exporter used to run its own 0.85 fader while playback used 0.8 —
+    // an unrelated ~0.5 dB offset between what the user heard and what they downloaded.
+    // Both now come from the shared graph's `MASTER_FADER_DEFAULT`.
+    expect(masterGain.gain.value).toBeCloseTo(MASTER_FADER_DEFAULT, 10);
     expect(trim.gain.value).toBeCloseTo(gainOf(getGenreLoudnessTrimDb("chicago-house")), 10);
   });
 
@@ -72,9 +76,12 @@ describe("offline renderer · genre loudness trim", () => {
     restore();
     restore = installFakeOfflineAudioContext();
     await renderPatternOffline(makePattern("chicago-house"), { loudnessTrimDb: 99 });
+    // Derived from the constant rather than hard-coded: the ceiling moved from +6 to +9
+    // when the per-genre FX work widened the library's extremes, and a literal here would
+    // have to be remembered every time.
     expect(
       (FakeOfflineAudioContext.lastInstance!.createdGains[1] as FakeGainNode).gain.value
-    ).toBeCloseTo(gainOf(6), 10);
+    ).toBeCloseTo(gainOf(LOUDNESS_TRIM_MAX_DB), 10);
   });
 
   it("uses unity gain for a custom/unknown genre", async () => {
@@ -91,12 +98,32 @@ describe("offline renderer · genre loudness trim", () => {
     const ctx = FakeOfflineAudioContext.lastInstance!;
     const masterGain = ctx.createdGains[0] as FakeGainNode;
     const trim = ctx.createdGains[1] as FakeGainNode;
-    // `connect` records the source on the destination, so walking `incoming` proves
-    // the exact order: masterGain -> trim -> limiter -> destination.
-    const limiter = ctx.destination.incoming[0] as FakeNode;
-    expect(trim.incoming).toContain(masterGain);
-    expect(limiter.incoming).toContain(trim);
-    expect(ctx.destination.incoming).toContain(limiter);
-    expect(limiter).not.toBe(trim);
+
+    // `connect` records the source on each destination, so the order is provable
+    // structurally rather than by array index.
+    const consumersOf = (node: FakeNode): FakeNode[] =>
+      (ctx.createdGains as unknown as FakeNode[]).filter((g) => g.incoming.includes(node));
+
+    // The fader feeds exactly the trim stage, and the trim does *not* reach the output
+    // directly — the FX rack and the true-peak limiter sit between them (E-17 gave the
+    // exporter the same chain as playback, where it previously had neither).
+    expect(consumersOf(masterGain)).toContain(trim);
+    expect(consumersOf(trim)).not.toContain(ctx.destination as unknown as FakeNode);
+
+    // And everything the trim feeds is upstream of the destination.
+    const ancestorsOfDestination = new Set<FakeNode>();
+    const walk = (node: FakeNode) => {
+      for (const source of node.incoming) {
+        if (!ancestorsOfDestination.has(source)) {
+          ancestorsOfDestination.add(source);
+          walk(source);
+        }
+      }
+    };
+    walk(ctx.destination as unknown as FakeNode);
+    expect(ancestorsOfDestination.has(masterGain)).toBe(true);
+    expect(ancestorsOfDestination.has(trim)).toBe(true);
+    // The trim is a distinct stage from the fader — they must not be the same node.
+    expect(trim).not.toBe(masterGain);
   });
 });

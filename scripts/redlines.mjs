@@ -220,6 +220,30 @@ check(
     (orphanMixIds.length ? `; orphan ${orphanMixIds.join(",")}` : "")
 );
 
+/* R10 — every genre resolves a per-genre FX profile (N-14) ---------------------
+ * The registered gap this closes: `DEFAULT_FX_STATE` was one global rack with all four
+ * effects off and the send buses hard-coded, so no genre had ever declared an effect.
+ * The profile table resolves through a category lookup built from the genre index, so a
+ * table entry naming a genre that no longer exists would silently do nothing. That is
+ * caught here rather than by listening for it.
+ *
+ * Read as text to stay a cheap static gate; `src/test/genreFx.test.ts` asserts the same
+ * thing against the typed modules.
+ */
+const fxOverrideIds = [
+  ...read("src/data/genreFx.ts")
+    .split("export const GENRE_FX")[1]
+    .split("\n};")[0]
+    .matchAll(/^\s{2}"?([a-zA-Z0-9_-]+)"?:\s*\{/gm),
+].map((m) => m[1]);
+const orphanFxIds = fxOverrideIds.filter((id) => !dataIds.includes(id));
+check(
+  "R10 genre FX table has no orphan genre ids",
+  orphanFxIds.length === 0,
+  `${fxOverrideIds.length} overrides` +
+    (orphanFxIds.length ? `; orphan ${orphanFxIds.join(",")}` : "")
+);
+
 console.log("===============================================================");
 console.log("  \ud83d\udea6 RED-LINE GATE");
 console.log("===============================================================");

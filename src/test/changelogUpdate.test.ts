@@ -79,10 +79,17 @@ describe("mergeChangelog", () => {
     expect(merged.map((e) => e.version)).toEqual(["1.16.19", "1.16.18"]);
   });
 
-  it("prefers the freshly revalidated entry over the cached copy", () => {
-    const cached = { ...entry("1.16.19"), category: "fix" as const };
-    const fresh = { ...entry("1.16.19"), category: "feature" as const };
-    expect(mergeChangelog([cached], fresh)[0].category).toBe("feature");
+  it("prefers the archive's fuller entry over the condensed check payload", () => {
+    // `version.json` carries only a summary of the newest entry (it has an 8 KB budget);
+    // the archive carries the whole thing. If the summary won, opening the history would
+    // show a truncated release note for the very release the user just installed.
+    const archiveEntry = { ...entry("1.16.19"), category: "feature" as const, highlights: [
+      { zh: "a", en: "a" }, { zh: "b", en: "b" }, { zh: "c", en: "c" }, { zh: "d", en: "d" },
+    ] };
+    const condensed = { ...entry("1.16.19"), category: "fix" as const, highlights: [{ zh: "a", en: "a" }] };
+    const merged = mergeChangelog([archiveEntry], condensed);
+    expect(merged[0].highlights).toHaveLength(4);
+    expect(merged[0].category).toBe("feature");
   });
 
   it("still renders the newest entry when the archive is unavailable", () => {

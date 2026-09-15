@@ -145,6 +145,8 @@ export class FakeConvolverNode extends FakeNode {
 
 export class FakeDelayNode extends FakeNode {
   delayTime = new FakeAudioParam();
+  /** `createDelay(maxDelayTime)`; recorded so tests can assert the bound. */
+  maxDelayTime = 1;
 }
 
 export class FakeCompressorNode extends FakeNode {
@@ -235,8 +237,13 @@ export class FakeAudioGraph {
   createConvolver() {
     return new FakeConvolverNode();
   }
-  createDelay() {
-    return new FakeDelayNode();
+  /** Recorded so tests can read back the scheduled delay time (see DelayBus/N-14). */
+  createdDelays: FakeDelayNode[] = [];
+  createDelay(maxDelayTime = 1) {
+    const node = new FakeDelayNode();
+    node.maxDelayTime = maxDelayTime;
+    this.createdDelays.push(node);
+    return node;
   }
   createDynamicsCompressor() {
     return new FakeCompressorNode();

@@ -672,3 +672,99 @@ N-12 的策展给每个金属曲风写了**具体的音箱描述**——`death-m
 **测试**：`genreVoicing.test.ts` 现覆盖声部形态、奏法、乐器三层。关键断言包括——奏法按音长正确排序（stab < comp < strum < block < sustain）、funk/雷鬼/salsa/techno/金属的 gateScale ≤ 0.6 而 ambient/trance/shoegaze/doom/black 的 ≥ 1.5、**端到端**渲染出的音长与起始展开与解析器一致（含「同乐器对比以隔离奏法」这一更锐利的对照），以及失真吉他**可测地更重**（更暗、更冲、更厚、更紧）而不只是改了标签。
 
 **过程中修掉一个自己写的 bug**：真峰值汇总块用 `arrangedTruePeakDb` 过滤，但序列化报告里只写了 `trimmedTruePeakDb`，导致整块被静默跳过（`Math.random` 那类「静默失效」的同一模式）。已修，并把 `arrangedTruePeakDb` 也序列化出来。
+
+---
+
+## 4.10 P2 续：E-09 真混响/真延迟 + E-17 实时离线同图（v2.0.2）
+
+### E-17 · 实时与离线共用一张渲染图（关闭 N-16）
+
+**问题**：实时引擎与离线导出器各建一张母带图，且已经分叉到**用户能听出来**：
+
+- **导出根本没有送出总线**。`sendA`/`sendB` 是逐曲风数据（159 个曲风都编排过混响/延迟送出），但导出器里**连混响和延迟都没有**，所以混响密集的曲风导出是干的。
+- **导出没有主 FX 机架**：用户在 FLT/DRIVE/CHORUS/LO-FI 里拧的一切都不在成品里。
+- **导出用 masterGain 0.85，实时用 0.8**：与效果无关的 ~0.5 dB 电平差。
+
+**修法是结构性的**：新增 `src/audio/masterGraph.ts`，一个 `buildMasterGraph(ctx, opts)` 供两边共用（实时多装一组表头分析器，离线不装）。链路与实时引擎既有链路逐节点一致：
+
+```
+轨道 + 总线返回 ─► masterGain（用户推子）─► loudnessTrimGain（逐曲风配平）
+                    ─► fxRack ─► true-peak limiter ─► 表头/输出
+```
+
+trim 仍在限幅器**之前**（限幅器保持绝对天花板）；总线返回仍汇入推子（推子移动湿声，与真实调音台一致）。
+
+**顺带发现并修掉的两处浪费**：E-17 让导出器第一次用上 FX 机架后，测试里冒出多余的振荡器与双二阶——**合唱 LFO 与滤波节点在效果关闭时也被创建**。合唱 LFO 改为懒创建/关闭即释放（`ensureChorusLfo`/`releaseChorusLfo`）；滤波节点则保留（其旁通测试断言"参数仍跟随设定值"，有价值，且单个 biquad 成本可忽略），改为让导出器的测试按**截止频率集合**断言而不是按下标。
+
+### E-09 · 真正的混响与延迟总线
+
+旧混响是 `ConvolverNode` + 合成白噪声 IR：**无频率相关衰减**（尾巴一直是亮的、像加噪不像空间）、无预延迟、无早期反射、固定 1.5 秒、返回量 0.35 硬编码。旧延迟是固定 250 ms、反馈 0.32、**反馈环里没有滤波**（每次重复都全带宽、越来越刺耳）、单声道、返回量 0.25 硬编码。
+
+新增 `src/audio/ReverbBus.ts` 与 `src/audio/DelayBus.ts`（各带独立测试，共 50 条）：
+
+| | 现在 |
+|---|---|
+| 混响 | 预延迟 + **5 个离散早期反射** + 扩散尾；**分频段衰减**（800 Hz 交叉，高频 RT60 = `decaySec·(1−0.75·damping)`）——这才是"尾巴随时间变暗"；`width` 控制立体声去相关；显式套用 Web Audio 的卷积等功率归一化并 `normalize=false`，使返回量成为唯一的湿声电平；确定性种子（无 `Math.random`） |
+| 延迟 | 可设时间（0.02–4 s）与**音乐分割**（1/4、附点八分、三连八分…）；**反馈环内置低通**（`dampHz`）使每次重复变暗；可选 ping-pong（先分轨再合并，绝不把多声道信号塞进 merger 输入而丢立体声）；反馈钳到 0.9；返回量唯一的湿声电平；`enabled=false` 用斜坡而非阶跃 |
+
+实测 RT60：`decaySec` 0.6→0.599 s、1.8→1.799、4→4.008、10→9.988（误差 ~0.2%）。阻尼扫描（`decaySec=2`，rt630/rt4k）：0→2.03/2.00、0.5→2.12/1.24、1.0→2.07/0.51。
+
+**一个值得留档的失败尝试**：先用"低通截止随时间下降"实现阻尼，实测 RT60(4 kHz) 只从 2.0 缩到 1.44 s（28%）——下降的截止只是让局部斜率变陡，截止饱和后高频又回到基础衰减率。改成分频段衰减才给出 2.0→0.51 s。**不要回退到下降截止的做法。**
+
+---
+
+## 4.11 P3：逐曲风母带 FX 默认值（N-14 / v2.0.2）
+
+**这是用户最初的需求 2**：「母带 FX 机架需要逐曲风默认值，需要 dub 长延迟、ambient 长混响、metal 饱和这类创作性默认」。此前 `DEFAULT_FX_STATE` 是全库唯一一套且四项全关，159 个曲风**零声明**——这就是登记项 N-14 描述的状态。
+
+新增 `src/data/genreFx.ts`：6 个 category profile + **55 条逐曲风 override**（每条带 reason），解析方式与 `genreMix`/`genreVoicing` 完全同构。三个点名案例：
+
+- **`dub`**：延迟 `1/4` 音符、反馈 **0.68**、反馈低通 **2 kHz**（重复逐次变暗）、ping-pong、返回 0.40。
+- **`ambient`**：混响 **9 秒**、阻尼 0.55、预延迟 70 ms、返回 0.50。
+- **`death-metal`/`thrash`/`heavy`/`black`/`metalcore`**：**饱和开**（`drive` 4.5–6）+ 极小房间（0.7–2.4 s）。
+
+**速度同步用「演奏速度」**：`delayDivision` 在应用时用 `pattern.bpm`（即 `sequencer_pattern.bpm`）换算，绝不用元数据 `default_bpm`——全库实测 **87/159** 个曲风两者不同，用错会让过半曲风的重复落不到拍上。`setBpm` 也会重算，用户改速度时延迟跟着走。
+
+**一处共享**：`applyGenreFxToGraph(graph, fx, playingBpm)` 是被实时与离线**共同调用**的唯一应用点，避免"播放一套、导出另一套"。
+
+**与 UI 的一致性**：`useGenreSwitching` 在切曲风时把解析出的 rack 写入抽屉状态（`setEffectsRackState`）——否则会出现"UI 显示全关、引擎却开着效果"这种比不做更糟的谎。自定义曲风解析为 `null`，保留用户设置。
+
+**门禁**：新增红线 **R10**（FX 表不得含不存在的曲风 id），红线总数 22 → **23**。数据完整性门禁在本轮再次抓到我自己写的 7 个**虚构曲风 id**（`drill`/`drone`/`drum-and-bass`/`dub_reggae`/`dub_version`/`lo-fi`/`post-rock`）——已改为真实 id 或删除；这正是这条红线存在的意义。
+
+---
+
+## 4.12 多线并行交付（v2.0.2）：E-13 力度→音色、E-15 打击乐模型库、D-05/D-03/G-02、GS-1 vendor 管线
+
+本轮按「异步多线推进」并行开了 4 条互不重叠文件域的工作线。
+
+### E-13 · 力度 → 音色（P5）
+
+**缺陷**：力度只映射到音量，且是线性（`safeVel * 0.8`）。真实乐器弹重了会更亮、更有冲击力；这里重音与弱音只是响度不同。线性还使 MIDI 上端压缩：力度 64 是 −6 dB、32 是 −12 dB。
+
+**实现**：`velocityCurve(v) = v²`（等功率/感知映射；力度 64 → −12 dB 而非 −6 dB；`v=1` 恰为 1）。`SynthPreset` 新增 4 个**可选**字段（默认 0）：`velocityToCutoff`（弱奏时低通关几档）、`velocityToFilterEnv`、`velocityToAttack`、`velocityToDecay`。**21 个拟真类预设**被标注；其余保持原样。
+
+**满力度逐字节不变**：不是靠推理——把 `git show HEAD:src/audio/PolySynth.ts` 的旧实现与新实现同时加载，对 51 预设 × 3 音高 × 4 时值在 `v=1` 比较**全部**调度参数事件：**612/612 完全一致**。
+
+### E-15 · 打击乐模型库（P5）
+
+**缺陷**：`synthesizePercussion` 只有两个声音——808 牛铃、其余拍手。而拉丁/世界、爵士、Afrobeat 等曲风**就是**由康加、天巴鼓、沙锤、Clave、Agogo 构成的。数据侧核实：159 个曲风的 percussion 轨一律 `rim_shaker`，`instrumentation` 散文中写着 Timbales/Congas/Guiro/Clave/Surdo/Pandeiro/Agogo。
+
+**实现**：**16 个模型**，按轨道的 `instrument` 名（含散文名）做子串解析——`rim_shaker` 复合模型（900 Hz rim click + 4200 Hz 沙锤层）、膜类（康加/邦戈/天巴/通鼓：两个失谐模态 + 快速音高下坠 + 接触噪声）、金属类（Agogo/三角铁）、木质类（Clave/边击/木鱼：噪声激励进高 Q 短带通）、沙锤类（沙锤/Cabasa/Guiro/铃鼓）、以及保留原样的拍手与 808 牛铃。未知名字保持**原有回退**（808→牛铃，其余→拍手）。同时加入鼓的力度→音色（亮度、衰减、瞬态），**`v=1` 时三个系数恰为 1**，并用与 E-13 相同的手法和旧模块逐参数对比验证 18 个 fixture **0 差异**。
+
+**顺带修掉一处 exporter parity 缺口**：`WavExporter` 之前**不转发** `track.instrument`，离线导出仍渲染旧的牛铃/拍手，而实时已经用新模型——这条已由我补上（2 处调用点），否则「导出与试听一致」这条硬规则会被打破。
+
+### D-05 / D-03 / G-02 · 工作台（v2.0.x 里程碑）
+
+- **G-02 先写会红的测试**：`src/test/fxParamReachability.test.ts` 断言 7 个 FX 参数各有 ≥1 个 `.tsx` 写入点。修改前 **0/7**（正是登记缺陷 S-P1-4「有壳无芯」），实现后 7/7。匹配规则刻意严格：字段必须作为 FX setter 调用实参对象里的**非引号键或简写**出现，且排除「自己读自己」；字符串、注释、类型声明、`.ts` 里的写入都不算——并在报告里给出红/绿两次原始输出。另有两条**反空过**守卫（证明扫描器能认出现有的 `filterEnabled` 写入、证明确实扫到了 `.tsx`）。
+- **D-05**：抽屉内为 4 个效果各接出主参数——**对数**截止频率滑条（线性 20–20000 Hz 是没法用的）、滤波类型下拉、饱和驱动、合唱混合、比特深度；`filterQ`/`chorusRate` 收进新的 ADV 次级区。全部带 `aria-label`（滑条另有 `aria-valuetext`）与 `data-fx-param` 测试钩子。**默认值一字未改**。
+- **D-03**：FX 进撤销栈。子代理完成 store 侧（`effectsRack` 进 `SequencerState` 与快照、新增 `SET_EFFECTS_RACK`）并证明「一次 commit 只占 1 条历史、一次 undo 同时回退 FX 与 pattern」；但 store 侧单独是**惰性**的，因为 `effectsRackState` 原本是 `StudioView` 的局部 `useState`。我补上了端到端接线：局部 state 保留为 UI 的真相源（所有既有消费者都接 React setter），每次改动**镜像**进 store 参与历史，并在历史恢复时回灌局部 state；滑条拖动用 `commitCoalesced` 合并为一条。
+- 8 个新 i18n 键已补进 `src/i18n/locales/studio.ts`（`i18nKeys.test.ts` 会校验字面量 `t()` 键）。
+
+### P6 第一步 · GS-1 vendor 管线与契约门禁
+
+- **vendor 子集已落地**并钉死：`groove-synth-gs1 v2.1.4 @ 2b5b3550`、**ABI 8**，含 worklet processor、参数表、host engine、两个 wasm（SIMD 217,049 B / scalar 203,046 B）与 MIT LICENSE。**wasm 必须提交**——本仓 CI 没有 Rust 工具链，无法重建。
+- `scripts/sync-gs1.mjs` 是**单向**的：上游字节只经 `readUpstream()` 读，所有写入经 `writeVendored()`，后者拒绝 `vendor/gs1` 之外的目标、也拒绝把目标放在上游树内。上游缺 wasm 时**不做任何 vendoring**，只打印确切的 `npm run build:wasm` 指令。
+- `scripts/check-gs1.mjs` **22 项断言**：6 个哈希、两个核 validate + 实例化、**从模块里读** `gs_abi_version()=8`/`max_voices=32`/`max_block_size=1024`/`spectrum_bins=36`、224 个参数 id 无重复、渲染非静音、`gs_alloc_violations()=0`。无清单时明确 SKIP；有清单则严格失败（清单只在全部文件成功后写出，所以"有清单缺文件"正是要抓的坏状态）。已接入 `check:budget` 与 `verify`。
+- **包体门禁补上 wasm 行**：此前 `check_budgets.js` 只看 `.js`，几百 KB 的 wasm 对它**完全不可见**。新增单件 96 KB / 合计 170 KB 上限，实测 74.98 + 72.22 = **147.2 KB**（40% 增长会失败，已用合成的 195 KB 验证）。
+
+**未做（P6 的下一步，需实测决策）**：真正的引擎接入（把 `chords`/`lead` 路由到 GS-1）尚未开始——按计划要先做 E3 的多轨 CPU 实测再决定范围。此外 vendored `engine.ts` 有 4 个非 vendored 的 host 依赖（`settle`/`wasmFetch`/`@/pwa/register`/`@/i18n`），运行时（`worklet-processor.js`）自包含，但接入时需要适配或重映射。

@@ -3,6 +3,7 @@ import {
   midiToFreq,
   DEFAULT_SYNTH_PRESETS,
   playPolySynthNote,
+  velocityCurve,
   SynthPreset,
 } from "../audio/PolySynth";
 import { FakeAudioContext, FakeGainNode } from "./helpers/fakeAudio";
@@ -231,6 +232,10 @@ describe("Amplitude envelope continuity (click fix)", () => {
   const VEL = 0.8;
   const FLOOR = 0.0001; // the envelope's initial/final value
   const SHORT_NOTE = 0.1; // 1/16 at 120 BPM with a 0.8 gate — the audit's case
+  // E-13: the amp level now goes through the velocity curve and an annotated preset's
+  // attack/decay are stretched at sub-unity velocity, so the mirror of the scheduled
+  // envelope has to include the same curve and scaling the engine uses.
+  const VEL_CURVE = velocityCurve(VEL);
 
   type AmpEvent = { type: string; value: number; time: number };
 
@@ -281,15 +286,27 @@ describe("Amplitude envelope continuity (click fix)", () => {
   }
 
   /**
+   * The velocity-scaled attack/decay endpoints `playPolySynthNote` schedules, mirroring
+   * the `attackScale` / `decayScale` operands exactly. For an un-annotated preset, or any
+   * preset at full velocity, the scales are 1 and these are the raw ADSR times.
+   */
+  function ampTiming(preset: SynthPreset) {
+    const attackScale = 1 + (preset.velocityToAttack ?? 0) * (1 - VEL_CURVE);
+    const decayScale = 1 + (preset.velocityToDecay ?? 0) * (1 - VEL_CURVE);
+    const attackEnd = TIME + Math.max(0.002, preset.adsr.attack * attackScale);
+    const decayEnd = attackEnd + Math.max(0.01, preset.adsr.decay * decayScale);
+    return { attackEnd, decayEnd };
+  }
+
+  /**
    * The analytic value the preceding ramp reaches at `noteReleaseStart`, mirroring
    * the formula in `playPolySynthNote` operand-for-operand so the comparison is exact.
    */
   function analyticReleaseValue(preset: SynthPreset, dur: number): number {
-    const maxVolume = VEL * 0.8;
+    const maxVolume = VEL_CURVE * 0.8;
     const attackStart = FLOOR;
     const attackPeak = Math.max(0.001, maxVolume);
-    const attackEnd = TIME + Math.max(0.002, preset.adsr.attack);
-    const decayEnd = attackEnd + Math.max(0.01, preset.adsr.decay);
+    const { attackEnd, decayEnd } = ampTiming(preset);
     const sustainLevel = Math.max(0.0001, maxVolume * preset.adsr.sustain);
     const noteReleaseStart = TIME + Math.max(0.05, dur);
     return noteReleaseStart <= attackEnd
@@ -314,8 +331,7 @@ describe("Amplitude envelope continuity (click fix)", () => {
     for (const [key, preset] of presetEntries) {
       const events = ampEnvelope(preset, SHORT_NOTE);
       const release = gateEnd(SHORT_NOTE);
-      const attackEnd = TIME + Math.max(0.002, preset.adsr.attack);
-      const decayEnd = attackEnd + Math.max(0.01, preset.adsr.decay);
+      const { decayEnd } = ampTiming(preset);
       if (release < decayEnd) decayClipped++;
 
       // The event at the gate carries the analytic value of the ramp running into it…
@@ -337,7 +353,7 @@ describe("Amplitude envelope continuity (click fix)", () => {
     const release = gateEnd(dur);
     let longAttack = 0;
     for (const [key, preset] of presetEntries) {
-      const attackEnd = TIME + Math.max(0.002, preset.adsr.attack);
+      const { attackEnd } = ampTiming(preset);
       if (attackEnd <= release) continue;
       longAttack++;
 
@@ -351,7 +367,7 @@ describe("Amplitude envelope continuity (click fix)", () => {
 
       // The buggy version forced the (louder) sustain level mid-attack; the fixed
       // envelope must stay on the quiet attack curve instead.
-      const sustainLevel = Math.max(0.0001, VEL * 0.8 * preset.adsr.sustain);
+      const sustainLevel = Math.max(0.0001, VEL_CURVE * 0.8 * preset.adsr.sustain);
       expect(at, `${key} must not step to sustain mid-attack`).toBeLessThan(sustainLevel);
     }
     expect(longAttack).toBeGreaterThanOrEqual(5);
@@ -364,7 +380,7 @@ describe("Amplitude envelope continuity (click fix)", () => {
     const preset = DEFAULT_SYNTH_PRESETS.bass808;
     const events = ampEnvelope(preset, SHORT_NOTE);
     const release = gateEnd(SHORT_NOTE);
-    const sustainLevel = Math.max(0.0001, VEL * 0.8 * preset.adsr.sustain);
+    const sustainLevel = Math.max(0.0001, VEL_CURVE * 0.8 * preset.adsr.sustain);
     const at = valueScheduledAt(events, release);
 
     expect(at).toBeGreaterThan(sustainLevel); // the removed step was a drop

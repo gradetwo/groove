@@ -74,18 +74,24 @@ export function isNewerVersion(remote: string, current: string): boolean {
 /**
  * Union the cached archive with the freshly checked `latest` entry, newest first.
  *
- * `latest` wins on a version collision because it is the only copy guaranteed to
- * have been revalidated against the network.
+ * The **archive wins** on a version collision. That is the opposite of the original rule,
+ * and the reason is the payload budget: `version.json` now carries a *condensed* copy of
+ * the newest entry (see `scripts/version.mjs#condenseLatest`) so the update check can never
+ * outgrow its 8 KB red line, while `changelog.json` holds the full text. Letting the
+ * summary win would replace a complete release note with a truncated one.
+ *
+ * `latest` still fills any gap the archive has — which is the case that matters: a stale
+ * archive that stops one release short.
  */
 export function mergeChangelog(
   archive: readonly ChangelogEntry[] | null | undefined,
   latest: ChangelogEntry | null | undefined
 ): ChangelogEntry[] {
   const byVersion = new Map<string, ChangelogEntry>();
+  if (latest && typeof latest.version === "string") byVersion.set(latest.version, latest);
   for (const entry of archive || []) {
     if (entry && typeof entry.version === "string") byVersion.set(entry.version, entry);
   }
-  if (latest && typeof latest.version === "string") byVersion.set(latest.version, latest);
   return [...byVersion.values()].sort((a, b) => compareVersionsDesc(a.version, b.version));
 }
 

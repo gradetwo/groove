@@ -1,40 +1,29 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "releaseDate": "2026-09-15",
-  "changelogCount": 65,
+  "changelogCount": 66,
   "latest": {
-    "version": "2.0.1",
+    "version": "2.0.2",
     "date": "2026-09-15",
     "category": "audio",
     "title": {
-      "zh": "v2.0.1 和弦按曲风的奏法与乐器：金属闷音不再长鸣、雷鬼不再像垫子、失真节奏吉他上线",
-      "en": "v2.0.1 Chords now use each genre's articulation and instrument: metal mutes stop ringing, reggae stops sounding like a pad, and a high-gain rhythm guitar arrives"
+      "zh": "v2.0.2 真混响与真延迟上线、逐曲风母带效果默认值（dub 长延迟 / ambient 长混响 / metal 饱和）、力度终于改变音色",
+      "en": "v2.0.2 Real reverb and delay, per-genre master FX defaults (dub's long delay, ambient's long reverb, metal's saturation), and velocity that finally changes timbre"
     },
     "highlights": [
       {
-        "zh": "**159 个曲风此前共用一套和弦奏法**：所有音一律「一步的 1.5 倍」长、起始错开固定 3 ms。于是雷鬼的 skank 像垫子一样长鸣、funk 的短促和弦糊成一片、金属的闷音却在延音——音高对了，奏法还是错的。现在有 6 种奏法，按「和弦是在承担节奏还是和声」判定：**stab**（0.30 倍长，1 ms）给 house/techno 短促和弦、funk、雷鬼 skank、蒙图诺与金属闷音；**comp**（0.55 倍、8 ms）给爵士伴奏；**strum**（0.80 倍、22 ms，约一次真实下扫的时长）给吉他；**block**（1.0 倍）是原来的行为；**roll**（1.3 倍、90 ms）给琶音滚奏；**sustain**（**3.0 倍**）给垫子、弦乐、ambient/shoegaze 音墙与黑金属颤音拨弦。",
-        "en": "**All 159 genres shared one chord articulation.** Every note was `stepDur · gate · 1.5` long with a flat 3 ms onset stagger — so a reggae skank rang like a pad, funk stabs smeared, and metal's palm mutes sustained. The notes were right; the playing was wrong. There are now six articulations chosen by asking whether the chord carries the *rhythm* or the *harmony*: **stab** (0.30x length, 1 ms) for house/techno stabs, funk, the reggae skank, montuno and palm-muted metal; **comp** (0.55x, 8 ms) for jazz; **strum** (0.80x, 22 ms — roughly a real downstroke) for guitar; **block** (1.0x) as the previous behaviour; **roll** (1.3x, 90 ms) for arpeggiated ripples; and **sustain** (**3.0x**) for pads, strings, ambient/shoegaze walls and tremolo-picked black metal."
+        "zh": "**每个曲风终于有自己的母带效果默认值**（登记项 N-14）。此前全库共用一套机架、四个效果**全部默认关闭**，159 个曲风零声明——「混音按曲风特色」到效果这一层就断了。现在 6 个分类 profile + **55 条逐曲风编排**，三个点名案例：**dub** 用四分音符长延迟、反馈 0.68、反馈环低通 2 kHz（重复逐次变暗）加 ping-pong；**ambient** 用 **9 秒**混响、预延迟 70 ms、返回 0.50；**金属**（death/thrash/heavy/black/metalcore）**饱和开启**（drive 4.5–6）配极小房间。切换曲风即载入该曲风默认（与换 patch 同义）。",
+        "en": "**Every genre finally has its own master FX defaults** (registered as N-14). One shared rack with all four effects **off by default** and zero declarations across 159 genres meant \"the mix reflects the genre\" stopped at the effects layer. There are now six category profiles plus **55 per-genre arrangements**: **dub** gets a quarter-note delay at 0.68 feedback with a 2 kHz low-pass in the loop so repeats darken as they travel, plus ping-pong; **ambient** gets a **9-second** r…"
       },
       {
-        "zh": "**乐器：数据早就写明每把琴的音色，轨道却一律用同一把**。N-12 的策展为每个金属曲风写了具体音箱——`death-metal` 是「HM-2 Buzzsaw Guitar」、`metalcore` 是「High-Gain 5150 Guitar」、`thrash-metal` 是「Scooped-Mid High-Gain Guitar」——但它们的和弦轨**全部**指向通用的主音吉他预设。新增 **`distortedGuitar` 高增益节奏吉他**：截止 1500 Hz（远低于主音的 2700，power chord 活在低中频，这是它不刺耳的原因）、Q 6.5（远高于 3.5，那个中频鼻音让它切得出来）、双锯齿厚墙、快起音短释放。**定点改 9 个高增益曲风**（hard-rock / punk-rock / heavy-metal / thrash / death / black / doom-metal / metalcore / grunge）；非高增益吉他曲风与所有主音轨**不动**。",
-        "en": "**Instruments: the data already described each amplifier, but every track used the same generic guitar.** The N-12 curation names a specific amp per metal genre — \"HM-2 Buzzsaw Guitar\" for death metal, \"High-Gain 5150 Guitar\" for metalcore, \"Scooped-Mid High-Gain Guitar\" for thrash — yet all of their chords tracks pointed at the generic lead-guitar preset. A new **`distortedGuitar` high-gain rhythm voice** lands: 1500 Hz cutoff (far below the lead's 2700 — a power chord lives in the low-mids, which is why it does not fizz), Q 6.5 (vs 3.5 — that midrange honk is what makes it cut), a thick two-saw stack, fast attack and short release. **Nine high-gain genres** are switched over; non-high-gain guitar genres and every lead track are left alone."
+        "zh": "**混响和延迟本身也换掉了**。旧混响是一个固定 1.5 秒的**白噪声**脉冲响应：没有频率相关衰减，尾巴一直是亮的、像加了噪声而不是空间；也没有预延迟和早期反射，返回量硬编码。旧延迟固定 250 ms、反馈环里**没有滤波**（每次重复都全带宽、越来越刺耳）、单声道。现在：混响有预延迟 + 5 个早期反射 + **分频段衰减**（高频先衰减，这才是「尾巴随时间变暗」）、可控立体声宽度、确定性种子；延迟可设音乐分割、**反馈环内置低通**、可选 ping-pong。实测 RT60 精度 ~0.2%（0.6 s→0.599、10 s→9.988）。",
+        "en": "**The reverb and delay themselves were replaced.** The old reverb was a fixed 1.5 s **white-noise** impulse: no frequency-dependent decay, so the tail stayed bright and read as added noise rather than space, plus no pre-delay, no early reflections and a hard-coded return. The old delay was a fixed 250 ms with **no filter in the feedback loop** (every repeat full-bandwidth, progressively harsher) and mono. Now: pre-delay, five early reflections, **per-band decay** (highs fade…"
       },
       {
-        "zh": "**既有门禁把「器材意图」和「轨道」绑在了一起**：`distorted_guitar` 的允许短语直接取自策展文案里已有的词（high-gain / buzzsaw / fuzz / overdriven guitar / tremolo-picked / down-tuned），所以「轨道乐器必须被该曲风的配器清单点名」这条老门禁现在会自动要求两者一致。新增乐器的钉死清单也如期拦下并要求显式更新——这正是它们存在的意义。",
-        "en": "**Existing gates now tie amplifier intent to the track.** The new instrument's allowed phrases are taken straight from the curation text (high-gain, buzzsaw, fuzz, overdriven guitar, tremolo-picked, down-tuned), so the long-standing rule that a track's instrument must be *named* by its genre's instrumentation list now enforces the two agree. The pinned instrument survey also caught the new voice and demanded a deliberate update — which is exactly why it exists."
-      },
-      {
-        "zh": "**重新配平**：奏法显著改变能量分布（stab 只有原来的 30% 长度、sustain 是 300%），因此按流程重测 159 曲风并回填 trim。配平后 p90−p10 **0.69 LU**（上限 1.5）、全距 2.77 LU、clamp 0/159；样本峰值超 0 dBFS 仍为 **0/159**，最差真峰值 −0.983 dBTP。",
-        "en": "**Re-matched.** Articulation changes the energy distribution materially (a stab is 30% of the old length, a sustain 300%), so all 159 genres were re-measured and the trims refitted: post-trim spread **0.69 LU** p90−p10 (limit 1.5), 2.77 LU full range, 0/159 clamp hits — and clipping remains **0/159** with a worst true peak of −0.983 dBTP."
-      },
-      {
-        "zh": "**测试覆盖三层且断言的是音乐主张**：奏法按音长正确排序（stab < comp < strum < block < sustain）；funk/雷鬼/salsa/techno/金属的 gateScale ≤ 0.6，ambient/trance/shoegaze/doom/black 的 ≥ 1.5；**端到端**渲染出的音长与起始展开和解析器一致（用同乐器对照隔离奏法，避免被预设自身的释放时间混淆）；失真吉他**可测地更重**（更暗、更冲、更厚、更紧）而不只是改了标签。",
-        "en": "**Three layers of tests, asserting musical claims.** Articulations order correctly by length (stab < comp < strum < block < sustain); funk/reggae/salsa/techno/metal sit at gateScale ≤ 0.6 while ambient/trance/shoegaze/doom/black sit at ≥ 1.5; the **rendered** note length and onset spread match the resolver (compared on a matched instrument so the preset's own release cannot confound it); and the distorted guitar is **measurably** heavier — darker, more aggressive, thicker, tighter — not merely relabelled."
-      },
-      {
-        "zh": "顺带修掉一个自己写的静默失效：真峰值汇总块用 `arrangedTruePeakDb` 过滤，但序列化报告里只写了 `trimmedTruePeakDb`，于是整块被悄悄跳过。已修，并把两个字段都写进报告。",
-        "en": "Also fixed a silent self-inflicted failure: the true-peak summary filtered on `arrangedTruePeakDb` while the serialized report only wrote `trimmedTruePeakDb`, so the whole block was quietly skipped. Both fields are now reported."
+        "zh": "**导出终于和试听是同一条链路**（关闭 N-16）。此前离线导出器**根本没有送出总线、也没有主 FX 机架**：159 个曲风精心编排的混响/延迟送出在成品里完全不存在，用户拧的 FLT/DRIVE/CHORUS/LO-FI 也不在成品里；而且导出用 0.85 推子、实时用 0.8，还有一个无关的 ~0.5 dB 偏差。现在实时与离线共用**同一个** `buildMasterGraph`，链路与逐曲风效果都由同一函数应用。",
+        "en": "**Export and audition are finally the same chain** (closing N-16). The offline renderer had **no send buses and no master FX rack at all**: the reverb/delay sends curated for all 159 genres simply were not in the file, and neither was anything dialled into FLT/DRIVE/CHORUS/LO-FI. It also ran a 0.85 fader against playback's 0.8 — an unrelated ~0.5 dB offset. Both now share one `buildMasterGraph`, and the per-genre effects are applied by one shared function."
       }
-    ]
+    ],
+    "truncated": true
   }
 }

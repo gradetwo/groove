@@ -182,6 +182,17 @@ export const studioMessages = {
   toolbar_fx_saturation: { en: "Tape Saturation", zh: "磁带饱和温暖感 (Tanh Soft Clip)" },
   toolbar_fx_chorus: { en: "Stereo Chorus", zh: "立体声合唱空间化" },
   toolbar_fx_bitcrusher: { en: "Lo-Fi Bitcrusher", zh: "低比特数字失真 (Bitcrusher)" },
+  // D-05: the FX rack's parameters, which the UI exposed as on/off toggles only. The
+  // engine accepted all seven the whole time, so these labels are the difference between
+  // "a shell with no core" and a usable rack.
+  toolbar_fx_filter_cutoff: { en: "Filter cutoff (log scale)", zh: "滤波截止频率（对数刻度）" },
+  toolbar_fx_filter_type: { en: "Filter type", zh: "滤波类型" },
+  toolbar_fx_filter_q: { en: "Filter resonance (Q)", zh: "滤波共振 (Q)" },
+  toolbar_fx_saturation_drive: { en: "Saturation drive", zh: "饱和驱动量" },
+  toolbar_fx_chorus_mix: { en: "Chorus mix", zh: "合唱混合量" },
+  toolbar_fx_chorus_rate: { en: "Chorus rate", zh: "合唱速率" },
+  toolbar_fx_bit_depth: { en: "Bit depth", zh: "比特深度" },
+  toolbar_fx_advanced: { en: "Show advanced FX parameters", zh: "显示高级 FX 参数" },
   toolbar_haptic_label: { en: "HAPTIC:", zh: "触感:" },
   toolbar_haptic_title: { en: "Toggle Haptic Feedback", zh: "触觉震动反馈开关" },
   toolbar_pan_hint: { en: "Wheel/drag to pan", zh: "滚轮/标尺拖拽可平移" },
