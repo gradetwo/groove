@@ -8,18 +8,32 @@
  * from a rAF loop, so the reading is post-limiter and includes the real voice scheduling,
  * panning and effects. Two independent measurement paths are much harder to fool than one.
  *
- * Measured baseline on v1.16.17 (before any per-genre mix or loudness trim existed),
- * studio transport, master RMS in dBFS, 12 genres spanning all six categories:
+ * METRIC — read this before quoting a number from this script. It reports windowed
+ * broadband **RMS**, which averages in the silence between hits. The per-genre loudness
+ * workstream reports gated **ITU-R BS.1770-4 integrated loudness (LUFS)** instead
+ * (`scripts/loudness.baseline.json`). The two metrics disagree systematically on sparse
+ * material: ambient measures about -24.7 dBFS RMS but only about -21.7 LUFS, because the
+ * BS.1770 gate discards the silence that dominates its RMS. LUFS is the standard proxy
+ * for "these genres should sound equally loud", so it is the primary acceptance metric;
+ * this probe is the independent cross-check on a different metric and a different signal
+ * path (live engine vs offline render). A large RMS spread with a small LUFS spread is
+ * expected and is not a failure.
  *
- *   chicago-house  -12.5   boom-bap   -16.8   salsa      -14.7   funk       -15.4
- *   detroit-techno -12.6   trap-rap   -14.7   afrobeat   -15.4   soul       -15.3
- *   delta-blues    -16.6   bebop      -14.2   hard-rock  -15.1   punk-rock  -11.4
+ * Measured baselines, all 159 genres, studio transport, master RMS in dBFS:
+ *   v1.16.17 (before the curated timbres):  min -25.2  p10 -16.8  median -14.6  p90 -11.3  max -8.25
+ *                                           spread 17.0 dB, p90-p10 5.5 dB
+ *   after the curated timbres, still no mix/loudness work:
+ *                                           min -24.7 (ambient)  p10 -16.8  median -14.2
+ *                                           p90 -11.5  max -9.7 (breakcore)
+ *                                           spread 15.0 dB, p90-p10 5.3 dB
+ * The earlier 12-genre sample showed only 5.2 dB because it contained no extreme genre --
+ * which is why the default sample is useful for a quick check but `--all` is the real run.
  *
- *   max-min spread 5.5 dB, p90-p10 4.0 dB   (loudest punk-rock, quietest boom-bap)
- *   compare view, chicago-house vs punk-rock full arrangement: A -11.4 / B -10.2 -> 1.1 dB
  *
  * Usage:
  *   node scripts/measure_live_loudness.mjs                      # built-in 12-genre sample
+ *   node scripts/measure_live_loudness.mjs --all                 # every genre (~7-15 min)
+ *   # add --baseline=scripts/loudness_live_baseline.json to see per-genre deltas
  *   node scripts/measure_live_loudness.mjs --genres=a,b,c
  *   node scripts/measure_live_loudness.mjs --compare=a,b        # also A/B the compare view
  *   LIVE_BASE=https://... node scripts/measure_live_loudness.mjs  # against the deployed site
@@ -55,7 +69,23 @@ const DEFAULT_SAMPLE = [
   "hard-rock", "punk-rock",                    // Rock/Metal
 ];
 
-const genres = (argVal("genres") || DEFAULT_SAMPLE.join(",")).split(",").filter(Boolean);
+/**
+ * Every genre id in the library, read from the canonical light index. `--all` uses this
+ * instead of the 12-genre sample so acceptance is judged on the whole library rather
+ * than a hand-picked subset (a subset can hide an outlier genre entirely).
+ */
+function allGenreIds() {
+  const indexPath = path.join(process.cwd(), "src/data/index/genresIndex.ts");
+  const src = fs.readFileSync(indexPath, "utf8");
+  return [...src.matchAll(/"id":\s*"([^"]+)"/g)].map((m) => m[1]);
+}
+
+const useAll = args.includes("--all");
+const genres = (
+  argVal("genres") || (useAll ? allGenreIds().join(",") : DEFAULT_SAMPLE.join(","))
+)
+  .split(",")
+  .filter(Boolean);
 const compareIds = argVal("compare") ? argVal("compare").split(",") : null;
 
 const MIME = {
