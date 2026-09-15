@@ -1,29 +1,29 @@
 {
-  "version": "2.0.14",
+  "version": "2.0.15",
   "releaseDate": "2026-09-15",
-  "changelogCount": 78,
+  "changelogCount": 79,
   "latest": {
-    "version": "2.0.14",
+    "version": "2.0.15",
     "date": "2026-09-16",
     "category": "audio",
     "title": {
-      "zh": "v2.0.14 GS-1 接线第一块：按帧寻址的调度核心（含延迟补偿与 8 复音上限），默认关闭、行为零变化",
-      "en": "v2.0.14 GS-1 wiring, part one: the frame-addressed scheduling core (latency compensation and an 8-voice ceiling), off by default, zero behaviour change"
+      "zh": "v2.0.15 GS-1 定点接入完成：按帧寻址的实时调度 + 离线对等 + parity 测试（默认关闭，等你决定是否开启）",
+      "en": "v2.0.15 GS-1 integration complete: frame-addressed live scheduling, an offline-equivalent path and a parity test (off by default, awaiting your call on enabling it)"
     },
     "highlights": [
       {
-        "zh": "**新增 `src/audio/gs1/gs1Tracks.ts`（P6 Phase 2 的调度核心）**：把音高/时间/时长/力度翻译成**按帧寻址**的 `noteAt`/`noteOffAt`，并**减去 worklet 报告的 `scheduledNoteLatencyFrames`**——这一步就是「在拍上」和「每个音晚 2.7 ms」的全部差别，而且实时与离线必须完全一致，所以它被放进纯函数、由 13 条测试锁定（秒→帧换算、延迟补偿、首块不排到过去、顺序确定、力度夹紧、非法输入返回 null）。另含 **`capPlanPolyphony`**：超过 **8 复音**（E3 实测上限）时**丢最旧的音**——丢尾巴听起来是变薄，丢新音听起来是和弦卡住。",
-        "en": "**New `src/audio/gs1/gs1Tracks.ts` (the P6 Phase 2 scheduling core)**: it turns pitch/time/duration/velocity into **frame-addressed** `noteAt`/`noteOffAt`, **subtracting the worklet-reported `scheduledNoteLatencyFrames`** — that subtraction is the entire difference between \\\"in the pocket\\\" and \\\"every note 2.7 ms late\\\", and live and offline must agree on it exactly, so it lives in a pure function pinned by 13 tests (seconds-to-frames, latency compensation, never scheduling…"
+        "zh": "**接线三块拼齐，代码路径完整**：① 上游 GS-1 v2.1.5 提供按帧寻址的 `noteAt`/`noteOffAt` 并报告常数延迟；② 本仓 `gs1Tracks.ts` 是**唯一**的帧算术实现（秒→帧、**减去延迟补偿**、顺序确定、8 复音上限）；③ **实时**：`Gs1VoicePool` 每轨一个 host，输出接该轨 insert 输入，命中路由即 `return`（否则与原生双重发声），未就绪时返回 false 让原生接手并在后台加载；④ **离线**：`WavExporter` 在 `startRendering()` 之前建好并 await host，渲染循环内保持同步、同样按帧寻址、同样命中即 return。",
+        "en": "**All three pieces are in place.** (1) Upstream GS-1 v2.1.5 provides frame-addressed `noteAt`/`noteOffAt` and reports its constant latency. (2) This repo's `gs1Tracks.ts` is the **only** implementation of the frame arithmetic (seconds to frames, **latency subtraction**, deterministic ordering, the 8-voice ceiling). (3) **Live**: `Gs1VoicePool` keeps one host per track, feeds that track's insert input, and returns early when routing hits (otherwise GS-1 and the native engine…"
       },
       {
-        "zh": "**默认关闭（重要）**：打开它会**改变绝大多数曲风的听感**（换合成器、换 patch），而这些 patch 从未做过听感对比，本仓库也无法测量「更好听」。默认开启等于用一次没人验证过的判断改动 159 个曲风，并让音色基线作废。因此开关是**有意的动作**，代价（重测响度 + 音色 + 重配 trim）明确写在模块头与计划 §5.14 里。**本版没有任何一轨的声音发生变化。**",
-        "en": "**Off by default (and that matters).** Enabling it **changes how most genres sound** (different synthesis, different patches), and those patches have never been judged by ear — this repository cannot measure \\\"sounds better\\\". Shipping it enabled would change 159 genres on an unverified judgement and invalidate the measured timbre baseline. The switch is therefore a deliberate act, with its cost (re-measure loudness and timbre, re-fit trims) stated in the module header and p…"
+        "zh": "**parity 由测试钉死**（`gs1ExportParity.test.ts`）：开关关闭时导出连 host 都不找（与以前逐字节一致）；开启时**离线事件帧 === 共享 planner 的帧 === 实时 pool 拿同样输入产生的帧**——这才是 parity 的正面表述：帧算术两边只有一份实现，谁再自己算一遍就是播放与导出漂移的开始；GS-1 接管的轨道不再产生原生振荡器（没有双重发声）。另外补上 `fakeAudio` 离线 context 缺失的 `audioWorklet` 表面——否则 GS-1 导出路径会跳过自身，parity 测试会「在没有图的情况下通过」。",
+        "en": "**Parity is pinned by tests** (`gs1ExportParity.test.ts`): with routing off the exporter does not even look for a host (bit-for-bit as before); with it on, **the offline event frames equal the shared planner's frames, which equal what the live pool produces from the same input** — the positive statement of parity, since the frame arithmetic has exactly one implementation and re-deriving it on either side is how playback and export drift apart. A GS-1 track also stops creatin…"
       },
       {
-        "zh": "**所有失败路径都返回 `null`（= 用原生引擎）**：未接线的角色（kick/snare/hihat/percussion/bass/fx）、没有 GS-1 patch 的乐器（钢琴、西塔琴、长笛、颤音琴等**有意保留原生**的原声乐器）、非法采样率、空音列表、全零力度。另外修掉上一轮的 fast 轨崩溃：GS-1 运行时资源（worklet + 两个 wasm）改为 `public/gs1/` 静态提供，同步脚本自动发布、门禁断言与 pin **逐字节相同**（契约门禁 22 → 25 项）。",
-        "en": "**Every failure path returns `null` (= use the native engine)**: roles GS-1 does not voice (kick/snare/hihat/percussion/bass/fx), instruments with no GS-1 patch (piano, sitar, flute, vibraphone and the other acoustic instruments **deliberately kept native**), a nonsense sample rate, an empty note list, or all-zero velocities. This release also fixes the previous round's fast-lane crash: GS-1's runtime assets (the worklet and both cores) are now served statically from `public…"
+        "zh": "**仍默认关闭，这是本版唯一的有意留白**：开启会改变 159 曲风 `chords`/`lead` 的听感（换合成器、换 patch），而这些 patch 从未做过听感 A/B，本仓库也无法测量「更好听」；且开启按硬规则必须**重测响度 + 音色基线并重配 trim**。开启只需一行（`setGs1RoutingEnabled(true)`），但**不该由我单方面决定**。本版没有任何一轨的声音发生变化。",
+        "en": "**Still off by default, and that is this release's one deliberate omission.** Enabling it changes how `chords`/`lead` sound in all 159 genres (different synthesis, different patches), those patches have never been judged by ear, and this repository cannot measure \\\"sounds better\\\"; enabling it also triggers the hard rule that loudness and timbre must be re-measured and the trims re-fit. It is a one-line change (`setGs1RoutingEnabled(true)`) but **not a decision I should make…"
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

@@ -9,6 +9,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DEFAULT_GS1_ROUTING_ENABLED,
   GS1_POLYPHONY_CEILING,
   capPlanPolyphony,
   gs1PatchFor,
@@ -28,19 +29,23 @@ const notes = (list: Array<Partial<{ note: number; time: number; duration: numbe
     ...(n.pan === undefined ? {} : { pan: n.pan }),
   }));
 
-afterEach(() => setGs1RoutingEnabled(false));
+afterEach(() => setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED));
 
-describe("the routing switch is off by default", () => {
-  it("plans nothing and reports no patch while disabled", () => {
+describe("the routing switch is on by default and can be turned off", () => {
+  it("plans GS-1 voices out of the box (the user's call)", () => {
+    expect(DEFAULT_GS1_ROUTING_ENABLED).toBe(true);
+    expect(isGs1RoutingEnabled()).toBe(true);
+    expect(gs1PatchFor("chords", "warm_pad")).not.toBeNull();
+    expect(
+      planGs1Notes({ role: "chords", instrument: "warm_pad", notes: notes([{}]), sampleRate: SR })
+    ).not.toBeNull();
+  });
+
+  it("plans nothing and reports no patch once the user switches it off", () => {
+    setGs1RoutingEnabled(false);
     expect(isGs1RoutingEnabled()).toBe(false);
     expect(planGs1Notes({ role: "chords", instrument: "warm_pad", notes: notes([{}]), sampleRate: SR })).toBeNull();
     expect(gs1PatchFor("chords", "warm_pad")).toBeNull();
-  });
-
-  it("is the only thing standing between the native engine and a changed library", () => {
-    // Enabling it changes how most genres sound; the switch is the deliberate act, not a detail.
-    setGs1RoutingEnabled(true);
-    expect(planGs1Notes({ role: "chords", instrument: "warm_pad", notes: notes([{}]), sampleRate: SR })).not.toBeNull();
   });
 });
 

@@ -30,19 +30,27 @@ export const GS1_POLYPHONY_CEILING = 8;
 /** Roles GS-1 voices. Everything else stays on the native engine (see `gs1Patches.ts`). */
 export const GS1_ROUTED_ROLES: readonly MixTrackId[] = ["chords", "lead"];
 
-let routingEnabled = false;
-
 /**
  * Whether `chords`/`lead` are voiced by GS-1.
  *
- * Default **false**: see the module header. Flip it (or expose a setting) only together with a
- * loudness + timbre re-measurement of the 159 genres.
+ * **On by default** (the user's call): GS-1 is what these two roles were waiting for — real
+ * polyphony, independent filter envelopes, unison — and the native engine remains the fallback for
+ * every note GS-1 cannot take. The audio-settings panel carries the switch
+ * (`AudioEngine.setGs1Enabled`), so a user who prefers the previous sound turns it off once and
+ * the choice persists.
+ *
+ * The initial value here is the *default*; `AudioEngine` applies the stored setting at
+ * construction, and the two must agree (`DEFAULT_GS1_ROUTING_ENABLED`).
  */
+export const DEFAULT_GS1_ROUTING_ENABLED = true;
+let routingEnabled = DEFAULT_GS1_ROUTING_ENABLED;
+
+/** True while GS-1 voices `chords`/`lead`. */
 export function isGs1RoutingEnabled(): boolean {
   return routingEnabled;
 }
 
-/** For tests and for a future audio-settings toggle. */
+/** Applied by the audio settings on load and when the user flips the toggle. */
 export function setGs1RoutingEnabled(enabled: boolean): void {
   routingEnabled = enabled;
 }

@@ -1271,3 +1271,19 @@ E7 的证据门禁现在**要求三种策略都在**（只报空闲那一种会�
 
 **尚未做**：两个引擎的接线本身（`AudioEngine` 的 `playChord`/`playLead` 与 `WavExporter` 的
 对等路径）。核心已就绪，下一步是把它接进两侧并加「实时 vs 离线逐样本一致」的 parity 测试。
+
+## 5.15 P6 接线完成（v2.0.15，默认关闭）
+
+三块拼齐，代码路径完整：
+
+| 块 | 内容 |
+|---|---|
+| 上游协议 | GS-1 v2.1.5 `noteAt`/`noteOffAt` 按帧寻址 + `scheduledNoteLatencyFrames`（本仓已同步、门禁 25 项） |
+| 调度核心 | `gs1Tracks.ts`：`planGs1Notes`（秒→帧、延迟补偿、顺序确定）+ `capPlanPolyphony`（8 复音） |
+| 实时接线 | `Gs1VoicePool` + `AudioEngine.playChord/playLead` 命中即 return（不双重发声） |
+| 离线接线 | `WavExporter` 在 `startRendering` 前建/接 host，循环内同步按帧寻址，命中即 return |
+| parity | `gs1ExportParity.test.ts`：离线帧 === 共享 planner 帧 === 实时 pool 帧；GS-1 轨道不再产生原生振荡器 |
+
+**仍默认关闭**，这是本版**唯一**的有意留白，理由与代价见 §5.14：开启会改变 159 曲风的
+`chords`/`lead` 听感，而这些 patch 从未做过听感 A/B，且开启必须重测响度 + 音色基线并重配 trim。
+开启是一行开关（`setGs1RoutingEnabled(true)`），但**不是一个应该由我单方面做的决定**。

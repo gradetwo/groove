@@ -7,7 +7,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Gs1VoicePool, type PoolNote } from "../audio/gs1/Gs1VoicePool";
-import { setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
+import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
 import type { Gs1Host } from "../audio/gs1/Gs1Host";
 
 const SR = 48000;
@@ -49,10 +49,11 @@ const note = (over: Partial<PoolNote> = {}): PoolNote => ({
   ...over,
 });
 
-afterEach(() => setGs1RoutingEnabled(false));
+afterEach(() => setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED));
 
 describe("the pool refuses until it can actually play", () => {
   it("returns false while routing is disabled", () => {
+    setGs1RoutingEnabled(false);
     const pool = new Gs1VoicePool(ctx, { createHost: (async () => makeHost().host) as never });
     expect(pool.tryPlay(0, "chords", "warm_pad", [note()], dest)).toBe(false);
   });

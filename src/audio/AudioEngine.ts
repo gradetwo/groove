@@ -34,6 +34,7 @@ import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
 import { Gs1VoicePool } from "./gs1/Gs1VoicePool";
+import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "./gs1/gs1Tracks";
 import type { TrackInsertParams } from "../data/trackInsert";
 import { applyGenreFxToGraph, delayParamsAtTempo, resolveGenreFx, type GenreFxProfile } from "../data/genreFx";
 export type { TrackState } from "./trackStates";
@@ -234,6 +235,11 @@ export class AudioEngine {
   private latencyCompensationMs: number = 0;
   private hearingProtection: boolean = true;
   private maxVolumeLimit: number = 0.85;
+  /**
+   * Whether `chords`/`lead` are voiced by GS-1. Persisted next to the other audio settings, and
+   * applied to the routing switch so the engines read one source of truth.
+   */
+  private gs1Enabled: boolean = DEFAULT_GS1_ROUTING_ENABLED;
   private currentMasterVolume: number = 0.8;
 
   // Genre loudness matching (feat/genre-mix-loudness).
@@ -260,6 +266,8 @@ export class AudioEngine {
     });
 
     this.loadAudioSettings();
+    // The routing switch is module state the engines read; the stored setting is the truth.
+    setGs1RoutingEnabled(this.gs1Enabled);
     this.initAudioContext();
   }
 
@@ -797,6 +805,9 @@ export class AudioEngine {
         if (typeof parsed.maxVolumeLimit === "number") {
           this.maxVolumeLimit = parsed.maxVolumeLimit;
         }
+        if (typeof parsed.gs1Enabled === "boolean") {
+          this.gs1Enabled = parsed.gs1Enabled;
+        }
         if (typeof parsed.masterVolume === "number") {
           this.currentMasterVolume = Math.max(0, Math.min(1, parsed.masterVolume));
         }
@@ -813,6 +824,7 @@ export class AudioEngine {
         latencyCompensationMs: this.latencyCompensationMs,
         hearingProtection: this.hearingProtection,
         maxVolumeLimit: this.maxVolumeLimit,
+        gs1Enabled: this.gs1Enabled,
         masterVolume: this.currentMasterVolume,
       };
       localStorage.setItem("groove_audio_settings_v1", JSON.stringify(data));
@@ -855,6 +867,28 @@ export class AudioEngine {
 
   public isHearingProtectionEnabled(): boolean {
     return this.hearingProtection;
+  }
+
+  /** True while GS-1 voices `chords`/`lead`. */
+  public isGs1Enabled(): boolean {
+    return this.gs1Enabled;
+  }
+
+  /**
+   * Turn the GS-1 voices for `chords`/`lead` on or off.
+   *
+   * Applies immediately (the routing switch is what both engines consult) and persists. Turning it
+   * off silences the loaded hosts so a note cannot hang, and the next notes are voiced natively.
+   */
+  public setGs1Enabled(enabled: boolean): void {
+    this.gs1Enabled = enabled;
+    setGs1RoutingEnabled(enabled);
+    if (!enabled) {
+      this.gs1Pool?.releaseAll();
+      this.gs1Pool?.dispose();
+      this.gs1Pool = null;
+    }
+    this.saveAudioSettings();
   }
 
   public setHearingProtection(enabled: boolean): void {

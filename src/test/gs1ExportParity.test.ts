@@ -42,7 +42,11 @@ vi.mock("../audio/gs1/Gs1Host", () => ({
 }));
 
 import { renderPatternOffline } from "../audio/WavExporter";
-import { planGs1Notes, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
+import {
+  DEFAULT_GS1_ROUTING_ENABLED,
+  planGs1Notes,
+  setGs1RoutingEnabled,
+} from "../audio/gs1/gs1Tracks";
 import { Gs1VoicePool } from "../audio/gs1/Gs1VoicePool";
 import { chordVoicingForStep, chordNoteDuration, chordVoiceOnset, chordVoiceGain } from "../audio/chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
@@ -83,7 +87,7 @@ let restore: (() => void) | null = null;
 afterEach(() => {
   restore?.();
   restore = null;
-  setGs1RoutingEnabled(false);
+  setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED);
   recorded.noteOnAt.length = 0;
   recorded.noteOffAt.length = 0;
   recorded.patches = 0;
@@ -93,6 +97,7 @@ afterEach(() => {
 describe("GS-1 export parity", () => {
   it("changes nothing at all while routing is off", async () => {
     restore = installFakeOfflineAudioContext();
+    setGs1RoutingEnabled(false);
     await renderPatternOffline(makePattern(), { bars: 1, sampleRate: SR });
     // The default path must not even look for a host.
     expect(recorded.hosts).toBe(0);

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
+import { DEFAULT_GS1_ROUTING_ENABLED, isGs1RoutingEnabled, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
 
 describe("AudioEngine Latency & Hearing Protection (P4-05)", () => {
   beforeEach(() => {
@@ -44,5 +45,59 @@ describe("AudioEngine Latency & Hearing Protection (P4-05)", () => {
 
     engine.setLatencyCompensation(-300);
     expect(engine.getLatencyCompensation()).toBe(-100);
+  });
+});
+
+/**
+ * GS-1 voices for `chords`/`lead` (P6): on by default, switchable, persisted.
+ *
+ * The default matters: it is the difference between "GS-1 is wired" and "GS-1 is what you hear".
+ * The user asked for on-by-default with a manual off switch in the audio settings, so both halves
+ * are pinned here — the default **and** the fact that turning it off takes effect immediately.
+ */
+describe("AudioEngine · GS-1 chord/lead voices", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED);
+  });
+
+  it("is on by default, and the routing switch agrees", () => {
+    const engine = new AudioEngine();
+    expect(engine.isGs1Enabled()).toBe(true);
+    expect(isGs1RoutingEnabled()).toBe(true);
+    expect(DEFAULT_GS1_ROUTING_ENABLED).toBe(true);
+  });
+
+  it("turns the routing switch off immediately, not just on the next load", () => {
+    const engine = new AudioEngine();
+    engine.setGs1Enabled(false);
+    expect(engine.isGs1Enabled()).toBe(false);
+    // The engines consult the module switch, so it has to change now.
+    expect(isGs1RoutingEnabled()).toBe(false);
+    engine.setGs1Enabled(true);
+    expect(isGs1RoutingEnabled()).toBe(true);
+  });
+
+  it("persists the choice across engines", () => {
+    const first = new AudioEngine();
+    first.setGs1Enabled(false);
+
+    const stored = JSON.parse(localStorage.getItem("groove_audio_settings_v1")!);
+    expect(stored.gs1Enabled).toBe(false);
+
+    const second = new AudioEngine();
+    expect(second.isGs1Enabled()).toBe(false);
+    // …and the restored setting is applied to the switch, so a reload really is off.
+    expect(isGs1RoutingEnabled()).toBe(false);
+  });
+
+  it("ignores a corrupt stored value instead of switching silently", () => {
+    localStorage.setItem(
+      "groove_audio_settings_v1",
+      JSON.stringify({ gs1Enabled: "yes please", hearingProtection: true })
+    );
+    const engine = new AudioEngine();
+    expect(engine.isGs1Enabled()).toBe(true);
+    expect(isGs1RoutingEnabled()).toBe(true);
   });
 });
