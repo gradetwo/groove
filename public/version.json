@@ -1,39 +1,47 @@
 {
-  "version": "1.16.19",
+  "version": "1.16.20",
   "releaseDate": "2026-09-15",
-  "changelogCount": 61,
+  "changelogCount": 62,
   "latest": {
-    "version": "1.16.19",
+    "version": "1.16.20",
     "date": "2026-09-15",
-    "category": "feature",
+    "category": "audio",
     "title": {
-      "zh": "v1.16.19 每个曲风一套按曲风编排的混音，并把 159 个曲风的总响度配平",
-      "en": "v1.16.19 A genre-arranged mix for every genre, and loudness matched across all 159"
+      "zh": "v1.16.20 让每个曲风真的弹出和声、修掉一批能听见的音质缺陷，并让更新记录不再看不到最新版",
+      "en": "v1.16.20 Real harmony for every genre, a batch of audible audio defects fixed, and release notes that can no longer miss the newest entry"
     },
     "highlights": [
       {
-        "zh": "每个曲风一套自己的混音（用户需求）：此前 159 个曲风共用同一套默认值——底鼓一律 0.90、主音一律偏右 0.10、混响与延迟送出**全部为 0**（两条送出总线其实是死的）。现在每个曲风按自己的性格编排：159 个曲风里 (音量, 声相) 组合有 157 种互不相同。爵士把立式贝斯推到 0.96~0.98 而鼓组后撤到 0.60~0.68；萨尔萨的打击乐推满并铺到左侧；雷鬼低音推到 1.00；金属把和弦与主音分别拉硬左硬右（双轨吉他）；ambient 的鼓组几乎退场而垫子挑大梁；trap 的底鼓与低音推到 0.98/0.99、踩镲铺宽",
-        "en": "A mix of its own for every genre: all 159 genres used to share one set of defaults — kick always 0.90, lead always panned +0.10, and the reverb/delay sends all zero (the two send buses were effectively dead). Each genre is now arranged to its own character, with 157 distinct (volume, pan) combinations across the 159. Jazz pushes the upright bass to 0.96–0.98 and pulls the kit back to 0.60–0.68; salsa pushes percussion to full and spreads it left; reggae takes the bass to 1.00; metal splits chords and lead hard left and right as double-tracked guitars; ambient all but removes the kit and lets the pads carry it; trap runs kick and bass at 0.98/0.99 with wide hats"
+        "zh": "**和弦轨第一次真的有和声**：此前 `chords` 轨只触发一个音，159 个曲风声明的 `common_chords` 走向从未到达引擎——所谓「垫子」其实是穿着 pad 音色的单音旋律。现在按曲风自己的调式做自然音阶和声（定位根音音级，再叠 1-3-5），实时与离线导出调用同一模块，**零曲风文件改动**。",
+        "en": "**The chords track finally has harmony.** It triggered a single note, so the `common_chords` progression every genre declares never reached the engine — the \"pad\" was a single-note melody wearing a pad preset. It now builds a diatonic voicing in the genre's own scale, from one module shared by playback and export, with **zero genre-file edits**."
       },
       {
-        "zh": "总响度配平（用户需求）：切换曲风时总响度不再跳变。做法是逐个曲风离线渲染其默认 pattern，按 ITU-R BS.1770-4 门控积分响度（LUFS，含 400ms/75% 分块、−70 LUFS 绝对门与 −10 LU 相对门）实测，以全库中位数为目标生成每个曲风的母带微调。配平前 p90−p10 为 4.69 LU、全距 9.96 LU；配平后为 **0.51 LU / 1.25 LU**，且没有任何一个曲风撞到 ±clamp 边界",
-        "en": "Loudness matching: the total level no longer jumps when you switch genres. Each genre's default pattern is rendered offline and measured as ITU-R BS.1770-4 gated integrated loudness (LUFS — 400 ms blocks at 75% overlap, −70 LUFS absolute gate, −10 LU relative gate); a per-genre master trim is derived against the library median. Before matching the p90−p10 spread was 4.69 LU with a 9.96 LU full range; after, it is **0.51 LU / 1.25 LU**, with no genre hitting the clamp bounds"
+        "zh": "**修掉每个长音都在响的咔哒声**：衰减比音符长时，包络会从衰减曲线硬跳到延持电平——`bass808` 在 1/16 音符上约 **−4.6 dB 阶跃**，等于一个宽带脉冲。808 贝斯、钢琴、Rhodes、颤音琴、钟琴、西塔琴、立式贝斯都受影响。改为从解析求出的真实值开始释放。",
+        "en": "**Fixed a click that fired on every sustained note.** When the decay outlasted the note, the envelope hard-stepped to the sustain level — about **−4.6 dB** on `bass808`, i.e. a broadband impulse. The 808 bass, piano, Rhodes, vibraphone, bells, sitar and upright bass were all affected. The release now starts from the envelope's analytically computed value."
       },
       {
-        "zh": "曲风比对也一起配平：单曲风试听各自使用本曲风的微调；同步 A/B 模式按当前**实际在响**的曲风重算（只独奏某一侧时就用那一侧自己的微调）。此前同步模式固定用两首的均值，独奏一侧时最差会偏 4.98 dB——即为了对比而独奏时反而最不准",
-        "en": "The compare view is matched too: a single-genre audition uses that genre's own trim, and the synchronised A/B mode recomputes from whichever genres are actually audible — isolating one side uses that side's own trim. It previously pinned the average of the two, which left isolating a side off by up to 4.98 dB — exactly when you isolate to compare"
+        "zh": "**母带主滤波此前从未真正旁通**：`DEFAULT_FX_STATE` 说它是关的，但节点按状态值构造，于是**实时母带一直挂着一个 16 kHz 双极点低通**，而离线导出器整条机架都不存在。现在按接线真旁通（BiquadFilter 没有透明类型，改频率只是假旁通），并修掉非 lowpass 类型的旁通值错误。",
+        "en": "**The master filter was never actually bypassed.** The node was built from the state values even though `DEFAULT_FX_STATE` says it is off, so **the live master always carried a 16 kHz low-pass** while the exporter has no rack at all. Bypass is now a true re-route (a BiquadFilter has no transparent type), and the wrong bypass value for non-lowpass types is fixed."
       },
       {
-        "zh": "微调是一个独立于音量的母带级（在用户推子与听力保护钳制之后、母带限幅器之前），因此推子始终只表示你要的音量，而导出与试听一致：离线 WAV 导出在同一相对位置套用同一个微调。「响度配平」不会被误当成用户调过音量",
-        "en": "The trim is a separate master stage from the volume fader (after the user fader and hearing-protection clamp, before the master limiter), so the fader keeps meaning exactly the level you asked for, and bounces match auditions: the offline WAV exporter applies the same trim in the same relative position"
+        "zh": "**降比特器其实没在降比特**：量化表只有 2048 点而量化级数可达 65536，`bits ≥ 11` 的设置完全失效——**出厂默认就是 12**。表长改为按级数自适应，并补 4× 过采样消除折叠失真；注释明确记录「采样率抽取未实现」及原因（WaveShaper 无记忆）。",
+        "en": "**The bitcrusher did not actually crush.** Its 2048-point table could not resolve a quantizer reaching 65536 levels, so any `bits ≥ 11` was meaningless — **the default was 12**. The table is now sized from the level count, 4x oversampling stops harmonic fold-back, and the comment states plainly that sample-rate decimation is not implemented and why."
       },
       {
-        "zh": "旧会话的兼容：老用户上次存下的会话快照里那套旧占位混音会按轨迁移到新编排——只迁移「从未被用户动过」的通道（音量、声相、两条送出都还是旧占位值的那些），你在调音台里动过的通道保留你自己的值。否则老用户会一直听到旧的扁平混音，新表根本到不了耳朵里",
-        "en": "Existing sessions are migrated per channel: a saved session's old placeholder values move to the new arrangement only on channels the user never touched (volume, pan and both sends still matching the old placeholder); channels you moved in the console keep your values. Without this, a returning user would keep hearing the old flat mix and the new table would never reach their ears"
+        "zh": "**鼓噪声可复现且每击不同**：噪声床、混响 IR 与离线噪声此前全部来自 `Math.random()`，两次渲染都不一致、导出也无法保证与试听相同；而每个鼓点又从 buffer 的 0 偏移读起，16 分踩镲是**逐字节相同**的一段。现在统一用种子生成器，并给每击一个由「轨/步/连击」确定性推出的读取偏移，实时与离线共用同一公式。",
+        "en": "**Drum noise is reproducible and varies per hit.** The noise bed, reverb impulse and offline noise all came from `Math.random()`, so renders disagreed and an export could not match the audition; separately every hit read from offset 0, making a 16th-note hat pattern byte-identical repetition. Both now use one seeded generator, with a per-hit offset derived deterministically from track/step/ratchet."
       },
       {
-        "zh": "修正分享链接的另一半：工具栏分享按钮此前丢掉了声相、混响/延迟送出、门限、连击、概率、轨道长度与摇摆八个字段（编解码器一直支持、工程中心也映射齐全，只有工作台这个入口是内联拼装漏了）。现在两处共用同一映射实现，并有三条端到端测试直接对生成的链接断言——否则按曲风编排好的声相与送出一分享就没了",
-        "en": "The other half of the share fix: the studio toolbar's share button was dropping eight per-track fields (pan, reverb/delay sends, gate, ratchet, probability, track length, swing) even though the codec always supported them and the project hub mapped them all. Both entry points now share one mapper, with three end-to-end tests asserting on the generated link — otherwise the genre-arranged pan and sends would vanish the moment you shared a pattern"
+        "zh": "**「更新后看不到最新更新记录」的根因修复**：① `/changelog.json` 允许缓存 1 小时；② Service Worker 走 stale-while-revalidate 先返回旧副本、回填后不重渲染；③ **弹窗把「归档」的优先级放在刚用 `no-store` 校验过的 `latest` 之上**，旧归档直接顶掉最新一条——这解释了为何版本号正确、只有记录是旧的。现在归档 URL 按版本作键、渲染改为「归档 ∪ latest」按版本降序、两个文件在 SW 中改为 Network First（对已部署的旧前端同样生效）。",
+        "en": "**Root cause of \"I updated but cannot see the newest release note\".** (1) `/changelog.json` cached for an hour; (2) the service worker served it stale-while-revalidate, returning the old copy and never re-rendering after the refresh; (3) **the modal ranked the archive above the `latest` entry just revalidated with `no-store`**, so a stale archive displaced the newest entry — which is why the version was right and only the notes were old. The archive URL is now version-keyed, rendering is a version-descending union, and both files are network-first in the worker."
+      },
+      {
+        "zh": "**其余可听/可测修复**：踢鼓逐 voice 饱和补 4× 过采样并把失真曲线改为缓存（此前每次踩击分配 4096 个 float）；调音台声相与两条送出改为斜坡写入，拖推子不再有阶梯噪声；`VoiceRegistry` 增加复音上限与**无咔哒抢音**（优先抢最接近自然结束的 voice）。",
+        "en": "**Other audible/measurable fixes.** The per-voice kick saturation gained 4x oversampling and a cached distortion curve (it allocated 4096 floats per hit). Console pan and both sends now ramp instead of stepping, removing zipper noise. `VoiceRegistry` gained a polyphony ceiling with **click-free stealing**, preferring the voice closest to finishing."
+      },
+      {
+        "zh": "**全库响度重新配平且更整齐**：加入和声抬高和弦轨峰值，因而**更狠地触发母带限幅器**把整个混音压低（全量实测 arranged 平均 −1.42 dB，最差 techstep −4.98）——这是 N-15 的又一次实证。按流程重测 159 曲风并回填 trim：配平后 p90−p10 由 0.51 LU 收到 **0.32 LU**，全距 1.11 LU，clamp 0/159。",
+        "en": "**The library was re-matched — and is now tighter.** Harmony raises the chord peak, which **drives the master limiter harder and pumps the whole mix down** (−1.42 dB average arranged, worst `techstep` −4.98) — more evidence for N-15. All 159 genres were re-measured and trims refitted: post-trim p90−p10 improved from 0.51 LU to **0.32 LU**, range 1.11 LU, 0/159 clamp hits."
       }
     ]
   }

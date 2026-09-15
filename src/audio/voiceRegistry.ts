@@ -26,18 +26,119 @@ export const MAX_TRACKED_VOICES = 512;
 export const PANIC_FADE_SEC = 0.005;
 
 /**
+ * E-08: default ceiling on *simultaneously sounding* tracked source nodes.
+ *
+ * The engine has no voice pool and no polyphony limit — every note builds a fresh node
+ * graph — so a dense 1/32 pattern, a stuck MIDI controller or a long release could pile
+ * up without bound. This is the safety net.
+ *
+ * It is counted in tracked **sources**, not musical notes: a `PolySynth` note registers
+ * two oscillators and a 909 clap registers four buffer sources, so 128 sources is
+ * roughly 32 simultaneous melodic notes. The default is deliberately generous so it
+ * never engages during normal playback and therefore cannot colour the sound — it exists
+ * to bound the pathological case (and to give the planned GS-1 engine drop-in a real
+ * voice budget to allocate against).
+ */
+export const DEFAULT_MAX_ACTIVE_VOICES = 128;
+
+/** Fade applied when a voice is stolen, so stealing is inaudible rather than a click. */
+export const STEAL_FADE_SEC = 0.005;
+
+/**
  * Tracks scheduled voices so `stop()`/`panic()` can cancel them, and so stale
  * entries are pruned instead of growing forever.
  */
 export class VoiceRegistry {
   private voices: ScheduledVoice[] = [];
+  private maxActiveVoices: number;
+  private stolenVoices = 0;
 
-  constructor(private readonly now: () => number) {}
+  constructor(
+    private readonly now: () => number,
+    maxActiveVoices: number = DEFAULT_MAX_ACTIVE_VOICES
+  ) {
+    this.maxActiveVoices = VoiceRegistry.sanitizeCap(maxActiveVoices);
+  }
+
+  private static sanitizeCap(value: number): number {
+    if (!Number.isFinite(value) || value < 1) return DEFAULT_MAX_ACTIVE_VOICES;
+    return Math.floor(value);
+  }
+
+  /**
+   * Sets the polyphony ceiling. Exposed so an engine can budget against the host's
+   * capability (and so tests can drive the cap down to a few voices).
+   */
+  setMaxActiveVoices(value: number): void {
+    this.maxActiveVoices = VoiceRegistry.sanitizeCap(value);
+  }
+
+  get maxVoices(): number {
+    return this.maxActiveVoices;
+  }
+
+  /** Sources currently believed to be sounding. */
+  get activeVoices(): number {
+    return this.voices.length;
+  }
+
+  /** How many voices have been stolen since construction — a load diagnostic. */
+  get stealCount(): number {
+    return this.stolenVoices;
+  }
+
+  /**
+   * Smoothly stops one voice and removes it from the registry.
+   *
+   * The ramp starts from wherever the envelope currently is rather than from a fixed
+   * value: an unconditional `setValueAtTime(0)` here would itself be a step
+   * discontinuity — the same broadband-impulse click that E-02 fixed in the synth
+   * envelope.
+   */
+  private releaseVoice(voice: ScheduledVoice, now: number, fadeSec: number): void {
+    try {
+      const gain = voice.gain.gain;
+      if (typeof gain.cancelScheduledValues === "function") gain.cancelScheduledValues(now);
+      if (typeof gain.setValueAtTime === "function") {
+        gain.setValueAtTime(Math.max(0, gain.value), now);
+      }
+      if (typeof gain.linearRampToValueAtTime === "function") {
+        gain.linearRampToValueAtTime(0.0001, now + fadeSec);
+      }
+      voice.source.stop(now + fadeSec + 0.001);
+    } catch {
+      // The node may already be stopped or disconnected; nothing to do.
+    }
+  }
+
+  /**
+   * Frees one slot by stealing the voice that is **closest to finishing anyway**.
+   *
+   * Stealing the oldest voice is the textbook rule, but the least audible victim is the
+   * one whose own `stop()` is nearest, so that is what is chosen here. Returns false when
+   * there is nothing left to steal, so the caller can still make progress.
+   */
+  private stealQuietest(now: number): boolean {
+    if (this.voices.length === 0) return false;
+    let victimIdx = 0;
+    for (let i = 1; i < this.voices.length; i++) {
+      if (this.voices[i].stopTime < this.voices[victimIdx].stopTime) victimIdx = i;
+    }
+    const victim = this.voices[victimIdx];
+    this.releaseVoice(victim, now, STEAL_FADE_SEC);
+    this.voices.splice(victimIdx, 1);
+    this.stolenVoices += 1;
+    return true;
+  }
 
   /** Records a voice that has already been scheduled. */
   register(source: AudioScheduledSourceNode, gain: GainNode, stopTime: number): void {
     const now = this.now();
     this.prune(now);
+    // Make room before admitting the new voice, so the cap is never exceeded.
+    while (this.voices.length >= this.maxActiveVoices) {
+      if (!this.stealQuietest(now)) break;
+    }
     this.voices.push({ source, gain, stopTime });
     if (this.voices.length > MAX_TRACKED_VOICES) {
       this.voices.splice(0, this.voices.length - MAX_TRACKED_VOICES);
@@ -57,14 +158,7 @@ export class VoiceRegistry {
   panic(): void {
     const now = this.now();
     for (const voice of this.voices) {
-      try {
-        voice.gain.gain.cancelScheduledValues(now);
-        voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
-        voice.gain.gain.linearRampToValueAtTime(0.0001, now + PANIC_FADE_SEC);
-        voice.source.stop(now + PANIC_FADE_SEC + 0.001);
-      } catch {
-        // The node may already be stopped or disconnected; nothing to do.
-      }
+      this.releaseVoice(voice, now, PANIC_FADE_SEC);
     }
     this.voices = [];
   }

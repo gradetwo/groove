@@ -68,8 +68,11 @@ export class FakeOscillatorNode extends FakeNode {
   frequency = new FakeAudioParam();
   detune = new FakeAudioParam();
   started = false;
-  start() {
+  /** Recorded `start(when)` times, so tests can assert onset stagger (E-01). */
+  startedAt: number[] = [];
+  start(when = 0) {
     this.started = true;
+    this.startedAt.push(when);
   }
   stop() {}
 }
@@ -78,13 +81,26 @@ export class FakeFilterNode extends FakeNode {
   type = "lowpass";
   frequency = new FakeAudioParam();
   Q = new FakeAudioParam();
+  /**
+   * Real `BiquadFilterNode` exposes `gain` (used by peaking/lowshelf/highshelf). It was
+   * missing here, so any path through a peaking filter threw "cannot set properties of
+   * undefined" — the 909 hi-hat's presence filter was untestable as a result.
+   */
+  gain = new FakeAudioParam();
 }
 
 export class FakeBufferSourceNode extends FakeNode {
   buffer: unknown = null;
   playbackRate = new FakeAudioParam();
   loop = false;
-  start() {}
+  /**
+   * Recorded `start(when, offset)` calls. The offset is what E-06 varies per hit so
+   * repeated drum hits are not bit-identical, so tests need to see it.
+   */
+  started: Array<{ when: number; offset: number }> = [];
+  start(when = 0, offset = 0) {
+    this.started.push({ when, offset });
+  }
   stop() {}
 }
 

@@ -17,6 +17,8 @@ import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp } from "./schedulerMath";
 import { TrackState, deriveTrackStates } from "./trackStates";
+import { createSeededNoiseBuffer, DEFAULT_NOISE_SEED, noisePositionFor } from "./noise";
+import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC } from "./chordVoicing";
 import { VoiceRegistry, applyMasterLimiter } from "./voiceRegistry";
 export type { TrackState } from "./trackStates";
 import { isDrumTrack } from "../utils/trackUtils";
@@ -79,7 +81,6 @@ export interface SpatialLayoutEntry {
   /** Degrees above the listener plane. */
   elevation: number;
 }
-
 
 export class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -336,13 +337,10 @@ export class AudioEngine {
 
   private createNoiseBuffer(): void {
     if (!this.ctx) return;
-    const sampleRate = this.ctx.sampleRate;
-    const buffer = this.ctx.createBuffer(1, sampleRate * 2, sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < buffer.length; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-    this.noiseBuffer = buffer;
+    // V-01: seeded, not `Math.random()`. A random bed made every render differ from the
+    // last, so the offline exporter could not be guaranteed to match playback and no
+    // sample-level regression gate was possible.
+    this.noiseBuffer = createSeededNoiseBuffer(this.ctx, 2);
   }
 
   private createReverbImpulse(seconds = 1.6, decay = 2.0): AudioBuffer | null {
@@ -352,10 +350,19 @@ export class AudioEngine {
     const impulse = this.ctx.createBuffer(2, length, rate);
     const left = impulse.getChannelData(0);
     const right = impulse.getChannelData(1);
+    // V-01: seeded. The two channels use different seeds so the tail stays decorrelated
+    // (a mono-correlated tail collapses to the centre), but the *same* seeds every time
+    // so the reverb is reproducible.
+    const seedL = DEFAULT_NOISE_SEED;
+    const seedR = (DEFAULT_NOISE_SEED ^ 0x9e3779b9) >>> 0;
+    let stateL = seedL >>> 0;
+    let stateR = seedR >>> 0;
     for (let i = 0; i < length; i++) {
       const factor = Math.exp(-decay * (i / length));
-      left[i] = (Math.random() * 2 - 1) * factor;
-      right[i] = (Math.random() * 2 - 1) * factor;
+      stateL = (stateL * 1664525 + 1013904223) >>> 0;
+      stateR = (stateR * 1664525 + 1013904223) >>> 0;
+      left[i] = ((stateL / 0xffffffff) * 2 - 1) * factor;
+      right[i] = ((stateR / 0xffffffff) * 2 - 1) * factor;
     }
     return impulse;
   }
@@ -603,6 +610,33 @@ export class AudioEngine {
     this.applyLoudnessTrimForPattern(pattern);
   }
 
+  /**
+   * E-05: writes a mixer parameter without zipper noise.
+   *
+   * Pan and the two sends used to be stepped with `setValueAtTime` on every
+   * `setTrackState` call — and the console issues one of those on *every frame* of a
+   * knob drag — so dragging a pan pot or a send slider produced audible stepping.
+   * Volume and polarity already ramped; this is the one helper the rest of the mixer
+   * now goes through.
+   *
+   * The write is skipped when the parameter is already at the target, so the per-frame
+   * cost is a comparison instead of a scheduled automation event.
+   */
+  private rampParam(param: AudioParam | null | undefined, target: number, now: number): void {
+    if (!param) return;
+    try {
+      if (Math.abs(param.value - target) < 1e-4) return;
+      if (typeof param.setTargetAtTime === "function") {
+        if (typeof param.cancelScheduledValues === "function") param.cancelScheduledValues(now);
+        param.setTargetAtTime(target, now, 0.01);
+      } else if (typeof param.setValueAtTime === "function") {
+        param.setValueAtTime(target, now);
+      }
+    } catch {
+      /* Mixer cosmetics must never break playback. */
+    }
+  }
+
   public syncTrackGains(): void {
     if (!this.ctx || this.trackStrips.length === 0) return;
     const anySolo = this.trackStates.some((t) => t.solo);
@@ -652,11 +686,7 @@ export class AudioEngine {
       }
 
       if (state.pan !== undefined && strip.panner) {
-        try {
-          if (typeof strip.panner.pan.setValueAtTime === "function") {
-            strip.panner.pan.setValueAtTime(Math.max(-1.0, Math.min(1.0, state.pan)), now);
-          }
-        } catch (_) {}
+        this.rampParam(strip.panner.pan, Math.max(-1.0, Math.min(1.0, state.pan)), now);
       }
       // N-02: in binaural mode the pan control shifts the track's azimuth instead.
       if (state.pan !== undefined && strip.spatialPanner) {
@@ -668,20 +698,10 @@ export class AudioEngine {
         this.applyPannerPosition(strip.spatialPanner, shifted);
       }
       if (state.sendA !== undefined && strip.sendA) {
-        try {
-          const sendVal = isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendA));
-          if (typeof strip.sendA.gain.setValueAtTime === "function") {
-            strip.sendA.gain.setValueAtTime(sendVal, now);
-          }
-        } catch (_) {}
+        this.rampParam(strip.sendA.gain, isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendA)), now);
       }
       if (state.sendB !== undefined && strip.sendB) {
-        try {
-          const sendVal = isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendB));
-          if (typeof strip.sendB.gain.setValueAtTime === "function") {
-            strip.sendB.gain.setValueAtTime(sendVal, now);
-          }
-        } catch (_) {}
+        this.rampParam(strip.sendB.gain, isSilenced ? 0 : Math.max(0, Math.min(1.0, state.sendB)), now);
       }
     });
   }
@@ -1323,10 +1343,10 @@ export class AudioEngine {
         for (let r = 0; r < ratchet; r++) {
           const subTime = trackStepTime + r * subDur;
           const subVel = normalizedVel * (0.85 + (r / ratchet) * 0.15);
-          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal);
+          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal, false, noisePositionFor(trackIdx, stepIdx, r));
         }
       } else {
-        this.triggerInstrument(trackIdx, track.name, trackStepTime, normalizedVel, pitchVal, stepVal, stepDur, gateVal);
+        this.triggerInstrument(trackIdx, track.name, trackStepTime, normalizedVel, pitchVal, stepVal, stepDur, gateVal, false, noisePositionFor(trackIdx, stepIdx));
       }
     });
 
@@ -1369,7 +1389,14 @@ export class AudioEngine {
     stepVal = 1,
     stepDur = 0.125,
     gateVal = 0.8,
-    isAudition = false
+    isAudition = false,
+    /**
+     * E-06: deterministic position used to pick each hit's noise read offset, so repeated
+     * hits are not bit-identical. Must be derived only from values the offline renderer
+     * can reproduce (track/step/ratchet index) — never from a clock — or exporter parity
+     * breaks.
+     */
+    noisePosition = 0
   ): void {
     if (!this.ctx) return;
     const dest = isAudition ? (this.masterGain || this.getTrackDestination(trackIdx)) : this.getTrackDestination(trackIdx);
@@ -1389,14 +1416,14 @@ export class AudioEngine {
     const synthPreset = resolveInstrumentPreset(this.pattern?.tracks[trackIdx]?.instrument, trackId);
 
     if (trackId === "kick" || lowerName.includes("kick")) {
-      this.playKick(dest, safeStartTime, safeVel, pitch);
+      this.playKick(dest, safeStartTime, safeVel, pitch, noisePosition);
       ecosystemBus.publishTransientHit("master", safeVel, pitch);
     } else if (trackId === "snare" || lowerName.includes("snare")) {
-      this.playSnare(dest, safeStartTime, safeVel, pitch);
+      this.playSnare(dest, safeStartTime, safeVel, pitch, noisePosition);
     } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
-      this.playHiHat(dest, safeStartTime, safeVel, pitch, stepVal, stepDur, gateVal);
+      this.playHiHat(dest, safeStartTime, safeVel, pitch, stepVal, stepDur, gateVal, noisePosition);
     } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
-      this.playPercussion(dest, safeStartTime, safeVel, pitch);
+      this.playPercussion(dest, safeStartTime, safeVel, pitch, noisePosition);
     } else if (trackId === "bass" || lowerName.includes("bass")) {
       this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
@@ -1406,7 +1433,7 @@ export class AudioEngine {
     } else if (trackId === "fx" || lowerName.includes("fx")) {
       this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else {
-      this.playPercussion(dest, safeStartTime, safeVel, pitch);
+      this.playPercussion(dest, safeStartTime, safeVel, pitch, noisePosition);
     }
   }
 
@@ -1452,33 +1479,33 @@ export class AudioEngine {
     return this.liveRecorder.getIsArmed();
   }
 
-  private playKick(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
+  private playKick(dest: AudioNode, time: number, vel: number, pitchOffset: number, noisePosition = 0): void {
     if (!this.ctx) return;
-    const voice = synthesizeKick(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer);
+    const voice = synthesizeKick(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer, noisePosition);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
   }
 
-  private playSnare(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
+  private playSnare(dest: AudioNode, time: number, vel: number, pitchOffset: number, noisePosition = 0): void {
     if (!this.ctx) return;
-    const voice = synthesizeSnare(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer);
+    const voice = synthesizeSnare(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer, noisePosition);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
   }
 
-  private playHiHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepVal = 1, stepDur = 0.125, gateVal = 0.8): void {
+  private playHiHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepVal = 1, stepDur = 0.125, gateVal = 0.8, noisePosition = 0): void {
     if (!this.ctx) return;
-    const voice = synthesizeHiHat(this.ctx, dest, time, vel, pitchOffset, this.drumKit, stepVal, stepDur, gateVal, this.noiseBuffer);
+    const voice = synthesizeHiHat(this.ctx, dest, time, vel, pitchOffset, this.drumKit, stepVal, stepDur, gateVal, this.noiseBuffer, noisePosition);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
   }
 
-  private playPercussion(dest: AudioNode, time: number, vel: number, pitchOffset: number): void {
+  private playPercussion(dest: AudioNode, time: number, vel: number, pitchOffset: number, noisePosition = 0): void {
     if (!this.ctx) return;
-    const voice = synthesizePercussion(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer);
+    const voice = synthesizePercussion(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer, noisePosition);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
@@ -1502,6 +1529,17 @@ export class AudioEngine {
     });
   }
 
+  /**
+   * E-01: the `chords` track now plays a real diatonic voicing instead of one note.
+   *
+   * It previously triggered a single note from the step's `pitch`, so no genre had any
+   * harmony at all — every `common_chords` progression stopped at the UI. The voicing
+   * is derived from the pattern's scale and the step's own root, so the authored bass
+   * line is preserved and no genre file needed editing.
+   *
+   * `WavExporter` performs the identical call, because "exporter parity" is a hard rule
+   * here — the voicing itself lives in the shared `chordVoicing` module for that reason.
+   */
   private playChord(
     dest: AudioNode,
     time: number,
@@ -1514,9 +1552,19 @@ export class AudioEngine {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 60;
     const dur = stepDur * gateVal * 1.5;
-    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
-    voice.sources.forEach((src, idx) => {
-      this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+    const notes = chordVoicingForStep(midi, this.pattern?.scale);
+    // Hold the voicing's summed power at the single note it replaces, so adding
+    // harmony is not heard as a level jump (and does not push the limiter harder on
+    // every genre at once).
+    const voiceVel = vel * chordVoiceGain(notes.length);
+    notes.forEach((note, i) => {
+      // Stagger the onsets (see CHORD_STRUM_SEC): coherent starts made the triad's
+      // peaks sum into the limiter, which measured ~1.2 dB quieter across the library.
+      const noteTime = time + i * CHORD_STRUM_SEC;
+      const voice = playPolySynthNote(this.ctx!, dest, note, noteTime, dur, voiceVel, preset);
+      voice.sources.forEach((src, idx) => {
+        this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+      });
     });
   }
 

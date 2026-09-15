@@ -15,6 +15,8 @@ import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
+import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
+import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC } from "./chordVoicing";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -181,12 +183,10 @@ export async function renderPatternOffline(
   loudnessTrim.connect(limiter);
   limiter.connect(ctx.destination);
 
-  // Generate 2-second white noise buffer
-  const noiseBuf = ctx.createBuffer(1, sampleRate * 2, sampleRate);
-  const noiseData = noiseBuf.getChannelData(0);
-  for (let i = 0; i < noiseData.length; i++) {
-    noiseData[i] = Math.random() * 2 - 1;
-  }
+  // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
+  // export never matched the audition it was rendered from, which broke the project's
+  // exporter-parity guarantee and made every render irreproducible.
+  const noiseBuf = createSeededNoiseBuffer(ctx, 2);
 
   // Pre-configure track channel strips (Gain + Stereo Panner).
   // F-03: when the caller does not supply mixer state we derive it from the pattern
@@ -276,19 +276,27 @@ export async function renderPatternOffline(
 
         // Synthesis Dispatch with physical drum kit modeling and polyphonic synth
         if (trackId === "kick" || lowerName.includes("kick")) {
-          synthesizeKick(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf);
+          synthesizeKick(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
         } else if (trackId === "snare" || lowerName.includes("snare")) {
-          synthesizeSnare(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf);
+          synthesizeSnare(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
         } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
-          synthesizeHiHat(ctx, trackDest, subTime, subVel, pitchVal, drumKit, stepVal, subDur, gateVal, noiseBuf);
+          synthesizeHiHat(ctx, trackDest, subTime, subVel, pitchVal, drumKit, stepVal, subDur, gateVal, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
         } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
-          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf);
+          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
         } else if (trackId === "bass" || lowerName.includes("bass")) {
           const midi = pitchVal > 0 ? pitchVal : 36;
           playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal, subVel, synthPreset);
         } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
+          // E-01: identical voicing to `AudioEngine.playChord`. Exporter parity is a
+          // hard rule in this project, so both sides call the same shared module and
+          // apply the same per-voice gain — never re-implement it here.
           const midi = pitchVal > 0 ? pitchVal : 60;
-          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
+          const notes = chordVoicingForStep(midi, pattern.scale);
+          const voiceVel = subVel * chordVoiceGain(notes.length);
+          notes.forEach((note, i) => {
+            // Same stagger as AudioEngine.playChord — parity depends on it.
+            playPolySynthNote(ctx, trackDest, note, subTime + i * CHORD_STRUM_SEC, subDur * gateVal * 1.5, voiceVel, synthPreset);
+          });
         } else if (trackId === "lead" || lowerName.includes("lead")) {
           const midi = pitchVal > 0 ? pitchVal : 72;
           playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
@@ -302,7 +310,7 @@ export async function renderPatternOffline(
             playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
           }
         } else {
-          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf);
+          synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
         }
       }
     });

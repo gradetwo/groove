@@ -43,27 +43,64 @@ export const DEFAULT_FX_STATE: EffectsRackState = {
 };
 
 /**
- * Generates a soft-clipping Tanh saturation curve for WaveShaperNode
+ * Generates a soft-clipping Tanh saturation curve for WaveShaperNode.
+ *
+ * The curve is normalised for **unity small-signal gain**: it is divided by
+ * `k`, not by `tanh(k)`. Dividing by `tanh(k)` normalises the *endpoint* to
+ * ±1 but leaves a slope-at-zero (small-signal gain) of `k / tanh(k)` — that is
+ * +3.9 dB at the default drive of 1.5 and +15.6 dB at the maximum drive of 6,
+ * which turned "analog warmth" into a large unrequested level jump. With
+ * `tanh(k * x) / k` the slope at x = 0 is exactly 1, so engaging DRIVE adds
+ * harmonic content and reduces peaks rather than adding loudness. The peak
+ * magnitude is `tanh(k) / k <= 1` for every supported drive (k >= 1). This
+ * deliberately changes the DRIVE sound/level; bypass (curve === null) is
+ * unaffected.
  */
 export function makeSaturationCurve(drive: number, samples = 2048): Float32Array {
   const curve = new Float32Array(samples);
   const k = Math.max(1, drive);
   for (let i = 0; i < samples; i++) {
     const x = (i * 2) / samples - 1;
-    // Tanh soft saturation: linear near center, smoothly saturating at extremes
-    curve[i] = Math.tanh(k * x) / Math.tanh(k);
+    // Tanh soft saturation: unity slope at the centre, smoothly saturating at extremes
+    curve[i] = Math.tanh(k * x) / k;
   }
   return curve;
 }
 
+/** Sizes the crusher table so the requested quantization is actually resolvable. */
+function bitcrushTableSize(stepCount: number, requested: number): number {
+  // x spans [-1, 1] and the quantizer has `stepCount` output steps, i.e.
+  // 2 * stepCount quantization intervals each 1 / stepCount wide. A table of
+  // 4 * stepCount entries puts two entries in every interval, so no requested
+  // level is skipped, and the final entry rounds up to +full scale. The
+  // historical fixed 2048-point table could not resolve more than ~10 bits,
+  // which made the shipped 12-bit default — and every higher bit depth —
+  // silently meaningless.
+  return Math.max(requested, Math.ceil(stepCount * 4));
+}
+
 /**
- * Generates a Bitcrusher stepped quantization transfer curve
+ * Generates a Bitcrusher stepped quantization transfer curve.
+ *
+ * **Scope / known limitation:** this implements *amplitude quantization* only —
+ * rounding the signal onto `2^bits` evenly spaced levels. A true bitcrusher
+ * also performs *sample-rate decimation* (sample-and-hold downsampling), and a
+ * `WaveShaperNode` fundamentally cannot do that: it is a memoryless transfer
+ * function applied per input sample, with no way to hold a previous sample or
+ * alter the effective sample rate. Decimation would require an AudioWorklet,
+ * which this rack deliberately does not use. Only the amplitude half of the
+ * effect exists here.
+ *
+ * `samples` is honoured as a **minimum** table size, not an exact one: the
+ * table is enlarged when needed so the requested bit depth is actually
+ * resolvable (see `bitcrushTableSize`).
  */
 export function makeBitcrushCurve(bits: number, samples = 2048): Float32Array {
-  const curve = new Float32Array(samples);
   const stepCount = Math.pow(2, Math.min(16, Math.max(3, bits)));
-  for (let i = 0; i < samples; i++) {
-    const x = (i * 2) / samples - 1;
+  const tableSize = bitcrushTableSize(stepCount, samples);
+  const curve = new Float32Array(tableSize);
+  for (let i = 0; i < tableSize; i++) {
+    const x = (i * 2) / tableSize - 1;
     curve[i] = Math.round(x * stepCount) / stepCount;
   }
   return curve;
@@ -113,6 +150,9 @@ export class EffectsRack {
 
     // 3. Bitcrusher
     this.crusherNode = ctx.createWaveShaper();
+    // The staircase transfer curve generates strong harmonics; oversample so
+    // they are filtered down instead of folding back into the audible band.
+    this.crusherNode.oversample = "4x";
     this.updateBitcrushCurve();
 
     // 4. Stereo Chorus
@@ -124,9 +164,10 @@ export class EffectsRack {
     this.chorusDelayR.delayTime.value = 0.022; // 22ms base
 
     // Assemble DSP Chain:
-    // input -> filter -> saturation -> bitcrusher -> (dry/chorus) -> output
-    this.inputNode.connect(this.filterNode);
-    this.filterNode.connect(this.shaperNode);
+    // input -> (filter when enabled) -> saturation -> bitcrusher -> (dry/chorus) -> output
+    // A BiquadFilterNode has no transparent type, so filter bypass is a true
+    // re-route: when disabled the input feeds the saturation stage directly.
+    this.updateFilterRouting();
     this.shaperNode.connect(this.crusherNode);
 
     // Chorus routing
@@ -173,6 +214,26 @@ export class EffectsRack {
     }
   }
 
+  /**
+   * True filter bypass, implemented by re-routing rather than by parking the
+   * filter at a "transparent" frequency. A BiquadFilterNode has no transparent
+   * type, and a disabled bandpass/peaking/highshelf parked at 20 Hz is not
+   * transparent, so the only correct bypass is to leave the filter out of the
+   * signal path entirely. Both possible edges are torn down before the active
+   * path is built, so repeated enable/disable cycles never leave a duplicate
+   * (doubled-signal) path behind.
+   */
+  private updateFilterRouting(): void {
+    this.inputNode.disconnect();
+    this.filterNode.disconnect();
+    if (this.state.filterEnabled) {
+      this.inputNode.connect(this.filterNode);
+      this.filterNode.connect(this.shaperNode);
+    } else {
+      this.inputNode.connect(this.shaperNode);
+    }
+  }
+
   private updateSaturationCurve(): void {
     if (this.state.saturationEnabled) {
       this.shaperNode.curve = makeSaturationCurve(this.state.saturationDrive) as any;
@@ -202,8 +263,9 @@ export class EffectsRack {
     this.state.filterType = type;
 
     this.filterNode.type = type;
-    this.filterNode.frequency.value = enabled ? cutoff : (type === "lowpass" ? 20000 : 20);
+    this.filterNode.frequency.value = cutoff;
     this.filterNode.Q.value = q;
+    this.updateFilterRouting();
   }
 
   public setSaturation(enabled: boolean, drive: number): void {

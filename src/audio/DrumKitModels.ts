@@ -14,6 +14,31 @@ import { synthesizeAnatomyKickVoice } from "./AnatomyKickEngine";
 
 export type DrumKitType = "808" | "909" | "acoustic" | "cyber" | string;
 import { safeVelocity } from "./dspGuards";
+import { noiseOffsetForHit } from "./noise";
+
+/**
+ * E-06: where a noise layer should start reading the shared noise buffer.
+ *
+ * Every noise layer used to call `start(time)` with no offset, so each hit read the
+ * buffer from sample 0 — a 16th-note hi-hat pattern was literally the same few tens of
+ * milliseconds of samples repeated byte-for-byte, which is the static "machine-gun"
+ * comb character that makes programmed hats sound fake.
+ *
+ * `position` must be something the live engine and the offline renderer both derive
+ * identically (track index, step index, ratchet index), otherwise exporter parity is
+ * lost. The offset is deterministic, so a given step always sounds the same.
+ */
+function noiseStartOffset(
+  ctx: BaseAudioContext,
+  buffer: AudioBuffer | null,
+  position: number
+): number {
+  if (!buffer) return 0;
+  // Leave half a second of buffer after the offset: far longer than any noise layer
+  // here, and it keeps `start(when, offset)` valid on every engine.
+  const headroom = Math.ceil(ctx.sampleRate * 0.5);
+  return noiseOffsetForHit(position, buffer.length, headroom);
+}
 
 export function getBaseDrumKit(kit: DrumKitType): "808" | "909" | "acoustic" | "cyber" {
   if (kit === "808" || kit === "909" || kit === "acoustic" || kit === "cyber") return kit;
@@ -40,7 +65,8 @@ export function synthesizeKick(
   vel: number,
   pitchOffset: number,
   kit: DrumKitType,
-  noiseBuffer: AudioBuffer | null
+  noiseBuffer: AudioBuffer | null,
+  noisePosition = 0
 ): DrumVoiceCleanup {
   // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
   vel = safeVelocity(vel);
@@ -93,7 +119,7 @@ export function synthesizeKick(
       click.connect(filter);
       filter.connect(clickGain);
       clickGain.connect(dest);
-      click.start(time);
+      click.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
       click.stop(time + 0.02);
       sources.push(click);
       gains.push(clickGain);
@@ -138,7 +164,7 @@ export function synthesizeKick(
       click.connect(filter);
       filter.connect(clickGain);
       clickGain.connect(dest);
-      click.start(time);
+      click.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
       click.stop(time + 0.03);
       sources.push(click);
       gains.push(clickGain);
@@ -212,7 +238,8 @@ export function synthesizeSnare(
   vel: number,
   pitchOffset: number,
   kit: DrumKitType,
-  noiseBuffer: AudioBuffer | null
+  noiseBuffer: AudioBuffer | null,
+  noisePosition = 0
 ): DrumVoiceCleanup {
   // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
   vel = safeVelocity(vel);
@@ -262,7 +289,7 @@ export function synthesizeSnare(
       noise.connect(filter);
       filter.connect(noiseGain);
       noiseGain.connect(dest);
-      noise.start(time);
+      noise.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
       noise.stop(time + 0.24);
       sources.push(noise);
       gains.push(noiseGain);
@@ -301,7 +328,7 @@ export function synthesizeSnare(
       noise.connect(filter);
       filter.connect(noiseGain);
       noiseGain.connect(dest);
-      noise.start(time);
+      noise.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
       noise.stop(time + 0.3);
       sources.push(noise);
       gains.push(noiseGain);
@@ -340,7 +367,7 @@ export function synthesizeSnare(
       noise.connect(filter);
       filter.connect(noiseGain);
       noiseGain.connect(dest);
-      noise.start(time);
+      noise.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
       noise.stop(time + 0.22);
       sources.push(noise);
       gains.push(noiseGain);
@@ -363,7 +390,8 @@ export function synthesizeHiHat(
   stepVal = 1,
   stepDur = 0.125,
   gateVal = 0.8,
-  noiseBuffer: AudioBuffer | null
+  noiseBuffer: AudioBuffer | null,
+  noisePosition = 0
 ): DrumVoiceCleanup {
   // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
   vel = safeVelocity(vel);
@@ -442,7 +470,7 @@ export function synthesizeHiHat(
     peakFilter.connect(gain);
     gain.connect(dest);
 
-    noise.start(time);
+    noise.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
     noise.stop(time + decayTime + 0.02);
     sources.push(noise);
     gains.push(gain);
@@ -461,7 +489,8 @@ export function synthesizePercussion(
   vel: number,
   pitchOffset: number,
   kit: DrumKitType,
-  noiseBuffer: AudioBuffer | null
+  noiseBuffer: AudioBuffer | null,
+  noisePosition = 0
 ): DrumVoiceCleanup {
   // F-01: never let a zero/NaN velocity reach an exponentialRampToValueAtTime target.
   vel = safeVelocity(vel);
@@ -523,7 +552,7 @@ export function synthesizePercussion(
       click.connect(bp);
       bp.connect(clickGain);
       clickGain.connect(dest);
-      click.start(time + delay);
+      click.start(time + delay, noiseStartOffset(ctx, noiseBuffer, noisePosition));
       click.stop(time + delay + 0.015);
       sources.push(click);
       gains.push(clickGain);
@@ -545,7 +574,7 @@ export function synthesizePercussion(
     mainNoise.connect(filter);
     filter.connect(mainGain);
     mainGain.connect(dest);
-    mainNoise.start(time + 0.03);
+    mainNoise.start(time + 0.03, noiseStartOffset(ctx, noiseBuffer, noisePosition));
     mainNoise.stop(time + 0.35);
     sources.push(mainNoise);
     gains.push(mainGain);

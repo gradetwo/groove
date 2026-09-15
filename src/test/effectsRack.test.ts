@@ -88,6 +88,56 @@ describe("Master DSP Effects Rack (P5-04)", () => {
       expect(unique4Bit).toBeLessThan(unique8Bit);
       expect(unique4Bit).toBeLessThanOrEqual(33); // 2^4 + 1
     });
+
+    it("resolves the requested bit depth in the Bitcrusher curve (D2)", () => {
+      // round(x * stepCount) yields 2 * stepCount + 1 distinct output levels.
+      // The old fixed 2048-point table could not resolve more than ~10 bits, so
+      // the shipped 12-bit default and every higher depth were meaningless.
+      const cases: Array<[number, number]> = [
+        [3, 2 ** 3],   // floor of the supported range
+        [4, 2 ** 4],
+        [8, 2 ** 8],
+        [12, 2 ** 12], // DEFAULT_FX_STATE.bitDepth
+        [16, 2 ** 16], // ceiling of the supported range
+      ];
+
+      for (const [bits, stepCount] of cases) {
+        const curve = makeBitcrushCurve(bits);
+        expect(new Set(curve).size).toBe(2 * stepCount + 1);
+        expect(curve[0]).toBe(-1);
+        expect(curve[curve.length - 1]).toBe(1);
+      }
+    });
+
+    it("sizes the Bitcrusher table from the bit depth (D2)", () => {
+      const curve12 = makeBitcrushCurve(12);
+      // High bit depths must not be collapsed into a coarser table than the
+      // quantization they are supposed to represent.
+      expect(curve12.length).toBeGreaterThan(2048);
+      expect(curve12.length).toBeGreaterThanOrEqual(4 * 2 ** 12);
+    });
+
+    it("normalises saturation to unity small-signal gain (D3)", () => {
+      const samples = 2048;
+      const dx = 2 / samples; // table spacing
+      const center = samples / 2;
+
+      for (const drive of [1, 1.5, 3, 6]) {
+        const curve = makeSaturationCurve(drive, samples);
+        // Slope at x = 0, measured from the two entries straddling the centre.
+        // The old tanh(k*x)/tanh(k) shape had a slope of k/tanh(k) here
+        // (+4.39 dB at drive 1.5, +15.56 dB at drive 6).
+        const slope = (curve[center + 1] - curve[center - 1]) / (2 * dx);
+        expect(slope).toBeGreaterThan(0.99);
+        expect(slope).toBeLessThan(1.01);
+
+        let peak = 0;
+        for (let i = 0; i < curve.length; i++) {
+          peak = Math.max(peak, Math.abs(curve[i]));
+        }
+        expect(peak).toBeLessThanOrEqual(1);
+      }
+    });
   });
 
   describe("Rack Initialization & Parameter Control", () => {

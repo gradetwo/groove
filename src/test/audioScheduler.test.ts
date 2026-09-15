@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
 import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
+import { chordVoicingForStep } from "../audio/chordVoicing";
 import type { SequencerPattern } from "../types/genre";
 import { FakeAudioContext, installFakeAudioContext } from "./helpers/fakeAudio";
 
@@ -305,12 +306,23 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     engine.destroy();
   });
 
-  it("plays a rhodes_ep chord with the EP preset", () => {
+  it("plays a rhodes_ep chord as a voicing with the EP preset", () => {
     const { engine, oscillators, filters } = triggerAndDiff(synthPattern("chords", "rhodes_ep", 60));
     const rhodes = resolveInstrumentPreset("rhodes_ep", "chords");
 
-    expect(oscillators.map((o) => o.type)).toEqual([rhodes.osc1Type, rhodes.osc2Type]);
-    expect(filters[0].frequency.events[0]?.value).toBe(rhodes.filterCutoff);
+    // E-01: the chords track is no longer monophonic. A single step now produces a
+    // diatonic voicing, so the per-voice oscillator pair repeats once per chord tone.
+    // This assertion is deliberately stricter than the old one: it pins the harmony as
+    // well as the preset, so a regression to a single note fails here.
+    const voicing = chordVoicingForStep(60, "C minor");
+    expect(voicing).toHaveLength(3);
+    expect(oscillators.map((o) => o.type)).toEqual(
+      voicing.flatMap(() => [rhodes.osc1Type, rhodes.osc2Type])
+    );
+    expect(filters).toHaveLength(voicing.length);
+    for (const filter of filters) {
+      expect(filter.frequency.events[0]?.value).toBe(rhodes.filterCutoff);
+    }
     expect(rhodes).not.toBe(DEFAULT_SYNTH_PRESETS.warmPad);
 
     engine.destroy();

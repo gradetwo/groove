@@ -86,9 +86,19 @@ describe("Hardware Drum Machine Models (P5-02)", () => {
         expect(result.gains.length).toBeGreaterThan(0);
         expect(result.stopTime).toBeGreaterThan(0.5);
 
-        // Ensure all scheduled sources received start() and stop() calls
+        // Ensure all scheduled sources received start() and stop() calls.
+        // E-06: noise layers now also pass a read offset, so this matches the schedule
+        // time rather than the exact argument list — and additionally pins that any
+        // offset passed is a valid buffer position, which the old assertion could not.
         result.sources.forEach((src) => {
-          expect(src.start).toHaveBeenCalledWith(0.5);
+          expect(src.start).toHaveBeenCalled();
+          const call = (src.start as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+          expect(call[0]).toBe(0.5);
+          if (call.length > 1) {
+            const offset = call[1] as number;
+            expect(Number.isFinite(offset)).toBe(true);
+            expect(offset).toBeGreaterThanOrEqual(0);
+          }
           expect(src.stop).toHaveBeenCalled();
         });
       });

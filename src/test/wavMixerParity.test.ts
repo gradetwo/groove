@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { encodeAudioBufferToWav, renderPatternOffline } from "../audio/WavExporter";
 import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
+import { chordVoicingForStep } from "../audio/chordVoicing";
 import { deriveTrackStates } from "../audio/trackStates";
 import { FakeAudioBuffer, FakeOfflineAudioContext, FakeGainNode, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 
@@ -232,15 +233,22 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     const ctx = FakeOfflineAudioContext.lastInstance!;
     const superSaw = resolveInstrumentPreset("supersaw", "chords");
 
-    expect(ctx.createdOscillators.map((o) => o.type)).toEqual([
-      superSaw.osc1Type,
-      superSaw.osc2Type,
-    ]);
-    expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(superSaw.osc2DetuneCents);
-    expect(ctx.createdFilters[0].frequency.events[0]?.value).toBe(superSaw.filterCutoff);
-    expect(ctx.createdFilters[0].frequency.events[0]?.value).not.toBe(
-      DEFAULT_SYNTH_PRESETS.warmPad.filterCutoff
+    // E-01: the offline renderer must produce the SAME voicing as the live engine.
+    // Exporter parity is a hard rule, so both sides call `chordVoicingForStep` and this
+    // pins that the exporter really voices the chord rather than rendering one note.
+    const voicing = chordVoicingForStep(60, "C minor");
+    expect(voicing).toHaveLength(3);
+    expect(ctx.createdOscillators.map((o) => o.type)).toEqual(
+      voicing.flatMap(() => [superSaw.osc1Type, superSaw.osc2Type])
     );
+    expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(superSaw.osc2DetuneCents);
+    expect(ctx.createdFilters).toHaveLength(voicing.length);
+    for (const filter of ctx.createdFilters) {
+      expect(filter.frequency.events[0]?.value).toBe(superSaw.filterCutoff);
+      expect(filter.frequency.events[0]?.value).not.toBe(
+        DEFAULT_SYNTH_PRESETS.warmPad.filterCutoff
+      );
+    }
   });
 
   it("keeps the shared noise-sweep riser for the noise_sweep fx track", async () => {

@@ -800,22 +800,58 @@ export function playPolySynthNote(
   // ADSR Amp Envelope
   const ampGain = ctx.createGain();
   const maxVolume = safeGain(safeVel * 0.8, 0.001);
+  const attackStart = 0.0001;
+  const attackPeak = Math.max(0.001, maxVolume);
   const attackEnd = time + Math.max(0.002, adsr.attack);
   const decayEnd = attackEnd + Math.max(0.01, adsr.decay);
   const sustainLevel = Math.max(0.0001, maxVolume * adsr.sustain);
   const noteReleaseStart = time + Math.max(0.05, durationSec);
   const noteEndTime = noteReleaseStart + Math.max(0.01, adsr.release);
 
+  // A short gate can land *inside* the attack or the decay ramp. Scheduling the
+  // sustain level unconditionally on top of a still-running ramp is a step
+  // discontinuity in amplitude — a broadband impulse, i.e. an audible click on
+  // every note. Instead, derive the value the envelope actually reaches at the
+  // gate end analytically: for an exponential ramp from v0 at t0 to v1 at t1,
+  // the value at t is v0 · (v1 / v0)^((t - t0) / (t1 - t0)). The release then
+  // starts from exactly that value, and because an exponential is
+  // self-similar, ramping to the interpolated point reproduces the original
+  // attack/decay curve bit-for-bit up to the gate end.
+  const releaseStartValue = safeGain(
+    noteReleaseStart <= attackEnd
+      ? attackStart *
+        Math.pow(attackPeak / attackStart, (noteReleaseStart - time) / (attackEnd - time))
+      : noteReleaseStart < decayEnd
+        ? attackPeak *
+          Math.pow(sustainLevel / attackPeak, (noteReleaseStart - attackEnd) / (decayEnd - attackEnd))
+        : sustainLevel
+  );
+
   // Initial silence (prevent pop)
-  ampGain.gain.setValueAtTime(0.0001, time);
-  // Attack: linear or exponential ramp to maxVolume
-  ampGain.gain.exponentialRampToValueAtTime(Math.max(0.001, maxVolume), attackEnd);
-  // Decay: exponential ramp to sustainLevel
-  ampGain.gain.exponentialRampToValueAtTime(sustainLevel, decayEnd);
-  // Hold sustain until note release start
-  ampGain.gain.setValueAtTime(sustainLevel, noteReleaseStart);
-  // Release: exponential decay to zero
-  ampGain.gain.exponentialRampToValueAtTime(0.0001, noteEndTime);
+  ampGain.gain.setValueAtTime(attackStart, time);
+  if (noteReleaseStart <= attackEnd) {
+    // Gate cuts the attack short: ramp to the analytic attack value at the gate
+    // end, then release from there.
+    ampGain.gain.exponentialRampToValueAtTime(releaseStartValue, noteReleaseStart);
+  } else {
+    // Attack: exponential ramp to the peak.
+    ampGain.gain.exponentialRampToValueAtTime(attackPeak, attackEnd);
+    if (noteReleaseStart < decayEnd) {
+      // Gate cuts the decay short: ramp to the analytic decay value at the gate
+      // end rather than stepping to the sustain level.
+      ampGain.gain.exponentialRampToValueAtTime(releaseStartValue, noteReleaseStart);
+    } else {
+      // Decay: exponential ramp to sustainLevel.
+      ampGain.gain.exponentialRampToValueAtTime(sustainLevel, decayEnd);
+      // The gate outlasts the decay, so the envelope already sits at sustain
+      // and holding it introduces no step.
+      if (noteReleaseStart > decayEnd) {
+        ampGain.gain.setValueAtTime(sustainLevel, noteReleaseStart);
+      }
+    }
+  }
+  // Release: exponential decay to the initial floor
+  ampGain.gain.exponentialRampToValueAtTime(attackStart, noteEndTime);
 
   filter.connect(ampGain);
   ampGain.connect(dest);

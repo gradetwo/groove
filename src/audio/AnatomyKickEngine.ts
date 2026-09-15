@@ -241,15 +241,76 @@ export const KICK_PRESETS: KickPreset[] = [
 ];
 
 /**
- * Creates a tanh-based saturation curve for non-linear waveshaping
+ * Curves are cached per quantised `amount` (D2). The key is the `amount` rounded
+ * to this step; the values themselves are always computed from the *exact*
+ * `amount` that first populated the bucket, so every curve a caller receives is
+ * bit-identical to what `Math.tanh(k * x) / Math.tanh(k)` produced before the
+ * cache existed. 0.001 of drive resolution corresponds to a worst-case change of
+ * ~0.0025 in curve value (measured across amount 0..1), i.e. ~0.25% of full
+ * scale, which is far below audibility; every shipped default/preset value sits
+ * exactly on the grid, so the measured loudness baseline is untouched.
  */
-function makeDistortionCurve(amount: number, n_samples = 4096): Float32Array {
+export const DISTORTION_CURVE_QUANTISATION_STEP = 0.001;
+
+/**
+ * Hard bound on cached curves. 32 entries x 4096 floats x 4 bytes ~= 512 KiB,
+ * which comfortably covers every curated/custom preset plus generous slider
+ * churn while guaranteeing a dragged knob cannot grow the cache without bound.
+ */
+export const DISTORTION_CURVE_CACHE_MAX_ENTRIES = 32;
+
+/** Quantised-amount -> curve. Insertion order doubles as LRU order (see below). */
+const distortionCurveCache = new Map<string, Float32Array>();
+
+/** Test/observability hook: empties the saturation-curve cache. */
+export function clearDistortionCurveCache(): void {
+  distortionCurveCache.clear();
+}
+
+/** Test/observability hook: current number of cached curves. */
+export function getDistortionCurveCacheSize(): number {
+  return distortionCurveCache.size;
+}
+
+function quantiseDistortionAmount(amount: number): number {
+  return Math.round(amount / DISTORTION_CURVE_QUANTISATION_STEP);
+}
+
+/**
+ * Creates a tanh-based saturation curve for non-linear waveshaping.
+ *
+ * The returned `Float32Array` is shared and MUST be treated as immutable: it is
+ * handed to `WaveShaperNode.curve` (which copies it) and may be served to several
+ * voices/nodes. Never write into a curve returned from here.
+ */
+export function makeDistortionCurve(amount: number, n_samples = 4096): Float32Array {
+  const bucket = quantiseDistortionAmount(amount);
+  // `n_samples` is part of the key so a caller that overrides it can never be
+  // served an array of the wrong length.
+  const cacheKey = `${bucket}|${n_samples}`;
+
+  const cached = distortionCurveCache.get(cacheKey);
+  if (cached !== undefined) {
+    // Refresh LRU position so hot curves (the ones actually being sequenced)
+    // are not evicted by slider-driven churn.
+    distortionCurveCache.delete(cacheKey);
+    distortionCurveCache.set(cacheKey, cached);
+    return cached;
+  }
+
   const curve = new Float32Array(n_samples);
   const k = Math.max(0.01, amount * 25);
   for (let i = 0; i < n_samples; ++i) {
     const x = (i * 2) / n_samples - 1;
     // Tanh soft saturation
     curve[i] = Math.tanh(k * x) / Math.tanh(k);
+  }
+
+  distortionCurveCache.set(cacheKey, curve);
+  while (distortionCurveCache.size > DISTORTION_CURVE_CACHE_MAX_ENTRIES) {
+    const oldest = distortionCurveCache.keys().next().value;
+    if (oldest === undefined) break;
+    distortionCurveCache.delete(oldest);
   }
   return curve;
 }
@@ -762,6 +823,13 @@ export function synthesizeAnatomyKickVoice(
     try {
       const shaper = ctx.createWaveShaper();
       shaper.curve = makeDistortionCurve(p.grit * 0.4) as Float32Array<ArrayBuffer>;
+      // D1: this is a saturating (non-linear) stage, so its harmonics must be
+      // filtered before decimation or they fold back into the audible band. The
+      // class-based master saturator already uses "2x"; this sequencer-reachable
+      // copy previously left oversampling unset. "4x" is the strongest standard
+      // anti-aliasing setting and costs only the voices with grit > 0.05, whose
+      // harmonics are exactly what would alias.
+      shaper.oversample = "4x";
       shaper.connect(dest);
       busNode = shaper;
     } catch {

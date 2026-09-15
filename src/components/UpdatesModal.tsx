@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   X, 
   RefreshCw, 
@@ -15,36 +15,17 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Modal } from "../ui";
+import {
+  ChangelogEntry,
+  VersionInfo,
+  ChangelogArchive,
+  changelogArchiveUrl,
+  compareVersionsDesc,
+  isNewerVersion,
+  mergeChangelog,
+} from "../utils/changelog";
 
-export interface ChangelogHighlight {
-  zh: string;
-  en: string;
-}
-
-export interface ChangelogEntry {
-  version: string;
-  date: string;
-  category: "feature" | "audio" | "fix";
-  title: {
-    zh: string;
-    en: string;
-  };
-  highlights: ChangelogHighlight[];
-}
-
-export interface VersionInfo {
-  version: string;
-  releaseDate: string;
-  /** A-08: the update check only ships the newest entry. */
-  changelog: ChangelogEntry[];
-  changelogCount?: number;
-}
-
-/** Full archive, fetched lazily only when the user opens the history. */
-export interface ChangelogArchive {
-  version: string;
-  changelog: ChangelogEntry[];
-}
+export type { ChangelogEntry, ChangelogHighlight, VersionInfo, ChangelogArchive } from "../utils/changelog";
 
 import { APP_VERSION } from "../version";
 
@@ -66,24 +47,13 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
 
   const [versionData, setVersionData] = useState<VersionInfo | null>(null);
   // A-08: `version.json` is now ~3KB; the 83KB archive loads only on demand.
-  const [changelog, setChangelog] = useState<ChangelogEntry[] | null>(null);
+  // Kept together with the version it belongs to, so a payload fetched for an
+  // older release can never overwrite a newer one.
+  const [archive, setArchive] = useState<ChangelogArchive | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [checkStatus, setCheckStatus] = useState<"idle" | "latest" | "update_available" | "error">("idle");
   const [latestVersion, setLatestVersion] = useState<string>(CURRENT_CLIENT_VERSION);
   const [lastCheckedTime, setLastCheckedTime] = useState<string | null>(null);
-
-  // Compare semantic versions (e.g. "1.1.0" > "1.0.2")
-  const isNewerVersion = (remote: string, current: string): boolean => {
-    const rParts = remote.split(".").map((n) => parseInt(n, 10) || 0);
-    const cParts = current.split(".").map((n) => parseInt(n, 10) || 0);
-    for (let i = 0; i < Math.max(rParts.length, cParts.length); i++) {
-      const r = rParts[i] || 0;
-      const c = cParts[i] || 0;
-      if (r > c) return true;
-      if (r < c) return false;
-    }
-    return false;
-  };
 
   const checkForUpdates = async (silent = false) => {
     if (!silent) setIsChecking(true);
@@ -99,7 +69,10 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
       const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
       setLastCheckedTime(timeStr);
 
-      if (data.version !== CURRENT_CLIENT_VERSION) {
+      // `isNewerVersion` (not `!==`) so a rollback — or a stale edge copy of
+      // version.json — cannot advertise a downgrade as an available update and
+      // trap the user in a reload loop.
+      if (isNewerVersion(data.version, CURRENT_CLIENT_VERSION)) {
         setCheckStatus("update_available");
         if (onUpdateAvailable) onUpdateAvailable(data.version);
       } else {
@@ -119,23 +92,50 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
     }
   }, [isOpen]);
 
+  /**
+   * The version the server just reported. The archive is keyed on this rather
+   * than on the *running* client version: a client that has not reloaded into the
+   * update yet must still be able to read the newest release notes.
+   */
+  const serverVersion = versionData?.version ?? null;
+
   // A-08: fetch the full bilingual archive only when the modal is actually opened.
-  // Uses the HTTP/SW cache (no `no-store`) so repeat opens are free.
+  // The URL is version-keyed, so shipping a release invalidates it by construction —
+  // the old unversioned fetch could be answered from a stale HTTP/SW cache entry,
+  // which is exactly how the newest release note went missing after an update.
   useEffect(() => {
-    if (!isOpen || changelog !== null) return;
+    if (!isOpen || !serverVersion) return;
+    // Already holding the archive for the version the server reported.
+    if (archive && archive.version === serverVersion) return;
+
     let cancelled = false;
-    fetch("/changelog.json")
+    fetch(changelogArchiveUrl(serverVersion))
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("changelog fetch failed"))))
       .then((data: ChangelogArchive) => {
-        if (!cancelled && Array.isArray(data?.changelog)) setChangelog(data.changelog);
+        if (cancelled || !Array.isArray(data?.changelog)) return;
+        // Never let a stale payload replace a newer archive already in hand.
+        setArchive((prev) =>
+          prev && compareVersionsDesc(prev.version, data.version) < 0 ? prev : data
+        );
       })
       .catch(() => {
-        // Falls back to the single entry embedded in version.json.
+        // Falls back to the single `latest` entry from version.json, which is
+        // enough to prove the update landed even if the archive is unreachable.
       });
     return () => {
       cancelled = true;
     };
-  }, [isOpen, changelog]);
+  }, [isOpen, serverVersion, archive]);
+
+  /**
+   * Newest-first union of the cacheable archive and the never-stale `latest`
+   * entry. Rendering the archive *instead of* `latest` is what hid the newest
+   * release from a just-updated client.
+   */
+  const entries = useMemo(
+    () => mergeChangelog(archive?.changelog, versionData?.latest),
+    [archive, versionData]
+  );
 
   const getCategoryBadge = (category: ChangelogEntry["category"]) => {
     switch (category) {
@@ -277,7 +277,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
 
         {/* Scrollable Changelog List */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 divide-y divide-[#1f222b]/60 bg-[#0d0f16]">
-          {(changelog || versionData?.changelog || []).map((entry, idx) => {
+          {entries.map((entry, idx) => {
             const badge = getCategoryBadge(entry.category);
             const isCurrent = entry.version === CURRENT_CLIENT_VERSION;
 

@@ -25,7 +25,13 @@
   Content-Type: application/json; charset=utf-8
 
 /changelog.json
-  Cache-Control: public, max-age=3600
+  # Cacheable ONLY because every consumer now requests it with a version key
+  # (`/changelog.json?v=<version>`, see src/utils/changelog.ts#changelogArchiveUrl):
+  # a new release is a new URL, so a previous release's cached copy can never be
+  # served for it. An unversioned request would go stale here for up to an hour —
+  # which is how an updated client ended up with a changelog one release behind.
+  # `public/sw.js` additionally serves this path network-first.
+  Cache-Control: public, max-age=3600, must-revalidate
   Content-Type: application/json; charset=utf-8
 
 # 4. Main HTML document -> Must revalidate

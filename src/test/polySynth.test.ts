@@ -5,7 +5,7 @@ import {
   playPolySynthNote,
   SynthPreset,
 } from "../audio/PolySynth";
-import { FakeAudioContext } from "./helpers/fakeAudio";
+import { FakeAudioContext, FakeGainNode } from "./helpers/fakeAudio";
 
 function createMockAudioContext() {
   const createdNodes: any[] = [];
@@ -208,5 +208,199 @@ describe("4-Voice Polyphonic Synthesizer (P5-03)", () => {
         }
       }
     });
+  });
+});
+
+/**
+ * Amplitude-envelope continuity regression tests.
+ *
+ * `playPolySynthNote` schedules its 4-stage ADSR on a single amp `GainNode`. When
+ * the gate ended before the attack or decay ramp had finished, the old code forced
+ * the sustain level with an unconditional `setValueAtTime` on top of the running
+ * ramp — a step discontinuity in amplitude, i.e. a broadband click (worst on low
+ * notes, where it is least masked). These tests read the scheduled automation back
+ * off `FakeAudioParam.events`, rebuild the envelope exactly as Web Audio renders
+ * it, and assert it is continuous at the gate and still lands on the initial floor
+ * by `noteEndTime`.
+ *
+ * Every assertion loops over the whole `DEFAULT_SYNTH_PRESETS` table, so a future
+ * long-decay or long-attack preset cannot silently reintroduce the click.
+ */
+describe("Amplitude envelope continuity (click fix)", () => {
+  const TIME = 0.5; // note onset — matches the shared fake graph used above
+  const VEL = 0.8;
+  const FLOOR = 0.0001; // the envelope's initial/final value
+  const SHORT_NOTE = 0.1; // 1/16 at 120 BPM with a 0.8 gate — the audit's case
+
+  type AmpEvent = { type: string; value: number; time: number };
+
+  /** Plays one note and returns the amp gain's scheduled events, time-ordered. */
+  function ampEnvelope(preset: SynthPreset, dur: number, midi = 36): AmpEvent[] {
+    const ctx = new FakeAudioContext();
+    const dest = ctx.createGain();
+    const voice = playPolySynthNote(
+      ctx as unknown as BaseAudioContext,
+      dest as unknown as AudioNode,
+      midi,
+      TIME,
+      dur,
+      VEL,
+      preset
+    );
+    // The amp envelope is the last gain pushed: noise presets push their noise
+    // gain first, the melodic path pushes only the amp gain.
+    const amp = voice.gains[voice.gains.length - 1] as unknown as FakeGainNode;
+    return [...amp.gain.events].sort((a, b) => a.time - b.time);
+  }
+
+  /**
+   * Evaluates the scheduled envelope at `t` the way Web Audio does: a
+   * `setValueAtTime` holds its value, and an `exponentialRampToValueAtTime`
+   * interpolates exponentially from the previous event to its target. Every
+   * envelope this code schedules uses strictly increasing event times, so
+   * consecutive events are always the ramp's true endpoints.
+   */
+  function envelopeValueAt(events: AmpEvent[], t: number): number {
+    if (events.length === 0) return NaN;
+    if (t <= events[0].time) return events[0].value;
+    for (let i = 1; i < events.length; i++) {
+      const prev = events[i - 1];
+      const next = events[i];
+      if (t > next.time) continue;
+      if (next.type === "setValueAtTime") return t < next.time ? prev.value : next.value;
+      const frac = next.time === prev.time ? 1 : (t - prev.time) / (next.time - prev.time);
+      return prev.value * Math.pow(next.value / prev.value, frac);
+    }
+    return events[events.length - 1].value;
+  }
+
+  /** The value of the (single) event scheduled at exactly `t`, or NaN. */
+  function valueScheduledAt(events: AmpEvent[], t: number): number {
+    const at = events.filter((e) => Math.abs(e.time - t) < 1e-9);
+    return at.length > 0 ? at[at.length - 1].value : NaN;
+  }
+
+  /**
+   * The analytic value the preceding ramp reaches at `noteReleaseStart`, mirroring
+   * the formula in `playPolySynthNote` operand-for-operand so the comparison is exact.
+   */
+  function analyticReleaseValue(preset: SynthPreset, dur: number): number {
+    const maxVolume = VEL * 0.8;
+    const attackStart = FLOOR;
+    const attackPeak = Math.max(0.001, maxVolume);
+    const attackEnd = TIME + Math.max(0.002, preset.adsr.attack);
+    const decayEnd = attackEnd + Math.max(0.01, preset.adsr.decay);
+    const sustainLevel = Math.max(0.0001, maxVolume * preset.adsr.sustain);
+    const noteReleaseStart = TIME + Math.max(0.05, dur);
+    return noteReleaseStart <= attackEnd
+      ? attackStart * Math.pow(attackPeak / attackStart, (noteReleaseStart - TIME) / (attackEnd - TIME))
+      : noteReleaseStart < decayEnd
+        ? attackPeak * Math.pow(sustainLevel / attackPeak, (noteReleaseStart - attackEnd) / (decayEnd - attackEnd))
+        : sustainLevel;
+  }
+
+  function gateEnd(dur: number): number {
+    return TIME + Math.max(0.05, dur);
+  }
+
+  function noteEnd(dur: number, preset: SynthPreset): number {
+    return gateEnd(dur) + Math.max(0.01, preset.adsr.release);
+  }
+
+  const presetEntries = Object.entries(DEFAULT_SYNTH_PRESETS);
+
+  it("schedules the gate value from the preceding ramp for every preset (no step at noteReleaseStart)", () => {
+    let decayClipped = 0;
+    for (const [key, preset] of presetEntries) {
+      const events = ampEnvelope(preset, SHORT_NOTE);
+      const release = gateEnd(SHORT_NOTE);
+      const attackEnd = TIME + Math.max(0.002, preset.adsr.attack);
+      const decayEnd = attackEnd + Math.max(0.01, preset.adsr.decay);
+      if (release < decayEnd) decayClipped++;
+
+      // The event at the gate carries the analytic value of the ramp running into it…
+      expect(valueScheduledAt(events, release), key).toBeCloseTo(
+        analyticReleaseValue(preset, SHORT_NOTE),
+        10
+      );
+      // …so the envelope is continuous across the gate.
+      const before = envelopeValueAt(events, release - 1e-9);
+      const at = envelopeValueAt(events, release);
+      expect(Math.abs(at - before), `${key} jump at gate`).toBeLessThan(1e-6);
+    }
+    // The 1/16 gate really does cut the decay for a large part of the table.
+    expect(decayClipped).toBeGreaterThan(10);
+  });
+
+  it("is continuous when a long attack is still rising at the gate (attackEnd > noteReleaseStart)", () => {
+    const dur = 0.05; // the shortest gate `playPolySynthNote` allows
+    const release = gateEnd(dur);
+    let longAttack = 0;
+    for (const [key, preset] of presetEntries) {
+      const attackEnd = TIME + Math.max(0.002, preset.adsr.attack);
+      if (attackEnd <= release) continue;
+      longAttack++;
+
+      const events = ampEnvelope(preset, dur);
+      const at = valueScheduledAt(events, release);
+      expect(at, key).toBeCloseTo(analyticReleaseValue(preset, dur), 10);
+      expect(
+        Math.abs(envelopeValueAt(events, release) - envelopeValueAt(events, release - 1e-9)),
+        `${key} jump mid-attack`
+      ).toBeLessThan(1e-6);
+
+      // The buggy version forced the (louder) sustain level mid-attack; the fixed
+      // envelope must stay on the quiet attack curve instead.
+      const sustainLevel = Math.max(0.0001, VEL * 0.8 * preset.adsr.sustain);
+      expect(at, `${key} must not step to sustain mid-attack`).toBeLessThan(sustainLevel);
+    }
+    expect(longAttack).toBeGreaterThanOrEqual(5);
+  });
+
+  it("keeps the removed bass808 step out of the 1/16 envelope", () => {
+    // Worked example: decay 0.9 s, sustain 0.55 on a 1/16 note. The decay curve
+    // sits ~4.6 dB above sustain at the gate, and the old unconditional
+    // setValueAtTime stepped down to sustain exactly there.
+    const preset = DEFAULT_SYNTH_PRESETS.bass808;
+    const events = ampEnvelope(preset, SHORT_NOTE);
+    const release = gateEnd(SHORT_NOTE);
+    const sustainLevel = Math.max(0.0001, VEL * 0.8 * preset.adsr.sustain);
+    const at = valueScheduledAt(events, release);
+
+    expect(at).toBeGreaterThan(sustainLevel); // the removed step was a drop
+    expect(20 * Math.log10(at / sustainLevel)).toBeGreaterThan(4); // ~4.6 dB
+    expect(envelopeValueAt(events, release)).toBeCloseTo(
+      envelopeValueAt(events, release - 1e-9),
+      6
+    );
+  });
+
+  it("returns the envelope to the initial floor by noteEndTime for every preset", () => {
+    for (const [key, preset] of presetEntries) {
+      for (const dur of [0.05, SHORT_NOTE, 0.125, 1.0]) {
+        const events = ampEnvelope(preset, dur);
+        const end = noteEnd(dur, preset);
+        const last = events[events.length - 1];
+        expect(last.time, `${key}@${dur} last event time`).toBeCloseTo(end, 9);
+        expect(last.value, `${key}@${dur} last event value`).toBeCloseTo(FLOOR, 9);
+        expect(envelopeValueAt(events, end), `${key}@${dur} floor`).toBeCloseTo(FLOOR, 9);
+        // Nothing is scheduled past the stop time, so the note cannot hang.
+        for (const e of events) {
+          expect(e.time, `${key}@${dur} event past note end`).toBeLessThanOrEqual(end + 1e-9);
+        }
+      }
+    }
+  });
+
+  it("never schedules a non-positive exponential target on the amp envelope", () => {
+    for (const [key, preset] of presetEntries) {
+      for (const dur of [0.05, SHORT_NOTE, 0.5]) {
+        for (const e of ampEnvelope(preset, dur)) {
+          if (e.type !== "exponentialRampToValueAtTime") continue;
+          expect(Number.isFinite(e.value), `${key}@${dur} finite target`).toBe(true);
+          expect(e.value, `${key}@${dur} positive target`).toBeGreaterThan(0);
+        }
+      }
+    }
   });
 });

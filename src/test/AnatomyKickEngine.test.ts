@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   AnatomyKickEngine,
   DEFAULT_SOMATIC_PARAMS,
+  DISTORTION_CURVE_CACHE_MAX_ENTRIES,
+  DISTORTION_CURVE_QUANTISATION_STEP,
   KICK_PRESETS,
+  clearDistortionCurveCache,
+  getDistortionCurveCacheSize,
+  makeDistortionCurve,
+  synthesizeAnatomyKickVoice,
 } from "../audio/AnatomyKickEngine";
 import { ecosystemBus, WangdaAudioMessage } from "../audio/ecosystemBus";
 import { parseUrlToRoute, formatRouteToUrl } from "../app/router";
@@ -42,7 +48,17 @@ function fakeAudioNode() {
   };
 }
 
-function createFakeAudioContext(): AudioContext {
+interface FakeContextObserver {
+  onWaveShaper?: (node: ReturnType<typeof fakeAudioNode>) => void;
+}
+
+function createFakeAudioContext(observer: FakeContextObserver = {}): AudioContext {
+  const createWaveShaper = () => {
+    const node = fakeAudioNode();
+    observer.onWaveShaper?.(node);
+    return node;
+  };
+
   return {
     state: "running",
     currentTime: 0,
@@ -50,10 +66,25 @@ function createFakeAudioContext(): AudioContext {
     createOscillator: fakeAudioNode,
     createGain: fakeAudioNode,
     createBiquadFilter: fakeAudioNode,
-    createWaveShaper: fakeAudioNode,
+    createWaveShaper,
     createAnalyser: fakeAudioNode,
     resume: vi.fn().mockResolvedValue(undefined),
   } as unknown as AudioContext;
+}
+
+/**
+ * Independent re-implementation of the pre-cache saturation curve, used to prove
+ * the cache is transparent (same values as before) rather than merely
+ * self-consistent.
+ */
+function referenceDistortionCurve(amount: number, n = 4096): Float32Array {
+  const curve = new Float32Array(n);
+  const k = Math.max(0.01, amount * 25);
+  for (let i = 0; i < n; ++i) {
+    const x = (i * 2) / n - 1;
+    curve[i] = Math.tanh(k * x) / Math.tanh(k);
+  }
+  return curve;
 }
 
 describe("The Anatomy Kick Engine & Ecosystem Bus (P-NEXT)", () => {
@@ -231,6 +262,130 @@ describe("The Anatomy Kick Engine & Ecosystem Bus (P-NEXT)", () => {
       engine.deleteCustomPreset(saved.id);
       const afterDelete = engine.getCustomPresets();
       expect(afterDelete.find((p) => p.id === saved.id)).toBeUndefined();
+    });
+  });
+
+  /**
+   * D1: the sequencer-reachable per-voice saturator used to be built with
+   * `oversample` left at its "none" default, so the harmonics it generates
+   * folded back into the audible band. The class-based master saturator already
+   * ran at "2x"; this pins that the two paths no longer disagree about whether
+   * a saturating stage is anti-aliased at all.
+   */
+  describe("Per-voice saturation oversampling (D1)", () => {
+    it("enables oversampling on the per-voice waveshaper when grit is above the threshold", () => {
+      clearDistortionCurveCache();
+      const expectedCurve = makeDistortionCurve(0.8 * 0.4);
+
+      const shapers: ReturnType<typeof fakeAudioNode>[] = [];
+      const ctx = createFakeAudioContext({ onWaveShaper: (node) => shapers.push(node) });
+      const dest = fakeAudioNode();
+
+      synthesizeAnatomyKickVoice(
+        ctx as unknown as BaseAudioContext,
+        dest as unknown as AudioNode,
+        0,
+        1,
+        { grit: 0.8 },
+        null
+      );
+
+      expect(shapers).toHaveLength(1);
+      const shaper = shapers[0];
+      // Not "none" and not unset: the saturating stage must anti-alias.
+      expect(shaper.oversample).not.toBe("none");
+      expect(shaper.oversample).not.toBe("");
+      expect(["2x", "4x"]).toContain(shaper.oversample);
+      // Current implementation choice (>= 2x is the contract; 4x is stronger).
+      expect(shaper.oversample).toBe("4x");
+      expect(shaper.connect).toHaveBeenCalledWith(dest);
+
+      // The voice path installs the shared cached curve, and the curve is still
+      // bit-identical to a fresh computation (nothing mutated it in place).
+      expect(shaper.curve).toBe(expectedCurve);
+      expect(expectedCurve).toEqual(referenceDistortionCurve(0.8 * 0.4));
+    });
+
+    it("does not insert a saturator when grit is at or below the threshold", () => {
+      const shapers: ReturnType<typeof fakeAudioNode>[] = [];
+      const ctx = createFakeAudioContext({ onWaveShaper: (node) => shapers.push(node) });
+      const dest = fakeAudioNode();
+
+      synthesizeAnatomyKickVoice(
+        ctx as unknown as BaseAudioContext,
+        dest as unknown as AudioNode,
+        0,
+        1,
+        { grit: 0.04 },
+        null
+      );
+
+      expect(shapers).toHaveLength(0);
+    });
+  });
+
+  /**
+   * D2: the 4096-float curve array used to be allocated on every kick hit. These
+   * tests pin the cache's identity reuse, its transparency versus the original
+   * formula, its cross-contamination safety and its hard size bound.
+   */
+  describe("Saturation curve cache (D2)", () => {
+    beforeEach(() => {
+      clearDistortionCurveCache();
+    });
+
+    it("reuses one cached array for repeated and near-identical amounts", () => {
+      const first = makeDistortionCurve(0.14);
+      const same = makeDistortionCurve(0.14);
+      expect(same).toBe(first);
+      expect(getDistortionCurveCacheSize()).toBe(1);
+
+      // A near-identical amount inside the same quantisation bucket must reuse
+      // the cached array instead of allocating a fresh 4096-float curve.
+      const near = makeDistortionCurve(0.14 + DISTORTION_CURVE_QUANTISATION_STEP / 4);
+      expect(near).toBe(first);
+      expect(getDistortionCurveCacheSize()).toBe(1);
+    });
+
+    it("keeps cached values identical to a freshly computed curve (transparent)", () => {
+      for (const amount of [0.02, 0.1, 0.14, 0.25, 0.368, 0.752]) {
+        const fresh = referenceDistortionCurve(amount);
+        const cached = makeDistortionCurve(amount);
+        expect(cached).toEqual(fresh);
+        // Second call is the cached instance and still matches the reference.
+        expect(makeDistortionCurve(amount)).toBe(cached);
+        expect(makeDistortionCurve(amount)).toEqual(fresh);
+      }
+    });
+
+    it("never aliases two different quantised amounts onto the same array", () => {
+      const low = makeDistortionCurve(0.2);
+      const high = makeDistortionCurve(0.7);
+      expect(high).not.toBe(low);
+      expect(low).toEqual(referenceDistortionCurve(0.2));
+      expect(high).toEqual(referenceDistortionCurve(0.7));
+      expect(getDistortionCurveCacheSize()).toBe(2);
+    });
+
+    it("bounds the cache when many distinct amounts are requested", () => {
+      const amounts = Array.from(
+        { length: DISTORTION_CURVE_CACHE_MAX_ENTRIES * 3 },
+        (_, i) => 0.01 + i * 0.01
+      );
+
+      const firstCurve = makeDistortionCurve(amounts[0]);
+      for (const amount of amounts) makeDistortionCurve(amount);
+
+      expect(getDistortionCurveCacheSize()).toBeLessThanOrEqual(DISTORTION_CURVE_CACHE_MAX_ENTRIES);
+      expect(getDistortionCurveCacheSize()).toBe(DISTORTION_CURVE_CACHE_MAX_ENTRIES);
+
+      // The oldest entry was evicted, so re-requesting it allocates a fresh
+      // array whose values are still correct for that amount...
+      const refetched = makeDistortionCurve(amounts[0]);
+      expect(refetched).not.toBe(firstCurve);
+      expect(refetched).toEqual(referenceDistortionCurve(amounts[0]));
+      // ...and the bound still holds.
+      expect(getDistortionCurveCacheSize()).toBeLessThanOrEqual(DISTORTION_CURVE_CACHE_MAX_ENTRIES);
     });
   });
 });
