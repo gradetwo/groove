@@ -1,35 +1,39 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.1",
   "releaseDate": "2026-09-15",
-  "changelogCount": 64,
+  "changelogCount": 65,
   "latest": {
-    "version": "2.0.0",
+    "version": "2.0.1",
     "date": "2026-09-15",
-    "category": "feature",
+    "category": "audio",
     "title": {
-      "zh": "v2.0.0 工作台重构启动：布局偏好持久化（刷新不再丢失侧栏/力度条/高级抽屉状态）",
-      "en": "v2.0.0 Studio refactor begins: layout preferences persist (no more re-collapsing the sidebar after every refresh)"
+      "zh": "v2.0.1 和弦按曲风的奏法与乐器：金属闷音不再长鸣、雷鬼不再像垫子、失真节奏吉他上线",
+      "en": "v2.0.1 Chords now use each genre's articulation and instrument: metal mutes stop ringing, reggae stops sounding like a pad, and a high-gain rhythm guitar arrives"
     },
     "highlights": [
       {
-        "zh": "**工作台重构规划正式启动，版本序列进入 2.0**：原计划的 v1.17.0–v1.17.13 改为 **v2.0.0–v2.0.12**，首个里程碑为布局偏好持久化。这一版是 2.0 序列的起点，后续每个里程碑都是可独立发布的小版本。",
-        "en": "**The studio refactor officially starts and versioning moves to 2.0.** The plan's v1.17.0–v1.17.13 milestones become **v2.0.0–v2.0.12**, beginning with layout-preference persistence. Each milestone ships as its own small release."
+        "zh": "**159 个曲风此前共用一套和弦奏法**：所有音一律「一步的 1.5 倍」长、起始错开固定 3 ms。于是雷鬼的 skank 像垫子一样长鸣、funk 的短促和弦糊成一片、金属的闷音却在延音——音高对了，奏法还是错的。现在有 6 种奏法，按「和弦是在承担节奏还是和声」判定：**stab**（0.30 倍长，1 ms）给 house/techno 短促和弦、funk、雷鬼 skank、蒙图诺与金属闷音；**comp**（0.55 倍、8 ms）给爵士伴奏；**strum**（0.80 倍、22 ms，约一次真实下扫的时长）给吉他；**block**（1.0 倍）是原来的行为；**roll**（1.3 倍、90 ms）给琶音滚奏；**sustain**（**3.0 倍**）给垫子、弦乐、ambient/shoegaze 音墙与黑金属颤音拨弦。",
+        "en": "**All 159 genres shared one chord articulation.** Every note was `stepDur · gate · 1.5` long with a flat 3 ms onset stagger — so a reggae skank rang like a pad, funk stabs smeared, and metal's palm mutes sustained. The notes were right; the playing was wrong. There are now six articulations chosen by asking whether the chord carries the *rhythm* or the *harmony*: **stab** (0.30x length, 1 ms) for house/techno stabs, funk, the reggae skank, montuno and palm-muted metal; **comp** (0.55x, 8 ms) for jazz; **strum** (0.80x, 22 ms — roughly a real downstroke) for guitar; **block** (1.0x) as the previous behaviour; **roll** (1.3x, 90 ms) for arpeggiated ripples; and **sustain** (**3.0x**) for pads, strings, ambient/shoegaze walls and tremolo-picked black metal."
       },
       {
-        "zh": "**布局不再每次刷新都归零**：侧栏折叠、工作台最大化、力度泳道、分析仪、高级抽屉这 5 个开关此前全是裸 `useState(false)`，全仓库没有任何持久化——每次刷新、每次从调音台/对比视图回来，都要重新收侧栏、重新开力度条。现在挂载时读一次、变更即写。",
-        "en": "**Layout no longer resets on every refresh.** All five toggles — sidebar collapse, editor maximise, velocity lane, analyser, advanced drawer — were plain `useState(false)` with no persistence anywhere in the repo, so every refresh (and every trip to the console or compare view) meant re-collapsing the sidebar and re-opening the velocity lane. They are now read once on mount and written on change."
+        "zh": "**乐器：数据早就写明每把琴的音色，轨道却一律用同一把**。N-12 的策展为每个金属曲风写了具体音箱——`death-metal` 是「HM-2 Buzzsaw Guitar」、`metalcore` 是「High-Gain 5150 Guitar」、`thrash-metal` 是「Scooped-Mid High-Gain Guitar」——但它们的和弦轨**全部**指向通用的主音吉他预设。新增 **`distortedGuitar` 高增益节奏吉他**：截止 1500 Hz（远低于主音的 2700，power chord 活在低中频，这是它不刺耳的原因）、Q 6.5（远高于 3.5，那个中频鼻音让它切得出来）、双锯齿厚墙、快起音短释放。**定点改 9 个高增益曲风**（hard-rock / punk-rock / heavy-metal / thrash / death / black / doom-metal / metalcore / grunge）；非高增益吉他曲风与所有主音轨**不动**。",
+        "en": "**Instruments: the data already described each amplifier, but every track used the same generic guitar.** The N-12 curation names a specific amp per metal genre — \"HM-2 Buzzsaw Guitar\" for death metal, \"High-Gain 5150 Guitar\" for metalcore, \"Scooped-Mid High-Gain Guitar\" for thrash — yet all of their chords tracks pointed at the generic lead-guitar preset. A new **`distortedGuitar` high-gain rhythm voice** lands: 1500 Hz cutoff (far below the lead's 2700 — a power chord lives in the low-mids, which is why it does not fizz), Q 6.5 (vs 3.5 — that midrange honk is what makes it cut), a thick two-saw stack, fast attack and short release. **Nine high-gain genres** are switched over; non-high-gain guitar genres and every lead track are left alone."
       },
       {
-        "zh": "**存储损坏绝不会弄坏工作台**：读取失败（无 storage／隐私模式抛错／配额）一律回落默认且**绝不抛错**；一个字段类型不对时**逐字段修复**，而不是把其余四个好设置一起丢掉；遇到未知的 `version` 则整体回落——形状不认识就不猜。键为 `groove_layout_prefs_v1` 且载荷内含 `version`，按计划「一旦写到用户机器上就永不删除」的纪律，未来改形状要加 v2 并保留 v1 作迁移源。",
-        "en": "**Corrupt storage can never break the studio.** Any read failure (no storage, a privacy mode that throws, quota) falls back to defaults and **never throws**; a single wrong-typed field is repaired **in place** rather than discarding the other four good settings; an unknown `version` falls back wholesale, because guessing at an unrecognised shape is worse than resetting. The key is `groove_layout_prefs_v1` with the version also inside the payload, so a future shape change must add v2 and keep v1 as a migration source."
+        "zh": "**既有门禁把「器材意图」和「轨道」绑在了一起**：`distorted_guitar` 的允许短语直接取自策展文案里已有的词（high-gain / buzzsaw / fuzz / overdriven guitar / tremolo-picked / down-tuned），所以「轨道乐器必须被该曲风的配器清单点名」这条老门禁现在会自动要求两者一致。新增乐器的钉死清单也如期拦下并要求显式更新——这正是它们存在的意义。",
+        "en": "**Existing gates now tie amplifier intent to the track.** The new instrument's allowed phrases are taken straight from the curation text (high-gain, buzzsaw, fuzz, overdriven guitar, tremolo-picked, down-tuned), so the long-standing rule that a track's instrument must be *named* by its genre's instrumentation list now enforces the two agree. The pinned instrument survey also caught the new voice and demanded a deliberate update — which is exactly why it exists."
       },
       {
-        "zh": "**演奏状态明确不持久化**：「只听鼓组」「键盘模式」「录音待命」被有意排除在偏好之外，并在代码里写明理由——它们描述的是演奏中的实时状态，静默恢复会在下次打开时重新武装录音或重进只听鼓组。测试从两个方向守护：类型层拒绝，以及绕开类型（模拟从解析出的 JSON 展开）时运行时过滤器仍拦下。",
-        "en": "**Performance state is deliberately not persisted.** Drums-only, keyboard mode and record-armed are excluded on purpose, with the reasoning in the code: they describe live performance state, and silently restoring them would re-arm the recorder or re-enter drums-only on the next visit. Tests guard this from both directions — the type system rejects them, and the runtime filter still catches them when the types are bypassed."
+        "zh": "**重新配平**：奏法显著改变能量分布（stab 只有原来的 30% 长度、sustain 是 300%），因此按流程重测 159 曲风并回填 trim。配平后 p90−p10 **0.69 LU**（上限 1.5）、全距 2.77 LU、clamp 0/159；样本峰值超 0 dBFS 仍为 **0/159**，最差真峰值 −0.983 dBTP。",
+        "en": "**Re-matched.** Articulation changes the energy distribution materially (a stab is 30% of the old length, a sustain 300%), so all 159 genres were re-measured and the trims refitted: post-trim spread **0.69 LU** p90−p10 (limit 1.5), 2.77 LU full range, 0/159 clamp hits — and clipping remains **0/159** with a worst true peak of −0.983 dBTP."
       },
       {
-        "zh": "**验证强度如实说明**：本版交付了模块级往返测试（走真实 `localStorage`）与源码级接线守护（断言 5 个开关全部落盘、会话态不落盘），共 35 条。**浏览器级「刷新后原样恢复」的端到端断言按计划归属后续里程碑的 7 端 E2E 矩阵**，因此这里不把「单元测试通过」表述为「浏览器已验收」。",
-        "en": "**Verification strength, stated honestly.** This release ships module-level round-trip tests through the real `localStorage` plus a source-level wiring guard asserting all five toggles are persisted and the session-only flags are not — 35 cases. The **browser-level \"still collapsed after a refresh\" end-to-end assertion belongs to a later milestone's seven-target E2E matrix**, so unit tests passing is not presented here as browser acceptance."
+        "zh": "**测试覆盖三层且断言的是音乐主张**：奏法按音长正确排序（stab < comp < strum < block < sustain）；funk/雷鬼/salsa/techno/金属的 gateScale ≤ 0.6，ambient/trance/shoegaze/doom/black 的 ≥ 1.5；**端到端**渲染出的音长与起始展开和解析器一致（用同乐器对照隔离奏法，避免被预设自身的释放时间混淆）；失真吉他**可测地更重**（更暗、更冲、更厚、更紧）而不只是改了标签。",
+        "en": "**Three layers of tests, asserting musical claims.** Articulations order correctly by length (stab < comp < strum < block < sustain); funk/reggae/salsa/techno/metal sit at gateScale ≤ 0.6 while ambient/trance/shoegaze/doom/black sit at ≥ 1.5; the **rendered** note length and onset spread match the resolver (compared on a matched instrument so the preset's own release cannot confound it); and the distorted guitar is **measurably** heavier — darker, more aggressive, thicker, tighter — not merely relabelled."
+      },
+      {
+        "zh": "顺带修掉一个自己写的静默失效：真峰值汇总块用 `arrangedTruePeakDb` 过滤，但序列化报告里只写了 `trimmedTruePeakDb`，于是整块被悄悄跳过。已修，并把两个字段都写进报告。",
+        "en": "Also fixed a silent self-inflicted failure: the true-peak summary filtered on `arrangedTruePeakDb` while the serialized report only wrote `trimmedTruePeakDb`, so the whole block was quietly skipped. Both fields are now reported."
       }
     ]
   }

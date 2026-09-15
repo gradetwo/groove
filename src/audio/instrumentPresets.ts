@@ -40,6 +40,8 @@ export const INSTRUMENT_PRESET_ALIASES: Record<string, string> = {
   saw_lead: "sawLead",
   square_lead: "squareLead",
   guitar_lead: "guitarLead",
+  // The high-gain rhythm voice for power chords / palm mutes (see the preset comment).
+  distorted_guitar: "distortedGuitar",
   flute_lead: "fluteLead",
   pluck_synth: "pluckSynth",
   warm_pad: "warmPad",

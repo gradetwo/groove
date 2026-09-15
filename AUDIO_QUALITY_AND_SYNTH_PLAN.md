@@ -620,3 +620,55 @@ vendor/gs1/
 **需求 11 待改**：`vendor/gs1/*`（新增）、`scripts/sync-gs1.mjs`（新增）、`scripts/check_gs1.mjs`（新增）、`scripts/check_budgets.js`、`scripts/version.mjs`、`src/audio/instrumentPresets.ts:224`
 
 **既有设计记录**：`MIX_LOUDNESS_NOTES.md`（N-13 混音与响度）、`TIMBRE_NOTES.md`（预设策展）、`ROADMAP_V2.md`（Phase 5–8）、`BACKLOG.md`、`CODE_REVIEW_AND_PLAN_v1.16.0.md`（N-13…N-16 原始登记）
+
+---
+
+## 4.9 和弦的「指法」与乐器（用户反馈第二轮，v2.0.1）
+
+**用户反馈**：和弦的音色和乐器也要按曲风常用的来设计，和弦指法例如连音、柱式，音长也是。
+
+**两半都是真问题，且各有各的根因。**
+
+### 4.9.1 指法与音长：此前 159 个曲风共用一套奏法
+
+旧引擎对所有曲风给同一个答案：所有音一律 `stepDur · gate · 1.5` 长、起始错开固定 3 ms。于是**雷鬼的 skank 像垫子一样长鸣、funk 的短促和弦糊成一片、金属的闷音却在延音**。
+
+新增 6 种**奏法（articulation）**，每种是「音长倍率 + 起始展开」：
+
+| 奏法 | gateScale | 起始展开 | 用于 |
+|---|---|---|---|
+| `stab` | **0.30** | 1 ms | house/techno 短促和弦、funk 和弦、雷鬼 skank、蒙图诺、金属闷音 power chord |
+| `comp` | 0.55 | 8 ms | 爵士伴奏——短而留白，否则压死独奏 |
+| `strum` | 0.80 | 22 ms | 吉他扫弦（约等于一次真实下扫的时长） |
+| `block` | 1.00 | 3 ms | **历史行为**，键盘/垫子的柱式和弦 |
+| `roll` | 1.30 | 90 ms | 琶音滚奏（钢琴/harp 手势） |
+| `sustain` | **3.00** | 12 ms | 垫子、弦乐、ambient/shoegaze 音墙、黑金属颤音拨弦 |
+
+判定规则只写一次（表内不再重复）：**和弦是在承担节奏还是在承担和声？**承担节奏（funk/雷鬼/techno stab/金属 riff/蒙图诺）就短而紧；承担和声（pad/弦乐/ambient）就鸣响超过一步；吉他语汇用扫弦；爵士语汇用伴奏。`GENRE_ARTICULATION` 约 110 条逐曲风 override，每条带理由。
+
+### 4.9.2 乐器：数据早已写明每把琴的音色，轨道却一律用同一把
+
+N-12 的策展给每个金属曲风写了**具体的音箱描述**——`death-metal` 是「HM-2 Buzzsaw Guitar」、`metalcore` 是「High-Gain 5150 Guitar」、`thrash-metal` 是「Scooped-Mid High-Gain Guitar」——但它们的 chords 轨**全部**指向通用的 `guitar_lead`（一个主音吉他预设）。数据里的意图没有落到轨道上。
+
+- 新增 `distortedGuitar` 预设（**高增益节奏吉他**，明确不是「更响的 lead」）：截止频率 **1500 Hz**（远低于 lead 的 2700，因为 power chord 活在低中频，这是它不刺耳的原因）、Q **6.5**（远高于 lead 的 3.5，那个中频「鼻音」才让它切得出来）、双锯齿 + `osc2Mix 0.85`（厚实的双轨墙）、快起音 + 短释放（闷音要的就是紧）。
+- 别名与门禁：`distorted_guitar` 加入别名表与 `INSTRUMENT_TOKENS`；token 直接取策展文案里已有的词（`distorted guitar` / `high-gain` / `overdriven guitar` / `fuzz` / `buzzsaw` / `tremolo-picked` / `down-tuned`），于是「轨道乐器必须被该曲风的配器清单点名」这条既有门禁把器材意图与轨道绑在了一起。
+- **定点改动 9 个高增益曲风**的 chords 轨：`hard-rock`/`punk-rock`/`heavy-metal`/`thrash-metal`/`death-metal`/`black-metal`/`doom-metal`/`metalcore`/`grunge`。非高增益的吉他曲风（`rock-and-roll`/`blues-rock`/`post-punk`/`alternative-rock`/`math-rock`/`shoe-gaze`）**保持 `guitar_lead`**。lead 轨一律不动——主音吉他就该是主音吉他。
+- 一次自我纠错：我最初把 `new-wave`/`progressive-rock` 也算作「吉他曲风」，测试显示前者用 pad、后者用 organ（本就如此）。断言已改成「这些曲风**不得**被误改成失真吉他」，而不是我猜的乐器名。
+
+`instrumentPresets.test.ts` 的**钉死清单**如期拦下了新乐器，要求显式更新——这正是它存在的意义。
+
+### 4.9.3 实测
+
+奏法改动显著改变能量分布（stab 只有原来的 30% 长度，sustain 是 300%），因此按门禁第 3 条重新实测 159 曲风并回填 trim：
+
+| 指标 | v2.0.0（上一版） | 本版 |
+|---|---|---|
+| 配平后 LUFS p90−p10 | 0.80 LU | **0.69 LU**（上限 1.5） |
+| 配平后全距 | 2.53 LU | **2.77 LU**（上限 4） |
+| 样本峰值超 0 dBFS | 0/159 | **0/159** |
+| 最差真峰值 | −0.996 dBTP | **−0.983 dBTP**（天花板 −1.0） |
+| trim clamp 命中 | 0/159 | 0/159 |
+
+**测试**：`genreVoicing.test.ts` 现覆盖声部形态、奏法、乐器三层。关键断言包括——奏法按音长正确排序（stab < comp < strum < block < sustain）、funk/雷鬼/salsa/techno/金属的 gateScale ≤ 0.6 而 ambient/trance/shoegaze/doom/black 的 ≥ 1.5、**端到端**渲染出的音长与起始展开与解析器一致（含「同乐器对比以隔离奏法」这一更锐利的对照），以及失真吉他**可测地更重**（更暗、更冲、更厚、更紧）而不只是改了标签。
+
+**过程中修掉一个自己写的 bug**：真峰值汇总块用 `arrangedTruePeakDb` 过滤，但序列化报告里只写了 `trimmedTruePeakDb`，导致整块被静默跳过（`Math.random` 那类「静默失效」的同一模式）。已修，并把 `arrangedTruePeakDb` 也序列化出来。

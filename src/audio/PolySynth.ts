@@ -133,6 +133,22 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 3.5,
     adsr: { attack: 0.005, decay: 0.35, sustain: 0.28, release: 0.28 },
   },
+  // `distorted_guitar`: the high-gain *rhythm* voice, deliberately not a louder
+  // `guitar_lead`. Power chords and palm mutes live in the low-mids, so the cutoff sits
+  // far below the lead's and the resonance is much higher — that midrange honk is what
+  // makes a distorted chord cut instead of fizzing. Two saws at a wider mix give the
+  // thick double-tracked wall; a fast attack and a short release keep the chugs tight,
+  // which is the articulation the metal genres ask for.
+  distortedGuitar: {
+    name: "Distorted Guitar",
+    osc1Type: "sawtooth",
+    osc2Type: "sawtooth",
+    osc2DetuneCents: 7,
+    osc2Mix: 0.85,
+    filterCutoff: 1500,
+    filterQ: 6.5,
+    adsr: { attack: 0.003, decay: 0.18, sustain: 0.18, release: 0.12 },
+  },
   // `flute_lead`: near-pure sine body with a triangle edge, slow soft attack,
   // low resonance and a 6-cent detune — enough movement for a breathy vibrato
   // without the saw buzz that made the old analog lead wrong for flute genres.

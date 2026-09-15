@@ -70,11 +70,15 @@ export class FakeOscillatorNode extends FakeNode {
   started = false;
   /** Recorded `start(when)` times, so tests can assert onset stagger (E-01). */
   startedAt: number[] = [];
+  /** Recorded `stop(when)` times, so tests can assert note length (chord articulation). */
+  stoppedAt: number[] = [];
   start(when = 0) {
     this.started = true;
     this.startedAt.push(when);
   }
-  stop() {}
+  stop(when = 0) {
+    this.stoppedAt.push(when);
+  }
 }
 
 export class FakeFilterNode extends FakeNode {

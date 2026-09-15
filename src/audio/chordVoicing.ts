@@ -266,3 +266,100 @@ export function chordVoiceGain(voiceCount: number): number {
  * per-genre trims, and it is further evidence for E-12 (a true-peak lookahead limiter).
  */
 export const CHORD_STRUM_SEC = 0.003;
+
+/**
+ * How a chord is *played*, as opposed to which notes it contains.
+ *
+ * Voicing alone is only half of "genre-appropriate chords". A techno stab, a jazz
+ * comp, a palm-muted metal power chord and an ambient pad can share the same three pitch
+ * classes and still be unmistakably different music — what separates them is **how long
+ * the chord rings** and **whether the notes start together or roll**.
+ *
+ * The old engine gave every genre the same answer: all notes `stepDur · gate · 1.5` long
+ * with a flat 3 ms onset stagger. So reggae's skank rang like a pad, funk's stabs
+ * smeared, and metal's palm-mutes sustained.
+ */
+export type ChordArticulation = "block" | "strum" | "roll" | "stab" | "sustain" | "comp";
+
+export interface ArticulationDefinition {
+  /** Multiplier on the base note length (see `CHORD_BASE_GATE`). */
+  gateScale: number;
+  /** Onset spread across the voicing, in seconds. 0 = all notes together. */
+  strumSeconds: number;
+  /** Why this articulation sounds the way it does — kept beside the data. */
+  note: string;
+}
+
+/**
+ * The articulation table.
+ *
+ * `gateScale` multiplies the historical base length (`CHORD_BASE_GATE`), so 1.0 is the
+ * behaviour every genre used to get, and the numbers below read directly as "longer or
+ * shorter than before".
+ */
+export const CHORD_ARTICULATIONS: Record<ChordArticulation, ArticulationDefinition> = {
+  block: {
+    gateScale: 1.0,
+    strumSeconds: 0.003,
+    note: "The historical default: all notes together, held for the step gate. Works for keys/pad comping where the chord is a bed rather than a rhythm.",
+  },
+  strum: {
+    gateScale: 0.8,
+    strumSeconds: 0.022,
+    note: "Guitar strum — ~22 ms between the lowest and highest note, which is roughly how long a real downward strum takes. Clearly rolled, still heard as one chord.",
+  },
+  roll: {
+    gateScale: 1.3,
+    strumSeconds: 0.09,
+    note: "Rolled/arpeggiated: ~90 ms across the voicing, the piano-roll or harp gesture. Long enough to read as a ripple rather than a chord.",
+  },
+  stab: {
+    gateScale: 0.3,
+    strumSeconds: 0.001,
+    note: "Short, tight and together: house/techno organ stabs, funk 'chicken scratch', reggae skank, palm-muted power chords, montuno. Rhythm, not harmony — the silence between stabs is the point.",
+  },
+  sustain: {
+    gateScale: 3.0,
+    strumSeconds: 0.012,
+    note: "Three times the base length: pads, strings, ambient and shoegaze walls, tremolo-picked black metal. The chord is a continuous texture, so the note length must outlast the step grid.",
+  },
+  comp: {
+    gateScale: 0.55,
+    strumSeconds: 0.008,
+    note: "Jazz comping: short, slightly spread, leaving space between the hits. Held chords would fight the soloist and destroy the swing.",
+  },
+};
+
+/** Base note length as a multiple of `stepDur * gate`, before `gateScale`. */
+export const CHORD_BASE_GATE = 1.5;
+
+/** Articulation for material nothing else describes. */
+export const DEFAULT_CHORD_ARTICULATION: ChordArticulation = "block";
+
+/** The resolved treatment a caller actually needs: which notes, and how to play them. */
+export interface ChordTreatment {
+  style: VoicingStyle;
+  articulation: ChordArticulation;
+  /** Note length as a multiple of `stepDur * gate`. */
+  gateScale: number;
+  /** Onset spread across the voicing, in seconds. */
+  strumSeconds: number;
+}
+
+/** Note length in seconds for one chord step under a given treatment. */
+export function chordNoteDuration(
+  stepDur: number,
+  gateVal: number,
+  treatment: Pick<ChordTreatment, "gateScale">
+): number {
+  return stepDur * gateVal * CHORD_BASE_GATE * treatment.gateScale;
+}
+
+/** Onset time for voice `index` of a voicing under a given treatment. */
+export function chordVoiceOnset(
+  time: number,
+  index: number,
+  treatment: Pick<ChordTreatment, "strumSeconds">
+): number {
+  return time + index * treatment.strumSeconds;
+}

@@ -18,8 +18,15 @@ import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp } from "./schedulerMath";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, DEFAULT_NOISE_SEED, noisePositionFor } from "./noise";
-import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC, type VoicingStyle } from "./chordVoicing";
-import { resolveVoicingStyle } from "../data/genreVoicing";
+import {
+  chordVoicingForStep,
+  chordVoiceGain,
+  chordNoteDuration,
+  chordVoiceOnset,
+  CHORD_STRUM_SEC,
+  type ChordTreatment,
+} from "./chordVoicing";
+import { resolveChordTreatment } from "../data/genreVoicing";
 import { VoiceRegistry } from "./voiceRegistry";
 import { createMasterLimiter, type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
 export type { TrackState } from "./trackStates";
@@ -1459,9 +1466,11 @@ export class AudioEngine {
     } else if (trackId === "bass" || lowerName.includes("bass")) {
       this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
-      // Genre-appropriate voicing: rock/metal power chords, jazz 7ths/9ths/quartal,
-      // ambient a thirdless wash. Resolved from the genre id, with the chords track's
-      // instrument as the fallback for custom genres.
+      // Genre-appropriate chord treatment: which notes *and* how they are played.
+      // Rock/metal get thirdless power chords struck short, jazz gets extended voicings
+      // comped with space, ambient gets a thirdless wash that rings past the step.
+      // Resolved from the genre id, with the chords track's instrument as the fallback
+      // for custom genres.
       this.playChord(
         dest,
         safeStartTime,
@@ -1470,7 +1479,7 @@ export class AudioEngine {
         stepDur,
         gateVal,
         synthPreset,
-        resolveVoicingStyle(
+        resolveChordTreatment(
           this.pattern?.genre_id,
           this.pattern?.tracks[trackIdx]?.instrument
         )
@@ -1600,20 +1609,27 @@ export class AudioEngine {
     stepDur = 0.125,
     gateVal = 0.8,
     preset: SynthPreset = DEFAULT_SYNTH_PRESETS.warmPad,
-    style?: VoicingStyle
+    treatment?: ChordTreatment
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 60;
-    const dur = stepDur * gateVal * 1.5;
-    const notes = chordVoicingForStep(midi, this.pattern?.scale, style ? { style } : {});
+    const notes = chordVoicingForStep(
+      midi,
+      this.pattern?.scale,
+      treatment ? { style: treatment.style } : {}
+    );
+    // Note length and onset spread are part of the genre's answer, not fixed values: a
+    // funk stab, a jazz comp, a strummed guitar chord and an ambient pad differ mainly
+    // in how long they ring and whether the notes roll.
+    const effective: ChordTreatment =
+      treatment ?? { style: "triad", articulation: "block", gateScale: 1, strumSeconds: CHORD_STRUM_SEC };
+    const dur = chordNoteDuration(stepDur, gateVal, effective);
     // Hold the voicing's summed power at the single note it replaces, so adding
     // harmony is not heard as a level jump (and does not push the limiter harder on
     // every genre at once).
     const voiceVel = vel * chordVoiceGain(notes.length);
     notes.forEach((note, i) => {
-      // Stagger the onsets (see CHORD_STRUM_SEC): coherent starts made the triad's
-      // peaks sum into the limiter, which measured ~1.2 dB quieter across the library.
-      const noteTime = time + i * CHORD_STRUM_SEC;
+      const noteTime = chordVoiceOnset(time, i, effective);
       const voice = playPolySynthNote(this.ctx!, dest, note, noteTime, dur, voiceVel, preset);
       voice.sources.forEach((src, idx) => {
         this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);

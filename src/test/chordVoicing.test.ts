@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC } from "../audio/chordVoicing";
+import { resolveChordTreatment } from "../data/genreVoicing";
 import { NOTE_NAMES } from "../utils/scaleTheory";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
@@ -208,12 +209,16 @@ describe("E-01 · chord voices are actually staggered in the render", () => {
 
     await renderPatternOffline(pattern);
     const ctx = FakeOfflineAudioContext.lastInstance!;
-    // Each voice is two oscillators, so three voices start at three distinct times.
+    // Each voice is two oscillators, so the voices start at distinct times. The spacing
+    // is the genre's articulation, not a fixed constant: an unknown genre with a pad on
+    // the chords track resolves to `sustain`, which rolls slightly more than a block.
+    const treatment = resolveChordTreatment("voicing-integration", "warm_pad");
+    const expectedGap = treatment.strumSeconds;
     const onsets = [...new Set(ctx.createdOscillators.map((o) => o.startedAt[0]))].sort(
       (a, b) => a - b
     );
     expect(onsets).toHaveLength(3);
-    expect(onsets[1] - onsets[0]).toBeCloseTo(CHORD_STRUM_SEC, 6);
-    expect(onsets[2] - onsets[1]).toBeCloseTo(CHORD_STRUM_SEC, 6);
+    expect(onsets[1] - onsets[0]).toBeCloseTo(expectedGap, 6);
+    expect(onsets[2] - onsets[1]).toBeCloseTo(expectedGap, 6);
   });
 });

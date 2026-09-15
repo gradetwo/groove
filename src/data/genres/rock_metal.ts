@@ -1343,7 +1343,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             0,
@@ -1827,7 +1827,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             0,
@@ -3280,7 +3280,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             0,
@@ -3764,7 +3764,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             0,
@@ -4248,7 +4248,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             0,
             0,
@@ -4732,7 +4732,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             1,
@@ -5216,7 +5216,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             0,
@@ -5700,7 +5700,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             0,
@@ -6185,7 +6185,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "guitar_lead",
+          "instrument": "distorted_guitar",
           "steps": [
             1,
             0,

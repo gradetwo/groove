@@ -35,7 +35,13 @@
  * - **triad**: the functional default for dance and pop writing.
  */
 import { GenreCategory } from "../types/genre";
-import type { VoicingStyle } from "../audio/chordVoicing";
+import {
+  CHORD_ARTICULATIONS,
+  DEFAULT_CHORD_ARTICULATION,
+  type ChordArticulation,
+  type ChordTreatment,
+  type VoicingStyle,
+} from "../audio/chordVoicing";
 
 /** Category defaults. Anchored on what each category's repertoire actually comps with. */
 export const CATEGORY_VOICING: Record<GenreCategory, VoicingStyle> = {
@@ -230,4 +236,263 @@ export function resolveVoicingStyle(
 /** Every genre id the table covers, for the red-line/consistency gates. */
 export function voicedGenreIds(): string[] {
   return Object.keys(GENRE_VOICING);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Articulation — how the chord is played, not which notes it contains         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Category defaults for articulation.
+ *
+ * Read alongside `CATEGORY_VOICING`: together they are the "how this category plays
+ * chords" answer. Rock/Metal defaults to `stab` because the category's chord sound is a
+ * short, palm-muted power chord; Jazz to `comp` because comping is short and spaced;
+ * Latin/World to `stab` because the montuno/skank vocabulary is off-beat and clipped.
+ */
+export const CATEGORY_ARTICULATION: Record<GenreCategory, ChordArticulation> = {
+  Electronic: "block",
+  "Hip Hop": "block",
+  "Jazz/Blues": "comp",
+  "Latin/World": "stab",
+  "Pop/R&B": "block",
+  "Rock/Metal": "stab",
+};
+
+export interface GenreArticulationOverride {
+  articulation: ChordArticulation;
+  /** Why this genre steps away from its category default. Required. */
+  reason: string;
+}
+
+/**
+ * Per-genre articulation overrides.
+ *
+ * The general rule the table follows, stated once so the entries do not each have to
+ * repeat it: **does the chord carry the rhythm or the harmony?** If it carries the
+ * rhythm (funk, reggae, house/techno stabs, metal riffs, montuno) it is short and tight;
+ * if it carries the harmony (pads, strings, ambient) it rings past the step; if it is a
+ * guitar idiom it strums; if it is a jazz idiom it comps.
+ */
+export const GENRE_ARTICULATION: Record<string, GenreArticulationOverride> = {
+  // ---- Electronic: stabs vs pads ------------------------------------------------
+  "detroit-techno": { articulation: "stab", reason: "Detroit stabs are clipped off-beat chords, not pads." },
+  "minimal-techno": { articulation: "stab", reason: "Sparse clipped stabs are the genre's whole chord vocabulary." },
+  "acid-techno": { articulation: "stab", reason: "Short stabs against the 303 line." },
+  "dub-techno": { articulation: "stab", reason: "Dub-techno stabs are short; the delay tail supplies the length." },
+  "industrial-techno": { articulation: "stab", reason: "Percussive clipped hits." },
+  "peak-time-techno": { articulation: "stab", reason: "Peak-time stabs drive the drop." },
+  "hard-techno": { articulation: "stab", reason: "Hard techno chords are percussive hits." },
+  "raw-techno": { articulation: "stab", reason: "Clipped and dry by design." },
+  schranz: { articulation: "stab", reason: "Loop-driven clipped hits." },
+  "tech-house": { articulation: "stab", reason: "Tech-house chords are short and rhythmic." },
+  "chicago-house": { articulation: "stab", reason: "Classic Chicago house piano/organ stabs are clipped off-beats." },
+  "lofi-house": { articulation: "block", reason: "Lofi house lets the Rhodes chords ring." },
+  "deep-house": { articulation: "block", reason: "Deep house sustains the Rhodes bed rather than stabbing it." },
+  "afro-house": { articulation: "block", reason: "Warm sustained chord bed under the percussion." },
+  "nu-disco-house": { articulation: "comp", reason: "Disco guitar/keys comp in short syncopated hits." },
+  "french-house": { articulation: "comp", reason: "Filtered disco comping shapes the groove." },
+  "progressive-house": { articulation: "sustain", reason: "Progressive house is pad-led; the chord is texture." },
+  "melodic-house": { articulation: "sustain", reason: "Melodic house sustains its pads." },
+  "tropical-house": { articulation: "stab", reason: "Bright clipped marimba/guitar hits." },
+  "bass-house": { articulation: "stab", reason: "Short stabs over the bassline." },
+  "ghetto-house": { articulation: "stab", reason: "Raw clipped hits." },
+  microhouse: { articulation: "stab", reason: "Microhouse clicks and stabs." },
+  "electro-house": { articulation: "stab", reason: "Electro-house stabs are percussive." },
+  "future-house": { articulation: "stab", reason: "Future-house chords hit hard and short." },
+  "uplifting-trance": { articulation: "sustain", reason: "Trance pads must outlast the bar; the chord is a wall." },
+  "progressive-trance": { articulation: "sustain", reason: "As uplifting trance." },
+  "vocal-trance": { articulation: "sustain", reason: "As uplifting trance." },
+  "euro-trance": { articulation: "sustain", reason: "As uplifting trance." },
+  "dream-trance": { articulation: "sustain", reason: "As uplifting trance." },
+  psytrance: { articulation: "stab", reason: "Psytrance stabs are short, driving the 16th-note pulse." },
+  "goa-trance": { articulation: "sustain", reason: "Goa layers long melodic pads." },
+  "tech-trance": { articulation: "stab", reason: "Techno-leaning: rhythmic stabs." },
+  "hard-trance": { articulation: "stab", reason: "Hard trance stabs are short and aggressive." },
+  ambient: { articulation: "sustain", reason: "Ambient chords must ring far past the step, or there is no ambience." },
+  "ambient-dub": { articulation: "sustain", reason: "The pad rings continuously; the dub delay is the movement, not the chord." },
+  "ambient-techno": { articulation: "sustain", reason: "Sustained pads sit under the pulse without asserting a rhythm." },
+  downtempo: { articulation: "sustain", reason: "Downtempo lets chords ring under the beat." },
+  "trip-hop": { articulation: "sustain", reason: "Trip-hop's Rhodes/sample beds sustain." },
+  "chillwave": { articulation: "sustain", reason: "Hazy sustained pads are the genre." },
+  synthwave: { articulation: "sustain", reason: "Sustained analogue pads." },
+  vaporwave: { articulation: "sustain", reason: "Slowed, smeared sustained chords." },
+  wave: { articulation: "sustain", reason: "The dark pad wall rings continuously." },
+  dub: { articulation: "stab", reason: "The dub skank is a short off-beat clip; the delay provides the sustain." },
+  jungle: { articulation: "stab", reason: "Jungle stabs are clipped off-beats." },
+  "ragga-jungle": { articulation: "stab", reason: "Ragga stabs are short and rhythmic." },
+  neurofunk: { articulation: "stab", reason: "Neurofunk chords are percussive hits." },
+  "liquid-dnb": { articulation: "block", reason: "Liquid rolls sustained musical chords." },
+  "jump-up": { articulation: "stab", reason: "Short aggressive stabs." },
+  techstep: { articulation: "stab", reason: "Dark clipped hits." },
+  halftime: { articulation: "sustain", reason: "Halftime lets the chord ring across the slow half-time bar." },
+  sambass: { articulation: "block", reason: "Brazilian d'n'b keeps a warm sustained chord bed." },
+  breakcore: { articulation: "stab", reason: "Chords are percussive interruptions." },
+  dubstep: { articulation: "stab", reason: "Dubstep mid-bass stabs are short and thirdless." },
+  brostep: { articulation: "stab", reason: "Mid-bass stabs are short, clipped and thirdless." },
+  riddim: { articulation: "stab", reason: "Minimal clipped stabs; the rhythm is in the bass, not the chord." },
+  "melodic-dubstep": { articulation: "sustain", reason: "Melodic dubstep sustains emotional pad chords." },
+  chillstep: { articulation: "sustain", reason: "As melodic dubstep." },
+  "tearout-dubstep": { articulation: "stab", reason: "Aggressive short stabs that punctuate the drop." },
+  deathstep: { articulation: "stab", reason: "Percussive clipped hits under the distorted bass." },
+  "post-dubstep": { articulation: "sustain", reason: "Post-dubstep is pad- and vocal-led." },
+  "future-garage": { articulation: "comp", reason: "The garage shuffle needs short, syncopated chord hits." },
+  "uk-garage": { articulation: "comp", reason: "As future garage." },
+  "2-step-garage": { articulation: "comp", reason: "As future garage." },
+  "speed-garage": { articulation: "comp", reason: "As future garage." },
+  "uk-funky": { articulation: "comp", reason: "Funky house comping." },
+  grime: { articulation: "stab", reason: "Grime chords are cold clipped hits." },
+  bassline: { articulation: "stab", reason: "Short stabs over the bassline." },
+  speedbass: { articulation: "stab", reason: "Short stabs over a fast bassline." },
+  hardstyle: { articulation: "sustain", reason: "Hardstyle screech chords are sustained through the drop." },
+  "hardcore-gabber": { articulation: "stab", reason: "Gabber chords are percussive hits." },
+  frenchcore: { articulation: "stab", reason: "Distorted percussive chord hits." },
+  "happy-hardcore": { articulation: "stab", reason: "Rave piano stabs are short and rhythmic." },
+  chiptune: { articulation: "stab", reason: "Chip hardware implies short clipped chords." },
+  idm: { articulation: "comp", reason: "IDM chords are short, displaced and pointillist." },
+  "glitch-hop": { articulation: "comp", reason: "As IDM, with funk comping." },
+  phonk: { articulation: "sustain", reason: "Phonk's dark chords ring under the cowbell." },
+  "drift-phonk": { articulation: "sustain", reason: "Dark chords ring under the cowbell, as in phonk." },
+  "edm-trap": { articulation: "sustain", reason: "EDM-trap sustains its brass/synth chords." },
+  "hard-trap": { articulation: "sustain", reason: "Sustained brass/synth chords under the 808." },
+  "hybrid-trap": { articulation: "sustain", reason: "Sustained chords bridging trap and EDM." },
+  "chicago-drill": { articulation: "sustain", reason: "Drill keys are sustained, minor and atmospheric." },
+  "uk-drill": { articulation: "sustain", reason: "As Chicago drill." },
+  "brooklyn-drill": { articulation: "sustain", reason: "As Chicago drill." },
+  "jersey-drill": { articulation: "sustain", reason: "As Chicago drill." },
+  "jersey-club": { articulation: "stab", reason: "Jersey club chops chords into short hits." },
+  moombahton: { articulation: "stab", reason: "Short stabs over the dembow." },
+  footwork: { articulation: "stab", reason: "Chords arrive as clipped samples." },
+  "future-bass": { articulation: "sustain", reason: "Future bass's signature is a sustained supersaw chord." },
+  "kawaii-future-bass": { articulation: "sustain", reason: "Bright sustained supersaw chords are the signature." },
+  "big-beat": { articulation: "block", reason: "Big-beat chords are held over the breakbeat." },
+  electro: { articulation: "stab", reason: "Electro stabs are clipped and robotic." },
+  breakbeat: { articulation: "block", reason: "Held chords over the break." },
+
+  // ---- Rock / Metal: riffs are short, walls are long ----------------------------
+  "rock-and-roll": { articulation: "strum", reason: "Guitar strums, not block chords." },
+  "blues-rock": { articulation: "strum", reason: "Strummed dominant-7th comping." },
+  "hard-rock": { articulation: "block", reason: "Power chords are held for their full value, unlike metal's mutes." },
+  "punk-rock": { articulation: "stab", reason: "Downstroked power chords are short and percussive." },
+  "post-punk": { articulation: "strum", reason: "Chorus/jangle guitar strums." },
+  "new-wave": { articulation: "block", reason: "Held synth/guitar chords." },
+  "heavy-metal": { articulation: "stab", reason: "Palm-muted power chords are clipped rhythm, not sustained harmony." },
+  "thrash-metal": { articulation: "stab", reason: "Palm-muted riffing is as short as it gets." },
+  "death-metal": { articulation: "stab", reason: "As thrash; the riff is the rhythm." },
+  "black-metal": { articulation: "sustain", reason: "Tremolo picking is continuous, so the chord must not decay between steps." },
+  "doom-metal": { articulation: "sustain", reason: "Slow, heavy chords ring for whole bars." },
+  metalcore: { articulation: "stab", reason: "Breakdown chugs are clipped and rhythmically decisive." },
+  grunge: { articulation: "block", reason: "Distorted chords are held through the bar." },
+  "alternative-rock": { articulation: "strum", reason: "Song-driven strummed guitar." },
+  "progressive-rock": { articulation: "block", reason: "Sustained organ/guitar pads under long-form sections." },
+  "math-rock": { articulation: "roll", reason: "Clean tapped arpeggios ripple across the chord." },
+  "shoe-gaze": { articulation: "sustain", reason: "The wall of sound is one continuous chord." },
+
+  // ---- Jazz / Blues: comp, don't hold -------------------------------------------
+  "delta-blues": { articulation: "strum", reason: "Acoustic blues is strummed and fingerpicked." },
+  "chicago-blues": { articulation: "comp", reason: "Electric blues comps short behind the soloist." },
+  "texas-blues": { articulation: "strum", reason: "Strummed shuffle." },
+  "electric-blues": { articulation: "comp", reason: "Short comping hits." },
+  "traditional-jazz": { articulation: "comp", reason: "Banjo/piano rhythm comping." },
+  bebop: { articulation: "comp", reason: "Bebop comping is short and displaced so the soloist has room." },
+  "hard-bop": { articulation: "comp", reason: "Short displaced comping so the horn solo has room." },
+  "cool-jazz": { articulation: "comp", reason: "Cool jazz comps sparsely." },
+  "modal-jazz": { articulation: "comp", reason: "Modal comping still leaves space; the quartal voicing floats over it." },
+  "free-jazz": { articulation: "comp", reason: "Pointillist, non-sustained interjections." },
+  "jazz-fusion": { articulation: "comp", reason: "Electric fusion comps short over the groove." },
+  "smooth-jazz": { articulation: "block", reason: "Smooth jazz sustains its Rhodes pads." },
+  "acid-jazz": { articulation: "comp", reason: "Funk comping is short and syncopated." },
+  "gypsy-jazz": { articulation: "comp", reason: "La pompe is a short percussive strummed comp." },
+
+  // ---- Hip Hop: loops vs trap keys ----------------------------------------------
+  "old-school-hip-hop": { articulation: "block", reason: "Sampled soul/funk chords are held as a loop bed." },
+  "boom-bap": { articulation: "block", reason: "Jazzy Rhodes loops ring under the drums." },
+  "east-coast-hip-hop": { articulation: "block", reason: "Jazzy Rhodes loops ring under the drums." },
+  "west-coast-hip-hop": { articulation: "block", reason: "Held sample-based chords under the groove." },
+  "conscious-hip-hop": { articulation: "block", reason: "Soul/jazz chord beds held as a loop." },
+  "lofi-hip-hop": { articulation: "block", reason: "Dusty Rhodes chords sustain; the wobble supplies the movement." },
+  "g-funk": { articulation: "sustain", reason: "G-funk's whiny lead sits over sustained chord pads." },
+  "trap-rap": { articulation: "sustain", reason: "Trap keys are sparse sustained pads under the 808." },
+  "southern-hip-hop": { articulation: "sustain", reason: "Sparse sustained keys under the 808." },
+  "cloud-rap": { articulation: "sustain", reason: "Reverb-drenched sustained chords." },
+  "emo-rap": { articulation: "sustain", reason: "Guitar/synth loops sustain." },
+
+  // ---- Pop / R&B: stabs vs beds -------------------------------------------------
+  "traditional-pop": { articulation: "block", reason: "Functional held chords." },
+  "synth-pop": { articulation: "sustain", reason: "Sustained analogue pads." },
+  disco: { articulation: "comp", reason: "Disco's chicken-scratch guitar and string stabs are short and syncopated." },
+  eurodance: { articulation: "stab", reason: "Rave piano stabs are clipped." },
+  funk: { articulation: "stab", reason: "Funk chords are the rhythm section — short, muted, on the off-beat." },
+  soul: { articulation: "comp", reason: "Soul comping is short but warm." },
+  motown: { articulation: "comp", reason: "The Funk Brothers comp short behind the vocal." },
+  "neo-soul": { articulation: "comp", reason: "Neo-soul comping is displaced and spacious." },
+  "contemporary-rnb": { articulation: "sustain", reason: "Modern R&B sustains its pads and keys." },
+  "alternative-rnb": { articulation: "sustain", reason: "As contemporary R&B." },
+  "city-pop": { articulation: "block", reason: "City-pop's maj7/add9 EP chords are held." },
+  "k-pop": { articulation: "block", reason: "Held bright chords under the topline." },
+  "j-pop": { articulation: "block", reason: "Held maj7/add9 keyboard chords under the topline." },
+
+  // ---- Latin / World: rhythm first ----------------------------------------------
+  salsa: { articulation: "stab", reason: "The piano montuno is a short off-beat rhythm pattern, not a chord bed." },
+  bachata: { articulation: "strum", reason: "Bachata guitar strums its characteristic rhythm." },
+  reggae: { articulation: "stab", reason: "The skank is a clipped off-beat chop; a held chord is not reggae." },
+  dancehall: { articulation: "stab", reason: "Clipped off-beat skank chops, as in reggae." },
+  reggaeton: { articulation: "stab", reason: "Short dembow stabs." },
+  afrobeat: { articulation: "comp", reason: "Afrobeat's keys/guitar comp in short interlocking phrases." },
+  amapiano: { articulation: "comp", reason: "Log-drum piano chords are short and syncopated." },
+  "bossa-nova": { articulation: "comp", reason: "Bossa guitar is a syncopated fingerstyle comp, not a strum." },
+  samba: { articulation: "strum", reason: "Cavaquinho strums the samba rhythm." },
+  cumbia: { articulation: "stab", reason: "The cumbia organ/guitar chop is short and off-beat." },
+  kuduro: { articulation: "stab", reason: "Fast clipped stabs." },
+};
+
+/** Instrument-derived articulation fallback, used for custom genres. */
+const ARTICULATION_FAMILIES: ReadonlyArray<{ match: RegExp; articulation: ChordArticulation }> = [
+  { match: /guitar|axe/i, articulation: "strum" },
+  { match: /pad|strings|choir/i, articulation: "sustain" },
+  { match: /organ|brass|marimba|accordion/i, articulation: "stab" },
+  { match: /rhodes|piano|vibraphone|wurli|ep\b/i, articulation: "block" },
+];
+
+/**
+ * Resolves how a genre plays its chords.
+ *
+ * Same precedence as `resolveVoicingStyle`: a curated genre wins, the instrument is only
+ * consulted when the genre id is unknown, so a heuristic can never override curation.
+ */
+export function resolveChordArticulation(
+  genreId: string | null | undefined,
+  chordInstrument?: string | null
+): ChordArticulation {
+  if (genreId) {
+    const override = GENRE_ARTICULATION[genreId];
+    if (override) return override.articulation;
+  }
+  if (chordInstrument) {
+    for (const family of ARTICULATION_FAMILIES) {
+      if (family.match.test(chordInstrument)) return family.articulation;
+    }
+  }
+  return DEFAULT_CHORD_ARTICULATION;
+}
+
+/**
+ * The single call the two engines make: which notes, and how to play them.
+ *
+ * Both `AudioEngine.playChord` and `WavExporter` resolve through this one function —
+ * exporter parity is a hard rule, and two independent resolutions is exactly how the
+ * audition and the bounce drift apart.
+ */
+export function resolveChordTreatment(
+  genreId: string | null | undefined,
+  chordInstrument?: string | null
+): ChordTreatment {
+  const articulation = resolveChordArticulation(genreId, chordInstrument);
+  const definition = CHORD_ARTICULATIONS[articulation];
+  return {
+    style: resolveVoicingStyle(genreId, chordInstrument),
+    articulation,
+    gateScale: definition.gateScale,
+    strumSeconds: definition.strumSeconds,
+  };
 }

@@ -16,8 +16,13 @@ import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
-import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC } from "./chordVoicing";
-import { resolveVoicingStyle } from "../data/genreVoicing";
+import {
+  chordVoicingForStep,
+  chordVoiceGain,
+  chordNoteDuration,
+  chordVoiceOnset,
+} from "./chordVoicing";
+import { resolveChordTreatment } from "../data/genreVoicing";
 import { createMasterLimiter } from "./MasterLimiter";
 
 export interface RenderWavOptions {
@@ -292,15 +297,23 @@ export async function renderPatternOffline(
           // hard rule in this project, so both sides call the same shared module and
           // apply the same per-voice gain — never re-implement it here.
           const midi = pitchVal > 0 ? pitchVal : 60;
-          // Same genre-appropriate voicing as `AudioEngine.playChord`; a generic triad
-          // here would silently break exporter parity for every rock and jazz genre.
-          const notes = chordVoicingForStep(midi, pattern.scale, {
-            style: resolveVoicingStyle(pattern.genre_id, track.instrument),
-          });
+          // Same genre-appropriate chord treatment as `AudioEngine.playChord` — voicing,
+          // note length and onset spread. Resolving any of the three differently here
+          // would silently break exporter parity for every rock, jazz and ambient genre.
+          const treatment = resolveChordTreatment(pattern.genre_id, track.instrument);
+          const notes = chordVoicingForStep(midi, pattern.scale, { style: treatment.style });
           const voiceVel = subVel * chordVoiceGain(notes.length);
+          const chordDur = chordNoteDuration(subDur, gateVal, treatment);
           notes.forEach((note, i) => {
-            // Same stagger as AudioEngine.playChord — parity depends on it.
-            playPolySynthNote(ctx, trackDest, note, subTime + i * CHORD_STRUM_SEC, subDur * gateVal * 1.5, voiceVel, synthPreset);
+            playPolySynthNote(
+              ctx,
+              trackDest,
+              note,
+              chordVoiceOnset(subTime, i, treatment),
+              chordDur,
+              voiceVel,
+              synthPreset
+            );
           });
         } else if (trackId === "lead" || lowerName.includes("lead")) {
           const midi = pitchVal > 0 ? pitchVal : 72;

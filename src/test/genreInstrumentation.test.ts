@@ -44,6 +44,21 @@ const INSTRUMENT_TOKENS: Record<string, string[]> = {
   saw_lead: ["synth lead", "saw lead", "sawtooth synth", "detuned saw", "saw synth", "analog saw", "monosynth", "analog synth"],
   square_lead: ["square", "screech", "chip", "8-bit", "casio", "digital synth"],
   guitar_lead: ["guitar"],
+  // A high-gain *rhythm* guitar, distinct from the lead voice. The phrases below are the
+  // ones the Rock/Metal curation already uses to describe each genre's amplifier, so the
+  // test ties the track instrument to the documented amp character rather than to a
+  // generic "guitar".
+  distorted_guitar: [
+    "distorted guitar",
+    "high-gain",
+    "overdriven guitar",
+    "fuzz",
+    "buzzsaw",
+    "tremolo-picked",
+    "down-tuned",
+    "palm-muted",
+    "solid-body guitar",
+  ],
   pluck_synth: ["pluck"],
   flute_lead: ["flute"],
   sax_lead: ["sax"],

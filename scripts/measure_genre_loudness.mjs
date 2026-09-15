@@ -437,6 +437,9 @@ async function waitForServer(url) {
             legacyRmsDb: Number(entry.legacyRmsDb.toFixed(3)),
             arrangedLufs: Number(entry.arrangedLufs.toFixed(3)),
             arrangedPeakDb: Number(entry.arrangedPeakDb.toFixed(3)),
+            arrangedTruePeakDb: Number.isFinite(entry.arrangedTruePeakDb)
+              ? Number(entry.arrangedTruePeakDb.toFixed(3))
+              : null,
             arrangedRmsDb: Number(entry.arrangedRmsDb.toFixed(3)),
             trimDb: entry.trimDb,
             trimmedLufs: Number.isFinite(entry.trimmedLufs) ? Number(entry.trimmedLufs.toFixed(3)) : null,
@@ -478,7 +481,10 @@ async function waitForServer(url) {
     // genres above 0 dBFS on the sample-peak metric, hard-clipped by the 16-bit encoder.
     // `report.genres` is an object keyed by genre id, not an array.
     const truePeakRows = Object.values(report.genres).filter(
-      (g) => Number.isFinite(g.arrangedTruePeakDb) || Number.isFinite(g.legacyTruePeakDb)
+      (g) =>
+        Number.isFinite(g.trimmedTruePeakDb) ||
+        Number.isFinite(g.arrangedTruePeakDb) ||
+        Number.isFinite(g.legacyTruePeakDb)
     );
     if (truePeakRows.length > 0) {
       const pick = (g) =>

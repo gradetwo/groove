@@ -12,18 +12,30 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
   VOICING_STYLES,
+  CHORD_ARTICULATIONS,
+  CHORD_STRUM_SEC,
+  DEFAULT_CHORD_ARTICULATION,
+  chordNoteDuration,
   chordVoicingForStep,
   resolveVoicingStyle as resolveStyleFromOptions,
+  type ChordArticulation,
   type VoicingStyle,
 } from "../audio/chordVoicing";
 import {
+  CATEGORY_ARTICULATION,
   CATEGORY_VOICING,
   DEFAULT_VOICING_STYLE,
+  GENRE_ARTICULATION,
   GENRE_VOICING,
+  resolveChordArticulation,
+  resolveChordTreatment,
   resolveVoicingStyle,
   voicedGenreIds,
 } from "../data/genreVoicing";
 import { GENRE_INDEX } from "../data/index/loader";
+import { ALL_GENRES } from "../data/genres";
+import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
+import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { SequencerPattern } from "../types/genre";
@@ -336,5 +348,314 @@ describe("rendered output matches the genre's voicing", () => {
       const expected = offsets(chordVoicingForStep(60, "C minor", { style: resolveVoicingStyle(genreId, instrument) }));
       expect(await renderedChordNotes(genreId, instrument), genreId).toEqual(expected);
     }
+  });
+});
+
+/**
+ * Articulation — how the chord is played, not which notes it contains.
+ *
+ * The user's follow-up: chords need genre-typical *fingering* (连音/柱式) and *note
+ * length* (音长), not just genre-typical notes. Before this, every genre got the same
+ * answer: all notes `stepDur · gate · 1.5` long with a flat 3 ms stagger — so a reggae
+ * skank rang like a pad and a funk stab smeared.
+ *
+ * The claims below are musical, so they are stated as such: a stab must be *shorter*
+ * than a sustain, a strum must be *rolled*, and a guitar must not comp like a pad.
+ */
+describe("articulation table", () => {
+  const ALL_ARTICULATIONS = Object.keys(CHORD_ARTICULATIONS) as ChordArticulation[];
+
+  it("orders the articulations by length the way the music does", () => {
+    const g = (a: ChordArticulation) => CHORD_ARTICULATIONS[a].gateScale;
+    // A stab is the shortest thing here; a sustain is the longest.
+    expect(g("stab")).toBeLessThan(g("comp"));
+    expect(g("comp")).toBeLessThan(g("strum"));
+    expect(g("strum")).toBeLessThan(g("block"));
+    expect(g("block")).toBeLessThan(g("sustain"));
+  });
+
+  it("makes block the historical behaviour, so the default is not a surprise", () => {
+    expect(CHORD_ARTICULATIONS.block.gateScale).toBe(1);
+    expect(CHORD_ARTICULATIONS.block.strumSeconds).toBe(CHORD_STRUM_SEC);
+  });
+
+  it("rolls a strum and a roll, and keeps a stab tight", () => {
+    expect(CHORD_ARTICULATIONS.strum.strumSeconds).toBeGreaterThan(CHORD_ARTICULATIONS.block.strumSeconds);
+    expect(CHORD_ARTICULATIONS.roll.strumSeconds).toBeGreaterThan(CHORD_ARTICULATIONS.strum.strumSeconds);
+    expect(CHORD_ARTICULATIONS.stab.strumSeconds).toBeLessThan(CHORD_ARTICULATIONS.block.strumSeconds);
+  });
+
+  it("documents every articulation", () => {
+    for (const a of ALL_ARTICULATIONS) {
+      expect(CHORD_ARTICULATIONS[a].note.length, a).toBeGreaterThan(30);
+      expect(CHORD_ARTICULATIONS[a].gateScale).toBeGreaterThan(0);
+      expect(CHORD_ARTICULATIONS[a].strumSeconds).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("keeps a whole step's stab from overrunning the next step at sane tempos", () => {
+    // A gateScale of 0.3 on a 16th at 200 BPM is ~45 ms — it must not bleed past the
+    // step, or the articulation stops reading as "short" at all.
+    const stepDur = 60 / 200 / 4;
+    const dur = chordNoteDuration(stepDur, 0.8, CHORD_ARTICULATIONS.stab);
+    expect(dur).toBeLessThan(stepDur);
+  });
+
+  it("lets a pad outlast its own step, which is what makes it a pad", () => {
+    const stepDur = 60 / 120 / 4;
+    const dur = chordNoteDuration(stepDur, 0.8, CHORD_ARTICULATIONS.sustain);
+    expect(dur).toBeGreaterThan(stepDur * 2);
+  });
+});
+
+describe("genre → articulation resolution", () => {
+  it("gives rhythmic genres short chords and textural genres long ones", () => {
+    // The centre of the user's point, asserted directly.
+    for (const id of ["funk", "reggae", "salsa", "detroit-techno", "heavy-metal", "thrash-metal"]) {
+      const articulation = resolveChordArticulation(id);
+      expect(CHORD_ARTICULATIONS[articulation].gateScale, id).toBeLessThanOrEqual(0.6);
+    }
+    for (const id of ["ambient", "uplifting-trance", "shoe-gaze", "doom-metal", "black-metal"]) {
+      const articulation = resolveChordArticulation(id);
+      expect(CHORD_ARTICULATIONS[articulation].gateScale, id).toBeGreaterThanOrEqual(1.5);
+    }
+  });
+
+  it("strums the guitar genres and comps the jazz genres", () => {
+    expect(resolveChordArticulation("rock-and-roll")).toBe("strum");
+    expect(resolveChordArticulation("bebop")).toBe("comp");
+    expect(resolveChordArticulation("gypsy-jazz")).toBe("comp");
+  });
+
+  it("does not give the whole library one articulation", () => {
+    const used = new Set(
+      (GENRE_INDEX as Array<{ id: string }>).map((g) => resolveChordArticulation(g.id))
+    );
+    expect(used.size).toBeGreaterThanOrEqual(4);
+  });
+
+  it("uses the instrument for a custom genre, never overriding curation", () => {
+    expect(resolveChordArticulation("custom-xyz", "guitar_lead")).toBe("strum");
+    expect(resolveChordArticulation("custom-xyz", "warm_pad")).toBe("sustain");
+    expect(resolveChordArticulation("custom-xyz", "rhodes_ep")).toBe("block");
+    // bebop is curated to comp; a guitar on its chords track must not turn it into a strum.
+    expect(resolveChordArticulation("bebop", "guitar_lead")).toBe("comp");
+  });
+
+  it("returns the documented default for unknown input", () => {
+    expect(resolveChordArticulation(null)).toBe(DEFAULT_CHORD_ARTICULATION);
+    expect(resolveChordArticulation("nope", "unknown")).toBe(DEFAULT_CHORD_ARTICULATION);
+  });
+
+  it("resolves a complete treatment from one call", () => {
+    const treatment = resolveChordTreatment("death-metal", "guitar_lead");
+    expect(treatment.style).toBe("power");
+    expect(treatment.articulation).toBe("stab");
+    expect(treatment.gateScale).toBe(CHORD_ARTICULATIONS.stab.gateScale);
+    expect(treatment.strumSeconds).toBe(CHORD_ARTICULATIONS.stab.strumSeconds);
+  });
+
+  it("covers every genre in the index with a known articulation", () => {
+    const known = new Set(Object.keys(CHORD_ARTICULATIONS));
+    for (const g of GENRE_INDEX as Array<{ id: string }>) {
+      expect(known, g.id).toContain(resolveChordArticulation(g.id));
+    }
+  });
+});
+
+describe("articulation table integrity", () => {
+  const indexIds = new Set((GENRE_INDEX as Array<{ id: string }>).map((g) => g.id));
+  const known = new Set(Object.keys(CHORD_ARTICULATIONS));
+
+  it("every articulation override names a genre that exists", () => {
+    for (const id of Object.keys(GENRE_ARTICULATION)) {
+      expect(indexIds, `GENRE_ARTICULATION has '${id}' but the library has no such genre`).toContain(id);
+    }
+  });
+
+  it("every override uses a known articulation and a real reason", () => {
+    for (const [id, override] of Object.entries(GENRE_ARTICULATION)) {
+      expect(known, `${id} uses unknown articulation`).toContain(override.articulation);
+      expect(override.reason.length, `${id} needs a real reason`).toBeGreaterThan(15);
+    }
+  });
+
+  it("every category has an articulation default", () => {
+    const categories = new Set((GENRE_INDEX as Array<{ category: string }>).map((g) => g.category));
+    for (const category of categories) {
+      expect(
+        CATEGORY_ARTICULATION[category as keyof typeof CATEGORY_ARTICULATION],
+        `no articulation default for ${category}`
+      ).toBeTruthy();
+    }
+  });
+});
+
+describe("rendered note length and onsets follow the genre", () => {
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  /** Renders one chord step and reports the note length and onset spread actually used. */
+  async function renderedChordTiming(genreId: string, instrument: string) {
+    restore?.();
+    restore = installFakeOfflineAudioContext();
+    const steps = 4;
+    const pattern = {
+      genre_id: genreId,
+      bpm: 120,
+      swing: 0,
+      scale: "C minor",
+      totalSteps: steps,
+      tracks: [
+        {
+          track_id: "chords",
+          name: "Chords",
+          instrument,
+          steps: [1, 0, 0, 0],
+          velocity: new Array(steps).fill(100),
+          pitch: new Array(steps).fill(60),
+          gate: new Array(steps).fill(0.8),
+          volume: 0.8,
+          pan: 0,
+          mute: false,
+          solo: false,
+        },
+      ],
+    } as unknown as SequencerPattern;
+
+    await renderPatternOffline(pattern);
+    const ctx = FakeOfflineAudioContext.lastInstance!;
+    const onsets = ctx.createdOscillators.map((o) => o.startedAt[0]).filter((t): t is number => typeof t === "number");
+    const stops = ctx.createdOscillators.map((o) => o.stoppedAt[0]).filter((t): t is number => typeof t === "number");
+    expect(onsets.length).toBeGreaterThan(0);
+    expect(stops.length).toBeGreaterThan(0);
+    const firstOnset = Math.min(...onsets);
+    const lastOnset = Math.max(...onsets);
+    const lastStop = Math.max(...stops);
+    return { onsetSpread: lastOnset - firstOnset, audibleLength: lastStop - firstOnset };
+  }
+
+  it("isolates articulation by holding the instrument constant", async () => {
+    // Comparing a metal guitar against an ambient pad mixes two variables: the
+    // articulation *and* the preset's own amp release, which is what makes the raw
+    // ratio smaller than the gateScale ratio alone would suggest. Holding the
+    // instrument fixed leaves the articulation as the only difference.
+    const block = await renderedChordTiming("deep-house", "rhodes_ep"); // block
+    const sustain = await renderedChordTiming("trip-hop", "rhodes_ep"); // sustain
+    const blockOrgan = await renderedChordTiming("progressive-rock", "m1_organ"); // block
+    const stabbed = await renderedChordTiming("chicago-house", "m1_organ"); // stab
+
+    expect(sustain.audibleLength).toBeGreaterThan(block.audibleLength);
+    expect(blockOrgan.audibleLength).toBeGreaterThan(stabbed.audibleLength);
+  });
+
+  it("makes a metal stab far shorter than an ambient pad", async () => {
+    const metal = await renderedChordTiming("death-metal", "guitar_lead");
+    const ambient = await renderedChordTiming("ambient", "warm_pad");
+    // Different instruments, so the presets' amp releases blur the ratio (hence the
+    // modest threshold); the instrument-matched comparison above is the sharp assertion.
+    expect(ambient.audibleLength / metal.audibleLength).toBeGreaterThan(2.5);
+  });
+
+  it("rolls a strummed guitar chord but not a block-chord pad", async () => {
+    const strummed = await renderedChordTiming("rock-and-roll", "guitar_lead");
+    const block = await renderedChordTiming("city-pop", "rhodes_ep");
+    expect(strummed.onsetSpread).toBeGreaterThan(block.onsetSpread);
+    expect(strummed.onsetSpread).toBeGreaterThan(0.01);
+  });
+
+  it("matches the resolver for every articulation-bearing genre it renders", async () => {
+    for (const [genreId, instrument] of [
+      ["funk", "rhodes_ep"],
+      ["reggae", "m1_organ"],
+      ["bebop", "piano_lead"],
+      ["shoe-gaze", "guitar_lead"],
+    ] as const) {
+      const treatment = resolveChordTreatment(genreId, instrument);
+      const timing = await renderedChordTiming(genreId, instrument);
+      // Voices are onset-staggered by exactly the articulation's strum, so the spread
+      // across a 3-4 note voicing is (n-1) × strumSeconds.
+      const notes = chordVoicingForStep(60, "C minor", { style: treatment.style });
+      expect(timing.onsetSpread, genreId).toBeCloseTo(
+        (notes.length - 1) * treatment.strumSeconds,
+        6
+      );
+    }
+  });
+});
+
+/**
+ * The chord *instrument* per genre, and that the new rhythm-guitar voice really is a
+ * different instrument rather than a renamed lead.
+ *
+ * The N-12 curation already documented a specific amplifier per metal genre — "HM-2
+ * Buzzsaw Guitar", "High-Gain 5150 Guitar", "Scooped-Mid High-Gain Guitar" — while every
+ * one of those tracks played the same generic `guitar_lead`. These tests close that gap
+ * and pin the audible difference, so "distorted" cannot degrade into a label.
+ */
+describe("chord instrument per genre", () => {
+  const chordInstrumentOf = (genreId: string): string => {
+    const genre = (ALL_GENRES as Array<{ id: string; sequencer_pattern: { tracks: Array<{ track_id: string; instrument: string }> } }>)
+      .find((g) => g.id === genreId);
+    if (!genre) throw new Error(`unknown genre ${genreId}`);
+    const chords = genre.sequencer_pattern.tracks.find((t) => t.track_id === "chords");
+    if (!chords) throw new Error(`${genreId} has no chords track`);
+    return chords.instrument;
+  };
+
+  it("gives the high-gain genres a distorted rhythm guitar", () => {
+    for (const id of ["hard-rock", "punk-rock", "heavy-metal", "thrash-metal", "death-metal", "black-metal", "doom-metal", "metalcore", "grunge"]) {
+      expect(chordInstrumentOf(id), id).toBe("distorted_guitar");
+    }
+  });
+
+  it("leaves the non-high-gain guitar genres on the lead guitar", () => {
+    // The change must be targeted: these are guitar genres whose chords are not chugged.
+    for (const id of ["rock-and-roll", "blues-rock", "post-punk", "alternative-rock", "math-rock", "shoe-gaze"]) {
+      expect(chordInstrumentOf(id), id).toBe("guitar_lead");
+    }
+  });
+
+  it("did not sweep up the rock genres that were never on a guitar", () => {
+    // `new-wave` comps on a pad and `progressive-rock` on an organ — both predate this
+    // change and neither is a high-gain chord genre, so the targeted edit must not have
+    // touched them. (My first version of this test assumed they were guitars; the data
+    // said otherwise.)
+    expect(chordInstrumentOf("new-wave")).not.toBe("distorted_guitar");
+    expect(chordInstrumentOf("progressive-rock")).not.toBe("distorted_guitar");
+  });
+
+  it("maps the new instrument to a preset rather than the global default", () => {
+    const preset = resolveInstrumentPreset("distorted_guitar", "chords");
+    expect(preset).toBe(DEFAULT_SYNTH_PRESETS.distortedGuitar);
+    expect(preset).not.toBe(DEFAULT_SYNTH_PRESETS.guitarLead);
+  });
+
+  it("makes the distorted voice measurably heavier, not just relabelled", () => {
+    const lead = DEFAULT_SYNTH_PRESETS.guitarLead;
+    const distorted = DEFAULT_SYNTH_PRESETS.distortedGuitar;
+    // Darker: a power chord lives in the low-mids, so the cutoff must sit well below the
+    // lead's — this is what stops a distorted chord fizzing.
+    expect(distorted.filterCutoff).toBeLessThan(lead.filterCutoff);
+    // More aggressive: the resonant midrange honk that makes it cut.
+    expect(distorted.filterQ).toBeGreaterThan(lead.filterQ);
+    // Thicker: two saws rather than saw+triangle, at a much higher second-oscillator mix.
+    expect(distorted.osc2Mix).toBeGreaterThan(lead.osc2Mix);
+    // Tighter: palm mutes need a fast decay and a short release.
+    expect(distorted.adsr.attack).toBeLessThanOrEqual(lead.adsr.attack);
+    expect(distorted.adsr.release).toBeLessThan(lead.adsr.release);
+  });
+
+  it("resolves a complete treatment for a metal genre end to end", () => {
+    const treatment = resolveChordTreatment("death-metal", chordInstrumentOf("death-metal"));
+    // Thirdless power chord, struck short, with the high-gain rhythm voice.
+    expect(treatment.style).toBe("power");
+    expect(treatment.articulation).toBe("stab");
+    expect(resolveInstrumentPreset(chordInstrumentOf("death-metal"), "chords")).toBe(
+      DEFAULT_SYNTH_PRESETS.distortedGuitar
+    );
   });
 });

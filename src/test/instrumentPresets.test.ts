@@ -32,7 +32,10 @@ const SYNTH_TRACK_IDS = new Set(["bass", "chords", "chord", "lead", "fx"]);
 const EXPECTED_SYNTH_INSTRUMENTS: Record<string, string[]> = {
   lead: ["accordion_lead","acid_303","bell_lead","brass_section","brass_synth","cowbell_lead","flute_lead","fm_lead","growl_lead","guitar_lead","harmonica_lead","m1_organ","muted_trumpet","organ_lead","pan_flute","piano_lead","pluck_string","pluck_synth","saw_lead","sax_lead","sine_lead","sitar_lead","square_lead","strings_lead","supersaw","trumpet_lead","warm_pad"],
   bass: ["808_bass","acid_303","analog_bass","distorted_kick","finger_bass","fm_lead","growl_lead","pick_bass","reese_bass","saw_lead","slap_bass","square_lead","sub_bass","walking_upright"],
-  chords: ["accordion_lead","brass_synth","guitar_lead","m1_organ","marimba_lead","piano_lead","rhodes_ep","strings_lead","supersaw","vibraphone","warm_pad"],
+  // `distorted_guitar` was added when the Rock/Metal genres' *chords* tracks moved off
+  // the lead-guitar preset: a power chord needs the high-gain rhythm voice, while the
+  // lead track legitimately stays `guitar_lead`.
+  chords: ["accordion_lead","brass_synth","distorted_guitar","guitar_lead","m1_organ","marimba_lead","piano_lead","rhodes_ep","strings_lead","supersaw","vibraphone","warm_pad"],
   fx: ["horn_stab","laser_zap","noise_rise","noise_sweep","reverse_cymbal","sub_drop","sweep_down","tape_stop","vinyl_crackle"],
 };
 
