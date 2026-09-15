@@ -441,15 +441,34 @@ export function romanToChord(
   let baseNumeral = numeral.replace(/(maj7|m7|7|5|add9|sus4|sus2|dim7|m7b5)/g, "");
   if (!baseNumeral) baseNumeral = numeral;
 
-  const found = scaleList.find(d => d.numeral.toLowerCase() === baseNumeral.toLowerCase()) 
+  // Exact-case first: the minor table carries **both** `v` (diatonic, minor) and `V` (the
+  // harmonic-minor dominant, major). A case-insensitive lookup finds `v` first and makes the
+  // dominant unreachable — the Andalusian cadence's `i–VII–VI–V` then played E minor where every
+  // chart, and the card, says E major.
+  const found = scaleList.find(d => d.numeral === baseNumeral)
+    || scaleList.find(d => d.numeral.toLowerCase() === baseNumeral.toLowerCase())
     || MAJOR_SCALE_DEGREES[0];
 
   const chordRootIdx = (keyIdx + found.degree) % 12;
   const chordRoot = NOTE_NAMES[chordRootIdx];
 
-  // Determine chord quality
+  // Determine chord quality.
+  //
+  // The *case* of the numeral decides the chord family before the scale's diatonic default does:
+  // `VI7` in C is the secondary dominant A7, not Amin7 — the diatonic default for degree 6 would
+  // make it minor, which is a different chord and a different sound. Only a lowercase base
+  // (`ii`, `vi`, `iv`) is minor; an uppercase one (`II`, `VI`, `III`) is major.
   let quality: ChordQuality = found.defaultQuality;
-  const isBaseMinor = found.defaultQuality === "min" || (baseNumeral === baseNumeral.toLowerCase() && !baseNumeral.startsWith("b"));
+  const hasLetter = /[ivIV]/.test(baseNumeral);
+  const baseIsLowercase = hasLetter && baseNumeral === baseNumeral.toLowerCase() && !baseNumeral.startsWith("b");
+  if (hasLetter) {
+    // The numeral's case is the chord family; the scale only supplies the default for a bare
+    // degree. This is what makes borrowed/alterable numerals behave: `iv` in a major key is the
+    // minor subdominant, `VI` in a major key (or `V` in a minor key) is major.
+    if (!baseIsLowercase && found.defaultQuality === "min") quality = "maj";
+    else if (baseIsLowercase && found.defaultQuality === "maj") quality = "min";
+  }
+  const isBaseMinor = baseIsLowercase || (!hasLetter && found.defaultQuality === "min");
   if (numeral.includes("maj7")) quality = "maj7";
   else if (numeral.includes("m7") || numeral.includes("min7") || (numeral.includes("7") && isBaseMinor)) quality = "min7";
   else if (numeral.includes("7")) quality = "7";

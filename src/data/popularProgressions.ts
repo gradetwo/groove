@@ -194,7 +194,7 @@ export const POPULAR_PROGRESSIONS: PopularProgression[] = [
     name: { zh: "史诗小调英雄走向 (i - VI - III - VII)", en: "Epic Minor Hero Progression (i - VI - III - VII)" },
     category: "emotional_cinematic",
     roman: ["i", "VI", "III", "VII"],
-    defaultKey: "Am",
+    defaultKey: "A",
     isMinorKey: true,
     chords: [
       { root: "A", quality: "min", duration: 4 },
@@ -226,7 +226,7 @@ export const POPULAR_PROGRESSIONS: PopularProgression[] = [
     name: { zh: "安达卢西亚终止式 (i - VII - VI - V)", en: "Andalusian Cadence (i - VII - VI - V)" },
     category: "emotional_cinematic",
     roman: ["i", "VII", "VI", "V"],
-    defaultKey: "Am",
+    defaultKey: "A",
     isMinorKey: true,
     chords: [
       { root: "A", quality: "min", duration: 4 },
@@ -469,9 +469,12 @@ export const POPULAR_PROGRESSIONS: PopularProgression[] = [
     defaultKey: "C",
     isMinorKey: false,
     chords: [
-      { root: "D", quality: "min9", duration: 4 },
-      { root: "G", quality: "9", duration: 4 },
-      { root: "C", quality: "maj9", duration: 4 },
+      // Spelled to match the numerals the engine maps (`ii7 V7 Imaj7 VI7`): the card used to
+      // print min9/9/maj9 while the engine played min7/7/maj7, i.e. it named chords the user would
+      // never hear. `romanToChord` does not parse a bare `9`, so the numerals stay 7ths.
+      { root: "D", quality: "min7", duration: 4 },
+      { root: "G", quality: "7", duration: 4 },
+      { root: "C", quality: "maj7", duration: 4 },
       { root: "A", quality: "7", duration: 4 },
     ],
     description: {

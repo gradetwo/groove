@@ -246,19 +246,24 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
       setIsPlaying(true);
       setPreviewingProgId(prog.id);
+      // Auditioning deliberately keeps **the user's** instrument and playing style.
+      //
+      // It used to adopt `prog.suggestedTimbre` / `prog.suggestedStyle`, so picking "piano, block"
+      // and then auditioning a guitar-strum progression played a guitar — the selection above the
+      // list stopped describing what you were hearing. The suggestion is still shown on the card
+      // as a hint; it is not applied behind the user's back.
+      // Tempo is a different axis: a progression's tempo is part of what is being auditioned.
       engine.setBpm(prog.suggestedBpm);
       setBpm(prog.suggestedBpm);
-      engine.setTimbre(prog.suggestedTimbre);
-      setTimbre(prog.suggestedTimbre);
-      engine.setStyle(prog.suggestedStyle);
-      setStyle(prog.suggestedStyle);
+      engine.setTimbre(timbre);
+      engine.setStyle(coerceStyle(timbre, style));
 
       engine.startProgression(mappedChords, (info: ChordPlaybackInfo) => {
         setActivePlaybackChordIdx(info.chordIndex);
         setActivePlaybackNotes(info.activeNotes);
       });
     }
-  }, [previewingProgId, isPlaying, keyRoot, isMinorKey]);
+  }, [previewingProgId, isPlaying, keyRoot, isMinorKey, timbre, style]);
 
   // Load curated progression into workspace
   const handleLoadProgression = useCallback((prog: PopularProgression) => {
