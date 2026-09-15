@@ -40,6 +40,19 @@ export const chordsMessages = {
   chords_style_strum: { en: "Strum", zh: "扫弦 Strum" },
   chords_style_arp: { en: "Arpeggio", zh: "琶音 Arp" },
   chords_style_block: { en: "Block", zh: "柱式 Block" },
+  // Why the style row is shorter for some instruments (see `src/audio/chordStyles.ts`).
+  chords_style_note_piano: {
+    en: "A keyboard strikes notes; there is no plectrum and nothing to sweep, so strumming is not offered.",
+    zh: "键盘是击键发声：没有拨片、没有可扫的弦，所以不提供扫弦。",
+  },
+  chords_style_note_guitar: {
+    en: "A guitar can sweep its strings — that is what tells it apart from a keyboard.",
+    zh: "吉他能扫弦——这正是它与键盘的区别。",
+  },
+  chords_style_note_power: {
+    en: "Power chords are down-picked or muted: strum and block, not broken chords or arpeggios.",
+    zh: "强力和弦是下扫或闷击：只有扫弦与柱式，不做分解和弦或琶音。",
+  },
   chords_voicing_mode: { en: "Live Voicing Visualizer", zh: "实时指板/琴键可视化模式 (Visualizer Display)" },
   chords_timeline_channel: { en: "Chord Timeline (Click block to edit parameters)", zh: "和弦音序通道 (点击和弦方块进行编辑调色)" },
   chords_add_chord: { en: "Add Chord", zh: "添加和弦" },

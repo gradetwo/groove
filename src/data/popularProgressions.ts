@@ -114,7 +114,10 @@ export const POPULAR_PROGRESSIONS: PopularProgression[] = [
     ],
     suggestedBpm: 124,
     suggestedTimbre: "piano",
-    suggestedStyle: "strum"
+    // A keyboard has no strings to sweep: the flowing feel this progression wants is a broken
+    // chord, which is `ballad`. (It previously suggested `strum`, a style a piano cannot play —
+    // see src/audio/chordStyles.ts.)
+    suggestedStyle: "ballad"
   },
   {
     id: "pop-rock-turnaround",
@@ -313,7 +316,9 @@ export const POPULAR_PROGRESSIONS: PopularProgression[] = [
     ],
     suggestedBpm: 96,
     suggestedTimbre: "piano",
-    suggestedStyle: "strum"
+    // Rhodes-style broken chords, not a strum — a keyboard cannot sweep strings
+    // (see src/audio/chordStyles.ts).
+    suggestedStyle: "ballad"
   },
 
   // 4. J-Pop & Anime Royal Road

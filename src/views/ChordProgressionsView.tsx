@@ -55,6 +55,19 @@ import {
   PlayingStyle, 
   ChordPlaybackInfo 
 } from "../audio/ChordAudioEngine";
+import {
+  coerceStyle,
+  styleNoteKeyForTimbre,
+  stylesForTimbre,
+} from "../audio/chordStyles";
+
+/** i18n label per playing style, for the instrument-filtered style row. */
+const STYLE_LABEL_KEYS: Record<PlayingStyle, string> = {
+  ballad: "chords_style_pop",
+  strum: "chords_style_strum",
+  arpeggio: "chords_style_arp",
+  block: "chords_style_block",
+};
 import { PianoKeyboardVisualizer } from "../components/chords/PianoKeyboardVisualizer";
 import { GuitarFretboardVisualizer } from "../components/chords/GuitarFretboardVisualizer";
 import { MidiExporter } from "../audio/MidiExporter";
@@ -128,12 +141,22 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
     };
   }, []);
 
+  // An instrument cannot play every style (a piano cannot strum), so the style is repaired
+  // whenever the instrument changes — including on the paths that load a curated progression's
+  // own `suggestedTimbre` + `suggestedStyle` pair, which can disagree.
+  useEffect(() => {
+    setStyle((current) => {
+      const next = coerceStyle(timbre, current);
+      return next === current ? current : next;
+    });
+  }, [timbre]);
+
   // Synchronize engine parameters
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.setBpm(bpm);
       engineRef.current.setTimbre(timbre);
-      engineRef.current.setStyle(style);
+      engineRef.current.setStyle(coerceStyle(timbre, style));
       engineRef.current.setLoop(isLooping);
       engineRef.current.setArpConfig(arpConfig);
       engineRef.current.setStrumConfig(strumConfig);
@@ -656,44 +679,29 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               <Sliders className="w-3.5 h-3.5" />
               <span>{t("chords_style")}</span>
             </label>
-            <div className="grid grid-cols-4 gap-1 bg-[#0a0d14] p-1 rounded-lg border border-[#232a3b]">
-              <button
-                type="button"
-                onClick={() => setStyle("ballad")}
-                className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-colors ${
-                  style === "ballad" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
-                }`}
-              >
-                {t("chords_style_pop")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setStyle("strum")}
-                className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-colors ${
-                  style === "strum" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
-                }`}
-              >
-                {t("chords_style_strum")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setStyle("arpeggio")}
-                className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-colors ${
-                  style === "arpeggio" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
-                }`}
-              >
-                {t("chords_style_arp")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setStyle("block")}
-                className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-colors ${
-                  style === "block" ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
-                }`}
-              >
-                {t("chords_style_block")}
-              </button>
+            <div
+              className={`grid ${
+                { 4: "grid-cols-4", 3: "grid-cols-3", 2: "grid-cols-2" }[stylesForTimbre(timbre).length] ?? "grid-cols-3"
+              } gap-1 bg-[#0a0d14] p-1 rounded-lg border border-[#232a3b]`}
+            >
+              {stylesForTimbre(timbre).map((candidate) => (
+                <button
+                  key={candidate}
+                  type="button"
+                  onClick={() => setStyle(candidate)}
+                  data-testid={`chord-style-${candidate}`}
+                  className={`px-1.5 py-1.5 rounded text-[11px] font-medium transition-colors ${
+                    style === candidate ? "bg-[#4ad8c8] text-zinc-950 font-bold" : "text-text-sub hover:text-white"
+                  }`}
+                >
+                  {t(STYLE_LABEL_KEYS[candidate])}
+                </button>
+              ))}
             </div>
+            {/* Why the row can be shorter than four: the instrument decides. */}
+            <p className="text-[10px] leading-snug text-text-dim" data-testid="chord-style-note">
+              {t(styleNoteKeyForTimbre(timbre))}
+            </p>
           </div>
 
           {/* Visualizer Display Toggle */}
