@@ -30,20 +30,10 @@ const SYNTH_TRACK_IDS = new Set(["bass", "chords", "chord", "lead", "fx"]);
  * whoever added it must give it a preset.
  */
 const EXPECTED_SYNTH_INSTRUMENTS: Record<string, string[]> = {
-  lead: ["saw_lead", "guitar_lead", "flute_lead", "pluck_synth", "square_lead"],
-  bass: [
-    "sub_bass",
-    "808_bass",
-    "walking_upright",
-    "acid_303",
-    "reese_bass",
-    "saw_lead",
-    "slap_bass",
-    "square_lead",
-    "distorted_kick",
-  ],
-  chords: ["warm_pad", "rhodes_ep", "guitar_lead", "supersaw", "brass_synth", "m1_organ"],
-  fx: ["noise_sweep"],
+  lead: ["accordion_lead","brass_section","brass_synth","flute_lead","guitar_lead","harmonica_lead","muted_trumpet","piano_lead","pluck_synth","saw_lead","sax_lead","square_lead","trumpet_lead"],
+  bass: ["808_bass","acid_303","distorted_kick","finger_bass","reese_bass","saw_lead","slap_bass","square_lead","sub_bass","walking_upright"],
+  chords: ["accordion_lead","brass_synth","guitar_lead","m1_organ","piano_lead","rhodes_ep","supersaw","vibraphone","warm_pad"],
+  fx: ["horn_stab","noise_rise","noise_sweep","sub_drop","tape_stop","vinyl_crackle"],
 };
 
 interface TrackPair {
