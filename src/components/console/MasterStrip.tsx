@@ -19,6 +19,11 @@ export interface MasterStripProps {
  * analysers, and the transport toggle that starts the pattern the desk is
  * mixing. The master fader has no store field, so it writes straight to
  * `AudioEngine.setMasterVolume`.
+ *
+ * The strip is `sticky right-0` inside the desk's horizontal scroll container: at
+ * 1440px the eight channels already overflow, and the master fader plus transport
+ * are the two controls you must never have to scroll to reach. The negative-margin
+ * shadow paints a soft edge so strips scrolling beneath it stay legible.
  */
 export const MasterStrip: React.FC<MasterStripProps> = ({
   volume,
@@ -32,7 +37,7 @@ export const MasterStrip: React.FC<MasterStripProps> = ({
   return (
     <div
       data-testid="console-master"
-      className="flex w-[168px] shrink-0 flex-col items-center gap-3 rounded-xl border border-accent/40 bg-panel2 px-3 py-3 shadow-[0_0_24px_rgba(245,183,61,0.08)]"
+      className="sticky right-0 z-10 flex w-[168px] shrink-0 flex-col items-center gap-3 rounded-xl border border-accent/40 bg-panel2 px-3 py-3 shadow-[-12px_0_20px_-8px_rgba(0,0,0,0.75),0_0_24px_rgba(245,183,61,0.08)]"
     >
       <div className="flex w-full items-center justify-between">
         <span className="font-['JetBrains_Mono'] text-[11px] font-bold tracking-[0.12em] text-accent">

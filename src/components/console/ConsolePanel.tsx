@@ -388,7 +388,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
           description={t("console_empty_desc")}
         />
       ) : (
-        <div className="w-full overflow-x-auto pb-4">
+        <div className="w-full overflow-x-auto pb-4" data-testid="console-desk-scroll">
           <div className="flex min-w-max items-stretch gap-2.5">
             {tracks.map((track, trackIdx) => {
               const visual = getTrackVisual(track.track_id, trackIdx);
