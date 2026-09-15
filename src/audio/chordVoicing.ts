@@ -20,18 +20,130 @@
  */
 import { parseScaleString, SCALES, NOTE_NAMES } from "../utils/scaleTheory";
 
-/** Triad (3 notes) or seventh (4 notes). */
+/**
+ * How a chord is voiced.
+ *
+ * A single diatonic 1-3-5 is wrong for most of this library. Rock and metal are built on
+ * **power chords** (root + fifth, deliberately no third — the third is what makes a chord
+ * major or minor, and that ambiguity plus the distortion intermodulation is the sound).
+ * Jazz comping wants **shell** and **extended** voicings (3rds and 7ths, often no 5th, plus
+ * 9ths). Modal jazz is **quartal**. Blues is dominant **sevenths**. Ambient and shoegaze
+ * want wide, thirdless **open** stacks. Pop and city pop want **add9**.
+ *
+ * Note where this knowledge has to live: the genre records' `common_chords` field is
+ * **degenerate** — every one of the 159 genres carries one of only two identical strings
+ * (`i–VI–III–VII` / `i–v–VI–VII`), so it cannot distinguish bebop from death metal. The
+ * genre-appropriate choice therefore comes from `src/data/genreVoicing.ts` (category
+ * profile + per-genre override), exactly like the mix table does for volume/pan.
+ */
+export type VoicingStyle =
+  | "power"
+  | "triad"
+  | "add9"
+  | "sus"
+  | "shell"
+  | "seventh"
+  | "extended"
+  | "quartal"
+  | "open";
+
+/**
+ * Legacy two-value density, still accepted so existing callers keep working.
+ * `triad` → `"triad"`, `seventh` → `"seventh"`.
+ */
 export type VoicingDensity = "triad" | "seventh";
 
+interface StyleDefinition {
+  /** `degree` stacks scale degrees (diatonic); `interval` uses fixed semitones. */
+  mode: "degree" | "interval";
+  /** For `degree`: scale-degree index offsets. For `interval`: semitone offsets. */
+  steps: readonly number[];
+  /** Largest root-to-top interval before folding a voice down an octave. */
+  span: number;
+  /** Why this voicing sounds the way it does — kept next to the data on purpose. */
+  note: string;
+}
+
+/**
+ * The style table. Degree-based styles follow the key, so the same style yields a major,
+ * minor or diminished chord depending on the root's scale degree; interval-based styles
+ * (`power`, `open`) do not, because a power chord is *always* a perfect fifth.
+ */
+export const VOICING_STYLES: Record<VoicingStyle, StyleDefinition> = {
+  power: {
+    mode: "interval",
+    steps: [0, 7, 12],
+    span: 12,
+    note: "Root + perfect fifth + octave, no third: the rock/metal power chord. Fixed intervals, not diatonic — a fifth above the 2nd degree of a minor scale is still a perfect fifth.",
+  },
+  open: {
+    mode: "interval",
+    steps: [0, 7, 12, 19],
+    span: 24,
+    note: "Wide and thirdless (root, 5th, octave, 12th) for ambient/shoegaze walls. Needs the larger span or the fold would collapse it back to a triad.",
+  },
+  triad: {
+    mode: "degree",
+    steps: [0, 2, 4],
+    span: 16,
+    note: "Plain 1-3-5. The default for functional dance/pop writing.",
+  },
+  add9: {
+    mode: "degree",
+    steps: [0, 2, 4, 8],
+    span: 16,
+    note: "1-3-5-9: pop, city pop and trance lift without the functional pull of a 7th.",
+  },
+  sus: {
+    mode: "degree",
+    steps: [0, 3, 4],
+    span: 16,
+    note: "1-4-5, no third: suspended, unresolved, the ambient/dub default.",
+  },
+  shell: {
+    mode: "degree",
+    steps: [0, 2, 6],
+    span: 12,
+    note: "1-3-7, no fifth: jazz shell voicing. Keeps the guide tones and leaves the midrange clear for the soloist.",
+  },
+  seventh: {
+    mode: "degree",
+    steps: [0, 2, 4, 6],
+    span: 16,
+    note: "1-3-5-7: blues, soul, disco, funk, boom-bap.",
+  },
+  extended: {
+    mode: "degree",
+    steps: [0, 2, 6, 8],
+    span: 16,
+    note: "1-3-7-9: bebop/hard-bop/neo-soul. The 5th is dropped so the 9th fits without crowding.",
+  },
+  quartal: {
+    mode: "degree",
+    steps: [0, 3, 6],
+    span: 16,
+    note: "Stacked fourths (1-4-b7): modal and free jazz, and the modern ambient/cinematic pad.",
+  },
+};
+
 export interface ChordVoicingOptions {
+  /** Voicing style. Takes precedence over `density` when both are given. */
+  style?: VoicingStyle;
+  /** Legacy alias: `triad` → `triad`, `seventh` → `seventh`. */
   density?: VoicingDensity;
   /**
-   * Largest interval allowed between the root and the top voice, in semitones.
-   * Voicings that would exceed it are folded down an octave so a pad does not smear
-   * into the lead register. This is a safety net: a diatonic triad spans at most 8
-   * semitones and a seventh at most 11, so it rarely engages.
+   * Overrides the style's own span. Largest interval allowed between the root and the
+   * top voice, in semitones; wider voices are folded down an octave so a pad does not
+   * smear into the lead register.
    */
   span?: number;
+}
+
+/** Resolves the effective style from the new option or the legacy one. */
+export function resolveVoicingStyle(options: ChordVoicingOptions = {}): VoicingStyle {
+  if (options.style) return options.style;
+  if (options.density === "seventh") return "seventh";
+  return "triad";
 }
 
 /**
@@ -58,16 +170,25 @@ export function chordVoicingForStep(
 ): number[] {
   if (!Number.isFinite(rootMidi) || rootMidi <= 0) return [rootMidi];
 
-  const density = options.density ?? "triad";
-  const span = options.span ?? 16;
+  const style = resolveVoicingStyle(options);
+  const definition = VOICING_STYLES[style];
+  const span = options.span ?? definition.span;
   const { root: keyRoot, scaleId } = parseScaleString(scale);
+
+  // Interval-based styles do not care about the key at all — a power chord is a perfect
+  // fifth above whatever root is authored, in any scale.
+  if (definition.mode === "interval") {
+    return definition.steps.map((semi) => rootMidi + semi);
+  }
 
   // Chromatic material cannot be harmonised by stacking scale degrees — every semitone
   // is "in scale", so a stack would be a cluster. `parseScaleString` does not know the
   // word "Atonal" (it falls back to minor), so the raw string is checked too; one genre
   // in the library uses it.
   if (scaleId === "chromatic" || /atonal|chrom/i.test(scale ?? "")) {
-    const stack = density === "seventh" ? [0, 7, 12, 19] : CHROMATIC_STACK;
+    // Atonal material still honours the style's *width*: a seventh/extended request gets
+    // an added octave rather than silently collapsing to a triad.
+    const stack = definition.steps.length > 3 ? [0, 7, 12, 19] : CHROMATIC_STACK;
     return stack.map((semi) => rootMidi + semi);
   }
 
@@ -96,9 +217,7 @@ export function chordVoicingForStep(
     }
   }
 
-  const degreeSteps = density === "seventh" ? [0, 2, 4, 6] : [0, 2, 4];
-
-  return degreeSteps.map((step) => {
+  return definition.steps.map((step) => {
     const idx = degreeIndex + step;
     const octave = Math.floor(idx / degrees.length);
     const semitone = degrees[idx % degrees.length] + octave * 12;
