@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import QRCode from "qrcode";
-import { getShareUrlResult } from "../../audio/SequencerUrlShare";
+import { getShareUrlResult, toSharedTrack } from "../../audio/SequencerUrlShare";
 import { GrooveProject, ProjectSortField, ProjectSortOrder } from "../../types/project";
 import { Genre, SequencerPattern } from "../../types/genre";
 import { EffectsRackState, DrumKitType } from "../../audio/AudioEngine";
@@ -316,25 +316,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
         timeSignature: project.timeSignature,
         resolution: project.resolution,
         totalSteps: project.stepCount,
-        tracks: pattern.tracks.map((track) => ({
-          track_id: track.track_id,
-          name: track.name,
-          instrument: track.instrument || "synth",
-          steps: track.steps,
-          velocity: track.velocity,
-          pitch: track.pitch,
-          gate: track.gate,
-          ratchet: track.ratchet,
-          probability: track.probability,
-          trackLength: track.trackLength,
-          mute: track.mute,
-          solo: track.solo,
-          volume: track.volume,
-          pan: track.pan,
-          swing: track.swing,
-          sendA: track.sendA,
-          sendB: track.sendB,
-        })),
+        tracks: pattern.tracks.map(toSharedTrack),
       });
 
       setShareUrl(result.url);

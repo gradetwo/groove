@@ -4,7 +4,7 @@ import { GrooveProject } from "../../../types/project";
 import { DrumKitType, EffectsRackState } from "../../../audio/AudioEngine";
 import { downloadMidiFile } from "../../../audio/MidiExporter";
 import { downloadAbletonProject } from "../../../audio/AbletonExporter";
-import { getShareUrlResult } from "../../../audio/SequencerUrlShare";
+import { getShareUrlResult, toSharedTrack } from "../../../audio/SequencerUrlShare";
 import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../../../audio/WavExporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
@@ -245,17 +245,7 @@ export function useExportActions({
       timeSignature,
       resolution,
       totalSteps: stepCount,
-      tracks: patternRef.current.tracks.map((t) => ({
-        track_id: t.track_id,
-        name: t.name,
-        instrument: t.instrument || "synth",
-        steps: t.steps,
-        velocity: t.velocity,
-        pitch: t.pitch,
-        mute: t.mute,
-        solo: t.solo,
-        volume: t.volume,
-      })),
+      tracks: patternRef.current.tracks.map(toSharedTrack),
     });
     if (!result.url) {
       showToast(

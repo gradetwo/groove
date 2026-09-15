@@ -34,6 +34,39 @@ export interface SharedSequencerState {
   }>;
 }
 
+/**
+ * Maps a sequencer track onto the share payload.
+ *
+ * Both share entry points (the studio toolbar via `useExportActions`, and the project
+ * hub) used to build this object inline, and they diverged: the project hub mapped every
+ * field, while the studio toolbar forgot `gate`, `ratchet`, `probability`, `trackLength`,
+ * `swing`, `pan`, `sendA` and `sendB`. A link shared from the studio therefore arrived
+ * with default gates and a centred, dry mix — even though this codec has always encoded
+ * and decoded all of them. One mapper used by every caller is the only shape that cannot
+ * drift again.
+ */
+export function toSharedTrack(track: SequencerTrack): SharedSequencerState["tracks"][number] {
+  return {
+    track_id: track.track_id,
+    name: track.name,
+    instrument: track.instrument || "synth",
+    steps: track.steps,
+    velocity: track.velocity,
+    pitch: track.pitch,
+    gate: track.gate,
+    ratchet: track.ratchet,
+    probability: track.probability,
+    trackLength: track.trackLength,
+    mute: track.mute,
+    solo: track.solo,
+    volume: track.volume,
+    pan: track.pan,
+    swing: track.swing,
+    sendA: track.sendA,
+    sendB: track.sendB,
+  };
+}
+
 interface CompactTrackPayload {
   id?: string;
   n?: string;
