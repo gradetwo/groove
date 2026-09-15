@@ -12,6 +12,7 @@ import {
   getProjectCount,
   createBlankProject,
   exportProjectPackage,
+  exportProjectToGrooveFile,
   validateGroovePackage,
   importGrooveFile,
   migrateLegacyLocalStorage,
@@ -21,6 +22,7 @@ import {
   LEGACY_MIGRATED_FLAG,
 } from "../features/sequencer/projectDb";
 import { GENRES_MAP } from "../data/genres";
+import { APP_VERSION } from "../version";
 import { GrooveProject } from "../types/project";
 
 describe("IndexedDB Multi-Project Hub Engine (P7-02)", () => {
@@ -154,6 +156,22 @@ describe("IndexedDB Multi-Project Hub Engine (P7-02)", () => {
 
     expect(() => validateGroovePackage(null)).toThrow();
     expect(() => validateGroovePackage({ format: "invalid" })).toThrow();
+  });
+
+  /**
+   * Regression (E-05 follow-up): `exportProjectToGrooveFile` used to default its
+   * `appVersion` parameter to a hardcoded "1.15.2", so every .groove file written
+   * from Project Hub / Export carried a stale version stamp. The version must
+   * come from the single source (`src/version.ts`) only.
+   */
+  it("stamps the current APP_VERSION into exported .groove packages", () => {
+    const proj = createBlankProject(sampleGenre, "Version Stamp");
+    expect(exportProjectPackage(proj).appVersion).toBe(APP_VERSION);
+
+    // The download helper must not fall back to a stale literal either.
+    const src = exportProjectToGrooveFile.toString();
+    expect(src).toContain("APP_VERSION");
+    expect(src).not.toMatch(/appVersion\s*=\s*"\d+\.\d+\.\d+"/);
   });
 
   it("imports a valid .groove file into the database", async () => {

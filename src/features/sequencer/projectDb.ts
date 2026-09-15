@@ -512,7 +512,7 @@ export function exportProjectPackage(project: GrooveProject, appVersion: string 
 /**
  * Triggers a browser download of the project as a .groove file
  */
-export function exportProjectToGrooveFile(project: GrooveProject, appVersion = "1.15.2"): void {
+export function exportProjectToGrooveFile(project: GrooveProject, appVersion: string = APP_VERSION): void {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
   const pkg = exportProjectPackage(project, appVersion);

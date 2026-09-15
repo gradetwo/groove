@@ -39,6 +39,39 @@ check(
   `package.json=${pkg.version}`
 );
 
+/* R1b \u2014 no second hand-written version number in src/ -------------------------- */
+// R1 only proves the four generated files agree with package.json. It does not
+// stop a *new* stale literal from appearing in application code, which is
+// exactly what happened: `exportProjectToGrooveFile` defaulted its `appVersion`
+// to a hardcoded "1.15.2", so every exported .groove file carried a version
+// stamp two minors out of date. Any semver-shaped string literal under src/
+// must therefore come from `src/version.ts`.
+const SEMVER_LITERAL = /["'`]\d+\.\d+\.\d+["'`]/;
+const walkSrc = (dir) =>
+  fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name);
+    return e.isDirectory() ? walkSrc(p) : [p];
+  });
+const semverOffenders = walkSrc(path.join(ROOT, "src"))
+  .filter((f) => /\.tsx?$/.test(f))
+  .filter((f) => !f.endsWith(path.join("src", "version.ts")))
+  .filter((f) => !f.includes(`${path.sep}test${path.sep}`))
+  .flatMap((f) => {
+    const rel = path.relative(ROOT, f);
+    return fs
+      .readFileSync(f, "utf8")
+      .split("\n")
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
+      .filter(({ line }) => SEMVER_LITERAL.test(line))
+      .map(({ n }) => `${rel}:${n}`);
+  });
+check(
+  "R1b no hand-written version literal outside src/version.ts",
+  semverOffenders.length === 0,
+  semverOffenders.join(", ")
+);
+
 /* R2 \u2014 genre database shape ---------------------------------------------------- */
 const indexIds = [...read("src/data/index/genresIndex.ts").matchAll(/"id":\s*"([^"]+)"/g)].map((m) => m[1]);
 const dataIds = fs

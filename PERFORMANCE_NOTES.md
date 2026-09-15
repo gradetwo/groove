@@ -108,6 +108,6 @@ initial route gzip 134.6 KB / 220 KB、单块最大 124.32 KB / 150 KB。
 ```
 npx tsc --noEmit
 npx vitest run src/test/sequencerMemo.test.tsx src/test/sequencerStore.test.ts src/test/sequencerMeter.test.ts --reporter=dot
-node scripts/track.mjs fast        # FAST TRACK PASSED（含 19 条红线）
+node scripts/track.mjs fast        # FAST TRACK PASSED（含 20 条红线）
 npm run build && node scripts/check_budgets.js
 ```
