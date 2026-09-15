@@ -1,39 +1,39 @@
 {
-  "version": "1.16.18",
+  "version": "1.16.19",
   "releaseDate": "2026-09-15",
-  "changelogCount": 60,
+  "changelogCount": 61,
   "latest": {
-    "version": "1.16.18",
+    "version": "1.16.19",
     "date": "2026-09-15",
     "category": "feature",
     "title": {
-      "zh": "v1.16.18 159 个曲风改用本命音色与真实配器清单：爵士用萨克斯小号、拉丁用铜管长笛、电子保留模拟合成",
-      "en": "v1.16.18 All 159 genres re-voiced with their own idioms and real instrumentation lists: horns for jazz, brass and flute for Latin, analog synths kept for electronic"
+      "zh": "v1.16.19 每个曲风一套按曲风编排的混音，并把 159 个曲风的总响度配平",
+      "en": "v1.16.19 A genre-arranged mix for every genre, and loudness matched across all 159"
     },
     "highlights": [
       {
-        "zh": "曲风音色策展（核心）：上一版让引擎开始按曲风数据里声明的乐器发声，但数据本身并不「曲风惯用」——爵士家族的 lead 是锯齿合成主音、全库 159 个曲风的 FX 都是同一条合成 riser。这一版把 159 个曲风逐一改成本命音色：主音从 5 种扩到 27 种（锯齿从 92 个曲风降到 28 个），FX 从 1 种扩到 9 种，低音 9→14 种、和弦 6→11 种",
-        "en": "Genre timbre curation (core): the previous release made the engine honour the instrument each genre declares, but the data itself was not idiomatic — the jazz family's lead was a saw synth and every one of the 159 genres used the same synth riser for FX. This release re-voices all 159 genres: leads go from 5 kinds to 27 (saw leads drop from 92 genres to 28), FX from 1 to 9, bass 9 to 14, chords 6 to 11"
+        "zh": "每个曲风一套自己的混音（用户需求）：此前 159 个曲风共用同一套默认值——底鼓一律 0.90、主音一律偏右 0.10、混响与延迟送出**全部为 0**（两条送出总线其实是死的）。现在每个曲风按自己的性格编排：159 个曲风里 (音量, 声相) 组合有 157 种互不相同。爵士把立式贝斯推到 0.96~0.98 而鼓组后撤到 0.60~0.68；萨尔萨的打击乐推满并铺到左侧；雷鬼低音推到 1.00；金属把和弦与主音分别拉硬左硬右（双轨吉他）；ambient 的鼓组几乎退场而垫子挑大梁；trap 的底鼓与低音推到 0.98/0.99、踩镲铺宽",
+        "en": "A mix of its own for every genre: all 159 genres used to share one set of defaults — kick always 0.90, lead always panned +0.10, and the reverb/delay sends all zero (the two send buses were effectively dead). Each genre is now arranged to its own character, with 157 distinct (volume, pan) combinations across the 159. Jazz pushes the upright bass to 0.96–0.98 and pulls the kit back to 0.60–0.68; salsa pushes percussion to full and spreads it left; reggae takes the bass to 1.00; metal splits chords and lead hard left and right as double-tracked guitars; ambient all but removes the kit and lets the pads carry it; trap runs kick and bass at 0.98/0.99 with wide hats"
       },
       {
-        "zh": "具体到你会在意的听感：bebop、hard-bop、cool-jazz、modal-jazz、free-jazz、traditional-jazz 现在的主音是萨克斯、小号与弱音小号，芝加哥蓝调是口琴，拉丁与世界音乐改用铜管组、长笛与手风琴，摇滚金属保持双吉他（本来就对，没有乱动）。电子分支中真有模拟合成传统的那 28 个曲风保留锯齿主音，理由逐个写在 TIMBRE_NOTES.md 里",
-        "en": "Concretely: bebop, hard-bop, cool-jazz, modal-jazz, free-jazz and traditional-jazz now lead with saxophone, trumpet and muted trumpet; Chicago blues with harmonica; Latin and world genres move to brass section, flute and accordion; rock and metal keep their twin guitars (already correct, left alone). The 28 electronic genres with a genuine analog-synth tradition keep their saw leads, with the reason recorded genre by genre in TIMBRE_NOTES.md"
+        "zh": "总响度配平（用户需求）：切换曲风时总响度不再跳变。做法是逐个曲风离线渲染其默认 pattern，按 ITU-R BS.1770-4 门控积分响度（LUFS，含 400ms/75% 分块、−70 LUFS 绝对门与 −10 LU 相对门）实测，以全库中位数为目标生成每个曲风的母带微调。配平前 p90−p10 为 4.69 LU、全距 9.96 LU；配平后为 **0.51 LU / 1.25 LU**，且没有任何一个曲风撞到 ±clamp 边界",
+        "en": "Loudness matching: the total level no longer jumps when you switch genres. Each genre's default pattern is rendered offline and measured as ITU-R BS.1770-4 gated integrated loudness (LUFS — 400 ms blocks at 75% overlap, −70 LUFS absolute gate, −10 LU relative gate); a per-genre master trim is derived against the library median. Before matching the p90−p10 spread was 4.69 LU with a 9.96 LU full range; after, it is **0.51 LU / 1.25 LU**, with no genre hitting the clamp bounds"
       },
       {
-        "zh": "「核心配器」终于名副其实：曲风详情页、曲风比对页与时间线悬浮提示里展示的配器清单，此前 159 个曲风是**同一句占位串**（「合成器、鼓机、贝斯、采样器、FX」——bebop 的核心配器被显示成这个）。现在 159 个曲风各有各的清单，写的是真实器材与音色，例如「M1 Organ Bass Stabs、Analog Synth Lead、Sub Bass、TR-909 Hats & Kicks」",
-        "en": "\"Core instrumentation\" finally means something: the instrumentation list shown on the genre detail page, the compare page and the timeline tooltip was a single placeholder string repeated across all 159 genres (\"Synthesizer, Drum Machine, Bass, Sampler, FX\" — that is what bebop's core instrumentation said). All 159 genres now carry their own list of real instruments and sounds, e.g. \"M1 Organ Bass Stabs, Analog Synth Lead, Sub Bass, TR-909 Hats & Kicks\""
+        "zh": "曲风比对也一起配平：单曲风试听各自使用本曲风的微调；同步 A/B 模式按当前**实际在响**的曲风重算（只独奏某一侧时就用那一侧自己的微调）。此前同步模式固定用两首的均值，独奏一侧时最差会偏 4.98 dB——即为了对比而独奏时反而最不准",
+        "en": "The compare view is matched too: a single-genre audition uses that genre's own trim, and the synchronised A/B mode recomputes from whichever genres are actually audible — isolating one side uses that side's own trim. It previously pinned the average of the two, which left isolating a side off by up to 4.98 dB — exactly when you isolate to compare"
       },
       {
-        "zh": "合成器预设库从 20 件扩到 49 件，新增 30 件带真实合成参数的预设（萨克斯、小号、弱音小号、铜管组、钢琴、风琴、颤音琴、弦乐、拨弦、排箫、西塔琴、手风琴、口琴、马林巴、钟琴、正弦主音、FM 主音、牛铃、咆哮主音，以及黑胶底噪、磁带停转、反向镲、上升噪、下扫、低频下坠、激光等效果音），不是把旧预设改名",
-        "en": "The synthesizer preset library grows from 20 to 49 with 30 presets built from real synthesis parameters (sax, trumpet, muted trumpet, brass section, piano, organ, vibraphone, strings, plucked string, pan flute, sitar, accordion, harmonica, marimba, bells, sine lead, FM lead, cowbell, growl lead, plus vinyl crackle, tape stop, reverse cymbal, noise rise, down sweep, sub drop and laser FX) — new voices, not renamed copies"
+        "zh": "微调是一个独立于音量的母带级（在用户推子与听力保护钳制之后、母带限幅器之前），因此推子始终只表示你要的音量，而导出与试听一致：离线 WAV 导出在同一相对位置套用同一个微调。「响度配平」不会被误当成用户调过音量",
+        "en": "The trim is a separate master stage from the volume fader (after the user fader and hearing-protection clamp, before the master limiter), so the fader keeps meaning exactly the level you asked for, and bounces match auditions: the offline WAV exporter applies the same trim in the same relative position"
       },
       {
-        "zh": "新增曲风配器完整性门禁：断言配器清单条目数与互异度、禁止通用占位词、要求每个轨道声明的乐器都被配器清单点名、并要求 FX 与主音不得再次单值化——八条断言逐条反向验证过（故意把数据改回同质化，确认门禁转红）",
-        "en": "A new instrumentation integrity gate asserts list length and distinctness, bans generic placeholder words, requires every declared track instrument to be named in that genre's list, and refuses a single-valued FX or lead again — all eight assertions were reverse-validated by deliberately homogenising the data and confirming they go red"
+        "zh": "旧会话的兼容：老用户上次存下的会话快照里那套旧占位混音会按轨迁移到新编排——只迁移「从未被用户动过」的通道（音量、声相、两条送出都还是旧占位值的那些），你在调音台里动过的通道保留你自己的值。否则老用户会一直听到旧的扁平混音，新表根本到不了耳朵里",
+        "en": "Existing sessions are migrated per channel: a saved session's old placeholder values move to the new arrangement only on channels the user never touched (volume, pan and both sends still matching the old placeholder); channels you moved in the console keep your values. Without this, a returning user would keep hearing the old flat mix and the new table would never reach their ears"
       },
       {
-        "zh": "修复真实缺陷：从工作台分享出去的链接会丢掉声相、混响/延迟送出、门限、连击、概率、轨道长度与摇摆——分享编解码器一直支持这些字段，工程中心的入口也映射齐全，只有工具栏的分享按钮是内联拼装、漏了 8 个字段。现在两个入口共用同一个映射实现，并补了三条端到端测试直接对生成的 URL 断言",
-        "en": "Fixed a real defect: links shared from the studio arrived without pan, reverb/delay sends, gate, ratchet, probability, track length or swing — the share codec always supported them and the project hub mapped them all, but the studio toolbar's share button built the payload inline and dropped eight fields. Both entry points now share one mapper, with three end-to-end tests asserting directly on the generated URL"
+        "zh": "修正分享链接的另一半：工具栏分享按钮此前丢掉了声相、混响/延迟送出、门限、连击、概率、轨道长度与摇摆八个字段（编解码器一直支持、工程中心也映射齐全，只有工作台这个入口是内联拼装漏了）。现在两处共用同一映射实现，并有三条端到端测试直接对生成的链接断言——否则按曲风编排好的声相与送出一分享就没了",
+        "en": "The other half of the share fix: the studio toolbar's share button was dropping eight per-track fields (pan, reverb/delay sends, gate, ratchet, probability, track length, swing) even though the codec always supported them and the project hub mapped them all. Both entry points now share one mapper, with three end-to-end tests asserting on the generated link — otherwise the genre-arranged pan and sends would vanish the moment you shared a pattern"
       }
     ]
   }
