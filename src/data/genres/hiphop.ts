@@ -37,11 +37,12 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "TR-808 Drum Machine",
+      "Turntables & Vinyl Scratches",
+      "Funk Bass Guitar",
+      "Square-Wave Synth Riff",
+      "Analog Synth Pad",
+      "Vocal Chants"
     ],
     "sound_design": {
       "en": "Two turntables, disco/funk drum breaks, vinyl scratches, Roland TR-808, simple vocal chants.",
@@ -332,7 +333,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -418,7 +419,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -461,7 +462,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -523,11 +524,11 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Sampled Jazz Horns",
+      "Chopped Rhodes",
+      "Upright Bass Loop",
+      "MPC60 / SP-1200 Drums",
+      "Vinyl Crackle"
     ],
     "sound_design": {
       "en": "Akai MPC60/SP-1200 12-bit crunch, chopped jazz Rhodes and horns, crackling vinyl snare.",
@@ -904,7 +905,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -947,7 +948,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -1008,11 +1009,11 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Portamento Sine Lead",
+      "Rhodes Chords",
+      "Fingerstyle Electric Bass",
+      "Funk Guitar",
+      "Parliament Horn Samples"
     ],
     "sound_design": {
       "en": "High-pitched sine/saw lead with portamento glide, live slap bass, Rhodes chords, Parliament samples.",
@@ -1303,7 +1304,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -1389,7 +1390,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "sine_lead",
           "steps": [
             0,
             0,
@@ -1432,7 +1433,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -1493,11 +1494,11 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Dark Minor Bells",
+      "808 Sub Bass",
+      "Rapid Triplet Hi-Hats",
+      "Minor Brass Stabs",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Booming Roland TR-808 sub-bass, rapid triplet hi-hats, minor brass stabs, eerie flutes.",
@@ -1874,7 +1875,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "pluck_synth",
+          "instrument": "bell_lead",
           "steps": [
             0,
             0,
@@ -1979,11 +1980,10 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Live Horn Section",
+      "Rhodes Piano",
+      "Upright Acoustic Bass",
+      "Organic Drum Kit"
     ],
     "sound_design": {
       "en": "Organic live instrumentation, upright acoustic bass, live horn sections, Rhodes piano.",
@@ -2360,7 +2360,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -2403,7 +2403,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -2464,11 +2464,10 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Clean Emo Guitar Loop",
+      "808 Sub Bass",
+      "Melancholic Synth Pad",
+      "Trap Drum Kit"
     ],
     "sound_design": {
       "en": "Clean plucked acoustic or electric guitar loops, autotuned emotional vocals, booming 808s.",
@@ -2888,7 +2887,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
@@ -2950,11 +2949,12 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Muted Rhodes",
+      "Vinyl Crackle",
+      "Soft Boom-Bap Drums",
+      "Warm Sine Sub Bass",
+      "Muted Plucked Synth",
+      "Cassette Tape Warble"
     ],
     "sound_design": {
       "en": "Vinyl crackle, muted Rhodes piano chords, cassette tape warble, soft acoustic drums.",
@@ -3374,7 +3374,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -3435,11 +3435,11 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Dark Minor Grand Piano",
+      "Rhodes Chords",
+      "Filtered Bass Guitar",
+      "Crackling Vinyl Breaks",
+      "SP-1200 Drums"
     ],
     "sound_design": {
       "en": "Kung fu movie voice samples, dark minor grand piano loops, crackling vinyl breaks, SP-1200 grit.",
@@ -3730,7 +3730,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -3816,7 +3816,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
@@ -3859,7 +3859,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -3920,11 +3920,11 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Analog Synth Lead",
+      "Heavy Analog Synth Bass",
+      "Rhodes Chords",
+      "Talkbox Vocoder",
+      "Funk Rhythm Guitar"
     ],
     "sound_design": {
       "en": "Heavy analog synth bass, talkbox vocoders, crisp handclaps, funk rhythm guitars.",
@@ -4215,7 +4215,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "analog_bass",
           "steps": [
             1,
             0,
@@ -4344,7 +4344,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -4406,11 +4406,11 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Brass Synth Blasts",
+      "Rhodes Chords",
+      "808 Sub Bass",
+      "Chanted Vocals",
+      "Chopped & Screwed Samples"
     ],
     "sound_design": {
       "en": "Roland TR-808 sub bass, brass synthesizer blasts, chants (Yeah!, What!), chopped slowed-down vocals.",
@@ -4787,7 +4787,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "brass_synth",
           "steps": [
             0,
             0,
@@ -4830,7 +4830,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -4891,11 +4891,10 @@ export const HIPHOP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Ethereal Plucked Synth",
+      "Warm 808 Sub Bass",
+      "Dreamlike Pads",
+      "Reversed Vocal Sighs"
     ],
     "sound_design": {
       "en": "Ethereal synth clouds, reversed female vocal sighs, drowning plate reverbs, warm 808s.",
@@ -5272,7 +5271,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -5315,7 +5314,7 @@ export const HIPHOP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
