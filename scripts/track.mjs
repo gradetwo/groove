@@ -172,4 +172,7 @@ runRedlinesIfPresent();
 // Reads the committed loudness baseline only (no browser), so the fast track stays
 // browser-free; the measurement itself is `node scripts/measure_genre_loudness.mjs`.
 run("Genre loudness spread gate", "node", ["scripts/check_loudness_spread.mjs"]);
+run("Genre timbre spread gate", "node", ["scripts/check_timbre_spread.mjs"]);
+run("GS-1 budget evidence gate", "node", ["scripts/check_gs1_load.mjs"]);
+run("GS-1 live timing jitter gate", "node", ["scripts/check_gs1_jitter.mjs"]);
 console.log("\n\ud83c\udf89 SLOW TRACK PASSED");

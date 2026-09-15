@@ -29,8 +29,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–I–V",
+      "i–iv–i–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -513,8 +513,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–V–IV",
+      "I–IV–I–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -998,8 +998,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–V–IV",
+      "i–iv–i–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1482,8 +1482,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–V–IV",
+      "i–iv–V–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1968,8 +1968,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–vi–ii–V",
+      "ii–V–I"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2453,8 +2453,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "iii–vi–ii–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2938,8 +2938,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "i–iv–V–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3424,8 +3424,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "I–vi–ii–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3909,8 +3909,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–IV–i",
+      "i–VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -4393,8 +4393,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–i",
+      "I–IV–I"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -4878,8 +4878,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "i–iv–VII–III"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -5364,8 +5364,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "I–vi–ii–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -5849,8 +5849,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "i–iv–VII–III"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -6335,8 +6335,8 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "i–iv–V–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",

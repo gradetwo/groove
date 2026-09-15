@@ -30,6 +30,10 @@ import { resolveChordTreatment } from "../data/genreVoicing";
 import { VoiceRegistry } from "./voiceRegistry";
 import { type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
 import { buildMasterGraph, dbToGain, type MasterGraph } from "./masterGraph";
+import { ChannelStrip } from "./ChannelStripDsp";
+import { resolveTrackInsertForGenre } from "../data/genreInsert";
+import { resolveGroupBus } from "./trackBuses";
+import type { TrackInsertParams } from "../data/trackInsert";
 import { applyGenreFxToGraph, delayParamsAtTempo, resolveGenreFx, type GenreFxProfile } from "../data/genreFx";
 export type { TrackState } from "./trackStates";
 import { isDrumTrack } from "../utils/trackUtils";
@@ -67,6 +71,13 @@ export interface TrackChannelStrip {
    * (`enableTrackAnalysers`). Pass-through: it does not colour the signal.
    */
   analyser: AnalyserNode | null;
+  /**
+   * E-10: the track's insert chain (HPF → EQ → compressor → drive).
+   *
+   * It sits **before the fader**, like a real console channel strip, so the fader stays the
+   * last gain in the strip and compression makeup does not change the fader's meaning.
+   */
+  insert: ChannelStrip;
   /**
    * Stereo mode panner. Exactly one of `panner` / `spatialPanner` is active:
    * the strip is rebuilt when the monitoring mode changes (N-02).
@@ -119,10 +130,13 @@ export class AudioEngine {
 
   // Send effect buses (P3-10)
   /**
-   * E-17 / N-16: the whole master chain (fader → trim → FX rack → true-peak limiter →
-   * analyser taps) and both send buses now come from one shared builder that the offline
-   * renderer also uses. Before this the two graphs had drifted apart: the export contained
-   * no sends and no FX rack at all, so reverb-heavy genres bounced dry.
+   * E-17 / N-16: the whole master chain (fader → FX rack → loudness trim → true-peak
+   * limiter → analyser taps) and both send buses now come from one shared builder that the
+   * offline renderer also uses. Before this the two graphs had drifted apart: the export
+   * contained no sends and no FX rack at all, so reverb-heavy genres bounced dry.
+   *
+   * The trim sits after the rack on purpose — it has to be a linear gain for the per-genre
+   * loudness match to hold (see `masterGraph.ts`).
    */
   private masterGraph: MasterGraph | null = null;
 
@@ -252,7 +266,7 @@ export class AudioEngine {
         if (AudioContextClass) {
           this.ctx = new AudioContextClass();
           // E-17 / N-16: one shared master graph for playback and export. Chain:
-          //   fader → trim → FX rack → true-peak limiter → analyser taps → destination,
+          //   fader → FX rack → loudness trim → true-peak limiter → analyser taps,
           // with the reverb/delay returns summing into the fader, exactly as before.
           const graph = buildMasterGraph(this.ctx, {
             analysers: true,
@@ -431,6 +445,7 @@ export class AudioEngine {
         strip.analyser?.disconnect();
         strip.panner?.disconnect();
         strip.spatialPanner?.disconnect();
+        strip.insert.dispose();
         strip.sendA.disconnect();
         strip.sendB.disconnect();
       } catch {
@@ -440,12 +455,40 @@ export class AudioEngine {
     this.trackStrips = [];
   }
 
+  /**
+   * E-11: the group bus a track belongs on.
+   *
+   * Tracks connect here rather than to the fader, so the glue stage cannot be bypassed by adding
+   * a track. The role→bus decision lives in `trackBuses.ts` because the offline renderer has to
+   * make exactly the same one.
+   */
+  private busInputFor(trackIdx: number): GainNode {
+    const fallback = this.masterGain!;
+    if (!this.masterGraph) return fallback;
+    const track = this.pattern?.tracks[trackIdx];
+    const bus = resolveGroupBus(track?.track_id, track?.name);
+    return bus === "drum" ? this.masterGraph.drumBusInput : this.masterGraph.musicBusInput;
+  }
+
   private setupTrackStrips(numTracks = 16): void {
     if (!this.ctx || !this.masterGain) return;
     this.trackStrips = [];
     for (let i = 0; i < numTracks; i++) {
+      // E-10: voices feed the insert chain first, then the fader. The chain's defaults come
+      // from the track's role, so every track arrives with a mixed channel strip.
+      const role = this.pattern?.tracks[i]?.track_id;
+      // Genre-aware: the role default is the starting point, the genre's patch is the
+      // character (see `genreInsert.ts`). Both live + export resolve through the same call.
+      const insert = new ChannelStrip(
+        this.ctx,
+        this.pattern?.tracks[i]?.insert ??
+          resolveTrackInsertForGenre(role, this.pattern?.genre_id)
+      );
+
       const gain = this.ctx.createGain();
       gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+
+      insert.output.connect(gain);
 
       const polarity = this.ctx.createGain();
       polarity.gain.setValueAtTime(1, this.ctx.currentTime);
@@ -477,16 +520,16 @@ export class AudioEngine {
         this.applyPannerPosition(spatialPanner, slot);
         gain.connect(polarity);
         stripOut.connect(spatialPanner);
-        spatialPanner.connect(this.masterGain);
+        spatialPanner.connect(this.busInputFor(i));
       } else if (typeof this.ctx.createStereoPanner === "function") {
         panner = this.ctx.createStereoPanner();
         panner.pan.setValueAtTime(0, this.ctx.currentTime);
         gain.connect(polarity);
         stripOut.connect(panner);
-        panner.connect(this.masterGain);
+        panner.connect(this.busInputFor(i));
       } else {
         gain.connect(polarity);
-        stripOut.connect(this.masterGain);
+        stripOut.connect(this.busInputFor(i));
       }
 
       const sendA = this.ctx.createGain();
@@ -503,13 +546,14 @@ export class AudioEngine {
         sendB.connect(this.masterGraph.delay.input);
       }
 
-      this.trackStrips.push({ gain, polarity, analyser, panner, spatialPanner, sendA, sendB });
+      this.trackStrips.push({ gain, polarity, analyser, panner, spatialPanner, sendA, sendB, insert });
     }
     this.syncTrackGains();
   }
 
   public getTrackDestination(trackIdx: number): AudioNode {
-    return this.trackStrips[trackIdx]?.gain || this.masterGain!;
+    // E-10: the strip's entry point is the insert chain, not the fader.
+    return this.trackStrips[trackIdx]?.insert.input || this.masterGain!;
   }
 
   public setPattern(pattern: SequencerPattern, resetStates = false): void {
@@ -542,6 +586,15 @@ export class AudioEngine {
         }
       });
     }
+    // E-10: apply each track's insert chain. A track with no stored chain takes the
+    // role's factory default, which is what makes a freshly loaded genre arrive already
+    // mixed rather than flat.
+    this.pattern?.tracks.forEach((track, idx) => {
+      this.setTrackInsert(
+        idx,
+        track.insert ?? resolveTrackInsertForGenre(track.track_id, this.pattern?.genre_id)
+      );
+    });
     this.syncTrackGains();
     // Loudness matching is *not* a per-track mix concern: it only needs the pattern's
     // genre id, so centralising it here covers the studio, every audition path, the
@@ -577,6 +630,24 @@ export class AudioEngine {
     } catch {
       /* Mixer cosmetics must never break playback. */
     }
+  }
+
+  /**
+   * E-10: applies an insert-chain edit to one track.
+   *
+   * Merges over whatever the strip currently holds, so a UI that sends one field at a time
+   * (the common case for a knob drag) behaves identically to one that sends the whole chain.
+   */
+  public setTrackInsert(trackIdx: number, patch: Partial<TrackInsertParams>): void {
+    const strip = this.trackStrips[trackIdx];
+    if (!strip) return;
+    strip.insert.setParams(patch);
+  }
+
+  /** The insert chain a track is currently using, or null when the strip does not exist. */
+  public getTrackInsert(trackIdx: number): TrackInsertParams | null {
+    const strip = this.trackStrips[trackIdx];
+    return strip ? strip.insert.getParams() : null;
   }
 
   public syncTrackGains(): void {

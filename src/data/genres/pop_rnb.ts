@@ -30,8 +30,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–V–vi–IV",
+      "I–vi–IV–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -516,7 +516,7 @@ export const POP_RNB_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "vi–IV–I–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -999,8 +999,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–VII–III",
+      "I–vi–ii–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1485,7 +1485,7 @@ export const POP_RNB_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "vi–IV–I–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1968,8 +1968,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–i",
+      "i–IV–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2453,8 +2453,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–vi–ii–V",
+      "ii–V–I"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2938,8 +2938,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "iii–vi–ii–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3423,8 +3423,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–v",
+      "ii–V–I"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3909,8 +3909,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–i",
+      "vi–IV–I–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -4394,8 +4394,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–V–IV",
+      "I–vi–ii–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -4879,8 +4879,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "ii–V–I",
+      "I–vi–ii–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -5364,8 +5364,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "vi–IV–I–V",
+      "I–V–vi–IV"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -5849,8 +5849,8 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "IV–V–iii–vi",
+      "I–V–vi–IV"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",

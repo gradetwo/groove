@@ -52,6 +52,40 @@ export type MasterLimiterKind = "worklet" | "fallback";
 
 /** Output true-peak ceiling in dBTP. Keeps the historical −1 dB intent. */
 export const MASTER_LIMITER_CEILING_DB = -1.0;
+
+/**
+ * Headroom the limiter leaves *below* {@link MASTER_LIMITER_CEILING_DB}, in dB.
+ *
+ * The ceiling is enforced by this module's own interpolating detector, but it is *verified*
+ * by `src/test/helpers/loudness.ts` — an independent 4x-oversampled polyphase true-peak
+ * meter (BS.1770-style). The two estimators do not agree exactly, and the 2026-09-16
+ * 159-genre re-measurement showed the meter reading up to **0.12 dB above** the commanded
+ * ceiling on the material that actually hits it (worst: `afrobeat` at −0.88 dBTP against a
+ * −1.0 dBTP command). A detector that under-reads the meter by a tenth of a dB means the
+ * shipped file can exceed the ceiling the project promises.
+ *
+ * Rather than argue about which estimator is "right", the limiter targets below the contract:
+ * the promise (−1.0 dBTP on the meter) is what ships, and this margin is what makes it true by
+ * measurement instead of by definition.
+ *
+ * The margin grew from 0.15 to 0.30 dB when the E-11 group buses landed. The drum bus's parallel
+ * compression path makes the pre-limiter waveform denser and more transient-rich, and the
+ * detector's under-read grew with it: the same 159-genre measurement that had peaked at
+ * −1.027 dBTP (0.12 dB of under-read) moved to **−0.95 dBTP** — i.e. 0.20 dB of under-read, and
+ * one genre above the ceiling the project promises. The margin is set from that measurement plus
+ * 0.1 dB of slack, not from taste.
+ */
+export const MASTER_LIMITER_DETECTOR_MARGIN_DB = 0.3;
+
+/**
+ * The ceiling the limiter is *constructed* with: the contract minus the detector margin.
+ *
+ * Callers that want the −1.0 dBTP promise (both engines do) should leave the ceiling alone
+ * and let this default apply. A caller may still pass an explicit `ceilingDb` — the limiter
+ * tests do, to pin the kernel's behaviour against a known command.
+ */
+export const MASTER_LIMITER_INTERNAL_CEILING_DB =
+  MASTER_LIMITER_CEILING_DB - MASTER_LIMITER_DETECTOR_MARGIN_DB;
 /** Lookahead in milliseconds (see the module comment for the choice). */
 export const MASTER_LIMITER_LOOKAHEAD_MS = 3.0;
 /** Release time constant for reduction shallower than the knee, in ms. */

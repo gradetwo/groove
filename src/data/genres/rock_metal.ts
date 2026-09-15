@@ -30,8 +30,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–V–IV",
+      "I–vi–IV–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -514,8 +514,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–V–IV",
+      "i–iv–V–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -998,8 +998,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–♭VII–IV–I",
+      "i–♭VI–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1482,8 +1482,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–IV–V–IV",
+      "i–♭VII–IV–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1966,8 +1966,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–i",
+      "i–VII–VI–VII"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2451,7 +2451,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "vi–IV–I–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2935,8 +2935,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VI–♭VII–i",
+      "I–♭VII–IV–I"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3419,8 +3419,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭II–♭VII–i",
+      "i–♭VI–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3903,8 +3903,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭II–i",
+      "i–♭VI–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -4387,8 +4387,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭II–♭VII–i",
+      "i–♭VI–♭II–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -4871,8 +4871,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VI–iv–i",
+      "i–♭VII–♭VI–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -5355,8 +5355,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VI–♭VII–i",
+      "i–iv–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -5840,8 +5840,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VII–IV–i",
+      "i–VI–III–VII"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -6325,7 +6325,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VII–IV–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -6809,8 +6809,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–VII–III",
+      "ii–V–I"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -7294,8 +7294,8 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VII–♭VI–V",
+      "i–iv–i–V"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -7780,7 +7780,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "I–V–vi–IV"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",

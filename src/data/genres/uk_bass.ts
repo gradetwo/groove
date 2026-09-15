@@ -30,8 +30,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–V",
+      "i–iv–VII–III"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -516,8 +516,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–v",
+      "ii–V–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1001,8 +1001,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–VI–V",
+      "i–VI–III–VII"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1487,8 +1487,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭II–i",
+      "i–♭VI–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1973,8 +1973,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–V",
+      "i–iv–VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2458,8 +2458,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–i–VII",
+      "i–VI–iv–v"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2944,8 +2944,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–i–V",
+      "i–VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3429,8 +3429,8 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VII–i",
+      "i–♭II–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",

@@ -31,7 +31,7 @@ export const DUBSTEP_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VII–♭VI–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -516,8 +516,8 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭VI–♭VII–i",
+      "i–♭II–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1002,8 +1002,8 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭II–i",
+      "i–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1488,7 +1488,7 @@ export const DUBSTEP_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–VI–v"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -1971,8 +1971,8 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–VII",
+      "i–VII–VI–VII"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2457,8 +2457,8 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–VI–iv–i",
+      "i–v–VI–iv"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -2942,8 +2942,8 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭II–♭VII–i",
+      "i–♭VI–♭VII"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3427,7 +3427,7 @@ export const DUBSTEP_GENRES: Genre[] = [
     },
     "common_chords": [
       "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–iv–VI–III"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",
@@ -3911,8 +3911,8 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "常使用自然小调、五声音阶及特征明显的和声走向。"
     },
     "common_chords": [
-      "i–VI–III–VII",
-      "i–v–VI–VII"
+      "i–♭II–i–♭VII",
+      "i–♭VI–♭VII–i"
     ],
     "chord_inversions": {
       "en": "Root-position fundamentals on downbeats with open inversions on syncopated layers.",

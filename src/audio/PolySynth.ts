@@ -27,6 +27,31 @@ export interface SynthPreset {
   filterCutoff: number;
   filterQ: number;
   adsr: Adsrenvelope;
+  // --- Filter envelope, resonance compensation, slope (E-14) ---------------
+  /**
+   * Filter-envelope depth in octaves above the note's base cutoff. Absent means the
+   * historical fixed `log2(2.5)` sweep, so every un-annotated preset renders
+   * bit-for-bit as before; `0` disables the sweep entirely (a pad that should not
+   * bloom), and a larger value opens a squelch (an acid line, a brass bloom).
+   */
+  filterEnvOctaves?: number;
+  /** Multiplier on the amp attack for the filter sweep only. Absent = 1 (the historical tie). */
+  filterEnvAttackScale?: number;
+  /** Multiplier on the amp decay for the filter return only. Absent = 1. */
+  filterEnvDecayScale?: number;
+  /**
+   * Resonance compensation, in dB of pre-filter gain reduction per unit of Q above 1.
+   * Absent means the module default (`RESONANCE_COMP_DB_PER_Q`), which exists because a
+   * biquad's response at resonance rises with Q: without compensation, turning resonance
+   * up is heard mostly as "louder", which is the wrong control. `0` disables it for a
+   * preset whose resonance is meant to be heard as level.
+   */
+  resonanceCompDbPerQ?: number;
+  /**
+   * Use a 24 dB/oct filter (two cascaded 12 dB stages) instead of the default 12 dB.
+   * Costs one extra biquad per voice, so it is opt-in per preset.
+   */
+  filterSlope24?: boolean;
   /**
    * Optional white-noise blend (0–1) mixed into the filter input next to the two
    * oscillators. Only the noise-based FX voices (vinyl crackle, risers, reverse
@@ -99,6 +124,9 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     adsr: { attack: 0.015, decay: 0.12, sustain: 0.7, release: 0.2 },
   },
   warmPad: {
+    // E-14: pads do not squelch. A shallow sweep + a slow opening keeps it a pad.
+    filterEnvOctaves: 0.55,
+    filterEnvAttackScale: 2.0,
     name: "Warm Poly Pad",
     osc1Type: "triangle",
     osc2Type: "sawtooth",
@@ -119,6 +147,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     adsr: { attack: 0.005, decay: 0.18, sustain: 0.15, release: 0.15 },
   },
   acidBass: {
+    // E-14: the 303 is a 24 dB ladder, and its character is a *fast, deep* envelope return.
+    filterSlope24: true,
+    filterEnvOctaves: 2.2,
+    filterEnvAttackScale: 0.25,
+    filterEnvDecayScale: 0.45,
     name: "Acid 303 Bass",
     osc1Type: "sawtooth",
     osc2Type: "square",
@@ -223,6 +256,8 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
   // `supersaw`: two saws an intentionally wide 26 cents apart (more than twice
   // sawLead) through a bright, low-Q filter — the trance/EDM wall of sound.
   supersaw: {
+    // E-14: a supersaw wall is static brightness; the historical 2.5x sweep fights the detune.
+    filterEnvOctaves: 0.7,
     name: "Supersaw",
     osc1Type: "sawtooth",
     osc2Type: "sawtooth",
@@ -263,6 +298,9 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
   // `brass_synth`: saw + square with a 70 ms bloom and a resonant 2.5 kHz
   // filter — the synth-brass swell rather than a static pad.
   brassSynth: {
+    // E-14: a brass "bloom" IS the filter opening slower than the amp attack.
+    filterEnvAttackScale: 2.4,
+    filterEnvDecayScale: 1.3,
     name: "Brass Synth",
     osc1Type: "sawtooth",
     osc2Type: "square",
@@ -856,6 +894,36 @@ export function velocityCurve(velocity: number): number {
  * `velocityToFilterEnv` can subtract from it.
  */
 const FILTER_ENV_OCTAVES = Math.log2(2.5);
+/**
+ * Resonance compensation, in dB of pre-filter gain reduction per unit of Q above 1 (E-14).
+ *
+ * A second-order lowpass has a resonant peak of roughly `Q` at the corner, so its *peak* gain
+ * rises 6 dB per doubling of Q while the passband does not. Left uncompensated, the resonance
+ * knob reads as a volume knob and every high-Q preset sits louder than its `filterCutoff`
+ * suggests. This is the first-order approximation of the correction — `Q` in dB is not exactly
+ * what a biquad does to broadband program material — so it is deliberately partial (0.6 dB per
+ * unit of Q, capped) rather than "exact": over-correcting would make resonance feel like it
+ * *removed* body. The level it moves is folded into the 159-genre loudness re-measurement, not
+ * guessed at.
+ */
+const RESONANCE_COMP_DB_PER_Q = 0.6;
+/** Ceiling on the compensation, so an extreme Q cannot make a preset inaudible. */
+const RESONANCE_COMP_MAX_DB = 6;
+
+/**
+ * The compensation for one preset, in dB (≤ 0). Exported because the correction is worth testing
+ * as arithmetic rather than by hunting for a gain node in a voice's node soup.
+ */
+export function resonanceCompensationGainDb(
+  filterQ: number,
+  perQ: number = RESONANCE_COMP_DB_PER_Q
+): number {
+  if (!(perQ > 0)) return 0;
+  const q = Number.isFinite(filterQ) ? filterQ : 1;
+  const db = -Math.min(RESONANCE_COMP_MAX_DB, perQ * Math.max(0, q - 1));
+  // `-0` is a real value in JS and would read as a correction where there is none.
+  return db === 0 ? 0 : db;
+}
 
 /**
  * How long a velocity-softened note takes to settle onto its base cutoff before the
@@ -988,26 +1056,69 @@ export function playPolySynthNote(
   // downward); at full velocity — or when the field is absent — the original expression
   // is used unchanged, so the ff render stays bit-for-bit identical.
   const velocityToFilterEnv = preset.velocityToFilterEnv ?? 0;
+  // E-14: the depth is the preset's when it states one, and the historical `·2.5` when it does
+  // not — so an un-annotated preset is unchanged, bit for bit, which is what keeps the
+  // library's measured baselines meaningful for everything that was not deliberately re-voiced.
+  const envOctaves = preset.filterEnvOctaves ?? FILTER_ENV_OCTAVES;
   const peakFilter =
     velocityToFilterEnv === 0 || velCurve >= 1
-      ? safeFreq(Math.min(velocityCutoff * 2.5, 18000))
+      ? safeFreq(Math.min(velocityCutoff * Math.pow(2, envOctaves), 18000))
       : safeFreq(
           Math.min(
             velocityCutoff *
               Math.pow(
                 2,
-                Math.max(0, FILTER_ENV_OCTAVES + velocityToFilterEnv * (velCurve - 1))
+                Math.max(0, envOctaves + velocityToFilterEnv * (velCurve - 1))
               ),
             18000
           )
         );
-  const sweepAttackEnd = time + adsr.attack * attackScale;
-  const sweepDecayEnd = sweepAttackEnd + adsr.decay * decayScale;
-  filter.frequency.exponentialRampToValueAtTime(peakFilter, sweepAttackEnd);
-  filter.frequency.exponentialRampToValueAtTime(velocityCutoff, sweepDecayEnd);
+  // A depth of zero is a preset saying "no sweep": ramping to the value it is already at would
+  // be harmless, but scheduling nothing is honest about the intent.
+  if (envOctaves > 0) {
+    const sweepAttackEnd = time + adsr.attack * attackScale * (preset.filterEnvAttackScale ?? 1);
+    const sweepDecayEnd = sweepAttackEnd + adsr.decay * decayScale * (preset.filterEnvDecayScale ?? 1);
+    filter.frequency.exponentialRampToValueAtTime(peakFilter, sweepAttackEnd);
+    filter.frequency.exponentialRampToValueAtTime(velocityCutoff, sweepDecayEnd);
+  }
 
-  osc1Gain.connect(filter);
-  osc2Gain.connect(filter);
+  /**
+   * E-14 — resonance compensation and the optional 24 dB slope.
+   *
+   * Compensation is a *pre-filter* gain: the resonant peak is what rises with Q, so trimming
+   * the signal entering the filter is the correction that does not also change the filter's
+   * character (a post-filter trim would just be a fader). A preset can opt out with
+   * `resonanceCompDbPerQ: 0`.
+   *
+   * The 24 dB option is two cascaded 12 dB lowpasses rather than a different filter design: it
+   * is the same biquad the whole engine already uses, so parity between the live engine and the
+   * exporter is structural, and the cost is exactly one extra node per voice.
+   */
+  const compDb = resonanceCompensationGainDb(filterQ, preset.resonanceCompDbPerQ ?? RESONANCE_COMP_DB_PER_Q);
+  if (compDb !== 0) {
+    const resonanceComp = ctx.createGain();
+    resonanceComp.gain.setValueAtTime(Math.pow(10, compDb / 20), time);
+    osc1Gain.connect(resonanceComp);
+    osc2Gain.connect(resonanceComp);
+    resonanceComp.connect(filter);
+  } else {
+    osc1Gain.connect(filter);
+    osc2Gain.connect(filter);
+  }
+
+  /** The last filter stage in the chain, so the noise bed and the amp connect to the right one. */
+  let lastFilter: BiquadFilterNode = filter;
+  if (preset.filterSlope24) {
+    const filter2 = ctx.createBiquadFilter();
+    filter2.type = "lowpass";
+    // The second stage tracks the first exactly: same cutoff schedule, and the Q is moved to the
+    // *second* stage only, so a resonant 24 dB voice does not get two resonant peaks stacked.
+    filter2.frequency.setValueAtTime(filterCutoff, time);
+    filter2.Q.setValueAtTime(1, time);
+    filter.Q.setValueAtTime(Math.max(0.7, filterQ * 0.5), time);
+    filter.connect(filter2);
+    lastFilter = filter2;
+  }
 
   // Optional noise bed (vinyl crackle, risers, reverse cymbal). It shares the voice's
   // resonant filter, so a noise preset is voiced by the same synthesis path as the
@@ -1021,7 +1132,8 @@ export function playPolySynthNote(
     const noiseGain = ctx.createGain();
     noiseGain.gain.setValueAtTime(noiseMix, time);
     noise.connect(noiseGain);
-    noiseGain.connect(filter);
+    // The noise bed shares the voice's filter chain, including the 24 dB second stage.
+    noiseGain.connect(lastFilter === filter ? filter : lastFilter);
     noise.start(time);
     noise.stop(time + Math.max(0.05, durationSec) + Math.max(0.01, adsr.release) + 0.01);
     sources.push(noise);
@@ -1087,7 +1199,7 @@ export function playPolySynthNote(
   // Release: exponential decay to the initial floor
   ampGain.gain.exponentialRampToValueAtTime(attackStart, noteEndTime);
 
-  filter.connect(ampGain);
+  lastFilter.connect(ampGain);
   ampGain.connect(dest);
 
   osc1.start(time);

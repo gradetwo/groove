@@ -287,6 +287,27 @@ const MISS_STREAK = 3;
 const OVER_LOAD = 0.35;
 /** Consecutive blocks over that fraction before voices are shed (~32 ms). */
 const OVER_BLOCKS = 12;
+/**
+ * Upper bound on queued frame-addressed note events.
+ *
+ * A host that schedules ahead legitimately holds a few hundred; anything past this means the
+ * host is leaking events (or a `noteAt` in the far future is never being reached), and growing
+ * without bound on the audio thread is not an option. The oldest event is dropped first.
+ */
+const MAX_SCHEDULED_EVENTS = 1024;
+/**
+ * Frames of constant latency between a frame-addressed note's `atFrame` and its first audible
+ * sample.
+ *
+ * Measured, not assumed (48 kHz, `atFrame` = 0/100/128/200/384/500 all land exactly 128 frames
+ * later): the core needs one full `gs_process` call before a queued note produces output, so the
+ * offset is exactly one render quantum and does **not** depend on where inside the block the
+ * event falls. That is a *fixed latency*, not jitter — the in-block position is preserved
+ * sample-exactly — so a host that wants GS-1 notes aligned with sample-accurate native voices
+ * simply addresses them this many frames early. It is reported in the `ready` message so the host
+ * never has to hard-code it.
+ */
+const SCHEDULED_NOTE_LATENCY_FRAMES = 128;
 
 const nowMs = () =>
   typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -323,6 +344,17 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
     this.lastUpgrade = 0;
     this.port.onmessage = (event) => this.handleMessage(event.data);
     /** Instance B's parameter values, so a restart can restore them. */
+    /**
+     * Frame-addressed note events, sorted by `atFrame` (see `noteAt` / `noteOffAt`).
+     *
+     * The audio thread has no way to be *called* at a future sample, so the host hands over the
+     * absolute frame and `process()` applies each event between render chunks. Until this
+     * existed a host could only say "now", which made a lookahead scheduler either early (post
+     * at scheduling time) or jittery (post from a timer at the last moment).
+     */
+    this.scheduledNotes = [];
+    /** Frames this processor has rendered, i.e. the absolute index of the next block. */
+    this.renderedFrames = 0;
     this.paramsB = opts.paramsB || null;
     this.instanceRoute = opts.instanceRoute || null;
 
@@ -370,7 +402,11 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
           );
         }
         this.ready = true;
-        this.port.postMessage({ type: 'ready', abi: this.wasm.gs_abi_version() });
+        this.port.postMessage({
+          type: 'ready',
+          abi: this.wasm.gs_abi_version(),
+          scheduledNoteLatencyFrames: SCHEDULED_NOTE_LATENCY_FRAMES,
+        });
       })
       .catch((err) => {
         this.port.postMessage({ type: 'error', message: 'WASM 实例化失败: ' + String(err) });
@@ -403,8 +439,34 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
       case 'noteOff':
         this.wasm.gs_note_off(data.note);
         break;
+      /**
+       * Frame-addressed notes. The host converts its `AudioContext` time into an absolute frame
+       * (`atFrame = Math.round(when * sampleRate)`) and the event is applied *between* render
+       * chunks, so it lands on the exact frame rather than on the next 128-frame boundary and
+       * never at message-delivery time.
+       *
+       * An `atFrame` already in the past is applied as soon as possible (a late host should sound
+       * late, not never), and a malformed one is ignored rather than treated as 0.
+       */
+      case 'noteAt':
+      case 'noteOnAt':
+      case 'noteOffAt': {
+        const atFrame = Math.round(Number(data.atFrame));
+        if (!Number.isFinite(atFrame)) break;
+        const isOff = data.type === 'noteOffAt';
+        this.scheduleTimedNote({
+          frame: atFrame,
+          off: isOff,
+          note: data.note,
+          velocity: isOff ? 0 : data.velocity,
+          pan: data.pan,
+        });
+        break;
+      }
       case 'allNotesOff':
       case 'panic':
+        // A panic must mean *silence now*: pending future events are the opposite of that.
+        this.scheduledNotes.length = 0;
         this.wasm.gs_all_notes_off();
         break;
       case 'pitchBend':
@@ -577,6 +639,38 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
     }
   }
 
+  /**
+   * Queue one frame-addressed event, keeping the queue sorted and bounded.
+   *
+   * Insertion is a linear scan from the end: hosts schedule in increasing time order almost
+   * always, so the common case is a single comparison, and the queue is small by construction.
+   */
+  scheduleTimedNote(event) {
+    const queue = this.scheduledNotes;
+    if (queue.length >= MAX_SCHEDULED_EVENTS) queue.shift();
+    let i = queue.length;
+    while (i > 0 && queue[i - 1].frame > event.frame) i -= 1;
+    queue.splice(i, 0, event);
+  }
+
+  /** Apply every queued event due at or before `frame`. Returns how many were applied. */
+  applyScheduledNotesUpTo(frame) {
+    const queue = this.scheduledNotes;
+    let applied = 0;
+    while (queue.length > 0 && queue[0].frame <= frame) {
+      const event = queue.shift();
+      if (event.off) {
+        this.wasm.gs_note_off(event.note);
+      } else if (event.pan !== undefined) {
+        this.wasm.gs_note_on_pan(event.note, event.velocity, event.pan);
+      } else {
+        this.wasm.gs_note_on(event.note, event.velocity);
+      }
+      applied += 1;
+    }
+    return applied;
+  }
+
   monitorLoad(frames, cost, rate) {
     const budget = (frames / rate) * 1000;
     // Warm-up is measured in *rendered audio*, not blocks: the first second
@@ -653,6 +747,9 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
     if (!this.ready || this.muted) {
       left.fill(0);
       if (right !== left) right.fill(0);
+      // The frame cursor must advance even while muted, or every queued event would be applied
+      // late by however long the mute lasted (the events are addressed in absolute frames).
+      this.renderedFrames += frames;
       return true;
     }
 
@@ -667,8 +764,35 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
     //    measuring the cost against the render-quantum budget so we can shed
     //    voices smoothly before the audio thread misses its deadline.
     const block = Math.min(frames, this.maxBlock);
+    const blockStart = this.renderedFrames;
     const t0 = nowMs();
-    this.wasm.gs_process(block);
+    if (this.scheduledNotes.length === 0) {
+      // The overwhelmingly common case: no timed events, so render the block in one call and
+      // keep the historical cost profile (a split render would show up as extra per-chunk
+      // overhead in the load monitor).
+      this.wasm.gs_process(block);
+    } else {
+      /**
+       * Split the block at each due event so a note can start mid-block.
+       *
+       * `gs_process(n)` is already called with dynamic sizes (the host's quantum is clamped to
+       * `maxBlock`), so chunking is safe; the cost is one extra call per event *inside* this
+       * block, which is at most a handful. An event due later than this block simply stays
+       * queued, which is what makes a 200 ms lookahead work without any timer on the host side.
+       */
+      let offset = 0;
+      while (offset < block) {
+        this.applyScheduledNotesUpTo(blockStart + offset);
+        const next = this.scheduledNotes.length > 0 ? this.scheduledNotes[0].frame : Infinity;
+        const untilNext = next === Infinity ? block - offset : Math.max(1, next - (blockStart + offset));
+        const chunk = Math.min(block - offset, untilNext);
+        this.wasm.gs_process(chunk);
+        offset += chunk;
+      }
+      // Events queued for the frame right after this block are still pending; ones that were
+      // already in the past when the message arrived were applied by the first call above.
+    }
+    this.renderedFrames = blockStart + block;
     const cost = nowMs() - t0;
     this.monitorLoad(block, cost, sampleRate);
 

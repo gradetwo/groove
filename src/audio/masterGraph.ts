@@ -18,24 +18,52 @@
  * builder, used by both, so the two graphs cannot diverge again — the same discipline the
  * chord-voicing module uses for note selection.
  *
- * ## Topology (identical to the previous live chain, which is what the loudness baseline
- * was measured through)
+ * ## Topology
  *
  * ```
  *   tracks + bus returns ─► masterGain (user fader)
- *                             └► loudnessTrimGain (per-genre match)
- *                                  └► fxRack ─► limiter ─► analysers ─► destination
+ *                             └► fxRack ─► loudnessTrimGain (per-genre match)
+ *                                             └► limiter ─► analysers ─► destination
  * ```
  *
- * The trim sits **before** the limiter deliberately: the limiter stays the absolute
- * output ceiling, so a genre needing a positive trim cannot push the master past it.
- * The bus returns tap into `masterGain`, i.e. *after* the trim and *before* the FX rack —
- * so the master fader moves the wet signal too, which is how a real console behaves.
+ * **Why the loudness trim sits after the FX rack** (it used to sit before it, and that was
+ * measurably wrong):
+ *
+ * The trim exists to make 159 genres equally loud, which only works if it is a *linear*
+ * gain. Placed before the rack it is not: the rack's saturation is a nonlinearity, so a
+ * genre that needed a +7 dB match arrived at the saturator 7 dB hotter, and the measured
+ * result was +1.7 dB — the correction was absorbed by the distortion. The 2026-09-16
+ * re-measurement caught exactly that: post-trim spread 3.14 LU against a 1.5 LU gate, with
+ * the quiet, saturating genres (dubstep, doom-metal, riddim, metalcore — all of which carry
+ * a genre FX rack with `saturationEnabled`) pinned far below target while the cuts landed
+ * almost exactly. Moving the trim after the rack makes it a pure gain: only the true-peak
+ * limiter can still absorb it, and the limiter only bites on genres that are *already* at
+ * the ceiling, which are precisely the ones the trim cuts rather than boosts.
+ *
+ * It stays **before the limiter**, so the limiter remains the absolute output ceiling: a
+ * genre needing a positive trim still cannot push the master past −1 dBTP.
+ *
+ * A second, quieter benefit: the rack now always sees the untrimmed signal, so a genre's
+ * *timbre* no longer depends on how much loudness matching it needed. That is what makes the
+ * V-10 timbre baseline (`scripts/timbre.baseline.json`, recorded at trim 0) a truthful
+ * description of what the user actually hears for every genre.
+ *
+ * The bus returns tap into `masterGain`, i.e. before both the rack and the trim — so the
+ * master fader moves the wet signal too, and the reverb/delay returns are loudness-matched
+ * with the rest of the genre, which is how a real console behaves.
  */
 import { EffectsRack, DEFAULT_FX_STATE, type EffectsRackState } from "./EffectsRack";
 import { ReverbBus, DEFAULT_REVERB_PARAMS, type ReverbParams } from "./ReverbBus";
 import { DelayBus, DEFAULT_DELAY_PARAMS, type DelayParams } from "./DelayBus";
-import { createMasterLimiter, type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
+import {
+  MASTER_LIMITER_INTERNAL_CEILING_DB,
+  createMasterLimiter,
+  type MasterLimiterHandle,
+  type MasterLimiterKind,
+} from "./MasterLimiter";
+
+/** How much of the heavily-compressed drum parallel path is blended back in (E-11). */
+export const DRUM_PARALLEL_BLEND = 0.22;
 
 export interface MasterGraphOptions {
   /**
@@ -63,11 +91,26 @@ export interface MasterGraph {
   readonly input: GainNode;
   /** The user fader. */
   readonly masterGain: GainNode;
-  /** The per-genre loudness-match stage, a separate node from the fader. */
+  /**
+   * The per-genre loudness-match stage, a separate node from the fader and the **last
+   * linear stage before the limiter** (see the topology note in the module header).
+   */
   readonly loudnessTrimGain: GainNode;
   /** Master FX rack (FLT / DRIVE / CHORUS / LO-FI). */
   readonly fxRack: EffectsRack;
   /** Reverb send bus: tracks' `sendA` connects to `.input`, `.output` is already patched. */
+  /**
+   * E-11: the two group buses every *track* sums into (the send returns do not — they join the
+   * fader directly, which is what a real console does with an FX return).
+   *
+   * Tracks connect to `.input`, never to `masterGain`, so the glue stage cannot be bypassed by
+   * adding a track. `busForRole` in `src/audio/trackBuses.ts` is the single place that decides
+   * which bus a role belongs on.
+   */
+  readonly drumBusInput: GainNode;
+  readonly musicBusInput: GainNode;
+  /** Gain reduction (dB, positive = reducing) currently applied by each glue compressor. */
+  glueReductionDb(): { drum: number; music: number };
   readonly reverb: ReverbBus;
   /** Delay send bus: tracks' `sendB` connects to `.input`, `.output` is already patched. */
   readonly delay: DelayBus;
@@ -124,9 +167,57 @@ export function buildMasterGraph(
   const reverb = new ReverbBus(ctx, options.reverb ?? DEFAULT_REVERB_PARAMS);
   const delay = new DelayBus(ctx, options.delay ?? DEFAULT_DELAY_PARAMS);
 
+  // The default ceiling is the internal one (the -1.0 dBTP contract minus the detector
+  // margin): the module's own detector under-reads the independent BS.1770 meter by up to
+  // 0.12 dB, so targeting the contract exactly shipped files that measured *above* it.
+  // See MASTER_LIMITER_DETECTOR_MARGIN_DB.
   const limiter = createMasterLimiter(ctx, {
-    ...(options.limiterCeilingDb !== undefined ? { ceilingDb: options.limiterCeilingDb } : {}),
+    ceilingDb: options.limiterCeilingDb ?? MASTER_LIMITER_INTERNAL_CEILING_DB,
   });
+
+  /**
+   * E-11 — group buses with glue compression.
+   *
+   * Two stages, one per bus, and they are deliberately *slow*: a fast attack would flatten the
+   * very transients that make a drum bus sound like drums, so the drum glue lets the first
+   * ~12 ms through and grips what follows, while the music bus is slower still and only exists
+   * to stop a pad, a bass and a lead from each claiming their own peak. Both are gentle
+   * (2:1 – 3:1) and neither is a limiter: the true-peak limiter at the end of the chain is
+   * still the only thing enforcing a ceiling.
+   *
+   * The drum bus additionally carries a **parallel** path — the same signal crushed hard and
+   * blended back under the clean one — which is how a drum bus gains density without losing its
+   * attack. Its blend is deliberately low; the level it contributes is folded into the loudness
+   * re-measurement (see `MIX_LOUDNESS_NOTES.md` §7), not guessed at.
+   */
+  const drumBusInput = ctx.createGain();
+  const drumGlue = ctx.createDynamicsCompressor();
+  drumGlue.threshold.value = -18;
+  drumGlue.knee.value = 6;
+  drumGlue.ratio.value = 3;
+  drumGlue.attack.value = 0.012;
+  drumGlue.release.value = 0.15;
+  drumBusInput.connect(drumGlue);
+
+  const drumParallel = ctx.createDynamicsCompressor();
+  drumParallel.threshold.value = -34;
+  drumParallel.knee.value = 2;
+  drumParallel.ratio.value = 8;
+  drumParallel.attack.value = 0.004;
+  drumParallel.release.value = 0.12;
+  const drumParallelGain = ctx.createGain();
+  drumParallelGain.gain.value = DRUM_PARALLEL_BLEND;
+  drumBusInput.connect(drumParallel);
+  drumParallel.connect(drumParallelGain);
+
+  const musicBusInput = ctx.createGain();
+  const musicGlue = ctx.createDynamicsCompressor();
+  musicGlue.threshold.value = -20;
+  musicGlue.knee.value = 8;
+  musicGlue.ratio.value = 2;
+  musicGlue.attack.value = 0.03;
+  musicGlue.release.value = 0.25;
+  musicBusInput.connect(musicGlue);
 
   const fxRack = new EffectsRack(ctx, { ...DEFAULT_FX_STATE, ...(options.fx ?? {}) });
 
@@ -163,10 +254,16 @@ export function buildMasterGraph(
     }
   }
 
-  // Signal chain. Same order as the live engine has always used.
-  masterGain.connect(loudnessTrimGain);
-  loudnessTrimGain.connect(fxRack.inputNode);
-  fxRack.outputNode.connect(limiter.input);
+  // Signal chain: fader → FX rack → linear loudness trim → true-peak limiter.
+  // The trim must come after every nonlinear stage for the match to be a real gain —
+  // see the topology note in the module header.
+  // The group buses are the only way a track reaches the fader.
+  drumGlue.connect(masterGain);
+  drumParallelGain.connect(masterGain);
+  musicGlue.connect(masterGain);
+  masterGain.connect(fxRack.inputNode);
+  fxRack.outputNode.connect(loudnessTrimGain);
+  loudnessTrimGain.connect(limiter.input);
   limiter.output.connect(analyser ?? ctx.destination);
 
   if (analyser) {
@@ -185,6 +282,12 @@ export function buildMasterGraph(
 
   return {
     input: masterGain,
+    drumBusInput,
+    musicBusInput,
+    glueReductionDb: () => ({
+      drum: drumGlue.reduction ?? 0,
+      music: musicGlue.reduction ?? 0,
+    }),
     masterGain,
     loudnessTrimGain,
     fxRack,
@@ -233,7 +336,7 @@ export function buildMasterGraph(
       } catch {
         /* teardown must never throw */
       }
-      for (const node of [masterGain, loudnessTrimGain, analyser, masterAnalyser, analyserL, analyserR, channelSplitter]) {
+      for (const node of [masterGain, loudnessTrimGain, analyser, masterAnalyser, analyserL, analyserR, channelSplitter, drumBusInput, drumGlue, drumParallel, drumParallelGain, musicBusInput, musicGlue]) {
         try {
           node?.disconnect();
         } catch {

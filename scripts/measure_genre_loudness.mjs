@@ -108,9 +108,18 @@ const METRIC = {
     after: "trimmedRmsDb",
   },
 }[metricKey];
+/**
+ * A subset run must never be able to clobber the committed baseline.
+ *
+ * The first version of this guard only looked at `--limit`, so
+ * `--genres=dubstep,doom-metal` — also a subset — wrote straight to
+ * `scripts/loudness.baseline.json` and replaced the 159-genre baseline with 7 genres.
+ * Any narrowing flag now redirects to the scratch file; `--out` still overrides.
+ */
+const isSubsetRun = limit > 0 || genreFilter.length > 0;
 const outPath = path.resolve(
   ROOT,
-  argValue("--out", limit > 0 ? "scripts/loudness.partial.json" : "scripts/loudness.baseline.json")
+  argValue("--out", isSubsetRun ? "scripts/loudness.partial.json" : "scripts/loudness.baseline.json")
 );
 
 // Must match `LOUDNESS_TRIM_MIN_DB` / `LOUDNESS_TRIM_MAX_DB` in src/data/genreMix.ts.
@@ -252,6 +261,45 @@ async function measureLegacy(page, genreId) {
   );
 }
 
+/**
+ * Which limiter the offline path actually installs, plus its measured ceiling behaviour.
+ *
+ * The V-03 true-peak check compares the *measured* peak against -1.0 dBTP, and the limiter
+ * is the only thing enforcing it. The two paths behave differently — the AudioWorklet is a
+ * hard lookahead ceiling, the `DynamicsCompressor` fallback is soft — so a report that does
+ * not say which one rendered cannot be interpreted. This probe answers it once per run
+ * instead of leaving it to be guessed from the numbers.
+ */
+async function probeLimiterKind(page) {
+  return page.evaluate(async () => {
+    const [{ buildMasterGraph }, limiterModule] = await Promise.all([
+      import("/src/audio/masterGraph.ts"),
+      import("/src/audio/MasterLimiter.ts"),
+    ]);
+    const ctx = new OfflineAudioContext(2, 4096, 44100);
+    const graph = buildMasterGraph(ctx, { loudnessTrimDb: 0 });
+    try {
+      const kind = await graph.limiter.ready;
+      return {
+        kind,
+        // The contract ceiling and the ceiling the detector actually targets. The gap is
+        // the documented detector margin; both are reported so a reader can tell which one
+        // the measured true peaks should be compared against.
+        contractCeilingDb: limiterModule.MASTER_LIMITER_CEILING_DB,
+        internalCeilingDb: limiterModule.MASTER_LIMITER_INTERNAL_CEILING_DB,
+        latencySeconds: graph.limiter.latencySeconds ?? null,
+        hasWorkletApi: typeof ctx.audioWorklet?.addModule === "function",
+      };
+    } finally {
+      try {
+        graph.destroy();
+      } catch {
+        /* best effort */
+      }
+    }
+  });
+}
+
 async function listGenreIds(page) {
   return page.evaluate(async () => {
     const { ALL_GENRES } = await import("/src/data/genres/index.ts");
@@ -335,6 +383,17 @@ async function waitForServer(url) {
       catalog = catalog.slice(0, limit);
     }
     console.log(`Measuring ${catalog.length} genre(s)...`);
+    let limiterProbe = null;
+    try {
+      limiterProbe = await probeLimiterKind(page);
+      console.log(
+        `Limiter path: ${limiterProbe.kind} (contract ${limiterProbe.contractCeilingDb} dBTP, ` +
+          `detector targets ${limiterProbe.internalCeilingDb} dBTP, lookahead ${limiterProbe.latencySeconds}s, ` +
+          `AudioWorklet API ${limiterProbe.hasWorkletApi ? "available" : "missing"})`
+      );
+    } catch (error) {
+      console.log(`Limiter probe failed: ${error.message}`);
+    }
 
     // Pass 1 — legacy (before) + arranged at unity trim.
     const measured = [];
@@ -362,31 +421,107 @@ async function waitForServer(url) {
     const arrangedSorted = measured.map((m) => m[METRIC.before]).sort((a, b) => a - b);
     const targetLufs = percentile(arrangedSorted, 50);
     const clampHits = { min: 0, max: 0, total: 0 };
-    for (const entry of measured) {
-      const raw = targetLufs - entry[METRIC.before];
-      const trim = clamp(raw, TRIM_MIN_DB, TRIM_MAX_DB);
+    const noteClamp = (raw) => {
       if (raw < TRIM_MIN_DB) clampHits.min++;
       if (raw > TRIM_MAX_DB) clampHits.max++;
       if (raw < TRIM_MIN_DB || raw > TRIM_MAX_DB) clampHits.total++;
-      entry.trimDb = Number(trim.toFixed(2));
+    };
+    for (const entry of measured) {
+      const raw = targetLufs - entry[METRIC.before];
+      noteClamp(raw);
+      entry.trimDb = Number(clamp(raw, TRIM_MIN_DB, TRIM_MAX_DB).toFixed(2));
+      entry.trimIterations = 0;
     }
     console.log(`\nTarget (median arranged ${metricKey}): ${targetLufs.toFixed(2)}`);
 
-    // Pass 2 — arranged mix with the derived trims applied.
-    console.log("Second pass with trims applied...");
-    for (const [index, entry] of measured.entries()) {
-      try {
-        const trimmed = await measureGenre(page, entry.id, entry.trimDb);
-        entry.trimmedLufs = trimmed.arrangedLufs;
-        entry.trimmedPeakDb = trimmed.arrangedPeakDb;
-        entry.trimmedTruePeakDb = trimmed.arrangedTruePeakDb;
-        entry.trimmedRmsDb = trimmed.arrangedRmsDb;
-      } catch (error) {
-        failures.push({ genreId: entry.id, pass: "trimmed", error: String(error.message || error) });
+    /**
+     * Passes 2..N — solve the trim instead of assuming one subtraction is enough.
+     *
+     * A single `target - arranged` is only exact if the measured quantity is linear in
+     * gain. BS.1770 gated integrated loudness is *not*: the relative gate (-10 LU below the
+     * ungated mean) changes which blocks are included as the level moves, so a genre with a
+     * wide dynamic range loses less loudness than the dB cut suggests. The first version of
+     * this script assumed linearity and left a 1.97 dB post-trim spread against a 1.5 dB
+     * gate — not because the trims were wrong to begin with, but because they were never
+     * re-checked after being applied.
+     *
+     * Each round therefore only re-renders the genres that are still outside the tolerance
+     * and moves each by its *measured* residual, which converges in two or three rounds for
+     * a handful of high-crest genres and costs nothing for the rest.
+     */
+    const MAX_TRIM_ROUNDS = 5;
+    /** Half the 1.5 dB gate: converging tighter than this buys nothing. */
+    const TRIM_TOLERANCE_DB = 0.2;
+    const clampLimited = [];
+    const stillOutside = [];
+    /**
+     * `trimDb` is only ever changed immediately before that genre is rendered again.
+     *
+     * The first version of this loop moved the trim first and re-rendered later, so a genre
+     * that moved on the final round ended the run with a trim and **no measurement at that
+     * trim** — the report then carried 26 nulls and the gate could not tell whether the
+     * shipped trim had ever been verified. A trim that has not been measured at its final
+     * value is not evidence, so the rule is now: measure, then decide, then (only if there is
+     * another round) move.
+     */
+    let queue = measured.slice();
+    let roundsRun = 0;
+    for (let round = 1; round <= MAX_TRIM_ROUNDS; round++) {
+      roundsRun = round;
+      console.log(`\nTrim round ${round}: rendering ${queue.length} genre(s)...`);
+      for (const [index, entry] of queue.entries()) {
+        try {
+          const trimmed = await measureGenre(page, entry.id, entry.trimDb);
+          entry.trimmedLufs = trimmed.arrangedLufs;
+          entry.trimmedPeakDb = trimmed.arrangedPeakDb;
+          entry.trimmedTruePeakDb = trimmed.arrangedTruePeakDb;
+          entry.trimmedRmsDb = trimmed.arrangedRmsDb;
+          entry.trimIterations = round;
+        } catch (error) {
+          failures.push({ genreId: entry.id, pass: `trim-round-${round}`, error: String(error.message || error) });
+        }
+        if ((index + 1) % 10 === 0 || index === queue.length - 1) {
+          process.stdout.write(`  round ${round}: ${index + 1}/${queue.length}\n`);
+        }
       }
-      if ((index + 1) % 10 === 0 || index === measured.length - 1) {
-        process.stdout.write(`  trimmed ${index + 1}/${measured.length}\n`);
+
+      // Decide who moves next, but do not touch their trims yet.
+      const next = [];
+      for (const entry of measured) {
+        const residual = targetLufs - entry.trimmedLufs;
+        if (!Number.isFinite(residual) || Math.abs(residual) <= TRIM_TOLERANCE_DB) continue;
+        const candidate = clamp(entry.trimDb + residual, TRIM_MIN_DB, TRIM_MAX_DB);
+        if (candidate === entry.trimDb) {
+          // Already pinned at the clamp: no further progress is possible, and pretending
+          // otherwise would just burn render time. Recorded as a clamp-limited residual.
+          clampLimited.push({ id: entry.id, trimDb: entry.trimDb, residualDb: Number(residual.toFixed(3)) });
+          continue;
+        }
+        next.push({ entry, trim: Number(candidate.toFixed(2)) });
       }
+      if (next.length === 0) {
+        console.log(`  converged after round ${round}`);
+        break;
+      }
+      console.log(`  ${next.length} genre(s) still outside ±${TRIM_TOLERANCE_DB} dB`);
+      for (const { entry, trim } of next) entry.trimDb = trim;
+      queue = next.map((n) => n.entry);
+    }
+
+    for (const entry of measured) {
+      const residual = targetLufs - entry.trimmedLufs;
+      if (Number.isFinite(residual) && Math.abs(residual) > TRIM_TOLERANCE_DB) {
+        stillOutside.push({ id: entry.id, residualDb: Number(residual.toFixed(3)), trimDb: entry.trimDb, trimIterations: entry.trimIterations ?? 0 });
+      }
+    }
+    if (stillOutside.length > 0) {
+      console.log(
+        `\n  informational: ${stillOutside.length} genre(s) finished outside ±${TRIM_TOLERANCE_DB} dB after ${roundsRun} round(s); ` +
+          `worst ${stillOutside
+            .slice()
+            .sort((a, b) => Math.abs(b.residualDb) - Math.abs(a.residualDb))[0]
+            .residualDb.toFixed(2)} dB`
+      );
     }
 
     const spreadPass = (legacyKey, beforeKey, afterKey) => ({
@@ -404,11 +539,19 @@ async function waitForServer(url) {
     const report = {
       generatedBy: "scripts/measure_genre_loudness.mjs",
       generatedAt: new Date().toISOString(),
-      subset: limit > 0,
+      subset: isSubsetRun,
       limit: limit > 0 ? limit : null,
       genreCount: measured.length,
       bars,
       repeats,
+      limiter: limiterProbe,
+      trimConvergence: {
+        rounds: roundsRun,
+        toleranceDb: TRIM_TOLERANCE_DB,
+        maxRounds: MAX_TRIM_ROUNDS,
+        stillOutside,
+        clampLimited,
+      },
       sampleRate: 44100,
       path: "offline: renderPatternOffline() via Vite dev server (no live AudioContext, post-limiter)",
       metric: {
@@ -448,6 +591,9 @@ async function waitForServer(url) {
             trimmedRmsDb: Number.isFinite(entry.trimmedRmsDb) ? Number(entry.trimmedRmsDb.toFixed(3)) : null,
             withinGenreSpreadDb: Number(entry.withinGenreSpreadDb.toFixed(3)),
             gatedBlockCount: entry.gatedBlockCount,
+            // How many render rounds the trim needed before it measured on target. 0 means
+            // the first subtraction was already within tolerance.
+            trimIterations: entry.trimIterations ?? 0,
           },
         ])
       ),

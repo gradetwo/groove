@@ -157,14 +157,21 @@ if (allTableTrimsZero && reportHasNonZero) {
   );
 }
 
-/* Wiring: the master stage must exist between fader and FX rack, and the offline
- * renderer must apply the same gain. If someone deletes either, this gate fails even
- * though every number in the report still looks perfect. */
+/* Wiring: the loudness-trim stage must exist as its own node placed after the FX rack and
+ * before the limiter, and the offline renderer must apply the same gain. If someone deletes
+ * or reorders it, this gate fails even though every number in the report still looks perfect.
+ *
+ * Note what this gate can and cannot see: it checks the *recorded* numbers for internal
+ * consistency (spread, clamp, trims matching the mix table) plus this topology. It never
+ * re-renders, so a change that alters the actual loudness without touching the trim table
+ * will not trip it — that is what the measurement (slow track) is for. That gap is exactly
+ * how the baseline went stale after the chord-voicing and bus work while this gate stayed
+ * green; see `AUDIO_QUALITY_AND_SYNTH_PLAN.md` §4.14. */
 const audioSource = read("src/audio/AudioEngine.ts");
 const wavSource = read("src/audio/WavExporter.ts");
 const storeSource = read("src/features/sequencer/useSequencerStore.ts");
 /**
- * E-17 moved the master chain (fader → trim → FX rack → limiter) into one shared builder,
+ * E-17 moved the master chain (fader → FX rack → loudness trim → limiter) into one shared builder,
  * so asserting the chain edges inside each engine file would now fail on a graph that is
  * *more* correct than before — the two engines can no longer diverge at all. The assertions
  * below therefore check the builder for the topology and the engines for using it.
@@ -172,9 +179,12 @@ const storeSource = read("src/features/sequencer/useSequencerStore.ts");
 const graphSource = read("src/audio/masterGraph.ts");
 const wiring = [
   ["masterGraph declares the separate trim stage", /loudnessTrimGain = ctx\.createGain\(\)/],
-  ["masterGraph inserts it after the fader", /masterGain\.connect\(loudnessTrimGain\)/],
-  ["masterGraph feeds the FX rack from the trim stage", /loudnessTrimGain\.connect\(fxRack\.inputNode\)/],
-  ["masterGraph places the limiter after the FX rack", /fxRack\.outputNode\.connect\(limiter\.input\)/],
+  ["masterGraph feeds the FX rack from the fader", /masterGain\.connect\(fxRack\.inputNode\)/],
+  // The trim must be the last LINEAR stage: placed before the rack, its correction is
+  // absorbed by the rack's saturation (measured 2026-09-16: a +7.07 dB request moved the
+  // integrated loudness by 1.74 dB). These two assertions are the topology that fixes it.
+  ["masterGraph places the trim after the FX rack", /fxRack\.outputNode\.connect\(loudnessTrimGain\)/],
+  ["masterGraph places the limiter after the trim", /loudnessTrimGain\.connect\(limiter\.input\)/],
   ["the live engine builds the shared graph", /buildMasterGraph\(this\.ctx/],
   ["the offline renderer builds the shared graph", /buildMasterGraph\(ctx/],
   ["AudioEngine derives the trim from the pattern's genre", /getGenreLoudnessTrimDb\(pattern\.genre_id\)/],

@@ -25,6 +25,9 @@ dist-ssr
 # Testing
 coverage
 
+# Scratch measurement reports (a subset run must never be committed as a baseline)
+scripts/*.partial.json
+
 # Python
 __pycache__/
 *.pyc

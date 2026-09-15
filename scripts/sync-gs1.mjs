@@ -72,7 +72,16 @@ const VENDORED_FILES = [
 ];
 
 /** Hand-written files that live in `vendor/gs1/` but are not upstream copies. */
-const KEEP_FILES = ["UPSTREAM.json", "README.md"];
+/**
+ * Files under `vendor/gs1/` that are *ours*, not upstream copies, and must survive a sync.
+ *
+ * `pruneToManagedSet` deletes anything not in the manifest, which is right for upstream files (a
+ * renamed upstream module must not linger) but wrong for the two documents we add: the README
+ * explaining the pin, and the third-party notices that discharge the licence obligation the
+ * upstream artifacts do not. Without this list a routine `--from` sync silently deleted the
+ * notices file — which is exactly the compliance gap the file exists to close.
+ */
+const KEEP_FILES = ["README.md", "THIRD_PARTY_NOTICES.md"];
 
 const WASM_FILES = VENDORED_FILES.filter((f) => f.endsWith(".wasm"));
 

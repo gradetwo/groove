@@ -24,6 +24,9 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
+import { ChannelStrip } from "./ChannelStripDsp";
+import { resolveTrackInsertForGenre } from "../data/genreInsert";
+import { resolveGroupBus } from "./trackBuses";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 
 export interface RenderWavOptions {
@@ -174,14 +177,13 @@ export async function renderPatternOffline(
   );
 
   // E-17 / N-16: the bounce now renders through the SAME master graph as playback —
-  // fader → trim → FX rack → true-peak limiter — and, crucially, through the same reverb
+  // fader → FX rack → loudness trim → true-peak limiter — and, crucially, through the same reverb
   // and delay sends. Previously the exporter had neither sends nor an FX rack, so the
   // per-genre `sendA`/`sendB` values (curated for all 159 genres) and anything the user
   // dialled into FLT/DRIVE/CHORUS/LO-FI simply did not reach the file. It also used a
   // 0.85 fader against the live engine's 0.8, an unrelated ~0.5 dB offset; both now come
   // from `MASTER_FADER_DEFAULT`.
   const graph = buildMasterGraph(ctx, { loudnessTrimDb });
-  const masterGain = graph.masterGain;
 
   // N-14: the genre's master FX and bus character, applied through the same shared
   // applier the live engine uses, at the same *playing* tempo (never the metadata
@@ -200,7 +202,13 @@ export async function renderPatternOffline(
   // itself (same helper the live engine uses), so a rendered master honours
   // mute / solo / volume / pan instead of silently exporting everything at 0.8 centre.
   const mixerStates: TrackState[] = options.trackStates ?? deriveTrackStates(pattern);
-  const trackStrips: Array<{ gain: GainNode; polarity: GainNode; pan: StereoPannerNode }> = [];
+  const trackStrips: Array<{
+    gain: GainNode;
+    polarity: GainNode;
+    pan: StereoPannerNode;
+    /** E-10: the same pre-fader insert chain the live engine builds. */
+    insert: ChannelStrip;
+  }> = [];
   const numTracks = pattern.tracks.length;
   // Hoisted above the strip loop because the send taps below need to know whether the
   // track is silenced — the live engine zeroes a muted/soloed-out track's sends too.
@@ -211,8 +219,18 @@ export async function renderPatternOffline(
 
   for (let t = 0; t < numTracks; t++) {
     const tState = mixerStates[t] || { mute: false, solo: false, volume: 0.8, pan: 0, sendA: 0, sendB: 0 };
+    // E-10: the bounce gets the same channel strip as playback — high-pass, EQ,
+    // compressor and drive — or the export would be missing the very thing that makes a
+    // genre's tracks sit together. A track with no stored chain takes its role default.
+    const tInsert = new ChannelStrip(
+      ctx,
+      pattern.tracks[t]?.insert ??
+        resolveTrackInsertForGenre(pattern.tracks[t]?.track_id, pattern.genre_id)
+    );
+
     const tGain = ctx.createGain();
     tGain.gain.setValueAtTime(Math.max(0, Math.min(2, tState.volume)), 0);
+    tInsert.output.connect(tGain);
 
     // N-01 follow-up: polarity must be honoured offline too, otherwise an inverted
     // channel would sound different in the exported master than in the console.
@@ -224,7 +242,11 @@ export async function renderPatternOffline(
 
     tGain.connect(tPolarity);
     tPolarity.connect(tPan);
-    tPan.connect(masterGain);
+    // E-11: through the group bus, never straight to the fader — the same decision the live
+    // engine makes, from the same function (`trackBuses.ts`), which is what keeps the two graphs
+    // identical where it matters.
+    const bus = resolveGroupBus(pattern.tracks[t]?.track_id, pattern.tracks[t]?.name);
+    tPan.connect(bus === "drum" ? graph.drumBusInput : graph.musicBusInput);
 
     // Exporter parity for the send buses: the live engine taps post-pan into `sendA`
     // (reverb) and `sendB` (delay), ramped with `setTargetAtTime`. The same tap point and
@@ -241,7 +263,7 @@ export async function renderPatternOffline(
     tPan.connect(sendB);
     sendB.connect(graph.delay.input);
 
-    trackStrips.push({ gain: tGain, polarity: tPolarity, pan: tPan });
+    trackStrips.push({ gain: tGain, polarity: tPolarity, pan: tPan, insert: tInsert });
   }
 
   const drumKit: DrumKitType = options.drumKit || "808";
@@ -285,7 +307,7 @@ export async function renderPatternOffline(
       const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
       const gateVal = track.gate && track.gate[stepIdx] !== undefined ? track.gate[stepIdx] : 0.8;
 
-      const trackDest = trackStrips[trackIdx].gain;
+      const trackDest = trackStrips[trackIdx].insert.input;
       const trackId = (track.track_id || "").toLowerCase();
       const lowerName = track.name.toLowerCase();
       // Exporter parity: resolve the same per-track instrument the live engine does, so a

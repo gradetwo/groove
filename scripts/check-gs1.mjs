@@ -51,7 +51,7 @@ const EXPECTED = {
 };
 
 /** Files in vendor/gs1 that are ours, not upstream copies, and so unhashed. */
-const LOCAL_METADATA = new Set(["UPSTREAM.json", "README.md"]);
+const LOCAL_METADATA = new Set(["UPSTREAM.json", "README.md", "THIRD_PARTY_NOTICES.md"]);
 
 /** The filename whose ABI the manifest pins (the SIMD core). */
 const PRIMARY_WASM = "src/generated/synth_core.wasm";
