@@ -54,6 +54,19 @@ function capture(command, args) {
   }
 }
 
+/**
+ * Like `capture`, but keeps the exit status and the combined output. Needed where a
+ * step can be "green" without having done anything — see the affected-tests step.
+ */
+function captureResult(command, args) {
+  try {
+    const output = execSync([command, ...args].join(" "), { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    return { status: 0, output };
+  } catch (err) {
+    return { status: err.status ?? 1, output: `${err.stdout || ""}${err.stderr || ""}` };
+  }
+}
+
 function resolveBase() {
   const explicit = argValue("--base");
   if (explicit) return explicit;
@@ -107,7 +120,27 @@ if (mode === "fast") {
   }
 
   if (changedSource.length > 0) {
-    run("Affected unit tests", "npx", ["vitest", "run", "--changed", base, "--reporter=dot"]);
+    // `vitest --changed` exits 0 with "No test files found" when nothing imports the
+    // changed files. That printed a green "Affected unit tests" line while running zero
+    // tests, i.e. the step could not fail — found by a workstream that noticed its green
+    // light meant nothing. Source that no unit test covers cannot be vouched for by the
+    // fast track, so require the full regression instead of reporting a false pass.
+    const startedAt = Date.now();
+    const affected = captureResult("npx", ["vitest", "run", "--changed", base, "--reporter=dot"]);
+    const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+    const selectedNothing = /No test files found/i.test(affected.output);
+    if (affected.status !== 0 || selectedNothing) {
+      process.stdout.write(affected.output);
+      console.error(
+        `\n\u274c GATE FAILED: Affected unit tests (${seconds}s, exit ${affected.status}${selectedNothing ? ", selected no test files" : ""})`
+      );
+      if (selectedNothing) {
+        console.error("   Source changed but `vitest --changed` selected no unit test, so the fast track");
+        console.error("   cannot vouch for this change. Run the full regression: npm run slow");
+      }
+      process.exit(affected.status || 1);
+    }
+    console.log(`\u2705 Affected unit tests (${seconds}s)`);
   } else {
     console.log("\u23ed  Unit tests skipped (no source changes)");
   }
