@@ -391,7 +391,12 @@ voice（含滤波器包络 / 力度→音色 / unison）
 
 ## 4.6 P1 交付记录（v1.16.20）
 
-按 §6 排期完成的 P1 内容。**测试 736 / 79 文件全绿，22 条红线全过，响度门禁全过。**
+按 §6 排期完成的 P1 内容。**736 测试 / 79 文件全绿；slow 轨全过（typecheck、全量 lint、data lint、docs、覆盖率、build、budget、3 浏览器 7 目标 e2e、性能门禁）；22 条红线全过；响度门禁全过。已提交 `f72a95f` 并部署上线。**
+
+> **线上验收（部署后实测，2026-09-15）**：`https://silent-river-9229.gradetwo.workers.dev`
+> - `/version.json` → `1.16.20`，`changelogCount: 62`，`latest` 为该版且含 8 条双语要点；
+> - `/changelog.json?v=1.16.20` → 62 条，**最新三条依次为 1.16.20 / 1.16.19 / 1.16.18** —— 即需求 7 的修复在线上成立（版本键使新版本不可能命中旧副本，且渲染取并集后最新一条不可能被顶掉）；
+> - 部署：`Uploaded 26 files (33 already uploaded)`，`dist` 内 `version.json` / `changelog.json` / `sw.js` 的 CACHE_VERSION 均为 `1.16.20`。
 
 | ID | 交付内容 | 关键证据 |
 |---|---|---|
