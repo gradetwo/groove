@@ -452,3 +452,76 @@ export function applyGenreMixDefaults(pattern: SequencerPattern, genreId?: strin
 export function patternFromGenre(genre: Pick<Genre, "id" | "sequencer_pattern">): SequencerPattern {
   return applyGenreMixDefaults(genre.sequencer_pattern, genre.id);
 }
+
+/**
+ * The pre-feature placeholder mix that all 159 genres shipped with — one identical
+ * tuple for every track, and no sends at all. Exported so the "did the user ever
+ * touch this channel?" discriminator is testable instead of being a literal buried
+ * in the migration code.
+ */
+export const LEGACY_PLACEHOLDER_MIX: ResolvedGenreMix = {
+  kick: { volume: 0.9, pan: 0.0, sendA: 0, sendB: 0 },
+  snare: { volume: 0.85, pan: 0.0, sendA: 0, sendB: 0 },
+  hihat: { volume: 0.7, pan: -0.2, sendA: 0, sendB: 0 },
+  percussion: { volume: 0.65, pan: 0.25, sendA: 0, sendB: 0 },
+  bass: { volume: 0.9, pan: 0.0, sendA: 0, sendB: 0 },
+  chords: { volume: 0.75, pan: 0.0, sendA: 0, sendB: 0 },
+  lead: { volume: 0.8, pan: 0.1, sendA: 0, sendB: 0 },
+  fx: { volume: 0.6, pan: 0.0, sendA: 0, sendB: 0 },
+};
+
+/**
+ * True when a track still carries the untouched placeholder mix.
+ *
+ * Exact float equality is intentional: the placeholder reached storage through a
+ * JSON round-trip of these same decimal literals, so it comes back bit-identical.
+ * A track whose volume, pan or either send differs in any way was moved by the user
+ * (or by a future default) and must be left alone.
+ */
+export function isLegacyPlaceholderTrackMix(
+  track: Pick<SequencerTrack, "track_id" | "name" | "volume" | "pan" | "sendA" | "sendB">
+): boolean {
+  const role = resolveMixTrackId(track);
+  if (!role) return false;
+  const legacy = LEGACY_PLACEHOLDER_MIX[role];
+  return (
+    track.volume === legacy.volume &&
+    track.pan === legacy.pan &&
+    (track.sendA ?? 0) === 0 &&
+    (track.sendB ?? 0) === 0
+  );
+}
+
+/**
+ * Non-destructive migration for patterns that were persisted *before* the arranged
+ * mix existed (the localStorage session snapshot in `createInitialSequencerState`).
+ *
+ * Per track, not per pattern: a channel still sitting on the legacy placeholder was
+ * never touched by the user, so it is re-seeded from `GENRE_MIX_RESOLVED`; a channel
+ * the user moved keeps its saved values exactly. Unknown/custom genre ids migrate
+ * nothing, and the input is never mutated.
+ *
+ * Deliberately NOT applied to IndexedDB projects (`projectDb`) or imported `.groove`
+ * packages: those are user-authored artefacts whose saved mix may be deliberate, and
+ * rewriting stored projects is far more invasive than migrating the session snapshot
+ * that the app rewrites automatically on every session anyway. That decision is
+ * recorded in the branch notes rather than left implicit.
+ */
+export function migrateLegacyPlaceholderMix(
+  pattern: SequencerPattern,
+  genreId?: string
+): SequencerPattern {
+  const resolved = resolveGenreMix(genreId ?? pattern.genre_id);
+  const copy = copyPatternTracks(pattern);
+  if (!resolved) return copy;
+
+  return {
+    ...copy,
+    tracks: copy.tracks.map((track) => {
+      const role = resolveMixTrackId(track);
+      if (!role || !isLegacyPlaceholderTrackMix(track)) return track;
+      const mix = resolved[role];
+      return { ...track, volume: mix.volume, pan: mix.pan, sendA: mix.sendA, sendB: mix.sendB };
+    }),
+  };
+}

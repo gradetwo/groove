@@ -1,10 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   sequencerReducer,
   createInitialSequencerState,
   clonePattern,
 } from "../features/sequencer/useSequencerStore";
 import { GENRES_MAP } from "../data/genres";
+import { GENRE_MIX_RESOLVED, LEGACY_PLACEHOLDER_MIX, resolveMixTrackId } from "../data/genreMix";
+import { PROJECT_STORAGE_KEY } from "../features/sequencer/projectStorage";
+import type { SequencerPattern, SequencerTrack } from "../types/genre";
 
 describe("Sequencer Store & Pure Immutable Reducer (P2-04)", () => {
   const testGenre = GENRES_MAP["future-bass"] || Object.values(GENRES_MAP)[0];
@@ -343,4 +346,106 @@ describe("Sequencer Store & Pure Immutable Reducer (P2-04)", () => {
       expect(leadTrack.velocity?.[0]).toBe(120);
     });
   });
+
+describe("arranged genre mix · session snapshot migration", () => {
+  const genre = GENRES_MAP["chicago-house"];
+
+  /** A pattern exactly as it was persisted before the arranged mix existed. */
+  const legacyPattern = (source = genre.sequencer_pattern) => {
+    const pattern = JSON.parse(JSON.stringify(source));
+    pattern.tracks.forEach((track: SequencerTrack) => {
+      const role = resolveMixTrackId(track);
+      if (!role) return;
+      track.volume = LEGACY_PLACEHOLDER_MIX[role].volume;
+      track.pan = LEGACY_PLACEHOLDER_MIX[role].pan;
+      delete track.sendA;
+      delete track.sendB;
+    });
+    return pattern;
+  };
+
+  const writeSnapshot = (
+    genreId: string,
+    patternA: SequencerPattern,
+    patternB: SequencerPattern = patternA
+  ) => {
+    window.localStorage.setItem(
+      PROJECT_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        updatedAt: Date.now(),
+        projectId: null,
+        genreId,
+        bpm: genre.default_bpm,
+        swing: 0,
+        timeSignature: "4/4",
+        resolution: "1/16",
+        stepCount: 16,
+        patterns: { A: patternA, B: patternB },
+        activeSlot: "A",
+        songMode: false,
+        songChain: ["A", "B"],
+        loopRange: null,
+        isMetronome: false,
+        isCountIn: false,
+      })
+    );
+  };
+
+  const resolved = () => GENRE_MIX_RESOLVED[genre.id];
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("re-seeds every track of a snapshot that still holds the legacy placeholder mix", () => {
+    writeSnapshot(genre.id, legacyPattern());
+    const state = createInitialSequencerState(genre);
+    state.pattern.tracks.forEach((track) => {
+      const role = resolveMixTrackId(track)!;
+      expect(track.volume, role).toBe(resolved()[role].volume);
+      expect(track.pan, role).toBe(resolved()[role].pan);
+      expect(track.sendA, role).toBe(resolved()[role].sendA);
+      expect(track.sendB, role).toBe(resolved()[role].sendB);
+    });
+  });
+
+  it("keeps a user-moved kick and seeds the other seven channels", () => {
+    const pattern = legacyPattern();
+    pattern.tracks[0].volume = 0.33;
+    pattern.tracks[0].pan = 0.5;
+    writeSnapshot(genre.id, pattern);
+
+    const state = createInitialSequencerState(genre);
+    expect(state.pattern.tracks[0].volume).toBe(0.33);
+    expect(state.pattern.tracks[0].pan).toBe(0.5);
+    expect(state.pattern.tracks[1].volume).toBe(resolved().snare.volume);
+    expect(state.pattern.tracks[7].volume).toBe(resolved().fx.volume);
+  });
+
+  it("treats a hand-set send as a user edit and preserves that channel's volume/pan", () => {
+    const pattern = legacyPattern();
+    pattern.tracks[2].sendA = 0.4;
+    writeSnapshot(genre.id, pattern);
+
+    const state = createInitialSequencerState(genre);
+    expect(state.pattern.tracks[2].sendA).toBe(0.4);
+    expect(state.pattern.tracks[2].volume).toBe(LEGACY_PLACEHOLDER_MIX.hihat.volume);
+    expect(state.pattern.tracks[3].volume).toBe(resolved().percussion.volume);
+  });
+
+  it("does not re-seed an unknown/custom genre snapshot", () => {
+    const custom = { ...genre, id: "custom-legacy-restore" };
+    const pattern = { ...legacyPattern(), genre_id: custom.id };
+    writeSnapshot(custom.id, pattern);
+
+    const state = createInitialSequencerState(custom);
+    state.pattern.tracks.forEach((track, idx) => {
+      expect(track.volume).toBe(pattern.tracks[idx].volume);
+      expect(track.pan).toBe(pattern.tracks[idx].pan);
+      expect(track.sendA).toBeUndefined();
+    });
+  });
+});
+
 });

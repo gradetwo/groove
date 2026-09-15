@@ -4,11 +4,13 @@ import {
   CATEGORY_MIX_PROFILES,
   GENRE_MIX,
   GENRE_MIX_RESOLVED,
+  LEGACY_PLACEHOLDER_MIX,
   LOUDNESS_TRIM_MAX_DB,
   LOUDNESS_TRIM_MIN_DB,
   MIX_TRACK_IDS,
   applyGenreMixDefaults,
   getGenreLoudnessTrimDb,
+  migrateLegacyPlaceholderMix,
   patternFromGenre,
   resolveGenreMix,
   resolveMixTrackId,
@@ -224,6 +226,77 @@ describe("genre mix defaults · apply helper", () => {
     expect(resolveMixTrackId({ track_id: "unknown" as never, name: "808 Snare" })).toBe("snare");
     expect(resolveMixTrackId({ track_id: "other" as never, name: "Shaker" })).toBe("percussion");
     expect(resolveMixTrackId({ track_id: "other" as never, name: "Mystery" })).toBeNull();
+  });
+});
+
+describe("genre mix defaults · legacy placeholder migration", () => {
+  const legacyPattern = (): SequencerPattern => {
+    const pattern = makePattern();
+    return {
+      ...pattern,
+      tracks: pattern.tracks.map((track) => {
+        const role = resolveMixTrackId(track)!;
+        const legacy = LEGACY_PLACEHOLDER_MIX[role];
+        return { ...track, volume: legacy.volume, pan: legacy.pan, sendA: legacy.sendA, sendB: legacy.sendB };
+      }),
+    };
+  };
+
+  it("re-seeds untouched tracks and leaves user-moved tracks alone, per track", () => {
+    const pattern = legacyPattern();
+    // User moved only the kick.
+    pattern.tracks[0].volume = 0.33;
+
+    const migrated = migrateLegacyPlaceholderMix(pattern, "chicago-house");
+    const expected = resolveGenreMix("chicago-house")!;
+
+    expect(migrated.tracks[0].volume).toBe(0.33);
+    expect(migrated.tracks[0].pan).toBe(LEGACY_PLACEHOLDER_MIX.kick.pan);
+    for (const track of migrated.tracks.slice(1)) {
+      const role = resolveMixTrackId(track)!;
+      expect(track.volume, role).toBe(expected[role].volume);
+      expect(track.pan, role).toBe(expected[role].pan);
+      expect(track.sendA, role).toBe(expected[role].sendA);
+      expect(track.sendB, role).toBe(expected[role].sendB);
+    }
+  });
+
+  it("treats a non-zero send as a user edit even when volume/pan still look legacy", () => {
+    const pattern = legacyPattern();
+    pattern.tracks[2].sendA = 0.4;
+    const migrated = migrateLegacyPlaceholderMix(pattern, "trap-rap");
+    expect(migrated.tracks[2].volume).toBe(LEGACY_PLACEHOLDER_MIX.hihat.volume);
+    expect(migrated.tracks[2].sendA).toBe(0.4);
+    expect(migrated.tracks[3].volume).toBe(resolveGenreMix("trap-rap")!.percussion.volume);
+  });
+
+  it("never touches an unknown/custom genre and never mutates its input", () => {
+    const pattern = { ...legacyPattern(), genre_id: "custom-legacy" };
+    const migrated = migrateLegacyPlaceholderMix(pattern, "custom-legacy");
+    expect(migrated).not.toBe(pattern);
+    migrated.tracks.forEach((track, idx) => {
+      expect(track.volume).toBe(pattern.tracks[idx].volume);
+      expect(track.pan).toBe(pattern.tracks[idx].pan);
+    });
+    expect(migrated.tracks[0].steps).not.toBe(pattern.tracks[0].steps);
+  });
+
+  it("migrates the full legacy preset only where it is still exactly the old tuple", () => {
+    const genre = ALL_GENRES.find((g) => g.id === "ambient")!;
+    const legacy = {
+      ...genre.sequencer_pattern,
+      tracks: genre.sequencer_pattern.tracks.map((track) => ({
+        ...track,
+        ...LEGACY_PLACEHOLDER_MIX[resolveMixTrackId(track)!],
+      })),
+    };
+    const migrated = migrateLegacyPlaceholderMix(legacy, genre.id);
+    const expected = resolveGenreMix(genre.id)!;
+    for (const track of migrated.tracks) {
+      const role = resolveMixTrackId(track)!;
+      expect(track.volume).toBe(expected[role].volume);
+      expect(track.sendB).toBe(expected[role].sendB);
+    }
   });
 });
 

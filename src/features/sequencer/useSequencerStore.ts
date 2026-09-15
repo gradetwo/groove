@@ -4,7 +4,7 @@ import { ChordDefinition, noteToMidi } from "../../utils/chordTheory";
 import { BakedArpeggioResult } from "../../utils/arpeggiatorTheory";
 // The one helper every genre-entry point uses: clone + seed the genre's arranged mix.
 // `clonePattern` stays untouched because slot copies and undo must preserve user values.
-import { patternFromGenre } from "../../data/genreMix";
+import { patternFromGenre, migrateLegacyPlaceholderMix } from "../../data/genreMix";
 import {
   debounceSaveProject,
   loadSavedProject,
@@ -196,13 +196,20 @@ export function createInitialSequencerState(genre: Genre): SequencerState {
 
   if (saved && saved.genreId === genre.id) {
     const activeSlot = saved.activeSlot || "A";
-    const currentPattern = activeSlot === "B" ? clonePattern(saved.patterns.B) : clonePattern(saved.patterns.A);
+    // Migration, per track: a channel still on the pre-feature placeholder mix was
+    // never touched by the user, so it is re-seeded from the genre's arranged mix; a
+    // channel the user moved in the console keeps its saved value. Without this, a
+    // returning user would keep hearing the old flat mix forever, because this
+    // snapshot wins over `patternFromGenre` whenever the genre id matches.
+    const restoredA = migrateLegacyPlaceholderMix(saved.patterns.A, genre.id);
+    const restoredB = migrateLegacyPlaceholderMix(saved.patterns.B, genre.id);
+    const currentPattern = activeSlot === "B" ? restoredB : restoredA;
     return {
       currentGenre: genre,
       pattern: currentPattern,
       patterns: {
-        A: clonePattern(saved.patterns.A),
-        B: clonePattern(saved.patterns.B),
+        A: restoredA,
+        B: restoredB,
       },
       activeSlot,
       songMode: saved.songMode || false,
