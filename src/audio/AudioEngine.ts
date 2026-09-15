@@ -848,11 +848,22 @@ export class AudioEngine {
    * before the limiter, and is clamped to the measured range.
    */
   public setLoudnessTrimDb(db: number | null): void {
-    this.loudnessTrimOverrideDb =
-      db === null || !Number.isFinite(db)
-        ? null
-        : Math.max(LOUDNESS_TRIM_MIN_DB, Math.min(LOUDNESS_TRIM_MAX_DB, db));
-    this.applyLoudnessTrim(this.loudnessTrimOverrideDb ?? 0);
+    if (db === null || !Number.isFinite(db)) {
+      this.loudnessTrimOverrideDb = null;
+      // Returning to automatic mode must re-derive from whatever pattern is loaded,
+      // not drop to 0 dB until the next setPattern.
+      if (this.pattern) {
+        this.applyLoudnessTrimForPattern(this.pattern);
+      } else {
+        this.applyLoudnessTrim(0);
+      }
+      return;
+    }
+    this.loudnessTrimOverrideDb = Math.max(
+      LOUDNESS_TRIM_MIN_DB,
+      Math.min(LOUDNESS_TRIM_MAX_DB, db)
+    );
+    this.applyLoudnessTrim(this.loudnessTrimOverrideDb);
   }
 
   /** Trim in dB currently applied to the master bus (0 when no genre is loaded). */

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
 import { GENRES_MAP } from "../data/genres";
 import { GENRE_MIX, LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB } from "../data/genreMix";
-import { installFakeAudioContext } from "./helpers/fakeAudio";
+import { FakeGainNode, installFakeAudioContext } from "./helpers/fakeAudio";
 
 /**
  * Genre loudness matching lives in its own master-bus stage. These tests pin the two
@@ -52,6 +52,15 @@ describe("master loudness trim", () => {
       10
     );
 
+    // Pick a genre whose measured trim is actually large, so "the trim is derived"
+    // is observable rather than trivially 0 dB.
+    const [loudGenreId, loudEntry] =
+      Object.entries(GENRE_MIX).find(([, mix]) => Math.abs(mix.loudnessTrimDb) >= 0.5) ?? [];
+    expect(loudGenreId, "no genre has a non-trivial trim — re-run the measurement").toBeTruthy();
+    engine.setPattern(GENRES_MAP[loudGenreId!].sequencer_pattern);
+    expect(engine.getLoudnessTrimDb()).toBe(loudEntry!.loudnessTrimDb);
+    expect(Math.abs(engine.getLoudnessTrimDb())).toBeGreaterThanOrEqual(0.5);
+
     // Switching genre re-derives it; nothing has to remember to call a setter.
     engine.setPattern(GENRES_MAP["punk-rock"].sequencer_pattern);
     expect(engine.getLoudnessTrimDb()).toBe(GENRE_MIX["punk-rock"].loudnessTrimDb);
@@ -97,6 +106,7 @@ describe("master loudness trim", () => {
 
   it("never disturbs the master fader or the hearing-protection clamp", () => {
     const engine = new AudioEngine();
+    const internals = engine as unknown as { masterGain: FakeGainNode; loudnessTrimGain: FakeGainNode };
     engine.setHearingProtection(true);
     engine.setMaxVolumeLimit(0.85);
     engine.setMasterVolume(0.8);
@@ -104,14 +114,20 @@ describe("master loudness trim", () => {
     engine.setLoudnessTrimDb(6);
     expect(engine.getMasterVolume()).toBe(0.8);
     expect(engine.getEffectiveMasterVolume()).toBe(0.8);
+    // Node-level: the trim must not have been folded into the fader's gain.
+    expect(internals.masterGain.gain.value).toBeCloseTo(0.8, 6);
+    expect(internals.loudnessTrimGain.gain.value).toBeCloseTo(Math.pow(10, 6 / 20), 6);
 
     // And the other way round: fader / protection changes leave the trim alone.
     engine.setMasterVolume(1.0);
     expect(engine.getEffectiveMasterVolume()).toBe(0.85);
     expect(engine.getLoudnessTrimDb()).toBe(6);
+    expect(internals.masterGain.gain.value).toBeCloseTo(0.85, 6);
+    expect(internals.loudnessTrimGain.gain.value).toBeCloseTo(Math.pow(10, 6 / 20), 6);
 
     engine.setHearingProtection(false);
     expect(engine.getEffectiveMasterVolume()).toBe(1.0);
     expect(engine.getLoudnessTrimDb()).toBe(6);
+    expect(internals.masterGain.gain.value).toBeCloseTo(1.0, 6);
   });
 });
