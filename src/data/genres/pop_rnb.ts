@@ -38,11 +38,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Big-Band Brass",
+      "Symphonic Strings",
+      "Grand Piano",
+      "Upright Bass",
+      "Crooner Vocals"
     ],
     "sound_design": {
       "en": "Full symphonic string sections, big band brass, grand acoustic piano, upright bass.",
@@ -376,7 +376,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "strings_lead",
           "steps": [
             1,
             0,
@@ -419,7 +419,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -462,7 +462,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -523,11 +523,10 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Bright Analog Synth Lead",
+      "Juno-60 Pads",
+      "Minimoog Bass",
+      "LinnDrum"
     ],
     "sound_design": {
       "en": "Roland Juno-60 pads, Minimoog bass, LinnDrum snares, bright analog synthesizer hooks.",
@@ -818,7 +817,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "analog_bass",
           "steps": [
             1,
             1,
@@ -1008,11 +1007,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Soaring Disco Strings",
+      "Chucking Funk Guitar",
+      "Slap Bass",
+      "Electric Piano",
+      "Orchestral Brass"
     ],
     "sound_design": {
       "en": "Soaring orchestral disco strings, Nile Rodgers chucking guitar, slap bass, orchestral brass.",
@@ -1389,7 +1388,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "strings_lead",
           "steps": [
             0,
             0,
@@ -1432,7 +1431,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -1493,11 +1492,10 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "JP-8000 Supersaw Lead",
+      "Korg M1 Piano Stabs",
+      "Offbeat Analog Bass",
+      "Four-on-the-Floor Kick"
     ],
     "sound_design": {
       "en": "Korg M1 piano chords, Roland JP-8000 supersaws, energetic male rap, soaring female vocals.",
@@ -1788,7 +1786,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "analog_bass",
           "steps": [
             0,
             1,
@@ -1831,7 +1829,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "supersaw",
+          "instrument": "piano_lead",
           "steps": [
             1,
             0,
@@ -1978,11 +1976,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Tight Brass Horn Stabs",
+      "Slap Bass",
+      "Clavinet",
+      "Clean Rhythm Guitar",
+      "The One Drum Groove"
     ],
     "sound_design": {
       "en": "Tight brass horn stabs, syncopated slap bass, clavinet through auto-wah, clean rhythm guitar.",
@@ -2359,7 +2357,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -2402,7 +2400,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -2463,11 +2461,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Hammond B3 Organ",
+      "Memphis Horn Section",
+      "Electric Bass",
+      "Electric Guitar",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Warm Hammond B3 organ with Leslie speaker, real horn section, electric guitar, upright/Fender bass.",
@@ -2758,7 +2756,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -2844,7 +2842,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "organ_lead",
           "steps": [
             0,
             0,
@@ -2887,7 +2885,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -2948,11 +2946,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Fender Rhodes",
+      "Warm Fingerstyle Bass",
+      "Layered Plucked Synth",
+      "Pocket Drum Kit",
+      "Vocal Layers"
     ],
     "sound_design": {
       "en": "Fender Rhodes electric piano, unquantized live drums, warm bass guitar, subtle vocal layers.",
@@ -3243,7 +3241,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -3372,7 +3370,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -3433,11 +3431,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Polished Synth Lead",
+      "Digital Synth Pads",
+      "808 Sub Bass",
+      "Rhodes Chords",
+      "Trap-Style Claps & Kicks"
     ],
     "sound_design": {
       "en": "Roland TR-808 kicks and claps, lush digital synth pads, polished melismatic vocals.",
@@ -3919,11 +3917,10 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Filtered Ambient Pads",
+      "Murky Sub Bass",
+      "Muted Plucked Synth",
+      "Pitch-Shifted Vocal Chops"
     ],
     "sound_design": {
       "en": "Filtered ambient synth pads, pitch-shifted vocal chops, murky sub-bass, underwater reverbs.",
@@ -4300,7 +4297,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "guitar_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -4343,7 +4340,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
@@ -4405,11 +4402,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Acoustic Piano",
+      "Vibraphone",
+      "Fender Precision Bass",
+      "Tambourine & Drums",
+      "Gospel Pop Harmonies"
     ],
     "sound_design": {
       "en": "Fender Precision Bass through direct-box, driving tambourines, acoustic piano, vibraphone.",
@@ -4700,7 +4697,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "walking_upright",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -4743,7 +4740,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "vibraphone",
           "steps": [
             1,
             0,
@@ -4786,7 +4783,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
@@ -4829,7 +4826,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -4890,11 +4887,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Lush Brass Horns",
+      "Roland Rhodes",
+      "Slap Bass",
+      "Tight Studio Drums",
+      "Funk Guitar"
     ],
     "sound_design": {
       "en": "Sparkling Roland Rhodes electric piano, lush brass horns, slap bass, tight studio drums.",
@@ -5271,7 +5268,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "guitar_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -5375,11 +5372,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Modern Synth Lead Stacks",
+      "Supersaw Chords",
+      "Sub Bass",
+      "Punchy Modern Drums",
+      "Trap 808s"
     ],
     "sound_design": {
       "en": "High-budget modern synthesizer stacks, processed vocal hooks, trap 808s, punchy modern drums.",
@@ -5860,11 +5857,11 @@ export const POP_RNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Acoustic Grand Piano",
+      "String Section",
+      "Bright Distorted Guitar",
+      "Melodic Electric Bass",
+      "Punchy Electronic Drums"
     ],
     "sound_design": {
       "en": "Acoustic grand piano fast runs, strings, bright distorted guitars, punchy electronic drums.",
@@ -6155,7 +6152,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -6198,7 +6195,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "strings_lead",
           "steps": [
             1,
             0,
@@ -6241,7 +6238,7 @@ export const POP_RNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
