@@ -8,6 +8,8 @@ export interface UsePanelTogglesOptions {
   setIsEuclideanOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsAnalyzerOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsProjectHubOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Feature #2: the floating mixing console drawer. */
+  setIsConsoleOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export interface UsePanelTogglesResult {
@@ -19,6 +21,7 @@ export interface UsePanelTogglesResult {
   handleOpenProjectHub: () => void;
   handleToggleMaximize: () => void;
   handleToggleAdvancedControls: () => void;
+  handleToggleConsole: () => void;
 }
 
 /**
@@ -34,6 +37,7 @@ export function usePanelToggles({
   setIsEuclideanOpen,
   setIsAnalyzerOpen,
   setIsProjectHubOpen,
+  setIsConsoleOpen,
 }: UsePanelTogglesOptions): UsePanelTogglesResult {
   const handleCollapseSidebar = useCallback(() => setIsSidebarCollapsed(true), []);
 
@@ -57,6 +61,8 @@ export function usePanelToggles({
     []
   );
 
+  const handleToggleConsole = useCallback(() => setIsConsoleOpen((prev) => !prev), []);
+
   return {
     handleCollapseSidebar,
     handleToggleSidebar,
@@ -66,5 +72,6 @@ export function usePanelToggles({
     handleOpenProjectHub,
     handleToggleMaximize,
     handleToggleAdvancedControls,
+    handleToggleConsole,
   };
 }

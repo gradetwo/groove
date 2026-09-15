@@ -338,6 +338,18 @@ export const studioMessages = {
     en: "The console is tuned for medium and large screens — scroll sideways to reach every channel.",
     zh: "调音台针对中等及大尺寸屏幕优化，可左右滚动查看全部通道。",
   },
+  // Floating console inside the studio (feature #2)
+  console_float_toggle: { en: "Mixing Console", zh: "调音台" },
+  console_float_toggle_title: {
+    en: "Float the mixing console over the studio (C)",
+    zh: "在工作台上浮出调音台 (C)",
+  },
+  console_float_close: { en: "Close console", zh: "关闭调音台" },
+  console_float_shared_hint: {
+    en: "Linked to the studio: same audio engine, same pattern",
+    zh: "与律动工作台联动：共用同一音频引擎与同一音序状态",
+  },
+  console_float_esc_hint: { en: "Esc to close", zh: "按 Esc 关闭" },
 
   // Sequencer Track Row (lane header controls)
   track_audition_title: { en: "Tap to audition sound", zh: "点击试听音色" },

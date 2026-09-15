@@ -30,6 +30,9 @@ export interface UseTransportShortcutsOptions {
   isEditorMaximized: boolean;
   setIsEditorMaximized: React.Dispatch<React.SetStateAction<boolean>>;
   setIsProjectHubOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Floating mixing console (调音台): Esc closes it before any other overlay. */
+  isConsoleOpen?: boolean;
+  setIsConsoleOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   onTogglePlay: () => void;
   onToggleDrumsOnly: () => void;
   onUndo: () => void;
@@ -56,6 +59,8 @@ export function useTransportShortcuts({
   isEditorMaximized,
   setIsEditorMaximized,
   setIsProjectHubOpen,
+  isConsoleOpen = false,
+  setIsConsoleOpen,
   onTogglePlay,
   onToggleDrumsOnly,
   onUndo,
@@ -104,7 +109,11 @@ export function useTransportShortcuts({
         e.preventDefault();
         onTogglePlay();
       } else if (e.key === "Escape") {
-        if (isProjectHubOpen) {
+        if (isConsoleOpen && setIsConsoleOpen) {
+          // The floating console is the topmost surface; Esc dismisses it first.
+          e.preventDefault();
+          setIsConsoleOpen(false);
+        } else if (isProjectHubOpen) {
           setIsProjectHubOpen(false);
         } else if (stepContextMenu) {
           setStepContextMenu(null);
@@ -135,6 +144,16 @@ export function useTransportShortcuts({
       } else if ((e.key === "o" || e.key === "O") && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setIsAnalyzerOpen((prev) => !prev);
+      } else if (
+        (e.key === "c" || e.key === "C") &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        setIsConsoleOpen
+      ) {
+        // Feature #2: C floats / dismisses the mixing console over the studio.
+        e.preventDefault();
+        setIsConsoleOpen((prev) => !prev);
       } else {
         const isMac =
           typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
@@ -174,6 +193,8 @@ export function useTransportShortcuts({
     isVelocityLaneOpen,
     isAnalyzerOpen,
     isEditorMaximized,
+    isConsoleOpen,
+    setIsConsoleOpen,
     onTogglePlay,
     onToggleDrumsOnly,
     onUndo,

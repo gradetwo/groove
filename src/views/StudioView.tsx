@@ -10,6 +10,7 @@ import { SequencerPanel } from "../components/sequencer/SequencerPanel";
 import { SequencerModals } from "../components/sequencer/SequencerModals";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
+import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
 import { useSequencerStore } from "../features/sequencer/useSequencerStore";
 import { useToast } from "../features/sequencer/hooks/useToast";
 import { useGenreSwitching } from "../features/sequencer/hooks/useGenreSwitching";
@@ -77,7 +78,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // so there is no need to statically pull the whole genre database as a fallback.
   const startingGenre = initialGenre as Genre;
 
-  // Central Sequencer Store (P2-04)
+  // Central Sequencer Store (P2-04). The whole store object is kept so the floated
+  // mixing console can subscribe to this exact instance instead of creating its own.
+  const store = useSequencerStore(startingGenre);
   const {
     state: seqState,
     dispatch,
@@ -88,7 +91,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     canRedo,
     invalidateRedo,
     commitCoalesced,
-  } = useSequencerStore(startingGenre);
+  } = store;
 
   const {
     currentGenre,
@@ -102,6 +105,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [viewedBar, setViewedBar] = useState<number>(0);
+
+  // Feature #2: the mixing console floats over the studio, sharing this engine + store.
+  const [isConsoleOpen, setIsConsoleOpen] = useState<boolean>(false);
 
   // Sidebar collapse & Maximize states
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
@@ -304,6 +310,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     isEditorMaximized,
     setIsEditorMaximized,
     setIsProjectHubOpen,
+    isConsoleOpen,
+    setIsConsoleOpen,
     onTogglePlay: handleTogglePlay,
     onToggleDrumsOnly: handleToggleDrumsOnly,
     onUndo: handleUndo,
@@ -430,6 +438,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleOpenProjectHub,
     handleToggleMaximize,
     handleToggleAdvancedControls,
+    handleToggleConsole,
   } = usePanelToggles({
     setIsSidebarCollapsed,
     setIsEditorMaximized,
@@ -438,6 +447,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setIsEuclideanOpen,
     setIsAnalyzerOpen,
     setIsProjectHubOpen,
+    setIsConsoleOpen,
   });
 
   // Velocity / probability / ratchet / gate drawer handlers (A-02)
@@ -542,6 +552,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onOpenGenreMaker={onOpenGenreMaker}
           onChangeMobileEditMode={setMobileEditMode}
           onCloseAnalyzer={() => setIsAnalyzerOpen(false)}
+          isConsoleOpen={isConsoleOpen}
+          onToggleConsole={handleToggleConsole}
           onTogglePlay={handleTogglePlay}
           onChangeBpm={handleChangeBpm}
           onChangeSwing={handleChangeSwing}
@@ -653,6 +665,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
           isZh={isZh}
         />
       )}
+
+      {/* Feature #2: the mixing console floats over the studio with the SAME engine
+          and store — it never constructs either. Closed => renders nothing. */}
+      <ConsoleOverlay
+        isOpen={isConsoleOpen}
+        engine={engineRef.current}
+        store={store}
+        drumKit={drumKit}
+        isPlaying={isPlaying}
+        onToggleTransport={handleTogglePlay}
+        onClose={() => setIsConsoleOpen(false)}
+      />
     </div>
   );
 };
