@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { AnalyzerView } from "../views/AnalyzerView";
 import { LanguageProvider } from "../i18n/LanguageContext";
 
@@ -50,10 +50,16 @@ describe("AnalyzerView Dedicated Workstation (P6-05)", () => {
     fireEvent.click(ctaBtn);
     expect(onOpenStudio).toHaveBeenCalledTimes(1);
 
-    // Trigger test signal
-    const sweepCards = screen.getAllByText(/Sine Sweep|全频扫频/i);
-    if (sweepCards.length > 0) {
-      fireEvent.click(sweepCards[0]);
-    }
+    // Trigger a test signal from the legacy reference-signal section (the new
+    // instrument dropdown also lists these labels, so scope the query to it).
+    const legacySection = screen
+      .getByRole("heading", {
+        name: /内置声学参考测试信号发生器|Acoustic Test Signal Generator/i,
+      })
+      .closest("section") as HTMLElement;
+    expect(legacySection).toBeTruthy();
+    fireEvent.click(
+      within(legacySection).getByRole("heading", { name: /Sine Sweep|全频扫频/i })
+    );
   });
 });

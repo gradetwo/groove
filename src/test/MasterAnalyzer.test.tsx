@@ -93,6 +93,55 @@ describe("Panoramic Analyzer & Lissajous Scope (P6-05)", () => {
     expect(screen.getByText(/Dual-Trace Waveform|双轨时域波形示波器/i)).toBeTruthy();
   });
 
+  it("renders the instrument signal-generator cluster only when wired", () => {
+    const analyser = createMockAnalyser(2048);
+    const onToggle = vi.fn();
+    const onSelect = vi.fn();
+
+    // Back-compat: the Studio dock renders the suite without the control.
+    const first = render(
+      <LanguageProvider>
+        <MasterAnalyzerSuite analyser={analyser} isPlaying={false} />
+      </LanguageProvider>
+    );
+    expect(screen.queryByTestId("analyzer-signal-generator-control")).toBeNull();
+    first.unmount();
+
+    render(
+      <LanguageProvider>
+        <MasterAnalyzerSuite
+          analyser={analyser}
+          isPlaying={false}
+          signalGenerator={{
+            enabled: true,
+            selected: "sweep",
+            options: [
+              { type: "sweep", label: "Sine Sweep" },
+              { type: "sub_808", label: "808 Sub-Bass" },
+            ],
+            onToggle,
+            onSelect,
+          }}
+        />
+      </LanguageProvider>
+    );
+
+    const toggle = screen.getByRole("button", {
+      name: /信号发生器开关|Signal generator power/i,
+    });
+    const select = screen.getByRole("combobox", {
+      name: /内置声学参考信号|Built-in reference signal/i,
+    });
+    expect(toggle).toBeTruthy();
+    expect(select).toBeEnabled();
+
+    fireEvent.click(toggle);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(select, { target: { value: "sub_808" } });
+    expect(onSelect).toHaveBeenCalledWith("sub_808");
+  });
+
   it("renders WaterfallSpectrogram and shows frequency bands", () => {
     const analyser = createMockAnalyser(2048);
 

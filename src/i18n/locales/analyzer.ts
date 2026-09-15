@@ -126,6 +126,22 @@ export const analyzerMessages = {
     zh: "关闭分析仪",
     en: "Close",
   },
+  analyzer_suite_signal_label: {
+    zh: "信号发生器",
+    en: "Signal Gen",
+  },
+  analyzer_suite_signal_toggle: {
+    zh: "信号发生器开关",
+    en: "Signal generator power",
+  },
+  analyzer_suite_signal_toggle_title: {
+    zh: "启用后从右侧下拉框选择内置声学参考信号并立即试听",
+    en: "Enable, then pick a built-in acoustic reference signal to audition it",
+  },
+  analyzer_suite_signal_select: {
+    zh: "内置声学参考信号",
+    en: "Built-in reference signal",
+  },
   // ---------------------------------------------------------------------------
   // AnalyzerView.tsx
   // ---------------------------------------------------------------------------
