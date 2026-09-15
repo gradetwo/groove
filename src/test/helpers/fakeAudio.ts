@@ -285,6 +285,14 @@ export class FakeAudioContext extends FakeAudioGraph {
 export class FakeOfflineAudioContext extends FakeAudioGraph {
   currentTime = 0;
   state: AudioContextState = "suspended";
+  /**
+   * Minimal `AudioWorklet` surface.
+   *
+   * The offline renderer only reaches for GS-1 when the context can load a worklet module, so a
+   * fake without this makes any GS-1 exporter test vacuous: the code path under test would skip
+   * itself and the assertions would pass on an empty graph.
+   */
+  audioWorklet = { addModule: async (_url: string) => undefined };
   /** Most recently constructed instance — lets tests inspect the graph after a render. */
   static lastInstance: FakeOfflineAudioContext | null = null;
 

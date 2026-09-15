@@ -27,6 +27,8 @@ import { buildMasterGraph } from "./masterGraph";
 import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
+import { createGs1Host, type Gs1Host } from "./gs1/Gs1Host";
+import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes } from "./gs1/gs1Tracks";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 
 export interface RenderWavOptions {
@@ -266,6 +268,33 @@ export async function renderPatternOffline(
     trackStrips.push({ gain: tGain, polarity: tPolarity, pan: tPan, insert: tInsert });
   }
 
+  /**
+   * P6 parity: the *same* routing decision the live engine makes, resolved before any note is
+   * scheduled so the render loop stays synchronous.
+   *
+   * A host is created, awaited and connected here — before `startRendering()` — because the
+   * scheduler below runs straight-line and must not await. The patch is pushed once, up front.
+   * When routing is off (the default) this map is empty and the export is bit-for-bit what it was.
+   */
+  const gs1Hosts = new Map<number, Gs1Host>();
+  if (isGs1RoutingEnabled() && typeof ctx.audioWorklet?.addModule === "function") {
+    for (let t = 0; t < numTracks; t++) {
+      const track = pattern.tracks[t];
+      const routed = track ? gs1PatchFor(track.track_id, track.instrument) : null;
+      if (!routed) continue;
+      try {
+        const host = await createGs1Host({ context: ctx });
+        await host.ready;
+        host.setPatch(routed.params);
+        host.output.connect(trackStrips[t].insert.input);
+        gs1Hosts.set(t, host);
+      } catch {
+        // A failed load leaves the track on the native engine, exactly like a live failure.
+        gs1Hosts.delete(t);
+      }
+    }
+  }
+
   const drumKit: DrumKitType = options.drumKit || "808";
   const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
 
@@ -348,6 +377,32 @@ export async function renderPatternOffline(
           const notes = chordVoicingForStep(midi, pattern.scale, { style: treatment.style });
           const voiceVel = subVel * chordVoiceGain(notes.length);
           const chordDur = chordNoteDuration(subDur, gateVal, treatment);
+          // P6: if GS-1 voices this track, it takes the notes and the native voices are skipped —
+          // playing both would double the harmony. The frame plan comes from the shared planner,
+          // so the live engine and this renderer cannot disagree about when a note sounds.
+          const chordHost = gs1Hosts.get(trackIdx);
+          if (chordHost) {
+            const planned = planGs1Notes({
+              role: "chords",
+              instrument: track.instrument,
+              notes: notes.map((note, i) => ({
+                note,
+                time: chordVoiceOnset(subTime, i, treatment),
+                duration: chordDur,
+                velocity: voiceVel,
+              })),
+              sampleRate: ctx.sampleRate,
+              latencyFrames: chordHost.scheduledNoteLatencyFrames,
+            });
+            if (planned) {
+              const capped = capPlanPolyphony(planned);
+              for (const plannedNote of capped.notes) {
+                chordHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
+                chordHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
+              }
+              return;
+            }
+          }
           notes.forEach((note, i) => {
             playPolySynthNote(
               ctx,
@@ -361,7 +416,24 @@ export async function renderPatternOffline(
           });
         } else if (trackId === "lead" || lowerName.includes("lead")) {
           const midi = pitchVal > 0 ? pitchVal : 72;
-          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
+          const leadDur = subDur * gateVal * 1.5;
+          const leadHost = gs1Hosts.get(trackIdx);
+          if (leadHost) {
+            const planned = planGs1Notes({
+              role: "lead",
+              instrument: track.instrument,
+              notes: [{ note: midi, time: subTime, duration: leadDur, velocity: subVel }],
+              sampleRate: ctx.sampleRate,
+              latencyFrames: leadHost.scheduledNoteLatencyFrames,
+            });
+            if (planned) {
+              const plannedNote = planned.notes[0];
+              leadHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
+              leadHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
+              return;
+            }
+          }
+          playPolySynthNote(ctx, trackDest, midi, subTime, leadDur, subVel, synthPreset);
         } else if (trackId === "fx" || lowerName.includes("fx")) {
           // Same split as AudioEngine.playFX: `noise_sweep` keeps the shared swept riser,
           // anything else is voiced by the poly synth with the track's own preset.
