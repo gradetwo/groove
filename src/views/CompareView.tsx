@@ -3,7 +3,7 @@ import { Columns, Plus, X, Play, Pause, Square, Minus, Sliders, ExternalLink, Sp
 import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
-import { patternFromGenre } from "../data/genreMix";
+import { patternFromGenre, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
 import { EmptyState } from "../ui/EmptyState";
@@ -252,6 +252,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
       }
 
       engine.setPattern(compositePattern, true);
+      // The merged composite carries a synthetic `sync_*` genre id, so the engine
+      // cannot derive a trim for it. Every member was already matched to the same
+      // library target, so the members arrive at comparable loudness; averaging their
+      // trims keeps the composite at that same level instead of favouring side A or B
+      // (and a single scalar is the only honest choice while mutes/solos can silence
+      // any column at runtime).
+      engine.setLoudnessTrimDb(
+        genres.reduce((sum, g) => sum + getGenreLoudnessTrimDb(g.id), 0) / genres.length
+      );
       engine.setBpm(bpmToUse);
       engine.setTotalSteps(maxLen);
 
@@ -340,6 +349,9 @@ export const CompareView: React.FC<CompareViewProps> = ({
         engine.stop();
       }
 
+      // Clear any explicit override left by a previous sync composite on a shared
+      // engine, then let `setPattern` match this genre's own measured trim.
+      engine.setLoudnessTrimDb(null);
       engine.setPattern(patternFromGenre(genre), true);
       engine.setBpm(genre.default_bpm || 120);
       applyAudioMutes(engine, mode, genre);

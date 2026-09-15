@@ -20,8 +20,19 @@ import { TrackState, deriveTrackStates } from "./trackStates";
 import { VoiceRegistry, applyMasterLimiter } from "./voiceRegistry";
 export type { TrackState } from "./trackStates";
 import { isDrumTrack } from "../utils/trackUtils";
+import {
+  LOUDNESS_TRIM_MAX_DB,
+  LOUDNESS_TRIM_MIN_DB,
+  getGenreLoudnessTrimDb,
+  resolveGenreMix,
+} from "../data/genreMix";
 
 export type { DrumKitType, EffectsRackState, SynthPreset, QuantizedStepResult };
+
+/** Converts a dB offset to a linear gain factor (used by the loudness-match stage). */
+function dbToGain(db: number): number {
+  return Math.pow(10, db / 20);
+}
 
 export interface StepCallbackInfo {
   step: number;
@@ -73,6 +84,12 @@ export interface SpatialLayoutEntry {
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  /**
+   * Genre loudness-match gain. Deliberately a *separate* stage from `masterGain` so
+   * `getMasterVolume()` / `getEffectiveMasterVolume()` and the console fader keep
+   * meaning "the level the user asked for".
+   */
+  private loudnessTrimGain: GainNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
   private masterAnalyser: AnalyserNode | null = null;
@@ -169,6 +186,17 @@ export class AudioEngine {
   private maxVolumeLimit: number = 0.85;
   private currentMasterVolume: number = 0.8;
 
+  // Genre loudness matching (feat/genre-mix-loudness).
+  /** dB actually written to `loudnessTrimGain` (post-clamp, post-fallback). */
+  private appliedLoudnessTrimDb: number = 0;
+  /**
+   * Explicit trim override, or `null` for "derive from the pattern's genre".
+   * Only the compare view's merged composite needs an override today (a composite
+   * carries a synthetic `sync_*` genre id that resolves to no genre); single-genre
+   * callers must pass `null` to return to automatic matching.
+   */
+  private loudnessTrimOverrideDb: number | null = null;
+
   constructor(options?: AudioEngineOptions) {
     if (options?.onStep) this.onStepCallback = options.onStep;
     if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
@@ -228,8 +256,23 @@ export class AudioEngine {
           // Master DSP Effects Rack (P5-04)
           this.masterFxRack = new EffectsRack(this.ctx);
 
-          // Audio chain: masterGain -> masterFxRack -> limiter -> analysers -> destination
-          this.masterGain.connect(this.masterFxRack.inputNode);
+          // Genre loudness-match stage: a plain gain, separate from the fader.
+          this.loudnessTrimGain = this.ctx.createGain();
+          this.loudnessTrimGain.gain.setValueAtTime(
+            dbToGain(this.appliedLoudnessTrimDb),
+            this.ctx.currentTime
+          );
+
+          // Audio chain (feat/genre-mix-loudness):
+          //   masterGain (user fader, capped by hearing protection)
+          //     -> loudnessTrim (per-genre match, explicit separate stage)
+          //     -> masterFxRack -> limiter -> analysers -> destination
+          // The trim sits *before* the limiter on purpose: the limiter stays the
+          // absolute output ceiling, so a genre that needs a positive trim cannot
+          // push the master past its threshold, while the fader/hearing-protection
+          // clamp keeps its "user level" meaning untouched.
+          this.masterGain.connect(this.loudnessTrimGain);
+          this.loudnessTrimGain.connect(this.masterFxRack.inputNode);
           this.masterFxRack.outputNode.connect(this.limiter);
           this.limiter.connect(this.analyser);
           this.limiter.connect(this.masterAnalyser);
@@ -554,6 +597,10 @@ export class AudioEngine {
       });
     }
     this.syncTrackGains();
+    // Loudness matching is *not* a per-track mix concern: it only needs the pattern's
+    // genre id, so centralising it here covers the studio, every audition path, the
+    // detail preview, the challenge view and both offline exporters at once.
+    this.applyLoudnessTrimForPattern(pattern);
   }
 
   public syncTrackGains(): void {
@@ -785,6 +832,62 @@ export class AudioEngine {
     }
     // Persisted so the level survives a reload and stays consistent across views.
     this.saveAudioSettings();
+  }
+
+  /**
+   * Genre loudness matching — sets the master loudness trim.
+   *
+   * `db === null` returns to automatic mode (the trim is derived from the loaded
+   * pattern's `genre_id` on every `setPattern`). A finite number pins an explicit
+   * override, which is what the compare view needs for its merged `sync_*`
+   * composite; a single-genre caller sharing that engine must reset it with
+   * `setLoudnessTrimDb(null)` or the composite's value would leak into the audition.
+   *
+   * The fader (`getMasterVolume` / `getEffectiveMasterVolume`) and the hearing
+   * protection clamp are intentionally untouched: this stage is separate, sits
+   * before the limiter, and is clamped to the measured range.
+   */
+  public setLoudnessTrimDb(db: number | null): void {
+    this.loudnessTrimOverrideDb =
+      db === null || !Number.isFinite(db)
+        ? null
+        : Math.max(LOUDNESS_TRIM_MIN_DB, Math.min(LOUDNESS_TRIM_MAX_DB, db));
+    this.applyLoudnessTrim(this.loudnessTrimOverrideDb ?? 0);
+  }
+
+  /** Trim in dB currently applied to the master bus (0 when no genre is loaded). */
+  public getLoudnessTrimDb(): number {
+    return this.appliedLoudnessTrimDb;
+  }
+
+  /** Linear gain of the loudness-match stage — mirrors `dbToGain(getLoudnessTrimDb())`. */
+  public getLoudnessTrimGain(): number {
+    return dbToGain(this.appliedLoudnessTrimDb);
+  }
+
+  /** Resolves and applies the trim that the given pattern's genre asks for. */
+  private applyLoudnessTrimForPattern(pattern: SequencerPattern): void {
+    if (this.loudnessTrimOverrideDb !== null) {
+      this.applyLoudnessTrim(this.loudnessTrimOverrideDb);
+      return;
+    }
+    // Unknown ids (custom genres, imported patterns, masterclass + sync composites)
+    // deliberately get 0 dB rather than a guess.
+    this.applyLoudnessTrim(resolveGenreMix(pattern.genre_id) ? getGenreLoudnessTrimDb(pattern.genre_id) : 0);
+  }
+
+  private applyLoudnessTrim(db: number): void {
+    const clamped = Math.max(LOUDNESS_TRIM_MIN_DB, Math.min(LOUDNESS_TRIM_MAX_DB, db));
+    this.appliedLoudnessTrimDb = Number.isFinite(clamped) ? clamped : 0;
+    if (this.loudnessTrimGain && this.ctx) {
+      const t = this.ctx.currentTime;
+      try {
+        this.loudnessTrimGain.gain.cancelScheduledValues(t);
+        this.loudnessTrimGain.gain.setValueAtTime(dbToGain(this.appliedLoudnessTrimDb), t);
+      } catch {
+        this.loudnessTrimGain.gain.value = dbToGain(this.appliedLoudnessTrimDb);
+      }
+    }
   }
 
   public setTrackState(trackIdx: number, state: Partial<TrackState>): void {
@@ -1492,6 +1595,7 @@ export class AudioEngine {
     }
     this.ctx = null;
     this.masterGain = null;
+    this.loudnessTrimGain = null;
     this.limiter = null;
     this.analyser = null;
     this.masterAnalyser = null;
