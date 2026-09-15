@@ -1,3 +1,4 @@
+import type { TrackInsertParams } from "../data/trackInsert";
 export type GenreCategory = 
   | 'Electronic'
   | 'Rock/Metal'
@@ -53,6 +54,17 @@ export interface SequencerTrack {
   sendB?: number; // Delay send level 0 - 1
   /** Polarity inversion (Ø). Flips the channel's sign without changing its level. */
   phaseInvert?: boolean;
+  /**
+   * E-10: the track's insert chain (high-pass → EQ → compressor → drive).
+   *
+   * Optional, and stored **on the track** rather than in a side table so it travels with
+   * the pattern through undo, the project hub, share links and the exporters for free —
+   * the same reason volume/pan/sends live here. Absent means "use the factory chain for
+   * this role in this genre" (`resolveTrackInsertForGenre(role, genre_id)` = the role's
+   * chain in `trackInsert.ts` plus the genre's patch in `genreInsert.ts`), which keeps all
+   * 159 genre files untouched and keeps older projects working.
+   */
+  insert?: TrackInsertParams;
 }
 
 export interface SequencerPattern {

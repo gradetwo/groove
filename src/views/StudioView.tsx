@@ -12,6 +12,11 @@ import { SequencerModals } from "../components/sequencer/SequencerModals";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
+import { TrackInspector } from "../components/console/TrackInspector";
+import { INSTRUMENT_PRESET_ALIASES } from "../audio/instrumentPresets";
+import { bypassTrackInsert } from "../data/trackInsert";
+import { resolveTrackInsertForGenre } from "../data/genreInsert";
+import type { MixTrackId } from "../data/genreMix";
 import { useSequencerStore } from "../features/sequencer/useSequencerStore";
 import { useToast } from "../features/sequencer/hooks/useToast";
 import { useGenreSwitching } from "../features/sequencer/hooks/useGenreSwitching";
@@ -31,6 +36,7 @@ import { useMatrixScroll } from "../features/sequencer/hooks/useMatrixScroll";
 import { useGridInteraction } from "../features/sequencer/hooks/useGridInteraction";
 import { usePatternActions } from "../features/sequencer/hooks/usePatternActions";
 import { useTrackControls } from "../features/sequencer/hooks/useTrackControls";
+import { followReorderedRow } from "../features/sequencer/inspectorFollow";
 import { useVelocityLaneEditing } from "../features/sequencer/hooks/useVelocityLaneEditing";
 import { useTransportControls } from "../features/sequencer/hooks/useTransportControls";
 import { useToolbarControls } from "../features/sequencer/hooks/useToolbarControls";
@@ -196,6 +202,27 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Multi-Project Hub State (P7-02)
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
+
+  /**
+   * E-10: which track's inspector is open, or null.
+   *
+   * The Logic-style affordance the user asked for: clicking a track header (or its sliders
+   * button) opens that one track's full configuration — timbre, mix and insert chain —
+   * instead of sending the user to a separate mixer view.
+   */
+  const [inspectorTrackIdx, setInspectorTrackIdx] = useState<number | null>(null);
+
+  /**
+   * Keep the inspector pointed at the same *track* when rows are reordered.
+   *
+   * The inspector is addressed by row index, but `REORDER_TRACKS` swaps two rows, so
+   * without this the panel would silently start editing the neighbouring track after a
+   * move-up/move-down. `moveInspectorWithRow` is defined here (it only needs the setter);
+   * the two wrappers that also call the reorder handlers live below `useTrackControls`.
+   */
+  const moveInspectorWithRow = useCallback((idx: number, toIndex: number) => {
+    setInspectorTrackIdx((current) => followReorderedRow(current, idx, toIndex));
+  }, []);
 
   /**
    * D-02: persist the five layout toggles whenever one changes.
@@ -471,6 +498,27 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setIsVelocityLaneOpen,
   });
 
+  // E-10: the reorder handlers the JSX actually receives, with the inspector index remapped
+  // so an open panel keeps editing the track the user opened it for.
+  const handleMoveTrackUpWithInspector = useCallback(
+    (idx: number) => {
+      moveInspectorWithRow(idx, Math.max(0, idx - 1));
+      handleMoveTrackUp(idx);
+    },
+    [handleMoveTrackUp, moveInspectorWithRow]
+  );
+
+  const handleMoveTrackDownWithInspector = useCallback(
+    (idx: number) => {
+      // Clamp exactly like the reorder handler: a no-op move must not leave the inspector
+      // pointing past the last row.
+      const toIndex = Math.min(patternRef.current.tracks.length - 1, idx + 1);
+      moveInspectorWithRow(idx, toIndex);
+      handleMoveTrackDown(idx);
+    },
+    [handleMoveTrackDown, moveInspectorWithRow, patternRef]
+  );
+
   // A-03: Toolbar is memoized, so every prop it receives needs a stable identity.
   // These low-frequency controls are grouped in their own hook so a transport tick
   // (isPlaying / bpm / viewedBar) cannot invalidate the Toolbar memo through them.
@@ -681,11 +729,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onToggleSolo={handleToggleTrackSolo}
           onChangeTrackVolume={handleChangeTrackVolume}
           onOpenVelocity={handleOpenVelocityLane}
+          onOpenInspector={setInspectorTrackIdx}
+          inspectorTrackIdx={inspectorTrackIdx}
           onShiftTrack={handleShiftTrack}
           onSmartFill={handleSmartFillTrack}
           onClearTrack={handleClearTrack}
-          onMoveTrackUp={handleMoveTrackUp}
-          onMoveTrackDown={handleMoveTrackDown}
+          onMoveTrackUp={handleMoveTrackUpWithInspector}
+          onMoveTrackDown={handleMoveTrackDownWithInspector}
           onChangeTrackPan={handleChangeTrackPan}
           onChangeTrackSwing={handleChangeTrackSwing}
           onSelectParameterDimension={handleSelectParameterDimension}
@@ -741,6 +791,75 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
       {/* Feature #2: the mixing console floats over the studio with the SAME engine
           and store — it never constructs either. Closed => renders nothing. */}
+      {inspectorTrackIdx !== null && pattern.tracks[inspectorTrackIdx] && (
+        <TrackInspector
+          role={(pattern.tracks[inspectorTrackIdx].track_id || "chords") as MixTrackId}
+          trackName={pattern.tracks[inspectorTrackIdx].name}
+          instrument={pattern.tracks[inspectorTrackIdx].instrument}
+          // The snake_case names the genre data uses; the alias table is the one place
+          // that maps them to presets, so it is also the honest source for the picker.
+          instrumentOptions={Object.keys(INSTRUMENT_PRESET_ALIASES)}
+          onInstrumentChange={(instrument) =>
+            commit({ type: "SET_TRACK_INSTRUMENT", trackIdx: inspectorTrackIdx, instrument })
+          }
+          volume={pattern.tracks[inspectorTrackIdx].volume ?? 0.8}
+          pan={pattern.tracks[inspectorTrackIdx].pan ?? 0}
+          sendA={pattern.tracks[inspectorTrackIdx].sendA ?? 0}
+          sendB={pattern.tracks[inspectorTrackIdx].sendB ?? 0}
+          muted={Boolean(pattern.tracks[inspectorTrackIdx].mute)}
+          soloed={Boolean(pattern.tracks[inspectorTrackIdx].solo)}
+          onVolumeChange={(v) => handleChangeTrackVolume(inspectorTrackIdx, v)}
+          onPanChange={(v) => handleChangeTrackPan(inspectorTrackIdx, v)}
+          // Coalesced under the track index, so dragging a send is one history entry.
+          onSendAChange={(v) =>
+            commitCoalesced(
+              { type: "SET_TRACK_SENDS", trackIdx: inspectorTrackIdx, sendA: v },
+              `sends:${inspectorTrackIdx}`
+            )
+          }
+          onSendBChange={(v) =>
+            commitCoalesced(
+              { type: "SET_TRACK_SENDS", trackIdx: inspectorTrackIdx, sendB: v },
+              `sends:${inspectorTrackIdx}`
+            )
+          }
+          onMuteToggle={() => handleToggleTrackMute(inspectorTrackIdx)}
+          onSoloToggle={() => handleToggleTrackSolo(inspectorTrackIdx)}
+          insert={
+            pattern.tracks[inspectorTrackIdx].insert ??
+            resolveTrackInsertForGenre(
+              pattern.tracks[inspectorTrackIdx].track_id,
+              pattern.genre_id
+            )
+          }
+          // Coalesced per track: a knob drag is one undo step, not one per frame.
+          onChangeInsert={(patch) =>
+            commitCoalesced(
+              { type: "SET_TRACK_INSERT", trackIdx: inspectorTrackIdx, patch },
+              `insert:${inspectorTrackIdx}`
+            )
+          }
+          onResetInsert={() =>
+            commit({
+              type: "REPLACE_TRACK_INSERT",
+              trackIdx: inspectorTrackIdx,
+              insert: resolveTrackInsertForGenre(
+                pattern.tracks[inspectorTrackIdx].track_id,
+                pattern.genre_id
+              ),
+            })
+          }
+          onBypassInsert={() =>
+            commit({
+              type: "REPLACE_TRACK_INSERT",
+              trackIdx: inspectorTrackIdx,
+              insert: bypassTrackInsert(),
+            })
+          }
+          onClose={() => setInspectorTrackIdx(null)}
+        />
+      )}
+
       <ConsoleOverlay
         isOpen={isConsoleOpen}
         engine={engineRef.current}

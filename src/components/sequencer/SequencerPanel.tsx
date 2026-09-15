@@ -116,6 +116,10 @@ export interface SequencerPanelProps {
   onToggleSolo: (trackIdx: number) => void;
   onChangeTrackVolume: (trackIdx: number, vol: number) => void;
   onOpenVelocity: (trackIdx: number) => void;
+  /** E-10: opens the per-track inspector (mix / insert chain / timbre). */
+  onOpenInspector: (trackIdx: number) => void;
+  /** Which row the inspector currently shows, for selected-header styling. */
+  inspectorTrackIdx?: number | null;
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
   onSmartFill: (trackIdx: number) => void;
   onClearTrack: (trackIdx: number) => void;
@@ -240,6 +244,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onToggleSolo,
   onChangeTrackVolume,
   onOpenVelocity,
+  onOpenInspector,
+  inspectorTrackIdx = null,
   onShiftTrack,
   onSmartFill,
   onClearTrack,
@@ -433,6 +439,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
               onToggleSolo={onToggleSolo}
               onChangeVolume={onChangeTrackVolume}
               onOpenVelocity={onOpenVelocity}
+              onOpenInspector={onOpenInspector}
+              isInspectorOpen={inspectorTrackIdx === trackIdx}
               onShiftTrack={onShiftTrack}
               onSmartFill={onSmartFill}
               onClearTrack={onClearTrack}

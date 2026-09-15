@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Sliders, Wand2 } from "lucide-react";
+import { Play, Sliders, SlidersHorizontal, Wand2 } from "lucide-react";
 import { SequencerTrack } from "../../types/genre";
 import { StepCell } from "./StepCell";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -31,6 +31,16 @@ export interface TrackRowProps {
   onToggleSolo: (trackIdx: number) => void;
   onChangeVolume: (trackIdx: number, vol: number) => void;
   onOpenVelocity: (trackIdx: number) => void;
+  /**
+   * Opens the track's detailed configuration panel (mix, insert chain, timbre).
+   *
+   * Logic-style: clicking the track header itself opens the inspector, and the ▶ button
+   * below auditions the sound. The two used to share the header click; auditioning now has
+   * its own affordance so the header can do what a DAW header is expected to do.
+   */
+  onOpenInspector: (trackIdx: number) => void;
+  /** True while this row is the one the inspector is showing, for selected-row styling. */
+  isInspectorOpen?: boolean;
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
   onSmartFill: (trackIdx: number) => void;
   onClearTrack: (trackIdx: number) => void;
@@ -62,6 +72,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   onToggleSolo,
   onChangeVolume,
   onOpenVelocity,
+  onOpenInspector,
+  isInspectorOpen = false,
   onShiftTrack,
   onSmartFill,
   onClearTrack,
@@ -90,10 +102,35 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
       }`}>
         {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
         <div className="flex items-center gap-1.5">
+          {/* Logic-style header: clicking the name/swatch area opens this track's
+              inspector (mix, insert chain, timbre). Auditioning moved to its own ▶ button. */}
           <div
-            onClick={() => onAudition(trackIdx, track.name)}
-            className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer group/trk hover:opacity-90 transition-opacity touch-manipulation"
-            title={t("track_audition_title")}
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenInspector(trackIdx)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpenInspector(trackIdx);
+              }
+            }}
+            data-testid={`track-header-${trackIdx}`}
+            data-inspector-open={isInspectorOpen ? "true" : "false"}
+            aria-expanded={isInspectorOpen}
+            aria-label={t("track_inspector_open_aria")}
+            className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer group/trk hover:opacity-90 transition-opacity touch-manipulation rounded-sm px-0.5 -mx-0.5"
+            // Inline rather than `bg-[var(--tc)]/12`: the alpha blend on a CSS variable is
+            // not something Tailwind's opacity modifier can resolve, and the track colour is
+            // per-row. color-mix degrades to "no highlight" on very old browsers.
+            style={
+              isInspectorOpen
+                ? {
+                    backgroundColor: "color-mix(in srgb, var(--tc) 14%, transparent)",
+                    boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--tc) 60%, transparent)",
+                  }
+                : undefined
+            }
+            title={t("track_inspector_open_title")}
           >
             <span
               className={`w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0 group-hover/trk:scale-y-110 transition-transform ${
@@ -128,6 +165,21 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
           </div>
 
           <div className="flex gap-0.5 sm:gap-1 shrink-0 items-center">
+            {/* Audition: previews this track's current timbre. Was the header click before
+                the header became the inspector opener. */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAudition(trackIdx, track.name);
+              }}
+              data-testid={`track-audition-${trackIdx}`}
+              className="w-5 h-5 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
+              title={t("track_audition_title")}
+              aria-label={t("track_audition_title")}
+            >
+              <Play className="w-2.5 h-2.5 sm:w-2 sm:h-2 fill-current" />
+            </button>
             {/* Polymeter Loop Length Selector */}
             <button
               onClick={() => onCycleLength(trackIdx)}
@@ -173,6 +225,21 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               aria-pressed={isSolo}
             >
               S
+            </button>
+            {/* Opens the Logic-style track inspector: mix, insert chain and timbre for
+                this one track. */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenInspector(trackIdx);
+              }}
+              data-testid={`track-inspector-open-${trackIdx}`}
+              className="w-5 h-5 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
+              title={t("track_inspector_open_title")}
+              aria-label={t("track_inspector_open_aria")}
+            >
+              <SlidersHorizontal className="w-3 h-3 sm:w-2.5 sm:h-2.5" />
             </button>
           </div>
         </div>

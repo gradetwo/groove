@@ -1,5 +1,7 @@
 import { useReducer, useCallback, useRef, useEffect, useState } from "react";
 import { Genre, SequencerPattern, SequencerTrack } from "../../types/genre";
+import { resolveTrackInsertForGenre } from "../../data/genreInsert";
+import type { TrackInsertParams } from "../../data/trackInsert";
 import { ChordDefinition, noteToMidi } from "../../utils/chordTheory";
 import { BakedArpeggioResult } from "../../utils/arpeggiatorTheory";
 // The one helper every genre-entry point uses: clone + seed the genre's arranged mix.
@@ -118,6 +120,14 @@ export type SequencerAction =
   | { type: "SET_TRACK_SWING"; trackIdx: number; swing: number }
   | { type: "SET_TRACK_SENDS"; trackIdx: number; sendA?: number; sendB?: number }
   | { type: "SET_TRACK_INSTRUMENT"; trackIdx: number; instrument: string }
+  /**
+   * E-10: an insert-chain edit. `patch` is merged over the track's current chain, and a
+   * missing chain resolves from the role's factory default first — so the first edit on a
+   * track starts from the strip the user is actually hearing, not from a blank one.
+   */
+  | { type: "SET_TRACK_INSERT"; trackIdx: number; patch: Partial<TrackInsertParams> }
+  /** Replaces the whole chain, e.g. "reset to the role default" or "bypass everything". */
+  | { type: "REPLACE_TRACK_INSERT"; trackIdx: number; insert: TrackInsertParams }
   | { type: "REORDER_TRACKS"; fromIndex: number; toIndex: number }
   | { type: "TOGGLE_MUTE"; trackIdx: number }
   | { type: "TOGGLE_SOLO"; trackIdx: number }
@@ -471,6 +481,20 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         instrument: action.instrument,
       }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    case "SET_TRACK_INSERT":
+    case "REPLACE_TRACK_INSERT": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
+        const current =
+          t.insert ?? resolveTrackInsertForGenre(t.track_id, state.pattern.genre_id);
+        const next =
+          action.type === "REPLACE_TRACK_INSERT"
+            ? action.insert
+            : { ...current, ...action.patch, low: { ...current.low, ...(action.patch.low ?? {}) }, mid: { ...current.mid, ...(action.patch.mid ?? {}) }, high: { ...current.high, ...(action.patch.high ?? {}) } };
+        return { ...t, insert: next };
+      });
       return withUpdatedPattern({ ...state.pattern, tracks });
     }
 

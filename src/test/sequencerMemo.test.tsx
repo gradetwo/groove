@@ -28,12 +28,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const probe = vi.hoisted(() => ({ sliders: 0 }));
 const noteName = vi.hoisted(() => vi.fn((midi: number) => `NOTE_${midi}`));
 
-// TrackRow imports exactly these two icons from lucide-react.
+// TrackRow imports exactly these icons from lucide-react.
 vi.mock("lucide-react", () => ({
+  Play: () => React.createElement("svg", { "data-testid": "probe-play" }),
   Sliders: () => {
     probe.sliders += 1;
     return React.createElement("svg", { "data-testid": "probe-sliders" });
   },
+  SlidersHorizontal: () =>
+    React.createElement("svg", { "data-testid": "probe-sliders-horizontal" }),
   Wand2: () => React.createElement("svg", { "data-testid": "probe-wand" }),
 }));
 
@@ -83,6 +86,7 @@ const rowHandlers = {
   onToggleSolo: noop,
   onChangeVolume: noop,
   onOpenVelocity: noop,
+  onOpenInspector: noop,
   onShiftTrack: noop,
   onSmartFill: noop,
   onClearTrack: noop,

@@ -439,6 +439,23 @@ App.tsx (路由/懒加载, 533)
 | **v2.0.11** | 浮窗控制台 | X-01…X-05 | 慢轨 | 浮窗与工作台同屏、同 store、同引擎；`?tab=console` 保留 |
 | **v2.0.12** | 门禁收尾 + 去轮询 | G-04, G-05 | 慢轨 | 3 条新 E2E 进 7 端矩阵；顶栏不再轮询 |
 
+### 8.1 实际版本映射（截至 v2.0.4）
+
+上表是**顺序位置**，不是已发布的版本号。发布时会插入计划外的用户点名项，实际对应关系因此偏移，每次发布后在这里登记一次，避免"计划里的 v2.0.3"和"应用里的 v2.0.3"指两件事：
+
+| 表中位置 | 实际版本 | 实际主题 |
+|---|---|---|
+| v2.0.0 | **v2.0.0** | S0 布局偏好持久化（计划内） |
+| — | **v2.0.1** | 计划外·音频线：和弦奏法与乐器（用户点名） |
+| — | **v2.0.2** | 计划外·音频线：真混响/真延迟 + 逐曲风母带 FX + 力度音色 + GS-1 vendoring |
+| — | **v2.0.3** | 计划外·工作台：轨道头即检查器入口（用户点名，见 §12） |
+| v2.0.3 | **v2.0.4** | 频率分层常量 + 测试先行（C-01、G-01），并与音频线的内容修复同版发布 |
+| — | 同上（v2.0.4 内） | 计划外·内容质量：159 曲风「经典走向」数据修复（见 `AUDIO_QUALITY_AND_SYNTH_PLAN.md` §4.13） |
+| v2.0.1 | *下一个可用号* | FX 参数补全 + 撤销一致性（D-05/D-03 已随 v2.0.2 落地，本行仅作历史登记） |
+| v2.0.4 及以后 | 顺延 | 依次顺延，每项仍取"当时的下一个可用版本号" |
+
+**纪律不变**：版本号只增不减，每次发布都对应一个**已交付**的里程碑；计划内靠后的项被计划外的用户点名项挤后，是预期行为，不是延期。
+
 **总计 5 个冲刺 / 29 个任务项**（D-01…06、C-01…08、L-01…05、X-01…05、G-01…05）**/ 约 20–28 人日。** 其中：
 - **建议必做且低风险**：v2.0.0 – v2.0.8（D / C / L-02,03,04 全部 + G-01~G-03）——**用户感知最强、几乎不动状态归属**。
 - **高风险 / 建议单独评估**：v2.0.9 – v2.0.10（`L-01` 共享 store）。⚠️ 这会改变 `StudioView`/`HardwareConsoleView`/`CompareView` 的状态所有权，是最容易引发回归的一步；必须"并存 + 逐视图切换 + 每步独立回滚点"。
@@ -641,3 +658,46 @@ $ grep -rn "localStorage" src/views/StudioView.tsx
 - `density` 档位的 UI 生效属 `C-06`（v2.0.6）；v2.0.0 只落地字段与持久化，档位默认 `standard`，尚无消费方。
 
 **本轮附带**：目标版本号由 `v1.17.0 → v1.17.13` 改为 **`v2.0.0 → v2.0.12`**（计划内 21 处版本令牌、文件名、以及 `CODE_REVIEW_AND_PLAN_v1.16.0.md` 的交叉引用同步更新）。`package.json` 在**本里程碑完成并通过门禁时**才提升到 `2.0.0`——在此之前应用版本仍是 `1.16.20`，避免出现"2.0.0 已声明但功能未交付"的空窗。
+
+### v2.0.3 · E-10 后续：轨道头即检查器入口（用户点名项）
+
+**来源**：用户直接要求——"类似 logic pro 点击每个轨道头要可以打开这个轨道的详细配置信息和参数，调节混音啊、效果、音色等等"。
+
+| 项 | 交付内容 | 证据 |
+|---|---|---|
+| **入口** | `TrackRow` 轨道头的色条 / 电平表 / 名称区域改为检查器入口（`role="button"`、`data-testid="track-header-N"`、`aria-expanded`、Enter/Space 可键盘触发）。此前唯一入口是头内一个 16px 滑块图标；该图标**保留**为显式冗余入口 | `src/test/trackRowHeader.test.tsx` 7 条：轨道头点击只调 `onOpenInspector`、键盘 Enter/Space 生效、其他按键忽略、`aria-expanded` 跟随状态、滑块入口仍可用 |
+| **试听分离** | 试听从"轨道头点击"移到独立的 ▶ 按钮（`data-testid="track-audition-N"`，复用既有 `track_audition_title`）。一个手势不再承担两个语义 | 同一测试文件：▶ 只调 `onAudition`，且不回跳 `onOpenInspector` |
+| **选中反馈** | 打开的行加同色高亮（`color-mix` 内联，避免 Tailwind 对 CSS 变量做不透明度修饰的不可靠解析），并以 `data-inspector-open` 暴露给测试 | `aria-expanded` 断言 + `data-inspector-open` |
+| **重排跟随** | 抽出纯函数 `src/features/sequencer/inspectorFollow.ts#followReorderedRow`；`StudioView` 的 `handleMoveTrackUp/DownWithInspector` 先重映射索引再提交 `REORDER_TRACKS`，并把 `toIndex` 按 store 的同一规则夹取 | `src/test/inspectorFollow.test.ts` 7 条：跟随上移/下移、被挤开的行、无关行、两端空操作不越界 |
+| **接线** | `SequencerPanel` 新增 `inspectorTrackIdx?: number \| null`（默认 `null`）→ `TrackRow.isInspectorOpen`；`StudioView` 传入自身状态 | 类型检查 + 面板/行两级 props 贯通 |
+
+**测试修复**：`src/test/sequencerMemo.test.tsx` 的 `lucide-react` mock 需补 `Play`，否则 4 条 memo 用例整体报 "No Play export is defined"。
+
+**未做 / 未验证（诚实说明）**：
+- **本版只走快轨**（typecheck、变更文件 lint、相关用例、红线）。按用户新规则"多个版本再走一个慢轨"，慢轨（全量 `test:coverage`、`build`、`check:budget`、3 浏览器 × 7 端 e2e、性能门、响度门）**合并到下一次发布前一次执行**。代价是明确的：本版的回归窗口为 1–2 个增量。
+- 没有真实音频层的改动，因此**未重测响度**（159 曲风 trim 基线不变）；插入链本身仍是 E-10 的范围。
+- 检查器面板仍是**纯展示组件**（受控 props + 回调），浏览器内的真实"点击轨道头 → 听到混音变化"闭环属 e2e/慢轨范畴，本版未做浏览器级验收。
+- 重排跟随只覆盖 `REORDER_TRACKS`；**曲风切换 / 工程载入**会整体替换 `tracks`，此时索引仍按位置解释（面板显示新曲风同一位置的轨道），这是有意保留的行为，未做按 `track_id` 的身份跟随。
+
+**下一慢轨批次**：本版 + 后续增量合并执行一次慢轨。
+
+### v2.0.4 · C-01 + G-01 频率分层常量表与键位对账
+
+**含项**：`C-01`（`toolbarTiers.ts`）、`G-01`（测试先行的键位/校验契约）。**`Toolbar.tsx` 一行未改**——本里程碑只建表，界面不变。
+
+| 项 | 交付内容 | 证据 |
+|---|---|---|
+| **C-01** | `src/components/sequencer/toolbarTiers.ts`：**55** 个控件的三级频率表（Tier 1 **12** / Tier 2 **17** / Tier 3 **26**），导出 `TIER_1_PRIMARY`/`TIER_2`/`TIER_3`/`ALL_TIER_ITEMS`/`TIER_1_MAX=14`/`DEFAULT_VISIBLE_IDS`/`tierOf`/`shortcutBindings`/`bindingKey`/`validateTiers`。**零 import**（不依赖 React 与应用状态），任何层都能安全引入 | `src/test/toolbarTiers.test.tsx` **27** 条 |
+| **接地** | 测试从磁盘读 `Toolbar.tsx`、`studio.ts`、`useTransportShortcuts.ts`：每个 `labelKey` 必须在 Toolbar 里以 `t("<key>")` 出现、在 locale 里有定义（`export` 是唯一跨 locale 例外，显式登记并证明）、每个 `id` 必须 kebab-case 且唯一、每个 `testId` 必须真的被渲染、**hook 里声明的每个单键键位必须出现在表里** | 同上 |
+| **G-01（变异守卫）** | **9** 条「必须能红」的用例：重复 id、无入口的键位、入口指向不存在的控件、入口指向非 Tier 1、Tier 1 上多余的入口、Tier 1 超限、空 id、空 labelKey、键位重复（含主绑定与别名互撞）。这是「表是合法的」这句话有意义的前提 | 同上 |
+| **计划冲突修正** | 计划原文要求「凡有单键快捷键的控件必须在 Tier 1」，但 hook 实际绑定 **5** 个单键，其中 **D/P/C** 三个不在计划点名的 Tier 1 名单里——字面执行会把 Tier 1 顶到 15 项，与同一份计划的 `≤14` 出口冲突。规则改为其**目的**形态：*带键位的控件要么本身在 Tier 1，要么声明一个 Tier 1 入口*（新增 `reachableVia`，校验器强制）。三个键位现在带**真实键位 + `reachableVia: "more"`** 入表 | `validateTiers` 的 `reachableVia` 三条规则 + 4 条对应用例 |
+| **别名** | `shortcut` 是单值，无法表达重做的第二个绑定；新增 `shortcutAliases` 记录 **Cmd/Ctrl+Y**，`shortcutBindings()` 与校验器一并计入 | 「records all three single-key bindings…」用例断言 `Ctrl/Cmd+Y → redo` |
+
+**对子代理首版的纠正（记录在案）**：子代理交付的版本把 D/P/C 三个键位**从表里删掉**并注释为"已知冲突"。这保住了 `TIER_1_MAX`，却让这张自称「唯一真相表」的常量表**漏掉应用真实存在的三个键位**——一个不会被任何测试发现的谎言（因为测试只检查"表里有的都对"，不检查"代码里有的都在表里"）。修正分两步：① 用 `reachableVia` 把规则改成可满足的形式；② 补上「从 hook 反查」的接地测试，使这类遗漏**必然变红**。
+
+**尚未做（诚实说明）**：
+- **没有任何像素测量**。计划 S1 出口的「常显控件 ≤14 / 1440×900 工具栏 ≤56 px / 1280×800 ≤96 px」属 `C-02`/`C-03`，本版只提供它们要消费的表；`toolbarTiers.ts` 当前**没有消费方**，分层对界面零影响。
+- Tier 2/Tier 3 的归档是**判断**（仓库无使用遥测），且部分控件只在传入可选 prop 时才渲染，分层假设完整工作台配置。
+- `pattern-slot` 建模为**一行**（PTN A + PTN B + 复制槽位的分段切换器），下拉/弹层里的**条目**不单独成行——这是为了让 Tier 1 恰好落在计划点名的 12 项上，属人为约定。
+- `Escape` 是共享的上下文关闭键（调音台 → 工程中心 → 上下文菜单 → …），不算任何单一控件的键位，故未记录。
+- 键位对账只覆盖 `e.key` 的单字符比较与 `e.code === "Space"`；若将来 hook 改用 `e.code` 绑定更多键，对账测试会**漏检**（不是误报）。这一限制写在测试注释里。
