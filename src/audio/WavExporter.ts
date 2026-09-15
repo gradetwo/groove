@@ -11,6 +11,7 @@ import { DrumPattern, Track } from "../types/genre";
 import { createZipArchive } from "../utils/zip";
 import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "./DrumKitModels";
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
+import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
 
@@ -236,6 +237,10 @@ export async function renderPatternOffline(
       const trackDest = trackStrips[trackIdx].gain;
       const trackId = (track.track_id || "").toLowerCase();
       const lowerName = track.name.toLowerCase();
+      // Exporter parity: resolve the same per-track instrument the live engine does, so a
+      // genre's declared timbre survives an offline bounce instead of falling back to the
+      // fixed per-role preset. Drum voices ignore this (their dispatch is untouched).
+      const synthPreset = resolveInstrumentPreset(track.instrument, trackId);
 
       // Ratchet
       const isHatTriplet = (trackId === "hihat" || lowerName.includes("hat")) && stepVal === 3;
@@ -257,15 +262,22 @@ export async function renderPatternOffline(
           synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf);
         } else if (trackId === "bass" || lowerName.includes("bass")) {
           const midi = pitchVal > 0 ? pitchVal : 36;
-          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal, subVel, DEFAULT_SYNTH_PRESETS.acidBass);
+          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal, subVel, synthPreset);
         } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
           const midi = pitchVal > 0 ? pitchVal : 60;
-          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, DEFAULT_SYNTH_PRESETS.warmPad);
+          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
         } else if (trackId === "lead" || lowerName.includes("lead")) {
           const midi = pitchVal > 0 ? pitchVal : 72;
-          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, DEFAULT_SYNTH_PRESETS.analogLead);
+          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
         } else if (trackId === "fx" || lowerName.includes("fx")) {
-          synthFX(ctx, trackDest, subTime, subVel, pitchVal, subDur, gateVal);
+          // Same split as AudioEngine.playFX: `noise_sweep` keeps the shared swept riser,
+          // anything else is voiced by the poly synth with the track's own preset.
+          if (synthPreset === DEFAULT_SYNTH_PRESETS.noiseSweep) {
+            synthFX(ctx, trackDest, subTime, subVel, pitchVal, subDur, gateVal);
+          } else {
+            const midi = pitchVal > 0 ? pitchVal : 72;
+            playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
+          }
         } else {
           synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf);
         }
