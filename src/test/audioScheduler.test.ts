@@ -3,6 +3,7 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { chordVoicingForStep } from "../audio/chordVoicing";
+import { resolveVoicingStyle } from "../data/genreVoicing";
 import type { SequencerPattern } from "../types/genre";
 import { FakeAudioContext, installFakeAudioContext } from "./helpers/fakeAudio";
 
@@ -310,12 +311,15 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     const { engine, oscillators, filters } = triggerAndDiff(synthPattern("chords", "rhodes_ep", 60));
     const rhodes = resolveInstrumentPreset("rhodes_ep", "chords");
 
-    // E-01: the chords track is no longer monophonic. A single step now produces a
-    // diatonic voicing, so the per-voice oscillator pair repeats once per chord tone.
-    // This assertion is deliberately stricter than the old one: it pins the harmony as
-    // well as the preset, so a regression to a single note fails here.
-    const voicing = chordVoicingForStep(60, "C minor");
-    expect(voicing).toHaveLength(3);
+    // E-01: the chords track is no longer monophonic, and the voicing is no longer a
+    // generic 1-3-5 — it depends on the genre, falling back to the track's instrument.
+    // This fixture has no genre entry, so the Rhodes instrument resolves to 7ths: the
+    // point of the assertion is that the *harpsichord-like* behaviour (one note, or a
+    // bare triad regardless of instrument) cannot come back.
+    const style = resolveVoicingStyle("timbre-test", "rhodes_ep");
+    expect(style).toBe("seventh");
+    const voicing = chordVoicingForStep(60, "C minor", { style });
+    expect(voicing).toHaveLength(4);
     expect(oscillators.map((o) => o.type)).toEqual(
       voicing.flatMap(() => [rhodes.osc1Type, rhodes.osc2Type])
     );

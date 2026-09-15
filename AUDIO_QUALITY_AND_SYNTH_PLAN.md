@@ -414,7 +414,53 @@ voice（含滤波器包络 / 力度→音色 / unison）
 
 **一个被证伪并如实记录的假设**：最初用「给和弦各音 3 ms 起始错开」试图通过去相关来减轻限幅器泵动，全量重测证明**无效**（目标 −16.95 → −17.09 LUFS，反而差 0.14 dB，属噪声量级）——常数时间偏移只是常数相位偏移，持续音之间仍然相干。`CHORD_STRUM_SEC` 因此**保留但改注释**：它只作为起始手感（真实演奏的和弦本就不是一声齐响），不再声称解决电平问题。
 
-**仍未完成、留给下一轮**：`E-14`（逐预设滤波器包络）、`V-02`（Node 侧真实 PCM 单测宿主）、`V-03`/`V-10`（真峰值与音色基线）。`E-13`（力度→音色）与 `E-09`（真混响/延迟）属 Tier 2，按 §6 排在 P2。
+**仍未完成、留给下一轮**：`E-14`（逐预设滤波器包络）、`V-02`（Node 侧真实 PCM 单测宿主）、`V-10`（音色基线）。`E-13`（力度→音色）与 `E-09`（真混响/延迟）属 Tier 2，按 §6 排在 P2。
+
+---
+
+## 4.7 P2 首项交付记录（v1.16.21）：E-12 真峰值前瞻限幅器 + V-03 真峰值表
+
+**N-15 关闭。** 这是 P2 被提前的一项——P1 的实测已经证明限幅器会**泵低整个混音**（E-01 加和声时全库平均掉 1.42 dB），只要它还这样，逐曲风默认效果链的电平就不可预测，P3 无从谈起。
+
+| ID | 交付内容 | 证据 |
+|---|---|---|
+| **E-12** | 新增 `src/audio/MasterLimiter.ts` + `public/limiterWorklet.js`：**3 ms 前瞻**的滑动窗口最小值（增益在瞬态到达输出**之前**已经压低）、**4× 过采样真峰值检测**（BS.1770-4 Annex 2 同款 12-tap/相位多相插值）、**−1.0 dBTP 硬天花板**、**立体声联动**（硬声相瞬态不会移动声像）、分级释放（浅压缩 80 ms / 深压缩 400 ms）、逐样本计算无阶梯写入、完全确定性 | 三个消费点（实时 `AudioEngine`、离线 `WavExporter`、和弦工作站 `ChordAudioEngine`）都改为 `createMasterLimiter`；句柄的 `input`/`output` 节点**身份不变**，因此图可以在同步构造期一次接好，worklet 异步换入 |
+| **V-03** | `src/test/helpers/loudness.ts` 补真峰值：4× 过采样、Kaiser-β=8.0 的 48-tap 原型插值器；`LoudnessResult` 新增 `truePeakDb`（并保留 `samplePeakDb`，因已提交基线依赖它） | 单测用**样本峰值低于满刻度但真峰值超过满刻度**的信号证明两者确实不同——这正是真峰值存在的理由 |
+| **门禁** | `check_loudness_spread.mjs` 新增两条**会失败**的断言：① 0 个曲风样本峰值超 0 dBFS；② 无曲风超出 −1 dBTP 天花板（容差 0.02 dB） | 只有真峰值能看见**采样间过冲**，只看样本峰值的门禁恰好漏掉限幅器存在的意义 |
+| **降级** | AudioWorklet 不可用时（旧引擎、jsdom、测试替身）回落到原 `DynamicsCompressorNode`，并把 `kind` 报为 `"fallback"`，**不假装**有真峰值保证 | 离线路径在 `startRendering()` 前 `await handle.ready`——`OfflineAudioContext` 是一次性渲染，worklet 若在渲染后才装好，整个导出会静默落在回落路径上 |
+
+**实测结果（全量 159 曲风离线渲染，`--bars=3 --repeats=1`，与已提交基线同口径）**：
+
+| 指标 | E-12 之前 | E-12 之后 |
+|---|---|---|
+| **样本峰值超 0 dBFS** | **121/159**（最差 riddim +1.63 dBFS，被 16-bit 编码器硬削） | **0/159** |
+| 最差真峰值 | 未度量（无真峰值表） | **−0.996 dBTP**（`disco`），天花板 −1.0 dBTP |
+| 配平后 LUFS p90−p10 | 0.32 LU | 0.80 LU（上限 1.5） |
+| 配平后全距 | 1.11 LU | 2.53 LU（上限 4） |
+| trim clamp 命中 | 0/159 | 0/159 |
+
+那 4 个「超出」天花板 0.004 dB 以内的曲风（`disco` −0.996、`dubstep` −0.998、`big-beat` −0.998、`boom-bap` −0.999）是**限幅器检测器与本表两个独立估计器之间的数值差异**，不是可听过的过冲——容差 0.02 dB 就是为此设的，而不是把门禁调到刚好通过。
+
+**库整体电平下降约 0.7 dB**（中位数 arranged −17.09 → −17.80 LUFS）：真峰值天花板比原来那个"20:1、3 ms 起攻、实际放行 1/20 超量"的压缩器更严格，这是**预期且正确**的方向。已按流程重测并回填 159 条 trim。
+
+---
+
+## 4.8 E-01 后续：和弦按曲风选声部形态（用户反馈）
+
+**用户反馈**：和弦要用曲风对应的用法——摇滚喜欢 power 和弦、jazz 变化更多，不能就是简单 135。
+
+**属实，且根因在数据侧**：`common_chords` 在 **159 个曲风里只有 2 个互不相同的字符串**（`i–VI–III–VII` / `i–v–VI–VII`），**连 Jazz/Blues 与 Rock/Metal 都完全相同**。所以「爵士和声更有变化」**不可能**从曲风数据里读出来。这与 `instrumentation` 在 N-12 之前的状态同类；`common_chords` 仍是旧状态，**登记为后续数据项**。
+
+| 交付 | 内容 |
+|---|---|
+| 9 种声部形态 | **音程型**（与调式无关）：`power` = 根音+纯五+八度（**无三度**）、`open` = 根音+五+八+十二。**音阶级数型**（随调式）：`triad`/`add9`/`sus`/`shell`(1-3-7 无五度)/`seventh`/`extended`(1-3-7-9)/`quartal`(叠四度)。每种自带 span 与注释里的音乐理由 |
+| 为什么 power 必须是音程型 | 用音阶级数叠置会在某些级数上得到**减五度**，那就不是 power chord 了。断言直接写成「`power` 在任何音级上都不含三度」 |
+| `src/data/genreVoicing.ts` | 6 个 category 默认 + 约 80 条逐曲风 override（每条必带 reason）+ 乐器回退（自定义曲风按 chords 轨音色推断）。`death-metal`/`black-metal`/`metalcore`/`grunge`/`punk-rock` → power；`bebop`/`hard-bop`/`bossa-nova`/`neo-soul` → extended；`modal-jazz`/`free-jazz` → quartal；`funk`/`soul`/`disco`/`boom-bap`/`deep-house` → seventh；`ambient`/`ambient-dub` → sus；`shoe-gaze`/`wave` → open；`city-pop`/`j-pop` → add9 |
+| 兼容 | 旧 `density: "triad"|"seventh"` 保留为别名，既有调用方与测试不受影响 |
+| 端到端 parity | 测试直接断言**渲染出来的音**：`death-metal` → `[0,7,12]`、`bebop` → `[0,3,10,14]`（C-Eb-Bb-D）、`ambient` 无三度、且实时与离线对 5 个曲风给出同一组音 |
+
+**表完整性门禁当场抓到 3 个真实错误**：我虚构了不存在的曲风 `acid-jazz-electronic`；`shell` 的测试期望值写错（实现给的 C-Eb-Bb = `[0,3,10]` 是对的，我却写成 `[0,3,7]`，那其实是三和弦）；11 条 reason 只是「As UK garage.」这类交叉引用而非自证。均已修正，门禁保持严格。
+
 
 ---
 

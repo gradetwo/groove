@@ -4,6 +4,12 @@ import {
   kWeightChannel,
   measureLoudness,
   sampleRmsDb,
+  truePeakDb,
+  truePeakDbChannels,
+  truePeakLinear,
+  truePeakPolyphaseTaps,
+  TRUE_PEAK_OVERSAMPLE_FACTOR,
+  TRUE_PEAK_TAPS_PER_PHASE,
   type BiquadCoefficients,
 } from "./helpers/loudness";
 
@@ -165,5 +171,149 @@ describe("BS.1770 gated integrated loudness", () => {
     const dc = new Float32Array(1000).fill(0.5);
     expect(sampleRmsDb([dc, dc])).toBeCloseTo(-6.0206, 3);
     expect(sampleRmsDb([new Float32Array(100)])).toBe(-Infinity);
+  });
+});
+
+function dbOf(linear: number): number {
+  return 20 * Math.log10(linear);
+}
+
+/** Highest raw sample magnitude, dBFS. */
+function samplePeakDbOf(samples: Float32Array): number {
+  let peak = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const abs = Math.abs(samples[i]);
+    if (abs > peak) peak = abs;
+  }
+  return peak > 0 ? dbOf(peak) : -Infinity;
+}
+
+/**
+ * A sine at exactly fs/4 with a 45° phase. Every sample lands at ±√2/2 (−3.01 dBFS)
+ * while the continuous waveform still reaches ±1.0 exactly halfway between samples —
+ * the canonical inter-sample-overshoot case, and the reason true-peak metering exists.
+ */
+function quarterRateSine(seconds: number, sampleRate: number, amplitude = 1): Float32Array {
+  const out = new Float32Array(Math.round(seconds * sampleRate));
+  for (let i = 0; i < out.length; i++) {
+    out[i] = amplitude * Math.sin((Math.PI / 2) * i + Math.PI / 4);
+  }
+  return out;
+}
+
+/** Nail the reason V-03 exists: sample peak below full scale, true peak above it. */
+describe("BS.1770-4 true-peak (inter-sample peak) metering", () => {
+  const sampleRate = 44100;
+
+  it("uses a 4× oversampled 48-tap polyphase interpolator (12 taps per branch)", () => {
+    expect(TRUE_PEAK_OVERSAMPLE_FACTOR).toBe(4);
+    expect(TRUE_PEAK_TAPS_PER_PHASE).toBe(12);
+    const branches = truePeakPolyphaseTaps();
+    expect(branches).toHaveLength(4);
+    for (const branch of branches) expect(branch).toHaveLength(12);
+    // Branch 0 must be an exact unit impulse (the prototype is centred on tap 24), so
+    // it reproduces the raw samples instead of a filtered copy of them.
+    for (let k = 0; k < 12; k++) {
+      expect(branches[0][k]).toBeCloseTo(k === 6 ? 1 : 0, 12);
+    }
+    // Every branch is DC-exact: interpolation must not change a constant signal.
+    for (const branch of branches) {
+      const sum = branch.reduce((acc, tap) => acc + tap, 0);
+      expect(sum).toBeCloseTo(1, 6);
+    }
+  });
+
+  it("detects an inter-sample overshoot whose sample peak is 3 dB below full scale", () => {
+    const samples = quarterRateSine(1, sampleRate);
+    const samplePeakDb = samplePeakDbOf(samples);
+    const truePeak = truePeakDb(samples, sampleRate);
+
+    // Samples sit at √2/2 (−3.01 dBFS)…
+    expect(samplePeakDb).toBeCloseTo(-3.0103, 2);
+    // …but the waveform between them reaches full scale.
+    expect(truePeak).toBeGreaterThan(samplePeakDb + 2.5);
+    expect(truePeak).toBeGreaterThan(-0.2);
+    expect(truePeak).toBeLessThan(0.2);
+  });
+
+  it("converts linear true peak to dBTP correctly (0 dBTP = full scale)", () => {
+    // A hard-started buffer rings in the interpolator's own start-up transition, so the
+    // absolute reading is a few hundredths of a dB above the steady-state crest. The
+    // *scale* relationship is exact, which is what "dBTP" means: halving the amplitude
+    // is exactly −6.0206 dB.
+    const full = truePeakDb(quarterRateSine(0.5, sampleRate, 1), sampleRate);
+    const half = truePeakDb(quarterRateSine(0.5, sampleRate, 0.5), sampleRate);
+    expect(full - half).toBeCloseTo(6.0206, 3);
+    expect(truePeakLinear(quarterRateSine(0.5, sampleRate, 1))).toBeCloseTo(
+      truePeakLinear(quarterRateSine(0.5, sampleRate, 0.5)) * 2,
+      6
+    );
+    expect(dbOf(1)).toBe(0);
+    expect(dbOf(0.5)).toBeCloseTo(-6.0206, 4);
+  });
+
+  it("keeps true peak ≥ sample peak for every signal shape (never under-reads)", () => {
+    const signals: Float32Array[] = [
+      quarterRateSine(0.2, sampleRate),
+      sine(997, 1, 0.2, sampleRate),
+      sine(60, 0.999, 0.2, sampleRate),
+      sine(19000, 0.9, 0.2, sampleRate),
+      new Float32Array(2000).fill(0.5),
+      new Float32Array(2000),
+    ];
+    // White noise + a bare impulse: the two cases where a naive interpolator would
+    // read *below* the sample peak and hide a real over.
+    const noise = new Float32Array(2000);
+    let state = 12345;
+    for (let i = 0; i < noise.length; i++) {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      noise[i] = (state / 4294967296) * 2 - 1;
+    }
+    signals.push(noise);
+    const impulse = new Float32Array(64);
+    impulse[32] = 1;
+    signals.push(impulse);
+
+    for (const signal of signals) {
+      expect(truePeakDb(signal, sampleRate)).toBeGreaterThanOrEqual(samplePeakDbOf(signal) - 1e-9);
+    }
+    expect(truePeakDb(new Float32Array(256), sampleRate)).toBe(-Infinity);
+  });
+
+  it("reads a settled DC signal and a near-full-scale low-frequency sine at their sample peak", () => {
+    // A DC buffer that starts abruptly is a step, and a band-limited step genuinely
+    // rings: the meter correctly reports that overshoot (it is the same reason the
+    // limiter must not trust sample peaks). Once the transition is behind it, DC must
+    // read exactly its sample peak.
+    const ramped = new Float32Array(4000);
+    for (let i = 0; i < ramped.length; i++) ramped[i] = 0.5 * Math.min(1, i / 512);
+    expect(truePeakDb(ramped, sampleRate)).toBeCloseTo(-6.0206, 2);
+
+    const stepDc = new Float32Array(4000).fill(0.5);
+    // Documented, bounded over-read on a hard start rather than a wild value.
+    expect(truePeakDb(stepDc, sampleRate)).toBeGreaterThan(-6.0206);
+    expect(truePeakDb(stepDc, sampleRate)).toBeLessThan(-5.0);
+
+    const low = sine(100, 0.999, 0.5, sampleRate);
+    // A 100 Hz sine at 44.1 kHz has 441 samples per cycle, so the sampled crest is
+    // within ~0.0003 dB of the true crest: the oversampled meter must not invent dB.
+    const delta = truePeakDb(low, sampleRate) - samplePeakDbOf(low);
+    expect(delta).toBeGreaterThanOrEqual(0);
+    expect(delta).toBeLessThan(0.05);
+  });
+
+  it("takes the maximum across channels and reports it next to the sample peak", () => {
+    const loud = quarterRateSine(0.5, sampleRate);
+    const quiet = sine(997, 0.1, 0.5, sampleRate);
+    const result = measureLoudness([quiet, loud], sampleRate);
+
+    // `samplePeakDb` keeps its old meaning exactly (raw sample peak)…
+    expect(result.samplePeakDb).toBeCloseTo(samplePeakDbOf(loud), 6);
+    // …and the new field exposes the inter-sample overshoot that it hides.
+    expect(result.truePeakDb).toBeGreaterThan(result.samplePeakDb + 2.5);
+    expect(result.truePeakDb).toBeCloseTo(truePeakDbChannels([quiet, loud]), 9);
+
+    const silence = measureLoudness([new Float32Array(4800)], sampleRate);
+    expect(silence.truePeakDb).toBe(-Infinity);
   });
 });

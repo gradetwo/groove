@@ -1,47 +1,39 @@
 {
-  "version": "1.16.20",
+  "version": "1.16.21",
   "releaseDate": "2026-09-15",
-  "changelogCount": 62,
+  "changelogCount": 63,
   "latest": {
-    "version": "1.16.20",
+    "version": "1.16.21",
     "date": "2026-09-15",
     "category": "audio",
     "title": {
-      "zh": "v1.16.20 让每个曲风真的弹出和声、修掉一批能听见的音质缺陷，并让更新记录不再看不到最新版",
-      "en": "v1.16.20 Real harmony for every genre, a batch of audible audio defects fixed, and release notes that can no longer miss the newest entry"
+      "zh": "v1.16.21 母带换上真正的真峰值前瞻限幅器（削波 121→0 个曲风），和弦开始按曲风选声部",
+      "en": "v1.16.21 A real true-peak lookahead limiter (clipping 121 genres → 0), and chords voiced for the genre"
     },
     "highlights": [
       {
-        "zh": "**和弦轨第一次真的有和声**：此前 `chords` 轨只触发一个音，159 个曲风声明的 `common_chords` 走向从未到达引擎——所谓「垫子」其实是穿着 pad 音色的单音旋律。现在按曲风自己的调式做自然音阶和声（定位根音音级，再叠 1-3-5），实时与离线导出调用同一模块，**零曲风文件改动**。",
-        "en": "**The chords track finally has harmony.** It triggered a single note, so the `common_chords` progression every genre declares never reached the engine — the \"pad\" was a single-note melody wearing a pad preset. It now builds a diatonic voicing in the genre's own scale, from one module shared by playback and export, with **zero genre-file edits**."
+        "zh": "**母带限幅器原来不是限幅器（已登记的 N-15）**：它是个 `DynamicsCompressorNode`，20:1、**3 ms 起攻**且无前瞻——底鼓/军鼓的瞬态在增益衰减介入前就已经过去了，超量还按 1/20 放行。实测后果：**159 个曲风里有 121 个渲染出的样本峰值超过 0 dBFS**，被 16-bit 编码器硬削平。现在换成真正的**前瞻式真峰值砖墙限幅器**：3 ms 前瞻（增益在瞬态到达输出前就已压低）、4× 过采样真峰值检测（能看见**采样间过冲**，而不只是采样点）、−1.0 dBTP 硬天花板、立体声联动、分级释放。",
+        "en": "**The master \"limiter\" was not a limiter (registered as N-15).** It was a `DynamicsCompressorNode` at 20:1 with a **3 ms attack** and no lookahead — kick and snare transients had already passed before the detector closed, and 1/20 of the excess sailed through. Measured result: **121 of 159 genres rendered sample peaks above 0 dBFS**, hard-clipped by the 16-bit encoder. It is now a real **lookahead true-peak brickwall**: 3 ms of lookahead (gain is down before the transient reaches the output), 4x-oversampled true-peak detection (so **inter-sample** overshoots are caught, not just sample points), a −1.0 dBTP hard ceiling, stereo-linked gain, and programme-dependent release."
       },
       {
-        "zh": "**修掉每个长音都在响的咔哒声**：衰减比音符长时，包络会从衰减曲线硬跳到延持电平——`bass808` 在 1/16 音符上约 **−4.6 dB 阶跃**，等于一个宽带脉冲。808 贝斯、钢琴、Rhodes、颤音琴、钟琴、西塔琴、立式贝斯都受影响。改为从解析求出的真实值开始释放。",
-        "en": "**Fixed a click that fired on every sustained note.** When the decay outlasted the note, the envelope hard-stepped to the sustain level — about **−4.6 dB** on `bass808`, i.e. a broadband impulse. The 808 bass, piano, Rhodes, vibraphone, bells, sitar and upright bass were all affected. The release now starts from the envelope's analytically computed value."
+        "zh": "**实测：削波从 121/159 降到 0/159，最差真峰值 −0.996 dBTP**（天花板 −1.0）。全库重新实测并回填 159 条响度 trim：配平后 p90−p10 0.80 LU、全距 2.53 LU、clamp 命中 0/159。库整体电平下降约 0.7 dB——真正的前瞻天花板比原来那个压缩器严格，这是预期且正确的方向。",
+        "en": "**Measured: clipping falls from 121/159 to 0/159, worst true peak −0.996 dBTP** against a −1.0 ceiling. All 159 loudness trims were re-measured and refitted: post-trim spread 0.80 LU p90−p10, 2.53 LU full range, 0/159 clamp hits. The library sits about 0.7 dB lower overall — a genuine lookahead ceiling is stricter than the compressor it replaced, which is the intended direction."
       },
       {
-        "zh": "**母带主滤波此前从未真正旁通**：`DEFAULT_FX_STATE` 说它是关的，但节点按状态值构造，于是**实时母带一直挂着一个 16 kHz 双极点低通**，而离线导出器整条机架都不存在。现在按接线真旁通（BiquadFilter 没有透明类型，改频率只是假旁通），并修掉非 lowpass 类型的旁通值错误。",
-        "en": "**The master filter was never actually bypassed.** The node was built from the state values even though `DEFAULT_FX_STATE` says it is off, so **the live master always carried a 16 kHz low-pass** while the exporter has no rack at all. Bypass is now a true re-route (a BiquadFilter has no transparent type), and the wrong bypass value for non-lowpass types is fixed."
+        "zh": "**新增真峰值表（V-03）并把它接成门禁**：此前无真峰值度量，所以「采样间过冲」这类问题**看不见**。现在 `loudness` 助手提供 4× 过采样真峰值，门禁新增两条会失败的断言——0 个曲风超 0 dBFS 样本峰值、无曲风超出 −1 dBTP（容差 0.02 dB）。只有真峰值能看见限幅器存在的意义，只看样本峰值恰好漏掉它。",
+        "en": "**A true-peak meter (V-03), wired in as a gate.** There was no true-peak measurement, so inter-sample overshoot was **invisible**. The loudness helper now reports 4x-oversampled true peak, and the gate gained two assertions that can fail: zero genres above 0 dBFS sample peak, and none beyond −1 dBTP (0.02 dB tolerance). Only a true-peak meter can see the failure the limiter exists to prevent."
       },
       {
-        "zh": "**降比特器其实没在降比特**：量化表只有 2048 点而量化级数可达 65536，`bits ≥ 11` 的设置完全失效——**出厂默认就是 12**。表长改为按级数自适应，并补 4× 过采样消除折叠失真；注释明确记录「采样率抽取未实现」及原因（WaveShaper 无记忆）。",
-        "en": "**The bitcrusher did not actually crush.** Its 2048-point table could not resolve a quantizer reaching 65536 levels, so any `bits ≥ 11` was meaningless — **the default was 12**. The table is now sized from the level count, 4x oversampling stops harmonic fold-back, and the comment states plainly that sample-rate decimation is not implemented and why."
+        "zh": "**和弦按曲风选声部形态（用户反馈）**：此前一律是自然音阶 1-3-5，对大多数曲风都不对。现在有 9 种形态：**power**（根音+纯五+八度，**无三度**——摇滚/金属的失真下三度会糊成一团）、**shell**/**extended**（爵士只留 3 度与 7 度、再叠 9 度）、**quartal**（叠四度，modal/free jazz）、**seventh**（布鲁斯/灵魂/迪斯科/boom-bap）、**sus**/**open**（环境与 shoegaze 的无三度音墙）、**add9**（city pop / j-pop / trance）。新增 `src/data/genreVoicing.ts`：6 个分类默认 + 约 80 条逐曲风 override。",
+        "en": "**Chords are now voiced for the genre (user feedback).** A generic diatonic 1-3-5 was wrong for most of the library. There are now nine voices: **power** (root + fifth + octave, **no third** — under distortion the third is what turns a chord to mush), **shell**/**extended** (jazz keeps the 3rd and 7th, adding the 9th), **quartal** (stacked fourths for modal/free jazz), **seventh** (blues, soul, disco, boom-bap), **sus**/**open** (the thirdless ambient/shoegaze wall), **add9** (city pop, J-pop, trance). New `src/data/genreVoicing.ts`: six category defaults plus ~80 per-genre overrides."
       },
       {
-        "zh": "**鼓噪声可复现且每击不同**：噪声床、混响 IR 与离线噪声此前全部来自 `Math.random()`，两次渲染都不一致、导出也无法保证与试听相同；而每个鼓点又从 buffer 的 0 偏移读起，16 分踩镲是**逐字节相同**的一段。现在统一用种子生成器，并给每击一个由「轨/步/连击」确定性推出的读取偏移，实时与离线共用同一公式。",
-        "en": "**Drum noise is reproducible and varies per hit.** The noise bed, reverb impulse and offline noise all came from `Math.random()`, so renders disagreed and an export could not match the audition; separately every hit read from offset 0, making a 16th-note hat pattern byte-identical repetition. Both now use one seeded generator, with a per-hit offset derived deterministically from track/step/ratchet."
+        "zh": "**但曲风数据本身给不出这个信息**：`common_chords` 在 159 个曲风里**只有 2 个互不相同的字符串**，连 Jazz/Blues 与 Rock/Metal 都完全一样。所以爵士的和声变化只能来自上面那张按曲风键控的表；`common_chords` 的退化已登记为后续数据项（与 instrumentation 在 N-12 之前的状态同类）。",
+        "en": "**The genre data itself cannot supply this.** `common_chords` holds only **two distinct strings across all 159 genres**, identical even for Jazz/Blues and Rock/Metal. Jazz harmony therefore has to come from the genre-keyed table above; the degeneracy of `common_chords` is registered as a follow-up data item (the same state `instrumentation` was in before N-12)."
       },
       {
-        "zh": "**「更新后看不到最新更新记录」的根因修复**：① `/changelog.json` 允许缓存 1 小时；② Service Worker 走 stale-while-revalidate 先返回旧副本、回填后不重渲染；③ **弹窗把「归档」的优先级放在刚用 `no-store` 校验过的 `latest` 之上**，旧归档直接顶掉最新一条——这解释了为何版本号正确、只有记录是旧的。现在归档 URL 按版本作键、渲染改为「归档 ∪ latest」按版本降序、两个文件在 SW 中改为 Network First（对已部署的旧前端同样生效）。",
-        "en": "**Root cause of \"I updated but cannot see the newest release note\".** (1) `/changelog.json` cached for an hour; (2) the service worker served it stale-while-revalidate, returning the old copy and never re-rendering after the refresh; (3) **the modal ranked the archive above the `latest` entry just revalidated with `no-store`**, so a stale archive displaced the newest entry — which is why the version was right and only the notes were old. The archive URL is now version-keyed, rendering is a version-descending union, and both files are network-first in the worker."
-      },
-      {
-        "zh": "**其余可听/可测修复**：踢鼓逐 voice 饱和补 4× 过采样并把失真曲线改为缓存（此前每次踩击分配 4096 个 float）；调音台声相与两条送出改为斜坡写入，拖推子不再有阶梯噪声；`VoiceRegistry` 增加复音上限与**无咔哒抢音**（优先抢最接近自然结束的 voice）。",
-        "en": "**Other audible/measurable fixes.** The per-voice kick saturation gained 4x oversampling and a cached distortion curve (it allocated 4096 floats per hit). Console pan and both sends now ramp instead of stepping, removing zipper noise. `VoiceRegistry` gained a polyphony ceiling with **click-free stealing**, preferring the voice closest to finishing."
-      },
-      {
-        "zh": "**全库响度重新配平且更整齐**：加入和声抬高和弦轨峰值，因而**更狠地触发母带限幅器**把整个混音压低（全量实测 arranged 平均 −1.42 dB，最差 techstep −4.98）——这是 N-15 的又一次实证。按流程重测 159 曲风并回填 trim：配平后 p90−p10 由 0.51 LU 收到 **0.32 LU**，全距 1.11 LU，clamp 0/159。",
-        "en": "**The library was re-matched — and is now tighter.** Harmony raises the chord peak, which **drives the master limiter harder and pumps the whole mix down** (−1.42 dB average arranged, worst `techstep` −4.98) — more evidence for N-15. All 159 genres were re-measured and trims refitted: post-trim p90−p10 improved from 0.51 LU to **0.32 LU**, range 1.11 LU, 0/159 clamp hits."
+        "zh": "**实时与导出必须给出同一组音**：声部形态在实时引擎与离线导出器各自解析（一个实时、一个离线），所以除了单元测试，另加**端到端断言**——直接检查渲染出来的音：`death-metal` → 根音+五度+八度、`bebop` → C-Eb-Bb-D、`ambient` 无三度，且两个引擎对 5 个曲风给出完全相同的音。",
+        "en": "**Playback and export must produce the same notes.** The two engines resolve the voicing independently (one realtime, one offline), so beyond unit tests there are **end-to-end assertions** on the rendered pitches: `death-metal` gives root+fifth+octave, `bebop` gives C-Eb-Bb-D, `ambient` has no third, and both engines agree exactly on five genres."
       }
     ]
   }

@@ -17,6 +17,8 @@ import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } 
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC } from "./chordVoicing";
+import { resolveVoicingStyle } from "../data/genreVoicing";
+import { createMasterLimiter } from "./MasterLimiter";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -157,13 +159,6 @@ export async function renderPatternOffline(
   const masterGain = ctx.createGain();
   masterGain.gain.setValueAtTime(0.85, 0);
 
-  const limiter = ctx.createDynamicsCompressor();
-  limiter.threshold.setValueAtTime(-1.0, 0);
-  limiter.knee.setValueAtTime(0.0, 0);
-  limiter.ratio.setValueAtTime(20.0, 0);
-  limiter.attack.setValueAtTime(0.003, 0);
-  limiter.release.setValueAtTime(0.05, 0);
-
   // Genre loudness-match stage. Exporter parity: the live engine applies the same
   // trim in the same relative position (after the fader, before the limiter), so a
   // bounced master is not louder or quieter than the audition that produced it.
@@ -179,9 +174,15 @@ export async function renderPatternOffline(
   const loudnessTrim = ctx.createGain();
   loudnessTrim.gain.setValueAtTime(Math.pow(10, loudnessTrimDb / 20), 0);
 
+  // E-12: true-peak lookahead brickwall ceiling. Built after the two master gains so
+  // the offline node order (and every parity test that indexes `createdGains`) is
+  // unchanged, and awaited below so the bounce really renders through the worklet when
+  // the browser has one, falling back to the legacy compressor otherwise.
+  const limiter = createMasterLimiter(ctx);
+
   masterGain.connect(loudnessTrim);
-  loudnessTrim.connect(limiter);
-  limiter.connect(ctx.destination);
+  loudnessTrim.connect(limiter.input);
+  limiter.output.connect(ctx.destination);
 
   // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
   // export never matched the audition it was rendered from, which broke the project's
@@ -291,7 +292,11 @@ export async function renderPatternOffline(
           // hard rule in this project, so both sides call the same shared module and
           // apply the same per-voice gain — never re-implement it here.
           const midi = pitchVal > 0 ? pitchVal : 60;
-          const notes = chordVoicingForStep(midi, pattern.scale);
+          // Same genre-appropriate voicing as `AudioEngine.playChord`; a generic triad
+          // here would silently break exporter parity for every rock and jazz genre.
+          const notes = chordVoicingForStep(midi, pattern.scale, {
+            style: resolveVoicingStyle(pattern.genre_id, track.instrument),
+          });
           const voiceVel = subVel * chordVoiceGain(notes.length);
           notes.forEach((note, i) => {
             // Same stagger as AudioEngine.playChord — parity depends on it.
@@ -315,6 +320,11 @@ export async function renderPatternOffline(
       }
     });
   }
+
+  // Wait for the limiter module before rendering: an OfflineAudioContext renders in
+  // one shot, so a worklet that installed after `startRendering()` would silently
+  // leave the whole bounce on the compressor fallback.
+  await limiter.ready;
 
   return await ctx.startRendering();
 }

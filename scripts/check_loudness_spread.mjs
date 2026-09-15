@@ -180,6 +180,71 @@ if (unwired.length) {
   oks.push(`wiring: master trim stage + offline parity + genre-entry seeding present`);
 }
 oks.push(`target loudness: ${report.target ?? report.targetLufs} (${report.targetMetric ?? "median of the library"})`);
+
+/* N-15 / E-12 — the master ceiling must actually hold ---------------------------
+ * Before the true-peak lookahead limiter landed, the master "limiter" was a
+ * DynamicsCompressorNode with a 3 ms attack, and the 16-bit encoder hard-clipped the
+ * result: **121 of 159 genres rendered sample peaks above 0 dBFS** (worst +1.63 dBFS).
+ * Now that the ceiling is a real one, this gate keeps it from silently regressing —
+ * measuring a true peak is the only way to see an inter-sample overshoot, and a
+ * sample-peak-only check would miss exactly the failure the limiter exists to prevent.
+ */
+const CEILING_DBTP = Number(argValue("--ceiling-dbtp", "-1"));
+/** The limiter's detector and this meter are separate estimators; a few thousandths of
+ *  a dB of disagreement is numerical, not an audible overshoot. */
+const TRUE_PEAK_TOLERANCE_DB = Number(argValue("--true-peak-tolerance", "0.02"));
+
+const truePeakOf = (g) =>
+  Number.isFinite(g.trimmedTruePeakDb)
+    ? g.trimmedTruePeakDb
+    : Number.isFinite(g.arrangedTruePeakDb)
+      ? g.arrangedTruePeakDb
+      : Number.isFinite(g.legacyTruePeakDb)
+        ? g.legacyTruePeakDb
+        : null;
+
+const truePeaks = entries
+  .map(([id, g]) => ({ id, db: truePeakOf(g), samplePeakDb: g.trimmedPeakDb ?? g.arrangedPeakDb ?? g.legacyPeakDb }))
+  .filter((r) => r.db !== null);
+
+if (truePeaks.length === 0) {
+  problems.push(
+    `${rel} carries no true-peak measurement — re-run the measurement so the N-15 ceiling can be verified`
+  );
+} else {
+  const clipped = truePeaks.filter((r) => Number.isFinite(r.samplePeakDb) && r.samplePeakDb > 0);
+  if (clipped.length > 0) {
+    problems.push(
+      `${clipped.length}/${truePeaks.length} genre(s) still exceed 0 dBFS sample peak (the 16-bit encoder hard-clips these): ` +
+        clipped
+          .sort((a, b) => b.samplePeakDb - a.samplePeakDb)
+          .slice(0, 5)
+          .map((r) => `${r.id} ${r.samplePeakDb.toFixed(2)}`)
+          .join(", ")
+    );
+  } else {
+    oks.push(`clipping: 0/${truePeaks.length} genres exceed 0 dBFS sample peak (N-15)`);
+  }
+
+  const overCeiling = truePeaks
+    .filter((r) => r.db > CEILING_DBTP + TRUE_PEAK_TOLERANCE_DB)
+    .sort((a, b) => b.db - a.db);
+  if (overCeiling.length > 0) {
+    problems.push(
+      `${overCeiling.length}/${truePeaks.length} genre(s) exceed the ${CEILING_DBTP} dBTP ceiling by more than ${TRUE_PEAK_TOLERANCE_DB} dB: ` +
+        overCeiling
+          .slice(0, 5)
+          .map((r) => `${r.id} ${r.db.toFixed(3)}`)
+          .join(", ")
+    );
+  } else {
+    const worst = [...truePeaks].sort((a, b) => b.db - a.db)[0];
+    oks.push(
+      `true peak: worst ${worst.db.toFixed(3)} dBTP (${worst.id}) vs a ${CEILING_DBTP} dBTP ceiling`
+    );
+  }
+}
+
 // The gate always runs on the report's primary metric; the other metric's post-trim
 // spread is reported for transparency (see the metric notes in the report).
 const otherKey = report.metric?.primary === "rms" ? "lufs" : "rms";

@@ -14,9 +14,10 @@
  *    absolute gate at −70 LUFS, then a relative gate 10 LU below the ungated mean of
  *    the surviving blocks.
  *  - Channel weighting 1.0 for L and R, matching BS.1770's table for stereo.
+ *  - True-peak (inter-sample peak) metering: 4× oversampled polyphase FIR per
+ *    BS.1770-4 Annex 2, reported as `truePeakDb` alongside the raw `samplePeakDb`.
  *
  * NOT implemented (documented, not silently approximated):
- *  - true-peak (oversampled) metering; `samplePeakDb` is the raw sample peak.
  *  - channel weights for surround layouts.
  */
 
@@ -41,11 +42,24 @@ export interface LoudnessResult {
   integratedLufs: number;
   /** Raw sample peak across channels, dBFS (0 dBFS = full scale). */
   samplePeakDb: number;
+  /**
+   * True (inter-sample) peak across channels, dBTP. Always ≥ `samplePeakDb`
+   * (a sample is a point on the reconstructed waveform, so the oversampled estimate
+   * can never legitimately read below the raw peak). −Infinity for digital silence.
+   */
+  truePeakDb: number;
   /** Ungated block loudness before the relative gate, LUFS (debugging aid). */
   ungatedLufs: number;
   /** Number of 400 ms blocks used after both gates. */
   gatedBlockCount: number;
 }
+
+/** Oversampling factor used by the true-peak estimator (BS.1770-4 Annex 2). */
+export const TRUE_PEAK_OVERSAMPLE_FACTOR = 4;
+/** Taps per polyphase branch; 4 × 12 = a 48-tap prototype interpolator. */
+export const TRUE_PEAK_TAPS_PER_PHASE = 12;
+/** Kaiser window β for the prototype low-pass. */
+export const TRUE_PEAK_KAISER_BETA = 8.0;
 
 const ABSOLUTE_GATE_LUFS = -70;
 const RELATIVE_GATE_LU = -10;
@@ -112,6 +126,117 @@ export function kWeightChannel(samples: Float32Array, sampleRate: number): Float
   return applyBiquad(applyBiquad(samples, shelf), highpass);
 }
 
+/** Modified Bessel function of the first kind, order 0 (Kaiser window). */
+function besselI0(x: number): number {
+  let sum = 1;
+  let term = 1;
+  const half = x / 2;
+  for (let k = 1; k < 64; k++) {
+    term *= (half / k) * (half / k);
+    sum += term;
+    if (term < 1e-16 * sum) break;
+  }
+  return sum;
+}
+
+let cachedTruePeakTaps: Float32Array[] | null = null;
+
+/**
+ * Polyphase branches of the BS.1770-4 Annex 2 true-peak interpolator.
+ *
+ * Design: a 48-tap (L = 4 phases × 12 taps) windowed-sinc prototype,
+ * `h[n] = sinc((n − 24)/4) · kaiser(n; β = 8)`, with each branch individually
+ * normalised to unity DC gain. Because the prototype is centred on tap 24, branch 0
+ * collapses to an exact unit impulse (all other sinc arguments are integers and
+ * vanish), so branch 0 reproduces the raw samples and branches 1–3 supply the three
+ * in-between phases. The 12-tap/phase class is the one the Recommendation names for
+ * 4× oversampling; a Kaiser β of 8 trades ~70 dB of stopband rejection against a
+ * passband flat enough (<0.01 dB below 0.4·fs) for peak metering.
+ */
+export function truePeakPolyphaseTaps(): Float32Array[] {
+  const L = TRUE_PEAK_OVERSAMPLE_FACTOR;
+  const P = TRUE_PEAK_TAPS_PER_PHASE;
+  const N = L * P;
+  const centre = N / 2; // 24 — integer, so branch 0 is δ[n − 6]
+  const windowCentre = (N - 1) / 2;
+  const i0 = besselI0(TRUE_PEAK_KAISER_BETA);
+  const prototype = new Float64Array(N);
+  for (let n = 0; n < N; n++) {
+    const t = (n - centre) / L;
+    const sinc = t === 0 ? 1 : Math.sin(Math.PI * t) / (Math.PI * t);
+    const r = (n - windowCentre) / windowCentre;
+    const window = besselI0(TRUE_PEAK_KAISER_BETA * Math.sqrt(Math.max(0, 1 - r * r))) / i0;
+    prototype[n] = sinc * window;
+  }
+  const branches: Float32Array[] = [];
+  for (let p = 0; p < L; p++) {
+    const taps = new Float32Array(P);
+    let sum = 0;
+    for (let k = 0; k < P; k++) {
+      taps[k] = prototype[k * L + p];
+      sum += taps[k];
+    }
+    if (sum !== 0) {
+      for (let k = 0; k < P; k++) taps[k] /= sum;
+    }
+    branches.push(taps);
+  }
+  return branches;
+}
+
+function truePeakTaps(): Float32Array[] {
+  // The design depends only on the (constant) oversampling geometry, so cache it:
+  // rebuilding the Kaiser window once per channel per render was pure overhead.
+  if (!cachedTruePeakTaps) cachedTruePeakTaps = truePeakPolyphaseTaps();
+  return cachedTruePeakTaps;
+}
+
+/**
+ * True (inter-sample) peak of one channel, in linear units, using 4× oversampling.
+ *
+ * `Math.max` with the raw sample value is deliberate: the interpolator can only
+ * *estimate* the continuous waveform, and a sample is by definition a point on it, so
+ * the estimate is floored at the sample peak. That makes `truePeak ≥ samplePeak`
+ * structurally true rather than a property the filter has to be lucky about.
+ */
+export function truePeakLinear(samples: Float32Array): number {
+  const taps = truePeakTaps();
+  const P = TRUE_PEAK_TAPS_PER_PHASE;
+  let peak = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const raw = Math.abs(samples[i]);
+    if (raw > peak) peak = raw;
+    for (let p = 0; p < taps.length; p++) {
+      const branch = taps[p];
+      let acc = 0;
+      for (let k = 0; k < P; k++) {
+        const j = i - k;
+        if (j < 0) break;
+        acc += branch[k] * samples[j];
+      }
+      const value = Math.abs(acc);
+      if (value > peak) peak = value;
+    }
+  }
+  return peak;
+}
+
+/** True peak of a mono signal in dBTP (0 dBTP = full scale). */
+export function truePeakDb(samples: Float32Array, _sampleRate?: number): number {
+  const peak = truePeakLinear(samples);
+  return peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+}
+
+/** True peak across channels in dBTP: the maximum of the per-channel estimates. */
+export function truePeakDbChannels(channels: Float32Array[]): number {
+  let peak = 0;
+  for (const channel of channels) {
+    const value = truePeakLinear(channel);
+    if (value > peak) peak = value;
+  }
+  return peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+}
+
 function loudnessOfBlock(meanSquareSum: number, blockSamples: number, channels: number): number {
   const meanSquare = meanSquareSum / (blockSamples * channels);
   if (meanSquare <= 0) return -Infinity;
@@ -132,8 +257,15 @@ function meanLoudness(blocks: number[]): number {
  * `channels` are raw (un-weighted) sample arrays; K-weighting is applied here.
  */
 export function measureLoudness(channels: Float32Array[], sampleRate: number): LoudnessResult {
+  const empty: LoudnessResult = {
+    integratedLufs: -Infinity,
+    samplePeakDb: -Infinity,
+    truePeakDb: -Infinity,
+    ungatedLufs: -Infinity,
+    gatedBlockCount: 0,
+  };
   if (channels.length === 0 || channels[0].length === 0) {
-    return { integratedLufs: -Infinity, samplePeakDb: -Infinity, ungatedLufs: -Infinity, gatedBlockCount: 0 };
+    return empty;
   }
 
   let peak = 0;
@@ -144,6 +276,7 @@ export function measureLoudness(channels: Float32Array[], sampleRate: number): L
     }
   }
   const samplePeakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+  const truePeak = truePeakDbChannels(channels);
 
   const weighted = channels.map((channel) => kWeightChannel(channel, sampleRate));
   const blockSamples = Math.round(BLOCK_SECONDS * sampleRate);
@@ -165,7 +298,7 @@ export function measureLoudness(channels: Float32Array[], sampleRate: number): L
   }
 
   if (blockLoudness.length === 0) {
-    return { integratedLufs: -Infinity, samplePeakDb, ungatedLufs: -Infinity, gatedBlockCount: 0 };
+    return { integratedLufs: -Infinity, samplePeakDb, truePeakDb: truePeak, ungatedLufs: -Infinity, gatedBlockCount: 0 };
   }
 
   // Ungated loudness over every block that passed the absolute gate, then the
@@ -176,7 +309,7 @@ export function measureLoudness(channels: Float32Array[], sampleRate: number): L
   const gated = blockLoudness.filter((l) => l > relativeGate);
   const integratedLufs = meanLoudness(gated.length > 0 ? gated : blockLoudness);
 
-  return { integratedLufs, samplePeakDb, ungatedLufs, gatedBlockCount: gated.length };
+  return { integratedLufs, samplePeakDb, truePeakDb: truePeak, ungatedLufs, gatedBlockCount: gated.length };
 }
 
 /**

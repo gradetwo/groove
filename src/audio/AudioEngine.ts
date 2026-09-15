@@ -18,8 +18,10 @@ import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp } from "./schedulerMath";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, DEFAULT_NOISE_SEED, noisePositionFor } from "./noise";
-import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC } from "./chordVoicing";
-import { VoiceRegistry, applyMasterLimiter } from "./voiceRegistry";
+import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC, type VoicingStyle } from "./chordVoicing";
+import { resolveVoicingStyle } from "../data/genreVoicing";
+import { VoiceRegistry } from "./voiceRegistry";
+import { createMasterLimiter, type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
 export type { TrackState } from "./trackStates";
 import { isDrumTrack } from "../utils/trackUtils";
 import {
@@ -91,7 +93,16 @@ export class AudioEngine {
    * meaning "the level the user asked for".
    */
   private loudnessTrimGain: GainNode | null = null;
-  private limiter: DynamicsCompressorNode | null = null;
+  /**
+   * Master ceiling input node. E-12: this is the `input` of the true-peak lookahead
+   * limiter handle (`masterLimiter`), kept under its historical name so the graph
+   * introspection tests and downstream analyser wiring still address one node. On the
+   * worklet path `masterLimiter.output` is a distinct node; on the compressor fallback
+   * the two are the same node.
+   */
+  private limiter: AudioNode | null = null;
+  /** The master ceiling (worklet when available, compressor fallback otherwise). */
+  private masterLimiter: MasterLimiterHandle | null = null;
   private analyser: AnalyserNode | null = null;
   private masterAnalyser: AnalyserNode | null = null;
   private channelSplitter: ChannelSplitterNode | null = null;
@@ -228,9 +239,13 @@ export class AudioEngine {
           this.masterGain = this.ctx.createGain();
           this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
 
-          // P0-02: Master Limiter (DynamicsCompressor) prevents harsh digital clipping
-          this.limiter = this.ctx.createDynamicsCompressor();
-          applyMasterLimiter(this.limiter, this.ctx);
+          // E-12 / N-15: true-peak lookahead brickwall ceiling. The handle falls back
+          // to the legacy DynamicsCompressorNode when AudioWorklet is unavailable, and
+          // swaps the worklet in asynchronously once its module has loaded — the
+          // handle's input/output nodes do not change identity across that swap.
+          const limiterHandle = createMasterLimiter(this.ctx);
+          this.masterLimiter = limiterHandle;
+          this.limiter = limiterHandle.input;
 
           this.analyser = this.ctx.createAnalyser();
           this.analyser.fftSize = 128;
@@ -274,11 +289,11 @@ export class AudioEngine {
           // clamp keeps its "user level" meaning untouched.
           this.masterGain.connect(this.loudnessTrimGain);
           this.loudnessTrimGain.connect(this.masterFxRack.inputNode);
-          this.masterFxRack.outputNode.connect(this.limiter);
-          this.limiter.connect(this.analyser);
-          this.limiter.connect(this.masterAnalyser);
+          this.masterFxRack.outputNode.connect(limiterHandle.input);
+          limiterHandle.output.connect(this.analyser);
+          limiterHandle.output.connect(this.masterAnalyser);
           if (this.channelSplitter && this.analyserL && this.analyserR) {
-            this.limiter.connect(this.channelSplitter);
+            limiterHandle.output.connect(this.channelSplitter);
             this.channelSplitter.connect(this.analyserL, 0);
             this.channelSplitter.connect(this.analyserR, 1);
           }
@@ -800,6 +815,23 @@ export class AudioEngine {
 
   public getLatencyCompensation(): number {
     return this.latencyCompensationMs;
+  }
+
+  /**
+   * E-12: lookahead introduced by the master true-peak limiter, in seconds.
+   *
+   * The whole master bus is delayed by this much on the worklet path (0 on the
+   * compressor fallback). Live playback and the offline bounce are delayed identically,
+   * so the exporter-parity rule is unaffected; the value is exposed for reporting and
+   * for any future latency-compensation display.
+   */
+  public getMasterLimiterLatencySeconds(): number {
+    return this.masterLimiter ? this.masterLimiter.latencySeconds : 0;
+  }
+
+  /** E-12: which master ceiling is installed ("worklet" or "fallback"). */
+  public getMasterLimiterKind(): MasterLimiterKind {
+    return this.masterLimiter ? this.masterLimiter.kind : "fallback";
   }
 
   public setLatencyCompensation(ms: number): void {
@@ -1427,7 +1459,22 @@ export class AudioEngine {
     } else if (trackId === "bass" || lowerName.includes("bass")) {
       this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
-      this.playChord(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
+      // Genre-appropriate voicing: rock/metal power chords, jazz 7ths/9ths/quartal,
+      // ambient a thirdless wash. Resolved from the genre id, with the chords track's
+      // instrument as the fallback for custom genres.
+      this.playChord(
+        dest,
+        safeStartTime,
+        safeVel,
+        pitch,
+        stepDur,
+        gateVal,
+        synthPreset,
+        resolveVoicingStyle(
+          this.pattern?.genre_id,
+          this.pattern?.tracks[trackIdx]?.instrument
+        )
+      );
     } else if (trackId === "lead" || lowerName.includes("lead")) {
       this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
     } else if (trackId === "fx" || lowerName.includes("fx")) {
@@ -1530,12 +1577,17 @@ export class AudioEngine {
   }
 
   /**
-   * E-01: the `chords` track now plays a real diatonic voicing instead of one note.
+   * E-01: the `chords` track now plays a real voicing instead of one note.
    *
    * It previously triggered a single note from the step's `pitch`, so no genre had any
-   * harmony at all — every `common_chords` progression stopped at the UI. The voicing
-   * is derived from the pattern's scale and the step's own root, so the authored bass
-   * line is preserved and no genre file needed editing.
+   * harmony at all — every `common_chords` progression stopped at the UI. The voicing is
+   * derived from the pattern's scale and the step's own root, so the authored bass line
+   * is preserved and no genre file needed editing.
+   *
+   * `style` is the genre-appropriate voice (rock gets power chords, jazz gets
+   * 7ths/9ths/quartal, ambient gets a thirdless wash); callers resolve it from the genre
+   * id and the track's instrument via `resolveVoicingStyle`. A generic 1-3-5 was the
+   * wrong answer for most of the library.
    *
    * `WavExporter` performs the identical call, because "exporter parity" is a hard rule
    * here — the voicing itself lives in the shared `chordVoicing` module for that reason.
@@ -1547,12 +1599,13 @@ export class AudioEngine {
     pitchOffset: number,
     stepDur = 0.125,
     gateVal = 0.8,
-    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.warmPad
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.warmPad,
+    style?: VoicingStyle
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 60;
     const dur = stepDur * gateVal * 1.5;
-    const notes = chordVoicingForStep(midi, this.pattern?.scale);
+    const notes = chordVoicingForStep(midi, this.pattern?.scale, style ? { style } : {});
     // Hold the voicing's summed power at the single note it replaces, so adding
     // harmony is not heard as a level jump (and does not push the limiter harder on
     // every genre at once).
@@ -1645,6 +1698,10 @@ export class AudioEngine {
     this.cleanupUnlockListeners();
     this.workletClock.destroy();
     this.workerBridge.destroy();
+    if (this.masterLimiter) {
+      this.masterLimiter.dispose();
+      this.masterLimiter = null;
+    }
     if (this.masterFxRack) {
       this.masterFxRack.destroy();
       this.masterFxRack = null;

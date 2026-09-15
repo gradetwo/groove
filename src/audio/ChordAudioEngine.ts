@@ -6,7 +6,8 @@
  */
 
 import { getChordMidiNotes, ChordDefinition, Inversion } from "../utils/chordTheory";
-import { VoiceRegistry, applyMasterLimiter, createEngineAudioContext } from "./voiceRegistry";
+import { VoiceRegistry, createEngineAudioContext } from "./voiceRegistry";
+import { createMasterLimiter, type MasterLimiterHandle } from "./MasterLimiter";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
 import {
   ArpConfig,
@@ -32,7 +33,10 @@ export interface ChordPlaybackInfo {
 export class ChordAudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private limiter: DynamicsCompressorNode | null = null;
+  /** E-12: master ceiling input node (see `AudioEngine.limiter`). */
+  private limiter: AudioNode | null = null;
+  /** E-12: the true-peak limiter handle (worklet or compressor fallback). */
+  private masterLimiter: MasterLimiterHandle | null = null;
   private isPlaying = false;
 
   // A-05: shared voice bookkeeping + no bespoke unlock listeners (the iOS unlocker
@@ -70,12 +74,14 @@ export class ChordAudioEngine {
           this.masterGain = this.ctx.createGain();
           this.masterGain.gain.setValueAtTime(0.75, this.ctx.currentTime);
 
-          // Shared master limiter so dense voicings cannot clip.
-          this.limiter = this.ctx.createDynamicsCompressor();
-          applyMasterLimiter(this.limiter, this.ctx);
+          // E-12: shared true-peak brickwall ceiling so dense voicings cannot clip.
+          // (Worklet when available, legacy compressor fallback otherwise.)
+          const limiterHandle = createMasterLimiter(this.ctx);
+          this.masterLimiter = limiterHandle;
+          this.limiter = limiterHandle.input;
 
-          this.masterGain.connect(this.limiter);
-          this.limiter.connect(this.ctx.destination);
+          this.masterGain.connect(limiterHandle.input);
+          limiterHandle.output.connect(this.ctx.destination);
         }
       }
 
@@ -570,6 +576,10 @@ export class ChordAudioEngine {
 
   public destroy(): void {
     this.stop();
+    if (this.masterLimiter) {
+      this.masterLimiter.dispose();
+      this.masterLimiter = null;
+    }
     if (this.ctx && this.ctx.state !== "closed") {
       this.ctx.close().catch(() => {});
     }

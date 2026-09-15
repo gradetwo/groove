@@ -86,6 +86,9 @@ const port = Number(argValue("--port", process.env.PORT || "3150")) || 3150;
  * on this library. Both are always reported; the flag only decides which one the
  * committed trims match.
  */
+/** E-12/N-15: the master true-peak ceiling the limiter targets, in dBTP. */
+const CEILING_DBTP = -1.0;
+
 const metricKey = argValue("--metric", "lufs");
 if (!["lufs", "rms"].includes(metricKey)) {
   console.error(`❌ --metric must be "lufs" or "rms" (got "${metricKey}")`);
@@ -183,6 +186,9 @@ async function measureGenre(page, genreId, trimDb) {
         return {
           integratedLufs: result.integratedLufs,
           samplePeakDb: result.samplePeakDb,
+          // V-03/E-12: inter-sample peak. The limiter's ceiling is a *true*-peak
+          // ceiling, so sample peak alone cannot show whether N-15 is fixed.
+          truePeakDb: result.truePeakDb,
           rmsDb: loudness.sampleRmsDb(channels),
           gatedBlockCount: result.gatedBlockCount,
           durationSec: buffer.duration,
@@ -204,6 +210,7 @@ async function measureGenre(page, genreId, trimDb) {
       return {
         arrangedLufs: median("integratedLufs"),
         arrangedPeakDb: median("samplePeakDb"),
+        arrangedTruePeakDb: median("truePeakDb"),
         arrangedRmsDb: median("rmsDb"),
         gatedBlockCount: runs[0].gatedBlockCount,
         withinGenreSpreadDb: spread,
@@ -237,6 +244,7 @@ async function measureLegacy(page, genreId) {
       return {
         legacyLufs: result.integratedLufs,
         legacyPeakDb: result.samplePeakDb,
+        legacyTruePeakDb: result.truePeakDb,
         legacyRmsDb: loudness.sampleRmsDb(channels),
       };
     },
@@ -371,6 +379,7 @@ async function waitForServer(url) {
         const trimmed = await measureGenre(page, entry.id, entry.trimDb);
         entry.trimmedLufs = trimmed.arrangedLufs;
         entry.trimmedPeakDb = trimmed.arrangedPeakDb;
+        entry.trimmedTruePeakDb = trimmed.arrangedTruePeakDb;
         entry.trimmedRmsDb = trimmed.arrangedRmsDb;
       } catch (error) {
         failures.push({ genreId: entry.id, pass: "trimmed", error: String(error.message || error) });
@@ -432,6 +441,7 @@ async function waitForServer(url) {
             trimDb: entry.trimDb,
             trimmedLufs: Number.isFinite(entry.trimmedLufs) ? Number(entry.trimmedLufs.toFixed(3)) : null,
             trimmedPeakDb: Number.isFinite(entry.trimmedPeakDb) ? Number(entry.trimmedPeakDb.toFixed(3)) : null,
+            trimmedTruePeakDb: Number.isFinite(entry.trimmedTruePeakDb) ? Number(entry.trimmedTruePeakDb.toFixed(3)) : null,
             trimmedRmsDb: Number.isFinite(entry.trimmedRmsDb) ? Number(entry.trimmedRmsDb.toFixed(3)) : null,
             withinGenreSpreadDb: Number(entry.withinGenreSpreadDb.toFixed(3)),
             gatedBlockCount: entry.gatedBlockCount,
@@ -462,6 +472,37 @@ async function waitForServer(url) {
     console.log(
       `  clamp hits           : ${clampHits.total} (min ${clampHits.min}, max ${clampHits.max})`
     );
+
+    // N-15 / E-12: the master ceiling is a *true*-peak ceiling, so report how many
+    // genres still exceed it. Before the lookahead limiter landed this was 121/159
+    // genres above 0 dBFS on the sample-peak metric, hard-clipped by the 16-bit encoder.
+    // `report.genres` is an object keyed by genre id, not an array.
+    const truePeakRows = Object.values(report.genres).filter(
+      (g) => Number.isFinite(g.arrangedTruePeakDb) || Number.isFinite(g.legacyTruePeakDb)
+    );
+    if (truePeakRows.length > 0) {
+      const pick = (g) =>
+        Number.isFinite(g.trimmedTruePeakDb)
+          ? g.trimmedTruePeakDb
+          : Number.isFinite(g.arrangedTruePeakDb)
+            ? g.arrangedTruePeakDb
+            : g.legacyTruePeakDb;
+      const worst = Object.entries(report.genres)
+        .map(([id, g]) => ({ id, db: pick(g) }))
+        .filter((r) => Number.isFinite(r.db))
+        .sort((a, b) => b.db - a.db);
+      const overCeiling = worst.filter((r) => r.db > CEILING_DBTP).length;
+      console.log(
+        `  true peak (dBTP)     : worst ${worst[0] ? `${worst[0].db.toFixed(2)} (${worst[0].id})` : "n/a"}` +
+          `   above ${CEILING_DBTP} dBTP: ${overCeiling}/${worst.length}`
+      );
+      if (overCeiling > 0) {
+        console.log(
+          `    ⚠️  ${overCeiling} genre(s) still exceed the ${CEILING_DBTP} dBTP ceiling:` +
+            ` ${worst.filter((r) => r.db > CEILING_DBTP).slice(0, 5).map((r) => `${r.id} ${r.db.toFixed(2)}`).join(", ")}`
+        );
+      }
+    }
     console.log(`  report               : ${path.relative(ROOT, outPath)}`);
     console.log("===============================================================");
   } finally {

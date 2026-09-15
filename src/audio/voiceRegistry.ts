@@ -172,7 +172,15 @@ export class VoiceRegistry {
   }
 }
 
-/** Shared master-limiter settings (identical across engines by design). */
+/**
+ * Fallback master-ceiling settings (identical across engines by design).
+ *
+ * E-12 / N-15: this is no longer the master ceiling. The real ceiling is the true-peak
+ * lookahead limiter in `MasterLimiter.ts`, and these values only configure the
+ * `DynamicsCompressorNode` that `createMasterLimiter` falls back to when AudioWorklet
+ * is unavailable. They are kept (and still applied by `applyMasterLimiter`) so that
+ * configuration path, and the tests that pin it, remain valid.
+ */
 export const MASTER_LIMITER_SETTINGS = {
   threshold: -1.0,
   knee: 0.0,
@@ -181,7 +189,7 @@ export const MASTER_LIMITER_SETTINGS = {
   release: 0.05,
 } as const;
 
-/** Applies the standard master-limiter configuration to a compressor node. */
+/** Applies the fallback master-ceiling configuration to a compressor node. */
 export function applyMasterLimiter(limiter: DynamicsCompressorNode, ctx: BaseAudioContext): void {
   const t = ctx.currentTime;
   limiter.threshold.setValueAtTime(MASTER_LIMITER_SETTINGS.threshold, t);

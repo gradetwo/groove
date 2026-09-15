@@ -9,7 +9,7 @@
  * chord has no third, on every scale degree" is the kind of assertion that fails loudly
  * if someone later "simplifies" the style table back into one triad path.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   VOICING_STYLES,
   chordVoicingForStep,
@@ -24,6 +24,9 @@ import {
   voicedGenreIds,
 } from "../data/genreVoicing";
 import { GENRE_INDEX } from "../data/index/loader";
+import { renderPatternOffline } from "../audio/WavExporter";
+import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
+import type { SequencerPattern } from "../types/genre";
 
 /** Semitone offsets from the root: what "which chord is this" actually reduces to. */
 const offsets = (notes: number[]) => notes.map((n) => n - notes[0]);
@@ -236,5 +239,102 @@ describe("table integrity (guards against typos and drift)", () => {
         .map((g) => resolveVoicingStyle(g.id))
     );
     expect(rockStyles.has("power")).toBe(true);
+  });
+});
+
+/**
+ * End-to-end parity: what the offline renderer actually plays for a genre.
+ *
+ * The unit tests above prove the style table is right; these prove the table is
+ * *reached* — that a death-metal pattern really renders a power chord and a bebop
+ * pattern really renders a 7th/9th, in the exported audio, not just in a pure function.
+ *
+ * This is also the exporter-parity guard: `AudioEngine.playChord` and `WavExporter`
+ * resolve the style independently (they have to — one is realtime, one offline), so
+ * nothing but a test stops the two from drifting apart.
+ */
+describe("rendered output matches the genre's voicing", () => {
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  /** Reads the notes a chord track actually rendered, from oscillator frequencies. */
+  async function renderedChordNotes(genreId: string, instrument: string, scale = "C minor") {
+    restore?.();
+    restore = installFakeOfflineAudioContext();
+    const steps = 4;
+    const pattern = {
+      genre_id: genreId,
+      bpm: 120,
+      swing: 0,
+      scale,
+      totalSteps: steps,
+      tracks: [
+        {
+          track_id: "chords",
+          name: "Chords",
+          instrument,
+          steps: [1, 0, 0, 0],
+          velocity: new Array(steps).fill(100),
+          pitch: new Array(steps).fill(60),
+          gate: new Array(steps).fill(0.8),
+          volume: 0.8,
+          pan: 0,
+          mute: false,
+          solo: false,
+        },
+      ],
+    } as unknown as SequencerPattern;
+
+    await renderPatternOffline(pattern);
+    const ctx = FakeOfflineAudioContext.lastInstance!;
+    const midis = ctx.createdOscillators
+      .map((o) => o.frequency.events[0]?.value)
+      .filter((hz): hz is number => typeof hz === "number" && hz > 0)
+      .map((hz) => Math.round(69 + 12 * Math.log2(hz / 440)));
+    // Each voice is two oscillators at the same base frequency, so dedupe.
+    return [...new Set(midis)].sort((a, b) => a - b).map((m) => m - Math.min(...midis));
+  }
+
+  it("renders a thirdless power chord for a metal genre", async () => {
+    const offsetsForMetal = await renderedChordNotes("death-metal", "guitar_lead");
+    expect(offsetsForMetal).toEqual([0, 7, 12]);
+    for (const semi of offsetsForMetal) {
+      expect([3, 4], "a third reached the metal chord").not.toContain(pc(semi));
+    }
+  });
+
+  it("renders jazz extensions rather than a bare triad for bebop", async () => {
+    const offsetsForBebop = await renderedChordNotes("bebop", "piano_lead");
+    expect(offsetsForBebop).toHaveLength(4);
+    // C minor extended = C, Eb, Bb, D(9th) -> 0, 3, 10, 14.
+    expect(offsetsForBebop).toEqual([0, 3, 10, 14]);
+  });
+
+  it("renders a thirdless suspended voicing for ambient", async () => {
+    const off = await renderedChordNotes("ambient", "warm_pad");
+    for (const semi of off) expect([3, 4]).not.toContain(pc(semi));
+  });
+
+  it("differs between a rock and a jazz genre on the same root and scale", async () => {
+    const rock = await renderedChordNotes("death-metal", "guitar_lead");
+    const jazz = await renderedChordNotes("bebop", "piano_lead");
+    expect(rock).not.toEqual(jazz);
+  });
+
+  it("matches what the shared resolver says the genre should play", async () => {
+    // The single source of truth for both engines.
+    for (const [genreId, instrument] of [
+      ["heavy-metal", "guitar_lead"],
+      ["bebop", "piano_lead"],
+      ["modal-jazz", "piano_lead"],
+      ["deep-house", "rhodes_ep"],
+      ["city-pop", "rhodes_ep"],
+    ] as const) {
+      const expected = offsets(chordVoicingForStep(60, "C minor", { style: resolveVoicingStyle(genreId, instrument) }));
+      expect(await renderedChordNotes(genreId, instrument), genreId).toEqual(expected);
+    }
   });
 });
