@@ -1,0 +1,102 @@
+{
+  "base": "v1.16.17 (local dist build)",
+  "metric": "master output RMS over 1.8s of playback, dBFS, sampled post-limiter",
+  "genres": [
+    {
+      "id": "chicago-house",
+      "rmsDb": -12.09,
+      "peakDb": 1.13
+    },
+    {
+      "id": "detroit-techno",
+      "rmsDb": -12.47,
+      "peakDb": 0.87
+    },
+    {
+      "id": "boom-bap",
+      "rmsDb": -16.39,
+      "peakDb": -0.14
+    },
+    {
+      "id": "trap-rap",
+      "rmsDb": -15.3,
+      "peakDb": 0.04
+    },
+    {
+      "id": "delta-blues",
+      "rmsDb": -16.63,
+      "peakDb": -1.82
+    },
+    {
+      "id": "bebop",
+      "rmsDb": -14.25,
+      "peakDb": -0.02
+    },
+    {
+      "id": "salsa",
+      "rmsDb": -15.15,
+      "peakDb": 0.08
+    },
+    {
+      "id": "afrobeat",
+      "rmsDb": -15.32,
+      "peakDb": -1.63
+    },
+    {
+      "id": "funk",
+      "rmsDb": -15.47,
+      "peakDb": -1.15
+    },
+    {
+      "id": "soul",
+      "rmsDb": -15.56,
+      "peakDb": -0.19
+    },
+    {
+      "id": "hard-rock",
+      "rmsDb": -15.12,
+      "peakDb": -0.04
+    },
+    {
+      "id": "punk-rock",
+      "rmsDb": -11.45,
+      "peakDb": 0.13
+    }
+  ],
+  "spread": {
+    "maxMinusMin": 5.17,
+    "p90MinusP10": 3.92
+  },
+  "compare": {
+    "ids": [
+      "chicago-house",
+      "punk-rock"
+    ],
+    "a": -11.23,
+    "b": -10.12,
+    "deltaDb": 1.11
+  },
+  "_comment": "Live-path loudness baseline (goal item 6), measured on v1.16.17 BEFORE any per-genre mix or loudness trim existed. Producer: scripts/measure_live_loudness.mjs, which taps the app's realtime engine at AudioContext.destination over 1.8s of playback (post-limiter) in a real Chromium (local dist, ephemeral port). Deliberately a different measurement path from the offline per-genre report produced by the mix workstream. Repeatability of this harness across three full runs: spread (max-min) 5.17 / 5.16 dB and p90-p10 3.92 / 3.68 dB, compare delta 1.11 / 1.11 dB -- the aggregate spread is stable to ~0.1 dB. INDIVIDUAL genre readings are noisier: boom-bap measured -16.4 / -17.0 / -17.3 dB across runs, because the fixed 1.8s sampling window lands on different bars of the loop and pattern density varies within a genre. Judge acceptance on the SPREAD, not on single-genre deltas.",
+  "repeatability": {
+    "spreadMaxMinusMin": [
+      5.17,
+      5.16
+    ],
+    "p90MinusP10": [
+      3.92,
+      3.68
+    ],
+    "compareDeltaDb": [
+      1.11,
+      1.11
+    ],
+    "individualGenreSpreadDb": {
+      "boom-bap": [
+        -16.39,
+        -17.0,
+        -17.3
+      ]
+    },
+    "note": "aggregate spread stable ~0.1 dB; individual genres vary up to ~0.9 dB (sampling window lands on different bars)"
+  }
+}

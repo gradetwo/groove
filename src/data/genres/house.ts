@@ -37,11 +37,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "M1 Organ Bass Stabs",
+      "Analog Synth Lead",
+      "Sub Bass",
+      "TR-909 Hats & Kicks"
     ],
     "sound_design": {
       "en": "TR-909 open hats, punchy analog kicks, Korg M1 organ bass stabs.",
@@ -522,11 +521,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Fender Rhodes Chords",
+      "Plucked Synth Arps",
+      "Warm Sine Sub Bass",
+      "Low-Pass Filtered Pads"
     ],
     "sound_design": {
       "en": "Fender Rhodes chords, low-pass filtered pads, warm sine sub-bass.",
@@ -1007,11 +1005,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Sawtooth Synth Lead",
+      "Warm Pad",
+      "Resonant FM Sub Bass",
+      "Metallic Rimshots"
     ],
     "sound_design": {
       "en": "Short punchy kicks, resonant FM rolling bass, metallic rimshots.",
@@ -1492,11 +1489,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Supersaw Chords",
+      "303 Acid Bass",
+      "Sawtooth Synth Lead",
+      "High-Passed Vocal Chops"
     ],
     "sound_design": {
       "en": "Metallic FM bass stabs, crisp claps, high-passed vocal chops.",
@@ -1977,11 +1973,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Multi-Layered Supersaw",
+      "Detuned Saw Lead",
+      "Reese Bass",
+      "White-Noise Sweeps"
     ],
     "sound_design": {
       "en": "Multi-layered detuned supersaws, massive white-noise sweeps, sidechained pads.",
@@ -2462,11 +2457,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Detuned Saw Waves",
+      "Supersaw Chords",
+      "Aggressive Sub Drops",
+      "Vocoder & Bitcrush"
     ],
     "sound_design": {
       "en": "Detuned saw waves with bitcrushing, vocoders, aggressive sub drops.",
@@ -2947,11 +2941,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Wavetable Growls",
+      "Metallic FM Screech Lead",
+      "303 Acid Bass",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Wavetable growls, metallic FM screech plucks, fast pitch bends.",
@@ -3328,7 +3321,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "fm_lead",
           "steps": [
             0,
             0,
@@ -3432,11 +3425,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Raw TR-808 Cowbells",
+      "Square-Wave Lead",
+      "Warm Pad",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Raw TR-808 cowbells and toms, unpolished tape distortion, vocal chops.",
@@ -3917,11 +3909,12 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Wooden Marimba",
+      "Pan Flute",
+      "Rhodes Chords",
+      "Acoustic Guitar Plucks",
+      "Saxophone",
+      "Warm Sub Bass"
     ],
     "sound_design": {
       "en": "Wooden marimbas, pan flutes, bright acoustic guitar plucks, saxophones.",
@@ -4255,7 +4248,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "marimba_lead",
           "steps": [
             1,
             0,
@@ -4298,7 +4291,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "pluck_synth",
+          "instrument": "pan_flute",
           "steps": [
             0,
             0,
@@ -4402,11 +4395,10 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "TB-303 Acid Bass",
+      "Warm Pad",
+      "TR-909 Drums",
+      "Resonant Filter Sweeps"
     ],
     "sound_design": {
       "en": "Roland TB-303 with high resonance, modulated cutoff, accented steps.",
@@ -4783,7 +4775,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "acid_303",
           "steps": [
             0,
             0,
@@ -4888,11 +4880,11 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Filtered Disco Chops",
+      "Slap Bass",
+      "Rhodes Chords",
+      "Sawtooth Synth Lead",
+      "Sidechain Pumping"
     ],
     "sound_design": {
       "en": "Alesis 3630 sidechain pumping, sweeping phasers, vinyl disco chops, slap bass.",
@@ -5373,11 +5365,11 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Intricate Plucked Arpeggios",
+      "Felt Piano",
+      "Warm Pad",
+      "Sub Bass",
+      "Organic Percussion"
     ],
     "sound_design": {
       "en": "Intricate synth arpeggios, organic percussion, felt piano, tape delays.",
@@ -5858,11 +5850,11 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Organic Djembes & Congas",
+      "Warm Rhodes",
+      "Talking Drums",
+      "Grounded Sub Bass",
+      "Plucked Synth Lead"
     ],
     "sound_design": {
       "en": "Organic djembes, congas, talking drums, warm Rhodes, and grounded sub-bass.",
@@ -6239,7 +6231,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -6343,11 +6335,11 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Arp Odyssey Arpeggios",
+      "Juno Synth Lead",
+      "Slap Bass Guitar",
+      "Rhodes Chords",
+      "Brass Stabs"
     ],
     "sound_design": {
       "en": "Arp Odyssey and Juno arpeggios, slap bass guitar, clavinet chops, brass stabs.",
@@ -6828,11 +6820,11 @@ export const HOUSE_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Microscopic Radio Clicks",
+      "Vinyl Needle Drops",
+      "Low-Passed Pad",
+      "Plucked Synth Blips",
+      "Sine Sub Bass"
     ],
     "sound_design": {
       "en": "Microscopic radio clicks, vinyl needle drops, subtle low-passed chords, sub sine.",
@@ -7252,7 +7244,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,

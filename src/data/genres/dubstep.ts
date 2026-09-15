@@ -38,11 +38,11 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Chest-Rattling Sub Bass",
+      "Warm Pad",
+      "Sawtooth Synth Lead",
+      "Sparse Rim Clicks",
+      "Cavernous Spring Reverb"
     ],
     "sound_design": {
       "en": "Chest-rattling sub-bass below 50Hz, cavernous spring reverbs, tape delays, sparse rim clicks.",
@@ -462,7 +462,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -524,11 +524,11 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Wavetable Growl Lead",
+      "Supersaw Chords",
+      "Reese Bass",
+      "Punchy Snares",
+      "Vocal Formant Cuts"
     ],
     "sound_design": {
       "en": "Aggressive wavetable growls, vocal formants (Yoii/Auu), heavy OTT compression, and punchy snares.",
@@ -819,7 +819,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "saw_lead",
+          "instrument": "reese_bass",
           "steps": [
             0,
             0,
@@ -905,7 +905,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "growl_lead",
           "steps": [
             0,
             0,
@@ -1010,11 +1010,11 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Resonant Square Plucks",
+      "Laser Pitch-Down Zaps",
+      "Reese Sub Bass",
+      "Warm Pad",
+      "Short Wooden Snares"
     ],
     "sound_design": {
       "en": "Resonant square wave plucks, laser pitch-down zaps, short wooden snares, and flanged sub.",
@@ -1305,7 +1305,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "saw_lead",
+          "instrument": "reese_bass",
           "steps": [
             0,
             0,
@@ -1434,7 +1434,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1495,11 +1495,10 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Massive Layered Supersaws",
+      "Acoustic Piano",
+      "Deep Mono Sub Bass",
+      "Sweeping Vocal Chops"
     ],
     "sound_design": {
       "en": "Massive layered supersaws, sweeping vocal chops, acoustic piano, and deep mono sub-bass.",
@@ -1876,7 +1875,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "supersaw",
           "steps": [
             0,
             0,
@@ -1980,11 +1979,12 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Pitched Vocal Fragments",
+      "Plucked Synth Chops",
+      "Warm Reese Bass",
+      "Rhodes Chords",
+      "Vinyl Crackle",
+      "Rain Soundscapes"
     ],
     "sound_design": {
       "en": "Vinyl crackle, rain soundscapes, pitched and time-stretched vocal fragments, warm Reese bass.",
@@ -2361,7 +2361,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -2404,7 +2404,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -2465,11 +2465,11 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Intimate Vocal Samples",
+      "Plucked Synth Chops",
+      "Warm Moog Analog Bass",
+      "Rhodes Chords",
+      "Gated Reverb Hits"
     ],
     "sound_design": {
       "en": "Intimate vocal recordings, warm Moog bass, organic acoustic samples, short gated reverbs.",
@@ -2760,7 +2760,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "analog_bass",
           "steps": [
             1,
             0,
@@ -2846,7 +2846,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -2950,11 +2950,10 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Machine-Gun Metallic Growl",
+      "Warm Pad",
+      "Extreme Clipping Distortion",
+      "Aggressive Gun Cock FX"
     ],
     "sound_design": {
       "en": "Machine-gun comb-filtered metallic basses, extreme clipping distortion, aggressive gun cock FX.",
@@ -3245,7 +3244,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "saw_lead",
+          "instrument": "growl_lead",
           "steps": [
             1,
             0,
@@ -3331,7 +3330,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "growl_lead",
           "steps": [
             0,
             0,
@@ -3374,7 +3373,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -3435,11 +3434,11 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Soft Rhodes",
+      "Acoustic Guitar Strums",
+      "Plucked Synth",
+      "Lush Ambient Reverb Washes",
+      "Smooth Sub Bass"
     ],
     "sound_design": {
       "en": "Soft Rhodes electric piano, acoustic guitar strums, lush ambient reverb washes, smooth sub sine.",
@@ -3773,7 +3772,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "warm_pad",
+          "instrument": "rhodes_ep",
           "steps": [
             1,
             0,
@@ -3920,11 +3919,11 @@ export const DUBSTEP_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Down-Tuned Distorted Guitar",
+      "Picked Distorted Bass Guitar",
+      "Industrial Slams",
+      "Sub Explosions",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Down-tuned distorted electric guitars, guttural demon growls, industrial slams, and sub explosions.",
@@ -4215,7 +4214,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "saw_lead",
+          "instrument": "pick_bass",
           "steps": [
             1,
             1,
@@ -4301,7 +4300,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "guitar_lead",
           "steps": [
             0,
             0,
@@ -4344,7 +4343,7 @@ export const DUBSTEP_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,

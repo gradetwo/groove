@@ -38,11 +38,12 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Korg M1 Organ Bass Stabs",
+      "Time-Stretched Vocal Micro-Samples",
+      "Rhodes Chords",
+      "Crisp Hi-Hats",
+      "Vinyl Dust",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Time-stretched vocal micro-samples, Korg M1 organ bass stabs, crisp high hats, warm vinyl dust.",
@@ -419,7 +420,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "m1_organ",
           "steps": [
             0,
             0,
@@ -462,7 +463,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -523,11 +524,11 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Smooth R&B Vocal Acapellas",
+      "Rhodes Chords",
+      "Snappy Rimshots",
+      "Bouncy Sub Bass",
+      "Plucked Synth Chops"
     ],
     "sound_design": {
       "en": "Smooth R&B vocal acapellas, Rhodes chords, snappy rimshots, bouncy sub-bass.",
@@ -818,7 +819,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "reese_bass",
+          "instrument": "sub_bass",
           "steps": [
             1,
             0,
@@ -904,7 +905,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -1008,11 +1009,12 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Pitched-Down Jungle Breaks",
+      "Heavy Sirens",
+      "Roaring Sub Bass",
+      "Warm Pad",
+      "Square-Wave Stabs",
+      "Time-Stretch Artifacts"
     ],
     "sound_design": {
       "en": "Warped time-stretch artifacts, heavy sirens, pitched-down jungle breaks, roaring sub drops.",
@@ -1389,7 +1391,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -1432,7 +1434,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sweep_down",
           "steps": [
             1,
             0,
@@ -1493,11 +1495,11 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "PlayStation / Triton Square Bass",
+      "8-Bit Chip Blips",
+      "Laser Zaps",
+      "Cold Orchestral Stabs",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "PlayStation/Korg Triton square wave bass, laser zaps, 8-bit chip blips, cold orchestral stabs.",
@@ -1917,7 +1919,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1979,11 +1981,11 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Screaming FM Donk Bass",
+      "Pitched-Up Vocal Hooks",
+      "Bouncy Plucked Synth",
+      "Warm Pad",
+      "Clean Claps"
     ],
     "sound_design": {
       "en": "Pitched-up catchy vocal hooks, screaming FM donk bass, bouncy Reese plucks, clean claps.",
@@ -2274,7 +2276,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "acid_303",
+          "instrument": "fm_lead",
           "steps": [
             0,
             0,
@@ -2360,7 +2362,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -2464,11 +2466,11 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Bright Piano Stabs",
+      "Resonant Bongos & Congas",
+      "Deep Sub Bass",
+      "Rhodes Chords",
+      "Smooth Female Vocals"
     ],
     "sound_design": {
       "en": "Resonant bongos, congas, bright piano stabs, smooth female vocals, deep sub-bass.",
@@ -2845,7 +2847,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
@@ -2950,11 +2952,11 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Melodica / Harmonica",
+      "Hammond Organ",
+      "Deep Electric Bass",
+      "Tape Echo Delays",
+      "Spring Reverb Crashes"
     ],
     "sound_design": {
       "en": "Tape echo delay oscillations, spring reverb tank crashes, melodica, deep electric bass.",
@@ -3245,7 +3247,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -3331,7 +3333,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "harmonica_lead",
           "steps": [
             0,
             0,
@@ -3374,7 +3376,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -3435,11 +3437,10 @@ export const UK_BASS_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "High-Velocity FM Bass Wobbles",
+      "Metallic Donk Plucks",
+      "Warm Pad",
+      "Speed-Pitched Vocal Shouts"
     ],
     "sound_design": {
       "en": "High-velocity FM bass wobbles, metallic donk plucks, speed-pitched vocal shouts.",
@@ -3730,7 +3731,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "fm_lead",
           "steps": [
             0,
             1,
@@ -3816,7 +3817,7 @@ export const UK_BASS_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "fm_lead",
           "steps": [
             0,
             0,

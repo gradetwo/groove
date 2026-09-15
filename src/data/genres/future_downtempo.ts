@@ -37,11 +37,11 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Detuned Supersaw Lead",
+      "Low-Pass LFO Wobble",
+      "Clean 808 Bass",
+      "Bright Arpeggios",
+      "Vocal Chops"
     ],
     "sound_design": {
       "en": "Detuned supersaws with low-pass LFO wobble, vocal chops, bright arpeggios, clean 808 bass.",
@@ -418,7 +418,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "supersaw",
           "steps": [
             0,
             0,
@@ -522,11 +522,11 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Bright Bells",
+      "8-Bit Game Arpeggios",
+      "Super-Bouncy Supersaws",
+      "808 Bass",
+      "Anime Vocal Giggles"
     ],
     "sound_design": {
       "en": "High-pitched anime vocal giggles, 8-bit game arpeggios, bright bells, super-bouncy supersaws.",
@@ -903,7 +903,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "pluck_synth",
+          "instrument": "bell_lead",
           "steps": [
             0,
             0,
@@ -946,7 +946,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1008,11 +1008,11 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Jupiter-8 Polysynth Pads",
+      "DX7 Electric Piano",
+      "Analog Synth Lead",
+      "LinnDrum Gated Snares",
+      "Analog Synth Bass"
     ],
     "sound_design": {
       "en": "LinnDrum/Oberheim DMX gated snares, Roland Jupiter-8 polysynth pads, Yamaha DX7 electric pianos.",
@@ -1303,7 +1303,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "analog_bass",
           "steps": [
             1,
             1,
@@ -1346,7 +1346,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "brass_synth",
+          "instrument": "warm_pad",
           "steps": [
             1,
             0,
@@ -1493,11 +1493,12 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Slowed Vinyl Samples",
+      "Tape Chorus & Wow",
+      "Muffled Synth Plucks",
+      "Rhodes Chords",
+      "Sub Bass",
+      "Phaser Sweeps"
     ],
     "sound_design": {
       "en": "Slowed-down vinyl samples, phasers, tape chorus, muffled telephone filters.",
@@ -1874,7 +1875,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -1917,7 +1918,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -1979,11 +1980,12 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Analog Polysynths",
+      "Woozy Tape Vibrato",
+      "Drenched Vocal Reverbs",
+      "Plucked Synth",
+      "Warm Pad",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Analog polysynths, woozy tape vibrato, drenched vocal reverbs, soft acoustic drums.",
@@ -2403,7 +2405,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -2465,11 +2467,10 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Warm Fender Rhodes",
+      "Acoustic Bass Guitar",
+      "Lush String Quartet",
+      "Gentle Wind Chimes"
     ],
     "sound_design": {
       "en": "Acoustic bass guitars, warm Fender Rhodes, lush string quartets, gentle wind chimes.",
@@ -2846,7 +2847,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "strings_lead",
           "steps": [
             0,
             0,
@@ -2889,7 +2890,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -2950,11 +2951,11 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Cinematic Dark Strings",
+      "Muted Trumpet",
+      "Crackling Vinyl Chops",
+      "Heavy Sub Bass",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Cinematic dark strings, crackling vinyl jazz chops, muted trumpets, heavy sub-bass.",
@@ -3331,7 +3332,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "strings_lead",
           "steps": [
             0,
             0,
@@ -3374,7 +3375,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -3435,11 +3436,12 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Microscopic Buffer Repeats",
+      "Bitcrushed Clicks",
+      "Funky Clavinet Stabs",
+      "Modular Growl Bass",
+      "Square-Wave Lead",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Microscopic buffer repeats, bitcrushed clicks, funky clavinet stabs, modular growl basses.",
@@ -3730,7 +3732,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "saw_lead",
+          "instrument": "growl_lead",
           "steps": [
             1,
             0,
@@ -3859,7 +3861,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -3921,11 +3923,12 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Generative Modular Bleeps",
+      "Granular Audio Clouds",
+      "FM Bells",
+      "Warm Pad",
+      "Sub Bass",
+      "Micro-Sampled Transients"
     ],
     "sound_design": {
       "en": "Generative modular bleeps, granular audio clouds, micro-sampled transients, FM bells.",
@@ -4302,7 +4305,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "square_lead",
+          "instrument": "bell_lead",
           "steps": [
             0,
             0,
@@ -4345,7 +4348,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -4407,11 +4410,11 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Infinite Reverb Washes",
+      "Bowed Guitar & Strings",
+      "Tape Loop Decay",
+      "Warm Pad",
+      "Subtle Sub Bass Drones"
     ],
     "sound_design": {
       "en": "Infinite reverb washes, tape loop decay, bowed guitars, subtle sub-bass drones.",
@@ -4788,7 +4791,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "strings_lead",
           "steps": [
             0,
             0,
@@ -4831,7 +4834,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -4892,11 +4895,11 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Cavernous Tape Delay Feedbacks",
+      "Warm Sine Sub Bass",
+      "Floating Synth Pads",
+      "Echo Plucks",
+      "Spring Reverb Splashes"
     ],
     "sound_design": {
       "en": "Cavernous tape delay feedbacks, warm sine sub-bass, floating synth pads, echo splashes.",
@@ -5273,7 +5276,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -5316,7 +5319,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -5377,11 +5380,12 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Cassette Tape Saturation",
+      "Muffled Soul Chops",
+      "Plucked Synth Chops",
+      "Crunchy 909 Drums",
+      "Rhodes Chords",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Cassette tape saturation and wow/flutter, crunchy 909 drums, muffled soul chops.",
@@ -5758,7 +5762,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -5801,7 +5805,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -5863,11 +5867,11 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Pure Square Waves",
+      "Triangle-Wave Bass",
+      "Warm Pad",
+      "White-Noise Percussion",
+      "Rapid Arpeggios"
     ],
     "sound_design": {
       "en": "Pure square waves, triangle wave bass, pseudo-random white noise percussions, rapid arpeggios.",
@@ -6287,7 +6291,7 @@ export const FUTURE_DOWNTEMPO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,

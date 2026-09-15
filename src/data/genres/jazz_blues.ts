@@ -37,11 +37,10 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Acoustic Slide Guitar",
+      "Harmonica",
+      "Upright Bass",
+      "Foot-Stomp & Handclaps"
     ],
     "sound_design": {
       "en": "Acoustic resonator guitars, brass slide, raw human vocals, foot tapping stomp.",
@@ -461,7 +460,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -522,11 +521,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Amplified Harmonica",
+      "Electric Guitar",
+      "Upright Bass",
+      "Piano",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Amplified distorted harmonica through bullet mic, Fender tube amps, upright bass, acoustic drums.",
@@ -817,7 +816,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "walking_upright",
           "steps": [
             1,
             0,
@@ -903,7 +902,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "guitar_lead",
+          "instrument": "harmonica_lead",
           "steps": [
             0,
             0,
@@ -946,7 +945,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -1007,11 +1006,10 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Stratocaster Electric Guitar",
+      "Electric Bass",
+      "Horn Section",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Cranked Fender Stratocasters through Dumble/Super Reverb tube amps, Ibanez Tube Screamer.",
@@ -1302,7 +1300,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -1431,7 +1429,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -1492,11 +1490,10 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Hollow-Body Electric Guitar",
+      "Electric Bass",
+      "Horn Section",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Gibson ES-335 hollow-body guitars, expressive finger vibrato, warm brass sections.",
@@ -1787,7 +1784,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -1830,7 +1827,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "guitar_lead",
           "steps": [
             1,
             0,
@@ -1916,7 +1913,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -1979,11 +1976,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Cornet / Trumpet",
+      "Clarinet",
+      "Trombone",
+      "Banjo & Rhythm Guitar",
+      "Upright Bass / Tuba"
     ],
     "sound_design": {
       "en": "Brass instruments (cornet, trumpet, trombone), clarinet, banjo, upright bass, tuba.",
@@ -2360,7 +2357,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "trumpet_lead",
           "steps": [
             0,
             0,
@@ -2403,7 +2400,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -2464,11 +2461,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Alto Sax",
+      "Muted Trumpet",
+      "Acoustic Piano",
+      "Upright Bass",
+      "Ride Cymbal"
     ],
     "sound_design": {
       "en": "Acoustic alto sax, muted trumpet, bebop acoustic piano, ride cymbal swing, upright bass.",
@@ -2802,7 +2799,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "piano_lead",
           "steps": [
             1,
             0,
@@ -2845,7 +2842,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "sax_lead",
           "steps": [
             1,
             1,
@@ -2888,7 +2885,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -2949,11 +2946,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Tenor Sax",
+      "Trumpet",
+      "Piano",
+      "Upright Bass",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Soulful tenor sax, brassy trumpet, blues-drenched piano chords, punchy drum kit.",
@@ -3287,7 +3284,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "piano_lead",
           "steps": [
             1,
             0,
@@ -3330,7 +3327,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "sax_lead",
           "steps": [
             0,
             0,
@@ -3373,7 +3370,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -3435,11 +3432,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Harmon-Muted Trumpet",
+      "Vibraphone",
+      "Piano",
+      "Upright Bass",
+      "Brushes"
     ],
     "sound_design": {
       "en": "Harmon-muted trumpet, breathy tenor sax, cool vibraphone, brushed acoustic snare.",
@@ -3773,7 +3770,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "vibraphone",
           "steps": [
             1,
             0,
@@ -3816,7 +3813,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "muted_trumpet",
           "steps": [
             0,
             0,
@@ -3859,7 +3856,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -3920,11 +3917,10 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Trumpet",
+      "Piano (Quartal Voicings)",
+      "Upright Bass",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Sustained piano quartal voicings (So What chords), open acoustic trumpet, meditative bass pedal point.",
@@ -4258,7 +4254,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "piano_lead",
           "steps": [
             1,
             0,
@@ -4301,7 +4297,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "trumpet_lead",
           "steps": [
             0,
             0,
@@ -4344,7 +4340,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -4405,11 +4401,10 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Overblown Saxophone",
+      "Percussive Piano",
+      "Bowed Upright Bass",
+      "Free Drum Kit"
     ],
     "sound_design": {
       "en": "Screaming overblown saxophones, percussive piano clusters, bowed acoustic bass harmonics.",
@@ -4743,7 +4738,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
@@ -4786,7 +4781,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "sax_lead",
           "steps": [
             0,
             1,
@@ -4829,7 +4824,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -4891,11 +4886,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Fender Rhodes",
+      "Minimoog Synth Lead",
+      "Fretless Electric Bass",
+      "Distorted Electric Guitar",
+      "Live Percussion"
     ],
     "sound_design": {
       "en": "Fender Rhodes through wah-wah pedals, Minimoog synthesizer, distorted electric guitar, live percussion.",
@@ -5186,7 +5181,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "slap_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -5377,11 +5372,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Soprano Saxophone",
+      "Electric Guitar",
+      "DX7 Electric Piano",
+      "Electric Bass",
+      "Drum Machine & Shakers"
     ],
     "sound_design": {
       "en": "Soprano saxophone, polished electric guitars with chorus, Yamaha DX7 electric pianos, soft synth pads.",
@@ -5672,7 +5667,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -5758,7 +5753,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "sax_lead",
           "steps": [
             0,
             0,
@@ -5801,7 +5796,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -5862,11 +5857,11 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Horn Section",
+      "Wah-Wah Funk Guitar",
+      "Fender Rhodes",
+      "Slap Bass",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Funky Fender Rhodes chords, live brass horn stabs, wah-wah funk rhythm guitars, slap bass.",
@@ -6243,7 +6238,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -6286,7 +6281,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -6348,11 +6343,10 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Selmer Acoustic Guitar",
+      "Violin",
+      "Rhythm Guitar (La Pompe)",
+      "Upright Bass"
     ],
     "sound_design": {
       "en": "Selmer-Maccaferri acoustic guitars, passionate violin solos, acoustic upright bass.",
@@ -6772,7 +6766,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,

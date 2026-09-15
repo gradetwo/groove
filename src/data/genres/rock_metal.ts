@@ -38,11 +38,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Tube-Overdriven Electric Guitar",
+      "Upright Bass",
+      "Honky-Tonk Piano",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Vintage tube-overdriven electric guitars, upright acoustic bass, pounding honky-tonk piano.",
@@ -462,7 +461,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -523,11 +522,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Cranked Electric Guitar",
+      "Picked Bass Guitar",
+      "Fuzz & Wah Pedals",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Fender Stratocaster / Gibson Les Paul into cranked Marshall stacks, fuzz pedals, wah-wah.",
@@ -818,7 +816,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -947,7 +945,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -1008,11 +1006,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Overdriven Guitar Stacks",
+      "Picked Bass Guitar",
+      "Power-Chord Riffs",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Overdriven Marshall guitar stacks, aggressive power chords, driving bass guitars, heavy room drums.",
@@ -1303,7 +1300,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -1432,7 +1429,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
@@ -1493,11 +1490,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Distorted Solid-Body Guitar",
+      "Downpicked Bass Guitar",
+      "Raw Vocals",
+      "Fast Drum Kit"
     ],
     "sound_design": {
       "en": "Distorted solid-body guitars through tube amps, aggressive plectrum bass, raw vocals.",
@@ -1788,7 +1784,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -1917,7 +1913,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -1978,11 +1974,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Chorus Guitar",
+      "Melodic Chorus Bass Guitar",
+      "Analog Synth Textures",
+      "Gated-Snare Drum Kit"
     ],
     "sound_design": {
       "en": "Prominent bass guitar with chorus and flanger pedals, jangly chorus guitars, gated snares.",
@@ -2273,7 +2268,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -2402,7 +2397,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -2463,11 +2458,11 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Prophet-5 Analog Synth Pads",
+      "Analog Synth Lead",
+      "Analog Synth Bass",
+      "Clean Chorused Guitar",
+      "LinnDrum"
     ],
     "sound_design": {
       "en": "Prophet-5 and Roland Jupiter synthesizers, clean chorused guitars, LinnDrum/acoustic hybrid drums.",
@@ -2758,7 +2753,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "analog_bass",
           "steps": [
             1,
             0,
@@ -2948,11 +2943,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Down-Tuned Distorted Guitar",
+      "Galloping Picked Bass",
+      "Twin Guitar Harmonies",
+      "Double-Bass Drum Kit"
     ],
     "sound_design": {
       "en": "Heavy tube distortion, dark tritone intervals, Marshall stacks, galloping double bass drums.",
@@ -3243,7 +3237,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             0,
             1,
@@ -3372,7 +3366,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
@@ -3433,11 +3427,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Scooped-Mid High-Gain Guitar",
+      "16th-Note Picked Bass",
+      "Tight Double Kick",
+      "Palm-Muted Riffs"
     ],
     "sound_design": {
       "en": "Scooped-mid tube amplifiers, palm-muted high-speed riffing, tight clicky double kicks.",
@@ -3728,7 +3721,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             1,
@@ -3857,7 +3850,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
@@ -3918,11 +3911,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "HM-2 Buzzsaw Guitar",
+      "Distorted Bass Guitar",
+      "Blast-Beat Drum Kit",
+      "Guttural Vocals"
     ],
     "sound_design": {
       "en": "Heavily down-tuned guitars (D-standard, B-standard), Boss HM-2 buzzsaw pedal, guttural vocals.",
@@ -4213,7 +4205,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             1,
@@ -4342,7 +4334,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -4403,11 +4395,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Tremolo-Picked Cold Guitar",
+      "Buried Distorted Bass Guitar",
+      "Lo-Fi Cassette Drums",
+      "Shrieked Vocals"
     ],
     "sound_design": {
       "en": "Cold, treble-heavy distorted guitars, rapid tremolo picking, shrieking rasps, lo-fi cassette hiss.",
@@ -4698,7 +4689,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             1,
@@ -4827,7 +4818,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -4888,11 +4879,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Fuzz-Distorted Down-Tuned Guitar",
+      "Fuzzy Analog Bass Guitar",
+      "Cavernous Drum Kit",
+      "Slow Heavy Riffs"
     ],
     "sound_design": {
       "en": "Massively fuzz-distorted down-tuned guitars, thick analog bass fuzz, cavernous room drums.",
@@ -5183,7 +5173,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -5312,7 +5302,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -5373,11 +5363,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "High-Gain 5150 Guitar",
+      "Clanky Compressed Bass Guitar",
+      "Double-Kick Drum Kit",
+      "Sub-Bass Breakdown Drops"
     ],
     "sound_design": {
       "en": "High-gain modern 5150 guitar tone, sub-bass drops before breakdowns, crisp double kicks.",
@@ -5668,7 +5657,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -5797,7 +5786,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -5859,11 +5848,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "DS-1 Distorted Guitar",
+      "Warm Picked Bass Guitar",
+      "Chorus Pedals",
+      "Raw Drum Kit"
     ],
     "sound_design": {
       "en": "Fender Mustang / Jaguar through Boss DS-1 distortion, Electro-Harmonix Small Clone chorus.",
@@ -6154,7 +6142,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -6283,7 +6271,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -6344,11 +6332,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Jangly Clean Guitar",
+      "Melodic Picked Bass Guitar",
+      "Textured Synths",
+      "Drum Kit"
     ],
     "sound_design": {
       "en": "Jangly clean electric guitars, fuzz pedals, textured synthesizers, acoustic guitar layers.",
@@ -6639,7 +6626,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -6768,7 +6755,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
@@ -6830,11 +6817,11 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Electric Guitar",
+      "Hammond Organ",
+      "Mellotron Strings",
+      "Moog Modular Synth",
+      "Rickenbacker Bass Guitar"
     ],
     "sound_design": {
       "en": "Mellotron string/flute tapes, Hammond organs, Moog modular synths, acoustic 12-string guitars.",
@@ -7125,7 +7112,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -7168,7 +7155,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "m1_organ",
           "steps": [
             1,
             0,
@@ -7315,11 +7302,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Clean Telecaster Guitar",
+      "Two-Handed Tapping",
+      "Counter-Melodic Bass Guitar",
+      "Natural Drum Kit"
     ],
     "sound_design": {
       "en": "Sparkling clean Telecaster tones, two-handed finger tapping, natural acoustic drums.",
@@ -7610,7 +7596,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -7739,7 +7725,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
@@ -7801,11 +7787,10 @@ export const ROCK_METAL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Glide Guitar (Whammy Bar)",
+      "Reverse-Reverb Fuzz Walls",
+      "Driving Root-Note Bass Guitar",
+      "Hushed Vocals & Drums"
     ],
     "sound_design": {
       "en": "Yamaha SPX90 reverse reverb, glide guitar whammy strumming, fuzz walls, hushed whisper vocals.",
@@ -8096,7 +8081,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "pick_bass",
           "steps": [
             1,
             0,
@@ -8225,7 +8210,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "reverse_cymbal",
           "steps": [
             1,
             0,
