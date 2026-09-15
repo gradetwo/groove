@@ -338,6 +338,11 @@ async function waitForServer(url) {
       try {
         const measured = await measureGenre(page, entry.id);
         results.push({ ...entry, ...measured });
+        // Flush progress every few genres: a long run that writes only at the end is
+        // indistinguishable from a hang from the outside, and an interrupted run leaves nothing.
+        if (results.length % 5 === 0) {
+          fs.writeFileSync(`${outPath}.progress.json`, `${JSON.stringify({ generatedBy: "measure_genre_timbre.mjs", partial: true, done: results.length, total: catalog.length, genres: results }, null, 0)}\n`);
+        }
         const f = measured.fingerprint;
         process.stdout.write(
           `  [${String(index + 1).padStart(3)}/${catalog.length}] ${entry.id.padEnd(22)}` +

@@ -383,6 +383,7 @@ async function waitForServer(url) {
       catalog = catalog.slice(0, limit);
     }
     console.log(`Measuring ${catalog.length} genre(s)...`);
+    console.log(`[start] ${catalog.length} genres → ${path.relative(ROOT, outPath)} (progress: ${path.relative(ROOT, outPath)}.progress.json) at ${new Date().toISOString()}`);
     let limiterProbe = null;
     try {
       limiterProbe = await probeLimiterKind(page);
@@ -403,6 +404,11 @@ async function waitForServer(url) {
         const legacy = await measureLegacy(page, entry.id);
         const arranged = await measureGenre(page, entry.id, null);
         measured.push({ ...entry, ...legacy, ...arranged, trimDb: 0 });
+        // Flush progress every few genres: a long run that only writes its report at the end
+        // looks exactly like a hang from the outside (and an interrupted run leaves nothing).
+        if (measured.length % 5 === 0) {
+          fs.writeFileSync(`${outPath}.progress.json`, `${JSON.stringify({ generatedBy: "measure_genre_loudness.mjs", partial: true, done: measured.length, total: catalog.length, genres: measured }, null, 0)}\n`);
+        }
         process.stdout.write(
           `  [${String(index + 1).padStart(3)}/${catalog.length}] ${entry.id.padEnd(24)}` +
             ` legacy ${legacy.legacyLufs.toFixed(2)} LUFS   arranged ${arranged.arrangedLufs.toFixed(2)} LUFS` +

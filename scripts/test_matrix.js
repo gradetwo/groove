@@ -222,10 +222,20 @@ async function runTestOnTarget(target, baseUrl) {
 
     // 2. Responsive Viewport Check (Horizontal scroll check)
     const overflowCheck = await page.evaluate(() => {
-      const docW = document.documentElement.scrollWidth;
-      const winW = window.innerWidth;
+      const root = document.documentElement;
+      const docW = root.scrollWidth;
+      /**
+       * Reference the **layout viewport**, not `window.innerWidth`.
+       *
+       * `innerWidth` includes the scrollbar (classic) while `scrollWidth` is measured without it,
+       * so the two are not comparable: on a classic-scrollbar engine the check is up to a
+       * scrollbar-width *too lenient* and can miss a real overflow. `clientWidth` is the width the
+       * layout actually had to fit into, on every engine and scrollbar style.
+       * (Cross-engine lesson borrowed from the sibling project's WebKit notes, §2.3.)
+       */
+      const viewW = root.clientWidth;
       // Allow minor 1px rounding discrepancies on high-DPI displays
-      return { docW, winW, hasOverflow: docW > winW + 4 };
+      return { docW, winW: viewW, hasOverflow: docW > viewW + 4 };
     });
 
     if (overflowCheck.hasOverflow && !target.isTablet && !target.isMobile) {
@@ -238,7 +248,10 @@ async function runTestOnTarget(target, baseUrl) {
       await langBtn.click({ force: true }); // Toggle to English
       await page.waitForTimeout(150);
       const enOverflow = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth + 4;
+        // Same layout-viewport reference as above: comparing against `innerWidth` would let a
+        // scrollbar's worth of real overflow through.
+        const root = document.documentElement;
+        return root.scrollWidth > root.clientWidth + 4;
       });
       if (enOverflow && !target.isTablet && !target.isMobile) {
         throw new Error("Layout overflow detected after switching to English mode (violating Chinese baseline rule)");
@@ -373,15 +386,19 @@ async function main() {
     process.stdout.write(`⏳ Testing ${target.name.padEnd(35)} ... `);
     const start = Date.now();
     let res = await runTestOnTarget(target, baseUrl);
+    let retried = false;
     if (!res.success) {
       process.stdout.write(`(retrying once) ... `);
+      retried = true;
       res = await runTestOnTarget(target, baseUrl);
     }
     const dur = ((Date.now() - start) / 1000).toFixed(2);
 
     if (res.success) {
       console.log(`✅ PASS (${dur}s)`);
-      results.push({ name: target.name, status: "PASS", duration: dur });
+      results.push({ name: target.name, status: "PASS", duration: dur,
+      retried,
+    });
     } else {
       console.log(`❌ FAIL (${dur}s)`);
       console.error(`   Error details: ${res.error}\n`);
