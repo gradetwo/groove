@@ -30,20 +30,10 @@ const SYNTH_TRACK_IDS = new Set(["bass", "chords", "chord", "lead", "fx"]);
  * whoever added it must give it a preset.
  */
 const EXPECTED_SYNTH_INSTRUMENTS: Record<string, string[]> = {
-  lead: ["saw_lead", "guitar_lead", "flute_lead", "pluck_synth", "square_lead"],
-  bass: [
-    "sub_bass",
-    "808_bass",
-    "walking_upright",
-    "acid_303",
-    "reese_bass",
-    "saw_lead",
-    "slap_bass",
-    "square_lead",
-    "distorted_kick",
-  ],
-  chords: ["warm_pad", "rhodes_ep", "guitar_lead", "supersaw", "brass_synth", "m1_organ"],
-  fx: ["noise_sweep"],
+  lead: ["accordion_lead","acid_303","bell_lead","brass_section","brass_synth","cowbell_lead","flute_lead","fm_lead","growl_lead","guitar_lead","harmonica_lead","m1_organ","muted_trumpet","organ_lead","pan_flute","piano_lead","pluck_string","pluck_synth","saw_lead","sax_lead","sine_lead","sitar_lead","square_lead","strings_lead","supersaw","trumpet_lead","warm_pad"],
+  bass: ["808_bass","acid_303","analog_bass","distorted_kick","finger_bass","fm_lead","growl_lead","pick_bass","reese_bass","saw_lead","slap_bass","square_lead","sub_bass","walking_upright"],
+  chords: ["accordion_lead","brass_synth","guitar_lead","m1_organ","marimba_lead","piano_lead","rhodes_ep","strings_lead","supersaw","vibraphone","warm_pad"],
+  fx: ["horn_stab","laser_zap","noise_rise","noise_sweep","reverse_cymbal","sub_drop","sweep_down","tape_stop","vinyl_crackle"],
 };
 
 interface TrackPair {
@@ -247,5 +237,103 @@ describe("genre timbres · instrument → preset mapping", () => {
   it("normalises instrument names before lookup", () => {
     expect(normalizeInstrumentName("  Flute-Lead ")).toBe("flute_lead");
     expect(normalizeInstrumentName(undefined)).toBe("");
+  });
+});
+
+/**
+ * The curated genre data introduces acoustic/world voices and one-shot FX that did not
+ * exist when the resolver was first written. These assertions pin (a) that each name maps
+ * to a *purpose-built* preset rather than a renamed old one, and (b) that the acoustic
+ * voices are actually acoustically distinct (no three-way aliasing onto one timbre).
+ */
+describe("curated timbres · the genre data's new voices", () => {
+  const CASES: Array<[string, string]> = [
+    ["finger_bass", "fingerBass"],
+    ["pick_bass", "pickBass"],
+    ["analog_bass", "analogBass"],
+    ["sax_lead", "saxLead"],
+    ["trumpet_lead", "trumpetLead"],
+    ["muted_trumpet", "mutedTrumpet"],
+    ["brass_section", "brassSection"],
+    ["piano_lead", "pianoLead"],
+    ["organ_lead", "organLead"],
+    ["vibraphone", "vibraphone"],
+    ["strings_lead", "stringsLead"],
+    ["pluck_string", "pluckString"],
+    ["pan_flute", "panFlute"],
+    ["sitar_lead", "sitarLead"],
+    ["accordion_lead", "accordionLead"],
+    ["harmonica_lead", "harmonicaLead"],
+    ["marimba_lead", "marimbaLead"],
+    ["bell_lead", "bellLead"],
+    ["sine_lead", "sineLead"],
+    ["fm_lead", "fmLead"],
+    ["cowbell_lead", "cowbellLead"],
+    ["growl_lead", "growlLead"],
+    ["horn_stab", "hornStab"],
+    ["vinyl_crackle", "vinylCrackle"],
+    ["tape_stop", "tapeStop"],
+    ["reverse_cymbal", "reverseCymbal"],
+    ["noise_rise", "noiseRise"],
+    ["sweep_down", "sweepDown"],
+    ["sub_drop", "subDrop"],
+    ["laser_zap", "laserZap"],
+  ];
+
+  it("resolves every curated instrument name to its own preset", () => {
+    for (const [instrument, key] of CASES) {
+      const preset = resolveInstrumentPreset(instrument, "lead");
+      expect(preset, instrument).toBe(DEFAULT_SYNTH_PRESETS[key]);
+      expect(preset, instrument).not.toBe(GLOBAL_DEFAULT);
+    }
+  });
+
+  it("keeps the curated voices distinguishable from the legacy presets", () => {
+    // A sax must not be the analog lead, and the three brass variants must differ.
+    const sax = resolveInstrumentPreset("sax_lead", "lead");
+    const trumpet = resolveInstrumentPreset("trumpet_lead", "lead");
+    const muted = resolveInstrumentPreset("muted_trumpet", "lead");
+    const section = resolveInstrumentPreset("brass_section", "lead");
+    expect(new Set([sax, trumpet, muted, section]).size).toBe(4);
+    expect(sax).not.toBe(DEFAULT_SYNTH_PRESETS.analogLead);
+
+    // Piano vs Rhodes vs organ: percussive, EP and sustained must stay distinct.
+    const piano = resolveInstrumentPreset("piano_lead", "chords");
+    const rhodes = resolveInstrumentPreset("rhodes_ep", "chords");
+    const organ = resolveInstrumentPreset("organ_lead", "lead");
+    expect(piano).not.toBe(rhodes);
+    expect(organ).not.toBe(DEFAULT_SYNTH_PRESETS.m1Organ);
+    expect(piano.adsr.decay).toBeGreaterThan(0.5);
+    expect(organ.adsr.sustain).toBeGreaterThan(0.9);
+
+    // The FX voices that need noise or a pitch envelope actually declare them.
+    expect(resolveInstrumentPreset("vinyl_crackle", "fx").noiseMix).toBeGreaterThan(0.5);
+    expect(resolveInstrumentPreset("reverse_cymbal", "fx").noiseMix).toBeGreaterThan(0.5);
+    expect(resolveInstrumentPreset("tape_stop", "fx").pitchSweepCents).toBeLessThan(0);
+    expect(resolveInstrumentPreset("noise_rise", "fx").pitchSweepCents).toBeGreaterThan(0);
+    expect(resolveInstrumentPreset("sub_drop", "fx").filterCutoff).toBeLessThan(
+      DEFAULT_SYNTH_PRESETS.subBass.filterCutoff + 1
+    );
+
+    // Meanwhile the melodic voices stay on the plain dual-oscillator path: no pitch
+    // envelope, and no noise bed except where the instrument is literally a wind/reed.
+    for (const name of ["sax_lead", "trumpet_lead", "marimba_lead", "bell_lead", "growl_lead"]) {
+      expect(resolveInstrumentPreset(name, "lead").pitchSweepCents ?? 0, name).toBe(0);
+      expect(resolveInstrumentPreset(name, "lead").noiseMix ?? 0, name).toBe(0);
+    }
+    expect(resolveInstrumentPreset("pan_flute", "lead").noiseMix).toBeGreaterThan(0);
+    expect(resolveInstrumentPreset("sine_lead", "lead").pitchSweepCents).toBeLessThan(0);
+  });
+
+  it("resolves the curated names identically for every synth track role", () => {
+    // The resolver is role-agnostic once the name is known: the live engine and the
+    // offline renderer therefore pick the same voice for the same declared instrument.
+    for (const name of ["brass_section", "bell_lead", "finger_bass", "tape_stop"]) {
+      const fromLead = resolveInstrumentPreset(name, "lead");
+      const fromBass = resolveInstrumentPreset(name, "bass");
+      const fromFx = resolveInstrumentPreset(name, "fx");
+      expect(fromLead).toBe(fromBass);
+      expect(fromBass).toBe(fromFx);
+    }
   });
 });

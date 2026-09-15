@@ -37,11 +37,10 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Synthesized Brass Horns",
+      "Pitch-Bent 808 Sub Kicks",
+      "Rave Lasers",
+      "Vocal Chants"
     ],
     "sound_design": {
       "en": "Massive pitch-bent 808 sub kicks, synthesized brass horns, vocal chants, rave lasers.",
@@ -417,7 +416,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "brass_synth",
           "steps": [
             0,
             0,
@@ -460,7 +459,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -521,11 +520,11 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Hardstyle Screech Synth",
+      "Distorted 808 Bass",
+      "Aggressive Sirens",
+      "Warm Pad",
+      "Compressed Vocal Screams"
     ],
     "sound_design": {
       "en": "Distorted 808s, hardstyle screeches, aggressive industrial sirens, compressed vocal screams.",
@@ -902,7 +901,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -945,7 +944,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1006,11 +1005,11 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Modulated FM Growls",
+      "Metallic Tearout Screeches",
+      "Brass Synth Horns",
+      "Reese Bass",
+      "Punchy Transient Kicks"
     ],
     "sound_design": {
       "en": "Modulated FM growls, metallic tearout screeches, brass synth horns, punchy transient kicks.",
@@ -1301,7 +1300,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "saw_lead",
+          "instrument": "reese_bass",
           "steps": [
             0,
             0,
@@ -1344,7 +1343,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "warm_pad",
+          "instrument": "brass_synth",
           "steps": [
             1,
             0,
@@ -1387,7 +1386,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "growl_lead",
           "steps": [
             0,
             0,
@@ -1430,7 +1429,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1491,11 +1490,12 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Detuned Reese Bass",
+      "Sidechained Supersaw Arpeggios",
+      "Rain Ambiences",
+      "Re-Pitched Vocal Chops",
+      "Plucked Synth Chops",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Detuned Reese bass, lush sidechained supersaw arpeggios, rain ambiences, re-pitched vocal chops.",
@@ -1915,7 +1915,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -1976,11 +1976,11 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Dark Minor-Key Bells",
+      "Menacing Brass Stabs",
+      "TR-808 Sub Booms",
+      "Clean Rim Snares",
+      "Rhodes Chords"
     ],
     "sound_design": {
       "en": "Dark minor-key bells, menacing brass stabs, Roland TR-808 sub booms, clean rim snares.",
@@ -2357,7 +2357,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "pluck_synth",
+          "instrument": "bell_lead",
           "steps": [
             0,
             0,
@@ -2400,7 +2400,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -2461,11 +2461,11 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Melancholic Minor Piano",
+      "Extreme Gliding 808 Subs",
+      "Warm Pad",
+      "Reversing Hi-Hats",
+      "Vocal Ad-Lib Cries"
     ],
     "sound_design": {
       "en": "Extreme gliding 808 subs, melancholic minor piano, reversing hi-hats, vocal ad-lib cries.",
@@ -2842,7 +2842,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
@@ -2885,7 +2885,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -2946,11 +2946,11 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Haunting Music Box Bells",
+      "Aggressive Sliding 808s",
+      "Heavy Sub Saturation",
+      "Gunshot FX",
+      "Rhodes Chords"
     ],
     "sound_design": {
       "en": "Aggressive sliding 808s, haunting music box bells, heavy sub saturation, gunshot FX.",
@@ -3327,7 +3327,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "guitar_lead",
+          "instrument": "bell_lead",
           "steps": [
             0,
             0,
@@ -3370,7 +3370,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -3431,11 +3431,12 @@ export const TRAP_DRILL_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Sliding 808 Bass",
+      "Chopped Sample Flips",
+      "Bed Squeak Samples",
+      "Water Drop Clicks",
+      "Sawtooth Synth Lead",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Sliding 808s, bed squeak samples, water drop foley, chopped sample flips.",
@@ -3855,7 +3856,7 @@ export const TRAP_DRILL_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,

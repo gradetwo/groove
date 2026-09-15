@@ -37,11 +37,12 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Chopped Amen Breaks",
+      "808 Sub Booms",
+      "Square-Wave Rave Stab",
+      "Dub Sirens",
+      "Reggae Vocal Samples",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Chopped Amen breaks, Roland S950 time-stretch artifacts, 808 sub booms, reggae sirens.",
@@ -418,7 +419,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -461,7 +462,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -523,11 +524,11 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Soulful Rhodes",
+      "Lush Acoustic Strings",
+      "Warm Filtered Reese Bass",
+      "Plucked Synth Arps",
+      "Vocal Loops"
     ],
     "sound_design": {
       "en": "Soulful Rhodes electric pianos, lush acoustic strings, warm filtered Reese bass, vocal loops.",
@@ -818,7 +819,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "reese_bass",
           "steps": [
             1,
             0,
@@ -1008,11 +1009,11 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Multi-Band Distorted Reese Bass",
+      "Modulated Growl Lead",
+      "Razor-Sharp Transients",
+      "Metallic Foley Clicks",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Modulated multi-band distorted Reese basses, razor-sharp clinical transients, metallic foley.",
@@ -1389,7 +1390,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "growl_lead",
           "steps": [
             0,
             0,
@@ -1432,7 +1433,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1493,11 +1494,11 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "High-Pitched Square Screech",
+      "303 Acid Bass",
+      "Loud Laser Sweeps",
+      "Punchy Clean Kicks",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "High-pitched square/FM screech bass synths, punchy clean kicks, loud laser sweeps.",
@@ -1874,7 +1875,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -1917,7 +1918,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -1978,11 +1979,10 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Cold Low-Passed Drone Pads",
+      "Gritty Reese Bass",
+      "Metal Clangs",
+      "Distorted 808 Kicks"
     ],
     "sound_design": {
       "en": "Distorted Roland TR-808 kicks, metal clangs, cold low-passed drone pads, gritty Reese bass.",
@@ -2359,7 +2359,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "warm_pad",
           "steps": [
             0,
             0,
@@ -2402,7 +2402,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -2463,11 +2463,12 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Deep Modular Analog 808 Sub Bass",
+      "Crunchy Hip-Hop Snares",
+      "Plucked Synth Stabs",
+      "Foley Clicks",
+      "Stereo Glitch Textures",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Deep modular analog subs, crunchy hip-hop snare claps, Foley clicks, stereo glitch textures.",
@@ -2844,7 +2845,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -2887,7 +2888,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -2948,11 +2949,12 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Surgically Glitch-Edited Amen Slices",
+      "Bitcrushed Noise Bursts",
+      "Square-Wave Lead",
+      "Warm Pad",
+      "Hardcore Kicks",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Surgically glitch-edited Amen slices, bitcrushed noise bursts, speed-ramped audio, hardcore kicks.",
@@ -3372,7 +3374,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -3433,11 +3435,12 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Dancehall Vocal Toasting",
+      "Dub Sirens",
+      "808 Sub Bass",
+      "Square-Wave Stab",
+      "Synth Brass",
+      "Chopped Snare Rolls"
     ],
     "sound_design": {
       "en": "Dancehall vocal toasting, dub sirens, spring reverb splashes, 808 sub bass, chopped snare rolls.",
@@ -3814,7 +3817,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -3857,7 +3860,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -3918,11 +3921,11 @@ export const DNB_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Acoustic Nylon Guitar",
+      "Cuíca Friction Drum",
+      "Pandeiro",
+      "Warm Rolling Upright Bass",
+      "Plucked String Lead"
     ],
     "sound_design": {
       "en": "Acoustic nylon guitars, live cuíca friction drums, pandeiro, warm rolling upright bass.",
@@ -4256,7 +4259,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "guitar_lead",
           "steps": [
             1,
             0,
@@ -4299,7 +4302,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "pluck_string",
           "steps": [
             0,
             0,
@@ -4342,7 +4345,7 @@ export const DNB_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,

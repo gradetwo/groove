@@ -37,11 +37,11 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Trumpet Section",
+      "Piano Montuno",
+      "Upright Bass (Tumbao)",
+      "Congas & Bongos",
+      "Timbales"
     ],
     "sound_design": {
       "en": "Acoustic congas (tumbao), bongo, timbales, piano montuno, bright trumpet section.",
@@ -375,7 +375,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "piano_lead",
           "steps": [
             1,
             0,
@@ -418,7 +418,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "trumpet_lead",
           "steps": [
             0,
             0,
@@ -461,7 +461,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -522,11 +522,10 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Requinto Acoustic Guitar",
+      "Electric Bass",
+      "Bongo & Güira",
+      "Rhythm Guitar"
     ],
     "sound_design": {
       "en": "Requinto acoustic guitar with chorus pedal, bongo, güira metal scraper, electric bass.",
@@ -817,7 +816,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -946,7 +945,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -1007,11 +1006,11 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Electric Bass",
+      "Hammond Organ",
+      "Offbeat Rhythm Guitar",
+      "Horn Section",
+      "One-Drop Drum Kit"
     ],
     "sound_design": {
       "en": "Offbeat chop guitar (skank), Hammond organ bubble, heavy flatwound electric bass, rimshots.",
@@ -1302,7 +1301,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -1388,7 +1387,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -1431,7 +1430,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -1492,11 +1491,10 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Digital Casio Synth",
+      "Sub Bass",
+      "Rhodes Keys",
+      "Drum Machine & Rimshots"
     ],
     "sound_design": {
       "en": "Casio/Yamaha digital synths, crisp synthesized rimshots, heavy sub-bass, vocal toasting.",
@@ -1873,7 +1871,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "square_lead",
           "steps": [
             0,
             0,
@@ -1916,7 +1914,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -1977,11 +1975,10 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Synth Brass",
+      "808 Sub Bass",
+      "Dembow Drum Machine",
+      "Rhodes Keys"
     ],
     "sound_design": {
       "en": "Signature Dembow snare, synth brass, pitched autotuned vocals, deep 808 sub-bass.",
@@ -2272,7 +2269,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "808_bass",
           "steps": [
             1,
             0,
@@ -2358,7 +2355,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "brass_synth",
           "steps": [
             0,
             0,
@@ -2401,7 +2398,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -2462,11 +2459,11 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Big-Band Horn Section",
+      "Electric Piano",
+      "Interlocking Funk Guitar",
+      "Electric Bass",
+      "Talking Drum & Shekere"
     ],
     "sound_design": {
       "en": "Large big-band brass horns, interlocking funk guitars, organic percussion (claves, shekere), electric piano.",
@@ -2757,7 +2754,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "slap_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -2843,7 +2840,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "brass_section",
           "steps": [
             0,
             0,
@@ -2886,7 +2883,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -2948,11 +2945,10 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Log Drum (Pitched 808)",
+      "Jazz Piano Chords",
+      "Rhodes Keys",
+      "Shaker Loops"
     ],
     "sound_design": {
       "en": "Signature synthesized 'Log Drum' (distorted 808 percussion bass), lush Rhodes chords, shaker loops.",
@@ -3243,7 +3239,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "808_bass",
           "steps": [
             1,
             0,
@@ -3329,7 +3325,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "flute_lead",
+          "instrument": "piano_lead",
           "steps": [
             0,
             0,
@@ -3434,11 +3430,10 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Nylon-String Acoustic Guitar",
+      "Flute / Sax",
+      "Upright Bass",
+      "Brushes & Rim Clicks"
     ],
     "sound_design": {
       "en": "Nylon-string acoustic guitar, delicate brushed snare rim clicks, warm flute/sax, whisper vocals.",
@@ -3858,7 +3853,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -3919,11 +3914,11 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Cavaquinho Guitar",
+      "Flute",
+      "Surdo & Pandeiro",
+      "Cuíca",
+      "Upright Bass"
     ],
     "sound_design": {
       "en": "Surdo bass drums, cuíca friction drum, pandeiro tambourine, caixa snare, cavaquinho guitar.",
@@ -4343,7 +4338,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -4404,11 +4399,11 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Button Accordion",
+      "Electric Bass",
+      "Guacharaca & Tambor",
+      "Guache Shakers",
+      "Horn Section"
     ],
     "sound_design": {
       "en": "Button accordion, guache/maracón shakers, tambor alegre drum, acoustic electric bass.",
@@ -4699,7 +4694,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -4742,7 +4737,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "accordion_lead",
           "steps": [
             0,
             0,
@@ -4785,7 +4780,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "accordion_lead",
           "steps": [
             0,
             0,
@@ -4828,7 +4823,7 @@ export const LATIN_WORLD_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
@@ -4889,11 +4884,11 @@ export const LATIN_WORLD_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Punchy Analog Synth Lead",
+      "Sub Bass",
+      "Fast Congas",
+      "Warm Pad",
+      "Whistle Blasts"
     ],
     "sound_design": {
       "en": "Fast syncopated congas, electronic whistle blasts, high-octane rap chants, heavy punchy kicks.",

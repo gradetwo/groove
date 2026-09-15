@@ -37,11 +37,11 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Detuned Saw Screech Leads",
+      "Epic Supersaw Melodies",
+      "Pitched Distorted Kicks",
+      "Sub Bass",
+      "Euphoric Anthems"
     ],
     "sound_design": {
       "en": "Pitched distorted kick drums, detuned screech leads, epic supersaw melodies, euphoric anthems.",
@@ -332,7 +332,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "saw_lead",
+          "instrument": "sub_bass",
           "steps": [
             0,
             1,
@@ -523,11 +523,12 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Severely Clipped 909 Kicks",
+      "Alpha Juno Hoovers",
+      "Sawtooth Synth Lead",
+      "Warm Pad",
+      "Dark Pitch Risers",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Severely clipped and overdriven TR-909 kicks, classic Alpha Juno hoovers, dark pitch risers.",
@@ -947,7 +948,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -1008,11 +1009,12 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Orchestral Strings",
+      "Choir Chants",
+      "Accordion Lead",
+      "Supersaw Chords",
+      "Sub Bass",
+      "Distorted Offbeat Kick"
     ],
     "sound_design": {
       "en": "Bouncy distorted kick with distinctive offbeat tail, orchestral strings, choir chants, accordion.",
@@ -1389,7 +1391,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "accordion_lead",
           "steps": [
             0,
             0,
@@ -1432,7 +1434,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "noise_rise",
           "steps": [
             1,
             0,
@@ -1493,11 +1495,11 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Bright M1 Piano Stabs",
+      "Euphoric Supersaws",
+      "Pitch-Shifted Female Vocals",
+      "909 Kicks",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Pitch-shifted female vocals (+5 to +7 semitones), bright M1 piano stabs, euphoric supersaws, 909 kicks.",
@@ -1831,7 +1833,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "piano_lead",
           "steps": [
             1,
             0,
@@ -1874,7 +1876,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "supersaw",
           "steps": [
             0,
             0,
@@ -1978,11 +1980,11 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Dutch House Laser Synth Lead",
+      "Thick Sub Bass",
+      "Synth Brass Stabs",
+      "Latin Percussion Fills",
+      "Pitched Vocal Shouts"
     ],
     "sound_design": {
       "en": "Dutch house laser synths, pitched vocal shouts, thick sub-bass, Latin percussion fills.",
@@ -2402,7 +2404,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -2463,11 +2465,12 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Bed Squeak Samples",
+      "Water Drop Clicks",
+      "Chopped Vocal Loop Stutters",
+      "808 Bass",
+      "Plucked Synth Chops",
+      "Rhodes Chords"
     ],
     "sound_design": {
       "en": "Bed spring squeak sample, water drop clicks, gunshots, chopped vocal loop stutters.",
@@ -2887,7 +2890,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -2949,11 +2952,11 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Rapid-Fire 808 Toms",
+      "Sliced Soul Vocal Chops",
+      "Sub-Bass Pitch Dives",
+      "Plucked Synth Stabs",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Rapid-fire 808 toms, sliced soul vocals repeated frantically, sub-bass pitch dives.",
@@ -3330,7 +3333,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
@@ -3373,7 +3376,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -3435,11 +3438,11 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Roland TR-808 Cowbell Lead",
+      "Dusty Vinyl Rhodes",
+      "Cassette Hiss",
+      "Chopped Memphis Acapellas",
+      "808 Bass"
     ],
     "sound_design": {
       "en": "Roland TR-808 cowbell leads, dusty vinyl Rhodes, chopped Memphis acapellas, cassette hiss.",
@@ -3816,7 +3819,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "cowbell_lead",
           "steps": [
             1,
             0,
@@ -3859,7 +3862,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "vinyl_crackle",
           "steps": [
             1,
             0,
@@ -3920,11 +3923,11 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Blown-Out 808 Cowbell Lead",
+      "Heavily Clipped Sub Bass",
+      "Distorted Kick Bass",
+      "Aggressive Vocal Shouts",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Blown-out overdriven 808 cowbells, heavily clipped sub bass, aggressive industrial vocal shouts.",
@@ -4301,7 +4304,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "cowbell_lead",
           "steps": [
             1,
             0,
@@ -4344,7 +4347,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "sub_drop",
           "steps": [
             1,
             0,
@@ -4406,11 +4409,12 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Robotic Vocoder Vocals",
+      "TR-808 Syncopated Breaks",
+      "Laser Zaps",
+      "Analog Saw Synths",
+      "Warm Pad",
+      "Sub Bass"
     ],
     "sound_design": {
       "en": "Robotic vocoder vocals, Roland TR-808 syncopated drum breaks, laser zaps, analog saw synths.",
@@ -4830,7 +4834,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "laser_zap",
           "steps": [
             1,
             0,
@@ -4891,11 +4895,11 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Punchy Syncopated Drum Chops",
+      "Acid Squeals",
+      "Heavy Sub Bass",
+      "Vinyl Scratches",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Punchy syncopated acoustic drum chops, heavy sub-bass, acid squeals, vinyl scratches.",
@@ -5272,7 +5276,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "acid_303",
           "steps": [
             0,
             0,
@@ -5315,7 +5319,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "tape_stop",
           "steps": [
             1,
             0,
@@ -5376,11 +5380,12 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
       "zh": "正拍使用根音排列夯实低频，切分音色使用开阔转位扩展立体声感。"
     },
     "instrumentation": [
-      "Synthesizer",
-      "Drum Machine",
-      "Bass",
-      "Sampler",
-      "FX"
+      "Heavy Distorted Drum Breaks",
+      "Fuzz Guitars",
+      "TB-303 Acid Sweeps",
+      "Brass Samples",
+      "Reese Bass",
+      "Warm Pad"
     ],
     "sound_design": {
       "en": "Heavy distorted acoustic drum breaks, fuzz guitars, TB-303 acid sweeps, brass samples.",
@@ -5757,7 +5762,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "guitar_lead",
           "steps": [
             0,
             0,
@@ -5800,7 +5805,7 @@ export const HARD_ELECTRO_GENRES: Genre[] = [
         {
           "track_id": "fx",
           "name": "FX / Sweep",
-          "instrument": "noise_sweep",
+          "instrument": "horn_stab",
           "steps": [
             1,
             0,
