@@ -1,39 +1,35 @@
 {
-  "version": "1.16.21",
+  "version": "2.0.0",
   "releaseDate": "2026-09-15",
-  "changelogCount": 63,
+  "changelogCount": 64,
   "latest": {
-    "version": "1.16.21",
+    "version": "2.0.0",
     "date": "2026-09-15",
-    "category": "audio",
+    "category": "feature",
     "title": {
-      "zh": "v1.16.21 母带换上真正的真峰值前瞻限幅器（削波 121→0 个曲风），和弦开始按曲风选声部",
-      "en": "v1.16.21 A real true-peak lookahead limiter (clipping 121 genres → 0), and chords voiced for the genre"
+      "zh": "v2.0.0 工作台重构启动：布局偏好持久化（刷新不再丢失侧栏/力度条/高级抽屉状态）",
+      "en": "v2.0.0 Studio refactor begins: layout preferences persist (no more re-collapsing the sidebar after every refresh)"
     },
     "highlights": [
       {
-        "zh": "**母带限幅器原来不是限幅器（已登记的 N-15）**：它是个 `DynamicsCompressorNode`，20:1、**3 ms 起攻**且无前瞻——底鼓/军鼓的瞬态在增益衰减介入前就已经过去了，超量还按 1/20 放行。实测后果：**159 个曲风里有 121 个渲染出的样本峰值超过 0 dBFS**，被 16-bit 编码器硬削平。现在换成真正的**前瞻式真峰值砖墙限幅器**：3 ms 前瞻（增益在瞬态到达输出前就已压低）、4× 过采样真峰值检测（能看见**采样间过冲**，而不只是采样点）、−1.0 dBTP 硬天花板、立体声联动、分级释放。",
-        "en": "**The master \"limiter\" was not a limiter (registered as N-15).** It was a `DynamicsCompressorNode` at 20:1 with a **3 ms attack** and no lookahead — kick and snare transients had already passed before the detector closed, and 1/20 of the excess sailed through. Measured result: **121 of 159 genres rendered sample peaks above 0 dBFS**, hard-clipped by the 16-bit encoder. It is now a real **lookahead true-peak brickwall**: 3 ms of lookahead (gain is down before the transient reaches the output), 4x-oversampled true-peak detection (so **inter-sample** overshoots are caught, not just sample points), a −1.0 dBTP hard ceiling, stereo-linked gain, and programme-dependent release."
+        "zh": "**工作台重构规划正式启动，版本序列进入 2.0**：原计划的 v1.17.0–v1.17.13 改为 **v2.0.0–v2.0.12**，首个里程碑为布局偏好持久化。这一版是 2.0 序列的起点，后续每个里程碑都是可独立发布的小版本。",
+        "en": "**The studio refactor officially starts and versioning moves to 2.0.** The plan's v1.17.0–v1.17.13 milestones become **v2.0.0–v2.0.12**, beginning with layout-preference persistence. Each milestone ships as its own small release."
       },
       {
-        "zh": "**实测：削波从 121/159 降到 0/159，最差真峰值 −0.996 dBTP**（天花板 −1.0）。全库重新实测并回填 159 条响度 trim：配平后 p90−p10 0.80 LU、全距 2.53 LU、clamp 命中 0/159。库整体电平下降约 0.7 dB——真正的前瞻天花板比原来那个压缩器严格，这是预期且正确的方向。",
-        "en": "**Measured: clipping falls from 121/159 to 0/159, worst true peak −0.996 dBTP** against a −1.0 ceiling. All 159 loudness trims were re-measured and refitted: post-trim spread 0.80 LU p90−p10, 2.53 LU full range, 0/159 clamp hits. The library sits about 0.7 dB lower overall — a genuine lookahead ceiling is stricter than the compressor it replaced, which is the intended direction."
+        "zh": "**布局不再每次刷新都归零**：侧栏折叠、工作台最大化、力度泳道、分析仪、高级抽屉这 5 个开关此前全是裸 `useState(false)`，全仓库没有任何持久化——每次刷新、每次从调音台/对比视图回来，都要重新收侧栏、重新开力度条。现在挂载时读一次、变更即写。",
+        "en": "**Layout no longer resets on every refresh.** All five toggles — sidebar collapse, editor maximise, velocity lane, analyser, advanced drawer — were plain `useState(false)` with no persistence anywhere in the repo, so every refresh (and every trip to the console or compare view) meant re-collapsing the sidebar and re-opening the velocity lane. They are now read once on mount and written on change."
       },
       {
-        "zh": "**新增真峰值表（V-03）并把它接成门禁**：此前无真峰值度量，所以「采样间过冲」这类问题**看不见**。现在 `loudness` 助手提供 4× 过采样真峰值，门禁新增两条会失败的断言——0 个曲风超 0 dBFS 样本峰值、无曲风超出 −1 dBTP（容差 0.02 dB）。只有真峰值能看见限幅器存在的意义，只看样本峰值恰好漏掉它。",
-        "en": "**A true-peak meter (V-03), wired in as a gate.** There was no true-peak measurement, so inter-sample overshoot was **invisible**. The loudness helper now reports 4x-oversampled true peak, and the gate gained two assertions that can fail: zero genres above 0 dBFS sample peak, and none beyond −1 dBTP (0.02 dB tolerance). Only a true-peak meter can see the failure the limiter exists to prevent."
+        "zh": "**存储损坏绝不会弄坏工作台**：读取失败（无 storage／隐私模式抛错／配额）一律回落默认且**绝不抛错**；一个字段类型不对时**逐字段修复**，而不是把其余四个好设置一起丢掉；遇到未知的 `version` 则整体回落——形状不认识就不猜。键为 `groove_layout_prefs_v1` 且载荷内含 `version`，按计划「一旦写到用户机器上就永不删除」的纪律，未来改形状要加 v2 并保留 v1 作迁移源。",
+        "en": "**Corrupt storage can never break the studio.** Any read failure (no storage, a privacy mode that throws, quota) falls back to defaults and **never throws**; a single wrong-typed field is repaired **in place** rather than discarding the other four good settings; an unknown `version` falls back wholesale, because guessing at an unrecognised shape is worse than resetting. The key is `groove_layout_prefs_v1` with the version also inside the payload, so a future shape change must add v2 and keep v1 as a migration source."
       },
       {
-        "zh": "**和弦按曲风选声部形态（用户反馈）**：此前一律是自然音阶 1-3-5，对大多数曲风都不对。现在有 9 种形态：**power**（根音+纯五+八度，**无三度**——摇滚/金属的失真下三度会糊成一团）、**shell**/**extended**（爵士只留 3 度与 7 度、再叠 9 度）、**quartal**（叠四度，modal/free jazz）、**seventh**（布鲁斯/灵魂/迪斯科/boom-bap）、**sus**/**open**（环境与 shoegaze 的无三度音墙）、**add9**（city pop / j-pop / trance）。新增 `src/data/genreVoicing.ts`：6 个分类默认 + 约 80 条逐曲风 override。",
-        "en": "**Chords are now voiced for the genre (user feedback).** A generic diatonic 1-3-5 was wrong for most of the library. There are now nine voices: **power** (root + fifth + octave, **no third** — under distortion the third is what turns a chord to mush), **shell**/**extended** (jazz keeps the 3rd and 7th, adding the 9th), **quartal** (stacked fourths for modal/free jazz), **seventh** (blues, soul, disco, boom-bap), **sus**/**open** (the thirdless ambient/shoegaze wall), **add9** (city pop, J-pop, trance). New `src/data/genreVoicing.ts`: six category defaults plus ~80 per-genre overrides."
+        "zh": "**演奏状态明确不持久化**：「只听鼓组」「键盘模式」「录音待命」被有意排除在偏好之外，并在代码里写明理由——它们描述的是演奏中的实时状态，静默恢复会在下次打开时重新武装录音或重进只听鼓组。测试从两个方向守护：类型层拒绝，以及绕开类型（模拟从解析出的 JSON 展开）时运行时过滤器仍拦下。",
+        "en": "**Performance state is deliberately not persisted.** Drums-only, keyboard mode and record-armed are excluded on purpose, with the reasoning in the code: they describe live performance state, and silently restoring them would re-arm the recorder or re-enter drums-only on the next visit. Tests guard this from both directions — the type system rejects them, and the runtime filter still catches them when the types are bypassed."
       },
       {
-        "zh": "**但曲风数据本身给不出这个信息**：`common_chords` 在 159 个曲风里**只有 2 个互不相同的字符串**，连 Jazz/Blues 与 Rock/Metal 都完全一样。所以爵士的和声变化只能来自上面那张按曲风键控的表；`common_chords` 的退化已登记为后续数据项（与 instrumentation 在 N-12 之前的状态同类）。",
-        "en": "**The genre data itself cannot supply this.** `common_chords` holds only **two distinct strings across all 159 genres**, identical even for Jazz/Blues and Rock/Metal. Jazz harmony therefore has to come from the genre-keyed table above; the degeneracy of `common_chords` is registered as a follow-up data item (the same state `instrumentation` was in before N-12)."
-      },
-      {
-        "zh": "**实时与导出必须给出同一组音**：声部形态在实时引擎与离线导出器各自解析（一个实时、一个离线），所以除了单元测试，另加**端到端断言**——直接检查渲染出来的音：`death-metal` → 根音+五度+八度、`bebop` → C-Eb-Bb-D、`ambient` 无三度，且两个引擎对 5 个曲风给出完全相同的音。",
-        "en": "**Playback and export must produce the same notes.** The two engines resolve the voicing independently (one realtime, one offline), so beyond unit tests there are **end-to-end assertions** on the rendered pitches: `death-metal` gives root+fifth+octave, `bebop` gives C-Eb-Bb-D, `ambient` has no third, and both engines agree exactly on five genres."
+        "zh": "**验证强度如实说明**：本版交付了模块级往返测试（走真实 `localStorage`）与源码级接线守护（断言 5 个开关全部落盘、会话态不落盘），共 35 条。**浏览器级「刷新后原样恢复」的端到端断言按计划归属后续里程碑的 7 端 E2E 矩阵**，因此这里不把「单元测试通过」表述为「浏览器已验收」。",
+        "en": "**Verification strength, stated honestly.** This release ships module-level round-trip tests through the real `localStorage` plus a source-level wiring guard asserting all five toggles are persisted and the session-only flags are not — 35 cases. The **browser-level \"still collapsed after a refresh\" end-to-end assertion belongs to a later milestone's seven-target E2E matrix**, so unit tests passing is not presented here as browser acceptance."
       }
     ]
   }
