@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { GENRES_MAP } from "../data/genres";
+import { GENRE_MIX_RESOLVED } from "../data/genreMix";
 import { useSequencerStore } from "../features/sequencer/useSequencerStore";
 import { ConsolePanel } from "../components/console/ConsolePanel";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
@@ -103,11 +104,13 @@ describe("ConsolePanel · injected engine + store (feature #2)", () => {
     expect(AudioEngineCtor).not.toHaveBeenCalled();
     expect(screen.getByTestId("hardware-console")).toBeTruthy();
 
+    // The console shows the *arranged* per-genre mix, not the raw value in the genre
+    // file: `patternFromGenre` seeds the store from `GENRE_MIX_RESOLVED`. Assert against
+    // that table rather than a hard-coded number, so retuning the mix cannot break this
+    // test while a real regression in the seeding path still does.
     const fader = screen.getByTestId("console-fader-0") as HTMLInputElement;
-    expect(Number(fader.value)).toBeCloseTo(
-      genre.sequencer_pattern.tracks[0].volume ?? 0.8,
-      2
-    );
+    const expected = GENRE_MIX_RESOLVED[genre.id]?.kick.volume ?? genre.sequencer_pattern.tracks[0].volume ?? 0.8;
+    expect(Number(fader.value)).toBeCloseTo(expected, 2);
   });
 
   it("subscribes to the injected store: an outside commit reaches the fader", async () => {

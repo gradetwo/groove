@@ -1,4 +1,5 @@
 import React from "react";
+import { GENRE_MIX_RESOLVED } from "../data/genreMix";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { HardwareConsoleView } from "../views/HardwareConsoleView";
@@ -103,7 +104,10 @@ describe("HardwareConsoleView (N-01 / P8-02)", () => {
     const fader = (await screen.findByTestId("console-fader-0", undefined, {
       timeout: ASYNC_TIMEOUT,
     })) as HTMLInputElement;
-    expect(Number(fader.value)).toBeCloseTo(genre.sequencer_pattern.tracks[0].volume ?? 0.8, 2);
+    // The arranged per-genre mix is the genre's default now, so assert against the mix
+    // table instead of the raw value in the genre file (which is the pre-mix placeholder).
+    const expectedKick = GENRE_MIX_RESOLVED[genre.id]?.kick.volume ?? genre.sequencer_pattern.tracks[0].volume ?? 0.8;
+    expect(Number(fader.value)).toBeCloseTo(expectedKick, 2);
 
     fireEvent.change(fader, { target: { value: "0.25" } });
 
