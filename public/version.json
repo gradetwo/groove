@@ -1,35 +1,39 @@
 {
-  "version": "1.16.17",
+  "version": "1.16.18",
   "releaseDate": "2026-09-15",
-  "changelogCount": 59,
+  "changelogCount": 60,
   "latest": {
-    "version": "1.16.17",
+    "version": "1.16.18",
     "date": "2026-09-15",
     "category": "feature",
     "title": {
-      "zh": "v1.16.17 工作台内一键浮出调音台：同一套引擎、同一份 pattern，而不是第二套",
-      "en": "v1.16.17 One-click floating mixing console inside the studio — the same engine and the same pattern, not a second copy"
+      "zh": "v1.16.18 159 个曲风改用本命音色与真实配器清单：爵士用萨克斯小号、拉丁用铜管长笛、电子保留模拟合成",
+      "en": "v1.16.18 All 159 genres re-voiced with their own idioms and real instrumentation lists: horns for jazz, brass and flute for Latin, analog synths kept for electronic"
     },
     "highlights": [
       {
-        "zh": "工作台内浮出调音台（用户需求）：律动工作台工具栏新增「调音台」按钮（快捷键 C），点击即在当前工程上浮出完整调音台抽屉，8 条通道条、母带推子、立体声峰值表、SEND A/B、M/S/Ø 与走带一应俱全；关闭后回到原来的编辑现场，pattern、撤销栈、FX 一个不丢",
-        "en": "Floating console inside the studio: the studio toolbar gains a Mixing Console button (shortcut C) that floats the full desk over the current project — eight channel strips, master fader, stereo peak meters, SEND A/B, M/S/Ø and transport. Closing it returns you to the exact editing state: pattern, undo stack and FX all intact"
+        "zh": "曲风音色策展（核心）：上一版让引擎开始按曲风数据里声明的乐器发声，但数据本身并不「曲风惯用」——爵士家族的 lead 是锯齿合成主音、全库 159 个曲风的 FX 都是同一条合成 riser。这一版把 159 个曲风逐一改成本命音色：主音从 5 种扩到 27 种（锯齿从 92 个曲风降到 28 个），FX 从 1 种扩到 9 种，低音 9→14 种、和弦 6→11 种",
+        "en": "Genre timbre curation (core): the previous release made the engine honour the instrument each genre declares, but the data itself was not idiomatic — the jazz family's lead was a saw synth and every one of the 159 genres used the same synth riser for FX. This release re-voices all 159 genres: leads go from 5 kinds to 27 (saw leads drop from 92 genres to 28), FX from 1 to 9, bass 9 to 14, chords 6 to 11"
       },
       {
-        "zh": "关键实现：把调音台拆成「纯展示的面板」与「持有引擎和状态的路由」。面板不再自己 new 引擎、不再自己建音序状态，而是由宿主注入——浮层复用工作台正在用的那一个引擎与那一份 pattern。浏览器实测（启动前包装 AudioContext 构造计数）：打开浮层前后 AudioContext 构造数恒为 1，浮层里推的推子改的就是工作台里的那条轨道",
-        "en": "The crux: the desk is split into a presentational panel and the route that owns the engine and state. The panel no longer constructs an engine or a store of its own — the host injects the studio's live engine and pattern. Verified in a real browser (AudioContext constructor counted from before app boot): the construction count stays at 1 whether the drawer is open or closed, and a fader moved in the drawer edits the very track the studio is playing"
+        "zh": "具体到你会在意的听感：bebop、hard-bop、cool-jazz、modal-jazz、free-jazz、traditional-jazz 现在的主音是萨克斯、小号与弱音小号，芝加哥蓝调是口琴，拉丁与世界音乐改用铜管组、长笛与手风琴，摇滚金属保持双吉他（本来就对，没有乱动）。电子分支中真有模拟合成传统的那 28 个曲风保留锯齿主音，理由逐个写在 TIMBRE_NOTES.md 里",
+        "en": "Concretely: bebop, hard-bop, cool-jazz, modal-jazz, free-jazz and traditional-jazz now lead with saxophone, trumpet and muted trumpet; Chicago blues with harmonica; Latin and world genres move to brass section, flute and accordion; rock and metal keep their twin guitars (already correct, left alone). The 28 electronic genres with a genuine analog-synth tradition keep their saw leads, with the reason recorded genre by genre in TIMBRE_NOTES.md"
       },
       {
-        "zh": "顺带修掉一个真实可用性缺陷：1440px 下 9 条通道横向溢出约 176px，母带推子与播放/停止原本要横向滚动才能碰到。现在母带条吸附在滚动容器右缘（带投影边缘），无论通道滚到哪里，母带与走带始终在原地",
-        "en": "Fixed a real usability defect found while verifying: at 1440px the nine strips overflow by ~176px, so the master fader and transport used to require horizontal scrolling. The master strip is now pinned to the right edge of the scroll container (with a soft edge shadow), so master and transport never move no matter how far you scroll the channels"
+        "zh": "「核心配器」终于名副其实：曲风详情页、曲风比对页与时间线悬浮提示里展示的配器清单，此前 159 个曲风是**同一句占位串**（「合成器、鼓机、贝斯、采样器、FX」——bebop 的核心配器被显示成这个）。现在 159 个曲风各有各的清单，写的是真实器材与音色，例如「M1 Organ Bass Stabs、Analog Synth Lead、Sub Bass、TR-909 Hats & Kicks」",
+        "en": "\"Core instrumentation\" finally means something: the instrumentation list shown on the genre detail page, the compare page and the timeline tooltip was a single placeholder string repeated across all 159 genres (\"Synthesizer, Drum Machine, Bass, Sampler, FX\" — that is what bebop's core instrumentation said). All 159 genres now carry their own list of real instruments and sounds, e.g. \"M1 Organ Bass Stabs, Analog Synth Lead, Sub Bass, TR-909 Hats & Kicks\""
       },
       {
-        "zh": "细节对齐：浮层的走带直接复用工作台的播放状态与处理函数（两个播放键不可能各说各话）；浮层打开时启用引擎真实分析器、关闭时释放，而工作台侧边栏的分析仪走母带分析器、不受影响；轨道状态同步补上此前到不了引擎的反相字段；独立 /console 路由退化为 55 行薄包装，行为不变",
-        "en": "Details kept honest: the drawer's transport reuses the studio's own playing state and handler, so the two play buttons cannot disagree; real per-track analysers are enabled while the drawer is open and released on close, while the studio sidebar analyser reads the master analyser and is unaffected; track-state sync now forwards the phase-invert field that previously never reached the engine; the standalone /console route collapses to a 55-line wrapper with unchanged behaviour"
+        "zh": "合成器预设库从 20 件扩到 49 件，新增 30 件带真实合成参数的预设（萨克斯、小号、弱音小号、铜管组、钢琴、风琴、颤音琴、弦乐、拨弦、排箫、西塔琴、手风琴、口琴、马林巴、钟琴、正弦主音、FM 主音、牛铃、咆哮主音，以及黑胶底噪、磁带停转、反向镲、上升噪、下扫、低频下坠、激光等效果音），不是把旧预设改名",
+        "en": "The synthesizer preset library grows from 20 to 49 with 30 presets built from real synthesis parameters (sax, trumpet, muted trumpet, brass section, piano, organ, vibraphone, strings, plucked string, pan flute, sitar, accordion, harmonica, marimba, bells, sine lead, FM lead, cowbell, growl lead, plus vinyl crackle, tape stop, reverse cymbal, noise rise, down sweep, sub drop and laser FX) — new voices, not renamed copies"
       },
       {
-        "zh": "四种关闭路径（Esc、C、关闭按钮、点击遮罩）与关着时完全不渲染（不挡工作台走带与网格）均已覆盖测试；配合反向验证（把面板改回自己 new 引擎、把 commit 改成空转、关掉 Esc/C 分支等），确认对应用例确实转红后再恢复",
-        "en": "All four dismissal paths (Esc, C, close button, backdrop click) are covered by tests, as is rendering nothing while closed so the studio transport and grid stay usable. Each new test was reverse-validated: making the panel construct its own engine, no-op the commit, or disable the Esc/C branches turned exactly the intended tests red before being restored"
+        "zh": "新增曲风配器完整性门禁：断言配器清单条目数与互异度、禁止通用占位词、要求每个轨道声明的乐器都被配器清单点名、并要求 FX 与主音不得再次单值化——八条断言逐条反向验证过（故意把数据改回同质化，确认门禁转红）",
+        "en": "A new instrumentation integrity gate asserts list length and distinctness, bans generic placeholder words, requires every declared track instrument to be named in that genre's list, and refuses a single-valued FX or lead again — all eight assertions were reverse-validated by deliberately homogenising the data and confirming they go red"
+      },
+      {
+        "zh": "修复真实缺陷：从工作台分享出去的链接会丢掉声相、混响/延迟送出、门限、连击、概率、轨道长度与摇摆——分享编解码器一直支持这些字段，工程中心的入口也映射齐全，只有工具栏的分享按钮是内联拼装、漏了 8 个字段。现在两个入口共用同一个映射实现，并补了三条端到端测试直接对生成的 URL 断言",
+        "en": "Fixed a real defect: links shared from the studio arrived without pan, reverb/delay sends, gate, ratchet, probability, track length or swing — the share codec always supported them and the project hub mapped them all, but the studio toolbar's share button built the payload inline and dropped eight fields. Both entry points now share one mapper, with three end-to-end tests asserting directly on the generated URL"
       }
     ]
   }

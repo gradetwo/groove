@@ -480,7 +480,7 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 
 ---
 
-## 9.5 实施进度（滚动更新，截至 v1.16.17）
+## 9.5 实施进度（滚动更新，截至 v1.16.18）
 
 > 图例：✅ 已交付并部署 ｜ ◐ 部分交付 ｜ ⏳ 进行中 ｜ ❌ 未完成 ｜ ⊘ 按需求排除（无障碍与 WebRTC）
 
@@ -562,7 +562,8 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 | N-10（用户需求） | ✅ | 1.16.16 | **声谱仪仪器级信号发生器**：`MasterAnalyzerSuite` 新增可选 `signalGenerator` 控件（电源开关 + 内置信号下拉框），与下方原有参考信号区块共用 `AnalyzerView` 里同一个 `generatorRef` 与状态源；旧区块 JSX/文案/播放停止**逐字节未改**，工作台侧边栏不传该 prop 渲染与之前完全一致。6 条交互测试 + 390px 实测无横向溢出。 |
 | P-01（规划） | ✅ | — | **工作台重构规划文档** `STUDIO_REFACTOR_PLAN_v1.17.0.md`（616 行）：四档视口实测量测（1440×900 工具栏 173px / 手机 395px 占视口 47% / 常显控件 33 个 / 首屏仅剩 2–5 条轨）、5 个冲刺 29 项任务、v1.17.1–v1.17.13 里程碑。主张**推广已有的 `showAdvancedControls` 渐进披露范式**，而非重写；ID 命名空间 `D-/C-/L-/X-/G-` 与本文 `F-/A-/E-/U-/N-` 不重叠。 |
 | N-11（用户需求） | ✅ | 1.16.17 | **工作台内浮出调音台**：抽出纯展示 `ConsolePanel`（引擎与音序状态全部注入），`/console` 路由退化为持有引擎+状态的 55 行薄包装，工作台把自己的 `engineRef`+store 交给浮层复用。**浏览器实测 `AudioContext` 构造数恒为 1**（打开浮层前后），浮层内推子改的就是工作台同一条轨道；四种关闭路径 + 关着时渲染 `null` 均有测试与反向验证。顺带修掉母带条在 1440px 下需横向滚动才能碰到的缺陷（改为滚动容器内 `sticky right-0`）。见 `CONSOLE_FLOAT_NOTES.md`。 |
-| N-12（N-09 后续，本轮审查发现） | ⏳ | — | **引擎已按数据发声，但数据本身并不「曲风惯用」**——交付 N-09 后逐曲风复核，发现三类系统性缺陷（均为用户需求 3「确保 LEAD/FX 用的是这个曲风常用的音色」的未竟部分）：① `instrumentation`（在曲风详情页作为「核心配器」、对比页作为「典型配器与音色设计」、时间线悬浮提示中展示）**159/159 全部是同一句占位串** `Synthesizer, Drum Machine, Bass, Sampler, FX`——即 bebop 的核心配器被显示为「合成器、鼓机、贝斯、采样器、FX」；② `fx` 轨道 **159/159 都是 `noise_sweep`**，整库共用一条合成 riser；③ `lead` 有 **92/159 是 `saw_lead`**，其中 `bebop`/`hard-bop`/`cool-jazz`/`modal-jazz`/`free-jazz`/`traditional-jazz`/`jazz-fusion` 的惯用主音是萨克斯/小号/钢琴/风琴/颤音琴，锯齿合成主音不成立。已派发并行工作流 `feat/genre-instrument-curation`：按曲风逐个校订 `lead`/`fx`（必要时含 `chords`/`bass`）与 `instrumentation`，并为新需要的乐器补齐真实合成器预设（萨克斯/小号/钢琴/风琴/颤音琴/弦乐/西塔琴等）与别名表；同时新增数据门禁禁止占位串与整库同一 FX 回归。**数据侧修完前，N-09 只能算「引擎侧完成」。** |
+| N-12（N-09 后续，本轮审查发现） | ✅ | 1.16.18 | **数据侧已补齐**：159 曲风逐一改用本命音色，`instrumentation` 从「159 次重复的同一句占位串」改为**159 种互不相同**的真实配器清单。实测对比：`lead` 5 种→**27 种**（`saw_lead` **92→28**）、`fx` 1 种→**9 种**（`noise_sweep` **159→54**，新增黑胶底噪/激光/上升噪/铜管重击/磁带停转/低频下坠/反向镲/下扫）、`bass` 9→14 种、`chords` 6→11 种；合成器预设库 **20→49 件**（新增 30 件真实参数预设，非改名）。我点名的那处已修：`bebop`/`hard-bop`/`cool-jazz`/`modal-jazz`/`free-jazz`/`traditional-jazz` 的主音从锯齿合成音改为 sax ×4 / trumpet ×2 / muted_trumpet ×1 / harmonica ×1 / brass_section ×1；拉丁世界改用铜管组/长笛/手风琴；摇滚金属保持 `guitar_lead` 16/17（本就正确，未动）。新增 `src/test/genreInstrumentation.test.ts` 八条数据门禁（配器条目数、互异度、占位词、轨道乐器须被配器清单点名、fx 与 lead 不得单值化）防止再次同质化，逐条反向验证过。仅改 `instrument` 与 `instrumentation`，`steps/velocity/pitch/gate/ratchet/probability/BPM` 逐字段核对未动。 |
+| B-03（本轮审查发现） | ✅ | 1.16.18 | **工具栏分享链接丢掉 8 个逐轨字段**：分享编解码器一直支持 `pan`/`sendA`/`sendB`/`gate`/`ratchet`/`probability`/`trackLength`/`swing`，工程中心（`ProjectHubModal`）也逐字段映射了，但工具栏的分享按钮（`useExportActions.handleShare`）是内联拼装的、只传了 `volume` —— 于是**从工作台分享出去的链接声相被抹平、送出全部归零、门限/连击/概率/轨道长度/摇摆全部退回默认值**，接收方听到的是居中、干声且丢失编辑的版本（恰好抹掉 N-13 刚做的按曲风编排的声相与送出）。修法是收敛成 `SequencerUrlShare.toSharedTrack` 单一实现、两处入口共用（而非补那 8 个字段了事）。新增 `src/test/shareTrackFidelity.test.ts` 三条（映射键集合须与 payload 声明一致 / 满字段 encode→decode 全等 / 直接对最终 URL 断言 pan、sendA、sendB、swing 仍在），反向验证：从 `toSharedTrack` 删掉 `pan` → 三条全红，恢复后全绿。 |
 | N-13（用户需求 6，本轮审查发现） | ⏳ | — | **「每个曲风默认的各轨道音量/声相/混音按曲风特色编排」目前不成立**：159 个曲风**全部声明了** `volume`/`pan`，但每个轨道的取值在整库范围内只有 1 个不同值 —— kick 0.90/0.00、snare 0.85/0.00、hihat 0.70/−0.20、percussion 0.65/+0.25、bass 0.90/0.00、chords 0.75/0.00、lead 0.80/+0.10、fx 0.60/0.00，即 159 曲风共用同一套「通用混音预设」，与曲风无关；`sendA`/`sendB`（混响/延迟送出）**1272 条轨道里 0 条声明**，两条送出总线实际是死的。同时全库没有任何响度配平：切换曲风（以及曲风比对 A/B 试听）时总响度只随 pattern 密度/力度/音色/鼓机漂移。已派发并行工作流 `feat/genre-mix-loudness`：新建 `src/data/genreMix.ts` 作为每曲风混音的单一来源（6 个 category profile + 逐曲风 override，含 sendA/sendB），并以**实测驱动**的方式做响度配平（Playwright 在浏览器内离线渲染全部曲风默认 pattern，算 BS.1770 门控积分响度，取全库中位数为目标，逐曲风生成 `loudnessTrimDb` 并二次实测验证残差），trim 同样作用于实时播放、曲风比对与离线导出。 |
 | N-14（用户需求 6 的邻接项，待决策） | ⏳ | — | **母带 FX 机架也没有曲风默认值**：`DEFAULT_FX_STATE`（`src/audio/EffectsRack.ts:28-43`）是全库唯一的一套，且四个效果（滤波/饱和/合唱/降比特）**全部默认关闭**，159 个曲风没有任何一个声明过 FX 机架（`src/data/genres/*.ts` 中 0 处）。因此「混音按曲风特色」在母带效果这一层同样不存在——但它与 N-13 性质不同：这些效果默认是关的，不存在「默认音色是错的」，只是缺少逐曲风的创作性默认值（例如 dub 应有长延迟、ambient 应有长混响、metal 应有饱和）。**这是一项功能新增而非缺陷修复，需要产品决策**，故本轮不擅自实施：N-13 的混音表已覆盖逐轨音量/声相/送出（混响与延迟送出是「混音」层面的曲风特色），母带 FX 预设留待确认后再做。 |
 | N-15（本轮审查发现，既有缺陷，待决策） | ⏳ | — | **母带「限幅器」不是砖墙限幅器，多曲风渲染出超 0 dBFS 的采样峰值**：`MASTER_LIMITER_SETTINGS`（`src/audio/voiceRegistry.ts:82-88`）是 `DynamicsCompressorNode`，threshold −1 dB / ratio 20:1 / **attack 3 ms** —— 3 ms 起攻意味着底鼓、军鼓的瞬态在增益衰减介入前就已经通过，因此无法保证天花板。在响度工作流的离线报告里逐曲风实测（`scripts/loudness.baseline.json`，159 曲风）：原样 **98/159** 峰值超 0 dBFS（最差 vocal-trance +1.35 dB）、换上按曲风编排的混音后 104/159（最差 +1.59）、套用响度微调后 **92/159**（最差 riddim +1.62）。`WavExporter` 在写 16-bit PCM 时做 `Math.max(-1, Math.min(1, s))` 硬削波（`WavExporter.ts:91,100`），所以导出的母带里这些瞬态是被削平的——不是本轮的回归（微调反而把超限曲风从 104 降到 92），而是既有问题。真修需要前瞻式砖墙限幅（lookahead / AudioWorklet）或给母带加真实天花板，属会改变所有曲风听感的功能改动，**需产品决策**，本轮不动。 |
@@ -577,7 +578,7 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 | A-07 剩余 | **已补齐** | `100vh → dvh` 已落地（`GalaxyView.tsx`，`h-[calc(100dvh-64px)]`）。 |
 | ~~U-11 剩余~~ | **已完成（1.16.12）** | 硬编码文案型内联三元已降到 97 处（目标 <100）；剩余 72 处为数据字段选择。**度量教训**：行级 `grep -c 'isZh ?'` 会漏掉跨行三元与一行两处，比 AST 口径少 20–30%，首轮审计的 556/259 都是行级数字。 |
 
-### 关键指标（实测，截至 v1.16.17）
+### 关键指标（实测，截至 v1.16.18）
 
 | 指标 | 审查基线 | 现在 |
 |---|---|---|
@@ -586,7 +587,7 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 | 其中 CSS | 113.6 KB | 23.2 KB |
 | 移动端 LCP（4G + 4×CPU） | 2700 ms | 3028 ms（单次测量噪声较大，多次落在 1.9–3.0s） |
 | 移动端 CLS | 0.191 | **0.000** |
-| 测试用例 | 324 | 535 |
+| 测试用例 | 324 | 595 |
 | 红线 | 14 | 20 |
 | CI 覆盖面 | 从未运行 | main + next，含 e2e/覆盖率/文档自检 |
 
