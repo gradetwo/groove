@@ -5376,7 +5376,7 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
       "Electric Guitar",
       "DX7 Electric Piano",
       "Electric Bass",
-      "Drum Machine"
+      "Drum Machine & Shakers"
     ],
     "sound_design": {
       "en": "Soprano saxophone, polished electric guitars with chorus, Yamaha DX7 electric pianos, soft synth pads.",
