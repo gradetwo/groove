@@ -1,39 +1,35 @@
 {
-  "version": "1.16.16",
+  "version": "1.16.17",
   "releaseDate": "2026-09-15",
-  "changelogCount": 58,
+  "changelogCount": 59,
   "latest": {
-    "version": "1.16.16",
+    "version": "1.16.17",
     "date": "2026-09-15",
     "category": "feature",
     "title": {
-      "zh": "v1.16.16 曲风音色真正落地：159 种曲风的 LEAD/FX/低音/和弦按各自乐器发声，并修复底鼓首击无声与导出包版本戳",
-      "en": "v1.16.16 Real per-genre timbres: all 159 genres now voice lead/FX/bass/chords with their declared instruments, plus kick first-trigger silence and stale export version-stamp fixes"
+      "zh": "v1.16.17 工作台内一键浮出调音台：同一套引擎、同一份 pattern，而不是第二套",
+      "en": "v1.16.17 One-click floating mixing console inside the studio — the same engine and the same pattern, not a second copy"
     },
     "highlights": [
       {
-        "zh": "曲风音色映射（核心）：曲风数据一直为 8 条轨道声明了 instrument（如 flute_lead、rhodes_ep、808_bass、sub_bass），但引擎从前忽略它，无论什么曲风都按轨道角色套同一个固定预设——长笛主导的曲风会响成锯齿合成主音。现在新增音色解析模块，按「精确预设名 → 别名表 → 轨道角色默认 → 全局默认」四级回退链取用，并把每件乐器补齐为独立合成器预设，实时播放与离线 WAV 导出解析同一个预设，导出不再与试听两套音色",
-        "en": "Per-genre timbres (core): the genre data has always declared an instrument per track (flute_lead, rhodes_ep, 808_bass, sub_bass, …) but the engine ignored it and played the same fixed per-role preset for every genre — a flute-led genre sounded like a saw lead. A new resolver maps instrument → synth preset through a four-step fallback chain (exact preset key → alias table → track-role default → global default), every declared instrument now has its own synthesizer preset, and the offline WAV renderer resolves the same preset so exports match what you auditioned"
+        "zh": "工作台内浮出调音台（用户需求）：律动工作台工具栏新增「调音台」按钮（快捷键 C），点击即在当前工程上浮出完整调音台抽屉，8 条通道条、母带推子、立体声峰值表、SEND A/B、M/S/Ø 与走带一应俱全；关闭后回到原来的编辑现场，pattern、撤销栈、FX 一个不丢",
+        "en": "Floating console inside the studio: the studio toolbar gains a Mixing Console button (shortcut C) that floats the full desk over the current project — eight channel strips, master fader, stereo peak meters, SEND A/B, M/S/Ø and transport. Closing it returns you to the exact editing state: pattern, undo stack and FX all intact"
       },
       {
-        "zh": "数据零改动、可验证：音色映射由测试直接扫描 src/data/genres 下 159×8 个 (轨道, 乐器) 组合生成，与类型化导出交叉比对，断言没有任何一个组合落到全局默认值，且各乐器音色彼此可区分——映射表不会随数据漂移而静默失效",
-        "en": "Zero data edits, fully verifiable: the mapping is enumerated by tests that scan all 159×8 (track, instrument) pairs straight out of src/data/genres, cross-check them against the typed exports, and assert that no pair falls through to the global default and that timbres are audibly distinct — so the table can never silently go stale as data drifts"
+        "zh": "关键实现：把调音台拆成「纯展示的面板」与「持有引擎和状态的路由」。面板不再自己 new 引擎、不再自己建音序状态，而是由宿主注入——浮层复用工作台正在用的那一个引擎与那一份 pattern。浏览器实测（启动前包装 AudioContext 构造计数）：打开浮层前后 AudioContext 构造数恒为 1，浮层里推的推子改的就是工作台里的那条轨道",
+        "en": "The crux: the desk is split into a presentational panel and the route that owns the engine and state. The panel no longer constructs an engine or a store of its own — the host injects the studio's live engine and pattern. Verified in a real browser (AudioContext constructor counted from before app boot): the construction count stays at 1 whether the drawer is open or closed, and a fader moved in the drawer edits the very track the studio is playing"
       },
       {
-        "zh": "修复真实缺陷：底鼓设计页的「INITIATE PULSE」首次点击无声。根因是音频上下文只由同页另一个按钮创建，先点播放就等于在静音上下文里调度。改为引擎层按需惰性创建上下文，触发时自愈并重挂分析器",
-        "en": "Fixed a real defect: the kick designer's INITIATE PULSE was silent on its first click. The audio context was only ever created by the page's other button, so pressing play first scheduled into a silent context. The engine now lazily creates its context on demand and self-heals on trigger, re-attaching the analyser"
+        "zh": "顺带修掉一个真实可用性缺陷：1440px 下 9 条通道横向溢出约 176px，母带推子与播放/停止原本要横向滚动才能碰到。现在母带条吸附在滚动容器右缘（带投影边缘），无论通道滚到哪里，母带与走带始终在原地",
+        "en": "Fixed a real usability defect found while verifying: at 1440px the nine strips overflow by ~176px, so the master fader and transport used to require horizontal scrolling. The master strip is now pinned to the right edge of the scroll container (with a soft edge shadow), so master and transport never move no matter how far you scroll the channels"
       },
       {
-        "zh": "修复真实缺陷：导出的 .groove 工程包版本戳一直是写死的「1.15.2」，落后两个小版本。同时补上红线 R1b——src 下只允许 src/version.ts 出现版本号字面量；红线总数 19 → 20",
-        "en": "Fixed a real defect: exported .groove project packages always carried a hardcoded \"1.15.2\" version stamp, two minor versions stale. Added red line R1b: no version literal may appear under src/ except in src/version.ts. Red lines 19 → 20"
+        "zh": "细节对齐：浮层的走带直接复用工作台的播放状态与处理函数（两个播放键不可能各说各话）；浮层打开时启用引擎真实分析器、关闭时释放，而工作台侧边栏的分析仪走母带分析器、不受影响；轨道状态同步补上此前到不了引擎的反相字段；独立 /console 路由退化为 55 行薄包装，行为不变",
+        "en": "Details kept honest: the drawer's transport reuses the studio's own playing state and handler, so the two play buttons cannot disagree; real per-track analysers are enabled while the drawer is open and released on close, while the studio sidebar analyser reads the master analyser and is unaffected; track-state sync now forwards the phase-invert field that previously never reached the engine; the standalone /console route collapses to a 55-line wrapper with unchanged behaviour"
       },
       {
-        "zh": "全景声谱仪：内置声学参考测试信号发生器搬到分析仪仪器本体上——仪器头部新增电源按钮，启用后旁边的下拉框直接选择 6 种内置信号，下方原有的参考信号区块完整保留，两处共用同一个发生器实例",
-        "en": "Master analyzer: the built-in acoustic reference signal generator moved onto the instrument itself — a power button in the instrument header with an adjacent dropdown for the six built-in signals, while the original reference-signal section below is kept fully intact; both share one generator instance"
-      },
-      {
-        "zh": "新增工作台（Studio）操作/交互/UI 与跨模块联动的重构规划文档：以四档视口实测数据为依据（1440×900 工具栏 173px、手机 395px 占视口 47%、常显控件 33 个、首屏只剩 2–5 条轨），给出 5 个冲刺 29 项任务与 v1.17.1–v1.17.13 里程碑，主张推广已有的渐进披露范式而非重写",
-        "en": "Added a Studio refactor plan covering operations, interaction, UI and cross-module linkage, grounded in measurements across four viewports (173px toolbar at 1440×900, 395px = 47% of a phone viewport, 33 always-visible controls, only 2–5 of 8 tracks left on the first screen): 5 sprints, 29 tasks, milestones v1.17.1–v1.17.13, extending the existing progressive-disclosure pattern instead of rewriting"
+        "zh": "四种关闭路径（Esc、C、关闭按钮、点击遮罩）与关着时完全不渲染（不挡工作台走带与网格）均已覆盖测试；配合反向验证（把面板改回自己 new 引擎、把 commit 改成空转、关掉 Esc/C 分支等），确认对应用例确实转红后再恢复",
+        "en": "All four dismissal paths (Esc, C, close button, backdrop click) are covered by tests, as is rendering nothing while closed so the studio transport and grid stay usable. Each new test was reverse-validated: making the panel construct its own engine, no-op the commit, or disable the Esc/C branches turned exactly the intended tests red before being restored"
       }
     ]
   }
