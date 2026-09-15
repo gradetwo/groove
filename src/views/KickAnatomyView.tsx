@@ -25,18 +25,12 @@ export const KickAnatomyView: React.FC = () => {
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(() => engineRef.current.getAnalyser());
   const [ecoBusOnline, setEcoBusOnline] = useState<boolean>(() => ecosystemBus.getIsOnline());
 
-  // Initialize Web Audio context on user interaction if not ready
+  // Initialize Web Audio context on user interaction if not ready. Delegates to the
+  // engine so every entry point (this view, the gravitational sequencer transport,
+  // hotkeys and any future caller) goes through one implementation.
   const ensureAudioContext = useCallback(() => {
-    let ctx = engineRef.current.getAudioContext();
-    if (!ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      ctx = new AudioCtx();
-      engineRef.current.init(ctx);
-      setAnalyser(engineRef.current.getAnalyser());
-    }
-    if (ctx && ctx.state === "suspended") {
-      ctx.resume().catch(() => {});
-    }
+    engineRef.current.ensureContext();
+    setAnalyser(engineRef.current.getAnalyser());
   }, []);
 
   // Subscribe to transient events for kinetic shock
@@ -192,6 +186,7 @@ export const KickAnatomyView: React.FC = () => {
             engine={engineRef.current}
             bpm={bpm}
             onBpmChange={setBpm}
+            onEnsureAudio={ensureAudioContext}
           />
         </div>
 

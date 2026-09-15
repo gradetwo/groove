@@ -289,3 +289,37 @@ describe("per-channel analysers · real console meters", () => {
     engine.destroy();
   });
 });
+
+describe("kick design · transport self-initialises audio", () => {
+  let restore: (() => void) | null = null;
+  beforeEach(() => {
+    restore = installFakeAudioContext();
+  });
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  it("creates its own AudioContext on the first trigger (INITIATE PULSE regression)", async () => {
+    const { AnatomyKickEngine } = await import("../audio/AnatomyKickEngine");
+    const engine = new AnatomyKickEngine();
+    expect(engine.getAudioContext()).toBeNull();
+
+    // No init() call first — exactly the state the gravitational sequencer started in.
+    expect(() => engine.trigger(0, 1)).not.toThrow();
+
+    const ctx = engine.getAudioContext();
+    expect(ctx, "trigger() should have created an AudioContext").not.toBeNull();
+    expect(ctx!.state).not.toBe("closed");
+  });
+
+  it("ensureContext() is idempotent and resumes a suspended context", async () => {
+    const { AnatomyKickEngine } = await import("../audio/AnatomyKickEngine");
+    const engine = new AnatomyKickEngine();
+
+    const first = engine.ensureContext();
+    const second = engine.ensureContext();
+    expect(first).toBe(second);
+    expect(engine.getAudioContext()).toBe(first);
+  });
+});

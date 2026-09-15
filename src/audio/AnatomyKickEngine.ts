@@ -302,6 +302,33 @@ export class AnatomyKickEngine {
     }
   }
 
+  /**
+   * Creates and initialises an AudioContext on demand.
+   *
+   * The kick view used to create the context only when the "dispatch transient" button
+   * was pressed, so any other caller — notably the gravitational sequencer's INITIATE
+   * PULSE transport — silently produced no sound because `trigger()` bails out when
+   * `ctx` is null. Self-initialising here means no call site can forget.
+   *
+   * Must be reached from a user gesture: browsers only allow context creation/resume
+   * from user activation, which every caller in this app is.
+   */
+  public ensureContext(): AudioContext | null {
+    if (!this.ctx) {
+      if (typeof window === "undefined") return null;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return null;
+      this.ctx = new AudioCtx();
+      this.initNodes();
+    }
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume().catch(() => {});
+    }
+    return this.ctx;
+  }
+
   private initNodes(): void {
     if (!this.ctx) return;
 
@@ -389,6 +416,10 @@ export class AnatomyKickEngine {
    * Triggers the 3-Layer Anatomical Kick Drum Synthesis
    */
   public trigger(time?: number, velocity = 1.0): void {
+    // Lazy init: a transport that starts before any knob was touched must still sound.
+    if (!this.ctx || !this.dcBlocker) {
+      this.ensureContext();
+    }
     if (!this.ctx || !this.dcBlocker) return;
 
     if (this.ctx.state === "suspended") {

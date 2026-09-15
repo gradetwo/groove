@@ -11,6 +11,13 @@ interface StepConfig {
 
 interface GravitationalSequencerProps {
   engine: AnatomyKickEngine;
+  /**
+   * Called before the transport starts so the caller can create/resume the
+   * AudioContext inside the user gesture. Without it, INITIATE PULSE ran the step
+   * scheduler against a null context and produced no sound until some other control
+   * had initialised audio.
+   */
+  onEnsureAudio?: () => void;
   bpm: number;
   onBpmChange: (bpm: number) => void;
   className?: string;
@@ -18,6 +25,7 @@ interface GravitationalSequencerProps {
 
 export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
   engine,
+  onEnsureAudio,
   bpm,
   onBpmChange,
   className = "",
@@ -175,6 +183,11 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
 
   const handleTogglePlay = () => {
     if (!isPlaying) {
+      // Starting the transport must also make sure audio exists *now*, inside the
+      // click gesture: previously the engine had no AudioContext until the "dispatch
+      // transient" button was pressed, so INITIATE PULSE ran silently.
+      onEnsureAudio?.();
+      engine.ensureContext();
       currentStepRef.current = 15;
       setIsPlaying(true);
       ecosystemBus.publishClockStart(bpm);
