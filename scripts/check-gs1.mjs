@@ -53,6 +53,17 @@ const EXPECTED = {
 /** Files in vendor/gs1 that are ours, not upstream copies, and so unhashed. */
 const LOCAL_METADATA = new Set(["UPSTREAM.json", "README.md", "THIRD_PARTY_NOTICES.md"]);
 
+/**
+ * The runtime copies served from `public/gs1/` (`sync-gs1.mjs` writes them). They are fetched by
+ * URL at runtime, so nothing in the build graph would notice a drift from the pin — this gate is
+ * the only thing standing between "vendored" and "whatever happens to be in public/".
+ */
+const PUBLIC_COPIES = {
+  "src/audio/worklet-processor.js": "workletProcessor.js",
+  "src/generated/synth_core.wasm": "synth_core.wasm",
+  "src/generated/synth_core_scalar.wasm": "synth_core_scalar.wasm",
+};
+
 /** The filename whose ABI the manifest pins (the SIMD core). */
 const PRIMARY_WASM = "src/generated/synth_core.wasm";
 
@@ -200,6 +211,18 @@ function main() {
     unexpected.length === 0,
     unexpected.length === 0 ? `${Object.keys(listed).length} listed files accounted for` : unexpected.join(", "),
   );
+
+  for (const [from, to] of Object.entries(PUBLIC_COPIES)) {
+    const vendored = path.join(VENDOR_ROOT, from);
+    const published = path.join(REPO_ROOT, "public", "gs1", to);
+    const same =
+      existsSync(vendored) && existsSync(published) && readFileSync(vendored).equals(readFileSync(published));
+    assert(
+      `public/gs1/${to} is byte-identical to the vendored ${from}`,
+      same,
+      same ? `${readFileSync(vendored).length} B` : "missing or drifted — run scripts/sync-gs1.mjs",
+    );
+  }
 
   // -- 2. wasm validates + instantiates ------------------------------------
   console.log("\n  ── 2. wasm validation ──────────────────────────────────────");

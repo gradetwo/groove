@@ -36,9 +36,29 @@
  *   `AudioContext`s; this adapter never creates one, so it cannot add a sixth (plan risk R6).
  */
 import { PARAM_NAMES, type ParamId } from "../../../vendor/gs1/src/audio/params";
-import workletProcessorUrl from "../../../vendor/gs1/src/audio/worklet-processor.js?url";
-import simdWasmUrl from "../../../vendor/gs1/src/generated/synth_core.wasm?url";
-import scalarWasmUrl from "../../../vendor/gs1/src/generated/synth_core_scalar.wasm?url";
+
+/**
+ * Runtime asset URLs.
+ *
+ * The processor and the two cores are served as **static files from `public/gs1/`** rather than
+ * imported with `?url`, for three reasons:
+ *
+ *  1. an `AudioWorklet` module and a `.wasm` binary are fetched by URL at runtime anyway — the
+ *     bundler adds nothing except a hash, and the hashed path then has to be kept alive by a
+ *     module import;
+ *  2. importing them put a `.wasm` in the module graph, which some test runners cannot load
+ *     (`"ESM integration proposal for Wasm" is not supported`), so a *test-selection* heuristic
+ *     could fail on a change that has nothing to do with GS-1;
+ *  3. it matches how this repository already ships its other worklets
+ *     (`public/limiterWorklet.js`, `public/audioClockWorklet.js`).
+ *
+ * The copies are not hand-maintained: `scripts/sync-gs1.mjs` writes them from the vendored pin and
+ * `scripts/check-gs1.mjs` asserts they are **byte-identical** to it, so they cannot drift.
+ */
+const DEFAULT_ASSET_BASE = "/gs1";
+const workletProcessorUrl = `${DEFAULT_ASSET_BASE}/workletProcessor.js`;
+const simdWasmUrl = `${DEFAULT_ASSET_BASE}/synth_core.wasm`;
+const scalarWasmUrl = `${DEFAULT_ASSET_BASE}/synth_core_scalar.wasm`;
 
 /** The processor name registered by the vendored worklet. */
 export const GS1_PROCESSOR_NAME = "gs1-synth-processor";
@@ -177,9 +197,9 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
   const {
     context,
     maxPolyphony = GS1_DEFAULT_POLYPHONY,
-    processorUrl = workletProcessorUrl as unknown as string,
-    simdUrl = simdWasmUrl as unknown as string,
-    scalarUrl = scalarWasmUrl as unknown as string,
+    processorUrl = workletProcessorUrl,
+    simdUrl = simdWasmUrl,
+    scalarUrl = scalarWasmUrl,
     fetchTimeoutMs = 20000,
   } = options;
 

@@ -33,6 +33,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -82,6 +83,21 @@ const VENDORED_FILES = [
  * notices file — which is exactly the compliance gap the file exists to close.
  */
 const KEEP_FILES = ["README.md", "THIRD_PARTY_NOTICES.md"];
+
+/**
+ * The runtime copies served from `public/gs1/`, as `vendored path -> public path`.
+ *
+ * The worklet and the two cores are fetched by URL at runtime, so they ship as static files
+ * rather than through the bundler: an AudioWorklet module and a `.wasm` binary are fetched by URL
+ * regardless, and keeping them out of the JS module graph is also what stops a test runner from
+ * having to load a `.wasm` import. Writing them here keeps the pin as the single source of truth;
+ * `check-gs1.mjs` asserts the copies are byte-identical, so a hand-edit cannot survive a gate.
+ */
+const PUBLIC_COPIES = {
+  "src/audio/worklet-processor.js": "workletProcessor.js",
+  "src/generated/synth_core.wasm": "synth_core.wasm",
+  "src/generated/synth_core_scalar.wasm": "synth_core_scalar.wasm",
+};
 
 const WASM_FILES = VENDORED_FILES.filter((f) => f.endsWith(".wasm"));
 
@@ -392,6 +408,14 @@ function main() {
   console.log(`\n  📌 wrote vendor/gs1/UPSTREAM.json`);
   console.log(`     upstream ${upstreamManifest.upstream.name} v${version} @ ${commit.slice(0, 12)}`);
   console.log(`     ABI ${simd.abi}, ${VENDORED_FILES.length} files pinned`);
+  // Publish the runtime copies (see PUBLIC_COPIES).
+  const publicGs1 = path.join(REPO_ROOT, "public", "gs1");
+  mkdirSync(publicGs1, { recursive: true });
+  for (const [from, to] of Object.entries(PUBLIC_COPIES)) {
+    copyFileSync(path.join(DEST_ROOT, from), path.join(publicGs1, to));
+    console.log(`  📦 published public/gs1/${to}`);
+  }
+
   console.log("\n🎉 GS-1 vendored. Run `node scripts/check-gs1.mjs` to verify the pin.\n");
 }
 
