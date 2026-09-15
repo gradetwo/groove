@@ -1,27 +1,27 @@
 {
-  "version": "2.0.13",
+  "version": "2.0.14",
   "releaseDate": "2026-09-15",
-  "changelogCount": 77,
+  "changelogCount": 78,
   "latest": {
-    "version": "2.0.13",
+    "version": "2.0.14",
     "date": "2026-09-16",
     "category": "audio",
     "title": {
-      "zh": "v2.0.13 阻塞解除：上游 GS-1 v2.1.5 落地按帧寻址的 note 事件（noteAt/noteOffAt），本仓已同步并把守卫翻转为「必须存在定时事件」",
-      "en": "v2.0.13 Unblocked: upstream GS-1 v2.1.5 ships frame-addressed note events (noteAt/noteOffAt); the pin is synced and the guard flips to requiring them"
+      "zh": "v2.0.14 GS-1 接线第一块：按帧寻址的调度核心（含延迟补偿与 8 复音上限），默认关闭、行为零变化",
+      "en": "v2.0.14 GS-1 wiring, part one: the frame-addressed scheduling core (latency compensation and an 8-voice ceiling), off by default, zero behaviour change"
     },
     "highlights": [
       {
-        "zh": "**上游实现了 §5.9 的提案**（GS-1 **v2.1.5 @ e073df5**，**ABI 仍为 8**）：`worklet-processor.js` 现在接受 `noteAt`/`noteOffAt` 并携带**绝对帧号**，内部维护按帧排序、上限 1024 条的队列，并在 `process()` 里**按事件切分渲染块**，因此事件落在它指定的那一帧而不是下一个 128 帧边界。`panic` 清空队列；非法帧号被忽略而不是当成 0；静音期间帧游标仍推进（否则静音结束后所有事件整体迟到）。",
-        "en": "**Upstream implemented the §5.9 proposal** (GS-1 **v2.1.5 @ e073df5**, **ABI still 8**): `worklet-processor.js` now accepts `noteAt`/`noteOffAt` carrying an **absolute frame**, keeps a frame-sorted queue capped at 1024 entries, and **splits the render block at each due event**, so an event lands on the frame it names rather than on the next 128-frame boundary. A panic clears the queue; a malformed frame is ignored rather than treated as zero; the frame cursor advances while…"
+        "zh": "**新增 `src/audio/gs1/gs1Tracks.ts`（P6 Phase 2 的调度核心）**：把音高/时间/时长/力度翻译成**按帧寻址**的 `noteAt`/`noteOffAt`，并**减去 worklet 报告的 `scheduledNoteLatencyFrames`**——这一步就是「在拍上」和「每个音晚 2.7 ms」的全部差别，而且实时与离线必须完全一致，所以它被放进纯函数、由 13 条测试锁定（秒→帧换算、延迟补偿、首块不排到过去、顺序确定、力度夹紧、非法输入返回 null）。另含 **`capPlanPolyphony`**：超过 **8 复音**（E3 实测上限）时**丢最旧的音**——丢尾巴听起来是变薄，丢新音听起来是和弦卡住。",
+        "en": "**New `src/audio/gs1/gs1Tracks.ts` (the P6 Phase 2 scheduling core)**: it turns pitch/time/duration/velocity into **frame-addressed** `noteAt`/`noteOffAt`, **subtracting the worklet-reported `scheduledNoteLatencyFrames`** — that subtraction is the entire difference between \\\"in the pocket\\\" and \\\"every note 2.7 ms late\\\", and live and offline must agree on it exactly, so it lives in a pure function pinned by 13 tests (seconds-to-frames, latency compensation, never scheduling…"
       },
       {
-        "zh": "**实测契约（已写进上游测试）**：声部起点恒为 `atFrame + 128`——一个渲染量子的**常数**延迟，且**与事件落在块内哪个位置无关**（`atFrame` = 0/100/128/200/384/500 全部如此），块内位置被逐样本保留。这个常数由 `ready` 消息的 `scheduledNoteLatencyFrames` **报告给宿主**，宿主提前寻址即可与采样精确的原生声部对齐，不必硬编码。上游新增 7 条测试，其中最关键的一条是**「早发/晚发消息产生逐样本相同的输出」**——这正是导出 parity 能成立的前提。",
-        "en": "**The measured contract, pinned by upstream tests**: the voice starts at exactly `atFrame + 128` — a **constant** one-quantum latency that is **independent of where in the block the event falls** (`atFrame` = 0/100/128/200/384/500 all behave this way) — while the in-block position is preserved sample-exactly. That constant is **reported to the host** in the `ready` message as `scheduledNoteLatencyFrames`, so a host can address events early and stay aligned with sample-accura…"
+        "zh": "**默认关闭（重要）**：打开它会**改变绝大多数曲风的听感**（换合成器、换 patch），而这些 patch 从未做过听感对比，本仓库也无法测量「更好听」。默认开启等于用一次没人验证过的判断改动 159 个曲风，并让音色基线作废。因此开关是**有意的动作**，代价（重测响度 + 音色 + 重配 trim）明确写在模块头与计划 §5.14 里。**本版没有任何一轨的声音发生变化。**",
+        "en": "**Off by default (and that matters).** Enabling it **changes how most genres sound** (different synthesis, different patches), and those patches have never been judged by ear — this repository cannot measure \\\"sounds better\\\". Shipping it enabled would change 159 genres on an unverified judgement and invalidate the measured timbre baseline. The switch is therefore a deliberate act, with its cost (re-measure loudness and timbre, re-fit trims) stated in the module header and p…"
       },
       {
-        "zh": "**本仓侧**：`scripts/sync-gs1.mjs --from ../synth` 单向同步完成（6 个文件重新哈希，22 项契约断言全绿）；`Gs1Host` 增加 `noteOnAt`/`noteOffAt` 与 `scheduledNoteLatencyFrames`；`gs1Scheduling.test.ts` 的守卫**按设计自动翻转**——从「协议必须没有时间字段」变为「协议必须有定时事件对」。**顺带修掉一个真实缺陷**：同步脚本的 `pruneToManagedSet` 会删除不在清单里的文件，于是它**静默删掉了 `vendor/gs1/THIRD_PARTY_NOTICES.md`**——正是用来补上游许可缺口的那份；现在 `KEEP_FILES` 显式列出我们自己的文档。",
-        "en": "**On this side**: the one-directional `sync-gs1.mjs --from ../synth` completed (six files re-hashed, all 22 contract assertions green); `Gs1Host` gained `noteOnAt`/`noteOffAt` and `scheduledNoteLatencyFrames`; and the `gs1Scheduling.test.ts` guard **flipped automatically by design**, from \\\"the protocol must have no time field\\\" to \\\"the protocol must have the timed pair\\\". **A real defect was fixed along the way**: the sync script's `pruneToManagedSet` deletes anything not…"
+        "zh": "**所有失败路径都返回 `null`（= 用原生引擎）**：未接线的角色（kick/snare/hihat/percussion/bass/fx）、没有 GS-1 patch 的乐器（钢琴、西塔琴、长笛、颤音琴等**有意保留原生**的原声乐器）、非法采样率、空音列表、全零力度。另外修掉上一轮的 fast 轨崩溃：GS-1 运行时资源（worklet + 两个 wasm）改为 `public/gs1/` 静态提供，同步脚本自动发布、门禁断言与 pin **逐字节相同**（契约门禁 22 → 25 项）。",
+        "en": "**Every failure path returns `null` (= use the native engine)**: roles GS-1 does not voice (kick/snare/hihat/percussion/bass/fx), instruments with no GS-1 patch (piano, sitar, flute, vibraphone and the other acoustic instruments **deliberately kept native**), a nonsense sample rate, an empty note list, or all-zero velocities. This release also fixes the previous round's fast-lane crash: GS-1's runtime assets (the worklet and both cores) are now served statically from `public…"
       }
     ],
     "truncated": true
