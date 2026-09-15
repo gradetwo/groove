@@ -29,6 +29,7 @@ import { Genre, SequencerTrack } from "../types/genre";
 import { GENRES_MAP } from "../data/genres";
 import { GENRE_RELATIONS } from "../data/relations";
 import { AudioEngine } from "../audio/AudioEngine";
+import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
 
 const getTrackMiniTheme = (track: SequencerTrack, idx: number) => {
@@ -127,7 +128,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
       },
     });
     engineRef.current = engine;
-    engine.setPattern(genre.sequencer_pattern);
+    engine.setPattern(patternFromGenre(genre));
     engine.setBpm(defaultBpm);
 
     return () => {

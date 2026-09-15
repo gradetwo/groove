@@ -2,6 +2,9 @@ import { useReducer, useCallback, useRef, useEffect, useState } from "react";
 import { Genre, SequencerPattern, SequencerTrack } from "../../types/genre";
 import { ChordDefinition, noteToMidi } from "../../utils/chordTheory";
 import { BakedArpeggioResult } from "../../utils/arpeggiatorTheory";
+// The one helper every genre-entry point uses: clone + seed the genre's arranged mix.
+// `clonePattern` stays untouched because slot copies and undo must preserve user values.
+import { patternFromGenre } from "../../data/genreMix";
 import {
   debounceSaveProject,
   loadSavedProject,
@@ -188,8 +191,8 @@ function updateTrack(
 
 export function createInitialSequencerState(genre: Genre): SequencerState {
   const saved = loadSavedProject();
-  const patternA = clonePattern(genre.sequencer_pattern);
-  const patternB = clonePattern(genre.sequencer_pattern);
+  const patternA = patternFromGenre(genre);
+  const patternB = patternFromGenre(genre);
 
   if (saved && saved.genreId === genre.id) {
     const activeSlot = saved.activeSlot || "A";
@@ -261,8 +264,8 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
   switch (action.type) {
     case "SET_GENRE": {
       const g = action.genre;
-      const patternA = clonePattern(g.sequencer_pattern);
-      const patternB = clonePattern(g.sequencer_pattern);
+      const patternA = patternFromGenre(g);
+      const patternB = patternFromGenre(g);
       const stepCount = patternA.tracks[0]?.steps?.length || 16;
       return {
         ...state,
@@ -283,8 +286,8 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
 
     case "RESET_TO_GENRE_DEFAULT": {
       clearSavedProject();
-      const patternA = clonePattern(state.currentGenre.sequencer_pattern);
-      const patternB = clonePattern(state.currentGenre.sequencer_pattern);
+      const patternA = patternFromGenre(state.currentGenre);
+      const patternB = patternFromGenre(state.currentGenre);
       const stepCount = patternA.tracks[0]?.steps?.length || 16;
       return {
         ...state,

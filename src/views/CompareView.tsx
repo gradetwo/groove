@@ -3,6 +3,7 @@ import { Columns, Plus, X, Play, Pause, Square, Minus, Sliders, ExternalLink, Sp
 import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
+import { patternFromGenre } from "../data/genreMix";
 import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
 import { EmptyState } from "../ui/EmptyState";
@@ -214,12 +215,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
       const mergedTracks: SequencerTrack[] = [];
 
       genres.forEach((g, gIdx) => {
-        const tracks = g.sequencer_pattern?.tracks || [];
+        // Each member contributes its own arranged mix, so the merged arrangement is
+        // not 8 x N identical channel strips; the A/B balance is then level-matched
+        // by the composite trim below.
+        const tracks = patternFromGenre(g).tracks;
         const tag = String.fromCharCode(65 + gIdx); // A, B, C, D
         tracks.forEach((t) => {
           maxLen = Math.max(maxLen, t.steps?.length || 16);
           mergedTracks.push({
-            ...JSON.parse(JSON.stringify(t)),
+            ...t,
             name: `[${tag}] ${t.name}`,
             track_id: t.track_id || t.name.toLowerCase(),
           });
@@ -336,7 +340,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
         engine.stop();
       }
 
-      engine.setPattern(genre.sequencer_pattern, true);
+      engine.setPattern(patternFromGenre(genre), true);
       engine.setBpm(genre.default_bpm || 120);
       applyAudioMutes(engine, mode, genre);
       await engine.play();

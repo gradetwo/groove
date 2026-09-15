@@ -180,6 +180,46 @@ check(
   ["typecheck", "lint", "lint:data", "test", "build", "check:budget", "test:e2e"].every((s) => scripts.verify.includes(`npm run ${s}`))
 );
 
+/* R9 \u2014 every genre entry point must seed the arranged mix --------------------- */
+// User request: each genre's default mix must be arranged for that genre. That only
+// holds if *every* path that hands a genre's own pattern to an engine goes through
+// `patternFromGenre` / `applyGenreMixDefaults`. Patching the sites ad hoc is exactly
+// how one audition path (detail preview, challenge, compare) gets forgotten, so the
+// raw shape is banned outright.
+const rawGenrePatternOffenders = walkSrc(path.join(ROOT, "src"))
+  .filter((f) => /\.tsx?$/.test(f))
+  .filter((f) => !f.includes(`${path.sep}test${path.sep}`))
+  .flatMap((f) => {
+    const rel = path.relative(ROOT, f);
+    return fs
+      .readFileSync(f, "utf8")
+      .split("\n")
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
+      .filter(({ line }) => /(^|[^\w])setPattern\(/.test(line) && line.includes(".sequencer_pattern"))
+      .map(({ n }) => `${rel}:${n}`);
+  });
+check(
+  "R9a no raw genre pattern reaches setPattern (use patternFromGenre)",
+  rawGenrePatternOffenders.length === 0,
+  rawGenrePatternOffenders.join(", ")
+);
+
+// R9b: the mix table must cover exactly the genre ids in the database. Read as text
+// so this stays a cheap static gate (the vitest suite asserts the same thing typed).
+const mixIds = [...read("src/data/genreMix.ts").matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{\s*category:/gm)].map(
+  (m) => m[1]
+);
+const missingMixIds = dataIds.filter((id) => !mixIds.includes(id));
+const orphanMixIds = mixIds.filter((id) => !dataIds.includes(id));
+check(
+  "R9b genre mix table covers every genre id, no orphans",
+  mixIds.length === dataIds.length && missingMixIds.length === 0 && orphanMixIds.length === 0,
+  `${mixIds.length} mix entries vs ${dataIds.length} genres` +
+    (missingMixIds.length ? `; missing ${missingMixIds.join(",")}` : "") +
+    (orphanMixIds.length ? `; orphan ${orphanMixIds.join(",")}` : "")
+);
+
 console.log("===============================================================");
 console.log("  \ud83d\udea6 RED-LINE GATE");
 console.log("===============================================================");
