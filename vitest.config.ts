@@ -12,7 +12,18 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+    /**
+     * Absolute on purpose.
+     *
+     * A relative `'./src/test/setup.ts'` is resolved by Vitest against its own notion of the
+     * project root, which is *not* necessarily this config's directory when the suite is started
+     * from a directory nested inside another checkout (unpacking the slow-track source package
+     * inside an existing clone does exactly that). A v2.0.18 run on another machine then failed to
+     * load this file at all — `Failed to load url …/src/test/setup.ts`, 120 test files, zero
+     * assertions executed. `__dirname` pins it to the file that declares it, so the suite means the
+     * same thing wherever it is started from.
+     */
+    setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     // Git worktrees for parallel workstreams live under .worktrees/ INSIDE the repo
     // root (needed for the file sandbox). Without this, `vitest run` would also
     // collect every worktree's copy of the suite and report thousands of tests.
