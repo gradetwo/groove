@@ -125,10 +125,11 @@ export function useGridInteraction({
 
     // Audition sound
     if (nextVal > 0 && engineRef.current) {
-      const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-      const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-      const gate = tr.gate && tr.gate[stepIdx] ? tr.gate[stepIdx] : 0.8;
-      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal, gate, stepIdx);
+      const activeIdx = tr.trackLength && tr.trackLength > 0 ? stepIdx % tr.trackLength : stepIdx;
+      const pitch = tr.pitch && tr.pitch[activeIdx] ? tr.pitch[activeIdx] : 0;
+      const vel = (tr.velocity && tr.velocity[activeIdx] ? tr.velocity[activeIdx] : 100) / 127;
+      const gate = tr.gate && tr.gate[activeIdx] ? tr.gate[activeIdx] : 0.8;
+      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal, gate, activeIdx);
     }
   };
 
@@ -161,8 +162,9 @@ export function useGridInteraction({
       pendingPaintMapRef.current.set(key, { trackIdx, stepIdx, val });
       const tr = pattern.tracks[trackIdx];
       if (tr && val > 0 && engineRef.current) {
-        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
+        const activeIdx = tr.trackLength && tr.trackLength > 0 ? stepIdx % tr.trackLength : stepIdx;
+        const pitch = tr.pitch && tr.pitch[activeIdx] ? tr.pitch[activeIdx] : 0;
+        const vel = (tr.velocity && tr.velocity[activeIdx] ? tr.velocity[activeIdx] : 100) / 127;
         engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, val);
       }
     }
@@ -195,10 +197,22 @@ export function useGridInteraction({
       pendingPaintMapRef.current.forEach(({ trackIdx, stepIdx, val }) => {
         const t = nextPattern.tracks[trackIdx];
         if (t) {
-          t.steps[stepIdx] = val;
-          if (val > 0 && (!t.velocity || !t.velocity[stepIdx])) {
-            if (!t.velocity) t.velocity = Array(t.steps.length).fill(100);
-            t.velocity[stepIdx] = 100;
+          const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < t.steps.length ? t.trackLength : null;
+          if (trackLen) {
+            const baseIdx = stepIdx % trackLen;
+            for (let i = baseIdx; i < t.steps.length; i += trackLen) {
+              t.steps[i] = val;
+              if (val > 0 && (!t.velocity || !t.velocity[i])) {
+                if (!t.velocity) t.velocity = Array(t.steps.length).fill(100);
+                t.velocity[i] = 100;
+              }
+            }
+          } else {
+            t.steps[stepIdx] = val;
+            if (val > 0 && (!t.velocity || !t.velocity[stepIdx])) {
+              if (!t.velocity) t.velocity = Array(t.steps.length).fill(100);
+              t.velocity[stepIdx] = 100;
+            }
           }
         }
       });

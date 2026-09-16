@@ -172,7 +172,8 @@ export function usePatternActions({
     (trackIdx: number) => {
       const tracks = patternRef.current.tracks;
       const cur = tracks[trackIdx]?.trackLength || stepCount;
-      const opts = [12, 14, 16, 24, 32].filter((n) => n <= stepCount);
+      const baseOpts = [12, 14, 16, 24, 32, 48, 64, stepCount];
+      const opts = [...new Set(baseOpts.filter((n) => n <= stepCount))].sort((a, b) => a - b);
       let nextLen = opts[(opts.indexOf(cur) + 1) % opts.length] || stepCount;
       commit({ type: "SET_TRACK_LENGTH", trackIdx, length: nextLen });
     },

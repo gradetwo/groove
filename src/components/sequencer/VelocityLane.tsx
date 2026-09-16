@@ -3,6 +3,7 @@ import { SequencerTrack } from "../../types/genre";
 import { Sliders, Sparkles, TrendingUp, TrendingDown, X, Dices, Repeat, Clock } from "lucide-react";
 import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { subscribePlayhead } from "../../features/sequencer/playheadBus";
 
 export type ParameterDimension = "velocity" | "probability" | "ratchet" | "gate";
 
@@ -66,18 +67,45 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
     onSelectDimension?.(d);
   };
 
+  // Subscribe to playhead bus for real-time laser sync without re-rendering
+  useEffect(() => {
+    let lastStep = -1;
+    return subscribePlayhead((step) => {
+      if (!containerRef.current) return;
+      if (lastStep >= 0) {
+        const prevEl = containerRef.current.querySelector(`[data-step-idx="${lastStep}"]`);
+        prevEl?.removeAttribute("data-playhead");
+      }
+      if (step >= 0) {
+        const nextEl = containerRef.current.querySelector(`[data-step-idx="${step}"]`);
+        nextEl?.setAttribute("data-playhead", "true");
+      }
+      lastStep = step;
+    });
+  }, []);
+
   // Values array for active track based on dimension
   const values = Array.from({ length: stepCount }, (_, i) => {
+    const trackLen = currentTrack?.trackLength && currentTrack.trackLength > 0 ? currentTrack.trackLength : null;
+    const activeIdx = trackLen ? i % trackLen : i;
     if (activeDim === "probability") {
-      return currentTrack?.probability?.[i] !== undefined ? currentTrack.probability[i] : 100;
+      return currentTrack?.probability?.[i] !== undefined 
+        ? currentTrack.probability[i] 
+        : (currentTrack?.probability?.[activeIdx] !== undefined ? currentTrack.probability[activeIdx] : 100);
     }
     if (activeDim === "ratchet") {
-      return currentTrack?.ratchet?.[i] !== undefined ? currentTrack.ratchet[i] : 1;
+      return currentTrack?.ratchet?.[i] !== undefined 
+        ? currentTrack.ratchet[i] 
+        : (currentTrack?.ratchet?.[activeIdx] !== undefined ? currentTrack.ratchet[activeIdx] : 1);
     }
     if (activeDim === "gate") {
-      return currentTrack?.gate?.[i] !== undefined ? currentTrack.gate[i] : 0.8;
+      return currentTrack?.gate?.[i] !== undefined 
+        ? currentTrack.gate[i] 
+        : (currentTrack?.gate?.[activeIdx] !== undefined ? currentTrack.gate[activeIdx] : 0.8);
     }
-    return currentTrack?.velocity?.[i] !== undefined ? currentTrack.velocity[i] : 100;
+    return currentTrack?.velocity?.[i] !== undefined 
+      ? currentTrack.velocity[i] 
+      : (currentTrack?.velocity?.[activeIdx] !== undefined ? currentTrack.velocity[activeIdx] : 100);
   });
 
   const commitValue = useCallback(
@@ -399,11 +427,15 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
           className="flex-1 flex gap-1 items-end h-24 sm:h-28 bg-[#090a0d] p-2 rounded-xl border border-[#1a1c22] touch-none"
         >
           {values.map((val, stepIdx) => {
-            const stepVal = currentTrack?.steps?.[stepIdx] || 0;
+            const trackLen = currentTrack?.trackLength && currentTrack.trackLength > 0 ? currentTrack.trackLength : stepCount;
+            const activeStepIdx = trackLen > 0 ? stepIdx % trackLen : stepIdx;
+            const stepVal = currentTrack?.steps?.[stepIdx] !== undefined 
+              ? currentTrack.steps[stepIdx] 
+              : (currentTrack?.steps?.[activeStepIdx] || 0);
             const isOn = stepVal > 0;
-            const trackLen = currentTrack?.trackLength || stepCount;
-            const isOutsideLoop = stepIdx >= trackLen;
-            const isPlayhead = isPlaying && !isOutsideLoop && (currentStep % trackLen === stepIdx);
+            const isOutsideLoop = stepIdx >= (currentTrack?.steps?.length || stepCount);
+            const isLoopedRepeat = currentTrack?.trackLength !== undefined && currentTrack.trackLength > 0 && currentTrack.trackLength < stepCount && stepIdx >= currentTrack.trackLength;
+            const isPlayhead = isPlaying && (currentStep === stepIdx);
             const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
             const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
             const heightPercent = getHeightPercent(val);
@@ -415,13 +447,13 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
                 data-step-idx={stepIdx}
                 onPointerDown={(e) => handlePointerDown(stepIdx, e)}
                 onPointerEnter={(e) => handlePointerEnter(stepIdx, e)}
-                className={`min-w-[28px] sm:min-w-[32px] flex-1 h-full flex flex-col justify-end items-center relative cursor-ns-resize group select-none touch-none ${
+                className={`min-w-[28px] sm:min-w-[32px] flex-1 h-full flex flex-col justify-end items-center relative cursor-ns-resize group select-none touch-none [&[data-playhead=true]]:ring-1 [&[data-playhead=true]]:ring-white [&[data-playhead=true]_.vel-tooltip]:opacity-100 ${
                   isBarStart ? "ml-3 sm:ml-4 border-l border-[#3a3e48]" : isGroupStart ? "ml-1.5 sm:ml-2" : ""
                 }`}
               >
                 {/* Numeric readout tooltip on hover or playhead */}
                 <div
-                  className={`absolute -top-5 font-mono text-[9px] font-bold px-1 rounded transition-opacity pointer-events-none z-20 ${
+                  className={`vel-tooltip absolute -top-5 font-mono text-[9px] font-bold px-1 rounded transition-opacity pointer-events-none z-20 ${
                     isPlayhead
                       ? "opacity-100 bg-accent text-black"
                       : "opacity-0 group-hover:opacity-100 bg-line text-text"
@@ -439,6 +471,8 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
                     isOn
                       ? isHighlighted
                         ? "shadow-[0_0_10px_var(--tc)]"
+                        : isLoopedRepeat
+                        ? "opacity-80"
                         : "opacity-90"
                       : "opacity-25"
                   } ${isPlayhead ? "ring-1 ring-white" : ""}`}

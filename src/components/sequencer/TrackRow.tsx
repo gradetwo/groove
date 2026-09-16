@@ -353,20 +353,25 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
       <div className={`flex-1 flex gap-1 relative transition-all duration-150 ${
         isSilenced ? "opacity-25 grayscale saturate-50" : "opacity-100"
       }`}>
-        {track.steps.map((stepVal, stepIdx) => {
-          const vel = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
+        {track.steps.map((rawStepVal, stepIdx) => {
+          const activeStepIdx = trackLen > 0 ? stepIdx % trackLen : stepIdx;
+          const stepVal = rawStepVal !== undefined ? rawStepVal : (track.steps[activeStepIdx] || 0);
+          const vel = track.velocity && track.velocity[stepIdx] !== undefined 
+            ? track.velocity[stepIdx] 
+            : (track.velocity && track.velocity[activeStepIdx] !== undefined ? track.velocity[activeStepIdx] : 100);
           const isAcc = vel >= 115;
           const isHatRound = isHatTrack && stepVal === 2;
           const isHatTriplet = isHatTrack && stepVal === 3;
-          const ratchet = track.ratchet?.[stepIdx] || (isHatTriplet ? 3 : 1);
-          const prob = track.probability?.[stepIdx] ?? 100;
+          const ratchet = (track.ratchet?.[stepIdx] ?? track.ratchet?.[activeStepIdx]) || (isHatTriplet ? 3 : 1);
+          const prob = track.probability?.[stepIdx] ?? track.probability?.[activeStepIdx] ?? 100;
           const isMelodic =
             track.track_id === "bass" || track.track_id === "chords" || track.track_id === "lead";
-          const midiNote = track.pitch?.[stepIdx];
-          const isOutsideLoop = stepIdx >= trackLen;
+          const midiNote = track.pitch?.[stepIdx] ?? track.pitch?.[activeStepIdx];
+          const isLoopedRepeat = track.trackLength !== undefined && track.trackLength > 0 && track.trackLength < stepCount && stepIdx >= track.trackLength;
+          const isOutsideLoop = stepIdx >= (track.steps?.length || stepCount);
           const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
           const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
-          const gate = track.gate?.[stepIdx];
+          const gate = track.gate?.[stepIdx] ?? track.gate?.[activeStepIdx];
 
           return (
             <StepCell
@@ -386,6 +391,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               articulationGateScale={track.track_id === "chords" ? chordArticulation?.gateScale : undefined}
               articulationLabel={track.track_id === "chords" ? chordArticulation?.label : undefined}
               isOutsideLoop={isOutsideLoop}
+              isLoopedRepeat={isLoopedRepeat}
               isPlayhead={false}
               isBarStart={isBarStart}
               isGroupStart={isGroupStart}

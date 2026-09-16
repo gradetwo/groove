@@ -407,10 +407,21 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_STEP": {
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const steps = [...t.steps];
-        steps[action.stepIdx] = action.value;
         const velocity = t.velocity ? [...t.velocity] : Array(steps.length).fill(100);
-        if (action.value > 0 && !velocity[action.stepIdx]) {
-          velocity[action.stepIdx] = 100;
+        const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < steps.length ? t.trackLength : null;
+        if (trackLen) {
+          const baseIdx = action.stepIdx % trackLen;
+          for (let i = baseIdx; i < steps.length; i += trackLen) {
+            steps[i] = action.value;
+            if (action.value > 0 && !velocity[i]) {
+              velocity[i] = 100;
+            }
+          }
+        } else {
+          steps[action.stepIdx] = action.value;
+          if (action.value > 0 && !velocity[action.stepIdx]) {
+            velocity[action.stepIdx] = 100;
+          }
         }
         return { ...t, steps, velocity };
       });
@@ -420,7 +431,15 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_VELOCITY": {
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const velocity = t.velocity ? [...t.velocity] : Array(t.steps.length).fill(100);
-        velocity[action.stepIdx] = action.velocity;
+        const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < t.steps.length ? t.trackLength : null;
+        if (trackLen) {
+          const baseIdx = action.stepIdx % trackLen;
+          for (let i = baseIdx; i < t.steps.length; i += trackLen) {
+            velocity[i] = action.velocity;
+          }
+        } else {
+          velocity[action.stepIdx] = action.velocity;
+        }
         return { ...t, velocity };
       });
       return withUpdatedPattern({ ...state.pattern, tracks });
@@ -437,7 +456,15 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_GATE": {
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const gate = t.gate ? [...t.gate] : Array(t.steps.length).fill(0.8);
-        gate[action.stepIdx] = action.gate;
+        const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < t.steps.length ? t.trackLength : null;
+        if (trackLen) {
+          const baseIdx = action.stepIdx % trackLen;
+          for (let i = baseIdx; i < t.steps.length; i += trackLen) {
+            gate[i] = action.gate;
+          }
+        } else {
+          gate[action.stepIdx] = action.gate;
+        }
         return { ...t, gate };
       });
       return withUpdatedPattern({ ...state.pattern, tracks });
@@ -511,20 +538,32 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_PITCH": {
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const pitch = t.pitch ? [...t.pitch] : Array(t.steps.length).fill(null);
-        const oldRoot = pitch[action.stepIdx];
-        pitch[action.stepIdx] = action.pitch;
-
         let pitches = t.pitches ? [...t.pitches] : undefined;
-        if (pitches && pitches[action.stepIdx] && Array.isArray(pitches[action.stepIdx])) {
-          const oldStack = pitches[action.stepIdx]!;
-          if (action.pitch === null) {
-            pitches[action.stepIdx] = null;
-          } else if (typeof oldRoot === "number" && oldRoot > 0) {
-            const delta = action.pitch - oldRoot;
-            pitches[action.stepIdx] = oldStack.map((n) => Math.max(0, Math.min(127, n + delta)));
-          } else {
-            pitches[action.stepIdx] = [action.pitch];
+        const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < t.steps.length ? t.trackLength : null;
+
+        const updateAt = (idx: number) => {
+          const oldRoot = pitch[idx];
+          pitch[idx] = action.pitch;
+          if (pitches && pitches[idx] && Array.isArray(pitches[idx])) {
+            const oldStack = pitches[idx]!;
+            if (action.pitch === null) {
+              pitches[idx] = null;
+            } else if (typeof oldRoot === "number" && oldRoot > 0) {
+              const delta = action.pitch - oldRoot;
+              pitches[idx] = oldStack.map((n) => Math.max(0, Math.min(127, n + delta)));
+            } else {
+              pitches[idx] = [action.pitch];
+            }
           }
+        };
+
+        if (trackLen) {
+          const baseIdx = action.stepIdx % trackLen;
+          for (let i = baseIdx; i < t.steps.length; i += trackLen) {
+            updateAt(i);
+          }
+        } else {
+          updateAt(action.stepIdx);
         }
         return { ...t, pitch, ...(pitches ? { pitches } : {}) };
       });
@@ -563,7 +602,15 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_RATCHET": {
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const ratchet = t.ratchet ? [...t.ratchet] : Array(t.steps.length).fill(1);
-        ratchet[action.stepIdx] = action.ratchet;
+        const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < t.steps.length ? t.trackLength : null;
+        if (trackLen) {
+          const baseIdx = action.stepIdx % trackLen;
+          for (let i = baseIdx; i < t.steps.length; i += trackLen) {
+            ratchet[i] = action.ratchet;
+          }
+        } else {
+          ratchet[action.stepIdx] = action.ratchet;
+        }
         return { ...t, ratchet };
       });
       return withUpdatedPattern({ ...state.pattern, tracks });
@@ -580,7 +627,15 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_PROBABILITY": {
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const probability = t.probability ? [...t.probability] : Array(t.steps.length).fill(100);
-        probability[action.stepIdx] = action.probability;
+        const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < t.steps.length ? t.trackLength : null;
+        if (trackLen) {
+          const baseIdx = action.stepIdx % trackLen;
+          for (let i = baseIdx; i < t.steps.length; i += trackLen) {
+            probability[i] = action.probability;
+          }
+        } else {
+          probability[action.stepIdx] = action.probability;
+        }
         return { ...t, probability };
       });
       return withUpdatedPattern({ ...state.pattern, tracks });

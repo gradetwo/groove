@@ -23,6 +23,7 @@ export interface StepCellProps {
   /** Chord tracks only: localized articulation name, used for the length tooltip. */
   articulationLabel?: string;
   isOutsideLoop: boolean;
+  isLoopedRepeat?: boolean;
   isPlayhead: boolean;
   isBarStart: boolean;
   isGroupStart: boolean;
@@ -49,6 +50,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
   midiNote,
   gate,
   isOutsideLoop,
+  isLoopedRepeat = false,
   isPlayhead,
   isBarStart,
   isGroupStart,
@@ -165,12 +167,14 @@ export const StepCell = memo<StepCellProps>(function StepCell({
         isOutsideLoop
           ? "opacity-25 bg-[#0e0f13] border-[#181920] cursor-not-allowed"
           : isOn
-          ? "border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_10px_var(--tc)]"
+          ? isLoopedRepeat
+            ? "border-dashed border-white/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_8px_var(--tc)]"
+            : "border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_10px_var(--tc)]"
           : "bg-[#141519] border-[#22242c] hover:border-[#383c48] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
       }`}
       style={{
         backgroundColor: !isOutsideLoop && isOn ? trackColor : undefined,
-        opacity: isOutsideLoop ? 0.25 : isOn ? 0.45 + (velocity / 127) * 0.55 : 1,
+        opacity: isOutsideLoop ? 0.25 : isOn ? (isLoopedRepeat ? 0.85 : 1) * (0.45 + (velocity / 127) * 0.55) : 1,
         ["--tc" as any]: trackColor,
       }}
     >

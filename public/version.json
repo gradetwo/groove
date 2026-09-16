@@ -1,27 +1,27 @@
 {
-  "version": "2.0.27",
+  "version": "2.0.28",
   "releaseDate": "2026-09-16",
-  "changelogCount": 91,
+  "changelogCount": 92,
   "latest": {
-    "version": "2.0.27",
+    "version": "2.0.28",
     "date": "2026-09-16",
     "category": "feature",
     "title": {
-      "zh": "v2.0.27 钢琴卷帘与和弦数据全链路一致性同步：查看器精准映射打开轨道、卷帘真和弦堆叠呈现与编辑、MIDI/Ableton 导出真和弦音符多音对齐",
-      "en": "v2.0.27 Piano Roll and Chord Data Synchronization: Inspector target track accuracy, true chord stack rendering & editing, and multi-note export parity for MIDI and Ableton Live Sets"
+      "zh": "v2.0.28 步进序列器视听长度全小节对齐与读写一致性：消除扩展小节黑屏失真、步进/力度泳道全小节发声呈现、多小节循环读写双向同步、钢琴卷帘扩充保护",
+      "en": "v2.0.28 Sequencer Visual and Audio Length Parity Across Looped Bars: Eliminated blacked-out bars on expanded patterns, synchronized StepCell & VelocityLane display with audio engine playback, enabled bi-directional multi-bar loop edit parity, and protected piano roll note extensions"
     },
     "highlights": [
       {
-        "zh": "**查看器打开卷帘精准定向（Track Inspector Target Track Binding）**：修复在任意轨道查看器（TrackInspector）点击「打开钢琴卷帘」时被硬编码逻辑无条件重定向到首个旋律轨（贝斯）的问题。现在精准透传当前检查的轨道索引，并在卷帘轨选择器中支持当前轨道显示，无论在和弦、主音、贝斯或打击乐查看器打开，卷帘均忠实展示该轨对应内容。",
-        "en": "**Target Track Binding**: Fixed an issue where clicking \"Open Piano Roll\" in TrackInspector unconditionally redirected to the first melodic track (bass). Now precisely binds and displays the inspected track index in both the piano roll lane and selector."
+        "zh": "**步进网格视听长度一致性（Visual and Audio Length Parity）**：修复 64/128 步多小节走向下，鼓组与贝斯轨因 trackLength 限制导致第 2、3、4 小节被误判为 isOutsideLoop 而呈现黑屏变暗、光标禁用（cursor-not-allowed）且无法点击交互，但后台音频却在持续循环发声的严重视听割裂问题。expandGenrePattern 现在为所有扩展步进完整复制旋律与节奏数据，步进单元格支持 isLoopedRepeat 循环高亮渲染，使整个步进网格显示与播放声音长度 100% 吻合。",
+        "en": "**Visual and Audio Length Parity**: Fixed a severe visual/audio disconnect where drum and bass tracks in 64/128-step patterns were dimmed, blacked out, and rendered with cursor-not-allowed on bars 2..4 due to false isOutsideLoop suppression while the audio engine looped and played them continuously. expandGenrePattern now populates repeating pattern data across all pattern steps, and StepCell introduces isLoopedRepeat active styling matching live sound."
       },
       {
-        "zh": "**和弦卷帘多音真实堆叠与读写双向同步**：在卷帘模型中为和弦轨引入调式 voicing 兜底，消除和弦轨在未固化音堆时只显示单音的缺陷；解决 React key 冲突警告；在序列器状态机（SET_PITCH / BATCH_SET_PITCH）中引入音堆与根音的同步移调约束，确保卷帘编辑、网格修改与音高变动时 pitch（根音）与 pitches（全音堆）始终保持严格一致。",
-        "en": "**True Chord Stack Rendering & Bi-directional State Sync**: Notes in the piano roll now synthesize full chord voicings even when unexpanded; resolved React child key collision warnings; synchronized pitch (root) and pitches (stack) in reducer actions (SET_PITCH / BATCH_SET_PITCH) to ensure seamless data coherence across the UI."
+        "zh": "**状态机循环步进读写双向同步（Bi-directional Loop Edit Synchronization）**：在 useSequencerStore 状态机（SET_STEP、SET_VELOCITY、SET_PITCH、SET_GATE、SET_RATCHET、SET_PROBABILITY）以及桌面拖拽批量绘制（useGridInteraction）中，引入循环步进模长双向同步机制。当轨道处于循环模式时，在任意小节点击或涂画步进，自动同步更新所有循环副本与发声音符，保证显示、编辑、试听、播放与导出全部使用同一份严格同步的数据。",
+        "en": "**Bi-directional Loop Edit Synchronization**: Implemented modulo-based loop synchronization in useSequencerStore actions (SET_STEP, SET_VELOCITY, SET_PITCH, SET_GATE, SET_RATCHET, SET_PROBABILITY) and desktop drag painting (useGridInteraction). Editing steps or velocity bars in any bar immediately synchronizes across all loop iterations, ensuring display, editing, audition, playback, and export operate on the exact same state."
       },
       {
-        "zh": "**导出端全音符多音对齐与单步试听对齐**：彻底移除 MidiExporter 与 AbletonExporter 之前写死的伪小三和弦（+0, +3, +7）硬编码，统一调用 track.pitches 与 chordNotesForStep 生成真和弦 MIDI 事件；同时在步进网格点击试听时传递 stepIdx，使网格点击试听、序列器实时播放、WAV 离线渲染、MIDI 导出与 Ableton 工程导出全部使用完全同一份真和弦数据。",
-        "en": "**Exporters & Audition Parity**: Replaced hardcoded minor triad offsets in MidiExporter and AbletonExporter with true note stacks derived from track.pitches and chordNotesForStep. Grid audition now receives stepIdx to audition the exact stored chord stack, achieving 100% data fidelity across editing, auditioning, live playback, WAV export, MIDI export, and Ableton export."
+        "zh": "**力度泳道全小节实时联动与卷帘扩充保护（Velocity Lane & Piano Roll Extension Parity）**：VelocityLane 现在自动派生循环步进的力度/概率/时值/切分值并直观呈现所有小节，通过接入 subscribePlayhead 实现高帧率零重渲染的激光播放头全小节平滑滚动；在钢琴卷帘 withTrackNotes 中增加跨小节绘制自动扩容保护，防止用户在后段小节绘制的新音符被旧循环长度截断失声。",
+        "en": "**Velocity Lane Real-time Parity & Piano Roll Extension**: VelocityLane now derives values across all bars and subscribes to subscribePlayhead for 60fps playhead tracking without React re-renders. withTrackNotes automatically expands trackLength when users draw notes in subsequent bars so custom melodies are never silently muted by playback."
       }
     ],
     "truncated": false

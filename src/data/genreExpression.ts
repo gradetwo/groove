@@ -3427,14 +3427,18 @@ export function expandGenrePattern(
     const role = track.track_id as ExpressionRole;
 
     // Grow every track's arrays to the new length (the store derives the step count from them).
-    const steps = Array.from({ length: total }, (_, i) => (i < track.steps.length ? track.steps[i] : 0));
-    const pitch = Array.from({ length: total }, (_, i) => (i < (track.pitch?.length ?? 0) ? track.pitch?.[i] ?? null : null));
+    // The authored loop repeats across all total steps so the track data is complete across all bars.
+    const authoredStepCount = track.steps.length || authored;
+    const steps = Array.from({ length: total }, (_, i) => (authoredStepCount > 0 ? track.steps[i % authoredStepCount] : 0));
+    const pitch = Array.from({ length: total }, (_, i) => (track.pitch && track.pitch.length > 0 ? track.pitch[i % track.pitch.length] : null));
     const pitches = Array.from(
       { length: total },
-      (_, i) => (track.pitches && i < track.pitches.length ? track.pitches[i] : null)
+      (_, i) => (track.pitches && track.pitches.length > 0 ? track.pitches[i % track.pitches.length] : null)
     );
-    const gate = Array.from({ length: total }, (_, i) => (i < (track.gate?.length ?? 0) ? track.gate?.[i] ?? 0.8 : 0.8));
-    const velocity = Array.from({ length: total }, (_, i) => (i < (track.velocity?.length ?? 0) ? track.velocity?.[i] ?? 100 : 100));
+    const gate = Array.from({ length: total }, (_, i) => (track.gate && track.gate.length > 0 ? track.gate[i % track.gate.length] : 0.8));
+    const velocity = Array.from({ length: total }, (_, i) => (track.velocity && track.velocity.length > 0 ? track.velocity[i % track.velocity.length] : 100));
+    const ratchet = Array.from({ length: total }, (_, i) => (track.ratchet && track.ratchet.length > 0 ? track.ratchet[i % track.ratchet.length] : 1));
+    const probability = Array.from({ length: total }, (_, i) => (track.probability && track.probability.length > 0 ? track.probability[i % track.probability.length] : 100));
 
     // The pattern is longer than the authored loop: keep the authored part as the track's own loop
     // so it repeats underneath the longer progression.
@@ -3534,7 +3538,17 @@ export function expandGenrePattern(
         }
       }
     }
-    return { ...track, steps, pitch, pitches, gate, velocity, ...(trackLength ? { trackLength } : {}) };
+    return {
+      ...track,
+      steps,
+      pitch,
+      pitches,
+      gate,
+      velocity,
+      ...(track.ratchet ? { ratchet } : {}),
+      ...(track.probability ? { probability } : {}),
+      ...(trackLength ? { trackLength } : {}),
+    };
   });
 
   return {

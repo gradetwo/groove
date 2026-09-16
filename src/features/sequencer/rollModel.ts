@@ -173,7 +173,12 @@ export function withTrackNotes(
       // The root is the lowest note: the meaning `pitch` had before chords existed.
       pitch[stepIdx] = sorted[0];
     }
-    return { ...track, steps, pitch, pitches, gate, velocity };
+    const maxAuthoredStep = notes.reduce((max, n) => Math.max(max, n.stepIdx + 1), 0);
+    const trackLength =
+      track.trackLength && maxAuthoredStep > track.trackLength
+        ? Math.max(track.trackLength, maxAuthoredStep, stepCount)
+        : track.trackLength;
+    return { ...track, steps, pitch, pitches, gate, velocity, ...(trackLength ? { trackLength } : {}) };
   });
   return { ...pattern, tracks };
 }
