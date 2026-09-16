@@ -178,9 +178,14 @@ describe("what the pool sends", () => {
     expect(host.dispose).not.toHaveBeenCalled();
     expect(calls.noteOnAt.length).toBe(1);
 
-    // A different *instrument* must still rebuild: the patch would otherwise be wrong.
-    await pool.ensureTrack(0, "chords", "saw_lead", dest);
-    expect(createHost).toHaveBeenCalledTimes(2);
-    expect(host.dispose).toHaveBeenCalled();
+    // A different *instrument* must NOT rebuild either (v2.0.19): the host is instrument-agnostic
+    // — a patch is a set of parameters — so switching timbre just pushes the new patch in
+    // `tryPlay`. Rebuilding here was what made switching timbre during playback tear the worklet
+    // down, play the next notes natively while the replacement compiled, and only then come back.
+    expect(await pool.ensureTrack(0, "chords", "rhodes_ep", dest)).toBe(true);
+    expect(createHost).toHaveBeenCalledTimes(1);
+    expect(host.dispose).not.toHaveBeenCalled();
+    expect(pool.tryPlay(0, "chords", "rhodes_ep", [note()], dest)).toBe(true);
+    expect(calls.noteOnAt.length).toBe(2);
   });
 });

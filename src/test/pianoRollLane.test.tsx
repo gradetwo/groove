@@ -150,3 +150,71 @@ describe("PianoRollLane · states the UI must be honest about", () => {
     }
   });
 });
+
+/**
+ * Item ① of the follow-up: on a computer the roll was only about a third of the width.
+ *
+ * The cause was that the note grid was `steps × 26px` — a fixed pixel size independent of the
+ * drawer — so a 16-step pattern occupied ~416 px and the rest of the panel sat empty. The fix is a
+ * zoom *factor* on a cell width derived from the measured container, so the default (1×) fills the
+ * drawer. jsdom performs no layout, so these tests pin the contract that is observable here
+ * (defaults, attributes, what is rendered) and the E2E matrix measures the real geometry.
+ */
+describe("PianoRollLane · width, fullscreen and collapse", () => {
+  it("starts at the fit zoom factor and fills the container width when it can be measured", () => {
+    const { container } = render(
+      <PianoRollLane
+        pattern={makePattern()}
+        activeTrackIdx={0}
+        stepCount={STEPS}
+        stepsPerBar={4}
+        isZh
+        onSelectTrack={() => {}}
+        onClose={() => {}}
+        commit={() => {}}
+        onAudition={() => {}}
+      />
+    );
+    const grid = container.querySelector("[data-testid='piano-roll-grid']") as HTMLElement;
+    const wrap = container.querySelector("[data-testid='piano-roll-grid-wrap']") as HTMLElement;
+    expect(grid).toBeTruthy();
+    expect(wrap).toBeTruthy();
+    // No layout in jsdom, so the fallback cell width is used — and the grid is still sized by the
+    // step count rather than by a hard-coded pixel total.
+    expect(grid.style.width).toBe(`${STEPS * 26}px`);
+    // The wrapper is the element whose width the fit logic reads.
+    expect(wrap.className).toContain("flex-1");
+  });
+
+  it("exposes fullscreen and collapse as real, independent states", () => {
+    setup();
+    const panel = screen.getByTestId("piano-roll");
+    expect(panel.getAttribute("data-fullscreen")).toBe("false");
+    expect(panel.getAttribute("data-collapsed")).toBe("false");
+
+    fireEvent.click(screen.getByTestId("piano-roll-fullscreen"));
+    expect(screen.getByTestId("piano-roll").getAttribute("data-fullscreen")).toBe("true");
+    // Fullscreen must not unmount the editor.
+    expect(screen.getByTestId("piano-roll-grid")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("piano-roll-collapse"));
+    expect(screen.getByTestId("piano-roll").getAttribute("data-collapsed")).toBe("true");
+    // Collapsed keeps the toolbar (so it can be reopened) but drops the editor.
+    expect(screen.queryByTestId("piano-roll-grid")).toBeNull();
+    expect(screen.getByTestId("piano-roll-track")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("piano-roll-collapse"));
+    expect(screen.getByTestId("piano-roll-grid")).toBeInTheDocument();
+  });
+
+  it("leaves fullscreen on the first Escape and closes on the second", () => {
+    const { onClose } = setup();
+    fireEvent.click(screen.getByTestId("piano-roll-fullscreen"));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByTestId("piano-roll").getAttribute("data-fullscreen")).toBe("false");
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

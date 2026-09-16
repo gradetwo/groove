@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useMemo } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { InstrumentPicker } from "./InstrumentPicker";
 import { GripHorizontal, Music2, X } from "lucide-react";
 import type { MixTrackId } from "../../data/genreMix";
@@ -303,6 +303,13 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
   onOpenPianoRoll,
 }) => {
   const { t } = useLanguage();
+  /**
+   * Item ③: the panel used to stack every control, which on a 400 px dock (or a phone sheet)
+   * meant scrolling past the timbre picker to reach the EQ. Three tabs keep each group one screen
+   * tall, and the two controls that must always be reachable — mute and solo — moved into the
+   * header instead of living inside a tab.
+   */
+  const [activeTab, setActiveTab] = useState<"timbre" | "mix" | "effects">("timbre");
   const uid = useId();
   const fieldId = useCallback((name: string) => `${uid}-${name}`, [uid]);
 
@@ -397,6 +404,37 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {/* Always visible: muting or soloing must not require finding the right tab. */}
+          <button
+            type="button"
+            onClick={onMuteToggle}
+            aria-pressed={muted}
+            aria-label={`${trackName} ${t("console_mute")}`}
+            title={t("console_mute")}
+            data-testid="track-inspector-mute"
+            className={`h-7 w-7 rounded-lg border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
+              muted
+                ? "border-[#ff5964] bg-[#ff5964]/25 text-[#ff5964]"
+                : "border-line bg-[#15171d] text-text-sub hover:text-text"
+            }`}
+          >
+            M
+          </button>
+          <button
+            type="button"
+            onClick={onSoloToggle}
+            aria-pressed={soloed}
+            aria-label={`${trackName} ${t("console_solo")}`}
+            title={t("console_solo")}
+            data-testid="track-inspector-solo"
+            className={`h-7 w-7 rounded-lg border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
+              soloed
+                ? "border-accent bg-accent/25 text-accent"
+                : "border-line bg-[#15171d] text-text-sub hover:text-text"
+            }`}
+          >
+            S
+          </button>
           {onOpenPianoRoll && (
             <button
               type="button"
@@ -423,10 +461,38 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
         </div>
       </header>
 
+      {/* Item ③: tabs, so each group fits one screen. */}
+      <div role="tablist" aria-label={t("track_inspector_title")} className="flex gap-1 border-b border-line pb-2">
+        {(["timbre", "mix", "effects"] as const).map((tabId) => (
+          <button
+            key={tabId}
+            role="tab"
+            type="button"
+            aria-selected={activeTab === tabId}
+            data-testid={`track-inspector-tab-${tabId}`}
+            onClick={() => setActiveTab(tabId)}
+            className={`rounded-lg border px-2 py-1 font-['JetBrains_Mono'] text-[10px] font-bold uppercase tracking-[0.08em] transition-colors ${
+              activeTab === tabId
+                ? "border-accent bg-accent/20 text-accent"
+                : "border-line bg-panel2 text-text-sub hover:text-text"
+            }`}
+          >
+            {t(
+              tabId === "timbre"
+                ? "track_inspector_section_timbre"
+                : tabId === "mix"
+                  ? "track_inspector_section_mix"
+                  : "track_inspector_section_effects"
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* ------------------------------------------------------- 1. Timbre / 音色 */}
       <section
         data-testid="track-inspector-section-timbre"
         aria-labelledby={fieldId("timbre-heading")}
+        hidden={activeTab !== "timbre"}
       >
         <h3 id={fieldId("timbre-heading")} className={SECTION_HEADING}>
           {t("track_inspector_section_timbre")}
@@ -447,7 +513,11 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
       </section>
 
       {/* ---------------------------------------------------------- 2. Mix / 混音 */}
-      <section data-testid="track-inspector-section-mix" aria-labelledby={fieldId("mix-heading")}>
+      <section
+        data-testid="track-inspector-section-mix"
+        aria-labelledby={fieldId("mix-heading")}
+        hidden={activeTab !== "mix"}
+      >
         <h3 id={fieldId("mix-heading")} className={SECTION_HEADING}>
           {t("track_inspector_section_mix")}
         </h3>
@@ -500,44 +570,13 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             formatValue={formatPercent}
             onValueChange={onSendBChange}
           />
-          <div className="flex items-center gap-2 border-t border-line-subtle pt-2">
-            <button
-              type="button"
-              onClick={onMuteToggle}
-              aria-pressed={muted}
-              aria-label={`${trackName} ${t("console_mute")}`}
-              title={t("console_mute")}
-              data-testid="track-inspector-mute"
-              className={`h-9 w-9 shrink-0 rounded-lg border font-['JetBrains_Mono'] text-xs font-bold transition-colors ${
-                muted
-                  ? "border-[#ff5964] bg-[#ff5964]/25 text-[#ff5964]"
-                  : "border-line bg-[#15171d] text-text-sub hover:text-text"
-              }`}
-            >
-              M
-            </button>
-            <button
-              type="button"
-              onClick={onSoloToggle}
-              aria-pressed={soloed}
-              aria-label={`${trackName} ${t("console_solo")}`}
-              title={t("console_solo")}
-              data-testid="track-inspector-solo"
-              className={`h-9 w-9 shrink-0 rounded-lg border font-['JetBrains_Mono'] text-xs font-bold transition-colors ${
-                soloed
-                  ? "border-accent bg-accent/25 text-accent"
-                  : "border-line bg-[#15171d] text-text-sub hover:text-text"
-              }`}
-            >
-              S
-            </button>
-          </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------ 3. Effects / 效果 */}
       <section
         data-testid="track-inspector-section-effects"
+        hidden={activeTab !== "effects"}
         aria-labelledby={fieldId("effects-heading")}
       >
         <div className="flex items-center justify-between gap-2">

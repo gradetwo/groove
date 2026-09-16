@@ -53,6 +53,15 @@ export interface StepCallbackInfo {
   time: number;
 }
 
+/**
+ * How long a switched-off GS-1 pool keeps its loaded hosts before being disposed.
+ *
+ * Long enough that flipping the switch off and back on (or A/B-ing the sound) never pays the
+ * worklet + WASM load again, short enough that leaving it off releases the memory. Audible output
+ * stops immediately either way — `releaseAll()` is not deferred.
+ */
+const GS1_DISABLE_GRACE_MS = 3000;
+
 export interface AudioEngineOptions {
   onStep?: (info: StepCallbackInfo) => void;
   onTrackTrigger?: (trackIndices: number[]) => void;
@@ -158,6 +167,18 @@ export class AudioEngine {
 
   /** Test seam: when set, replaces `new Gs1VoicePool(ctx)` (see `AudioEngineOptions`). */
   private readonly gs1PoolFactory: ((ctx: BaseAudioContext) => Gs1VoicePool) | null;
+
+  /** Pending teardown after GS-1 was switched off; cancelled if it comes back on in time. */
+  private gs1DisposeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Last insert chain applied per track, so an unchanged chain is not pushed again. */
+  private appliedInsertRefs: Array<TrackInsertParams | null> = [];
+
+  /** Memoised `resolveTrackInsertForGenre` results, keyed by `genre|role`. */
+  private readonly resolvedInsertCache = new Map<string, TrackInsertParams>();
+
+  /** Diagnostics for the skip above (and for the tests that pin it). */
+  private patternInsertApplications = 0;
 
   /**
    * The per-genre FX profile last applied by `setPattern` (N-14). `null` means the genre
@@ -620,11 +641,19 @@ export class AudioEngine {
     // E-10: apply each track's insert chain. A track with no stored chain takes the
     // role's factory default, which is what makes a freshly loaded genre arrive already
     // mixed rather than flat.
+    //
+    // Only the tracks whose chain actually changed are re-applied. `setPattern` runs on *every*
+    // pattern commit — every step toggle, every timbre change, every coalesced drag — so pushing
+    // all eight chains each time was pure repeated work on the main thread while the transport
+    // was running. The resolved default is memoised per (genre, role), because
+    // `resolveTrackInsertForGenre` builds a fresh object each call and identity is how "unchanged"
+    // is decided here.
     this.pattern?.tracks.forEach((track, idx) => {
-      this.setTrackInsert(
-        idx,
-        track.insert ?? resolveTrackInsertForGenre(track.track_id, this.pattern?.genre_id)
-      );
+      const resolved = this.resolveInsertFor(track);
+      if (this.appliedInsertRefs[idx] === resolved) return;
+      this.appliedInsertRefs[idx] = resolved;
+      this.patternInsertApplications += 1;
+      this.setTrackInsert(idx, resolved);
     });
     this.syncTrackGains();
     // Loudness matching is *not* a per-track mix concern: it only needs the pattern's
@@ -679,6 +708,28 @@ export class AudioEngine {
   public getTrackInsert(trackIdx: number): TrackInsertParams | null {
     const strip = this.trackStrips[trackIdx];
     return strip ? strip.insert.getParams() : null;
+  }
+
+  /**
+   * The chain a track should be using: its own stored chain, or the genre default for its role.
+   *
+   * Memoised because the resolver allocates, and `setPattern` needs a *stable* reference to tell
+   * "this track did not change" from "this track changed".
+   */
+  private resolveInsertFor(track: SequencerTrack): TrackInsertParams {
+    if (track.insert) return track.insert;
+    const key = `${this.pattern?.genre_id ?? ""}|${track.track_id}`;
+    const cached = this.resolvedInsertCache.get(key);
+    if (cached) return cached;
+    if (this.resolvedInsertCache.size > 512) this.resolvedInsertCache.clear();
+    const resolved = resolveTrackInsertForGenre(track.track_id, this.pattern?.genre_id);
+    this.resolvedInsertCache.set(key, resolved);
+    return resolved;
+  }
+
+  /** How many per-track chains have been pushed since construction (diagnostic + test seam). */
+  public getPatternInsertApplications(): number {
+    return this.patternInsertApplications;
   }
 
   public syncTrackGains(): void {
@@ -896,11 +947,32 @@ export class AudioEngine {
     this.gs1Enabled = enabled;
     setGs1RoutingEnabled(enabled);
     if (!enabled) {
+      // Silence first, release later.
+      //
+      // This used to `getParams()`-free synchronously: `releaseAll()` + `dispose()` inside the
+      // click handler, which tears down every worklet node and frees its WASM on the main thread
+      // while the transport is running — the reported "switching it feels like it hangs". Notes
+      // have to stop immediately, but the teardown does not have to happen before the next frame,
+      // and if the user flips the switch back the loaded hosts are exactly what we want to keep.
       this.gs1Pool?.releaseAll();
-      this.gs1Pool?.dispose();
-      this.gs1Pool = null;
+      this.clearGs1DisposeTimer();
+      this.gs1DisposeTimer = setTimeout(() => {
+        this.gs1DisposeTimer = null;
+        this.gs1Pool?.dispose();
+        this.gs1Pool = null;
+      }, GS1_DISABLE_GRACE_MS);
+    } else {
+      // Re-enabled inside the grace period: keep the hosts that are still loaded.
+      this.clearGs1DisposeTimer();
     }
     this.saveAudioSettings();
+  }
+
+  private clearGs1DisposeTimer(): void {
+    if (this.gs1DisposeTimer !== null) {
+      clearTimeout(this.gs1DisposeTimer);
+      this.gs1DisposeTimer = null;
+    }
   }
 
   public setHearingProtection(enabled: boolean): void {
@@ -1886,6 +1958,7 @@ export class AudioEngine {
   }
 
   public destroy(): void {
+    this.clearGs1DisposeTimer();
     this.stop();
     this.panic();
     this.cleanupUnlockListeners();

@@ -1,7 +1,7 @@
 {
   "name": "groove-music-genre-learning",
   "private": true,
-  "version": "2.0.18",
+  "version": "2.0.19",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -30,6 +30,7 @@
     "deploy": "npm run verify && npm run deploy:only",
     "deploy:only": "node scripts/deploy.mjs",
     "perf:check": "node scripts/measure_live_perf.mjs --local",
+    "probe:latency": "node scripts/measure_interaction_latency.mjs",
     "data:lint": "vite-node scripts/lint_genres.ts",
     "data:index": "vite-node scripts/build_genre_index.ts",
     "check:gs1": "node scripts/check-gs1.mjs"

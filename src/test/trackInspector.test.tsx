@@ -519,3 +519,54 @@ describe("TrackInspector · placement", () => {
     expect(handlers.onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Item ③ of the follow-up: "the inspector takes up too much room — consider collapsing or tabs".
+ *
+ * Three tabs now hold the three groups, and the two controls that must never be a tab away — mute
+ * and solo — moved into the header. Sections stay *mounted* and are toggled with the `hidden`
+ * attribute, so switching is instant and control state (a slider mid-drag, a search query) is not
+ * thrown away.
+ */
+describe("TrackInspector · tabs and compactness", () => {
+  it("offers three tabs and shows exactly one section at a time", () => {
+    setup();
+    for (const tab of ["timbre", "mix", "effects"]) {
+      expect(screen.getByTestId(`track-inspector-tab-${tab}`)).toBeInTheDocument();
+    }
+    const section = (id: string) => screen.getByTestId(`track-inspector-section-${id}`) as HTMLElement;
+    expect(screen.getByTestId("track-inspector-tab-timbre")).toHaveAttribute("aria-selected", "true");
+    expect(section("timbre").hidden).toBe(false);
+    expect(section("mix").hidden).toBe(true);
+    expect(section("effects").hidden).toBe(true);
+  });
+
+  it("switches sections without unmounting them", () => {
+    setup();
+    const section = (id: string) => screen.getByTestId(`track-inspector-section-${id}`) as HTMLElement;
+
+    fireEvent.click(screen.getByTestId("track-inspector-tab-mix"));
+    expect(section("mix").hidden).toBe(false);
+    expect(section("timbre").hidden).toBe(true);
+    // Still in the document: a slider keeps its position and a picker keeps its query.
+    expect(screen.getByTestId("track-inspector-volume")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("track-inspector-tab-effects"));
+    expect(section("effects").hidden).toBe(false);
+    expect(section("mix").hidden).toBe(true);
+    expect(screen.getByTestId("track-inspector-reset")).toBeInTheDocument();
+  });
+
+  it("keeps mute and solo reachable from every tab", () => {
+    const { handlers } = setup();
+    fireEvent.click(screen.getByTestId("track-inspector-tab-effects"));
+    // They live in the header, not inside a section, so no tab can hide them.
+    const mute = screen.getByTestId("track-inspector-mute");
+    const solo = screen.getByTestId("track-inspector-solo");
+    expect(mute.closest("[hidden]")).toBeNull();
+    expect(solo.closest("[hidden]")).toBeNull();
+
+    fireEvent.click(mute);
+    expect(handlers.onMuteToggle).toHaveBeenCalled();
+  });
+});

@@ -1,5 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Minus, Music2, Plus, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Maximize2,
+  Minimize2,
+  Minus,
+  Music2,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { SequencerAction } from "../../features/sequencer/useSequencerStore";
 import type { SequencerPattern } from "../../types/genre";
@@ -53,8 +63,19 @@ export interface PianoRollLaneProps {
 }
 
 const ROW_H = 18;
-const BASE_CELL_W = 26;
-const ZOOMS = [14, 20, 26, 34, 46];
+/**
+ * Zoom is a *factor* on the fitted cell width, not an absolute pixel size.
+ *
+ * The first version used fixed pixels (`ZOOMS = [14, 20, 26, …]`), so the note grid was always
+ * `steps × 26px` — about 416 px for a 16-step pattern, i.e. a third of a desktop screen, with the
+ * rest of the drawer empty. The user's report ("only a third of the width on a computer") was
+ * exactly that. Now the default (1×) fills whatever the drawer gives it, and the zoom buttons
+ * scale from there.
+ */
+const ZOOM_FACTORS = [0.5, 0.75, 1, 1.5, 2];
+const DEFAULT_ZOOM_INDEX = 2; // 1× == fit
+const MIN_CELL_W = 10;
+const GUTTER_W = 52;
 
 export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   pattern,
@@ -70,14 +91,21 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   onAudition,
 }) => {
   const { t } = useLanguage();
-  const [zoomIdx, setZoomIdx] = useState(2);
+  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_INDEX);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [availableWidth, setAvailableWidth] = useState(0);
   const [octaveShift, setOctaveShift] = useState(0);
   const [selectedStep, setSelectedStep] = useState<number | null>(null);
   const [draft, setDraft] = useState<SequencerPattern | null>(null);
   const dragRef = useRef<{ fromStep: number; mode: "move" | "resize"; startGate: number } | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
+  const gridWrapRef = useRef<HTMLDivElement | null>(null);
 
-  const cellW = ZOOMS[zoomIdx];
+  // Cell width comes from the measured container, so the grid fills the drawer by default and
+  // still scales with the zoom buttons.
+  const fitCellW = availableWidth > 0 ? Math.max(MIN_CELL_W, (availableWidth - GUTTER_W) / Math.max(1, stepCount)) : 26;
+  const cellW = Math.max(MIN_CELL_W, fitCellW * ZOOM_FACTORS[zoomIdx]);
   const track = pattern.tracks[activeTrackIdx];
   const editable = isRollEditableTrack(track);
 
@@ -135,10 +163,26 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (node && typeof node.scrollIntoView === "function") node.scrollIntoView({ block: "nearest" });
   }, []);
 
+  /** Track the drawer's width so the grid can fill it. */
+  useEffect(() => {
+    const node = gridWrapRef.current;
+    if (!node) return;
+    const measure = () => setAvailableWidth(node.clientWidth);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [isFullscreen, isCollapsed]);
+
   // Escape closes, like every other floating panel in the studio.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        // Leaving fullscreen is the smaller step, so it wins the first press.
+        if (isFullscreen) setIsFullscreen(false);
+        else onClose();
+      }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedStep !== null) {
         e.preventDefault();
         commitDraft(removeNote(pattern, activeTrackIdx, selectedStep, stepCount));
@@ -167,7 +211,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, selectedStep, notes, pattern, activeTrackIdx, stepCount, commitDraft]);
+  }, [onClose, selectedStep, notes, pattern, activeTrackIdx, stepCount, commitDraft, isFullscreen]);
 
   const cellFromEvent = (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -238,8 +282,24 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     <section
       ref={sectionRef}
       data-testid="piano-roll"
+      data-fullscreen={isFullscreen ? "true" : "false"}
+      data-collapsed={isCollapsed ? "true" : "false"}
       aria-label={`${t("roll_title")} ${track?.name ?? ""}`}
-      className="flex flex-col gap-2"
+      className={
+        isFullscreen
+          ? // Fullscreen: the editor takes the viewport. This is what makes a 32-step pattern
+            // editable without squinting, and it is also the only way to see enough pitch rows.
+            "fixed inset-0 z-[60] flex flex-col gap-2 overflow-y-auto bg-bg p-3 sm:p-4"
+          : "flex w-full flex-col gap-2"
+      }
+      style={
+        isFullscreen
+          ? {
+              paddingTop: "max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.5rem))",
+              paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))",
+            }
+          : undefined
+      }
     >
       {/* ---------------------------------------------------------------- toolbar */}
       <header className="flex flex-wrap items-center gap-1.5 border-b border-line-subtle pb-2">
@@ -303,7 +363,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setZoomIdx((v) => Math.min(ZOOMS.length - 1, v + 1))}
+            onClick={() => setZoomIdx((v) => Math.min(ZOOM_FACTORS.length - 1, v + 1))}
             title={t("roll_zoom_in")}
             aria-label={t("roll_zoom_in")}
             data-testid="piano-roll-zoom-in"
@@ -350,6 +410,30 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
         <button
           type="button"
+          onClick={() => setIsCollapsed((v) => !v)}
+          aria-pressed={isCollapsed}
+          data-testid="piano-roll-collapse"
+          title={isCollapsed ? t("roll_expand") : t("roll_collapse")}
+          aria-label={isCollapsed ? t("roll_expand") : t("roll_collapse")}
+          className="rounded-lg border border-line bg-panel2 p-1 text-text-sub hover:text-text"
+        >
+          {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsFullscreen((v) => !v)}
+          aria-pressed={isFullscreen}
+          data-testid="piano-roll-fullscreen"
+          title={isFullscreen ? t("roll_exit_fullscreen") : t("roll_fullscreen")}
+          aria-label={isFullscreen ? t("roll_exit_fullscreen") : t("roll_fullscreen")}
+          className="rounded-lg border border-line bg-panel2 p-1 text-text-sub hover:text-text"
+        >
+          {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+        </button>
+
+        <button
+          type="button"
           onClick={onClose}
           data-testid="piano-roll-close"
           aria-label={t("roll_close")}
@@ -360,7 +444,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         </button>
       </header>
 
-      {!editable ? (
+      {isCollapsed ? null : !editable ? (
         <div className="rounded-lg border border-line bg-panel2/60 p-3 text-[11px] text-text-sub" data-testid="piano-roll-not-melodic">
           {t("roll_not_melodic")}
         </div>
@@ -383,7 +467,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               ))}
             </div>
 
-            <div className="min-w-0 flex-1 overflow-x-auto">
+            <div ref={gridWrapRef} data-testid="piano-roll-grid-wrap" className="min-w-0 flex-1 overflow-x-auto">
               {/* Step ruler */}
               <div className="flex" style={{ height: 14 }}>
                 {Array.from({ length: stepCount }, (_, i) => (

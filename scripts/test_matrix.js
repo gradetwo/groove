@@ -151,13 +151,75 @@ const TARGETS = [
 ];
 
 /**
- * Click something that may be hidden *under the sticky header*.
+ * Click an element and *verify the click event actually arrived*.
  *
- * `force: true` skips Playwright's actionability checks, so the click is dispatched at the
- * element's coordinates — and if the page is scrolled such that a sticky header covers them, the
- * header receives the event instead. Scrolling the target to the middle of the viewport first is
- * what a user would do, and it makes the click land where it is aimed.
+ * Three lessons, all from the sibling project's WebKit notes
+ * (`synth/docs/notes/webkit-testing-pitfalls.md`, §1.1/§1.1b) — the first two of which this
+ * suite had already been bitten by:
+ *
+ * 1. **Do not depend on "two stable frames".** Playwright's actionability check waits for them,
+ *    and on a WebKit build without a compositor the page may not produce frames for seconds — the
+ *    notes measured 8–30 s per click. So: scroll in the DOM, aim at the bounding box, and dispatch
+ *    real mouse input.
+ * 2. **A real click needs a pair of down/up on the same node.** If a re-render replaces the node
+ *    in between, the engine dispatches **no `click` at all** — which looks exactly like "the
+ *    product ignored my tap" while a driver-level `locator.click()` works. Verify delivery, and
+ *    retry around the gesture.
+ * 3. **`force: true` clicks are dispatched at coordinates**, so a sticky header covering the
+ *    target silently receives them. Centring the element first is what a user would do anyway.
+ *
+ * The retry is *around a real gesture*, not a relaxed assertion: if the element never receives a
+ * click this still fails, and it names the missing event.
  */
+async function clickVerified(page, selector, { timeoutMs = 10000, pressMs = 60 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let lastReason = "unknown";
+  while (Date.now() < deadline) {
+    await page.evaluate((sel) => {
+      window.__clickProbe = { events: [] };
+      const el = document.querySelector(sel);
+      const record = (type) => (event) => {
+        // `once` per type: the first event of that type decides whether delivery happened.
+        window.__clickProbe.events.push({
+          type,
+          targetMatched: Boolean(el && (event.target === el || el.contains(event.target))),
+        });
+      };
+      for (const type of ["pointerdown", "pointerup", "click"]) {
+        document.addEventListener(type, record(type), { capture: true, once: true });
+      }
+    }, selector);
+
+    const box = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      el.scrollIntoView({ block: "center", inline: "center" });
+      const r = el.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height };
+    }, selector);
+
+    if (!box) {
+      lastReason = `${selector} is not in the document`;
+    } else if (box.w < 1 || box.h < 1) {
+      lastReason = `${selector} has a zero-sized box (${box.w}x${box.h})`;
+    } else {
+      await page.mouse.move(box.x, box.y);
+      await page.mouse.down();
+      // A non-zero press duration: a 0 ms press is the easiest thing for an engine to swallow.
+      await page.waitForTimeout(pressMs);
+      await page.mouse.up();
+      const events = await page.evaluate(() => window.__clickProbe?.events ?? []);
+      if (events.some((e) => e.type === "click" && e.targetMatched)) return;
+      lastReason = `no click reached ${selector} (saw ${
+        events.map((e) => `${e.type}${e.targetMatched ? "" : "→other"}`).join(", ") || "nothing"
+      })`;
+    }
+    await page.waitForTimeout(150);
+  }
+  throw new Error(`clickVerified(${selector}) failed: ${lastReason}`);
+}
+
+/** Centring click for non-critical interactions that need no delivery proof. */
 async function clickCentred(page, selector) {
   await page.evaluate((sel) => {
     const el = document.querySelector(sel);
@@ -165,6 +227,13 @@ async function clickCentred(page, selector) {
   }, selector);
   await page.waitForTimeout(150);
   await page.click(selector, { force: true });
+}
+
+/** Active steps in one track row of the step matrix. */
+async function countActiveSteps(page, trackIdx) {
+  return page.$$eval(`[data-track-idx="${trackIdx}"][data-step-idx]`, (cells) =>
+    cells.filter((c) => c.getAttribute("aria-selected") === "true").length
+  );
 }
 
 async function runTestOnTarget(target, baseUrl) {
@@ -382,7 +451,7 @@ async function runTestOnTarget(target, baseUrl) {
     });
     // The audio settings entry point lives in the collapsible advanced drawer, closed by default.
     if (!(await page.$("[data-testid='studio-audio-settings-open']"))) {
-      await page.click("[data-testid='toolbar-advanced-toggle']", { force: true });
+      await clickVerified(page, "[data-testid='toolbar-advanced-toggle']");
       await page.waitForTimeout(300);
     }
     await page.waitForSelector("[data-testid='studio-gs1-toggle']", { timeout: 20000 }).catch(() => {
@@ -392,7 +461,7 @@ async function runTestOnTarget(target, baseUrl) {
     if (!audioSettingsBtn) {
       throw new Error("Audio settings panel has no entry point in the toolbar");
     }
-    await audioSettingsBtn.click({ force: true });
+    await clickVerified(page, "[data-testid='studio-audio-settings-open']");
     await page.waitForSelector("[data-testid='audio-settings-gs1-toggle']", { timeout: 15000 });
 
     // GS-1 ships on by default, and flipping the switch must be a genuine state change.
@@ -543,6 +612,42 @@ async function runTestOnTarget(target, baseUrl) {
       }
     }
 
+    // Item ③: three tabs, one visible group — measured on the real element (`hidden` is a DOM
+    // property, not a CSS class, so this is exactly the contract the component implements).
+    for (const tab of ["timbre", "mix", "effects"]) {
+      if (!(await page.$(`[data-testid='track-inspector-tab-${tab}']`))) {
+        throw new Error(`Track inspector is missing the "${tab}" tab`);
+      }
+    }
+    const visibility = await page.evaluate(() => {
+      const at = (id) => document.querySelector(`[data-testid='track-inspector-section-${id}']`);
+      return { timbre: at("timbre")?.hidden, mix: at("mix")?.hidden, effects: at("effects")?.hidden };
+    });
+    if (visibility.timbre !== false || visibility.mix !== true || visibility.effects !== true) {
+      throw new Error(`Inspector tabs do not isolate their sections: ${JSON.stringify(visibility)}`);
+    }
+    // Switching tabs must not unmount the other groups (state is preserved, switching is instant).
+    await clickVerified(page, "[data-testid='track-inspector-tab-mix']");
+    await page.waitForTimeout(150);
+    const afterSwitch = await page.evaluate(() => ({
+      timbreHidden: document.querySelector("[data-testid='track-inspector-section-timbre']")?.hidden,
+      mixHidden: document.querySelector("[data-testid='track-inspector-section-mix']")?.hidden,
+      volumePresent: Boolean(document.querySelector("[data-testid='track-inspector-volume']")),
+    }));
+    if (afterSwitch.mixHidden !== false || afterSwitch.timbreHidden !== true || !afterSwitch.volumePresent) {
+      throw new Error(`Inspector tab switch is wrong: ${JSON.stringify(afterSwitch)}`);
+    }
+    // Mute/solo stay reachable from any tab (they live in the header, not inside a section).
+    const msHidden = await page.evaluate(() =>
+      Boolean(
+        document.querySelector("[data-testid='track-inspector-mute']")?.closest("[hidden]") ||
+          document.querySelector("[data-testid='track-inspector-solo']")?.closest("[hidden]")
+      )
+    );
+    if (msHidden) throw new Error("Mute/solo are hidden behind a tab");
+    await clickVerified(page, "[data-testid='track-inspector-tab-timbre']");
+    await page.waitForTimeout(150);
+
     // The picker must filter by name and report the selection.
     const searchInput = await page.$("[data-testid='track-inspector-instrument-search']");
     if (!searchInput) {
@@ -573,7 +678,7 @@ async function runTestOnTarget(target, baseUrl) {
     // The whole claim of the roll is that it is another view of the same data, not a second copy.
     // So this draws a note in the roll and then requires the step grid to show it — a cross-view
     // assertion, which is the part that could silently break.
-    await clickCentred(page, "[data-testid='toolbar-piano-roll-toggle']");
+    await clickVerified(page, "[data-testid='toolbar-piano-roll-toggle']");
     try {
       await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 15000 });
     } catch (rollErr) {
@@ -609,6 +714,7 @@ async function runTestOnTarget(target, baseUrl) {
       return null;
     });
     if (!drawTarget) throw new Error("No melodic track with an empty step was found to draw into");
+    const activeBefore = await countActiveSteps(page, drawTarget.trackIdx);
 
     // The roll defaults to the first melodic track; select the measured one so both views agree.
     const selectedTrack = await page.$eval("[data-testid='piano-roll-track']", (el) => Number(el.value));
@@ -616,6 +722,46 @@ async function runTestOnTarget(target, baseUrl) {
       await page.selectOption("[data-testid='piano-roll-track']", String(drawTarget.trackIdx));
       await page.waitForTimeout(250);
     }
+
+    // Item ①: the note grid must fill the drawer, not sit at a fixed `steps × 26px` (a third of a
+    // desktop screen). Measured geometry, because this is exactly what jsdom cannot check.
+    const fill = await page.evaluate(() => {
+      const wrap = document.querySelector("[data-testid='piano-roll-grid-wrap']");
+      const grid = document.querySelector("[data-testid='piano-roll-grid']");
+      const w = wrap?.getBoundingClientRect().width ?? 0;
+      const g = grid?.getBoundingClientRect().width ?? 0;
+      return { wrap: w, grid: g };
+    });
+    if (fill.grid < fill.wrap - 60) {
+      throw new Error(
+        `Piano roll does not fill its drawer: grid ${Math.round(fill.grid)}px vs drawer ${Math.round(fill.wrap)}px`
+      );
+    }
+
+    // Fullscreen takes the viewport; collapse drops the editor but keeps the toolbar; both toggle
+    // back. (`Escape` leaves fullscreen before it closes the panel.)
+    await clickVerified(page, "[data-testid='piano-roll-fullscreen']");
+    await page.waitForTimeout(250);
+    const fsBox = await (await page.$("[data-testid='piano-roll']")).boundingBox();
+    const vp = page.viewportSize();
+    if (!fsBox || !vp || fsBox.width < vp.width - 8 || fsBox.height < vp.height - 8) {
+      throw new Error(`Fullscreen piano roll does not cover the viewport: ${JSON.stringify(fsBox)} of ${JSON.stringify(vp)}`);
+    }
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(250);
+    if ((await page.getAttribute("[data-testid='piano-roll']", "data-fullscreen")) !== "false") {
+      throw new Error("Escape did not leave fullscreen first");
+    }
+    await clickVerified(page, "[data-testid='piano-roll-collapse']");
+    await page.waitForTimeout(200);
+    if (await page.$("[data-testid='piano-roll-grid']")) {
+      throw new Error("Collapsing the piano roll left the editor mounted");
+    }
+    if (!(await page.$("[data-testid='piano-roll-track']"))) {
+      throw new Error("Collapsing the piano roll threw away its toolbar");
+    }
+    await clickVerified(page, "[data-testid='piano-roll-collapse']");
+    await page.waitForTimeout(200);
 
     // The drawer opens below the step matrix, so bring it into view before clicking and then
     // re-measure: `mouse.click` works in viewport coordinates, and the grid is taller than the
@@ -637,17 +783,19 @@ async function runTestOnTarget(target, baseUrl) {
     const rollNoteCount = await page.$$eval("[data-testid^='piano-roll-note-']", (els) => els.length);
     if (rollNoteCount === 0) throw new Error("Drawing in the piano roll produced no note");
 
-    // The step matrix renders the same pattern, so the drawn step must now read as active.
-    const activeAfter = await page.$$eval(`[data-step-idx="${drawTarget.stepIdx}"]`, (cells) =>
-      cells.map((c) => c.getAttribute("aria-selected"))
-    );
-    if (!activeAfter.includes("true")) {
+    // The step matrix renders the same pattern, so the row must have *gained* an active step.
+    // Counting the row's active steps (a relative change) rather than requiring a specific step
+    // index is deliberate: a click at computed coordinates can round into the neighbouring cell on
+    // another engine, and asserting which cell was hit would then be testing that engine's
+    // rounding instead of the shared-data behaviour this check exists for.
+    const activeAfter = await countActiveSteps(page, drawTarget.trackIdx);
+    if (activeAfter <= activeBefore) {
       throw new Error(
-        `The roll's new note did not reach the step grid at step ${drawTarget.stepIdx} (aria-selected: ${activeAfter.join(",")})`
+        `The roll's new note did not reach the step grid: track ${drawTarget.trackIdx} had ${activeBefore} active steps before and ${activeAfter} after`
       );
     }
 
-    await clickCentred(page, "[data-testid='piano-roll-close']");
+    await clickVerified(page, "[data-testid='piano-roll-close']");
     await page.waitForTimeout(250);
     if (await page.$("[data-testid='piano-roll-grid']")) {
       throw new Error("Piano roll did not close");

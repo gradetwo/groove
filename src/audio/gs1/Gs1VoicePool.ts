@@ -91,10 +91,15 @@ export class Gs1VoicePool {
   ): Promise<boolean> {
     if (this.disposed || !isGs1RoutingEnabled()) return false;
     const existing = this.slots.get(trackIdx);
-    // A ready host with the right patch is reused even if the caller asked for a different
-    // destination: a host's output is connected once, and rebuilding it to re-point the output
-    // is what made audition and playback destroy each other's hosts (see the class doc).
-    if (existing?.ready && existing.instrument === instrument) return true;
+    // A ready host is reused for any destination *and any instrument*: the host is
+    // instrument-agnostic (a patch is just a set of parameters), its output is connected once, and
+    // rebuilding it on every timbre change is what made switching timbre during playback feel
+    // unresponsive — each switch tore the worklet down, played the next notes on the native engine
+    // while the replacement compiled, and only then came back. The patch is pushed by `tryPlay`.
+    if (existing?.ready) {
+      existing.instrument = instrument;
+      return true;
+    }
     // A different instrument on the same track: tear the old host down rather than playing the
     // wrong patch. `slot.instrument` is updated first so a second call does not duplicate the work.
     if (existing) {
@@ -151,7 +156,7 @@ export class Gs1VoicePool {
     // The destination is intentionally not compared here: the host is already connected to this
     // track's output, and a caller asking for a different one (audition → master) must not cost
     // the live host its life.
-    if (slot?.ready && slot.host && slot.instrument === instrument) {
+    if (slot?.ready && slot.host) {
       const plan = planGs1Notes({
         role,
         instrument,
@@ -159,11 +164,18 @@ export class Gs1VoicePool {
         sampleRate: this.ctx.sampleRate,
         latencyFrames: slot.host.scheduledNoteLatencyFrames,
       });
-      if (!plan) return false;
+      if (!plan) {
+        // No GS-1 patch for this instrument: play it natively, but keep the host alive — the user
+        // may switch back, and disposing here would make that switch pay the load again.
+        slot.instrument = instrument;
+        slot.patch = null;
+        return false;
+      }
       if (slot.patch !== plan.patch) {
         slot.host.setPatch(plan.params);
         slot.patch = plan.patch;
       }
+      slot.instrument = instrument;
       const capped = capPlanPolyphony(plan, this.maxVoices);
       for (const note of capped.notes) {
         slot.host.noteOnAt(note.note, note.velocity, note.atFrame, note.pan);
@@ -177,7 +189,7 @@ export class Gs1VoicePool {
     // engine cover this note. Never await here — this runs inside the scheduler. A ready slot
     // with the same instrument cannot reach this branch, so a destination difference alone never
     // triggers a rebuild.
-    if (!slot || slot.instrument !== instrument || !slot.ready) {
+    if (!slot || !slot.ready) {
       void this.ensureTrack(trackIdx, role, instrument, dest);
     }
     return false;

@@ -1,27 +1,27 @@
 {
-  "version": "2.0.18",
+  "version": "2.0.19",
   "releaseDate": "2026-09-16",
-  "changelogCount": 82,
+  "changelogCount": 83,
   "latest": {
-    "version": "2.0.18",
+    "version": "2.0.19",
     "date": "2026-09-16",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.18 快机器慢轨包读回（并修掉它暴露的两个工具缺陷）+ 用户报告的 8 项：GS-1 三个现场缺陷、设置面板、和弦时值可见、检查器浮层/停靠、未保存提醒、钢琴卷帘",
-      "en": "v2.0.18 The fast-machine slow-track pack read back (and the two tooling defects it exposed) + the eight reported items: three live GS-1 defects, the settings panel, visible chord length, a floating/docked inspector, an unsaved-changes guard, and a piano roll"
+      "zh": "v2.0.19 三项使用反馈：钢琴卷帘默认满宽（并可全屏/收起/关闭）、GS-1 与换音色的卡顿根因、轨道检查器改成分类 tab",
+      "en": "v2.0.19 Three pieces of feedback from real use: the piano roll fills the width by default (and can go fullscreen, collapse or close), the root causes behind the GS-1 and timbre-switch stalls, and a tabbed track inspector"
     },
     "highlights": [
       {
-        "zh": "**M2 Max 上的慢轨包读回，四个小时级测量跨机复现**（15 门禁过 / 1 红 / 36 个文件哈希校验通过）：响度 trim 后 max |Δ| **0.115 dB**、mean 0.002；音色 13 段形状 max **0.14 dB**，最近一对**完全相同**（future-house ↔ acid-techno 0.2759）；GS-1 时序中位 −198.6 → −198.7 ms。**最有价值的一条是 GS-1 负载**：16 复音的 p90 从本机 0.336 掉到 **0.035**、实时比 0.578 → **0.998**——也就是说 E3 得出的「8 复音上限」是**我这台 2011 年 CPU 的上限，不是代码的上限**。红的那一个门禁是全量套件：**167 个失败全部是存储类测试**，真因是那台机器是 **Node v26.8.2**，较新的 Node 暴露了自己的全局 `localStorage`，而 Vitest 的 jsdom 环境只为「globalThis 上尚不存在的键」安装 jsdom 全局，…",
-        "en": "**The slow-track pack from the M2 Max was read back, and all four hour-long measurements reproduce across machines** (15 gates passed / 1 red / 36 files hash-verified): post-trim loudness max |delta| **0.115 dB**, mean 0.002; timbre 13-band shape max **0.14 dB** with the closest pair **identical** (future-house vs acid-techno, 0.2759); GS-1 jitter median -198.6 to -198.7 ms. **The most valuable number is the GS-1 load**: at 16 voices p90 fell from 0.336 here to **0.035**, an…"
+        "zh": "**钢琴卷帘只有屏幕 1/3 宽——因为格子宽度是写死的像素**。第一版用 `ZOOMS = [14, 20, 26, …]` 直接当格子宽度，于是音符网格永远是 `步数 × 26px`：16 步就是 416px，在 1440px 的屏幕上正好约 1/3，抽屉剩下的地方全空着。现在缩放是**相对容器宽度的倍数**（用 `ResizeObserver` 量抽屉宽度再算格子宽），默认 1× 就是**铺满**，缩放按钮从 0.5× 到 2× 在此基础上放大缩小；格子宽有 10px 下限（32 步在窄屏上不会被压成看不见）。新增两个状态：**全屏**（`fixed inset-0`，带安全区内边距，Esc 先退全屏再关面板，因为那是更小的一步）与**收起**（只留工具栏——轨选择、缩放、移调、关闭都还在，编辑区卸载）。E2E 量的是几何：网格宽度必须 ≥ 抽屉宽度 − 60px、全屏盒子必须覆盖视口、收起后编辑区必须消失而工具栏必须还在。",
+        "en": "**The piano roll was about a third of the screen because its cell width was a hard-coded pixel size.** The first version used `ZOOMS = [14, 20, 26, …]` as the cell width directly, so the note grid was always `steps × 26px` — 416 px for a 16-step pattern, almost exactly a third of a 1440 px screen, with the rest of the drawer empty. Zoom is now a **factor on a cell width derived from the measured container** (a `ResizeObserver` watches the drawer), so the default 1× **fills**…"
       },
       {
-        "zh": "**同一个包还暴露了我自己工具的一个真实缺陷**：`--measure` 花 22 分钟跑完四份测量，包里四项「新测量 vs 已提交基线」**全部返回 no matching genre ids**——第一版对比函数在**猜报告结构**（找 `genres` 数组和 `id` 字段），而四份报告实际都按**对象映射**按曲风 id 索引，GS-1 两份更不是按曲风索引的。现在每个报告一个显式适配器（响度 `trimmedLufs` / 音色 13 段形状距离 / GS-1 负载按复音数 / GS-1 时序按策略），字段名写死，无法识别就明确报不可比；`verify` 还会**用本仓库的基线重算一遍**再打印，所以旧打包器产出的包也能被正确解读，适配器坏掉会显示成 NOT COMPARABLE 而不是四个沉默的空答案。",
-        "en": "**The same pack exposed a real defect in my own tooling.** `--measure` spent 22 minutes producing four measurements, and all four \"fresh measurement vs committed baseline\" comparisons came back `no matching genre ids`: the first version of the comparison *guessed* at the report shapes (looking for a `genres` array and an `id` field), whereas every report actually keys its genres by **object map** — and the two GS-1 reports are not genre-keyed at all. Each report now has an e…"
+        "zh": "**GS-1 开关与播放中换音色的卡顿，根因有三个，都在主线程的生命周期上**。① **每次换音色都在重建 host**：`ensureTrack`/`tryPlay` 把「乐器名不同」当成「拆掉这个 slot、重新加载一个 host」，于是从一个 GS-1 patch 换到另一个，会先销毁一个完全可用的 worklet、让接下来几个音**回退到原生引擎**、等新 host 编译完再切回来——听感就是「换音色没反应，过一会儿才变」。host 与乐器无关（patch 只是一组参数），现在**就地把新 patch 推给同一个 host**；新乐器若没有 GS-1 patch（例如钢琴这类刻意保留原生的），也只是**不用**它发声，host 仍然留着，切回来是即时的。② **关闭 GS-1 时同步销毁**：`releaseAll()` + `dispose()` 原本都写在点击处理里，正在播放时等于在主线程上拆掉每个 worklet 节点并释放 WASM——这就是「一切就像卡住」。现在**先静音、后释放**：`releaseAll()` 立即执行（声…",
+        "en": "**The stalls around the GS-1 switch and around switching timbre during playback have three root causes, all of them main-thread lifecycle work.** (1) **Every timbre change rebuilt the host**: `ensureTrack`/`tryPlay` treated \"a different instrument\" as \"tear this slot down and load another host\", so switching from one GS-1 patch to another disposed a perfectly usable worklet, played the next notes on the **native** engine while the replacement compiled, and only then switched…"
       },
       {
-        "zh": "**GS-1 三个现场缺陷，全部是接线/归属问题而不是合成器问题**：① **和弦时值被平方**——`chordNoteDuration()` 内部已经乘过发音法的 `gateScale`，GS-1 这条路又乘了一次，于是 stab(0.3) 变成 0.09×（13 ms 的咔哒）、sustain(3.0) 变成 9×（近一秒长鸣），而且**现场与导出不再对等**（导出只乘一次），违反本仓库的硬规则；现在两条路共用 `chordNoteDuration` 与 `chordVoiceOnset`。② **试听会拆掉正在用的 host**——试听走 master 输出、播放走轨道通道条，而 voice pool 把「目标节点不同」当成「重建这个 slot」，于是试听与播放互相拆 host，下一次音符发现 slot 不匹配就回退原生并再次触发重建，形成抖动循环（正是「试听有延迟或不响」）；host 输出只连一次，目标节点不再作为重建理由，真实变化（换乐器）仍然重建，试听也改为走轨道通道条。③ **停止后还有几个音**——GS-1 声部在 workle…",
-        "en": "**Three live GS-1 defects, all wiring/ownership rather than synth problems.** (1) **Chord length was squared**: `chordNoteDuration()` already multiplies by the articulation's `gateScale`, and the GS-1 path multiplied by it again, so a stab (0.3) became 0.09x — a 13 ms click — and a sustain (3.0) became 9x, ringing for most of a second; it also meant **live and export no longer agreed** (the exporter multiplies once), breaking a hard rule of this repository. Both paths now sh…"
+        "zh": "**一个可复用的测量脚本，因为「卡」不能靠读代码断言**：`scripts/measure_interaction_latency.mjs` 在真实浏览器里量每个交互的 **点击→DOM 真的反映变化** 的延迟，以及期间主线程的 **long task**（>50ms 的阻塞；那正是「卡住」的感觉，也是会饿死调度器前瞻的东西）。第一次写它时我把固定 `setTimeout` 当成 settle，于是把一个几毫秒的状态翻转量成了 8 秒——现在的 inspect 等的是**可观测状态**（`aria-pressed` 翻转、选项 `aria-selected` 变 true、格子 `aria-selected` 改变）。本机（无头 Chromium，桌面视口，同一脚本同一条件）修复前后：**GS-1 关 119.5 → 38.8 ms、开 71.5 → 23.9 ms**（约 3 倍）；**换音色 81/160/215/108 → 89/81/63/59 ms**（最差那个从 215 ms 降到 63 ms）；切一步 59.6 → 45.1 m…",
+        "en": "**A reusable probe, because \"it stutters\" cannot be asserted by reading code.** `scripts/measure_interaction_latency.mjs` measures, in a real browser, each interaction's **click → the DOM actually reflecting it** latency plus the main thread's **long tasks** during it (>50 ms of blocking is what \"stuck\" feels like, and it is what starves the scheduler's lookahead). The first version of the probe used a fixed `setTimeout` as its settle, which is how it reported eight seconds…"
       }
     ],
     "truncated": true
