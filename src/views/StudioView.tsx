@@ -398,6 +398,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setEffectsRackState,
     clearPlayhead,
     commit,
+    // Item ⑧: the hook asks before any genre switch destroys unsaved edits — including the
+    // navigation path (Explore / search / random genre), which used to discard them silently.
+    requestGenreGuard: (genre, run) =>
+      guard.request(t("unsaved_action_genre", { name: genre.name || genre.id }), run),
   });
 
   // Export / share actions: MIDI, ALS, .groove, WAV, stems, share URL (A-02)
@@ -730,15 +734,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
         genreAccent={genreAccent}
         isZh={isZh}
         onSelectCategory={setActiveCategoryFilter}
-        onSelectGenre={(genreId) => {
-          // Switching genre replaces BOTH pattern slots with the new genre's defaults (SET_GENRE),
-          // so it is the most destructive thing in the studio. The rail hands over an id, hence
-          // the lookup for a human-readable name in the confirmation.
-          const named = railGenres.find((g) => g.id === genreId);
-          guard.request(t("unsaved_action_genre", { name: named?.name || genreId }), () =>
-            handleSelectGenreFromRail(genreId)
-          );
-        }}
+        // The unsaved-changes question is asked inside `switchGenre` (useGenreSwitching), so it
+        // covers the rail, the dice button and navigation in one place.
+        onSelectGenre={handleSelectGenreFromRail}
         onRandomGenre={handleDiceRandom}
         getGenreAccent={getGenreAccent}
         getGenreChipTag={getGenreChipTag}

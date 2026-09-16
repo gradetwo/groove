@@ -1,0 +1,132 @@
+/**
+ * Genre switching asks before it destroys unsaved work (item ⑧, the "similar scenarios" audit).
+ *
+ * Gating the genre rail alone was not enough. There are three ways in — the rail, the dice/random
+ * button, and **navigation** (Explore, search or a random genre sending the user to the studio) —
+ * and the navigation path used to `commit({ type: "SET_GENRE" })` directly: it discarded edits
+ * with no question *and* skipped the genre's own drum kit and FX defaults, so arriving from
+ * Explore left the previous genre's kit and rack in place.
+ *
+ * These tests pin the choke point: every path goes through `switchGenre`, which asks the caller's
+ * guard, and nothing is committed unless the guard runs the action.
+ */
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { useGenreSwitching } from "../features/sequencer/hooks/useGenreSwitching";
+import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
+import type { Genre } from "../types/genre";
+import type { SequencerAction } from "../features/sequencer/useSequencerStore";
+import { ALL_GENRES } from "../data/genres";
+
+/**
+ * Real catalog entries, not stubs: the switch path consults the genre's own metadata (accent
+ * colour, drum kit, FX defaults), and a hand-written stub drifts out of shape the moment that
+ * metadata grows a field.
+ */
+const genre = (id: string): Genre => {
+  const found = (ALL_GENRES as unknown as Genre[]).find((g) => g.id === id);
+  if (!found) throw new Error(`test genre not in the catalog: ${id}`);
+  return found;
+};
+
+function setup(options: { guard?: (genre: Genre, run: () => void) => void } = {}) {
+  const commits: SequencerAction[] = [];
+  const engine = {
+    setPattern: vi.fn(),
+    setDrumKit: vi.fn(),
+    setDrumsOnly: vi.fn(),
+    setBpm: vi.fn(),
+    setSwing: vi.fn(),
+    setTimeSignature: vi.fn(),
+    setResolution: vi.fn(),
+    play: vi.fn(),
+    stop: vi.fn(),
+  };
+  const current = genre("chicago-house");
+  const rendered = renderHook(() =>
+    useGenreSwitching({
+      currentGenre: current,
+      onSelectGenre: vi.fn(),
+      engineRef: { current: engine } as never,
+      isPlaying: false,
+      setIsPlaying: vi.fn(),
+      isDrumsOnly: false,
+      setDrumKit: vi.fn(),
+      setEffectsRackState: vi.fn(),
+      clearPlayhead: vi.fn(),
+      commit: (action) => commits.push(action),
+      requestGenreGuard: options.guard,
+    })
+  );
+  return { ...rendered, commits, engine, current };
+}
+
+beforeEach(() => {
+  localStorage.clear();
+});
+afterEach(() => {
+  setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED);
+});
+
+describe("genre switching · the unsaved-changes choke point", () => {
+  it("asks the guard before switching, and does nothing if the guard does not proceed", () => {
+    const asked: string[] = [];
+    const { result, commits } = setup({
+      guard: (g, run) => {
+        asked.push(g.id);
+        // Cancel: the guard never calls `run`.
+        void run;
+      },
+    });
+
+    act(() => {
+      result.current.switchGenre(genre("boom-bap"));
+    });
+
+    expect(asked).toEqual(["boom-bap"]);
+    // Nothing happened: no pattern replacement, no engine call.
+    expect(commits).toHaveLength(0);
+  });
+
+  it("switches when the guard proceeds", () => {
+    const { result, commits, engine } = setup({ guard: (_g, run) => run() });
+
+    act(() => {
+      result.current.switchGenre(genre("boom-bap"));
+    });
+
+    expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
+    expect(engine.setPattern).toHaveBeenCalledTimes(1);
+  });
+
+  it("switches without a guard at all (the hook stays usable in isolation)", () => {
+    const { result, commits } = setup();
+    act(() => {
+      result.current.switchGenre(genre("boom-bap"));
+    });
+    expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
+  });
+
+  it("routes re-clicking the active genre to nothing, so edits are never reset by an idle tap", async () => {
+    const { result, commits } = setup({ guard: (_g, run) => run() });
+    await act(async () => {
+      await result.current.switchGenreById("chicago-house");
+    });
+    expect(commits).toHaveLength(0);
+  });
+
+  it("guards the rail path through the same choke point", async () => {
+    const asked: string[] = [];
+    const { result, commits } = setup({
+      guard: (g, run) => {
+        asked.push(g.id);
+        run();
+      },
+    });
+    await act(async () => {
+      result.current.handleSelectGenreFromRail("boom-bap");
+    });
+    expect(asked).toContain("boom-bap");
+    expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
+  });
+});

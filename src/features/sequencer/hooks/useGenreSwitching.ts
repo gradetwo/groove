@@ -93,6 +93,15 @@ export interface UseGenreSwitchingOptions {
   setEffectsRackState?: React.Dispatch<React.SetStateAction<EffectsRackState>>;
   clearPlayhead: () => void;
   commit: (action: SequencerAction, recordHistory?: boolean) => void;
+  /**
+   * Item ⑧: ask before switching away from unsaved edits.
+   *
+   * Applied at `switchGenre` itself rather than at the rail, because there are three ways in:
+   * the rail, the dice/random button, and **navigation** (Explore, search, or a random genre
+   * sending the user to the studio). Gating only the rail left the navigation path silently
+   * discarding edits.
+   */
+  requestGenreGuard?: (genre: Genre, run: () => void) => void;
 }
 
 export interface UseGenreSwitchingResult {
@@ -126,6 +135,7 @@ export function useGenreSwitching({
   setEffectsRackState,
   clearPlayhead,
   commit,
+  requestGenreGuard,
 }: UseGenreSwitchingOptions): UseGenreSwitchingResult {
   const { customGenres } = useCustomGenres();
 
@@ -161,17 +171,8 @@ export function useGenreSwitching({
     }
   }, [currentGenre.id, isDrumsOnly, applyGenreFxDefaults]);
 
-  // Sync external genre
-  useEffect(() => {
-    if (initialGenre && initialGenre.id !== currentGenre.id) {
-      commit({ type: "SET_GENRE", genre: initialGenre });
-    }
-  }, [initialGenre, currentGenre.id, commit]);
-
-  const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
-
-  // Switch genre
-  const switchGenre = useCallback(
+  /** The actual switch, with no questions asked. */
+  const performSwitch = useCallback(
     (genre: Genre, andPlay = false) => {
       lastGenreIdRef.current = genre.id;
       const defaultKit = getDefaultDrumKitForGenre(genre);
@@ -203,16 +204,34 @@ export function useGenreSwitching({
       }
     },
     [
-      commit,
-      onSelectGenre,
-      isPlaying,
+      applyGenreFxDefaults,
       clearPlayhead,
-      isDrumsOnly,
+      commit,
       engineRef,
+      isDrumsOnly,
+      isPlaying,
+      onSelectGenre,
       setDrumKit,
       setIsPlaying,
     ]
   );
+
+  /**
+   * Sync external genre (navigation).
+   *
+   * This used to `commit({ type: "SET_GENRE" })` directly, which both discarded unsaved edits
+   * without asking *and* skipped the genre's own drum kit and FX defaults — so arriving from
+   * Explore gave you a pattern whose kit and rack belonged to the previous genre. It now goes
+   * through the same guarded path as every other switch.
+   */
+  useEffect(() => {
+    if (initialGenre && initialGenre.id !== currentGenre.id) {
+      if (requestGenreGuard) requestGenreGuard(initialGenre, () => performSwitch(initialGenre, false));
+      else performSwitch(initialGenre, false);
+    }
+  }, [initialGenre, currentGenre.id, performSwitch, requestGenreGuard]);
+
+  const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -253,10 +272,15 @@ export function useGenreSwitching({
     return GENRE_INDEX.filter((g) => g.category === activeCategoryFilter);
   }, [activeCategoryFilter, customGenres]);
 
-  /**
-   * A-01: genre data is loaded on demand. Selecting a chip resolves the full genre
-   * (pattern + metadata) before switching, so nothing heavy ships in the entry chunk.
-   */
+  /** Switch genre, asking first when the current pattern has unsaved edits (item ⑧). */
+  const switchGenre = useCallback(
+    (genre: Genre, andPlay = false) => {
+      if (requestGenreGuard) requestGenreGuard(genre, () => performSwitch(genre, andPlay));
+      else performSwitch(genre, andPlay);
+    },
+    [performSwitch, requestGenreGuard]
+  );
+
   const switchGenreById = useCallback(
     async (genreId: string, andPlay = false) => {
       if (genreId === currentGenre.id) {
