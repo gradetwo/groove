@@ -1433,6 +1433,30 @@ GS-1 快捷开关。三条设计约束写进组件注释并被测试钉住：
 `performSwitch`，行为一致；代价是取消切换后 App 的 `selectedGenre` 与 store 的 `currentGenre` 会
 不一致（轨道栏高亮跟随 store），这一点写在这里而不是藏起来：下一次导航会重新询问。
 
+### 5.18.5 慢轨结果：快机器上 16/16 全绿（v2.0.18）
+
+包 `slowpack-v2.0.18-final.tar.gz`（MacBook Pro M2 Max ×12，**Node v26.8.2**，提交 `f6ef0d9`），
+`verify` 判 **INTEGRITY OK**（24 个文件哈希全对，attribution = `COMMIT.txt`）。
+
+| 门禁 | 结果 | 说明 |
+|---|---|---|
+| typecheck / lint / data-lint / genre-audit / docs | ✅ | |
+| **suite** | ✅ | **120 文件 / 1424 用例全过**（v2.0.17 时是 167 个存储类失败、第二次是 120 文件全部无法 collect） |
+| build / budget / gs1-contract | ✅ | GS-1 契约 25 项 |
+| **e2e** | ✅ | **7 端全部通过**（Chromium/Firefox/WebKit + iPhone 14 竖横 + iPad Pro 11 竖横） |
+| perf | ✅ | 真实浏览器性能门禁 |
+| **redlines** | ✅ | **23/23**（此前因为导出树没有 `.git` 而红） |
+| 四个证据门禁 | ✅ | 响度 spread / 音色 spread / GS-1 负载 / GS-1 时序 |
+
+**这意味着 §5.18.2 ① 的两个工具缺陷在当初出问题的那台机器上被验证修好了**：套件不但能 collect，
+而且 1424 条全过；`redlines` 那条「工具自相矛盾」（让用户解到 git 检出之外，却要求 `git ls-files`）
+也修好并复验。
+
+本次**未带 `--measure`**，所以没有新的跨机测量，§5.18.1 的 v2.0.17 跨机对比仍然有效。
+该提交包含 v2.0.18 发布、一个应用跟进（⑧ 的守卫下沉到 `switchGenre`，导航路径也应用鼓组/FX）
+与工具/测试基建修复（`vitest.config.ts` 的 `setupFiles` 绝对路径、`slow_pack.mjs` 加固）；
+这之后 `src/` 无改动。
+
 ### 5.18.4 诚实说明
 
 - ③④⑥ 的修复在**无头浏览器里可验证的是「引擎被要求演奏什么」**（帧、时值、目标节点、静音调用），
