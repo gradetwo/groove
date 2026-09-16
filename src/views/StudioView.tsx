@@ -9,7 +9,7 @@ import { ToastBanner } from "../components/sequencer/ToastBanner";
 import { StepContextMenu } from "../components/sequencer/StepContextMenu";
 import { SequencerPanel } from "../components/sequencer/SequencerPanel";
 import { SequencerModals } from "../components/sequencer/SequencerModals";
-import { AudioSettingsModal } from "../components/sequencer/AudioSettingsModal";
+import { useGs1Setting } from "../features/sequencer/useGs1Setting";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
@@ -57,6 +57,8 @@ interface StudioViewProps {
   onViewDetail: (genre: Genre) => void;
   onAddToCompare?: (genre: Genre) => void;
   onAudioEngineReady?: (engine: AudioEngine) => (() => void) | void;
+  /** Opens the global settings panel, which App owns (item ⑤). */
+  onOpenSettings?: () => void;
   onOpenGenreMaker?: () => void;
   initialChords?: ChordDefinition[] | null;
   onClearInitialChords?: () => void;
@@ -73,6 +75,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onAddToCompare,
   onAudioEngineReady,
   onOpenGenreMaker,
+  onOpenSettings,
   initialChords,
   onClearInitialChords,
   initialArpeggio,
@@ -252,29 +255,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const engineRef = useRef<AudioEngine | null>(null);
 
   /**
-   * P6 mirror of the engine's GS-1 setting.
+   * GS-1 ("new architecture voices") switch.
    *
-   * The engine owns and persists the value; this state exists so flipping the toolbar toggle
-   * re-renders the button. Reading it straight from the engine during render would work once and
-   * then never update, because a ref mutation is not a render trigger.
+   * The engine owns and persists the value, the schedulers read it from module state, and three
+   * surfaces display it (this toolbar chip, the settings panel's audio tab, the About tab). The
+   * shared `useGs1Setting` hook subscribes to that module state, so whichever surface flips it,
+   * they all re-render together — and writes still go through the engine so persistence and the
+   * host teardown happen.
    */
-  const [gs1Enabled, setGs1Enabled] = useState(true);
-  useEffect(() => {
-    const engine = engineRef.current;
-    if (engine) setGs1Enabled(engine.isGs1Enabled());
-  }, []);
-
-  /** Audio settings panel (master level / hearing protection / latency / GS-1). */
-  const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
-
-  /**
-   * One write path for the GS-1 switch, shared by the toolbar quick toggle and the audio
-   * settings panel, so the two can never disagree about the value.
-   */
-  const handleSetGs1Enabled = useCallback((next: boolean) => {
-    engineRef.current?.setGs1Enabled(next);
-    setGs1Enabled(next);
-  }, []);
+  const [gs1Enabled, setGs1Enabled] = useGs1Setting(engineRef.current);
   const patternRef = useRef(pattern);
   patternRef.current = pattern;
   const seqStateRef = useRef(seqState);
@@ -757,10 +746,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onOpenVelocity={handleOpenVelocityLane}
           onOpenInspector={setInspectorTrackIdx}
           inspectorTrackIdx={inspectorTrackIdx}
-          // P6: read through to the engine (the setting is persisted there) and toggle it there.
+          // P6: the engine owns and persists it; the hook keeps every surface in sync.
           gs1Enabled={gs1Enabled}
-          onToggleGs1={() => handleSetGs1Enabled(!gs1Enabled)}
-          onOpenAudioSettings={() => setAudioSettingsOpen(true)}
+          onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
+          onOpenAudioSettings={onOpenSettings}
           onShiftTrack={handleShiftTrack}
           onSmartFill={handleSmartFillTrack}
           onClearTrack={handleClearTrack}
@@ -805,16 +794,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
         effectsRackState={effectsRackState}
         drumKit={drumKit}
         handleLoadProject={handleLoadProject}
-      />
-
-      {/* Audio settings panel: the engine-level settings that are not per-track (GS-1 voices,
-          master level, hearing protection, latency compensation). */}
-      <AudioSettingsModal
-        isOpen={audioSettingsOpen}
-        onClose={() => setAudioSettingsOpen(false)}
-        engine={engineRef.current}
-        gs1Enabled={gs1Enabled}
-        onToggleGs1={() => handleSetGs1Enabled(!gs1Enabled)}
       />
 
       {/* Step Context Menu (P-Locks) */}

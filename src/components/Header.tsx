@@ -19,6 +19,7 @@ import {
   Wand2,
   Keyboard,
   SlidersHorizontal,
+  Settings,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
@@ -46,6 +47,8 @@ interface HeaderProps {
   onRandomGenre: (genre: { id: string }) => void;
   onOpenUpdates?: () => void;
   onOpenShortcuts?: () => void;
+  /** Opens the global settings panel (item ⑤). */
+  onOpenSettings?: () => void;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
 }
@@ -57,6 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRandomGenre,
   onOpenUpdates,
   onOpenShortcuts,
+  onOpenSettings,
   analyser,
   isPlaying = false,
 }) => {
@@ -339,16 +343,33 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Language Switch */}
         <button
           onClick={toggleLanguage}
+          data-testid="header-language-switch"
           className="flex items-center gap-1 text-xs font-mono font-bold text-text-sub hover:text-text px-2 py-1.5 border border-line hover:border-line-strong rounded-lg bg-panel2 transition-colors"
           title={t("lang_switch_title")}
         >
           <span className="text-accent">{t("lang_switch_target")}</span>
         </button>
 
+        {/* Global settings (item ⑤). Deliberately between the language switch and the version
+            button: those three are the app-level controls, and it is where the user looked. */}
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            data-testid="header-settings-open"
+            className="flex items-center justify-center p-1.5 border border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
+            title={t("settings_open")}
+            aria-label={t("settings_open")}
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Updates / Version Button */}
         {onOpenUpdates && (
           <button
             onClick={onOpenUpdates}
+            data-testid="header-version-button"
             className="flex items-center gap-1.5 text-xs font-mono font-medium text-text-sub hover:text-accent px-2 py-1.5 border border-line hover:border-accent/40 rounded-lg bg-panel2 transition-colors"
             title={t("header_check_updates_title")}
           >

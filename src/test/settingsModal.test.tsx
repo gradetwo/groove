@@ -17,9 +17,12 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { AudioSettingsModal } from "../components/sequencer/AudioSettingsModal";
+import { SettingsModal } from "../components/settings/SettingsModal";
 import { AudioEngine } from "../audio/AudioEngine";
 import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
+import { APP_VERSION } from "../version";
+import { loadLayoutPrefs } from "../features/sequencer/layoutPrefs";
+import { getHapticSettings } from "../utils/haptics";
 
 function makeEngine(overrides: Partial<Record<string, unknown>> = {}) {
   const calls: string[] = [];
@@ -66,9 +69,9 @@ function makeEngine(overrides: Partial<Record<string, unknown>> = {}) {
   return { engine: engine as unknown as AudioEngine, state, calls, raw: engine };
 }
 
-const renderPanel = (engine: AudioEngine, props: Partial<React.ComponentProps<typeof AudioSettingsModal>> = {}) =>
+const renderPanel = (engine: AudioEngine, props: Partial<React.ComponentProps<typeof SettingsModal>> = {}) =>
   render(
-    <AudioSettingsModal
+    <SettingsModal
       isOpen
       onClose={() => {}}
       engine={engine}
@@ -78,7 +81,7 @@ const renderPanel = (engine: AudioEngine, props: Partial<React.ComponentProps<ty
     />
   );
 
-describe("AudioSettingsModal (audio settings panel)", () => {
+describe("SettingsModal (audio tab)", () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -163,9 +166,7 @@ describe("AudioSettingsModal (audio settings panel)", () => {
 
     state.masterVolume = 0.9;
     state.effectiveVolume = 0.9;
-    rerender(
-      <AudioSettingsModal isOpen onClose={() => {}} engine={engine} gs1Enabled onToggleGs1={() => {}} />
-    );
+    rerender(<SettingsModal isOpen onClose={() => {}} engine={engine} gs1Enabled onToggleGs1={() => {}} />);
     expect(screen.getByTestId("audio-settings-master-value")).toHaveTextContent("90%");
   });
 
@@ -188,5 +189,88 @@ describe("AudioSettingsModal (audio settings panel)", () => {
     renderPanel(null as unknown as AudioEngine);
     expect(screen.getByTestId("audio-settings-master-value")).toHaveTextContent("%");
     expect(screen.getByTestId("audio-settings-diagnostics")).toBeInTheDocument();
+  });
+});
+
+describe("SettingsModal tabs", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED);
+  });
+
+  it("groups the app-level parameters into four tabs and opens on Audio by default", () => {
+    const { engine } = makeEngine();
+    renderPanel(engine);
+
+    for (const tab of ["audio", "performance", "interface", "about"]) {
+      expect(screen.getByTestId(`settings-tab-${tab}`)).toBeInTheDocument();
+    }
+    // The audio controls are the ones people come here for; the rest are one click away.
+    expect(screen.getByTestId("settings-tab-audio")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("audio-settings-gs1-toggle")).toBeInTheDocument();
+  });
+
+  it("honours initialTab, so the toolbar shortcut can land on audio while the header keeps its own", () => {
+    const { engine } = makeEngine();
+    renderPanel(engine, { initialTab: "about" });
+
+    expect(screen.getByTestId("settings-tab-about")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("settings-panel-about")).toBeInTheDocument();
+    expect(screen.queryByTestId("audio-settings-gs1-toggle")).toBeNull();
+  });
+
+  it("reports the build, the GS-1 state and the local data it actually holds", () => {
+    localStorage.setItem("groove_projects_v1", "x".repeat(2048));
+    const { engine } = makeEngine();
+    renderPanel(engine, { initialTab: "about" });
+
+    expect(screen.getByTestId("settings-about-version")).toHaveTextContent(`v${APP_VERSION}`);
+    // The About tab is where a user checks whether the "new architecture" is on without hunting
+    // through the studio toolbar.
+    expect(screen.getByTestId("settings-about-gs1")).toHaveTextContent(/已开启|on/);
+    const total = screen.getByTestId("settings-storage-total").textContent ?? "";
+    expect(total).toMatch(/KB/);
+    expect(total).toMatch(/1\s*项|\b1\b/);
+  });
+
+  it("writes layout defaults through the same module the studio boots from", () => {
+    const { engine } = makeEngine();
+    renderPanel(engine, { initialTab: "interface" });
+
+    fireEvent.click(screen.getByTestId("settings-layout-isSidebarCollapsed"));
+    expect(loadLayoutPrefs().isSidebarCollapsed).toBe(true);
+    fireEvent.click(screen.getByTestId("settings-density-compact"));
+    expect(loadLayoutPrefs().density).toBe("compact");
+
+    fireEvent.click(screen.getByTestId("settings-layout-reset"));
+    const after = loadLayoutPrefs();
+    expect(after.isSidebarCollapsed).toBe(false);
+    expect(after.density).toBe("standard");
+  });
+
+  it("toggles haptics through the haptics module, and disables intensity with it off", () => {
+    const { engine } = makeEngine();
+    renderPanel(engine, { initialTab: "performance" });
+
+    const initial = getHapticSettings().enabled;
+    fireEvent.click(screen.getByTestId("settings-haptics-toggle"));
+    expect(getHapticSettings().enabled).toBe(!initial);
+    expect(screen.getByTestId("settings-haptics-slider")).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId("settings-haptics-toggle"));
+    expect(getHapticSettings().enabled).toBe(initial);
+    expect(screen.getByTestId("settings-haptics-slider")).not.toBeDisabled();
+  });
+
+  it("opens the update dialog from About when the host provides one", () => {
+    const onOpenUpdates = vi.fn();
+    const { engine } = makeEngine();
+    renderPanel(engine, { initialTab: "about", onOpenUpdates });
+
+    fireEvent.click(screen.getByTestId("settings-about-updates"));
+    expect(onOpenUpdates).toHaveBeenCalledTimes(1);
   });
 });

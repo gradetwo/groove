@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Modal } from "../../ui/Modal";
+
 import { useLanguage } from "../../i18n/LanguageContext";
 import { Gauge, ShieldCheck, Timer, Waves } from "lucide-react";
 import type { AudioEngine } from "../../audio/AudioEngine";
 
 /**
- * Audio settings panel.
+ * Audio tab of the settings panel.
  *
  * Three of these settings (`latencyCompensationMs`, `hearingProtection`, `maxVolumeLimit`)
  * have existed in the engine — persisted in `groove_audio_settings_v1` — since before the
@@ -18,9 +18,7 @@ import type { AudioEngine } from "../../audio/AudioEngine";
  * UI shows the *clamped* result (the engine clamps the limit to 0.1–1.0 and the compensation
  * to ±100 ms) instead of the raw number the user dragged to.
  */
-export interface AudioSettingsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+export interface AudioSettingsTabProps {
   engine: AudioEngine | null;
   /** Mirrors the engine's GS-1 routing switch; owned by the view so the toolbar stays in sync. */
   gs1Enabled: boolean;
@@ -29,9 +27,7 @@ export interface AudioSettingsModalProps {
 
 const pct = (value: number) => Math.round(value * 100);
 
-export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({
-  isOpen,
-  onClose,
+export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
   engine,
   gs1Enabled,
   onToggleGs1,
@@ -59,10 +55,11 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({
     setLimiterLookaheadMs(Math.round(engine.getMasterLimiterLatencySeconds() * 1000));
   }, [engine]);
 
-  // Re-sync on every open: the toolbar/console can change the same values while this is closed.
+  // Re-sync on mount: the toolbar or the mixing console can change the same values while the
+  // panel is closed, so the tab always opens on the engine's real state rather than a stale copy.
   useEffect(() => {
-    if (isOpen) readEngine();
-  }, [isOpen, readEngine]);
+    readEngine();
+  }, [readEngine]);
 
   const applyMasterVolume = (value: number) => {
     engine?.setMasterVolume(value);
@@ -97,13 +94,8 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({
     }`;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={t("audio_settings_title")}
-      className="max-w-xl"
-    >
-      <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
+    <div className="space-y-5" data-testid="settings-panel-audio">
+      <div className="space-y-5">
         {/* GS-1 voices (P6) */}
         <div className={sectionClass}>
           <div className={sectionTitleClass}>
@@ -253,6 +245,6 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({
           </div>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };

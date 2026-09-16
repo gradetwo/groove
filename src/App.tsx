@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
+import { SettingsModal } from "./components/settings/SettingsModal";
+import { useGs1Setting } from "./features/sequencer/useGs1Setting";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { Genre, SequencerPattern } from "./types/genre";
 import { GENRE_INDEX_MAP } from "./data/index/genresIndex";
@@ -106,6 +108,10 @@ const MainApp: React.FC = () => {
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [engineInstance, setEngineInstance] = useState<AudioEngine | null>(null);
+  // Global settings panel (item ⑤), and the one shared source of truth for the GS-1 switch so
+  // the header/settings surfaces can never disagree with the studio toolbar.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [gs1Enabled, setGs1Enabled] = useGs1Setting(engineInstance);
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Global hotkey: Cmd+K / Ctrl+K opens search dialog from ANY page (P0-23)
@@ -169,6 +175,7 @@ const MainApp: React.FC = () => {
         onRandomGenre={handleOpenStudioWithGenre}
         onOpenUpdates={() => setUpdatesOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
       />
@@ -209,6 +216,7 @@ const MainApp: React.FC = () => {
                     onViewDetail={(g) => handleSelectGenre(g, "detail")}
                     onAddToCompare={handleAddToCompare}
                     onAudioEngineReady={handleEngineReady}
+                    onOpenSettings={() => setSettingsOpen(true)}
                     onOpenGenreMaker={() => navigate({ tab: "maker", customGenreFork: selectedGenre?.id })}
                     initialChords={initialChords}
                     onClearInitialChords={() => setInitialChords(null)}
@@ -507,6 +515,19 @@ const MainApp: React.FC = () => {
       <ShortcutsModal
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
+      />
+
+      {/* Global settings panel (item ⑤): the app-level, non-per-track parameters. */}
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        engine={engineInstance}
+        gs1Enabled={gs1Enabled}
+        onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
+        onOpenUpdates={() => {
+          setSettingsOpen(false);
+          setUpdatesOpen(true);
+        }}
       />
 
       {/* Global Singleton Toast Container */}

@@ -50,9 +50,26 @@ export function isGs1RoutingEnabled(): boolean {
   return routingEnabled;
 }
 
+/**
+ * Listen for routing-switch changes.
+ *
+ * The switch is read by the schedulers (module state) *and* displayed by the UI (the toolbar
+ * chip, the audio tab, the About tab). Without a subscription each of those keeps its own copy
+ * and they drift the moment one of them writes — the toolbar would say ON while the settings
+ * panel said OFF. Kept React-free here; `useGs1Setting` adapts it to `useSyncExternalStore`.
+ */
+const routingListeners = new Set<(enabled: boolean) => void>();
+
+export function subscribeGs1Routing(listener: (enabled: boolean) => void): () => void {
+  routingListeners.add(listener);
+  return () => routingListeners.delete(listener);
+}
+
 /** Applied by the audio settings on load and when the user flips the toggle. */
 export function setGs1RoutingEnabled(enabled: boolean): void {
+  if (routingEnabled === enabled) return;
   routingEnabled = enabled;
+  for (const listener of routingListeners) listener(enabled);
 }
 
 /** One note of a planned chord/lead event, in absolute context frames. */

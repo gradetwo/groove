@@ -415,6 +415,80 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error("Audio settings panel did not close on Escape");
     }
 
+    // 5d. Global settings panel (item ⑤).
+    //
+    // The report was "I cannot find a global switch for the new architecture's voices". The panel
+    // now lives in the header between the language switch and the version button, so this asserts
+    // it is reachable there, that it is organised into tabs, and — the part that matters — that
+    // flipping the switch inside the panel is reflected by the studio toolbar chip. Two surfaces,
+    // one value; that mismatch was the bug class.
+    if (!(await page.$("[data-testid='header-settings-open']"))) {
+      throw new Error("Header has no global settings entry point");
+    }
+    const headerOrder = await page.evaluate(() => {
+      const left = (id) => {
+        const el = document.querySelector(`[data-testid='${id}']`);
+        return el ? el.getBoundingClientRect().left : null;
+      };
+      return {
+        language: left("header-language-switch"),
+        settings: left("header-settings-open"),
+        version: left("header-version-button"),
+      };
+    });
+    if (
+      headerOrder.language === null ||
+      headerOrder.settings === null ||
+      headerOrder.settings <= headerOrder.language ||
+      (headerOrder.version !== null && headerOrder.settings >= headerOrder.version)
+    ) {
+      throw new Error(`Settings entry point is misplaced: ${JSON.stringify(headerOrder)}`);
+    }
+
+    await page.click("[data-testid='header-settings-open']", { force: true });
+    await page.waitForSelector("[data-testid='settings-tab-audio']", { timeout: 15000 });
+    for (const tab of ["audio", "performance", "interface", "about"]) {
+      if (!(await page.$(`[data-testid='settings-tab-${tab}']`))) {
+        throw new Error(`Settings panel is missing the "${tab}" tab`);
+      }
+    }
+
+    const settingsGs1 = await page.$("[data-testid='audio-settings-gs1-toggle']");
+    if (!settingsGs1) {
+      throw new Error("The Audio tab does not expose the GS-1 switch");
+    }
+    if ((await settingsGs1.getAttribute("aria-pressed")) !== "true") {
+      throw new Error("GS-1 should default to on in the settings panel");
+    }
+    await settingsGs1.click({ force: true });
+    await page.waitForTimeout(250);
+    if ((await settingsGs1.getAttribute("aria-pressed")) !== "false") {
+      throw new Error("Flipping GS-1 inside the settings panel had no effect");
+    }
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    if (await page.$("[data-testid='settings-tab-audio']")) {
+      throw new Error("Settings panel did not close on Escape");
+    }
+
+    // The toolbar chip must agree with what the panel just did (the cross-surface contract).
+    if (!(await page.$("[data-testid='studio-gs1-toggle']"))) {
+      await page.click("[data-testid='toolbar-advanced-toggle']", { force: true });
+      await page.waitForTimeout(300);
+    }
+    const chipAfterPanelFlip = await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed");
+    if (chipAfterPanelFlip !== "false") {
+      throw new Error(
+        `Toolbar GS-1 chip (${chipAfterPanelFlip}) disagrees with the settings panel that just turned it off`
+      );
+    }
+    // Leave the app as we found it: default on.
+    await page.click("[data-testid='studio-gs1-toggle']", { force: true });
+    await page.waitForTimeout(200);
+    if ((await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed")) !== "true") {
+      throw new Error("Could not restore the GS-1 default after the settings-panel check");
+    }
+
     // 6. Compare & Challenge Views Check
     await page.goto(`${baseUrl}/?tab=compare`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
