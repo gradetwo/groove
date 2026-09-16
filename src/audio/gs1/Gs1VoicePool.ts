@@ -19,12 +19,22 @@
  * That is deliberately not "queue the notes until the host is up": a sequencer that stalls its
  * first bar to await a download is worse than one that plays the first bar natively.
  *
- * ## Not enabled in production yet
+ * ## Destination stability
  *
- * `isGs1RoutingEnabled()` (in `gs1Tracks.ts`) is the switch, and it is **off**. Do not turn it on
- * until the offline renderer routes through GS-1 as well: a live-only route would make the export
- * disagree with playback, which this repository treats as a hard rule. See
- * `AUDIO_QUALITY_AND_SYNTH_PLAN.md` §5.14.
+ * A host's output is connected once, to the track's own destination. `dest` is therefore only
+ * used when a host is *created*: it is deliberately not part of the "is this slot usable" test.
+ * Making it part of that test caused a host-churn loop — auditioning a track passes the master
+ * output, which asked for a different destination, which tore the live host down and rebuilt it
+ * against the master; the next sequencer note then found a mismatched slot, fell back to native
+ * and rebuilt again. The user-visible symptom was exactly "the audition button has latency, or
+ * does not sound".
+ *
+ * ## The switch
+ *
+ * `isGs1RoutingEnabled()` (in `gs1Tracks.ts`) is the switch. It ships **on** (v2.0.16), is
+ * persisted per user in `groove_audio_settings_v1`, and both the toolbar quick toggle and the
+ * audio settings panel write through `AudioEngine.setGs1Enabled`. Turning it off is safe at any
+ * moment: the pool silences and disposes its hosts and the native engine takes the notes.
  */
 import type { MixTrackId } from "../../data/genreMix";
 import { createGs1Host, type Gs1Host } from "./Gs1Host";
@@ -81,7 +91,10 @@ export class Gs1VoicePool {
   ): Promise<boolean> {
     if (this.disposed || !isGs1RoutingEnabled()) return false;
     const existing = this.slots.get(trackIdx);
-    if (existing?.ready && existing.instrument === instrument && existing.dest === dest) return true;
+    // A ready host with the right patch is reused even if the caller asked for a different
+    // destination: a host's output is connected once, and rebuilding it to re-point the output
+    // is what made audition and playback destroy each other's hosts (see the class doc).
+    if (existing?.ready && existing.instrument === instrument) return true;
     // A different instrument on the same track: tear the old host down rather than playing the
     // wrong patch. `slot.instrument` is updated first so a second call does not duplicate the work.
     if (existing) {
@@ -135,7 +148,10 @@ export class Gs1VoicePool {
   ): boolean {
     if (this.disposed || !isGs1RoutingEnabled()) return false;
     const slot = this.slots.get(trackIdx);
-    if (slot?.ready && slot.host && slot.instrument === instrument && slot.dest === dest) {
+    // The destination is intentionally not compared here: the host is already connected to this
+    // track's output, and a caller asking for a different one (audition → master) must not cost
+    // the live host its life.
+    if (slot?.ready && slot.host && slot.instrument === instrument) {
       const plan = planGs1Notes({
         role,
         instrument,
@@ -158,8 +174,10 @@ export class Gs1VoicePool {
       return true;
     }
     // Not ready (or a different instrument): start loading in the background and let the native
-    // engine cover this note. Never await here — this runs inside the scheduler.
-    if (!slot || slot.instrument !== instrument || slot.dest !== dest) {
+    // engine cover this note. Never await here — this runs inside the scheduler. A ready slot
+    // with the same instrument cannot reach this branch, so a destination difference alone never
+    // triggers a rebuild.
+    if (!slot || slot.instrument !== instrument || !slot.ready) {
       void this.ensureTrack(trackIdx, role, instrument, dest);
     }
     return false;

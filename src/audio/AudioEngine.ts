@@ -59,6 +59,12 @@ export interface AudioEngineOptions {
   onStop?: () => void;
   /** Fires when the scheduler had to skip steps after a stall (F-02 diagnostics). */
   onDroppedSteps?: (droppedSteps: number) => void;
+  /**
+   * GS-1 voice-pool factory. Injectable so a test can observe the live routing decisions
+   * (which notes, how long, to which destination) and assert that a transport stop actually
+   * silences the worklet voices — neither is observable through the real pool without WASM.
+   */
+  createGs1Pool?: (ctx: BaseAudioContext) => Gs1VoicePool;
 }
 
 export interface TrackChannelStrip {
@@ -149,6 +155,9 @@ export class AudioEngine {
    * nothing: every `tryPlay` returns `false` and the native path below runs exactly as before.
    */
   private gs1Pool: Gs1VoicePool | null = null;
+
+  /** Test seam: when set, replaces `new Gs1VoicePool(ctx)` (see `AudioEngineOptions`). */
+  private readonly gs1PoolFactory: ((ctx: BaseAudioContext) => Gs1VoicePool) | null;
 
   /**
    * The per-genre FX profile last applied by `setPattern` (N-14). `null` means the genre
@@ -258,6 +267,7 @@ export class AudioEngine {
     if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
     if (options?.onStop) this.onStopCallback = options.onStop;
     if (options?.onDroppedSteps) this.onDroppedStepsCallback = options.onDroppedSteps;
+    this.gs1PoolFactory = options?.createGs1Pool ?? null;
 
     this.workerBridge = new AudioWorkerBridge();
     this.workletClock = new AudioWorkletClock();
@@ -292,7 +302,9 @@ export class AudioEngine {
           this.masterGraph = graph;
           this.masterGain = graph.masterGain;
           this.gs1Pool?.dispose();
-          this.gs1Pool = new Gs1VoicePool(this.ctx);
+          this.gs1Pool = this.gs1PoolFactory
+            ? this.gs1PoolFactory(this.ctx)
+            : new Gs1VoicePool(this.ctx);
           this.limiter = graph.limiter.input;
           this.masterLimiter = graph.limiter;
           this.masterFxRack = graph.fxRack;
@@ -1136,10 +1148,17 @@ export class AudioEngine {
   }
 
   /**
-   * Cancels all scheduled voices with a fast 5ms release ramp to prevent hanging notes and clicks
+   * Cancels all scheduled voices with a fast 5ms release ramp to prevent hanging notes and clicks.
+   *
+   * GS-1 notes are allocated inside the worklet's own voice table, not in the native
+   * `voiceRegistry`, so panicking only the registry left them ringing — which is the "a few notes
+   * still sound after I hit stop" report. A sustain pad is scheduled three steps long, so those
+   * tails were audible for up to a second after the transport stopped. The pool's all-notes-off
+   * silences them without tearing the hosts down, so playback can resume immediately.
    */
   public panic(): void {
     this.voiceRegistry.panic();
+    this.gs1Pool?.releaseAll();
   }
 
   public async play(): Promise<void> {
@@ -1740,22 +1759,30 @@ export class AudioEngine {
     // — playing both would double the harmony. `tryPlay` returns false whenever GS-1 is disabled,
     // not yet loaded, or has no patch for this instrument, which is the native fallback.
     if (trackIdx !== undefined && this.gs1Pool) {
-      const treatmentGate = treatment?.gateScale ?? 1;
+      const effective: ChordTreatment =
+        treatment ?? { style: "triad", articulation: "block", gateScale: 1, strumSeconds: CHORD_STRUM_SEC };
       const gs1Notes = notes.map((note, i) => ({
         note,
-        time: time + (treatment ? CHORD_STRUM_SEC * 0 : 0) + i * (treatment?.strumSeconds ?? 0),
-        duration:
-          chordNoteDuration(stepDur, gateVal, treatment ?? { gateScale: 1 }) * treatmentGate,
+        // Same onset helper as the native path, so a strum/roll cannot drift apart between the
+        // two engines.
+        time: chordVoiceOnset(time, i, effective),
+        // `chordNoteDuration` ALREADY multiplies by `treatment.gateScale`. Multiplying by it
+        // again here made every GS-1 chord the square of its articulation: stabs became 13 ms
+        // clicks (0.3² = 0.09×) and pads became nine-step rings (3.0² = 9×), which is also why
+        // sustained chords kept sounding after the transport stopped. GS-1 and native chords
+        // must have the same length — that is the whole point of the articulation table.
+        duration: chordNoteDuration(stepDur, gateVal, effective),
         velocity: vel * chordVoiceGain(notes.length),
       }));
+      // Route through the track's own destination even when this is an audition. Audition passes
+      // `masterGain`, and a host can only be bound to one destination: asking the pool for the
+      // master instead made it tear down the live host and rebuild it against the master, so the
+      // next sequencer note found a mismatched slot, fell back to native, and triggered another
+      // rebuild — a host churn loop that is exactly the "audition has latency / does not sound"
+      // report. The track strip is also where a preview belongs: it is the sound as mixed.
+      const gs1Dest = this.getTrackDestination(trackIdx);
       if (
-        this.gs1Pool.tryPlay(
-          trackIdx,
-          "chords",
-          this.pattern?.tracks[trackIdx]?.instrument,
-          gs1Notes,
-          dest
-        )
+        this.gs1Pool.tryPlay(trackIdx, "chords", this.pattern?.tracks[trackIdx]?.instrument, gs1Notes, gs1Dest)
       ) {
         return;
       }

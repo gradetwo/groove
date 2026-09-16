@@ -159,15 +159,28 @@ describe("what the pool sends", () => {
     expect(pool.tryPlay(0, "chords", "warm_pad", [note()], dest)).toBe(false);
   });
 
-  it("reconnects to a new destination instead of playing into the old one", async () => {
+  it("keeps the live host when a caller asks for a different destination", async () => {
+    // Regression (v2.0.18): audition routes to the master output while playback routes to the
+    // track strip. Treating that difference as "rebuild this slot" made the two tear down each
+    // other's hosts — the next sequencer note then found a mismatched slot, fell back to native
+    // and rebuilt again. That loop is the reported "the audition button has latency, or does not
+    // sound". A host's output is connected once, so a destination difference is not a rebuild
+    // reason; the engine disposes the whole pool when it rebuilds the master graph.
     setGs1RoutingEnabled(true);
-    const { host } = makeHost();
+    const { host, calls } = makeHost();
     const createHost = vi.fn(async () => host);
     const pool = new Gs1VoicePool(ctx, { createHost: createHost as never });
-    const otherDest = {} as AudioNode;
+    const masterDest = {} as AudioNode;
 
     await pool.ensureTrack(0, "chords", "warm_pad", dest);
-    expect(pool.tryPlay(0, "chords", "warm_pad", [note()], otherDest)).toBe(false);
-    await vi.waitFor(() => expect(createHost).toHaveBeenCalledTimes(2));
+    expect(pool.tryPlay(0, "chords", "warm_pad", [note()], masterDest)).toBe(true);
+    expect(createHost).toHaveBeenCalledTimes(1);
+    expect(host.dispose).not.toHaveBeenCalled();
+    expect(calls.noteOnAt.length).toBe(1);
+
+    // A different *instrument* must still rebuild: the patch would otherwise be wrong.
+    await pool.ensureTrack(0, "chords", "saw_lead", dest);
+    expect(createHost).toHaveBeenCalledTimes(2);
+    expect(host.dispose).toHaveBeenCalled();
   });
 });
