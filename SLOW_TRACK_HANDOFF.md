@@ -48,27 +48,27 @@ node scripts/slow_pack.mjs verify <dir|tar.gz>     # 校验回来的包（哈希
 node scripts/slow_pack.mjs export --label v2.0.17-src
 #   -> slowpack-out/slowpack-v2.0.17-src.tar.gz  (~2 MB)
 
-# ② 快机器上
-tar xzf slowpack-v2.0.17-src.tar.gz && cd slowpack-v2.0.17-src
+# ② 快机器上（务必解到任何 git 检出之外）
+tar xzf slowpack-v2.0.18-src.tar.gz && cd slowpack-v2.0.18-src
 git apply --whitespace=nowarn changes.patch      # 只有树是脏的时候才需要
 npm ci
 npx playwright install chromium firefox webkit   # E2E 矩阵与性能门禁需要真浏览器
 
 # ③ 先看计划，再跑（CPU 越快越省时间）
 node scripts/slow_pack.mjs list
-node scripts/slow_pack.mjs run --label v2.0.17
+node scripts/slow_pack.mjs run --label v2.0.18
 #   需要重新测量基线时（小时级）：
-node scripts/slow_pack.mjs run --label v2.0.17-measured --measure
+node scripts/slow_pack.mjs run --label v2.0.18-measured --measure
 
 # ④ 把这两个文件发回来
-#   slowpack-v2.0.17.tar.gz
-#   slowpack-v2.0.17.tar.gz.sha256
+#   slowpack-v2.0.18.tar.gz
+#   slowpack-v2.0.18.tar.gz.sha256
 ```
 
 ## 4. 包回来之后
 
 ```bash
-node scripts/slow_pack.mjs verify slowpack-out/slowpack-v2.0.17.tar.gz
+node scripts/slow_pack.mjs verify slowpack-out/slowpack-v2.0.18.tar.gz
 ```
 
 `verify` 做四件事，任何一件不过就退出 1：
@@ -108,3 +108,47 @@ artifacts/gs1.jitter.measured.json
 - `scripts/slow_pack.mjs` 本身**没有单元测试**：它的正确性靠 `--selftest`（绿 + 红两条路径）、
   一次真实的 `run --only docs,redlines`，以及 `verify` 的自校验来证明——这三样都在本轮跑过，
   期间确实抓出并修掉了四个真实缺陷（truncated patch、SUMMARY 未被哈希、子集包被误判为不完整、反向 patch 被误判为不可归属）。
+
+## 7. 一次真实事故：解到别人的检出里面（v2.0.18 的两次红门禁）
+
+回来的包里 `data-lint` 与 `suite` 红，日志是：
+
+```
+RUN  v2.1.9 /Users/crow/work/music/groove/slowpack-v2.0.18-src
+Error: Failed to load url /Users/crow/work/music/groove/src/test/setup.ts …
+Test Files  120 failed (120)      Tests  no tests
+```
+
+**一个断言都没有跑**：包被解到了 `/Users/crow/work/music/groove/` 这个已有检出里面的
+`slowpack-v2.0.18-src/`，于是 Vite/Vitest 解析测试 setup 时按**外层 worktree** 找，找到的是外层的
+路径，120 个测试文件全部无法加载。代码没问题——同一份包里的 `e2e`（7 端、67.8s）、`build`、
+`budget`、`perf`、四个证据门禁、GS-1 契约 25 项、typecheck、lint、红线**全部通过**。
+
+### 7.1 工具现在会挡住这种情况（preflight）
+
+`run` 在跑任何门禁**之前**检查三件事，不通过就直接 `exit 4`（一条门禁都不跑，
+可用 `--continue-anyway` 覆盖）：
+
+1. `git rev-parse --show-toplevel` 与当前目录不一致 → 「你正跑在一个 git 检出的子目录里」，
+   并给出两条修法（解到检出之外，或回到 worktree 根目录）；
+2. `package.json` / `vitest.config.ts` / `src/test/setup.ts` 是否存在；
+3. `node_modules` 是否已安装（否则先 `npm ci`，或用 `--install`）。
+
+实测：在一个嵌套目录里跑 `run` → `EXIT=4`，打印原因与修法，**0 条门禁被执行**。
+
+### 7.2 归属判定改成看证据，而不是看一个布尔
+
+那次包的 `MANIFEST` 说 `dirty: true` 但 `changes.patch` 是 0 字节，于是旧版 `verify` 判
+「结果不可归属」。真实情况是：唯一的变化是**未跟踪**的 `?? slowpack-v2.0.18-src/`
+（也就是解包出来的目录本身），而补丁只能携带**已跟踪文件的改动**。现在：
+
+- `dirty` 只表示「已跟踪文件与 HEAD 不同」；未跟踪文件单独记录；
+- `verify` 用证据判断：`trackedChanges` 非空且补丁为空才算不可归属；
+  旧清单没有该字段时，从记录下来的 `status --porcelain` 里剔除 `??`/`!!` 行推算；
+- 显示上不再把干净的树说成 dirty。
+
+### 7.3 macOS 重新打包会产生 `._*`
+
+用 Mac 的 `tar` 重打包（或在 Finder 里拷贝）会给每个条目加上 AppleDouble 资源叉
+（`._MANIFEST.json`、`._logs` …）。`verify` 现在把它们识别为**元数据并忽略**，只报告数量，
+而不是当成 28 个「包外文件」——否则真正的问题（有没有重要文件没进哈希清单）会被噪音淹没。

@@ -161,23 +161,72 @@ function gitState() {
       statusLines: ["(no .git in this tree: it is an exported source package; the commit comes from COMMIT.txt)"],
       diff: "",
       untracked: [],
+      trackedChanges: [],
+      cwd: ROOT,
+      toplevel: "",
     };
   }
   const sha = capture("git", ["rev-parse", "HEAD"]);
   const branch = capture("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
   const status = capture("git", ["status", "--porcelain"]);
   const diff = captureRaw("git", ["diff", "HEAD"]);
+  // "Dirty" must mean "the *tracked* tree differs from HEAD", because that is the only thing the
+  // patch can carry. Counting untracked files here made a perfectly attributable run look
+  // unattributable: on the v2.0.18 run, one unpacked source directory (`?? slowpack-v2.0.18-src/`)
+  // was enough for `verify` to reject the package even though no tracked file had changed.
+  const trackedChanges = [
+    ...capture("git", ["diff", "--name-only", "HEAD"]).split("\n"),
+    ...capture("git", ["diff", "--name-only", "--cached"]).split("\n"),
+  ].filter(Boolean);
   return {
     available: true,
     sha,
     branch,
-    dirty: status.length > 0,
+    dirty: trackedChanges.length > 0,
+    trackedChanges,
     statusLines: status ? status.split("\n") : [],
     diff,
     describe: capture("git", ["describe", "--tags", "--always", "--dirty"]),
     subject: capture("git", ["log", "-1", "--pretty=%s"]),
     untracked: capture("git", ["ls-files", "--others", "--exclude-standard"]).split("\n").filter(Boolean),
+    /** Where the packer ran, and the worktree that owns it — the pair that explains most
+     *  "the test suite could not even collect" reports (see `preflightProblems`). */
+    cwd: ROOT,
+    toplevel: capture("git", ["rev-parse", "--show-toplevel"]),
   };
+}
+
+/**
+ * Reasons this tree cannot produce trustworthy gate results.
+ *
+ * Written from a real failure: a v2.0.18 run on another machine reported **120 test files failed
+ * to collect** with `Failed to load url …/src/test/setup.ts … Does the file exist?`, and two gates
+ * went red for it. The code was fine — the gates had been started from the *unpacked source
+ * directory inside the existing checkout*, so Vite/Vitest resolved the test setup against the
+ * outer worktree instead of the package. Two minutes of gates produced a package that looked like
+ * a regression.
+ *
+ * A preflight is the honest fix: refuse to run in a tree that cannot mean what the results claim,
+ * and say exactly how to fix it. `--continue-anyway` exists for someone who knows better.
+ */
+function preflightProblems() {
+  const problems = [];
+  const toplevel = capture("git", ["rev-parse", "--show-toplevel"]);
+  if (toplevel && path.resolve(toplevel) !== path.resolve(ROOT)) {
+    problems.push(
+      `this directory is nested inside the git worktree at ${toplevel}.` +
+        `\n     Vitest/Vite resolve the test setup against the worktree, so the suite can load the wrong` +
+        `\n     config and every test file fails to collect ("Failed to load url …/src/test/setup.ts").` +
+        `\n     Fix: unpack the source package OUTSIDE any git checkout, or run from ${toplevel}.`
+    );
+  }
+  for (const required of ["package.json", "vitest.config.ts", "src/test/setup.ts"]) {
+    if (!fs.existsSync(path.join(ROOT, required))) problems.push(`missing ${required} — this is not the project root`);
+  }
+  if (!fs.existsSync(path.join(ROOT, "node_modules"))) {
+    problems.push("node_modules is missing — run `npm ci` first, or pass --install");
+  }
+  return problems;
 }
 
 function hostInfo() {
@@ -573,6 +622,9 @@ function buildManifest(pkgDir, meta) {
       branch: meta.git.branch,
       dirty: meta.git.dirty,
       available: meta.git.available,
+      trackedChanges: meta.git.trackedChanges,
+      cwd: meta.git.cwd,
+      toplevel: meta.git.toplevel,
       describe: meta.git.describe,
       subject: meta.git.subject,
       statusLines: meta.git.statusLines,
@@ -754,6 +806,18 @@ function commandRun() {
     console.log(`  browsers : ${host.playwrightBrowsers}`);
     console.log(`  output   : ${pkgDir}`);
 
+    // Refuse to spend minutes of gates in a tree whose results would not mean what they claim.
+    const preflight = preflightProblems();
+    if (preflight.length > 0) {
+      console.error("\n\u274c PREFLIGHT FAILED \u2014 this tree cannot produce trustworthy gate results:\n");
+      for (const problem of preflight) console.error(`   \u2022 ${problem}\n`);
+      if (!hasFlag("continue-anyway")) {
+        console.error("   Re-run with --continue-anyway to run the gates regardless.");
+        return 4;
+      }
+      console.error("   --continue-anyway given: running the gates anyway.\n");
+    }
+
     // Exact tree state travels with the results; without it the numbers are unattributable.
     fs.writeFileSync(path.join(pkgDir, "git", "status.txt"), git.statusLines.join("\n") + (git.statusLines.length ? "\n" : ""));
     fs.writeFileSync(path.join(pkgDir, "git", "changes.patch"), git.diff);
@@ -915,6 +979,11 @@ function commandExport() {
       "",
       "## On the fast machine",
       "",
+      "> **Unpack it OUTSIDE any git checkout.** Unpacking inside an existing clone nests the",
+      "> package in that worktree, and Vitest/Vite then resolve the test setup against the outer",
+      "> repo — which is exactly how a v2.0.18 run reported `120 test files failed to collect`",
+      "> (`Failed to load url …/src/test/setup.ts`) with two gates red for no code reason.",
+      "",
       "```bash",
       `tar xzf slowpack-${label}.tar.gz`,
       `cd slowpack-${label}`,
@@ -1015,7 +1084,11 @@ function commandVerify() {
   // Files that appeared after packaging are worth knowing about, but not fatal.
   const onDisk = walkFiles(pkgDir).filter((rel) => rel !== "MANIFEST.json").sort();
   const listed = new Set((manifest.files ?? []).map((f) => f.path));
-  const unlisted = onDisk.filter((rel) => !listed.has(rel));
+  // macOS re-tarring (`tar czf` on a Mac, or a Finder copy) adds AppleDouble `._name` resource
+  // forks for every entry. They are metadata, not package contents, and reporting them as
+  // mysterious extras hides the real question of whether anything important travelled unhashed.
+  const macMetadata = onDisk.filter((rel) => rel.split("/").some((part) => part.startsWith("._")));
+  const unlisted = onDisk.filter((rel) => !listed.has(rel) && !macMetadata.includes(rel));
 
   // 2) Completeness: the plan must be fully accounted for (pass / fail / timeout / skipped).
   // A run narrowed with `--only` is *documented* as partial in `args`, so compare against
@@ -1054,7 +1127,11 @@ function commandVerify() {
   }
 
   const counts = manifest.counts ?? {};
-  console.log(`  commit    : ${sha || "(none)"}${manifest.git?.dirty ? " (dirty: patch included)" : ""} ${shaKnown ? "\u2714 known here" : "\u26a0 not a commit in this repo"}`);
+  const statusTracked = (manifest.git?.statusLines ?? []).filter((l) => l && !l.startsWith("??") && !l.startsWith("!!"));
+  const trackedForDisplay = manifest.git?.trackedChanges ?? statusTracked;
+  console.log(
+    `  commit    : ${sha || "(none)"}${trackedForDisplay.length ? " (tracked files modified: patch included)" : " (tracked tree clean)"} ${shaKnown ? "\u2714 known here" : "\u26a0 not a commit in this repo"}`
+  );
   if (!manifest.git?.available) console.log(`  attribution: ${manifest.git?.attribution ?? "unknown"}`);
   if (patchState) console.log(`  tree      : ${patchState}`);
   console.log(`  host      : ${manifest.host?.hostname} \u00b7 ${manifest.host?.cpuModel} \u00d7${manifest.host?.cpuCount} \u00b7 node ${manifest.host?.node}`);
@@ -1062,6 +1139,14 @@ function commandVerify() {
   console.log(`  scope     : ${partial ? `\u26a0 PARTIAL (${requestedOnly ? `--only ${requestedOnly.join(",")}` : `--skip ${(manifest.args?.skip ?? []).join(",")}`})` : "full slow-lane plan"}`);
   console.log(`  gates     : ${counts.pass} pass / ${counts.fail} fail / ${counts.timeout} timeout / ${counts.skipped} skipped`);
   console.log(`  files     : ${checked} hash-checked${unlisted.length ? `, ${unlisted.length} unlisted (extra)` : ""}`);
+  if (unlisted.length) {
+    // Name them: "28 extra" tells you nothing, "artifacts/x.json, logs/y.log" tells you whether
+    // anything important travelled outside the manifest.
+    console.log(`  extra     : ${unlisted.slice(0, 6).join(", ")}${unlisted.length > 6 ? ` … (+${unlisted.length - 6} more)` : ""}`);
+  }
+  if (macMetadata.length) {
+    console.log(`  macOS     : ${macMetadata.length} AppleDouble \`._*\` resource forks ignored (re-tarred on a Mac)`);
+  }
   console.log("");
   for (const s of manifest.steps ?? []) {
     console.log(`  ${statusIcon(s.status)} ${String(s.slug).padEnd(18)} ${String(s.seconds).padStart(7)}s  ${s.label}`);
@@ -1083,6 +1168,16 @@ function commandVerify() {
   for (const s of red) {
     console.log(`\n  \u274c ${s.label} (exit ${s.exitCode}${s.timedOut ? ", timed out" : ""})`);
     for (const h of (s.highlights.length ? s.highlights : s.tail).slice(0, 10)) console.log(`     ${h}`);
+    const logText = s.log && fs.existsSync(path.join(pkgDir, s.log)) ? fs.readFileSync(path.join(pkgDir, s.log), "utf8") : "";
+    if (/Failed to load url|no tests\b|failed to collect/i.test(logText)) {
+      console.log(
+        "     \u2139\ufe0f  This gate never collected: the runner could not load its own setup file. That is an"
+      );
+      console.log(
+        "        environment/config problem in the tree it ran in, not a failing assertion — re-run from a"
+      );
+      console.log("        clean checkout (see the preflight notes in SLOW_TRACK_HANDOFF.md).");
+    }
   }
 
   // Re-run the cross-machine comparison against THIS repo's committed baselines. The manifest
@@ -1118,8 +1213,25 @@ function commandVerify() {
 
   if (absent.length) problems.push(`gates missing from the package: ${absent.join(", ")}`);
   for (const s of noLog) problems.push(`log missing for ${s.slug}: ${s.log}`);
-  if (manifest.git?.dirty && (!fs.existsSync(patchPath) || fs.statSync(patchPath).size === 0)) {
-    problems.push("tree was dirty but git/changes.patch is empty — results are unattributable");
+  // Attribution is decided by *evidence*, not by the recorded `dirty` flag: a package written by
+  // an older packer can say `dirty: true` purely because an untracked directory existed (that is
+  // exactly what happened to the v2.0.18 package). Only tracked modifications need a patch.
+  const trackedChanges =
+    manifest.git?.trackedChanges ??
+    (manifest.git?.statusLines ?? []).filter((line) => line && !line.startsWith("??") && !line.startsWith("!!"));
+  if (trackedChanges.length > 0 && (!fs.existsSync(patchPath) || fs.statSync(patchPath).size === 0)) {
+    problems.push(
+      `tracked files differ from the recorded commit (${trackedChanges.slice(0, 4).join(", ")}) but git/changes.patch is empty — results are unattributable`
+    );
+  }
+  // A package can be perfectly attributable and still have run somewhere the gates could not see
+  // the right config. Say so, because that failure is silent in the gate table.
+  const ranIn = manifest.git?.cwd;
+  const ownedBy = manifest.git?.toplevel;
+  if (ranIn && ownedBy && path.resolve(ownedBy) !== path.resolve(ranIn)) {
+    console.log(`\n  \u26a0\ufe0f  the packer ran in ${ranIn}, which is nested inside the git worktree ${ownedBy}.`);
+    console.log("      Vite/Vitest resolve the test setup against the worktree, so a suite failure in");
+    console.log("      this package may be an environment artefact rather than a code failure.");
   }
   if (patchState === "neither direction applies") {
     problems.push("git/changes.patch applies in neither direction — cannot attribute these results to a tree");
