@@ -1,27 +1,27 @@
 {
   "version": "2.0.34",
   "releaseDate": "2026-09-16",
-  "changelogCount": 97,
+  "changelogCount": 98,
   "latest": {
-    "version": "2.0.33",
+    "version": "2.0.34",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.33 钢琴卷帘调式音阶智能折叠（Fold）与快捷力度动态：Ableton/FL Studio 式音阶折叠、双击音符快速删除、音高拖动实时发声试听、4段力度快捷预设（p/mf/f/127）与平滑渐强（Ramp ↗）",
-      "en": "v2.0.33 Piano Roll Scale Folding & Dynamic Articulation Suite: Ableton/FL Studio-style Fold to Scale, double-click note deletion, live pitch-drag acoustic auditioning, 4-tier velocity presets (p/mf/f/127), and smooth velocity ramp (Ramp ↗)"
+      "zh": "v2.0.34 钢琴卷帘滑音试听与交互质感飞跃：琴键上下滑动试听（Glissando）、网格悬浮幽灵音符光标预警、Alt+滚轮即时微调力度、拖拽音长浮动HUD与首小节一键复刻（Dup B1）",
+      "en": "v2.0.34 Piano Roll Keybed Glissando, Interactive Hover Cursors & Rhythmic Polish: Keybed drag-auditioning (glissando), ghost hover previews, Alt+wheel velocity nudging, floating note resize HUD, and 1-click Bar 1 duplication (Dup B1)"
     },
     "highlights": [
       {
-        "zh": "**调式音阶智能折叠（Ableton/FL Studio 式 Fold to Scale）**：在钢琴卷帘 Deck 2 新增「Fold / 折叠」开关。开启后自动隐藏音阶外的冗余半音行，仅保留当前调式音阶内音高与已写入音符行，彻底释放小屏笔记本与移动触控设备的垂直空间，防止滑音误触跑调，专注和谐和弦与旋律编排；关闭折叠则完整呈现全半音阶网格。",
-        "en": "**Smart Scale Folding (Ableton/FL Studio-style Fold to Scale)**: Added a dedicated \"Fold\" toggle button to Deck 2 of the piano roll. When engaged, out-of-scale chromatic pitch rows are folded away, leaving only in-scale notes and authored pitches. This eliminates vertical clutter on compact screens, prevents out-of-key note entry, and streamlines chord voicing."
+        "zh": "**琴键上下滑动连续试听（Keybed Glissando / Drag-Auditioning）**：钢琴卷帘左侧象牙与黑曜石 3D 琴键槽全新支持连续滑音试听。按住鼠标或触控拖拽在键盘上快速上下掠过时，滑过的每个琴键均实时击发声学校准音符并点亮金黄热力图高光反馈，松开平滑归位，音域定位与和弦声部感知如行云流水。",
+        "en": "**Piano Keybed Glissando & Drag-Auditioning**: Sweeping up and down the 3D ivory and obsidian pitch gutter keys with pointer down now triggers smooth acoustic glissando auditioning. Each key struck illuminates with a responsive golden heatmap glow and releases cleanly, providing effortless tactile pitch inspection."
       },
       {
-        "zh": "**双击音符即时删除与拖动音高实时试听（Double-Click Deletion & Live Pitch-Drag Auditioning）**：免切换工具即可实现双击（Double-Click）任意音符直接删除，操作体验对齐主流桌面 DAW；在网格拖动音符进行上下移调时，实时触发微切片声学校准试听，随着鼠标拖曳即时回放音高变化，给予创作者极具质感的即时声音反馈。",
-        "en": "**Double-Click Note Deletion & Live Pitch-Drag Auditioning**: Double-clicking any existing note now removes it instantly without requiring tool switching. Dragging notes vertically across pitch rows triggers real-time acoustic auditioning as the note crosses row boundaries, providing instantaneous sonic feedback."
+        "zh": "**网格鼠标悬浮幽灵音符与工具预警光标（Interactive Hover Ghost Cursor & Tool Targeting）**：铅笔工具模式下，指针移至网格任意空白位置自动投射半透明虚线幽灵预警音符（带微发光与音名/和弦印章角标），所见即所得；橡皮模式下悬浮目标音符显现实时红色脉冲警戒高光，剪刀模式下提供切割线预览，彻底消除盲目操作。",
+        "en": "**Interactive Ghost Hover Cursor & Tool Targeting**: In pencil mode, hovering over any empty cell displays a translucent dashed ghost note preview showing the exact pitch name (or chord stamp name) and duration before clicking. The eraser mode highlights targeted notes with a pulsing red warning glow, and scissors mode renders precise split guides."
       },
       {
-        "zh": "**快捷力度动态工具组（Quick Dynamics Presets & Ramp ↗）**：在卷帘检视器中为选中音符新增即时力度预设（p · 40、mf · 80、f · 110、max · 127）以及「Ramp ↗」时间线线性平滑渐强工具，一键完成复杂小节内多音符的起伏力度塑形与律动编排。",
-        "en": "**Quick Dynamics Presets & Ramp ↗**: Introduced instant velocity preset buttons (p · 40, mf · 80, f · 110, max · 127) and a smooth chronological \"Ramp ↗\" tool in the note inspector, allowing producers to sculpt rhythmic dynamics and crescendos across multi-note selections with a single click."
+        "zh": "**Alt + 滚轮即时微调音符力度（Alt + Mouse Wheel Velocity Nudge）**：鼠标悬停在任意音符上（或选中多音符）后，按住 Alt 键上下滚动滚轮即可直接以 ±5 步进微调音符力度，实时更新音符发光热力图并伴随微切片声学试听，界面顶部同步浮现数值 HUD 提示（如 Velocity: 105），指尖操作畅快淋漓。",
+        "en": "**Alt + Mouse Wheel Velocity Nudge**: Hovering over any note or selecting multiple notes and scrolling with the Alt key instantly nudges velocity up or down by ±5. Dynamic heatmap colors update immediately, triggering acoustic velocity auditioning with a sleek HUD toast confirming the new value."
       }
     ],
     "truncated": true
