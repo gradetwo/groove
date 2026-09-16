@@ -12,6 +12,10 @@ export interface RulerProps {
   onPointerDown?: (e: React.PointerEvent) => void;
   onPointerMove?: (e: React.PointerEvent) => void;
   onPointerUp?: (e: React.PointerEvent) => void;
+  barCount?: number;
+  viewedBar?: number;
+  onSelectBar?: (barIdx: number) => void;
+  onDuplicateBar1?: () => void;
 }
 
 export const Ruler = memo<RulerProps>(function Ruler({
@@ -26,13 +30,17 @@ export const Ruler = memo<RulerProps>(function Ruler({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  barCount = 1,
+  viewedBar = 0,
+  onSelectBar,
+  onDuplicateBar1,
 }) {
   return (
     <div className="flex items-center gap-2 sm:gap-3 pb-2 pt-1 border-b border-line-subtle mb-2 min-w-max">
       {/* Left Label aligned with track headers - Sticky Left */}
       <div className="sticky left-0 z-30 bg-panel flex-none w-[138px] sm:w-[172px] pr-1.5 sm:pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-text-dim uppercase select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-1">
-          <span>{stepCount} STEPS</span>
+          <span className="font-bold text-accent">{stepCount} STEPS</span>
           {loopRange && (
             <button
               type="button"
@@ -44,7 +52,22 @@ export const Ruler = memo<RulerProps>(function Ruler({
             </button>
           )}
         </div>
-        <span className="text-[#3a3e48]">{timeSignature}</span>
+        <div className="flex items-center gap-1.5">
+          {onDuplicateBar1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicateBar1();
+              }}
+              title={isZh ? "将第 1 小节快速复制到所有小节" : "Duplicate Bar 1 to all bars"}
+              className="px-1.5 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent border border-accent/30 text-[8px] font-bold transition-all shadow-sm"
+            >
+              📋 {isZh ? "复制B1" : "Dup B1"}
+            </button>
+          )}
+          <span className="text-[#3a3e48]">{timeSignature}</span>
+        </div>
       </div>
 
       {/* Dynamic Ruler Step Badges with Drag-to-Scroll & Loop Range Selection */}
@@ -134,7 +157,7 @@ export const Ruler = memo<RulerProps>(function Ruler({
                     : "text-[#3e424d]"
                 }`}
               >
-                {isFirstStepOfBar ? `M${barIdx}` : `.${stepInGroup}`}
+                {isFirstStepOfBar ? `BAR ${barIdx}` : `.${stepInGroup}`}
               </span>
             </div>
           );

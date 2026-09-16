@@ -461,6 +461,10 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
           onPointerDown={handleRulerPointerDown}
           onPointerMove={handleRulerPointerMove}
           onPointerUp={handleRulerPointerUp}
+          barCount={barCount}
+          viewedBar={viewedBar}
+          onSelectBar={onSelectBar}
+          onDuplicateBar1={barCount > 1 ? () => onQuickAction("dup_bar1") : undefined}
         />
 
         {/* Track Rows */}

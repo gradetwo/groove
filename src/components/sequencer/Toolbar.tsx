@@ -681,570 +681,605 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
     <div className="flex flex-col gap-1.5 min-w-0 w-full relative">
       {/* Top Toolbar Header (P2-23: flex-wrap in landscape ensures all controls stay visible without horizontal scroll pushing) */}
       <div className="w-full flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 pb-2 mb-1.5 border-b border-line-subtle select-none shrink-0 landscape-compact-bar min-w-0">
-        {/* Left Section: Transport, Genre Tag & Metre */}
+        {/* Left Section: Transport, Sound & Metre Pods */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* Maximize/Sidebar indicator badge */}
-          {isEditorMaximized ? (
-            <div className="flex items-center gap-1.5 h-8 px-2 sm:px-2.5 bg-[#14151a] border border-line rounded-lg shrink-0">
-              <span
-                className="w-2 h-2 rounded-full shadow-[0_0_8px_var(--g)] shrink-0"
-                style={{ backgroundColor: "var(--g)" }}
-              />
-              <span className="font-['Space_Grotesk'] font-bold text-xs text-text truncate max-w-[100px] sm:max-w-[150px]">
-                {genreName}
-              </span>
-            </div>
-          ) : (
-            isSidebarCollapsed && (
-              <button
-                onClick={onToggleSidebar}
-                className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-text-sub hover:text-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
-                title={t("toolbar_dossier_expand_title")}
-              >
-                <PanelLeftOpen className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t("toolbar_dossier_short")}</span>
-              </button>
-            )
-          )}
-
-          {/* Play / Pause Button */}
-          <button
-            onClick={onTogglePlay}
-            className={`h-8 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all hover:brightness-110 shrink-0 ${
-              isPlaying
-                ? "bg-[#ff5964] text-white shadow-[0_0_12px_rgba(255,89,100,0.35)] animate-pulse-play"
-                : "bg-accent text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
-            }`}
-            aria-label="Play / Pause"
-            title={isPlaying ? "Space: Pause" : "Space: Play"}
-          >
-            {isPlaying ? (
-              <div className="w-2.5 h-2.5 rounded-xs bg-current" />
+          {/* Pod 1: Master Transport & Clock Pod */}
+          <div className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] shrink-0">
+            {/* Maximize/Sidebar indicator badge */}
+            {isEditorMaximized ? (
+              <div className="flex items-center gap-1.5 h-8 px-2 sm:px-2.5 bg-[#14151a] border border-line rounded-lg shrink-0">
+                <span
+                  className="w-2 h-2 rounded-full shadow-[0_0_8px_var(--g)] shrink-0"
+                  style={{ backgroundColor: "var(--g)" }}
+                />
+                <span className="font-['Space_Grotesk'] font-bold text-xs text-text truncate max-w-[100px] sm:max-w-[150px]">
+                  {genreName}
+                </span>
+              </div>
             ) : (
-              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+              isSidebarCollapsed && (
+                <button
+                  onClick={onToggleSidebar}
+                  className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-text-sub hover:text-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
+                  title={t("toolbar_dossier_expand_title")}
+                >
+                  <PanelLeftOpen className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("toolbar_dossier_short")}</span>
+                </button>
+              )
             )}
-            <span className="font-['JetBrains_Mono'] text-xs">
-              {isPlaying ? (t("toolbar_pause")) : (t("toolbar_play"))}
-            </span>
-          </button>
 
-          {/* BPM Input */}
-          <div className="flex items-center gap-1 h-8 bg-panel2 border border-line px-2 rounded-lg shrink-0">
-            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider select-none">BPM</span>
-            <input
-              type="number"
-              min="40"
-              max="240"
-              value={bpm}
-              onChange={(e) => onChangeBpm(Math.max(40, Math.min(240, Number(e.target.value) || 120)))}
-              className="w-10 bg-transparent text-text font-['JetBrains_Mono'] text-xs font-bold text-center focus:outline-none focus:text-accent"
-              title={t("toolbar_bpm_title")}
+            {/* Play / Pause Button */}
+            <button
+              onClick={onTogglePlay}
+              className={`h-8 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all hover:brightness-110 shrink-0 ${
+                isPlaying
+                  ? "bg-[#ff5964] text-white shadow-[0_0_12px_rgba(255,89,100,0.35)] animate-pulse-play"
+                  : "bg-accent text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
+              }`}
+              aria-label="Play / Pause"
+              title={isPlaying ? "Space: Pause" : "Space: Play"}
+            >
+              {isPlaying ? (
+                <div className="w-2.5 h-2.5 rounded-xs bg-current" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+              )}
+              <span className="font-['JetBrains_Mono'] text-xs">
+                {isPlaying ? (t("toolbar_pause")) : (t("toolbar_play"))}
+              </span>
+            </button>
+
+            {/* BPM Input + Micro-nudges */}
+            <div className="flex items-center h-8 bg-panel2 border border-line rounded-lg px-1 text-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => onChangeBpm(Math.max(40, bpm - 1))}
+                className="w-4 h-6 flex items-center justify-center text-text-dim hover:text-accent font-['JetBrains_Mono'] text-xs rounded hover:bg-white/5 active:scale-90 select-none"
+                title="−1 BPM"
+                aria-label="Decrease BPM"
+              >
+                −
+              </button>
+              <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider select-none px-0.5">BPM</span>
+              <input
+                type="number"
+                min="40"
+                max="240"
+                value={bpm}
+                onChange={(e) => onChangeBpm(Math.max(40, Math.min(240, Number(e.target.value) || 120)))}
+                className="w-9 bg-transparent text-text font-['JetBrains_Mono'] text-xs font-bold text-center focus:outline-none focus:text-accent"
+                title={t("toolbar_bpm_title")}
+              />
+              <button
+                type="button"
+                onClick={() => onChangeBpm(Math.min(240, bpm + 1))}
+                className="w-4 h-6 flex items-center justify-center text-text-dim hover:text-accent font-['JetBrains_Mono'] text-xs rounded hover:bg-white/5 active:scale-90 select-none"
+                title="+1 BPM"
+                aria-label="Increase BPM"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Tap Tempo Button (P3-07) */}
+            {onTapTempo && (
+              <button
+                type="button"
+                onClick={onTapTempo}
+                className="h-8 px-2 bg-panel2 hover:bg-[#14151a] border border-line hover:border-accent rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-accent transition-colors shrink-0 active:scale-95"
+                title={t("toolbar_tap_tempo_title")}
+                aria-label="Tap Tempo"
+              >
+                TAP
+              </button>
+            )}
+
+            {/* Metronome Toggle (P3-07) */}
+            {onToggleMetronome && (
+              <button
+                type="button"
+                onClick={onToggleMetronome}
+                className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+                  isMetronome
+                    ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.25)]"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+                }`}
+                title={t("toolbar_metronome_title")}
+                aria-label={t("toolbar_metronome_aria")}
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline font-['JetBrains_Mono']">{t("toolbar_metronome_label")}</span>
+              </button>
+            )}
+
+            {/* Count-In Toggle (P3-07) */}
+            {onToggleCountIn && (
+              <button
+                type="button"
+                onClick={onToggleCountIn}
+                className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+                  isCountIn
+                    ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+                }`}
+                title={t("toolbar_count_in_title")}
+                aria-label={t("toolbar_count_in_aria")}
+              >
+                <span className="font-['JetBrains_Mono'] font-bold text-[10px]">1-4</span>
+              </button>
+            )}
+
+            {/* Live Recording Toggle (P5-05) */}
+            {onToggleRecordArmed && (
+              <button
+                type="button"
+                onClick={onToggleRecordArmed}
+                className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-colors shrink-0 ${
+                  isRecordArmed
+                    ? "bg-red-500/25 border-red-500 text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.35)]"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+                }`}
+                title={t("toolbar_record_title")}
+                aria-label="Live Recording"
+              >
+                <div className={`w-2 h-2 rounded-full ${isRecordArmed ? "bg-red-500 animate-ping" : "bg-red-500/70"}`} />
+                <span>REC</span>
+              </button>
+            )}
+          </div>
+
+          {/* Pod 2: Sound & Pattern Slots Pod */}
+          <div className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] shrink-0">
+            {/* Drum Kit Model Selector (P5-02) */}
+            {onChangeDrumKit && (
+              <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none hidden sm:inline">
+                  {t("toolbar_drum_kit_label")}
+                </span>
+                <select
+                  value={drumKit}
+                  onChange={(e) => onChangeDrumKit(e.target.value as DrumKitType)}
+                  className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  aria-label={t("toolbar_drum_kit_aria")}
+                >
+                  <optgroup label={t("toolbar_drum_kit_hardware_group")}>
+                    <option value="808" className="bg-panel text-text">TR-808 (Analog)</option>
+                    <option value="909" className="bg-panel text-text">TR-909 (Punch)</option>
+                    <option value="acoustic" className="bg-panel text-text">Acoustic (Warm)</option>
+                    <option value="cyber" className="bg-panel text-text">Cyber (Wave)</option>
+                  </optgroup>
+                  <optgroup label={t("toolbar_drum_kit_kick_group")}>
+                    <option value="kick:berlin-orphic" className="bg-panel text-text">
+                      {t("toolbar_kick_berlin_orphic")}
+                    </option>
+                    <option value="kick:detroit-mechanical" className="bg-panel text-text">
+                      {t("toolbar_kick_detroit_mechanical")}
+                    </option>
+                    <option value="kick:somatic-808-gravity" className="bg-panel text-text">
+                      {t("toolbar_kick_visceral_808")}
+                    </option>
+                    <option value="kick:industrial-revolt" className="bg-panel text-text">
+                      {t("toolbar_kick_industrial_revolt")}
+                    </option>
+                    <option value="kick:acoustic-beater-skin" className="bg-panel text-text">
+                      {t("toolbar_kick_acoustic_skin")}
+                    </option>
+                    <option value="kick:neural-click-clock" className="bg-panel text-text">
+                      {t("toolbar_kick_neural_click")}
+                    </option>
+                  </optgroup>
+                  {customKicks.length > 0 && (
+                    <optgroup label={t("toolbar_kick_custom_group")}>
+                      {customKicks.map((k) => (
+                        <option key={k.id} value={`kick:${k.id}`} className="bg-panel text-text">
+                          {t("toolbar_kick_custom_option", { name: k.name })}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+            )}
+
+            {/* Drums Only Toggle */}
+            {onToggleDrumsOnly && (
+              <button
+                type="button"
+                onClick={onToggleDrumsOnly}
+                className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-all shrink-0 active:scale-95 ${
+                  isDrumsOnly
+                    ? "bg-accent/25 border-accent text-accent font-bold shadow-[0_0_10px_rgba(245,183,61,0.35)]"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+                }`}
+                title={
+                  t("toolbar_drums_only_title", { state: isDrumsOnly ? t("toolbar_state_on") : t("toolbar_state_off") })
+                }
+                aria-label={t("toolbar_drums_only_aria")}
+                aria-pressed={isDrumsOnly}
+              >
+                <Disc3 className={`w-3.5 h-3.5 ${isDrumsOnly ? "text-accent animate-spin-slow" : "text-text-dim"}`} />
+                <span className="font-semibold">{t("toolbar_drums_only_label")}</span>
+                {isDrumsOnly && <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
+              </button>
+            )}
+
+            <PatternSlotControls
+              activeSlot={activeSlot}
+              songMode={songMode}
+              blindCompare={blindCompare}
+              onSwitchSlot={onSwitchSlot}
+              onCopySlot={onCopySlot}
+              onToggleSongMode={onToggleSongMode}
+              onToggleBlindCompare={onToggleBlindCompare}
             />
           </div>
 
-          {/* Tap Tempo Button (P3-07) */}
-          {onTapTempo && (
-            <button
-              type="button"
-              onClick={onTapTempo}
-              className="h-8 px-2 bg-panel2 hover:bg-[#14151a] border border-line hover:border-accent rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-accent transition-colors shrink-0 active:scale-95"
-              title={t("toolbar_tap_tempo_title")}
-              aria-label="Tap Tempo"
-            >
-              TAP
-            </button>
-          )}
+          {/* Pod 3: Metre, Quantize & Tool Pod */}
+          <div className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] shrink-0">
+            <MeterControls
+              timeSignature={timeSignature}
+              resolution={resolution}
+              stepCount={stepCount}
+              barCount={barCount}
+              mobileEditMode={mobileEditMode}
+              onChangeTimeSignature={onChangeTimeSignature}
+              onChangeResolution={onChangeResolution}
+              onChangeStepCount={onChangeStepCount}
+              onChangeMobileEditMode={onChangeMobileEditMode}
+            />
+          </div>
+        </div>
 
-          {/* Metronome Toggle (P3-07) */}
-          {onToggleMetronome && (
-            <button
-              type="button"
-              onClick={onToggleMetronome}
-              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
-                isMetronome
-                  ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.25)]"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={t("toolbar_metronome_title")}
-              aria-label={t("toolbar_metronome_aria")}
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline font-['JetBrains_Mono']">{t("toolbar_metronome_label")}</span>
-            </button>
-          )}
+        {/* Right Section: DAW Views, Creative Tools & I/O Pods */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 ml-auto">
+          {/* Pod 4: DAW Views & Editors Pod */}
+          <div className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] shrink-0">
+            {/* Bar Navigation Select (shown when barCount > 1) */}
+            {barCount > 1 && (
+              <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
+                  {t("toolbar_bar_label")}
+                </span>
+                <select
+                  value={viewedBar}
+                  onChange={(e) => onSelectBar(Number(e.target.value))}
+                  className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                  aria-label={t("toolbar_bar_aria")}
+                >
+                  {Array.from({ length: barCount }, (_, bIdx) => {
+                    const startStep = bIdx * stepsPerBar + 1;
+                    const endStep = Math.min(stepCount, (bIdx + 1) * stepsPerBar);
+                    return (
+                      <option key={bIdx} value={bIdx} className="bg-panel text-text">
+                        Bar {bIdx + 1} ({startStep}-{endStep})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
 
-          {/* Count-In Toggle (P3-07) */}
-          {onToggleCountIn && (
+            {/* Velocity Lane Toggle */}
             <button
-              type="button"
-              onClick={onToggleCountIn}
-              className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
-                isCountIn
+              onClick={onToggleVelocityLane}
+              className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                isVelocityLaneOpen
                   ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
                   : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
               }`}
-              title={t("toolbar_count_in_title")}
-              aria-label={t("toolbar_count_in_aria")}
+              title={t("toolbar_velocity_title")}
             >
-              <span className="font-['JetBrains_Mono'] font-bold text-[10px]">1-4</span>
+              <Sliders className="w-3.5 h-3.5 text-[#45e0c9]" />
+              <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_velocity_label")}</span>
             </button>
-          )}
 
-          {/* Live Recording Toggle (P5-05) */}
-          {onToggleRecordArmed && (
-            <button
-              type="button"
-              onClick={onToggleRecordArmed}
-              className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-colors shrink-0 ${
-                isRecordArmed
-                  ? "bg-red-500/25 border-red-500 text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.35)]"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={t("toolbar_record_title")}
-              aria-label="Live Recording"
-            >
-              <div className={`w-2 h-2 rounded-full ${isRecordArmed ? "bg-red-500 animate-ping" : "bg-red-500/70"}`} />
-              <span>REC</span>
-            </button>
-          )}
-
-          {/* Drum Kit Model Selector (P5-02) */}
-          {onChangeDrumKit && (
-            <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-              <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none hidden sm:inline">
-                {t("toolbar_drum_kit_label")}
-              </span>
-              <select
-                value={drumKit}
-                onChange={(e) => onChangeDrumKit(e.target.value as DrumKitType)}
-                className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                aria-label={t("toolbar_drum_kit_aria")}
-              >
-                <optgroup label={t("toolbar_drum_kit_hardware_group")}>
-                  <option value="808" className="bg-panel text-text">TR-808 (Analog)</option>
-                  <option value="909" className="bg-panel text-text">TR-909 (Punch)</option>
-                  <option value="acoustic" className="bg-panel text-text">Acoustic (Warm)</option>
-                  <option value="cyber" className="bg-panel text-text">Cyber (Wave)</option>
-                </optgroup>
-                <optgroup label={t("toolbar_drum_kit_kick_group")}>
-                  <option value="kick:berlin-orphic" className="bg-panel text-text">
-                    {t("toolbar_kick_berlin_orphic")}
-                  </option>
-                  <option value="kick:detroit-mechanical" className="bg-panel text-text">
-                    {t("toolbar_kick_detroit_mechanical")}
-                  </option>
-                  <option value="kick:somatic-808-gravity" className="bg-panel text-text">
-                    {t("toolbar_kick_visceral_808")}
-                  </option>
-                  <option value="kick:industrial-revolt" className="bg-panel text-text">
-                    {t("toolbar_kick_industrial_revolt")}
-                  </option>
-                  <option value="kick:acoustic-beater-skin" className="bg-panel text-text">
-                    {t("toolbar_kick_acoustic_skin")}
-                  </option>
-                  <option value="kick:neural-click-clock" className="bg-panel text-text">
-                    {t("toolbar_kick_neural_click")}
-                  </option>
-                </optgroup>
-                {customKicks.length > 0 && (
-                  <optgroup label={t("toolbar_kick_custom_group")}>
-                    {customKicks.map((k) => (
-                      <option key={k.id} value={`kick:${k.id}`} className="bg-panel text-text">
-                        {t("toolbar_kick_custom_option", { name: k.name })}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-          )}
-
-          {/* Drums Only Toggle */}
-          {onToggleDrumsOnly && (
-            <button
-              type="button"
-              onClick={onToggleDrumsOnly}
-              className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-all shrink-0 active:scale-95 ${
-                isDrumsOnly
-                  ? "bg-accent/25 border-accent text-accent font-bold shadow-[0_0_10px_rgba(245,183,61,0.35)]"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={
-                t("toolbar_drums_only_title", { state: isDrumsOnly ? t("toolbar_state_on") : t("toolbar_state_off") })
-              }
-              aria-label={t("toolbar_drums_only_aria")}
-              aria-pressed={isDrumsOnly}
-            >
-              <Disc3 className={`w-3.5 h-3.5 ${isDrumsOnly ? "text-accent animate-spin-slow" : "text-text-dim"}`} />
-              <span className="font-semibold">{t("toolbar_drums_only_label")}</span>
-              {isDrumsOnly && <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
-            </button>
-          )}
-
-          <MeterControls
-            timeSignature={timeSignature}
-            resolution={resolution}
-            stepCount={stepCount}
-            barCount={barCount}
-            mobileEditMode={mobileEditMode}
-            onChangeTimeSignature={onChangeTimeSignature}
-            onChangeResolution={onChangeResolution}
-            onChangeStepCount={onChangeStepCount}
-            onChangeMobileEditMode={onChangeMobileEditMode}
-          />
-
-          <PatternSlotControls
-            activeSlot={activeSlot}
-            songMode={songMode}
-            blindCompare={blindCompare}
-            onSwitchSlot={onSwitchSlot}
-            onCopySlot={onCopySlot}
-            onToggleSongMode={onToggleSongMode}
-            onToggleBlindCompare={onToggleBlindCompare}
-          />
-
-        </div>
-
-        {/* Right Section: Bar Navigation & Pro Operations */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 ml-auto">
-          {/* Bar Navigation Select (shown when barCount > 1) */}
-          {barCount > 1 && (
-            <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-              <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none">
-                {t("toolbar_bar_label")}
-              </span>
-              <select
-                value={viewedBar}
-                onChange={(e) => onSelectBar(Number(e.target.value))}
-                className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-                aria-label={t("toolbar_bar_aria")}
-              >
-                {Array.from({ length: barCount }, (_, bIdx) => {
-                  const startStep = bIdx * stepsPerBar + 1;
-                  const endStep = Math.min(stepCount, (bIdx + 1) * stepsPerBar);
-                  return (
-                    <option key={bIdx} value={bIdx} className="bg-panel text-text">
-                      Bar {bIdx + 1} ({startStep}-{endStep})
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          )}
-
-          {/* Velocity Lane Toggle */}
-          <button
-            onClick={onToggleVelocityLane}
-            className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
-              isVelocityLaneOpen
-                ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9] font-bold shadow-[0_0_8px_rgba(69,224,201,0.25)]"
-                : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-            }`}
-            title={t("toolbar_velocity_title")}
-          >
-            <Sliders className="w-3.5 h-3.5 text-[#45e0c9]" />
-            <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_velocity_label")}</span>
-          </button>
-
-          {/* Piano Roll Toggle (item ⑦) */}
-          {onTogglePianoRoll && (
-            <button
-              onClick={onTogglePianoRoll}
-              data-testid="toolbar-piano-roll-toggle"
-              aria-pressed={isPianoRollOpen ?? false}
-              className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
-                isPianoRollOpen
-                  ? "bg-accent/20 border-accent text-accent font-bold"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={t("roll_toggle_title")}
-            >
-              <Music2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline font-['JetBrains_Mono']">{t("roll_toggle")}</span>
-            </button>
-          )}
-
-          {/* Euclidean Rhythm Generator */}
-          <button
-            onClick={onOpenEuclidean}
-            className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-panel2 border border-line hover:border-accent/60 rounded-lg text-xs text-text-sub hover:text-accent transition-colors shrink-0"
-            title={t("toolbar_euclid_title")}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_euclid_label")}</span>
-          </button>
-
-          {/* Master Panoramic Analyzer Toggle (P6-05) */}
-          {onToggleAnalyzer && (
-            <button
-              type="button"
-              onClick={onToggleAnalyzer}
-              className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
-                isAnalyzerOpen
-                  ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.3)]"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={t("toolbar_analyzer_title")}
-              aria-label="Toggle Master Analyzer"
-            >
-              <Activity className="w-3.5 h-3.5 text-accent" />
-              <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_analyzer_label")}</span>
-            </button>
-          )}
-
-          {/* Floating Mixing Console Toggle (feature #2) */}
-          {onToggleConsole && (
-            <button
-              type="button"
-              onClick={onToggleConsole}
-              aria-pressed={isConsoleOpen}
-              aria-label={t("console_float_toggle")}
-              data-testid="studio-console-toggle"
-              className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
-                isConsoleOpen
-                  ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.3)]"
-                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
-              }`}
-              title={t("console_float_toggle_title")}
-            >
-              <AudioLines className="w-3.5 h-3.5 text-accent" />
-              <span className="hidden sm:inline font-['JetBrains_Mono']">
-                {t("console_float_toggle")}
-              </span>
-            </button>
-          )}
-
-          {/* Undo & Redo */}
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={onUndo}
-              disabled={!canUndo}
-              className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
-                canUndo
-                  ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
-                  : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
-              }`}
-              title={t("toolbar_undo_title")}
-              aria-label={t("toolbar_undo_title")}
-            >
-              <Undo2 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={onRedo}
-              disabled={!canRedo}
-              className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
-                canRedo
-                  ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
-                  : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
-              }`}
-              title={t("toolbar_redo_title")}
-              aria-label={t("toolbar_redo_title")}
-            >
-              <Redo2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Fullscreen Maximize / Minimize Toggle */}
-          <button
-            onClick={onToggleMaximize}
-            className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
-              isEditorMaximized
-                ? "bg-[#17181c] hover:bg-line border-[#2b2e38] text-text shadow-sm"
-                : "bg-panel2 border-line hover:border-accent text-text-sub hover:text-accent"
-            }`}
-            title={
-              isEditorMaximized
-                ? (t("toolbar_fullscreen_exit_title"))
-                : (t("toolbar_fullscreen_enter_title"))
-            }
-          >
-            {isEditorMaximized ? (
-              <>
-                <Minimize2 className="w-3.5 h-3.5 text-accent" />
-                <span className="hidden sm:inline font-['JetBrains_Mono']">
-                  {t("toolbar_fullscreen_exit_label")}
-                </span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-3.5 h-3.5 text-accent" />
-                <span className="hidden sm:inline font-['JetBrains_Mono']">
-                  {t("toolbar_fullscreen_enter_label")}
-                </span>
-              </>
-            )}
-          </button>
-
-          {/* Quick Tools Dropdown */}
-          <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
-            <select
-              value=""
-              onChange={(e) => onQuickAction(e.target.value as any)}
-              className="bg-transparent text-text-sub hover:text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
-              aria-label={t("toolbar_quick_actions_aria")}
-            >
-              <option value="" disabled className="bg-panel text-text-sub">
-                ⚡ {t("toolbar_quick_tools_placeholder")}
-              </option>
-              <option value="open_hub" className="bg-panel text-accent font-bold">
-                📁 {t("toolbar_quick_project_hub")}
-              </option>
-              <option value="dup_bar1" className="bg-panel text-text">
-                📋 {t("toolbar_quick_duplicate_bar1")}
-              </option>
-              <option value="humanize" className="bg-panel text-text">
-                ✨ {t("toolbar_quick_humanize")}
-              </option>
-              <option value="clear_all" className="bg-panel text-[#ff5964]">
-                🗑️ {t("toolbar_quick_clear_all")}
-              </option>
-              <option value="reset_preset" className="bg-panel text-text">
-                🔄 {t("toolbar_quick_reset_preset")}
-              </option>
-              <option value="clear_saved" className="bg-panel text-[#f87171]">
-                🧹 {t("toolbar_quick_clear_saved")}
-              </option>
-            </select>
-          </div>
-
-          {/* Inspire Me controlled generative groove variation (P4-06) */}
-          {onInspireMe && (
-            <button
-              onClick={onInspireMe}
-              className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-accent hover:bg-accent/15 border border-accent/40 rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-              title={t("toolbar_inspire_title")}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-accent animate-pulse" />
-              <span className="hidden xl:inline">{t("toolbar_inspire_label")}</span>
-            </button>
-          )}
-
-          {/* Import MIDI (P4-03) */}
-          {onImportMidi && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".mid,.midi"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    onImportMidi(file);
-                  }
-                  e.target.value = "";
-                }}
-              />
+            {/* Piano Roll Toggle (item ⑦) */}
+            {onTogglePianoRoll && (
               <button
-                onClick={() => fileInputRef.current?.click()}
-                className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-                title={t("toolbar_import_midi_title")}
+                onClick={onTogglePianoRoll}
+                data-testid="toolbar-piano-roll-toggle"
+                aria-pressed={isPianoRollOpen ?? false}
+                className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                  isPianoRollOpen
+                    ? "bg-accent/20 border-accent text-accent font-bold"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+                }`}
+                title={t("roll_toggle_title")}
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">{t("toolbar_import_label")}</span>
+                <Music2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline font-['JetBrains_Mono']">{t("roll_toggle")}</span>
               </button>
-            </>
-          )}
+            )}
 
-          {/* Live Keyboard / Web MIDI Input (P4-04) */}
-          {onToggleKeyboardMode && (
+            {/* Euclidean Rhythm Generator */}
             <button
-              onClick={onToggleKeyboardMode}
-              className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 font-['JetBrains_Mono'] ${
-                isKeyboardMode
-                  ? "bg-accent/20 text-accent border-accent/60 shadow-[0_0_12px_rgba(255,100,50,0.2)]"
-                  : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
+              onClick={onOpenEuclidean}
+              className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-panel2 border border-line hover:border-accent/60 rounded-lg text-xs text-text-sub hover:text-accent transition-colors shrink-0"
+              title={t("toolbar_euclid_title")}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_euclid_label")}</span>
+            </button>
+
+            {/* Master Panoramic Analyzer Toggle (P6-05) */}
+            {onToggleAnalyzer && (
+              <button
+                type="button"
+                onClick={onToggleAnalyzer}
+                className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                  isAnalyzerOpen
+                    ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.3)]"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+                }`}
+                title={t("toolbar_analyzer_title")}
+                aria-label="Toggle Master Analyzer"
+              >
+                <Activity className="w-3.5 h-3.5 text-accent" />
+                <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_analyzer_label")}</span>
+              </button>
+            )}
+
+            {/* Floating Mixing Console Toggle (feature #2) */}
+            {onToggleConsole && (
+              <button
+                type="button"
+                onClick={onToggleConsole}
+                aria-pressed={isConsoleOpen}
+                aria-label={t("console_float_toggle")}
+                data-testid="studio-console-toggle"
+                className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                  isConsoleOpen
+                    ? "bg-accent/20 border-accent text-accent font-bold shadow-[0_0_8px_rgba(245,183,61,0.3)]"
+                    : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+                }`}
+                title={t("console_float_toggle_title")}
+              >
+                <AudioLines className="w-3.5 h-3.5 text-accent" />
+                <span className="hidden sm:inline font-['JetBrains_Mono']">
+                  {t("console_float_toggle")}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Pod 5: Creative Tools & History Pod */}
+          <div className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] shrink-0">
+            {/* Undo & Redo */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={onUndo}
+                disabled={!canUndo}
+                className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
+                  canUndo
+                    ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
+                    : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                }`}
+                title={t("toolbar_undo_title")}
+                aria-label={t("toolbar_undo_title")}
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={onRedo}
+                disabled={!canRedo}
+                className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
+                  canRedo
+                    ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
+                    : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                }`}
+                title={t("toolbar_redo_title")}
+                aria-label={t("toolbar_redo_title")}
+              >
+                <Redo2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Fullscreen Maximize / Minimize Toggle */}
+            <button
+              onClick={onToggleMaximize}
+              className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
+                isEditorMaximized
+                  ? "bg-[#17181c] hover:bg-line border-[#2b2e38] text-text shadow-sm"
+                  : "bg-panel2 border-line hover:border-accent text-text-sub hover:text-accent"
               }`}
               title={
-                t("toolbar_keyboard_play_title", { devices: midiDeviceCount > 0 ? t("toolbar_keyboard_devices", { count: midiDeviceCount }) : "" })
+                isEditorMaximized
+                  ? (t("toolbar_fullscreen_exit_title"))
+                  : (t("toolbar_fullscreen_enter_title"))
               }
             >
-              <Keyboard className="w-3.5 h-3.5" />
-              <span className="hidden 2xl:inline">{t("toolbar_keyboard_label")}</span>
-              {midiDeviceCount > 0 && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" title="MIDI Connected" />
+              {isEditorMaximized ? (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5 text-accent" />
+                  <span className="hidden sm:inline font-['JetBrains_Mono']">
+                    {t("toolbar_fullscreen_exit_label")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-accent" />
+                  <span className="hidden sm:inline font-['JetBrains_Mono']">
+                    {t("toolbar_fullscreen_enter_label")}
+                  </span>
+                </>
               )}
             </button>
-          )}
 
-          {/* Multi-Project Hub Button (P7-02) */}
-          {onOpenProjectHub && (
-            <button
-              type="button"
-              onClick={onOpenProjectHub}
-              className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-              title={t("toolbar_project_hub_title")}
-              aria-label={t("toolbar_project_hub_aria")}
-            >
-              <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
-              <span className="hidden lg:inline max-w-[90px] xl:max-w-[120px] truncate text-text font-medium">
-                {activeProjectName || (t("toolbar_projects_fallback"))}
-              </span>
-            </button>
-          )}
+            {/* Quick Tools Dropdown */}
+            <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+              <select
+                value=""
+                onChange={(e) => onQuickAction(e.target.value as any)}
+                className="bg-transparent text-text-sub hover:text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
+                aria-label={t("toolbar_quick_actions_aria")}
+              >
+                <option value="" disabled className="bg-panel text-text-sub">
+                  ⚡ {t("toolbar_quick_tools_placeholder")}
+                </option>
+                <option value="open_hub" className="bg-panel text-accent font-bold">
+                  📁 {t("toolbar_quick_project_hub")}
+                </option>
+                <option value="dup_bar1" className="bg-panel text-text">
+                  📋 {t("toolbar_quick_duplicate_bar1")}
+                </option>
+                <option value="humanize" className="bg-panel text-text">
+                  ✨ {t("toolbar_quick_humanize")}
+                </option>
+                <option value="clear_all" className="bg-panel text-[#ff5964]">
+                  🗑️ {t("toolbar_quick_clear_all")}
+                </option>
+                <option value="reset_preset" className="bg-panel text-text">
+                  🔄 {t("toolbar_quick_reset_preset")}
+                </option>
+                <option value="clear_saved" className="bg-panel text-[#f87171]">
+                  🧹 {t("toolbar_quick_clear_saved")}
+                </option>
+              </select>
+            </div>
 
-          {/* Custom Genre Maker Button (P7-03) */}
-          {onOpenGenreMaker && (
-            <button
-              type="button"
-              onClick={onOpenGenreMaker}
-              className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
-              title={t("toolbar_genre_maker_title")}
-              aria-label={t("toolbar_genre_maker_aria")}
-            >
-              <Wand2 className="w-3.5 h-3.5 text-accent shrink-0" />
-              <span className="hidden xl:inline text-text font-medium">
-                {t("toolbar_genre_maker_label")}
-              </span>
-            </button>
-          )}
-
-          <ExportMenu
-            isExportingAudio={isExportingAudio}
-            onExportMidi={onExportMidi}
-            onExportAls={onExportAls}
-            onExportGroove={onExportGroove}
-            onExportWav={onExportWav}
-            onExportStems={onExportStems}
-          />
-
-          {/* Share Groove */}
-          {!isEditorMaximized && (
-            <button
-              type="button"
-              onClick={onShare}
-              className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
-              title={t("share_groove")}
-              aria-label={t("share_groove")}
-            >
-              <Share2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          {/* Collapsible Advanced Settings */}
-          <button
-            onClick={onToggleAdvancedControls}
-            data-testid="toolbar-advanced-toggle"
-            className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
-              showAdvancedControls
-                ? "bg-[#1f232b] text-accent border-accent/50"
-                : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
-            }`}
-            title={t("toolbar_advanced_title")}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline font-['JetBrains_Mono']">
-              {t("toolbar_advanced_label")}
-            </span>
-            {swing > 0 && !showAdvancedControls && (
-              <span className="text-[10px] text-accent font-['JetBrains_Mono'] hidden sm:inline">
-                {swing}%
-              </span>
+            {/* Inspire Me controlled generative groove variation (P4-06) */}
+            {onInspireMe && (
+              <button
+                onClick={onInspireMe}
+                className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-accent hover:bg-accent/15 border border-accent/40 rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+                title={t("toolbar_inspire_title")}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-accent animate-pulse" />
+                <span className="hidden xl:inline">{t("toolbar_inspire_label")}</span>
+              </button>
             )}
-            <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedControls ? "rotate-180" : ""}`} />
-          </button>
+          </div>
+
+          {/* Pod 6: I/O & Master Hub Pod */}
+          <div className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] shrink-0">
+            {/* Import MIDI (P4-03) */}
+            {onImportMidi && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".mid,.midi"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      onImportMidi(file);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+                  title={t("toolbar_import_midi_title")}
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span className="hidden xl:inline">{t("toolbar_import_label")}</span>
+                </button>
+              </>
+            )}
+
+            {/* Live Keyboard / Web MIDI Input (P4-04) */}
+            {onToggleKeyboardMode && (
+              <button
+                onClick={onToggleKeyboardMode}
+                className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 font-['JetBrains_Mono'] ${
+                  isKeyboardMode
+                    ? "bg-accent/20 text-accent border-accent/60 shadow-[0_0_12px_rgba(255,100,50,0.2)]"
+                    : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
+                }`}
+                title={
+                  t("toolbar_keyboard_play_title", { devices: midiDeviceCount > 0 ? t("toolbar_keyboard_devices", { count: midiDeviceCount }) : "" })
+                }
+              >
+                <Keyboard className="w-3.5 h-3.5" />
+                <span className="hidden 2xl:inline">{t("toolbar_keyboard_label")}</span>
+                {midiDeviceCount > 0 && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" title="MIDI Connected" />
+                )}
+              </button>
+            )}
+
+            {/* Multi-Project Hub Button (P7-02) */}
+            {onOpenProjectHub && (
+              <button
+                type="button"
+                onClick={onOpenProjectHub}
+                className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+                title={t("toolbar_project_hub_title")}
+                aria-label={t("toolbar_project_hub_aria")}
+              >
+                <FolderKanban className="w-3.5 h-3.5 text-accent shrink-0" />
+                <span className="hidden lg:inline max-w-[90px] xl:max-w-[120px] truncate text-text font-medium">
+                  {activeProjectName || (t("toolbar_projects_fallback"))}
+                </span>
+              </button>
+            )}
+
+            {/* Custom Genre Maker Button (P7-03) */}
+            {onOpenGenreMaker && (
+              <button
+                type="button"
+                onClick={onOpenGenreMaker}
+                className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
+                title={t("toolbar_genre_maker_title")}
+                aria-label={t("toolbar_genre_maker_aria")}
+              >
+                <Wand2 className="w-3.5 h-3.5 text-accent shrink-0" />
+                <span className="hidden xl:inline text-text font-medium">
+                  {t("toolbar_genre_maker_label")}
+                </span>
+              </button>
+            )}
+
+            <ExportMenu
+              isExportingAudio={isExportingAudio}
+              onExportMidi={onExportMidi}
+              onExportAls={onExportAls}
+              onExportGroove={onExportGroove}
+              onExportWav={onExportWav}
+              onExportStems={onExportStems}
+            />
+
+            {/* Share Groove */}
+            {!isEditorMaximized && (
+              <button
+                type="button"
+                onClick={onShare}
+                className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
+                title={t("share_groove")}
+                aria-label={t("share_groove")}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Collapsible Advanced Settings */}
+            <button
+              onClick={onToggleAdvancedControls}
+              data-testid="toolbar-advanced-toggle"
+              className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
+                showAdvancedControls
+                  ? "bg-[#1f232b] text-accent border-accent/50"
+                  : "bg-panel2 text-text-sub hover:text-text border-line hover:border-[#3a3e48]"
+              }`}
+              title={t("toolbar_advanced_title")}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline font-['JetBrains_Mono']">
+                {t("toolbar_advanced_label")}
+              </span>
+              {swing > 0 && !showAdvancedControls && (
+                <span className="text-[10px] text-accent font-['JetBrains_Mono'] hidden sm:inline">
+                  {swing}%
+                </span>
+              )}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedControls ? "rotate-180" : ""}`} />
+            </button>
+          </div>
         </div>
       </div>
 

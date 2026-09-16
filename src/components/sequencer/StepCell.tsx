@@ -28,6 +28,7 @@ export interface StepCellProps {
   isBarStart: boolean;
   isGroupStart: boolean;
   trackColor: string;
+  isAlternateBar?: boolean;
   onClick?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
   onContextMenu?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
   onPointerDown?: (trackIdx: number, stepIdx: number, e: React.PointerEvent) => void;
@@ -55,6 +56,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
   isBarStart,
   isGroupStart,
   trackColor,
+  isAlternateBar = false,
   articulationGateScale,
   articulationLabel,
   onClick,
@@ -168,9 +170,11 @@ export const StepCell = memo<StepCellProps>(function StepCell({
           ? "opacity-25 bg-[#0e0f13] border-[#181920] cursor-not-allowed"
           : isOn
           ? isLoopedRepeat
-            ? "border-dashed border-white/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_8px_var(--tc)]"
-            : "border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_10px_var(--tc)]"
-          : "bg-[#141519] border-[#22242c] hover:border-[#383c48] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+            ? "border-dashed border-white/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_8px_var(--tc)]"
+            : "border-t border-t-white/60 border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.3),0_0_12px_var(--tc)]"
+          : isAlternateBar
+          ? "bg-[#161822] border-[#252936] hover:border-[#3d4356] hover:bg-[#1b1e2b] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+          : "bg-[#111217] border-[#1d1f28] hover:border-[#333746] hover:bg-[#171922] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
       }`}
       style={{
         backgroundColor: !isOutsideLoop && isOn ? trackColor : undefined,

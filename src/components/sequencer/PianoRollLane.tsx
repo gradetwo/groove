@@ -13,6 +13,7 @@ import {
   Pencil,
   Plus,
   Radio,
+  Repeat,
   Scissors,
   Sparkles,
   SquareDashedMousePointer,
@@ -123,19 +124,13 @@ const TOOLS: Array<{ id: RollTool; icon: React.ReactNode; labelKey: string; keyH
 
 const SNAPS: RollSnap[] = ["off", "1/4", "1/8", "1/16", "1/32"];
 
-/** Velocity → a DAW heatmap colour that reads from mellow cyan to radiant amber/coral. */
+/** Velocity → a luminous DAW heatmap colour that reads from radiant coral to blazing golden amber. */
 function velocityColor(velocity: number): string {
   const t = Math.min(1, Math.max(0, velocity / 127));
-  if (t < 0.35) {
-    const u = t / 0.35;
-    return `rgb(${Math.round(45 + u * 20)}, ${Math.round(140 + u * 50)}, ${Math.round(195 - u * 30)})`;
-  } else if (t < 0.7) {
-    const u = (t - 0.35) / 0.35;
-    return `rgb(${Math.round(65 + u * 140)}, ${Math.round(190 + u * 20)}, ${Math.round(165 - u * 110)})`;
-  } else {
-    const u = (t - 0.7) / 0.3;
-    return `rgb(${Math.round(205 + u * 45)}, ${Math.round(210 - u * 130)}, ${Math.round(55 - u * 15)})`;
-  }
+  const hue = Math.round(18 + t * 27); // 18 (coral) -> 45 (gold)
+  const sat = Math.round(88 + t * 10);
+  const light = Math.round(44 + t * 18);
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
 type DragState =
@@ -193,17 +188,29 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const notes = useMemo(() => notesFromTrack(track, 60, view.scale), [track, view.scale]);
   const selectedSet = useMemo(() => new Set(selection), [selection]);
 
+  const barCount = useMemo(() => Math.max(1, Math.ceil(stepCount / stepsPerBar)), [stepCount, stepsPerBar]);
+  const loopLen = loopLengthOf(track, stepCount);
+
   const chordsByBar = useMemo(() => {
-    const bars = Math.max(1, Math.ceil(stepCount / stepsPerBar));
-    return Array.from({ length: bars }, (_, barIdx) => {
+    return Array.from({ length: barCount }, (_, barIdx) => {
       const startStep = barIdx * stepsPerBar;
       const endStep = Math.min(stepCount, startStep + stepsPerBar);
       const barNotes = notes.filter((n) => n.stepIdx >= startStep && n.stepIdx < endStep);
-      const midis = barNotes.map((n) => n.midi);
+      const effectiveNotes =
+        barNotes.length > 0
+          ? barNotes
+          : loopLen < stepCount
+          ? notes.filter((n) => {
+              const loopedStep = n.stepIdx % loopLen;
+              const mapped = startStep + loopedStep;
+              return mapped >= startStep && mapped < endStep;
+            })
+          : [];
+      const midis = (effectiveNotes.length ? effectiveNotes : barNotes).map((n) => n.midi);
       const chordName = detectChordName(midis);
       return { barIdx, startStep, endStep, chordName, noteIds: barNotes.map(noteId) };
     });
-  }, [notes, stepCount, stepsPerBar]);
+  }, [barCount, notes, stepCount, stepsPerBar, loopLen]);
 
   const [baseLo, baseHi] = useMemo(() => visiblePitchRange(notes), [notes]);
   const [loPitch, hiPitch] = useMemo(() => {
@@ -227,7 +234,6 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   }, [loPitch, hiPitch]);
 
   const scale = useMemo(() => scaleHighlightFor(view.scale), [view.scale]);
-  const loopLen = loopLengthOf(track, stepCount);
   const fitCellW = availableWidth > 0 ? Math.max(MIN_CELL_W, (availableWidth - GUTTER_W) / Math.max(1, stepCount)) : 26;
   const cellW = Math.max(MIN_CELL_W, fitCellW * ZOOM_FACTORS[zoomIdx]);
   const gridW = stepCount * cellW;
@@ -969,7 +975,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         <>
           <div className="flex gap-2">
             {/* Pitch gutter, drawn as a realistic 3D piano keyboard with auditioning */}
-            <div className="shrink-0 select-none w-16" style={{ paddingTop: 24 }}>
+            <div className="shrink-0 select-none w-16 shadow-[4px_0_12px_rgba(0,0,0,0.5)] z-20" style={{ paddingTop: 24 }}>
               {rows.map((midi) => {
                 const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
                 const inScale = scale.pcs.has(midi % 12);
@@ -990,10 +996,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerLeave={() => setActiveAuditionMidi(null)}
                     className={`relative flex items-center justify-between px-1.5 font-['JetBrains_Mono'] text-[9px] cursor-pointer transition-all duration-75 select-none ${
                       isAuditioning
-                        ? "bg-gradient-to-r from-accent to-accent-hover text-white shadow-[0_0_12px_rgba(var(--accent-rgb),0.8),inset_0_1px_2px_rgba(255,255,255,0.6)] z-20 font-bold"
+                        ? "bg-gradient-to-r from-accent via-amber-400 to-amber-300 text-black shadow-[0_0_16px_rgba(var(--accent-rgb),0.9),inset_0_1px_2px_white] z-20 font-black scale-[1.02]"
                         : isBlack
-                        ? "bg-gradient-to-r from-[#101217] via-[#1a1d26] to-[#242833] text-[#868c9c] hover:to-[#2c3240] border-t border-white/15 border-b border-black/90 shadow-[1px_2px_4px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.1)] rounded-r-[3px] mr-1"
-                        : "bg-gradient-to-r from-[#d9dde6] via-[#ebedf2] to-[#fafbfc] text-[#14161f] hover:to-white border-b border-[#a8adb8] border-l-2 border-[#b8bcc8] shadow-[0_1px_2px_rgba(0,0,0,0.2)]"
+                        ? "bg-gradient-to-r from-[#11131a] via-[#1a1d28] to-[#252a3a] text-[#8e95a8] hover:to-[#31374a] border-t border-white/20 border-b border-black/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),2px_2px_5px_rgba(0,0,0,0.8)] rounded-r-[4px] mr-1"
+                        : "bg-gradient-to-r from-[#cad0dd] via-[#e2e6f0] to-[#f4f6fa] text-[#1a1d29] hover:to-white border-b border-[#9ca3b5] border-l-2 border-[#b8bcc8] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.3)]"
                     }`}
                     style={{ height: rowH }}
                   >
@@ -1070,52 +1076,112 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerMove={handleGridPointerMove}
                     onPointerUp={handleGridPointerUp}
                     onPointerCancel={handleGridPointerUp}
-                    className="relative touch-none select-none bg-[#0a0c12]"
+                    className="relative touch-none select-none bg-[#0c0e15] overflow-hidden"
                     style={{ height: rows.length * rowH, width: gridW }}
                   >
+                    {/* Layer 1: Alternating Bar Column Backdrops */}
+                    {Array.from({ length: barCount }, (_, barIdx) => {
+                      const isAlternateBar = barIdx % 2 === 1;
+                      const barLeft = barIdx * stepsPerBar * cellW;
+                      const barWidth = Math.min(stepsPerBar, stepCount - barIdx * stepsPerBar) * cellW;
+                      return (
+                        <div
+                          key={`bar-col-${barIdx}`}
+                          className={`absolute inset-y-0 pointer-events-none transition-colors ${
+                            isAlternateBar ? "bg-[#151926]" : "bg-[#10121b]"
+                          }`}
+                          style={{ left: barLeft, width: barWidth }}
+                        />
+                      );
+                    })}
+
+                    {/* Layer 2: Pitch Rows Shading & Border Dividers */}
                     {rows.map((midi, rowIdx) => {
                       const isRoot = midi % 12 === scale.rootPc;
                       const inScale = scale.pcs.has(midi % 12);
+                      const isBlackKey = [1, 3, 6, 8, 10].includes(midi % 12);
                       return (
                         <div
                           key={midi}
-                          className={`absolute inset-x-0 border-b border-[#1b1f2c]/50 ${
+                          className={`absolute inset-x-0 border-b border-[#222736]/70 pointer-events-none ${
                             isRoot
-                              ? "bg-accent/[0.08] shadow-[inset_0_0_8px_rgba(var(--accent-rgb),0.12)]"
+                              ? "bg-accent/[0.12] shadow-[inset_0_0_12px_rgba(var(--accent-rgb),0.18)] border-b-accent/40"
                               : !inScale
-                              ? "bg-black/45"
-                              : rowIdx % 2 === 0
-                              ? "bg-white/[0.02]"
-                              : "bg-[#10131b]"
+                              ? "bg-black/35 opacity-70"
+                              : isBlackKey
+                              ? "bg-black/20"
+                              : "bg-white/[0.02]"
                           }`}
                           style={{ top: rowIdx * rowH, height: rowH }}
                         />
                       );
                     })}
+
+                    {/* Layer 3: Vertical Beat & Step Grid Dividers */}
                     {Array.from({ length: stepCount }, (_, i) => {
                       const isBar = i % stepsPerBar === 0;
                       const isBeat = i % (stepsPerBar >= 4 ? stepsPerBar / 4 : 4) === 0;
                       return (
                         <div
                           key={`bar-${i}`}
-                          className={`absolute inset-y-0 ${
+                          className={`absolute inset-y-0 pointer-events-none ${
                             isBar
-                              ? "border-l-2 border-accent/40 shadow-[0_0_8px_rgba(var(--accent-rgb),0.25)] z-0"
+                              ? "border-l-2 border-accent/60 shadow-[0_0_10px_rgba(var(--accent-rgb),0.35)] z-10"
                               : isBeat
-                              ? "border-l border-white/12"
-                              : "border-l border-white/[0.03]"
+                              ? "border-l border-white/20"
+                              : "border-l border-white/[0.07]"
                           }`}
                           style={{ left: i * cellW }}
                         />
                       );
                     })}
 
+                    {/* Layer 4: Looped Repeat Ghost Notes */}
+                    {loopLen < stepCount &&
+                      Array.from({ length: Math.ceil((stepCount - loopLen) / loopLen) }, (_, repeatIdx) => {
+                        const offset = (repeatIdx + 1) * loopLen;
+                        return notes
+                          .filter((n) => n.stepIdx < loopLen)
+                          .map((note) => {
+                            const ghostStep = note.stepIdx + offset;
+                            if (ghostStep >= stepCount) return null;
+                            if (notes.some((n) => n.stepIdx === ghostStep && n.midi === note.midi)) return null;
+                            const top = (hiPitch - note.midi) * rowH;
+                            if (top < 0 || top > rows.length * rowH) return null;
+                            const width = Math.max(cellW * 0.9, note.gate * cellW);
+                            return (
+                              <div
+                                key={`ghost-${ghostStep}-${note.midi}`}
+                                className="absolute pointer-events-none rounded-[5px] border border-dashed border-accent/45 bg-accent/15 opacity-40 shadow-sm overflow-hidden z-10"
+                                style={{
+                                  left: ghostStep * cellW + 1,
+                                  top: top + 1,
+                                  width: width - 2,
+                                  height: rowH - 2,
+                                }}
+                              >
+                                {cellW >= 16 && (
+                                  <span className="absolute inset-0 flex items-center px-1 font-['JetBrains_Mono'] text-[8px] font-bold text-accent/80 select-none">
+                                    {midiToNoteName(note.midi)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          });
+                      })}
+
+                    {/* Layer 5: Polymeter Loop Boundary Indicator (Non-blocking transparent guide) */}
                     {loopLen < stepCount && (
                       <div
-                        className="absolute inset-y-0 bg-[repeating-linear-gradient(45deg,rgba(0,0,0,0.45),rgba(0,0,0,0.45)_12px,rgba(0,0,0,0.65)_12px,rgba(0,0,0,0.65)_24px)] backdrop-grayscale-[0.4]"
+                        className="pointer-events-none absolute inset-y-0 border-l-2 border-dashed border-accent/60 bg-accent/[0.02] shadow-[inset_1px_0_12px_rgba(var(--accent-rgb),0.1)] z-10"
                         style={{ left: loopLen * cellW, width: (stepCount - loopLen) * cellW }}
                         data-testid="piano-roll-loop-boundary"
-                      />
+                      >
+                        <div className="absolute top-1 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#131622]/90 border border-accent/40 text-[8.5px] font-['JetBrains_Mono'] text-accent font-bold shadow-md select-none">
+                          <Repeat className="w-2.5 h-2.5 text-accent" />
+                          <span>Loop ({loopLen} Steps)</span>
+                        </div>
+                      </div>
                     )}
 
                     <div
@@ -1125,6 +1191,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       data-testid="piano-roll-playhead"
                     />
 
+                    {/* Layer 6: Real Authored Notes */}
                     {notes.map((note) => {
                       const top = (hiPitch - note.midi) * rowH;
                       if (top < 0 || top > rows.length * rowH) return null;
@@ -1143,8 +1210,8 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           title={`${noteName} · ${t("roll_note_meta", { gate: note.gate.toFixed(2), velocity: note.velocity })}`}
                           className={`absolute overflow-hidden rounded-[5px] transition-shadow duration-75 select-none ${
                             selected
-                              ? "border border-white ring-2 ring-white/90 shadow-[0_0_16px_rgba(255,255,255,0.8),inset_0_1px_0_rgba(255,255,255,0.9)] z-20"
-                              : "border border-black/60 shadow-[0_2px_5px_rgba(0,0,0,0.6)] hover:border-white/60 hover:shadow-[0_0_10px_rgba(255,255,255,0.4)] z-10"
+                              ? "border-2 border-white ring-2 ring-white/90 shadow-[0_0_18px_rgba(255,255,255,0.9),inset_0_1px_0_rgba(255,255,255,0.95)] z-20"
+                              : "border border-black/70 shadow-[0_2px_6px_rgba(0,0,0,0.6)] hover:border-white/70 hover:shadow-[0_0_12px_rgba(255,255,255,0.5)] z-10"
                           }`}
                           style={{
                             left: note.stepIdx * cellW + 1,
@@ -1153,19 +1220,19 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                             height: rowH - 2,
                             backgroundColor: baseColor,
                             boxShadow: selected
-                              ? "0 0 16px rgba(255,255,255,0.8), inset 0 1px 0 rgba(255,255,255,0.9)"
-                              : "inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 5px rgba(0,0,0,0.5)",
+                              ? "0 0 18px rgba(255,255,255,0.9), inset 0 1px 0 rgba(255,255,255,0.95)"
+                              : "inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.6)",
                           }}
                         >
                           {/* Top specular highlight rim */}
-                          <span className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-white/60" />
+                          <span className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-white/70" />
 
                           {/* Left impact transient strike line */}
-                          <span className="pointer-events-none absolute inset-y-0 left-0 w-[3.5px] bg-white/70 rounded-l-[4px] shadow-[0_0_4px_white]" />
+                          <span className="pointer-events-none absolute inset-y-0 left-0 w-[4px] bg-white/90 rounded-l-[4px] shadow-[0_0_6px_white]" />
 
                           {/* Note pitch name tag */}
                           {cellW >= 16 && (
-                            <span className="pointer-events-none absolute inset-0 flex items-center px-1.5 font-['JetBrains_Mono'] text-[8.5px] font-extrabold text-black/90 drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)] truncate">
+                            <span className="pointer-events-none absolute inset-0 flex items-center px-1.5 font-['JetBrains_Mono'] text-[8.5px] font-extrabold text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] truncate">
                               {noteName}
                             </span>
                           )}
@@ -1189,7 +1256,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                                 e.currentTarget.setPointerCapture?.(e.pointerId);
                               }}
                             >
-                              <span className="w-[1.5px] h-3 bg-white/40 group-hover:bg-white rounded-full" />
+                              <span className="w-[1.5px] h-3 bg-white/50 group-hover:bg-white rounded-full" />
                             </span>
                           )}
                         </div>
@@ -1215,13 +1282,48 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                   <div
                     data-testid="piano-roll-velocity-lane"
                     aria-label={t("roll_velocity_lane")}
-                    className="relative mt-2 cursor-ns-resize rounded-xl border border-[#242938] bg-gradient-to-b from-[#0f1118] via-[#0b0c12] to-[#08090e] p-1 shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)]"
+                    className="relative mt-2 cursor-ns-resize rounded-xl border border-[#242938] bg-gradient-to-b from-[#0f1118] via-[#0b0c12] to-[#08090e] p-1 shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] overflow-hidden"
                     style={{ height: VELOCITY_LANE_H, width: gridW }}
                     onPointerDown={handleVelocityPointerDown}
                     onPointerMove={handleGridPointerMove}
                     onPointerUp={handleGridPointerUp}
                     onPointerCancel={handleGridPointerUp}
                   >
+                    {/* Velocity Lane Alternating Bar Backdrops */}
+                    {Array.from({ length: barCount }, (_, barIdx) => {
+                      const isAlternateBar = barIdx % 2 === 1;
+                      const barLeft = barIdx * stepsPerBar * cellW;
+                      const barWidth = Math.min(stepsPerBar, stepCount - barIdx * stepsPerBar) * cellW;
+                      return (
+                        <div
+                          key={`vel-bar-${barIdx}`}
+                          className={`absolute inset-y-0 pointer-events-none ${
+                            isAlternateBar ? "bg-[#141724]" : "bg-[#0e1018]"
+                          }`}
+                          style={{ left: barLeft, width: barWidth }}
+                        />
+                      );
+                    })}
+
+                    {/* Vertical Beat Lines in Velocity Lane */}
+                    {Array.from({ length: stepCount }, (_, i) => {
+                      const isBar = i % stepsPerBar === 0;
+                      const isBeat = i % (stepsPerBar >= 4 ? stepsPerBar / 4 : 4) === 0;
+                      return (
+                        <div
+                          key={`vel-grid-${i}`}
+                          className={`absolute inset-y-0 pointer-events-none ${
+                            isBar
+                              ? "border-l-2 border-accent/40"
+                              : isBeat
+                              ? "border-l border-white/10"
+                              : "border-l border-white/[0.03]"
+                          }`}
+                          style={{ left: i * cellW }}
+                        />
+                      );
+                    })}
+
                     {[32, 64, 96].map((line) => (
                       <div
                         key={line}
@@ -1251,17 +1353,21 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         >
                           {/* Lollipop glowing head */}
                           <div
-                            className={`w-2 h-2 rounded-full mb-[-3px] z-10 transition-transform hover:scale-125 ${
+                            className={`w-2.5 h-2.5 rounded-full -mb-1 z-10 transition-transform hover:scale-125 ${
                               stepSelected
                                 ? "bg-white shadow-[0_0_8px_white]"
                                 : "shadow-[0_0_6px_rgba(0,0,0,0.6)]"
                             }`}
-                            style={{ backgroundColor: stepSelected ? "#ffffff" : barColor }}
+                            style={{
+                              backgroundColor: stepSelected ? "#ffffff" : barColor,
+                              border: "1.5px solid rgba(255,255,255,0.8)",
+                              boxShadow: stepSelected ? "0 0 12px white" : `0 0 8px ${barColor}`,
+                            }}
                           />
                           {/* Lollipop needle stem */}
                           <div
-                            className={`w-[2px] flex-1 ${
-                              stepSelected ? "bg-white/90 shadow-[0_0_6px_white]" : "opacity-80"
+                            className={`w-[2.5px] flex-1 ${
+                              stepSelected ? "bg-white/90 shadow-[0_0_6px_white]" : "opacity-85"
                             }`}
                             style={{ backgroundColor: stepSelected ? "#ffffff" : barColor }}
                           />

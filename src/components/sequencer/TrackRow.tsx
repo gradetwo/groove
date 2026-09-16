@@ -107,7 +107,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
       style={{ ["--tc" as any]: meta.color }}
     >
       {/* Track Header (.trk-head) - 138px on mobile / 172px on sm+ - Sticky Left */}
-      <div className={`sticky left-0 z-20 bg-panel flex-none w-[138px] sm:w-[172px] pr-1.5 sm:pr-2 flex flex-col justify-center gap-1 select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-opacity ${
+      <div className={`sticky left-0 z-20 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[138px] sm:w-[172px] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center gap-1 select-none border-r border-line-subtle border-l-[3px] border-l-[var(--tc)] shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-opacity ${
         isSilenced && !isMute && !isSolo ? "opacity-60" : "opacity-100"
       }`}>
         {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
@@ -209,10 +209,10 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 e.stopPropagation();
                 onToggleMute(trackIdx);
               }}
-              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-all flex items-center justify-center touch-manipulation select-none ${
+              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
                 isMute
-                  ? "border-[#ff5964] text-[#ff5964] bg-[#ff5964]/20 font-bold shadow-[0_0_8px_rgba(255,89,100,0.35)] scale-105"
-                  : "border-line text-text-dim hover:text-text hover:border-text-dim/60"
+                  ? "border-[#ff5964] text-white bg-gradient-to-b from-[#ff5964] to-[#d62839] font-black shadow-[0_0_8px_rgba(255,89,100,0.5)] scale-105"
+                  : "border-[#2b3040] bg-[#171922] text-text-dim hover:text-[#ff5964] hover:border-[#ff5964]/50"
               }`}
               title={isMute ? t("track_unmute_title") : t("track_mute_title")}
               aria-label={isMute ? t("track_unmute_aria") : t("track_mute_aria")}
@@ -225,10 +225,10 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 e.stopPropagation();
                 onToggleSolo(trackIdx);
               }}
-              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9px] sm:text-[8.5px] border rounded transition-all flex items-center justify-center touch-manipulation select-none ${
+              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
                 isSolo
-                  ? "border-accent text-accent bg-accent/25 font-bold shadow-[0_0_8px_rgba(245,183,61,0.4)] scale-105"
-                  : "border-line text-text-dim hover:text-text hover:border-text-dim/60"
+                  ? "border-accent text-black bg-gradient-to-b from-amber-300 to-amber-500 font-black shadow-[0_0_8px_rgba(245,183,61,0.5)] scale-105"
+                  : "border-[#2b3040] bg-[#171922] text-text-dim hover:text-accent hover:border-accent/50"
               }`}
               title={isSolo ? t("track_unsolo_title") : t("track_solo_title")}
               aria-label={isSolo ? t("track_unsolo_aria") : t("track_solo_aria")}
@@ -323,7 +323,11 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               <button
                 type="button"
                 onClick={() => onOpenPianoRoll(trackIdx)}
-                className="w-5 h-5 sm:w-4 sm:h-4 rounded border border-line text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation"
+                className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation active:scale-95 ${
+                  track.track_id === "chords" || track.track_id === "bass" || track.track_id === "lead"
+                    ? "border-accent/50 bg-accent/15 text-accent hover:bg-accent/30 hover:border-accent shadow-[0_0_6px_rgba(var(--accent-rgb),0.25)]"
+                    : "border-line text-text-dim hover:text-accent hover:border-accent/60"
+                }`}
                 title={t("roll_toggle_title")}
                 aria-label={t("roll_toggle")}
                 data-testid={`track-piano-roll-open-${trackIdx}`}
@@ -383,6 +387,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
           const midiNote = track.pitch?.[stepIdx] ?? track.pitch?.[activeStepIdx];
           const isLoopedRepeat = track.trackLength !== undefined && track.trackLength > 0 && track.trackLength < stepCount && stepIdx >= track.trackLength;
           const isOutsideLoop = stepIdx >= (track.steps?.length || stepCount);
+          const barIdx = Math.floor(stepIdx / stepsPerBar);
+          const isAlternateBar = barIdx % 2 === 1;
           const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
           const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
           const gate = track.gate?.[stepIdx] ?? track.gate?.[activeStepIdx];
@@ -410,6 +416,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               isBarStart={isBarStart}
               isGroupStart={isGroupStart}
               trackColor={meta.color}
+              isAlternateBar={isAlternateBar}
             />
           );
         })}

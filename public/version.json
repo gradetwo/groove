@@ -1,27 +1,27 @@
 {
-  "version": "2.0.31",
+  "version": "2.0.32",
   "releaseDate": "2026-09-16",
-  "changelogCount": 95,
+  "changelogCount": 96,
   "latest": {
-    "version": "2.0.31",
+    "version": "2.0.32",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.31 钢琴卷帘 Logic Pro 级专业美化与双层 DAW 指令台重构：模块化双层控制台、立体 3D 象牙与黑曜石琴键、调式级数钻石导轨、亚克力高光音符块、棒棒糖力度控制器与直达虚拟键盘演奏",
-      "en": "v2.0.31 Logic Pro-Grade Piano Roll Visual & Command Architecture Overhaul: Modular 2-deck command deck, 3D ivory & obsidian keybed, scale degree guide rails, acrylic glass note blocks, lollipop velocity lane, and direct Musical Typing HUD integration"
+      "zh": "v2.0.32 工作台与钢琴卷帘全链路创作体验与视觉重构：消除多小节卷帘黑屏遮挡、多小节交替明暗底色底纹、半透明虚线循环导轨与幽灵音符、暖阳琥珀热力图音符、6大 DAW 硬件指令舱与一键复制小节",
+      "en": "v2.0.32 Studio Workbench & Piano Roll Arranger Workflow & Visual Overhaul: Multi-bar blackout elimination, alternating bar columns, non-blocking polymeter loop guide with ghost notes, warm radiant amber note heatmap, 6 DAW hardware pods, and 1-click bar duplication"
     },
     "highlights": [
       {
-        "zh": "**模块化双层 DAW 指令控制台（2-Deck Command Deck）**：重塑原本拥挤无序的单行工具栏，构建清晰专业的双层分级控制台。Deck 1 集成轨道上下文中心（轨道切换、调式音阶微标、动态音符计数）、胶囊型主工具箱（指针 1、铅笔 2、橡皮 3、剪刀 4、框选 5，带荧光激活高光与快捷键角标）、力度泳道/播放头追随/展开收起/全屏及专属「Keys ⌥K」虚拟键盘快捷入口；Deck 2 集成时间网格（吸附与长度量化）、连音（Legato）、和弦编配大师组（Note/Triad/7th/9th/Sus4/Power 印章、和弦转位 ▲/▼、Drop-2 声部排列、人性化微时序抖动）、音高八度跨度调节（±12、8va/8vb）与多级视区缩放。层次分明，操作行云流水。",
-        "en": "**Modular 2-Deck DAW Command Deck**: Replaced the cluttered single-line toolbar with an ergonomically stratified 2-deck control chassis. Deck 1 houses the Track Context Hub (selector, scale/key badge, note counter), Primary Tool Palette (Pointer 1, Pencil 2, Eraser 3, Scissors 4, Marquee 5 with radiant glow states and shortcut badges), view toggles (Velocity, Catch, Collapse, Fullscreen), and a dedicated \"Keys ⌥K\" Musical Typing launcher. Deck 2 houses timing & quantize cont…"
+        "zh": "**钢琴卷帘多小节黑屏遮挡彻底消除（Elimination of Multi-Bar Piano Roll Blackout）**：彻底修复在 64 步（4 小节）等多小节工程中，因轨道循环长度（trackLength）触发粗暴的纯黑重叠遮罩导致第 1 小节后全网格变黑、网格线消失且指针点击被拦截的严重故障。卷帘网格现采用分层架构：底层跨全部 64 步平铺交替明暗小节底色（#10121b 与 #151926），小节与拍子网格线贯穿全长；循环导轨改为非阻断性半透明导轨（pointer-events-none + 细虚线高光与步数标牌），任何小节均清爽通透且可自由点按创作。",
+        "en": "**Elimination of Multi-Bar Piano Roll Blackout**: Completely resolved a critical issue where multi-bar projects (e.g. 64 steps / 4 bars) with partial loop lengths triggered an opaque dark hatching overlay that blacked out the entire grid past Bar 1, hid all gridlines, and intercepted user mouse gestures. The piano roll grid now features layered alternating bar columns across all 64 steps, and the loop boundary is transformed into a non-blocking transparent guide (pointer-eve…"
       },
       {
-        "zh": "**立体 3D 象牙与黑曜石键盘（3D Ivory & Obsidian Keybed）**：彻底告别简陋扁平色块。黑键采用多段黑曜石渐变（#101217 → #242833），顶部倒角反光与投射到白键上的自然阴影，指针按下时呈现发光下潜反馈；白键采用象牙瓷釉高质感微渐变，并标注醒目 C3/C4/C5 八度标牌；琴键右缘嵌入调式级数光导轨，根音显示脉动旋转菱形钻标（Diamond Pin），调内音显示精细珍珠圆标，键盘与网格行实现亚像素级严格对齐。",
-        "en": "**3D Ivory & Obsidian Piano Keybed**: Overhauled the pitch gutter with authentic tactile depth. Ebony keys feature multi-stop obsidian gradients (#101217 to #242833), top bevel highlights, and cast drop shadows with interactive depression feedback; ivory keys feature creamy enamel finishes and prominent octave badges (C3, C4, C5); and the keybed margin embeds luminous scale degree guide pins (pulsing diamond pips for roots, pearl pips for diatonic tones) perfectly aligned wi…"
+        "zh": "**多小节循环幽灵音符呈现（Looped Repeat Ghost Notes）**：当旋律轨处于循环循环模式（如 16 步循环在 64 步走向下播放）时，卷帘第 2、3、4 小节自动根据模长呈现半透明虚线幽灵音符（Ghost Notes），不仅清晰展示当前后段小节的真实复响，还能配合吸附和弦走向标尺显示全局和弦徽标；用户在后段小节任意空白处点击，即可立即写入独立真实音符进行变奏创作。",
+        "en": "**Looped Repeat Ghost Notes**: When a track loops polymetrically under a longer progression (e.g. 16 steps looping under 64 steps), bars 2..4 in the piano roll automatically render translucent dashed ghost notes indicating loop repetitions and display full chord progression badges. Clicking any empty cell in subsequent bars immediately authors a discrete note variation."
       },
       {
-        "zh": "**亚克力质感音符块与金属拉丝和弦走势标尺（Acrylic Glass Notes & Brushed Chord Ruler）**：网格音符升级为全圆角亚克力发光块体，顶部拥有细致的高光反射边缘（border-t border-white/60），左侧配备琴槌撞击瞬态标记（Hammer Transient Marker），并根据力度映射琥珀至亮珊瑚热力图渐变；顶部吸附小节线与和弦走向标尺采用金属拉丝风格，自动识别小节和弦徽章，轻点即可多音完整试听。",
-        "en": "**Acrylic Glass Note Blocks & Brushed Chord Progression Ruler**: Pitch grid notes are elevated with acrylic glass capsules featuring top specular reflection rims, hammer strike transient impact lines, and velocity heatmap shading; the sticky timeline tape and chord progression ruler adopts a brushed dark metal texture, displaying harmonic badges that audition polyphonic chords upon clicking."
+        "zh": "**暖阳琥珀发光音符与 3D 象牙黑曜石琴键配色美化**：彻底告别原本发青偏暗的低对比度音符着色，重塑为基于标准 DAW 热力图的暖阳琥珀至亮珊瑚发光块体（hsl(18..45) 随力度自然延展），搭配顶部 2px 镜面反射弧边与左侧琴槌冲击瞬态线；左侧音高键盘升级为典雅象牙温润白键与多段黑曜石黑键，并赋予 C 音八度徽标；力度泳道同步配备交替小节底衬与发光棒棒糖圆头（Lollipop Heads）。",
+        "en": "**Warm Radiant Amber Notes & 3D Ivory/Obsidian Keybed Aesthetics**: Replaced muddy greenish-cyan notes with a glowing DAW heatmap spanning radiant coral to blazing golden amber (hsl(18..45) with velocity dynamics), augmented by 2px top specular highlights and hammer transient strike edges. The pitch gutter features satin ivory and obsidian key textures with bold C-octave pills, and the velocity lane embeds matching alternating bar shading and luminous lollipop heads."
       }
     ],
     "truncated": true
