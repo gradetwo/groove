@@ -130,3 +130,101 @@ describe("genre switching · the unsaved-changes choke point", () => {
     expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
   });
 });
+
+/**
+ * Regression: a genre switch must happen ONCE per request, no matter how often React re-renders.
+ *
+ * The bug (found in a browser trace on 2026-09-16, worse on Safari): the external-sync effect
+ * listed `performSwitch` and `requestGenreGuard` as dependencies, and `performSwitch` closes over
+ * `onSelectGenre` — which `App` passed as an inline arrow, i.e. a new function on every render. A
+ * single click therefore produced: switch → `onSelectGenre` → `navigate` → App re-render → new
+ * callback identity → effect runs again → switch again… Measured with the transport running, one
+ * click caused **5, 11 and 13 `pushState` calls** and up to **9 pattern flips** on successive
+ * clicks: "the two genres keep swapping and the display flickers", with broken sound, because each
+ * round-trip re-applied `SET_GENRE` + `engine.setPattern(..., resetStates = true)` + the genre's
+ * drum kit and FX defaults.
+ *
+ * These tests hand the hook *fresh callback identities on every render* and require exactly one
+ * switch. Before the fix this failed with many commits; that is the whole point of the assertion.
+ */
+describe("genre sync · one switch per request, whatever React re-renders", () => {
+  const A = genre("chicago-house");
+  const B = genre("boom-bap");
+  const C = genre("uk-drill");
+
+  const renderSync = (initial: Genre) =>
+    renderHook(
+      ({ target, tick }: { target: Genre; tick: number }) =>
+        useGenreSwitching({
+          currentGenre: A,
+          initialGenre: target,
+          // Deliberately new identities on every render, exactly like an inline arrow prop.
+          onSelectGenre: () => {
+            void tick;
+          },
+          engineRef: { current: null } as never,
+          isPlaying: false,
+          setIsPlaying: vi.fn(),
+          isDrumsOnly: false,
+          setDrumKit: vi.fn(),
+          setEffectsRackState: vi.fn(),
+          clearPlayhead: vi.fn(),
+          commit: (action: SequencerAction) => commits.push(action),
+          requestGenreGuard: (_g, run) => run(),
+        }),
+      { initialProps: { target: initial, tick: 0 } }
+    );
+
+  let commits: SequencerAction[] = [];
+  beforeEach(() => {
+    commits = [];
+  });
+
+  it("applies a navigation request once even when every render allocates new callbacks", () => {
+    const { rerender } = renderSync(B);
+    // Re-render repeatedly with new callback identities, as App does on each route/state update.
+    for (let tick = 1; tick <= 6; tick++) rerender({ target: B, tick });
+
+    const applied = commits.filter((a) => a.type === "SET_GENRE");
+    expect(applied, `SET_GENRE applied ${applied.length} times for one request`).toHaveLength(1);
+    expect((applied[0] as { genre: Genre }).genre.id).toBe("boom-bap");
+  });
+
+  it("still honours a genuinely new request after the first one lands", () => {
+    const { rerender } = renderSync(B);
+    for (let tick = 1; tick <= 3; tick++) rerender({ target: B, tick });
+    // A different navigation target is a new request and must be applied.
+    rerender({ target: C, tick: 4 });
+    const ids = commits.filter((a) => a.type === "SET_GENRE").map((a) => (a as { genre: Genre }).genre.id);
+    expect(ids).toEqual(["boom-bap", "uk-drill"]);
+  });
+
+  it("asks the guard for a routed navigation, not for one it has already satisfied", () => {
+    const asked: string[] = [];
+    const { rerender } = renderHook(
+      ({ target, tick }: { target: Genre; tick: number }) =>
+        useGenreSwitching({
+          currentGenre: A,
+          initialGenre: target,
+          onSelectGenre: () => {
+            void tick;
+          },
+          engineRef: { current: null } as never,
+          isPlaying: false,
+          setIsPlaying: vi.fn(),
+          isDrumsOnly: false,
+          setDrumKit: vi.fn(),
+          setEffectsRackState: vi.fn(),
+          clearPlayhead: vi.fn(),
+          commit: (action: SequencerAction) => commits.push(action),
+          requestGenreGuard: (g, run) => {
+            asked.push(g.id);
+            run();
+          },
+        }),
+      { initialProps: { target: B, tick: 0 } }
+    );
+    for (let tick = 1; tick <= 4; tick++) rerender({ target: B, tick });
+    expect(asked).toEqual(["boom-bap"]);
+  });
+});

@@ -801,6 +801,95 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error("Piano roll did not close");
     }
 
+    // 5g. Switching genre *while playing* (the case that shipped broken).
+    //
+    // A single click used to trigger 5–13 `pushState` calls and up to 9 pattern flips, because the
+    // genre-sync effect depended on callback identities that every render reallocated: switch →
+    // onSelectGenre → navigate → re-render → effect again → switch again. On Safari that showed as
+    // the two genres swapping continuously with the display flickering. The matrix never exercised
+    // this, so nothing caught it — this check does, on every engine, by measuring the app's own
+    // activity rather than trusting a screenshot.
+    await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("[data-testid='toolbar-advanced-toggle']", { timeout: 30000 });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => {
+      window.__genreDiag = { nav: 0, samples: [] };
+      for (const fn of ["pushState", "replaceState"]) {
+        const orig = history[fn].bind(history);
+        history[fn] = (...a) => {
+          window.__genreDiag.nav += 1;
+          return orig(...a);
+        };
+      }
+      const signature = () =>
+        [...document.querySelectorAll("[data-track-idx][data-step-idx]")]
+          .map((c) => (c.getAttribute("aria-selected") === "true" ? "1" : "0"))
+          .join("");
+      window.__genreDiag.start = () =>
+        setInterval(() => window.__genreDiag.samples.push(signature()), 50);
+    });
+    const genrePlayBtn = await page.$("button:has-text('播放'), button:has-text('Play')");
+    if (genrePlayBtn) await genrePlayBtn.click({ force: true });
+    await page.waitForTimeout(600);
+    await page.evaluate(() => window.__genreDiag.start());
+
+    const chipSelectors = await page.$$eval("[data-testid^='genre-chip-']", (els) =>
+      els.map((e) => `[data-testid='${e.getAttribute("data-testid")}']`)
+    );
+    const switches = Math.min(2, Math.max(0, chipSelectors.length - 1));
+    for (let i = 1; i <= switches; i++) {
+      const before = await page.evaluate(() => ({
+        nav: window.__genreDiag.nav,
+        samples: window.__genreDiag.samples.length,
+      }));
+      // Click through the delivery-verifying helper: on WebKit a plain `force: true` click at
+      // coordinates silently did nothing here (the page had been scrolled by the earlier steps, and
+      // a click needs a pair of down/up on the same node), which is how the first version of this
+      // check passed vacuously with `navigations=0, flips=0`.
+      await clickVerified(page, chipSelectors[i], { timeoutMs: 8000 });
+      // By this point the matrix has edited the pattern (step toggles, a timbre change, a note
+      // drawn in the roll), so the unsaved-changes guard legitimately asks first. Answer it and
+      // carry on measuring: the loop this check hunts happens *after* the switch is allowed, and a
+      // dialog left open would otherwise make the check vacuous (it did, twice).
+      await page.waitForTimeout(400);
+      if (await page.$("[data-testid='unsaved-discard']")) {
+        console.log(`   · genre switch ${i}: unsaved-changes guard asked (pattern had edits) — discarding to continue`);
+        await clickVerified(page, "[data-testid='unsaved-discard']", { timeoutMs: 8000 });
+      }
+      await page.waitForTimeout(2000);
+      const after = await page.evaluate(({ nav, samples }) => {
+        const slice = window.__genreDiag.samples.slice(samples);
+        let changes = 0;
+        for (let k = 1; k < slice.length; k++) if (slice[k] !== slice[k - 1]) changes += 1;
+        return { navDelta: window.__genreDiag.nav - nav, patternFlips: changes };
+      }, before);
+      // Print the measurements before judging them: the sibling project's notes record a probe that
+      // asserted first and therefore left nothing behind on the run that mattered (§6.10). With the
+      // numbers in the log, an interrupted run is still evidence.
+      console.log(
+        `   · genre switch ${i}: navigations=${after.navDelta} patternFlips=${after.patternFlips} (${target.name})`
+      );
+
+      // A click that changed nothing means the check is not exercising anything: fail loudly rather
+      // than pass. "Not judged" must never be recorded as "passed".
+      if (after.patternFlips < 1) {
+        throw new Error(
+          `Clicking a genre chip while playing changed no pattern on ${target.name} (navigations=${after.navDelta}, flips=${after.patternFlips}) — the check is vacuous`
+        );
+      }
+      // One click may cost one navigation and one pattern change. Anything more is the loop.
+      if (after.navDelta > 2) {
+        throw new Error(
+          `Switching genre while playing caused ${after.navDelta} navigations on ${target.name} (expected <= 2)`
+        );
+      }
+      if (after.patternFlips > 2) {
+        throw new Error(
+          `Switching genre while playing flipped the pattern ${after.patternFlips} times on ${target.name} (expected <= 2) — the genres are swapping`
+        );
+      }
+    }
+
     // 6. Compare & Challenge Views Check
     await page.goto(`${baseUrl}/?tab=compare`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
@@ -821,13 +910,36 @@ async function runTestOnTarget(target, baseUrl) {
 }
 
 async function main() {
-  console.log("===============================================================");
-  console.log("  🚀 GROOVE LAB Multi-Browser & Cross-Device Release Test Matrix");
-  console.log("===============================================================\n");
+  /**
+   * Every run persists itself.
+   *
+   * Rule (from the sibling project's WebKit notes, §6.1, and from killing a healthy 15-minute run
+   * because it was piped through `tail`): a long run must stream to disk as it goes and leave a
+   * machine-readable result behind. This matrix takes minutes per target on a slow machine, so it
+   * writes `matrix.log` line by line plus a final `matrix.json` + `summary.md` — which means the
+   * run can be handed off, packaged, or interrupted without losing what it established.
+   *
+   * `--out <dir>` chooses the parent directory (default `e2e-out/`, git-ignored).
+   */
+  const outArg = process.argv.find((a) => a.startsWith("--out="));
+  const outRoot = outArg ? outArg.split("=")[1] : path.join(process.cwd(), "e2e-out");
+  const runStamp = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
+  const runDir = path.join(outRoot, `e2e-${runStamp}`);
+  fs.mkdirSync(runDir, { recursive: true });
+  const logPath = path.join(runDir, "matrix.log");
+  const startedAt = new Date().toISOString();
+  const log = (line = "") => {
+    console.log(line);
+    fs.appendFileSync(logPath, `${line}\n`);
+  };
+
+  log("===============================================================");
+  log("  🚀 GROOVE LAB Multi-Browser & Cross-Device Release Test Matrix");
+  log("===============================================================\n");
 
   const { server, port } = await startStaticServer();
   const baseUrl = `http://127.0.0.1:${port}`;
-  console.log(`[Static Server] Serving dist/ at ${baseUrl}\n`);
+  log(`[Static Server] Serving dist/ at ${baseUrl}\n`);
 
   let allPassed = true;
   const results = [];
@@ -847,40 +959,78 @@ async function main() {
   }
 
   for (const target of targets) {
-    process.stdout.write(`⏳ Testing ${target.name.padEnd(35)} ... `);
+    // One line per target, written as the target starts and again when it finishes: with the log
+    // on disk, a run that is still going looks like progress instead of a hang.
+    log(`⏳ Testing ${target.name} ...`);
     const start = Date.now();
     let res = await runTestOnTarget(target, baseUrl);
     let retried = false;
     if (!res.success) {
-      process.stdout.write(`(retrying once) ... `);
+      log(`   ↻ ${target.name}: retrying once`);
       retried = true;
       res = await runTestOnTarget(target, baseUrl);
     }
     const dur = ((Date.now() - start) / 1000).toFixed(2);
 
     if (res.success) {
-      console.log(`✅ PASS (${dur}s)`);
-      results.push({ name: target.name, status: "PASS", duration: dur,
-      retried,
-    });
+      log(`✅ PASS ${target.name} (${dur}s)${retried ? " [retried once]" : ""}`);
+      results.push({ name: target.name, status: "PASS", duration: dur, retried });
     } else {
-      console.log(`❌ FAIL (${dur}s)`);
-      console.error(`   Error details: ${res.error}\n`);
-      results.push({ name: target.name, status: "FAIL", error: res.error, duration: dur });
+      log(`❌ FAIL ${target.name} (${dur}s)`);
+      log(`   Error details: ${res.error}`);
+      results.push({ name: target.name, status: "FAIL", error: res.error, duration: dur, retried });
       allPassed = false;
     }
   }
 
   server.close();
 
-  console.log("\n===============================================================");
-  console.log("  📊 Release Test Matrix Summary");
-  console.log("===============================================================");
+  log("\n===============================================================");
+  log("  📊 Release Test Matrix Summary");
+  log("===============================================================");
   results.forEach((r) => {
     const icon = r.status === "PASS" ? "✅" : "❌";
-    console.log(`  ${icon} ${r.name.padEnd(36)} [${r.status}] (${r.duration}s)`);
+    log(`  ${icon} ${r.name.padEnd(36)} [${r.status}] (${r.duration}s)`);
   });
-  console.log("===============================================================\n");
+  log("===============================================================\n");
+
+  // Persist the machine-readable result next to the log, so this run can be packaged, compared
+  // with another machine, or read by a gate without re-running anything.
+  const finishedAt = new Date().toISOString();
+  const totalSeconds = +(results.reduce((sum, r) => sum + Number(r.duration), 0)).toFixed(1);
+  const manifest = {
+    schema: "groove.e2e-matrix/1",
+    startedAt,
+    finishedAt,
+    baseUrl,
+    node: process.version,
+    platform: `${process.platform}/${process.arch}`,
+    targetFilter: targetFilter ?? null,
+    totalSeconds,
+    passed: allPassed,
+    targets: results,
+  };
+  fs.writeFileSync(path.join(runDir, "matrix.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.writeFileSync(
+    path.join(runDir, "summary.md"),
+    [
+      "# Cross-device E2E matrix",
+      "",
+      `- ran: ${startedAt} → ${finishedAt} (${totalSeconds}s of target time)`,
+      `- node: ${manifest.node} · ${manifest.platform}`,
+      `- scope: ${targetFilter ? `filtered (--target=${targetFilter})` : "all targets"}`,
+      `- verdict: ${allPassed ? "**all selected targets passed**" : "**one or more targets FAILED**"}`,
+      "",
+      "| target | status | seconds | retried |",
+      "|---|---|---|---|",
+      ...results.map((r) => `| ${r.name} | ${r.status} | ${r.duration} | ${r.retried ? "yes" : "no"} |`),
+      "",
+      ...(allPassed ? [] : ["## Failures", "", ...results.filter((r) => r.error).map((r) => `- **${r.name}**: ${r.error}`), ""]),
+      `Full output: \`${path.relative(runDir, logPath)}\``,
+      "",
+    ].join("\n")
+  );
+  log(`📦 artifacts: ${runDir} (matrix.json, matrix.log, summary.md)`);
 
   if (!allPassed) {
     console.error("❌ Release Test Matrix FAILED: One or more browser/device targets failed.");

@@ -1,27 +1,27 @@
 {
-  "version": "2.0.19",
+  "version": "2.0.20",
   "releaseDate": "2026-09-16",
-  "changelogCount": 83,
+  "changelogCount": 84,
   "latest": {
-    "version": "2.0.19",
+    "version": "2.0.20",
     "date": "2026-09-16",
     "category": "fix",
     "title": {
-      "zh": "v2.0.19 三项使用反馈：钢琴卷帘默认满宽（并可全屏/收起/关闭）、GS-1 与换音色的卡顿根因、轨道检查器改成分类 tab",
-      "en": "v2.0.19 Three pieces of feedback from real use: the piano roll fills the width by default (and can go fullscreen, collapse or close), the root causes behind the GS-1 and timbre-switch stalls, and a tabbed track inspector"
+      "zh": "v2.0.20 修播放中切曲风的老/新曲风来回交换与显示闪烁：一次点击触发 5–13 次导航、最多 9 次 pattern 翻转",
+      "en": "v2.0.20 Fixes the old/new genre swapping and flicker when switching genre during playback: one click caused 5–13 navigations and up to 9 pattern flips"
     },
     "highlights": [
       {
-        "zh": "**钢琴卷帘只有屏幕 1/3 宽——因为格子宽度是写死的像素**。第一版用 `ZOOMS = [14, 20, 26, …]` 直接当格子宽度，于是音符网格永远是 `步数 × 26px`：16 步就是 416px，在 1440px 的屏幕上正好约 1/3，抽屉剩下的地方全空着。现在缩放是**相对容器宽度的倍数**（用 `ResizeObserver` 量抽屉宽度再算格子宽），默认 1× 就是**铺满**，缩放按钮从 0.5× 到 2× 在此基础上放大缩小；格子宽有 10px 下限（32 步在窄屏上不会被压成看不见）。新增两个状态：**全屏**（`fixed inset-0`，带安全区内边距，Esc 先退全屏再关面板，因为那是更小的一步）与**收起**（只留工具栏——轨选择、缩放、移调、关闭都还在，编辑区卸载）。E2E 量的是几何：网格宽度必须 ≥ 抽屉宽度 − 60px、全屏盒子必须覆盖视口、收起后编辑区必须消失而工具栏必须还在。",
-        "en": "**The piano roll was about a third of the screen because its cell width was a hard-coded pixel size.** The first version used `ZOOMS = [14, 20, 26, …]` as the cell width directly, so the note grid was always `steps × 26px` — 416 px for a 16-step pattern, almost exactly a third of a 1440 px screen, with the rest of the drawer empty. Zoom is now a **factor on a cell width derived from the measured container** (a `ResizeObserver` watches the drawer), so the default 1× **fills**…"
+        "zh": "**根因是 effect 依赖了每次渲染都会新建的回调**。`useGenreSwitching` 的外部同步 effect 把 `performSwitch` 与 `requestGenreGuard` 放进了依赖数组，而 `performSwitch` 闭包里的 `onSelectGenre` 是 App 传的**内联箭头**（`onSelectGenre={(g) => handleSelectGenre(g, \"studio\")}`）——每次 App 重渲染都是一个新函数。于是一次点击变成：切换 → `onSelectGenre` → `navigate` → App 重渲染 → 新回调身份 → **effect 再跑一次** → 再切一次 → …… 浏览器实测（**Chromium 上就能复现，Safari 更严重**），transport 播放中连续三次点击分别产生 **5 / 11 / 13 次 `pushState`** 与最多 **9 次 pattern 签名翻转**，每个来回都重新执行 `SET_GENRE` + `engi…",
+        "en": "**The root cause was an effect depending on callbacks that every render reallocates.** `useGenreSwitching`'s external-sync effect listed `performSwitch` and `requestGenreGuard` as dependencies, and `performSwitch` closes over `onSelectGenre` — which `App` passed as an **inline arrow** (`onSelectGenre={(g) => handleSelectGenre(g, \"studio\")}`), i.e. a new function on every App render. So one click became: switch → `onSelectGenre` → `navigate` → App re-renders → new callback id…"
       },
       {
-        "zh": "**GS-1 开关与播放中换音色的卡顿，根因有三个，都在主线程的生命周期上**。① **每次换音色都在重建 host**：`ensureTrack`/`tryPlay` 把「乐器名不同」当成「拆掉这个 slot、重新加载一个 host」，于是从一个 GS-1 patch 换到另一个，会先销毁一个完全可用的 worklet、让接下来几个音**回退到原生引擎**、等新 host 编译完再切回来——听感就是「换音色没反应，过一会儿才变」。host 与乐器无关（patch 只是一组参数），现在**就地把新 patch 推给同一个 host**；新乐器若没有 GS-1 patch（例如钢琴这类刻意保留原生的），也只是**不用**它发声，host 仍然留着，切回来是即时的。② **关闭 GS-1 时同步销毁**：`releaseAll()` + `dispose()` 原本都写在点击处理里，正在播放时等于在主线程上拆掉每个 worklet 节点并释放 WASM——这就是「一切就像卡住」。现在**先静音、后释放**：`releaseAll()` 立即执行（声…",
-        "en": "**The stalls around the GS-1 switch and around switching timbre during playback have three root causes, all of them main-thread lifecycle work.** (1) **Every timbre change rebuilt the host**: `ensureTrack`/`tryPlay` treated \"a different instrument\" as \"tear this slot down and load another host\", so switching from one GS-1 patch to another disposed a perfectly usable worklet, played the next notes on the **native** engine while the replacement compiled, and only then switched…"
+        "zh": "**修法（两层，缺一不可）**：① 同步 effect 改成**边沿触发、且完全不看回调身份**——`performSwitch` 与 guard 通过 ref 读取，依赖只剩下「请求的曲风」与 store 里的当前曲风，并记住「已经因这次请求同步过」，因此同一请求只落一次；② App 侧把 `onSelectGenre`（studio 与 detail 两个去向）改成 `useCallback` 稳定引用，从源头消掉这类抖动。**证据**：修复后同一套测量在 Chromium 与 WebKit 上都是**每次点击 1 次导航、1 次 pattern 翻转**（修复前 5/11/13 与 1/8/9）。",
+        "en": "**The fix, in two layers.** (1) The sync effect is now **edge-triggered and blind to callback identity**: `performSwitch` and the guard are read through refs, the dependency list is down to the requested genre and the store's current genre, and the last satisfied request is remembered so one request lands once. (2) `App` now hands over stable `useCallback` references for `onSelectGenre` (both the studio and detail destinations), removing that class of churn at the source. **…"
       },
       {
-        "zh": "**一个可复用的测量脚本，因为「卡」不能靠读代码断言**：`scripts/measure_interaction_latency.mjs` 在真实浏览器里量每个交互的 **点击→DOM 真的反映变化** 的延迟，以及期间主线程的 **long task**（>50ms 的阻塞；那正是「卡住」的感觉，也是会饿死调度器前瞻的东西）。第一次写它时我把固定 `setTimeout` 当成 settle，于是把一个几毫秒的状态翻转量成了 8 秒——现在的 inspect 等的是**可观测状态**（`aria-pressed` 翻转、选项 `aria-selected` 变 true、格子 `aria-selected` 改变）。本机（无头 Chromium，桌面视口，同一脚本同一条件）修复前后：**GS-1 关 119.5 → 38.8 ms、开 71.5 → 23.9 ms**（约 3 倍）；**换音色 81/160/215/108 → 89/81/63/59 ms**（最差那个从 215 ms 降到 63 ms）；切一步 59.6 → 45.1 m…",
-        "en": "**A reusable probe, because \"it stutters\" cannot be asserted by reading code.** `scripts/measure_interaction_latency.mjs` measures, in a real browser, each interaction's **click → the DOM actually reflecting it** latency plus the main thread's **long tasks** during it (>50 ms of blocking is what \"stuck\" feels like, and it is what starves the scheduler's lookahead). The first version of the probe used a fixed `setTimeout` as its settle, which is how it reported eight seconds…"
+        "zh": "**为什么它能溜过 7 端矩阵**：矩阵从来没有**在播放中切换曲风**——它检查过视图渲染、控制台、控制台面板、设置面板、检查器、卷帘，唯独没碰这条路径。新增的检查用应用自己的活动量作判据（`pushState` 次数 + 步进网格签名翻转次数），并且**先打印后断言**：一旦某次运行被中断，日志里也已经留下了数字。它自己也踩了两个坑，都已在代码注释里写明：**点击落空**（rail 在之前的步骤里已滚出视口，WebKit 上 `force: true` 的坐标点击什么都没发生 → 改用 `clickVerified` 做投递验证），以及**空转通过**（第一次版本是 0 导航 0 翻转却判绿——「没判」被当成「通过」）；现在「点击后什么都没变」直接判失败。",
+        "en": "**Why the 7-target matrix let it through:** the matrix never **switched genre while the transport was running** — it covered view rendering, the console, the mixer, the settings panel, the inspector and the roll, but not this path. The new check judges by the app's own activity (count of `pushState` calls + pattern-signature flips) and **prints before it asserts**, so an interrupted run still leaves the numbers in the log. The check itself hit two traps, both now written int…"
       }
     ],
     "truncated": true

@@ -54,3 +54,6 @@ scratch/
 slowpack-out/
 slowpack-*.tar.gz
 slowpack-*.tar.gz.sha256
+
+# Cross-device E2E matrix artifacts (scripts/test_matrix.js)
+e2e-out/

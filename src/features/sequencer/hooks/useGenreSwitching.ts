@@ -217,19 +217,54 @@ export function useGenreSwitching({
   );
 
   /**
-   * Sync external genre (navigation).
+   * Sync external genre (navigation). Edge-triggered, and deliberately blind to callback identity.
    *
-   * This used to `commit({ type: "SET_GENRE" })` directly, which both discarded unsaved edits
-   * without asking *and* skipped the genre's own drum kit and FX defaults — so arriving from
-   * Explore gave you a pattern whose kit and rack belonged to the previous genre. It now goes
-   * through the same guarded path as every other switch.
+   * ## The bug this shape exists to prevent
+   *
+   * The first version listed `performSwitch` and `requestGenreGuard` in the dependency array.
+   * `performSwitch` closes over `onSelectGenre`, which `App` passed as an inline arrow
+   * (`onSelectGenre={(g) => handleSelectGenre(g, "studio")}`) — a **new identity on every App
+   * render**. So a single click produced: switch → `onSelectGenre` → `navigate` → App re-renders →
+   * new callback identity → this effect runs again → switch again → … Measured in a browser while
+   * the transport was running: one click caused **5, 11 and 13 `pushState` calls** and up to **9
+   * pattern flips** on successive clicks, which is exactly the reported "the two genres keep
+   * swapping and the display flickers" (and why it is worse on Safari, where the route/state
+   * updates land differently). Each round-trip re-applied `SET_GENRE` plus
+   * `engine.setPattern(..., resetStates = true)`, the genre's drum kit and its FX defaults, so the
+   * sound broke as well.
+   *
+   * Two properties make it safe now:
+   *   - the callbacks are read through refs, so the effect fires when the **requested genre**
+   *     changes and not when a render happens to allocate new functions;
+   *   - the last requested id is remembered, so the same navigation request is applied once even
+   *     if `initialGenre` is handed over as a fresh object on every render.
    */
   useEffect(() => {
-    if (initialGenre && initialGenre.id !== currentGenre.id) {
-      if (requestGenreGuard) requestGenreGuard(initialGenre, () => performSwitch(initialGenre, false));
-      else performSwitch(initialGenre, false);
+    performSwitchRef.current = performSwitch;
+  }, [performSwitch]);
+  useEffect(() => {
+    requestGenreGuardRef.current = requestGenreGuard;
+  }, [requestGenreGuard]);
+
+  useEffect(() => {
+    const requested = initialGenre;
+    if (!requested) return;
+    if (requested.id === currentGenre.id) {
+      // Arrived: mark this request satisfied so a later navigation to the same id is a new one.
+      lastSyncedGenreIdRef.current = requested.id;
+      return;
     }
-  }, [initialGenre, currentGenre.id, performSwitch, requestGenreGuard]);
+    if (lastSyncedGenreIdRef.current === requested.id) return;
+    lastSyncedGenreIdRef.current = requested.id;
+    const run = () => performSwitchRef.current(requested, false);
+    if (requestGenreGuardRef.current) requestGenreGuardRef.current(requested, run);
+    else run();
+  }, [initialGenre, currentGenre.id]);
+
+  // Identity-independent access to the switch and the guard for the sync effect above.
+  const performSwitchRef = useRef<(genre: Genre, andPlay?: boolean) => void>(() => {});
+  const requestGenreGuardRef = useRef<UseGenreSwitchingOptions["requestGenreGuard"]>(undefined);
+  const lastSyncedGenreIdRef = useRef<string | null>(null);
 
   const genreAccent = useMemo(() => getGenreAccent(currentGenre), [currentGenre]);
 

@@ -68,6 +68,7 @@ export const GenreRail = memo<GenreRailProps>(function GenreRail({
             <button
               key={g.id}
               onClick={() => onSelectGenre(g.id)}
+              data-testid={`genre-chip-${g.id}`}
               className={`flex-none flex flex-col gap-0.5 px-3.5 py-2 border rounded-xl bg-panel min-w-[124px] text-left transition-all relative ${
                 isCurrent
                   ? "border-[var(--g)] shadow-[0_0_14px_rgba(245,183,61,0.2)] bg-[#171920]"

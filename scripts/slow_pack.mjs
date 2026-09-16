@@ -49,6 +49,15 @@ const argValue = (name, fallback = null) => {
 const sha256 = (buf) => crypto.createHash("sha256").update(buf).digest("hex");
 const nowStamp = () => new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
 
+/**
+ * Past this, a run should be handed off rather than watched.
+ *
+ * The rule (from the user): anything expected to take more than ~20 minutes becomes a script the
+ * user runs on a faster machine, with result collection and packaging built in — which is what this
+ * packer already is. The number is reported so the decision is made on data, not on a hunch.
+ */
+const HANDOFF_THRESHOLD_MINUTES = 20;
+
 /* ------------------------------------------------------------------ the plan */
 
 // Mirrors `scripts/track.mjs slow` exactly (same commands, same order), plus the GS-1
@@ -960,6 +969,23 @@ function commandRun() {
       }
     }
 
+    // The E2E matrix persists its own `matrix.json` + `summary.md`; carry the newest run into the
+    // package so the result is machine-readable without parsing a log.
+    const e2eOut = path.join(ROOT, "e2e-out");
+    if (fs.existsSync(e2eOut)) {
+      const runs = fs
+        .readdirSync(e2eOut, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => ({ name: e.name, at: fs.statSync(path.join(e2eOut, e.name)).mtimeMs }))
+        .sort((a, b) => b.at - a.at);
+      if (runs[0]) {
+        for (const file of ["matrix.json", "summary.md"]) {
+          const from = path.join(e2eOut, runs[0].name, file);
+          if (fs.existsSync(from)) fs.copyFileSync(from, path.join(pkgDir, "artifacts", `e2e-${file}`));
+        }
+      }
+    }
+
     // Coverage: keep the machine-readable summary, not the 31 MB HTML report.
     const covSummary = ["coverage-summary.json", "coverage/coverage-summary.json", "coverage/coverage-final.json"]
       .map((rel) => path.join(ROOT, rel))
@@ -1024,6 +1050,16 @@ function commandRun() {
     else console.log(`  send back: ${pkgDir}`);
 
     if (gateGit?.dir) fs.rmSync(gateGit.dir, { recursive: true, force: true });
+
+    const observedSeconds = [...steps, ...measurements].reduce((sum, x) => sum + (x.seconds ?? 0), 0);
+    const observedMinutes = +(observedSeconds / 60).toFixed(1);
+    console.log(`\n  observed: ${observedMinutes} min of gate time (wall clock is longer on a busy machine)`);
+    if (observedMinutes > HANDOFF_THRESHOLD_MINUTES) {
+      console.log(
+        `  \u2139\ufe0f  over ${HANDOFF_THRESHOLD_MINUTES} min: run this on the faster machine next time and send the package back —` +
+          "\n      `node scripts/slow_pack.mjs export` here, then `node scripts/slow_pack.mjs run` there."
+      );
+    }
 
     const failed = counts.fail + counts.timeout;
     return failed === 0 ? 0 : 3;

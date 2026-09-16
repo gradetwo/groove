@@ -1,7 +1,7 @@
 {
   "name": "groove-music-genre-learning",
   "private": true,
-  "version": "2.0.19",
+  "version": "2.0.20",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,6 +23,8 @@
     "fast:build": "node scripts/track.mjs fast --with-build",
     "slow": "node scripts/track.mjs slow",
     "slow:pack": "node scripts/slow_pack.mjs run",
+    "handoff": "node scripts/slow_pack.mjs run",
+    "handoff:e2e": "node scripts/slow_pack.mjs run --only e2e --label e2e",
     "slow:export": "node scripts/slow_pack.mjs export",
     "slow:verify": "node scripts/slow_pack.mjs verify",
     "verify": "npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run check:budget && npm run check:gs1 && npm run test:e2e",

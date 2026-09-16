@@ -151,6 +151,22 @@ const MainApp: React.FC = () => {
     navigate({ tab: "studio", genreId: genre.id });
   }, [navigate]);
 
+  /**
+   * Stable callbacks for the views.
+   *
+   * These used to be inline arrows at each call site, so every App render allocated new functions —
+   * which fed a re-render loop through `StudioView`'s genre-sync effect (see the comment there).
+   * One `useCallback` per destination removes that class of churn at the source.
+   */
+  const handleSelectStudioGenre = useCallback(
+    (genre: { id: string; name?: string }) => handleSelectGenre(genre, "studio"),
+    [handleSelectGenre]
+  );
+  const handleSelectDetailGenre = useCallback(
+    (genre: { id: string; name?: string }) => handleSelectGenre(genre, "detail"),
+    [handleSelectGenre]
+  );
+
   const handleEngineReady = (engine: AudioEngine) => {
     setEngineInstance(engine);
     setAnalyser(engine.getAnalyser());
@@ -212,8 +228,8 @@ const MainApp: React.FC = () => {
                 {selectedGenre ? (
                   <StudioView
                     selectedGenre={selectedGenre}
-                    onSelectGenre={(g) => handleSelectGenre(g, "studio")}
-                    onViewDetail={(g) => handleSelectGenre(g, "detail")}
+                    onSelectGenre={handleSelectStudioGenre}
+                    onViewDetail={handleSelectDetailGenre}
                     onAddToCompare={handleAddToCompare}
                     onAudioEngineReady={handleEngineReady}
                     onOpenSettings={() => setSettingsOpen(true)}
@@ -318,7 +334,7 @@ const MainApp: React.FC = () => {
                     setInitialMasterclassPattern({ pattern, label });
                     handleSelectTab("studio");
                   }}
-                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                  onSelectGenre={handleSelectDetailGenre}
                 />
               </ErrorBoundary>
             )}
@@ -333,7 +349,7 @@ const MainApp: React.FC = () => {
                 alternativeLabel={t("btn_browse_timeline")}
               >
                 <GalaxyView
-                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                  onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -346,7 +362,7 @@ const MainApp: React.FC = () => {
                 homeLabel={t("btn_return_studio")}
               >
                 <HorizontalTimelineView
-                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                  onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -359,7 +375,7 @@ const MainApp: React.FC = () => {
                 homeLabel={t("btn_return_studio")}
               >
                 <VerticalTimelineView
-                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                  onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -373,7 +389,7 @@ const MainApp: React.FC = () => {
               >
                 <CompareView
                   initialGenres={comparePool}
-                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                  onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -386,7 +402,7 @@ const MainApp: React.FC = () => {
                 homeLabel={t("btn_return_studio")}
               >
                 <ChallengeView
-                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                  onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
                 />
               </ErrorBoundary>
@@ -403,7 +419,7 @@ const MainApp: React.FC = () => {
                   initialSharePayload={route.customGenreShare}
                   initialForkId={route.customGenreFork}
                   onOpenStudio={handleOpenStudioWithGenre}
-                  onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                  onSelectGenre={handleSelectDetailGenre}
                 />
               </ErrorBoundary>
             )}
@@ -418,7 +434,7 @@ const MainApp: React.FC = () => {
                   <GenreDetailView
                     genre={selectedGenre}
                     onBack={() => handleSelectTab("studio")}
-                    onSelectGenre={(g) => handleSelectGenre(g, "detail")}
+                    onSelectGenre={handleSelectDetailGenre}
                     onOpenStudio={handleOpenStudioWithGenre}
                     onAddToCompare={handleAddToCompare}
                     onForkInMaker={(g) => navigate({ tab: "maker", customGenreFork: g.id })}
