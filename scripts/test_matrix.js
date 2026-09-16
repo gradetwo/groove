@@ -489,6 +489,68 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error("Could not restore the GS-1 default after the settings-panel check");
     }
 
+    // 5e. Track inspector placement + categorized timbre picker (item ②).
+    //
+    // The inspector used to render in normal flow after the sequencer: on a phone it appeared
+    // below everything, on desktop it pushed the layout around. This asserts the real geometry —
+    // a bottom sheet on phones, a full-height left dock on desktop — and that the timbre picker
+    // can actually filter 115 names down to the one you want.
+    await page.click("[data-testid='track-inspector-open-0']", { force: true });
+    await page.waitForSelector("[data-testid='track-inspector']", { timeout: 15000 });
+    const inspectorBox = await (await page.$("[data-testid='track-inspector']")).boundingBox();
+    const viewport = page.viewportSize();
+    if (!inspectorBox || !viewport) {
+      throw new Error("Could not measure the track inspector");
+    }
+    // Classify by the breakpoint the CSS actually uses (`lg` = 1024px), not by device type: an
+    // iPad Pro in landscape is 1194px wide and therefore gets the desktop dock, which is correct
+    // and is exactly the kind of assumption a device-name check gets wrong.
+    const desktopLayout = viewport.width >= 1024;
+    if (!desktopLayout) {
+      // Pinned to the bottom of the viewport and spanning its width: a sheet, not a page section.
+      const touchingBottom = Math.abs(inspectorBox.y + inspectorBox.height - viewport.height) <= 4;
+      // Width is "spans the viewport", not an exact match: a mobile engine can reserve a few px
+      // for a scrollbar, and a 400 px desktop dock would be nowhere near the viewport width.
+      const spansWidth = inspectorBox.width >= viewport.width - 16;
+      if (!touchingBottom || inspectorBox.x > 2 || !spansWidth) {
+        throw new Error(
+          `Inspector is not a bottom sheet on ${target.name}: box=${JSON.stringify(inspectorBox)} viewport=${JSON.stringify(viewport)}`
+        );
+      }
+    } else {
+      // Docked left, full height: the sequencer must stay visible beside it.
+      if (inspectorBox.x > 2 || inspectorBox.height < viewport.height - 4 || inspectorBox.width < 360) {
+        throw new Error(
+          `Inspector is not a left dock on ${target.name}: box=${JSON.stringify(inspectorBox)} viewport=${JSON.stringify(viewport)}`
+        );
+      }
+    }
+
+    // The picker must filter by name and report the selection.
+    const searchInput = await page.$("[data-testid='track-inspector-instrument-search']");
+    if (!searchInput) {
+      throw new Error("Track inspector has no timbre search box");
+    }
+    await searchInput.fill("reese");
+    await page.waitForTimeout(200);
+    const reeseOption = await page.$("[data-testid='track-inspector-instrument-option-reese_bass']");
+    if (!reeseOption) {
+      throw new Error("Filtering the timbre picker by \"reese\" did not surface reese_bass");
+    }
+    // A category chip must also narrow the list (the user asked for categories, not just search).
+    if (!(await page.$("[data-testid='track-inspector-instrument-category-bass']"))) {
+      throw new Error("Timbre picker is missing its category chips");
+    }
+    await reeseOption.click({ force: true });
+    await page.waitForTimeout(200);
+
+    // Escape must dismiss it: a floating panel that only closes via a small button traps users.
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    if (await page.$("[data-testid='track-inspector']")) {
+      throw new Error("Track inspector did not close on Escape");
+    }
+
     // 6. Compare & Challenge Views Check
     await page.goto(`${baseUrl}/?tab=compare`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);

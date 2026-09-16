@@ -1,5 +1,6 @@
-import React, { useCallback, useId, useMemo } from "react";
-import { X } from "lucide-react";
+import React, { useCallback, useEffect, useId, useMemo } from "react";
+import { InstrumentPicker } from "./InstrumentPicker";
+import { GripHorizontal, X } from "lucide-react";
 import type { MixTrackId } from "../../data/genreMix";
 import {
   INSERT_COMP_MAX_ATTACK_SEC,
@@ -304,6 +305,22 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
 
   const bypassed = isTrackInsertBypassed(insert);
 
+  /**
+   * Escape closes the panel.
+   *
+   * It floats above the studio now, so it has to be dismissible by keyboard like any other
+   * overlay — a floating panel you can only close by hitting a 28 px button is a trap.
+   * (The shared `Modal` does this for dialogs; this panel is not a Modal because it stays open
+   * while the track is edited.)
+   */
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   // The current preset must always be selectable, even if the host's option list is
   // momentarily stale — otherwise a controlled <select> would render blank.
   const options = useMemo(() => {
@@ -336,13 +353,33 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
   const driveLabel = t("track_inspector_drive");
 
   return (
-    <aside
-      data-testid="track-inspector"
-      data-inspector-role={role}
-      data-insert-bypassed={bypassed ? "true" : "false"}
-      aria-label={`${trackName} ${t("track_inspector_title")}`}
-      className="flex w-full max-w-[440px] flex-col gap-3 rounded-xl border border-line bg-panel p-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
-    >
+    <>
+      {/**
+       * Scrim, phones only. On a desktop the panel is docked to the left and must not dim the
+       * studio — the whole point of an inspector is to watch the track while you change it.
+       */}
+      <div
+        className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+        onClick={onClose}
+        aria-hidden="true"
+        data-testid="track-inspector-scrim"
+      />
+      <aside
+        data-testid="track-inspector"
+        data-inspector-role={role}
+        data-insert-bypassed={bypassed ? "true" : "false"}
+        aria-label={`${trackName} ${t("track_inspector_title")}`}
+        /**
+         * Item ②: it used to render in normal flow *after* the sequencer, so on a phone it
+         * appeared below everything and on a desktop it pushed the layout around. Now it floats
+         * above the current layer on phones (bottom sheet, thumb-reachable, dismissible by
+         * scrim/Escape/close) and docks to the left on desktop, where the studio stays visible.
+         */
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col gap-3 overflow-y-auto rounded-t-2xl border border-line bg-panel p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.5)] lg:inset-y-0 lg:left-0 lg:right-auto lg:bottom-auto lg:h-full lg:max-h-none lg:w-[400px] lg:rounded-none lg:rounded-r-2xl lg:border-r lg:pb-3 lg:shadow-[8px_0_32px_rgba(0,0,0,0.45)]"
+      >
+      {/* Phone affordance: a grab handle says "this sheet is dismissible" without a label. */}
+      <div className="mx-auto h-1 w-10 shrink-0 rounded-full bg-line lg:hidden" aria-hidden="true" />
+
       {/* ---------------------------------------------------------------- header */}
       <header className="flex items-start justify-between gap-2 border-b border-line pb-2">
         <div className="flex min-w-0 flex-col gap-0.5">
@@ -376,27 +413,18 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
         <h3 id={fieldId("timbre-heading")} className={SECTION_HEADING}>
           {t("track_inspector_section_timbre")}
         </h3>
-        <div className="mt-2 flex flex-col gap-1">
-          <label
-            htmlFor={fieldId("instrument")}
-            className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.08em] text-text-sub"
-          >
-            {t("track_inspector_instrument")}
-          </label>
-          <select
-            id={fieldId("instrument")}
+        <div className="mt-2">
+          {/**
+           * Item ②: a categorized, searchable picker instead of a 115-row flat select. GS-1-routed
+           * names are badged so the two engines are distinguishable at a glance.
+           */}
+          <InstrumentPicker
+            role={role === "chords" || role === "lead" ? role : null}
             value={instrument}
-            onChange={(e) => onInstrumentChange(e.target.value)}
-            aria-label={`${trackName} ${t("track_inspector_instrument")}`}
-            data-testid="track-inspector-instrument"
-            className="w-full rounded-lg border border-line bg-panel2 px-2 py-1.5 font-['JetBrains_Mono'] text-[11px] text-text outline-none transition-colors focus-visible:border-accent/60 focus-visible:ring-2 focus-visible:ring-accent/40"
-          >
-            {options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            options={options}
+            onChange={onInstrumentChange}
+            label={t("track_inspector_instrument")}
+          />
         </div>
       </section>
 
@@ -812,6 +840,7 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
           </Button>
         </div>
       </section>
-    </aside>
+      </aside>
+    </>
   );
 };

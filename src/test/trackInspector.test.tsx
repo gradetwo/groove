@@ -213,13 +213,33 @@ describe("TrackInspector · layout and sections", () => {
     expect(screen.getByTestId("track-inspector-section-effects")).toBeInTheDocument();
   });
 
-  it("exposes every interactive control exactly once", () => {
+  it("exposes every named control exactly once", () => {
+    // A raw control count stopped being meaningful when the flat instrument <select> became a
+    // categorized picker (search + chips + one row per timbre). What must not regress is that no
+    // control is duplicated or lost: every testid below is asserted to exist exactly once.
     setup();
     const panel = screen.getByTestId("track-inspector");
-    const controls = panel.querySelectorAll("input, select, button");
-    // 19 numeric sliders + 1 instrument select + 6 stage switches + mute/solo
-    // + reset/bypass + close.
-    expect(controls).toHaveLength(31);
+    const uniqueIds = [
+      "track-inspector-close",
+      "track-inspector-instrument",
+      "track-inspector-instrument-search",
+      "track-inspector-mute",
+      "track-inspector-solo",
+      "track-inspector-reset",
+      "track-inspector-bypass",
+      "track-inspector-hpf-enable",
+      "track-inspector-low-enable",
+      "track-inspector-mid-enable",
+      "track-inspector-high-enable",
+      "track-inspector-comp-enable",
+      "track-inspector-drive-enable",
+    ];
+    for (const id of uniqueIds) {
+      expect(panel.querySelectorAll(`[data-testid="${id}"]`), id).toHaveLength(1);
+    }
+    // The sliders remain one per parameter (19 of them) — the picker must not have disturbed them.
+    const sliders = panel.querySelectorAll("input[type='range']");
+    expect(sliders.length).toBeGreaterThanOrEqual(19);
   });
 
   it("shows the track name and closes through the header button", () => {
@@ -232,25 +252,45 @@ describe("TrackInspector · layout and sections", () => {
 });
 
 describe("TrackInspector · timbre picker", () => {
-  it("lists every instrument option and reports the chosen one", () => {
+  it("lists every instrument, optionally filtered by category and by search", () => {
     const { handlers } = setup();
-    const select = screen.getByTestId("track-inspector-instrument") as HTMLSelectElement;
+    // Every option is reachable: search for each name in turn and require its row to appear.
+    const search = screen.getByTestId("track-inspector-instrument-search");
+    for (const name of INSTRUMENTS) {
+      fireEvent.change(search, { target: { value: name } });
+      expect(screen.getByTestId(`track-inspector-instrument-option-${name}`), name).toBeInTheDocument();
+    }
 
-    expect(Array.from(select.options).map((option) => option.value)).toEqual([...INSTRUMENTS]);
-    expect(select.value).toBe(INSTRUMENTS[0]);
+    fireEvent.change(search, { target: { value: "" } });
+    // A category chip narrows the list without hiding the search box.
+    const firstChip = screen.getByTestId(/track-inspector-instrument-category-(?!all)/);
+    fireEvent.click(firstChip);
+    expect(screen.getByTestId("track-inspector-instrument-count")).toBeInTheDocument();
 
-    fireEvent.change(select, { target: { value: "TR-808 Kit" } });
-    expect(handlers.onInstrumentChange).toHaveBeenCalledTimes(1);
+    // And clicking a row reports the choice.
+    fireEvent.change(search, { target: { value: "TR-808 Kit" } });
+    fireEvent.click(screen.getByTestId("track-inspector-instrument-option-TR-808 Kit"));
     expect(handlers.onInstrumentChange).toHaveBeenCalledWith("TR-808 Kit");
   });
 
-  it("keeps a stale current preset selectable instead of rendering blank", () => {
+  it("keeps a stale current preset reachable instead of rendering blank", () => {
     setup({ instrument: "Vintage Kit (removed)" });
-    const select = screen.getByTestId("track-inspector-instrument") as HTMLSelectElement;
-    expect(Array.from(select.options).map((option) => option.value)).toContain(
-      "Vintage Kit (removed)"
-    );
-    expect(select.value).toBe("Vintage Kit (removed)");
+    // The picker derives its categories from the option list, so an option the host no longer
+    // ships must still be listed (and selected) rather than silently dropped.
+    fireEvent.change(screen.getByTestId("track-inspector-instrument-search"), {
+      target: { value: "Vintage Kit (removed)" },
+    });
+    expect(
+      screen.getByTestId("track-inspector-instrument-option-Vintage Kit (removed)")
+    ).toBeInTheDocument();
+  });
+
+  it("says so when nothing matches instead of showing an empty box", () => {
+    setup();
+    fireEvent.change(screen.getByTestId("track-inspector-instrument-search"), {
+      target: { value: "zzz-nothing" },
+    });
+    expect(screen.getByTestId("track-inspector-instrument-empty")).toBeInTheDocument();
   });
 });
 
@@ -435,5 +475,47 @@ describe("TrackInspector · every role renders", () => {
       expect(screen.getByTestId("track-inspector-instrument")).toBeInTheDocument();
       unmount();
     }
+  });
+});
+
+/**
+ * Item ② — the inspector floats above the current layer on phones and docks left on desktop.
+ *
+ * It used to render in normal flow *after* the sequencer, so on a phone it appeared below
+ * everything (and on desktop it pushed the layout). A floating panel also has to be dismissible by
+ * more than a small button, hence the scrim and Escape assertions.
+ */
+describe("TrackInspector · placement", () => {
+  it("floats above the studio on phones and docks to the left on desktop", () => {
+    setup();
+    const panel = screen.getByTestId("track-inspector");
+    // Phones: pinned to the bottom of the viewport, never in the document flow.
+    expect(panel.className).toContain("fixed");
+    expect(panel.className).toContain("inset-x-0");
+    expect(panel.className).toContain("bottom-0");
+    // Desktop: a full-height left dock, so the sequencer stays visible while editing.
+    expect(panel.className).toContain("lg:inset-y-0");
+    expect(panel.className).toContain("lg:left-0");
+    expect(panel.className).toContain("lg:w-[400px]");
+    // It scrolls internally rather than stretching the page.
+    expect(panel.className).toContain("overflow-y-auto");
+  });
+
+  it("dims the studio only on phones (a desktop dock must not block the view)", () => {
+    const { handlers } = setup();
+    const scrim = screen.getByTestId("track-inspector-scrim");
+    expect(scrim.className).toContain("lg:hidden");
+
+    fireEvent.click(screen.getByTestId("track-inspector-scrim"));
+    expect(handlers.onClose).toHaveBeenCalled();
+  });
+
+  it("closes on Escape, like every other overlay", () => {
+    const { handlers } = setup();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(handlers.onClose).toHaveBeenCalledTimes(1);
+    // Other keys must not close it: it stays open while the track is edited.
+    fireEvent.keyDown(window, { key: "a" });
+    expect(handlers.onClose).toHaveBeenCalledTimes(1);
   });
 });
