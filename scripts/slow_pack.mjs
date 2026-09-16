@@ -144,11 +144,31 @@ function captureRaw(cmd, args) {
 }
 
 function gitState() {
+  // An `export`ed tree (built with `git archive`) has no .git directory at all, so the commit
+  // has to come from the COMMIT.txt the export writes. Without this the results package would
+  // come back with an empty sha — unattributable, which is the one thing it must never be.
+  if (capture("git", ["rev-parse", "--is-inside-work-tree"]) !== "true") {
+    const lines = fs.existsSync(path.join(ROOT, "COMMIT.txt"))
+      ? fs.readFileSync(path.join(ROOT, "COMMIT.txt"), "utf8").split("\n")
+      : [];
+    return {
+      available: false,
+      sha: (lines[0] ?? "").trim(),
+      branch: (lines[1] ?? "").trim(),
+      describe: (lines[2] ?? "").trim(),
+      subject: (lines[3] ?? "").trim(),
+      dirty: false,
+      statusLines: ["(no .git in this tree: it is an exported source package; the commit comes from COMMIT.txt)"],
+      diff: "",
+      untracked: [],
+    };
+  }
   const sha = capture("git", ["rev-parse", "HEAD"]);
   const branch = capture("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
   const status = capture("git", ["status", "--porcelain"]);
   const diff = captureRaw("git", ["diff", "HEAD"]);
   return {
+    available: true,
     sha,
     branch,
     dirty: status.length > 0,
@@ -437,10 +457,14 @@ function buildManifest(pkgDir, meta) {
       sha: meta.git.sha,
       branch: meta.git.branch,
       dirty: meta.git.dirty,
+      available: meta.git.available,
       describe: meta.git.describe,
       subject: meta.git.subject,
       statusLines: meta.git.statusLines,
       untracked: meta.git.untracked,
+      attribution: meta.git.available
+        ? "working tree (.git present)"
+        : "COMMIT.txt (exported source package: this tree has no .git)",
     },
     host: meta.host,
     args: meta.args,
@@ -494,6 +518,9 @@ function buildSummary(manifest) {
     lines.push("");
   }
   lines.push(`- commit: \`${manifest.git.sha}\` (${manifest.git.branch})${manifest.git.dirty ? " **dirty tree — see `git/changes.patch`**" : ""}`);
+  if (!manifest.git.available) {
+    lines.push(`- ⚠️ attribution: this tree has **no \`.git\`** (exported source package); the commit comes from \`COMMIT.txt\`.`);
+  }
   lines.push(`- commit subject: ${manifest.git.subject}`);
   lines.push(`- version: v${manifest.version}`);
   lines.push(`- created: ${manifest.createdAt}`);
@@ -601,7 +628,10 @@ function commandRun() {
     console.log("===============================================================");
     console.log(`  \u{1F4E6} SLOW PACK \u2014 ${pkgLabel}`);
     console.log("===============================================================");
-    console.log(`  commit   : ${git.sha}${git.dirty ? "  (dirty tree!)" : ""}`);
+    console.log(`  commit   : ${git.sha || "(unknown)"}${git.dirty ? "  (dirty tree!)" : ""}${git.available ? "" : "  [no .git: exported tree, via COMMIT.txt]"}`);
+    if (!git.sha) {
+      console.log("  \u26a0\ufe0f  no commit available (no .git and no COMMIT.txt): these results cannot be attributed to a commit.");
+    }
     console.log(`  host     : ${host.hostname} \u00b7 ${host.cpuModel} \u00d7${host.cpuCount} \u00b7 ${host.totalMemGB} GB`);
     console.log(`  node/npm : ${host.node} / ${host.npm}  \u00b7 playwright ${host.playwright}`);
     console.log(`  browsers : ${host.playwrightBrowsers}`);
@@ -907,7 +937,8 @@ function commandVerify() {
   }
 
   const counts = manifest.counts ?? {};
-  console.log(`  commit    : ${sha}${manifest.git?.dirty ? " (dirty: patch included)" : ""} ${shaKnown ? "\u2714 known here" : "\u26a0 unknown locally"}`);
+  console.log(`  commit    : ${sha || "(none)"}${manifest.git?.dirty ? " (dirty: patch included)" : ""} ${shaKnown ? "\u2714 known here" : "\u26a0 not a commit in this repo"}`);
+  if (!manifest.git?.available) console.log(`  attribution: ${manifest.git?.attribution ?? "unknown"}`);
   if (patchState) console.log(`  tree      : ${patchState}`);
   console.log(`  host      : ${manifest.host?.hostname} \u00b7 ${manifest.host?.cpuModel} \u00d7${manifest.host?.cpuCount} \u00b7 node ${manifest.host?.node}`);
   console.log(`  created   : ${manifest.createdAt}`);
@@ -963,7 +994,8 @@ function commandVerify() {
 
 function commandList() {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-  console.log(`Groove Lab slow pack · v${pkg.version} · ${gitState().sha.slice(0, 7)}`);
+  const state = gitState();
+  console.log(`Groove Lab slow pack · v${pkg.version} · ${state.sha ? state.sha.slice(0, 7) : "no .git (exported tree)"}`);
   console.log(`\nGates (${SLOW_GATES.length}), in this order:`);
   for (const g of SLOW_GATES) {
     console.log(`  ${g.slug.padEnd(18)} ${String(g.timeoutMin).padStart(4)} min  ${g.label}${g.extra ? "  [extra: not in the slow lane]" : ""}`);
