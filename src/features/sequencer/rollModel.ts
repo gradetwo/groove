@@ -1,30 +1,5 @@
 import { MAX_NOTE_GATE_STEPS, type SequencerPattern, type SequencerTrack } from "../../types/genre";
-import { chordNotesForStep } from "../../audio/chordVoicing";
-
-/**
- * Piano-roll <-> step-grid model.
- *
- * Groove Lab's pattern is a per-step grid: `steps[i] > 0` means "something sounds at step i",
- * `pitch[i]` is its **root** MIDI note, `pitches[i]` is the **whole stack** sounding on that step
- * (a chord) and `gate[i]` its length in steps (clamped 0.1–`MAX_NOTE_GATE_STEPS`). A piano roll wants
- * (pitch, start, length) rectangles. This module is the whole translation between the two, kept
- * pure and free of React so the roll's gestures can be tested without a browser.
- *
- * ## Note identity
- *
- * A note is identified by **(step, midi)**, not by step alone. That is what lets the roll show and
- * edit chords — several notes on one step — and it is why the selection in the UI is a list of
- * `RollNoteId`s rather than a list of step indices. `gate` and `velocity` stay **per step** (that
- * is how the engine and the genre data model them), so every note sharing a step shares its length
- * and velocity; the UI shows that plainly rather than pretending otherwise.
- *
- * ## What is deliberately *not* supported
- *
- * Starts are always on the grid (no sub-step start) and a length is a multiple of one step. Those
- * two would require reshaping how the engine schedules notes and how the genre data is authored, so
- * the roll edits the data that exists: **start = step index**, **pitch = MIDI note**, **length =
- * gate**. The limitations are stated in the UI rather than hidden.
- */
+import { chordNotesForStep, chordVoicingForStep } from "../../audio/chordVoicing";
 
 /** One note as the roll sees it. */
 export interface RollStepNote {
@@ -56,6 +31,44 @@ export const ROLL_EDITABLE_ROLES = ["bass", "chords", "lead"] as const;
 export function isRollEditableTrack(track: SequencerTrack | undefined): boolean {
   if (!track) return false;
   return (ROLL_EDITABLE_ROLES as readonly string[]).includes(track.track_id);
+}
+
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] as const;
+
+/**
+ * Identify musical chord name from MIDI notes.
+ */
+export function detectChordName(midis: number[]): string {
+  if (!midis || midis.length === 0) return "";
+  const unique = [...new Set(midis.map((n) => Math.round(n)))].sort((a, b) => a - b);
+  if (unique.length === 1) {
+    const pc = ((unique[0] % 12) + 12) % 12;
+    return NOTE_NAMES[pc];
+  }
+  const rootMidi = unique[0];
+  const rootPc = ((rootMidi % 12) + 12) % 12;
+  const rootName = NOTE_NAMES[rootPc];
+  const intervals = unique.map((m) => ((m - rootMidi) % 12 + 12) % 12);
+  const intSet = new Set(intervals);
+
+  if (intSet.has(4) && intSet.has(7) && intSet.has(11) && intSet.has(2)) return `${rootName}maj9`;
+  if (intSet.has(3) && intSet.has(7) && intSet.has(10) && intSet.has(2)) return `${rootName}m9`;
+  if (intSet.has(4) && intSet.has(7) && intSet.has(10) && intSet.has(2)) return `${rootName}9`;
+  if (intSet.has(4) && intSet.has(7) && intSet.has(11)) return `${rootName}maj7`;
+  if (intSet.has(3) && intSet.has(7) && intSet.has(10)) return `${rootName}m7`;
+  if (intSet.has(4) && intSet.has(7) && intSet.has(10)) return `${rootName}7`;
+  if (intSet.has(3) && intSet.has(6) && intSet.has(10)) return `${rootName}m7b5`;
+  if (intSet.has(3) && intSet.has(6) && intSet.has(9)) return `${rootName}dim7`;
+  if (intSet.has(4) && intSet.has(7) && intSet.has(2)) return `${rootName}add9`;
+  if (intSet.has(4) && intSet.has(7)) return rootName;
+  if (intSet.has(3) && intSet.has(7)) return `${rootName}m`;
+  if (intSet.has(3) && intSet.has(6)) return `${rootName}dim`;
+  if (intSet.has(4) && intSet.has(8)) return `${rootName}aug`;
+  if (intSet.has(5) && intSet.has(7)) return `${rootName}sus4`;
+  if (intSet.has(2) && intSet.has(7)) return `${rootName}sus2`;
+  if (intSet.has(7) && intSet.size === 2) return `${rootName}5`;
+
+  return rootName;
 }
 
 /**
@@ -585,4 +598,145 @@ export function scaleHighlightFor(scale: string | undefined | null): { rootPc: n
   const minor = /minor|m\b|dorian|phrygian|aeolian|locrian/i.test(text);
   const intervals = minor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
   return { rootPc, pcs: new Set(intervals.map((i) => (rootPc + i) % 12)) };
+}
+
+export type ChordStampType = "note" | "triad" | "seventh" | "ninth" | "sus4" | "sus2" | "power";
+
+/**
+ * Adds a chord stack on the given step using the specified chord stamp quality.
+ */
+export function addChord(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  stepIdx: number,
+  rootMidi: number,
+  stepCount: number,
+  chordType: ChordStampType = "triad",
+  velocity = 100,
+  gate = 0.8
+): SequencerPattern {
+  if (stepIdx < 0 || stepIdx >= stepCount) return pattern;
+  if (chordType === "note") {
+    return addNote(pattern, trackIdx, stepIdx, rootMidi, stepCount, velocity, gate);
+  }
+  const notes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale).filter((n) => n.stepIdx !== stepIdx);
+  const targetRoot = Math.round(rootMidi);
+  let chordNotes: number[];
+
+  if (chordType === "triad") {
+    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "triad" });
+  } else if (chordType === "seventh") {
+    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "seventh" });
+  } else if (chordType === "ninth") {
+    chordNotes = [targetRoot, targetRoot + 4, targetRoot + 7, targetRoot + 11, targetRoot + 14];
+  } else if (chordType === "sus4") {
+    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "sus" });
+  } else if (chordType === "sus2") {
+    chordNotes = [targetRoot, targetRoot + 2, targetRoot + 7];
+  } else if (chordType === "power") {
+    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "power" });
+  } else {
+    chordNotes = [targetRoot];
+  }
+
+  for (const midi of chordNotes) {
+    notes.push({ stepIdx, midi, gate, velocity });
+  }
+  return withTrackNotes(pattern, trackIdx, notes, stepCount);
+}
+
+/**
+ * Invert selected chord notes:
+ * "up" moves the lowest note of each selected chord up an octave (+12).
+ * "down" moves the highest note of each selected chord down an octave (-12).
+ */
+export function invertSelectedChord(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selectedNoteIds: readonly RollNoteId[],
+  direction: "up" | "down",
+  stepCount: number
+): SequencerPattern {
+  if (selectedNoteIds.length === 0) return pattern;
+  const targetSteps = [...new Set(selectedNoteIds.map((id) => parseNoteId(id).stepIdx))];
+  const allNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
+  const nextNotes: RollStepNote[] = [];
+
+  for (let s = 0; s < stepCount; s++) {
+    const stepNotes = allNotes.filter((n) => n.stepIdx === s);
+    if (stepNotes.length === 0) continue;
+    if (!targetSteps.includes(s) || stepNotes.length <= 1) {
+      nextNotes.push(...stepNotes);
+      continue;
+    }
+    const sorted = [...stepNotes].sort((a, b) => a.midi - b.midi);
+    if (direction === "up") {
+      const lowest = sorted[0];
+      const rest = sorted.slice(1);
+      nextNotes.push(...rest, { ...lowest, midi: Math.min(127, lowest.midi + 12) });
+    } else {
+      const highest = sorted[sorted.length - 1];
+      const rest = sorted.slice(0, sorted.length - 1);
+      nextNotes.push(...rest, { ...highest, midi: Math.max(0, highest.midi - 12) });
+    }
+  }
+
+  return withTrackNotes(pattern, trackIdx, nextNotes, stepCount);
+}
+
+/**
+ * Drop-2 voicing: drops the 2nd voice from the top down an octave (-12).
+ */
+export function drop2SelectedChord(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selectedNoteIds: readonly RollNoteId[],
+  stepCount: number
+): SequencerPattern {
+  if (selectedNoteIds.length === 0) return pattern;
+  const targetSteps = [...new Set(selectedNoteIds.map((id) => parseNoteId(id).stepIdx))];
+  const allNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
+  const nextNotes: RollStepNote[] = [];
+
+  for (let s = 0; s < stepCount; s++) {
+    const stepNotes = allNotes.filter((n) => n.stepIdx === s);
+    if (stepNotes.length === 0) continue;
+    if (!targetSteps.includes(s) || stepNotes.length < 3) {
+      nextNotes.push(...stepNotes);
+      continue;
+    }
+    const sorted = [...stepNotes].sort((a, b) => a.midi - b.midi);
+    const dropIdx = sorted.length - 2;
+    const dropped = { ...sorted[dropIdx], midi: Math.max(0, sorted[dropIdx].midi - 12) };
+    const remaining = sorted.filter((_, idx) => idx !== dropIdx);
+    nextNotes.push(...remaining, dropped);
+  }
+
+  return withTrackNotes(pattern, trackIdx, nextNotes, stepCount);
+}
+
+/**
+ * Humanize timing and velocity of selected notes.
+ */
+export function humanizeSelectedNotes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selectedNoteIds: readonly RollNoteId[],
+  stepCount: number,
+  velocityJitter = 8,
+  gateJitter = 0.05
+): SequencerPattern {
+  const selected = new Set(selectedNoteIds);
+  const notes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale).map((n) => {
+    if (selected.size > 0 && !selected.has(noteId(n))) return n;
+    const seed = (n.stepIdx * 17 + n.midi * 31) % 100;
+    const vOffset = Math.round(((seed / 50) - 1) * velocityJitter);
+    const gOffset = (((seed % 20) / 10) - 1) * gateJitter;
+    return {
+      ...n,
+      velocity: Math.max(1, Math.min(127, n.velocity + vOffset)),
+      gate: Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Number((n.gate + gOffset).toFixed(3)))),
+    };
+  });
+  return withTrackNotes(pattern, trackIdx, notes, stepCount);
 }

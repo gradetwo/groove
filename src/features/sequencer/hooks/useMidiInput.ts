@@ -68,12 +68,9 @@ export function useMidiInput({
     };
   }, [pattern.tracks, isZh, showToast]);
 
-  // Computer keyboard play listener
-  useEffect(() => {
-    if (!isKeyboardMode) return;
-    const stopListener = midiInputManager.startKeyboardListener(0);
-    return () => stopListener();
-  }, [isKeyboardMode]);
+  // Computer keyboard performance is handled by MusicalTypingModal when isKeyboardMode is active,
+  // which provides visual key feedback, octave shift, velocity control, scale-aware chord voicing,
+  // and direct track routing without conflicting global listeners.
 
   return { midiDevices };
 }

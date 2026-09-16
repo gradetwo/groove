@@ -107,6 +107,7 @@ export const commonMessages = {
   shortcut_studio_jump_edges: { en: "Jump to first / last step", zh: "跳转至行首 / 行尾" },
   shortcut_studio_velocity: { en: "Toggle Velocity lane", zh: "开闭力度抽屉 (Velocity)" },
   shortcut_studio_euclidean: { en: "Open Euclidean generator", zh: "打开欧几里得律动器" },
+  shortcut_studio_musical_typing: { en: "Toggle Musical Typing keyboard", zh: "开闭电脑音乐键盘演奏 (Musical Typing)" },
   shortcut_modal_title: { en: "Keyboard Shortcuts Guide", zh: "键盘快捷键指南" },
   shortcut_section_navigation: { en: "Global Navigation (Press g followed by key)", zh: "全局导航快捷键 (按 g 后快速按字母)" },
   shortcut_section_studio: { en: "Studio Sequencer Shortcuts", zh: "工作台音序器快捷键" },

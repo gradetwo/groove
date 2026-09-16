@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Play, Sliders, SlidersHorizontal, Wand2 } from "lucide-react";
+import { Music2, Play, Sliders, SlidersHorizontal, Wand2 } from "lucide-react";
 import { SequencerTrack } from "../../types/genre";
 import { StepCell } from "./StepCell";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -39,6 +39,7 @@ export interface TrackRowProps {
    * its own affordance so the header can do what a DAW header is expected to do.
    */
   onOpenInspector: (trackIdx: number) => void;
+  onOpenPianoRoll?: (trackIdx: number) => void;
   /** True while this row is the one the inspector is showing, for selected-row styling. */
   isInspectorOpen?: boolean;
   /**
@@ -80,6 +81,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   onChangeVolume,
   onOpenVelocity,
   onOpenInspector,
+  onOpenPianoRoll,
   isInspectorOpen = false,
   chordArticulation,
   onShiftTrack,
@@ -317,6 +319,18 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             >
               <Sliders className="w-2.5 h-2.5" />
             </button>
+            {onOpenPianoRoll && (
+              <button
+                type="button"
+                onClick={() => onOpenPianoRoll(trackIdx)}
+                className="w-5 h-5 sm:w-4 sm:h-4 rounded border border-line text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation"
+                title={t("roll_toggle_title")}
+                aria-label={t("roll_toggle")}
+                data-testid={`track-piano-roll-open-${trackIdx}`}
+              >
+                <Music2 className="w-2.5 h-2.5" />
+              </button>
+            )}
             <button
               onClick={() => onShiftTrack(trackIdx, -1)}
               className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"

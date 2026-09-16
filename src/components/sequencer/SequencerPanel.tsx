@@ -131,6 +131,7 @@ export interface SequencerPanelProps {
   isPianoRollOpen?: boolean;
   pianoRollTrackIdx?: number;
   onSelectPianoRollTrack?: (trackIdx: number) => void;
+  onOpenPianoRoll?: (trackIdx: number) => void;
   onClosePianoRoll?: () => void;
   onTogglePianoRoll?: () => void;
   onAuditionRollNote?: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
@@ -268,6 +269,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   isPianoRollOpen = false,
   pianoRollTrackIdx = 0,
   onSelectPianoRollTrack,
+  onOpenPianoRoll,
   onClosePianoRoll,
   onTogglePianoRoll,
   onAuditionRollNote,
@@ -493,6 +495,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
               onChangeVolume={onChangeTrackVolume}
               onOpenVelocity={onOpenVelocity}
               onOpenInspector={onOpenInspector}
+              onOpenPianoRoll={onOpenPianoRoll}
               isInspectorOpen={inspectorTrackIdx === trackIdx}
               chordArticulation={chordArticulations.get(trackIdx)}
               onShiftTrack={onShiftTrack}

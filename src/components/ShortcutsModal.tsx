@@ -40,6 +40,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
     { keys: ["Home", "End"], desc: t("shortcut_studio_jump_edges") },
     { keys: ["V"], desc: t("shortcut_studio_velocity") },
     { keys: ["E"], desc: t("shortcut_studio_euclidean") },
+    { keys: [isMac ? "⌥" : "Alt", "K"], desc: t("shortcut_studio_musical_typing") },
   ];
 
   return (

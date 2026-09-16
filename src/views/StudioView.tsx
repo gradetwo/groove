@@ -18,6 +18,7 @@ import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
 import { TrackInspector } from "../components/console/TrackInspector";
+import { MusicalTypingModal } from "../components/sequencer/MusicalTypingModal";
 import { INSTRUMENT_PRESET_ALIASES } from "../audio/instrumentPresets";
 import { bypassTrackInsert } from "../data/trackInsert";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
@@ -496,6 +497,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     onToggleDrumsOnly: handleToggleDrumsOnly,
     onUndo: handleUndo,
     onRedo: handleRedo,
+    onToggleKeyboardMode: () => setIsKeyboardMode((prev) => !prev),
   });
 
   // Math for Bars & Steps (pure helpers live in ../utils/meter)
@@ -792,6 +794,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           isPianoRollOpen={isPianoRollOpen}
           pianoRollTrackIdx={pianoRollTrackIdx}
           onSelectPianoRollTrack={setPianoRollTrackIdx}
+          onOpenPianoRoll={handleOpenPianoRoll}
           onClosePianoRoll={handleClosePianoRoll}
           onTogglePianoRoll={handleTogglePianoRoll}
           onAuditionRollNote={handleAuditionRollNote}
@@ -1051,6 +1054,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
         isPlaying={isPlaying}
         onToggleTransport={handleTogglePlay}
         onClose={() => setIsConsoleOpen(false)}
+      />
+
+      <MusicalTypingModal
+        isOpen={isKeyboardMode}
+        onClose={() => setIsKeyboardMode(false)}
+        pattern={pattern}
+        activeTrackIdx={pianoRollTrackIdx}
+        onSelectTrack={setPianoRollTrackIdx}
+        onAudition={handleAuditionRollNote}
+        isZh={isZh}
       />
     </div>
   );

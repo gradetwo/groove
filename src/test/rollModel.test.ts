@@ -11,7 +11,12 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  addChord,
   addNote,
+  detectChordName,
+  drop2SelectedChord,
+  humanizeSelectedNotes,
+  invertSelectedChord,
   isRollEditableTrack,
   loopLengthOf,
   moveNote,
@@ -507,3 +512,88 @@ describe("roll model · chords are real notes", () => {
     expect(split.tracks[0].pitches?.[1]).toEqual([60, 64]);
   });
 });
+
+describe("roll model · professional DAW chord tools and harmonic analysis", () => {
+  it("accurately detects chord names from note arrays", () => {
+    expect(detectChordName([60, 64, 67])).toBe("C");
+    expect(detectChordName([60, 63, 67])).toBe("Cm");
+    expect(detectChordName([60, 64, 67, 71])).toBe("Cmaj7");
+    expect(detectChordName([60, 64, 67, 70])).toBe("C7");
+    expect(detectChordName([60, 63, 67, 70])).toBe("Cm7");
+    expect(detectChordName([60, 65, 67])).toBe("Csus4");
+    expect(detectChordName([60, 62, 67])).toBe("Csus2");
+    expect(detectChordName([60, 67])).toBe("C5");
+    expect(detectChordName([60])).toBe("C");
+    expect(detectChordName([])).toBe("");
+  });
+
+  it("adds multi-note chords via addChord", () => {
+    const emptyTrack = makeTrack({ steps: [0, 0, 0, 0], pitch: [null, null, null, null] });
+    const pattern = makePattern(emptyTrack);
+
+    // In C minor scale, C triad voices diatonically as C minor [60, 63, 67]
+    const triadPattern = addChord(pattern, 0, 0, 60, 4, "triad", 110, 1.0);
+    expect(triadPattern.tracks[0].steps[0]).toBe(1);
+    expect(triadPattern.tracks[0].pitches?.[0]).toEqual([60, 63, 67]);
+    expect(triadPattern.tracks[0].velocity?.[0]).toBe(110);
+    expect(triadPattern.tracks[0].gate?.[0]).toBe(1.0);
+
+    // Add 7th chord (60, 63, 67, 70 in C minor)
+    const seventhPattern = addChord(pattern, 0, 2, 60, 4, "seventh");
+    expect(seventhPattern.tracks[0].pitches?.[2]).toEqual([60, 63, 67, 70]);
+
+    // Add 9th chord
+    const ninthPattern = addChord(pattern, 0, 3, 60, 4, "ninth");
+    expect(ninthPattern.tracks[0].pitches?.[3]).toEqual([60, 64, 67, 71, 74]);
+  });
+
+  it("inverts selected chord up and down", () => {
+    const track = makeTrack({
+      steps: [1, 0, 0, 0],
+      pitch: [60, null, null, null],
+      pitches: [[60, 64, 67], null, null, null],
+    });
+    const pattern = makePattern(track);
+
+    // Invert up: lowest note (60) moves up one octave to 72 -> [64, 67, 72]
+    const invUp = invertSelectedChord(pattern, 0, ["0:60", "0:64", "0:67"], "up", 4);
+    expect(invUp.tracks[0].pitches?.[0]).toEqual([64, 67, 72]);
+
+    // Invert down: highest note (72) moves down one octave to 60 -> [60, 64, 67]
+    const invDown = invertSelectedChord(invUp, 0, ["0:64", "0:67", "0:72"], "down", 4);
+    expect(invDown.tracks[0].pitches?.[0]).toEqual([60, 64, 67]);
+  });
+
+  it("applies Drop-2 voicing to four-voice chord", () => {
+    // 4-voice chord in close position: C4 (60), E4 (64), G4 (67), B4 (71)
+    // 2nd highest note is G4 (67). Dropping it by 1 octave gives G3 (55).
+    // Resulting drop-2 voicing: G3 (55), C4 (60), E4 (64), B4 (71)
+    const track = makeTrack({
+      steps: [1, 0, 0, 0],
+      pitch: [60, null, null, null],
+      pitches: [[60, 64, 67, 71], null, null, null],
+    });
+    const pattern = makePattern(track);
+
+    const drop2 = drop2SelectedChord(pattern, 0, ["0:60", "0:64", "0:67", "0:71"], 4);
+    expect(drop2.tracks[0].pitches?.[0]).toEqual([55, 60, 64, 71]);
+  });
+
+  it("humanizes selected notes with velocity jitter", () => {
+    const track = makeTrack({
+      steps: [1, 1, 0, 0],
+      pitch: [60, 64, null, null],
+      velocity: [100, 100, 100, 100],
+    });
+    const pattern = makePattern(track);
+
+    const humanized = humanizeSelectedNotes(pattern, 0, ["0:60", "1:64"], 4);
+    const vel0 = humanized.tracks[0].velocity?.[0] ?? 100;
+    const vel1 = humanized.tracks[0].velocity?.[1] ?? 100;
+    expect(vel0).toBeGreaterThanOrEqual(1);
+    expect(vel0).toBeLessThanOrEqual(127);
+    expect(vel1).toBeGreaterThanOrEqual(1);
+    expect(vel1).toBeLessThanOrEqual(127);
+  });
+});
+

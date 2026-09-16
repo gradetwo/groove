@@ -37,6 +37,7 @@ export interface UseTransportShortcutsOptions {
   onToggleDrumsOnly: () => void;
   onUndo: () => void;
   onRedo: () => void;
+  onToggleKeyboardMode?: () => void;
 }
 
 /**
@@ -65,6 +66,7 @@ export function useTransportShortcuts({
   onToggleDrumsOnly,
   onUndo,
   onRedo,
+  onToggleKeyboardMode,
 }: UseTransportShortcutsOptions): void {
   // Keyboard shortcuts (Space, Esc, V, E, Undo/Redo)
   useEffect(() => {
@@ -154,6 +156,14 @@ export function useTransportShortcuts({
         // Feature #2: C floats / dismisses the mixing console over the studio.
         e.preventDefault();
         setIsConsoleOpen((prev) => !prev);
+      } else if (
+        e.altKey &&
+        (e.code === "KeyK" || (e as any).keyCode === 75) &&
+        onToggleKeyboardMode
+      ) {
+        // Musical Typing HUD toggle (Option+K / Alt+K)
+        e.preventDefault();
+        onToggleKeyboardMode();
       } else {
         const isMac =
           typeof navigator !== "undefined" && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
@@ -199,5 +209,6 @@ export function useTransportShortcuts({
     onToggleDrumsOnly,
     onUndo,
     onRedo,
+    onToggleKeyboardMode,
   ]);
 }

@@ -2,7 +2,8 @@ import { useReducer, useCallback, useRef, useEffect, useState } from "react";
 import { Genre, SequencerPattern, SequencerTrack } from "../../types/genre";
 import { resolveTrackInsertForGenre } from "../../data/genreInsert";
 import type { TrackInsertParams } from "../../data/trackInsert";
-import { ChordDefinition, noteToMidi } from "../../utils/chordTheory";
+import { ChordDefinition, noteToMidi, getChordMidiNotes } from "../../utils/chordTheory";
+import { chordVoicingForStep } from "../../audio/chordVoicing";
 import { BakedArpeggioResult } from "../../utils/arpeggiatorTheory";
 // The one helper every genre-entry point uses: clone + seed the genre's arranged mix.
 // `clonePattern` stays untouched because slot copies and undo must preserve user values.
@@ -539,21 +540,29 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const pitch = t.pitch ? [...t.pitch] : Array(t.steps.length).fill(null);
         let pitches = t.pitches ? [...t.pitches] : undefined;
+        const isChords = t.track_id === "chords" || (t.name ? t.name.toLowerCase().includes("chord") : false);
         const trackLen = t.trackLength && t.trackLength > 0 && t.trackLength < t.steps.length ? t.trackLength : null;
 
         const updateAt = (idx: number) => {
           const oldRoot = pitch[idx];
           pitch[idx] = action.pitch;
+          if (action.pitch === null) {
+            if (pitches) pitches[idx] = null;
+            return;
+          }
           if (pitches && pitches[idx] && Array.isArray(pitches[idx])) {
             const oldStack = pitches[idx]!;
-            if (action.pitch === null) {
-              pitches[idx] = null;
-            } else if (typeof oldRoot === "number" && oldRoot > 0) {
+            if (oldStack.length > 1 && typeof oldRoot === "number" && oldRoot > 0) {
               const delta = action.pitch - oldRoot;
               pitches[idx] = oldStack.map((n) => Math.max(0, Math.min(127, n + delta)));
+            } else if (isChords) {
+              pitches[idx] = chordVoicingForStep(action.pitch, state.pattern.scale);
             } else {
               pitches[idx] = [action.pitch];
             }
+          } else if (isChords) {
+            if (!pitches) pitches = Array(t.steps.length).fill(null);
+            pitches[idx] = chordVoicingForStep(action.pitch, state.pattern.scale);
           }
         };
 
@@ -887,6 +896,7 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         const total = t.steps.length;
         const steps = Array(total).fill(0);
         const pitch = Array(total).fill(null);
+        const pitches: (number[] | null)[] = Array(total).fill(null);
         const velocity = Array(total).fill(100);
 
         const chordCount = chords.length;
@@ -896,12 +906,14 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
           const stepPos = idx * stepInterval;
           if (stepPos < total) {
             steps[stepPos] = 1;
-            pitch[stepPos] = noteToMidi(chordDef.root, 4);
+            const midis = getChordMidiNotes(chordDef.root, chordDef.quality, 4, chordDef.inversion);
+            pitches[stepPos] = midis;
+            pitch[stepPos] = midis[0] ?? noteToMidi(chordDef.root, 4);
             velocity[stepPos] = 105;
           }
         });
 
-        return { ...t, steps, pitch, velocity };
+        return { ...t, steps, pitch, pitches, velocity };
       });
 
       return withUpdatedPattern({ ...state.pattern, tracks });

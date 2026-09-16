@@ -1,29 +1,29 @@
 {
-  "version": "2.0.28",
+  "version": "2.0.29",
   "releaseDate": "2026-09-16",
-  "changelogCount": 92,
+  "changelogCount": 93,
   "latest": {
-    "version": "2.0.28",
-    "date": "2026-09-16",
+    "version": "2.0.29",
+    "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.28 步进序列器视听长度全小节对齐与读写一致性：消除扩展小节黑屏失真、步进/力度泳道全小节发声呈现、多小节循环读写双向同步、钢琴卷帘扩充保护",
-      "en": "v2.0.28 Sequencer Visual and Audio Length Parity Across Looped Bars: Eliminated blacked-out bars on expanded patterns, synchronized StepCell & VelocityLane display with audio engine playback, enabled bi-directional multi-bar loop edit parity, and protected piano roll note extensions"
+      "zh": "v2.0.29 钢琴卷帘专业编曲升级与电脑键盘演奏系统：多音和弦无损呈现与编辑、Logic 式 3D 琴键与和弦走向标尺、和弦印章/转位/Drop-2/人性化、Musical Typing 虚拟键盘 (⌥K)",
+      "en": "v2.0.29 Professional Piano Roll Arranger Upgrade & Musical Typing Keyboard: Lossless polyphonic chord stacks, Logic-grade 3D keybed & chord progression ruler, chord stamps / inversions / Drop-2 / humanize, and Musical Typing HUD (⌥K)"
     },
     "highlights": [
       {
-        "zh": "**步进网格视听长度一致性（Visual and Audio Length Parity）**：修复 64/128 步多小节走向下，鼓组与贝斯轨因 trackLength 限制导致第 2、3、4 小节被误判为 isOutsideLoop 而呈现黑屏变暗、光标禁用（cursor-not-allowed）且无法点击交互，但后台音频却在持续循环发声的严重视听割裂问题。expandGenrePattern 现在为所有扩展步进完整复制旋律与节奏数据，步进单元格支持 isLoopedRepeat 循环高亮渲染，使整个步进网格显示与播放声音长度 100% 吻合。",
-        "en": "**Visual and Audio Length Parity**: Fixed a severe visual/audio disconnect where drum and bass tracks in 64/128-step patterns were dimmed, blacked out, and rendered with cursor-not-allowed on bars 2..4 due to false isOutsideLoop suppression while the audio engine looped and played them continuously. expandGenrePattern now populates repeating pattern data across all pattern steps, and StepCell introduces isLoopedRepeat active styling matching live sound."
+        "zh": "**钢琴卷帘真和弦多音堆叠与无损编曲**：彻底解决和弦在卷帘中坍缩为单音的痛点。当轨道为和弦轨且未固化音堆时，自动基于调式进行全音堆多音展开；在序列器状态机（SET_PITCH）中保持原有和弦堆叠结构或调式级数移调，禁止单音覆盖；新增 addChord 工具支持三和弦、七和弦、九和弦、挂留（Sus4/Sus2）及强力和弦一键输入，并支持和弦转位（▲ Inv / ▼ Inv）、爵士/流行 Drop-2 声部编配以及音符人性化微时序/力度抖动（Humanize）。",
+        "en": "**Lossless Polyphonic Chord Stacks & Editing**: Completely resolved chord voice collapsing in the piano roll. Unexpanded chord steps are dynamically voiced with full polyphony; SET_PITCH maintains full multi-note stacks during transposition; and new chord authoring tools provide instant chord stamping (triads, 7ths, 9ths, sus, power), inversions (up/down), Drop-2 jazz/pop voicing, and humanize jitter."
       },
       {
-        "zh": "**状态机循环步进读写双向同步（Bi-directional Loop Edit Synchronization）**：在 useSequencerStore 状态机（SET_STEP、SET_VELOCITY、SET_PITCH、SET_GATE、SET_RATCHET、SET_PROBABILITY）以及桌面拖拽批量绘制（useGridInteraction）中，引入循环步进模长双向同步机制。当轨道处于循环模式时，在任意小节点击或涂画步进，自动同步更新所有循环副本与发声音符，保证显示、编辑、试听、播放与导出全部使用同一份严格同步的数据。",
-        "en": "**Bi-directional Loop Edit Synchronization**: Implemented modulo-based loop synchronization in useSequencerStore actions (SET_STEP, SET_VELOCITY, SET_PITCH, SET_GATE, SET_RATCHET, SET_PROBABILITY) and desktop drag painting (useGridInteraction). Editing steps or velocity bars in any bar immediately synchronizes across all loop iterations, ensuring display, editing, audition, playback, and export operate on the exact same state."
+        "zh": "**Logic Pro 级高品质卷帘界面与走向标尺**：重塑钢琴卷帘视觉与交互质感。左侧琴键槽重构为立体 3D 黑白键盘（带圆润键尖、C 音高标记、调式级数光环与点击即时按压下潜发声试听）；音符块升级为带力度渐变热力图、左侧打击高光与亚克力玻璃质感的 DAW 块体，并在宽度合适时清晰印上 C4、E4 音名；顶部网格新增小节与和弦走向吸附标尺（Chord Progression Header），自动识别并展示和弦徽标（如 Bar 1 · Cmaj7），点击即可一键框选全小节所有音符。",
+        "en": "**Logic-Grade 3D Piano Keybed & Progression Ruler**: Overhauled the piano roll visual architecture. The pitch gutter now features realistic 3D ivory/ebony keys with C-octave badges, scale indicators, and interactive pointer-down audition depression; note blocks feature velocity heatmap gradients, strike accents, and crisp pitch labels; and a sticky chord progression header automatically detects chord badges (e.g. Bar 1 · Cmaj7) with 1-click bar selection."
       },
       {
-        "zh": "**力度泳道全小节实时联动与卷帘扩充保护（Velocity Lane & Piano Roll Extension Parity）**：VelocityLane 现在自动派生循环步进的力度/概率/时值/切分值并直观呈现所有小节，通过接入 subscribePlayhead 实现高帧率零重渲染的激光播放头全小节平滑滚动；在钢琴卷帘 withTrackNotes 中增加跨小节绘制自动扩容保护，防止用户在后段小节绘制的新音符被旧循环长度截断失声。",
-        "en": "**Velocity Lane Real-time Parity & Piano Roll Extension**: VelocityLane now derives values across all bars and subscribes to subscribePlayhead for 60fps playhead tracking without React re-renders. withTrackNotes automatically expands trackLength when users draw notes in subsequent bars so custom melodies are never silently muted by playback."
+        "zh": "**Musical Typing 电脑虚拟键盘演奏系统 (⌥K)**：为系统引入与 Web MIDI 键盘并行的完整电脑键盘演奏 HUD（快捷键 ⌥K / Alt+K，或通过工具栏键盘按钮一键呼出）。支持标准 Logic Pro 双八度键位映射（白键 A S D F G H J K L ; '，黑键 W E T Y U O P），集成八度升降（Z / X）、力度调节（C / V）、延音踩踏（Tab）、和弦模式（一键触发调式和声堆叠）与目标轨道即时切换，为无物理 MIDI 键盘的用户提供专业流畅的现场演奏与试听体验。",
+        "en": "**Musical Typing Virtual Keyboard HUD (⌥K)**: Introduced a full-featured computer keyboard performance HUD alongside Web MIDI (toggle via ⌥K or toolbar button). Features standard Logic Pro 2-octave QWERTY mapping, octave shifting (Z/X), velocity scaling (C/V), sustain toggle (Tab), diatonic chord mode, and dynamic track routing for fluid real-time auditioning and musical performance."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
