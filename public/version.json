@@ -1,27 +1,27 @@
 {
-  "version": "2.0.21",
+  "version": "2.0.22",
   "releaseDate": "2026-09-16",
-  "changelogCount": 85,
+  "changelogCount": 86,
   "latest": {
-    "version": "2.0.21",
+    "version": "2.0.22",
     "date": "2026-09-16",
     "category": "feature",
     "title": {
-      "zh": "v2.0.21 效果检查器重做：Logic 式信号链 + 按级编辑，配真实计算的 EQ 频响曲线、压缩器传输曲线与实时增益衰减表、驱动波形曲线",
-      "en": "v2.0.21 The effects inspector is rebuilt: a Logic-style signal chain with per-stage editing, plus a computed EQ response curve, compressor transfer curve and live gain-reduction meter, and the drive's transfer curve"
+      "zh": "v2.0.22 钢琴卷帘按 Logic 重做：力度泳道、五种工具、框选与成组编辑、量化/连音、音阶高亮、播放头跟随",
+      "en": "v2.0.22 The piano roll is rebuilt against Logic: velocity lane, five tools, marquee and group editing, quantise/legato, scale highlighting and playhead catching"
     },
     "highlights": [
       {
-        "zh": "**从「一长串滑条」变成一条信号链**。原来的效果页把 6 个处理级堆成一列滑条（每个都带开关），既看不出顺序、也看不出各自在做什么；更别扭的是 EQ 挂在「混音」页、压缩与驱动挂在「效果」页，而它们其实是**同一条串联插入链**。现在页首是一条信号链 `HP → EQ → Comp → Drive`（顺序就是 `ChannelStripDsp` 里实际的接线顺序，不是排版顺序），每级有：**电源圆点**（真正改参数的开关）、名称、以及**当前值摘要**（如 `180 Hz`、`-3.0 · +1.0 · +1.0 dB`、`-18 dB · 4.0:1`）。点某一级切换编辑区；被选中的一级展开，其余**保持挂载**（用 `hidden` 切换），所以切换即时、滑条位置与搜索词都不会丢。",
-        "en": "**From a long column of sliders to a signal chain.** The old effects page stacked six processors as rows of sliders (each with a switch), which showed neither their order nor what each was doing — and worse, the EQ lived under the *mix* tab while the compressor and drive lived under *effects*, even though all of them are one serial insert chain. The page now opens with the chain `HP → EQ → Comp → Drive` (the order is `ChannelStripDsp`'s actual wiring, not a layout choice), a…"
+        "zh": "**力度泳道**（Logic 的标志性部件）：网格下方每个音符一根竖条，条高就是力度；拖动一根改那个音符，拖动的条若属于当前选区则**整段选区一起偏移**。绘制音符的颜色也随之变化（暗石板 → 亮琥珀），所以力度不用读数字也能看出来。",
+        "en": "**A velocity lane** — Logic's signature component: one vertical bar per note under the grid, its height being the velocity. Dragging a bar edits that note, and dragging a bar that belongs to the selection offsets **the whole selection**. Note colours follow velocity too (dim slate → bright amber), so the dynamics are visible without reading numbers."
       },
       {
-        "zh": "**三条曲线都是从真实参数算出来的，不是画的图**。新增 `src/audio/insertCurves.ts`，逐项对齐 `ChannelStripDsp` 而不是近似它：滤波器曲线用浏览器 `BiquadFilterNode` 同一套 RBJ 系数公式、同样的 Q（高通用 `INSERT_HPF_Q`、谐振级用该带自己的 Q）；压缩器曲线用 Web Audio 的**软拐点传输函数**，拐点就是那条链路固定的 6 dB（`INSERT_COMP_KNEE_DB`，所以它不是用户参数）；驱动曲线**直接取自整形器自己的查表**（`makeSaturationCurve`，就是填 `WaveShaperNode` 的那个函数），因此画出来的和听到的不可能漂移；**关闭的级不参与**（DSP 是把它从图上摘掉，不是停在中间值）。**18 条单测断言的是传输函数的已知性质**而不是快照数字：巴特沃斯高通在拐点 −3.01 dB、搁架在频谱两端各自到达增益、谐振级在中心频率到达增益、Q 越大越窄、压缩在拐点以下是单位增益、以上严格 1/ratio、跨…",
-        "en": "**All three curves are computed from the live parameters, not drawn pictures.** `src/audio/insertCurves.ts` mirrors `ChannelStripDsp` point for point instead of approximating it: the filter curves use the same RBJ coefficient formulas the browser's `BiquadFilterNode` implements, at the same Q values (`INSERT_HPF_Q` for the high-pass, each band's own Q for the peaking band); the compressor curve is Web Audio's **soft-knee transfer function** with the chain's fixed 6 dB knee (…"
+        "zh": "**五种工具**：铅笔（默认）、指针、橡皮、剪刀、框选——按钮 + 键盘 `1`–`5`。铅笔还会**涂画**：按住拖过空格会连续写音符，整笔**只算一次撤销**。**与 Logic 不同的两处，都是刻意的**：① 默认工具是铅笔而不是指针——这个编辑器的第一动作是往空网格里画（重建前它也只有这一种行为），而 Logic 的钢琴卷帘主要是编辑已有片段；② 剪刀需要**右侧有空位**才能把长音符切成两个（步进网格是单声部的，没有地方放重叠音符），切不了时**弹提示说明原因**，而不是静默无动作。",
+        "en": "**Five tools** — pencil (the default), pointer, eraser, scissors, marquee — as buttons and keys `1`–`5`. The pencil also **paints**: holding and dragging across empty cells keeps writing notes, and the whole stroke is **one undo step**. Two deliberate departures from Logic: (1) the default tool is the pencil, not the pointer, because this editor's first act is drawing into an empty grid (and before this rebuild that was its only behaviour), whereas Logic's piano roll mostly…"
       },
       {
-        "zh": "**曲线上可以直接拖频点与增益**：EQ 曲线画出四个频段的圆点手柄，拖动即改该带的频率/增益，拖动期间只在本地草稿里重绘、**松手才提交一次**（与钢琴卷帘同一条「一次手势一条撤销」的规矩；每次 pointermove 都提交会把撤销栈冲爆）。**压缩器的增益衰减表读的是正在跑的节点**（`DynamicsCompressorNode.reduction`），不是二次估算；取样放在表组件内部以 ~20 Hz 轮询，因此这个高频更新不会让整个工作台跟着重渲染。",
-        "en": "**The curve is editable directly**: the EQ drawing carries a handle per band, and dragging one moves that band's frequency and gain — redrawing from a local draft during the drag and **committing once on release**, the same \"one gesture, one undo step\" rule the piano roll follows (committing on every pointermove would flood the undo stack). The **compressor's gain-reduction meter reads the running node** (`DynamicsCompressorNode.reduction`) rather than a second estimate, and…"
+        "zh": "**框选与成组编辑**：拖框（指阵/框选工具）选中一批音符，成组拖动（同时改时间与音高）、**⌥ 拖动复制**、Delete 删除、方向键微移、⌘A 全选；每一次手势**只提交一次**（一条撤销），这是我在实现里专门保证的不变量。选中音符会显示白色描边与计数，右下角是可直接输入的音符检视器（音高 / 起点 / 时长 / 力度），改任一项即提交。",
+        "en": "**Marquee and group editing**: drag a rectangle (pointer or marquee tool) to select notes, then move the group in time and pitch together, **⌥-drag to copy**, Delete to remove, arrow keys to nudge, ⌘A to select all — each gesture committing **once** (one undo step), an invariant the implementation protects. Selected notes get a white outline and a count, and the footer is a numeric note inspector (pitch / start / length / velocity) that commits on any edit."
       }
     ],
     "truncated": true

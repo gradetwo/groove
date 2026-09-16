@@ -6,6 +6,7 @@ import type { SequencerAction, SequencerState } from "../useSequencerStore";
 import { midiInputManager } from "../../../audio/MidiInputManager";
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheory";
+import { publishPlayhead } from "../playheadBus";
 
 export interface UseAudioEngineLifecycleOptions {
   engineRef: React.MutableRefObject<AudioEngine | null>;
@@ -94,6 +95,8 @@ export function useAudioEngineLifecycle({
   }, []);
 
   const clearPlayhead = useCallback(() => {
+    // Tell the DOM-only subscribers (the piano roll) that the transport stopped.
+    publishPlayhead(-1);
     if (lastActiveRulerStepRef.current) {
       lastActiveRulerStepRef.current.classList.remove("playhead-active");
       lastActiveRulerStepRef.current = null;
@@ -124,6 +127,8 @@ export function useAudioEngineLifecycle({
     const engine = new AudioEngine({
       onStep: ({ step }) => {
         updatePlayhead(step);
+        // The piano roll follows the same step through the DOM-only bus (no re-render per step).
+        publishPlayhead(step);
         // P8-01: Haptic downbeat pulse during playback
         const sig = seqStateRef.current.timeSignature;
         const res = seqStateRef.current.resolution;

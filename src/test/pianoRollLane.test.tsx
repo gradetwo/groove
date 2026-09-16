@@ -9,10 +9,11 @@
  */
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { PianoRollLane } from "../components/sequencer/PianoRollLane";
 import type { SequencerAction } from "../features/sequencer/useSequencerStore";
 import type { SequencerPattern } from "../types/genre";
+import { publishPlayhead, resetPlayheadBus } from "../features/sequencer/playheadBus";
 
 vi.mock("../components/sequencer/PitchPickerModal", () => ({
   midiToNoteName: (midi: number) => `NOTE_${midi}`,
@@ -218,3 +219,252 @@ describe("PianoRollLane · width, fullscreen and collapse", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Piano-roll tools (item ② of the DAW-alignment objective).
+ *
+ * Logic's tool set is borrowed, and the places where it had to be *adapted* to a step grid are
+ * asserted as adaptations rather than as Logic behaviour: quantise acts on lengths (starts are
+ * already grid steps), scissors needs a free slot and says so when it has none, and the pencil
+ * paints a stroke that is one undo step.
+ */
+describe("PianoRollLane · tools", () => {
+  const grid = () => screen.getByTestId("piano-roll-grid");
+
+  it("offers the five tools, reports the active one, and switches with the number keys", () => {
+    setup();
+    const panel = screen.getByTestId("piano-roll");
+    // The roll opens on the pencil: drawing into an empty grid is this editor's primary verb.
+    expect(panel.getAttribute("data-tool")).toBe("pencil");
+
+    for (const id of ["pointer", "pencil", "eraser", "scissors", "marquee"]) {
+      expect(screen.getByTestId(`piano-roll-tool-${id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`piano-roll-tool-${id}`).getAttribute("aria-pressed")).toBe(id === "pencil" ? "true" : "false");
+    }
+
+    fireEvent.keyDown(window, { key: "3" });
+    expect(screen.getByTestId("piano-roll-tool-eraser").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("piano-roll").getAttribute("data-tool")).toBe("eraser");
+  });
+
+  it("erases the note under the eraser, and only that note", () => {
+    const { commits } = setup();
+    fireEvent.keyDown(window, { key: "3" });
+    // jsdom rects are zero-sized, so the coordinates *are* cell coordinates (x/26, y/18).
+    fireEvent.pointerDown(grid(), { clientX: 0 * 26 + 5, clientY: 3 * 18 + 4 });
+    expect(commits).toHaveLength(1);
+    const pattern = (commits[0] as { pattern: SequencerPattern }).pattern;
+    expect(pattern.tracks[0].steps[0]).toBe(0);
+    expect(pattern.tracks[0].steps[4]).toBe(1); // the other note is untouched
+  });
+
+  it("paints a stroke with the pencil, committing the first cell at once and the rest on release", () => {
+    const { commits } = setup();
+    fireEvent.pointerDown(grid(), { clientX: 2 * 26 + 4, clientY: 3 * 18 + 4 });
+    expect(commits).toHaveLength(1);
+
+    fireEvent.pointerMove(grid(), { clientX: 3 * 26 + 4, clientY: 3 * 18 + 4 });
+    fireEvent.pointerMove(grid(), { clientX: 4 * 26 + 4, clientY: 3 * 18 + 4 });
+    // Still one commit: the stroke is one gesture (one undo step) once it is released.
+    expect(commits).toHaveLength(1);
+
+    fireEvent.pointerUp(grid());
+    expect(commits).toHaveLength(2);
+    const painted = (commits[1] as { pattern: SequencerPattern }).pattern;
+    expect(painted.tracks[0].steps[2]).toBe(1);
+    expect(painted.tracks[0].steps[3]).toBe(1);
+  });
+
+  it("splits a note with the scissors when the next step is free", () => {
+    const { commits } = setup({
+      pattern: makePattern({ steps: [1, 0, 0, 0, 0, 0, 0, 0], gate: [1.2, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8] }),
+    });
+    fireEvent.keyDown(window, { key: "4" });
+    fireEvent.pointerDown(grid(), { clientX: 0, clientY: 3 * 18 + 4 });
+    expect(commits).toHaveLength(1);
+    const split = (commits[0] as { pattern: SequencerPattern }).pattern;
+    expect(split.tracks[0].steps[0]).toBe(1);
+    expect(split.tracks[0].steps[1]).toBe(1);
+  });
+
+  it("says why the scissors cannot cut when the next step is occupied", () => {
+    // A monophonic grid has nowhere to put the second half of the note.
+    const { commits } = setup({
+      pattern: makePattern({ steps: [1, 1, 0, 0, 0, 0, 0, 0], gate: [1.2, 1.2, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8] }),
+    });
+    fireEvent.keyDown(window, { key: "4" });
+    fireEvent.pointerDown(grid(), { clientX: 0, clientY: 3 * 18 + 4 });
+    expect(commits).toHaveLength(0);
+    expect(screen.getByTestId("piano-roll-notice")).toBeInTheDocument();
+  });
+});
+
+describe("PianoRollLane · selection, marquee and moving a group", () => {
+  const grid = () => screen.getByTestId("piano-roll-grid");
+
+  it("selects the notes inside a marquee and moves them together", () => {
+    const { commits } = setup({
+      pattern: makePattern({
+        steps: [1, 0, 1, 0, 0, 0, 0, 0],
+        pitch: [60, null, 62, null, null, null, null, null],
+      }),
+    });
+    fireEvent.keyDown(window, { key: "1" }); // pointer
+    fireEvent.pointerDown(grid(), { clientX: 5 * 26 + 4, clientY: 0 * 18 + 4 });
+    fireEvent.pointerMove(grid(), { clientX: 4, clientY: 7 * 18 + 4 });
+    expect(screen.getByTestId("piano-roll-marquee")).toBeInTheDocument();
+    fireEvent.pointerUp(grid());
+    expect(screen.getByTestId("piano-roll-selected-count").textContent).toContain("2");
+
+    // Now drag one of the selected notes one step right: both must move.
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0"), { clientX: 0 * 26 + 4, clientY: 0 * 18 + 4 });
+    fireEvent.pointerMove(grid(), { clientX: 1 * 26 + 4, clientY: 0 * 18 + 4 });
+    fireEvent.pointerUp(grid());
+    const moved = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    // Both notes move one step right: 0→1 and 2→3, so the steps they left are empty.
+    expect(moved.tracks[0].steps[1]).toBe(1);
+    expect(moved.tracks[0].steps[3]).toBe(1);
+    expect(moved.tracks[0].steps[0]).toBe(0);
+    expect(moved.tracks[0].steps[2]).toBe(0);
+  });
+
+  it("copies with ⌥-drag instead of moving (the originals stay)", () => {
+    const { commits } = setup({ pattern: makePattern({ steps: [1, 0, 0, 0, 0, 0, 0, 0] }) });
+    fireEvent.keyDown(window, { key: "1" });
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0"), { clientX: 4, clientY: 4 });
+    fireEvent.pointerMove(grid(), { clientX: 2 * 26 + 4, clientY: 0 * 18 + 4, altKey: true });
+    fireEvent.pointerUp(grid());
+    const copied = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(copied.tracks[0].steps[0]).toBe(1); // original
+    expect(copied.tracks[0].steps[2]).toBe(1); // copy
+  });
+
+  it("deletes the whole selection from the toolbar", () => {
+    const { commits } = setup({
+      pattern: makePattern({ steps: [1, 0, 1, 0, 0, 0, 0, 0], pitch: [60, null, 62, null, null, null, null, null] }),
+    });
+    fireEvent.keyDown(window, { key: "1" });
+    fireEvent.pointerDown(grid(), { clientX: 5 * 26 + 4, clientY: 0 });
+    fireEvent.pointerMove(grid(), { clientX: 4, clientY: 7 * 18 });
+    fireEvent.pointerUp(grid());
+    fireEvent.click(screen.getByTestId("piano-roll-delete"));
+    const emptied = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(emptied.tracks[0].steps.every((v: number) => v === 0)).toBe(true);
+  });
+});
+
+describe("PianoRollLane · velocity lane", () => {
+  it("draws one bar per note at its velocity", () => {
+    setup({ pattern: makePattern({ velocity: [40, 100, 100, 100, 127, 100, 100, 100] }) });
+    expect(screen.getByTestId("piano-roll-velocity-bar-0").getAttribute("data-velocity")).toBe("40");
+    expect(screen.getByTestId("piano-roll-velocity-bar-4").getAttribute("data-velocity")).toBe("127");
+    expect(screen.queryByTestId("piano-roll-velocity-bar-1")).toBeNull();
+  });
+
+  it("raises the velocity of the bar under the pointer, committing once", () => {
+    const { commits } = setup({ pattern: makePattern({ velocity: [20, 100, 100, 100, 100, 100, 100, 100] }) });
+    const lane = screen.getByTestId("piano-roll-velocity-lane");
+    // jsdom gives the lane a zero-height rect, so the pointer's y *is* the height fraction.
+    fireEvent.pointerDown(lane, { clientX: 4, clientY: -20 });
+    fireEvent.pointerUp(lane);
+    expect(commits).toHaveLength(1);
+    const next = (commits[0] as { pattern: SequencerPattern }).pattern;
+    expect(next.tracks[0].velocity?.[0]).toBeGreaterThan(20);
+  });
+
+  it("can be hidden, and says so through aria-pressed", () => {
+    setup();
+    const toggle = screen.getByTestId("piano-roll-velocity-toggle");
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByTestId("piano-roll-velocity-lane")).toBeNull();
+  });
+});
+
+describe("PianoRollLane · quantise and legato, adapted to a step grid", () => {
+  it("quantises lengths (the honest version of Logic's quantise, given integer starts)", () => {
+    const { commits } = setup({
+      pattern: makePattern({ steps: [1, 0, 0, 0, 0, 0, 0, 0], gate: [0.62, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8] }),
+    });
+    fireEvent.change(screen.getByTestId("piano-roll-snap"), { target: { value: "1/4" } });
+    fireEvent.click(screen.getByTestId("piano-roll-quantize-lengths"));
+    const quantised = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(quantised.tracks[0].gate?.[0]).toBeCloseTo(1, 5);
+  });
+
+  it("applies legato to fill the gap to the next note", () => {
+    const { commits } = setup({
+      pattern: makePattern({ steps: [1, 0, 0, 1, 0, 0, 0, 0], pitch: [60, null, null, 64, null, null, null, null], gate: [0.2, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8] }),
+    });
+    fireEvent.click(screen.getByTestId("piano-roll-legato"));
+    const legato = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    // Three steps of gap, clamped by the engine's two-step maximum.
+    expect(legato.tracks[0].gate?.[0]).toBe(2);
+  });
+});
+
+describe("PianoRollLane · Logic-style visuals", () => {
+  it("highlights the scale on the pitch gutter (root, in-scale, out-of-scale)", () => {
+    setup({ pattern: makePattern({ scale: "C minor" }) });
+    // C is the root of C minor; D# (63) is in it; A# (58) is not. (The gutter only draws the range
+    // around the notes, padded by two semitones: 58–66 here.)
+    expect(screen.getByTestId("piano-roll-row-60").getAttribute("data-scale")).toBe("root");
+    expect(screen.getByTestId("piano-roll-row-63").getAttribute("data-scale")).toBe("in");
+    // B (59) is not in C natural minor (which has Bb), so that row is marked out-of-scale.
+    expect(screen.getByTestId("piano-roll-row-59").getAttribute("data-scale")).toBe("out");
+  });
+
+  it("colours notes by velocity and names them when there is room", () => {
+    setup({ pattern: makePattern({ steps: [1, 0, 0, 0, 1, 0, 0, 0], velocity: [30, 100, 100, 100, 127, 100, 100, 100] }) });
+    const soft = screen.getByTestId("piano-roll-note-0");
+    const hard = screen.getByTestId("piano-roll-note-4");
+    expect(soft.getAttribute("data-velocity")).toBe("30");
+    expect(soft.style.backgroundColor).not.toBe(hard.style.backgroundColor);
+    expect(soft.textContent).toContain("NOTE_60");
+  });
+
+  it("exposes an inspector that edits the selected note numerically", () => {
+    const { commits } = setup();
+    // The pencil draws and does not select (that is the pointer's job), so switch tools first.
+    fireEvent.keyDown(window, { key: "1" });
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0"), { clientX: 4, clientY: 4 });
+    fireEvent.pointerUp(gridSafe());
+
+    fireEvent.change(screen.getByTestId("piano-roll-velocity"), { target: { value: "55" } });
+    const changed = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(changed.tracks[0].velocity?.[0]).toBe(55);
+
+    fireEvent.change(screen.getByTestId("piano-roll-length"), { target: { value: "1.5" } });
+    const resized = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(resized.tracks[0].gate?.[0]).toBeCloseTo(1.5, 5);
+  });
+
+  it("follows the transport through the DOM-only playhead bus, without re-rendering", () => {
+    setup();
+    const line = screen.getByTestId("piano-roll-playhead");
+    // Stopped: the line is in the DOM but invisible, so the bus can move it without a render.
+    expect(line.style.opacity).toBe("0");
+
+    act(() => publishPlayhead(5));
+    expect(line.style.opacity).toBe("1");
+    // 5 steps at the jsdom fallback cell width of 26 px.
+    expect(line.style.transform).toContain("130px");
+
+    act(() => publishPlayhead(-1));
+    expect(line.style.opacity).toBe("0");
+  });
+
+  it("offers catch-playhead as a real toggle", () => {
+    setup();
+    const catchBtn = screen.getByTestId("piano-roll-catch");
+    expect(catchBtn.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(catchBtn);
+    expect(catchBtn.getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
+/** The grid element, for gestures that start on a note but end on the grid. */
+function gridSafe(): HTMLElement {
+  return screen.getByTestId("piano-roll-grid");
+}

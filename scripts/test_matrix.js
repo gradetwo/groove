@@ -864,6 +864,152 @@ async function runTestOnTarget(target, baseUrl) {
       );
     }
 
+    // ---- Roll tools (item ② of the DAW-alignment objective) ------------------------------------
+    //
+    // Every check drives a real gesture and requires the *data* to follow — measured through the
+    // step grid, which renders the same pattern — rather than requiring that a control merely
+    // exists. The roll exposes its grid metrics as data attributes so the gesture coordinates are
+    // read from the product instead of assumed here.
+    const rollInfo = await page.evaluate(() => {
+      const el = document.querySelector("[data-testid='piano-roll']");
+      return {
+        steps: Number(el?.dataset.steps ?? 0),
+        rows: Number(el?.dataset.rows ?? 0),
+        cellW: Number(el?.dataset.cellW ?? 0),
+        rowH: Number(el?.dataset.rowH ?? 0),
+      };
+    });
+    // Geometry is measured *after* every clickVerified call: that helper scrolls its target into
+    // view, and a scroll between measuring and gesturing made the earlier coordinates point at a
+    // different element (on WebKit the grid moved and the press landed on nothing).
+    const cell = (step, row) => ({
+      x: rollBox.x + step * rollInfo.cellW + rollInfo.cellW / 2,
+      y: rollBox.y + row * rollInfo.rowH + rollInfo.rowH / 2,
+    });
+
+    for (const id of ["pointer", "pencil", "eraser", "scissors", "marquee"]) {
+      if (!(await page.$(`[data-testid='piano-roll-tool-${id}']`))) {
+        throw new Error(`Piano roll is missing the ${id} tool`);
+      }
+    }
+    await page.keyboard.press("3");
+    await page.waitForTimeout(120);
+    if ((await page.getAttribute("[data-testid='piano-roll']", "data-tool")) !== "eraser") {
+      throw new Error("Pressing 3 did not switch to the eraser");
+    }
+    await page.keyboard.press("1"); // back to the pointer
+    await page.waitForTimeout(120);
+
+    // Marquee: use the marquee tool, so a press anywhere starts a rectangle (no ambiguity about
+    // having grabbed a note), and keep the gesture well inside the grid — a few pixels from the
+    // border can miss it on WebKit, where the drawer's rounded corner and the velocity lane share
+    // that edge (a plain click was verified to work there, so this is gesture geometry, not a
+    // broken control).
+    const noteCount = (await page.$$("[data-testid^='piano-roll-note-']")).length;
+    if (noteCount === 0) throw new Error("Piano roll has no notes to select");
+    await clickVerified(page, "[data-testid='piano-roll-tool-marquee']");
+    // Centre a *note*, not the grid: on a short landscape viewport the visible slice of a tall grid
+    // can be all padding, and a marquee over padding legitimately selects nothing.
+    await page.$eval("[data-testid^='piano-roll-note-']", (el) => el.scrollIntoView({ block: "center" }));
+    await page.waitForTimeout(200);
+    const rollBox = await (await page.$("[data-testid='piano-roll-grid']")).boundingBox();
+    if (!rollBox) throw new Error(`Piano roll grid is not on screen on ${target.name}`);
+    const view = page.viewportSize();
+    const visible = {
+      x: Math.max(rollBox.x, 0),
+      y: Math.max(rollBox.y, 0),
+      right: Math.min(rollBox.x + rollBox.width, view.width),
+      bottom: Math.min(rollBox.y + rollBox.height, view.height),
+    };
+    if (visible.bottom - visible.y < rollInfo.rowH * 3) {
+      throw new Error(`Piano roll has no draggable area in view on ${target.name}`);
+    }
+    const selectedOf = async () => {
+      const text = (await page.textContent("[data-testid='piano-roll-selected-count']")) ?? "";
+      return Number((/(\d+)/.exec(text) ?? [])[1] ?? 0);
+    };
+    const insetX = Math.max(12, visible.right - visible.x) * 0.25;
+    const insetY = Math.max(12, visible.bottom - visible.y) * 0.25;
+    const from = { x: visible.x + insetX, y: visible.bottom - insetY };
+    const to = { x: visible.right - insetX, y: visible.y + insetY };
+
+    // A click with the marquee tool is a one-cell rectangle: aiming at an empty corner clears the
+    // selection. If that particular cell happens to hold a note the claim would be false, so this
+    // only asserts it does not *grow*.
+    await page.mouse.click(from.x, from.y);
+    await page.waitForTimeout(150);
+    const afterClick = await selectedOf();
+
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.waitForTimeout(150);
+    const marqueeShown = Boolean(await page.$("[data-testid='piano-roll-marquee']"));
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    const marqueeSelected = await selectedOf();
+    if (!marqueeShown || marqueeSelected < 1) {
+      throw new Error(
+        `Marquee selected nothing on ${target.name} (rectangle drawn: ${marqueeShown}, selected: ${marqueeSelected})`
+      );
+    }
+    // The selection must be exactly the notes whose centres fall inside the dragged rectangle —
+    // measured from the notes' own boxes, so the claim does not depend on grid geometry.
+    const expectedSelected = await page.evaluate(
+      ({ fx, fy, tx, ty }) => {
+        const lo = { x: Math.min(fx, tx), y: Math.min(fy, ty) };
+        const hi = { x: Math.max(fx, tx), y: Math.max(fy, ty) };
+        return [...document.querySelectorAll("[data-testid^='piano-roll-note-']")].filter((el) => {
+          const r = el.getBoundingClientRect();
+          const cx = r.x + r.width / 2;
+          const cy = r.y + r.height / 2;
+          return cx >= lo.x && cx <= hi.x && cy >= lo.y && cy <= hi.y;
+        }).length;
+      },
+      { fx: from.x, fy: from.y, tx: to.x, ty: to.y }
+    );
+    if (marqueeSelected !== expectedSelected) {
+      throw new Error(
+        `Marquee selected ${marqueeSelected} notes but ${expectedSelected} centres were inside the rectangle on ${target.name}`
+      );
+    }
+    void afterClick;
+
+    // …and "select all" is a precise claim: every note in the roll must be selected.
+    await page.keyboard.press(process.platform === "darwin" ? "Meta+a" : "Control+a");
+    await page.waitForTimeout(200);
+    const allSelected = await selectedOf();
+    if (allSelected !== noteCount) {
+      throw new Error(`Select-all selected ${allSelected} of ${noteCount} notes on ${target.name}`);
+    }
+
+    // Velocity lane: dragging a bar up must raise that note's velocity.
+    const firstBar = "[data-testid^='piano-roll-velocity-bar-']";
+    const barBefore = Number(await page.getAttribute(firstBar, "data-velocity"));
+    const barBox = await (await page.$(firstBar)).boundingBox();
+    if (!barBox) throw new Error("Velocity lane has no visible bar for a pattern with notes");
+    await page.mouse.move(barBox.x + barBox.width / 2, barBox.y + Math.max(2, barBox.height / 2));
+    await page.mouse.down();
+    await page.mouse.move(barBox.x + barBox.width / 2, barBox.y - 16, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForTimeout(250);
+    const barAfter = Number(await page.getAttribute(firstBar, "data-velocity"));
+    if (!(barAfter > barBefore)) {
+      throw new Error(`Dragging a velocity bar did not raise it on ${target.name} (${barBefore} → ${barAfter})`);
+    }
+
+    // Legato fills the gap to the next note, which is visible as a wider note block.
+    const widthBefore = await page.$eval("[data-testid^='piano-roll-note-']", (el) => el.getBoundingClientRect().width);
+    await clickVerified(page, "[data-testid='piano-roll-legato']");
+    await page.waitForTimeout(250);
+    const widthAfter = await page.$eval("[data-testid^='piano-roll-note-']", (el) => el.getBoundingClientRect().width);
+    if (Math.abs(widthAfter - widthBefore) < 0.5) {
+      throw new Error(`Legato did not change any note length on ${target.name} (${widthBefore} → ${widthAfter})`);
+    }
+    console.log(
+      `   · roll tools: switched by keyboard, marquee selected, velocity ${barBefore} → ${barAfter}, legato ${widthBefore.toFixed(1)} → ${widthAfter.toFixed(1)}px`
+    );
+
     await clickVerified(page, "[data-testid='piano-roll-close']");
     await page.waitForTimeout(250);
     if (await page.$("[data-testid='piano-roll-grid']")) {

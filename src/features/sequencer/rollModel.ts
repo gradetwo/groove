@@ -214,3 +214,249 @@ export function stepBeatsFor(resolution: SequencerPattern["resolution"]): number
   if (resolution === "1/32") return 0.125;
   return 0.25;
 }
+
+/* ------------------------------------------------------------------ tools & selection (v2.0.22) */
+
+/**
+ * Editing tools, borrowed from Logic's piano roll.
+ *
+ * The names are Logic's; what each one does here is adapted to a **step grid**: a note occupies
+ * one integer step and its length is `gate` (0.1–2.0 steps), so several of Logic's operations have
+ * no meaning in the same form and are deliberately reinterpreted rather than faked:
+ *
+ *   - **quantise starts** cannot be offered, because starts *are* grid steps already. What is
+ *     offered instead is quantising **lengths** and **legato** (fill the gap to the next note),
+ *     which is where a step pattern actually drifts.
+ *   - **scissors** splits a note that rings past its step into two notes, which requires a free
+ *     slot at the split point — a monophonic grid has nowhere to put an overlapping note.
+ */
+export type RollTool = "pointer" | "pencil" | "eraser" | "scissors" | "marquee";
+
+/** Snap grid for drawing and dragging, in steps. `off` means "free" (integer steps anyway). */
+export type RollSnap = "off" | "1/4" | "1/8" | "1/16" | "1/32";
+
+export const ROLL_SNAP_STEPS: Record<RollSnap, number> = {
+  off: 0,
+  "1/4": 1,
+  "1/8": 0.5,
+  "1/16": 0.25,
+  "1/32": 0.125,
+};
+
+/** Snaps a fractional step position to the snap grid (used for lengths, which may be fractional). */
+export function snapValue(value: number, snap: RollSnap): number {
+  const grid = ROLL_SNAP_STEPS[snap];
+  if (!grid) return value;
+  return Math.round(value / grid) * grid;
+}
+
+/** The selected steps, sorted, with duplicates removed. */
+export function normalizeSelection(selection: readonly number[]): number[] {
+  return [...new Set(selection)].sort((a, b) => a - b);
+}
+
+/** Notes whose (step, pitch) falls inside a marquee rectangle. */
+export function notesInRect(
+  notes: readonly RollStepNote[],
+  rect: { stepFrom: number; stepTo: number; pitchFrom: number; pitchTo: number }
+): number[] {
+  const lo = Math.min(rect.stepFrom, rect.stepTo);
+  const hi = Math.max(rect.stepFrom, rect.stepTo);
+  const pitchLo = Math.min(rect.pitchFrom, rect.pitchTo);
+  const pitchHi = Math.max(rect.pitchFrom, rect.pitchTo);
+  return normalizeSelection(
+    notes.filter((n) => n.stepIdx >= lo && n.stepIdx <= hi && n.midi >= pitchLo && n.midi <= pitchHi).map((n) => n.stepIdx)
+  );
+}
+
+/**
+ * Move a whole selection in time and pitch, as one operation.
+ *
+ * Occupied steps the selection lands on are **replaced** (the grid is monophonic), and the move is
+ * refused as a whole if any destination falls outside the pattern — a partial move would silently
+ * lose notes.
+ */
+export function moveNotes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly number[],
+  deltaSteps: number,
+  deltaPitch: number,
+  stepCount: number
+): { pattern: SequencerPattern; selection: number[] } {
+  const selected = normalizeSelection(selection);
+  const notes = notesFromTrack(pattern.tracks[trackIdx]);
+  const moving = notes.filter((n) => selected.includes(n.stepIdx));
+  if (moving.length === 0) return { pattern, selection: selected };
+
+  const destinations = moving.map((n) => n.stepIdx + deltaSteps);
+  if (destinations.some((d) => d < 0 || d >= stepCount)) return { pattern, selection: selected };
+
+  const moved = moving.map((n) => ({
+    ...n,
+    stepIdx: n.stepIdx + deltaSteps,
+    midi: Math.max(0, Math.min(127, n.midi + deltaPitch)),
+  }));
+  const destinationSet = new Set(destinations);
+  const kept = notes.filter((n) => !selected.includes(n.stepIdx) && !destinationSet.has(n.stepIdx));
+  return {
+    pattern: withTrackNotes(pattern, trackIdx, [...kept, ...moved], stepCount),
+    selection: normalizeSelection(destinations),
+  };
+}
+
+/** Duplicate a selection `deltaSteps` later (Alt-drag in Logic), leaving the originals in place. */
+export function copyNotes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly number[],
+  deltaSteps: number,
+  stepCount: number
+): { pattern: SequencerPattern; selection: number[] } {
+  const selected = normalizeSelection(selection);
+  const notes = notesFromTrack(pattern.tracks[trackIdx]);
+  const copies = notes
+    .filter((n) => selected.includes(n.stepIdx))
+    .map((n) => ({ ...n, stepIdx: n.stepIdx + deltaSteps }))
+    .filter((n) => n.stepIdx >= 0 && n.stepIdx < stepCount);
+  if (copies.length === 0) return { pattern, selection: selected };
+
+  const copySet = new Set(copies.map((n) => n.stepIdx));
+  const kept = notes.filter((n) => !copySet.has(n.stepIdx));
+  return {
+    pattern: withTrackNotes(pattern, trackIdx, [...kept, ...copies], stepCount),
+    selection: normalizeSelection(copies.map((n) => n.stepIdx)),
+  };
+}
+
+/** Remove every selected note. */
+export function deleteNotes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly number[],
+  stepCount: number
+): SequencerPattern {
+  const selected = new Set(normalizeSelection(selection));
+  const kept = notesFromTrack(pattern.tracks[trackIdx]).filter((n) => !selected.has(n.stepIdx));
+  return withTrackNotes(pattern, trackIdx, kept, stepCount);
+}
+
+/** Set an absolute velocity on every selected note (the velocity lane's click behaviour). */
+export function setNotesVelocity(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly number[],
+  velocity: number,
+  stepCount: number
+): SequencerPattern {
+  const selected = new Set(normalizeSelection(selection));
+  const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
+    selected.has(n.stepIdx) ? { ...n, velocity: Math.max(1, Math.min(127, Math.round(velocity))) } : n
+  );
+  return withTrackNotes(pattern, trackIdx, next, stepCount);
+}
+
+/** Scale selected velocities (the lane's drag behaviour), clamped to the MIDI range. */
+export function scaleNotesVelocity(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly number[],
+  deltaVelocity: number,
+  stepCount: number
+): SequencerPattern {
+  const selected = new Set(normalizeSelection(selection));
+  const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
+    selected.has(n.stepIdx) ? { ...n, velocity: Math.max(1, Math.min(127, Math.round(n.velocity + deltaVelocity))) } : n
+  );
+  return withTrackNotes(pattern, trackIdx, next, stepCount);
+}
+
+/**
+ * Quantise the **lengths** of the selection to the snap grid.
+ *
+ * Starts are already steps, so this is where quantisation has something to do: a length that was
+ * dragged to 0.73 steps becomes 0.75 at 1/16, or 1.0 at 1/4.
+ */
+export function quantizeLengths(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly number[],
+  snap: RollSnap,
+  stepCount: number
+): SequencerPattern {
+  const selected = new Set(normalizeSelection(selection));
+  const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
+    selected.has(n.stepIdx) ? { ...n, gate: Math.max(0.1, Math.min(2, snapValue(n.gate, snap))) } : n
+  );
+  return withTrackNotes(pattern, trackIdx, next, stepCount);
+}
+
+/**
+ * Legato: extend each selected note to the next note's start (or to the end of the loop).
+ *
+ * `maxGate` is the engine's own clamp (2 steps), so a long gap cannot produce a length the audio
+ * path would silently ignore.
+ */
+export function legatoNotes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly number[],
+  stepCount: number,
+  loopLength = stepCount,
+  maxGate = 2
+): SequencerPattern {
+  const selected = new Set(normalizeSelection(selection));
+  const notes = notesFromTrack(pattern.tracks[trackIdx]);
+  const next = notes.map((n) => {
+    if (!selected.has(n.stepIdx)) return n;
+    const later = notes.filter((other) => other.stepIdx > n.stepIdx).map((other) => other.stepIdx);
+    const boundary = later.length ? Math.min(...later) : loopLength;
+    return { ...n, gate: Math.max(0.1, Math.min(maxGate, boundary - n.stepIdx)) };
+  });
+  return withTrackNotes(pattern, trackIdx, next, stepCount);
+}
+
+/**
+ * Scissors: split the note at `stepIdx` into a shortened note plus a new one at the next step.
+ *
+ * A step grid has no room for an overlapping note, so the split needs a **free** step right after
+ * the cut; if there is none (or the note is shorter than a step) this is a no-op and says so
+ * through the returned flag rather than pretending to cut something.
+ */
+export function splitNote(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  stepIdx: number,
+  stepCount: number
+): { pattern: SequencerPattern; split: boolean } {
+  const notes = notesFromTrack(pattern.tracks[trackIdx]);
+  const note = notes.find((n) => n.stepIdx === stepIdx);
+  if (!note) return { pattern, split: false };
+  const at = stepIdx + 1;
+  if (at >= stepCount) return { pattern, split: false };
+  if (notes.some((n) => n.stepIdx === at)) return { pattern, split: false };
+  const half = Math.max(0.1, Math.min(2, note.gate / 2));
+  const next = [
+    ...notes.filter((n) => n.stepIdx !== stepIdx),
+    { ...note, gate: half },
+    { ...note, stepIdx: at, gate: half },
+  ];
+  return { pattern: withTrackNotes(pattern, trackIdx, next, stepCount), split: true };
+}
+
+/** Rows of a scale, for the pitch gutter's highlighting (root, in-scale, out-of-scale). */
+export function scaleHighlightFor(scale: string | undefined | null): { rootPc: number; pcs: Set<number> } {
+  const text = (scale ?? "C major").trim();
+  const match = /^([A-Ga-g])([#b]?)/.exec(text);
+  const letters: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  let root = 0;
+  if (match) {
+    root = letters[match[1].toUpperCase()] ?? 0;
+    if (match[2] === "#") root += 1;
+    if (match[2] === "b") root -= 1;
+  }
+  const rootPc = ((root % 12) + 12) % 12;
+  const minor = /minor|m\b|dorian|phrygian|aeolian|locrian/i.test(text);
+  const intervals = minor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+  return { rootPc, pcs: new Set(intervals.map((i) => (rootPc + i) % 12)) };
+}
