@@ -1,27 +1,27 @@
 {
-  "version": "2.0.17",
+  "version": "2.0.18",
   "releaseDate": "2026-09-16",
-  "changelogCount": 81,
+  "changelogCount": 82,
   "latest": {
-    "version": "2.0.17",
+    "version": "2.0.18",
     "date": "2026-09-16",
     "category": "feature",
     "title": {
-      "zh": "v2.0.17 音频设置面板：在引擎里躺了很久的三个设置第一次有了 UI，GS-1 开关搬进设置；另附慢轨交接打包器",
-      "en": "v2.0.17 The audio settings panel: three settings that had been sitting in the engine get a UI at last, the GS-1 switch moves into settings, and the slow track gets a handoff packer"
+      "zh": "v2.0.18 快机器慢轨包读回（并修掉它暴露的两个工具缺陷）+ 用户报告的 8 项：GS-1 三个现场缺陷、设置面板、和弦时值可见、检查器浮层/停靠、未保存提醒、钢琴卷帘",
+      "en": "v2.0.18 The fast-machine slow-track pack read back (and the two tooling defects it exposed) + the eight reported items: three live GS-1 defects, the settings panel, visible chord length, a floating/docked inspector, an unsaved-changes guard, and a piano roll"
     },
     "highlights": [
       {
-        "zh": "**三个设置实现了、持久化了、却没有任何 UI**：`latencyCompensationMs`、`hearingProtection`、`maxVolumeLimit` 自 P4-05 起就在 `AudioEngine` 里（连 `groove_audio_settings_v1` 的持久化都写好了），但全仓库没有一个控件能改它们——想调只能开控制台。GS-1 的开关（用户要求「默认开启、用户可以手动关」）此前只落在工具栏抽屉里。新增 `AudioSettingsModal`：四个设置一处集中，工具栏保留一个齿轮入口与 GS-1 快捷开关。**关键约束：面板显示的是引擎的值，不是它自己的猜测**——每次打开都从引擎重读（工具栏/调音台可能刚改过），每次写入后**重新读回**，所以显示的是引擎**夹取后**的结果而不是用户拖到的数字（上限夹在 0.1–1.0、延迟补偿夹在 ±100 ms）。听力保护关闭时上限滑条**禁用**——那个上限此时真的不生效，让它可拖就是在骗人。GS-1 的读写只有**一条**路径（由视图持有，工具栏与面板共用），两…",
-        "en": "**Three settings were implemented, persisted, and unreachable.** `latencyCompensationMs`, `hearingProtection` and `maxVolumeLimit` have lived in `AudioEngine` since P4-05 — persistence into `groove_audio_settings_v1` included — with no control anywhere in the app, so changing them meant opening the console. The GS-1 switch (the user asked for on-by-default with a manual off) existed only in the toolbar drawer. The new `AudioSettingsModal` gathers all four in one place, with…"
+        "zh": "**M2 Max 上的慢轨包读回，四个小时级测量跨机复现**（15 门禁过 / 1 红 / 36 个文件哈希校验通过）：响度 trim 后 max |Δ| **0.115 dB**、mean 0.002；音色 13 段形状 max **0.14 dB**，最近一对**完全相同**（future-house ↔ acid-techno 0.2759）；GS-1 时序中位 −198.6 → −198.7 ms。**最有价值的一条是 GS-1 负载**：16 复音的 p90 从本机 0.336 掉到 **0.035**、实时比 0.578 → **0.998**——也就是说 E3 得出的「8 复音上限」是**我这台 2011 年 CPU 的上限，不是代码的上限**。红的那一个门禁是全量套件：**167 个失败全部是存储类测试**，真因是那台机器是 **Node v26.8.2**，较新的 Node 暴露了自己的全局 `localStorage`，而 Vitest 的 jsdom 环境只为「globalThis 上尚不存在的键」安装 jsdom 全局，…",
+        "en": "**The slow-track pack from the M2 Max was read back, and all four hour-long measurements reproduce across machines** (15 gates passed / 1 red / 36 files hash-verified): post-trim loudness max |delta| **0.115 dB**, mean 0.002; timbre 13-band shape max **0.14 dB** with the closest pair **identical** (future-house vs acid-techno, 0.2759); GS-1 jitter median -198.6 to -198.7 ms. **The most valuable number is the GS-1 load**: at 16 voices p90 fell from 0.336 here to **0.035**, an…"
       },
       {
-        "zh": "**这一版没有给引擎加任何能力，它只是**把已有的能力接出来**——所以测试断言的是接线而不是新 DSP：面板渲染的是引擎的当前值而非默认值；改总音量会走 `setMasterVolume` 并显示被上限压住的**有效**电平；关掉听力保护会调用 `setHearingProtection(false)` 且禁用上限滑条（且不去写上限）；延迟超范围时显示夹取后的值；限幅器状态如实显示（worklet 真峰值 / 压缩器降级方案）；GS-1 开关只委托给视图、**不**自己去改引擎；以及用**真实 `AudioEngine`** 跑一遍端到端夹取（上限 0.5 + 总音量 1.0 → 面板必须显示 50%）。",
-        "en": "**This release adds no engine capability — it only connects one up** — so the tests assert wiring, not new DSP: the panel renders the engine's current values rather than its own defaults; moving the master fader goes through `setMasterVolume` and shows the **effective** level held down by the limit; switching hearing protection off calls `setHearingProtection(false)` and disables the limit slider (without writing the limit); an out-of-range latency request displays the clamp…"
+        "zh": "**同一个包还暴露了我自己工具的一个真实缺陷**：`--measure` 花 22 分钟跑完四份测量，包里四项「新测量 vs 已提交基线」**全部返回 no matching genre ids**——第一版对比函数在**猜报告结构**（找 `genres` 数组和 `id` 字段），而四份报告实际都按**对象映射**按曲风 id 索引，GS-1 两份更不是按曲风索引的。现在每个报告一个显式适配器（响度 `trimmedLufs` / 音色 13 段形状距离 / GS-1 负载按复音数 / GS-1 时序按策略），字段名写死，无法识别就明确报不可比；`verify` 还会**用本仓库的基线重算一遍**再打印，所以旧打包器产出的包也能被正确解读，适配器坏掉会显示成 NOT COMPARABLE 而不是四个沉默的空答案。",
+        "en": "**The same pack exposed a real defect in my own tooling.** `--measure` spent 22 minutes producing four measurements, and all four \"fresh measurement vs committed baseline\" comparisons came back `no matching genre ids`: the first version of the comparison *guessed* at the report shapes (looking for a `genres` array and an `id` field), whereas every report actually keys its genres by **object map** — and the two GS-1 reports are not genre-keyed at all. Each report now has an e…"
       },
       {
-        "zh": "**慢轨交接打包器 `scripts/slow_pack.mjs`**：`npm run slow` 有两个不适合长跑的性质——第一个红门禁直接退出（你拿不到「还坏了哪些」），证据只存在于会滚掉的终端里。新脚本**每个门禁都跑**，各自落一份完整日志，把关键数字抽进 `SUMMARY.md`，并把日志 + 实测产物 + **精确 git 状态（含未提交改动的 patch）** + **逐文件 SHA-256** 打成带校验和的压缩包。四个模式：`export`（把当前这棵树打包带走，因为仓库**没有 remote**）、`run`（跑门禁并打包，退出码 0 全绿 / 3 有红门禁但包可用 / 4 打包器自身出错）、`verify`（回来时校验：容器摘要、逐文件哈希、门禁完整性、以及这份结果**能不能归属到某个提交**）、`list`。`--measure` 会把小时级的四个测量**写进包里**（`--out`），因此**已提交的基线永远不会被另一台机器静默改写**；包回来时 `SUMMARY.md` 会给出「新测量 vs 已提交基线」的逐曲风对…",
-        "en": "**A slow-track handoff packer, `scripts/slow_pack.mjs`.** `npm run slow` has two properties that make it a poor long run: it exits at the first red gate (so you never learn what *else* is broken) and its evidence exists only in a scrolling terminal. The new script runs **every gate regardless**, writes a full log per gate, extracts the numbers that matter into `SUMMARY.md`, and packs the logs plus measurement artifacts plus the **exact git state (including a patch of uncommi…"
+        "zh": "**GS-1 三个现场缺陷，全部是接线/归属问题而不是合成器问题**：① **和弦时值被平方**——`chordNoteDuration()` 内部已经乘过发音法的 `gateScale`，GS-1 这条路又乘了一次，于是 stab(0.3) 变成 0.09×（13 ms 的咔哒）、sustain(3.0) 变成 9×（近一秒长鸣），而且**现场与导出不再对等**（导出只乘一次），违反本仓库的硬规则；现在两条路共用 `chordNoteDuration` 与 `chordVoiceOnset`。② **试听会拆掉正在用的 host**——试听走 master 输出、播放走轨道通道条，而 voice pool 把「目标节点不同」当成「重建这个 slot」，于是试听与播放互相拆 host，下一次音符发现 slot 不匹配就回退原生并再次触发重建，形成抖动循环（正是「试听有延迟或不响」）；host 输出只连一次，目标节点不再作为重建理由，真实变化（换乐器）仍然重建，试听也改为走轨道通道条。③ **停止后还有几个音**——GS-1 声部在 workle…",
+        "en": "**Three live GS-1 defects, all wiring/ownership rather than synth problems.** (1) **Chord length was squared**: `chordNoteDuration()` already multiplies by the articulation's `gateScale`, and the GS-1 path multiplied by it again, so a stab (0.3) became 0.09x — a 13 ms click — and a sustain (3.0) became 9x, ringing for most of a second; it also meant **live and export no longer agreed** (the exporter multiplies once), breaking a hard rule of this repository. Both paths now sh…"
       }
     ],
     "truncated": true
