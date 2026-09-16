@@ -16,6 +16,7 @@ import {
   resolveMixTrackId,
 } from "../data/genreMix";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
+import { expressionStepCount, resolveGenreExpression } from "../data/genreExpression";
 
 const CATEGORIES = Object.keys(CATEGORY_MIX_PROFILES);
 
@@ -209,16 +210,41 @@ describe("genre mix defaults · apply helper", () => {
     }
   });
 
-  it("patternFromGenre applies the genre's own mix and keeps the rest of the pattern", () => {
+  it("patternFromGenre applies the genre's mix, and expands the pattern to the genre's expression", () => {
     const genre = ALL_GENRES.find((g) => g.id === "boom-bap")!;
     const applied = patternFromGenre(genre);
     const expected = resolveGenreMix("boom-bap")!;
     expect(applied.tracks[0].volume).toBe(expected.kick.volume);
-    expect(applied.tracks[0].steps).toEqual(genre.sequencer_pattern.tracks[0].steps);
     expect(applied.bpm).toBe(genre.sequencer_pattern.bpm);
+    // The authored pattern is a 16-step skeleton; loading a genre expands it to the length its
+    // chord progression needs, and the authored loop is preserved as that track's own loop so the
+    // drums repeat underneath instead of being re-authored.
+    const expression = resolveGenreExpression("boom-bap", genre.category);
+    expect(applied.totalSteps).toBe(expressionStepCount(expression, applied));
+    expect(applied.totalSteps).toBeGreaterThan(genre.sequencer_pattern.tracks[0].steps.length);
+    // `totalSteps` is optional on the type; the arrays are the source of truth the store derives it from.
+    expect(applied.tracks[0].steps.length).toBe(applied.totalSteps);
+    expect(applied.tracks[0].trackLength).toBe(genre.sequencer_pattern.tracks[0].steps.length ?? 16);
+    // The authored steps are still there at the top of the track (they are the loop).
+    expect(applied.tracks[0].steps.slice(0, 16)).toEqual(genre.sequencer_pattern.tracks[0].steps);
     // Independent copy: mutating the result must not touch the database.
     applied.tracks[0].steps[0] = 3;
     expect(genre.sequencer_pattern.tracks[0].steps[0]).not.toBe(3);
+  });
+
+  it("writes the genre's chords into the pattern as real note stacks", () => {
+    const genre = ALL_GENRES.find((g) => g.id === "boom-bap")!;
+    const applied = patternFromGenre(genre);
+    const chords = applied.tracks.find((t) => t.track_id === "chords")!;
+    const stacks = (chords.pitches ?? []).filter((stack): stack is number[] => Array.isArray(stack) && stack.length > 0);
+    // The whole complaint was that the chords track held single notes: every sounding chord step
+    // must now carry a stack, and at least one of them must be an actual chord.
+    expect(stacks.length).toBeGreaterThan(0);
+    expect(Math.max(...stacks.map((s) => s.length))).toBeGreaterThanOrEqual(3);
+    // `pitch` keeps its old meaning (the root) for every step that sounds.
+    chords.steps.forEach((value, i) => {
+      if (value > 0) expect(chords.pitch?.[i]).toBe(Math.min(...(chords.pitches?.[i] as number[])));
+    });
   });
 
   it("maps track roles by id and falls back to name heuristics", () => {

@@ -58,7 +58,12 @@ describe("unsaved guard · dirty detection", () => {
   it("counts a newly materialised field as an edit, but not a reordering of the same data", () => {
     const clean = patternFromGenre(genre);
     const withGate = clone(clean);
-    withGate.tracks[0].gate = withGate.tracks[0].steps.map(() => 0.8);
+    // A *differing* gate array counts as an edit. It must differ from what the genre produced —
+    // this used to write a flat 0.8 and rely on the authored pattern not having one, which stopped
+    // being true once the genre's phrase rules started writing gates for every step.
+    withGate.tracks[0].gate = withGate.tracks[0].steps.map((_, i) =>
+      clean.tracks[0].gate?.[i] === 1.5 ? 1.4 : 1.5
+    );
     expect(isPatternDirty({ A: withGate, B: clean }, genre)).toBe(true);
 
     // Same content, different key insertion order: must NOT look dirty. (Rebuild every object

@@ -256,7 +256,8 @@ const MeterControls = memo<MeterControlsProps>(function MeterControls({
           <option value={32} className="bg-panel text-text">32 {t("toolbar_steps_2_bars")}</option>
           <option value={48} className="bg-panel text-text">48 {t("toolbar_steps_3_bars")}</option>
           <option value={64} className="bg-panel text-text">64 {t("toolbar_steps_4_bars")}</option>
-          {![16, 32, 48, 64].includes(stepCount) && (
+          <option value={128} className="bg-panel text-text">128 {t("toolbar_steps_8_bars")}</option>
+          {![16, 32, 48, 64, 128].includes(stepCount) && (
             <option value={stepCount} className="bg-panel text-text">
               {stepCount} {t("toolbar_steps_n_bars", { count: barCount })}
             </option>

@@ -118,6 +118,7 @@ export const studioMessages = {
   toolbar_steps_1_bar: { en: "Steps (1 Bar)", zh: "步 (1小节)" },
   toolbar_steps_2_bars: { en: "Steps (2 Bars)", zh: "步 (2小节)" },
   toolbar_steps_3_bars: { en: "Steps (3 Bars)", zh: "步 (3小节)" },
+  toolbar_steps_8_bars: { en: "Steps (8 Bars)", zh: "步 (8小节)" },
   toolbar_steps_4_bars: { en: "Steps (4 Bars)", zh: "步 (4小节)" },
   toolbar_tool_step_tip: { en: "Step Note: Tap to toggle, long press for P-Locks", zh: "普通步进：点按开关音符，长按打开参数锁" },
   toolbar_tool_accent_tip: { en: "Accent: Tap to toggle max accent velocity", zh: "重音模式：点按步进切换最大重音 (Vel 127)" },

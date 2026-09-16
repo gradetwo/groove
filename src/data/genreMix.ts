@@ -28,6 +28,8 @@
  * [LOUDNESS_TRIM_MIN_DB, LOUDNESS_TRIM_MAX_DB].
  */
 import { Genre, GenreCategory, SequencerPattern, SequencerTrack } from "../types/genre";
+import { expandGenrePattern, resolveGenreExpression } from "./genreExpression";
+import { GENRE_INDEX_MAP } from "./index/genresIndex";
 
 /** The eight sequencer roles a mix profile assigns values to. */
 export const MIX_TRACK_IDS = [
@@ -460,7 +462,17 @@ export function applyGenreMixDefaults(pattern: SequencerPattern, genreId?: strin
  * because it also backs slot copies and undo, where the user's values must survive.
  */
 export function patternFromGenre(genre: Pick<Genre, "id" | "sequencer_pattern">): SequencerPattern {
-  return applyGenreMixDefaults(genre.sequencer_pattern, genre.id);
+  const mixed = applyGenreMixDefaults(genre.sequencer_pattern, genre.id);
+  // The authored pattern is a **progression skeleton**: one root per step on the chords track and
+  // one loop of steps for everything else. This is where it becomes music — the genre's chords are
+  // written as real note stacks with the genre's own lengths and articulation, the phrase rules
+  // shape the other tracks, and the pattern grows to whatever length the progression needs (a
+  // 4-bar progression at 1/16 is 64 steps, an 8-bar one 128).
+  //
+  // A track the genre leaves silent stays silent: nothing here invents content for an `fx` part a
+  // genre does not use.
+  const category = (GENRE_INDEX_MAP[genre.id]?.category ?? undefined) as GenreCategory | undefined;
+  return expandGenrePattern(mixed, resolveGenreExpression(genre.id, category));
 }
 
 /**
