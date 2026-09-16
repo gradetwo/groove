@@ -351,6 +351,70 @@ async function runTestOnTarget(target, baseUrl) {
     }
     await page.waitForTimeout(200);
 
+    // 5c. Audio settings panel (v2.0.17).
+    //
+    // The engine-level settings (GS-1 voices, master level, hearing protection, latency
+    // compensation) had no UI at all until this milestone; this asserts they are reachable
+    // and live at *every* viewport, not merely that the component renders in jsdom. The
+    // panel must reflect engine state, so toggling and dragging have to produce real
+    // observable changes rather than a static picture of the defaults.
+    await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+    // React mounts after `domcontentloaded`, so wait for the toolbar itself before querying.
+    await page.waitForSelector("[data-testid='toolbar-advanced-toggle']", { timeout: 20000 }).catch(() => {
+      throw new Error("Studio toolbar did not render the advanced drawer toggle");
+    });
+    // The audio settings entry point lives in the collapsible advanced drawer, closed by default.
+    if (!(await page.$("[data-testid='studio-audio-settings-open']"))) {
+      await page.click("[data-testid='toolbar-advanced-toggle']", { force: true });
+      await page.waitForTimeout(300);
+    }
+    await page.waitForSelector("[data-testid='studio-gs1-toggle']", { timeout: 20000 }).catch(() => {
+      throw new Error("Opening the advanced drawer did not reveal the GS-1 toggle");
+    });
+    const audioSettingsBtn = await page.$("[data-testid='studio-audio-settings-open']");
+    if (!audioSettingsBtn) {
+      throw new Error("Audio settings panel has no entry point in the toolbar");
+    }
+    await audioSettingsBtn.click({ force: true });
+    await page.waitForSelector("[data-testid='audio-settings-gs1-toggle']", { timeout: 15000 });
+
+    // GS-1 ships on by default, and flipping the switch must be a genuine state change.
+    const gs1Toggle = await page.$("[data-testid='audio-settings-gs1-toggle']");
+    const gs1Before = await gs1Toggle.getAttribute("aria-pressed");
+    if (gs1Before !== "true") {
+      throw new Error(`GS-1 should default to on inside the panel, got aria-pressed=${gs1Before}`);
+    }
+    await gs1Toggle.click({ force: true });
+    await page.waitForTimeout(200);
+    const gs1After = await gs1Toggle.getAttribute("aria-pressed");
+    if (gs1After === gs1Before) {
+      throw new Error(`GS-1 toggle did not change state (stayed ${gs1After})`);
+    }
+    await gs1Toggle.click({ force: true }); // leave it as we found it
+    await page.waitForTimeout(200);
+
+    // Dragging the master fader must move the number the panel displays.
+    const masterBefore = await page.innerText("[data-testid='audio-settings-master-value']");
+    await page.$eval("[data-testid='audio-settings-master-slider']", (el) => {
+      // React tracks the input's value, so assigning `.value` directly is ignored; go through
+      // the prototype setter and then dispatch the event React actually listens for.
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      setter.call(el, "40");
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.waitForTimeout(250);
+    const masterAfter = await page.innerText("[data-testid='audio-settings-master-value']");
+    if (masterBefore === masterAfter) {
+      throw new Error(`Master fader did not update the panel (stuck at ${masterAfter})`);
+    }
+
+    // Escape must close it: a panel that cannot be dismissed would trap touch users.
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    if (await page.$("[data-testid='audio-settings-gs1-toggle']")) {
+      throw new Error("Audio settings panel did not close on Escape");
+    }
+
     // 6. Compare & Challenge Views Check
     await page.goto(`${baseUrl}/?tab=compare`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(300);
@@ -382,7 +446,21 @@ async function main() {
   let allPassed = true;
   const results = [];
 
-  for (const target of TARGETS) {
+  // Optional subset for iterating on a single engine without paying for all seven targets:
+  //   node scripts/test_matrix.js --target=chromium
+  const targetFilter = process.argv.find((a) => a.startsWith("--target="))?.split("=")[1] ?? null;
+  const targets = targetFilter
+    ? TARGETS.filter((t) => `${t.name} ${t.browserType}`.toLowerCase().includes(targetFilter.toLowerCase()))
+    : TARGETS;
+  if (targetFilter) {
+    if (targets.length === 0) {
+      console.error(`❌ --target=${targetFilter} matched no target. Known: ${TARGETS.map((t) => t.name).join(" | ")}`);
+      process.exit(1);
+    }
+    console.log(`[Filter] --target=${targetFilter} → ${targets.map((t) => t.name).join(", ")}\n`);
+  }
+
+  for (const target of targets) {
     process.stdout.write(`⏳ Testing ${target.name.padEnd(35)} ... `);
     const start = Date.now();
     let res = await runTestOnTarget(target, baseUrl);
@@ -421,6 +499,10 @@ async function main() {
   if (!allPassed) {
     console.error("❌ Release Test Matrix FAILED: One or more browser/device targets failed.");
     process.exit(1);
+  } else if (targetFilter) {
+    // A filtered run is not a release gate; say exactly what passed instead of claiming all 7.
+    console.log(`✅ ${results.length}/${TARGETS.length} TARGET(S) PASSED (filtered: --target=${targetFilter})\n`);
+    process.exit(0);
   } else {
     console.log("🎉 ALL 7 BROWSER & DEVICE TARGETS PASSED PRE-RELEASE VERIFICATION!\n");
     process.exit(0);
