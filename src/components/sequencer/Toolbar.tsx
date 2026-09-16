@@ -642,6 +642,32 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   // D-05: the drawer's secondary FX parameters (filter Q, chorus rate) stay collapsed
   // by default so the four primary effect parameters fit the one-line drawer.
   const [showFxAdvanced, setShowFxAdvanced] = useState(false);
+  const advancedRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showAdvancedControls) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        advancedRef.current &&
+        !advancedRef.current.contains(target) &&
+        !target.closest("[data-testid='toolbar-advanced-toggle']")
+      ) {
+        onToggleAdvancedControls();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onToggleAdvancedControls();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showAdvancedControls, onToggleAdvancedControls]);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -652,9 +678,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 min-w-0 w-full">
+    <div className="flex flex-col gap-1.5 min-w-0 w-full relative">
       {/* Top Toolbar Header (P2-23: flex-wrap in landscape ensures all controls stay visible without horizontal scroll pushing) */}
-      <div className="w-full flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 pb-2.5 mb-2 border-b border-line-subtle select-none shrink-0 landscape-compact-bar min-w-0">
+      <div className="w-full flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 pb-2 mb-1.5 border-b border-line-subtle select-none shrink-0 landscape-compact-bar min-w-0">
         {/* Left Section: Transport, Genre Tag & Metre */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Maximize/Sidebar indicator badge */}
@@ -1222,9 +1248,12 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
         </div>
       </div>
 
-      {/* Collapsible Advanced Settings Bar (Drawer) */}
+      {/* Collapsible Advanced Settings Popover/Overlay */}
       {showAdvancedControls && (
-        <div className="flex items-center justify-between gap-3 p-2 bg-[#0a0b0e] border border-line rounded-xl mb-2 text-xs select-none transition-all shrink-0 overflow-x-auto whitespace-nowrap scrollbar-none min-w-0">
+        <div
+          ref={advancedRef}
+          className="absolute top-full left-0 right-0 z-40 flex items-center justify-between gap-3 p-2 bg-[#0a0b0e]/95 backdrop-blur-md border border-line shadow-2xl rounded-xl mt-1 text-xs select-none transition-all shrink-0 overflow-x-auto whitespace-nowrap scrollbar-none min-w-0 animate-in fade-in slide-in-from-top-1 duration-150"
+        >
           {/* Swing Slider Knob */}
           <div className="flex items-center gap-2 bg-panel px-2.5 py-1 rounded-lg border border-line-subtle">
             <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase whitespace-nowrap">

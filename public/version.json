@@ -1,27 +1,27 @@
 {
-  "version": "2.0.25",
+  "version": "2.0.26",
   "releaseDate": "2026-09-16",
-  "changelogCount": 89,
+  "changelogCount": 90,
   "latest": {
-    "version": "2.0.25",
+    "version": "2.0.26",
     "date": "2026-09-16",
     "category": "feature",
     "title": {
-      "zh": "v2.0.25 声学动态与音质增强：开闭镲物理阻尼互斥切音（Hi-Hat Choke Group）与底鼓对贝斯低频瞬态闪避（Sidechain Ducking）落地，实时与离线导出声学一致",
-      "en": "v2.0.25 Acoustic dynamics & fidelity: Physical Hi-Hat Choke Group and Kick-Bass Low-End Sidechain Ducking implemented with live and export parity"
+      "zh": "v2.0.26 工作台工具栏渐进呈现与浮动面板优化：88px 高级控制抽屉重构为自适应悬浮 Popover，点击外部或 Esc 快捷收起，消除小屏网格挤压与垂直跳动",
+      "en": "v2.0.26 Studio toolbar progressive disclosure: Advanced Controls reconstructed into a floating popover with click-outside and Escape dismiss, eliminating grid squishing and vertical jumps on small displays"
     },
     "highlights": [
       {
-        "zh": "**Hi-Hat Choke Group 阻尼互斥切音**：遵循声学架子鼓镲片物理闭合特性与经典鼓机（TR-808/909）Exclusive Choke Group 机制，在 `AudioEngine` 与 `WavExporter` 中建立开闭镲联动状态。当闭镲（或 ratchet 滚奏）触发时，对处于振动衰减尾音的开镲施加 3ms 快速无爆音指数阻尼释音，彻底消除开闭镲重叠导致的脏乱高频混叠。",
-        "en": "**Hi-Hat Choke Group**: Modeled after acoustic hi-hat pedal mechanics and Roland TR-808/909 exclusive choke groups. When a closed hi-hat or ratchet triggers, ringing open hi-hat voices are smoothly choked with a 3ms clickless exponential release ramp in both `AudioEngine` and `WavExporter`."
+        "zh": "**高级控制栏浮动化改造（Floating Popover Overlay）**：将原本占用文档流排版的 88px 高级控制抽屉改造成自适应悬浮 Popover（带 `z-40`、`backdrop-blur-md` 与柔和阴影），展开时不再向下推挤下方步进网格与轨道列表，小屏笔记本（1366×768 / 1440×900）上 8 轨序列器垂直空间始终稳定完整呈现。",
+        "en": "**Floating Popover Overlay**: Converted the in-flow 88px advanced controls drawer into an anchored floating popover with `z-40`, backdrop blur, and 2xl shadow. Toggling advanced controls no longer pushes down or squishes the sequencer grid on compact laptop screens."
       },
       {
-        "zh": "**底鼓对贝斯低频闪避（Kick/Bass Sidechain Ducking）**：为解决 40–100Hz 次低频与超低频相位干涉和频率掩蔽难题，在通道条插入链与推子之间加入独立的 `duckGain` 动态闪避节点。每当底鼓音符触发时，贝斯通道自动按底鼓力度产生 ~-3dB 的精细瞬态下潜并在 65ms 内平滑恢复，显著提升整个混音底部的下潜凝聚力与瞬态打击感。",
-        "en": "**Kick/Bass Low-End Sidechain Ducking**: Integrated a dedicated `duckGain` stage on channel strips before the volume fader. Triggering a kick transient dips bass channels by ~-3dB with an instant 3ms attack and smooth 65ms exponential release to resolve low-end frequency masking."
+        "zh": "**轻量交互与失焦收起**：为高级控制悬浮面板接入 `useRef` 点击外部与 `Escape` 键盘事件侦听，调节 Swing、总线滤波截止频率或 GS-1 开关后，只需轻点网格任意处或按 Esc 即可自然关闭，符合专业 DAW 浮动检查器交互直觉。",
+        "en": "**Click-Outside & Escape Dismiss**: Added natural dismissal listeners to close the advanced panel when clicking anywhere outside or pressing Escape, matching professional DAW overlay workflows."
       },
       {
-        "zh": "**全流程离线导出对齐与单元验证**：离线渲染器 `WavExporter` 同步接入切音追踪与低频闪避算法，保证用户导出的 WAV 音频与浏览器实时监听具备 100% 的声学一致性，并通过新建的 `acousticEnhancements.test.ts` 严格断言。",
-        "en": "**Full Export Parity & Test Suite**: The offline `WavExporter` implements identical choke group and sidechain ducking algorithms to maintain 100% acoustic parity with the live Web Audio engine, verified with new unit tests."
+        "zh": "**顶部主工具栏间距紧凑化**：将 Tier 1 顶部工具栏垂直边距紧凑化优化至 `pb-2 mb-1.5`，保证所有核心操作项（播放/停止、BPM、拍号、精度、小节导航、撤销/重做）整齐保持在舒适高度内，并通过自动化测试断言浮动层级与事件销毁。",
+        "en": "**Toolbar Compaction**: Tightened vertical spacing to keep the Tier 1 toolbar streamlined, ensuring transport and timing controls fit comfortably without layout thrashing."
       }
     ],
     "truncated": false
