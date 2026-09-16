@@ -18,6 +18,7 @@ import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } fr
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
   chordVoicingForStep,
+  chordNotesForStep,
   chordVoiceGain,
   chordNoteDuration,
   chordVoiceOnset,
@@ -374,7 +375,10 @@ export async function renderPatternOffline(
           // note length and onset spread. Resolving any of the three differently here
           // would silently break exporter parity for every rock, jazz and ambient genre.
           const treatment = resolveChordTreatment(pattern.genre_id, track.instrument);
-          const notes = chordVoicingForStep(midi, pattern.scale, { style: treatment.style });
+          // The stored stack wins (see `chordNotesForStep`): a genre whose chords are expanded into
+          // the pattern must render *those* notes here too, or live/export parity breaks the moment
+          // a chord is stored — which is the whole reason this is one shared call.
+          const notes = chordNotesForStep(track, stepIdx, midi, pattern.scale, { style: treatment.style });
           const voiceVel = subVel * chordVoiceGain(notes.length);
           const chordDur = chordNoteDuration(subDur, gateVal, treatment);
           // P6: if GS-1 voices this track, it takes the notes and the native voices are skipped —

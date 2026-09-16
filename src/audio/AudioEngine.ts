@@ -25,6 +25,7 @@ import {
   chordVoiceOnset,
   CHORD_STRUM_SEC,
   type ChordTreatment,
+  chordNotesForStep,
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { VoiceRegistry } from "./voiceRegistry";
@@ -1567,10 +1568,10 @@ export class AudioEngine {
         for (let r = 0; r < ratchet; r++) {
           const subTime = trackStepTime + r * subDur;
           const subVel = normalizedVel * (0.85 + (r / ratchet) * 0.15);
-          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal, false, noisePositionFor(trackIdx, stepIdx, r));
+          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal, false, noisePositionFor(trackIdx, stepIdx, r), stepIdx);
         }
       } else {
-        this.triggerInstrument(trackIdx, track.name, trackStepTime, normalizedVel, pitchVal, stepVal, stepDur, gateVal, false, noisePositionFor(trackIdx, stepIdx));
+        this.triggerInstrument(trackIdx, track.name, trackStepTime, normalizedVel, pitchVal, stepVal, stepDur, gateVal, false, noisePositionFor(trackIdx, stepIdx), stepIdx);
       }
     });
 
@@ -1601,7 +1602,7 @@ export class AudioEngine {
       this.liveRecorder.recordTrigger(trackIdx, pitchVal, velocity, this.currentStep, this.totalSteps);
     }
 
-    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal, true);
+    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal, true, 0, -1);
   }
 
   private triggerInstrument(
@@ -1620,7 +1621,15 @@ export class AudioEngine {
      * can reproduce (track/step/ratchet index) — never from a clock — or exporter parity
      * breaks.
      */
-    noisePosition = 0
+    noisePosition = 0,
+    /**
+     * Which step of the pattern this voice belongs to, or `-1` for an audition.
+     *
+     * Needed by the chords track: a genre whose chords are expanded into the pattern carries the
+     * actual notes per step in `pitches`, and the voice must play *those* rather than a voicing of
+     * the root.
+     */
+    stepIdx = -1
   ): void {
     if (!this.ctx) return;
     const dest = isAudition ? (this.masterGain || this.getTrackDestination(trackIdx)) : this.getTrackDestination(trackIdx);
@@ -1666,6 +1675,10 @@ export class AudioEngine {
       // comped with space, ambient gets a thirdless wash that rings past the step.
       // Resolved from the genre id, with the chords track's instrument as the fallback
       // for custom genres.
+      const chordTreatment = resolveChordTreatment(
+        this.pattern?.genre_id,
+        this.pattern?.tracks[trackIdx]?.instrument
+      );
       this.playChord(
         dest,
         safeStartTime,
@@ -1674,11 +1687,11 @@ export class AudioEngine {
         stepDur,
         gateVal,
         synthPreset,
-        resolveChordTreatment(
-          this.pattern?.genre_id,
-          this.pattern?.tracks[trackIdx]?.instrument
-        ),
-        trackIdx
+        chordTreatment,
+        trackIdx,
+        chordNotesForStep(this.pattern?.tracks[trackIdx], stepIdx, pitch, this.pattern?.scale, {
+          style: chordTreatment.style,
+        })
       );
     } else if (trackId === "lead" || lowerName.includes("lead")) {
       this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset, trackIdx);
@@ -1830,15 +1843,21 @@ export class AudioEngine {
     gateVal = 0.8,
     preset: SynthPreset = DEFAULT_SYNTH_PRESETS.warmPad,
     treatment?: ChordTreatment,
-    trackIdx?: number
+    trackIdx?: number,
+    /**
+     * The notes to sound. Passed in by the caller from `chordNotesForStep`, so a **stored** chord
+     * (the pattern's `pitches`, expanded per genre by `applyGenreExpression`) is played verbatim
+     * and the automatic voicing is skipped — otherwise the harmony would be voiced twice. Plain
+     * `pitch` steps still arrive as `undefined` and are voiced here, exactly as before.
+     */
+    storedNotes?: number[]
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 60;
-    const notes = chordVoicingForStep(
-      midi,
-      this.pattern?.scale,
-      treatment ? { style: treatment.style } : {}
-    );
+    const notes =
+      storedNotes && storedNotes.length > 0
+        ? storedNotes
+        : chordVoicingForStep(midi, this.pattern?.scale, treatment ? { style: treatment.style } : {});
     // P6: if GS-1 voices this track, it takes the notes and the native path is skipped entirely
     // — playing both would double the harmony. `tryPlay` returns false whenever GS-1 is disabled,
     // not yet loaded, or has no patch for this instrument, which is the native fallback.

@@ -40,7 +40,20 @@ export interface SequencerTrack {
   instrument: string;
   steps: number[]; // 1 or 0 (16 or 32 steps)
   velocity?: number[]; // 0 - 127
-  pitch?: (number | null)[]; // MIDI note (e.g. 36 for C2, 60 for C4)
+  pitch?: (number | null)[]; // MIDI note (e.g. 36 for C2, 60 for C4) — the *root* of the step
+  /**
+   * Every note sounding on a step, as a stack — the chord.
+   *
+   * `pitch` remains the root (the lowest note) so that everything which reads "the note of this
+   * step" keeps working, and so old projects and share links stay valid: a track without `pitches`
+   * is monophonic, exactly as before. When `pitches` is present the renderers play it **verbatim**
+   * instead of expanding `pitch` themselves — otherwise a stored chord would be voiced twice, and
+   * the piano roll (which renders this array) would disagree with what is heard.
+   *
+   * Written by `applyGenreExpression` when a genre's pattern is loaded, so the chords and the
+   * per-genre lengths/articulations are real, editable data rather than a playback-time effect.
+   */
+  pitches?: (number[] | null)[];
   gate?: number[]; // note duration (1 = 1 step)
   ratchet?: number[]; // subdivisions per step (1, 2, 3, 4, 8)
   probability?: number[]; // trigger probability 0 - 100 (%)

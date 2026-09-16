@@ -7,7 +7,7 @@
  * claim as "it plays the right notes".
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { chordVoicingForStep, chordVoiceGain, CHORD_STRUM_SEC } from "../audio/chordVoicing";
+import { chordVoicingForStep, chordVoiceGain, chordNotesForStep, CHORD_STRUM_SEC } from "../audio/chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { NOTE_NAMES } from "../utils/scaleTheory";
 import { renderPatternOffline } from "../audio/WavExporter";
@@ -220,5 +220,53 @@ describe("E-01 · chord voices are actually staggered in the render", () => {
     expect(onsets).toHaveLength(3);
     expect(onsets[1] - onsets[0]).toBeCloseTo(expectedGap, 6);
     expect(onsets[2] - onsets[1]).toBeCloseTo(expectedGap, 6);
+  });
+});
+
+/**
+ * Stored chords (the "chords track shows one note in the roll" fix).
+ *
+ * A genre's chords are expanded **into the pattern** (`track.pitches`) so the piano roll shows and
+ * edits real notes and the renderers play them verbatim. The rule that makes that safe is that a
+ * stored stack *wins* over automatic voicing — otherwise the harmony is voiced twice and the roll
+ * disagrees with what is heard. Both renderers consult this one function, which is what keeps
+ * live/export parity from depending on remembering to change two places.
+ */
+describe("chordNotesForStep · a stored chord is played verbatim", () => {
+  it("returns the stored stack, sorted low→high, when the step has one", () => {
+    const track = { pitch: [60, null], pitches: [[67, 60, 64], null] };
+    expect(chordNotesForStep(track, 0, 60, "C minor")).toEqual([60, 64, 67]);
+  });
+
+  it("falls back to voicing the root when the step has no stack", () => {
+    const track = { pitch: [60, null] };
+    const voiced = chordNotesForStep(track, 0, 60, "C minor");
+    expect(voiced.length).toBeGreaterThan(1); // a triad, not the bare root
+    expect(voiced[0]).toBe(60);
+  });
+
+  it("falls back for an empty stack, so a half-written pattern cannot go silent", () => {
+    const track = { pitch: [60], pitches: [[]] as number[][] };
+    expect(chordNotesForStep(track, 0, 60, "C minor").length).toBeGreaterThan(1);
+  });
+
+  it("does not hand out the pattern's own array (callers must not mutate the track)", () => {
+    const stored = [60, 64, 67];
+    const track = { pitch: [60], pitches: [stored] };
+    const notes = chordNotesForStep(track, 0, 60, "C minor");
+    notes.push(72);
+    expect(stored).toEqual([60, 64, 67]);
+  });
+
+  it("ignores non-finite entries rather than playing NaN", () => {
+    const track = { pitch: [60], pitches: [[60, Number.NaN, 67]] as number[][] };
+    expect(chordNotesForStep(track, 0, 60, "C minor")).toEqual([60, 67]);
+  });
+
+  it("drops a stack that is entirely invalid, falling back to the root's voicing", () => {
+    const track = { pitch: [60], pitches: [[Number.NaN, Number.POSITIVE_INFINITY]] as number[][] };
+    // `chordNotesForStep` returns the stored array only when it holds something finite; a stack of
+    // only garbage must not silence the step.
+    expect(chordNotesForStep(track, 0, 60, "C minor").length).toBeGreaterThan(1);
   });
 });

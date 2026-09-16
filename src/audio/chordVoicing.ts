@@ -363,3 +363,33 @@ export function chordVoiceOnset(
 ): number {
   return time + index * treatment.strumSeconds;
 }
+
+
+/**
+ * The notes a chord step actually sounds.
+ *
+ * A step whose track carries a stored stack (`pitches`, written into the pattern by
+ * `applyGenreExpression`) sounds **exactly those notes**; a step without one falls back to the
+ * automatic voicing of its root. Both the live engine and the offline exporter call this, so the
+ * two cannot disagree about the harmony — and once a genre's chords are stored, the piano roll
+ * (which renders the same array) shows what is heard instead of a single placeholder note.
+ */
+export function chordNotesForStep(
+  track: { pitch?: (number | null)[]; pitches?: (number[] | null)[] } | undefined,
+  stepIdx: number,
+  midi: number,
+  scale: string | undefined,
+  options: ChordVoicingOptions = {}
+): number[] {
+  const stored = track?.pitches?.[stepIdx];
+  if (Array.isArray(stored) && stored.length > 0) {
+    // Defensive copy, sorted low→high: callers must not be able to mutate the pattern, and the
+    // onset/strum order of a voicing is defined from the bottom up.
+    const notes = [...stored].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+    // A stack of nothing but garbage (a corrupt import, a half-written pattern) must not silence
+    // the step: falling back to the root's voicing keeps it audible and obviously wrong, which is
+    // far easier to notice and fix than a hole in the arrangement.
+    if (notes.length > 0) return notes;
+  }
+  return chordVoicingForStep(midi, scale, options);
+}
