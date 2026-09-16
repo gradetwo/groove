@@ -217,6 +217,18 @@ export class ChannelStrip {
     this.applyParams();
   }
 
+  /**
+   * Live gain reduction of this strip's compressor, in dB (≤ 0).
+   *
+   * `DynamicsCompressorNode.reduction` is the browser's own measurement, so the meter shows what
+   * the compressor is doing rather than a re-derivation of it. A strip whose compressor is bypassed
+   * is *unwired*, so this reads 0 there — which is the honest reading.
+   */
+  getCompressorReductionDb(): number {
+    const reduction = (this.compressor as DynamicsCompressorNode & { reduction?: number }).reduction;
+    return typeof reduction === "number" && Number.isFinite(reduction) ? reduction : 0;
+  }
+
   /** A defensive deep copy — callers cannot mutate the strip's live parameters. */
   getParams(): TrackInsertParams {
     return {

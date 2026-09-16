@@ -704,6 +704,18 @@ export class AudioEngine {
     strip.insert.setParams(patch);
   }
 
+  /**
+   * Live gain reduction of a track's insert compressor, in dB (≤ 0).
+   *
+   * Read straight from the running `DynamicsCompressorNode`, so the effects page's meter is a
+   * measurement of the audio path rather than a second estimate of it.
+   */
+  public getTrackCompressorReductionDb(trackIdx: number): number {
+    // The insert chain owns the compressor node, so the reading comes from the strip that is
+    // actually processing the track rather than from a parallel calculation.
+    return this.trackStrips[trackIdx]?.insert.getCompressorReductionDb() ?? 0;
+  }
+
   /** The insert chain a track is currently using, or null when the strip does not exist. */
   public getTrackInsert(trackIdx: number): TrackInsertParams | null {
     const strip = this.trackStrips[trackIdx];

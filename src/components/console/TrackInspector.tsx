@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { InstrumentPicker } from "./InstrumentPicker";
+import { InsertFlowStrip, type InsertStageId } from "./InsertFlowStrip";
+import { CompressorCurveView, DriveCurveView, EqCurveView } from "./insertCurveViews";
 import { GripHorizontal, Music2, X } from "lucide-react";
 import type { MixTrackId } from "../../data/genreMix";
 import {
@@ -70,6 +72,11 @@ export interface TrackInspectorProps {
   instrumentOptions: readonly string[];
   /** Opens the piano roll for this track (item ⑦). Optional: the console omits it. */
   onOpenPianoRoll?: () => void;
+  /** Context sample rate for the curve views; the filters' shapes barely move with it. */
+  sampleRate?: number;
+  /** Reads the live gain reduction (dB, ≤ 0) for the compressor meter. */
+  getGainReductionDb?: () => number;
+  isPlaying?: boolean;
   onInstrumentChange: (instrument: string) => void;
 
   // --- mix ---
@@ -301,6 +308,9 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
   onBypassInsert,
   onClose,
   onOpenPianoRoll,
+  sampleRate = 48000,
+  getGainReductionDb,
+  isPlaying = false,
 }) => {
   const { t } = useLanguage();
   /**
@@ -310,6 +320,10 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
    * header instead of living inside a tab.
    */
   const [activeTab, setActiveTab] = useState<"timbre" | "mix" | "effects">("timbre");
+  /** Which insert stage the effects page is editing (item ①: one stage at a time, Logic-style). */
+  const [effectStage, setEffectStage] = useState<InsertStageId>("eq");
+  /** Which band the EQ curve emphasises: the last band the user touched. */
+  const [eqFocusBand, setEqFocusBand] = useState<"hpf" | "low" | "mid" | "high">("mid");
   const uid = useId();
   const fieldId = useCallback((name: string) => `${uid}-${name}`, [uid]);
 
@@ -340,8 +354,11 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
   }, [instrument, instrumentOptions]);
 
   const patchBand = useCallback(
-    (band: "low" | "mid" | "high", patch: Partial<TrackEqBand>) =>
-      onChangeInsert({ [band]: { ...insert[band], ...patch } } as Partial<TrackInsertParams>),
+    (band: "low" | "mid" | "high", patch: Partial<TrackEqBand>) => {
+      // Touching a band focuses it on the curve, so the drawing follows the edit.
+      setEqFocusBand(band);
+      onChangeInsert({ [band]: { ...insert[band], ...patch } } as Partial<TrackInsertParams>);
+    },
     [insert, onChangeInsert]
   );
 
@@ -593,8 +610,54 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
           )}
         </div>
 
+        {/* Item ①: the signal chain, one slot per processor, in DSP order. */}
+        <InsertFlowStrip
+          selected={effectStage}
+          onSelect={setEffectStage}
+          stages={[
+            {
+              id: "hpf",
+              label: t("insert_stage_hpf"),
+              enabled: insert.hpfEnabled,
+              summary: formatHz(insert.hpfHz),
+              onToggle: () => onChangeInsert({ hpfEnabled: !insert.hpfEnabled }),
+            },
+            {
+              id: "eq",
+              label: t("insert_stage_eq"),
+              enabled: insert.low.enabled || insert.mid.enabled || insert.high.enabled,
+              summary: `${formatGainDb(insert.low.gainDb)} · ${formatGainDb(insert.mid.gainDb)} · ${formatGainDb(insert.high.gainDb)}`,
+              // One power dot for the EQ block: it switches the three bands together, while the
+              // individual band switches stay available inside the stage.
+              onToggle: () => {
+                const next = !(insert.low.enabled || insert.mid.enabled || insert.high.enabled);
+                onChangeInsert({
+                  low: { ...insert.low, enabled: next },
+                  mid: { ...insert.mid, enabled: next },
+                  high: { ...insert.high, enabled: next },
+                });
+              },
+            },
+            {
+              id: "comp",
+              label: t("insert_stage_comp"),
+              enabled: insert.compEnabled,
+              summary: `${formatGainDb(insert.compThresholdDb)} · ${insert.compRatio.toFixed(1)}:1`,
+              onToggle: () => onChangeInsert({ compEnabled: !insert.compEnabled }),
+            },
+            {
+              id: "drive",
+              label: t("insert_stage_drive"),
+              enabled: insert.driveEnabled,
+              summary: `${insert.driveAmount.toFixed(1)} · ${Math.round(insert.driveMix * 100)}%`,
+              onToggle: () => onChangeInsert({ driveEnabled: !insert.driveEnabled }),
+            },
+          ]}
+        />
+
         {/* High-pass — three bands, a compressor and drive follow, in signal order. */}
-        <StageGroup
+        <div hidden={effectStage !== "hpf"} data-testid="insert-stage-panel-hpf">
+<StageGroup
           testId="track-inspector-stage-hpf"
           title={hpfLabel}
           enabled={insert.hpfEnabled}
@@ -620,10 +683,37 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             formatValue={formatHz}
             onValueChange={(v) => onChangeInsert({ hpfHz: v })}
           />
+                <EqCurveView
+            params={insert}
+            sampleRate={sampleRate}
+            highlight="hpf"
+            testIdSuffix="-hpf"
+            onBandChange={(band, patch) => {
+            if (band === "hpf") onChangeInsert({ hpfHz: patch.hz });
+            else if (band === "low") patchBand("low", { hz: patch.hz, ...(patch.gainDb !== undefined ? { gainDb: patch.gainDb } : {}) });
+            else if (band === "mid") patchBand("mid", { hz: patch.hz, ...(patch.gainDb !== undefined ? { gainDb: patch.gainDb } : {}) });
+            else patchBand("high", { hz: patch.hz, ...(patch.gainDb !== undefined ? { gainDb: patch.gainDb } : {}) });
+          }}
+          />
         </StageGroup>
+</div>
 
         {/* Low shelf */}
-        <StageGroup
+        <div hidden={effectStage !== "eq"} data-testid="insert-eq-curve-block">
+          <EqCurveView
+            params={insert}
+            sampleRate={sampleRate}
+            highlight={eqFocusBand}
+            onBandChange={(band, patch) => {
+            if (band === "hpf") onChangeInsert({ hpfHz: patch.hz });
+            else if (band === "low") patchBand("low", { hz: patch.hz, ...(patch.gainDb !== undefined ? { gainDb: patch.gainDb } : {}) });
+            else if (band === "mid") patchBand("mid", { hz: patch.hz, ...(patch.gainDb !== undefined ? { gainDb: patch.gainDb } : {}) });
+            else patchBand("high", { hz: patch.hz, ...(patch.gainDb !== undefined ? { gainDb: patch.gainDb } : {}) });
+          }}
+          />
+        </div>
+        <div hidden={effectStage !== "eq"} data-testid="insert-stage-panel-low">
+<StageGroup
           testId="track-inspector-stage-low"
           title={lowLabel}
           enabled={insert.low.enabled}
@@ -661,10 +751,12 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             formatValue={formatGainDb}
             onValueChange={(v) => patchBand("low", { gainDb: v })}
           />
-        </StageGroup>
+                </StageGroup>
+</div>
 
         {/* Mid peaking band — the only band with Q. */}
-        <StageGroup
+        <div hidden={effectStage !== "eq"} data-testid="insert-stage-panel-mid">
+<StageGroup
           testId="track-inspector-stage-mid"
           title={midLabel}
           enabled={insert.mid.enabled}
@@ -714,10 +806,12 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             formatValue={(v) => v.toFixed(2)}
             onValueChange={(v) => patchBand("mid", { q: v })}
           />
-        </StageGroup>
+                </StageGroup>
+</div>
 
         {/* High shelf */}
-        <StageGroup
+        <div hidden={effectStage !== "eq"} data-testid="insert-stage-panel-high">
+<StageGroup
           testId="track-inspector-stage-high"
           title={highLabel}
           enabled={insert.high.enabled}
@@ -755,10 +849,12 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             formatValue={formatGainDb}
             onValueChange={(v) => patchBand("high", { gainDb: v })}
           />
-        </StageGroup>
+                </StageGroup>
+</div>
 
         {/* Compressor */}
-        <StageGroup
+        <div hidden={effectStage !== "comp"} data-testid="insert-stage-panel-comp">
+<StageGroup
           testId="track-inspector-stage-comp"
           title={compLabel}
           enabled={insert.compEnabled}
@@ -832,10 +928,13 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             formatValue={formatGainDb}
             onValueChange={(v) => onChangeInsert({ compMakeupDb: v })}
           />
+        <CompressorCurveView params={insert} getGainReductionDb={getGainReductionDb} isPlaying={isPlaying} />
         </StageGroup>
+</div>
 
         {/* Drive */}
-        <StageGroup
+        <div hidden={effectStage !== "drive"} data-testid="insert-stage-panel-drive">
+<StageGroup
           testId="track-inspector-stage-drive"
           title={driveLabel}
           enabled={insert.driveEnabled}
@@ -873,7 +972,9 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             formatValue={formatPercent}
             onValueChange={(v) => onChangeInsert({ driveMix: v })}
           />
+        <DriveCurveView params={insert} />
         </StageGroup>
+</div>
 
         {/* The two "get me back" affordances: without them a broken chain is a dead end. */}
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line-subtle pt-2">

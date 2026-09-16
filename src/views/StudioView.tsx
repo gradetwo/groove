@@ -706,6 +706,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   const handleClosePianoRoll = useCallback(() => setIsPianoRollOpen(false), []);
 
+  /** Live compressor gain reduction for the effects page's meter (polled by that component). */
+  const handleReadGainReduction = useCallback(
+    // No track selected (panel closed) reads as 0 dB of reduction, which is what the meter shows.
+    () => (inspectorTrackIdx === null ? 0 : engineRef.current?.getTrackCompressorReductionDb(inspectorTrackIdx) ?? 0),
+    [inspectorTrackIdx]
+  );
+
   /**
    * Audition one note through the track's own instrument, so drawing is audible and the roll
    * previews exactly what the sequencer will play (same engine call, same voice routing).
@@ -960,6 +967,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
       {inspectorTrackIdx !== null && pattern.tracks[inspectorTrackIdx] && (
         <TrackInspector
           onOpenPianoRoll={() => handleOpenPianoRoll(inspectorTrackIdx)}
+          // Item ①: the effects page draws curves from the real context rate and meters the
+          // compressor the strip is actually running.
+          sampleRate={engineRef.current?.getAudioContext()?.sampleRate ?? 48000}
+          isPlaying={isPlaying}
+          getGainReductionDb={handleReadGainReduction}
           role={(pattern.tracks[inspectorTrackIdx].track_id || "chords") as MixTrackId}
           trackName={pattern.tracks[inspectorTrackIdx].name}
           instrument={pattern.tracks[inspectorTrackIdx].instrument}

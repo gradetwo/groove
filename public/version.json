@@ -1,27 +1,27 @@
 {
-  "version": "2.0.20",
+  "version": "2.0.21",
   "releaseDate": "2026-09-16",
-  "changelogCount": 84,
+  "changelogCount": 85,
   "latest": {
-    "version": "2.0.20",
+    "version": "2.0.21",
     "date": "2026-09-16",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.20 修播放中切曲风的老/新曲风来回交换与显示闪烁：一次点击触发 5–13 次导航、最多 9 次 pattern 翻转",
-      "en": "v2.0.20 Fixes the old/new genre swapping and flicker when switching genre during playback: one click caused 5–13 navigations and up to 9 pattern flips"
+      "zh": "v2.0.21 效果检查器重做：Logic 式信号链 + 按级编辑，配真实计算的 EQ 频响曲线、压缩器传输曲线与实时增益衰减表、驱动波形曲线",
+      "en": "v2.0.21 The effects inspector is rebuilt: a Logic-style signal chain with per-stage editing, plus a computed EQ response curve, compressor transfer curve and live gain-reduction meter, and the drive's transfer curve"
     },
     "highlights": [
       {
-        "zh": "**根因是 effect 依赖了每次渲染都会新建的回调**。`useGenreSwitching` 的外部同步 effect 把 `performSwitch` 与 `requestGenreGuard` 放进了依赖数组，而 `performSwitch` 闭包里的 `onSelectGenre` 是 App 传的**内联箭头**（`onSelectGenre={(g) => handleSelectGenre(g, \"studio\")}`）——每次 App 重渲染都是一个新函数。于是一次点击变成：切换 → `onSelectGenre` → `navigate` → App 重渲染 → 新回调身份 → **effect 再跑一次** → 再切一次 → …… 浏览器实测（**Chromium 上就能复现，Safari 更严重**），transport 播放中连续三次点击分别产生 **5 / 11 / 13 次 `pushState`** 与最多 **9 次 pattern 签名翻转**，每个来回都重新执行 `SET_GENRE` + `engi…",
-        "en": "**The root cause was an effect depending on callbacks that every render reallocates.** `useGenreSwitching`'s external-sync effect listed `performSwitch` and `requestGenreGuard` as dependencies, and `performSwitch` closes over `onSelectGenre` — which `App` passed as an **inline arrow** (`onSelectGenre={(g) => handleSelectGenre(g, \"studio\")}`), i.e. a new function on every App render. So one click became: switch → `onSelectGenre` → `navigate` → App re-renders → new callback id…"
+        "zh": "**从「一长串滑条」变成一条信号链**。原来的效果页把 6 个处理级堆成一列滑条（每个都带开关），既看不出顺序、也看不出各自在做什么；更别扭的是 EQ 挂在「混音」页、压缩与驱动挂在「效果」页，而它们其实是**同一条串联插入链**。现在页首是一条信号链 `HP → EQ → Comp → Drive`（顺序就是 `ChannelStripDsp` 里实际的接线顺序，不是排版顺序），每级有：**电源圆点**（真正改参数的开关）、名称、以及**当前值摘要**（如 `180 Hz`、`-3.0 · +1.0 · +1.0 dB`、`-18 dB · 4.0:1`）。点某一级切换编辑区；被选中的一级展开，其余**保持挂载**（用 `hidden` 切换），所以切换即时、滑条位置与搜索词都不会丢。",
+        "en": "**From a long column of sliders to a signal chain.** The old effects page stacked six processors as rows of sliders (each with a switch), which showed neither their order nor what each was doing — and worse, the EQ lived under the *mix* tab while the compressor and drive lived under *effects*, even though all of them are one serial insert chain. The page now opens with the chain `HP → EQ → Comp → Drive` (the order is `ChannelStripDsp`'s actual wiring, not a layout choice), a…"
       },
       {
-        "zh": "**修法（两层，缺一不可）**：① 同步 effect 改成**边沿触发、且完全不看回调身份**——`performSwitch` 与 guard 通过 ref 读取，依赖只剩下「请求的曲风」与 store 里的当前曲风，并记住「已经因这次请求同步过」，因此同一请求只落一次；② App 侧把 `onSelectGenre`（studio 与 detail 两个去向）改成 `useCallback` 稳定引用，从源头消掉这类抖动。**证据**：修复后同一套测量在 Chromium 与 WebKit 上都是**每次点击 1 次导航、1 次 pattern 翻转**（修复前 5/11/13 与 1/8/9）。",
-        "en": "**The fix, in two layers.** (1) The sync effect is now **edge-triggered and blind to callback identity**: `performSwitch` and the guard are read through refs, the dependency list is down to the requested genre and the store's current genre, and the last satisfied request is remembered so one request lands once. (2) `App` now hands over stable `useCallback` references for `onSelectGenre` (both the studio and detail destinations), removing that class of churn at the source. **…"
+        "zh": "**三条曲线都是从真实参数算出来的，不是画的图**。新增 `src/audio/insertCurves.ts`，逐项对齐 `ChannelStripDsp` 而不是近似它：滤波器曲线用浏览器 `BiquadFilterNode` 同一套 RBJ 系数公式、同样的 Q（高通用 `INSERT_HPF_Q`、谐振级用该带自己的 Q）；压缩器曲线用 Web Audio 的**软拐点传输函数**，拐点就是那条链路固定的 6 dB（`INSERT_COMP_KNEE_DB`，所以它不是用户参数）；驱动曲线**直接取自整形器自己的查表**（`makeSaturationCurve`，就是填 `WaveShaperNode` 的那个函数），因此画出来的和听到的不可能漂移；**关闭的级不参与**（DSP 是把它从图上摘掉，不是停在中间值）。**18 条单测断言的是传输函数的已知性质**而不是快照数字：巴特沃斯高通在拐点 −3.01 dB、搁架在频谱两端各自到达增益、谐振级在中心频率到达增益、Q 越大越窄、压缩在拐点以下是单位增益、以上严格 1/ratio、跨…",
+        "en": "**All three curves are computed from the live parameters, not drawn pictures.** `src/audio/insertCurves.ts` mirrors `ChannelStripDsp` point for point instead of approximating it: the filter curves use the same RBJ coefficient formulas the browser's `BiquadFilterNode` implements, at the same Q values (`INSERT_HPF_Q` for the high-pass, each band's own Q for the peaking band); the compressor curve is Web Audio's **soft-knee transfer function** with the chain's fixed 6 dB knee (…"
       },
       {
-        "zh": "**为什么它能溜过 7 端矩阵**：矩阵从来没有**在播放中切换曲风**——它检查过视图渲染、控制台、控制台面板、设置面板、检查器、卷帘，唯独没碰这条路径。新增的检查用应用自己的活动量作判据（`pushState` 次数 + 步进网格签名翻转次数），并且**先打印后断言**：一旦某次运行被中断，日志里也已经留下了数字。它自己也踩了两个坑，都已在代码注释里写明：**点击落空**（rail 在之前的步骤里已滚出视口，WebKit 上 `force: true` 的坐标点击什么都没发生 → 改用 `clickVerified` 做投递验证），以及**空转通过**（第一次版本是 0 导航 0 翻转却判绿——「没判」被当成「通过」）；现在「点击后什么都没变」直接判失败。",
-        "en": "**Why the 7-target matrix let it through:** the matrix never **switched genre while the transport was running** — it covered view rendering, the console, the mixer, the settings panel, the inspector and the roll, but not this path. The new check judges by the app's own activity (count of `pushState` calls + pattern-signature flips) and **prints before it asserts**, so an interrupted run still leaves the numbers in the log. The check itself hit two traps, both now written int…"
+        "zh": "**曲线上可以直接拖频点与增益**：EQ 曲线画出四个频段的圆点手柄，拖动即改该带的频率/增益，拖动期间只在本地草稿里重绘、**松手才提交一次**（与钢琴卷帘同一条「一次手势一条撤销」的规矩；每次 pointermove 都提交会把撤销栈冲爆）。**压缩器的增益衰减表读的是正在跑的节点**（`DynamicsCompressorNode.reduction`），不是二次估算；取样放在表组件内部以 ~20 Hz 轮询，因此这个高频更新不会让整个工作台跟着重渲染。",
+        "en": "**The curve is editable directly**: the EQ drawing carries a handle per band, and dragging one moves that band's frequency and gain — redrawing from a local draft during the drag and **committing once on release**, the same \"one gesture, one undo step\" rule the piano roll follows (committing on every pointermove would flood the undo stack). The **compressor's gain-reduction meter reads the running node** (`DynamicsCompressorNode.reduction`) rather than a second estimate, and…"
       }
     ],
     "truncated": true

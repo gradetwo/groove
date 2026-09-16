@@ -648,6 +648,75 @@ async function runTestOnTarget(target, baseUrl) {
     await clickVerified(page, "[data-testid='track-inspector-tab-timbre']");
     await page.waitForTimeout(150);
 
+    // 5e-bis. Effects page redesign (item ①): signal chain + computed curves + a real drag.
+    //
+    // The curves are the point of the redesign, and the only way to know they are wired to the
+    // parameters (not pictures) is to change a parameter and watch the drawing and the value move.
+    await clickVerified(page, "[data-testid='track-inspector-tab-effects']");
+    await page.waitForSelector("[data-testid='insert-flow-strip']", { timeout: 15000 });
+    const flowSlots = await page.$$eval("[data-testid^='insert-flow-']", (els) =>
+      els
+        .map((e) => e.getAttribute("data-testid"))
+        // The strip container itself also starts with `insert-flow-`; the *slots* are what matters.
+        .filter((id) => id && id !== "insert-flow-strip" && !id.endsWith("-toggle"))
+    );
+    const expectedFlow = ["insert-flow-hpf", "insert-flow-eq", "insert-flow-comp", "insert-flow-drive"];
+    if (JSON.stringify(flowSlots) !== JSON.stringify(expectedFlow)) {
+      throw new Error(`Signal chain is wrong on ${target.name}: ${JSON.stringify(flowSlots)}`);
+    }
+    // One stage at a time, and the others stay mounted.
+    const stageState = async () =>
+      page.evaluate(() => ({
+        mid: document.querySelector("[data-testid='insert-stage-panel-mid']")?.hidden,
+        comp: document.querySelector("[data-testid='insert-stage-panel-comp']")?.hidden,
+        mounted: Boolean(document.querySelector("[data-testid='track-inspector-comp-threshold']")),
+      }));
+    const before = await stageState();
+    if (before.mid !== false || before.comp !== true || !before.mounted) {
+      throw new Error(`Effects stage isolation is wrong on ${target.name}: ${JSON.stringify(before)}`);
+    }
+    await clickVerified(page, "[data-testid='insert-flow-comp']");
+    await page.waitForTimeout(150);
+    const after = await stageState();
+    if (after.comp !== false || after.mid !== true) {
+      throw new Error(`Selecting the compressor did not switch stages on ${target.name}: ${JSON.stringify(after)}`);
+    }
+    if (!(await page.$("[data-testid='insert-comp-curve-path']"))) {
+      throw new Error("Compressor transfer curve is missing");
+    }
+    await clickVerified(page, "[data-testid='insert-flow-drive']");
+    await page.waitForTimeout(150);
+    if (!(await page.$("[data-testid='insert-drive-curve-path']"))) {
+      throw new Error("Drive curve is missing");
+    }
+
+    // Back to the EQ, then drag a band handle and require the *value* to follow the drag.
+    await clickVerified(page, "[data-testid='insert-flow-eq']");
+    await page.waitForTimeout(200);
+    const eqPathBefore = await page.getAttribute("[data-testid='insert-eq-curve-path']", "d");
+    const gainBefore = await page.inputValue("[data-testid='track-inspector-mid-gain']");
+    const handle = await page.$("[data-testid='insert-eq-handle-mid']");
+    const handleBox = handle ? await handle.boundingBox() : null;
+    if (!handleBox) throw new Error("EQ band handle is not on screen");
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y - 24, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(250);
+    const gainAfter = await page.inputValue("[data-testid='track-inspector-mid-gain']");
+    const eqPathAfter = await page.getAttribute("[data-testid='insert-eq-curve-path']", "d");
+    if (gainAfter === gainBefore && eqPathAfter === eqPathBefore) {
+      throw new Error(
+        `Dragging the mid band handle changed nothing on ${target.name} (gain ${gainBefore} → ${gainAfter})`
+      );
+    }
+    console.log(`   · effects page: chain ok, drag moved mid gain ${gainBefore} → ${gainAfter} (${target.name})`);
+
+    // Leave the panel on the tab the following steps expect: the timbre picker's search box is in
+    // the Timbre tab, and a hidden input cannot be filled (this cost one 30 s timeout to learn).
+    await clickVerified(page, "[data-testid='track-inspector-tab-timbre']");
+    await page.waitForTimeout(150);
+
     // The picker must filter by name and report the selection.
     const searchInput = await page.$("[data-testid='track-inspector-instrument-search']");
     if (!searchInput) {

@@ -227,6 +227,21 @@ export const studioMessages = {
   track_inspector_bypass: { en: "Bypass all", zh: "旁通全部" },
   track_inspector_bypass_hint: { en: "Turn every insert stage off", zh: "关闭所有插入效果级" },
   track_inspector_bypassed: { en: "Bypassed", zh: "已旁通" },
+  // Effects page redesign (v2.0.21): signal-flow strip + computed curves.
+  insert_flow_title: { en: "Signal chain", zh: "信号链" },
+  insert_flow_hint: { en: "Click a stage to edit it. The dot is its on/off switch.", zh: "点某一级编辑它；圆点是它的开关。" },
+  insert_curve_eq_aria: { en: "EQ frequency response", zh: "EQ 频响曲线" },
+  insert_curve_eq_hint: { en: "Computed from the enabled bands and their live values; drag a handle to move a band.", zh: "由启用中的各级与当前参数算出；拖动手柄可直接改频点与增益。" },
+  insert_curve_comp_aria: { en: "Compressor transfer curve", zh: "压缩器传输曲线" },
+  insert_curve_comp_axes: { en: "in → out (dB), dashed = no compression", zh: "输入 → 输出 (dB)，虚线=不压缩" },
+  insert_curve_drive_aria: { en: "Drive transfer curve", zh: "驱动波形曲线" },
+  insert_curve_drive_hint: { en: "Sampled from the shaper's own table. Note the mildest setting is already soft saturation, and raising it also lowers the output (1/k normalisation).", zh: "取自整形器自己的查表。注意最轻的一档就已经是软饱和，而且加大驱动会同时压低输出（1/k 归一）。" },
+  insert_comp_reduction: { en: "Gain reduction", zh: "增益衰减" },
+  insert_stage_hpf: { en: "HP", zh: "高通" },
+  insert_stage_eq: { en: "EQ", zh: "EQ" },
+  insert_stage_comp: { en: "Comp", zh: "压缩" },
+  insert_stage_drive: { en: "Drive", zh: "驱动" },
+  insert_eq_bands: { en: "Bands", zh: "各级" },
   toolbar_haptic_label: { en: "HAPTIC:", zh: "触感:" },
   // P6: GS-1 voices the chords and lead tracks. Defaults on; turning it off restores the
   // previous (native) voices and the choice persists.
