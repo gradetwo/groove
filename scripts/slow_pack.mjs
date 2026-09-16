@@ -374,65 +374,180 @@ function readJsonSafe(p) {
  * Compare a freshly measured file against the committed baseline.
  *
  * This is the question a second machine is uniquely able to answer: does the baseline we
- * committed still describe reality, or did it encode one machine's quirk? A large drift is
- * not automatically a bug (different browser, different CPU), but it must be *seen*.
+ * committed still describe reality, or did it encode one machine's quirk?
+ *
+ * The first version of this function *guessed* at the report shapes (looking for a `genres`
+ * array and an `id` field). Every report actually keys its genres by **object map**, and the
+ * GS-1 reports are not genre-keyed at all, so a run that spent 22 minutes measuring four
+ * baselines came back with four "no matching genre ids" non-answers. The adapters below are
+ * therefore explicit per report: each one names the exact fields it reads, and an unrecognised
+ * shape returns `ok:false` with a reason instead of quietly comparing nothing.
  */
+const round = (v, digits = 3) => (typeof v === "number" && Number.isFinite(v) ? +v.toFixed(digits) : null);
+
+/** Sorted worst-first deltas plus the summary statistics every adapter reports. */
+function deltaSummary(pairs) {
+  const deltas = pairs
+    .map((p) => ({ id: p.id, baseline: round(p.baseline, 4), measured: round(p.measured, 4), delta: round(p.measured - p.baseline) }))
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const abs = deltas.map((d) => Math.abs(d.delta));
+  return {
+    ok: true,
+    compared: deltas.length,
+    maxAbsDelta: round(abs[0]),
+    meanAbsDelta: round(abs.reduce((s, v) => s + v, 0) / abs.length),
+    worst: deltas.slice(0, 5),
+  };
+}
+
+const mapEntries = (report) => (report && typeof report.genres === "object" && !Array.isArray(report.genres) ? report.genres : null);
+
+/** Post-trim loudness per genre — the level a listener actually hears. */
+function compareLoudness(committed, measured) {
+  const a = mapEntries(committed);
+  const b = mapEntries(measured);
+  if (!a || !b) return { ok: false, reason: "report has no `genres` object map" };
+  const pairs = Object.keys(a)
+    .map((id) => ({ id, baseline: a[id]?.trimmedLufs, measured: b[id]?.trimmedLufs }))
+    .filter((p) => typeof p.baseline === "number" && typeof p.measured === "number");
+  if (!pairs.length) return { ok: false, reason: "no numeric `trimmedLufs` on both sides" };
+  const summary = deltaSummary(pairs);
+  const spread = (r) => round(r?.spread?.after?.p90p10, 4);
+  return {
+    ...summary,
+    unit: "dB (LUFS, post-trim)",
+    headline:
+      `post-trim loudness · ${summary.compared} genres · max |Δ| ${summary.maxAbsDelta} dB · mean ${summary.meanAbsDelta} dB` +
+      ` · spread p90−p10 ${spread(committed)} → ${spread(measured)} dB (gate 1.5)`,
+  };
+}
+
+/** Level-normalised 13-band shape distance: the same metric the V-10 gate uses. */
+function compareTimbre(committed, measured) {
+  const a = mapEntries(committed);
+  const b = mapEntries(measured);
+  if (!a || !b) return { ok: false, reason: "report has no `genres` object map" };
+  const shapeDistance = (x, y) => {
+    if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length || x.length === 0) return null;
+    const mx = x.reduce((s, v) => s + v, 0) / x.length;
+    const my = y.reduce((s, v) => s + v, 0) / y.length;
+    return Math.sqrt(x.reduce((s, v, i) => s + ((v - mx) - (y[i] - my)) ** 2, 0) / x.length);
+  };
+  const pairs = [];
+  const centroid = [];
+  for (const id of Object.keys(a)) {
+    const dist = shapeDistance(a[id]?.bandDb, b[id]?.bandDb);
+    if (dist !== null) pairs.push({ id, baseline: 0, measured: dist }); // baseline is the reference shape; delta = distance
+    if (typeof a[id]?.centroidHz === "number" && typeof b[id]?.centroidHz === "number") {
+      centroid.push(Math.abs(b[id].centroidHz - a[id].centroidHz));
+    }
+  }
+  if (!pairs.length) return { ok: false, reason: "no comparable `bandDb` vectors on both sides" };
+  // Every delta here is a distance from the reference, so report distances rather than deltas.
+  const sorted = pairs.map((p) => ({ id: p.id, distance: round(p.measured, 4) })).sort((x, y) => y.distance - x.distance);
+  const distances = sorted.map((d) => d.distance);
+  const closest = (r) => r?.distinctness?.closestPair ?? null;
+  const fmtPair = (p) => (p ? `${p.a} ↔ ${p.b} at ${round(p.distance, 4)} dB` : "n/a");
+  return {
+    ok: true,
+    compared: sorted.length,
+    maxAbsDelta: round(distances[0]),
+    meanAbsDelta: round(distances.reduce((s, v) => s + v, 0) / distances.length),
+    worst: sorted.slice(0, 5).map((d) => ({ id: d.id, baseline: null, measured: d.distance, delta: d.distance })),
+    unit: "dB (band-shape distance from baseline)",
+    centroidMaxDeltaHz: round(Math.max(...centroid), 2),
+    headline:
+      `timbre shape · ${sorted.length} genres · max distance ${round(distances[0], 4)} dB · mean ${round(distances.reduce((s, v) => s + v, 0) / distances.length, 4)} dB` +
+      ` · closest pair ${fmtPair(closest(committed))} → ${fmtPair(closest(measured))}` +
+      (centroid.length ? ` · centroid max |Δ| ${round(Math.max(...centroid), 2)} Hz` : ""),
+  };
+}
+
+/** GS-1 load is reported per requested voice count, not per genre. */
+function compareGs1Load(committed, measured) {
+  const a = committed?.results;
+  const b = measured?.results;
+  if (!Array.isArray(a) || !Array.isArray(b)) return { ok: false, reason: "report has no `results` array" };
+  const rows = [];
+  for (const row of a) {
+    const other = b.find((r) => r.requestedVoices === row.requestedVoices);
+    if (!other) continue;
+    rows.push({
+      id: `${row.requestedVoices} voices`,
+      loadBaseline: round(row.loadP90, 4),
+      loadMeasured: round(other.loadP90, 4),
+      realtimeBaseline: round(row.realtimeRatio, 3),
+      realtimeMeasured: round(other.realtimeRatio, 3),
+      voicesBaseline: row.voicesMax,
+      voicesMeasured: other.voicesMax,
+    });
+  }
+  if (!rows.length) return { ok: false, reason: "no matching `requestedVoices` rows" };
+  const deltas = rows.map((r) => ({ id: r.id, baseline: r.loadBaseline, measured: r.loadMeasured }));
+  const summary = deltaSummary(deltas);
+  return {
+    ...summary,
+    unit: "load p90 (0..1 of the audio budget)",
+    perVoice: rows,
+    headline:
+      `GS-1 load p90 by polyphony · ` +
+      rows.map((r) => `${r.id.split(" ")[0]}: ${r.loadBaseline} → ${r.loadMeasured}`).join(" · ") +
+      ` · realtime ratio at the top row ${rows[rows.length - 1].realtimeBaseline} → ${rows[rows.length - 1].realtimeMeasured}`,
+  };
+}
+
+/** GS-1 jitter is keyed by scheduling strategy (schedule-ahead / last-moment / …). */
+function compareGs1Jitter(committed, measured) {
+  const a = committed?.results;
+  const b = measured?.results;
+  if (!a || !b || typeof a !== "object") return { ok: false, reason: "report has no `results` object" };
+  const rows = [];
+  for (const key of Object.keys(a)) {
+    const ca = a[key]?.summary;
+    const cb = b[key]?.summary;
+    if (!ca || !cb) continue;
+    rows.push({
+      id: key,
+      medianBaseline: round(ca.medianErrorMs, 2),
+      medianMeasured: round(cb.medianErrorMs, 2),
+      p90Baseline: round(ca.p90AbsErrorMs, 2),
+      p90Measured: round(cb.p90AbsErrorMs, 2),
+    });
+  }
+  if (!rows.length) return { ok: false, reason: "no matching strategy summaries" };
+  // The median is a signed lead/lag; the interesting question is whether it moved.
+  const deltas = rows.map((r) => ({ id: r.id, baseline: r.medianBaseline, measured: r.medianMeasured }));
+  const summary = deltaSummary(deltas);
+  return {
+    ...summary,
+    unit: "ms (median schedule error, negative = scheduled early)",
+    perStrategy: rows,
+    headline:
+      `GS-1 jitter · ` +
+      rows.map((r) => `${r.id}: median ${r.medianBaseline} → ${r.medianMeasured} ms, p90|err| ${r.p90Baseline} → ${r.p90Measured} ms`).join(" · "),
+  };
+}
+
+const BASELINE_ADAPTERS = {
+  lufs: compareLoudness,
+  timbre: compareTimbre,
+  gs1load: compareGs1Load,
+  gs1jitter: compareGs1Jitter,
+};
+
 function compareBaseline(measuredPath, committedPath, metric) {
   const measured = readJsonSafe(measuredPath);
   const committed = readJsonSafe(committedPath);
   if (!measured || !committed) {
     return { ok: false, reason: "one side missing or unparsable", metric };
   }
-  const pick = (report) => {
-    const out = new Map();
-    const list = Array.isArray(report) ? report : report.genres ?? report.results ?? report.entries ?? [];
-    if (Array.isArray(list)) {
-      for (const entry of list) {
-        const id = entry.genre_id ?? entry.genreId ?? entry.id;
-        if (id) out.set(id, entry);
-      }
-    }
-    return out;
-  };
-  const a = pick(committed);
-  const b = pick(measured);
-  const common = [...a.keys()].filter((k) => b.has(k));
-  if (common.length === 0) {
-    return { ok: false, reason: "no matching genre ids between baseline and measurement", metric };
+  const adapter = BASELINE_ADAPTERS[metric];
+  if (!adapter) return { ok: false, reason: `no adapter for metric "${metric}"`, metric };
+  try {
+    return { metric, ...adapter(committed, measured) };
+  } catch (err) {
+    return { ok: false, reason: `adapter threw: ${err?.message ?? err}`, metric };
   }
-  const valueOf = (entry) => {
-    if (metric === "lufs") return entry.lufs ?? entry.integratedLufs ?? entry.loudnessLufs ?? null;
-    if (metric === "timbre") {
-      const fp = entry.fingerprint ?? entry.bands ?? entry.timbre;
-      if (Array.isArray(fp)) return fp.reduce((s, v) => s + (Number(v) || 0), 0);
-      return null;
-    }
-    if (metric === "gs1load") return entry.loadP90 ?? entry.p90Load ?? entry.load ?? null;
-    if (metric === "gs1jitter") return entry.spreadMs ?? entry.jitterMs ?? entry.medianAbsMs ?? null;
-    return null;
-  };
-  const deltas = [];
-  for (const id of common) {
-    const va = valueOf(a.get(id));
-    const vb = valueOf(b.get(id));
-    if (typeof va !== "number" || typeof vb !== "number") continue;
-    deltas.push({ id, baseline: va, measured: vb, delta: +(vb - va).toFixed(3) });
-  }
-  if (deltas.length === 0) {
-    return { ok: false, reason: "no comparable numeric field found", metric };
-  }
-  deltas.sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
-  const abs = deltas.map((d) => Math.abs(d.delta));
-  const mean = abs.reduce((s, v) => s + v, 0) / abs.length;
-  return {
-    ok: true,
-    metric,
-    compared: deltas.length,
-    missingInMeasurement: [...a.keys()].filter((k) => !b.has(k)).length,
-    maxAbsDelta: abs[0],
-    meanAbsDelta: +mean.toFixed(3),
-    worst: deltas.slice(0, 5),
-  };
 }
 
 /* ---------------------------------------------------------------- packaging */
@@ -553,16 +668,18 @@ function buildSummary(manifest) {
   if (manifest.baselineComparison.length) {
     lines.push("## Fresh measurement vs committed baseline");
     lines.push("");
+    lines.push("The same measurement run on a second machine. A drift is not automatically a bug");
+    lines.push("(different CPU/browser moves numbers), but it must be *seen* — and a baseline that");
+    lines.push("reproduces elsewhere is evidence that it describes the code, not one machine.");
+    lines.push("");
     for (const c of manifest.baselineComparison) {
       if (!c.ok) {
-        lines.push(`- **${c.metric}**: not comparable — ${c.reason}`);
+        lines.push(`- **${c.metric}**: NOT COMPARABLE — ${c.reason}`);
         continue;
       }
-      lines.push(
-        `- **${c.metric}**: ${c.compared} genres compared · max |Δ| **${c.maxAbsDelta}** · mean |Δ| ${c.meanAbsDelta}`
-      );
-      for (const w of c.worst) {
-        lines.push(`  - \`${w.id}\`: baseline ${w.baseline} → measured ${w.measured} (Δ ${w.delta})`);
+      lines.push(`- ${c.headline ?? `**${c.metric}**: ${c.compared} compared`}`);
+      for (const w of c.worst ?? []) {
+        lines.push(`  - \`${w.id}\`: ${w.baseline} → ${w.measured} (Δ ${w.delta})`);
       }
     }
     lines.push("");
@@ -953,8 +1070,11 @@ function commandVerify() {
     console.log(`  ${statusIcon(m.status)} ${String(m.slug).padEnd(18)} ${String(m.seconds).padStart(7)}s  ${m.label}`);
   }
   for (const c of manifest.baselineComparison ?? []) {
-    if (!c.ok) continue;
-    console.log(`  \u{1F4CA} ${c.metric}: ${c.compared} compared, max |\u0394| ${c.maxAbsDelta}, mean |\u0394| ${c.meanAbsDelta}`);
+    if (!c.ok) {
+      console.log(`  \u26a0\ufe0f  ${c.metric}: NOT COMPARABLE — ${c.reason}`);
+      continue;
+    }
+    console.log(`  \u{1F4CA} ${c.headline ?? `${c.metric}: ${c.compared} compared, max |\u0394| ${c.maxAbsDelta}`}`);
   }
 
   console.log("\n  --- failing gate evidence ---");
@@ -963,6 +1083,37 @@ function commandVerify() {
   for (const s of red) {
     console.log(`\n  \u274c ${s.label} (exit ${s.exitCode}${s.timedOut ? ", timed out" : ""})`);
     for (const h of (s.highlights.length ? s.highlights : s.tail).slice(0, 10)) console.log(`     ${h}`);
+  }
+
+  // Re-run the cross-machine comparison against THIS repo's committed baselines. The manifest
+  // carries the packer's own comparison, but that was produced by whatever version of this
+  // script travelled inside the package; recomputing here means a package made by an older
+  // packer still gets read correctly, and a broken adapter shows up as NOT COMPARABLE instead
+  // of as four silent non-answers (which is exactly what the first v2.0.17 package returned).
+  const artifactsDir = path.join(pkgDir, "artifacts");
+  const recomputed = [];
+  if (fs.existsSync(artifactsDir)) {
+    for (const m of MEASUREMENTS) {
+      const measuredPath = path.join(artifactsDir, m.outFile);
+      if (!fs.existsSync(measuredPath)) continue;
+      recomputed.push({ slug: m.slug, ...compareBaseline(measuredPath, path.join(ROOT, m.compareTo), m.metric) });
+    }
+  }
+  if (recomputed.length) {
+    console.log("\n  --- fresh measurement vs committed baseline (recomputed against this repo) ---");
+    for (const r of recomputed) {
+      console.log(r.ok ? `  \u{1F4CA} ${r.headline}` : `  \u26a0\ufe0f  ${r.slug}: NOT COMPARABLE \u2014 ${r.reason}`);
+    }
+    const stored = manifest.baselineComparison ?? [];
+    const storedFailed = stored.filter((s) => !s.ok);
+    const fixedHere = recomputed.filter((r) => r.ok && storedFailed.some((s) => s.metric === r.metric));
+    if (fixedHere.length) {
+      console.log(
+        `  \u2139\ufe0f  ${fixedHere.length} comparison(s) failed inside the package (${storedFailed
+          .map((s) => `${s.metric}: ${s.reason}`)
+          .join("; ")}) but succeed here \u2014 that package was made by an older packer.`
+      );
+    }
   }
 
   if (absent.length) problems.push(`gates missing from the package: ${absent.join(", ")}`);
