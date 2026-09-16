@@ -164,10 +164,20 @@ function gitState() {
       trackedChanges: [],
       cwd: ROOT,
       toplevel: "",
+      // The commit above came from COMMIT.txt, and `verify` needs to be told so rather than
+      // reporting "neither .git nor COMMIT.txt" for a package that is in fact fully attributable.
+      localSha: "",
+      fromCommitTxt: true,
     };
   }
-  const sha = capture("git", ["rev-parse", "HEAD"]);
-  const branch = capture("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
+  const localSha = capture("git", ["rev-parse", "HEAD"]);
+  // An exported package carries COMMIT.txt; that is the upstream revision, and the package's own
+  // git (if any) is a tooling artefact, never the truth about what was measured.
+  const commitTxt = fs.existsSync(path.join(ROOT, "COMMIT.txt"))
+    ? fs.readFileSync(path.join(ROOT, "COMMIT.txt"), "utf8").split("\n").map((l) => l.trim())
+    : null;
+  const sha = commitTxt?.[0] || localSha;
+  const branch = commitTxt?.[1] || capture("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
   const status = capture("git", ["status", "--porcelain"]);
   const diff = captureRaw("git", ["diff", "HEAD"]);
   // "Dirty" must mean "the *tracked* tree differs from HEAD", because that is the only thing the
@@ -186,7 +196,9 @@ function gitState() {
     trackedChanges,
     statusLines: status ? status.split("\n") : [],
     diff,
-    describe: capture("git", ["describe", "--tags", "--always", "--dirty"]),
+    describe: commitTxt?.[2] || capture("git", ["describe", "--tags", "--always", "--dirty"]),
+    localSha,
+    fromCommitTxt: Boolean(commitTxt),
     subject: capture("git", ["log", "-1", "--pretty=%s"]),
     untracked: capture("git", ["ls-files", "--others", "--exclude-standard"]).split("\n").filter(Boolean),
     /** Where the packer ran, and the worktree that owns it — the pair that explains most
@@ -211,15 +223,6 @@ function gitState() {
  */
 function preflightProblems() {
   const problems = [];
-  const toplevel = capture("git", ["rev-parse", "--show-toplevel"]);
-  if (toplevel && path.resolve(toplevel) !== path.resolve(ROOT)) {
-    problems.push(
-      `this directory is nested inside the git worktree at ${toplevel}.` +
-        `\n     Vitest/Vite resolve the test setup against the worktree, so the suite can load the wrong` +
-        `\n     config and every test file fails to collect ("Failed to load url …/src/test/setup.ts").` +
-        `\n     Fix: unpack the source package OUTSIDE any git checkout, or run from ${toplevel}.`
-    );
-  }
   for (const required of ["package.json", "vitest.config.ts", "src/test/setup.ts"]) {
     if (!fs.existsSync(path.join(ROOT, required))) problems.push(`missing ${required} — this is not the project root`);
   }
@@ -227,6 +230,58 @@ function preflightProblems() {
     problems.push("node_modules is missing — run `npm ci` first, or pass --install");
   }
   return problems;
+}
+
+/**
+ * Non-fatal observations about the tree. Printed, not enforced: the two things that made a nested
+ * run fail (a relative test-setup path, and git-based gates) are fixed at the source now, so a
+ * nested extraction is a smell worth reporting rather than a reason to refuse.
+ */
+function preflightWarnings() {
+  const warnings = [];
+  const toplevel = capture("git", ["rev-parse", "--show-toplevel"]);
+  if (toplevel && path.resolve(toplevel) !== path.resolve(ROOT)) {
+    warnings.push(
+      `this directory is nested inside the git worktree at ${toplevel}. Test setup is resolved` +
+        ` absolutely and git-based gates use the packer's own throwaway repository, so the results are` +
+        ` still valid — but extracting outside any checkout is the configuration that was tested.`
+    );
+  }
+  return warnings;
+}
+
+/**
+ * A throwaway git repository for trees that have none.
+ *
+ * The exported source package is built with `git archive`, so it carries no `.git` — and one
+ * red-line check (`git ls-files`, which is how R4a/R5a/R9a know which files are tracked) needs a
+ * repository. On the v2.0.18 re-run that was the single remaining red gate:
+ *
+ *     fatal: not a git repository (or any of the parent directories): .git
+ *
+ * Rather than requiring the user to keep a checkout around — being *inside* one is what broke the
+ * previous run — the packer builds a one-commit repository in a temp directory, points `GIT_DIR` /
+ * `GIT_WORK_TREE` at it for every gate, and deletes it afterwards. `COMMIT.txt` stays the
+ * authoritative revision; the synthetic repository exists only so the gates can run.
+ */
+function createGateGit(git) {
+  const realRepoAtRoot = Boolean(git.available && git.toplevel && path.resolve(git.toplevel) === path.resolve(ROOT));
+  if (realRepoAtRoot) return null;
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "slowpack-git-"));
+  const env = { ...process.env, GIT_DIR: dir, GIT_WORK_TREE: ROOT };
+  const gitIn = (args) => execFileSync("git", args, { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
+  try {
+    gitIn(["init", "-q"]);
+    gitIn(["config", "user.name", "Groove Lab slow pack"]);
+    gitIn(["config", "user.email", "noreply@example.invalid"]);
+    gitIn(["add", "-A"]);
+    gitIn(["commit", "-qm", `slow-pack snapshot of ${git.sha || "unknown revision"}`]);
+  } catch (err) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    return { error: String(err?.stderr ?? err?.message ?? err).trim(), dir: null, env: null };
+  }
+  return { dir, env };
 }
 
 function hostInfo() {
@@ -328,7 +383,7 @@ async function runStep(step, ctx) {
   const logPath = path.join(ctx.logDir, logName);
   const startedAt = new Date();
   const t0 = Date.now();
-  const env = { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1", ...(step.env ?? {}) };
+  const env = { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1", ...(ctx.gateEnv ?? {}), ...(step.env ?? {}) };
 
   if (!ctx.quiet) {
     console.log(`\n\u2500\u2500 ${step.label}\n   $ ${step.cmd} ${step.args.join(" ")}`);
@@ -629,9 +684,13 @@ function buildManifest(pkgDir, meta) {
       subject: meta.git.subject,
       statusLines: meta.git.statusLines,
       untracked: meta.git.untracked,
-      attribution: meta.git.available
-        ? "working tree (.git present)"
-        : "COMMIT.txt (exported source package: this tree has no .git)",
+      localSha: meta.git.localSha,
+      fromCommitTxt: meta.git.fromCommitTxt,
+      attribution: meta.git.fromCommitTxt
+        ? "COMMIT.txt (authoritative upstream revision recorded by the exporter)"
+        : meta.git.available
+          ? "working tree (.git present)"
+          : "none — this tree has neither .git nor COMMIT.txt",
     },
     host: meta.host,
     args: meta.args,
@@ -817,6 +876,15 @@ function commandRun() {
       }
       console.error("   --continue-anyway given: running the gates anyway.\n");
     }
+    for (const warning of preflightWarnings()) console.log(`  \u26a0\ufe0f  ${warning}`);
+
+    // Git-based gates (redlines) need a repository; an exported package has none.
+    const gateGit = createGateGit(git);
+    if (gateGit?.error) {
+      console.log(`  \u26a0\ufe0f  could not prepare a git repository for the git-based gates: ${gateGit.error}`);
+    } else if (gateGit?.dir) {
+      console.log("  git      : no repository in this tree \u2014 using a throwaway one for the git-based gates (redlines)");
+    }
 
     // Exact tree state travels with the results; without it the numbers are unattributable.
     fs.writeFileSync(path.join(pkgDir, "git", "status.txt"), git.statusLines.join("\n") + (git.statusLines.length ? "\n" : ""));
@@ -829,7 +897,16 @@ function commandRun() {
     const streamFile = path.join(pkgDir, "logs", "00-full-stream.log");
     fs.writeFileSync(streamFile, "");
 
-    const ctx = { quiet, logDir: path.join(pkgDir, "logs"), order: 1, git, timeoutScale, streamFile };
+    const ctx = {
+      quiet,
+      logDir: path.join(pkgDir, "logs"),
+      order: 1,
+      git,
+      timeoutScale,
+      streamFile,
+      // `GIT_DIR`/`GIT_WORK_TREE` for the throwaway repository, when the tree has none of its own.
+      gateEnv: gateGit?.env ?? null,
+    };
 
     if (hasFlag("install")) {
       await runStep({ slug: "install", label: "npm ci (fresh dependencies)", cmd: "npm", args: ["ci"], timeoutMin: 30 }, ctx);
@@ -945,6 +1022,8 @@ function commandRun() {
     console.log(`\n  summary : ${path.join(pkgDir, "SUMMARY.md")}`);
     if (tarInfo) console.log(`  send back: slowpack-${pkgLabel}.tar.gz  (sha256 ${tarInfo.digest.slice(0, 16)}…)`);
     else console.log(`  send back: ${pkgDir}`);
+
+    if (gateGit?.dir) fs.rmSync(gateGit.dir, { recursive: true, force: true });
 
     const failed = counts.fail + counts.timeout;
     return failed === 0 ? 0 : 3;

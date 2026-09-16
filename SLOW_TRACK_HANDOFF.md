@@ -48,7 +48,7 @@ node scripts/slow_pack.mjs verify <dir|tar.gz>     # 校验回来的包（哈希
 node scripts/slow_pack.mjs export --label v2.0.17-src
 #   -> slowpack-out/slowpack-v2.0.17-src.tar.gz  (~2 MB)
 
-# ② 快机器上（务必解到任何 git 检出之外）
+# ② 快机器上（建议解到任何 git 检出之外；包自带一次性 git，解在别处也能跑）
 tar xzf slowpack-v2.0.18-src.tar.gz && cd slowpack-v2.0.18-src
 git apply --whitespace=nowarn changes.patch      # 只有树是脏的时候才需要
 npm ci
@@ -124,17 +124,23 @@ Test Files  120 failed (120)      Tests  no tests
 路径，120 个测试文件全部无法加载。代码没问题——同一份包里的 `e2e`（7 端、67.8s）、`build`、
 `budget`、`perf`、四个证据门禁、GS-1 契约 25 项、typecheck、lint、红线**全部通过**。
 
-### 7.1 工具现在会挡住这种情况（preflight）
+### 7.1 现在有三种防线（其中两条是根治）
 
-`run` 在跑任何门禁**之前**检查三件事，不通过就直接 `exit 4`（一条门禁都不跑，
-可用 `--continue-anyway` 覆盖）：
+1. **根治其一**：`vitest.config.ts` 的 `setupFiles` 改成绝对路径
+   （`path.resolve(__dirname, './src/test/setup.ts')`）。原来那个相对路径由 Vitest 按它自己的
+   project root 解析，嵌套启动时就会指到外层 worktree——这正是 120 个文件全部无法加载的直接原因。
+2. **根治其二**：导出包**自带一个一次性 git 仓库**。`git archive` 出来的树没有 `.git`，
+   而 `redlines` 里有一条检查用 `git ls-files`（R4a/R5a/R9a 靠它知道哪些文件被跟踪）。
+   第二次运行剩下的那一个红门禁就是它：`fatal: not a git repository`。现在 `run` 会在临时目录里
+   建一个单提交仓库、用 `GIT_DIR`/`GIT_WORK_TREE` 指向它跑门禁、跑完删掉；`COMMIT.txt` 仍是
+   **唯一权威**的版本来源（清单里写明 attribution）。
+3. **兜底 preflight**：`package.json` / `vitest.config.ts` / `src/test/setup.ts` 是否在、
+   `node_modules` 是否装了——不通过直接 `exit 4`，**一条门禁都不跑**，可用 `--continue-anyway`
+   覆盖。另外「解在别人的检出里」现在只作为**警告**打印（两条根因都已根治，结果依然有效），
+   不再拒绝运行。
 
-1. `git rev-parse --show-toplevel` 与当前目录不一致 → 「你正跑在一个 git 检出的子目录里」，
-   并给出两条修法（解到检出之外，或回到 worktree 根目录）；
-2. `package.json` / `vitest.config.ts` / `src/test/setup.ts` 是否存在；
-3. `node_modules` 是否已安装（否则先 `npm ci`，或用 `--install`）。
-
-实测：在一个嵌套目录里跑 `run` → `EXIT=4`，打印原因与修法，**0 条门禁被执行**。
+实测：在一个没有 `.git` 的导出树里跑 `run --only redlines` → **PASS**（0.6s，借用一次性仓库）；
+`verify` 正确报出 `attribution: COMMIT.txt`。
 
 ### 7.2 归属判定改成看证据，而不是看一个布尔
 
