@@ -265,6 +265,14 @@ export const studioMessages = {
     en: "Protection is holding the output at {value}%.",
     zh: "听力保护已把输出压到 {value}%。",
   },
+  // Chord articulation names. Chord length is decided by the genre rather than by the grid, so
+  // the chords row shows which articulation is in force and how many steps it rings for.
+  chord_articulation_block: { en: "block", zh: "柱式" },
+  chord_articulation_strum: { en: "strum", zh: "扫弦" },
+  chord_articulation_roll: { en: "roll", zh: "滚奏" },
+  chord_articulation_stab: { en: "stab", zh: "短促" },
+  chord_articulation_sustain: { en: "sustain", zh: "长音" },
+  chord_articulation_comp: { en: "comp", zh: "伴奏" },
   audio_settings_section_timing: { en: "Timing", zh: "时序" },
   audio_settings_latency_compensation: { en: "Latency compensation", zh: "延迟补偿" },
   audio_settings_latency_compensation_hint: {

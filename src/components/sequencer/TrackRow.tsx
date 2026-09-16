@@ -41,6 +41,13 @@ export interface TrackRowProps {
   onOpenInspector: (trackIdx: number) => void;
   /** True while this row is the one the inspector is showing, for selected-row styling. */
   isInspectorOpen?: boolean;
+  /**
+   * Chord tracks only: how this genre plays its chords (articulation + length multiplier).
+   *
+   * The engine's chord length is `stepDur × gate × CHORD_BASE_GATE × gateScale`, so without this
+   * the grid cannot show why one genre's chords ring three times longer than another's.
+   */
+  chordArticulation?: { articulation: string; gateScale: number; label: string };
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
   onSmartFill: (trackIdx: number) => void;
   onClearTrack: (trackIdx: number) => void;
@@ -74,6 +81,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   onOpenVelocity,
   onOpenInspector,
   isInspectorOpen = false,
+  chordArticulation,
   onShiftTrack,
   onSmartFill,
   onClearTrack,
@@ -375,6 +383,8 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               isMelodic={isMelodic}
               midiNote={midiNote}
               gate={gate}
+              articulationGateScale={track.track_id === "chords" ? chordArticulation?.gateScale : undefined}
+              articulationLabel={track.track_id === "chords" ? chordArticulation?.label : undefined}
               isOutsideLoop={isOutsideLoop}
               isPlayhead={false}
               isBarStart={isBarStart}

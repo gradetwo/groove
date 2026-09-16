@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { SequencerPattern } from "../../types/genre";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import type { SequencerState } from "../../features/sequencer/useSequencerStore";
 import type { Language } from "../../i18n/LanguageContext";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { isDrumTrack } from "../../utils/trackUtils";
+import { resolveChordTreatment } from "../../data/genreVoicing";
 import { Ruler } from "./Ruler";
 import { TrackRow } from "./TrackRow";
 import { Toolbar, MobileEditMode } from "./Toolbar";
@@ -273,6 +275,29 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onBatchUpdateGate,
   onCloseVelocityLane,
 }) => {
+  const { t } = useLanguage();
+
+  /**
+   * How this genre plays its chords, per chord track — the length the engine will actually use.
+   *
+   * Chord length is the one note length the *genre* decides rather than the step grid
+   * (`stepDur × gate × CHORD_BASE_GATE × articulation.gateScale`, spanning 0.3× to 3.0×), so the
+   * grid has to show it or every genre looks like the same one-cell note.
+   */
+  const chordArticulations = useMemo(() => {
+    const map = new Map<number, { articulation: string; gateScale: number; label: string }>();
+    pattern.tracks.forEach((track, idx) => {
+      if (track.track_id !== "chords") return;
+      const treatment = resolveChordTreatment(pattern.genre_id, track.instrument);
+      map.set(idx, {
+        articulation: treatment.articulation,
+        gateScale: treatment.gateScale,
+        label: t(`chord_articulation_${treatment.articulation}`),
+      });
+    });
+    return map;
+  }, [pattern.tracks, pattern.genre_id, t]);
+
   return (
     <section
       className={
@@ -452,6 +477,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
               onOpenVelocity={onOpenVelocity}
               onOpenInspector={onOpenInspector}
               isInspectorOpen={inspectorTrackIdx === trackIdx}
+              chordArticulation={chordArticulations.get(trackIdx)}
               onShiftTrack={onShiftTrack}
               onSmartFill={onSmartFill}
               onClearTrack={onClearTrack}

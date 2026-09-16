@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import { midiToNoteName } from "./PitchPickerModal";
+import { CHORD_BASE_GATE } from "../../audio/chordVoicing";
 
 export interface StepCellProps {
   trackIdx: number;
@@ -14,6 +15,13 @@ export interface StepCellProps {
   isMelodic: boolean;
   midiNote?: number | null;
   gate?: number;
+  /**
+   * Chord tracks only: the genre's articulation multiplier on the base note length
+   * (1 = the historical `block` default). `undefined` means "this role's length is just `gate`".
+   */
+  articulationGateScale?: number;
+  /** Chord tracks only: localized articulation name, used for the length tooltip. */
+  articulationLabel?: string;
   isOutsideLoop: boolean;
   isPlayhead: boolean;
   isBarStart: boolean;
@@ -45,6 +53,8 @@ export const StepCell = memo<StepCellProps>(function StepCell({
   isBarStart,
   isGroupStart,
   trackColor,
+  articulationGateScale,
+  articulationLabel,
   onClick,
   onContextMenu,
   onPointerDown,
@@ -53,6 +63,25 @@ export const StepCell = memo<StepCellProps>(function StepCell({
   onPointerEnter,
 }) {
   const isOn = stepVal > 0;
+
+  /**
+   * Effective note length as a fraction of one step.
+   *
+   * For chord tracks the genre decides how long a chord rings: the engine plays
+   * `stepDur × gate × CHORD_BASE_GATE × articulation.gateScale`, and the articulation table
+   * spans 0.3× (stab) to 3.0× (sustain). The bar used to draw the raw `gate` — which is 0.8 for
+   * every genre's defaults — so the studio showed the same one-cell note for a funk stab and an
+   * ambient pad. That is the "chord lengths never change" report; this makes the length visible.
+   */
+  const effectiveStepFraction =
+    articulationGateScale === undefined ? (gate ?? 0.8) : (gate ?? 0.8) * CHORD_BASE_GATE * articulationGateScale;
+  const lengthBarVisible = isOn && !isOutsideLoop && (gate !== 0.8 || articulationGateScale !== undefined);
+  const ringsPastStep = articulationGateScale !== undefined && effectiveStepFraction > 1.02;
+  const lengthBarTitle = articulationLabel
+    ? `${articulationLabel} · ${effectiveStepFraction.toFixed(2)} × step`
+    : undefined;
+  // Rounded to a tenth of a percent: `0.8 × 1.5 × 0.3` lands on 36.00000000000001 otherwise.
+  const lengthBarWidthPct = Math.round(Math.min(100, Math.max(8, effectiveStepFraction * 100)) * 10) / 10;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const parentGrid = e.currentTarget.closest('[role="grid"]');
@@ -194,11 +223,17 @@ export const StepCell = memo<StepCellProps>(function StepCell({
         </span>
       )}
 
-      {/* Gate Duration Indicator Bar (P3-01) */}
-      {isOn && gate !== undefined && gate !== 0.8 && !isOutsideLoop && (
+      {/* Gate Duration Indicator Bar (P3-01), showing the genre's effective chord length */}
+      {lengthBarVisible && (
         <span
-          className="absolute bottom-0 left-0 h-[2.5px] bg-white/80 rounded-b-sm pointer-events-none shadow-[0_0_4px_rgba(255,255,255,0.6)]"
-          style={{ width: `${Math.min(100, Math.max(10, gate * 100))}%` }}
+          title={lengthBarTitle}
+          data-testid={ringsPastStep ? "step-length-tail" : "step-length-bar"}
+          className={`absolute bottom-0 left-0 h-[2.5px] rounded-b-sm pointer-events-none ${
+            ringsPastStep
+              ? "bg-amber-300/90 shadow-[0_0_5px_rgba(252,211,77,0.75)]"
+              : "bg-white/80 shadow-[0_0_4px_rgba(255,255,255,0.6)]"
+          }`}
+          style={{ width: `${lengthBarWidthPct}%` }}
         />
       )}
 
