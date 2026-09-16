@@ -533,6 +533,59 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="font-semibold">{t("nav_challenge")}</span>
           </button>
 
+          {/* Pro Tools: Console, Analyzer, Maker */}
+          <div className="pt-2 pb-0.5">
+            <div className="px-2 text-[10px] font-mono uppercase tracking-wider text-text-dim flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-accent" />
+              <span className="font-bold">{isZh ? "高级与实验室" : "Pro & Labs"}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              onSelectTab("console");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
+              currentTab === "console"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{t("console_title") || (isZh ? "独立硬件调音台" : "Console Desk")}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onSelectTab("analyzer");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
+              currentTab === "analyzer"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
+            }`}
+          >
+            <Activity className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{isZh ? "全景声谱分析仪" : "Acoustic Analyzer"}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onSelectTab("maker");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
+              currentTab === "maker"
+                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
+                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
+            }`}
+          >
+            <Wand2 className="w-4 h-4 text-accent shrink-0" />
+            <span className="font-semibold">{isZh ? "曲风制作工坊" : "Custom Genre Maker"}</span>
+          </button>
+
           {onOpenShortcuts && (
             <button
               onClick={() => {

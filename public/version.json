@@ -1,29 +1,29 @@
 {
-  "version": "2.0.23",
+  "version": "2.0.24",
   "releaseDate": "2026-09-16",
-  "changelogCount": 87,
+  "changelogCount": 88,
   "latest": {
-    "version": "2.0.23",
+    "version": "2.0.24",
     "date": "2026-09-16",
     "category": "feature",
     "title": {
-      "zh": "v2.0.23 和弦真正落地：159 个曲风各自的和弦类型/音域/按 BPM 换算的音长/演奏法，琶音与分解写成真音符；pattern 长度按走向可变（16/32/64/128），没内容的轨道保持空",
-      "en": "v2.0.23 Chords are real now: every one of the 159 genres gets its own chord quality, register, tempo-derived length and articulation, arpeggios and broken chords are written as real notes, pattern length varies with the progression (16/32/64/128), and tracks a genre does not use stay empty"
+      "zh": "v2.0.24 通道条动态扩充（支持 24/32 轨并入混音链）、子引擎（大师课与底鼓解剖）限幅器保护与移动端导航补齐",
+      "en": "v2.0.24 Dynamic channel strip expansion (24/32-track mixing chain support), sub-engine limiter protection (Masterclass & Kick Anatomy) and mobile drawer navigation completion"
     },
     "highlights": [
       {
-        "zh": "**先说清问题的性质**：声音里其实已经在用和弦（`chordVoicing` 会在播放时按曲风展开 voicing），但**数据模型每步只能存一个音高**（`pitch?: (number|null)[]`），和弦只在播放的一瞬间存在、不落进 pattern。所以钢琴卷帘只能显示单音，你也看不见、改不了和弦；音长与演奏法同样没有位置。这一版把它变成**真数据**。",
-        "en": "**The nature of the problem first:** chords were already sounding (`chordVoicing` expanded a voicing per genre at playback), but the **data model held one pitch per step** (`pitch?: (number|null)[]`), so a chord existed only for the instant it was played and never in the pattern. The piano roll could therefore only show single notes, and neither the harmony nor its lengths and articulation had anywhere to live. This release turns them into **real data**."
+        "zh": "**通道条动态按需扩充**：针对 CompareView 24 轨与 32 轨复杂工程，`AudioEngine` 的通道条分配机制由原本写死的 16 轨动态扩充至 `Math.max(16, pattern.tracks.length)`。`setPattern` 切换大型工程时自动扩容补全缺失通道条并保证插入效果链与声像节点正确建立，彻底修复之前超过 16 轨的伴奏与对比轨道绕过通道条混音链路的问题。",
+        "en": "**Dynamic channel strip allocation**: Expanded `AudioEngine` channel strips from hardcoded 16 to dynamically allocate `Math.max(16, pattern.tracks.length)` to support CompareView's 24 and 32-track projects. Switching patterns dynamically expands missing strips and attaches their insert effects and panners, resolving the previous issue where tracks past strip 16 bypassed channel strip processing."
       },
       {
-        "zh": "**三步地基**：① `SequencerTrack` 新增 **`pitches`**（每步一组音），`pitch` 保留为**根音**，旧工程/分享链接照旧可用；② 实时引擎与导出都改成**照存的音堆弹**（新增共享的 `chordNotesForStep`，有存就用、没有才自动 voicing），因此「卷帘所见 = 耳朵所听」是结构保证；③ 卷帘的音符标识从 `stepIdx` 改为 **(step, midi)**，和弦在卷帘里是**可显示、可逐音编辑**的音堆（画在已发声的步上会**加入和弦**，橡皮删单个音、⌥ 擦清整步，和弦可整体拖动、⌥ 拖动复制）。",
-        "en": "**Three foundation steps.** (1) `SequencerTrack` gained **`pitches`** (a note stack per step) while `pitch` stays the **root**, so old projects and share links keep working. (2) The live engine and the exporter both play a **stored stack verbatim** (through a new shared `chordNotesForStep`; automatic voicing happens only when nothing is stored), which makes \"what the roll shows is what you hear\" structural rather than aspirational. (3) The roll's note identity changed from `…"
+        "zh": "**子引擎限幅保护**：为独立运行的 `MasterclassAudioEngine`（调音大师课音频引擎）与 `AnatomyKickEngine`（底鼓解剖引擎）接入 `MasterLimiter` 动态限幅防护链路，并在销毁时显式释放限幅器与音频上下文，彻底杜绝大师课多轨示范与多层底鼓合成测试中的数字破音与削波失真风险。",
+        "en": "**Sub-engine limiter protection**: Wired `MasterLimiter` dynamically to `MasterclassAudioEngine` and `AnatomyKickEngine` to guard against digital clipping during multi-track demonstrations and layered kick synthesis, and properly disposed resources in `destroy()`."
       },
       {
-        "zh": "**时值上限的根因**：「有 1 拍的、也有多拍的」原本**做不到**——`gate` 被三处各自夹在 2 步（卷帘模型、卷帘 UI、MIDI/Ableton 导出、分享链接写入器），而引擎本身只是 `stepDur * gate`，从不需要这个小上限。现在统一用共享的 `MAX_NOTE_GATE_STEPS = 16`（1/16 下正好一小节），于是 pad 与小节级和弦是**一个长音**而不是十六个连起来的重复音。",
-        "en": "**Why multi-beat lengths were impossible:** `gate` was independently clamped to 2 steps in four places (the roll model, the roll UI, the MIDI/Ableton exporters, the share-link writer) even though the engine only ever does `stepDur * gate` and never needed a small cap. They now share `MAX_NOTE_GATE_STEPS = 16` (one bar at 1/16), so a pad or a whole-bar chord is **one long note** rather than sixteen tied retriggers."
+        "zh": "**移动端抽屉导航补全**：在顶部导航栏（`Header.tsx`）的移动端折叠抽屉菜单中，补齐了遗漏的「调音台」（`/console`）、「全景声谱分析仪」（`/analyzer`）与「曲风制作工坊」（`/maker`）快捷路由跳转，移动端体验与桌面端保持完全一致。",
+        "en": "**Mobile drawer navigation complete**: Added missing routes for Console (`/console`), Spectral Analyzer (`/analyzer`), and Genre Maker (`/maker`) to the mobile slide-out drawer menu in `Header.tsx`."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

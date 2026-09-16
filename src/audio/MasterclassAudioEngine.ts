@@ -5,6 +5,7 @@
  */
 
 import { createEngineAudioContext, rampBusMute } from "./voiceRegistry";
+import { createMasterLimiter, type MasterLimiterHandle } from "./MasterLimiter";
 
 export type PercussionSound =
   | "woodblock"
@@ -32,8 +33,9 @@ export class MasterclassAudioEngine {
   private nextNoteTime = 0;
   private currentCycle = 0;
 
-  // Master Gain & Output
+  // Master Gain & Output with Brickwall Limiter
   private masterGain: GainNode | null = null;
+  private masterLimiter: MasterLimiterHandle | null = null;
 
   // Pattern scheduling callback
   private scheduleCallback: ((currentTime: number, nextTime: number) => void) | null = null;
@@ -53,7 +55,9 @@ export class MasterclassAudioEngine {
       if (!this.ctx) return;
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
-      this.masterGain.connect(this.ctx.destination);
+      this.masterLimiter = createMasterLimiter(this.ctx);
+      this.masterGain.connect(this.masterLimiter.input);
+      this.masterLimiter.output.connect(this.ctx.destination);
     }
     if (this.ctx.state === "suspended") {
       this.ctx.resume().catch(() => {});
@@ -464,6 +468,10 @@ export class MasterclassAudioEngine {
 
   public destroy() {
     this.stop();
+    if (this.masterLimiter) {
+      this.masterLimiter.dispose();
+      this.masterLimiter = null;
+    }
     if (this.ctx) {
       // Closing an already-closed context rejects; swallow it rather than producing an
       // unhandled rejection on every unmount (A-05).

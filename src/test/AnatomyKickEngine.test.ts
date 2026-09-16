@@ -52,6 +52,16 @@ interface FakeContextObserver {
   onWaveShaper?: (node: ReturnType<typeof fakeAudioNode>) => void;
 }
 
+function fakeDynamicsCompressor() {
+  const node = fakeAudioNode();
+  (node as unknown as { threshold: ReturnType<typeof fakeAudioParam> }).threshold = fakeAudioParam();
+  (node as unknown as { knee: ReturnType<typeof fakeAudioParam> }).knee = fakeAudioParam();
+  (node as unknown as { ratio: ReturnType<typeof fakeAudioParam> }).ratio = fakeAudioParam();
+  (node as unknown as { attack: ReturnType<typeof fakeAudioParam> }).attack = fakeAudioParam();
+  (node as unknown as { release: ReturnType<typeof fakeAudioParam> }).release = fakeAudioParam();
+  return node;
+}
+
 function createFakeAudioContext(observer: FakeContextObserver = {}): AudioContext {
   const createWaveShaper = () => {
     const node = fakeAudioNode();
@@ -68,6 +78,7 @@ function createFakeAudioContext(observer: FakeContextObserver = {}): AudioContex
     createBiquadFilter: fakeAudioNode,
     createWaveShaper,
     createAnalyser: fakeAudioNode,
+    createDynamicsCompressor: fakeDynamicsCompressor,
     resume: vi.fn().mockResolvedValue(undefined),
   } as unknown as AudioContext;
 }

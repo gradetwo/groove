@@ -454,8 +454,9 @@ export class AudioEngine {
     if (this.spatialEnabled === enabled) return;
     this.spatialEnabled = enabled;
     if (!this.ctx) return;
+    const tracksToBuild = Math.max(16, this.pattern?.tracks?.length || 0);
     this.releaseTrackStrips();
-    this.setupTrackStrips(16);
+    this.setupTrackStrips(tracksToBuild);
   }
 
   /**
@@ -467,8 +468,9 @@ export class AudioEngine {
     if (this.trackAnalysersEnabled === enabled) return;
     this.trackAnalysersEnabled = enabled;
     if (!this.ctx) return;
+    const tracksToBuild = Math.max(16, this.pattern?.tracks?.length || 0);
     this.releaseTrackStrips();
-    this.setupTrackStrips(16);
+    this.setupTrackStrips(tracksToBuild);
   }
 
   public areTrackAnalysersEnabled(): boolean {
@@ -478,6 +480,11 @@ export class AudioEngine {
   /** Real per-channel analyser, or null when meters are not enabled/available. */
   public getTrackAnalyser(trackIdx: number): AnalyserNode | null {
     return this.trackStrips[trackIdx]?.analyser ?? null;
+  }
+
+  /** Readonly access to the channel strips array. */
+  public getTrackStrips(): readonly TrackChannelStrip[] {
+    return this.trackStrips;
   }
 
   public getSpatialMode(): boolean {
@@ -506,6 +513,7 @@ export class AudioEngine {
       }
     }
     this.trackStrips = [];
+    this.appliedInsertRefs = [];
   }
 
   /**
@@ -523,10 +531,11 @@ export class AudioEngine {
     return bus === "drum" ? this.masterGraph.drumBusInput : this.masterGraph.musicBusInput;
   }
 
-  private setupTrackStrips(numTracks = 16): void {
+  private setupTrackStrips(numTracks?: number): void {
     if (!this.ctx || !this.masterGain) return;
+    const count = numTracks ?? Math.max(16, this.pattern?.tracks?.length || 0);
     this.trackStrips = [];
-    for (let i = 0; i < numTracks; i++) {
+    for (let i = 0; i < count; i++) {
       // E-10: voices feed the insert chain first, then the fader. The chain's defaults come
       // from the track's role, so every track arrives with a mixed channel strip.
       const role = this.pattern?.tracks[i]?.track_id;
@@ -611,6 +620,11 @@ export class AudioEngine {
 
   public setPattern(pattern: SequencerPattern, resetStates = false): void {
     this.pattern = pattern;
+    const neededTracks = Math.max(16, pattern.tracks?.length || 0);
+    if (this.ctx && this.trackStrips.length < neededTracks) {
+      this.releaseTrackStrips();
+      this.setupTrackStrips(neededTracks);
+    }
     if (pattern.totalSteps) {
       this.totalSteps = pattern.totalSteps;
     } else if (pattern.tracks && pattern.tracks.length > 0 && pattern.tracks[0].steps) {

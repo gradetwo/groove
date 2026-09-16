@@ -11,6 +11,7 @@
 
 import { ecosystemBus } from "./ecosystemBus";
 import { safeGain, safeVelocity } from "./dspGuards";
+import { createMasterLimiter, type MasterLimiterHandle } from "./MasterLimiter";
 
 export interface SomaticKickParams {
   softness: number; // 0 (razor sharp pitch dip) to 1 (velvety soft curve)
@@ -329,6 +330,7 @@ export function resolveKickPresetParams(presetId: string): Partial<SomaticKickPa
 export class AnatomyKickEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private masterLimiter: MasterLimiterHandle | null = null;
   private analyser: AnalyserNode | null = null;
   private waveshaper: WaveShaperNode | null = null;
   private dcBlocker: BiquadFilterNode | null = null;
@@ -379,7 +381,7 @@ export class AnatomyKickEngine {
       if (typeof window === "undefined") return null;
       const AudioCtx =
         window.AudioContext ||
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return null;
       this.ctx = new AudioCtx();
       this.initNodes();
@@ -413,11 +415,30 @@ export class AnatomyKickEngine {
     this.analyser.fftSize = 1024;
     this.analyser.smoothingTimeConstant = 0.55;
 
-    // Chain: dcBlocker -> waveshaper -> masterGain -> analyser -> destination
+    // Master brickwall ceiling to protect ears and transducers
+    this.masterLimiter = createMasterLimiter(this.ctx);
+
+    // Chain: dcBlocker -> waveshaper -> masterGain -> analyser -> masterLimiter -> destination
     this.dcBlocker.connect(this.waveshaper);
     this.waveshaper.connect(this.masterGain);
     this.masterGain.connect(this.analyser);
-    this.analyser.connect(this.ctx.destination);
+    this.analyser.connect(this.masterLimiter.input);
+    this.masterLimiter.output.connect(this.ctx.destination);
+  }
+
+  public destroy(): void {
+    if (this.masterLimiter) {
+      this.masterLimiter.dispose();
+      this.masterLimiter = null;
+    }
+    if (this.ctx && this.ctx.state !== "closed") {
+      this.ctx.close().catch(() => {});
+    }
+    this.ctx = null;
+    this.masterGain = null;
+    this.analyser = null;
+    this.waveshaper = null;
+    this.dcBlocker = null;
   }
 
   public getAnalyser(): AnalyserNode | null {
