@@ -420,8 +420,9 @@ describe("PianoRollLane · quantise and legato, adapted to a step grid", () => {
     });
     fireEvent.click(screen.getByTestId("piano-roll-legato"));
     const legato = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
-    // Three steps of gap, clamped by the engine's two-step maximum.
-    expect(legato.tracks[0].gate?.[0]).toBe(2);
+    // The note now fills the whole three-step gap; the old two-step cap is gone (see
+    // `MAX_NOTE_GATE_STEPS`), which is what makes a sustained chord or a legato bass writable.
+    expect(legato.tracks[0].gate?.[0]).toBe(3);
   });
 });
 

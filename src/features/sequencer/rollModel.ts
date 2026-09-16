@@ -1,11 +1,11 @@
-import type { SequencerPattern, SequencerTrack } from "../../types/genre";
+import { MAX_NOTE_GATE_STEPS, type SequencerPattern, type SequencerTrack } from "../../types/genre";
 
 /**
  * Piano-roll <-> step-grid model.
  *
  * Groove Lab's pattern is a per-step grid: `steps[i] > 0` means "something sounds at step i",
  * `pitch[i]` is its **root** MIDI note, `pitches[i]` is the **whole stack** sounding on that step
- * (a chord) and `gate[i]` its length in steps (clamped 0.1–2.0 by the engine). A piano roll wants
+ * (a chord) and `gate[i]` its length in steps (clamped 0.1–`MAX_NOTE_GATE_STEPS`). A piano roll wants
  * (pitch, start, length) rectangles. This module is the whole translation between the two, kept
  * pure and free of React so the roll's gestures can be tested without a browser.
  *
@@ -150,7 +150,7 @@ export function withTrackNotes(
       } else {
         stacks.set(note.stepIdx, [midi]);
         steps[note.stepIdx] = 1;
-        gate[note.stepIdx] = Math.max(0.1, Math.min(2, note.gate));
+        gate[note.stepIdx] = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, note.gate));
         velocity[note.stepIdx] = Math.max(0, Math.min(127, Math.round(note.velocity)));
       }
     }
@@ -254,7 +254,7 @@ export function resizeNote(
   stepCount: number
 ): SequencerPattern {
   const notes = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
-    n.stepIdx === stepIdx ? { ...n, gate: Math.max(0.1, Math.min(2, gate)) } : n
+    n.stepIdx === stepIdx ? { ...n, gate: Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, gate)) } : n
   );
   return withTrackNotes(pattern, trackIdx, notes, stepCount);
 }
@@ -492,7 +492,7 @@ export function quantizeLengths(
 ): SequencerPattern {
   const steps = new Set(selectedSteps(selection));
   const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
-    steps.has(n.stepIdx) ? { ...n, gate: Math.max(0.1, Math.min(2, snapValue(n.gate, snap))) } : n
+    steps.has(n.stepIdx) ? { ...n, gate: Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, snapValue(n.gate, snap))) } : n
   );
   return withTrackNotes(pattern, trackIdx, next, stepCount);
 }
@@ -510,7 +510,7 @@ export function legatoNotes(
   selection: readonly RollNoteId[],
   stepCount: number,
   loopLength = stepCount,
-  maxGate = 2
+  maxGate = MAX_NOTE_GATE_STEPS
 ): SequencerPattern {
   const steps = new Set(selectedSteps(selection));
   const notes = notesFromTrack(pattern.tracks[trackIdx]);
@@ -543,7 +543,7 @@ export function splitNote(
   const at = stepIdx + 1;
   if (at >= stepCount) return { pattern, split: false };
   if (notes.some((n) => n.stepIdx === at)) return { pattern, split: false };
-  const half = Math.max(0.1, Math.min(2, (onStep[0].gate ?? 0.8) / 2));
+  const half = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, (onStep[0].gate ?? 0.8) / 2));
   const next = [
     ...notes.filter((n) => n.stepIdx !== stepIdx),
     ...onStep.map((n) => ({ ...n, gate: half })),

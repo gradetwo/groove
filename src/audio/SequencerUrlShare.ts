@@ -3,7 +3,7 @@
  * Serializes groove state into a compact URL-safe base64 string for instant sharing.
  */
 
-import { SequencerPattern, SequencerTrack } from "../types/genre";
+import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
 
 export interface SharedSequencerState {
   genreId: string;
@@ -164,7 +164,7 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
           ? t.pitch.slice(0, MAX_STEPS).map((p) => (p !== null && !isNaN(Number(p))) ? Math.max(0, Math.min(127, Math.round(Number(p)))) : null)
           : undefined,
         gt: Array.isArray(t.gate) && t.gate.some((g) => g !== 0.8 && g !== 1.0)
-          ? t.gate.slice(0, MAX_STEPS).map((g) => Math.round(Math.max(0.1, Math.min(2.0, Number(g) || 0.8)) * 10) / 10)
+          ? t.gate.slice(0, MAX_STEPS).map((g) => Math.round(Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Number(g) || 0.8)) * 10) / 10)
           : undefined,
         r: Array.isArray(t.ratchet) && t.ratchet.some((r) => r > 1)
           ? t.ratchet.slice(0, MAX_STEPS).map((r) => Math.max(1, Math.min(8, Math.round(Number(r) || 1))))

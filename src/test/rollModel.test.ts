@@ -27,7 +27,7 @@ import {
   visiblePitchRange,
   withTrackNotes,
 } from "../features/sequencer/rollModel";
-import type { SequencerPattern, SequencerTrack } from "../types/genre";
+import { MAX_NOTE_GATE_STEPS, type SequencerPattern, type SequencerTrack } from "../types/genre";
 
 function makeTrack(over: Partial<SequencerTrack> = {}): SequencerTrack {
   return {
@@ -160,12 +160,14 @@ describe("roll model · editing", () => {
     expect(notesFromTrack(moveNote(pattern, 0, 0, 1, null, 8).tracks[0])[0].midi).toBe(60);
   });
 
-  it("resizes through `gate`, inside the engine's 0.1–2.0 range", () => {
+  it("resizes through `gate`, inside the shared 0.1–MAX_NOTE_GATE_STEPS range", () => {
     const pattern = makePattern(makeTrack());
     expect(notesFromTrack(resizeNote(pattern, 0, 0, 1.5, 8).tracks[0])[0].gate).toBe(1.5);
-    // The engine clamps to 0.1..2.0, so the roll clamps too rather than writing a value that
-    // would silently sound different from what the handle shows.
-    expect(notesFromTrack(resizeNote(pattern, 0, 0, 5, 8).tracks[0])[0].gate).toBe(2);
+    // A note may now last up to a bar (16 steps at 1/16). It used to be capped at 2 steps, which
+    // made "多拍的" chords and pads impossible to write: the roll, the exporters and the share-link
+    // writer each clamped independently. They now share `MAX_NOTE_GATE_STEPS`.
+    expect(notesFromTrack(resizeNote(pattern, 0, 0, 9, 16).tracks[0])[0].gate).toBe(9);
+    expect(notesFromTrack(resizeNote(pattern, 0, 0, 99, 16).tracks[0])[0].gate).toBe(MAX_NOTE_GATE_STEPS);
     expect(notesFromTrack(resizeNote(pattern, 0, 0, 0, 8).tracks[0])[0].gate).toBe(0.1);
   });
 
@@ -332,12 +334,22 @@ describe("roll tools · quantise and legato, reinterpreted for a step grid", () 
 
   it("fills the gap to the next note, and the loop end for the last one", () => {
     const legato = notesFromTrack(legatoNotes(rollPattern(), 0, ["0:60", "6:67"], 8, 8).tracks[0]);
-    // Step 0 → next note is at 3, so three steps… clamped to the engine's 2-step maximum.
-    expect(legato.find((n) => n.stepIdx === 0)?.gate).toBe(2);
+    // Step 0 → the next note is at 3, so legato fills three steps (the shared limit allows it now;
+    // the old 2-step cap is what made a legato bass line impossible to write).
+    expect(legato.find((n) => n.stepIdx === 0)?.gate).toBe(3);
     // Step 6 → no later note, so it fills to the loop end (8 − 6 = 2).
     expect(legato.find((n) => n.stepIdx === 6)?.gate).toBe(2);
     // Unselected notes are untouched.
     expect(legato.find((n) => n.stepIdx === 3)?.gate).toBe(1.5);
+  });
+
+  it("still refuses a legato longer than the shared limit", () => {
+    // A 32-step pattern with the next note at 24 leaves a 24-step gap, which is past the limit.
+    const steps = Array.from({ length: 32 }, (_, i) => (i === 0 || i === 24 ? 1 : 0));
+    const gate = Array(32).fill(0.8);
+    const pattern = makePattern(makeTrack({ steps, gate }));
+    const legato = notesFromTrack(legatoNotes(pattern, 0, ["0:60"], 32, 32).tracks[0]);
+    expect(legato.find((n) => n.stepIdx === 0)?.gate).toBe(MAX_NOTE_GATE_STEPS);
   });
 
   it("legato sets the length to the gap, which can shorten a note as well as lengthen it", () => {

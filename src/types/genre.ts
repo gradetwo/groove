@@ -34,6 +34,18 @@ export interface DrumPatternFeatures {
   tempo: string;
 }
 
+/**
+ * Longest note length a step may carry, in steps.
+ *
+ * `gate[i]` is a multiple of one step and the engine simply multiplies it by the step duration
+ * (`stepDur * gate`), so nothing in the audio path ever needed a small cap — but the roll, the
+ * exporters and the share-link writer each clamped it to 2 steps, which made a chord or a pad
+ * **unable to last a bar**: "多拍的" notes were not expressible at all. 16 steps is one bar at
+ * 1/16, which is the longest musical unit a step pattern needs to hold, and it is short enough
+ * that a stale or hostile value cannot ring for minutes.
+ */
+export const MAX_NOTE_GATE_STEPS = 16;
+
 export interface SequencerTrack {
   track_id: 'kick' | 'snare' | 'hihat' | 'percussion' | 'bass' | 'chords' | 'lead' | 'fx';
   name: string;

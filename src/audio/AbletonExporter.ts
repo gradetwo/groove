@@ -9,7 +9,7 @@
  * - Track names, 70-color palette assignment, volume gain, stereo pan, mute/solo, and send levels
  */
 
-import { SequencerPattern, SequencerTrack } from "../types/genre";
+import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
 import { patternSeed, probabilityPasses } from "./noteEvents";
 
 export interface ExportAlsOptions {
@@ -163,7 +163,7 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
       }
 
       const vel = Math.max(1, Math.min(127, velocities[stepIdx] !== undefined ? velocities[stepIdx] : 100));
-      const gateVal = gates[stepIdx] !== undefined ? Math.max(0.1, Math.min(2.0, gates[stepIdx])) : 0.8;
+      const gateVal = gates[stepIdx] !== undefined ? Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, gates[stepIdx])) : 0.8;
 
       let pitchOffset =
         pitches[stepIdx] !== undefined && pitches[stepIdx] !== null

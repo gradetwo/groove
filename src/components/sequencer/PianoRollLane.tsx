@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { SequencerAction } from "../../features/sequencer/useSequencerStore";
-import type { SequencerPattern } from "../../types/genre";
+import { MAX_NOTE_GATE_STEPS, type SequencerPattern } from "../../types/genre";
 import {
   addNote,
   copyNotes,
@@ -418,7 +418,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     }
     if (drag.mode === "resize") {
       const deltaSteps = (event.clientX - drag.startX) / cellW;
-      const gate = Math.max(0.1, Math.min(2, drag.startGate + deltaSteps));
+      const gate = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, drag.startGate + deltaSteps));
       setDraft(resizeNote(drag.base, activeTrackIdx, drag.stepIdx, gate, stepCount));
     }
   };
@@ -960,12 +960,12 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                   <input
                     type="number"
                     min={0.1}
-                    max={2}
+                    max={MAX_NOTE_GATE_STEPS}
                     step={0.05}
                     value={focusNote.gate}
                     data-testid="piano-roll-length"
                     onChange={(e) => {
-                      const gate = Math.max(0.1, Math.min(2, Number(e.target.value)));
+                      const gate = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Number(e.target.value)));
                       applyOp((p) => resizeNote(p, activeTrackIdx, focusNote.stepIdx, gate, stepCount));
                     }}
                     className="w-16 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
