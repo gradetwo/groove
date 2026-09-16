@@ -168,7 +168,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const view = draft ?? pattern;
   const track = view.tracks[activeTrackIdx];
   const editable = isRollEditableTrack(track);
-  const notes = useMemo(() => notesFromTrack(track), [track]);
+  const notes = useMemo(() => notesFromTrack(track, 60, view.scale), [track, view.scale]);
   const selectedSet = useMemo(() => new Set(selection), [selection]);
 
   const [baseLo, baseHi] = useMemo(() => visiblePitchRange(notes), [notes]);
@@ -200,7 +200,13 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   cellWRef.current = cellW;
   catchRef.current = catchPlayhead;
 
-  const melodicTracks = view.tracks.map((tr, idx) => ({ tr, idx })).filter(({ tr }) => isRollEditableTrack(tr));
+  const selectableTracks = useMemo(() => {
+    const list = view.tracks.map((tr, idx) => ({ tr, idx })).filter(({ tr }) => isRollEditableTrack(tr));
+    if (track && !isRollEditableTrack(track) && !list.some((item) => item.idx === activeTrackIdx)) {
+      list.unshift({ tr: track, idx: activeTrackIdx });
+    }
+    return list;
+  }, [view.tracks, track, activeTrackIdx]);
 
   /** The note exactly under a cell, or null. */
   const noteAt = useCallback(
@@ -375,7 +381,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       const current = draft ?? drag.base;
       // Painting never overwrites: a cell that already sounds (at this pitch or any) is skipped, so
       // a stroke across a chord cannot erase it.
-      const currentNotes = notesFromTrack(current.tracks[activeTrackIdx]);
+      const currentNotes = notesFromTrack(current.tracks[activeTrackIdx], 60, current.scale);
       const id = noteId({ stepIdx, midi });
       if (currentNotes.some((n) => noteId(n) === id)) return;
       const next = addNote(current, activeTrackIdx, stepIdx, midi, stepCount, 100, currentNotes.find((n) => n.stepIdx === stepIdx)?.gate);
@@ -435,7 +441,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       const landedSelection = drag?.mode === "move" ? drag.origin : selection;
       commit({ type: "COMMIT_PATTERN", pattern: draft });
       setDraft(null);
-      const landed = notesFromTrack(draft.tracks[activeTrackIdx]).find((n) => landedSelection.includes(noteId(n)));
+      const landed = notesFromTrack(draft.tracks[activeTrackIdx], 60, draft.scale).find((n) => landedSelection.includes(noteId(n)));
       if (landed) onAudition(activeTrackIdx, landed.midi, landed.velocity, landed.gate);
     }
   };
@@ -559,7 +565,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           data-testid="piano-roll-track"
           className="rounded-lg border border-line bg-panel2 px-2 py-1 font-['JetBrains_Mono'] text-[11px] text-text outline-none"
         >
-          {melodicTracks.map(({ tr, idx }) => (
+          {selectableTracks.map(({ tr, idx }) => (
             <option key={`${tr.track_id}-${idx}`} value={idx}>
               {tr.name}
             </option>
@@ -817,7 +823,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       const width = Math.max(cellW * 0.9, note.gate * cellW);
                       return (
                         <div
-                          key={`note-${note.stepIdx}`}
+                          key={`note-${note.stepIdx}-${note.midi}`}
                           data-testid={`piano-roll-note-${note.stepIdx}-${note.midi}`}
                           data-selected={selected ? "true" : "false"}
                           data-chord-size={notesAtStep(note.stepIdx).length}

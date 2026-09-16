@@ -1616,7 +1616,15 @@ export class AudioEngine {
   /**
    * Preview a single track note immediately
    */
-  public triggerNote(trackIdx: number, trackName: string, velocity = 0.8, pitch: number | null = 0, stepVal = 1, gateVal = 0.8): void {
+  public triggerNote(
+    trackIdx: number,
+    trackName: string,
+    velocity = 0.8,
+    pitch: number | null = 0,
+    stepVal = 1,
+    gateVal = 0.8,
+    stepIdx = -1
+  ): void {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
     initIosAudioUnlock(this.ctx).unlock();
@@ -1629,7 +1637,7 @@ export class AudioEngine {
       this.liveRecorder.recordTrigger(trackIdx, pitchVal, velocity, this.currentStep, this.totalSteps);
     }
 
-    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal, true, 0, -1);
+    this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal, true, 0, stepIdx);
   }
 
   private triggerInstrument(

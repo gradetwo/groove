@@ -6,6 +6,7 @@
 
 import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
 import { patternSeed, probabilityPasses } from "./noteEvents";
+import { chordNotesForStep } from "./chordVoicing";
 
 export interface ExportMidiOptions {
   bpm: number;
@@ -157,6 +158,16 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
         ? ratchets[stepIdx]
         : (isHatTriplet ? 3 : 1);
 
+      const stack = track.pitches?.[stepIdx];
+      const hasStack = Array.isArray(stack) && stack.length > 0;
+      const isChords = track.track_id === "chords" || track.name.toLowerCase().includes("chord");
+      const chordNotes = hasStack
+        ? stack!.filter((n): n is number => typeof n === "number" && Number.isFinite(n) && n > 0)
+        : isChords
+          ? (chordNotesForStep(track, stepIdx, noteNumber, pattern.scale) || [noteNumber, noteNumber + 3, noteNumber + 7])
+          : null;
+      const notesToExport = chordNotes && chordNotes.length > 0 ? chordNotes : [noteNumber];
+
       if (ratchet > 1) {
         const subTicks = Math.round(ticksPerStep / ratchet);
         const subNoteTicks = Math.max(12, Math.round(subTicks * gateVal));
@@ -165,79 +176,45 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
           const subEnd = subStart + subNoteTicks;
           const subVel = Math.min(127, Math.round(vel * (0.85 + (r / ratchet) * 0.15)));
 
-          if (track.track_id === "chords" || track.name.toLowerCase().includes("chord")) {
-            const chordNotes = [noteNumber, noteNumber + 3, noteNumber + 7];
-            chordNotes.forEach((n) => {
-              allEvents.push({
-                tick: subStart,
-                type: "noteOn",
-                channel: mapping.channel,
-                note: Math.min(127, n),
-                velocity: subVel,
-              });
-              allEvents.push({
-                tick: subEnd,
-                type: "noteOff",
-                channel: mapping.channel,
-                note: Math.min(127, n),
-                velocity: 0,
-              });
-            });
-          } else {
+          notesToExport.forEach((n) => {
+            const safeNote = Math.max(0, Math.min(127, Math.round(n)));
             allEvents.push({
               tick: subStart,
               type: "noteOn",
               channel: mapping.channel,
-              note: noteNumber,
+              note: safeNote,
               velocity: subVel,
             });
             allEvents.push({
               tick: subEnd,
               type: "noteOff",
               channel: mapping.channel,
-              note: noteNumber,
+              note: safeNote,
               velocity: 0,
             });
-          }
+          });
         }
       } else {
         const noteTicks = Math.max(16, Math.round(ticksPerStep * gateVal));
         const tickEnd = stepTick + noteTicks;
 
-        if (track.track_id === "chords" || track.name.toLowerCase().includes("chord")) {
-          const chordNotes = [noteNumber, noteNumber + 3, noteNumber + 7];
-          chordNotes.forEach((n) => {
-            allEvents.push({
-              tick: stepTick,
-              type: "noteOn",
-              channel: mapping.channel,
-              note: Math.min(127, n),
-              velocity: vel,
-            });
-            allEvents.push({
-              tick: tickEnd,
-              type: "noteOff",
-              channel: mapping.channel,
-              note: Math.min(127, n),
-              velocity: 0,
-            });
-          });
-        } else {
+        notesToExport.forEach((n) => {
+          const safeNote = Math.max(0, Math.min(127, Math.round(n)));
           allEvents.push({
             tick: stepTick,
             type: "noteOn",
             channel: mapping.channel,
-            note: noteNumber,
+            note: safeNote,
             velocity: vel,
           });
           allEvents.push({
             tick: tickEnd,
             type: "noteOff",
             channel: mapping.channel,
-            note: noteNumber,
+            note: safeNote,
             velocity: 0,
           });
-        }
+        });
       }
     }
   });

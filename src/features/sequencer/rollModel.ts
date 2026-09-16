@@ -1,4 +1,5 @@
 import { MAX_NOTE_GATE_STEPS, type SequencerPattern, type SequencerTrack } from "../../types/genre";
+import { chordNotesForStep } from "../../audio/chordVoicing";
 
 /**
  * Piano-roll <-> step-grid model.
@@ -64,9 +65,14 @@ export function isRollEditableTrack(track: SequencerTrack | undefined): boolean 
  * a chord. The engine defaults a missing/0 pitch to C4 (60) — see `AudioEngine.triggerInstrument` —
  * so a step with no usable pitch shows the note the user is already hearing rather than nothing.
  */
-export function notesFromTrack(track: SequencerTrack | undefined, fallbackMidi = 60): RollStepNote[] {
+export function notesFromTrack(
+  track: SequencerTrack | undefined,
+  fallbackMidi = 60,
+  scale?: string
+): RollStepNote[] {
   if (!track?.steps) return [];
   const notes: RollStepNote[] = [];
+  const isChords = track.track_id === "chords" || (track.name ? track.name.toLowerCase().includes("chord") : false);
   track.steps.forEach((value, stepIdx) => {
     if (!(value > 0)) return;
     const gate = track.gate?.[stepIdx] ?? 0.8;
@@ -82,6 +88,13 @@ export function notesFromTrack(track: SequencerTrack | undefined, fallbackMidi =
     }
     const raw = track.pitch?.[stepIdx];
     const midi = typeof raw === "number" && raw > 0 ? raw : fallbackMidi;
+    if (isChords) {
+      const derived = chordNotesForStep(track, stepIdx, midi, scale);
+      if (derived && derived.length > 0) {
+        for (const m of derived) notes.push({ stepIdx, midi: Math.round(m), gate, velocity });
+        return;
+      }
+    }
     notes.push({ stepIdx, midi, gate, velocity });
   });
   return notes;

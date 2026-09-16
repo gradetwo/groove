@@ -678,11 +678,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
    * the first editable one — the alternative is a grid of notes that the engine ignores.
    */
   const handleOpenPianoRoll = useCallback(
-    (trackIdx: number) => {
-      const editableIdx = patternRef.current.tracks.findIndex((tr) =>
-        tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead"
-      );
-      setPianoRollTrackIdx(editableIdx === -1 ? trackIdx : editableIdx);
+    (trackIdx?: number) => {
+      if (typeof trackIdx === "number" && trackIdx >= 0 && trackIdx < patternRef.current.tracks.length) {
+        setPianoRollTrackIdx(trackIdx);
+      } else {
+        const editableIdx = patternRef.current.tracks.findIndex((tr) =>
+          tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead"
+        );
+        setPianoRollTrackIdx(editableIdx === -1 ? 0 : editableIdx);
+      }
       setIsPianoRollOpen(true);
     },
     []

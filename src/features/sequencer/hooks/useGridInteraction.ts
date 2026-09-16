@@ -127,7 +127,8 @@ export function useGridInteraction({
     if (nextVal > 0 && engineRef.current) {
       const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
       const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
+      const gate = tr.gate && tr.gate[stepIdx] ? tr.gate[stepIdx] : 0.8;
+      engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal, gate, stepIdx);
     }
   };
 

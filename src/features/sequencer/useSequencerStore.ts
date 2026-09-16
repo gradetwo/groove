@@ -511,17 +511,48 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_PITCH": {
       const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
         const pitch = t.pitch ? [...t.pitch] : Array(t.steps.length).fill(null);
+        const oldRoot = pitch[action.stepIdx];
         pitch[action.stepIdx] = action.pitch;
-        return { ...t, pitch };
+
+        let pitches = t.pitches ? [...t.pitches] : undefined;
+        if (pitches && pitches[action.stepIdx] && Array.isArray(pitches[action.stepIdx])) {
+          const oldStack = pitches[action.stepIdx]!;
+          if (action.pitch === null) {
+            pitches[action.stepIdx] = null;
+          } else if (typeof oldRoot === "number" && oldRoot > 0) {
+            const delta = action.pitch - oldRoot;
+            pitches[action.stepIdx] = oldStack.map((n) => Math.max(0, Math.min(127, n + delta)));
+          } else {
+            pitches[action.stepIdx] = [action.pitch];
+          }
+        }
+        return { ...t, pitch, ...(pitches ? { pitches } : {}) };
       });
       return withUpdatedPattern({ ...state.pattern, tracks });
     }
 
     case "BATCH_SET_PITCH": {
-      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => ({
-        ...t,
-        pitch: [...action.pitches],
-      }));
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
+        const pitch = [...action.pitches];
+        let pitches = t.pitches ? [...t.pitches] : undefined;
+        if (pitches) {
+          pitches = pitches.map((stack, i) => {
+            const newP = action.pitches[i];
+            const oldP = t.pitch?.[i];
+            if (newP === null || newP === undefined) return null;
+            if (Array.isArray(stack) && stack.length > 0 && typeof oldP === "number" && oldP > 0) {
+              const delta = newP - oldP;
+              return stack.map((n) => Math.max(0, Math.min(127, n + delta)));
+            }
+            return [newP];
+          });
+        }
+        return {
+          ...t,
+          pitch,
+          ...(pitches ? { pitches } : {}),
+        };
+      });
       return withUpdatedPattern({ ...state.pattern, tracks });
     }
 

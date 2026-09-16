@@ -11,6 +11,7 @@
 
 import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
 import { patternSeed, probabilityPasses } from "./noteEvents";
+import { chordNotesForStep } from "./chordVoicing";
 
 export interface ExportAlsOptions {
   bpm: number;
@@ -182,6 +183,15 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
       const isHatTriplet = isHat && stepVal === 3;
       const ratchet = ratchets[stepIdx] && ratchets[stepIdx] > 1 ? ratchets[stepIdx] : isHatTriplet ? 3 : 1;
 
+      const stack = track.pitches?.[stepIdx];
+      const hasStack = Array.isArray(stack) && stack.length > 0;
+      const isChords = track.track_id === "chords" || track.name.toLowerCase().includes("chord");
+      const notesToAdd = hasStack
+        ? stack!.filter((n): n is number => typeof n === "number" && Number.isFinite(n) && n > 0)
+        : isChords
+          ? (chordNotesForStep(track, stepIdx, noteNumber, pattern.scale) || [noteNumber, noteNumber + 3, noteNumber + 7])
+          : [noteNumber];
+
       if (ratchet > 1) {
         const subStepBeats = stepBeats / ratchet;
         const subNoteDur = Math.max(0.02, subStepBeats * gateVal);
@@ -189,13 +199,8 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
           const subStart = stepTimeBeats + r * subStepBeats;
           const subVel = Math.min(127, Math.round(vel * (0.85 + (r / ratchet) * 0.15)));
 
-          const notesToAdd =
-            track.track_id === "chords" || track.name.toLowerCase().includes("chord")
-              ? [noteNumber, noteNumber + 3, noteNumber + 7]
-              : [noteNumber];
-
           notesToAdd.forEach((n) => {
-            const safeNote = Math.min(127, Math.max(0, n));
+            const safeNote = Math.min(127, Math.max(0, Math.round(n)));
             if (!keyMap.has(safeNote)) keyMap.set(safeNote, []);
             keyMap.get(safeNote)!.push({
               time: subStart,
@@ -207,13 +212,9 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
         }
       } else {
         const noteDur = Math.max(0.04, stepBeats * gateVal);
-        const notesToAdd =
-          track.track_id === "chords" || track.name.toLowerCase().includes("chord")
-            ? [noteNumber, noteNumber + 3, noteNumber + 7]
-            : [noteNumber];
 
         notesToAdd.forEach((n) => {
-          const safeNote = Math.min(127, Math.max(0, n));
+          const safeNote = Math.min(127, Math.max(0, Math.round(n)));
           if (!keyMap.has(safeNote)) keyMap.set(safeNote, []);
           keyMap.get(safeNote)!.push({
             time: stepTimeBeats,

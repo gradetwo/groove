@@ -1,27 +1,27 @@
 {
-  "version": "2.0.26",
+  "version": "2.0.27",
   "releaseDate": "2026-09-16",
-  "changelogCount": 90,
+  "changelogCount": 91,
   "latest": {
-    "version": "2.0.26",
+    "version": "2.0.27",
     "date": "2026-09-16",
     "category": "feature",
     "title": {
-      "zh": "v2.0.26 工作台工具栏渐进呈现与浮动面板优化：88px 高级控制抽屉重构为自适应悬浮 Popover，点击外部或 Esc 快捷收起，消除小屏网格挤压与垂直跳动",
-      "en": "v2.0.26 Studio toolbar progressive disclosure: Advanced Controls reconstructed into a floating popover with click-outside and Escape dismiss, eliminating grid squishing and vertical jumps on small displays"
+      "zh": "v2.0.27 钢琴卷帘与和弦数据全链路一致性同步：查看器精准映射打开轨道、卷帘真和弦堆叠呈现与编辑、MIDI/Ableton 导出真和弦音符多音对齐",
+      "en": "v2.0.27 Piano Roll and Chord Data Synchronization: Inspector target track accuracy, true chord stack rendering & editing, and multi-note export parity for MIDI and Ableton Live Sets"
     },
     "highlights": [
       {
-        "zh": "**高级控制栏浮动化改造（Floating Popover Overlay）**：将原本占用文档流排版的 88px 高级控制抽屉改造成自适应悬浮 Popover（带 `z-40`、`backdrop-blur-md` 与柔和阴影），展开时不再向下推挤下方步进网格与轨道列表，小屏笔记本（1366×768 / 1440×900）上 8 轨序列器垂直空间始终稳定完整呈现。",
-        "en": "**Floating Popover Overlay**: Converted the in-flow 88px advanced controls drawer into an anchored floating popover with `z-40`, backdrop blur, and 2xl shadow. Toggling advanced controls no longer pushes down or squishes the sequencer grid on compact laptop screens."
+        "zh": "**查看器打开卷帘精准定向（Track Inspector Target Track Binding）**：修复在任意轨道查看器（TrackInspector）点击「打开钢琴卷帘」时被硬编码逻辑无条件重定向到首个旋律轨（贝斯）的问题。现在精准透传当前检查的轨道索引，并在卷帘轨选择器中支持当前轨道显示，无论在和弦、主音、贝斯或打击乐查看器打开，卷帘均忠实展示该轨对应内容。",
+        "en": "**Target Track Binding**: Fixed an issue where clicking \"Open Piano Roll\" in TrackInspector unconditionally redirected to the first melodic track (bass). Now precisely binds and displays the inspected track index in both the piano roll lane and selector."
       },
       {
-        "zh": "**轻量交互与失焦收起**：为高级控制悬浮面板接入 `useRef` 点击外部与 `Escape` 键盘事件侦听，调节 Swing、总线滤波截止频率或 GS-1 开关后，只需轻点网格任意处或按 Esc 即可自然关闭，符合专业 DAW 浮动检查器交互直觉。",
-        "en": "**Click-Outside & Escape Dismiss**: Added natural dismissal listeners to close the advanced panel when clicking anywhere outside or pressing Escape, matching professional DAW overlay workflows."
+        "zh": "**和弦卷帘多音真实堆叠与读写双向同步**：在卷帘模型中为和弦轨引入调式 voicing 兜底，消除和弦轨在未固化音堆时只显示单音的缺陷；解决 React key 冲突警告；在序列器状态机（SET_PITCH / BATCH_SET_PITCH）中引入音堆与根音的同步移调约束，确保卷帘编辑、网格修改与音高变动时 pitch（根音）与 pitches（全音堆）始终保持严格一致。",
+        "en": "**True Chord Stack Rendering & Bi-directional State Sync**: Notes in the piano roll now synthesize full chord voicings even when unexpanded; resolved React child key collision warnings; synchronized pitch (root) and pitches (stack) in reducer actions (SET_PITCH / BATCH_SET_PITCH) to ensure seamless data coherence across the UI."
       },
       {
-        "zh": "**顶部主工具栏间距紧凑化**：将 Tier 1 顶部工具栏垂直边距紧凑化优化至 `pb-2 mb-1.5`，保证所有核心操作项（播放/停止、BPM、拍号、精度、小节导航、撤销/重做）整齐保持在舒适高度内，并通过自动化测试断言浮动层级与事件销毁。",
-        "en": "**Toolbar Compaction**: Tightened vertical spacing to keep the Tier 1 toolbar streamlined, ensuring transport and timing controls fit comfortably without layout thrashing."
+        "zh": "**导出端全音符多音对齐与单步试听对齐**：彻底移除 MidiExporter 与 AbletonExporter 之前写死的伪小三和弦（+0, +3, +7）硬编码，统一调用 track.pitches 与 chordNotesForStep 生成真和弦 MIDI 事件；同时在步进网格点击试听时传递 stepIdx，使网格点击试听、序列器实时播放、WAV 离线渲染、MIDI 导出与 Ableton 工程导出全部使用完全同一份真和弦数据。",
+        "en": "**Exporters & Audition Parity**: Replaced hardcoded minor triad offsets in MidiExporter and AbletonExporter with true note stacks derived from track.pitches and chordNotesForStep. Grid audition now receives stepIdx to audition the exact stored chord stack, achieving 100% data fidelity across editing, auditioning, live playback, WAV export, MIDI export, and Ableton export."
       }
     ],
     "truncated": false
