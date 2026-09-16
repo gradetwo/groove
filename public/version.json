@@ -1,29 +1,29 @@
 {
-  "version": "2.0.30",
+  "version": "2.0.31",
   "releaseDate": "2026-09-16",
-  "changelogCount": 94,
+  "changelogCount": 95,
   "latest": {
-    "version": "2.0.30",
+    "version": "2.0.31",
     "date": "2026-09-17",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.30 播放中切换曲风从头起播与视听试听全链路声学同步：切换时干净重置播放头并从第一拍开始、试听与详情页完整继承真实BPM/Swing/鼓机模型、WAV导出Swing倍率归一化",
-      "en": "v2.0.30 Transport Playback Reset on Genre Switch & Audition Acoustic Fidelity: Clean playhead reset and restart from downbeat when switching genres during playback, audition & detail previews inherit authentic BPM/Swing/DrumKit, and WAV export swing normalization"
+      "zh": "v2.0.31 钢琴卷帘 Logic Pro 级专业美化与双层 DAW 指令台重构：模块化双层控制台、立体 3D 象牙与黑曜石琴键、调式级数钻石导轨、亚克力高光音符块、棒棒糖力度控制器与直达虚拟键盘演奏",
+      "en": "v2.0.31 Logic Pro-Grade Piano Roll Visual & Command Architecture Overhaul: Modular 2-deck command deck, 3D ivory & obsidian keybed, scale degree guide rails, acrylic glass note blocks, lollipop velocity lane, and direct Musical Typing HUD integration"
     },
     "highlights": [
       {
-        "zh": "**播放中切换曲风从头开始播放（Transport Playback Restart on Downbeat）**：解决在序列器正在播放时切换曲风，新曲风半路承接上一曲风步进指针与拍子偏移的割裂感。现在切换曲风时检测若处于播放状态，自动执行 stop() 并彻底重置播放头（clearPlayhead()），随后从第 0 步/第一小节第 1 拍从头启动播放，保证新曲风节奏与和声从第一拍干净利落实时呈现。",
-        "en": "**Transport Playback Reset on Genre Switch**: Resolved an issue where switching genres while the transport was running caused the new genre to resume from an arbitrary mid-bar step and phase offset. When switching during active playback, the engine now cleanly stops, resets the playhead via clearPlayhead(), and restarts from step 0 (downbeat of bar 1)."
+        "zh": "**模块化双层 DAW 指令控制台（2-Deck Command Deck）**：重塑原本拥挤无序的单行工具栏，构建清晰专业的双层分级控制台。Deck 1 集成轨道上下文中心（轨道切换、调式音阶微标、动态音符计数）、胶囊型主工具箱（指针 1、铅笔 2、橡皮 3、剪刀 4、框选 5，带荧光激活高光与快捷键角标）、力度泳道/播放头追随/展开收起/全屏及专属「Keys ⌥K」虚拟键盘快捷入口；Deck 2 集成时间网格（吸附与长度量化）、连音（Legato）、和弦编配大师组（Note/Triad/7th/9th/Sus4/Power 印章、和弦转位 ▲/▼、Drop-2 声部排列、人性化微时序抖动）、音高八度跨度调节（±12、8va/8vb）与多级视区缩放。层次分明，操作行云流水。",
+        "en": "**Modular 2-Deck DAW Command Deck**: Replaced the cluttered single-line toolbar with an ergonomically stratified 2-deck control chassis. Deck 1 houses the Track Context Hub (selector, scale/key badge, note counter), Primary Tool Palette (Pointer 1, Pencil 2, Eraser 3, Scissors 4, Marquee 5 with radiant glow states and shortcut badges), view toggles (Velocity, Catch, Collapse, Fullscreen), and a dedicated \"Keys ⌥K\" Musical Typing launcher. Deck 2 houses timing & quantize cont…"
       },
       {
-        "zh": "**全站曲风试听与详情页声学全要素同步（Audition Acoustic Parity）**：修复悬浮试听（useGenreAudition）与曲风详情预览（GenreDetailView）未继承该曲风专属 BPM、Swing 与硬件鼓机模型的痛点。setPattern(..., resetStates = true) 现在自动同步曲风自带速度、Swing 微时序（支持百分比与 0..0.75 比例）以及真实鼓机型号（808/909/Acoustic/Cyber），在全站任意卡片试听 174 BPM Drum & Bass 或 35% 摇摆 Boom Bap 均能立即听到该曲风地道标志性的律动与音色。",
-        "en": "**Audition Acoustic Parity**: Overhauled preview auditioning in hover cards and GenreDetailView to strictly adhere to authentic genre tempo, swing micro-timing, and drum machine models (808/909/Acoustic/Cyber) via setPattern(..., resetStates = true). Auditioning Drum & Bass at 174 BPM or Boom Bap with 35% swing immediately conveys the authentic acoustic groove."
+        "zh": "**立体 3D 象牙与黑曜石键盘（3D Ivory & Obsidian Keybed）**：彻底告别简陋扁平色块。黑键采用多段黑曜石渐变（#101217 → #242833），顶部倒角反光与投射到白键上的自然阴影，指针按下时呈现发光下潜反馈；白键采用象牙瓷釉高质感微渐变，并标注醒目 C3/C4/C5 八度标牌；琴键右缘嵌入调式级数光导轨，根音显示脉动旋转菱形钻标（Diamond Pin），调内音显示精细珍珠圆标，键盘与网格行实现亚像素级严格对齐。",
+        "en": "**3D Ivory & Obsidian Piano Keybed**: Overhauled the pitch gutter with authentic tactile depth. Ebony keys feature multi-stop obsidian gradients (#101217 to #242833), top bevel highlights, and cast drop shadows with interactive depression feedback; ivory keys feature creamy enamel finishes and prominent octave badges (C3, C4, C5); and the keybed margin embeds luminous scale degree guide pins (pulsing diamond pips for roots, pearl pips for diatonic tones) perfectly aligned wi…"
       },
       {
-        "zh": "**WAV 离线导出 Swing 溢出归一化修复**：修复 WavExporter 在处理大于 1 的 Swing 百分比值（如 15% 或 35%）时未除以 100 进行比例归一化，导致直接被 Math.min(0.75, ...) 截断为极限摇摆 0.75 的声学缺陷。离线导出渲染现与实时音频引擎完全保持一致。",
-        "en": "**WAV Offline Export Swing Normalization**: Corrected swing parsing in WavExporter to properly normalize percentage-based swing (> 1) by dividing by 100 before clamping to 0.75, eliminating acoustic distortion and achieving 100% parity with live playback."
+        "zh": "**亚克力质感音符块与金属拉丝和弦走势标尺（Acrylic Glass Notes & Brushed Chord Ruler）**：网格音符升级为全圆角亚克力发光块体，顶部拥有细致的高光反射边缘（border-t border-white/60），左侧配备琴槌撞击瞬态标记（Hammer Transient Marker），并根据力度映射琥珀至亮珊瑚热力图渐变；顶部吸附小节线与和弦走向标尺采用金属拉丝风格，自动识别小节和弦徽章，轻点即可多音完整试听。",
+        "en": "**Acrylic Glass Note Blocks & Brushed Chord Progression Ruler**: Pitch grid notes are elevated with acrylic glass capsules featuring top specular reflection rims, hammer strike transient impact lines, and velocity heatmap shading; the sticky timeline tape and chord progression ruler adopts a brushed dark metal texture, displaying harmonic badges that audition polyphonic chords upon clicking."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }

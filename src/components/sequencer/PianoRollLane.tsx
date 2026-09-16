@@ -3,6 +3,8 @@ import {
   ChevronDown,
   ChevronUp,
   Eraser,
+  Keyboard,
+  Layers,
   Maximize2,
   Minimize2,
   Minus,
@@ -10,9 +12,12 @@ import {
   Music2,
   Pencil,
   Plus,
+  Radio,
   Scissors,
+  Sparkles,
   SquareDashedMousePointer,
   Trash2,
+  Volume2,
   X,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -96,6 +101,8 @@ export interface PianoRollLaneProps {
   commit: (action: SequencerAction) => void;
   /** Plays one note through the track's instrument so drawing is audible. */
   onAudition: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
+  /** Optional trigger to open/toggle Musical Typing keyboard HUD */
+  onToggleMusicalTyping?: () => void;
 }
 
 const ROW_HEIGHTS = [12, 18, 26];
@@ -106,12 +113,12 @@ const GUTTER_W = 52;
 const VELOCITY_LANE_H = 54;
 const VELOCITY_PER_PX = 2.4;
 
-const TOOLS: Array<{ id: RollTool; icon: React.ReactNode; labelKey: string }> = [
-  { id: "pointer", icon: <MousePointer2 className="h-3.5 w-3.5" />, labelKey: "roll_tool_pointer" },
-  { id: "pencil", icon: <Pencil className="h-3.5 w-3.5" />, labelKey: "roll_tool_pencil" },
-  { id: "eraser", icon: <Eraser className="h-3.5 w-3.5" />, labelKey: "roll_tool_eraser" },
-  { id: "scissors", icon: <Scissors className="h-3.5 w-3.5" />, labelKey: "roll_tool_scissors" },
-  { id: "marquee", icon: <SquareDashedMousePointer className="h-3.5 w-3.5" />, labelKey: "roll_tool_marquee" },
+const TOOLS: Array<{ id: RollTool; icon: React.ReactNode; labelKey: string; keyHint: string }> = [
+  { id: "pointer", icon: <MousePointer2 className="h-3.5 w-3.5" />, labelKey: "roll_tool_pointer", keyHint: "1" },
+  { id: "pencil", icon: <Pencil className="h-3.5 w-3.5" />, labelKey: "roll_tool_pencil", keyHint: "2" },
+  { id: "eraser", icon: <Eraser className="h-3.5 w-3.5" />, labelKey: "roll_tool_eraser", keyHint: "3" },
+  { id: "scissors", icon: <Scissors className="h-3.5 w-3.5" />, labelKey: "roll_tool_scissors", keyHint: "4" },
+  { id: "marquee", icon: <SquareDashedMousePointer className="h-3.5 w-3.5" />, labelKey: "roll_tool_marquee", keyHint: "5" },
 ];
 
 const SNAPS: RollSnap[] = ["off", "1/4", "1/8", "1/16", "1/32"];
@@ -132,7 +139,7 @@ function velocityColor(velocity: number): string {
 }
 
 type DragState =
-  /** `origin` is a list of note ids — a chord moves as several notes. */
+  | { mode: "draw"; startStep: number; midi: number; base: SequencerPattern }
   | { mode: "move"; startStep: number; startMidi: number; origin: RollNoteId[]; base: SequencerPattern; copied: boolean }
   | { mode: "marquee"; startStep: number; startMidi: number }
   | { mode: "velocity"; startY: number; steps: RollNoteId[]; base: SequencerPattern }
@@ -151,6 +158,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   onClose,
   commit,
   onAudition,
+  onToggleMusicalTyping,
 }) => {
   const { t } = useLanguage();
   const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_INDEX);
@@ -545,7 +553,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const selectedNotes: RollStepNote[] = notes.filter((n) => selectedSet.has(noteId(n)));
   const focusNote = selectedNotes[0] ?? null;
   const ctrlClass =
-    "flex h-6 items-center gap-1 rounded-lg border border-line bg-panel2 px-1.5 font-['JetBrains_Mono'] text-[10px] text-text-sub transition-colors hover:text-text";
+    "flex h-7 items-center gap-1.5 rounded-lg border border-[#2b3040] bg-gradient-to-b from-[#1b1f2b] to-[#12151e] px-2 font-['JetBrains_Mono'] text-[10px] font-semibold text-[#cbd1de] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_1px_2px_rgba(0,0,0,0.4)] transition-all duration-100 hover:border-accent/50 hover:text-white hover:shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)] active:translate-y-[1px]";
 
   return (
     <section
@@ -562,7 +570,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       data-row-h={rowH}
       aria-label={`${t("roll_title")} ${track?.name ?? ""}`}
       className={
-        isFullscreen ? "fixed inset-0 z-[60] flex flex-col gap-2 overflow-y-auto bg-bg p-3 sm:p-4" : "flex w-full flex-col gap-2"
+        isFullscreen
+          ? "fixed inset-0 z-[60] flex flex-col gap-2.5 overflow-y-auto bg-gradient-to-b from-[#12141c] via-[#0d0f16] to-[#08090e] p-3 sm:p-5 shadow-2xl backdrop-blur-2xl ring-1 ring-white/[0.08]"
+          : "flex w-full flex-col gap-2 rounded-2xl border border-[#242838] bg-gradient-to-b from-[#121520] via-[#0d0f17] to-[#0a0b11] p-3 sm:p-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.65)] backdrop-blur-xl ring-1 ring-white/[0.05]"
       }
       style={
         isFullscreen
@@ -573,252 +583,393 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           : undefined
       }
     >
-      {/* ---------------------------------------------------------------- toolbar */}
-      <header className="flex flex-wrap items-center gap-1.5 border-b border-line-subtle pb-2">
-        <span className="flex items-center gap-1.5 font-['JetBrains_Mono'] text-[10px] font-bold uppercase tracking-[0.1em] text-text">
-          <Music2 className="h-3.5 w-3.5 text-accent" />
-          {t("roll_title")}
-        </span>
+      {/* ---------------------------------------------------------------- modular 2-deck command header */}
+      <header className="flex flex-col gap-2 border-b border-[#242938] pb-2.5">
+        {/* Deck 1: Track Context, Primary Tool Palette & Essential View Toggles */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Left: Track & Musical Tonality Hub */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-lg border border-[#2d3345] bg-gradient-to-b from-[#181c28] to-[#12151f] px-2 py-1 shadow-inner">
+              <Music2 className="h-3.5 w-3.5 text-accent animate-pulse" />
+              <span className="font-['JetBrains_Mono'] text-[10px] font-bold uppercase tracking-[0.1em] text-white">
+                {t("roll_title")}
+              </span>
+            </div>
 
-        <select
-          value={activeTrackIdx}
-          onChange={(e) => {
-            setSelection([]);
-            setDraft(null);
-            onSelectTrack(Number(e.target.value));
-          }}
-          aria-label={t("roll_track")}
-          data-testid="piano-roll-track"
-          className="rounded-lg border border-line bg-panel2 px-2 py-1 font-['JetBrains_Mono'] text-[11px] text-text outline-none"
-        >
-          {selectableTracks.map(({ tr, idx }) => (
-            <option key={`${tr.track_id}-${idx}`} value={idx}>
-              {tr.name}
-            </option>
-          ))}
-        </select>
-
-        <div role="group" aria-label={t("roll_tools")} className="flex items-center gap-0.5 rounded-lg border border-line bg-panel2 p-0.5">
-          {TOOLS.map((entry, index) => (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => setTool(entry.id)}
-              aria-pressed={tool === entry.id}
-              data-testid={`piano-roll-tool-${entry.id}`}
-              title={`${t(entry.labelKey)} (${index + 1})`}
-              aria-label={t(entry.labelKey)}
-              className={`rounded p-0.5 transition-colors ${tool === entry.id ? "bg-accent/25 text-accent" : "text-text-sub hover:text-text"}`}
-            >
-              {entry.icon}
-            </button>
-          ))}
-        </div>
-
-        <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[9px] uppercase tracking-[0.08em] text-text-dim">
-          {t("roll_snap")}
-          <select
-            value={snap}
-            onChange={(e) => setSnap(e.target.value as RollSnap)}
-            aria-label={t("roll_snap")}
-            data-testid="piano-roll-snap"
-            className="rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text outline-none"
-          >
-            {SNAPS.map((value) => (
-              <option key={value} value={value}>
-                {value === "off" ? t("roll_snap_off") : value}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <button
-          type="button"
-          onClick={() =>
-            applyOp((p) =>
-              quantizeLengths(p, activeTrackIdx, selection.length ? selection : notes.map(noteId), snap, stepCount)
-            )
-          }
-          disabled={notes.length === 0}
-          data-testid="piano-roll-quantize-lengths"
-          title={t("roll_quantize_lengths_hint")}
-          className={`${ctrlClass} disabled:opacity-40`}
-        >
-          {t("roll_quantize_lengths")}
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            applyOp((p) =>
-              legatoNotes(p, activeTrackIdx, selection.length ? selection : notes.map(noteId), stepCount, loopLen)
-            )
-          }
-          disabled={notes.length === 0}
-          data-testid="piano-roll-legato"
-          title={t("roll_legato_hint")}
-          className={`${ctrlClass} disabled:opacity-40`}
-        >
-          {t("roll_legato")}
-        </button>
-
-        {/* Chord Palette & Voicing Tools */}
-        <div className="flex items-center gap-1 border-l border-line-subtle pl-1.5">
-          <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[9px] uppercase tracking-[0.08em] text-text-dim">
-            {t("roll_chord_stamp")}
             <select
-              value={chordStamp}
-              onChange={(e) => setChordStamp(e.target.value as ChordStampType)}
-              data-testid="piano-roll-chord-stamp"
-              className="rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text outline-none"
+              value={activeTrackIdx}
+              onChange={(e) => {
+                setSelection([]);
+                setDraft(null);
+                onSelectTrack(Number(e.target.value));
+              }}
+              aria-label={t("roll_track")}
+              data-testid="piano-roll-track"
+              className="h-7 rounded-lg border border-[#2e3447] bg-gradient-to-b from-[#191d29] to-[#12151f] px-2.5 font-['JetBrains_Mono'] text-[11px] font-bold text-white shadow-inner outline-none transition-colors hover:border-accent/50 focus:border-accent"
             >
-              <option value="note">{t("roll_chord_note")}</option>
-              <option value="triad">{t("roll_chord_triad")}</option>
-              <option value="seventh">{t("roll_chord_seventh")}</option>
-              <option value="ninth">{t("roll_chord_ninth")}</option>
-              <option value="sus4">{t("roll_chord_sus4")}</option>
-              <option value="power">{t("roll_chord_power")}</option>
+              {selectableTracks.map(({ tr, idx }) => (
+                <option key={`${tr.track_id}-${idx}`} value={idx} className="bg-[#12151f] text-white">
+                  {tr.name}
+                </option>
+              ))}
             </select>
-          </label>
 
-          <button
-            type="button"
-            onClick={() => applyOp((p) => invertSelectedChord(p, activeTrackIdx, selection, "up", stepCount))}
-            disabled={selection.length === 0}
-            title="Invert chord up"
-            data-testid="piano-roll-invert-up"
-            className={`${ctrlClass} disabled:opacity-40`}
+            {/* Tonality / Scale badge */}
+            <div className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-['JetBrains_Mono'] font-bold bg-accent/15 text-accent border border-accent/30 shadow-[0_0_8px_rgba(var(--accent-rgb),0.2)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+              <span>{view.scale || "Chromatic"}</span>
+            </div>
+
+            {/* Note count chip */}
+            <span className="hidden sm:inline-block font-['JetBrains_Mono'] text-[9px] text-text-dim px-1.5 py-0.5 rounded bg-white/5 border border-white/10">
+              {notes.length} notes
+            </span>
+          </div>
+
+          {/* Center: Primary DAW Tool Palette */}
+          <div
+            role="group"
+            aria-label={t("roll_tools")}
+            className="flex items-center gap-1 rounded-xl border border-[#2b3142] bg-[#141723]/90 p-1 shadow-[inset_0_1px_3px_rgba(0,0,0,0.7)]"
           >
-            {t("roll_invert_up")}
-          </button>
-          <button
-            type="button"
-            onClick={() => applyOp((p) => invertSelectedChord(p, activeTrackIdx, selection, "down", stepCount))}
-            disabled={selection.length === 0}
-            title="Invert chord down"
-            data-testid="piano-roll-invert-down"
-            className={`${ctrlClass} disabled:opacity-40`}
-          >
-            {t("roll_invert_down")}
-          </button>
-          <button
-            type="button"
-            onClick={() => applyOp((p) => drop2SelectedChord(p, activeTrackIdx, selection, stepCount))}
-            disabled={selection.length === 0}
-            title="Drop-2 Voicing"
-            data-testid="piano-roll-drop2"
-            className={`${ctrlClass} disabled:opacity-40`}
-          >
-            {t("roll_drop2")}
-          </button>
-          <button
-            type="button"
-            onClick={() => applyOp((p) => humanizeSelectedNotes(p, activeTrackIdx, selection, stepCount))}
-            disabled={notes.length === 0}
-            title="Humanize notes"
-            data-testid="piano-roll-humanize"
-            className={`${ctrlClass} disabled:opacity-40`}
-          >
-            {t("roll_humanize")}
-          </button>
+            {TOOLS.map((entry, index) => {
+              const isActive = tool === entry.id;
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => setTool(entry.id)}
+                  aria-pressed={isActive}
+                  data-testid={`piano-roll-tool-${entry.id}`}
+                  title={`${t(entry.labelKey)} (${index + 1})`}
+                  aria-label={t(entry.labelKey)}
+                  className={`relative flex items-center gap-1 rounded-lg px-2 py-1 font-['JetBrains_Mono'] text-[10px] font-bold transition-all duration-100 select-none ${
+                    isActive
+                      ? "bg-gradient-to-b from-accent to-accent-hover text-white shadow-[0_0_12px_rgba(var(--accent-rgb),0.6),inset_0_1px_0_rgba(255,255,255,0.4)] scale-[1.02]"
+                      : "text-text-sub hover:text-white hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {entry.icon}
+                  <span className={`text-[8.5px] opacity-60 ml-0.5 ${isActive ? "text-white/90" : "text-text-dim"}`}>
+                    {entry.keyHint}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right: Window Controls & Utility Toggles */}
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              type="button"
+              onClick={() => setShowVelocityLane((v) => !v)}
+              aria-pressed={showVelocityLane}
+              data-testid="piano-roll-velocity-toggle"
+              title={t("roll_velocity_lane")}
+              className={`${ctrlClass} ${showVelocityLane ? "border-accent text-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)]" : ""}`}
+            >
+              <Volume2 className="h-3 w-3" />
+              <span>{t("roll_velocity_lane")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCatchPlayhead((v) => !v)}
+              aria-pressed={catchPlayhead}
+              data-testid="piano-roll-catch"
+              title={t("roll_catch_hint")}
+              className={`${ctrlClass} ${catchPlayhead ? "border-accent text-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)]" : ""}`}
+            >
+              <Radio className="h-3 w-3" />
+              <span>{t("roll_catch")}</span>
+            </button>
+            {onToggleMusicalTyping && (
+              <button
+                type="button"
+                onClick={onToggleMusicalTyping}
+                title={isZh ? "打开 Musical Typing 电脑键盘演奏 (⌥K)" : "Open Musical Typing computer keyboard HUD (⌥K)"}
+                aria-label={isZh ? "电脑键盘演奏" : "Musical Typing"}
+                data-testid="piano-roll-musical-typing"
+                className="flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/15 px-2 py-1 font-['JetBrains_Mono'] text-[10px] font-bold text-accent transition-all duration-150 hover:bg-accent/25 hover:border-accent hover:shadow-[0_0_10px_rgba(var(--accent-rgb),0.3)] select-none"
+              >
+                <Keyboard className="h-3 w-3" />
+                <span className="hidden sm:inline">{isZh ? "虚拟键盘" : "Keys"}</span>
+                <kbd className="rounded bg-black/40 px-1 py-0.2 text-[8.5px] border border-accent/20 text-accent font-semibold">
+                  ⌥K
+                </kbd>
+              </button>
+            )}
+            <div className="h-4 w-[1px] bg-line-subtle mx-0.5" />
+            <button
+              type="button"
+              onClick={() => setIsCollapsed((v) => !v)}
+              aria-pressed={isCollapsed}
+              data-testid="piano-roll-collapse"
+              title={isCollapsed ? t("roll_expand") : t("roll_collapse")}
+              aria-label={isCollapsed ? t("roll_expand") : t("roll_collapse")}
+              className={ctrlClass}
+            >
+              {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsFullscreen((v) => !v)}
+              aria-pressed={isFullscreen}
+              data-testid="piano-roll-fullscreen"
+              title={isFullscreen ? t("roll_exit_fullscreen") : t("roll_fullscreen")}
+              aria-label={isFullscreen ? t("roll_exit_fullscreen") : t("roll_fullscreen")}
+              className={ctrlClass}
+            >
+              {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              data-testid="piano-roll-close"
+              aria-label={t("roll_close")}
+              title={t("roll_close")}
+              className={`${ctrlClass} hover:border-red-500/50 hover:text-red-400`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setOctaveShift((v) => v + 12)} title={t("roll_octave_up")} aria-label={t("roll_octave_up")} data-testid="piano-roll-octave-up" className={ctrlClass}>
-            <ChevronUp className="h-3.5 w-3.5" />
-          </button>
-          <button type="button" onClick={() => setOctaveShift((v) => v - 12)} title={t("roll_octave_down")} aria-label={t("roll_octave_down")} data-testid="piano-roll-octave-down" className={ctrlClass}>
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
+        {/* Deck 2: Timing, Harmony & Voicing Suite, Pitch Transposition & Density */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          {/* Left Deck 2: Snap, Quantize & Legato */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center gap-1 rounded-lg border border-[#282d3e] bg-[#131622]/80 px-2 py-0.5">
+              <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[9px] uppercase tracking-[0.08em] text-text-dim">
+                {t("roll_snap")}
+                <select
+                  value={snap}
+                  onChange={(e) => setSnap(e.target.value as RollSnap)}
+                  aria-label={t("roll_snap")}
+                  data-testid="piano-roll-snap"
+                  className="rounded border border-[#2b3040] bg-[#1a1e2b] px-1 py-0.5 text-[10px] font-bold text-white outline-none hover:border-accent/40"
+                >
+                  {SNAPS.map((value) => (
+                    <option key={value} value={value} className="bg-[#12151f]">
+                      {value === "off" ? t("roll_snap_off") : value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={() =>
+                  applyOp((p) =>
+                    quantizeLengths(p, activeTrackIdx, selection.length ? selection : notes.map(noteId), snap, stepCount)
+                  )
+                }
+                disabled={notes.length === 0}
+                data-testid="piano-roll-quantize-lengths"
+                title={t("roll_quantize_lengths_hint")}
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                {t("roll_quantize_lengths")}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  applyOp((p) =>
+                    legatoNotes(p, activeTrackIdx, selection.length ? selection : notes.map(noteId), stepCount, loopLen)
+                  )
+                }
+                disabled={notes.length === 0}
+                data-testid="piano-roll-legato"
+                title={t("roll_legato_hint")}
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                {t("roll_legato")}
+              </button>
+            </div>
+
+            {/* Chord Palette & Voicing Suite */}
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-[#282d3e] bg-[#131622]/80 px-2 py-0.5">
+              <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[9px] uppercase tracking-[0.08em] text-text-dim">
+                <Layers className="h-3 w-3 text-accent" />
+                {t("roll_chord_stamp")}
+                <select
+                  value={chordStamp}
+                  onChange={(e) => setChordStamp(e.target.value as ChordStampType)}
+                  data-testid="piano-roll-chord-stamp"
+                  className="rounded border border-[#2b3040] bg-[#1a1e2b] px-1.5 py-0.5 text-[10px] font-bold text-white outline-none hover:border-accent/40"
+                >
+                  <option value="note" className="bg-[#12151f]">{t("roll_chord_note")}</option>
+                  <option value="triad" className="bg-[#12151f]">{t("roll_chord_triad")}</option>
+                  <option value="seventh" className="bg-[#12151f]">{t("roll_chord_seventh")}</option>
+                  <option value="ninth" className="bg-[#12151f]">{t("roll_chord_ninth")}</option>
+                  <option value="sus4" className="bg-[#12151f]">{t("roll_chord_sus4")}</option>
+                  <option value="power" className="bg-[#12151f]">{t("roll_chord_power")}</option>
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => applyOp((p) => invertSelectedChord(p, activeTrackIdx, selection, "up", stepCount))}
+                disabled={selection.length === 0}
+                title="Invert chord up"
+                data-testid="piano-roll-invert-up"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                {t("roll_invert_up")}
+              </button>
+              <button
+                type="button"
+                onClick={() => applyOp((p) => invertSelectedChord(p, activeTrackIdx, selection, "down", stepCount))}
+                disabled={selection.length === 0}
+                title="Invert chord down"
+                data-testid="piano-roll-invert-down"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                {t("roll_invert_down")}
+              </button>
+              <button
+                type="button"
+                onClick={() => applyOp((p) => drop2SelectedChord(p, activeTrackIdx, selection, stepCount))}
+                disabled={selection.length === 0}
+                title="Drop-2 Voicing"
+                data-testid="piano-roll-drop2"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                {t("roll_drop2")}
+              </button>
+              <button
+                type="button"
+                onClick={() => applyOp((p) => humanizeSelectedNotes(p, activeTrackIdx, selection, stepCount))}
+                disabled={notes.length === 0}
+                title="Humanize notes"
+                data-testid="piano-roll-humanize"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                <Sparkles className="h-3 w-3 text-amber-400" />
+                {t("roll_humanize")}
+              </button>
+            </div>
+          </div>
+
+          {/* Right Deck 2: Pitch Transposition, Octaves, Zoom & Delete */}
+          <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+            {/* Octave Shift */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setOctaveShift((v) => v + 12)}
+                title={t("roll_octave_up")}
+                aria-label={t("roll_octave_up")}
+                data-testid="piano-roll-octave-up"
+                className={ctrlClass}
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+                <span className="text-[9px]">8va</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOctaveShift((v) => v - 12)}
+                title={t("roll_octave_down")}
+                aria-label={t("roll_octave_down")}
+                data-testid="piano-roll-octave-down"
+                className={ctrlClass}
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+                <span className="text-[9px]">8vb</span>
+              </button>
+            </div>
+
+            {/* Transpose ±12 */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => applyOp((p) => transposeTrack(p, activeTrackIdx, 12, stepCount))}
+                disabled={!editable}
+                data-testid="piano-roll-transpose-up"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                +12
+              </button>
+              <button
+                type="button"
+                onClick={() => applyOp((p) => transposeTrack(p, activeTrackIdx, -12, stepCount))}
+                disabled={!editable}
+                data-testid="piano-roll-transpose-down"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                −12
+              </button>
+            </div>
+
+            {/* Zoom & Row Height */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setZoomIdx((v) => Math.max(0, v - 1))}
+                title={t("roll_zoom_out")}
+                aria-label={t("roll_zoom_out")}
+                data-testid="piano-roll-zoom-out"
+                className={ctrlClass}
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomIdx((v) => Math.min(ZOOM_FACTORS.length - 1, v + 1))}
+                title={t("roll_zoom_in")}
+                aria-label={t("roll_zoom_in")}
+                data-testid="piano-roll-zoom-in"
+                className={ctrlClass}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setRowHeightIdx((v) => (v + 1) % ROW_HEIGHTS.length)}
+                title={t("roll_row_height")}
+                aria-label={t("roll_row_height")}
+                data-testid="piano-roll-row-height-toggle"
+                className={ctrlClass}
+              >
+                {rowH}px
+              </button>
+            </div>
+
+            {/* Delete Selection */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selection.length === 0) return;
+                applyOp((p) => deleteNotes(p, activeTrackIdx, selection, stepCount));
+                setSelection([]);
+              }}
+              disabled={selection.length === 0}
+              data-testid="piano-roll-delete"
+              title={t("roll_delete_note")}
+              aria-label={t("roll_delete_note")}
+              className={`${ctrlClass} ${selection.length > 0 ? "border-red-500/50 text-red-300 hover:bg-red-500/20" : "disabled:opacity-30"}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setZoomIdx((v) => Math.max(0, v - 1))} title={t("roll_zoom_out")} aria-label={t("roll_zoom_out")} data-testid="piano-roll-zoom-out" className={ctrlClass}>
-            <Minus className="h-3.5 w-3.5" />
-          </button>
-          <button type="button" onClick={() => setZoomIdx((v) => Math.min(ZOOM_FACTORS.length - 1, v + 1))} title={t("roll_zoom_in")} aria-label={t("roll_zoom_in")} data-testid="piano-roll-zoom-in" className={ctrlClass}>
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setRowHeightIdx((v) => (v + 1) % ROW_HEIGHTS.length)}
-            title={t("roll_row_height")}
-            aria-label={t("roll_row_height")}
-            data-testid="piano-roll-row-height-toggle"
-            className={ctrlClass}
-          >
-            {rowH}px
-          </button>
-        </div>
-
-        <button type="button" onClick={() => applyOp((p) => transposeTrack(p, activeTrackIdx, 12, stepCount))} disabled={!editable} data-testid="piano-roll-transpose-up" className={`${ctrlClass} disabled:opacity-40`}>
-          +12
-        </button>
-        <button type="button" onClick={() => applyOp((p) => transposeTrack(p, activeTrackIdx, -12, stepCount))} disabled={!editable} data-testid="piano-roll-transpose-down" className={`${ctrlClass} disabled:opacity-40`}>
-          −12
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (selection.length === 0) return;
-            applyOp((p) => deleteNotes(p, activeTrackIdx, selection, stepCount));
-            setSelection([]);
-          }}
-          disabled={selection.length === 0}
-          data-testid="piano-roll-delete"
-          title={t("roll_delete_note")}
-          aria-label={t("roll_delete_note")}
-          className={`${ctrlClass} disabled:opacity-40`}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowVelocityLane((v) => !v)}
-          aria-pressed={showVelocityLane}
-          data-testid="piano-roll-velocity-toggle"
-          title={t("roll_velocity_lane")}
-          className={`${ctrlClass} ${showVelocityLane ? "border-accent text-accent" : ""}`}
-        >
-          {t("roll_velocity_lane")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setCatchPlayhead((v) => !v)}
-          aria-pressed={catchPlayhead}
-          data-testid="piano-roll-catch"
-          title={t("roll_catch_hint")}
-          className={`${ctrlClass} ${catchPlayhead ? "border-accent text-accent" : ""}`}
-        >
-          {t("roll_catch")}
-        </button>
-
-        <button type="button" onClick={() => setIsCollapsed((v) => !v)} aria-pressed={isCollapsed} data-testid="piano-roll-collapse" title={isCollapsed ? t("roll_expand") : t("roll_collapse")} aria-label={isCollapsed ? t("roll_expand") : t("roll_collapse")} className={ctrlClass}>
-          {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-        </button>
-        <button type="button" onClick={() => setIsFullscreen((v) => !v)} aria-pressed={isFullscreen} data-testid="piano-roll-fullscreen" title={isFullscreen ? t("roll_exit_fullscreen") : t("roll_fullscreen")} aria-label={isFullscreen ? t("roll_exit_fullscreen") : t("roll_fullscreen")} className={ctrlClass}>
-          {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-        </button>
-        <button type="button" onClick={onClose} data-testid="piano-roll-close" aria-label={t("roll_close")} title={t("roll_close")} className={`${ctrlClass} ml-auto`}>
-          <X className="h-3.5 w-3.5" />
-        </button>
       </header>
 
       {notice && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-300" data-testid="piano-roll-notice">
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent px-3 py-1.5 text-[11px] font-['JetBrains_Mono'] text-amber-200 shadow-md backdrop-blur-md" data-testid="piano-roll-notice">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           {notice}
         </div>
       )}
 
       {isCollapsed ? null : !editable ? (
-        <div className="rounded-lg border border-line bg-panel2/60 p-3 text-[11px] text-text-sub" data-testid="piano-roll-not-melodic">
+        <div className="rounded-2xl border border-[#282d3e] bg-gradient-to-b from-[#141724] to-[#0c0e15] p-8 text-center text-xs text-text-sub backdrop-blur-md shadow-inner" data-testid="piano-roll-not-melodic">
           {t("roll_not_melodic")}
         </div>
       ) : (
         <>
           <div className="flex gap-2">
             {/* Pitch gutter, drawn as a realistic 3D piano keyboard with auditioning */}
-            <div className="shrink-0 select-none w-14" style={{ paddingTop: 22 }}>
+            <div className="shrink-0 select-none w-16" style={{ paddingTop: 24 }}>
               {rows.map((midi) => {
                 const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
                 const inScale = scale.pcs.has(midi % 12);
@@ -839,18 +990,23 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerLeave={() => setActiveAuditionMidi(null)}
                     className={`relative flex items-center justify-between px-1.5 font-['JetBrains_Mono'] text-[9px] cursor-pointer transition-all duration-75 select-none ${
                       isAuditioning
-                        ? "bg-accent text-white shadow-[inset_0_0_8px_rgba(255,255,255,0.8)] z-10"
+                        ? "bg-gradient-to-r from-accent to-accent-hover text-white shadow-[0_0_12px_rgba(var(--accent-rgb),0.8),inset_0_1px_2px_rgba(255,255,255,0.6)] z-20 font-bold"
                         : isBlack
-                        ? "bg-gradient-to-r from-[#15171d] to-[#252932] text-[#717684] hover:to-[#2e3340] border-b border-[#0e1014] shadow-[1px_1px_3px_rgba(0,0,0,0.5)]"
-                        : "bg-gradient-to-r from-[#e3e4e8] to-[#f4f5f8] text-[#1c1f26] hover:to-white border-b border-[#c8cad0] shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
+                        ? "bg-gradient-to-r from-[#101217] via-[#1a1d26] to-[#242833] text-[#868c9c] hover:to-[#2c3240] border-t border-white/15 border-b border-black/90 shadow-[1px_2px_4px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.1)] rounded-r-[3px] mr-1"
+                        : "bg-gradient-to-r from-[#d9dde6] via-[#ebedf2] to-[#fafbfc] text-[#14161f] hover:to-white border-b border-[#a8adb8] border-l-2 border-[#b8bcc8] shadow-[0_1px_2px_rgba(0,0,0,0.2)]"
                     }`}
                     style={{ height: rowH }}
                   >
+                    {/* Scale Degree Guide Marker */}
                     <div className="flex items-center gap-1">
-                      {isRoot && <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" title="Root" />}
-                      {!isRoot && inScale && <span className={`w-1 h-1 rounded-full ${isBlack ? "bg-white/40" : "bg-black/30"}`} />}
+                      {isRoot ? (
+                        <span className="w-1.5 h-1.5 rotate-45 bg-accent shadow-[0_0_6px_var(--accent)] animate-pulse" title="Root" />
+                      ) : inScale ? (
+                        <span className={`w-1 h-1 rounded-full ${isBlack ? "bg-white/60 shadow-[0_0_3px_rgba(255,255,255,0.4)]" : "bg-black/40"}`} />
+                      ) : null}
                     </div>
-                    <span className={`font-semibold tracking-tighter ${isC ? "font-bold text-accent" : ""}`}>
+                    {/* Key Pitch Label */}
+                    <span className={`font-semibold tracking-tighter ${isC ? "font-black text-accent drop-shadow-[0_0_4px_rgba(var(--accent-rgb),0.4)]" : ""}`}>
                       {isC ? `C${oct}` : rowH >= 18 ? midiToNoteName(midi) : isBlack ? "" : midiToNoteName(midi)}
                     </span>
                   </div>
@@ -861,28 +1017,40 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
             <div ref={gridWrapRef} data-testid="piano-roll-grid-wrap" className="min-w-0 flex-1">
               <div ref={scrollRef} className="overflow-x-auto">
                 {/* Measure & Chord Progression Ruler */}
-                <div className="flex border-b border-line-subtle/80 bg-panel/70 backdrop-blur-sm sticky top-0 z-30" style={{ height: 22 }}>
+                <div className="flex border-b border-[#262b3b] bg-gradient-to-b from-[#171a25] via-[#13151f] to-[#0f1118] backdrop-blur-md sticky top-0 z-30 shadow-sm" style={{ height: 24 }}>
                   {chordsByBar.map(({ barIdx, chordName, noteIds }) => {
                     const barWidth = stepsPerBar * cellW;
                     const isBarSelected = noteIds.length > 0 && noteIds.every((id) => selectedSet.has(id));
                     return (
                       <div
                         key={`bar-header-${barIdx}`}
-                        className="shrink-0 flex items-center justify-between px-1.5 border-l border-accent/40 font-['JetBrains_Mono'] text-[9px] overflow-hidden"
+                        className="shrink-0 flex items-center justify-between px-2 border-l-2 border-accent/50 font-['JetBrains_Mono'] text-[9px] overflow-hidden shadow-[inset_1px_0_0_rgba(255,255,255,0.05)]"
                         style={{ width: barWidth }}
                       >
-                        <span className="text-accent font-bold tracking-tight">
-                          {t("roll_progression_bar", { bar: barIdx + 1 })}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-accent font-extrabold tracking-tight drop-shadow-[0_0_6px_rgba(var(--accent-rgb),0.3)]">
+                            {t("roll_progression_bar", { bar: barIdx + 1 })}
+                          </span>
+                          <div className="hidden sm:flex items-center gap-1 text-[7.5px] text-white/20 ml-1">
+                            <span>.1</span>
+                            <span>.2</span>
+                            <span>.3</span>
+                            <span>.4</span>
+                          </div>
+                        </div>
                         {chordName && (
                           <button
                             type="button"
-                            onClick={() => setSelection(noteIds)}
-                            title={`Select chord ${chordName}`}
-                            className={`px-1.5 py-0.5 rounded text-[8.5px] font-bold transition-colors truncate ${
+                            onClick={() => {
+                              setSelection(noteIds);
+                              const barNotes = notes.filter((n) => noteIds.includes(noteId(n)));
+                              barNotes.forEach((n) => onAudition(activeTrackIdx, n.midi, n.velocity, 0.5));
+                            }}
+                            title={`Select & audition chord ${chordName}`}
+                            className={`px-2 py-0.5 rounded-md text-[8.5px] font-bold transition-all truncate ${
                               isBarSelected
-                                ? "bg-white text-black shadow-[0_0_6px_rgba(255,255,255,0.6)]"
-                                : "bg-accent/20 text-accent hover:bg-accent/30 border border-accent/30"
+                                ? "bg-white text-black shadow-[0_0_12px_rgba(255,255,255,0.8)] scale-105 font-black"
+                                : "bg-accent/20 text-accent hover:bg-accent/35 border border-accent/40 hover:border-accent shadow-[0_0_6px_rgba(var(--accent-rgb),0.2)]"
                             }`}
                           >
                             {chordName}
@@ -902,7 +1070,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerMove={handleGridPointerMove}
                     onPointerUp={handleGridPointerUp}
                     onPointerCancel={handleGridPointerUp}
-                    className="relative touch-none select-none"
+                    className="relative touch-none select-none bg-[#0a0c12]"
                     style={{ height: rows.length * rowH, width: gridW }}
                   >
                     {rows.map((midi, rowIdx) => {
@@ -911,24 +1079,40 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       return (
                         <div
                           key={midi}
-                          className={`absolute inset-x-0 border-b border-line-subtle/40 ${
-                            isRoot ? "bg-accent/[0.07]" : !inScale ? "bg-black/25" : rowIdx % 2 === 0 ? "bg-white/[0.02]" : ""
+                          className={`absolute inset-x-0 border-b border-[#1b1f2c]/50 ${
+                            isRoot
+                              ? "bg-accent/[0.08] shadow-[inset_0_0_8px_rgba(var(--accent-rgb),0.12)]"
+                              : !inScale
+                              ? "bg-black/45"
+                              : rowIdx % 2 === 0
+                              ? "bg-white/[0.02]"
+                              : "bg-[#10131b]"
                           }`}
                           style={{ top: rowIdx * rowH, height: rowH }}
                         />
                       );
                     })}
-                    {Array.from({ length: stepCount }, (_, i) => (
-                      <div
-                        key={`bar-${i}`}
-                        className={`absolute inset-y-0 border-l ${i % stepsPerBar === 0 ? "border-accent/30" : "border-line-subtle/30"}`}
-                        style={{ left: i * cellW }}
-                      />
-                    ))}
+                    {Array.from({ length: stepCount }, (_, i) => {
+                      const isBar = i % stepsPerBar === 0;
+                      const isBeat = i % (stepsPerBar >= 4 ? stepsPerBar / 4 : 4) === 0;
+                      return (
+                        <div
+                          key={`bar-${i}`}
+                          className={`absolute inset-y-0 ${
+                            isBar
+                              ? "border-l-2 border-accent/40 shadow-[0_0_8px_rgba(var(--accent-rgb),0.25)] z-0"
+                              : isBeat
+                              ? "border-l border-white/12"
+                              : "border-l border-white/[0.03]"
+                          }`}
+                          style={{ left: i * cellW }}
+                        />
+                      );
+                    })}
 
                     {loopLen < stepCount && (
                       <div
-                        className="absolute inset-y-0 bg-black/45"
+                        className="absolute inset-y-0 bg-[repeating-linear-gradient(45deg,rgba(0,0,0,0.45),rgba(0,0,0,0.45)_12px,rgba(0,0,0,0.65)_12px,rgba(0,0,0,0.65)_24px)] backdrop-grayscale-[0.4]"
                         style={{ left: loopLen * cellW, width: (stepCount - loopLen) * cellW }}
                         data-testid="piano-roll-loop-boundary"
                       />
@@ -936,7 +1120,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
                     <div
                       ref={playheadRef}
-                      className="pointer-events-none absolute inset-y-0 w-[2px] bg-accent/80"
+                      className="pointer-events-none absolute inset-y-0 w-[2px] bg-gradient-to-b from-white via-accent to-accent/60 shadow-[0_0_10px_rgba(var(--accent-rgb),1),0_0_20px_rgba(var(--accent-rgb),0.6)] z-30"
                       style={{ left: 0, opacity: 0, willChange: "transform" }}
                       data-testid="piano-roll-playhead"
                     />
@@ -947,6 +1131,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       const selected = selectedSet.has(noteId(note));
                       const width = Math.max(cellW * 0.9, note.gate * cellW);
                       const noteName = midiToNoteName(note.midi);
+                      const baseColor = velocityColor(note.velocity);
                       return (
                         <div
                           key={`note-${note.stepIdx}-${note.midi}`}
@@ -956,37 +1141,40 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           data-gate={note.gate.toFixed(3)}
                           data-velocity={note.velocity}
                           title={`${noteName} · ${t("roll_note_meta", { gate: note.gate.toFixed(2), velocity: note.velocity })}`}
-                          className={`absolute overflow-hidden rounded-[4px] transition-shadow duration-75 select-none ${
+                          className={`absolute overflow-hidden rounded-[5px] transition-shadow duration-75 select-none ${
                             selected
-                              ? "border border-white ring-2 ring-white/80 shadow-[0_0_12px_rgba(255,255,255,0.5)] z-20"
-                              : "border border-black/50 shadow-[0_1px_3px_rgba(0,0,0,0.5)] hover:border-white/50 z-10"
+                              ? "border border-white ring-2 ring-white/90 shadow-[0_0_16px_rgba(255,255,255,0.8),inset_0_1px_0_rgba(255,255,255,0.9)] z-20"
+                              : "border border-black/60 shadow-[0_2px_5px_rgba(0,0,0,0.6)] hover:border-white/60 hover:shadow-[0_0_10px_rgba(255,255,255,0.4)] z-10"
                           }`}
                           style={{
                             left: note.stepIdx * cellW + 1,
                             top: top + 1,
                             width: width - 2,
                             height: rowH - 2,
-                            backgroundColor: velocityColor(note.velocity),
+                            backgroundColor: baseColor,
                             boxShadow: selected
-                              ? "0 0 10px rgba(255,255,255,0.6), inset 0 1px 0 rgba(255,255,255,0.7)"
-                              : "inset 0 1px 0 rgba(255,255,255,0.35), 0 1px 3px rgba(0,0,0,0.4)",
+                              ? "0 0 16px rgba(255,255,255,0.8), inset 0 1px 0 rgba(255,255,255,0.9)"
+                              : "inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 5px rgba(0,0,0,0.5)",
                           }}
                         >
-                          {/* Left velocity impact strike line */}
-                          <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-white/45 rounded-l-[3px]" />
+                          {/* Top specular highlight rim */}
+                          <span className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-white/60" />
+
+                          {/* Left impact transient strike line */}
+                          <span className="pointer-events-none absolute inset-y-0 left-0 w-[3.5px] bg-white/70 rounded-l-[4px] shadow-[0_0_4px_white]" />
 
                           {/* Note pitch name tag */}
                           {cellW >= 16 && (
-                            <span className="pointer-events-none absolute inset-0 flex items-center px-1.5 font-['JetBrains_Mono'] text-[8.5px] font-bold text-black/85 drop-shadow-[0_1px_1px_rgba(255,255,255,0.35)] truncate">
+                            <span className="pointer-events-none absolute inset-0 flex items-center px-1.5 font-['JetBrains_Mono'] text-[8.5px] font-extrabold text-black/90 drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)] truncate">
                               {noteName}
                             </span>
                           )}
 
-                          {/* Logic-style resize handle */}
+                          {/* Logic-style resize handle with tactile ribs */}
                           {tool === "pointer" && width > 14 && (
                             <span
                               data-testid={`piano-roll-resize-${note.stepIdx}-${note.midi}`}
-                              className="absolute inset-y-0 right-0 w-[7px] cursor-ew-resize bg-black/20 hover:bg-white/40 transition-colors"
+                              className="group absolute inset-y-0 right-0 w-[8px] cursor-ew-resize bg-black/20 hover:bg-white/40 transition-colors flex items-center justify-center"
                               onPointerDown={(e) => {
                                 e.stopPropagation();
                                 setSelection([noteId(note)]);
@@ -1000,7 +1188,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                                 };
                                 e.currentTarget.setPointerCapture?.(e.pointerId);
                               }}
-                            />
+                            >
+                              <span className="w-[1.5px] h-3 bg-white/40 group-hover:bg-white rounded-full" />
+                            </span>
                           )}
                         </div>
                       );
@@ -1025,7 +1215,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                   <div
                     data-testid="piano-roll-velocity-lane"
                     aria-label={t("roll_velocity_lane")}
-                    className="relative mt-1 cursor-ns-resize rounded border border-line-subtle bg-[#0f1116]"
+                    className="relative mt-2 cursor-ns-resize rounded-xl border border-[#242938] bg-gradient-to-b from-[#0f1118] via-[#0b0c12] to-[#08090e] p-1 shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)]"
                     style={{ height: VELOCITY_LANE_H, width: gridW }}
                     onPointerDown={handleVelocityPointerDown}
                     onPointerMove={handleGridPointerMove}
@@ -1033,24 +1223,49 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerCancel={handleGridPointerUp}
                   >
                     {[32, 64, 96].map((line) => (
-                      <div key={line} className="absolute inset-x-0 border-t border-line-subtle/40" style={{ bottom: `${(line / 127) * 100}%` }} />
+                      <div
+                        key={line}
+                        className="absolute inset-x-0 border-t border-line-subtle/30 flex items-center justify-start pl-1 text-[7.5px] font-['JetBrains_Mono'] text-white/20 select-none pointer-events-none"
+                        style={{ bottom: `${(line / 127) * 100}%` }}
+                      >
+                        {line === 96 ? "f · 96" : line === 64 ? "mf · 64" : "p · 32"}
+                      </div>
                     ))}
                     {[...new Map(notes.map((n) => [n.stepIdx, n])).values()].map((note) => {
                       const onStep = notesAtStep(note.stepIdx);
                       const stepSelected = onStep.every((n) => selectedSet.has(noteId(n)));
+                      const velHeight = `${(note.velocity / 127) * 100}%`;
+                      const barColor = velocityColor(note.velocity);
                       return (
                         <div
                           key={`vel-${note.stepIdx}`}
                           data-testid={`piano-roll-velocity-bar-${note.stepIdx}`}
                           data-velocity={note.velocity}
                           data-chord-size={onStep.length}
-                          className={`absolute bottom-0 ${stepSelected ? "bg-white/80" : "bg-accent/70"}`}
+                          className="absolute bottom-0 flex flex-col items-center justify-end"
                           style={{
                             left: note.stepIdx * cellW + 1,
                             width: Math.max(2, cellW - 2),
-                            height: `${(note.velocity / 127) * 100}%`,
+                            height: velHeight,
                           }}
-                        />
+                        >
+                          {/* Lollipop glowing head */}
+                          <div
+                            className={`w-2 h-2 rounded-full mb-[-3px] z-10 transition-transform hover:scale-125 ${
+                              stepSelected
+                                ? "bg-white shadow-[0_0_8px_white]"
+                                : "shadow-[0_0_6px_rgba(0,0,0,0.6)]"
+                            }`}
+                            style={{ backgroundColor: stepSelected ? "#ffffff" : barColor }}
+                          />
+                          {/* Lollipop needle stem */}
+                          <div
+                            className={`w-[2px] flex-1 ${
+                              stepSelected ? "bg-white/90 shadow-[0_0_6px_white]" : "opacity-80"
+                            }`}
+                            style={{ backgroundColor: stepSelected ? "#ffffff" : barColor }}
+                          />
+                        </div>
                       );
                     })}
                   </div>
@@ -1060,88 +1275,108 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           </div>
 
           {/* -------------------------------------------------- selection inspector */}
-          <div className="flex flex-wrap items-center gap-3 border-t border-line-subtle pt-2">
-            <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.08em] text-text-sub">{t("roll_selected")}</span>
-            <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim" data-testid="piano-roll-selected-count">
-              {t("roll_selected_count", { count: selection.length })}
-            </span>
-            {focusNote ? (
-              <>
-                <span className="font-['JetBrains_Mono'] text-[11px] text-text" data-testid="piano-roll-selected-name">
-                  {midiToNoteName(focusNote.midi)}
-                </span>
-                <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
-                  {t("roll_pitch")}
-                  <input
-                    type="number"
-                    min={0}
-                    max={127}
-                    value={focusNote.midi}
-                    data-testid="piano-roll-pitch"
-                    onChange={(e) => {
-                      const midi = Math.max(0, Math.min(127, Number(e.target.value)));
-                      applyOp((p) => moveNotes(p, activeTrackIdx, [noteId(focusNote)], 0, midi - focusNote.midi, stepCount).pattern);
-                    }}
-                    className="w-14 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
-                  />
-                </label>
-                <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
-                  {t("roll_start")}
-                  <input
-                    type="number"
-                    min={0}
-                    max={stepCount - 1}
-                    value={focusNote.stepIdx}
-                    data-testid="piano-roll-start"
-                    onChange={(e) => {
-                      const target = Math.max(0, Math.min(stepCount - 1, Number(e.target.value)));
-                      applyOp((p) => moveNotes(p, activeTrackIdx, [noteId(focusNote)], target - focusNote.stepIdx, 0, stepCount).pattern);
-                    }}
-                    className="w-14 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
-                  />
-                </label>
-                <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
-                  {t("roll_length")}
-                  <input
-                    type="number"
-                    min={0.1}
-                    max={MAX_NOTE_GATE_STEPS}
-                    step={0.05}
-                    value={focusNote.gate}
-                    data-testid="piano-roll-length"
-                    onChange={(e) => {
-                      const gate = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Number(e.target.value)));
-                      applyOp((p) => resizeNote(p, activeTrackIdx, focusNote.stepIdx, gate, stepCount));
-                    }}
-                    className="w-16 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
-                  />
-                </label>
-                <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
-                  {t("roll_velocity")}
-                  <input
-                    type="number"
-                    min={1}
-                    max={127}
-                    value={focusNote.velocity}
-                    data-testid="piano-roll-velocity"
-                    onChange={(e) => {
-                      const velocity = Math.max(1, Math.min(127, Number(e.target.value)));
-                      applyOp((p) => scaleNotesVelocity(p, activeTrackIdx, [noteId(focusNote)], velocity - focusNote.velocity, stepCount));
-                    }}
-                    className="w-16 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
-                  />
-                </label>
-                <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim" data-testid="piano-roll-selected-meta">
-                  {focusNote.gate.toFixed(2)} × {t("roll_steps_unit")} · {focusNote.velocity}
-                </span>
-              </>
-            ) : (
-              <span className="text-[10px] text-text-dim">{t("roll_select_hint")}</span>
-            )}
-            <span className="ml-auto text-[10px] text-text-dim">
-              {t("roll_quantise_hint")} · {t("roll_snap_hint")}
-              {isZh ? "" : ""}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#252a3b] bg-gradient-to-r from-[#141722] via-[#10121a] to-[#141722] px-3.5 py-2.5 rounded-b-xl shadow-inner backdrop-blur-md">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-['JetBrains_Mono'] text-[10px] uppercase tracking-[0.08em] font-bold text-text-sub flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                {t("roll_selected")}
+              </span>
+              <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim px-2 py-0.5 rounded-full bg-white/5 border border-white/10" data-testid="piano-roll-selected-count">
+                {t("roll_selected_count", { count: selection.length })}
+              </span>
+              {focusNote ? (
+                <>
+                  <span className="font-['JetBrains_Mono'] text-[11px] font-bold text-accent px-2 py-0.5 rounded bg-accent/15 border border-accent/30 shadow-[0_0_6px_rgba(var(--accent-rgb),0.3)]" data-testid="piano-roll-selected-name">
+                    {midiToNoteName(focusNote.midi)}
+                  </span>
+                  <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
+                    {t("roll_pitch")}
+                    <input
+                      type="number"
+                      min={0}
+                      max={127}
+                      value={focusNote.midi}
+                      data-testid="piano-roll-pitch"
+                      onChange={(e) => {
+                        const midi = Math.max(0, Math.min(127, Number(e.target.value)));
+                        applyOp((p) => moveNotes(p, activeTrackIdx, [noteId(focusNote)], 0, midi - focusNote.midi, stepCount).pattern);
+                      }}
+                      className="w-14 rounded-md border border-[#2b3040] bg-[#1a1e2a] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-inner outline-none focus:border-accent"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
+                    {t("roll_start")}
+                    <input
+                      type="number"
+                      min={0}
+                      max={stepCount - 1}
+                      value={focusNote.stepIdx}
+                      data-testid="piano-roll-start"
+                      onChange={(e) => {
+                        const target = Math.max(0, Math.min(stepCount - 1, Number(e.target.value)));
+                        applyOp((p) => moveNotes(p, activeTrackIdx, [noteId(focusNote)], target - focusNote.stepIdx, 0, stepCount).pattern);
+                      }}
+                      className="w-14 rounded-md border border-[#2b3040] bg-[#1a1e2a] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-inner outline-none focus:border-accent"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
+                    {t("roll_length")}
+                    <input
+                      type="number"
+                      min={0.1}
+                      max={MAX_NOTE_GATE_STEPS}
+                      step={0.05}
+                      value={focusNote.gate}
+                      data-testid="piano-roll-length"
+                      onChange={(e) => {
+                        const gate = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Number(e.target.value)));
+                        applyOp((p) => resizeNote(p, activeTrackIdx, focusNote.stepIdx, gate, stepCount));
+                      }}
+                      className="w-16 rounded-md border border-[#2b3040] bg-[#1a1e2a] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-inner outline-none focus:border-accent"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
+                    {t("roll_velocity")}
+                    <input
+                      type="number"
+                      min={1}
+                      max={127}
+                      value={focusNote.velocity}
+                      data-testid="piano-roll-velocity"
+                      onChange={(e) => {
+                        const velocity = Math.max(1, Math.min(127, Number(e.target.value)));
+                        applyOp((p) => scaleNotesVelocity(p, activeTrackIdx, [noteId(focusNote)], velocity - focusNote.velocity, stepCount));
+                      }}
+                      className="w-16 rounded-md border border-[#2b3040] bg-[#1a1e2a] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-inner outline-none focus:border-accent"
+                    />
+                  </label>
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim" data-testid="piano-roll-selected-meta">
+                    {focusNote.gate.toFixed(2)} × {t("roll_steps_unit")} · {focusNote.velocity}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] text-text-dim">{t("roll_select_hint")}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-[9.5px] font-['JetBrains_Mono'] text-text-dim">
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-white/5 border border-white/10">1–5 Tools</span>
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-white/5 border border-white/10">⌥+Drag Copy</span>
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-white/5 border border-white/10">⇧+Click Add</span>
+              <span className="hidden md:inline px-1.5 py-0.5 rounded bg-white/5 border border-white/10">⌫ Delete</span>
+              {onToggleMusicalTyping ? (
+                <button
+                  type="button"
+                  onClick={onToggleMusicalTyping}
+                  title={isZh ? "点击打开电脑虚拟键盘 HUD (⌥K)" : "Click to open Musical Typing HUD (⌥K)"}
+                  className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/15 border border-accent/30 text-accent font-bold hover:bg-accent/25 hover:border-accent transition-colors"
+                >
+                  <Keyboard className="w-2.5 h-2.5" />
+                  <span>⌥K Musical Typing</span>
+                </button>
+              ) : (
+                <span className="hidden lg:inline px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 text-accent font-bold">⌥K Musical Typing</span>
+              )}
+            </div>
           </div>
         </>
       )}

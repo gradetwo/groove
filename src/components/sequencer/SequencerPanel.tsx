@@ -557,6 +557,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             onClose={onClosePianoRoll}
             commit={commit}
             onAudition={onAuditionRollNote}
+            onToggleMusicalTyping={onToggleKeyboardMode}
           />
         </div>
       )}

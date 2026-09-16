@@ -64,11 +64,12 @@ function makePattern(trackOver: Record<string, unknown> = {}): SequencerPattern 
   } as unknown as SequencerPattern;
 }
 
-function setup(over: { pattern?: SequencerPattern; trackIdx?: number } = {}) {
+function setup(over: { pattern?: SequencerPattern; trackIdx?: number; onToggleMusicalTyping?: () => void } = {}) {
   const commits: SequencerAction[] = [];
   const onAudition = vi.fn();
   const onClose = vi.fn();
   const onSelectTrack = vi.fn();
+  const onToggleMusicalTyping = over.onToggleMusicalTyping ?? vi.fn();
   const pattern = over.pattern ?? makePattern();
   render(
     <PianoRollLane
@@ -81,6 +82,7 @@ function setup(over: { pattern?: SequencerPattern; trackIdx?: number } = {}) {
       onClose={onClose}
       commit={(action) => commits.push(action)}
       onAudition={onAudition}
+      onToggleMusicalTyping={onToggleMusicalTyping}
     />
   );
   return { commits, onAudition, onClose, onSelectTrack, pattern };
@@ -566,5 +568,14 @@ describe("PianoRollLane · chords are visible and editable", () => {
     fireEvent.pointerMove(grid(), { clientX: 1 * 26, clientY: extremeRowY("top") });
     fireEvent.pointerUp(grid());
     expect(screen.getByTestId("piano-roll-selected-count").textContent).toContain("3");
+  });
+
+  it("triggers onToggleMusicalTyping when clicking the keyboard HUD button", () => {
+    const onToggleMusicalTyping = vi.fn();
+    setup({ onToggleMusicalTyping });
+    const btn = screen.getByTestId("piano-roll-musical-typing");
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    expect(onToggleMusicalTyping).toHaveBeenCalledTimes(1);
   });
 });
