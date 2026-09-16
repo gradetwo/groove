@@ -612,7 +612,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
             onClick={() => setRowHeightIdx((v) => (v + 1) % ROW_HEIGHTS.length)}
             title={t("roll_row_height")}
             aria-label={t("roll_row_height")}
-            data-testid="piano-roll-row-height"
+            data-testid="piano-roll-row-height-toggle"
             className={ctrlClass}
           >
             {rowH}px
