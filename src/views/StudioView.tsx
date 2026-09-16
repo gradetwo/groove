@@ -147,6 +147,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Pro Sequencer Extensions: Velocity Lane, Euclidean Generator, Pitch Picker & P-Locks
   const [isVelocityLaneOpen, setIsVelocityLaneOpen] = useState(bootLayoutPrefs.isVelocityLaneOpen);
   const [velocityActiveTrackIdx, setVelocityActiveTrackIdx] = useState(0);
+  // Piano roll (item ⑦): edits the same pattern data as the step grid, one melodic track at a time.
+  const [isPianoRollOpen, setIsPianoRollOpen] = useState(bootLayoutPrefs.isPianoRollOpen);
+  const [pianoRollTrackIdx, setPianoRollTrackIdx] = useState(0);
   const [isEuclideanOpen, setIsEuclideanOpen] = useState(false);
   const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(bootLayoutPrefs.isAnalyzerOpen);
   const [pitchPicker, setPitchPicker] = useState<PitchPickerState>({
@@ -245,6 +248,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       isEditorMaximized,
       isVelocityLaneOpen,
       isAnalyzerOpen,
+      isPianoRollOpen,
       showAdvancedControls,
     });
   }, [
@@ -252,6 +256,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     isEditorMaximized,
     isVelocityLaneOpen,
     isAnalyzerOpen,
+    isPianoRollOpen,
     showAdvancedControls,
   ]);
 
@@ -662,6 +667,54 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setIsVelocityLaneOpen,
   });
 
+  /**
+   * Open the roll for a track.
+   *
+   * Only melodic roles have a meaningful pitch, so a request for any other track is redirected to
+   * the first editable one — the alternative is a grid of notes that the engine ignores.
+   */
+  const handleOpenPianoRoll = useCallback(
+    (trackIdx: number) => {
+      const editableIdx = patternRef.current.tracks.findIndex((tr) =>
+        tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead"
+      );
+      setPianoRollTrackIdx(editableIdx === -1 ? trackIdx : editableIdx);
+      setIsPianoRollOpen(true);
+    },
+    []
+  );
+
+  const handleTogglePianoRoll = useCallback(() => {
+    // Opening from the toolbar targets a melodic track rather than whatever index happens to be
+    // current: a roll over the kick track would show an empty grid the engine ignores.
+    //
+    // The target is resolved *outside* the state updater on purpose. Doing it inside (`setOpen(o
+    // => { if (!o) handleOpenPianoRoll(...); ... })`) is a side effect during the render phase:
+    // React may run the updater twice and the nested update gets dropped, which is exactly how the
+    // roll failed to open on some devices while working on others.
+    if (isPianoRollOpen) {
+      setIsPianoRollOpen(false);
+      return;
+    }
+    handleOpenPianoRoll(pianoRollTrackIdx);
+    setIsPianoRollOpen(true);
+  }, [isPianoRollOpen, handleOpenPianoRoll, pianoRollTrackIdx]);
+
+  const handleClosePianoRoll = useCallback(() => setIsPianoRollOpen(false), []);
+
+  /**
+   * Audition one note through the track's own instrument, so drawing is audible and the roll
+   * previews exactly what the sequencer will play (same engine call, same voice routing).
+   */
+  const handleAuditionRollNote = useCallback(
+    (trackIdx: number, midi: number, velocity: number, gate: number) => {
+      const track = patternRef.current.tracks[trackIdx];
+      if (!track) return;
+      engineRef.current?.triggerNote(trackIdx, track.name, velocity / 127, midi, 1, gate);
+    },
+    []
+  );
+
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
   return (
@@ -726,6 +779,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
           isEditorMaximized={isEditorMaximized}
           isVelocityLaneOpen={isVelocityLaneOpen}
           isAnalyzerOpen={isAnalyzerOpen}
+          commit={commit}
+          isPianoRollOpen={isPianoRollOpen}
+          pianoRollTrackIdx={pianoRollTrackIdx}
+          onSelectPianoRollTrack={setPianoRollTrackIdx}
+          onClosePianoRoll={handleClosePianoRoll}
+          onTogglePianoRoll={handleTogglePianoRoll}
+          onAuditionRollNote={handleAuditionRollNote}
           language={language}
           isZh={isZh}
           canUndo={canUndo}
@@ -874,6 +934,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
         }}
       />
 
+      {/* Piano roll (item ⑦) opens for the track whose header was clicked; the drawer itself is
+          rendered by SequencerPanel so it sits with the grid it mirrors. */}
+
       {/* Unsaved-changes guard (item ⑧): shown when a destructive action is waiting on an answer. */}
       <UnsavedChangesDialog
         isOpen={guard.pending !== null}
@@ -898,6 +961,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           and store — it never constructs either. Closed => renders nothing. */}
       {inspectorTrackIdx !== null && pattern.tracks[inspectorTrackIdx] && (
         <TrackInspector
+          onOpenPianoRoll={() => handleOpenPianoRoll(inspectorTrackIdx)}
           role={(pattern.tracks[inspectorTrackIdx].track_id || "chords") as MixTrackId}
           trackName={pattern.tracks[inspectorTrackIdx].name}
           instrument={pattern.tracks[inspectorTrackIdx].instrument}

@@ -150,6 +150,23 @@ const TARGETS = [
   },
 ];
 
+/**
+ * Click something that may be hidden *under the sticky header*.
+ *
+ * `force: true` skips Playwright's actionability checks, so the click is dispatched at the
+ * element's coordinates — and if the page is scrolled such that a sticky header covers them, the
+ * header receives the event instead. Scrolling the target to the middle of the viewport first is
+ * what a user would do, and it makes the click land where it is aimed.
+ */
+async function clickCentred(page, selector) {
+  await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (el) el.scrollIntoView({ block: "center" });
+  }, selector);
+  await page.waitForTimeout(150);
+  await page.click(selector, { force: true });
+}
+
 async function runTestOnTarget(target, baseUrl) {
   const browserLauncher = playwright[target.browserType];
   const browser = await browserLauncher.launch({
@@ -549,6 +566,91 @@ async function runTestOnTarget(target, baseUrl) {
     await page.waitForTimeout(300);
     if (await page.$("[data-testid='track-inspector']")) {
       throw new Error("Track inspector did not close on Escape");
+    }
+
+    // 5f. Piano roll (item ⑦): it must edit the studio's OWN pattern.
+    //
+    // The whole claim of the roll is that it is another view of the same data, not a second copy.
+    // So this draws a note in the roll and then requires the step grid to show it — a cross-view
+    // assertion, which is the part that could silently break.
+    await clickCentred(page, "[data-testid='toolbar-piano-roll-toggle']");
+    try {
+      await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 15000 });
+    } catch (rollErr) {
+      // Diagnose on failure rather than guessing: the state of every panel at that moment.
+      const diag = await page.evaluate(() => ({
+        rollDrawer: Boolean(document.querySelector("[data-testid='piano-roll-drawer']")),
+        notMelodic: Boolean(document.querySelector("[data-testid='piano-roll-not-melodic']")),
+        inspector: Boolean(document.querySelector("[data-testid='track-inspector']")),
+        settings: Boolean(document.querySelector("[data-testid='settings-tab-audio']")),
+        stepGrid: document.querySelectorAll("[data-track-idx][data-step-idx]").length,
+        toggleBox: (() => { const el = document.querySelector("[data-testid='toolbar-piano-roll-toggle']"); const r = el?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null; })(),
+        viewport: { w: window.innerWidth, h: window.innerHeight, scrollY: window.scrollY },
+      }));
+      console.error(`[roll-diag ${target.name}] ${JSON.stringify(diag)}`);
+      throw rollErr;
+    }
+
+    if (!(await (await page.$("[data-testid='piano-roll-grid']")).boundingBox())) {
+      throw new Error("Piano roll grid has no measurable box");
+    }
+
+    // Pick a melodic row and one of its empty steps from the step matrix itself.
+    const drawTarget = await page.evaluate(() => {
+      // The roll's own track selector is the app's definition of "melodic", so use it rather than
+      // guessing roles from accessible labels.
+      const select = document.querySelector("[data-testid='piano-roll-track']");
+      const melodicIdx = select ? [...select.options].map((o) => Number(o.value)) : [];
+      for (const trackIdx of melodicIdx) {
+        const cells = [...document.querySelectorAll(`[data-track-idx="${trackIdx}"][data-step-idx]`)];
+        const empty = cells.find((c) => c.getAttribute("aria-selected") !== "true");
+        if (empty) return { trackIdx, stepIdx: Number(empty.getAttribute("data-step-idx")) };
+      }
+      return null;
+    });
+    if (!drawTarget) throw new Error("No melodic track with an empty step was found to draw into");
+
+    // The roll defaults to the first melodic track; select the measured one so both views agree.
+    const selectedTrack = await page.$eval("[data-testid='piano-roll-track']", (el) => Number(el.value));
+    if (selectedTrack !== drawTarget.trackIdx) {
+      await page.selectOption("[data-testid='piano-roll-track']", String(drawTarget.trackIdx));
+      await page.waitForTimeout(250);
+    }
+
+    // The drawer opens below the step matrix, so bring it into view before clicking and then
+    // re-measure: `mouse.click` works in viewport coordinates, and the grid is taller than the
+    // viewport on a laptop.
+    await page.locator("[data-testid='piano-roll-grid']").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+
+    // Draw into the measured step. The grid's cell width depends on the zoom level, so derive it
+    // from the rendered geometry rather than assuming a pixel size.
+    const clickPoint = await page.evaluate(({ trackIdx, stepIdx }) => {
+      const grid = document.querySelector("[data-testid='piano-roll-grid']");
+      const rect = grid.getBoundingClientRect();
+      const stepCount = document.querySelectorAll(`[data-track-idx="${trackIdx}"][data-step-idx]`).length || 16;
+      const cellW = rect.width / stepCount;
+      return { x: rect.left + stepIdx * cellW + cellW / 2, y: rect.top + 8 };
+    }, drawTarget);
+    await page.mouse.click(clickPoint.x, clickPoint.y);
+    await page.waitForTimeout(300);
+    const rollNoteCount = await page.$$eval("[data-testid^='piano-roll-note-']", (els) => els.length);
+    if (rollNoteCount === 0) throw new Error("Drawing in the piano roll produced no note");
+
+    // The step matrix renders the same pattern, so the drawn step must now read as active.
+    const activeAfter = await page.$$eval(`[data-step-idx="${drawTarget.stepIdx}"]`, (cells) =>
+      cells.map((c) => c.getAttribute("aria-selected"))
+    );
+    if (!activeAfter.includes("true")) {
+      throw new Error(
+        `The roll's new note did not reach the step grid at step ${drawTarget.stepIdx} (aria-selected: ${activeAfter.join(",")})`
+      );
+    }
+
+    await clickCentred(page, "[data-testid='piano-roll-close']");
+    await page.waitForTimeout(250);
+    if (await page.$("[data-testid='piano-roll-grid']")) {
+      throw new Error("Piano roll did not close");
     }
 
     // 6. Compare & Challenge Views Check

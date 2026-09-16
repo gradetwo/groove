@@ -28,6 +28,7 @@ import {
   FolderKanban,
   Wand2,
   AudioLines,
+  Music2,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -117,6 +118,9 @@ export interface ToolbarProps {
   onChangeMobileEditMode: (mode: MobileEditMode) => void;
   onSelectBar: (barIdx: number) => void;
   onToggleVelocityLane: () => void;
+  isPianoRollOpen?: boolean;
+  /** Piano roll toggle (item ⑦). Optional so an unwired toolbar still renders. */
+  onTogglePianoRoll?: () => void;
   onOpenEuclidean: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -556,6 +560,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   mobileEditMode,
   showAdvancedControls,
   isVelocityLaneOpen,
+  isPianoRollOpen,
   isSidebarCollapsed,
   isEditorMaximized,
   canUndo,
@@ -590,6 +595,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onChangeMobileEditMode,
   onSelectBar,
   onToggleVelocityLane,
+  onTogglePianoRoll,
   onOpenEuclidean,
   onUndo,
   onRedo,
@@ -912,6 +918,24 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             <Sliders className="w-3.5 h-3.5 text-[#45e0c9]" />
             <span className="hidden sm:inline font-['JetBrains_Mono']">{t("toolbar_velocity_label")}</span>
           </button>
+
+          {/* Piano Roll Toggle (item ⑦) */}
+          {onTogglePianoRoll && (
+            <button
+              onClick={onTogglePianoRoll}
+              data-testid="toolbar-piano-roll-toggle"
+              aria-pressed={isPianoRollOpen ?? false}
+              className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
+                isPianoRollOpen
+                  ? "bg-accent/20 border-accent text-accent font-bold"
+                  : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+              }`}
+              title={t("roll_toggle_title")}
+            >
+              <Music2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline font-['JetBrains_Mono']">{t("roll_toggle")}</span>
+            </button>
+          )}
 
           {/* Euclidean Rhythm Generator */}
           <button

@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { SequencerPattern } from "../../types/genre";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
-import type { SequencerState } from "../../features/sequencer/useSequencerStore";
+import type { SequencerAction, SequencerState } from "../../features/sequencer/useSequencerStore";
 import type { Language } from "../../i18n/LanguageContext";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { isDrumTrack } from "../../utils/trackUtils";
@@ -10,6 +10,7 @@ import { Ruler } from "./Ruler";
 import { TrackRow } from "./TrackRow";
 import { Toolbar, MobileEditMode } from "./Toolbar";
 import { VelocityLane, type ParameterDimension } from "./VelocityLane";
+import { PianoRollLane } from "./PianoRollLane";
 import { MasterAnalyzerSuite } from "../analyzer/MasterAnalyzerSuite";
 import { DEMO_TRACKS_CONFIG } from "./trackConfig";
 
@@ -125,6 +126,14 @@ export interface SequencerPanelProps {
   onToggleGs1: () => void;
   /** v2.0.17: opens the audio settings panel (level / protection / latency / GS-1). */
   onOpenAudioSettings?: () => void;
+  /** Piano roll (item ⑦): a pitch-grid editor over the same pattern the step grid edits. */
+  commit?: (action: SequencerAction) => void;
+  isPianoRollOpen?: boolean;
+  pianoRollTrackIdx?: number;
+  onSelectPianoRollTrack?: (trackIdx: number) => void;
+  onClosePianoRoll?: () => void;
+  onTogglePianoRoll?: () => void;
+  onAuditionRollNote?: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
   /** Which row the inspector currently shows, for selected-header styling. */
   inspectorTrackIdx?: number | null;
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
@@ -255,6 +264,13 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   gs1Enabled,
   onToggleGs1,
   onOpenAudioSettings,
+  commit,
+  isPianoRollOpen = false,
+  pianoRollTrackIdx = 0,
+  onSelectPianoRollTrack,
+  onClosePianoRoll,
+  onTogglePianoRoll,
+  onAuditionRollNote,
   inspectorTrackIdx = null,
   onShiftTrack,
   onSmartFill,
@@ -321,6 +337,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         gs1Enabled={gs1Enabled}
         onToggleGs1={onToggleGs1}
         onOpenAudioSettings={onOpenAudioSettings}
+        onTogglePianoRoll={onTogglePianoRoll}
         isPlaying={isPlaying}
         bpm={seqState.bpm}
         swing={seqState.swing}
@@ -517,6 +534,26 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             stepsPerBar={stepsPerBar}
             groupSize={groupSize}
             tracksConfig={DEMO_TRACKS_CONFIG}
+          />
+        </div>
+      )}
+
+      {/* Piano roll drawer (item ⑦). Placed with the grid rather than in a portal so the note
+          activity stays visually attached to the track it edits. */}
+      {isPianoRollOpen && commit && onClosePianoRoll && onAuditionRollNote && (
+        <div className="mt-3 pt-3 border-t border-line-subtle" data-testid="piano-roll-drawer">
+          <PianoRollLane
+            pattern={pattern}
+            activeTrackIdx={pianoRollTrackIdx}
+            stepCount={seqState.stepCount}
+            stepsPerBar={stepsPerBar}
+            isZh={isZh}
+            isPlaying={isPlaying}
+            currentStep={-1}
+            onSelectTrack={onSelectPianoRollTrack ?? (() => {})}
+            onClose={onClosePianoRoll}
+            commit={commit}
+            onAudition={onAuditionRollNote}
           />
         </div>
       )}

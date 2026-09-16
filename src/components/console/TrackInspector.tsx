@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo } from "react";
 import { InstrumentPicker } from "./InstrumentPicker";
-import { GripHorizontal, X } from "lucide-react";
+import { GripHorizontal, Music2, X } from "lucide-react";
 import type { MixTrackId } from "../../data/genreMix";
 import {
   INSERT_COMP_MAX_ATTACK_SEC,
@@ -68,6 +68,8 @@ export interface TrackInspectorProps {
   instrument: string;
   /** Every preset the track could use, for the timbre picker. */
   instrumentOptions: readonly string[];
+  /** Opens the piano roll for this track (item ⑦). Optional: the console omits it. */
+  onOpenPianoRoll?: () => void;
   onInstrumentChange: (instrument: string) => void;
 
   // --- mix ---
@@ -298,6 +300,7 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
   onResetInsert,
   onBypassInsert,
   onClose,
+  onOpenPianoRoll,
 }) => {
   const { t } = useLanguage();
   const uid = useId();
@@ -393,6 +396,20 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             {trackName}
           </h2>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {onOpenPianoRoll && (
+            <button
+              type="button"
+              onClick={onOpenPianoRoll}
+              title={t("roll_toggle_title")}
+              aria-label={t("roll_toggle")}
+              data-testid="track-inspector-open-roll"
+              className="flex h-7 items-center gap-1 rounded-lg border border-line bg-panel2 px-2 font-['JetBrains_Mono'] text-[10px] text-text-sub transition-colors hover:border-accent/50 hover:text-accent"
+            >
+              <Music2 className="h-3.5 w-3.5" />
+              {t("roll_toggle")}
+            </button>
+          )}
         <button
           type="button"
           onClick={onClose}
@@ -403,6 +420,7 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
         >
           <X className="h-3.5 w-3.5" />
         </button>
+        </div>
       </header>
 
       {/* ------------------------------------------------------- 1. Timbre / 音色 */}

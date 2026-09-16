@@ -46,6 +46,8 @@ export interface LayoutPrefs {
   isEditorMaximized: boolean;
   isVelocityLaneOpen: boolean;
   isAnalyzerOpen: boolean;
+  /** Piano roll drawer (item ⑦). */
+  isPianoRollOpen: boolean;
   showAdvancedControls: boolean;
   density: DensityTier;
 }
@@ -56,6 +58,7 @@ export const LAYOUT_BOOLEAN_KEYS = [
   "isEditorMaximized",
   "isVelocityLaneOpen",
   "isAnalyzerOpen",
+  "isPianoRollOpen",
   "showAdvancedControls",
 ] as const satisfies readonly (keyof LayoutPrefs)[];
 
@@ -74,6 +77,7 @@ export const DEFAULT_LAYOUT_PREFS: Readonly<LayoutPrefs> = Object.freeze({
   isEditorMaximized: false,
   isVelocityLaneOpen: false,
   isAnalyzerOpen: false,
+  isPianoRollOpen: false,
   showAdvancedControls: false,
   density: "standard",
 });
