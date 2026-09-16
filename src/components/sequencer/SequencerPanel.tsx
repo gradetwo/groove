@@ -121,6 +121,8 @@ export interface SequencerPanelProps {
   /** P6: GS-1 voices for chords/lead, reflected from the engine's persisted setting. */
   gs1Enabled: boolean;
   onToggleGs1: () => void;
+  /** v2.0.17: opens the audio settings panel (level / protection / latency / GS-1). */
+  onOpenAudioSettings?: () => void;
   /** Which row the inspector currently shows, for selected-header styling. */
   inspectorTrackIdx?: number | null;
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
@@ -250,6 +252,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onOpenInspector,
   gs1Enabled,
   onToggleGs1,
+  onOpenAudioSettings,
   inspectorTrackIdx = null,
   onShiftTrack,
   onSmartFill,
@@ -292,6 +295,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
       <Toolbar
         gs1Enabled={gs1Enabled}
         onToggleGs1={onToggleGs1}
+        onOpenAudioSettings={onOpenAudioSettings}
         isPlaying={isPlaying}
         bpm={seqState.bpm}
         swing={seqState.swing}

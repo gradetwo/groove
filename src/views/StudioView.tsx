@@ -9,6 +9,7 @@ import { ToastBanner } from "../components/sequencer/ToastBanner";
 import { StepContextMenu } from "../components/sequencer/StepContextMenu";
 import { SequencerPanel } from "../components/sequencer/SequencerPanel";
 import { SequencerModals } from "../components/sequencer/SequencerModals";
+import { AudioSettingsModal } from "../components/sequencer/AudioSettingsModal";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
@@ -261,6 +262,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
   useEffect(() => {
     const engine = engineRef.current;
     if (engine) setGs1Enabled(engine.isGs1Enabled());
+  }, []);
+
+  /** Audio settings panel (master level / hearing protection / latency / GS-1). */
+  const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
+
+  /**
+   * One write path for the GS-1 switch, shared by the toolbar quick toggle and the audio
+   * settings panel, so the two can never disagree about the value.
+   */
+  const handleSetGs1Enabled = useCallback((next: boolean) => {
+    engineRef.current?.setGs1Enabled(next);
+    setGs1Enabled(next);
   }, []);
   const patternRef = useRef(pattern);
   patternRef.current = pattern;
@@ -746,11 +759,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
           inspectorTrackIdx={inspectorTrackIdx}
           // P6: read through to the engine (the setting is persisted there) and toggle it there.
           gs1Enabled={gs1Enabled}
-          onToggleGs1={() => {
-            const next = !gs1Enabled;
-            engineRef.current?.setGs1Enabled(next);
-            setGs1Enabled(next);
-          }}
+          onToggleGs1={() => handleSetGs1Enabled(!gs1Enabled)}
+          onOpenAudioSettings={() => setAudioSettingsOpen(true)}
           onShiftTrack={handleShiftTrack}
           onSmartFill={handleSmartFillTrack}
           onClearTrack={handleClearTrack}
@@ -795,6 +805,16 @@ export const StudioView: React.FC<StudioViewProps> = ({
         effectsRackState={effectsRackState}
         drumKit={drumKit}
         handleLoadProject={handleLoadProject}
+      />
+
+      {/* Audio settings panel: the engine-level settings that are not per-track (GS-1 voices,
+          master level, hearing protection, latency compensation). */}
+      <AudioSettingsModal
+        isOpen={audioSettingsOpen}
+        onClose={() => setAudioSettingsOpen(false)}
+        engine={engineRef.current}
+        gs1Enabled={gs1Enabled}
+        onToggleGs1={() => handleSetGs1Enabled(!gs1Enabled)}
       />
 
       {/* Step Context Menu (P-Locks) */}

@@ -236,6 +236,49 @@ export const studioMessages = {
     zh: "用 GS-1 合成器演奏和弦与旋律轨。关闭则回到原来的音色。",
   },
   toolbar_haptic_title: { en: "Toggle Haptic Feedback", zh: "触觉震动反馈开关" },
+  // Audio settings panel. Three of these controls already existed in the engine (and were
+  // persisted) with no UI, so this is where the listener can finally reach them; the GS-1
+  // switch lives here as well, with a shortcut left in the toolbar drawer.
+  audio_settings_title: { en: "Audio Settings", zh: "音频设置" },
+  audio_settings_open: { en: "Audio settings", zh: "音频设置" },
+  audio_settings_on: { en: "ON", zh: "开" },
+  audio_settings_off: { en: "OFF", zh: "关" },
+  audio_settings_section_voices: { en: "Voices", zh: "音色引擎" },
+  audio_settings_gs1_label: { en: "GS-1 synth for chords & lead", zh: "和弦/旋律轨使用 GS-1 合成器" },
+  audio_settings_gs1_hint: {
+    en: "On by default. Turn it off to voice those two tracks with the original native patches.",
+    zh: "默认开启。关闭后这两条轨道回到原来的原生音色。",
+  },
+  audio_settings_section_protection: { en: "Level & protection", zh: "电平与听力保护" },
+  audio_settings_master_volume: { en: "Master volume", zh: "总音量" },
+  audio_settings_hearing_protection: { en: "Hearing protection", zh: "听力保护" },
+  audio_settings_hearing_protection_hint: {
+    en: "Caps the master output at the limit below.",
+    zh: "把总输出限制在下面的上限之内。",
+  },
+  audio_settings_max_volume_limit: { en: "Max volume limit", zh: "音量上限" },
+  audio_settings_max_volume_limit_hint: {
+    en: "Only applies while hearing protection is on.",
+    zh: "仅在听力保护开启时生效。",
+  },
+  audio_settings_effective_volume: {
+    en: "Protection is holding the output at {value}%.",
+    zh: "听力保护已把输出压到 {value}%。",
+  },
+  audio_settings_section_timing: { en: "Timing", zh: "时序" },
+  audio_settings_latency_compensation: { en: "Latency compensation", zh: "延迟补偿" },
+  audio_settings_latency_compensation_hint: {
+    en: "Offsets note scheduling to cancel your output latency. 0 ms leaves the engine untouched.",
+    zh: "用于抵消输出延迟，微调音符的触发时刻。0 ms 表示不做任何调整。",
+  },
+  audio_settings_section_diagnostics: { en: "Diagnostics", zh: "诊断" },
+  audio_settings_output_latency: { en: "Output latency (measured)", zh: "输出延迟（实测）" },
+  audio_settings_limiter: { en: "Master limiter", zh: "母带限幅器" },
+  audio_settings_limiter_worklet: {
+    en: "true peak · {value} ms lookahead",
+    zh: "真峰值 · 前瞻 {value} ms",
+  },
+  audio_settings_limiter_fallback: { en: "compressor fallback", zh: "压缩器降级方案" },
   toolbar_pan_hint: { en: "Wheel/drag to pan", zh: "滚轮/标尺拖拽可平移" },
   toolbar_scroll_left: { en: "Scroll left", zh: "向左滚动" },
   toolbar_scroll_right: { en: "Scroll right", zh: "向右滚动" },

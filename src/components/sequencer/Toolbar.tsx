@@ -79,6 +79,11 @@ export interface ToolbarProps {
   /** Optional, like the console toggle: the control renders only when a handler is given. */
   gs1Enabled?: boolean;
   onToggleGs1?: () => void;
+  /**
+   * Opens the audio settings panel (master level / hearing protection / latency
+   * compensation / GS-1). Optional so the toolbar still renders in isolation.
+   */
+  onOpenAudioSettings?: () => void;
   bpm: number;
   swing: number;
   timeSignature: string;
@@ -539,6 +544,7 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
 export const Toolbar = memo<ToolbarProps>(function Toolbar({
   gs1Enabled = true,
   onToggleGs1,
+  onOpenAudioSettings,
   isPlaying,
   bpm,
   swing,
@@ -1169,6 +1175,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {/* Collapsible Advanced Settings */}
           <button
             onClick={onToggleAdvancedControls}
+            data-testid="toolbar-advanced-toggle"
             className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
               showAdvancedControls
                 ? "bg-[#1f232b] text-accent border-accent/50"
@@ -1454,6 +1461,25 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 ADV
               </button>
             </div>
+          )}
+
+          {/* Audio settings entry point. Opens the panel that holds the engine-level,
+              non-per-track settings: GS-1 voices, master level, hearing protection and
+              latency compensation. The GS-1 quick toggle below stays for one-click access. */}
+          {onOpenAudioSettings && (
+            <button
+              type="button"
+              onClick={onOpenAudioSettings}
+              data-testid="studio-audio-settings-open"
+              aria-label={t("audio_settings_open")}
+              title={t("audio_settings_open")}
+              className="flex items-center gap-1.5 bg-panel px-2 py-1 rounded-lg border border-line-subtle text-text-sub hover:text-text transition-colors"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="font-['JetBrains_Mono'] text-[10px] tracking-wider uppercase whitespace-nowrap">
+                {t("audio_settings_open")}
+              </span>
+            </button>
           )}
 
           {/* GS-1 voices for chords/lead (P6). Beside the haptics switch on purpose: both are
