@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import {
   addChord,
   addNote,
+  arpeggiateSelectedNotes,
   detectChordName,
   drop2SelectedChord,
   duplicateBar1Notes,
@@ -611,6 +612,40 @@ describe("roll model · professional DAW chord tools and harmonic analysis", () 
     expect(duplicated.tracks[0].pitch).toEqual([60, null, 64, null, 60, null, 64, null]);
     expect(duplicated.tracks[0].velocity?.[4]).toBe(90);
     expect(duplicated.tracks[0].velocity?.[6]).toBe(110);
+  });
+
+  it("arpeggiates selected chord notes up and down across consecutive steps", () => {
+    const track = makeTrack({
+      steps: [1, 0, 0, 0, 0, 0, 0, 0],
+      pitches: [[60, 64, 67], null, null, null, null, null, null, null],
+      gate: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+      velocity: [100, 100, 100, 100, 100, 100, 100, 100],
+    });
+    const pattern = { ...makePattern(track), totalSteps: 8 };
+
+    // Arpeggiate up: 60, 64, 67 -> step 0 (60), step 1 (64), step 2 (67)
+    const { pattern: arpUp, nextSelection: selUp } = arpeggiateSelectedNotes(
+      pattern,
+      0,
+      ["0:60", "0:64", "0:67"],
+      "up",
+      8
+    );
+    expect(arpUp.tracks[0].steps.slice(0, 4)).toEqual([1, 1, 1, 0]);
+    expect(arpUp.tracks[0].pitch?.slice(0, 4)).toEqual([60, 64, 67, null]);
+    expect(selUp).toEqual(["0:60", "1:64", "2:67"]);
+
+    // Arpeggiate down: 67 at step 0, 64 at step 1, 60 at step 2
+    const { pattern: arpDown, nextSelection: selDown } = arpeggiateSelectedNotes(
+      pattern,
+      0,
+      ["0:60", "0:64", "0:67"],
+      "down",
+      8
+    );
+    expect(arpDown.tracks[0].steps.slice(0, 4)).toEqual([1, 1, 1, 0]);
+    expect(arpDown.tracks[0].pitch?.slice(0, 4)).toEqual([67, 64, 60, null]);
+    expect(selDown).toEqual(["0:67", "1:64", "2:60"]);
   });
 });
 

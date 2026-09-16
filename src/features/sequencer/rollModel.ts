@@ -801,3 +801,67 @@ export function humanizeSelectedNotes(
   });
   return withTrackNotes(pattern, trackIdx, notes, stepCount);
 }
+
+/**
+ * Arpeggiate selected chord notes across consecutive steps.
+ * "up": low to high notes
+ * "down": high to low notes
+ * "updown": up then down
+ */
+export function arpeggiateSelectedNotes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selectedNoteIds: readonly RollNoteId[],
+  direction: "up" | "down" | "updown" = "up",
+  stepCount: number,
+  stepInterval = 1
+): { pattern: SequencerPattern; nextSelection: RollNoteId[] } {
+  if (selectedNoteIds.length === 0) return { pattern, nextSelection: [...selectedNoteIds] };
+  const allNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
+  const selectedSet = new Set(selectedNoteIds);
+
+  const targetSteps = [...new Set(selectedNoteIds.map((id) => parseNoteId(id).stepIdx))].sort((a, b) => a - b);
+  let workingNotes = [...allNotes];
+  const newSelectedIds: RollNoteId[] = [];
+
+  for (const s of targetSteps) {
+    const chordNotes = workingNotes.filter((n) => n.stepIdx === s && selectedSet.has(noteId(n)));
+    if (chordNotes.length <= 1) {
+      chordNotes.forEach((n) => newSelectedIds.push(noteId(n)));
+      continue;
+    }
+
+    // Remove the original chord notes from working set
+    workingNotes = workingNotes.filter((n) => !(n.stepIdx === s && selectedSet.has(noteId(n))));
+
+    const sorted = [...chordNotes].sort((a, b) => a.midi - b.midi);
+    let sequence: RollStepNote[] = [];
+    if (direction === "up") {
+      sequence = sorted;
+    } else if (direction === "down") {
+      sequence = [...sorted].reverse();
+    } else {
+      const up = [...sorted];
+      const down = sorted.slice(1, -1).reverse();
+      sequence = [...up, ...down];
+    }
+
+    // Spread each note across steps starting at s
+    sequence.forEach((n, idx) => {
+      const targetStep = s + idx * stepInterval;
+      if (targetStep < stepCount) {
+        workingNotes = workingNotes.filter((wn) => !(wn.stepIdx === targetStep && wn.midi === n.midi));
+        const newNote: RollStepNote = {
+          ...n,
+          stepIdx: targetStep,
+          gate: Math.min(n.gate, 0.8),
+        };
+        workingNotes.push(newNote);
+        newSelectedIds.push(noteId(newNote));
+      }
+    });
+  }
+
+  const updatedPattern = withTrackNotes(pattern, trackIdx, workingNotes, stepCount);
+  return { pattern: updatedPattern, nextSelection: newSelectedIds };
+}

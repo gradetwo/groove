@@ -30,6 +30,7 @@ import { MAX_NOTE_GATE_STEPS, type SequencerPattern } from "../../types/genre";
 import {
   addNote,
   addChord,
+  arpeggiateSelectedNotes,
   copyNotes,
   deleteNotes,
   detectChordName,
@@ -960,6 +961,32 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               </button>
               <button
                 type="button"
+                onClick={() => {
+                  const res = arpeggiateSelectedNotes(pattern, activeTrackIdx, selection, "up", stepCount);
+                  commitDraft(res.pattern, res.nextSelection);
+                }}
+                disabled={selection.length === 0}
+                title={t("roll_arp_up_hint")}
+                data-testid="piano-roll-arp-up"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                {t("roll_arp_up")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const res = arpeggiateSelectedNotes(pattern, activeTrackIdx, selection, "down", stepCount);
+                  commitDraft(res.pattern, res.nextSelection);
+                }}
+                disabled={selection.length === 0}
+                title={t("roll_arp_down_hint")}
+                data-testid="piano-roll-arp-down"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                {t("roll_arp_down")}
+              </button>
+              <button
+                type="button"
                 onClick={() => applyOp((p) => humanizeSelectedNotes(p, activeTrackIdx, selection, stepCount))}
                 disabled={notes.length === 0}
                 title="Humanize notes"
@@ -1237,7 +1264,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerCancel={handleGridPointerUp}
                     onPointerLeave={() => setHoverCell(null)}
                     onWheel={handleGridWheel}
-                    className="relative touch-none select-none bg-[#0c0e15] overflow-hidden"
+                    className="relative touch-none select-none bg-[#0f121d] overflow-hidden"
                     style={{ height: rows.length * rowH, width: gridW }}
                   >
                     {/* Layer 1: Alternating Bar Column Backdrops */}
@@ -1249,7 +1276,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         <div
                           key={`bar-col-${barIdx}`}
                           className={`absolute inset-y-0 pointer-events-none transition-colors ${
-                            isAlternateBar ? "bg-[#151926]" : "bg-[#10121b]"
+                            isAlternateBar ? "bg-[#181c2e]" : "bg-[#131624]"
                           }`}
                           style={{ left: barLeft, width: barWidth }}
                         />
@@ -1264,17 +1291,31 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       return (
                         <div
                           key={midi}
-                          className={`absolute inset-x-0 border-b border-[#222736]/70 pointer-events-none ${
+                          className={`absolute inset-x-0 pointer-events-none ${
                             isRoot
-                              ? "bg-accent/[0.12] shadow-[inset_0_0_12px_rgba(var(--accent-rgb),0.18)] border-b-accent/40"
-                              : !inScale
-                              ? "bg-black/35 opacity-70"
+                              ? "bg-amber-500/[0.13] border-b border-amber-500/40 shadow-[inset_0_0_12px_rgba(245,158,11,0.18)]"
+                              : inScale
+                              ? isBlackKey
+                                ? "bg-black/30 border-b border-[#1c2132]/80"
+                                : "bg-white/[0.035] border-b border-[#252b40]/80"
                               : isBlackKey
-                              ? "bg-black/20"
-                              : "bg-white/[0.02]"
+                              ? "bg-black/60 border-b border-[#141622]/80 opacity-60"
+                              : "bg-black/45 border-b border-[#181b28]/80 opacity-75"
                           }`}
                           style={{ top: rowIdx * rowH, height: rowH }}
-                        />
+                        >
+                          {/* Scale Root Row Watermark */}
+                          {isRoot &&
+                            Array.from({ length: barCount }, (_, bIdx) => (
+                              <span
+                                key={`root-badge-${bIdx}`}
+                                className="absolute top-0.5 pointer-events-none px-1 text-[7px] font-['JetBrains_Mono'] font-bold text-amber-400/60 select-none"
+                                style={{ left: bIdx * stepsPerBar * cellW + 2 }}
+                              >
+                                ROOT
+                              </span>
+                            ))}
+                        </div>
                       );
                     })}
 
@@ -1287,10 +1328,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           key={`bar-${i}`}
                           className={`absolute inset-y-0 pointer-events-none ${
                             isBar
-                              ? "border-l-2 border-accent/60 shadow-[0_0_10px_rgba(var(--accent-rgb),0.35)] z-10"
+                              ? "border-l-2 border-accent/80 shadow-[0_0_12px_rgba(var(--accent-rgb),0.5)] z-10"
                               : isBeat
-                              ? "border-l border-white/20"
-                              : "border-l border-white/[0.07]"
+                              ? "border-l border-white/[0.28]"
+                              : "border-l border-white/[0.14]"
                           }`}
                           style={{ left: i * cellW }}
                         />
@@ -1340,9 +1381,28 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         style={{ left: loopLen * cellW, width: (stepCount - loopLen) * cellW }}
                         data-testid="piano-roll-loop-boundary"
                       >
-                        <div className="absolute top-1 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#131622]/90 border border-accent/40 text-[8.5px] font-['JetBrains_Mono'] text-accent font-bold shadow-md select-none">
+                        <div className="absolute top-1 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#131622]/95 border border-accent/40 text-[8.5px] font-['JetBrains_Mono'] text-accent font-bold shadow-md select-none">
                           <Repeat className="w-2.5 h-2.5 text-accent" />
                           <span>Loop ({loopLen} Steps)</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              applyOp((p) => {
+                                const tracks = p.tracks.map((tr, idx) => {
+                                  if (idx !== activeTrackIdx) return tr;
+                                  const { trackLength: _removed, ...rest } = tr;
+                                  return { ...rest, trackLength: stepCount };
+                                });
+                                return { ...p, tracks };
+                              });
+                            }}
+                            className="pointer-events-auto ml-1 px-1.5 py-0.5 rounded bg-accent/20 hover:bg-accent/40 border border-accent/50 text-[8px] font-bold text-accent transition-all flex items-center gap-0.5 shadow-sm"
+                            title={t("roll_extend_loop_hint")}
+                            data-testid="piano-roll-extend-loop"
+                          >
+                            <span>{t("roll_extend_loop")}</span>
+                          </button>
                         </div>
                       </div>
                     )}
@@ -1522,7 +1582,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         <div
                           key={`vel-bar-${barIdx}`}
                           className={`absolute inset-y-0 pointer-events-none ${
-                            isAlternateBar ? "bg-[#141724]" : "bg-[#0e1018]"
+                            isAlternateBar ? "bg-[#181c2e]" : "bg-[#131624]"
                           }`}
                           style={{ left: barLeft, width: barWidth }}
                         />
@@ -1538,23 +1598,23 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           key={`vel-grid-${i}`}
                           className={`absolute inset-y-0 pointer-events-none ${
                             isBar
-                              ? "border-l-2 border-accent/40"
+                              ? "border-l-2 border-accent/60"
                               : isBeat
-                              ? "border-l border-white/10"
-                              : "border-l border-white/[0.03]"
+                              ? "border-l border-white/25"
+                              : "border-l border-white/10"
                           }`}
                           style={{ left: i * cellW }}
                         />
                       );
                     })}
 
-                    {[32, 64, 96].map((line) => (
+                    {[32, 64, 96, 127].map((line) => (
                       <div
                         key={line}
-                        className="absolute inset-x-0 border-t border-line-subtle/30 flex items-center justify-start pl-1 text-[7.5px] font-['JetBrains_Mono'] text-white/20 select-none pointer-events-none"
+                        className="absolute inset-x-0 border-t border-white/[0.08] flex items-center justify-start pl-1 text-[7.5px] font-['JetBrains_Mono'] font-bold text-white/30 select-none pointer-events-none"
                         style={{ bottom: `${(line / 127) * 100}%` }}
                       >
-                        {line === 96 ? "f · 96" : line === 64 ? "mf · 64" : "p · 32"}
+                        {line === 127 ? "fff · 127" : line === 96 ? "f · 96" : line === 64 ? "mf · 64" : "p · 32"}
                       </div>
                     ))}
                     {[...new Map(notes.map((n) => [n.stepIdx, n])).values()].map((note) => {
@@ -1562,13 +1622,15 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       const stepSelected = onStep.every((n) => selectedSet.has(noteId(n)));
                       const velHeight = `${(note.velocity / 127) * 100}%`;
                       const barColor = velocityColor(note.velocity);
+                      const dynamicName = note.velocity >= 115 ? "fff" : note.velocity >= 95 ? "f" : note.velocity >= 60 ? "mf" : "p";
                       return (
                         <div
                           key={`vel-${note.stepIdx}`}
                           data-testid={`piano-roll-velocity-bar-${note.stepIdx}`}
                           data-velocity={note.velocity}
                           data-chord-size={onStep.length}
-                          className="absolute bottom-0 flex flex-col items-center justify-end"
+                          title={`Step ${note.stepIdx + 1} · Velocity ${note.velocity} (${dynamicName})`}
+                          className="absolute bottom-0 flex flex-col items-center justify-end group cursor-pointer"
                           style={{
                             left: note.stepIdx * cellW + 1,
                             width: Math.max(2, cellW - 2),

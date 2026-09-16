@@ -167,14 +167,14 @@ export const StepCell = memo<StepCellProps>(function StepCell({
         isHatRound ? "rounded-full" : "rounded-md"
       } ${
         isOutsideLoop
-          ? "opacity-25 bg-[#0e0f13] border-[#181920] cursor-not-allowed"
+          ? "opacity-35 bg-[#0f111a] border-[#1a1c28] cursor-not-allowed"
           : isOn
           ? isLoopedRepeat
             ? "border-dashed border-white/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_8px_var(--tc)]"
             : "border-t border-t-white/60 border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.3),0_0_12px_var(--tc)]"
           : isAlternateBar
-          ? "bg-[#161822] border-[#252936] hover:border-[#3d4356] hover:bg-[#1b1e2b] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
-          : "bg-[#111217] border-[#1d1f28] hover:border-[#333746] hover:bg-[#171922] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+          ? "bg-[#181c2c] border-[#282e42] hover:border-accent/50 hover:bg-[#1f253a] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
+          : "bg-[#131522] border-[#202434] hover:border-accent/50 hover:bg-[#191c2c] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
       }`}
       style={{
         backgroundColor: !isOutsideLoop && isOn ? trackColor : undefined,

@@ -1,27 +1,27 @@
 {
-  "version": "2.0.34",
+  "version": "2.0.35",
   "releaseDate": "2026-09-16",
-  "changelogCount": 98,
+  "changelogCount": 99,
   "latest": {
-    "version": "2.0.34",
+    "version": "2.0.35",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.34 钢琴卷帘滑音试听与交互质感飞跃：琴键上下滑动试听（Glissando）、网格悬浮幽灵音符光标预警、Alt+滚轮即时微调力度、拖拽音长浮动HUD与首小节一键复刻（Dup B1）",
-      "en": "v2.0.34 Piano Roll Keybed Glissando, Interactive Hover Cursors & Rhythmic Polish: Keybed drag-auditioning (glissando), ghost hover previews, Alt+wheel velocity nudging, floating note resize HUD, and 1-click Bar 1 duplication (Dup B1)"
+      "zh": "v2.0.35 钢琴卷帘多小节全域网格质感重塑与琶音展开大师组：彻底消除黑屏死区、全半音阶白黑键分道底纹、调式根音金光徽标、一键解除循环全轨展开、和弦升降序琶音展开（Arp ▲/▼）与127极限力度动态标尺",
+      "en": "v2.0.35 Piano Roll Unified Professional DAW Grid & Multi-Note Arpeggiator Suite: Blackout dead-zone elimination across all bars, natural/accidental key lane shading, scale root gold watermark badges, 1-click loop extension, multi-note arpeggiator (Arp ▲/▼), and 127 fff velocity dynamic markers"
     },
     "highlights": [
       {
-        "zh": "**琴键上下滑动连续试听（Keybed Glissando / Drag-Auditioning）**：钢琴卷帘左侧象牙与黑曜石 3D 琴键槽全新支持连续滑音试听。按住鼠标或触控拖拽在键盘上快速上下掠过时，滑过的每个琴键均实时击发声学校准音符并点亮金黄热力图高光反馈，松开平滑归位，音域定位与和弦声部感知如行云流水。",
-        "en": "**Piano Keybed Glissando & Drag-Auditioning**: Sweeping up and down the 3D ivory and obsidian pitch gutter keys with pointer down now triggers smooth acoustic glissando auditioning. Each key struck illuminates with a responsive golden heatmap glow and releases cleanly, providing effortless tactile pitch inspection."
+        "zh": "**钢琴卷帘全小节网格质感重塑（Unified Professional DAW Grid Across All Bars）**：彻底修复多小节工程中首小节后网格反差断层、暗沉黑斑与线条不可见的视觉缺陷。网格底衬采用专业工作室海军深石板色调（#131624 与 #181c2e 优雅微反差交替），全半音阶自然白键行配备细腻透光层、半音黑键行采用经典钢琴黑曜石暗轨；调式根音行赋予温润金阳微光（rgba(245,158,11,0.13)）与小节起始「ROOT」金色水印徽标；16分音符与4分音符拍线贯穿全部小节，彻底消除空洞黑斑。",
+        "en": "**Unified Professional DAW Grid Across All Bars**: Completely resolved the visual disparity where bars past Bar 1 appeared as an illegible black void. The grid canvas now features a sleek dark studio slate palette (#131624 and #181c2e subtle bar alternation), natural white key lanes with luminous highlights, and obsidian black key gutter rows. Scale root rows are illuminated with warm amber gradients and \"ROOT\" gold watermark badges, while crisp 16th and beat dividers span a…"
       },
       {
-        "zh": "**网格鼠标悬浮幽灵音符与工具预警光标（Interactive Hover Ghost Cursor & Tool Targeting）**：铅笔工具模式下，指针移至网格任意空白位置自动投射半透明虚线幽灵预警音符（带微发光与音名/和弦印章角标），所见即所得；橡皮模式下悬浮目标音符显现实时红色脉冲警戒高光，剪刀模式下提供切割线预览，彻底消除盲目操作。",
-        "en": "**Interactive Ghost Hover Cursor & Tool Targeting**: In pencil mode, hovering over any empty cell displays a translucent dashed ghost note preview showing the exact pitch name (or chord stamp name) and duration before clicking. The eraser mode highlights targeted notes with a pulsing red warning glow, and scissors mode renders precise split guides."
+        "zh": "**和弦升降序琶音即时展开（Multi-Note Arpeggiator Suite / Arp ▲ & Arp ▼）**：在 Deck 2 和弦编配区全新引入「琶音 ▲ (Arp ▲)」与「琶音 ▼ (Arp ▼)」工具。在网格中框选或点选任意复合和弦后，一键自动将静态叠音在时间线上按音高升序或降序分解平铺为连续步进琶音流水线条，并保持适当时值与独立编辑选区，极大解放键盘琶音与流水旋律的编曲生产力。",
+        "en": "**Multi-Note Arpeggiator Suite (Arp ▲ & Arp ▼)**: Introduced dedicated \"Arp ▲\" and \"Arp ▼\" buttons in Deck 2. Selecting any chord stack and clicking an Arp button instantly unrolls block chords chronologically across consecutive steps in ascending or descending pitch order, turning static chords into fluid, rhythmic arpeggio runs with full undo support."
       },
       {
-        "zh": "**Alt + 滚轮即时微调音符力度（Alt + Mouse Wheel Velocity Nudge）**：鼠标悬停在任意音符上（或选中多音符）后，按住 Alt 键上下滚动滚轮即可直接以 ±5 步进微调音符力度，实时更新音符发光热力图并伴随微切片声学试听，界面顶部同步浮现数值 HUD 提示（如 Velocity: 105），指尖操作畅快淋漓。",
-        "en": "**Alt + Mouse Wheel Velocity Nudge**: Hovering over any note or selecting multiple notes and scrolling with the Alt key instantly nudges velocity up or down by ±5. Dynamic heatmap colors update immediately, triggering acoustic velocity auditioning with a sleek HUD toast confirming the new value."
+        "zh": "**一键解除循环限制全轨展开（1-Click Track Loop Extension）**：针对独立循环长度短于工程总长的音轨，在网格循环导轨与标尺中增加直达交互标牌「展开全轨 (Extend Track)」。创作者无需反复进入设置或手动对齐，轻点即可将该轨循环长度安全扩充至工程全长，解锁全部小节的直接绘制与旋律发展。",
+        "en": "**1-Click Track Loop Extension**: For tracks whose loop length was clamped below the project's total step count, an interactive \"Extend Track\" button is embedded in the loop boundary HUD. Creators can immediately expand the track loop to match the full song length with one click, unlocking full multi-bar sequencing freedom."
       }
     ],
     "truncated": true

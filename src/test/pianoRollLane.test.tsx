@@ -682,4 +682,53 @@ describe("PianoRollLane · chords are visible and editable", () => {
     const updated = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
     expect(updated.tracks[0].velocity?.[0]).toBe(105);
   });
+
+  it("arpeggiates selected chord notes using Arp ▲ button", () => {
+    const { commits } = setup({
+      pattern: makePattern({
+        steps: [1, 0, 0, 0, 0, 0, 0, 0],
+        pitches: [[60, 64, 67], null, null, null, null, null, null, null],
+      }),
+      stepCount: 8,
+    });
+    const arpBtn = screen.getByTestId("piano-roll-arp-up");
+    expect(arpBtn).toBeInTheDocument();
+
+    // Select chord at step 0
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-60"), { clientX: 4, clientY: rowYFor(60) });
+    // Additional notes in chord selection
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-64"), { clientX: 4, clientY: rowYFor(64), shiftKey: true });
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-67"), { clientX: 4, clientY: rowYFor(67), shiftKey: true });
+
+    fireEvent.click(arpBtn);
+    const updated = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(updated.tracks[0].steps.slice(0, 3)).toEqual([1, 1, 1]);
+    expect(updated.tracks[0].pitch?.slice(0, 3)).toEqual([60, 64, 67]);
+  });
+
+  it("extends track loop using the extend loop button when loopLen < stepCount", () => {
+    const { commits } = setup({
+      pattern: makePattern({
+        steps: [1, 0, 0, 0, 0, 0, 0, 0],
+        trackLength: 4,
+      }),
+      stepCount: 8,
+    });
+    const extendBtn = screen.getByTestId("piano-roll-extend-loop");
+    expect(extendBtn).toBeInTheDocument();
+    fireEvent.click(extendBtn);
+
+    const updated = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(updated.tracks[0].trackLength).toBe(8);
+  });
+
+  it("renders scale root watermarks and dynamic reference markers in velocity lane", () => {
+    setup({ stepCount: 8, stepsPerBar: 4 });
+    // Root pitch rows have ROOT badge
+    const rootBadges = screen.getAllByText("ROOT");
+    expect(rootBadges.length).toBeGreaterThan(0);
+
+    // Velocity lane renders fff · 127
+    expect(screen.getByText("fff · 127")).toBeInTheDocument();
+  });
 });
