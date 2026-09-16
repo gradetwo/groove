@@ -30,6 +30,7 @@ import {
   type TrackInsertParams,
 } from "../data/trackInsert";
 import type { MixTrackId } from "../data/genreMix";
+import { INSTRUMENT_PRESET_ALIASES } from "../audio/instrumentPresets";
 import {
   TrackInspector,
   clampInspectorValue,
@@ -568,5 +569,105 @@ describe("TrackInspector · tabs and compactness", () => {
 
     fireEvent.click(mute);
     expect(handlers.onMuteToggle).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Regression: the timbre picker must not scope itself to the current instrument.
+ *
+ * Reported from use: "the drum kits were two, and after choosing one only one was left". Two things
+ * were wrong. (1) The picker opened with the category filter set to the *current instrument's*
+ * family — a kick's family is `drums`, which holds two entries, so a drum track showed "2 of 116"
+ * and hid every other timbre. (2) A current value that is not a preset name (a kick track's
+ * instrument is a kick preset) was listed as an extra entry, so choosing a real preset made the
+ * list shrink by one under the user's finger.
+ */
+describe("TrackInspector · the timbre picker does not hide the list", () => {
+  const options = Object.keys(INSTRUMENT_PRESET_ALIASES);
+
+  const renderWithInstrument = (instrument: string, onChange = vi.fn()) => {
+    const utils = render(
+      <TrackInspector
+        role={"kick" as MixTrackId}
+        trackName="Kick Drum"
+        instrument={instrument}
+        instrumentOptions={options}
+        onInstrumentChange={onChange}
+        volume={0.8}
+        pan={0}
+        sendA={0}
+        sendB={0}
+        muted={false}
+        soloed={false}
+        onVolumeChange={vi.fn()}
+        onPanChange={vi.fn()}
+        onSendAChange={vi.fn()}
+        onSendBChange={vi.fn()}
+        insert={resolveTrackInsert("kick")}
+        onClose={vi.fn()}
+        onMuteToggle={vi.fn()}
+        onSoloToggle={vi.fn()}
+        onChangeInsert={vi.fn()}
+        onResetInsert={vi.fn()}
+        onBypassInsert={vi.fn()}
+      />
+    );
+    return { ...utils, onChange };
+  };
+
+  it("opens on every timbre, not on the current instrument's family", () => {
+    renderWithInstrument("punchy_kick");
+    // The "all" chip is active…
+    expect(screen.getByTestId("track-inspector-instrument-category-all").getAttribute("aria-pressed")).toBe("true");
+    // …and the list is the whole table, not the two drum entries.
+    const rendered = screen.getAllByTestId(/track-inspector-instrument-option-/);
+    expect(rendered.length).toBeGreaterThan(100);
+    expect(screen.getByTestId("track-inspector-instrument-option-reese_bass")).toBeInTheDocument();
+  });
+
+  it("keeps the current non-preset value listed, and says that it is not a preset", () => {
+    renderWithInstrument("punchy_kick");
+    expect(screen.getByTestId("track-inspector-instrument-option-punchy_kick")).toBeInTheDocument();
+    expect(screen.getByTestId("track-inspector-instrument-unlisted")).toBeInTheDocument();
+  });
+
+  it("still shows every timbre after a preset replaces the non-preset value", () => {
+    const { rerender, onChange } = renderWithInstrument("punchy_kick");
+    fireEvent.click(screen.getByTestId("track-inspector-instrument-option-distorted_kick"));
+    expect(onChange).toHaveBeenCalledWith("distorted_kick");
+
+    // The parent commits the choice and the panel re-renders with the new instrument: the list
+    // must stay complete (this is the state the report described as "only one left").
+    rerender(
+      <TrackInspector
+        role={"kick" as MixTrackId}
+        trackName="Kick Drum"
+        instrument="distorted_kick"
+        instrumentOptions={options}
+        onInstrumentChange={onChange}
+        volume={0.8}
+        pan={0}
+        sendA={0}
+        sendB={0}
+        muted={false}
+        soloed={false}
+        onVolumeChange={vi.fn()}
+        onPanChange={vi.fn()}
+        onSendAChange={vi.fn()}
+        onSendBChange={vi.fn()}
+        insert={resolveTrackInsert("kick")}
+        onClose={vi.fn()}
+        onMuteToggle={vi.fn()}
+        onSoloToggle={vi.fn()}
+        onChangeInsert={vi.fn()}
+        onResetInsert={vi.fn()}
+        onBypassInsert={vi.fn()}
+      />
+    );
+    const after = screen.getAllByTestId(/track-inspector-instrument-option-/);
+    expect(after.length).toBeGreaterThan(100);
+    // And the replaced value is gone, which is correct — it is no longer this track's timbre.
+    expect(screen.queryByTestId("track-inspector-instrument-option-punchy_kick")).toBeNull();
+    expect(screen.queryByTestId("track-inspector-instrument-unlisted")).toBeNull();
   });
 });

@@ -342,6 +342,11 @@ export const studioMessages = {
   unsaved_saved: { en: "Saved ✓", zh: "已保存 ✓" },
   unsaved_save_no_project_hint: { en: "No project yet: saving opens the project hub so you can name one first.", zh: "还没有工程：点保存会先打开工程中心，让你命名后再保存。" },
   // Timbre picker (item ②): categories + search over the 115 instrument names.
+  instrument_current_unlisted: { en: "current", zh: "当前" },
+  instrument_current_unlisted_hint: {
+    en: "This is the track's current timbre but it is not one of the preset names (a drum track holds a kick preset here, for instance). Choosing a listed name replaces it.",
+    zh: "这是该轨当前的音色，但它不是预置表里的名字（例如鼓轨这里放的是底鼓预置）。选列表里的名字会替换它。",
+  },
   instrument_search_placeholder: { en: "Search timbres…", zh: "搜索音色…" },
   instrument_search_clear: { en: "Clear search", zh: "清除搜索" },
   instrument_categories: { en: "Instrument categories", zh: "音色分类" },

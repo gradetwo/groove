@@ -17,6 +17,12 @@ import {
  * voices are badged, since the same instrument name can come from two different engines.
  */
 export interface InstrumentPickerProps {
+  /**
+   * The current value when it is *not* one of `options` (a kick track's instrument is a kick
+   * preset name, for instance). It is still listed — the selection must always have a home — but
+   * marked, so it is clear why it is there and that choosing a listed name will replace it.
+   */
+  unlistedValue?: string;
   /** Track role, needed to know whether GS-1 would voice a name. */
   role: "chords" | "lead" | null;
   value: string;
@@ -35,11 +41,20 @@ export const InstrumentPicker: React.FC<InstrumentPickerProps> = ({
   onChange,
   label,
   idPrefix = "track-inspector",
+  unlistedValue,
 }) => {
   const { t } = useLanguage();
   const [query, setQuery] = useState("");
-  // Start on the family of the current timbre: opening the picker already scoped is half the work.
-  const [category, setCategory] = useState<InstrumentCategoryId | "all">(() => categoryForInstrument(value));
+  /**
+   * The category filter starts at **all**, and only the user's chips narrow it.
+   *
+   * It used to start on `categoryForInstrument(value)` ("opening already scoped is half the work").
+   * That reasoning breaks on the drum tracks: a kick's family is `drums`, which holds two entries,
+   * so opening the timbre picker on a kick track showed "2 of 116" — reported as "the drum kits
+   * were only two, and after choosing one only one was left" (the second entry was the current
+   * value, see `unlistedValue`). A picker that hides 114 options to save one click is not helping.
+   */
+  const [category, setCategory] = useState<InstrumentCategoryId | "all">("all");
 
   const groups = useMemo(() => groupInstrumentsByCategory(options), [options]);
   const total = options.length;
@@ -162,6 +177,15 @@ export const InstrumentPicker: React.FC<InstrumentPickerProps> = ({
                 >
                   <span className="truncate">{name}</span>
                   <span className="flex shrink-0 items-center gap-1">
+                    {unlistedValue === name && (
+                      <span
+                        className="rounded border border-line-strong px-1 text-[8px] uppercase tracking-wider text-text-dim"
+                        title={t("instrument_current_unlisted_hint")}
+                        data-testid={`${idPrefix}-instrument-unlisted`}
+                      >
+                        {t("instrument_current_unlisted")}
+                      </span>
+                    )}
                     {gs1 && (
                       <span
                         className="rounded border border-accent/40 px-1 text-[8px] uppercase tracking-wider text-accent/90"

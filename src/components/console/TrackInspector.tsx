@@ -348,6 +348,12 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
   // The current preset must always be selectable, even if the host's option list is
   // momentarily stale — otherwise a controlled <select> would render blank.
   const options = useMemo(() => {
+    // A current value that is not a preset name — a kick track's instrument is a kick preset, for
+    // instance — is listed so the selection always has a home, and badged (`unlistedValue`) so it
+    // is clear it is not a preset. It disappears once a real preset replaces it, which is correct;
+    // what was *not* correct was the picker opening scoped to that value's family, which left only
+    // two entries on a drum track ("the drum kits were two, and after choosing one only one was
+    // left") and hid the other 114 timbres.
     const list = [...instrumentOptions];
     if (instrument && !list.includes(instrument)) list.unshift(instrument);
     return list;
@@ -523,6 +529,7 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             role={role === "chords" || role === "lead" ? role : null}
             value={instrument}
             options={options}
+            unlistedValue={instrument && !instrumentOptions.includes(instrument) ? instrument : undefined}
             onChange={onInstrumentChange}
             label={t("track_inspector_instrument")}
           />
