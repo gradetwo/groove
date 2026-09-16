@@ -1,27 +1,27 @@
 {
-  "version": "2.0.15",
-  "releaseDate": "2026-09-15",
-  "changelogCount": 79,
+  "version": "2.0.16",
+  "releaseDate": "2026-09-16",
+  "changelogCount": 80,
   "latest": {
-    "version": "2.0.15",
+    "version": "2.0.16",
     "date": "2026-09-16",
     "category": "audio",
     "title": {
-      "zh": "v2.0.15 GS-1 定点接入完成：按帧寻址的实时调度 + 离线对等 + parity 测试（默认关闭，等你决定是否开启）",
-      "en": "v2.0.15 GS-1 integration complete: frame-addressed live scheduling, an offline-equivalent path and a parity test (off by default, awaiting your call on enabling it)"
+      "zh": "v2.0.16 GS-1 正式默认接管 chords/lead：全库响度与音色重测通过（p90−p10 0.319 dB），工具栏可一键关闭",
+      "en": "v2.0.16 GS-1 now voices chords/lead by default: the library was re-measured and re-balanced (p90-p10 0.319 dB), with a one-click switch in the toolbar"
     },
     "highlights": [
       {
-        "zh": "**接线三块拼齐，代码路径完整**：① 上游 GS-1 v2.1.5 提供按帧寻址的 `noteAt`/`noteOffAt` 并报告常数延迟；② 本仓 `gs1Tracks.ts` 是**唯一**的帧算术实现（秒→帧、**减去延迟补偿**、顺序确定、8 复音上限）；③ **实时**：`Gs1VoicePool` 每轨一个 host，输出接该轨 insert 输入，命中路由即 `return`（否则与原生双重发声），未就绪时返回 false 让原生接手并在后台加载；④ **离线**：`WavExporter` 在 `startRendering()` 之前建好并 await host，渲染循环内保持同步、同样按帧寻址、同样命中即 return。",
-        "en": "**All three pieces are in place.** (1) Upstream GS-1 v2.1.5 provides frame-addressed `noteAt`/`noteOffAt` and reports its constant latency. (2) This repo's `gs1Tracks.ts` is the **only** implementation of the frame arithmetic (seconds to frames, **latency subtraction**, deterministic ordering, the 8-voice ceiling). (3) **Live**: `Gs1VoicePool` keeps one host per track, feeds that track's insert input, and returns early when routing hits (otherwise GS-1 and the native engine…"
+        "zh": "**GS-1 正式生效**：`chords`/`lead` 默认由 GS-1 演奏——按帧寻址（采样精确：实测调度时刻发消息会早 198.6 ms、临响发消息仍有 11.8 ms 极差，现在两条路都不走）、8 复音上限（E3 实测可持续上限）、未就绪/超载/无 patch 一律回退原生。**工具栏高级抽屉里、触感开关旁有 `GS-1` 开关，可随时关闭并持久化**；关闭立即释放已加载的宿主。",
+        "en": "**GS-1 is live by default**: `chords` and `lead` are voiced by GS-1 — frame-addressed (sample-accurate; the measured alternatives were 198.6 ms early when posting at scheduling time and an 11.8 ms spread posting at the last moment, and neither is used now), an 8-voice ceiling (E3's measured sustainable limit), and a native fallback whenever a host is not ready, is overloaded or has no patch. A **GS-1 switch sits beside the haptics toggle in the toolbar's advanced drawer**, c…"
       },
       {
-        "zh": "**parity 由测试钉死**（`gs1ExportParity.test.ts`）：开关关闭时导出连 host 都不找（与以前逐字节一致）；开启时**离线事件帧 === 共享 planner 的帧 === 实时 pool 拿同样输入产生的帧**——这才是 parity 的正面表述：帧算术两边只有一份实现，谁再自己算一遍就是播放与导出漂移的开始；GS-1 接管的轨道不再产生原生振荡器（没有双重发声）。另外补上 `fakeAudio` 离线 context 缺失的 `audioWorklet` 表面——否则 GS-1 导出路径会跳过自身，parity 测试会「在没有图的情况下通过」。",
-        "en": "**Parity is pinned by tests** (`gs1ExportParity.test.ts`): with routing off the exporter does not even look for a host (bit-for-bit as before); with it on, **the offline event frames equal the shared planner's frames, which equal what the live pool produces from the same input** — the positive statement of parity, since the frame arithmetic has exactly one implementation and re-deriving it on either side is how playback and export drift apart. A GS-1 track also stops creatin…"
+        "zh": "**重测与重配平（硬规则）**：开启改变电平与音色 ⇒ 重录两份基线并重配 159 条 trim。响度 **p90−p10 0.319 dB**（门禁 1.5）、全距 **2.82 dB**（门禁 4）、clamp **0/159**、削波 **0/159**、最差真峰值 **−1.094 dBTP**（0/159 超 −1.0）、目标 −15.716 LUFS；音色 **159/159 互异**。",
+        "en": "**Re-measured and re-balanced (the hard rule).** Enabling it changes level and timbre, so both baselines were re-recorded and all 159 trims re-fit: loudness **p90-p10 0.319 dB** (limit 1.5), full range **2.82 dB** (limit 4), trim clamp **0/159**, clipping **0/159**, worst true peak **-1.094 dBTP** (0/159 over -1.0), target -15.716 LUFS; timbre **159/159 distinct**."
       },
       {
-        "zh": "**仍默认关闭，这是本版唯一的有意留白**：开启会改变 159 曲风 `chords`/`lead` 的听感（换合成器、换 patch），而这些 patch 从未做过听感 A/B，本仓库也无法测量「更好听」；且开启按硬规则必须**重测响度 + 音色基线并重配 trim**。开启只需一行（`setGs1RoutingEnabled(true)`），但**不该由我单方面决定**。本版没有任何一轨的声音发生变化。",
-        "en": "**Still off by default, and that is this release's one deliberate omission.** Enabling it changes how `chords`/`lead` sound in all 159 genres (different synthesis, different patches), those patches have never been judged by ear, and this repository cannot measure \\\"sounds better\\\"; enabling it also triggers the hard rule that loudness and timbre must be re-measured and the trims re-fit. It is a one-line change (`setGs1RoutingEnabled(true)`) but **not a decision I should make…"
+        "zh": "**诚实说明**：① 音色最近一对距离从 GS-1 前的 0.3535 收到 **0.2759 dB**，相对 0.25 地板的余量只剩 **1.10×**——10 个 patch 覆盖 39 个乐器名让全库在这两个声部上更趋同，这是「统一乐器换一致性」的代价；要恢复辨识度应给 patch 加分化，不是放宽地板。② GS-1 的 patch 仍是**按参数语义写的、没有做过听感 A/B**——默认开启是产品决定，不是已证明更好听。③ 首次重测被我的 2 小时超时切断并留下不完整报告（p90−p10 1.65、部分 null），我没有用它配 trim，而是还原报告、提高到 4 小时重跑并加了进度落盘。",
+        "en": "**Honest limitations.** (1) The closest timbre pair tightened from 0.3535 before GS-1 to **0.2759 dB**, leaving only **1.10x** of margin over the 0.25 floor — ten patches covering 39 instrument names made the library more uniform in those two voices, which is the price of one consistent instrument. Recovering distinctness means differentiating the patches, not lowering the floor. (2) The GS-1 patches are still **written from parameter semantics with no listening A/B** — enab…"
       }
     ],
     "truncated": false
