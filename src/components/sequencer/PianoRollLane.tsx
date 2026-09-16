@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ChevronDown,
   ChevronUp,
+  Copy,
   Eraser,
   Filter,
   Keyboard,
@@ -33,6 +34,7 @@ import {
   deleteNotes,
   detectChordName,
   drop2SelectedChord,
+  duplicateBar1Notes,
   humanizeSelectedNotes,
   invertSelectedChord,
   isRollEditableTrack,
@@ -142,7 +144,7 @@ type DragState =
   | { mode: "move"; startStep: number; startMidi: number; origin: RollNoteId[]; base: SequencerPattern; copied: boolean }
   | { mode: "marquee"; startStep: number; startMidi: number }
   | { mode: "velocity"; startY: number; steps: RollNoteId[]; base: SequencerPattern }
-  | { mode: "resize"; stepIdx: number; midi: number; base: SequencerPattern; startGate: number; startX: number }
+  | { mode: "resize"; stepIdx: number; midi: number; base: SequencerPattern; startGate: number; startX: number; currentGate: number }
   | { mode: "paint"; base: SequencerPattern; painted: RollNoteId[] };
 
 export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
@@ -177,6 +179,8 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [catchPlayhead, setCatchPlayhead] = useState(true);
   const [isFolded, setIsFolded] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [hoverCell, setHoverCell] = useState<{ stepIdx: number; midi: number } | null>(null);
+  const [resizeGatePreview, setResizeGatePreview] = useState<{ stepIdx: number; midi: number; gate: number } | null>(null);
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const gridWrapRef = useRef<HTMLDivElement | null>(null);
@@ -351,6 +355,60 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (next !== pattern) commitDraft(next);
   };
 
+  useEffect(() => {
+    const onGlobalPointerUp = () => {
+      setActiveAuditionMidi(null);
+    };
+    window.addEventListener("pointerup", onGlobalPointerUp);
+    return () => window.removeEventListener("pointerup", onGlobalPointerUp);
+  }, []);
+
+  const handleKeybedPointerDown = (midi: number, e: React.PointerEvent<HTMLDivElement>) => {
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    setActiveAuditionMidi(midi);
+    onAudition(activeTrackIdx, midi, 100, 0.45);
+  };
+
+  const handleKeybedPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.buttons !== 1) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const keyEl = el?.closest("[data-midi-pitch]");
+    if (keyEl) {
+      const p = Number(keyEl.getAttribute("data-midi-pitch"));
+      if (!isNaN(p) && p !== activeAuditionMidi) {
+        setActiveAuditionMidi(p);
+        onAudition(activeTrackIdx, p, 100, 0.45);
+      }
+    }
+  };
+
+  const handleKeybedPointerUp = () => {
+    setActiveAuditionMidi(null);
+  };
+
+  const handleGridWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!editable || !event.altKey) return;
+    const { stepIdx, midi } = cellFromEvent(event as unknown as React.PointerEvent<HTMLElement>);
+    if (stepIdx < 0 || stepIdx >= stepCount || midi === undefined) return;
+    const hit = noteAt(stepIdx, midi);
+    const targetIds = hit
+      ? (selectedSet.has(noteId(hit)) ? selection : [noteId(hit)])
+      : selection.length > 0
+      ? selection
+      : null;
+    if (!targetIds || targetIds.length === 0) return;
+
+    const delta = event.deltaY < 0 ? 5 : -5;
+    applyOp((p) => scaleNotesVelocity(p, activeTrackIdx, targetIds, delta, stepCount));
+
+    const sampleNote = notes.find((n) => targetIds.includes(noteId(n)));
+    if (sampleNote) {
+      const newVel = Math.max(1, Math.min(127, Math.round(sampleNote.velocity + delta)));
+      setNotice(t("roll_vel_nudge", { vel: newVel }));
+      onAudition(activeTrackIdx, sampleNote.midi, newVel, 0.25);
+    }
+  };
+
   /* ------------------------------------------------------------------ grid gestures */
 
   const handleGridPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -432,7 +490,18 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
   const handleGridPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
-    if (!drag || !editable) return;
+    if (!drag) {
+      if (editable) {
+        const { stepIdx, midi } = cellFromEvent(event);
+        if (stepIdx >= 0 && stepIdx < stepCount && midi !== undefined) {
+          setHoverCell({ stepIdx, midi });
+        } else {
+          setHoverCell(null);
+        }
+      }
+      return;
+    }
+    if (!editable) return;
     const { stepIdx, midi } = cellFromEvent(event);
     if (midi === undefined) return;
 
@@ -493,6 +562,8 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (drag.mode === "resize") {
       const deltaSteps = (event.clientX - drag.startX) / cellW;
       const gate = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, drag.startGate + deltaSteps));
+      drag.currentGate = gate;
+      setResizeGatePreview({ stepIdx: drag.stepIdx, midi: drag.midi, gate });
       setDraft(resizeNote(drag.base, activeTrackIdx, drag.stepIdx, gate, stepCount));
     }
   };
@@ -500,6 +571,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const handleGridPointerUp = () => {
     const drag = dragRef.current;
     dragRef.current = null;
+    setResizeGatePreview(null);
     if (drag?.mode === "marquee") {
       if (marquee) setSelection(notesInRect(notes, marquee));
       setMarquee(null);
@@ -897,6 +969,19 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 <Sparkles className="h-3 w-3 text-amber-400" />
                 {t("roll_humanize")}
               </button>
+              {barCount > 1 && (
+                <button
+                  type="button"
+                  onClick={() => applyOp((p) => duplicateBar1Notes(p, activeTrackIdx, stepsPerBar, stepCount))}
+                  disabled={notes.length === 0}
+                  title={t("roll_dup_bar1_hint")}
+                  data-testid="piano-roll-dup-bar1"
+                  className={`${ctrlClass} disabled:opacity-35`}
+                >
+                  <Copy className="h-3 w-3 text-accent" />
+                  {t("roll_dup_bar1")}
+                </button>
+              )}
             </div>
           </div>
 
@@ -1019,7 +1104,15 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         <>
           <div className="flex gap-2">
             {/* Pitch gutter, drawn as a realistic 3D piano keyboard with auditioning */}
-            <div className="shrink-0 select-none w-16 shadow-[4px_0_12px_rgba(0,0,0,0.5)] z-20" style={{ paddingTop: 24 }}>
+            <div
+              className="shrink-0 select-none w-16 shadow-[4px_0_12px_rgba(0,0,0,0.5)] z-20"
+              style={{ paddingTop: 24 }}
+              onPointerMove={handleKeybedPointerMove}
+              onPointerUp={handleKeybedPointerUp}
+              onPointerCancel={handleKeybedPointerUp}
+              data-testid="piano-roll-keybed"
+              title={t("roll_keybed_glissando_hint")}
+            >
               {rows.map((midi) => {
                 const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
                 const inScale = scale.pcs.has(midi % 12);
@@ -1031,13 +1124,16 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                   <div
                     key={midi}
                     data-testid={`piano-roll-row-${midi}`}
+                    data-midi-pitch={midi}
                     data-scale={isRoot ? "root" : inScale ? "in" : "out"}
-                    onPointerDown={() => {
-                      setActiveAuditionMidi(midi);
-                      onAudition(activeTrackIdx, midi, 100, 0.5);
+                    onPointerDown={(e) => handleKeybedPointerDown(midi, e)}
+                    onPointerEnter={(e) => {
+                      if (e.buttons === 1 && activeAuditionMidi !== midi) {
+                        setActiveAuditionMidi(midi);
+                        onAudition(activeTrackIdx, midi, 100, 0.45);
+                      }
                     }}
-                    onPointerUp={() => setActiveAuditionMidi(null)}
-                    onPointerLeave={() => setActiveAuditionMidi(null)}
+                    onPointerUp={handleKeybedPointerUp}
                     className={`relative flex items-center justify-between px-1.5 font-['JetBrains_Mono'] text-[9px] cursor-pointer transition-all duration-75 select-none ${
                       isAuditioning
                         ? "bg-gradient-to-r from-accent via-amber-400 to-amber-300 text-black shadow-[0_0_16px_rgba(var(--accent-rgb),0.9),inset_0_1px_2px_white] z-20 font-black scale-[1.02]"
@@ -1048,7 +1144,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     style={{ height: rowH }}
                   >
                     {/* Scale Degree Guide Marker */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 pointer-events-none">
                       {isRoot ? (
                         <span className="w-1.5 h-1.5 rotate-45 bg-accent shadow-[0_0_6px_var(--accent)] animate-pulse" title="Root" />
                       ) : inScale ? (
@@ -1056,7 +1152,13 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       ) : null}
                     </div>
                     {/* Key Pitch Label */}
-                    <span className={`font-semibold tracking-tighter ${isC ? "font-black text-accent drop-shadow-[0_0_4px_rgba(var(--accent-rgb),0.4)]" : ""}`}>
+                    <span className={`font-semibold tracking-tighter pointer-events-none ${
+                      isC
+                        ? "font-black text-black bg-accent px-1 rounded shadow-[0_0_6px_rgba(var(--accent-rgb),0.6)]"
+                        : isBlack
+                        ? "text-[#8e95a8]"
+                        : "text-[#1a1d29]"
+                    }`}>
                       {isC ? `C${oct}` : rowH >= 18 ? midiToNoteName(midi) : isBlack ? "" : midiToNoteName(midi)}
                     </span>
                   </div>
@@ -1087,6 +1189,19 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                             <span>.3</span>
                             <span>.4</span>
                           </div>
+                          {barIdx === 0 && barCount > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => applyOp((p) => duplicateBar1Notes(p, activeTrackIdx, stepsPerBar, stepCount))}
+                              disabled={!editable}
+                              data-testid="piano-roll-ruler-dup-bar1"
+                              title={t("roll_dup_bar1_hint")}
+                              className="px-1.5 py-0.5 ml-1.5 rounded bg-[#1c202e] hover:bg-accent/20 border border-[#2e3549] hover:border-accent text-[8px] font-['JetBrains_Mono'] font-bold text-text-sub hover:text-accent flex items-center gap-1 transition-all shadow-sm shrink-0"
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                              <span>{t("roll_dup_bar1")}</span>
+                            </button>
+                          )}
                         </div>
                         {chordName && (
                           <button
@@ -1120,6 +1235,8 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerMove={handleGridPointerMove}
                     onPointerUp={handleGridPointerUp}
                     onPointerCancel={handleGridPointerUp}
+                    onPointerLeave={() => setHoverCell(null)}
+                    onWheel={handleGridWheel}
                     className="relative touch-none select-none bg-[#0c0e15] overflow-hidden"
                     style={{ height: rows.length * rowH, width: gridW }}
                   >
@@ -1247,6 +1364,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       const width = Math.max(cellW * 0.9, note.gate * cellW);
                       const noteName = midiToNoteName(note.midi);
                       const baseColor = velocityColor(note.velocity);
+                      const isHoverTarget = hoverCell?.stepIdx === note.stepIdx && hoverCell?.midi === note.midi;
+                      const isEraserHover = isHoverTarget && tool === "eraser";
+                      const isScissorsHover = isHoverTarget && tool === "scissors";
                       return (
                         <div
                           key={`note-${note.stepIdx}-${note.midi}`}
@@ -1257,7 +1377,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           data-velocity={note.velocity}
                           title={`${noteName} · ${t("roll_note_meta", { gate: note.gate.toFixed(2), velocity: note.velocity })}`}
                           className={`absolute overflow-hidden rounded-[5px] transition-shadow duration-75 select-none ${
-                            selected
+                            isEraserHover
+                              ? "border-2 border-red-500 ring-2 ring-red-400 bg-red-600 shadow-[0_0_18px_rgba(239,68,68,0.95)] z-20 animate-pulse"
+                              : selected
                               ? "border-2 border-white ring-2 ring-white/90 shadow-[0_0_18px_rgba(255,255,255,0.9),inset_0_1px_0_rgba(255,255,255,0.95)] z-20"
                               : "border border-black/70 shadow-[0_2px_6px_rgba(0,0,0,0.6)] hover:border-white/70 hover:shadow-[0_0_12px_rgba(255,255,255,0.5)] z-10"
                           }`}
@@ -1285,6 +1407,11 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                             </span>
                           )}
 
+                          {/* Scissors Cut Preview Indicator */}
+                          {isScissorsHover && (
+                            <span className="pointer-events-none absolute inset-y-0 right-0 w-[2px] bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.9)] z-30" />
+                          )}
+
                           {/* Logic-style resize handle with tactile ribs */}
                           {tool === "pointer" && width > 14 && (
                             <span
@@ -1300,7 +1427,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                                   base: draft ?? pattern,
                                   startGate: note.gate,
                                   startX: e.clientX,
+                                  currentGate: note.gate,
                                 };
+                                setResizeGatePreview({ stepIdx: note.stepIdx, midi: note.midi, gate: note.gate });
                                 e.currentTarget.setPointerCapture?.(e.pointerId);
                               }}
                             >
@@ -1310,6 +1439,47 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         </div>
                       );
                     })}
+
+                    {/* Layer 7: Interactive Ghost Note Cursor Preview (Pencil mode) */}
+                    {hoverCell && !dragRef.current && editable && tool === "pencil" && !noteAt(hoverCell.stepIdx, hoverCell.midi) && (() => {
+                      const rIdx = rowIdxMap.get(hoverCell.midi);
+                      if (rIdx === undefined) return null;
+                      return (
+                        <div
+                          data-testid="piano-roll-ghost-hover"
+                          className="pointer-events-none absolute z-20 rounded-[5px] border-2 border-dashed border-accent/80 bg-accent/25 shadow-[0_0_12px_rgba(var(--accent-rgb),0.4),inset_0_1px_0_rgba(255,255,255,0.4)] animate-pulse flex items-center px-1"
+                          style={{
+                            left: hoverCell.stepIdx * cellW + 1,
+                            top: rIdx * rowH + 1,
+                            width: cellW - 2,
+                            height: rowH - 2,
+                          }}
+                        >
+                          <span className="font-['JetBrains_Mono'] text-[8px] font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] truncate">
+                            {chordStamp !== "note" ? `${midiToNoteName(hoverCell.midi)} ${chordStamp}` : midiToNoteName(hoverCell.midi)}
+                          </span>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Layer 8: Floating Note Resize HUD */}
+                    {resizeGatePreview && (() => {
+                      const rIdx = rowIdxMap.get(resizeGatePreview.midi);
+                      if (rIdx === undefined) return null;
+                      return (
+                        <div
+                          data-testid="piano-roll-resize-hud"
+                          className="pointer-events-none absolute z-40 rounded-md border border-accent/70 bg-[#141724]/95 px-2 py-0.5 font-['JetBrains_Mono'] text-[9.5px] font-bold text-accent shadow-[0_4px_12px_rgba(0,0,0,0.8)] backdrop-blur-md flex items-center gap-1.5 whitespace-nowrap"
+                          style={{
+                            left: resizeGatePreview.stepIdx * cellW,
+                            top: Math.max(0, rIdx * rowH - 22),
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                          <span>{t("roll_resize_hud", { gate: resizeGatePreview.gate.toFixed(2) })}</span>
+                        </div>
+                      );
+                    })()}
 
                     {marquee && (() => {
                       const r1 = rowIdxMap.get(marquee.pitchFrom);

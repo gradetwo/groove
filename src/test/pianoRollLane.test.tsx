@@ -64,19 +64,28 @@ function makePattern(trackOver: Record<string, unknown> = {}): SequencerPattern 
   } as unknown as SequencerPattern;
 }
 
-function setup(over: { pattern?: SequencerPattern; trackIdx?: number; onToggleMusicalTyping?: () => void } = {}) {
+function setup(over: {
+  pattern?: SequencerPattern;
+  trackIdx?: number;
+  stepCount?: number;
+  stepsPerBar?: number;
+  onAudition?: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
+  onToggleMusicalTyping?: () => void;
+} = {}) {
   const commits: SequencerAction[] = [];
-  const onAudition = vi.fn();
+  const onAudition = over.onAudition ?? vi.fn();
   const onClose = vi.fn();
   const onSelectTrack = vi.fn();
   const onToggleMusicalTyping = over.onToggleMusicalTyping ?? vi.fn();
   const pattern = over.pattern ?? makePattern();
+  const stepCount = over.stepCount ?? STEPS;
+  const stepsPerBar = over.stepsPerBar ?? 4;
   render(
     <PianoRollLane
       pattern={pattern}
       activeTrackIdx={over.trackIdx ?? 0}
-      stepCount={STEPS}
-      stepsPerBar={4}
+      stepCount={stepCount}
+      stepsPerBar={stepsPerBar}
       isZh
       onSelectTrack={onSelectTrack}
       onClose={onClose}
@@ -619,5 +628,58 @@ describe("PianoRollLane · chords are visible and editable", () => {
     fireEvent.pointerDown(grid(), { clientX: 0 * 26 + 4, clientY: rowYFor(60), detail: 2 });
     const lastPattern = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
     expect(lastPattern.tracks[0].steps[0]).toBe(0);
+  });
+
+  it("duplicates bar 1 notes across subsequent bars using Dup B1", () => {
+    const { commits } = setup({
+      stepCount: 16,
+      stepsPerBar: 4,
+      pattern: makePattern({
+        steps: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        pitch: [60, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      }),
+    });
+    const dupBtn = screen.getByTestId("piano-roll-dup-bar1");
+    expect(dupBtn).toBeInTheDocument();
+    fireEvent.click(dupBtn);
+    const updated = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(updated.tracks[0].steps[0]).toBe(1);
+    expect(updated.tracks[0].steps[4]).toBe(1);
+    expect(updated.tracks[0].steps[8]).toBe(1);
+    expect(updated.tracks[0].steps[12]).toBe(1);
+  });
+
+  it("supports drag-audition across piano keys in pitch gutter", () => {
+    const onAudition = vi.fn();
+    setup({ onAudition });
+    const key60 = screen.getByTestId("piano-roll-row-60");
+    const key62 = screen.getByTestId("piano-roll-row-62");
+
+    fireEvent.pointerDown(key60);
+    expect(onAudition).toHaveBeenCalledWith(0, 60, 100, 0.45);
+
+    fireEvent.pointerEnter(key62, { buttons: 1 });
+    expect(onAudition).toHaveBeenCalledWith(0, 62, 100, 0.45);
+  });
+
+  it("shows ghost hover preview when hovering over empty grid in pencil mode", () => {
+    setup();
+    // Default tool is pencil; step 2 is empty
+    fireEvent.pointerMove(grid(), { clientX: 2 * 26 + 4, clientY: rowYFor(64) });
+    expect(screen.getByTestId("piano-roll-ghost-hover")).toBeInTheDocument();
+
+    fireEvent.pointerLeave(grid());
+    expect(screen.queryByTestId("piano-roll-ghost-hover")).toBeNull();
+  });
+
+  it("nudges note velocity with Alt + Wheel", () => {
+    const { commits } = setup();
+    const noteEl = screen.getByTestId("piano-roll-note-0-60");
+    expect(noteEl).toBeInTheDocument();
+
+    // Alt + scroll up increases velocity by 5
+    fireEvent.wheel(grid(), { clientX: 0 * 26 + 4, clientY: rowYFor(60), altKey: true, deltaY: -100 });
+    const updated = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(updated.tracks[0].velocity?.[0]).toBe(105);
   });
 });

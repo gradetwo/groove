@@ -536,6 +536,40 @@ export function rampNotesVelocity(
 }
 
 /**
+ * Duplicates notes in Bar 1 (steps 0 .. stepsPerBar - 1) across subsequent bars (bars 2, 3, 4...)
+ * for the active track.
+ */
+export function duplicateBar1Notes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  stepsPerBar: number,
+  stepCount: number
+): SequencerPattern {
+  if (stepsPerBar <= 0 || stepCount <= stepsPerBar) return pattern;
+  const barCount = Math.ceil(stepCount / stepsPerBar);
+  const track = pattern.tracks[trackIdx];
+  if (!track) return pattern;
+  const allNotes = notesFromTrack(track);
+  const bar1Notes = allNotes.filter((n) => n.stepIdx < stepsPerBar);
+  if (bar1Notes.length === 0) return pattern;
+
+  const nextNotes: RollStepNote[] = [...bar1Notes];
+  for (let bar = 1; bar < barCount; bar++) {
+    const offset = bar * stepsPerBar;
+    for (const n of bar1Notes) {
+      const stepIdx = offset + n.stepIdx;
+      if (stepIdx < stepCount) {
+        nextNotes.push({
+          ...n,
+          stepIdx,
+        });
+      }
+    }
+  }
+  return withTrackNotes(pattern, trackIdx, nextNotes, stepCount);
+}
+
+/**
  * Quantise the **lengths** of the selection to the snap grid.
  *
  * Starts are already steps, so this is where quantisation has something to do: a length that was

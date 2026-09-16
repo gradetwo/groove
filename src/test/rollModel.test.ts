@@ -15,6 +15,7 @@ import {
   addNote,
   detectChordName,
   drop2SelectedChord,
+  duplicateBar1Notes,
   humanizeSelectedNotes,
   invertSelectedChord,
   isRollEditableTrack,
@@ -594,6 +595,22 @@ describe("roll model · professional DAW chord tools and harmonic analysis", () 
     expect(vel0).toBeLessThanOrEqual(127);
     expect(vel1).toBeGreaterThanOrEqual(1);
     expect(vel1).toBeLessThanOrEqual(127);
+  });
+
+  it("duplicates bar 1 notes across subsequent bars", () => {
+    const track = makeTrack({
+      steps: [1, 0, 1, 0, 0, 0, 0, 0],
+      pitch: [60, null, 64, null, null, null, null, null],
+      gate: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+      velocity: [90, 100, 110, 100, 100, 100, 100, 100],
+    });
+    const pattern = { ...makePattern(track), totalSteps: 8 };
+
+    const duplicated = duplicateBar1Notes(pattern, 0, 4, 8);
+    expect(duplicated.tracks[0].steps).toEqual([1, 0, 1, 0, 1, 0, 1, 0]);
+    expect(duplicated.tracks[0].pitch).toEqual([60, null, 64, null, 60, null, 64, null]);
+    expect(duplicated.tracks[0].velocity?.[4]).toBe(90);
+    expect(duplicated.tracks[0].velocity?.[6]).toBe(110);
   });
 });
 
