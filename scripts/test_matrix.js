@@ -959,10 +959,16 @@ async function runTestOnTarget(target, baseUrl) {
       const text = (await page.textContent("[data-testid='piano-roll-selected-count']")) ?? "";
       return Number((/(\d+)/.exec(text) ?? [])[1] ?? 0);
     };
-    const insetX = Math.max(12, visible.right - visible.x) * 0.25;
-    const insetY = Math.max(12, visible.bottom - visible.y) * 0.25;
-    const from = { x: visible.x + insetX, y: visible.bottom - insetY };
-    const to = { x: visible.right - insetX, y: visible.y + insetY };
+    // Anchor the rectangle on a real note instead of a fixed fraction of the viewport: patterns now
+    // run to 64/128 steps, so a note can sit near an edge and an inset rectangle would enclose
+    // nothing (that is exactly how this check first failed after the chord work landed).
+    const anchorNoteBox = await (await page.$("[data-testid^='piano-roll-note-']")).boundingBox();
+    if (!anchorNoteBox) throw new Error(`No note to anchor a marquee on ${target.name}`);
+    // Stay *inside* the note's own row: the marquee selects whole cells, so a few pixels past the
+    // block's edge would pull in the neighbouring pitch row and the selection would legitimately be
+    // larger than the notes whose centres are inside the drawn rectangle.
+    const from = { x: anchorNoteBox.x + anchorNoteBox.width / 2, y: anchorNoteBox.y + anchorNoteBox.height - 1 };
+    const to = { x: anchorNoteBox.x + anchorNoteBox.width / 2, y: anchorNoteBox.y + 1 };
 
     // A click with the marquee tool is a one-cell rectangle: aiming at an empty corner clears the
     // selection. If that particular cell happens to hold a note the claim would be false, so this
@@ -1029,16 +1035,23 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error(`Dragging a velocity bar did not raise it on ${target.name} (${barBefore} → ${barAfter})`);
     }
 
-    // Legato fills the gap to the next note, which is visible as a wider note block.
-    const widthBefore = await page.$eval("[data-testid^='piano-roll-note-']", (el) => el.getBoundingClientRect().width);
+    // Legato fills each note's gap to the next one. Measured on the notes' own `data-gate` values,
+    // not on pixel widths: a 64/128-step pattern has ~8 px cells, so a one-step change is under a
+    // pixel and a width assertion would be testing the zoom level instead of the operation.
+    const gatesOf = () =>
+      page.$$eval("[data-testid^='piano-roll-note-']", (els) => els.map((e) => Number(e.getAttribute("data-gate"))));
+    const gatesBefore = await gatesOf();
     await clickVerified(page, "[data-testid='piano-roll-legato']");
     await page.waitForTimeout(250);
-    const widthAfter = await page.$eval("[data-testid^='piano-roll-note-']", (el) => el.getBoundingClientRect().width);
-    if (Math.abs(widthAfter - widthBefore) < 0.5) {
-      throw new Error(`Legato did not change any note length on ${target.name} (${widthBefore} → ${widthAfter})`);
+    const gatesAfter = await gatesOf();
+    const grew = gatesAfter.some((gate, i) => gate - (gatesBefore[i] ?? gate) > 0.05);
+    if (!grew) {
+      throw new Error(
+        `Legato changed no note length on ${target.name} (${gatesBefore.slice(0, 6).join(",")} → ${gatesAfter.slice(0, 6).join(",")})`
+      );
     }
     console.log(
-      `   · roll tools: switched by keyboard, marquee selected, velocity ${barBefore} → ${barAfter}, legato ${widthBefore.toFixed(1)} → ${widthAfter.toFixed(1)}px`
+      `   · roll tools: switched by keyboard, marquee selected, velocity ${barBefore} → ${barAfter}, legato lengthened a note`
     );
 
     await clickVerified(page, "[data-testid='piano-roll-close']");

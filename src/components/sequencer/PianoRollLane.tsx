@@ -821,6 +821,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           data-testid={`piano-roll-note-${note.stepIdx}-${note.midi}`}
                           data-selected={selected ? "true" : "false"}
                           data-chord-size={notesAtStep(note.stepIdx).length}
+                          data-gate={note.gate.toFixed(3)}
                           data-velocity={note.velocity}
                           title={`${midiToNoteName(note.midi)} · ${t("roll_note_meta", { gate: note.gate.toFixed(2), velocity: note.velocity })}`}
                           className={`absolute overflow-hidden rounded-[3px] border ${selected ? "border-white/80 ring-1 ring-white/70" : "border-black/40"}`}
