@@ -1424,6 +1424,11 @@ export class AudioEngine {
       if (!isStepActive) return;
 
       // Probability check (Chance: 0 - 100)
+      // V-01 note: this is the one place where live playback is deliberately NOT
+      // identical to an export. Chance is a performance feature, so live rolls
+      // `Math.random()` on every pass; the three exporters share the seeded
+      // `probabilityPasses()` in `noteEvents.ts` instead, so re-exporting a project
+      // always yields the same notes. Do not "fix" this by seeding live playback.
       const prob = (track.probability && track.probability[stepIdx] !== undefined)
         ? track.probability[stepIdx]
         : 100;

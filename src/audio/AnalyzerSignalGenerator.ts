@@ -8,6 +8,11 @@
  * 4. 180° Anti-Phase Inverted Waveform (Mono cancellation demonstrator)
  * 5. Pink Noise (1/f acoustic reference)
  * 6. White Noise (Flat stochastic energy)
+ *
+ * V-01 scope: this is a UI reference-signal generator, not a pattern render path.
+ * `Math.random()` is correct here — a noise reference must be aperiodic — and none of
+ * these signals reach `WavExporter`, so render determinism is unaffected. Pattern
+ * noise (drums, risers) comes from the seeded generator in `noise.ts` instead.
  */
 
 export type TestSignalType =
