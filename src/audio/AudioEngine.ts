@@ -39,7 +39,7 @@ import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "./gs1/gs1Trac
 import type { TrackInsertParams } from "../data/trackInsert";
 import { applyGenreFxToGraph, delayParamsAtTempo, resolveGenreFx, type GenreFxProfile } from "../data/genreFx";
 export type { TrackState } from "./trackStates";
-import { isDrumTrack } from "../utils/trackUtils";
+import { isDrumTrack, getDefaultDrumKitForGenre } from "../utils/trackUtils";
 import {
   LOUDNESS_TRIM_MAX_DB,
   LOUDNESS_TRIM_MIN_DB,
@@ -650,6 +650,18 @@ export class AudioEngine {
     if (pattern.timeSignature) {
       this.timeSignature = pattern.timeSignature;
     }
+    if (resetStates) {
+      if (typeof pattern.bpm === "number" && pattern.bpm > 0) {
+        this.setBpm(pattern.bpm);
+      }
+      if (typeof pattern.swing === "number") {
+        this.setSwing(pattern.swing > 1 ? pattern.swing / 100 : pattern.swing);
+      }
+      const genreId = (pattern as any).genre_id || (pattern as any).genreId;
+      if (genreId) {
+        this.setDrumKit(getDefaultDrumKitForGenre({ id: genreId }));
+      }
+    }
     if (resetStates || this.trackStates.length !== pattern.tracks.length) {
       this.trackStates = deriveTrackStates(pattern);
     } else {
@@ -890,6 +902,14 @@ export class AudioEngine {
 
   public setSwing(swing: number): void {
     this.swing = Math.max(0, Math.min(0.75, swing));
+  }
+
+  public getBpm(): number {
+    return this.bpm;
+  }
+
+  public getSwing(): number {
+    return this.swing;
   }
 
   private loadAudioSettings(): void {

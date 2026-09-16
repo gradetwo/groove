@@ -191,13 +191,15 @@ export function useGenreSwitching({
         engineRef.current.setBpm(genre.default_bpm || 120);
         engineRef.current.setSwing((genre.sequencer_pattern.swing || 0) / 100);
         engineRef.current.setTimeSignature(genre.time_signature || "4/4");
-        engineRef.current.setResolution("1/16");
-        if (andPlay) {
-          if (!isPlaying) {
-            engineRef.current.play();
-            setIsPlaying(true);
-          }
-        } else if (!isPlaying) {
+        if (isPlaying) {
+          // When switching genres during playback, restart from step 0 of the new genre
+          engineRef.current.stop();
+          clearPlayhead();
+          engineRef.current.play();
+        } else if (andPlay) {
+          engineRef.current.play();
+          setIsPlaying(true);
+        } else {
           engineRef.current.stop();
           clearPlayhead();
         }

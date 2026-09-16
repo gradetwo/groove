@@ -57,7 +57,7 @@ export function useGenreAudition(): UseGenreAuditionReturn {
 
       const engine = engineRef.current;
       engine.stop();
-      engine.setPattern(patternFromGenre(genre));
+      engine.setPattern(patternFromGenre(genre), true);
       setPlayingGenreId(genre.id);
       announcer.announce(`正在试听：${genre.name} / Auditioning: ${genre.name}`);
       await engine.play();

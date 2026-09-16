@@ -29,7 +29,7 @@ const genre = (id: string): Genre => {
   return found;
 };
 
-function setup(options: { guard?: (genre: Genre, run: () => void) => void } = {}) {
+function setup(options: { guard?: (genre: Genre, run: () => void) => void; isPlaying?: boolean } = {}) {
   const commits: SequencerAction[] = [];
   const engine = {
     setPattern: vi.fn(),
@@ -43,22 +43,24 @@ function setup(options: { guard?: (genre: Genre, run: () => void) => void } = {}
     stop: vi.fn(),
   };
   const current = genre("chicago-house");
+  const clearPlayhead = vi.fn();
+  const setIsPlaying = vi.fn();
   const rendered = renderHook(() =>
     useGenreSwitching({
       currentGenre: current,
       onSelectGenre: vi.fn(),
       engineRef: { current: engine } as never,
-      isPlaying: false,
-      setIsPlaying: vi.fn(),
+      isPlaying: options.isPlaying ?? false,
+      setIsPlaying,
       isDrumsOnly: false,
       setDrumKit: vi.fn(),
       setEffectsRackState: vi.fn(),
-      clearPlayhead: vi.fn(),
+      clearPlayhead,
       commit: (action) => commits.push(action),
       requestGenreGuard: options.guard,
     })
   );
-  return { ...rendered, commits, engine, current };
+  return { ...rendered, commits, engine, current, clearPlayhead, setIsPlaying };
 }
 
 beforeEach(() => {
@@ -128,6 +130,34 @@ describe("genre switching · the unsaved-changes choke point", () => {
     });
     expect(asked).toContain("boom-bap");
     expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
+  });
+
+  it("restarts playback from the beginning when switching genres during playback", () => {
+    const { result, commits, engine, clearPlayhead } = setup({ isPlaying: true });
+
+    act(() => {
+      result.current.switchGenre(genre("boom-bap"));
+    });
+
+    expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
+    expect(engine.setPattern).toHaveBeenCalledTimes(1);
+    expect(engine.stop).toHaveBeenCalledTimes(1);
+    expect(clearPlayhead).toHaveBeenCalledTimes(1);
+    expect(engine.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps playback stopped and clears playhead when switching genres while stopped", () => {
+    const { result, commits, engine, clearPlayhead } = setup({ isPlaying: false });
+
+    act(() => {
+      result.current.switchGenre(genre("boom-bap"));
+    });
+
+    expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
+    expect(engine.setPattern).toHaveBeenCalledTimes(1);
+    expect(engine.stop).toHaveBeenCalledTimes(1);
+    expect(clearPlayhead).toHaveBeenCalledTimes(1);
+    expect(engine.play).not.toHaveBeenCalled();
   });
 });
 

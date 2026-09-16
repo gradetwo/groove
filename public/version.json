@@ -1,29 +1,29 @@
 {
-  "version": "2.0.29",
+  "version": "2.0.30",
   "releaseDate": "2026-09-16",
-  "changelogCount": 93,
+  "changelogCount": 94,
   "latest": {
-    "version": "2.0.29",
+    "version": "2.0.30",
     "date": "2026-09-17",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.29 钢琴卷帘专业编曲升级与电脑键盘演奏系统：多音和弦无损呈现与编辑、Logic 式 3D 琴键与和弦走向标尺、和弦印章/转位/Drop-2/人性化、Musical Typing 虚拟键盘 (⌥K)",
-      "en": "v2.0.29 Professional Piano Roll Arranger Upgrade & Musical Typing Keyboard: Lossless polyphonic chord stacks, Logic-grade 3D keybed & chord progression ruler, chord stamps / inversions / Drop-2 / humanize, and Musical Typing HUD (⌥K)"
+      "zh": "v2.0.30 播放中切换曲风从头起播与视听试听全链路声学同步：切换时干净重置播放头并从第一拍开始、试听与详情页完整继承真实BPM/Swing/鼓机模型、WAV导出Swing倍率归一化",
+      "en": "v2.0.30 Transport Playback Reset on Genre Switch & Audition Acoustic Fidelity: Clean playhead reset and restart from downbeat when switching genres during playback, audition & detail previews inherit authentic BPM/Swing/DrumKit, and WAV export swing normalization"
     },
     "highlights": [
       {
-        "zh": "**钢琴卷帘真和弦多音堆叠与无损编曲**：彻底解决和弦在卷帘中坍缩为单音的痛点。当轨道为和弦轨且未固化音堆时，自动基于调式进行全音堆多音展开；在序列器状态机（SET_PITCH）中保持原有和弦堆叠结构或调式级数移调，禁止单音覆盖；新增 addChord 工具支持三和弦、七和弦、九和弦、挂留（Sus4/Sus2）及强力和弦一键输入，并支持和弦转位（▲ Inv / ▼ Inv）、爵士/流行 Drop-2 声部编配以及音符人性化微时序/力度抖动（Humanize）。",
-        "en": "**Lossless Polyphonic Chord Stacks & Editing**: Completely resolved chord voice collapsing in the piano roll. Unexpanded chord steps are dynamically voiced with full polyphony; SET_PITCH maintains full multi-note stacks during transposition; and new chord authoring tools provide instant chord stamping (triads, 7ths, 9ths, sus, power), inversions (up/down), Drop-2 jazz/pop voicing, and humanize jitter."
+        "zh": "**播放中切换曲风从头开始播放（Transport Playback Restart on Downbeat）**：解决在序列器正在播放时切换曲风，新曲风半路承接上一曲风步进指针与拍子偏移的割裂感。现在切换曲风时检测若处于播放状态，自动执行 stop() 并彻底重置播放头（clearPlayhead()），随后从第 0 步/第一小节第 1 拍从头启动播放，保证新曲风节奏与和声从第一拍干净利落实时呈现。",
+        "en": "**Transport Playback Reset on Genre Switch**: Resolved an issue where switching genres while the transport was running caused the new genre to resume from an arbitrary mid-bar step and phase offset. When switching during active playback, the engine now cleanly stops, resets the playhead via clearPlayhead(), and restarts from step 0 (downbeat of bar 1)."
       },
       {
-        "zh": "**Logic Pro 级高品质卷帘界面与走向标尺**：重塑钢琴卷帘视觉与交互质感。左侧琴键槽重构为立体 3D 黑白键盘（带圆润键尖、C 音高标记、调式级数光环与点击即时按压下潜发声试听）；音符块升级为带力度渐变热力图、左侧打击高光与亚克力玻璃质感的 DAW 块体，并在宽度合适时清晰印上 C4、E4 音名；顶部网格新增小节与和弦走向吸附标尺（Chord Progression Header），自动识别并展示和弦徽标（如 Bar 1 · Cmaj7），点击即可一键框选全小节所有音符。",
-        "en": "**Logic-Grade 3D Piano Keybed & Progression Ruler**: Overhauled the piano roll visual architecture. The pitch gutter now features realistic 3D ivory/ebony keys with C-octave badges, scale indicators, and interactive pointer-down audition depression; note blocks feature velocity heatmap gradients, strike accents, and crisp pitch labels; and a sticky chord progression header automatically detects chord badges (e.g. Bar 1 · Cmaj7) with 1-click bar selection."
+        "zh": "**全站曲风试听与详情页声学全要素同步（Audition Acoustic Parity）**：修复悬浮试听（useGenreAudition）与曲风详情预览（GenreDetailView）未继承该曲风专属 BPM、Swing 与硬件鼓机模型的痛点。setPattern(..., resetStates = true) 现在自动同步曲风自带速度、Swing 微时序（支持百分比与 0..0.75 比例）以及真实鼓机型号（808/909/Acoustic/Cyber），在全站任意卡片试听 174 BPM Drum & Bass 或 35% 摇摆 Boom Bap 均能立即听到该曲风地道标志性的律动与音色。",
+        "en": "**Audition Acoustic Parity**: Overhauled preview auditioning in hover cards and GenreDetailView to strictly adhere to authentic genre tempo, swing micro-timing, and drum machine models (808/909/Acoustic/Cyber) via setPattern(..., resetStates = true). Auditioning Drum & Bass at 174 BPM or Boom Bap with 35% swing immediately conveys the authentic acoustic groove."
       },
       {
-        "zh": "**Musical Typing 电脑虚拟键盘演奏系统 (⌥K)**：为系统引入与 Web MIDI 键盘并行的完整电脑键盘演奏 HUD（快捷键 ⌥K / Alt+K，或通过工具栏键盘按钮一键呼出）。支持标准 Logic Pro 双八度键位映射（白键 A S D F G H J K L ; '，黑键 W E T Y U O P），集成八度升降（Z / X）、力度调节（C / V）、延音踩踏（Tab）、和弦模式（一键触发调式和声堆叠）与目标轨道即时切换，为无物理 MIDI 键盘的用户提供专业流畅的现场演奏与试听体验。",
-        "en": "**Musical Typing Virtual Keyboard HUD (⌥K)**: Introduced a full-featured computer keyboard performance HUD alongside Web MIDI (toggle via ⌥K or toolbar button). Features standard Logic Pro 2-octave QWERTY mapping, octave shifting (Z/X), velocity scaling (C/V), sustain toggle (Tab), diatonic chord mode, and dynamic track routing for fluid real-time auditioning and musical performance."
+        "zh": "**WAV 离线导出 Swing 溢出归一化修复**：修复 WavExporter 在处理大于 1 的 Swing 百分比值（如 15% 或 35%）时未除以 100 进行比例归一化，导致直接被 Math.min(0.75, ...) 截断为极限摇摆 0.75 的声学缺陷。离线导出渲染现与实时音频引擎完全保持一致。",
+        "en": "**WAV Offline Export Swing Normalization**: Corrected swing parsing in WavExporter to properly normalize percentage-based swing (> 1) by dividing by 100 before clamping to 0.75, eliminating acoustic distortion and achieving 100% parity with live playback."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

@@ -147,7 +147,10 @@ export async function renderPatternOffline(
   // `lengthInSamples`, and an unbounded `bars` could allocate gigabytes.
   const bpm = Math.max(20, Math.min(300, options.bpm || pattern.bpm || 120));
   const bars = Math.max(1, Math.min(64, Math.floor(options.bars || 1)));
-  const swing = Math.max(0, Math.min(0.75, options.swing !== undefined ? options.swing : (pattern.swing || 0)));
+  const baseSwing = options.swing !== undefined
+    ? (options.swing > 1 ? options.swing / 100 : options.swing)
+    : (pattern.swing ? (pattern.swing > 1 ? pattern.swing / 100 : pattern.swing) : 0);
+  const swing = Math.max(0, Math.min(0.75, baseSwing));
   const stepDur = 60 / bpm / 4;
   const patternSteps =
     (pattern as any).totalSteps && (pattern as any).totalSteps > 0

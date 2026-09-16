@@ -115,7 +115,14 @@ export function getDefaultDrumKitForGenre(
     category.includes("jazz") ||
     category.includes("blues") ||
     category.includes("latin") ||
-    category.includes("world")
+    category.includes("world") ||
+    id.includes("rock") ||
+    id.includes("metal") ||
+    id.includes("jazz") ||
+    id.includes("blues") ||
+    id.includes("latin") ||
+    id.includes("grunge") ||
+    id.includes("punk")
   ) {
     return "acoustic";
   }

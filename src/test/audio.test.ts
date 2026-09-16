@@ -506,6 +506,42 @@ describe("Audio & Sequencer Utilities", () => {
       engine.destroy();
     });
 
+    it("synchronizes bpm, swing, and drumKit when setPattern is invoked with resetStates = true", () => {
+      const engine = new AudioEngine();
+      engine.setBpm(120);
+      engine.setSwing(0);
+      engine.setDrumKit("808");
+
+      const genrePattern = {
+        name: "Synthwave Pattern",
+        genre_id: "synthwave",
+        bpm: 105,
+        swing: 20, // 20% swing -> 0.20
+        tracks: [
+          { track_id: "kick", name: "Kick", steps: [1, 0, 0, 0] },
+        ],
+      };
+
+      engine.setPattern(genrePattern as any, true);
+      expect(engine.getBpm()).toBe(105);
+      expect(engine.getSwing()).toBeCloseTo(0.20, 2);
+      expect(engine.getDrumKit()).toBe("cyber");
+
+      // Also test delta-blues -> acoustic
+      engine.setPattern({
+        name: "Delta Blues",
+        genre_id: "delta-blues",
+        bpm: 76,
+        swing: 0.45,
+        tracks: [],
+      } as any, true);
+      expect(engine.getBpm()).toBe(76);
+      expect(engine.getSwing()).toBeCloseTo(0.45, 2);
+      expect(engine.getDrumKit()).toBe("acoustic");
+
+      engine.destroy();
+    });
+
     it("ChordAudioEngine stop and destroy cleanly without leaking", () => {
       const chordEngine = new ChordAudioEngine();
       expect(chordEngine.getIsPlaying()).toBe(false);

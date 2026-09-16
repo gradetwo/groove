@@ -128,7 +128,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
       },
     });
     engineRef.current = engine;
-    engine.setPattern(patternFromGenre(genre));
+    engine.setPattern(patternFromGenre(genre), true);
     engine.setBpm(defaultBpm);
 
     return () => {
