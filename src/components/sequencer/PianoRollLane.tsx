@@ -27,6 +27,7 @@ import {
   loopLengthOf,
   moveNotes,
   notesFromTrack,
+  noteId,
   notesInRect,
   quantizeLengths,
   removeNote,
@@ -37,6 +38,10 @@ import {
   transposeTrack,
   visiblePitchRange,
   type RollSnap,
+  parseNoteId,
+  removeNoteAt,
+  selectedSteps,
+  type RollNoteId,
   type RollStepNote,
   type RollTool,
 } from "../../features/sequencer/rollModel";
@@ -115,11 +120,12 @@ function velocityColor(velocity: number): string {
 }
 
 type DragState =
-  | { mode: "move"; startStep: number; startMidi: number; origin: number[]; base: SequencerPattern; copied: boolean }
+  /** `origin` is a list of note ids — a chord moves as several notes. */
+  | { mode: "move"; startStep: number; startMidi: number; origin: RollNoteId[]; base: SequencerPattern; copied: boolean }
   | { mode: "marquee"; startStep: number; startMidi: number }
-  | { mode: "velocity"; startY: number; steps: number[]; base: SequencerPattern }
-  | { mode: "resize"; stepIdx: number; base: SequencerPattern; startGate: number; startX: number }
-  | { mode: "paint"; base: SequencerPattern; painted: number[] };
+  | { mode: "velocity"; startY: number; steps: RollNoteId[]; base: SequencerPattern }
+  | { mode: "resize"; stepIdx: number; midi: number; base: SequencerPattern; startGate: number; startX: number }
+  | { mode: "paint"; base: SequencerPattern; painted: RollNoteId[] };
 
 export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   pattern,
@@ -143,7 +149,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [octaveShift, setOctaveShift] = useState(0);
   const [tool, setTool] = useState<RollTool>("pencil");
   const [snap, setSnap] = useState<RollSnap>("1/16");
-  const [selection, setSelection] = useState<number[]>([]);
+  const [selection, setSelection] = useState<RollNoteId[]>([]);
   const [draft, setDraft] = useState<SequencerPattern | null>(null);
   const [marquee, setMarquee] = useState<{ stepFrom: number; stepTo: number; pitchFrom: number; pitchTo: number } | null>(null);
   const [showVelocityLane, setShowVelocityLane] = useState(true);
@@ -196,10 +202,16 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
   const melodicTracks = view.tracks.map((tr, idx) => ({ tr, idx })).filter(({ tr }) => isRollEditableTrack(tr));
 
-  const noteAt = useCallback((stepIdx: number) => notes.find((n) => n.stepIdx === stepIdx) ?? null, [notes]);
+  /** The note exactly under a cell, or null. */
+  const noteAt = useCallback(
+    (stepIdx: number, midi: number) => notes.find((n) => n.stepIdx === stepIdx && n.midi === midi) ?? null,
+    [notes]
+  );
+  /** Every note on a step — a chord is several. */
+  const notesAtStep = useCallback((stepIdx: number) => notes.filter((n) => n.stepIdx === stepIdx), [notes]);
 
   const commitDraft = useCallback(
-    (next: SequencerPattern, nextSelection?: number[]) => {
+    (next: SequencerPattern, nextSelection?: RollNoteId[]) => {
       commit({ type: "COMMIT_PATTERN", pattern: next });
       if (nextSelection) setSelection(nextSelection);
     },
@@ -224,7 +236,12 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
   // Drop a selection that no longer exists (genre switch, undo, track change).
   useEffect(() => {
-    setSelection((prev) => prev.filter((step) => notes.some((n) => n.stepIdx === step)));
+    // Keep only ids that still exist: a genre switch, an undo or a track change can remove notes.
+    const live = new Set(notes.map(noteId));
+    setSelection((prev) => {
+      const next = prev.filter((id) => live.has(id));
+      return next.length === prev.length ? prev : next;
+    });
   }, [notes]);
 
   // Playhead + catch. Driven by the DOM-only playhead bus, so a running transport does not
@@ -279,15 +296,23 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (!editable) return;
     const { stepIdx, midi } = cellFromEvent(event);
     if (stepIdx < 0 || stepIdx >= stepCount || midi === undefined) return;
-    const hit = noteAt(stepIdx);
+    const hit = noteAt(stepIdx, midi);
     const additive = event.metaKey || event.ctrlKey || event.shiftKey;
 
     if (tool === "eraser") {
-      if (hit) applyOp((p) => removeNote(p, activeTrackIdx, stepIdx, stepCount));
+      // The eraser removes the tone under the cursor, so a chord can be thinned one note at a
+      // time; ⌥-click clears the whole step.
+      if (hit) {
+        applyOp((p) =>
+          event.altKey
+            ? removeNote(p, activeTrackIdx, stepIdx, stepCount)
+            : removeNoteAt(p, activeTrackIdx, stepIdx, midi, stepCount)
+        );
+      }
       return;
     }
     if (tool === "scissors") {
-      if (!hit) return;
+      if (!notesAtStep(stepIdx).length) return;
       const result = splitNote(pattern, activeTrackIdx, stepIdx, stepCount);
       if (result.split) commitDraft(result.pattern);
       else setNotice(t("roll_split_failed"));
@@ -295,16 +320,21 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     }
     if (tool === "pencil") {
       if (hit) {
-        // The pencil does not stack notes on a step the grid already occupies.
+        // Already sounding at this pitch: select it rather than stacking a duplicate.
+        setSelection(additive ? [...selection, noteId(hit)] : [noteId(hit)]);
         onAudition(activeTrackIdx, hit.midi, hit.velocity, hit.gate);
         return;
       }
-      // The first cell commits immediately, so a single click is a single, complete gesture; a
-      // stroke that continues accumulates and commits once on release.
-      const next = addNote(pattern, activeTrackIdx, stepIdx, midi, stepCount);
-      commitDraft(next, [stepIdx]);
-      onAudition(activeTrackIdx, midi, 100, 0.8);
-      dragRef.current = { mode: "paint", base: next, painted: [stepIdx] };
+      // Draw. On a step that already sounds this **adds to the chord** (`addNote` stacks), which
+      // is how a chord is built here: draw the root, then draw the third and fifth onto the same
+      // step. The first cell commits immediately, so a click is one complete gesture; a stroke
+      // that continues accumulates and commits once on release.
+      const next = addNote(pattern, activeTrackIdx, stepIdx, midi, stepCount, 100, notesAtStep(stepIdx)[0]?.gate);
+      if (next === pattern) return;
+      const id = noteId({ stepIdx, midi });
+      commitDraft(next, additive ? [...selection, id] : [id]);
+      onAudition(activeTrackIdx, midi, 100, notesAtStep(stepIdx)[0]?.gate ?? 0.8);
+      dragRef.current = { mode: "paint", base: next, painted: [id] };
       event.currentTarget.setPointerCapture?.(event.pointerId);
       return;
     }
@@ -316,13 +346,14 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     }
 
     if (!hit) return;
+    const hitId = noteId(hit);
     const origin = additive
-      ? selection.includes(stepIdx)
-        ? selection.filter((s) => s !== stepIdx)
-        : [...selection, stepIdx]
-      : selectedSet.has(stepIdx)
+      ? selection.includes(hitId)
+        ? selection.filter((s) => s !== hitId)
+        : [...selection, hitId]
+      : selectedSet.has(hitId)
         ? selection
-        : [stepIdx];
+        : [hitId];
     setSelection(origin);
     onAudition(activeTrackIdx, hit.midi, hit.velocity, hit.gate);
     dragRef.current = { mode: "move", startStep: stepIdx, startMidi: midi, origin, base: pattern, copied: false };
@@ -342,10 +373,14 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (drag.mode === "paint") {
       if (stepIdx < 0 || stepIdx >= stepCount) return;
       const current = draft ?? drag.base;
-      if (notesFromTrack(current.tracks[activeTrackIdx]).some((n) => n.stepIdx === stepIdx)) return;
-      const next = addNote(current, activeTrackIdx, stepIdx, midi, stepCount);
+      // Painting never overwrites: a cell that already sounds (at this pitch or any) is skipped, so
+      // a stroke across a chord cannot erase it.
+      const currentNotes = notesFromTrack(current.tracks[activeTrackIdx]);
+      const id = noteId({ stepIdx, midi });
+      if (currentNotes.some((n) => noteId(n) === id)) return;
+      const next = addNote(current, activeTrackIdx, stepIdx, midi, stepCount, 100, currentNotes.find((n) => n.stepIdx === stepIdx)?.gate);
       if (next === current) return;
-      drag.painted.push(stepIdx);
+      drag.painted.push(id);
       setDraft(next);
       onAudition(activeTrackIdx, midi, 100, 0.8);
       return;
@@ -400,7 +435,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       const landedSelection = drag?.mode === "move" ? drag.origin : selection;
       commit({ type: "COMMIT_PATTERN", pattern: draft });
       setDraft(null);
-      const landed = notesFromTrack(draft.tracks[activeTrackIdx]).find((n) => landedSelection.includes(n.stepIdx));
+      const landed = notesFromTrack(draft.tracks[activeTrackIdx]).find((n) => landedSelection.includes(noteId(n)));
       if (landed) onAudition(activeTrackIdx, landed.midi, landed.velocity, landed.gate);
     }
   };
@@ -411,16 +446,18 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (!editable) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const stepIdx = Math.floor((event.clientX - rect.left) / cellW);
-    const hit = noteAt(stepIdx);
-    if (!hit) return;
-    // A bar inside the selection offsets the whole selection; otherwise the gesture touches only
-    // the bar under the cursor.
-    const steps = selectedSet.has(stepIdx) ? selection : [stepIdx];
-    if (!selectedSet.has(stepIdx)) setSelection([stepIdx]);
+    const onStep = notesAtStep(stepIdx);
+    if (onStep.length === 0) return;
+    // Velocity belongs to the step (the model has one value per step), so the lane has one bar per
+    // sounding step even when that step holds a chord.
+    const stepIds = onStep.map(noteId);
+    const insideSelection = stepIds.every((id) => selectedSet.has(id));
+    const ids = insideSelection ? selection : stepIds;
+    if (!insideSelection) setSelection(stepIds);
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    dragRef.current = { mode: "velocity", startY: event.clientY, steps, base: pattern };
+    dragRef.current = { mode: "velocity", startY: event.clientY, steps: ids, base: pattern };
     const value = Math.max(1, Math.min(127, Math.round(((rect.bottom - event.clientY) / rect.height) * 127)));
-    setDraft(scaleNotesVelocity(pattern, activeTrackIdx, steps, value - hit.velocity, stepCount));
+    setDraft(scaleNotesVelocity(pattern, activeTrackIdx, ids, value - onStep[0].velocity, stepCount));
   };
 
   /* ------------------------------------------------------------------ keyboard */
@@ -453,7 +490,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       }
       if (event.key === "a" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        setSelection(notes.map((n) => n.stepIdx));
+        setSelection(notes.map(noteId));
         return;
       }
       if (event.key.startsWith("Arrow") && selection.length > 0) {
@@ -473,7 +510,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
   /* ------------------------------------------------------------------ render */
 
-  const selectedNotes: RollStepNote[] = notes.filter((n) => selectedSet.has(n.stepIdx));
+  const selectedNotes: RollStepNote[] = notes.filter((n) => selectedSet.has(noteId(n)));
   const focusNote = selectedNotes[0] ?? null;
   const ctrlClass =
     "flex h-6 items-center gap-1 rounded-lg border border-line bg-panel2 px-1.5 font-['JetBrains_Mono'] text-[10px] text-text-sub transition-colors hover:text-text";
@@ -567,7 +604,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           type="button"
           onClick={() =>
             applyOp((p) =>
-              quantizeLengths(p, activeTrackIdx, selection.length ? selection : notes.map((n) => n.stepIdx), snap, stepCount)
+              quantizeLengths(p, activeTrackIdx, selection.length ? selection : notes.map(noteId), snap, stepCount)
             )
           }
           disabled={notes.length === 0}
@@ -581,7 +618,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           type="button"
           onClick={() =>
             applyOp((p) =>
-              legatoNotes(p, activeTrackIdx, selection.length ? selection : notes.map((n) => n.stepIdx), stepCount, loopLen)
+              legatoNotes(p, activeTrackIdx, selection.length ? selection : notes.map(noteId), stepCount, loopLen)
             )
           }
           disabled={notes.length === 0}
@@ -776,13 +813,14 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     {notes.map((note) => {
                       const top = (hiPitch - note.midi) * rowH;
                       if (top < 0 || top > rows.length * rowH) return null;
-                      const selected = selectedSet.has(note.stepIdx);
+                      const selected = selectedSet.has(noteId(note));
                       const width = Math.max(cellW * 0.9, note.gate * cellW);
                       return (
                         <div
                           key={`note-${note.stepIdx}`}
-                          data-testid={`piano-roll-note-${note.stepIdx}`}
+                          data-testid={`piano-roll-note-${note.stepIdx}-${note.midi}`}
                           data-selected={selected ? "true" : "false"}
+                          data-chord-size={notesAtStep(note.stepIdx).length}
                           data-velocity={note.velocity}
                           title={`${midiToNoteName(note.midi)} · ${t("roll_note_meta", { gate: note.gate.toFixed(2), velocity: note.velocity })}`}
                           className={`absolute overflow-hidden rounded-[3px] border ${selected ? "border-white/80 ring-1 ring-white/70" : "border-black/40"}`}
@@ -802,14 +840,15 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                           )}
                           {tool === "pointer" && width > 14 && (
                             <span
-                              data-testid={`piano-roll-resize-${note.stepIdx}`}
+                              data-testid={`piano-roll-resize-${note.stepIdx}-${note.midi}`}
                               className="absolute inset-y-0 right-0 w-[5px] cursor-ew-resize bg-black/35"
                               onPointerDown={(e) => {
                                 e.stopPropagation();
-                                setSelection([note.stepIdx]);
+                                setSelection([noteId(note)]);
                                 dragRef.current = {
                                   mode: "resize",
                                   stepIdx: note.stepIdx,
+                                  midi: note.midi,
                                   base: draft ?? pattern,
                                   startGate: note.gate,
                                   startX: e.clientX,
@@ -851,19 +890,24 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     {[32, 64, 96].map((line) => (
                       <div key={line} className="absolute inset-x-0 border-t border-line-subtle/40" style={{ bottom: `${(line / 127) * 100}%` }} />
                     ))}
-                    {notes.map((note) => (
-                      <div
-                        key={`vel-${note.stepIdx}`}
-                        data-testid={`piano-roll-velocity-bar-${note.stepIdx}`}
-                        data-velocity={note.velocity}
-                        className={`absolute bottom-0 ${selectedSet.has(note.stepIdx) ? "bg-white/80" : "bg-accent/70"}`}
-                        style={{
-                          left: note.stepIdx * cellW + 1,
-                          width: Math.max(2, cellW - 2),
-                          height: `${(note.velocity / 127) * 100}%`,
-                        }}
-                      />
-                    ))}
+                    {[...new Map(notes.map((n) => [n.stepIdx, n])).values()].map((note) => {
+                      const onStep = notesAtStep(note.stepIdx);
+                      const stepSelected = onStep.every((n) => selectedSet.has(noteId(n)));
+                      return (
+                        <div
+                          key={`vel-${note.stepIdx}`}
+                          data-testid={`piano-roll-velocity-bar-${note.stepIdx}`}
+                          data-velocity={note.velocity}
+                          data-chord-size={onStep.length}
+                          className={`absolute bottom-0 ${stepSelected ? "bg-white/80" : "bg-accent/70"}`}
+                          style={{
+                            left: note.stepIdx * cellW + 1,
+                            width: Math.max(2, cellW - 2),
+                            height: `${(note.velocity / 127) * 100}%`,
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -891,7 +935,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     data-testid="piano-roll-pitch"
                     onChange={(e) => {
                       const midi = Math.max(0, Math.min(127, Number(e.target.value)));
-                      applyOp((p) => moveNotes(p, activeTrackIdx, [focusNote.stepIdx], 0, midi - focusNote.midi, stepCount).pattern);
+                      applyOp((p) => moveNotes(p, activeTrackIdx, [noteId(focusNote)], 0, midi - focusNote.midi, stepCount).pattern);
                     }}
                     className="w-14 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
                   />
@@ -906,7 +950,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     data-testid="piano-roll-start"
                     onChange={(e) => {
                       const target = Math.max(0, Math.min(stepCount - 1, Number(e.target.value)));
-                      applyOp((p) => moveNotes(p, activeTrackIdx, [focusNote.stepIdx], target - focusNote.stepIdx, 0, stepCount).pattern);
+                      applyOp((p) => moveNotes(p, activeTrackIdx, [noteId(focusNote)], target - focusNote.stepIdx, 0, stepCount).pattern);
                     }}
                     className="w-14 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
                   />
@@ -937,7 +981,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     data-testid="piano-roll-velocity"
                     onChange={(e) => {
                       const velocity = Math.max(1, Math.min(127, Number(e.target.value)));
-                      applyOp((p) => scaleNotesVelocity(p, activeTrackIdx, [focusNote.stepIdx], velocity - focusNote.velocity, stepCount));
+                      applyOp((p) => scaleNotesVelocity(p, activeTrackIdx, [noteId(focusNote)], velocity - focusNote.velocity, stepCount));
                     }}
                     className="w-16 rounded border border-line bg-panel2 px-1 py-0.5 text-[10px] text-text"
                   />

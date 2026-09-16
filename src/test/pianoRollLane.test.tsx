@@ -19,6 +19,27 @@ vi.mock("../components/sequencer/PitchPickerModal", () => ({
   midiToNoteName: (midi: number) => `NOTE_${midi}`,
 }));
 
+/**
+ * The y coordinate of a pitch's row, read from the rendered gutter.
+ *
+ * Notes are hit-tested by **(step, pitch)** — that is what makes a chord editable — so a gesture in
+ * a test has to aim at the note's own row. Reading the row order from the DOM keeps that honest
+ * instead of hard-coding an index that shifts whenever the visible range changes.
+ */
+function rowYFor(midi: number, rowH = 18): number {
+  const rows = screen.getAllByTestId(/^piano-roll-row-\d+$/);
+  const idx = rows.findIndex((el) => el.getAttribute("data-testid") === `piano-roll-row-${midi}`);
+  if (idx < 0) throw new Error(`pitch row ${midi} is not rendered`);
+  return idx * rowH + 4;
+}
+
+/** y of the topmost / bottommost rendered pitch row — for marquees that must cover everything. */
+function extremeRowY(which: "top" | "bottom", rowH = 18): number {
+  const rows = screen.getAllByTestId(/^piano-roll-row-\d+$/);
+  const idx = which === "top" ? 0 : rows.length - 1;
+  return idx * rowH + 4;
+}
+
 const STEPS = 8;
 
 function makePattern(trackOver: Record<string, unknown> = {}): SequencerPattern {
@@ -68,12 +89,12 @@ function setup(over: { pattern?: SequencerPattern; trackIdx?: number } = {}) {
 describe("PianoRollLane · one source of truth", () => {
   it("renders one block per sounding step, positioned by pitch", () => {
     setup();
-    expect(screen.getByTestId("piano-roll-note-0")).toBeInTheDocument();
-    expect(screen.getByTestId("piano-roll-note-4")).toBeInTheDocument();
-    expect(screen.queryByTestId("piano-roll-note-1")).toBeNull();
+    expect(screen.getByTestId("piano-roll-note-0-60")).toBeInTheDocument();
+    expect(screen.getByTestId("piano-roll-note-4-64")).toBeInTheDocument();
+    expect(screen.queryByTestId("piano-roll-note-1-60")).toBeNull();
     // The pitch decides the row, so the two notes are not on the same one.
-    const first = screen.getByTestId("piano-roll-note-0");
-    const second = screen.getByTestId("piano-roll-note-4");
+    const first = screen.getByTestId("piano-roll-note-0-60");
+    const second = screen.getByTestId("piano-roll-note-4-64");
     expect(first.style.top).not.toBe(second.style.top);
   });
 
@@ -251,7 +272,7 @@ describe("PianoRollLane · tools", () => {
     const { commits } = setup();
     fireEvent.keyDown(window, { key: "3" });
     // jsdom rects are zero-sized, so the coordinates *are* cell coordinates (x/26, y/18).
-    fireEvent.pointerDown(grid(), { clientX: 0 * 26 + 5, clientY: 3 * 18 + 4 });
+    fireEvent.pointerDown(grid(), { clientX: 0 * 26 + 5, clientY: rowYFor(60) });
     expect(commits).toHaveLength(1);
     const pattern = (commits[0] as { pattern: SequencerPattern }).pattern;
     expect(pattern.tracks[0].steps[0]).toBe(0);
@@ -310,15 +331,15 @@ describe("PianoRollLane · selection, marquee and moving a group", () => {
       }),
     });
     fireEvent.keyDown(window, { key: "1" }); // pointer
-    fireEvent.pointerDown(grid(), { clientX: 5 * 26 + 4, clientY: 0 * 18 + 4 });
-    fireEvent.pointerMove(grid(), { clientX: 4, clientY: 7 * 18 + 4 });
+    fireEvent.pointerDown(grid(), { clientX: 5 * 26 + 4, clientY: extremeRowY("bottom") });
+    fireEvent.pointerMove(grid(), { clientX: 4, clientY: extremeRowY("top") });
     expect(screen.getByTestId("piano-roll-marquee")).toBeInTheDocument();
     fireEvent.pointerUp(grid());
     expect(screen.getByTestId("piano-roll-selected-count").textContent).toContain("2");
 
     // Now drag one of the selected notes one step right: both must move.
-    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0"), { clientX: 0 * 26 + 4, clientY: 0 * 18 + 4 });
-    fireEvent.pointerMove(grid(), { clientX: 1 * 26 + 4, clientY: 0 * 18 + 4 });
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-60"), { clientX: 0 * 26 + 4, clientY: rowYFor(60) });
+    fireEvent.pointerMove(grid(), { clientX: 1 * 26 + 4, clientY: rowYFor(60) });
     fireEvent.pointerUp(grid());
     const moved = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
     // Both notes move one step right: 0→1 and 2→3, so the steps they left are empty.
@@ -331,8 +352,8 @@ describe("PianoRollLane · selection, marquee and moving a group", () => {
   it("copies with ⌥-drag instead of moving (the originals stay)", () => {
     const { commits } = setup({ pattern: makePattern({ steps: [1, 0, 0, 0, 0, 0, 0, 0] }) });
     fireEvent.keyDown(window, { key: "1" });
-    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0"), { clientX: 4, clientY: 4 });
-    fireEvent.pointerMove(grid(), { clientX: 2 * 26 + 4, clientY: 0 * 18 + 4, altKey: true });
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-60"), { clientX: 4, clientY: rowYFor(60) });
+    fireEvent.pointerMove(grid(), { clientX: 2 * 26 + 4, clientY: rowYFor(60), altKey: true });
     fireEvent.pointerUp(grid());
     const copied = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
     expect(copied.tracks[0].steps[0]).toBe(1); // original
@@ -344,8 +365,8 @@ describe("PianoRollLane · selection, marquee and moving a group", () => {
       pattern: makePattern({ steps: [1, 0, 1, 0, 0, 0, 0, 0], pitch: [60, null, 62, null, null, null, null, null] }),
     });
     fireEvent.keyDown(window, { key: "1" });
-    fireEvent.pointerDown(grid(), { clientX: 5 * 26 + 4, clientY: 0 });
-    fireEvent.pointerMove(grid(), { clientX: 4, clientY: 7 * 18 });
+    fireEvent.pointerDown(grid(), { clientX: 5 * 26 + 4, clientY: extremeRowY("bottom") });
+    fireEvent.pointerMove(grid(), { clientX: 4, clientY: extremeRowY("top") });
     fireEvent.pointerUp(grid());
     fireEvent.click(screen.getByTestId("piano-roll-delete"));
     const emptied = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
@@ -417,8 +438,8 @@ describe("PianoRollLane · Logic-style visuals", () => {
 
   it("colours notes by velocity and names them when there is room", () => {
     setup({ pattern: makePattern({ steps: [1, 0, 0, 0, 1, 0, 0, 0], velocity: [30, 100, 100, 100, 127, 100, 100, 100] }) });
-    const soft = screen.getByTestId("piano-roll-note-0");
-    const hard = screen.getByTestId("piano-roll-note-4");
+    const soft = screen.getByTestId("piano-roll-note-0-60");
+    const hard = screen.getByTestId("piano-roll-note-4-64");
     expect(soft.getAttribute("data-velocity")).toBe("30");
     expect(soft.style.backgroundColor).not.toBe(hard.style.backgroundColor);
     expect(soft.textContent).toContain("NOTE_60");
@@ -428,7 +449,7 @@ describe("PianoRollLane · Logic-style visuals", () => {
     const { commits } = setup();
     // The pencil draws and does not select (that is the pointer's job), so switch tools first.
     fireEvent.keyDown(window, { key: "1" });
-    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0"), { clientX: 4, clientY: 4 });
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-60"), { clientX: 4, clientY: rowYFor(60) });
     fireEvent.pointerUp(gridSafe());
 
     fireEvent.change(screen.getByTestId("piano-roll-velocity"), { target: { value: "55" } });
@@ -468,3 +489,81 @@ describe("PianoRollLane · Logic-style visuals", () => {
 function gridSafe(): HTMLElement {
   return screen.getByTestId("piano-roll-grid");
 }
+
+/**
+ * Chords in the roll (the user's report: "the chords track shows one note, not a chord").
+ *
+ * The roll renders `track.pitches`, so a stored chord appears as a stack of blocks on one step and
+ * can be edited tone by tone. These tests are about that visible/editable contract — the model's own
+ * rules are covered in `rollModel.test.ts`.
+ */
+describe("PianoRollLane · chords are visible and editable", () => {
+  const grid = () => screen.getByTestId("piano-roll-grid");
+  const chordTrack = (pitches: (number[] | null)[]) =>
+    makePattern({ steps: [1, 0, 0, 0, 0, 0, 0, 0], pitch: [60, null, null, null, null, null, null, null], pitches });
+
+  it("draws every tone of a chord as its own block on one step", () => {
+    setup({ pattern: chordTrack([[60, 64, 67], null, null, null, null, null, null, null]) });
+    for (const midi of [60, 64, 67]) {
+      expect(screen.getByTestId(`piano-roll-note-0-${midi}`)).toBeInTheDocument();
+    }
+    // Three blocks on the same step, on three different rows.
+    const tops = [60, 64, 67].map((m) => screen.getByTestId(`piano-roll-note-0-${m}`).style.top);
+    expect(new Set(tops).size).toBe(3);
+    expect(screen.getByTestId("piano-roll-note-0-60").getAttribute("data-chord-size")).toBe("3");
+  });
+
+  it("builds a chord by drawing onto a step that already sounds", () => {
+    const { commits } = setup({
+      pattern: makePattern({ steps: [1, 0, 0, 0, 0, 0, 0, 0], pitch: [60, null, null, null, null, null, null, null] }),
+    });
+    // Pencil is the default tool; draw the third onto the same step.
+    fireEvent.pointerDown(grid(), { clientX: 4, clientY: rowYFor(64) });
+    expect(commits).toHaveLength(1);
+    const pattern = (commits[0] as { pattern: SequencerPattern }).pattern;
+    expect(pattern.tracks[0].pitches?.[0]).toEqual([60, 64]);
+    // The step grid still sees exactly one sounding step: the two views share one pattern.
+    expect(pattern.tracks[0].steps[0]).toBe(1);
+    expect(pattern.tracks[0].steps.filter((v: number) => v > 0)).toHaveLength(1);
+  });
+
+  it("erases one chord tone, and clears the whole step with ⌥", () => {
+    const { commits } = setup({ pattern: chordTrack([[60, 64, 67], null, null, null, null, null, null, null]) });
+    fireEvent.keyDown(window, { key: "3" }); // eraser
+    fireEvent.pointerDown(grid(), { clientX: 4, clientY: rowYFor(64) });
+    const thinned = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(thinned.tracks[0].pitches?.[0]).toEqual([60, 67]);
+
+    fireEvent.pointerDown(grid(), { clientX: 4, clientY: rowYFor(67), altKey: true });
+    const cleared = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(cleared.tracks[0].steps[0]).toBe(0);
+    expect(cleared.tracks[0].pitches?.[0]).toBeNull();
+  });
+
+  it("moves a single chord tone without disturbing the rest of the chord", () => {
+    const { commits } = setup({ pattern: chordTrack([[60, 64, 67], null, null, null, null, null, null, null]) });
+    fireEvent.keyDown(window, { key: "1" }); // pointer
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-64"), { clientX: 4, clientY: rowYFor(64) });
+    fireEvent.pointerMove(grid(), { clientX: 1 * 26 + 4, clientY: rowYFor(64) });
+    fireEvent.pointerUp(grid());
+    const moved = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(moved.tracks[0].pitches?.[0]).toEqual([60, 67]);
+    expect(moved.tracks[0].pitches?.[1]).toEqual([64]);
+  });
+
+  it("shows one velocity bar per step even when the step holds a chord", () => {
+    setup({ pattern: chordTrack([[60, 64, 67], null, null, null, null, null, null, null]) });
+    const bar = screen.getByTestId("piano-roll-velocity-bar-0");
+    expect(bar.getAttribute("data-chord-size")).toBe("3");
+    expect(screen.queryByTestId("piano-roll-velocity-bar-1")).toBeNull();
+  });
+
+  it("says how many notes the selection holds", () => {
+    setup({ pattern: chordTrack([[60, 64, 67], null, null, null, null, null, null, null]) });
+    fireEvent.keyDown(window, { key: "1" });
+    fireEvent.pointerDown(grid(), { clientX: 4, clientY: extremeRowY("bottom") });
+    fireEvent.pointerMove(grid(), { clientX: 1 * 26, clientY: extremeRowY("top") });
+    fireEvent.pointerUp(grid());
+    expect(screen.getByTestId("piano-roll-selected-count").textContent).toContain("3");
+  });
+});

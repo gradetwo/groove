@@ -864,6 +864,37 @@ async function runTestOnTarget(target, baseUrl) {
       );
     }
 
+    // ---- Chords are real notes -----------------------------------------------------------------
+    //
+    // The reported defect: "the chords track shows one note in the piano roll, not a chord". Draw a
+    // second tone onto a step that already sounds (that is how a chord is entered here) and require
+    // the roll to show a stack while the step grid still shows exactly one sounding step — the two
+    // views share one pattern, so a chord must be visible in both without duplicating steps.
+    const staggerBefore = await countActiveSteps(page, drawTarget.trackIdx);
+    const firstNote = await page.$("[data-testid^='piano-roll-note-']");
+    const firstNoteBox = firstNote ? await firstNote.boundingBox() : null;
+    if (!firstNoteBox) throw new Error("No note block to stack a chord onto");
+    const rowH = Number(await page.getAttribute("[data-testid='piano-roll']", "data-row-h"));
+    await page.keyboard.press("2"); // pencil
+    await page.waitForTimeout(120);
+    // One semitone above the first note, same step: the pencil adds to that step's stack.
+    await page.mouse.click(firstNoteBox.x + firstNoteBox.width / 2, firstNoteBox.y - rowH / 2);
+    await page.waitForTimeout(250);
+    const chordSizes = await page.$$eval("[data-testid^='piano-roll-note-']", (els) =>
+      els.map((e) => Number(e.getAttribute("data-chord-size")))
+    );
+    const maxChord = chordSizes.length ? Math.max(...chordSizes) : 0;
+    const staggerAfter = await countActiveSteps(page, drawTarget.trackIdx);
+    if (maxChord < 2) {
+      throw new Error(`Drawing onto a sounding step did not build a chord on ${target.name} (sizes: ${chordSizes.join(",")})`);
+    }
+    if (staggerAfter !== staggerBefore) {
+      throw new Error(
+        `A chord changed the step grid's step count on ${target.name} (${staggerBefore} → ${staggerAfter}): the roll and the grid disagree`
+      );
+    }
+    console.log(`   · chords: stacked ${maxChord} tones on one step, step grid unchanged (${staggerAfter} steps) on ${target.name}`);
+
     // ---- Roll tools (item ② of the DAW-alignment objective) ------------------------------------
     //
     // Every check drives a real gesture and requires the *data* to follow — measured through the

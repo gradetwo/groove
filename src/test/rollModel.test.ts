@@ -18,6 +18,8 @@ import {
   noteEndStep,
   notesFromTrack,
   removeNote,
+  removeNoteAt,
+  selectedSteps,
   resizeNote,
   setNoteVelocity,
   stepBeatsFor,
@@ -109,11 +111,29 @@ describe("roll model · editing", () => {
     expect(pattern.tracks[0].steps[2]).toBe(0);
   });
 
-  it("replaces rather than stacks when drawing onto an occupied step", () => {
+  it("adds to the chord when drawing onto an occupied step", () => {
+    // This is how a chord is built in the roll: draw the root, then draw the third and fifth onto
+    // the same step. It used to *replace*, which made a chord impossible to enter by hand.
     const pattern = makePattern(makeTrack({ pitch: [60, null, null, null, 67, null, null, null] }));
-    const next = addNote(pattern, 0, 0, 55, 8);
-    expect(notesFromTrack(next.tracks[0]).filter((n) => n.stepIdx === 0)).toHaveLength(1);
-    expect(notesFromTrack(next.tracks[0])[0].midi).toBe(55);
+    const withThird = addNote(pattern, 0, 0, 64, 8);
+    const withFifth = addNote(withThird, 0, 0, 67, 8);
+    const chord = notesFromTrack(withFifth.tracks[0]).filter((n) => n.stepIdx === 0);
+    expect(chord.map((n) => n.midi).sort((a, b) => a - b)).toEqual([60, 64, 67]);
+    // The step's root stays the lowest note and the stack is written for the renderers.
+    expect(withFifth.tracks[0].pitch?.[0]).toBe(60);
+    expect(withFifth.tracks[0].pitches?.[0]).toEqual([60, 64, 67]);
+  });
+
+  it("ignores a second draw of the same pitch (no duplicate notes)", () => {
+    const pattern = makePattern(makeTrack({ pitch: [60, null, null, null, 67, null, null, null] }));
+    expect(addNote(pattern, 0, 0, 60, 8)).toBe(pattern);
+  });
+
+  it("keeps a note added to a sounding step's length and velocity (they belong to the step)", () => {
+    const pattern = makePattern(makeTrack({ steps: [1, 0, 0, 0], pitch: [60, null, null, null], gate: [1.5, 0.8, 0.8, 0.8], velocity: [70, 100, 100, 100] }));
+    const stacked = addNote(pattern, 0, 0, 64, 4);
+    expect(stacked.tracks[0].gate?.[0]).toBeCloseTo(1.5, 6);
+    expect(stacked.tracks[0].velocity?.[0]).toBe(70);
   });
 
   it("deletes one note and leaves the rest", () => {
@@ -218,16 +238,18 @@ const rollPattern = () =>
   );
 
 describe("roll tools · selection and marquee", () => {
-  it("normalises a selection (deduplicated, sorted)", () => {
-    expect(normalizeSelection([4, 1, 4, 0])).toEqual([0, 1, 4]);
+  it("normalises a selection (deduplicated, sorted by step then pitch)", () => {
+    expect(normalizeSelection(["4:60", "1:64", "4:60", "0:67", "1:62"])).toEqual(["0:67", "1:62", "1:64", "4:60"]);
+    // Garbage ids are dropped rather than reaching the ops.
+    expect(normalizeSelection(["nope", "2:60"])).toEqual(["2:60"]);
   });
 
   it("selects the notes inside a marquee rectangle, in either drag direction", () => {
     const notes = notesFromTrack(rollPattern().tracks[0]);
-    expect(notesInRect(notes, { stepFrom: 0, stepTo: 4, pitchFrom: 58, pitchTo: 66 })).toEqual([0, 3]);
+    expect(notesInRect(notes, { stepFrom: 0, stepTo: 4, pitchFrom: 58, pitchTo: 66 })).toEqual(["0:60", "3:64"]);
     // Dragging up-left must select the same box.
-    expect(notesInRect(notes, { stepFrom: 4, stepTo: 0, pitchFrom: 66, pitchTo: 58 })).toEqual([0, 3]);
-    expect(notesInRect(notes, { stepFrom: 6, stepTo: 6, pitchFrom: 67, pitchTo: 67 })).toEqual([6]);
+    expect(notesInRect(notes, { stepFrom: 4, stepTo: 0, pitchFrom: 66, pitchTo: 58 })).toEqual(["0:60", "3:64"]);
+    expect(notesInRect(notes, { stepFrom: 6, stepTo: 6, pitchFrom: 67, pitchTo: 67 })).toEqual(["6:67"]);
     expect(notesInRect(notes, { stepFrom: 1, stepTo: 2, pitchFrom: 0, pitchTo: 127 })).toEqual([]);
   });
 });
@@ -235,9 +257,9 @@ describe("roll tools · selection and marquee", () => {
 describe("roll tools · moving and copying a selection", () => {
   it("moves every selected note together, and replaces what it lands on", () => {
     const pattern = rollPattern();
-    const moved = moveNotes(pattern, 0, [0, 3], 1, 2, 8);
+    const moved = moveNotes(pattern, 0, ["0:60", "3:64"], 1, 2, 8);
     const notes = notesFromTrack(moved.pattern.tracks[0]);
-    expect(moved.selection).toEqual([1, 4]);
+    expect(moved.selection).toEqual(["1:62", "4:66"]);
     expect(notes.map((n) => [n.stepIdx, n.midi]).sort((a, b) => a[0] - b[0])).toEqual([
       [1, 62],
       [4, 66],
@@ -249,14 +271,14 @@ describe("roll tools · moving and copying a selection", () => {
 
   it("refuses a move that would push any note out of the pattern", () => {
     const pattern = rollPattern();
-    expect(moveNotes(pattern, 0, [6], 4, 0, 8).pattern).toBe(pattern);
-    expect(moveNotes(pattern, 0, [0], -1, 0, 8).pattern).toBe(pattern);
+    expect(moveNotes(pattern, 0, ["6:67"], 4, 0, 8).pattern).toBe(pattern);
+    expect(moveNotes(pattern, 0, ["0:60"], -1, 0, 8).pattern).toBe(pattern);
   });
 
   it("copies a selection without disturbing the originals", () => {
     const pattern = rollPattern();
-    const copied = copyNotes(pattern, 0, [0, 3], 2, 8);
-    expect(copied.selection).toEqual([2, 5]);
+    const copied = copyNotes(pattern, 0, ["0:60", "3:64"], 2, 8);
+    expect(copied.selection).toEqual(["2:60", "5:64"]);
     const notes = notesFromTrack(copied.pattern.tracks[0]);
     // Originals still there (0 and 3) plus copies (2 and 5) — 2 and 5 were empty.
     expect(notes.map((n) => n.stepIdx).sort((a, b) => a - b)).toEqual([0, 2, 3, 5, 6]);
@@ -265,24 +287,24 @@ describe("roll tools · moving and copying a selection", () => {
   });
 
   it("deletes only the selection", () => {
-    const remaining = notesFromTrack(deleteNotes(rollPattern(), 0, [0, 6], 8).tracks[0]);
+    const remaining = notesFromTrack(deleteNotes(rollPattern(), 0, ["0:60", "6:67"], 8).tracks[0]);
     expect(remaining.map((n) => n.stepIdx)).toEqual([3]);
   });
 });
 
 describe("roll tools · velocity", () => {
   it("sets an absolute velocity on the selection (what a lane click does)", () => {
-    const next = notesFromTrack(setNotesVelocity(rollPattern(), 0, [0, 6], 42, 8).tracks[0]);
+    const next = notesFromTrack(setNotesVelocity(rollPattern(), 0, ["0:60", "6:67"], 42, 8).tracks[0]);
     expect(next.find((n) => n.stepIdx === 0)?.velocity).toBe(42);
     expect(next.find((n) => n.stepIdx === 6)?.velocity).toBe(42);
     expect(next.find((n) => n.stepIdx === 3)?.velocity).toBe(60);
   });
 
   it("scales velocities by a delta (what a lane drag does), clamped to 1..127", () => {
-    const louder = notesFromTrack(scaleNotesVelocity(rollPattern(), 0, [0, 3], 40, 8).tracks[0]);
+    const louder = notesFromTrack(scaleNotesVelocity(rollPattern(), 0, ["0:60", "3:64"], 40, 8).tracks[0]);
     expect(louder.find((n) => n.stepIdx === 0)?.velocity).toBe(127); // 100 + 40 clamped
     expect(louder.find((n) => n.stepIdx === 3)?.velocity).toBe(100); // 60 + 40
-    const quieter = notesFromTrack(scaleNotesVelocity(rollPattern(), 0, [0], -500, 8).tracks[0]);
+    const quieter = notesFromTrack(scaleNotesVelocity(rollPattern(), 0, ["0:60"], -500, 8).tracks[0]);
     expect(quieter.find((n) => n.stepIdx === 0)?.velocity).toBe(1);
   });
 });
@@ -294,22 +316,22 @@ describe("roll tools · quantise and legato, reinterpreted for a step grid", () 
     expect(snapValue(0.73, "off")).toBeCloseTo(0.73, 6);
 
     // At a 1/4 grid the only grid points are whole steps, so 1.5 snaps to 2 (the nearest one).
-    const quantised = notesFromTrack(quantizeLengths(rollPattern(), 0, [3], "1/4", 8).tracks[0]);
+    const quantised = notesFromTrack(quantizeLengths(rollPattern(), 0, ["3:64"], "1/4", 8).tracks[0]);
     expect(quantised.find((n) => n.stepIdx === 3)?.gate).toBeCloseTo(2, 6);
     // …and at 1/16 it snaps to 1.5 exactly, which is already on the grid.
-    const fine = notesFromTrack(quantizeLengths(rollPattern(), 0, [3], "1/16", 8).tracks[0]);
+    const fine = notesFromTrack(quantizeLengths(rollPattern(), 0, ["3:64"], "1/16", 8).tracks[0]);
     expect(fine.find((n) => n.stepIdx === 3)?.gate).toBeCloseTo(1.5, 6);
   });
 
   it("keeps the requested length inside the engine's 0.1–2 step clamp", () => {
     const pattern = makePattern(makeTrack({ steps: [1, 0], gate: [1.9, 0.8] }));
-    const quantised = notesFromTrack(quantizeLengths(pattern, 0, [0], "off", 2).tracks[0]);
+    const quantised = notesFromTrack(quantizeLengths(pattern, 0, ["0:60"], "off", 2).tracks[0]);
     expect(quantised[0].gate).toBeLessThanOrEqual(2);
     expect(quantised[0].gate).toBeGreaterThanOrEqual(0.1);
   });
 
   it("fills the gap to the next note, and the loop end for the last one", () => {
-    const legato = notesFromTrack(legatoNotes(rollPattern(), 0, [0, 6], 8, 8).tracks[0]);
+    const legato = notesFromTrack(legatoNotes(rollPattern(), 0, ["0:60", "6:67"], 8, 8).tracks[0]);
     // Step 0 → next note is at 3, so three steps… clamped to the engine's 2-step maximum.
     expect(legato.find((n) => n.stepIdx === 0)?.gate).toBe(2);
     // Step 6 → no later note, so it fills to the loop end (8 − 6 = 2).
@@ -322,7 +344,7 @@ describe("roll tools · quantise and legato, reinterpreted for a step grid", () 
     // That is what legato means (the note ends where the next begins); the clamp only caps the
     // *upper* end, so a two-step note followed by a note one step later becomes one step.
     const pattern = makePattern(makeTrack({ steps: [1, 1], gate: [2, 0.8] }));
-    const legato = notesFromTrack(legatoNotes(pattern, 0, [0], 2, 2).tracks[0]);
+    const legato = notesFromTrack(legatoNotes(pattern, 0, ["0:60"], 2, 2).tracks[0]);
     expect(legato.find((n) => n.stepIdx === 0)?.gate).toBe(1);
   });
 });
@@ -361,5 +383,115 @@ describe("roll visuals · scale highlighting", () => {
     expect(scaleHighlightFor("F# minor").rootPc).toBe(6);
     // Unknown text falls back to C major rather than throwing.
     expect(scaleHighlightFor(undefined).rootPc).toBe(0);
+  });
+});
+
+/**
+ * Chords in the pattern (the "the chords track shows one note in the roll" fix).
+ *
+ * A note is identified by **(step, midi)**, so a step can hold a chord. What matters for the rest
+ * of the app is that the model keeps all three of the grid's views of that in step: `steps` (does
+ * it sound), `pitch` (the **root**, which is what every older reader means by "the note") and
+ * `pitches` (the whole stack, which is what the renderers play and the roll draws).
+ */
+describe("roll model · chords are real notes", () => {
+  const chordPattern = () =>
+    makePattern(
+      makeTrack({
+        steps: [1, 0, 0, 0],
+        pitch: [60, null, null, null],
+        pitches: [[60, 64, 67], null, null, null],
+      })
+    );
+
+  it("reads every tone of a stored stack, not just the root", () => {
+    const notes = notesFromTrack(chordPattern().tracks[0]);
+    expect(notes.map((n) => n.midi)).toEqual([60, 64, 67]);
+    expect(notes.every((n) => n.stepIdx === 0)).toBe(true);
+  });
+
+  it("shares the step's length and velocity across the chord (that is how the model stores them)", () => {
+    const pattern = makePattern(
+      makeTrack({ steps: [1, 0], pitch: [60, null], pitches: [[60, 64, 67], null], gate: [1.5, 0.8], velocity: [88, 100] })
+    );
+    for (const note of notesFromTrack(pattern.tracks[0])) {
+      expect(note.gate).toBeCloseTo(1.5, 6);
+      expect(note.velocity).toBe(88);
+    }
+  });
+
+  it("writes the stack back with the root as the lowest note", () => {
+    const written = withTrackNotes(makePattern(makeTrack()), 0, [
+      { stepIdx: 2, midi: 67, gate: 0.8, velocity: 100 },
+      { stepIdx: 2, midi: 60, gate: 0.8, velocity: 100 },
+      { stepIdx: 2, midi: 64, gate: 0.8, velocity: 100 },
+    ], 8);
+    expect(written.tracks[0].pitches?.[2]).toEqual([60, 64, 67]);
+    expect(written.tracks[0].pitch?.[2]).toBe(60);
+    expect(written.tracks[0].steps[2]).toBe(1);
+  });
+
+  it("de-duplicates a stack that names the same pitch twice", () => {
+    const written = withTrackNotes(makePattern(makeTrack()), 0, [
+      { stepIdx: 0, midi: 60, gate: 0.8, velocity: 100 },
+      { stepIdx: 0, midi: 60, gate: 0.8, velocity: 100 },
+    ], 8);
+    expect(written.tracks[0].pitches?.[0]).toEqual([60]);
+  });
+
+  it("removes one chord tone without touching the others", () => {
+    const third = removeNoteAt(chordPattern(), 0, 0, 64, 4);
+    expect(notesFromTrack(third.tracks[0]).map((n) => n.midi)).toEqual([60, 67]);
+    // …and clearing the step removes them all.
+    const cleared = removeNote(chordPattern(), 0, 0, 4);
+    expect(notesFromTrack(cleared.tracks[0])).toHaveLength(0);
+    expect(cleared.tracks[0].pitches?.[0]).toBeNull();
+  });
+
+  it("moves one chord tone and leaves the rest of the chord where it was", () => {
+    const moved = moveNote(chordPattern(), 0, 0, 2, 64, 4, 64);
+    const notes = notesFromTrack(moved.tracks[0]);
+    expect(notes.filter((n) => n.stepIdx === 0).map((n) => n.midi)).toEqual([60, 67]);
+    expect(notes.filter((n) => n.stepIdx === 2).map((n) => n.midi)).toEqual([64]);
+  });
+
+  it("moves a whole chord as a group, and lands it as a chord", () => {
+    const moved = moveNotes(chordPattern(), 0, ["0:60", "0:64", "0:67"], 2, 0, 8);
+    expect(moved.selection).toEqual(["2:60", "2:64", "2:67"]);
+    expect(moved.pattern.tracks[0].pitches?.[2]).toEqual([60, 64, 67]);
+    expect(moved.pattern.tracks[0].steps[0]).toBe(0);
+  });
+
+  it("refuses a group move that would push any tone out of the MIDI range", () => {
+    const pattern = makePattern(makeTrack({ steps: [1, 0], pitch: [126, null], pitches: [[126, 127], null] }));
+    expect(moveNotes(pattern, 0, ["0:126", "0:127"], 0, 4, 2).pattern).toBe(pattern);
+  });
+
+  it("applies length, velocity and quantise edits to the whole step", () => {
+    const resized = resizeNote(chordPattern(), 0, 0, 1.75, 4);
+    expect(resized.tracks[0].gate?.[0]).toBeCloseTo(1.75, 6);
+    const louder = setNotesVelocity(chordPattern(), 0, ["0:64"], 120, 4);
+    expect(louder.tracks[0].velocity?.[0]).toBe(120);
+    expect(notesFromTrack(louder.tracks[0])).toHaveLength(3); // the chord is untouched
+  });
+
+  it("maps a selection of ids to the steps they occupy", () => {
+    expect(selectedSteps(["0:60", "0:64", "4:67"])).toEqual([0, 4]);
+  });
+
+  it("leaves a monophonic pattern exactly as it was (old data must not change)", () => {
+    const legacy = makePattern(makeTrack({ steps: [1, 0], pitch: [52, null] }));
+    const written = withTrackNotes(legacy, 0, notesFromTrack(legacy.tracks[0]), 2);
+    expect(written.tracks[0].pitch?.[0]).toBe(52);
+    expect(written.tracks[0].pitches?.[0]).toEqual([52]);
+    expect(written.tracks[0].steps).toEqual([1, 0]);
+  });
+
+  it("splits a chord as a chord (both halves keep every tone)", () => {
+    const pattern = makePattern(makeTrack({ steps: [1, 0], pitch: [60, null], pitches: [[60, 64], null], gate: [1.6, 0.8] }));
+    const { pattern: split, split: didSplit } = splitNote(pattern, 0, 0, 2);
+    expect(didSplit).toBe(true);
+    expect(split.tracks[0].pitches?.[0]).toEqual([60, 64]);
+    expect(split.tracks[0].pitches?.[1]).toEqual([60, 64]);
   });
 });
