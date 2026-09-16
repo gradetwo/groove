@@ -52,3 +52,5 @@ scratch/
 
 # Slow-pack handoff output (scripts/slow_pack.mjs) — packages travel by hand, not by git.
 slowpack-out/
+slowpack-*.tar.gz
+slowpack-*.tar.gz.sha256
