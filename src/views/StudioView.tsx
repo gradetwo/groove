@@ -10,6 +10,10 @@ import { StepContextMenu } from "../components/sequencer/StepContextMenu";
 import { SequencerPanel } from "../components/sequencer/SequencerPanel";
 import { SequencerModals } from "../components/sequencer/SequencerModals";
 import { useGs1Setting } from "../features/sequencer/useGs1Setting";
+import { useUnsavedGuard } from "../features/sequencer/hooks/useUnsavedGuard";
+import { isPatternDirty } from "../features/sequencer/unsavedGuard";
+import { UnsavedChangesDialog } from "../components/sequencer/UnsavedChangesDialog";
+import { saveProject } from "../features/sequencer/projectDb";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
@@ -279,6 +283,58 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setDrumKit,
     setEffectsRackState,
     engineRef,
+  });
+
+  /**
+   * "Discard your changes?" (item ⑧).
+   *
+   * `SET_GENRE` replaces both pattern slots with the new genre's defaults, so switching genre —
+   * like loading a project, generating a variation or importing a MIDI file — destroys edits with
+   * no undo. Those are the actions routed through this guard; switching pattern *slots* is not,
+   * because both slots are kept.
+   *
+   * Detection is stateless (`isPatternDirty` regenerates the genre default and compares), so no
+   * mutating action can forget to mark the studio dirty.
+   */
+  const guard = useUnsavedGuard({
+    // The hook re-reads these options on every render, so plain values are always current —
+    // no refs needed, and therefore no way for a stale closure to hide an edit.
+    isDirty: () => isPatternDirty({ A: seqState.patterns.A, B: seqState.patterns.B }, currentGenre),
+    onSave: async () => {
+      if (!activeProject) {
+        // Nowhere to save yet: send the user to the hub to name one, and do NOT run the
+        // destructive action — losing the edits to a failed save would be the worst outcome.
+        setIsProjectHubOpen(true);
+        return false;
+      }
+      try {
+        await saveProject({
+          ...activeProject,
+          genreId: currentGenre.id,
+          genreName: currentGenre.name || currentGenre.id,
+          bpm: seqState.bpm,
+          swing: seqState.swing,
+          timeSignature: seqState.timeSignature,
+          resolution: seqState.resolution,
+          stepCount: seqState.stepCount,
+          patterns: { A: seqState.patterns.A, B: seqState.patterns.B },
+          activeSlot: seqState.activeSlot,
+          songMode: seqState.songMode,
+          songChain: seqState.songChain,
+          loopRange: seqState.loopRange,
+          effectsRack: { ...effectsRackState },
+          drumKit,
+          isMetronome: seqState.isMetronome,
+          isCountIn: seqState.isCountIn,
+          updatedAt: Date.now(),
+        });
+        showToast(t("unsaved_saved"));
+        return true;
+      } catch (err) {
+        showToast(t("unsaved_save_failed", { error: String((err as Error)?.message ?? err) }));
+        return false;
+      }
+    },
   });
 
   // Web MIDI devices + keyboard performance listener (A-02)
@@ -621,7 +677,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
         genreAccent={genreAccent}
         isZh={isZh}
         onSelectCategory={setActiveCategoryFilter}
-        onSelectGenre={handleSelectGenreFromRail}
+        onSelectGenre={(genreId) => {
+          // Switching genre replaces BOTH pattern slots with the new genre's defaults (SET_GENRE),
+          // so it is the most destructive thing in the studio. The rail hands over an id, hence
+          // the lookup for a human-readable name in the confirmation.
+          const named = railGenres.find((g) => g.id === genreId);
+          guard.request(t("unsaved_action_genre", { name: named?.name || genreId }), () =>
+            handleSelectGenreFromRail(genreId)
+          );
+        }}
         onRandomGenre={handleDiceRandom}
         getGenreAccent={getGenreAccent}
         getGenreChipTag={getGenreChipTag}
@@ -708,15 +772,27 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onToggleMaximize={handleToggleMaximize}
           onToggleSidebar={handleToggleSidebar}
           onToggleAdvancedControls={handleToggleAdvancedControls}
-          onQuickAction={handleQuickAction}
+          onQuickAction={(action) =>
+            // "reset preset" / "clear saved" reload the genre default, discarding edits; the other
+            // quick actions edit in place and are undoable, so they are not gated.
+            action === "reset_preset" || action === "clear_saved"
+              ? guard.request(t("unsaved_action_genre", { name: currentGenre.name || currentGenre.id }), () =>
+                  handleQuickAction(action)
+                )
+              : handleQuickAction(action)
+          }
           onExportMidi={handleExportMidi}
           onExportAls={handleExportAls}
           onExportGroove={handleExportGroove}
           onOpenProjectHub={handleOpenProjectHub}
           onExportWav={handleExportWav}
           onExportStems={handleExportStems}
-          onImportMidi={handleImportMidi}
-          onInspireMe={handleInspireMe}
+          onImportMidi={async (file) => {
+            guard.request(t("unsaved_action_import", { name: file?.name ?? "MIDI" }), () =>
+              handleImportMidi(file)
+            );
+          }}
+          onInspireMe={() => guard.request(t("unsaved_action_inspire"), () => handleInspireMe())}
           onToggleKeyboardMode={handleToggleKeyboardMode}
           onShare={handleShare}
           onAddSteps={handleAddSteps}
@@ -793,7 +869,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
         stepCount={stepCount}
         effectsRackState={effectsRackState}
         drumKit={drumKit}
-        handleLoadProject={handleLoadProject}
+        handleLoadProject={async (project) => {
+          guard.request(t("unsaved_action_project", { name: project.name }), () => handleLoadProject(project));
+        }}
+      />
+
+      {/* Unsaved-changes guard (item ⑧): shown when a destructive action is waiting on an answer. */}
+      <UnsavedChangesDialog
+        isOpen={guard.pending !== null}
+        actionLabel={guard.pending?.label ?? ""}
+        saveHint={activeProject ? undefined : t("unsaved_save_no_project_hint")}
+        onDecide={guard.decide}
       />
 
       {/* Step Context Menu (P-Locks) */}
