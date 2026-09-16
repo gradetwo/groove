@@ -1,27 +1,27 @@
 {
-  "version": "2.0.24",
+  "version": "2.0.25",
   "releaseDate": "2026-09-16",
-  "changelogCount": 88,
+  "changelogCount": 89,
   "latest": {
-    "version": "2.0.24",
+    "version": "2.0.25",
     "date": "2026-09-16",
     "category": "feature",
     "title": {
-      "zh": "v2.0.24 通道条动态扩充（支持 24/32 轨并入混音链）、子引擎（大师课与底鼓解剖）限幅器保护与移动端导航补齐",
-      "en": "v2.0.24 Dynamic channel strip expansion (24/32-track mixing chain support), sub-engine limiter protection (Masterclass & Kick Anatomy) and mobile drawer navigation completion"
+      "zh": "v2.0.25 声学动态与音质增强：开闭镲物理阻尼互斥切音（Hi-Hat Choke Group）与底鼓对贝斯低频瞬态闪避（Sidechain Ducking）落地，实时与离线导出声学一致",
+      "en": "v2.0.25 Acoustic dynamics & fidelity: Physical Hi-Hat Choke Group and Kick-Bass Low-End Sidechain Ducking implemented with live and export parity"
     },
     "highlights": [
       {
-        "zh": "**通道条动态按需扩充**：针对 CompareView 24 轨与 32 轨复杂工程，`AudioEngine` 的通道条分配机制由原本写死的 16 轨动态扩充至 `Math.max(16, pattern.tracks.length)`。`setPattern` 切换大型工程时自动扩容补全缺失通道条并保证插入效果链与声像节点正确建立，彻底修复之前超过 16 轨的伴奏与对比轨道绕过通道条混音链路的问题。",
-        "en": "**Dynamic channel strip allocation**: Expanded `AudioEngine` channel strips from hardcoded 16 to dynamically allocate `Math.max(16, pattern.tracks.length)` to support CompareView's 24 and 32-track projects. Switching patterns dynamically expands missing strips and attaches their insert effects and panners, resolving the previous issue where tracks past strip 16 bypassed channel strip processing."
+        "zh": "**Hi-Hat Choke Group 阻尼互斥切音**：遵循声学架子鼓镲片物理闭合特性与经典鼓机（TR-808/909）Exclusive Choke Group 机制，在 `AudioEngine` 与 `WavExporter` 中建立开闭镲联动状态。当闭镲（或 ratchet 滚奏）触发时，对处于振动衰减尾音的开镲施加 3ms 快速无爆音指数阻尼释音，彻底消除开闭镲重叠导致的脏乱高频混叠。",
+        "en": "**Hi-Hat Choke Group**: Modeled after acoustic hi-hat pedal mechanics and Roland TR-808/909 exclusive choke groups. When a closed hi-hat or ratchet triggers, ringing open hi-hat voices are smoothly choked with a 3ms clickless exponential release ramp in both `AudioEngine` and `WavExporter`."
       },
       {
-        "zh": "**子引擎限幅保护**：为独立运行的 `MasterclassAudioEngine`（调音大师课音频引擎）与 `AnatomyKickEngine`（底鼓解剖引擎）接入 `MasterLimiter` 动态限幅防护链路，并在销毁时显式释放限幅器与音频上下文，彻底杜绝大师课多轨示范与多层底鼓合成测试中的数字破音与削波失真风险。",
-        "en": "**Sub-engine limiter protection**: Wired `MasterLimiter` dynamically to `MasterclassAudioEngine` and `AnatomyKickEngine` to guard against digital clipping during multi-track demonstrations and layered kick synthesis, and properly disposed resources in `destroy()`."
+        "zh": "**底鼓对贝斯低频闪避（Kick/Bass Sidechain Ducking）**：为解决 40–100Hz 次低频与超低频相位干涉和频率掩蔽难题，在通道条插入链与推子之间加入独立的 `duckGain` 动态闪避节点。每当底鼓音符触发时，贝斯通道自动按底鼓力度产生 ~-3dB 的精细瞬态下潜并在 65ms 内平滑恢复，显著提升整个混音底部的下潜凝聚力与瞬态打击感。",
+        "en": "**Kick/Bass Low-End Sidechain Ducking**: Integrated a dedicated `duckGain` stage on channel strips before the volume fader. Triggering a kick transient dips bass channels by ~-3dB with an instant 3ms attack and smooth 65ms exponential release to resolve low-end frequency masking."
       },
       {
-        "zh": "**移动端抽屉导航补全**：在顶部导航栏（`Header.tsx`）的移动端折叠抽屉菜单中，补齐了遗漏的「调音台」（`/console`）、「全景声谱分析仪」（`/analyzer`）与「曲风制作工坊」（`/maker`）快捷路由跳转，移动端体验与桌面端保持完全一致。",
-        "en": "**Mobile drawer navigation complete**: Added missing routes for Console (`/console`), Spectral Analyzer (`/analyzer`), and Genre Maker (`/maker`) to the mobile slide-out drawer menu in `Header.tsx`."
+        "zh": "**全流程离线导出对齐与单元验证**：离线渲染器 `WavExporter` 同步接入切音追踪与低频闪避算法，保证用户导出的 WAV 音频与浏览器实时监听具备 100% 的声学一致性，并通过新建的 `acousticEnhancements.test.ts` 严格断言。",
+        "en": "**Full Export Parity & Test Suite**: The offline `WavExporter` implements identical choke group and sidechain ducking algorithms to maintain 100% acoustic parity with the live Web Audio engine, verified with new unit tests."
       }
     ],
     "truncated": false

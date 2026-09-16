@@ -207,6 +207,7 @@ export async function renderPatternOffline(
   const mixerStates: TrackState[] = options.trackStates ?? deriveTrackStates(pattern);
   const trackStrips: Array<{
     gain: GainNode;
+    duckGain: GainNode;
     polarity: GainNode;
     pan: StereoPannerNode;
     /** E-10: the same pre-fader insert chain the live engine builds. */
@@ -231,9 +232,13 @@ export async function renderPatternOffline(
         resolveTrackInsertForGenre(pattern.tracks[t]?.track_id, pattern.genre_id)
     );
 
+    const tDuckGain = ctx.createGain();
+    tDuckGain.gain.setValueAtTime(1, 0);
+    tInsert.output.connect(tDuckGain);
+
     const tGain = ctx.createGain();
     tGain.gain.setValueAtTime(Math.max(0, Math.min(2, tState.volume)), 0);
-    tInsert.output.connect(tGain);
+    tDuckGain.connect(tGain);
 
     // N-01 follow-up: polarity must be honoured offline too, otherwise an inverted
     // channel would sound different in the exported master than in the console.
@@ -266,7 +271,7 @@ export async function renderPatternOffline(
     tPan.connect(sendB);
     sendB.connect(graph.delay.input);
 
-    trackStrips.push({ gain: tGain, polarity: tPolarity, pan: tPan, insert: tInsert });
+    trackStrips.push({ gain: tGain, duckGain: tDuckGain, polarity: tPolarity, pan: tPan, insert: tInsert });
   }
 
   /**
@@ -298,6 +303,9 @@ export async function renderPatternOffline(
 
   const drumKit: DrumKitType = options.drumKit || "808";
   const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
+
+  // Acoustic Enhancement: Track open hi-hat voices for offline choke group
+  const openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number }> = [];
 
   // Step scheduling loop
   for (let step = 0; step < totalSteps; step++) {
@@ -357,10 +365,53 @@ export async function renderPatternOffline(
         // Synthesis Dispatch with physical drum kit modeling and polyphonic synth
         if (trackId === "kick" || lowerName.includes("kick")) {
           synthesizeKick(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
+          // Acoustic Enhancement: Kick-Bass sidechain ducking (parity with AudioEngine)
+          const duckDepth = Math.max(0.65, 1 - 0.3 * subVel);
+          pattern.tracks.forEach((tTrack: Track, tIdx: number) => {
+            const tTid = (tTrack.track_id || "").toLowerCase();
+            const tName = (tTrack.name || "").toLowerCase();
+            if (tTid === "bass" || tName.includes("bass")) {
+              const bassStrip = trackStrips[tIdx];
+              if (bassStrip?.duckGain) {
+                try {
+                  const param = bassStrip.duckGain.gain;
+                  param.cancelScheduledValues(subTime);
+                  param.setValueAtTime(1.0, subTime);
+                  param.linearRampToValueAtTime(duckDepth, subTime + 0.003);
+                  param.exponentialRampToValueAtTime(1.0, subTime + 0.065);
+                } catch {
+                  // Guard against scheduling errors
+                }
+              }
+            }
+          });
         } else if (trackId === "snare" || lowerName.includes("snare")) {
           synthesizeSnare(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
         } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
-          synthesizeHiHat(ctx, trackDest, subTime, subVel, pitchVal, drumKit, stepVal, subDur, gateVal, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
+          // Acoustic Enhancement: Hi-Hat Choke Group (parity with AudioEngine)
+          if (stepVal === 1 || stepVal === 3) {
+            for (const openHat of openHiHatVoices) {
+              if (openHat.stopTime > subTime) {
+                for (const gNode of openHat.gains) {
+                  try {
+                    const g = gNode.gain;
+                    g.cancelScheduledValues(subTime);
+                    g.setValueAtTime(Math.max(0.0001, g.value), subTime);
+                    g.exponentialRampToValueAtTime(0.0001, subTime + 0.003);
+                  } catch {
+                    // Guard against scheduling errors
+                  }
+                }
+              }
+            }
+          }
+          const hatVoice = synthesizeHiHat(ctx, trackDest, subTime, subVel, pitchVal, drumKit, stepVal, subDur, gateVal, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
+          if (stepVal === 2 && hatVoice.gains.length > 0) {
+            openHiHatVoices.push({ gains: hatVoice.gains, stopTime: hatVoice.stopTime });
+            if (openHiHatVoices.length > 16) {
+              openHiHatVoices.shift();
+            }
+          }
         } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
           synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r), track.instrument);
         } else if (trackId === "bass" || lowerName.includes("bass")) {

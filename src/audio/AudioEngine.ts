@@ -80,6 +80,10 @@ export interface AudioEngineOptions {
 export interface TrackChannelStrip {
   gain: GainNode;
   /**
+   * Dedicated ducking stage for kick-bass low-end sidechain dip.
+   */
+  duckGain: GainNode;
+  /**
    * Polarity stage (Ø). Held at +1 normally and -1 when the channel is inverted, so
    * the sign can be flipped without touching the volume stage (N-01 follow-up).
    */
@@ -214,6 +218,8 @@ export class AudioEngine {
 
   // Drum Kit Models (P5-02)
   private drumKit: DrumKitType = "808";
+  /** Acoustic enhancement: Active open hi-hat voices tracked for choking */
+  private openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number }> = [];
   private isDrumsOnly: boolean = false;
 
   // Master DSP Effects Rack (P5-04)
@@ -501,6 +507,7 @@ export class AudioEngine {
     for (const strip of this.trackStrips) {
       try {
         strip.gain.disconnect();
+        strip.duckGain.disconnect();
         strip.polarity.disconnect();
         strip.analyser?.disconnect();
         strip.panner?.disconnect();
@@ -514,6 +521,7 @@ export class AudioEngine {
     }
     this.trackStrips = [];
     this.appliedInsertRefs = [];
+    this.openHiHatVoices = [];
   }
 
   /**
@@ -547,10 +555,14 @@ export class AudioEngine {
           resolveTrackInsertForGenre(role, this.pattern?.genre_id)
       );
 
+      const duckGain = this.ctx.createGain();
+      duckGain.gain.setValueAtTime(1, this.ctx.currentTime);
+
       const gain = this.ctx.createGain();
       gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
 
-      insert.output.connect(gain);
+      insert.output.connect(duckGain);
+      duckGain.connect(gain);
 
       const polarity = this.ctx.createGain();
       polarity.gain.setValueAtTime(1, this.ctx.currentTime);
@@ -608,7 +620,7 @@ export class AudioEngine {
         sendB.connect(this.masterGraph.delay.input);
       }
 
-      this.trackStrips.push({ gain, polarity, analyser, panner, spatialPanner, sendA, sendB, insert });
+      this.trackStrips.push({ gain, duckGain, polarity, analyser, panner, spatialPanner, sendA, sendB, insert });
     }
     this.syncTrackGains();
   }
@@ -1258,6 +1270,7 @@ export class AudioEngine {
   public panic(): void {
     this.voiceRegistry.panic();
     this.gs1Pool?.releaseAll();
+    this.openHiHatVoices = [];
   }
 
   public async play(): Promise<void> {
@@ -1665,6 +1678,7 @@ export class AudioEngine {
     if (trackId === "kick" || lowerName.includes("kick")) {
       this.playKick(dest, safeStartTime, safeVel, pitch, noisePosition);
       ecosystemBus.publishTransientHit("master", safeVel, pitch);
+      this.applyKickDuckOnBass(safeStartTime, safeVel);
     } else if (trackId === "snare" || lowerName.includes("snare")) {
       this.playSnare(dest, safeStartTime, safeVel, pitch, noisePosition);
     } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
@@ -1773,6 +1787,33 @@ export class AudioEngine {
     });
   }
 
+  /**
+   * Acoustic enhancement: Kick-Bass low-frequency sidechain ducking.
+   * Dips bass track strip by ~3dB for ~60ms to eliminate 40-100Hz masking.
+   */
+  private applyKickDuckOnBass(time: number, vel: number): void {
+    if (!this.pattern?.tracks) return;
+    const duckDepth = Math.max(0.65, 1 - 0.3 * vel);
+    this.pattern.tracks.forEach((track, idx) => {
+      const tid = (track.track_id || "").toLowerCase();
+      const tname = (track.name || "").toLowerCase();
+      if (tid === "bass" || tname.includes("bass")) {
+        const strip = this.trackStrips[idx];
+        if (strip?.duckGain) {
+          try {
+            const param = strip.duckGain.gain;
+            param.cancelScheduledValues(time);
+            param.setValueAtTime(1.0, time);
+            param.linearRampToValueAtTime(duckDepth, time + 0.003);
+            param.exponentialRampToValueAtTime(1.0, time + 0.065);
+          } catch {
+            // AudioParam scheduling guard
+          }
+        }
+      }
+    });
+  }
+
   private playSnare(dest: AudioNode, time: number, vel: number, pitchOffset: number, noisePosition = 0): void {
     if (!this.ctx) return;
     const voice = synthesizeSnare(this.ctx, dest, time, vel, pitchOffset, this.drumKit, this.noiseBuffer, noisePosition);
@@ -1783,10 +1824,37 @@ export class AudioEngine {
 
   private playHiHat(dest: AudioNode, time: number, vel: number, pitchOffset: number, stepVal = 1, stepDur = 0.125, gateVal = 0.8, noisePosition = 0): void {
     if (!this.ctx) return;
+
+    // Acoustic Choke Group: Closed hi-hat (stepVal 1 or 3) cuts ringing open hi-hat (stepVal 2)
+    if (stepVal === 1 || stepVal === 3) {
+      for (const openHat of this.openHiHatVoices) {
+        if (openHat.stopTime > time) {
+          for (const gNode of openHat.gains) {
+            try {
+              const g = gNode.gain;
+              g.cancelScheduledValues(time);
+              g.setValueAtTime(Math.max(0.0001, g.value), time);
+              g.exponentialRampToValueAtTime(0.0001, time + 0.003);
+            } catch {
+              // AudioParam scheduling guard
+            }
+          }
+        }
+      }
+      this.openHiHatVoices = this.openHiHatVoices.filter((v) => v.stopTime > time);
+    }
+
     const voice = synthesizeHiHat(this.ctx, dest, time, vel, pitchOffset, this.drumKit, stepVal, stepDur, gateVal, this.noiseBuffer, noisePosition);
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
+
+    if (stepVal === 2 && voice.gains.length > 0) {
+      this.openHiHatVoices.push({ gains: voice.gains, stopTime: voice.stopTime });
+      if (this.openHiHatVoices.length > 16) {
+        this.openHiHatVoices.shift();
+      }
+    }
   }
 
   private playPercussion(
