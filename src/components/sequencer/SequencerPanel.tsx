@@ -13,6 +13,7 @@ import { VelocityLane, type ParameterDimension } from "./VelocityLane";
 import { PianoRollLane } from "./PianoRollLane";
 import { MasterAnalyzerSuite } from "../analyzer/MasterAnalyzerSuite";
 import { DEMO_TRACKS_CONFIG } from "./trackConfig";
+import { APP_VERSION } from "../../version";
 
 export interface SequencerPanelProps {
   pattern: SequencerPattern;
@@ -597,7 +598,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             </span>
           )}
         </div>
-        <div className="text-text-dim text-[9.5px]">Groove v1.7.0 · FL Studio Pattern Engine</div>
+        <div className="text-text-dim text-[9.5px]">Groove v{APP_VERSION} · Pro DAW Studio Sequencer</div>
       </div>
     </section>
   );

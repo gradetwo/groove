@@ -508,6 +508,33 @@ export function scaleNotesVelocity(
   return withTrackNotes(pattern, trackIdx, next, stepCount);
 }
 
+/** Ramps velocity from startVelocity to endVelocity across selected steps in chronological order. */
+export function rampNotesVelocity(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly RollNoteId[],
+  startVel = 40,
+  endVel = 120,
+  stepCount: number
+): SequencerPattern {
+  const steps = selectedSteps(selection);
+  if (steps.length === 0) return pattern;
+  const velMap = new Map<number, number>();
+  if (steps.length === 1) {
+    velMap.set(steps[0], Math.round((startVel + endVel) / 2));
+  } else {
+    steps.forEach((st, idx) => {
+      const frac = idx / (steps.length - 1);
+      velMap.set(st, Math.max(1, Math.min(127, Math.round(startVel + frac * (endVel - startVel)))));
+    });
+  }
+  const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) => {
+    const ramped = velMap.get(n.stepIdx);
+    return ramped !== undefined ? { ...n, velocity: ramped } : n;
+  });
+  return withTrackNotes(pattern, trackIdx, next, stepCount);
+}
+
 /**
  * Quantise the **lengths** of the selection to the snap grid.
  *

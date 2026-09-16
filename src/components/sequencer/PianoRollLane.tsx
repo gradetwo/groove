@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eraser,
+  Filter,
   Keyboard,
   Layers,
   Maximize2,
@@ -18,6 +19,7 @@ import {
   Sparkles,
   SquareDashedMousePointer,
   Trash2,
+  TrendingUp,
   Volume2,
   X,
 } from "lucide-react";
@@ -41,10 +43,12 @@ import {
   noteId,
   notesInRect,
   quantizeLengths,
+  rampNotesVelocity,
   removeNote,
   resizeNote,
   scaleHighlightFor,
   scaleNotesVelocity,
+  setNotesVelocity,
   splitNote,
   transposeTrack,
   visiblePitchRange,
@@ -171,6 +175,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [marquee, setMarquee] = useState<{ stepFrom: number; stepTo: number; pitchFrom: number; pitchTo: number } | null>(null);
   const [showVelocityLane, setShowVelocityLane] = useState(true);
   const [catchPlayhead, setCatchPlayhead] = useState(true);
+  const [isFolded, setIsFolded] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -178,6 +183,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const playheadRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const lastAuditionPitchRef = useRef<number | null>(null);
 
   const cellWRef = useRef(26);
   const catchRef = useRef(true);
@@ -227,13 +233,22 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     }
     return [lo, Math.max(lo + span, hi)] as [number, number];
   }, [baseLo, baseHi, octaveShift]);
-  const rows = useMemo(() => {
-    const out: number[] = [];
-    for (let p = hiPitch; p >= loPitch; p--) out.push(p);
-    return out;
-  }, [loPitch, hiPitch]);
 
   const scale = useMemo(() => scaleHighlightFor(view.scale), [view.scale]);
+  const rows = useMemo(() => {
+    const out: number[] = [];
+    for (let p = hiPitch; p >= loPitch; p--) {
+      if (isFolded) {
+        const inScale = scale.pcs.has(p % 12);
+        const hasNote = notes.some((n) => n.midi === p);
+        if (!inScale && !hasNote) continue;
+      }
+      out.push(p);
+    }
+    return out;
+  }, [loPitch, hiPitch, isFolded, scale.pcs, notes]);
+
+  const rowIdxMap = useMemo(() => new Map(rows.map((p, idx) => [p, idx])), [rows]);
   const fitCellW = availableWidth > 0 ? Math.max(MIN_CELL_W, (availableWidth - GUTTER_W) / Math.max(1, stepCount)) : 26;
   const cellW = Math.max(MIN_CELL_W, fitCellW * ZOOM_FACTORS[zoomIdx]);
   const gridW = stepCount * cellW;
@@ -345,6 +360,12 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     const hit = noteAt(stepIdx, midi);
     const additive = event.metaKey || event.ctrlKey || event.shiftKey;
 
+    if (hit && event.detail === 2) {
+      applyOp((p) => removeNoteAt(p, activeTrackIdx, hit.stepIdx, hit.midi, stepCount));
+      setSelection((prev) => prev.filter((id) => id !== noteId(hit)));
+      return;
+    }
+
     if (tool === "eraser") {
       // The eraser removes the tone under the cursor, so a chord can be thinned one note at a
       // time; ⌥-click clears the whole step.
@@ -368,6 +389,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       if (hit) {
         // Already sounding at this pitch: select it rather than stacking a duplicate.
         setSelection(additive ? [...selection, noteId(hit)] : [noteId(hit)]);
+        lastAuditionPitchRef.current = hit.midi;
         onAudition(activeTrackIdx, hit.midi, hit.velocity, hit.gate);
         return;
       }
@@ -379,6 +401,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       if (next === pattern) return;
       const id = noteId({ stepIdx, midi });
       commitDraft(next, additive ? [...selection, id] : [id]);
+      lastAuditionPitchRef.current = midi;
       onAudition(activeTrackIdx, midi, 100, baseGate);
       dragRef.current = { mode: "paint", base: next, painted: [id] };
       event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -401,6 +424,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         ? selection
         : [hitId];
     setSelection(origin);
+    lastAuditionPitchRef.current = hit.midi;
     onAudition(activeTrackIdx, hit.midi, hit.velocity, hit.gate);
     dragRef.current = { mode: "move", startStep: stepIdx, startMidi: midi, origin, base: pattern, copied: false };
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -455,6 +479,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       drag.origin = moved.selection;
       drag.startStep = stepIdx;
       drag.startMidi = midi;
+      if (deltaPitch !== 0 && midi !== lastAuditionPitchRef.current) {
+        lastAuditionPitchRef.current = midi;
+        onAudition(activeTrackIdx, midi, 100, 0.25);
+      }
       return;
     }
     if (drag.mode === "velocity") {
@@ -567,6 +595,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       data-testid="piano-roll"
       data-fullscreen={isFullscreen ? "true" : "false"}
       data-collapsed={isCollapsed ? "true" : "false"}
+      data-folded={isFolded ? "true" : "false"}
       data-tool={tool}
       // Grid metrics as data attributes: gestures in tests (and diagnostics anywhere) read the
       // geometry from the product instead of hard-coding it.
@@ -789,6 +818,21 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 className={`${ctrlClass} disabled:opacity-35`}
               >
                 {t("roll_legato")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFolded((v) => !v)}
+                aria-pressed={isFolded}
+                data-testid="piano-roll-fold"
+                title={isFolded ? t("roll_unfold_hint") : t("roll_fold_hint")}
+                className={`${ctrlClass} ${
+                  isFolded
+                    ? "bg-accent/20 border-accent text-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)] font-bold"
+                    : ""
+                }`}
+              >
+                <Filter className="h-3 w-3" />
+                <span>{t("roll_fold")}</span>
               </button>
             </div>
 
@@ -1146,7 +1190,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                             const ghostStep = note.stepIdx + offset;
                             if (ghostStep >= stepCount) return null;
                             if (notes.some((n) => n.stepIdx === ghostStep && n.midi === note.midi)) return null;
-                            const top = (hiPitch - note.midi) * rowH;
+                            const rowIdx = rowIdxMap.get(note.midi);
+                            if (rowIdx === undefined) return null;
+                            const top = rowIdx * rowH;
                             if (top < 0 || top > rows.length * rowH) return null;
                             const width = Math.max(cellW * 0.9, note.gate * cellW);
                             return (
@@ -1193,7 +1239,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
                     {/* Layer 6: Real Authored Notes */}
                     {notes.map((note) => {
-                      const top = (hiPitch - note.midi) * rowH;
+                      const rowIdx = rowIdxMap.get(note.midi);
+                      if (rowIdx === undefined) return null;
+                      const top = rowIdx * rowH;
                       if (top < 0 || top > rows.length * rowH) return null;
                       const selected = selectedSet.has(noteId(note));
                       const width = Math.max(cellW * 0.9, note.gate * cellW);
@@ -1263,18 +1311,24 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       );
                     })}
 
-                    {marquee && (
-                      <div
-                        data-testid="piano-roll-marquee"
-                        className="pointer-events-none absolute border border-accent/80 bg-accent/15"
-                        style={{
-                          left: Math.min(marquee.stepFrom, marquee.stepTo) * cellW,
-                          width: (Math.abs(marquee.stepTo - marquee.stepFrom) + 1) * cellW,
-                          top: (hiPitch - Math.max(marquee.pitchFrom, marquee.pitchTo)) * rowH,
-                          height: (Math.abs(marquee.pitchTo - marquee.pitchFrom) + 1) * rowH,
-                        }}
-                      />
-                    )}
+                    {marquee && (() => {
+                      const r1 = rowIdxMap.get(marquee.pitchFrom);
+                      const r2 = rowIdxMap.get(marquee.pitchTo);
+                      const topRow = r1 !== undefined && r2 !== undefined ? Math.min(r1, r2) : 0;
+                      const botRow = r1 !== undefined && r2 !== undefined ? Math.max(r1, r2) : 0;
+                      return (
+                        <div
+                          data-testid="piano-roll-marquee"
+                          className="pointer-events-none absolute border border-accent/80 bg-accent/15"
+                          style={{
+                            left: Math.min(marquee.stepFrom, marquee.stepTo) * cellW,
+                            width: (Math.abs(marquee.stepTo - marquee.stepFrom) + 1) * cellW,
+                            top: topRow * rowH,
+                            height: (botRow - topRow + 1) * rowH,
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1459,6 +1513,56 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                   <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim" data-testid="piano-roll-selected-meta">
                     {focusNote.gate.toFixed(2)} × {t("roll_steps_unit")} · {focusNote.velocity}
                   </span>
+                  {/* Quick Dynamics Pod */}
+                  <div className="flex items-center gap-1 pl-2 border-l border-[#2c3244]" data-testid="piano-roll-dyn-pod">
+                    <span className="font-['JetBrains_Mono'] text-[9px] font-bold text-text-dim uppercase tracking-wider">Dyn</span>
+                    <button
+                      type="button"
+                      onClick={() => applyOp((p) => setNotesVelocity(p, activeTrackIdx, selection, 40, stepCount))}
+                      title={t("roll_vel_preset_soft")}
+                      data-testid="piano-roll-dyn-soft"
+                      className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/15 text-[9px] font-['JetBrains_Mono'] font-bold text-text hover:text-white border border-white/10 transition-colors"
+                    >
+                      p
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyOp((p) => setNotesVelocity(p, activeTrackIdx, selection, 80, stepCount))}
+                      title={t("roll_vel_preset_mid")}
+                      data-testid="piano-roll-dyn-mid"
+                      className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/15 text-[9px] font-['JetBrains_Mono'] font-bold text-text hover:text-white border border-white/10 transition-colors"
+                    >
+                      mf
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyOp((p) => setNotesVelocity(p, activeTrackIdx, selection, 110, stepCount))}
+                      title={t("roll_vel_preset_loud")}
+                      data-testid="piano-roll-dyn-loud"
+                      className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/15 text-[9px] font-['JetBrains_Mono'] font-bold text-text hover:text-white border border-white/10 transition-colors"
+                    >
+                      f
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyOp((p) => setNotesVelocity(p, activeTrackIdx, selection, 127, stepCount))}
+                      title={t("roll_vel_preset_max")}
+                      data-testid="piano-roll-dyn-max"
+                      className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/15 text-[9px] font-['JetBrains_Mono'] font-bold text-text hover:text-white border border-white/10 transition-colors"
+                    >
+                      127
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyOp((p) => rampNotesVelocity(p, activeTrackIdx, selection, 40, 120, stepCount))}
+                      title={t("roll_vel_ramp")}
+                      data-testid="piano-roll-dyn-ramp"
+                      className="px-1.5 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-[9px] font-['JetBrains_Mono'] font-bold text-accent border border-accent/30 hover:border-accent transition-colors flex items-center gap-0.5"
+                    >
+                      <TrendingUp className="w-2.5 h-2.5" />
+                      <span>Ramp</span>
+                    </button>
+                  </div>
                 </>
               ) : (
                 <span className="text-[10px] text-text-dim">{t("roll_select_hint")}</span>

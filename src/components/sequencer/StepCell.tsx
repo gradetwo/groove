@@ -226,7 +226,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
 
       {/* Melodic note name readout */}
       {isOn && isMelodic && typeof midiNote === "number" && midiNote > 0 && !isOutsideLoop && (
-        <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[8px] font-extrabold text-[#0a0b0d] tracking-tighter leading-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
+        <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[8px] font-black text-white tracking-tighter leading-none pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
           {midiToNoteName(midiNote)}
         </span>
       )}

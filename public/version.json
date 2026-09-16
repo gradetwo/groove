@@ -1,27 +1,27 @@
 {
-  "version": "2.0.32",
+  "version": "2.0.33",
   "releaseDate": "2026-09-16",
-  "changelogCount": 96,
+  "changelogCount": 97,
   "latest": {
-    "version": "2.0.32",
+    "version": "2.0.33",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.32 工作台与钢琴卷帘全链路创作体验与视觉重构：消除多小节卷帘黑屏遮挡、多小节交替明暗底色底纹、半透明虚线循环导轨与幽灵音符、暖阳琥珀热力图音符、6大 DAW 硬件指令舱与一键复制小节",
-      "en": "v2.0.32 Studio Workbench & Piano Roll Arranger Workflow & Visual Overhaul: Multi-bar blackout elimination, alternating bar columns, non-blocking polymeter loop guide with ghost notes, warm radiant amber note heatmap, 6 DAW hardware pods, and 1-click bar duplication"
+      "zh": "v2.0.33 钢琴卷帘调式音阶智能折叠（Fold）与快捷力度动态：Ableton/FL Studio 式音阶折叠、双击音符快速删除、音高拖动实时发声试听、4段力度快捷预设（p/mf/f/127）与平滑渐强（Ramp ↗）",
+      "en": "v2.0.33 Piano Roll Scale Folding & Dynamic Articulation Suite: Ableton/FL Studio-style Fold to Scale, double-click note deletion, live pitch-drag acoustic auditioning, 4-tier velocity presets (p/mf/f/127), and smooth velocity ramp (Ramp ↗)"
     },
     "highlights": [
       {
-        "zh": "**钢琴卷帘多小节黑屏遮挡彻底消除（Elimination of Multi-Bar Piano Roll Blackout）**：彻底修复在 64 步（4 小节）等多小节工程中，因轨道循环长度（trackLength）触发粗暴的纯黑重叠遮罩导致第 1 小节后全网格变黑、网格线消失且指针点击被拦截的严重故障。卷帘网格现采用分层架构：底层跨全部 64 步平铺交替明暗小节底色（#10121b 与 #151926），小节与拍子网格线贯穿全长；循环导轨改为非阻断性半透明导轨（pointer-events-none + 细虚线高光与步数标牌），任何小节均清爽通透且可自由点按创作。",
-        "en": "**Elimination of Multi-Bar Piano Roll Blackout**: Completely resolved a critical issue where multi-bar projects (e.g. 64 steps / 4 bars) with partial loop lengths triggered an opaque dark hatching overlay that blacked out the entire grid past Bar 1, hid all gridlines, and intercepted user mouse gestures. The piano roll grid now features layered alternating bar columns across all 64 steps, and the loop boundary is transformed into a non-blocking transparent guide (pointer-eve…"
+        "zh": "**调式音阶智能折叠（Ableton/FL Studio 式 Fold to Scale）**：在钢琴卷帘 Deck 2 新增「Fold / 折叠」开关。开启后自动隐藏音阶外的冗余半音行，仅保留当前调式音阶内音高与已写入音符行，彻底释放小屏笔记本与移动触控设备的垂直空间，防止滑音误触跑调，专注和谐和弦与旋律编排；关闭折叠则完整呈现全半音阶网格。",
+        "en": "**Smart Scale Folding (Ableton/FL Studio-style Fold to Scale)**: Added a dedicated \"Fold\" toggle button to Deck 2 of the piano roll. When engaged, out-of-scale chromatic pitch rows are folded away, leaving only in-scale notes and authored pitches. This eliminates vertical clutter on compact screens, prevents out-of-key note entry, and streamlines chord voicing."
       },
       {
-        "zh": "**多小节循环幽灵音符呈现（Looped Repeat Ghost Notes）**：当旋律轨处于循环循环模式（如 16 步循环在 64 步走向下播放）时，卷帘第 2、3、4 小节自动根据模长呈现半透明虚线幽灵音符（Ghost Notes），不仅清晰展示当前后段小节的真实复响，还能配合吸附和弦走向标尺显示全局和弦徽标；用户在后段小节任意空白处点击，即可立即写入独立真实音符进行变奏创作。",
-        "en": "**Looped Repeat Ghost Notes**: When a track loops polymetrically under a longer progression (e.g. 16 steps looping under 64 steps), bars 2..4 in the piano roll automatically render translucent dashed ghost notes indicating loop repetitions and display full chord progression badges. Clicking any empty cell in subsequent bars immediately authors a discrete note variation."
+        "zh": "**双击音符即时删除与拖动音高实时试听（Double-Click Deletion & Live Pitch-Drag Auditioning）**：免切换工具即可实现双击（Double-Click）任意音符直接删除，操作体验对齐主流桌面 DAW；在网格拖动音符进行上下移调时，实时触发微切片声学校准试听，随着鼠标拖曳即时回放音高变化，给予创作者极具质感的即时声音反馈。",
+        "en": "**Double-Click Note Deletion & Live Pitch-Drag Auditioning**: Double-clicking any existing note now removes it instantly without requiring tool switching. Dragging notes vertically across pitch rows triggers real-time acoustic auditioning as the note crosses row boundaries, providing instantaneous sonic feedback."
       },
       {
-        "zh": "**暖阳琥珀发光音符与 3D 象牙黑曜石琴键配色美化**：彻底告别原本发青偏暗的低对比度音符着色，重塑为基于标准 DAW 热力图的暖阳琥珀至亮珊瑚发光块体（hsl(18..45) 随力度自然延展），搭配顶部 2px 镜面反射弧边与左侧琴槌冲击瞬态线；左侧音高键盘升级为典雅象牙温润白键与多段黑曜石黑键，并赋予 C 音八度徽标；力度泳道同步配备交替小节底衬与发光棒棒糖圆头（Lollipop Heads）。",
-        "en": "**Warm Radiant Amber Notes & 3D Ivory/Obsidian Keybed Aesthetics**: Replaced muddy greenish-cyan notes with a glowing DAW heatmap spanning radiant coral to blazing golden amber (hsl(18..45) with velocity dynamics), augmented by 2px top specular highlights and hammer transient strike edges. The pitch gutter features satin ivory and obsidian key textures with bold C-octave pills, and the velocity lane embeds matching alternating bar shading and luminous lollipop heads."
+        "zh": "**快捷力度动态工具组（Quick Dynamics Presets & Ramp ↗）**：在卷帘检视器中为选中音符新增即时力度预设（p · 40、mf · 80、f · 110、max · 127）以及「Ramp ↗」时间线线性平滑渐强工具，一键完成复杂小节内多音符的起伏力度塑形与律动编排。",
+        "en": "**Quick Dynamics Presets & Ramp ↗**: Introduced instant velocity preset buttons (p · 40, mf · 80, f · 110, max · 127) and a smooth chronological \"Ramp ↗\" tool in the note inspector, allowing producers to sculpt rhythmic dynamics and crescendos across multi-note selections with a single click."
       }
     ],
     "truncated": true

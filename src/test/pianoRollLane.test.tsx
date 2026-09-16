@@ -578,4 +578,46 @@ describe("PianoRollLane · chords are visible and editable", () => {
     fireEvent.click(btn);
     expect(onToggleMusicalTyping).toHaveBeenCalledTimes(1);
   });
+
+  it("toggles Fold to scale to filter visible pitch rows to in-key pitches", () => {
+    setup();
+    const foldBtn = screen.getByTestId("piano-roll-fold");
+    const section = screen.getByTestId("piano-roll");
+    expect(section.getAttribute("data-folded")).toBe("false");
+    const rowsBefore = screen.getAllByTestId(/^piano-roll-row-\d+$/).length;
+
+    fireEvent.click(foldBtn);
+    expect(section.getAttribute("data-folded")).toBe("true");
+    const rowsAfter = screen.getAllByTestId(/^piano-roll-row-\d+$/).length;
+    expect(rowsAfter).toBeLessThan(rowsBefore);
+
+    fireEvent.click(foldBtn);
+    expect(section.getAttribute("data-folded")).toBe("false");
+    expect(screen.getAllByTestId(/^piano-roll-row-\d+$/).length).toBe(rowsBefore);
+  });
+
+  it("applies quick velocity presets and ramp across selected notes", () => {
+    const { commits } = setup();
+    // Select note at step 0
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-60"), { clientX: 4, clientY: rowYFor(60) });
+    expect(screen.getByTestId("piano-roll-dyn-pod")).toBeInTheDocument();
+
+    // Click 'p' preset (40)
+    fireEvent.click(screen.getByTestId("piano-roll-dyn-soft"));
+    const softPattern = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(softPattern.tracks[0].velocity?.[0]).toBe(40);
+
+    // Click '127' max preset
+    fireEvent.click(screen.getByTestId("piano-roll-dyn-max"));
+    const maxPattern = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(maxPattern.tracks[0].velocity?.[0]).toBe(127);
+  });
+
+  it("deletes note on double-click", () => {
+    const { commits } = setup();
+    expect(screen.getByTestId("piano-roll-note-0-60")).toBeInTheDocument();
+    fireEvent.pointerDown(grid(), { clientX: 0 * 26 + 4, clientY: rowYFor(60), detail: 2 });
+    const lastPattern = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(lastPattern.tracks[0].steps[0]).toBe(0);
+  });
 });
