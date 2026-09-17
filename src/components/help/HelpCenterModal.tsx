@@ -241,9 +241,9 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       title: t("tut_masterclass_title"),
       desc: t("tut_masterclass_desc"),
       targetTab: "masterclass" as NavTab,
-      targetBtn: isZh ? "参加节奏大师课" : "Join Rhythm Masterclass",
+      targetBtn: isZh ? "进入节奏律动实验室" : "Open Rhythm & Grooves Lab",
       steps: [
-        { label: t("tut_masterclass_s1"), tip: isZh ? "包含复节奏对撞、拉丁Clave演化、反拍重音消隐等大师课" : "Explore Polyrhythm Colliders, Clave Trees, and Odd Meters" },
+        { label: t("tut_masterclass_s1"), tip: isZh ? "包含复节奏对撞、拉丁Clave演化、反拍重音消隐等深度律动课题" : "Explore Polyrhythm Colliders, Clave Trees, and Odd Meters" },
         { label: t("tut_masterclass_s2"), tip: isZh ? "通过粒子对撞示波器与动态时钟感悟数学律动美感" : "Interact with live step visualizers and timing experiments" },
         { label: t("tut_masterclass_s3"), tip: isZh ? "跟随 J Dilla 微时序解构人声与贝斯后置拉扯感" : "Deconstruct J Dilla swing delay and drunk drum feels" },
         { label: t("tut_masterclass_s4"), tip: isZh ? "考核挑战模式实时评分反馈打击精度" : "Complete tap challenges with real-time millisecond scoring" },

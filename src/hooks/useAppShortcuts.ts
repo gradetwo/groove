@@ -124,8 +124,8 @@ export function useAppShortcuts({ onNavigateTab, isZh }: UseAppShortcutsOptions)
           case "r":
           case "w":
             targetTab = "masterclass";
-            tabNameZh = "节奏大师课";
-            tabNameEn = "Masterclasses";
+            tabNameZh = "节奏律动";
+            tabNameEn = "Rhythm & Grooves";
             break;
           case "z":
           case "l":

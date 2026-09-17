@@ -16,7 +16,8 @@ import {
   Search, 
   Grid, 
   SlidersHorizontal,
-  RefreshCw 
+  RefreshCw,
+  BookOpen
 } from "lucide-react";
 import { Genre } from "../types/genre";
 import { 
@@ -32,6 +33,7 @@ import { ExploreListView } from "./ExploreListView";
 interface GalaxyViewProps {
   onSelectGenre: (genre: Genre) => void;
   onOpenStudio: (genre: Genre) => void;
+  onOpenHelp?: () => void;
 }
 
 // Mathematical and curve helpers
@@ -264,6 +266,7 @@ const _scratchScreenPt = { x: 0, y: 0 };
 export const GalaxyView: React.FC<GalaxyViewProps> = ({
   onSelectGenre,
   onOpenStudio,
+  onOpenHelp,
 }) => {
   const { language, isZh, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -1557,6 +1560,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
       <ExploreListView
         onSelectGenre={onSelectGenre}
         onOpenStudio={onOpenStudio}
+        onOpenHelp={onOpenHelp}
         isFallback={Boolean(webglError)}
         onSwitchTo3D={() => {
           setWebglError(null);
@@ -1701,9 +1705,23 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           <span className="font-mono text-[9px] tracking-[0.2em] text-[#d8b988]/80">GENESIS ATLAS OF SOUND</span>
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-light tracking-[0.25em] text-[#eae6dc] drop-shadow-[0_0_20px_rgba(216,185,136,0.35)] m-0 font-[Space_Grotesk]">
-            {t("galaxy_title")}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-light tracking-[0.25em] text-[#eae6dc] drop-shadow-[0_0_20px_rgba(216,185,136,0.35)] m-0 font-[Space_Grotesk]">
+              {t("galaxy_title")}
+            </h1>
+            {onOpenHelp && (
+              <button
+                type="button"
+                data-testid="galaxy-help-button"
+                onClick={onOpenHelp}
+                title={t("galaxy_guide_btn")}
+                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-accent/40 bg-[#080c16]/80 text-accent font-semibold text-[11px] hover:bg-accent/20 transition-all shadow-sm"
+              >
+                <BookOpen className="w-3 h-3 text-accent" />
+                <span>{t("galaxy_guide_btn")}</span>
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 mt-1 text-xs text-[#eae6dc]/60">
             <span className="inline-flex items-center gap-1 font-['JetBrains_Mono'] text-[11px] text-[#d8b988]">
               <Sparkles className="w-3 h-3" />

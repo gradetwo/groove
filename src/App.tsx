@@ -406,6 +406,7 @@ const MainApp: React.FC = () => {
                 <GalaxyView
                   onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
+                  onOpenHelp={() => handleOpenHelp("tutorials")}
                 />
               </ErrorBoundary>
             )}
@@ -419,6 +420,7 @@ const MainApp: React.FC = () => {
                 <HorizontalTimelineView
                   onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
+                  onOpenHelp={() => handleOpenHelp("tutorials")}
                 />
               </ErrorBoundary>
             )}
@@ -432,6 +434,7 @@ const MainApp: React.FC = () => {
                 <VerticalTimelineView
                   onSelectGenre={handleSelectDetailGenre}
                   onOpenStudio={handleOpenStudioWithGenre}
+                  onOpenHelp={() => handleOpenHelp("tutorials")}
                 />
               </ErrorBoundary>
             )}

@@ -111,7 +111,7 @@ export const chordsMessages = {
   chords_minor: { en: "Minor", zh: "小调 Minor" },
   chords_major: { en: "Major", zh: "大调 Major" },
   chords_copied: { en: "Copied", zh: "已复制" },
-  chords_arp_panel_title: { en: "Smart Arpeggiator & Strumming Controls", zh: "智能琶音器与扫弦微动态控制器 (P6-03)" },
+  chords_arp_panel_title: { en: "Arpeggiator & Strumming Controls", zh: "琶音器与扫弦微动态控制器" },
   chords_arp_pattern: { en: "Arp Pattern", zh: "琶音模式 (Arp Pattern)" },
   chords_arp_up: { en: "Up", zh: "上行 Up ↗" },
   chords_arp_down: { en: "Down", zh: "下行 Down ↘" },

@@ -40,7 +40,7 @@ export const helpMessages = {
   tut_maker_desc: { en: "Fork from 159 historical genres, rewrite drum engines, tweak timbres, and share lossless URLs.", zh: "从 159 种曲风图谱中派生工程、修改合成器音色与音轨步进，并通过无损轻量 URL 自由分享。" },
   tut_chords_title: { en: "Lesson 6: Harmonic Progressions & Voicing Theory", zh: "第 6 课: 和弦走向编配与调式和声理论" },
   tut_chords_desc: { en: "Author diatonic progression blocks, audition acoustic voicings, and bake progressions into studio tracks.", zh: "推导自然音阶和弦骨架、试听吉他/钢琴真实声部排列，并将走向一键烘焙入编曲工作台。" },
-  tut_masterclass_title: { en: "Lesson 7: Rhythm Masterclass & Polyrhythmic Challenges", zh: "第 7 课: 节奏大师课与交互式复节奏挑战" },
+  tut_masterclass_title: { en: "Lesson 7: Rhythm & Grooves (Polyrhythmic Challenges)", zh: "第 7 课: 节奏律动与交互式复节奏挑战" },
   tut_masterclass_desc: { en: "Explore polyrhythm colliders, Latin clave evolution, J Dilla swing timing, and real-time accuracy scoring.", zh: "体验复节奏对撞机、拉丁 Clave 节拍演进分支、J Dilla 醉步微时序以及毫秒级打击精度挑战。" },
   tut_galaxy_title: { en: "Lesson 8: Musicology Galaxy & Evolutionary Timelines", zh: "第 8 课: 全球曲风星系与音乐史时间线探索" },
   tut_galaxy_desc: { en: "Navigate a 3D orbital constellation of 159 global genres, tracing family lineages and century-long migrations.", zh: "在 3D 引力星系与水平/垂直双轴时间线中漫游 159 种全球流派，追溯百年音乐演进的谱系与传承。" },

@@ -216,12 +216,12 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
     titleKey: "tut_masterclass_title",
     descKey: "tut_masterclass_desc",
     targetTab: "masterclass",
-    targetBtnZh: "参加节奏大师课",
-    targetBtnEn: "Join Rhythm Masterclass",
+    targetBtnZh: "进入节奏律动实验室",
+    targetBtnEn: "Open Rhythm & Grooves Lab",
     steps: [
       {
         labelKey: "tut_masterclass_s1",
-        tipZh: "包含复节奏对撞、拉丁Clave演化、反拍重音消隐等大师课",
+        tipZh: "包含复节奏对撞、拉丁Clave演化、反拍重音消隐等深度律动课题",
         tipEn: "Explore Polyrhythm Colliders, Clave Trees, and Odd Meters",
         targetTab: "masterclass",
       },

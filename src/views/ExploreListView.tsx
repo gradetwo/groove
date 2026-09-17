@@ -13,7 +13,8 @@ import {
   RotateCcw,
   SlidersHorizontal,
   ChevronRight,
-  Filter
+  Filter,
+  BookOpen
 } from "lucide-react";
 import { Genre, GenreCategory } from "../types/genre";
 import { ALL_GENRES } from "../data/genres";
@@ -24,6 +25,7 @@ export interface ExploreListViewProps {
   onOpenStudio: (genre: Genre) => void;
   onAddToCompare?: (genre: Genre) => void;
   onSwitchTo3D?: () => void;
+  onOpenHelp?: () => void;
   isFallback?: boolean;
 }
 
@@ -53,6 +55,7 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
   onOpenStudio,
   onAddToCompare,
   onSwitchTo3D,
+  onOpenHelp,
   isFallback = false,
 }) => {
   const { t, language, isZh } = useLanguage();
@@ -219,9 +222,21 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
           </p>
         </div>
 
-        {/* View Mode Switching button */}
-        {onSwitchTo3D && (
-          <div className="shrink-0 relative z-10">
+        {/* View Mode Switching and Guide buttons */}
+        <div className="shrink-0 relative z-10 flex flex-wrap items-center gap-2">
+          {onOpenHelp && (
+            <button
+              type="button"
+              data-testid="galaxy-help-button"
+              onClick={onOpenHelp}
+              title={t("galaxy_guide_btn")}
+              className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-2xl border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all"
+            >
+              <BookOpen className="w-4 h-4 text-accent" />
+              <span>{t("galaxy_guide_btn")}</span>
+            </button>
+          )}
+          {onSwitchTo3D && (
             <button
               onClick={onSwitchTo3D}
               className="flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-text font-bold text-xs shadow-lg shadow-indigo-600/20 transition-all hover:scale-105"
@@ -230,8 +245,8 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
               <Compass className="w-4 h-4" />
               <span>{t("switch_to_3d")}</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Multi-Dimensional Filter Deck (P3-20) */}

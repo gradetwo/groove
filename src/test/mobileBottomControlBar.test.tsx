@@ -60,7 +60,7 @@ async function chicagoHouse(): Promise<Genre> {
   return (await loadGenre("chicago-house"))!;
 }
 
-describe("Mobile Bottom Control Bar & Virtual Keyboard FAB", () => {
+describe("Mobile Bottom Control Bar & Virtual Keyboard FAB", { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();

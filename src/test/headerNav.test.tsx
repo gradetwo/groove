@@ -77,7 +77,7 @@ describe("Header · mobile menu de-duplication & help button integration", () =>
     expect(makerItems.length).toBe(1);
 
     // Check that Masterclass, Galaxy, Horizontal, Vertical appear exactly ONCE each
-    const masterclassItems = screen.getAllByText("节奏大师课");
+    const masterclassItems = screen.getAllByText("节奏律动");
     expect(masterclassItems.length).toBe(1);
 
     const galaxyItems = screen.getAllByText("星系云团");

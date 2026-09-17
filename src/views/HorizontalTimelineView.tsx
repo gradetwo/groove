@@ -16,7 +16,8 @@ import {
   Disc,
   Compass,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  BookOpen
 } from "lucide-react";
 import { Genre, GenreCategory } from "../types/genre";
 import { 
@@ -41,6 +42,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 interface HorizontalTimelineViewProps {
   onSelectGenre: (genre: Genre) => void;
   onOpenStudio: (genre: Genre) => void;
+  onOpenHelp?: () => void;
 }
 
 interface LaneConfig {
@@ -416,6 +418,7 @@ const LINEAR_COLUMNS: TimelineColumnDef[] = [1920, 1930, 1940, 1950, 1960, 1970,
 export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
   onSelectGenre,
   onOpenStudio,
+  onOpenHelp,
 }) => {
   const { t, language, isZh } = useLanguage();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -607,6 +610,18 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
               <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-amber-500/15 text-accent border border-amber-500/30 font-bold">
                 159 GENRES
               </span>
+              {onOpenHelp && (
+                <button
+                  type="button"
+                  data-testid="timeline-h-help-button"
+                  onClick={onOpenHelp}
+                  title={t("timeline_guide_btn")}
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border border-accent/40 bg-accent/10 text-accent font-semibold text-[11px] hover:bg-accent/20 transition-all ml-1"
+                >
+                  <BookOpen className="w-3 h-3 text-accent" />
+                  <span className="hidden sm:inline">{t("timeline_guide_btn")}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

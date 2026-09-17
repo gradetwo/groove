@@ -513,7 +513,7 @@ export function synthesizeKick(
 
     return { sources, gains, stopTime: time + bodyDecay + 0.02 };
   } else if (kit === "acoustic") {
-    // Vintage Acoustic: Shell body resonance + soft beater contact
+    // Vintage Acoustic: Shell body resonance + soft felt beater contact
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const startFreq = 120 * pitchMultiplier;
@@ -534,6 +534,29 @@ export function synthesizeKick(
     osc.stop(time + bodyDecay + 0.03);
     sources.push(osc);
     gains.push(gain);
+
+    // Felt beater strike transient
+    if (noiseBuffer) {
+      const click = ctx.createBufferSource();
+      click.buffer = noiseBuffer;
+      const clickFilter = ctx.createBiquadFilter();
+      clickFilter.type = "bandpass";
+      clickFilter.frequency.value = safeFreq(3000 * timbre.brightness);
+      clickFilter.Q.value = 2.2;
+
+      const clickGain = ctx.createGain();
+      const clickDecay = 0.012;
+      clickGain.gain.setValueAtTime(vel * 0.28 * timbre.transientScale, time);
+      clickGain.gain.exponentialRampToValueAtTime(0.0001, time + clickDecay);
+
+      click.connect(clickFilter);
+      clickFilter.connect(clickGain);
+      clickGain.connect(dest);
+      click.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
+      click.stop(time + clickDecay + 0.01);
+      sources.push(click);
+      gains.push(clickGain);
+    }
 
     return { sources, gains, stopTime: time + bodyDecay + 0.03 };
   } else {
@@ -701,8 +724,55 @@ export function synthesizeSnare(
     }
 
     return { sources, gains, stopTime: time + Math.max(0.3, bodyDecay + 0.02) };
+  } else if (kit === "acoustic") {
+    // Vintage Acoustic Snare: Wooden shell body + dual-resonance snare wire buzz
+    const osc = ctx.createOscillator();
+    const toneGain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(195 * pitchMultiplier, time);
+    osc.frequency.exponentialRampToValueAtTime(135, time + 0.055);
+
+    const bodyDecay = 0.14 * timbre.decayScale;
+    toneGain.gain.setValueAtTime(vel * 0.78, time);
+    toneGain.gain.exponentialRampToValueAtTime(0.001, time + bodyDecay);
+
+    osc.connect(toneGain);
+    toneGain.connect(dest);
+    osc.start(time);
+    osc.stop(time + bodyDecay + 0.03);
+    sources.push(osc);
+    gains.push(toneGain);
+
+    if (noiseBuffer) {
+      const noise = ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = safeFreq(2200 * timbre.brightness);
+      filter.Q.value = 1.5;
+      const noiseGain = ctx.createGain();
+      const noiseDecay = 0.22 * timbre.decayScale;
+      noiseGain.gain.setValueAtTime(vel * 0.88 * timbre.transientScale, time);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, time + noiseDecay);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(dest);
+      noise.start(time, noiseStartOffset(ctx, noiseBuffer, noisePosition));
+      noise.stop(time + noiseDecay + 0.02);
+      sources.push(noise);
+      gains.push(noiseGain);
+
+      return {
+        sources,
+        gains,
+        stopTime: time + Math.max(0.24, bodyDecay + 0.03, noiseDecay + 0.02),
+      };
+    }
+
+    return { sources, gains, stopTime: time + Math.max(0.22, bodyDecay + 0.03) };
   } else {
-    // Acoustic / Cyber Snare: Rimshot body + wide acoustic buzz
+    // Cyber Wave Snare: Rimshot body + wide acoustic buzz
     const osc = ctx.createOscillator();
     const toneGain = ctx.createGain();
     osc.type = "sine";

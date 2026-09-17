@@ -13,7 +13,8 @@ import {
   Cpu,
   Flame,
   ChevronRight,
-  Filter
+  Filter,
+  BookOpen
 } from "lucide-react";
 import { TIMELINE_STORIES, TimelineStory } from "../data/timeline_stories";
 import { GENRES_MAP } from "../data/genres";
@@ -24,6 +25,7 @@ import { useGenreAudition } from "../hooks/useGenreAudition";
 interface VerticalTimelineViewProps {
   onSelectGenre: (genre: Genre) => void;
   onOpenStudio: (genre: Genre) => void;
+  onOpenHelp?: () => void;
 }
 
 interface EraAesthetic {
@@ -188,6 +190,7 @@ const ERA_AESTHETICS: Record<number, EraAesthetic> = {
 export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
   onSelectGenre,
   onOpenStudio,
+  onOpenHelp,
 }) => {
   const { t, language, isZh } = useLanguage();
   
@@ -239,11 +242,23 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
               <span>CENTURY SONIC REVOLUTION · 1900 — 2026</span>
             </div>
             
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#f5f4ef] tracking-tight flex items-center gap-3">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#f5f4ef] tracking-tight flex flex-wrap items-center gap-3">
               <span>{t("nav_timeline_v")}</span>
               <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-white/[0.06] text-[#b9b7b0] border border-white/[0.1]">
                 11 纪元里程碑 · 159 经典曲风
               </span>
+              {onOpenHelp && (
+                <button
+                  type="button"
+                  data-testid="timeline-v-help-button"
+                  onClick={onOpenHelp}
+                  title={t("timeline_guide_btn")}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-accent" />
+                  <span>{t("timeline_guide_btn")}</span>
+                </button>
+              )}
             </h1>
 
             <p className="text-xs sm:text-sm text-[#8e93a0] max-w-2xl leading-relaxed">

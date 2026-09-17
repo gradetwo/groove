@@ -1,29 +1,29 @@
 {
-  "version": "2.0.43",
+  "version": "2.0.44",
   "releaseDate": "2026-09-17",
-  "changelogCount": 107,
+  "changelogCount": 108,
   "latest": {
-    "version": "2.0.43",
+    "version": "2.0.44",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.43 钢琴卷帘片段新建/保存/录制闭环、工作区功能键4组胶囊聚合与精简折叠、轨道头独立折叠与声学类型指示器",
-      "en": "v2.0.43 Piano Roll Clip New/Export/Record Workflow, 4-Pill Workspace Toolbar Grouping & Compact Fold, Track Row Collapsing & Category Badges"
+      "zh": "v2.0.44 节奏律动实验室重塑、文案专业度去AI营销化、全景视图上下文专属手册深层链接与原声鼓组音色保真度提升",
+      "en": "v2.0.44 Rhythm & Grooves Lab Relocation, Professional DAW Copywriting Refinement, Universal View Contextual Help Deep-Linking & Acoustic Drum Timbre Fidelity"
     },
     "highlights": [
       {
-        "zh": "**钢琴卷帘片段新建、保存与实时录制闭环（Item 3: Piano Roll Clip New, Save/Export & Realtime Record）**：在钢琴卷帘顶部 Deck 1 新增三大核心工程操作：「新建片段 (New Clip)」（支持安全二次确认弹窗、重置旋律音符并拥有完整撤销历史支持）、「保存/导出片段 (Save / Export)」（提供单轨独立 JSON 片段导出、纯净标准 MIDI (.mid) 文件直下与一键复制数据至剪贴板）以及「实时按键录制 (Realtime REC)」（支持红光律动浮动 HUD 标牌、琴键连续拖曳试听/滑音录入与电脑键盘 QWERTY 音乐键盘实时录入，直接写入音序器与全音轨历史）。",
-        "en": "**Piano Roll Clip New, Save/Export & Realtime Record**: Integrated 3 essential clip actions into Piano Roll Deck 1: \"New Clip\" (with safety confirmation dialog, note reset, and complete undo stack integration), \"Save / Export Clip\" (supporting discrete track JSON export, Type 0 Standard MIDI (.mid) generation, and 1-click clipboard copying), and \"Realtime REC\" (featuring a pulsating red recording HUD, 3D keybed drag/glissando capture, and QWERTY musical typing direct note wr…"
+        "zh": "**节奏律动实验室与导航结构重塑（Item 11: Rhythm & Grooves Lab Relocation & Structural Navigation Reorganization）**：将原本位于「探索」分组的「节奏大师课」正式全面更名为「节奏律动」（Rhythm & Grooves），并重新归类迁入「高级与实验室（Pro & Labs）」核心工具组。同步更新顶部 Header 桌面与移动端菜单抽屉、全局快捷键提示（R/W 键）、交互式教学中心课程第 7 课及全部国际化多语言配置。聚焦复节奏对撞、Clave 演化树与 J Dilla 醉步微时序实验，定位更加清晰专业。",
+        "en": "**Rhythm & Grooves Lab Relocation & Structural Navigation Reorganization**: Formally renamed \"节奏大师课\" to \"节奏律动\" (\"Rhythm & Grooves\") and relocated it from the \"Explore\" group into the \"Pro & Labs\" workstation group. Updated top navigation headers for desktop and mobile drawers, global keyboard shortcuts (R/W keys), interactive tutorial curriculum (Lesson 7), and all bilingual locale assets. Emphasizes polyrhythmic colliders, clave evolution trees, and J Dilla micro-timing exp…"
       },
       {
-        "zh": "**工作区功能键 4 组胶囊微底色聚合与一键精简折叠（Item 8: 4-Pill Logical Grouping, Visual Capsules & Responsive Compact Fold）**：系统重塑工作区顶部工具栏为 4 大清晰逻辑功能组：播放控制组（播放/停止、BPM调节与Tap、节拍器、预备拍、录音、鼓机音色与模式、槽位）、编辑操作组（撤销/重做、拍号、量化精度、时值步长、工具模式、快速操作）、视图切换组（钢琴卷帘、虚拟键盘、独立混音台、速度/动态轨、全景频谱仪、全屏切换）与工程管理组（灵感激发、MIDI导入、工程中心、曲风工坊、多格式导出、分享与高级效果器机架）。每组使用微底色胶囊（Pill）包裹并保留 8-12px 呼吸间距。增设一键精简折叠按钮（持久化于 localStorage），折叠状态下仅保留播放控制组，次要功能优雅收起于「··· 更多」弹性下拉菜单，彻底释放编曲视界与移动端空间。",
-        "en": "**4-Pill Logical Grouping, Visual Capsules & Responsive Compact Fold**: Restructured the master workstation toolbar into 4 ergonomic logical groups: Playback & Transport (Play/Stop, BPM ±/Tap, Metronome, Count-In, REC, Drum Kit, Pattern Slots), Edit Operations (Undo/Redo, Meter, Quantize, Length, Tool Mode, Quick Actions), View Switchers (Piano Roll, Musical Typing, Mixing Console, Velocity Lane, Panoramic Analyzer, Fullscreen), and Project Management (Inspire Me, MIDI Impor…"
+        "zh": "**生产力文案专业化与去 AI 浮夸营销化（Item 13: Professional DAW Terminology & Elimination of Exaggerated AI Buzzwords）**：全面排查并剔除界面与文案中残留的“智能生成”、“神仙”、“终极”、“顶级”等宣传营销化辞藻，重塑为严谨规范的数字音频工作站（DAW）与声学乐理专业术语。如将音轨快捷菜单的“智能生成常规节拍”精炼调整为“填充基础节奏型 (Fill rhythmic template)”；和弦琶音控制台名称去除内部版本代号并规整为“琶音器与扫弦微动态控制器 (Arpeggiator & Strumming Controls)”；优化全景声谱分析仪高频空气感与底鼓声学档案的专业学术表述。",
+        "en": "**Professional DAW Terminology & Elimination of Exaggerated AI Buzzwords**: Thoroughly audited and eliminated promotional and exaggerated buzzwords (e.g. \"Smart AI\", \"Ultimate\", \"Miraculous\") across all user-facing interfaces and locale dictionaries, replacing them with industry-standard digital audio workstation (DAW) and acoustics terminology. Streamlined \"Smart fill rhythm\" to \"Fill rhythmic template\", refined arpeggiator headers to \"Arpeggiator & Strumming Controls\", and…"
       },
       {
-        "zh": "**轨道头独立折叠压缩与 6 大声学分类指示器（Item 9: Single-Track Folding & 6 Acoustic Category Badges）**：在音序器每条轨道表头增设折叠切换按钮（单个轨道一键压缩至 36px 超精简模式，隐藏下层微调控件，仅保留指示色块、类型微标、音色试听 ▶、静音与独奏），并在标尺上方增设全局「全部折叠 / 全部展开」总控开关；同时为全部 8 轨智能配备专属声学分类胶囊徽标（DRUM 鼓组、PERC 打击乐、BASS 贝斯、CHORD 和弦、LEAD 主音、FX 音效），高对比度半透明彩色标签一目了然，多轨工程纵览游刃有余。",
-        "en": "**Single-Track Folding & 6 Acoustic Category Badges**: Introduced individual track fold toggles that compress any track row into an ultra-compact 36px footprint (hiding secondary volume/pan/shift/clear controls while retaining color swatch, audition ▶, Mute, Solo, and category badge), paired with a global \"Fold All / Expand All\" master switch. Every track row features intelligent acoustic category badges (DRUM, PERC, BASS, CHORD, LEAD, FX) with high-contrast semi-transparent…"
+        "zh": "**全站视图上下文专属手册与交互教学深层链接（Item 10: App-Wide Universal View Contextual Help Deep-Linking）**：全面补齐曲风星系图谱（GalaxyView 3D 模式与 2D ExploreListView 兜底列表）、年代编年演变轴（HorizontalTimelineView）与流派故事脉络时间轴（VerticalTimelineView）的专属磨砂质感指南按钮（星系图谱指南、时间轴指南）。各视图深度直连帮助中心对应章节（交互式教程第 8 课「全球曲风星系与音乐史时间线探索」），配合既有的调音台、示波器、和弦工坊、底鼓实验室与曲风工坊指南，实现全站 100% 视图文档无缝交互闭环。",
+        "en": "**App-Wide Universal View Contextual Help Deep-Linking**: Completed contextual frosted glass guide buttons across the Musicology 3D Galaxy View (and 2D ExploreListView fallback), Horizontal Chronology Timeline, and Vertical Narrative Timeline. Each view seamlessly deep-links into the relevant documentation chapters (Lesson 8: Musicology Galaxy & Evolutionary Timelines), joining existing mixers, scopes, chord studios, kick labs, and maker views for 100% complete contextual he…"
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }

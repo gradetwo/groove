@@ -1,11 +1,11 @@
 export const masterclassMessages = {
   masterclass_hero_title: {
-    zh: "世界节奏沉浸工作坊",
-    en: "World Rhythm Masterclasses",
+    zh: "世界律动实验室",
+    en: "World Rhythm & Groove Lab",
   },
   masterclass_hero_desc: {
-    zh: "解构跨越大洋与世纪的五大终极律动形态：从西非复节奏到巴尔干奇数拍与 J Dilla 醉酒摇摆",
-    en: "Deconstruct five transcendent rhythmic archetypes: from West African polyrhythms to Balkan aksak and J Dilla drunk pocket",
+    zh: "解构跨越大洋与世纪的五大经典律动形态：从西非复节奏到巴尔干奇数拍与 J Dilla 醉酒摇摆",
+    en: "Deconstruct five classic rhythmic archetypes: from West African polyrhythms to Balkan aksak and J Dilla drunk pocket",
   },
   masterclass_tab_polyrhythm: {
     zh: "复节奏声光对撞机",
@@ -297,12 +297,12 @@ export const masterclassMessages = {
   // MasterclassView.tsx
   // ---------------------------------------------------------------------------
   masterclass_page_title: {
-    zh: "律动解构：跨越世纪的大师节奏实验室",
-    en: "Rhythm Deconstruction & Masterclasses",
+    zh: "律动解构：世界节奏与微时序实验室",
+    en: "Rhythm Deconstruction & Groove Lab",
   },
   masterclass_page_desc: {
-    zh: "解构跨越大洋与世代的五大终极律动形态：从西非约鲁巴复节奏对冲、古巴 Clave 演化树，到 Tony Allen 避让第一拍与 J Dilla 拟人化醉酒微时序。支持实时对拍打卡与一键载入 Studio 工作台。",
-    en: "Deconstruct five transcendent rhythmic archetypes: West African polyrhythms, Cuban clave mutation tree, downbeat omission dynamics, Balkan aksak odd meters, and J Dilla's unquantized drunk feel.",
+    zh: "解构跨越大洋与世代的五大经典律动形态：从西非约鲁巴复节奏对冲、古巴 Clave 演化树，到 Tony Allen 避让第一拍与 J Dilla 拟人化醉酒微时序。支持实时对拍打卡与一键载入 Studio 工作台。",
+    en: "Deconstruct five classic rhythmic archetypes: West African polyrhythms, Cuban clave mutation tree, downbeat omission dynamics, Balkan aksak odd meters, and J Dilla's unquantized drunk feel.",
   },
   masterclass_lesson_index: {
     zh: "课程 0{index}",

@@ -206,7 +206,7 @@ export const analyzerMessages = {
     en: "The 7 Acoustic Frequency Bands",
   },
   analyzer_card_bands_desc: {
-    zh: "底鼓与 808 避开 60Hz 频点对冲；军鼓箱体稳固在 200-250Hz；踩镲与扫频混响延伸至 10kHz+ 展现顶级空气光泽。",
+    zh: "底鼓与 808 避开 60Hz 频点对冲；军鼓箱体稳固在 200-250Hz；踩镲与扫频混响延伸至 10kHz+ 展现细腻的高频空气感。",
     en: "Kick and 808 carve out space around 60Hz; snare body anchors at 200-250Hz; hi-hats and air sheens shimmer at 10kHz+.",
   },
 };
