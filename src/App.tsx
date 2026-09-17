@@ -280,6 +280,7 @@ const MainApp: React.FC = () => {
                     setInitialArpeggio({ baked, label });
                     handleSelectTab("studio");
                   }}
+                  onOpenHelp={() => handleOpenHelp("theory")}
                 />
               </ErrorBoundary>
             )}
@@ -304,6 +305,7 @@ const MainApp: React.FC = () => {
               >
                 <AnalyzerView
                   onOpenStudio={() => handleSelectTab("studio")}
+                  onOpenHelp={() => handleOpenHelp("mixing")}
                   externalAnalyser={engineInstance?.getMasterAnalyser()}
                   externalAnalyserL={engineInstance?.getStereoAnalysers().left}
                   externalAnalyserR={engineInstance?.getStereoAnalysers().right}
@@ -323,6 +325,7 @@ const MainApp: React.FC = () => {
                   <HardwareConsoleView
                     selectedGenre={selectedGenre}
                     onOpenStudio={handleOpenStudioWithGenre}
+                    onOpenHelp={() => handleOpenHelp("mixing")}
                   />
                 ) : (
                   <div className="max-w-7xl mx-auto px-4 py-8">
@@ -346,6 +349,7 @@ const MainApp: React.FC = () => {
                     handleSelectTab("studio");
                   }}
                   onSelectGenre={handleSelectDetailGenre}
+                  onOpenHelp={() => handleOpenHelp("tutorials")}
                 />
               </ErrorBoundary>
             )}
@@ -431,6 +435,7 @@ const MainApp: React.FC = () => {
                   initialForkId={route.customGenreFork}
                   onOpenStudio={handleOpenStudioWithGenre}
                   onSelectGenre={handleSelectDetailGenre}
+                  onOpenHelp={() => handleOpenHelp("tutorials")}
                 />
               </ErrorBoundary>
             )}

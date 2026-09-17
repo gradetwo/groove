@@ -38,6 +38,12 @@ export const helpMessages = {
   tut_acoustics_desc: { en: "Analyze click transients, pitch decay envelopes, stereo phase Lissajous curves, and FFT spectra.", zh: "解构瞬态点击与低频谐振体，实时查看立体声声谱图、李萨如相位椭圆与纯音信号发生器。" },
   tut_maker_title: { en: "Lesson 5: Custom Genre Workshop & Cloud Sharing", zh: "第 5 课: 自定义曲风工坊派生与云端链接分享" },
   tut_maker_desc: { en: "Fork from 159 historical genres, rewrite drum engines, tweak timbres, and share lossless URLs.", zh: "从 159 种曲风图谱中派生工程、修改合成器音色与音轨步进，并通过无损轻量 URL 自由分享。" },
+  tut_chords_title: { en: "Lesson 6: Harmonic Progressions & Voicing Theory", zh: "第 6 课: 和弦走向编配与调式和声理论" },
+  tut_chords_desc: { en: "Author diatonic progression blocks, audition acoustic voicings, and bake progressions into studio tracks.", zh: "推导自然音阶和弦骨架、试听吉他/钢琴真实声部排列，并将走向一键烘焙入编曲工作台。" },
+  tut_masterclass_title: { en: "Lesson 7: Rhythm Masterclass & Polyrhythmic Challenges", zh: "第 7 课: 节奏大师课与交互式复节奏挑战" },
+  tut_masterclass_desc: { en: "Explore polyrhythm colliders, Latin clave evolution, J Dilla swing timing, and real-time accuracy scoring.", zh: "体验复节奏对撞机、拉丁 Clave 节拍演进分支、J Dilla 醉步微时序以及毫秒级打击精度挑战。" },
+  tut_galaxy_title: { en: "Lesson 8: Musicology Galaxy & Evolutionary Timelines", zh: "第 8 课: 全球曲风星系与音乐史时间线探索" },
+  tut_galaxy_desc: { en: "Navigate a 3D orbital constellation of 159 global genres, tracing family lineages and century-long migrations.", zh: "在 3D 引力星系与水平/垂直双轴时间线中漫游 159 种全球流派，追溯百年音乐演进的谱系与传承。" },
 
   // Tutorial Steps
   tut_drum_s1: { en: "Click step cells on the Kick track (row 1) to place standard four-on-the-floor pulses at steps 1, 5, 9, 13.", zh: "在底鼓轨道（第 1 行）的第 1、5、9、13 步点击网格激活，建立经典四四拍重音骨架。" },
@@ -61,4 +67,19 @@ export const helpMessages = {
   tut_maker_s1: { en: "Open the 'Custom Genre Maker' workshop to forge your own hybrid musical style.", zh: "打开「曲风制作工坊 (Custom Genre Maker)」工作区，开启独特的跨界混血音乐流派定制。" },
   tut_maker_s2: { en: "Customize genre name, tempo (BPM), swing ratio, scale mode, and program custom drum/instrument step patterns.", zh: "设定曲风流派代号、BPM 速度、摇摆律动率与调式，并在 8 轨点音矩阵中录入标志性节奏与副歌模式。" },
   tut_maker_s3: { en: "Click 'Share via URL' to generate an ultra-compact compressed link, or export directly as a GS1 patch or Ableton project.", zh: "点击「复制分享链接」生成包含全部合成参数的极简 URL，或一键导出为 GS1 开放协议补丁及 Ableton Live 工程。" },
+
+  tut_chords_s1: { en: "Select your root key and choose between Major, Minor, or modal diatonic tonal centers.", zh: "在和弦工坊顶部选定根音与大调/小调模式，系统将自动映射调内各级自然和弦。" },
+  tut_chords_s2: { en: "Browse curated progression cards (Pop 4-Chords, Royal Road, Jazz 2-5-1, Epic Minor) with live preview.", zh: "翻阅经典和弦走向库（流行四和弦、王道走向、爵士 2-5-1、史诗小调等），轻点卡片即时试听。" },
+  tut_chords_s3: { en: "Switch playing styles between ballad arpeggiation, acoustic guitar strumming, and rich block voicings.", zh: "自由切换抒情分解、木吉他扫弦、连续琶音与厚实柱式和弦等 4 种声学演奏风格。" },
+  tut_chords_s4: { en: "Click 'Load to Studio' or 'Bake Arpeggio' to import your harmonic arrangement into the live sequencer.", zh: "点击「载入编曲台」或「烘焙琶音」，将编配好的和弦骨架直接导入步进序列器轨道中持续创作。" },
+
+  tut_masterclass_s1: { en: "Select a masterclass topic like 3:2 or 4:3 Polyrhythms, Son/Rumba Clave trees, or Dilla Microtiming.", zh: "在课程目录中挑选感兴趣的专题（如 3:2/4:3 复节奏对撞、Son/Rumba Clave 进化树、Dilla 摇摆延时）。" },
+  tut_masterclass_s2: { en: "Use the interactive visualizer to see how polyrhythmic pulses phase and sync against the primary downbeat.", zh: "通过粒子对撞示波器与动态环形时钟，直观感知异相节拍与主拍重合交织的数学律动美感。" },
+  tut_masterclass_s3: { en: "Audition historical preset examples illustrating how afro-cuban, hip-hop, and balkan grooves evolved.", zh: "试听历史经典预设范例，体味非洲古巴、黄金年代 Hip-Hop 与巴尔干奇数拍的节拍奥秘。" },
+  tut_masterclass_s4: { en: "Test your rhythmic intuition with the Interactive Challenge tap tester to measure timing accuracy.", zh: "开启交互式节奏考核，跟随节拍敲击屏幕或空格键，获取毫秒级准确度评级与技能反馈。" },
+
+  tut_galaxy_s1: { en: "Rotate and zoom the 3D Galaxy constellation to inspect clusters grouped by electronic, rock, jazz, and world roots.", zh: "在 3D 星系视图中旋转缩放，观察电子、摇滚、嘻哈、爵士、拉丁等各大音乐星团的引力聚集。" },
+  tut_galaxy_s2: { en: "Follow luminous connection rays to trace how Blues birthed Rock, or how Reggae and Dub shaped Drum & Bass.", zh: "观察发光引力连线，清晰查阅从布鲁斯到摇滚乐、从牙买加 Dub 到现代 DnB 的衍化与派生轨迹。" },
+  tut_galaxy_s3: { en: "Switch to Horizontal or Vertical Timeline views to explore chronological revolutions across musical decades.", zh: "切换至水平演变轴或垂直年代线，按 1930s 至 2020s 年代跨度浏览各时期的颠覆性风格发明。" },
+  tut_galaxy_s4: { en: "Click any genre node to preview its authentic rhythm in real time and load it directly into the Studio.", zh: "点击任意曲风星体，即刻在悬浮卡片中声学试听地道律动，并一键将其作为模板载入工作台。" },
 } as const;

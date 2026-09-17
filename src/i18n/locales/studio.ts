@@ -678,4 +678,13 @@ export const studioMessages = {
   track_shift_right: { en: "Shift right 1 step", zh: "向右位移 1 步" },
   track_smart_fill: { en: "Smart fill rhythm", zh: "智能生成常规节拍" },
   track_clear: { en: "Clear track", zh: "清空轨道" },
+
+  // Contextual Module Guide Buttons
+  console_guide_btn: { en: "Mixer Guide", zh: "混音手册" },
+  analyzer_guide_btn: { en: "Acoustics Guide", zh: "声学手册" },
+  chords_guide_btn: { en: "Harmony Guide", zh: "和声手册" },
+  maker_guide_btn: { en: "Workshop Guide", zh: "工坊指南" },
+  masterclass_guide_btn: { en: "Masterclass Guide", zh: "大师课指南" },
+  help_view_all_lessons: { en: "View 8 Interactive Lessons", zh: "查看 8 堂完整实操课程" },
+  help_lessons_count: { en: "8 Lessons", zh: "8 门实操课程" },
 } as const;

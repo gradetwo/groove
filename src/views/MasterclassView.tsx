@@ -27,11 +27,13 @@ interface MasterclassViewProps {
   initialLessonId?: string;
   onOpenStudio: (payload: { pattern: SequencerPattern; label: string }) => void;
   onSelectGenre?: (genre: { id: string }) => void;
+  onOpenHelp?: () => void;
 }
 
 export const MasterclassView: React.FC<MasterclassViewProps> = ({
   initialLessonId,
   onOpenStudio,
+  onOpenHelp,
 }) => {
   const { t, isZh } = useLanguage();
 
@@ -105,13 +107,27 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
       <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-[#12141c] via-[#0d0e14] to-[#090a0d] border border-line overflow-hidden shadow-2xl">
         <div className="absolute -right-12 -bottom-12 w-80 h-80 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 text-[11px] font-mono font-bold uppercase rounded-full bg-accent/15 text-accent border border-accent/30 tracking-wider">
-              {t("masterclass_hero_title")}
-            </span>
-            <span className="px-2.5 py-0.5 text-[10px] font-mono text-text-dim rounded-md bg-panel border border-line">
-              P6-01 · Pure Web Audio
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 text-[11px] font-mono font-bold uppercase rounded-full bg-accent/15 text-accent border border-accent/30 tracking-wider">
+                {t("masterclass_hero_title")}
+              </span>
+              <span className="px-2.5 py-0.5 text-[10px] font-mono text-text-dim rounded-md bg-panel border border-line">
+                P6-01 · Pure Web Audio
+              </span>
+            </div>
+            {onOpenHelp && (
+              <button
+                type="button"
+                data-testid="masterclass-help-button"
+                onClick={onOpenHelp}
+                title={t("masterclass_guide_btn")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-accent" />
+                <span>{t("masterclass_guide_btn")}</span>
+              </button>
+            )}
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-text tracking-tight">

@@ -24,6 +24,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 
 interface AnalyzerViewProps {
   onOpenStudio?: () => void;
+  onOpenHelp?: () => void;
   externalAnalyser?: AnalyserNode | null;
   externalAnalyserL?: AnalyserNode | null;
   externalAnalyserR?: AnalyserNode | null;
@@ -106,6 +107,7 @@ const TEST_SIGNALS: TestSignalConfig[] = [
 
 export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
   onOpenStudio,
+  onOpenHelp,
   externalAnalyser = null,
   externalAnalyserL = null,
   externalAnalyserR = null,
@@ -258,16 +260,30 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
           </p>
         </div>
 
-        {/* Action Button: Jump to Studio */}
-        {onOpenStudio && (
-          <button
-            onClick={onOpenStudio}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-[#0a0b0d] font-bold text-sm hover:brightness-110 shadow-[0_0_16px_rgba(245,183,61,0.25)] transition-all shrink-0"
-          >
-            <span>{t("analyzer_open_studio_monitor")}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        )}
+        {/* Action Buttons: Guide & Studio */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {onOpenHelp && (
+            <button
+              type="button"
+              data-testid="analyzer-help-button"
+              onClick={onOpenHelp}
+              title={t("analyzer_guide_btn")}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all shrink-0"
+            >
+              <BookOpen className="w-4 h-4 text-accent" />
+              <span>{t("analyzer_guide_btn")}</span>
+            </button>
+          )}
+          {onOpenStudio && (
+            <button
+              onClick={onOpenStudio}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-[#0a0b0d] font-bold text-sm hover:brightness-110 shadow-[0_0_16px_rgba(245,183,61,0.25)] transition-all shrink-0"
+            >
+              <span>{t("analyzer_open_studio_monitor")}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </section>
 
       {/* Main Real-time Visualizer Suite */}

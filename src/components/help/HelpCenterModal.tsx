@@ -68,6 +68,9 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
     mixer: 0,
     acoustics: 0,
     maker: 0,
+    chords: 0,
+    masterclass: 0,
+    galaxy: 0,
   });
 
   const categories: Array<{ id: HelpCategory; label: string; icon: React.ReactNode }> = [
@@ -149,6 +152,45 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
         { label: t("tut_maker_s1"), tip: isZh ? "可自由分叉 159 种曲风或从零构建全新流派" : "Fork existing genres or craft hybrid musical styles" },
         { label: t("tut_maker_s2"), tip: isZh ? "定制 BPM、摇摆律动、合成器参数与打击乐" : "Customize tempo, swing, synth timbres, and step patterns" },
         { label: t("tut_maker_s3"), tip: isZh ? "生成包含完整参数的无损压缩 URL 链接分享" : "Share lossless compressed URLs or export GS1 patch bundles" },
+      ],
+    },
+    {
+      id: "chords",
+      title: t("tut_chords_title"),
+      desc: t("tut_chords_desc"),
+      targetTab: "chords" as NavTab,
+      targetBtn: isZh ? "进入和弦工坊编配" : "Open Chord Studio",
+      steps: [
+        { label: t("tut_chords_s1"), tip: isZh ? "提供大调、自然小调与各类和声模态调式中心" : "Select root keys and explore major/minor modal theory" },
+        { label: t("tut_chords_s2"), tip: isZh ? "内置王道进行、爵士2-5-1、流行4和弦等经典走向" : "Load curated progressions from Hooktheory & classic hits" },
+        { label: t("tut_chords_s3"), tip: isZh ? "弹奏方式支持抒情分解、扫弦、琶音与柱式和弦" : "Audition ballad, strum, arpeggio, and block chord voicings" },
+        { label: t("tut_chords_s4"), tip: isZh ? "将和弦骨架与琶音一键烘焙并加载回工作台编曲" : "Bake progressions directly into Studio sequencer tracks" },
+      ],
+    },
+    {
+      id: "masterclass",
+      title: t("tut_masterclass_title"),
+      desc: t("tut_masterclass_desc"),
+      targetTab: "masterclass" as NavTab,
+      targetBtn: isZh ? "参加节奏大师课" : "Join Rhythm Masterclass",
+      steps: [
+        { label: t("tut_masterclass_s1"), tip: isZh ? "包含复节奏对撞、拉丁Clave演化、反拍重音消隐等大师课" : "Explore Polyrhythm Colliders, Clave Trees, and Odd Meters" },
+        { label: t("tut_masterclass_s2"), tip: isZh ? "通过粒子对撞示波器与动态时钟感悟数学律动美感" : "Interact with live step visualizers and timing experiments" },
+        { label: t("tut_masterclass_s3"), tip: isZh ? "跟随 J Dilla 微时序解构人声与贝斯后置拉扯感" : "Deconstruct J Dilla swing delay and drunk drum feels" },
+        { label: t("tut_masterclass_s4"), tip: isZh ? "考核挑战模式实时评分反馈打击精度" : "Complete tap challenges with real-time millisecond scoring" },
+      ],
+    },
+    {
+      id: "galaxy",
+      title: t("tut_galaxy_title"),
+      desc: t("tut_galaxy_desc"),
+      targetTab: "galaxy" as NavTab,
+      targetBtn: isZh ? "漫游曲风星系图谱" : "Explore Genre Galaxy",
+      steps: [
+        { label: t("tut_galaxy_s1"), tip: isZh ? "三维立体星系可视化呈现全球 159 种现代音乐流派" : "3D interactive galaxy mapping 159 global music styles" },
+        { label: t("tut_galaxy_s2"), tip: isZh ? "节点间发光引力连线揭示曲风衍化、融合与传承脉络" : "Luminous lineage connections illustrate influences & roots" },
+        { label: t("tut_galaxy_s3"), tip: isZh ? "横向演变轴与纵向时间轴多重视角穿梭百年音乐史" : "Navigate horizontal and vertical evolutionary timelines" },
+        { label: t("tut_galaxy_s4"), tip: isZh ? "轻点任意星体即时触发真实曲风试听与一键编曲" : "Click any galaxy node for instant audition and arrangement" },
       ],
     },
   ];
@@ -376,7 +418,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                           className="px-3.5 py-2 rounded-xl bg-[#1c2030] hover:bg-[#252a3f] border border-line text-text font-medium text-xs transition-all flex items-center gap-1.5"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-accent" />
-                          <span>{isZh ? "查看 5 堂完整实操课程" : "View 5 Interactive Lessons"}</span>
+                          <span>{t("help_view_all_lessons")}</span>
                         </button>
                       </div>
                     </div>
@@ -422,7 +464,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                         <span>{isZh ? "交互式实操教学 (按步骤体验)" : "Interactive Step-by-Step Tutorials"}</span>
                       </h3>
                       <span className="text-[11px] font-mono text-text-dim">
-                        5 {isZh ? "门实操课程" : "Lessons"}
+                        {t("help_lessons_count")}
                       </span>
                     </div>
 

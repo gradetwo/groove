@@ -82,11 +82,13 @@ const getScaleNotes = (root: string, isMinor: boolean): string[] => {
 interface ChordProgressionsViewProps {
   onOpenStudioWithChords?: (chords: ChordDefinition[]) => void;
   onOpenStudioWithArpeggio?: (baked: BakedArpeggioResult, label?: string) => void;
+  onOpenHelp?: () => void;
 }
 
 export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
   onOpenStudioWithChords,
   onOpenStudioWithArpeggio,
+  onOpenHelp,
 }) => {
   const { t, language, isZh } = useLanguage();
 
@@ -381,7 +383,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex flex-col gap-2 max-w-2xl">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-accent/20 text-accent border border-accent/40">
                 Hooktheory Theorytab Reference
               </span>
@@ -389,6 +391,18 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               <span className="text-xs text-text-sub">
                 {t("chords_studio_sub")}
               </span>
+              {onOpenHelp && (
+                <button
+                  type="button"
+                  data-testid="chords-help-button"
+                  onClick={onOpenHelp}
+                  title={t("chords_guide_btn")}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all ml-auto"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-accent" />
+                  <span>{t("chords_guide_btn")}</span>
+                </button>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-white font-[Space_Grotesk]">

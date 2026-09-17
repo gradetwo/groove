@@ -8,6 +8,7 @@ import { ConsolePanel } from "../components/console/ConsolePanel";
 interface HardwareConsoleViewProps {
   selectedGenre?: Genre;
   onOpenStudio?: (genre: { id: string }) => void;
+  onOpenHelp?: () => void;
 }
 
 /**
@@ -21,6 +22,7 @@ interface HardwareConsoleViewProps {
 export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
   selectedGenre: initialGenre,
   onOpenStudio,
+  onOpenHelp,
 }) => {
   const startingGenre = initialGenre as Genre;
   const store = useSequencerStore(startingGenre);
@@ -50,6 +52,7 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
       onOpenStudio={
         onOpenStudio ? () => onOpenStudio({ id: store.state.currentGenre.id }) : undefined
       }
+      onOpenHelp={onOpenHelp}
     />
   );
 };

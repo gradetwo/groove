@@ -22,6 +22,7 @@ import {
   Music,
   Clock,
   ArrowRight,
+  BookOpen,
 } from "lucide-react";
 import { CustomGenre, RADAR_KEYS_ORDER } from "../types/customGenre";
 import { Genre, GenreCategory, GenreRadarMetrics, SequencerTrack } from "../types/genre";
@@ -42,6 +43,7 @@ interface CustomGenreMakerViewProps {
   initialForkId?: string;
   onOpenStudio: (genre: Genre) => void;
   onSelectGenre?: (genre: { id: string }) => void;
+  onOpenHelp?: () => void;
 }
 
 const CATEGORIES: GenreCategory[] = [
@@ -82,6 +84,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
   initialSharePayload,
   initialForkId,
   onOpenStudio,
+  onOpenHelp,
 }) => {
   const { t, isZh } = useLanguage();
   const {
@@ -478,6 +481,20 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
             <Share2 className="w-3.5 h-3.5" />
             <span>{t("maker_share_poster")}</span>
           </button>
+
+          {/* Guide Button */}
+          {onOpenHelp && (
+            <button
+              type="button"
+              data-testid="maker-help-button"
+              onClick={onOpenHelp}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent/15 hover:bg-accent/25 text-accent font-bold text-xs border border-accent/40 transition-all"
+              title={t("maker_guide_btn")}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>{t("maker_guide_btn")}</span>
+            </button>
+          )}
 
           {/* Open in Studio */}
           <button

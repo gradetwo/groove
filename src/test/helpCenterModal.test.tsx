@@ -78,9 +78,18 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
     // Switch to Tutorials
     fireEvent.click(screen.getByTestId("help-category-tutorials"));
 
+    // Check all 8 lessons exist
+    expect(screen.getByTestId("tutorial-card-drum")).toBeInTheDocument();
+    expect(screen.getByTestId("tutorial-card-piano")).toBeInTheDocument();
+    expect(screen.getByTestId("tutorial-card-mixer")).toBeInTheDocument();
+    expect(screen.getByTestId("tutorial-card-acoustics")).toBeInTheDocument();
+    expect(screen.getByTestId("tutorial-card-maker")).toBeInTheDocument();
+    expect(screen.getByTestId("tutorial-card-chords")).toBeInTheDocument();
+    expect(screen.getByTestId("tutorial-card-masterclass")).toBeInTheDocument();
+    expect(screen.getByTestId("tutorial-card-galaxy")).toBeInTheDocument();
+
     // Check Lesson 1
     const drumCard = screen.getByTestId("tutorial-card-drum");
-    expect(drumCard).toBeInTheDocument();
     expect(within(drumCard).getByText("步骤 1 / 4")).toBeInTheDocument();
 
     // Next step
@@ -94,6 +103,12 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
 
     expect(handleClose).toHaveBeenCalledTimes(1);
     expect(handleSelectTab).toHaveBeenCalledWith("studio");
+
+    // Launch Chords lesson
+    const chordsCard = screen.getByTestId("tutorial-card-chords");
+    const launchChordsBtn = within(chordsCard).getByTestId("launch-tutorial-chords");
+    fireEvent.click(launchChordsBtn);
+    expect(handleSelectTab).toHaveBeenCalledWith("chords");
   });
 
   it("dynamically searches and filters documentation across tutorials and shortcuts", () => {

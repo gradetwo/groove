@@ -4,7 +4,7 @@ import type { useSequencerStore } from "../../features/sequencer/useSequencerSto
 import { useLanguage } from "../../i18n/LanguageContext";
 import { getDefaultDrumKitForGenre } from "../../utils/trackUtils";
 import { EmptyState } from "../../ui";
-import { Headphones, X } from "lucide-react";
+import { BookOpen, Headphones, X } from "lucide-react";
 import { ChannelStrip } from "./ChannelStrip";
 import { MasterStrip } from "./MasterStrip";
 import { getTrackVisual } from "./trackVisuals";
@@ -43,6 +43,8 @@ export interface ConsolePanelProps {
   onOpenStudio?: () => void;
   /** Dismiss affordance. Present only when the panel is floated over the studio. */
   onClose?: () => void;
+  /** Contextual manual / guide affordance */
+  onOpenHelp?: () => void;
   /** `overlay` tightens the chrome for the floated drawer. */
   variant?: "page" | "overlay";
 }
@@ -82,6 +84,7 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
   onToggleTransport,
   onOpenStudio,
   onClose,
+  onOpenHelp,
   variant = "page",
 }) => {
   const { t } = useLanguage();
@@ -363,6 +366,18 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
               className="rounded-lg border border-line bg-panel2 px-3 py-1.5 text-[11px] text-text-sub transition-colors hover:border-accent/50 hover:text-accent"
             >
               {t("console_open_studio")}
+            </button>
+          )}
+          {onOpenHelp && (
+            <button
+              type="button"
+              data-testid="console-help-button"
+              onClick={onOpenHelp}
+              title={t("console_guide_btn")}
+              className="flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[11px] text-accent transition-colors hover:bg-accent/20"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span>{t("console_guide_btn")}</span>
             </button>
           )}
           {onClose && (

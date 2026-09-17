@@ -151,6 +151,16 @@ describe("ConsolePanel · injected engine + store (feature #2)", () => {
     expect(engineMock.enableTrackAnalysers).toHaveBeenCalledWith(false);
     expect(AudioEngineCtor).not.toHaveBeenCalled();
   });
+
+  it("renders mixer guide button when onOpenHelp is provided and invokes it", () => {
+    const handleOpenHelp = vi.fn();
+    renderPanel({ onOpenHelp: handleOpenHelp });
+
+    const helpBtn = screen.getByTestId("console-help-button");
+    expect(helpBtn).toBeInTheDocument();
+    fireEvent.click(helpBtn);
+    expect(handleOpenHelp).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("ConsoleOverlay · dismissible shared drawer (feature #2)", () => {
