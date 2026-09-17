@@ -58,6 +58,16 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
     expect(screen.getByText("常见问题与疑难排障 (FAQ)")).toBeInTheDocument();
     expect(screen.getByText("Q: 手机 Safari 或微信内置浏览器点击没有声音？")).toBeInTheDocument();
 
+    // Switch to UI Manual
+    fireEvent.click(screen.getByTestId("help-category-interface"));
+    expect(screen.getByText("工作站区域划分与功能按钮全景手册")).toBeInTheDocument();
+    expect(screen.getByText("顶部导航与全局控制栏")).toBeInTheDocument();
+    expect(screen.getByText("编曲工作台与音轨点音区")).toBeInTheDocument();
+    expect(screen.getByText("专业黑白键钢琴卷帘区")).toBeInTheDocument();
+    expect(screen.getByText("独立硬件调音台与空间总线")).toBeInTheDocument();
+    expect(screen.getByText("全景声谱分析仪与声学实验室")).toBeInTheDocument();
+    expect(screen.getByText("和弦工坊与全球曲风星系")).toBeInTheDocument();
+
     // Switch to Shortcuts
     fireEvent.click(screen.getByTestId("help-category-shortcuts"));
     expect(screen.getByText("键盘快捷键完整索引")).toBeInTheDocument();
@@ -159,6 +169,74 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
     );
 
     expect(screen.getByText("编曲工作台与专业钢琴卷帘深度手册")).toBeInTheDocument();
+  });
+
+  it("triggers acoustic audition on tutorial cards and supports toggling", () => {
+    renderWithLanguage(
+      <HelpCenterModal
+        isOpen={true}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Switch to tutorials
+    fireEvent.click(screen.getByTestId("help-category-tutorials"));
+
+    // Check audition button on Lesson 1 (Drum)
+    const auditionDrumBtn = screen.getByTestId("audition-tutorial-drum");
+    expect(auditionDrumBtn).toBeInTheDocument();
+    expect(auditionDrumBtn).toHaveTextContent("声学试听");
+
+    // Click to start audition
+    fireEvent.click(auditionDrumBtn);
+    expect(auditionDrumBtn).toHaveTextContent("停止试听");
+
+    // Click again to toggle stop
+    fireEvent.click(auditionDrumBtn);
+    expect(auditionDrumBtn).toHaveTextContent("声学试听");
+  });
+
+  it("invokes onStartTutorial with courseId and step index", () => {
+    const handleStartTutorial = vi.fn();
+    const handleClose = vi.fn();
+
+    renderWithLanguage(
+      <HelpCenterModal
+        isOpen={true}
+        onClose={handleClose}
+        onStartTutorial={handleStartTutorial}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("help-category-tutorials"));
+
+    // Click launch drum tutorial
+    const launchDrumBtn = screen.getByTestId("launch-tutorial-drum");
+    expect(launchDrumBtn).toHaveTextContent("进入实操教学");
+    fireEvent.click(launchDrumBtn);
+
+    expect(handleStartTutorial).toHaveBeenCalledWith("drum", 0);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("launches onboarding tour from quickstart banner", () => {
+    const handleOpenOnboarding = vi.fn();
+    const handleClose = vi.fn();
+
+    renderWithLanguage(
+      <HelpCenterModal
+        isOpen={true}
+        onClose={handleClose}
+        onOpenOnboarding={handleOpenOnboarding}
+      />
+    );
+
+    const startTourBtn = screen.getByTestId("help-start-onboarding-btn");
+    expect(startTourBtn).toHaveTextContent("开启全景引导漫游");
+    fireEvent.click(startTourBtn);
+
+    expect(handleOpenOnboarding).toHaveBeenCalledTimes(1);
+    expect(handleClose).toHaveBeenCalledTimes(1);
   });
 });
 

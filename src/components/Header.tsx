@@ -21,6 +21,7 @@ import {
   SlidersHorizontal,
   Settings,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
@@ -49,6 +50,7 @@ interface HeaderProps {
   onOpenUpdates?: () => void;
   onOpenShortcuts?: () => void;
   onOpenHelp?: () => void;
+  onOpenOnboarding?: () => void;
   /** Opens the global settings panel (item ⑤). */
   onOpenSettings?: () => void;
   analyser?: AnalyserNode | null;
@@ -63,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUpdates,
   onOpenShortcuts,
   onOpenHelp,
+  onOpenOnboarding,
   onOpenSettings,
   analyser,
   isPlaying = false,
@@ -431,6 +434,21 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
+        {/* New User Onboarding Tour Button */}
+        {onOpenOnboarding && (
+          <button
+            type="button"
+            onClick={onOpenOnboarding}
+            data-testid="header-onboarding-button"
+            className="hidden sm:flex items-center gap-1.5 px-2 py-1.5 border border-accent/40 hover:border-accent rounded-lg text-accent hover:bg-accent/10 bg-panel2 transition-all text-xs font-medium shadow-[0_0_8px_rgba(245,183,61,0.12)]"
+            title={t("onboarding_header_btn")}
+            aria-label="New User Onboarding Tour"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-accent" />
+            <span className="hidden lg:inline">{t("onboarding_header_btn")}</span>
+          </button>
+        )}
+
         {/* Keyboard Shortcuts Guide Button (P2-20) */}
         {onOpenShortcuts && (
           <button
@@ -620,6 +638,23 @@ export const Header: React.FC<HeaderProps> = ({
               );
             })}
           </div>
+
+          {onOpenOnboarding && (
+            <button
+              onClick={() => {
+                onOpenOnboarding();
+                setMobileMenuOpen(false);
+              }}
+              data-testid="mobile-onboarding-button"
+              className="w-full flex items-center gap-2 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-accent/50 text-accent bg-accent/15 hover:bg-accent/25 transition-all mt-2"
+            >
+              <Sparkles className="w-4 h-4 text-accent shrink-0" />
+              <span>{t("onboarding_header_btn")}</span>
+              <span className="ml-auto text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/30 text-accent font-bold">
+                GUIDE
+              </span>
+            </button>
+          )}
 
           {onOpenHelp && (
             <button

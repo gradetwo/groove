@@ -14,6 +14,11 @@ import { BakedArpeggioResult } from "./utils/arpeggiatorTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
 import { ShortcutsModal } from "./components/ShortcutsModal";
 import { HelpCenterModal, type HelpCategory } from "./components/help/HelpCenterModal";
+import {
+  NewUserOnboardingModal,
+  ONBOARDING_COMPLETED_KEY,
+} from "./components/help/NewUserOnboardingModal";
+import { InteractiveTutorialCoach } from "./components/help/InteractiveTutorialCoach";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
 import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
@@ -88,6 +93,27 @@ const MainApp: React.FC = () => {
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpCategory, setHelpCategory] = useState<HelpCategory | undefined>(undefined);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [activeTutorial, setActiveTutorial] = useState<{
+    courseId: string;
+    stepIndex: number;
+  } | null>(null);
+
+  // Auto-launch onboarding tour for first-time visitors
+  useEffect(() => {
+    try {
+      const hasCompleted = localStorage.getItem(ONBOARDING_COMPLETED_KEY);
+      if (!hasCompleted) {
+        const timer = setTimeout(() => {
+          setOnboardingOpen(true);
+        }, 700);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // Ignore localStorage read errors
+    }
+  }, []);
+
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
   const [initialArpeggio, setInitialArpeggio] = useState<{
     baked: BakedArpeggioResult;
@@ -102,6 +128,10 @@ const MainApp: React.FC = () => {
   const handleOpenHelp = useCallback((category?: string) => {
     setHelpCategory(category as HelpCategory | undefined);
     setHelpOpen(true);
+  }, []);
+
+  const handleStartTutorial = useCallback((courseId: string, initialStep?: number) => {
+    setActiveTutorial({ courseId, stepIndex: initialStep ?? 0 });
   }, []);
 
   const handleSelectTab = useCallback((tab: NavTab) => {
@@ -202,6 +232,7 @@ const MainApp: React.FC = () => {
         onOpenUpdates={() => setUpdatesOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
+        onOpenOnboarding={() => setOnboardingOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
@@ -574,6 +605,39 @@ const MainApp: React.FC = () => {
         onOpenShortcuts={() => {
           setHelpOpen(false);
           setShortcutsOpen(true);
+        }}
+        onStartTutorial={handleStartTutorial}
+        onOpenOnboarding={() => {
+          setHelpOpen(false);
+          setOnboardingOpen(true);
+        }}
+      />
+
+      {/* Interactive Hands-on Tutorial Coach Dock */}
+      {activeTutorial && (
+        <InteractiveTutorialCoach
+          courseId={activeTutorial.courseId}
+          stepIndex={activeTutorial.stepIndex}
+          onStepChange={(newStep) =>
+            setActiveTutorial((prev) => (prev ? { ...prev, stepIndex: newStep } : null))
+          }
+          onClose={() => setActiveTutorial(null)}
+          onNavigateTab={handleSelectTab}
+        />
+      )}
+
+      {/* New User Onboarding Tour Modal */}
+      <NewUserOnboardingModal
+        isOpen={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        onStartLesson1={() => {
+          setOnboardingOpen(false);
+          handleSelectTab("studio");
+          setActiveTutorial({ courseId: "drum", stepIndex: 0 });
+        }}
+        onStartStudio={() => {
+          setOnboardingOpen(false);
+          handleSelectTab("studio");
         }}
       />
 

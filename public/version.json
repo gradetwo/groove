@@ -1,27 +1,27 @@
 {
-  "version": "2.0.39",
+  "version": "2.0.40",
   "releaseDate": "2026-09-17",
-  "changelogCount": 103,
+  "changelogCount": 104,
   "latest": {
-    "version": "2.0.39",
+    "version": "2.0.40",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.39 底鼓解剖实验室直达指南与工作台回归、声学课程双向跳转、和弦工坊直达钢琴卷帘实时编辑",
-      "en": "v2.0.39 Kick Anatomy Lab Contextual Guide & Studio Return, Dual Acoustic Lesson Routing, and Chord Workshop Piano Roll Bridge"
+      "zh": "v2.0.40 交互式实操教学模式、工作站区域与功能按钮全景手册、新用户全景引导漫游",
+      "en": "v2.0.40 Interactive Hands-on Tutorial Coach, Workstation Layout & Controls Manual, and New User Onboarding Tour"
     },
     "highlights": [
       {
-        "zh": "**底鼓声学实验室专属手册与回归闭环（Kick Anatomy Lab Studio & Manual Integration）**：在底鼓设计/躯体声学实验室（KickAnatomyView）顶部遥测状态栏增设专属磨砂金光指南按钮（底鼓手册，直达混音与声学实验室手册）与高对比度「返回编曲台」快捷入口；全面打通从底鼓瞬态物理建模、低频下潜调试到主工作台的编曲创作流转闭环。",
-        "en": "**Kick Anatomy Lab Studio & Manual Integration**: Equipped the Kick Design & Somatic Acoustics Lab with a dedicated frosted gold \"Kick Lab Guide\" button linking straight to acoustics/mixing documentation, alongside a high-visibility \"Return to Studio\" action. Creators can effortlessly inspect physical kick synthesis models and seamlessly jump back to the sequencer."
+        "zh": "**交互式实操教学模式（Interactive Tutorial Coach）**：彻底解决点击教程仅跳转页面而无教学状态的痛点。点击任一教程「进入实操教学」后自动进入教学模式，底端升起半透明磨砂悬浮实操指导小窗（Coach Dock），展示当前步骤实操指引、核心要领与 💡 实践技巧，集成「声学试听（即时触发纯 Web Audio 声音范例）」、「上一步/下一步（自动无缝切换工作台/调音台/分析仪视图）」及「折叠为迷你小窗」功能，伴随创作者沉浸式动手实操。",
+        "en": "**Interactive Tutorial Coach**: Resolved the lack of active teaching state when launching tutorials. Clicking \"Start Hands-on Tutorial\" now launches an interactive guided session with a floating docked coach HUD, presenting step-by-step instructions, practical tips, instant synthesized audio auditions, seamless cross-tab view navigation, and a collapsible mini pill view."
       },
       {
-        "zh": "**交互教学课程声学双向实操跳转（Dual Acoustic Lesson Routing）**：在交互式教学中心第 4 课「底鼓谐振解剖与全景声谱示波器」卡片中引入双向实操跳转架构。提供次要动作「进入底鼓实验室」与主要动作「查看全景声谱分析仪」，学习者可根据学习进度一键直达三段式物理谐振建模或 32 频段 FFT / 李萨如相位视区，彻底消除功能探索的认知割裂。",
-        "en": "**Dual Acoustic Lesson Routing**: Upgraded Lesson 4 (\"Kick Anatomy & Panoramic Acoustic Scope\") in the Interactive Learning Center with dual action routing. Provides direct buttons to both the Kick Anatomy Lab and the Panoramic Analyzer Suite, letting learners jump straight into physical transient modeling or 32-band FFT/Lissajous visualizers directly from the course milestone."
+        "zh": "**工作站区域划分与功能按钮全景手册（Workstation UI & Controls Manual）**：帮助中心重磅上线专属「界面与功能全景手册」专栏，全面系统拆解 6 大工作站核心区域与每一个功能按钮、滑块、电平表及控制旋钮：顶部导航与走带控制栏（Space播放、BPM 40-240、Swing%、调式根音、Cmd+K 搜索）、8 轨点音矩阵与控制列（静音/独奏、力度通道、欧几里得律动、多节拍循环）、专业黑白键钢琴卷帘（3D 琴键、滑音试听、22 种音阶高亮、和弦印章虚影、连续琶音）、独立硬件调音台（推子、全景声像、延迟混响发送、砖墙限制器）、全景声谱分析仪与底鼓实验室（32 段 FFT、李萨如椭圆、纯音校准、底鼓瞬态扫频），以及和弦工坊与 3D 曲风星系。",
+        "en": "**Workstation UI & Controls Manual**: Added a dedicated \"UI & Interface Manual\" section to the User Manual, providing component-by-component documentation across 6 core zones: Master Header & Transport Bar, Sequencer Grid & Track Controls, Studio Piano Roll & Virtual Keybed, Hardware Console Mixer Desk, Panoramic Analyzer & Kick Anatomy, and Chord Workshop & 3D Genre Galaxy."
       },
       {
-        "zh": "**和弦工坊直通专业钢琴卷帘编辑（Chord Workshop to Piano Roll Direct Bridge）**：在和弦走向与律动工坊（ChordProgressionsView）顶部工具栏增设专属「在卷帘中编辑」动作。创作者在探索经典或自定义和弦走向后，可一键将和弦载入和弦轨道并自动在工作台唤起专业钢琴卷帘，即刻进行音阶对齐、转位微调、Drop-2 爵士重排或力度动态塑形。",
-        "en": "**Chord Workshop to Piano Roll Direct Bridge**: Introduced an \"Edit in Piano Roll\" action in the Chord Progressions Studio toolbar. Clicking immediately loads the authored chord progression into the sequencer chords track and automatically opens the Piano Roll editor on that track for instant visual editing, inversion adjustments, Drop-2 jazz re-voicing, and velocity humanization."
+        "zh": "**新用户交互式全景引导漫游（New User Onboarding Tour）**：专为新进创作者设计 7 站沉浸式全景漫游（欢迎与纯物理合成、走带与全局主控、8 轨鼓机与步进网格、专业钢琴卷帘与和弦印章、独立调音台与声学实验室、和弦工坊与 3D 曲风星系、实操起步与快捷键全景）。首次访问自动推荐，随时可在顶部 Header 导航栏或帮助中心「开启全景引导漫游」重新开启，并提供一键直达「鼓机编排实操教学（第 1 课）」与直接进入编曲工作台两大行动入口。",
+        "en": "**New User Onboarding Tour**: Designed a 7-milestone interactive walkthrough covering zero-sample pure synthesis, transport controls, drum sequencer matrix, studio piano roll, hardware console, chord theory, and keyboard shortcuts. Automatically offered to first-time visitors and accessible anytime from the header button or quickstart guide, with direct launchers to Lesson 1 hands-on practice or the studio workbench."
       }
     ],
     "truncated": false

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal } from "../../ui/Modal";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { auditionTutorialSound, stopTutorialAudition } from "../../utils/tutorialAudition";
 import {
   BookOpen,
   Search,
@@ -20,6 +21,7 @@ import {
   X,
   Layers,
   Volume2,
+  Layout,
 } from "lucide-react";
 import type { NavTab } from "../Header";
 
@@ -29,11 +31,14 @@ export interface HelpCenterModalProps {
   onSelectTab?: (tab: NavTab) => void;
   onOpenShortcuts?: () => void;
   initialCategory?: HelpCategory;
+  onStartTutorial?: (tutorialId: string, initialStep?: number) => void;
+  onOpenOnboarding?: () => void;
 }
 
 export type HelpCategory =
   | "quickstart"
   | "tutorials"
+  | "interface"
   | "sequencer"
   | "mixing"
   | "theory"
@@ -47,6 +52,8 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
   onSelectTab,
   onOpenShortcuts,
   initialCategory,
+  onStartTutorial,
+  onOpenOnboarding,
 }) => {
   const { t, language } = useLanguage();
   const isZh = language === "zh";
@@ -73,9 +80,58 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
     galaxy: 0,
   });
 
+  const [playingTutorialId, setPlayingTutorialId] = useState<string | null>(null);
+  const auditionTimerRef = useRef<any>(null);
+
+  const handleAudition = (tutorialId: string) => {
+    if (playingTutorialId === tutorialId) {
+      stopTutorialAudition();
+      setPlayingTutorialId(null);
+      if (auditionTimerRef.current) clearTimeout(auditionTimerRef.current);
+      return;
+    }
+
+    if (auditionTimerRef.current) clearTimeout(auditionTimerRef.current);
+    setPlayingTutorialId(tutorialId);
+    auditionTutorialSound(tutorialId);
+
+    auditionTimerRef.current = setTimeout(() => {
+      setPlayingTutorialId((curr) => (curr === tutorialId ? null : curr));
+    }, 2800);
+  };
+
+  const handleModalClose = () => {
+    stopTutorialAudition();
+    if (auditionTimerRef.current) clearTimeout(auditionTimerRef.current);
+    setPlayingTutorialId(null);
+    onClose();
+  };
+
+  const handleNavigate = (tab: NavTab) => {
+    handleModalClose();
+    if (onSelectTab) {
+      onSelectTab(tab);
+    }
+  };
+
+  const handleStartHandsOnTutorial = (tutId: string, stepIdx?: number) => {
+    if (onStartTutorial) {
+      handleModalClose();
+      onStartTutorial(tutId, stepIdx ?? 0);
+    } else {
+      const tut = tutorialsData.find((t) => t.id === tutId);
+      if (tut) {
+        handleNavigate(tut.targetTab);
+      } else {
+        handleModalClose();
+      }
+    }
+  };
+
   const categories: Array<{ id: HelpCategory; label: string; icon: React.ReactNode }> = [
     { id: "quickstart", label: t("help_tab_quickstart"), icon: <BookOpen className="w-4 h-4" /> },
     { id: "tutorials", label: t("help_tab_tutorials"), icon: <Sparkles className="w-4 h-4" /> },
+    { id: "interface", label: t("help_tab_interface"), icon: <Layout className="w-4 h-4" /> },
     { id: "sequencer", label: t("help_tab_sequencer"), icon: <Sliders className="w-4 h-4" /> },
     { id: "mixing", label: t("help_tab_mixing"), icon: <SlidersHorizontal className="w-4 h-4" /> },
     { id: "theory", label: t("help_tab_theory"), icon: <Music className="w-4 h-4" /> },
@@ -84,12 +140,12 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
     { id: "shortcuts", label: t("help_tab_shortcuts"), icon: <Keyboard className="w-4 h-4" /> },
   ];
 
-  const handleNavigate = (tab: NavTab) => {
-    onClose();
-    if (onSelectTab) {
-      onSelectTab(tab);
-    }
-  };
+  useEffect(() => {
+    return () => {
+      stopTutorialAudition();
+      if (auditionTimerRef.current) clearTimeout(auditionTimerRef.current);
+    };
+  }, []);
 
   interface TutorialCourse {
     id: string;
@@ -255,7 +311,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       title={
         <div className="flex items-center gap-2 text-accent">
           <BookOpen className="w-5 h-5" />
@@ -360,13 +416,30 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                             <div key={tut.id} className="p-4 rounded-xl bg-[#111420] border border-line/70 space-y-2">
                               <h4 className="text-sm font-semibold text-text">{tut.title}</h4>
                               <p className="text-xs text-text-sub">{tut.desc}</p>
-                              <button
-                                onClick={() => handleNavigate(tut.targetTab)}
-                                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/15 border border-accent/40 text-accent text-xs font-medium hover:bg-accent/25 transition-all"
-                              >
-                                <span>{tut.targetBtn}</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAudition(tut.id)}
+                                  data-testid={`search-audition-tutorial-${tut.id}`}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
+                                    playingTutorialId === tut.id
+                                      ? "bg-accent text-black border-accent shadow-[0_0_12px_rgba(245,183,61,0.35)] animate-pulse"
+                                      : "bg-[#181d2c] hover:bg-[#232a3f] text-[#f5b73d] border-[#f5b73d]/40"
+                                  }`}
+                                  title={playingTutorialId === tut.id ? t("help_audition_stop") : t("help_audition_label")}
+                                >
+                                  <Volume2 className={`w-3.5 h-3.5 ${playingTutorialId === tut.id ? "animate-bounce" : ""}`} />
+                                  <span>{playingTutorialId === tut.id ? t("help_audition_stop") : t("help_audition_label")}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartHandsOnTutorial(tut.id, 0)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-accent/15 border border-accent/40 text-accent text-xs font-medium hover:bg-accent/25 transition-all"
+                                >
+                                  <span>{t("tutorial_start_hands_on")}</span>
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -436,6 +509,38 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                       </div>
                     </div>
 
+                    {onOpenOnboarding && (
+                      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-accent/20 via-[#191d2e] to-[#101322] border-2 border-accent/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_20px_rgba(245,183,61,0.15)]">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-accent" />
+                            <h4 className="text-sm font-bold text-text">
+                              {t("onboarding_quickstart_card_title")}
+                            </h4>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-accent/20 text-accent font-bold">
+                              NEW TOUR
+                            </span>
+                          </div>
+                          <p className="text-xs text-text-sub max-w-xl">
+                            {t("onboarding_quickstart_card_desc")}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleModalClose();
+                            onOpenOnboarding();
+                          }}
+                          className="px-4 py-2 rounded-xl bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+                          data-testid="help-start-onboarding-btn"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>{t("onboarding_quickstart_card_btn")}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="p-4 rounded-xl bg-[#10131d] border border-line/60 space-y-2">
                         <div className="flex items-center gap-2 text-accent text-xs font-bold">
@@ -498,9 +603,25 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                                 <h4 className="text-sm font-bold text-text">{tut.title}</h4>
                                 <p className="text-xs text-text-sub mt-0.5">{tut.desc}</p>
                               </div>
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-semibold self-start sm:self-center">
-                                {t("help_step_label", { step: currentStepIdx + 1, total: totalSteps })}
-                              </span>
+                              <div className="flex items-center gap-2 self-start sm:self-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAudition(tut.id)}
+                                  data-testid={`audition-tutorial-${tut.id}`}
+                                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shrink-0 ${
+                                    playingTutorialId === tut.id
+                                      ? "bg-accent text-black border-accent shadow-[0_0_12px_rgba(245,183,61,0.35)] animate-pulse"
+                                      : "bg-[#181d2c] hover:bg-[#232a3f] text-[#f5b73d] border-[#f5b73d]/40"
+                                  }`}
+                                  title={playingTutorialId === tut.id ? t("help_audition_stop") : t("help_audition_label")}
+                                >
+                                  <Volume2 className={`w-3.5 h-3.5 ${playingTutorialId === tut.id ? "animate-bounce" : ""}`} />
+                                  <span>{playingTutorialId === tut.id ? t("help_audition_stop") : t("help_audition_label")}</span>
+                                </button>
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-semibold whitespace-nowrap">
+                                  {t("help_step_label", { step: currentStepIdx + 1, total: totalSteps })}
+                                </span>
+                              </div>
                             </div>
 
                             {/* Current Step Display Card */}
@@ -584,11 +705,12 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => handleNavigate(tut.targetTab)}
+                                  type="button"
+                                  onClick={() => handleStartHandsOnTutorial(tut.id, currentStepIdx)}
                                   className="px-3 py-1.5 rounded-xl bg-accent text-black font-semibold text-xs hover:bg-accent/90 transition-all flex items-center gap-1 shadow-sm"
                                   data-testid={`launch-tutorial-${tut.id}`}
                                 >
-                                  <span>{tut.targetBtn}</span>
+                                  <span>{t("tutorial_start_hands_on")}</span>
                                   <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                               </div>
@@ -596,6 +718,398 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {/* INTERFACE & UI MANUAL */}
+                {activeCategory === "interface" && (
+                  <div className="space-y-6">
+                    <div className="border-b border-line/60 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-accent/20 border border-accent/40 text-accent text-[11px] font-mono font-bold">
+                          UI MANUAL
+                        </span>
+                        <h3 className="text-base font-bold text-text flex items-center gap-2">
+                          <Layout className="w-4 h-4 text-accent" />
+                          <span>{t("help_ui_zones_title")}</span>
+                        </h3>
+                      </div>
+                      <p className="text-xs text-text-sub mt-1">
+                        {t("help_ui_zones_subtitle")}
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Section 1: Header */}
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-accent/20 text-accent font-mono text-xs flex items-center justify-center font-bold">1</span>
+                            <h4 className="text-sm font-bold text-text">
+                              {t("help_ui_section_header")}
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleNavigate("studio")}
+                            className="text-xs text-accent hover:underline flex items-center gap-1"
+                          >
+                            <span>{isZh ? "查看主控栏" : "View Header"}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-text-sub">
+                          {t("help_ui_section_header_desc")}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-accent flex items-center justify-between">
+                              <span>{isZh ? "走带播放 / 暂停" : "Transport Play / Pause"}</span>
+                              <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-text-sub border border-line">Space</kbd>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "控制全局时钟与所有音轨同步回放，重新触发时走带指针平滑回滚。" : "Controls global transport loop. Resumes and pauses Web Audio context."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-accent flex items-center justify-between">
+                              <span>{isZh ? "速度 BPM 与摇摆 Swing%" : "Tempo BPM & Swing"}</span>
+                              <span className="font-mono text-[10px] text-accent">40-240 BPM</span>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "BPM 控制每分钟节拍；摇摆度调节十六分音符偶数微时序延后量，赋予律动灵魂。" : "Tempo slider sets beats per minute. Swing applies microtiming shuffle."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-accent flex items-center justify-between">
+                              <span>{isZh ? "根音与 22 种音阶调式" : "Root Key & 22 Scales"}</span>
+                              <span className="font-mono text-[10px] text-accent">C-B / Modes</span>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "切换大调、自然小调、多利亚、爵士小调、布鲁斯等，全局钢琴卷帘自动联动高亮。" : "Select tonality and mode. Synchronizes piano roll in-scale highlighting."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-accent flex items-center justify-between">
+                              <span>{isZh ? "全局搜索与流派切换" : "Global Search & Genres"}</span>
+                              <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-text-sub border border-line">⌘K / Ctrl+K</kbd>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "在 159 种曲风与各项高级功能之间毫秒级模糊检索，支持键盘上下方向键直达。" : "Fuzzy-search 159 genres, studio tools, and hotkeys anywhere."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 2: Sequencer */}
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-[#45e0c9]/20 text-[#45e0c9] font-mono text-xs flex items-center justify-center font-bold">2</span>
+                            <h4 className="text-sm font-bold text-text">
+                              {t("help_ui_section_sequencer")}
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleNavigate("studio")}
+                            className="text-xs text-[#45e0c9] hover:underline flex items-center gap-1"
+                          >
+                            <span>{isZh ? "进入编曲工作台" : "Open Studio"}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-text-sub">
+                          {t("help_ui_section_sequencer_desc")}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#45e0c9] flex items-center justify-between">
+                              <span>{isZh ? "音轨静音 (M) 与独奏 (S)" : "Mute (M) & Solo (S)"}</span>
+                              <span className="font-mono text-[10px] text-text-dim">M / S</span>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "独立屏蔽或单独监听某一音轨，排查声部编配与混音冲突。" : "Isolate individual tracks or silence them during arrangement."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#45e0c9] flex items-center justify-between">
+                              <span>{isZh ? "力度动态通道 (Velocity)" : "Velocity Lane"}</span>
+                              <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-text-sub border border-line">V</kbd>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "按 V 展开每步 1-127 棒棒糖推子，标示 fff、f、mf、p，塑造极富人情味的呼吸感。" : "Press V to reveal lollipop sliders. Range 1-127 with musical dynamics."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#45e0c9] flex items-center justify-between">
+                              <span>{isZh ? "欧几里得律动生成器" : "Euclidean Generator"}</span>
+                              <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-text-sub border border-line">E</kbd>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "最大公约数算法将击打均匀散布在步进中，生成非洲与现代电子特色多节拍。" : "Algorithmic pulse spacing based on Bjorklund Euclidean math."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#45e0c9] flex items-center justify-between">
+                              <span>{isZh ? "多节拍循环与展开全轨" : "Polymeter & Extend Track"}</span>
+                              <span className="font-mono text-[10px] text-[#45e0c9]">1-64 Steps</span>
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "每轨可设置独立步长（如 7 步对撞 16 步），利用「展开全轨」可一键复制平铺。" : "Independent loop lengths create phasing polymeters. Extend to tile."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 3: Piano Roll */}
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-[#f59e0b]/20 text-[#f59e0b] font-mono text-xs flex items-center justify-center font-bold">3</span>
+                            <h4 className="text-sm font-bold text-text">
+                              {t("help_ui_section_piano")}
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleNavigate("studio")}
+                            className="text-xs text-[#f59e0b] hover:underline flex items-center gap-1"
+                          >
+                            <span>{isZh ? "在工作台中打开" : "Open Piano Roll"}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-text-sub">
+                          {t("help_ui_section_piano_desc")}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#f59e0b]">
+                              {isZh ? "3D 琴键与滑音试听" : "3D Keybed & Glissando"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "在左侧琴键上下滑动产生流畅滑音反馈，精确感知每个半音的声学谐振。" : "Drag vertically across keybed to audition notes with smooth glissando."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#f59e0b]">
+                              {isZh ? "和弦印章与悬停虚影" : "Chord Stamps & Ghost Preview"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "开启印章后光标悬停即呈现多音虚影，单击即可直接盖印完整三和弦、七和弦、九和弦。" : "Hovering displays full voicings before clicking to stamp chord stacks."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#f59e0b]">
+                              {isZh ? "连续琶音器 (Arp ▲ / ▼)" : "Chronological Arpeggiator"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "框选和弦后一键按升序或降序拆解为时序连贯步进，轻松制作流动琶音副歌。" : "Unrolls selected stacked chords into ascending or descending arpeggio runs."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#f59e0b]">
+                              {isZh ? "半音与八度快速移调" : "Semitone & Octave Transpose"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "快速 ±1 半音或 ±12 八度移调选区音符，附带实时高保真音频试听。" : "Instant ±1 semitone or ±12 octave pitch shift with audio feedback."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 4: Hardware Console Mixer */}
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-[#38bdf8]/20 text-[#38bdf8] font-mono text-xs flex items-center justify-center font-bold">4</span>
+                            <h4 className="text-sm font-bold text-text">
+                              {t("help_ui_section_mixer")}
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleNavigate("console")}
+                            className="text-xs text-[#38bdf8] hover:underline flex items-center gap-1"
+                          >
+                            <span>{isZh ? "前往独立调音台" : "Open Console"}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-text-sub">
+                          {t("help_ui_section_mixer_desc")}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#38bdf8]">
+                              {isZh ? "硬件通道推子与声像" : "Faders & Pan Potentiometers"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "双击推子重置 0dB，双击声像旋钮归中。塑造清晰的立体声分离度与动态余量。" : "Faders adjust level (-inf to +6dB). Pan pots spread tracks across the stereo field."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#38bdf8]">
+                              {isZh ? "空间混响与延迟总线" : "Reverb & Delay Aux Sends"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "立体声乒乓延迟制造空间回音，算法大厅混响赋予声部温润的沉浸式空间深度。" : "Stereo ping-pong delay and algorithmic reverb buses with send controls."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#38bdf8]">
+                              {isZh ? "母带真实峰值砖墙限制器" : "Master True-Peak Limiter"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "纯 Web Audio 砖墙限制，杜绝 DAC 采样间破音失真，兼顾响度与通透度。" : "Inter-sample clipping protection ensures transparent, loud master output."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#38bdf8]">
+                              {isZh ? "实时峰值与均方根电平表" : "Peak & RMS Level Meters"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "高灵敏度 LED 电平表，直观显示每条声道的瞬间冲击与平均能量分布。" : "Dynamic LED level meters tracking transient peaks and continuous loudness."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 5: Acoustic Labs */}
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-[#ec4899]/20 text-[#ec4899] font-mono text-xs flex items-center justify-center font-bold">5</span>
+                            <h4 className="text-sm font-bold text-text">
+                              {t("help_ui_section_acoustic")}
+                            </h4>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleNavigate("analyzer")}
+                              className="text-xs text-[#ec4899] hover:underline flex items-center gap-1"
+                            >
+                              <span>{isZh ? "声谱分析仪" : "Analyzer"}</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleNavigate("kick")}
+                              className="text-xs text-accent hover:underline flex items-center gap-1"
+                            >
+                              <span>{isZh ? "底鼓实验室" : "Kick Lab"}</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-text-sub">
+                          {t("help_ui_section_acoustic_desc")}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#ec4899]">
+                              {isZh ? "32 频段 FFT 声谱与 3D 瀑布图" : "32-Band FFT & 3D Waterfall"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "涵盖 20Hz 至 20kHz 全可闻音域，瀑布图以时间轴呈现低频驻波与混响消散痕迹。" : "Real-time FFT and time-history waterfall tracking room resonance and decay."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#ec4899]">
+                              {isZh ? "李萨如相位示波器 (Lissajous)" : "Stereo Lissajous Phase Scope"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "通过发光光束呈现立体声相位关联：垂直为单声道，宽椭圆为立体声，水平为反相。" : "Tracks stereo correlation. Vertical indicates mono, wide ellipse indicates stereo width."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#ec4899]">
+                              {isZh ? "440Hz / 1kHz 与粉红噪声校准" : "Sine Tone & Noise Generator"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "输出精准参考测试信号，用于耳机平衡测试、监听音箱校准与声场检测。" : "Reference signal generator for studio monitor calibration."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#ec4899]">
+                              {isZh ? "底鼓物理三段解构" : "Kick Anatomy Modeling"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "微调 Transient 点击瞬态、Pitch Drop 扫频包络与 Sub-body 超低频共振。" : "Sculpt click transient, pitch sweep decay, and sub resonance body."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 6: Chord Workshop & Galaxy */}
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-[#a78bfa]/20 text-[#a78bfa] font-mono text-xs flex items-center justify-center font-bold">6</span>
+                            <h4 className="text-sm font-bold text-text">
+                              {t("help_ui_section_harmony")}
+                            </h4>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleNavigate("chords")}
+                              className="text-xs text-[#a78bfa] hover:underline flex items-center gap-1"
+                            >
+                              <span>{isZh ? "和弦工坊" : "Chords"}</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleNavigate("galaxy")}
+                              className="text-xs text-accent hover:underline flex items-center gap-1"
+                            >
+                              <span>{isZh ? "曲风星系" : "Galaxy"}</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-text-sub">
+                          {t("help_ui_section_harmony_desc")}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#a78bfa]">
+                              {isZh ? "罗马数字分析与经典走向" : "Roman Analysis & Curated Chords"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "内置流行四和弦、王道走向、爵士 2-5-1 等走向，直观展示各和弦级数与和声功能。" : "Analyze diatonic functions (I, ii, IV, V) with classic progression cards."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#a78bfa]">
+                              {isZh ? "一键烘焙至工作台与卷帘" : "Bake to Sequencer & Piano Roll"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "点击「载入编曲台」直接生成轨道步进，点击「在卷帘中编辑」自动无缝展开黑白键画布。" : "Bake chord voicings into live sequencer tracks or edit directly in piano roll."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#a78bfa]">
+                              {isZh ? "4 种声学演奏风格试听" : "4 Voicing Styles Audition"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "支持抒情分解 (Ballad)、吉他扫弦 (Strum)、连续琶音 (Arpeggio) 与厚实柱式 (Block)。" : "Audition ballad arpeggios, guitar strums, continuous runs, and block voicings."}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
+                            <div className="text-xs font-bold text-[#a78bfa]">
+                              {isZh ? "3D 引力星系与年代谱系" : "3D Gravitational Galaxy & Lineage"}
+                            </div>
+                            <p className="text-[11px] text-text-sub leading-relaxed">
+                              {isZh ? "发光引力连线描摹 159 种曲风在百年历史中的衍化派生，支持点选星体直接试听。" : "Interactive 3D constellation tracing genre evolution across centuries."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -894,7 +1408,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                       {onOpenShortcuts && (
                         <button
                           onClick={() => {
-                            onClose();
+                            handleModalClose();
                             onOpenShortcuts();
                           }}
                           className="text-xs text-accent hover:underline flex items-center gap-1"
@@ -944,7 +1458,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
             <span>Pure Web Audio Workstation Manual</span>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="px-4 py-1.5 rounded-xl bg-[#181c2b] hover:bg-[#202538] border border-line text-text font-medium transition-all"
             data-testid="help-center-close-button"
           >
