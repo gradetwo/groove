@@ -1,27 +1,27 @@
 {
-  "version": "2.0.44",
+  "version": "2.0.45",
   "releaseDate": "2026-09-17",
-  "changelogCount": 108,
+  "changelogCount": 109,
   "latest": {
-    "version": "2.0.44",
-    "date": "2026-09-17",
+    "version": "2.0.45",
+    "date": "2026-09-18",
     "category": "feature",
     "title": {
-      "zh": "v2.0.44 节奏律动实验室重塑、文案专业度去AI营销化、全景视图上下文专属手册深层链接与原声鼓组音色保真度提升",
-      "en": "v2.0.44 Rhythm & Grooves Lab Relocation, Professional DAW Copywriting Refinement, Universal View Contextual Help Deep-Linking & Acoustic Drum Timbre Fidelity"
+      "zh": "v2.0.45 播放音频绝对同步与卡顿根除、桌面端虚拟键盘100%全宽人机工学展开、移动端防选中与界面精简重构、全界面49项图标与功能深度图解词典",
+      "en": "v2.0.45 Audio-Visual Playhead Synchronization & Lag Elimination, Desktop 100% Full-Width Ergonomic Virtual Keyboard, Mobile Touch Protection & Streamlined Toolbar, and 49-Item Comprehensive Visual Dictionary"
     },
     "highlights": [
       {
-        "zh": "**节奏律动实验室与导航结构重塑（Item 11: Rhythm & Grooves Lab Relocation & Structural Navigation Reorganization）**：将原本位于「探索」分组的「节奏大师课」正式全面更名为「节奏律动」（Rhythm & Grooves），并重新归类迁入「高级与实验室（Pro & Labs）」核心工具组。同步更新顶部 Header 桌面与移动端菜单抽屉、全局快捷键提示（R/W 键）、交互式教学中心课程第 7 课及全部国际化多语言配置。聚焦复节奏对撞、Clave 演化树与 J Dilla 醉步微时序实验，定位更加清晰专业。",
-        "en": "**Rhythm & Grooves Lab Relocation & Structural Navigation Reorganization**: Formally renamed \"节奏大师课\" to \"节奏律动\" (\"Rhythm & Grooves\") and relocated it from the \"Explore\" group into the \"Pro & Labs\" workstation group. Updated top navigation headers for desktop and mobile drawers, global keyboard shortcuts (R/W keys), interactive tutorial curriculum (Lesson 7), and all bilingual locale assets. Emphasizes polyrhythmic colliders, clave evolution trees, and J Dilla micro-timing exp…"
+        "zh": "**播放走带绝对同步与卡顿源根除（Playback Synchronization & Zero-Lag Refactor）**：彻底排查并根除了播放循环中的卡顿根源：移除了 `useAudioEngineLifecycle` 中在每一拍/步高频调用系统马达震动（`navigator.vibrate`）导致的 IPC 阻塞，消除了每一拍强行读取 `getBoundingClientRect()` 与 `querySelector` 导致的强制同步重排（Layout Thrashing）；将音频引擎 `visualLeadSec` 预前量精准归零，实现扫描光束与 Web Audio 声学输出的绝对零延迟同步。",
+        "en": "**Playback Synchronization & Zero-Lag Refactor**: Fully eliminated the root causes of playback stutter: removed thread-blocking high-frequency `navigator.vibrate` calls from `onStep`, cached step positions to completely eradicate synchronous layout thrashing (`getBoundingClientRect` / DOM queries), and zeroed out `visualLeadSec` (25ms -> 0ms) for sample-accurate acoustic audio-visual playhead synchronization."
       },
       {
-        "zh": "**生产力文案专业化与去 AI 浮夸营销化（Item 13: Professional DAW Terminology & Elimination of Exaggerated AI Buzzwords）**：全面排查并剔除界面与文案中残留的“智能生成”、“神仙”、“终极”、“顶级”等宣传营销化辞藻，重塑为严谨规范的数字音频工作站（DAW）与声学乐理专业术语。如将音轨快捷菜单的“智能生成常规节拍”精炼调整为“填充基础节奏型 (Fill rhythmic template)”；和弦琶音控制台名称去除内部版本代号并规整为“琶音器与扫弦微动态控制器 (Arpeggiator & Strumming Controls)”；优化全景声谱分析仪高频空气感与底鼓声学档案的专业学术表述。",
-        "en": "**Professional DAW Terminology & Elimination of Exaggerated AI Buzzwords**: Thoroughly audited and eliminated promotional and exaggerated buzzwords (e.g. \"Smart AI\", \"Ultimate\", \"Miraculous\") across all user-facing interfaces and locale dictionaries, replacing them with industry-standard digital audio workstation (DAW) and acoustics terminology. Streamlined \"Smart fill rhythm\" to \"Fill rhythmic template\", refined arpeggiator headers to \"Arpeggiator & Strumming Controls\", and…"
+        "zh": "**桌面端虚拟键盘 100% 全宽自适应与人机工学琴键（Desktop 100% Full-Width Ergonomic Keybed）**：彻底解除 1200px 宽度钳制与两侧空隙，窗口固定吸附于屏幕底端并水平 100% 铺满；琴键垂直高度精简至贴合 DAW 标准的轻量高度（`h-28 ~ h-36`），白键扩充为 2 个完整八度（15 个白键 + 10 个黑键），琴键比例舒展自然，配合 QWERTY 键盘映射、Z/X 八度升降与 Tab 延音，打造开箱即用的专业弹奏体验。",
+        "en": "**Desktop 100% Full-Width Ergonomic Keybed**: Removed the 1200px max-width clamp to achieve true 100% full-width docked keybed expansion. Streamlined keybed height to an ergonomic DAW scale (`h-28 ~ h-36`) while expanding the key count to 2 full octaves (15 white keys + 10 black keys), delivering authentic piano proportions, Z/X octave controls, and Tab sustain."
       },
       {
-        "zh": "**全站视图上下文专属手册与交互教学深层链接（Item 10: App-Wide Universal View Contextual Help Deep-Linking）**：全面补齐曲风星系图谱（GalaxyView 3D 模式与 2D ExploreListView 兜底列表）、年代编年演变轴（HorizontalTimelineView）与流派故事脉络时间轴（VerticalTimelineView）的专属磨砂质感指南按钮（星系图谱指南、时间轴指南）。各视图深度直连帮助中心对应章节（交互式教程第 8 课「全球曲风星系与音乐史时间线探索」），配合既有的调音台、示波器、和弦工坊、底鼓实验室与曲风工坊指南，实现全站 100% 视图文档无缝交互闭环。",
-        "en": "**App-Wide Universal View Contextual Help Deep-Linking**: Completed contextual frosted glass guide buttons across the Musicology 3D Galaxy View (and 2D ExploreListView fallback), Horizontal Chronology Timeline, and Vertical Narrative Timeline. Each view seamlessly deep-links into the relevant documentation chapters (Lesson 8: Musicology Galaxy & Evolutionary Timelines), joining existing mixers, scopes, chord studios, kick labs, and maker views for 100% complete contextual he…"
+        "zh": "**移动端长按/拖拽全域防选中与触控锁（Mobile Anti-Selection & Touch Protection）**：在全局 CSS 与核心工作区层级全面注入 `-webkit-touch-callout: none`、`-webkit-user-select: none`、`user-select: none` 与 `-webkit-tap-highlight-color: transparent`，彻底杜绝在移动设备上快速点音、长按或滑动画布时意外呼出系统选择框、蓝色文本遮罩或弹出菜单，同时严格保留输入框（input/textarea）的原生文本编辑能力。",
+        "en": "**Mobile Anti-Selection & Touch Protection**: Injected `-webkit-touch-callout: none`, `-webkit-user-select: none`, `user-select: none`, and `-webkit-tap-highlight-color: transparent` across global stylesheets and sequencer grids, completely preventing accidental blue selection overlays and system callout popups during rapid tapping or dragging, while safely preserving native input editing."
       }
     ],
     "truncated": true

@@ -67,32 +67,86 @@ export function useAudioEngineLifecycle({
 }: UseAudioEngineLifecycleOptions): UseAudioEngineLifecycleResult {
   const lastStepRef = useRef(-1);
 
-  // Decoupled Playhead & Peak Meter logic (P2-03)
-  const updatePlayhead = useCallback((step: number) => {
+  // Cached geometry and DOM elements for zero-layout-thrashing playhead updates (P2-03)
+  const stepPositionsCacheRef = useRef<Map<number, { left: number; width: number }>>(new Map());
+  const rulerCellsCacheRef = useRef<Map<number, HTMLElement>>(new Map());
+  const trackMetersCacheRef = useRef<Map<number, HTMLElement>>(new Map());
+  const meterTimersRef = useRef<Map<number, any>>(new Map());
+
+  // Batch measure step offsets to avoid getBoundingClientRect() during rapid transport playback
+  const refreshStepCache = useCallback(() => {
     const container = matrixContainerRef.current;
     if (!container) return;
+    const cRect = container.getBoundingClientRect();
+    const cells = container.querySelectorAll<HTMLElement>("[data-ruler-step-idx]");
+    const posMap = new Map<number, { left: number; width: number }>();
+    const cellMap = new Map<number, HTMLElement>();
+    cells.forEach((cell) => {
+      const idx = Number(cell.getAttribute("data-ruler-step-idx"));
+      if (!isNaN(idx)) {
+        const rRect = cell.getBoundingClientRect();
+        const left = rRect.left - cRect.left - container.clientLeft + container.scrollLeft;
+        posMap.set(idx, { left, width: rRect.width });
+        cellMap.set(idx, cell);
+      }
+    });
+    stepPositionsCacheRef.current = posMap;
+    rulerCellsCacheRef.current = cellMap;
 
-    const rulerCell = container.querySelector<HTMLElement>(`[data-ruler-step-idx="${step}"]`);
+    const metersMap = new Map<number, HTMLElement>();
+    const meters = container.querySelectorAll<HTMLElement>("[data-meter-track]");
+    meters.forEach((m) => {
+      const idx = Number(m.getAttribute("data-meter-track"));
+      if (!isNaN(idx)) {
+        metersMap.set(idx, m);
+      }
+    });
+    trackMetersCacheRef.current = metersMap;
+  }, [matrixContainerRef]);
+
+  // Invalidate position caches on step count changes or window resize
+  useEffect(() => {
+    stepPositionsCacheRef.current.clear();
+    rulerCellsCacheRef.current.clear();
+    trackMetersCacheRef.current.clear();
+    const onResize = () => {
+      stepPositionsCacheRef.current.clear();
+      rulerCellsCacheRef.current.clear();
+      trackMetersCacheRef.current.clear();
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [seqState.stepCount]);
+
+  // Decoupled Playhead & Peak Meter logic (P2-03)
+  const updatePlayhead = useCallback((step: number) => {
+    if (stepPositionsCacheRef.current.size === 0) {
+      refreshStepCache();
+    }
+
+    let rulerCell = rulerCellsCacheRef.current.get(step);
+    if (!rulerCell && matrixContainerRef.current) {
+      rulerCell = matrixContainerRef.current.querySelector<HTMLElement>(`[data-ruler-step-idx="${step}"]`) || undefined;
+      if (rulerCell) rulerCellsCacheRef.current.set(step, rulerCell);
+    }
+
     if (rulerCell) {
       if (lastActiveRulerStepRef.current && lastActiveRulerStepRef.current !== rulerCell) {
         lastActiveRulerStepRef.current.classList.remove("playhead-active");
       }
       rulerCell.classList.add("playhead-active");
       lastActiveRulerStepRef.current = rulerCell;
+    }
 
-      if (playheadBeamRef.current) {
-        const cRect = container.getBoundingClientRect();
-        const rRect = rulerCell.getBoundingClientRect();
-        // Calculate true offset relative to matrixContainer scroll coordinate space
-        const left = rRect.left - cRect.left - container.clientLeft + container.scrollLeft;
-        const width = rRect.width;
-
-        playheadBeamRef.current.style.transform = `translate3d(${left}px, 0, 0)`;
-        playheadBeamRef.current.style.width = `${width}px`;
+    if (playheadBeamRef.current) {
+      const pos = stepPositionsCacheRef.current.get(step);
+      if (pos) {
+        playheadBeamRef.current.style.transform = `translate3d(${pos.left}px, 0, 0)`;
+        playheadBeamRef.current.style.width = `${pos.width}px`;
         playheadBeamRef.current.style.display = "block";
       }
     }
-  }, []);
+  }, [refreshStepCache, matrixContainerRef]);
 
   const clearPlayhead = useCallback(() => {
     // Tell the DOM-only subscribers (the piano roll) that the transport stopped.
@@ -105,22 +159,31 @@ export function useAudioEngineLifecycle({
       playheadBeamRef.current.style.display = "none";
       playheadBeamRef.current.style.transition = "none";
     }
+    meterTimersRef.current.forEach((t) => clearTimeout(t));
+    meterTimersRef.current.clear();
     lastStepRef.current = -1;
   }, []);
 
   const triggerTrackMeters = useCallback((trackIndices: number[]) => {
-    const container = matrixContainerRef.current;
-    if (!container) return;
     trackIndices.forEach((idx) => {
-      const meter = container.querySelector<HTMLElement>(`[data-meter-track="${idx}"]`);
+      let meter = trackMetersCacheRef.current.get(idx);
+      if (!meter && matrixContainerRef.current) {
+        meter = matrixContainerRef.current.querySelector<HTMLElement>(`[data-meter-track="${idx}"]`) || undefined;
+        if (meter) trackMetersCacheRef.current.set(idx, meter);
+      }
       if (meter) {
         meter.classList.add("is-flashing");
-        setTimeout(() => {
-          meter.classList.remove("is-flashing");
-        }, 140);
+        if (meterTimersRef.current.has(idx)) {
+          clearTimeout(meterTimersRef.current.get(idx));
+        }
+        const timer = setTimeout(() => {
+          meter?.classList.remove("is-flashing");
+          meterTimersRef.current.delete(idx);
+        }, 120);
+        meterTimersRef.current.set(idx, timer);
       }
     });
-  }, []);
+  }, [matrixContainerRef]);
 
   // Initialize AudioEngine (StrictMode safe, decoupled playhead & peak meter - P2-03 / P2-04)
   useEffect(() => {
@@ -129,19 +192,6 @@ export function useAudioEngineLifecycle({
         updatePlayhead(step);
         // The piano roll follows the same step through the DOM-only bus (no re-render per step).
         publishPlayhead(step);
-        // P8-01: Haptic downbeat pulse during playback
-        const sig = seqStateRef.current.timeSignature;
-        const res = seqStateRef.current.resolution;
-        const denom = parseInt(sig.split("/")[1]) || 4;
-        const beatsPerBar = parseInt(sig.split("/")[0]) || 4;
-        const stepsPerWhole = res === "1/32" ? 32 : res === "1/8" ? 8 : 16;
-        const spb = Math.max(1, Math.round(stepsPerWhole / denom));
-        const stepsPerBeat = Math.max(1, Math.round(spb / beatsPerBar));
-        if (step % spb === 0) {
-          triggerHaptic(HapticPatterns.heavyThud);
-        } else if (stepsPerBeat > 1 && step % stepsPerBeat === 0) {
-          triggerHaptic(HapticPatterns.metronomeClick);
-        }
         // Song Mode auto-transition between pattern slots on loop wrap-around (P3-02)
         if (seqStateRef.current.songMode && lastStepRef.current > step && step === 0) {
           const nextSlot = seqStateRef.current.activeSlot === "A" ? "B" : "A";

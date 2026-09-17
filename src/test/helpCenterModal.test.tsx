@@ -238,5 +238,52 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
     expect(handleOpenOnboarding).toHaveBeenCalledTimes(1);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it("renders comprehensive visual dictionary of controls and icons with category filtering", () => {
+    renderWithLanguage(
+      <HelpCenterModal
+        isOpen={true}
+        onClose={vi.fn()}
+        initialCategory="interface"
+      />
+    );
+
+    expect(screen.getByTestId("ui-manual-dictionary-section")).toBeInTheDocument();
+    expect(screen.getByText("全界面图标与功能按键图解词典")).toBeInTheDocument();
+
+    // Verify all 5 category filter buttons exist
+    expect(screen.getByTestId("ui-manual-cat-all")).toBeInTheDocument();
+    expect(screen.getByTestId("ui-manual-cat-transport")).toBeInTheDocument();
+    expect(screen.getByTestId("ui-manual-cat-track")).toBeInTheDocument();
+    expect(screen.getByTestId("ui-manual-cat-piano")).toBeInTheDocument();
+    expect(screen.getByTestId("ui-manual-cat-fx")).toBeInTheDocument();
+    expect(screen.getByTestId("ui-manual-cat-nav")).toBeInTheDocument();
+
+    const grid = screen.getByTestId("ui-manual-grid");
+
+    // In 'all' category, key controls from different areas should be present in the dictionary
+    expect(within(grid).getByText("播放 / 暂停")).toBeInTheDocument();
+    expect(within(grid).getByText("力度动态通道 (V)")).toBeInTheDocument();
+    expect(within(grid).getByText("丰富和弦印章库 (Chord Stamps)")).toBeInTheDocument();
+    expect(within(grid).getByText("多模式总线滤波器 (Filter)")).toBeInTheDocument();
+    expect(within(grid).getByText("全屏虚拟音乐键盘 (⌥K)")).toBeInTheDocument();
+
+    // Filter to 'transport'
+    fireEvent.click(screen.getByTestId("ui-manual-cat-transport"));
+    expect(within(grid).getByText("播放 / 暂停")).toBeInTheDocument();
+    expect(within(grid).getByText("速度 BPM 与微调")).toBeInTheDocument();
+    expect(within(grid).queryByText("力度动态通道 (V)")).not.toBeInTheDocument();
+
+    // Filter to 'piano'
+    fireEvent.click(screen.getByTestId("ui-manual-cat-piano"));
+    expect(within(grid).getByText("铅笔绘制与涂抹工具 (Pencil Tool)")).toBeInTheDocument();
+    expect(within(grid).getByText("丰富和弦印章库 (Chord Stamps)")).toBeInTheDocument();
+    expect(within(grid).queryByText("播放 / 暂停")).not.toBeInTheDocument();
+
+    // Filter to 'fx'
+    fireEvent.click(screen.getByTestId("ui-manual-cat-fx"));
+    expect(within(grid).getByText("多模式总线滤波器 (Filter)")).toBeInTheDocument();
+    expect(within(grid).getByText("暖色模拟管饱和度 (Warm Tube Drive)")).toBeInTheDocument();
+  });
 });
 

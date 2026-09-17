@@ -60,14 +60,14 @@ async function chicagoHouse(): Promise<Genre> {
   return (await loadGenre("chicago-house"))!;
 }
 
-describe("Mobile Bottom Control Bar & Virtual Keyboard FAB", { timeout: 15000 }, () => {
+describe("Clean Mobile Workspace & Virtual Keyboard FAB", { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     localStorage.setItem("groove_language", "zh");
   });
 
-  it("renders mobile bottom control bar and virtual keyboard FAB by default", async () => {
+  it("renders clean mobile workspace without redundant bottom control bar", async () => {
     const genre = await chicagoHouse();
     render(
       <LanguageProvider>
@@ -80,7 +80,9 @@ describe("Mobile Bottom Control Bar & Virtual Keyboard FAB", { timeout: 15000 },
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("mobile-bottom-control-bar")).toBeInTheDocument();
+      // Redundant bottom bar is removed
+      expect(screen.queryByTestId("mobile-bottom-control-bar")).toBeNull();
+      // Keyboard FAB is cleanly available
       expect(screen.getByTestId("virtual-keyboard-fab")).toBeInTheDocument();
     });
   });
@@ -106,7 +108,7 @@ describe("Mobile Bottom Control Bar & Virtual Keyboard FAB", { timeout: 15000 },
     expect(screen.queryByTestId("virtual-keyboard-fab")).toBeNull();
   });
 
-  it("toggles play and adjusts BPM from mobile control bar", async () => {
+  it("toggles play and adjusts BPM cleanly from toolbar transport", async () => {
     const genre = await chicagoHouse();
     render(
       <LanguageProvider>
@@ -118,12 +120,12 @@ describe("Mobile Bottom Control Bar & Virtual Keyboard FAB", { timeout: 15000 },
       </LanguageProvider>
     );
 
-    const playBtn = await screen.findByTestId("mobile-quick-play-btn");
+    const playBtn = await screen.findByRole("button", { name: "Play / Pause" });
     fireEvent.click(playBtn);
     expect(engineMock.play).toHaveBeenCalled();
 
-    const increaseBtn = screen.getByTestId("mobile-bpm-increase");
-    fireEvent.click(increaseBtn);
+    const increaseBpm = screen.getByRole("button", { name: "Increase BPM" });
+    fireEvent.click(increaseBpm);
     expect(engineMock.setBpm).toHaveBeenCalled();
   });
 });

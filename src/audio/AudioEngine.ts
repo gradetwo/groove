@@ -1408,7 +1408,7 @@ export class AudioEngine {
       if (this.isPlaying) {
         this.schedulerLoop();
       }
-    }, 25);
+    }, 40);
   }
 
   private stopScheduler(): void {
@@ -1434,8 +1434,8 @@ export class AudioEngine {
       }
 
       const now = this.ctx.currentTime;
-      // Anticipation offset of 25ms aligns visual playhead with monitor refresh
-      const visualLeadSec = 0.025;
+      // Exact alignment: playhead advances when the audio block starts playing
+      const visualLeadSec = 0.0;
 
       let latestStep = -1;
       let latestTime = 0;

@@ -41,6 +41,27 @@
     padding: 0;
     box-sizing: border-box;
     -webkit-text-size-adjust: 100%;
+    /* Prevent accidental text/element selection and callout popups on mobile touch (Item 3) */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Explicitly allow selection in editable text inputs and code */
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  button, [role="button"], [role="grid"], [role="gridcell"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   ::selection {

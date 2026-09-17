@@ -724,7 +724,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {/* Group 1: 播放控制组 (Playback & Transport Group) */}
           <div
             data-testid="toolbar-group-transport"
-            className="flex flex-wrap items-center gap-1 sm:gap-1.5 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
+            className="flex items-center overflow-x-auto scrollbar-none gap-1 sm:gap-1.5 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
           >
             {/* Maximize/Sidebar indicator badge */}
             {isEditorMaximized ? (
@@ -1149,7 +1149,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {!isToolbarFolded && (
             <div
               data-testid="toolbar-group-edit"
-              className="flex flex-wrap items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
+              className="flex items-center overflow-x-auto scrollbar-none gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
             >
               <MeterControls
                 timeSignature={timeSignature}
@@ -1236,7 +1236,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {!isToolbarFolded && (
             <div
               data-testid="toolbar-group-views"
-              className="flex flex-wrap items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
+              className="flex items-center overflow-x-auto scrollbar-none gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
             >
               {/* Bar Navigation Select (shown when barCount > 1) */}
               {barCount > 1 && (
@@ -1382,7 +1382,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           {!isToolbarFolded && (
             <div
               data-testid="toolbar-group-project"
-              className="flex flex-wrap items-center gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
+              className="flex items-center overflow-x-auto scrollbar-none gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
             >
               {/* Inspire Me controlled generative groove variation (P4-06) */}
               {onInspireMe && (

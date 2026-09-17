@@ -1,7 +1,7 @@
 # GROOVE LAB 改进任务清单（BACKLOG）
 
 > 配套文档：`IMPROVEMENT_PLAN.md`（历史 v1.0 基线）、`CODE_REVIEW_AND_PLAN_v1.16.0.md`（当前审阅与规划）
-> 当前基线：**v2.0.44**（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
+> 当前基线：**v2.0.45**（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
 > 优先级：**P0** 正确性/安全 ｜ **P1** 体验/性能/可维护 ｜ **P2** 增强
 > 工时单位：人·天（含自测）
 > 使用方式：每个任务一条 PR；`ID` 可直接用于 commit message，如 `fix(P0-01): correct Bjorklund euclidean generator`
@@ -424,5 +424,10 @@
 | **A-07** | 播放队列有界 + 画布缓冲复用 | v1.16.3 | `git log --oneline --grep=A-07` |
 | **A-06** | 删除零引用设计系统组件与失效 hook | 本分支未发布（`f6b6ed0`） | `npx vitest run src/test/ui.test.ts` |
 | **E-09** | 文档基线刷新与自检脚本 | 本分支未发布（本轮） | `node scripts/check_docs.mjs` |
+| **P7-05** | 走带绝对同步与卡顿根除（IPC 震动移除 + 布局重排缓存） | v2.0.45 | `npm run test` |
+| **P1-19** | 桌面端虚拟键盘 100% 全宽与人机工学双八度设计 | v2.0.45 | `npx vitest run src/test/musicalTyping.test.tsx` |
+| **P8-04** | 移动端防选中与触控锁（全域 CSS 触控保护与交互隔离） | v2.0.45 | `npm run test` |
+| **P1-20** | 移动端工作区净化与四组功能胶囊单行流线优化 | v2.0.45 | `npx vitest run src/test/mobileBottomControlBar.test.tsx` |
+| **U-12** | 全界面 49 项功能按键与图标深度图解词典与实操要领 | v2.0.45 | `npx vitest run src/test/helpCenterModal.test.tsx` |
 
 > 本批次的已知回归：`src/test/CompareViewPresets.test.tsx` 的 2 条用例计时超时（5000ms），在 v1.16.3 基线上即为红色（见 E-03 之后并入的 compare 用例）；`npx vitest run` 当前为 **407 passed / 2 failed（共 409）**。

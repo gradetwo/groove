@@ -802,7 +802,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       <main
         className={`grid ${
           isSidebarCollapsed || isEditorMaximized ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[352px_1fr]"
-        } gap-5 px-3 sm:px-7 py-3 pb-16 safe-pb items-start`}
+        } gap-5 px-3 sm:px-7 py-3 pb-6 safe-pb items-start`}
       >
         {/* Left Column: Info Dossier (.info) */}
         {!isSidebarCollapsed && !isEditorMaximized && (
@@ -1118,74 +1118,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
           title={isZh ? "打开虚拟键盘 (⌥K)" : "Open Virtual Keyboard (⌥K)"}
           aria-label={isZh ? "打开虚拟键盘" : "Open Virtual Keyboard"}
           data-testid="virtual-keyboard-fab"
-          className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[9990] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-accent text-black shadow-[0_8px_24px_rgba(245,183,61,0.45),0_2px_8px_rgba(0,0,0,0.5)] transition-all duration-200 hover:scale-110 hover:shadow-[0_12px_32px_rgba(245,183,61,0.65)] active:scale-95 active:translate-y-0.5 pointer-events-auto border-2 border-white/20"
+          className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-[9990] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-accent text-black shadow-[0_8px_24px_rgba(245,183,61,0.45),0_2px_8px_rgba(0,0,0,0.5)] transition-all duration-200 hover:scale-110 hover:shadow-[0_12px_32px_rgba(245,183,61,0.65)] active:scale-95 active:translate-y-0.5 pointer-events-auto border-2 border-white/20"
           style={{ zIndex: 9990 }}
         >
           <Keyboard className="h-6 w-6 stroke-[2.2]" />
         </button>
-      )}
-
-      {/* Mobile Bottom Quick Control Bar (md:hidden) */}
-      {!isKeyboardMode && (
-        <aside
-          aria-label={t("mobile_quick_controls")}
-          data-testid="mobile-bottom-control-bar"
-          className="fixed bottom-0 inset-x-0 z-40 md:hidden flex items-center justify-between px-3 py-2 bg-[#0c0e15]/95 backdrop-blur-xl border-t border-line/80 shadow-[0_-8px_24px_rgba(0,0,0,0.85)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
-        >
-          {/* Play / Stop */}
-          <button
-            type="button"
-            onClick={handleTogglePlay}
-            data-testid="mobile-quick-play-btn"
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs shadow transition-all ${
-              isPlaying
-                ? "bg-amber-400 text-black shadow-[0_0_12px_rgba(245,183,61,0.5)]"
-                : "bg-[#1f2438] text-white hover:bg-[#2a314c]"
-            }`}
-            aria-label={isPlaying ? t("mobile_quick_stop") : t("mobile_quick_play")}
-          >
-            {isPlaying ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span>{isPlaying ? t("mobile_quick_stop") : t("mobile_quick_play")}</span>
-          </button>
-
-          {/* BPM Adjuster */}
-          <div className="flex items-center gap-1.5 bg-[#141724] px-2.5 py-1 rounded-xl border border-line">
-            <span className="text-[10px] font-mono text-text-dim uppercase font-semibold">BPM</span>
-            <button
-              type="button"
-              data-testid="mobile-bpm-decrease"
-              onClick={() => commit({ type: "SET_BPM", bpm: Math.max(40, pattern.bpm - 1) })}
-              className="w-5 h-5 flex items-center justify-center rounded bg-[#1e2337] text-text hover:bg-accent/20 active:scale-90 text-xs font-bold"
-              aria-label="Decrease BPM"
-            >
-              -
-            </button>
-            <span data-testid="mobile-bpm-display" className="w-7 text-center font-mono font-bold text-xs text-accent">
-              {pattern.bpm}
-            </span>
-            <button
-              type="button"
-              data-testid="mobile-bpm-increase"
-              onClick={() => commit({ type: "SET_BPM", bpm: Math.min(240, pattern.bpm + 1) })}
-              className="w-5 h-5 flex items-center justify-center rounded bg-[#1e2337] text-text hover:bg-accent/20 active:scale-90 text-xs font-bold"
-              aria-label="Increase BPM"
-            >
-              +
-            </button>
-          </div>
-
-          {/* Virtual Keyboard Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsKeyboardMode(true)}
-            data-testid="mobile-quick-keyboard-btn"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#1b2033] border border-line text-text hover:text-accent active:scale-95 transition-all text-xs font-semibold"
-            aria-label={t("mobile_quick_keys")}
-          >
-            <Keyboard className="w-3.5 h-3.5 text-accent" />
-            <span className="text-[11px]">{t("mobile_quick_keys")}</span>
-          </button>
-        </aside>
       )}
     </div>
   );

@@ -13,7 +13,7 @@ import { ChordDefinition } from "./utils/chordTheory";
 import { BakedArpeggioResult } from "./utils/arpeggiatorTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
 import { ShortcutsModal } from "./components/ShortcutsModal";
-import { HelpCenterModal, type HelpCategory } from "./components/help/HelpCenterModal";
+import type { HelpCategory } from "./components/help/HelpCenterModal";
 import {
   NewUserOnboardingModal,
   ONBOARDING_COMPLETED_KEY,
@@ -37,6 +37,7 @@ const MasterclassView = React.lazy(() => import("./views/MasterclassView").then(
 const AnalyzerView = React.lazy(() => import("./views/AnalyzerView").then((m) => ({ default: m.AnalyzerView })));
 const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerView").then((m) => ({ default: m.CustomGenreMakerView })));
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
+const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
@@ -597,24 +598,28 @@ const MainApp: React.FC = () => {
       />
 
       {/* User Manual & Interactive Learning Center Modal */}
-      <HelpCenterModal
-        isOpen={helpOpen}
-        initialCategory={helpCategory}
-        onClose={() => {
-          setHelpOpen(false);
-          setHelpCategory(undefined);
-        }}
-        onSelectTab={handleSelectTab}
-        onOpenShortcuts={() => {
-          setHelpOpen(false);
-          setShortcutsOpen(true);
-        }}
-        onStartTutorial={handleStartTutorial}
-        onOpenOnboarding={() => {
-          setHelpOpen(false);
-          setOnboardingOpen(true);
-        }}
-      />
+      {helpOpen && (
+        <React.Suspense fallback={null}>
+          <HelpCenterModal
+            isOpen={helpOpen}
+            initialCategory={helpCategory}
+            onClose={() => {
+              setHelpOpen(false);
+              setHelpCategory(undefined);
+            }}
+            onSelectTab={handleSelectTab}
+            onOpenShortcuts={() => {
+              setHelpOpen(false);
+              setShortcutsOpen(true);
+            }}
+            onStartTutorial={handleStartTutorial}
+            onOpenOnboarding={() => {
+              setHelpOpen(false);
+              setOnboardingOpen(true);
+            }}
+          />
+        </React.Suspense>
+      )}
 
       {/* Interactive Hands-on Tutorial Coach Dock */}
       {activeTutorial && (

@@ -22,7 +22,32 @@ import {
   Layers,
   Volume2,
   Layout,
+  Play,
+  Bell,
+  Clock,
+  Disc,
+  Disc3,
+  Columns,
+  Repeat,
+  EyeOff,
+  Undo2,
+  MousePointer,
+  Edit2,
+  Trash2,
+  Scissors,
+  Square,
+  Music2,
+  ArrowUp,
+  RotateCcw,
+  Eye,
+  Flame,
+  Waves,
+  Radio,
+  Shuffle,
+  Settings,
+  ChevronDown,
 } from "lucide-react";
+import { UI_MANUAL_ITEMS, UI_MANUAL_CATEGORIES } from "../../data/uiManualItems";
 import type { NavTab } from "../Header";
 
 export interface HelpCenterModalProps {
@@ -60,6 +85,66 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
 
   const [activeCategory, setActiveCategory] = useState<HelpCategory>(initialCategory ?? "quickstart");
   const [searchQuery, setSearchQuery] = useState("");
+  const [uiManualCategory, setUiManualCategory] = useState<string>("all");
+
+  const renderManualIcon = (iconName: string) => {
+    switch (iconName) {
+      case "Play": return <Play className="w-4 h-4 text-accent" />;
+      case "Sliders": return <Sliders className="w-4 h-4 text-accent" />;
+      case "Activity": return <Activity className="w-4 h-4 text-emerald-400" />;
+      case "Bell": return <Bell className="w-4 h-4 text-amber-400" />;
+      case "Clock": return <Clock className="w-4 h-4 text-cyan-400" />;
+      case "Disc": return <Disc className="w-4 h-4 text-red-400" />;
+      case "Layers": return <Layers className="w-4 h-4 text-indigo-400" />;
+      case "Disc3": return <Disc3 className="w-4 h-4 text-purple-400" />;
+      case "Columns": return <Columns className="w-4 h-4 text-blue-400" />;
+      case "Repeat": return <Repeat className="w-4 h-4 text-emerald-400" />;
+      case "EyeOff": return <EyeOff className="w-4 h-4 text-amber-400" />;
+      case "SlidersHorizontal": return <SlidersHorizontal className="w-4 h-4 text-teal-400" />;
+      case "Compass": return <Compass className="w-4 h-4 text-accent" />;
+      case "Music": return <Music className="w-4 h-4 text-pink-400" />;
+      case "Undo2": return <Undo2 className="w-4 h-4 text-sky-400" />;
+      case "Sparkles": return <Sparkles className="w-4 h-4 text-accent" />;
+      case "Volume2": return <Volume2 className="w-4 h-4 text-rose-400" />;
+      case "ChevronDown": return <ChevronDown className="w-4 h-4 text-zinc-400" />;
+      case "MousePointer": return <MousePointer className="w-4 h-4 text-blue-400" />;
+      case "Edit2": return <Edit2 className="w-4 h-4 text-accent" />;
+      case "Trash2": return <Trash2 className="w-4 h-4 text-red-400" />;
+      case "Scissors": return <Scissors className="w-4 h-4 text-amber-400" />;
+      case "Square": return <Square className="w-4 h-4 text-cyan-400" />;
+      case "Music2": return <Music2 className="w-4 h-4 text-pink-400" />;
+      case "ArrowUp": return <ArrowUp className="w-4 h-4 text-emerald-400" />;
+      case "RotateCcw": return <RotateCcw className="w-4 h-4 text-indigo-400" />;
+      case "BookOpen": return <BookOpen className="w-4 h-4 text-violet-400" />;
+      case "Eye": return <Eye className="w-4 h-4 text-amber-400" />;
+      case "Keyboard": return <Keyboard className="w-4 h-4 text-accent" />;
+      case "Flame": return <Flame className="w-4 h-4 text-orange-400" />;
+      case "Waves": return <Waves className="w-4 h-4 text-cyan-400" />;
+      case "Download": return <Download className="w-4 h-4 text-emerald-400" />;
+      case "Search": return <Search className="w-4 h-4 text-accent" />;
+      case "Shuffle": return <Shuffle className="w-4 h-4 text-purple-400" />;
+      case "Settings": return <Settings className="w-4 h-4 text-zinc-300" />;
+      default: return <Sliders className="w-4 h-4 text-accent" />;
+    }
+  };
+
+  const filteredUiItems = useMemo(() => {
+    return UI_MANUAL_ITEMS.filter((item) => {
+      const matchesCat = uiManualCategory === "all" || item.category === uiManualCategory;
+      if (!matchesCat) return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.nameZh.toLowerCase().includes(q) ||
+        item.nameEn.toLowerCase().includes(q) ||
+        item.descZh.toLowerCase().includes(q) ||
+        item.descEn.toLowerCase().includes(q) ||
+        item.detailZh.toLowerCase().includes(q) ||
+        item.detailEn.toLowerCase().includes(q) ||
+        (item.shortcut && item.shortcut.toLowerCase().includes(q))
+      );
+    });
+  }, [uiManualCategory, searchQuery]);
 
   useEffect(() => {
     if (initialCategory) {
@@ -740,8 +825,137 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                       </p>
                     </div>
 
-                    <div className="space-y-4">
-                      {/* Section 1: Header */}
+                    {/* COMPREHENSIVE CONTROL & ICON DICTIONARY */}
+                    <div className="space-y-4" data-testid="ui-manual-dictionary-section">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#111422] border border-line/80">
+                        <div>
+                          <h4 className="text-sm font-bold text-text flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-accent" />
+                            <span>{isZh ? "全界面图标与功能按键图解词典" : "Visual Dictionary of Controls & Icons"}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent font-mono border border-accent/30 font-bold">
+                              {filteredUiItems.length} {isZh ? "项" : "items"}
+                            </span>
+                          </h4>
+                          <p className="text-[11px] text-text-sub mt-0.5">
+                            {isZh
+                              ? "全面收录走带控制、音轨步进、专业钢琴卷帘、混音效果器与全局导航的所有按键与图标功能说明与操作技巧。"
+                              : "Exhaustive visual dictionary covering transport controls, track sequencers, piano roll, DSP rack, and global navigation."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Category Filter Pills */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none" role="tablist" aria-label={isZh ? "功能分类" : "Categories"}>
+                        {UI_MANUAL_CATEGORIES.map((cat) => {
+                          const isActive = uiManualCategory === cat.id;
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setUiManualCategory(cat.id)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                                isActive
+                                  ? "bg-accent text-black border-accent shadow-sm"
+                                  : "bg-[#141828] text-text-sub hover:text-text border-line/60 hover:border-line"
+                              }`}
+                              data-testid={`ui-manual-cat-${cat.id}`}
+                            >
+                              <span>{isZh ? cat.labelZh : cat.labelEn}</span>
+                              <span
+                                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                                  isActive ? "bg-black/20 text-black font-bold" : "bg-white/5 text-text-sub"
+                                }`}
+                              >
+                                {cat.id === "all"
+                                  ? UI_MANUAL_ITEMS.length
+                                  : UI_MANUAL_ITEMS.filter((i) => i.category === cat.id).length}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Items Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="ui-manual-grid">
+                        {filteredUiItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-3.5 rounded-2xl bg-[#111422] hover:bg-[#15192a] border border-line/70 hover:border-accent/40 transition-all flex flex-col justify-between space-y-2.5 shadow-sm group"
+                            data-testid={`ui-manual-item-${item.id}`}
+                          >
+                            <div className="space-y-2">
+                              {/* Card Header: Icon, Name, Shortcut */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-xl bg-[#181d30] border border-line flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+                                    {renderManualIcon(item.iconName)}
+                                  </div>
+                                  <div>
+                                    <div className="text-xs font-bold text-text flex items-center gap-1.5 flex-wrap">
+                                      <span>{isZh ? item.nameZh : item.nameEn}</span>
+                                    </div>
+                                    <div className="text-[10px] font-mono text-text-sub truncate max-w-[160px] sm:max-w-[200px]">
+                                      {isZh ? item.nameEn : item.nameZh}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {item.shortcut && (
+                                    <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/50 text-accent border border-accent/30 shadow-xs font-bold">
+                                      {item.shortcut}
+                                    </kbd>
+                                  )}
+                                  {item.badge && (
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-text-sub border border-line-subtle">
+                                      {item.badge}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Description */}
+                              <p className="text-xs text-text-sub leading-relaxed">
+                                {isZh ? item.descZh : item.descEn}
+                              </p>
+                            </div>
+
+                            {/* Practical Tips Box */}
+                            <div className="p-2.5 rounded-xl bg-[#0b0e19] border border-line/40 text-[11px] text-text-sub/90 leading-relaxed font-sans">
+                              <span className="text-accent font-bold mr-1">
+                                {isZh ? "【实操要领】" : "[Pro Tip]"}
+                              </span>
+                              <span>{isZh ? item.detailZh : item.detailEn}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {filteredUiItems.length === 0 && (
+                        <div className="p-8 text-center rounded-2xl bg-[#111422] border border-line/60">
+                          <p className="text-xs text-text-sub">
+                            {isZh ? "未找到匹配的功能按键或图标。" : "No matching controls or icons found."}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ZONE ARCHITECTURE OVERVIEW */}
+                    <div className="pt-4 border-t border-line/60">
+                      <div className="mb-4">
+                        <h4 className="text-sm font-bold text-text flex items-center gap-2">
+                          <Layout className="w-4 h-4 text-accent" />
+                          <span>{isZh ? "六大核心功能区架构速览" : "Six Core Functional Zones Overview"}</span>
+                        </h4>
+                        <p className="text-xs text-text-sub mt-0.5">
+                          {isZh
+                            ? "纵览整套 DAW 的模块划分与快速跳转导航。"
+                            : "High-level visual layout and fast navigation across all DAW workspaces."}
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        {/* Section 1: Header */}
                       <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -1112,7 +1326,8 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
                 {/* 3. SEQUENCER & PIANO ROLL */}
                 {activeCategory === "sequencer" && (
