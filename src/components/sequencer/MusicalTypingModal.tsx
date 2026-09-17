@@ -36,16 +36,16 @@ const WHITE_KEYS: KeyDef[] = [
   { key: "'", offset: 17, isBlack: false },
 ];
 
-const BLACK_KEYS: Array<KeyDef & { leftPercent: number }> = [
-  { key: "w", offset: 1, isBlack: true, leftPercent: 5.5 },
-  { key: "e", offset: 3, isBlack: true, leftPercent: 14.5 },
+const BLACK_KEYS: Array<KeyDef & { boundaryIndex: number; leftPercent: number }> = [
+  { key: "w", offset: 1, isBlack: true, boundaryIndex: 1, leftPercent: (1 / 11) * 100 },
+  { key: "e", offset: 3, isBlack: true, boundaryIndex: 2, leftPercent: (2 / 11) * 100 },
   // no key between E and F
-  { key: "t", offset: 6, isBlack: true, leftPercent: 32.7 },
-  { key: "y", offset: 8, isBlack: true, leftPercent: 41.8 },
-  { key: "u", offset: 10, isBlack: true, leftPercent: 50.9 },
+  { key: "t", offset: 6, isBlack: true, boundaryIndex: 4, leftPercent: (4 / 11) * 100 },
+  { key: "y", offset: 8, isBlack: true, boundaryIndex: 5, leftPercent: (5 / 11) * 100 },
+  { key: "u", offset: 10, isBlack: true, boundaryIndex: 6, leftPercent: (6 / 11) * 100 },
   // no key between B and C
-  { key: "o", offset: 13, isBlack: true, leftPercent: 69.1 },
-  { key: "p", offset: 15, isBlack: true, leftPercent: 78.2 },
+  { key: "o", offset: 13, isBlack: true, boundaryIndex: 8, leftPercent: (8 / 11) * 100 },
+  { key: "p", offset: 15, isBlack: true, boundaryIndex: 9, leftPercent: (9 / 11) * 100 },
 ];
 
 const QWERTY_MAP: Record<string, number> = {
@@ -221,9 +221,10 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
       aria-modal="true"
       aria-label={t("virtual_keyboard_title")}
       data-testid="musical-typing-modal"
-      className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none"
+      className="fixed inset-x-0 bottom-0 z-[9999] flex justify-center p-2 sm:p-4 pointer-events-none"
+      style={{ zIndex: 9999 }}
     >
-      <div className="w-full max-w-2xl rounded-2xl border border-line bg-[#13151b]/95 backdrop-blur-xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-6 duration-200">
+      <div className="w-full max-w-[1200px] rounded-t-2xl sm:rounded-2xl border border-line bg-[#13151b]/95 backdrop-blur-xl p-3 sm:p-4 shadow-[0_20px_60px_rgba(0,0,0,0.95)] pointer-events-auto ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-6 duration-200">
         {/* Header HUD */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle pb-3">
           <div className="flex items-center gap-2">
@@ -350,10 +351,11 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
           </div>
         </div>
 
-        {/* Piano Keyboard bed (Logic Pro style) */}
+        {/* Piano Keyboard bed (100% responsive width, Logic Pro style) */}
         <div
           data-testid="musical-typing-keybed"
-          className="relative h-36 w-full select-none rounded-xl border border-black/80 bg-[#0c0e12] p-1 shadow-inner overflow-hidden"
+          className="relative h-36 sm:h-44 w-full select-none rounded-xl border border-black/80 bg-[#0c0e12] p-1 shadow-inner overflow-hidden flex"
+          style={{ width: "100%" }}
         >
           {/* White keys container */}
           <div className="relative flex h-full w-full">
@@ -370,13 +372,14 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
                   onPointerDown={() => playNote(midi)}
                   onPointerUp={() => releaseNote(midi)}
                   onPointerLeave={() => releaseNote(midi)}
+                  style={{ flex: "1 0 auto", minWidth: "24px" }}
                   className={`relative flex-1 rounded-b-[6px] border-r border-b border-[#b0b3ba] transition-all duration-75 flex flex-col justify-end items-center pb-2 cursor-pointer ${
                     isActive
                       ? "bg-gradient-to-t from-accent to-[#ffe28a] text-black shadow-[inset_0_-4px_12px_rgba(0,0,0,0.3),0_0_16px_rgba(245,183,61,0.6)] translate-y-1"
                       : "bg-gradient-to-b from-[#f2f3f7] via-[#ffffff] to-[#e0e2e8] text-[#1c1f26] shadow-[0_3px_5px_rgba(0,0,0,0.3)] hover:from-white hover:to-[#ebedf2]"
                   }`}
                 >
-                  <span className="font-['JetBrains_Mono'] text-[9px] font-bold tracking-tight">
+                  <span className="font-['JetBrains_Mono'] text-[9px] sm:text-[10px] font-bold tracking-tight">
                     {noteLabel}
                   </span>
                   <span className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/10 font-['JetBrains_Mono'] text-[8.5px] font-bold uppercase text-black/70">
@@ -389,10 +392,11 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
 
           {/* Black keys overlaid on top */}
           <div className="pointer-events-none absolute inset-0 px-1">
-            {BLACK_KEYS.map(({ key, offset, leftPercent }) => {
+            {BLACK_KEYS.map(({ key, offset, boundaryIndex }) => {
               const midi = baseMidi + offset;
               const isActive = activeMidis.has(midi);
               const noteLabel = midiToNoteName(midi);
+              const leftPercent = (boundaryIndex / WHITE_KEYS.length) * 100;
               return (
                 <div
                   key={`black-${key}`}
@@ -411,14 +415,18 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
                     e.stopPropagation();
                     releaseNote(midi);
                   }}
-                  style={{ left: `${leftPercent}%` }}
-                  className={`pointer-events-auto absolute top-1 h-[62%] w-[6.5%] rounded-b-[5px] transition-all duration-75 flex flex-col justify-end items-center pb-1.5 cursor-pointer z-20 ${
+                  style={{
+                    left: `${leftPercent}%`,
+                    transform: "translateX(-50%)",
+                    width: `calc(100% / ${WHITE_KEYS.length} * 0.60)`,
+                  }}
+                  className={`pointer-events-auto absolute top-1 h-[62%] rounded-b-[5px] transition-all duration-75 flex flex-col justify-end items-center pb-1.5 cursor-pointer z-20 ${
                     isActive
                       ? "bg-gradient-to-t from-accent to-[#ffd060] text-black shadow-[0_0_16px_rgba(245,183,61,0.8)] translate-y-1"
                       : "bg-gradient-to-b from-[#2a2d36] via-[#1a1c23] to-[#0d0e12] text-[#8e95a5] shadow-[0_4px_8px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] hover:from-[#353945] hover:to-[#171920]"
                   }`}
                 >
-                  <span className="font-['JetBrains_Mono'] text-[8px] font-bold text-white/90">
+                  <span className="font-['JetBrains_Mono'] text-[8px] sm:text-[9px] font-bold text-white/90">
                     {noteLabel}
                   </span>
                   <span className="mt-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/20 font-['JetBrains_Mono'] text-[7.5px] font-bold uppercase text-white/90">

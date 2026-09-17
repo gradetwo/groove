@@ -1,29 +1,29 @@
 {
-  "version": "2.0.40",
+  "version": "2.0.41",
   "releaseDate": "2026-09-17",
-  "changelogCount": 104,
+  "changelogCount": 105,
   "latest": {
-    "version": "2.0.40",
+    "version": "2.0.41",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.40 交互式实操教学模式、工作站区域与功能按钮全景手册、新用户全景引导漫游",
-      "en": "v2.0.40 Interactive Hands-on Tutorial Coach, Workstation Layout & Controls Manual, and New User Onboarding Tour"
+      "zh": "v2.0.41 虚拟键盘 100% 水平全宽响应、卷帘全屏防遮挡与全域置顶、悬浮按键与移动端精简控制条",
+      "en": "v2.0.41 Virtual Keyboard 100% Responsive Width, Fullscreen Non-Obscured Z-Index, FAB Toggle & Mobile Quick Control Bar"
     },
     "highlights": [
       {
-        "zh": "**交互式实操教学模式（Interactive Tutorial Coach）**：彻底解决点击教程仅跳转页面而无教学状态的痛点。点击任一教程「进入实操教学」后自动进入教学模式，底端升起半透明磨砂悬浮实操指导小窗（Coach Dock），展示当前步骤实操指引、核心要领与 💡 实践技巧，集成「声学试听（即时触发纯 Web Audio 声音范例）」、「上一步/下一步（自动无缝切换工作台/调音台/分析仪视图）」及「折叠为迷你小窗」功能，伴随创作者沉浸式动手实操。",
-        "en": "**Interactive Tutorial Coach**: Resolved the lack of active teaching state when launching tutorials. Clicking \"Start Hands-on Tutorial\" now launches an interactive guided session with a floating docked coach HUD, presenting step-by-step instructions, practical tips, instant synthesized audio auditions, seamless cross-tab view navigation, and a collapsible mini pill view."
+        "zh": "**虚拟键盘 100% 水平全宽响应式自适应（100% Responsive Width Keybed）**：彻底消除虚拟键盘两侧留白与宽度受限问题。容器设置 100% 全宽并针对桌面端设置 1200px 黄金居中最大宽度，白键采用 flex: 1 0 auto 均分宽度并设立最小触控安全边界；黑键根据白键边界精准计算居中位置与 60% 相对黄金键宽，完美适配从超宽带鱼屏到掌上触屏设备的各种视口。",
+        "en": "**100% Responsive Width Keybed**: Eliminated fixed modal width clamping and horizontal margin gaps. The virtual keyboard container now fills 100% width up to 1200px desktop max-width, with white keys equally dividing space via flex: 1 0 auto and black keys positioned dynamically on white key boundaries with 60% relative width."
       },
       {
-        "zh": "**工作站区域划分与功能按钮全景手册（Workstation UI & Controls Manual）**：帮助中心重磅上线专属「界面与功能全景手册」专栏，全面系统拆解 6 大工作站核心区域与每一个功能按钮、滑块、电平表及控制旋钮：顶部导航与走带控制栏（Space播放、BPM 40-240、Swing%、调式根音、Cmd+K 搜索）、8 轨点音矩阵与控制列（静音/独奏、力度通道、欧几里得律动、多节拍循环）、专业黑白键钢琴卷帘（3D 琴键、滑音试听、22 种音阶高亮、和弦印章虚影、连续琶音）、独立硬件调音台（推子、全景声像、延迟混响发送、砖墙限制器）、全景声谱分析仪与底鼓实验室（32 段 FFT、李萨如椭圆、纯音校准、底鼓瞬态扫频），以及和弦工坊与 3D 曲风星系。",
-        "en": "**Workstation UI & Controls Manual**: Added a dedicated \"UI & Interface Manual\" section to the User Manual, providing component-by-component documentation across 6 core zones: Master Header & Transport Bar, Sequencer Grid & Track Controls, Studio Piano Roll & Virtual Keybed, Hardware Console Mixer Desk, Panoramic Analyzer & Kick Anatomy, and Chord Workshop & 3D Genre Galaxy."
+        "zh": "**钢琴卷帘全屏防遮挡与全域最高置顶（Fullscreen Non-Obscured & Fixed Top Layer）**：将虚拟键盘（Musical Typing）提升为全站绝对最高层级（z-index: 9999），固定吸附于屏幕最底端。当钢琴卷帘进入全屏模式（z-[60]）时，虚拟键盘依然清晰可见、随时弹奏，彻底消除了全屏模式下键盘被遮挡无法演奏的体验断层。",
+        "en": "**Fullscreen Non-Obscured & Fixed Top Layer**: Elevated the virtual keyboard modal to the absolute top layer (z-index: 9999) fixed to the bottom edge. When the piano roll expands to fullscreen (z-[60]), the keyboard remains prominently visible and playable without being covered."
       },
       {
-        "zh": "**新用户交互式全景引导漫游（New User Onboarding Tour）**：专为新进创作者设计 7 站沉浸式全景漫游（欢迎与纯物理合成、走带与全局主控、8 轨鼓机与步进网格、专业钢琴卷帘与和弦印章、独立调音台与声学实验室、和弦工坊与 3D 曲风星系、实操起步与快捷键全景）。首次访问自动推荐，随时可在顶部 Header 导航栏或帮助中心「开启全景引导漫游」重新开启，并提供一键直达「鼓机编排实操教学（第 1 课）」与直接进入编曲工作台两大行动入口。",
-        "en": "**New User Onboarding Tour**: Designed a 7-milestone interactive walkthrough covering zero-sample pure synthesis, transport controls, drum sequencer matrix, studio piano roll, hardware console, chord theory, and keyboard shortcuts. Automatically offered to first-time visitors and accessible anytime from the header button or quickstart guide, with direct launchers to Lesson 1 hands-on practice or the studio workbench."
+        "zh": "**虚拟键盘右下角悬浮键（FAB）与全局设置开关**：在工作台右下方增设专属圆形琴键悬浮键（FAB，带微光阴影与悬停放大动效），轻点即可随时展开虚拟键盘；键盘展开时自动让位。在「全局设置 → 界面设置」中新增「显示虚拟键盘悬浮键」持久化开关，随心定制操作习惯。",
+        "en": "**Virtual Keyboard Floating Action Button (FAB) & Settings Switch**: Added a dedicated circular keyboard FAB on the bottom-right for instant 1-click keyboard launching. Includes a persistent toggle in \"Global Settings -> Interface Defaults\" to customize workspace density."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }

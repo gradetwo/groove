@@ -324,6 +324,12 @@ export const studioMessages = {
   settings_storage_total: { en: "Used by this app", zh: "本应用占用" },
   settings_storage_keys: { en: "keys", zh: "项" },
   settings_storage_hint: { en: "Projects, layout, audio and language settings stored on this device. Nothing is uploaded.", zh: "工程、布局、音频与语言设置都存在这台设备上，不会上传。" },
+  settings_keyboard_fab: { en: "Show Virtual Keyboard FAB", zh: "显示虚拟键盘悬浮键" },
+  settings_keyboard_fab_desc: { en: "Display a floating quick button on the bottom-right to open the piano keyboard", zh: "在工作台右下角显示随时唤起琴键的圆形悬浮按钮" },
+  mobile_quick_play: { en: "Play", zh: "播放" },
+  mobile_quick_stop: { en: "Stop", zh: "停止" },
+  mobile_quick_keys: { en: "Keys", zh: "琴键" },
+  mobile_quick_controls: { en: "Mobile quick controls", zh: "移动端快捷控制条" },
   // Unsaved-changes guard (item ⑧). Destructive actions ask before discarding pattern edits.
   unsaved_title: { en: "Unsaved changes", zh: "有未保存的修改" },
   unsaved_message: {

@@ -20,6 +20,10 @@ import {
   type LayoutPrefs,
 } from "../../features/sequencer/layoutPrefs";
 import {
+  loadKeyboardFabPref,
+  saveKeyboardFabPref,
+} from "../../features/sequencer/keyboardFabPref";
+import {
   getHapticSettings,
   setHapticEnabled,
   setHapticIntensity,
@@ -120,8 +124,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Layout defaults are read/written through the same module the studio boots from.
   const [layout, setLayout] = useState<LayoutPrefs>(() => loadLayoutPrefs());
+  const [showKeyboardFab, setShowKeyboardFab] = useState<boolean>(() => loadKeyboardFabPref());
   useEffect(() => {
-    if (isOpen) setLayout(loadLayoutPrefs());
+    if (isOpen) {
+      setLayout(loadLayoutPrefs());
+      setShowKeyboardFab(loadKeyboardFabPref());
+    }
   }, [isOpen]);
 
   const updateLayout = useCallback((patch: Partial<LayoutPrefs>) => {
@@ -311,6 +319,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     ))}
                   </div>
                 </label>
+
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-line/40">
+                  <div>
+                    <span className={rowLabelClass}>{t("settings_keyboard_fab")}</span>
+                    <div className="text-[11px] text-text-sub leading-relaxed">{t("settings_keyboard_fab_desc")}</div>
+                  </div>
+                  <button
+                    type="button"
+                    aria-pressed={showKeyboardFab}
+                    data-testid="settings-keyboard-fab-toggle"
+                    onClick={() => {
+                      const next = !showKeyboardFab;
+                      setShowKeyboardFab(next);
+                      saveKeyboardFabPref(next);
+                    }}
+                    className={toggleClass(showKeyboardFab)}
+                  >
+                    {showKeyboardFab ? t("audio_settings_on") : t("audio_settings_off")}
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   data-testid="settings-layout-reset"

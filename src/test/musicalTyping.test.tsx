@@ -224,4 +224,30 @@ describe("MusicalTypingModal", () => {
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(3);
   });
+
+  it("occupies 100% horizontal width and has z-index 9999 on top of all panels", () => {
+    render(
+      <MusicalTypingModal
+        isOpen={true}
+        onClose={vi.fn()}
+        pattern={mockPattern}
+        activeTrackIdx={0}
+        onSelectTrack={vi.fn()}
+        onAudition={vi.fn()}
+        isZh={false}
+      />
+    );
+
+    const modal = screen.getByTestId("musical-typing-modal");
+    expect(modal).toHaveStyle({ zIndex: "9999" });
+
+    const keybed = screen.getByTestId("musical-typing-keybed");
+    expect(keybed).toHaveStyle({ width: "100%" });
+
+    const whiteKeyA = screen.getByTestId("musical-key-a");
+    expect(whiteKeyA).toHaveStyle({ flex: "1 0 auto", minWidth: "24px" });
+
+    const blackKeyW = screen.getByTestId("musical-key-w");
+    expect(blackKeyW).toHaveStyle({ transform: "translateX(-50%)" });
+  });
 });
