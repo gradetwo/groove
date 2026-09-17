@@ -273,4 +273,23 @@ describe("SettingsModal tabs", () => {
     fireEvent.click(screen.getByTestId("settings-about-updates"));
     expect(onOpenUpdates).toHaveBeenCalledTimes(1);
   });
+
+  it("persists piano roll default tool preference in interface tab", () => {
+    const { engine } = makeEngine();
+    renderPanel(engine, { initialTab: "interface" });
+
+    const pointerBtn = screen.getByTestId("settings-default-tool-pointer");
+    const pencilBtn = screen.getByTestId("settings-default-tool-pencil");
+    expect(pointerBtn).toBeInTheDocument();
+    expect(pencilBtn).toBeInTheDocument();
+    expect(pointerBtn.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(pencilBtn);
+    expect(localStorage.getItem("groove_default_roll_tool")).toBe("pencil");
+    expect(pencilBtn.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(pointerBtn);
+    expect(localStorage.getItem("groove_default_roll_tool")).toBe("pointer");
+    expect(pointerBtn.getAttribute("aria-pressed")).toBe("true");
+  });
 });

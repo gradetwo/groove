@@ -72,6 +72,7 @@ function setup(over: {
   onAudition?: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
   onToggleMusicalTyping?: () => void;
   onOpenHelp?: (chapterId?: string) => void;
+  initialTool?: "pointer" | "pencil" | "eraser" | "scissors" | "marquee";
 } = {}) {
   const commits: SequencerAction[] = [];
   const onAudition = over.onAudition ?? vi.fn();
@@ -95,6 +96,7 @@ function setup(over: {
       onAudition={onAudition}
       onToggleMusicalTyping={onToggleMusicalTyping}
       onOpenHelp={onOpenHelp}
+      initialTool={over.initialTool}
     />
   );
   return { commits, onAudition, onClose, onSelectTrack, onOpenHelp, pattern };
@@ -114,7 +116,7 @@ describe("PianoRollLane · one source of truth", () => {
   });
 
   it("commits a whole pattern (not a private copy) when a note is drawn", () => {
-    const { commits, onAudition } = setup();
+    const { commits, onAudition } = setup({ initialTool: "pencil" });
     const grid = screen.getByTestId("piano-roll-grid");
     // jsdom gives every element a zero-sized rect, so the click coordinates *are* the cell
     // coordinates: x/width = step, y/ROW_H = row.
@@ -132,7 +134,7 @@ describe("PianoRollLane · one source of truth", () => {
   });
 
   it("leaves array lengths untouched, because the store derives the step count from them", () => {
-    const { commits } = setup();
+    const { commits } = setup({ initialTool: "pencil" });
     fireEvent.pointerDown(screen.getByTestId("piano-roll-grid"), { clientX: 2 * 26 + 4, clientY: 3 * 18 + 4 });
     const payload = (commits[0] as { pattern: SequencerPattern }).pattern;
     for (const track of payload.tracks) {
@@ -267,16 +269,26 @@ describe("PianoRollLane · width, fullscreen and collapse", () => {
 describe("PianoRollLane · tools", () => {
   const grid = () => screen.getByTestId("piano-roll-grid");
 
-  it("offers the five tools, reports the active one, and switches with the number keys", () => {
+  it("offers the five tools, reports the active one, and switches with the number keys and P/B", () => {
     setup();
     const panel = screen.getByTestId("piano-roll");
-    // The roll opens on the pencil: drawing into an empty grid is this editor's primary verb.
-    expect(panel.getAttribute("data-tool")).toBe("pencil");
+    // The roll opens on the pointer by default (item ②).
+    expect(panel.getAttribute("data-tool")).toBe("pointer");
 
     for (const id of ["pointer", "pencil", "eraser", "scissors", "marquee"]) {
       expect(screen.getByTestId(`piano-roll-tool-${id}`)).toBeInTheDocument();
-      expect(screen.getByTestId(`piano-roll-tool-${id}`).getAttribute("aria-pressed")).toBe(id === "pencil" ? "true" : "false");
+      expect(screen.getByTestId(`piano-roll-tool-${id}`).getAttribute("aria-pressed")).toBe(id === "pointer" ? "true" : "false");
     }
+
+    // Switch to pencil with 'B'
+    fireEvent.keyDown(window, { key: "b" });
+    expect(screen.getByTestId("piano-roll-tool-pencil").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("piano-roll").getAttribute("data-tool")).toBe("pencil");
+
+    // Switch back to pointer with 'P'
+    fireEvent.keyDown(window, { key: "p" });
+    expect(screen.getByTestId("piano-roll-tool-pointer").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("piano-roll").getAttribute("data-tool")).toBe("pointer");
 
     fireEvent.keyDown(window, { key: "3" });
     expect(screen.getByTestId("piano-roll-tool-eraser").getAttribute("aria-pressed")).toBe("true");
@@ -295,7 +307,7 @@ describe("PianoRollLane · tools", () => {
   });
 
   it("paints a stroke with the pencil, committing the first cell at once and the rest on release", () => {
-    const { commits } = setup();
+    const { commits } = setup({ initialTool: "pencil" });
     fireEvent.pointerDown(grid(), { clientX: 2 * 26 + 4, clientY: 3 * 18 + 4 });
     expect(commits).toHaveLength(1);
 
@@ -532,8 +544,9 @@ describe("PianoRollLane · chords are visible and editable", () => {
   it("builds a chord by drawing onto a step that already sounds", () => {
     const { commits } = setup({
       pattern: makePattern({ steps: [1, 0, 0, 0, 0, 0, 0, 0], pitch: [60, null, null, null, null, null, null, null] }),
+      initialTool: "pencil",
     });
-    // Pencil is the default tool; draw the third onto the same step.
+    // Pencil is selected; draw the third onto the same step.
     fireEvent.pointerDown(grid(), { clientX: 4, clientY: rowYFor(64) });
     expect(commits).toHaveLength(1);
     const pattern = (commits[0] as { pattern: SequencerPattern }).pattern;
@@ -667,8 +680,8 @@ describe("PianoRollLane · chords are visible and editable", () => {
   });
 
   it("shows ghost hover preview when hovering over empty grid in pencil mode", () => {
-    setup();
-    // Default tool is pencil; step 2 is empty
+    setup({ initialTool: "pencil" });
+    // Step 2 is empty
     fireEvent.pointerMove(grid(), { clientX: 2 * 26 + 4, clientY: rowYFor(64) });
     expect(screen.getByTestId("piano-roll-ghost-hover")).toBeInTheDocument();
 
@@ -765,7 +778,7 @@ describe("PianoRollLane · chords are visible and editable", () => {
   });
 
   it("renders pitch row guideline and multi-note ghost preview when chord stamp is engaged", () => {
-    setup();
+    setup({ initialTool: "pencil" });
     // Engage Triad stamp
     const stampSelect = screen.getByTestId("piano-roll-chord-stamp");
     fireEvent.change(stampSelect, { target: { value: "triad" } });
@@ -839,6 +852,77 @@ describe("PianoRollLane · chords are visible and editable", () => {
 
     fireEvent.click(guideBtn);
     expect(onOpenHelp).toHaveBeenCalledWith("sequencer");
+  });
+});
+
+describe("PianoRollLane · dual-axis zoom, 0-127 pitch range & pointer workflow (items ②, ④, ⑤)", () => {
+  it("defaults to pointer tool, displays cursor styles and switches with P / B", () => {
+    setup();
+    const panel = screen.getByTestId("piano-roll");
+    const grid = screen.getByTestId("piano-roll-grid");
+
+    // 1. Defaults to pointer tool
+    expect(panel.getAttribute("data-tool")).toBe("pointer");
+    expect(grid.className).toContain("cursor-default");
+
+    // 2. Switch to pencil with 'B'
+    fireEvent.keyDown(window, { key: "b" });
+    expect(panel.getAttribute("data-tool")).toBe("pencil");
+    expect(grid.className).toContain("cursor-crosshair");
+
+    // 3. Switch back to pointer with 'P'
+    fireEvent.keyDown(window, { key: "p" });
+    expect(panel.getAttribute("data-tool")).toBe("pointer");
+    expect(grid.className).toContain("cursor-default");
+  });
+
+  it("covers full 0-127 MIDI pitch range (128 rows) when unfolded", () => {
+    setup();
+    const panel = screen.getByTestId("piano-roll");
+    expect(panel.getAttribute("data-rows")).toBe("128");
+
+    // Extreme pitch rows exist
+    expect(screen.getByTestId("piano-roll-row-0")).toBeInTheDocument();
+    expect(screen.getByTestId("piano-roll-row-60")).toBeInTheDocument();
+    expect(screen.getByTestId("piano-roll-row-127")).toBeInTheDocument();
+  });
+
+  it("controls horizontal and vertical zoom independently via dual-axis sliders and buttons", () => {
+    setup();
+    const panel = screen.getByTestId("piano-roll");
+    const xSlider = screen.getByTestId("piano-roll-zoom-x-slider");
+    const ySlider = screen.getByTestId("piano-roll-zoom-y-slider");
+
+    expect(xSlider).toBeInTheDocument();
+    expect(ySlider).toBeInTheDocument();
+
+    // Adjust horizontal zoom via slider
+    fireEvent.change(xSlider, { target: { value: "36" } });
+    expect(panel.getAttribute("data-cell-w")).toBe("36");
+
+    // Adjust vertical zoom via slider
+    fireEvent.change(ySlider, { target: { value: "24" } });
+    expect(panel.getAttribute("data-row-h")).toBe("24");
+
+    // Step horizontal zoom with zoom-in / zoom-out buttons
+    fireEvent.click(screen.getByTestId("piano-roll-zoom-in"));
+    expect(panel.getAttribute("data-cell-w")).toBe("40");
+
+    fireEvent.click(screen.getByTestId("piano-roll-zoom-out"));
+    expect(panel.getAttribute("data-cell-w")).toBe("36");
+
+    // Cycle vertical zoom with row-height toggle button
+    fireEvent.click(screen.getByTestId("piano-roll-row-height-toggle"));
+    expect(Number(panel.getAttribute("data-row-h"))).toBeGreaterThan(0);
+  });
+
+  it("supports viewport navigation with Arrow keys when no notes are selected", () => {
+    setup();
+    // With no selection, Arrow keys navigate/scroll viewport without error
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    fireEvent.keyDown(window, { key: "ArrowDown", shiftKey: true });
+    fireEvent.keyDown(window, { key: "ArrowUp", shiftKey: true });
   });
 });
 

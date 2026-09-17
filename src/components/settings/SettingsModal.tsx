@@ -125,10 +125,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Layout defaults are read/written through the same module the studio boots from.
   const [layout, setLayout] = useState<LayoutPrefs>(() => loadLayoutPrefs());
   const [showKeyboardFab, setShowKeyboardFab] = useState<boolean>(() => loadKeyboardFabPref());
+  const [defaultRollTool, setDefaultRollTool] = useState<"pointer" | "pencil">(() => {
+    try {
+      const val = localStorage.getItem("groove_default_roll_tool");
+      return val === "pencil" ? "pencil" : "pointer";
+    } catch {
+      return "pointer";
+    }
+  });
   useEffect(() => {
     if (isOpen) {
       setLayout(loadLayoutPrefs());
       setShowKeyboardFab(loadKeyboardFabPref());
+      try {
+        const val = localStorage.getItem("groove_default_roll_tool");
+        setDefaultRollTool(val === "pencil" ? "pencil" : "pointer");
+      } catch {
+        setDefaultRollTool("pointer");
+      }
     }
   }, [isOpen]);
 
@@ -338,6 +352,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     {showKeyboardFab ? t("audio_settings_on") : t("audio_settings_off")}
                   </button>
+                </div>
+
+                {/* Default Piano Roll Tool */}
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-line/40">
+                  <div>
+                    <span className={rowLabelClass}>{t("settings_default_roll_tool")}</span>
+                    <div className="text-[11px] text-text-sub leading-relaxed">{t("settings_default_roll_tool_desc")}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      aria-pressed={defaultRollTool === "pointer"}
+                      data-testid="settings-default-tool-pointer"
+                      onClick={() => {
+                        setDefaultRollTool("pointer");
+                        localStorage.setItem("groove_default_roll_tool", "pointer");
+                        window.dispatchEvent(new CustomEvent("groove_default_tool_changed", { detail: "pointer" }));
+                      }}
+                      className={toggleClass(defaultRollTool === "pointer")}
+                    >
+                      {t("roll_tool_pointer")}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={defaultRollTool === "pencil"}
+                      data-testid="settings-default-tool-pencil"
+                      onClick={() => {
+                        setDefaultRollTool("pencil");
+                        localStorage.setItem("groove_default_roll_tool", "pencil");
+                        window.dispatchEvent(new CustomEvent("groove_default_tool_changed", { detail: "pencil" }));
+                      }}
+                      className={toggleClass(defaultRollTool === "pencil")}
+                    >
+                      {t("roll_tool_pencil")}
+                    </button>
+                  </div>
                 </div>
 
                 <button

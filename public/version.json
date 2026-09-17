@@ -1,29 +1,29 @@
 {
-  "version": "2.0.41",
+  "version": "2.0.42",
   "releaseDate": "2026-09-17",
-  "changelogCount": 105,
+  "changelogCount": 106,
   "latest": {
-    "version": "2.0.41",
+    "version": "2.0.42",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.41 虚拟键盘 100% 水平全宽响应、卷帘全屏防遮挡与全域置顶、悬浮按键与移动端精简控制条",
-      "en": "v2.0.41 Virtual Keyboard 100% Responsive Width, Fullscreen Non-Obscured Z-Index, FAB Toggle & Mobile Quick Control Bar"
+      "zh": "v2.0.42 钢琴卷帘默认指针模式、双轴无级缩放滑动条、0-127全音区联动滚动与C4自动居中",
+      "en": "v2.0.42 Piano Roll Default Pointer Tool, Dual-Axis Continuous Zoom Sliders, 0-127 Full Pitch Range with Synchronized Scroll & C4 Auto-Centering"
     },
     "highlights": [
       {
-        "zh": "**虚拟键盘 100% 水平全宽响应式自适应（100% Responsive Width Keybed）**：彻底消除虚拟键盘两侧留白与宽度受限问题。容器设置 100% 全宽并针对桌面端设置 1200px 黄金居中最大宽度，白键采用 flex: 1 0 auto 均分宽度并设立最小触控安全边界；黑键根据白键边界精准计算居中位置与 60% 相对黄金键宽，完美适配从超宽带鱼屏到掌上触屏设备的各种视口。",
-        "en": "**100% Responsive Width Keybed**: Eliminated fixed modal width clamping and horizontal margin gaps. The virtual keyboard container now fills 100% width up to 1200px desktop max-width, with white keys equally dividing space via flex: 1 0 auto and black keys positioned dynamically on white key boundaries with 60% relative width."
+        "zh": "**默认指针状态与全局偏好持久化（Default Pointer Tool & Persistent Preference）**：将钢琴卷帘默认激活工具由铅笔（Pencil）全面调整为更符合专业 DAW 直觉的指针选择工具（Pointer）。在全局设置「界面设置」中新增「钢琴卷帘默认工具」持久化偏好项，支持创作者自由选择指针或铅笔作为默认模式；同时深度保留 P（指针）、B（铅笔）及 1~5 数字快捷键，指针模式下支持双击空白网格快速写入音符、双击既有音符快速删除，操作行云流水。",
+        "en": "**Default Pointer Tool & Persistent Preference**: Transitioned the initial piano roll editing tool from pencil to pointer, aligning with standard desktop DAW conventions. Added a persistent preference in Global Settings allowing producers to choose either pointer or pencil as default. Preserved P (Pointer), B (Pencil), and numeric 1-5 shortcuts, with seamless double-click creation and deletion in pointer mode."
       },
       {
-        "zh": "**钢琴卷帘全屏防遮挡与全域最高置顶（Fullscreen Non-Obscured & Fixed Top Layer）**：将虚拟键盘（Musical Typing）提升为全站绝对最高层级（z-index: 9999），固定吸附于屏幕最底端。当钢琴卷帘进入全屏模式（z-[60]）时，虚拟键盘依然清晰可见、随时弹奏，彻底消除了全屏模式下键盘被遮挡无法演奏的体验断层。",
-        "en": "**Fullscreen Non-Obscured & Fixed Top Layer**: Elevated the virtual keyboard modal to the absolute top layer (z-index: 9999) fixed to the bottom edge. When the piano roll expands to fullscreen (z-[60]), the keyboard remains prominently visible and playable without being covered."
+        "zh": "**双轴无级缩放滑动条与滚轮手势（Dual-Axis Continuous Zoom Sliders & Gestures）**：在卷帘 Deck 2 工具栏新增专属水平缩放（8px~64px 步宽）与垂直缩放（12px~48px 行高）连续滑动条（Slider），配合放大/缩小与循环切换步进按键；全面支持高精度手势操作：Ctrl/Cmd + 滚轮实时水平缩放时间网格，Alt + 滚轮（在网格空白处）实时垂直缩放音高行高（悬停在音符上时微调力度），Shift + 滚轮水平横向漫游，多小节编曲收放自如。",
+        "en": "**Dual-Axis Continuous Zoom Sliders & Gestures**: Integrated continuous horizontal (8px-64px step width) and vertical (12px-48px row height) zoom sliders into Deck 2, complete with quick step buttons. Fully supports precision gestures: Ctrl/Cmd + Wheel for horizontal time zoom, Alt + Wheel on empty grid for vertical pitch zoom (and velocity nudge when hovering over notes), and Shift + Wheel for horizontal panning."
       },
       {
-        "zh": "**虚拟键盘右下角悬浮键（FAB）与全局设置开关**：在工作台右下方增设专属圆形琴键悬浮键（FAB，带微光阴影与悬停放大动效），轻点即可随时展开虚拟键盘；键盘展开时自动让位。在「全局设置 → 界面设置」中新增「显示虚拟键盘悬浮键」持久化开关，随心定制操作习惯。",
-        "en": "**Virtual Keyboard Floating Action Button (FAB) & Settings Switch**: Added a dedicated circular keyboard FAB on the bottom-right for instant 1-click keyboard launching. Includes a persistent toggle in \"Global Settings -> Interface Defaults\" to customize workspace density."
+        "zh": "**0-127 全音区覆盖与音高键盘精准视区联动（0-127 Full MIDI Pitch Range & Synchronized Keybed Scroll）**：展开模式（Unfolded）完整覆盖标准 MIDI 0~127 全音域（128 行音高，高音 127 降至低音 0），初次开启或切换模式时视区精准自动平滑居中于中央 C（C4 / MIDI 60）；左侧象牙黑曜石 3D 琴键与网格视区建立像素级垂直滚动绝对同步；支持方向键导航（未选中音符时上下键微步滚动、Shift + 上下键单八度快速翻页）；力度泳道独立吸附停靠于音高视区底端并与时间轴严格横向同步，彻底消除音域盲区。",
+        "en": "**0-127 Full MIDI Pitch Range & Synchronized Keybed Scroll**: Unfolded mode now spans the entire 0-127 MIDI pitch range (128 chromatic rows) with automatic smooth viewport centering on Middle C (C4 / MIDI 60) on initial render. The 3D ivory/obsidian keybed and grid viewport synchronize vertical scroll offsets flawlessly. Features keyboard navigation (Shift + Up/Down for 12-semitone octave page jumping and Up/Down for single row scrolling), with the velocity lane docked clean…"
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

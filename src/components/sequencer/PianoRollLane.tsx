@@ -123,8 +123,19 @@ export interface PianoRollLaneProps {
   onToggleMusicalTyping?: () => void;
   /** Optional trigger to open Help Center modal with contextual chapter */
   onOpenHelp?: (chapterId?: string) => void;
+  /** Initial tool to activate when opening the roll (defaults to stored preference or pointer) */
+  initialTool?: RollTool;
 }
 
+export function loadDefaultRollTool(): RollTool {
+  try {
+    const val = localStorage.getItem("groove_default_roll_tool");
+    if (val === "pencil") return "pencil";
+    return "pointer";
+  } catch {
+    return "pointer";
+  }
+}
 
 const ROW_HEIGHTS = [12, 18, 26];
 const ZOOM_FACTORS = [0.5, 0.75, 1, 1.5, 2];
@@ -135,8 +146,8 @@ const VELOCITY_LANE_H = 54;
 const VELOCITY_PER_PX = 2.4;
 
 const TOOLS: Array<{ id: RollTool; icon: React.ReactNode; labelKey: string; keyHint: string }> = [
-  { id: "pointer", icon: <MousePointer2 className="h-3.5 w-3.5" />, labelKey: "roll_tool_pointer", keyHint: "1" },
-  { id: "pencil", icon: <Pencil className="h-3.5 w-3.5" />, labelKey: "roll_tool_pencil", keyHint: "2" },
+  { id: "pointer", icon: <MousePointer2 className="h-3.5 w-3.5" />, labelKey: "roll_tool_pointer", keyHint: "1/P" },
+  { id: "pencil", icon: <Pencil className="h-3.5 w-3.5" />, labelKey: "roll_tool_pencil", keyHint: "2/B" },
   { id: "eraser", icon: <Eraser className="h-3.5 w-3.5" />, labelKey: "roll_tool_eraser", keyHint: "3" },
   { id: "scissors", icon: <Scissors className="h-3.5 w-3.5" />, labelKey: "roll_tool_scissors", keyHint: "4" },
   { id: "marquee", icon: <SquareDashedMousePointer className="h-3.5 w-3.5" />, labelKey: "roll_tool_marquee", keyHint: "5" },
@@ -200,15 +211,16 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   onAudition,
   onToggleMusicalTyping,
   onOpenHelp,
+  initialTool,
 }) => {
   const { t } = useLanguage();
-  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_INDEX);
-  const [rowHeightIdx, setRowHeightIdx] = useState(1);
+  const [customStepWidth, setCustomStepWidth] = useState<number | null>(null);
+  const [rowHeight, setRowHeight] = useState(18);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [availableWidth, setAvailableWidth] = useState(0);
   const [octaveShift, setOctaveShift] = useState(0);
-  const [tool, setTool] = useState<RollTool>("pencil");
+  const [tool, setTool] = useState<RollTool>(() => initialTool ?? loadDefaultRollTool());
   const [chordStamp, setChordStamp] = useState<ChordStampType>("note");
   const [selectedProgressionId, setSelectedProgressionId] = useState<string>("pop_4chords");
   const [activeAuditionMidi, setActiveAuditionMidi] = useState<number | null>(null);
@@ -228,13 +240,15 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const progressionAuditionTimersRef = useRef<number[]>([]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const keybedScrollRef = useRef<HTMLDivElement | null>(null);
+  const velScrollRef = useRef<HTMLDivElement | null>(null);
   const playheadRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const lastAuditionPitchRef = useRef<number | null>(null);
+  const hasCenteredRef = useRef(false);
 
   const cellWRef = useRef(26);
   const catchRef = useRef(true);
-  const rowH = ROW_HEIGHTS[rowHeightIdx];
   const view = draft ?? pattern;
   const track = view.tracks[activeTrackIdx];
   const editable = isRollEditableTrack(track);
@@ -265,26 +279,11 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     });
   }, [barCount, notes, stepCount, stepsPerBar, loopLen]);
 
-  const [baseLo, baseHi] = useMemo(() => visiblePitchRange(notes), [notes]);
-  const [loPitch, hiPitch] = useMemo(() => {
-    const span = baseHi - baseLo;
-    let lo = baseLo + octaveShift;
-    let hi = baseHi + octaveShift;
-    if (lo < 0) {
-      hi -= lo;
-      lo = 0;
-    }
-    if (hi > 127) {
-      lo = Math.max(0, lo - (hi - 127));
-      hi = 127;
-    }
-    return [lo, Math.max(lo + span, hi)] as [number, number];
-  }, [baseLo, baseHi, octaveShift]);
-
   const scale = useMemo(() => scaleHighlightFor(view.scale), [view.scale]);
+  // 0-127 full MIDI range coverage when unfolded, filtered to in-scale/notes when folded
   const rows = useMemo(() => {
     const out: number[] = [];
-    for (let p = hiPitch; p >= loPitch; p--) {
+    for (let p = 127; p >= 0; p--) {
       if (isFolded) {
         const inScale = scale.pcs.has(p % 12);
         const hasNote = notes.some((n) => n.midi === p);
@@ -293,14 +292,42 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       out.push(p);
     }
     return out;
-  }, [loPitch, hiPitch, isFolded, scale.pcs, notes]);
+  }, [isFolded, scale.pcs, notes]);
 
   const rowIdxMap = useMemo(() => new Map(rows.map((p, idx) => [p, idx])), [rows]);
   const fitCellW = availableWidth > 0 ? Math.max(MIN_CELL_W, (availableWidth - GUTTER_W) / Math.max(1, stepCount)) : 26;
-  const cellW = Math.max(MIN_CELL_W, fitCellW * ZOOM_FACTORS[zoomIdx]);
+  const cellW = customStepWidth ?? fitCellW;
+  const rowH = rowHeight;
   const gridW = stepCount * cellW;
   cellWRef.current = cellW;
   catchRef.current = catchPlayhead;
+
+  // Auto-center on Middle C (C4 / MIDI 60) on initial render
+  useEffect(() => {
+    if (hasCenteredRef.current) return;
+    const c4Idx = rows.indexOf(60);
+    if (c4Idx >= 0 && scrollRef.current) {
+      const viewportH = scrollRef.current.clientHeight || 420;
+      const targetY = Math.max(0, 24 + c4Idx * rowH - viewportH / 2);
+      scrollRef.current.scrollTop = targetY;
+      if (keybedScrollRef.current) {
+        keybedScrollRef.current.scrollTop = targetY;
+      }
+      hasCenteredRef.current = true;
+    }
+  }, [rows, rowH]);
+
+  // Sync tool with user preference broadcast
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<RollTool>).detail;
+      if (detail === "pointer" || detail === "pencil") {
+        setTool(detail);
+      }
+    };
+    window.addEventListener("groove_default_tool_changed", handler);
+    return () => window.removeEventListener("groove_default_tool_changed", handler);
+  }, []);
 
   const selectableTracks = useMemo(() => {
     const list = view.tracks.map((tr, idx) => ({ tr, idx })).filter(({ tr }) => isRollEditableTrack(tr));
@@ -461,25 +488,47 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   };
 
   const handleGridWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (!editable || !event.altKey) return;
-    const { stepIdx, midi } = cellFromEvent(event as unknown as React.PointerEvent<HTMLElement>);
-    if (stepIdx < 0 || stepIdx >= stepCount || midi === undefined) return;
-    const hit = noteAt(stepIdx, midi);
-    const targetIds = hit
-      ? (selectedSet.has(noteId(hit)) ? selection : [noteId(hit)])
-      : selection.length > 0
-      ? selection
-      : null;
-    if (!targetIds || targetIds.length === 0) return;
+    if (event.ctrlKey || event.metaKey) {
+      // Ctrl / Cmd + Wheel: Horizontal zoom
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? 2 : -2;
+      setCustomStepWidth((w) => Math.max(8, Math.min(64, (w ?? Math.round(cellW)) + delta)));
+      return;
+    }
 
-    const delta = event.deltaY < 0 ? 5 : -5;
-    applyOp((p) => scaleNotesVelocity(p, activeTrackIdx, targetIds, delta, stepCount));
+    if (event.altKey) {
+      const { stepIdx, midi } = cellFromEvent(event as unknown as React.PointerEvent<HTMLElement>);
+      const hit = (stepIdx >= 0 && stepIdx < stepCount && midi !== undefined) ? noteAt(stepIdx, midi) : null;
+      const targetIds = hit
+        ? (selectedSet.has(noteId(hit)) ? selection : [noteId(hit)])
+        : selection.length > 0
+        ? selection
+        : null;
 
-    const sampleNote = notes.find((n) => targetIds.includes(noteId(n)));
-    if (sampleNote) {
-      const newVel = Math.max(1, Math.min(127, Math.round(sampleNote.velocity + delta)));
-      setNotice(t("roll_vel_nudge", { vel: newVel }));
-      onAudition(activeTrackIdx, sampleNote.midi, newVel, 0.25);
+      if (editable && targetIds && targetIds.length > 0) {
+        const delta = event.deltaY < 0 ? 5 : -5;
+        applyOp((p) => scaleNotesVelocity(p, activeTrackIdx, targetIds, delta, stepCount));
+
+        const sampleNote = notes.find((n) => targetIds.includes(noteId(n)));
+        if (sampleNote) {
+          const newVel = Math.max(1, Math.min(127, Math.round(sampleNote.velocity + delta)));
+          setNotice(t("roll_vel_nudge", { vel: newVel }));
+          onAudition(activeTrackIdx, sampleNote.midi, newVel, 0.25);
+        }
+      } else {
+        // Empty space: Vertical zoom
+        event.preventDefault();
+        const delta = event.deltaY < 0 ? 2 : -2;
+        setRowHeight((h) => Math.max(12, Math.min(48, h + delta)));
+      }
+      return;
+    }
+
+    if (event.shiftKey) {
+      if (scrollRef.current) {
+        scrollRef.current.scrollLeft += event.deltaY;
+      }
+      return;
     }
   };
 
@@ -540,6 +589,17 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       return;
     }
     if (tool === "marquee" || (!hit && tool === "pointer")) {
+      if (tool === "pointer" && event.detail === 2) {
+        const baseGate = notesAtStep(stepIdx)[0]?.gate ?? 0.8;
+        const next = addNote(pattern, activeTrackIdx, stepIdx, midi, stepCount, 100, baseGate);
+        if (next !== pattern) {
+          const id = noteId({ stepIdx, midi });
+          commitDraft(next, [id]);
+          lastAuditionPitchRef.current = midi;
+          onAudition(activeTrackIdx, midi, 100, baseGate);
+        }
+        return;
+      }
       // Dragging from empty space selects a region — the pointer tool does this in Logic too.
       dragRef.current = { mode: "marquee", startStep: stepIdx, startMidi: midi };
       setMarquee({ stepFrom: stepIdx, stepTo: stepIdx, pitchFrom: midi, pitchTo: midi });
@@ -696,6 +756,14 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         else onClose();
         return;
       }
+      if (event.key === "p" || event.key === "P") {
+        setTool("pointer");
+        return;
+      }
+      if (event.key === "b" || event.key === "B") {
+        setTool("pencil");
+        return;
+      }
       if (event.key >= "1" && event.key <= "5") {
         const next = TOOLS[Number(event.key) - 1];
         if (next) setTool(next.id);
@@ -713,14 +781,34 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         setSelection(notes.map(noteId));
         return;
       }
-      if (event.key.startsWith("Arrow") && selection.length > 0) {
-        const stepDelta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-        const pitchDelta = event.key === "ArrowUp" ? 1 : event.key === "ArrowDown" ? -1 : 0;
-        if (stepDelta === 0 && pitchDelta === 0) return;
-        event.preventDefault();
-        const moved = moveNotes(pattern, activeTrackIdx, selection, stepDelta, pitchDelta, stepCount);
-        if (moved.pattern !== pattern) {
-          commitDraft(moved.pattern, moved.selection);
+      if (event.key.startsWith("Arrow")) {
+        if (selection.length > 0) {
+          const stepDelta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+          const pitchDelta = event.key === "ArrowUp" ? 1 : event.key === "ArrowDown" ? -1 : 0;
+          if (stepDelta === 0 && pitchDelta === 0) return;
+          event.preventDefault();
+          const moved = moveNotes(pattern, activeTrackIdx, selection, stepDelta, pitchDelta, stepCount);
+          if (moved.pattern !== pattern) {
+            commitDraft(moved.pattern, moved.selection);
+          }
+        } else {
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            const amount = event.shiftKey ? 12 * rowH : rowH;
+            if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, scrollRef.current.scrollTop - amount);
+          } else if (event.key === "ArrowDown") {
+            event.preventDefault();
+            const amount = event.shiftKey ? 12 * rowH : rowH;
+            if (scrollRef.current) scrollRef.current.scrollTop += amount;
+          } else if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            const amount = event.shiftKey ? 4 * cellW : cellW;
+            if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, scrollRef.current.scrollLeft - amount);
+          } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            const amount = event.shiftKey ? 4 * cellW : cellW;
+            if (scrollRef.current) scrollRef.current.scrollLeft += amount;
+          }
         }
       }
     };
@@ -1258,38 +1346,72 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               </button>
             </div>
 
-            {/* Zoom & Row Height */}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setZoomIdx((v) => Math.max(0, v - 1))}
-                title={t("roll_zoom_out")}
-                aria-label={t("roll_zoom_out")}
-                data-testid="piano-roll-zoom-out"
-                className={ctrlClass}
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoomIdx((v) => Math.min(ZOOM_FACTORS.length - 1, v + 1))}
-                title={t("roll_zoom_in")}
-                aria-label={t("roll_zoom_in")}
-                data-testid="piano-roll-zoom-in"
-                className={ctrlClass}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setRowHeightIdx((v) => (v + 1) % ROW_HEIGHTS.length)}
-                title={t("roll_row_height")}
-                aria-label={t("roll_row_height")}
-                data-testid="piano-roll-row-height-toggle"
-                className={ctrlClass}
-              >
-                {rowH}px
-              </button>
+            {/* Zoom & Row Height Dual-Axis Controls */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Horizontal Zoom */}
+              <div className="flex items-center gap-1 bg-[#141722] px-2 py-0.5 rounded-lg border border-[#262c3e]" title={t("roll_zoom_x")}>
+                <span className="text-[8px] font-['JetBrains_Mono'] text-text-dim uppercase font-bold">X</span>
+                <button
+                  type="button"
+                  onClick={() => setCustomStepWidth((w) => Math.max(8, (w ?? Math.round(cellW)) - 4))}
+                  title={t("roll_zoom_out")}
+                  aria-label={t("roll_zoom_out")}
+                  data-testid="piano-roll-zoom-out"
+                  className="p-0.5 hover:text-accent text-text-sub transition-colors"
+                >
+                  <Minus className="h-3 w-3" />
+                </button>
+                <input
+                  type="range"
+                  min="8"
+                  max="64"
+                  value={customStepWidth ?? Math.round(cellW)}
+                  onChange={(e) => setCustomStepWidth(Number(e.target.value))}
+                  data-testid="piano-roll-zoom-x-slider"
+                  aria-label={t("roll_zoom_x")}
+                  className="w-14 sm:w-16 h-1 accent-accent bg-black/40 rounded cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCustomStepWidth((w) => Math.min(64, (w ?? Math.round(cellW)) + 4))}
+                  title={t("roll_zoom_in")}
+                  aria-label={t("roll_zoom_in")}
+                  data-testid="piano-roll-zoom-in"
+                  className="p-0.5 hover:text-accent text-text-sub transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+                <span className="text-[8px] font-['JetBrains_Mono'] text-text-dim min-w-[22px] text-right">{Math.round(cellW)}px</span>
+              </div>
+
+              {/* Vertical Zoom */}
+              <div className="flex items-center gap-1 bg-[#141722] px-2 py-0.5 rounded-lg border border-[#262c3e]" title={t("roll_zoom_y")}>
+                <span className="text-[8px] font-['JetBrains_Mono'] text-text-dim uppercase font-bold">Y</span>
+                <input
+                  type="range"
+                  min="12"
+                  max="48"
+                  value={rowHeight}
+                  onChange={(e) => setRowHeight(Number(e.target.value))}
+                  data-testid="piano-roll-zoom-y-slider"
+                  aria-label={t("roll_zoom_y")}
+                  className="w-14 sm:w-16 h-1 accent-accent bg-black/40 rounded cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const heights = [14, 18, 26, 36];
+                    const nextIdx = (heights.indexOf(rowHeight) + 1) % heights.length;
+                    setRowHeight(heights[nextIdx] ?? 18);
+                  }}
+                  title={t("roll_row_height")}
+                  aria-label={t("roll_row_height")}
+                  data-testid="piano-roll-row-height-toggle"
+                  className="px-1.5 py-0.5 text-[8.5px] font-['JetBrains_Mono'] font-bold rounded bg-white/5 hover:bg-accent/20 hover:text-accent text-text-sub transition-colors"
+                >
+                  {rowH}px
+                </button>
+              </div>
             </div>
 
             {/* Delete Selection */}
@@ -1325,17 +1447,22 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         </div>
       ) : (
         <>
-          <div className="flex gap-2">
+          <div className="flex gap-2 min-h-0">
             {/* Pitch gutter, drawn as a realistic 3D piano keyboard with auditioning */}
             <div
-              className="shrink-0 select-none w-16 shadow-[4px_0_12px_rgba(0,0,0,0.5)] z-20"
-              style={{ paddingTop: 24 }}
+              ref={keybedScrollRef}
+              className="shrink-0 select-none w-16 shadow-[4px_0_12px_rgba(0,0,0,0.5)] z-20 overflow-hidden"
+              style={{ maxHeight: isFullscreen ? "calc(100vh - 280px)" : 420 }}
+              onWheel={(e) => {
+                if (scrollRef.current) scrollRef.current.scrollTop += e.deltaY;
+              }}
               onPointerMove={handleKeybedPointerMove}
               onPointerUp={handleKeybedPointerUp}
               onPointerCancel={handleKeybedPointerUp}
               data-testid="piano-roll-keybed"
               title={t("roll_keybed_glissando_hint")}
             >
+              <div style={{ height: 24 }} className="shrink-0" />
               {rows.map((midi) => {
                 const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
                 const inScale = scale.pcs.has(midi % 12);
@@ -1393,10 +1520,22 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               })}
             </div>
 
-            <div ref={gridWrapRef} data-testid="piano-roll-grid-wrap" className="min-w-0 flex-1">
-              <div ref={scrollRef} className="overflow-x-auto">
+            <div ref={gridWrapRef} data-testid="piano-roll-grid-wrap" className="min-w-0 flex-1 flex flex-col">
+              <div
+                ref={scrollRef}
+                onScroll={(e) => {
+                  if (keybedScrollRef.current) {
+                    keybedScrollRef.current.scrollTop = e.currentTarget.scrollTop;
+                  }
+                  if (velScrollRef.current) {
+                    velScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                  }
+                }}
+                className="overflow-x-auto overflow-y-auto"
+                style={{ maxHeight: isFullscreen ? "calc(100vh - 280px)" : 420 }}
+              >
                 {/* Measure & Chord Progression Ruler */}
-                <div className="flex border-b border-[#262b3b] bg-gradient-to-b from-[#171a25] via-[#13151f] to-[#0f1118] backdrop-blur-md sticky top-0 z-30 shadow-sm" style={{ height: 24 }}>
+                <div className="flex border-b border-[#262b3b] bg-gradient-to-b from-[#171a25] via-[#13151f] to-[#0f1118] backdrop-blur-md sticky top-0 z-30 shadow-sm" style={{ height: 24, minWidth: gridW }}>
                   {chordsByBar.map(({ barIdx, chordName, noteIds }) => {
                     const barWidth = stepsPerBar * cellW;
                     const isBarSelected = noteIds.length > 0 && noteIds.every((id) => selectedSet.has(id));
@@ -1464,7 +1603,15 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     onPointerCancel={handleGridPointerUp}
                     onPointerLeave={() => setHoverCell(null)}
                     onWheel={handleGridWheel}
-                    className="relative touch-none select-none bg-[#0f121d] overflow-hidden"
+                    className={`relative touch-none select-none bg-[#0f121d] overflow-hidden ${
+                      tool === "pointer"
+                        ? "cursor-default"
+                        : tool === "pencil"
+                        ? "cursor-crosshair"
+                        : tool === "eraser"
+                        ? "cursor-not-allowed"
+                        : "cursor-crosshair"
+                    }`}
                     style={{ height: rows.length * rowH, width: gridW }}
                   >
                     {/* Layer 1: Alternating Bar Column Backdrops */}
@@ -1785,9 +1932,19 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     })()}
                   </div>
                 </div>
+              </div>
 
-                {showVelocityLane && (
-                  <div className="mt-2.5 flex flex-col gap-1">
+              {showVelocityLane && (
+                <div
+                  ref={velScrollRef}
+                  onScroll={(e) => {
+                    if (scrollRef.current) {
+                      scrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                    }
+                  }}
+                  className="overflow-x-auto mt-2.5"
+                >
+                  <div className="flex flex-col gap-1" style={{ minWidth: gridW }}>
                     {/* Velocity Lane Header Bar with quick dynamics & leveling tools */}
                     <div className="flex flex-wrap items-center justify-between gap-1.5 px-1 font-['JetBrains_Mono'] text-[9.5px]">
                       <div className="flex items-center gap-1.5 text-text-dim">
@@ -1949,9 +2106,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       })}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-              </div>
             </div>
           </div>
 
