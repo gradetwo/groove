@@ -1,8 +1,39 @@
 import React, { memo } from "react";
-import { Music2, Play, Sliders, SlidersHorizontal, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Music2, Play, Sliders, SlidersHorizontal, Wand2 } from "lucide-react";
 import { SequencerTrack } from "../../types/genre";
 import { StepCell } from "./StepCell";
 import { useLanguage } from "../../i18n/LanguageContext";
+
+export type TrackCategory = "drum" | "perc" | "bass" | "chord" | "lead" | "fx";
+
+export function getTrackCategory(trackId: string, name: string): TrackCategory {
+  const tid = (trackId || "").toLowerCase();
+  const nm = (name || "").toLowerCase();
+  if (tid === "kick" || tid === "snare" || nm.includes("kick") || nm.includes("snare")) return "drum";
+  if (tid === "hat" || tid === "perc" || nm.includes("hat") || nm.includes("perc") || nm.includes("clap")) return "perc";
+  if (tid === "bass" || nm.includes("bass") || nm.includes("808") || nm.includes("sub")) return "bass";
+  if (tid === "chord" || nm.includes("chord") || nm.includes("pad") || nm.includes("key")) return "chord";
+  if (tid === "lead" || nm.includes("lead") || nm.includes("synth") || nm.includes("melody")) return "lead";
+  return "fx";
+}
+
+export function getTrackTypeDetails(category: TrackCategory, isZh: boolean) {
+  switch (category) {
+    case "drum":
+      return { label: isZh ? "鼓组" : "DRUM", color: "#ff5964" };
+    case "perc":
+      return { label: isZh ? "打击" : "PERC", color: "#45e0c9" };
+    case "bass":
+      return { label: isZh ? "贝斯" : "BASS", color: "#ff8a5c" };
+    case "chord":
+      return { label: isZh ? "和弦" : "CHORD", color: "#f06ec4" };
+    case "lead":
+      return { label: isZh ? "主音" : "LEAD", color: "#7ee787" };
+    case "fx":
+    default:
+      return { label: isZh ? "音效" : "FX", color: "#9aa5ce" };
+  }
+}
 
 export interface TrackMetaConfig {
   id: string;
@@ -58,6 +89,8 @@ export interface TrackRowProps {
   canMoveDown?: boolean;
   onChangePan?: (trackIdx: number, pan: number) => void;
   onChangeSwing?: (trackIdx: number, swing: number) => void;
+  isCompact?: boolean;
+  onToggleCompact?: (trackIdx: number) => void;
 }
 
 export const TrackRow = memo<TrackRowProps>(function TrackRow({
@@ -93,25 +126,62 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   canMoveDown = false,
   onChangePan,
   onChangeSwing,
+  isCompact = false,
+  onToggleCompact,
 }) {
   const { t } = useLanguage();
   const trackVol = track.volume !== undefined ? track.volume : 0.8;
   const trackPan = track.pan !== undefined ? track.pan : 0;
   const trackLen = track.trackLength || stepCount;
+  const typeCategory = getTrackCategory(track.track_id, track.name || meta.name);
+  const typeDetails = getTrackTypeDetails(typeCategory, isZh);
 
   return (
     <div
       role="row"
       aria-label={meta.name}
-      className={`flex items-center gap-2 sm:gap-3 py-1 sm:py-1.5 landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
+      className={`flex items-center gap-2 sm:gap-3 ${isCompact ? "py-0.5 min-h-[36px]" : "py-1 sm:py-1.5"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
       style={{ ["--tc" as any]: meta.color }}
     >
-      {/* Track Header (.trk-head) - 138px on mobile / 172px on sm+ - Sticky Left */}
-      <div className={`sticky left-0 z-20 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[138px] sm:w-[172px] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center gap-1 select-none border-r border-line-subtle border-l-[3px] border-l-[var(--tc)] shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-opacity ${
+      {/* Track Header (.trk-head) - 142px on mobile / 176px on sm+ - Sticky Left */}
+      <div className={`sticky left-0 z-20 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[142px] sm:w-[176px] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center ${
+        isCompact ? "h-[36px] gap-0" : "gap-1"
+      } select-none border-r border-line-subtle border-l-[3.5px] border-l-[var(--tc)] shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-all ${
         isSilenced && !isMute && !isSolo ? "opacity-60" : "opacity-100"
       }`}>
-        {/* Upper row: Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
-        <div className="flex items-center gap-1.5">
+        {/* Upper row: Fold Toggle + Type Badge + Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Fold / Unfold Single Track */}
+          {onToggleCompact && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCompact(trackIdx);
+              }}
+              data-testid={`track-fold-${trackIdx}`}
+              className="w-3.5 h-3.5 flex items-center justify-center text-text-dim hover:text-text shrink-0 cursor-pointer"
+              title={isCompact ? t("roll_expand") : t("roll_collapse")}
+              aria-label={isCompact ? t("roll_expand") : t("roll_collapse")}
+            >
+              {isCompact ? <ChevronRight className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+            </button>
+          )}
+
+          {/* Type Badge */}
+          <span
+            data-testid={`track-type-${trackIdx}`}
+            className="font-['JetBrains_Mono'] text-[7.5px] font-black uppercase px-1 py-0.2 rounded tracking-tighter shrink-0 border"
+            style={{
+              backgroundColor: `${typeDetails.color}22`,
+              borderColor: `${typeDetails.color}55`,
+              color: typeDetails.color,
+            }}
+            title={typeDetails.label}
+          >
+            {typeDetails.label}
+          </span>
+
           {/* Logic-style header: clicking the name/swatch area opens this track's
               inspector (mix, insert chain, timbre). Auditioning moved to its own ▶ button. */}
           <div
@@ -255,116 +325,118 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
         </div>
 
         {/* Lower row: Volume slider + Track actions (Velocity Focus, Shift, Smart Fill, Clear) */}
-        <div className="flex items-center justify-between gap-1 text-text-dim">
-          {/* Mini Volume & Pan Slider */}
-          <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%, Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={trackVol}
-              onChange={(e) => onChangeVolume(trackIdx, +e.target.value)}
-              className="w-9 sm:w-10 h-2 sm:h-1 accent-accent bg-line-subtle rounded cursor-pointer touch-manipulation"
-              title={`Vol: ${Math.round(trackVol * 100)}%`}
-              aria-label={`${meta.name} Volume`}
-            />
-            {onChangePan && (
+        {!isCompact && (
+          <div className="flex items-center justify-between gap-1 text-text-dim">
+            {/* Mini Volume & Pan Slider */}
+            <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%, Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}>
               <input
                 type="range"
-                min="-1"
+                min="0"
                 max="1"
-                step="0.1"
-                value={trackPan}
-                onChange={(e) => onChangePan(trackIdx, +e.target.value)}
-                className="w-8 sm:w-9 h-2 sm:h-1 accent-[#45e0c9] bg-line-subtle rounded cursor-pointer hidden lg:block"
-                title={`Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}
-                aria-label={`${meta.name} Pan`}
+                step="0.05"
+                value={trackVol}
+                onChange={(e) => onChangeVolume(trackIdx, +e.target.value)}
+                className="w-9 sm:w-10 h-2 sm:h-1 accent-accent bg-line-subtle rounded cursor-pointer touch-manipulation"
+                title={`Vol: ${Math.round(trackVol * 100)}%`}
+                aria-label={`${meta.name} Volume`}
               />
-            )}
-          </div>
+              {onChangePan && (
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.1"
+                  value={trackPan}
+                  onChange={(e) => onChangePan(trackIdx, +e.target.value)}
+                  className="w-8 sm:w-9 h-2 sm:h-1 accent-[#45e0c9] bg-line-subtle rounded cursor-pointer hidden lg:block"
+                  title={`Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}
+                  aria-label={`${meta.name} Pan`}
+                />
+              )}
+            </div>
 
-          {/* Track Quick Actions & Reorder */}
-          <div className="flex items-center gap-0.5 shrink-0">
-            {onMoveUp && canMoveUp && (
+            {/* Track Quick Actions & Reorder */}
+            <div className="flex items-center gap-0.5 shrink-0">
+              {onMoveUp && canMoveUp && (
+                <button
+                  type="button"
+                  onClick={() => onMoveUp(trackIdx)}
+                  className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
+                  title={t("track_move_up")}
+                  aria-label={t("track_move_up_aria")}
+                >
+                  ▲
+                </button>
+              )}
+              {onMoveDown && canMoveDown && (
+                <button
+                  type="button"
+                  onClick={() => onMoveDown(trackIdx)}
+                  className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
+                  title={t("track_move_down")}
+                  aria-label={t("track_move_down_aria")}
+                >
+                  ▼
+                </button>
+              )}
               <button
-                type="button"
-                onClick={() => onMoveUp(trackIdx)}
-                className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
-                title={t("track_move_up")}
-                aria-label={t("track_move_up_aria")}
-              >
-                ▲
-              </button>
-            )}
-            {onMoveDown && canMoveDown && (
-              <button
-                type="button"
-                onClick={() => onMoveDown(trackIdx)}
-                className="w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text hidden md:flex items-center justify-center text-[7px] touch-manipulation"
-                title={t("track_move_down")}
-                aria-label={t("track_move_down_aria")}
-              >
-                ▼
-              </button>
-            )}
-            <button
-              onClick={() => onOpenVelocity(trackIdx)}
-              className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation ${
-                isVelocityLaneOpen && isVelocityActiveTrack
-                  ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
-                  : "border-line text-text-dim hover:text-[#45e0c9]"
-              }`}
-              title={t("track_edit_drawer")}
-            >
-              <Sliders className="w-2.5 h-2.5" />
-            </button>
-            {onOpenPianoRoll && (
-              <button
-                type="button"
-                onClick={() => onOpenPianoRoll(trackIdx)}
-                className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation active:scale-95 ${
-                  track.track_id === "chords" || track.track_id === "bass" || track.track_id === "lead"
-                    ? "border-accent/50 bg-accent/15 text-accent hover:bg-accent/30 hover:border-accent shadow-[0_0_6px_rgba(var(--accent-rgb),0.25)]"
-                    : "border-line text-text-dim hover:text-accent hover:border-accent/60"
+                onClick={() => onOpenVelocity(trackIdx)}
+                className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation ${
+                  isVelocityLaneOpen && isVelocityActiveTrack
+                    ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
+                    : "border-line text-text-dim hover:text-[#45e0c9]"
                 }`}
-                title={t("roll_toggle_title")}
-                aria-label={t("roll_toggle")}
-                data-testid={`track-piano-roll-open-${trackIdx}`}
+                title={t("track_edit_drawer")}
               >
-                <Music2 className="w-2.5 h-2.5" />
+                <Sliders className="w-2.5 h-2.5" />
               </button>
-            )}
-            <button
-              onClick={() => onShiftTrack(trackIdx, -1)}
-              className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
-              title={t("track_shift_left")}
-            >
-              ◀
-            </button>
-            <button
-              onClick={() => onShiftTrack(trackIdx, 1)}
-              className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
-              title={t("track_shift_right")}
-            >
-              ▶
-            </button>
-            <button
-              onClick={() => onSmartFill(trackIdx)}
-              className="hidden md:flex w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#45e0c9] items-center justify-center text-[10px] touch-manipulation"
-              title={t("track_smart_fill")}
-            >
-              <Wand2 className="w-2.5 h-2.5" />
-            </button>
-            <button
-              onClick={() => onClearTrack(trackIdx)}
-              className="hidden md:flex w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#ff5964] items-center justify-center text-[10px] touch-manipulation"
-              title={t("track_clear")}
-            >
-              ✕
-            </button>
+              {onOpenPianoRoll && (
+                <button
+                  type="button"
+                  onClick={() => onOpenPianoRoll(trackIdx)}
+                  className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation active:scale-95 ${
+                    track.track_id === "chords" || track.track_id === "bass" || track.track_id === "lead"
+                      ? "border-accent/50 bg-accent/15 text-accent hover:bg-accent/30 hover:border-accent shadow-[0_0_6px_rgba(var(--accent-rgb),0.25)]"
+                      : "border-line text-text-dim hover:text-accent hover:border-accent/60"
+                  }`}
+                  title={t("roll_toggle_title")}
+                  aria-label={t("roll_toggle")}
+                  data-testid={`track-piano-roll-open-${trackIdx}`}
+                >
+                  <Music2 className="w-2.5 h-2.5" />
+                </button>
+              )}
+              <button
+                onClick={() => onShiftTrack(trackIdx, -1)}
+                className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
+                title={t("track_shift_left")}
+              >
+                ◀
+              </button>
+              <button
+                onClick={() => onShiftTrack(trackIdx, 1)}
+                className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
+                title={t("track_shift_right")}
+              >
+                ▶
+              </button>
+              <button
+                onClick={() => onSmartFill(trackIdx)}
+                className="hidden md:flex w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#45e0c9] items-center justify-center text-[10px] touch-manipulation"
+                title={t("track_smart_fill")}
+              >
+                <Wand2 className="w-2.5 h-2.5" />
+              </button>
+              <button
+                onClick={() => onClearTrack(trackIdx)}
+                className="hidden md:flex w-4 h-4 rounded hover:bg-line-subtle text-text-dim hover:text-[#ff5964] items-center justify-center text-[10px] touch-manipulation"
+                title={t("track_clear")}
+              >
+                ✕
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Step Grid (.grid) */}
@@ -417,6 +489,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               isGroupStart={isGroupStart}
               trackColor={meta.color}
               isAlternateBar={isAlternateBar}
+              isCompact={isCompact}
             />
           );
         })}

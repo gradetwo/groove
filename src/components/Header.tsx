@@ -344,12 +344,12 @@ export const Header: React.FC<HeaderProps> = ({
       </nav>
 
       {/* Right Tools: Spectrum, Search, Dice, Lang, Mobile Menu */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Spectrum Canvas - click opens full Panoramic Analyzer */}
         <button
           type="button"
           onClick={() => onSelectTab("analyzer")}
-          className="cursor-pointer group flex items-center hidden sm:block p-0.5 rounded hover:bg-white/5 transition-all"
+          className="cursor-pointer group flex items-center hidden 2xl:block p-0.5 rounded hover:bg-white/5 transition-all"
           title={isZh ? "点击打开全景声谱分析仪与示波器 (P6-05)" : "Open Panoramic Spectrogram & Lissajous Scope (P6-05)"}
           aria-label="Open Analyzer"
         >
@@ -445,7 +445,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="New User Onboarding Tour"
           >
             <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden lg:inline">{t("onboarding_header_btn")}</span>
+            <span className="hidden 2xl:inline">{t("onboarding_header_btn")}</span>
           </button>
         )}
 

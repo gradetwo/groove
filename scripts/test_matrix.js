@@ -248,6 +248,11 @@ async function runTestOnTarget(target, baseUrl) {
     : { ...target.options };
 
   const context = await browser.newContext(contextOptions);
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem("groove_onboarding_completed", "true");
+    } catch (_) {}
+  });
   const page = await context.newPage();
 
   const errors = [];
@@ -835,17 +840,27 @@ async function runTestOnTarget(target, baseUrl) {
     // The drawer opens below the step matrix, so bring it into view before clicking and then
     // re-measure: `mouse.click` works in viewport coordinates, and the grid is taller than the
     // viewport on a laptop.
-    await page.locator("[data-testid='piano-roll-grid']").scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      const drawer = document.querySelector("[data-testid='piano-roll']");
+      if (drawer) drawer.scrollIntoView({ block: "center" });
+      window.scrollTo({ left: 0 });
+      const scroller = document.querySelector("[data-testid='piano-roll-grid']")?.closest(".overflow-x-auto");
+      if (scroller) scroller.scrollLeft = 0;
+    });
     await page.waitForTimeout(200);
 
     // Draw into the measured step. The grid's cell width depends on the zoom level, so derive it
     // from the rendered geometry rather than assuming a pixel size.
     const clickPoint = await page.evaluate(({ trackIdx, stepIdx }) => {
       const grid = document.querySelector("[data-testid='piano-roll-grid']");
+      const scrollContainer = grid.closest(".overflow-y-auto") || grid.parentElement;
+      const cRect = scrollContainer ? scrollContainer.getBoundingClientRect() : null;
       const rect = grid.getBoundingClientRect();
       const stepCount = document.querySelectorAll(`[data-track-idx="${trackIdx}"][data-step-idx]`).length || 16;
       const cellW = rect.width / stepCount;
-      return { x: rect.left + stepIdx * cellW + cellW / 2, y: rect.top + 8 };
+      const targetY = cRect ? cRect.top + cRect.height / 2 : rect.top + 8;
+      const x = rect.left + stepIdx * cellW + cellW / 2;
+      return { x, y: targetY };
     }, drawTarget);
     await page.mouse.click(clickPoint.x, clickPoint.y);
     await page.waitForTimeout(300);
@@ -871,8 +886,12 @@ async function runTestOnTarget(target, baseUrl) {
     // the roll to show a stack while the step grid still shows exactly one sounding step — the two
     // views share one pattern, so a chord must be visible in both without duplicating steps.
     const staggerBefore = await countActiveSteps(page, drawTarget.trackIdx);
-    const firstNote = await page.$("[data-testid^='piano-roll-note-']");
-    const firstNoteBox = firstNote ? await firstNote.boundingBox() : null;
+    const targetNote = await page.$(`[data-testid^='piano-roll-note-${drawTarget.stepIdx}-']`);
+    const noteToStack = targetNote || (await page.$("[data-testid^='piano-roll-note-']"));
+    if (!noteToStack) throw new Error("No note block to stack a chord onto");
+    await noteToStack.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    const firstNoteBox = await noteToStack.boundingBox();
     if (!firstNoteBox) throw new Error("No note block to stack a chord onto");
     const rowH = Number(await page.getAttribute("[data-testid='piano-roll']", "data-row-h"));
     await page.keyboard.press("2"); // pencil
@@ -967,8 +986,8 @@ async function runTestOnTarget(target, baseUrl) {
     // Stay *inside* the note's own row: the marquee selects whole cells, so a few pixels past the
     // block's edge would pull in the neighbouring pitch row and the selection would legitimately be
     // larger than the notes whose centres are inside the drawn rectangle.
-    const from = { x: anchorNoteBox.x + anchorNoteBox.width / 2, y: anchorNoteBox.y + anchorNoteBox.height - 1 };
-    const to = { x: anchorNoteBox.x + anchorNoteBox.width / 2, y: anchorNoteBox.y + 1 };
+    const from = { x: anchorNoteBox.x + 2, y: anchorNoteBox.y + anchorNoteBox.height - 1 };
+    const to = { x: anchorNoteBox.x + anchorNoteBox.width - 2, y: anchorNoteBox.y + 1 };
 
     // A click with the marquee tool is a one-cell rectangle: aiming at an empty corner clears the
     // selection. If that particular cell happens to hold a note the claim would be false, so this
@@ -1022,9 +1041,12 @@ async function runTestOnTarget(target, baseUrl) {
 
     // Velocity lane: dragging a bar up must raise that note's velocity.
     const firstBar = "[data-testid^='piano-roll-velocity-bar-']";
-    const barBefore = Number(await page.getAttribute(firstBar, "data-velocity"));
-    const barBox = await (await page.$(firstBar)).boundingBox();
-    if (!barBox) throw new Error("Velocity lane has no visible bar for a pattern with notes");
+    const barEl = await page.$(firstBar);
+    if (!barEl) throw new Error("Velocity lane has no visible bar for a pattern with notes");
+    const barBefore = Number(await barEl.getAttribute("data-velocity"));
+    await barEl.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    const barBox = await barEl.boundingBox();
     await page.mouse.move(barBox.x + barBox.width / 2, barBox.y + Math.max(2, barBox.height / 2));
     await page.mouse.down();
     await page.mouse.move(barBox.x + barBox.width / 2, barBox.y - 16, { steps: 5 });

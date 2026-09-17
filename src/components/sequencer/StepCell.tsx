@@ -29,6 +29,7 @@ export interface StepCellProps {
   isGroupStart: boolean;
   trackColor: string;
   isAlternateBar?: boolean;
+  isCompact?: boolean;
   onClick?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
   onContextMenu?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
   onPointerDown?: (trackIdx: number, stepIdx: number, e: React.PointerEvent) => void;
@@ -57,6 +58,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
   isGroupStart,
   trackColor,
   isAlternateBar = false,
+  isCompact = false,
   articulationGateScale,
   articulationLabel,
   onClick,
@@ -157,7 +159,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onPointerEnter={onPointerEnter ? () => onPointerEnter(trackIdx, stepIdx) : undefined}
-      className={`min-w-[28px] sm:min-w-[36px] flex-1 h-10 sm:h-10 landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:z-20 ${
+      className={`min-w-[28px] sm:min-w-[36px] flex-1 ${isCompact ? "h-7 sm:h-7" : "h-10 sm:h-10"} landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:z-20 ${
         isBarStart
           ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
           : isGroupStart

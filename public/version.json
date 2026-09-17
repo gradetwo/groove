@@ -1,27 +1,27 @@
 {
-  "version": "2.0.42",
+  "version": "2.0.43",
   "releaseDate": "2026-09-17",
-  "changelogCount": 106,
+  "changelogCount": 107,
   "latest": {
-    "version": "2.0.42",
+    "version": "2.0.43",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.42 钢琴卷帘默认指针模式、双轴无级缩放滑动条、0-127全音区联动滚动与C4自动居中",
-      "en": "v2.0.42 Piano Roll Default Pointer Tool, Dual-Axis Continuous Zoom Sliders, 0-127 Full Pitch Range with Synchronized Scroll & C4 Auto-Centering"
+      "zh": "v2.0.43 钢琴卷帘片段新建/保存/录制闭环、工作区功能键4组胶囊聚合与精简折叠、轨道头独立折叠与声学类型指示器",
+      "en": "v2.0.43 Piano Roll Clip New/Export/Record Workflow, 4-Pill Workspace Toolbar Grouping & Compact Fold, Track Row Collapsing & Category Badges"
     },
     "highlights": [
       {
-        "zh": "**默认指针状态与全局偏好持久化（Default Pointer Tool & Persistent Preference）**：将钢琴卷帘默认激活工具由铅笔（Pencil）全面调整为更符合专业 DAW 直觉的指针选择工具（Pointer）。在全局设置「界面设置」中新增「钢琴卷帘默认工具」持久化偏好项，支持创作者自由选择指针或铅笔作为默认模式；同时深度保留 P（指针）、B（铅笔）及 1~5 数字快捷键，指针模式下支持双击空白网格快速写入音符、双击既有音符快速删除，操作行云流水。",
-        "en": "**Default Pointer Tool & Persistent Preference**: Transitioned the initial piano roll editing tool from pencil to pointer, aligning with standard desktop DAW conventions. Added a persistent preference in Global Settings allowing producers to choose either pointer or pencil as default. Preserved P (Pointer), B (Pencil), and numeric 1-5 shortcuts, with seamless double-click creation and deletion in pointer mode."
+        "zh": "**钢琴卷帘片段新建、保存与实时录制闭环（Item 3: Piano Roll Clip New, Save/Export & Realtime Record）**：在钢琴卷帘顶部 Deck 1 新增三大核心工程操作：「新建片段 (New Clip)」（支持安全二次确认弹窗、重置旋律音符并拥有完整撤销历史支持）、「保存/导出片段 (Save / Export)」（提供单轨独立 JSON 片段导出、纯净标准 MIDI (.mid) 文件直下与一键复制数据至剪贴板）以及「实时按键录制 (Realtime REC)」（支持红光律动浮动 HUD 标牌、琴键连续拖曳试听/滑音录入与电脑键盘 QWERTY 音乐键盘实时录入，直接写入音序器与全音轨历史）。",
+        "en": "**Piano Roll Clip New, Save/Export & Realtime Record**: Integrated 3 essential clip actions into Piano Roll Deck 1: \"New Clip\" (with safety confirmation dialog, note reset, and complete undo stack integration), \"Save / Export Clip\" (supporting discrete track JSON export, Type 0 Standard MIDI (.mid) generation, and 1-click clipboard copying), and \"Realtime REC\" (featuring a pulsating red recording HUD, 3D keybed drag/glissando capture, and QWERTY musical typing direct note wr…"
       },
       {
-        "zh": "**双轴无级缩放滑动条与滚轮手势（Dual-Axis Continuous Zoom Sliders & Gestures）**：在卷帘 Deck 2 工具栏新增专属水平缩放（8px~64px 步宽）与垂直缩放（12px~48px 行高）连续滑动条（Slider），配合放大/缩小与循环切换步进按键；全面支持高精度手势操作：Ctrl/Cmd + 滚轮实时水平缩放时间网格，Alt + 滚轮（在网格空白处）实时垂直缩放音高行高（悬停在音符上时微调力度），Shift + 滚轮水平横向漫游，多小节编曲收放自如。",
-        "en": "**Dual-Axis Continuous Zoom Sliders & Gestures**: Integrated continuous horizontal (8px-64px step width) and vertical (12px-48px row height) zoom sliders into Deck 2, complete with quick step buttons. Fully supports precision gestures: Ctrl/Cmd + Wheel for horizontal time zoom, Alt + Wheel on empty grid for vertical pitch zoom (and velocity nudge when hovering over notes), and Shift + Wheel for horizontal panning."
+        "zh": "**工作区功能键 4 组胶囊微底色聚合与一键精简折叠（Item 8: 4-Pill Logical Grouping, Visual Capsules & Responsive Compact Fold）**：系统重塑工作区顶部工具栏为 4 大清晰逻辑功能组：播放控制组（播放/停止、BPM调节与Tap、节拍器、预备拍、录音、鼓机音色与模式、槽位）、编辑操作组（撤销/重做、拍号、量化精度、时值步长、工具模式、快速操作）、视图切换组（钢琴卷帘、虚拟键盘、独立混音台、速度/动态轨、全景频谱仪、全屏切换）与工程管理组（灵感激发、MIDI导入、工程中心、曲风工坊、多格式导出、分享与高级效果器机架）。每组使用微底色胶囊（Pill）包裹并保留 8-12px 呼吸间距。增设一键精简折叠按钮（持久化于 localStorage），折叠状态下仅保留播放控制组，次要功能优雅收起于「··· 更多」弹性下拉菜单，彻底释放编曲视界与移动端空间。",
+        "en": "**4-Pill Logical Grouping, Visual Capsules & Responsive Compact Fold**: Restructured the master workstation toolbar into 4 ergonomic logical groups: Playback & Transport (Play/Stop, BPM ±/Tap, Metronome, Count-In, REC, Drum Kit, Pattern Slots), Edit Operations (Undo/Redo, Meter, Quantize, Length, Tool Mode, Quick Actions), View Switchers (Piano Roll, Musical Typing, Mixing Console, Velocity Lane, Panoramic Analyzer, Fullscreen), and Project Management (Inspire Me, MIDI Impor…"
       },
       {
-        "zh": "**0-127 全音区覆盖与音高键盘精准视区联动（0-127 Full MIDI Pitch Range & Synchronized Keybed Scroll）**：展开模式（Unfolded）完整覆盖标准 MIDI 0~127 全音域（128 行音高，高音 127 降至低音 0），初次开启或切换模式时视区精准自动平滑居中于中央 C（C4 / MIDI 60）；左侧象牙黑曜石 3D 琴键与网格视区建立像素级垂直滚动绝对同步；支持方向键导航（未选中音符时上下键微步滚动、Shift + 上下键单八度快速翻页）；力度泳道独立吸附停靠于音高视区底端并与时间轴严格横向同步，彻底消除音域盲区。",
-        "en": "**0-127 Full MIDI Pitch Range & Synchronized Keybed Scroll**: Unfolded mode now spans the entire 0-127 MIDI pitch range (128 chromatic rows) with automatic smooth viewport centering on Middle C (C4 / MIDI 60) on initial render. The 3D ivory/obsidian keybed and grid viewport synchronize vertical scroll offsets flawlessly. Features keyboard navigation (Shift + Up/Down for 12-semitone octave page jumping and Up/Down for single row scrolling), with the velocity lane docked clean…"
+        "zh": "**轨道头独立折叠压缩与 6 大声学分类指示器（Item 9: Single-Track Folding & 6 Acoustic Category Badges）**：在音序器每条轨道表头增设折叠切换按钮（单个轨道一键压缩至 36px 超精简模式，隐藏下层微调控件，仅保留指示色块、类型微标、音色试听 ▶、静音与独奏），并在标尺上方增设全局「全部折叠 / 全部展开」总控开关；同时为全部 8 轨智能配备专属声学分类胶囊徽标（DRUM 鼓组、PERC 打击乐、BASS 贝斯、CHORD 和弦、LEAD 主音、FX 音效），高对比度半透明彩色标签一目了然，多轨工程纵览游刃有余。",
+        "en": "**Single-Track Folding & 6 Acoustic Category Badges**: Introduced individual track fold toggles that compress any track row into an ultra-compact 36px footprint (hiding secondary volume/pan/shift/clear controls while retaining color swatch, audition ▶, Mute, Solo, and category badge), paired with a global \"Fold All / Expand All\" master switch. Every track row features intelligent acoustic category badges (DRUM, PERC, BASS, CHORD, LEAD, FX) with high-contrast semi-transparent…"
       }
     ],
     "truncated": false

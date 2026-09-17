@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { SequencerPattern } from "../../types/genre";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import type { SequencerAction, SequencerState } from "../../features/sequencer/useSequencerStore";
@@ -298,6 +299,38 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
 }) => {
   const { t } = useLanguage();
 
+  const [compactTracks, setCompactTracks] = useState<Record<number, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem("groove_compact_tracks");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const allCompact = pattern.tracks.length > 0 && pattern.tracks.every((_, idx) => compactTracks[idx]);
+  const handleToggleAllCompact = () => {
+    const nextVal = !allCompact;
+    const nextMap: Record<number, boolean> = {};
+    pattern.tracks.forEach((_, idx) => {
+      nextMap[idx] = nextVal;
+    });
+    setCompactTracks(nextMap);
+    try {
+      localStorage.setItem("groove_compact_tracks", JSON.stringify(nextMap));
+    } catch {}
+  };
+
+  const handleToggleSingleTrackCompact = (trackIdx: number) => {
+    setCompactTracks((prev) => {
+      const next = { ...prev, [trackIdx]: !prev[trackIdx] };
+      try {
+        localStorage.setItem("groove_compact_tracks", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   /**
    * How this genre plays its chords, per chord track — the length the engine will actually use.
    *
@@ -451,6 +484,20 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         {/* Playhead Laser Overlay Beam (P2-03) */}
         <div ref={playheadBeamRef} className="playhead-laser-beam hidden" />
 
+        {/* Track Controls Utility Bar (Compact Toggle) */}
+        <div className="flex items-center justify-between px-1 mb-1 text-xs text-text-dim">
+          <button
+            type="button"
+            onClick={handleToggleAllCompact}
+            data-testid="toggle-all-tracks-compact"
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-line-subtle hover:border-accent/40 bg-panel2 hover:text-accent font-['JetBrains_Mono'] text-[10px] transition-colors cursor-pointer select-none"
+            title={allCompact ? (isZh ? "全部展开音轨" : "Expand All Tracks") : (isZh ? "全部折叠音轨" : "Fold All Tracks")}
+          >
+            {allCompact ? <ChevronDown className="w-3 h-3 text-accent" /> : <ChevronUp className="w-3 h-3 text-accent" />}
+            <span>{allCompact ? t("track_unfold_all") : t("track_fold_all")}</span>
+          </button>
+        </div>
+
         {/* Step Indicator Ruler Header */}
         <Ruler
           stepCount={seqState.stepCount}
@@ -514,6 +561,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
               canMoveDown={trackIdx < pattern.tracks.length - 1}
               onChangePan={onChangeTrackPan}
               onChangeSwing={onChangeTrackSwing}
+              isCompact={Boolean(compactTracks[trackIdx])}
+              onToggleCompact={handleToggleSingleTrackCompact}
             />
           );
         })}

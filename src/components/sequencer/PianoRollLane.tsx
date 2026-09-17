@@ -3,8 +3,11 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  Circle,
   Copy,
+  Download,
   Eraser,
+  FilePlus,
   Filter,
   Keyboard,
   Layers,
@@ -17,6 +20,7 @@ import {
   Plus,
   Radio,
   Repeat,
+  Save,
   Scissors,
   Sparkles,
   SquareDashedMousePointer,
@@ -26,6 +30,7 @@ import {
   Wand2,
   X,
 } from "lucide-react";
+import { MidiExporter } from "../../audio/MidiExporter";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { SequencerAction } from "../../features/sequencer/useSequencerStore";
 import { MAX_NOTE_GATE_STEPS, type SequencerPattern } from "../../types/genre";
@@ -231,9 +236,15 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [showVelocityLane, setShowVelocityLane] = useState(true);
   const [catchPlayhead, setCatchPlayhead] = useState(true);
   const [isFolded, setIsFolded] = useState(false);
+  const [fullPitchRange, setFullPitchRange] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [hoverCell, setHoverCell] = useState<{ stepIdx: number; midi: number } | null>(null);
   const [resizeGatePreview, setResizeGatePreview] = useState<{ stepIdx: number; midi: number; gate: number } | null>(null);
+  const [showNewConfirm, setShowNewConfirm] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const recordingStepRef = useRef<number>(0);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const gridWrapRef = useRef<HTMLDivElement | null>(null);
@@ -241,6 +252,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const keybedScrollRef = useRef<HTMLDivElement | null>(null);
+  const rulerScrollRef = useRef<HTMLDivElement | null>(null);
   const velScrollRef = useRef<HTMLDivElement | null>(null);
   const playheadRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -279,11 +291,29 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     });
   }, [barCount, notes, stepCount, stepsPerBar, loopLen]);
 
+  const [baseLo, baseHi] = useMemo(() => visiblePitchRange(notes), [notes]);
+  const [loPitch, hiPitch] = useMemo(() => {
+    const span = baseHi - baseLo;
+    let lo = baseLo + octaveShift;
+    let hi = baseHi + octaveShift;
+    if (lo < 0) {
+      hi -= lo;
+      lo = 0;
+    }
+    if (hi > 127) {
+      lo = Math.max(0, lo - (hi - 127));
+      hi = 127;
+    }
+    return [lo, Math.max(lo + span, hi)] as [number, number];
+  }, [baseLo, baseHi, octaveShift]);
+
   const scale = useMemo(() => scaleHighlightFor(view.scale), [view.scale]);
-  // 0-127 full MIDI range coverage when unfolded, filtered to in-scale/notes when folded
+  // 0-127 full MIDI range coverage when fullPitchRange is enabled, otherwise track content range
   const rows = useMemo(() => {
     const out: number[] = [];
-    for (let p = 127; p >= 0; p--) {
+    const minP = fullPitchRange ? 0 : loPitch;
+    const maxP = fullPitchRange ? 127 : hiPitch;
+    for (let p = maxP; p >= minP; p--) {
       if (isFolded) {
         const inScale = scale.pcs.has(p % 12);
         const hasNote = notes.some((n) => n.midi === p);
@@ -292,7 +322,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       out.push(p);
     }
     return out;
-  }, [isFolded, scale.pcs, notes]);
+  }, [fullPitchRange, loPitch, hiPitch, isFolded, scale.pcs, notes]);
 
   const rowIdxMap = useMemo(() => new Map(rows.map((p, idx) => [p, idx])), [rows]);
   const fitCellW = availableWidth > 0 ? Math.max(MIN_CELL_W, (availableWidth - GUTTER_W) / Math.max(1, stepCount)) : 26;
@@ -302,20 +332,18 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   cellWRef.current = cellW;
   catchRef.current = catchPlayhead;
 
-  // Auto-center on Middle C (C4 / MIDI 60) on initial render
+  // Auto-center when toggling full 0-127 pitch range
   useEffect(() => {
-    if (hasCenteredRef.current) return;
-    const c4Idx = rows.indexOf(60);
-    if (c4Idx >= 0 && scrollRef.current) {
-      const viewportH = scrollRef.current.clientHeight || 420;
-      const targetY = Math.max(0, 24 + c4Idx * rowH - viewportH / 2);
-      scrollRef.current.scrollTop = targetY;
-      if (keybedScrollRef.current) {
-        keybedScrollRef.current.scrollTop = targetY;
+    if (fullPitchRange && scrollRef.current) {
+      const c4Idx = rows.indexOf(60);
+      if (c4Idx >= 0) {
+        const viewportH = scrollRef.current.clientHeight || 396;
+        const targetY = Math.max(0, c4Idx * rowH - viewportH / 2);
+        scrollRef.current.scrollTop = targetY;
+        if (keybedScrollRef.current) keybedScrollRef.current.scrollTop = targetY;
       }
-      hasCenteredRef.current = true;
     }
-  }, [rows, rowH]);
+  }, [fullPitchRange, rows, rowH]);
 
   // Sync tool with user preference broadcast
   useEffect(() => {
@@ -352,6 +380,108 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     },
     [commit]
   );
+
+  const handleNewPattern = useCallback(() => {
+    if (notes.length === 0) {
+      setNotice(t("roll_cleared_notice"));
+      return;
+    }
+    setShowNewConfirm(true);
+  }, [notes.length, t]);
+
+  const handleConfirmNewPattern = useCallback(() => {
+    const cleared = deleteNotes(pattern, activeTrackIdx, notes.map(noteId), stepCount);
+    commitDraft(cleared, []);
+    setShowNewConfirm(false);
+    setSelection([]);
+    setNotice(t("roll_cleared_notice"));
+  }, [pattern, activeTrackIdx, notes, stepCount, commitDraft, t]);
+
+  const handleExportClipJson = useCallback(() => {
+    const activeTrack = pattern.tracks[activeTrackIdx];
+    const clipData = {
+      format: "groove-pattern-clip",
+      version: "1.0",
+      trackId: activeTrack?.track_id ?? "unknown",
+      trackName: activeTrack?.name ?? "Track",
+      scale: view.scale,
+      bpm: pattern.bpm ?? 120,
+      stepCount,
+      stepsPerBar,
+      steps: activeTrack?.steps?.slice(0, stepCount) || [],
+      velocity: activeTrack?.velocity?.slice(0, stepCount) || [],
+      pitch: activeTrack?.pitch?.slice(0, stepCount) || [],
+      gate: activeTrack?.gate?.slice(0, stepCount) || [],
+      notes: notes.map((n) => ({ stepIdx: n.stepIdx, midi: n.midi, velocity: n.velocity, gate: n.gate })),
+      exportedAt: new Date().toISOString(),
+    };
+    const jsonStr = JSON.stringify(clipData, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(activeTrack?.name || "track").toLowerCase()}_clip.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(jsonStr).catch(() => {});
+    }
+    setShowExportMenu(false);
+    setNotice(t("roll_clip_saved"));
+  }, [pattern, activeTrackIdx, view.scale, stepCount, stepsPerBar, notes, t]);
+
+  const handleExportClipMidi = useCallback(() => {
+    const activeTrack = pattern.tracks[activeTrackIdx];
+    if (!activeTrack) return;
+    const singleTrackPattern: SequencerPattern = {
+      ...pattern,
+      totalSteps: stepCount,
+      tracks: [activeTrack],
+    };
+    MidiExporter.downloadMidiFile(
+      {
+        bpm: pattern.bpm || 120,
+        pattern: singleTrackPattern,
+        genreName: activeTrack.name,
+      },
+      `${activeTrack.name.toLowerCase()}_clip.mid`
+    );
+    setShowExportMenu(false);
+    setNotice(t("roll_clip_saved"));
+  }, [pattern, activeTrackIdx, stepCount, t]);
+
+  const recordNote = useCallback(
+    (midi: number, vel = 100, gateLen = 0.8) => {
+      if (!editable) return;
+      const targetStep =
+        currentStep !== undefined && currentStep >= 0
+          ? currentStep
+          : recordingStepRef.current;
+      recordingStepRef.current = (targetStep + 1) % stepCount;
+      const next = addNote(pattern, activeTrackIdx, targetStep, midi, stepCount, vel, gateLen);
+      commitDraft(next);
+      setNotice(
+        isZh
+          ? `已录制: ${midiToNoteName(midi)} (步 ${targetStep + 1})`
+          : `Recorded: ${midiToNoteName(midi)} (step ${targetStep + 1})`
+      );
+    },
+    [editable, currentStep, stepCount, pattern, activeTrackIdx, commitDraft, isZh]
+  );
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener("mousedown", onDocClick);
+      return () => document.removeEventListener("mousedown", onDocClick);
+    }
+  }, [showExportMenu]);
 
   useEffect(() => {
     const node = sectionRef.current;
@@ -401,7 +531,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       const left = scroller.scrollLeft;
       const right = left + scroller.clientWidth;
       if (x < left || x > right - cellWRef.current) {
-        scroller.scrollLeft = Math.max(0, x - scroller.clientWidth * 0.35);
+        const nextLeft = Math.max(0, x - scroller.clientWidth * 0.35);
+        scroller.scrollLeft = nextLeft;
+        if (rulerScrollRef.current) rulerScrollRef.current.scrollLeft = nextLeft;
+        if (velScrollRef.current) velScrollRef.current.scrollLeft = nextLeft;
       }
       void lastRenderedStep;
     });
@@ -468,6 +601,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
     setActiveAuditionMidi(midi);
     onAudition(activeTrackIdx, midi, 100, 0.45);
+    if (isRecording) {
+      recordNote(midi, 100, 0.8);
+    }
   };
 
   const handleKeybedPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -479,6 +615,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       if (!isNaN(p) && p !== activeAuditionMidi) {
         setActiveAuditionMidi(p);
         onAudition(activeTrackIdx, p, 100, 0.45);
+        if (isRecording) {
+          recordNote(p, 100, 0.8);
+        }
       }
     }
   };
@@ -707,7 +846,27 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     dragRef.current = null;
     setResizeGatePreview(null);
     if (drag?.mode === "marquee") {
-      if (marquee) setSelection(notesInRect(notes, marquee));
+      const isSingleClick = marquee && marquee.stepFrom === marquee.stepTo && marquee.pitchFrom === marquee.pitchTo;
+      if (isSingleClick && tool === "pointer") {
+        const stepIdx = marquee.stepFrom;
+        const midi = marquee.pitchFrom;
+        const hit = noteAt(stepIdx, midi);
+        if (!hit) {
+          const baseGate = notesAtStep(stepIdx)[0]?.gate ?? 0.8;
+          const next =
+            chordStamp !== "note"
+              ? addChord(pattern, activeTrackIdx, stepIdx, midi, stepCount, chordStamp, 100, baseGate)
+              : addNote(pattern, activeTrackIdx, stepIdx, midi, stepCount, 100, baseGate);
+          if (next !== pattern) {
+            const id = noteId({ stepIdx, midi });
+            commitDraft(next, [id]);
+            lastAuditionPitchRef.current = midi;
+            onAudition(activeTrackIdx, midi, 100, baseGate);
+          }
+        }
+      } else if (marquee) {
+        setSelection(notesInRect(notes, marquee));
+      }
       setMarquee(null);
       return;
     }
@@ -781,6 +940,29 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         setSelection(notes.map(noteId));
         return;
       }
+      if ((event.metaKey || event.ctrlKey) && (event.key === "n" || event.key === "N")) {
+        event.preventDefault();
+        handleNewPattern();
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && (event.key === "s" || event.key === "S")) {
+        event.preventDefault();
+        handleExportClipJson();
+        return;
+      }
+      if (isRecording) {
+        const QWERTY_KEYS: Record<string, number> = {
+          a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15, ";": 16,
+        };
+        const k = event.key.toLowerCase();
+        if (k in QWERTY_KEYS) {
+          event.preventDefault();
+          const midi = 60 + octaveShift + QWERTY_KEYS[k];
+          onAudition(activeTrackIdx, midi, 100, 0.4);
+          recordNote(midi, 100, 0.8);
+          return;
+        }
+      }
       if (event.key.startsWith("Arrow")) {
         if (selection.length > 0) {
           const stepDelta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
@@ -814,7 +996,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, selection, notes, pattern, activeTrackIdx, stepCount, isFullscreen, marquee, commitDraft]);
+  }, [onClose, selection, notes, pattern, activeTrackIdx, stepCount, isFullscreen, marquee, commitDraft, isRecording, octaveShift, recordNote, onAudition, handleNewPattern, handleExportClipJson]);
 
   /* ------------------------------------------------------------------ render */
 
@@ -995,6 +1177,88 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 <span className="hidden sm:inline">{t("roll_tutorial_btn")}</span>
               </button>
             )}
+
+            {/* DAW Clip Operations: New, Export, Record */}
+            <div className="flex items-center gap-1">
+              {/* New Clip */}
+              <button
+                type="button"
+                onClick={handleNewPattern}
+                data-testid="piano-roll-new-btn"
+                title={t("roll_new_clip_title")}
+                aria-label={t("roll_new_clip")}
+                className={ctrlClass}
+              >
+                <FilePlus className="h-3.5 w-3.5 text-accent" />
+                <span className="hidden sm:inline">{t("roll_new_clip")}</span>
+              </button>
+
+              {/* Export Clip / Save Dropdown */}
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowExportMenu((v) => !v)}
+                  data-testid="piano-roll-export-btn"
+                  title={t("roll_export_clip_title")}
+                  aria-label={t("roll_export_clip")}
+                  className={`${ctrlClass} ${showExportMenu ? "border-accent text-accent" : ""}`}
+                >
+                  <Download className="h-3.5 w-3.5 text-accent" />
+                  <span className="hidden sm:inline">{t("roll_export_clip")}</span>
+                  <ChevronDown className="h-3 w-3 opacity-60 ml-0.5" />
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1.5 z-50 w-44 rounded-xl border border-[#2c3246] bg-[#141724] p-1.5 shadow-2xl flex flex-col gap-1">
+                    <button
+                      type="button"
+                      data-testid="piano-roll-export-json"
+                      onClick={handleExportClipJson}
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-['JetBrains_Mono'] text-[11px] text-text hover:bg-accent/15 hover:text-accent transition-colors"
+                    >
+                      <Save className="h-3.5 w-3.5 text-accent" />
+                      <span>{t("roll_export_json")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="piano-roll-export-midi"
+                      onClick={handleExportClipMidi}
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-['JetBrains_Mono'] text-[11px] text-text hover:bg-accent/15 hover:text-accent transition-colors"
+                    >
+                      <Download className="h-3.5 w-3.5 text-accent" />
+                      <span>{t("roll_export_midi")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="piano-roll-copy-json"
+                      onClick={handleExportClipJson}
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-['JetBrains_Mono'] text-[11px] text-text hover:bg-accent/15 hover:text-accent transition-colors border-t border-[#242938] mt-0.5 pt-1.5"
+                    >
+                      <Copy className="h-3.5 w-3.5 text-text-sub" />
+                      <span>{t("roll_copy_json")}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Realtime Recording Button */}
+              <button
+                type="button"
+                onClick={() => setIsRecording((v) => !v)}
+                aria-pressed={isRecording}
+                data-testid="piano-roll-record-btn"
+                title={t("roll_record_title")}
+                aria-label={t("roll_record")}
+                className={`${ctrlClass} ${
+                  isRecording
+                    ? "bg-red-500/25 border-red-500 text-red-400 font-bold shadow-[0_0_12px_rgba(239,68,68,0.5)] animate-pulse"
+                    : "hover:text-red-400 hover:border-red-500/40"
+                }`}
+              >
+                <Circle className={`h-3 w-3 ${isRecording ? "fill-red-500 text-red-500" : "text-red-400"}`} />
+                <span className="hidden sm:inline">{isRecording ? t("roll_recording_active") : t("roll_record")}</span>
+              </button>
+            </div>
+
             <div className="h-4 w-[1px] bg-line-subtle mx-0.5" />
             <button
 
@@ -1096,6 +1360,22 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               >
                 <Filter className="h-3 w-3" />
                 <span>{t("roll_fold")}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFullPitchRange((v) => !v)}
+                aria-pressed={fullPitchRange}
+                data-testid="piano-roll-full-range-toggle"
+                title={fullPitchRange ? (isZh ? "切换为内容自适应音域" : "Switch to Content Fit Range") : (isZh ? "展开 0-127 全音区" : "Expand to 0-127 Full Pitch Range")}
+                aria-label={fullPitchRange ? (isZh ? "自适应音域" : "Fit Range") : (isZh ? "全音区" : "Full 128")}
+                className={`${ctrlClass} ${
+                  fullPitchRange
+                    ? "bg-accent/20 border-accent text-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)] font-bold"
+                    : ""
+                }`}
+              >
+                <Layers className="h-3 w-3" />
+                <span>{fullPitchRange ? (isZh ? "自适应" : "Fit") : (isZh ? "全音区" : "Full 128")}</span>
               </button>
             </div>
 
@@ -1449,93 +1729,88 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
         <>
           <div className="flex gap-2 min-h-0">
             {/* Pitch gutter, drawn as a realistic 3D piano keyboard with auditioning */}
-            <div
-              ref={keybedScrollRef}
-              className="shrink-0 select-none w-16 shadow-[4px_0_12px_rgba(0,0,0,0.5)] z-20 overflow-hidden"
-              style={{ maxHeight: isFullscreen ? "calc(100vh - 280px)" : 420 }}
-              onWheel={(e) => {
-                if (scrollRef.current) scrollRef.current.scrollTop += e.deltaY;
-              }}
-              onPointerMove={handleKeybedPointerMove}
-              onPointerUp={handleKeybedPointerUp}
-              onPointerCancel={handleKeybedPointerUp}
-              data-testid="piano-roll-keybed"
-              title={t("roll_keybed_glissando_hint")}
-            >
-              <div style={{ height: 24 }} className="shrink-0" />
-              {rows.map((midi) => {
-                const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
-                const inScale = scale.pcs.has(midi % 12);
-                const isRoot = midi % 12 === scale.rootPc;
-                const isC = midi % 12 === 0;
-                const oct = Math.floor(midi / 12) - 1;
-                const isAuditioning = activeAuditionMidi === midi;
-                return (
-                  <div
-                    key={midi}
-                    data-testid={`piano-roll-row-${midi}`}
-                    data-midi-pitch={midi}
-                    data-scale={isRoot ? "root" : inScale ? "in" : "out"}
-                    onPointerDown={(e) => handleKeybedPointerDown(midi, e)}
-                    onPointerEnter={(e) => {
-                      if (e.buttons === 1 && activeAuditionMidi !== midi) {
-                        setActiveAuditionMidi(midi);
-                        onAudition(activeTrackIdx, midi, 100, 0.45);
-                      }
-                    }}
-                    onPointerUp={handleKeybedPointerUp}
-                    className={`relative flex items-center justify-between px-1.5 font-['JetBrains_Mono'] text-[9px] cursor-pointer transition-all duration-75 select-none ${
-                      isAuditioning
-                        ? "bg-gradient-to-r from-accent via-amber-400 to-amber-300 text-black shadow-[0_0_16px_rgba(var(--accent-rgb),0.9),inset_0_1px_2px_white] z-20 font-black scale-[1.02]"
-                        : isBlack
-                        ? "bg-gradient-to-r from-[#11131a] via-[#1a1d28] to-[#252a3a] text-[#8e95a8] hover:to-[#31374a] border-t border-white/20 border-b border-black/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),2px_2px_5px_rgba(0,0,0,0.8)] rounded-r-[4px] mr-1"
-                        : "bg-gradient-to-r from-[#cad0dd] via-[#e2e6f0] to-[#f4f6fa] text-[#1a1d29] hover:to-white border-b border-[#9ca3b5] border-l-2 border-[#b8bcc8] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.3)]"
-                    } ${
-                      !isAuditioning && hoverCell?.midi === midi
-                        ? "ring-1 ring-accent/80 shadow-[0_0_10px_rgba(var(--accent-rgb),0.5)] z-10 brightness-110"
-                        : ""
-                    }`}
-                    style={{ height: rowH }}
-                  >
-                    {/* Scale Degree Guide Marker */}
-                    <div className="flex items-center gap-1 pointer-events-none">
-                      {isRoot ? (
-                        <span className="w-1.5 h-1.5 rotate-45 bg-accent shadow-[0_0_6px_var(--accent)] animate-pulse" title="Root" />
-                      ) : inScale ? (
-                        <span className={`w-1 h-1 rounded-full ${isBlack ? "bg-white/60 shadow-[0_0_3px_rgba(255,255,255,0.4)]" : "bg-black/40"}`} />
-                      ) : null}
+            <div className="shrink-0 flex flex-col w-16 shadow-[4px_0_12px_rgba(0,0,0,0.5)] z-20">
+              <div className="h-6 shrink-0 flex items-center justify-center font-['JetBrains_Mono'] text-[9px] text-text-dim border-b border-[#262b3b] bg-[#11131a] rounded-tl-lg shadow-sm select-none">
+                <span className="tracking-wider">KEY</span>
+              </div>
+              <div
+                ref={keybedScrollRef}
+                className="select-none overflow-hidden"
+                style={{ maxHeight: isFullscreen ? "calc(100vh - 304px)" : 396 }}
+                onWheel={(e) => {
+                  if (scrollRef.current) scrollRef.current.scrollTop += e.deltaY;
+                }}
+                onPointerMove={handleKeybedPointerMove}
+                onPointerUp={handleKeybedPointerUp}
+                onPointerCancel={handleKeybedPointerUp}
+                data-testid="piano-roll-keybed"
+                title={t("roll_keybed_glissando_hint")}
+              >
+                {rows.map((midi) => {
+                  const isBlack = [1, 3, 6, 8, 10].includes(midi % 12);
+                  const inScale = scale.pcs.has(midi % 12);
+                  const isRoot = midi % 12 === scale.rootPc;
+                  const isC = midi % 12 === 0;
+                  const oct = Math.floor(midi / 12) - 1;
+                  const isAuditioning = activeAuditionMidi === midi;
+                  return (
+                    <div
+                      key={midi}
+                      data-testid={`piano-roll-row-${midi}`}
+                      data-midi-pitch={midi}
+                      data-scale={isRoot ? "root" : inScale ? "in" : "out"}
+                      onPointerDown={(e) => handleKeybedPointerDown(midi, e)}
+                      onPointerEnter={(e) => {
+                        if (e.buttons === 1 && activeAuditionMidi !== midi) {
+                          setActiveAuditionMidi(midi);
+                          onAudition(activeTrackIdx, midi, 100, 0.45);
+                        }
+                      }}
+                      onPointerUp={handleKeybedPointerUp}
+                      className={`relative flex items-center justify-between px-1.5 font-['JetBrains_Mono'] text-[9px] cursor-pointer transition-all duration-75 select-none ${
+                        isAuditioning
+                          ? "bg-gradient-to-r from-accent via-amber-400 to-amber-300 text-black shadow-[0_0_16px_rgba(var(--accent-rgb),0.9),inset_0_1px_2px_white] z-20 font-black scale-[1.02]"
+                          : isBlack
+                          ? "bg-gradient-to-r from-[#11131a] via-[#1a1d28] to-[#252a3a] text-[#8e95a8] hover:to-[#31374a] border-t border-white/20 border-b border-black/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),2px_2px_5px_rgba(0,0,0,0.8)] rounded-r-[4px] mr-1"
+                          : "bg-gradient-to-r from-[#cad0dd] via-[#e2e6f0] to-[#f4f6fa] text-[#1a1d29] hover:to-white border-b border-[#9ca3b5] border-l-2 border-[#b8bcc8] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.3)]"
+                      } ${
+                        !isAuditioning && hoverCell?.midi === midi
+                          ? "ring-1 ring-accent/80 shadow-[0_0_10px_rgba(var(--accent-rgb),0.5)] z-10 brightness-110"
+                          : ""
+                      }`}
+                      style={{ height: rowH }}
+                    >
+                      {/* Scale Degree Guide Marker */}
+                      <div className="flex items-center gap-1 pointer-events-none">
+                        {isRoot ? (
+                          <span className="w-1.5 h-1.5 rotate-45 bg-accent shadow-[0_0_6px_var(--accent)] animate-pulse" title="Root" />
+                        ) : inScale ? (
+                          <span className={`w-1 h-1 rounded-full ${isBlack ? "bg-white/60 shadow-[0_0_3px_rgba(255,255,255,0.4)]" : "bg-black/40"}`} />
+                        ) : null}
+                      </div>
+                      {/* Key Pitch Label */}
+                      <span className={`font-semibold tracking-tighter pointer-events-none ${
+                        isC
+                          ? "font-black text-black bg-accent px-1 rounded shadow-[0_0_6px_rgba(var(--accent-rgb),0.6)]"
+                          : isBlack
+                          ? "text-[#8e95a8]"
+                          : "text-[#1a1d29]"
+                      }`}>
+                        {isC ? `C${oct}` : rowH >= 18 ? midiToNoteName(midi) : isBlack ? "" : midiToNoteName(midi)}
+                      </span>
                     </div>
-                    {/* Key Pitch Label */}
-                    <span className={`font-semibold tracking-tighter pointer-events-none ${
-                      isC
-                        ? "font-black text-black bg-accent px-1 rounded shadow-[0_0_6px_rgba(var(--accent-rgb),0.6)]"
-                        : isBlack
-                        ? "text-[#8e95a8]"
-                        : "text-[#1a1d29]"
-                    }`}>
-                      {isC ? `C${oct}` : rowH >= 18 ? midiToNoteName(midi) : isBlack ? "" : midiToNoteName(midi)}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
             <div ref={gridWrapRef} data-testid="piano-roll-grid-wrap" className="min-w-0 flex-1 flex flex-col">
+              {/* Measure & Chord Progression Ruler (Horizontally synced) */}
               <div
-                ref={scrollRef}
-                onScroll={(e) => {
-                  if (keybedScrollRef.current) {
-                    keybedScrollRef.current.scrollTop = e.currentTarget.scrollTop;
-                  }
-                  if (velScrollRef.current) {
-                    velScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
-                  }
-                }}
-                className="overflow-x-auto overflow-y-auto"
-                style={{ maxHeight: isFullscreen ? "calc(100vh - 280px)" : 420 }}
+                ref={rulerScrollRef}
+                className="overflow-hidden border-b border-[#262b3b] bg-gradient-to-b from-[#171a25] via-[#13151f] to-[#0f1118] backdrop-blur-md shadow-sm h-6 shrink-0"
               >
-                {/* Measure & Chord Progression Ruler */}
-                <div className="flex border-b border-[#262b3b] bg-gradient-to-b from-[#171a25] via-[#13151f] to-[#0f1118] backdrop-blur-md sticky top-0 z-30 shadow-sm" style={{ height: 24, minWidth: gridW }}>
+                <div className="flex h-6" style={{ width: gridW }}>
                   {chordsByBar.map(({ barIdx, chordName, noteIds }) => {
                     const barWidth = stepsPerBar * cellW;
                     const isBarSelected = noteIds.length > 0 && noteIds.every((id) => selectedSet.has(id));
@@ -1591,7 +1866,24 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     );
                   })}
                 </div>
+              </div>
 
+              <div
+                ref={scrollRef}
+                onScroll={(e) => {
+                  if (keybedScrollRef.current) {
+                    keybedScrollRef.current.scrollTop = e.currentTarget.scrollTop;
+                  }
+                  if (rulerScrollRef.current) {
+                    rulerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                  }
+                  if (velScrollRef.current) {
+                    velScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                  }
+                }}
+                className="overflow-x-auto overflow-y-auto"
+                style={{ maxHeight: isFullscreen ? "calc(100vh - 304px)" : 396 }}
+              >
                 <div className="min-w-0">
                   <div
                     role="grid"
@@ -2267,6 +2559,48 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
             </div>
           </div>
         </>
+      )}
+
+      {/* Realtime Recording Indicator HUD */}
+      {isRecording && (
+        <div className="absolute top-3 right-4 z-40 flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/90 text-white font-['JetBrains_Mono'] text-[10px] font-bold shadow-[0_0_15px_rgba(239,68,68,0.7)] border border-white/20 animate-pulse pointer-events-none">
+          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+          <span>REC · {track?.name || "TRACK"} {currentStep !== undefined && currentStep >= 0 ? `· STEP ${currentStep + 1}` : ""}</span>
+        </div>
+      )}
+
+      {/* Clear Notes & New Clip Confirmation Dialog */}
+      {showNewConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-xl border border-[#2e3447] bg-[#141723] p-5 shadow-2xl flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-text">
+              <FilePlus className="h-5 w-5 text-accent" />
+              <h3 className="font-['Space_Grotesk'] text-sm font-bold text-white">
+                {t("roll_clear_confirm_title")}
+              </h3>
+            </div>
+            <p className="text-xs text-text-sub leading-relaxed">
+              {t("roll_clear_confirm_desc")}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowNewConfirm(false)}
+                className="px-3 py-1.5 rounded-lg border border-line-subtle text-xs text-text-sub hover:text-text hover:bg-white/5 transition-colors"
+              >
+                {isZh ? "取消" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                data-testid="piano-roll-new-confirm"
+                onClick={handleConfirmNewPattern}
+                className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md transition-colors"
+              >
+                {t("roll_clear_confirm_btn")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

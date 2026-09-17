@@ -736,16 +736,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const handleTogglePianoRoll = useCallback(() => {
     // Opening from the toolbar targets a melodic track rather than whatever index happens to be
     // current: a roll over the kick track would show an empty grid the engine ignores.
-    //
-    // The target is resolved *outside* the state updater on purpose. Doing it inside (`setOpen(o
-    // => { if (!o) handleOpenPianoRoll(...); ... })`) is a side effect during the render phase:
-    // React may run the updater twice and the nested update gets dropped, which is exactly how the
-    // roll failed to open on some devices while working on others.
     if (isPianoRollOpen) {
       setIsPianoRollOpen(false);
       return;
     }
-    handleOpenPianoRoll(pianoRollTrackIdx);
+    const currentTrack = patternRef.current.tracks[pianoRollTrackIdx];
+    const isCurrentMelodic = currentTrack && (currentTrack.track_id === "bass" || currentTrack.track_id === "chords" || currentTrack.track_id === "lead");
+    if (!isCurrentMelodic) {
+      const editableIdx = patternRef.current.tracks.findIndex((tr) =>
+        tr.track_id === "bass" || tr.track_id === "chords" || tr.track_id === "lead"
+      );
+      handleOpenPianoRoll(editableIdx === -1 ? 0 : editableIdx);
+    } else {
+      handleOpenPianoRoll(pianoRollTrackIdx);
+    }
     setIsPianoRollOpen(true);
   }, [isPianoRollOpen, handleOpenPianoRoll, pianoRollTrackIdx]);
 
