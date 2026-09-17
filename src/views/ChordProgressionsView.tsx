@@ -79,8 +79,12 @@ const getScaleNotes = (root: string, isMinor: boolean): string[] => {
   return intervals.map((interval) => NOTE_NAMES[(rootIdx + interval) % 12]);
 };
 
-interface ChordProgressionsViewProps {
-  onOpenStudioWithChords?: (chords: ChordDefinition[]) => void;
+export interface ChordOpenStudioOptions {
+  openPianoRoll?: boolean;
+}
+
+export interface ChordProgressionsViewProps {
+  onOpenStudioWithChords?: (chords: ChordDefinition[], options?: ChordOpenStudioOptions) => void;
   onOpenStudioWithArpeggio?: (baked: BakedArpeggioResult, label?: string) => void;
   onOpenHelp?: () => void;
 }
@@ -569,15 +573,28 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
             {/* Load to Studio */}
             {onOpenStudioWithChords && (
-              <button
-                type="button"
-                onClick={() => onOpenStudioWithChords(customChords)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent hover:bg-[#ffc24b] text-zinc-950 font-bold text-xs transition-colors shadow-lg shadow-[#f5b73d]/10 shrink-0"
-                title={t("chords_to_studio_title")}
-              >
-                <Music className="w-3.5 h-3.5 shrink-0" />
-                <span className="whitespace-nowrap">{t("chords_to_studio")}</span>
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onOpenStudioWithChords(customChords)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent hover:bg-[#ffc24b] text-zinc-950 font-bold text-xs transition-colors shadow-lg shadow-[#f5b73d]/10 shrink-0"
+                  title={t("chords_to_studio_title")}
+                >
+                  <Music className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">{t("chords_to_studio")}</span>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="chords-open-in-piano-roll"
+                  onClick={() => onOpenStudioWithChords(customChords, { openPianoRoll: true })}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1f2638] border border-accent/40 text-accent font-bold text-xs transition-colors shadow-sm shrink-0"
+                  title={t("chords_open_piano_roll_title")}
+                >
+                  <PianoIcon className="w-3.5 h-3.5 text-accent shrink-0" />
+                  <span className="whitespace-nowrap">{t("chords_open_piano_roll")}</span>
+                </button>
+              </div>
             )}
 
             {/* Quick Bake Arpeggio to Studio (P6-03) */}

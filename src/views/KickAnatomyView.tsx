@@ -12,10 +12,18 @@ import { WaterfallSpectrogram } from "../components/kick/WaterfallSpectrogram";
 import { GravitationalSequencer } from "../components/kick/GravitationalSequencer";
 import { SomaticControls } from "../components/kick/SomaticControls";
 import { KickPhilosophyDossier } from "../components/kick/KickPhilosophyDossier";
-import { Activity, Layers, Disc, Sparkles, Radio, Cpu, Network, ExternalLink } from "lucide-react";
+import { Activity, Layers, Disc, Sparkles, Radio, Cpu, Network, ExternalLink, BookOpen, ArrowLeft } from "lucide-react";
 
-export const KickAnatomyView: React.FC = () => {
-  const { isZh } = useLanguage();
+export interface KickAnatomyViewProps {
+  onOpenHelp?: () => void;
+  onOpenStudio?: () => void;
+}
+
+export const KickAnatomyView: React.FC<KickAnatomyViewProps> = ({
+  onOpenHelp,
+  onOpenStudio,
+}) => {
+  const { t, isZh } = useLanguage();
   const engineRef = useRef<AnatomyKickEngine>(globalAnatomyKickEngine);
   const [params, setParams] = useState<SomaticKickParams>(() => engineRef.current.getParams());
   const [plv, setPlv] = useState<number>(() => engineRef.current.calculatePLV());
@@ -107,24 +115,54 @@ export const KickAnatomyView: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-4 text-[10px] text-text-dim">
-          <div className="flex items-center gap-1">
-            <Cpu className="w-3 h-3 text-[#f5b73d]" />
-            <span>PLV:</span>
-            <span className="text-[#f5b73d] font-bold">{plv.toFixed(3)}</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-4 text-[10px] text-text-dim">
+            <div className="flex items-center gap-1">
+              <Cpu className="w-3 h-3 text-[#f5b73d]" />
+              <span>PLV:</span>
+              <span className="text-[#f5b73d] font-bold">{plv.toFixed(3)}</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Network className="w-3 h-3 text-emerald-400" />
+              <span>ECOSYSTEM:</span>
+              <span className={ecoBusOnline ? "text-emerald-400 font-bold" : "text-text-dim"}>
+                {ecoBusOnline ? "BUS ACTIVE" : "LOCAL"}
+              </span>
+            </div>
+
+            <div className="hidden md:flex items-center gap-1">
+              <span>RES: 48kHz / 32-FLOAT</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <Network className="w-3 h-3 text-emerald-400" />
-            <span>ECOSYSTEM:</span>
-            <span className={ecoBusOnline ? "text-emerald-400 font-bold" : "text-text-dim"}>
-              {ecoBusOnline ? "BUS ACTIVE" : "LOCAL"}
-            </span>
-          </div>
-
-          <div className="hidden md:flex items-center gap-1">
-            <span>RES: 48kHz / 32-FLOAT</span>
-          </div>
+          {(onOpenHelp || onOpenStudio) && (
+            <div className="flex items-center gap-2 border-l border-line/40 pl-3">
+              {onOpenHelp && (
+                <button
+                  type="button"
+                  data-testid="kick-help-button"
+                  onClick={onOpenHelp}
+                  title={t("kick_guide_btn")}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#f5b73d]/40 bg-[#f5b73d]/10 text-[#f5b73d] font-semibold text-xs hover:bg-[#f5b73d]/20 transition-all shrink-0"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-[#f5b73d]" />
+                  <span>{t("kick_guide_btn")}</span>
+                </button>
+              )}
+              {onOpenStudio && (
+                <button
+                  type="button"
+                  data-testid="kick-studio-button"
+                  onClick={onOpenStudio}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#f5b73d] text-zinc-950 font-bold text-xs hover:brightness-110 shadow-[0_0_12px_rgba(245,183,61,0.25)] transition-all shrink-0"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>{isZh ? "返回编曲台" : "Return to Studio"}</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

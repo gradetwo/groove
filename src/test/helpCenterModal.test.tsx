@@ -109,6 +109,12 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
     const launchChordsBtn = within(chordsCard).getByTestId("launch-tutorial-chords");
     fireEvent.click(launchChordsBtn);
     expect(handleSelectTab).toHaveBeenCalledWith("chords");
+
+    // Launch Acoustics secondary action (Kick lab)
+    const acousticsCard = screen.getByTestId("tutorial-card-acoustics");
+    const launchKickBtn = within(acousticsCard).getByTestId("launch-secondary-tutorial-acoustics");
+    fireEvent.click(launchKickBtn);
+    expect(handleSelectTab).toHaveBeenCalledWith("kick");
   });
 
   it("dynamically searches and filters documentation across tutorials and shortcuts", () => {

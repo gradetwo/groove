@@ -72,6 +72,8 @@ interface StudioViewProps {
   onClearInitialArpeggio?: () => void;
   initialMasterclassPattern?: { pattern: SequencerPattern; label?: string } | null;
   onClearInitialMasterclassPattern?: () => void;
+  initialOpenPianoRollTrack?: number | string | null;
+  onClearInitialOpenPianoRollTrack?: () => void;
 }
 
 export const StudioView: React.FC<StudioViewProps> = ({
@@ -89,6 +91,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onClearInitialArpeggio,
   initialMasterclassPattern,
   onClearInitialMasterclassPattern,
+  initialOpenPianoRollTrack,
+  onClearInitialOpenPianoRollTrack,
 }) => {
   const { t, language, isZh } = useLanguage();
 
@@ -695,6 +699,24 @@ export const StudioView: React.FC<StudioViewProps> = ({
     },
     []
   );
+
+  // Auto-open piano roll on handed-over track request (e.g. from chord workbench)
+  useEffect(() => {
+    if (initialOpenPianoRollTrack !== null && initialOpenPianoRollTrack !== undefined) {
+      if (typeof initialOpenPianoRollTrack === "string") {
+        const targetIdx = patternRef.current.tracks.findIndex(
+          (t) => t.track_id === initialOpenPianoRollTrack
+        );
+        handleOpenPianoRoll(targetIdx === -1 ? undefined : targetIdx);
+      } else {
+        handleOpenPianoRoll(initialOpenPianoRollTrack);
+      }
+      setIsPianoRollOpen(true);
+      if (onClearInitialOpenPianoRollTrack) {
+        onClearInitialOpenPianoRollTrack();
+      }
+    }
+  }, [initialOpenPianoRollTrack, handleOpenPianoRoll, onClearInitialOpenPianoRollTrack]);
 
   const handleTogglePianoRoll = useCallback(() => {
     // Opening from the toolbar targets a melodic track rather than whatever index happens to be

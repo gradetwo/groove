@@ -1,27 +1,27 @@
 {
-  "version": "2.0.38",
+  "version": "2.0.39",
   "releaseDate": "2026-09-17",
-  "changelogCount": 102,
+  "changelogCount": 103,
   "latest": {
-    "version": "2.0.38",
+    "version": "2.0.39",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.38 8大多维交互教学课程全量上线与全站视图专属手册直达闭环",
-      "en": "v2.0.38 8-Track Interactive Course Curriculum & App-Wide Contextual Manual Deep-Linking"
+      "zh": "v2.0.39 底鼓解剖实验室直达指南与工作台回归、声学课程双向跳转、和弦工坊直达钢琴卷帘实时编辑",
+      "en": "v2.0.39 Kick Anatomy Lab Contextual Guide & Studio Return, Dual Acoustic Lesson Routing, and Chord Workshop Piano Roll Bridge"
     },
     "highlights": [
       {
-        "zh": "**8 大交互式实操教学课程体系（8 Interactive Learning Courses）**：将教学中心实操教程由 5 门全量扩充至 8 门，完整覆盖系统全部技术与音乐学维度。新增第 6 课「和弦走向编配与调式和声理论」（和弦级数、4 种声学演奏风格与走向烘焙）、第 7 课「节奏大师课与交互式复节奏挑战」（复节奏对撞、Clave 进化树、Dilla 醉步微时序与敲击测试）、第 8 课「全球曲风星系与音乐史时间线探索」（3D 引力星系、引力连线脉络与年代轴演化）；全部配备分步实操指引与「立即前往体验」一键联动跳转。",
-        "en": "**8 Interactive Learning Courses**: Expanded the interactive tutorial hub from 5 to 8 comprehensive guided tracks covering all DAW and musicological capabilities. Added Lesson 6 (Harmonic Progressions & Voicing Theory), Lesson 7 (Rhythm Masterclass & Polyrhythmic Challenges), and Lesson 8 (Musicology Galaxy & Evolutionary Timelines), complete with multi-step tips and 1-click launch routing."
+        "zh": "**底鼓声学实验室专属手册与回归闭环（Kick Anatomy Lab Studio & Manual Integration）**：在底鼓设计/躯体声学实验室（KickAnatomyView）顶部遥测状态栏增设专属磨砂金光指南按钮（底鼓手册，直达混音与声学实验室手册）与高对比度「返回编曲台」快捷入口；全面打通从底鼓瞬态物理建模、低频下潜调试到主工作台的编曲创作流转闭环。",
+        "en": "**Kick Anatomy Lab Studio & Manual Integration**: Equipped the Kick Design & Somatic Acoustics Lab with a dedicated frosted gold \"Kick Lab Guide\" button linking straight to acoustics/mixing documentation, alongside a high-visibility \"Return to Studio\" action. Creators can effortlessly inspect physical kick synthesis models and seamlessly jump back to the sequencer."
       },
       {
-        "zh": "**全站各视图专属指南与手册深层联动（App-wide Contextual Manual Deep-Linking）**：在硬件调音台（ConsolePanel）、全景声谱分析仪（AnalyzerView）、和弦工坊（ChordProgressionsView）、曲风制作工坊（CustomGenreMakerView）及节奏大师课（MasterclassView）5 大核心视图顶部增设专属磨砂玻璃质感指南按钮（混音手册、声学手册、和声手册、工坊指南、大师课指南），轻点直达对应手册章节与实操课程，彻底打通功能实操与乐理教学闭环。",
-        "en": "**App-Wide Contextual Manual Deep-Linking**: Integrated dedicated frosted glass guide buttons into Hardware Console, Panoramic Analyzer, Chord Progressions Studio, Custom Genre Maker, and Rhythm Masterclass headers. Each button deep-links directly into its specific manual chapter and interactive course without interrupting user workflows."
+        "zh": "**交互教学课程声学双向实操跳转（Dual Acoustic Lesson Routing）**：在交互式教学中心第 4 课「底鼓谐振解剖与全景声谱示波器」卡片中引入双向实操跳转架构。提供次要动作「进入底鼓实验室」与主要动作「查看全景声谱分析仪」，学习者可根据学习进度一键直达三段式物理谐振建模或 32 频段 FFT / 李萨如相位视区，彻底消除功能探索的认知割裂。",
+        "en": "**Dual Acoustic Lesson Routing**: Upgraded Lesson 4 (\"Kick Anatomy & Panoramic Acoustic Scope\") in the Interactive Learning Center with dual action routing. Provides direct buttons to both the Kick Anatomy Lab and the Panoramic Analyzer Suite, letting learners jump straight into physical transient modeling or 32-band FFT/Lissajous visualizers directly from the course milestone."
       },
       {
-        "zh": "**教学状态与检索动态计数同步优化**：快速上手与实操课程表头动态同步课程数量统计（8 门实操课程），关键词秒级检索无缝命中全部 8 门课程与 32 个分步教学节点，中英双语 100% 校验覆盖。",
-        "en": "**Dynamic Learning Counters & Full Search Coverage**: Synchronized interactive course counters across Quick Start and tutorial headers, ensuring instant real-time search filtering across all 8 courses and 32 guided milestones with 100% bilingual parity."
+        "zh": "**和弦工坊直通专业钢琴卷帘编辑（Chord Workshop to Piano Roll Direct Bridge）**：在和弦走向与律动工坊（ChordProgressionsView）顶部工具栏增设专属「在卷帘中编辑」动作。创作者在探索经典或自定义和弦走向后，可一键将和弦载入和弦轨道并自动在工作台唤起专业钢琴卷帘，即刻进行音阶对齐、转位微调、Drop-2 爵士重排或力度动态塑形。",
+        "en": "**Chord Workshop to Piano Roll Direct Bridge**: Introduced an \"Edit in Piano Roll\" action in the Chord Progressions Studio toolbar. Clicking immediately loads the authored chord progression into the sequencer chords track and automatically opens the Piano Roll editor on that track for instant visual editing, inversion adjustments, Drop-2 jazz re-voicing, and velocity humanization."
       }
     ],
     "truncated": false

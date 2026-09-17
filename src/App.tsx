@@ -97,6 +97,7 @@ const MainApp: React.FC = () => {
     pattern: SequencerPattern;
     label: string;
   } | null>(null);
+  const [initialOpenPianoRollTrack, setInitialOpenPianoRollTrack] = useState<number | string | null>(null);
 
   const handleOpenHelp = useCallback((category?: string) => {
     setHelpCategory(category as HelpCategory | undefined);
@@ -251,6 +252,8 @@ const MainApp: React.FC = () => {
                     onClearInitialArpeggio={() => setInitialArpeggio(null)}
                     initialMasterclassPattern={initialMasterclassPattern}
                     onClearInitialMasterclassPattern={() => setInitialMasterclassPattern(null)}
+                    initialOpenPianoRollTrack={initialOpenPianoRollTrack}
+                    onClearInitialOpenPianoRollTrack={() => setInitialOpenPianoRollTrack(null)}
                   />
                 ) : (
                   <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 min-h-[100dvh]">
@@ -272,8 +275,11 @@ const MainApp: React.FC = () => {
                 homeLabel={t("btn_return_studio")}
               >
                 <ChordProgressionsView
-                  onOpenStudioWithChords={(chords) => {
+                  onOpenStudioWithChords={(chords, options) => {
                     setInitialChords(chords);
+                    if (options?.openPianoRoll) {
+                      setInitialOpenPianoRollTrack("chords");
+                    }
                     handleSelectTab("studio");
                   }}
                   onOpenStudioWithArpeggio={(baked, label) => {
@@ -292,7 +298,10 @@ const MainApp: React.FC = () => {
                 onNavigateHome={() => handleSelectTab("studio")}
                 homeLabel={t("btn_return_studio")}
               >
-                <KickAnatomyView />
+                <KickAnatomyView
+                  onOpenHelp={() => handleOpenHelp("mixing")}
+                  onOpenStudio={() => handleSelectTab("studio")}
+                />
               </ErrorBoundary>
             )}
 

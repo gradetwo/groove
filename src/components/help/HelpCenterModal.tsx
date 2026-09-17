@@ -91,7 +91,18 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
     }
   };
 
-  const tutorialsData = [
+  interface TutorialCourse {
+    id: string;
+    title: string;
+    desc: string;
+    targetTab: NavTab;
+    targetBtn: string;
+    secondaryTab?: NavTab;
+    secondaryBtn?: string;
+    steps: Array<{ label: string; tip?: string }>;
+  }
+
+  const tutorialsData: TutorialCourse[] = [
     {
       id: "drum",
       title: t("tut_drum_title"),
@@ -136,6 +147,8 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       desc: t("tut_acoustics_desc"),
       targetTab: "analyzer" as NavTab,
       targetBtn: isZh ? "查看全景声谱分析仪" : "Open Panoramic Analyzer",
+      secondaryTab: "kick" as NavTab,
+      secondaryBtn: t("help_tut_kick_lab_btn"),
       steps: [
         { label: t("tut_acoustics_s1"), tip: isZh ? "可在底鼓实验室解构击打瞬态与低频下潜" : "Inspect kick transient clicks, pitch drop, and resonance" },
         { label: t("tut_acoustics_s2"), tip: isZh ? "32 频段高精频谱与李萨如立体声相位椭圆" : "Real-time FFT spectrogram and Lissajous phase scope" },
@@ -225,7 +238,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       (t) =>
         isMatch(t.title) ||
         isMatch(t.desc) ||
-        t.steps.some((s) => isMatch(s.label) || isMatch(s.tip))
+        t.steps.some((s) => isMatch(s.label) || (s.tip ? isMatch(s.tip) : false))
     );
   }, [searchQuery, tutorialsData]);
 
@@ -559,14 +572,26 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                                 </button>
                               </div>
 
-                              <button
-                                onClick={() => handleNavigate(tut.targetTab)}
-                                className="px-3 py-1.5 rounded-xl bg-accent text-black font-semibold text-xs hover:bg-accent/90 transition-all flex items-center gap-1 shadow-sm"
-                                data-testid={`launch-tutorial-${tut.id}`}
-                              >
-                                <span>{tut.targetBtn}</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {tut.secondaryTab && (
+                                  <button
+                                    onClick={() => handleNavigate(tut.secondaryTab!)}
+                                    className="px-2.5 py-1.5 rounded-xl bg-[#1c2132] hover:bg-[#272e45] border border-line text-text-sub hover:text-text font-medium text-xs transition-all flex items-center gap-1 shadow-sm"
+                                    data-testid={`launch-secondary-tutorial-${tut.id}`}
+                                  >
+                                    <span>{tut.secondaryBtn}</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleNavigate(tut.targetTab)}
+                                  className="px-3 py-1.5 rounded-xl bg-accent text-black font-semibold text-xs hover:bg-accent/90 transition-all flex items-center gap-1 shadow-sm"
+                                  data-testid={`launch-tutorial-${tut.id}`}
+                                >
+                                  <span>{tut.targetBtn}</span>
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );

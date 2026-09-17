@@ -685,6 +685,11 @@ export const studioMessages = {
   chords_guide_btn: { en: "Harmony Guide", zh: "和声手册" },
   maker_guide_btn: { en: "Workshop Guide", zh: "工坊指南" },
   masterclass_guide_btn: { en: "Masterclass Guide", zh: "大师课指南" },
+  kick_guide_btn: { en: "Kick Lab Guide", zh: "底鼓手册" },
+  chords_open_piano_roll: { en: "Edit in Piano Roll", zh: "在卷帘中编辑" },
+  chords_open_piano_roll_title: { en: "Load progression into track and edit in Piano Roll", zh: "将当前和弦进行导入音轨并立即在钢琴卷帘中打开编辑" },
+  help_tut_kick_lab_btn: { en: "Open Kick Lab", zh: "进入底鼓实验室" },
   help_view_all_lessons: { en: "View 8 Interactive Lessons", zh: "查看 8 堂完整实操课程" },
   help_lessons_count: { en: "8 Lessons", zh: "8 门实操课程" },
 } as const;
+
