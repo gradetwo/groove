@@ -14,6 +14,7 @@ import {
   addChord,
   addNote,
   arpeggiateSelectedNotes,
+  chordNotesForStamp,
   detectChordName,
   drop2SelectedChord,
   duplicateBar1Notes,
@@ -31,6 +32,7 @@ import {
   setNoteVelocity,
   stepBeatsFor,
   transposeTrack,
+  transposeNotes,
   visiblePitchRange,
   withTrackNotes,
 } from "../features/sequencer/rollModel";
@@ -646,6 +648,35 @@ describe("roll model · professional DAW chord tools and harmonic analysis", () 
     expect(arpDown.tracks[0].steps.slice(0, 4)).toEqual([1, 1, 1, 0]);
     expect(arpDown.tracks[0].pitch?.slice(0, 4)).toEqual([67, 64, 60, null]);
     expect(selDown).toEqual(["0:67", "1:64", "2:60"]);
+  });
+
+  it("resolves pitches for chord stamp types with chordNotesForStamp", () => {
+    const triad = chordNotesForStamp(60, "C major", "triad");
+    expect(triad).toEqual([60, 64, 67]);
+
+    const seventh = chordNotesForStamp(60, "C major", "seventh");
+    expect(seventh).toEqual([60, 64, 67, 71]);
+
+    const sus4 = chordNotesForStamp(60, "C major", "sus4");
+    expect(sus4).toEqual([60, 65, 67]);
+
+    const single = chordNotesForStamp(62, "C major", "note");
+    expect(single).toEqual([62]);
+  });
+
+  it("transposes selected notes while leaving unselected notes unchanged", () => {
+    const track = makeTrack({
+      steps: [1, 1, 0, 0],
+      pitch: [60, 64, null, null],
+      gate: [0.8, 0.8, 0.8, 0.8],
+      velocity: [100, 100, 100, 100],
+    });
+    const pattern = { ...makePattern(track), totalSteps: 4 };
+
+    // Transpose only step 0 by +2 semitones
+    const { pattern: transposed, nextSelection } = transposeNotes(pattern, 0, ["0:60"], 2, 4);
+    expect(transposed.tracks[0].pitch?.slice(0, 2)).toEqual([62, 64]);
+    expect(nextSelection).toEqual(["0:62"]);
   });
 });
 

@@ -17,7 +17,11 @@
 import simdWasmUrl from '@/generated/synth_core.wasm?url';
 import scalarWasmUrl from '@/generated/synth_core_scalar.wasm?url';
 import { settleWithin } from './settle';
-import processorUrl from './worklet-processor.js?url';
+// The readable processor (`src/audio/worklet-processor.js`) stays the single
+// source of truth; what ships is the build's minified copy of it, so the visitor
+// does not download the source's ~12 KB of comments. `scripts/worklet-min.ts`
+// generates the file before this import is resolved.
+import processorUrl from '@/generated/worklet-processor.min.js?url';
 import { recoverFromStaleBuild } from '@/pwa/register';
 import { fetchCoreBytes } from './wasmFetch';
 import { t } from '@/i18n';

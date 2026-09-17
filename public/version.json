@@ -1,27 +1,27 @@
 {
-  "version": "2.0.35",
-  "releaseDate": "2026-09-16",
-  "changelogCount": 99,
+  "version": "2.0.36",
+  "releaseDate": "2026-09-17",
+  "changelogCount": 100,
   "latest": {
-    "version": "2.0.35",
+    "version": "2.0.36",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.35 钢琴卷帘多小节全域网格质感重塑与琶音展开大师组：彻底消除黑屏死区、全半音阶白黑键分道底纹、调式根音金光徽标、一键解除循环全轨展开、和弦升降序琶音展开（Arp ▲/▼）与127极限力度动态标尺",
-      "en": "v2.0.35 Piano Roll Unified Professional DAW Grid & Multi-Note Arpeggiator Suite: Blackout dead-zone elimination across all bars, natural/accidental key lane shading, scale root gold watermark badges, 1-click loop extension, multi-note arpeggiator (Arp ▲/▼), and 127 fff velocity dynamic markers"
+      "zh": "v2.0.36 用户手册与交互式教学中心上线、移动端高级实验室与探索去重、钢琴卷帘交互式音阶选择与半音移调",
+      "en": "v2.0.36 User Manual & Interactive Learning Center, Mobile Drawer De-duplication, Piano Roll Scale Selector & Semitone Transpose"
     },
     "highlights": [
       {
-        "zh": "**钢琴卷帘全小节网格质感重塑（Unified Professional DAW Grid Across All Bars）**：彻底修复多小节工程中首小节后网格反差断层、暗沉黑斑与线条不可见的视觉缺陷。网格底衬采用专业工作室海军深石板色调（#131624 与 #181c2e 优雅微反差交替），全半音阶自然白键行配备细腻透光层、半音黑键行采用经典钢琴黑曜石暗轨；调式根音行赋予温润金阳微光（rgba(245,158,11,0.13)）与小节起始「ROOT」金色水印徽标；16分音符与4分音符拍线贯穿全部小节，彻底消除空洞黑斑。",
-        "en": "**Unified Professional DAW Grid Across All Bars**: Completely resolved the visual disparity where bars past Bar 1 appeared as an illegible black void. The grid canvas now features a sleek dark studio slate palette (#131624 and #181c2e subtle bar alternation), natural white key lanes with luminous highlights, and obsidian black key gutter rows. Scale root rows are illuminated with warm amber gradients and \"ROOT\" gold watermark badges, while crisp 16th and beat dividers span a…"
+        "zh": "**用户手册与交互式教学中心（User Manual & Interactive Learning Center）**：全新上线完整知识库与交互式实操中心。集成 8 大手册章节（快速上手、交互教学、编曲与钢琴卷帘、混音与高级实验室、和弦与调式理论、工程导出与跨平台、疑难排障 FAQ、快捷键完整索引），支持全域实时关键词秒级检索；内置 5 门交互式实操课程（鼓机节奏与欧几里得律动、钢琴卷帘与和声琶音、硬件调音台与母带限制器、底鼓谐振解剖与声谱示波器、曲风工坊派生与云端链接分享），支持分步指引与「立即前往体验」一键联动跳转。",
+        "en": "**User Manual & Interactive Learning Center**: Launched a comprehensive documentation center and interactive tutorial hub. Covers 8 structured sections (Quick Start, Interactive Lessons, Sequencer & Piano Roll, Mixing & Pro Labs, Harmony & Theory, Export & Integrations, FAQs, and Keyboard Shortcuts) with instant search filtering. Features 5 interactive step-by-step tutorials with forward/backward progression and 1-click action buttons connecting directly to Studio, Console,…"
       },
       {
-        "zh": "**和弦升降序琶音即时展开（Multi-Note Arpeggiator Suite / Arp ▲ & Arp ▼）**：在 Deck 2 和弦编配区全新引入「琶音 ▲ (Arp ▲)」与「琶音 ▼ (Arp ▼)」工具。在网格中框选或点选任意复合和弦后，一键自动将静态叠音在时间线上按音高升序或降序分解平铺为连续步进琶音流水线条，并保持适当时值与独立编辑选区，极大解放键盘琶音与流水旋律的编曲生产力。",
-        "en": "**Multi-Note Arpeggiator Suite (Arp ▲ & Arp ▼)**: Introduced dedicated \"Arp ▲\" and \"Arp ▼\" buttons in Deck 2. Selecting any chord stack and clicking an Arp button instantly unrolls block chords chronologically across consecutive steps in ascending or descending pitch order, turning static chords into fluid, rhythmic arpeggio runs with full undo support."
+        "zh": "**移动端高级实验室与探索菜单彻底去重（Mobile Menu De-duplication）**：彻底解决移动端菜单中「高级与实验室」与「探索」列表重复展示调音台、全景示波器和曲风工坊的混乱体验。清晰划分为「高级与实验室」（调音台、全景示波器、曲风工坊）与「探索」（节奏大师课、星系云团、水平演变轴、垂直时间轴），各视图唯一归属，并为移动端和桌面端提供醒目的用户手册直达入口。",
+        "en": "**Mobile Drawer Navigation De-duplication**: Completely eliminated redundant entries where Console Desk, Acoustic Analyzer, and Custom Genre Maker appeared under both \"Explore\" and \"Pro & Labs\" in the mobile drawer. Navigational items are now strictly partitioned between Pro Labs and Musicology/Exploration without duplication, with prominent direct entry points for the User Manual."
       },
       {
-        "zh": "**一键解除循环限制全轨展开（1-Click Track Loop Extension）**：针对独立循环长度短于工程总长的音轨，在网格循环导轨与标尺中增加直达交互标牌「展开全轨 (Extend Track)」。创作者无需反复进入设置或手动对齐，轻点即可将该轨循环长度安全扩充至工程全长，解锁全部小节的直接绘制与旋律发展。",
-        "en": "**1-Click Track Loop Extension**: For tracks whose loop length was clamped below the project's total step count, an interactive \"Extend Track\" button is embedded in the loop boundary HUD. Creators can immediately expand the track loop to match the full song length with one click, unlocking full multi-bar sequencing freedom."
+        "zh": "**钢琴卷帘交互式调式音阶选择器（Interactive Scale & Tonality Selector）**：将 Deck 1 被动音阶标签升级为全功能交互式调式音阶选择下拉框，内置大调、自然小调、多利亚、弗里几亚、利底亚、混合利底亚、洛克利亚、和声小调、旋律小调、全音阶、布鲁斯等 22 种音乐理论音阶；选择后实时刷新全半音阶网格自然音高亮与根音「ROOT」金色水印标牌，并同步影响和弦印章配置。",
+        "en": "**Interactive Scale & Tonality Selector**: Replaced the passive scale badge in Deck 1 with an interactive dropdown supporting 22 theoretical scales and modes (Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, Harmonic/Melodic Minor, Blues, Pentatonic, etc.). Switching tonality immediately refreshes in-scale lanes, ROOT gold watermark badges, and chord voicings in real time."
       }
     ],
     "truncated": true

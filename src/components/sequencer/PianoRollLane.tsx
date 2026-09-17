@@ -31,6 +31,7 @@ import {
   addNote,
   addChord,
   arpeggiateSelectedNotes,
+  chordNotesForStamp,
   copyNotes,
   deleteNotes,
   detectChordName,
@@ -54,6 +55,7 @@ import {
   setNotesVelocity,
   splitNote,
   transposeTrack,
+  transposeNotes,
   visiblePitchRange,
   type ChordStampType,
   type RollSnap,
@@ -130,6 +132,31 @@ const TOOLS: Array<{ id: RollTool; icon: React.ReactNode; labelKey: string; keyH
 ];
 
 const SNAPS: RollSnap[] = ["off", "1/4", "1/8", "1/16", "1/32"];
+
+const AVAILABLE_SCALES = [
+  "C major",
+  "G major",
+  "D major",
+  "A major",
+  "E major",
+  "F major",
+  "Bb major",
+  "Eb major",
+  "A minor",
+  "E minor",
+  "B minor",
+  "D minor",
+  "G minor",
+  "C minor",
+  "F minor",
+  "D dorian",
+  "E phrygian",
+  "F lydian",
+  "G mixolydian",
+  "C blues",
+  "A pentatonic minor",
+  "C pentatonic major",
+];
 
 /** Velocity → a luminous DAW heatmap colour that reads from radiant coral to blazing golden amber. */
 function velocityColor(velocity: number): string {
@@ -722,10 +749,24 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               ))}
             </select>
 
-            {/* Tonality / Scale badge */}
-            <div className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-['JetBrains_Mono'] font-bold bg-accent/15 text-accent border border-accent/30 shadow-[0_0_8px_rgba(var(--accent-rgb),0.2)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-              <span>{view.scale || "Chromatic"}</span>
+            {/* Interactive Tonality / Scale Selector */}
+            <div className="hidden md:flex items-center gap-1.5">
+              <select
+                value={view.scale || "C major"}
+                onChange={(e) => {
+                  commit({ type: "SET_SCALE", scale: e.target.value });
+                  setNotice(t("roll_scale_changed", { scale: e.target.value }));
+                }}
+                title={t("roll_scale_select_title")}
+                data-testid="piano-roll-scale-select"
+                className="h-7 rounded-lg border border-accent/40 bg-gradient-to-b from-[#1c2235] to-[#121624] px-2 font-['JetBrains_Mono'] text-[10px] font-bold text-accent shadow-sm outline-none transition-all hover:border-accent cursor-pointer"
+              >
+                {AVAILABLE_SCALES.map((s) => (
+                  <option key={s} value={s} className="bg-[#12151f] text-white">
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Note count chip */}
@@ -1040,12 +1081,54 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               </button>
             </div>
 
-            {/* Transpose ±12 */}
+            {/* Transpose ±1 & ±12 */}
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => applyOp((p) => transposeTrack(p, activeTrackIdx, 12, stepCount))}
+                onClick={() => {
+                  const res = transposeNotes(pattern, activeTrackIdx, selection, 1, stepCount);
+                  commitDraft(res.pattern, res.nextSelection);
+                  if (res.nextSelection.length > 0) {
+                    const sample = parseNoteId(res.nextSelection[0]);
+                    onAudition(activeTrackIdx, sample.midi, 100, 0.35);
+                  }
+                }}
                 disabled={!editable}
+                title={t("roll_transpose_semitone_up")}
+                data-testid="piano-roll-semitone-up"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                +1
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const res = transposeNotes(pattern, activeTrackIdx, selection, -1, stepCount);
+                  commitDraft(res.pattern, res.nextSelection);
+                  if (res.nextSelection.length > 0) {
+                    const sample = parseNoteId(res.nextSelection[0]);
+                    onAudition(activeTrackIdx, sample.midi, 100, 0.35);
+                  }
+                }}
+                disabled={!editable}
+                title={t("roll_transpose_semitone_down")}
+                data-testid="piano-roll-semitone-down"
+                className={`${ctrlClass} disabled:opacity-35`}
+              >
+                −1
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const res = transposeNotes(pattern, activeTrackIdx, selection, 12, stepCount);
+                  commitDraft(res.pattern, res.nextSelection);
+                  if (res.nextSelection.length > 0) {
+                    const sample = parseNoteId(res.nextSelection[0]);
+                    onAudition(activeTrackIdx, sample.midi, 100, 0.35);
+                  }
+                }}
+                disabled={!editable}
+                title="Transpose +12 semitones"
                 data-testid="piano-roll-transpose-up"
                 className={`${ctrlClass} disabled:opacity-35`}
               >
@@ -1053,8 +1136,16 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => applyOp((p) => transposeTrack(p, activeTrackIdx, -12, stepCount))}
+                onClick={() => {
+                  const res = transposeNotes(pattern, activeTrackIdx, selection, -12, stepCount);
+                  commitDraft(res.pattern, res.nextSelection);
+                  if (res.nextSelection.length > 0) {
+                    const sample = parseNoteId(res.nextSelection[0]);
+                    onAudition(activeTrackIdx, sample.midi, 100, 0.35);
+                  }
+                }}
                 disabled={!editable}
+                title="Transpose -12 semitones"
                 data-testid="piano-roll-transpose-down"
                 className={`${ctrlClass} disabled:opacity-35`}
               >
@@ -1167,6 +1258,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         : isBlack
                         ? "bg-gradient-to-r from-[#11131a] via-[#1a1d28] to-[#252a3a] text-[#8e95a8] hover:to-[#31374a] border-t border-white/20 border-b border-black/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),2px_2px_5px_rgba(0,0,0,0.8)] rounded-r-[4px] mr-1"
                         : "bg-gradient-to-r from-[#cad0dd] via-[#e2e6f0] to-[#f4f6fa] text-[#1a1d29] hover:to-white border-b border-[#9ca3b5] border-l-2 border-[#b8bcc8] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.3)]"
+                    } ${
+                      !isAuditioning && hoverCell?.midi === midi
+                        ? "ring-1 ring-accent/80 shadow-[0_0_10px_rgba(var(--accent-rgb),0.5)] z-10 brightness-110"
+                        : ""
                     }`}
                     style={{ height: rowH }}
                   >
@@ -1500,25 +1595,49 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       );
                     })}
 
-                    {/* Layer 7: Interactive Ghost Note Cursor Preview (Pencil mode) */}
-                    {hoverCell && !dragRef.current && editable && tool === "pencil" && !noteAt(hoverCell.stepIdx, hoverCell.midi) && (() => {
+                    {/* Hover Pitch Guideline Crosshair */}
+                    {hoverCell && (() => {
                       const rIdx = rowIdxMap.get(hoverCell.midi);
                       if (rIdx === undefined) return null;
                       return (
                         <div
-                          data-testid="piano-roll-ghost-hover"
-                          className="pointer-events-none absolute z-20 rounded-[5px] border-2 border-dashed border-accent/80 bg-accent/25 shadow-[0_0_12px_rgba(var(--accent-rgb),0.4),inset_0_1px_0_rgba(255,255,255,0.4)] animate-pulse flex items-center px-1"
-                          style={{
-                            left: hoverCell.stepIdx * cellW + 1,
-                            top: rIdx * rowH + 1,
-                            width: cellW - 2,
-                            height: rowH - 2,
-                          }}
-                        >
-                          <span className="font-['JetBrains_Mono'] text-[8px] font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] truncate">
-                            {chordStamp !== "note" ? `${midiToNoteName(hoverCell.midi)} ${chordStamp}` : midiToNoteName(hoverCell.midi)}
-                          </span>
-                        </div>
+                          data-testid="piano-roll-row-guideline"
+                          className="pointer-events-none absolute inset-x-0 border-t border-b border-accent/30 bg-accent/[0.04] z-10"
+                          style={{ top: rIdx * rowH, height: rowH }}
+                        />
+                      );
+                    })()}
+
+                    {/* Layer 7: Interactive Ghost Note Cursor Preview (Pencil mode) */}
+                    {hoverCell && !dragRef.current && editable && tool === "pencil" && !noteAt(hoverCell.stepIdx, hoverCell.midi) && (() => {
+                      const chordNotes = chordNotesForStamp(hoverCell.midi, view.scale, chordStamp);
+                      return (
+                        <>
+                          {chordNotes.map((m, cIdx) => {
+                            const rIdx = rowIdxMap.get(m);
+                            if (rIdx === undefined) return null;
+                            const isRoot = cIdx === 0;
+                            return (
+                              <div
+                                key={`ghost-stamp-${m}`}
+                                data-testid="piano-roll-ghost-hover"
+                                className={`pointer-events-none absolute z-20 rounded-[5px] border-2 border-dashed ${
+                                  isRoot ? "border-accent/90 bg-accent/30" : "border-amber-300/70 bg-amber-400/20"
+                                } shadow-[0_0_12px_rgba(var(--accent-rgb),0.4),inset_0_1px_0_rgba(255,255,255,0.4)] animate-pulse flex items-center px-1`}
+                                style={{
+                                  left: hoverCell.stepIdx * cellW + 1,
+                                  top: rIdx * rowH + 1,
+                                  width: cellW - 2,
+                                  height: rowH - 2,
+                                }}
+                              >
+                                <span className="font-['JetBrains_Mono'] text-[8px] font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] truncate">
+                                  {isRoot && chordStamp !== "note" ? `${midiToNoteName(m)} ${chordStamp}` : midiToNoteName(m)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </>
                       );
                     })()}
 

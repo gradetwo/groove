@@ -13,6 +13,7 @@ import { ChordDefinition } from "./utils/chordTheory";
 import { BakedArpeggioResult } from "./utils/arpeggiatorTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
 import { ShortcutsModal } from "./components/ShortcutsModal";
+import { HelpCenterModal } from "./components/help/HelpCenterModal";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
 import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
@@ -85,6 +86,7 @@ const MainApp: React.FC = () => {
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
   const [initialArpeggio, setInitialArpeggio] = useState<{
     baked: BakedArpeggioResult;
@@ -191,6 +193,7 @@ const MainApp: React.FC = () => {
         onRandomGenre={handleOpenStudioWithGenre}
         onOpenUpdates={() => setUpdatesOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
@@ -531,6 +534,21 @@ const MainApp: React.FC = () => {
       <ShortcutsModal
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
+        onOpenHelp={() => {
+          setShortcutsOpen(false);
+          setHelpOpen(true);
+        }}
+      />
+
+      {/* User Manual & Interactive Learning Center Modal */}
+      <HelpCenterModal
+        isOpen={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onSelectTab={handleSelectTab}
+        onOpenShortcuts={() => {
+          setHelpOpen(false);
+          setShortcutsOpen(true);
+        }}
       />
 
       {/* Global settings panel (item ⑤): the app-level, non-per-track parameters. */}

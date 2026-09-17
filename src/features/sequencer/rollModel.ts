@@ -319,6 +319,40 @@ export function transposeTrack(
 }
 
 /**
+ * Transpose selected notes (or the whole track if no selection) by semitones,
+ * returning the updated pattern and new selected note IDs.
+ */
+export function transposeNotes(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selectedNoteIds: readonly RollNoteId[],
+  semitones: number,
+  stepCount: number
+): { pattern: SequencerPattern; nextSelection: RollNoteId[] } {
+  if (selectedNoteIds.length === 0) {
+    return {
+      pattern: transposeTrack(pattern, trackIdx, semitones, stepCount),
+      nextSelection: [],
+    };
+  }
+  const selectedSet = new Set(selectedNoteIds);
+  const nextSelection: RollNoteId[] = [];
+  const notes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale).map((n) => {
+    if (selectedSet.has(noteId(n))) {
+      const nextMidi = Math.max(0, Math.min(127, n.midi + semitones));
+      const updated: RollStepNote = { ...n, midi: nextMidi };
+      nextSelection.push(noteId(updated));
+      return updated;
+    }
+    return n;
+  });
+  return {
+    pattern: withTrackNotes(pattern, trackIdx, notes, stepCount),
+    nextSelection,
+  };
+}
+
+/**
  * Loop length for the track: its own `trackLength` when set (polymeter), else the pattern.
  */
 export function loopLengthOf(track: SequencerTrack | undefined, stepCount: number): number {
@@ -664,6 +698,26 @@ export function scaleHighlightFor(scale: string | undefined | null): { rootPc: n
 export type ChordStampType = "note" | "triad" | "seventh" | "ninth" | "sus4" | "sus2" | "power";
 
 /**
+ * Resolves the MIDI pitches for a chord stamp type and root note.
+ */
+export function chordNotesForStamp(
+  targetRoot: number,
+  scale: string | undefined | null,
+  chordType: ChordStampType
+): number[] {
+  const root = Math.round(targetRoot);
+  const normalizedScale = scale ?? undefined;
+  if (chordType === "note") return [root];
+  if (chordType === "triad") return chordVoicingForStep(root, normalizedScale, { style: "triad" });
+  if (chordType === "seventh") return chordVoicingForStep(root, normalizedScale, { style: "seventh" });
+  if (chordType === "ninth") return [root, root + 4, root + 7, root + 11, root + 14];
+  if (chordType === "sus4") return chordVoicingForStep(root, normalizedScale, { style: "sus" });
+  if (chordType === "sus2") return [root, root + 2, root + 7];
+  if (chordType === "power") return chordVoicingForStep(root, normalizedScale, { style: "power" });
+  return [root];
+}
+
+/**
  * Adds a chord stack on the given step using the specified chord stamp quality.
  */
 export function addChord(
@@ -682,23 +736,7 @@ export function addChord(
   }
   const notes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale).filter((n) => n.stepIdx !== stepIdx);
   const targetRoot = Math.round(rootMidi);
-  let chordNotes: number[];
-
-  if (chordType === "triad") {
-    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "triad" });
-  } else if (chordType === "seventh") {
-    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "seventh" });
-  } else if (chordType === "ninth") {
-    chordNotes = [targetRoot, targetRoot + 4, targetRoot + 7, targetRoot + 11, targetRoot + 14];
-  } else if (chordType === "sus4") {
-    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "sus" });
-  } else if (chordType === "sus2") {
-    chordNotes = [targetRoot, targetRoot + 2, targetRoot + 7];
-  } else if (chordType === "power") {
-    chordNotes = chordVoicingForStep(targetRoot, pattern.scale, { style: "power" });
-  } else {
-    chordNotes = [targetRoot];
-  }
+  const chordNotes = chordNotesForStamp(targetRoot, pattern.scale, chordType);
 
   for (const midi of chordNotes) {
     notes.push({ stepIdx, midi, gate, velocity });

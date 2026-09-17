@@ -731,4 +731,49 @@ describe("PianoRollLane · chords are visible and editable", () => {
     // Velocity lane renders fff · 127
     expect(screen.getByText("fff · 127")).toBeInTheDocument();
   });
+
+  it("changes project scale via interactive scale select dropdown", () => {
+    const { commits } = setup();
+    const scaleSelect = screen.getByTestId("piano-roll-scale-select");
+    expect(scaleSelect).toBeInTheDocument();
+
+    fireEvent.change(scaleSelect, { target: { value: "A minor" } });
+    const lastAction = commits.at(-1);
+    expect(lastAction).toEqual({ type: "SET_SCALE", scale: "A minor" });
+  });
+
+  it("transposes selected notes by ±1 semitone using semitone buttons", () => {
+    const { commits } = setup();
+    // Select note at step 0 (pitch 60)
+    fireEvent.pointerDown(screen.getByTestId("piano-roll-note-0-60"), { clientX: 4, clientY: rowYFor(60) });
+
+    // Transpose +1 semitone
+    const upBtn = screen.getByTestId("piano-roll-semitone-up");
+    fireEvent.click(upBtn);
+    const updatedUp = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(updatedUp.tracks[0].pitch?.[0]).toBe(61);
+
+    // Transpose -1 semitone
+    const downBtn = screen.getByTestId("piano-roll-semitone-down");
+    fireEvent.click(downBtn);
+    const updatedDown = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(updatedDown.tracks[0].pitch?.[0]).toBe(60);
+  });
+
+  it("renders pitch row guideline and multi-note ghost preview when chord stamp is engaged", () => {
+    setup();
+    // Engage Triad stamp
+    const stampSelect = screen.getByTestId("piano-roll-chord-stamp");
+    fireEvent.change(stampSelect, { target: { value: "triad" } });
+
+    // Hover over step 2, pitch 60
+    fireEvent.pointerMove(grid(), { clientX: 2 * 26 + 4, clientY: rowYFor(60) });
+
+    // Row guideline should be rendered
+    expect(screen.getByTestId("piano-roll-row-guideline")).toBeInTheDocument();
+
+    // Triad stamp renders 3 ghost notes (root, third, fifth)
+    const ghostNotes = screen.getAllByTestId("piano-roll-ghost-hover");
+    expect(ghostNotes.length).toBe(3);
+  });
 });

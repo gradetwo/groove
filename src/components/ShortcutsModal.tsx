@@ -1,15 +1,16 @@
 import React from "react";
 import { Modal } from "../ui/Modal";
 import { useLanguage } from "../i18n/LanguageContext";
-import { Keyboard, Navigation, Music, HelpCircle } from "lucide-react";
+import { Keyboard, Navigation, Music, HelpCircle, BookOpen } from "lucide-react";
 
 export interface ShortcutsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenHelp?: () => void;
 }
 
-export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
-  const { t } = useLanguage();
+export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose, onOpenHelp }) => {
+  const { t, isZh } = useLanguage();
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   const modKey = isMac ? "⌘" : "Ctrl";
 
@@ -106,6 +107,25 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
             ))}
           </div>
         </div>
+
+        {/* Link to Full Manual & Tutorials */}
+        {onOpenHelp && (
+          <div className="pt-3 border-t border-line/60 flex items-center justify-between">
+            <span className="text-xs text-text-sub">
+              {isZh ? "需要完整的声学实验与编曲教学？" : "Need complete DAW & acoustic tutorials?"}
+            </span>
+            <button
+              onClick={() => {
+                onClose();
+                onOpenHelp();
+              }}
+              className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>{t("help_mobile_entry_label")}</span>
+            </button>
+          </div>
+        )}
       </div>
     </Modal>
   );

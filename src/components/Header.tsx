@@ -20,6 +20,7 @@ import {
   Keyboard,
   SlidersHorizontal,
   Settings,
+  BookOpen,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
@@ -47,6 +48,7 @@ interface HeaderProps {
   onRandomGenre: (genre: { id: string }) => void;
   onOpenUpdates?: () => void;
   onOpenShortcuts?: () => void;
+  onOpenHelp?: () => void;
   /** Opens the global settings panel (item ⑤). */
   onOpenSettings?: () => void;
   analyser?: AnalyserNode | null;
@@ -60,6 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRandomGenre,
   onOpenUpdates,
   onOpenShortcuts,
+  onOpenHelp,
   onOpenSettings,
   analyser,
   isPlaying = false,
@@ -132,17 +135,20 @@ export const Header: React.FC<HeaderProps> = ({
     return () => cancelAnimationFrame(animationFrameId);
   }, [analyser, isPlaying]);
 
-  const exploreItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
-    { tab: "maker", labelKey: "nav_maker", descKey: "nav_maker_desc", icon: <Wand2 className="w-3.5 h-3.5" /> },
-    { tab: "analyzer", labelKey: "nav_analyzer", descKey: "nav_analyzer_desc", icon: <Activity className="w-3.5 h-3.5" /> },
+  const labItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
     { tab: "console", labelKey: "console_nav_label", descKey: "console_nav_desc", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
+    { tab: "analyzer", labelKey: "nav_analyzer", descKey: "nav_analyzer_desc", icon: <Activity className="w-3.5 h-3.5" /> },
+    { tab: "maker", labelKey: "nav_maker", descKey: "nav_maker_desc", icon: <Wand2 className="w-3.5 h-3.5" /> },
+  ];
+
+  const exploreItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
     { tab: "masterclass", labelKey: "nav_masterclass", descKey: "nav_masterclass_desc", icon: <Disc className="w-3.5 h-3.5" /> },
     { tab: "galaxy", labelKey: "nav_galaxy", descKey: "nav_galaxy_desc", icon: <Orbit className="w-3.5 h-3.5" /> },
     { tab: "horizontal-timeline", labelKey: "nav_timeline_h", descKey: "nav_timeline_h_desc", icon: <Clock className="w-3.5 h-3.5" /> },
     { tab: "vertical-timeline", labelKey: "nav_timeline_v", descKey: "nav_timeline_v_desc", icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" /> },
   ];
 
-  const isExploreActive = ["maker", "analyzer", "console", "masterclass", "galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
+  const isExploreActive = ["console", "analyzer", "maker", "masterclass", "galaxy", "horizontal-timeline", "vertical-timeline"].includes(currentTab);
 
   const handleRandom = () => {
     const randomIndex = Math.floor(Math.random() * GENRE_INDEX.length);
@@ -237,9 +243,42 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {exploreOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-52 bg-[#0d0e12] border border-line rounded-xl p-1.5 shadow-2xl z-50 animate-fade-in">
-              <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-text-dim select-none">
-                {t("header_explore_title")}
+            <div className="absolute top-full left-0 mt-1.5 w-56 bg-[#0d0e12] border border-line rounded-xl p-1.5 shadow-2xl z-50 animate-fade-in">
+              <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-text-dim select-none flex items-center gap-1.5">
+                <Sliders className="w-3 h-3 text-accent" />
+                <span>{isZh ? "高级与实验室" : "Pro & Labs"}</span>
+              </div>
+              <div className="space-y-0.5 mt-0.5 mb-1.5">
+                {labItems.map((item) => {
+                  const isItemActive = currentTab === item.tab;
+                  return (
+                    <button
+                      key={item.tab}
+                      onClick={() => {
+                        onSelectTab(item.tab);
+                        setExploreOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors text-left ${
+                        isItemActive
+                          ? "bg-accent/15 text-accent font-medium"
+                          : "text-text-sub hover:text-text hover:bg-[#181a22]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {item.icon}
+                        <span className="font-medium">{t(item.labelKey)}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-text-dim">
+                        {t(item.descKey)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-text-dim select-none flex items-center gap-1.5 pt-1.5 border-t border-line/60">
+                <Compass className="w-3 h-3 text-accent" />
+                <span>{t("header_explore_title")}</span>
               </div>
               <div className="space-y-0.5 mt-0.5">
                 {exploreItems.map((item) => {
@@ -375,6 +414,20 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             <span className="hidden sm:inline">v{CURRENT_CLIENT_VERSION}</span>
+          </button>
+        )}
+
+        {/* User Manual & Help Center Button */}
+        {onOpenHelp && (
+          <button
+            type="button"
+            onClick={onOpenHelp}
+            data-testid="header-help-button"
+            className="hidden sm:flex items-center justify-center p-1.5 border border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
+            title={t("help_manual_title")}
+            aria-label="User Manual & Help Center"
+          >
+            <BookOpen className="w-4 h-4" />
           </button>
         )}
 
@@ -540,51 +593,50 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-bold">{isZh ? "高级与实验室" : "Pro & Labs"}</span>
             </div>
           </div>
+          <div className="space-y-1.5 pl-2.5 border-l-2 border-[#262a38] ml-1">
+            {labItems.map((item) => {
+              const isSubActive = currentTab === item.tab;
+              return (
+                <button
+                  key={item.tab}
+                  onClick={() => {
+                    onSelectTab(item.tab);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
+                    isSubActive
+                      ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_10px_rgba(245,183,61,0.15)]"
+                      : "border-line/70 text-text-sub hover:text-text bg-[#0f1118] hover:bg-[#161922]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-accent">{item.icon}</span>
+                    <span className={isSubActive ? "text-accent font-semibold" : "text-text font-medium"}>{t(item.labelKey)}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-text-dim">
+                    {t(item.descKey)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-          <button
-            onClick={() => {
-              onSelectTab("console");
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
-              currentTab === "console"
-                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
-                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
-            }`}
-          >
-            <SlidersHorizontal className="w-4 h-4 text-accent shrink-0" />
-            <span className="font-semibold">{t("console_title") || (isZh ? "独立硬件调音台" : "Console Desk")}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              onSelectTab("analyzer");
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
-              currentTab === "analyzer"
-                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
-                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
-            }`}
-          >
-            <Activity className="w-4 h-4 text-accent shrink-0" />
-            <span className="font-semibold">{isZh ? "全景声谱分析仪" : "Acoustic Analyzer"}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              onSelectTab("maker");
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full flex items-center gap-2 text-xs font-medium px-3.5 py-2.5 rounded-xl border transition-all ${
-              currentTab === "maker"
-                ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_12px_rgba(245,183,61,0.2)]"
-                : "border-line text-text hover:text-accent bg-[#13151d] hover:bg-[#1a1d27]"
-            }`}
-          >
-            <Wand2 className="w-4 h-4 text-accent shrink-0" />
-            <span className="font-semibold">{isZh ? "曲风制作工坊" : "Custom Genre Maker"}</span>
-          </button>
+          {onOpenHelp && (
+            <button
+              onClick={() => {
+                onOpenHelp();
+                setMobileMenuOpen(false);
+              }}
+              data-testid="mobile-help-button"
+              className="w-full flex items-center gap-2 text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-accent/40 text-accent bg-accent/10 hover:bg-accent/20 transition-all mt-2"
+            >
+              <BookOpen className="w-4 h-4 text-accent shrink-0" />
+              <span>{t("help_mobile_entry_label")}</span>
+              <span className="ml-auto text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/20 border border-accent/40 text-accent font-bold">
+                {t("help_mobile_entry_tag")}
+              </span>
+            </button>
+          )}
 
           {onOpenShortcuts && (
             <button

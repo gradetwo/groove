@@ -314,6 +314,42 @@ const nowMs = () =>
     ? performance.now()
     : Date.now();
 
+/**
+ * Validate one frame-addressed note payload into the event the queue stores, or `null`.
+ *
+ * There is exactly one validator: the `noteAt` / `noteOnAt` / `noteOffAt` messages go through
+ * this function, and so does the offline export's whole-song prefill (`processorOptions.notes`,
+ * see `prefillScheduledNotes`). A second, weaker copy on the prefill path would let a malformed
+ * frame reach wasm as `NaN` while the message path kept rejecting it.
+ *
+ * Every field crosses into wasm as an `f32`, and two JavaScript coercions make a malformed one
+ * look valid: `Number(null)` and `Number('')` are both `0` (a *finite* frame, i.e. "sound now"),
+ * and `undefined` becomes `NaN` at the wasm boundary, where the core's `clamp(0, 1)` cannot clamp
+ * it (every comparison against NaN is false). So the guard is on the raw value
+ * (`typeof … === 'number'`), never on a coerced one: a missing or wrongly typed field drops the
+ * event, and `null` / `''` / `false` can no longer impersonate frame 0.
+ *
+ * A note-on that omits `velocity` means "a normal, full note" (MIDI's own implicit velocity), but
+ * a velocity that was *given* and is not a finite number is a host bug: rejecting it is honest,
+ * while silently substituting the default would hide the bug. A pan that is present but not
+ * finite is dropped (the note plays centre) rather than discarding the whole event: pan is
+ * decoration, pitch and frame are the contract.
+ */
+function timedEventFrom(payload) {
+  if (typeof payload.atFrame !== 'number' || !Number.isFinite(payload.atFrame)) return null;
+  if (typeof payload.note !== 'number' || !Number.isFinite(payload.note)) return null;
+  const isOff = payload.type === 'noteOffAt';
+  let velocity = 0;
+  if (!isOff) {
+    if (payload.velocity === undefined) velocity = 1;
+    else if (typeof payload.velocity === 'number' && Number.isFinite(payload.velocity)) velocity = payload.velocity;
+    else return null;
+  }
+  let pan;
+  if (typeof payload.pan === 'number' && Number.isFinite(payload.pan)) pan = payload.pan;
+  return { frame: Math.round(payload.atFrame), off: isOff, note: payload.note, velocity, pan };
+}
+
 class SynthWorkletProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return PARAMS.map(([name, , defaultValue, minValue, maxValue]) => ({
@@ -357,6 +393,9 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
     this.renderedFrames = 0;
     this.paramsB = opts.paramsB || null;
     this.instanceRoute = opts.instanceRoute || null;
+    // Offline export hands the whole song over before rendering starts (see
+    // `prefillScheduledNotes`); the live engine never sets this.
+    if (opts.notes) this.prefillScheduledNotes(opts.notes);
 
     const bytes = opts.wasmBytes;
     if (!bytes) {
@@ -451,16 +490,17 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
       case 'noteAt':
       case 'noteOnAt':
       case 'noteOffAt': {
-        const atFrame = Math.round(Number(data.atFrame));
-        if (!Number.isFinite(atFrame)) break;
-        const isOff = data.type === 'noteOffAt';
-        this.scheduleTimedNote({
-          frame: atFrame,
-          off: isOff,
+        // The field validation (raw-type frame / note, implicit full velocity, drop-only-the-pan)
+        // lives in `timedEventFrom`, shared with the offline prefill, so there is exactly one
+        // validator. Valid events take exactly the path they always did.
+        const event = timedEventFrom({
+          type: data.type,
+          atFrame: data.atFrame,
           note: data.note,
-          velocity: isOff ? 0 : data.velocity,
+          velocity: data.velocity,
           pan: data.pan,
         });
+        if (event) this.scheduleTimedNote(event);
         break;
       }
       case 'allNotesOff':
@@ -651,6 +691,45 @@ class SynthWorkletProcessor extends AudioWorkletProcessor {
     let i = queue.length;
     while (i > 0 && queue[i - 1].frame > event.frame) i -= 1;
     queue.splice(i, 0, event);
+  }
+
+  /**
+   * Pre-fill the timed queue with a whole song, for an offline export.
+   *
+   * `processorOptions.notes` is `[{ note, onFrame, offFrame, velocity?, pan? }]` (see
+   * `src/audio/render.ts`). Each note becomes a note-on and a note-off, both validated by the same
+   * `timedEventFrom` the live `noteAt` / `noteOffAt` messages use, then the queue is sorted by
+   * frame. `onFrame` / `offFrame` are absolute frames from the context's time origin, exactly like
+   * `atFrame` — the engine applies them inside `process()` at the frame that names, so an export no
+   * longer needs `OfflineAudioContext.suspend()` (Firefox has none; see `docs/notes/compat.md` §5).
+   *
+   * This deliberately does **not** go through `scheduleTimedNote`'s `MAX_SCHEDULED_EVENTS` bound.
+   * That bound protects the audio thread from a *live* host leaking events, where the oldest of an
+   * ever-growing queue is the right thing to drop. Here the list is the finite song the user
+   * already has in memory and asked to export: truncating it would silently cut the opening bars
+   * out of the file, which is exactly the class of quiet wrongness this export path exists to
+   * avoid. The list is validated in one pass and sorted once, rather than inserted one at a time
+   * through the live path's bounded queue.
+   */
+  prefillScheduledNotes(notes) {
+    const queue = [];
+    for (const raw of notes) {
+      if (!raw) continue;
+      const on = timedEventFrom({
+        type: 'noteOnAt',
+        atFrame: raw.onFrame,
+        note: raw.note,
+        velocity: raw.velocity,
+        pan: raw.pan,
+      });
+      if (on) queue.push(on);
+      const off = timedEventFrom({ type: 'noteOffAt', atFrame: raw.offFrame, note: raw.note });
+      if (off) queue.push(off);
+    }
+    // Stable sort: events that share a frame keep their order (a note's on before its own off, and
+    // the song's own note order), which is the first-in-first-applied tie break the queue promises.
+    queue.sort((a, b) => a.frame - b.frame);
+    this.scheduledNotes = queue;
   }
 
   /** Apply every queued event due at or before `frame`. Returns how many were applied. */
