@@ -65,6 +65,7 @@ interface StudioViewProps {
   /** Opens the global settings panel, which App owns (item ⑤). */
   onOpenSettings?: () => void;
   onOpenGenreMaker?: () => void;
+  onOpenHelp?: (chapterId?: string) => void;
   initialChords?: ChordDefinition[] | null;
   onClearInitialChords?: () => void;
   initialArpeggio?: { baked: BakedArpeggioResult; label?: string } | null;
@@ -81,6 +82,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onAudioEngineReady,
   onOpenGenreMaker,
   onOpenSettings,
+  onOpenHelp,
   initialChords,
   onClearInitialChords,
   initialArpeggio,
@@ -798,6 +800,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onClosePianoRoll={handleClosePianoRoll}
           onTogglePianoRoll={handleTogglePianoRoll}
           onAuditionRollNote={handleAuditionRollNote}
+          onOpenHelp={onOpenHelp}
           language={language}
           isZh={isZh}
           canUndo={canUndo}

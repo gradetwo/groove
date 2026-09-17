@@ -71,12 +71,14 @@ function setup(over: {
   stepsPerBar?: number;
   onAudition?: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
   onToggleMusicalTyping?: () => void;
+  onOpenHelp?: (chapterId?: string) => void;
 } = {}) {
   const commits: SequencerAction[] = [];
   const onAudition = over.onAudition ?? vi.fn();
   const onClose = vi.fn();
   const onSelectTrack = vi.fn();
   const onToggleMusicalTyping = over.onToggleMusicalTyping ?? vi.fn();
+  const onOpenHelp = over.onOpenHelp ?? vi.fn();
   const pattern = over.pattern ?? makePattern();
   const stepCount = over.stepCount ?? STEPS;
   const stepsPerBar = over.stepsPerBar ?? 4;
@@ -92,10 +94,12 @@ function setup(over: {
       commit={(action) => commits.push(action)}
       onAudition={onAudition}
       onToggleMusicalTyping={onToggleMusicalTyping}
+      onOpenHelp={onOpenHelp}
     />
   );
-  return { commits, onAudition, onClose, onSelectTrack, pattern };
+  return { commits, onAudition, onClose, onSelectTrack, onOpenHelp, pattern };
 }
+
 
 describe("PianoRollLane · one source of truth", () => {
   it("renders one block per sounding step, positioned by pitch", () => {
@@ -776,4 +780,65 @@ describe("PianoRollLane · chords are visible and editable", () => {
     const ghostNotes = screen.getAllByTestId("piano-roll-ghost-hover");
     expect(ghostNotes.length).toBe(3);
   });
+
+  it("renders chord progression suite and stamps progression into track", () => {
+    const { commits } = setup({ stepCount: 16, stepsPerBar: 16 });
+    expect(screen.getByTestId("piano-roll-progression-suite")).toBeInTheDocument();
+
+    const select = screen.getByTestId("piano-roll-progression-select");
+    expect(select).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: "pop_4chords" } });
+
+    // Audition progression
+    const auditionBtn = screen.getByTestId("piano-roll-progression-audition");
+    fireEvent.click(auditionBtn);
+
+    // Stamp progression
+    const applyBtn = screen.getByTestId("piano-roll-progression-apply");
+    fireEvent.click(applyBtn);
+
+    const updated = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    const leadTrack = updated.tracks[0];
+    // Chords should be stamped across the steps (step 0, 4, 8, 12)
+    expect(leadTrack.steps[0]).toBe(1);
+    expect(leadTrack.steps[4]).toBe(1);
+    expect(leadTrack.steps[8]).toBe(1);
+    expect(leadTrack.steps[12]).toBe(1);
+  });
+
+  it("renders velocity lane header toolbar and applies quick dynamics transforms", () => {
+    const { commits } = setup({ stepCount: 8 });
+    const levelBtn = screen.getByTestId("piano-roll-vel-level-100");
+    const humanizeBtn = screen.getByTestId("piano-roll-vel-humanize");
+    const compressBtn = screen.getByTestId("piano-roll-vel-compress");
+    const rampUpBtn = screen.getByTestId("piano-roll-vel-ramp-up");
+    const rampDownBtn = screen.getByTestId("piano-roll-vel-ramp-down");
+
+    expect(levelBtn).toBeInTheDocument();
+    expect(humanizeBtn).toBeInTheDocument();
+    expect(compressBtn).toBeInTheDocument();
+    expect(rampUpBtn).toBeInTheDocument();
+    expect(rampDownBtn).toBeInTheDocument();
+
+    // Level all velocities to 100
+    fireEvent.click(levelBtn);
+    const updated = (commits.at(-1) as { pattern: SequencerPattern }).pattern;
+    expect(updated.tracks[0].velocity?.[0]).toBe(100);
+
+    // Compress velocities
+    fireEvent.click(compressBtn);
+    expect(commits.length).toBeGreaterThan(1);
+  });
+
+  it("renders Guide button in Deck 1 and triggers onOpenHelp callback", () => {
+    const onOpenHelp = vi.fn();
+    setup({ onOpenHelp });
+
+    const guideBtn = screen.getByTestId("piano-roll-guide");
+    expect(guideBtn).toBeInTheDocument();
+
+    fireEvent.click(guideBtn);
+    expect(onOpenHelp).toHaveBeenCalledWith("sequencer");
+  });
 });
+

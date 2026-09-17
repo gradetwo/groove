@@ -13,7 +13,7 @@ import { ChordDefinition } from "./utils/chordTheory";
 import { BakedArpeggioResult } from "./utils/arpeggiatorTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
 import { ShortcutsModal } from "./components/ShortcutsModal";
-import { HelpCenterModal } from "./components/help/HelpCenterModal";
+import { HelpCenterModal, type HelpCategory } from "./components/help/HelpCenterModal";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
 import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
@@ -87,6 +87,7 @@ const MainApp: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpCategory, setHelpCategory] = useState<HelpCategory | undefined>(undefined);
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
   const [initialArpeggio, setInitialArpeggio] = useState<{
     baked: BakedArpeggioResult;
@@ -97,9 +98,15 @@ const MainApp: React.FC = () => {
     label: string;
   } | null>(null);
 
+  const handleOpenHelp = useCallback((category?: string) => {
+    setHelpCategory(category as HelpCategory | undefined);
+    setHelpOpen(true);
+  }, []);
+
   const handleSelectTab = useCallback((tab: NavTab) => {
     navigate({ tab, genreId: tab === "detail" || tab === "console" ? selectedGenre?.id : undefined });
   }, [navigate, selectedGenre?.id]);
+
 
   // Global Keyboard Shortcuts (P2-20: '?' help panel and 'g'+key navigation)
   const { shortcutsOpen, setShortcutsOpen } = useAppShortcuts({
@@ -237,6 +244,7 @@ const MainApp: React.FC = () => {
                     onAudioEngineReady={handleEngineReady}
                     onOpenSettings={() => setSettingsOpen(true)}
                     onOpenGenreMaker={() => navigate({ tab: "maker", customGenreFork: selectedGenre?.id })}
+                    onOpenHelp={handleOpenHelp}
                     initialChords={initialChords}
                     onClearInitialChords={() => setInitialChords(null)}
                     initialArpeggio={initialArpeggio}
@@ -536,20 +544,25 @@ const MainApp: React.FC = () => {
         onClose={() => setShortcutsOpen(false)}
         onOpenHelp={() => {
           setShortcutsOpen(false);
-          setHelpOpen(true);
+          handleOpenHelp("shortcuts");
         }}
       />
 
       {/* User Manual & Interactive Learning Center Modal */}
       <HelpCenterModal
         isOpen={helpOpen}
-        onClose={() => setHelpOpen(false)}
+        initialCategory={helpCategory}
+        onClose={() => {
+          setHelpOpen(false);
+          setHelpCategory(undefined);
+        }}
         onSelectTab={handleSelectTab}
         onOpenShortcuts={() => {
           setHelpOpen(false);
           setShortcutsOpen(true);
         }}
       />
+
 
       {/* Global settings panel (item ⑤): the app-level, non-per-track parameters. */}
       <SettingsModal

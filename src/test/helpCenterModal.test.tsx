@@ -127,4 +127,17 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
     fireEvent.click(screen.getByTestId("help-center-close-button"));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it("directly opens to specified initialCategory", () => {
+    renderWithLanguage(
+      <HelpCenterModal
+        isOpen={true}
+        onClose={vi.fn()}
+        initialCategory="sequencer"
+      />
+    );
+
+    expect(screen.getByText("编曲工作台与专业钢琴卷帘深度手册")).toBeInTheDocument();
+  });
 });
+

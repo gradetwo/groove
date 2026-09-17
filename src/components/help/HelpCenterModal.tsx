@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "../../ui/Modal";
 import { useLanguage } from "../../i18n/LanguageContext";
 import {
@@ -28,9 +28,10 @@ export interface HelpCenterModalProps {
   onClose: () => void;
   onSelectTab?: (tab: NavTab) => void;
   onOpenShortcuts?: () => void;
+  initialCategory?: HelpCategory;
 }
 
-type HelpCategory =
+export type HelpCategory =
   | "quickstart"
   | "tutorials"
   | "sequencer"
@@ -45,12 +46,20 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
   onClose,
   onSelectTab,
   onOpenShortcuts,
+  initialCategory,
 }) => {
   const { t, language } = useLanguage();
   const isZh = language === "zh";
 
-  const [activeCategory, setActiveCategory] = useState<HelpCategory>("quickstart");
+  const [activeCategory, setActiveCategory] = useState<HelpCategory>(initialCategory ?? "quickstart");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory, isOpen]);
+
 
   // Tutorial progression state for interactive step-throughs
   const [tutorialStep, setTutorialStep] = useState<Record<string, number>>({

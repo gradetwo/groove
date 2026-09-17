@@ -13,29 +13,48 @@ import { describe, expect, it } from "vitest";
 import {
   addChord,
   addNote,
+  applyChordProgression,
   arpeggiateSelectedNotes,
+  CHORD_PROGRESSIONS,
   chordNotesForStamp,
+  compressNotesVelocity,
+  copyNotes,
+  deleteNotes,
   detectChordName,
   drop2SelectedChord,
   duplicateBar1Notes,
+  humanizeNotesVelocity,
   humanizeSelectedNotes,
   invertSelectedChord,
   isRollEditableTrack,
+  legatoNotes,
   loopLengthOf,
   moveNote,
+  moveNotes,
+  normalizeSelection,
   noteEndStep,
   notesFromTrack,
+  notesInRect,
+  quantizeLengths,
+  rampNotesVelocity,
   removeNote,
   removeNoteAt,
-  selectedSteps,
   resizeNote,
+  resolveProgressionChords,
+  scaleHighlightFor,
+  scaleNotesVelocity,
+  selectedSteps,
   setNoteVelocity,
+  setNotesVelocity,
+  snapValue,
+  splitNote,
   stepBeatsFor,
   transposeTrack,
   transposeNotes,
   visiblePitchRange,
   withTrackNotes,
 } from "../features/sequencer/rollModel";
+
 import { MAX_NOTE_GATE_STEPS, type SequencerPattern, type SequencerTrack } from "../types/genre";
 
 function makeTrack(over: Partial<SequencerTrack> = {}): SequencerTrack {
@@ -223,20 +242,6 @@ describe("roll model · grid geometry", () => {
  * the gap to the next note. A monophonic grid has nowhere to put an overlapping note, so scissors
  * needs a free step and says so when it cannot cut.
  */
-import {
-  copyNotes,
-  deleteNotes,
-  legatoNotes,
-  moveNotes,
-  notesInRect,
-  normalizeSelection,
-  quantizeLengths,
-  scaleHighlightFor,
-  scaleNotesVelocity,
-  setNotesVelocity,
-  snapValue,
-  splitNote,
-} from "../features/sequencer/rollModel";
 
 const rollPattern = () =>
   makePattern(
@@ -678,5 +683,113 @@ describe("roll model · professional DAW chord tools and harmonic analysis", () 
     expect(transposed.tracks[0].pitch?.slice(0, 2)).toEqual([62, 64]);
     expect(nextSelection).toEqual(["0:62"]);
   });
+
+  it("resolves diatonic chord progressions using active scale", () => {
+    const popProg = CHORD_PROGRESSIONS.find((p) => p.id === "pop_4chords")!;
+    expect(popProg).toBeDefined();
+
+    // In C major, I - V - vi - IV -> roots C4 (60), G4 (67), A4 (69), F4 (65)
+    const chords = resolveProgressionChords("C major", popProg, { chordStyle: "triad", baseOctave: 4 });
+    expect(chords).toHaveLength(4);
+    expect(chords[0].rootMidi).toBe(60);
+    expect(chords[0].chordNotes).toEqual([60, 64, 67]); // C major triad
+    expect(chords[1].rootMidi).toBe(67);
+    expect(chords[1].chordNotes).toEqual([67, 71, 74]); // G major triad
+    expect(chords[2].rootMidi).toBe(69);
+    expect(chords[2].chordNotes).toEqual([69, 72, 76]); // A minor triad (diatonic 6th)
+    expect(chords[3].rootMidi).toBe(65);
+    expect(chords[3].chordNotes).toEqual([65, 69, 72]); // F major triad
+  });
+
+  it("applies a harmonic chord progression evenly across track steps", () => {
+    const track = makeTrack({
+      steps: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      pitch: Array(16).fill(null),
+      pitches: Array(16).fill(null),
+      gate: Array(16).fill(0.8),
+      velocity: Array(16).fill(100),
+    });
+    const pattern = { ...makePattern(track), scale: "C major", totalSteps: 16 };
+    const popProg = CHORD_PROGRESSIONS.find((p) => p.id === "pop_4chords")!;
+
+    // 16 steps / 4 chords = 1 chord every 4 steps (step 0, 4, 8, 12)
+    const updated = applyChordProgression(pattern, 0, popProg, 16, 16);
+    const updatedTrack = updated.tracks[0];
+
+    expect(updatedTrack.steps[0]).toBe(1);
+    expect(updatedTrack.steps[4]).toBe(1);
+    expect(updatedTrack.steps[8]).toBe(1);
+    expect(updatedTrack.steps[12]).toBe(1);
+
+    expect(updatedTrack.pitches?.[0]).toEqual([60, 64, 67]);
+    expect(updatedTrack.pitches?.[4]).toEqual([67, 71, 74]);
+    expect(updatedTrack.pitches?.[8]).toEqual([69, 72, 76]);
+    expect(updatedTrack.pitches?.[12]).toEqual([65, 69, 72]);
+  });
+
+  it("compresses note velocities toward target level", () => {
+    const track = makeTrack({
+      steps: [1, 0, 1, 0],
+      pitch: [60, null, 64, null],
+      gate: [0.8, 0.8, 0.8, 0.8],
+      velocity: [40, 100, 120, 100],
+    });
+    const pattern = { ...makePattern(track), totalSteps: 4 };
+
+    // Compress toward 85 with ratio 0.5 across whole track
+    // Step 0: 40 + (85 - 40)*0.5 = 40 + 22.5 = 63
+    // Step 2: 120 + (85 - 120)*0.5 = 120 - 17.5 = 102
+    const compressed = compressNotesVelocity(pattern, 0, [], 85, 0.5, 4);
+    expect(compressed.tracks[0].velocity?.[0]).toBe(63);
+    expect(compressed.tracks[0].velocity?.[2]).toBe(103);
+  });
+
+  it("humanizes note velocities within micro-dynamics jitter", () => {
+    const track = makeTrack({
+      steps: [1, 1, 1, 1],
+      pitch: [60, 62, 64, 65],
+      gate: [0.8, 0.8, 0.8, 0.8],
+      velocity: [100, 100, 100, 100],
+    });
+    const pattern = { ...makePattern(track), totalSteps: 4 };
+    const humanized = humanizeNotesVelocity(pattern, 0, [], 8, 4);
+
+    // Velocities should deviate slightly but remain bounded within [92, 108]
+    const vels = humanized.tracks[0].velocity?.slice(0, 4) as number[];
+    vels.forEach((v) => {
+      expect(v).toBeGreaterThanOrEqual(92);
+      expect(v).toBeLessThanOrEqual(108);
+    });
+  });
+
+  it("ramps velocities across entire track when selection is empty", () => {
+    const track = makeTrack({
+      steps: [1, 0, 1, 0, 1],
+      pitch: [60, null, 64, null, 67],
+      gate: [0.8, 0.8, 0.8, 0.8, 0.8],
+      velocity: [100, 100, 100, 100, 100],
+    });
+    const pattern = { ...makePattern(track), totalSteps: 5 };
+    const ramped = rampNotesVelocity(pattern, 0, [], 40, 120, 5);
+
+    expect(ramped.tracks[0].velocity?.[0]).toBe(40);
+    expect(ramped.tracks[0].velocity?.[2]).toBe(80);
+    expect(ramped.tracks[0].velocity?.[4]).toBe(120);
+  });
+
+  it("sets all note velocities when selection is empty", () => {
+    const track = makeTrack({
+      steps: [1, 0, 1, 0],
+      pitch: [60, null, 64, null],
+      gate: [0.8, 0.8, 0.8, 0.8],
+      velocity: [50, 100, 120, 100],
+    });
+    const pattern = { ...makePattern(track), totalSteps: 4 };
+    const leveled = setNotesVelocity(pattern, 0, [], 100, 4);
+
+    expect(leveled.tracks[0].velocity?.[0]).toBe(100);
+    expect(leveled.tracks[0].velocity?.[2]).toBe(100);
+  });
 });
+
 

@@ -1,5 +1,6 @@
 import { MAX_NOTE_GATE_STEPS, type SequencerPattern, type SequencerTrack } from "../../types/genre";
-import { chordNotesForStep, chordVoicingForStep } from "../../audio/chordVoicing";
+import { chordNotesForStep, chordVoicingForStep, type VoicingStyle } from "../../audio/chordVoicing";
+import { parseScaleString, SCALES, type NoteName } from "../../utils/scaleTheory";
 
 /** One note as the roll sees it. */
 export interface RollStepNote {
@@ -512,7 +513,7 @@ export function deleteNotes(
   return withTrackNotes(pattern, trackIdx, kept, stepCount);
 }
 
-/** Set an absolute velocity on every step the selection touches (the lane's click behaviour). */
+/** Set an absolute velocity on every step the selection touches (or all notes if selection is empty). */
 export function setNotesVelocity(
   pattern: SequencerPattern,
   trackIdx: number,
@@ -520,9 +521,10 @@ export function setNotesVelocity(
   velocity: number,
   stepCount: number
 ): SequencerPattern {
-  const steps = new Set(selectedSteps(selection));
+  const selected = selectedSteps(selection);
+  const steps = selected.length > 0 ? new Set(selected) : null;
   const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
-    steps.has(n.stepIdx) ? { ...n, velocity: Math.max(1, Math.min(127, Math.round(velocity))) } : n
+    steps === null || steps.has(n.stepIdx) ? { ...n, velocity: Math.max(1, Math.min(127, Math.round(velocity))) } : n
   );
   return withTrackNotes(pattern, trackIdx, next, stepCount);
 }
@@ -542,6 +544,55 @@ export function scaleNotesVelocity(
   return withTrackNotes(pattern, trackIdx, next, stepCount);
 }
 
+/**
+ * Compresses note velocities toward targetVel (e.g. 85), reducing dynamic extremes.
+ * If selection is empty, all sounding notes on the track are compressed.
+ */
+export function compressNotesVelocity(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly RollNoteId[],
+  targetVel = 85,
+  ratio = 0.5,
+  stepCount?: number
+): SequencerPattern {
+  const selected = selectedSteps(selection);
+  const steps = selected.length > 0 ? new Set(selected) : null;
+  const allNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
+  const targetStepCount = stepCount ?? pattern.tracks[trackIdx]?.steps.length ?? 16;
+  const next = allNotes.map((n) => {
+    if (steps !== null && !steps.has(n.stepIdx)) return n;
+    const diff = targetVel - n.velocity;
+    const newVel = Math.round(n.velocity + diff * ratio);
+    return { ...n, velocity: Math.max(1, Math.min(127, newVel)) };
+  });
+  return withTrackNotes(pattern, trackIdx, next, targetStepCount);
+}
+
+/**
+ * Adds subtle micro-dynamics jitter to note velocities (±jitter) without changing length/timing.
+ * If selection is empty, all sounding notes on the track are humanized.
+ */
+export function humanizeNotesVelocity(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly RollNoteId[],
+  jitter = 10,
+  stepCount?: number
+): SequencerPattern {
+  const selected = selectedSteps(selection);
+  const steps = selected.length > 0 ? new Set(selected) : null;
+  const allNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
+  const targetStepCount = stepCount ?? pattern.tracks[trackIdx]?.steps.length ?? 16;
+  const next = allNotes.map((n) => {
+    if (steps !== null && !steps.has(n.stepIdx)) return n;
+    const seed = (n.stepIdx * 23 + n.midi * 19) % 100;
+    const offset = Math.round(((seed / 50) - 1) * jitter);
+    return { ...n, velocity: Math.max(1, Math.min(127, n.velocity + offset)) };
+  });
+  return withTrackNotes(pattern, trackIdx, next, targetStepCount);
+}
+
 /** Ramps velocity from startVelocity to endVelocity across selected steps in chronological order. */
 export function rampNotesVelocity(
   pattern: SequencerPattern,
@@ -551,7 +602,9 @@ export function rampNotesVelocity(
   endVel = 120,
   stepCount: number
 ): SequencerPattern {
-  const steps = selectedSteps(selection);
+  const rawSteps = selectedSteps(selection);
+  const allNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
+  const steps = rawSteps.length > 0 ? rawSteps : [...new Set(allNotes.map((n) => n.stepIdx))].sort((a, b) => a - b);
   if (steps.length === 0) return pattern;
   const velMap = new Map<number, number>();
   if (steps.length === 1) {
@@ -562,12 +615,13 @@ export function rampNotesVelocity(
       velMap.set(st, Math.max(1, Math.min(127, Math.round(startVel + frac * (endVel - startVel)))));
     });
   }
-  const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) => {
+  const next = allNotes.map((n) => {
     const ramped = velMap.get(n.stepIdx);
     return ramped !== undefined ? { ...n, velocity: ramped } : n;
   });
   return withTrackNotes(pattern, trackIdx, next, stepCount);
 }
+
 
 /**
  * Duplicates notes in Bar 1 (steps 0 .. stepsPerBar - 1) across subsequent bars (bars 2, 3, 4...)
@@ -903,3 +957,165 @@ export function arpeggiateSelectedNotes(
   const updatedPattern = withTrackNotes(pattern, trackIdx, workingNotes, stepCount);
   return { pattern: updatedPattern, nextSelection: newSelectedIds };
 }
+
+/**
+ * Standard harmonic progression definitions for the Piano Roll.
+ */
+export interface ChordProgressionDef {
+  id: string;
+  name: { zh: string; en: string };
+  romanNumerals: string;
+  degrees: number[]; // 1-indexed diatonic scale degrees
+  desc: { zh: string; en: string };
+}
+
+export const CHORD_PROGRESSIONS: readonly ChordProgressionDef[] = [
+  {
+    id: "pop_4chords",
+    name: { zh: "流行黄金四和弦", en: "Pop 4-Chords" },
+    romanNumerals: "I - V - vi - IV",
+    degrees: [1, 5, 6, 4],
+    desc: { zh: "流行乐最具爆发力的万能进行", en: "Classic uplifting anthemic pop chord progression" },
+  },
+  {
+    id: "emotional_6415",
+    name: { zh: "流行与EDM抒情", en: "Emotional Lift" },
+    romanNumerals: "vi - IV - I - V",
+    degrees: [6, 4, 1, 5],
+    desc: { zh: "深情优美，常用于电音与流行慢歌副歌", en: "Powerful emotional arc, popular in EDM and vocal ballads" },
+  },
+  {
+    id: "jazz_2516",
+    name: { zh: "爵士与新灵魂 2-5-1", en: "Jazz & Neo-Soul 2-5-1" },
+    romanNumerals: "ii - V - I - vi",
+    degrees: [2, 5, 1, 6],
+    desc: { zh: "爵士、R&B与Lo-Fi的核心顺滑解决进行", en: "Standard jazz cadence with smooth harmonic resolution" },
+  },
+  {
+    id: "royal_road_4536",
+    name: { zh: "王道进行 (J-Pop)", en: "Royal Road (4-5-3-6)" },
+    romanNumerals: "IV - V - iii - vi",
+    degrees: [4, 5, 3, 6],
+    desc: { zh: "日本流行与City Pop标志性感人旋律进行", en: "Iconic Japanese pop and City Pop chord sequence" },
+  },
+  {
+    id: "epic_minor_1637",
+    name: { zh: "暗黑史诗小调", en: "Epic Minor (1-6-3-7)" },
+    romanNumerals: "i - VI - III - VII",
+    degrees: [1, 6, 3, 7],
+    desc: { zh: "Synthwave、Trap与史诗配乐经典骨架", en: "Staple of Synthwave, Cinematic and Dark Trap" },
+  },
+  {
+    id: "blues_rock_1415",
+    name: { zh: "布鲁斯与摇滚", en: "Blues & Rock (1-4-1-5)" },
+    romanNumerals: "I - IV - I - V",
+    degrees: [1, 4, 1, 5],
+    desc: { zh: "经典布鲁斯、放克与摇滚律动循环", en: "Root blues and raw rock harmonic cycle" },
+  },
+  {
+    id: "dorian_funk_14",
+    name: { zh: "放克双和弦", en: "Dorian Funk Vamp" },
+    romanNumerals: "i - IV",
+    degrees: [1, 4],
+    desc: { zh: "Daft Punk 与 Nu-Disco 标志性双和弦律动", en: "Signature two-chord vamp for Nu-Disco and French House" },
+  },
+  {
+    id: "canon_8chords",
+    name: { zh: "帕赫贝尔卡农", en: "Canon Progression" },
+    romanNumerals: "I - V - vi - iii - IV - I - IV - V",
+    degrees: [1, 5, 6, 3, 4, 1, 4, 5],
+    desc: { zh: "帕赫贝尔经典卡农进行，优雅庄重", en: "Timeless classical progression with majestic voice leading" },
+  },
+] as const;
+
+/**
+ * Resolves the chords of a progression into concrete MIDI notes using the active scale.
+ */
+export function resolveProgressionChords(
+  scaleStr: string | undefined | null,
+  progression: ChordProgressionDef,
+  options?: {
+    chordStyle?: VoicingStyle;
+    baseOctave?: number;
+  }
+): Array<{ rootMidi: number; chordNotes: number[]; roman: string }> {
+  const { root, scaleId } = parseScaleString(scaleStr ?? undefined);
+  const scale = SCALES[scaleId] || SCALES.minor;
+  const rootIndex = (NOTE_NAMES as readonly string[]).indexOf(root);
+  const baseOctave = options?.baseOctave ?? 4;
+  const tonicMidi = 12 * (baseOctave + 1) + (rootIndex >= 0 ? rootIndex : 0);
+  const chordStyle = options?.chordStyle ?? "triad";
+  const romanParts = progression.romanNumerals.split(/[\s-]+/).filter((p) => p.length > 0);
+
+  return progression.degrees.map((degree, idx) => {
+    const degOffset = Math.max(1, degree) - 1;
+    const intervalIdx = degOffset % scale.intervals.length;
+    const octaveOffset = Math.floor(degOffset / scale.intervals.length) * 12;
+    const semitone = scale.intervals[intervalIdx] + octaveOffset;
+    const chordRootMidi = tonicMidi + semitone;
+
+    const chordNotes = chordVoicingForStep(chordRootMidi, scaleStr ?? undefined, {
+      style: chordStyle,
+    });
+
+    return {
+      rootMidi: chordRootMidi,
+      chordNotes,
+      roman: romanParts[idx] || `${degree}`,
+    };
+  });
+}
+
+/**
+ * Applies a full harmonic chord progression across the track's step span.
+ */
+export function applyChordProgression(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  progression: ChordProgressionDef,
+  stepCount: number,
+  stepsPerBar: number,
+  options?: {
+    chordStyle?: VoicingStyle;
+    baseOctave?: number;
+    startStep?: number;
+    velocity?: number;
+    gate?: number;
+  }
+): SequencerPattern {
+  const chords = resolveProgressionChords(pattern.scale, progression, {
+    chordStyle: options?.chordStyle ?? "triad",
+    baseOctave: options?.baseOctave ?? 4,
+  });
+  if (chords.length === 0) return pattern;
+
+  const start = Math.max(0, Math.min(stepCount - 1, options?.startStep ?? 0));
+  const chordCount = chords.length;
+  const availableSteps = stepCount - start;
+  const stepsPerChord = Math.max(1, Math.floor(availableSteps / chordCount));
+  const defaultGate = Math.min(MAX_NOTE_GATE_STEPS, Number((stepsPerChord * 0.9).toFixed(2)));
+  const gate = options?.gate ?? defaultGate;
+  const velocity = options?.velocity ?? 100;
+
+  const endStep = Math.min(stepCount, start + chordCount * stepsPerChord);
+  const existingNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
+  const preservedNotes = existingNotes.filter((n) => n.stepIdx < start || n.stepIdx >= endStep);
+
+  const newNotes: RollStepNote[] = [...preservedNotes];
+
+  chords.forEach((chord, i) => {
+    const stepIdx = start + i * stepsPerChord;
+    if (stepIdx >= stepCount) return;
+    for (const midi of chord.chordNotes) {
+      newNotes.push({
+        stepIdx,
+        midi,
+        gate,
+        velocity,
+      });
+    }
+  });
+
+  return withTrackNotes(pattern, trackIdx, newNotes, stepCount);
+}
+

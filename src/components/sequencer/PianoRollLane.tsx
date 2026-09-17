@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BookOpen,
   ChevronDown,
   ChevronUp,
   Copy,
@@ -22,6 +23,7 @@ import {
   Trash2,
   TrendingUp,
   Volume2,
+  Wand2,
   X,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -30,13 +32,17 @@ import { MAX_NOTE_GATE_STEPS, type SequencerPattern } from "../../types/genre";
 import {
   addNote,
   addChord,
+  applyChordProgression,
   arpeggiateSelectedNotes,
+  CHORD_PROGRESSIONS,
   chordNotesForStamp,
+  compressNotesVelocity,
   copyNotes,
   deleteNotes,
   detectChordName,
   drop2SelectedChord,
   duplicateBar1Notes,
+  humanizeNotesVelocity,
   humanizeSelectedNotes,
   invertSelectedChord,
   isRollEditableTrack,
@@ -50,6 +56,7 @@ import {
   rampNotesVelocity,
   removeNote,
   resizeNote,
+  resolveProgressionChords,
   scaleHighlightFor,
   scaleNotesVelocity,
   setNotesVelocity,
@@ -57,6 +64,7 @@ import {
   transposeTrack,
   transposeNotes,
   visiblePitchRange,
+  type ChordProgressionDef,
   type ChordStampType,
   type RollSnap,
   parseNoteId,
@@ -113,7 +121,10 @@ export interface PianoRollLaneProps {
   onAudition: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
   /** Optional trigger to open/toggle Musical Typing keyboard HUD */
   onToggleMusicalTyping?: () => void;
+  /** Optional trigger to open Help Center modal with contextual chapter */
+  onOpenHelp?: (chapterId?: string) => void;
 }
+
 
 const ROW_HEIGHTS = [12, 18, 26];
 const ZOOM_FACTORS = [0.5, 0.75, 1, 1.5, 2];
@@ -188,6 +199,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   commit,
   onAudition,
   onToggleMusicalTyping,
+  onOpenHelp,
 }) => {
   const { t } = useLanguage();
   const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_INDEX);
@@ -198,6 +210,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [octaveShift, setOctaveShift] = useState(0);
   const [tool, setTool] = useState<RollTool>("pencil");
   const [chordStamp, setChordStamp] = useState<ChordStampType>("note");
+  const [selectedProgressionId, setSelectedProgressionId] = useState<string>("pop_4chords");
   const [activeAuditionMidi, setActiveAuditionMidi] = useState<number | null>(null);
   const [snap, setSnap] = useState<RollSnap>("1/16");
   const [selection, setSelection] = useState<RollNoteId[]>([]);
@@ -212,6 +225,8 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const gridWrapRef = useRef<HTMLDivElement | null>(null);
+  const progressionAuditionTimersRef = useRef<number[]>([]);
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const playheadRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -383,6 +398,36 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (next !== pattern) commitDraft(next);
   };
 
+  const handleAuditionProgression = useCallback(() => {
+    progressionAuditionTimersRef.current.forEach((id) => window.clearTimeout(id));
+    progressionAuditionTimersRef.current = [];
+
+    const prog = CHORD_PROGRESSIONS.find((p) => p.id === selectedProgressionId) || CHORD_PROGRESSIONS[0];
+    const chords = resolveProgressionChords(view.scale, prog, { chordStyle: "triad", baseOctave: 4 });
+
+    chords.forEach((chord, chordIdx) => {
+      const timer = window.setTimeout(() => {
+        chord.chordNotes.forEach((midi) => {
+          onAudition(activeTrackIdx, midi, 95, 0.7);
+        });
+      }, chordIdx * 450);
+      progressionAuditionTimersRef.current.push(timer);
+    });
+  }, [activeTrackIdx, onAudition, selectedProgressionId, view.scale]);
+
+  const handleApplyProgression = useCallback(() => {
+    const prog = CHORD_PROGRESSIONS.find((p) => p.id === selectedProgressionId) || CHORD_PROGRESSIONS[0];
+    applyOp((p) => applyChordProgression(p, activeTrackIdx, prog, stepCount, stepsPerBar));
+    setNotice(t("roll_progression_applied", { name: isZh ? prog.name.zh : prog.name.en }));
+  }, [activeTrackIdx, applyOp, isZh, selectedProgressionId, stepCount, stepsPerBar, t]);
+
+  useEffect(() => {
+    return () => {
+      progressionAuditionTimersRef.current.forEach((id) => window.clearTimeout(id));
+      progressionAuditionTimersRef.current = [];
+    };
+  }, []);
+
   useEffect(() => {
     const onGlobalPointerUp = () => {
       setActiveAuditionMidi(null);
@@ -390,6 +435,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     window.addEventListener("pointerup", onGlobalPointerUp);
     return () => window.removeEventListener("pointerup", onGlobalPointerUp);
   }, []);
+
 
   const handleKeybedPointerDown = (midi: number, e: React.PointerEvent<HTMLDivElement>) => {
     (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
@@ -847,8 +893,23 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 </kbd>
               </button>
             )}
+            {onOpenHelp && (
+              <button
+
+                type="button"
+                onClick={() => onOpenHelp("sequencer")}
+                data-testid="piano-roll-guide"
+                title={t("roll_tutorial_hint")}
+                aria-label={t("roll_tutorial_btn")}
+                className="flex items-center gap-1 rounded-md border border-[#2b3040] bg-[#1a1e2b] px-2 py-1 text-[10px] font-bold text-accent hover:border-accent hover:bg-accent/15 transition-all shadow-[0_0_6px_rgba(var(--accent-rgb),0.2)]"
+              >
+                <BookOpen className="h-3 w-3 text-accent" />
+                <span className="hidden sm:inline">{t("roll_tutorial_btn")}</span>
+              </button>
+            )}
             <div className="h-4 w-[1px] bg-line-subtle mx-0.5" />
             <button
+
               type="button"
               onClick={() => setIsCollapsed((v) => !v)}
               aria-pressed={isCollapsed}
@@ -1051,7 +1112,51 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 </button>
               )}
             </div>
+
+            {/* Chord Progression Suite */}
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-[#282d3e] bg-[#131622]/80 px-2 py-0.5" data-testid="piano-roll-progression-suite">
+              <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[9px] uppercase tracking-[0.08em] text-accent font-bold">
+                <Wand2 className="h-3 w-3 text-accent" />
+                {t("roll_progression_title")}
+                <select
+                  value={selectedProgressionId}
+                  onChange={(e) => setSelectedProgressionId(e.target.value)}
+                  data-testid="piano-roll-progression-select"
+                  aria-label={t("roll_progression_title")}
+                  className="rounded border border-[#2b3040] bg-[#1a1e2b] px-1.5 py-0.5 text-[10px] font-bold text-white outline-none hover:border-accent/40"
+                >
+                  {CHORD_PROGRESSIONS.map((prog) => (
+                    <option key={prog.id} value={prog.id} className="bg-[#12151f]">
+                      {isZh ? prog.name.zh : prog.name.en} ({prog.romanNumerals})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={handleAuditionProgression}
+                title={t("roll_progression_audition")}
+                data-testid="piano-roll-progression-audition"
+                className={`${ctrlClass} text-accent hover:bg-accent/20`}
+              >
+                <Volume2 className="h-3 w-3 text-accent" />
+                <span className="hidden sm:inline">{t("roll_progression_audition")}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyProgression}
+                title={t("roll_progression_stamp")}
+                data-testid="piano-roll-progression-apply"
+                className={`${ctrlClass} bg-accent/20 border-accent/60 text-accent font-bold hover:bg-accent/30 shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)]`}
+              >
+                <Sparkles className="h-3 w-3 text-accent" />
+                <span>{t("roll_progression_stamp")}</span>
+              </button>
+            </div>
           </div>
+
 
           {/* Right Deck 2: Pitch Transposition, Octaves, Zoom & Delete */}
           <div className="flex flex-wrap items-center gap-1.5 ml-auto">
@@ -1682,105 +1787,170 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 </div>
 
                 {showVelocityLane && (
-                  <div
-                    data-testid="piano-roll-velocity-lane"
-                    aria-label={t("roll_velocity_lane")}
-                    className="relative mt-2 cursor-ns-resize rounded-xl border border-[#242938] bg-gradient-to-b from-[#0f1118] via-[#0b0c12] to-[#08090e] p-1 shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] overflow-hidden"
-                    style={{ height: VELOCITY_LANE_H, width: gridW }}
-                    onPointerDown={handleVelocityPointerDown}
-                    onPointerMove={handleGridPointerMove}
-                    onPointerUp={handleGridPointerUp}
-                    onPointerCancel={handleGridPointerUp}
-                  >
-                    {/* Velocity Lane Alternating Bar Backdrops */}
-                    {Array.from({ length: barCount }, (_, barIdx) => {
-                      const isAlternateBar = barIdx % 2 === 1;
-                      const barLeft = barIdx * stepsPerBar * cellW;
-                      const barWidth = Math.min(stepsPerBar, stepCount - barIdx * stepsPerBar) * cellW;
-                      return (
-                        <div
-                          key={`vel-bar-${barIdx}`}
-                          className={`absolute inset-y-0 pointer-events-none ${
-                            isAlternateBar ? "bg-[#181c2e]" : "bg-[#131624]"
-                          }`}
-                          style={{ left: barLeft, width: barWidth }}
-                        />
-                      );
-                    })}
-
-                    {/* Vertical Beat Lines in Velocity Lane */}
-                    {Array.from({ length: stepCount }, (_, i) => {
-                      const isBar = i % stepsPerBar === 0;
-                      const isBeat = i % (stepsPerBar >= 4 ? stepsPerBar / 4 : 4) === 0;
-                      return (
-                        <div
-                          key={`vel-grid-${i}`}
-                          className={`absolute inset-y-0 pointer-events-none ${
-                            isBar
-                              ? "border-l-2 border-accent/60"
-                              : isBeat
-                              ? "border-l border-white/25"
-                              : "border-l border-white/10"
-                          }`}
-                          style={{ left: i * cellW }}
-                        />
-                      );
-                    })}
-
-                    {[32, 64, 96, 127].map((line) => (
-                      <div
-                        key={line}
-                        className="absolute inset-x-0 border-t border-white/[0.08] flex items-center justify-start pl-1 text-[7.5px] font-['JetBrains_Mono'] font-bold text-white/30 select-none pointer-events-none"
-                        style={{ bottom: `${(line / 127) * 100}%` }}
-                      >
-                        {line === 127 ? "fff · 127" : line === 96 ? "f · 96" : line === 64 ? "mf · 64" : "p · 32"}
+                  <div className="mt-2.5 flex flex-col gap-1">
+                    {/* Velocity Lane Header Bar with quick dynamics & leveling tools */}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 px-1 font-['JetBrains_Mono'] text-[9.5px]">
+                      <div className="flex items-center gap-1.5 text-text-dim">
+                        <TrendingUp className="h-3 w-3 text-accent" />
+                        <span className="font-bold tracking-wider uppercase text-[9px] text-text-sub">{t("roll_velocity_lane")}</span>
+                        <span className="text-[8.5px] text-white/30 hidden sm:inline">· 1..127</span>
                       </div>
-                    ))}
-                    {[...new Map(notes.map((n) => [n.stepIdx, n])).values()].map((note) => {
-                      const onStep = notesAtStep(note.stepIdx);
-                      const stepSelected = onStep.every((n) => selectedSet.has(noteId(n)));
-                      const velHeight = `${(note.velocity / 127) * 100}%`;
-                      const barColor = velocityColor(note.velocity);
-                      const dynamicName = note.velocity >= 115 ? "fff" : note.velocity >= 95 ? "f" : note.velocity >= 60 ? "mf" : "p";
-                      return (
-                        <div
-                          key={`vel-${note.stepIdx}`}
-                          data-testid={`piano-roll-velocity-bar-${note.stepIdx}`}
-                          data-velocity={note.velocity}
-                          data-chord-size={onStep.length}
-                          title={`Step ${note.stepIdx + 1} · Velocity ${note.velocity} (${dynamicName})`}
-                          className="absolute bottom-0 flex flex-col items-center justify-end group cursor-pointer"
-                          style={{
-                            left: note.stepIdx * cellW + 1,
-                            width: Math.max(2, cellW - 2),
-                            height: velHeight,
-                          }}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => applyOp((p) => humanizeNotesVelocity(p, activeTrackIdx, selection, 10, stepCount))}
+                          disabled={notes.length === 0}
+                          data-testid="piano-roll-vel-humanize"
+                          title="Humanize velocity (±10)"
+                          className={`${ctrlClass} text-[9px] px-1.5 py-0.5`}
                         >
-                          {/* Lollipop glowing head */}
+                          <Sparkles className="h-2.5 w-2.5 text-amber-400" />
+                          <span>{t("roll_vel_humanize_btn")}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyOp((p) => compressNotesVelocity(p, activeTrackIdx, selection, 85, 0.5, stepCount))}
+                          disabled={notes.length === 0}
+                          data-testid="piano-roll-vel-compress"
+                          title="Compress / level velocities toward 85"
+                          className={`${ctrlClass} text-[9px] px-1.5 py-0.5`}
+                        >
+                          <span>{t("roll_vel_compress_btn")}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyOp((p) => rampNotesVelocity(p, activeTrackIdx, selection, 40, 120, stepCount))}
+                          disabled={notes.length === 0}
+                          data-testid="piano-roll-vel-ramp-up"
+                          title={t("roll_vel_ramp_up_btn")}
+                          className={`${ctrlClass} text-[9px] px-1.5 py-0.5 text-accent`}
+                        >
+                          <span>{t("roll_vel_ramp_up_btn")}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyOp((p) => rampNotesVelocity(p, activeTrackIdx, selection, 120, 40, stepCount))}
+                          disabled={notes.length === 0}
+                          data-testid="piano-roll-vel-ramp-down"
+                          title={t("roll_vel_ramp_down_btn")}
+                          className={`${ctrlClass} text-[9px] px-1.5 py-0.5`}
+                        >
+                          <span>{t("roll_vel_ramp_down_btn")}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyOp((p) => setNotesVelocity(p, activeTrackIdx, selection, 100, stepCount))}
+                          disabled={notes.length === 0}
+                          data-testid="piano-roll-vel-level-100"
+                          title={t("roll_vel_level_btn")}
+                          className={`${ctrlClass} text-[9px] px-1.5 py-0.5`}
+                        >
+                          <span>{t("roll_vel_level_btn")}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div
+                      data-testid="piano-roll-velocity-lane"
+                      aria-label={t("roll_velocity_lane")}
+                      className="relative cursor-ns-resize rounded-xl border border-[#242938] bg-gradient-to-b from-[#0f1118] via-[#0b0c12] to-[#08090e] p-1 shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] overflow-hidden"
+                      style={{ height: VELOCITY_LANE_H, width: gridW }}
+                      onPointerDown={handleVelocityPointerDown}
+                      onPointerMove={handleGridPointerMove}
+                      onPointerUp={handleGridPointerUp}
+                      onPointerCancel={handleGridPointerUp}
+                    >
+                      {/* Velocity Lane Alternating Bar Backdrops */}
+                      {Array.from({ length: barCount }, (_, barIdx) => {
+                        const isAlternateBar = barIdx % 2 === 1;
+                        const barLeft = barIdx * stepsPerBar * cellW;
+                        const barWidth = Math.min(stepsPerBar, stepCount - barIdx * stepsPerBar) * cellW;
+                        return (
                           <div
-                            className={`w-2.5 h-2.5 rounded-full -mb-1 z-10 transition-transform hover:scale-125 ${
-                              stepSelected
-                                ? "bg-white shadow-[0_0_8px_white]"
-                                : "shadow-[0_0_6px_rgba(0,0,0,0.6)]"
+                            key={`vel-bar-${barIdx}`}
+                            className={`absolute inset-y-0 pointer-events-none ${
+                              isAlternateBar ? "bg-[#181c2e]" : "bg-[#131624]"
                             }`}
-                            style={{
-                              backgroundColor: stepSelected ? "#ffffff" : barColor,
-                              border: "1.5px solid rgba(255,255,255,0.8)",
-                              boxShadow: stepSelected ? "0 0 12px white" : `0 0 8px ${barColor}`,
-                            }}
+                            style={{ left: barLeft, width: barWidth }}
                           />
-                          {/* Lollipop needle stem */}
+                        );
+                      })}
+
+                      {/* Vertical Beat Lines in Velocity Lane */}
+                      {Array.from({ length: stepCount }, (_, i) => {
+                        const isBar = i % stepsPerBar === 0;
+                        const isBeat = i % (stepsPerBar >= 4 ? stepsPerBar / 4 : 4) === 0;
+                        return (
                           <div
-                            className={`w-[2.5px] flex-1 ${
-                              stepSelected ? "bg-white/90 shadow-[0_0_6px_white]" : "opacity-85"
+                            key={`vel-grid-${i}`}
+                            className={`absolute inset-y-0 pointer-events-none ${
+                              isBar
+                                ? "border-l-2 border-accent/60"
+                                : isBeat
+                                ? "border-l border-white/25"
+                                : "border-l border-white/10"
                             }`}
-                            style={{ backgroundColor: stepSelected ? "#ffffff" : barColor }}
+                            style={{ left: i * cellW }}
                           />
+                        );
+                      })}
+
+                      {[32, 64, 96, 127].map((line) => (
+                        <div
+                          key={line}
+                          className="absolute inset-x-0 border-t border-white/[0.08] flex items-center justify-start pl-1 text-[7.5px] font-['JetBrains_Mono'] font-bold text-white/30 select-none pointer-events-none"
+                          style={{ bottom: `${(line / 127) * 100}%` }}
+                        >
+                          {line === 127 ? "fff · 127" : line === 96 ? "f · 96" : line === 64 ? "mf · 64" : "p · 32"}
                         </div>
-                      );
-                    })}
+                      ))}
+                      {[...new Map(notes.map((n) => [n.stepIdx, n])).values()].map((note) => {
+                        const onStep = notesAtStep(note.stepIdx);
+                        const stepSelected = onStep.every((n) => selectedSet.has(noteId(n)));
+                        const velHeight = `${(note.velocity / 127) * 100}%`;
+                        const barColor = velocityColor(note.velocity);
+                        const dynamicName = note.velocity >= 115 ? "fff" : note.velocity >= 95 ? "f" : note.velocity >= 60 ? "mf" : "p";
+                        return (
+                          <div
+                            key={`vel-${note.stepIdx}`}
+                            data-testid={`piano-roll-velocity-bar-${note.stepIdx}`}
+                            data-velocity={note.velocity}
+                            data-chord-size={onStep.length}
+                            title={`Step ${note.stepIdx + 1} · Velocity ${note.velocity} (${dynamicName})`}
+                            className="absolute bottom-0 flex flex-col items-center justify-end group cursor-pointer"
+                            style={{
+                              left: note.stepIdx * cellW + 1,
+                              width: Math.max(2, cellW - 2),
+                              height: velHeight,
+                            }}
+                          >
+                            {/* Lollipop glowing head */}
+                            <div
+                              className={`w-2.5 h-2.5 rounded-full -mb-1 z-10 transition-transform hover:scale-125 ${
+                                stepSelected
+                                  ? "bg-white shadow-[0_0_8px_white]"
+                                  : "shadow-[0_0_6px_rgba(0,0,0,0.6)]"
+                              }`}
+                              style={{
+                                backgroundColor: stepSelected ? "#ffffff" : barColor,
+                                border: "1.5px solid rgba(255,255,255,0.8)",
+                                boxShadow: stepSelected ? "0 0 12px white" : `0 0 8px ${barColor}`,
+                              }}
+                            />
+                            {/* Lollipop needle stem */}
+                            <div
+                              className={`w-[2.5px] flex-1 ${
+                                stepSelected ? "bg-white/90 shadow-[0_0_6px_white]" : "opacity-85"
+                              }`}
+                              style={{ backgroundColor: stepSelected ? "#ffffff" : barColor }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
+
               </div>
             </div>
           </div>

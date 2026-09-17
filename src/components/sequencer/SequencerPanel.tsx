@@ -136,6 +136,7 @@ export interface SequencerPanelProps {
   onClosePianoRoll?: () => void;
   onTogglePianoRoll?: () => void;
   onAuditionRollNote?: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
+  onOpenHelp?: (chapterId?: string) => void;
   /** Which row the inspector currently shows, for selected-header styling. */
   inspectorTrackIdx?: number | null;
   onShiftTrack: (trackIdx: number, dir: -1 | 1) => void;
@@ -274,6 +275,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onClosePianoRoll,
   onTogglePianoRoll,
   onAuditionRollNote,
+  onOpenHelp,
   inspectorTrackIdx = null,
   onShiftTrack,
   onSmartFill,
@@ -563,7 +565,9 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             commit={commit}
             onAudition={onAuditionRollNote}
             onToggleMusicalTyping={onToggleKeyboardMode}
+            onOpenHelp={onOpenHelp}
           />
+
         </div>
       )}
 

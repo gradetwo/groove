@@ -1,29 +1,29 @@
 {
-  "version": "2.0.36",
+  "version": "2.0.37",
   "releaseDate": "2026-09-17",
-  "changelogCount": 100,
+  "changelogCount": 101,
   "latest": {
-    "version": "2.0.36",
+    "version": "2.0.37",
     "date": "2026-09-17",
     "category": "feature",
     "title": {
-      "zh": "v2.0.36 用户手册与交互式教学中心上线、移动端高级实验室与探索去重、钢琴卷帘交互式音阶选择与半音移调",
-      "en": "v2.0.36 User Manual & Interactive Learning Center, Mobile Drawer De-duplication, Piano Roll Scale Selector & Semitone Transpose"
+      "zh": "v2.0.37 钢琴卷帘经典和弦走向大师套件、力度泳道动态工具栏与手册直达联动",
+      "en": "v2.0.37 Piano Roll Diatonic Chord Progression Suite, Velocity Lane Dynamics Toolbar & Manual Deep-Linking"
     },
     "highlights": [
       {
-        "zh": "**用户手册与交互式教学中心（User Manual & Interactive Learning Center）**：全新上线完整知识库与交互式实操中心。集成 8 大手册章节（快速上手、交互教学、编曲与钢琴卷帘、混音与高级实验室、和弦与调式理论、工程导出与跨平台、疑难排障 FAQ、快捷键完整索引），支持全域实时关键词秒级检索；内置 5 门交互式实操课程（鼓机节奏与欧几里得律动、钢琴卷帘与和声琶音、硬件调音台与母带限制器、底鼓谐振解剖与声谱示波器、曲风工坊派生与云端链接分享），支持分步指引与「立即前往体验」一键联动跳转。",
-        "en": "**User Manual & Interactive Learning Center**: Launched a comprehensive documentation center and interactive tutorial hub. Covers 8 structured sections (Quick Start, Interactive Lessons, Sequencer & Piano Roll, Mixing & Pro Labs, Harmony & Theory, Export & Integrations, FAQs, and Keyboard Shortcuts) with instant search filtering. Features 5 interactive step-by-step tutorials with forward/backward progression and 1-click action buttons connecting directly to Studio, Console,…"
+        "zh": "**经典和弦走向套件（Diatonic Chord Progression Suite）**：在钢琴卷帘 Deck 2 新增和弦走向编配套件。内置 Pop 4-Chords (I-V-vi-IV)、Emotional Lift (vi-IV-I-V)、Jazz 2-5-1 (ii-V-I-vi)、王道进行 J-Pop (IV-V-iii-vi)、Epic Minor (i-VI-III-VII)、Blues & Rock (I-IV-I-V)、Dorian Funk (i-IV) 及卡农走向 (Canon in D) 等 8 大经典和弦走向；结合当前选定调式音阶实时推导自然音阶级数和弦，支持一键实时多音试听与一键盖印平铺至全小节，创作和声骨架如虎添翼。",
+        "en": "**Diatonic Chord Progression Suite**: Introduced a comprehensive progression authoring engine in Deck 2. Features 8 classic chord progressions (Pop 4-Chords, Emotional Lift, Jazz 2-5-1, Royal Road/J-Pop, Epic Minor, Blues & Rock, Dorian Funk, Canon in D) derived dynamically from the active scale and root key. Includes instant polyphonic chord auditioning and 1-click timeline stamping across bars with animated HUD confirmation."
       },
       {
-        "zh": "**移动端高级实验室与探索菜单彻底去重（Mobile Menu De-duplication）**：彻底解决移动端菜单中「高级与实验室」与「探索」列表重复展示调音台、全景示波器和曲风工坊的混乱体验。清晰划分为「高级与实验室」（调音台、全景示波器、曲风工坊）与「探索」（节奏大师课、星系云团、水平演变轴、垂直时间轴），各视图唯一归属，并为移动端和桌面端提供醒目的用户手册直达入口。",
-        "en": "**Mobile Drawer Navigation De-duplication**: Completely eliminated redundant entries where Console Desk, Acoustic Analyzer, and Custom Genre Maker appeared under both \"Explore\" and \"Pro & Labs\" in the mobile drawer. Navigational items are now strictly partitioned between Pro Labs and Musicology/Exploration without duplication, with prominent direct entry points for the User Manual."
+        "zh": "**力度泳道独立工具栏与声学动态塑形（Velocity Lane Dynamics Toolbar）**：在力度泳道表头增设专属磨砂玻璃硬件工具栏，提供人性化微动态（Humanize ±10 模拟真实演奏手感）、动态压缩（Compress 0.5 压缩比收拢极端力度）、线性渐强渐弱（Ramp ↗ / Ramp ↘）及基准力度（Level 100）等 5 大批处理工具；未选中音符时智能作用于全轨音符，大幅提升音符动态塑形效率。",
+        "en": "**Velocity Lane Dynamics Toolbar**: Integrated a dedicated frosted hardware toolbar directly atop the velocity lane. Equips 5 dynamic shaping tools: Humanize (deterministic ±10 micro-dynamics jitter), Compress (0.5 ratio dynamic leveling toward 85 velocity), Ramp Up/Down (linear chronological crescendos and decrescendos), and Level 100. Gracefully applies to note selections or the entire track."
       },
       {
-        "zh": "**钢琴卷帘交互式调式音阶选择器（Interactive Scale & Tonality Selector）**：将 Deck 1 被动音阶标签升级为全功能交互式调式音阶选择下拉框，内置大调、自然小调、多利亚、弗里几亚、利底亚、混合利底亚、洛克利亚、和声小调、旋律小调、全音阶、布鲁斯等 22 种音乐理论音阶；选择后实时刷新全半音阶网格自然音高亮与根音「ROOT」金色水印标牌，并同步影响和弦印章配置。",
-        "en": "**Interactive Scale & Tonality Selector**: Replaced the passive scale badge in Deck 1 with an interactive dropdown supporting 22 theoretical scales and modes (Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, Harmonic/Melodic Minor, Blues, Pentatonic, etc.). Switching tonality immediately refreshes in-scale lanes, ROOT gold watermark badges, and chord voicings in real time."
+        "zh": "**钢琴卷帘直达用户手册深层联动（Contextual Help Deep-Link）**：在 Deck 1 控制台右侧新增专属「卷帘手册 (Guide)」帮助按钮，轻点即可直达全功能用户手册的「编曲与钢琴卷帘 (Sequencer & Piano Roll)」专属章节，随时查阅音阶折叠、和弦印章、快捷键与高级编辑技巧，彻底打通工具操作与教学指导。",
+        "en": "**Contextual Help Deep-Linking**: Added a dedicated \"Guide\" button to the right of Deck 1 that deep-links directly into the User Manual\"s \"Sequencer & Piano Roll\" chapter, providing instant access to scale theory, chord stamping workflows, keyboard shortcuts, and power-user tips without losing editing context."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
