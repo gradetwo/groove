@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { ChevronRight, X } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { DrumKitType } from "../../audio/DrumKitModels";
@@ -42,6 +42,8 @@ export interface MobileStudioSheetProps {
 
 export const MobileStudioSheet: React.FC<MobileStudioSheetProps> = ({ open, onClose, groups }) => {
   const { t } = useLanguage();
+  /** Y where a handle drag began; the gesture is scoped to the handle (see its comment). */
+  const dragStartYRef = useRef<number | null>(null);
   if (!open) return null;
 
   return (
@@ -60,7 +62,28 @@ export const MobileStudioSheet: React.FC<MobileStudioSheetProps> = ({ open, onCl
         aria-label={t("mobile_studio_sheet_title")}
         className="relative z-10 max-h-[80dvh] w-full overflow-y-auto overscroll-contain rounded-t-3xl border-t border-line bg-panel pb-[max(1rem,env(safe-area-inset-bottom,0px))] shadow-2xl"
       >
-        <div className="flex justify-center pt-2.5 pb-1">
+        {/*
+          The drag-to-dismiss gesture is scoped to this handle, not to the whole sheet.
+          
+          It used to be on the container with no guard, so *any* pointerup more than 60 px below
+          its pointerdown closed the sheet — including the pointerup that ends a normal tap on a
+          row, whenever a real click lands a little low. On touch that reads as "tapping the
+          bottom row closes the sheet instead of choosing it", and the E2E matrix reproduced it as
+          the row vanishing mid-click. A handle is also the honest affordance: it is what tells a
+          user the sheet can be dragged at all.
+        */}
+        <div
+          data-testid="mobile-studio-sheet-handle"
+          onPointerDown={(e) => {
+            dragStartYRef.current = e.clientY;
+          }}
+          onPointerUp={(e) => {
+            const start = dragStartYRef.current;
+            dragStartYRef.current = null;
+            if (start !== null && e.clientY - start > 60) onClose();
+          }}
+          className="flex touch-none justify-center pt-2.5 pb-1"
+        >
           <span aria-hidden="true" className="h-1 w-10 rounded-full bg-line" />
         </div>
         <div className="flex items-center justify-between px-5 pb-2">

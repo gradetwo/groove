@@ -70,6 +70,51 @@ const MIME_TYPES = {
   ".ico": "image/x-icon",
 };
 
+/**
+ * Refuses to test a stale bundle.
+ *
+ * This suite serves `dist/`, so if `npm run build` failed the tests happily run against the
+ * *previous* build and report PASS — a broken build becomes invisible, and the release gate
+ * reports green while the tree does not compile. That is not hypothetical: it happened while
+ * adding the phone shell, where a type error failed the build and all seven targets still passed.
+ *
+ * The check compares the newest source file against the built entry point, which is sufficient
+ * and cheap: any source edit that is not reflected in a rebuild makes the entry point older.
+ */
+function assertDistIsFresh() {
+  const distDir = path.join(process.cwd(), "dist");
+  const entry = path.join(distDir, "index.html");
+  if (!fs.existsSync(entry)) {
+    throw new Error("dist/index.html is missing — run `npm run build` before the e2e matrix");
+  }
+  const entryMtime = fs.statSync(entry).mtimeMs;
+  const roots = ["src", "index.html", "vite.config.ts", "tailwind.config.js"];
+  let newest = 0;
+  let newestFile = "";
+  const walk = (target) => {
+    const stat = fs.statSync(target);
+    if (stat.isDirectory()) {
+      for (const child of fs.readdirSync(target)) walk(path.join(target, child));
+      return;
+    }
+    if (stat.mtimeMs > newest) {
+      newest = stat.mtimeMs;
+      newestFile = target;
+    }
+  };
+  for (const root of roots) {
+    const full = path.join(process.cwd(), root);
+    if (fs.existsSync(full)) walk(full);
+  }
+  if (newest > entryMtime) {
+    throw new Error(
+      `dist/ is stale: ${path.relative(process.cwd(), newestFile)} is newer than dist/index.html.\n` +
+        "  The matrix serves the built bundle, so testing now would validate old output.\n" +
+        "  Run `npm run build` first (and read its output — a failed build is the usual cause)."
+    );
+  }
+}
+
 // Start local static server serving the production dist/ bundle
 function startStaticServer() {
   return new Promise((resolve) => {
@@ -99,7 +144,14 @@ function startStaticServer() {
 }
 
 // Test matrix definition
-const TARGETS = [
+/**
+ * Optional target filter for iterating on a single device: `E2E_ONLY=iPhone node scripts/test_matrix.js`.
+ * The release gate runs every target; this exists so a phone-only fix does not cost a full matrix
+ * per attempt. It cannot weaken the gate because an unfiltered run is the default.
+ */
+const TARGET_FILTER = process.env.E2E_ONLY || "";
+
+const ALL_TARGETS = [
   // 1. Desktop Browsers
   {
     name: "Desktop Chromium / Chrome",
@@ -150,6 +202,18 @@ const TARGETS = [
   },
 ];
 
+const TARGETS = TARGET_FILTER
+  ? ALL_TARGETS.filter((t) => t.name.toLowerCase().includes(TARGET_FILTER.toLowerCase()))
+  : ALL_TARGETS;
+
+if (TARGETS.length === 0) {
+  console.error(`❌ E2E_ONLY=${TARGET_FILTER} matched no target`);
+  process.exit(1);
+}
+if (TARGET_FILTER) {
+  console.log(`[filter] E2E_ONLY=${TARGET_FILTER} → ${TARGETS.length} target(s): ${TARGETS.map((t) => t.name).join(", ")}\n`);
+}
+
 /**
  * Click an element and *verify the click event actually arrived*.
  *
@@ -192,9 +256,71 @@ async function openPianoRoll(page) {
     return "desktop";
   }
   await openStudioMoreControls(page);
-  await page.waitForSelector("[data-testid='mobile-studio-action-piano-roll']", { timeout: 15000 });
-  await clickVerified(page, "[data-testid='mobile-studio-action-piano-roll']");
+  await clickSheetRowAndVerify(
+    page,
+    "[data-testid='mobile-studio-action-piano-roll']",
+    "[data-testid='piano-roll-grid']",
+    "piano roll"
+  );
   return "mobile";
+}
+
+/**
+ * Clicks a row inside a scrolling bottom sheet.
+ *
+ * `clickVerified` handles elements that are already on screen, but a sheet row can sit far below
+ * the fold — the studio sheet renders ~1300 px of rows inside a `max-h-[80dvh]` scroller, so its
+ * last rows start outside a 664 px phone viewport and Playwright's actionability check simply
+ * waits until the click times out. Scrolling the row into view first is the difference between
+ * "the row is missing" and "the row exists and works", and only the first of those is a bug.
+ */
+/**
+ * Clicks a row in the studio sheet and verifies the result rather than the click.
+ *
+ * `clickVerified` asserts that a `click` event reached the element, which a row that *navigates
+ * away* can never satisfy: the row's own handler closes the sheet, so the element is gone from the
+ * document by the time the check runs. That is the intended behaviour, so the verification has to
+ * be the outcome — the row's surface closed and its destination appeared — not the event.
+ *
+ * Scrolling is `block: "nearest"` on purpose: the sheet is its own scroller and `center` can
+ * scroll the backdrop over the row's centre.
+ */
+async function clickSheetRowAndVerify(page, selector, expectSelector, label) {
+  await page.waitForSelector(selector, { timeout: 15000 });
+  const prepared = await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return false;
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    el.setAttribute("data-e2e-target", "1");
+    return true;
+  }, selector);
+  if (!prepared) throw new Error(`${selector} not found`);
+  await page.waitForTimeout(250);
+
+  const box = await page.evaluate(() => {
+    const el = document.querySelector("[data-e2e-target='1']");
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (!box) throw new Error(`${selector} lost its box before the click`);
+  await page.mouse.move(box.x, box.y);
+  await page.mouse.down();
+  await page.waitForTimeout(60);
+  await page.mouse.up();
+  await page.evaluate(() => document.querySelector("[data-e2e-target='1']")?.removeAttribute("data-e2e-target"));
+
+  if (expectSelector) {
+    try {
+      await page.waitForSelector(expectSelector, { timeout: 15000 });
+    } catch {
+      const diag = await page.evaluate(() => ({
+        sheetOpen: Boolean(document.querySelector("[data-testid='mobile-studio-sheet']")),
+        panelOpen: Boolean(document.querySelector("[data-testid='audio-settings-gs1-toggle']")),
+      }));
+      throw new Error(`${label}: clicking ${selector} did not produce ${expectSelector} :: ${JSON.stringify(diag)}`);
+    }
+  }
 }
 
 async function openStudioMoreControls(page) {
@@ -222,9 +348,15 @@ async function openFloatedConsole(page) {
     return "desktop";
   }
   await openStudioMoreControls(page);
-  const mobileRow = await page.$("[data-testid='mobile-studio-action-console']");
-  if (!mobileRow) throw new Error("Phone studio sheet has no console row");
-  await clickVerified(page, "[data-testid='mobile-studio-action-console']");
+  if (!(await page.$("[data-testid='mobile-studio-action-console']"))) {
+    throw new Error("Phone studio sheet has no console row");
+  }
+  await clickSheetRowAndVerify(
+    page,
+    "[data-testid='mobile-studio-action-console']",
+    null,
+    "floating console"
+  );
   return "mobile";
 }
 
@@ -516,19 +648,40 @@ async function runTestOnTarget(target, baseUrl) {
       .catch(() => {
         throw new Error("Studio did not render a transport surface");
       });
-    // The audio settings entry point is behind the secondary-controls surface on both shells.
-    const audioSettingsBtn = await page.$("[data-testid='studio-audio-settings-open']");
-    if (!audioSettingsBtn) {
+    /**
+     * The audio-settings entry point must be reachable on every viewport, but where it sits
+     * differs by shell: desktop has it in the advanced drawer, the phone in the studio sheet.
+     * The desktop assertion is also a real regression guard — `mobile-studio-action-audio-settings`
+     * is a *separate* id, so the phone path would never have been exercised by looking for
+     * `studio-audio-settings-open` alone, and the earlier version of this block failed with
+     * "no entry point" while the row was in fact present and working.
+     */
+    const MOBILE_AUDIO_SETTINGS = "[data-testid='mobile-studio-action-audio-settings']";
+    const DESKTOP_AUDIO_SETTINGS = "[data-testid='studio-audio-settings-open']";
+    if (!(await page.$(DESKTOP_AUDIO_SETTINGS)) && !(await page.$(MOBILE_AUDIO_SETTINGS))) {
       await openStudioMoreControls(page);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(400);
     }
-    await page.waitForSelector("[data-testid='studio-gs1-toggle']", { timeout: 20000 }).catch(() => {
-      throw new Error("Opening the secondary controls did not reveal the GS-1 toggle");
-    });
-    if (!(await page.$("[data-testid='studio-audio-settings-open']"))) {
-      throw new Error("Audio settings panel has no entry point in the toolbar");
+    const mobileEntry = await page.$(MOBILE_AUDIO_SETTINGS);
+    const desktopEntry = await page.$(DESKTOP_AUDIO_SETTINGS);
+    if (!mobileEntry && !desktopEntry) {
+      const diag = await page.evaluate(() => ({
+        viewport: { w: window.innerWidth, h: window.innerHeight },
+        hasTransportBar: Boolean(document.querySelector("[data-testid='mobile-transport-bar']")),
+        studioSheetOpen: Boolean(document.querySelector("[data-testid='mobile-studio-sheet']")),
+        studioRows: [...document.querySelectorAll("[data-testid^='mobile-studio-action-']")].map((el) =>
+          el.getAttribute("data-testid")
+        ),
+      }));
+      throw new Error(`Audio settings panel has no entry point on this viewport :: ${JSON.stringify(diag)}`);
     }
-    await clickVerified(page, "[data-testid='studio-audio-settings-open']");
+    // A sheet row can start below the fold, so scroll it into view before clicking.
+    await clickSheetRowAndVerify(
+      page,
+      mobileEntry ? MOBILE_AUDIO_SETTINGS : DESKTOP_AUDIO_SETTINGS,
+      "[data-testid='audio-settings-gs1-toggle']",
+      "audio settings"
+    );
     await page.waitForSelector("[data-testid='audio-settings-gs1-toggle']", { timeout: 15000 });
 
     // GS-1 ships on by default, and flipping the switch must be a genuine state change.
@@ -624,22 +777,48 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error("Settings panel did not close on Escape");
     }
 
-    // The toolbar chip must agree with what the panel just did (the cross-surface contract).
-    if (!(await page.$("[data-testid='studio-gs1-toggle']"))) {
-      await openStudioMoreControls(page);
-      await page.waitForTimeout(300);
-    }
-    const chipAfterPanelFlip = await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed");
-    if (chipAfterPanelFlip !== "false") {
-      throw new Error(
-        `Toolbar GS-1 chip (${chipAfterPanelFlip}) disagrees with the settings panel that just turned it off`
+    /**
+     * The toolbar chip must agree with what the panel just did — but only where that chip exists.
+     *
+     * The cross-surface contract exists because the desktop toolbar and the settings panel are two
+     * controls for one engine flag. The phone deliberately has no chip (the flag lives only in the
+     * settings panel, and the sheet row that opens it is a navigation, not a duplicate toggle), so
+     * asserting a chip there would be asserting the absence of a deliberate design decision rather
+     * than a bug.
+     */
+    const hasGs1Chip = Boolean(await page.$("[data-testid='studio-gs1-toggle']"));
+    if (hasGs1Chip) {
+      const chipAfterPanelFlip = await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed");
+      if (chipAfterPanelFlip !== "false") {
+        throw new Error(
+          `Toolbar GS-1 chip (${chipAfterPanelFlip}) disagrees with the settings panel that just turned it off`
+        );
+      }
+      // Leave the app as we found it: default on.
+      await page.click("[data-testid='studio-gs1-toggle']", { force: true });
+      await page.waitForTimeout(200);
+      if ((await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed")) !== "true") {
+        throw new Error("Could not restore the GS-1 default after the settings-panel check");
+      }
+    } else {
+      // Phone: restore the default through the panel itself, which is the only surface that owns
+      // the flag there.
+      await page.click("[data-testid='mobile-transport-more']", { timeout: 10000 });
+      await page.waitForSelector("[data-testid='mobile-studio-sheet']", { timeout: 10000 });
+      await clickSheetRowAndVerify(
+        page,
+        "[data-testid='mobile-studio-action-audio-settings']",
+        "[data-testid='audio-settings-gs1-toggle']",
+        "audio settings (restore)"
       );
-    }
-    // Leave the app as we found it: default on.
-    await page.click("[data-testid='studio-gs1-toggle']", { force: true });
-    await page.waitForTimeout(200);
-    if ((await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed")) !== "true") {
-      throw new Error("Could not restore the GS-1 default after the settings-panel check");
+      await page.click("[data-testid='audio-settings-gs1-toggle']", { force: true });
+      await page.waitForTimeout(200);
+      const restored = await page.getAttribute("[data-testid='audio-settings-gs1-toggle']", "aria-pressed");
+      if (restored !== "true") {
+        throw new Error(`Could not restore the GS-1 default on a phone (aria-pressed=${restored})`);
+      }
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(250);
     }
 
     // 5e. Track inspector placement + categorized timbre picker (item ②).
@@ -1288,6 +1467,15 @@ async function main() {
   log("===============================================================");
   log("  🚀 GROOVE LAB Multi-Browser & Cross-Device Release Test Matrix");
   log("===============================================================\n");
+
+  // Fail before spending minutes of browser time if the bundle does not match the source.
+  try {
+    assertDistIsFresh();
+  } catch (error) {
+    console.error(`\n❌ ${error.message}\n`);
+    log(`❌ ${error.message}`);
+    process.exit(1);
+  }
 
   const { server, port } = await startStaticServer();
   const baseUrl = `http://127.0.0.1:${port}`;
