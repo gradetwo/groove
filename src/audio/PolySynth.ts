@@ -53,6 +53,26 @@ export interface SynthPreset {
    */
   filterSlope24?: boolean;
   /**
+   * Key tracking depth for the low-pass cutoff, in octaves per octave (0–1 = 0–100 %).
+   *
+   * Absent means **full tracking at a musically useful depth**, which is the opposite default
+   * from the velocity fields above, and deliberately so: this is a *fix*, not an option.
+   *
+   * The cutoff used to be an absolute constant, so a C2 bass note and a C6 lead note opened to
+   * the same 2.6 kHz. Relative to the note's fundamental, the low note is wide open (bright, thin,
+   * no body) and the high note is nearly closed (dull, muffled) — the opposite of how a real
+   * instrument behaves, where a fixed resonant body produces proportionally fewer harmonics as
+   * pitch rises and the ear reads that as a consistent timbre. That mismatch is one of the
+   * reasons the library did not sound like the records its genres come from, and it affected
+   * every preset at once.
+   *
+   * `0` disables it for a preset whose character depends on a fixed corner (drum-like blips,
+   * deliberately muffled lo-fi stabs). The amount is the *fraction* of the pitch distance applied
+   * to the cutoff, measured relative to `KEY_TRACK_REFERENCE_MIDI`, so a note one octave above the
+   * reference multiplies the cutoff by `2^depth`.
+   */
+  keyTrackFilter?: number;
+  /**
    * Optional white-noise blend (0–1) mixed into the filter input next to the two
    * oscillators. Only the noise-based FX voices (vinyl crackle, risers, reverse
    * cymbals, sub sweeps) set it; a preset that omits it stays a pure dual-oscillator
@@ -875,6 +895,51 @@ export function midiToFreq(midi: number): number {
 export const VELOCITY_CURVE_EXPONENT = 2;
 
 /**
+ * The cutoff a preset actually opens to for a given note, after key tracking.
+ *
+ * Exported so callers and tests can ask the question the voice asks instead of re-deriving the
+ * formula. The offline parity suite used to assert `filterCutoffs()).toContain(preset.filterCutoff)`,
+ * which held only while the cutoff ignored the note being played — i.e. only while the defect
+ * existed. A shared function is what lets those assertions describe the contract rather than the
+ * workaround.
+ *
+ * `keyTrackFilter: 0` returns the authored value unchanged; a preset that omits the field gets
+ * `DEFAULT_KEY_TRACK_DEPTH`.
+ */
+export function keyTrackedCutoff(
+  preset: Pick<SynthPreset, "filterCutoff" | "keyTrackFilter">,
+  midiNote: number
+): number {
+  const depth = preset.keyTrackFilter ?? DEFAULT_KEY_TRACK_DEPTH;
+  const authored = safeFreq(preset.filterCutoff, 12000);
+  if (!(depth > 0)) return authored;
+  const ratio = Math.pow(
+    safeFreq(midiToFreq(midiNote), 440) / midiToFreq(KEY_TRACK_REFERENCE_MIDI),
+    depth
+  );
+  return safeFreq(authored * ratio, 12000);
+}
+
+/**
+ * The MIDI note the presets' `filterCutoff` values were authored against.
+ *
+ * Middle C: a preset that says "2.6 kHz" means 2.6 kHz at C4, and key tracking scales it around
+ * that anchor. Choosing C4 rather than the actual mean pitch of the library keeps the authored
+ * numbers meaning what their names suggest.
+ */
+export const KEY_TRACK_REFERENCE_MIDI = 60;
+
+/**
+ * How much of the note distance reaches the cutoff when a preset does not state a depth.
+ *
+ * 0.5 is the classic analogue-synth setting (one octave of cutoff per octave of pitch, halved) and
+ * is the safest general answer: it makes a bass note warmer and a lead note clearer without making
+ * either sound like a different instrument. Full tracking (1.0) is available per preset for
+ * sampled-instrument emulations, where the recorded body really does track pitch exactly.
+ */
+export const DEFAULT_KEY_TRACK_DEPTH = 0.5;
+
+/**
  * Maps a normalised velocity (nominally 0..1) through the E-13 amplitude curve.
  *
  * Pure, deterministic, monotonic non-decreasing and bounded to `[0, 1]`. Out-of-range
@@ -982,7 +1047,19 @@ export function playPolySynthNote(
   // is byte-for-byte the note this function produced before the curve existed.
   const velCurve = velocityCurve(safeVel);
   const { osc1Type, osc2Type, osc2DetuneCents, osc2Mix, filterQ, adsr } = preset;
-  const filterCutoff = safeFreq(preset.filterCutoff, 12000);
+  /**
+   * Key tracking — the authored cutoff is a *C4* cutoff, not an absolute one.
+   *
+   * Applied here, before every consumer of `filterCutoff`, so the filter envelope, the velocity
+   * depth and the 24 dB second stage all inherit it and the whole sweep tracks the note. The
+   * ratio is taken from the oscillator frequency rather than the raw MIDI argument, because the
+   * engine passes pitches both as absolute notes and as role-relative offsets (a bass offset of
+   * +12 and an absolute 48 must produce the same ratio, and only the frequency knows that).
+   */
+  const keyTrackDepth = preset.keyTrackFilter ?? DEFAULT_KEY_TRACK_DEPTH;
+  const keyTrackRatio =
+    keyTrackDepth > 0 ? Math.pow(freq / midiToFreq(KEY_TRACK_REFERENCE_MIDI), keyTrackDepth) : 1;
+  const filterCutoff = safeFreq(preset.filterCutoff * keyTrackRatio, 12000);
 
   // Velocity → timbre depth. Each field defaults to 0, which short-circuits to the
   // original expression: an un-annotated preset schedules the exact cutoff, sweep and

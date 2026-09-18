@@ -1,29 +1,29 @@
 {
-  "version": "2.0.54",
+  "version": "2.0.55",
   "releaseDate": "2026-09-18",
-  "changelogCount": 118,
+  "changelogCount": 119,
   "latest": {
-    "version": "2.0.54",
+    "version": "2.0.55",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.54 修复「看起来在播却没声音」：播放不再谎报成功，音频被阻止时明确告知",
-      "en": "v2.0.54 Fix \"Looks Like It Is Playing But There Is No Sound\": Playback No Longer Claims Success It Cannot Observe"
+      "zh": "v2.0.55 键盘跟踪：滤波截止频率随音高移动，低音不再又薄又亮、高音不再发闷；并修复播放谎报成功",
+      "en": "v2.0.55 Key Tracking: the Filter Corner Follows Pitch; Playback No Longer Claims Success It Cannot Observe"
     },
     "highlights": [
       {
-        "zh": "**播放不再谎报成功**：`play()` 是异步的，它会 `await ctx.resume()`——而 iOS 打开静音开关（或任何需要新一次用户手势的浏览器）时，这个 resume 会被拒绝、或只是让音频上下文保持 suspended。此前调用处既不 await 也不 catch，却无条件把界面置为「播放中」：于是按钮亮起、播放头走动、**一点声音都没有**，而且因为 Promise 拒绝无人处理，连一条错误都没有。现在只有真的开始播放才报告播放；若音频被阻止，则**停止走带并把原因告诉用户**——一个在没有声音的轨道上空转的播放头，是音乐类应用能给出的最糟糕的第一印象。",
-        "en": "**Playback no longer claims success it cannot observe**: `play()` is async and awaits `ctx.resume()`, which on iOS with the silent switch on — or in any browser that wants a fresh user gesture — either rejects or simply leaves the context suspended. The caller neither awaited nor caught it and set \"playing\" unconditionally, so the button lit up, the playhead advanced and **nothing was audible**; the rejection was also unhandled, so nothing reported it. Playback is now report…"
+        "zh": "**键盘跟踪（Key Tracking）**：滤波截止频率此前是一个**绝对常数**，于是 C2 的贝斯和 C6 的主音都开到同一个 2.6kHz——相对各自的基频，低音是「全开」（薄、亮、没有厚度），高音是「几乎关死」（闷）。真实乐器的共鸣体是固定的，音越高谐波越少，耳朵把这读成一致的音色；而此前的行为正好相反。这不是某个预设没调好，而是**全部 51 个预设共有的系统性偏差**，所以作为默认修复（0.5 深度，即音高移动一个八度、截止频率移动半个八度），单预设可用 `keyTrackFilter: 0` 关闭。参考音为 C4——预设里写的数字因此仍然意味着「C4 时的值」。",
+        "en": "**Key tracking**: the low-pass corner used to be an absolute constant, so a C2 bass note and a C6 lead both opened to the same 2.6 kHz. Relative to their own fundamentals the low note was wide open (thin, bright, no body) and the high note nearly closed (dull) — the opposite of a real resonant body, where fewer harmonics survive as pitch rises and the ear reads that as a consistent timbre. That is not one badly voiced preset; it is a systematic bias in all 51 of them, so it…"
       },
       {
-        "zh": "**新增可检测的「音频被阻止」状态**：`AudioEngine.isAudioBlocked()` 直接读音频上下文的真实状态，而不是靠推断。此前 `initIosAudioUnlock` 与 `ctx.resume()` 其实都已经在 `play()` 里调用，缺的正是「如何知道它没成功」。",
-        "en": "**New detectable blocked-audio state**: `AudioEngine.isAudioBlocked()` reads the audio context's real state instead of inferring it. `initIosAudioUnlock` and `ctx.resume()` were already being called inside `play()`; what was missing was any way to know they had not succeeded."
+        "zh": "**和弦因此也有了音色层次**：一副 C-E-G 和弦的三个音现在各自拥有不同的截止频率（三音比根音更亮），而不是三个完全相同的滤波器设置——这在离线与实时两条路径上都已断言。",
+        "en": "**Chords gain timbral depth as a result**: the three notes of a C-E-G voicing now each carry their own corner (the third is brighter than the root) instead of one filter setting repeated — asserted on both the live and the offline paths."
       },
       {
-        "zh": "**测试**：`transportPlaybackTruth.test.ts` 八条，覆盖「先 await 再报播放」「被阻止时不报播放并停止 + 提示」「play() 拒绝时不产生未处理拒绝且走诚实路径」「关闭仍正常」「引擎未就绪时不动」以及 `isAudioBlocked` 的三种上下文状态（未初始化 / running / suspended）。",
-        "en": "**Tests**: eight in `transportPlaybackTruth.test.ts` covering \"await before reporting started\", \"blocked stops and explains instead of claiming playback\", \"a rejected play() produces no unhandled rejection and takes the honest path\", clean stop, no-op when the engine is absent, and the three context states for `isAudioBlocked` (uninitialised / running / suspended)."
+        "zh": "**播放不再谎报成功**：`play()` 会 await `ctx.resume()`，而 iOS 静音开关（或任何需要新一次手势的浏览器）会让它被拒绝、或让上下文保持 suspended。此前调用处不 await、不 catch，却无条件把界面置为「播放中」——按钮亮起、播放头走动、一点声音都没有，且 Promise 拒绝无人处理。现在只有真的开始播放才报告播放；音频被阻止时**停止走带并说明原因**（新增 `AudioEngine.isAudioBlocked()` 直接读上下文的真实状态）。",
+        "en": "**Playback no longer claims success it cannot observe**: `play()` awaits `ctx.resume()`, which the iOS silent switch (or any browser wanting a fresh gesture) rejects or leaves suspended. The caller neither awaited nor caught it and set \"playing\" unconditionally — button lit, playhead moving, no sound, and the rejection unhandled. Playback is now reported only when it actually started, and a blocked context **stops the transport and says why** (new `AudioEngine.isAudioBlocked…"
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }

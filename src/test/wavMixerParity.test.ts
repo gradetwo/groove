@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { encodeAudioBufferToWav, renderPatternOffline } from "../audio/WavExporter";
-import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
+import { DEFAULT_SYNTH_PRESETS, keyTrackedCutoff } from "../audio/PolySynth";
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { chordVoicingForStep } from "../audio/chordVoicing";
 import { deriveTrackStates } from "../audio/trackStates";
@@ -252,10 +252,21 @@ describe("genre timbres · offline render voices the declared instrument", () =>
 
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual([flute.osc1Type, flute.osc2Type]);
     expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(flute.osc2DetuneCents);
+    /**
+     * The cutoff the voice holds for the note it is actually playing.
+     *
+     * This used to assert `toContain(flute.filterCutoff)` — the *authored* value — which was only
+     * true while the cutoff ignored the note, i.e. only while the key-tracking defect existed.
+     * Asserting the tracked value keeps the real claim (this preset is the one in use) while
+     * describing the corrected behaviour.
+     */
+    const expectedCutoff = keyTrackedCutoff(flute, 72);
     const cutoffs = filterCutoffs();
-    expect(cutoffs).toContain(flute.filterCutoff);
+    expect(cutoffs).toContain(expectedCutoff);
     // Exactly one voice, so exactly one filter carries the flute's cutoff.
-    expect(cutoffs.filter((c) => c === flute.filterCutoff)).toHaveLength(1);
+    expect(cutoffs.filter((c) => c === expectedCutoff)).toHaveLength(1);
+    // The authored number is a C4 value; this note is an octave up, so tracking must have moved it.
+    expect(expectedCutoff).not.toBe(flute.filterCutoff);
   });
 
   it("renders sub_bass, not the legacy acidBass, on a sub_bass bass track", async () => {
@@ -266,7 +277,9 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     const sub = resolveInstrumentPreset("sub_bass", "bass");
 
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual([sub.osc1Type, sub.osc2Type]);
-    expect(filterCutoffs()).toContain(sub.filterCutoff);
+    // Two octaves below the C4 anchor, so key tracking closes the corner — which is the whole
+    // point for a sub bass: the authored cutoff is a C4 figure, not the note's own.
+    expect(filterCutoffs()).toContain(keyTrackedCutoff(sub, 36));
     expect(sub.filterCutoff).toBeLessThan(DEFAULT_SYNTH_PRESETS.acidBass.filterCutoff);
   });
 
@@ -290,8 +303,22 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     // the legacy warmPad value. Counted by cutoff rather than by array length, because
     // the shared master graph (E-17) contributes biquads of its own.
     const cutoffs = filterCutoffs();
-    expect(cutoffs.filter((c) => c === superSaw.filterCutoff)).toHaveLength(voicing.length);
-    expect(cutoffs).not.toContain(DEFAULT_SYNTH_PRESETS.warmPad.filterCutoff);
+    /**
+     * One voice-level low-pass per chord tone, each carrying the cutoff for *its own* note.
+     *
+     * This assertion used to require all three filters at the identical supersaw cutoff, which was
+     * only true while the cutoff ignored pitch. With key tracking a C/E/G voicing correctly has
+     * three different corners — the third of the triad is brighter than the root — so the claim
+     * that survives is "every voice used the supersaw preset, tracked to its note", plus the
+     * original negative check that none of them used the legacy warmPad value.
+     */
+    const expectedCutoffs = voicing.map((n) => keyTrackedCutoff(superSaw, n));
+    for (const expected of expectedCutoffs) {
+      expect(cutoffs, `a voice at ${expected} Hz`).toContain(expected);
+    }
+    // Distinct per-note corners are the observable consequence of the fix on a chord.
+    expect(new Set(expectedCutoffs).size).toBe(voicing.length);
+    expect(cutoffs).not.toContain(keyTrackedCutoff(DEFAULT_SYNTH_PRESETS.warmPad, 60));
   });
 
   it("keeps the shared noise-sweep riser for the noise_sweep fx track", async () => {

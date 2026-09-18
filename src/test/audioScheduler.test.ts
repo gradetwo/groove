@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
-import { DEFAULT_SYNTH_PRESETS } from "../audio/PolySynth";
+import { DEFAULT_SYNTH_PRESETS, keyTrackedCutoff } from "../audio/PolySynth";
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { chordVoicingForStep } from "../audio/chordVoicing";
 import { resolveVoicingStyle } from "../data/genreVoicing";
@@ -286,9 +286,12 @@ describe("genre timbres · the live engine voices the declared instrument", () =
       DEFAULT_SYNTH_PRESETS.analogLead.osc2Type,
     ]);
 
-    // The per-voice low-pass is opened to the flute cutoff.
+    // The per-voice low-pass is opened to the flute cutoff *for the note being played*: the
+    // authored figure is a C4 value and this is a C5, so key tracking has moved it (see
+    // `keyTrackedCutoff`).
     expect(filters).toHaveLength(1);
-    expect(filters[0].frequency.events[0]?.value).toBe(flute.filterCutoff);
+    expect(filters[0].frequency.events[0]?.value).toBe(keyTrackedCutoff(flute, 72));
+    expect(filters[0].frequency.events[0]?.value).not.toBe(flute.filterCutoff);
 
     engine.destroy();
   });
@@ -298,7 +301,8 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     const sub = resolveInstrumentPreset("sub_bass", "bass");
 
     expect(oscillators.map((o) => o.type)).toEqual([sub.osc1Type, sub.osc2Type]);
-    expect(filters[0].frequency.events[0]?.value).toBe(sub.filterCutoff);
+    // Two octaves below the C4 anchor, so the corner closes — which is what a sub bass needs.
+    expect(filters[0].frequency.events[0]?.value).toBe(keyTrackedCutoff(sub, 36));
     // The old behaviour was acidBass (1200 Hz); sub_bass must be lower still.
     expect(filters[0].frequency.events[0]?.value).toBeLessThan(
       DEFAULT_SYNTH_PRESETS.acidBass.filterCutoff
@@ -324,9 +328,12 @@ describe("genre timbres · the live engine voices the declared instrument", () =
       voicing.flatMap(() => [rhodes.osc1Type, rhodes.osc2Type])
     );
     expect(filters).toHaveLength(voicing.length);
-    for (const filter of filters) {
-      expect(filter.frequency.events[0]?.value).toBe(rhodes.filterCutoff);
-    }
+    // One tracked corner per chord tone: a voicing is not one filter setting repeated, it is each
+    // note's own. (This used to require the identical authored value on all four.)
+    const expectedRhodes = voicing.map((n) => keyTrackedCutoff(rhodes, n));
+    expect(filters.map((f) => f.frequency.events[0]?.value).sort((a, b) => (a as number) - (b as number))).toEqual(
+      [...expectedRhodes].sort((a, b) => a - b)
+    );
     expect(rhodes).not.toBe(DEFAULT_SYNTH_PRESETS.warmPad);
 
     engine.destroy();
@@ -336,7 +343,7 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     const { engine, filters } = triggerAndDiff(synthPattern("lead", "totally_unknown", 72));
 
     expect(filters[0].frequency.events[0]?.value).toBe(
-      DEFAULT_SYNTH_PRESETS.analogLead.filterCutoff
+      keyTrackedCutoff(DEFAULT_SYNTH_PRESETS.analogLead, 72)
     );
 
     engine.destroy();
