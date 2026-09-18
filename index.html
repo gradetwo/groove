@@ -2,7 +2,19 @@
 <html lang="zh-CN" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, viewport-fit=cover" />
+    <!--
+      `maximum-scale` is deliberately absent. Leaving it in (it was 2.0) re-enables pinch zoom,
+      and on iOS pinch zoom also restores the magnifier loupe — which over a grid of small step
+      cells means every slightly-slow tap pops a magnifying glass over the thing being aimed at.
+      `viewport-fit=cover` stays so the safe areas around a notch remain usable.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Native-app feel: themed status bar area and no automatic phone-number linkification. -->
+    <meta name="theme-color" content="#0a0b0e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
     <title>GROOVE LAB</title>
     <!-- SEO / social preview (N-07) -->
     <meta

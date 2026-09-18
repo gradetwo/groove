@@ -46,6 +46,28 @@
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    /**
+     * Native-app gesture model.
+     *
+     * `touch-action: manipulation` removes the browser's double-tap-to-zoom while keeping pan and
+     * pinch available to elements that opt into them. Without it, tapping two step cells in quick
+     * succession (the normal way to program a beat) is read as a double-tap and zooms the whole
+     * page — the single most "this is a web page, not an app" behaviour on the grid.
+     *
+     * `overscroll-behavior: none` stops the rubber-band bounce and, more importantly, the
+     * pull-to-refresh that a downward drag on the step grid otherwise triggers.
+     */
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+  }
+
+  html {
+    /* The document itself must never scroll horizontally: a stray overflow is what lets a phone
+       pan the whole UI sideways and makes the page feel like a website. */
+    overflow-x: hidden;
+    overscroll-behavior: none;
   }
 
   /* Explicitly allow selection in editable text inputs and code */

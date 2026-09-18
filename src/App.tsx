@@ -20,6 +20,10 @@ import {
 } from "./components/help/NewUserOnboardingModal";
 import { InteractiveTutorialCoach } from "./components/help/InteractiveTutorialCoach";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
+import { useDeviceCapabilities } from "./hooks/useDeviceCapabilities";
+import { MobileTabBar } from "./components/MobileTabBar";
+import { MobileMoreSheet } from "./components/MobileMoreSheet";
+import type { MobileSheetAction } from "./components/MobileTabBar";
 import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
 
@@ -146,6 +150,25 @@ const MainApp: React.FC = () => {
     isZh,
   });
 
+  /**
+   * Phone shell. `isMobile` is capability-based (see `useDeviceCapabilities`), not a width test,
+   * so a landscape phone gets the phone UI instead of the desktop editor squeezed into 390 px of
+   * height.
+   */
+  const { isMobile } = useDeviceCapabilities();
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  const handleMobileSheetAction = useCallback(
+    (action: MobileSheetAction["id"]) => {
+      setMobileSheetOpen(false);
+      if (action === "search") setSearchOpen(true);
+      else if (action === "settings") setSettingsOpen(true);
+      else if (action === "help") setHelpOpen(true);
+      else if (action === "updates") setUpdatesOpen(true);
+    },
+    []
+  );
+
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [engineInstance, setEngineInstance] = useState<AudioEngine | null>(null);
@@ -247,7 +270,19 @@ const MainApp: React.FC = () => {
       />
 
       {/* Main Viewport with Suspense fallback for async chunks */}
-      <main className="flex-1 w-full pb-12">
+      <main
+        className="flex-1 w-full pb-12"
+        /**
+         * On a phone the tab bar is fixed over the bottom of the viewport, so the document needs
+         * enough padding to scroll its last row above it. `env(safe-area-inset-bottom)` is added
+         * because on a notched/dock-less phone the bar itself grows by the safe-area inset.
+         */
+        style={
+          isMobile
+            ? { paddingBottom: "calc(4.25rem + env(safe-area-inset-bottom, 0px))" }
+            : undefined
+        }
+      >
         <React.Suspense
           fallback={
             /* Reserve a full viewport while the lazy chunk loads. With a 50vh box the
@@ -514,6 +549,30 @@ const MainApp: React.FC = () => {
         </React.Suspense>
       </main>
 
+      {/**
+       * Phone shell. The tab bar is a sibling of `main` rather than inside it so it is unaffected
+       * by any view's own layout, and `main` gets matching bottom padding so the bar never covers
+       * the last row of a view — the classic fixed-bar bug.
+       */}
+      {isMobile && (
+        <>
+          <MobileTabBar
+            activeTab={currentTab}
+            onSelectTab={handleSelectTab}
+            onOpenSheet={() => setMobileSheetOpen(true)}
+          />
+          <MobileMoreSheet
+            open={mobileSheetOpen}
+            onClose={() => setMobileSheetOpen(false)}
+            onSelectTab={(tab) => {
+              setMobileSheetOpen(false);
+              handleSelectTab(tab);
+            }}
+            onAction={handleMobileSheetAction}
+          />
+        </>
+      )}
+
       {/* Persistent Footer */}
       <footer className="w-full bg-bg border-t border-line py-6 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-dim">
@@ -526,7 +585,7 @@ const MainApp: React.FC = () => {
             <span>159 Synthetic Genres & Realtime Audio Synthesis</span>
           </div>
 
-          <div className="flex items-center gap-4 text-text-sub">
+          <div className="hidden md:flex items-center gap-4 text-text-sub">
             <button
               onClick={() => handleSelectTab("studio")}
               className="hover:text-text transition-colors"
