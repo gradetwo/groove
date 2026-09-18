@@ -270,6 +270,21 @@ export class AudioEngine {
   // inline copy here silently drifted the moment a field was added.
   private trackStates: TrackState[] = [];
 
+  /**
+   * Isolated preview of one track's lane — the piano roll's "play just this part".
+   *
+   * Deliberately **not** implemented by touching `trackStates` (i.e. by soloing the track):
+   * that is shared, user-visible state, so entering a preview would light the row's Solo button
+   * and leaving it would have to remember what to restore. Instead the scheduler simply skips
+   * every other track while a scope is set, which means:
+   *
+   *   - the previewed track is heard **as it is mixed** — its own mute/solo state still applies,
+   *     so the preview cannot claim a track is audible when the arrangement says otherwise;
+   *   - nothing outside this object changes, so closing the roll cannot leave the session in a
+   *     different state than it was found in.
+   */
+  private previewScope: { trackIdx: number; fromStep: number; toStep: number } | null = null;
+
   // Callbacks
   private onStepCallback?: (info: StepCallbackInfo) => void;
   private onTrackTriggerCallback?: (trackIndices: number[]) => void;
@@ -1084,7 +1099,20 @@ export class AudioEngine {
       ? Math.min(this.maxVolumeLimit, this.currentMasterVolume)
       : this.currentMasterVolume;
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(effective, this.ctx.currentTime);
+      /**
+       * Q11: smooth the master fader instead of stepping it.
+       *
+       * `setValueAtTime` on every pointer move during a fader drag is a staircase — the
+       * classic "zipper" artefact — and `setHearingProtection` / `setMaxVolumeLimit` both call
+       * straight into here, so toggling the limiter also clicked. A 15 ms `setTargetAtTime`
+       * reaches the new level within a frame or two and is inaudible as a step. The parameter
+       * is pinned first so a target change mid-ramp starts from where the ramp actually is.
+       */
+      const param = this.masterGain.gain;
+      const now = this.ctx.currentTime;
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(Math.max(0.0001, param.value), now);
+      param.setTargetAtTime(Math.max(0.0001, effective), now, 0.015);
     }
     // Persisted so the level survives a reload and stays consistent across views.
     this.saveAudioSettings();
@@ -1245,6 +1273,39 @@ export class AudioEngine {
     return this.loopRange;
   }
 
+  /**
+   * Restricts the transport to one track's lane over a step range — the piano roll's isolated
+   * preview.
+   *
+   * While a scope is set the scheduler emits **only** that track and wraps inside
+   * `[fromStep, toStep)`, reusing the ordinary transport (and therefore the ordinary lookahead
+   * scheduler, voice path, playhead reporting and `stop()`). Nothing else on the engine is
+   * mutated: `trackStates` is untouched, so the preview cannot leave mute/solo behind, and the
+   * caller does not have to restore anything beyond clearing the scope.
+   *
+   * `null` clears it. Out-of-range or inverted spans clear it rather than silently playing the
+   * whole pattern, because a preview that quietly plays everything is worse than no preview.
+   */
+  public setPreviewScope(scope: { trackIdx: number; fromStep: number; toStep: number } | null): void {
+    if (!scope) {
+      this.previewScope = null;
+      return;
+    }
+    const from = Math.max(0, Math.floor(scope.fromStep));
+    const to = Math.floor(scope.toStep);
+    const trackIdx = Math.floor(scope.trackIdx);
+    const trackCount = this.pattern?.tracks?.length ?? 0;
+    if (!(to > from) || trackIdx < 0 || (trackCount > 0 && trackIdx >= trackCount)) {
+      this.previewScope = null;
+      return;
+    }
+    this.previewScope = { trackIdx, fromStep: from, toStep: to };
+  }
+
+  public getPreviewScope(): { trackIdx: number; fromStep: number; toStep: number } | null {
+    return this.previewScope ? { ...this.previewScope } : null;
+  }
+
   public setDrumsOnly(enabled: boolean): void {
     this.isDrumsOnly = enabled;
     this.syncTrackGains();
@@ -1321,7 +1382,11 @@ export class AudioEngine {
       this.onPlayCallback();
     }
     ecosystemBus.publishClockStart(this.bpm);
-    this.currentStep = (this.loopRange && this.loopRange[0] >= 0) ? this.loopRange[0] : 0;
+    this.currentStep = this.previewScope
+      ? this.previewScope.fromStep
+      : this.loopRange && this.loopRange[0] >= 0
+        ? this.loopRange[0]
+        : 0;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (this.isCountIn) {
       const beatSec = 60.0 / this.bpm;
@@ -1508,7 +1573,14 @@ export class AudioEngine {
     if (!this.ctx || !this.isPlaying || !this.pattern) return;
 
     const stepDur = this.getStepDuration();
-    const stepsCount = this.totalSteps > 0 ? this.totalSteps : 16;
+    // A preview plays the scope's own range, not the pattern or the transport loop.
+    const preview = this.previewScope;
+    const stepsCount = preview
+      ? Math.max(1, preview.toStep - preview.fromStep)
+      : this.totalSteps > 0
+        ? this.totalSteps
+        : 16;
+    const rangeStart = preview ? preview.fromStep : null;
 
     // F-02: recover from a stall (backgrounded tab, GC pause, iOS suspend → resume,
     // a heavy render pass) instead of firing every missed step at "now".
@@ -1599,6 +1671,13 @@ export class AudioEngine {
       if (state.mute) return;
       if (anySolo && !state.solo) return;
       if (this.isDrumsOnly && !isDrumTrack(track, trackIdx)) return;
+      /**
+       * Isolated preview: skip every track but the previewed one.
+       *
+       * This sits *after* the mute/solo/drums-only rules on purpose — the preview then shows the
+       * track as the mix actually treats it instead of overriding the user's own solo/mute.
+       */
+      if (this.previewScope && trackIdx !== this.previewScope.trackIdx) return;
 
       // Independent track loop length (Polymeter)
       const trackLen = (track.trackLength && track.trackLength > 0)
@@ -1695,7 +1774,17 @@ export class AudioEngine {
     initIosAudioUnlock(this.ctx).unlock();
     if (this.ctx.state === "suspended") this.ctx.resume();
     const stepDur = this.getStepDuration();
-    const pitchVal = pitch !== null && pitch !== undefined && pitch > 0 ? pitch : 0;
+    const trackId = (this.pattern?.tracks[trackIdx]?.track_id || "").toLowerCase();
+    const lowerName = trackName.toLowerCase();
+    const defaultPitch =
+      trackId === "bass" || lowerName.includes("bass")
+        ? 48
+        : trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")
+        ? 60
+        : trackId === "lead" || lowerName.includes("lead")
+        ? 72
+        : 0;
+    const pitchVal = pitch !== null && pitch !== undefined && pitch > 0 ? pitch : defaultPitch;
 
     // P5-05: Real-time Live Sequencer Recording
     if (this.isPlaying && this.liveRecorder.getIsArmed()) {
@@ -1703,6 +1792,63 @@ export class AudioEngine {
     }
 
     this.triggerInstrument(trackIdx, trackName, this.ctx.currentTime, velocity, pitchVal, stepVal, stepDur, gateVal, true, 0, stepIdx);
+  }
+
+  /**
+   * Audition a **complete chord** in one call — the notes as one voicing.
+   *
+   * Why this exists: `triggerNote` is a single-note preview, and on a `chords` track it routes
+   * through the same genre treatment the sequencer uses, which *voices the note it is given*.
+   * Calling it once per chord member therefore harmonised every member — a four-note chord
+   * produced twelve voices in the same register (measured: 24 oscillators instead of 8), which
+   * is the "chord audition sounds wrong" report. Passing the finished voicing here plays exactly
+   * those notes, through the same filter/preset/insert path the arrangement will use, and through
+   * the track's own destination so what is heard is what is mixed.
+   *
+   * `notes` is the voicing the caller is about to write, so audition and result cannot differ.
+   */
+  public previewChord(
+    trackIdx: number,
+    trackName: string,
+    notes: number[],
+    velocity = 0.8,
+    durationSeconds?: number
+  ): void {
+    if (!this.ctx) this.initAudioContext();
+    if (!this.ctx) return;
+    initIosAudioUnlock(this.ctx).unlock();
+    if (this.ctx.state === "suspended") this.ctx.resume();
+
+    const voiced = (Array.isArray(notes) ? notes : []).filter((n) => Number.isFinite(n) && n > 0);
+    if (voiced.length === 0) return;
+
+    // One voice per note, all sharing a single onset and a single duration — a chord, not a
+    // sequence of notes. The duration is expressed in the caller's seconds (the piano roll uses
+    // its own step length) so the audition matches the bar length it is previewing.
+    const stepDur = this.getStepDuration();
+    const gateVal =
+      durationSeconds !== undefined && stepDur > 0
+        ? Math.max(0.05, Math.min(MAX_NOTE_GATE_STEPS, durationSeconds / stepDur))
+        : 0.9;
+
+    const track = this.pattern?.tracks?.[trackIdx];
+    const preset = resolveInstrumentPreset(track?.instrument, (track?.track_id || "").toLowerCase());
+    const treatment = resolveChordTreatment(this.pattern?.genre_id, track?.instrument);
+    const effective: ChordTreatment =
+      treatment ?? { style: "triad", articulation: "block", gateScale: 1, strumSeconds: CHORD_STRUM_SEC };
+
+    const dest = this.getTrackDestination(trackIdx);
+    const start = Math.max(this.ctx.currentTime, safeTime(this.ctx.currentTime, this.ctx.currentTime));
+    const dur = chordNoteDuration(stepDur, gateVal, effective);
+    const voiceVel = safeVelocity(velocity) * chordVoiceGain(voiced.length);
+
+    voiced.forEach((note, i) => {
+      const voice = playPolySynthNote(this.ctx!, dest, note, chordVoiceOnset(start, i, effective), dur, voiceVel, preset);
+      voice.sources.forEach((src, idx) => {
+        this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
+      });
+    });
+    void trackName;
   }
 
   private triggerInstrument(
@@ -1791,17 +1937,18 @@ export class AudioEngine {
         this.pattern?.genre_id,
         this.pattern?.tracks[trackIdx]?.instrument
       );
+      const effectivePitch = pitch > 0 ? pitch : (this.pattern?.tracks[trackIdx]?.pitch?.find((p) => (p ?? 0) > 0) ?? 60);
       this.playChord(
         dest,
         safeStartTime,
         safeVel,
-        pitch,
+        effectivePitch,
         stepDur,
         gateVal,
         synthPreset,
         chordTreatment,
         trackIdx,
-        chordNotesForStep(this.pattern?.tracks[trackIdx], stepIdx, pitch, this.pattern?.scale, {
+        chordNotesForStep(this.pattern?.tracks[trackIdx], stepIdx, effectivePitch, this.pattern?.scale, {
           style: chordTreatment.style,
         })
       );

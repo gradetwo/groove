@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { SequencerPattern } from "../../types/genre";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -137,6 +137,12 @@ export interface SequencerPanelProps {
   onClosePianoRoll?: () => void;
   onTogglePianoRoll?: () => void;
   onAuditionRollNote?: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
+  /** Plays a complete voicing as one chord, so a chords track is not re-voiced per member. */
+  onPreviewChord?: (trackIdx: number, notes: number[], velocity: number, durationSeconds?: number) => void;
+  /** Isolated preview of one lane: returns whether the engine accepted the scope. */
+  onStartRollPreview?: (trackIdx: number, fromStep: number, toStep: number) => boolean;
+  onStopRollPreview?: () => void;
+  isRollPreviewing?: boolean;
   onOpenHelp?: (chapterId?: string) => void;
   /** Which row the inspector currently shows, for selected-header styling. */
   inspectorTrackIdx?: number | null;
@@ -276,6 +282,10 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onClosePianoRoll,
   onTogglePianoRoll,
   onAuditionRollNote,
+  onPreviewChord,
+  onStartRollPreview,
+  onStopRollPreview,
+  isRollPreviewing,
   onOpenHelp,
   inspectorTrackIdx = null,
   onShiftTrack,
@@ -330,6 +340,21 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
       return next;
     });
   };
+
+  const handleSetChordDuration = useCallback(
+    (trackIdx: number, gate: number) => {
+      const track = pattern.tracks[trackIdx];
+      if (!track) return;
+      const len = track.steps?.length || seqState.stepCount;
+      const currentGates =
+        track.gate && track.gate.length >= len
+          ? [...track.gate]
+          : Array.from({ length: len }, (_, i) => track.gate?.[i] ?? 0.8);
+      const updated = currentGates.map((g, i) => ((track.steps?.[i] ?? 0) > 0 ? gate : g));
+      onBatchUpdateGate(trackIdx, updated);
+    },
+    [pattern.tracks, seqState.stepCount, onBatchUpdateGate]
+  );
 
   /**
    * How this genre plays its chords, per chord track — the length the engine will actually use.
@@ -563,6 +588,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
               onChangeSwing={onChangeTrackSwing}
               isCompact={Boolean(compactTracks[trackIdx])}
               onToggleCompact={handleToggleSingleTrackCompact}
+              onSetChordDuration={handleSetChordDuration}
             />
           );
         })}
@@ -613,6 +639,10 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             onClose={onClosePianoRoll}
             commit={commit}
             onAudition={onAuditionRollNote}
+            onPreviewChord={onPreviewChord}
+            onStartPreview={onStartRollPreview}
+            onStopPreview={onStopRollPreview}
+            isPreviewing={isRollPreviewing}
             onToggleMusicalTyping={onToggleKeyboardMode}
             onOpenHelp={onOpenHelp}
           />

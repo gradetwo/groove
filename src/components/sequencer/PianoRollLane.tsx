@@ -17,12 +17,14 @@ import {
   MousePointer2,
   Music2,
   Pencil,
+  Play,
   Plus,
   Radio,
   Repeat,
   Save,
   Scissors,
   Sparkles,
+  Square,
   SquareDashedMousePointer,
   Trash2,
   TrendingUp,
@@ -61,7 +63,7 @@ import {
   rampNotesVelocity,
   removeNote,
   resizeNote,
-  resolveProgressionChords,
+  previewProgressionNotes,
   scaleHighlightFor,
   scaleNotesVelocity,
   setNotesVelocity,
@@ -124,6 +126,23 @@ export interface PianoRollLaneProps {
   commit: (action: SequencerAction) => void;
   /** Plays one note through the track's instrument so drawing is audible. */
   onAudition: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
+  /**
+   * Plays a **complete voicing** as one chord (not one call per member).
+   *
+   * `onAudition` is a single-note preview, and on a chords track the engine voices whatever note
+   * it is handed — so auditioning a four-note chord note-by-note produced twelve voices in the
+   * same register. Optional so an embedder that only has the single-note path still compiles.
+   */
+  onPreviewChord?: (trackIdx: number, notes: number[], velocity: number, durationSeconds?: number) => void;
+  /**
+   * Isolated preview of just this track's lane (the roll's own transport).
+   *
+   * `onStartPreview` returns whether the engine accepted the scope, so the toggle can stay in
+   * sync with reality instead of assuming success.
+   */
+  onStartPreview?: (trackIdx: number, fromStep: number, toStep: number) => boolean;
+  onStopPreview?: () => void;
+  isPreviewing?: boolean;
   /** Optional trigger to open/toggle Musical Typing keyboard HUD */
   onToggleMusicalTyping?: () => void;
   /** Optional trigger to open Help Center modal with contextual chapter */
@@ -214,6 +233,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   onClose,
   commit,
   onAudition,
+  onPreviewChord,
+  onStartPreview,
+  onStopPreview,
+  isPreviewing = false,
   onToggleMusicalTyping,
   onOpenHelp,
   initialTool,
@@ -229,6 +252,8 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [chordStamp, setChordStamp] = useState<ChordStampType>("note");
   const [selectedProgressionId, setSelectedProgressionId] = useState<string>("pop_4chords");
   const [activeAuditionMidi, setActiveAuditionMidi] = useState<number | null>(null);
+  /** 0 = whole lane; otherwise the 1-based bar whose span the preview plays. */
+  const [previewBars, setPreviewBars] = useState(0);
   const [snap, setSnap] = useState<RollSnap>("1/16");
   const [selection, setSelection] = useState<RollNoteId[]>([]);
   const [draft, setDraft] = useState<SequencerPattern | null>(null);
@@ -589,28 +614,87 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     if (next !== pattern) commitDraft(next);
   };
 
+  /**
+   * Auditions the progression using **the same notes the stamp would write**.
+   *
+   * Two defects lived here. First, each chord member was passed to `onAudition` separately —
+   * and the engine voices whatever single note a chords track is handed, so a four-note chord
+   * came out as twelve voices in one register (measured 24 oscillators instead of 8). Second
+   * the preview computed its own voicing (`triad`, octave 4, a hard-coded 450 ms spacing) while
+   * the stamp divided the pattern evenly, so the preview was not the result.
+   *
+   * Now the voicing comes from `previewProgressionNotes` (shared with `applyChordProgression`)
+   * and each chord is handed to the engine **once**, as a chord, for the chord's real duration.
+   */
   const handleAuditionProgression = useCallback(() => {
     progressionAuditionTimersRef.current.forEach((id) => window.clearTimeout(id));
     progressionAuditionTimersRef.current = [];
 
     const prog = CHORD_PROGRESSIONS.find((p) => p.id === selectedProgressionId) || CHORD_PROGRESSIONS[0];
-    const chords = resolveProgressionChords(view.scale, prog, { chordStyle: "triad", baseOctave: 4 });
+    const { chords, stepsPerChord } = previewProgressionNotes(
+      view.scale,
+      prog,
+      stepCount,
+      stepsPerBar,
+      { chordStyle: "triad", baseOctave: 4 }
+    );
+    // The step length is the engine's, not a guess: a preview that ignores tempo drifts away
+    // from the bar it is previewing as soon as the user changes BPM.
+    const secondsPerStep = (60 / (pattern.bpm || 120)) / 4;
+    // A preview chord lasts as long as the stamped chord will: `stepsPerChord` steps, at the
+    // pattern's own tempo, times the same 0.9 fraction the stamp's default gate uses.
+    const chordSeconds = Math.max(0.12, secondsPerStep * stepsPerChord * 0.9);
+    const chordMs = Math.max(120, chordSeconds * 1000);
 
     chords.forEach((chord, chordIdx) => {
       const timer = window.setTimeout(() => {
-        chord.chordNotes.forEach((midi) => {
-          onAudition(activeTrackIdx, midi, 95, 0.7);
-        });
-      }, chordIdx * 450);
+        if (onPreviewChord) {
+          onPreviewChord(activeTrackIdx, chord.chordNotes, 95, chordSeconds);
+        } else {
+          // Fallback for a host without the chord path: still one call per note, but the notes
+          // are already the final voicing so the engine's own voicing is skipped.
+          chord.chordNotes.forEach((midi) => onAudition(activeTrackIdx, midi, 95, 0.7));
+        }
+      }, chordIdx * chordMs);
       progressionAuditionTimersRef.current.push(timer);
     });
-  }, [activeTrackIdx, onAudition, selectedProgressionId, view.scale]);
+  }, [activeTrackIdx, onAudition, onPreviewChord, pattern.bpm, selectedProgressionId, stepCount, stepsPerBar, view.scale]);
 
   const handleApplyProgression = useCallback(() => {
     const prog = CHORD_PROGRESSIONS.find((p) => p.id === selectedProgressionId) || CHORD_PROGRESSIONS[0];
     applyOp((p) => applyChordProgression(p, activeTrackIdx, prog, stepCount, stepsPerBar));
     setNotice(t("roll_progression_applied", { name: isZh ? prog.name.zh : prog.name.en }));
   }, [activeTrackIdx, applyOp, isZh, selectedProgressionId, stepCount, stepsPerBar, t]);
+
+  /**
+   * Start/stop the isolated preview of this lane.
+   *
+   * `onStartPreview` reports whether the engine accepted the scope, so the button state follows
+   * the engine rather than assuming it worked — a toggle that lights up while nothing plays is
+   * exactly the class of lying UI this pass is meant to remove.
+   */
+  const handleTogglePreview = useCallback(() => {
+    if (!onStartPreview || !onStopPreview) return;
+    if (isPreviewing) {
+      onStopPreview();
+      return;
+    }
+    const fromStep = previewBars > 0 ? (previewBars - 1) * stepsPerBar : 0;
+    const toStep = previewBars > 0 ? Math.min(stepCount, previewBars * stepsPerBar) : stepCount;
+    if (!onStartPreview(activeTrackIdx, fromStep, toStep)) {
+      setNotice(t("roll_preview_unavailable"));
+    }
+  }, [activeTrackIdx, isPreviewing, onStartPreview, onStopPreview, previewBars, stepCount, stepsPerBar, t]);
+
+  /**
+   * The preview must never outlive the surface that started it. Closing the roll unmounts this
+   * component; the cleanup below is what stops the lane, so a user cannot end up with one track
+   * looping with no visible way to stop it.
+   */
+  useEffect(() => {
+    if (!onStopPreview) return;
+    return () => onStopPreview();
+  }, [onStopPreview]);
 
   useEffect(() => {
     return () => {
@@ -1554,6 +1638,53 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 <span>{t("roll_progression_stamp")}</span>
               </button>
             </div>
+
+            {/* Isolated preview: play just this lane, without disturbing the transport or any
+                shared mute/solo state. Hidden when the host has no preview plumbing. */}
+            {onStartPreview && onStopPreview && (
+              <div
+                className="flex flex-wrap items-center gap-1 rounded-lg border border-[#282d3e] bg-[#131622]/80 px-2 py-0.5"
+                data-testid="piano-roll-preview-suite"
+              >
+                <button
+                  type="button"
+                  onClick={handleTogglePreview}
+                  aria-pressed={isPreviewing}
+                  data-testid="piano-roll-preview-toggle"
+                  title={isPreviewing ? t("roll_preview_stop_hint") : t("roll_preview_start_hint")}
+                  className={`${ctrlClass} ${
+                    isPreviewing
+                      ? "bg-accent/25 border-accent text-accent font-bold shadow-[0_0_8px_rgba(var(--accent-rgb),0.3)]"
+                      : "text-accent hover:bg-accent/20"
+                  }`}
+                >
+                  {isPreviewing ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3 fill-current" />}
+                  <span className="hidden sm:inline">
+                    {isPreviewing ? t("roll_preview_stop") : t("roll_preview_start")}
+                  </span>
+                </button>
+
+                <label className="flex items-center gap-1 font-['JetBrains_Mono'] text-[9px] uppercase tracking-[0.08em] text-text-dim">
+                  {t("roll_preview_range")}
+                  <select
+                    value={previewBars}
+                    onChange={(e) => setPreviewBars(Number(e.target.value))}
+                    data-testid="piano-roll-preview-range"
+                    aria-label={t("roll_preview_range")}
+                    className="rounded border border-[#2b3040] bg-[#1a1e2b] px-1 py-0.5 text-[10px] font-bold text-white outline-none hover:border-accent/40"
+                  >
+                    <option value={0} className="bg-[#12151f]">
+                      {t("roll_preview_range_all")}
+                    </option>
+                    {Array.from({ length: Math.max(1, barCount - 1) }, (_, i) => i + 1).map((bar) => (
+                      <option key={bar} value={bar} className="bg-[#12151f]">
+                        {t("roll_preview_range_bar", { bar })}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
           </div>
 
 
@@ -1881,7 +2012,23 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                             onClick={() => {
                               setSelection(noteIds);
                               const barNotes = notes.filter((n) => noteIds.includes(noteId(n)));
-                              barNotes.forEach((n) => onAudition(activeTrackIdx, n.midi, n.velocity, 0.5));
+                              /**
+                               * The bar's notes are already the finished voicing, so they go to
+                               * the engine as **one chord**. Passing them to `onAudition` one at a
+                               * time made the chords track voice each member again — four notes in,
+                               * twelve voices out.
+                               */
+                              if (onPreviewChord && barNotes.length > 0) {
+                                const firstStep = Math.min(...barNotes.map((b) => b.stepIdx));
+                                const uniquePitches = Array.from(
+                                  new Set(barNotes.filter((n) => n.stepIdx === firstStep).map((n) => n.midi))
+                                );
+                                if (uniquePitches.length > 0) {
+                                  onPreviewChord(activeTrackIdx, uniquePitches, 100, 0.5);
+                                }
+                              } else {
+                                barNotes.forEach((n) => onAudition(activeTrackIdx, n.midi, n.velocity, 0.5));
+                              }
                             }}
                             title={`Select & audition chord ${chordName}`}
                             className={`px-2 py-0.5 rounded-md text-[8.5px] font-bold transition-all truncate ${

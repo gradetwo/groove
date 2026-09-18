@@ -781,6 +781,63 @@ export const StudioView: React.FC<StudioViewProps> = ({
     []
   );
 
+  /**
+   * Audition a finished voicing as one chord.
+   *
+   * The single-note path above is wrong for a `chords` track: the engine voices whatever note it
+   * is given, so auditioning four members produced twelve voices. This passes the voicing itself.
+   */
+  const handlePreviewChord = useCallback(
+    (trackIdx: number, notes: number[], velocity: number, durationSeconds?: number) => {
+      const track = patternRef.current.tracks[trackIdx];
+      if (!track) return;
+      engineRef.current?.previewChord(trackIdx, track.name, notes, velocity / 127, durationSeconds);
+    },
+    []
+  );
+
+  /** Piano-roll isolated preview state, kept in React so the roll's button can reflect it. */
+  const [isRollPreviewing, setIsRollPreviewing] = useState(false);
+
+  const handleStartRollPreview = useCallback((trackIdx: number, fromStep: number, toStep: number): boolean => {
+    const engine = engineRef.current;
+    if (!engine) return false;
+    // A running arrangement would play underneath the preview and double every note of the
+    // previewed lane, so the full transport yields to the preview rather than mixing with it.
+    if (engine.getIsPlaying()) {
+      engine.stop();
+      setIsPlaying(false);
+      clearPlayhead();
+    }
+    engine.setPreviewScope({ trackIdx, fromStep, toStep });
+    const accepted = engine.getPreviewScope() !== null;
+    if (accepted) {
+      engine.play();
+      setIsRollPreviewing(true);
+    }
+    return accepted;
+  }, [clearPlayhead]);
+
+  const handleStopRollPreview = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    engine.setPreviewScope(null);
+    // Only stop the transport if the preview is what started it.
+    if (isRollPreviewing) {
+      engine.stop();
+      setIsPlaying(false);
+      clearPlayhead();
+    }
+    setIsRollPreviewing(false);
+  }, [clearPlayhead, isRollPreviewing]);
+
+  // Leaving the studio unmounts the roll; the scope must not survive it.
+  useEffect(() => {
+    return () => {
+      engineRef.current?.setPreviewScope(null);
+    };
+  }, []);
+
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
   return (
@@ -847,6 +904,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onClosePianoRoll={handleClosePianoRoll}
           onTogglePianoRoll={handleTogglePianoRoll}
           onAuditionRollNote={handleAuditionRollNote}
+          onPreviewChord={handlePreviewChord}
+          onStartRollPreview={handleStartRollPreview}
+          onStopRollPreview={handleStopRollPreview}
+          isRollPreviewing={isRollPreviewing}
           onOpenHelp={onOpenHelp}
           language={language}
           isZh={isZh}

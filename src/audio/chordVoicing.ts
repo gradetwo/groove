@@ -186,6 +186,9 @@ export function chordVoicingForStep(
   // word "Atonal" (it falls back to minor), so the raw string is checked too; one genre
   // in the library uses it.
   if (scaleId === "chromatic" || /atonal|chrom/i.test(scale ?? "")) {
+    if (style === "quartal") {
+      return [0, 5, 10].map((semi) => rootMidi + semi);
+    }
     // Atonal material still honours the style's *width*: a seventh/extended request gets
     // an added octave rather than silently collapsing to a triad.
     const stack = definition.steps.length > 3 ? [0, 7, 12, 19] : CHROMATIC_STACK;
@@ -385,11 +388,12 @@ export function chordNotesForStep(
   if (Array.isArray(stored) && stored.length > 0) {
     // Defensive copy, sorted low→high: callers must not be able to mutate the pattern, and the
     // onset/strum order of a voicing is defined from the bottom up.
-    const notes = [...stored].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+    const notes = [...stored].filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
     // A stack of nothing but garbage (a corrupt import, a half-written pattern) must not silence
     // the step: falling back to the root's voicing keeps it audible and obviously wrong, which is
     // far easier to notice and fix than a hole in the arrangement.
     if (notes.length > 0) return notes;
   }
-  return chordVoicingForStep(midi, scale, options);
+  const effectiveMidi = Number.isFinite(midi) && midi > 0 ? midi : 60;
+  return chordVoicingForStep(effectiveMidi, scale, options);
 }

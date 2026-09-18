@@ -1067,6 +1067,45 @@ export function resolveProgressionChords(
 }
 
 /**
+ * The notes a progression stamp will produce, and the step span each chord occupies.
+ *
+ * Split out of `applyChordProgression` so the piano roll's **audition** can play exactly what
+ * the stamp would write. The two used to compute their own answers — the stamp divided the
+ * pattern evenly while the audition re-voiced each member at a fixed 450 ms and a fixed
+ * `triad` style — so "preview" and "result" could disagree on voicing, octave, timing and
+ * length. One function makes that drift structurally impossible.
+ */
+export function previewProgressionNotes(
+  scaleStr: string | undefined | null,
+  progression: ChordProgressionDef,
+  stepCount: number,
+  stepsPerBar: number,
+  options?: {
+    chordStyle?: VoicingStyle;
+    baseOctave?: number;
+    startStep?: number;
+    velocity?: number;
+    gate?: number;
+  }
+): { chords: Array<{ rootMidi: number; chordNotes: number[]; roman: string }>; stepsPerChord: number; start: number; endStep: number; gate: number } {
+  const chords = resolveProgressionChords(scaleStr, progression, {
+    chordStyle: options?.chordStyle ?? "triad",
+    baseOctave: options?.baseOctave ?? 4,
+  });
+  const start = Math.max(0, Math.min(Math.max(0, stepCount - 1), options?.startStep ?? 0));
+  const availableSteps = Math.max(1, stepCount - start);
+  const stepsPerChord = Math.max(1, Math.floor(availableSteps / Math.max(1, chords.length)));
+  const defaultGate = Math.min(MAX_NOTE_GATE_STEPS, Number((stepsPerChord * 0.9).toFixed(2)));
+  return {
+    chords,
+    stepsPerChord,
+    start,
+    endStep: Math.min(stepCount, start + chords.length * stepsPerChord),
+    gate: options?.gate ?? defaultGate,
+  };
+}
+
+/**
  * Applies a full harmonic chord progression across the track's step span.
  */
 export function applyChordProgression(
@@ -1083,21 +1122,18 @@ export function applyChordProgression(
     gate?: number;
   }
 ): SequencerPattern {
-  const chords = resolveProgressionChords(pattern.scale, progression, {
-    chordStyle: options?.chordStyle ?? "triad",
-    baseOctave: options?.baseOctave ?? 4,
-  });
+  // Same calculation the piano roll auditions, so a preview cannot disagree with the result.
+  const { chords, stepsPerChord, start, gate } = previewProgressionNotes(
+    pattern.scale,
+    progression,
+    stepCount,
+    stepsPerBar,
+    options
+  );
   if (chords.length === 0) return pattern;
 
-  const start = Math.max(0, Math.min(stepCount - 1, options?.startStep ?? 0));
-  const chordCount = chords.length;
-  const availableSteps = stepCount - start;
-  const stepsPerChord = Math.max(1, Math.floor(availableSteps / chordCount));
-  const defaultGate = Math.min(MAX_NOTE_GATE_STEPS, Number((stepsPerChord * 0.9).toFixed(2)));
-  const gate = options?.gate ?? defaultGate;
   const velocity = options?.velocity ?? 100;
-
-  const endStep = Math.min(stepCount, start + chordCount * stepsPerChord);
+  const endStep = Math.min(stepCount, start + chords.length * stepsPerChord);
   const existingNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
   const preservedNotes = existingNotes.filter((n) => n.stepIdx < start || n.stepIdx >= endStep);
 
