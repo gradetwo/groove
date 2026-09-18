@@ -250,19 +250,36 @@ if (TARGET_FILTER) {
  * assertion the suite cares about is that the roll edits the studio's own pattern, which is a
  * cross-view claim and has nothing to do with which chrome exposed the entry point.
  */
+/**
+ * Opens the piano roll, or reports that this shell does not have one.
+ *
+ * The phone shell deliberately omits the roll: measured on a 390×664 device the drawer is 1095 px
+ * tall with a 2304 px grid, 55 toolbar buttons and `touch-action: none` on the grid (a one-finger
+ * drag must paint rather than scroll, so there is no gesture left to pan with). Returning `null`
+ * lets the caller skip the roll assertions on that shell and assert the *notice* instead — the
+ * point being that an omitted feature must be visibly omitted rather than silently missing.
+ */
 async function openPianoRoll(page) {
   if (await page.$("[data-testid='toolbar-piano-roll-toggle']")) {
     await clickVerified(page, "[data-testid='toolbar-piano-roll-toggle']");
     return "desktop";
   }
-  await openStudioMoreControls(page);
-  await clickSheetRowAndVerify(
-    page,
-    "[data-testid='mobile-studio-action-piano-roll']",
-    "[data-testid='piano-roll-grid']",
-    "piano roll"
-  );
-  return "mobile";
+  if (await page.$("[data-testid='mobile-transport-more']")) {
+    /**
+     * Phone shell: the roll is not offered. Its sheet row is "editing notes", which opens the
+     * explanation — so this opens that, and the caller asserts the explanation plus its route to
+     * the Chords view instead of the grid.
+     */
+    await openStudioMoreControls(page);
+    await clickSheetRowAndVerify(
+      page,
+      "[data-testid='mobile-studio-action-note-editing']",
+      "[data-testid='piano-roll-mobile-notice']",
+      "note-editing help"
+    );
+    return null;
+  }
+  throw new Error("No piano roll entry point on this viewport");
 }
 
 /**
@@ -1052,7 +1069,26 @@ async function runTestOnTarget(target, baseUrl) {
     // The whole claim of the roll is that it is another view of the same data, not a second copy.
     // So this draws a note in the roll and then requires the step grid to show it — a cross-view
     // assertion, which is the part that could silently break.
-    await openPianoRoll(page);
+    //
+    // The phone shell has no roll (see `openPianoRoll`), so there this step asserts the *notice*
+    // instead: an omitted feature must be visibly omitted, with a route to the alternative, not
+    // simply absent.
+    const rollShell = await openPianoRoll(page);
+    if (rollShell === null) {
+      // `openPianoRoll` already opened the explanation; assert it and its route out.
+      await page.waitForSelector("[data-testid='piano-roll-mobile-notice']", { timeout: 15000 }).catch(() => {
+        throw new Error("Phone shell hid the piano roll without explaining why");
+      });
+      if (!(await page.$("[data-testid='piano-roll-mobile-notice-chords']"))) {
+        throw new Error("Piano-roll notice offers no route to the Chords view");
+      }
+      console.log(`   · piano roll: not offered on a phone; notice + Chords route verified`);
+      await clickVerified(page, "[data-testid='piano-roll-mobile-notice-close']");
+      await page.waitForTimeout(250);
+      if (await page.$("[data-testid='piano-roll-mobile-notice']")) {
+        throw new Error("Piano-roll notice did not dismiss");
+      }
+    } else {
     try {
       await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 15000 });
     } catch (rollErr) {
@@ -1387,6 +1423,7 @@ async function runTestOnTarget(target, baseUrl) {
     if (await page.$("[data-testid='piano-roll-grid']")) {
       throw new Error("Piano roll did not close");
     }
+    } // end desktop-only piano roll assertions
 
     // 5g. Switching genre *while playing* (the case that shipped broken).
     //

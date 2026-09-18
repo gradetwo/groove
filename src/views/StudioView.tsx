@@ -64,6 +64,11 @@ interface StudioViewProps {
   onSelectGenre: (genre: Genre) => void;
   onViewDetail: (genre: Genre) => void;
   onAddToCompare?: (genre: Genre) => void;
+  /**
+   * Navigates to the Chords view. Used by the phone's "the piano roll is a desktop tool" notice,
+   * which offers progressions as the alternative rather than leaving a dead end.
+   */
+  onOpenChords?: () => void;
   onAudioEngineReady?: (engine: AudioEngine) => (() => void) | void;
   /** Opens the global settings panel, which App owns (item ⑤). */
   onOpenSettings?: () => void;
@@ -84,6 +89,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onSelectGenre,
   onViewDetail,
   onAddToCompare,
+  onOpenChords,
   onAudioEngineReady,
   onOpenGenreMaker,
   onOpenSettings,
@@ -891,6 +897,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         {/* Right Column: The Sequencer (.seq) */}
         <SequencerPanel
           isPhone={isPhone}
+          onOpenChords={onOpenChords}
           pattern={pattern}
           seqState={seqState}
           isPlaying={isPlaying}

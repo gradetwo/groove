@@ -30,8 +30,8 @@ const baseProps = {
   accent: "#f5b73d",
 };
 
-const renderCell = (over: Record<string, unknown> = {}) =>
-  render(<StepCell {...(baseProps as never)} {...(over as never)} />);
+const renderCell = (over: { isCompact?: boolean } = {}) =>
+  render(<StepCell {...(({ ...baseProps, ...over }) as unknown as React.ComponentProps<typeof StepCell>)} />);
 
 /** The element carrying the sizing classes. */
 const cellOf = (container: HTMLElement) =>

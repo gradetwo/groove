@@ -1,19 +1,23 @@
 {
-  "version": "2.0.52",
+  "version": "2.0.53",
   "releaseDate": "2026-09-18",
-  "changelogCount": 116,
+  "changelogCount": 117,
   "latest": {
-    "version": "2.0.52",
+    "version": "2.0.53",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.52 手机端步进格尺寸达标：28×40px → 36×44px，打拍子不再需要精准点击",
-      "en": "v2.0.52 Phone Step Grid Now Meets Touch Standards: 28×40px → 36×44px"
+      "zh": "v2.0.53 手机端不再提供钢琴卷帘（附替代路径说明），步进格尺寸达标",
+      "en": "v2.0.53 Piano Roll Withdrawn from Phones (With an Explanation), Step Grid Meets Touch Standards"
     },
     "highlights": [
       {
-        "zh": "**步进格 28×40px → 36×44px**：步进格是真正「打拍子」的表面，它的尺寸不是样式偏好而是乐器是否可弹的问题。手机实测原为 28×40px（宽 28px 明显低于约 32px 的可用下限、高度 40px 差 4px 到 44px 建议值），而同一视口里还挤着 40 多个控件，所以这次只增高度与宽度、不加任何底部栏。桌面端保持 16px 行高与自适应宽度不变（那里旁边还有信息面板要放 8 条轨道）。横向密度由网格自身滚动承担——这是移动端音序器的标准做法（GarageBand / Figure 同理），不是把格子压小。",
-        "en": "**Step cells 28×40px → 36×44px**: the step grid is the surface a beat is actually programmed on, so its cell size is not a styling preference — it is whether the instrument is playable. Measured on a phone it was 28×40 px: 28 px wide is below the ~32 px practical floor and 40 px tall misses the 44 px recommendation by four pixels, while the same viewport already carries 40-odd other controls. So the fix gains height and width without adding any chrome. Desktop is unchanged (…"
+        "zh": "**手机端不再提供钢琴卷帘**：实测在 390×664 手机上，卷帘抽屉高 **1095px**、音符网格宽 **2304px**、工具栏 **55 个按钮**，且网格必须 `touch-action: none`（单指拖动要用来画音符，因此没有手势留给平移）——结果是绝大部分网格在屏幕外且无法导航。这不是调参能解决的问题，所以按「提供的功能必须好用」的原则，手机端不提供它，而不是提供一个能打开却没法用的界面。取而代之的是：音符仍在步进网格编辑（点按放置、长按调参数），和弦走向用「和弦」视图；抽屉里的入口改为「编辑音符」说明，讲清楚原因并给出前往和弦视图的按钮——被省略的功能要**明确省略并给出去处**，而不是静默消失。E2E 在手机上断言这条说明与去处确实存在。",
+        "en": "**The piano roll is no longer offered on phones**: measured on a 390×664 device the roll drawer is 1095 px tall, its note grid 2304 px wide, its toolbar 55 buttons, and the grid must carry `touch-action: none` — a one-finger drag has to paint a note, so no gesture is left to pan with. Most of the grid is therefore off-screen and unreachable. That is not a tuning problem, so rather than shipping a surface that opens and cannot be used, the phone does not offer it. Notes stay…"
+      },
+      {
+        "zh": "**步进格 28×40px → 36×44px**：步进格是真正打拍子的表面，手机实测原为 28×40px（宽低于约 32px 可用下限、高差 4px 到 44px 建议值）。改为 36×44px，桌面端保持 16px 行高与自适应宽度（那里还要在信息面板旁放下 8 条轨道）。横向密度由网格自身滚动承担——这是移动端音序器的标准做法。",
+        "en": "**Step cells 28×40px → 36×44px**: the step grid is where a beat is actually programmed, and measured on a phone it was 28×40 px (28 px wide is below the ~32 px floor; 40 px tall misses the 44 px recommendation by four). Now 36×44 px, with desktop unchanged at 16 px rows and flexible width, where eight tracks must still fit beside the information dossier. Horizontal density stays with the grid's own scroll, which is how mobile sequencers work."
       }
     ],
     "truncated": false

@@ -197,7 +197,12 @@ export function buildStudioSheetGroups(input: {
   onChangeDrumKit: (kit: DrumKitType) => void;
   onChangeMobileEditMode: (mode: MobileEditMode) => void;
   onToggleVelocityLane: () => void;
-  onTogglePianoRoll?: () => void;
+  /**
+   * Opens the phone's note-editing help. The piano roll itself is not offered on a phone, so this
+   * is what its entry point became: an explanation plus a route to the Chords view, rather than a
+   * button that opens a surface too large to navigate.
+   */
+  onShowNoteEditingHelp?: () => void;
   onOpenEuclidean: () => void;
   onOpenProjectHub: () => void;
   onOpenExport: () => void;
@@ -237,8 +242,15 @@ export function buildStudioSheetGroups(input: {
           shortcut: "V",
           toggle: { on: true, onToggle: input.onToggleVelocityLane },
         },
-        ...(input.onTogglePianoRoll
-          ? [{ id: "piano-roll", labelKey: "roll_toggle", onSelect: input.onTogglePianoRoll }]
+        ...(input.onShowNoteEditingHelp
+          ? [
+              {
+                id: "note-editing",
+                labelKey: "mobile_note_editing_label",
+                descKey: "mobile_note_editing_desc",
+                onSelect: input.onShowNoteEditingHelp,
+              },
+            ]
           : []),
         { id: "euclidean", labelKey: "toolbar_euclid_label", shortcut: "E", onSelect: input.onOpenEuclidean },
       ],

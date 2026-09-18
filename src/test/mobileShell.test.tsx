@@ -191,3 +191,31 @@ describe("mobile shell has no unreachable navigation", () => {
     expect(reachable.has("console")).toBe(false);
   });
 });
+
+/**
+ * The piano roll is deliberately not offered on a phone.
+ *
+ * Measured on a 390×664 phone: the roll drawer is 1095 px tall, its note grid 2304 px wide, its
+ * toolbar 55 buttons, and the grid carries `touch-action: none` — which it needs, because a
+ * one-finger drag has to paint a note rather than scroll, leaving no gesture to pan with. Most of
+ * the grid is therefore off-screen and unreachable. The product rule this encodes is "do not ship
+ * a surface that is present and unusable"; the alternative is offered instead.
+ */
+describe("piano roll is not offered on phones", () => {
+  it("keeps the piano roll out of the phone sheet", () => {
+    const ids = MOBILE_SHEET_GROUPS.flatMap((g) => g.items).map((i) =>
+      i.kind === "tab" ? `tab:${i.tab}` : `action:${i.id}`
+    );
+    expect(ids).not.toContain("action:piano-roll");
+    // It is still a desktop surface, so the omission must be about the shell, not the feature
+    // having been deleted from the app.
+    expect(ids).toContain("tab:chords");
+  });
+
+  it("points at the Chords view rather than leaving a dead end", () => {
+    const hasChordsCta = MOBILE_SHEET_GROUPS.flatMap((g) => g.items).some(
+      (i) => i.kind === "tab" && i.tab === "chords"
+    );
+    expect(hasChordsCta).toBe(true);
+  });
+});

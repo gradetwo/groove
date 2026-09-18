@@ -308,6 +308,7 @@ const MainApp: React.FC = () => {
                     selectedGenre={selectedGenre}
                     onSelectGenre={handleSelectStudioGenre}
                     onViewDetail={handleSelectDetailGenre}
+                    onOpenChords={() => handleSelectTab("chords")}
                     onAddToCompare={handleAddToCompare}
                     onAudioEngineReady={handleEngineReady}
                     onOpenSettings={() => setSettingsOpen(true)}

@@ -137,6 +137,8 @@ export interface SequencerPanelProps {
   isPhone?: boolean;
   /** Opens the phone sheet, which holds everything the compact bar leaves out. */
   onOpenMobileSheet?: () => void;
+  /** Opens the Chords view — the phone's replacement for the piano roll. */
+  onOpenChords?: () => void;
   /** Piano roll (item ⑦): a pitch-grid editor over the same pattern the step grid edits. */
   commit?: (action: SequencerAction) => void;
   isPianoRollOpen?: boolean;
@@ -285,6 +287,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onOpenAudioSettings,
   isPhone = false,
   onOpenMobileSheet,
+  onOpenChords,
   commit,
   isPianoRollOpen = false,
   pianoRollTrackIdx = 0,
@@ -326,6 +329,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
    * callbacks through `StudioView` just to reach the same handlers.
    */
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+  /** Phone: the "why is there no piano roll here" explanation, opened from the sheet. */
+  const [isPianoRollNoticeOpen, setIsPianoRollNoticeOpen] = useState(false);
 
   const [compactTracks, setCompactTracks] = useState<Record<number, boolean>>(() => {
     try {
@@ -658,9 +663,58 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         </div>
       )}
 
+      {/**
+        * Phone: the piano roll is deliberately not offered, and says so.
+        *
+        * Measured on a 390×664 phone: the drawer is 1095 px tall and the note grid 2304 px wide,
+        * with 55 buttons in its toolbar and `touch-action: none` on the grid — which is required,
+        * because a one-finger drag has to paint notes rather than scroll, leaving no gesture to
+        * pan with. The result is a surface where most of the grid is off-screen, the controls are
+        * a wall, and the part you can reach cannot be navigated.
+        *
+        * That is not a tuning problem, so the honest answer is not to offer it here rather than to
+        * ship a version that is present and unusable. Notes are still editable on the step grid
+        * (tap to place, long-press for parameters), and progressions live in the Chords view.
+        */}
+      {isPhone && (isPianoRollOpen || isPianoRollNoticeOpen) && (
+        <div
+          data-testid="piano-roll-mobile-notice"
+          className="mt-3 rounded-2xl border border-line bg-panel p-4"
+        >
+          <h3 className="text-[13px] font-bold text-text">{t("roll_mobile_unavailable_title")}</h3>
+          <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-sub">
+            {t("roll_mobile_unavailable_body")}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsPianoRollNoticeOpen(false);
+                onClosePianoRoll?.();
+              }}
+              data-testid="piano-roll-mobile-notice-close"
+              className="h-11 flex-1 rounded-xl border border-line text-[12px] font-semibold text-text active:bg-panel2"
+            >
+              {t("mobile_more_close")}
+            </button>
+            {onOpenChords && (
+              <button
+                type="button"
+                onClick={onOpenChords}
+                data-testid="piano-roll-mobile-notice-chords"
+                className="h-11 flex-1 rounded-xl border border-accent/60 bg-accent/15 text-[12px] font-semibold text-accent active:bg-accent/25"
+              >
+                {t("roll_mobile_unavailable_cta")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Piano roll drawer (item ⑦). Placed with the grid rather than in a portal so the note
-          activity stays visually attached to the track it edits. */}
-      {isPianoRollOpen && commit && onClosePianoRoll && onAuditionRollNote && (
+          activity stays visually attached to the track it edits. Desktop only; see the notice
+          above for why. */}
+      {!isPhone && isPianoRollOpen && commit && onClosePianoRoll && onAuditionRollNote && (
         <div className="mt-3 pt-3 border-t border-line-subtle" data-testid="piano-roll-drawer">
           <PianoRollLane
             pattern={pattern}
@@ -741,7 +795,12 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             onChangeDrumKit,
             onChangeMobileEditMode,
             onToggleVelocityLane,
-            onTogglePianoRoll,
+            /**
+             * The piano roll is deliberately absent on a phone (see the notice above the drawer).
+             * Its sheet row became "note editing", which explains what to use instead — an
+             * omitted feature should be visibly omitted and point somewhere, not vanish.
+             */
+            onShowNoteEditingHelp: () => setIsPianoRollNoticeOpen(true),
             onOpenEuclidean,
             onOpenProjectHub,
             onOpenExport: onExportWav,
