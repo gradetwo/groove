@@ -165,8 +165,23 @@ export function usePatternActions({
   }, [commit, t, showToast]);
 
   const handleAudition = useCallback((trackIdx: number, trackName: string) => {
-    engineRef.current?.triggerNote(trackIdx, trackName, 0.9, 0, 1);
-  }, []);
+    const track = patternRef.current.tracks[trackIdx];
+    const activeIdx = track?.steps?.findIndex((s) => s > 0) ?? -1;
+    const defaultPitch =
+      trackIdx === 4 || track?.track_id === "bass" || trackName.toLowerCase().includes("bass")
+        ? 48
+        : trackIdx === 5 || track?.track_id === "chords" || trackName.toLowerCase().includes("chord") || trackName.toLowerCase().includes("pad")
+        ? 60
+        : trackIdx === 6 || track?.track_id === "lead" || trackName.toLowerCase().includes("lead")
+        ? 72
+        : 0;
+    const pitch = activeIdx >= 0 && track?.pitch?.[activeIdx] && track.pitch[activeIdx]! > 0
+      ? track.pitch[activeIdx]!
+      : defaultPitch;
+    const stepVal = activeIdx >= 0 && track?.steps?.[activeIdx] ? track.steps[activeIdx] : 1;
+    const gateVal = activeIdx >= 0 && track?.gate?.[activeIdx] ? track.gate[activeIdx] : 0.8;
+    engineRef.current?.triggerNote(trackIdx, trackName, 0.9, pitch, stepVal, gateVal, activeIdx);
+  }, [patternRef]);
 
   const handleCycleTrackLength = useCallback(
     (trackIdx: number) => {

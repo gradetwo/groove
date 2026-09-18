@@ -165,7 +165,8 @@ export function useGridInteraction({
         const activeIdx = tr.trackLength && tr.trackLength > 0 ? stepIdx % tr.trackLength : stepIdx;
         const pitch = tr.pitch && tr.pitch[activeIdx] ? tr.pitch[activeIdx] : 0;
         const vel = (tr.velocity && tr.velocity[activeIdx] ? tr.velocity[activeIdx] : 100) / 127;
-        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, val);
+        const gate = tr.gate && tr.gate[activeIdx] ? tr.gate[activeIdx] : 0.8;
+        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, val, gate, activeIdx);
       }
     }
   };
@@ -206,12 +207,26 @@ export function useGridInteraction({
                 if (!t.velocity) t.velocity = Array(t.steps.length).fill(100);
                 t.velocity[i] = 100;
               }
+              if (val > 0 && t.track_id === "chords") {
+                const prefGate = t.gate?.find((g, idx) => (t.steps[idx] ?? 0) > 0 && g >= 2) ?? 16;
+                if (!t.gate) t.gate = Array(t.steps.length).fill(0.8);
+                if (t.gate[i] === undefined || t.gate[i] <= 1) {
+                  t.gate[i] = prefGate;
+                }
+              }
             }
           } else {
             t.steps[stepIdx] = val;
             if (val > 0 && (!t.velocity || !t.velocity[stepIdx])) {
               if (!t.velocity) t.velocity = Array(t.steps.length).fill(100);
               t.velocity[stepIdx] = 100;
+            }
+            if (val > 0 && t.track_id === "chords") {
+              const prefGate = t.gate?.find((g, idx) => (t.steps[idx] ?? 0) > 0 && g >= 2) ?? 16;
+              if (!t.gate) t.gate = Array(t.steps.length).fill(0.8);
+              if (t.gate[stepIdx] === undefined || t.gate[stepIdx] <= 1) {
+                t.gate[stepIdx] = prefGate;
+              }
             }
           }
         }
@@ -263,10 +278,20 @@ export function useGridInteraction({
           ? 0
           : 1;
       commit({ type: "SET_STEP", trackIdx, stepIdx, value: nextVal });
+      if (nextVal > 0 && tr.track_id === "chords") {
+        const prefGate = tr.gate?.find((g, i) => (tr.steps[i] ?? 0) > 0 && g >= 2) ?? 16;
+        if (!tr.gate?.[stepIdx] || tr.gate[stepIdx] <= 1) {
+          commit({ type: "SET_GATE", trackIdx, stepIdx, gate: prefGate });
+        }
+      }
       if (nextVal > 0 && engineRef.current) {
-        const pitch = tr.pitch && tr.pitch[stepIdx] ? tr.pitch[stepIdx] : 0;
-        const vel = (tr.velocity && tr.velocity[stepIdx] ? tr.velocity[stepIdx] : 100) / 127;
-        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal);
+        const activeIdx = tr.trackLength && tr.trackLength > 0 ? stepIdx % tr.trackLength : stepIdx;
+        const pitch = tr.pitch && tr.pitch[activeIdx] ? tr.pitch[activeIdx] : 0;
+        const vel = (tr.velocity && tr.velocity[activeIdx] ? tr.velocity[activeIdx] : 100) / 127;
+        const gate = (tr.gate && tr.gate[activeIdx] && tr.gate[activeIdx] > 1)
+          ? tr.gate[activeIdx]
+          : (tr.track_id === "chords" ? (tr.gate?.find((g, idx) => (tr.steps[idx] ?? 0) > 0 && g >= 2) ?? 16) : 0.8);
+        engineRef.current.triggerNote(trackIdx, tr.name, vel, pitch, nextVal, gate, activeIdx);
       }
     } else if (mobileEditMode === "accent") {
       commit({ type: "SET_STEP", trackIdx, stepIdx, value: 1 });

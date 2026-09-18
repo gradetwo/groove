@@ -116,7 +116,7 @@ export const CATEGORY_EXPRESSION_PROFILES: Record<GenreCategory, GenreExpression
   Electronic: {
     // Four-on-the-floor: harmony moves once a bar, held (pads) or stabbed (organ), and the bass
     // locks to the root. A four-bar statement of the progression is the norm.
-    chord: { quality: "seventh", style: "sustain", chordBeats: 4, bars: 4, octaveOffset: 0 },
+    chord: { quality: "seventh", style: "sustain", chordBeats: 4, bars: 4, octaveOffset: 0, degrees: [0, 8, 3, 10] },
     roles: {
       bass: { style: "legato", gateScale: 1.4 },
       lead: { style: "authored" },
@@ -126,7 +126,7 @@ export const CATEGORY_EXPRESSION_PROFILES: Record<GenreCategory, GenreExpression
   "Hip Hop": {
     // Loop-based: two bars, dark minor 7ths, short and behind the beat; the 808 owns the low end, so
     // the chords stay out of the bass's way (a small register lift, not a wide voicing).
-    chord: { quality: "seventh", style: "block", chordBeats: 4, bars: 2, octaveOffset: 1 },
+    chord: { quality: "seventh", style: "block", chordBeats: 4, bars: 2, octaveOffset: 1, degrees: [0, 5] },
     roles: {
       bass: { style: "sustain", gateScale: 1.8 },
       percussion: { style: "ghost", everySteps: 2 },
@@ -135,7 +135,7 @@ export const CATEGORY_EXPRESSION_PROFILES: Record<GenreCategory, GenreExpression
   "Jazz/Blues": {
     // Comping: 7th chords, syncopated (two chords a bar), voiced around middle C, no arpeggios —
     // the comp is the accompaniment and the walking bass supplies the motion.
-    chord: { quality: "seventh", style: "block", chordBeats: 2, bars: 4, octaveOffset: 0 },
+    chord: { quality: "seventh", style: "block", chordBeats: 2, bars: 4, octaveOffset: 0, progressionId: "major-two-five-one" },
     roles: {
       bass: { style: "legato", gateScale: 1.6 },
       lead: { style: "authored" },
@@ -143,7 +143,7 @@ export const CATEGORY_EXPRESSION_PROFILES: Record<GenreCategory, GenreExpression
   },
   "Latin/World": {
     // Montuno-style: broken chords in eighths, four bars, with the percussion carrying the pattern.
-    chord: { quality: "triad", style: "broken", chordBeats: 4, bars: 4, octaveOffset: 0, arpStepBeats: 0.5 },
+    chord: { quality: "triad", style: "broken", chordBeats: 4, bars: 4, octaveOffset: 0, arpStepBeats: 0.5, degrees: [0, 10, 8, 7] },
     roles: {
       percussion: { style: "authored" },
       bass: { style: "legato", gateScale: 1.3 },
@@ -151,7 +151,7 @@ export const CATEGORY_EXPRESSION_PROFILES: Record<GenreCategory, GenreExpression
   },
   "Pop/R&B": {
     // The broadest space: triads and 7ths, arpeggiated or strummed, one chord a bar, four bars.
-    chord: { quality: "triad", style: "arpeggio", chordBeats: 4, bars: 4, octaveOffset: 0, arpStepBeats: 0.25 },
+    chord: { quality: "triad", style: "arpeggio", chordBeats: 4, bars: 4, octaveOffset: 0, arpStepBeats: 0.25, progressionId: "axis-of-awesome" },
     roles: {
       lead: { style: "legato", gateScale: 1.5 },
       bass: { style: "authored" },
@@ -160,7 +160,7 @@ export const CATEGORY_EXPRESSION_PROFILES: Record<GenreCategory, GenreExpression
   "Rock/Metal": {
     // Power chords, struck short and hard, one or two a bar, with the riff repeating every two bars
     // (a rock pattern that states a four-bar progression is unusual — the riff *is* the hook).
-    chord: { quality: "power", style: "stab", chordBeats: 4, bars: 2, octaveOffset: -1 },
+    chord: { quality: "power", style: "stab", chordBeats: 4, bars: 2, octaveOffset: -1, progressionId: "punk-power-chords" },
     roles: {
       bass: { style: "authored" },
       hihat: { style: "authored" },
@@ -198,7 +198,7 @@ export const GENRE_EXPRESSION_AUTHORED: Record<string, GenreExpressionOverride> 
     reason: "Bebop comping changes chord every beat and uses extensions, not plain 7ths.",
   },
   "modal-jazz": {
-    expression: { chord: { quality: "quartal", style: "sustain", chordBeats: 8 } },
+    expression: { chord: { quality: "quartal", style: "sustain", chordBeats: 4 } },
     reason: "Modal jazz sits on one chord for bars at a time with quartal voicings.",
   },
   "progressive-house": {
@@ -2299,8 +2299,8 @@ export const GENRE_EXPRESSION_GENERATED: Record<string, GenreExpressionOverride>
       "chord": {
         "quality": "quartal",
         "style": "sustain",
-        "chordBeats": 8,
-        "bars": 8,
+        "chordBeats": 4,
+        "bars": 4,
         "octaveOffset": 0
       },
       "roles": {
@@ -2310,14 +2310,14 @@ export const GENRE_EXPRESSION_GENERATED: Record<string, GenreExpressionOverride>
         }
       }
     },
-    "reason": "Modal jazz (Kind of Blue) deliberately abandons functional changes: one quartal voicing is sustained for two bars (chordBeats 8 over an 8-bar form) above a pedal bass, with no progressionId at all."
+    "reason": "Modal jazz (Kind of Blue) deliberately abandons functional changes: quartal voicings sustained for a full bar (chordBeats 4 over a 4-bar form) above a pedal bass, with no progressionId at all."
   },
   "free-jazz": {
     "expression": {
       "chord": {
         "quality": "quartal",
         "style": "sustain",
-        "chordBeats": 3,
+        "chordBeats": 4,
         "bars": 4,
         "octaveOffset": 0
       },
@@ -2327,7 +2327,7 @@ export const GENRE_EXPRESSION_GENERATED: Record<string, GenreExpressionOverride>
         }
       }
     },
-    "reason": "Free jazz is intentionally non-functional: quartal/cluster sonorities of unequal length (chordBeats 3 against a 4-bar span, no progressionId) instead of a repeating tonal cycle, with no written walking bass."
+    "reason": "Free jazz is intentionally non-functional: quartal/cluster sonorities sustained across bars (chordBeats 4 against a 4-bar span, no progressionId) instead of a repeating tonal cycle, with no written walking bass."
   },
   "jazz-fusion": {
     "expression": {
@@ -3338,27 +3338,47 @@ export function expressionStepCount(expression: GenreExpression, pattern: Pick<S
 }
 
 /** Roman/degree list for the expression's progression, resolved to degrees (0 = tonic). */
-export function progressionDegrees(expression: GenreExpression): number[] {
+export function progressionDegrees(
+  expression: GenreExpression,
+  options?: { scale?: string; commonChords?: string[] }
+): number[] {
   const rule = expression.chord;
   if (rule.progressionId) {
     const entry = POPULAR_PROGRESSIONS.find((p) => p.id === rule.progressionId);
     if (entry && entry.roman.length > 0) {
-      return entry.roman.map(romanToDegree);
+      return entry.roman.map((r) => romanToDegree(r, options?.scale));
     }
   }
   if (rule.degrees && rule.degrees.length > 0) return [...rule.degrees];
+  if (options?.commonChords && options.commonChords.length > 0) {
+    const firstProg = options.commonChords[0];
+    if (typeof firstProg === "string") {
+      const tokens = firstProg.split(/[–\-—\s>→,]+/).filter(Boolean);
+      if (tokens.length > 0) {
+        return tokens.map((r) => romanToDegree(r, options?.scale));
+      }
+    }
+  }
   // No progression declared: hold the tonic, which is at least musically coherent.
   return [0];
 }
 
-/** "bVII" / "IV" / "vi°" → a scale degree, as a semitone offset from the tonic. */
-export function romanToDegree(roman: string): number {
+/** "bVII" / "♭VII" / "IV" / "vi°" → a scale degree, as a semitone offset from the tonic. */
+export function romanToDegree(roman: string, scale?: string): number {
   const text = roman.trim().replace(/[°ø+Δ]/g, "");
-  const flat = /^b/.test(text) ? -1 : 0;
-  const sharp = /^#/.test(text) ? 1 : 0;
-  const body = text.replace(/^[b#]/, "").toUpperCase();
+  const flat = /^[b♭]/.test(text) ? -1 : 0;
+  const sharp = /^[#♯]/.test(text) ? 1 : 0;
+  const body = text.replace(/^[b♭#♯]/, "");
+  if (body.toUpperCase() === "N") return 1;
+  const upper = body.toUpperCase();
   const table: Record<string, number> = { I: 0, II: 2, III: 4, IV: 5, V: 7, VI: 9, VII: 11 };
-  const base = table[body.replace(/[^IVX]/g, "")] ?? 0;
+  let base = table[upper.replace(/[^IVX]/g, "")] ?? 0;
+  const isMinorScale = scale ? /minor|dorian|phrygian|aeolian|locrian/i.test(scale) : false;
+  if (!flat && !sharp && isMinorScale) {
+    if (upper === "III") base = 3;
+    else if (upper === "VI") base = 8;
+    else if (upper === "VII") base = 10;
+  }
   return ((base + flat + sharp) % 12 + 12) % 12;
 }
 
@@ -3405,7 +3425,7 @@ function arpSteps(expression: GenreExpression, pattern: SequencerPattern): numbe
 export function expandGenrePattern(
   pattern: SequencerPattern,
   expression: GenreExpression,
-  options: { authoredStepCount?: number } = {}
+  options: { authoredStepCount?: number; commonChords?: string[] } = {}
 ): SequencerPattern {
   const chordsTrack = pattern.tracks.find((t) => t.track_id === "chords");
   if (chordsTrack?.pitches?.some((stack) => Array.isArray(stack) && stack.length > 0)) {
@@ -3418,7 +3438,7 @@ export function expandGenrePattern(
   const total = expressionStepCount(expression, pattern);
   const authored = options.authoredStepCount ?? pattern.tracks[0]?.steps.length ?? total;
   const perBar = stepsPerBarFor(pattern);
-  const degrees = progressionDegrees(expression);
+  const degrees = progressionDegrees(expression, { scale: pattern.scale, commonChords: options.commonChords });
   const slots = Math.max(1, Math.floor(total / chordSteps(expression, pattern)));
   const style = expression.chord.style;
   const voicingStyle = VOICING_FOR_QUALITY[expression.chord.quality];
@@ -3497,21 +3517,20 @@ export function expandGenrePattern(
       };
 
       marks.forEach((mark, index) => {
-        const degree = degrees[index % degrees.length];
-        const rootMidi = chordRootMidi(pattern, degree, expression.chord.octaveOffset, authoredRoot);
+        const authoredNote = track.pitch?.[mark % authored];
+        const hasAuthoredPitch = typeof authoredNote === "number" && authoredNote > 0;
+        const markRoot = hasAuthoredPitch ? authoredNote : authoredRoot;
+        const degree = hasAuthoredPitch && authoredSlots.length >= 2
+          ? 0
+          : degrees[index % degrees.length];
+        const rootMidi = chordRootMidi(pattern, degree, expression.chord.octaveOffset, markRoot);
         const voicing = chordVoicingForStep(rootMidi, pattern.scale, { style: voicingStyle });
 
         const gap = Math.max(0.1, nextMarkAfter(index) - mark);
 
-        if (style === "arpeggio" || style === "broken") {
-          // Written as **real notes** (the user's decision): visible and editable in the roll, and
-          // exported identically because there is nothing left to expand at playback.
-          const order =
-            style === "arpeggio"
-              ? voicing
-              : gap < 8
-              ? voicing
-              : voicing.flatMap((note, i) => (i === 0 ? [note, note] : [note]));
+        if (style === "arpeggio") {
+          // Written as real arpeggiated single notes when explicitly requested
+          const order = voicing;
           const span = Math.max(1, Math.floor(gap / Math.max(1, order.length)));
           const stepInterval = Math.max(1, Math.min(arp, span));
           order.forEach((note, i) => {
@@ -3520,15 +3539,12 @@ export function expandGenrePattern(
             steps[at] = 1;
             pitches[at] = [note];
             pitch[at] = note;
-            // Arpeggio notes are shortened; broken-chord roots ring a little longer than the upper
-            // voices, which is what makes the pattern read as an accompaniment rather than a scale.
-            const length = style === "arpeggio" ? stepInterval : i % 2 === 0 ? stepInterval * 1.5 : stepInterval;
-            gate[at] = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Math.min(length, gap)));
+            gate[at] = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Math.min(stepInterval, gap)));
           });
           return;
         }
 
-        // Block/stab/sustain/ballad/strum: one stack per chord slot, held no longer than the gap to
+        // Block/stab/sustain/ballad/strum/broken: one stack per chord slot, held no longer than the gap to
         // the next chord.
         const nominal = style === "stab" ? Math.max(0.5, Math.min(2, chordGate / 2)) : chordGate;
         const lengthFor = Math.min(nominal, gap);

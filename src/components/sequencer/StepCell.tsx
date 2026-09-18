@@ -30,6 +30,11 @@ export interface StepCellProps {
   trackColor: string;
   isAlternateBar?: boolean;
   isCompact?: boolean;
+  isSustainTail?: boolean;
+  isSustainEnd?: boolean;
+  hasSustainFollower?: boolean;
+  sustainSourceIdx?: number;
+  sustainTotalSteps?: number;
   onClick?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
   onContextMenu?: (trackIdx: number, stepIdx: number, e: React.MouseEvent) => void;
   onPointerDown?: (trackIdx: number, stepIdx: number, e: React.PointerEvent) => void;
@@ -59,6 +64,11 @@ export const StepCell = memo<StepCellProps>(function StepCell({
   trackColor,
   isAlternateBar = false,
   isCompact = false,
+  isSustainTail = false,
+  isSustainEnd = false,
+  hasSustainFollower = false,
+  sustainSourceIdx,
+  sustainTotalSteps,
   articulationGateScale,
   articulationLabel,
   onClick,
@@ -147,10 +157,22 @@ export const StepCell = memo<StepCellProps>(function StepCell({
     <div
       role="gridcell"
       tabIndex={0}
-      aria-selected={isOn}
-      aria-label={`Track ${trackIdx + 1} Step ${stepIdx + 1}, ${isOn ? "Active" : "Empty"}`}
+      aria-selected={isOn || isSustainTail}
+      aria-label={
+        isSustainTail
+          ? `Track ${trackIdx + 1} Step ${stepIdx + 1}, Sustained note`
+          : `Track ${trackIdx + 1} Step ${stepIdx + 1}, ${isOn ? "Active" : "Empty"}`
+      }
+      title={
+        isSustainTail && sustainSourceIdx !== undefined
+          ? `和弦持续音 (来自第 ${sustainSourceIdx + 1} 步)`
+          : undefined
+      }
       data-track-idx={trackIdx}
       data-step-idx={stepIdx}
+      data-testid={`step-cell-${trackIdx}-${stepIdx}`}
+      data-active={isOn ? "true" : "false"}
+      {...(isSustainTail ? { "data-step-sustain": "tail" } : {})}
       onClick={onClick ? (e) => onClick(trackIdx, stepIdx, e) : undefined}
       onKeyDown={handleKeyDown}
       onContextMenu={onContextMenu ? (e) => onContextMenu(trackIdx, stepIdx, e) : undefined}
@@ -166,24 +188,78 @@ export const StepCell = memo<StepCellProps>(function StepCell({
           ? "ml-2 sm:ml-2.5 border-l border-[#3a3e48]"
           : ""
       } ${
-        isHatRound ? "rounded-full" : "rounded-md"
+        isHatRound
+          ? "rounded-full"
+          : isSustainTail && !isSustainEnd
+          ? "rounded-none"
+          : isSustainTail && isSustainEnd
+          ? "rounded-r-md rounded-l-none"
+          : hasSustainFollower
+          ? "rounded-l-md rounded-r-none"
+          : "rounded-md"
       } ${
         isOutsideLoop
           ? "opacity-35 bg-[#0f111a] border-[#1a1c28] cursor-not-allowed"
           : isOn
           ? isLoopedRepeat
             ? "border-dashed border-white/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_8px_var(--tc)]"
+            : hasSustainFollower
+            ? "border-t border-t-white/60 border-y-transparent border-l-transparent border-r-0 shadow-[inset_0_1px_2px_rgba(0,0,0,0.3),0_0_12px_var(--tc)]"
             : "border-t border-t-white/60 border-transparent shadow-[inset_0_1px_2px_rgba(0,0,0,0.3),0_0_12px_var(--tc)]"
+          : isSustainTail
+          ? `border-y border-y-[var(--tc)]/40 border-l-0 ${isSustainEnd ? "border-r border-r-[var(--tc)]/40" : "border-r-0"} shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)] hover:border-y-accent/60`
           : isAlternateBar
           ? "bg-[#181c2c] border-[#282e42] hover:border-accent/50 hover:bg-[#1f253a] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
           : "bg-[#131522] border-[#202434] hover:border-accent/50 hover:bg-[#191c2c] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]"
       }`}
       style={{
-        backgroundColor: !isOutsideLoop && isOn ? trackColor : undefined,
-        opacity: isOutsideLoop ? 0.25 : isOn ? (isLoopedRepeat ? 0.85 : 1) * (0.45 + (velocity / 127) * 0.55) : 1,
+        backgroundColor:
+          !isOutsideLoop && isOn
+            ? trackColor
+            : !isOutsideLoop && isSustainTail
+            ? "color-mix(in srgb, var(--tc) 22%, transparent)"
+            : undefined,
+        opacity: isOutsideLoop
+          ? 0.25
+          : isOn
+          ? (isLoopedRepeat ? 0.85 : 1) * (0.45 + (velocity / 127) * 0.55)
+          : isSustainTail
+          ? 0.92
+          : 1,
         ["--tc" as any]: trackColor,
       }}
     >
+      {/* DAW-grade multi-step chord sustain ribbon */}
+      {isSustainTail && !isOutsideLoop && (
+        <>
+          <div
+            data-testid="chord-sustain-tail"
+            className={`absolute inset-x-0 top-1/2 -translate-y-1/2 h-2.5 sm:h-3 pointer-events-none ${
+              isSustainEnd ? "rounded-r-full" : ""
+            }`}
+            style={{
+              backgroundColor: trackColor,
+              opacity: 0.55,
+              boxShadow: `0 0 8px ${trackColor}`,
+            }}
+          />
+          <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[7.5px] font-bold text-white/60 tracking-tighter leading-none pointer-events-none drop-shadow">
+            {isSustainEnd ? "┤" : "─"}
+          </span>
+        </>
+      )}
+
+      {/* Head-to-tail connector link on the trigger cell */}
+      {hasSustainFollower && !isOutsideLoop && (
+        <span
+          className="absolute top-1/2 -translate-y-1/2 -right-1 w-2 h-2.5 sm:h-3 pointer-events-none z-10"
+          style={{
+            backgroundColor: trackColor,
+            opacity: 0.85,
+            boxShadow: `0 0 6px ${trackColor}`,
+          }}
+        />
+      )}
       {/* Tactile hardware bevel specular acrylic highlight */}
       {isOn && !isOutsideLoop && (
         <span

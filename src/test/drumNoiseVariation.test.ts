@@ -106,11 +106,11 @@ describe("per-hit noise offsets reach the drum voices", () => {
     await renderPatternOffline(drumPattern("snare", "Snare", 16), { drumKit: "909" });
 
     const ctx = FakeOfflineAudioContext.lastInstance!;
-    const bufferLength = 44100 * 2; // the shared 2 s noise bed
+    const bufferDuration = 2; // the shared 2 s noise bed
     for (const source of ctx.createdBufferSources) {
       for (const { offset } of source.started) {
         expect(offset).toBeGreaterThanOrEqual(0);
-        expect(offset).toBeLessThan(bufferLength);
+        expect(offset).toBeLessThan(bufferDuration);
       }
     }
   });

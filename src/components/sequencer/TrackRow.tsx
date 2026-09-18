@@ -1,6 +1,6 @@
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { ChevronDown, ChevronRight, Music2, Play, Sliders, SlidersHorizontal, Wand2 } from "lucide-react";
-import { SequencerTrack } from "../../types/genre";
+import { MAX_NOTE_GATE_STEPS, SequencerTrack } from "../../types/genre";
 import { StepCell } from "./StepCell";
 import { useLanguage } from "../../i18n/LanguageContext";
 
@@ -91,6 +91,7 @@ export interface TrackRowProps {
   onChangeSwing?: (trackIdx: number, swing: number) => void;
   isCompact?: boolean;
   onToggleCompact?: (trackIdx: number) => void;
+  onSetChordDuration?: (trackIdx: number, gate: number) => void;
 }
 
 export const TrackRow = memo<TrackRowProps>(function TrackRow({
@@ -128,6 +129,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   onChangeSwing,
   isCompact = false,
   onToggleCompact,
+  onSetChordDuration,
 }) {
   const { t } = useLanguage();
   const trackVol = track.volume !== undefined ? track.volume : 0.8;
@@ -135,6 +137,55 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   const trackLen = track.trackLength || stepCount;
   const typeCategory = getTrackCategory(track.track_id, track.name || meta.name);
   const typeDetails = getTrackTypeDetails(typeCategory, isZh);
+
+  const { sustainMap, sustainHeadSet } = useMemo(() => {
+    const map = new Map<
+      number,
+      {
+        isSustainTail: boolean;
+        isSustainEnd: boolean;
+        sourceStepIdx: number;
+        totalSteps: number;
+      }
+    >();
+    const heads = new Set<number>();
+    if (!track.steps || track.steps.length === 0) return { sustainMap: map, sustainHeadSet: heads };
+
+    const total = track.steps.length;
+    let s = 0;
+    while (s < total) {
+      const activeS = trackLen > 0 ? s % trackLen : s;
+      const stepVal = track.steps[s] !== undefined ? track.steps[s] : (track.steps[activeS] || 0);
+      if (stepVal > 0) {
+        const rawGate = track.gate?.[s] ?? track.gate?.[activeS] ?? 0.8;
+        const effectiveSteps = Math.min(MAX_NOTE_GATE_STEPS, Math.round(rawGate));
+        if (effectiveSteps > 1) {
+          let span = 1;
+          for (let next = s + 1; next < s + effectiveSteps && next < total; next++) {
+            const nextActive = trackLen > 0 ? next % trackLen : next;
+            const nextVal = track.steps[next] !== undefined ? track.steps[next] : (track.steps[nextActive] || 0);
+            if (nextVal > 0) {
+              break;
+            }
+            span++;
+          }
+          if (span > 1) {
+            heads.add(s);
+            for (let t = 1; t < span; t++) {
+              map.set(s + t, {
+                isSustainTail: true,
+                isSustainEnd: t === span - 1,
+                sourceStepIdx: s,
+                totalSteps: span,
+              });
+            }
+          }
+        }
+      }
+      s++;
+    }
+    return { sustainMap: map, sustainHeadSet: heads };
+  }, [track.steps, track.gate, trackLen]);
 
   return (
     <div
@@ -274,6 +325,31 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             >
               L:{track.trackLength || stepCount}
             </button>
+            {/* Chord Duration / Technique Selector */}
+            {track.track_id === "chords" && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const cur = track.gate?.find((_, i) => (track.steps?.[i] ?? 0) > 0) ?? 16;
+                  // Cycle: 16 (4 beats / 1 bar) -> 8 (2 beats / half bar) -> 4 (1 beat) -> 2 (0.5 beat) -> 16
+                  const next = cur >= 12 ? 8 : cur >= 6 ? 4 : cur >= 3 ? 2 : 16;
+                  onSetChordDuration?.(trackIdx, next);
+                }}
+                data-testid={`chord-duration-button-${trackIdx}`}
+                className="px-1 sm:px-1.5 h-5 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border bg-[#17181c] border-line text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none font-bold shadow-[0_0_4px_rgba(245,183,61,0.15)]"
+                title={isZh ? "和弦长度 (点击切换 4拍/2拍/1拍/半拍)" : "Chord Length (Click to cycle 4 / 2 / 1 / 0.5 beats)"}
+                aria-label="Cycle Chord Length"
+              >
+                {(() => {
+                  const g = track.gate?.find((_, i) => (track.steps?.[i] ?? 0) > 0) ?? 16;
+                  if (g >= 12) return isZh ? "4拍" : "4B";
+                  if (g >= 6) return isZh ? "2拍" : "2B";
+                  if (g >= 3) return isZh ? "1拍" : "1B";
+                  return isZh ? "半拍" : "½B";
+                })()}
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -464,6 +540,12 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
           const isBarStart = stepIdx % stepsPerBar === 0 && stepIdx !== 0;
           const isGroupStart = stepIdx % groupSize === 0 && stepIdx !== 0;
           const gate = track.gate?.[stepIdx] ?? track.gate?.[activeStepIdx];
+          const sustainInfo = sustainMap.get(stepIdx);
+          const isSustainTail = Boolean(sustainInfo?.isSustainTail);
+          const isSustainEnd = Boolean(sustainInfo?.isSustainEnd);
+          const hasSustainFollower = sustainHeadSet.has(stepIdx);
+          const sustainSourceIdx = sustainInfo?.sourceStepIdx;
+          const sustainTotalSteps = sustainInfo?.totalSteps;
 
           return (
             <StepCell
@@ -490,6 +572,11 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               trackColor={meta.color}
               isAlternateBar={isAlternateBar}
               isCompact={isCompact}
+              isSustainTail={isSustainTail}
+              isSustainEnd={isSustainEnd}
+              hasSustainFollower={hasSustainFollower}
+              sustainSourceIdx={sustainSourceIdx}
+              sustainTotalSteps={sustainTotalSteps}
             />
           );
         })}
