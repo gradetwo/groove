@@ -1,19 +1,19 @@
 {
-  "version": "2.0.51",
+  "version": "2.0.52",
   "releaseDate": "2026-09-18",
-  "changelogCount": 115,
+  "changelogCount": 116,
   "latest": {
-    "version": "2.0.51",
+    "version": "2.0.52",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.51 手机端触控目标放大：轨道行控制从 20px 提升到 36px，静音/独奏不再需要精准点击",
-      "en": "v2.0.51 Larger Phone Touch Targets: Track-Row Controls 20px → 36px, No More Precision Tapping"
+      "zh": "v2.0.52 手机端步进格尺寸达标：28×40px → 36×44px，打拍子不再需要精准点击",
+      "en": "v2.0.52 Phone Step Grid Now Meets Touch Standards: 28×40px → 36×44px"
     },
     "highlights": [
       {
-        "zh": "**轨道行控制触控目标 20px → 36px**：试听、静音、独奏、检查器、折叠、移动等八个按钮此前在手机上只有 20×20px，而人手指的可靠触控面积约 44px、可接受下限约 32px——静音和独奏是编曲时最常点的两个按钮，却最难点中，误触还会改错轨道状态。现在手机端为 36×36px（桌面端保持 16px 不动，因为鼠标精度足够且工具栏已经很拥挤），仍能在一屏内放下 8 条轨道。",
-        "en": "**Track-row controls 20px → 36px**: the eight buttons in each row (audition, mute, solo, inspector, fold, move) were 20×20 px on a phone, while a finger needs about 44 px and tolerates no less than ~32 px. Mute and solo are the two most-tapped controls when arranging, and they were the hardest to hit — a miss also changed the wrong track's state. They are 36×36 px on phones now (desktop keeps 16 px, where the pointer is precise and the toolbar is already dense), and eight tr…"
+        "zh": "**步进格 28×40px → 36×44px**：步进格是真正「打拍子」的表面，它的尺寸不是样式偏好而是乐器是否可弹的问题。手机实测原为 28×40px（宽 28px 明显低于约 32px 的可用下限、高度 40px 差 4px 到 44px 建议值），而同一视口里还挤着 40 多个控件，所以这次只增高度与宽度、不加任何底部栏。桌面端保持 16px 行高与自适应宽度不变（那里旁边还有信息面板要放 8 条轨道）。横向密度由网格自身滚动承担——这是移动端音序器的标准做法（GarageBand / Figure 同理），不是把格子压小。",
+        "en": "**Step cells 28×40px → 36×44px**: the step grid is the surface a beat is actually programmed on, so its cell size is not a styling preference — it is whether the instrument is playable. Measured on a phone it was 28×40 px: 28 px wide is below the ~32 px practical floor and 40 px tall misses the 44 px recommendation by four pixels, while the same viewport already carries 40-odd other controls. So the fix gains height and width without adding any chrome. Desktop is unchanged (…"
       }
     ],
     "truncated": false
