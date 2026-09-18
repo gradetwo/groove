@@ -1,23 +1,27 @@
 {
-  "version": "2.0.53",
+  "version": "2.0.54",
   "releaseDate": "2026-09-18",
-  "changelogCount": 117,
+  "changelogCount": 118,
   "latest": {
-    "version": "2.0.53",
+    "version": "2.0.54",
     "date": "2026-09-19",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.53 手机端不再提供钢琴卷帘（附替代路径说明），步进格尺寸达标",
-      "en": "v2.0.53 Piano Roll Withdrawn from Phones (With an Explanation), Step Grid Meets Touch Standards"
+      "zh": "v2.0.54 修复「看起来在播却没声音」：播放不再谎报成功，音频被阻止时明确告知",
+      "en": "v2.0.54 Fix \"Looks Like It Is Playing But There Is No Sound\": Playback No Longer Claims Success It Cannot Observe"
     },
     "highlights": [
       {
-        "zh": "**手机端不再提供钢琴卷帘**：实测在 390×664 手机上，卷帘抽屉高 **1095px**、音符网格宽 **2304px**、工具栏 **55 个按钮**，且网格必须 `touch-action: none`（单指拖动要用来画音符，因此没有手势留给平移）——结果是绝大部分网格在屏幕外且无法导航。这不是调参能解决的问题，所以按「提供的功能必须好用」的原则，手机端不提供它，而不是提供一个能打开却没法用的界面。取而代之的是：音符仍在步进网格编辑（点按放置、长按调参数），和弦走向用「和弦」视图；抽屉里的入口改为「编辑音符」说明，讲清楚原因并给出前往和弦视图的按钮——被省略的功能要**明确省略并给出去处**，而不是静默消失。E2E 在手机上断言这条说明与去处确实存在。",
-        "en": "**The piano roll is no longer offered on phones**: measured on a 390×664 device the roll drawer is 1095 px tall, its note grid 2304 px wide, its toolbar 55 buttons, and the grid must carry `touch-action: none` — a one-finger drag has to paint a note, so no gesture is left to pan with. Most of the grid is therefore off-screen and unreachable. That is not a tuning problem, so rather than shipping a surface that opens and cannot be used, the phone does not offer it. Notes stay…"
+        "zh": "**播放不再谎报成功**：`play()` 是异步的，它会 `await ctx.resume()`——而 iOS 打开静音开关（或任何需要新一次用户手势的浏览器）时，这个 resume 会被拒绝、或只是让音频上下文保持 suspended。此前调用处既不 await 也不 catch，却无条件把界面置为「播放中」：于是按钮亮起、播放头走动、**一点声音都没有**，而且因为 Promise 拒绝无人处理，连一条错误都没有。现在只有真的开始播放才报告播放；若音频被阻止，则**停止走带并把原因告诉用户**——一个在没有声音的轨道上空转的播放头，是音乐类应用能给出的最糟糕的第一印象。",
+        "en": "**Playback no longer claims success it cannot observe**: `play()` is async and awaits `ctx.resume()`, which on iOS with the silent switch on — or in any browser that wants a fresh user gesture — either rejects or simply leaves the context suspended. The caller neither awaited nor caught it and set \"playing\" unconditionally, so the button lit up, the playhead advanced and **nothing was audible**; the rejection was also unhandled, so nothing reported it. Playback is now report…"
       },
       {
-        "zh": "**步进格 28×40px → 36×44px**：步进格是真正打拍子的表面，手机实测原为 28×40px（宽低于约 32px 可用下限、高差 4px 到 44px 建议值）。改为 36×44px，桌面端保持 16px 行高与自适应宽度（那里还要在信息面板旁放下 8 条轨道）。横向密度由网格自身滚动承担——这是移动端音序器的标准做法。",
-        "en": "**Step cells 28×40px → 36×44px**: the step grid is where a beat is actually programmed, and measured on a phone it was 28×40 px (28 px wide is below the ~32 px floor; 40 px tall misses the 44 px recommendation by four). Now 36×44 px, with desktop unchanged at 16 px rows and flexible width, where eight tracks must still fit beside the information dossier. Horizontal density stays with the grid's own scroll, which is how mobile sequencers work."
+        "zh": "**新增可检测的「音频被阻止」状态**：`AudioEngine.isAudioBlocked()` 直接读音频上下文的真实状态，而不是靠推断。此前 `initIosAudioUnlock` 与 `ctx.resume()` 其实都已经在 `play()` 里调用，缺的正是「如何知道它没成功」。",
+        "en": "**New detectable blocked-audio state**: `AudioEngine.isAudioBlocked()` reads the audio context's real state instead of inferring it. `initIosAudioUnlock` and `ctx.resume()` were already being called inside `play()`; what was missing was any way to know they had not succeeded."
+      },
+      {
+        "zh": "**测试**：`transportPlaybackTruth.test.ts` 八条，覆盖「先 await 再报播放」「被阻止时不报播放并停止 + 提示」「play() 拒绝时不产生未处理拒绝且走诚实路径」「关闭仍正常」「引擎未就绪时不动」以及 `isAudioBlocked` 的三种上下文状态（未初始化 / running / suspended）。",
+        "en": "**Tests**: eight in `transportPlaybackTruth.test.ts` covering \"await before reporting started\", \"blocked stops and explains instead of claiming playback\", \"a rejected play() produces no unhandled rejection and takes the honest path\", clean stop, no-op when the engine is absent, and the three context states for `isAudioBlocked` (uninitialised / running / suspended)."
       }
     ],
     "truncated": false

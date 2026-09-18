@@ -1472,6 +1472,21 @@ export class AudioEngine {
     return this.ctx;
   }
 
+  /**
+   * Whether audio cannot currently be heard even though the transport may be running.
+   *
+   * The iOS silent switch (and any browser that refuses to resume a suspended context without a
+   * fresh gesture) leaves `state === "suspended"`: `play()` returns, the scheduler starts, the
+   * playhead advances, and **nothing is audible**. That is worse than a failure, because the UI
+   * asserts success — the button lights up and the user concludes the app is broken.
+   *
+   * So the state is exposed rather than assumed: callers start playback, then ask. `null` context
+   * means audio was never initialised, which is also "cannot be heard".
+   */
+  public isAudioBlocked(): boolean {
+    return !this.ctx || this.ctx.state !== "running";
+  }
+
   public getCurrentStep(): number {
     return this.currentStep;
   }

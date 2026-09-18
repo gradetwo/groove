@@ -46,6 +46,15 @@ const { engineMock, AudioEngineCtor } = vi.hoisted(() => {
     stop: vi.fn(),
     destroy: vi.fn(),
     getIsPlaying: vi.fn(() => false),
+    /**
+     * Required by the transport: it asks the engine whether audio is actually audible before
+     * reporting playback, because a resolved `play()` does not prove sound is coming out (the iOS
+     * silent switch leaves the context suspended). Omitting it here made the toggle throw inside
+     * an async continuation, which surfaced as an *unhandled rejection* that failed the run while
+     * every individual test still passed — the worst shape of failure, since the suite reads green
+     * in the summary.
+     */
+    isAudioBlocked: vi.fn(() => false),
   };
   return { engineMock, AudioEngineCtor: vi.fn(() => engineMock) };
 });

@@ -90,21 +90,53 @@ export function useTransportControls({
     });
   }, [t, showToast]);
 
-  // Transport toggle play
-  const handleTogglePlay = useCallback(() => {
-    if (!engineRef.current) return;
+  /**
+   * Transport toggle play.
+   *
+   * `play()` is async and its `ctx.resume()` can reject or simply leave the context suspended
+   * (the iOS silent switch, a browser that wants a fresh gesture). The old code called it without
+   * awaiting and then set `isPlaying` unconditionally, so on those devices the transport lit up,
+   * the playhead ran and no sound came out — and the rejection was unhandled, so nothing reported
+   * it either. The UI was asserting success it could not observe.
+   *
+   * Now playback is only reported as started when it actually is, and a blocked context says so.
+   */
+  const handleTogglePlay = useCallback(async () => {
+    const engine = engineRef.current;
+    if (!engine) return;
     triggerHaptic(HapticPatterns.playPause);
     if (isPlaying) {
-      engineRef.current.stop();
+      engine.stop();
       setIsPlaying(false);
       clearPlayhead();
       announcer.announce(t("transport_playback_stopped"));
-    } else {
-      engineRef.current.play();
-      setIsPlaying(true);
-      announcer.announce(t("transport_playback_started"));
+      return;
     }
-  }, [isPlaying, clearPlayhead, t]);
+
+    try {
+      await engine.play();
+    } catch (error) {
+      // A rejected resume is a real failure worth reporting, not a reason to claim playback.
+      console.warn("[transport] playback could not start", error);
+    }
+
+    if (engine.isAudioBlocked()) {
+      /**
+       * Schedulers are running but the output is silent. Stopping is the honest state: leaving it
+       * "playing" would advance the playhead over a track nobody can hear, and the user would
+       * judge the app by the silence.
+       */
+      engine.stop();
+      setIsPlaying(false);
+      clearPlayhead();
+      showToast(t("transport_audio_blocked"));
+      announcer.announce(t("transport_audio_blocked_announce"));
+      return;
+    }
+
+    setIsPlaying(true);
+    announcer.announce(t("transport_playback_started"));
+  }, [isPlaying, clearPlayhead, engineRef, showToast, t]);
 
   const handleUndo = useCallback(() => {
     const prev = undo();

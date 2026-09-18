@@ -606,6 +606,19 @@ export const studioMessages = {
   transport_announce_drums_only_off: { en: "Drums only mode disabled", zh: "已关闭只听鼓组" },
   transport_playback_stopped: { en: "Playback stopped", zh: "已停止播放" },
   transport_playback_started: { en: "Playback started", zh: "开始播放" },
+  /**
+   * Shown when the audio context will not run — the iOS silent switch, or a browser that wants a
+   * fresh gesture. The transport is deliberately stopped instead of shown as playing, because a
+   * running playhead over silence is the single most "this app is broken" impression available.
+   */
+  transport_audio_blocked: {
+    en: "Audio is blocked by the browser or the silent switch — tap Play again, or turn the ringer on.",
+    zh: "音频被浏览器或静音开关阻止——请再点一次播放，或打开响铃。",
+  },
+  transport_audio_blocked_announce: {
+    en: "Playback could not start: audio output is blocked.",
+    zh: "无法开始播放：音频输出被阻止。",
+  },
   transport_undo_done: { en: "Undone ✓", zh: "已撤销 (Undo) ✓" },
   transport_redo_done: { en: "Redone ✓", zh: "已重做 (Redo) ✓" },
   transport_slot_copied: { en: "Copied Pattern {from} to {to} ✓", zh: "已将 Pattern {from} 复制至 {to} ✓" },
