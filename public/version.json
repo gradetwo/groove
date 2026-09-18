@@ -1,27 +1,27 @@
 {
-  "version": "2.0.49",
+  "version": "2.0.50",
   "releaseDate": "2026-09-18",
-  "changelogCount": 113,
+  "changelogCount": 114,
   "latest": {
-    "version": "2.0.49",
+    "version": "2.0.50",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.49 钢琴卷帘单轨试听与和弦试听根因修复、鼓组/合成音质一揽子修复、159 曲风按大类分档响度对齐",
-      "en": "v2.0.49 Piano-roll Lane Preview & Chord Audition Root-cause Fix, Drum/Synth Fidelity Pass, Per-category Loudness Alignment for All 159 Genres"
+      "zh": "v2.0.50 手机端独立 UI：底部导航与紧凑走带条、禁止误触放大镜与页面缩放、修复底栏遮挡控件",
+      "en": "v2.0.50 Phone-Specific UI: Bottom Tab Bar & Compact Transport, Zoom/Magnifier Prevention, Fixed Tab-Bar Occlusion"
     },
     "highlights": [
       {
-        "zh": "**钢琴卷帘试听和弦的根因修复**：试听和弦进行时逐音触发，而和弦轨的引擎会为传进来的每个单音再配一副和弦——4 个音实际发出 12 个声部（24 个振荡器）。新增 `previewChord()` 一次播放整副已完成声部，并让试听与“写入进行”共用同一份音符计算函数，从结构上杜绝“试听到的和写入的不是一回事”。",
-        "en": "**Chord audition root cause fixed**: the progression audition fired one call per chord member, and the engine re-voices whatever single note a chords track is handed — so a four-note chord produced twelve voices (24 oscillators). A new `previewChord()` plays the finished voicing in one call, and audition now shares one note-calculation function with the stamp, so preview and result cannot disagree."
+        "zh": "**禁止误触放大镜与页面缩放**：viewport 去掉 `maximum-scale`（它会重新开启双指缩放，而 iOS 上一旦能缩放，长按/慢点就会弹出放大镜——在密集的步进格上等于每次点格子都被放大镜挡住）；根样式加 `touch-action: manipulation` 消除双击缩放（连点两个格子打拍子是常规操作，以前会被当成双击把整页放大）、`overscroll-behavior: none` 去掉橡皮筋回弹与下拉刷新、文档禁止横向滚动。另加主题色、独立应用（PWA）元信息与 `format-detection: telephone=no`，让手机端更像原生应用而不是网页。",
+        "en": "**Stop the magnifier and page zoom**: removed `maximum-scale` from the viewport (it re-enables pinch zoom, and on iOS being zoomable brings back the magnifier loupe — over a dense step grid that means every slightly-slow tap is blocked by a magnifying glass). `touch-action: manipulation` at the root kills double-tap zoom (tapping two step cells in a row is how a beat is programmed, and it used to zoom the page), `overscroll-behavior: none` removes rubber-banding and pull-to-…"
       },
       {
-        "zh": "**钢琴卷帘可单独播放当前谱子**：新增按轨隔离预览（只发被预览轨、按小节范围循环、复用走带与播放头），且不修改全局静音/独奏状态；卷帘内新增“试听本轨 / 停止 + 范围”控件，关闭卷帘自动停止。",
-        "en": "**Play just the current lane in the piano roll**: an isolated per-track preview (only the previewed track sounds, loops within a bar range, reuses the existing transport and playhead) that never touches global mute/solo state. New in-roll Play lane / Stop + Range controls; closing the roll stops it."
+        "zh": "**手机端独立导航**：新增底部五格标签栏（工作台 / 探索 / 学习 / 工具 / 我的），全部带文字标签、52px 触控高度、适配安全区，并在 `pointerup` 即响应而非等 300ms 的 click；其余视图收进一个底部抽屉，按用途分组（创作 / 学习 / 探索与分析 / 应用），每行 56px 且带说明文字。抽屉支持背景点击、关闭按钮、Esc 与拖拽把手四种关闭方式。",
+        "en": "**Phone-specific navigation**: a five-destination bottom tab bar (Studio / Explore / Learn / Tools / You) with visible text labels, 52 px targets and safe-area padding, committing on `pointerup` instead of waiting ~300 ms for a click. Every other view moves into one bottom sheet grouped by intent (Create / Learn / Explore & analyse / App), with 56 px rows that carry a description. The sheet dismisses by backdrop, close button, Escape or its drag handle."
       },
       {
-        "zh": "**鼓组一揽子音质修复**：开镲 choke 由阶跃改为解析式包络锚点平滑淡出（消除每次闭镲的咔哒）；51 个曲风声明的 clap/rimshot 军鼓此前被忽略、现按声明发声；选择底鼓预设不再连带换掉整套鼓；鼓音高轨整体移调（原先只移扫频起点导致落地跑调）；非 808 套件踩镲补上金属簇（此前是纯噪声）；开镲恢复镲片长度；拍手各次爆发读取不同噪声切片；底鼓补齐饱和级；`kick:*` 预设接上力度→音色。",
-        "en": "**Drum fidelity pass**: open-hat choke is now an analytic-envelope fade instead of a step (no click on every close); the clap/rimshot snare declared by 51 genres is finally voiced as declared; picking a kick preset no longer re-voices the whole kit; the drum pitch lane transposes the whole voice (it used to move only the sweep start, leaving the tail detuned); non-808 hats gain a metal cluster (they were pure noise); open hats ring like cymbals; clap bursts read different no…"
+        "zh": "**走带条替代 64 按钮工具栏**：桌面工具栏在 390px 宽的手机上占 47% 视口高度（项目自身实测数字）。手机端改为六个控件：播放、上一小节/下一小节、速度读数、撤销、重做、更多——全部 44px 触控高度且不含文本输入框（避免键盘弹起遮住网格）。缺少的控件（节拍器、预备拍、录音、只留鼓、歌曲模式、盲测、鼓组、力度泳道、钢琴卷帘、欧几里得、工程中心、导出、人性化、分析器、音频设置）全部进入抽屉。",
+        "en": "**A compact transport replaces the 64-button toolbar**: the desktop toolbar measured 47% of a 390 px phone viewport before a single step was visible (the project's own number). The phone gets six controls — play, previous/next bar, tempo readout, undo, redo, more — all 44 px and with no text input (a raised keyboard over the grid is its own failure). Everything omitted (metronome, count-in, record, drums-only, song mode, blind compare, drum kit, velocity lane, piano roll, Eu…"
       }
     ],
     "truncated": true

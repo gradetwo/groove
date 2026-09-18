@@ -786,6 +786,11 @@ async function runTestOnTarget(target, baseUrl) {
      * asserting a chip there would be asserting the absence of a deliberate design decision rather
      * than a bug.
      */
+    if (!(await page.$("[data-testid='mobile-transport-more']")) && !(await page.$("[data-testid='studio-gs1-toggle']"))) {
+      // Desktop: the chip lives in the advanced drawer, which may be closed.
+      await openStudioMoreControls(page);
+      await page.waitForTimeout(300);
+    }
     const hasGs1Chip = Boolean(await page.$("[data-testid='studio-gs1-toggle']"));
     if (hasGs1Chip) {
       const chipAfterPanelFlip = await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed");
@@ -800,7 +805,7 @@ async function runTestOnTarget(target, baseUrl) {
       if ((await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed")) !== "true") {
         throw new Error("Could not restore the GS-1 default after the settings-panel check");
       }
-    } else {
+    } else if (await page.$("[data-testid='mobile-transport-more']")) {
       // Phone: restore the default through the panel itself, which is the only surface that owns
       // the flag there.
       await page.click("[data-testid='mobile-transport-more']", { timeout: 10000 });
@@ -827,7 +832,14 @@ async function runTestOnTarget(target, baseUrl) {
     // below everything, on desktop it pushed the layout around. This asserts the real geometry —
     // a bottom sheet on phones, a full-height left dock on desktop — and that the timbre picker
     // can actually filter 115 names down to the one you want.
-    await page.click("[data-testid='track-inspector-open-0']", { force: true });
+    /**
+     * `force: true` dispatches at the element's box without checking what is on top of it, and the
+     * inspector toggle is small — 20×20 on a phone, 16×16 on a landscape phone, inside a track row
+     * that is itself horizontally scrolled. `clickVerified` scrolls the target into view, waits for
+     * the layout to settle and proves the click was delivered, which is what makes this
+     * deterministic across the seven targets rather than only on the wide ones.
+     */
+    await clickVerified(page, "[data-testid='track-inspector-open-0']");
     await page.waitForSelector("[data-testid='track-inspector']", { timeout: 15000 });
     const inspectorBox = await (await page.$("[data-testid='track-inspector']")).boundingBox();
     const viewport = page.viewportSize();
@@ -839,14 +851,28 @@ async function runTestOnTarget(target, baseUrl) {
     // and is exactly the kind of assumption a device-name check gets wrong.
     const desktopLayout = viewport.width >= 1024;
     if (!desktopLayout) {
-      // Pinned to the bottom of the viewport and spanning its width: a sheet, not a page section.
-      const touchingBottom = Math.abs(inspectorBox.y + inspectorBox.height - viewport.height) <= 4;
+      /**
+       * Pinned above the phone tab bar and spanning the viewport width: a sheet, not a page section.
+       *
+       * Measured against the tab bar rather than the viewport bottom, because on a phone the bar is
+       * fixed over the bottom of the screen and the inspector has to clear it — that overlap is what
+       * made the bottom ~52 px of the sheet (the whole EQ canvas in a landscape phone's 279 px tall
+       * sheet) unreachable. On a wide-but-short viewport the shell still shows the bar, so the same
+       * offset applies.
+       */
+      const tabBarHeight = await page.evaluate(() => {
+        const bar = document.querySelector("[data-testid='mobile-tab-bar']");
+        return bar ? bar.getBoundingClientRect().height : 0;
+      });
+      const expectedBottom = viewport.height - tabBarHeight;
+      const touchingBottom = Math.abs(inspectorBox.y + inspectorBox.height - expectedBottom) <= 6;
       // Width is "spans the viewport", not an exact match: a mobile engine can reserve a few px
       // for a scrollbar, and a 400 px desktop dock would be nowhere near the viewport width.
       const spansWidth = inspectorBox.width >= viewport.width - 16;
       if (!touchingBottom || inspectorBox.x > 2 || !spansWidth) {
         throw new Error(
-          `Inspector is not a bottom sheet on ${target.name}: box=${JSON.stringify(inspectorBox)} viewport=${JSON.stringify(viewport)}`
+          `Inspector is not a bottom sheet on ${target.name}: box=${JSON.stringify(inspectorBox)} ` +
+            `viewport=${JSON.stringify(viewport)} tabBar=${tabBarHeight} expectedBottom=${Math.round(expectedBottom)}`
         );
       }
     } else {
@@ -942,18 +968,51 @@ async function runTestOnTarget(target, baseUrl) {
     const eqPathBefore = await page.getAttribute("[data-testid='insert-eq-curve-path']", "d");
     const gainBefore = await page.inputValue("[data-testid='track-inspector-mid-gain']");
     const handle = await page.$("[data-testid='insert-eq-handle-mid']");
-    const handleBox = handle ? await handle.boundingBox() : null;
-    if (!handleBox) throw new Error("EQ band handle is not on screen");
-    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    if (!handle) throw new Error("EQ band handle is not on screen");
+    await handle.scrollIntoViewIfNeeded();
+    const handleBox = await handle.boundingBox();
+    if (!handleBox) throw new Error("EQ band handle has no measurable box");
+    /**
+     * Drag *within* the viewport.
+     *
+     * The distance used to be a fixed 24 px upward, which is fine on a desktop viewport and wrong
+     * on a landscape phone: the inspector dock is only ~279 px tall there, so a handle sitting
+     * near the top of the panel ends up outside the viewport mid-drag, the pointermove is not
+     * delivered, and the value never changes — a test failure that looks like a broken EQ but is
+     * really a broken gesture. The distance is therefore derived from the space actually above the
+     * handle, and the drag is required to stay inside the viewport.
+     */
+    const centreX = handleBox.x + handleBox.width / 2;
+    const centreY = handleBox.y + handleBox.height / 2;
+    const dragViewport = page.viewportSize() ?? { width: 390, height: 664 };
+    const roomAbove = centreY - 8;
+    const dragDistance = Math.max(6, Math.min(24, roomAbove));
+    if (roomAbove < 6) {
+      throw new Error(
+        `EQ band handle has no room above it to drag (centreY=${Math.round(centreY)}, viewport=${dragViewport.height})`
+      );
+    }
+    await page.mouse.move(centreX, centreY);
     await page.mouse.down();
-    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y - 24, { steps: 6 });
+    await page.mouse.move(centreX, centreY - dragDistance, { steps: 6 });
     await page.mouse.up();
     await page.waitForTimeout(250);
     const gainAfter = await page.inputValue("[data-testid='track-inspector-mid-gain']");
     const eqPathAfter = await page.getAttribute("[data-testid='insert-eq-curve-path']", "d");
     if (gainAfter === gainBefore && eqPathAfter === eqPathBefore) {
+      const dragDiag = await page.evaluate(() => {
+        const el = document.querySelector("[data-testid='insert-eq-handle-mid']");
+        const r = el?.getBoundingClientRect();
+        const top = r ? document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) : null;
+        return {
+          handleRect: r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } : null,
+          viewport: { w: window.innerWidth, h: window.innerHeight },
+          topAtCentre: top ? `${top.tagName.toLowerCase()}${top.getAttribute("data-testid") ? `[${top.getAttribute("data-testid")}]` : ""}` : "null",
+          scrollTop: document.querySelector("[data-testid='track-inspector']")?.scrollTop ?? null,
+        };
+      });
       throw new Error(
-        `Dragging the mid band handle changed nothing on ${target.name} (gain ${gainBefore} → ${gainAfter})`
+        `Dragging the mid band handle changed nothing on ${target.name} (gain ${gainBefore} → ${gainAfter}) :: ${JSON.stringify(dragDiag)}`
       );
     }
     console.log(`   · effects page: chain ok, drag moved mid gain ${gainBefore} → ${gainAfter} (${target.name})`);

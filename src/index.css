@@ -217,6 +217,26 @@ input[type=range]::-moz-range-thumb {
   -webkit-overflow-scrolling: touch;
 }
 
+/**
+ * Height of the phone tab bar, as a variable every bottom-anchored overlay can subtract.
+ *
+ * `0px` by default because the bar only exists below the `md` breakpoint (the header nav is hidden
+ * there and the tab bar replaces it). The media query at the end of this file raises it to the real
+ * height plus the safe-area inset, so a sheet that must sit above the bar is correct by
+ * construction rather than by a per-component guess. The track inspector needed exactly this: the
+ * bar was covering its last ~52 px, which on a landscape phone is the entire EQ canvas, and the
+ * measured symptom was a band handle whose hit test resolved to a tab-bar button.
+ */
+:root {
+  --mobile-tab-bar-h: 0px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --mobile-tab-bar-h: calc(52px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .overscroll-x-contain {
   overscroll-behavior-x: contain !important;
   overscroll-behavior-y: auto !important;

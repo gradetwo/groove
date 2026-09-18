@@ -408,7 +408,18 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
          * above the current layer on phones (bottom sheet, thumb-reachable, dismissible by
          * scrim/Escape/close) and docks to the left on desktop, where the studio stays visible.
          */
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col gap-3 overflow-y-auto rounded-t-2xl border border-line bg-panel p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.5)] lg:inset-y-0 lg:left-0 lg:right-auto lg:bottom-auto lg:h-full lg:max-h-none lg:w-[400px] lg:rounded-none lg:rounded-r-2xl lg:border-r lg:pb-3 lg:shadow-[8px_0_32px_rgba(0,0,0,0.45)]"
+        /**
+         * On a phone the inspector must clear the tab bar, not merely the safe area.
+         *
+         * The tab bar is `z-[70]` and fixed to the bottom; this sheet was `bottom-0 z-50`, so the
+         * bar covered the bottom ~52 px of the inspector — and on a landscape phone, where the
+         * sheet is only ~279 px tall, that is the whole EQ canvas. The measured symptom was an EQ
+         * band handle inside the covered strip whose hit test resolved to `mobile-tab-learn`: the
+         * drag never reached the handle, so the value never moved. Offsetting the sheet by the
+         * bar's height (plus the inset the bar itself adds) fixes the geometry for every control
+         * at the bottom of the sheet, not just the one the matrix happened to exercise.
+         */
+        className="fixed inset-x-0 bottom-[var(--mobile-tab-bar-h)] z-50 flex max-h-[82vh] flex-col gap-3 overflow-y-auto rounded-t-2xl border border-line bg-panel p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.5)] lg:inset-y-0 lg:left-0 lg:right-auto lg:bottom-auto lg:h-full lg:max-h-none lg:w-[400px] lg:rounded-none lg:rounded-r-2xl lg:border-r lg:pb-3 lg:shadow-[8px_0_32px_rgba(0,0,0,0.45)]"
       >
       {/* Phone affordance: a grab handle says "this sheet is dismissible" without a label. */}
       <div className="mx-auto h-1 w-10 shrink-0 rounded-full bg-line lg:hidden" aria-hidden="true" />

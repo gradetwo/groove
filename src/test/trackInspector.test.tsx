@@ -490,10 +490,19 @@ describe("TrackInspector · placement", () => {
   it("floats above the studio on phones and docks to the left on desktop", () => {
     setup();
     const panel = screen.getByTestId("track-inspector");
-    // Phones: pinned to the bottom of the viewport, never in the document flow.
+    /**
+     * Phones: pinned above the tab bar, never in the document flow.
+     *
+     * The offset is not `bottom-0` on purpose. The phone tab bar is `z-[70]` and fixed over the
+     * bottom of the viewport, so a sheet at `bottom-0 z-50` had its last ~52 px covered by the bar
+     * — and on a landscape phone, where this sheet is only ~279 px tall, that is the whole EQ
+     * canvas. The measured symptom was an EQ band handle whose hit test resolved to a tab-bar
+     * button, so a drag on it never reached the control. Asserting the offset makes the overlap a
+     * failing test rather than a geometry bug that only a device matrix could see.
+     */
     expect(panel.className).toContain("fixed");
     expect(panel.className).toContain("inset-x-0");
-    expect(panel.className).toContain("bottom-0");
+    expect(panel.className).toContain("bottom-[var(--mobile-tab-bar-h)]");
     // Desktop: a full-height left dock, so the sequencer stays visible while editing.
     expect(panel.className).toContain("lg:inset-y-0");
     expect(panel.className).toContain("lg:left-0");

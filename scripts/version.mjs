@@ -151,16 +151,21 @@ const DOC_VERSION_PATTERNS = [
   { file: "IMPROVEMENT_PLAN.md", re: /版本 \*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `版本 **v${version}**` },
   { file: "ROADMAP_V2.md", re: /\*\*当前基线\*\*：v\d+\.\d+\.\d+/, replacement: () => `**当前基线**：v${version}` },
   { file: "BACKLOG.md", re: /当前基线：\*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `当前基线：**v${version}**` },
-  {
-    file: "IMPROVEMENT_PLAN.md",
-    re: /全部 \d+ 个 TS\/TSX 文件、[\d,]+ 行/,
-    replacement: (text) => {
-      const size = measureSourceSize();
-      if (!/全部 \d+ 个 TS\/TSX 文件、[\d,]+ 行/.test(text)) return text;
-      return `全部 ${size.files} 个 TS/TSX 文件、${size.lines.toLocaleString("en-US")} 行`;
-    },
-  },
 ];
+
+/**
+ * The source-size claim in `IMPROVEMENT_PLAN.md`'s header is deliberately NOT maintained here.
+ *
+ * It used to be, and it made this gate flap: `measureSourceSize()` reads the working tree, so the
+ * number it demanded depended on untracked scratch files and on whether a test file happened to be
+ * mid-write, and the pattern rewrote the document to a figure the *next* run disagreed with. The
+ * result was a red `version:check` on a tree whose version was correct — a gate failing for a
+ * reason unrelated to what it is named after.
+ *
+ * `scripts/check_docs.mjs` already owns that claim, and owns it better: it compares against the
+ * real count with a ±10 % tolerance, which is the right precision for a round number in prose.
+ * One owner, and the precise tool is the permissive one.
+ */
 
 // Group by file first: several patterns target the same document, and computing each
 // "desired" content independently from the original text meant the later write silently
