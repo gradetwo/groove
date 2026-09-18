@@ -4,10 +4,19 @@
  * Implements sample-accurate lookahead scheduling with swing and track solo/mute/pan.
  */
 
-import { SequencerPattern, SequencerTrack } from "../types/genre";
+import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
 import { AudioWorkerBridge } from "./AudioWorkerBridge";
 import { AudioWorkletClock } from "./AudioWorkletClock";
-import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "./DrumKitModels";
+import {
+  DrumKitType,
+  synthesizeKick,
+  synthesizeSnare,
+  synthesizeHiHat,
+  synthesizePercussion,
+  drumEnvelopeLevelAt,
+  instrumentWantsPercussionVoice,
+  type DrumVoiceEnvelope,
+} from "./DrumKitModels";
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS, SynthPreset } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
 import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
@@ -16,6 +25,7 @@ import { initIosAudioUnlock } from "./iosAudioUnlock";
 import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp } from "./schedulerMath";
+import { resolveRatchet } from "./noteEvents";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -220,7 +230,7 @@ export class AudioEngine {
   // Drum Kit Models (P5-02)
   private drumKit: DrumKitType = "808";
   /** Acoustic enhancement: Active open hi-hat voices tracked for choking */
-  private openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number }> = [];
+  private openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number; envelope?: DrumVoiceEnvelope }> = [];
   private isDrumsOnly: boolean = false;
 
   // Master DSP Effects Rack (P5-04)
@@ -1524,7 +1534,14 @@ export class AudioEngine {
 
     while (this.nextStepTime < this.ctx.currentTime + this.scheduleAheadSec) {
       let step = this.currentStep;
-      if (this.loopRange) {
+      if (rangeStart !== null) {
+        // Preview scope owns the range: wrap inside it and ignore the transport loop.
+        const lEnd = rangeStart + stepsCount;
+        if (step < rangeStart || step >= lEnd) {
+          step = rangeStart;
+          this.currentStep = rangeStart;
+        }
+      } else if (this.loopRange) {
         const [lStart, lEnd] = this.loopRange;
         if (step < lStart || step >= lEnd) {
           step = lStart;
@@ -1559,7 +1576,9 @@ export class AudioEngine {
 
       // Keep monotonic un-swung grid advancement
       this.nextStepTime += stepDur;
-      if (this.loopRange) {
+      if (rangeStart !== null) {
+        this.currentStep = rangeStart + ((this.currentStep - rangeStart + 1) % stepsCount);
+      } else if (this.loopRange) {
         const [lStart, lEnd] = this.loopRange;
         const loopLen = Math.max(1, lEnd - lStart);
         this.currentStep = lStart + ((this.currentStep - lStart + 1) % loopLen);
@@ -1621,9 +1640,18 @@ export class AudioEngine {
 
       // Ratchet / Subdivisions
       const isHatTriplet = (track.track_id === "hihat" || track.name.toLowerCase().includes("hat")) && stepVal === 3;
-      const ratchet = (track.ratchet && track.ratchet[stepIdx] && track.ratchet[stepIdx] > 1)
-        ? track.ratchet[stepIdx]
-        : (isHatTriplet ? 3 : 1);
+      /**
+       * Q10: route through the same `resolveRatchet` the exporters use.
+       *
+       * Live playback took `track.ratchet[stepIdx]` raw, while every exporter clamps it to
+       * 1..8 (`noteEvents.ts`). A malformed or imported value — or simply a corrupt pattern —
+       * therefore fired an unbounded burst of voices in one step live, and the live take could
+       * never match its own bounce. One shared function is the only way those two stay equal.
+       */
+      const ratchet = resolveRatchet(
+        track.ratchet ? track.ratchet[stepIdx] : undefined,
+        isHatTriplet
+      );
 
       activeTracks.push(trackIdx);
 
@@ -1725,7 +1753,18 @@ export class AudioEngine {
       ecosystemBus.publishTransientHit("master", safeVel, pitch);
       this.applyKickDuckOnBass(safeStartTime, safeVel);
     } else if (trackId === "snare" || lowerName.includes("snare")) {
-      this.playSnare(dest, safeStartTime, safeVel, pitch, noisePosition);
+      // D8: 51 of 159 shipped snare tracks declare `clap` or `rimshot` as their instrument, and
+      // the dispatch used to drop that on the floor — every one of them got a plain snare while
+      // the genre data, the arrangement prose and the timbre baseline all claimed otherwise.
+      // Those two names already have real models in the percussion library, so a declared
+      // clap/rim is voiced there; a plain snare (`tight_snare`, `acoustic_snare`, `808_snare`,
+      // …) keeps the snare model.
+      const snareInstrument = this.pattern?.tracks[trackIdx]?.instrument;
+      if (instrumentWantsPercussionVoice(snareInstrument)) {
+        this.playPercussion(dest, safeStartTime, safeVel, pitch, noisePosition, snareInstrument);
+      } else {
+        this.playSnare(dest, safeStartTime, safeVel, pitch, noisePosition);
+      }
     } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
       this.playHiHat(dest, safeStartTime, safeVel, pitch, stepVal, stepDur, gateVal, noisePosition);
     } else if (trackId === "percussion" || trackId === "perc" || lowerName.includes("perc") || lowerName.includes("clap")) {
@@ -1877,8 +1916,21 @@ export class AudioEngine {
           for (const gNode of openHat.gains) {
             try {
               const g = gNode.gain;
+              /**
+               * Q1: anchor the fade at the value the envelope *will* have at `time`.
+               *
+               * `time` is a lookahead-scheduled future instant, so neither `g.value` (the
+               * value now) nor a bare `setValueAtTime` is the right anchor: reading `g.value`
+               * after cancelling the hat's own decay ramp froze it at its last scheduled
+               * value and then stepped to silence — a click plus a level jump on every choke.
+               * `drumEnvelopeLevelAt` evaluates the same curve the ramp draws, so 3 ms is
+               * enough for an inaudible fade and the level is continuous.
+               */
+              const anchor = openHat.envelope
+                ? Math.max(0.0001, drumEnvelopeLevelAt(openHat.envelope, time))
+                : Math.max(0.0001, g.value);
               g.cancelScheduledValues(time);
-              g.setValueAtTime(Math.max(0.0001, g.value), time);
+              g.setValueAtTime(anchor, time);
               g.exponentialRampToValueAtTime(0.0001, time + 0.003);
             } catch {
               // AudioParam scheduling guard
@@ -1895,7 +1947,7 @@ export class AudioEngine {
     });
 
     if (stepVal === 2 && voice.gains.length > 0) {
-      this.openHiHatVoices.push({ gains: voice.gains, stopTime: voice.stopTime });
+      this.openHiHatVoices.push({ gains: voice.gains, stopTime: voice.stopTime, envelope: voice.envelope });
       if (this.openHiHatVoices.length > 16) {
         this.openHiHatVoices.shift();
       }

@@ -106,6 +106,31 @@ export function noiseOffsetForHit(
 }
 
 /**
+ * Q6: distinct layers of one composite voice (the three clap bursts and its body) must read
+ * **different** slices of the noise buffer.
+ *
+ * Adding a small constant to `position` is not enough: `noiseOffsetForHit` returns
+ * `hashSeed(position) % usable`, and two nearby positions can hash into the same bucket — the
+ * measured case was a 2 s buffer where `base + 4096` and `base + 8192` landed on the *same*
+ * sample, so that burst and the body summed coherently (up to +6 dB inside the overlap) and the
+ * clap came out comb-filtered. Layers are therefore spaced by a fraction of the usable range,
+ * which cannot collide regardless of buffer length.
+ */
+export function noiseOffsetForLayer(
+  position: number,
+  layerIndex: number,
+  bufferLength: number,
+  neededSamples: number,
+  layerCount = 4
+): number {
+  if (bufferLength <= 0) return 0;
+  const usable = Math.max(1, bufferLength - Math.max(0, Math.floor(neededSamples)));
+  const mixed = hashSeed(position + layerIndex * 0x9e3779b1);
+  const stride = Math.max(1, Math.floor(usable / Math.max(1, layerCount)));
+  return (mixed % stride) + Math.min(usable - 1, layerIndex * stride);
+}
+
+/**
  * The canonical "which hit is this" key, shared by the live engine and the offline
  * renderer.
  *

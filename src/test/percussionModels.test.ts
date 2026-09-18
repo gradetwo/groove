@@ -149,6 +149,8 @@ function summarize(nodes: any[]) {
   }
   return {
     oscillators: nodes.filter((n) => n._type === "oscillator").length,
+    /** Q4: square-wave oscillators — exactly the metal cluster's partials, 0 when absent. */
+    squareOscillators: nodes.filter((n) => n._type === "oscillator" && n.type === "square").length,
     buffers: nodes.filter((n) => n._type === "bufferSource").length,
     filterFreqs: filters.map((n) => round(n.frequency.value)).sort((a, b) => a - b),
     /** Latest scheduled envelope event — a proxy for the voice's decay/stop. */
@@ -353,13 +355,22 @@ describe("velocity → timbre (Defect B)", () => {
     const hat909 = summarize(
       renderVoice((c, d, b) => synthesizeHiHat(c, d, 0.5, 1, 0, "909", 1, 0.125, 0.8, b)).nodes
     );
-    expect(hat909.filterFreqs).toEqual([8200, 11500]);
-    expect(
+    /**
+     * Q4 deliberately adds a *second* filter — the metal cluster's highpass (8600 for the 909,
+     * 7400 for acoustic/cyber) — because three of the four base kits previously had no
+     * inharmonic content at all and read as band-passed noise rather than as a cymbal. The
+     * original noise-path filters must survive at exactly their old frequencies, which is what
+     * this assertion pins; the cluster is asserted separately so the two can never be confused.
+     */
+    expect(hat909.filterFreqs).toEqual([8200, 8600, 11500]);
+    // Q4: the metal cluster contributes six inharmonic square partials; without it this hat
+    // was pure filtered noise, which is the "cheap MIDI drum" tell the fix exists to remove.
+    expect(hat909.squareOscillators).toBe(6);    expect(
       summarize(
         renderVoice((c, d, b) => synthesizeHiHat(c, d, 0.5, 1, 0, "acoustic", 1, 0.125, 0.8, b))
           .nodes
       ).filterFreqs
-    ).toEqual([7000, 11500]);
+    ).toEqual([7000, 7400, 11500]);
 
     expect(summarize(renderPerc(undefined, 1, "808").nodes).filterFreqs).toEqual([850]);
     expect(summarize(renderPerc(undefined, 1, "909").nodes).filterFreqs).toEqual([

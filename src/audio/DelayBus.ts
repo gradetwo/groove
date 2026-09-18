@@ -89,6 +89,12 @@ const DAMP_Q = Math.SQRT1_2;
 const RETURN_RAMP_SEC = 0.02;
 /** Shortest click-free ramp for a delay-time change (a step would click). */
 const DELAY_TIME_RAMP_SEC = 0.02;
+/**
+ * Q11: time constant for smoothing the feedback gain and the in-loop damping cutoff. Well below
+ * the audible threshold for a parameter move but long enough that a tempo change is a glide
+ * rather than a step.
+ */
+const DELAY_PARAM_SMOOTH_SEC = 0.012;
 /** Fallback tempo when a caller hands over a non-finite BPM. */
 const FALLBACK_BPM = 120;
 const BPM_MIN = 1;
@@ -371,11 +377,34 @@ export class DelayBus {
     }
     this._timeApplied = true;
 
+    /**
+     * Q11: feedback amount and damping are smoothed, not stepped.
+     *
+     * `setParams` runs on every return-level change and on every `setBpm`, so a plain
+     * `setValueAtTime` put a gain step inside the feedback loop (and a cutoff step in its
+     * filter) every time the tempo moved — the delay audibly "re-tuned" in steps. A short
+     * `setTargetAtTime` removes the step; the parameter is pinned first so a target that
+     * changes mid-ramp starts from where the ramp actually is instead of jumping.
+     */
     for (const damp of this._damps) {
-      damp.frequency.setValueAtTime(params.dampHz, now);
+      const param = damp.frequency;
+      try {
+        param.cancelScheduledValues(now);
+      } catch {
+        /* minimal param double */
+      }
+      param.setValueAtTime(Math.max(1, param.value), now);
+      param.setTargetAtTime(params.dampHz, now, DELAY_PARAM_SMOOTH_SEC);
     }
     for (const fb of this._fbs) {
-      fb.gain.setValueAtTime(params.feedback, now);
+      const param = fb.gain;
+      try {
+        param.cancelScheduledValues(now);
+      } catch {
+        /* minimal param double */
+      }
+      param.setValueAtTime(Math.max(0, param.value), now);
+      param.setTargetAtTime(params.feedback, now, DELAY_PARAM_SMOOTH_SEC);
     }
 
     this._applyReturn(now);

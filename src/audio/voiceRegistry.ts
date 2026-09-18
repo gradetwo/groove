@@ -22,6 +22,41 @@ export interface ScheduledVoice {
 /** Hard cap so a long session cannot retain unbounded voice bookkeeping. */
 export const MAX_TRACKED_VOICES = 512;
 
+/**
+ * Q14: tears down the two nodes every voice owns once the voice is silent.
+ *
+ * `onended` is the portable "this source has finished" signal. Attaching it (rather than
+ * disconnecting eagerly at `stopTime`) means the graph is only dismantled after the browser has
+ * actually stopped rendering the source, so the disconnect can never truncate a tail. Guarded
+ * throughout: a source may already be stopped or disconnected by panic/steal, and tearing down
+ * twice must be a no-op.
+ */
+export function releaseVoiceNodes(voice: ScheduledVoice): void {
+  const { source, gain } = voice;
+  try {
+    const fire = () => {
+      try {
+        gain.disconnect();
+      } catch {
+        // Already disconnected.
+      }
+      try {
+        source.disconnect();
+      } catch {
+        // Already disconnected.
+      }
+    };
+    if (typeof source.addEventListener === "function") {
+      // `once` so a source that fires onended more than once cannot double-disconnect.
+      source.addEventListener("ended", fire, { once: true });
+    } else {
+      (source as { onended?: (() => void) | null }).onended = fire;
+    }
+  } catch {
+    // A node type that refuses listeners simply keeps its old (GC-dependent) behaviour.
+  }
+}
+
 /** Fade applied by `panic()` so voices stop without a click. */
 export const PANIC_FADE_SEC = 0.005;
 
@@ -139,16 +174,40 @@ export class VoiceRegistry {
     while (this.voices.length >= this.maxActiveVoices) {
       if (!this.stealQuietest(now)) break;
     }
-    this.voices.push({ source, gain, stopTime });
+    const voice: ScheduledVoice = { source, gain, stopTime };
+    // Q14: arm the teardown now, so a voice that simply plays to its end is disconnected even
+    // if nothing calls `prune` afterwards.
+    releaseVoiceNodes(voice);
+    this.voices.push(voice);
     if (this.voices.length > MAX_TRACKED_VOICES) {
       this.voices.splice(0, this.voices.length - MAX_TRACKED_VOICES);
     }
   }
 
-  /** Drops voices that have already finished. */
+  /**
+   * Drops voices that have already finished.
+   *
+   * Q14: finished voices are **released**, not just forgotten.
+   *
+   * Every note builds a fresh node graph and nothing ever disconnected it — `prune` only
+   * dropped the bookkeeping, so the registry's reference went away while the nodes stayed
+   * wired into the track strip. Whether the browser eventually collects a finished but still
+   * connected subgraph is implementation-defined; relying on that is a retention and GC-pause
+   * risk that grows with session length, and a dense pattern builds hundreds of nodes per bar.
+   * `source.onended` is the portable signal that the graph is silent, so each voice tears
+   * itself down once, guarded so a re-entrant call or an already-stopped source is harmless.
+   */
   prune(now = this.now()): void {
     if (this.voices.length === 0) return;
-    this.voices = this.voices.filter((voice) => voice.stopTime > now);
+    const surviving: ScheduledVoice[] = [];
+    for (const voice of this.voices) {
+      if (voice.stopTime > now) {
+        surviving.push(voice);
+      } else {
+        releaseVoiceNodes(voice);
+      }
+    }
+    this.voices = surviving;
   }
 
   /**

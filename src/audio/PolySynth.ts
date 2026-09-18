@@ -1033,7 +1033,28 @@ export function playPolySynthNote(
   // The preset's own cutoff is scheduled first: it is the reference every caller and
   // parity test identifies the voice by, and at full velocity it is the value the note
   // actually holds. Velocity (when the preset opts in) moves the base below it.
-  filter.frequency.setValueAtTime(filterCutoff, time);
+  /**
+   * Q9: the optional 24 dB slope is two cascaded stages, and **both** must follow the filter
+   * envelope. The second stage used to be created later with a single
+   * `setValueAtTime(filterCutoff, time)` and never touched again, while only stage 1 swept to
+   * `cutoff · 2^envOctaves`. A real 303 is a single ladder moving as one, so the sweep came out
+   * roughly half as deep and left a static corner under a resonant peak — which is exactly why
+   * the acid line read as muffled and its accents as level rather than brightness.
+   *
+   * `filter2` is created here, before any frequency is scheduled, so every automation below can
+   * go to both stages; the Q split and the graph wiring stay at their original site.
+   */
+  let filter2: BiquadFilterNode | null = null;
+  if (preset.filterSlope24) {
+    filter2 = ctx.createBiquadFilter();
+    filter2.type = "lowpass";
+    // Stage 2 carries the resonance at Q=1 and stage 1 is tamed (see the Q split below); both
+    // values are the pre-Q9 ones, preserved so the only thing that changed is the sweep.
+    filter2.Q.setValueAtTime(1, time);
+  }
+  const cutoffStages: AudioParam[] = filter2 ? [filter.frequency, filter2.frequency] : [filter.frequency];
+
+  cutoffStages.forEach((param) => param.setValueAtTime(filterCutoff, time));
   filter.Q.setValueAtTime(filterQ, time);
 
   // Velocity-scaled settle onto the base cutoff, scheduled *before* the attack sweep.
@@ -1045,7 +1066,7 @@ export function playPolySynthNote(
   if (velocityCutoff !== filterCutoff) {
     const settleSec = Math.min(VELOCITY_FILTER_SETTLE_SEC, adsr.attack * 0.5);
     if (settleSec > 0) {
-      filter.frequency.exponentialRampToValueAtTime(velocityCutoff, time + settleSec);
+      cutoffStages.forEach((param) => param.exponentialRampToValueAtTime(velocityCutoff, time + settleSec));
     }
   }
 
@@ -1078,8 +1099,11 @@ export function playPolySynthNote(
   if (envOctaves > 0) {
     const sweepAttackEnd = time + adsr.attack * attackScale * (preset.filterEnvAttackScale ?? 1);
     const sweepDecayEnd = sweepAttackEnd + adsr.decay * decayScale * (preset.filterEnvDecayScale ?? 1);
-    filter.frequency.exponentialRampToValueAtTime(peakFilter, sweepAttackEnd);
-    filter.frequency.exponentialRampToValueAtTime(velocityCutoff, sweepDecayEnd);
+    // Q9: both 24 dB stages sweep together.
+    cutoffStages.forEach((param) => {
+      param.exponentialRampToValueAtTime(peakFilter, sweepAttackEnd);
+      param.exponentialRampToValueAtTime(velocityCutoff, sweepDecayEnd);
+    });
   }
 
   /**
@@ -1108,13 +1132,9 @@ export function playPolySynthNote(
 
   /** The last filter stage in the chain, so the noise bed and the amp connect to the right one. */
   let lastFilter: BiquadFilterNode = filter;
-  if (preset.filterSlope24) {
-    const filter2 = ctx.createBiquadFilter();
-    filter2.type = "lowpass";
-    // The second stage tracks the first exactly: same cutoff schedule, and the Q is moved to the
-    // *second* stage only, so a resonant 24 dB voice does not get two resonant peaks stacked.
-    filter2.frequency.setValueAtTime(filterCutoff, time);
-    filter2.Q.setValueAtTime(1, time);
+  if (filter2) {
+    // Q9: cutoff automation already went to both stages above. The Q is moved to the *second*
+    // stage only, so a resonant 24 dB voice does not get two resonant peaks stacked.
     filter.Q.setValueAtTime(Math.max(0.7, filterQ * 0.5), time);
     filter.connect(filter2);
     lastFilter = filter2;

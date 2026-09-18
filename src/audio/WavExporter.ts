@@ -9,7 +9,16 @@
 
 import { DrumPattern, Track } from "../types/genre";
 import { createZipArchive } from "../utils/zip";
-import { DrumKitType, synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "./DrumKitModels";
+import {
+  DrumKitType,
+  synthesizeKick,
+  synthesizeSnare,
+  synthesizeHiHat,
+  synthesizePercussion,
+  drumEnvelopeLevelAt,
+  instrumentWantsPercussionVoice,
+  type DrumVoiceEnvelope,
+} from "./DrumKitModels";
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
@@ -46,6 +55,13 @@ export interface RenderWavOptions {
    * `setPattern`, so an exported master matches what the user just heard.
    */
   loudnessTrimDb?: number;
+  /**
+   * Absolute master makeup in dB. Omitted means the shared default
+   * (`MASTER_MAKEUP_DB`), so an export is as loud as playback.
+   */
+  masterMakeupDb?: number;
+  /** Set false to render without the mastering bus compressor (measurement tooling). */
+  masterBusCompEnabled?: boolean;
 }
 
 export interface ExportedWav {
@@ -189,7 +205,11 @@ export async function renderPatternOffline(
   // dialled into FLT/DRIVE/CHORUS/LO-FI simply did not reach the file. It also used a
   // 0.85 fader against the live engine's 0.8, an unrelated ~0.5 dB offset; both now come
   // from `MASTER_FADER_DEFAULT`.
-  const graph = buildMasterGraph(ctx, { loudnessTrimDb });
+  const graph = buildMasterGraph(ctx, {
+    loudnessTrimDb,
+    masterMakeupDb: options.masterMakeupDb,
+    masterBusCompEnabled: options.masterBusCompEnabled,
+  });
 
   // N-14: the genre's master FX and bus character, applied through the same shared
   // applier the live engine uses, at the same *playing* tempo (never the metadata
@@ -308,7 +328,7 @@ export async function renderPatternOffline(
   const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
 
   // Acoustic Enhancement: Track open hi-hat voices for offline choke group
-  const openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number }> = [];
+  const openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number; envelope?: DrumVoiceEnvelope }> = [];
 
   // Step scheduling loop
   for (let step = 0; step < totalSteps; step++) {
@@ -389,7 +409,13 @@ export async function renderPatternOffline(
             }
           });
         } else if (trackId === "snare" || lowerName.includes("snare")) {
-          synthesizeSnare(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
+          // D8 parity with `AudioEngine`: a declared clap/rimshot is voiced by the percussion
+          // library, everything else by the snare model.
+          if (instrumentWantsPercussionVoice(track.instrument)) {
+            synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r), track.instrument);
+          } else {
+            synthesizeSnare(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
+          }
         } else if (trackId === "hihat" || trackId === "hat" || lowerName.includes("hihat") || lowerName.includes("hat")) {
           // Acoustic Enhancement: Hi-Hat Choke Group (parity with AudioEngine)
           if (stepVal === 1 || stepVal === 3) {
@@ -398,8 +424,14 @@ export async function renderPatternOffline(
                 for (const gNode of openHat.gains) {
                   try {
                     const g = gNode.gain;
+                    // Q1: same analytic anchor as the live engine. Reading `g.value` here
+                    // anchored the fade at "now" instead of at the scheduled `subTime`, so
+                    // the exported choke stepped and clicked while the live one did not.
+                    const anchor = openHat.envelope
+                      ? Math.max(0.0001, drumEnvelopeLevelAt(openHat.envelope, subTime))
+                      : Math.max(0.0001, g.value);
                     g.cancelScheduledValues(subTime);
-                    g.setValueAtTime(Math.max(0.0001, g.value), subTime);
+                    g.setValueAtTime(anchor, subTime);
                     g.exponentialRampToValueAtTime(0.0001, subTime + 0.003);
                   } catch {
                     // Guard against scheduling errors
@@ -410,7 +442,7 @@ export async function renderPatternOffline(
           }
           const hatVoice = synthesizeHiHat(ctx, trackDest, subTime, subVel, pitchVal, drumKit, stepVal, subDur, gateVal, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
           if (stepVal === 2 && hatVoice.gains.length > 0) {
-            openHiHatVoices.push({ gains: hatVoice.gains, stopTime: hatVoice.stopTime });
+            openHiHatVoices.push({ gains: hatVoice.gains, stopTime: hatVoice.stopTime, envelope: hatVoice.envelope });
             if (openHiHatVoices.length > 16) {
               openHiHatVoices.shift();
             }

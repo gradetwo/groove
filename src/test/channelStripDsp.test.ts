@@ -5,7 +5,7 @@ import {
   INSERT_DRIVE_CURVE_SAMPLES,
   INSERT_HPF_Q,
 } from "../audio/ChannelStripDsp";
-import { makeSaturationCurve } from "../audio/EffectsRack";
+import { makeSaturationCurve, saturationCurveInputForIndex } from "../audio/EffectsRack";
 import {
   INSERT_COMP_MAX_ATTACK_SEC,
   INSERT_COMP_MAX_MAKEUP_DB,
@@ -820,8 +820,10 @@ describe("ChannelStrip — drive", () => {
 
       // Central-difference slope of the transfer table at x = 0. An even sample count puts
       // a sample exactly at the centre, so this measures the true small-signal gain.
+      // Q13: the table spans ±SATURATION_INPUT_CEILING, so the spacing comes from the shared
+      // inverse mapping instead of assuming a ±1 domain.
       const centre = curve!.length / 2;
-      const dx = 2 / curve!.length;
+      const dx = saturationCurveInputForIndex(1, curve!.length) - saturationCurveInputForIndex(0, curve!.length);
       const slope = (curve![centre + 1] - curve![centre - 1]) / (2 * dx);
       expect(Math.abs(slope - 1), `drive ${amount}`).toBeLessThan(1e-3);
 

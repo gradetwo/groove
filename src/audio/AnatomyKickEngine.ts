@@ -833,6 +833,28 @@ export function synthesizeAnatomyKickVoice(
     ...(rawParams || {}),
   };
 
+  /**
+   * Q8: velocity must reach the *timbre*, not just the level.
+   *
+   * Every other drum voice in `DrumKitModels` maps velocity through `velocityTimbre`
+   * (brightness / decay / transient), and this one — the six `kick:*` presets, reachable from
+   * the toolbar's kick dropdown — was the only family that did not: velocity scaled amplitudes
+   * and nothing else, so a ghost kick and an accented kick differed only in loudness. That is
+   * the single most recognisable "programmed drums" tell.
+   *
+   * The mapping is expressed with this module's own parameters rather than importing
+   * `velocityTimbre` from `DrumKitModels` — that module already imports this one, and a cycle
+   * would be the price of sharing three numbers:
+   *   - soft hits    → less grit (a lightly struck head distorts less), softer pitch drop,
+   *                    a touch longer decay;
+   *   - hard hits    → unchanged from the pre-Q8 defaults, so ff output is untouched.
+   */
+  const velNorm = Math.max(0, Math.min(1, vel));
+  const gripScale = 0.55 + 0.45 * Math.pow(velNorm, 0.6); // 0.55 at ppp → 1.0 at ff
+  const decayScale = 1 + 0.25 * (1 - velNorm); // ghost notes ring slightly longer
+  const effectiveGrit = p.grit * gripScale;
+  const effectiveSoftness = Math.min(0.95, p.softness / gripScale);
+
   const t = Math.max(ctx.currentTime, time);
   const anySolo = p.subSolo || p.thumpSolo || p.clickSolo;
   const playSub = !p.subMute && (!anySolo || p.subSolo);
@@ -840,10 +862,10 @@ export function synthesizeAnatomyKickVoice(
   const playClick = !p.clickMute && (!anySolo || p.clickSolo);
 
   let busNode: AudioNode = dest;
-  if (p.grit > 0.05 && typeof (ctx as any).createWaveShaper === "function") {
+  if (effectiveGrit > 0.05 && typeof (ctx as any).createWaveShaper === "function") {
     try {
       const shaper = ctx.createWaveShaper();
-      shaper.curve = makeDistortionCurve(p.grit * 0.4) as Float32Array<ArrayBuffer>;
+      shaper.curve = makeDistortionCurve(effectiveGrit * 0.4) as Float32Array<ArrayBuffer>;
       // D1: this is a saturating (non-linear) stage, so its harmonics must be
       // filtered before decimation or they fold back into the audible band. The
       // class-based master saturator already uses "2x"; this sequencer-reachable
@@ -867,11 +889,11 @@ export function synthesizeAnatomyKickVoice(
     const subFilter = ctx.createBiquadFilter();
 
     subOsc.type = "sine";
-    const startPitch = p.basePitch * (1 + 2.2 * (1 - p.softness));
+    const startPitch = p.basePitch * (1 + 2.2 * (1 - effectiveSoftness));
     const endPitch = p.basePitch;
 
     subOsc.frequency.setValueAtTime(startPitch, t);
-    const pitchDropTime = 0.025 + p.softness * 0.04;
+    const pitchDropTime = 0.025 + effectiveSoftness * 0.04;
     subOsc.frequency.exponentialRampToValueAtTime(endPitch, t + pitchDropTime);
 
     subFilter.type = "lowpass";
@@ -922,7 +944,7 @@ export function synthesizeAnatomyKickVoice(
     const thumpFilter = ctx.createBiquadFilter();
 
     thumpOsc.type = "triangle";
-    const thumpStart = 380 * (1 - p.softness * 0.3);
+    const thumpStart = 380 * (1 - effectiveSoftness * 0.3);
     const thumpEnd = 110;
 
     thumpOsc.frequency.setValueAtTime(thumpStart, t);
@@ -965,7 +987,7 @@ export function synthesizeAnatomyKickVoice(
     clickFilter.frequency.setValueAtTime(centerFreq, t);
     clickFilter.Q.setValueAtTime(4.5, t);
 
-    const clickDecay = 0.008 + (1 - p.softness) * 0.007;
+    const clickDecay = (0.008 + (1 - effectiveSoftness) * 0.007) * decayScale;
     const clickPeak = safeGain(vel * p.clickAmount * 0.95 * p.volume);
 
     clickGain.gain.setValueAtTime(0.0001, t);

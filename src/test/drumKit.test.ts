@@ -60,6 +60,9 @@ function createMockAudioContext() {
       numberOfChannels: channels,
       length,
       sampleRate,
+      // `duration` is what the noise-offset assertion bounds against; without it a wrong
+      // offset unit (samples vs seconds) cannot be detected at all.
+      duration: length / sampleRate,
       getChannelData: vi.fn(() => new Float32Array(length)),
     })),
     destination: { _type: "destination" },
@@ -98,6 +101,18 @@ describe("Hardware Drum Machine Models (P5-02)", () => {
             const offset = call[1] as number;
             expect(Number.isFinite(offset)).toBe(true);
             expect(offset).toBeGreaterThanOrEqual(0);
+            /**
+             * The upper bound is the assertion that actually has teeth.
+             *
+             * `offset` is a buffer read position in **seconds**. The v2.0.47 regression had
+             * `noiseStartOffset` returning *sample counts*, so offsets like 20492 were handed to
+             * `start(when, offset)` — outside the buffer, which every browser clamps to the end,
+             * i.e. silence. Hi-hats, percussion and the snare-wire layer were silent for a whole
+             * release while this suite stayed green, because the old assertion only checked
+             * `Number.isFinite(offset) && offset >= 0`. `noiseStartOffset` deliberately leaves
+             * 0.5 s of tail after the offset, so offset + 0.5 s must still land inside the buffer.
+             */
+            expect(offset + 0.5).toBeLessThanOrEqual(mockNoiseBuffer.duration);
           }
           expect(src.stop).toHaveBeenCalled();
         });

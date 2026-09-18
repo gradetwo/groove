@@ -10,11 +10,11 @@
  * - Cyber Wave: Modern punchy transient-saturated hyperpop / synthwave kit.
  */
 
-import { synthesizeAnatomyKickVoice } from "./AnatomyKickEngine";
+import { makeDistortionCurve, synthesizeAnatomyKickVoice } from "./AnatomyKickEngine";
 
 export type DrumKitType = "808" | "909" | "acoustic" | "cyber" | string;
 import { safeFreq, safeVelocity } from "./dspGuards";
-import { noiseOffsetForHit } from "./noise";
+import { noiseOffsetForHit, noiseOffsetForLayer } from "./noise";
 
 /**
  * E-06: where a noise layer should start reading the shared noise buffer.
@@ -31,13 +31,19 @@ import { noiseOffsetForHit } from "./noise";
 function noiseStartOffset(
   ctx: BaseAudioContext,
   buffer: AudioBuffer | null,
-  position: number
+  position: number,
+  layerIndex = 0,
+  layerCount = 1
 ): number {
-  if (!buffer) return 0;
+  if (!buffer || ctx.sampleRate <= 0) return 0;
   // Leave half a second of buffer after the offset: far longer than any noise layer
   // here, and it keeps `start(when, offset)` valid on every engine.
   const headroom = Math.ceil(ctx.sampleRate * 0.5);
-  return noiseOffsetForHit(position, buffer.length, headroom);
+  const samples =
+    layerCount > 1
+      ? noiseOffsetForLayer(position, layerIndex, buffer.length, headroom, layerCount)
+      : noiseOffsetForHit(position, buffer.length, headroom);
+  return samples / ctx.sampleRate;
 }
 
 export function getBaseDrumKit(kit: DrumKitType): "808" | "909" | "acoustic" | "cyber" {
@@ -47,6 +53,25 @@ export function getBaseDrumKit(kit: DrumKitType): "808" | "909" | "acoustic" | "
   if (lower.includes("acoustic") || lower.includes("skin")) return "acoustic";
   if (lower.includes("neural") || lower.includes("cyber")) return "cyber";
   return "909";
+}
+
+/**
+ * D9: the kit a **non-kick** voice should use.
+ *
+ * The drum-kit dropdown stores a single `drumKit` string, and six of its entries are *kick*
+ * presets (`kick:berlin-orphic`, `kick:somatic-808-gravity`, …). Passing that string to the
+ * snare, hat and percussion models made `getBaseDrumKit` string-sniff it — "orphic" contains
+ * "orphic" so it mapped to 808, "neural-click-clock" matched "neural" so it mapped to cyber —
+ * meaning **selecting a kick also silently re-voiced the whole kit**. The kick itself is the
+ * one voice allowed to read the `kick:` preset (see `synthesizeKick`); everything else must
+ * fall back to the neutral base kit.
+ *
+ * Keeping this in one exported helper is what makes the live engine and the offline exporter
+ * agree — the two used to duplicate the sniffing rule.
+ */
+export function drumKitForVoice(kit: DrumKitType): "808" | "909" | "acoustic" | "cyber" {
+  if (typeof kit === "string" && kit.startsWith("kick:")) return "909";
+  return getBaseDrumKit(kit);
 }
 
 /* ------------------------------------------------------------------------- *
@@ -339,6 +364,54 @@ export const PERCUSSION_MODELS: Record<PercussionModel, PercussionModelSpec> = {
 export const PERCUSSION_MODEL_IDS = Object.keys(PERCUSSION_MODELS) as PercussionModel[];
 
 /**
+ * Q7: how hard the kick body is driven into its saturation stage, per base kit.
+ *
+ * The module comment on the 909 branch already claimed "driven saturation" but **no base kit
+ * had a waveshaper at all** — only the `kick:*` presets and the master rack did. That matters
+ * because most of what we recognise as an 808 or a 909 kick is *not* the sine; it is the
+ * harmonics a bridged-T network or a diode clipper adds on top of it. A clean sine sweep is
+ * exactly the "cheap MIDI kick" the genre library was trying to avoid.
+ *
+ * Values are deliberately modest: enough to add a second and third harmonic to the tail,
+ * not enough to turn the body into fuzz. `0` disables the stage for a kit.
+ */
+export const KICK_BODY_DRIVE: Record<"808" | "909" | "acoustic" | "cyber", number> = {
+  808: 0.42,
+  909: 0.55,
+  acoustic: 0.22,
+  cyber: 0.7,
+};
+
+/**
+ * Inserts the kick's diode-clipper stage between its amplitude envelope and the track bus.
+ *
+ * The shaper normalises its own peak (`tanh(k)/k` peaks at `1/k`), so the tail gains harmonics
+ * without the body getting louder — the alternative would have been a level jump at the exact
+ * moment saturation is applied, which is the sort of thing §3.4 exists to remove.
+ * Returns the node downstream code should treat as "the kick's output".
+ */
+function applyKickSaturation(
+  ctx: BaseAudioContext,
+  gain: GainNode,
+  dest: AudioNode,
+  drive: number
+): AudioNode {
+  if (!(drive > 0) || typeof (ctx as BaseAudioContext).createWaveShaper !== "function") return dest;
+  try {
+    const shaper = ctx.createWaveShaper();
+    shaper.curve = makeDistortionCurve(drive) as Float32Array<ArrayBuffer>;
+    shaper.oversample = "2x";
+    gain.connect(shaper);
+    shaper.connect(dest);
+    return shaper;
+  } catch {
+    // A context that refuses a waveshaper (or a curve) must still make a kick.
+    gain.connect(dest);
+    return dest;
+  }
+}
+
+/**
  * Declared instrument name → model, matched as a token so both a raw track
  * `instrument` value (`rim_shaker`, `rimshot`, `clap`) and a prose word from the
  * genre `instrumentation` list ("Timbales", "Congas", "Guiro", "Clave") resolve.
@@ -365,6 +438,21 @@ const PERCUSSION_NAME_PATTERNS: ReadonlyArray<readonly [RegExp, PercussionModel]
 ];
 
 /**
+ * D8: whether a declared snare-track instrument should be voiced by the percussion library
+ * instead of the snare model.
+ *
+ * 25 genres declare `clap` and 26 declare `rimshot` on their snare track. Both already have
+ * hand-written models in `PERCUSSION_MODELS`, so the honest fix is to route them there rather
+ * than to invent a third snare variant — and both live engines (live + offline) must ask this
+ * same question, which is why it is a function here instead of an inline test at each call site.
+ */
+export function instrumentWantsPercussionVoice(instrument?: string | null): boolean {
+  if (!instrument || typeof instrument !== "string") return false;
+  const token = instrument.toLowerCase();
+  return /clap|snap|rimshot|reggae.?rim/.test(token);
+}
+
+/**
  * Resolves the percussion voice for a track. A recognised `instrument` name wins;
  * anything unknown (or absent) keeps the historical kit-based fallback so nothing
  * regresses: 808 → cowbell, 909/acoustic/cyber → handclap.
@@ -379,13 +467,57 @@ export function resolvePercussionModel(
       if (pattern.test(token)) return model;
     }
   }
-  return getBaseDrumKit(kit) === "808" ? "cowbell" : "clap";
+  return drumKitForVoice(kit) === "808" ? "cowbell" : "clap";
 }
 
 export interface DrumVoiceCleanup {
   sources: AudioScheduledSourceNode[];
   gains: GainNode[];
   stopTime: number;
+  /**
+   * Amplitude envelope of the voice's *tail*, when a later hit is allowed to cut it short
+   * (today: the open hi-hat, choked by the next closed hat).
+   *
+   * Q1: the choke used to be
+   *
+   *     cancelScheduledValues(time); setValueAtTime(g.value, time); ramp to 0.0001
+   *
+   * and `time` is a **lookahead-scheduled future instant** while `g.value` is the value
+   * **now** — up to 200 ms away — so cancelling the hat's own decay ramp left the envelope
+   * holding its last scheduled value and then stepping to silence: an audible click plus a
+   * level jump on every choke. The old code cannot ask an AudioParam what it will be worth at
+   * a future time, so the envelope is described here and evaluated analytically instead.
+   */
+  envelope?: DrumVoiceEnvelope;
+}
+
+/** The exponential decay segment a chokeable voice actually runs. */
+export interface DrumVoiceEnvelope {
+  /** Instant the envelope reaches `peak` (the voice's scheduled start). */
+  startTime: number;
+  peak: number;
+  /** Instant the exponential decay reaches `floor`. */
+  decayEndTime: number;
+  floor: number;
+}
+
+/**
+ * Value of an `exponentialRampToValueAtTime` segment at an arbitrary instant.
+ *
+ * Clamped to the segment: before `startTime` the envelope is at `peak`, after
+ * `decayEndTime` it is at `floor`. Pure, so the choke anchor is unit-testable — the
+ * AudioParam double in `src/test/helpers/fakeAudio.ts` records events but cannot be asked
+ * for a future value, which is exactly the mistake the old implementation made.
+ */
+export function drumEnvelopeLevelAt(env: DrumVoiceEnvelope, t: number): number {
+  const { startTime, peak, decayEndTime, floor } = env;
+  if (!Number.isFinite(t)) return floor;
+  if (t <= startTime) return peak;
+  if (t >= decayEndTime) return floor;
+  const span = decayEndTime - startTime;
+  if (!(span > 0)) return floor;
+  // Same curve `exponentialRampToValueAtTime` draws, evaluated in closed form.
+  return peak * Math.pow(floor / peak, (t - startTime) / span);
 }
 
 /**
@@ -420,7 +552,10 @@ export function synthesizeKick(
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const startFreq = 160 * pitchMultiplier;
-    const endFreq = 42;
+    // Q3: `endFreq` was hardcoded, so the pitch lane only moved the *sweep start* and every
+    // kick landed back on the same 42 Hz fundamental — a transposed kick part sounded detuned
+    // for its whole tail. Both ends transpose now.
+    const endFreq = 42 * pitchMultiplier;
 
     osc.type = "sine";
     osc.frequency.setValueAtTime(startFreq, time);
@@ -436,7 +571,8 @@ export function synthesizeKick(
     gain.gain.exponentialRampToValueAtTime(0.0001, time + bodyDecay);
 
     osc.connect(gain);
-    gain.connect(dest);
+    // Q7: the body's diode-clipper stage (see `applyKickSaturation`).
+    applyKickSaturation(ctx, gain, dest, KICK_BODY_DRIVE["808"]);
     osc.start(time);
     osc.stop(time + bodyDecay + 0.05);
     sources.push(osc);
@@ -470,7 +606,7 @@ export function synthesizeKick(
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const startFreq = 260 * pitchMultiplier;
-    const endFreq = 48;
+    const endFreq = 48 * pitchMultiplier; // Q3: transpose the settle frequency too
 
     osc.type = "sine";
     osc.frequency.setValueAtTime(startFreq, time);
@@ -484,7 +620,7 @@ export function synthesizeKick(
     gain.gain.exponentialRampToValueAtTime(0.0001, time + bodyDecay);
 
     osc.connect(gain);
-    gain.connect(dest);
+    applyKickSaturation(ctx, gain, dest, KICK_BODY_DRIVE["909"]);
     osc.start(time);
     osc.stop(time + bodyDecay + 0.02);
     sources.push(osc);
@@ -517,7 +653,7 @@ export function synthesizeKick(
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const startFreq = 120 * pitchMultiplier;
-    const endFreq = 54;
+    const endFreq = 54 * pitchMultiplier; // Q3: transpose the settle frequency too
 
     osc.type = "triangle";
     osc.frequency.setValueAtTime(startFreq, time);
@@ -529,7 +665,7 @@ export function synthesizeKick(
     gain.gain.exponentialRampToValueAtTime(0.0001, time + bodyDecay);
 
     osc.connect(gain);
-    gain.connect(dest);
+    applyKickSaturation(ctx, gain, dest, KICK_BODY_DRIVE["acoustic"]);
     osc.start(time);
     osc.stop(time + bodyDecay + 0.03);
     sources.push(osc);
@@ -566,7 +702,7 @@ export function synthesizeKick(
     const gain = ctx.createGain();
 
     const startFreq = 220 * pitchMultiplier;
-    const endFreq = 40;
+    const endFreq = 40 * pitchMultiplier; // Q3: transpose the settle frequency too
 
     osc1.type = "sine";
     osc2.type = "triangle";
@@ -581,7 +717,7 @@ export function synthesizeKick(
 
     osc1.connect(gain);
     osc2.connect(gain);
-    gain.connect(dest);
+    applyKickSaturation(ctx, gain, dest, KICK_BODY_DRIVE.cyber);
 
     osc1.start(time);
     osc2.start(time);
@@ -613,7 +749,8 @@ export function synthesizeSnare(
   const gains: GainNode[] = [];
   const basePitch = pitchOffset > 24 ? pitchOffset - 60 : pitchOffset;
   const pitchMultiplier = Math.pow(2, basePitch / 12);
-  const effectiveKit = getBaseDrumKit(kit);
+  // D9: a `kick:` preset must not re-voice the snare (see `drumKitForVoice`).
+  const effectiveKit = drumKitForVoice(kit);
   // Defect B: at vel === 1 these are all exactly 1, so ff output is unchanged.
   const timbre = velocityTimbre(vel);
 
@@ -627,8 +764,9 @@ export function synthesizeSnare(
     osc2.type = "sine";
     osc1.frequency.setValueAtTime(180 * pitchMultiplier, time);
     osc2.frequency.setValueAtTime(332 * pitchMultiplier, time);
-    osc1.frequency.exponentialRampToValueAtTime(140, time + 0.08);
-    osc2.frequency.exponentialRampToValueAtTime(260, time + 0.08);
+    // Q3: settle frequencies transpose with the pitch lane (they were constants 140/260).
+    osc1.frequency.exponentialRampToValueAtTime(140 * pitchMultiplier, time + 0.08);
+    osc2.frequency.exponentialRampToValueAtTime(260 * pitchMultiplier, time + 0.08);
 
     const bodyDecay = 0.12 * timbre.decayScale;
     oscGain.gain.setValueAtTime(vel * 0.65, time);
@@ -679,7 +817,7 @@ export function synthesizeSnare(
     const oscGain = ctx.createGain();
     osc.type = "triangle";
     osc.frequency.setValueAtTime(220 * pitchMultiplier, time);
-    osc.frequency.exponentialRampToValueAtTime(95, time + 0.07);
+    osc.frequency.exponentialRampToValueAtTime(95 * pitchMultiplier, time + 0.07); // Q3
 
     const bodyDecay = 0.14 * timbre.decayScale;
     oscGain.gain.setValueAtTime(vel * 0.8, time);
@@ -822,6 +960,25 @@ export function synthesizeSnare(
 }
 
 /**
+ * Q5: ceiling for an open hi-hat's decay. A real open hat rings roughly 0.4–0.8 s; the
+ * historical 0.45 s cap (further shortened by the step gate) is what made them read as gated
+ * samples. The step length no longer caps it either — at 1/16 and 124 BPM a step is 0.121 s,
+ * so `stepDur * 3.5` was the binding constraint at every tempo and the gate then scaled that
+ * down again, which is why "open" hats kept coming out shorter than closed ones sound.
+ */
+export const OPEN_HAT_MAX_DECAY_SEC = 0.6;
+
+/**
+ * Q4: inharmonic partials shared by every kit's hi-hat. The 808 branch uses its own
+ * TR-808 service-manual set; this one is the higher 909-register cluster that the
+ * noise-only kits were missing entirely.
+ */
+export const METAL_CLUSTER_FREQS = [310, 387, 466, 522, 681, 1070] as const;
+
+/** How loud the metal cluster sits under the noise sizzle for the non-808 kits. */
+export const METAL_CLUSTER_MIX = 0.42;
+
+/**
  * Synthesizes a Hi-Hat (Closed / Open) with metallic inharmonic frequency clusters
  */
 export function synthesizeHiHat(
@@ -844,15 +1001,25 @@ export function synthesizeHiHat(
 
   const isOpen = stepVal === 2;
   const isRatchet = stepVal === 3;
+  /**
+   * Q5: an open hat is a cymbal, not a gated sample. The decay used to be
+   * `min(stepDur * 3.5, 0.45)` and then multiplied by the step's gate, so a 0.2 gate made a
+   * 90 ms "open" hat and even the longest possible open hat stopped at 450 ms — roughly half
+   * of a real one, and unrelated to how the pattern was written. The gate still scales the
+   * open decay (a short gate means the player let it go early), but the ceiling is now a
+   * cymbal-length 0.8 s and the floor is high enough to stay a cymbal.
+   */
   const baseDecay = isOpen
-    ? Math.min(stepDur * 3.5, 0.45)
+    ? OPEN_HAT_MAX_DECAY_SEC
     : isRatchet
       ? Math.min(stepDur * 0.45, 0.06)
       : 0.065;
   // Defect B: accents are shorter/tighter and brighter, ghost notes a touch longer and darker.
   const timbre = velocityTimbre(vel);
-  const decayTime = Math.max(0.02, baseDecay * gateVal) * timbre.decayScale;
-  const effectiveKit = getBaseDrumKit(kit);
+  // A short gate still means the player released early, but a *minimum* is required or an
+  // "open" hat becomes indistinguishable from a closed one.
+  const decayTime = Math.max(isOpen ? 0.25 : 0.02, baseDecay * gateVal) * timbre.decayScale;
+  const effectiveKit = drumKitForVoice(kit);
 
   if (effectiveKit === "808") {
     // 808 Hi-Hat: 6 inharmonic square wave oscillators clustered together
@@ -892,7 +1059,14 @@ export function synthesizeHiHat(
     envGain.connect(dest);
     gains.push(envGain);
 
-    return { sources, gains, stopTime: time + decayTime + 0.02 };
+    return {
+      sources,
+      gains,
+      stopTime: time + decayTime + 0.02,
+      // Q1: the choke needs to know what this envelope will be worth when the next closed
+      // hat lands, not what it is worth now.
+      envelope: { startTime: time, peak: hatVol, decayEndTime: time + decayTime, floor: 0.0001 },
+    };
   } else {
     // 909 / Acoustic / Cyber: High-passed white noise with sizzle resonance
     if (!noiseBuffer) return { sources, gains, stopTime: time + 0.05 };
@@ -925,7 +1099,52 @@ export function synthesizeHiHat(
     sources.push(noise);
     gains.push(gain);
 
-    return { sources, gains, stopTime: time + decayTime + 0.02 };
+    /**
+     * Q4: three of the four base kits used to be *noise only* — a band-passed white-noise
+     * burst with one exponential decay, which is the single most recognisable "MIDI drum"
+     * tell in the whole kit. A real hi-hat is a set of inharmonic partials; the noise is only
+     * the sizzle on top of them. The 808 branch already had the right idea (six inharmonic
+     * squares), so this reuses the same cluster, transposed into the 909's higher register
+     * and mixed *under* the noise rather than replacing it.
+     */
+    const metalLevel = METAL_CLUSTER_MIX * (isOpen ? 1 : 0.85) * timbre.brightness;
+    if (metalLevel > 0.001) {
+      const clusterGain = ctx.createGain();
+      clusterGain.gain.value = (1 / METAL_CLUSTER_FREQS.length) * metalLevel;
+      const clusterHp = ctx.createBiquadFilter();
+      clusterHp.type = "highpass";
+      clusterHp.frequency.value = safeFreq((effectiveKit === "909" ? 8600 : 7400) * timbre.brightness);
+      const clusterEnv = ctx.createGain();
+      // Slightly shorter than the noise tail: metal rings out a touch faster than the sizzle.
+      clusterEnv.gain.setValueAtTime(1, time);
+      clusterEnv.gain.exponentialRampToValueAtTime(0.0001, time + decayTime * 0.8);
+      const clusterPitch = Math.pow(2, (pitchOffset > 24 ? pitchOffset - 48 : pitchOffset) / 12);
+
+      METAL_CLUSTER_FREQS.forEach((freq) => {
+        const osc = ctx.createOscillator();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq * clusterPitch, time);
+        osc.connect(clusterGain);
+        osc.start(time);
+        osc.stop(time + decayTime + 0.02);
+        sources.push(osc);
+      });
+
+      clusterGain.connect(clusterHp);
+      clusterHp.connect(clusterEnv);
+      clusterEnv.connect(dest);
+      gains.push(clusterEnv);
+    }
+
+    return {
+      sources,
+      gains,
+      stopTime: time + decayTime + 0.02,
+      // Q1: the *noise* envelope is the loudest layer and therefore the one a choke must
+      // anchor on; the metal layer rides underneath it and is ramped by the same 3 ms fade
+      // because both gains are in `gains`.
+      envelope: { startTime: time, peak: hatVol, decayEndTime: time + decayTime, floor: 0.0001 },
+    };
   }
 }
 
@@ -998,7 +1217,7 @@ function synthesizeClapModel(
 
   const burstDecay = 0.012 * timbre.decayScale;
   const burstDelays = [0, 0.011, 0.022];
-  burstDelays.forEach((delay) => {
+  burstDelays.forEach((delay, burstIndex) => {
     const click = ctx.createBufferSource();
     click.buffer = noiseBuffer;
     const bp = ctx.createBiquadFilter();
@@ -1013,7 +1232,16 @@ function synthesizeClapModel(
     click.connect(bp);
     bp.connect(clickGain);
     clickGain.connect(dest);
-    click.start(time + delay, noiseStartOffset(ctx, noiseBuffer, noisePosition));
+    /**
+     * Q6: each burst reads a **different** slice of the noise buffer.
+     *
+     * All three bursts (and the body) used to read `noisePosition` verbatim, so bursts 2 and 3
+     * were bit-identical copies of burst 1 shifted by 11 and 22 ms. Overlapping identical noise
+     * sums *coherently* — up to +6 dB inside the overlap — so the clap came out comb-coloured
+     * and machine-like instead of as decorrelated hand claps. Offsetting the read position per
+     * burst is what makes a multi-burst clap work at all.
+     */
+    click.start(time + delay, noiseStartOffset(ctx, noiseBuffer, noisePosition, burstIndex, 4));
     click.stop(time + delay + Math.max(0.015, burstDecay + 0.003));
     sources.push(click);
     gains.push(clickGain);
@@ -1036,7 +1264,7 @@ function synthesizeClapModel(
   mainNoise.connect(filter);
   filter.connect(mainGain);
   mainGain.connect(dest);
-  mainNoise.start(time + 0.03, noiseStartOffset(ctx, noiseBuffer, noisePosition));
+  mainNoise.start(time + 0.03, noiseStartOffset(ctx, noiseBuffer, noisePosition, 3, 4));
   mainNoise.stop(bodyEnd + 0.03);
   sources.push(mainNoise);
   gains.push(mainGain);

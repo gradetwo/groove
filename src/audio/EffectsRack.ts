@@ -43,6 +43,22 @@ export const DEFAULT_FX_STATE: EffectsRackState = {
 };
 
 /**
+ * Q13: the largest input magnitude the saturation curve is defined for.
+ *
+ * A `WaveShaperNode` maps any input outside the curve's domain to the curve's **endpoint**, so
+ * the old ±1 domain silently turned every sample above unity into a flat-topped hard clip — and
+ * this rack sits *after* the 8-track sum and the master fader, which is precisely where peaks
+ * above unity live. Sixteen shipped genres run DRIVE at 2.5–6.0, so those genres were being
+ * hard-clipped on every kick transient, before the true-peak limiter ever saw them.
+ *
+ * Defining the table over ±2 fixes that while keeping the old behaviour exactly where it was
+ * defined: the slope at the origin is still 1 and, because the curve is still evaluated at
+ * `x / 1`, the value at x = ±1 is still `±tanh(k)/k` — the level every measured trim was fitted
+ * against. Only the region that *used* to clip is different, and there it now saturates.
+ */
+export const SATURATION_INPUT_CEILING = 2;
+
+/**
  * Generates a soft-clipping Tanh saturation curve for WaveShaperNode.
  *
  * The curve is normalised for **unity small-signal gain**: it is divided by
@@ -55,16 +71,25 @@ export const DEFAULT_FX_STATE: EffectsRackState = {
  * magnitude is `tanh(k) / k <= 1` for every supported drive (k >= 1). This
  * deliberately changes the DRIVE sound/level; bypass (curve === null) is
  * unaffected.
+ *
+ * The table spans ±`SATURATION_INPUT_CEILING` rather than ±1 (see that constant for why);
+ * `saturationCurveInputForIndex` is the inverse mapping, so tests can probe the curve at a
+ * known input level instead of guessing an index.
  */
 export function makeSaturationCurve(drive: number, samples = 2048): Float32Array {
   const curve = new Float32Array(samples);
   const k = Math.max(1, drive);
   for (let i = 0; i < samples; i++) {
-    const x = (i * 2) / samples - 1;
+    const x = ((i * 2) / samples - 1) * SATURATION_INPUT_CEILING;
     // Tanh soft saturation: unity slope at the centre, smoothly saturating at extremes
     curve[i] = Math.tanh(k * x) / k;
   }
   return curve;
+}
+
+/** Input level a given index of the saturation table is evaluated at. */
+export function saturationCurveInputForIndex(index: number, samples = 2048): number {
+  return ((index * 2) / samples - 1) * SATURATION_INPUT_CEILING;
 }
 
 /** Sizes the crusher table so the requested quantization is actually resolvable. */

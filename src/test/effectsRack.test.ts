@@ -3,6 +3,8 @@ import {
   EffectsRack,
   DEFAULT_FX_STATE,
   makeSaturationCurve,
+  saturationCurveInputForIndex,
+  SATURATION_INPUT_CEILING,
   makeBitcrushCurve,
 } from "../audio/EffectsRack";
 
@@ -65,9 +67,12 @@ describe("Master DSP Effects Rack (P5-04)", () => {
       // Center should be zero (or near zero)
       expect(Math.abs(curve[512])).toBeLessThan(0.01);
 
-      // Ends should be bounded within [-1.0, 1.0]
-      expect(curve[0]).toBeGreaterThanOrEqual(-1.0001);
-      expect(curve[curve.length - 1]).toBeLessThanOrEqual(1.0001);
+      // Bounded in amplitude (the table's *domain* is ±SATURATION_INPUT_CEILING, but the tanh
+      // shape never exceeds tanh(k)/k <= 1).
+      for (const entry of curve) {
+        expect(entry).toBeGreaterThanOrEqual(-1.0001);
+        expect(entry).toBeLessThanOrEqual(1.0001);
+      }
 
       // Monotonically non-decreasing
       for (let i = 1; i < curve.length; i++) {
@@ -119,7 +124,9 @@ describe("Master DSP Effects Rack (P5-04)", () => {
 
     it("normalises saturation to unity small-signal gain (D3)", () => {
       const samples = 2048;
-      const dx = 2 / samples; // table spacing
+      // Q13: the table now spans ±SATURATION_INPUT_CEILING, so the spacing is derived from the
+      // exported inverse mapping rather than assuming a ±1 domain.
+      const dx = saturationCurveInputForIndex(1, samples) - saturationCurveInputForIndex(0, samples);
       const center = samples / 2;
 
       for (const drive of [1, 1.5, 3, 6]) {
@@ -137,6 +144,67 @@ describe("Master DSP Effects Rack (P5-04)", () => {
         }
         expect(peak).toBeLessThanOrEqual(1);
       }
+    });
+
+    /**
+     * Q13 regression guard.
+     *
+     * A `WaveShaperNode` clamps any input outside its table's domain to the table's endpoint, so
+     * the old ±1 table turned every master-bus sample above unity into a flat-topped hard clip —
+     * and this rack runs after the 8-track sum and the master fader, which is exactly where those
+     * peaks live. Sixteen shipped genres enable DRIVE at 2.5–6.0.
+     *
+     * The distinguishing property is *curvature above unity*: on the old table every input from
+     * 1.0 to the ceiling mapped to the identical endpoint value, so the first difference was
+     * exactly zero there. Saturation curves must still be rising.
+     */
+    it("does not flat-top inputs above unity (Q13)", () => {
+      const samples = 4096;
+      const drive = 6; // the hottest shipped setting, so the old curve clipped hardest
+      const curve = makeSaturationCurve(drive, samples);
+      /**
+       * Index a table entry by the input level it is evaluated at, using the shared inverse
+       * mapping (not a hand-rolled formula that would itself have to change with the domain).
+       */
+      const indexForInput = (x: number): number => {
+        const target = (x / SATURATION_INPUT_CEILING + 1) / 2;
+        return Math.min(samples - 1, Math.max(0, Math.round(target * (samples - 1))));
+      };
+      const levelAt = (x: number): number => curve[indexForInput(x)];
+
+      const justOverUnity = levelAt(1.05);
+      const above = levelAt(1.6);
+
+      /**
+       * At drive 6 a tanh curve is *already* deeply saturated by unity, so the honest property
+       * is not "it curves a lot above 1" — it is "it is not exactly constant", which is what the
+       * old table was: every input from 1.0 outward was clamped to one endpoint value, so these
+       * two entries were bit-identical. The numbers are small by construction; the point is that
+       * they are non-zero. (At the milder drives the shipped presets also use, 1.5–3.0, the
+       * difference is orders of magnitude larger — that is where the old hard clip was audible.)
+       */
+      expect(above).toBeGreaterThan(justOverUnity);
+      for (const drive of [1.5, 2.5, 4]) {
+        const c = makeSaturationCurve(drive, samples);
+        const at = (x: number): number => c[Math.min(samples - 1, Math.max(0, Math.round(((x / SATURATION_INPUT_CEILING + 1) / 2) * (samples - 1))))];
+        // The old ±1 table made this difference exactly 0 at every drive.
+        expect(at(1.6) - at(1.0), `drive ${drive}`).toBeGreaterThan(5e-5);
+      }
+
+      // The table never decreases (a float32 table is flat, not strictly rising, in the region
+      // where tanh is fully saturated — that is precision, not a fold-back).
+      for (let i = 1; i < samples; i++) {
+        expect(curve[i]).toBeGreaterThanOrEqual(curve[i - 1]);
+      }
+      // ...and it is strictly rising across the whole musical range (±1, i.e. 0 dBFS and below),
+      // which is where a plateau would be audible rather than merely theoretical.
+      for (let i = indexForInput(-1) + 1; i <= indexForInput(1); i++) {
+        expect(curve[i]).toBeGreaterThan(curve[i - 1]);
+      }
+
+      // ...and the value at exactly unity is unchanged from the level the trims were fitted
+      // against: the curve is still evaluated at x/1 there.
+      expect(levelAt(1)).toBeCloseTo(Math.tanh(drive) / drive, 3);
     });
   });
 
