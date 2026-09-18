@@ -20,13 +20,18 @@ import { FakeAudioContext, FakeGainNode, FakeFilterNode } from "./helpers/fakeAu
  *
  *   1. every response is a no-op at full velocity, so annotating a preset cannot move
  *      the library's measured loudness baseline, and
- *   2. an un-annotated preset schedules exactly the automation it always did at every
- *      velocity (its level still follows the global curve, but its *timbre* does not).
+ *   2. a preset with the response *stripped* schedules exactly the automation the pre-E-13 code
+ *      did at every velocity (its level still follows the global curve, its timbre does not).
+ *
+ * Every preset in the library is annotated now — velocity reaching only amplitude is the
+ * "programmed, not played" defect, so the default became "responsive" and the tests that used to
+ * rely on a population of velocity-deaf presets build one by stripping the fields instead. That
+ * keeps the short-circuit guarantee testable without needing presets that exhibit the defect.
  */
 
 const TIME = 0.5;
 
-/** The presets the task annotates; every other key must stay velocity-deaf. */
+/** Every preset, which is now every one of them — see the header. */
 const ANNOTATED_KEYS = [
   "pianoLead",
   "rhodesEp",
@@ -52,7 +57,12 @@ const ANNOTATED_KEYS = [
 ];
 
 const ALL_KEYS = Object.keys(DEFAULT_SYNTH_PRESETS);
-const UNANNOTATED_KEYS = ALL_KEYS.filter((key) => !ANNOTATED_KEYS.includes(key));
+/**
+ * Keys used for the short-circuit tests. They are no longer "the presets we did not annotate"
+ * (there are none); each test strips the response off the preset it is checking, which tests the
+ * same guarantee without depending on the library containing a defect.
+ */
+const UNANNOTATED_KEYS = ANNOTATED_KEYS;
 
 function play(preset: SynthPreset, velocity: number, dur = 0.3, midi = 60) {
   const ctx = new FakeAudioContext();
@@ -150,7 +160,7 @@ describe("E-13 · per-preset velocity → timbre response", () => {
       expect(preset.velocityToAttack, `${key} velocityToAttack`).toBeGreaterThanOrEqual(0);
       expect(preset.velocityToDecay, `${key} velocityToDecay`).toBeGreaterThanOrEqual(0);
     }
-    // Sanity: the derived "un-annotated" half of these tests is not empty.
+    // Sanity: the short-circuit half of these tests still covers a real population.
     expect(UNANNOTATED_KEYS.length).toBeGreaterThan(20);
   });
 
@@ -189,8 +199,10 @@ describe("E-13 · per-preset velocity → timbre response", () => {
   }
 
   for (const key of UNANNOTATED_KEYS) {
-    it(`${key}: un-annotated presets are timbre-identical at every velocity`, () => {
-      const preset = DEFAULT_SYNTH_PRESETS[key];
+    it(`${key}: a stripped preset is timbre-identical at every velocity`, () => {
+      // Stripped, not "un-annotated by omission": the library no longer ships a velocity-deaf
+      // preset, so the short-circuit is tested against the fields being absent.
+      const preset = withoutVelocityResponse(DEFAULT_SYNTH_PRESETS[key]);
       const reference = filterEvents(preset, 1);
       for (const velocity of [0.05, 0.25, 0.5, 0.8, 1]) {
         const events = filterEvents(preset, velocity);
@@ -249,7 +261,9 @@ describe("E-13 · per-preset velocity → timbre response", () => {
     // The curve still scales the amp level of every preset (that is the E-13 amplitude
     // fix), but it must not move an un-annotated voice's filter or envelope *timing*.
     for (const key of UNANNOTATED_KEYS) {
-      const preset = DEFAULT_SYNTH_PRESETS[key];
+      // Stripped, because every shipped preset is annotated now (see the header): the guarantee
+      // under test is that *without* the response nothing but level moves.
+      const preset = withoutVelocityResponse(DEFAULT_SYNTH_PRESETS[key]);
       const timesAt = (velocity: number) => {
         const { amp } = play(preset, velocity, 1.0);
         return amp.gain.events.map((e) => e.time);

@@ -142,6 +142,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3800,
     filterQ: 2.5,
     adsr: { attack: 0.015, decay: 0.12, sustain: 0.7, release: 0.2 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.1,
+    velocityToFilterEnv: 0.6,
+    velocityToAttack: 0.15,
+    velocityToDecay: 0.2,
   },
   warmPad: {
     // E-14: pads do not squelch. A shallow sweep + a slow opening keeps it a pad.
@@ -155,6 +160,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2200,
     filterQ: 1.2,
     adsr: { attack: 0.15, decay: 0.3, sustain: 0.8, release: 0.6 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.0,
+    velocityToFilterEnv: 0.6,
+    velocityToAttack: 0.05,
+    velocityToDecay: 0.05,
   },
   deepPluck: {
     name: "Deep Pluck",
@@ -165,6 +175,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 1800,
     filterQ: 3.0,
     adsr: { attack: 0.005, decay: 0.18, sustain: 0.15, release: 0.15 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.9,
+    velocityToFilterEnv: 1.2,
+    velocityToAttack: 0.25,
+    velocityToDecay: 0.45,
   },
   acidBass: {
     // E-14: the 303 is a 24 dB ladder, and its character is a *fast, deep* envelope return.
@@ -180,6 +195,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 1200,
     filterQ: 6.0,
     adsr: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.1 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 2.2,
+    velocityToFilterEnv: 1.4,
+    velocityToAttack: 0.15,
+    velocityToDecay: 0.3,
   },
 
   // --- Leads ---------------------------------------------------------------
@@ -194,6 +214,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 4200,
     filterQ: 2.2,
     adsr: { attack: 0.012, decay: 0.15, sustain: 0.75, release: 0.22 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.2,
+    velocityToFilterEnv: 0.7,
+    velocityToAttack: 0.15,
+    velocityToDecay: 0.2,
   },
   // `square_lead`: hollow PWM-ish square, narrower detune and a gentler filter
   // so the odd harmonics dominate instead of the saw fizz.
@@ -206,6 +231,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3000,
     filterQ: 1.4,
     adsr: { attack: 0.008, decay: 0.12, sustain: 0.7, release: 0.18 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.0,
+    velocityToFilterEnv: 0.6,
+    velocityToAttack: 0.15,
+    velocityToDecay: 0.2,
   },
   // `guitar_lead`: saw + triangle with a fast pluck and a resonant midrange,
   // i.e. a single-coil-ish electric lead rather than a synth brass.
@@ -270,6 +300,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2000,
     filterQ: 4.5,
     adsr: { attack: 0.003, decay: 0.14, sustain: 0.06, release: 0.12 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.5,
+    velocityToFilterEnv: 0.9,
+    velocityToAttack: 0.2,
+    velocityToDecay: 0.35,
   },
 
   // --- Chords / pads -------------------------------------------------------
@@ -286,6 +321,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 6500,
     filterQ: 1.0,
     adsr: { attack: 0.02, decay: 0.35, sustain: 0.85, release: 0.45 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.9,
+    velocityToFilterEnv: 0.5,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.15,
   },
   // `rhodes_ep`: sine body + triangle tine, instantaneous attack and a long
   // decay into a low sustain — the electric-piano "bell then body" contour.
@@ -314,6 +354,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 5200,
     filterQ: 0.7,
     adsr: { attack: 0.006, decay: 0.06, sustain: 0.95, release: 0.16 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.7,
+    velocityToFilterEnv: 0.4,
+    velocityToAttack: 0.05,
+    velocityToDecay: 0.05,
   },
   // `brass_synth`: saw + square with a 70 ms bloom and a resonant 2.5 kHz
   // filter — the synth-brass swell rather than a static pad.
@@ -329,6 +374,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 2500,
     filterQ: 2.4,
     adsr: { attack: 0.07, decay: 0.25, sustain: 0.8, release: 0.3 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.8,
+    velocityToFilterEnv: 1.1,
+    velocityToAttack: 0.25,
+    velocityToDecay: 0.2,
   },
 
   // --- Basses --------------------------------------------------------------
@@ -343,6 +393,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 320,
     filterQ: 0.8,
     adsr: { attack: 0.004, decay: 0.14, sustain: 0.9, release: 0.14 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.9,
+    velocityToFilterEnv: 0.5,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.25,
   },
   // `808_bass`: sine fundamental with a tiny triangle edge and a long 0.9 s
   // decay — the sustained 808 tail, distinct from the dry sub_bass.
@@ -355,6 +410,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 480,
     filterQ: 0.9,
     adsr: { attack: 0.004, decay: 0.9, sustain: 0.55, release: 0.5 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.1,
+    velocityToFilterEnv: 0.6,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.3,
   },
   // `reese_bass`: two saws 28 cents apart through a dark 620 Hz filter — the
   // slow beating that defines the Reese, no sub-sine reinforcement.
@@ -367,6 +427,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 620,
     filterQ: 3.0,
     adsr: { attack: 0.012, decay: 0.35, sustain: 0.85, release: 0.3 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.3,
+    velocityToFilterEnv: 0.8,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.2,
   },
   // `walking_upright`: triangle + sine, woody low-pass at 700 Hz, short sustain
   // and a fast decay — a plucked double bass, not a sine sub.
@@ -411,6 +476,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 900,
     filterQ: 5.0,
     adsr: { attack: 0.002, decay: 0.25, sustain: 0.4, release: 0.15 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.2,
+    velocityToFilterEnv: 0.7,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.25,
   },
 
   // --- FX ------------------------------------------------------------------
@@ -427,6 +497,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 1200,
     filterQ: 5.0,
     adsr: { attack: 0.01, decay: 0.4, sustain: 0.4, release: 0.25 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.8,
+    velocityToFilterEnv: 0.5,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.1,
   },
 
   // --- Basses the curated genre data needs ---------------------------------
@@ -473,6 +548,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 700,
     filterQ: 3.2,
     adsr: { attack: 0.006, decay: 0.28, sustain: 0.5, release: 0.18 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.4,
+    velocityToFilterEnv: 0.9,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.25,
   },
 
   // --- Acoustic / world leads & comping voices -----------------------------
@@ -535,6 +615,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3200,
     filterQ: 1.8,
     adsr: { attack: 0.04, decay: 0.24, sustain: 0.8, release: 0.24 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 2.0,
+    velocityToFilterEnv: 1.2,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.2,
   },
   // `piano_lead`: hard hammer transient, a 1.2 s decay into almost no sustain and a
   // 4.4 kHz body — brighter and more percussive than `rhodes_ep`.
@@ -629,6 +714,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 0.7,
     adsr: { attack: 0.06, decay: 0.16, sustain: 0.85, release: 0.28 },
     noiseMix: 0.16,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 2.1,
+    velocityToFilterEnv: 1.3,
+    velocityToAttack: 0.35,
+    velocityToDecay: 0.2,
   },
   // `sitar_lead`: the jawari buzz comes from a wide 22-cent saw/square pair through a
   // 5-Q 3.8 kHz resonance, with a 0.9 s drone-ish decay.
@@ -723,6 +813,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 1.1,
     adsr: { attack: 0.012, decay: 0.3, sustain: 0.72, release: 0.3 },
     pitchSweepCents: -80,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.8,
+    velocityToFilterEnv: 0.4,
+    velocityToAttack: 0.1,
+    velocityToDecay: 0.15,
   },
   // `fm_lead`: two-operator-ish FM squelch faked by a sine carrier plus a square
   // partial a minor-tenth sharp (1207 cents) through a 3-Q 5.2 kHz filter.
@@ -735,6 +830,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 5200,
     filterQ: 3.0,
     adsr: { attack: 0.002, decay: 0.22, sustain: 0.35, release: 0.14 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.3,
+    velocityToFilterEnv: 0.8,
+    velocityToAttack: 0.15,
+    velocityToDecay: 0.3,
   },
   // `cowbell_lead`: the TR-808 cowbell as a melodic hook — two squares 540 cents
   // apart through a 6-Q 5 kHz band, clanging and immediately gone.
@@ -747,6 +847,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 5000,
     filterQ: 6.0,
     adsr: { attack: 0.001, decay: 0.28, sustain: 0.04, release: 0.12 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.2,
+    velocityToFilterEnv: 0.8,
+    velocityToAttack: 0.15,
+    velocityToDecay: 0.3,
   },
   // `growl_lead`: dubstep/neuro wavetable growl — a saw/square pair 40 cents apart
   // screaming through an 8-Q 1.5 kHz resonance with a sustained body.
@@ -759,6 +864,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 1500,
     filterQ: 8.0,
     adsr: { attack: 0.008, decay: 0.4, sustain: 0.6, release: 0.2 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.6,
+    velocityToFilterEnv: 1.0,
+    velocityToAttack: 0.2,
+    velocityToDecay: 0.3,
   },
 
   // --- One-shot FX -----------------------------------------------------------------
@@ -773,6 +883,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterCutoff: 3000,
     filterQ: 3.0,
     adsr: { attack: 0.012, decay: 0.26, sustain: 0.1, release: 0.2 },
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 1.9,
+    velocityToFilterEnv: 1.2,
+    velocityToAttack: 0.3,
+    velocityToDecay: 0.25,
   },
   // `vinyl_crackle`: filtered noise with a 0.12 s decay — surface noise / needle hiss
   // for the sampled and shellac-recorded genres. The two oscillators are muted.
@@ -786,6 +901,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 0.8,
     adsr: { attack: 0.004, decay: 0.12, sustain: 0.35, release: 0.5 },
     noiseMix: 0.9,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.5,
+    velocityToFilterEnv: 0.3,
+    velocityToAttack: 0.0,
+    velocityToDecay: 0.0,
   },
   // `tape_stop`: a record/tape spun down — saw + square falling 2400 cents across the
   // note over a 0.5 s decay.
@@ -799,6 +919,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 2.0,
     adsr: { attack: 0.002, decay: 0.5, sustain: 0.3, release: 0.2 },
     pitchSweepCents: -2400,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.6,
+    velocityToFilterEnv: 0.4,
+    velocityToAttack: 0.0,
+    velocityToDecay: 0.0,
   },
   // `reverse_cymbal`: noise swelling in over half a second and cut off instantly —
   // the classic pre-downbeat reverse cymbal.
@@ -812,6 +937,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 0.7,
     adsr: { attack: 0.5, decay: 0.05, sustain: 0.9, release: 0.02 },
     noiseMix: 1.0,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.7,
+    velocityToFilterEnv: 0.4,
+    velocityToAttack: 0.0,
+    velocityToDecay: 0.0,
   },
   // `noise_rise`: a 1.1 s white-noise riser climbing 700 cents into the next section.
   noiseRise: {
@@ -825,6 +955,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     adsr: { attack: 1.1, decay: 0.1, sustain: 0.95, release: 0.05 },
     noiseMix: 1.0,
     pitchSweepCents: 700,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.8,
+    velocityToFilterEnv: 0.5,
+    velocityToAttack: 0.0,
+    velocityToDecay: 0.0,
   },
   // `sweep_down`: the falling counterpart — half-noise, half-saw dropping 1200 cents.
   sweepDown: {
@@ -838,6 +973,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     adsr: { attack: 0.005, decay: 0.8, sustain: 0.2, release: 0.3 },
     noiseMix: 0.5,
     pitchSweepCents: -1200,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.8,
+    velocityToFilterEnv: 0.5,
+    velocityToAttack: 0.0,
+    velocityToDecay: 0.0,
   },
   // `sub_drop`: an 808 sub sliding a full octave down under a 300 Hz filter — the
   // trap/dubstep drop rather than a riser.
@@ -851,6 +991,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 1.0,
     adsr: { attack: 0.004, decay: 1.0, sustain: 0.3, release: 0.6 },
     pitchSweepCents: -1200,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.9,
+    velocityToFilterEnv: 0.5,
+    velocityToAttack: 0.0,
+    velocityToDecay: 0.0,
   },
   // `laser_zap`: a square/saw blip plummeting 1900 cents in 0.12 s — the electro/rave zap.
   laserZap: {
@@ -863,6 +1008,11 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     filterQ: 4.0,
     adsr: { attack: 0.001, decay: 0.12, sustain: 0.0, release: 0.08 },
     pitchSweepCents: -1900,
+    // Played dynamics (see the velocity fields' docs): hard = brighter, tighter.
+    velocityToCutoff: 0.7,
+    velocityToFilterEnv: 0.4,
+    velocityToAttack: 0.0,
+    velocityToDecay: 0.0,
   },
 };
 
@@ -906,6 +1056,26 @@ export const VELOCITY_CURVE_EXPONENT = 2;
  * `keyTrackFilter: 0` returns the authored value unchanged; a preset that omits the field gets
  * `DEFAULT_KEY_TRACK_DEPTH`.
  */
+/**
+ * The cutoff a preset's voice *settles* to at a given velocity, after key tracking.
+ *
+ * The audible sweep peaks at `cutoff · 2^filterEnvOctaves` above this value and returns here; this
+ * is the floor the note holds and therefore the number that says how bright a soft note is compared
+ * with a hard one. Exported so the velocity→timbre tests can assert the contract — hard notes are
+ * brighter, and the mapping is a no-op at full velocity — without re-deriving the expression and
+ * drifting from the voice.
+ */
+export function velocityScaledCutoff(
+  preset: Pick<SynthPreset, "filterCutoff" | "keyTrackFilter" | "velocityToCutoff">,
+  midiNote: number,
+  velocity: number
+): number {
+  const base = keyTrackedCutoff(preset, midiNote);
+  const depth = preset.velocityToCutoff ?? 0;
+  if (!(depth > 0)) return base;
+  return safeFreq(base * Math.pow(2, depth * (velocityCurve(velocity) - 1)), base);
+}
+
 export function keyTrackedCutoff(
   preset: Pick<SynthPreset, "filterCutoff" | "keyTrackFilter">,
   midiNote: number
@@ -1051,16 +1221,12 @@ export function playPolySynthNote(
    * Key tracking — the authored cutoff is a *C4* cutoff, not an absolute one.
    *
    * Applied here, before every consumer of `filterCutoff`, so the filter envelope, the velocity
-   * depth and the 24 dB second stage all inherit it and the whole sweep tracks the note. The
-   * ratio is taken from the oscillator frequency rather than the raw MIDI argument, because the
-   * engine passes pitches both as absolute notes and as role-relative offsets (a bass offset of
-   * +12 and an absolute 48 must produce the same ratio, and only the frequency knows that).
+   * depth and the 24 dB second stage all inherit it and the whole sweep tracks the note. The ratio
+   * comes from the oscillator frequency rather than the raw MIDI argument, because the engine
+   * passes pitches both as absolute notes and as role-relative offsets (a bass offset of +12 and an
+   * absolute 48 must produce the same ratio, and only the frequency knows that).
    */
-  const keyTrackDepth = preset.keyTrackFilter ?? DEFAULT_KEY_TRACK_DEPTH;
-  const keyTrackRatio =
-    keyTrackDepth > 0 ? Math.pow(freq / midiToFreq(KEY_TRACK_REFERENCE_MIDI), keyTrackDepth) : 1;
-  const filterCutoff = safeFreq(preset.filterCutoff * keyTrackRatio, 12000);
-
+  const filterCutoff = keyTrackedCutoff(preset, midiNote);
   // Velocity → timbre depth. Each field defaults to 0, which short-circuits to the
   // original expression: an un-annotated preset schedules the exact cutoff, sweep and
   // amp timing it always did at *every* velocity. An annotated preset also keeps its

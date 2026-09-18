@@ -1,27 +1,27 @@
 {
-  "version": "2.0.55",
+  "version": "2.0.56",
   "releaseDate": "2026-09-18",
-  "changelogCount": 119,
+  "changelogCount": 120,
   "latest": {
-    "version": "2.0.55",
+    "version": "2.0.56",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.55 键盘跟踪：滤波截止频率随音高移动，低音不再又薄又亮、高音不再发闷；并修复播放谎报成功",
-      "en": "v2.0.55 Key Tracking: the Filter Corner Follows Pitch; Playback No Longer Claims Success It Cannot Observe"
+      "zh": "v2.0.56 力度真正改变音色：51 个预设全部具备演奏动态，不再只有音量变化",
+      "en": "v2.0.56 Velocity Reaches Timbre on All 51 Presets, Not Just Level"
     },
     "highlights": [
       {
-        "zh": "**键盘跟踪（Key Tracking）**：滤波截止频率此前是一个**绝对常数**，于是 C2 的贝斯和 C6 的主音都开到同一个 2.6kHz——相对各自的基频，低音是「全开」（薄、亮、没有厚度），高音是「几乎关死」（闷）。真实乐器的共鸣体是固定的，音越高谐波越少，耳朵把这读成一致的音色；而此前的行为正好相反。这不是某个预设没调好，而是**全部 51 个预设共有的系统性偏差**，所以作为默认修复（0.5 深度，即音高移动一个八度、截止频率移动半个八度），单预设可用 `keyTrackFilter: 0` 关闭。参考音为 C4——预设里写的数字因此仍然意味着「C4 时的值」。",
-        "en": "**Key tracking**: the low-pass corner used to be an absolute constant, so a C2 bass note and a C6 lead both opened to the same 2.6 kHz. Relative to their own fundamentals the low note was wide open (thin, bright, no body) and the high note nearly closed (dull) — the opposite of a real resonant body, where fewer harmonics survive as pitch rises and the ear reads that as a consistent timbre. That is not one badly voiced preset; it is a systematic bias in all 51 of them, so it…"
+        "zh": "**51 个预设全部具备演奏动态**：此前 21/51 个预设支持「力度→音色」，其余 30 个（模拟主音、风琴、铜管、贝斯、噪声类等）力度只改变音量——轻弹与重弹的差别只是响度，这是「像是编出来的、不是弹出来的」最典型的破绽。现在每个预设都按乐器特性带有各自的动态深度：击弦类（拨弦、钢琴、颤音琴）最深、拉奏/吹奏类次之、垫子与风琴最浅（持续音没有声学理由随力度大幅变亮）、噪声类过渡音色最轻。",
+        "en": "**All 51 presets respond to velocity in timbre**: 21 of 51 had it; the other 30 (analogue leads, organ, brass, basses, noise voices) changed only in level, so a soft note and a hard one differed in loudness alone — the most recognisable \"programmed, not played\" tell. Each preset now carries a depth matched to its instrument: struck patches (plucked, piano, vibraphone) deepest, bowed/blown next, pads and organ shallowest (a sustained tone has no acoustic reason to brighten sh…"
       },
       {
-        "zh": "**和弦因此也有了音色层次**：一副 C-E-G 和弦的三个音现在各自拥有不同的截止频率（三音比根音更亮），而不是三个完全相同的滤波器设置——这在离线与实时两条路径上都已断言。",
-        "en": "**Chords gain timbral depth as a result**: the three notes of a C-E-G voicing now each carry their own corner (the third is brighter than the root) instead of one filter setting repeated — asserted on both the live and the offline paths."
+        "zh": "**实测依据**：出厂 pattern 的力度**本来就**有 12 种取值（50–120，扫描 `src/data/genres/**` 得到），所以这个映射是可听的，不是理论上的。",
+        "en": "**Measured basis**: the shipped patterns already use twelve distinct velocity values (50–120, scanned across `src/data/genres/**`), so the mapping is audible rather than theoretical."
       },
       {
-        "zh": "**播放不再谎报成功**：`play()` 会 await `ctx.resume()`，而 iOS 静音开关（或任何需要新一次手势的浏览器）会让它被拒绝、或让上下文保持 suspended。此前调用处不 await、不 catch，却无条件把界面置为「播放中」——按钮亮起、播放头走动、一点声音都没有，且 Promise 拒绝无人处理。现在只有真的开始播放才报告播放；音频被阻止时**停止走带并说明原因**（新增 `AudioEngine.isAudioBlocked()` 直接读上下文的真实状态）。",
-        "en": "**Playback no longer claims success it cannot observe**: `play()` awaits `ctx.resume()`, which the iOS silent switch (or any browser wanting a fresh gesture) rejects or leaves suspended. The caller neither awaited nor caught it and set \"playing\" unconditionally — button lit, playhead moving, no sound, and the rejection unhandled. Playback is now reported only when it actually started, and a blocked context **stops the transport and says why** (new `AudioEngine.isAudioBlocked…"
+        "zh": "**满力度严格不变**：每个深度项在满力度时都是精确的空操作（因子含 `(velCurve − 1)` 或 `(1 − velCurve)`，在 `velCurve === 1` 时为 0），因此标注不会让任何预设在其最强处变响或变闷。这一点由测试断言，而不是靠算术「应该如此」。",
+        "en": "**Strictly unchanged at full velocity**: every depth term is an exact no-op at full velocity (its factor contains `(velCurve − 1)` or `(1 − velCurve)`, which is 0 at `velCurve === 1`), so annotating a preset cannot make it louder or duller at its loudest. That is asserted rather than assumed from the arithmetic."
       }
     ],
     "truncated": true
