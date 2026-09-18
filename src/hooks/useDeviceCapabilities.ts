@@ -94,6 +94,21 @@ export function useDeviceCapabilities(): DeviceCapabilities {
   const [caps, setCaps] = useState<DeviceCapabilities>(() => readCapabilities());
 
   useEffect(() => {
+    /**
+     * `matchMedia` is optional, and not only in theory: jsdom does not implement it, and suites
+     * that stub `window` wholesale (rather than spreading the real one) drop it entirely. A hook
+     * that throws on a runtime API it merely *prefers* would take the whole view down, so the
+     * effect degrades to a `resize`-only listener rather than assuming the richer API exists.
+     */
+    if (typeof window.matchMedia !== "function") {
+      const update = () => setCaps(readCapabilities());
+      window.addEventListener("resize", update);
+      window.addEventListener("orientationchange", update);
+      return () => {
+        window.removeEventListener("resize", update);
+        window.removeEventListener("orientationchange", update);
+      };
+    }
     const queries = [
       QUERY_TOUCH,
       "(hover: none)",

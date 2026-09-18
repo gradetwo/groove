@@ -1,0 +1,244 @@
+import React from "react";
+import { ChevronRight, X } from "lucide-react";
+import { useLanguage } from "../../i18n/LanguageContext";
+import type { DrumKitType } from "../../audio/DrumKitModels";
+import type { MobileEditMode } from "./Toolbar";
+
+/**
+ * The phone's "everything else" sheet for the studio.
+ *
+ * The compact transport bar carries play, bar navigation, tempo and undo. Every other sequencer
+ * control lives here rather than in the toolbar, because the honest answer to "does this belong
+ * on a phone" is different for a metronome and a blind-A/B compare toggle — and the desktop
+ * toolbar's answer was "all of them, always visible" on a 390 px screen.
+ *
+ * Each row states the shortcut it mirrors on a desktop, so the two surfaces stay learnable as one
+ * app rather than two.
+ */
+export interface StudioSheetAction {
+  id: string;
+  labelKey: string;
+  descKey?: string;
+  /** Mirrors the desktop keyboard binding, shown as a hint. */
+  shortcut?: string;
+  /** A toggle row shows its current state instead of a chevron. */
+  toggle?: { on: boolean; onToggle: () => void };
+  /** A radio row shows which option is active. */
+  selected?: boolean;
+  onSelect?: () => void;
+  disabled?: boolean;
+}
+
+export interface StudioSheetGroup {
+  titleKey: string;
+  actions: StudioSheetAction[];
+}
+
+export interface MobileStudioSheetProps {
+  open: boolean;
+  onClose: () => void;
+  groups: StudioSheetGroup[];
+}
+
+export const MobileStudioSheet: React.FC<MobileStudioSheetProps> = ({ open, onClose, groups }) => {
+  const { t } = useLanguage();
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[85] flex items-end" data-testid="mobile-studio-sheet">
+      <button
+        type="button"
+        aria-label={t("mobile_more_close")}
+        data-testid="mobile-studio-sheet-backdrop"
+        onClick={onClose}
+        onPointerUp={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("mobile_studio_sheet_title")}
+        className="relative z-10 max-h-[80dvh] w-full overflow-y-auto overscroll-contain rounded-t-3xl border-t border-line bg-panel pb-[max(1rem,env(safe-area-inset-bottom,0px))] shadow-2xl"
+      >
+        <div className="flex justify-center pt-2.5 pb-1">
+          <span aria-hidden="true" className="h-1 w-10 rounded-full bg-line" />
+        </div>
+        <div className="flex items-center justify-between px-5 pb-2">
+          <h2 className="text-sm font-bold text-text">{t("mobile_studio_sheet_title")}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            onPointerUp={onClose}
+            aria-label={t("mobile_more_close")}
+            data-testid="mobile-studio-sheet-close"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-line text-text-sub"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {groups.map((group) => (
+          <section key={group.titleKey} className="px-3 pb-2">
+            <h3 className="px-2 pb-1 pt-2 font-['JetBrains_Mono'] text-[10px] font-bold uppercase tracking-[0.12em] text-text-dim">
+              {t(group.titleKey)}
+            </h3>
+            <ul>
+              {group.actions.map((action) => (
+                <li key={action.id}>
+                  <button
+                    type="button"
+                    data-testid={`mobile-studio-action-${action.id}`}
+                    aria-pressed={action.toggle ? action.toggle.on : undefined}
+                    aria-checked={action.selected}
+                    disabled={action.disabled}
+                    onPointerUp={(e) => {
+                      e.preventDefault();
+                      if (action.disabled) return;
+                      if (action.toggle) {
+                        // A toggle stays open: a user flicking metronome on and count-in off
+                        // should not have to re-open the sheet between the two.
+                        action.toggle.onToggle();
+                        return;
+                      }
+                      action.onSelect?.();
+                      onClose();
+                    }}
+                    className="flex min-h-[56px] w-full items-center gap-3 rounded-xl px-2 text-left transition-colors active:bg-panel2 disabled:opacity-40"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13.5px] font-semibold text-text">
+                        {t(action.labelKey)}
+                      </span>
+                      {action.descKey && (
+                        <span className="block truncate text-[11px] leading-tight text-text-dim">
+                          {t(action.descKey)}
+                        </span>
+                      )}
+                    </span>
+                    {action.toggle ? (
+                      <span
+                        aria-hidden="true"
+                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                          action.toggle.on ? "bg-accent" : "bg-line"
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 h-5 w-5 rounded-full bg-bg transition-all ${
+                            action.toggle.on ? "left-[22px]" : "left-0.5"
+                          }`}
+                        />
+                      </span>
+                    ) : (
+                      <>
+                        {action.selected && (
+                          <span
+                            aria-hidden="true"
+                            className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent"
+                          />
+                        )}
+                        {action.shortcut && (
+                          <span className="shrink-0 font-['JetBrains_Mono'] text-[9px] text-text-dim">
+                            {action.shortcut}
+                          </span>
+                        )}
+                        <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-text-dim" />
+                      </>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** Builds the studio sheet's groups from the panel's own callbacks. */
+export function buildStudioSheetGroups(input: {
+  isMetronome: boolean;
+  isCountIn: boolean;
+  isRecordArmed: boolean;
+  isDrumsOnly: boolean;
+  isSongMode: boolean;
+  isBlindCompare: boolean;
+  drumKit: DrumKitType;
+  mobileEditMode: MobileEditMode;
+  onToggleMetronome: () => void;
+  onToggleCountIn: () => void;
+  onToggleRecordArmed: () => void;
+  onToggleDrumsOnly: () => void;
+  onToggleSongMode: () => void;
+  onToggleBlindCompare: () => void;
+  onChangeDrumKit: (kit: DrumKitType) => void;
+  onChangeMobileEditMode: (mode: MobileEditMode) => void;
+  onToggleVelocityLane: () => void;
+  onTogglePianoRoll?: () => void;
+  onOpenEuclidean: () => void;
+  onOpenProjectHub: () => void;
+  onOpenExport: () => void;
+  onQuickAction?: () => void;
+  onToggleConsole?: () => void;
+  onToggleAnalyzer: () => void;
+  onOpenAudioSettings?: () => void;
+}): StudioSheetGroup[] {
+  const drumKits: DrumKitType[] = ["808", "909", "acoustic", "cyber"];
+  return [
+    {
+      titleKey: "mobile_sheet_playback",
+      actions: [
+        { id: "metronome", labelKey: "toolbar_metronome_label", shortcut: "K", toggle: { on: input.isMetronome, onToggle: input.onToggleMetronome } },
+        { id: "count-in", labelKey: "toolbar_count_in_title", toggle: { on: input.isCountIn, onToggle: input.onToggleCountIn } },
+        { id: "record", labelKey: "toolbar_record_title", toggle: { on: input.isRecordArmed, onToggle: input.onToggleRecordArmed } },
+        { id: "drums-only", labelKey: "toolbar_drums_only_label", shortcut: "D", toggle: { on: input.isDrumsOnly, onToggle: input.onToggleDrumsOnly } },
+        { id: "song-mode", labelKey: "toolbar_song_mode_title", toggle: { on: input.isSongMode, onToggle: input.onToggleSongMode } },
+        { id: "blind-compare", labelKey: "toolbar_blind_label", toggle: { on: input.isBlindCompare, onToggle: input.onToggleBlindCompare } },
+      ],
+    },
+    {
+      titleKey: "mobile_sheet_edit",
+      actions: [
+        // The kit selector is a radio, not a switch: tapping a kit chooses it and closes, and the
+        // row shows which one is current rather than an on/off state.
+        ...drumKits.map((kit) => ({
+          id: `drum-kit-${kit}`,
+          labelKey: "toolbar_drum_kit_label",
+          
+          onSelect: () => input.onChangeDrumKit(kit),
+          selected: input.drumKit === kit,
+        })),
+        {
+          id: "velocity-lane",
+          labelKey: "toolbar_velocity_label",
+          shortcut: "V",
+          toggle: { on: true, onToggle: input.onToggleVelocityLane },
+        },
+        ...(input.onTogglePianoRoll
+          ? [{ id: "piano-roll", labelKey: "roll_toggle", onSelect: input.onTogglePianoRoll }]
+          : []),
+        { id: "euclidean", labelKey: "toolbar_euclid_label", shortcut: "E", onSelect: input.onOpenEuclidean },
+      ],
+    },
+    {
+      titleKey: "mobile_sheet_project",
+      actions: [
+        { id: "project-hub", labelKey: "toolbar_project_hub_title", onSelect: input.onOpenProjectHub },
+        { id: "export", labelKey: "toolbar_export_wav", onSelect: input.onOpenExport },
+        ...(input.onQuickAction ? [{ id: "inspire", labelKey: "toolbar_inspire_label", onSelect: input.onQuickAction }] : []),
+      ],
+    },
+    {
+      titleKey: "mobile_sheet_view",
+      actions: [
+        ...(input.onToggleConsole
+          ? [{ id: "console", labelKey: "nav_console", onSelect: input.onToggleConsole }]
+          : []),
+        { id: "analyzer", labelKey: "nav_analyzer", onSelect: input.onToggleAnalyzer },
+        ...(input.onOpenAudioSettings
+          ? [{ id: "audio-settings", labelKey: "settings_open", onSelect: input.onOpenAudioSettings }]
+          : []),
+      ],
+    },
+  ];
+}

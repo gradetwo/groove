@@ -171,6 +171,63 @@ const TARGETS = [
  * The retry is *around a real gesture*, not a relaxed assertion: if the element never receives a
  * click this still fails, and it names the missing event.
  */
+/**
+ * Opens the studio's secondary-controls surface, whichever shell is on screen.
+ *
+ * The phone shell replaces the 64-button desktop toolbar with a compact transport bar, so the
+ * audio-settings entry point lives somewhere else there (the transport bar's "more" button rather
+ * than `toolbar-advanced-toggle`). Assertions should be about *reachability*, not about which
+ * chrome a given viewport happens to use, so this resolves the surface per target.
+ */
+/**
+ * Opens the piano roll from whichever shell is present.
+ *
+ * Desktop has a dedicated toolbar button; the phone reaches it through the studio sheet. The
+ * assertion the suite cares about is that the roll edits the studio's own pattern, which is a
+ * cross-view claim and has nothing to do with which chrome exposed the entry point.
+ */
+async function openPianoRoll(page) {
+  if (await page.$("[data-testid='toolbar-piano-roll-toggle']")) {
+    await clickVerified(page, "[data-testid='toolbar-piano-roll-toggle']");
+    return "desktop";
+  }
+  await openStudioMoreControls(page);
+  await page.waitForSelector("[data-testid='mobile-studio-action-piano-roll']", { timeout: 15000 });
+  await clickVerified(page, "[data-testid='mobile-studio-action-piano-roll']");
+  return "mobile";
+}
+
+async function openStudioMoreControls(page) {
+  const mobileMore = await page.$("[data-testid='mobile-transport-more']");
+  if (mobileMore) {
+    await clickVerified(page, "[data-testid='mobile-transport-more']");
+    return "mobile";
+  }
+  const advanced = await page.$("[data-testid='toolbar-advanced-toggle']");
+  if (advanced) {
+    await clickVerified(page, "[data-testid='toolbar-advanced-toggle']");
+    return "desktop";
+  }
+  throw new Error("No studio secondary-controls surface found on this viewport");
+}
+
+/**
+ * Opens the floated console from whichever shell is present. On a phone the console is reached
+ * through the studio sheet; on desktop through the toolbar.
+ */
+async function openFloatedConsole(page) {
+  const desktopToggle = await page.$("[data-testid='toolbar-console-toggle']");
+  if (desktopToggle) {
+    await clickVerified(page, "[data-testid='toolbar-console-toggle']");
+    return "desktop";
+  }
+  await openStudioMoreControls(page);
+  const mobileRow = await page.$("[data-testid='mobile-studio-action-console']");
+  if (!mobileRow) throw new Error("Phone studio sheet has no console row");
+  await clickVerified(page, "[data-testid='mobile-studio-action-console']");
+  return "mobile";
+}
+
 async function clickVerified(page, selector, { timeoutMs = 10000, pressMs = 60 } = {}) {
   const deadline = Date.now() + timeoutMs;
   let lastReason = "unknown";
@@ -451,19 +508,24 @@ async function runTestOnTarget(target, baseUrl) {
     // observable changes rather than a static picture of the defaults.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
     // React mounts after `domcontentloaded`, so wait for the toolbar itself before querying.
-    await page.waitForSelector("[data-testid='toolbar-advanced-toggle']", { timeout: 20000 }).catch(() => {
-      throw new Error("Studio toolbar did not render the advanced drawer toggle");
-    });
-    // The audio settings entry point lives in the collapsible advanced drawer, closed by default.
-    if (!(await page.$("[data-testid='studio-audio-settings-open']"))) {
-      await clickVerified(page, "[data-testid='toolbar-advanced-toggle']");
+    // React mounts after `domcontentloaded`, so wait for a shell before querying.
+    await page
+      .waitForSelector("[data-testid='toolbar-advanced-toggle'], [data-testid='mobile-transport-more']", {
+        timeout: 20000,
+      })
+      .catch(() => {
+        throw new Error("Studio did not render a transport surface");
+      });
+    // The audio settings entry point is behind the secondary-controls surface on both shells.
+    const audioSettingsBtn = await page.$("[data-testid='studio-audio-settings-open']");
+    if (!audioSettingsBtn) {
+      await openStudioMoreControls(page);
       await page.waitForTimeout(300);
     }
     await page.waitForSelector("[data-testid='studio-gs1-toggle']", { timeout: 20000 }).catch(() => {
-      throw new Error("Opening the advanced drawer did not reveal the GS-1 toggle");
+      throw new Error("Opening the secondary controls did not reveal the GS-1 toggle");
     });
-    const audioSettingsBtn = await page.$("[data-testid='studio-audio-settings-open']");
-    if (!audioSettingsBtn) {
+    if (!(await page.$("[data-testid='studio-audio-settings-open']"))) {
       throw new Error("Audio settings panel has no entry point in the toolbar");
     }
     await clickVerified(page, "[data-testid='studio-audio-settings-open']");
@@ -564,7 +626,7 @@ async function runTestOnTarget(target, baseUrl) {
 
     // The toolbar chip must agree with what the panel just did (the cross-surface contract).
     if (!(await page.$("[data-testid='studio-gs1-toggle']"))) {
-      await page.click("[data-testid='toolbar-advanced-toggle']", { force: true });
+      await openStudioMoreControls(page);
       await page.waitForTimeout(300);
     }
     const chipAfterPanelFlip = await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed");
@@ -752,7 +814,7 @@ async function runTestOnTarget(target, baseUrl) {
     // The whole claim of the roll is that it is another view of the same data, not a second copy.
     // So this draws a note in the roll and then requires the step grid to show it — a cross-view
     // assertion, which is the part that could silently break.
-    await clickVerified(page, "[data-testid='toolbar-piano-roll-toggle']");
+    await openPianoRoll(page);
     try {
       await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 15000 });
     } catch (rollErr) {
@@ -763,7 +825,13 @@ async function runTestOnTarget(target, baseUrl) {
         inspector: Boolean(document.querySelector("[data-testid='track-inspector']")),
         settings: Boolean(document.querySelector("[data-testid='settings-tab-audio']")),
         stepGrid: document.querySelectorAll("[data-track-idx][data-step-idx]").length,
-        toggleBox: (() => { const el = document.querySelector("[data-testid='toolbar-piano-roll-toggle']"); const r = el?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null; })(),
+        toggleBox: (() => {
+          const el =
+            document.querySelector("[data-testid='toolbar-piano-roll-toggle']") ||
+            document.querySelector("[data-testid='mobile-studio-action-piano-roll']");
+          const r = el?.getBoundingClientRect();
+          return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null;
+        })(),
         viewport: { w: window.innerWidth, h: window.innerHeight, scrollY: window.scrollY },
       }));
       console.error(`[roll-diag ${target.name}] ${JSON.stringify(diag)}`);
@@ -1091,7 +1159,10 @@ async function runTestOnTarget(target, baseUrl) {
     // this, so nothing caught it — this check does, on every engine, by measuring the app's own
     // activity rather than trusting a screenshot.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector("[data-testid='toolbar-advanced-toggle']", { timeout: 30000 });
+    await page.waitForSelector(
+      "[data-testid='toolbar-advanced-toggle'], [data-testid='mobile-transport-more']",
+      { timeout: 30000 }
+    );
     await page.waitForTimeout(800);
     await page.evaluate(() => {
       window.__genreDiag = { nav: 0, samples: [] };

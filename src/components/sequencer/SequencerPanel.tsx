@@ -10,6 +10,8 @@ import { resolveChordTreatment } from "../../data/genreVoicing";
 import { Ruler } from "./Ruler";
 import { TrackRow } from "./TrackRow";
 import { Toolbar, MobileEditMode } from "./Toolbar";
+import { MobileTransportBar } from "./MobileTransportBar";
+import { MobileStudioSheet, buildStudioSheetGroups } from "./MobileStudioSheet";
 import { VelocityLane, type ParameterDimension } from "./VelocityLane";
 import { PianoRollLane } from "./PianoRollLane";
 import { MasterAnalyzerSuite } from "../analyzer/MasterAnalyzerSuite";
@@ -128,6 +130,13 @@ export interface SequencerPanelProps {
   onToggleGs1: () => void;
   /** v2.0.17: opens the audio settings panel (level / protection / latency / GS-1). */
   onOpenAudioSettings?: () => void;
+  /**
+   * Phone layout. When true the 64-button desktop toolbar is replaced by the compact transport
+   * bar; the grid, track rows and lane drawers are the same components either way.
+   */
+  isPhone?: boolean;
+  /** Opens the phone sheet, which holds everything the compact bar leaves out. */
+  onOpenMobileSheet?: () => void;
   /** Piano roll (item ⑦): a pitch-grid editor over the same pattern the step grid edits. */
   commit?: (action: SequencerAction) => void;
   isPianoRollOpen?: boolean;
@@ -274,6 +283,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   gs1Enabled,
   onToggleGs1,
   onOpenAudioSettings,
+  isPhone = false,
+  onOpenMobileSheet,
   commit,
   isPianoRollOpen = false,
   pianoRollTrackIdx = 0,
@@ -308,6 +319,13 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onCloseVelocityLane,
 }) => {
   const { t } = useLanguage();
+
+  /**
+   * Phone sheet. Kept local to the panel rather than lifted to the view because every control it
+   * exposes is already a prop of this component — lifting it would mean threading a dozen more
+   * callbacks through `StudioView` just to reach the same handlers.
+   */
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   const [compactTracks, setCompactTracks] = useState<Record<number, boolean>>(() => {
     try {
@@ -395,7 +413,23 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
           : undefined
       }
     >
-      {/* Sequencer Unified Toolbar */}
+      {isPhone ? (
+        <MobileTransportBar
+          isPlaying={isPlaying}
+          bpm={seqState.bpm}
+          viewedBar={viewedBar}
+          barCount={barCount}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onTogglePlay={onTogglePlay}
+          onPrevBar={() => onSelectBar(Math.max(0, viewedBar - 1))}
+          onNextBar={() => onSelectBar(Math.min(barCount - 1, viewedBar + 1))}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          onOpenSheet={onOpenMobileSheet ?? (() => setIsMobileSheetOpen(true))}
+        />
+      ) : (
+      /* Sequencer Unified Toolbar */
       <Toolbar
         gs1Enabled={gs1Enabled}
         onToggleGs1={onToggleGs1}
@@ -480,6 +514,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         onToggleConsole={onToggleConsole}
         onTapTempo={onTapTempo}
       />
+      )}
 
       {/* Master Panoramic Analyzer Dock (P6-05) */}
       {isAnalyzerOpen && (
@@ -683,6 +718,40 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         </div>
         <div className="text-text-dim text-[9.5px]">Groove v{APP_VERSION} · Pro DAW Studio Sequencer</div>
       </div>
+
+      {isPhone && (
+        <MobileStudioSheet
+          open={isMobileSheetOpen}
+          onClose={() => setIsMobileSheetOpen(false)}
+          groups={buildStudioSheetGroups({
+            isMetronome: seqState.isMetronome,
+            isCountIn: seqState.isCountIn,
+            isRecordArmed,
+            isDrumsOnly,
+            isSongMode: seqState.songMode,
+            isBlindCompare: seqState.blindTestMode,
+            drumKit,
+            mobileEditMode,
+            onToggleMetronome,
+            onToggleCountIn,
+            onToggleRecordArmed,
+            onToggleDrumsOnly,
+            onToggleSongMode,
+            onToggleBlindCompare,
+            onChangeDrumKit,
+            onChangeMobileEditMode,
+            onToggleVelocityLane,
+            onTogglePianoRoll,
+            onOpenEuclidean,
+            onOpenProjectHub,
+            onOpenExport: onExportWav,
+            onQuickAction: () => onQuickAction("humanize"),
+            onToggleConsole,
+            onToggleAnalyzer,
+            onOpenAudioSettings,
+          })}
+        />
+      )}
     </section>
   );
 };

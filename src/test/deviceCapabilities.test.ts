@@ -6,7 +6,8 @@
  * tablet.
  */
 import { describe, it, expect } from "vitest";
-import { classifyDevice, PHONE_MAX_WIDTH_PX, PHONE_MAX_HEIGHT_PX } from "../hooks/useDeviceCapabilities";
+import { classifyDevice, PHONE_MAX_WIDTH_PX, PHONE_MAX_HEIGHT_PX, useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
+import { renderHook } from "@testing-library/react";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -99,5 +100,30 @@ describe("mobile zoom and gesture guards", () => {
     // Overscroll at the document level is what makes a PWA feel like a web page: rubber-banding
     // and pull-to-refresh both fire during a downward drag on the step grid.
     expect(css).toMatch(/overscroll-behavior[^;]*none/);
+  });
+});
+
+/**
+ * Regression: the hook must not require `matchMedia`.
+ *
+ * jsdom does not implement it and several suites stub `window` wholesale, which drops it. The
+ * first version read it in the initialiser but called `window.matchMedia(...)` unguarded in the
+ * effect, so every view using the hook threw on mount in those suites — a runtime API the hook
+ * merely *prefers* took seven tests down with it.
+ */
+describe("useDeviceCapabilities robustness", () => {
+  it("mounts and returns the desktop default when matchMedia is unavailable", () => {
+    const original = window.matchMedia;
+    // @ts-expect-error deliberately removing an API the hook must tolerate losing.
+    delete window.matchMedia;
+    try {
+      const { result } = renderHook(() => useDeviceCapabilities());
+      // Desktop is the safe fallback: it is the superset layout, so nothing becomes unreachable.
+      expect(result.current.isMobile).toBe(false);
+      expect(result.current.isTouch).toBe(false);
+      expect(typeof result.current.isPhone).toBe("boolean");
+    } finally {
+      window.matchMedia = original;
+    }
   });
 });

@@ -6,6 +6,7 @@ import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { loadLayoutPrefs, saveLayoutPrefs } from "../features/sequencer/layoutPrefs";
 import { loadKeyboardFabPref } from "../features/sequencer/keyboardFabPref";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { MobileEditMode } from "../components/sequencer/Toolbar";
 import { ToastBanner } from "../components/sequencer/ToastBanner";
 import { StepContextMenu } from "../components/sequencer/StepContextMenu";
@@ -548,6 +549,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
     scrollByPixels,
   } = useMatrixScroll({ matrixContainerRef, stepsPerBar, setViewedBar, commit });
 
+  /**
+   * Phone layout switch. Capability-based rather than a width test, so a landscape phone gets the
+   * compact transport instead of the desktop toolbar on a 390 px-tall screen.
+   */
+  const { isMobile: isPhone } = useDeviceCapabilities();
+
   // Grid input layer: drag-paint, long-press P-Locks, mobile tap modes (A-02)
   const {
     isTouchDevice,
@@ -883,6 +890,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
         {/* Right Column: The Sequencer (.seq) */}
         <SequencerPanel
+          isPhone={isPhone}
           pattern={pattern}
           seqState={seqState}
           isPlaying={isPlaying}
