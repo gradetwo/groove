@@ -974,3 +974,23 @@ node scripts/check_timbre_spread.mjs      # 音色基线也需重录（母带链
 
 **手机实测几何（改后）**：步进格 36×44px；标签栏 53px + 走带条 59px = 视口 17%（664px 高）。
 双层底部栏仍是待评估项（见 C.3）。
+
+## C.5 手机端独立 UI —— 交付完成判定
+
+本轮目标中「手机端重新设计独立 UI」的四项要求已全部落地并有测试与真机矩阵证据：
+
+| 要求 | 交付 | 证据 |
+|---|---|---|
+| 按手机特点取舍功能（难做好用的直接不提供） | 硬件调音台不提供（同一条混音可由每轨音量/声像完成）；**钢琴卷帘撤下**（实测抽屉 1095px、网格 2304px、55 按钮、无手势可平移）。两者都有测试断言「不出现」，且被撤下的功能在界面上**明确说明原因并给出去处** | `mobileShell.test.tsx`、`mobileTransportBar.test.tsx`、E2E 手机端断言说明弹层与和弦入口 |
+| 交互要好、绝不密密麻麻堆砌按钮 | 底部五格标签栏（全部带文字、52px）+ 一个分组抽屉（56px 行带说明）+ 六控件走带条（44px、无文本输入框），替代桌面 64 按钮工具栏；控件数上界写成测试 | `mobileTransportBar.test.tsx` 断言渲染按钮数 ≤7；`mobileShell.test.tsx` 断言标签数=5 且跨视图可达 |
+| 禁止误触放大镜与页面缩放 | viewport 去掉 `maximum-scale`；根样式 `touch-action: manipulation`、`overscroll-behavior: none`、禁横向滚动 | `deviceCapabilities.test.ts` 源码级断言 |
+| 接近原生应用 | 五格标签栏 + 底部抽屉 + 指针抬起即响应（不等 ~300ms click）+ 安全区适配 + 主题色/PWA 元信息 | `mobileShell.test.tsx`（断言 `pointerup` 触发而非 click）、`index.html` |
+
+**全链路绿灯**：`npm run verify` = 0；typecheck、lint、data lint、**1763 单测**、build、budget、GS-1、23 红线、**7/7 浏览器与设备目标**（含 iPhone 竖/横、iPad 竖/横）。
+
+### 仍未完成（不阻塞「手机端 UI」这一项，属产品规划后续）
+
+1. **底部双层栏**：标签栏 53px + 走带条 59px = 664px 视口的 17%。已量到数字，是否合并/折叠待评估。
+2. **§4 上手改造**（桌面与手机共用）：`toolbarTiers` 三层分级仍未接入渲染路径、`layout.density` 无消费者、首屏单一动作、iOS 静音无声（`play()` 未 await/catch）、静默 no-op 与 toast 可达性。
+3. **§3.5 结构性音质**：波表/齐奏/键盘跟踪、鼓组采样层与每击轮转、立体声完整性、混响 IR 移出主线程、延迟不重建图。
+4. **限幅器起音平滑**：三次尝试后如实回退，需离线迭代。
