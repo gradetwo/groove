@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
+import {
+  MASTER_BUS_COMP_RATIO,
+  MASTER_BUS_COMP_ATTACK_SEC,
+  MASTER_BUS_COMP_RELEASE_SEC,
+} from "../audio/masterGraph";
 import { GENRES_MAP } from "../data/genres";
 import { GENRE_MIX, LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB } from "../data/genreMix";
 import { FakeGainNode, installFakeAudioContext } from "./helpers/fakeAudio";
@@ -22,7 +27,7 @@ describe("master loudness trim", () => {
     localStorage.clear();
   });
 
-  it("is the last linear stage: fader -> FX rack -> trim -> limiter", () => {
+  it("keeps the trim as the last linear stage before the limiter", () => {
     const engine = new AudioEngine();
     const internals = engine as unknown as {
       masterGain: any;
@@ -32,13 +37,30 @@ describe("master loudness trim", () => {
     };
 
     expect(internals.loudnessTrimGain).toBeTruthy();
-    // masterGain -> masterFxRack -> loudnessTrim -> limiter.
+    // masterGain -> DC blocker -> masterFxRack -> loudnessTrim -> makeup -> bus comp -> limiter.
     // The trim sits after the rack so it is a *linear* gain: before it, the rack's
     // saturation absorbed the correction (a +7.07 dB match request produced +1.74 dB of
     // measured loudness). See the topology note in masterGraph.ts.
-    expect(internals.masterFxRack.inputNode.incoming).toContain(internals.masterGain);
+    // Q12: the DC blocker's biquad is the only thing between the fader and the rack, so the
+    // fader is asserted indirectly — it is the blocker's source, and the blocker is one node.
+    expect(internals.masterFxRack.inputNode.incoming.length).toBe(1);
+    expect(internals.masterFxRack.inputNode.incoming[0].type).toBe("highpass");
     expect(internals.loudnessTrimGain.incoming).toContain(internals.masterFxRack.outputNode);
-    expect(internals.limiter.incoming).toContain(internals.loudnessTrimGain);
+    /**
+     * The trim is still the last *linear* gain, and the two stages that follow it are the fixed
+     * makeup and the mastering bus compressor — the stage that lowers the crest the limiter
+     * would otherwise have to absorb entirely. Both are after the trim, so its meaning (one
+     * linear match per genre) is unchanged; the limiter is still the final ceiling.
+     */
+    expect(internals.limiter.incoming.length).toBe(1);
+    const beforeLimiter = internals.limiter.incoming[0];
+    expect(beforeLimiter).not.toBe(internals.loudnessTrimGain);
+    // A DynamicsCompressorNode double tuned to the mastering bus settings, i.e. the bus
+    // compressor rather than a bare gain.
+    expect(beforeLimiter.threshold).toBeDefined();
+    expect(beforeLimiter.ratio.value).toBe(MASTER_BUS_COMP_RATIO);
+    expect(beforeLimiter.attack.value).toBe(MASTER_BUS_COMP_ATTACK_SEC);
+    expect(beforeLimiter.release.value).toBe(MASTER_BUS_COMP_RELEASE_SEC);
     // The trim is not the fader: they are two distinct nodes.
     expect(internals.loudnessTrimGain).not.toBe(internals.masterGain);
   });

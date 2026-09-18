@@ -76,6 +76,43 @@ const bars = Math.max(1, Number(argValue("--bars", "3")) || 3);
 const repeats = Math.max(1, Number(argValue("--repeats", "2")) || 2);
 const port = Number(argValue("--port", process.env.PORT || "3150")) || 3150;
 /**
+ * Absolute delivery target, or empty to keep the historical "match the library's own median"
+ * behaviour. The fitted trims only ever made the genres match *each other*; the absolute level
+ * was whatever the median happened to be (−15.7 LUFS), which is 1.7 dB below Spotify's
+ * normalisation point and 6–9 dB below a modern master of the same material. Naming a target is
+ * how the library stops being self-referential.
+ */
+const targetArg = argValue("--target", "");
+const explicitTargetLufs = targetArg === "" ? null : Number(targetArg);
+/**
+ * Per-category delivery targets, in LUFS.
+ *
+ * A single number for 159 genres is the wrong shape: a metal master and an ambient master are not
+ * mastered to the same loudness in the real world, and forcing them together is what produced the
+ * old self-referential −15.7 LUFS median. These values follow how each family is actually
+ * delivered, and they are *ceilings* — a genre whose own dynamics cannot reach its category
+ * target stops at the loudest level its crest allows (see `achievableCeilingLufs`), which is why
+ * the report names every capped genre instead of silently missing.
+ *
+ * `--target=<number>` still overrides the whole table with one number.
+ */
+const CATEGORY_TARGET_LUFS = {
+  "Rock/Metal": -10,
+  "Hip Hop": -12.5,
+  Electronic: -13,
+  "Pop/R&B": -13.5,
+  "Latin/World": -13.5,
+  "Jazz/Blues": -14.5,
+};
+const DEFAULT_CATEGORY_TARGET_LUFS = -13.5;
+/**
+ * The absolute makeup the master graph now applies (`MASTER_MAKEUP_DB`). The measurement must
+ * include it or the trims would be solved against a signal the user never hears. `--makeup=0`
+ * measures the pre-makeup level, which is what a spread-only re-fit wants.
+ */
+const makeupArg = argValue("--makeup", "default");
+const masterMakeupDb = makeupArg === "default" ? undefined : Number(makeupArg);
+/**
  * Which measured quantity the trims are derived from.
  *
  * `lufs` (default) is BS.1770-4 gated integrated loudness — the broadcast/streaming
@@ -165,7 +202,7 @@ function spreadOf(entries, key) {
 /** Renders + measures one genre in the page. Runs inside Chromium, so plain JS. */
 async function measureGenre(page, genreId, trimDb) {
   return page.evaluate(
-    async ({ genreId: id, trimDb: trim, bars: barsArg, repeats: repeatsArg }) => {
+    async ({ genreId: id, trimDb: trim, bars: barsArg, repeats: repeatsArg, makeupDb }) => {
       const [wav, genresModule, mixModule, loudness, trackUtils] = await Promise.all([
         import("/src/audio/WavExporter.ts"),
         import("/src/data/genres/index.ts"),
@@ -188,6 +225,8 @@ async function measureGenre(page, genreId, trimDb) {
           bars: barsArg,
           drumKit,
           loudnessTrimDb: trim === null ? 0 : trim,
+          // `undefined` means "use the graph's shared default", which is what playback does.
+          masterMakeupDb: makeupDb,
         });
         const channels = [];
         for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
@@ -227,7 +266,7 @@ async function measureGenre(page, genreId, trimDb) {
         sampleRate: 44100,
       };
     },
-    { genreId, trimDb, bars, repeats }
+    { genreId, trimDb, bars, repeats, makeupDb: masterMakeupDb }
   );
 }
 
@@ -425,7 +464,45 @@ async function waitForServer(url) {
     // Target = median arranged loudness in the chosen metric, so the library's
     // overall level stays put and only the spread is corrected.
     const arrangedSorted = measured.map((m) => m[METRIC.before]).sort((a, b) => a - b);
-    const targetLufs = percentile(arrangedSorted, 50);
+    const libraryMedianLufs = percentile(arrangedSorted, 50);
+    /**
+     * An explicit `--target` names the delivery level; without one the historical behaviour is
+     * kept (match the library's own median), which is the right choice for a pure spread re-fit.
+     */
+    /**
+     * How loud a genre can *physically* go: a true-peak ceiling minus its own peak-to-loudness
+     * ratio. Measured with the limiter in place, which is the honest figure — anything above it
+     * is simply absorbed by the limiter (a controlled test on `chicago-house` transferred 0% of
+     * a +10 dB makeup step once it was pinned at the ceiling).
+     */
+    const LIMITER_CEILING_DBTP = -1.3;
+    const achievableCeilingLufs = (entry, lufs, truePeak) => {
+      const crest = Number.isFinite(truePeak) && Number.isFinite(lufs) ? truePeak - lufs : null;
+      if (crest === null || crest <= 0) return null;
+      return LIMITER_CEILING_DBTP - crest;
+    };
+    const categoryTargetOf = (entry) =>
+      explicitTargetLufs !== null && Number.isFinite(explicitTargetLufs)
+        ? explicitTargetLufs
+        : CATEGORY_TARGET_LUFS[entry.category] ?? DEFAULT_CATEGORY_TARGET_LUFS;
+    for (const entry of measured) {
+      // `arrangedTruePeakDb` already carries the limiter's effect at the measured operating
+      // point, so the crest derived from it is the one the ceiling actually applies to.
+      const ceiling = achievableCeilingLufs(entry, entry[METRIC.before], entry.arrangedTruePeakDb);
+      const wanted = categoryTargetOf(entry);
+      entry.categoryTargetLufs = Number(wanted.toFixed(2));
+      entry.achievableLufs = ceiling === null ? null : Number(ceiling.toFixed(2));
+      // `targetLufs` per genre: the category's goal, or the crest-limited maximum when lower.
+      entry.targetLufs = Number((ceiling === null ? wanted : Math.min(wanted, ceiling)).toFixed(3));
+      entry.crestDb = Number.isFinite(entry.arrangedTruePeakDb)
+        ? Number((entry.arrangedTruePeakDb - entry[METRIC.before]).toFixed(3))
+        : null;
+      if (entry.achievableLufs !== null && entry.achievableLufs < wanted - 0.05) {
+        entry.targetCappedByDynamics = true;
+      }
+    }
+    const targetLufs = libraryMedianLufs;
+    const targetFor = (entry) => entry.targetLufs;
     const clampHits = { min: 0, max: 0, total: 0 };
     const noteClamp = (raw) => {
       if (raw < TRIM_MIN_DB) clampHits.min++;
@@ -433,12 +510,29 @@ async function waitForServer(url) {
       if (raw < TRIM_MIN_DB || raw > TRIM_MAX_DB) clampHits.total++;
     };
     for (const entry of measured) {
-      const raw = targetLufs - entry[METRIC.before];
+      const raw = targetFor(entry) - entry[METRIC.before];
       noteClamp(raw);
       entry.trimDb = Number(clamp(raw, TRIM_MIN_DB, TRIM_MAX_DB).toFixed(2));
       entry.trimIterations = 0;
     }
-    console.log(`\nTarget (median arranged ${metricKey}): ${targetLufs.toFixed(2)}`);
+    const capped = measured.filter((e) => e.targetCappedByDynamics);
+    console.log(
+      `\nTargets: ${explicitTargetLufs !== null ? `explicit ${targetLufs.toFixed(2)} LUFS` : "per category"}` +
+        `   [library median ${libraryMedianLufs.toFixed(2)}]`
+    );
+    if (explicitTargetLufs === null) {
+      for (const [cat, lufs] of Object.entries(CATEGORY_TARGET_LUFS)) {
+        const n = measured.filter((e) => e.category === cat).length;
+        console.log(`  ${cat.padEnd(14)} target ${String(lufs).padStart(6)} LUFS   (${n} genre(s))`);
+      }
+    }
+    if (capped.length > 0) {
+      console.log(
+        `  ${capped.length}/${measured.length} genre(s) capped by their own dynamics: their ` +
+          `peak-to-loudness ratio is too wide for their category target at a ` +
+          `${LIMITER_CEILING_DBTP} dBTP ceiling, so they stop at the loudest level it allows.`
+      );
+    }
 
     /**
      * Passes 2..N — solve the trim instead of assuming one subtraction is enough.
@@ -494,7 +588,7 @@ async function waitForServer(url) {
       // Decide who moves next, but do not touch their trims yet.
       const next = [];
       for (const entry of measured) {
-        const residual = targetLufs - entry.trimmedLufs;
+        const residual = targetFor(entry) - entry.trimmedLufs;
         if (!Number.isFinite(residual) || Math.abs(residual) <= TRIM_TOLERANCE_DB) continue;
         const candidate = clamp(entry.trimDb + residual, TRIM_MIN_DB, TRIM_MAX_DB);
         if (candidate === entry.trimDb) {
@@ -515,7 +609,7 @@ async function waitForServer(url) {
     }
 
     for (const entry of measured) {
-      const residual = targetLufs - entry.trimmedLufs;
+      const residual = targetFor(entry) - entry.trimmedLufs;
       if (Number.isFinite(residual) && Math.abs(residual) > TRIM_TOLERANCE_DB) {
         stillOutside.push({ id: entry.id, residualDb: Number(residual.toFixed(3)), trimDb: entry.trimDb, trimIterations: entry.trimIterations ?? 0 });
       }
@@ -572,6 +666,11 @@ async function waitForServer(url) {
       },
       targetLufs: Number(targetLufs.toFixed(3)),
       target: Number(targetLufs.toFixed(3)),
+      targetSource: explicitTargetLufs !== null ? "explicit" : "per-category",
+      categoryTargets: explicitTargetLufs !== null ? null : CATEGORY_TARGET_LUFS,
+      cappedByDynamics: measured.filter((e) => e.targetCappedByDynamics).map((e) => e.id),
+      libraryMedianLufs: Number(libraryMedianLufs.toFixed(3)),
+      masterMakeupDb: masterMakeupDb === undefined ? "graph-default" : masterMakeupDb,
       targetMetric: METRIC.label,
       trimRangeDb: { min: TRIM_MIN_DB, max: TRIM_MAX_DB },
       clampHits,
@@ -596,6 +695,13 @@ async function waitForServer(url) {
             trimmedTruePeakDb: Number.isFinite(entry.trimmedTruePeakDb) ? Number(entry.trimmedTruePeakDb.toFixed(3)) : null,
             trimmedRmsDb: Number.isFinite(entry.trimmedRmsDb) ? Number(entry.trimmedRmsDb.toFixed(3)) : null,
             withinGenreSpreadDb: Number(entry.withinGenreSpreadDb.toFixed(3)),
+            // Why this genre stopped where it did, so a reader can tell a fitted target from a
+            // crest-limited one without re-deriving it.
+            categoryTargetLufs: entry.categoryTargetLufs,
+            targetLufs: entry.targetLufs,
+            achievableLufs: entry.achievableLufs,
+            crestDb: entry.crestDb,
+            targetCappedByDynamics: Boolean(entry.targetCappedByDynamics),
             gatedBlockCount: entry.gatedBlockCount,
             // How many render rounds the trim needed before it measured on target. 0 means
             // the first subtraction was already within tolerance.

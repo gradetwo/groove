@@ -107,8 +107,13 @@ describe("offline renderer · genre loudness trim", () => {
     // The fader feeds the FX rack, *not* the trim: the trim is the last linear stage and
     // must sit after the rack, or the rack's saturation absorbs the loudness correction
     // (measured: a +7.07 dB request produced +1.74 dB of integrated loudness).
+    // Q12: the master DC blocker (a highpass biquad) sits between the two, so the fader's
+    // consumer is that filter rather than a gain node.
+    const faderFilterConsumers = (ctx.createdFilters as unknown as FakeNode[]).filter((f) =>
+      f.incoming.includes(masterGain)
+    );
+    expect(faderFilterConsumers.length).toBe(1);
     const faderConsumers = consumersOf(masterGain);
-    expect(faderConsumers.length).toBeGreaterThan(0);
     expect(faderConsumers).not.toContain(trim);
 
     // The rack feeds the trim: its only consumer among gain nodes is the trim stage.

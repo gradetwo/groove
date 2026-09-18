@@ -74,6 +74,17 @@ export interface MasterGraphOptions {
   analysers?: boolean;
   /** Per-genre loudness-match trim, dB. Defaults to 0. */
   loudnessTrimDb?: number;
+  /**
+   * Fixed makeup applied after the per-genre loudness trim.
+   *
+   * Exists so the library's absolute level can be raised to a delivery target without touching
+   * the 159 fitted trims: the trim's job is to make the genres match *each other*, and re-fitting
+   * all of them upward would push most against the ±9 dB clamp. This is one number for the whole
+   * record, applied identically in the live graph and the offline exporter, so parity holds.
+   */
+  masterMakeupDb?: number;
+  /** Set false to remove the mastering bus compressor from the chain (measurement tooling). */
+  masterBusCompEnabled?: boolean;
   /** Master true-peak ceiling, dBTP. Defaults to the limiter's own default. */
   limiterCeilingDb?: number;
   /** Initial send-bus parameters (per-genre defaults are applied later via setters). */
@@ -137,6 +148,57 @@ export interface MasterGraph {
 /** Default master fader level. Kept at the live engine's historical value. */
 export const MASTER_FADER_DEFAULT = 0.8;
 
+/**
+ * Q12: corner frequency of the master DC blocker. Below the lowest musical fundamental
+ * (a 32.7 Hz C1 is the lowest note any preset here reaches) and above any plausible DC.
+ */
+export const MASTER_DC_BLOCK_HZ = 20;
+
+/**
+ * Absolute makeup gain for the master bus, in dB.
+ *
+ * Measured state before this existed: the library's 159 fitted trims match each other to a
+ * 0.32 dB p10–p90 spread, but the *absolute* target was the library's own median, −15.7 LUFS —
+ * roughly 1.7 dB below Spotify's −14 LUFS normalisation point and 6–9 dB below a modern master
+ * of the same genres. Raising the target through the trims alone would have pushed almost every
+ * genre into the ±9 dB clamp (the median trim is already ≈0 dB, and the required lift is +4.5 to
+ * +7.4 dB), so the lift belongs here: one number, applied to every genre, preserving the spread.
+ */
+export const MASTER_MAKEUP_DB = 5;
+
+/**
+ * Mastering-style bus compressor, and why it exists in the chain.
+ *
+ * Measured before this stage: the library's peak-to-loudness ratio ("crest") is a median of
+ * 14.34 dB, and a controlled experiment (apply +10 dB of makeup to `chicago-house` at a fixed
+ * trim, then measure) showed the true-peak limiter was the *only* stage handling the crest — it
+ * swallowed the whole 10 dB and the output moved by −0.1 LUFS. The consequence is that raising
+ * the delivery level, per genre, was physically impossible: only 21 of 159 genres could reach
+ * −11 LUFS under a −1.0 dBTP ceiling, and gain transfer ran at 7–70%.
+ *
+ * That is what a mastering chain exists to fix. Program-dependent gain reduction *before* the
+ * limiter lowers the crest, which both raises the achievable loudness and lets the limiter work
+ * with shallower, more transparent gain reduction. The settings are deliberately slow and gentle
+ * (2:1, 30 ms attack, 220 ms release, soft knee, 3 dB of detector headroom), i.e. glue rather
+ * than audible pumping: the point is to remove the peaks that were costing loudness, not to
+ * squash the music. It is applied identically in the live graph and the offline exporter, so
+ * exporter parity is unchanged.
+ */
+export const MASTER_BUS_COMP_THRESHOLD_DB = -16;
+export const MASTER_BUS_COMP_KNEE_DB = 8;
+export const MASTER_BUS_COMP_RATIO = 2;
+export const MASTER_BUS_COMP_ATTACK_SEC = 0.03;
+export const MASTER_BUS_COMP_RELEASE_SEC = 0.22;
+
+/** Clamp for `masterMakeupDb`, wide enough to be usable and narrow enough to stay safe. */
+export const MASTER_MAKEUP_MIN_DB = -12;
+export const MASTER_MAKEUP_MAX_DB = 12;
+
+function clampMakeup(db: number): number {
+  if (!Number.isFinite(db)) return 0;
+  return Math.min(MASTER_MAKEUP_MAX_DB, Math.max(MASTER_MAKEUP_MIN_DB, db));
+}
+
 /** Clamp for the per-genre trim, in dB — same range `genreMix` promises. */
 export const MASTER_TRIM_MIN_DB = -12;
 export const MASTER_TRIM_MAX_DB = 12;
@@ -163,6 +225,27 @@ export function buildMasterGraph(
   const loudnessTrimGain = ctx.createGain();
   let appliedTrimDb = clampTrim(options.loudnessTrimDb ?? 0);
   loudnessTrimGain.gain.setValueAtTime(dbToGain(appliedTrimDb), ctx.currentTime);
+
+  // Absolute makeup (see `masterMakeupDb`). Sits immediately after the trim and before the
+  // limiter, so the limiter is still the last thing that can raise or lower the level.
+  const masterMakeupGain = ctx.createGain();
+  const appliedMakeupDb = clampMakeup(options.masterMakeupDb ?? MASTER_MAKEUP_DB);
+  masterMakeupGain.gain.setValueAtTime(dbToGain(appliedMakeupDb), ctx.currentTime);
+
+  /**
+   * Bus compression between the makeup and the limiter — see the constants above for the
+   * measurement that motivated it. `masterBusCompEnabled: false` removes the stage from the
+   * chain (used by the measurement tooling to isolate its effect); the default is on.
+   */
+  const busCompEnabled = options.masterBusCompEnabled !== false;
+  const masterBusComp = ctx.createDynamicsCompressor();
+  if (busCompEnabled) {
+    masterBusComp.threshold.value = MASTER_BUS_COMP_THRESHOLD_DB;
+    masterBusComp.knee.value = MASTER_BUS_COMP_KNEE_DB;
+    masterBusComp.ratio.value = MASTER_BUS_COMP_RATIO;
+    masterBusComp.attack.value = MASTER_BUS_COMP_ATTACK_SEC;
+    masterBusComp.release.value = MASTER_BUS_COMP_RELEASE_SEC;
+  }
 
   const reverb = new ReverbBus(ctx, options.reverb ?? DEFAULT_REVERB_PARAMS);
   const delay = new DelayBus(ctx, options.delay ?? DEFAULT_DELAY_PARAMS);
@@ -254,16 +337,37 @@ export function buildMasterGraph(
     }
   }
 
-  // Signal chain: fader → FX rack → linear loudness trim → true-peak limiter.
+  /**
+   * Q12: DC blocker at the head of the master chain.
+   *
+   * Nothing in the chain removed DC: the drum and synth voices, the reverb IR (a noise tail
+   * with a non-zero mean) and imported material can all carry an offset, and the true-peak
+   * limiter counts DC at full weight — so a constant offset statically ate ceiling and
+   * reduced the whole mix's headroom for no audible benefit. One 20 Hz first-order highpass
+   * is inaudible on any musical content and removes the problem at the source.
+   */
+  const dcBlocker = ctx.createBiquadFilter();
+  dcBlocker.type = "highpass";
+  dcBlocker.frequency.setValueAtTime(MASTER_DC_BLOCK_HZ, ctx.currentTime);
+  dcBlocker.Q.setValueAtTime(0.707, ctx.currentTime);
+
+  // Signal chain: fader → DC block → FX rack → linear loudness trim → true-peak limiter.
   // The trim must come after every nonlinear stage for the match to be a real gain —
   // see the topology note in the module header.
   // The group buses are the only way a track reaches the fader.
   drumGlue.connect(masterGain);
   drumParallelGain.connect(masterGain);
   musicGlue.connect(masterGain);
-  masterGain.connect(fxRack.inputNode);
+  masterGain.connect(dcBlocker);
+  dcBlocker.connect(fxRack.inputNode);
   fxRack.outputNode.connect(loudnessTrimGain);
-  loudnessTrimGain.connect(limiter.input);
+  loudnessTrimGain.connect(masterMakeupGain);
+  if (busCompEnabled) {
+    masterMakeupGain.connect(masterBusComp);
+    masterBusComp.connect(limiter.input);
+  } else {
+    masterMakeupGain.connect(limiter.input);
+  }
   limiter.output.connect(analyser ?? ctx.destination);
 
   if (analyser) {

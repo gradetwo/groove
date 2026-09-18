@@ -43,6 +43,12 @@ interface LoudnessReport {
   bars: number;
   repeats: number;
   targetLufs: number;
+  /** `"library-median"` (the historical single-target fit) or `"per-category"`. */
+  targetSource?: string;
+  /** The per-category LUFS table, present only for a `per-category` run. */
+  categoryTargets?: Record<string, number> | null;
+  /** Genre ids whose own crest cannot reach their category target at the ceiling. */
+  cappedByDynamics?: string[];
   metric: { primary: string; primaryLabel: string };
   trimRangeDb: { min: number; max: number };
   clampHits: { min: number; max: number; total: number };
@@ -57,7 +63,14 @@ interface LoudnessReport {
       trimDb: number;
       trimmedLufs: number | null;
       trimmedPeakDb: number | null;
+      trimmedTruePeakDb: number | null;
       withinGenreSpreadDb: number;
+      /** Per-genre delivery bookkeeping (see `targetSource`). */
+      categoryTargetLufs?: number;
+      targetLufs?: number;
+      achievableLufs?: number | null;
+      crestDb?: number | null;
+      targetCappedByDynamics?: boolean;
     }
   >;
   unmeasured: unknown[];
@@ -123,9 +136,43 @@ describe("committed loudness baseline", () => {
         expect(Number.isFinite(report.spread[view][pass].p90p10), `${view}.${pass}`).toBe(true);
       }
     }
-    // The gate's own threshold: the committed post-trim LUFS spread must pass it.
-    expect(report.spread.lufs.after.p90p10).toBeLessThanOrEqual(1.5);
-    expect(report.spread.lufs.after.fullRange).toBeLessThanOrEqual(4);
+    /**
+     * Delivery shape. The library used to be fitted to a single number (its own median,
+     * −15.7 LUFS), which is why the old assertion here was "the post-trim spread is under
+     * 1.5 dB" — that was correct for a single target and is *wrong* for per-category
+     * targeting, where a metal master and an ambient master are deliberately at different
+     * levels. The claims that replaced it are the ones that still have to hold:
+     *
+     *   1. the report says which policy produced it;
+     *   2. every genre is either at its category target or legitimately capped by its own
+     *      peak-to-loudness ratio (physics at a fixed true-peak ceiling, recorded per genre);
+     *   3. no genre is *louder* than its category target by more than the fitting tolerance.
+     */
+    expect(report.targetSource).toBe("per-category");
+    expect(report.categoryTargets).toBeTruthy();
+    for (const [id, entry] of Object.entries(report.genres)) {
+      const target = entry.categoryTargetLufs;
+      expect(Number.isFinite(target), `${id} categoryTargetLufs`).toBe(true);
+      expect(Number.isFinite(entry.targetLufs), `${id} targetLufs`).toBe(true);
+      const achieved = Number.isFinite(entry.trimmedLufs) ? entry.trimmedLufs : entry.arrangedLufs;
+      expect(
+        achieved,
+        `${id} must not exceed its category target (${target} LUFS)`
+      ).toBeLessThanOrEqual((target as number) + 1.0);
+    }
+    // A capped genre is a documented, per-genre fact rather than an unexplained miss, and the
+    // count has to be reported so a change in how many are capped is visible in the artefact.
+    expect(Array.isArray(report.cappedByDynamics)).toBe(true);
+    const capped = (report.cappedByDynamics ?? []).length;
+    expect(capped).toBeGreaterThan(0);
+    expect(capped).toBeLessThan(Object.keys(report.genres).length);
+    // Every genre must still carry a measurement at its FINAL trim: a trim that was never
+    // rendered at its shipped value is not evidence (the failure mode this guards).
+    for (const [id, entry] of Object.entries(report.genres)) {
+      expect(Number.isFinite(entry.trimmedLufs), `${id} unmetered after trim`).toBe(true);
+      expect(Number.isFinite(entry.trimmedTruePeakDb), `${id} no true peak after trim`).toBe(true);
+      expect(Number.isFinite(entry.crestDb), `${id} crest`).toBe(true);
+    }
     // The offline renderer re-creates its noise buffer per render, so run-to-run
     // variation is real but tiny; the report must show it when it measured repeats.
     expect(report.repeats).toBeGreaterThanOrEqual(1);

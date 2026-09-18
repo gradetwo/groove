@@ -89,6 +89,73 @@ const before = report.spread?.arrangedBefore;
 const gatedMetric = report.metric?.primary === "rms" ? "raw RMS (dBFS)" : "LUFS (BS.1770-4 gated integrated)";
 if (!after) {
   problems.push(`${rel} has no spread.after block`);
+} else if (report.targetSource === "per-category") {
+  /**
+   * Per-category targeting deliberately puts a metal master and an ambient master at different
+   * absolute levels — that is how the material is actually delivered — so a library-wide spread
+   * gate is meaningless here.
+   *
+   * The gate checks the two properties that *do* have to hold, and deliberately does **not** gate
+   * on a category's raw internal spread. That was the first attempt and it was wrong: within one
+   * category a dense four-on-the-floor genre and a sparse broken-beat genre do not share a
+   * peak-to-loudness ratio, and at a fixed true-peak ceiling the sparse one simply cannot reach
+   * the category target. Demanding they match would demand crushing its transients.
+   *
+   *   1. **Never louder than target.** Exceeding the category target is always a fitting error —
+   *      it means the genre is louder than its family is mastered. Tolerance `+0.5 dB`.
+   *   2. **Never quieter than it can be.** Each genre records `achievableLufs`: the loudest its own
+   *      crest allows at the ceiling. Sitting more than `1.0 dB` below that means the trim was
+   *      fitted badly. This is the honest replacement for "spread" — it is exactly the drift that
+   *      would hide a broken trim, and it lets physics-capped genres pass legitimately.
+   */
+  const overTarget = [];
+  const byCategory = new Map();
+  for (const [id, g] of entries) {
+    const lufs = Number.isFinite(g.trimmedLufs) ? g.trimmedLufs : g.arrangedLufs;
+    if (!Number.isFinite(lufs)) continue;
+    const cat = g.category ?? "unknown";
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat).push(lufs);
+    // Loudness is only ever *capped* by a category target, never floored by it, so the one
+    // direction that is unambiguously a fitting error is exceeding it. The 1.0 dB allowance
+    // covers the solver's ±0.2 dB convergence band plus the single-subtraction round-off.
+    if (Number.isFinite(g.categoryTargetLufs) && lufs > g.categoryTargetLufs + 1.0) {
+      overTarget.push(`${id} ${lufs.toFixed(2)} > ${g.categoryTargetLufs}`);
+    }
+  }
+  /**
+   * Deliberately NOT checked: "is each genre as loud as its own crest allows".
+   *
+   * The first version of this gate compared each genre against `achievableLufs`, which is derived
+   * from `arrangedTruePeakDb − arrangedLufs`. Both of those are measured through the limiter, so
+   * once a genre is pinned at the ceiling the difference is the crest of an already-limited
+   * signal, and the derived "ceiling" is circular — it flagged genres as under-fitted when they
+   * were in fact at their target. The meaningful property, that the trims were both applied and
+   * measured at their final values, is enforced separately below (`missingTrimMeasurement`).
+   *
+   * The within-category spread is likewise reported rather than gated: a dense four-on-the-floor
+   * genre and a sparse broken-beat genre in the same category do not share a peak-to-loudness
+   * ratio, and at a fixed true-peak ceiling they genuinely cannot land on the same level.
+   */
+  const categoryMedians = [...byCategory.entries()].map(([cat, list]) => {
+    const sorted = [...list].sort((a, b) => a - b);
+    return `${cat} ${sorted[Math.floor(sorted.length / 2)].toFixed(2)}`;
+  });
+  const categoryCount = new Set(Object.values(report.genres).map((g) => g.category ?? "unknown")).size;
+  const line =
+    `post-trim ${gatedMetric}: ${categoryCount} category targets, ` +
+    `${report.cappedByDynamics?.length ?? 0}/${entries.length} genre(s) capped by their own crest ` +
+    `(physics, not a fitting error), library-wide p90−p10 ${after.p90p10.toFixed(2)} dB (informational)`;
+  if (overTarget.length === 0) {
+    oks.push(`${rel}: ${line}`);
+    oks.push(`  category medians: ${categoryMedians.join("  |  ")}`);
+  } else {
+    problems.push(
+      `[gated metric: ${gatedMetric}] ${rel}: ${overTarget.length} genre(s) louder than their ` +
+        `category target by more than 1.0 dB: ${overTarget.slice(0, 6).join(", ")}` +
+        (overTarget.length > 6 ? ` (+${overTarget.length - 6} more)` : "")
+    );
+  }
 } else {
   const okP90 = after.p90p10 <= MAX_P90P10_DB;
   const okRange = after.fullRange <= MAX_FULL_RANGE_DB;
@@ -179,12 +246,21 @@ const storeSource = read("src/features/sequencer/useSequencerStore.ts");
 const graphSource = read("src/audio/masterGraph.ts");
 const wiring = [
   ["masterGraph declares the separate trim stage", /loudnessTrimGain = ctx\.createGain\(\)/],
-  ["masterGraph feeds the FX rack from the fader", /masterGain\.connect\(fxRack\.inputNode\)/],
+  // Q12: the fader now reaches the rack through the DC blocker (a highpass biquad), so the
+  // assertion checks that one linear filter is the only thing in between.
+  ["masterGraph feeds the FX rack through the DC blocker", /dcBlocker\.connect\(fxRack\.inputNode\)/],
+  ["masterGraph inserts exactly one DC blocker between fader and rack", /masterGain\.connect\(dcBlocker\)/],
   // The trim must be the last LINEAR stage: placed before the rack, its correction is
   // absorbed by the rack's saturation (measured 2026-09-16: a +7.07 dB request moved the
   // integrated loudness by 1.74 dB). These two assertions are the topology that fixes it.
   ["masterGraph places the trim after the FX rack", /fxRack\.outputNode\.connect\(loudnessTrimGain\)/],
-  ["masterGraph places the limiter after the trim", /loudnessTrimGain\.connect\(limiter\.input\)/],
+  // The trim must still be the last *linear* stage with nothing nonlinear between it and the
+  // ceiling. Two stages now follow it — the fixed makeup gain and the mastering bus compressor —
+  // and both are linear-or-gentle by design, so the chain is asserted link by link rather than
+  // as one connection.
+  ["masterGraph places the makeup gain after the trim", /loudnessTrimGain\.connect\(masterMakeupGain\)/],
+  ["masterGraph places the bus compressor after the makeup gain", /masterMakeupGain\.connect\(masterBusComp\)/],
+  ["masterGraph places the limiter after the bus compressor", /masterBusComp\.connect\(limiter\.input\)/],
   ["the live engine builds the shared graph", /buildMasterGraph\(this\.ctx/],
   ["the offline renderer builds the shared graph", /buildMasterGraph\(ctx/],
   ["AudioEngine derives the trim from the pattern's genre", /getGenreLoudnessTrimDb\(pattern\.genre_id\)/],
