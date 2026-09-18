@@ -191,17 +191,20 @@ export function useGenreSwitching({
         engineRef.current.setBpm(genre.default_bpm || 120);
         engineRef.current.setSwing((genre.sequencer_pattern.swing || 0) / 100);
         engineRef.current.setTimeSignature(genre.time_signature || "4/4");
-        if (isPlaying) {
+        const wasPlaying = isPlaying || Boolean(engineRef.current.getIsPlaying());
+        if (wasPlaying) {
           // When switching genres during playback, restart from step 0 of the new genre
           engineRef.current.stop();
           clearPlayhead();
           engineRef.current.play();
+          setIsPlaying(true);
         } else if (andPlay) {
           engineRef.current.play();
           setIsPlaying(true);
         } else {
           engineRef.current.stop();
           clearPlayhead();
+          setIsPlaying(false);
         }
       }
     },

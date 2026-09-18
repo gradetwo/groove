@@ -175,6 +175,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [showAdvancedControls, setShowAdvancedControls] = useState(
     bootLayoutPrefs.showAdvancedControls
   );
+  const [autoFollowPlayhead, setAutoFollowPlayhead] = useState<boolean>(
+    bootLayoutPrefs.autoFollowPlayhead
+  );
 
   // Phase 4 States (P4-01 ~ P4-04 & P4-06)
   const [isKeyboardMode, setIsKeyboardMode] = useState(false);
@@ -272,6 +275,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       isAnalyzerOpen,
       isPianoRollOpen,
       showAdvancedControls,
+      autoFollowPlayhead,
     });
   }, [
     isSidebarCollapsed,
@@ -280,6 +284,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     isAnalyzerOpen,
     isPianoRollOpen,
     showAdvancedControls,
+    autoFollowPlayhead,
   ]);
 
   // AudioEngine ref
@@ -395,6 +400,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     commit,
     setIsPlaying,
     handleQuantizedStep,
+    autoFollowPlayhead,
   });
 
   // Genre rail: categories, chip list, accent colour, on-demand switch & dice (A-02)

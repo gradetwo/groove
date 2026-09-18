@@ -62,6 +62,7 @@ describe("G-03 · round trip", () => {
         isAnalyzerOpen: false,
         showAdvancedControls: true,
         density: "compact",
+        autoFollowPlayhead: false,
       },
       storage
     );
@@ -72,6 +73,7 @@ describe("G-03 · round trip", () => {
     expect(restored.isVelocityLaneOpen).toBe(true);
     expect(restored.isAnalyzerOpen).toBe(false);
     expect(restored.showAdvancedControls).toBe(true);
+    expect(restored.autoFollowPlayhead).toBe(false);
     expect(restored.density).toBe("compact");
     expect(restored.version).toBe(LAYOUT_PREFS_VERSION);
   });

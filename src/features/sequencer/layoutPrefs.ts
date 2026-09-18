@@ -50,6 +50,8 @@ export interface LayoutPrefs {
   isPianoRollOpen: boolean;
   showAdvancedControls: boolean;
   density: DensityTier;
+  /** Auto-scroll step matrix horizontally to follow the playhead. */
+  autoFollowPlayhead: boolean;
 }
 
 /** The persisted booleans, in one place so tests can assert the exact set. */
@@ -60,6 +62,7 @@ export const LAYOUT_BOOLEAN_KEYS = [
   "isAnalyzerOpen",
   "isPianoRollOpen",
   "showAdvancedControls",
+  "autoFollowPlayhead",
 ] as const satisfies readonly (keyof LayoutPrefs)[];
 
 export type LayoutBooleanKey = (typeof LAYOUT_BOOLEAN_KEYS)[number];
@@ -80,6 +83,7 @@ export const DEFAULT_LAYOUT_PREFS: Readonly<LayoutPrefs> = Object.freeze({
   isPianoRollOpen: false,
   showAdvancedControls: false,
   density: "standard",
+  autoFollowPlayhead: true,
 });
 
 /** A fresh, mutable copy of the defaults (never hand out the frozen object). */
@@ -176,6 +180,13 @@ export function saveLayoutPrefs(
     storage.setItem(LAYOUT_PREFS_KEY, JSON.stringify(next));
   } catch {
     /* Quota exceeded or storage disabled: the in-memory state is still correct. */
+  }
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("groove_layout_prefs_changed", { detail: next }));
+    } catch {
+      /* ignore */
+    }
   }
   return next;
 }

@@ -185,6 +185,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { key: "isVelocityLaneOpen", labelKey: "settings_layout_velocity" },
     { key: "isAnalyzerOpen", labelKey: "settings_layout_analyzer" },
     { key: "showAdvancedControls", labelKey: "settings_layout_advanced" },
+    { key: "autoFollowPlayhead", labelKey: "settings_layout_auto_follow_playhead" },
   ];
 
   return (

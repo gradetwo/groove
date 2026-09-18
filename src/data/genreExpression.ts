@@ -3463,10 +3463,27 @@ export function expandGenrePattern(
       }
       const chordGate = chordSteps(expression, pattern);
       const arp = arpSteps(expression, pattern);
-      // The authored steps say *where the harmony moves*; keep that rhythm and let the progression
-      // supply the degrees, so a genre that changes chord twice a bar still does.
+      // The authored steps say *where the harmony moves*. When only a single placeholder step was
+      // authored (or none), expand across the progression's chord slots so the progression's chords
+      // all sound. When a rhythm pattern was authored (>= 2 marks), repeat it across all bars of the phrase.
       const authoredSlots = [...new Set(track.steps.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0))];
-      const marks = authoredSlots.length > 0 ? authoredSlots : Array.from({ length: slots }, (_, i) => i * chordGate);
+      let marks: number[];
+      if (authoredSlots.length <= 1) {
+        marks = Array.from({ length: slots }, (_, i) => i * chordGate);
+      } else {
+        const repeatCount = Math.max(1, Math.floor(total / authored));
+        const repeatedMarks: number[] = [];
+        for (let b = 0; b < repeatCount; b++) {
+          for (const s of authoredSlots) {
+            const at = b * authored + s;
+            if (at < total && !repeatedMarks.includes(at)) {
+              repeatedMarks.push(at);
+            }
+          }
+        }
+        repeatedMarks.sort((a, b) => a - b);
+        marks = repeatedMarks.length > 0 ? repeatedMarks : Array.from({ length: slots }, (_, i) => i * chordGate);
+      }
 
       const nextMarkAfter = (index: number): number => {
         // The next change of harmony after `marks[index]`, or the end of the pattern. A chord may
@@ -3484,32 +3501,35 @@ export function expandGenrePattern(
         const rootMidi = chordRootMidi(pattern, degree, expression.chord.octaveOffset, authoredRoot);
         const voicing = chordVoicingForStep(rootMidi, pattern.scale, { style: voicingStyle });
 
+        const gap = Math.max(0.1, nextMarkAfter(index) - mark);
+
         if (style === "arpeggio" || style === "broken") {
           // Written as **real notes** (the user's decision): visible and editable in the roll, and
           // exported identically because there is nothing left to expand at playback.
           const order =
             style === "arpeggio"
               ? voicing
-              : // Broken chords alternate the root with the upper voices: bass–chord–bass–chord.
-                voicing.flatMap((note, i) => (i === 0 ? [note, note] : [note]));
-          const span = Math.max(1, Math.round(chordGate / Math.max(1, order.length)));
+              : gap < 8
+              ? voicing
+              : voicing.flatMap((note, i) => (i === 0 ? [note, note] : [note]));
+          const span = Math.max(1, Math.floor(gap / Math.max(1, order.length)));
+          const stepInterval = Math.max(1, Math.min(arp, span));
           order.forEach((note, i) => {
-            const at = mark + i * (style === "broken" ? arp : Math.min(arp, span));
-            if (at < 0 || at >= total) return;
+            const at = mark + i * stepInterval;
+            if (at < 0 || at >= total || at >= nextMarkAfter(index)) return;
             steps[at] = 1;
             pitches[at] = [note];
             pitch[at] = note;
             // Arpeggio notes are shortened; broken-chord roots ring a little longer than the upper
             // voices, which is what makes the pattern read as an accompaniment rather than a scale.
-            const length = style === "arpeggio" ? arp : i % 2 === 0 ? arp * 1.5 : arp;
-            gate[at] = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, length));
+            const length = style === "arpeggio" ? stepInterval : i % 2 === 0 ? stepInterval * 1.5 : stepInterval;
+            gate[at] = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Math.min(length, gap)));
           });
           return;
         }
 
         // Block/stab/sustain/ballad/strum: one stack per chord slot, held no longer than the gap to
         // the next chord.
-        const gap = Math.max(0.1, nextMarkAfter(index) - mark);
         const nominal = style === "stab" ? Math.max(0.5, Math.min(2, chordGate / 2)) : chordGate;
         const lengthFor = Math.min(nominal, gap);
         steps[mark] = 1;

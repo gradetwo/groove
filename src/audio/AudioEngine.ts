@@ -66,6 +66,7 @@ const GS1_DISABLE_GRACE_MS = 3000;
 export interface AudioEngineOptions {
   onStep?: (info: StepCallbackInfo) => void;
   onTrackTrigger?: (trackIndices: number[]) => void;
+  onPlay?: () => void;
   onStop?: () => void;
   /** Fires when the scheduler had to skip steps after a stall (F-02 diagnostics). */
   onDroppedSteps?: (droppedSteps: number) => void;
@@ -262,6 +263,7 @@ export class AudioEngine {
   // Callbacks
   private onStepCallback?: (info: StepCallbackInfo) => void;
   private onTrackTriggerCallback?: (trackIndices: number[]) => void;
+  private onPlayCallback?: () => void;
   private onStopCallback?: () => void;
   private onDroppedStepsCallback?: (droppedSteps: number) => void;
 
@@ -293,6 +295,7 @@ export class AudioEngine {
   constructor(options?: AudioEngineOptions) {
     if (options?.onStep) this.onStepCallback = options.onStep;
     if (options?.onTrackTrigger) this.onTrackTriggerCallback = options.onTrackTrigger;
+    if (options?.onPlay) this.onPlayCallback = options.onPlay;
     if (options?.onStop) this.onStopCallback = options.onStop;
     if (options?.onDroppedSteps) this.onDroppedStepsCallback = options.onDroppedSteps;
     this.gs1PoolFactory = options?.createGs1Pool ?? null;
@@ -1304,6 +1307,9 @@ export class AudioEngine {
     if (this.isPlaying) return;
 
     this.isPlaying = true;
+    if (this.onPlayCallback) {
+      this.onPlayCallback();
+    }
     ecosystemBus.publishClockStart(this.bpm);
     this.currentStep = (this.loopRange && this.loopRange[0] >= 0) ? this.loopRange[0] : 0;
     const now = this.ctx ? this.ctx.currentTime : 0;
@@ -1341,6 +1347,9 @@ export class AudioEngine {
     this.stopScheduler();
     this.stopPlayheadSync();
     this.panic();
+    if (this.onStopCallback) {
+      this.onStopCallback();
+    }
   }
 
   public stop(): void {
@@ -1355,6 +1364,14 @@ export class AudioEngine {
     if (this.onStopCallback) {
       this.onStopCallback();
     }
+  }
+
+  public setOnPlay(cb: () => void): void {
+    this.onPlayCallback = cb;
+  }
+
+  public setOnStop(cb: () => void): void {
+    this.onStopCallback = cb;
   }
 
   public getIsPlaying(): boolean {

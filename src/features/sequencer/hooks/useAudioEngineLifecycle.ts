@@ -7,6 +7,7 @@ import { midiInputManager } from "../../../audio/MidiInputManager";
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheory";
 import { publishPlayhead } from "../playheadBus";
+import { loadLayoutPrefs, type LayoutPrefs } from "../layoutPrefs";
 
 export interface UseAudioEngineLifecycleOptions {
   engineRef: React.MutableRefObject<AudioEngine | null>;
@@ -30,6 +31,7 @@ export interface UseAudioEngineLifecycleOptions {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   /** P5-05 callback registered on the engine's live recorder. */
   handleQuantizedStep: (rec: QuantizedStepResult) => void;
+  autoFollowPlayhead?: boolean;
 }
 
 export interface UseAudioEngineLifecycleResult {
@@ -64,8 +66,29 @@ export function useAudioEngineLifecycle({
   commit,
   setIsPlaying,
   handleQuantizedStep,
+  autoFollowPlayhead,
 }: UseAudioEngineLifecycleOptions): UseAudioEngineLifecycleResult {
   const lastStepRef = useRef(-1);
+  const autoFollowPlayheadRef = useRef<boolean>(
+    autoFollowPlayhead ?? loadLayoutPrefs().autoFollowPlayhead ?? true
+  );
+
+  useEffect(() => {
+    if (typeof autoFollowPlayhead === "boolean") {
+      autoFollowPlayheadRef.current = autoFollowPlayhead;
+    }
+  }, [autoFollowPlayhead]);
+
+  useEffect(() => {
+    const onPrefsChanged = (e: Event) => {
+      const detail = (e as CustomEvent<LayoutPrefs>).detail;
+      if (detail && typeof detail.autoFollowPlayhead === "boolean") {
+        autoFollowPlayheadRef.current = detail.autoFollowPlayhead;
+      }
+    };
+    window.addEventListener("groove_layout_prefs_changed", onPrefsChanged);
+    return () => window.removeEventListener("groove_layout_prefs_changed", onPrefsChanged);
+  }, []);
 
   // Cached geometry and DOM elements for zero-layout-thrashing playhead updates (P2-03)
   const stepPositionsCacheRef = useRef<Map<number, { left: number; width: number }>>(new Map());
@@ -144,6 +167,23 @@ export function useAudioEngineLifecycle({
         playheadBeamRef.current.style.transform = `translate3d(${pos.left}px, 0, 0)`;
         playheadBeamRef.current.style.width = `${pos.width}px`;
         playheadBeamRef.current.style.display = "block";
+
+        if (autoFollowPlayheadRef.current && matrixContainerRef.current) {
+          const container = matrixContainerRef.current;
+          if (container.scrollWidth > container.clientWidth) {
+            // Check loop wrap-around or restart from step 0
+            if (step === 0 && lastStepRef.current > 0) {
+              if (container.scrollLeft > 0) {
+                container.scrollTo({ left: 0, behavior: "smooth" });
+              }
+            } else if (pos.left + pos.width > container.scrollLeft + container.clientWidth - 24) {
+              const target = Math.min(container.scrollWidth - container.clientWidth, Math.max(0, pos.left - 48));
+              container.scrollTo({ left: target, behavior: "smooth" });
+            } else if (pos.left < container.scrollLeft) {
+              container.scrollTo({ left: Math.max(0, pos.left - 48), behavior: "smooth" });
+            }
+          }
+        }
       }
     }
   }, [refreshStepCache, matrixContainerRef]);
@@ -202,6 +242,9 @@ export function useAudioEngineLifecycle({
       },
       onTrackTrigger: (trackIndices) => {
         triggerTrackMeters(trackIndices);
+      },
+      onPlay: () => {
+        setIsPlaying(true);
       },
       onStop: () => {
         clearPlayhead();

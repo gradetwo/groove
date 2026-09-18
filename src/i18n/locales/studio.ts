@@ -310,6 +310,7 @@ export const studioMessages = {
   settings_layout_velocity: { en: "Velocity lane open", zh: "力度泳道默认展开" },
   settings_layout_analyzer: { en: "Analyzer dock open", zh: "分析仪默认展开" },
   settings_layout_advanced: { en: "Advanced drawer open", zh: "高级抽屉默认展开" },
+  settings_layout_auto_follow_playhead: { en: "Auto-follow playhead", zh: "播放时步进视口跟随" },
   settings_layout_density: { en: "Density", zh: "密度" },
   settings_density_compact: { en: "compact", zh: "紧凑" },
   settings_density_standard: { en: "standard", zh: "标准" },

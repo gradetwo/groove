@@ -612,6 +612,35 @@ describe("Audio & Sequencer Utilities", () => {
       engine.destroy();
     });
 
+    it("triggers onPlay callback on play() and onStop on pause() and stop()", async () => {
+      let playCount = 0;
+      let stopCount = 0;
+      const engine = new AudioEngine({
+        onPlay: () => {
+          playCount++;
+        },
+        onStop: () => {
+          stopCount++;
+        },
+      });
+
+      await engine.play();
+      expect(playCount).toBe(1);
+      expect(engine.getIsPlaying()).toBe(true);
+
+      engine.pause();
+      expect(stopCount).toBe(1);
+      expect(engine.getIsPlaying()).toBe(false);
+
+      await engine.play();
+      expect(playCount).toBe(2);
+
+      engine.stop();
+      expect(stopCount).toBe(2);
+      expect(engine.getIsPlaying()).toBe(false);
+      engine.destroy();
+    });
+
     // The odd-step swing offset (`(swing * 0.5) * stepDur` in AudioEngine's
     // private schedulerLoop) and the per-track gate envelope
     // (`stepDur * gateVal` inside the private playBass/playChord/playLead/playFX

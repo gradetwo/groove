@@ -41,6 +41,7 @@ function setup(options: { guard?: (genre: Genre, run: () => void) => void; isPla
     setResolution: vi.fn(),
     play: vi.fn(),
     stop: vi.fn(),
+    getIsPlaying: vi.fn(() => options.isPlaying ?? false),
   };
   const current = genre("chicago-house");
   const clearPlayhead = vi.fn();
@@ -132,8 +133,8 @@ describe("genre switching · the unsaved-changes choke point", () => {
     expect(commits.map((a) => a.type)).toEqual(["SET_GENRE"]);
   });
 
-  it("restarts playback from the beginning when switching genres during playback", () => {
-    const { result, commits, engine, clearPlayhead } = setup({ isPlaying: true });
+  it("restarts playback from the beginning and syncs playing state when switching genres during playback", () => {
+    const { result, commits, engine, clearPlayhead, setIsPlaying } = setup({ isPlaying: true });
 
     act(() => {
       result.current.switchGenre(genre("boom-bap"));
@@ -144,6 +145,7 @@ describe("genre switching · the unsaved-changes choke point", () => {
     expect(engine.stop).toHaveBeenCalledTimes(1);
     expect(clearPlayhead).toHaveBeenCalledTimes(1);
     expect(engine.play).toHaveBeenCalledTimes(1);
+    expect(setIsPlaying).toHaveBeenCalledWith(true);
   });
 
   it("keeps playback stopped and clears playhead when switching genres while stopped", () => {

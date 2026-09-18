@@ -258,6 +258,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const dragRef = useRef<DragState | null>(null);
   const lastAuditionPitchRef = useRef<number | null>(null);
   const hasCenteredRef = useRef(false);
+  const centeredTrackRef = useRef<number | null>(null);
 
   const cellWRef = useRef(26);
   const catchRef = useRef(true);
@@ -332,18 +333,48 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   cellWRef.current = cellW;
   catchRef.current = catchPlayhead;
 
-  // Auto-center when toggling full 0-127 pitch range
+  // Auto-center on the active track's first note upon entering / switching tracks
   useEffect(() => {
-    if (fullPitchRange && scrollRef.current) {
-      const c4Idx = rows.indexOf(60);
-      if (c4Idx >= 0) {
+    if (!scrollRef.current) return;
+    if (centeredTrackRef.current === activeTrackIdx && hasCenteredRef.current) return;
+
+    const sortedNotes = [...notes].sort((a, b) => a.stepIdx - b.stepIdx || a.midi - b.midi);
+    const firstNote = sortedNotes[0];
+    const targetMidi = firstNote ? firstNote.midi : 60;
+    const targetRowIdx = rowIdxMap.get(targetMidi) ?? rows.indexOf(targetMidi);
+
+    if (targetRowIdx >= 0) {
+      const viewportH = scrollRef.current.clientHeight || 396;
+      const targetY = Math.max(0, targetRowIdx * rowH - viewportH / 2 + rowH / 2);
+      scrollRef.current.scrollTop = targetY;
+      if (keybedScrollRef.current) keybedScrollRef.current.scrollTop = targetY;
+
+      if (firstNote && firstNote.stepIdx > 0) {
+        const targetX = Math.max(0, firstNote.stepIdx * cellW - 40);
+        scrollRef.current.scrollLeft = targetX;
+        if (rulerScrollRef.current) rulerScrollRef.current.scrollLeft = targetX;
+        if (velScrollRef.current) velScrollRef.current.scrollLeft = targetX;
+      }
+      centeredTrackRef.current = activeTrackIdx;
+      hasCenteredRef.current = true;
+    }
+  }, [activeTrackIdx, notes, rowIdxMap, rows, rowH, cellW]);
+
+  // Center on first note or C4 when toggling full 0-127 pitch range
+  useEffect(() => {
+    if (scrollRef.current) {
+      const sortedNotes = [...notes].sort((a, b) => a.stepIdx - b.stepIdx || a.midi - b.midi);
+      const firstNote = sortedNotes[0];
+      const targetMidi = firstNote ? firstNote.midi : 60;
+      const targetRowIdx = rowIdxMap.get(targetMidi) ?? rows.indexOf(targetMidi);
+      if (targetRowIdx >= 0) {
         const viewportH = scrollRef.current.clientHeight || 396;
-        const targetY = Math.max(0, c4Idx * rowH - viewportH / 2);
+        const targetY = Math.max(0, targetRowIdx * rowH - viewportH / 2 + rowH / 2);
         scrollRef.current.scrollTop = targetY;
         if (keybedScrollRef.current) keybedScrollRef.current.scrollTop = targetY;
       }
     }
-  }, [fullPitchRange, rows, rowH]);
+  }, [fullPitchRange]);
 
   // Sync tool with user preference broadcast
   useEffect(() => {

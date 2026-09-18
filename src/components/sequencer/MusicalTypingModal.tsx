@@ -232,7 +232,7 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
       className="fixed inset-x-0 bottom-0 z-[9999] w-full flex justify-center p-0 pointer-events-none select-none"
       style={{ zIndex: 9999 }}
     >
-      <div className="w-full rounded-t-2xl border-t border-line bg-[#101217]/98 backdrop-blur-2xl px-3 py-2 sm:px-6 sm:py-2.5 shadow-[0_-12px_36px_rgba(0,0,0,0.9)] pointer-events-auto ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-4 duration-200">
+      <div className="w-full sm:max-w-[760px] md:max-w-[820px] mx-auto rounded-t-2xl sm:border-x sm:border-line border-t border-line bg-[#101217]/98 backdrop-blur-2xl px-3 py-2 sm:px-5 sm:py-2 shadow-[0_-12px_36px_rgba(0,0,0,0.9)] pointer-events-auto ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-4 duration-200">
         {/* Header HUD */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle pb-2">
           <div className="flex items-center gap-2">
@@ -362,7 +362,7 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
         {/* Piano Keyboard bed (100% responsive width, Logic Pro style) */}
         <div
           data-testid="musical-typing-keybed"
-          className="relative h-28 sm:h-32 md:h-36 w-full select-none rounded-xl border border-black/80 bg-[#0c0e12] p-0.5 sm:p-1 shadow-inner overflow-hidden flex"
+          className="relative h-24 sm:h-28 md:h-28 w-full select-none rounded-xl border border-black/80 bg-[#0c0e12] p-0.5 sm:p-1 shadow-inner overflow-hidden flex"
           style={{ width: "100%" }}
         >
           {/* White keys container */}

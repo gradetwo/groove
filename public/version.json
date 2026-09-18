@@ -1,27 +1,27 @@
 {
-  "version": "2.0.45",
-  "releaseDate": "2026-09-17",
-  "changelogCount": 109,
+  "version": "2.0.46",
+  "releaseDate": "2026-09-18",
+  "changelogCount": 110,
   "latest": {
-    "version": "2.0.45",
+    "version": "2.0.46",
     "date": "2026-09-18",
     "category": "feature",
     "title": {
-      "zh": "v2.0.45 播放音频绝对同步与卡顿根除、桌面端虚拟键盘100%全宽人机工学展开、移动端防选中与界面精简重构、全界面49项图标与功能深度图解词典",
-      "en": "v2.0.45 Audio-Visual Playhead Synchronization & Lag Elimination, Desktop 100% Full-Width Ergonomic Virtual Keyboard, Mobile Touch Protection & Streamlined Toolbar, and 49-Item Comprehensive Visual Dictionary"
+      "zh": "v2.0.46 播放走带状态绝对同步、步进矩阵视界自动跟随指针开关、桌面端虚拟键盘居中人机工学重塑、多小节完整和弦走向展开与钢琴卷帘首音自适应聚焦",
+      "en": "v2.0.46 Playback State Synchronization, Auto-Follow Playhead Setting, Desktop Ergonomic Centered Virtual Keyboard, Multi-Bar Chord Progression Expansion & Piano Roll Initial Note Centering"
     },
     "highlights": [
       {
-        "zh": "**播放走带绝对同步与卡顿源根除（Playback Synchronization & Zero-Lag Refactor）**：彻底排查并根除了播放循环中的卡顿根源：移除了 `useAudioEngineLifecycle` 中在每一拍/步高频调用系统马达震动（`navigator.vibrate`）导致的 IPC 阻塞，消除了每一拍强行读取 `getBoundingClientRect()` 与 `querySelector` 导致的强制同步重排（Layout Thrashing）；将音频引擎 `visualLeadSec` 预前量精准归零，实现扫描光束与 Web Audio 声学输出的绝对零延迟同步。",
-        "en": "**Playback Synchronization & Zero-Lag Refactor**: Fully eliminated the root causes of playback stutter: removed thread-blocking high-frequency `navigator.vibrate` calls from `onStep`, cached step positions to completely eradicate synchronous layout thrashing (`getBoundingClientRect` / DOM queries), and zeroed out `visualLeadSec` (25ms -> 0ms) for sample-accurate acoustic audio-visual playhead synchronization."
+        "zh": "**播放按钮走带状态绝对同步（Playback Button State Coherence & Engine Event Bridge）**：排查并修复了在连续切换曲风或停止重播时播放按钮显示“播放”而音频已在发声的状态不同步缺陷。在 `AudioEngine` 底层注入 `onPlay` 回调监听机制并在 `useAudioEngineLifecycle` 中双向同步 `setIsPlaying(true)`；在 `useGenreSwitching` 切曲风恢复播放时显式校准播放态，彻底杜绝状态漂移。",
+        "en": "**Playback Button State Coherence & Engine Event Bridge**: Fixed transport desync where the play button displayed \"Play\" while audio was actively sounding after switching genres. Integrated an `onPlay` callback directly into `AudioEngine`, wired bidirectional state syncing in `useAudioEngineLifecycle`, and explicitly synchronized playback state in `useGenreSwitching`."
       },
       {
-        "zh": "**桌面端虚拟键盘 100% 全宽自适应与人机工学琴键（Desktop 100% Full-Width Ergonomic Keybed）**：彻底解除 1200px 宽度钳制与两侧空隙，窗口固定吸附于屏幕底端并水平 100% 铺满；琴键垂直高度精简至贴合 DAW 标准的轻量高度（`h-28 ~ h-36`），白键扩充为 2 个完整八度（15 个白键 + 10 个黑键），琴键比例舒展自然，配合 QWERTY 键盘映射、Z/X 八度升降与 Tab 延音，打造开箱即用的专业弹奏体验。",
-        "en": "**Desktop 100% Full-Width Ergonomic Keybed**: Removed the 1200px max-width clamp to achieve true 100% full-width docked keybed expansion. Streamlined keybed height to an ergonomic DAW scale (`h-28 ~ h-36`) while expanding the key count to 2 full octaves (15 white keys + 10 black keys), delivering authentic piano proportions, Z/X octave controls, and Tab sustain."
+        "zh": "**步进矩阵播放视界自动跟随指针系统设置（Auto-Follow Playhead Step Matrix Viewport Setting）**：在系统全局设置「界面设置」中新增「播放时步进板块跟随播放指针（Auto-follow playhead in sequencer grid）」持久化开关（默认开启）。在播放走带过程中，当扫描光束运行至可视区域右侧或首步循环折返时，自动平滑横向滚动音序器步进矩阵，确保当前发音步进始终位于视界中心。",
+        "en": "**Auto-Follow Playhead Step Matrix Viewport Setting**: Added a persistent toggle in Global Settings -> Interface Preferences for \"Auto-follow playhead in sequencer grid\" (enabled by default). During playback, as the scanning playhead approaches the right edge or wraps back to Step 1, the step matrix automatically scrolls horizontally to keep the active playhead continuously in view."
       },
       {
-        "zh": "**移动端长按/拖拽全域防选中与触控锁（Mobile Anti-Selection & Touch Protection）**：在全局 CSS 与核心工作区层级全面注入 `-webkit-touch-callout: none`、`-webkit-user-select: none`、`user-select: none` 与 `-webkit-tap-highlight-color: transparent`，彻底杜绝在移动设备上快速点音、长按或滑动画布时意外呼出系统选择框、蓝色文本遮罩或弹出菜单，同时严格保留输入框（input/textarea）的原生文本编辑能力。",
-        "en": "**Mobile Anti-Selection & Touch Protection**: Injected `-webkit-touch-callout: none`, `-webkit-user-select: none`, `user-select: none`, and `-webkit-tap-highlight-color: transparent` across global stylesheets and sequencer grids, completely preventing accidental blue selection overlays and system callout popups during rapid tapping or dragging, while safely preserving native input editing."
+        "zh": "**桌面端虚拟键盘居中人机工学重塑（Desktop Virtual Keyboard Centering & Proportional Ergonomics）**：重塑桌面端虚拟键盘视觉排版，解除宽屏下 100% 满屏无界拉伸，将桌面端宽度优雅限制为最大 820px（`w-full sm:max-w-[760px] md:max-w-[820px] mx-auto`）并在屏幕底端平整居中；琴键垂直高度调整为 `h-24 sm:h-28 md:h-28`，消除按键过于宽大粗重的失真比例，呈现真实便携式键盘的细腻触感与专业美感。",
+        "en": "**Desktop Virtual Keyboard Centering & Proportional Ergonomics**: Refined desktop musical typing layout by removing excessive 100% full-width stretching across wide monitors. Constrained keybed width to a tasteful centered container (`max-w-[820px] mx-auto`) and adjusted key heights (`h-24 sm:h-28 md:h-28`) for realistic, authentic piano proportions."
       }
     ],
     "truncated": true
