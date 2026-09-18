@@ -1,27 +1,27 @@
 {
-  "version": "2.0.46",
+  "version": "2.0.49",
   "releaseDate": "2026-09-18",
-  "changelogCount": 110,
+  "changelogCount": 113,
   "latest": {
-    "version": "2.0.46",
-    "date": "2026-09-18",
+    "version": "2.0.49",
+    "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.46 播放走带状态绝对同步、步进矩阵视界自动跟随指针开关、桌面端虚拟键盘居中人机工学重塑、多小节完整和弦走向展开与钢琴卷帘首音自适应聚焦",
-      "en": "v2.0.46 Playback State Synchronization, Auto-Follow Playhead Setting, Desktop Ergonomic Centered Virtual Keyboard, Multi-Bar Chord Progression Expansion & Piano Roll Initial Note Centering"
+      "zh": "v2.0.49 钢琴卷帘单轨试听与和弦试听根因修复、鼓组/合成音质一揽子修复、159 曲风按大类分档响度对齐",
+      "en": "v2.0.49 Piano-roll Lane Preview & Chord Audition Root-cause Fix, Drum/Synth Fidelity Pass, Per-category Loudness Alignment for All 159 Genres"
     },
     "highlights": [
       {
-        "zh": "**播放按钮走带状态绝对同步（Playback Button State Coherence & Engine Event Bridge）**：排查并修复了在连续切换曲风或停止重播时播放按钮显示“播放”而音频已在发声的状态不同步缺陷。在 `AudioEngine` 底层注入 `onPlay` 回调监听机制并在 `useAudioEngineLifecycle` 中双向同步 `setIsPlaying(true)`；在 `useGenreSwitching` 切曲风恢复播放时显式校准播放态，彻底杜绝状态漂移。",
-        "en": "**Playback Button State Coherence & Engine Event Bridge**: Fixed transport desync where the play button displayed \"Play\" while audio was actively sounding after switching genres. Integrated an `onPlay` callback directly into `AudioEngine`, wired bidirectional state syncing in `useAudioEngineLifecycle`, and explicitly synchronized playback state in `useGenreSwitching`."
+        "zh": "**钢琴卷帘试听和弦的根因修复**：试听和弦进行时逐音触发，而和弦轨的引擎会为传进来的每个单音再配一副和弦——4 个音实际发出 12 个声部（24 个振荡器）。新增 `previewChord()` 一次播放整副已完成声部，并让试听与“写入进行”共用同一份音符计算函数，从结构上杜绝“试听到的和写入的不是一回事”。",
+        "en": "**Chord audition root cause fixed**: the progression audition fired one call per chord member, and the engine re-voices whatever single note a chords track is handed — so a four-note chord produced twelve voices (24 oscillators). A new `previewChord()` plays the finished voicing in one call, and audition now shares one note-calculation function with the stamp, so preview and result cannot disagree."
       },
       {
-        "zh": "**步进矩阵播放视界自动跟随指针系统设置（Auto-Follow Playhead Step Matrix Viewport Setting）**：在系统全局设置「界面设置」中新增「播放时步进板块跟随播放指针（Auto-follow playhead in sequencer grid）」持久化开关（默认开启）。在播放走带过程中，当扫描光束运行至可视区域右侧或首步循环折返时，自动平滑横向滚动音序器步进矩阵，确保当前发音步进始终位于视界中心。",
-        "en": "**Auto-Follow Playhead Step Matrix Viewport Setting**: Added a persistent toggle in Global Settings -> Interface Preferences for \"Auto-follow playhead in sequencer grid\" (enabled by default). During playback, as the scanning playhead approaches the right edge or wraps back to Step 1, the step matrix automatically scrolls horizontally to keep the active playhead continuously in view."
+        "zh": "**钢琴卷帘可单独播放当前谱子**：新增按轨隔离预览（只发被预览轨、按小节范围循环、复用走带与播放头），且不修改全局静音/独奏状态；卷帘内新增“试听本轨 / 停止 + 范围”控件，关闭卷帘自动停止。",
+        "en": "**Play just the current lane in the piano roll**: an isolated per-track preview (only the previewed track sounds, loops within a bar range, reuses the existing transport and playhead) that never touches global mute/solo state. New in-roll Play lane / Stop + Range controls; closing the roll stops it."
       },
       {
-        "zh": "**桌面端虚拟键盘居中人机工学重塑（Desktop Virtual Keyboard Centering & Proportional Ergonomics）**：重塑桌面端虚拟键盘视觉排版，解除宽屏下 100% 满屏无界拉伸，将桌面端宽度优雅限制为最大 820px（`w-full sm:max-w-[760px] md:max-w-[820px] mx-auto`）并在屏幕底端平整居中；琴键垂直高度调整为 `h-24 sm:h-28 md:h-28`，消除按键过于宽大粗重的失真比例，呈现真实便携式键盘的细腻触感与专业美感。",
-        "en": "**Desktop Virtual Keyboard Centering & Proportional Ergonomics**: Refined desktop musical typing layout by removing excessive 100% full-width stretching across wide monitors. Constrained keybed width to a tasteful centered container (`max-w-[820px] mx-auto`) and adjusted key heights (`h-24 sm:h-28 md:h-28`) for realistic, authentic piano proportions."
+        "zh": "**鼓组一揽子音质修复**：开镲 choke 由阶跃改为解析式包络锚点平滑淡出（消除每次闭镲的咔哒）；51 个曲风声明的 clap/rimshot 军鼓此前被忽略、现按声明发声；选择底鼓预设不再连带换掉整套鼓；鼓音高轨整体移调（原先只移扫频起点导致落地跑调）；非 808 套件踩镲补上金属簇（此前是纯噪声）；开镲恢复镲片长度；拍手各次爆发读取不同噪声切片；底鼓补齐饱和级；`kick:*` 预设接上力度→音色。",
+        "en": "**Drum fidelity pass**: open-hat choke is now an analytic-envelope fade instead of a step (no click on every close); the clap/rimshot snare declared by 51 genres is finally voiced as declared; picking a kick preset no longer re-voices the whole kit; the drum pitch lane transposes the whole voice (it used to move only the sweep start, leaving the tail detuned); non-808 hats gain a metal cluster (they were pure noise); open hats ring like cymbals; clap bursts read different no…"
       }
     ],
     "truncated": true
