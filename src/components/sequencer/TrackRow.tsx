@@ -305,7 +305,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 onAudition(trackIdx, track.name);
               }}
               data-testid={`track-audition-${trackIdx}`}
-              className="w-5 h-5 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
+              className="w-9 h-9 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
               title={t("track_audition_title")}
               aria-label={t("track_audition_title")}
             >
@@ -314,7 +314,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             {/* Polymeter Loop Length Selector */}
             <button
               onClick={() => onCycleLength(trackIdx)}
-              className={`px-1 sm:px-1.5 h-5 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors items-center justify-center touch-manipulation ${
+              className={`px-1 sm:px-1.5 h-9 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors items-center justify-center touch-manipulation ${
                 track.trackLength && track.trackLength !== stepCount
                   ? "flex bg-accent/20 border-accent text-accent font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
                   : "hidden sm:flex bg-[#17181c] border-line text-text-dim hover:text-text-sub"
@@ -337,7 +337,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                   onSetChordDuration?.(trackIdx, next);
                 }}
                 data-testid={`chord-duration-button-${trackIdx}`}
-                className="px-1 sm:px-1.5 h-5 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border bg-[#17181c] border-line text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none font-bold shadow-[0_0_4px_rgba(245,183,61,0.15)]"
+                className="px-1 sm:px-1.5 h-9 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border bg-[#17181c] border-line text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none font-bold shadow-[0_0_4px_rgba(245,183,61,0.15)]"
                 title={isZh ? "和弦长度 (点击切换 4拍/2拍/1拍/半拍)" : "Chord Length (Click to cycle 4 / 2 / 1 / 0.5 beats)"}
                 aria-label="Cycle Chord Length"
               >
@@ -355,7 +355,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 e.stopPropagation();
                 onToggleMute(trackIdx);
               }}
-              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
+              className={`w-9 h-9 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
                 isMute
                   ? "border-[#ff5964] text-white bg-gradient-to-b from-[#ff5964] to-[#d62839] font-black shadow-[0_0_8px_rgba(255,89,100,0.5)] scale-105"
                   : "border-[#2b3040] bg-[#171922] text-text-dim hover:text-[#ff5964] hover:border-[#ff5964]/50"
@@ -371,7 +371,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 e.stopPropagation();
                 onToggleSolo(trackIdx);
               }}
-              className={`w-5 h-5 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
+              className={`w-9 h-9 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
                 isSolo
                   ? "border-accent text-black bg-gradient-to-b from-amber-300 to-amber-500 font-black shadow-[0_0_8px_rgba(245,183,61,0.5)] scale-105"
                   : "border-[#2b3040] bg-[#171922] text-text-dim hover:text-accent hover:border-accent/50"
@@ -391,7 +391,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 onOpenInspector(trackIdx);
               }}
               data-testid={`track-inspector-open-${trackIdx}`}
-              className="w-5 h-5 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
+              className="w-9 h-9 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
               title={t("track_inspector_open_title")}
               aria-label={t("track_inspector_open_aria")}
             >
@@ -457,7 +457,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               )}
               <button
                 onClick={() => onOpenVelocity(trackIdx)}
-                className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation ${
+                className={`w-9 h-9 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation ${
                   isVelocityLaneOpen && isVelocityActiveTrack
                     ? "bg-[#45e0c9]/20 border-[#45e0c9] text-[#45e0c9]"
                     : "border-line text-text-dim hover:text-[#45e0c9]"
@@ -470,7 +470,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 <button
                   type="button"
                   onClick={() => onOpenPianoRoll(trackIdx)}
-                  className={`w-5 h-5 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation active:scale-95 ${
+                  className={`w-9 h-9 sm:w-4 sm:h-4 rounded border transition-colors flex items-center justify-center touch-manipulation active:scale-95 ${
                     track.track_id === "chords" || track.track_id === "bass" || track.track_id === "lead"
                       ? "border-accent/50 bg-accent/15 text-accent hover:bg-accent/30 hover:border-accent shadow-[0_0_6px_rgba(var(--accent-rgb),0.25)]"
                       : "border-line text-text-dim hover:text-accent hover:border-accent/60"
@@ -484,14 +484,14 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               )}
               <button
                 onClick={() => onShiftTrack(trackIdx, -1)}
-                className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
+                className="w-9 h-9 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
                 title={t("track_shift_left")}
               >
                 ◀
               </button>
               <button
                 onClick={() => onShiftTrack(trackIdx, 1)}
-                className="w-5 h-5 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
+                className="w-9 h-9 sm:w-4 sm:h-4 rounded hover:bg-line-subtle text-text-dim hover:text-text flex items-center justify-center text-[10px] touch-manipulation"
                 title={t("track_shift_right")}
               >
                 ▶

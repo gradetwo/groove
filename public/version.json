@@ -1,29 +1,21 @@
 {
-  "version": "2.0.50",
+  "version": "2.0.51",
   "releaseDate": "2026-09-18",
-  "changelogCount": 114,
+  "changelogCount": 115,
   "latest": {
-    "version": "2.0.50",
+    "version": "2.0.51",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.50 手机端独立 UI：底部导航与紧凑走带条、禁止误触放大镜与页面缩放、修复底栏遮挡控件",
-      "en": "v2.0.50 Phone-Specific UI: Bottom Tab Bar & Compact Transport, Zoom/Magnifier Prevention, Fixed Tab-Bar Occlusion"
+      "zh": "v2.0.51 手机端触控目标放大：轨道行控制从 20px 提升到 36px，静音/独奏不再需要精准点击",
+      "en": "v2.0.51 Larger Phone Touch Targets: Track-Row Controls 20px → 36px, No More Precision Tapping"
     },
     "highlights": [
       {
-        "zh": "**禁止误触放大镜与页面缩放**：viewport 去掉 `maximum-scale`（它会重新开启双指缩放，而 iOS 上一旦能缩放，长按/慢点就会弹出放大镜——在密集的步进格上等于每次点格子都被放大镜挡住）；根样式加 `touch-action: manipulation` 消除双击缩放（连点两个格子打拍子是常规操作，以前会被当成双击把整页放大）、`overscroll-behavior: none` 去掉橡皮筋回弹与下拉刷新、文档禁止横向滚动。另加主题色、独立应用（PWA）元信息与 `format-detection: telephone=no`，让手机端更像原生应用而不是网页。",
-        "en": "**Stop the magnifier and page zoom**: removed `maximum-scale` from the viewport (it re-enables pinch zoom, and on iOS being zoomable brings back the magnifier loupe — over a dense step grid that means every slightly-slow tap is blocked by a magnifying glass). `touch-action: manipulation` at the root kills double-tap zoom (tapping two step cells in a row is how a beat is programmed, and it used to zoom the page), `overscroll-behavior: none` removes rubber-banding and pull-to-…"
-      },
-      {
-        "zh": "**手机端独立导航**：新增底部五格标签栏（工作台 / 探索 / 学习 / 工具 / 我的），全部带文字标签、52px 触控高度、适配安全区，并在 `pointerup` 即响应而非等 300ms 的 click；其余视图收进一个底部抽屉，按用途分组（创作 / 学习 / 探索与分析 / 应用），每行 56px 且带说明文字。抽屉支持背景点击、关闭按钮、Esc 与拖拽把手四种关闭方式。",
-        "en": "**Phone-specific navigation**: a five-destination bottom tab bar (Studio / Explore / Learn / Tools / You) with visible text labels, 52 px targets and safe-area padding, committing on `pointerup` instead of waiting ~300 ms for a click. Every other view moves into one bottom sheet grouped by intent (Create / Learn / Explore & analyse / App), with 56 px rows that carry a description. The sheet dismisses by backdrop, close button, Escape or its drag handle."
-      },
-      {
-        "zh": "**走带条替代 64 按钮工具栏**：桌面工具栏在 390px 宽的手机上占 47% 视口高度（项目自身实测数字）。手机端改为六个控件：播放、上一小节/下一小节、速度读数、撤销、重做、更多——全部 44px 触控高度且不含文本输入框（避免键盘弹起遮住网格）。缺少的控件（节拍器、预备拍、录音、只留鼓、歌曲模式、盲测、鼓组、力度泳道、钢琴卷帘、欧几里得、工程中心、导出、人性化、分析器、音频设置）全部进入抽屉。",
-        "en": "**A compact transport replaces the 64-button toolbar**: the desktop toolbar measured 47% of a 390 px phone viewport before a single step was visible (the project's own number). The phone gets six controls — play, previous/next bar, tempo readout, undo, redo, more — all 44 px and with no text input (a raised keyboard over the grid is its own failure). Everything omitted (metronome, count-in, record, drums-only, song mode, blind compare, drum kit, velocity lane, piano roll, Eu…"
+        "zh": "**轨道行控制触控目标 20px → 36px**：试听、静音、独奏、检查器、折叠、移动等八个按钮此前在手机上只有 20×20px，而人手指的可靠触控面积约 44px、可接受下限约 32px——静音和独奏是编曲时最常点的两个按钮，却最难点中，误触还会改错轨道状态。现在手机端为 36×36px（桌面端保持 16px 不动，因为鼠标精度足够且工具栏已经很拥挤），仍能在一屏内放下 8 条轨道。",
+        "en": "**Track-row controls 20px → 36px**: the eight buttons in each row (audition, mute, solo, inspector, fold, move) were 20×20 px on a phone, while a finger needs about 44 px and tolerates no less than ~32 px. Mute and solo are the two most-tapped controls when arranging, and they were the hardest to hit — a miss also changed the wrong track's state. They are 36×36 px on phones now (desktop keeps 16 px, where the pointer is precise and the toolbar is already dense), and eight tr…"
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
