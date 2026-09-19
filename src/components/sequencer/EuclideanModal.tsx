@@ -122,7 +122,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                     className={`px-3 py-1.5 rounded-lg text-xs font-['JetBrains_Mono'] font-bold border transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? "bg-[#181a22] text-[#f0ede6] shadow-[0_0_10px_rgba(0,0,0,0.5)] scale-105"
-                        : "bg-bg text-[#717684] border-[#1e212b] hover:text-text"
+                        : "bg-bg text-text-dim border-[#1e212b] hover:text-text"
                     }`}
                     style={{ borderColor: isSelected ? meta.color : undefined }}
                   >
@@ -246,7 +246,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
 
           {/* Quick World Rhythms Presets */}
           <div>
-            <label className="block text-[11px] font-mono text-[#6b7280] uppercase tracking-wider mb-2">
+            <label className="block text-[11px] font-mono text-text-dim uppercase tracking-wider mb-2">
               {t("euclidean_presets")}
             </label>
             <div className="flex flex-wrap gap-1.5">

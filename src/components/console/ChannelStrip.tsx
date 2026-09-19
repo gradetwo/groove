@@ -226,7 +226,7 @@ export const ChannelStrip: React.FC<ChannelStripProps> = ({
           data-testid={`console-mute-${trackIdx}`}
           className={`h-11 w-11 shrink-0 rounded-lg border font-['JetBrains_Mono'] text-xs font-bold transition-colors ${
             isMute
-              ? "border-[#ff5964] bg-[#ff5964]/25 text-[#ff5964]"
+              ? "border-[#ff5964] bg-[#ff5964]/15 text-[#ff5964]"
               : "border-line bg-[#15171d] text-text-sub hover:text-text"
           }`}
         >

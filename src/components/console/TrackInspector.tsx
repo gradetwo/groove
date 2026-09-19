@@ -467,7 +467,7 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
             data-testid="track-inspector-mute"
             className={`h-7 w-7 rounded-lg border font-['JetBrains_Mono'] text-[10px] font-bold transition-colors ${
               muted
-                ? "border-[#ff5964] bg-[#ff5964]/25 text-[#ff5964]"
+                ? "border-[#ff5964] bg-[#ff5964]/15 text-[#ff5964]"
                 : "border-line bg-[#15171d] text-text-sub hover:text-text"
             }`}
           >

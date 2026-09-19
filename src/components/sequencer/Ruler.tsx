@@ -83,7 +83,7 @@ export const Ruler = memo<RulerProps>(function Ruler({
               {isZh ? "复制B1" : "Dup B1"}
             </button>
           )}
-          <span className="text-[#3a3e48]">{timeSignature}</span>
+          <span className="text-text-dim">{timeSignature}</span>
         </div>
       </div>
 
@@ -171,7 +171,7 @@ export const Ruler = memo<RulerProps>(function Ruler({
                     ? "text-accent font-bold"
                     : isFirstStepOfGroup
                     ? "text-text-sub font-semibold"
-                    : "text-[#3e424d]"
+                    : "text-text-dim"
                 }`}
               >
                 {isFirstStepOfBar ? `BAR ${barIdx}` : `.${stepInGroup}`}

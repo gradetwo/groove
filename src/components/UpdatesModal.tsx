@@ -219,7 +219,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
                   v{CURRENT_CLIENT_VERSION}
                 </span>
               </h2>
-              <p className="text-[11px] text-[#717684]">
+              <p className="text-[11px] text-text-dim">
                 {t("updates_modal_subtitle")}
               </p>
             </div>
@@ -275,7 +275,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
             )}
 
             {lastCheckedTime && (
-              <span className="text-[10px] text-[#555a67] font-mono ml-1">
+              <span className="text-[10px] text-text-dim font-mono ml-1">
                 ({lastCheckedTime})
               </span>
             )}
@@ -330,7 +330,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
                     </span>
                   </div>
 
-                  <span className="text-[11px] font-mono text-[#616675]">
+                  <span className="text-[11px] font-mono text-text-dim">
                     {entry.date}
                   </span>
                 </div>
@@ -357,7 +357,7 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 sm:px-6 py-3 border-t border-[#1f222b] bg-[#121319] flex items-center justify-between text-[11px] text-[#616675]">
+        <div className="px-5 sm:px-6 py-3 border-t border-[#1f222b] bg-[#121319] flex items-center justify-between text-[11px] text-text-dim">
           <span>Groove Lab • Cloudflare Edge Distribution</span>
           <button
             onClick={onClose}

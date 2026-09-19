@@ -549,35 +549,35 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
           {/* Active Instrument Trigger Badges Footer */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-[#181a22] text-[11px]">
-            <span className="text-[#686d7c] font-semibold tracking-wider uppercase font-mono text-[10px]">
+            <span className="text-text-dim font-semibold tracking-wider uppercase font-mono text-[10px]">
               CHANNELS:
             </span>
             <div className="flex flex-wrap items-center gap-2 font-mono">
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
                 isPlaying && currentHits.hasKick 
                   ? "bg-amber-500/25 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,183,61,0.5)] font-bold scale-105" 
-                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+                  : "bg-[#12141a] border-[#222632] text-text-dim"
               }`}>
                 KICK
               </span>
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
                 isPlaying && currentHits.hasSnare 
                   ? "bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.5)] font-bold scale-105" 
-                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+                  : "bg-[#12141a] border-[#222632] text-text-dim"
               }`}>
                 SNARE
               </span>
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
                 isPlaying && currentHits.hasHihat 
                   ? "bg-yellow-500/25 border-yellow-400 text-yellow-300 shadow-[0_0_8px_rgba(234,179,8,0.5)] font-bold scale-105" 
-                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+                  : "bg-[#12141a] border-[#222632] text-text-dim"
               }`}>
                 HI-HAT
               </span>
               <span className={`px-2 py-0.5 rounded-md border transition-all ${
                 isPlaying && currentHits.hasPerc 
                   ? "bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.5)] font-bold scale-105" 
-                  : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+                  : "bg-[#12141a] border-[#222632] text-text-dim"
               }`}>
                 PERC
               </span>
@@ -585,7 +585,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                 <span className={`px-2 py-0.5 rounded-md border transition-all ${
                   isPlaying && currentHits.hasBass 
                     ? "bg-purple-500/25 border-purple-400 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.5)] font-bold scale-105" 
-                    : "bg-[#12141a] border-[#222632] text-[#6b7280]"
+                    : "bg-[#12141a] border-[#222632] text-text-dim"
                 }`}>
                   BASS
                 </span>
@@ -628,7 +628,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                 <div
                   key={stepIdx}
                   className={`flex-1 text-center font-bold ${
-                    stepIdx % 4 === 0 ? "text-accent font-black" : "text-[#5e6372]"
+                    stepIdx % 4 === 0 ? "text-accent font-black" : "text-text-dim"
                   } ${stepIdx % 4 === 3 && stepIdx !== 15 ? "mr-1.5" : ""}`}
                 >
                   {stepIdx + 1}

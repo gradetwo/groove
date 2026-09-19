@@ -213,12 +213,12 @@ export const PitchPickerModal: React.FC<PitchPickerModalProps> = ({
               <span>
                 MIDI: <b className="text-accent">{currentNoteName}</b> ({selectedNote})
               </span>
-              <span className="text-[#3a3e4d]">|</span>
+              <span className="text-text-dim">|</span>
               <span>
                 {t("pitch_scale_type")}{" "}
                 <b className="text-text">{rootNote} {activeScale.name[isZh ? "zh" : "en"]}</b>
               </span>
-              <span className="text-[#3a3e4d]">|</span>
+              <span className="text-text-dim">|</span>
               <span className={isSelectedInScale ? "text-[#45e0c9] font-bold" : "text-[#ff5964]"}>
                 {isSelectedInScale
                   ? currentDegree === "R"

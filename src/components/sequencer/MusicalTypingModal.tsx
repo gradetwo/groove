@@ -435,7 +435,7 @@ export const MusicalTypingModal: React.FC<MusicalTypingModalProps> = ({
                   className={`pointer-events-auto absolute top-0.5 sm:top-1 h-[62%] rounded-b-[5px] transition-all duration-75 flex flex-col justify-end items-center pb-1 cursor-pointer z-20 select-none ${
                     isActive
                       ? "bg-gradient-to-t from-accent to-[#ffd060] text-black shadow-[0_0_16px_rgba(245,183,61,0.8)] translate-y-0.5"
-                      : "bg-gradient-to-b from-[#2a2d36] via-[#1a1c23] to-[#0d0e12] text-[#8e95a5] shadow-[0_4px_8px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] hover:from-[#353945] hover:to-[#171920]"
+                      : "bg-gradient-to-b from-[#2a2d36] via-[#1a1c23] to-[#0d0e12] text-[#b9bdc9] shadow-[0_4px_8px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] hover:from-[#353945] hover:to-[#171920]"
                   }`}
                 >
                   <span className="font-['JetBrains_Mono'] text-[7.5px] sm:text-[8.5px] font-bold text-white/90">

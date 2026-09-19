@@ -1195,7 +1195,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                       <div className="p-4 sm:p-5 rounded-2xl bg-[#111422] border border-line/80 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-[#ec4899]/20 text-[#ec4899] font-mono text-xs flex items-center justify-center font-bold">5</span>
+                            <span className="w-5 h-5 rounded-full bg-[#ec4899]/10 text-[#ec4899] font-mono text-xs flex items-center justify-center font-bold">5</span>
                             <h4 className="text-sm font-bold text-text">
                               {t("help_ui_section_acoustic")}
                             </h4>

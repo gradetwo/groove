@@ -292,7 +292,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
         {/* Interactive Decade Quick-Navigator Bar */}
         <div className="relative z-10 mt-6 pt-5 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none max-w-full">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#636875] mr-1 flex items-center gap-1">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-text-dim mr-1 flex items-center gap-1">
               <Clock className="w-3 h-3" />
               <span>{t("timeline_decade_quick")}</span>
             </span>
@@ -323,7 +323,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
 
           {/* Category Filter */}
           <div className="flex items-center gap-2 bg-[#0c0d12] border border-white/[0.08] rounded-2xl px-3 py-1.5 shrink-0">
-            <Filter className="w-3.5 h-3.5 text-[#636875]" />
+            <Filter className="w-3.5 h-3.5 text-text-dim" />
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -393,7 +393,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                 >
                   {story.year}
                 </div>
-                <div className="text-[11px] text-[#636875] font-mono mt-1 hidden sm:block">
+                <div className="text-[11px] text-text-dim font-mono mt-1 hidden sm:block">
                   EPOCH {String(storyIdx + 1).padStart(2, "0")}
                 </div>
               </div>
@@ -592,7 +592,7 @@ export const VerticalTimelineView: React.FC<VerticalTimelineViewProps> = ({
                       })}
                     </div>
                   ) : (
-                    <div className="py-6 text-center text-xs text-[#636875]">
+                    <div className="py-6 text-center text-xs text-text-dim">
                       {t("timeline_no_genres_in_era")}
                     </div>
                   )}
