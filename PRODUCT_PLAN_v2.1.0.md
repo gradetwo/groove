@@ -389,15 +389,15 @@ studio 的 URL 才会稳定带上曲风。
 | M1 | 送出（sendA/sendB）在**推子后、声像前**分接：`stripOut` 同时喂 panner 与 send | `AudioEngine.ts:605` vs `:612-624` | 硬左/硬右的轨道，混响/延迟送的是**居中**信号（真实调音台是 post-pan）——**已修，见附录 G.19** |
 | M2 | 母带 `DRIVE` 是**硬削波**：WaveShaper 曲线定义域固定 `[-1,1]`，而机架在推子之后、8 轨求和之后 | `EffectsRack.ts:59-67`；`masterGraph.ts:264` | 在 rock/metal/dubstep（drive 3.5–5.5，`genreFx.ts:113, 213, 217`）上，母带在进限幅器之前就已经被削平 |
 | M3 | 合唱把立体声**降混成单声道**（`ChannelMergerNode` 的输入默认 `channelCount 1`），且左右两抽头共用同一个 LFO | `EffectsRack.ts:179-184, 219-221` | 湿声是单声道、主总线每隔约 66 Hz 一个梳状陷波——**已修，见附录 G.20** |
-| M4 | 乒乓开关会**重建整条延迟图并切断尾音**（`if (pingChanged) this._build()`） | `DelayBus.ts:234-236, 277-284` | 切曲风/切乒乓时延迟尾巴被砍断 |
-| M5 | 混响 IR 生成在**主线程同步**执行并直接换缓冲、无交叉淡化（最长约 9 s，约 4 MB 立体声） | `ReverbBus.ts:350-354, 190-211, 396-397` | 切曲风时掉帧 + 尾音被瞬间截断 |
+| M4 | 乒乓开关会**重建整条延迟图并切断尾音**（`if (pingChanged) this._build()`） | `DelayBus.ts:234-236, 277-284` | 切曲风/切乒乓时延迟尾巴被砍断——**仍开放**：实测可达（`genreFx.ts` 里有 11 处 `pingPong: true`，切到/切离这些曲风就会 `_build()`），但只在切曲风那一刻发生、且被全新的素材掩盖。修法（交叉淡化或原地改路由）留待后续 |
+| M5 | 混响 IR 生成在**主线程同步**执行并直接换缓冲、无交叉淡化（最长约 9 s，约 4 MB 立体声） | `ReverbBus.ts:350-354, 190-211, 396-397` | 切曲风时掉帧 + 尾音被瞬间截断——**已降级，计划原文的数字是错的**：9 s 是**冲激响应长度**（`ambient` 确实用 `decaySec: 9.0`），不是计算耗时。实测生成本身：0.9 s → **4.3 ms**、1.9 s → **6.4 ms**、9 s → **29.7 ms**（初始化 0.2 ms）。即最坏 1–2 帧，且只在该曲风被切入/切出时发生一次；「移出主线程」因此从「必修」降为「若将来 profile 显示才做」 |
 | M6 | 母带推子是**阶跃写入**（`setValueAtTime`），且"听力保护"开关会重写推子 | `AudioEngine.ts:1077, 1042` | 拖推子有 zipper 噪声 |
 | M7 | 延迟反馈量与阻尼在每次 `setParams`（含仅改返回量、改 BPM）都是阶跃写入 | `DelayBus.ts:374-379` | 变速时延迟的"变暗/反馈量"有阶跃 |
-| M8 | 插入条（EQ/压缩/makeup/drive）参数全是 `setValueAtTime`，无平滑；`setFilter` 每次写都重连图 | `ChannelStripDsp.ts:286-315, 383-390`；`EffectsRack.ts:257-266` | 拖插入旋钮有 zipper；每帧重连图 |
-| M9 | **实时的 `probability` 用 `Math.random()`，导出用确定性掷骰** | `AudioEngine.ts:1603` vs `WavExporter.ts:335` | 概率轨的播放**永远不等于自己的导出** |
+| M8 | 插入条（EQ/压缩/makeup/drive）参数全是 `setValueAtTime`，无平滑；`setFilter` 每次写都重连图 | `ChannelStripDsp.ts:286-315, 383-390`；`EffectsRack.ts:257-266` | 拖插入旋钮有 zipper；每帧重连图——**一半已修（v2.0.83）**：`EffectsRack.setFilter` 每次写都重连图，而它在**每次 BPM 变化**都会被 `applyGenreFxToGraph` 调用，所以拖速度滑杆就会把主滤波器拽出链路再装回；现已只在拓扑变化时重连。插入条那半是**刻意**的：`ChannelStripDsp.writeParam` 的注释写明步进写入才能让离线渲染逐位一致，不是缺陷 |
+| M9 | **实时的 `probability` 用 `Math.random()`，导出用确定性掷骰** | `AudioEngine.ts:1603` vs `WavExporter.ts:335` | 概率轨的播放**永远不等于自己的导出**——**刻意为之，不是缺陷**：`AudioEngine` 该处注释写明 Chance 是演奏功能、每次经过都重掷，导出用确定性掷骰是为了可复现，并明确写着「Do not "fix" this by seeding live playback」 |
 | M10 | 实时 ratchet **未做 1..8 夹取**，导出做了 | `AudioEngine.ts:1624-1626` vs `noteEvents.ts:59-61` | 畸形/导入的 pattern 能一次性喷出大量声部 |
 | M11 | 逐轨 swing 分支丢掉了 `latencyCompensationMs`（用的是 `this.nextStepTime` 而不是 `time`） | `AudioEngine.ts:1618-1620` vs `WavExporter.ts:340-344` | 带独立 swing 的轨道与导出有几毫秒偏差 |
-| M12 | 混响返回量的 ramp 没有先钉住当前值（DelayBus 有先钉） | `ReverbBus.ts:337-343` vs `DelayBus.ts:402-403` | ramp 起点可能跳变 |
+| M12 | 混响返回量的 ramp 没有先钉住当前值（DelayBus 有先钉） | `ReverbBus.ts:337-343` vs `DelayBus.ts:402-403` | ramp 起点可能跳变——**只在降级路径成立**：现代路径先 `cancelAndHoldAtTime(now)`（已钉住当前值），只有不支持它的 context 才退到 `cancelScheduledValues` 而跳变 |
 | M13 | 母带链路**没有 DC 阻断**，混响 IR 也没有高通 | `masterGraph.ts`（无 HPF）、`ReverbBus.ts`（无 HPF） | 任何 DC 会持续占用限幅器的天花板——**已修，见 Q12** |
 | M14 | 限幅器的增益包络是**瞬时阶跃**（`this.gain = target`），滑窗最小值是每样本 O(D) 线性扫描，且 NaN/Inf 无消毒 | `MasterLimiter.ts:358-360, 352-356, 346` | 限幅时的调制颗粒感/泵动；渲染线程额外负载 |
 
@@ -2417,3 +2417,44 @@ const sendTap: AudioNode = panner ?? spatialPanner ?? stripOut;
 且**曲库数据里没有任何一个曲风把它打开**（`grep "chorusEnabled: true" src/data/*.ts` = 0 处）。
 两个基线都只经离线导出器渲染，而旁通状态下湿增益为 0、新节点到不了输出（第 6 条测试钉住这一点），
 所以既有基线仍然准确——这一点是**查过**的，不是推断的。
+
+## G.21 值写入不再重建图（v2.0.83），以及 §3.3 那一表的分诊结果
+
+### 修的是什么
+
+`EffectsRack.setFilter()` **无条件**调用 `updateFilterRouting()`，而后者先把两条边都断开
+（`inputNode.disconnect()` / `filterNode.disconnect()`）再按 `filterEnabled` 重接——在实时图里这不是
+空操作，而是**主链路上一次短暂的断路**。更糟的是它的调用时机：`applyGenreFxToGraph()` 在**每次
+`setPattern` 和每次 BPM 变化**时都会调用 `setFilter`，所以只要滤波器是开着的，**拖速度滑杆就会把主
+滤波器拽出链路再装回来一次**（每个输入事件一次）。
+
+修法：路由只取决于 `filterEnabled`，所以记下上次为哪个值布线（`routedFilterEnabled`），值变化只写参数、
+不发图。频率/Q/类型仍然用**步进**写入——这是刻意的，见下。
+
+### 测试（新增 `src/test/effectsRackRewiring.test.ts`，3 条）
+
+给测试用的 `FakeNode` 加了 `disconnectCalls` 计数器：「断开一条边再接回同一条边」在实时图里不是
+空操作，计数正是区分「重建了路由」和「写了个值」的东西。
+
+1. 只改 cutoff/Q 的连续写入：`inputNode` / `filterNode` 的 `disconnectCalls` **不变**，而参数确实写进去了；
+2. 开关滤波器**仍会**重连，且重连后的边是正确的那一组（开：input→filter→shaper；关：input→shaper）；
+3. **走用户真实路径**：`applyGenreFxToGraph(graph, resolveGenreFx("chicago-house"), bpm)` 连调 5 个不同
+   BPM，已开启的滤波器一次都没被重连。
+
+把 `setFilter` 改回无条件重连实测：**第 1、3 条失败**。全量单测 **177 文件 / 2042 用例**。
+
+### §3.3 那一表的分诊（这轮顺手把「未验证的缺陷」变成「有证据的结论」）
+
+审计表是当时的快照，其中几行要么已经修过、要么被我读成了比实际更严重的问题。逐行核实后：
+
+| 行 | 结论 | 证据 |
+|---|---|---|
+| **M4** 乒乓切换重建延迟图、砍断尾音 | **仍开放**，且实测**可达** | `genreFx.ts` 有 **11 处** `pingPong: true`（dub lineage 等），切到/切离这些曲风即触发 `_build()`；但只发生在切曲风那一刻，且被全新素材掩盖 |
+| **M5** 混响 IR 在主线程生成，「最长约 9 s，约 4 MB」 | **降级**，且原文数字混淆了两件事 | 9 s 是**冲激响应长度**（`ambient` 确实用 9.0 s）；**生成耗时**实测 0.9 s→**4.3 ms**、1.9 s→**6.4 ms**、9 s→**29.7 ms**，初始化 0.2 ms。最坏 1–2 帧、一次性。Worker 方案从「必修」降为「若 profile 显示才做」 |
+| **M8** 插入条参数无平滑；`setFilter` 每次写都重连 | **一半已修**（本轮），一半是刻意 | 重连那半已修；步进写入那半是 `ChannelStripDsp.writeParam` 注释写明的刻意选择（步进 → 离线渲染逐位一致） |
+| **M9** 实时 probability 用 `Math.random()`，导出确定性 | **刻意为之，不是缺陷** | `AudioEngine` 该处注释：Chance 是演奏功能，每次经过重掷；导出确定性是为了可复现，并写着「Do not "fix" this by seeding live playback」 |
+| **M12** 混响返回量 ramp 没先钉住当前值 | **只在降级路径成立** | 现代路径先 `cancelAndHoldAtTime(now)`；只有不支持它的 context 才退到 `cancelScheduledValues` |
+
+**教训（这轮重复犯了旧错）**：我先按计划的表述打算「修 M9」，读代码才发现注释明确写着不要那样修；
+M5 也是先量了才发现 30 ms 而不是 9 s，还先按表里前几行的 0.9–1.9 s 推断「没有曲风用长衰减」，
+再查全表才发现 `ambient` 用满 9.0 s。**审计表也是二手材料，动它之前要回到代码与实测。**
