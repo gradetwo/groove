@@ -781,7 +781,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   /**
    * Auditioning — single notes, whole voicings and isolated lane playback.
    *
-   * Extracted to \`useAuditionPreview\`: it is audio behaviour (it calls the engine and reads the
+   * Extracted to `useAuditionPreview`: it is audio behaviour (it calls the engine and reads the
    * current pattern) and none of it knows how a control looks, so a second surface should not have to
    * copy the four decisions it encodes — the voicing-vs-note rule for a chords track, yielding the
    * transport to an isolated preview, only stopping what the preview started, and clearing the scope

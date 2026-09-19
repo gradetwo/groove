@@ -211,6 +211,21 @@ check(
  * read, so this red line only has to prove the guard is still there.
  */
 const deploySource = read("scripts/deploy.mjs");
+/**
+ * R6e — the CSS-usage gate must stay wired.
+ *
+ * A dead CSS rule is invisible: nothing fails and nothing warns, so `.landscape-compact-bar` sat in
+ * the stylesheet forcing 28 px buttons long after the class stopped being applied. The gate is the
+ * only thing that notices, so it must not be quietly dropped from `verify`.
+ */
+check(
+  "R6e verify keeps the CSS-usage gate",
+  // `vite-node`, not `node`: the sweep imports its parsing helpers from `src/utils/cssUsage.ts` so the
+  // same code the tests cover is the code that runs. Anything that only asserts "it is wired" would
+  // let the runner change silently, so the command is pinned as well as the presence.
+  scripts.verify.includes("npm run check:css") &&
+    scripts["check:css"] === "vite-node scripts/check_css_usage.mjs"
+);
 check(
   "R6d deploy refuses a dist whose version is not package.json's",
   deploySource.includes("Stale build") &&

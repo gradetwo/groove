@@ -147,18 +147,16 @@ input[type=range]::-moz-range-thumb {
   100% { box-shadow: 0 0 0 16px #f5b73d00; }
 }
 
-@keyframes spawn {
-  from { transform: scale(.3); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
+/*
+ * The `.animate-spawn` rule and its `@keyframes spawn` lived here. Nothing referenced the class —
+ * not a className, not a template literal, not a test — so it was one more rule that reads as intent
+ * while having no effect. Found by `scripts/check_css_usage.mjs`, which now guards the rest.
+ */
 
 .animate-pulse-play {
   animation: pulse-play 1.05s ease-out infinite;
 }
 
-.animate-spawn {
-  animation: spawn .3s cubic-bezier(.2, 1.4, .4, 1) backwards;
-}
 
 /* Scrollbar */
 ::-webkit-scrollbar {
@@ -203,13 +201,11 @@ input[type=range]::-moz-range-thumb {
   user-select: none;
 }
 
-.touch-action-pan-x {
-  touch-action: pan-x !important;
-}
-
-.touch-action-pan-y {
-  touch-action: pan-y !important;
-}
+/*
+ * `.touch-action-pan-x` / `.touch-action-pan-y` were declared here and referenced nowhere. The
+ * interacting surfaces use `touch-action-none` (which is used) and the per-element
+ * `manipulation` rule below, so these were two more shells of the same idea.
+ */
 
 .touch-action-manipulation {
   touch-action: manipulation !important;
@@ -366,18 +362,12 @@ input[type=range]::-moz-range-thumb {
 .safe-pb, .pb-safe {
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
 }
-.safe-pt, .pt-safe {
-  padding-top: max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.375rem));
-}
-.safe-pl, .pl-safe {
-  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-}
-.safe-pr, .pr-safe {
-  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-}
-.bottom-safe {
-  bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
-}
+/*
+ * Only the bottom inset has call sites; the top/left/right variants and `.bottom-safe` were
+ * declared and never applied. The components that need a top inset write it inline (see
+ * `SequencerPanel`'s landscape shell), which is also how the values stay visible at the site that
+ * depends on them.
+ */
 
 /* Reduced Motion Support (P2-19: Media Query & User Override) */
 @media (prefers-reduced-motion: reduce) {
@@ -450,9 +440,6 @@ html.reduced-motion .animate-orbit {
   .landscape-compact-cell {
     height: var(--step-cell-h-compact) !important;
     min-width: var(--step-cell-h-compact) !important;
-  }
-  .landscape-compact-header {
-    height: var(--step-cell-h-compact) !important;
   }
 }
 
