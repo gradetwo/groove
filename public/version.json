@@ -1,27 +1,27 @@
 {
-  "version": "2.0.99",
+  "version": "2.1.0",
   "releaseDate": "2026-09-19",
-  "changelogCount": 163,
+  "changelogCount": 164,
   "latest": {
-    "version": "2.0.99",
+    "version": "2.1.0",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.99 手机端：和弦台与 Kick Lab 的控件都按得到了",
-      "en": "v2.0.99 On a Phone: The Chord Studio and Kick Lab Controls Are All Hittable"
+      "zh": "v2.1.0 手机端：曲风制作器、挑战与大师课都按得到了；顺手修掉一个会空转的检查",
+      "en": "v2.1.0 On a Phone: The Genre Maker, Challenge and Masterclass Are Hittable Too"
     },
     "highlights": [
       {
-        "zh": "**和弦台（Tools 落地页）3 → 0**：Harmony Guide（139×26）与调号/调式两个下拉（119×32）在手机上都到 44 px——这两个下拉正是手机用户在这页最先要动的东西。",
-        "en": "**The chord studio (the Tools landing page) went from 3 to 0**: the Harmony Guide (139×26) and the key/mode selects (119×32) now clear 44 px — and those selects are the first thing a phone user reaches for on that page."
+        "zh": "**三个视图 8 + 5 + 1 → 0**：**maker** 的 fork 下拉只有 140×**18**、Fork 43×24、`New Blank Genre`/`Saved`/`Poster & Share`/`Workshop Guide`/`Open in Studio` 一排 34 px，还有元数据表单里 316×38 的名称输入；**challenge** 的证书按钮 34 px、重置 32×32、三档难度 32–34 px；**masterclass** 的 Guide 128×30。同一形状的表单控件（名称/分类/作者/BPM/音阶/拍号）一并按 44 px 处理——它们只是再往下滚一屏的同一种东西，不修就是「量不到就不算」的自欺。",
+        "en": "**Three views went 8 + 5 + 1 → 0**: the **maker**'s fork select was 140×**18**, Fork 43×24, and the `New Blank Genre` / `Saved` / `Poster & Share` / `Workshop Guide` / `Open in Studio` row 34 px tall, plus a 316×38 name field in the metadata form; **challenge**'s certificate button was 34 px, reset 32×32 and the three difficulty buttons 32–34 px; **masterclass**'s guide was 128×30. The identically shaped form controls (name, category, author, BPM, scale, meter) were done in…"
       },
       {
-        "zh": "**Kick Lab 7 → 0**：Kick Lab Guide（140×26）、Return to Studio（156×24）、CRT/WATERFALL 两个可视化模式、INITIATE PULSE（146×30），以及全页最小的两个目标——**TEMPO 数字输入 48×17** 与 **YT/XY 波形切换 57×33**——都到 44 px。",
-        "en": "**Kick Lab went from 7 to 0**: the Kick Lab Guide (140×26), Return to Studio (156×24), the two visualiser modes, INITIATE PULSE (146×30), and the two smallest targets on the page — the **TEMPO number field at 48×17** and the **YT/XY waveform toggle at 57×33** — all reach 44 px."
+        "zh": "四个文件都从 `useDeviceCapabilities()` 读 `isMobile`，**桌面路径一行未改**。量后：maker 15 控件 / 0 低于 44，challenge 12 / 0，masterclass 10 / 0，横屏同样 0；E2E 手机门禁现在覆盖 **7 个面**。",
+        "en": "All four files read `isMobile` from `useDeviceCapabilities()` and **the desktop path is untouched**. After: maker 15 controls / 0 under 44, challenge 12 / 0, masterclass 10 / 0, and 0 in landscape; the E2E phone gate now covers **seven surfaces**."
       },
       {
-        "zh": "四个文件（`ChordProgressionsView`、`KickAnatomyView`、`GravitationalSequencer`、`PhosphorOscilloscope`）都从 `useDeviceCapabilities()` 读 `isMobile`，**桌面路径一行未改**。量后：chords 10 控件 / 0 低于 44，kick 12 / 0，横屏同样 0。",
-        "en": "The four files (`ChordProgressionsView`, `KickAnatomyView`, `GravitationalSequencer`, `PhosphorOscilloscope`) read `isMobile` from `useDeviceCapabilities()`; **the desktop path is untouched**. After the change: chords 10 controls / 0 under 44, kick 12 / 0, and 0 in landscape too."
+        "zh": "**顺手修掉一个「构造上就会空转」的检查**：加完 7 面门禁后，iPhone 两个方向都报 `genre switch 1: navigations=0 patternFlips=0`。加了诊断一量才发现：那个 chip **本来就是当前曲风**——检查固定点 `chipSelectors[1]` 并假定它一定是别的曲风，而 App 把当前曲风存在 state 里，前面几步（这一轮新加的门禁会走一遍 maker）已经切到过它，于是点击是**合法的 no-op**。现在从排除当前曲风后的头三个 chip 里逐个试，只要有一个真的换了曲风就通过；真坏掉的处理器仍然会失败。",
+        "en": "**A check that was vacuous by construction got fixed along the way**: after the seven-surface gate landed, both iPhone orientations reported `genre switch 1: navigations=0 patternFlips=0`. A three-line diagnostic showed the chip **was already the current genre** — the check always clicked `chipSelectors[1]` and assumed that was a different genre, while the app keeps its genre in state, and the earlier steps (this round's gate walks the maker) had already visited it, making t…"
       }
     ],
     "truncated": true
