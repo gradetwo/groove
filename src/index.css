@@ -47,23 +47,38 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     /**
-     * `overscroll-behavior: none` stops the rubber-band bounce and, more importantly, the
-     * pull-to-refresh that a downward drag on the step grid otherwise triggers.
+     * Horizontal only. **This axis split is the whole point of the rule, not a detail of it.**
      *
-     * `touch-action: manipulation` used to be here as well, to stop two quick taps on a step cell
-     * being read as a double-tap zoom. It is **not** applied at the root any more: Chrome honours
-     * `touch-action` on touch-capable desktop hardware too, and `manipulation` there disabled
-     * two-finger scrolling with a trackpad — a regression that broke the most basic page gesture.
-     * Double-tap zoom is now prevented by the viewport's `user-scalable=no` (which also removes the
-     * iOS magnifier loupe), and `manipulation` is applied per-element to the interactive controls
-     * that need it, where it cannot affect page scrolling.
+     * This used to be the `overscroll-behavior: none` shorthand, here and on `html`. On macOS
+     * Chrome that silently killed two-finger trackpad scrolling of the page: the property is
+     * honoured on touch-capable *desktop* hardware, not only on touchscreens, and the shorthand's
+     * vertical half is exactly the half the page needs. Confirmed by hand against the built app —
+     * the same page scrolled with the rule absent and did not with it present, while `touch-action`
+     * and `overflow` were left untouched.
+     *
+     * What survives is deliberate: `-x: none` still suppresses Chrome's two-finger horizontal
+     * history-swipe (Back/Forward), which the step grid's own horizontal panning would otherwise
+     * trigger constantly. Vertical belongs to the browser again, so the page scrolls.
+     *
+     * `.overscroll-x-contain` further down this file already used this exact split for the
+     * sequencer's own scroll pane; the root was simply the one place the lesson had not been
+     * applied.
      */
-    overscroll-behavior: none;
     overscroll-behavior-x: none;
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: auto;
   }
 
-  /* Controls keep the double-tap-zoom suppression; the page keeps its scroll gestures. */
+  /**
+   * Controls keep the double-tap-zoom suppression; the page keeps its scroll gestures.
+   *
+   * `touch-action: manipulation` used to be on the root as well, to stop two quick taps on a step
+   * cell being read as a double-tap zoom. It is **not** applied at the root any more: Chrome honours
+   * `touch-action` on touch-capable desktop hardware too, and `manipulation` there disabled
+   * two-finger scrolling with a trackpad — a regression that broke the most basic page gesture, and
+   * the same failure mode as the `overscroll-behavior` shorthand directly above. Double-tap zoom is
+   * now prevented by the viewport's `user-scalable=no` (which also removes the iOS magnifier loupe),
+   * and `manipulation` is applied per-element, where it cannot affect page scrolling.
+   */
   button,
   [role="button"],
   [role="gridcell"],
@@ -76,7 +91,10 @@
     /* The document itself must never scroll horizontally: a stray overflow is what lets a phone
        pan the whole UI sideways and makes the page feel like a website. */
     overflow-x: hidden;
-    overscroll-behavior: none;
+    /* Same axis split as `body` above, and for the same measured reason: the shorthand's vertical
+       half is what stopped the page responding to a trackpad two-finger scroll. */
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: auto;
   }
 
   /* Explicitly allow selection in editable text inputs and code */

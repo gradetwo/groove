@@ -114,6 +114,24 @@ describe("mobile zoom and gesture guards", () => {
   const root = process.cwd();
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const css = fs.readFileSync(path.join(root, "src/index.css"), "utf8");
+  /**
+   * Comments carry no CSS, and this file's comments quote the exact broken declarations the tests
+   * below forbid (`overscroll-behavior: none` among them), so they are stripped before any
+   * declaration is inspected. Offset-preserving is not needed here — nothing maps back to a line.
+   */
+  const cssRules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  /**
+   * The declaration block of a bare selector.
+   *
+   * Throws rather than returning empty when the selector is absent. The lookups this replaced used
+   * `indexOf` + `slice`, which silently produced `""` for a selector that did not exist and turned
+   * a regression guard into an assertion about nothing — see the test that documents it.
+   */
+  const blockOf = (selector: string): string => {
+    const match = cssRules.match(new RegExp(`(?:^|\\n)\\s*${selector}\\s*\\{([^{}]*)\\}`));
+    if (!match) throw new Error(`src/index.css has no \`${selector}\` block`);
+    return match[1];
+  };
 
   it("blocks viewport zoom at the source", () => {
     const meta = html.match(/<meta\s+name="viewport"\s+content="([^"]+)"/)?.[1] ?? "";
@@ -143,17 +161,47 @@ describe("mobile zoom and gesture guards", () => {
      * `touch-action: manipulation` disabled two-finger trackpad scrolling on an ordinary laptop.
      * It is applied per-control instead (see the rule right after the body block), which keeps the
      * double-tap suppression where it matters without taking the page's scroll gestures away.
+     *
+     * This assertion used to run against `css.slice(css.indexOf("html,"), …)` — and `src/index.css`
+     * contains no `html,` selector, so `indexOf` returned -1, `slice` returned the empty string, and
+     * the check passed no matter what the root said. A guard for a real regression that cannot fail
+     * is worse than no guard: it is the reason the note above claims something nobody re-verified.
+     * The block lookups below parse the real blocks and throw when one is missing, so a renamed
+     * selector fails the suite instead of silently emptying it.
      */
-    const bodyBlock = css.slice(css.indexOf("html,"), css.indexOf("/* Explicitly allow selection"));
-    expect(bodyBlock).not.toMatch(/touch-action/);
+    for (const selector of ["html", "body"]) {
+      expect(blockOf(selector), `${selector} block`).not.toMatch(/touch-action/);
+    }
     // ...and it is still applied to controls.
-    expect(css).toMatch(/button,[\s\S]{0,120}touch-action:\s*manipulation/);
+    expect(cssRules).toMatch(/button,[\s\S]{0,120}touch-action:\s*manipulation/);
   });
 
-  it("disables overscroll bounce and pull-to-refresh at the root", () => {
-    // Overscroll at the document level is what makes a PWA feel like a web page: rubber-banding
-    // and pull-to-refresh both fire during a downward drag on the step grid.
-    expect(css).toMatch(/overscroll-behavior[^;]*none/);
+  it("suppresses overscroll on the horizontal axis only, so the page still scrolls", () => {
+    /**
+     * The root rule is deliberately axis-split, and this test exists because the previous form
+     * broke the most basic gesture on the page.
+     *
+     * `overscroll-behavior: none` on `html`/`body` is honoured by Chrome on touch-capable *desktop*
+     * hardware, and on macOS it made two-finger trackpad scrolling of the page stop working
+     * entirely — the page could still be scrolled programmatically, `overflow` and `touch-action`
+     * were untouched, and Safari was unaffected, which is why it read as a mystery for a while.
+     * Verified by hand against the built app: the page scrolls with the shorthand removed and does
+     * not with it present.
+     *
+     * The horizontal half is kept on purpose — it suppresses Chrome's two-finger horizontal
+     * history-swipe (Back/Forward), which the step grid's own horizontal panning would otherwise
+     * fire constantly. Vertical belongs to the browser.
+     */
+    for (const selector of ["html", "body"]) {
+      const declarations = blockOf(selector)
+        .split(";")
+        .map((d) => d.trim().replace(/\s+/g, " "));
+      expect(declarations, `${selector} block`).toContain("overscroll-behavior-x: none");
+      expect(declarations, `${selector} block`).toContain("overscroll-behavior-y: auto");
+      // The regression, in both of the forms that can express it.
+      expect(declarations, `${selector} block`).not.toContain("overscroll-behavior: none");
+      expect(declarations, `${selector} block`).not.toContain("overscroll-behavior-y: none");
+    }
   });
 });
 

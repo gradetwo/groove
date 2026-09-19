@@ -3,22 +3,34 @@
  *
  *   node scripts/diagnose_page_scroll.mjs
  *
- * The report: two-finger trackpad scrolling does not move the page on macOS Chrome. It is not
- * reproducible in headless Chromium here — a synthetic wheel reaches the element under the cursor,
- * nothing cancels it, the document is taller than the viewport and `window.scrollTo` moves it — and a
- * five-pane probe of the *candidate CSS rules* was reported to scroll in every pane, which rules the
- * stylesheet out as a whole.
+ * ## Resolution (this bug is closed; read this before trusting a method below)
  *
- * So this does the one useful thing left: it loads the real app with `index.css` reduced to a
- * *subset* of its rules and measures whether the page still scrolls. If some single rule is
- * responsible, the subset that omits it will scroll where the full stylesheet does not. If every
- * subset scrolls here, then the culprit is not in the stylesheet at all and the answer has to come
- * from the machine that shows it — which is a useful conclusion in itself, and the one this script
- * makes cheap to reach.
+ * The cause was `overscroll-behavior: none` on `html` and `body` in `src/index.css`. Chrome honours
+ * that property on touch-capable *desktop* hardware, and on macOS it made a two-finger trackpad
+ * gesture stop moving the page entirely, while Safari was unaffected. The fix is the axis split
+ * (`-x: none; -y: auto`) now in place, and `src/test/deviceCapabilities.test.ts` guards it.
  *
- * The measurement is deliberately independent of `page.mouse.wheel`: a real trackpad cannot be
- * simulated, so this checks the two things a wheel gesture depends on — that the page is scrollable
- * at all, and that a wheel over each element type is *delivered without being cancelled*.
+ * ## Why the measurements below could not find it
+ *
+ * Every probe in this script scrolls the page *programmatically* (`window.scrollTo`) or asks
+ * whether the document is taller than the viewport. Both are true regardless of
+ * `overscroll-behavior`: the property gates the *gesture* and the overscroll affordance, not the
+ * scroll range or the scroll API. That is why a five-pane probe could honestly report "all five
+ * scroll" on the machine running this script while the machine with the trackpad stayed frozen, and
+ * why the subset sweep below — which did include an "overscroll removed" variant — could not
+ * distinguish them either.
+ *
+ * The lesson is recorded rather than tidied away: **a probe that bypasses the input path cannot
+ * test an input-path bug.** The readout added at the end therefore inspects the *computed* value of
+ * the gesture properties on the root, which needs no gesture and no hardware, and is what this
+ * script should have done first.
+ *
+ * The original subset sweep is kept because it is still the cheap way to answer "is the culpable
+ * rule in the stylesheet at all".
+ *
+ * If the sweep reports every subset scrolling *and* the root readout says the gesture properties are
+ * clean, then the culprit is not in the stylesheet and the answer has to come from the machine that
+ * shows it — which is a useful conclusion in itself, and the one this script makes cheap to reach.
  */
 import http from "node:http";
 import path from "node:path";
@@ -151,7 +163,66 @@ for (const subset of Object.keys(subsets)) {
 
 await browser.close();
 server.close();
+
+/**
+ * The readout that would have found this in one run.
+ *
+ * It reads the *computed* gesture properties off the root elements. No gesture, no hardware, no
+ * subsetting — `overscroll-behavior-y: none` on `html`/`body` is the exact configuration that froze
+ * the page on macOS Chrome, and a stylesheet only has to *say* it for the verdict to be "broken".
+ */
+const rootContext = await (async () => {
+  const b = await playwright.chromium.launch({ args: ["--no-sandbox"] });
+  const s = http.createServer((req, res) => {
+    const url = req.url.split("?")[0];
+    const rel = url === "/" ? "/index.html" : url;
+    const file = path.join(ROOT, "dist", rel);
+    if (!file.startsWith(path.join(ROOT, "dist")) || !fs.existsSync(file)) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    const ext = path.extname(file);
+    res.writeHead(200, { "content-type": MIME[ext] ?? "application/octet-stream" });
+    fs.createReadStream(file).pipe(res);
+  });
+  await new Promise((r) => s.listen(0, "127.0.0.1", r));
+  const c = await b.newContext({ viewport: { width: 1440, height: 900 } });
+  const p = await c.newPage();
+  await p.goto(`http://127.0.0.1:${s.address().port}/?tab=studio`, { waitUntil: "domcontentloaded" });
+  const readout = await p.evaluate(() => {
+    const pick = (el) => {
+      const cs = getComputedStyle(el);
+      return {
+        overscrollX: cs.overscrollBehaviorX,
+        overscrollY: cs.overscrollBehaviorY,
+        touchAction: cs.touchAction,
+      };
+    };
+    return { html: pick(document.documentElement), body: pick(document.body) };
+  });
+  await c.close();
+  await b.close();
+  s.close();
+  return readout;
+})();
+
+console.log("\n### root gesture properties (what a trackpad gesture is gated on)");
+let broken = false;
+for (const [name, v] of Object.entries(rootContext)) {
+  const bad = v.overscrollY === "none" || v.overscrollX === "none";
+  if (bad) broken = true;
+  console.log(
+    `   ${name.padEnd(4)} overscroll-x=${v.overscrollX.padEnd(8)} overscroll-y=${v.overscrollY.padEnd(8)} ` +
+      `touch-action=${v.touchAction}${bad ? "   <-- BREAKS TRACKPAD SCROLL IN CHROME" : ""}`
+  );
+}
 console.log(
-  "\nIf every subset reports scrollable=true, the stylesheet does not contain the cause — the\n" +
-    "remaining candidates are macOS/Chrome gesture handling, which cannot be reproduced here."
+  broken
+    ? "\n❌ The root pins an axis to `none`. On Chrome that suppresses the overscroll affordance,\n" +
+        "   which on macOS stops a two-finger trackpad gesture from moving the page at all.\n" +
+        "   Use `overscroll-behavior-x: none; overscroll-behavior-y: auto` instead.\n"
+    : "\n✅ No root axis is pinned to `none` — the gesture properties are clean.\n" +
+        "   If page scrolling is still broken on a real machine, the cause is not this stylesheet.\n"
 );
+process.exit(broken ? 1 : 0);
