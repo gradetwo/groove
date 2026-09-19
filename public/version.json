@@ -1,27 +1,27 @@
 {
-  "version": "2.0.96",
+  "version": "2.0.97",
   "releaseDate": "2026-09-19",
-  "changelogCount": 160,
+  "changelogCount": 161,
   "latest": {
-    "version": "2.0.96",
+    "version": "2.0.97",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.96 手机端：页眉变回标题栏，控件都能按得到",
-      "en": "v2.0.96 On a Phone: The Header Is a Title Bar Again, and Every Control Is Hittable"
+      "zh": "v2.0.97 手机端：轨道头的检查器入口从 4×20 px 变成按得到的目标",
+      "en": "v2.0.97 The Phone Track Header: A 4×20 px Inspector Button Becomes a Real Target"
     },
     "highlights": [
       {
-        "zh": "**先量，再改。** 新工具 `scripts/measure_phone_surface.mjs` 在真实构建产物上量 iPhone 14 竖/横两屏：可触摸控件数（分「工作区」与「两条栏」）、每个控件的盒子与是否 < 44 px、横向溢出、固定栏占比、最小字号。竖屏基线：**22 个控件，11 个低于 44 px，其中 9 个在页眉**（Search 36×28、设置 30×30、版本 24×20…）。缩放已被 `user-scalable=no` 挡住 ✓，无横向溢出 ✓。",
-        "en": "**Measure first, then change.** The new `scripts/measure_phone_surface.mjs` reads the real build at iPhone 14 portrait and landscape: how many controls are touchable (split into working area and the two bars), every control's box and whether it is under 44 px, horizontal overflow, fixed-chrome share, smallest font. Portrait baseline: **22 controls, 11 of them under 44 px, 9 of those in the header** (Search 36×28, Settings 30×30, the version button 24×20 …). Zoom is already b…"
+        "zh": "**上一轮的门禁有个盲区**：它把整个 `[role=\"grid\"]` 子树排除在外（步进格子是 `role=\"gridcell\"`），可**轨道头就在同一个容器里**——于是五个控件（折叠 14×14、检查器入口 **4×20**、`L:16` 30×36、Mute/Solo 36×36）从来没被量到。把排除范围缩到 `role=\"gridcell\"` 本身之后，竖屏控件数从 16 变成 44，低于 44 px 的从 2 变成 **29**。",
+        "en": "**The previous round's gate had a blind spot**: it skipped the whole `[role=\"grid\"]` subtree (the step cells are `role=\"gridcell\"`), but **the track headers live inside that same container** — so five controls (fold 14×14, the inspector opener **4×20**, `L:16` 30×36, mute and solo 36×36) had never been measured. Narrowing the skip to `role=\"gridcell\"` itself took the portrait count from 16 to 44 controls and the under-44 count from 2 to **29**."
       },
       {
-        "zh": "**页眉在手机上变回标题栏**：只留品牌 + 一个 **44×44 的「全部板块」按钮**，打开 App 自己的 sections sheet；原本 9 个桌面控件与页眉自带的抽屉不再渲染。删减是有依据的：逐条比对后 **sheet 是页眉抽屉的超集**（chords/kick/maker/challenge/masterclass/两条时间线/compare/analyzer/search/settings/help/updates 全在里面），语言开关在 Settings、引导在帮助中心、随机曲风在 Explore 自己那里。类型栏的筛选框与骰子也从 36 px 提到 **44 px**。**低于 44 px 的控件从 11 个降到 2 个**，剩下两个是冻结文件里手机传输条的上一/下一小节（32×44），在门禁里**具名豁免**。",
-        "en": "**The phone header is a title bar again**: the brand plus one **44×44 \"All sections\" button** that opens the app's own sheet; the nine desktop controls and the header's own drawer are no longer rendered. The removal is backed by a line-by-line comparison: **the sheet is a superset of that drawer** (chords, kick, maker, challenge, masterclass, both timelines, compare, analyzer, search, settings, help, updates), the language switch lives in Settings, the tour in the Help centr…"
+        "zh": "**142 px 的固定列放不下三个 44 px 目标**，所以这一行只能减东西——减什么有依据：检查器入口是 `flex-1 min-w-0`，被同排的 `L:16`/M/S 挤成 4 px（也就是轨名被挤成 0 宽）。现在轨道头是**一个大检查器目标（≥44×44，轨名重新可见）+ 44×44 的 Mute**；Solo 去掉（`TrackInspector` 里写着 \"Always visible: muting or soloing must not require finding the right tab\"，那是重复的）；逐轨折叠去掉（工具栏有 Fold All）；`L:16` 变成**只读徽标**，改长度留给桌面。顺带把 Ruler 的「复制 B1」（58×30）提到 44 px。",
+        "en": "**A 142 px fixed column cannot hold three 44 px targets**, so the row had to lose something — and which somethings is argued: the inspector opener was `flex-1 min-w-0` squeezed to 4 px by the `L:16`/mute/solo beside it (the track name was squeezed to zero width too). The phone row is now **one big inspector target (≥44×44, with the name visible again) plus a 44×44 mute**; solo is gone (the inspector says \"Always visible: muting or soloing must not require finding the right t…"
       },
       {
-        "zh": "**新门禁**（只在手机目标上跑）：页眉最多 2 个控件；步进网格之外、当前在屏的每个控件都 ≥ 44×44；并把原来「页眉必须有全局设置入口」改成设备相关——手机上从页眉的「全部板块」进 sheet 再进设置，桌面/平板仍走页眉。三条在 iPhone 竖/横两屏跑通（`E2E_PROFILE=mobile` 4/4）。",
-        "en": "**New gates**, mobile targets only: at most two controls in the header; every on-screen control outside the step grid at least 44×44; and the old \"the header must have a global settings entry point\" assertion made device-aware — a phone goes header → All sections → Settings, desktop and tablet still go through the header. All three pass on iPhone portrait and landscape (`E2E_PROFILE=mobile`, 4/4)."
+        "zh": "**横屏另有一处泄漏**：`.trk-head-desktop-only` 的隐藏规则是 `max-width: 639px`，而横屏手机是 **750 px 宽**——于是七个 16 px 控件（含一个 16×16 的「打开检查器」）在横屏回到屏幕上。这正是能力钩子注释里说的「两条规则一个按宽、一个按高」。现在短横屏也隐藏它们（用 `pointer: coarse` 限定，短桌面上窗口不受影响）。**结果：竖屏低于 44 px 的 29 → 3，横屏 → 1**，剩下三个都在冻结文件里（传输条 32×44、工具栏 Fold All 126×22），在门禁里具名豁免。",
+        "en": "**Landscape had a leak of its own**: the rule hiding `.trk-head-desktop-only` is a `max-width: 639px` query, and a landscape phone is **750 px wide** — so seven 16 px controls (including a 16×16 \"open inspector\") came back on screen in landscape. That is exactly the width-vs-height disagreement the capability hook's comment warns about. A short landscape phone now hides them too (gated on `pointer: coarse`, so a short *desktop* window is unaffected). **Result: portrait under…"
       }
     ],
     "truncated": true
