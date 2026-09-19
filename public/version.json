@@ -1,27 +1,27 @@
 {
-  "version": "2.0.81",
+  "version": "2.0.82",
   "releaseDate": "2026-09-19",
-  "changelogCount": 145,
+  "changelogCount": 146,
   "latest": {
-    "version": "2.0.81",
+    "version": "2.0.82",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "audio",
     "title": {
-      "zh": "v2.0.81 送出改到声像后分接：硬左/硬右轨道的混响与延迟不再跑回正中间",
-      "en": "v2.0.81 Sends Tap After the Panner: a Hard-Panned Track's Reverb and Delay Keep Their Side"
+      "zh": "v2.0.82 立体声合唱真的立体声了：两个抽头各走一个声道，并反向调制",
+      "en": "v2.0.82 The Stereo Chorus Is Stereo: Each Tap Gets Its Own Channel, Modulated in Anti-Phase"
     },
     "highlights": [
       {
-        "zh": "**实时播放的送出分接点在声像之前，导出的在声像之后——两张图不一致，而导出器的注释还写着它们一致。** 逐轨送出的混响（`sendA`）与延迟（`sendB`）都是从 `stripOut`（极性/分析仪那一级，位于声像节点**上游**）分接的。于是一条硬左的轨道把**居中**的信号送进混响，干的信号在一侧、湿的尾巴在正中间；逐曲风策展的送出量就这样丢掉了它本来要制造的宽度。真实调音台的惯例也是 post-pan：效果跟着声源走。",
-        "en": "**Live playback tapped the sends before the panner, the exporter tapped after it — and the exporter's comment claimed they matched.** Per-track reverb (`sendA`) and delay (`sendB`) were fed from `stripOut` (the polarity/analyser stage, *upstream* of the panner). A hard-panned track therefore pushed a centred signal into the reverb: the dry signal sat on one side while its wet tail returned in the middle, and the per-genre curated send amounts lost the width they exist to cre…"
+        "zh": "**湿声是两个抽头共用的「单声道和」。** `ChannelMergerNode` 的每个输入按规范只有 1 个声道，而两个抽头是从粉碎级直接接进合并器的——于是立体声总线在这里被**降混**。一个本来用来加宽声场的效果把声像塌成了单声道，左右唯一的差别只剩固定的 15 / 22 ms 延迟。现在湿分支先经过一个显式两声道增益再分流：`crusherNode → chorusStereo(2ch) → ChannelSplitter(2) → 左右各一个延迟 → merger(2)`，左抽头 = 声道 0、右抽头 = 声道 1。那个显式上混是必须的：分流器遇到单声道输入时输出 1 是静音，全居中的混音会把右抽头整个丢掉。",
+        "en": "**The wet signal was one mono sum shared by both taps.** A `ChannelMergerNode` input is one channel wide by specification, and both taps were fed straight into it from the crusher — so the stereo bus was **down-mixed** there. An effect that exists to widen the image was collapsing it, leaving the fixed 15/22 ms delay as the only difference between the sides. The wet branch now forces two channels and splits: `crusherNode → chorusStereo(2ch) → ChannelSplitter(2) → per-side de…"
       },
       {
-        "zh": "**修法只有一行分接点。** `const sendTap = panner ?? spatialPanner ?? stripOut;`，两个送出都从它分接：双声道模式跟 `StereoPannerNode`，双耳（HRTF）模式跟 `spatialPanner`，没有声像节点时回退到原来的位置。实时链路的其余部分一个节点都没动，所以别的声音不受影响。",
-        "en": "**The fix is one tap point.** `const sendTap = panner ?? spatialPanner ?? stripOut;` now feeds both sends: the stereo panner in normal mode, the HRTF `spatialPanner` in binaural mode, and the old stage only when the context has no panner at all. Nothing else in the live chain changed, so no other sound moved with it."
+        "zh": "**两侧由同一个 LFO 同相驱动。** 一个深度增益同时接两个延迟时间，两侧一起摆动——那是「双单声道」合唱。现在改成两个增益、一正一负（`+3 ms` / `−3 ms`），两侧反向摆动，正是 Juno 那一代立体声合唱的做法。两个基延迟是 15 / 22 ms，±3 ms 摆动不会把延迟时间推到负值；调制深度也提成了一个常量 `CHORUS_DEPTH_SEC`。",
+        "en": "**One LFO drove both sides in phase.** A single depth gain fed both delay times, so the sides moved together — a dual-mono chorus. There are now two gains, `+3 ms` and `−3 ms`, so the sides move against each other, which is the Juno-era arrangement. Both base delays (15/22 ms) are far enough from zero that 3 ms of swing cannot drive a delay time negative, and the depth is now a single named constant, `CHORUS_DEPTH_SEC`."
       },
       {
-        "zh": "**测试（`trackSends.test.ts`，4 条）**：硬左轨道下两个送出的来源**只有 panner**；打开逐轨分析仪时分接点不会退回声像之前；空间模式下跟着 `spatialPanner`；离线导出图里被硬左 panner 直接喂到的增益正好 3 个（分组总线 + 两个送出）——最后一条钉的正是导出侧那一级，也就是这次要对齐的目标。把送出改回 `stripOut` 实测 **3 条失败**。全量单测 175 文件 / 2033 用例。",
-        "en": "**Tests (`trackSends.test.ts`, 4 cases):** a hard-panned track's sends come from the panner and nothing else; inserting the per-channel analyser does not move the tap back upstream of the pan; binaural mode follows `spatialPanner`; and in the offline graph the hard-panned panner feeds exactly three gains (group bus + both sends) — the last one pins the export stage this fix aligns with. Putting the old tap point back fails three of the four. Full suite: 175 files / 2033 test…"
+        "zh": "**测试（`chorusStereo.test.ts`，6 条）**：分流器两个输出分别喂左右抽头、抽头不再取自分流前的节点、分流前那个增益是 `channelCount 2 / explicit / speakers`、两侧回到合并器的不同输入、两个深度幅度相同符号相反、关掉合唱后两个深度都被释放，以及**关闭时湿增益为 0 且不创建 LFO**。这一批断言能量出来，是因为顺手给测试用的 `FakeNode` 加了 `outgoing`（记录每条边用的输出/输入**序号**）——`incoming` 分不出分流器的两个输出，而「哪个输出喂哪个抽头」正是这次的缺陷。把旧接线放回去实测 **2 条失败**；全量单测 176 文件 / 2039 用例。",
+        "en": "**Tests (`chorusStereo.test.ts`, 6 cases):** the splitter's two outputs feed the two taps, the taps no longer come from the pre-split node, that node is `channelCount 2 / explicit / speakers`, the taps return on separate merger inputs, the two depths are equal and opposite, both are released when the chorus is switched off, and a bypassed chorus has a zero wet gain and no LFO at all. These are assertable because the test `FakeNode` gained `outgoing` (every edge with its outp…"
       }
     ],
     "truncated": true
