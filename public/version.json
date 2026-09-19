@@ -1,27 +1,27 @@
 {
-  "version": "2.1.1",
+  "version": "2.1.2",
   "releaseDate": "2026-09-19",
-  "changelogCount": 165,
+  "changelogCount": 166,
   "latest": {
-    "version": "2.1.1",
+    "version": "2.1.2",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.1.1 手机端：门禁覆盖 11 个面，还没决定的四页用预算钉住",
-      "en": "v2.1.1 The Phone Gate Covers Eleven Surfaces; Four Await a Decision Under Budget"
+      "zh": "v2.1.2 手机档进了发布门禁：一次发版跑 7 个目标",
+      "en": "v2.1.2 The Phone Targets Joined the Release Gate: Seven Devices per Version"
     },
     "highlights": [
       {
-        "zh": "**还没拍板的四页不能无人看管。** E2E 的手机门禁现在走 **11 个面**：7 个走 44 px 硬规则，4 个（horizontal-timeline / vertical-timeline / compare / analyzer）走**预算**。预算是棘轮不是免责：数字是今天的实测值，**变差就失败**，变好会提示收紧，并且每次都打印。它按**方向**分开记，因为两种布局本来就不同——analyzer 横屏只剩 2 个、竖屏 13 个；vertical-timeline 横屏 1 个、竖屏 6 个。",
-        "en": "**The four undecided pages cannot be left unguarded.** The E2E phone gate now walks **eleven surfaces**: seven under the 44 px rule and four (horizontal-timeline, vertical-timeline, compare, analyzer) under a **budget**. A budget is a ratchet, not an excuse: the numbers are today's measurements, **worse fails the run**, better says so, and every one is printed. They are recorded per orientation because the layouts differ — the analyzer has 2 left in landscape against 13 in p…"
+        "zh": "**一条不在发布链里的门禁，就是一条迟早会被跳过的门禁。** 手机端已经是这个产品的一半界面（11 个面的 44 px 规则、预算棘轮、页眉与 sheet 的交互断言都在手机档里），但一直是我**手工**跑。现在 `verify` 结尾多了 `npm run test:e2e:mobile`：每次发版跑 **3 个桌面引擎 + 4 个手机/平板目标**（iPhone 竖/横、iPad 竖/横）。实测耗时从约 5.5 min 变成约 11 min，其中手机档 ~290 s。",
+        "en": "**A gate that is not in the release chain is a gate that will eventually be skipped.** The phone surface is half of this product's interface now — the eleven-surface 44 px rule, the budget ratchet and the header/sheet interaction assertions all live in the mobile profile — yet it was being run by hand. `verify` now ends with `npm run test:e2e:mobile`, so every version is checked on **three desktop engines plus four phone/tablet targets** (iPhone portrait and landscape, iPad…"
       },
       {
-        "zh": "**一个教训：门禁必须自己拥有它执行的数字。** 第一版预算抄了审计脚本的数，一跑就红——门禁量到的 compare 是 **15**（审计 14）、analyzer 横屏是 **2**（审计 0）。差异来自口径：审计要求元素**中心**真的在视口内且多等一会儿布局稳定，门禁只要求矩形与视口相交。两者都对，但「照这个数执行」的那个数必须来自执行者本身。",
-        "en": "**A lesson: a gate has to own the numbers it enforces.** The first budget copied the audit's figures and failed immediately — the gate measured **15** for compare against the audit's 14, and **2** for the analyzer in landscape against the audit's 0. The rules differ: the audit requires the element's *centre* to be inside the viewport and waits longer for layout to settle, while the gate only requires the rect to intersect it. Both are defensible, but the number a gate enforc…"
+        "zh": "**先把已知的 flake 修掉，再把它放进门禁。** G.40 记下的线索是 `100 → 52`（向上拖却变小）——真因不是「拖拽偶发」，而是**比较了两个不同的音符**：改前读的是元素句柄，改后却用选择器**重新查询**；这次运行前面已经编辑过 pattern，力度条的顺序会变，于是两个数字来自不同音符。现在：前后都读**同一个句柄**，盒子反复读到你它不再移动（`scrollIntoViewIfNeeded` + 睡 150 ms 不是布局已稳定的承诺），并且按下之前用 `elementFromPoint` **核实落点就在这根条上**（和点击用的同一套「验证送达」契约）。",
+        "en": "**Fix the known flake before putting it in the gate.** The clue recorded in G.40 was `100 → 52` — an upward drag that went down. The cause was not drag flakiness but **comparing two different notes**: the before-read used the element handle while the after-read re-queried by selector, and since the run edits the pattern earlier, the lane's bars re-order, so the two numbers came from different notes. Now both reads use the same handle, the box is re-read until it stops moving…"
       },
       {
-        "zh": "**顺带抓到一个真实的 ResizeObserver 循环**：门禁走到 analyzer 后，E2E 开始报 `ResizeObserver loop completed with undelivered notifications`。**没有过滤这条消息**，而是找到源头——三个分析画布在自己的 observer 回调里写 `canvas.style.width/height`，而容器尺寸又跟着画布走，于是在自己的通知里改变了被观察元素。修法是把回调**推迟一帧**（三处），第二遍本来就会因守卫变成 no-op。E2E 的 `pageerror` 收集保持严格，没加白名单。",
-        "en": "**And it caught a real ResizeObserver loop**: once the gate reached the analyzer, the E2E began reporting `ResizeObserver loop completed with undelivered notifications`. **The message was not filtered** — the source was found instead: three analyser canvases write `canvas.style.width/height` inside their own observer callback, while the container's size follows the canvas, so the callback resizes the element it is observing. Deferring the callback by one frame (three files)…"
+        "zh": "**顺带核对：目标里的两条要求其实早有测试**——`deviceCapabilities.test.ts` 已经断言 viewport meta 的 `maximum-scale=1` + `user-scalable=no`（并写明为什么是刻意的），`mobileShell.test.tsx` / `mobileTransportBar.test.tsx` 已经断言底栏**在 pointerup 提交**而不是 click。所以本轮没有加重复测试，只把这次核对写进计划：**先看有没有，再决定加不加。**",
+        "en": "**And a check that saved a duplicate**: two requirements from the objective turned out to be tested already — `deviceCapabilities.test.ts` asserts the viewport meta's `maximum-scale=1` and `user-scalable=no` (and records why that is deliberate), and `mobileShell.test.tsx` / `mobileTransportBar.test.tsx` assert that the bottom bars commit on **pointerup** rather than click. No duplicate tests were added; the check itself is recorded in the plan: look for the test before writi…"
       }
     ],
     "truncated": true
