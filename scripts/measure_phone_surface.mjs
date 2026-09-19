@@ -35,6 +35,15 @@ const asJson = args.includes("--json");
 /** `--shots=DIR` writes one PNG per orientation, because "is this a wall of buttons" is a look. */
 const shotsArg = args.find((a) => a.startsWith("--shots="));
 const shotsDir = shotsArg ? path.resolve(ROOT, shotsArg.slice("--shots=".length)) : null;
+/**
+ * `--tabs=studio,explore` measures more than the home surface.
+ *
+ * The phone shell's tabs are separate surfaces with their own control sets, and "the phone UI" is
+ * all of them: the studio was measured first because it is where a producer spends the time, but a
+ * tap-target rule that only holds there would be a rule about one screen.
+ */
+const tabsArg = args.find((a) => a.startsWith("--tabs="));
+const TABS = tabsArg ? tabsArg.slice("--tabs=".length).split(",").filter(Boolean) : ["studio"];
 
 if (!fs.existsSync(path.join(DIST, "index.html"))) {
   console.error("❌ dist/index.html is missing — run `npm run build` first.");
@@ -79,6 +88,9 @@ function collectSurface() {
   const receivesHit = (el) => {
     const rect = el.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return false;
+    // Nothing can tap a `pointer-events: none` element, so it is a label, not a target — which is
+    // how the galaxy's projected 3D labels stop counting as controls on a phone.
+    if (window.getComputedStyle(el).pointerEvents === "none") return false;
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
     if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return false;
@@ -200,21 +212,22 @@ try {
       } catch (_) {}
     });
     const page = await context.newPage();
-    await page.goto(base, { waitUntil: "domcontentloaded" });
-    // The studio is the phone's home tab; wait for the grid, not for a timeout.
-    await page.waitForSelector('[data-testid="piano-roll-grid"], [data-testid="step-grid"], main', {
-      timeout: 15000,
-    });
-    await page.waitForTimeout(400);
+    for (const tab of TABS) {
+      const url = tab === "studio" ? base : `${base}?tab=${tab}`;
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      // Wait for real content, not for a timeout.
+      await page.waitForSelector("main", { timeout: 15000 });
+      await page.waitForTimeout(600);
 
-    const measured = await page.evaluate(collectSurface);
-    if (shotsDir) {
-      fs.mkdirSync(shotsDir, { recursive: true });
-      const file = path.join(shotsDir, `phone-${orientation}.png`);
-      await page.screenshot({ path: file });
-      measured.screenshot = path.relative(ROOT, file);
+      const measured = await page.evaluate(collectSurface);
+      if (shotsDir) {
+        fs.mkdirSync(shotsDir, { recursive: true });
+        const file = path.join(shotsDir, `phone-${tab}-${orientation}.png`);
+        await page.screenshot({ path: file });
+        measured.screenshot = path.relative(ROOT, file);
+      }
+      report.push({ tab, orientation, device, ...measured });
     }
-    report.push({ orientation, device, ...measured });
     await context.close();
   }
 } finally {
@@ -228,7 +241,9 @@ if (asJson) {
   for (const entry of report) {
     const tooSmall = entry.controls.filter((c) => c.tooSmall);
     const chromePx = (entry.chrome.tabBar ?? 0) + (entry.chrome.transport ?? 0);
-    console.log(`\n=== ${entry.device} (${entry.orientation}) ${entry.innerW}×${entry.innerH}`);
+    console.log(
+      `\n=== ${entry.tab ?? "studio"} · ${entry.device} (${entry.orientation}) ${entry.innerW}×${entry.innerH}`
+    );
     console.log(`viewport meta      ${entry.viewportMeta}`);
     console.log(
       `zoom               ${

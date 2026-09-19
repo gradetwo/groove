@@ -670,13 +670,18 @@ async function runTestOnTarget(target, baseUrl) {
      */
     if (target.isMobile) {
       /**
-       * Measured on the phone's *home* surface, deliberately: the check runs after several
+       * Every phone-reachable surface is measured by name: the check runs after several
        * navigations, and "how many controls are on screen" only means something for a named screen.
-       * Scrolling to the footer is a different surface with its own (recorded) findings.
+       * The two here are the ones brought up to the 44 px rule so far; G.36 in the plan lists the
+       * measured counts for the rest (chords, kick, maker, timelines, compare, analyzer).
        */
-      await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(400);
-      const surface = await page.evaluate(() => {
+      for (const surface of [
+        { name: "studio", url: baseUrl },
+        { name: "explore", url: `${baseUrl}?tab=galaxy` },
+      ]) {
+        await page.goto(surface.url, { waitUntil: "domcontentloaded" });
+        await page.waitForTimeout(600);
+        const measured = await page.evaluate(() => {
         const MIN_TAP = 44;
         /**
          * The phone transport's bar-step buttons are 32×44: 44 px tall, deliberately narrow to keep
@@ -706,6 +711,13 @@ async function runTestOnTarget(target, baseUrl) {
           if (rect.width <= 0 || rect.height <= 0) continue;
           const style = window.getComputedStyle(node);
           if (style.display === "none" || style.visibility === "hidden") continue;
+          /**
+           * `pointer-events: none` is not a target either — by definition nothing can tap it. This
+           * is how a phone-only decorative surface (the galaxy's projected 3D labels) stops being
+           * counted as a control: it stays on screen as a label and the phone selects from the chips
+           * row instead.
+           */
+          if (style.pointerEvents === "none") continue;
           // On screen, not merely in the document: the same rule the audit uses, so the two agree.
           if (rect.left < 0 || rect.right > window.innerWidth) continue;
           if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
@@ -720,19 +732,20 @@ async function runTestOnTarget(target, baseUrl) {
         }
         return { small, headerControls };
       });
-      const { small, headerControls } = surface;
+        const { small, headerControls } = measured;
 
-      if (headerControls.length > 2) {
-        throw new Error(
-          `Phone header shows ${headerControls.length} controls, expected at most 2 (the brand and ` +
-            `the sections sheet): ${JSON.stringify(headerControls)} on ${target.name}`
-        );
-      }
-      if (small.length > 0) {
-        throw new Error(
-          `Phone surface has ${small.length} control(s) under the ${44} px touch minimum on ` +
-            `${target.name}: ${JSON.stringify(small)}`
-        );
+        if (headerControls.length > 2) {
+          throw new Error(
+            `Phone header shows ${headerControls.length} controls, expected at most 2 (the brand and ` +
+              `the sections sheet): ${JSON.stringify(headerControls)} on ${target.name}`
+          );
+        }
+        if (small.length > 0) {
+          throw new Error(
+            `Phone surface "${surface.name}" has ${small.length} control(s) under the ${44} px ` +
+              `touch minimum on ${target.name}: ${JSON.stringify(small)}`
+          );
+        }
       }
     }
 
