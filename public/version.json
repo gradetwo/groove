@@ -1,27 +1,27 @@
 {
-  "version": "2.0.92",
+  "version": "2.0.93",
   "releaseDate": "2026-09-19",
-  "changelogCount": 156,
+  "changelogCount": 157,
   "latest": {
-    "version": "2.0.92",
+    "version": "2.0.93",
     "date": "2026-09-19",
-    "category": "audio",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.92 切曲风时延迟尾巴不再被砍断",
-      "en": "v2.0.92 Switching Genres No Longer Cuts the Delay Tail"
+      "zh": "v2.0.93 钢琴卷帘可以用键盘编辑了，读屏也知道你在哪",
+      "en": "v2.0.93 The Piano Roll Can Be Edited From the Keyboard"
     },
     "highlights": [
       {
-        "zh": "**乒乓开关一按，整条延迟图被重建、旧图被当场断开。** 于是还在延迟线里回荡的尾巴在一个采样里消失——切换那一刻的咔哒声。这条路径实测可达：`genreFx.ts` 里有 **11 处** `pingPong: true`（dub 一脉等），切到或切离这些曲风就会触发重建。",
-        "en": "**Toggling ping-pong rebuilt the whole delay graph and disconnected the old one on the spot.** Whatever was still ringing in its delay line vanished in a single sample — the click at the moment of the switch. The path is reachable in practice: **11** genre profiles carry `pingPong: true` (the dub lineage among them), and moving to or away from any of them triggers a rebuild."
+        "zh": "**卷帘的网格不是一个表格，却被写成了 `role=\"grid\"`。** ARIA 要求 `grid > row > gridcell`，而音符是绝对定位的 div，没有「行」元素能承载 `gridcell`——这个 role 承诺了不存在的结构。现在它是一个可聚焦表面（`role=\"application\"`），配 `tabIndex`、一段键盘说明和 `role=\"status\"` 的播报区。音符改成 `aria-hidden`：它们是视觉层，暴露出去只是两百个无名 div。",
+        "en": "**The roll's grid is not a table, yet it was marked `role=\"grid\"`.** ARIA requires `grid > row > gridcell`, and the notes are absolutely-positioned divs with no rows to hold cells — the role promised structure that did not exist. It is now one focusable surface (`role=\"application\"`) with a `tabIndex`, a keyboard description, and a `role=\"status\"` live region. The notes became `aria-hidden`: they are the visual layer, and exposing them was a run of unlabelled divs."
       },
       {
-        "zh": "**现在每个 build 有自己的输出增益，旧 build 不断线、只淡出。** 它不再接收新的发送，但**已经录进它延迟线里的东西继续在响**，尾音交给新 build 接上。两种拓扑的内部结构一行没动——居中的那条延迟线仍是单节点、天然保留立体声，连单声道发送也照样居中。",
-        "en": "**Each build now has its own output gain, so the replaced build is faded out instead of disconnected.** It stops receiving new send, but **what is already in its delay line keeps sounding** and hands the tail over to the new build. Neither topology changed internally — the centred delay is still a single node that preserves stereo by construction, and a mono send still stays centred."
+        "zh": "**键盘现在能走完一整条编辑流程**：方向键移动光标（Shift 跨小节／八度，Home/End 跳首尾步），Enter 建音或删音，Delete 删音，`+`/`-` 调力度，`[`/`]` 调音长。视口会跟着光标滚（带一格余量），所以按键不会「看起来什么都没发生」。",
+        "en": "**The keyboard can now complete a whole edit**: arrows move the cursor (Shift for a bar or an octave, Home/End for the first and last step), Enter adds or removes a note, Delete removes it, `+`/`-` change velocity and `[`/`]` change length. The view follows the cursor with a cell of margin, so a keypress never looks like it did nothing."
       },
       {
-        "zh": "**淡出窗跟着延迟时间走（0.25–0.5 s）**，因为新 build 的延迟线一开始是空的，它的第一声回声要等一个延迟时间才到，这段空档得由旧尾音盖住：固定 250 ms 只盖得住 120 BPM 的 1/8，60 BPM 的 1/4 会露洞。下限 250 ms 保证无咔哒（本文件其余斜坡是 12–20 ms），上限 500 ms 是因为再长切换就不像切换了。",
-        "en": "**The fade window follows the delay time (0.25–0.5 s)**, because the new build's delay line starts empty: its first repeat arrives one delay time later, and the outgoing tail is what covers that gap. A fixed 250 ms covers a 1/8 at 120 BPM but leaves a hole at a 1/4 at 60 BPM. The 250 ms floor keeps it click-free (the file's other ramps are 12–20 ms); the 500 ms ceiling is where a switch stops feeling like a switch."
+        "zh": "**原来的键盘行为一行没改**：有选区时，方向键仍然移动**选区**、Delete 仍然删选区（那是本来就有的 window 级处理器）。新光标是「新音符会落在哪里」，不是第二个选区；我只在编辑成功后**补一句播报**，因为读屏看不见音符在动。⌘/Ctrl 组合、Tab 以及一切不认识的键一律不碰。",
+        "en": "**The existing keyboard behaviour is untouched**: with a selection, the arrows still move *it* and Delete still deletes it (that window-level handler was already there). The new cursor is where a new note would land, not a second selection; the only addition on that path is a spoken confirmation, because a screen reader cannot see notes shift. ⌘/Ctrl combinations, Tab, and every unrecognised key are left alone."
       }
     ],
     "truncated": true
