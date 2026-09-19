@@ -1,27 +1,27 @@
 {
-  "version": "2.0.93",
+  "version": "2.0.94",
   "releaseDate": "2026-09-19",
-  "changelogCount": 157,
+  "changelogCount": 158,
   "latest": {
-    "version": "2.0.93",
+    "version": "2.0.94",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "audio",
     "title": {
-      "zh": "v2.0.93 钢琴卷帘可以用键盘编辑了，读屏也知道你在哪",
-      "en": "v2.0.93 The Piano Roll Can Be Edited From the Keyboard"
+      "zh": "v2.0.94 带独立 swing 的轨道不再比别的轨道早一个延迟补偿量",
+      "en": "v2.0.94 A Track With Its Own Swing No Longer Fires a Latency Offset Early"
     },
     "highlights": [
       {
-        "zh": "**卷帘的网格不是一个表格，却被写成了 `role=\"grid\"`。** ARIA 要求 `grid > row > gridcell`，而音符是绝对定位的 div，没有「行」元素能承载 `gridcell`——这个 role 承诺了不存在的结构。现在它是一个可聚焦表面（`role=\"application\"`），配 `tabIndex`、一段键盘说明和 `role=\"status\"` 的播报区。音符改成 `aria-hidden`：它们是视觉层，暴露出去只是两百个无名 div。",
-        "en": "**The roll's grid is not a table, yet it was marked `role=\"grid\"`.** ARIA requires `grid > row > gridcell`, and the notes are absolutely-positioned divs with no rows to hold cells — the role promised structure that did not exist. It is now one focusable surface (`role=\"application\"`) with a `tabIndex`, a keyboard description, and a `role=\"status\"` live region. The notes became `aria-hidden`: they are the visual layer, and exposing them was a run of unlabelled divs."
+        "zh": "**逐轨 swing 那条分支自己重建了时间，于是丢掉了两样东西。** 计划里只写了丢掉 `latencyCompensationMs`，实际连「不得早于 `currentTime`」的钳位一起丢了。结果是：带独立 swing 的轨道比其它轨道**整整早一个补偿量**，也比它自己的导出早（导出是离线渲染，没有输出延迟可补，本来就不该有这一项）。",
+        "en": "**The per-track swing branch rebuilt the scheduled time from scratch and dropped two things.** The plan named only the lost `latencyCompensationMs`; the `>= currentTime` clamp went with it. A track with independent swing therefore fired a full compensation ahead of every other track — and ahead of its own export, which is an offline render with no output latency to compensate in the first place."
       },
       {
-        "zh": "**键盘现在能走完一整条编辑流程**：方向键移动光标（Shift 跨小节／八度，Home/End 跳首尾步），Enter 建音或删音，Delete 删音，`+`/`-` 调力度，`[`/`]` 调音长。视口会跟着光标滚（带一格余量），所以按键不会「看起来什么都没发生」。",
-        "en": "**The keyboard can now complete a whole edit**: arrows move the cursor (Shift for a bar or an octave, Home/End for the first and last step), Enter adds or removes a note, Delete removes it, `+`/`-` change velocity and `[`/`]` change length. The view follows the cursor with a cell of margin, so a keypress never looks like it did nothing."
+        "zh": "**修法只有一句：这个分支里只有 swing 项允许不同。** 延迟补偿与钳位照抄调用方的语义，另加一个局部 `ctx` 收窄（`this.ctx` 在回调里会重新变宽成 nullable）。",
+        "en": "**The fix is one expression: only the swing term may differ here.** The latency offset and the clamp now mirror what the caller already folded into `time`, plus a local `ctx` narrowing because `this.ctx` widens back to nullable inside the callback."
       },
       {
-        "zh": "**原来的键盘行为一行没改**：有选区时，方向键仍然移动**选区**、Delete 仍然删选区（那是本来就有的 window 级处理器）。新光标是「新音符会落在哪里」，不是第二个选区；我只在编辑成功后**补一句播报**，因为读屏看不见音符在动。⌘/Ctrl 组合、Tab 以及一切不认识的键一律不碰。",
-        "en": "**The existing keyboard behaviour is untouched**: with a selection, the arrows still move *it* and Delete still deletes it (that window-level handler was already there). The new cursor is where a new note would land, not a second selection; the only addition on that path is a spoken confirmation, because a screen reader cannot see notes shift. ⌘/Ctrl combinations, Tab, and every unrecognised key are left alone."
+        "zh": "**动手前先逐行核对了 M 表，14 行里 4 行写的缺陷早就不存在了**：M2（母带 DRIVE 硬削波）、M6（推子阶跃）、M7（延迟反馈阶跃）、M10（实时 ratchet 未夹取）都已修过，行号也全都过期。已在计划里逐条标注。顺手把实时路径里**复制的那份**副拍力度渐变换成共享的 `ratchetVelocityScale`——公式一样，改的是「同一件事只留一份」。",
+        "en": "**The M table was audited line by line before touching anything: four of its fourteen rows described defects that no longer exist** — M2 (master DRIVE hard clip), M6 (fader stepping), M7 (delay feedback stepping) and M10 (unclamped live ratchet) were all already fixed, and every line reference had drifted. Each row now says so. The live path also stopped carrying its own copy of the sub-hit velocity taper and calls the shared `ratchetVelocityScale` instead: same formula, one…"
       }
     ],
     "truncated": true
