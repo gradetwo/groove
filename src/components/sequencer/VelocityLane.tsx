@@ -302,7 +302,7 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
               className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors flex items-center gap-1 ${
                 activeDim === "gate" ? "bg-accent text-black shadow-sm" : "text-text-dim hover:text-text"
               }`}
-              title="Edit Gate Duration (时长)"
+              title="Edit Gate Duration (音长)"
             >
               <Clock className="w-3 h-3" />
               <span>Gate</span>

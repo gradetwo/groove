@@ -249,7 +249,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       title: t("tut_drum_title"),
       desc: t("tut_drum_desc"),
       targetTab: "studio" as NavTab,
-      targetBtn: isZh ? "进入编曲台编排鼓机" : "Launch Sequencer Grid",
+      targetBtn: isZh ? "进入工作台编排鼓机" : "Launch Sequencer Grid",
       steps: [
         { label: t("tut_drum_s1"), tip: isZh ? "四四拍是 House、Techno 和 Funk 的经典基底" : "Four-on-the-floor is the backbone of House & Techno" },
         { label: t("tut_drum_s2"), tip: isZh ? "军鼓提供清晰的反拍律动点" : "Snare drives the essential rhythmic backbeat" },
@@ -339,7 +339,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       title: t("tut_galaxy_title"),
       desc: t("tut_galaxy_desc"),
       targetTab: "galaxy" as NavTab,
-      targetBtn: isZh ? "漫游曲风星系图谱" : "Explore Genre Galaxy",
+      targetBtn: isZh ? "漫游律动星系" : "Explore Genre Galaxy",
       steps: [
         { label: t("tut_galaxy_s1"), tip: isZh ? "三维立体星系可视化呈现全球 159 种现代音乐流派" : "3D interactive galaxy mapping 159 global music styles" },
         { label: t("tut_galaxy_s2"), tip: isZh ? "节点间发光引力连线揭示曲风衍化、融合与传承脉络" : "Luminous lineage connections illustrate influences & roots" },
@@ -350,11 +350,11 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
   ];
 
   const shortcutsList = [
-    { category: isZh ? "全局导航" : "Navigation", keys: ["G", "S"], desc: isZh ? "跳转至编曲工作台" : "Go to Sequencer Studio" },
+    { category: isZh ? "全局导航" : "Navigation", keys: ["G", "S"], desc: isZh ? "跳转至工作台" : "Go to Sequencer Studio" },
     { category: isZh ? "全局导航" : "Navigation", keys: ["G", "C"], desc: isZh ? "跳转至和弦工坊" : "Go to Chord Progressions" },
     { category: isZh ? "全局导航" : "Navigation", keys: ["G", "Z"], desc: isZh ? "跳转至声谱分析仪" : "Go to Acoustic Analyzer" },
     { category: isZh ? "全局导航" : "Navigation", keys: ["G", "K"], desc: isZh ? "跳转至底鼓实验室" : "Go to Kick Anatomy" },
-    { category: isZh ? "全局导航" : "Navigation", keys: ["G", "G"], desc: isZh ? "跳转至曲风星系图谱" : "Go to Genre Galaxy" },
+    { category: isZh ? "全局导航" : "Navigation", keys: ["G", "G"], desc: isZh ? "跳转至律动星系" : "Go to Genre Galaxy" },
     { category: isZh ? "全局导航" : "Navigation", keys: ["⌘ / Ctrl", "K"], desc: isZh ? "全局曲风与功能搜索" : "Global Search Modal" },
     { category: isZh ? "全局导航" : "Navigation", keys: ["?"], desc: isZh ? "打开用户手册与帮助中心" : "Open Manual & Help Center" },
     { category: isZh ? "编曲操作" : "Sequencing", keys: ["Space"], desc: isZh ? "走带播放 / 暂停" : "Play / Pause playback" },
@@ -581,7 +581,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                           onClick={() => handleNavigate("studio")}
                           className="px-3.5 py-2 rounded-xl bg-accent text-black font-semibold text-xs hover:bg-accent/90 transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,183,61,0.3)]"
                         >
-                          <span>{isZh ? "立即前往编曲工作台" : "Open Studio Sequencer"}</span>
+                          <span>{isZh ? "立即前往工作台" : "Open Studio Sequencer"}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                         <button
@@ -1030,7 +1030,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                             onClick={() => handleNavigate("studio")}
                             className="text-xs text-[#45e0c9] hover:underline flex items-center gap-1"
                           >
-                            <span>{isZh ? "进入编曲工作台" : "Open Studio"}</span>
+                            <span>{isZh ? "进入工作台" : "Open Studio"}</span>
                             <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -1303,7 +1303,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                               {isZh ? "一键烘焙至工作台与卷帘" : "Bake to Sequencer & Piano Roll"}
                             </div>
                             <p className="text-[11px] text-text-sub leading-relaxed">
-                              {isZh ? "点击「载入编曲台」直接生成轨道步进，点击「在卷帘中编辑」自动无缝展开黑白键画布。" : "Bake chord voicings into live sequencer tracks or edit directly in piano roll."}
+                              {isZh ? "点击「载入工作台」直接生成轨道步进，点击「在卷帘中编辑」自动无缝展开黑白键画布。" : "Bake chord voicings into live sequencer tracks or edit directly in piano roll."}
                             </p>
                           </div>
                           <div className="p-3 rounded-xl bg-[#161a2b] border border-line-subtle space-y-1">
@@ -1335,7 +1335,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                     <div className="border-b border-line/60 pb-3">
                       <h3 className="text-base font-bold text-text flex items-center gap-2">
                         <Sliders className="w-4 h-4 text-accent" />
-                        <span>{isZh ? "编曲工作台与专业钢琴卷帘深度手册" : "DAW Sequencer & Piano Roll Guide"}</span>
+                        <span>{isZh ? "工作台与专业钢琴卷帘深度手册" : "DAW Sequencer & Piano Roll Guide"}</span>
                       </h3>
                       <p className="text-xs text-text-sub mt-1">
                         {isZh

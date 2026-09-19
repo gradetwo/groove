@@ -80,7 +80,7 @@ describe("Header · mobile menu de-duplication & help button integration", () =>
     const masterclassItems = screen.getAllByText("节奏律动");
     expect(masterclassItems.length).toBe(1);
 
-    const galaxyItems = screen.getAllByText("星系云团");
+    const galaxyItems = screen.getAllByText("律动星系");
     expect(galaxyItems.length).toBe(1);
 
     const timelineHItems = screen.getAllByText("水平演变轴");

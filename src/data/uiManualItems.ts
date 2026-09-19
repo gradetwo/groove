@@ -443,7 +443,7 @@ export const UI_MANUAL_ITEMS: UiManualItem[] = [
     shortcut: "Q",
     descZh: "自动将音符音长对齐到网格倍数，或自动延长音符直至下一音起始。",
     descEn: "Quantizes note lengths to grid divisions or extends notes seamlessly to the next note onset.",
-    detailZh: "消除由于手画导致的微小时长参差，让电子主音或管弦乐声部呈现丝滑顺畅的 Legato 连音延展质感。",
+    detailZh: "消除由于手画导致的微小音长参差，让电子主音或管弦乐声部呈现丝滑顺畅的 Legato 连音延展质感。",
     detailEn: "Eliminates uneven note durations, delivering seamless, flowing legato phrasing for leads and acoustic instruments.",
   },
   {

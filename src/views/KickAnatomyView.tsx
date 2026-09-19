@@ -161,7 +161,7 @@ export const KickAnatomyView: React.FC<KickAnatomyViewProps> = ({
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#f5b73d] text-zinc-950 font-bold text-xs hover:brightness-110 shadow-[0_0_12px_rgba(245,183,61,0.25)] transition-all shrink-0 ${isMobile ? "min-h-11" : ""}`}
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>{isZh ? "返回编曲台" : "Return to Studio"}</span>
+                  <span>{isZh ? "返回工作台" : "Return to Studio"}</span>
                 </button>
               )}
             </div>

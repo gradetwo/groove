@@ -43,7 +43,7 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
     titleKey: "tut_drum_title",
     descKey: "tut_drum_desc",
     targetTab: "studio",
-    targetBtnZh: "进入编曲台编排鼓机",
+    targetBtnZh: "进入工作台编排鼓机",
     targetBtnEn: "Launch Sequencer Grid",
     steps: [
       {
@@ -275,7 +275,7 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
     titleKey: "tut_galaxy_title",
     descKey: "tut_galaxy_desc",
     targetTab: "galaxy",
-    targetBtnZh: "漫游曲风星系图谱",
+    targetBtnZh: "漫游律动星系",
     targetBtnEn: "Explore Genre Galaxy",
     steps: [
       {

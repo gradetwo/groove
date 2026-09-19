@@ -64,7 +64,7 @@ export const studioMessages = {
   euclidean_apply: { en: "Apply to Track", zh: "应用到当前音轨" },
 
   // Studio Controls & Info
-  studio_title: { en: "Synthesizer Sequencer Studio", zh: "全功能步进音序编曲工作台" },
+  studio_title: { en: "Synthesizer Sequencer Studio", zh: "全功能步进音序工作台" },
   studio_view_dossier: { en: "View Dossier", zh: "查看详情" },
   studio_load_initial_chords: { en: "Chord Progression Active", zh: "已载入定制和弦走向" },
   studio_clear_chords: { en: "Clear Chords", zh: "清除和弦" },
@@ -432,10 +432,10 @@ export const studioMessages = {
   settings_default_roll_tool_desc: { en: "Initial tool active when opening the piano roll (Pointer vs Pencil)", zh: "打开钢琴卷帘时默认选中的编辑工具（指针或铅笔）" },
   roll_snap: { en: "Snap", zh: "吸附" },
   roll_snap_off: { en: "free", zh: "自由" },
-  roll_quantize_lengths: { en: "Quantise len", zh: "量化长度" },
+  roll_quantize_lengths: { en: "Quantise len", zh: "量化音长" },
   roll_quantize_lengths_hint: {
     en: "Snap the selected notes' lengths to the snap value. Starts are already grid steps, so there is nothing to quantise there.",
-    zh: "把选中音符的时长吸附到吸附值。起点本来就是网格步，没有可量化的余地。",
+    zh: "把选中音符的音长吸附到吸附值。起点本来就是网格步，没有可量化的余地。",
   },
   roll_legato: { en: "Legato", zh: "连音" },
   roll_legato_hint: {
@@ -486,7 +486,7 @@ export const studioMessages = {
   roll_vel_ramp: { en: "Ramp ↗", zh: "渐强 ↗" },
   roll_progression_bar: { en: "Bar {bar}", zh: "第 {bar} 小节" },
   roll_vel_nudge: { en: "Velocity: {vel}", zh: "力度: {vel}" },
-  roll_resize_hud: { en: "Length: {gate} steps", zh: "长度: {gate} 步" },
+  roll_resize_hud: { en: "Length: {gate} steps", zh: "音长: {gate} 步" },
   roll_dup_bar1: { en: "Dup B1", zh: "复制B1" },
   roll_dup_bar1_hint: { en: "Duplicate Bar 1 notes to subsequent bars", zh: "将第1小节音符复制到后续小节" },
   roll_arp_up: { en: "Arp ▲", zh: "琶音 ▲" },
@@ -671,7 +671,7 @@ export const studioMessages = {
   export_stems_failed: { en: "Stems export failed: {error}", zh: "分轨导出失败: {error}" },
   export_share_too_large: { en: "Pattern is too large for a share link — export a .groove package instead", zh: "工程过大，无法装入分享链接；请改用 .groove 工程包导出" },
   export_share_encode_failed: { en: "Share failed: this pattern cannot be encoded", zh: "分享失败：当前音序器内容无法编码" },
-  export_share_copied_degraded: { en: "Link copied (too large — pitch/gate detail omitted) 🔗", zh: "链接已复制（内容较大，已省略音高/门限等细节）🔗" },
+  export_share_copied_degraded: { en: "Link copied (too large — pitch/gate detail omitted) 🔗", zh: "链接已复制（内容较大，已省略音高/音长等细节）🔗" },
   export_share_copied: { en: "Share URL copied to clipboard 🔗", zh: "链接已复制到剪贴板 🔗" },
 
   // Sequencer Transport Toasts & Announcements (U-11: migrated from inline bilingual ternaries)
@@ -840,7 +840,7 @@ export const studioMessages = {
   console_float_close: { en: "Close console", zh: "关闭调音台" },
   console_float_shared_hint: {
     en: "Linked to the studio: same audio engine, same pattern",
-    zh: "与律动工作台联动：共用同一音频引擎与同一音序状态",
+    zh: "与工作台联动：共用同一音频引擎与同一音序状态",
   },
   console_float_esc_hint: { en: "Esc to close", zh: "按 Esc 关闭" },
 
@@ -872,7 +872,7 @@ export const studioMessages = {
   maker_guide_btn: { en: "Workshop Guide", zh: "工坊指南" },
   masterclass_guide_btn: { en: "Groove Guide", zh: "律动指南" },
   kick_guide_btn: { en: "Kick Lab Guide", zh: "底鼓手册" },
-  galaxy_guide_btn: { en: "Galaxy Guide", zh: "星系图谱指南" },
+  galaxy_guide_btn: { en: "Galaxy Guide", zh: "律动星系指南" },
   timeline_guide_btn: { en: "Timeline Guide", zh: "时间轴指南" },
   chords_open_piano_roll: { en: "Edit in Piano Roll", zh: "在卷帘中编辑" },
   chords_open_piano_roll_title: { en: "Load progression into track and edit in Piano Roll", zh: "将当前和弦进行导入音轨并立即在钢琴卷帘中打开编辑" },

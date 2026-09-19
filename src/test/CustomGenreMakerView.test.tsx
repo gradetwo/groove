@@ -72,7 +72,7 @@ describe("CustomGenreMakerView Component (P7-03)", () => {
     await waitFor(() => {
       expect(screen.getByText(/自定义曲风与变奏工坊|Custom Genre & Variation Maker/i)).toBeTruthy();
       expect(screen.getByTitle(/新建空白曲风|New Blank Genre/i)).toBeTruthy();
-      expect(screen.getByTitle(/在编曲室中打开|Open in Studio/i)).toBeTruthy();
+      expect(screen.getByTitle(/在工作台中打开|Open in Studio/i)).toBeTruthy();
       expect(screen.getByTitle(/专属海报与分享|Poster & Share/i)).toBeTruthy();
     }, { timeout: ASYNC_UI_TIMEOUT });
 
@@ -166,10 +166,10 @@ describe("CustomGenreMakerView Component (P7-03)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTitle(/在编曲室中打开|Open in Studio/i)).toBeTruthy();
+      expect(screen.getByTitle(/在工作台中打开|Open in Studio/i)).toBeTruthy();
     }, { timeout: ASYNC_UI_TIMEOUT });
 
-    const studioBtn = screen.getByTitle(/在编曲室中打开|Open in Studio/i);
+    const studioBtn = screen.getByTitle(/在工作台中打开|Open in Studio/i);
     fireEvent.click(studioBtn);
 
     expect(mockOpenStudio).toHaveBeenCalledWith(

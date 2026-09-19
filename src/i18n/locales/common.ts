@@ -1,8 +1,8 @@
 export const commonMessages = {
   // Brand & Navigation
-  app_title: { en: "Groove Odyssey", zh: "音乐曲风探索与律动工作台" },
+  app_title: { en: "Groove Odyssey", zh: "音乐曲风探索与工作台" },
   app_subtitle: { en: "Interactive Music Genre Learning & Sequencer", zh: "沉浸式交互曲风百科与步进音序器" },
-  nav_studio: { en: "Studio", zh: "律动工作台" },
+  nav_studio: { en: "Studio", zh: "工作台" },
   // Phone shell (see `src/components/MobileTabBar.tsx`). Five destinations, not eleven.
   nav_learn: { en: "Learn", zh: "学习" },
   nav_tools: { en: "Tools", zh: "工具" },
@@ -25,14 +25,14 @@ export const commonMessages = {
   nav_challenge_desc: { en: "Guess the genre by ear", zh: "听辨曲风挑战" },
   nav_chords: { en: "Chords", zh: "和弦走向" },
   nav_explore: { en: "Explore", zh: "探索" },
-  nav_galaxy: { en: "Galaxy", zh: "星系云团" },
+  nav_galaxy: { en: "Galaxy", zh: "律动星系" },
   nav_timeline_h: { en: "Timeline H", zh: "水平演变轴" },
   nav_timeline_v: { en: "Timeline V", zh: "垂直时间轴" },
   nav_compare: { en: "Compare", zh: "曲风对比" },
   nav_challenge: { en: "Challenge", zh: "听辨挑战" },
   nav_kick: { en: "Kick Design", zh: "底鼓设计" },
   nav_kick_desc: { en: "The Somatic Triad", zh: "底鼓声学与设计" },
-  nav_galaxy_desc: { en: "3D Cosmic Map", zh: "3D 星系图谱" },
+  nav_galaxy_desc: { en: "3D Cosmic Map", zh: "3D 律动星系" },
   nav_timeline_h_desc: { en: "Chronology", zh: "年代编年演变轴" },
   nav_timeline_v_desc: { en: "Storylines", zh: "流派故事脉络" },
   nav_masterclass: { en: "Rhythm & Grooves", zh: "节奏律动" },
@@ -79,7 +79,7 @@ export const commonMessages = {
   loading_chunk: { en: "Loading Chunk...", zh: "正在按需加载曲风模块..." },
 
   // Error Boundaries
-  error_studio_title: { en: "Studio View Error", zh: "编曲工作台运行异常" },
+  error_studio_title: { en: "Studio View Error", zh: "工作台运行异常" },
   error_studio_desc: { en: "Audio engine or sequencer matrix encountered an unexpected error.", zh: "音频引擎或音序矩阵遇到意外异常，您可以尝试重试。" },
   error_chord_title: { en: "Chord Studio Error", zh: "和弦工作台运行异常" },
   error_chord_desc: { en: "Chord progression analysis encountered an error. You can retry or return to Studio.", zh: "和弦走向或理论分析模块遇到异常，可重试或返回主工作台。" },

@@ -53,7 +53,7 @@ describe("KickAnatomyView · Somatic Acoustic Lab & Contextual Help", () => {
 
     const studioBtn = screen.getByTestId("kick-studio-button");
     expect(studioBtn).toBeInTheDocument();
-    expect(studioBtn).toHaveTextContent("返回编曲台");
+    expect(studioBtn).toHaveTextContent("返回工作台");
 
     fireEvent.click(studioBtn);
     expect(handleOpenStudio).toHaveBeenCalledTimes(1);
