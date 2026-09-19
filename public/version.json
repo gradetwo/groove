@@ -1,27 +1,27 @@
 {
-  "version": "2.0.86",
+  "version": "2.0.87",
   "releaseDate": "2026-09-19",
-  "changelogCount": 150,
+  "changelogCount": 151,
   "latest": {
-    "version": "2.0.86",
+    "version": "2.0.87",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.86 多开对话框：一次 Esc 不再关掉整叠，焦点也不再被抢回去",
-      "en": "v2.0.86 Stacked Dialogs: One Escape No Longer Closes Them All, and Focus Stays Where You Put It"
+      "zh": "v2.0.87 实操教学现在真的指向那个控件：圈出目标、压暗其余、且不挡点击",
+      "en": "v2.0.87 The Hands-on Lesson Actually Points at the Control Now"
     },
     "highlights": [
       {
-        "zh": "**一次 Esc 会关掉整叠对话框。** 每个打开的 `Modal` 都往 `window` 上挂自己的 keydown 监听，所以帮助叠在设置上、选择器叠在卷帘上时，按一次 Esc 两层一起关；两个 `Tab` 焦点陷阱还会互相抢，把用户拽出他正在用的那一层。现在有一个模块级的**对话框栈**，只有**栈顶**响应 Esc 与 Tab。",
-        "en": "**One Escape closed the whole stack.** Every open `Modal` attached its own `window` keydown handler, so with help over settings, or a picker over the roll, a single Escape dismissed both — and two `Tab` traps fought over focus, pulling the user out of the dialog they were actually in. There is now a module-level **dialog stack**, and only its **top** reacts to Escape and Tab."
+        "zh": "**教练一直只能切视图，没有任何东西指向文字说的那个按钮或格子。** 写着「点一个格子里放底鼓」，格子在哪儿得自己找。现在每个步骤可以带一个 `anchor`（属性对：`data-testid` 或 `data-toolbar-id`），教练会把目标**圈出来**、用 `box-shadow` 把其余部分压暗——**环上 `pointer-events: none`**，所以应用照旧可点：指令变成「跟着做」而不只是「读一读」。鼓组 4 步、钢琴 3 步、调音台 1 步已接上。",
+        "en": "**The coach could only switch views; nothing pointed at the button or cell its text described.** It said \"click a step cell to place a kick\" and left you to find the cell. A step can now carry an `anchor` (an attribute pair: `data-testid` or `data-toolbar-id`), and the coach **rings the target** and dims the rest with a `box-shadow` — with **`pointer-events: none` on the ring**, so the app stays clickable and the instruction becomes something you can follow rather than only…"
       },
       {
-        "zh": "**`aria-labelledby` 撞 id。** 标题 id 是写死的 `modal-title`，两个对话框就有两个同 id 的 `h3`，屏幕阅读器念的可能是**下面那层**的标题；而且每个对话框都自称 `aria-modal=\"true\"`，等于告诉辅助技术「忽略我以外的一切」——包括压在它上面的那个。现在每个实例用 `useId()` 生成自己的标题 id，`aria-modal` 只由栈顶声明。",
-        "en": "**`aria-labelledby` collided.** The heading id was the literal `modal-title`, so two dialogs produced two elements with that id and a screen reader could read the *lower* dialog's title; on top of that every dialog declared `aria-modal=\"true\"`, telling assistive tech to ignore everything outside it — including the dialog stacked above. Each instance now generates its own id with `useId()`, and only the top of the stack claims to be modal."
+        "zh": "**控件不在当前界面时，明说。** 手机布局、面板未打开、控件被重命名——这些情况下没有环，面板出现一条说明。**圈一片空白比不圈更糟**：用户会去找一个并不存在的控件。手机端是三端共用的，这条退化路径正是为你重做的手机布局准备的。",
+        "en": "**When the control is not on this screen, it says so.** A phone layout, a closed panel, a renamed control — no ring, and an explicit note instead. **A ring around empty space is worse than no ring**: it sends the user hunting for a control that is not there. The coach is shared by all three surfaces, so this degradation is there for the phone layout you are redesigning."
       },
       {
-        "zh": "**每次宿主重渲染都会抢焦点（清单里没写的第三条）。** 焦点 effect 的依赖里有 `onClose`，而调用方几乎都传内联闭包，于是它**每次渲染都重跑**，50ms 后把焦点抢回第一个可聚焦元素——点了第二个按钮、或在输入框里打字，任何状态变化都会把你拽回去。现在回调与开关走 ref，effect 只依赖「开/合」，一次打开只跑一次。",
-        "en": "**Focus was re-taken on every host render — a third defect the plan did not mention.** The focus effect listed `onClose` as a dependency and callers pass inline closures, so it re-ran on every render and, 50 ms later, pulled focus back to the first focusable element: click a second button, or type in a field, and any state change in the dialog undid it. Callbacks and options now live in refs, the effect depends only on open/closed, and it runs once per open."
+        "zh": "**锚点不会腐烂。** 一条测试遍历课程数据里的每个 `anchor`，在 `src/` 全量源码里找 `attribute=\"value\"`（网格格子与通道条是模板字符串，所以按模板字面前缀匹配），少一个就失败。**这条门禁当场抓到了我自己**：`step-cell-1-4` 在源码里是 ``data-testid={`step-cell-${trackIdx}-${stepIdx}`}``，字面量匹配不到——于是门禁学会识别模板字面量，而不是我改数据去迁就门禁。",
+        "en": "**The anchors cannot rot.** A test walks every `anchor` in the course data and looks for `attribute=\"value\"` across all of `src/` (grid cells and channel strips are template strings, so those match on the template's literal prefix); one missing name fails the suite. **The gate caught me on its first run**: `step-cell-1-4` is written as ``data-testid={`step-cell-${trackIdx}-${stepIdx}`}`` in the source, so the literal match failed — the gate learned about templates rather tha…"
       }
     ],
     "truncated": true
