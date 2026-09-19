@@ -1,4 +1,4 @@
-import type { NavTab } from "../components/Header";
+import type { NavTab } from "../app/navigation";
 import type { MessageKey } from "../i18n/locales";
 
 export interface TutorialCourseStep {

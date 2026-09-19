@@ -1,26 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { announcer } from "../platform/announcer";
+import type { AnnouncePriority } from "../platform/announcer";
 
-export type AnnouncePriority = "polite" | "assertive";
-
-class AnnouncerService {
-  private listener: ((message: string, priority: AnnouncePriority) => void) | null = null;
-
-  setListener(fn: (message: string, priority: AnnouncePriority) => void) {
-    this.listener = fn;
-  }
-
-  clearListener() {
-    this.listener = null;
-  }
-
-  announce(message: string, priority: AnnouncePriority = "polite") {
-    if (this.listener) {
-      this.listener(message, priority);
-    }
-  }
-}
-
-export const announcer = new AnnouncerService();
+/**
+ * The announcement service now lives in `src/platform/announcer.ts`.
+ *
+ * It was defined here, which made `announcer` a presentation import: the transport and
+ * genre-audition hooks reached into a `.tsx` file to publish an event. Re-exported so existing
+ * importers keep working, but new code should import from the platform module — and the layering
+ * gate will now reject a logic file that imports this one.
+ */
+export { announcer };
+export type { AnnouncePriority };
 
 /**
  * Global WAI-ARIA live region container for screen readers (P2-17)

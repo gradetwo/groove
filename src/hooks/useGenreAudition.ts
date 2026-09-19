@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Genre } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre } from "../data/genreMix";
-import { announcer } from "../ui/AriaLiveRegion";
+import { announcer } from "../platform/announcer";
 
 export interface UseGenreAuditionReturn {
   playingGenreId: string | null;

@@ -11,7 +11,12 @@ import { AlertTriangle, Save, Trash2, X } from "lucide-react";
  * rendered neutrally on purpose — the safe choice should never be the one a hurried tap hits by
  * accident, and on a phone this dialog is thumb-height.
  */
-export type UnsavedDecision = "save" | "discard" | "cancel";
+/**
+ * The decision union lives in `src/features/sequencer/unsavedDecision.ts`; re-exported so existing
+ * importers keep working. Imported as well as re-exported, because this component's props use it.
+ */
+import type { UnsavedDecision } from "../../features/sequencer/unsavedDecision";
+export type { UnsavedDecision };
 
 export interface UnsavedChangesDialogProps {
   isOpen: boolean;

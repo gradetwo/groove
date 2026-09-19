@@ -5,7 +5,12 @@ import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { subscribePlayhead } from "../../features/sequencer/playheadBus";
 
-export type ParameterDimension = "velocity" | "probability" | "ratchet" | "gate";
+/**
+ * The union lives in `src/features/sequencer/stepParameters.ts`; re-exported so existing importers
+ * keep working. Imported as well as re-exported, because this component uses it in its own props.
+ */
+import type { ParameterDimension } from "../../features/sequencer/stepParameters";
+export type { ParameterDimension };
 
 export interface VelocityLaneProps {
   tracks: SequencerTrack[];

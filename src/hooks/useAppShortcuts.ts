@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { NavTab } from "../components/Header";
-import { announcer } from "../ui/AriaLiveRegion";
+import type { NavTab } from "../app/navigation";
+import { announcer } from "../platform/announcer";
 
 export interface UseAppShortcutsOptions {
   onNavigateTab: (tab: NavTab) => void;

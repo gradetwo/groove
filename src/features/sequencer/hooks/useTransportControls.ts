@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import { AudioEngine } from "../../../audio/AudioEngine";
 import type { SequencerAction, SequencerState, StudioHistorySnapshot } from "../useSequencerStore";
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
-import { announcer } from "../../../ui";
+import { announcer } from "../../../platform/announcer";
 import { useLanguage } from "../../../i18n/LanguageContext";
 
 export interface UseTransportControlsOptions {

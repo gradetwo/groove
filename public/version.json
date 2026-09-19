@@ -1,27 +1,27 @@
 {
-  "version": "2.0.63",
+  "version": "2.0.64",
   "releaseDate": "2026-09-19",
-  "changelogCount": 127,
+  "changelogCount": 128,
   "latest": {
-    "version": "2.0.63",
+    "version": "2.0.64",
     "date": "2026-09-19",
-    "category": "audio",
+    "category": "refactor",
     "title": {
-      "zh": "v2.0.63 管风琴有了真正的音栓：波表合成（createPeriodicWave）落地",
-      "en": "v2.0.63 The Organs Get Real Drawbars: Wavetable Synthesis via createPeriodicWave"
+      "zh": "v2.0.64 三端架构起步：功能层与界面层解耦，并加分层门禁守住它",
+      "en": "v2.0.64 Starting the Three-Surface Architecture: Decoupling Logic from Presentation, With a Gate to Keep It"
     },
     "highlights": [
       {
-        "zh": "**为什么先做管风琴**：它们是全库里「机制上做不到」最清楚的例子——哈蒙德管风琴的音色是**在选定音栓长度上的纯分音之和**，而任何内置波形的组合都逼近不了它。所以两个管风琴此前一直是「方波 + 正弦」：方波的分音按 1/n 衰减，既暗得多、又是**错的级数**；那个正弦是为了暗示它根本产生不出来的高音栓。听感因此是「合成器管风琴」，不是音栓乐器。",
-        "en": "**Why the organs first**: they are the clearest case in the library of something the engine *could not do*. A Hammond's tone is a sum of **pure partials at chosen footages**, and no combination of the built-in waveforms approximates it — so both organ presets were a square plus a sine: a square's partials fall off as 1/n, which is both far too dark and the wrong *series*, and the sine was there to suggest upper drawbars it could not actually produce. The result read as a syn…"
+        "zh": "**为什么现在做**：手机端 UI/交互/功能将重做，三端将来会有不同界面、不同交互、甚至不同功能集合（PC 最全）。这只有在**功能层不依赖任何一种界面的形状**时才做得起——否则三端就是一个程序加三套皮肤，每个功能都要写三遍。",
+        "en": "**Why now**: the phone UI, interactions and features are being redesigned, and the three surfaces will end up with different interfaces, interactions and even different feature sets (PC fullest). That is only affordable if the logic layer does not depend on any one interface's shape — otherwise the three surfaces are one program with three skins, and every feature costs three times."
       },
       {
-        "zh": "**新机制**：预设可声明 `harmonics`（0 基分音幅度），第一个振荡器改用 `createPeriodicWave` 构建，`osc1Type` 只在声明时被覆盖。系数由**纯函数** `periodicWaveCoefficients()` 生成，用**正弦级数**（`real` 全零）——音栓是用「长度 + 幅度」描述的，不是相位关系，正弦级数让波形与任意相位选择无关。",
-        "en": "**The new mechanism**: a preset may declare `harmonics` (0-based partial amplitudes), and the first oscillator is then built with `createPeriodicWave`, overriding `osc1Type` only when declared. The coefficients come from a **pure function**, `periodicWaveCoefficients()`, as a **sine** series (`real` all zero) — a drawbar is described by footage and amplitude, not by a phase relationship, and a sine series makes the waveform independent of an arbitrary phase choice."
+        "zh": "**先说好消息（实测）**：`src/features/` 与 `src/hooks/` **原本已经没有任何文件 import React 组件**。底子比预想的好得多，所以本轮不是大重构，而是把仅剩的几处耦合清掉并把边界固定下来。",
+        "en": "**First, the good news (measured)**: `src/features/` and `src/hooks/` **already contained no imports of React components at all**. The foundation was far better than expected, so this was not a large refactor — just clearing the few remaining couplings and pinning the boundary."
       },
       {
-        "zh": "**归一化按「分音幅度之和」，不按采样峰值**：和是波形峰值的**严格上界**，一次遍历即精确，且无论分音如何都保证不超过 1。按真实峰值归一需要一次采样，而采样分辨率会随分音数量变化——那是实时图与离线图产生分歧的无谓来源。这条取舍写进了函数注释。",
-        "en": "**Normalisation is by the sum of the partial amplitudes, not by the sampled peak**: the sum is a strict upper bound on the waveform's peak, it is exact in one pass, and it guarantees the result never exceeds unity whatever the partials are. Peak normalisation would need a sampling pass whose resolution varies with the number of partials — a needless source of disagreement between the realtime and offline graphs. The trade-off is in the function's comment."
+        "zh": "**清掉的耦合**：① `announcer`（屏幕阅读器播报服务）原先定义在 `src/ui/AriaLiveRegion.tsx` 里——**一个 `.tsx`**，于是走带与曲风试听的 hook 为了播报一句话要 import 一个 React 组件。它本质是**事件**不是视图，已移到 `src/platform/announcer.ts`：logic 负责发布，哪个界面在挂载就由哪个界面决定怎么显示。② `NavTab` 从 `components/Header.tsx` 移到 `app/navigation.ts`（「应用有哪些目的地」不是 Header 的 props 形状，domain 的教程数据与 logic 的快捷键 hook 都在用它）。③ `ParameterDimension` / `GenreRailItem` / `UnsavedDecision` 三个类型原来都定义在组件里、被 logic 反向 import，现已回到 `src/features/sequencer/` 的归属地；组件仍 re-export 以兼…",
+        "en": "**The couplings removed**: (1) `announcer` (the screen-reader announcement service) was defined inside `src/ui/AriaLiveRegion.tsx` — a `.tsx` — so the transport and genre-audition hooks imported a React component just to announce a sentence. It is an *event*, not a view, so it moved to `src/platform/announcer.ts`: logic publishes, and whichever view is mounted decides how to show it. (2) `NavTab` moved from `components/Header.tsx` to `app/navigation.ts` — \"which destinations…"
       }
     ],
     "truncated": true

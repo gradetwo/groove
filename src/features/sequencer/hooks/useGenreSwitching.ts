@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Genre } from "../../../types/genre";
 import { GENRE_INDEX, GENRE_INDEX_MAP, loadGenre } from "../../../data/index/loader";
-import type { GenreRailItem } from "../../../components/sequencer/GenreRail";
+import type { GenreRailItem } from "../genreRail";
 import { AudioEngine, DrumKitType } from "../../../audio/AudioEngine";
 import type { SequencerAction } from "../useSequencerStore";
 import { useCustomGenres } from "../../customGenre/useCustomGenres";

@@ -4,7 +4,7 @@ import {
   saveUnsavedPromptPrefs,
   type UnsavedPromptPrefs,
 } from "../unsavedGuard";
-import type { UnsavedDecision } from "../../../components/sequencer/UnsavedChangesDialog";
+import type { UnsavedDecision } from "../unsavedDecision";
 
 /**
  * Gate destructive actions behind the "unsaved changes" question (item ⑧).

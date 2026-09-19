@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { NavTab } from "../components/Header";
+import type { NavTab } from "./navigation";
 
 export interface RouteState {
   tab: NavTab;

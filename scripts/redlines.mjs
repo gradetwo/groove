@@ -180,6 +180,28 @@ check(
   ["typecheck", "lint", "lint:data", "test", "build", "check:budget", "test:e2e"].every((s) => scripts.verify.includes(`npm run ${s}`))
 );
 
+/**
+ * R6c — the E2E gate runs the PC profile while the phone/tablet surfaces are being redesigned, so
+ * the *full* matrix must stay declared and one command away. Without this, "PC only for now" quietly
+ * becomes "mobile coverage was deleted", and nobody notices until a redesign ships untested.
+ */
+const matrixSource = read("scripts/test_matrix.js");
+const declaredMobileTargets = (matrixSource.match(/isMobile: true/g) || []).length;
+const declaredTabletTargets = (matrixSource.match(/isTablet: true/g) || []).length;
+check(
+  "R6c the E2E matrix still declares every phone and tablet target",
+  declaredMobileTargets === 2 && declaredTabletTargets === 2
+);
+check(
+  "R6c the full matrix is still one command away",
+  scripts["test:e2e:all"] === "E2E_PROFILE=all node scripts/test_matrix.js" &&
+    scripts["test:e2e"] === "E2E_PROFILE=pc node scripts/test_matrix.js"
+);
+check(
+  "R6c the profile selector validates its input",
+  matrixSource.includes("is not a profile") && matrixSource.includes("PROFILE_MATCHERS")
+);
+
 /* R9 \u2014 every genre entry point must seed the arranged mix --------------------- */
 // User request: each genre's default mix must be arranged for that genre. That only
 // holds if *every* path that hands a genre's own pattern to an engine goes through

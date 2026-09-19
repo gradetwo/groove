@@ -7,14 +7,12 @@ import { Shuffle } from "lucide-react";
  * full genre (with its sequencer pattern) only when a chip is actually clicked.
  * This is what keeps the 14 genre data chunks out of the first paint.
  */
-export interface GenreRailItem {
-  id: string;
-  name: string;
-  category: string;
-  origin_year?: string;
-  default_bpm?: number;
-  isCustom?: boolean;
-}
+/**
+ * The shape lives in `src/features/sequencer/genreRail.ts`; re-exported so existing importers keep
+ * working. Imported as well as re-exported, because this component uses it in its own props.
+ */
+import type { GenreRailItem } from "../../features/sequencer/genreRail";
+export type { GenreRailItem };
 
 export interface GenreRailProps {
   currentGenreId: string;

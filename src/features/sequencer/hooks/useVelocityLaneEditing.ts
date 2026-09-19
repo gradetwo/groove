@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { SequencerAction } from "../useSequencerStore";
-import type { ParameterDimension } from "../../../components/sequencer/VelocityLane";
+import type { ParameterDimension } from "../stepParameters";
 
 export interface UseVelocityLaneEditingOptions {
   commit: (action: SequencerAction, recordHistory?: boolean) => void;

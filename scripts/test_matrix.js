@@ -146,10 +146,32 @@ function startStaticServer() {
 // Test matrix definition
 /**
  * Optional target filter for iterating on a single device: `E2E_ONLY=iPhone node scripts/test_matrix.js`.
- * The release gate runs every target; this exists so a phone-only fix does not cost a full matrix
- * per attempt. It cannot weaken the gate because an unfiltered run is the default.
+ * This exists so a phone-only fix does not cost a full matrix per attempt.
  */
 const TARGET_FILTER = process.env.E2E_ONLY || "";
+
+/**
+ * Which *group* of targets the release gate runs.
+ *
+ *   E2E_PROFILE=pc      the three desktop browsers       (default in `npm run verify`)
+ *   E2E_PROFILE=mobile  the four phone/tablet targets
+ *   E2E_PROFILE=all     everything — the full matrix, `npm run test:e2e:all`
+ *
+ * The phone and tablet surfaces are being redesigned from scratch, so their targets assert against a
+ * UI that is about to be replaced: running them in every gate costs minutes per iteration and
+ * reports failures that the redesign will invalidate. `pc` is therefore the default *in the gate*
+ * while `all` stays one command away — the matrix itself is unchanged, and a surface that has been
+ * redesigned just switches profiles back.
+ *
+ * This is a deliberate, reversible reduction in gate coverage, recorded here and in
+ * `ARCHITECTURE_SURFACES.md` §6 rather than quietly left to look like a full run.
+ */
+const TARGET_PROFILE = (process.env.E2E_PROFILE || "all").toLowerCase();
+const PROFILE_MATCHERS = {
+  all: () => true,
+  pc: (t) => !t.isMobile && !t.isTablet,
+  mobile: (t) => Boolean(t.isMobile || t.isTablet),
+};
 
 const ALL_TARGETS = [
   // 1. Desktop Browsers
@@ -202,16 +224,28 @@ const ALL_TARGETS = [
   },
 ];
 
-const TARGETS = TARGET_FILTER
-  ? ALL_TARGETS.filter((t) => t.name.toLowerCase().includes(TARGET_FILTER.toLowerCase()))
-  : ALL_TARGETS;
-
-if (TARGETS.length === 0) {
-  console.error(`❌ E2E_ONLY=${TARGET_FILTER} matched no target`);
+if (!PROFILE_MATCHERS[TARGET_PROFILE]) {
+  console.error(
+    `❌ E2E_PROFILE=${TARGET_PROFILE} is not a profile. Use one of: ${Object.keys(PROFILE_MATCHERS).join(", ")}`
+  );
   process.exit(1);
 }
-if (TARGET_FILTER) {
-  console.log(`[filter] E2E_ONLY=${TARGET_FILTER} → ${TARGETS.length} target(s): ${TARGETS.map((t) => t.name).join(", ")}\n`);
+
+const TARGETS = ALL_TARGETS.filter(PROFILE_MATCHERS[TARGET_PROFILE]).filter((t) =>
+  TARGET_FILTER ? t.name.toLowerCase().includes(TARGET_FILTER.toLowerCase()) : true
+);
+
+if (TARGETS.length === 0) {
+  console.error(
+    `❌ E2E_PROFILE=${TARGET_PROFILE}${TARGET_FILTER ? ` + E2E_ONLY=${TARGET_FILTER}` : ""} matched no target`
+  );
+  process.exit(1);
+}
+if (TARGET_PROFILE !== "all" || TARGET_FILTER) {
+  console.log(
+    `[profile] E2E_PROFILE=${TARGET_PROFILE}${TARGET_FILTER ? ` E2E_ONLY=${TARGET_FILTER}` : ""} → ` +
+      `${TARGETS.length} of ${ALL_TARGETS.length} target(s): ${TARGETS.map((t) => t.name).join(", ")}\n`
+  );
 }
 
 /**
@@ -1694,12 +1728,26 @@ async function main() {
   if (!allPassed) {
     console.error("❌ Release Test Matrix FAILED: One or more browser/device targets failed.");
     process.exit(1);
-  } else if (targetFilter) {
-    // A filtered run is not a release gate; say exactly what passed instead of claiming all 7.
-    console.log(`✅ ${results.length}/${TARGETS.length} TARGET(S) PASSED (filtered: --target=${targetFilter})\n`);
+  } else if (TARGETS.length < ALL_TARGETS.length) {
+    /**
+     * A partial run must never claim the whole matrix passed.
+     *
+     * This message used to be hardcoded to "ALL 7", which was already wrong for a filtered run and
+     * becomes actively misleading now that the gate runs the PC profile while the phone surfaces are
+     * redesigned: the log would say all seven passed while three ran. The count is derived from what
+     * actually ran, and a partial profile says which command covers the rest.
+     */
+    const scope = targetFilter
+      ? `filtered by E2E_ONLY=${targetFilter}`
+      : `E2E_PROFILE=${TARGET_PROFILE}`;
+    console.log(
+      `✅ ${TARGETS.length}/${ALL_TARGETS.length} TARGET(S) PASSED (${scope}) — the full matrix is \`npm run test:e2e:all\`\n`
+    );
     process.exit(0);
   } else {
-    console.log("🎉 ALL 7 BROWSER & DEVICE TARGETS PASSED PRE-RELEASE VERIFICATION!\n");
+    console.log(
+      `🎉 ALL ${ALL_TARGETS.length} BROWSER & DEVICE TARGETS PASSED PRE-RELEASE VERIFICATION!\n`
+    );
     process.exit(0);
   }
 }

@@ -27,20 +27,13 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX } from "../data/index/genresIndex";
 import { CURRENT_CLIENT_VERSION } from "./UpdatesModal";
 
-export type NavTab = 
-  | "studio" 
-  | "chords"
-  | "kick"
-  | "maker"
-  | "analyzer"
-  | "console"
-  | "masterclass"
-  | "galaxy" 
-  | "horizontal-timeline" 
-  | "vertical-timeline" 
-  | "compare" 
-  | "challenge" 
-  | "detail";
+/**
+ * Re-exported from `src/app/navigation.ts` so existing importers keep working. New code — and
+ * especially anything below the UI layer — should import the union from there: a destination is
+ * shared vocabulary, not part of this component's contract.
+ */
+import type { NavTab } from "../app/navigation";
+export type { NavTab };
 
 interface HeaderProps {
   currentTab: NavTab;

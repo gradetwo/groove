@@ -1632,6 +1632,33 @@ french-house 是 punchy_kick + clap + closed_hat，nu-disco-house 是 punchy_kic
   所以钟/锣/钟琴的金属感仍只能用「两个不成整数比的振荡器」近似（`bell_lead` 现在就是这么做的）。
   真正的解决方案是采样或加减法合成，属于独立工作。
 - 鼓组采样层与每击轮转、立体声完整性其余部分（E.5 第 3–4 条）。
+## G.10 转向「三端架构」：功能与界面解耦（v2.0.64 起）
+
+用户决定：**手机端 UI/交互/功能将重做**，底层功能复用 PC 与 iPad；
+三端将来 UI、交互、功能都会有差异（PC 最全）。因此本轮起的工作重点是
+**把功能代码与视觉/交互代码解耦**，让三套界面能挂在同一套功能上。
+
+已交付（v2.0.64）：
+
+1. **分层约定与门禁**：新增 `scripts/check_layers.mjs` 并接入 `verify`。
+   四层 `domain / platform / logic / ui`（外加 `util`），违规即失败；
+   只对**新增**违规失败，已存在的登记在 `ALLOW` 里、只应减少。
+2. **实测结果**：`src/features/` 与 `src/hooks/` **原本已无任何组件 import**——
+   解耦的基础比预想的好。本轮清掉了其中仅有的耦合：
+   - `announcer` 从 `src/ui/AriaLiveRegion.tsx`（一个 `.tsx`！）移到 `src/platform/announcer.ts`，
+     于是 logic 播报不再依赖 React 组件；
+   - `NavTab` → `src/app/navigation.ts`；`ParameterDimension` / `GenreRailItem` / `UnsavedDecision`
+     各自回到 `src/features/sequencer/` 的归属地（原来都在组件里定义，logic 反向 import 组件取类型）。
+3. **文档**：新增 `ARCHITECTURE_SURFACES.md`——分层表、门禁用法、
+   「想知道是不是手机该怎么办」的**正例与反例**、类型归属判据、三端功能默认取向、
+   以及「删掉某一端整个目录后 features/audio 仍应能编译」这条可检验的判据。
+4. **测试范围临时缩小**（并按用户要求）：`verify` 里的 E2E 只跑 PC 三浏览器；
+   全量矩阵保留且由红线 **R6c** 守住不被删。同时修掉一处既有缺陷：
+   部分目标运行时汇总信息硬编码「ALL 7 ... PASSED」。
+
+剩余债务（门禁登记）：`src/data/index/loader.ts` 依赖 `features/customGenre/customGenreDb`
+（domain 指名 feature）。正确修法是**反转依赖**：loader 接受 resolver，由 `src/app` 注入。
+
 ## G.9 下一轮的优先级（按 收益÷成本）
 
 **已在 v2.0.61–v2.0.63 完成**：手机两条固定栏合并（G.6）、合并引入的两个缺陷热修（G.7）、
