@@ -108,7 +108,17 @@ input[type=range] {
   background: transparent;
   outline: none;
   cursor: pointer;
-  touch-action: none;
+  /*
+   * `pan-y`, not `none`.
+   *
+   * `none` meant a gesture that started over a slider could not pan the page at all. The studio
+   * renders 22 of these (per-track volume, pan, sends, swing, tempo, insert stages, mixer), so the
+   * dead zones were spread across the whole surface — and "two-finger scrolling stops working over
+   * parts of the page" is exactly the shape of that. `pan-y` keeps vertical page scrolling available
+   * while the horizontal drag that adjusts the value is unaffected, because a range input is a native
+   * control that handles its own gesture.
+   */
+  touch-action: pan-y;
 }
 input[type=range]::-webkit-slider-runnable-track {
   height: 4px;

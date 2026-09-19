@@ -39,13 +39,29 @@ export function useMatrixScroll({
     const el = matrixContainerRef.current;
     if (!el) return;
 
+    /**
+     * The step grid pans horizontally on Shift+wheel, and only there.
+     *
+     * Two guards, both about leaving vertical scrolling alone:
+     *
+     *  - **Axis direction.** A horizontal-dominant gesture pans the grid without needing Shift, which
+     *    is what a trackpad two-finger swipe actually produces; a vertical-dominant one is left to the
+     *    browser so the page keeps scrolling. Intercepting on `deltaY !== 0` alone is how a grid
+     *    swallows the page's vertical scroll.
+     *  - **Only when there is somewhere to go.** `preventDefault` on a grid that is already fully
+     *    scrolled just eats the gesture.
+     */
     const handleWheel = (e: WheelEvent) => {
-      if (e.shiftKey && e.deltaY !== 0) {
-        if (el.scrollWidth > el.clientWidth) {
-          e.preventDefault();
-          el.scrollLeft += e.deltaY;
-        }
-      }
+      const canPan = el.scrollWidth > el.clientWidth;
+      if (!canPan) return;
+
+      const horizontalDominant = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      // Shift+wheel is the conventional vertical-wheel-to-horizontal-scroll mapping.
+      const wantsHorizontal = e.shiftKey && e.deltaY !== 0;
+      if (!horizontalDominant && !wantsHorizontal) return;
+
+      e.preventDefault();
+      el.scrollLeft += horizontalDominant ? e.deltaX : e.deltaY;
     };
 
     el.addEventListener("wheel", handleWheel, { passive: false });

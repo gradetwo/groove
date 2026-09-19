@@ -1,27 +1,27 @@
 {
-  "version": "2.0.69",
+  "version": "2.0.70",
   "releaseDate": "2026-09-19",
-  "changelogCount": 133,
+  "changelogCount": 134,
   "latest": {
-    "version": "2.0.69",
+    "version": "2.0.70",
     "date": "2026-09-19",
-    "category": "refactor",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.69 domain 不再指名 feature：自定义曲风解析改为注入，分层门禁的容忍表清零",
-      "en": "v2.0.69 The Domain Stops Naming a Feature: Custom-Genre Resolution Is Injected, and the Tolerance Table Is Empty"
+      "zh": "v2.0.70 滑动条不再吞掉整页滚动；步进网格的滚轮改为按主轴方向判断",
+      "en": "v2.0.70 Sliders Stop Swallowing Page Scrolling, and the Step Grid's Wheel Handler Becomes Axis-Aware"
     },
     "highlights": [
       {
-        "zh": "**还清分层门禁最后一笔债**：`src/data/index/loader.ts` 直接 import `features/customGenre` 的 `getCustomGenre`——数据层因此「指名」了一个功能模块。这个依赖是真的（自定义曲风确实存在创建它的那个功能里），但**方向反了**。现在 loader 暴露 `setCustomGenreResolver`，由 `src/app/installCustomGenreResolver.ts` 在启动时回答它。`src/data` 不再知道任何 feature 的存在。",
-        "en": "**The layer gate's last debt is paid**: `src/data/index/loader.ts` imported `getCustomGenre` straight out of `features/customGenre`, so the data layer *named* a feature module. The dependency is real — custom genres are stored with the feature that creates them — but it pointed the wrong way. The loader now exposes `setCustomGenreResolver`, and `src/app/installCustomGenreResolver.ts` answers it at startup. `src/data` no longer knows any feature exists."
+        "zh": "**`input[type=range]` 上的 `touch-action: none` 改成了 `pan-y`**。`none` 意味着**从滑动条上开始的任何手势都无法滚动页面**，而工作台里渲染了 **22 个**滑动条（每轨音量与声像、送出、Swing、速度、插入级、调音台），这些「手势死区」因此铺满整个界面——这正是「页面某些区域双指滚动失效」的形状。这是本次唯一确定能解释该症状的规则。",
+        "en": "**`touch-action: none` on `input[type=range]` became `pan-y`.** `none` meant that **any gesture starting over a slider could not pan the page at all**, and the studio renders **22** of them (per-track volume and pan, sends, swing, tempo, insert stages, mixer), so those gesture dead zones were spread across the whole surface — which is exactly the shape of \"two-finger scrolling stops working over parts of the page\". This is the one rule found that genuinely explains that symp…"
       },
       {
-        "zh": "**容忍表清零，并用红线 R6f 守住「必须为空」**：那张表存在的意义是让「真实但暂时无法反转的依赖」被**写明修法**地声明出来，而不是静默破坏门禁。但它一旦变成停车场就会变成坟场——两笔债既已还清，现在非空即失败。同时验证过门禁本身仍然会拦住新增违规（把旧 import 加回去，`check:layers` 退出码 1）。",
-        "en": "**The tolerance table is empty, and red line R6f keeps it that way.** The table exists so a real dependency that cannot yet be inverted is declared *with its fix* rather than silently breaking the gate — but a parking space becomes a graveyard. Both entries are paid, so it now fails if non-empty. The gate itself was also verified to still catch a new violation: re-adding the old import makes `check:layers` exit 1."
+        "zh": "**方向说明（重要，我不想含糊过去）**：你反馈探针五屏都能滚，我据此判断**样式表整体不是元凶**，并用 `scripts/diagnose_page_scroll.mjs` 独立验证：把构建后的样式表按族剥离（全部 / 去掉 touch-action / 去掉 overscroll / 两者都去掉 / 去掉 position:fixed）分别加载真实应用，**每一族都可滚动**（`scrollHeight=1417 > clientHeight=900`，`scrollTo(200)` 生效）。所以滑动条这条是在**修一个真实但可能不是你所遇症状主因**的缺陷——请刷新后确认是否还有问题。",
+        "en": "**A direction note, because I do not want to be vague about it**: your probe scrolling in all five panes is what tells me the stylesheet as a whole is not the culprit, and I verified that independently with `scripts/diagnose_page_scroll.mjs` — loading the real app with the built stylesheet stripped by family (all / without touch-action / without overscroll / without both / without `position: fixed`) scrolls in **every** variant (`scrollHeight=1417 > clientHeight=900`, `scrol…"
       },
       {
-        "zh": "**反转依赖会引入一个新的静默失败方式**：如果没人回答 loader 的问题，用户保存的自定义曲风就**解析不出来**——在用户看来是「我的曲风不见了」。所以行为在两个方向都被测试钉住：没有 resolver 时返回 null（而不是抛错，抛错会让整个曲风加载失败）；装了 resolver 时正常解析；内置曲风**不会去问 resolver**（这保证常见路径零开销）；resolver 抛错时（IndexedDB 被禁用）退化为「这个自定义曲风不存在」，而不是「所有曲风都加载不了」。",
-        "en": "**Inverting a dependency introduces a new way to fail silently**: if nobody answers the loader's question, a user's saved custom genre stops resolving — which looks to them like their genre has vanished. So the behaviour is pinned in both directions: no resolver returns null rather than throwing (a throw would fail the whole genre load); an installed resolver resolves; built-in genres never consult the resolver, which keeps the common path free; and a resolver that throws (I…"
+        "zh": "**步进网格的滚轮按你建议改成主轴判断**：原来是 `if (e.shiftKey && e.deltaY !== 0) preventDefault()`——对鼠标滚轮+Shift 是对的，但**对触控板完全失明**（两指横滑是 `deltaX` 为主、没有修饰键）。现在：横向位移占优 → 平移网格（不需要 Shift）；纵向占优 → **交给浏览器**，让页面继续滚；网格已经滚到头 → **不拦**。反过来「只要 `deltaY !== 0` 就拦」正是网格吞掉整页纵向滚动的写法，两个方向都有测试钉住。",
+        "en": "**The step grid's wheel handler is axis-aware, as you suggested**: it was `if (e.shiftKey && e.deltaY !== 0) preventDefault()` — right for a mouse wheel with Shift, and **blind to a trackpad**, whose two-finger swipe arrives as `deltaX` with no modifier. Now: horizontal-dominant pans the grid without needing Shift; vertical-dominant is **left to the browser** so the page keeps scrolling; and a grid already scrolled to its end **does not intercept at all**. The mirror-image m…"
       }
     ],
     "truncated": true
