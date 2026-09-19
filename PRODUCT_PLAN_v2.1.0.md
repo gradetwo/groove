@@ -1931,6 +1931,74 @@ const bodyBlock = css.slice(css.indexOf("html,"), css.indexOf("/* Explicitly all
 并额外断言「与改动前字面量 1.15 的偏差 ≤ 0.65 × `HIT_VARIATION_MAX_DECAY`」。
 这样既钉住了「0.65 这个数还在、只是被乘了一个已知系数」，也不会因为它依赖默认位置而变得不可复现。
 
+## G.15 冻结轨道头与步进格子之间的空隙被侵入（v2.0.77 修）
+
+用户报告：**连续播放时，轨道头旁边那块空间里会出现步进格子**，
+「要以刚进入时候轨道头和步进格子那个距离为标准，不能侵入下面这块空间」。
+
+### 实测（1440×900）
+
+布局是：每行一个 flex row，`gap: var(--trk-head-gap)`，第一个子元素是
+`sticky left-0` 的轨道头。**这个 gap 在轨道头的盒子之外**，所以没有任何东西盖住它：
+
+| 状态 | 轨道头右缘 | 格子首列 | 空隙里被画出的格子 |
+|---|---|---|---|
+| 刚进入（`scrollLeft = 0`） | 593px | 609px | **0**（16px 空隙干净） |
+| 播放中（`scrollLeft = 908`） | 593px | — | **8**（每轨一个） |
+| 播放中（`scrollLeft = 2706`） | 593px | — | **8** |
+
+播放时走带条会自动横向滚动以跟随播放头，格子于是**从这个 16px 空隙里穿过去**，
+视觉上就是「轨道头和格子贴在一起了」。标尺（Ruler）的拍号徽章是同样的结构，同样会被穿。
+
+### 修法：给空隙加一块「盖板」
+
+`src/index.css` 新增 `.trk-head-gap-cover`，`TrackRow` 与 `Ruler` 各在 sticky 头之后放一个：
+
+```css
+.trk-head-gap-cover {
+  position: sticky;
+  left: var(--trk-head-w);        /* 钉在轨道头右缘（也正是它的自然位置） */
+  z-index: 30;
+  flex: none;
+  align-self: stretch;
+  width: var(--trk-head-gap);
+  margin-left: calc(-1 * var(--trk-head-gap));   /* 从 header 后面的 gap 里拉回来 */
+  margin-right: calc(-1 * var(--trk-head-gap));  /* 抵消自己引入的 gap，格子位置不变 */
+  background: var(--panel);
+}
+```
+
+两条负 margin 是全部技巧，而且**两条都必需**：`margin-left` 让它正好落在 header 之后的空隙里；
+`margin-right` 抵消它自己会引入的 gap，否则**全app的网格都会右移 16px**。
+背景用 `var(--panel)` 是因为空隙本来透出的就是 `<section>` 的 `bg-panel`，
+所以**静止状态像素级不变**——盖板只在有东西从下面滚过时才起作用。
+实测盖板宽度 16px = 空隙宽度 16px。
+
+### 守卫：`npm run probe:grid-gutter`（已进 `verify`）
+
+`scripts/probe_grid_gutter.mjs` 在真实 Chromium 里播放并**用命中测试（`elementFromPoint`）
+采样每一行的空隙**。两个关键设计：
+
+1. **命中测试，而不是几何**。「格子是否与空隙矩形相交」在滚动时永远是 8 ——
+   它们本来就该从 header 底下滚过去；问题是**有没有被画出来**。
+   这个脚本的第一版就是几何口径，结果它**放过了一个坏构建**并报告「通过」。
+2. **空隙坐标在静止时采集**。报告里的「刚进入时候那个距离」正是标准，
+   所以标准在滚动前量好（`[headerRight, 网格首列)`），之后所有采样都用这组固定坐标；
+   若改成「播放时网格的第一列」，量到的是滚动后的位置，整个检查会退化成同义反复
+   （第一版也犯了这个错）。
+
+3. **`--no-cover` 必须让它失败**，否则它就不是证据：
+
+```
+$ node scripts/probe_grid_gutter.mjs --no-cover
+   at rest      scrollLeft     0   gutter empty
+   playing      scrollLeft   908   54/54 SAMPLES HIT A STEP CELL
+   playing      scrollLeft  2706   54/54 SAMPLES HIT A STEP CELL
+✅ Without the cover the gutter does show step cells (54 samples), so the check bites.
+```
+
+装上盖板之后：三次采样全部 `gutter empty`，命中结果一律是 `trk-head-gap-cover`。
+
 ## G.14 离线导出不可逐位复现：根因是「一个节点上叠加 3 个振荡器」（v2.0.74 修）
 
 ### 起因与最终结论

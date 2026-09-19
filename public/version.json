@@ -1,27 +1,27 @@
 {
-  "version": "2.0.76",
+  "version": "2.0.77",
   "releaseDate": "2026-09-19",
-  "changelogCount": 140,
+  "changelogCount": 141,
   "latest": {
-    "version": "2.0.76",
+    "version": "2.0.77",
     "date": "2026-09-19",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.76 工具条瘦身：36 → 16 个控件、215 → 111px，并修掉它暴露出的「密度里的控件点不动」",
-      "en": "v2.0.76 The Toolbar Slims Down: 36 -> 16 Controls, 215 -> 111 px, and the Click-Swallowing Bug It Exposed"
+      "zh": "v2.0.77 播放时步进格子不再侵入轨道头旁边那块空隙（附一个能失败的守卫）",
+      "en": "v2.0.77 Step Cells Stop Intruding Into the Gutter Beside the Track Headers (With a Guard That Can Fail)"
     },
     "highlights": [
       {
-        "zh": "**把早就写好、却一直没接线的分层表接上。** `toolbarTiers.ts` 早已登记 55 个控件的使用频率（Tier 1 常驻 12 个，硬上限 14），但 Toolbar 从来不看它。现在加一个谓词 `isControlVisible(id, showAdvanced)`，Toolbar 里定义一次 `shows`、13 处沿用。实测（`npm run probe:toolbar`，1440×900）：**可见控件 36 → 16 个元素、去重后 12 个 tier id；视觉行数 4 → 2；高度 215 → 111px；占视口 23.9% → 12.3%；默认可见的 Tier 2/3 控件 24 → 0。**",
-        "en": "**The tier table existed and nothing read it.** `toolbarTiers.ts` already recorded the frequency of 55 controls (12 always-visible Tier 1, hard cap 14), but the Toolbar never consulted it. There is now one predicate — `isControlVisible(id, showAdvanced)` — and one `shows` defined in the Toolbar and used in 13 places. Measured with `npm run probe:toolbar` at 1440x900: **visible controls 36 -> 16 elements (12 distinct tier ids); visual rows 4 -> 2; height 215 -> 111 px; 23.9%…"
+        "zh": "**问题（用户报告）**：连续播放时，轨道头旁边那块空间里会出现步进格子。每行是一个 flex row，`gap: var(--trk-head-gap)`，第一个子元素是 `sticky left-0` 的轨道头——**这个 gap 在轨道头的盒子之外，没有任何东西盖住它**。刚进入时格子首列在 609px、轨道头右缘在 593px（16px 干净空隙）；一旦播放自动横滚跟随播放头，格子就从这个空隙里穿过去，看起来像轨道头和网格贴在一起。实测：**静止时空隙里 0 个格子，播放中 8 个（每轨一个）**。标尺的拍号徽章是同样的结构，同样会被穿。",
+        "en": "**Reported by the user**: while it keeps playing, step cells appear in the space beside the track headers. Each row is a flex row with `gap: var(--trk-head-gap)` whose first child is a `sticky left-0` header — **the gap is outside the header's box, so nothing is painted over it**. On first entry the grid's first column is at 609 px and the header's right edge at 593 px (a clean 16 px gutter); once playback auto-scrolls to follow the playhead the cells slide straight through…"
       },
       {
-        "zh": "**顺带修掉一个真缺陷：高级面板的入口在最常见的桌面宽度下根本不在屏幕上。** 实测：1280 与 1440 宽下，Fold / 高级 / More 三个触发按钮被横向挤到 `left≈1565`——**在窗口右边缘之外**，而它们所在的容器是 `overflow-x-auto scrollbar-none`，**连滚动条都不显示**。所以这个入口实际不可发现，Tier 3 的 FX、量化细调、触感全部连带不可达。控件瘦下来之后它回到 `left=845`。探针现在每次都会打印这一行。",
-        "en": "**A real defect fixed on the way: the advanced panel's own entry point was off-screen at the most common desktop widths.** Measured at 1280 and 1440: the Fold / Advanced / More triggers were pushed to `left ~ 1565`, **past the right edge of the window**, inside an `overflow-x-auto scrollbar-none` container — **with no scrollbar shown either**. The entry to the advanced panel was undiscoverable, and everything Tier 3 behind it (FX, fine quantisation, haptics) was unreachable…"
+        "zh": "**修法**：`src/index.css` 新增 `.trk-head-gap-cover`，`TrackRow` 与 `Ruler` 各在 sticky 头之后放一块。它 `sticky left: var(--trk-head-w)`（钉在轨道头右缘，也正是自然位置），宽度等于空隙，背景 `var(--panel)`——空隙本来透出的就是面板色，所以**静止状态像素级不变**。两条负 margin 是全部技巧且都必需：`margin-left` 让它落在 header 之后的空隙里，`margin-right` 抵消它自己引入的 gap，否则**全 app 的网格都会右移 16px**。实测盖板宽度 16px = 空隙宽度 16px。",
+        "en": "**The fix**: a new `.trk-head-gap-cover` in `src/index.css`, added after the sticky header in both `TrackRow` and `Ruler`. It is `sticky left: var(--trk-head-w)` (pinned to the header's right edge, which is also its natural position), as wide as the gutter, with `background: var(--panel)` — which is what the gutter already showed through to, so **the resting layout is pixel-identical**. Two negative margins are the whole trick and both are needed: `margin-left` puts it in th…"
       },
       {
-        "zh": "**接线的方式比原计划更省风险。** 原计划第一步是把 1889 行的 `Toolbar.tsx` 拆成四个组件。实际发现这些控件**本来就已经各自包在条件表达式里**，所以接线是「在既有条件后面追加一个 `shows(\"id\")`」——纯字符串替换、每处断言锚点唯一，而不是插入新的包裹层（脚本化的包裹层会撞上这些既有条件，我实测撞了一次并回退）。真正需要新包裹的只有三处，且都是整组同 tier；测试断言「这一组 tier 相同」，以保证那个 gate 始终描述它所挡住的东西。",
-        "en": "**The wiring took a lower-risk route than the plan's.** Step one was going to split the 1,889-line `Toolbar.tsx` into four components. In practice these controls **already sit inside their own conditional expressions**, so the gate is a `shows(\"id\")` appended to an existing condition — a pure string substitution with a uniqueness assertion per anchor, not a new wrapper layer. (A scripted wrapper collided with exactly those conditions; I hit it once and reverted.) Only three…"
+        "zh": "**守卫，以及它第一版为什么是错的。** `scripts/probe_grid_gutter.mjs`（`npm run probe:grid-gutter`，已进 `verify`）在真实 Chromium 里播放并采样每一行的空隙。两个设计要点：① **用命中测试而不是几何**——「格子是否与空隙矩形相交」在滚动时永远是 8，它们本来就该从 header 底下滚过去，问题是有没有被画出来；**第一版正是几何口径，因此放过了一个坏构建并报告通过**。② **空隙坐标在静止时采集**——报告说的「刚进入时候那个距离」就是标准，改成「播放时网格的第一列」量到的是滚动后的位置，整个检查退化成同义反复（第一版也犯了这个错）。另外 `--no-cover` 必须让它失败，否则它不算证据：实测去掉盖板后 **54/54 采样命中步进格子**，装上后三次采样全部 `gutter empty`。",
+        "en": "**The guard — and why its first version was wrong.** `scripts/probe_grid_gutter.mjs` (`npm run probe:grid-gutter`, wired into `verify`) plays the pattern in real Chromium and samples each row's gutter. Two things matter: (1) **it is a hit test, not geometry** — \"do cells intersect the gutter rectangle\" is always 8 while scrolling, because cells are *supposed* to pass under the header; the question is whether any is visible, and **the first version used geometry, passed a bro…"
       }
     ],
     "truncated": true
