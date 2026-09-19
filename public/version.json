@@ -1,27 +1,27 @@
 {
-  "version": "2.0.70",
+  "version": "2.0.71",
   "releaseDate": "2026-09-19",
-  "changelogCount": 134,
+  "changelogCount": 135,
   "latest": {
-    "version": "2.0.70",
+    "version": "2.0.71",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "refactor",
     "title": {
-      "zh": "v2.0.70 滑动条不再吞掉整页滚动；步进网格的滚轮改为按主轴方向判断",
-      "en": "v2.0.70 Sliders Stop Swallowing Page Scrolling, and the Step Grid's Wheel Handler Becomes Axis-Aware"
+      "zh": "v2.0.71 抽出 useEffectsRack：效果器架的状态与撤销联动不再写在视图里",
+      "en": "v2.0.71 Extracting useEffectsRack: the FX Rack's State and Undo Coupling Leave the View"
     },
     "highlights": [
       {
-        "zh": "**`input[type=range]` 上的 `touch-action: none` 改成了 `pan-y`**。`none` 意味着**从滑动条上开始的任何手势都无法滚动页面**，而工作台里渲染了 **22 个**滑动条（每轨音量与声像、送出、Swing、速度、插入级、调音台），这些「手势死区」因此铺满整个界面——这正是「页面某些区域双指滚动失效」的形状。这是本次唯一确定能解释该症状的规则。",
-        "en": "**`touch-action: none` on `input[type=range]` became `pan-y`.** `none` meant that **any gesture starting over a slider could not pan the page at all**, and the studio renders **22** of them (per-track volume and pan, sends, swing, tempo, insert stages, mixer), so those gesture dead zones were spread across the whole surface — which is exactly the shape of \"two-finger scrolling stops working over parts of the page\". This is the one rule found that genuinely explains that symp…"
+        "zh": "**为什么效果器架不是普通 `useState`**：每个消费方都接受一个 React setter，所以它必须留在 React state 里（否则所有调用点都要改）；但**它同时属于 pattern，必须进撤销栈**。以前没有这层联动时，Ctrl+Z 会把音符回滚而把效果改动留在原地——**半撤销比不能撤销更糟**，因为它看起来像是成功了。",
+        "en": "**Why the FX rack is not a plain `useState`**: every consumer takes a React setter, so it has to stay in React state (or every call site changes) — but **it also lives inside the pattern, so it must be in the undo stack**. Before that coupling existed, Ctrl+Z rolled the notes back and left the FX change in place: a **half-undo, which is worse than no undo** because it looks like it worked."
       },
       {
-        "zh": "**方向说明（重要，我不想含糊过去）**：你反馈探针五屏都能滚，我据此判断**样式表整体不是元凶**，并用 `scripts/diagnose_page_scroll.mjs` 独立验证：把构建后的样式表按族剥离（全部 / 去掉 touch-action / 去掉 overscroll / 两者都去掉 / 去掉 position:fixed）分别加载真实应用，**每一族都可滚动**（`scrollHeight=1417 > clientHeight=900`，`scrollTo(200)` 生效）。所以滑动条这条是在**修一个真实但可能不是你所遇症状主因**的缺陷——请刷新后确认是否还有问题。",
-        "en": "**A direction note, because I do not want to be vague about it**: your probe scrolling in all five panes is what tells me the stylesheet as a whole is not the culprit, and I verified that independently with `scripts/diagnose_page_scroll.mjs` — loading the real app with the built stylesheet stripped by family (all / without touch-action / without overscroll / without both / without `position: fixed`) scrolls in **every** variant (`scrollHeight=1417 > clientHeight=900`, `scrol…"
+        "zh": "**两个隐患被收进 hook，不再散在调用点**：① **在 state updater 里提交是副作用**，而 React 可能把它跑两次（StrictMode），一次改动会压入两条历史——表现为「第一次 Ctrl+Z 好像没反应」。所以下一个值从 ref 计算，不在 updater 里提交。② **历史会在界面底下移动**：撤销/重做把另一个 rack 放回 store 时，本地状态必须跟随，否则面板显示旧 rack、下一次编辑从错误的基础上提交。同时，**没发生恢复时绝不能覆盖用户的本地编辑**——否则控件会在手指底下弹回去。",
+        "en": "**Two hazards are handled inside the hook instead of at each call site**: (1) **committing from inside a state updater is a side effect React may run twice** (StrictMode double-invokes updaters), so one change could push two history entries — which presents as \"the first Ctrl+Z did nothing\". The next value is therefore computed from a ref, not committed inside the updater. (2) **History moves underneath the UI**: when a restore puts a different rack back in the store, the lo…"
       },
       {
-        "zh": "**步进网格的滚轮按你建议改成主轴判断**：原来是 `if (e.shiftKey && e.deltaY !== 0) preventDefault()`——对鼠标滚轮+Shift 是对的，但**对触控板完全失明**（两指横滑是 `deltaX` 为主、没有修饰键）。现在：横向位移占优 → 平移网格（不需要 Shift）；纵向占优 → **交给浏览器**，让页面继续滚；网格已经滚到头 → **不拦**。反过来「只要 `deltaY !== 0` 就拦」正是网格吞掉整页纵向滚动的写法，两个方向都有测试钉住。",
-        "en": "**The step grid's wheel handler is axis-aware, as you suggested**: it was `if (e.shiftKey && e.deltaY !== 0) preventDefault()` — right for a mouse wheel with Shift, and **blind to a trackpad**, whose two-finger swipe arrives as `deltaX` with no modifier. Now: horizontal-dominant pans the grid without needing Shift; vertical-dominant is **left to the browser** so the page keeps scrolling; and a grid already scrolled to its end **does not intercept at all**. The mirror-image m…"
+        "zh": "**测试钉住的是隐患，而不是「它能存一个值」**：一次改动只提交一次（用 updater 形式，正是过去危险的形状）；同一 tick 内的两次改动会**复合**而不是都从旧值出发；十次连续改动**只用一个历史键**（拖一次滑块 = 一次撤销）；历史恢复后界面跟随；以及**没有恢复时本地编辑必须存活**。",
+        "en": "**The tests pin the hazards, not \"it can store a value\"**: one change commits once (passing an updater, which is the shape that used to be dangerous); two changes in one tick **compose** rather than both starting from the old value; ten consecutive changes use **one history key** (a slider drag is one undo step); the UI follows a restored rack; and a **local edit survives** when no restore happened."
       }
     ],
     "truncated": true

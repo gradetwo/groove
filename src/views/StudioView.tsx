@@ -2,7 +2,6 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from "react"
 import { Keyboard, Play, Square } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
-import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { loadKeyboardFabPref } from "../features/sequencer/keyboardFabPref";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
@@ -56,6 +55,7 @@ import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { calculateGroupSize, calculateStepsPerBar } from "../utils/meter";
 import { getDefaultDrumKitForGenre } from "../utils/trackUtils";
 import { useAuditionPreview } from "../features/sequencer/hooks/useAuditionPreview";
+import { useEffectsRack } from "../features/sequencer/hooks/useEffectsRack";
 
 // A-02: the track colour/name mapping moved to components/sequencer/trackConfig.
 // Re-exported here so this module's public surface is unchanged.
@@ -223,42 +223,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [drumKit, setDrumKit] = useState<DrumKitType>(() => getDefaultDrumKitForGenre(currentGenre));
   const [isDrumsOnly, setIsDrumsOnly] = useState<boolean>(false);
   const [isRecordArmed, setIsRecordArmed] = useState<boolean>(false);
-  const [effectsRackState, setEffectsRackStateLocal] = useState<EffectsRackState>(DEFAULT_FX_STATE);
 
   /**
-   * D-03: FX changes participate in the undo stack.
+   * D-03 — the master FX rack is local UI state *and* part of the undo history.
    *
-   * The local state stays the UI's source of truth — every consumer already takes a React
-   * setter — and each change is mirrored into the store so Ctrl+Z rolls the rack back
-   * together with the notes. Before this, undo restored the pattern while leaving an FX
-   * change in place: a half-undo, which is worse than none.
-   *
-   * The next value is computed from a ref rather than inside a state updater, because
-   * committing from inside an updater is a side effect React may run twice in StrictMode.
+   * Extracted to `useEffectsRack`: it is not a plain `useState`, because every consumer takes a
+   * React setter while the rack must also live in the pattern so Ctrl+Z rolls it back with the
+   * notes. The two hazards — committing inside a state updater (which StrictMode double-runs) and
+   * history restoring a rack underneath the UI — are handled in one place instead of at each call
+   * site. See the hook for the full reasoning.
    */
-  const effectsRackRef = useRef(effectsRackState);
-  effectsRackRef.current = effectsRackState;
-  const setEffectsRackState = useCallback<React.Dispatch<React.SetStateAction<EffectsRackState>>>(
-    (action) => {
-      const prev = effectsRackRef.current;
-      const next = typeof action === "function" ? action(prev) : action;
-      effectsRackRef.current = next;
-      setEffectsRackStateLocal(next);
-      // Coalesced under one key, so dragging a slider is one history entry rather than
-      // one per frame.
-      commitCoalesced({ type: "SET_EFFECTS_RACK", effectsRack: next }, "fx");
-    },
-    [commitCoalesced]
-  );
-
-  // ...and when history restores a rack, the UI follows it.
-  const storedEffectsRack = seqState.effectsRack;
-  useEffect(() => {
-    if (storedEffectsRack && storedEffectsRack !== effectsRackRef.current) {
-      effectsRackRef.current = storedEffectsRack;
-      setEffectsRackStateLocal(storedEffectsRack);
-    }
-  }, [storedEffectsRack]);
+  const { effectsRackState, setEffectsRackState, effectsRackRef } = useEffectsRack({
+    storedRack: seqState.effectsRack,
+    commitCoalesced,
+  });
 
   // Multi-Project Hub State (P7-02)
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
