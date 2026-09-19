@@ -1,6 +1,6 @@
 # GROOVE LAB 下一阶段演进与完善规划（v2.0 路线图）
 
-> **当前基线**：v2.0.94（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
+> **当前基线**：v2.0.95（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
 > **交付状态（E-09 复核，2026-09-14）**：Phase 0–6 已交付；**Phase 7** 交付 P7-01 / P7-02 / P7-03，**P7-04 未交付**；**Phase 8** 仅交付 P8-01，**P8-02 / P8-03 未交付**。逐项证据见下方各阶段状态说明与 `BACKLOG.md`。
 > **核心定位**：从「世界音乐曲风学习库」向「**专业级 Web 律动工作站与交互式乐理工作坊（Web-Native Groove Workstation & Interactive Musicology Suite）**」全面跨越。
 

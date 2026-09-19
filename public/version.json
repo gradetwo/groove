@@ -1,27 +1,27 @@
 {
-  "version": "2.0.94",
+  "version": "2.0.95",
   "releaseDate": "2026-09-19",
-  "changelogCount": 158,
+  "changelogCount": 159,
   "latest": {
-    "version": "2.0.94",
+    "version": "2.0.95",
     "date": "2026-09-19",
     "category": "audio",
     "title": {
-      "zh": "v2.0.94 带独立 swing 的轨道不再比别的轨道早一个延迟补偿量",
-      "en": "v2.0.94 A Track With Its Own Swing No Longer Fires a Latency Offset Early"
+      "zh": "v2.0.95 限幅器的前瞻窗口不再每样本全扫一遍",
+      "en": "v2.0.95 The Limiter's Lookahead Window No Longer Scans Every Sample"
     },
     "highlights": [
       {
-        "zh": "**逐轨 swing 那条分支自己重建了时间，于是丢掉了两样东西。** 计划里只写了丢掉 `latencyCompensationMs`，实际连「不得早于 `currentTime`」的钳位一起丢了。结果是：带独立 swing 的轨道比其它轨道**整整早一个补偿量**，也比它自己的导出早（导出是离线渲染，没有输出延迟可补，本来就不该有这一项）。",
-        "en": "**The per-track swing branch rebuilt the scheduled time from scratch and dropped two things.** The plan named only the lost `latencyCompensationMs`; the `>= currentTime` clamp went with it. A track with independent swing therefore fired a full compensation ahead of every other track — and ahead of its own export, which is an offline render with no output latency to compensate in the first place."
+        "zh": "**限幅器的滑窗最小值原来是每样本扫 145 次（D=144 @3 ms/48 kHz），而且它在渲染线程里。** 现在是一个**单调队列**：队首就是窗口最小值，O(1) 读出，每个样本入队一次、出队至多一次。**输出逐位不变**——入队时值先过 `Math.fround`，正是旧代码写进 `Float32Array` 时发生的转换，所以「选中的最小值」和旧扫描完全一致。",
+        "en": "**The limiter's sliding-window minimum used to compare 145 values per sample (D = 144 at 3 ms/48 kHz), on the render thread.** It is now a **monotonic deque**: the smallest value in the window sits at the front and is read in O(1), each sample is pushed once and popped at most once. **The output is bit-identical** — values enter through `Math.fround`, exactly the conversion the old `Float32Array` window applied on write, so the minimum that gets chosen is the same one the sc…"
       },
       {
-        "zh": "**修法只有一句：这个分支里只有 swing 项允许不同。** 延迟补偿与钳位照抄调用方的语义，另加一个局部 `ctx` 收窄（`this.ctx` 在回调里会重新变宽成 nullable）。",
-        "en": "**The fix is one expression: only the swing term may differ here.** The latency offset and the clamp now mirror what the caller already folded into `time`, plus a local `ctx` narrowing because `this.ctx` widens back to nullable inside the callback."
+        "zh": "**实测工作量**（把窗口这一步单独拿出来跑，因为改动只在它）：4,410,000 样本、窗口 145，比较次数 **639,450,000 → 8,549,300**（145.0 → **1.939/样本**），该步耗时 **2126 ms → 127 ms**，校验和一致。这是窗口步的数字，不是整条限幅链的加速比——4×12 抽头的真峰卷积没动。",
+        "en": "**Measured work** (the window step alone, since that is all that changed): over 4,410,000 samples with a 145-sample window, comparisons fall from **639,450,000 to 8,549,300** (145.0 → **1.939 per sample**) and the step's time from **2126 ms to 127 ms**, with identical checksums. That is the window step, not the whole limiter — the 4×12-tap true-peak convolution is untouched."
       },
       {
-        "zh": "**动手前先逐行核对了 M 表，14 行里 4 行写的缺陷早就不存在了**：M2（母带 DRIVE 硬削波）、M6（推子阶跃）、M7（延迟反馈阶跃）、M10（实时 ratchet 未夹取）都已修过，行号也全都过期。已在计划里逐条标注。顺手把实时路径里**复制的那份**副拍力度渐变换成共享的 `ratchetVelocityScale`——公式一样，改的是「同一件事只留一份」。",
-        "en": "**The M table was audited line by line before touching anything: four of its fourteen rows described defects that no longer exist** — M2 (master DRIVE hard clip), M6 (fader stepping), M7 (delay feedback stepping) and M10 (unclamped live ratchet) were all already fixed, and every line reference had drifted. Each row now says so. The live path also stopped carrying its own copy of the sub-hit velocity taper and calls the shared `ratchetVelocityScale` instead: same formula, one…"
+        "zh": "**两份实现都改了，因为真正的实时限幅器不是 TypeScript 那份**：`public/limiterWorklet.js` 是逐行镜像（`src/**` 进不了音频线程），只改内核等于没优化生产路径。两道防线：原有的 worklet 对拍测试（逐字执行 shipped 源码、断言两份 sample-identical）只改一份就会红；另加一条**源码守卫**要求两边都用队列、都不再有每样本扫描。源码级断言是故意的——输出已经无法区分两种实现，「扫描被重新引入」在行为上永远测不出来。",
+        "en": "**Both copies changed, because the realtime limiter is not the TypeScript one**: `public/limiterWorklet.js` is a line-for-line mirror (`src/**` cannot reach the audio thread), so fixing only the kernel would leave production unoptimised. Two guards: the existing worklet parity test (it evaluates the shipped source verbatim and asserts the two are sample-identical) fails if only one side changes, and a new **source guard** requires the deque in both files and no per-sample sc…"
       }
     ],
     "truncated": true
