@@ -494,6 +494,13 @@ export const studioMessages = {
   settings_replay_onboarding: { en: "Replay the new-user guide", zh: "重看新手引导" },
   // U5: the sequencer toolbar had no way into the help centre.
   toolbar_help_title: { en: "Help for this screen", zh: "本页帮助" },
+
+  // U8: the studio auto-saves 500 ms after every change; say so.
+  save_indicator_saving: { en: "Saving…", zh: "保存中…" },
+  save_indicator_saved: { en: "Saved", zh: "已保存" },
+  save_indicator_failed: { en: "Not saved", zh: "保存失败" },
+  save_indicator_saved_at: { en: "Saved to this browser at {time}", zh: "已保存到本浏览器（{time}）" },
+  save_indicator_local_only: { en: "Saved in this browser only — export to keep a copy", zh: "仅保存在本浏览器——要留副本请导出" },
   toolbar_group_help_label: { en: "Help", zh: "帮助" },
 
   // U1: the first screen's single action, shown until playback has happened once.
