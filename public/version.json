@@ -1,27 +1,27 @@
 {
-  "version": "2.0.90",
+  "version": "2.0.91",
   "releaseDate": "2026-09-19",
-  "changelogCount": 154,
+  "changelogCount": 155,
   "latest": {
-    "version": "2.0.90",
+    "version": "2.0.91",
     "date": "2026-09-19",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.90 自动保存终于看得见：保存中／已保存／保存失败",
-      "en": "v2.0.90 The Auto-Save Is Visible Now: Saving, Saved, or Refused"
+      "zh": "v2.0.91 界面文字读不清的问题，现在有一条会失败的检查",
+      "en": "v2.0.91 Unreadable UI Text Now Fails the Build"
     },
     "highlights": [
       {
-        "zh": "**项目每次改动后 500 ms 就被写进 localStorage，而工作台从不告诉用户。** 反倒是「曲风制作器」一直有一个 `● 未保存修改` 徽标。于是用户分不清「已保存」和「只活在内存里」。现在工作台显示**保存中…／已保存／保存失败**三态。",
-        "en": "**The project has always been written to localStorage 500 ms after every change, and the studio never said so** — while the genre maker has shown an `● unsaved` badge all along. There was no way to tell a saved project from one living only in memory. The studio now shows **Saving… / Saved / Not saved**."
+        "zh": "**全量扫了一遍 `src/` 里 66 个硬编码文字色**，逐个按 `--panel #121317` 算 WCAG 对比度：10 个低于 3:1，再 8 个低于 4.5:1 的正文线。计划里点名的只有其中两处。**52 处、11 个文件**换成早就存在的 `text-dim` 语义色，另把四处彩色胶囊调过线（红/粉底 `#ff5964`、`#ec4899`，以及钢琴卷帘黑键上的音名）。",
+        "en": "**Swept all 66 hard-coded text colours in `src/`** and measured each against `--panel #121317`: 10 fell below 3:1 and 8 more below the 4.5:1 body-text line. The plan named two of them. **52 occurrences across 11 files** moved onto the `text-dim` token that already existed, and four tinted chips were adjusted to clear the floor (the red/pink `#ff5964` and `#ec4899` fills, and the piano roll's black-key pitch names)."
       },
       {
-        "zh": "**状态由写盘的那个模块拥有。** `projectStorage` 是唯一知道写入是否成功的模块，所以状态归它、界面只订阅——另建一套记账迟早会和事实不一致。「保存中」的含义是「改动还在 debounce 里排队」，不是「字节在飞」，文案就按这个事实写。**`保存失败` 是刻意加的一态**：localStorage 写满或被禁用会抛异常，而旧代码只打了条日志——没有这一态，指示器会在用户的作品**并不安全**时永远显示「保存中…」。",
-        "en": "**The status is owned by the module that writes.** `projectStorage` is the only place that knows whether a write succeeded, so it owns the status and the UI only subscribes — parallel bookkeeping would eventually disagree with reality. \"Saving\" means a change is waiting on the debounce, not that bytes are in flight, and the copy says exactly that. **\"Not saved\" is a deliberate third state**: localStorage throws when full or disabled and the old code only logged it, so withou…"
+        "zh": "**新增 `readabilityAudit.test.ts`**：读源码找出每一个 `text-[#hex]`，按它自己那条 class 串里声明的背景算对比度，低于 4.5:1 就报出**引入它的那一行**和比值。毫秒级，不截图。把 `#4a4e58` 写回项目里任意一个文件，实测失败并报出 `2.23:1`。",
+        "en": "**New `readabilityAudit.test.ts`**: it reads the source, takes every `text-[#hex]`, resolves the background its own class string declares, and reports **the line that introduced it** when the ratio is under 4.5:1. Milliseconds, no screenshots. Writing `#4a4e58` back into any file in the project fails it with `2.23:1`."
       },
       {
-        "zh": "**它也说清楚存在哪。** 悬浮提示写「已保存到本浏览器（HH:MM）」与「仅保存在本浏览器——要留副本请导出」：对勾不能暗示云备份，因为并没有云。状态用 `role=\"status\"` + `aria-live=\"polite\"`——这份安心对读屏用户同样要有。订阅用 `useSyncExternalStore`（状态在 React 之外变化，debounce 在用户看屏幕时到点），快照对象只在变化时换新。",
-        "en": "**It also says where.** The tooltip reads \"Saved to this browser at HH:MM\" and \"Saved in this browser only — export to keep a copy\": a checkmark must not imply a cloud backup, because there is no cloud. The state is a `role=\"status\"` live region, because the reassurance matters to a screen reader too. The subscription uses `useSyncExternalStore` (the status changes outside React — the debounce fires while the user is reading the screen) with a snapshot that is only replaced…"
+        "zh": "**扫描器补上了两件容易搞错的事**：带变体的字色（`group-hover:text-[#0a0b0d]`）只对**同变体**的背景负责，否则正确的悬停镂空会被报成隐形字；半透明底要先**合成**再算（`bg-white/[0.06]`、`bg-[#ec4899]/20`，而且 Tailwind 的透明度有 `/20`、`/[0.06]`、`/[6%]` 三种写法）。时间线上那个「6% 白胶囊里的灰字」曾被我误报，它真实是 5.23:1。",
+        "en": "**The scanner learned the two things it had wrong**: a variant-gated ink (`group-hover:text-[#0a0b0d]`) answers only to that same variant's surface — otherwise a correct hover knockout reads as invisible text; and a translucent surface has to be **composited** before measuring (`bg-white/[0.06]`, `bg-[#ec4899]/20`, in all three Tailwind alpha spellings). The timeline's grey-on-6%-white chip was a false alarm of mine: it really is 5.23:1."
       }
     ],
     "truncated": true
