@@ -38,6 +38,7 @@ import {
   type StepContextMenuState,
 } from "../features/sequencer/hooks/useTransportShortcuts";
 import { useExportActions } from "../features/sequencer/hooks/useExportActions";
+import { useInitialAutoPlay } from "../features/sequencer/hooks/useInitialAutoPlay";
 import { useProjectHub } from "../features/sequencer/hooks/useProjectHub";
 import { useMidiInput } from "../features/sequencer/hooks/useMidiInput";
 import { useInitialPatternLoad } from "../features/sequencer/hooks/useInitialPatternLoad";
@@ -91,6 +92,12 @@ interface StudioViewProps {
   initialMasterclassPattern?: { pattern: SequencerPattern; label?: string } | null;
   onClearInitialMasterclassPattern?: () => void;
   initialOpenPianoRollTrack?: number | string | null;
+  /**
+   * U2: the new-user guide's first slide offers one action — hear the current genre — and hands the
+   * request over before this view mounts. See `useInitialAutoPlay`.
+   */
+  initialAutoPlay?: boolean;
+  onClearInitialAutoPlay?: () => void;
   onClearInitialOpenPianoRollTrack?: () => void;
 }
 
@@ -113,6 +120,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onClearInitialMasterclassPattern,
   initialOpenPianoRollTrack,
   onClearInitialOpenPianoRollTrack,
+  initialAutoPlay,
+  onClearInitialAutoPlay,
 }) => {
   const { t, language, isZh } = useLanguage();
 
@@ -362,7 +371,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // P5-05 live-recording bridge + AudioEngine lifecycle (A-02)
   const { handleQuantizedStep } = useLiveRecordingBridge({ invalidateRedo, dispatch });
-  const { clearPlayhead } = useAudioEngineLifecycle({
+  const { clearPlayhead, engineReady } = useAudioEngineLifecycle({
     engineRef,
     matrixContainerRef,
     playheadBeamRef,
@@ -494,6 +503,17 @@ export const StudioView: React.FC<StudioViewProps> = ({
     commit,
     engineRef,
     patternRef,
+  });
+
+  /**
+   * U2: consume a pending "play as soon as you can" request from the new-user guide's first slide.
+   * Mounted here because this is where the engine and the transport both exist.
+   */
+  useInitialAutoPlay({
+    requested: Boolean(initialAutoPlay),
+    ready: engineReady,
+    play: handleTogglePlay,
+    onConsumed: () => onClearInitialAutoPlay?.(),
   });
 
   // Boot-time `?groove=` / `?genre=` load (A-02)

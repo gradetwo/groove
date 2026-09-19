@@ -81,6 +81,20 @@ const renderPanel = (engine: AudioEngine, props: Partial<React.ComponentProps<ty
     />
   );
 
+describe("SettingsModal · the new-user guide can be replayed (U2)", () => {
+  it("calls the host's replay callback from the About tab", () => {
+    // A guide that can be dismissed without being finished needs a way back; clearing site data is
+    // not a remedy a user can be expected to find.
+    const onReplayOnboarding = vi.fn();
+    // Open straight to About: the audio tab needs a fuller engine double than this case is about.
+    renderPanel(makeEngine() as unknown as AudioEngine, { onReplayOnboarding, initialTab: "about" });
+
+    fireEvent.click(screen.getByTestId("settings-about-replay-onboarding"));
+
+    expect(onReplayOnboarding).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("SettingsModal (audio tab)", () => {
   beforeEach(() => {
     localStorage.clear();

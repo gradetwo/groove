@@ -491,6 +491,7 @@ export const studioMessages = {
     en: "pattern too short — only {placed} of {total} chords placed",
     zh: "小节太短 — 只放得下 {placed}/{total} 个和弦",
   },
+  settings_replay_onboarding: { en: "Replay the new-user guide", zh: "重看新手引导" },
   roll_preview_start: { en: "Play lane", zh: "试听本轨" },
   roll_preview_stop: { en: "Stop", zh: "停止" },
   roll_preview_start_hint: {

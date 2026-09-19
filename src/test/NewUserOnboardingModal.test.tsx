@@ -5,6 +5,11 @@ import {
   ONBOARDING_COMPLETED_KEY,
 } from "../components/help/NewUserOnboardingModal";
 import { LanguageProvider } from "../i18n/LanguageContext";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const SRC = resolve(__dirname, "..");
+const read = (relative: string) => readFileSync(resolve(SRC, relative), "utf8");
 
 beforeEach(() => {
   localStorage.clear();
@@ -79,5 +84,56 @@ describe("NewUserOnboardingModal · Interactive Walkthrough", () => {
 
     expect(handleClose).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(ONBOARDING_COMPLETED_KEY)).toBe("true");
+  });
+
+  /**
+   * U2: **dismissing the overlay is not finishing the guide.**
+   *
+   * `Modal`'s `onClose` fires for Escape and for a click on the mask, and it used to be wired
+   * straight to the "completed" flag — so one stray click outside the card made the first-run guide
+   * disappear permanently, for exactly the users who had not read it. Only the explicit Skip button
+   * and the last slide's actions may record completion now.
+   */
+  it("does not record completion when the overlay is dismissed", () => {
+    const handleClose = vi.fn();
+    renderOnboarding({ onClose: handleClose });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(handleClose).toHaveBeenCalled();
+    expect(localStorage.getItem(ONBOARDING_COMPLETED_KEY)).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("Close modal"));
+    expect(localStorage.getItem(ONBOARDING_COMPLETED_KEY)).toBeNull();
+  });
+
+  it("offers its single action on the first slide, without recording completion", () => {
+    // The point of U2: one click from the first screen to a sound, instead of seven slides of list.
+    const handleAudition = vi.fn();
+    const handleClose = vi.fn();
+    renderOnboarding({ onAudition: handleAudition, onClose: handleClose });
+
+    expect(screen.getByText("1 / 7")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("onboarding-listen-btn"));
+
+    expect(handleClose).toHaveBeenCalledTimes(1);
+    expect(handleAudition).toHaveBeenCalledTimes(1);
+    // Hearing the groove is not finishing the guide: it comes back, and Settings can replay it.
+    expect(localStorage.getItem(ONBOARDING_COMPLETED_KEY)).toBeNull();
+  });
+
+  it("is wired from App into the studio's auto-play and the settings replay entry", () => {
+    // Wiring, not behaviour: the hook's own suite covers what happens once the request arrives, and a
+    // correct hook wired to nothing is indistinguishable from no feature at all (the argument
+    // `genreInsertWiring.test.ts` makes for its own call sites).
+    const app = read("App.tsx");
+    expect(app).toMatch(/onAudition=\{\(\) => \{[\s\S]*?setInitialAutoPlay\(true\)/);
+    expect(app).toContain("initialAutoPlay={initialAutoPlay}");
+    expect(app).toContain("onClearInitialAutoPlay={() => setInitialAutoPlay(false)}");
+    expect(app).toMatch(/onReplayOnboarding=\{\(\) => \{/);
+    expect(app).toContain("localStorage.removeItem(ONBOARDING_COMPLETED_KEY)");
+
+    const studio = read("views/StudioView.tsx");
+    expect(studio).toContain("useInitialAutoPlay({");
+    expect(studio).toContain("ready: engineReady");
   });
 });

@@ -134,6 +134,11 @@ const MainApp: React.FC = () => {
     label: string;
   } | null>(null);
   const [initialOpenPianoRollTrack, setInitialOpenPianoRollTrack] = useState<number | string | null>(null);
+  /**
+   * U2: the new-user guide's first slide offers one action — hear the current genre. It sets this and
+   * switches to the studio; `StudioView` consumes it once its engine exists (`useInitialAutoPlay`).
+   */
+  const [initialAutoPlay, setInitialAutoPlay] = useState(false);
 
   const handleOpenHelp = useCallback((category?: string) => {
     setHelpCategory(category as HelpCategory | undefined);
@@ -372,6 +377,8 @@ const MainApp: React.FC = () => {
                     onClearInitialMasterclassPattern={() => setInitialMasterclassPattern(null)}
                     initialOpenPianoRollTrack={initialOpenPianoRollTrack}
                     onClearInitialOpenPianoRollTrack={() => setInitialOpenPianoRollTrack(null)}
+                    initialAutoPlay={initialAutoPlay}
+                    onClearInitialAutoPlay={() => setInitialAutoPlay(false)}
                   />
                 ) : (
                   <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 min-h-[100dvh]">
@@ -758,6 +765,17 @@ const MainApp: React.FC = () => {
           setOnboardingOpen(false);
           handleSelectTab("studio");
         }}
+        /**
+         * U2: the guide's single action. One click gets the user to a sound: switch to the studio and
+         * ask it to play as soon as its engine is up. Deliberately does not mark the guide completed —
+         * hearing the groove is not the same as finishing it, and the guide can be replayed from
+         * Settings.
+         */
+        onAudition={() => {
+          setOnboardingOpen(false);
+          handleSelectTab("studio");
+          setInitialAutoPlay(true);
+        }}
       />
 
 
@@ -768,6 +786,16 @@ const MainApp: React.FC = () => {
         engine={engineInstance}
         gs1Enabled={gs1Enabled}
         onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
+        /** U2: a guide dismissed without being finished must be recoverable. */
+        onReplayOnboarding={() => {
+          try {
+            localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
+          } catch {
+            // A storage that refuses to forget is not a reason to refuse the replay.
+          }
+          setSettingsOpen(false);
+          setOnboardingOpen(true);
+        }}
         onOpenUpdates={() => {
           setSettingsOpen(false);
           setUpdatesOpen(true);
