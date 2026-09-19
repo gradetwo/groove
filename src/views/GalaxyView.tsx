@@ -28,6 +28,7 @@ import {
   NebulaNode 
 } from "../data/nebulaClusters";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { ExploreListView } from "./ExploreListView";
 
 interface GalaxyViewProps {
@@ -269,6 +270,15 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   onOpenHelp,
 }) => {
   const { language, isZh, t } = useLanguage();
+  /**
+   * Phone surface. The render loop below has its own local `isMobile` (a pixel-ratio decision); this
+   * one is the capability, and the chips row and the replay button size themselves from it —
+   * measured at 390×664 the category chips were 29 px tall and the replay button 28×28.
+   */
+  const { isMobile } = useDeviceCapabilities();
+  /** The loop below writes `pointerEvents` per frame; a ref keeps it phone-aware without re-running. */
+  const phoneSurfaceRef = useRef(isMobile);
+  phoneSurfaceRef.current = isMobile;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const labelsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1406,7 +1416,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             }
             const vis = currentYearRef.current >= node.year;
             el.style.opacity = vis ? "0.85" : "0";
-            el.style.pointerEvents = vis ? "auto" : "none";
+            el.style.pointerEvents = vis && !phoneSurfaceRef.current ? "auto" : "none";
             el.style.transform = `translate3d(${s.x}px, ${s.y - 28}px, 0) translate(-50%, -100%)`;
           });
         } else {
@@ -1443,7 +1453,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
               el.style.opacity = "0.92";
               el.style.transform = `translate3d(${s.x}px, ${s.y - 8}px, 0) translate(-50%, -100%) scale(1)`;
             }
-            el.style.pointerEvents = "auto";
+            el.style.pointerEvents = phoneSurfaceRef.current ? "none" : "auto";
           });
         }
 
@@ -1597,8 +1607,19 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 selectMajorCluster(c);
               }}
               aria-label={`${c.name} ${c.en}`}
+              /**
+               * Visual only on a phone. These labels are projected onto the canvas and anchored by
+               * their bottom edge (`translate(-50%, -100%)`), so they cannot be grown without moving
+               * the text — and measured at 390×664 they were 39×29 px, i.e. not tappable anyway. The
+               * phone picks a cluster from the chips row or the list view (`galaxy_switch_list`),
+               * both of which are real 44 px controls; here the label stays a label.
+               */
+              tabIndex={isMobile ? -1 : undefined}
+              aria-hidden={isMobile || undefined}
               style={{ opacity: 0 }}
-              className="nlab-core absolute transition-opacity duration-300 pointer-events-auto cursor-pointer text-center group bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
+              className={`nlab-core absolute transition-opacity duration-300 text-center group bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg ${
+                isMobile ? "pointer-events-none" : "pointer-events-auto cursor-pointer"
+              }`}
             >
               <b className="block font-light text-xs sm:text-[13px] tracking-[0.32em] text-[#eae6dc]/80 group-hover:text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.9)] transition-colors">
                 {c.name}
@@ -1642,7 +1663,12 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 if (th) th.uniforms.uHoverNode.value = -1;
               }}
               style={{ opacity: 0 }}
-              className="nlab-sub absolute pointer-events-auto cursor-pointer select-none text-left transition-opacity duration-150 bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
+              /* Same as the cluster labels above: a projected label, not a phone target. */
+              tabIndex={isMobile ? -1 : undefined}
+              aria-hidden={isMobile || undefined}
+              className={`nlab-sub absolute select-none text-left transition-opacity duration-150 bg-transparent border-0 p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg ${
+                isMobile ? "pointer-events-none" : "pointer-events-auto cursor-pointer"
+              }`}
             >
               <div
                 className={`transition-all duration-200 px-2 py-0.5 rounded-full flex items-center justify-center ${
@@ -1715,7 +1741,9 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
                 data-testid="galaxy-help-button"
                 onClick={onOpenHelp}
                 title={t("galaxy_guide_btn")}
-                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-accent/40 bg-[#080c16]/80 text-accent font-semibold text-[11px] hover:bg-accent/20 transition-all shadow-sm"
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-accent/40 bg-[#080c16]/80 text-accent font-semibold text-[11px] hover:bg-accent/20 transition-all shadow-sm ${
+                  isMobile ? "min-h-11" : ""
+                }`}
               >
                 <BookOpen className="w-3 h-3 text-accent" />
                 <span>{t("galaxy_guide_btn")}</span>
@@ -1767,7 +1795,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         <button
           type="button"
           onClick={() => selectMajorCluster(null)}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${isMobile ? "min-h-11" : ""} ${
             !selectedCluster
               ? "bg-accent/20 border border-accent/70 text-accent font-bold shadow-[0_0_12px_rgba(245,183,61,0.35)]"
               : "text-[#eae6dc]/60 hover:text-white hover:bg-white/5 border border-transparent"
@@ -1783,7 +1811,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
             <button
               key={c.id}
               onClick={() => selectMajorCluster(c)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${isMobile ? "min-h-11" : ""} ${
                 isSelected
                   ? "text-zinc-950 font-bold"
                   : "text-[#eae6dc]/60 hover:text-white hover:bg-white/5"
@@ -1804,7 +1832,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
         <div className="w-[1px] h-4 bg-white/20 mx-0.5 shrink-0" />
         <button
           onClick={() => setDisplayMode("list")}
-          className="px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 text-accent hover:text-white hover:bg-white/10 shrink-0"
+          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 text-accent hover:text-white hover:bg-white/10 shrink-0 ${isMobile ? "min-h-11" : ""}`}
           title={t("galaxy_switch_list_title")}
         >
           <List className="w-3.5 h-3.5" />
@@ -1838,7 +1866,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
           </span>
           <button
             onClick={handleToggleReplay}
-            className={`w-7 h-7 rounded-full border border-[#eae6dc]/20 flex items-center justify-center transition-colors ${
+            className={`${isMobile ? "w-11 h-11" : "w-7 h-7"} rounded-full border border-[#eae6dc]/20 flex items-center justify-center transition-colors ${
               isPlayingYear ? "text-[#d8b988] border-[#d8b988] shadow-[0_0_10px_rgba(216,185,136,0.4)]" : "hover:text-[#d8b988] hover:border-[#d8b988]"
             }`}
             title={t("galaxy_replay_evolution")}
