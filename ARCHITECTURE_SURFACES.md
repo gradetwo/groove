@@ -110,6 +110,26 @@ function useTransportControls({ announceScope }: { announceScope: "full" | "mini
 「手机上不提供」不等于「logic 里不存在」——功能仍然在 `src/features` 里，
 只是手机端的界面不渲染它的入口，并且在需要时**明确告知省略**而不是静默消失。
 
+## 4b. 功能层已有的可复用基元
+
+解耦不只是「不许 import 组件」，还要**把重复的接线收敛成基元**，否则每套界面都要重写一遍。
+目前已抽出并测试的：
+
+| 基元 | 位置 | 职责 |
+|---|---|---|
+| `usePanelVisibility` | `features/sequencer/hooks/` | 面板可见性 + 布局持久化（含 D-06 规则） |
+| `useAudioEngineInstance` | `features/sequencer/hooks/` | 一个组件一个引擎：创建、回调保鲜、卸载时 `stop()` 后 `destroy()` |
+
+**`useAudioEngineInstance` 存在的理由**：五个视图此前各自手写同三行（构造、挂到 ref、cleanup 里销毁），
+其中几个还必须小心保持 effect 依赖稳定——因为 `onStep` **只能在构造函数里设置**
+（`onPlay` / `onStop` 早就有 setter）。于是「回调捕获了会变的状态」就会逼出**整个引擎重建**，
+而重建会丢掉所有已排期的声部并在会话中途重新分配音频图。
+为此给 `AudioEngine` 补了 `setOnStep`，让回调可以保鲜而不重建引擎。
+
+**刻意未迁移的一处**：`ChallengeView` **每换一题就销毁并新建引擎**，且 `play()` 前不主动初始化音频上下文
+（依赖播放路径自身的惰性解锁）。改成复用单实例会改变它的音频行为，因此保留原样并在此登记，
+而不是为了「统一」去动它。
+
 ## 5. 已知债务（门禁登记在案，只应减少）
 
 | 违规 | 原因 | 正确修法 |

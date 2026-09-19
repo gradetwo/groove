@@ -33,10 +33,10 @@ import { encodeGenreToSharePayload, decodeSharePayloadToGenre } from "../feature
 import { renderGenrePoster } from "../features/customGenre/posterGenerator";
 import { RadarChart } from "../ui/RadarChart";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
 import { toast } from "../ui/Toast";
+import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 
 interface CustomGenreMakerViewProps {
   initialSharePayload?: string;
@@ -105,7 +105,22 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
   // Audition playback state
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const engineRef = useRef<AudioEngine | null>(null);
+  /**
+   * The preview engine, owned by `useAudioEngineInstance`.
+   *
+   * This view used to build the engine inside an effect and destroy it in that effect's cleanup,
+   * which is the same three lines every other view wrote by hand. The hook owns the lifecycle now —
+   * one engine per mount, `stop()` then `destroy()` on unmount — and keeps the callbacks current
+   * without rebuilding the engine, so the closures over `setCurrentStep` / `setIsPlaying` can change
+   * freely.
+   */
+  const { engineRef } = useAudioEngineInstance({
+    onStep: ({ step }) => setCurrentStep(step),
+    onStop: () => {
+      setIsPlaying(false);
+      setCurrentStep(0);
+    },
+  });
 
   // Poster & Share Modal
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -159,23 +174,6 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
       }
     }
   }, [isDbLoading, activeGenre, customGenres, initialForkId, initialSharePayload, createBlankCustomGenre]);
-
-  // AudioEngine setup for preview
-  useEffect(() => {
-    const engine = new AudioEngine({
-      onStep: ({ step }) => setCurrentStep(step),
-      onStop: () => {
-        setIsPlaying(false);
-        setCurrentStep(0);
-      },
-    });
-    engineRef.current = engine;
-
-    return () => {
-      engine.destroy();
-      engineRef.current = null;
-    };
-  }, []);
 
   // Sync engine pattern when activeGenre pattern or bpm changes
   useEffect(() => {

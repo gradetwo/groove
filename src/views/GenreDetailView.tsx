@@ -31,6 +31,7 @@ import { GENRE_RELATIONS } from "../data/relations";
 import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 
 const getTrackMiniTheme = (track: SequencerTrack, idx: number) => {
   const id = `${track.track_id || ""} ${track.name || ""}`.toLowerCase();
@@ -112,30 +113,33 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [bpm, setBpm] = useState(genre.default_bpm || 124);
   const [bpmInput, setBpmInput] = useState<string>(String(genre.default_bpm || 124));
-  const engineRef = useRef<AudioEngine | null>(null);
+  /**
+   * The genre preview engine, owned by `useAudioEngineInstance`.
+   *
+   * The engine used to be constructed inside the effect below and destroyed in its cleanup, with the
+   * effect keyed on `genre` so a genre change rebuilt everything. The hook owns creation and teardown
+   * now; the effect keeps only the part that is genuinely about the genre — seeding the pattern, the
+   * bpm and the input field — and re-runs on a genre change without any engine bookkeeping.
+   */
+  const { engineRef } = useAudioEngineInstance({
+    onStep: ({ step }) => setCurrentStep(step),
+    onStop: () => {
+      setIsPlaying(false);
+      setCurrentStep(0);
+    },
+  });
 
-  // Initialize audio engine for preview
+  // Seed the preview from the genre. The engine's own lifecycle is the hook's business now.
   useEffect(() => {
     const defaultBpm = genre.default_bpm || 124;
     setBpm(defaultBpm);
     setBpmInput(String(defaultBpm));
 
-    const engine = new AudioEngine({
-      onStep: ({ step }) => setCurrentStep(step),
-      onStop: () => {
-        setIsPlaying(false);
-        setCurrentStep(0);
-      },
-    });
-    engineRef.current = engine;
+    const engine = engineRef.current;
+    if (!engine) return;
     engine.setPattern(patternFromGenre(genre), true);
     engine.setBpm(defaultBpm);
-
-    return () => {
-      engine.destroy();
-      engineRef.current = null;
-    };
-  }, [genre]);
+  }, [genre, engineRef]);
 
   const handlePlayMode = (mode: "drums" | "full") => {
     if (!engineRef.current) return;

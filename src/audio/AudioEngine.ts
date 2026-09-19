@@ -1441,6 +1441,19 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Replaces the step callback without recreating the engine.
+   *
+   * `onStep` used to be constructable only, unlike `onPlay` and `onStop`. That asymmetry is why
+   * every view built its engine inside an effect and then had to keep that effect's dependencies
+   * stable: a callback that captured changing state forced a full engine teardown and rebuild, which
+   * drops every scheduled voice and re-allocates the graph mid-session. With this setter a caller can
+   * own one engine and keep its callback current, which is what `useAudioEngineInstance` does.
+   */
+  public setOnStep(cb: (info: StepCallbackInfo) => void): void {
+    this.onStepCallback = cb;
+  }
+
   public setOnPlay(cb: () => void): void {
     this.onPlayCallback = cb;
   }

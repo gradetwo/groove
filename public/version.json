@@ -1,27 +1,27 @@
 {
-  "version": "2.0.65",
+  "version": "2.0.66",
   "releaseDate": "2026-09-19",
-  "changelogCount": 129,
+  "changelogCount": 130,
   "latest": {
-    "version": "2.0.65",
+    "version": "2.0.66",
     "date": "2026-09-19",
     "category": "refactor",
     "title": {
-      "zh": "v2.0.65 抽出 usePanelVisibility：面板可见性与持久化不再长在视图里",
-      "en": "v2.0.65 Extracting usePanelVisibility: Panel Visibility and Persistence Leave the View"
+      "zh": "v2.0.66 抽出 useAudioEngineInstance：五个视图不再各自手写引擎生命周期",
+      "en": "v2.0.66 Extracting useAudioEngineInstance: Five Views Stop Hand-Rolling the Engine Lifecycle"
     },
     "highlights": [
       {
-        "zh": "**为什么抽这一块**：实测 `StudioView` 有 **1255 行**，其中十二个 `useState`（侧栏折叠、最大化、力度抽屉、钢琴卷帘、欧几里得、频谱、高级控件、跟随播放头…）加上一段持久化 effect 直接写在视图里。这些状态**不是某个视图的私事**：三套界面都需要同样这十几个状态、同样的默认值、同样的持久化；新界面要么抄一遍这段 effect，要么（对用户更糟）忘了抄而每次刷新丢布局。",
-        "en": "**Why this block**: `StudioView` measured **1255 lines**, with twelve `useState`s (sidebar, maximize, velocity drawer, piano roll, Euclidean, analyzer, advanced controls, playhead follow…) plus a persistence effect written straight into the view. That state is **not a view's private business**: all three surfaces need the same dozen values, the same defaults and the same persistence, so a new surface either copies the effect or — worse for the user — forgets to and loses its…"
+        "zh": "**实测到的重复**：**五个视图**各自手写同样三行——构造 `new AudioEngine({...})`、挂到 ref、在 effect 的 cleanup 里销毁。其中三个还必须小心保持那个 effect 的依赖列表稳定。\n\n**根因是一处 API 不对称**：`onPlay` / `onStop` 都有 setter，但 **`onStep` 只能在构造函数里设置**。于是「回调捕获了会变的状态」就会逼出**整个引擎重建**——而重建会丢掉所有已排期的声部，并在会话中途重新分配音频图。已补上 `setOnStep`，让回调可以保鲜而不重建。",
+        "en": "**The duplication, measured**: **five views** each wrote the same three lines — construct `new AudioEngine({...})`, assign to a ref, destroy in the effect's cleanup — and three of them had to keep that effect's dependency list carefully stable.\n\nThe root cause was one API asymmetry: `onPlay` and `onStop` had setters but **`onStep` could only be set in the constructor**. So a callback that captured changing state forced a **full engine rebuild**, which drops every scheduled v…"
       },
       {
-        "zh": "**逐字抽出，行为不变**：默认值仍是**挂载时读一次**（每次渲染重读会让过期或失败的存储读取覆盖用户刚点的东西——原注释专门写明这一点），持久化字段仍是那七个，`velocityActiveTrackIdx` / `pianoRollTrackIdx` **仍不持久化**（它们是光标不是布局）。",
-        "en": "**Extracted verbatim**: defaults are still read **once on mount** (re-reading each render would let a stale or failing storage read overwrite what the user just clicked — the original comment called this out), the persisted set is still the same seven fields, and `velocityActiveTrackIdx` / `pianoRollTrackIdx` are still **not** persisted because they are cursors rather than layout."
+        "zh": "**新基元 `useAudioEngineInstance`**：一个组件一个引擎，创建与销毁由它负责；回调通过 ref **保鲜而非捕获**，所以闭包可以自由地引用最新状态；`engineRef` 保持同步，因此命令式调用点（走带按钮、试听范围、控制台的增益衰减表）行为完全不变。刻意**不**做成通用音序器——它不持有 pattern、走带或任何状态，那些属于 `useAudioEngineLifecycle`；这一层是更简单的界面（试听、预览、游戏化视图）或未来的新界面可以直接用的原语。",
+        "en": "**The new primitive, `useAudioEngineInstance`**: one engine per mount, with creation and teardown owned by the hook; callbacks are kept current through a ref rather than captured, so closures may freely reference the latest state; and `engineRef` stays in sync so imperative callers — transport buttons, preview scopes, the console's gain-reduction meter — behave exactly as before. Deliberately **not** a general sequencer: it holds no pattern, transport or state, which is `use…"
       },
       {
-        "zh": "**D-06 规则有测试守着**：`isDrumsOnly` / `isRecordArmed` / `isKeyboardMode` 属于现场演奏状态，**不得**被持久化——静默重新武装录音机是个（可能具破坏性的）意外。新测试断言的是**存储里的实际形状**而不是读那段 effect，所以任何字段偷偷出现在存储里都会被发现。",
-        "en": "**The D-06 rule is now asserted**: `isDrumsOnly`, `isRecordArmed` and `isKeyboardMode` are live-performance state and must **not** be persisted — silently re-arming the recorder is a surprise, possibly a destructive one. The test asserts the **actual stored shape** rather than reading the effect, so a field that quietly appeared in storage would be caught."
+        "zh": "**两个视图已迁移**（`CustomGenreMakerView`、`GenreDetailView`）：删掉了各自的 ref 声明、构造 effect 与销毁 cleanup；`GenreDetailView` 的 effect 只保留「确实与曲风有关」的部分（写入 pattern、BPM 与输入框），曲风切换不再伴随任何引擎账务。`CustomGenreMakerView` 失去了对 `AudioEngine` 的直接依赖。",
+        "en": "**Two views migrated** (`CustomGenreMakerView`, `GenreDetailView`): each lost its own ref declaration, construction effect and destroy cleanup, and `GenreDetailView`'s effect now keeps only the part that is genuinely about the genre — seeding the pattern, the bpm and the input field — so a genre change no longer involves any engine bookkeeping. `CustomGenreMakerView` no longer depends on `AudioEngine` at all."
       }
     ],
     "truncated": true
