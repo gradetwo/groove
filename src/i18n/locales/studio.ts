@@ -492,6 +492,14 @@ export const studioMessages = {
     zh: "小节太短 — 只放得下 {placed}/{total} 个和弦",
   },
   settings_replay_onboarding: { en: "Replay the new-user guide", zh: "重看新手引导" },
+
+  // U1: the first screen's single action, shown until playback has happened once.
+  first_run_prompt_text: {
+    en: "Press play to hear this groove — then light up a cell to change it.",
+    zh: "按播放先听一遍这段律动，再点亮一个格子改它。",
+  },
+  first_run_prompt_play: { en: "Listen", zh: "先听一遍" },
+  first_run_prompt_dismiss: { en: "Don't show this again", zh: "不再显示这条提示" },
   roll_preview_start: { en: "Play lane", zh: "试听本轨" },
   roll_preview_stop: { en: "Stop", zh: "停止" },
   roll_preview_start_hint: {
