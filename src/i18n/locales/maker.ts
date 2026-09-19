@@ -11,7 +11,7 @@ export const makerMessages = {
   maker_save_local: { en: "Save to Hub", zh: "保存到工坊" },
   maker_saving: { en: "Saving...", zh: "保存中..." },
   maker_saved: { en: "Saved", zh: "已保存" },
-  maker_open_studio: { en: "Open in Studio", zh: "在编曲室中打开" },
+  maker_open_studio: { en: "Open in Studio", zh: "在工作台中打开" },
   maker_share_poster: { en: "Poster & Share", zh: "专属海报与分享" },
   maker_sec_identity: { en: "1. Identity & Cultural Context", zh: "1. 身份与文化背景" },
   maker_name_label: { en: "Genre Name", zh: "曲风名称 (Genre Name)" },

@@ -37,7 +37,7 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
 
     // Switch to Sequencer Manual
     fireEvent.click(screen.getByTestId("help-category-sequencer"));
-    expect(screen.getByText("编曲工作台与专业钢琴卷帘深度手册")).toBeInTheDocument();
+    expect(screen.getByText("工作台与专业钢琴卷帘深度手册")).toBeInTheDocument();
     expect(screen.getByText("高对比度专业钢琴卷帘 (Piano Roll)")).toBeInTheDocument();
 
     // Switch to Mixing & Labs
@@ -62,7 +62,7 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
     fireEvent.click(screen.getByTestId("help-category-interface"));
     expect(screen.getByText("工作站区域划分与功能按钮全景手册")).toBeInTheDocument();
     expect(screen.getByText("顶部导航与全局控制栏")).toBeInTheDocument();
-    expect(screen.getByText("编曲工作台与音轨点音区")).toBeInTheDocument();
+    expect(screen.getByText("工作台与音轨点音区")).toBeInTheDocument();
     expect(screen.getByText("专业黑白键钢琴卷帘区")).toBeInTheDocument();
     expect(screen.getByText("独立硬件调音台与空间总线")).toBeInTheDocument();
     expect(screen.getByText("全景声谱分析仪与声学实验室")).toBeInTheDocument();
@@ -168,7 +168,7 @@ describe("HelpCenterModal · user manual, interactive tutorials & search", () =>
       />
     );
 
-    expect(screen.getByText("编曲工作台与专业钢琴卷帘深度手册")).toBeInTheDocument();
+    expect(screen.getByText("工作台与专业钢琴卷帘深度手册")).toBeInTheDocument();
   });
 
   it("triggers acoustic audition on tutorial cards and supports toggling", () => {

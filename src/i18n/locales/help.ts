@@ -15,7 +15,7 @@ export const helpMessages = {
   // Tabs
   help_tab_quickstart: { en: "Quick Start", zh: "快速上手" },
   help_tab_tutorials: { en: "Interactive Tutorials", zh: "交互式教学" },
-  help_tab_sequencer: { en: "Sequencer & Piano Roll", zh: "编曲台与钢琴卷帘" },
+  help_tab_sequencer: { en: "Sequencer & Piano Roll", zh: "工作台与钢琴卷帘" },
   help_tab_mixing: { en: "Mixing & Pro Labs", zh: "混音与高级实验室" },
   help_tab_theory: { en: "Harmony & Chords", zh: "和弦与调式理论" },
   help_tab_export: { en: "Export & Integrations", zh: "工程导出与跨平台" },
@@ -39,7 +39,7 @@ export const helpMessages = {
   tut_maker_title: { en: "Lesson 5: Custom Genre Workshop & Cloud Sharing", zh: "第 5 课: 自定义曲风工坊派生与云端链接分享" },
   tut_maker_desc: { en: "Fork from 159 historical genres, rewrite drum engines, tweak timbres, and share lossless URLs.", zh: "从 159 种曲风图谱中派生工程、修改合成器音色与音轨步进，并通过无损轻量 URL 自由分享。" },
   tut_chords_title: { en: "Lesson 6: Harmonic Progressions & Voicing Theory", zh: "第 6 课: 和弦走向编配与调式和声理论" },
-  tut_chords_desc: { en: "Author diatonic progression blocks, audition acoustic voicings, and bake progressions into studio tracks.", zh: "推导自然音阶和弦骨架、试听吉他/钢琴真实声部排列，并将走向一键烘焙入编曲工作台。" },
+  tut_chords_desc: { en: "Author diatonic progression blocks, audition acoustic voicings, and bake progressions into studio tracks.", zh: "推导自然音阶和弦骨架、试听吉他/钢琴真实声部排列，并将走向一键烘焙入工作台。" },
   tut_masterclass_title: { en: "Lesson 7: Rhythm & Grooves (Polyrhythmic Challenges)", zh: "第 7 课: 节奏律动与交互式复节奏挑战" },
   tut_masterclass_desc: { en: "Explore polyrhythm colliders, Latin clave evolution, J Dilla swing timing, and real-time accuracy scoring.", zh: "体验复节奏对撞机、拉丁 Clave 节拍演进分支、J Dilla 醉步微时序以及毫秒级打击精度挑战。" },
   tut_galaxy_title: { en: "Lesson 8: Musicology Galaxy & Evolutionary Timelines", zh: "第 8 课: 全球曲风星系与音乐史时间线探索" },
@@ -76,7 +76,7 @@ export const helpMessages = {
   tut_chords_s1: { en: "Select your root key and choose between Major, Minor, or modal diatonic tonal centers.", zh: "在和弦工坊顶部选定根音与大调/小调模式，系统将自动映射调内各级自然和弦。" },
   tut_chords_s2: { en: "Browse curated progression cards (Pop 4-Chords, Royal Road, Jazz 2-5-1, Epic Minor) with live preview.", zh: "翻阅经典和弦走向库（流行四和弦、王道走向、爵士 2-5-1、史诗小调等），轻点卡片即时试听。" },
   tut_chords_s3: { en: "Switch playing styles between ballad arpeggiation, acoustic guitar strumming, and rich block voicings.", zh: "自由切换抒情分解、木吉他扫弦、连续琶音与厚实柱式和弦等 4 种声学演奏风格。" },
-  tut_chords_s4: { en: "Click 'Load to Studio' or 'Bake Arpeggio' to import your harmonic arrangement into the live sequencer.", zh: "点击「载入编曲台」或「烘焙琶音」，将编配好的和弦骨架直接导入步进序列器轨道中持续创作。" },
+  tut_chords_s4: { en: "Click 'Load to Studio' or 'Bake Arpeggio' to import your harmonic arrangement into the live sequencer.", zh: "点击「载入工作台」或「烘焙琶音」，将编配好的和弦骨架直接导入步进序列器轨道中持续创作。" },
 
   tut_masterclass_s1: { en: "Select a masterclass topic like 3:2 or 4:3 Polyrhythms, Son/Rumba Clave trees, or Dilla Microtiming.", zh: "在课程目录中挑选感兴趣的专题（如 3:2/4:3 复节奏对撞、Son/Rumba Clave 进化树、Dilla 摇摆延时）。" },
   tut_masterclass_s2: { en: "Use the interactive visualizer to see how polyrhythmic pulses phase and sync against the primary downbeat.", zh: "通过粒子对撞示波器与动态环形时钟，直观感知异相节拍与主拍重合交织的数学律动美感。" },
@@ -96,7 +96,7 @@ export const helpMessages = {
   help_ui_zones_subtitle: { en: "Comprehensive reference for transport controls, sequencing matrix, piano roll, console desk, and acoustic laboratories", zh: "系统详解顶部走带控制栏、步进点音网格、高对比度钢琴卷帘、硬件调音台与物理声学实验室各区域与按钮" },
   help_ui_section_header: { en: "Top Header & Master Transport Bar", zh: "顶部导航与全局控制栏" },
   help_ui_section_header_desc: { en: "Master playback, tempo, global pitch tonality, search, view routing, and system tools.", zh: "统领走带播放、工程速度、全局音阶调式、曲风搜索、视图路由与系统工具。" },
-  help_ui_section_sequencer: { en: "DAW Sequencer & Track Matrix", zh: "编曲工作台与音轨点音区" },
+  help_ui_section_sequencer: { en: "DAW Sequencer & Track Matrix", zh: "工作台与音轨点音区" },
   help_ui_section_sequencer_desc: { en: "8-track instrument strips, 16/32/64 step matrix, velocity lane, and Euclidean polyrhythms.", zh: "8 轨独立乐器控制列、16/32/64 步进点音矩阵、力度动态通道与欧几里得复节拍生成。" },
   help_ui_section_piano: { en: "High-Contrast Studio Piano Roll", zh: "专业黑白键钢琴卷帘区" },
   help_ui_section_piano_desc: { en: "3D virtual keybed, 22 scale highlight lanes, chord stamp ghosts, and chronological arpeggiator.", zh: "3D 纵向虚拟琴键、22 种音阶高亮遮罩、和弦印章虚影预览与时序连续琶音展开。" },
@@ -105,7 +105,7 @@ export const helpMessages = {
   help_ui_section_acoustic: { en: "Panoramic Analyzer & Acoustic Labs", zh: "全景声谱分析仪与声学实验室" },
   help_ui_section_acoustic_desc: { en: "32-band FFT spectrogram, 3D waterfall, Lissajous phase scope, and kick physics modeling.", zh: "32 频段 FFT 频谱、三维瀑布能量图、李萨如相位椭圆与底鼓瞬态扫频物理建模。" },
   help_ui_section_harmony: { en: "Chord Workshop & Musicology Galaxy", zh: "和弦工坊与全球曲风星系" },
-  help_ui_section_harmony_desc: { en: "Diatonic Roman numeral analysis, 4 voicing styles, sequencer baking, and 3D galaxy lineages.", zh: "自然音阶罗马数字分析、4 种演奏风格、一键烘焙至编曲台与三维流派引力传承图谱。" },
+  help_ui_section_harmony_desc: { en: "Diatonic Roman numeral analysis, 4 voicing styles, sequencer baking, and 3D galaxy lineages.", zh: "自然音阶罗马数字分析、4 种演奏风格、一键烘焙至工作台与三维流派引力传承图谱。" },
 
   // Interactive Tutorial Coach
   tutorial_coach_badge: { en: "HANDS-ON TUTORIAL", zh: "交互式实操教学中" },
@@ -126,7 +126,7 @@ export const helpMessages = {
   onboarding_skip_btn: { en: "Skip Tour", zh: "稍后查看" },
   onboarding_prev_btn: { en: "Back", zh: "上一步" },
   onboarding_next_btn: { en: "Next Milestone", zh: "下一步" },
-  onboarding_start_studio_btn: { en: "Launch Studio Sequencer", zh: "直接进入编曲工作台" },
+  onboarding_start_studio_btn: { en: "Launch Studio Sequencer", zh: "直接进入工作台" },
   onboarding_start_lesson_btn: { en: "Start Hands-on Lesson 1", zh: "进入鼓机编排实操教学" },
   onboarding_quickstart_card_title: { en: "New User Interactive Walkthrough", zh: "新用户全景交互引导漫游" },
   onboarding_quickstart_card_desc: { en: "Take an interactive 7-step guided tour through pure synthesis, sequencing, piano roll, mixer, and acoustics.", zh: "通过 7 步交互式漫游，快速掌握纯合成引擎、步进点音、专业钢琴卷帘、调音台与声学实验室。" },
@@ -156,11 +156,11 @@ export const helpMessages = {
   onboarding_s5_desc: { en: "Balance channel faders and pan pots, sculpt room ambiance with dedicated delay/reverb sends, and inspect audio via 32-band FFT and Kick Anatomy.", zh: "通过多轨推子与声像旋钮塑造空间立体感；利用延迟与混响总线制造大厅氛围；在声学实验室与底鼓工坊深度解构音频频响。" },
   onboarding_s5_tip: { en: "The master bus includes a transparent True-Peak limiter to prevent digital clipping.", zh: "母带输出总线内置零延迟真实峰值砖墙限制器，坚决杜绝数码破音失真。" },
 
-  onboarding_s6_title: { en: "6. Harmonic Progressions & 3D Galaxy", zh: "6. 和弦工坊与 3D 曲风星系图谱" },
+  onboarding_s6_title: { en: "6. Harmonic Progressions & 3D Galaxy", zh: "6. 和弦工坊与 3D 律动星系" },
   onboarding_s6_desc: { en: "Explore classic pop, jazz, and cinematic chord progressions. Bake chords directly into sequencer tracks, and travel through 159 music genres across a 3D gravitational universe.", zh: "探索流行王道、爵士 2-5-1 与现代和弦走向；一键烘焙走向入编曲工程；在 3D 引力星系中穿梭查阅 159 种曲风百年演化脉络。" },
-  onboarding_s6_tip: { en: "Click 'Bake to Sequencer' to translate any harmonic progression into active track steps.", zh: "轻点「烘焙至编曲台」即可将选定和弦走向自动转化为真实步进。" },
+  onboarding_s6_tip: { en: "Click 'Bake to Sequencer' to translate any harmonic progression into active track steps.", zh: "轻点「烘焙至工作台」即可将选定和弦走向自动转化为真实步进。" },
 
   onboarding_s7_title: { en: "7. You're All Set! Start Creating", zh: "7. 一切就绪！开始您的音乐创作" },
   onboarding_s7_desc: { en: "Press '?' anytime for keyboard shortcuts, export lossless WAV/MIDI/ALS projects with one click, or jump into interactive hands-on lessons now.", zh: "随时按「?」查看快捷键，一键无损导出 WAV/MIDI/Ableton 工程，或者立即开启交互式实操教学！" },
-  onboarding_s7_tip: { en: "Choose an option below to begin your hands-on journey or dive straight into the studio.", zh: "选择下方入口开始实操教学或直接进入编曲工作台。" },
+  onboarding_s7_tip: { en: "Choose an option below to begin your hands-on journey or dive straight into the studio.", zh: "选择下方入口开始实操教学或直接进入工作台。" },
 } as const;

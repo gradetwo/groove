@@ -66,7 +66,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (typeof document !== "undefined") {
       document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
       document.title = language === "zh" 
-        ? "GROOVE LAB | 音乐曲风探索与律动工作台" 
+        ? "GROOVE LAB | 音乐曲风探索与工作台" 
         : "GROOVE LAB | Music Genre Learning & Sequencer";
     }
   }, [language]);

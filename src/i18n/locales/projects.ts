@@ -75,7 +75,7 @@ export const projectsMessages = {
   project_hub_share_qr_alt: { en: "QR code for this project's share link", zh: "该工程分享链接的二维码" },
   project_hub_share_degraded: {
     en: "This pattern is large, so pitch/gate detail was omitted to fit in a URL.",
-    zh: "工程较大，为放入链接已省略音高/门限等细节。",
+    zh: "工程较大，为放入链接已省略音高/音长等细节。",
   },
   project_hub_share_too_large: {
     en: "This project is too large to fit in a share link. Export a .groove file instead and send that.",

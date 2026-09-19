@@ -28,7 +28,7 @@ describe("GalaxyView · Contextual Help Integration", () => {
 
     const helpBtn = screen.getByTestId("galaxy-help-button");
     expect(helpBtn).toBeInTheDocument();
-    expect(helpBtn).toHaveTextContent("星系图谱指南");
+    expect(helpBtn).toHaveTextContent("律动星系指南");
 
     fireEvent.click(helpBtn);
     expect(handleOpenHelp).toHaveBeenCalledTimes(1);
