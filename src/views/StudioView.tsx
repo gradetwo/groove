@@ -40,6 +40,8 @@ import {
 import { useExportActions } from "../features/sequencer/hooks/useExportActions";
 import { useInitialAutoPlay } from "../features/sequencer/hooks/useInitialAutoPlay";
 import { useFirstRunPrompt } from "../features/sequencer/hooks/useFirstRunPrompt";
+import { useAutosaveStatus } from "../features/sequencer/hooks/useAutosaveStatus";
+import { SaveIndicator } from "../components/sequencer/SaveIndicator";
 import { FirstRunPrompt } from "../components/onboarding/FirstRunPrompt";
 import { useProjectHub } from "../features/sequencer/hooks/useProjectHub";
 import { useMidiInput } from "../features/sequencer/hooks/useMidiInput";
@@ -526,6 +528,14 @@ export const StudioView: React.FC<StudioViewProps> = ({
    */
   const firstRunPrompt = useFirstRunPrompt({ isPlaying });
 
+  /**
+   * U8: the auto-save used to be invisible. This is the studio's answer to "is my work safe?" —
+   * `saving` while a change waits on the debounce, `saved` once it has landed, `failed` if storage
+   * refused it. Desktop and tablet only, like the first-run hint: the phone layout is being
+   * redesigned and this component takes one line to mount wherever that layout wants it.
+   */
+  const autosave = useAutosaveStatus();
+
   // Boot-time `?groove=` / `?genre=` load (A-02)
   useUrlShareLoad({ commit, engineRef, currentGenre, showToast });
 
@@ -888,6 +898,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
             }}
             onDismiss={firstRunPrompt.dismiss}
           />
+          {/* Unconditional, like the hint above it: a conditional sibling here would remount the
+              sequencer panel whenever `isPhone` flips (a resize, a rotation). */}
+          <SaveIndicator visible={!isPhone} status={autosave} />
         <SequencerPanel
           isPhone={isPhone}
           isShortLandscape={isShortLandscape}

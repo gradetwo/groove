@@ -36,6 +36,56 @@ export interface PersistedProject {
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * What the auto-save is doing, as something a surface can subscribe to.
+ *
+ * The studio writes the project to localStorage 500 ms after every change and never said so, while
+ * the genre maker has shown a `● unsaved` badge all along — so the studio's users could not tell
+ * whether their work was safe (U8). This is the *only* honest place to read that from: the module
+ * that does the writing. `saving` means a change is debounced, not that bytes are in flight (a
+ * localStorage write is synchronous), and it is reported as such rather than pretending to be
+ * progress.
+ *
+ * The snapshot object is cached and replaced only on change, because `useSyncExternalStore` compares
+ * snapshots by identity — returning a fresh object per call would loop forever.
+ */
+export type SaveStatus = "idle" | "saving" | "saved" | "failed";
+
+export interface SaveStatusSnapshot {
+  status: SaveStatus;
+  /** When the last successful write landed, or null before the first one. */
+  savedAt: number | null;
+}
+
+let saveStatusSnapshot: SaveStatusSnapshot = { status: "idle", savedAt: null };
+const saveStatusListeners = new Set<() => void>();
+
+function setSaveStatus(status: SaveStatus): void {
+  if (saveStatusSnapshot.status === status) return;
+  saveStatusSnapshot = {
+    status,
+    savedAt: status === "saved" ? Date.now() : saveStatusSnapshot.savedAt,
+  };
+  for (const listener of saveStatusListeners) listener();
+}
+
+export function subscribeSaveStatus(listener: () => void): () => void {
+  saveStatusListeners.add(listener);
+  return () => {
+    saveStatusListeners.delete(listener);
+  };
+}
+
+export function getSaveStatusSnapshot(): SaveStatusSnapshot {
+  return saveStatusSnapshot;
+}
+
+/** Test helper: put the indicator back to "nothing has happened yet". */
+export function resetSaveStatus(): void {
+  saveStatusSnapshot = { status: "idle", savedAt: null };
+  for (const listener of saveStatusListeners) listener();
+}
+
 /** Pending payload of the debounced write, so it can be flushed on page hide. */
 let pendingProject: Omit<PersistedProject, "version" | "updatedAt"> | null = null;
 let flushRegistered = false;
@@ -47,6 +97,8 @@ export function debounceSaveProject(project: Omit<PersistedProject, "version" | 
   if (typeof window === "undefined") return;
   if (saveTimer) clearTimeout(saveTimer);
   pendingProject = project;
+  // A change is now waiting on the debounce; say so rather than leaving the user guessing.
+  setSaveStatus("saving");
 
   // F-07 (companion): a debounce that is only ever reset silently loses the tail of
   // a session (tab close / app switch right after an edit). Flush on page hide.
@@ -96,6 +148,7 @@ export function saveProjectImmediate(project: Omit<PersistedProject, "version" |
       updatedAt: Date.now(),
     };
     window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(payload));
+    setSaveStatus("saved");
 
     if (activeId) {
       getProject(activeId).then((existing) => {
@@ -121,7 +174,15 @@ export function saveProjectImmediate(project: Omit<PersistedProject, "version" |
       }).catch(() => {});
     }
   } catch (e) {
+    /**
+     * A refused write must not read as "saving" for ever.
+     *
+     * localStorage throws when it is full or disabled, and the old code only logged it — so a user
+     * whose storage was full had no way to learn that their work was *not* safe. Saying so is the
+     * whole point of this indicator.
+     */
     console.warn("[projectStorage] Failed to save project:", e);
+    setSaveStatus("failed");
   }
 }
 
