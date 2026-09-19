@@ -310,6 +310,8 @@ const MainApp: React.FC = () => {
         onOpenHelp={() => setHelpOpen(true)}
         onOpenOnboarding={() => setOnboardingOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
+        /* The phone header's entry point: the sections sheet the tab bar also opens. */
+        onOpenMore={() => setMobileSheetOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
       />

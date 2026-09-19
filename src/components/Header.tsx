@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { GENRE_INDEX } from "../data/index/genresIndex";
 import { CURRENT_CLIENT_VERSION } from "./UpdatesModal";
 
@@ -46,6 +47,16 @@ interface HeaderProps {
   onOpenOnboarding?: () => void;
   /** Opens the global settings panel (item ⑤). */
   onOpenSettings?: () => void;
+  /**
+   * Opens the app's phone "sections" sheet (search, settings, help, updates, every tab).
+   *
+   * The phone header needs this because the sheet's own tab-bar opener is unreachable in portrait:
+   * measured at 390×664, the 48×48 virtual-keyboard FAB sits exactly over the centre of the "You"
+   * tab (`elementFromPoint` at the tab's centre returns `virtual-keyboard-fab`), leaving two ~15 px
+   * slivers. The header's own 44 px button is the reliable way in — and `MobileTabBar.tsx` is
+   * reserved by the design freeze, so the FAB overlap itself is recorded rather than moved.
+   */
+  onOpenMore?: () => void;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
 }
@@ -60,15 +71,26 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHelp,
   onOpenOnboarding,
   onOpenSettings,
+  onOpenMore,
   analyser,
   isPlaying = false,
 }) => {
   const { t, toggleLanguage, isZh } = useLanguage();
+  /** Phone shell: the header keeps the brand and nothing else (see the right-tools block below). */
+  const { isMobile } = useDeviceCapabilities();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const exploreRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
+  /**
+   * A device that becomes a phone mid-session (a touch laptop resized below the breakpoint, a
+   * convertible) must not keep a drawer state that has no visible toggle any more.
+   */
+  useEffect(() => {
+    if (isMobile) setMobileMenuOpen(false);
+  }, [isMobile]);
 
   // Close explore dropdown on click outside or Escape
   useEffect(() => {
@@ -166,7 +188,8 @@ export const Header: React.FC<HeaderProps> = ({
         <button 
           onClick={() => onSelectTab("studio")} 
           aria-label="GROOVE LAB Home"
-          className="flex items-center gap-2.5 cursor-pointer select-none group border-0 bg-transparent p-0 text-left"
+          /* 44 px tall on a phone: the brand link is the header's only control there. */
+          className="flex min-h-11 items-center gap-2.5 cursor-pointer select-none group border-0 bg-transparent p-0 text-left"
         >
           {/* Glowing amber dot */}
           <span className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_10px_#f5b73d] shrink-0 group-hover:scale-125 transition-transform" />
@@ -336,8 +359,41 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </nav>
 
-      {/* Right Tools: Spectrum, Search, Dice, Lang, Mobile Menu */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      {/*
+        Phone header: the brand, and one 44 px way into the app's own sections sheet — search,
+        settings, help, updates and every tab live there behind big rows. Measured at 390×664, the
+        nine desktop controls this replaces were 24–36 px each, and the sheet's tab-bar opener is
+        covered by the keyboard FAB in portrait (see `onOpenMore` above), which is why this button
+        exists rather than relying on that tab.
+      */}
+      {isMobile && onOpenMore && (
+        <button
+          type="button"
+          onClick={onOpenMore}
+          data-testid="header-more"
+          aria-haspopup="dialog"
+          aria-label={t("mobile_more_title")}
+          title={t("mobile_more_title")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-panel2 text-text-sub transition-colors hover:border-accent hover:text-accent"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
+
+      {/*
+        Right Tools: Spectrum, Search, Dice, Lang, Settings, Updates, Help, Onboarding, Menu.
+
+        **Not on a phone.** Every one of these has a bigger twin behind the phone's own chrome:
+        search, settings, help and updates are rows in the tab bar's "More" sheet; the language
+        switch is inside Settings; the onboarding tour opens from the Help centre; a random genre
+        is the Explore view's own button; and navigation is the tab bar plus that same sheet, which
+        already lists every tab this header's dropdown lists. Measured at 390×664 before this
+        change: nine controls here, seven of them 24–36 px — under the 44 px a thumb needs, and
+        exactly the "wall of buttons" a phone should not have. What is left on a phone is the brand
+        link, which the audit reports at 126×44.
+      */}
+      {!isMobile && (
+        <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Spectrum Canvas - click opens full Panoramic Analyzer */}
         <button
           type="button"
@@ -455,7 +511,9 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Mobile menu toggle */}
+        {/* Mobile menu toggle. Kept for a *narrow desktop window* (the nav above is `md:flex`), and
+            still shown to phones by width — but not when `isMobile`, where the tab bar's More sheet
+            already lists every entry this dropdown has. */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
@@ -464,10 +522,11 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </button>
-      </div>
+        </div>
+      )}
 
       {/* Mobile backdrop scrim (completely solid dimming layer) */}
-      {mobileMenuOpen && (
+      {!isMobile && mobileMenuOpen && (
         <div 
           className="md:hidden fixed inset-0 top-0 bg-black/85 z-40"
           onClick={() => setMobileMenuOpen(false)}
@@ -476,7 +535,7 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Mobile dropdown: 100% opaque solid dark panel with solid button cards */}
-      {mobileMenuOpen && (
+      {!isMobile && mobileMenuOpen && (
         <div 
           className="md:hidden absolute top-full left-0 right-0 bg-[#090b10] border-b-2 border-line-strong p-3 space-y-2 shadow-[0_25px_60px_rgba(0,0,0,0.98)] max-h-[85vh] overflow-y-auto z-50 overscroll-contain"
           style={{
