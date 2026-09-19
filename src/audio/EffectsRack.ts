@@ -167,6 +167,13 @@ export class EffectsRack {
   private chorusLfoGainR: GainNode | null = null;
 
   private state: EffectsRackState;
+  /**
+   * The `filterEnabled` value the filter edges were last built for.
+   *
+   * The routing depends on this flag and nothing else, so a value-only write must not touch the
+   * graph (see `setFilter`).
+   */
+  private routedFilterEnabled = false;
 
   constructor(ctx: BaseAudioContext, initialState: Partial<EffectsRackState> = {}) {
     this.ctx = ctx;
@@ -205,7 +212,7 @@ export class EffectsRack {
     // input -> (filter when enabled) -> saturation -> bitcrusher -> (dry/chorus) -> output
     // A BiquadFilterNode has no transparent type, so filter bypass is a true
     // re-route: when disabled the input feeds the saturation stage directly.
-    this.updateFilterRouting();
+    this.routeFilter();
     this.shaperNode.connect(this.crusherNode);
 
     /**
@@ -372,7 +379,25 @@ export class EffectsRack {
     this.filterNode.type = type;
     this.filterNode.frequency.value = cutoff;
     this.filterNode.Q.value = q;
+
+    /**
+     * Re-route only when the **topology** changes.
+     *
+     * `updateFilterRouting()` disconnects both edges and builds them again, which is a brief open
+     * circuit in the master path. Calling it for a value change therefore clicked the filter on
+     * every write — and `applyGenreFxToGraph` calls `setFilter` on every pattern set *and every BPM
+     * change*, so dragging the tempo slider with the filter engaged tore the filter out and put it
+     * back once per input event. The enabled flag is the only thing the routing depends on; frequency,
+     * Q and type are written in place above, and they are written as steps rather than ramps on
+     * purpose (see `ChannelStripDsp.writeParam`: a step keeps the offline render bit-identical).
+     */
+    if (this.routedFilterEnabled !== enabled) this.routeFilter();
+  }
+
+  /** (Re)builds the filter edges and records the topology they were built for. */
+  private routeFilter(): void {
     this.updateFilterRouting();
+    this.routedFilterEnabled = this.state.filterEnabled;
   }
 
   public setSaturation(enabled: boolean, drive: number): void {

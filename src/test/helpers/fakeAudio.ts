@@ -67,6 +67,14 @@ export class FakeNode {
    * merger. Recording the indices makes that routing assertable instead of assumed.
    */
   outgoing: Array<{ node: FakeNode; outputIndex: number; inputIndex: number }> = [];
+  /**
+   * How many times `disconnect()` was called on this node.
+   *
+   * Tearing an edge down and rebuilding the identical one is not a no-op in a live graph: it is a
+   * brief open circuit. Counting the calls is how a test tells "the routing was rebuilt" from "a
+   * value was written", which is the difference between a click and no click.
+   */
+  disconnectCalls = 0;
   connect(destination?: unknown, outputIndex = 0, inputIndex = 0) {
     if (destination instanceof FakeNode) {
       destination.incoming.push(this);
@@ -75,6 +83,7 @@ export class FakeNode {
     return destination ?? this;
   }
   disconnect() {
+    this.disconnectCalls += 1;
     return this;
   }
 }
