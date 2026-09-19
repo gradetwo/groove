@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Music2, Play, Sliders, SlidersHorizontal, Wa
 import { MAX_NOTE_GATE_STEPS, SequencerTrack } from "../../types/genre";
 import { StepCell } from "./StepCell";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../../hooks/useDeviceCapabilities";
 
 export type TrackCategory = "drum" | "perc" | "bass" | "chord" | "lead" | "fx";
 
@@ -132,6 +133,15 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
   onSetChordDuration,
 }) {
   const { t } = useLanguage();
+  /**
+   * Phone shell: the row keeps one big inspector target plus Mute, and drops the rest (see the
+   * header markup below for why each one goes).
+   *
+   * Read from the capability hook rather than a prop, so this file stays independent of the panel's
+   * own phone branches — and *not* from `isCompact`, which is the per-track density toggle: the
+   * first version of this change gated on that and silently did nothing on a phone.
+   */
+  const { isMobile } = useDeviceCapabilities();
   const trackVol = track.volume !== undefined ? track.volume : 0.8;
   const trackPan = track.pan !== undefined ? track.pan : 0;
   const trackLen = track.trackLength || stepCount;
@@ -228,8 +238,13 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
       }`}>
         {/* Upper row: Fold Toggle + Type Badge + Swatch + LED Peak Meter + Title + Polymeter + Mute / Solo */}
         <div className="flex items-center gap-1 sm:gap-1.5">
-          {/* Fold / Unfold Single Track */}
-          {onToggleCompact && (
+          {/**
+           * Fold / Unfold Single Track. Desktop and tablet only: measured at 390×664 this button
+           * came out **14×14 px**, and a phone already has "Fold All Tracks" in the studio toolbar,
+           * so the per-track toggle is the kind of control this shell does not offer rather than
+           * shrink.
+           */}
+          {onToggleCompact && !isMobile && (
             <button
               type="button"
               onClick={(e) => {
@@ -264,6 +279,12 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
 
           {/* Logic-style header: clicking the name/swatch area opens this track's
               inspector (mix, insert chain, timbre). Auditioning moved to its own ▶ button. */}
+          {/**
+           * The inspector opener. On a phone this is the row's main target: it was 4×20 px, because
+           * its `flex-1 min-w-0` collapsed to the 4 px swatch once the action buttons took the row
+           * (the "L:16"/M/S controls consumed all 128 px). It is now at least 44×44 with the track
+           * name visible, and the row holds nothing else but the length badge and Mute.
+           */}
           <div
             role="button"
             tabIndex={0}
@@ -278,7 +299,9 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             data-inspector-open={isInspectorOpen ? "true" : "false"}
             aria-expanded={isInspectorOpen}
             aria-label={t("track_inspector_open_aria")}
-            className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer group/trk hover:opacity-90 transition-opacity touch-manipulation rounded-sm px-0.5 -mx-0.5"
+            className={`flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer group/trk hover:opacity-90 transition-opacity touch-manipulation rounded-sm px-0.5 -mx-0.5 ${
+              isMobile ? "min-h-11 min-w-11" : ""
+            }`}
             // Inline rather than `bg-[var(--tc)]/12`: the alpha blend on a CSS variable is
             // not something Tailwind's opacity modifier can resolve, and the track colour is
             // per-row. color-mix degrades to "no highlight" on very old browsers.
@@ -340,20 +363,34 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             >
               <Play className="w-2.5 h-2.5 sm:w-2 sm:h-2 fill-current" />
             </button>
-            {/* Polymeter Loop Length Selector */}
-            <button
-              onClick={() => onCycleLength(trackIdx)}
-              className={`px-1 sm:px-1.5 h-9 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors items-center justify-center touch-manipulation ${
-                track.trackLength && track.trackLength !== stepCount
-                  ? "flex bg-accent/20 border-accent text-accent font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
-                  : "hidden sm:flex bg-[#17181c] border-line text-text-dim hover:text-text-sub"
-              }`}
-              title={
-                t("track_polymeter_title", { steps: track.trackLength || stepCount })
-              }
-            >
-              L:{track.trackLength || stepCount}
-            </button>
+            {/* Polymeter Loop Length.
+                Desktop: a cycling button. Phone: an indicator only — a button here would have to be
+                ~30 px wide next to the inspector and Mute, and cycling a track's length is not a
+                job a 390 px header does well, so the shell shows the state and leaves the edit to
+                the desktop layout (see the plan's keep/drop table). */}
+            {isMobile ? (
+              track.trackLength && track.trackLength !== stepCount ? (
+                <span
+                  data-testid={`track-length-badge-${trackIdx}`}
+                  className="px-1 h-9 rounded text-[9.5px] font-['JetBrains_Mono'] border border-accent bg-accent/20 text-accent font-bold flex items-center justify-center shrink-0"
+                  title={t("track_polymeter_title", { steps: track.trackLength })}
+                >
+                  L:{track.trackLength}
+                </span>
+              ) : null
+            ) : (
+              <button
+                onClick={() => onCycleLength(trackIdx)}
+                className={`px-1 sm:px-1.5 h-9 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border transition-colors items-center justify-center touch-manipulation ${
+                  track.trackLength && track.trackLength !== stepCount
+                    ? "flex bg-accent/20 border-accent text-accent font-bold shadow-[0_0_6px_rgba(245,183,61,0.25)]"
+                    : "hidden sm:flex bg-[#17181c] border-line text-text-dim hover:text-text-sub"
+                }`}
+                title={t("track_polymeter_title", { steps: track.trackLength || stepCount })}
+              >
+                L:{track.trackLength || stepCount}
+              </button>
+            )}
             {/* Chord Duration / Technique Selector */}
             {track.track_id === "chords" && (
               <button
@@ -384,7 +421,9 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 e.stopPropagation();
                 onToggleMute(trackIdx);
               }}
-              className={`w-9 h-9 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
+              className={`${
+                isMobile ? "w-11 h-11 text-[12px]" : "w-9 h-9 sm:w-4 sm:h-4 text-[9.5px] sm:text-[9px]"
+              } font-['JetBrains_Mono'] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
                 isMute
                   ? "border-[#ff5964] text-white bg-gradient-to-b from-[#ff5964] to-[#d62839] font-black shadow-[0_0_8px_rgba(255,89,100,0.5)] scale-105"
                   : "border-[#2b3040] bg-[#171922] text-text-dim hover:text-[#ff5964] hover:border-[#ff5964]/50"
@@ -395,22 +434,30 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             >
               M
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleSolo(trackIdx);
-              }}
-              className={`w-9 h-9 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
-                isSolo
-                  ? "border-accent text-black bg-gradient-to-b from-amber-300 to-amber-500 font-black shadow-[0_0_8px_rgba(245,183,61,0.5)] scale-105"
-                  : "border-[#2b3040] bg-[#171922] text-text-dim hover:text-accent hover:border-accent/50"
-              }`}
-              title={isSolo ? t("track_unsolo_title") : t("track_solo_title")}
-              aria-label={isSolo ? t("track_unsolo_aria") : t("track_solo_aria")}
-              aria-pressed={isSolo}
-            >
-              S
-            </button>
+            {/**
+             * Solo. Not on a phone: the track inspector keeps mute and solo permanently visible
+             * ("Always visible: muting or soloing must not require finding the right tab"), so this
+             * is a duplicate — and the row's width is what squeezed the inspector opener down to
+             * 4 px. The phone opens the inspector from the row's main target instead.
+             */}
+            {!isMobile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSolo(trackIdx);
+                }}
+                className={`w-9 h-9 sm:w-4 sm:h-4 font-['JetBrains_Mono'] text-[9.5px] sm:text-[9px] border rounded transition-all flex items-center justify-center touch-manipulation select-none active:scale-95 ${
+                  isSolo
+                    ? "border-accent text-black bg-gradient-to-b from-amber-300 to-amber-500 font-black shadow-[0_0_8px_rgba(245,183,61,0.5)] scale-105"
+                    : "border-[#2b3040] bg-[#171922] text-text-dim hover:text-accent hover:border-accent/50"
+                }`}
+                title={isSolo ? t("track_unsolo_title") : t("track_solo_title")}
+                aria-label={isSolo ? t("track_unsolo_aria") : t("track_solo_aria")}
+                aria-pressed={isSolo}
+              >
+                S
+              </button>
+            )}
             {/* Opens the Logic-style track inspector: mix, insert chain and timbre for
                 this one track. */}
             <button

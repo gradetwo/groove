@@ -401,9 +401,12 @@ input[type=range]::-moz-range-thumb {
  * all landed on top of step cells, so tapping them toggled steps instead.
  *
  * On a phone nobody can hit a 16 px target anyway, and the per-track console already owns
- * mixer, insert chain and timbre — plus mute and solo in its own header. So the phone
- * keeps the row identity (fold, type, colour, meter, name) and drops the rest, while the
- * compact grid controls that *are* mobile-sized (mute, solo) stay inline.
+ * mixer, insert chain and timbre — plus mute and solo in its own header. So the phone keeps the
+ * row identity (type badge is desktop-only, colour and meter and name stay) and drops the rest;
+ * the compact grid controls that *are* mobile-sized keep their inline mute, now at 44 px.
+ * (`TrackRow` also drops the per-track fold toggle, the polymeter cycle and solo on a phone,
+ * because at 142 px the row cannot hold them at a tappable size — see `PRODUCT_PLAN_v2.1.0.md`
+ * G.36.)
  *
  * This is a real `display: none` rather than a Tailwind `hidden sm:flex`, because a
  * conflicting `flex` in the element's own class list wins over `hidden` regardless of
@@ -494,6 +497,26 @@ html.reduced-motion .animate-orbit {
   }
   .landscape-hide-sidebar {
     display: none !important;
+  }
+  /**
+   * The desktop-only track-header controls, hidden here for the same reason the portrait block
+   * hides them: at 16 px they are the opposite of a phone target, and everything they do lives in
+   * the track inspector.
+   *
+   * They were leaking back in **landscape only** because that block is a `max-width: 639px` query
+   * while a landscape phone is 750 px wide — the same width/height disagreement the JS capability
+   * hook documents (`PHONE_MAX_HEIGHT_PX` exists precisely to keep the two rules in step). The
+   * measured consequence: seven 16 px controls on screen in landscape, including a 16×16 "open
+   * inspector" button.
+   *
+   * Gated on `pointer: coarse` so a short *desktop* window (1280×480, where JS says `isMobile` is
+   * false) keeps its desktop controls.
+   */
+  @media (pointer: coarse) {
+    .trk-head-desktop-only,
+    .trk-head-desktop-group {
+      display: none !important;
+    }
   }
   /*
    * `.landscape-compact-bar` used to live here: five `!important` rules that compressed any bar's
