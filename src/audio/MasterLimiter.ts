@@ -202,12 +202,32 @@ export class TruePeakLimiterKernel {
   private readonly historyLength: number;
   private readonly delayLines: Float32Array[] = [];
   private readonly histories: Float32Array[] = [];
-  private readonly gainWindow: Float32Array;
   private readonly fastCoefficient: number;
   private readonly slowCoefficient: number;
 
+  /**
+   * M14: the lookahead gain is the *minimum* `required` gain across the next `D + 1` samples, and it
+   * used to be recomputed by scanning every slot on every sample — D ≈ 144 at 3 ms/48 kHz, about
+   * 7 million comparisons per second per channel, inside the render thread.
+   *
+   * These two arrays are a monotonic deque of that window: indices are stored oldest-first and their
+   * values increase from front to back, so the smallest value in the window is always at the front
+   * and is read in O(1). Each sample is pushed once and popped at most once, which makes the whole
+   * window O(1) amortised.
+   *
+   * Values go in as `Math.fround(required)` — exactly the conversion the old `Float32Array` window
+   * applied on write — so the minimum that gets chosen, and therefore every output sample, is
+   * bit-identical to the scan it replaces (pinned by the golden test in `limiterTruePeak.test.ts`).
+   */
+  private readonly dequeIndex: Int32Array;
+  private readonly dequeValue: Float32Array;
+  private readonly dequeCapacity: number;
+  private dequeHead = 0;
+  private dequeTail = 0;
+  /** How many samples have entered the window; it holds the most recent `lookaheadSamples + 1`. */
+  private samplesProcessed = 0;
+
   private delayIndex = 0;
-  private gainWindowIndex = 0;
   private gain = 1;
   private scratch: Float32Array;
   private framePeak: Float32Array;
@@ -229,7 +249,11 @@ export class TruePeakLimiterKernel {
 
     this.taps = limiterTruePeakTaps();
     this.historyLength = LIMITER_TRUE_PEAK_TAPS_PER_PHASE - 1;
-    this.gainWindow = new Float32Array(this.lookaheadSamples + 1).fill(1);
+    // One spare slot: a deque never needs to hold more than the window, and the ring needs a gap
+    // between head and tail to tell "empty" from "full".
+    this.dequeCapacity = this.lookaheadSamples + 2;
+    this.dequeIndex = new Int32Array(this.dequeCapacity);
+    this.dequeValue = new Float32Array(this.dequeCapacity);
     this.scratch = new Float32Array(this.historyLength + 128);
     this.framePeak = new Float32Array(128);
     // One-pole release: gain moves a fraction (1 − e^(−1/(τ·fs))) toward unity each sample.
@@ -260,9 +284,10 @@ export class TruePeakLimiterKernel {
   reset(): void {
     for (const line of this.delayLines) line.fill(0);
     for (const history of this.histories) history.fill(0);
-    this.gainWindow.fill(1);
+    this.dequeHead = 0;
+    this.dequeTail = 0;
+    this.samplesProcessed = 0;
     this.delayIndex = 0;
-    this.gainWindowIndex = 0;
     this.gain = 1;
   }
 
@@ -341,19 +366,32 @@ export class TruePeakLimiterKernel {
     const D = this.lookaheadSamples;
     const windowSize = D + 1;
     const ceiling = this.ceilingLinear;
+    const capacity = this.dequeCapacity;
     for (let i = 0; i < frames; i++) {
       const truePeak = peak[i];
       const required = truePeak > 0 ? Math.min(1, ceiling / truePeak) : 1;
 
-      // Sliding-window minimum over the lookahead: this is what makes the attack
-      // complete *before* the transient, and it is why the ceiling is hard.
-      this.gainWindow[this.gainWindowIndex] = required;
-      this.gainWindowIndex = this.gainWindowIndex + 1 === windowSize ? 0 : this.gainWindowIndex + 1;
-      let target = 1;
-      for (let j = 0; j < windowSize; j++) {
-        const candidate = this.gainWindow[j];
-        if (candidate < target) target = candidate;
+      /**
+       * Sliding-window minimum over the lookahead: this is what makes the attack
+       * complete *before* the transient, and it is why the ceiling is hard. The deque's
+       * front is the window's smallest value — see the field comment for why this is not
+       * a per-sample scan, and why `Math.fround` keeps it bit-identical to one.
+       */
+      const stored = Math.fround(required);
+      const oldest = this.samplesProcessed - windowSize;
+      while (this.dequeHead !== this.dequeTail && this.dequeIndex[this.dequeHead] <= oldest) {
+        this.dequeHead = this.dequeHead + 1 === capacity ? 0 : this.dequeHead + 1;
       }
+      while (this.dequeHead !== this.dequeTail) {
+        const back = this.dequeTail === 0 ? capacity - 1 : this.dequeTail - 1;
+        if (this.dequeValue[back] < stored) break;
+        this.dequeTail = back;
+      }
+      this.dequeIndex[this.dequeTail] = this.samplesProcessed;
+      this.dequeValue[this.dequeTail] = stored;
+      this.dequeTail = this.dequeTail + 1 === capacity ? 0 : this.dequeTail + 1;
+      this.samplesProcessed += 1;
+      const target = this.dequeValue[this.dequeHead];
 
       if (target <= this.gain) {
         // Instant attack: with lookahead in place this happens before the peak arrives.

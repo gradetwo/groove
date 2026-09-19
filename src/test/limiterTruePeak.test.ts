@@ -493,3 +493,109 @@ describe("E-12 · master limiter graph wiring", () => {
     expect(dbToLinear(MASTER_LIMITER_CEILING_DB)).toBeCloseTo(0.891251, 6);
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// M14: the sliding-window minimum is a deque, and the output did not move
+// ---------------------------------------------------------------------------------------
+
+/**
+ * FNV-1a over the raw Float32 bit patterns of every output sample, plus the final gain.
+ *
+ * Hashes rather than tolerance comparisons on purpose: the M14 change claims the output is
+ * **bit-identical**, and a tolerance would accept exactly the kind of one-ULP drift the claim rules
+ * out. These values were taken from the per-sample scan before it was replaced.
+ */
+function hashOutput(channels: Float32Array[], gain: number): string {
+  let h = 0x811c9dc5;
+  for (const channel of channels) {
+    const bits = new Uint32Array(channel.buffer, channel.byteOffset, channel.length);
+    for (let i = 0; i < bits.length; i++) {
+      h ^= bits[i];
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+  }
+  const gainBits = new Uint32Array(Float32Array.of(gain).buffer);
+  h ^= gainBits[0];
+  h = Math.imul(h, 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, "0");
+}
+
+describe("M14 · the deque window reproduces the scan it replaced", () => {
+  const GOLDEN: Array<{
+    name: string;
+    channels: () => Float32Array[];
+    blockSize: number;
+    hash: string;
+  }> = [
+    {
+      name: "a sine well above the ceiling",
+      channels: () => [sine(220, 1.6, 1500)],
+      blockSize: 128,
+      hash: "2db683ff",
+    },
+    {
+      name: "the inter-sample overshoot case",
+      channels: () => [quarterRateSine(0.707, 1500)],
+      blockSize: 128,
+      hash: "f65fefcf",
+    },
+    {
+      name: "broadband noise above the ceiling",
+      channels: () => [noise(7, 1500, 1.3)],
+      blockSize: 128,
+      hash: "711d898f",
+    },
+    {
+      name: "a transient burst, so the attack and the release both run",
+      channels: () => [squareBurst(2048, 300, 700)],
+      blockSize: 128,
+      hash: "2a53dfaa",
+    },
+    {
+      name: "two channels sharing one gain (stereo link)",
+      channels: () => [noise(1, 1200, 1.4), sine(110, 1.1, 1200)],
+      blockSize: 128,
+      hash: "0f7fedab",
+    },
+    {
+      name: "the same material in 37-frame blocks",
+      channels: () => [noise(9, 1500, 1.2)],
+      blockSize: 37,
+      hash: "a1fcba84",
+    },
+    {
+      name: "material below the ceiling, where the window stays at unity",
+      channels: () => [sine(440, 0.3, 900)],
+      blockSize: 128,
+      hash: "594e1308",
+    },
+  ];
+
+  it("produces the same samples and the same gain trajectory as the per-sample scan", () => {
+    for (const golden of GOLDEN) {
+      const kernel = new TruePeakLimiterKernel(SAMPLE_RATE);
+      const out = runKernel(kernel, golden.channels(), golden.blockSize);
+      expect(hashOutput(out, kernel.gainLinear), golden.name).toBe(golden.hash);
+    }
+  });
+
+  it("no longer scans the window per sample", () => {
+    /**
+     * This is a source assertion, and it is deliberate: the whole point of M14 is *work*, and the
+     * golden test above proves the output cannot tell the two implementations apart. Nothing
+     * observable distinguishes them, so a reintroduced scan would sail through every behavioural
+     * test while quietly costing ~145 comparisons per sample per channel in the render thread.
+     */
+    const files = [
+      path.resolve(process.cwd(), "src/audio/MasterLimiter.ts"),
+      path.resolve(process.cwd(), "public/limiterWorklet.js"),
+    ];
+    for (const file of files) {
+      const source = fs.readFileSync(file, "utf8");
+      expect(source, `${path.basename(file)} should use the deque`).toMatch(/dequeHead/);
+      expect(source, `${path.basename(file)} must not scan the window per sample`).not.toMatch(
+        /for \(\s*(?:let|var)\s+\w+\s*=\s*0;\s*\w+\s*<\s*windowSize/
+      );
+    }
+  });
+});
