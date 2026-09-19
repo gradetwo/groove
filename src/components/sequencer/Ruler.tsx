@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import { Copy } from "lucide-react";
+import { useDeviceCapabilities } from "../../hooks/useDeviceCapabilities";
 
 export interface RulerProps {
   stepCount: number;
@@ -36,6 +37,7 @@ export const Ruler = memo<RulerProps>(function Ruler({
   onSelectBar,
   onDuplicateBar1,
 }) {
+  const { isMobile } = useDeviceCapabilities();
   return (
     <div className="relative z-20 flex items-center gap-[var(--trk-head-gap)] pb-2 pt-1 border-b border-line-subtle mb-2 min-w-max">
       {/* Solid frozen column, same layer as the track rows: the label is only as tall as its own
@@ -68,7 +70,11 @@ export const Ruler = memo<RulerProps>(function Ruler({
                 onDuplicateBar1();
               }}
               title={isZh ? "将第 1 小节快速复制到所有小节" : "Duplicate Bar 1 to all bars"}
-              className="px-1.5 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent border border-accent/30 text-[8px] font-bold transition-all shadow-sm flex items-center gap-1"
+              /* 44 px tall on a phone: measured at 390×664 this pill was 58×30, and it is one of
+                 the few ruler controls that stays on the phone surface. */
+              className={`px-1.5 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent border border-accent/30 text-[8px] font-bold transition-all shadow-sm flex items-center gap-1 ${
+                isMobile ? "min-h-11" : ""
+              }`}
             >
               {/*
                 A lucide `Copy`, not the 📋 emoji this used to carry.
