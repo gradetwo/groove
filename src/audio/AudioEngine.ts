@@ -1306,6 +1306,21 @@ export class AudioEngine {
     return this.previewScope ? { ...this.previewScope } : null;
   }
 
+  /**
+   * Start playing **only** `scope`, atomically.
+   *
+   * `play()` clears any scope (see its comment), so a caller that wants a scoped run cannot do
+   * `setPreviewScope(...)` followed by `play()` — the scope would be gone before the first step was
+   * scheduled. This is the one entry point that sets a scope and starts in the same call. Returns
+   * whether the engine accepted the scope, so the caller reports what happened rather than assuming.
+   */
+  public playScoped(scope: { trackIdx: number; fromStep: number; toStep: number }): boolean {
+    this.setPreviewScope(scope);
+    if (!this.previewScope) return false;
+    void this.play({ keepPreviewScope: true });
+    return true;
+  }
+
   public setDrumsOnly(enabled: boolean): void {
     this.isDrumsOnly = enabled;
     this.syncTrackGains();
@@ -1367,7 +1382,22 @@ export class AudioEngine {
     this.openHiHatVoices = [];
   }
 
-  public async play(): Promise<void> {
+  public async play(options: { keepPreviewScope?: boolean } = {}): Promise<void> {
+    /**
+     * A full play clears any preview scope, because that is what the user just asked for.
+     *
+     * The scope exists so the piano roll can loop one lane in isolation; while it is set, the
+     * scheduler skips every other track. Pressing the arrangement's own Play button with a scope
+     * left over therefore played *only that lane*, with nothing on screen saying so — reported as
+     * "after writing a chord progression, playback in the workspace only plays the chords". The
+     * scope belongs to the preview, not to the transport, so the transport clears it.
+     *
+     * `keepPreviewScope` is the one visible exception, and only `playScoped` passes it: a scoped run
+     * has to keep the scope it just set. Making it a named option rather than a second method keeps
+     * the clearing in one place, so a future caller cannot get the old behaviour by accident.
+     */
+    const scoped = options.keepPreviewScope ? this.previewScope : null;
+    if (!options.keepPreviewScope) this.previewScope = null;
     if (!this.ctx) {
       this.initAudioContext();
     }
@@ -1382,8 +1412,10 @@ export class AudioEngine {
       this.onPlayCallback();
     }
     ecosystemBus.publishClockStart(this.bpm);
-    this.currentStep = this.previewScope
-      ? this.previewScope.fromStep
+    // `scoped`, not `this.previewScope`: a full play cleared the property just above, and a scoped
+    // run has already had its scope read into this local.
+    this.currentStep = scoped
+      ? scoped.fromStep
       : this.loopRange && this.loopRange[0] >= 0
         ? this.loopRange[0]
         : 0;

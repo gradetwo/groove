@@ -55,6 +55,17 @@ const { engineMock, AudioEngineCtor } = vi.hoisted(() => {
      * in the summary.
      */
     isAudioBlocked: vi.fn(() => false),
+    /**
+     * Required by the transport's second job: starting the full arrangement releases a leftover
+     * piano-roll lane scope, and the roll's preview state is released through the same call
+     * (`useAuditionPreview.releasePreviewScope` → `setPreviewScope(null)`).
+     *
+     * Omitting it is the same shape of failure as the missing `isAudioBlocked` above — the click
+     * handler throws inside a continuation, so the visible symptom is an unhandled rejection plus a
+     * *different* test failing, which reads like a flake rather than a missing method.
+     */
+    setPreviewScope: vi.fn(),
+    getPreviewScope: vi.fn(() => null),
   };
   return { engineMock, AudioEngineCtor: vi.fn(() => engineMock) };
 });

@@ -439,6 +439,20 @@ export const StudioView: React.FC<StudioViewProps> = ({
     showToast,
   });
 
+  /**
+   * The roll's lane scope is owned by `useAuditionPreview`, which this view creates further down
+   * (it needs `handleAudition`, itself produced below the transport). The transport is created
+   * first and still has to release that scope when the arrangement starts, so the call is bound
+   * late through a ref.
+   *
+   * `AudioEngine.play()` already clears the scope — that is what stops a full play scheduling one
+   * lane — but the roll's `isRollPreviewing` state would stay true and leave its toggle lit over a
+   * scope that no longer exists. The wrapper has a stable identity because
+   * `useTransportControls` keeps it in a `useCallback` dependency list.
+   */
+  const releasePreviewScopeRef = useRef<(() => void) | null>(null);
+  const releasePreviewScope = useCallback(() => releasePreviewScopeRef.current?.(), []);
+
   // Transport & playback modes: play, drums-only, undo/redo, tap, song, slots (A-02)
   const {
     handleTapTempo,
@@ -464,6 +478,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     redo,
     isZh,
     showToast,
+    releasePreviewScope,
   });
 
   // Patterns handed over from other views (chords / arpeggio / masterclass) (A-02)
@@ -771,6 +786,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleAuditionInspectorTrack,
     handleStartRollPreview,
     handleStopRollPreview,
+    releasePreviewScope: releaseAuditionPreviewScope,
     isRollPreviewing,
   } = useAuditionPreview({
     engineRef,
@@ -780,6 +796,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleAudition,
     inspectorTrackIdx,
   });
+
+  // Bind the late wire the transport reads (see `releasePreviewScopeRef` above).
+  useEffect(() => {
+    releasePreviewScopeRef.current = releaseAuditionPreviewScope;
+  }, [releaseAuditionPreviewScope]);
 
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 

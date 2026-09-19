@@ -34,6 +34,7 @@ const makeHarness = (over: { blocked?: boolean; rejects?: boolean } = {}) => {
   const setIsPlaying = vi.fn();
   const clearPlayhead = vi.fn();
   const showToast = vi.fn();
+  const releasePreviewScope = vi.fn();
 
   const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(LanguageProvider, null, children);
@@ -52,10 +53,11 @@ const makeHarness = (over: { blocked?: boolean; rejects?: boolean } = {}) => {
         redo: vi.fn(() => null),
         isZh: false,
         showToast,
+        releasePreviewScope,
       }),
     { wrapper }
   );
-  return { engine, setIsPlaying, clearPlayhead, showToast, result };
+  return { engine, setIsPlaying, clearPlayhead, showToast, releasePreviewScope, result };
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -68,6 +70,18 @@ describe("transport playback truthfulness", () => {
     });
     expect(engine.play).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(setIsPlaying).toHaveBeenCalledWith(true));
+  });
+
+  it("releases a leftover piano-roll lane scope before the arrangement starts", async () => {
+    // The audio half of this is `AudioEngine.play()` clearing the scope (pinned in
+    // `pianoRollPreview.test.ts`). This pins the other half: the roll's own preview state has to be
+    // released in the same breath, or its toggle stays lit over a scope that no longer exists.
+    const { releasePreviewScope, result } = makeHarness();
+    expect(releasePreviewScope).not.toHaveBeenCalled();
+    await act(async () => {
+      await result.current.handleTogglePlay();
+    });
+    expect(releasePreviewScope).toHaveBeenCalledTimes(1);
   });
 
   it("stops and reports instead of showing playback when audio is blocked", async () => {

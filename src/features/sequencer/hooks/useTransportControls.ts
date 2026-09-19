@@ -17,6 +17,16 @@ export interface UseTransportControlsOptions {
   redo: () => StudioHistorySnapshot | null;
   isZh: boolean;
   showToast: (msg: string) => void;
+  /**
+   * Drop any piano-roll lane scope before the full arrangement starts.
+   *
+   * While a scope is set the scheduler skips every other track, so pressing Play with one left over
+   * played only that lane — reported as "after writing a chord progression, playback in the
+   * workspace only plays the chords". `AudioEngine.play()` clears the scope as well; this exists so
+   * the roll's own preview state is released in the same breath, instead of its toggle staying lit
+   * over a scope that no longer exists.
+   */
+  releasePreviewScope?: () => void;
 }
 
 export interface UseTransportControlsResult {
@@ -49,6 +59,7 @@ export function useTransportControls({
   undo,
   redo,
   showToast,
+  releasePreviewScope,
 }: UseTransportControlsOptions): UseTransportControlsResult {
   const { t } = useLanguage();
   // Tap tempo calculator (P3-07)
@@ -113,6 +124,8 @@ export function useTransportControls({
       return;
     }
 
+    // Asking for the arrangement releases any leftover lane scope before the transport starts.
+    releasePreviewScope?.();
     try {
       await engine.play();
     } catch (error) {
@@ -136,7 +149,7 @@ export function useTransportControls({
 
     setIsPlaying(true);
     announcer.announce(t("transport_playback_started"));
-  }, [isPlaying, clearPlayhead, engineRef, showToast, t]);
+  }, [isPlaying, clearPlayhead, engineRef, showToast, t, releasePreviewScope]);
 
   const handleUndo = useCallback(() => {
     const prev = undo();

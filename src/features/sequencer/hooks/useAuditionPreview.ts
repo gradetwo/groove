@@ -47,6 +47,13 @@ export interface UseAuditionPreviewOptions {
 }
 
 export interface UseAuditionPreviewResult {
+  /**
+   * Release a leftover lane scope without stopping playback.
+   *
+   * The transport calls this the moment the user asks for the full arrangement, so a scope left over
+   * from an earlier preview cannot silently narrow the next play to one track.
+   */
+  releasePreviewScope: () => void;
   /** One note through the track's own instrument — the same call the step grid makes. */
   handleAuditionRollNote: (
     trackIdx: number,
@@ -110,6 +117,18 @@ export function useAuditionPreview({
   const isRollPreviewingRef = useRef(false);
   isRollPreviewingRef.current = isRollPreviewing;
 
+  /**
+   * Drops the scope and the roll's preview state, **without touching the transport**.
+   *
+   * Split out because the transport needs exactly this half: pressing Play on the arrangement has to
+   * release a leftover lane scope (see `play()`'s comment) while obviously not stopping the playback
+   * it is in the middle of starting. `handleStopRollPreview` is this plus the transport teardown.
+   */
+  const releasePreviewScope = useCallback(() => {
+    engineRef.current?.setPreviewScope(null);
+    setIsRollPreviewing(false);
+  }, [engineRef]);
+
   const handleStartRollPreview = useCallback(
     (trackIdx: number, fromStep: number, toStep: number): boolean => {
       const engine = engineRef.current;
@@ -121,12 +140,10 @@ export function useAuditionPreview({
         setIsPlaying(false);
         clearPlayhead();
       }
-      engine.setPreviewScope({ trackIdx, fromStep, toStep });
-      // The engine clamps and can reject the request, so the caller is told what actually happened
-      // rather than being left to assume it started.
-      const accepted = engine.getPreviewScope() !== null;
+      // `playScoped`, not `setPreviewScope` + `play`: `play()` clears a leftover scope (that is the
+      // fix for "the workspace only plays the chords"), so the two-step form would drop this one.
+      const accepted = engine.playScoped({ trackIdx, fromStep, toStep });
       if (accepted) {
-        engine.play();
         setIsRollPreviewing(true);
       }
       return accepted;
@@ -137,15 +154,14 @@ export function useAuditionPreview({
   const handleStopRollPreview = useCallback(() => {
     const engine = engineRef.current;
     if (!engine) return;
-    engine.setPreviewScope(null);
+    releasePreviewScope();
     // Only stop the transport if the preview is what started it.
     if (isRollPreviewingRef.current) {
       engine.stop();
       setIsPlaying(false);
       clearPlayhead();
     }
-    setIsRollPreviewing(false);
-  }, [clearPlayhead, engineRef, setIsPlaying]);
+  }, [clearPlayhead, engineRef, releasePreviewScope, setIsPlaying]);
 
   // Leaving the surface unmounts the roll; the scope must not survive it and constrain the next play.
   useEffect(() => {
@@ -160,6 +176,8 @@ export function useAuditionPreview({
     handleAuditionInspectorTrack,
     handleStartRollPreview,
     handleStopRollPreview,
+    /** For the transport: release a leftover scope without stopping playback. */
+    releasePreviewScope,
     isRollPreviewing,
   };
 }

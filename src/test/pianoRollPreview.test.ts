@@ -13,10 +13,15 @@
  * scheduled on a fake context, rather than reading back the parameters it was told to write.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { AudioEngine } from "../audio/AudioEngine";
 import { installFakeAudioContext } from "./helpers/fakeAudio";
 import { previewProgressionNotes, applyChordProgression, CHORD_PROGRESSIONS } from "../features/sequencer/rollModel";
 import type { SequencerPattern } from "../types/genre";
+
+const SRC = resolve(__dirname, "..");
+const read = (relative: string) => readFileSync(resolve(SRC, relative), "utf8");
 
 function makeTrack(track_id: string, name: string, instrument: string) {
   return {
@@ -224,5 +229,129 @@ describe("isolated lane preview", () => {
     } finally {
       restore();
     }
+  });
+});
+
+describe("a full play releases a leftover lane scope", () => {
+  /**
+   * Reported by the user: "after writing a chord progression in the piano roll, playback in the
+   * workspace above only plays the chords."
+   *
+   * The scope exists so the roll can loop one lane in isolation, and while it is set the scheduler
+   * skips every other track. Nothing cleared it when the user pressed the arrangement's own Play
+   * button, so the transport started with the previous preview's scope still narrowing it — one
+   * track audible, no indication why. The scope belongs to the preview, so the transport releases it.
+   */
+  it("clears the scope when the transport starts", async () => {
+    const restore = installFakeAudioContext();
+    try {
+      const engine = new AudioEngine();
+      engine.setPattern(makePattern());
+      engine.setPreviewScope({ trackIdx: CHORDS_TRACK, fromStep: 0, toStep: 16 });
+      expect(engine.getPreviewScope()).not.toBeNull();
+
+      await engine.play();
+
+      expect(engine.getPreviewScope()).toBeNull();
+      engine.stop();
+    } finally {
+      restore();
+    }
+  });
+
+  it("keeps the scope when a scoped run starts, which is the one exception", () => {
+    /**
+     * The preview itself would be broken by the clear above, so `playScoped` sets the scope and
+     * starts in one call. Without this assertion, "the scope is always cleared" would look like a
+     * complete fix while silently removing the feature it protects.
+     */
+    const restore = installFakeAudioContext();
+    try {
+      const engine = new AudioEngine();
+      engine.setPattern(makePattern());
+
+      const accepted = engine.playScoped({ trackIdx: CHORDS_TRACK, fromStep: 0, toStep: 16 });
+
+      expect(accepted).toBe(true);
+      expect(engine.getPreviewScope()).toEqual({ trackIdx: CHORDS_TRACK, fromStep: 0, toStep: 16 });
+      engine.stop();
+    } finally {
+      restore();
+    }
+  });
+
+  it("schedules every track again once a full play has cleared the scope", async () => {
+    /**
+     * The user-visible half of the report: after the scope is released, the arrangement must sound
+     * all of its tracks again. This schedules the same step twice — once while scoped, once after a
+     * full `play()` — and compares the voices each produced, so "only the chords come out" cannot
+     * come back without failing here.
+     */
+    const restore = installFakeAudioContext();
+    try {
+      const engine = new AudioEngine();
+      const pattern = makePattern();
+      for (const idx of [0, 1, 2, 4, CHORDS_TRACK]) {
+        const t = pattern.tracks[idx];
+        if (!t) continue;
+        t.steps[0] = 1;
+        if (t.pitch) t.pitch[0] = idx === 4 ? 40 : 60;
+      }
+      engine.setPattern(pattern);
+      const internal = engine as unknown as {
+        initAudioContext: () => void;
+        scheduleStep: (s: number, t: number, d: number) => number[];
+        ctx: { currentTime: number; createdOscillators: unknown[]; createdBufferSources: unknown[] };
+      };
+      internal.initAudioContext();
+      const voiceCount = () =>
+        internal.ctx.createdOscillators.length + internal.ctx.createdBufferSources.length;
+
+      engine.setPreviewScope({ trackIdx: CHORDS_TRACK, fromStep: 0, toStep: 4 });
+      const beforeScoped = voiceCount();
+      internal.scheduleStep(0, internal.ctx.currentTime, 0.12);
+      const scopedVoices = voiceCount() - beforeScoped;
+
+      await engine.play();
+      expect(engine.getPreviewScope()).toBeNull();
+      const beforeFull = voiceCount();
+      internal.scheduleStep(0, internal.ctx.currentTime, 0.12);
+      const fullVoices = voiceCount() - beforeFull;
+
+      // The scoped run voiced only the chords lane; the full one voices every track on the step.
+      expect(scopedVoices).toBeGreaterThan(0);
+      expect(fullVoices).toBeGreaterThan(scopedVoices);
+      engine.stop();
+    } finally {
+      restore();
+    }
+  });
+});
+
+/**
+ * The UI half of the same defect, checked at the source level like `genreInsertWiring.test.ts`.
+ *
+ * Clearing the scope inside `play()` is what stops a full play from scheduling one lane, but the
+ * roll's `isRollPreviewing` state is separate: if the transport never releases it, the roll's toggle
+ * stays lit over a scope that no longer exists. That is a *wiring* failure — a correct hook wired to
+ * nothing looks identical to no feature at all — and it is invisible to every test above, which is
+ * why a source-level assertion is the right instrument here rather than a behavioural one.
+ */
+describe("the scope release is wired from the roll's hook into the transport", () => {
+  it("hands the transport a release and binds the ref to the hook that owns the scope", () => {
+    const view = read("views/StudioView.tsx");
+    // The transport is created before `useAuditionPreview` (which needs `handleAudition`, itself
+    // produced lower in the view), so the release travels through a ref. Assert both ends of the wire.
+    expect(view).toMatch(/useTransportControls\(\{[\s\S]*?\n\s*releasePreviewScope,/);
+    expect(view).toContain("releasePreviewScope: releaseAuditionPreviewScope,");
+    expect(view).toContain("releasePreviewScopeRef.current = releaseAuditionPreviewScope");
+  });
+
+  it("keeps the engine, not the UI, as the thing that clears the scope for audio", () => {
+    // The wire above only mirrors state; the audio guarantee is `play()` clearing the scope, and it
+    // must stay that way or a surface that forgets to call the release would narrow the next play.
+    expect(read("audio/AudioEngine.ts")).toMatch(
+      /if \(!options\.keepPreviewScope\) this\.previewScope = null/
+    );
   });
 });
