@@ -13,6 +13,7 @@ import {
   ChevronRight,
   CheckCircle2,
   BookOpen,
+  Play,
 } from "lucide-react";
 
 export interface NewUserOnboardingModalProps {
@@ -20,6 +21,13 @@ export interface NewUserOnboardingModalProps {
   onClose: () => void;
   onStartLesson1?: () => void;
   onStartStudio?: () => void;
+  /**
+   * U2: the single action the guide offers on its first slide — "hear this genre now".
+   *
+   * The guide hands this to the host (which owns navigation and the studio) rather than starting
+   * anything itself; `App` switches to the studio and asks it to play as soon as its engine exists.
+   */
+  onAudition?: () => void;
 }
 
 export const ONBOARDING_COMPLETED_KEY = "groove_onboarding_completed";
@@ -29,6 +37,7 @@ export const NewUserOnboardingModal: React.FC<NewUserOnboardingModalProps> = ({
   onClose,
   onStartLesson1,
   onStartStudio,
+  onAudition,
 }) => {
   const { t, isZh } = useLanguage();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -104,6 +113,30 @@ export const NewUserOnboardingModal: React.FC<NewUserOnboardingModalProps> = ({
     onClose();
   };
 
+  /**
+   * Closing the overlay is **not** finishing the guide.
+   *
+   * `Modal`'s `onClose` fires for a click on the mask and for Escape, and it used to be wired
+   * straight to `handleFinish` — which writes the "completed" flag. One stray click outside the card
+   * therefore dismissed the walkthrough *permanently*, which is how a first-run guide disappears for
+   * the users who need it most. The flag is now written only by the explicit Skip button and by the
+   * last slide's actions; dismissing leaves the guide to be offered again next time.
+   */
+  const handleDismiss = () => {
+    onClose();
+  };
+
+  /**
+   * The first slide's action: leave the guide and start playing the current genre.
+   *
+   * Deliberately *not* `handleFinish`: the user asked to hear the groove, not to be told they have
+   * finished reading. The guide comes back next session, and Settings can replay it on demand.
+   */
+  const handleAuditionNow = () => {
+    onClose();
+    onAudition?.();
+  };
+
   const handleLaunchLesson1 = () => {
     handleFinish();
     if (onStartLesson1) {
@@ -121,7 +154,7 @@ export const NewUserOnboardingModal: React.FC<NewUserOnboardingModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={handleFinish}
+      onClose={handleDismiss}
       maxWidth="2xl"
       className="p-0 overflow-hidden bg-[#0a0b12] border-line-strong"
     >
@@ -215,6 +248,18 @@ export const NewUserOnboardingModal: React.FC<NewUserOnboardingModalProps> = ({
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 <span>{t("onboarding_prev_btn")}</span>
+              </button>
+            )}
+
+            {currentSlide === 0 && onAudition && (
+              <button
+                type="button"
+                onClick={handleAuditionNow}
+                className="px-3.5 py-1.5 rounded-xl border border-accent/60 bg-accent/15 text-accent text-xs font-bold hover:bg-accent/25 transition-all flex items-center gap-1.5"
+                data-testid="onboarding-listen-btn"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>{t("onboarding_listen_now")}</span>
               </button>
             )}
 

@@ -69,6 +69,11 @@ export interface SettingsModalProps {
   onToggleGs1: () => void;
   /** Opens the changelog/update dialog from the About tab, when the host provides one. */
   onOpenUpdates?: () => void;
+  /**
+   * U2: the walkthrough is dismissed without being finished, so the user needs a way back to it —
+   * otherwise "I closed it by accident" has no remedy other than clearing site data.
+   */
+  onReplayOnboarding?: () => void;
 }
 
 const TAB_ORDER: SettingsTabId[] = ["audio", "performance", "interface", "about"];
@@ -103,6 +108,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   gs1Enabled,
   onToggleGs1,
   onOpenUpdates,
+  onReplayOnboarding,
 }) => {
   const { t, language, setLanguage } = useLanguage();
   const [tab, setTab] = useState<SettingsTabId>(initialTab);
@@ -434,6 +440,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="w-full mt-1 px-3 py-2 rounded-lg text-xs font-bold border border-line bg-[#1d2028] text-text-sub hover:text-text transition-colors"
                   >
                     {t("header_check_updates_title")}
+                  </button>
+                )}
+                {onReplayOnboarding && (
+                  <button
+                    type="button"
+                    data-testid="settings-about-replay-onboarding"
+                    onClick={onReplayOnboarding}
+                    className="w-full mt-1 px-3 py-2 rounded-lg text-xs font-bold border border-line bg-[#1d2028] text-text-sub hover:text-text transition-colors"
+                  >
+                    {t("settings_replay_onboarding")}
                   </button>
                 )}
               </div>

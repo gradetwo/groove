@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SequencerPattern } from "../../../types/genre";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../../../audio/AudioEngine";
 import type { QuantizedStepResult } from "../../../audio/AudioEngine";
@@ -39,6 +39,16 @@ export interface UseAudioEngineLifecycleResult {
   updatePlayhead: (step: number) => void;
   /** Hides the playhead and resets the last-step tracker. */
   clearPlayhead: () => void;
+  /**
+   * Whether the engine instance exists yet.
+   *
+   * The engine is created in a mount effect, so on the first render the ref is still empty and no
+   * re-render is guaranteed afterwards. Anything that has to act "as soon as the studio can make a
+   * sound" — the new-user guide's single action, a lesson, a phone surface — needs a dependency it
+   * can re-run on, and this is it. Reading `engineRef.current` in an effect instead looks like it
+   * works and silently never fires.
+   */
+  engineReady: boolean;
 }
 
 /**
@@ -68,6 +78,9 @@ export function useAudioEngineLifecycle({
   handleQuantizedStep,
   autoFollowPlayhead,
 }: UseAudioEngineLifecycleOptions): UseAudioEngineLifecycleResult {
+  /** Flips once the engine exists, so consumers can depend on readiness (see the interface). */
+  const [engineReady, setEngineReady] = useState(false);
+
   const lastStepRef = useRef(-1);
   const autoFollowPlayheadRef = useRef<boolean>(
     autoFollowPlayhead ?? loadLayoutPrefs().autoFollowPlayhead ?? true
@@ -261,6 +274,7 @@ export function useAudioEngineLifecycle({
       },
     });
     engineRef.current = engine;
+    setEngineReady(true);
     engine.setPattern(pattern);
     engine.setBpm(bpm);
     engine.setSwing(swing / 100);
@@ -282,6 +296,7 @@ export function useAudioEngineLifecycle({
       cleanup?.();
       engine.destroy();
       engineRef.current = null;
+      setEngineReady(false);
     };
   }, []);
 
@@ -398,5 +413,5 @@ export function useAudioEngineLifecycle({
     }
   }, [resolution]);
 
-  return { updatePlayhead, clearPlayhead };
+  return { updatePlayhead, clearPlayhead, engineReady };
 }

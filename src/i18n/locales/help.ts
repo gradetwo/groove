@@ -132,6 +132,9 @@ export const helpMessages = {
   onboarding_s1_desc: { en: "Groove runs 100% on W3C Web Audio DSP algorithms in your browser with zero sample libraries, zero loading delay, and zero audio latency.", zh: "Groove 完全基于 W3C Web Audio DSP 算法在您的浏览器本地实时运算，0 采样库依赖、0 音频加载等待、极低硬件延迟。" },
   onboarding_s1_tip: { en: "159 authentic historical genres synthesized in real time with studio master quality.", zh: "实时合成 159 种现代音乐流派地道音色，输出无损母带级音频。" },
 
+  // U2: the guide's single action, on the first slide.
+  onboarding_listen_now: { en: "Hear this genre now", zh: "先听一下这个曲风" },
+
   onboarding_s2_title: { en: "2. Transport & Global Master Controls", zh: "2. 走带、速度与全局主控区" },
   onboarding_s2_desc: { en: "Control master playback (Space), BPM tempo (40-240), swing groove ratio, root pitch, and 22 musical scales directly from the top bar.", zh: "在顶部控制栏掌控走带播放 (空格键)、BPM 速度 (40-240)、摇摆律动百分比、根音音高与 22 种自然调式音阶。" },
   onboarding_s2_tip: { en: "Use Cmd/Ctrl + K from any view to instantly search genres, tools, and shortcuts.", zh: "在任意界面按下 Cmd/Ctrl + K 即可快速全局检索曲风、功能与快捷操作。" },
