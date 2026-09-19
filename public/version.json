@@ -1,27 +1,27 @@
 {
-  "version": "2.1.0",
+  "version": "2.1.1",
   "releaseDate": "2026-09-19",
-  "changelogCount": 164,
+  "changelogCount": 165,
   "latest": {
-    "version": "2.1.0",
+    "version": "2.1.1",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.1.0 手机端：曲风制作器、挑战与大师课都按得到了；顺手修掉一个会空转的检查",
-      "en": "v2.1.0 On a Phone: The Genre Maker, Challenge and Masterclass Are Hittable Too"
+      "zh": "v2.1.1 手机端：门禁覆盖 11 个面，还没决定的四页用预算钉住",
+      "en": "v2.1.1 The Phone Gate Covers Eleven Surfaces; Four Await a Decision Under Budget"
     },
     "highlights": [
       {
-        "zh": "**三个视图 8 + 5 + 1 → 0**：**maker** 的 fork 下拉只有 140×**18**、Fork 43×24、`New Blank Genre`/`Saved`/`Poster & Share`/`Workshop Guide`/`Open in Studio` 一排 34 px，还有元数据表单里 316×38 的名称输入；**challenge** 的证书按钮 34 px、重置 32×32、三档难度 32–34 px；**masterclass** 的 Guide 128×30。同一形状的表单控件（名称/分类/作者/BPM/音阶/拍号）一并按 44 px 处理——它们只是再往下滚一屏的同一种东西，不修就是「量不到就不算」的自欺。",
-        "en": "**Three views went 8 + 5 + 1 → 0**: the **maker**'s fork select was 140×**18**, Fork 43×24, and the `New Blank Genre` / `Saved` / `Poster & Share` / `Workshop Guide` / `Open in Studio` row 34 px tall, plus a 316×38 name field in the metadata form; **challenge**'s certificate button was 34 px, reset 32×32 and the three difficulty buttons 32–34 px; **masterclass**'s guide was 128×30. The identically shaped form controls (name, category, author, BPM, scale, meter) were done in…"
+        "zh": "**还没拍板的四页不能无人看管。** E2E 的手机门禁现在走 **11 个面**：7 个走 44 px 硬规则，4 个（horizontal-timeline / vertical-timeline / compare / analyzer）走**预算**。预算是棘轮不是免责：数字是今天的实测值，**变差就失败**，变好会提示收紧，并且每次都打印。它按**方向**分开记，因为两种布局本来就不同——analyzer 横屏只剩 2 个、竖屏 13 个；vertical-timeline 横屏 1 个、竖屏 6 个。",
+        "en": "**The four undecided pages cannot be left unguarded.** The E2E phone gate now walks **eleven surfaces**: seven under the 44 px rule and four (horizontal-timeline, vertical-timeline, compare, analyzer) under a **budget**. A budget is a ratchet, not an excuse: the numbers are today's measurements, **worse fails the run**, better says so, and every one is printed. They are recorded per orientation because the layouts differ — the analyzer has 2 left in landscape against 13 in p…"
       },
       {
-        "zh": "四个文件都从 `useDeviceCapabilities()` 读 `isMobile`，**桌面路径一行未改**。量后：maker 15 控件 / 0 低于 44，challenge 12 / 0，masterclass 10 / 0，横屏同样 0；E2E 手机门禁现在覆盖 **7 个面**。",
-        "en": "All four files read `isMobile` from `useDeviceCapabilities()` and **the desktop path is untouched**. After: maker 15 controls / 0 under 44, challenge 12 / 0, masterclass 10 / 0, and 0 in landscape; the E2E phone gate now covers **seven surfaces**."
+        "zh": "**一个教训：门禁必须自己拥有它执行的数字。** 第一版预算抄了审计脚本的数，一跑就红——门禁量到的 compare 是 **15**（审计 14）、analyzer 横屏是 **2**（审计 0）。差异来自口径：审计要求元素**中心**真的在视口内且多等一会儿布局稳定，门禁只要求矩形与视口相交。两者都对，但「照这个数执行」的那个数必须来自执行者本身。",
+        "en": "**A lesson: a gate has to own the numbers it enforces.** The first budget copied the audit's figures and failed immediately — the gate measured **15** for compare against the audit's 14, and **2** for the analyzer in landscape against the audit's 0. The rules differ: the audit requires the element's *centre* to be inside the viewport and waits longer for layout to settle, while the gate only requires the rect to intersect it. Both are defensible, but the number a gate enforc…"
       },
       {
-        "zh": "**顺手修掉一个「构造上就会空转」的检查**：加完 7 面门禁后，iPhone 两个方向都报 `genre switch 1: navigations=0 patternFlips=0`。加了诊断一量才发现：那个 chip **本来就是当前曲风**——检查固定点 `chipSelectors[1]` 并假定它一定是别的曲风，而 App 把当前曲风存在 state 里，前面几步（这一轮新加的门禁会走一遍 maker）已经切到过它，于是点击是**合法的 no-op**。现在从排除当前曲风后的头三个 chip 里逐个试，只要有一个真的换了曲风就通过；真坏掉的处理器仍然会失败。",
-        "en": "**A check that was vacuous by construction got fixed along the way**: after the seven-surface gate landed, both iPhone orientations reported `genre switch 1: navigations=0 patternFlips=0`. A three-line diagnostic showed the chip **was already the current genre** — the check always clicked `chipSelectors[1]` and assumed that was a different genre, while the app keeps its genre in state, and the earlier steps (this round's gate walks the maker) had already visited it, making t…"
+        "zh": "**顺带抓到一个真实的 ResizeObserver 循环**：门禁走到 analyzer 后，E2E 开始报 `ResizeObserver loop completed with undelivered notifications`。**没有过滤这条消息**，而是找到源头——三个分析画布在自己的 observer 回调里写 `canvas.style.width/height`，而容器尺寸又跟着画布走，于是在自己的通知里改变了被观察元素。修法是把回调**推迟一帧**（三处），第二遍本来就会因守卫变成 no-op。E2E 的 `pageerror` 收集保持严格，没加白名单。",
+        "en": "**And it caught a real ResizeObserver loop**: once the gate reached the analyzer, the E2E began reporting `ResizeObserver loop completed with undelivered notifications`. **The message was not filtered** — the source was found instead: three analyser canvases write `canvas.style.width/height` inside their own observer callback, while the container's size follows the canvas, so the callback resizes the element it is observing. Deferring the callback by one frame (three files)…"
       }
     ],
     "truncated": true
