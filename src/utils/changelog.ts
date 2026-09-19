@@ -25,10 +25,21 @@ export interface ChangelogHighlight {
   en: string;
 }
 
+export const CHANGELOG_CATEGORIES = ["feature", "audio", "fix", "refactor", "docs"] as const;
+export type ChangelogCategory = (typeof CHANGELOG_CATEGORIES)[number];
+
 export interface ChangelogEntry {
   version: string;
   date: string;
-  category: "feature" | "audio" | "fix";
+  /**
+   * What kind of change this release was.
+   *
+   * Typed as a closed union for authors, but **treated as open at runtime** — see
+   * `normalizeChangelogCategory`. The archive is JSON fetched from the network, so TypeScript
+   * cannot vouch for it, and a category the UI does not know about must degrade to a generic badge
+   * rather than crash the modal.
+   */
+  category: ChangelogCategory;
   title: {
     zh: string;
     en: string;
@@ -83,15 +94,37 @@ export function isNewerVersion(remote: string, current: string): boolean {
  * `latest` still fills any gap the archive has — which is the case that matters: a stale
  * archive that stops one release short.
  */
+/**
+ * Coerces whatever the archive says into a category this UI can render.
+ *
+ * This exists because a release was shipped with `category: "refactor"` while the modal's badge
+ * lookup handled only feature/audio/fix. The lookup returned `undefined` and the render threw
+ * `Cannot read properties of undefined (reading 'classes')` — the whole updates panel hit the error
+ * boundary. The type was written as a closed union, but the data arrives as JSON from the network,
+ * so the type was a promise the runtime never made.
+ *
+ * Unknown categories map to `"fix"`: a release note that renders with a slightly wrong badge is
+ * strictly better than a panel that cannot open, and choosing a category the UI knows keeps every
+ * downstream lookup total.
+ */
+export function normalizeChangelogCategory(value: unknown): ChangelogCategory {
+  return (CHANGELOG_CATEGORIES as readonly string[]).includes(value as string)
+    ? (value as ChangelogCategory)
+    : "fix";
+}
+
 export function mergeChangelog(
   archive: readonly ChangelogEntry[] | null | undefined,
   latest: ChangelogEntry | null | undefined
 ): ChangelogEntry[] {
   const byVersion = new Map<string, ChangelogEntry>();
-  if (latest && typeof latest.version === "string") byVersion.set(latest.version, latest);
-  for (const entry of archive || []) {
-    if (entry && typeof entry.version === "string") byVersion.set(entry.version, entry);
-  }
+  const accept = (entry: ChangelogEntry | null | undefined) => {
+    if (!entry || typeof entry.version !== "string") return;
+    // Normalised on the way in, so nothing downstream has to defend against an unknown category.
+    byVersion.set(entry.version, { ...entry, category: normalizeChangelogCategory(entry.category) });
+  };
+  accept(latest);
+  for (const entry of archive || []) accept(entry);
   return [...byVersion.values()].sort((a, b) => compareVersionsDesc(a.version, b.version));
 }
 

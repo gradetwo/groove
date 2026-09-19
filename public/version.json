@@ -1,27 +1,27 @@
 {
-  "version": "2.0.66",
+  "version": "2.0.67",
   "releaseDate": "2026-09-19",
-  "changelogCount": 130,
+  "changelogCount": 131,
   "latest": {
-    "version": "2.0.66",
+    "version": "2.0.67",
     "date": "2026-09-19",
-    "category": "refactor",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.66 抽出 useAudioEngineInstance：五个视图不再各自手写引擎生命周期",
-      "en": "v2.0.66 Extracting useAudioEngineInstance: Five Views Stop Hand-Rolling the Engine Lifecycle"
+      "zh": "v2.0.67 修掉点版本号就崩：未知发布分类不再把更新面板打进错误边界",
+      "en": "v2.0.67 Fixing the Crash on Clicking the Version: an Unknown Release Category No Longer Kills the Updates Panel"
     },
     "highlights": [
       {
-        "zh": "**实测到的重复**：**五个视图**各自手写同样三行——构造 `new AudioEngine({...})`、挂到 ref、在 effect 的 cleanup 里销毁。其中三个还必须小心保持那个 effect 的依赖列表稳定。\n\n**根因是一处 API 不对称**：`onPlay` / `onStop` 都有 setter，但 **`onStep` 只能在构造函数里设置**。于是「回调捕获了会变的状态」就会逼出**整个引擎重建**——而重建会丢掉所有已排期的声部，并在会话中途重新分配音频图。已补上 `setOnStep`，让回调可以保鲜而不重建。",
-        "en": "**The duplication, measured**: **five views** each wrote the same three lines — construct `new AudioEngine({...})`, assign to a ref, destroy in the effect's cleanup — and three of them had to keep that effect's dependency list carefully stable.\n\nThe root cause was one API asymmetry: `onPlay` and `onStop` had setters but **`onStep` could only be set in the constructor**. So a callback that captured changing state forced a **full engine rebuild**, which drops every scheduled v…"
+        "zh": "**用户报的崩溃**：点版本号弹「应用遇到未知错误」，诊断信息是 `TypeError: Cannot read properties of undefined (reading 'classes')`。根因是更新面板的分类徽章用了一个 `switch`，只处理 `feature` / `audio` / `fix` 且**没有 `default`**，于是未知分类返回 `undefined`，渲染时读 `.classes` 直接抛错，整个面板进错误边界。",
+        "en": "**The reported crash**: clicking the version number raised \"the app hit an unknown error\", with `TypeError: Cannot read properties of undefined (reading 'classes')`. The cause is that the updates panel's category badge was a `switch` handling only `feature` / `audio` / `fix` with **no `default`**, so an unrecognised category returned `undefined` and the render threw while reading `.classes`, sending the panel to the error boundary."
       },
       {
-        "zh": "**新基元 `useAudioEngineInstance`**：一个组件一个引擎，创建与销毁由它负责；回调通过 ref **保鲜而非捕获**，所以闭包可以自由地引用最新状态；`engineRef` 保持同步，因此命令式调用点（走带按钮、试听范围、控制台的增益衰减表）行为完全不变。刻意**不**做成通用音序器——它不持有 pattern、走带或任何状态，那些属于 `useAudioEngineLifecycle`；这一层是更简单的界面（试听、预览、游戏化视图）或未来的新界面可以直接用的原语。",
-        "en": "**The new primitive, `useAudioEngineInstance`**: one engine per mount, with creation and teardown owned by the hook; callbacks are kept current through a ref rather than captured, so closures may freely reference the latest state; and `engineRef` stays in sync so imperative callers — transport buttons, preview scopes, the console's gain-reduction meter — behave exactly as before. Deliberately **not** a general sequencer: it holds no pattern, transport or state, which is `use…"
+        "zh": "**而这个分类是我自己加出来的**：`ChangelogEntry[\"category\"]` 被写成一个封闭联合（只有三种），但归档是**从网络取回的 JSON**——TypeScript 管不到运行时。我在最近几个版本里写了 `category: \"refactor\"`，类型看着「不可能出问题」，运行时却真的出问题了。**类型是对编辑者的承诺，不是对运行时的保证。**",
+        "en": "**And that category was one I introduced**: `ChangelogEntry[\"category\"]` was written as a closed union of three, but the archive is **JSON fetched from the network** — TypeScript cannot vouch for runtime data. I had been writing `category: \"refactor\"` in recent releases, so the type made the bug *look* impossible while the runtime disagreed. **A type is a promise to the editor, not a guarantee about the runtime.**"
       },
       {
-        "zh": "**两个视图已迁移**（`CustomGenreMakerView`、`GenreDetailView`）：删掉了各自的 ref 声明、构造 effect 与销毁 cleanup；`GenreDetailView` 的 effect 只保留「确实与曲风有关」的部分（写入 pattern、BPM 与输入框），曲风切换不再伴随任何引擎账务。`CustomGenreMakerView` 失去了对 `AudioEngine` 的直接依赖。",
-        "en": "**Two views migrated** (`CustomGenreMakerView`, `GenreDetailView`): each lost its own ref declaration, construction effect and destroy cleanup, and `GenreDetailView`'s effect now keeps only the part that is genuinely about the genre — seeding the pattern, the bpm and the input field — so a genre change no longer involves any engine bookkeeping. `CustomGenreMakerView` no longer depends on `AudioEngine` at all."
+        "zh": "**两层修**：① 数据层加 `normalizeChangelogCategory()`——未知分类**归一**为已知分类，并在 `mergeChangelog` 接受的每一条上应用，因此没有任何一条会带着 UI 渲染不了的分类走到徽章查询；② 界面层把 `switch` 换成**按联合类型索引的 record**，缺一个分支就是**类型错误**而不是运行时崩溃——这正是无 `default` 的 `switch` 从来没有的检查。同时为 `refactor` / `docs` 补上中英文案与徽章样式。",
+        "en": "**Fixed at both levels**: (1) a data-level `normalizeChangelogCategory()` maps an unknown category onto a known one, applied to everything `mergeChangelog` accepts, so no entry reaches a badge lookup with a category the UI cannot render; (2) the UI's `switch` became a **record keyed by the union**, so a missing arm is a **type error** instead of a runtime crash — the check a `switch` without a `default` never had. `refactor` and `docs` also gained labels and badge styles."
       }
     ],
     "truncated": true

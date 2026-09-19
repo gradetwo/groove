@@ -11,7 +11,9 @@ import {
   History,
   ShieldCheck,
   Zap,
-  ArrowUpCircle
+  ArrowUpCircle,
+  Wrench,
+  FileText
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Modal } from "../ui";
@@ -137,27 +139,55 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
     [archive, versionData]
   );
 
+  /**
+   * A badge per category, as a **record rather than a switch**.
+   *
+   * This was a `switch` with cases for feature/audio/fix and no `default`, so an unrecognised
+   * category returned `undefined` and the render threw
+   * `Cannot read properties of undefined (reading 'classes')` — taking the whole updates panel to the
+   * error boundary. A release shipped with `category: "refactor"` and that is exactly what happened.
+   *
+   * A record keyed by the union cannot have a missing arm: adding a category to
+   * `CHANGELOG_CATEGORIES` is a type error here until a badge exists for it, which is the check a
+   * `switch` without a `default` never had. `normalizeChangelogCategory` additionally guarantees the
+   * value is one of these keys even though the data arrives as JSON from the network.
+   */
+  const CATEGORY_BADGES: Record<
+    ChangelogEntry["category"],
+    { labelKey: string; classes: string; icon: React.ReactNode }
+  > = {
+    feature: {
+      labelKey: "updates_category_feature",
+      classes: "bg-accent/15 text-accent border-accent/30",
+      icon: <Sparkles className="w-3 h-3" />,
+    },
+    audio: {
+      labelKey: "updates_category_audio",
+      classes: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+      icon: <Zap className="w-3 h-3" />,
+    },
+    fix: {
+      labelKey: "updates_category_fix",
+      classes: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+      icon: <ShieldCheck className="w-3 h-3" />,
+    },
+    refactor: {
+      labelKey: "updates_category_refactor",
+      classes: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+      icon: <Wrench className="w-3 h-3" />,
+    },
+    docs: {
+      labelKey: "updates_category_docs",
+      classes: "bg-slate-500/15 text-slate-300 border-slate-500/30",
+      icon: <FileText className="w-3 h-3" />,
+    },
+  };
+
   const getCategoryBadge = (category: ChangelogEntry["category"]) => {
-    switch (category) {
-      case "feature":
-        return {
-          label: t("updates_category_feature"),
-          classes: "bg-accent/15 text-accent border-accent/30",
-          icon: <Sparkles className="w-3 h-3" />,
-        };
-      case "audio":
-        return {
-          label: t("updates_category_audio"),
-          classes: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
-          icon: <Zap className="w-3 h-3" />,
-        };
-      case "fix":
-        return {
-          label: t("updates_category_fix"),
-          classes: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-          icon: <ShieldCheck className="w-3 h-3" />,
-        };
-    }
+    // Belt and braces: the record is total over the union, and this cannot be reached with a key
+    // outside it because `mergeChangelog` normalises before the entry gets here.
+    const badge = CATEGORY_BADGES[category] ?? CATEGORY_BADGES.fix;
+    return { label: t(badge.labelKey), classes: badge.classes, icon: badge.icon };
   };
 
   const handleReloadToUpdate = () => {

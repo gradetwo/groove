@@ -2,6 +2,8 @@ export const updatesMessages = {
   updates_category_feature: { en: "Feature", zh: "全新功能" },
   updates_category_audio: { en: "Audio Engine", zh: "音频重构" },
   updates_category_fix: { en: "Bug Fix", zh: "稳定修复" },
+  updates_category_refactor: { en: "Refactor", zh: "架构重构" },
+  updates_category_docs: { en: "Docs", zh: "文档" },
   updates_modal_title: { en: "Updates & Release Notes", zh: "检查更新 & 更新记录" },
   updates_modal_subtitle: { en: "Check for latest features, audio engine updates and changelogs", zh: "查看最新功能特性、音频算法进化与更新日志" },
   updates_idle_hint: { en: "Click check to discover latest cloud updates", zh: "点击右侧按钮立即检查云端版本" },

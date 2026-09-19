@@ -55,6 +55,7 @@ import { ChordDefinition } from "../utils/chordTheory";
 import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { calculateGroupSize, calculateStepsPerBar } from "../utils/meter";
 import { getDefaultDrumKitForGenre } from "../utils/trackUtils";
+import { useAuditionPreview } from "../features/sequencer/hooks/useAuditionPreview";
 
 // A-02: the track colour/name mapping moved to components/sequencer/trackConfig.
 // Re-exported here so this module's public surface is unchanged.
@@ -778,89 +779,29 @@ export const StudioView: React.FC<StudioViewProps> = ({
   );
 
   /**
-   * Audition one note through the track's own instrument, so drawing is audible and the roll
-   * previews exactly what the sequencer will play (same engine call, same voice routing).
-   */
-  const handleAuditionRollNote = useCallback(
-    (trackIdx: number, midi: number, velocity: number, gate: number) => {
-      const track = patternRef.current.tracks[trackIdx];
-      if (!track) return;
-      engineRef.current?.triggerNote(trackIdx, track.name, velocity / 127, midi, 1, gate);
-    },
-    []
-  );
-
-  /**
-   * Audition the track the inspector is showing.
+   * Auditioning — single notes, whole voicings and isolated lane playback.
    *
-   * Memoised on purpose: the inspector re-renders on every pattern change, and an inline arrow
-   * here would hand it a new callback identity each time and defeat its memoization.
+   * Extracted to \`useAuditionPreview\`: it is audio behaviour (it calls the engine and reads the
+   * current pattern) and none of it knows how a control looks, so a second surface should not have to
+   * copy the four decisions it encodes — the voicing-vs-note rule for a chords track, yielding the
+   * transport to an isolated preview, only stopping what the preview started, and clearing the scope
+   * on unmount so it cannot constrain the next play.
    */
-  const handleAuditionInspectorTrack = useCallback(
-    () => {
-      const idx = inspectorTrackIdx;
-      if (idx === null) return;
-      handleAudition(idx, patternRef.current.tracks[idx]?.name ?? "");
-    },
-    [handleAudition, inspectorTrackIdx]
-  );
-
-  /**
-   * Audition a finished voicing as one chord.
-   *
-   * The single-note path above is wrong for a `chords` track: the engine voices whatever note it
-   * is given, so auditioning four members produced twelve voices. This passes the voicing itself.
-   */
-  const handlePreviewChord = useCallback(
-    (trackIdx: number, notes: number[], velocity: number, durationSeconds?: number) => {
-      const track = patternRef.current.tracks[trackIdx];
-      if (!track) return;
-      engineRef.current?.previewChord(trackIdx, track.name, notes, velocity / 127, durationSeconds);
-    },
-    []
-  );
-
-  /** Piano-roll isolated preview state, kept in React so the roll's button can reflect it. */
-  const [isRollPreviewing, setIsRollPreviewing] = useState(false);
-
-  const handleStartRollPreview = useCallback((trackIdx: number, fromStep: number, toStep: number): boolean => {
-    const engine = engineRef.current;
-    if (!engine) return false;
-    // A running arrangement would play underneath the preview and double every note of the
-    // previewed lane, so the full transport yields to the preview rather than mixing with it.
-    if (engine.getIsPlaying()) {
-      engine.stop();
-      setIsPlaying(false);
-      clearPlayhead();
-    }
-    engine.setPreviewScope({ trackIdx, fromStep, toStep });
-    const accepted = engine.getPreviewScope() !== null;
-    if (accepted) {
-      engine.play();
-      setIsRollPreviewing(true);
-    }
-    return accepted;
-  }, [clearPlayhead]);
-
-  const handleStopRollPreview = useCallback(() => {
-    const engine = engineRef.current;
-    if (!engine) return;
-    engine.setPreviewScope(null);
-    // Only stop the transport if the preview is what started it.
-    if (isRollPreviewing) {
-      engine.stop();
-      setIsPlaying(false);
-      clearPlayhead();
-    }
-    setIsRollPreviewing(false);
-  }, [clearPlayhead, isRollPreviewing]);
-
-  // Leaving the studio unmounts the roll; the scope must not survive it.
-  useEffect(() => {
-    return () => {
-      engineRef.current?.setPreviewScope(null);
-    };
-  }, []);
+  const {
+    handleAuditionRollNote,
+    handlePreviewChord,
+    handleAuditionInspectorTrack,
+    handleStartRollPreview,
+    handleStopRollPreview,
+    isRollPreviewing,
+  } = useAuditionPreview({
+    engineRef,
+    patternRef,
+    setIsPlaying,
+    clearPlayhead,
+    handleAudition,
+    inspectorTrackIdx,
+  });
 
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
