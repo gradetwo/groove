@@ -1,27 +1,27 @@
 {
-  "version": "2.1.3",
+  "version": "2.1.4",
   "releaseDate": "2026-09-19",
-  "changelogCount": 167,
+  "changelogCount": 168,
   "latest": {
-    "version": "2.1.3",
-    "date": "2026-09-19",
+    "version": "2.1.4",
+    "date": "2026-09-20",
     "category": "fix",
     "title": {
-      "zh": "v2.1.3 中文术语统一：工作台 / 律动星系 / 音长",
-      "en": "v2.1.3 One Name per Concept: 工作台, 律动星系, 音长"
+      "zh": "v2.1.4 两个音质门禁接进 verify；顺手清掉计划里六处过时的「未做」",
+      "en": "v2.1.4 Two Audio Gates Wired into verify; Six Stale “Not Done” Claims Corrected"
     },
     "highlights": [
       {
-        "zh": "**同一个东西四五个名字，教程说的在界面上找不到。** 按用户拍板的用词统一：工作室 → **工作台**（退役：律动工作台/编曲工作台/编曲台/编曲室）、星系 → **律动星系**（退役：星系云团/星系图谱/曲风星谱/宇宙星图）、音符时长 → **音长**（退役：门限时值/门限/长度/时长的那层意思）。**47 处替换**，覆盖 8 个 i18n 文件、帮助中心、Kick Lab、力度条、文档数据，以及 **6 个断言旧中文文案的测试**——它们正是「改了界面却忘了教程」的来源。",
-        "en": "**The same thing had four or five names, so what the tutorial said could not be found in the interface.** Unified to the words the user chose: 工作室 → **工作台** (retiring 律动工作台 / 编曲工作台 / 编曲台 / 编曲室), 星系 → **律动星系** (retiring 星系云团 / 星系图谱 / 曲风星谱 / 宇宙星图), note length → **音长** (retiring 门限时值 / 门限 / 长度 / 时长 in that sense). **47 replacements** across eight locale files, the help centre, Kick Lab, the velocity lane, the manual data and **six tests that asserted the old Chinese copy** — w…"
+        "zh": "**两个一直存在、一直通过、却从来不在 `verify` 里的门禁**：`check_loudness_spread.mjs`（按大类分档的响度）与 `check_timbre_spread.mjs`（159 曲风的音色指纹）此前只能靠人记得手动跑，没有 npm script。现在有 `check:loudness` / `check:timbre`，并接进 `verify`（`check:gs1` 之后、E2E 之前）。两者只读已提交的基线与源码、不启浏览器，实测 0.06 s 与 0.15 s。**「代码改了、基线没重录」从此每次发版都会被抓住。**",
+        "en": "**Two gates that had always existed, always passed, and were never in `verify`**: `check_loudness_spread.mjs` (per-category loudness) and `check_timbre_spread.mjs` (the 159 genres' timbre fingerprints) could only be run by whoever remembered them — they had no npm script. Now `check:loudness` and `check:timbre` exist and sit inside `verify` (after `check:gs1`, before E2E). Both only read committed baselines and sources, launch no browser, and take 0.06 s and 0.15 s. **“Code…"
       },
       {
-        "zh": "**一张允许表，而不是把规则放宽**：分不清「同名不同义」的扫描器只能一路放宽到什么都不查。所以**门限混响**（gated reverb，159 个曲风的文案里到处都是）、音轨**循环长度/步长**、**物理长度**、**衰减长度**，以及曲风 `origin_place` 里的「工作室」（一个**地点**，不是这个应用的编曲页）都保留，并把理由写进测试注释；扫描范围也据此排除 `src/data/genres/**`。",
-        "en": "**An allowlist instead of a loosened rule**: a scanner that cannot tell look-alikes apart can only be relaxed until it checks nothing. So 门限混响 (gated reverb, all over the 159 genres' copy), a track's loop/step 长度, 物理长度, 衰减长度, and a genre's `origin_place` 工作室 (a *place*, not this app's studio view) all stay, with the reasons in the test's comments — and the scan scope excludes `src/data/genres/**` for the same reason."
+        "zh": "**一次计划核对，翻出六处过时说法。** 全量响度测量其实早已跑完并写入基线（6 个类别中位数、69/159 因自身峰均比顶到上限、**159 条 trim 与报告完全一致**、0/159 削波、峰值最差 −1.242 dBTP）；音色基线也已重录，门禁还顺带断言 `src/data/genres/**` 与录音逐字节一致；「限幅器起音平滑」不是待办而是**已结案**（有前瞻时瞬时起音正是让天花板成为硬墙的做法，真正该修的每样本滑窗最小值已换成单调队列）。**手机端代码一行未动。**",
+        "en": "**A plan audit turned up six stale claims.** The full loudness measurement had in fact finished and been baked into the baseline (six category medians, 69/159 capped by their own crest factor, **all 159 trims matching the report**, 0/159 clipping, worst true peak −1.242 dBTP); the timbre baseline had been re-recorded too, and that gate also asserts `src/data/genres/**` is byte-identical to the recording; and “limiter attack smoothing” is not a pending task but **closed** (wi…"
       },
       {
-        "zh": "**门禁 `terminology.test.ts`（3 条）**：① 在**键上**断言三个正名（并在三个「长度」键上断言含「音长」），这样「改成第三个新词」也会失败，而不只是「改回旧词」；② 扫描界面文案里的退役名与音符门限语义的「门限」，报出 `文件:行号 词`；③ **扫描器自检**——对 `门限混响`/`循环长度`/`物理长度` 必须放行，对 `返回编曲台`/`门限: {gate} 步` 必须命中。没有第 ③ 条，前两条只是「当前为真的断言」，不是检查。",
-        "en": "**The gate (`terminology.test.ts`, three tests)**: (1) the three canonical names are asserted **by key** — and the three length keys must contain 音长 — so picking a *third* word fails too, not just reverting to an old one; (2) the interface copy is scanned for the retired names and for 门限 in the note-gate sense, reporting `file:line term`; (3) the **scanner checks itself** — 门限混响 / 循环长度 / 物理长度 must pass, while 返回编曲台 / 门限: {gate} 步 must be caught. Without the third, the first…"
+        "zh": "**同一份文档自己跟自己矛盾**：状态块写着「首屏单一动作（U1/U2）、术语表、工具栏 `?` 入口、Modal 栈仍未做」，而上面的 U 表早就记着四项都已交付（G.23/G.25/G.26、U9、G.28、G.24）。§3.5 与 §4 那份「均未开始」的清单也多数已完成（齐奏/立体声展开、键盘跟踪、立体声完整性、延迟不重建图、`toolbarTiers`、密度设置、iOS 静音无声）；**真正仍未做的只有波表与鼓组采样层（需要素材与许可）和混响 IR 移出主线程（已降级）**。",
+        "en": "**The document contradicted itself**: a status block still claimed the first-screen single action (U1/U2), the glossary, the toolbar `?` entry point and the modal stack were undone, while the U table above had long recorded all four as delivered (G.23/G.25/G.26, U9, G.28, G.24). The “nothing started” list for §3.5 and §4 was likewise mostly finished (unison/stereo spread, key tracking, stereo integrity, delay without rebuilding the graph, `toolbarTiers`, the density setting,…"
       }
     ],
     "truncated": true
