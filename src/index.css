@@ -247,8 +247,11 @@ input[type=range]::-moz-range-thumb {
  *
  * `z-index: 30` puts it above the step cells, and the header is raised to `z-40` so its own text,
  * borders and shadow still paint on top of it. (Measured the hard way: at `z-index: 19` the layer
- * lost to the cells and 570 samples still resolved to a cell.) `pointer-events: none` keeps it from
- * intercepting clicks aimed at the gutter. The background is left to the caller (`bg-panel` for the
+ * lost to the cells and 570 samples still resolved to a cell.)
+ *
+ * It deliberately does **not** set `pointer-events: none` any more: `elementFromPoint` skips such
+ * elements, and the probe that guards this column is built on `elementFromPoint` — the property made
+ * the layer invisible to its own check (G.15). The background is left to the caller (`bg-panel` for the
  * ruler, the header's own gradient for the track rows) so the strips match what they abut.
  */
 .trk-head-solid {

@@ -79,12 +79,38 @@ describe("the frozen left column has exactly one width", () => {
   it("uses one gap between the column and the first step, in the ruler and in the rows", () => {
     expect(ruler).toContain("gap-[var(--trk-head-gap)]");
     expect(trackRow).toContain("gap-[var(--trk-head-gap)]");
-    // The outer row of each must not *also* carry a Tailwind gap the variable cannot control —
-    // that is how the ruler ended up 4 px out of step with the cells it labels.
-    const outerGap = (source: string) =>
-      source.match(/className=\{?[`"]flex items-center (gap-[^ "`]+)/)?.[1] ?? null;
-    expect(outerGap(ruler)).toBe("gap-[var(--trk-head-gap)]");
-    expect(trackRow).toContain('className={`flex items-center gap-[var(--trk-head-gap)]');
+    /**
+     * The outer row of each must carry **exactly one** gap class, and it must be the variable one —
+     * a second Tailwind gap is what put the ruler 4 px out of step with the cells it labels.
+     *
+     * Written against the row's class list rather than anchored at the start of it: the guard used to
+     * require the row to be the first `className="flex …` in the file, which broke when the row gained
+     * `relative z-20` in front (the stacking context the frozen column needs — see
+     * `frozenColumnLayering.test.ts`). Intent unchanged, and it now counts the gaps instead of
+     * checking one position.
+     */
+    const rowClassList = (source: string) => {
+      const marker = "flex items-center gap-[var(--trk-head-gap)]";
+      const at = source.indexOf(marker);
+      if (at < 0) return "";
+      const before = source.slice(0, at);
+      const start = Math.max(before.lastIndexOf("`"), before.lastIndexOf('"')) + 1;
+      const after = at + marker.length;
+      const rest = source.slice(after);
+      const end = Math.min(
+        ...["`", '"'].map((quote) => (rest.indexOf(quote) >= 0 ? rest.indexOf(quote) : Infinity))
+      );
+      return source.slice(start, after + end);
+    };
+    for (const [name, source] of [
+      ["ruler", ruler],
+      ["rows", trackRow],
+    ] as const) {
+      const gaps = rowClassList(source).match(/\bgap-[^ "'`]+/g) ?? [];
+      expect(gaps, `${name}: the outer row must carry exactly the variable gap`).toEqual([
+        "gap-[var(--trk-head-gap)]",
+      ]);
+    }
   });
 });
 
