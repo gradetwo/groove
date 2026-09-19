@@ -35,6 +35,7 @@ import { RadarChart } from "../ui/RadarChart";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { toast } from "../ui/Toast";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 
@@ -87,6 +88,9 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
   onOpenHelp,
 }) => {
   const { t, isZh } = useLanguage();
+  /** Phone surface: measured at 390×664 this view had eight controls under the minimum — the
+   *  fork select at 140×18, Fork at 43×24, and the whole header row at 34 px. */
+  const { isMobile } = useDeviceCapabilities();
   const {
     customGenres,
     isLoading: isDbLoading,
@@ -426,7 +430,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
             <select
               value={selectedForkBaseId}
               onChange={(e) => setSelectedForkBaseId(e.target.value)}
-              className="bg-transparent text-text font-medium text-xs focus:outline-none max-w-[140px] cursor-pointer"
+              className={`bg-transparent text-text font-medium text-xs focus:outline-none max-w-[140px] cursor-pointer ${isMobile ? "min-h-11" : ""}`}
             >
               {GENRE_INDEX.map((g) => (
                 <option key={g.id} value={g.id} className="bg-[#12141c] text-text">
@@ -436,7 +440,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
             </select>
             <button
               onClick={handleForkBase}
-              className="px-2 py-1 rounded-lg bg-accent/20 hover:bg-accent text-accent hover:text-black text-xs font-bold transition-colors"
+              className={`px-2 py-1 rounded-lg bg-accent/20 hover:bg-accent text-accent hover:text-black text-xs font-bold transition-colors ${isMobile ? "min-h-11 min-w-11" : ""}`}
               title={t("fork_in_maker")}
             >
               {t("maker_fork_action")}
@@ -446,7 +450,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
           {/* New Blank Button */}
           <button
             onClick={handleCreateBlank}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl bg-panel2 hover:bg-neutral-800 text-text font-medium text-xs border border-line transition-colors"
+            className={`flex items-center gap-1 px-3 py-2 rounded-xl bg-panel2 hover:bg-neutral-800 text-text font-medium text-xs border border-line transition-colors ${isMobile ? "min-h-11" : ""}`}
             title={t("maker_new_blank")}
           >
             <Plus className="w-3.5 h-3.5 text-accent" />
@@ -457,7 +461,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md ${isMobile ? "min-h-11" : ""} ${
               isDirty
                 ? "bg-accent text-black shadow-[0_0_15px_rgba(245,183,61,0.4)] ring-2 ring-amber-400"
                 : "bg-panel2 hover:bg-neutral-800 text-text border border-line"
@@ -479,7 +483,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
           {/* Poster & Share */}
           <button
             onClick={handleOpenShareModal}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-bold text-xs border border-indigo-500/40 transition-all hover:scale-105"
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-bold text-xs border border-indigo-500/40 transition-all hover:scale-105 ${isMobile ? "min-h-11" : ""}`}
             title={t("maker_share_poster")}
           >
             <Share2 className="w-3.5 h-3.5" />
@@ -492,7 +496,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
               type="button"
               data-testid="maker-help-button"
               onClick={onOpenHelp}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent/15 hover:bg-accent/25 text-accent font-bold text-xs border border-accent/40 transition-all"
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent/15 hover:bg-accent/25 text-accent font-bold text-xs border border-accent/40 transition-all ${isMobile ? "min-h-11" : ""}`}
               title={t("maker_guide_btn")}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -503,7 +507,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
           {/* Open in Studio */}
           <button
             onClick={() => onOpenStudio(activeGenre)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs border border-emerald-500/40 transition-all"
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs border border-emerald-500/40 transition-all ${isMobile ? "min-h-11" : ""}`}
             title={t("maker_open_studio")}
           >
             <Sliders className="w-3.5 h-3.5" />
@@ -533,7 +537,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                   type="text"
                   value={activeGenre.name}
                   onChange={(e) => updateGenreField("name", e.target.value)}
-                  className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-sm text-text font-bold focus:outline-none focus:border-accent"
+                  className={`w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-sm text-text font-bold focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
                   placeholder="e.g. Cyber Gqom 2026"
                 />
               </div>
@@ -545,7 +549,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                 <select
                   value={activeGenre.category}
                   onChange={(e) => updateGenreField("category", e.target.value as GenreCategory)}
-                  className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-sm text-text font-medium focus:outline-none focus:border-accent cursor-pointer"
+                  className={`w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-sm text-text font-medium focus:outline-none focus:border-accent cursor-pointer ${isMobile ? "min-h-11" : ""}`}
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat} className="bg-[#12141c]">
@@ -566,7 +570,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                   type="text"
                   value={activeGenre.authorName || ""}
                   onChange={(e) => updateGenreField("authorName", e.target.value)}
-                  className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text font-medium focus:outline-none focus:border-accent"
+                  className={`w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text font-medium focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
                   placeholder="e.g. DJ Producer"
                 />
               </div>
@@ -608,7 +612,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                     const pat = { ...activeGenre.sequencer_pattern, scale: e.target.value };
                     updateGenreField("sequencer_pattern", pat);
                   }}
-                  className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text font-medium focus:outline-none focus:border-accent cursor-pointer"
+                  className={`w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text font-medium focus:outline-none focus:border-accent cursor-pointer ${isMobile ? "min-h-11" : ""}`}
                 >
                   {COMMON_SCALES.map((scale) => (
                     <option key={scale} value={scale} className="bg-[#12141c]">
@@ -625,7 +629,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                 <select
                   value={activeGenre.time_signature}
                   onChange={(e) => updateGenreField("time_signature", e.target.value)}
-                  className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text font-medium focus:outline-none focus:border-accent cursor-pointer"
+                  className={`w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text font-medium focus:outline-none focus:border-accent cursor-pointer ${isMobile ? "min-h-11" : ""}`}
                 >
                   {TIME_SIGNATURES.map((ts) => (
                     <option key={ts} value={ts} className="bg-[#12141c]">
@@ -670,7 +674,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
                   const arr = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
                   updateGenreField("representative_artists", arr);
                 }}
-                className="w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text focus:outline-none focus:border-accent"
+                className={`w-full bg-panel2 border border-line rounded-xl px-3 py-2 text-xs text-text focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
                 placeholder="e.g. Burial, Four Tet, Sophie"
               />
             </div>

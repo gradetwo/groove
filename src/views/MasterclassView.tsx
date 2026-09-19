@@ -22,6 +22,7 @@ import {
   Disc,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 
 interface MasterclassViewProps {
   initialLessonId?: string;
@@ -36,6 +37,8 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
   onOpenHelp,
 }) => {
   const { t, isZh } = useLanguage();
+  /** Phone surface: measured at 390×664 the guide button was 128×30 and "bake to studio" 40 px. */
+  const { isMobile } = useDeviceCapabilities();
 
   // Find initial lesson index or default to 0
   const initialIndex = useMemo(() => {
@@ -122,7 +125,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
                 data-testid="masterclass-help-button"
                 onClick={onOpenHelp}
                 title={t("masterclass_guide_btn")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all ${isMobile ? "min-h-11" : ""}`}
               >
                 <BookOpen className="w-3.5 h-3.5 text-accent" />
                 <span>{t("masterclass_guide_btn")}</span>
@@ -194,7 +197,7 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
           <button
             onClick={handleBakeToStudio}
             data-testid="bake-to-studio-btn"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-accent to-[#ffc65c] text-black hover:brightness-110 active:scale-95 transition-all shadow-[0_0_15px_rgba(245,183,61,0.3)] shrink-0 self-start sm:self-auto"
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-accent to-[#ffc65c] text-black hover:brightness-110 active:scale-95 transition-all shadow-[0_0_15px_rgba(245,183,61,0.3)] shrink-0 self-start sm:self-auto ${isMobile ? "min-h-11" : ""}`}
           >
             <Sliders className="w-4 h-4" />
             <span>{t("masterclass_bake_btn")}</span>
