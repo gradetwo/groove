@@ -78,6 +78,54 @@ export const InteractiveTutorialCoach: React.FC<InteractiveTutorialCoachProps> =
     }, 2800);
   };
 
+  /**
+   * Where the current step's control is, in viewport coordinates — or `null` when there is nothing to
+   * point at (no anchor on this step, or the control is not on this surface).
+   */
+  const [anchorRect, setAnchorRect] = useState<{ top: number; left: number; width: number; height: number } | null>(
+    null
+  );
+
+  const anchor = currentStep?.anchor;
+
+  /**
+   * U2, second half: point at the thing the step is talking about.
+   *
+   * Measured rather than assumed, and re-measured when the layout can move under the coach (window
+   * resize, any scroll — the capture phase catches inner scrollers). A step whose control is missing
+   * leaves `anchorRect` null and the panel says so; a ring drawn around nothing would be worse than no
+   * ring, because the user would go looking for the control it claims to show.
+   */
+  useEffect(() => {
+    if (!anchor) {
+      setAnchorRect(null);
+      return;
+    }
+
+    const measure = () => {
+      const el = document.querySelector<HTMLElement>(
+        `[${anchor.attribute}="${anchor.value}"]`
+      );
+      if (!el) {
+        setAnchorRect(null);
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      setAnchorRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+    };
+
+    measure();
+    // A couple of frames after a step change, because the panel and the target are both settling.
+    const frames = [requestAnimationFrame(measure), requestAnimationFrame(() => requestAnimationFrame(measure))];
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      for (const frame of frames) cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [anchor?.attribute, anchor?.value]);
+
   const handleStepJump = (targetIdx: number) => {
     if (!course) return;
     const clamped = Math.min(Math.max(0, targetIdx), totalSteps - 1);
@@ -123,6 +171,26 @@ export const InteractiveTutorialCoach: React.FC<InteractiveTutorialCoachProps> =
   if (!course || !currentStep) return null;
 
   return (
+    <>
+      {/*
+        U2: the control this step is about, dimmed around and ringed.
+        `pointer-events: none` on purpose — the app underneath stays clickable, which is the whole
+        point: the step says "click a step cell", and the cell it means is lit up and still works.
+      */}
+      {currentStep.anchor && anchorRect && (
+        <div
+          data-testid="tutorial-coach-anchor"
+          aria-hidden="true"
+          className="fixed z-40 rounded-xl border-2 border-accent pointer-events-none transition-all duration-200"
+          style={{
+            top: Math.max(0, anchorRect.top - 4),
+            left: Math.max(0, anchorRect.left - 4),
+            width: anchorRect.width + 8,
+            height: anchorRect.height + 8,
+            boxShadow: "0 0 0 9999px rgba(3, 4, 8, 0.55)",
+          }}
+        />
+      )}
     <div
       className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50 transition-all duration-300 pointer-events-auto select-none"
       data-testid="interactive-tutorial-coach"
@@ -227,6 +295,19 @@ export const InteractiveTutorialCoach: React.FC<InteractiveTutorialCoachProps> =
                     <span>{isZh ? currentStep.tipZh : currentStep.tipEn}</span>
                   </div>
                 )}
+                {/*
+                  The control is not on this surface (a phone layout, a panel that is closed). Say so:
+                  a ring drawn around nothing would send the user looking for a control that is not
+                  there, which is worse than admitting the step cannot be shown here.
+                */}
+                {currentStep.anchor && !anchorRect && (
+                  <div
+                    data-testid="tutorial-coach-anchor-missing"
+                    className="text-[11px] text-[#f59e0b] font-mono pt-0.5"
+                  >
+                    {t("tut_anchor_missing")}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -310,5 +391,6 @@ export const InteractiveTutorialCoach: React.FC<InteractiveTutorialCoachProps> =
         </div>
       )}
     </div>
+    </>
   );
 };
