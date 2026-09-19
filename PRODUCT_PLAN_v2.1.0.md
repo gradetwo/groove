@@ -1422,11 +1422,69 @@ ramp 目标抛错）。仍然存在三份手写桩（`audioDspGuards` / `keyTrac
    一个元素可以被一条规则定尺寸、被另一条规则定位。已统一为 500，并加了
    **读样式表断言两者相等**的测试（CSS 与 TS 无法共享常量，只能靠测试钉住）。
 
+# 合并手机两条固定栏 —— 下一轮的施工图（不需要状态提升）
+
+> 目标：横屏可用带 138px → **187px**（35% → 48%），做法是让走带条与标签栏**共享同一行**，
+> 而不是上下各占一条。这是一份可直接执行的方案，本轮只做了调研与测量，未实施。
+
+## 为什么之前的判断（要状态提升到 App）是错的
+
+先前记录的前提是「必须把走带状态从 `SequencerPanel` 提升到 `App`」。重新看了一遍数据流，
+**那是把方向搞反了**：
+
+- `MobileTransportBar` 需要的东西（`isPlaying` / `bpm` / `viewedBar` / `barCount` / `canUndo` /
+  `canRedo` / 五个回调）**全部已经是 `SequencerPanel` 的 props**，来自 `StudioView`。
+- 真正「在 `SequencerPanel` 里」的只有 `isMobileSheetOpen` 与 `buildStudioSheetGroups(...)`，
+  而那个 builder 需要**四十多个 prop**——把**它**提升到 `App` 才是昂贵的。
+- 而 `MobileTabBar` 只需要三个 prop：`activeTab` / `onSelectTab` / `onOpenSheet`。
+
+所以正确方向是 **把标签栏挪下来**，而不是把走带挪上去。
+
+## 施工步骤
+
+1. `StudioView` 增加两个可选 prop：`onSelectTab?: (tab: NavTab) => void`、
+   `onOpenSheet?: () => void`。`App` 已经把 `handleSelectTab` 与 `setMobileSheetOpen` 拿在手里，
+   直接传下去，**不新增任何状态**。
+2. `SequencerPanel` 在 `isShortLandscape` 时，把走带条与标签栏渲染进同一个
+   `fixed bottom-0 inset-x-0 z-[70]` 容器：走带条 `flex-1`，标签栏 `shrink-0`。
+   走带条当前在 `SequencerPanel` 的常规流里（`top 150`）——这是它占掉 49px 纵向空间的原因；
+   改成固定后，它只占标签栏那一行的横向空间。
+3. 走带条需要一个「横排」变体：控件数不变（play / tempo / undo / redo / more），
+   但去掉 `w-full` 与上下的整行背景，让它作为那一行的一半存在。
+4. `App` 在横屏工作台时**不渲染**自己的 `MobileTabBar`，避免出现两条。
+5. `--mobile-bottom-bars-h` 从 `--mobile-tab-bar-h`（53px）改为两栏堆叠所需的高度；
+   `TrackInspector` 已经在用这个变量（`bottom-[var(--mobile-tab-bar-h)]`），
+   所以控制台会跟着上移，不需要单独改。
+6. `main` 的底部内边距按同一个变量走，避免遮住最后一行。
+
+## 已知风险（必须由 E2E 覆盖的三点）
+
+1. **横屏进入非工作台视图时标签栏会消失。** 理由是：横屏能走 `StudioView`，而抽屉的
+   `MOBILE_SHEET_GROUPS` 里恰好有 `chords` / `kick` / `challenge` / 时间线 / `compare` 等目的地，
+   所以在工作台里导航仍然完整。但 `galaxy` 与 `studio` 不在那份列表里——一旦标签栏消失，
+   用户回不到探索页。两个选项：
+   (a) 抽屉补上 `galaxy` 入口（一行数据，推荐）；
+   (b) 横屏在**所有**视图都保留一条极简标签栏（放弃部分收益）。
+2. **面板的 bottom 偏移。** 合并后两栏同层，`--mobile-bottom-bars-h` 必须等于那一行的真实高度
+   （横屏走带 49px 或标签栏 53px，取高者），否则控制台底部会与其中一条重叠——
+   这正是 v2.0.52 修过的那类缺陷（当时是 EQ 画布整块被标签栏盖住，命中测试落到标签栏按钮上）。
+3. **安全区。** 标签栏自身带 `paddingBottom: env(safe-area-inset-bottom)`；合并后这个内边距
+   必须留在**整行**上，否则 iPhone 的 home indicator 会压住走带条右半边的按钮。
+
+## 验证方式
+
+- `node scripts/diagnose_mobile_chrome.mjs` 必须报告横屏可用带 ≥ 180px（现在 138px）。
+- `npm run verify` 全绿，特别是 iPhone 14 横屏目标（它已经覆盖控制台几何与抽屉行点击）。
+- 新增可失败测试：横屏下走带条与标签栏的盒子**不重叠**、且都在视口内；
+  竖屏布局**不变**（回归保护）。
+
+---
+
 ## G.6 下一轮的优先级（按 收益÷成本）
 
-1. **合并手机的两条固定栏**（见 G.5）：横屏可用带 138px → 187px（35% → 48%）。
-   前提动作二选一——给 `MOBILE_SHEET_GROUPS` 补上 `studio` / `galaxy` 入口，
-   或把走带状态提升到 `App`。这是「让移动端像原生应用」剩余的最大单项。
+1. **合并手机的两条固定栏**（见 G.5 与上面的施工图）：横屏可用带 138px → 187px（35% → 48%）。
+   **前提不需要状态提升**——先前那条记录是错的，施工图里已订正为「把标签栏挪进工作台」。
+   这是「让移动端像原生应用」剩余的最大单项。
 2. **收口手写 AudioContext 桩**（G.3 其一，v2.0.60 已完成前两份）：
    `keyTracking` 已迁移到共享 `FakeOfflineAudioContext`；`audioDspGuards` 保留自己的最小桩，
    但补上了缺失的 `createChannelSplitter` / `createChannelMerger` / `createBuffer`，
