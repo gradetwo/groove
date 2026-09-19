@@ -675,6 +675,23 @@ async function runTestOnTarget(target, baseUrl) {
        * These seven are the ones brought up to the 44 px rule so far; G.39 in the plan lists the
        * measured counts for the rest (both timelines, compare, analyzer).
        */
+      /**
+       * The last four pages carry a *budget* rather than the 44 px rule, while G.39's proposal
+       * (keep the analyzer's waveform mode, drop compare and both timelines on a phone) waits for a
+       * decision. A budget is a ratchet, not an excuse: the numbers are today's measurements, a
+       * change that makes any of them worse fails the run, and a change that makes one better says
+       * so, because a budget that is never tightened stops describing the code.
+       *
+       * They differ per orientation because the layouts do — analyzer is already clean in landscape
+       * (7 controls, none under 44) while its portrait form still has 13.
+       */
+      const PHONE_BUDGET = {
+        "horizontal-timeline": { portrait: 11, landscape: 14 },
+        "vertical-timeline": { portrait: 6, landscape: 1 },
+        compare: { portrait: 15, landscape: 11 },
+        analyzer: { portrait: 13, landscape: 2 },
+      };
+      const landscape = /landscape/i.test(target.name);
       for (const surface of [
         { name: "studio", url: baseUrl },
         { name: "explore", url: `${baseUrl}?tab=galaxy` },
@@ -683,7 +700,14 @@ async function runTestOnTarget(target, baseUrl) {
         { name: "maker", url: `${baseUrl}?tab=maker` },
         { name: "challenge", url: `${baseUrl}?tab=challenge` },
         { name: "masterclass", url: `${baseUrl}?tab=masterclass` },
+        { name: "horizontal-timeline", url: `${baseUrl}?tab=horizontal-timeline` },
+        { name: "vertical-timeline", url: `${baseUrl}?tab=vertical-timeline` },
+        { name: "compare", url: `${baseUrl}?tab=compare` },
+        { name: "analyzer", url: `${baseUrl}?tab=analyzer` },
       ]) {
+        const budget = surface.name in PHONE_BUDGET
+          ? PHONE_BUDGET[surface.name][landscape ? "landscape" : "portrait"]
+          : 0;
         await page.goto(surface.url, { waitUntil: "domcontentloaded" });
         await page.waitForTimeout(600);
         const measured = await page.evaluate(() => {
@@ -745,11 +769,19 @@ async function runTestOnTarget(target, baseUrl) {
               `the sections sheet): ${JSON.stringify(headerControls)} on ${target.name}`
           );
         }
-        if (small.length > 0) {
+        if (budget > 0) {
+          console.log(
+            `   · ${surface.name}: ${small.length} under 44 px (budget ${budget}) on ${target.name}`,
+          );
+        }
+        if (small.length > budget) {
           throw new Error(
             `Phone surface "${surface.name}" has ${small.length} control(s) under the ${44} px ` +
-              `touch minimum on ${target.name}: ${JSON.stringify(small)}`
+              `touch minimum on ${target.name}, above its budget of ${budget}: ${JSON.stringify(small)}`
           );
+        }
+        if (budget > 0 && small.length < budget) {
+          console.log(`   · ${surface.name}: budget could be tightened to ${small.length}`);
         }
       }
     }
