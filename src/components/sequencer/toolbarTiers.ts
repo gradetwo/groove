@@ -174,6 +174,14 @@ export const TIER_3: readonly ToolbarTierItem[] = [
   { id: "import-midi", labelKey: "toolbar_import_label", tier: 3 },
   { id: "genre-maker", labelKey: "toolbar_genre_maker_label", tier: 3 },
   { id: "share", labelKey: "share_groove", tier: 3 },
+  /**
+   * U5: the sequencer is the only screen without a help entry, and it is the one that needs it most.
+   *
+   * Tier 3 on purpose: help is a session-edge affordance, and the density work (G.10) spent real
+   * effort getting the default surface down to 16 controls. It lives in the More menu, which is not
+   * rendered until opened, so the density probe stays green either way.
+   */
+  { id: "sequencer-help", labelKey: "toolbar_help_title", tier: 3 },
   { id: "fine-remove-steps", labelKey: "toolbar_remove_steps", tier: 3 },
   { id: "fine-add-steps", labelKey: "toolbar_add_steps", tier: 3 },
   { id: "fine-add-1-bar", labelKey: "toolbar_add_1_bar", tier: 3 },

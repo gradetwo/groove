@@ -1,35 +1,36 @@
 import React, { memo, useState, useRef, useEffect } from "react";
 import {
-  Play,
-  Download,
-  Share2,
-  Sliders,
-  PanelLeftOpen,
-  Maximize2,
-  Minimize2,
-  Sparkles,
-  Undo2,
-  Redo2,
-  SlidersHorizontal,
-  ChevronDown,
+  Activity,
+  AudioLines,
   Bell,
+  ChevronDown,
+  Copy,
+  Disc3,
+  Download,
   Eye,
   EyeOff,
-  Repeat,
-  Copy,
-  Upload,
-  Keyboard,
   FileAudio,
-  Package,
-  Loader2,
-  Disc3,
-  Activity,
-  Layers,
   FolderKanban,
-  Wand2,
-  AudioLines,
-  Music2,
+  HelpCircle,
+  Keyboard,
+  Layers,
+  Loader2,
+  Maximize2,
+  Minimize2,
   MoreHorizontal,
+  Music2,
+  Package,
+  PanelLeftOpen,
+  Play,
+  Redo2,
+  Repeat,
+  Share2,
+  Sliders,
+  SlidersHorizontal,
+  Sparkles,
+  Undo2,
+  Upload,
+  Wand2,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { isControlVisible } from "./toolbarTiers";
@@ -124,6 +125,11 @@ export interface ToolbarProps {
   /** Piano roll toggle (item ⑦). Optional so an unwired toolbar still renders. */
   onTogglePianoRoll?: () => void;
   onOpenEuclidean: () => void;
+  /**
+   * Opens the help centre at the sequencer's chapter (U5). Optional, like the console toggle: the
+   * entry renders only when the host can actually open help.
+   */
+  onOpenHelp?: (chapterId?: string) => void;
   onUndo: () => void;
   onRedo: () => void;
   onToggleMaximize: () => void;
@@ -613,6 +619,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onToggleVelocityLane,
   onTogglePianoRoll,
   onOpenEuclidean,
+  onOpenHelp,
   onUndo,
   onRedo,
   onToggleMaximize,
@@ -1155,6 +1162,26 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                       )}
                     </div>
                   </div>
+
+                  {/* Section 4: 帮助 (U5) — the sequencer had no way into the help centre. */}
+                  {onOpenHelp && (
+                    <div className="flex flex-col gap-1 pb-2 border-b border-line/40">
+                      <span className="text-[10px] uppercase font-bold text-text-dim tracking-wider">
+                        {t("toolbar_group_help_label")}
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          data-toolbar-id="sequencer-help"
+                          data-testid="toolbar-help"
+                          onClick={() => { onOpenHelp("sequencer"); setIsMoreMenuOpen(false); }}
+                          className="h-7 px-2 rounded bg-panel2 border border-line text-text-sub hover:text-accent flex items-center gap-1 text-[11px]"
+                        >
+                          <HelpCircle className="w-3 h-3 text-accent" /> {t("toolbar_help_title")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Section 3: 工程管理 */}
                   <div className="flex flex-col gap-1">

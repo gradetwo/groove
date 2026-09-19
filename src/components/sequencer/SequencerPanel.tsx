@@ -517,6 +517,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
       ) : (
       /* Sequencer Unified Toolbar */
       <Toolbar
+        onOpenHelp={onOpenHelp}
         gs1Enabled={gs1Enabled}
         onToggleGs1={onToggleGs1}
         onOpenAudioSettings={onOpenAudioSettings}
