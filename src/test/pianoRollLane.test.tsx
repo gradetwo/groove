@@ -7,7 +7,7 @@
  * views one source of truth — plus the states the UI must handle: a non-melodic track, the loop
  * boundary, and dismissal by Escape.
  */
-import React from "react";
+import React, { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { PianoRollLane } from "../components/sequencer/PianoRollLane";
@@ -923,6 +923,239 @@ describe("PianoRollLane · dual-axis zoom, 0-127 pitch range & pointer workflow 
     fireEvent.keyDown(window, { key: "ArrowUp" });
     fireEvent.keyDown(window, { key: "ArrowDown", shiftKey: true });
     fireEvent.keyDown(window, { key: "ArrowUp", shiftKey: true });
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// U10: keyboard editing
+// ---------------------------------------------------------------------------------------
+
+/**
+ * A roll wired to its own state the way the studio wires it: a committed pattern comes back as the
+ * `pattern` prop. `setup()` renders a fixed pattern, which is right for one gesture and wrong for a
+ * *sequence* of them — the second press of a toggle has to see the first press's result.
+ */
+function HarnessedRoll({
+  initial,
+  commits,
+  onAudition,
+}: {
+  initial: SequencerPattern;
+  commits: SequencerAction[];
+  onAudition: (trackIdx: number, midi: number, velocity: number, gate: number) => void;
+}) {
+  const [pattern, setPattern] = useState(initial);
+  return (
+    <PianoRollLane
+      pattern={pattern}
+      activeTrackIdx={0}
+      stepCount={STEPS}
+      stepsPerBar={4}
+      isZh
+      onSelectTrack={vi.fn()}
+      onClose={vi.fn()}
+      commit={(action) => {
+        commits.push(action);
+        if (action.type === "COMMIT_PATTERN") setPattern(action.pattern);
+      }}
+      onAudition={onAudition}
+      onToggleMusicalTyping={vi.fn()}
+      onOpenHelp={vi.fn()}
+      initialTool="pencil"
+    />
+  );
+}
+
+function setupKeyboard(initial: SequencerPattern = makePattern()) {
+  const commits: SequencerAction[] = [];
+  const onAudition = vi.fn();
+  render(<HarnessedRoll initial={initial} commits={commits} onAudition={onAudition} />);
+  const grid = screen.getByTestId("piano-roll-grid");
+  const announcer = screen.getByTestId("piano-roll-announcer");
+  const guideline = () => screen.queryByTestId("piano-roll-row-guideline");
+  const lastPattern = () =>
+    (commits.filter((c) => c.type === "COMMIT_PATTERN").pop() as
+      | { pattern: SequencerPattern }
+      | undefined)?.pattern;
+  return { commits, onAudition, grid, announcer, guideline, lastPattern };
+}
+
+describe("PianoRollLane · keyboard editing (U10)", () => {
+  it("is one focusable surface with a name, a keyboard description and a live region", () => {
+    setupKeyboard();
+    const grid = screen.getByTestId("piano-roll-grid");
+    expect(grid).toHaveAttribute("role", "application");
+    expect(grid).toHaveAttribute("tabindex", "0");
+
+    // `role="grid"` used to sit here while the notes were rows-less divs: invalid ARIA promising
+    // structure that did not exist.
+    expect(screen.queryByRole("grid")).toBeNull();
+
+    const describedBy = grid.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    const help = screen.getByTestId("piano-roll-kb-help");
+    expect(help.id).toBe(describedBy);
+    expect(help.textContent).toContain("方向键");
+
+    const announcer = screen.getByTestId("piano-roll-announcer");
+    expect(announcer).toHaveAttribute("role", "status");
+    expect(announcer).toHaveAttribute("aria-live", "polite");
+    // The notes are the visual layer of a widget; exposing them is a run of unlabelled divs.
+    expect(screen.getByTestId("piano-roll-note-0-60")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("puts the cursor on the clip's first note when focused, and says where it is", () => {
+    const { grid, announcer } = setupKeyboard();
+    fireEvent.focusIn(grid);
+    const guide = screen.getByTestId("piano-roll-row-guideline");
+    expect(guide).toHaveAttribute("data-cursor-source", "keyboard");
+    expect(guide).toHaveAttribute("data-cursor-step", "0");
+    expect(guide).toHaveAttribute("data-cursor-midi", "60");
+    expect(announcer.textContent).toContain("NOTE_60");
+    expect(announcer.textContent).toContain("第 1 步");
+    expect(announcer.textContent).toContain("力度 100");
+  });
+
+  it("moves the cursor with the arrows and keeps it inside the clip", () => {
+    const { grid, announcer, guideline } = setupKeyboard();
+    fireEvent.focusIn(grid);
+
+    fireEvent.keyDown(grid, { key: "ArrowRight" });
+    expect(guideline()).toHaveAttribute("data-cursor-step", "1");
+    expect(announcer.textContent).toContain("第 2 步");
+    expect(announcer.textContent).toContain("空");
+
+    fireEvent.keyDown(grid, { key: "ArrowUp" });
+    expect(guideline()).toHaveAttribute("data-cursor-midi", "61");
+
+    fireEvent.keyDown(grid, { key: "End" });
+    expect(guideline()).toHaveAttribute("data-cursor-step", String(STEPS - 1));
+    // Walking off the end stops there: a cursor the user cannot see is worse than one that refuses.
+    fireEvent.keyDown(grid, { key: "ArrowRight" });
+    expect(guideline()).toHaveAttribute("data-cursor-step", String(STEPS - 1));
+    fireEvent.keyDown(grid, { key: "Home" });
+    fireEvent.keyDown(grid, { key: "ArrowLeft" });
+    expect(guideline()).toHaveAttribute("data-cursor-step", "0");
+  });
+
+  it("creates a note with Enter and removes it with Enter again, through the same commit path", () => {
+    const { grid, announcer, commits, onAudition, lastPattern } = setupKeyboard();
+    fireEvent.focusIn(grid);
+    fireEvent.keyDown(grid, { key: "ArrowRight" }); // step 1 is empty
+    fireEvent.keyDown(grid, { key: "Enter" });
+
+    expect(commits).toHaveLength(1);
+    expect(commits[0]).toMatchObject({ type: "COMMIT_PATTERN" });
+    const added = lastPattern()!;
+    expect(added.tracks[0].steps[1]).toBe(1);
+    expect(added.tracks[0].pitch?.[1]).toBe(60);
+    expect(onAudition).toHaveBeenCalledTimes(1);
+    expect(announcer.textContent).toContain("已添加");
+    expect(announcer.textContent).toContain("NOTE_60");
+
+    // The harness applies the committed pattern back, as the studio does: the second press toggles.
+    fireEvent.keyDown(grid, { key: "Enter" });
+    expect(lastPattern()!.tracks[0].steps[1]).toBe(0);
+    expect(announcer.textContent).toContain("已删除");
+  });
+
+  it("deletes the note under the cursor, and reports an empty step instead of nothing at all", () => {
+    const { grid, announcer, lastPattern } = setupKeyboard();
+    fireEvent.focusIn(grid); // the cursor starts on the note at step 0
+    fireEvent.keyDown(grid, { key: "Delete" });
+    expect(lastPattern()!.tracks[0].steps[0]).toBe(0);
+    expect(announcer.textContent).toContain("已删除");
+
+    fireEvent.keyDown(grid, { key: "Delete" });
+    expect(announcer.textContent).toContain("这一步没有音符");
+  });
+
+  it("changes the cursor note's velocity with + and -, by one and by ten", () => {
+    const { grid, announcer, lastPattern } = setupKeyboard();
+    fireEvent.focusIn(grid);
+    fireEvent.keyDown(grid, { key: "+" });
+    expect(lastPattern()!.tracks[0].velocity?.[0]).toBe(101);
+    expect(announcer.textContent).toContain("101");
+
+    fireEvent.keyDown(grid, { key: "+", shiftKey: true });
+    expect(lastPattern()!.tracks[0].velocity?.[0]).toBe(111);
+  });
+
+  it("never drops a note's velocity below 1", () => {
+    const quiet = makePattern();
+    (quiet.tracks[0] as unknown as { velocity: number[] }).velocity[0] = 3;
+    const { grid, announcer, lastPattern } = setupKeyboard(quiet);
+    fireEvent.focusIn(grid);
+    fireEvent.keyDown(grid, { key: "-", shiftKey: true });
+    expect(lastPattern()!.tracks[0].velocity?.[0]).toBe(1);
+    expect(announcer.textContent).toContain("力度 1");
+  });
+
+  it("changes the note's length with the bracket keys, clamped to one bar", () => {
+    const { grid, announcer, lastPattern } = setupKeyboard();
+    fireEvent.focusIn(grid); // step 0's note has a 0.8-step gate
+    fireEvent.keyDown(grid, { key: "]" });
+    expect(lastPattern()!.tracks[0].gate?.[0]).toBeCloseTo(1.8, 5);
+    expect(announcer.textContent).toContain("音长 1.8 步");
+
+    fireEvent.keyDown(grid, { key: "[", shiftKey: true });
+    expect(lastPattern()!.tracks[0].gate?.[0]).toBeCloseTo(0.1, 5); // 1.8 - 4, clamped at the floor
+
+    // The ceiling is one bar (16 steps), where `resizeNote` stops it.
+    for (let i = 0; i < 8; i += 1) fireEvent.keyDown(grid, { key: "]", shiftKey: true });
+    expect(lastPattern()!.tracks[0].gate?.[0]).toBe(16);
+  });
+
+  it("leaves the arrows to the selected notes, and says where they went", () => {
+    const { grid, announcer, guideline, lastPattern } = setupKeyboard();
+    fireEvent.focusIn(grid);
+    // The roll's existing select-all, then the arrows move the selection — not the cursor.
+    fireEvent.keyDown(window, { key: "a", metaKey: true });
+    fireEvent.keyDown(grid, { key: "ArrowRight" });
+
+    const moved = lastPattern()!;
+    expect(moved.tracks[0].pitch?.[1]).toBe(60); // step 0's note moved one step right
+    expect(moved.tracks[0].pitch?.[5]).toBe(64);
+    // The cursor stayed where it was: it is where a *new* note would land, not a second selection.
+    expect(guideline()).toHaveAttribute("data-cursor-step", "0");
+    // …and the move is spoken, because a screen reader cannot see the notes shift.
+    expect(announcer.textContent).toContain("已移动到");
+  });
+
+  it("speaks the selection delete that the app-level handler owns", () => {
+    const { grid, announcer } = setupKeyboard();
+    fireEvent.focusIn(grid);
+    fireEvent.keyDown(window, { key: "a", metaKey: true });
+    fireEvent.keyDown(window, { key: "Delete" });
+    expect(announcer.textContent).toContain("已删除 2 个音");
+  });
+
+  it("does not swallow platform shortcuts, and drops the cursor on blur", () => {
+    const { grid, guideline } = setupKeyboard();
+    fireEvent.focusIn(grid);
+    fireEvent.keyDown(grid, { key: "ArrowRight", metaKey: true });
+    expect(guideline()).toHaveAttribute("data-cursor-step", "0");
+
+    fireEvent.focusOut(grid);
+    expect(guideline()).toBeNull();
+  });
+
+  it("scrolls the grid so the keyboard cursor stays visible", () => {
+    const { grid } = setupKeyboard();
+    const scroller = grid.closest(".overflow-x-auto") as HTMLElement;
+    // jsdom performs no layout, so the measured viewport has to be stated. A narrow one is the case
+    // that matters: without revealing, walking right looks like the key did nothing.
+    Object.defineProperty(scroller, "clientWidth", { value: 100, configurable: true });
+    Object.defineProperty(scroller, "clientHeight", { value: 60, configurable: true });
+    expect(scroller.scrollLeft).toBe(0);
+
+    fireEvent.focusIn(grid);
+    fireEvent.keyDown(grid, { key: "End" }); // the last step of eight, far outside 100 px
+    expect(scroller.scrollLeft).toBeGreaterThan(0);
+
+    // Walking back to the start scrolls it home again rather than leaving the view stranded.
+    fireEvent.keyDown(grid, { key: "Home" });
+    expect(scroller.scrollLeft).toBe(0);
   });
 });
 
