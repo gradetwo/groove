@@ -1,27 +1,27 @@
 {
-  "version": "2.0.84",
+  "version": "2.0.85",
   "releaseDate": "2026-09-19",
-  "changelogCount": 148,
+  "changelogCount": 149,
   "latest": {
-    "version": "2.0.84",
+    "version": "2.0.85",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.84 五处「点了没反应」现在都会说话：模式开关、tap tempo、空撤销、引擎未就绪",
-      "en": "v2.0.84 Five Silent Controls Now Say What They Did"
+      "zh": "v2.0.85 新手引导第 1 页就能出声，而且不再「误点一次就永久消失」",
+      "en": "v2.0.85 The Guide's First Slide Plays Something, and a Stray Click No Longer Loses It"
     },
     "highlights": [
       {
-        "zh": "**四个模式开关改了状态却一个字都不说。** Song Mode、盲测对比、节拍器、预备拍以前只提交状态：既没有提示也没有屏幕阅读器播报——从外面看和坏掉的按钮一模一样。现在每个开关都报告它刚切到的新状态（开/关各一条文案），并同时播报。",
-        "en": "**Four mode toggles changed state without a word.** Song Mode, Blind Compare, Metronome and Count-In only committed state — no toast, no screen-reader announcement — which from the outside is indistinguishable from a broken button. Each toggle now reports the state it just moved to (a distinct message per edge) and announces it."
+        "zh": "**遮罩/Esc 关闭以前等于「已完成」。** `Modal` 的关闭回调在点遮罩和按 Esc 时都会触发，而它直接接着写入完成标记的那段代码——所以**一次误点就永久关掉了引导**，偏偏发生在最需要它的人身上。现在只有显式的「跳过」和最后一页的两个动作会写标记；关掉之后下次仍会再问一次。About 页还加了**重看新手引导**入口，否则「我不小心关了」除了清站点数据没有别的补救。",
+        "en": "**Dismissing the overlay used to mean \"completed\".** `Modal`'s close callback fires for a mask click and for Escape, and it was wired straight to the code that writes the completion flag — so one stray click **permanently** dismissed the guide, for exactly the users who had not read it. Now only the explicit Skip button and the last slide's actions record completion, and a dismissed guide is offered again next time. The About tab also gained **Replay the new-user guide**, be…"
       },
       {
-        "zh": "**另外三处静默**：① tap tempo 第一次点**什么都不发生**（要两次才有反应），现在会说「再点一次即可测定速度」；② 撤销/重做在历史为空时静默返回，现在会说「没有可撤销/可重做的操作」；③ 播放时引擎实例还没就绪会静默返回，现在会说「音频仍在启动中——请稍后再点一次播放」。撤销/重做还修了一个连带问题：以前「有历史、但引擎恰好未就绪」会连确认提示一起吞掉，现在存储已经回滚就照常确认（同步引擎退化为尽力而为）。",
-        "en": "**Three more silences:** (1) the first tap of tap tempo did **nothing at all** — it needs two taps — and now asks for another tap; (2) undo/redo with an empty history returned in silence and now says there is nothing to undo or redo; (3) pressing Play before the engine instance exists was silently ignored and now says audio is still starting. Undo/redo also had a related bug: when history *did* have an entry but the engine was not ready yet, the confirmation was swallowed al…"
+        "zh": "**第 1 页就有单一动作。** 引导原本是 7 屏功能清单、只有最后一屏有动作，于是新用户**先读 7 屏才第一次出声**。现在第 1 页就有「先听一下这个曲风」：一次点击关掉引导、切到工作台并**开始播放**——刻意不写完成标记，因为想听一段律动不等于「读完了」。",
+        "en": "**The first slide now has a single action.** The guide was seven slides of feature list with its only action on the last one, so a new user read seven screens before hearing anything. The first slide now offers \"Hear this genre now\": one click dismisses the guide, switches to the studio and **starts playing** — deliberately without recording completion, because hearing the groove is not the same as finishing the guide."
       },
       {
-        "zh": "**顺手查明的死分支**：tap tempo 里 `calculatedBpm >= 40 && <= 240` 永远不会为假——`AudioEngine.calculateTapTempo` 自己就会夹取到 40–240 并四舍五入，退化输入还返回 120。所以「超出范围」从来不是静默 no-op，那段是死代码，已删并加注释。**但它暴露了另一个诚实问题**：点得过快/过慢时数值被夹取，界面却把它当「测到的速度」展示；没有证据说这会困扰用户，这轮只记录、不改。",
-        "en": "**A dead branch found on the way:** the `calculatedBpm >= 40 && <= 240` check in tap tempo can never be false — `AudioEngine.calculateTapTempo` already clamps into 40-240 and rounds, returning 120 for a degenerate interval. So \"out of range\" was never a silent no-op; the branch was dead code and is gone, with a comment. It does expose a separate honesty question: tapping far too fast or slow yields a clamped value that the UI presents as measured. There is no evidence that b…"
+        "zh": "**「等引擎就绪」这件事是我的测试先抓到的。** 请求交给工作台时它还没挂载完（引擎实例由里面的挂载 effect 创建）。第一版 hook 读 `engineRef.current` 判空——**看起来在等，实际拿到 `null` 就返回，而且不会再有下一次**（写 ref 不触发重渲染）。那条测试当场失败。修法不是加轮询，而是把它变成**依赖**：`useAudioEngineLifecycle` 新增 `engineReady` 状态，hook 收 `ready`。这让「引擎存在」第一次成为可观察的事实，手机端与教学也不用再猜。",
+        "en": "**My own test caught the \"wait for the engine\" mistake.** The request reaches the studio before it has finished mounting (the engine instance is created by a mount effect inside it). The first version of the hook read `engineRef.current` and returned early on `null` — **it looked like it waited, but it fired against nothing and never ran again** (writing a ref does not re-render). The test written for that case failed immediately. The fix is not polling: `useAudioEngineLifec…"
       }
     ],
     "truncated": true
