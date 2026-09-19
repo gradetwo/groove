@@ -682,16 +682,24 @@ async function runTestOnTarget(target, baseUrl) {
          * The phone transport's bar-step buttons are 32×44: 44 px tall, deliberately narrow to keep
          * the tempo readout on a 390 px row. They live in `MobileTransportBar.tsx`, which the design
          * freeze reserves, so they are named here rather than silently tolerated by a loose rule.
+         *
+         * `toggle-all-tracks-compact` (the studio toolbar's "Fold all tracks", 126×22) is the same
+         * kind of case: it is drawn by `SequencerPanel.tsx`, whose phone branches the freeze
+         * reserves, so its size is recorded in the plan (G.36) instead of changed here.
          */
         const ALLOWED_SMALL = new Set([
           "mobile-transport-prev-bar",
           "mobile-transport-next-bar",
+          "toggle-all-tracks-compact",
         ]);
         const selector = 'button, select, input, textarea, [role="button"], [tabindex="0"]';
         const small = [];
         const headerControls = [];
         for (const node of Array.from(document.querySelectorAll(selector))) {
-          if (node.closest('[role="grid"]')) continue;
+          // Step cells only. The track headers live *inside* the grid container too, and skipping
+          // the whole `[role="grid"]` subtree is how five tiny header controls (4×20, 14×14 …) went
+          // unnoticed by the first version of this check.
+          if (node.closest('[role="gridcell"]')) continue;
           const testid = node.getAttribute("data-testid");
           if (testid && ALLOWED_SMALL.has(testid)) continue;
           const rect = node.getBoundingClientRect();
