@@ -1,27 +1,27 @@
 {
-  "version": "2.1.2",
+  "version": "2.1.3",
   "releaseDate": "2026-09-19",
-  "changelogCount": 166,
+  "changelogCount": 167,
   "latest": {
-    "version": "2.1.2",
+    "version": "2.1.3",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.1.2 手机档进了发布门禁：一次发版跑 7 个目标",
-      "en": "v2.1.2 The Phone Targets Joined the Release Gate: Seven Devices per Version"
+      "zh": "v2.1.3 中文术语统一：工作台 / 律动星系 / 音长",
+      "en": "v2.1.3 One Name per Concept: 工作台, 律动星系, 音长"
     },
     "highlights": [
       {
-        "zh": "**一条不在发布链里的门禁，就是一条迟早会被跳过的门禁。** 手机端已经是这个产品的一半界面（11 个面的 44 px 规则、预算棘轮、页眉与 sheet 的交互断言都在手机档里），但一直是我**手工**跑。现在 `verify` 结尾多了 `npm run test:e2e:mobile`：每次发版跑 **3 个桌面引擎 + 4 个手机/平板目标**（iPhone 竖/横、iPad 竖/横）。实测耗时从约 5.5 min 变成约 11 min，其中手机档 ~290 s。",
-        "en": "**A gate that is not in the release chain is a gate that will eventually be skipped.** The phone surface is half of this product's interface now — the eleven-surface 44 px rule, the budget ratchet and the header/sheet interaction assertions all live in the mobile profile — yet it was being run by hand. `verify` now ends with `npm run test:e2e:mobile`, so every version is checked on **three desktop engines plus four phone/tablet targets** (iPhone portrait and landscape, iPad…"
+        "zh": "**同一个东西四五个名字，教程说的在界面上找不到。** 按用户拍板的用词统一：工作室 → **工作台**（退役：律动工作台/编曲工作台/编曲台/编曲室）、星系 → **律动星系**（退役：星系云团/星系图谱/曲风星谱/宇宙星图）、音符时长 → **音长**（退役：门限时值/门限/长度/时长的那层意思）。**47 处替换**，覆盖 8 个 i18n 文件、帮助中心、Kick Lab、力度条、文档数据，以及 **6 个断言旧中文文案的测试**——它们正是「改了界面却忘了教程」的来源。",
+        "en": "**The same thing had four or five names, so what the tutorial said could not be found in the interface.** Unified to the words the user chose: 工作室 → **工作台** (retiring 律动工作台 / 编曲工作台 / 编曲台 / 编曲室), 星系 → **律动星系** (retiring 星系云团 / 星系图谱 / 曲风星谱 / 宇宙星图), note length → **音长** (retiring 门限时值 / 门限 / 长度 / 时长 in that sense). **47 replacements** across eight locale files, the help centre, Kick Lab, the velocity lane, the manual data and **six tests that asserted the old Chinese copy** — w…"
       },
       {
-        "zh": "**先把已知的 flake 修掉，再把它放进门禁。** G.40 记下的线索是 `100 → 52`（向上拖却变小）——真因不是「拖拽偶发」，而是**比较了两个不同的音符**：改前读的是元素句柄，改后却用选择器**重新查询**；这次运行前面已经编辑过 pattern，力度条的顺序会变，于是两个数字来自不同音符。现在：前后都读**同一个句柄**，盒子反复读到你它不再移动（`scrollIntoViewIfNeeded` + 睡 150 ms 不是布局已稳定的承诺），并且按下之前用 `elementFromPoint` **核实落点就在这根条上**（和点击用的同一套「验证送达」契约）。",
-        "en": "**Fix the known flake before putting it in the gate.** The clue recorded in G.40 was `100 → 52` — an upward drag that went down. The cause was not drag flakiness but **comparing two different notes**: the before-read used the element handle while the after-read re-queried by selector, and since the run edits the pattern earlier, the lane's bars re-order, so the two numbers came from different notes. Now both reads use the same handle, the box is re-read until it stops moving…"
+        "zh": "**一张允许表，而不是把规则放宽**：分不清「同名不同义」的扫描器只能一路放宽到什么都不查。所以**门限混响**（gated reverb，159 个曲风的文案里到处都是）、音轨**循环长度/步长**、**物理长度**、**衰减长度**，以及曲风 `origin_place` 里的「工作室」（一个**地点**，不是这个应用的编曲页）都保留，并把理由写进测试注释；扫描范围也据此排除 `src/data/genres/**`。",
+        "en": "**An allowlist instead of a loosened rule**: a scanner that cannot tell look-alikes apart can only be relaxed until it checks nothing. So 门限混响 (gated reverb, all over the 159 genres' copy), a track's loop/step 长度, 物理长度, 衰减长度, and a genre's `origin_place` 工作室 (a *place*, not this app's studio view) all stay, with the reasons in the test's comments — and the scan scope excludes `src/data/genres/**` for the same reason."
       },
       {
-        "zh": "**顺带核对：目标里的两条要求其实早有测试**——`deviceCapabilities.test.ts` 已经断言 viewport meta 的 `maximum-scale=1` + `user-scalable=no`（并写明为什么是刻意的），`mobileShell.test.tsx` / `mobileTransportBar.test.tsx` 已经断言底栏**在 pointerup 提交**而不是 click。所以本轮没有加重复测试，只把这次核对写进计划：**先看有没有，再决定加不加。**",
-        "en": "**And a check that saved a duplicate**: two requirements from the objective turned out to be tested already — `deviceCapabilities.test.ts` asserts the viewport meta's `maximum-scale=1` and `user-scalable=no` (and records why that is deliberate), and `mobileShell.test.tsx` / `mobileTransportBar.test.tsx` assert that the bottom bars commit on **pointerup** rather than click. No duplicate tests were added; the check itself is recorded in the plan: look for the test before writi…"
+        "zh": "**门禁 `terminology.test.ts`（3 条）**：① 在**键上**断言三个正名（并在三个「长度」键上断言含「音长」），这样「改成第三个新词」也会失败，而不只是「改回旧词」；② 扫描界面文案里的退役名与音符门限语义的「门限」，报出 `文件:行号 词`；③ **扫描器自检**——对 `门限混响`/`循环长度`/`物理长度` 必须放行，对 `返回编曲台`/`门限: {gate} 步` 必须命中。没有第 ③ 条，前两条只是「当前为真的断言」，不是检查。",
+        "en": "**The gate (`terminology.test.ts`, three tests)**: (1) the three canonical names are asserted **by key** — and the three length keys must contain 音长 — so picking a *third* word fails too, not just reverting to an old one; (2) the interface copy is scanned for the retired names and for 门限 in the note-gate sense, reporting `file:line term`; (3) the **scanner checks itself** — 门限混响 / 循环长度 / 物理长度 must pass, while 返回编曲台 / 门限: {gate} 步 must be caught. Without the third, the first…"
       }
     ],
     "truncated": true
