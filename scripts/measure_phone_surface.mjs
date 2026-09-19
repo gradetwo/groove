@@ -105,9 +105,12 @@ function collectSurface() {
    * different facts: how many *choices* the grid offers is a design constraint (390 px ÷ 16 steps
    * is 24 px per target no matter how the cell is drawn), while how many buttons a toolbar shows is
    * the density question.
+   *
+   * Only `role="gridcell"` itself counts as a cell. The **track headers live inside the same grid
+   * container** but are real buttons, and treating the whole `[role="grid"]` subtree as "grid" is
+   * how the first version of this audit hid five 4–36 px controls from its own tap-target list.
    */
-  const isGridCell = (el) =>
-    el.getAttribute("role") === "gridcell" || Boolean(el.closest('[role="grid"]'));
+  const isGridCell = (el) => el.getAttribute("role") === "gridcell";
 
   const selector = 'button, a[href], select, input, textarea, [role="button"], [tabindex="0"]';
   const controls = [];
