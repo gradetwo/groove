@@ -42,11 +42,13 @@ export const GenreRail = memo<GenreRailProps>(function GenreRail({
 }) {
   return (
     <div className="px-4 sm:px-7 pt-4 pb-1 flex items-center gap-3">
-      {/* Category selector */}
+      {/* Category selector. `min-h-11`: measured at 390×664 it was 168×36, three fingers wide and
+          under the 44 px a thumb needs — and it is one of the two controls a phone user reaches for
+          first in the studio. */}
       <select
         value={activeCategoryFilter}
         onChange={(e) => onSelectCategory(e.target.value)}
-        className="bg-panel border border-[#2b2e38] hover:border-accent text-text text-xs font-semibold px-3 py-2 rounded-xl outline-none cursor-pointer transition-colors shadow-sm"
+        className="bg-panel border border-[#2b2e38] hover:border-accent text-text text-xs font-semibold px-3 min-h-11 rounded-xl outline-none cursor-pointer transition-colors shadow-sm"
         aria-label={isZh ? "按大类筛选风格" : "Filter genres by category"}
       >
         {categories.map((cat) => (
@@ -93,10 +95,10 @@ export const GenreRail = memo<GenreRailProps>(function GenreRail({
         })}
       </div>
 
-      {/* Dice Random Button (#dice) */}
+      {/* Dice Random Button (#dice). 44×44 like every other phone target: it was 36×36. */}
       <button
         onClick={onRandomGenre}
-        className="flex-none w-9 h-9 border border-dashed border-line hover:border-accent text-text-sub hover:text-accent rounded-xl flex items-center justify-center transition-colors bg-panel2 touch-manipulation"
+        className="flex-none w-11 h-11 border border-dashed border-line hover:border-accent text-text-sub hover:text-accent rounded-xl flex items-center justify-center transition-colors bg-panel2 touch-manipulation"
         title={isZh ? "随机选择风格" : "Random Genre"}
         aria-label={isZh ? "随机选择风格" : "Random Genre"}
       >
