@@ -48,10 +48,30 @@ export class FakeAudioParam {
 }
 
 export class FakeNode {
+  /**
+   * Every real `AudioNode` carries these three, and code that re-routes a stereo branch sets them
+   * (`channelCount 2 / explicit / speakers` is how a mono mix survives a splitter). Omitting them
+   * made that wiring unassertable — and a test mock that cannot express the property cannot catch
+   * the bug either.
+   */
+  channelCount = 2;
+  channelCountMode: ChannelCountMode = "max";
+  channelInterpretation: ChannelInterpretation = "speakers";
   /** Nodes that were connected INTO this node — lets tests assert routing. */
   incoming: FakeNode[] = [];
-  connect(destination?: unknown) {
-    if (destination instanceof FakeNode) destination.incoming.push(this);
+  /**
+   * Every edge out of this node, with the output and input indices it was made on.
+   *
+   * `incoming` alone cannot tell a `ChannelSplitterNode`'s two outputs apart, and "which output
+   * feeds which tap" was exactly the stereo-chorus defect; the same applies to the two inputs of a
+   * merger. Recording the indices makes that routing assertable instead of assumed.
+   */
+  outgoing: Array<{ node: FakeNode; outputIndex: number; inputIndex: number }> = [];
+  connect(destination?: unknown, outputIndex = 0, inputIndex = 0) {
+    if (destination instanceof FakeNode) {
+      destination.incoming.push(this);
+      this.outgoing.push({ node: destination, outputIndex, inputIndex });
+    }
     return destination ?? this;
   }
   disconnect() {
