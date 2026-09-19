@@ -1,29 +1,29 @@
 {
-  "version": "2.0.88",
+  "version": "2.0.89",
   "releaseDate": "2026-09-19",
-  "changelogCount": 152,
+  "changelogCount": 153,
   "latest": {
-    "version": "2.0.88",
+    "version": "2.0.89",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.88 首屏有一个明确的动作；顺带修掉冻结列里漏出来的播放头光束",
-      "en": "v2.0.88 The First Screen Has One Clear Action — and the Playhead Beam Stops Leaking Into the Frozen Column"
+      "zh": "v2.0.89 音序器终于有「本页帮助」：主编辑面不再是唯一没有帮助入口的界面",
+      "en": "v2.0.89 The Sequencer Gets a Help Entry — It Was the Only Screen Without One"
     },
     "highlights": [
       {
-        "zh": "**首屏是一张格子和一排控件，没有任何东西提示先碰哪个。** 导游解决的是第一次访问，但回来的人、或当初把导游关掉的人，看到的仍然只是编辑器。现在首屏有一条细横条：一句话说明「按播放先听一遍这段律动，再点亮一个格子改它」+ 播放键 + ✕。它是一条提示而不是面板：U1 的抱怨正是「第一印象像控制面板」，用更多家具回答它就是重复同一个错误。",
-        "en": "**The first screen is a grid and a row of controls, with nothing saying which to touch first.** The guide covers a first visit, but a returning visitor — or anyone who dismissed it — still just sees an editor. The studio now shows one slim line: \"Press play to hear this groove — then light up a cell to change it\", plus a Play button and a dismiss ✕. A hint, not a panel: U1's complaint is that the first impression is a control surface, and answering that with more furniture w…"
+        "zh": "**主编辑面是唯一没有帮助入口的界面**：钢琴卷帘有，「?」全局快捷键也有，但工具栏里 grep「help」零命中——最需要帮助的地方反而没有入口。现在 More 菜单里多了一项「本页帮助」，打开帮助中心的 sequencer 章节。",
+        "en": "**The main editor was the only screen without a help entry.** The piano roll has one and `?` opens the shortcuts, but the toolbar had zero hits for \"help\" — the place that needs it most had no way in. The More menu now carries **Help for this screen**, which opens the help centre at the sequencer chapter."
       },
       {
-        "zh": "**它会永久退场，而且有三种退场方式。** 按它自己的播放键、**从别的路径开始播放**（空格、走带、教学——靠 `isPlaying` 观察）、或主动关掉。**关掉也算退场**是刻意的：被关掉又回来的提示比没有提示更烦人。记录只有一个键 `groove_first_play_done`；读失败视为「没有记录」（不让提示永久化），写失败静默（下次再出现，没有别的东西依赖它）。",
-        "en": "**It retires for good, by any of three routes:** its own Play button, **playback started some other way** (space bar, transport, a lesson — observed through `isPlaying`), or being dismissed. **Dismissal counts as done** on purpose: a hint that returns after being dismissed is worse than no hint. One key, `groove_first_play_done`; a failed read means \"no record\" (so the hint cannot become permanent), a failed write is silent (it simply appears again; nothing else depends on i…"
+        "zh": "**Tier 3，不占默认密度。** 帮助属于「会话边缘」类，而 G.10 好不容易把默认可见控件从 36 降到 16；放进 More 菜单意味着密度探针看不见它，也不会被判成「Tier 2/3 泄漏」（探针只禁止**默认可见**的非 Tier 1 控件）。层级表里照样登记了这一行——表仍是单一事实来源，而它的既有守卫（每个 `labelKey` 必须在 locale 里有定义）当场抓到我「只加了行、忘了加文案」。入口在宿主没给 handler 时**不渲染**，与 console 开关同一约定。",
+        "en": "**Tier 3, so it costs no default density.** Help is a session-edge affordance and G.10 spent real effort getting the default surface from 36 controls down to 16; inside the More menu the density probe cannot see it and it is not counted as a Tier 2/3 leak (the probe only forbids *visible* non-Tier-1 controls). It is still recorded in the tier table — which remains the single source of truth, and whose existing guard (every `labelKey` must exist in the locale) caught me addin…"
       },
       {
-        "zh": "**只在桌面/平板显示（`!isPhone`）。** 手机端是你正在重做的部分，我不把这条提示作为约束交给你——这不是「绕过冻结」，而是这条新组件本来就该按端取舍。",
-        "en": "**Desktop and tablet only (`!isPhone`).** The phone layout is being redesigned separately, and this hint is not something to hand that work as a constraint — a deliberate per-surface decision rather than a way around the freeze."
+        "zh": "**顺带把 U 表里已经完成、却还挂着「未修」的条目补齐**（U1/U2/U3/U4/U5/U6/U7/U11 均已交付，各自标注版本与附录），并写明仍然开放的四项及原因：**U8**（自动保存却没有「已保存」指示）、**U9**（中文术语一名多译——**需要你拍板用词**）、**U10**（卷帘是无障碍空洞）、**U12**（对比度 2.3:1 / 1.96:1 与 ≤10px 字号）。顺带修掉 U1 行里我上一轮重复粘贴的一句话。",
+        "en": "**The U table's finished rows are no longer labelled \"not fixed\"** (U1/U2/U3/U4/U5/U6/U7/U11 are all delivered, each with its version and appendix), and the four that remain open are named with their reasons: **U8** (autosave with no saved indicator), **U9** (one concept, four or five Chinese names — **this needs your call on the wording**), **U10** (the piano roll is an accessibility void), **U12** (contrast 2.3:1 / 1.96:1 and 44 controls at ≤10px). A duplicated phrase I le…"
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
