@@ -3191,3 +3191,58 @@ Solo 36×36）从来没被量到过。修法是把排除范围缩到 **`role="gr
 - `TrackRow` 的桌面/平板路径一行未改（`isCompact` 的既有语义保持），`workspaceGroupingAndClipManagement`
   等既有测试全绿。
 - 手机端审计：控件 27（工作区 16 + 两条栏 11），低于 44 px 的 **3**，全部具名豁免。
+
+## G.37 手机端第三轮：把"每个视图"都量一遍，先收拾 Explore（v2.0.98）
+
+G.36 结尾写着"随后是 Explore / 时间线 / analyzer 三个视图的逐屏体检"。动手第一步是让工具能走别的页：
+`measure_phone_surface.mjs` 新增 **`--tabs=a,b,c`**（默认仍是 studio），逐个 `?tab=` 加载、`main` 出现后再量。
+
+### 量出来的全景（iPhone 14 竖屏；这一轮动手前的数字）
+
+| 视图 | 控件 | 低于 44 px | 主要问题（前三个） |
+|---|---|---|---|
+| studio | 27 | 3 | Previous/Next bar（冻结）、Fold All Tracks（冻结） |
+| **galaxy（Explore）** | 17 | **9** | 六个星云分类 chip（39–134×**29**）、`Show all`、3D 标签 `HOUSE`、回放 28×28 |
+| chords | 10 | 3 | Harmony Guide、两个 `<select>`（119×32） |
+| kick | 14 | 7 | Kick Lab Guide、Return to Studio、三个示波器模式按钮（24–26 px） |
+| maker | 15 | 8 | 曲风下拉（140×**18**）、Fork、New Blank Genre… |
+| challenge | 12 | 5 | Rank Certificate、Reset stats 32×32、三个难度 32–34 |
+| masterclass | 10 | 1 | Groove Guide（128×30） |
+| horizontal-timeline | 20 | **12** | Timeline Guide 34×18、两个刻度模式、两个 `<select>` |
+| vertical-timeline | 13 | 6 | Timeline Guide、年代 chip 57–60×26 |
+| compare | 21 | **14** | 三个播放模式 42 高、Add Genre、三个预设 30 高 |
+| analyzer | 22 | 13 | Acoustics Guide、Open Studio Monitor、Dual Split 28×20… |
+
+**合计 89 个低于 44 px 的控件，分布在除了 studio 之外的每个视图里**——也就是说 G.35/G.36 修好的是手机端的
+"主页"，其余视图从来没按手机标准量过。这张表就是接下来几轮的工作清单（也是"哪些功能手机上不该提供"的判据）。
+
+### 这一轮收拾的是 Explore（galaxy）：9 → 0
+
+Explore 是 studio 之外使用频率最高的页面（选曲风），而且它的 9 个问题里有 6 个是**主交互本身**：
+
+- **星云分类 chip**（39–134×29）：手机上加 `min-h-11`。它们在一行横向滚动里（`overflow-x-auto`），变高不会挤坏布局 ✓。
+- **`Show all nebulae clusters` / 列表视图按钮**：同样 `min-h-11`。
+- **年代回放按钮 28×28** → 手机上 44×44。
+- **3D 投影标签**（`nlab-core`/`nlab-sub`：`浩室 HOUSE` 39×29、`HOUSE` 72×24…）：**手机上改成纯视觉元素**
+  （`pointer-events-none` + `tabIndex={-1}` + `aria-hidden`）。理由是它们**长不大**：渲染循环用
+  `translate3d(x, y-28) translate(-50%,-100%)` 把标签**底边**锚在投影点上，加高只会把文字整体上移；而
+  39×29 的按钮在手机上本来就点不准。手机改用 chip 行与列表视图选曲风（两者现在都是 44 px ✓），
+  标签留在屏幕上当信息。
+
+量到的一个细节值得记：那 6 个标签在**渲染循环里每帧**被写 `el.style.pointerEvents = vis ? "auto" : "none"`，
+所以类名上的 `pointer-events-none` 会被**内联样式覆盖**（探针里 7 个标签只有 1 个读到 `none`）。改成循环里读
+一个 `phoneSurfaceRef`（`isMobile` 的 ref 副本，避免重建渲染循环）才真的生效。
+
+### 门禁与工具
+
+- 审计与 E2E 门禁都新增一条规则：**`pointer-events: none` 的元素不是目标**（按定义按不到）——这正是"手机端
+  只读标签"能合法地从目标清单里消失的机制，而不是把规则放宽。
+- E2E 的手机门禁从"只量 studio"扩成**按名字逐个量**：这一轮起覆盖 `studio` 与 `explore`，报错信息带上页面名；
+  其余视图的数字在 G.37 的表里，等各自的轮次搬进同一套门禁。
+- 结果：galaxy 竖屏 11 控件 / **0 低于 44**，横屏 14 / 0；studio 不变（3 个冻结豁免）。
+
+### 下一轮
+
+按同一套流程收拾 **chords（Tools 的落地页）与 kick**——两者都是 studio 之外最常用的创作页，问题也少
+（3 + 7），预计一轮能收完并把它们加进门禁；之后再排时间线 / compare / analyzer 这几个**更该考虑"手机上不提供"
+的分析型视图**（它们的问题数最多：12 / 14 / 13，而且都是桌面级信息密度）。
