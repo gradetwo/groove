@@ -386,7 +386,7 @@ studio 的 URL 才会稳定带上曲风。
 
 | # | 事实 | 位置 | 后果 |
 |---|---|---|---|
-| M1 | 送出（sendA/sendB）在**推子后、声像前**分接：`stripOut` 同时喂 panner 与 send | `AudioEngine.ts:605` vs `:612-624` | 硬左/硬右的轨道，混响/延迟送的是**居中**信号（真实调音台是 post-pan） |
+| M1 | 送出（sendA/sendB）在**推子后、声像前**分接：`stripOut` 同时喂 panner 与 send | `AudioEngine.ts:605` vs `:612-624` | 硬左/硬右的轨道，混响/延迟送的是**居中**信号（真实调音台是 post-pan）——**已修，见附录 G.19** |
 | M2 | 母带 `DRIVE` 是**硬削波**：WaveShaper 曲线定义域固定 `[-1,1]`，而机架在推子之后、8 轨求和之后 | `EffectsRack.ts:59-67`；`masterGraph.ts:264` | 在 rock/metal/dubstep（drive 3.5–5.5，`genreFx.ts:113, 213, 217`）上，母带在进限幅器之前就已经被削平 |
 | M3 | 合唱把立体声**降混成单声道**（`ChannelMergerNode` 的输入默认 `channelCount 1`），且左右两抽头共用同一个 LFO | `EffectsRack.ts:179-184, 219-221` | 湿声是单声道、主总线每隔约 66 Hz 一个梳状陷波 |
 | M4 | 乒乓开关会**重建整条延迟图并切断尾音**（`if (pingChanged) this._build()`） | `DelayBus.ts:234-236, 277-284` | 切曲风/切乒乓时延迟尾巴被砍断 |
@@ -398,7 +398,7 @@ studio 的 URL 才会稳定带上曲风。
 | M10 | 实时 ratchet **未做 1..8 夹取**，导出做了 | `AudioEngine.ts:1624-1626` vs `noteEvents.ts:59-61` | 畸形/导入的 pattern 能一次性喷出大量声部 |
 | M11 | 逐轨 swing 分支丢掉了 `latencyCompensationMs`（用的是 `this.nextStepTime` 而不是 `time`） | `AudioEngine.ts:1618-1620` vs `WavExporter.ts:340-344` | 带独立 swing 的轨道与导出有几毫秒偏差 |
 | M12 | 混响返回量的 ramp 没有先钉住当前值（DelayBus 有先钉） | `ReverbBus.ts:337-343` vs `DelayBus.ts:402-403` | ramp 起点可能跳变 |
-| M13 | 母带链路**没有 DC 阻断**，混响 IR 也没有高通 | `masterGraph.ts`（无 HPF）、`ReverbBus.ts`（无 HPF） | 任何 DC 会持续占用限幅器的天花板 |
+| M13 | 母带链路**没有 DC 阻断**，混响 IR 也没有高通 | `masterGraph.ts`（无 HPF）、`ReverbBus.ts`（无 HPF） | 任何 DC 会持续占用限幅器的天花板——**已修，见 Q12** |
 | M14 | 限幅器的增益包络是**瞬时阶跃**（`this.gain = target`），滑窗最小值是每样本 O(D) 线性扫描，且 NaN/Inf 无消毒 | `MasterLimiter.ts:358-360, 352-356, 346` | 限幅时的调制颗粒感/泵动；渲染线程额外负载 |
 
 **响度：已测数据（离线口径）** —— 这是本仓库最扎实也最"反直觉"的一块：
@@ -1051,7 +1051,7 @@ node scripts/check_timbre_spread.mjs      # 音色基线也需重录（母带链
 2. **Unison / 立体声展开**：`supersaw` 目前是两把锯齿，真实超级锯是 7 路失谐。
 3. **波表（`createPeriodicWave`）**：风琴拉杆、钢琴/钟琴的不谐分音目前无法实现。
 4. **鼓组采样层与每击轮转**（`DrumKitModels` 100% 合成、噪声偏移按步进确定）。
-5. **立体声完整性**（合唱降混、送出为声像前分接）、混响 IR 移出主线程、延迟不重建图。
+5. **立体声完整性**（合唱降混）、混响 IR 移出主线程、延迟不重建图。（送出已改到声像后分接，见 G.19。）
 6. **限幅器起音平滑**：三次尝试后如实回退。
 7. **§4 上手改造**：`toolbarTiers` 接线、`layout.density` 落地、首屏单一动作、静默 no-op。
 8. **手机端底部双层栏**（标签栏 53px + 走带条 59px = 视口 17%）。
@@ -1099,7 +1099,7 @@ node scripts/check_timbre_spread.mjs      # 音色基线也需重录（母带链
 1. **Unison / 立体声展开**：`supersaw` 目前是两把锯齿，真实超级锯是 7 路失谐 + 相位随机。
 2. **波表（`createPeriodicWave`）**：风琴拉杆、钢琴/钟琴的不谐分音目前机制上做不到。
 3. **鼓组采样层与每击轮转**：`DrumKitModels` 100% 合成，噪声偏移按步进确定（不随小节变化）。
-4. **立体声完整性**（合唱降混、送出为声像前分接）、混响 IR 移出主线程、延迟不重建图。
+4. **立体声完整性**（合唱降混）、混响 IR 移出主线程、延迟不重建图。（送出已改到声像后分接，见 G.19。）
 5. **限幅器起音平滑**：三次尝试后回退，需离线迭代。
 6. **§4 上手改造**：`toolbarTiers` 接线、`layout.density` 落地、首屏单一动作、静默 no-op。
 7. **手机端底部双层栏**（标签栏 53px + 走带条 59px = 664px 视口的 17%）。
@@ -1786,7 +1786,8 @@ E2E 的 `openPianoRoll()` 原来是「找到卷帘开关就点、找不到就跳
      ~~同一鼓件连续敲击因此逐次完全相同~~ —— **「每击轮转」已完成（v2.0.73）**，
      见 G.13：音高/音量/长度按音乐位置做确定性微变，四个鼓件族与六个打击乐族全部接入。
      仍未做的是**真正的采样层**（需引入采样资源与许可），本轮不涉及。
-   - **立体声完整性其余部分**：合唱降混、送出为声像前分接、混响 IR 移出主线程、延迟不重建图。
+   - **立体声完整性其余部分**：合唱降混、混响 IR 移出主线程、延迟不重建图。
+     ~~送出为声像前分接~~ —— **已完成（v2.0.81）**，见 G.19。
 5. **不谐分音**：`createPeriodicWave` 只能生成**谐波**级数，所以钟/锣/钟琴的金属感
    仍只能用两个不成整数比的振荡器近似。真正的解法是采样或加减法合成。
 6. **`StudioView` 剩余接线的继续外提**：播放/混音设置（鼓组、drums-only、录音待命）、
@@ -2323,3 +2324,51 @@ G.16 立的判据是「没有引用才能删」。这一轮**先在代码与文�
 `CODE_REVIEW_AND_PLAN_v1.16.0.md`（代码注释里 `E-xx` / `V-xx` / `N-xx` 编号的登记表）、
 `TIMBRE_NOTES.md` / `MIX_LOUDNESS_NOTES.md`（音色与母带/响度的实测记录，门禁基线以它们为据）。
 
+
+## G.19 送出改到声像后分接：实时与导出重新一致（v2.0.81）
+
+### 缺陷（读代码 + 图断言双重确认）
+
+`AudioEngine.setupTrackStrips` 把 `sendA`/`sendB` 从 `stripOut` 分接——那是极性/分析仪那一级，
+位于 `StereoPannerNode` 的**上游**；而离线导出器 `WavExporter` 从 `tPan`（声像**之后**）分接，
+并且它的注释还写着「the live engine taps post-pan」——**注释是假的，两张图不一致**。
+
+后果：硬左/硬右的轨道，混响与延迟收到的是**居中**的信号，于是干的信号在一侧、湿的尾巴在正中间，
+逐曲风策展的送出量失去了它本来要制造的宽度。真实调音台的惯例同样是 post-pan：效果跟着声源走。
+（这正是 §3.3 的 **M1**，也是 §3.5 / G.11 里一直挂着的「送出为声像前分接」。）
+
+### 修法
+
+```ts
+const sendTap: AudioNode = panner ?? spatialPanner ?? stripOut;
+```
+
+两个送出都从 `sendTap` 分接。空间（HRTF）模式下自动跟着 `spatialPanner`；没有声像节点时回退到
+原来的 `stripOut`。实时链路的其余部分（插入条 → duck → 推子 → 极性 →[分析仪]→ 声像 → 分组总线）
+一个节点都没动，所以这不会顺带改变别的声音。
+
+### 测试（新增 `src/test/trackSends.test.ts`，4 条）
+
+1. 硬左轨道（`pan: -1`、两个送出全开）：两个送出的 `incoming` **只有 panner**，且 panner 上确实是 −1；
+2. 打开逐轨分析仪时仍分接在声像之后（旧代码这时分接点会变成分析仪，仍在声像之前）；
+3. 空间模式下分接 `spatialPanner`；
+4. **离线导出器分接在同一级**：离线图里被硬左 panner 直接喂到的增益正好 3 个
+   （分组总线 + 混响送出 + 延迟送出）。
+
+把送出改回 `stripOut` 实测：**第 1–3 条失败**，第 4 条本来通过——它钉的正是导出侧那一级，
+也就是这次要对齐的目标。全量单测 **175 文件 / 2033 用例**。
+
+### 为什么**没有**重录 timbre / loudness 基线
+
+两个基线都由 `measure_genre_timbre.mjs` / `measure_genre_loudness.mjs` **只经
+`renderPatternOffline`（离线导出器）**渲染得到（脚本头部与本轮复核都确认：`path` 字段写的是
+`offline: renderPatternOffline() via Vite dev server`）。本轮的改动**只在实时 `AudioEngine` 的送处分接点**，
+导出器的分接点本来就是对的，所以它的输出没有变，基线仍然准确。
+
+我起过两轮全库重测（约 25 分钟/轮），确认这一点后**主动终止**：否则只会把平台的 DSP 重渲染噪声
+（中位数 ≈7e-5 dB、偶发 1.16–1.55 dB 离群，见 G.14）写进已提交的基线，换来约 270 KB 无意义 diff。
+
+**顺带记一个工具坑**：`measure_genre_loudness.mjs` 在全库跑到一半时会**就地覆盖**
+`scripts/loudness.baseline.json`（不像 timbre 那样只写 `.progress.json`、末尾才落盘），
+所以中途终止会留下一个残缺的基线。本轮踩到了，已 `git checkout --` 还原并核对 md5 与 HEAD 一致。
+如果以后要中途停它，先备份基线。
