@@ -294,10 +294,16 @@ if (TARGET_PROFILE !== "all" || TARGET_FILTER) {
  * point being that an omitted feature must be visibly omitted rather than silently missing.
  */
 async function openPianoRoll(page) {
-  if (await page.$("[data-testid='toolbar-piano-roll-toggle']")) {
-    await clickVerified(page, "[data-testid='toolbar-piano-roll-toggle']");
-    return "desktop";
-  }
+  /**
+   * The roll is Tier 2 (`toolbarTiers.ts`), so the desktop shell renders it only once the advanced
+   * density is on — that is what G.10's slimming does: 36 always-visible controls became 16, and the
+   * roll is one of those that moved behind the "More" control.
+   *
+   * The desktop path therefore opens the density first. The previous order — test for the toggle,
+   * and if it is absent fall through — would have silently deleted the roll's coverage from the
+   * desktop matrix, which is exactly the "an omitted feature must be *visibly* omitted" failure the
+   * phone branch below exists to avoid.
+   */
   if (await page.$("[data-testid='mobile-transport-more']")) {
     /**
      * Phone shell: the roll is not offered. Its sheet row is "editing notes", which opens the
@@ -313,7 +319,27 @@ async function openPianoRoll(page) {
     );
     return null;
   }
-  throw new Error("No piano roll entry point on this viewport");
+  // Already open (an earlier step left it that way): nothing to do.
+  if (await page.$("[data-testid='piano-roll-grid']")) return "desktop";
+
+  if (!(await page.$("[data-testid='toolbar-piano-roll-toggle']"))) {
+    await openStudioMoreControls(page);
+  }
+
+  /**
+   * Verify the *outcome*, not the click.
+   *
+   * `clickVerified` re-queries the selector on each retry, which is the wrong instrument for a
+   * control whose own click re-renders the toolbar: the retry can look for an element that the
+   * first, successful click already replaced. The roll's grid appearing is the thing the caller
+   * needs, and it cannot be satisfied by a click that did nothing.
+   */
+  const toggle = await page.waitForSelector("[data-testid='toolbar-piano-roll-toggle']", {
+    timeout: 15000,
+  });
+  await toggle.click();
+  await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 15000 });
+  return "desktop";
 }
 
 /**

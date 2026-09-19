@@ -121,8 +121,21 @@ describe("Item 8: Toolbar Logical Grouping, Capsule Pills & Compact Fold", () =>
     localStorage.clear();
   });
 
-  it("renders 4 logical group pills with micro-tinted capsules", () => {
-    render(<Toolbar {...makeToolbarProps()} />);
+  it("renders the three Tier 1 group pills by default, and the project group with the density on", () => {
+    /**
+     * G.10's slimming: the project group is Tier 2/3 (project context, exports, niche modes), so
+     * the default toolbar shows three pills instead of four. The assertion is both halves — the
+     * absence is as much the design as the presence, and asserting only the advanced-on state would
+     * let the toolbar silently grow back to 36 visible controls.
+     */
+    const { unmount } = render(<Toolbar {...makeToolbarProps()} />);
+    expect(screen.getByTestId("toolbar-group-transport")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-group-edit")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-group-views")).toBeInTheDocument();
+    expect(screen.queryByTestId("toolbar-group-project")).not.toBeInTheDocument();
+    unmount();
+
+    render(<Toolbar {...makeToolbarProps({ showAdvancedControls: true })} />);
     expect(screen.getByTestId("toolbar-group-transport")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-group-edit")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-group-views")).toBeInTheDocument();

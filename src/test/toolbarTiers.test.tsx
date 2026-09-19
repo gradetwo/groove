@@ -10,6 +10,7 @@ import {
   TIER_1_PRIMARY,
   TIER_2,
   TIER_3,
+  isControlVisible,
   shortcutBindings,
   tierOf,
   validateTiers,
@@ -17,15 +18,25 @@ import {
 import type { ToolbarTierItem } from "../components/sequencer/toolbarTiers";
 
 /**
- * C-01 — toolbar tier table contract.
+ * C-01 — toolbar tier table contract, now load-bearing.
  *
- * The layout half of the plan's acceptance ("Tier 3 stays invisible by default",
- * "toolbar <= 56 px") belongs to the later slimming milestone (C-02/C-03) and is
- * deliberately NOT asserted here: it would be red today. What this file locks in
- * is the table itself — that it is internally valid, that every keyboard binding
- * is pinned to Tier 1, that `DEFAULT_VISIBLE_IDS` is exactly Tier 1, that the
- * validator can genuinely fail (mutation-style guards), and that no `id` or
- * `labelKey` has drifted away from the real Toolbar / locale sources.
+ * This file used to say the layout half of the acceptance ("Tier 3 stays invisible
+ * by default") belonged to a later milestone and would be red today. That milestone
+ * is this change: `isControlVisible` is what the Toolbar renders through, so the
+ * table decides what is on screen and these tests are no longer describing a plan.
+ *
+ * What is asserted here:
+ *   - the table is internally valid, every binding is pinned to Tier 1, and the
+ *     validator can genuinely fail (mutation-style guards below);
+ *   - `isControlVisible` shows exactly Tier 1 when the advanced density is off, and
+ *     everything when it is on — the density contract itself;
+ *   - every control the Toolbar stamps with `data-toolbar-id` names a real row and
+ *     agrees with that row's tier, in both directions, so the table cannot quietly
+ *     become an incomplete description of the toolbar again. It was one twice: the
+ *     piano roll and the fold toggle were both rendered, visible and unrecorded;
+ *   - the controls gated as a group really do share a tier, so one gate cannot hide
+ *     a control of another frequency;
+ *   - no `id` or `labelKey` has drifted away from the real Toolbar / locale sources.
  */
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -345,5 +356,102 @@ describe("grounding: the table cannot drift from the real Toolbar", () => {
       (item) => item.testId !== undefined && !toolbar.includes(`data-testid="${item.testId}"`),
     ).map((item) => `${item.id} -> ${item.testId}`);
     expect(missing, `testIds not rendered by Toolbar.tsx:\n${missing.join("\n")}`).toEqual([]);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * The density contract
+ * ------------------------------------------------------------------------- */
+
+describe("the tier table decides what is on screen", () => {
+  it("shows exactly Tier 1 while the advanced density is off", () => {
+    for (const item of ALL_TIER_ITEMS) {
+      expect(isControlVisible(item.id, false), `${item.id} (tier ${item.tier})`).toBe(item.tier === 1);
+    }
+  });
+
+  it("shows everything while the advanced density is on", () => {
+    const hidden = ALL_TIER_ITEMS.filter((item) => !isControlVisible(item.id, true));
+    expect(hidden.map((i) => i.id)).toEqual([]);
+  });
+
+  it("hides an unknown id rather than inventing a visible control", () => {
+    // A control nobody classified is not something to show by accident; the grounding test below
+    // is what turns an unrecorded control into a failure instead of an invisible one.
+    expect(isControlVisible("not-a-real-control", false)).toBe(false);
+    expect(isControlVisible("not-a-real-control", true)).toBe(true);
+  });
+
+  it("keeps Tier 1 within its own cap", () => {
+    expect(TIER_1_PRIMARY.length).toBeGreaterThanOrEqual(10);
+    expect(TIER_1_PRIMARY.length).toBeLessThanOrEqual(TIER_1_MAX);
+  });
+
+  it("records the two controls the table used to be missing", () => {
+    /**
+     * Both were rendered, visible and absent from the table — which the module header claims is
+     * impossible ("a complete description of the app's own keyboard model") and nothing checked.
+     * Pinning them by id is what makes the grounding test below meaningful rather than vacuous.
+     */
+    expect(tierOf("piano-roll-toggle")).toBe(2);
+    expect(tierOf("fold-toggle")).toBe(1);
+  });
+
+  it("the groove-meter group shares one tier, so its single gate is valid", () => {
+    /**
+     * `MeterControls` renders meter / grid / length / tool mode and the Toolbar gates the whole
+     * component with one `shows("meter")`. That is only correct while all four share a tier, so a
+     * re-tier of any one of them has to fail here rather than leave the others stuck behind a gate
+     * that no longer describes them.
+     */
+    const groove = ["meter", "grid", "length", "tool-mode"].map((id) => tierOf(id));
+    expect(new Set(groove).size, `tiers: ${groove.join(", ")}`).toBe(1);
+    expect(groove[0]).toBe(2);
+  });
+});
+
+describe("grounding: every stamped control agrees with the table", () => {
+  /** `<id, tier>` pairs the Toolbar stamps on the elements it renders. */
+  function stampedControls(): Array<{ id: string; tier: number }> {
+    const toolbar = read(TOOLBAR_PATH);
+    const re = /data-toolbar-id="([^"]+)"\s+data-toolbar-tier="(\d+)"/g;
+    return [...toolbar.matchAll(re)].map((m) => ({ id: m[1], tier: Number(m[2]) }));
+  }
+
+  it("stamps only ids the table knows, all at the table's own tier", () => {
+    const stamped = stampedControls();
+    const wrong = stamped
+      .filter(({ id, tier }) => tierOf(id) !== tier)
+      .map(({ id, tier }) => `${id}: stamped tier ${tier}, table says ${tierOf(id) ?? "unknown"}`);
+    expect(wrong, `stamps disagreeing with the table:\n${wrong.join("\n")}`).toEqual([]);
+  });
+
+  it("stamps enough controls to be evidence, not decoration", () => {
+    const ids = new Set(stampedControls().map((s) => s.id));
+    // Every Tier 1 control is rendered somewhere, and the density guarantee is about them.
+    const unstampedTier1 = TIER_1_PRIMARY.filter((item) => !ids.has(item.id)).map((i) => i.id);
+    expect(unstampedTier1, `Tier 1 ids with no stamp in Toolbar.tsx: ${unstampedTier1.join(", ")}`).toEqual(
+      []
+    );
+  });
+
+  it("keeps the browser-side density gate wired, because source text cannot answer it", () => {
+    /**
+     * Whether a control is *on screen* is not decidable from the source: this file already tried,
+     * by slicing "the always-visible row" out of Toolbar.tsx, and the slice included the advanced
+     * overlay — 23 buttons that are only rendered when the advanced density is on. A test that
+     * miscounts its own subject is worse than no test, because it reads as coverage.
+     *
+     * The real check is `scripts/measure_toolbar_density.mjs`: it loads the built studio in
+     * Chromium, counts what is actually visible, and fails when any Tier 2/3 control is on screen
+     * with the advanced density off. This test exists so that gate cannot quietly disappear from
+     * the release chain — a deleted npm script is otherwise invisible.
+     */
+    const pkg = JSON.parse(read(path.join(SRC_DIR, "..", "package.json"))) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["probe:toolbar"]).toBe("node scripts/measure_toolbar_density.mjs");
+    expect(pkg.scripts.verify).toContain("probe:toolbar");
+    expect(fs.existsSync(path.join(SRC_DIR, "..", "scripts", "measure_toolbar_density.mjs"))).toBe(true);
   });
 });

@@ -87,6 +87,22 @@ function renderStudio(genre: Genre) {
   );
 }
 
+/**
+ * Opens the toolbar's advanced density and returns the console's toggle.
+ *
+ * The floating console is Tier 2 (`toolbarTiers.ts`), so G.10's slimming moved it behind the
+ * "More" control: the toolbar shows 12 Tier-1 controls by default instead of 36. Reaching the
+ * console is therefore two clicks now, and a test that skipped the first click would be testing a
+ * toolbar that no longer exists.
+ */
+async function openConsoleToggle() {
+  const more = await screen.findByTestId("toolbar-advanced-toggle", undefined, {
+    timeout: ASYNC_TIMEOUT,
+  });
+  fireEvent.click(more);
+  return screen.findByTestId("studio-console-toggle", undefined, { timeout: ASYNC_TIMEOUT });
+}
+
 describe("StudioView · floating mixing console (feature #2)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,9 +114,7 @@ describe("StudioView · floating mixing console (feature #2)", () => {
     const genre = await chicagoHouse();
     renderStudio(genre);
 
-    const toggle = await screen.findByTestId("studio-console-toggle", undefined, {
-      timeout: ASYNC_TIMEOUT,
-    });
+    const toggle = await openConsoleToggle();
     // Closed: the drawer is not in the DOM and the studio's own engine is the only one.
     expect(screen.queryByTestId("hardware-console")).toBeNull();
     expect(AudioEngineCtor).toHaveBeenCalledTimes(1);
@@ -124,9 +138,7 @@ describe("StudioView · floating mixing console (feature #2)", () => {
     const genre = await chicagoHouse();
     renderStudio(genre);
 
-    fireEvent.click(
-      await screen.findByTestId("studio-console-toggle", undefined, { timeout: ASYNC_TIMEOUT })
-    );
+    fireEvent.click(await openConsoleToggle());
     await screen.findByTestId("console-fader-0", undefined, { timeout: ASYNC_TIMEOUT });
 
     // The studio's own track row (KICK) starts at the genre's volume...
@@ -158,9 +170,7 @@ describe("StudioView · floating mixing console (feature #2)", () => {
     const genre = await chicagoHouse();
     renderStudio(genre);
 
-    fireEvent.click(
-      await screen.findByTestId("studio-console-toggle", undefined, { timeout: ASYNC_TIMEOUT })
-    );
+    fireEvent.click(await openConsoleToggle());
     await screen.findByTestId("hardware-console", undefined, { timeout: ASYNC_TIMEOUT });
 
     fireEvent.keyDown(document.body, { key: "Escape" });
@@ -168,11 +178,18 @@ describe("StudioView · floating mixing console (feature #2)", () => {
     await waitFor(() => expect(screen.queryByTestId("hardware-console")).toBeNull());
   }, TEST_TIMEOUT);
 
-  it("toggles the floated console with the C shortcut", async () => {
+  it("toggles the floated console with the C shortcut, without opening the density", async () => {
+    /**
+     * The console is Tier 2, so the toolbar hides its button by default — but `C` is a real binding
+     * and the tier table records it as `reachableVia: "more"`. A shortcut whose control cannot be
+     * reached is the failure the table exists to prevent, so this presses the key with the advanced
+     * density *closed* and expects the console anyway.
+     */
     const genre = await chicagoHouse();
     renderStudio(genre);
 
-    await screen.findByTestId("studio-console-toggle", undefined, { timeout: ASYNC_TIMEOUT });
+    await screen.findByTestId("toolbar-advanced-toggle", undefined, { timeout: ASYNC_TIMEOUT });
+    expect(screen.queryByTestId("studio-console-toggle")).toBeNull();
 
     fireEvent.keyDown(document.body, { key: "c" });
     await screen.findByTestId("hardware-console", undefined, { timeout: ASYNC_TIMEOUT });

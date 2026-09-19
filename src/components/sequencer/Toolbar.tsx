@@ -32,6 +32,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { isControlVisible } from "./toolbarTiers";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { CustomKickPreset, loadCustomKickPresets } from "../../audio/AnatomyKickEngine";
 import { triggerHaptic, HapticPatterns, getHapticSettings, setHapticEnabled, setHapticIntensity } from "../../utils/haptics";
@@ -207,6 +208,7 @@ const MeterControls = memo<MeterControlsProps>(function MeterControls({
           {t("toolbar_meter_label")}
         </span>
         <select
+          data-toolbar-id="meter" data-toolbar-tier="2"
           value={timeSignature}
           onChange={(e) => onChangeTimeSignature(e.target.value)}
           className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
@@ -231,6 +233,7 @@ const MeterControls = memo<MeterControlsProps>(function MeterControls({
           {t("toolbar_grid_label")}
         </span>
         <select
+          data-toolbar-id="grid" data-toolbar-tier="2"
           value={resolution}
           onChange={(e) => onChangeResolution(e.target.value as "1/8" | "1/16" | "1/32")}
           className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
@@ -248,6 +251,7 @@ const MeterControls = memo<MeterControlsProps>(function MeterControls({
           {t("toolbar_length_label")}
         </span>
         <select
+          data-toolbar-id="length" data-toolbar-tier="2"
           value={stepCount}
           onChange={(e) => onChangeStepCount(Number(e.target.value))}
           className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
@@ -285,6 +289,7 @@ const MeterControls = memo<MeterControlsProps>(function MeterControls({
           {t("toolbar_tool_label")}
         </span>
         <select
+          data-toolbar-id="tool-mode" data-toolbar-tier="2"
           value={mobileEditMode}
           onChange={(e) => onChangeMobileEditMode(e.target.value as MobileEditMode)}
           className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
@@ -309,6 +314,8 @@ interface PatternSlotControlsProps {
   onCopySlot?: (from: "A" | "B", to: "A" | "B") => void;
   onToggleSongMode?: () => void;
   onToggleBlindCompare?: () => void;
+  /** Advanced density: song mode and blind compare are Tier 2 and Tier 3 (see `toolbarTiers`). */
+  showAdvancedControls: boolean;
 }
 
 /**
@@ -323,8 +330,10 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
   onCopySlot,
   onToggleSongMode,
   onToggleBlindCompare,
+  showAdvancedControls,
 }) {
   const { t } = useLanguage();
+  const shows = (id: string) => isControlVisible(id, showAdvancedControls);
 
   return (
     <>
@@ -332,6 +341,7 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
       {onSwitchSlot && (
         <div className="flex items-center bg-panel2 border border-line rounded-lg p-0.5 shrink-0">
           <button
+            data-toolbar-id="pattern-slot" data-toolbar-tier="1"
             type="button"
             onClick={() => onSwitchSlot("A")}
             className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
@@ -344,6 +354,7 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
             {blindCompare ? "?1" : "PTN A"}
           </button>
           <button
+            data-toolbar-id="pattern-slot" data-toolbar-tier="1"
             type="button"
             onClick={() => onSwitchSlot("B")}
             className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
@@ -357,6 +368,7 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
           </button>
           {onCopySlot && (
             <button
+              data-toolbar-id="pattern-slot" data-toolbar-tier="1"
               type="button"
               onClick={() => onCopySlot(activeSlot === "A" ? "A" : "B", activeSlot === "A" ? "B" : "A")}
               className="h-7 px-1.5 text-text-sub hover:text-accent transition-colors ml-0.5"
@@ -372,8 +384,9 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
       )}
 
       {/* Song Mode Toggle (P3-02) */}
-      {onToggleSongMode && (
+      {onToggleSongMode && shows("song-mode") && (
         <button
+          data-toolbar-id="song-mode" data-toolbar-tier="2"
           type="button"
           onClick={onToggleSongMode}
           className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
@@ -390,8 +403,9 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
       )}
 
       {/* Blind Compare Toggle (P3-02) */}
-      {onToggleBlindCompare && (
+      {onToggleBlindCompare && shows("blind-compare") && (
         <button
+          data-toolbar-id="blind-compare" data-toolbar-tier="3"
           type="button"
           onClick={onToggleBlindCompare}
           className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
@@ -652,6 +666,25 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
       if (target.closest("[role='dialog'], [data-testid='track-inspector'], .fixed.inset-0")) {
         return;
       }
+      /**
+       * A control the toolbar itself renders must not dismiss the density.
+       *
+       * Two problems, one rule. Controls that are only on screen *because* the density is on mostly
+       * live outside this panel — the transport group, the groove selects, the roll and console
+       * toggles, the whole project group — and treating their press as an outside click made them
+       * unclickable: the mousedown closed the density, the control unmounted, and the click event
+       * landed on nothing, so the control looked dead until it was pressed twice. (The release
+       * matrix caught that as "the piano roll never opens".)
+       *
+       * The same rule also stops Tier 1 controls from closing it, which is what makes the density
+       * predictable: it opens and closes only on its own control, on Escape, or on a press that is
+       * genuinely outside the toolbar. A disclosure that snapped shut every time the user touched
+       * the toolbar would be the thing that feels broken.
+       *
+       * The selector is the stamp every control carries (`toolbarTiers.ts`), so this comes from the
+       * table that decided visibility rather than from a second list that could drift from it.
+       */
+      if (target.closest("[data-toolbar-id], [data-toolbar-tier]")) return;
       if (
         advancedRef.current &&
         !advancedRef.current.contains(target) &&
@@ -683,6 +716,15 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
     window.addEventListener("groove_kick_presets_changed", handleUpdate);
     return () => window.removeEventListener("groove_kick_presets_changed", handleUpdate);
   }, []);
+
+  /**
+   * Which controls are shown, decided by the tier table and nothing else.
+   *
+   * G.10 measured this toolbar at 36-38 always-visible controls and 215 px (24 % of a 1440x900
+   * viewport) against a Tier 1 design of 12. The table already recorded every control's frequency;
+   * this is the line that makes it load-bearing.
+   */
+  const shows = (id: string) => isControlVisible(id, showAdvancedControls);
 
   const [isToolbarFolded, setIsToolbarFolded] = useState(() => {
     try {
@@ -740,6 +782,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             ) : (
               isSidebarCollapsed && (
                 <button
+                  data-toolbar-id="sidebar-toggle" data-toolbar-tier="1"
                   onClick={onToggleSidebar}
                   className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-text-sub hover:text-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0"
                   title={t("toolbar_dossier_expand_title")}
@@ -752,6 +795,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
 
             {/* Play / Pause Button */}
             <button
+              data-toolbar-id="play" data-toolbar-tier="1"
               onClick={onTogglePlay}
               className={`h-8 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all hover:brightness-110 shrink-0 ${
                 isPlaying
@@ -774,6 +818,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             {/* BPM Input + Micro-nudges */}
             <div className="flex items-center h-8 bg-panel2 border border-line rounded-lg px-1 text-xs shrink-0">
               <button
+                data-toolbar-id="bpm" data-toolbar-tier="1"
                 type="button"
                 onClick={() => onChangeBpm(Math.max(40, bpm - 1))}
                 className="w-4 h-6 flex items-center justify-center text-text-dim hover:text-accent font-['JetBrains_Mono'] text-xs rounded hover:bg-white/5 active:scale-90 select-none"
@@ -784,6 +829,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               </button>
               <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider select-none px-0.5">BPM</span>
               <input
+                data-toolbar-id="bpm" data-toolbar-tier="1"
                 type="number"
                 min="40"
                 max="240"
@@ -793,6 +839,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 title={t("toolbar_bpm_title")}
               />
               <button
+                data-toolbar-id="bpm" data-toolbar-tier="1"
                 type="button"
                 onClick={() => onChangeBpm(Math.min(240, bpm + 1))}
                 className="w-4 h-6 flex items-center justify-center text-text-dim hover:text-accent font-['JetBrains_Mono'] text-xs rounded hover:bg-white/5 active:scale-90 select-none"
@@ -804,8 +851,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             </div>
 
             {/* Tap Tempo Button (P3-07) */}
-            {onTapTempo && (
+            {onTapTempo && shows("tap-tempo") && (
               <button
+                data-toolbar-id="tap-tempo" data-toolbar-tier="2"
                 type="button"
                 onClick={onTapTempo}
                 className="h-8 px-2 bg-panel2 hover:bg-[#14151a] border border-line hover:border-accent rounded-lg text-xs font-['JetBrains_Mono'] text-text-sub hover:text-accent transition-colors shrink-0 active:scale-95"
@@ -817,8 +865,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             )}
 
             {/* Metronome Toggle (P3-07) */}
-            {onToggleMetronome && (
+            {onToggleMetronome && shows("metronome") && (
               <button
+                data-toolbar-id="metronome" data-toolbar-tier="2"
                 type="button"
                 onClick={onToggleMetronome}
                 className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
@@ -835,8 +884,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             )}
 
             {/* Count-In Toggle (P3-07) */}
-            {onToggleCountIn && (
+            {onToggleCountIn && shows("count-in") && (
               <button
+                data-toolbar-id="count-in" data-toolbar-tier="2"
                 type="button"
                 onClick={onToggleCountIn}
                 className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
@@ -852,8 +902,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             )}
 
             {/* Live Recording Toggle (P5-05) */}
-            {onToggleRecordArmed && (
+            {onToggleRecordArmed && shows("record-arm") && (
               <button
+                data-toolbar-id="record-arm" data-toolbar-tier="2"
                 type="button"
                 onClick={onToggleRecordArmed}
                 className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-colors shrink-0 ${
@@ -870,12 +921,13 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             )}
 
             {/* Drum Kit Model Selector (P5-02) */}
-            {onChangeDrumKit && (
+            {onChangeDrumKit && shows("drum-kit") && (
               <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
                 <span className="font-['JetBrains_Mono'] text-[10px] text-text-dim tracking-wider uppercase mr-1 select-none hidden sm:inline">
                   {t("toolbar_drum_kit_label")}
                 </span>
                 <select
+                  data-toolbar-id="drum-kit" data-toolbar-tier="2"
                   value={drumKit}
                   onChange={(e) => onChangeDrumKit(e.target.value as DrumKitType)}
                   className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
@@ -921,8 +973,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             )}
 
             {/* Drums Only Toggle */}
-            {onToggleDrumsOnly && (
+            {onToggleDrumsOnly && shows("drums-only") && (
               <button
+                data-toolbar-id="drums-only" data-toolbar-tier="2"
                 type="button"
                 onClick={onToggleDrumsOnly}
                 className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-['JetBrains_Mono'] transition-all shrink-0 active:scale-95 ${
@@ -950,10 +1003,12 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               onCopySlot={onCopySlot}
               onToggleSongMode={onToggleSongMode}
               onToggleBlindCompare={onToggleBlindCompare}
+              showAdvancedControls={showAdvancedControls}
             />
 
             {/* Compact Fold Toggle (Item 8) */}
             <button
+              data-toolbar-id="fold-toggle" data-toolbar-tier="1"
               type="button"
               onClick={toggleToolbarFolded}
               data-testid="toolbar-fold-toggle"
@@ -974,6 +1029,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
 
             {/* Collapsible Advanced Settings (always reachable on all viewports) */}
             <button
+              data-toolbar-id="more" data-toolbar-tier="1"
               type="button"
               onClick={onToggleAdvancedControls}
               data-testid="toolbar-advanced-toggle"
@@ -1151,8 +1207,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               data-testid="toolbar-group-edit"
               className="flex items-center overflow-x-auto scrollbar-none gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
             >
-              <MeterControls
-                timeSignature={timeSignature}
+              {shows("meter") && (
+                <MeterControls
+                  timeSignature={timeSignature}
                 resolution={resolution}
                 stepCount={stepCount}
                 barCount={barCount}
@@ -1160,12 +1217,14 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 onChangeTimeSignature={onChangeTimeSignature}
                 onChangeResolution={onChangeResolution}
                 onChangeStepCount={onChangeStepCount}
-                onChangeMobileEditMode={onChangeMobileEditMode}
-              />
+                  onChangeMobileEditMode={onChangeMobileEditMode}
+                />
+              )}
 
               {/* Undo & Redo */}
               <div className="flex items-center gap-1 shrink-0">
                 <button
+                  data-toolbar-id="undo" data-toolbar-tier="1"
                   type="button"
                   onClick={onUndo}
                   disabled={!canUndo}
@@ -1180,6 +1239,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   <Undo2 className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  data-toolbar-id="redo" data-toolbar-tier="1"
                   type="button"
                   onClick={onRedo}
                   disabled={!canRedo}
@@ -1196,8 +1256,10 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               </div>
 
               {/* Quick Tools Dropdown */}
-              <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
+              {shows("quick-tools") && (
+                <div className="flex items-center h-8 bg-panel2 hover:bg-[#14151a] border border-line hover:border-[#3a3e48] rounded-lg px-2 text-xs transition-colors shrink-0">
                 <select
+                  data-toolbar-id="quick-tools" data-toolbar-tier="3"
                   value=""
                   onChange={(e) => onQuickAction(e.target.value as any)}
                   className="bg-transparent text-text-sub hover:text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
@@ -1222,10 +1284,11 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     🔄 {t("toolbar_quick_reset_preset")}
                   </option>
                   <option value="clear_saved" className="bg-panel text-[#f87171]">
-                    🧹 {t("toolbar_quick_clear_saved")}
-                  </option>
-                </select>
-              </div>
+                      🧹 {t("toolbar_quick_clear_saved")}
+                    </option>
+                  </select>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1245,6 +1308,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     {t("toolbar_bar_label")}
                   </span>
                   <select
+                    data-toolbar-id="bar-nav" data-toolbar-tier="1"
                     value={viewedBar}
                     onChange={(e) => onSelectBar(Number(e.target.value))}
                     className="bg-transparent text-text font-['JetBrains_Mono'] text-xs font-semibold focus:outline-none cursor-pointer"
@@ -1265,6 +1329,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
 
               {/* Velocity Lane Toggle */}
               <button
+                data-toolbar-id="velocity-lane" data-toolbar-tier="1"
                 onClick={onToggleVelocityLane}
                 className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
                   isVelocityLaneOpen
@@ -1278,8 +1343,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               </button>
 
               {/* Piano Roll Toggle (item ⑦) */}
-              {onTogglePianoRoll && (
+              {onTogglePianoRoll && shows("piano-roll-toggle") && (
                 <button
+                  data-toolbar-id="piano-roll-toggle" data-toolbar-tier="2"
                   onClick={onTogglePianoRoll}
                   data-testid="toolbar-piano-roll-toggle"
                   aria-pressed={isPianoRollOpen ?? false}
@@ -1297,6 +1363,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
 
               {/* Euclidean Rhythm Generator */}
               <button
+                data-toolbar-id="euclid" data-toolbar-tier="1"
                 onClick={onOpenEuclidean}
                 className="h-8 flex items-center gap-1 px-2 sm:px-2.5 bg-panel2 border border-line hover:border-accent/60 rounded-lg text-xs text-text-sub hover:text-accent transition-colors shrink-0"
                 title={t("toolbar_euclid_title")}
@@ -1308,6 +1375,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               {/* Master Panoramic Analyzer Toggle (P6-05) */}
               {onToggleAnalyzer && (
                 <button
+                  data-toolbar-id="analyzer" data-toolbar-tier="1"
                   type="button"
                   onClick={onToggleAnalyzer}
                   className={`h-8 flex items-center gap-1 px-2 sm:px-2.5 rounded-lg text-xs transition-colors border shrink-0 ${
@@ -1324,8 +1392,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               )}
 
               {/* Floating Mixing Console Toggle (feature #2) */}
-              {onToggleConsole && (
+              {onToggleConsole && shows("console") && (
                 <button
+                  data-toolbar-id="console" data-toolbar-tier="2"
                   type="button"
                   onClick={onToggleConsole}
                   aria-pressed={isConsoleOpen}
@@ -1347,6 +1416,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
 
               {/* Fullscreen Maximize / Minimize Toggle */}
               <button
+                data-toolbar-id="maximize" data-toolbar-tier="1"
                 onClick={onToggleMaximize}
                 className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 ${
                   isEditorMaximized
@@ -1378,8 +1448,9 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             </div>
           )}
 
-          {/* Group 4: 工程管理组 (Project Management & I/O Group) */}
-          {!isToolbarFolded && (
+          {/* Group 4: 工程管理组 (Project Management & I/O Group) — Tier 2/3: project context,
+              exports and niche modes, so the group arrives with the advanced density. */}
+          {!isToolbarFolded && shows("project-hub") && (
             <div
               data-testid="toolbar-group-project"
               className="flex items-center overflow-x-auto scrollbar-none gap-1 p-0.5 sm:p-1 rounded-xl bg-[#11131a]/85 border border-[#272b38] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.4)] max-w-full"
@@ -1387,6 +1458,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               {/* Inspire Me controlled generative groove variation (P4-06) */}
               {onInspireMe && (
                 <button
+                  data-toolbar-id="inspire" data-toolbar-tier="2"
                   onClick={onInspireMe}
                   className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-accent hover:bg-accent/15 border border-accent/40 rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
                   title={t("toolbar_inspire_title")}
@@ -1413,6 +1485,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                     }}
                   />
                   <button
+                    data-toolbar-id="import-midi" data-toolbar-tier="3"
                     onClick={() => fileInputRef.current?.click()}
                     className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
                     title={t("toolbar_import_midi_title")}
@@ -1426,6 +1499,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               {/* Live Keyboard / Web MIDI Input (P4-04) */}
               {onToggleKeyboardMode && (
                 <button
+                  data-toolbar-id="keyboard-mode" data-toolbar-tier="2"
                   onClick={onToggleKeyboardMode}
                   className={`h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs border rounded-lg transition-colors shrink-0 font-['JetBrains_Mono'] ${
                     isKeyboardMode
@@ -1447,6 +1521,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               {/* Multi-Project Hub Button (P7-02) */}
               {onOpenProjectHub && (
                 <button
+                  data-toolbar-id="project-hub" data-toolbar-tier="2"
                   type="button"
                   onClick={onOpenProjectHub}
                   className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"
@@ -1463,6 +1538,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               {/* Custom Genre Maker Button (P7-03) */}
               {onOpenGenreMaker && (
                 <button
+                  data-toolbar-id="genre-maker" data-toolbar-tier="3"
                   type="button"
                   onClick={onOpenGenreMaker}
                   className="h-8 px-2 sm:px-2.5 flex items-center gap-1.5 text-xs text-text-sub hover:text-accent hover:border-accent border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono']"

@@ -113,6 +113,15 @@ export const TIER_1_PRIMARY: readonly ToolbarTierItem[] = [
     tier: 1,
   },
   { id: "maximize", labelKey: "toolbar_fullscreen_enter_label", tier: 1 },
+  /**
+   * The toolbar's own compact/expand toggle.
+   *
+   * Tier 1, and the second control this table had simply failed to record (the piano roll was the
+   * first). It is the companion of `more`: both are controls *about the toolbar itself* rather than
+   * about the music, and hiding the one that lets you compact the toolbar would leave the user with
+   * no way to reclaim the space except by knowing a shortcut that does not exist.
+   */
+  { id: "fold-toggle", labelKey: "toolbar_fold_compact", testId: "toolbar-fold-toggle", tier: 1 },
   // The Toolbar's label for this toggle is "More" (zh: 高级).
   { id: "more", labelKey: "toolbar_advanced_label", tier: 1 },
 ];
@@ -133,14 +142,23 @@ export const TIER_2: readonly ToolbarTierItem[] = [
   { id: "tool-mode", labelKey: "toolbar_tool_label", tier: 2 },
   { id: "song-mode", labelKey: "toolbar_song_mode_title", tier: 2 },
   // The hook binds C to the floating console; reachable from "more" (note 3).
-  {
-    id: "console",
+  { id: "console",
     labelKey: "console_float_toggle",
     shortcut: "C",
     reachableVia: "more",
     testId: "studio-console-toggle",
     tier: 2,
   },
+  /**
+   * The per-track note editor.
+   *
+   * Tier 2 because it is opened on purpose for one track and closed again, not reached for every
+   * few seconds like the velocity drawer beside it. It went unrecorded until the wiring pass: the
+   * table claimed to be a complete description of the toolbar, nothing checked that, and this
+   * control — rendered, visible, shortcut-free — was simply absent from it. The grounding test now
+   * compares the stamped controls against the table in both directions.
+   */
+  { id: "piano-roll-toggle", labelKey: "roll_toggle", testId: "toolbar-piano-roll-toggle", tier: 2 },
   { id: "keyboard-mode", labelKey: "toolbar_keyboard_label", tier: 2 },
   // The hook binds P to the project hub; reachable from "more" (note 3).
   { id: "project-hub", labelKey: "toolbar_project_hub_title", shortcut: "P", reachableVia: "more", tier: 2 },
@@ -199,6 +217,22 @@ export const DEFAULT_VISIBLE_IDS: readonly string[] = TIER_1_PRIMARY.map((item) 
 /** The tier an id belongs to, or `undefined` for an unknown id. */
 export function tierOf(id: string): ToolbarTier | undefined {
   return ALL_TIER_ITEMS.find((item) => item.id === id)?.tier;
+}
+
+/**
+ * Whether a control is shown at the given density — the one predicate the Toolbar renders through.
+ *
+ * `showAdvanced` is the existing "advanced" toggle, which the toolbar has had for a while. Wiring
+ * the tier table to it is what turns that toggle from a *sound-design* drawer into the density
+ * control: Tier 1 stays on screen, Tier 2 and Tier 3 wait behind it.
+ *
+ * It lives here, beside `tierOf`, so that a control's frequency and its visibility cannot be
+ * decided in two places — the failure this table exists to prevent. An id the table does not know
+ * returns `false`: an unrecorded control is not something to show by accident, and the grounding
+ * test fails on one anyway.
+ */
+export function isControlVisible(id: string, showAdvanced: boolean): boolean {
+  return tierOf(id) === 1 || showAdvanced;
 }
 
 /**

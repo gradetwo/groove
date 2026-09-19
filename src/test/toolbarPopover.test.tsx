@@ -121,3 +121,71 @@ describe("Toolbar Advanced Controls Popover & Progressive Disclosure", () => {
     expect(handleToggle).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The density is not a modal: pressing a control it revealed must act, not dismiss.
+ *
+ * This is the interaction the release matrix caught, and it is worth a unit test because the
+ * failure is invisible to every other kind of check. Most Tier 2/3 controls live *outside* the
+ * advanced panel (the transport group, the groove selects, the roll and console toggles, the project
+ * group). Each one carries `data-toolbar-tier`, and the panel's mousedown handler used to treat that
+ * click as an outside click: the density closed, the control unmounted, and the click landed on
+ * nothing — so the control looked dead until the user pressed it twice.
+ */
+describe("controls revealed by the advanced density stay clickable", () => {
+  it("does not dismiss the density when a Tier 2 control outside the panel is pressed", () => {
+    const onToggleAdvancedControls = vi.fn();
+    const onTogglePianoRoll = vi.fn();
+    render(
+      <Toolbar
+        {...makeToolbarProps({
+          showAdvancedControls: true,
+          onToggleAdvancedControls,
+          onTogglePianoRoll,
+        })}
+      />
+    );
+
+    // The roll toggle is Tier 2 and lives in the views group, outside the advanced panel.
+    const roll = screen.getByTestId("toolbar-piano-roll-toggle");
+    expect(roll).toHaveAttribute("data-toolbar-tier", "2");
+    fireEvent.mouseDown(roll);
+    expect(onToggleAdvancedControls).not.toHaveBeenCalled();
+
+    fireEvent.click(roll);
+    expect(onTogglePianoRoll).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not dismiss when a Tier 1 control outside the panel is pressed", () => {
+    /**
+     * The same mechanism applies to Tier 1 controls that sit outside the panel, and there is no
+     * reason to treat them differently: clicking Undo while the density is open should undo, not
+     * close the density. Only a press that is genuinely *outside the toolbar* dismisses it.
+     */
+    const onToggleAdvancedControls = vi.fn();
+    render(
+      <Toolbar
+        {...makeToolbarProps({ showAdvancedControls: true, onToggleAdvancedControls })}
+      />
+    );
+    const playButton = document.querySelector("[data-toolbar-id='play']");
+    expect(playButton).not.toBeNull();
+    fireEvent.mouseDown(playButton!);
+    expect(onToggleAdvancedControls).not.toHaveBeenCalled();
+  });
+
+  it("still dismisses on a press that is outside the toolbar entirely", () => {
+    // The dismissal has to keep working, or the panel becomes impossible to close without Escape.
+    const onToggleAdvancedControls = vi.fn();
+    render(
+      <Toolbar
+        {...makeToolbarProps({ showAdvancedControls: true, onToggleAdvancedControls })}
+      />
+    );
+    const outside = document.createElement("div");
+    document.body.appendChild(outside);
+    fireEvent.mouseDown(outside);
+    expect(onToggleAdvancedControls).toHaveBeenCalledTimes(1);
+    outside.remove();
+  });
+});
