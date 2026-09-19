@@ -34,6 +34,7 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
+import type { MasterLimiterKind } from "./MasterLimiter";
 import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
@@ -62,12 +63,31 @@ export interface RenderWavOptions {
   masterMakeupDb?: number;
   /** Set false to render without the mastering bus compressor (measurement tooling). */
   masterBusCompEnabled?: boolean;
+  /**
+   * Called once per render with the limiter that actually ended up in the graph.
+   *
+   * `createMasterLimiter` prefers an `AudioWorkletNode` and falls back to a `DynamicsCompressor`
+   * when the module cannot be loaded. That fallback is silent, and it is not cosmetic: forcing it
+   * measures the export **2.36 dB louder overall and 4.83 dB off in one band** (appendix G.14). A
+   * renderer that quietly hands back a different file than the one just auditioned is exactly the
+   * kind of claim this project does not make, so the kind is reported rather than assumed —
+   * `exportMasterWav` / `exportStemsWav` carry it out to their callers.
+   */
+  onLimiterKind?: (kind: MasterLimiterKind) => void;
 }
 
 export interface ExportedWav {
   blob: Blob;
   filename: string;
   durationSec: number;
+  /**
+   * Which master limiter the bounce actually went through.
+   *
+   * `"fallback"` means the true-peak limiter could not load and a `DynamicsCompressor` was used
+   * instead, which measures 2.36 dB louder overall and 4.83 dB off in one band (G.14). Callers are
+   * expected to tell the user rather than ship a silently degraded file.
+   */
+  limiterKind: MasterLimiterKind;
 }
 
 export interface ExportedStem {
@@ -545,7 +565,7 @@ export async function renderPatternOffline(
   // leave the whole bounce on the compressor fallback.
   // An OfflineAudioContext renders in one shot, so a worklet that installed after
   // `startRendering()` would silently leave the whole bounce on the compressor fallback.
-  await graph.limiter.ready;
+  options.onLimiterKind?.(await graph.limiter.ready);
 
   return await ctx.startRendering();
 }
@@ -584,7 +604,14 @@ export async function exportMasterWav(
   genreId = "groove",
   options: RenderWavOptions = {}
 ): Promise<ExportedWav> {
-  const audioBuf = await renderPatternOffline(pattern, options);
+  let limiterKind: MasterLimiterKind = "fallback";
+  const audioBuf = await renderPatternOffline(pattern, {
+    ...options,
+    onLimiterKind: (kind) => {
+      limiterKind = kind;
+      options.onLimiterKind?.(kind);
+    },
+  });
   const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const bpm = options.bpm || pattern.bpm || 120;
@@ -595,6 +622,7 @@ export async function exportMasterWav(
     blob,
     filename,
     durationSec: audioBuf.duration,
+    limiterKind,
   };
 }
 

@@ -203,6 +203,15 @@ export class FakeAudioBuffer {
     public sampleRate: number
   ) {}
   private channels = new Map<number, Float32Array>();
+  /**
+   * Real `AudioBuffer` has `duration`, and code that reports it to the user (`ExportedWav`) or
+   * measures a render needs it. Without this, a fake-rendered export reported `durationSec:
+   * undefined` — a hole in the double rather than a bug in the caller, but it made the caller's
+   * contract untestable.
+   */
+  get duration(): number {
+    return this.length / this.sampleRate;
+  }
   getChannelData(channel: number): Float32Array {
     if (!this.channels.has(channel)) this.channels.set(channel, new Float32Array(this.length));
     return this.channels.get(channel)!;

@@ -1,29 +1,29 @@
 {
-  "version": "2.0.74",
+  "version": "2.0.75",
   "releaseDate": "2026-09-19",
-  "changelogCount": 138,
+  "changelogCount": 139,
   "latest": {
-    "version": "2.0.74",
+    "version": "2.0.75",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.74 踩镲的金属簇不再叠 6 个振荡器：一条可测的平台规律，以及一次自我更正",
-      "en": "v2.0.74 The Hi-Hat Cluster Stops Summing Six Oscillators: a Measurable Platform Rule, and a Self-Correction"
+      "zh": "v2.0.75 导出不再沉默：限幅器没加载成功时，用户会被告知",
+      "en": "v2.0.75 The Export Stops Being Silent: When the Limiter Did Not Load, the User Is Told"
     },
     "highlights": [
       {
-        "zh": "**起因**：重新录 timbre 基线时发现 `chicago-house` 的重复渲染偏差是 **1.317 dB**，而门禁脚本的头注释声称导出器逐位可复现（0.000014 dB）。追下去发现一条**平台层面可测的规律**：**一个 Web Audio 节点上叠加 3 个及以上「频率各不相同」的振荡器时，Chrome 的 `OfflineAudioContext` 每次渲染结果都不同**；同频振荡器可以、buffer 源可以、每节点最多 2 个可以。本项目的踩镲金属簇正是 6 个方波振荡器，而 `[310,387,466,522,681,1070]` 恰好落在观测到差异的频段 6–10。",
-        "en": "**How it started**: re-recording the timbre baseline showed `chicago-house` at a **1.317 dB** repeat drift, while the gate script's own header claimed the exporter was bit-reproducible (0.000014 dB). Chasing it produced a **measurable platform rule**: **a Web Audio node summing three or more oscillators tuned to different frequencies renders differently every time in Chrome's `OfflineAudioContext`** — same-frequency oscillators are fine, buffer sources are fine, and two per…"
+        "zh": "上一版顺手测出一条比重复渲染偏差严重得多的隐患：`createMasterLimiter` 优先用 AudioWorklet 的 true-peak 限幅器，`addModule` 失败时**静默**换成 `DynamicsCompressor`。强制走回退路径实测（同一次 3 小节渲染）：整体**响 2.36 dB**、某频段**差 4.83 dB**。也就是说用户拿到的是一个**和他刚刚试听的不是同一个东西**的文件，而界面仍然说「导出完成」。",
+        "en": "The previous release turned up a hazard far worse than the repeat-render drift: `createMasterLimiter` prefers an AudioWorklet true-peak limiter and **silently** swaps in a `DynamicsCompressor` when `addModule` fails. Forcing that path measures the export **2.36 dB louder overall and 4.83 dB off in one band** for the same three-bar render. The user gets a file that is not the thing they just auditioned, while the UI still says \"export complete\"."
       },
       {
-        "zh": "**修法：把分音烘焙成一个 buffer**。新增 `inharmonicClusterBuffer()`，用奇次谐波 1/n 展开还原方波，所以音色不变；音高改由 `playbackRate` 承载（打击乐各族的 `mult` 正好是整体移调）。接入踩镲金属簇、打击乐 metal 族、铃鼓 jingle 层。两处不能烘焙的改为**树状扇入**：膜鸣族（timbale，3 个分音各有独立衰减与音高下滑，烘焙会丢掉「Defect B」的逐分音包络）用 (2+1) 树；`kick:*` 模拟底鼓（`somatic-808-gravity` 四层全开）用 2+2 树。参数一字未改。",
-        "en": "**The fix: bake the partials into one buffer.** New `inharmonicClusterBuffer()` renders a square partial as its odd harmonics at 1/n, so the timbre is unchanged, and the pitch lane moves to `playbackRate` (the percussion families' `mult` is exactly a whole-cluster transposition). Wired into the hi-hat cluster, the metal percussion family and the tambourine's jingle layer. Two voices cannot be baked and get **tree fan-in** instead: the membrane family (timbale — its three par…"
+        "zh": "**修的是「静默」，不是回退**。回退本身要保留——音频绝不能被放任无上限。改动：`RenderWavOptions.onLimiterKind` 把实际使用的限幅器报出来；`ExportedWav.limiterKind` 一路带到调用方；音序器的导出动作在拿到 `\"fallback\"` 时改说「已导出该文件，但真实峰值限幅器未能加载——它比试听更响、控制更差，请刷新后重试」，而不是笼统的「导出完成」。文件照样给用户，因为它是有效的。",
+        "en": "**What changed is the silence, not the fallback.** The fallback stays — audio must never be left un-ceilinged. `RenderWavOptions.onLimiterKind` now reports which limiter the graph actually got, `ExportedWav.limiterKind` carries it out to callers, and the sequencer's export action says \"exported, but the true-peak limiter could not load — this file is louder and less controlled than the preview; reload and export again\" instead of a plain success. The file is still handed ove…"
       },
       {
-        "zh": "**顺带的收益与守卫**：每次踩镲少 6 个振荡器、每个金属族打击乐少 3 个——踩镲是 pattern 里最密的声部。新增 `oscillatorFanIn.test.ts`，对全部鼓件、全部 16 个打击乐模型、全部 `kick:*` 预设断言「同一节点首次混合的异频振荡器 ≤2」（它在修复前会失败，实测报出 12 条违规）；`drumFidelityTier1` 里补了 **Goertzel 频谱断言**（每个分音的基频与三次谐波都有能量、非谐波频点没有），防止这次改动把 Q4 的金属簇悄悄变成静音缓冲。",
-        "en": "**The side benefits and the guard**: six fewer oscillators per hi-hat hit and three fewer per metal percussion hit, on the densest voice in the pattern. New `oscillatorFanIn.test.ts` asserts, for every drum voice, every one of the 16 percussion models and every `kick:*` preset, that a node mixes at most two differently-tuned oscillators for the first time (it fails against the old code — 12 violations, measured); and `drumFidelityTier1` gains a **Goertzel spectrum assertion*…"
+        "zh": "**为什么这也算修 bug 而不只是加日志**：本项目的原则是「不要声称界面无法观察到的成功」。一次静默降级的导出正是这个原则的反面——文件有效、提示成功、但结果与试听差 2.36 dB，而且用户没有任何办法察觉。测试 `src/test/exportLimiterKind.test.ts` 钉住「报告出实际的限幅器」与「降级不等于失败」两件事；顺带补上 `FakeAudioBuffer.duration`（缺它会让假渲染出的导出报 `durationSec: undefined`，是测试替身的洞而不是调用方的 bug）。",
+        "en": "**Why this counts as a fix and not just a log line**: this project's rule is to never claim a success the UI cannot observe. A silently degraded export is the exact opposite — valid file, success message, result 2.36 dB away from the audition, and no way for the user to notice. `src/test/exportLimiterKind.test.ts` pins both halves: that the actual limiter is reported, and that a degradation is not a failure. It also adds `FakeAudioBuffer.duration`, without which a fake-rende…"
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

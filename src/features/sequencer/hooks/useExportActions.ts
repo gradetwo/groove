@@ -200,8 +200,18 @@ export function useExportActions({
         drumKit,
       });
       triggerWavDownload(result.blob, result.filename);
+      /**
+       * Tell the user when the master limiter did not load.
+       *
+       * The file is still valid, but it is not the file they just auditioned: a `DynamicsCompressor`
+       * fallback measures 2.36 dB louder overall and 4.83 dB off in one band (G.14). Reporting it is
+       * the whole point of surfacing the kind — a silently degraded master is the failure mode this
+       * avoids.
+       */
       showToast(
-        t("export_wav_done", { filename: result.filename })
+        result.limiterKind === "fallback"
+          ? t("export_wav_degraded_limiter", { filename: result.filename })
+          : t("export_wav_done", { filename: result.filename })
       );
     } catch (err: any) {
       showToast(

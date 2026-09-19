@@ -591,6 +591,17 @@ export const studioMessages = {
   export_groove_done: { en: "Exported .groove: {name} ✓", zh: "已导出 .groove 工程包: {name} ✓" },
   export_wav_rendering: { en: "Rendering offline WAV master...", zh: "正在离线高质量渲染 WAV 母带..." },
   export_wav_done: { en: "Exported Master WAV: {filename} ✓", zh: "母带 WAV 导出完成: {filename} ✓" },
+  /**
+   * The degraded-path notice.
+   *
+   * It says what is actually wrong rather than "export failed", because the file is fine and
+   * usable — it is simply louder and less controlled than the audition, by 2.36 dB overall and
+   * 4.83 dB in one band (appendix G.14). Saying nothing is what this change exists to stop.
+   */
+  export_wav_degraded_limiter: {
+    en: "Exported {filename}, but the true-peak limiter could not load — this file is louder and less controlled than the preview. Reload and export again for a clean master.",
+    zh: "已导出 {filename}，但真实峰值限幅器未能加载——该文件比试听更响、控制更差。请刷新页面后重新导出以获得正常母带。",
+  },
   export_wav_failed: { en: "WAV export failed: {error}", zh: "WAV 导出失败: {error}" },
   export_stems_rendering: { en: "Rendering 8 stems and packaging ZIP...", zh: "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..." },
   export_stems_done: { en: "Exported Stems ZIP: {filename} ✓", zh: "分轨打包导出完成: {filename} ✓" },
