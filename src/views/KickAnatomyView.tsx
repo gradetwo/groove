@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { 
   AnatomyKickEngine, 
   globalAnatomyKickEngine, 
@@ -24,6 +25,8 @@ export const KickAnatomyView: React.FC<KickAnatomyViewProps> = ({
   onOpenStudio,
 }) => {
   const { t, isZh } = useLanguage();
+  /** Phone surface: measured at 390×664 the header buttons were 24–26 px tall and the mode buttons 26 px. */
+  const { isMobile } = useDeviceCapabilities();
   const engineRef = useRef<AnatomyKickEngine>(globalAnatomyKickEngine);
   const [params, setParams] = useState<SomaticKickParams>(() => engineRef.current.getParams());
   const [plv, setPlv] = useState<number>(() => engineRef.current.calculatePLV());
@@ -144,7 +147,7 @@ export const KickAnatomyView: React.FC<KickAnatomyViewProps> = ({
                   data-testid="kick-help-button"
                   onClick={onOpenHelp}
                   title={t("kick_guide_btn")}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#f5b73d]/40 bg-[#f5b73d]/10 text-[#f5b73d] font-semibold text-xs hover:bg-[#f5b73d]/20 transition-all shrink-0"
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#f5b73d]/40 bg-[#f5b73d]/10 text-[#f5b73d] font-semibold text-xs hover:bg-[#f5b73d]/20 transition-all shrink-0 ${isMobile ? "min-h-11" : ""}`}
                 >
                   <BookOpen className="w-3.5 h-3.5 text-[#f5b73d]" />
                   <span>{t("kick_guide_btn")}</span>
@@ -155,7 +158,7 @@ export const KickAnatomyView: React.FC<KickAnatomyViewProps> = ({
                   type="button"
                   data-testid="kick-studio-button"
                   onClick={onOpenStudio}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#f5b73d] text-zinc-950 font-bold text-xs hover:brightness-110 shadow-[0_0_12px_rgba(245,183,61,0.25)] transition-all shrink-0"
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#f5b73d] text-zinc-950 font-bold text-xs hover:brightness-110 shadow-[0_0_12px_rgba(245,183,61,0.25)] transition-all shrink-0 ${isMobile ? "min-h-11" : ""}`}
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>{isZh ? "返回编曲台" : "Return to Studio"}</span>
@@ -176,7 +179,7 @@ export const KickAnatomyView: React.FC<KickAnatomyViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setVisualMode("oscilloscope")}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold transition-all border ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold transition-all border ${isMobile ? "min-h-11" : ""} ${
                     visualMode === "oscilloscope"
                       ? "bg-[#f5b73d]/15 text-[#f5b73d] border-[#f5b73d] shadow-[0_0_8px_rgba(245,183,61,0.2)]"
                       : "bg-[#0d1017] text-text-sub border-line/40 hover:bg-[#141924]"
@@ -188,7 +191,7 @@ export const KickAnatomyView: React.FC<KickAnatomyViewProps> = ({
 
                 <button
                   onClick={() => setVisualMode("waterfall")}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold transition-all border ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold transition-all border ${isMobile ? "min-h-11" : ""} ${
                     visualMode === "waterfall"
                       ? "bg-[#f5b73d]/15 text-[#f5b73d] border-[#f5b73d] shadow-[0_0_8px_rgba(245,183,61,0.2)]"
                       : "bg-[#0d1017] text-text-sub border-line/40 hover:bg-[#141924]"
