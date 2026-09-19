@@ -331,51 +331,65 @@ describe("G-03 · the real localStorage is used by default", () => {
 /**
  * D-02 wiring guard.
  *
- * The module tests above prove the store is correct; these prove `StudioView` is
- * actually *connected* to it. Without them the feature can silently regress to
- * "persistence module exists, nothing calls it" — which is exactly the state the plan
- * found the repo in (module-less, five bare `useState(false)`).
+ * The module tests above prove the store is correct; these prove something is actually *connected*
+ * to it. Without them the feature can silently regress to "persistence module exists, nothing calls
+ * it" — which is exactly the state the plan found the repo in (module-less, five bare
+ * `useState(false)`).
  *
- * This is a source-level assertion on purpose, in the same spirit as the plan's own G-02
- * ("read `src/` and assert reachability"): the property being defended is a wiring fact,
- * and rendering the whole studio view to observe a `localStorage` write would be a far
- * more expensive and more brittle way to check it.
+ * The wiring moved: it used to live inline in `StudioView`, and these assertions were written
+ * against that file's source text. It now lives in `usePanelVisibility`, which is the point of the
+ * extraction — a 1255-line view was holding the read-once discipline and the persist effect that
+ * every surface needs. So this guard follows the behaviour rather than pinning the file it used to
+ * be in: the hook must own the wiring, and `StudioView` must actually mount the hook.
+ *
+ * `panelVisibility.test.ts` exercises the same behaviour at runtime (defaults, write-back, the
+ * session-only rule), so these source assertions only have to catch disconnection.
  */
-describe("D-02 · StudioView is wired to the preference store", () => {
-  const source = fs.readFileSync(
-    path.join(process.cwd(), "src/views/StudioView.tsx"),
-    "utf8"
-  );
+describe("D-02 · the preference store is wired", () => {
+  const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), "utf8");
+  const hookSource = read("src/features/sequencer/hooks/usePanelVisibility.ts");
+  const studioSource = read("src/views/StudioView.tsx");
 
   it("reads the preferences once on mount and writes them on change", () => {
-    expect(source).toMatch(/loadLayoutPrefs\(\)/);
-    expect(source).toMatch(/saveLayoutPrefs\(\{/);
+    expect(hookSource).toMatch(/loadLayoutPrefs\(\)/);
+    expect(hookSource).toMatch(/saveLayoutPrefs\(\{/);
   });
 
   it("persists every declared layout toggle", () => {
-    const call = source.match(/saveLayoutPrefs\(\{([\s\S]*?)\}\)/);
-    expect(call, "saveLayoutPrefs({...}) call not found in StudioView").toBeTruthy();
-    const block = call![1];
+    const call = hookSource.match(/saveLayoutPrefs\(\{([\s\S]*?)\}\)/);
+    expect(call, "saveLayoutPrefs({...}) call not found in the panel-visibility hook").toBeTruthy();
     for (const key of LAYOUT_BOOLEAN_KEYS) {
-      expect(block, `layout toggle '${key}' is not persisted`).toContain(key);
+      expect(call![1], "layout toggle " + key + " is not persisted").toContain(key);
     }
   });
 
   it("keeps the session-only flags out of the persisted block", () => {
-    const call = source.match(/saveLayoutPrefs\(\{([\s\S]*?)\}\)/);
+    const call = hookSource.match(/saveLayoutPrefs\(\{([\s\S]*?)\}\)/);
     expect(call).toBeTruthy();
     for (const flag of SESSION_ONLY_FLAGS) {
-      expect(call![1], `'${flag}' must stay session-only (D-06)`).not.toContain(flag);
+      expect(call![1], flag + " must stay session-only (D-06)").not.toContain(flag);
     }
   });
 
-  it("seeds each toggle's initial state from the loaded preferences", () => {
-    // Every toggle should be initialised from `bootLayoutPrefs`, not from a bare literal,
-    // or the first render would ignore what was restored.
+  it("seeds each toggle from the loaded preferences, not from a bare literal", () => {
+    // Seeding from a literal would ignore what was restored on the first render.
+    expect(hookSource, "the hook does not read the stored preferences").toMatch(
+      /useState\(\(\) => loadLayoutPrefs\(\)\)/
+    );
     for (const key of LAYOUT_BOOLEAN_KEYS) {
-      expect(source, `${key} is not seeded from bootLayoutPrefs`).toContain(
-        `bootLayoutPrefs.${key}`
+      expect(hookSource, key + " is not seeded from the loaded preferences").toContain(
+        "bootPrefs." + key
       );
     }
+  });
+
+  it("is actually mounted by the studio, or the hook is dead code", () => {
+    /**
+     * The half that keeps the extraction honest. Moving behaviour into a well-tested hook and then
+     * forgetting to call it is the failure mode a file-level guard cannot see: the hook's own tests
+     * stay green while the app loses persistence entirely.
+     */
+    expect(studioSource).toContain("usePanelVisibility()");
+    expect(studioSource).toContain("hooks/usePanelVisibility");
   });
 });

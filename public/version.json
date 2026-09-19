@@ -1,27 +1,27 @@
 {
-  "version": "2.0.64",
+  "version": "2.0.65",
   "releaseDate": "2026-09-19",
-  "changelogCount": 128,
+  "changelogCount": 129,
   "latest": {
-    "version": "2.0.64",
+    "version": "2.0.65",
     "date": "2026-09-19",
     "category": "refactor",
     "title": {
-      "zh": "v2.0.64 三端架构起步：功能层与界面层解耦，并加分层门禁守住它",
-      "en": "v2.0.64 Starting the Three-Surface Architecture: Decoupling Logic from Presentation, With a Gate to Keep It"
+      "zh": "v2.0.65 抽出 usePanelVisibility：面板可见性与持久化不再长在视图里",
+      "en": "v2.0.65 Extracting usePanelVisibility: Panel Visibility and Persistence Leave the View"
     },
     "highlights": [
       {
-        "zh": "**为什么现在做**：手机端 UI/交互/功能将重做，三端将来会有不同界面、不同交互、甚至不同功能集合（PC 最全）。这只有在**功能层不依赖任何一种界面的形状**时才做得起——否则三端就是一个程序加三套皮肤，每个功能都要写三遍。",
-        "en": "**Why now**: the phone UI, interactions and features are being redesigned, and the three surfaces will end up with different interfaces, interactions and even different feature sets (PC fullest). That is only affordable if the logic layer does not depend on any one interface's shape — otherwise the three surfaces are one program with three skins, and every feature costs three times."
+        "zh": "**为什么抽这一块**：实测 `StudioView` 有 **1255 行**，其中十二个 `useState`（侧栏折叠、最大化、力度抽屉、钢琴卷帘、欧几里得、频谱、高级控件、跟随播放头…）加上一段持久化 effect 直接写在视图里。这些状态**不是某个视图的私事**：三套界面都需要同样这十几个状态、同样的默认值、同样的持久化；新界面要么抄一遍这段 effect，要么（对用户更糟）忘了抄而每次刷新丢布局。",
+        "en": "**Why this block**: `StudioView` measured **1255 lines**, with twelve `useState`s (sidebar, maximize, velocity drawer, piano roll, Euclidean, analyzer, advanced controls, playhead follow…) plus a persistence effect written straight into the view. That state is **not a view's private business**: all three surfaces need the same dozen values, the same defaults and the same persistence, so a new surface either copies the effect or — worse for the user — forgets to and loses its…"
       },
       {
-        "zh": "**先说好消息（实测）**：`src/features/` 与 `src/hooks/` **原本已经没有任何文件 import React 组件**。底子比预想的好得多，所以本轮不是大重构，而是把仅剩的几处耦合清掉并把边界固定下来。",
-        "en": "**First, the good news (measured)**: `src/features/` and `src/hooks/` **already contained no imports of React components at all**. The foundation was far better than expected, so this was not a large refactor — just clearing the few remaining couplings and pinning the boundary."
+        "zh": "**逐字抽出，行为不变**：默认值仍是**挂载时读一次**（每次渲染重读会让过期或失败的存储读取覆盖用户刚点的东西——原注释专门写明这一点），持久化字段仍是那七个，`velocityActiveTrackIdx` / `pianoRollTrackIdx` **仍不持久化**（它们是光标不是布局）。",
+        "en": "**Extracted verbatim**: defaults are still read **once on mount** (re-reading each render would let a stale or failing storage read overwrite what the user just clicked — the original comment called this out), the persisted set is still the same seven fields, and `velocityActiveTrackIdx` / `pianoRollTrackIdx` are still **not** persisted because they are cursors rather than layout."
       },
       {
-        "zh": "**清掉的耦合**：① `announcer`（屏幕阅读器播报服务）原先定义在 `src/ui/AriaLiveRegion.tsx` 里——**一个 `.tsx`**，于是走带与曲风试听的 hook 为了播报一句话要 import 一个 React 组件。它本质是**事件**不是视图，已移到 `src/platform/announcer.ts`：logic 负责发布，哪个界面在挂载就由哪个界面决定怎么显示。② `NavTab` 从 `components/Header.tsx` 移到 `app/navigation.ts`（「应用有哪些目的地」不是 Header 的 props 形状，domain 的教程数据与 logic 的快捷键 hook 都在用它）。③ `ParameterDimension` / `GenreRailItem` / `UnsavedDecision` 三个类型原来都定义在组件里、被 logic 反向 import，现已回到 `src/features/sequencer/` 的归属地；组件仍 re-export 以兼…",
-        "en": "**The couplings removed**: (1) `announcer` (the screen-reader announcement service) was defined inside `src/ui/AriaLiveRegion.tsx` — a `.tsx` — so the transport and genre-audition hooks imported a React component just to announce a sentence. It is an *event*, not a view, so it moved to `src/platform/announcer.ts`: logic publishes, and whichever view is mounted decides how to show it. (2) `NavTab` moved from `components/Header.tsx` to `app/navigation.ts` — \"which destinations…"
+        "zh": "**D-06 规则有测试守着**：`isDrumsOnly` / `isRecordArmed` / `isKeyboardMode` 属于现场演奏状态，**不得**被持久化——静默重新武装录音机是个（可能具破坏性的）意外。新测试断言的是**存储里的实际形状**而不是读那段 effect，所以任何字段偷偷出现在存储里都会被发现。",
+        "en": "**The D-06 rule is now asserted**: `isDrumsOnly`, `isRecordArmed` and `isKeyboardMode` are live-performance state and must **not** be persisted — silently re-arming the recorder is a surprise, possibly a destructive one. The test asserts the **actual stored shape** rather than reading the effect, so a field that quietly appeared in storage would be caught."
       }
     ],
     "truncated": true
