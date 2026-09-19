@@ -637,7 +637,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
                   {isAnswered ? (
                     `${opt.category} • ${opt.bpm_range} BPM`
                   ) : (
-                    <span className="text-[#4a4e58]">{t("challenge_select_genre")}</span>
+                    <span className="text-text-dim">{t("challenge_select_genre")}</span>
                   )}
                 </div>
               </div>

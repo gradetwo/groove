@@ -1258,7 +1258,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
                     canUndo
                       ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
-                      : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                      : "bg-bg text-text-dim border-[#181a20] cursor-not-allowed opacity-40"
                   }`}
                   title={t("toolbar_undo_title")}
                   aria-label={t("toolbar_undo_title")}
@@ -1273,7 +1273,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                   className={`h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-colors ${
                     canRedo
                       ? "bg-panel2 text-text border-line hover:border-accent hover:text-accent cursor-pointer"
-                      : "bg-bg text-[#4a4e58] border-[#181a20] cursor-not-allowed opacity-40"
+                      : "bg-bg text-text-dim border-[#181a20] cursor-not-allowed opacity-40"
                   }`}
                   title={t("toolbar_redo_title")}
                   aria-label={t("toolbar_redo_title")}

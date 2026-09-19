@@ -1989,7 +1989,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         isAuditioning
                           ? "bg-gradient-to-r from-accent via-amber-400 to-amber-300 text-black shadow-[0_0_16px_rgba(var(--accent-rgb),0.9),inset_0_1px_2px_white] z-20 font-black scale-[1.02]"
                           : isBlack
-                          ? "bg-gradient-to-r from-[#11131a] via-[#1a1d28] to-[#252a3a] text-[#8e95a8] hover:to-[#31374a] border-t border-white/20 border-b border-black/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),2px_2px_5px_rgba(0,0,0,0.8)] rounded-r-[4px] mr-1"
+                          ? "bg-gradient-to-r from-[#11131a] via-[#1a1d28] to-[#252a3a] text-[#b9bdc9] hover:to-[#31374a] border-t border-white/20 border-b border-black/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),2px_2px_5px_rgba(0,0,0,0.8)] rounded-r-[4px] mr-1"
                           : "bg-gradient-to-r from-[#cad0dd] via-[#e2e6f0] to-[#f4f6fa] text-[#1a1d29] hover:to-white border-b border-[#9ca3b5] border-l-2 border-[#b8bcc8] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.3)]"
                       } ${
                         !isAuditioning && hoverCell?.midi === midi

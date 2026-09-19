@@ -658,7 +658,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
 
           {/* Category Filter */}
           <div className="flex items-center space-x-1.5 bg-[#090a0e] px-2.5 py-1 rounded-xl border border-white/[0.08]">
-            <Filter className="w-3 h-3 text-[#636875]" />
+            <Filter className="w-3 h-3 text-text-dim" />
             <select
               value={selectedCategory}
               onChange={(e) => {
@@ -722,7 +722,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
 
           {/* Current Year Display */}
           <div className="flex items-center space-x-1 pl-2 border-l border-white/[0.08]">
-            <span className="text-[9px] text-[#636875] font-mono font-bold">YEAR:</span>
+            <span className="text-[9px] text-text-dim font-mono font-bold">YEAR:</span>
             <span className="text-sm font-mono font-extrabold text-accent w-10 text-center">
               {currentYear}
             </span>
@@ -746,7 +746,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                 className={`text-[9px] font-mono px-1 py-0.5 rounded ${
                   playbackSpeed === spd
                     ? "bg-amber-500/20 text-accent font-bold"
-                    : "text-[#636875] hover:text-[#9ca1ad]"
+                    : "text-text-dim hover:text-[#9ca1ad]"
                 }`}
               >
                 {spd}x
@@ -758,7 +758,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
 
       {/* Quick Epoch Navigation Jump Line */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none px-1">
-        <span className="text-[10px] font-mono uppercase text-[#636875] tracking-wider shrink-0 mr-1">
+        <span className="text-[10px] font-mono uppercase text-text-dim tracking-wider shrink-0 mr-1">
           {t("timeline_epoch")}
         </span>
         {activeColumns.map((col) => (
@@ -804,7 +804,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                     className="px-2 flex flex-col items-center justify-between relative transition-colors border-r border-white/[0.05] last:border-none"
                   >
                     <div className="text-center">
-                      <div className={`text-xs font-mono font-extrabold ${isPast ? "text-accent" : "text-[#555a68]"}`}>
+                      <div className={`text-xs font-mono font-extrabold ${isPast ? "text-accent" : "text-text-dim"}`}>
                         {col.label}
                       </div>
                       <div className="text-[9.5px] font-semibold text-[#8e93a0] uppercase tracking-wider mt-0.5">
@@ -863,7 +863,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                       </h4>
                     </div>
 
-                    <div className="mt-1 pt-1 border-t border-white/[0.05] flex items-center justify-between text-[9.5px] text-[#636875] font-mono">
+                    <div className="mt-1 pt-1 border-t border-white/[0.05] flex items-center justify-between text-[9.5px] text-text-dim font-mono">
                       <span>{lane.genres.length} 曲风</span>
                       <span className="font-bold text-[#9ca1ad]">{lane.birthDecade}s</span>
                     </div>
@@ -986,7 +986,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                               /* Slim Lineage Ribbon */
                               <div className="h-full min-h-[44px] w-full flex items-center justify-center px-1.5">
                                 {isPreBirth ? (
-                                  <div className="w-full flex items-center gap-1.5 py-1 px-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[9.5px] text-[#636875] font-sans">
+                                  <div className="w-full flex items-center gap-1.5 py-1 px-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[9.5px] text-text-dim font-sans">
                                     <GitBranch className="w-3 h-3 text-accent shrink-0" />
                                     <span className="truncate max-w-[200px]" title={lane.predecessor[language]}>
                                       {lane.predecessor[language]}
@@ -1003,7 +1003,7 @@ export const HorizontalTimelineView: React.FC<HorizontalTimelineViewProps> = ({
                       })}
                     </div>
                   ) : (
-                    <div className="flex-1 flex items-center px-4 text-xs text-[#555a68] font-mono">
+                    <div className="flex-1 flex items-center px-4 text-xs text-text-dim font-mono">
                       <span>Loading {lane.name[language]}...</span>
                     </div>
                   )}

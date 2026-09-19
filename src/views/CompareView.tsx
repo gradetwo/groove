@@ -729,7 +729,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
               {/* Channel Routing Mode Buttons */}
               <div className="space-y-1.5">
-                <span className="text-xs font-bold text-[#737887] uppercase tracking-wider block">
+                <span className="text-xs font-bold text-text-dim uppercase tracking-wider block">
                   {t("compare_channel_routing")}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
@@ -782,7 +782,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               {/* Synchronized Tempo (BPM) Adjustment */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#737887] uppercase tracking-wider">
+                  <span className="text-xs font-bold text-text-dim uppercase tracking-wider">
                     {t("compare_sync_tempo")}
                   </span>
                   <span className="font-mono text-xs font-bold text-accent">
@@ -839,7 +839,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
             {/* Bottom Row: 16-Step LED Sequence Tracker */}
             <div className="pt-2 border-t border-[#1f222a] space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] text-[#737887]">
+              <div className="flex items-center justify-between text-[11px] text-text-dim">
                 <span className="uppercase tracking-wider font-mono font-bold">
                   {t("compare_16_phase")}
                 </span>
@@ -900,7 +900,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
         {/* Presets Quick Matchup Buttons */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1f2229]">
-          <span className="text-xs font-bold text-[#737887] uppercase tracking-wider flex items-center space-x-1 mr-1">
+          <span className="text-xs font-bold text-text-dim uppercase tracking-wider flex items-center space-x-1 mr-1">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span>{t("compare_presets")}:</span>
           </span>
@@ -918,7 +918,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
         {/* Same-origin (lineage) comparison — N-06 */}
         {(lineage.ancestors.length > 0 || lineage.descendants.length > 0 || lineage.related.length > 0) && (
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1f2229]">
-            <span className="text-xs font-bold text-[#737887] uppercase tracking-wider flex items-center space-x-1 mr-1">
+            <span className="text-xs font-bold text-text-dim uppercase tracking-wider flex items-center space-x-1 mr-1">
               <GitBranch className="w-3.5 h-3.5 text-accent" />
               <span>{t("compare_lineage")}:</span>
             </span>
@@ -1155,7 +1155,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
             {/* Pairwise Matrix Grid (P3-13) */}
             <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs text-[#737887]">
+              <div className="flex items-center justify-between text-xs text-text-dim">
                 <span className="font-bold uppercase tracking-wider">
                   {t("compare_similarity_matrix")} ({genres.length}×{genres.length})
                 </span>
@@ -1168,7 +1168,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                 <table className="w-full text-center border-collapse text-xs">
                   <thead>
                     <tr>
-                      <th className="p-1.5 bg-[#121319] text-[#717684] font-mono border border-line rounded-tl-lg">
+                      <th className="p-1.5 bg-[#121319] text-text-dim font-mono border border-line rounded-tl-lg">
                         #
                       </th>
                       {genres.map((g, j) => (
@@ -1226,7 +1226,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
             {/* Primary Pair BPM & Meter Overlap Badges */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
               <div className="bg-panel2 p-2.5 rounded-xl border border-line">
-                <span className="font-bold text-[#737887] uppercase tracking-wider text-[11px] flex items-center space-x-1">
+                <span className="font-bold text-text-dim uppercase tracking-wider text-[11px] flex items-center space-x-1">
                   <Clock className="w-3.5 h-3.5 text-accent" />
                   <span>{t("bpm_overlap")}</span>
                 </span>
@@ -1249,7 +1249,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
               </div>
 
               <div className="bg-panel2 p-2.5 rounded-xl border border-line">
-                <span className="font-bold text-[#737887] uppercase tracking-wider text-[11px] flex items-center space-x-1">
+                <span className="font-bold text-text-dim uppercase tracking-wider text-[11px] flex items-center space-x-1">
                   <Layers className="w-3.5 h-3.5 text-accent" />
                   <span>{t("compare_dna_compat")}</span>
                 </span>
@@ -1521,19 +1521,19 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#1a1c22]">
                       <div>
-                        <span className="text-xs text-[#737887] font-semibold block">{t("bpm")}</span>
+                        <span className="text-xs text-text-dim font-semibold block">{t("bpm")}</span>
                         <span className="font-mono font-bold text-sm text-[#f3f1ec] mt-0.5 block">{genre.bpm_range}</span>
                       </div>
                       <div>
-                        <span className="text-xs text-[#737887] font-semibold block">{t("time_signature")}</span>
+                        <span className="text-xs text-text-dim font-semibold block">{t("time_signature")}</span>
                         <span className="font-mono font-bold text-sm text-[#f3f1ec] mt-0.5 block">{genre.time_signature}</span>
                       </div>
                       <div>
-                        <span className="text-xs text-[#737887] font-semibold block">{t("origin_place")}</span>
+                        <span className="text-xs text-text-dim font-semibold block">{t("origin_place")}</span>
                         <span className="text-sm font-medium text-[#c4c7cf] truncate block mt-0.5">{genre.origin_place[language]}</span>
                       </div>
                       <div>
-                        <span className="text-xs text-[#737887] font-semibold block">{t("scale")}</span>
+                        <span className="text-xs text-text-dim font-semibold block">{t("scale")}</span>
                         <span className="font-mono text-sm font-medium text-[#c4c7cf] truncate block mt-0.5">
                           {genre.sequencer_pattern?.scale || "C Minor"}
                         </span>
@@ -1677,7 +1677,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                                   {sec}
                                 </span>
                                 {sIdx < genre.structure.length - 1 && (
-                                  <span className="text-[#626775]">→</span>
+                                  <span className="text-text-dim">→</span>
                                 )}
                               </React.Fragment>
                             ))}
@@ -1736,7 +1736,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                           <div key={trackIdx} className="flex items-center justify-between text-xs sm:text-sm">
                             <div className="truncate mr-2">
                               <span className="text-[#f0ede6] font-semibold">{track.title}</span>
-                              <span className="text-[#737887] ml-1.5">· {track.artist}</span>
+                              <span className="text-text-dim ml-1.5">· {track.artist}</span>
                             </div>
                             {track.link ? (
                               <a
@@ -1749,7 +1749,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
                                 <ExternalLink className="w-3 h-3" />
                               </a>
                             ) : (
-                              <span className="text-xs text-[#737887] font-mono">{track.year}</span>
+                              <span className="text-xs text-text-dim font-mono">{track.year}</span>
                             )}
                           </div>
                         ))}

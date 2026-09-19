@@ -343,7 +343,7 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
                   className={`px-2.5 py-1 rounded-lg text-xs font-['JetBrains_Mono'] font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
                     isSelected
                       ? "bg-[#181a22] text-[#f0ede6] shadow-[0_0_10px_rgba(0,0,0,0.5)] scale-105"
-                      : "bg-bg text-[#717684] border-[#1e212b] hover:text-text"
+                      : "bg-bg text-text-dim border-[#1e212b] hover:text-text"
                   }`}
                   style={{
                     borderColor: isSelected ? trackMeta.color : undefined,
@@ -417,12 +417,12 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
         {/* Left Track Label Space aligned with matrix headers. Shares `--trk-head-w` with
             the ruler label and the track headers; it was hardcoded to 126 px, a third
             disagreeing width for the same frozen column. */}
-        <div className="w-[var(--trk-head-w)] flex-none text-right pr-2 sm:pr-3 font-mono text-[11px] text-[#6b7280]">
+        <div className="w-[var(--trk-head-w)] flex-none text-right pr-2 sm:pr-3 font-mono text-[11px] text-text-dim">
           <span className="font-bold text-text">{meta.name}</span>
           <span className="block text-[10px] text-accent uppercase font-bold">
             {activeDim}
           </span>
-          <span className="block text-[9.5px] text-[#4a5060]">
+          <span className="block text-[9.5px] text-text-dim">
             {t("vel_drag_hint")}
           </span>
         </div>
@@ -494,7 +494,7 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
                 </div>
 
                 {/* Step index subscript */}
-                <span className="font-mono text-[8px] text-[#4a5060] mt-1 pointer-events-none">
+                <span className="font-mono text-[8px] text-text-dim mt-1 pointer-events-none">
                   {stepIdx + 1}
                 </span>
               </div>
