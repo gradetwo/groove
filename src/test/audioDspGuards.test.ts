@@ -110,6 +110,12 @@ function createFakeContext() {
      * what stops the next node type from arriving the same way.
      */
     createChannelSplitter: () => ({ numberOfOutputs: 2, connect: () => {}, disconnect: () => {} }),
+    /**
+     * The wavetable path (organ drawbar registrations) needs this, and the oscillator needs
+     * `setPeriodicWave` to receive it. Found by the guard below rather than by a crash, which is
+     * exactly the outcome that guard was added for after the `ChannelSplitter` incident.
+     */
+    createPeriodicWave: () => ({ real: new Float32Array(1), imag: new Float32Array(1) }),
     createChannelMerger: () => ({ numberOfInputs: 2, connect: () => {}, disconnect: () => {} }),
     /**
      * Found by the guard below, not by a failure: the noise bed asks for a buffer, and a double
@@ -149,6 +155,7 @@ const NODE_FACTORIES_THE_VOICES_NEED = [
   "createDynamicsCompressor",
   "createGain",
   "createOscillator",
+  "createPeriodicWave",
   "createStereoPanner",
   "createWaveShaper",
 ] as const;

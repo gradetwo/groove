@@ -63,11 +63,29 @@ export class FakeGainNode extends FakeNode {
   gain = new FakeAudioParam();
 }
 
+export class FakePeriodicWave {
+  constructor(
+    public real: Float32Array,
+    public imag: Float32Array
+  ) {}
+}
+
 export class FakeOscillatorNode extends FakeNode {
   type = "sine";
   frequency = new FakeAudioParam();
   detune = new FakeAudioParam();
   started = false;
+  /**
+   * The periodic wave this oscillator was switched to, if any.
+   *
+   * Recorded rather than ignored: a preset's `harmonics` are its timbre, so a test has to be able
+   * to assert that the wavetable actually reached the oscillator — an unrecorded call would let a
+   * preset claim a drawbar registration while still playing a square.
+   */
+  periodicWave: FakePeriodicWave | null = null;
+  setPeriodicWave(wave: FakePeriodicWave) {
+    this.periodicWave = wave;
+  }
   /** Recorded `start(when)` times, so tests can assert onset stagger (E-01). */
   startedAt: number[] = [];
   /** Recorded `stop(when)` times, so tests can assert note length (chord articulation). */
@@ -212,6 +230,9 @@ export class FakeAudioGraph {
     const node = new FakeOscillatorNode();
     this.createdOscillators.push(node);
     return node;
+  }
+  createPeriodicWave(real: Float32Array, imag: Float32Array) {
+    return new FakePeriodicWave(real, imag);
   }
   createBiquadFilter() {
     const node = new FakeFilterNode();

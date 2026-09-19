@@ -131,6 +131,23 @@ export interface SynthPreset {
    * wall. Values above `MAX_STEREO_SPREAD` are clamped at the call site.
    */
   stereoSpread?: number;
+  /**
+   * Explicit harmonic amplitudes for the first oscillator, index 0 being the fundamental.
+   *
+   * Present means `osc1` is built with `createPeriodicWave` from these partials instead of using
+   * `osc1Type`. That is the mechanism a drawbar organ actually needs: a Hammond's tone is a sum of
+   * *pure* partials at the drawbar footages (16′ / 8′ / 5⅓′ / 4′ / 2⅔′ / 2′ / 1⅗′ / 1⅓′ / 1′), and no
+   * combination of the built-in waveforms approximates it — which is why both organ presets were a
+   * square plus a sine and read as "a synth organ" rather than a drawbar instrument.
+   *
+   * Absent is **exactly** the old voice: no periodic wave is built and `osc1Type` is used as before,
+   * so presets that do not opt in render bit-for-bit identically and their committed baselines stay
+   * meaningful.
+   *
+   * Values are relative; they are peak-normalised (see `periodicWaveCoefficients`) so that adding a
+   * partial cannot make a preset louder.
+   */
+  harmonics?: readonly number[];
 }
 
 /**
@@ -360,14 +377,30 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     velocityToAttack: 0.6,
     velocityToDecay: 0.3,
   },
-  // `m1_organ`: square + sine locked at 0 cents with a near-instant swell and
-  // full sustain — drawbar organ, no decay.
+  // `m1_organ`: the bright "full drawbars" registration. `harmonics` replaces the square that
+  // used to stand in for it — a square's partials fall off as 1/n, which is both far too dark and
+  // the wrong *series*: a drawbar organ's tone is a set of pure partials at chosen footages, and
+  // which ones are present is the instrument.
   m1Organ: {
     name: "M1 Organ",
+    /**
+     * The array is 0-based, so index i is footage 8′ / 2^i:
+     *   0 → 8′ fundamental, 2 → 5⅓′ twelfth, 3 → 2′, 5 → 2⅔′, 7 → 1′, 12 → ½′.
+     * A registration of 8′ + 5⅓′ + 2′ + 2⅔′ + 1′ + ½′ — the bright "full drawbars" setting, with
+     * the upper partials pulled out so it cuts through a mix.
+     *
+     * The 16′ sub-octave drawbar (harmonic ½) cannot be expressed here at all: a periodic wave is
+     * built from one fundamental, so anything below it would have to be a second oscillator. That is
+     * the right outcome anyway — on a real console the 16′ belongs to its own manual, and folding it
+     * in would put energy under the note that the bass part owns.
+     */
+    harmonics: [1, 0, 0.42, 0.36, 0, 0.24, 0, 0.16, 0, 0, 0, 0, 0.1],
     osc1Type: "square",
     osc2Type: "sine",
     osc2DetuneCents: 0,
-    osc2Mix: 0.5,
+    // Lowered from 0.5: the periodic wave already carries the upper partials the sine was there to
+    // suggest, so the same mix would double-count them and read as bright rather than full.
+    osc2Mix: 0.22,
     filterCutoff: 5200,
     filterQ: 0.7,
     adsr: { attack: 0.006, decay: 0.06, sustain: 0.95, release: 0.16 },
@@ -654,15 +687,19 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     velocityToAttack: 0.5,
     velocityToDecay: 0.35,
   },
-  // `organ_lead`: drawbar tone locked at 0 cents (no beating), instant swell, full
-  // sustain and a 6.2 kHz filter — a Hammond B3 with the Leslie opened up. Distinct
-  // from `m1_organ` (which has a percussive 60 ms decay and a mid 5.2 kHz cutoff).
+  // `organ_lead`: the classic jazz registration (888000000 plus the 4′ for definition) — a
+  // Hammond B3 with the Leslie opened up, locked at 0 cents so there is no beating. Distinct from
+  // `m1_organ`: fewer upper partials (rounder) and a longer, gentler envelope.
   organLead: {
     name: "Hammond Organ",
+    // Same 0-based indexing as `m1_organ`: 0 → 8′, 2 → 5⅓′, 3 → 2′, 5 → 2⅔′. A registration of
+    // 8′ + 5⅓′ + 2′ + a touch of 2⅔′ — deliberately darker than `m1_organ`, because a
+    // registration is a choice and the two presets should not be one sound with two filters.
+    harmonics: [1, 0, 0.3, 0.5, 0, 0.12],
     osc1Type: "square",
     osc2Type: "sine",
     osc2DetuneCents: 0,
-    osc2Mix: 0.45,
+    osc2Mix: 0.3,
     filterCutoff: 6200,
     filterQ: 0.6,
     adsr: { attack: 0.004, decay: 0.12, sustain: 0.94, release: 0.12 },
@@ -1228,6 +1265,42 @@ export function unisonOuterDetuneCents(
 export const UNISON_OUTER_DETUNE_MULTIPLE = 1.6;
 
 /**
+ * Fourier coefficients for a preset's harmonic stack, ready for `createPeriodicWave`.
+ *
+ * A pure, testable function because this is part of a preset's *definition*: two runs of the same
+ * preset must produce byte-identical coefficients, and the live engine and the offline renderer
+ * call it through the same code path, so exporter parity is structural rather than compared.
+ *
+ * The shape is deliberately a **sine** series (`real` all zero). A drawbar tone is described as
+ * amplitudes at footages, not as a phase relationship, and a sine series makes the waveform
+ * independent of an arbitrary phase choice — two presets that name the same drawbars are the same
+ * sound.
+ *
+ * Normalisation is by the **sum of the amplitudes**, not by the peak of the sampled waveform:
+ * the sum is a strict upper bound on the peak, it is exact in one pass, and it guarantees the
+ * result never exceeds unity whatever the partials are. Scaling by the true peak would need a
+ * sampling pass whose resolution changes with the number of partials — a needless source of
+ * frame-to-frame disagreement between the realtime and offline graphs.
+ *
+ * Returns `null` for an empty or entirely silent stack, so a caller can fall back to `osc1Type`
+ * instead of creating an oscillator that makes no sound.
+ */
+export function periodicWaveCoefficients(
+  harmonics: readonly number[] | undefined
+): { real: Float32Array; imag: Float32Array } | null {
+  if (!harmonics || harmonics.length === 0) return null;
+  const amp = harmonics.map((v) => (Number.isFinite(v) && v > 0 ? v : 0));
+  const total = amp.reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+
+  // Index 0 is the DC term and must stay zero; the imaginary part carries the sine partials.
+  const real = new Float32Array(amp.length + 1);
+  const imag = new Float32Array(amp.length + 1);
+  for (let i = 0; i < amp.length; i += 1) imag[i + 1] = amp[i] / total;
+  return { real, imag };
+}
+
+/**
  * The oscillator waveforms one voice of this preset allocates, in creation order.
  *
  * Exists so callers that need to reason about a voice's node count — the exporter-parity tests,
@@ -1329,7 +1402,17 @@ export function playPolySynthNote(
   const osc1 = ctx.createOscillator();
   const osc2 = ctx.createOscillator();
 
+  /**
+   * `osc1` is a wavetable when the preset declares harmonics, and `osc1Type` otherwise.
+   *
+   * The order matters: `type` is assigned first so that a preset which names both still has a valid
+   * waveform if the periodic wave cannot be built, and `setPeriodicWave` overrides it when it can.
+   * A `null` from the coefficient helper (an empty or silent stack) falls back to the plain
+   * oscillator rather than creating a voice that produces nothing.
+   */
   osc1.type = osc1Type;
+  const wave = periodicWaveCoefficients(preset.harmonics);
+  if (wave) osc1.setPeriodicWave(ctx.createPeriodicWave(wave.real, wave.imag));
   osc1.frequency.setValueAtTime(freq, time);
 
   osc2.type = osc2Type;
