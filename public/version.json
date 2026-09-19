@@ -1,27 +1,27 @@
 {
-  "version": "2.0.85",
+  "version": "2.0.86",
   "releaseDate": "2026-09-19",
-  "changelogCount": 149,
+  "changelogCount": 150,
   "latest": {
-    "version": "2.0.85",
+    "version": "2.0.86",
     "date": "2026-09-19",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.85 新手引导第 1 页就能出声，而且不再「误点一次就永久消失」",
-      "en": "v2.0.85 The Guide's First Slide Plays Something, and a Stray Click No Longer Loses It"
+      "zh": "v2.0.86 多开对话框：一次 Esc 不再关掉整叠，焦点也不再被抢回去",
+      "en": "v2.0.86 Stacked Dialogs: One Escape No Longer Closes Them All, and Focus Stays Where You Put It"
     },
     "highlights": [
       {
-        "zh": "**遮罩/Esc 关闭以前等于「已完成」。** `Modal` 的关闭回调在点遮罩和按 Esc 时都会触发，而它直接接着写入完成标记的那段代码——所以**一次误点就永久关掉了引导**，偏偏发生在最需要它的人身上。现在只有显式的「跳过」和最后一页的两个动作会写标记；关掉之后下次仍会再问一次。About 页还加了**重看新手引导**入口，否则「我不小心关了」除了清站点数据没有别的补救。",
-        "en": "**Dismissing the overlay used to mean \"completed\".** `Modal`'s close callback fires for a mask click and for Escape, and it was wired straight to the code that writes the completion flag — so one stray click **permanently** dismissed the guide, for exactly the users who had not read it. Now only the explicit Skip button and the last slide's actions record completion, and a dismissed guide is offered again next time. The About tab also gained **Replay the new-user guide**, be…"
+        "zh": "**一次 Esc 会关掉整叠对话框。** 每个打开的 `Modal` 都往 `window` 上挂自己的 keydown 监听，所以帮助叠在设置上、选择器叠在卷帘上时，按一次 Esc 两层一起关；两个 `Tab` 焦点陷阱还会互相抢，把用户拽出他正在用的那一层。现在有一个模块级的**对话框栈**，只有**栈顶**响应 Esc 与 Tab。",
+        "en": "**One Escape closed the whole stack.** Every open `Modal` attached its own `window` keydown handler, so with help over settings, or a picker over the roll, a single Escape dismissed both — and two `Tab` traps fought over focus, pulling the user out of the dialog they were actually in. There is now a module-level **dialog stack**, and only its **top** reacts to Escape and Tab."
       },
       {
-        "zh": "**第 1 页就有单一动作。** 引导原本是 7 屏功能清单、只有最后一屏有动作，于是新用户**先读 7 屏才第一次出声**。现在第 1 页就有「先听一下这个曲风」：一次点击关掉引导、切到工作台并**开始播放**——刻意不写完成标记，因为想听一段律动不等于「读完了」。",
-        "en": "**The first slide now has a single action.** The guide was seven slides of feature list with its only action on the last one, so a new user read seven screens before hearing anything. The first slide now offers \"Hear this genre now\": one click dismisses the guide, switches to the studio and **starts playing** — deliberately without recording completion, because hearing the groove is not the same as finishing the guide."
+        "zh": "**`aria-labelledby` 撞 id。** 标题 id 是写死的 `modal-title`，两个对话框就有两个同 id 的 `h3`，屏幕阅读器念的可能是**下面那层**的标题；而且每个对话框都自称 `aria-modal=\"true\"`，等于告诉辅助技术「忽略我以外的一切」——包括压在它上面的那个。现在每个实例用 `useId()` 生成自己的标题 id，`aria-modal` 只由栈顶声明。",
+        "en": "**`aria-labelledby` collided.** The heading id was the literal `modal-title`, so two dialogs produced two elements with that id and a screen reader could read the *lower* dialog's title; on top of that every dialog declared `aria-modal=\"true\"`, telling assistive tech to ignore everything outside it — including the dialog stacked above. Each instance now generates its own id with `useId()`, and only the top of the stack claims to be modal."
       },
       {
-        "zh": "**「等引擎就绪」这件事是我的测试先抓到的。** 请求交给工作台时它还没挂载完（引擎实例由里面的挂载 effect 创建）。第一版 hook 读 `engineRef.current` 判空——**看起来在等，实际拿到 `null` 就返回，而且不会再有下一次**（写 ref 不触发重渲染）。那条测试当场失败。修法不是加轮询，而是把它变成**依赖**：`useAudioEngineLifecycle` 新增 `engineReady` 状态，hook 收 `ready`。这让「引擎存在」第一次成为可观察的事实，手机端与教学也不用再猜。",
-        "en": "**My own test caught the \"wait for the engine\" mistake.** The request reaches the studio before it has finished mounting (the engine instance is created by a mount effect inside it). The first version of the hook read `engineRef.current` and returned early on `null` — **it looked like it waited, but it fired against nothing and never ran again** (writing a ref does not re-render). The test written for that case failed immediately. The fix is not polling: `useAudioEngineLifec…"
+        "zh": "**每次宿主重渲染都会抢焦点（清单里没写的第三条）。** 焦点 effect 的依赖里有 `onClose`，而调用方几乎都传内联闭包，于是它**每次渲染都重跑**，50ms 后把焦点抢回第一个可聚焦元素——点了第二个按钮、或在输入框里打字，任何状态变化都会把你拽回去。现在回调与开关走 ref，effect 只依赖「开/合」，一次打开只跑一次。",
+        "en": "**Focus was re-taken on every host render — a third defect the plan did not mention.** The focus effect listed `onClose` as a dependency and callers pass inline closures, so it re-ran on every render and, 50 ms later, pulled focus back to the first focusable element: click a second button, or type in a field, and any state change in the dialog undid it. Callbacks and options now live in refs, the effect depends only on open/closed, and it runs once per open."
       }
     ],
     "truncated": true
