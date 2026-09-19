@@ -920,6 +920,26 @@ export function synthesizeAnatomyKickVoice(
     }
   }
 
+  /**
+   * The four layers (sub, rumble, thump, click) meet two at a time rather than all at `busNode`.
+   *
+   * This preset's layers are four oscillators at four different frequencies, which is the case
+   * Chrome renders differently every time — measured in
+   * `scripts/diagnose_repeat_determinism.mjs --primitives` at 6-7 distinct hashes out of 10 renders,
+   * against 1 of 10 for the same four fanned in two per node. `somatic-808-gravity` is the preset
+   * that enables all four layers, and `src/test/oscillatorFanIn.test.ts` pins it.
+   *
+   * Unity gains, so the sum is the same signal: only the order the layers are added in changes.
+   * Not pushed to `gains`, for the same reason `busNode` is not — see the note in `DrumKitModels`'
+   * membrane model.
+   */
+  const sumLower = ctx.createGain();
+  const sumUpper = ctx.createGain();
+  sumLower.gain.value = 1;
+  sumUpper.gain.value = 1;
+  sumLower.connect(busNode);
+  sumUpper.connect(busNode);
+
   let maxDecay = 0.4;
 
   // 1. SUB (30-60 Hz)
@@ -950,7 +970,7 @@ export function synthesizeAnatomyKickVoice(
 
     subOsc.connect(subFilter);
     subFilter.connect(subGain);
-    subGain.connect(busNode);
+    subGain.connect(sumLower);
 
     subOsc.start(t);
     subOsc.stop(t + subDecay + 0.05);
@@ -969,7 +989,7 @@ export function synthesizeAnatomyKickVoice(
       rumbleGain.gain.exponentialRampToValueAtTime(0.0001, t + rumbleDecay);
 
       rumbleOsc.connect(rumbleGain);
-      rumbleGain.connect(busNode);
+      rumbleGain.connect(sumLower);
       rumbleOsc.start(t);
       rumbleOsc.stop(t + rumbleDecay + 0.05);
       sources.push(rumbleOsc);
@@ -1006,7 +1026,7 @@ export function synthesizeAnatomyKickVoice(
 
     thumpOsc.connect(thumpFilter);
     thumpFilter.connect(thumpGain);
-    thumpGain.connect(busNode);
+    thumpGain.connect(sumUpper);
 
     thumpOsc.start(t);
     thumpOsc.stop(t + thumpDecay + 0.05);
@@ -1038,7 +1058,7 @@ export function synthesizeAnatomyKickVoice(
 
     clickOsc.connect(clickFilter);
     clickFilter.connect(clickGain);
-    clickGain.connect(busNode);
+    clickGain.connect(sumUpper);
 
     clickOsc.start(t);
     clickOsc.stop(t + clickDecay + 0.02);

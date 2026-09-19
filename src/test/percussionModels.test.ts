@@ -78,6 +78,9 @@ function createRecordingContext() {
       n.gain = param(0);
     } else if (type === "bufferSource") {
       n.buffer = null;
+      // Real Web Audio property, and the percussion clusters use it to carry the pitch lane now
+      // that their partials are baked into one buffer instead of summed as oscillators.
+      n.playbackRate = param(1);
     }
     nodes.push(n);
     return n;
@@ -110,7 +113,7 @@ function round(value: number): number {
 function fingerprint(nodes: any[]) {
   return nodes.map((n) => {
     const params: Record<string, unknown> = {};
-    for (const key of ["gain", "frequency", "Q", "detune"]) {
+    for (const key of ["gain", "frequency", "Q", "detune", "playbackRate"]) {
       if (!n[key]) continue;
       params[key] = {
         value: round(n[key].value),
@@ -199,9 +202,20 @@ describe("percussion model library (Defect A)", () => {
     // Spot-check the physics families really are different shapes:
     expect(summarize(renderPerc("conga").nodes).oscillators).toBe(2); // two modes
     expect(summarize(renderPerc("timbale").nodes).oscillators).toBe(3); // third inharmonic partial
-    expect(summarize(renderPerc("triangle").nodes).oscillators).toBe(3);
+    /**
+     * The metal and jingle clusters are no longer oscillators.
+     *
+     * A Web Audio node that sums three or more oscillators at different frequencies is not
+     * bit-reproducible in Chrome (measured in `scripts/diagnose_repeat_determinism.mjs
+     * --primitives`, and guarded by `oscillatorFanIn.test.ts`), so those partials are baked into a
+     * single buffer source. They are still there — the buffers count below is what says so, and the
+     * voices stay distinguishable because their `filterFreqs` and buffer counts differ.
+     */
+    expect(summarize(renderPerc("triangle").nodes).oscillators).toBe(0);
     expect(summarize(renderPerc("shaker").nodes).oscillators).toBe(0); // pure noise
-    expect(summarize(renderPerc("tambourine").nodes).oscillators).toBe(3); // jingle layer
+    expect(summarize(renderPerc("tambourine").nodes).oscillators).toBe(0); // jingle layer, baked
+    expect(summarize(renderPerc("triangle").nodes).buffers).toBeGreaterThan(0);
+    expect(summarize(renderPerc("tambourine").nodes).buffers).toBeGreaterThan(0);
     expect(summarize(renderPerc("clave").nodes).filterFreqs).toContain(2500);
     expect(summarize(renderPerc("agogo").nodes).filterFreqs).toContain(1900);
   });
@@ -290,7 +304,12 @@ describe("percussion model library (Defect A)", () => {
 
   it("still honours the trailing noisePosition offset for every noise model", () => {
     const offsets = (nodes: any[]) =>
-      nodes.filter((n) => n._type === "bufferSource").map((n) => n.start.mock.calls[0]?.[1]);
+      nodes
+        .filter((n) => n._type === "bufferSource")
+        .map((n) => n.start.mock.calls[0]?.[1])
+        // The baked cluster sources start at the voice's own time with no read offset, so they are
+        // not evidence either way; only a source that reads into a buffer counts here.
+        .filter((offset) => typeof offset === "number");
     let checked = 0;
     for (const id of PERCUSSION_MODEL_IDS) {
       const a = offsets(renderPerc(id, 1, "909", 0).nodes);
@@ -377,9 +396,21 @@ describe("velocity → timbre (Defect B)", () => {
      * this assertion pins; the cluster is asserted separately so the two can never be confused.
      */
     expect(hat909.filterFreqs).toEqual([8200, 8600, 11500]);
-    // Q4: the metal cluster contributes six inharmonic square partials; without it this hat
-    // was pure filtered noise, which is the "cheap MIDI drum" tell the fix exists to remove.
-    expect(hat909.squareOscillators).toBe(6);
+    /**
+     * Q4: the metal cluster's six inharmonic partials are still there, but they are no longer six
+     * square oscillators summed into one node.
+     *
+     * That shape is not bit-reproducible in Chrome — a node summing three or more oscillators at
+     * different frequencies renders differently every time (measured in
+     * `scripts/diagnose_repeat_determinism.mjs --primitives`; guarded by `oscillatorFanIn.test.ts`)
+     * — so the partials are baked into one buffer source, which also removes six oscillators from
+     * the busiest voice in the pattern. Without the cluster this hat was pure filtered noise, which
+     * is the "cheap MIDI drum" tell the fix exists to remove; the buffer count is what proves the
+     * cluster survived the change.
+     */
+    expect(hat909.squareOscillators).toBe(0);
+    // The noise sizzle and the baked cluster.
+    expect(hat909.buffers).toBe(2);
     expect(
       summarize(
         renderVoice((c, d, b) => synthesizeHiHat(c, d, 0.5, 1, 0, "acoustic", 1, 0.125, 0.8, b))

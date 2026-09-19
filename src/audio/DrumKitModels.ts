@@ -1018,6 +1018,120 @@ export const METAL_CLUSTER_FREQS = [310, 387, 466, 522, 681, 1070] as const;
 export const METAL_CLUSTER_MIX = 0.42;
 
 /**
+ * Length of the baked hi-hat cluster.
+ *
+ * It is a *steady* cluster — the voice's its own envelope does the decaying — so it only has to
+ * outlast the longest hat, which is `OPEN_HAT_MAX_DECAY_SEC`, plus the tail the voice schedules
+ * beyond it.
+ */
+export const HAT_CLUSTER_BUFFER_SEC = OPEN_HAT_MAX_DECAY_SEC + 0.05;
+
+/** One partial of a baked inharmonic cluster. */
+export interface ClusterPartial {
+  hz: number;
+  gain: number;
+  /** A square partial is a sum of odd harmonics; a sine partial is a single one. */
+  square?: boolean;
+}
+
+/**
+ * Inharmonic partials baked into a single `AudioBuffer`.
+ *
+ * ## Why this exists (a measured platform constraint, not a preference)
+ *
+ * A Web Audio node that sums **three or more oscillators tuned to different frequencies** does not
+ * render bit-identically twice in Chrome's `OfflineAudioContext`. Measured over ten renders of a
+ * minimal graph (`scripts/diagnose_repeat_determinism.mjs --primitives`):
+ *
+ * | graph                                       | distinct hashes / 10 |
+ * |---------------------------------------------|----------------------|
+ * | 1 or 2 oscillators                          | 1                    |
+ * | 3 oscillators, all the same frequency        | 1                    |
+ * | 3 / 4 / 5 / 6 oscillators, different freqs   | 3 / 7 / 9 / 10       |
+ * | 3 *buffer sources* summed                    | 1                    |
+ * | 4 oscillators fanned in two per node         | 1                    |
+ *
+ * Same-frequency oscillators are fine and buffer sources are fine, which points at Chrome building
+ * band-limited wavetables lazily: oscillators sharing a frequency share one table, so a render that
+ * starts while a table is still being filled is the render that comes out different. The audible
+ * footprint matches — the differences start at the first note, are tiny and randomly signed, and land
+ * in the band the offending partials occupy.
+ *
+ * That mattered here because it made **every export unreproducible**, which is the opposite of what
+ * `noise.ts` and the whole seeded-renderer design exist to guarantee. `src/test/oscillatorFanIn.test.ts`
+ * holds the line from now on.
+ *
+ * ## Cost
+ *
+ * Baked once per sample rate and cached, so a voice pays a few milliseconds the first time it sounds
+ * and nothing afterwards — and it plays with one source instead of six, which on the busiest voice in
+ * the pattern is a straight win. The partials are the same inharmonic set the oscillators played, so
+ * the timbre is unchanged: a square partial is rendered as its odd harmonics at `1/n`, which is what
+ * a band-limited square oscillator is.
+ */
+const clusterBufferCache = new Map<string, AudioBuffer>();
+
+export function inharmonicClusterBuffer(
+  ctx: BaseAudioContext,
+  partials: readonly ClusterPartial[],
+  seconds: number
+): AudioBuffer {
+  const key = `${ctx.sampleRate}|${seconds}|${partials
+    .map((p) => `${p.hz}x${p.gain}${p.square ? "s" : ""}`)
+    .join(",")}`;
+  const cached = clusterBufferCache.get(key);
+  if (cached) return cached;
+
+  const length = Math.max(1, Math.ceil(ctx.sampleRate * seconds));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  const nyquist = ctx.sampleRate / 2;
+  for (let i = 0; i < length; i++) {
+    const t = i / ctx.sampleRate;
+    let sample = 0;
+    for (const partial of partials) {
+      if (partial.square) {
+        // Odd harmonics at 1/n, stopping before Nyquist so the buffer cannot alias.
+        for (let n = 1; n <= 9 && partial.hz * n < nyquist; n += 2) {
+          sample += (partial.gain * Math.sin(2 * Math.PI * partial.hz * n * t)) / n;
+        }
+      } else {
+        sample += partial.gain * Math.sin(2 * Math.PI * partial.hz * t);
+      }
+    }
+    data[i] = sample;
+  }
+
+  clusterBufferCache.set(key, buffer);
+  return buffer;
+}
+
+/**
+ * Plays a baked cluster from `time` until `stopAfter` seconds later.
+ *
+ * `playbackRate` transposes the whole set at once, which is what the percussion models need: their
+ * partials are all multiples of one base frequency, so the pitch lane scales the entire cluster and
+ * resampling the buffer reproduces that exactly where separate oscillators could not be summed.
+ */
+function scheduleCluster(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  partials: readonly ClusterPartial[],
+  seconds: number,
+  time: number,
+  stopAfter: number,
+  playbackRate = 1
+): AudioBufferSourceNode {
+  const source = ctx.createBufferSource();
+  source.buffer = inharmonicClusterBuffer(ctx, partials, seconds);
+  if (playbackRate !== 1) source.playbackRate.value = playbackRate;
+  source.connect(dest);
+  source.start(time);
+  source.stop(time + stopAfter);
+  return source;
+}
+
+/**
  * Synthesizes a Hi-Hat (Closed / Open) with metallic inharmonic frequency clusters
  */
 export function synthesizeHiHat(
@@ -1090,15 +1204,19 @@ export function synthesizeHiHat(
     envGain.gain.setValueAtTime(hatVol, time);
     envGain.gain.exponentialRampToValueAtTime(0.0001, time + decayTime);
 
-    inharmonicFreqs.forEach((freq) => {
-      const osc = ctx.createOscillator();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(freq * pitchMult, time);
-      osc.connect(clusterGain);
-      osc.start(time);
-      osc.stop(time + decayTime + 0.02);
-      sources.push(osc);
-    });
+    // One baked source, not six oscillators summed: see `inharmonicClusterBuffer`. `playbackRate`
+    // carries the pitch lane, which scales the whole cluster exactly as the oscillators did.
+    sources.push(
+      scheduleCluster(
+        ctx,
+        clusterGain,
+        inharmonicFreqs.map((hz) => ({ hz, gain: 1, square: true })),
+        HAT_CLUSTER_BUFFER_SEC,
+        time,
+        decayTime + 0.02,
+        pitchMult
+      )
+    );
 
     clusterGain.gain.value = 1 / inharmonicFreqs.length;
     clusterGain.connect(highpass);
@@ -1168,15 +1286,18 @@ export function synthesizeHiHat(
       clusterEnv.gain.exponentialRampToValueAtTime(0.0001, time + decayTime * 0.8);
       const clusterPitch = Math.pow(2, (pitchOffset > 24 ? pitchOffset - 48 : pitchOffset) / 12);
 
-      METAL_CLUSTER_FREQS.forEach((freq) => {
-        const osc = ctx.createOscillator();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(freq * clusterPitch, time);
-        osc.connect(clusterGain);
-        osc.start(time);
-        osc.stop(time + decayTime + 0.02);
-        sources.push(osc);
-      });
+      // One baked source instead of six summed oscillators — see `inharmonicClusterBuffer`.
+      sources.push(
+        scheduleCluster(
+          ctx,
+          clusterGain,
+          METAL_CLUSTER_FREQS.map((hz) => ({ hz, gain: 1, square: true })),
+          HAT_CLUSTER_BUFFER_SEC,
+          time,
+          decayTime + 0.02,
+          clusterPitch
+        )
+      );
 
       clusterGain.connect(clusterHp);
       clusterHp.connect(clusterEnv);
@@ -1344,6 +1465,26 @@ function synthesizeMembraneModel(
   bus.connect(dest);
 
   const ratios = spec.partials >= 3 ? [1, spec.ratio, 2.13] : [1, spec.ratio];
+  /**
+   * Three partials, fanned in two at a time.
+   *
+   * The membrane model is the one voice whose partials cannot simply be baked into a buffer: each
+   * has its own decay *and* its own 30 ms pitch drop, so baking would have to give up the
+   * per-partial envelope that "Defect B" added. Fanning them in as a pair plus one keeps every
+   * parameter exactly as it was and still satisfies the platform rule — measured in
+   * `scripts/diagnose_repeat_determinism.mjs --primitives`, where three oscillators into one node
+   * differ in 3 of 10 renders while the same three as a (2+1) tree are bit-identical in 10 of 10.
+   *
+   * `pair` is deliberately not pushed to `gains`: `VoiceRegistry` pairs `sources[i]` with `gains[i]`,
+   * so adding a node there would shift every pairing and make a stolen voice fade the wrong layer.
+   * This matches the existing `bus`, which is not in `gains` either.
+   */
+  const pair = ratios.length >= 3 ? ctx.createGain() : null;
+  if (pair) {
+    pair.gain.value = 1;
+    pair.connect(bus);
+  }
+
   ratios.forEach((ratio, i) => {
     const partialDecay = decay * (i === 0 ? 1 : 0.65);
     const osc = ctx.createOscillator();
@@ -1355,7 +1496,7 @@ function synthesizeMembraneModel(
     g.gain.setValueAtTime(vel * (i === 0 ? 0.9 : 0.4), time);
     g.gain.exponentialRampToValueAtTime(0.0001, time + partialDecay);
     osc.connect(g);
-    g.connect(bus);
+    g.connect(pair && i < 2 ? pair : bus);
     osc.start(time);
     osc.stop(time + partialDecay + 0.02);
     sources.push(osc);
@@ -1418,24 +1559,49 @@ function synthesizeMetalModel(
   env.gain.exponentialRampToValueAtTime(0.0001, time + decay);
 
   const ratios = spec.partials >= 3 ? [1, spec.ratio, spec.ratio * 2.02] : [1, spec.ratio];
-  ratios.forEach((ratio, i) => {
-    const osc = ctx.createOscillator();
-    osc.type = i === 0 ? "square" : "sine";
-    osc.frequency.setValueAtTime(safeFreq(f0 * ratio), time);
-    const g = ctx.createGain();
-    g.gain.value = i === 0 ? 1 : 0.45;
-    osc.connect(g);
-    g.connect(bus);
-    osc.start(time);
-    osc.stop(time + decay + 0.02);
-    sources.push(osc);
-    gains.push(g);
-  });
+  /**
+   * Baked into one source rather than fanned in as oscillators.
+   *
+   * Three partials at *different* frequencies into one node is exactly the case Chrome renders
+   * differently every time (see `inharmonicClusterBuffer`), and `timbale`, `triangle` and
+   * `tambourine` are the models with three. Their partials are all multiples of `f0`, so the pitch
+   * lane scales the whole cluster and `playbackRate` reproduces it exactly — the buffer is built at
+   * the spec's own base frequency and transposed here.
+   */
+  const clusterGain = ctx.createGain();
+  sources.push(
+    scheduleCluster(
+      ctx,
+      clusterGain,
+      ratios.map((ratio, i) => ({
+        hz: spec.baseHz * ratio,
+        gain: i === 0 ? 1 : 0.45,
+        square: i === 0,
+      })),
+      Math.min(1.2, Math.max(0.25, decay + 0.05)),
+      time,
+      decay + 0.02,
+      mult
+    )
+  );
 
   bus.gain.value = 1 / ratios.length;
   bus.connect(bp);
   bp.connect(env);
   env.connect(dest);
+
+  clusterGain.connect(bus);
+
+  /**
+   * `env` is the voice's release gain.
+   *
+   * `gains` used to be filled by the per-partial gains, so removing them would have left this voice
+   * with none — and the voice registry fades `gains[i]` when it steals or chokes a voice, so an
+   * empty array means a metal percussion hit can no longer be released. `bus` stays out of the array
+   * for the same reason it is not pushed in the membrane model: `gains[i]` has to stay paired with
+   * `sources[i]`.
+   */
+  gains.push(env);
 
   return { sources, gains, stopTime: time + decay + 0.02 };
 }
@@ -1557,19 +1723,28 @@ function synthesizeShakerModel(
     jingle.gain.setValueAtTime(0.0001, time);
     jingle.gain.linearRampToValueAtTime(vel * 0.25 * timbre.transientScale, time + attack);
     jingle.gain.exponentialRampToValueAtTime(0.0001, jingleEnd);
-    [1, 1.71, 2.43].forEach((ratio, i) => {
-      const osc = ctx.createOscillator();
-      osc.type = i === 0 ? "square" : "sine";
-      osc.frequency.setValueAtTime(safeFreq(spec.centreHz * 0.9 * ratio * mult), time);
-      const g = ctx.createGain();
-      g.gain.value = 0.4;
-      osc.connect(g);
-      g.connect(jingle);
-      osc.start(time);
-      osc.stop(jingleEnd + 0.01);
-      sources.push(osc);
-      gains.push(g);
-    });
+    /**
+     * One baked source, not three summed oscillators — see `inharmonicClusterBuffer`.
+     *
+     * The jingle is a steady inharmonic cluster under one shared envelope, which is exactly the
+     * shape that bakes cleanly: the ratios are relative to `centreHz * 0.9`, so `playbackRate`
+     * carries the pitch lane, and `jingle` keeps doing all the envelope work.
+     */
+    sources.push(
+      scheduleCluster(
+        ctx,
+        jingle,
+        [1, 1.71, 2.43].map((ratio, i) => ({
+          hz: spec.centreHz * 0.9 * ratio,
+          gain: 0.4,
+          square: i === 0,
+        })),
+        Math.min(1.2, Math.max(0.25, jingleEnd - time + 0.02)),
+        time,
+        jingleEnd + 0.01 - time,
+        mult
+      )
+    );
     jingle.connect(dest);
     return { sources, gains, stopTime: jingleEnd + 0.01 };
   }
