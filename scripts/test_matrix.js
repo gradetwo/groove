@@ -672,12 +672,14 @@ async function runTestOnTarget(target, baseUrl) {
       /**
        * Every phone-reachable surface is measured by name: the check runs after several
        * navigations, and "how many controls are on screen" only means something for a named screen.
-       * The two here are the ones brought up to the 44 px rule so far; G.36 in the plan lists the
-       * measured counts for the rest (chords, kick, maker, timelines, compare, analyzer).
+       * These four are the ones brought up to the 44 px rule so far; G.38 in the plan lists the
+       * measured counts for the rest (maker, challenge, masterclass, timelines, compare, analyzer).
        */
       for (const surface of [
         { name: "studio", url: baseUrl },
         { name: "explore", url: `${baseUrl}?tab=galaxy` },
+        { name: "chords", url: `${baseUrl}?tab=chords` },
+        { name: "kick", url: `${baseUrl}?tab=kick` },
       ]) {
         await page.goto(surface.url, { waitUntil: "domcontentloaded" });
         await page.waitForTimeout(600);
