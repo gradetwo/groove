@@ -634,17 +634,31 @@ export class AudioEngine {
         stripOut.connect(this.busInputFor(i));
       }
 
+      /**
+       * The sends tap **after** the panner, not before it.
+       *
+       * They used to tap `stripOut` — the polarity/analyser stage, which is *upstream* of the
+       * `StereoPannerNode`. A hard-panned track therefore fed a mono, centred signal into the reverb
+       * and the delay, so its wet tail returned in the middle of the image while the dry signal sat
+       * on one side, and the per-genre curated sends lost the width they were curated for. The
+       * offline renderer has always tapped post-pan (`tPan.connect(sendA)` in `WavExporter`), and its
+       * comment claimed the live engine did the same — so playback and the exported file disagreed
+       * about the one thing a send is for. Post-pan is also the conventional send point: the effect
+       * follows its source.
+       */
+      const sendTap: AudioNode = panner ?? spatialPanner ?? stripOut;
+
       const sendA = this.ctx.createGain();
       sendA.gain.setValueAtTime(0, this.ctx.currentTime);
       if (this.masterGraph) {
-        stripOut.connect(sendA);
+        sendTap.connect(sendA);
         sendA.connect(this.masterGraph.reverb.input);
       }
 
       const sendB = this.ctx.createGain();
       sendB.gain.setValueAtTime(0, this.ctx.currentTime);
       if (this.masterGraph) {
-        stripOut.connect(sendB);
+        sendTap.connect(sendB);
         sendB.connect(this.masterGraph.delay.input);
       }
 
