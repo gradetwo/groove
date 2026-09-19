@@ -3331,3 +3331,47 @@ challenge、masterclass）。
   写清楚，而不是让用户点进去面对一屏 18 px 高的年代 chip。
 
 这一节是**提案**，等确认后再动代码——因为它改变的是"手机上有什么"，不只是一种排版。
+
+## G.40 门禁覆盖 11 个面：还没决定的四页用"预算"钉住（v2.1.1）
+
+G.39 的取舍提案还没拍板，但**不能让这四页在这段时间里无人看管**。所以 E2E 的手机门禁现在走 **11 个面**：
+7 个走 44 px 硬规则（studio、explore、chords、kick、maker、challenge、masterclass），
+4 个走**预算**（horizontal-timeline、vertical-timeline、compare、analyzer）。
+
+预算是一个**棘轮**，不是免责：数字是今天的实测值，**变差就失败**，变好会提示收紧，并且每次都打印。它按
+**方向**分开记，因为两种布局本来就不同——analyzer 横屏只剩 2 个（而竖屏 13 个），vertical-timeline 横屏只有 1 个。
+
+| 面 | 竖屏 | 横屏 |
+|---|---|---|
+| horizontal-timeline | 11 | 14 |
+| vertical-timeline | 6 | 1 |
+| compare | 15 | 11 |
+| analyzer | 13 | 2 |
+
+**门禁必须自己拥有它执行的数字。** 第一版预算直接抄了审计脚本的数（12 / 6 / 14 / 13 竖屏），一跑就红：
+门禁量到的 compare 是 **15**（横屏 11），analyzer 横屏是 **2**（审计报 0）。差异来自两处判定的口径——
+审计要求元素**中心**真的落在视口内且多等一会儿布局稳定，门禁只要求矩形与视口相交。两者都对，但"我照这个数执行"
+的那个数必须来自执行者本身，所以预算现在以门禁自己的实测为准（并在日志里逐条打印）。
+
+### 顺带抓到一个真实的 ResizeObserver 循环
+
+门禁走到 analyzer 后，E2E 开始报 `[PageError] ResizeObserver loop completed with undelivered notifications`。
+**没有过滤这条消息**，而是去找源头：三个分析画布（`WaterfallSpectrogram` / `LissajousPhaseScope` /
+`OscilloscopeWaveform`）都在自己的 observer 回调里写 `canvas.style.width/height`，而容器的尺寸又跟着画布走——
+于是在自己的通知里改变了被观察元素。虽然处理器本身有"值没变就不写"的守卫，但同一帧内的这一次写入就足够触发该警告。
+修法是把回调**推迟一帧**（`requestAnimationFrame`），三处都改；第二遍本来就会因守卫变成 no-op，所以一帧即可收敛。
+E2E 的 `pageerror` 收集保持严格，没有加白名单。
+
+### 下一轮
+
+四页的取舍（G.39 提案：analyzer 只留波形档、compare 与两条时间线手机端不提供）仍等确认；定了就按提案落地，
+门禁里对应的预算随之收紧到 0，或者整面从"手机可达"里移除。
+
+### 记一次真实的不稳定（不掩盖）
+
+全档 `E2E_PROFILE=mobile` 有一次在 **iPad Pro 11 横屏** 上失败：`Dragging a velocity bar did not raise it
+on iPad Pro 11 (横屏 Landscape) (100 → 52)`——拖拽把力度从 100 拖到了 **52**（方向相反）。本轮没有任何改动
+碰过力度条（改的是 maker/challenge/masterclass 的类名、analyzer 画布的 observer、以及门禁本身），单独重跑
+iPad 两个目标**都通过**。所以这是一个**基于坐标拖拽的偶发失败**（平板横屏、鼠标坐标 + 布局时机），不是产品缺陷，
+也不该被"重跑一次就算了"掩盖：它记在这里，下次谁再看到它就知道先看拖拽的坐标与布局就绪时机，而不是去查力度模型。
+真正稳的做法（等布局稳定后再按下、或用 pointer 事件序列而不是裸坐标）留给下一次有人碰那条检查时再做。
