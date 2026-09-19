@@ -13,6 +13,12 @@ npm run build        # 产物在 dist/
 **先提升版本、再构建、最后部署。** `scripts/deploy.mjs` 会比对 `dist/version.json` 与
 `package.json`，两者不一致就拒绝上传——否则会把上一版的产物挂到新版本号下面。
 
+**这道关卡只比对版本号，认不出「版本号对、内容旧」的 `dist/`。** 实测踩过一次：`verify` 里已经 build 完，
+之后才改 `public/changelog.json` 的发布日期，再直接 deploy——版本号当然一致，于是 09-20 的旧日期又上了一次线
+（`version.json`、`changelog.json` 都一样，Edge 与源站都是旧值）。所以**任何 `public/` 下的改动之后都要重新
+`npm run build` 再部署**；线上核对时用 `curl https://<域名>/version.json` 看 `latest.date`，缓存戳（`?cb=`）
+只绕过 CDN 缓存，绕过不了自己上传的旧产物。
+
 ```bash
 npm run preview      # 本地预览 dist/（默认 :4173）
 ```
