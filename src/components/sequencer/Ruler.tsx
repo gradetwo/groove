@@ -1,4 +1,5 @@
 import React, { memo } from "react";
+import { Copy } from "lucide-react";
 
 export interface RulerProps {
   stepCount: number;
@@ -63,9 +64,19 @@ export const Ruler = memo<RulerProps>(function Ruler({
                 onDuplicateBar1();
               }}
               title={isZh ? "将第 1 小节快速复制到所有小节" : "Duplicate Bar 1 to all bars"}
-              className="px-1.5 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent border border-accent/30 text-[8px] font-bold transition-all shadow-sm"
+              className="px-1.5 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent border border-accent/30 text-[8px] font-bold transition-all shadow-sm flex items-center gap-1"
             >
-              📋 {isZh ? "复制B1" : "Dup B1"}
+              {/*
+                A lucide `Copy`, not the 📋 emoji this used to carry.
+
+                The emoji is a full-colour platform glyph: it renders at a different optical weight
+                and baseline from the 8 px monospace label beside it, and it is the only colour in a
+                pill that is otherwise entirely the accent tint. The piano roll's control for the
+                *same action* (`duplicateBar1Notes`) has always used this icon, so the ruler was also
+                the odd one out against the app's own vocabulary.
+              */}
+              <Copy className="w-2.5 h-2.5" />
+              {isZh ? "复制B1" : "Dup B1"}
             </button>
           )}
           <span className="text-[#3a3e48]">{timeSignature}</span>
