@@ -491,7 +491,7 @@ studio 的 URL 才会稳定带上曲风。
 | U4 | 教程教练**没有任何 DOM 定位**：8 门课每一步都只 `onNavigateTab("studio")`，无 spotlight、无高亮、无"你完成了吗"判定 | `InteractiveTutorialCoach.tsx:81-90` | 承诺的"交互式动手课"实际是幻灯片 |
 | U5 | 主编辑面（音序器）**是唯一没有帮助入口的界面**（卷帘有，`PianoRollLane.tsx:1197-1204`） | `Toolbar.tsx`（grep "help" 零命中） | 最需要帮助的地方没有帮助 |
 | U6 | iOS 静音开关下**点播放会"看起来在播但没声音"**：`play()` 是 async 且调用处不 await、不 catch；iOS unlocker 只被 `ChordAudioEngine` 引用，工作室引擎从不调用 | `useTransportControls.ts:94-99`；`AudioEngine.ts:1299-1305`；`iosAudioUnlock.ts:215` | 最典型也最致命的"这 App 坏了" |
-| U7 | 静默 no-op：播放引擎为空、撤销/重做为空、**第一次 tap tempo 无任何反馈**、song mode/blind compare/metronome/count-in 四个模式开关**都没有 toast 也没有 announce** | `useTransportControls.ts:88,99-121,68-80,141-160` | "点了没反应" |
+| U7 | 静默 no-op：播放引擎为空、撤销/重做为空、**第一次 tap tempo 无任何反馈**、song mode/blind compare/metronome/count-in 四个模式开关**都没有 toast 也没有 announce** | `useTransportControls.ts:88,99-121,68-80,141-160` | "点了没反应"——**已修（v2.0.84）**，见附录 G.22。顺带查明 tap tempo 那段 `calculatedBpm >= 40 && <= 240` 是**死分支**：`AudioEngine.calculateTapTempo` 本身就会夹取到 40–240 并返回整数 |
 | U8 | 自动保存让"未保存"模型自相矛盾：每 500 ms debounce 写 localStorage，但**工作台里没有任何 dirty 指示**（maker 视图倒是有 `● maker_unsaved`） | `useSequencerStore.ts:1090`；对比 `CustomGenreMakerView.tsx:404` | 用户不知道作品是否安全 |
 | U9 | 中文术语**同一概念 4–5 个名字**：工作室 = 律动工作台/工作台/编曲工作台/编曲台/编曲室；星系 = 星系云团/律动星系/3D 星系图谱/曲风星谱/3D 宇宙星图；音长 = 门限时值/门限/音长/长度/时长 | `common.ts:5,87`；`HelpCenterModal.tsx:353,252`；`studio.ts:387,456` 等 | 教程说的名字，界面上找不到 |
 | U10 | 卷帘网格是**无障碍空洞**：音符是无 role 的 div、无 `tabIndex`（全文 0 处），力度条只能指针操作 | `PianoRollLane.tsx:1920-1922, 2100-2110, 2338` | 屏幕阅读器读到一个空格子；旋律编辑只能鼠标 |
@@ -647,13 +647,13 @@ $ node scripts/check_docs.mjs      → exit 1（5 处漂移）
 
 ### 7.3 v2.1.2 —— 上手（§4）
 
-1. 把 `toolbarTiers.DEFAULT_VISIBLE_IDS` 接进 `Toolbar.tsx`，删除 More 菜单里的重复项；
-   目标：1440×900 下 ≤14 个常显控件、工具栏高度 ≤56 px；390×844 下 ≤40% 视口。
-2. `layout.density` 真正生效（或**删掉这个设置**——不能留着骗人）。
+1. ~~把 `toolbarTiers.DEFAULT_VISIBLE_IDS` 接进 `Toolbar.tsx`……~~ —— **已完成（v2.0.76）**，见 G.10。
+2. ~~`layout.density` 真正生效~~ —— **已完成**：`useDensityPreference()` 在 `StudioView` 调用，
+   `index.css` 有 `:root[data-density="compact"|"comfortable"]` 规则（本轮复核）。
 3. 首屏改为"单一动作"：把 onboarding 第 2 页提前为"按播放 → 点一个格子"，
    遮罩点击**不再**结束引导，设置里加"重看新手引导"。
-4. 修 U6（iOS 静音下静默无声）：`await play()` + `catch` + 常驻提示 + 接上 `initIosAudioLock`。
-5. 补 U7 的静默 no-op（tap tempo 首次反馈、四个模式开关 toast/announce）。
+4. ~~修 U6（iOS 静音下静默无声）……~~ —— **已完成**：`play()` 被 await 且有 catch，`isAudioBlocked()` 决定是否声称在播放，导出器不回退。
+5. ~~补 U7 的静默 no-op~~ —— **已完成（v2.0.84）**，见 G.22。
 6. 统一中文术语表（工作室/星系/音长/调音台各定一个词），加一条 i18n 术语一致性测试。
 7. 音序器工具栏加 `?` 帮助入口（复用卷帘已有的 `onOpenHelp("sequencer")`）。
 8. `Modal` 加栈（只有最顶层处理 Escape / 恢复焦点）；`useId()` 替换写死的 `modal-title`。
@@ -1053,7 +1053,7 @@ node scripts/check_timbre_spread.mjs      # 音色基线也需重录（母带链
 4. **鼓组采样层与每击轮转**（`DrumKitModels` 100% 合成、噪声偏移按步进确定）。
 5. **立体声完整性**（混响 IR 移出主线程、延迟不重建图）。（送出与合唱已修，见 G.19 / G.20。）
 6. **限幅器起音平滑**：三次尝试后如实回退。
-7. **§4 上手改造**：`toolbarTiers` 接线、`layout.density` 落地、首屏单一动作、静默 no-op。
+7. **§4 上手改造**：~~`toolbarTiers` 接线~~、~~`layout.density` 落地~~、~~静默 no-op~~ 已完成（G.10 / G.22）；**首屏单一动作**仍未做（U1/U2）。
 8. **手机端底部双层栏**（标签栏 53px + 走带条 59px = 视口 17%）。
 
 ---
@@ -1101,7 +1101,7 @@ node scripts/check_timbre_spread.mjs      # 音色基线也需重录（母带链
 3. **鼓组采样层与每击轮转**：`DrumKitModels` 100% 合成，噪声偏移按步进确定（不随小节变化）。
 4. **立体声完整性**（混响 IR 移出主线程、延迟不重建图）。（送出与合唱已修，见 G.19 / G.20。）
 5. **限幅器起音平滑**：三次尝试后回退，需离线迭代。
-6. **§4 上手改造**：`toolbarTiers` 接线、`layout.density` 落地、首屏单一动作、静默 no-op。
+6. **§4 上手改造**：~~`toolbarTiers` 接线~~、~~`layout.density` 落地~~、~~静默 no-op~~ 已完成（G.10 / G.22）；**首屏单一动作**仍未做（U1/U2）。
 7. **手机端底部双层栏**（标签栏 53px + 走带条 59px = 664px 视口的 17%）。
 
 ---
@@ -2458,3 +2458,50 @@ const sendTap: AudioNode = panner ?? spatialPanner ?? stripOut;
 **教训（这轮重复犯了旧错）**：我先按计划的表述打算「修 M9」，读代码才发现注释明确写着不要那样修；
 M5 也是先量了才发现 30 ms 而不是 9 s，还先按表里前几行的 0.9–1.9 s 推断「没有曲风用长衰减」，
 再查全表才发现 `ambient` 用满 9.0 s。**审计表也是二手材料，动它之前要回到代码与实测。**
+
+## G.22 静默 no-op：点了没反应的那些控件现在都会说话（v2.0.84）
+
+用户对「上手」的核心抱怨是「点了没反应」。§4 的 U7 列了五处**状态变了却一个字都不说**的地方，
+本轮把五处都补上反馈（`showToast` + `announcer.announce`，也就是「只听鼓组」一直在用的那一对）：
+
+| 位置 | 旧行为 | 现在 |
+|---|---|---|
+| tap tempo 第一次点 | **什么都不发生**（要两次才有反应） | "再点一次即可测定速度"（toast + 播报） |
+| tap tempo 第二次点 | 有 toast，但**没有播报** | toast + 播报都带上测得的 BPM |
+| song mode / blind compare / metronome / count-in | **四个开关都只改状态**：没有 toast、没有 announce | 每个开关都报告**新状态**（开/关各一条文案），并播报 |
+| 撤销 / 重做（历史为空） | **静默返回** | "没有可撤销的操作" / "没有可重做的操作" |
+| 播放（引擎实例还没就绪） | **静默返回** | "音频仍在启动中——请稍后再点一次播放" + 播报 |
+
+顺带把撤销/重做里「有历史、但引擎恰好还没就绪」的情况也改了：以前它连确认提示都一起吞掉，
+现在存储已经回滚，就照常给确认（同步引擎退化为尽力而为）。
+
+### 死分支（顺手查明）
+
+`handleTapTempo` 里那段 `if (calculatedBpm >= 40 && calculatedBpm <= 240)` **永远不会为假**：
+`AudioEngine.calculateTapTempo` 自己就把结果 `Math.max(40, Math.min(240, ...))` 并 `Math.round`，
+退化输入还返回 120。所以「超出范围」从来不是一个静默 no-op——那个分支是死代码，已删掉并加了注释。
+（**但它暴露了另一个诚实问题**：点得过快/过慢时结果被夹取，界面却把它当"测到的速度"显示。
+没有证据说这会困扰用户，所以这轮只记录、不改。）
+
+### 测试（`transportPlaybackTruth.test.ts` 新增 6 条 + 改写 1 条）
+
+断言**刻意与语言无关**（测试环境解析到哪种语言不确定）：文案存在、同一个开关开/关两条文案**不相同**、
+以及提交给 store 的 action 载荷正确。播报通过 `announcer.setListener()` 捕获计数。
+
+同时把测试里那个假引擎补全了：它只有 `play`/`stop`/`isAudioBlocked`，所以 `setBpm` 一被调用就在
+handler 里抛异常——**看起来像被测代码的错，其实是假替身不完整**（和之前 `mobileBottomControlBar`
+缺 `setPreviewScope` 是同一类）。现在 `setBpm`/`setPattern`/`setSwing`/`setTimeSignature`/
+`setResolution`/`setDrumsOnly` 都在，并在接口上写明了原因。
+
+把 hook 暂存回改前的版本实测：**7 条全部失败**（"引擎未就绪"那条 + 6 条新增）。
+全量单测 **177 文件 / 2048 用例**。
+
+### 顺手核实的 §4 清单
+
+- ~~`toolbarTiers` 接线~~ **已完成（v2.0.76，G.10）**：`Toolbar.tsx` 里 `isControlVisible` 与
+  `data-toolbar-tier` 都在。
+- ~~`layout.density` 落地~~ **已完成**：`useDensityPreference()` 在 `StudioView` 调用，
+  `index.css` 有 `:root[data-density="compact"|"comfortable"]` 规则。
+- ~~iOS 静音无声（U6）~~ **已完成**：`play()` 被 await、有 catch，`isAudioBlocked()` 决定是否声称在播放。
+- **仍未做**：**首屏单一动作**（U1/U2：把 onboarding 第 2 页提前成「按播放 → 点一个格子」），
+  以及 v2.1.2 清单里的术语表、工具栏 `?` 入口、Modal 栈这三项（本轮未核实，不宣称状态）。
