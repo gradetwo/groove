@@ -558,7 +558,19 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     // Play button interaction & Playhead beam alignment check
-    const playBtn = await page.$("button:has-text('播放'), button:has-text('Play'), button:has-text('暂停'), button:has-text('Pause')");
+    /**
+     * By test id, not by label.
+     *
+     * The selector used to be `button:has-text('播放')`, which is only unambiguous while nothing else
+     * on screen offers to play. The first screen now carries a one-line "listen to this groove" hint
+     * whose button also says 播放; the matrix clicked *that* one, and its follow-up "pause back" click
+     * then held a handle to a button that had retired (reported, accurately, as
+     * `elementHandle.click: Element is not attached to the DOM`). The transport's own controls have
+     * stable ids on both surfaces.
+     */
+    const playBtn = await page.$(
+      "[data-toolbar-id='play'], [data-testid='mobile-transport-play']"
+    );
     if (playBtn) {
       await playBtn.click({ force: true });
       await page.waitForTimeout(250);

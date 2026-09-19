@@ -39,6 +39,8 @@ import {
 } from "../features/sequencer/hooks/useTransportShortcuts";
 import { useExportActions } from "../features/sequencer/hooks/useExportActions";
 import { useInitialAutoPlay } from "../features/sequencer/hooks/useInitialAutoPlay";
+import { useFirstRunPrompt } from "../features/sequencer/hooks/useFirstRunPrompt";
+import { FirstRunPrompt } from "../components/onboarding/FirstRunPrompt";
 import { useProjectHub } from "../features/sequencer/hooks/useProjectHub";
 import { useMidiInput } from "../features/sequencer/hooks/useMidiInput";
 import { useInitialPatternLoad } from "../features/sequencer/hooks/useInitialPatternLoad";
@@ -516,6 +518,14 @@ export const StudioView: React.FC<StudioViewProps> = ({
     onConsumed: () => onClearInitialAutoPlay?.(),
   });
 
+  /**
+   * U1: one action on the first screen, retired for good once playback has happened once.
+   *
+   * Desktop and tablet only: the phone layout is being redesigned separately, and this strip is not
+   * something to hand that work as a constraint.
+   */
+  const firstRunPrompt = useFirstRunPrompt({ isPlaying });
+
   // Boot-time `?groove=` / `?genre=` load (A-02)
   useUrlShareLoad({ commit, engineRef, currentGenre, showToast });
 
@@ -865,7 +875,19 @@ export const StudioView: React.FC<StudioViewProps> = ({
           />
         )}
 
-        {/* Right Column: The Sequencer (.seq) */}
+        {/* Right Column: The Sequencer (.seq) — one grid item, so the first-run hint above the grid
+            cannot displace it into a second row. */}
+        <div className="min-w-0 flex flex-col">
+          {/* Unconditional on purpose: a conditional sibling here would change the panel's position
+              when the hint hides, which remounts the whole sequencer (see `FirstRunPrompt`). */}
+          <FirstRunPrompt
+            visible={!isPhone && firstRunPrompt.visible}
+            onPlay={() => {
+              firstRunPrompt.started();
+              void handleTogglePlay();
+            }}
+            onDismiss={firstRunPrompt.dismiss}
+          />
         <SequencerPanel
           isPhone={isPhone}
           isShortLandscape={isShortLandscape}
@@ -1016,6 +1038,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onBatchUpdateGate={handleBatchUpdateGate}
           onCloseVelocityLane={handleCloseVelocityLane}
         />
+        </div>
       </main>
 
       <SequencerModals
