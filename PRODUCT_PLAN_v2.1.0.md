@@ -492,7 +492,7 @@ studio 的 URL 才会稳定带上曲风。
 | U5 | 主编辑面（音序器）**是唯一没有帮助入口的界面**（卷帘有，`PianoRollLane.tsx:1197-1204`） | `Toolbar.tsx`（grep "help" 零命中） | 最需要帮助的地方没有帮助——**已修（v2.0.89）**：More 菜单里加了「本页帮助」（Tier 3，不占默认密度），打开帮助中心的 sequencer 章节。见 G.28 |
 | U6 | iOS 静音开关下**点播放会"看起来在播但没声音"**：`play()` 是 async 且调用处不 await、不 catch；iOS unlocker 只被 `ChordAudioEngine` 引用，工作室引擎从不调用 | `useTransportControls.ts:94-99`；`AudioEngine.ts:1299-1305`；`iosAudioUnlock.ts:215` | 最典型也最致命的"这 App 坏了" |
 | U7 | 静默 no-op：播放引擎为空、撤销/重做为空、**第一次 tap tempo 无任何反馈**、song mode/blind compare/metronome/count-in 四个模式开关**都没有 toast 也没有 announce** | `useTransportControls.ts:88,99-121,68-80,141-160` | "点了没反应"——**已修（v2.0.84）**，见附录 G.22。顺带查明 tap tempo 那段 `calculatedBpm >= 40 && <= 240` 是**死分支**：`AudioEngine.calculateTapTempo` 本身就会夹取到 40–240 并返回整数 |
-| U8 | 自动保存让"未保存"模型自相矛盾：每 500 ms debounce 写 localStorage，但**工作台里没有任何 dirty 指示**（maker 视图倒是有 `● maker_unsaved`） | `useSequencerStore.ts:1090`；对比 `CustomGenreMakerView.tsx:404` | 用户不知道作品是否安全 |
+| U8 | 自动保存让"未保存"模型自相矛盾：每 500 ms debounce 写 localStorage，但**工作台里没有任何 dirty 指示**（maker 视图倒是有 `● maker_unsaved`） | `useSequencerStore.ts:1090`；对比 `CustomGenreMakerView.tsx:404` | 用户不知道作品是否安全——**已修（v2.0.90）**：自动保存的状态改由**写盘的那个模块**拥有并公开订阅，工作台显示「保存中…／已保存／保存失败」，失败态是刻意加的（存储写不进去时必须说，而不是永远转圈）。见 G.29 |
 | U9 | 中文术语**同一概念 4–5 个名字**：工作室 = 律动工作台/工作台/编曲工作台/编曲台/编曲室；星系 = 星系云团/律动星系/3D 星系图谱/曲风星谱/3D 宇宙星图；音长 = 门限时值/门限/音长/长度/时长 | `common.ts:5,87`；`HelpCenterModal.tsx:353,252`；`studio.ts:387,456` 等 | 教程说的名字，界面上找不到 |
 | U10 | 卷帘网格是**无障碍空洞**：音符是无 role 的 div、无 `tabIndex`（全文 0 处），力度条只能指针操作 | `PianoRollLane.tsx:1920-1922, 2100-2110, 2338` | 屏幕阅读器读到一个空格子；旋律编辑只能鼠标 |
 | U11 | 模态**没有栈**：`Modal` 的 Escape 是每个实例各挂一个 window 监听、无最顶层判定（`StudioView.tsx:994-1008` 可达"工程中心 + 未保存确认"叠放） | `Modal.tsx:69-74,105` | 一次 Escape 关掉两层，丢失上下文——**已修（v2.0.86）**：对话框改成栈，只有栈顶响应 Escape/Tab，`aria-modal` 也只由栈顶声明。见 G.24 |
@@ -2741,7 +2741,43 @@ U5：**主编辑面是唯一没有帮助入口的界面**。卷帘有（`onOpenH
 | **U6** iOS 静音无声 | **已完成**（`play()` await + catch + `isAudioBlocked()` 决定是否声称在播放） |
 | **U7** 静默 no-op | **已完成（v2.0.84）**，见 G.22 |
 | **U11** 模态没有栈 | **已完成（v2.0.86）**，见 G.24 |
-| **U8** 自动保存但没有「已保存」指示 | **仍未做**：`useSequencerStore` 每 500 ms debounce 写 localStorage，界面从不告诉用户作品是否安全 |
+| **U8** 自动保存但没有「已保存」指示 | **已完成（v2.0.90）**，见 G.29 |
 | **U9** 中文术语一名多译 | **仍未做**：同一概念 4–5 个名字（工作室/星系/音长）。这项工作**需要用户拍板用词**，不是我能替他选的 |
 | **U10** 卷帘是无障碍空洞 | **仍未做**：音符是无 role 的 div、无 `tabIndex`，力度条只能指针操作 |
 | **U12** 对比度与字号 | **仍未做**：`ChallengeView` ≈2.3:1、`Ruler` ≈1.96:1 @7.5px，工具栏 44 处 ≤10px |
+
+## G.29 自动保存终于可见：保存中／已保存／保存失败（v2.0.90）
+
+U8：项目**每次改动后 500 ms** 就被写进 localStorage，而工作台**从不告诉用户**；反倒是「曲风制作器」一直有
+一个 `● 未保存修改` 徽标。于是用户分不清「已保存」和「只活在内存里」，也分不清「存储写满、一直在拒绝写」——
+而后者的旧代码**只 `console.warn`**。
+
+### 做了什么
+
+- **状态由写盘的那个模块拥有**：`projectStorage.ts` 新增 `SaveStatus`（`idle` / `saving` / `saved` / `failed`）
+  与 `subscribeSaveStatus` / `getSaveStatusSnapshot`。理由很简单：只有真正执行写入的模块知道有没有写成，
+  另建一套记账迟早会和事实不一致。`saving` 的含义是「改动还在 debounce 里排队」，不是「字节在飞」——
+  文案按这个事实写，不假装是进度条。
+- **`failed` 是刻意加的**：localStorage 满或被禁用会抛异常，旧代码只打日志。没有这个状态，指示器会在
+  用户的作品**并不安全**时永远显示「保存中…」。
+- **`useAutosaveStatus`** 用 `useSyncExternalStore` 订阅（不是 `useState` + effect）：状态在 React 之外变化
+  （debounce 在用户看屏幕时到点），快照对象**只在变化时换新**——`useSyncExternalStore` 按身份比较，
+  每次返回新对象会无限重渲染。
+- **`SaveIndicator`**：`role="status"` + `aria-live="polite"`（这份安心对读屏用户同样要有），三态文案 + 图标，
+  悬浮提示写清楚**存在哪**——「已保存到本浏览器（HH:MM）」以及「仅保存在本浏览器——要留副本请导出」。
+  对勾不能暗示云备份，因为并没有云。
+- **只在桌面/平板显示**，并且**无条件挂载**、由 `visible` 属性决定是否 `return null`。
+
+### 一个我这次自己先想到的坑（上一轮是 E2E 教的）
+
+上一轮首屏提示教过一次：**在面板前面放条件兄弟节点会让整个网格重新挂载**。这次写指示器时我一开始又把
+`{!isPhone && (<div>…</div>)}` 放在面板前面——`isPhone` 会随窗口尺寸变化，所以那不是理论问题。改成
+**无条件挂载**、布局（`flex justify-end mb-1`）挪进组件内部，隐藏时零占位、位置恒定。这一条也写进了接线断言。
+
+### 测试（`autosaveStatus.test.tsx`，7 条）
+
+`saving → saved` 且记下写入时间；**`flushPendingProject` 也标成 saved**（页面隐藏时不能停在「保存中」）；
+**写失败标成 `failed`**（模拟 `setItem` 抛异常）；订阅会在 React 之外的状态变化时重渲染；
+组件在 `idle`/`visible=false` 时**什么都不渲染**；三态各带各自的 `data-save-status`、`role`/`aria-live`
+与不同文案；以及一条接线断言（`useAutosaveStatus()`、无条件挂载、**不得**再出现条件兄弟节点）。
+把三处 `setSaveStatus` 调用删掉实测 **4/7 失败**。全量单测 **183 文件 / 2090 用例**。
