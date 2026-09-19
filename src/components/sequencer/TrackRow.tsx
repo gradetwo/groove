@@ -198,7 +198,17 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
        * the colour already behind them (the sequencer section), so this is invisible at rest and
        * opaque under motion.
        */
-      className={`flex items-center gap-[var(--trk-head-gap)] bg-panel ${isCompact ? "py-0.5 min-h-[var(--step-cell-h-compact)]" : "py-row-y"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
+      /**
+       * `relative z-20` is load-bearing, not decoration.
+       *
+       * The playhead laser beam is a positioned sibling with `z-index: 15`, and it starts at the
+       * first visible step's left edge — a few pixels *inside* the frozen column. Without a stacking
+       * context on the row the beam is hit-tested through the column there, which is what the gutter
+       * probe reported (99 of 14592 samples, and only when the playhead happened to be at step 0 of
+       * the visible window). The row's own `z-index` puts the row, its solid layer and its header
+       * above the beam as one unit.
+       */
+      className={`relative z-20 flex items-center gap-[var(--trk-head-gap)] bg-panel ${isCompact ? "py-0.5 min-h-[var(--step-cell-h-compact)]" : "py-row-y"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
       style={{ ["--tc" as any]: meta.color }}
     >
       {/* Solid frozen column: full row height, header width plus the gutter, underneath the header.

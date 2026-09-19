@@ -37,7 +37,7 @@ export const Ruler = memo<RulerProps>(function Ruler({
   onDuplicateBar1,
 }) {
   return (
-    <div className="flex items-center gap-[var(--trk-head-gap)] pb-2 pt-1 border-b border-line-subtle mb-2 min-w-max">
+    <div className="relative z-20 flex items-center gap-[var(--trk-head-gap)] pb-2 pt-1 border-b border-line-subtle mb-2 min-w-max">
       {/* Solid frozen column, same layer as the track rows: the label is only as tall as its own
           content while the row is taller, and the flex gap after it is outside its box. */}
       <div aria-hidden="true" className="trk-head-solid bg-panel" />
