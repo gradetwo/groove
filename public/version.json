@@ -1,27 +1,27 @@
 {
-  "version": "2.0.56",
-  "releaseDate": "2026-09-18",
-  "changelogCount": 120,
+  "version": "2.0.57",
+  "releaseDate": "2026-09-19",
+  "changelogCount": 121,
   "latest": {
-    "version": "2.0.56",
+    "version": "2.0.57",
     "date": "2026-09-19",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.56 力度真正改变音色：51 个预设全部具备演奏动态，不再只有音量变化",
-      "en": "v2.0.56 Velocity Reaches Timbre on All 51 Presets, Not Just Level"
+      "zh": "v2.0.57 冻结列统一宽度修掉和弦轨道遮挡；播放头按真实输出延迟对齐声音；64/128 步不再半空",
+      "en": "v2.0.57 One width for the frozen column, a playhead aligned to real output latency, and no more half-empty 64/128-step grids"
     },
     "highlights": [
       {
-        "zh": "**51 个预设全部具备演奏动态**：此前 21/51 个预设支持「力度→音色」，其余 30 个（模拟主音、风琴、铜管、贝斯、噪声类等）力度只改变音量——轻弹与重弹的差别只是响度，这是「像是编出来的、不是弹出来的」最典型的破绽。现在每个预设都按乐器特性带有各自的动态深度：击弦类（拨弦、钢琴、颤音琴）最深、拉奏/吹奏类次之、垫子与风琴最浅（持续音没有声学理由随力度大幅变亮）、噪声类过渡音色最轻。",
-        "en": "**All 51 presets respond to velocity in timbre**: 21 of 51 had it; the other 30 (analogue leads, organ, brass, basses, noise voices) changed only in level, so a soft note and a hard one differed in loudness alone — the most recognisable \"programmed, not played\" tell. Each preset now carries a depth matched to its instrument: struck patches (plucked, piano, vibraphone) deepest, bowed/blown next, pads and organ shallowest (a sustained tone has no acoustic reason to brighten sh…"
+        "zh": "**冻结列只有一个宽度**：标尺标签 138px、轨道头 142px、力度泳道 126px——三个宽度、两种间距同时在用。标尺那列是 `z-30`、轨道头是 `z-20`，所以在手机上标尺压过和弦轨道头 4px（这就是「和弦轨道会被遮挡」），同时标尺的步号比它标注的格子偏移 4px。现在三者共用 `--trk-head-w` / `--trk-head-gap`，滚动条留白也从写死的 126px 改成同一个变量。实测四个端：列宽与首列 x 坐标全部对齐。",
+        "en": "**The frozen column now has one width**: the ruler label was 138 px, every track header 142 px and the velocity lane 126 px, with two different gaps. The ruler column is `z-30` and the track headers are `z-20`, so on a phone the ruler painted 4 px over the chords header — the reported occlusion — while the ruler badges sat 4 px away from the cells they label. All three share `--trk-head-w` / `--trk-head-gap` now, and the scrollbar gutter uses the same variable instead of a h…"
       },
       {
-        "zh": "**实测依据**：出厂 pattern 的力度**本来就**有 12 种取值（50–120，扫描 `src/data/genres/**` 得到），所以这个映射是可听的，不是理论上的。",
-        "en": "**Measured basis**: the shipped patterns already use twelve distinct velocity values (50–120, scanned across `src/data/genres/**`), so the mapping is audible rather than theoretical."
+        "zh": "**手机端轨道头不再溢出到步进格上**：142px 的列里塞了十一个控件，实测内容宽 241px，而列是 `sticky` + `overflow:hidden`——静音、独奏、滑杆按钮全部压在步进格上方，点它们实际是在切步进。现在手机只保留音符身份（折叠、类型、色条、电平、名称）与静音/独奏，其余由每轨控制台承担；试听钮移进控制台，手机上不会失去这个功能。两处原本写了 `hidden md:flex` 仍在溢出的按钮，原因是元素自己的 `flex` 与 `hidden` 同优先级、由 Tailwind 输出顺序决定——所以改用真正的 `display:none !important`。",
+        "en": "**The phone track header no longer spills onto the step grid**: eleven controls inside a 142 px column measured 241 px of content, in a `sticky` box with `overflow: hidden`, so mute, solo and the sliders button all landed on top of step cells and tapping them toggled steps. The phone keeps the row identity (fold, type, colour, meter, name) plus mute and solo; everything else lives in the per-track inspector, and auditioning moved there too so the phone does not lose it. Two…"
       },
       {
-        "zh": "**满力度严格不变**：每个深度项在满力度时都是精确的空操作（因子含 `(velCurve − 1)` 或 `(1 − velCurve)`，在 `velCurve === 1` 时为 0），因此标注不会让任何预设在其最强处变响或变闷。这一点由测试断言，而不是靠算术「应该如此」。",
-        "en": "**Strictly unchanged at full velocity**: every depth term is an exact no-op at full velocity (its factor contains `(velCurve − 1)` or `(1 − velCurve)`, which is 0 at `velCurve === 1`), so annotating a preset cannot make it louder or duller at its loudest. That is asserted rather than assumed from the arithmetic."
+        "zh": "**播放头按真实输出延迟对齐声音**：原来在 `ctx.currentTime` 越过步进时间的那一刻就推进播放头。但排在 `t` 的音是在 `t` 被渲染、在 `t + outputLatency` 才到扬声器，所以画面系统性地早于声音。现在减去 `outputLatency + 限幅器前瞻 + 用户补偿`，并封顶半步；浏览器不报告延迟时结果精确为 0，离线导出与既有测试不受影响（有单测固定这一点）。",
+        "en": "**The playhead is aligned to the real output latency**: it advanced the instant `ctx.currentTime` passed a step's scheduled time, but a voice scheduled at `t` is *rendered* at `t` and reaches the speakers at `t + outputLatency`, so the picture was systematically early. It now subtracts `outputLatency + limiter lookahead + user compensation`, capped at half a step; where a browser reports no latency the result is exactly 0, so the offline bounce and every existing test are un…"
       }
     ],
     "truncated": true

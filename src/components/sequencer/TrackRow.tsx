@@ -191,11 +191,13 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
     <div
       role="row"
       aria-label={meta.name}
-      className={`flex items-center gap-2 sm:gap-3 ${isCompact ? "py-0.5 min-h-[36px]" : "py-1 sm:py-1.5"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
+      className={`flex items-center gap-[var(--trk-head-gap)] ${isCompact ? "py-0.5 min-h-[36px]" : "py-1 sm:py-1.5"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
       style={{ ["--tc" as any]: meta.color }}
     >
-      {/* Track Header (.trk-head) - 142px on mobile / 176px on sm+ - Sticky Left */}
-      <div className={`sticky left-0 z-20 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[142px] sm:w-[176px] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center ${
+      {/* Track Header (.trk-head) - `--trk-head-w` (142px mobile / 176px sm+) - Sticky Left.
+          The width is shared with the ruler label and the velocity lane so the three cannot
+          disagree and paint over each other; see the note on `--trk-head-w` in index.css. */}
+      <div className={`sticky left-0 z-20 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[var(--trk-head-w)] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center ${
         isCompact ? "h-[36px] gap-0" : "gap-1"
       } select-none border-r border-line-subtle border-l-[3.5px] border-l-[var(--tc)] shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-all ${
         isSilenced && !isMute && !isSolo ? "opacity-60" : "opacity-100"
@@ -219,10 +221,13 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             </button>
           )}
 
-          {/* Type Badge */}
+          {/* Type Badge. Desktop only: at 142 px the phone column cannot hold it plus the
+              name plus the five mobile-sized action buttons, and the name already says
+              what the track is ("HI-HAT", "KICK"). The badge stays in the DOM for the
+              desktop layout and for assistive tech. */}
           <span
             data-testid={`track-type-${trackIdx}`}
-            className="font-['JetBrains_Mono'] text-[7.5px] font-black uppercase px-1 py-0.2 rounded tracking-tighter shrink-0 border"
+            className="font-['JetBrains_Mono'] text-[7.5px] font-black uppercase px-1 py-0.2 rounded tracking-tighter shrink-0 border trk-head-desktop-only"
             style={{
               backgroundColor: `${typeDetails.color}22`,
               borderColor: `${typeDetails.color}55`,
@@ -305,7 +310,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 onAudition(trackIdx, track.name);
               }}
               data-testid={`track-audition-${trackIdx}`}
-              className="w-9 h-9 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
+              className="trk-head-desktop-only w-9 h-9 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
               title={t("track_audition_title")}
               aria-label={t("track_audition_title")}
             >
@@ -337,7 +342,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                   onSetChordDuration?.(trackIdx, next);
                 }}
                 data-testid={`chord-duration-button-${trackIdx}`}
-                className="px-1 sm:px-1.5 h-9 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border bg-[#17181c] border-line text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none font-bold shadow-[0_0_4px_rgba(245,183,61,0.15)]"
+                className="trk-head-desktop-only px-1 sm:px-1.5 h-9 sm:h-4 rounded text-[8.5px] sm:text-[8px] font-['JetBrains_Mono'] border bg-[#17181c] border-line text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none font-bold shadow-[0_0_4px_rgba(245,183,61,0.15)]"
                 title={isZh ? "和弦长度 (点击切换 4拍/2拍/1拍/半拍)" : "Chord Length (Click to cycle 4 / 2 / 1 / 0.5 beats)"}
                 aria-label="Cycle Chord Length"
               >
@@ -391,7 +396,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
                 onOpenInspector(trackIdx);
               }}
               data-testid={`track-inspector-open-${trackIdx}`}
-              className="w-9 h-9 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
+              className="trk-head-desktop-only w-9 h-9 sm:w-4 sm:h-4 border border-line rounded text-text-dim hover:text-accent hover:border-accent/60 transition-colors flex items-center justify-center touch-manipulation select-none"
               title={t("track_inspector_open_title")}
               aria-label={t("track_inspector_open_aria")}
             >
@@ -403,8 +408,9 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
         {/* Lower row: Volume slider + Track actions (Velocity Focus, Shift, Smart Fill, Clear) */}
         {!isCompact && (
           <div className="flex items-center justify-between gap-1 text-text-dim">
-            {/* Mini Volume & Pan Slider */}
-            <div className="flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%, Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}>
+            {/* Mini Volume & Pan Slider. Desktop only — both are in the inspector's mix
+                tab, and the phone column has no room for a second row of controls. */}
+            <div className="trk-head-desktop-group flex items-center gap-1 shrink-0" title={`Volume: ${Math.round(trackVol * 100)}%, Pan: ${trackPan < 0 ? `L${Math.round(-trackPan * 100)}` : trackPan > 0 ? `R${Math.round(trackPan * 100)}` : 'C'}`}>
               <input
                 type="range"
                 min="0"
@@ -431,8 +437,10 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               )}
             </div>
 
-            {/* Track Quick Actions & Reorder */}
-            <div className="flex items-center gap-0.5 shrink-0">
+            {/* Track Quick Actions & Reorder. Desktop only: velocity, piano roll, shift and
+                clear are all reachable from the inspector / the mobile studio sheets, and a
+                36 px button cannot fit seven-deep inside a 142 px column. */}
+            <div className="trk-head-desktop-group flex items-center gap-0.5 shrink-0">
               {onMoveUp && canMoveUp && (
                 <button
                   type="button"

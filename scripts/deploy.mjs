@@ -15,7 +15,17 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const ENV_FILE = path.join(ROOT, ".env.deploy");
+/**
+ * Credential files, in precedence order (later wins).
+ *
+ * `.env` is where this project's token actually lives — it is the file the repo ships an example
+ * for (`.env.deploy.example`) and the one the local setup already had. Reading only `.env.deploy`
+ * meant `npm run deploy` silently fell back to wrangler's own stored session even though a valid
+ * token was sitting in the working tree, which is why deployments were being run by hand.
+ *
+ * `.env.deploy` still wins when present, so an operator can override without touching `.env`.
+ */
+const ENV_FILES = [path.join(ROOT, ".env"), path.join(ROOT, ".env.deploy")];
 
 function parseEnvFile(file) {
   const out = {};
@@ -34,7 +44,10 @@ function parseEnvFile(file) {
   return out;
 }
 
-const fileEnv = fs.existsSync(ENV_FILE) ? parseEnvFile(ENV_FILE) : {};
+const fileEnv = ENV_FILES.reduce(
+  (acc, file) => (fs.existsSync(file) ? { ...acc, ...parseEnvFile(file) } : acc),
+  {}
+);
 const env = { ...process.env, ...fileEnv };
 const dryRun = process.argv.includes("--dry-run");
 
@@ -45,9 +58,9 @@ const dryRun = process.argv.includes("--dry-run");
 if (!env.CLOUDFLARE_API_TOKEN) {
   console.log(
     [
-      "\u2139\ufe0f  CLOUDFLARE_API_TOKEN not found in the environment or .env.deploy.",
+      "\u2139\ufe0f  CLOUDFLARE_API_TOKEN not found in the environment, .env or .env.deploy.",
       "   Falling back to wrangler's own stored authentication.",
-      "   If this fails, create ./.env.deploy (git-ignored):",
+      "   If this fails, add it to ./.env (git-ignored) or ./.env.deploy:",
       "     CLOUDFLARE_API_TOKEN=<your token>",
       "     CLOUDFLARE_ACCOUNT_ID=<your account id>   # optional but recommended",
       "   See .env.deploy.example.",

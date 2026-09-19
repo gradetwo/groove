@@ -838,38 +838,49 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     case "SET_STEP_COUNT": {
       const targetSteps = action.count;
       const tracks = state.pattern.tracks.map((t) => {
-        let steps = [...t.steps];
-        let velocity = t.velocity ? [...t.velocity] : Array(steps.length).fill(100);
-        let pitch = t.pitch ? [...t.pitch] : Array(steps.length).fill(null);
-        let gate = t.gate ? [...t.gate] : Array(steps.length).fill(0.8);
-        let ratchet = t.ratchet ? [...t.ratchet] : Array(steps.length).fill(1);
-        let probability = t.probability ? [...t.probability] : Array(steps.length).fill(100);
+        const steps = [...t.steps];
+        const velocity = t.velocity ? [...t.velocity] : Array(steps.length).fill(100);
+        const pitch = t.pitch ? [...t.pitch] : Array(steps.length).fill(null);
+        const gate = t.gate ? [...t.gate] : Array(steps.length).fill(0.8);
+        const ratchet = t.ratchet ? [...t.ratchet] : Array(steps.length).fill(1);
+        const probability = t.probability ? [...t.probability] : Array(steps.length).fill(100);
 
-        if (targetSteps > steps.length) {
-          const diff = targetSteps - steps.length;
-          steps = [...steps, ...steps.slice(0, diff)];
-          velocity = [...velocity, ...velocity.slice(0, diff)];
-          pitch = [...pitch, ...pitch.slice(0, diff)];
-          gate = [...gate, ...gate.slice(0, diff)];
-          ratchet = [...ratchet, ...ratchet.slice(0, diff)];
-          probability = [...probability, ...probability.slice(0, diff)];
-        } else if (targetSteps < steps.length) {
-          steps = steps.slice(0, targetSteps);
-          velocity = velocity.slice(0, targetSteps);
-          pitch = pitch.slice(0, targetSteps);
-          gate = gate.slice(0, targetSteps);
-          ratchet = ratchet.slice(0, targetSteps);
-          probability = probability.slice(0, targetSteps);
+        if (targetSteps <= steps.length) {
+          const cut = <T,>(arr: T[]) => arr.slice(0, targetSteps);
+          return {
+            ...t,
+            steps: cut(steps),
+            velocity: cut(velocity),
+            pitch: cut(pitch),
+            gate: cut(gate),
+            ratchet: cut(ratchet),
+            probability: cut(probability),
+            trackLength: targetSteps,
+          };
         }
+
+        /**
+         * Growing tiles the existing pattern instead of padding with silence.
+         *
+         * This used to be `[...steps, ...steps.slice(0, diff)]`, which only works while `diff`
+         * is smaller than the source: 16 → 128 asked for a 112-step tail from a 16-step array,
+         * got 16, and produced a 32-step grid whose upper three quarters were empty. The
+         * user-visible result was "选择 64/128 步后大半格子是死的，导出也大半是静音".
+         * Repeating by modulo reaches the target for every source and target length.
+         */
+        const tile = <T,>(arr: T[], fill: T): T[] => {
+          const cycle = arr.length > 0 ? arr : [fill];
+          return Array.from({ length: targetSteps }, (_, i) => cycle[i % cycle.length]);
+        };
 
         return {
           ...t,
-          steps,
-          velocity,
-          pitch,
-          gate,
-          ratchet,
-          probability,
+          steps: tile(steps, 0),
+          velocity: tile(velocity, 100),
+          pitch: tile(pitch, null),
+          gate: tile(gate, 0.8),
+          ratchet: tile(ratchet, 1),
+          probability: tile(probability, 100),
           trackLength: targetSteps,
         };
       });

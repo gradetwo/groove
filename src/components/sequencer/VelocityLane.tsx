@@ -409,8 +409,10 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
 
       {/* Main Interactive Parameter Slider Columns */}
       <div className="pt-3 flex items-center gap-3 overflow-x-auto min-w-max pb-1">
-        {/* Left Track Label Space aligned with matrix headers */}
-        <div className="w-[126px] sm:w-[172px] flex-none text-right pr-2 sm:pr-3 font-mono text-[11px] text-[#6b7280]">
+        {/* Left Track Label Space aligned with matrix headers. Shares `--trk-head-w` with
+            the ruler label and the track headers; it was hardcoded to 126 px, a third
+            disagreeing width for the same frozen column. */}
+        <div className="w-[var(--trk-head-w)] flex-none text-right pr-2 sm:pr-3 font-mono text-[11px] text-[#6b7280]">
           <span className="font-bold text-text">{meta.name}</span>
           <span className="block text-[10px] text-accent uppercase font-bold">
             {activeDim}

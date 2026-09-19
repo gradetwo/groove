@@ -91,8 +91,16 @@ describe("Clean Mobile Workspace & Virtual Keyboard FAB", { timeout: 15000 }, ()
     await waitFor(() => {
       // Redundant bottom bar is removed
       expect(screen.queryByTestId("mobile-bottom-control-bar")).toBeNull();
-      // Keyboard FAB is cleanly available
-      expect(screen.getByTestId("virtual-keyboard-fab")).toBeInTheDocument();
+      /**
+       * The keyboard FAB exists in the DOM but is **phone-only** (`sm:hidden`).
+       *
+       * jsdom has no layout engine, so the media query cannot be evaluated here — the class is the
+       * testable statement of intent, and the device matrix verifies the real geometry. On a
+       * desktop the button used to float over the sequencer while the keyboard was already one tap
+       * away in the toolbar and on ⌥K, so it was pure occlusion.
+       */
+      const fab = screen.getByTestId("virtual-keyboard-fab");
+      expect(fab.className).toMatch(/sm:hidden/);
     });
   });
 

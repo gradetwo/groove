@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { InstrumentPicker } from "./InstrumentPicker";
 import { InsertFlowStrip, type InsertStageId } from "./InsertFlowStrip";
 import { CompressorCurveView, DriveCurveView, EqCurveView } from "./insertCurveViews";
-import { GripHorizontal, Music2, X } from "lucide-react";
+import { GripHorizontal, Music2, Play, X } from "lucide-react";
 import type { MixTrackId } from "../../data/genreMix";
 import {
   INSERT_COMP_MAX_ATTACK_SEC,
@@ -72,6 +72,12 @@ export interface TrackInspectorProps {
   instrumentOptions: readonly string[];
   /** Opens the piano roll for this track (item ⑦). Optional: the console omits it. */
   onOpenPianoRoll?: () => void;
+  /**
+   * Previews this track's current timbre. The header's ▶ button is desktop-only now, so this
+   * is the phone's only route to it — without this prop the phone would lose auditioning.
+   * Optional: the console omits it.
+   */
+  onAudition?: () => void;
   /** Context sample rate for the curve views; the filters' shapes barely move with it. */
   sampleRate?: number;
   /** Reads the live gain reduction (dB, ≤ 0) for the compressor meter. */
@@ -308,6 +314,7 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
   onBypassInsert,
   onClose,
   onOpenPianoRoll,
+  onAudition,
   sampleRate = 48000,
   getGainReductionDb,
   isPlaying = false,
@@ -439,6 +446,18 @@ export const TrackInspector: React.FC<TrackInspectorProps> = ({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {/* Always visible: muting or soloing must not require finding the right tab. */}
+          {onAudition && (
+            <button
+              type="button"
+              onClick={onAudition}
+              aria-label={`${trackName} ${t("track_audition_title")}`}
+              title={t("track_audition_title")}
+              data-testid="track-inspector-audition"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-[#15171d] text-text-sub transition-colors hover:text-accent"
+            >
+              <Play className="h-3 w-3 fill-current" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onMuteToggle}

@@ -36,9 +36,11 @@ export const Ruler = memo<RulerProps>(function Ruler({
   onDuplicateBar1,
 }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 pb-2 pt-1 border-b border-line-subtle mb-2 min-w-max">
-      {/* Left Label aligned with track headers - Sticky Left */}
-      <div className="sticky left-0 z-30 bg-panel flex-none w-[138px] sm:w-[172px] pr-1.5 sm:pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-text-dim uppercase select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
+    <div className="flex items-center gap-[var(--trk-head-gap)] pb-2 pt-1 border-b border-line-subtle mb-2 min-w-max">
+      {/* Left Label aligned with track headers - Sticky Left. `--trk-head-w` is shared
+          with TrackRow and VelocityLane; before, this was 138 px against the rows' 142 px,
+          so this `z-30` column overlapped the `z-20` track headers by 4 px. */}
+      <div className="sticky left-0 z-30 bg-panel flex-none w-[var(--trk-head-w)] pr-1.5 sm:pr-2 flex items-center justify-between font-['JetBrains_Mono'] text-[9px] tracking-[0.14em] text-text-dim uppercase select-none border-r border-line-subtle shadow-[4px_0_12px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-1">
           <span className="font-bold text-accent">{stepCount} STEPS</span>
           {loopRange && (

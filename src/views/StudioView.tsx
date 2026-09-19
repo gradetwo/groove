@@ -795,6 +795,21 @@ export const StudioView: React.FC<StudioViewProps> = ({
   );
 
   /**
+   * Audition the track the inspector is showing.
+   *
+   * Memoised on purpose: the inspector re-renders on every pattern change, and an inline arrow
+   * here would hand it a new callback identity each time and defeat its memoization.
+   */
+  const handleAuditionInspectorTrack = useCallback(
+    () => {
+      const idx = inspectorTrackIdx;
+      if (idx === null) return;
+      handleAudition(idx, patternRef.current.tracks[idx]?.name ?? "");
+    },
+    [handleAudition, inspectorTrackIdx]
+  );
+
+  /**
    * Audition a finished voicing as one chord.
    *
    * The single-note path above is wrong for a `chords` track: the engine voices whatever note it
@@ -1100,6 +1115,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
       {inspectorTrackIdx !== null && pattern.tracks[inspectorTrackIdx] && (
         <TrackInspector
           onOpenPianoRoll={() => handleOpenPianoRoll(inspectorTrackIdx)}
+          // The header's ▶ audition button is desktop-only now (it did not fit the 142 px
+          // phone column), so the inspector is the phone's route to it.
+          onAudition={handleAuditionInspectorTrack}
           // Item ①: the effects page draws curves from the real context rate and meters the
           // compressor the strip is actually running.
           sampleRate={engineRef.current?.getAudioContext()?.sampleRate ?? 48000}
@@ -1192,7 +1210,14 @@ export const StudioView: React.FC<StudioViewProps> = ({
         isZh={isZh}
       />
 
-      {/* Floating Action Button (FAB) for Virtual Keyboard */}
+      {/**
+        * Floating keyboard button — phones only.
+        *
+        * On a phone the toolbar is replaced by the compact transport bar, so the floating button is
+        * the only always-visible route to the keyboard and it earns its place. On a desktop it sat
+        * on top of the sequencer in the bottom-right corner while the keyboard was already one tap
+        * away in the toolbar (and on ⌥K), so it was pure occlusion.
+        */}
       {showKeyboardFab && !isKeyboardMode && (
         <button
           type="button"
@@ -1200,7 +1225,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           title={isZh ? "打开虚拟键盘 (⌥K)" : "Open Virtual Keyboard (⌥K)"}
           aria-label={isZh ? "打开虚拟键盘" : "Open Virtual Keyboard"}
           data-testid="virtual-keyboard-fab"
-          className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-[9990] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-accent text-black shadow-[0_8px_24px_rgba(245,183,61,0.45),0_2px_8px_rgba(0,0,0,0.5)] transition-all duration-200 hover:scale-110 hover:shadow-[0_12px_32px_rgba(245,183,61,0.65)] active:scale-95 active:translate-y-0.5 pointer-events-auto border-2 border-white/20"
+          className="fixed bottom-5 right-4 sm:hidden z-[9990] flex h-12 w-12 items-center justify-center rounded-full bg-accent text-black shadow-[0_8px_24px_rgba(245,183,61,0.45),0_2px_8px_rgba(0,0,0,0.5)] transition-all duration-200 active:scale-95 pointer-events-auto border-2 border-white/20"
           style={{ zIndex: 9990 }}
         >
           <Keyboard className="h-6 w-6 stroke-[2.2]" />

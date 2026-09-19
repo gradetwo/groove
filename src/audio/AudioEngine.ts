@@ -24,7 +24,7 @@ import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
 import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
-import { computeCatchUp } from "./schedulerMath";
+import { computeCatchUp, visualLeadSeconds } from "./schedulerMath";
 import { resolveRatchet } from "./noteEvents";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
@@ -1541,8 +1541,21 @@ export class AudioEngine {
       }
 
       const now = this.ctx.currentTime;
-      // Exact alignment: playhead advances when the audio block starts playing
-      const visualLeadSec = 0.0;
+      /**
+       * "The playhead is early" (item 7): a voice scheduled at `t` is *rendered* at `t` but
+       * reaches the speakers at `t + outputLatency`, so advancing the playhead the instant
+       * `currentTime` passes the scheduled time puts the picture ahead of the sound. The fix
+       * is to compare against a time that has already reached the listener.
+       *
+       * The compensation is clamped to half a step, and it is 0 wherever the browser reports
+       * no latency — which is why the tests and the offline bounce are unaffected.
+       */
+      const visualLeadSec = visualLeadSeconds({
+        outputLatencySec: this.getOutputLatency() / 1000,
+        limiterLatencySec: this.getMasterLimiterLatencySeconds(),
+        compensationMs: this.latencyCompensationMs,
+        stepDur: this.getStepDuration(),
+      });
 
       let latestStep = -1;
       let latestTime = 0;

@@ -1096,3 +1096,163 @@ node scripts/check_timbre_spread.mjs      # 音色基线也需重录（母带链
 5. **限幅器起音平滑**：三次尝试后回退，需离线迭代。
 6. **§4 上手改造**：`toolbarTiers` 接线、`layout.density` 落地、首屏单一动作、静默 no-op。
 7. **手机端底部双层栏**（标签栏 53px + 走带条 59px = 664px 视口的 17%）。
+
+---
+
+# 附录 F — 本轮交付（v2.0.57，七项直接诉求）
+
+> 这一轮的输入是七条具体反馈，不是规划。每条都先**测量**再改，改完再**测量一次**；
+> 下面每条都附上支撑它的命令与数字，凡是本机测不出来的（真机听感、真实耳机延迟）一律标注。
+
+## F.1 七项的处置与证据
+
+| # | 诉求 | 根因（实测） | 处置 | 证据 |
+|---|---|---|---|---|
+| ① | 发布要用 `wrangler deploy` | `scripts/deploy.mjs` 只读 `.env.deploy`，凭据实际在 `.env` | 两个文件按序合并读取 | `node scripts/deploy.mjs --dry-run` → `Read 67 files from …/dist`，exit 0 |
+| ② | 电脑 Chrome 不能两指上下滑动 | 根元素 `touch-action: manipulation` 关掉了整页的滚动手势 | 根元素移除，改为在 `button/[role=button]/[role=gridcell]/select/input[type=range]` 上按元素声明 | 逐元素断言 |
+| ③ | 手机端去掉又丑又遮挡的按钮 | 桌面悬浮键盘 FAB 在手机上仍是 `fixed bottom-5 right-4` | 类名加 `sm:hidden`（骨架保留，E2E 仍能断言其存在） | `virtualKeyboardFab.test.tsx` 6 项通过 |
+| ④ | 打开首页停在页面中间 | 钢琴卷帘挂载时执行 `scrollIntoView({block:"nearest"})` | 移除该 effect | 首屏位置测量 |
+| ⑤ | 虚拟键盘按键点击无视觉变化 | 底部按键高亮依赖一次瞬时 class，快速点击时被同帧覆盖 | `KEYBED_MIN_HIGHLIGHT_MS = 160` 最短保持 | `pianoRollLane` 测试 |
+| ⑥ | 轨道头区域乱 + 和弦轨道被遮挡 | 见 §F.2 | 见 §F.2 | `diagnose_track_alignment.mjs`：四个端全对齐 |
+| ⑦ | 播放卡顿 / 音画不同步 | 见 §F.3 | 见 §F.3 | `measure_playback_smoothness.mjs` |
+
+## F.2 轨道列：一个宽度，四个端全对齐
+
+**这是「和弦轨道被遮挡」的真正原因，而且和和弦本身无关。** 同一个冻结列被四个地方各自写死：
+
+| 位置 | 原宽度 | 层级 |
+|---|---|---|
+| `Ruler.tsx` 左侧标签 | **138px**（sm: 172px） | `z-30` |
+| `TrackRow.tsx` 轨道头 | **142px**（sm: 176px） | `z-20` |
+| `VelocityLane.tsx` 左侧标签 | **126px**（sm: 172px） | — |
+| `index.css` 滚动条留白 | **126px**（sm: 172px） | — |
+
+标尺那列 `z-30` 比轨道头 `z-20` 高，于是**窄 4px 的标尺压在宽的轨道头上**——任何轨道都被压，
+但和弦轨道头上多了「和弦长度」按钮，视觉上最明显，所以被报成「和弦轨道有遮挡」。
+同时两处 gap 不一致（标尺 `sm:gap-3`、轨道行 `gap-2 sm:gap-3`），
+导致**手机端步号比它标注的格子偏移 4px**。
+
+处置：`--trk-head-w`（142px / sm:176px）与 `--trk-head-gap`（0.75rem / sm:1rem）单点定义，
+四处引用；并加不变量测试禁止任何硬编码宽度回归。
+
+```
+### desktop-1440   ruler w=176 left=417  row w=176 left=417  first step 609 = 609   ALIGNED
+### iPhone14-竖屏  ruler w=142 left=25   row w=142 left=25   first step 179 = 179   ALIGNED
+### iPad11-竖屏    ruler w=176 left=45   row w=176 left=45   first step 237 = 237   ALIGNED
+### iPhone14-横屏  ruler w=176 left=45   row w=176 left=45   first step 237 = 237   ALIGNED
+```
+
+**第二层问题是轨道头自己溢出。** 142px 的列里放了十一个控件，实测内容宽 **241px**：
+
+```
+head: w=142  overflow=hidden  scrollW=241  clientW=138
+  div  w=182 right=243.5   <== OVERFLOWS HEAD     ← 试听/长度/静音/独奏/滑杆
+  div  w=150 right=197     <== OVERFLOWS HEAD     ← 力度/卷帘/左移/右移
+```
+
+列是 `sticky` + `overflow:hidden`，所以溢出部分被裁掉并**压在步进格上方**：
+点静音/独奏实际是在切步进格。手机上 36px 触摸目标下，十一个控件需要 396px，
+这列只有 128px 可用——**这不是调参能解决的，是「手机端不提供做不好的功能」的另一面**。
+
+处置：手机只留音符身份（折叠/类型/色条/电平/名称）与**静音、独奏**（演奏时最需要当场切换），
+其余（试听、和弦长度、滑杆、力度、卷帘、左右移、智能填充、清空、音量、声像）交给每轨控制台——
+它们本来就在那里。**试听钮补进控制台头部**，所以手机端没有丢功能。
+
+一个值得记下的坑：**已有的 `hidden md:flex` 标记并没有生效**。元素自己的 `flex`
+与 Tailwind 的 `hidden` 同优先级，最终由 Tailwind 的输出顺序决定——所以必须用真正的
+`display: none !important`（`.trk-head-desktop-only`）。两处溢出按钮本来就带着
+`hidden md:flex`，这解释了为什么缺陷能存活。
+
+## F.3 播放：卡顿来源与音画对齐
+
+### 已实测：主线程几乎没有在算
+
+5 秒播放，三个端：
+
+| 端 | 帧 p50 | 帧 p95 | 最差 | >50ms | 长任务 | 步进速率 |
+|---|---|---|---|---|---|---|
+| 桌面 1440 | 16.7ms | 21.5ms | 39.3ms | 0 | 0 | 8.2 步/秒 |
+| 手机竖屏 | 16.6ms | 20.3ms | 23.9ms | 0 | 0 | 8.2 步/秒 |
+| 手机横屏 | 16.7ms | 20.7ms | 54.6ms | 1 | 0 | 8.28 步/秒 |
+
+124 BPM 4/4 的 16 分音符理论值是 **8.27 步/秒** —— 实测 8.2，**音画同相**。
+
+### 唯一能归因到代码的来源：自动跟随的 smooth 滚动
+
+自动跟随默认开启，且**每一步**都调 `scrollTo({behavior:"smooth"})`。
+浏览器在动画进行中收到新的 smooth 请求会**取消并重启**，于是滚动器永远在动画、永不落定，
+每秒约 8 次——为了几像素的位移。改为增量步进直接定位，只在循环回到开头时保留平滑
+（那才是值得展示的一次移动）。
+
+### 深挖：尖峰不在 JS 里（四次独立探针一致）
+
+`scripts/diagnose_playback_stall.mjs` 用 CDP 采了 CPU profile、DevTools trace、
+`long-animation-frame` 与 `localStorage` 写入归属，结论和「某段代码在算」相反：
+
+| 探针 | 结果 |
+|---|---|
+| CPU profile（6 秒） | 加权窗口 8083ms，其中 idle **7353ms**；最重的非空转项 `requestAnimationFrame` 8.9ms、`fillRect` 4.7ms、`H`(index) 4.7ms、GC 2.2ms |
+| DevTools trace（最干净的一次） | `RunTask` 79 个、合计 **5.5ms**，最坏单次 **2.3ms** |
+| long-animation-frame | 报出 17 个 >50ms 帧，blocking 被归给 `st @ vendor-react`（单帧自报 656ms） |
+| localStorage 写入归属 | 播放窗口内 **0 次**写入（`innerSerialize`/`serialize` 合计 <1ms，不是病灶） |
+
+`st @ vendor-react` 单帧自报 blocking 656ms，而同一函数在 CPU 采样里自用仅零点几毫秒——
+两者不可能同时成立，所以 LAF 的脚本归因在这里不可采信（它给的是「该帧栈上出现过的脚本集」，不是真正的耗时者）。
+**可以确证的只有一句：JS 侧没有热路径。** 残留的单帧 130–370ms 尖峰来自浏览器内部/合成与宿主机 I/O：
+本机 `ps` 里没有任何残留 Chromium（`pgrep -c chrome` 为 0），而 `uptime` 的负载来自 `iou_exit` 与 `btrfs-endio`
+这两个内核 I/O worker —— 也就是这块机器本身在存储 I/O 上阻塞。
+
+标 [已复现] 的是「没有 JS 热路径」与「滚动事件降到每 6 秒 1–3 次」；
+标 [未验证] 的是尖峰的确切成因（需要一台非 I/O 受限的机器复测）。**环境噪声不写成修复。**
+### 音画对齐：播放头此前系统性偏早
+
+原实现在 `ctx.currentTime` 越过 `stepQueue[0].time` 时推进播放头，注释写着
+「Exact alignment: playhead advances when the audio block starts playing」。
+但 **`currentTime` 是渲染时间，不是到达扬声器的时间**：排在 `t` 的音在 `t + outputLatency`
+才被听到。所以画面早于声音，差值就是整条输出链的延迟。
+
+处置（`visualLeadSeconds`，纯函数、可单测）：
+`-(outputLatency + 限幅器前瞻 + 用户补偿)`，**封顶半步**，
+且延迟为 0 时结果精确为 0——所以离线导出与既有测试不受影响。
+
+本机 headless Chrome 实测 `baseLatency = 10.67ms`、`outputLatency = 0`，
+即修正量约 10–15ms（不足一帧）。**真机上蓝牙耳机/慢接口可达 150–300ms，那才是这条修复的价值**；
+标 [未验证]，本机测不到。封顶逻辑保证即使延迟异常也不会退到显示上一步。
+
+### 新增的测量工具
+
+- `scripts/measure_playback_smoothness.mjs` —— 帧间隔分布、长任务、步进速率 vs 理论速率。
+- `scripts/diagnose_playback_stall.mjs` —— CDP CPU 采样 + DevTools trace + long-animation-frame + localStorage 写入归属，用来区分「代码在算」与「机器在等 I/O」。
+- `scripts/diagnose_track_header.mjs` —— 轨道头逐元素几何与溢出链。
+- `scripts/diagnose_track_alignment.mjs` —— 冻结列宽度与首列 x 坐标对齐。
+
+## F.4 顺带修掉的正确性缺陷（计划 ③）
+
+`SET_STEP_COUNT` 用 `steps.slice(0, diff)` 追加：`diff` 只在**小于源数组长度**时才够用。
+16 → 128 时 `diff = 112 > 16`，六个并行数组只长到 **32**，后四分之三永远空着
+（导出也大半是静音）。改为按模重复（tiling）。
+
+新增 `patternLengthGrowth.test.ts`（5 项），并且**先用旧代码反向验证过它确实失败**——
+否则测试只是在描述实现，不是在守住行为。
+
+## F.5 门禁与发行
+
+- 单元测试 **1795 项全绿**（156 个文件；本轮新增 21 项：播放头延迟数学 8、冻结列不变量 8、增长不截断 5）。
+- E2E **7/7 设备目标通过**（`dist` 新鲜度守卫在位）。
+- `scripts/deploy.mjs` 凭据核对通过，`--dry-run` 读取 67 个资源文件。
+
+### F.5.1 E2E 的连带修改（重要）
+
+打开每轨控制台的那一步原本点 `track-inspector-open-0`——一个 16×16、且**随网格横向滚动**的按钮，
+而它现在是手机端的桌面专用控件。改为点击**轨道头本身**：它是七端都可见的唯一控件，
+142px 宽、钉在左边缘，且触发的是同一个 inspector。同时给 `clickVerified` 加了 `scrollInline` 选项——
+对 `sticky left-0` 的列做 `inline:"center"` 会让滚动器去居中被钉住的盒子，纯属白滚。
+
+## F.6 仍未做（登记，避免误以为已完成）
+
+音色侧的大项（附录 E.5 前四条）一个没动：**unison/立体声展开、波表 `createPeriodicWave`、
+鼓组采样层与每击轮转、立体声完整性**。它们各自需要新的合成机制，不是调参。
+另有 §4 上手改造与手机端底部双层栏（标签栏 53px + 走带条 59px = 664px 视口的 17%）。
+
+**一条测试基建的缺口**：`check-timbre.mjs` / `check-loudness-spread.mjs` 读的是**已提交的报告**，
+从不重新渲染，所以交付前必须重录基线，否则门禁会脱节（本仓库已有这条规矩，此处只是重申）。

@@ -81,19 +81,39 @@ describe("mobile zoom and gesture guards", () => {
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const css = fs.readFileSync(path.join(root, "src/index.css"), "utf8");
 
-  it("does not allow viewport zoom via the meta tag", () => {
+  it("blocks viewport zoom at the source", () => {
     const meta = html.match(/<meta\s+name="viewport"\s+content="([^"]+)"/)?.[1] ?? "";
     expect(meta).toContain("width=device-width");
     expect(meta).toContain("initial-scale=1");
-    // `maximum-scale` / `user-scalable=yes` re-enable pinch zoom, which on iOS also brings back
-    // the magnifier loupe. The app is a control surface, not a document to be zoomed.
-    expect(meta).not.toMatch(/maximum-scale/i);
-    expect(meta).not.toMatch(/user-scalable\s*=\s*yes/i);
+    /**
+     * `user-scalable=no` + `maximum-scale=1` is the deliberate choice, and it is the *second*
+     * attempt at this.
+     *
+     * The first removed `maximum-scale` on the theory that its presence enabled zoom. Removing it
+     * did not stop pinch — it merely stopped *capping* it — so the phone could still be zoomed by
+     * accident mid-gesture, and the magnifier loupe over a step grid (the original complaint) was
+     * still reachable. This is a control surface, not a document; the only correct value is none.
+     */
+    expect(meta).toMatch(/maximum-scale=1(\.0)?/);
+    expect(meta).toMatch(/user-scalable=no/);
   });
 
-  it("removes the double-tap zoom and iOS callout globally", () => {
+  it("removes the double-tap zoom on controls and the iOS callout globally", () => {
     expect(css).toMatch(/touch-action:\s*manipulation/);
     expect(css).toMatch(/-webkit-touch-callout:\s*none/);
+  });
+
+  it("does NOT put touch-action on the root, which broke trackpad scrolling", () => {
+    /**
+     * Chrome honours `touch-action` on touch-capable desktop hardware, so a root-level
+     * `touch-action: manipulation` disabled two-finger trackpad scrolling on an ordinary laptop.
+     * It is applied per-control instead (see the rule right after the body block), which keeps the
+     * double-tap suppression where it matters without taking the page's scroll gestures away.
+     */
+    const bodyBlock = css.slice(css.indexOf("html,"), css.indexOf("/* Explicitly allow selection"));
+    expect(bodyBlock).not.toMatch(/touch-action/);
+    // ...and it is still applied to controls.
+    expect(css).toMatch(/button,[\s\S]{0,120}touch-action:\s*manipulation/);
   });
 
   it("disables overscroll bounce and pull-to-refresh at the root", () => {

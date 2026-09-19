@@ -8,7 +8,15 @@
       cells means every slightly-slow tap pops a magnifying glass over the thing being aimed at.
       `viewport-fit=cover` stays so the safe areas around a notch remain usable.
     -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      `user-scalable=no` blocks pinch zoom outright. `maximum-scale` was removed first (it had been
+      re-enabling zoom, which on iOS also restores the magnifier loupe), but removing it left pinch
+      available, so the phone could still be zoomed by accident mid-gesture. This is a control
+      surface, not a document: zoom is never wanted and the accidental magnifier over a step grid is
+      the specific complaint. `viewport-fit=cover` stays so the notch and home-indicator areas are
+      usable.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <!-- Native-app feel: themed status bar area and no automatic phone-number linkification. -->
     <meta name="theme-color" content="#0a0b0e" />
     <meta name="mobile-web-app-capable" content="yes" />

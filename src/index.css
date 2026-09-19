@@ -47,20 +47,29 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     /**
-     * Native-app gesture model.
-     *
-     * `touch-action: manipulation` removes the browser's double-tap-to-zoom while keeping pan and
-     * pinch available to elements that opt into them. Without it, tapping two step cells in quick
-     * succession (the normal way to program a beat) is read as a double-tap and zooms the whole
-     * page — the single most "this is a web page, not an app" behaviour on the grid.
-     *
      * `overscroll-behavior: none` stops the rubber-band bounce and, more importantly, the
      * pull-to-refresh that a downward drag on the step grid otherwise triggers.
+     *
+     * `touch-action: manipulation` used to be here as well, to stop two quick taps on a step cell
+     * being read as a double-tap zoom. It is **not** applied at the root any more: Chrome honours
+     * `touch-action` on touch-capable desktop hardware too, and `manipulation` there disabled
+     * two-finger scrolling with a trackpad — a regression that broke the most basic page gesture.
+     * Double-tap zoom is now prevented by the viewport's `user-scalable=no` (which also removes the
+     * iOS magnifier loupe), and `manipulation` is applied per-element to the interactive controls
+     * that need it, where it cannot affect page scrolling.
      */
-    touch-action: manipulation;
     overscroll-behavior: none;
     overscroll-behavior-x: none;
     overscroll-behavior-y: none;
+  }
+
+  /* Controls keep the double-tap-zoom suppression; the page keeps its scroll gestures. */
+  button,
+  [role="button"],
+  [role="gridcell"],
+  select,
+  input[type="range"] {
+    touch-action: manipulation;
   }
 
   html {
@@ -174,12 +183,9 @@ input[type=range]::-moz-range-thumb {
 .custom-sequencer-scroll::-webkit-scrollbar-track {
   background: #0a0b0e;
   border-radius: 4px;
-  margin-left: 126px; /* aligns with compact mobile track header */
-}
-@media (min-width: 640px) {
-  .custom-sequencer-scroll::-webkit-scrollbar-track {
-    margin-left: 172px; /* aligns with full desktop track header */
-  }
+  /* Shares `--trk-head-w` with the ruler label and the track headers instead of the
+     126 px it used to hardcode — a fourth disagreeing width for the same column. */
+  margin-left: var(--trk-head-w);
 }
 .custom-sequencer-scroll::-webkit-scrollbar-thumb {
   background: #323642;
@@ -229,6 +235,24 @@ input[type=range]::-moz-range-thumb {
  */
 :root {
   --mobile-tab-bar-h: 0px;
+  /* One source of truth for the frozen left column. The ruler label, the track
+     headers and the velocity lane all pin themselves to the left edge of the step
+     grid; if they disagree by even 4 px, the narrower sticky column of one paints
+     over the wider column of the other. They were 138 / 142 / 126 px at the same
+     time, and the ruler's `z-30` painted over the chords header at `z-20` — the
+     chord-track occlusion. Defined once here so the three cannot drift again. */
+  --trk-head-w: 142px;
+  /* The gap between that column and the first step column. Must match too: the
+     ruler used `sm:gap-3` while the rows used `gap-2 sm:gap-3`, which shifted the
+     step badges 4 px away from the cells they label on phones. */
+  --trk-head-gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --trk-head-w: 176px;
+    --trk-head-gap: 1rem;
+  }
 }
 
 @media (max-width: 767px) {
@@ -241,6 +265,35 @@ input[type=range]::-moz-range-thumb {
   overscroll-behavior-x: contain !important;
   overscroll-behavior-y: auto !important;
   -webkit-overflow-scrolling: touch;
+}
+
+/**
+ * Desktop-only controls inside the frozen track header.
+ *
+ * The header column is a fixed 142 px (phone) / 176 px (desktop) and it is `sticky`, so
+ * anything that escapes it is painted over the step grid and no longer hit-testable. It
+ * held eleven controls and needed 241 px on a phone: mute, solo and the inspector button
+ * all landed on top of step cells, so tapping them toggled steps instead.
+ *
+ * On a phone nobody can hit a 16 px target anyway, and the per-track console already owns
+ * mixer, insert chain and timbre — plus mute and solo in its own header. So the phone
+ * keeps the row identity (fold, type, colour, meter, name) and drops the rest, while the
+ * compact grid controls that *are* mobile-sized (mute, solo) stay inline.
+ *
+ * This is a real `display: none` rather than a Tailwind `hidden sm:flex`, because a
+ * conflicting `flex` in the element's own class list wins over `hidden` regardless of
+ * specificity — which is how the overflow survived the `hidden md:flex` markers already
+ * present on two of these buttons.
+ */
+@media (max-width: 639px) {
+  .trk-head-desktop-only {
+    display: none !important;
+  }
+  /* The volume/pan group and the shift/reorder cluster. Volume and pan are in the
+     inspector's mix tab; shift and reorder are desktop editing tools. */
+  .trk-head-desktop-group {
+    display: none !important;
+  }
 }
 
 /* 44x44 Real Minimum Touch Target for WCAG AAA & iOS HIG (P2-21: No overlapping ::after) */

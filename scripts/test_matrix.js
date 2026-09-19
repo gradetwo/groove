@@ -377,7 +377,7 @@ async function openFloatedConsole(page) {
   return "mobile";
 }
 
-async function clickVerified(page, selector, { timeoutMs = 10000, pressMs = 60 } = {}) {
+async function clickVerified(page, selector, { timeoutMs = 10000, pressMs = 60, scrollInline = true } = {}) {
   const deadline = Date.now() + timeoutMs;
   let lastReason = "unknown";
   while (Date.now() < deadline) {
@@ -396,13 +396,15 @@ async function clickVerified(page, selector, { timeoutMs = 10000, pressMs = 60 }
       }
     }, selector);
 
-    const box = await page.evaluate((sel) => {
+    const box = await page.evaluate(({ sel, inline }) => {
       const el = document.querySelector(sel);
       if (!el) return null;
-      el.scrollIntoView({ block: "center", inline: "center" });
+      // `inline: "center"` on a `sticky left-0` column asks the scroller to centre a box that is
+      // pinned to the left edge, which scrolls the studio sideways for nothing.
+      el.scrollIntoView(inline ? { block: "center", inline: "center" } : { block: "center" });
       const r = el.getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height };
-    }, selector);
+    }, { sel: selector, inline: scrollInline });
 
     if (!box) {
       lastReason = `${selector} is not in the document`;
@@ -850,13 +852,13 @@ async function runTestOnTarget(target, baseUrl) {
     // a bottom sheet on phones, a full-height left dock on desktop — and that the timbre picker
     // can actually filter 115 names down to the one you want.
     /**
-     * `force: true` dispatches at the element's box without checking what is on top of it, and the
-     * inspector toggle is small — 20×20 on a phone, 16×16 on a landscape phone, inside a track row
-     * that is itself horizontally scrolled. `clickVerified` scrolls the target into view, waits for
-     * the layout to settle and proves the click was delivered, which is what makes this
-     * deterministic across the seven targets rather than only on the wide ones.
+     * Opened from the row header, which is the real gesture and the only control that is visible
+     * on every target: the phone column is 142 px and cannot hold the header's eleven controls, so
+     * all but mute and solo are desktop-only now (see `.trk-head-desktop-only`). The explicit
+     * sliders button was 16×16 px *and* scrolled with the grid; the header is 142 px wide, pinned
+     * to the left edge, and opens the same inspector.
      */
-    await clickVerified(page, "[data-testid='track-inspector-open-0']");
+    await clickVerified(page, "[data-testid='track-header-0']", { scrollInline: false });
     await page.waitForSelector("[data-testid='track-inspector']", { timeout: 15000 });
     const inspectorBox = await (await page.$("[data-testid='track-inspector']")).boundingBox();
     const viewport = page.viewportSize();

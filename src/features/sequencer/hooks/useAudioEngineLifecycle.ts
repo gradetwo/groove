@@ -171,16 +171,25 @@ export function useAudioEngineLifecycle({
         if (autoFollowPlayheadRef.current && matrixContainerRef.current) {
           const container = matrixContainerRef.current;
           if (container.scrollWidth > container.clientWidth) {
-            // Check loop wrap-around or restart from step 0
+            /**
+             * Only the loop wrap-around animates.
+             *
+             * Nudging the viewport every step used `behavior: "smooth"`, which starts a fresh
+             * animation on each of the ~8 steps per second. Each new call cancels the running
+             * animation mid-flight, so the scroller was permanently animating and never
+             * settled — a continuous main-thread cost behind the "playback stutters" report,
+             * for a movement that is only a few pixels. Stepping is a jump; the jump back to
+             * the top of the loop is the one move worth showing.
+             */
             if (step === 0 && lastStepRef.current > 0) {
               if (container.scrollLeft > 0) {
                 container.scrollTo({ left: 0, behavior: "smooth" });
               }
             } else if (pos.left + pos.width > container.scrollLeft + container.clientWidth - 24) {
               const target = Math.min(container.scrollWidth - container.clientWidth, Math.max(0, pos.left - 48));
-              container.scrollTo({ left: target, behavior: "smooth" });
+              container.scrollLeft = target;
             } else if (pos.left < container.scrollLeft) {
-              container.scrollTo({ left: Math.max(0, pos.left - 48), behavior: "smooth" });
+              container.scrollLeft = Math.max(0, pos.left - 48);
             }
           }
         }

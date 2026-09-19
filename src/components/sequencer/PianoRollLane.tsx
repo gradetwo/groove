@@ -539,9 +539,19 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     }
   }, [showExportMenu]);
 
+  /**
+   * Deliberately does NOT call `scrollIntoView` on mount.
+   *
+   * It used to, with `block: "nearest"`, to bring the editor into view when it opened. The effect
+   * is not scoped to this panel's own scroller: on a fresh page load the panel mounts while the
+   * document is still laying out, and the browser scrolls the *document* to satisfy the request —
+   * so opening the app landed the user in the middle of the sequencer instead of at the top of the
+   * page. Nothing here needs the document to move; the panel's own scrollers already position the
+   * editor, and the user arrives by tapping a control they can see.
+   */
   useEffect(() => {
-    const node = sectionRef.current;
-    if (node && typeof node.scrollIntoView === "function") node.scrollIntoView({ block: "nearest" });
+    // Intentionally empty: `sectionRef` is kept for callers that need the node, not for scrolling.
+    void sectionRef.current;
   }, []);
 
   useEffect(() => {
@@ -703,17 +713,43 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     };
   }, []);
 
+  /**
+   * Clears the keybed highlight, but never instantly.
+   *
+   * The highlight used to be set on `pointerdown` and cleared on the next `pointerup`, so an
+   * ordinary click set it and unset it inside one frame: React batched both updates and the key
+   * never visibly changed. The user's report was exactly that — "the virtual keyboard key visual
+   * never changes when clicked" — and the sound still played, which makes it worse: the app
+   * answers with audio and gives no visual acknowledgement at all.
+   *
+   * A short floor on how long the highlight stays is what makes a tap visible; `pressStartRef`
+   * records when the press began so a *hold* still ends exactly when the finger lifts.
+   */
+  const KEYBED_MIN_HIGHLIGHT_MS = 160;
+  const pressStartRef = useRef<number>(0);
+  const clearHighlightTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     const onGlobalPointerUp = () => {
-      setActiveAuditionMidi(null);
+      const elapsed = Date.now() - pressStartRef.current;
+      const remaining = Math.max(0, KEYBED_MIN_HIGHLIGHT_MS - elapsed);
+      if (clearHighlightTimerRef.current !== null) window.clearTimeout(clearHighlightTimerRef.current);
+      clearHighlightTimerRef.current = window.setTimeout(() => {
+        setActiveAuditionMidi(null);
+        clearHighlightTimerRef.current = null;
+      }, remaining);
     };
     window.addEventListener("pointerup", onGlobalPointerUp);
-    return () => window.removeEventListener("pointerup", onGlobalPointerUp);
+    return () => {
+      window.removeEventListener("pointerup", onGlobalPointerUp);
+      if (clearHighlightTimerRef.current !== null) window.clearTimeout(clearHighlightTimerRef.current);
+    };
   }, []);
 
 
   const handleKeybedPointerDown = (midi: number, e: React.PointerEvent<HTMLDivElement>) => {
     (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    pressStartRef.current = Date.now();
     setActiveAuditionMidi(midi);
     onAudition(activeTrackIdx, midi, 100, 0.45);
     if (isRecording) {
