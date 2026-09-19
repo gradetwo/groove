@@ -1931,73 +1931,53 @@ const bodyBlock = css.slice(css.indexOf("html,"), css.indexOf("/* Explicitly all
 并额外断言「与改动前字面量 1.15 的偏差 ≤ 0.65 × `HIT_VARIATION_MAX_DECAY`」。
 这样既钉住了「0.65 这个数还在、只是被乘了一个已知系数」，也不会因为它依赖默认位置而变得不可复现。
 
-## G.15 冻结轨道头与步进格子之间的空隙被侵入（v2.0.77 修）
+## G.15 冻结轨道头那一列必须「实心」（v2.0.77 起，v2.0.79 才算修对）
 
-用户报告：**连续播放时，轨道头旁边那块空间里会出现步进格子**，
-「要以刚进入时候轨道头和步进格子那个距离为标准，不能侵入下面这块空间」。
+用户报告两次：**连续播放时会侵入轨道头那块空间**，并且强调
+「**下方空间应该让用户感觉是实心的**，不能侵入」。
 
-### 实测（1440×900）
+### v2.0.77 只修了一半
 
-布局是：每行一个 flex row，`gap: var(--trk-head-gap)`，第一个子元素是
-`sticky left-0` 的轨道头。**这个 gap 在轨道头的盒子之外**，所以没有任何东西盖住它：
+第一次我只修了轨道头与网格之间那道 **16px 空隙**（`.trk-head-gap-cover`，见下），
+用户复测后说仍然侵入。原因是我把「空隙」当成了全部，而**同一列还有第二处漏光**：
 
-| 状态 | 轨道头右缘 | 格子首列 | 空隙里被画出的格子 |
-|---|---|---|---|
-| 刚进入（`scrollLeft = 0`） | 593px | 609px | **0**（16px 空隙干净） |
-| 播放中（`scrollLeft = 908`） | 593px | — | **8**（每轨一个） |
-| 播放中（`scrollLeft = 2706`） | 593px | — | **8** |
+| 漏光处 | 机制 | 实测 |
+|---|---|---|
+| ① 轨道头与网格之间的空隙 | `gap: var(--trk-head-gap)` 在 sticky 头**盒子之外**，无人覆盖 | 静止 0 个格子、播放中 8 个（每轨一个） |
+| ② 轨道头**上下两条边条** | 行高 85px、轨道头盒子只有 **73px**——差的那 6px×2 是**行自己的 padding**，任何子元素都够不到 | 用「列是否实心」的口径测：**3217/16256 采样点透出东西** |
 
-播放时走带条会自动横向滚动以跟随播放头，格子于是**从这个 16px 空隙里穿过去**，
-视觉上就是「轨道头和格子贴在一起了」。标尺（Ruler）的拍号徽章是同样的结构，同样会被穿。
+②是关键，也是我第一版没测出来的东西：**我用「这里有没有出现步进格子」当判据，而格子只有 40px、
+位于 73px 盒子内部，根本到不了那 6px 边条**——所以检查「通过」了一个透光的列。
+**判据错了，比没有判据更糟**：它让我以为修好了。
 
-### 修法：给空隙加一块「盖板」
+### 三个测出来的结论（都写进代码注释）
 
-`src/index.css` 新增 `.trk-head-gap-cover`，`TrackRow` 与 `Ruler` 各在 sticky 头之后放一个：
+1. **`align-self: stretch` 修不了它。** 给轨道头加 `self-stretch` 后实测高度**仍是 73px**：
+   flex 行交叉轴尺寸来自内容盒，而行自己的 padding 在内容盒之外，**子元素无论怎么拉伸都覆盖不到**。
+2. **`pointer-events: none` 会让探针看不见图层。** 探针用 `elementFromPoint`，它会**跳过**
+   `pointer-events: none` 的元素——于是图层明明在，探针却报 3217 处失败。图层现在不加这个属性：
+   它不遮挡任何可交互元素（格子正好从它右缘开始，轨道头 z 更高）。
+3. **行的 padding 条必须由行自己画。** 行现在带 `bg-panel`——那里本来就透出面板色，所以静止时
+   像素不变，滚动时**不透明**。
 
-```css
-.trk-head-gap-cover {
-  position: sticky;
-  left: var(--trk-head-w);        /* 钉在轨道头右缘（也正是它的自然位置） */
-  z-index: 30;
-  flex: none;
-  align-self: stretch;
-  width: var(--trk-head-gap);
-  margin-left: calc(-1 * var(--trk-head-gap));   /* 从 header 后面的 gap 里拉回来 */
-  margin-right: calc(-1 * var(--trk-head-gap));  /* 抵消自己引入的 gap，格子位置不变 */
-  background: var(--panel);
-}
-```
+### 最终做法
 
-两条负 margin 是全部技巧，而且**两条都必需**：`margin-left` 让它正好落在 header 之后的空隙里；
-`margin-right` 抵消它自己会引入的 gap，否则**全app的网格都会右移 16px**。
-背景用 `var(--panel)` 是因为空隙本来透出的就是 `<section>` 的 `bg-panel`，
-所以**静止状态像素级不变**——盖板只在有东西从下面滚过时才起作用。
-实测盖板宽度 16px = 空隙宽度 16px。
+- 新增 `.trk-head-solid`：`position: sticky; left: 0; z-index: 30`，宽度
+  `calc(var(--trk-head-w) + var(--trk-head-gap))`，`align-self: stretch`，放在轨道头**之前**，
+  用 `margin-right: calc(-1 * (hw + 2*gap))` 抵消自己占的宽度与两个 gap，**布局一格不动**
+  （实测冻结列仍是 `[417, 609)`，格子首列仍是 609）。轨道头与标尺标签抬到 `z-40` 画在它上面。
+- 行加 `bg-panel`，补上它自己那两条 padding。
 
-### 守卫：`npm run probe:grid-gutter`（已进 `verify`）
+### 守卫：判据说清楚了
 
-`scripts/probe_grid_gutter.mjs` 在真实 Chromium 里播放并**用命中测试（`elementFromPoint`）
-采样每一行的空隙**。两个关键设计：
+`npm run probe:grid-gutter` 现在断言的是**「这一列不许透出东西」**，并把采样点分三类：
+`column`（轨道头或图层）、`row`（行自己的不透明 padding，**合法**）、
+`stepCell`/`transparent`（**失败**）。实测：静止与播放中**全部 solid**
+（column 14144、row padding 2112、格子 0）；`--no-cover` 反证：**600 处透出，其中 564 处是格子**。
 
-1. **命中测试，而不是几何**。「格子是否与空隙矩形相交」在滚动时永远是 8 ——
-   它们本来就该从 header 底下滚过去；问题是**有没有被画出来**。
-   这个脚本的第一版就是几何口径，结果它**放过了一个坏构建**并报告「通过」。
-2. **空隙坐标在静止时采集**。报告里的「刚进入时候那个距离」正是标准，
-   所以标准在滚动前量好（`[headerRight, 网格首列)`），之后所有采样都用这组固定坐标；
-   若改成「播放时网格的第一列」，量到的是滚动后的位置，整个检查会退化成同义反复
-   （第一版也犯了这个错）。
-
-3. **`--no-cover` 必须让它失败**，否则它就不是证据：
-
-```
-$ node scripts/probe_grid_gutter.mjs --no-cover
-   at rest      scrollLeft     0   gutter empty
-   playing      scrollLeft   908   54/54 SAMPLES HIT A STEP CELL
-   playing      scrollLeft  2706   54/54 SAMPLES HIT A STEP CELL
-✅ Without the cover the gutter does show step cells (54 samples), so the check bites.
-```
-
-装上盖板之后：三次采样全部 `gutter empty`，命中结果一律是 `trk-head-gap-cover`。
+> 教训（与 G.12、G.14 同一条，这里第二次出现）：**判据本身要先被验证。**
+> G.12 的探针用程序化滚动测手势，G.14 的探针在挂着应用的页面上记录调度流，
+> 这次的探针用「有没有格子」测「实心」。三次都是**仪器**错了，而三次都表现为「通过」。
 
 ## G.14 离线导出不可逐位复现：根因是「一个节点上叠加 3 个振荡器」（v2.0.74 修）
 
@@ -2150,192 +2130,3 @@ $ node scripts/probe_grid_gutter.mjs --no-cover
 **离群值稳定存在、每次命中的曲风不同、幅度 1.16–1.55 dB**——与上面的结论一致：
 它是 DSP 差异在非线性级上的尾部放大，不是任何一处可修的代码。因此它从「待修缺陷」
 降级为**已知的、有界的平台特性**，并已按此写进门禁的阈值论证。
-
-## G.15 冻结轨道头与步进格子之间的空隙被侵入（v2.0.77 修）
-
-用户报告：**连续播放时，轨道头旁边那块空间里会出现步进格子**，
-「要以刚进入时候轨道头和步进格子那个距离为标准，不能侵入下面这块空间」。
-
-### 实测（1440×900）
-
-布局是：每行一个 flex row，`gap: var(--trk-head-gap)`，第一个子元素是
-`sticky left-0` 的轨道头。**这个 gap 在轨道头的盒子之外**，所以没有任何东西盖住它：
-
-| 状态 | 轨道头右缘 | 格子首列 | 空隙里被画出的格子 |
-|---|---|---|---|
-| 刚进入（`scrollLeft = 0`） | 593px | 609px | **0**（16px 空隙干净） |
-| 播放中（`scrollLeft = 908`） | 593px | — | **8**（每轨一个） |
-| 播放中（`scrollLeft = 2706`） | 593px | — | **8** |
-
-播放时走带条会自动横向滚动以跟随播放头，格子于是**从这个 16px 空隙里穿过去**，
-视觉上就是「轨道头和格子贴在一起了」。标尺（Ruler）的拍号徽章是同样的结构，同样会被穿。
-
-### 修法：给空隙加一块「盖板」
-
-`src/index.css` 新增 `.trk-head-gap-cover`，`TrackRow` 与 `Ruler` 各在 sticky 头之后放一个：
-
-```css
-.trk-head-gap-cover {
-  position: sticky;
-  left: var(--trk-head-w);        /* 钉在轨道头右缘（也正是它的自然位置） */
-  z-index: 30;
-  flex: none;
-  align-self: stretch;
-  width: var(--trk-head-gap);
-  margin-left: calc(-1 * var(--trk-head-gap));   /* 从 header 后面的 gap 里拉回来 */
-  margin-right: calc(-1 * var(--trk-head-gap));  /* 抵消自己引入的 gap，格子位置不变 */
-  background: var(--panel);
-}
-```
-
-两条负 margin 是全部技巧，而且**两条都必需**：`margin-left` 让它正好落在 header 之后的空隙里；
-`margin-right` 抵消它自己会引入的 gap，否则**全app的网格都会右移 16px**。
-背景用 `var(--panel)` 是因为空隙本来透出的就是 `<section>` 的 `bg-panel`，
-所以**静止状态像素级不变**——盖板只在有东西从下面滚过时才起作用。
-实测盖板宽度 16px = 空隙宽度 16px。
-
-### 守卫：`npm run probe:grid-gutter`（已进 `verify`）
-
-`scripts/probe_grid_gutter.mjs` 在真实 Chromium 里播放并**用命中测试（`elementFromPoint`）
-采样每一行的空隙**。两个关键设计：
-
-1. **命中测试，而不是几何**。「格子是否与空隙矩形相交」在滚动时永远是 8 ——
-   它们本来就该从 header 底下滚过去；问题是**有没有被画出来**。
-   这个脚本的第一版就是几何口径，结果它**放过了一个坏构建**并报告「通过」。
-2. **空隙坐标在静止时采集**。报告里的「刚进入时候那个距离」正是标准，
-   所以标准在滚动前量好（`[headerRight, 网格首列)`），之后所有采样都用这组固定坐标；
-   若改成「播放时网格的第一列」，量到的是滚动后的位置，整个检查会退化成同义反复
-   （第一版也犯了这个错）。
-
-3. **`--no-cover` 必须让它失败**，否则它就不是证据：
-
-```
-$ node scripts/probe_grid_gutter.mjs --no-cover
-   at rest      scrollLeft     0   gutter empty
-   playing      scrollLeft   908   54/54 SAMPLES HIT A STEP CELL
-   playing      scrollLeft  2706   54/54 SAMPLES HIT A STEP CELL
-✅ Without the cover the gutter does show step cells (54 samples), so the check bites.
-```
-
-装上盖板之后：三次采样全部 `gutter empty`，命中结果一律是 `trk-head-gap-cover`。
-
-## G.14 离线导出不可逐位复现：根因是「一个节点上叠加 3 个振荡器」（v2.0.74 修）
-
-### 起因与最终结论
-
-重新录制 timbre 基线时发现 `chicago-house` 的 `repeatMaxBandDeltaDb` 是 **1.317 dB**，
-而 `check_timbre_spread.mjs` 的头注释声称导出器逐位可复现（冒烟测得 0.000014 dB）。
-**不是本轮改动引入的**：改动前基线就是 1.317172，改动后 1.317833。
-
-追下去之后，根因是一条**平台层面的可测规律**，而且**修得掉**：
-
-> **一个 Web Audio 节点上叠加 3 个及以上「频率各不相同」的振荡器时，
-> Chrome 的 `OfflineAudioContext` 每次渲染的结果都不一样。**
-> 同频振荡器可以，buffer 源可以，每个节点最多 2 个可以。
-
-超过 2 个就出问题，直接命中本项目的**踩镲金属簇（6 个方波）**——
-而 `[310, 387, 466, 522, 681, 1070]` 正落在**频段 6–10**，与观测到的差异频段完全一致。
-
-### 实测规律（`scripts/diagnose_repeat_determinism.mjs --primitives`，每个图渲染 10 次）
-
-| 图 | 不同哈希数 / 10 |
-|---|---|
-| 1 个振荡器 / 2 个振荡器 | 1（可复现） |
-| 3 个振荡器，**同频** | 1 |
-| 3 / 4 / 5 / 6 个振荡器，**不同频** | 3 / 7 / 9 / 10 |
-| 3 个 **buffer 源**叠加 | 1 |
-| 6 个 buffer 源叠加 | 1 |
-| 4 个振荡器按「每节点 2 个」树状扇入 | 1 |
-| 3 个振荡器按 (2+1) 树状扇入 | 1 |
-| 1 振荡器 + 2 buffer 源（3 个混合源） | 3 |
-| 2 振荡器 + 1 buffer 源 | 3 |
-| 2 振荡器 + 2 buffer 源 | 7 |
-| **平台原生节点**（biquad / compressor / waveshaper / convolver / panner / limiter worklet） | 1 |
-
-结论：**buffer 源不触发，纯振荡器 ≥3 或混合源 ≥3 触发**。
-最可能的机制是 Chrome 为振荡器惰性构建**带限波表**：同频振荡器共用一张表，
-而「渲染开始时某张表还在被填充」的那一次渲染就会读到不同的样本——
-这也解释了为什么差异从一个音符起就出现、极小、且随机正负。
-
-### 修法（三处，全部保留原有音色参数）
-
-| 位置 | 原写法 | 现写法 |
-|---|---|---|
-| 踩镲金属簇（808 与 909/acoustic/cyber） | 6 个方波振荡器 → `clusterGain` | `inharmonicClusterBuffer()` 烘焙成一个 buffer，1 个源；音高走 `playbackRate` |
-| 打击乐 metal 族（triangle 等） | 3 个振荡器 → `bus` | 同上（buffer 按 spec 基频烘焙，`playbackRate = mult` 承载音高轨） |
-| 铃鼓 jingle 层 | 3 个振荡器 → `jingle` | 同上 |
-| 膜鸣族（timbale，3 个分音各有**独立衰减与音高下滑**） | 3 个振荡器 → `bus` | 不能烘焙（会丢掉「Defect B」的逐分音包络），改为 **(2+1) 树状扇入**，参数一字不改 |
-| `kick:*` 模拟底鼓（`somatic-808-gravity` 四层全开） | 4 个振荡器 → `busNode` | 改为 **2+2 树状扇入**（两个单位增益求和节点） |
-
-烘焙的分音用**奇次谐波 1/n** 展开来还原方波（`inharmonicClusterBuffer`），
-所以音色不变，同时**每次踩镲少 6 个振荡器**——踩镲是 pattern 里最密的声部。
-缓冲按「采样率 + 分音集合」缓存，一个采样率只烘焙一次。
-
-守卫测试：`src/test/oscillatorFanIn.test.ts`（对全部鼓件、全部 16 个打击乐模型、
-全部 `kick:*` 预设断言「同一节点首次混合的异频振荡器 ≤2」），
-以及 `drumFidelityTier1.test.ts` 里对烘焙缓冲的 **Goertzel 频谱断言**
-（每个分音基频与三次谐波都有能量、非谐波频点没有）——
-后者是为了防止这次改动把 Q4 的金属簇悄悄变成静音缓冲。
-
-### 修掉的效果（实测，**全库 159 曲风复测**，不是单曲风抽样）
-
-先说明一次自我更正：本轮中途我曾据**单曲风一次**的测量写下「1.317 dB → 0.0001 dB」，
-随后录完整库基线发现**那是抽样误差**。真实数字如下（每个曲风重复渲染 2 次）：
-
-| 指标 | 修前（6 振荡器簇） | 修后（烘焙缓冲） |
-|---|---|---|
-| 中位数 | 0.000067 dB | **0.000063 dB** |
-| p90 | 0.000698 dB | 0.000578 dB |
-| p99 | 1.152777 dB | 1.320452 dB |
-| 最大值 | 1.317833 dB（chicago-house） | **1.546828 dB（detroit-techno）** |
-| >0.10 dB 的曲风 | chicago-house, electro-house | chicago-house, detroit-techno, acid-techno |
-
-**所以：这轮修改并没有消掉那个 ~1.3 dB 的离群事件。**
-中位数（也就是「每次都有的那层底噪」）**完全没变**——量级 ~6e-5 dB，属亚采样级时序差异，
-对指纹没有影响。离群事件仍在，而且**每次跑命中的曲风都不一样**
-（修前是 electro-house，修后是 detroit-techno / acid-techno），
-说明它**与具体曲风无关**，只是「那一刻正在渲染谁」。
-
-那这轮修改的意义是什么？**它是一个独立的、有实测依据的正确性修复**，而不是这个离群事件的解药：
-
-- 它消掉的是「同一节点叠加 ≥3 个异频振荡器」这一**明确可测的平台违规**，本项目的踩镲正踩在上面；
-- 每次踩镲少 6 个振荡器、每个金属族打击乐少 3 个（最密的声部，实打实的 CPU）；
-- 留下了 `oscillatorFanIn.test.ts` 这条守卫，使「下一个为了更丰富再加一个分音」的改动不会重新踩坑。
-
-### 顺带测出一条更严重的隐患：限幅器静默回退值 4.8 dB
-
-`createMasterLimiter` 优先用 `AudioWorkletNode`，`addModule` 失败时**静默**换成
-`DynamicsCompressor`。强制走回退路径实测（同一次 3 小节渲染）：
-
-```
-normal (worklet)       rmsDb -9.508280   worst band vs normal 0.0000 dB (band 0)
-forced fallback        rmsDb -7.149265   worst band vs normal 4.8330 dB (band 9)
-normal again           rmsDb -9.508270   worst band vs normal 0.0001 dB (band 10)
-```
-
-即一次静默回退会让导出**整体响 2.36 dB、某频段差 4.8 dB**——比那个 1.3 dB 离群事件严重得多。
-它也**证明离群事件不是限幅器回退**（签名完全不符：4.8 dB ≠ 1.3 dB）。
-这条本身值得单独处理：导出前应把 `limiter.kind` 报出来，而不是让用户拿到一个悄悄降级的文件。
-
-### 仍未解决：离群事件的下一步查法
-
-已排除（全部实测）：单条轨道、送出总线（干声同样不稳定）、概率掷点、混响 IR 种子、
-限幅器 worklet 竞态/回退、以及「一个节点 ≥3 异频振荡器」这条（已修）。
-剩下的特征是：**一对固定的结果、稳定的幅度、与曲风无关、约每 150 次渲染命中一次**。
-
-因此下一步不该再猜机制，而该做**相关性研究**：固定一个曲风连续渲染数百次
-（1 小节约 2.5 s，300 次约 12 分钟），一旦出现离群就对比
-**调度参数流**（而非音频）——若两次的参数流逐字相同而音频不同，则原因在浏览器 DSP；
-若参数流本身不同，则在调度层（`noteEvents` / `resolveRatchet` / 混音默认值）。
-
-### 为什么这条值得追
-
-「同一工程导出两次得到同一个文件」是本项目的核心承诺之一，
-而两个音频门禁的阈值论证都建立在「重复渲染的噪声底≈0」之上。
-1.3 dB 恰好是**能被指纹看见**的量级，所以它不是可以当作测量噪声放过的东西。
-### 为什么这条值得追
-
-「同一工程导出两次得到同一个文件」是本项目的核心承诺之一，
-而两个音频门禁的阈值论证都建立在「重复渲染的噪声底≈0」之上。
-1.317 dB 恰好是**能被指纹看见**的量级，所以它不是可以当作测量噪声放过的东西。
-

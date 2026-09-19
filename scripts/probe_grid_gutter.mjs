@@ -92,7 +92,7 @@ try {
 await page.waitForTimeout(800);
 
 if (noCover) {
-  await page.addStyleTag({ content: ".trk-head-gap-cover { display: none !important; }" });
+  await page.addStyleTag({ content: ".trk-head-solid { display: none !important; }" });
 }
 
 /**
@@ -117,12 +117,17 @@ const gutterAtRest = await page.evaluate(() => {
   const hr = header.getBoundingClientRect();
   const cells = [...document.querySelectorAll("[data-step-idx]")].map((c) => c.getBoundingClientRect());
   return {
+    headerLeft: Math.round(hr.left),
     headerRight: Math.round(hr.right),
     gapRight: Math.round(Math.min(...cells.map((c) => c.left))),
-    // The cover's own width is the stylesheet's resolved gap, a cross-check on the layout figure
-    // above: if these two disagree the cover is not filling the gutter it exists for.
+    /**
+     * The solid layer must span the header's width plus the gutter, and nothing narrower.
+     *
+     * A cross-check on the layout arithmetic in the negative margin: one gap too small and every
+     * grid in the app shifts; one gap too large and the first cells are covered.
+     */
     coverWidth: Math.round(
-      (document.querySelector(".trk-head-gap-cover")?.getBoundingClientRect().width ?? 0)
+      (document.querySelector(".trk-head-solid")?.getBoundingClientRect().width ?? 0)
     ),
   };
 });
@@ -134,36 +139,67 @@ if (gutterAtRest.error) {
 }
 
 /** Hit-test the gutter of every track row that is on screen, and report what is on top. */
+/**
+ * Is the whole frozen column solid?
+ *
+ * Every sample point inside `[columnLeft, gridLeft) x [rowTop, rowBottom]` must resolve to something
+ * that is *part of the frozen column* — the header, the gutter cover, or a descendant of either.
+ *
+ * This is deliberately not "is a step cell visible here". The first version of this check asked that,
+ * and it passed a build in which the header box was **73 px inside an 85 px row**: the 6 px strips
+ * above and below the header were painted by nothing at all, so cells scrolling underneath were
+ * visible there whenever they happened to be tall enough to reach — and at the default row height
+ * they are 40 px inside that 73 px box, which is why the cell-based check never failed. "Solid" is
+ * the invariant the user asked for and the one that can be checked directly.
+ */
 const sample = () =>
-  page.evaluate(({ gutterLeft, gutterRight }) => {
-    const rows = [...document.querySelectorAll("[data-testid^='track-header-']")];
-    const samples = [];
-    for (const row of rows) {
-      const sticky = row.closest("div.sticky");
-      if (!sticky) continue;
-      const r = sticky.getBoundingClientRect();
-      for (const yFrac of [0.3, 0.5, 0.7]) {
-        const y = r.top + r.height * yFrac;
-        // Rows below the fold cannot be hit-tested, and pretending they were would inflate the
-        // sample count with `none` results.
-        if (y < 0 || y > window.innerHeight) continue;
-        for (const xFrac of [0.25, 0.5, 0.75]) {
-          const x = gutterLeft + (gutterRight - gutterLeft) * xFrac;
-          const el = document.elementFromPoint(x, y);
-          if (!el) continue;
-          samples.push({
-            x: Math.round(x),
-            y: Math.round(y),
-            isStepCell: el.hasAttribute("data-step-idx"),
-            topmost: el.className.toString().slice(0, 32) || el.tagName.toLowerCase(),
-          });
+  page.evaluate(
+    ({ columnLeft, gridLeft }) => {
+      const rows = [...document.querySelectorAll("[data-testid^='track-header-']")];
+      const samples = [];
+      for (const row of rows) {
+        const header = row.closest("div.sticky");
+        const rowEl = header?.parentElement;
+        if (!header || !rowEl) continue;
+        const rr = rowEl.getBoundingClientRect();
+        if (rr.bottom < 0 || rr.top > window.innerHeight) continue;
+        for (let y = Math.round(rr.top) + 1; y < rr.bottom; y += 2) {
+          if (y < 0 || y > window.innerHeight) continue;
+          for (let x = Math.round(columnLeft) + 1; x < gridLeft; x += 3) {
+            const el = document.elementFromPoint(x, y);
+            if (!el) continue;
+            /**
+             * Three outcomes, and the distinction between the last two is the whole point.
+             *
+             * `column`  — the header, its solid layer, or something inside them.
+             * `row`     — the row's own background. Opaque (it carries `bg-panel`) and therefore
+             *             still "solid"; this is the 6 px of row padding that no child can paint.
+             * `stepCell`— a grid cell showing through. This is the reported defect.
+             *
+             * A transparent ancestor (`section`, the scroller) is a failure too: something would be
+             * showing through, which is what "the space should feel solid" rules out.
+             */
+            const isCell = el.hasAttribute("data-step-idx");
+            const inColumn =
+              el === header ||
+              header.contains(el) ||
+              el.classList.contains("trk-head-solid");
+            const isRowBackground = el === rowEl;
+            samples.push({
+              x,
+              y,
+              kind: inColumn ? "column" : isCell ? "stepCell" : isRowBackground ? "row" : "transparent",
+              topmost: el.className.toString().slice(0, 40) || el.tagName.toLowerCase(),
+            });
+          }
         }
       }
-    }
-    let scroller = document.querySelector("[data-step-idx]");
-    while (scroller && scroller.scrollWidth <= scroller.clientWidth + 1) scroller = scroller.parentElement;
-    return { scrollLeft: scroller ? Math.round(scroller.scrollLeft) : null, samples };
-  }, { gutterLeft: gutterAtRest.headerRight, gutterRight: gutterAtRest.gapRight });
+      let scroller = document.querySelector("[data-step-idx]");
+      while (scroller && scroller.scrollWidth <= scroller.clientWidth + 1) scroller = scroller.parentElement;
+      return { scrollLeft: scroller ? Math.round(scroller.scrollLeft) : null, samples };
+    },
+    { columnLeft: gutterAtRest.headerLeft, gridLeft: gutterAtRest.gapRight }
+  );
 
 const phases = [{ label: "at rest", ...(await sample()) }];
 
@@ -180,28 +216,34 @@ await page.evaluate(() => {
 await browser.close();
 server.close();
 
-const worst = phases.reduce((n, p) => Math.max(n, p.samples.filter((s) => s.isStepCell).length), 0);
+/** A cell showing through, or anything transparent, is a failure. Opaque row padding is not. */
+const countBad = (p) => p.samples.filter((s) => s.kind === "stepCell" || s.kind === "transparent").length;
+const worst = phases.reduce((n, p) => Math.max(n, countBad(p)), 0);
 
 if (asJson) {
-  console.log(JSON.stringify({ noCover, phases, stepCellsInGutter: worst }, null, 2));
+  console.log(JSON.stringify({ noCover, phases, nonColumnSamples: worst }, null, 2));
 } else {
   console.log(`\n=== step grid gutter, 1440x900${noCover ? " (cover disabled)" : ""} ===\n`);
-  const gutterWidth = gutterAtRest.gapRight - gutterAtRest.headerRight;
+  const columnWidth = gutterAtRest.gapRight - gutterAtRest.headerLeft;
   console.log(
-    `   gutter [${gutterAtRest.headerRight}, ${gutterAtRest.gapRight}) = ${gutterWidth} px; ` +
-      `cover is ${gutterAtRest.coverWidth} px`
+    `   frozen column [${gutterAtRest.headerLeft}, ${gutterAtRest.gapRight}) = ${columnWidth} px; ` +
+      `solid layer is ${gutterAtRest.coverWidth} px`
   );
-  if (gutterAtRest.coverWidth !== gutterWidth) {
+  if (gutterAtRest.coverWidth !== columnWidth) {
     console.log(
-      `   ⚠️  the cover does not match the gutter: ${gutterAtRest.coverWidth} vs ${gutterWidth} px`
+      `   ⚠️  the solid layer does not match the column: ${gutterAtRest.coverWidth} vs ${columnWidth} px`
     );
   }
   for (const p of phases) {
-    const bad = p.samples.filter((s) => s.isStepCell);
+    const bad = p.samples.filter((s) => s.kind === "stepCell" || s.kind === "transparent");
+    const cells = bad.filter((s) => s.kind === "stepCell").length;
+    const inColumn = p.samples.filter((s) => s.kind === "column").length;
+    const rowBg = p.samples.filter((s) => s.kind === "row").length;
     console.log(
       `   ${p.label.padEnd(12)} scrollLeft ${String(p.scrollLeft).padStart(5)}   ` +
-        `${bad.length === 0 ? "gutter empty" : `${bad.length}/${p.samples.length} SAMPLES HIT A STEP CELL`}` +
-        `   (topmost: ${[...new Set(p.samples.map((s) => s.topmost))].join(", ")})`
+        `${bad.length === 0 ? "solid" : `${bad.length}/${p.samples.length} SHOW THROUGH (${cells} a step cell)`}` +
+        `   [column ${inColumn}, row padding ${rowBg}]` +
+        (bad.length ? `   e.g. ${bad[0].topmost} at ${bad[0].x},${bad[0].y}` : "")
     );
   }
   console.log();
@@ -210,7 +252,7 @@ if (asJson) {
 if (noCover) {
   if (worst === 0) {
     console.error(
-      "❌ With the cover disabled the gutter still reported no step cells, so this check cannot\n" +
+      "❌ With the solid layer disabled the frozen column still reported as solid, so this check cannot\n" +
         "   detect the defect it exists for. Something else is occluding them, or the sampling is\n" +
         "   wrong — either way the passing runs above prove nothing.\n"
     );
@@ -222,9 +264,11 @@ if (noCover) {
 
 if (worst > 0) {
   console.error(
-    `❌ ${worst} sample(s) in the header-to-grid gutter resolve to a step cell.\n` +
-      "   Step cells are being painted in the frozen header's space during playback; see\n" +
-      "   `.trk-head-gap-cover` in src/index.css and PRODUCT_PLAN_v2.1.0.md G.15.\n"
+    `❌ ${worst} sample(s) inside the frozen column show something through it.\n` +
+      "   The column must read as solid: no step cell may be visible in it, and nothing transparent\n" +
+      "   may be behind it. `.trk-head-solid` fills the gutter and the header's own column; the row\n" +
+      "   carries an opaque background for the padding strips no child can reach.\n" +
+      "   See PRODUCT_PLAN_v2.1.0.md G.15.\n"
   );
   process.exit(1);
 }

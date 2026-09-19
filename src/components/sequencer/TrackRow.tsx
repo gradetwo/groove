@@ -191,14 +191,28 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
     <div
       role="row"
       aria-label={meta.name}
-      className={`flex items-center gap-[var(--trk-head-gap)] ${isCompact ? "py-0.5 min-h-[var(--step-cell-h-compact)]" : "py-row-y"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
+      /**
+       * `bg-panel` is not decoration: the row is taller than any of its children, so its own
+       * vertical padding is a strip no child can paint. Without a background those strips are
+       * transparent, which is what let the grid show through them while it scrolled. `--panel` is
+       * the colour already behind them (the sequencer section), so this is invisible at rest and
+       * opaque under motion.
+       */
+      className={`flex items-center gap-[var(--trk-head-gap)] bg-panel ${isCompact ? "py-0.5 min-h-[var(--step-cell-h-compact)]" : "py-row-y"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
       style={{ ["--tc" as any]: meta.color }}
     >
+      {/* Solid frozen column: full row height, header width plus the gutter, underneath the header.
+          See `.trk-head-solid` in index.css for why the header box alone is not enough. */}
+      <div
+        aria-hidden="true"
+        className="trk-head-solid bg-gradient-to-r from-[#161822] to-[#121319]"
+      />
+
       {/* Track Header (.trk-head) - `--trk-head-w` (142px mobile / 176px sm+) - Sticky Left.
           The width is shared with the ruler label and the velocity lane so the three cannot
           disagree and paint over each other; see the note on `--trk-head-w` in index.css. */}
-      <div className={`sticky left-0 z-20 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[var(--trk-head-w)] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center ${
-        isCompact ? "h-[var(--step-cell-h-compact)] gap-0" : "gap-1"
+      <div className={`sticky left-0 z-40 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[var(--trk-head-w)] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center ${
+        isCompact ? "min-h-[var(--step-cell-h-compact)] gap-0" : "gap-1"
       } select-none border-r border-line-subtle border-l-[3.5px] border-l-[var(--tc)] shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-all ${
         isSilenced && !isMute && !isSolo ? "opacity-60" : "opacity-100"
       }`}>
@@ -522,10 +536,6 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
           </div>
         )}
       </div>
-
-      {/* Covers the flex gap between the frozen header and the grid, so cells that auto-scroll
-          during playback cannot be painted in it. See `.trk-head-gap-cover` in index.css. */}
-      <div aria-hidden="true" className="trk-head-gap-cover" />
 
       {/* Step Grid (.grid) */}
       <div className={`flex-1 flex gap-1 relative transition-all duration-150 ${

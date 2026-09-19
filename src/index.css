@@ -223,39 +223,42 @@ input[type=range]::-moz-range-thumb {
 }
 
 /**
- * Covers the gutter between the frozen track-header column and the scrolling grid.
+ * Makes the frozen track-header column solid: full row height, header width plus the gutter.
  *
- * Every track row (and the ruler) is a flex row with `gap: var(--trk-head-gap)` whose first child is
- * a `sticky left-0` header. That gap is *outside* the header's box, so nothing is painted over it:
- * at rest the first step cell starts after it, and once playback auto-scrolls the grid the cells
- * slide into the gutter and the header looks like it is touching the grid. Measured at 1440x900 with
- * the header at 593 px and the grid's first column at 609 px — **0 cells in the gutter at rest, 8
- * (one per track) once the grid scrolls**, which is the "step cells appear in the header's space"
- * report.
+ * Two separate leaks, both seen while a pattern plays and the grid auto-scrolls:
  *
- * The negative margins are the whole trick, and both are needed:
- *   - `margin-left` pulls the box back off the flex gap that follows the header, so it starts
- *     exactly where the header ends rather than one gap later;
- *   - `margin-right` cancels the gap the box would itself introduce, so the step cells keep their
- *     original x. Without it every grid in the app shifts 16 px right.
+ *  1. **The gutter.** Each row is a flex row with `gap: var(--trk-head-gap)` and a `sticky left-0`
+ *     header, so the gap sits *outside* the header's box and nothing was painted over it. At rest
+ *     the first step cell starts after the gap (measured 593 -> 609 px at 1440x900); once the grid
+ *     scrolls, cells slide through it and the header looks like it is touching the grid.
+ *  2. **The strips above and below the header.** The header box is only as tall as its own content
+ *     while the row is as tall as its tallest child (the step cells): measured **73 px inside an
+ *     85 px row**, leaving 6 px unpainted at each end. Cells scrolling underneath showed through
+ *     those strips, so the column did not read as solid.
  *
- * `background: var(--panel)` because that is what the gutter already showed through to (the
- * sequencer `<section>` is `bg-panel`), so at rest the layout is pixel-identical and nothing changes
- * colour — the cover only exists while something is scrolling underneath it.
+ * `align-self: stretch` on the header does *not* fix this — the flex line's cross size comes from the
+ * grid, and the header still measured 73 px with `stretch` applied. A dedicated layer under the
+ * header does, and it fixes both leaks at once.
  *
- * `sticky left: var(--trk-head-w)` pins it to the header's right edge, which is also its natural
- * position, so it costs no layout work before the scroll begins.
+ * The negative margin is the whole trick and must be exactly `width + 2 * gap`: the layer is placed
+ * *before* the header, so it occupies `[0, headerW + gap)`, and cancelling its own width plus the two
+ * flex gaps it introduces leaves the header at x=0 and the step cells at their original x. Get it
+ * wrong by one gap and every grid in the app shifts 16 px.
+ *
+ * `z-index: 30` puts it above the step cells, and the header is raised to `z-40` so its own text,
+ * borders and shadow still paint on top of it. (Measured the hard way: at `z-index: 19` the layer
+ * lost to the cells and 570 samples still resolved to a cell.) `pointer-events: none` keeps it from
+ * intercepting clicks aimed at the gutter. The background is left to the caller (`bg-panel` for the
+ * ruler, the header's own gradient for the track rows) so the strips match what they abut.
  */
-.trk-head-gap-cover {
+.trk-head-solid {
   position: sticky;
-  left: var(--trk-head-w);
+  left: 0;
   z-index: 30;
   flex: none;
   align-self: stretch;
-  width: var(--trk-head-gap);
-  margin-left: calc(-1 * var(--trk-head-gap));
-  margin-right: calc(-1 * var(--trk-head-gap));
-  background: var(--panel);
+  width: calc(var(--trk-head-w) + var(--trk-head-gap));
+  margin-right: calc(-1 * (var(--trk-head-w) + 2 * var(--trk-head-gap)));
 }
 
 /* Touch Action & Gesture Conflict Prevention for Mobile */
@@ -562,7 +565,6 @@ html.reduced-motion .animate-orbit {
   background-color: rgba(245, 183, 61, 0.25);
   box-shadow: 0 0 14px rgba(245, 183, 61, 0.5);
   border-radius: 6px;
-  pointer-events: none;
   z-index: 15;
   will-change: transform;
 }
