@@ -125,52 +125,24 @@ const split = splitVersionFiles(currentJson, currentChangelog);
 
 /**
  * E-09: the planning documents state the current version in their headers, and
- * `scripts/check_docs.mjs` fails when they drift. Rather than hand-editing three
- * files on every release, `sync` rewrites those specific header claims.
+ * `scripts/check_docs.mjs` fails when they drift. Rather than hand-editing them on every release,
+ * `sync` rewrites those specific header claims.
+ *
+ * The old `IMPROVEMENT_PLAN.md` header also carried a src file/line count, and a `measureSourceSize()`
+ * kept it fresh. Both went with the document when the repository was prepared for open source: the
+ * count described 194 files and had drifted ~40 %, `docs:check` owns no such claim any more, and a
+ * stale count is worse than no count.
  */
-/**
- * The baseline header also states the source size, which drifts on every feature and
- * refactor. Measure it here so `docs:check` cannot fail on a stale count.
- */
-function measureSourceSize() {
-  const files = [];
-  const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (/\.tsx?$/.test(entry.name)) files.push(full);
-    }
-  };
-  walk(path.join(ROOT, "src"));
-  let lines = 0;
-  for (const file of files) lines += fs.readFileSync(file, "utf8").split("\n").length;
-  return { files: files.length, lines };
-}
 
 const DOC_VERSION_PATTERNS = [
-  { file: "IMPROVEMENT_PLAN.md", re: /版本 \*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `版本 **v${version}**` },
   { file: "ROADMAP_V2.md", re: /\*\*当前基线\*\*：v\d+\.\d+\.\d+/, replacement: () => `**当前基线**：v${version}` },
   { file: "BACKLOG.md", re: /当前基线：\*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `当前基线：**v${version}**` },
 ];
 
-/**
- * The source-size claim in `IMPROVEMENT_PLAN.md`'s header is deliberately NOT maintained here.
- *
- * It used to be, and it made this gate flap: `measureSourceSize()` reads the working tree, so the
- * number it demanded depended on untracked scratch files and on whether a test file happened to be
- * mid-write, and the pattern rewrote the document to a figure the *next* run disagreed with. The
- * result was a red `version:check` on a tree whose version was correct — a gate failing for a
- * reason unrelated to what it is named after.
- *
- * `scripts/check_docs.mjs` already owns that claim, and owns it better: it compares against the
- * real count with a ±10 % tolerance, which is the right precision for a round number in prose.
- * One owner, and the precise tool is the permissive one.
- */
-
 // Group by file first: several patterns target the same document, and computing each
 // "desired" content independently from the original text meant the later write silently
-// reverted the earlier fix (observed on IMPROVEMENT_PLAN.md, whose header then claimed
-// the previous version). Apply every pattern to one shared buffer per file.
+// reverted the earlier fix (observed when several patterns targeted one document, whose
+// header then claimed the previous version). Apply every pattern to one shared buffer.
 const patternsByFile = new Map();
 for (const entry of DOC_VERSION_PATTERNS) {
   if (!patternsByFile.has(entry.file)) patternsByFile.set(entry.file, []);
