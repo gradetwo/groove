@@ -1427,9 +1427,15 @@ ramp 目标抛错）。仍然存在三份手写桩（`audioDspGuards` / `keyTrac
 1. **合并手机的两条固定栏**（见 G.5）：横屏可用带 138px → 187px（35% → 48%）。
    前提动作二选一——给 `MOBILE_SHEET_GROUPS` 补上 `studio` / `galaxy` 入口，
    或把走带状态提升到 `App`。这是「让移动端像原生应用」剩余的最大单项。
-2. **收口三份手写 AudioContext 桩**（`audioDspGuards` / `keyTracking` / `drumFidelityTier1`）：
-   它们对新增节点类型的覆盖是零，而失败方式还是「崩」而不是「断言不成立」（G.3 其一）。
-3. **删掉 `.landscape-compact-bar` 死规则**，并顺手清查同类无人引用的 CSS（G.5b 其一）。
+2. **收口手写 AudioContext 桩**（G.3 其一，v2.0.60 已完成前两份）：
+   `keyTracking` 已迁移到共享 `FakeOfflineAudioContext`；`audioDspGuards` 保留自己的最小桩，
+   但补上了缺失的 `createChannelSplitter` / `createChannelMerger` / `createBuffer`，
+   并新增「桩必须实现这 13 个 `create*` 工厂」的守卫测试（下一步该由它接手：往桩里加节点，
+   而不是让引擎新增节点时以 `is not a function` 崩掉）。
+   `drumFidelityTier1` **不动**——它桩的是鼓机引擎（`synthesizeKick` 等），
+   不经过 `playPolySynthNote`，所以立体声级对它没有影响；
+   先前把它一并列进来是**判断过宽**，本轮订正。
+3. ~~删掉 `.landscape-compact-bar` 死规则~~（v2.0.60 已删）。**顺带清查同类无人引用的 CSS 仍未做**：本轮只删了这一条，没有系统扫描其他 `src/index.css` 里无人引用的类。
 4. **`toolbarTiers.ts` 接线**：306 行的分层表仍只有它自己的测试引用它。
 5. **音色侧剩余三条**（附录 E.5 第 2–4 条）：波表 `createPeriodicWave`、
    鼓组采样层与每击轮转、立体声完整性其余部分（合唱降混、送出为声像前分接、

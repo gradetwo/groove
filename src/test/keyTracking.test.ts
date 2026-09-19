@@ -19,80 +19,37 @@ import {
   KEY_TRACK_REFERENCE_MIDI,
   midiToFreq,
 } from "../audio/PolySynth";
+import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 
-/** Records the scheduled filter cutoff for one note. */
+/**
+ * The scheduled cutoff for one note, read from a real fake context.
+ *
+ * This used to be a hand-rolled mock with one stub per node type. That kind of mock drifts against
+ * the voice builder: when the stereo unison stage added a `ChannelSplitter`, the sibling velocity
+ * suite broke with `ctx.createChannelSplitter is not a function` — a failure that says nothing
+ * about velocity. The shared double implements the whole graph API and throws on the same illegal
+ * ramp targets a browser does, so a new node type cannot silently stop being exercised here.
+ */
 const cutoffFor = (preset: (typeof DEFAULT_SYNTH_PRESETS)[string], midi: number): number => {
-  const filters: Array<{ type: string; frequency: { events: Array<{ kind: string; value: number }>; value: number } }> = [];
-  const param = (initial = 0) => {
-    const p = {
-      value: initial,
-      events: [] as Array<{ kind: string; value: number }>,
-      setValueAtTime(v: number) {
-        this.events.push({ kind: "set", value: v });
-        this.value = v;
-        return this;
-      },
-      linearRampToValueAtTime(v: number) {
-        this.events.push({ kind: "lin", value: v });
-        this.value = v;
-        return this;
-      },
-      exponentialRampToValueAtTime(v: number) {
-        this.events.push({ kind: "exp", value: v });
-        this.value = v;
-        return this;
-      },
-      setTargetAtTime(v: number) {
-        this.value = v;
-        return this;
-      },
-      cancelScheduledValues() {
-        return this;
-      },
-    };
-    return p;
-  };
-  const ctx: Record<string, unknown> = {
-    currentTime: 0,
-    sampleRate: 44100,
-    createGain: () => ({ gain: param(1), connect: () => {}, disconnect: () => {} }),
-    createOscillator: () => ({
-      type: "sine",
-      frequency: param(440),
-      detune: param(0),
-      connect: () => {},
-      disconnect: () => {},
-      start: () => {},
-      stop: () => {},
-    }),
-    createBiquadFilter: () => {
-      const f = { type: "lowpass", frequency: param(350), Q: param(1), gain: param(0), connect: () => {}, disconnect: () => {}, _type: "biquadFilter" };
-      filters.push(f as never);
-      return f;
-    },
-    createBufferSource: () => ({
-      buffer: null,
-      loop: false,
-      playbackRate: param(1),
-      connect: () => {},
-      disconnect: () => {},
-      start: () => {},
-      stop: () => {},
-    }),
-    createBuffer: (c: number, l: number, sr: number) => ({
-      numberOfChannels: c,
-      length: l,
-      sampleRate: sr,
-      getChannelData: () => new Float32Array(l),
-    }),
-    createWaveShaper: () => ({ curve: null, oversample: "none", connect: () => {}, disconnect: () => {} }),
-  };
-  const dest = (ctx.createGain as () => unknown)();
-  playPolySynthNote(ctx as never, dest as never, midi, 0, 0.5, 0.8, preset);
-  const main = filters.find((f) => f.type === "lowpass");
-  if (!main) throw new Error("no low-pass filter was created");
-  // The first scheduled cutoff is the reference value the voice holds.
-  return main.frequency.events[0]?.value ?? main.frequency.value;
+  const restore = installFakeOfflineAudioContext();
+  try {
+    const ctx = new FakeOfflineAudioContext(1, 4096, 44100);
+    playPolySynthNote(
+      ctx as unknown as BaseAudioContext,
+      ctx.createGain() as unknown as AudioNode,
+      midi,
+      0,
+      0.5,
+      0.8,
+      preset
+    );
+    const main = ctx.createdFilters.find((f) => f.type === "lowpass");
+    if (!main) throw new Error("no low-pass filter was created");
+    // The first scheduled cutoff is the reference value the voice holds.
+    return main.frequency.events[0]?.value ?? main.frequency.value;
+  } finally {
+    restore();
+  }
 };
 
 const preset = DEFAULT_SYNTH_PRESETS.warmPad;

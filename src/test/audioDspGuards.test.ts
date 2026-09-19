@@ -3,6 +3,7 @@ import { safeGain, safeFreq, safeVelocity, safeTime, MIN_GAIN, MAX_FREQ } from "
 import { computeCatchUp } from "../audio/schedulerMath";
 import { synthesizeKick, synthesizeSnare, synthesizeHiHat, synthesizePercussion } from "../audio/DrumKitModels";
 import { playPolySynthNote } from "../audio/PolySynth";
+import { FakeOfflineAudioContext } from "./helpers/fakeAudio";
 
 /**
  * Minimal AudioContext double that reproduces the one browser behaviour that matters
@@ -102,10 +103,72 @@ function createFakeContext() {
       disconnect: () => {},
     }),
     createDelay: () => ({ delayTime: new FakeAudioParam(), connect: () => {}, disconnect: () => {} }),
+    /**
+     * The stereo unison stage (v2.0.58) needs these two, and this minimal double did not have them:
+     * the sibling velocity suite failed with `ctx.createChannelSplitter is not a function` — a
+     * *crash*, not a failed assertion, and one that said nothing about velocity. The guard below is
+     * what stops the next node type from arriving the same way.
+     */
+    createChannelSplitter: () => ({ numberOfOutputs: 2, connect: () => {}, disconnect: () => {} }),
+    createChannelMerger: () => ({ numberOfInputs: 2, connect: () => {}, disconnect: () => {} }),
+    /**
+     * Found by the guard below, not by a failure: the noise bed asks for a buffer, and a double
+     * without `createBuffer` would have crashed the first time a preset with `noiseMix` was played
+     * through it. Nothing exercised it before, which is exactly the state the guard exists to
+     * surface.
+     */
+    createBuffer: (channels: number, length: number, rate: number) => ({
+      numberOfChannels: channels,
+      length,
+      sampleRate: rate,
+      getChannelData: () => new Float32Array(length),
+    }),
     resume: () => Promise.resolve(),
     close: () => Promise.resolve(),
   } as unknown as BaseAudioContext;
 }
+
+/**
+ * Every `ctx.create*` call the synthesis voices can reach for.
+ *
+ * A literal list on purpose. The problem with a partial double is that nobody knows it is partial
+ * until a *new* node type appears — at which point the test crashes for a reason unrelated to what
+ * it tests. Adding a node type to the engine now fails this assertion, so the next author is told to
+ * extend the double (or move to the shared `FakeOfflineAudioContext`, which implements all of these)
+ * rather than being handed a confusing `is not a function`.
+ */
+const NODE_FACTORIES_THE_VOICES_NEED = [
+  "createAnalyser",
+  "createBiquadFilter",
+  "createBuffer",
+  "createBufferSource",
+  "createChannelMerger",
+  "createChannelSplitter",
+  "createConvolver",
+  "createDelay",
+  "createDynamicsCompressor",
+  "createGain",
+  "createOscillator",
+  "createStereoPanner",
+  "createWaveShaper",
+] as const;
+
+describe("the minimal AudioContext double covers what the voices call", () => {
+  it("implements every node factory the engine can reach for", () => {
+    const ctx = createFakeContext() as unknown as Record<string, unknown>;
+    const missing = NODE_FACTORIES_THE_VOICES_NEED.filter((name) => typeof ctx[name] !== "function");
+    expect(missing).toEqual([]);
+  });
+
+  it("agrees with the shared double about that list", () => {
+    // The shared fake implements the whole graph API, so if it lacks a factory this list claims,
+    // the list is wrong rather than the local double being complete.
+    const shared = new FakeOfflineAudioContext(1, 16, 44100) as unknown as Record<string, unknown>;
+    for (const name of NODE_FACTORIES_THE_VOICES_NEED) {
+      expect(typeof shared[name], `the shared fake lacks ${name}`).toBe("function");
+    }
+  });
+});
 
 describe("F-01 · DSP guards keep illegal values out of exponential ramps", () => {
   it("safeGain never returns zero or non-finite values", () => {

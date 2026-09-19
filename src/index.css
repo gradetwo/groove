@@ -415,17 +415,12 @@ html.reduced-motion .animate-orbit {
   .landscape-hide-sidebar {
     display: none !important;
   }
-  .landscape-compact-bar {
-    padding-top: 0.125rem !important;
-    padding-bottom: 0.125rem !important;
-    margin-bottom: 0.25rem !important;
-    gap: 0.25rem !important;
-  }
-  .landscape-compact-bar button,
-  .landscape-compact-bar select,
-  .landscape-compact-bar input {
-    height: 1.75rem !important;
-  }
+  /*
+   * `.landscape-compact-bar` used to live here: five `!important` rules that compressed any bar's
+   * padding and forced its buttons to 28 px. Nothing referenced the class (checked across `src/`),
+   * so it was dead — and 28 px is below the 44 px touch minimum the phone shell standardised on, so
+   * the right disposition was to delete it rather than wire it up to something.
+   */
   .landscape-compact-row {
     padding-top: var(--track-row-pad-y) !important;
     padding-bottom: var(--track-row-pad-y) !important;
