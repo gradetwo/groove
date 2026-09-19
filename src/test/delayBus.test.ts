@@ -6,6 +6,7 @@ import {
   DELAY_TIME_MAX_SEC,
   DELAY_FEEDBACK_MAX,
   delayDivisionSeconds,
+  delayCrossfadeSeconds,
   type DelayDivision,
   type DelayParams,
 } from "../audio/DelayBus";
@@ -581,5 +582,171 @@ describe("determinism and offline compatibility", () => {
     expect(() => bus.dispose()).not.toThrow();
     expect(() => bus.setParams({ timeSeconds: 1, pingPong: false })).not.toThrow();
     expect(bus.getParams().timeSeconds).toBe(DEFAULT_DELAY_PARAMS.timeSeconds);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// M4: a rebuild hands the tail over instead of cutting it
+// ---------------------------------------------------------------------------------------
+
+/** The persistent wet summing node: the one gain that feeds the public `output`. */
+function wetSumOf(ctx: FakeAudioGraph, bus: DelayBus): FakeGainNode {
+  const output = asFakeNode(bus.output);
+  const found = ctx.createdGains.filter((g) => g.outgoing.some((edge) => edge.node === output));
+  expect(found, "expected exactly one wet summing node feeding output").toHaveLength(1);
+  return found[0];
+}
+
+/**
+ * Every generation output gain, oldest first — the builds that feed the wet sum. A build that is
+ * still fading out keeps this edge, which is how these tests see that it was not cut.
+ */
+function generationGains(ctx: FakeAudioGraph, bus: DelayBus): FakeGainNode[] {
+  const wetSum = wetSumOf(ctx, bus);
+  return ctx.createdGains.filter((g) => g.outgoing.some((edge) => edge.node === wetSum));
+}
+
+describe("rebuild cross-fade (M4)", () => {
+  it("fades the outgoing build out instead of disconnecting it, so the tail is not cut", () => {
+    const { ctx, rec, bus } = makeBus({ pingPong: false, feedback: 0.5, timeSeconds: 0.25 });
+    const centredDelay = rec.delays[0];
+    const [firstGen] = generationGains(ctx, bus);
+    expect(firstGen.gain.value).toBeCloseTo(1, 9);
+
+    const delayDisconnects = centredDelay.disconnectCalls;
+    const genDisconnects = firstGen.disconnectCalls;
+
+    bus.setParams({ pingPong: true });
+
+    // The defect: `_build()` used to disconnect every node of the old build here, which truncated
+    // whatever was still ringing in its delay line. Nothing of the outgoing build may be torn down
+    // at toggle time.
+    expect(centredDelay.disconnectCalls).toBe(delayDisconnects);
+    expect(firstGen.disconnectCalls).toBe(genDisconnects);
+
+    // …and it is still feeding the wet sum, so its repeats keep arriving while it fades.
+    expect(firstGen.outgoing.some((edge) => edge.node === wetSumOf(ctx, bus))).toBe(true);
+
+    // Faded from wherever its gain actually was to silence, over the delay-tied window.
+    const fade = firstGen.gain.events;
+    const pin = fade.findIndex((e) => e.type === "setValueAtTime");
+    expect(pin).toBeGreaterThanOrEqual(0);
+    const ramp = fade.slice(pin).find((e) => e.type === "linearRampToValueAtTime");
+    expect(ramp?.value).toBe(0);
+    expect(ramp?.time).toBeCloseTo(delayCrossfadeSeconds(0.25), 9);
+
+    // The replacement fades in over the same window, so the two overlap instead of gapping: this is
+    // the half that covers the new (empty) delay line's warm-up.
+    const gens = generationGains(ctx, bus);
+    expect(gens).toHaveLength(2);
+    const entering = gens[1].gain.events;
+    expect(entering[0]).toEqual({ type: "setValueAtTime", value: 0, time: 0 });
+    expect(
+      entering.some(
+        (e) =>
+          e.type === "linearRampToValueAtTime" &&
+          e.value === 1 &&
+          Math.abs(e.time - delayCrossfadeSeconds(0.25)) < 1e-9
+      )
+    ).toBe(true);
+  });
+
+  it("tears the retired build down once its fade has elapsed, on the audio clock", () => {
+    const { ctx, rec, bus } = makeBus({ pingPong: false, timeSeconds: 0.25 });
+    const oldDelay = rec.delays[0];
+    const [firstGen] = generationGains(ctx, bus);
+    bus.setParams({ pingPong: true });
+
+    const fadeEnd = delayCrossfadeSeconds(0.25);
+
+    // Mid-fade: still alive. A wall-clock timer would have freed it by now if the code used one.
+    ctx.currentTime = fadeEnd / 2;
+    bus.setParams({ feedback: 0.4 });
+    expect(oldDelay.disconnectCalls).toBe(0);
+    expect(firstGen.disconnectCalls).toBe(0);
+
+    // Past the fade, the next parameter application frees it — the audio clock, not a timer.
+    ctx.currentTime = fadeEnd;
+    bus.setParams({ feedback: 0.45 });
+    expect(oldDelay.disconnectCalls).toBe(1);
+    expect(firstGen.disconnectCalls).toBe(1);
+    // (`generationGains` cannot show the teardown: the shared fake counts `disconnect()` calls
+    // rather than dropping the edges, by design. The call counts above are the observable.)
+
+    // Sweeping again is a no-op, not a double disconnect.
+    bus.setParams({ feedback: 0.5 });
+    expect(oldDelay.disconnectCalls).toBe(1);
+  });
+
+  it("handles two toggles inside one fade window without cutting either build", () => {
+    const { ctx, rec, bus } = makeBus({ pingPong: false, timeSeconds: 0.25 });
+    const firstDelay = rec.delays[0];
+    bus.setParams({ pingPong: true });
+    ctx.currentTime = 0.05;
+    const secondGen = generationGains(ctx, bus)[1];
+    bus.setParams({ pingPong: false });
+
+    // Both replaced builds are still connected and both were given their own fade ramp.
+    expect(generationGains(ctx, bus)).toHaveLength(3);
+    expect(firstDelay.disconnectCalls).toBe(0);
+    expect(secondGen.disconnectCalls).toBe(0);
+    for (const gen of generationGains(ctx, bus).slice(0, 2)) {
+      const ramp = gen.gain.events.find(
+        (e) => e.type === "linearRampToValueAtTime" && e.value === 0
+      );
+      expect(ramp, "every replaced build gets its own fade to zero").toBeTruthy();
+    }
+
+    // The second fade is measured from the second toggle, not the first.
+    const secondRamp = secondGen.gain.events.find(
+      (e) => e.type === "linearRampToValueAtTime" && e.value === 0
+    );
+    expect(secondRamp?.time).toBeCloseTo(0.05 + delayCrossfadeSeconds(0.25), 9);
+
+    // Past both windows, one sweep retires both.
+    ctx.currentTime = 0.05 + delayCrossfadeSeconds(0.25);
+    bus.setParams({ feedback: 0.5 });
+    expect(firstDelay.disconnectCalls).toBe(1);
+    expect(secondGen.disconnectCalls).toBe(1);
+  });
+
+  it("disposes retiring builds that are still inside their fade window", () => {
+    const { ctx, rec, bus } = makeBus({ pingPong: false, timeSeconds: 0.25 });
+    const oldDelay = rec.delays[0];
+    const [firstGen] = generationGains(ctx, bus);
+    bus.setParams({ pingPong: true });
+    // Still fading: nothing has been freed yet, so `dispose` is the only thing that can free it.
+    expect(oldDelay.disconnectCalls).toBe(0);
+    bus.dispose();
+    expect(oldDelay.disconnectCalls).toBe(1);
+    expect(firstGen.disconnectCalls).toBe(1);
+  });
+
+  it("ties the window to the delay time, with a floor and a ceiling", () => {
+    // One 1/8 at 120 BPM — the library's most common echo — is the floor, and anything faster gets
+    // the floor too: a shorter window would stop being click-free.
+    expect(delayCrossfadeSeconds(0.25)).toBeCloseTo(0.25, 9);
+    expect(delayCrossfadeSeconds(0.125)).toBeCloseTo(0.25, 9);
+    expect(delayCrossfadeSeconds(DELAY_TIME_MIN_SEC)).toBeCloseTo(0.25, 9);
+    // Longer delays get a proportionally longer handover, so the new line's first repeat is covered…
+    expect(delayCrossfadeSeconds(0.4)).toBeCloseTo(0.4, 9);
+    // …up to the ceiling, past which a switch stops feeling immediate.
+    expect(delayCrossfadeSeconds(1)).toBeCloseTo(0.5, 9);
+    expect(delayCrossfadeSeconds(DELAY_TIME_MAX_SEC)).toBeCloseTo(0.5, 9);
+    // Non-finite inputs are clamped like every other time in this file, never returned as-is.
+    expect(Number.isFinite(delayCrossfadeSeconds(NaN))).toBe(true);
+    expect(delayCrossfadeSeconds(NaN)).toBeCloseTo(0.25, 9);
+    expect(delayCrossfadeSeconds(Infinity)).toBeCloseTo(0.5, 9);
+  });
+
+  it("keeps the cross-fade deterministic across two identical toggle sequences", () => {
+    const run = () => {
+      const { ctx, bus } = makeBus({ pingPong: false, timeSeconds: 0.3 });
+      bus.setParams({ pingPong: true });
+      ctx.currentTime = 0.1;
+      bus.setParams({ pingPong: false });
+      return ctx.createdGains.map((g) => g.gain.events);
+    };
+    expect(run()).toEqual(run());
   });
 });
