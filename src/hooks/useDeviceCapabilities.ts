@@ -22,6 +22,15 @@ export interface DeviceCapabilities {
   isMobile: boolean;
   /** Viewport is currently in landscape (phones rotate; the layout has to follow). */
   isLandscape: boolean;
+  /**
+   * A phone held sideways: the shape with the least vertical room and therefore the one that can
+   * least afford two stacked bars.
+   *
+   * Separate from `isPhone` on purpose. `isPhone` is also true in portrait, where the two bars cost
+   * 17 % of the viewport; here they cost 29 %, so the landscape shell has to make a different
+   * trade rather than inherit the portrait one.
+   */
+  isShortLandscape: boolean;
   /** The user asked the OS for less motion. Read here so JS motion can honour it too. */
   prefersReducedMotion: boolean;
 }
@@ -29,8 +38,16 @@ export interface DeviceCapabilities {
 /** Phone breakpoint. Matches the 640 px `sm:` boundary the Tailwind config already uses. */
 export const PHONE_MAX_WIDTH_PX = 639;
 
-/** Landscape phone: wider than the phone breakpoint but too short for the desktop chrome. */
-export const PHONE_MAX_HEIGHT_PX = 480;
+/**
+ * Landscape phone: wider than the phone breakpoint but too short for the desktop chrome.
+ *
+ * 500 px, not 480: this is the boundary the *stylesheet* already uses for its short-landscape
+ * block (`@media (max-height: 500px) and (orientation: landscape)` in `src/index.css`). The two
+ * used to differ by 20 px, which meant a 490 px-tall landscape viewport got the compressed CSS
+ * layout while JS still classified it as a tall phone — the kind of gap where a bar is measured
+ * against one rule and positioned by another.
+ */
+export const PHONE_MAX_HEIGHT_PX = 500;
 
 const QUERY_TOUCH = "(pointer: coarse)";
 const QUERY_PHONE_WIDTH = `(max-width: ${PHONE_MAX_WIDTH_PX}px)`;
@@ -58,6 +75,7 @@ export function classifyDevice(input: {
     isPhone,
     isMobile: input.touch && isPhone,
     isLandscape: input.landscape,
+    isShortLandscape: input.landscape && input.shortViewport,
     prefersReducedMotion: input.reducedMotion,
   };
 }

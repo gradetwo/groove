@@ -26,6 +26,17 @@ import { useLanguage } from "../../i18n/LanguageContext";
  * Tempo is shown, not editable, because a phone number-style stepper for BPM is worse than the
  * sheet's slider; tapping it opens the sheet. That is a deliberate trade: one fewer control, no
  * loss of capability.
+ *
+ * ---------------------------------------------------------------------------------------------
+ * Landscape drops bar navigation, and that is a measurement decision rather than a preference.
+ *
+ * The two fixed bars cost 112 px in *both* orientations, which is 17 % of a 664 px portrait
+ * viewport and 29 % of a 390 px landscape one (`PRODUCT_PLAN_v2.1.0.md` §G.5). Landscape is
+ * therefore where the working area is actually lost, and it is also where bar navigation stops
+ * earning its 88 px: a landscape phone shows 24+ step columns at once, so most patterns fit the
+ * screen without horizontal scrolling, and reaching bar 2 is a pan rather than 64 steps of
+ * dragging. It stays reachable from the sheet, so nothing becomes impossible — the control moves
+ * one tap deeper instead of occupying a fifth of the short edge for the whole session.
  */
 export interface MobileTransportBarProps {
   isPlaying: boolean;
@@ -40,6 +51,11 @@ export interface MobileTransportBarProps {
   onUndo: () => void;
   onRedo: () => void;
   onOpenSheet: () => void;
+  /**
+   * A phone held sideways. Drops bar navigation and tightens the vertical padding, because this is
+   * the shape with 390 px of total height.
+   */
+  isShortLandscape?: boolean;
 }
 
 /** 44 px minimum on every control; see the mobile a11y notes in `PRODUCT_PLAN_v2.1.0.md` §4. */
@@ -60,24 +76,52 @@ const BTN =
 export const TRANSPORT_LAYOUT = {
   /** Container padding: `px-1.5` on both sides. */
   paddingPx: 12,
-  /** `gap-1` between the seven items. */
+  /** `gap-1` between the items. */
   gapPx: 4,
   itemCount: 7,
   playWidthPx: 44,
   barNavWidthPx: 88, // two 32 px arrow buttons + a 44 px label (at 11 px type)
   fixedRightWidthPx: 132, // undo + redo + more, each 44 px
+  /**
+   * The landscape variant: bar navigation gone, so five items instead of seven and 88 px freed.
+   * Kept as its own numbers rather than derived, so each budget is a plain sum a test can check.
+   */
+  landscapeItemCount: 5,
+  landscapeFixedRightWidthPx: 132, // undo + redo + more, unchanged
 } as const;
 
 /** Narrowest viewport the phone shell is designed for. */
 export const MIN_SUPPORTED_PHONE_WIDTH_PX = 360;
 
 /** Width the flex tempo readout can occupy on that viewport, or a negative number if it cannot fit. */
-export function tempoReadoutBudgetPx(viewportWidth = MIN_SUPPORTED_PHONE_WIDTH_PX): number {
-  const { paddingPx, gapPx, itemCount, playWidthPx, barNavWidthPx, fixedRightWidthPx } = TRANSPORT_LAYOUT;
+export function tempoReadoutBudgetPx(
+  viewportWidth = MIN_SUPPORTED_PHONE_WIDTH_PX,
+  isShortLandscape = false
+): number {
+  const { paddingPx, gapPx, itemCount, playWidthPx, barNavWidthPx, fixedRightWidthPx } =
+    TRANSPORT_LAYOUT;
+  if (isShortLandscape) {
+    const { landscapeItemCount, landscapeFixedRightWidthPx } = TRANSPORT_LAYOUT;
+    const fixed = paddingPx + playWidthPx + landscapeFixedRightWidthPx;
+    return viewportWidth - fixed - gapPx * (landscapeItemCount - 1);
+  }
   const fixed = paddingPx + playWidthPx + barNavWidthPx + fixedRightWidthPx;
   const gaps = gapPx * (itemCount - 1);
   return viewportWidth - fixed - gaps;
 }
+
+/**
+ * The bar's own height, as a layout contract rather than a class name.
+ *
+ * Portrait keeps the 44 px control plus `py-1.5` on both sides. Landscape cuts the padding to
+ * `py-0.5` — the controls themselves stay 44 px, because shrinking the target is the one saving
+ * that would make the bar harder to use rather than merely smaller.
+ *
+ * Measured in Chromium (`scripts/diagnose_mobile_chrome.mjs`), not derived: 59 px and 49 px, with
+ * 49 rather than 47 because the 1 px bottom border and the toolbar's own rounding do not divide
+ * evenly. The test asserts only the ordering, since the exact box is the browser's business.
+ */
+export const TRANSPORT_BAR_HEIGHT_PX = { portrait: 59, landscape: 49 } as const;
 
 export const MobileTransportBar: React.FC<MobileTransportBarProps> = ({
   isPlaying,
@@ -92,15 +136,19 @@ export const MobileTransportBar: React.FC<MobileTransportBarProps> = ({
   onUndo,
   onRedo,
   onOpenSheet,
+  isShortLandscape = false,
 }) => {
   const { t } = useLanguage();
 
   return (
     <div
       data-testid="mobile-transport-bar"
+      data-layout={isShortLandscape ? "landscape" : "portrait"}
       role="toolbar"
       aria-label={t("mobile_transport_label")}
-      className="flex w-full items-center gap-1 border-b border-line bg-panel/80 px-1.5 py-1.5 backdrop-blur"
+      className={`flex w-full items-center gap-1 border-b border-line bg-panel/80 px-1.5 backdrop-blur ${
+        isShortLandscape ? "py-0.5" : "py-1.5"
+      }`}
     >
       {/*
         Widths are budgeted, not left to content: 8 px container padding + 44 play + 4 gap +
@@ -124,37 +172,39 @@ export const MobileTransportBar: React.FC<MobileTransportBarProps> = ({
 
       {/*
         Bar navigation is how a phone moves around a pattern longer than one bar, and it is the
-        only way to reach bar 2+ without horizontal scrolling 64 steps — so it earns its space
-        even though the desktop toolbar hides it until a pattern has more than one bar.
+        only way to reach bar 2+ without horizontally scrolling 64 steps — so it earns its space in
+        portrait. See the header comment for why landscape drops it.
       */}
-      <div className="flex shrink-0 items-center rounded-xl border border-line">
-        <button
-          type="button"
-          data-testid="mobile-transport-prev-bar"
-          aria-label={t("toolbar_bar_prev")}
-          onClick={onPrevBar}
-          disabled={viewedBar <= 0}
-          className="flex h-11 w-8 items-center justify-center text-text disabled:opacity-35"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span
-          data-testid="mobile-transport-bar-label"
-          className="w-11 text-center font-['JetBrains_Mono'] text-[11px] font-bold text-text-sub"
-        >
-          {Math.min(viewedBar + 1, Math.max(1, barCount))}/{Math.max(1, barCount)}
-        </span>
-        <button
-          type="button"
-          data-testid="mobile-transport-next-bar"
-          aria-label={t("toolbar_bar_next")}
-          onClick={onNextBar}
-          disabled={viewedBar >= barCount - 1}
-          className="flex h-11 w-8 items-center justify-center text-text disabled:opacity-35"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
+      {!isShortLandscape && (
+        <div className="flex shrink-0 items-center rounded-xl border border-line">
+          <button
+            type="button"
+            data-testid="mobile-transport-prev-bar"
+            aria-label={t("toolbar_bar_prev")}
+            onClick={onPrevBar}
+            disabled={viewedBar <= 0}
+            className="flex h-11 w-8 items-center justify-center text-text disabled:opacity-35"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span
+            data-testid="mobile-transport-bar-label"
+            className="w-11 text-center font-['JetBrains_Mono'] text-[11px] font-bold text-text-sub"
+          >
+            {Math.min(viewedBar + 1, Math.max(1, barCount))}/{Math.max(1, barCount)}
+          </span>
+          <button
+            type="button"
+            data-testid="mobile-transport-next-bar"
+            aria-label={t("toolbar_bar_next")}
+            onClick={onNextBar}
+            disabled={viewedBar >= barCount - 1}
+            className="flex h-11 w-8 items-center justify-center text-text disabled:opacity-35"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Tempo is a readout that opens the sheet, not a stepper: see the header comment. */}
       <button

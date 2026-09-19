@@ -144,6 +144,8 @@ export const studioMessages = {
   mobile_transport_label: { en: "Transport", zh: "走带控制" },
   mobile_studio_sheet_title: { en: "Studio controls", zh: "工作台控制" },
   mobile_sheet_playback: { en: "Playback", zh: "播放" },
+  mobile_sheet_bar_nav: { en: "Bar navigation", zh: "小节导航" },
+  mobile_sheet_bar_position: { en: "Bar {current} of {total}", zh: "第 {current} / {total} 小节" },
   mobile_sheet_edit: { en: "Editing", zh: "编辑" },
   mobile_sheet_project: { en: "Project", zh: "工程" },
   mobile_sheet_view: { en: "Panels & audio", zh: "面板与音频" },

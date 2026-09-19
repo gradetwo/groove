@@ -14,6 +14,7 @@ import { LanguageProvider } from "../i18n/LanguageContext";
 import {
   MobileTransportBar,
   TRANSPORT_LAYOUT,
+  TRANSPORT_BAR_HEIGHT_PX,
   MIN_SUPPORTED_PHONE_WIDTH_PX,
   tempoReadoutBudgetPx,
 } from "../components/sequencer/MobileTransportBar";
@@ -353,3 +354,227 @@ function buildStudioSheetGroupsForTest(over: { onToggleMetronome?: () => void })
     },
   ];
 }
+
+/**
+ * Landscape is a different trade, and it is a measurement rather than a preference.
+ *
+ * The two fixed bars cost 112 px in both orientations: 17 % of a 664 px portrait viewport but
+ * **29 %** of a 390 px landscape one (`PRODUCT_PLAN_v2.1.0.md` §G.5). So landscape is where the
+ * working area is actually lost, and it is also where the 88 px of bar navigation stops earning
+ * its place — a landscape phone shows 24+ step columns at once, so most patterns fit without
+ * horizontal scrolling and reaching bar 2 is a pan rather than 64 steps of dragging.
+ *
+ * These assertions are on the rendered DOM and on the budget arithmetic, not on the class strings
+ * alone: the point is that the *short* layout is genuinely narrower and shorter, and that it still
+ * holds every control at the 44 px touch minimum.
+ */
+describe("MobileTransportBar in a short landscape viewport", () => {
+  const renderLandscape = (overrides: Partial<typeof baseProps> = {}) =>
+    render(
+      <LanguageProvider>
+        <MobileTransportBar {...baseProps} {...overrides} isShortLandscape />
+      </LanguageProvider>
+    );
+
+  it("drops bar navigation, and with it two of the seven items", () => {
+    const { container } = renderLandscape();
+    expect(container.querySelector("[data-testid='mobile-transport-prev-bar']")).toBeNull();
+    expect(container.querySelector("[data-testid='mobile-transport-next-bar']")).toBeNull();
+    expect(container.querySelector("[data-testid='mobile-transport-bar-label']")).toBeNull();
+    // The controls that must survive regardless: play, tempo, undo, redo, more.
+    for (const id of [
+      "mobile-transport-play",
+      "mobile-transport-tempo",
+      "mobile-transport-undo",
+      "mobile-transport-redo",
+      "mobile-transport-more",
+    ]) {
+      expect(container.querySelector(`[data-testid='${id}']`), `${id} must stay`).not.toBeNull();
+    }
+  });
+
+  it("advertises which layout it is rendering, so the difference is observable", () => {
+    const landscape = renderLandscape();
+    expect(
+      landscape.container.querySelector("[data-testid='mobile-transport-bar']")!.getAttribute("data-layout")
+    ).toBe("landscape");
+    const portrait = render(
+      <LanguageProvider>
+        <MobileTransportBar {...baseProps} />
+      </LanguageProvider>
+    );
+    expect(
+      portrait.container.querySelector("[data-testid='mobile-transport-bar']")!.getAttribute("data-layout")
+    ).toBe("portrait");
+  });
+
+  it("is wider than the portrait layout, despite fewer controls", () => {
+    // Fewer items and a smaller fixed width, so the flexible readout gets more room rather than
+    // less — which is the whole reason the bar can afford to drop navigation here.
+    expect(tempoReadoutBudgetPx(MIN_SUPPORTED_PHONE_WIDTH_PX, true)).toBeGreaterThan(
+      tempoReadoutBudgetPx(MIN_SUPPORTED_PHONE_WIDTH_PX, false)
+    );
+  });
+
+  it("still leaves room for a three-digit readout at 360 px", () => {
+    expect(tempoReadoutBudgetPx(MIN_SUPPORTED_PHONE_WIDTH_PX, true)).toBeGreaterThanOrEqual(56);
+  });
+
+  it("keeps every control at the 44 px touch minimum, which is the trade it refuses to make", () => {
+    const { container } = renderLandscape();
+    for (const button of Array.from(container.querySelectorAll("button"))) {
+      // The savings come from the padding and from dropping a control, never from a smaller target.
+      expect(button.className).toMatch(/h-11/);
+    }
+  });
+
+  it("uses tighter vertical padding than portrait, and declares both heights", () => {
+    const landscape = renderLandscape();
+    const portrait = render(
+      <LanguageProvider>
+        <MobileTransportBar {...baseProps} />
+      </LanguageProvider>
+    );
+    const cls = (c: HTMLElement) => c.querySelector("[data-testid='mobile-transport-bar']")!.className;
+    expect(cls(landscape.container)).toMatch(/py-0\.5/);
+    expect(cls(portrait.container)).toMatch(/py-1\.5/);
+    // The heights are a contract the browser measurement is checked against, so they must be
+    // ordered the way the classes are.
+    expect(TRANSPORT_BAR_HEIGHT_PX.landscape).toBeLessThan(TRANSPORT_BAR_HEIGHT_PX.portrait);
+  });
+
+  it("does not overflow at 360 px in either layout", () => {
+    const viewport = MIN_SUPPORTED_PHONE_WIDTH_PX;
+    for (const landscape of [false, true]) {
+      const fixed = landscape
+        ? TRANSPORT_LAYOUT.paddingPx +
+          TRANSPORT_LAYOUT.playWidthPx +
+          TRANSPORT_LAYOUT.landscapeFixedRightWidthPx +
+          TRANSPORT_LAYOUT.gapPx * (TRANSPORT_LAYOUT.landscapeItemCount - 1)
+        : TRANSPORT_LAYOUT.paddingPx +
+          TRANSPORT_LAYOUT.playWidthPx +
+          TRANSPORT_LAYOUT.barNavWidthPx +
+          TRANSPORT_LAYOUT.fixedRightWidthPx +
+          TRANSPORT_LAYOUT.gapPx * (TRANSPORT_LAYOUT.itemCount - 1);
+      const used = fixed + tempoReadoutBudgetPx(viewport, landscape);
+      expect(used, `landscape=${landscape}`).toBeLessThanOrEqual(viewport);
+    }
+  });
+});
+
+/**
+ * Landscape keeps bar navigation by moving it, not by deleting it.
+ *
+ * Dropping the ◀ 1/4 ▶ cluster from the transport is only acceptable if the capability survives
+ * somewhere. The sheet is that somewhere, and "reachable" is asserted through the same row model
+ * the rest of the sheet uses — including that the position is legible and the bounds behave.
+ */
+describe("bar navigation moves into the sheet when the transport drops it", () => {
+  const noop = () => {};
+  const buildGroups = (over: Record<string, unknown> = {}) =>
+    buildStudioSheetGroups({
+      isMetronome: false,
+      isCountIn: false,
+      isRecordArmed: false,
+      isDrumsOnly: false,
+      isSongMode: false,
+      isBlindCompare: false,
+      drumKit: "909",
+      mobileEditMode: "step",
+      onToggleMetronome: noop,
+      onToggleCountIn: noop,
+      onToggleRecordArmed: noop,
+      onToggleDrumsOnly: noop,
+      onToggleSongMode: noop,
+      onToggleBlindCompare: noop,
+      onChangeDrumKit: noop,
+      onChangeMobileEditMode: noop,
+      onToggleVelocityLane: noop,
+      onOpenEuclidean: noop,
+      onOpenProjectHub: noop,
+      onOpenExport: noop,
+      onToggleAnalyzer: noop,
+      ...over,
+    });
+
+  const actionsFor = (groups: ReturnType<typeof buildGroups>) =>
+    groups.flatMap((g) => g.actions);
+
+  it("omits the rows entirely when the transport already shows them", () => {
+    // Portrait. A second copy on screen is a duplicate, not a fallback.
+    const ids = actionsFor(buildGroups()).map((a) => a.id);
+    expect(ids).not.toContain("prev-bar");
+    expect(ids).not.toContain("next-bar");
+  });
+
+  it("adds both directions when the transport cannot carry them", () => {
+    const ids = actionsFor(
+      buildGroups({ barNav: { viewedBar: 0, barCount: 4, onPrev: noop, onNext: noop } })
+    ).map((a) => a.id);
+    expect(ids).toContain("prev-bar");
+    expect(ids).toContain("next-bar");
+  });
+
+  it("names the current position, so the user knows where they are", () => {
+    const groups = buildGroups({
+      barNav: { viewedBar: 1, barCount: 4, onPrev: noop, onNext: noop },
+    });
+    const prev = actionsFor(groups).find((a) => a.id === "prev-bar")!;
+    // 0-based internally, 1-based in the UI: "Bar 2 of 4".
+    expect(prev.descKey).toBe("mobile_sheet_bar_position");
+    expect(prev.descParams).toMatchObject({ current: 2, total: 4 });
+  });
+
+  it("disables the direction that would leave the pattern", () => {
+    const atStart = actionsFor(
+      buildGroups({ barNav: { viewedBar: 0, barCount: 4, onPrev: noop, onNext: noop } })
+    );
+    expect(atStart.find((a) => a.id === "prev-bar")!.disabled).toBe(true);
+    expect(atStart.find((a) => a.id === "next-bar")!.disabled).toBe(false);
+
+    const atEnd = actionsFor(
+      buildGroups({ barNav: { viewedBar: 3, barCount: 4, onPrev: noop, onNext: noop } })
+    );
+    expect(atEnd.find((a) => a.id === "prev-bar")!.disabled).toBe(false);
+    expect(atEnd.find((a) => a.id === "next-bar")!.disabled).toBe(true);
+  });
+
+  it("does not offer a direction that does not exist on a one-bar pattern", () => {
+    const only = actionsFor(
+      buildGroups({ barNav: { viewedBar: 0, barCount: 1, onPrev: noop, onNext: noop } })
+    );
+    expect(only.find((a) => a.id === "prev-bar")!.disabled).toBe(true);
+    expect(only.find((a) => a.id === "next-bar")!.disabled).toBe(true);
+  });
+
+  it("calls the handler the row is for, and only that one", () => {
+    const onPrev = vi.fn();
+    const onNext = vi.fn();
+    const groups = buildGroups({ barNav: { viewedBar: 1, barCount: 4, onPrev, onNext } });
+    const actions = actionsFor(groups);
+    actions.find((a) => a.id === "prev-bar")!.onSelect?.();
+    expect(onPrev).toHaveBeenCalledTimes(1);
+    expect(onNext).not.toHaveBeenCalled();
+    actions.find((a) => a.id === "next-bar")!.onSelect?.();
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the position text through the real row, not just the model", () => {
+    render(
+      <LanguageProvider>
+        <MobileStudioSheet
+          open
+          onClose={noop}
+          groups={buildGroups({
+            barNav: { viewedBar: 2, barCount: 5, onPrev: noop, onNext: noop },
+          })}
+        />
+      </LanguageProvider>
+    );
+    const row = screen.getByTestId("mobile-studio-action-next-bar");
+    // The interpolation has to reach the DOM, or the row says "Bar {current} of {total}".
+    expect(row.textContent).toContain("3");
+    expect(row.textContent).toContain("5");
+    expect(row.textContent).not.toContain("{current}");
+  });
+});

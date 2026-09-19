@@ -1,27 +1,27 @@
 {
-  "version": "2.0.58",
+  "version": "2.0.59",
   "releaseDate": "2026-09-19",
-  "changelogCount": 122,
+  "changelogCount": 123,
   "latest": {
-    "version": "2.0.58",
+    "version": "2.0.59",
     "date": "2026-09-19",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.58 超级锯有了真正的立体声展开；界面密度设置从此真的生效",
-      "en": "v2.0.58 The Supersaw Gets Real Stereo Width, and the Density Setting Finally Does Something"
+      "zh": "v2.0.59 手机横屏找回 10px 可用高度：走带条瘦身，小节导航移入面板而非删掉",
+      "en": "v2.0.59 Ten Pixels Back on a Landscape Phone: a Slimmer Transport, and Bar Navigation Moved Rather Than Deleted"
     },
     "highlights": [
       {
-        "zh": "**超级锯（supersaw）立体声展开**：此前它是两把锯齿相差 26 音分、**完全单声道**。两把失谐锯齿挤在同一声道里只会以单一速率互相拍频，听感是「一把带点合唱的主音」而不是 trance 的声墙——而这个音色是 trance / hardstyle /  euphoric 类曲风的和弦担当。现在增设一对失谐副振荡器（±42 音分，即预设失谐的 1.6 倍）并左右分开摆位，用等功率摆位（居中时两声道各 √½，满足 L²+R²=1，避免线性摆位把居中做得响 3dB）保持总响度不变；原本的一对仍居中垫在下面，副对的混音只取预设的一半，所以加宽不抬电平。",
-        "en": "**Real stereo width for the supersaw**: it was two sawtooths 26 cents apart in **complete mono**. Two detuned saws in one channel only beat against each other at a single rate, which reads as 'a lead with a bit of chorus' rather than a trance wall — and that timbre carries the chords in trance, hardstyle and euphoric genres. It now gains a detuned outer pair (±42 cents, 1.6× the preset's own offset) panned apart with equal-power panning (both channels at √½ when centred, L²+…"
+        "zh": "**横屏走带条 59px → 49px**：两条固定栏在两种方向上都是 112px，但那是 664px 竖屏的 17%、390px 横屏的 **29%**——横屏才是真正失去工作区的地方。横屏因此去掉小节导航那一簇（◀ 1/4 ▶，88px 宽）并把纵向内边距从 `py-1.5` 收到 `py-0.5`。**控件本身仍然全部 44px**：省的是内边距和一个控件，不是触摸目标。实测两栏之间的可用带 128px → **138px**（33% → 35%）。",
+        "en": "**The landscape transport goes 59px → 49px**: the two fixed bars cost 112px in both orientations, but that is 17% of a 664px portrait viewport and **29%** of a 390px landscape one — landscape is where the working area is actually lost. It therefore drops the bar-navigation cluster (◀ 1/4 ▶, 88px wide) and tightens the vertical padding from `py-1.5` to `py-0.5`. **Every control stays 44px**: the saving is padding and one control, never the touch target. Measured free band bet…"
       },
       {
-        "zh": "**其余 50 个预设逐位不变**：立体声级只在预设声明 `stereoSpread` 时创建，不需要的预设连一个 splitter 都不多分配。测试以**节点计数**断言这一点（遍历全部未选择加入的预设，断言 splitter/merger 数量为 0），而不是依赖那个 `if`——否则一旦有人把该级改成无条件，158 个预设会静默改声，两份已提交基线同时失效。按仓库规矩重录了两份基线。",
-        "en": "**The other 50 presets are bit-for-bit unchanged**: the stereo stage is built only when a preset declares `stereoSpread`, and a preset that does not ask for it allocates not one extra splitter. The test asserts that by **counting nodes** across every preset that does not opt in (splitter and merger counts must be 0) rather than trusting the `if` — otherwise making the stage unconditional would silently change 158 presets and invalidate both committed baselines at the same ti…"
+        "zh": "**小节导航是移走，不是删掉**：横屏的工作台面板里多出一组「小节导航」，两行分别是上一小节/下一小节，行描述显示当前位置（「第 2 / 4 小节」），到头自动禁用。竖屏**不注入**这一组——走带条已经在显示它们，再来一份是重复而不是兜底。这条是本次能安全缩小的前提：**只有当能力在别处可达时，才允许把它从主界面移除**。",
+        "en": "**Bar navigation was moved, not deleted**: on a landscape phone the studio sheet gains a \"Bar navigation\" group whose two rows step to the previous and next bar, with the current position in the row description (\"Bar 2 of 4\") and the ends disabled. Portrait does **not** get the group — the transport already shows those controls, so a second copy would be a duplicate rather than a fallback. This is what makes the shrink safe: a control may leave the main surface only when the…"
       },
       {
-        "zh": "**界面密度设置真正生效（此前是个谎）**：设置里有紧凑/标准/宽松三档、有持久化、有校验、有中英文案，**却没有任何组件读它**——按下紧凑按钮亮起，界面毫无变化。这比不提供该控件更糟。现在它落到 `<html data-density>` 上，由 `index.css` 的几何自定义属性消费，因此不需要任何组件订阅该状态、也不会造成每次改偏好就整树重渲染（与播放头走 DOM 总线同一考虑）。步进格高度实测：桌面 40 / 44 / 48px，手机竖屏同样 40 / 44 / 48px。",
-        "en": "**The density setting actually takes effect (it was previously a lie)**: Settings offered compact / standard / comfortable with persistence, validation and bilingual labels, and **no component read it** — pressing compact lit the button up and changed nothing on screen. That is worse than not offering the control. It now lands on `<html data-density>` and is consumed by the geometry custom properties in `index.css`, so no component has to subscribe to it and changing the pre…"
+        "zh": "**修掉一处 JS 与 CSS 断点不一致**：`PHONE_MAX_HEIGHT_PX` 是 480，而样式表里的 `@media (max-height: 500px) and (orientation: landscape)` 是 500。也就是说 490px 高的横屏视口会拿到压缩后的样式表，而 JS 仍把它当高视口——同一个元素可以被一条规则定尺寸、被另一条规则定位。已统一为 500，并加了**读样式表断言两者相等**的测试：CSS 与 TS 无法共享常量，只能靠测试钉住。",
+        "en": "**Fixed a JS/CSS breakpoint mismatch**: `PHONE_MAX_HEIGHT_PX` was 480 while the stylesheet's `@media (max-height: 500px) and (orientation: landscape)` was 500. A 490px-tall landscape viewport therefore got the compressed stylesheet while JS still classified it as tall — the same element could be sized by one rule and positioned by another. Both are 500 now, with a test that **reads the stylesheet and asserts the two agree**, since CSS and TS cannot share a constant."
       }
     ],
     "truncated": true

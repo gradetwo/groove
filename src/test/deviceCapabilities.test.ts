@@ -10,6 +10,10 @@ import { classifyDevice, PHONE_MAX_WIDTH_PX, PHONE_MAX_HEIGHT_PX, useDeviceCapab
 import { renderHook } from "@testing-library/react";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
+const readFileSync = fs.readFileSync;
 
 const base = {
   touch: false,
@@ -67,6 +71,36 @@ describe("device classification", () => {
     expect(PHONE_MAX_WIDTH_PX).toBeGreaterThan(320);
     expect(PHONE_MAX_WIDTH_PX).toBeLessThan(768);
     expect(PHONE_MAX_HEIGHT_PX).toBeLessThan(PHONE_MAX_WIDTH_PX);
+  });
+
+  it("flags a short landscape viewport, which is the shape with the least room", () => {
+    const caps = classifyDevice({ ...base, touch: true, landscape: true, shortViewport: true });
+    expect(caps.isShortLandscape).toBe(true);
+  });
+
+  it("does not flag portrait, nor a tall landscape viewport", () => {
+    expect(
+      classifyDevice({ ...base, touch: true, landscape: false, shortViewport: true }).isShortLandscape
+    ).toBe(false);
+    expect(
+      classifyDevice({ ...base, touch: true, landscape: true, shortViewport: false }).isShortLandscape
+    ).toBe(false);
+  });
+
+  /**
+   * The JS boundary and the CSS boundary must be the same number.
+   *
+   * They were 480 and 500: a 490 px-tall landscape viewport got the compressed stylesheet from
+   * `@media (max-height: 500px)` while JS still classified it as a tall phone, so a component
+   * could be sized by one rule and positioned by another. There is no way to share a constant
+   * between CSS and TS, so this asserts they agree by reading the stylesheet — the one place an
+   * edit to either side is caught.
+   */
+  it("uses the same short-landscape boundary as the stylesheet", () => {
+    const css = readFileSync(path.resolve(TEST_DIR, "../index.css"), "utf8");
+    const media = css.match(/@media \(max-height: (\d+)px\) and \(orientation: landscape\)/);
+    expect(media, "the short-landscape media query is gone").toBeTruthy();
+    expect(Number(media![1])).toBe(PHONE_MAX_HEIGHT_PX);
   });
 });
 

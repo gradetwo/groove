@@ -19,6 +19,14 @@ export interface StudioSheetAction {
   id: string;
   labelKey: string;
   descKey?: string;
+  /**
+   * Interpolation values for `descKey`.
+   *
+   * Needed because a sheet row has to be able to show live state — "Bar 2 of 4" — and the
+   * alternative was a second row type that renders arbitrary text, i.e. a hole in the sheet's
+   * model for one case.
+   */
+  descParams?: Record<string, string | number>;
   /** Mirrors the desktop keyboard binding, shown as a hint. */
   shortcut?: string;
   /** A toggle row shows its current state instead of a chevron. */
@@ -134,7 +142,7 @@ export const MobileStudioSheet: React.FC<MobileStudioSheetProps> = ({ open, onCl
                       </span>
                       {action.descKey && (
                         <span className="block truncate text-[11px] leading-tight text-text-dim">
-                          {t(action.descKey)}
+                          {t(action.descKey, action.descParams)}
                         </span>
                       )}
                     </span>
@@ -210,9 +218,57 @@ export function buildStudioSheetGroups(input: {
   onToggleConsole?: () => void;
   onToggleAnalyzer: () => void;
   onOpenAudioSettings?: () => void;
+  /**
+   * Bar navigation, for the shapes where the transport bar does not carry it.
+   *
+   * A landscape phone drops the transport's ◀ 1/4 ▶ cluster because the two fixed bars cost 29 %
+   * of its 390 px of height (`PRODUCT_PLAN_v2.1.0.md` §G.5). Dropping it from the *transport* is
+   * only acceptable if it appears somewhere, so these rows are how the capability is kept: the same
+   * two controls, one tap deeper, with the current position in each row's description. Omitted
+   * entirely in portrait, where the transport shows them and a second copy would be a duplicate
+   * rather than a fallback.
+   */
+  barNav?: {
+    viewedBar: number;
+    barCount: number;
+    onPrev: () => void;
+    onNext: () => void;
+  };
 }): StudioSheetGroup[] {
   const drumKits: DrumKitType[] = ["808", "909", "acoustic", "cyber"];
+  const barNavGroup: StudioSheetGroup[] = input.barNav
+    ? [
+        {
+          titleKey: "mobile_sheet_bar_nav",
+          actions: [
+            {
+              id: "prev-bar",
+              labelKey: "toolbar_bar_prev",
+              descKey: "mobile_sheet_bar_position",
+              descParams: {
+                current: Math.min(input.barNav.viewedBar + 1, Math.max(1, input.barNav.barCount)),
+                total: Math.max(1, input.barNav.barCount),
+              },
+              disabled: input.barNav.viewedBar <= 0,
+              onSelect: input.barNav.onPrev,
+            },
+            {
+              id: "next-bar",
+              labelKey: "toolbar_bar_next",
+              descKey: "mobile_sheet_bar_position",
+              descParams: {
+                current: Math.min(input.barNav.viewedBar + 1, Math.max(1, input.barNav.barCount)),
+                total: Math.max(1, input.barNav.barCount),
+              },
+              disabled: input.barNav.viewedBar >= input.barNav.barCount - 1,
+              onSelect: input.barNav.onNext,
+            },
+          ],
+        },
+      ]
+    : [];
   return [
+    ...barNavGroup,
     {
       titleKey: "mobile_sheet_playback",
       actions: [

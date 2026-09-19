@@ -135,6 +135,11 @@ export interface SequencerPanelProps {
    * bar; the grid, track rows and lane drawers are the same components either way.
    */
   isPhone?: boolean;
+  /**
+   * A phone held sideways: the shape with 390 px of total height, where the two fixed bars cost
+   * 29 % of the viewport. Forwarded to the mobile transport so it can drop bar navigation.
+   */
+  isShortLandscape?: boolean;
   /** Opens the phone sheet, which holds everything the compact bar leaves out. */
   onOpenMobileSheet?: () => void;
   /** Opens the Chords view — the phone's replacement for the piano roll. */
@@ -286,6 +291,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onToggleGs1,
   onOpenAudioSettings,
   isPhone = false,
+  isShortLandscape = false,
   onOpenMobileSheet,
   onOpenChords,
   commit,
@@ -432,6 +438,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
           onUndo={onUndo}
           onRedo={onRedo}
           onOpenSheet={onOpenMobileSheet ?? (() => setIsMobileSheetOpen(true))}
+          isShortLandscape={isShortLandscape}
         />
       ) : (
       /* Sequencer Unified Toolbar */
@@ -808,6 +815,19 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             onToggleConsole,
             onToggleAnalyzer,
             onOpenAudioSettings,
+            /**
+             * Bar navigation lives here only in the shape that dropped it from the transport.
+             * Passing it in portrait too would render a second copy of two controls that are
+             * already on screen, which is the opposite of what the phone shell is for.
+             */
+            barNav: isShortLandscape
+              ? {
+                  viewedBar,
+                  barCount,
+                  onPrev: () => onSelectBar(Math.max(0, viewedBar - 1)),
+                  onNext: () => onSelectBar(Math.min(barCount - 1, viewedBar + 1)),
+                }
+              : undefined,
           })}
         />
       )}

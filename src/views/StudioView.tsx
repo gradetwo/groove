@@ -567,7 +567,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
    * Phone layout switch. Capability-based rather than a width test, so a landscape phone gets the
    * compact transport instead of the desktop toolbar on a 390 px-tall screen.
    */
-  const { isMobile: isPhone } = useDeviceCapabilities();
+  const { isMobile: isPhone, isShortLandscape } = useDeviceCapabilities();
 
   // Grid input layer: drag-paint, long-press P-Locks, mobile tap modes (A-02)
   const {
@@ -920,6 +920,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         {/* Right Column: The Sequencer (.seq) */}
         <SequencerPanel
           isPhone={isPhone}
+          isShortLandscape={isShortLandscape}
           onOpenChords={onOpenChords}
           pattern={pattern}
           seqState={seqState}
