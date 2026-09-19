@@ -1,27 +1,27 @@
 {
-  "version": "2.0.83",
+  "version": "2.0.84",
   "releaseDate": "2026-09-19",
-  "changelogCount": 147,
+  "changelogCount": 148,
   "latest": {
-    "version": "2.0.83",
+    "version": "2.0.84",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.83 改 FX 参数不再重建音频图：拖速度滑杆不再把主滤波器拽出链路",
-      "en": "v2.0.83 Writing an FX Value No Longer Rebuilds the Audio Graph"
+      "zh": "v2.0.84 五处「点了没反应」现在都会说话：模式开关、tap tempo、空撤销、引擎未就绪",
+      "en": "v2.0.84 Five Silent Controls Now Say What They Did"
     },
     "highlights": [
       {
-        "zh": "**`setFilter` 无条件重连图，而它在每次 BPM 变化时都会被调用。** `updateFilterRouting()` 先把两条边都断开再重接——在实时图里这不是空操作，而是**主链路上一次短暂的断路**（听感上就是咔哒）。而 `applyGenreFxToGraph()` 在**每次 pattern 替换和每次 BPM 变化**时都会调用 `setFilter`，所以只要滤波器开着，**拖速度滑杆就会把主滤波器拽出链路再装回来一次**（每个输入事件一次）。",
-        "en": "**`setFilter` re-routed the graph unconditionally, and it is called on every BPM change.** `updateFilterRouting()` disconnects both edges before reconnecting them — not a no-op in a live graph, but a brief **open circuit in the master path** (a click). And `applyGenreFxToGraph()` calls `setFilter` on every pattern set *and every BPM change*, so with the filter engaged, **dragging the tempo slider pulled the master filter out of the chain and put it back once per input event*…"
+        "zh": "**四个模式开关改了状态却一个字都不说。** Song Mode、盲测对比、节拍器、预备拍以前只提交状态：既没有提示也没有屏幕阅读器播报——从外面看和坏掉的按钮一模一样。现在每个开关都报告它刚切到的新状态（开/关各一条文案），并同时播报。",
+        "en": "**Four mode toggles changed state without a word.** Song Mode, Blind Compare, Metronome and Count-In only committed state — no toast, no screen-reader announcement — which from the outside is indistinguishable from a broken button. Each toggle now reports the state it just moved to (a distinct message per edge) and announces it."
       },
       {
-        "zh": "**修法：路由只取决于开关状态。** 记下上次为哪个 `filterEnabled` 值布线，值变化只写参数、不动图（频率/Q/类型仍是**步进**写入——这是刻意的：`ChannelStripDsp.writeParam` 的注释说明步进才能让离线渲染逐位一致，不是这次的缺陷）。",
-        "en": "**The fix: the routing depends on the enable flag alone.** The rack now records which `filterEnabled` value the edges were built for, so a value change writes parameters without touching the graph. Frequency, Q and type are still written as **steps**, deliberately: the comment in `ChannelStripDsp.writeParam` records that a step keeps the offline render bit-identical."
+        "zh": "**另外三处静默**：① tap tempo 第一次点**什么都不发生**（要两次才有反应），现在会说「再点一次即可测定速度」；② 撤销/重做在历史为空时静默返回，现在会说「没有可撤销/可重做的操作」；③ 播放时引擎实例还没就绪会静默返回，现在会说「音频仍在启动中——请稍后再点一次播放」。撤销/重做还修了一个连带问题：以前「有历史、但引擎恰好未就绪」会连确认提示一起吞掉，现在存储已经回滚就照常确认（同步引擎退化为尽力而为）。",
+        "en": "**Three more silences:** (1) the first tap of tap tempo did **nothing at all** — it needs two taps — and now asks for another tap; (2) undo/redo with an empty history returned in silence and now says there is nothing to undo or redo; (3) pressing Play before the engine instance exists was silently ignored and now says audio is still starting. Undo/redo also had a related bug: when history *did* have an entry but the engine was not ready yet, the confirmation was swallowed al…"
       },
       {
-        "zh": "**测试（`effectsRackRewiring.test.ts`，3 条）**：连续改 cutoff/Q 时 `disconnectCalls` 一次都不涨（而参数确实写进去了）、开关滤波器仍然重连且重连后的边正确、以及**走用户真实路径**——`applyGenreFxToGraph` 连调 5 个不同 BPM，已开启的滤波器一次都没被重连。为此给测试用的 `FakeNode` 加了 `disconnectCalls`：断开一条边再接回同一条边，在实时图里不是空操作。把 `setFilter` 改回无条件重连实测 **2 条失败**；全量单测 177 文件 / 2042 用例。",
-        "en": "**Tests (`effectsRackRewiring.test.ts`, 3):** consecutive cutoff/Q writes leave `disconnectCalls` unchanged while the values really are written; switching the filter in and out still re-routes, with the right edges afterwards; and the real path — `applyGenreFxToGraph` at five different BPMs leaves an engaged filter untouched. The test `FakeNode` gained a `disconnectCalls` counter, because tearing an edge down and rebuilding the identical one is not a no-op in a live graph. R…"
+        "zh": "**顺手查明的死分支**：tap tempo 里 `calculatedBpm >= 40 && <= 240` 永远不会为假——`AudioEngine.calculateTapTempo` 自己就会夹取到 40–240 并四舍五入，退化输入还返回 120。所以「超出范围」从来不是静默 no-op，那段是死代码，已删并加注释。**但它暴露了另一个诚实问题**：点得过快/过慢时数值被夹取，界面却把它当「测到的速度」展示；没有证据说这会困扰用户，这轮只记录、不改。",
+        "en": "**A dead branch found on the way:** the `calculatedBpm >= 40 && <= 240` check in tap tempo can never be false — `AudioEngine.calculateTapTempo` already clamps into 40-240 and rounds, returning 120 for a degenerate interval. So \"out of range\" was never a silent no-op; the branch was dead code and is gone, with a comment. It does expose a separate honesty question: tapping far too fast or slow yields a clamped value that the UI presents as measured. There is no evidence that b…"
       }
     ],
     "truncated": true
