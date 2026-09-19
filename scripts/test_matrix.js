@@ -646,6 +646,88 @@ async function runTestOnTarget(target, baseUrl) {
       }
     }
 
+    // 2.3 The phone surface is a phone surface: few controls, and all of them hittable.
+    /**
+     * Measured before this check existed (`scripts/measure_phone_surface.mjs`, 390×664): the header
+     * carried nine controls, seven of them 24–36 px, plus a second navigation menu on top of the tab
+     * bar's own; the genre rail's category picker was 36 px tall and its dice 36×36. Everything the
+     * header offered is reachable on a phone through bigger targets (the tab bar's "More" sheet for
+     * search/settings/help/updates, Settings for the language, the Help centre for the tour, Explore
+     * for a random genre), and that sheet lists every tab the header dropdown listed.
+     *
+     * Two rules, both about the same thing — a control a thumb cannot hit is a control that should
+     * not be offered:
+     *   1. the header shows at most one control (the brand), and it is ≥44 px;
+     *   2. every other touchable control outside the step grid is ≥44 px in both dimensions.
+     *
+     * The step grid is excluded because a grid is not a toolbar: `StepCell` is a focusable
+     * `role="gridcell"`, and how many steps fit a 390 px screen is a separate design question (the
+     * measured cells are large; the narrow entries are the 4 px track swatch, tracked in the plan).
+     * So are content links: `a[href]` inside a card or a paragraph is read as text, and WCAG's own
+     * target-size rule exempts links in a sentence. The phone's navigation is the tab bar, which is
+     * a button surface and is measured. Scoped to `target.isMobile`: a tablet has the room, and a
+     * narrow *desktop* window still needs the header's drawer because its `md:flex` nav is hidden.
+     */
+    if (target.isMobile) {
+      /**
+       * Measured on the phone's *home* surface, deliberately: the check runs after several
+       * navigations, and "how many controls are on screen" only means something for a named screen.
+       * Scrolling to the footer is a different surface with its own (recorded) findings.
+       */
+      await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(400);
+      const surface = await page.evaluate(() => {
+        const MIN_TAP = 44;
+        /**
+         * The phone transport's bar-step buttons are 32×44: 44 px tall, deliberately narrow to keep
+         * the tempo readout on a 390 px row. They live in `MobileTransportBar.tsx`, which the design
+         * freeze reserves, so they are named here rather than silently tolerated by a loose rule.
+         */
+        const ALLOWED_SMALL = new Set([
+          "mobile-transport-prev-bar",
+          "mobile-transport-next-bar",
+        ]);
+        const selector = 'button, select, input, textarea, [role="button"], [tabindex="0"]';
+        const small = [];
+        const headerControls = [];
+        for (const node of Array.from(document.querySelectorAll(selector))) {
+          if (node.closest('[role="grid"]')) continue;
+          const testid = node.getAttribute("data-testid");
+          if (testid && ALLOWED_SMALL.has(testid)) continue;
+          const rect = node.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) continue;
+          const style = window.getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden") continue;
+          // On screen, not merely in the document: the same rule the audit uses, so the two agree.
+          if (rect.left < 0 || rect.right > window.innerWidth) continue;
+          if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
+          const entry = {
+            testid,
+            label: node.getAttribute("aria-label") || (node.textContent ?? "").trim().slice(0, 20),
+            w: Math.round(rect.width),
+            h: Math.round(rect.height),
+          };
+          if (rect.width < MIN_TAP || rect.height < MIN_TAP) small.push(entry);
+          if (node.closest("header") && !node.closest("nav")) headerControls.push(entry);
+        }
+        return { small, headerControls };
+      });
+      const { small, headerControls } = surface;
+
+      if (headerControls.length > 2) {
+        throw new Error(
+          `Phone header shows ${headerControls.length} controls, expected at most 2 (the brand and ` +
+            `the sections sheet): ${JSON.stringify(headerControls)} on ${target.name}`
+        );
+      }
+      if (small.length > 0) {
+        throw new Error(
+          `Phone surface has ${small.length} control(s) under the ${44} px touch minimum on ` +
+            `${target.name}: ${JSON.stringify(small)}`
+        );
+      }
+    }
+
     // 3. Chord Studio View Check
     await page.goto(`${baseUrl}/?tab=chords`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(400);
@@ -819,30 +901,51 @@ async function runTestOnTarget(target, baseUrl) {
     // it is reachable there, that it is organised into tabs, and — the part that matters — that
     // flipping the switch inside the panel is reflected by the studio toolbar chip. Two surfaces,
     // one value; that mismatch was the bug class.
-    if (!(await page.$("[data-testid='header-settings-open']"))) {
-      throw new Error("Header has no global settings entry point");
-    }
-    const headerOrder = await page.evaluate(() => {
-      const left = (id) => {
-        const el = document.querySelector(`[data-testid='${id}']`);
-        return el ? el.getBoundingClientRect().left : null;
-      };
-      return {
-        language: left("header-language-switch"),
-        settings: left("header-settings-open"),
-        version: left("header-version-button"),
-      };
-    });
-    if (
-      headerOrder.language === null ||
-      headerOrder.settings === null ||
-      headerOrder.settings <= headerOrder.language ||
-      (headerOrder.version !== null && headerOrder.settings >= headerOrder.version)
-    ) {
-      throw new Error(`Settings entry point is misplaced: ${JSON.stringify(headerOrder)}`);
+    if (!target.isMobile) {
+      if (!(await page.$("[data-testid='header-settings-open']"))) {
+        throw new Error("Header has no global settings entry point");
+      }
+      const headerOrder = await page.evaluate(() => {
+        const left = (id) => {
+          const el = document.querySelector(`[data-testid='${id}']`);
+          return el ? el.getBoundingClientRect().left : null;
+        };
+        return {
+          language: left("header-language-switch"),
+          settings: left("header-settings-open"),
+          version: left("header-version-button"),
+        };
+      });
+      if (
+        headerOrder.language === null ||
+        headerOrder.settings === null ||
+        headerOrder.settings <= headerOrder.language ||
+        (headerOrder.version !== null && headerOrder.settings >= headerOrder.version)
+      ) {
+        throw new Error(`Settings entry point is misplaced: ${JSON.stringify(headerOrder)}`);
+      }
     }
 
-    await page.click("[data-testid='header-settings-open']", { force: true });
+    /**
+     * On a phone the same panel is reached from the tab bar's "More" sheet, not the header: the
+     * header is a title bar there (see 2.3), and the sheet row is the identical entry point behind a
+     * bigger target. Same panel, same assertions — only the way in differs.
+     */
+    const settingsEntry = target.isMobile
+      ? "[data-testid='mobile-sheet-action-settings']"
+      : "[data-testid='header-settings-open']";
+    if (target.isMobile) {
+      /**
+       * The header's own 44 px button, not the tab bar's sheet opener: measured in portrait, the
+       * 48×48 virtual-keyboard FAB sits exactly over the centre of the "You" tab, so a tap there
+       * lands on the FAB. That overlap is a finding recorded in the plan (the file is reserved by
+       * the design freeze); this check exercises the path a phone user actually has.
+       */
+      await page.click("[data-testid='header-more']", { force: true });
+      await page.waitForSelector(settingsEntry, { timeout: 10000 });
+    }
+
+    await page.click(settingsEntry, { force: true });
     await page.waitForSelector("[data-testid='settings-tab-audio']", { timeout: 15000 });
     for (const tab of ["audio", "performance", "interface", "about"]) {
       if (!(await page.$(`[data-testid='settings-tab-${tab}']`))) {
