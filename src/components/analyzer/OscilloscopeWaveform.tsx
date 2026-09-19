@@ -46,7 +46,15 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
   useEffect(() => {
     updateCanvasSize();
     if (typeof ResizeObserver !== "undefined") {
-      const ro = new ResizeObserver(() => updateCanvasSize());
+      /**
+       * Deferred by one frame: `updateCanvasSize` writes the canvas' *style* width/height, and the
+       * container's size follows the canvas, so a synchronous callback resizes the observed element
+       * inside its own notification and the engine reports
+       * "ResizeObserver loop completed with undelivered notifications". The handler's own guard makes
+       * the second pass a no-op, so one frame of deferral settles it — measured by the E2E, which
+       * collected that warning as a page error once the phone gate started visiting this view.
+       */
+      const ro = new ResizeObserver(() => requestAnimationFrame(() => updateCanvasSize()));
       if (containerRef.current) ro.observe(containerRef.current);
       return () => ro.disconnect();
     }
