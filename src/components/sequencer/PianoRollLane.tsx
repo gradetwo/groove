@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   ChevronDown,
@@ -81,6 +81,14 @@ import {
   type RollStepNote,
   type RollTool,
 } from "../../features/sequencer/rollModel";
+import {
+  clampCursor,
+  KEYBOARD_DEFAULT_GATE,
+  rollKeyboardIntent,
+  scrollToRevealCursor,
+  type RollCursor,
+  type RollKeyboardBounds,
+} from "../../features/sequencer/rollKeyboard";
 import { midiToNoteName } from "./PitchPickerModal";
 import { subscribePlayhead } from "../../features/sequencer/playheadBus";
 
@@ -264,6 +272,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [fullPitchRange, setFullPitchRange] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [hoverCell, setHoverCell] = useState<{ stepIdx: number; midi: number } | null>(null);
+  /** U10: where the keyboard is, as opposed to where the pointer is (`hoverCell`). */
+  const [keyboardCursor, setKeyboardCursor] = useState<RollCursor | null>(null);
+  /** U10: the live region's text — what a screen reader hears as the cursor moves and edits land. */
+  const [rollAnnouncement, setRollAnnouncement] = useState("");
   const [resizeGatePreview, setResizeGatePreview] = useState<{ stepIdx: number; midi: number; gate: number } | null>(null);
   const [showNewConfirm, setShowNewConfirm] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -623,6 +635,260 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     const next = op(pattern);
     if (next !== pattern) commitDraft(next);
   };
+
+  // ---------------------------------------------------------------------------------------
+  // U10: keyboard editing
+  //
+  // The roll's DOM cannot honestly be a `grid` (there are no rows to hold `gridcell`s), so the
+  // editor is exposed as one focusable surface with a cursor inside it — see
+  // `features/sequencer/rollKeyboard.ts` for why. What lives here is only the dispatch: move the
+  // cursor, or apply the pointer tools' own operations to whatever note is under it, so a note drawn
+  // by keyboard and a note drawn by pointer are the same edit through the same `commitDraft`.
+  // ---------------------------------------------------------------------------------------
+
+  const rollHelpId = useId();
+
+  const keyboardBounds = useMemo<RollKeyboardBounds>(
+    () => ({
+      stepCount,
+      barSteps: Math.max(1, stepsPerBar),
+      loMidi: rows.length ? Math.min(rows[0], rows[rows.length - 1]) : 0,
+      hiMidi: rows.length ? Math.max(rows[0], rows[rows.length - 1]) : 127,
+    }),
+    [stepCount, stepsPerBar, rows]
+  );
+
+  /**
+   * Announces a line to the live region.
+   *
+   * `aria-live` only re-announces when the *text changes*, and two identical messages are normal
+   * here: nudging velocity into its ceiling, or pressing an arrow against the edge of the clip.
+   * Alternating a zero-width space keeps the message identical to a reader while making the DOM text
+   * differ, which is the only thing the live region reacts to.
+   */
+  const announceRoll = useCallback((text: string) => {
+    setRollAnnouncement((prev) => (prev.endsWith("\u200B") ? text : `${text}\u200B`));
+  }, []);
+
+  const describeCell = useCallback(
+    (cursor: RollCursor): string => {
+      const note = midiToNoteName(cursor.midi);
+      const hit = noteAt(cursor.stepIdx, cursor.midi);
+      return hit
+        ? t("roll_kb_cursor_note", { note, step: cursor.stepIdx + 1, velocity: hit.velocity })
+        : t("roll_kb_cursor_empty", { note, step: cursor.stepIdx + 1 });
+    },
+    [noteAt, t]
+  );
+
+  /**
+   * Where the cursor appears when the grid is focused: the first selected note, else the first note
+   * in the clip, else the middle of the drawn range. Starting from the user's own selection means
+   * tabbing in and pressing a key acts on what they were already working on.
+   */
+  const initialCursor = useCallback((): RollCursor => {
+    const selected = selection.map(parseNoteId)[0];
+    const anchor = selected ?? notes[0];
+    if (anchor) return clampCursor({ stepIdx: anchor.stepIdx, midi: anchor.midi }, keyboardBounds);
+    return clampCursor(
+      {
+        stepIdx: 0,
+        midi: Math.round((keyboardBounds.loMidi + keyboardBounds.hiMidi) / 2),
+      },
+      keyboardBounds
+    );
+  }, [selection, notes, keyboardBounds]);
+
+  /** A note read back from the pattern that was committed — what was actually written. */
+  const noteAfter = useCallback(
+    (next: SequencerPattern, id: RollNoteId) =>
+      notesFromTrack(next.tracks[activeTrackIdx]).find((n) => noteId(n) === id) ?? null,
+    [activeTrackIdx]
+  );
+
+  /**
+   * Scrolls the grid so the keyboard cursor stays visible, syncing the ruler and velocity lanes the
+   * same way a manual scroll does. The pointer never needed this; a cursor that walks off-screen
+   * just looks like the key did nothing.
+   */
+  const revealCursor = useCallback(
+    (cursor: RollCursor) => {
+      const scroller = scrollRef.current;
+      const rowIdx = rowIdxMap.get(cursor.midi);
+      if (!scroller || rowIdx === undefined) return;
+      const { left, top } = scrollToRevealCursor({
+        stepIdx: cursor.stepIdx,
+        rowIdx,
+        cellW,
+        rowH,
+        viewW: scroller.clientWidth,
+        viewH: scroller.clientHeight,
+        scrollLeft: scroller.scrollLeft,
+        scrollTop: scroller.scrollTop,
+      });
+      if (left !== scroller.scrollLeft) {
+        scroller.scrollLeft = left;
+        if (rulerScrollRef.current) rulerScrollRef.current.scrollLeft = left;
+        if (velScrollRef.current) velScrollRef.current.scrollLeft = left;
+      }
+      if (top !== scroller.scrollTop) {
+        scroller.scrollTop = top;
+        if (keybedScrollRef.current) keybedScrollRef.current.scrollTop = top;
+      }
+    },
+    [rowIdxMap, cellW, rowH]
+  );
+
+  /**
+   * Keyboard editing on the focused surface.
+   *
+   * ## Who owns which key
+   *
+   * The roll already had a keyboard model before this: a window-level handler where arrows **move the
+   * selected notes**, Delete deletes the selection, and letters pick tools. That is real editing and
+   * it stays — so this handler only *adds* the part that was missing (a cursor that can create a note
+   * and a keyboard path to velocity) and defers to the window handler whenever a selection exists.
+   * The cursor is therefore where a new note would land, not a second, competing selection: with
+   * something selected the arrows move it (existing behaviour, unchanged), with nothing selected they
+   * move the cursor, and the viewport follows it.
+   *
+   * `stopPropagation` is what makes the split work: this runs while the event bubbles through the
+   * React root, so stopping it there keeps the window handler from acting on a key the cursor already
+   * used. Keys the roll does not act on are left completely alone — including every ⌘/Ctrl
+   * combination, and Tab, which must still leave the surface.
+   */
+  const handleGridKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!editable) return;
+      const cursor = keyboardCursor ?? initialCursor();
+      const intent = rollKeyboardIntent(
+        event.key,
+        { shift: event.shiftKey, meta: event.metaKey, ctrl: event.ctrlKey },
+        cursor,
+        keyboardBounds
+      );
+      if (!intent) return;
+
+      const hasSelection = selection.length > 0;
+      const hit = noteAt(cursor.stepIdx, cursor.midi);
+      const take = () => {
+        event.preventDefault();
+        event.stopPropagation();
+      };
+
+      if (intent.kind === "move") {
+        if (hasSelection) return; // the window handler moves the selection; leave the event to it
+        take();
+        setKeyboardCursor(intent.cursor);
+        revealCursor(intent.cursor);
+        announceRoll(describeCell(intent.cursor));
+        return;
+      }
+
+      if (intent.kind === "velocity") {
+        const ids = hasSelection ? selection : hit ? [noteId(hit)] : [];
+        if (ids.length === 0) {
+          take();
+          announceRoll(t("roll_kb_no_note"));
+          return;
+        }
+        take();
+        // The velocity lane's own relative op, so a keyboard nudge and a lane drag are one edit and
+        // clamp in one place; the announced number is read back from the result, never re-derived.
+        const next = scaleNotesVelocity(pattern, activeTrackIdx, ids, intent.delta, stepCount);
+        if (next !== pattern) commitDraft(next, ids);
+        const velocity = noteAfter(next, ids[0])?.velocity ?? 0;
+        announceRoll(
+          ids.length > 1
+            ? t("roll_kb_velocity_many", { count: ids.length, velocity })
+            : t("roll_kb_velocity", { note: midiToNoteName(parseNoteId(ids[0]).midi), velocity })
+        );
+        return;
+      }
+
+      if (intent.kind === "length") {
+        if (!hit) {
+          take();
+          announceRoll(t("roll_kb_no_note"));
+          return;
+        }
+        take();
+        // `resizeNote` owns the clamp (0.1 step .. one bar); the announcement reads back the result.
+        const next = resizeNote(
+          pattern,
+          activeTrackIdx,
+          cursor.stepIdx,
+          hit.gate + intent.delta,
+          stepCount
+        );
+        const id = noteId(hit);
+        if (next !== pattern) commitDraft(next, [id]);
+        announceRoll(
+          t("roll_kb_length", {
+            note: midiToNoteName(cursor.midi),
+            steps: Number((noteAfter(next, id)?.gate ?? hit.gate).toFixed(2)),
+          })
+        );
+        return;
+      }
+
+      if (intent.kind === "toggle" && !hit) {
+        take();
+        const baseGate = notesAtStep(cursor.stepIdx)[0]?.gate ?? KEYBOARD_DEFAULT_GATE;
+        const next = addNote(
+          pattern,
+          activeTrackIdx,
+          cursor.stepIdx,
+          cursor.midi,
+          stepCount,
+          100,
+          baseGate
+        );
+        if (next === pattern) return;
+        const id = noteId({ stepIdx: cursor.stepIdx, midi: cursor.midi });
+        setKeyboardCursor(cursor);
+        commitDraft(next, [id]);
+        lastAuditionPitchRef.current = cursor.midi;
+        onAudition(activeTrackIdx, cursor.midi, 100, baseGate);
+        announceRoll(t("roll_kb_added", { note: midiToNoteName(cursor.midi), step: cursor.stepIdx + 1 }));
+        return;
+      }
+
+      // Removal: the note under the cursor. With none there, Delete still means "delete the
+      // selection", which the window handler owns — so that case is not swallowed here.
+      if (!hit) {
+        if (!hasSelection) {
+          take();
+          announceRoll(t("roll_kb_no_note"));
+        }
+        return;
+      }
+      take();
+      applyOp((p) => removeNoteAt(p, activeTrackIdx, cursor.stepIdx, cursor.midi, stepCount));
+      setSelection((prev) => prev.filter((id) => id !== noteId(hit)));
+      announceRoll(t("roll_kb_removed", { note: midiToNoteName(cursor.midi), step: cursor.stepIdx + 1 }));
+    },
+    [
+      editable,
+      keyboardCursor,
+      initialCursor,
+      keyboardBounds,
+      describeCell,
+      announceRoll,
+      revealCursor,
+      noteAfter,
+      selection,
+      noteAt,
+      notesAtStep,
+      pattern,
+      activeTrackIdx,
+      stepCount,
+      commitDraft,
+      onAudition,
+      applyOp,
+      t,
+    ]
+  );
 
   /**
    * Auditions the progression using **the same notes the stamp would write**.
@@ -1102,8 +1368,11 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       if (event.key === "Delete" || event.key === "Backspace") {
         if (selection.length === 0) return;
         event.preventDefault();
+        const removed = selection.length;
         applyOp((p) => deleteNotes(p, activeTrackIdx, selection, stepCount));
         setSelection([]);
+        // U10: the same edit said out loud — a screen reader has no way to see the notes go.
+        announceRoll(t("roll_kb_removed_many", { count: removed }));
         return;
       }
       if (event.key === "a" && (event.metaKey || event.ctrlKey)) {
@@ -1143,6 +1412,13 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           const moved = moveNotes(pattern, activeTrackIdx, selection, stepDelta, pitchDelta, stepCount);
           if (moved.pattern !== pattern) {
             commitDraft(moved.pattern, moved.selection);
+            // U10: say where it went. Without this the arrow keys edit notes silently.
+            const first = moved.selection[0] ? parseNoteId(moved.selection[0]) : null;
+            if (first) {
+              announceRoll(
+                t("roll_kb_moved", { note: midiToNoteName(first.midi), step: first.stepIdx + 1 })
+              );
+            }
           }
         } else {
           if (event.key === "ArrowUp") {
@@ -1167,7 +1443,7 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, selection, notes, pattern, activeTrackIdx, stepCount, isFullscreen, marquee, commitDraft, isRecording, octaveShift, recordNote, onAudition, handleNewPattern, handleExportClipJson]);
+  }, [onClose, selection, notes, pattern, activeTrackIdx, stepCount, isFullscreen, marquee, commitDraft, isRecording, octaveShift, recordNote, onAudition, handleNewPattern, handleExportClipJson, announceRoll, t]);
 
   /* ------------------------------------------------------------------ render */
 
@@ -2120,9 +2396,30 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
               >
                 <div className="min-w-0">
                   <div
-                    role="grid"
+                    /* U10: one focusable surface, not a table. `role="grid"` used to sit here, but
+                       the notes are absolutely-positioned divs with no rows to hold `gridcell`s, so
+                       it was invalid ARIA promising structure that did not exist. `application` is
+                       the honest role for a keyboard-driven editor like this one: the live region
+                       below is what reports the cursor. */
+                    role="application"
+                    tabIndex={editable ? 0 : -1}
                     aria-label={t("roll_grid_aria")}
+                    aria-describedby={rollHelpId}
                     data-testid="piano-roll-grid"
+                    onKeyDown={handleGridKeyDown}
+                    onFocus={() => {
+                      if (!keyboardCursor) {
+                        const cursor = initialCursor();
+                        setKeyboardCursor(cursor);
+                        announceRoll(describeCell(cursor));
+                      }
+                    }}
+                    onBlur={(event) => {
+                      // React's onBlur is focusout, so ignore focus moving *within* the surface.
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setKeyboardCursor(null);
+                      }
+                    }}
                     onPointerDown={handleGridPointerDown}
                     onPointerMove={handleGridPointerMove}
                     onPointerUp={handleGridPointerUp}
@@ -2140,6 +2437,24 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                     }`}
                     style={{ height: rows.length * rowH, width: gridW }}
                   >
+                    {/* U10: the keyboard model's two screen-reader surfaces. The description is what
+                        `aria-describedby` points at; the live region is what speaks as the cursor
+                        moves and edits land, since the notes themselves are decorative divs. */}
+                    <span
+                      id={rollHelpId}
+                      data-testid="piano-roll-kb-help"
+                      className="sr-only"
+                    >
+                      {t("roll_kb_help")}
+                    </span>
+                    <span
+                      role="status"
+                      aria-live="polite"
+                      data-testid="piano-roll-announcer"
+                      className="sr-only"
+                    >
+                      {rollAnnouncement}
+                    </span>
                     {/* Layer 1: Alternating Bar Column Backdrops */}
                     {Array.from({ length: barCount }, (_, barIdx) => {
                       const isAlternateBar = barIdx % 2 === 1;
@@ -2304,6 +2619,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                         <div
                           key={`note-${note.stepIdx}-${note.midi}`}
                           data-testid={`piano-roll-note-${note.stepIdx}-${note.midi}`}
+                          /* U10: the note blocks are the visual layer of a widget whose keyboard
+                             model lives on the surface and speaks through the live region. Leaving
+                             them exposed gave a screen reader a run of unlabelled divs. */
+                          aria-hidden="true"
                           data-selected={selected ? "true" : "false"}
                           data-chord-size={notesAtStep(note.stepIdx).length}
                           data-gate={note.gate.toFixed(3)}
@@ -2373,13 +2692,19 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       );
                     })}
 
-                    {/* Hover Pitch Guideline Crosshair */}
-                    {hoverCell && (() => {
-                      const rIdx = rowIdxMap.get(hoverCell.midi);
+                    {/* Cursor Guideline: follows the pointer, and follows the keyboard when the
+                        surface has focus — that row band *is* the keyboard cursor's visible focus. */}
+                    {(() => {
+                      const guideCell = hoverCell ?? keyboardCursor;
+                      if (!guideCell) return null;
+                      const rIdx = rowIdxMap.get(guideCell.midi);
                       if (rIdx === undefined) return null;
                       return (
                         <div
                           data-testid="piano-roll-row-guideline"
+                          data-cursor-step={guideCell.stepIdx}
+                          data-cursor-midi={guideCell.midi}
+                          data-cursor-source={hoverCell ? "pointer" : "keyboard"}
                           className="pointer-events-none absolute inset-x-0 border-t border-b border-accent/30 bg-accent/[0.04] z-10"
                           style={{ top: rIdx * rowH, height: rowH }}
                         />
