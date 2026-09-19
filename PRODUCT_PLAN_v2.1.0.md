@@ -387,19 +387,19 @@ studio 的 URL 才会稳定带上曲风。
 | # | 事实 | 位置 | 后果 |
 |---|---|---|---|
 | M1 | 送出（sendA/sendB）在**推子后、声像前**分接：`stripOut` 同时喂 panner 与 send | `AudioEngine.ts:605` vs `:612-624` | 硬左/硬右的轨道，混响/延迟送的是**居中**信号（真实调音台是 post-pan）——**已修，见附录 G.19** |
-| M2 | 母带 `DRIVE` 是**硬削波**：WaveShaper 曲线定义域固定 `[-1,1]`，而机架在推子之后、8 轨求和之后 | `EffectsRack.ts:59-67`；`masterGraph.ts:264` | 在 rock/metal/dubstep（drive 3.5–5.5，`genreFx.ts:113, 213, 217`）上，母带在进限幅器之前就已经被削平 |
+| M2 | 母带 `DRIVE` 是**硬削波**：WaveShaper 曲线定义域固定 `[-1,1]`，而机架在推子之后、8 轨求和之后 | `EffectsRack.ts:59-67`；`masterGraph.ts:264` | 在 rock/metal/dubstep（drive 3.5–5.5，`genreFx.ts:113, 213, 217`）上，母带在进限幅器之前就已经被削平——**已修（Q13）**：曲线定义域改为 ±`SATURATION_INPUT_CEILING = 2`，超界处是饱和而不是平顶；同时把曲线改成 `tanh(k·x)/k`（小信号增益恰为 1），消掉了旧归一化带的 +3.9–15.6 dB 无请求增益 |
 | M3 | 合唱把立体声**降混成单声道**（`ChannelMergerNode` 的输入默认 `channelCount 1`），且左右两抽头共用同一个 LFO | `EffectsRack.ts:179-184, 219-221` | 湿声是单声道、主总线每隔约 66 Hz 一个梳状陷波——**已修，见附录 G.20** |
 | M4 | 乒乓开关会**重建整条延迟图并切断尾音**（`if (pingChanged) this._build()`） | `DelayBus.ts:234-236, 277-284` | 切曲风/切乒乓时延迟尾巴被砍断——**已修（v2.0.92）**：实测可达（`genreFx.ts` 有 11 处 `pingPong: true`，切到/切离这些曲风即 `_build()`）。修法是**交叉淡化**（计划里给的两个方向之一）：每个 build 有自己的输出增益，旧 build 不断线、只把增益淡到 0，尾音继续从自己的延迟线里响；淡化窗**跟着延迟时间走**（0.25–0.5 s），因为它要盖住新 build 空延迟线的预热期。拆除靠 `ctx.currentTime`（音频时钟）而非 `setTimeout`，以保住"离线渲染建出同一张图"的契约。见 G.31 |
 | M5 | 混响 IR 生成在**主线程同步**执行并直接换缓冲、无交叉淡化（最长约 9 s，约 4 MB 立体声） | `ReverbBus.ts:350-354, 190-211, 396-397` | 切曲风时掉帧 + 尾音被瞬间截断——**已降级，计划原文的数字是错的**：9 s 是**冲激响应长度**（`ambient` 确实用 `decaySec: 9.0`），不是计算耗时。实测生成本身：0.9 s → **4.3 ms**、1.9 s → **6.4 ms**、9 s → **29.7 ms**（初始化 0.2 ms）。即最坏 1–2 帧，且只在该曲风被切入/切出时发生一次；「移出主线程」因此从「必修」降为「若将来 profile 显示才做」 |
-| M6 | 母带推子是**阶跃写入**（`setValueAtTime`），且"听力保护"开关会重写推子 | `AudioEngine.ts:1077, 1042` | 拖推子有 zipper 噪声 |
-| M7 | 延迟反馈量与阻尼在每次 `setParams`（含仅改返回量、改 BPM）都是阶跃写入 | `DelayBus.ts:374-379` | 变速时延迟的"变暗/反馈量"有阶跃 |
+| M6 | 母带推子是**阶跃写入**（`setValueAtTime`），且"听力保护"开关会重写推子 | `AudioEngine.ts:1077, 1042` | 拖推子有 zipper 噪声——**已修（Q11）**：`setMasterVolume` 现在先 `cancelScheduledValues` + 钉住当前值，再 `setTargetAtTime`（15 ms）平滑；`setHearingProtection` / `setMaxVolumeLimit` 都走这条路，所以切限幅器也不再咔哒 |
+| M7 | 延迟反馈量与阻尼在每次 `setParams`（含仅改返回量、改 BPM）都是阶跃写入 | `DelayBus.ts:374-379` | 变速时延迟的"变暗/反馈量"有阶跃——**已修（Q11）**：反馈增益与阻尼截止都改成"先钉住当前值、再 `setTargetAtTime`（12 ms）" |
 | M8 | 插入条（EQ/压缩/makeup/drive）参数全是 `setValueAtTime`，无平滑；`setFilter` 每次写都重连图 | `ChannelStripDsp.ts:286-315, 383-390`；`EffectsRack.ts:257-266` | 拖插入旋钮有 zipper；每帧重连图——**一半已修（v2.0.83）**：`EffectsRack.setFilter` 每次写都重连图，而它在**每次 BPM 变化**都会被 `applyGenreFxToGraph` 调用，所以拖速度滑杆就会把主滤波器拽出链路再装回；现已只在拓扑变化时重连。插入条那半是**刻意**的：`ChannelStripDsp.writeParam` 的注释写明步进写入才能让离线渲染逐位一致，不是缺陷 |
 | M9 | **实时的 `probability` 用 `Math.random()`，导出用确定性掷骰** | `AudioEngine.ts:1603` vs `WavExporter.ts:335` | 概率轨的播放**永远不等于自己的导出**——**刻意为之，不是缺陷**：`AudioEngine` 该处注释写明 Chance 是演奏功能、每次经过都重掷，导出用确定性掷骰是为了可复现，并明确写着「Do not "fix" this by seeding live playback」 |
-| M10 | 实时 ratchet **未做 1..8 夹取**，导出做了 | `AudioEngine.ts:1624-1626` vs `noteEvents.ts:59-61` | 畸形/导入的 pattern 能一次性喷出大量声部 |
-| M11 | 逐轨 swing 分支丢掉了 `latencyCompensationMs`（用的是 `this.nextStepTime` 而不是 `time`） | `AudioEngine.ts:1618-1620` vs `WavExporter.ts:340-344` | 带独立 swing 的轨道与导出有几毫秒偏差 |
+| M10 | 实时 ratchet **未做 1..8 夹取**，导出做了 | `AudioEngine.ts:1624-1626` vs `noteEvents.ts:59-61` | 畸形/导入的 pattern 能一次性喷出大量声部——**已修（Q10）**：实时路径改走与导出同一个 `resolveRatchet`（1..8 夹取），`exporterParity.test.ts` 钉住夹取边界；这一轮顺手把实时路径里**复制的那份**副拍力度渐变也换成共享的 `ratchetVelocityScale`（公式本来就一样，改的是"只留一份"） |
+| M11 | 逐轨 swing 分支丢掉了 `latencyCompensationMs`（用的是 `this.nextStepTime` 而不是 `time`） | `AudioEngine.ts:1618-1620` vs `WavExporter.ts:340-344` | 带独立 swing 的轨道与导出有几毫秒偏差——**已修（v2.0.94）**：该分支自己重建了时间，于是把调用方已经折进 `time` 的**两个**活演奏修正都丢了：延迟补偿，以及"不得早于 `currentTime`"的钳位。独立 swing 的轨道因此比其它轨道（以及它自己的导出）整整早一个补偿量。现在只有 swing 项不同，另两项照旧。见 G.33 |
 | M12 | 混响返回量的 ramp 没有先钉住当前值（DelayBus 有先钉） | `ReverbBus.ts:337-343` vs `DelayBus.ts:402-403` | ramp 起点可能跳变——**只在降级路径成立**：现代路径先 `cancelAndHoldAtTime(now)`（已钉住当前值），只有不支持它的 context 才退到 `cancelScheduledValues` 而跳变 |
 | M13 | 母带链路**没有 DC 阻断**，混响 IR 也没有高通 | `masterGraph.ts`（无 HPF）、`ReverbBus.ts`（无 HPF） | 任何 DC 会持续占用限幅器的天花板——**已修，见 Q12** |
-| M14 | 限幅器的增益包络是**瞬时阶跃**（`this.gain = target`），滑窗最小值是每样本 O(D) 线性扫描，且 NaN/Inf 无消毒 | `MasterLimiter.ts:358-360, 352-356, 346` | 限幅时的调制颗粒感/泵动；渲染线程额外负载 |
+| M14 | 限幅器的增益包络是**瞬时阶跃**（`this.gain = target`），滑窗最小值是每样本 O(D) 线性扫描，且 NaN/Inf 无消毒 | `MasterLimiter.ts:358-360, 352-356, 346` | 限幅时的调制颗粒感/泵动；渲染线程额外负载——**核对后仍开放，且这是下一件该做的**：瞬时**起音**在有前瞻时是站得住的（注释也这么写），真正的缺陷是那个**每样本 O(D) 的滑窗最小值**（D≈144 @3 ms/48 kHz，约 7 M 次比较/秒/声道），它可以换成单调队列做到 O(1) 摊还、**输出逐位不变**（因此不动物理基线）。 |
 
 **响度：已测数据（离线口径）** —— 这是本仓库最扎实也最"反直觉"的一块：
 
@@ -2455,6 +2455,7 @@ const sendTap: AudioNode = panner ?? spatialPanner ?? stripOut;
 | **M5** 混响 IR 在主线程生成，「最长约 9 s，约 4 MB」 | **降级**，且原文数字混淆了两件事 | 9 s 是**冲激响应长度**（`ambient` 确实用 9.0 s）；**生成耗时**实测 0.9 s→**4.3 ms**、1.9 s→**6.4 ms**、9 s→**29.7 ms**，初始化 0.2 ms。最坏 1–2 帧、一次性。Worker 方案从「必修」降为「若 profile 显示才做」 |
 | **M8** 插入条参数无平滑；`setFilter` 每次写都重连 | **一半已修**（本轮），一半是刻意 | 重连那半已修；步进写入那半是 `ChannelStripDsp.writeParam` 注释写明的刻意选择（步进 → 离线渲染逐位一致） |
 | **M9** 实时 probability 用 `Math.random()`，导出确定性 | **刻意为之，不是缺陷** | `AudioEngine` 该处注释：Chance 是演奏功能，每次经过重掷；导出确定性是为了可复现，并写着「Do not "fix" this by seeding live playback」 |
+| **M11** 逐轨 swing 丢掉延迟补偿 | **已完成（v2.0.94）** | 独立 swing 分支自己重建时间，于是丢了**两个**活演奏修正（延迟补偿 + 不得早于 `currentTime` 的钳位），比其它轨道早整整一个补偿量。2 条新测试用 20 ms 正补偿与 −8 ms 负补偿钉住；把旧行为注入回去，两条都失败且差值正好是被丢掉的 20 ms / 8 ms。见 G.33 |
 | **M12** 混响返回量 ramp 没先钉住当前值 | **只在降级路径成立** | 现代路径先 `cancelAndHoldAtTime(now)`；只有不支持它的 context 才退到 `cancelScheduledValues` |
 
 **教训（这轮重复犯了旧错）**：我先按计划的表述打算「修 M9」，读代码才发现注释明确写着不要那样修；
@@ -2960,3 +2961,61 @@ U10 那行说"音符是无 role 的 div、无 `tabIndex`（全文 0 处），力
 
 **故障注入**（播报改成空实现 + 取消"有选区就让路"）：**10 条里 8 条失败**——这两个行为确实被钉住了。
 全量单测 **185 文件 / 2123 用例**，`npm run verify` 全绿，PC E2E 3/3。
+
+## G.33 动手前先核对 M 表：四行早已修好，M11 是真的（v2.0.94）
+
+这一轮本来打算从 M 表里挑活干，第一件事是**逐行核对**——结果 14 行里有 4 行写的缺陷**早就不存在了**，
+而它们的行号也全都过期了（文件在这些条目写完之后改过很多次）：
+
+| 行 | 计划说 | 实际 |
+|---|---|---|
+| M2 | 母带 DRIVE 硬削波，曲线定义域固定 ±1 | **已修（Q13）**：`SATURATION_INPUT_CEILING = 2`，超界处饱和不平顶；曲线也从 `tanh(kx)/tanh(k)` 改成 `tanh(kx)/k`，小信号增益恰为 1（旧写法在 drive 1.5 时白送 +3.9 dB、drive 6 时 +15.6 dB） |
+| M6 | 母带推子阶跃写入，切听力保护会咔哒 | **已修（Q11）**：`setMasterVolume` 先钉住当前值再 15 ms `setTargetAtTime` |
+| M7 | 延迟反馈/阻尼每次 `setParams` 阶跃 | **已修（Q11）**：两者都先钉住再 12 ms 平滑 |
+| M10 | 实时 ratchet 没做 1..8 夹取 | **已修（Q10）**：实时路径直接用共享的 `resolveRatchet`，`exporterParity.test.ts` 钉住 0→1、99→8 等边界 |
+
+顺手做掉一处**漂移隐患**：实时路径里那份复制粘贴的副拍力度渐变（`0.85 + (r/ratchet)*0.15`）换成了共享的
+`ratchetVelocityScale`。公式本来就一模一样，改的是"同一件事只留一份"——这正是 Q10 注释里那句
+「one shared function is the only way those two stay equal」的意思。它的取值已在 `exporterParity` 钉住，
+所以这里没有新增测试，只有删掉一份重复。
+
+**M11 是真的，而且比计划写的多丢了一样东西。** 计划说"丢掉了 `latencyCompensationMs`"，实际这个分支
+自己用 `nextStepTime` 重建时间，于是把调用方已经折进 `time` 的**两个**活演奏修正都丢了：
+
+1. **延迟补偿** `latencyCompensationMs`（把每个声部对齐到"已经到达听者"的时刻）；
+2. **`>= currentTime` 的钳位**（迟排的步不得排到过去）。
+
+于是带独立 swing 的轨道比其它轨道**整整早一个补偿量**，也比它自己的导出早——导出是一次离线渲染，
+没有输出延迟可补，所以那边本来就不该有这一项。修法只有一句：**这个分支里只有 swing 项允许不同**，
+另外两项照抄调用方的语义：
+
+```ts
+const trackStepTime = (step % 2 === 1 && effSwing !== this.swing)
+  ? Math.max(ctx.currentTime, this.nextStepTime + (effSwing * 0.5) * stepDur + this.latencyCompensationMs / 1000)
+  : time;
+```
+
+（`this.ctx` 在回调里会重新变宽成 nullable，所以顺手把守卫后的上下文收进一个局部 `ctx`。）
+
+### 测试（`audioScheduler.test.ts` +2，共 16 条）
+
+两条都用假 AudioContext 直接驱动 `scheduleStep`，从**实际排出的声部起音时间**（`FakeOscillatorNode.startedAt`
+/ `FakeBufferSourceNode.started[].when`）读结果，而不是读我们自己算的中间值：
+
+1. 同一音在奇步上，一条轨道无独立 swing、一条 `swing: 40`，补偿 20 ms：前者必须是 `grid + 20 ms`，
+   后者必须是 `grid + 0.4·0.5·stepDur + 20 ms`——**两个修正都在**。同时断言两者之差正好是 swing 项，
+   且后者**不**等于漏掉补偿的值。
+2. 全局 swing 50 %、轨道 `swing: -50`（正好抵消）、补偿 **−8 ms**（提前监听是合法设置）：轨道必须落在
+   未摆动的网格上，但仍带 −8 ms。这条同时钉住了"负补偿也是补偿"和"抵消全局 swing 不是缺陷，是功能"。
+
+**故障注入**（把那一行换回 `nextStepTime + swing` 的旧写法）：**两条都失败**，差值正好是 20 ms 与 8 ms
+——不是"看起来不对"，是被丢掉的那两个量本身。
+
+### 下一件：M14（已核准仍是真缺陷）
+
+核对时一并看了限幅器：**瞬时起音在有前瞻时是站得住的**（注释也这么写，不是缺陷），但那个
+**每样本 O(D) 的滑窗最小值**确实还在（`MasterLimiter.ts:352-356`）：3 ms 前瞻 @48 kHz 即 D≈144，
+约 700 万次比较/秒/声道，而且它在渲染线程里。换成**单调队列**可以做到 O(1) 摊还、**输出逐位不变**
+（因此不动物理基线，也不用重测响度）——这是下一轮的第一件事。
+
+全量单测 **185 文件 / 2125 用例**，`npm run verify` 全绿，PC E2E 3/3。
