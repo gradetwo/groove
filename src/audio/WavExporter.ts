@@ -74,7 +74,31 @@ export interface RenderWavOptions {
    * `exportMasterWav` / `exportStemsWav` carry it out to their callers.
    */
   onLimiterKind?: (kind: MasterLimiterKind) => void;
+  /**
+   * Called once per render with how many GS-1 hosts failed to load after their retries.
+   *
+   * `0` in every normal render. Anything else means a `chords`/`lead` track was voiced by the native
+   * synth instead of GS-1, which moves the fingerprint by 0.71-3.66 dB depending on the track
+   * (measured; see `GS1_HOST_LOAD_ATTEMPTS`), so the caller has to be able to say so rather than
+   * ship a silently different file.
+   */
+  onGs1HostFailures?: (count: number) => void;
 }
+
+/**
+ * How many times a GS-1 host load is attempted before the track falls back to the native synth.
+ *
+ * Three, because the failure being retried is a transient fetch or module load, not a logical error:
+ * a second attempt is the one most likely to succeed, and a persistent failure (no network, no
+ * worklet support) is not helped by waiting longer. The point is not to make failure impossible but
+ * to stop a coin-flip from silently changing what the export sounds like.
+ *
+ * The retry is the *second* line of defence. The first is that `fetchCore` now caches the core per
+ * URL, so the fetch happens once per page instead of once per host per render — without that, this
+ * constant multiplied the very traffic whose failure it exists to tolerate (600 fetches per library
+ * render became 1800).
+ */
+const GS1_HOST_LOAD_ATTEMPTS = 3;
 
 export interface ExportedWav {
   blob: Blob;
@@ -88,6 +112,13 @@ export interface ExportedWav {
    * expected to tell the user rather than ship a silently degraded file.
    */
   limiterKind: MasterLimiterKind;
+  /**
+   * GS-1 hosts that failed to load after retrying; `0` in every normal export.
+   *
+   * Non-zero means one or more `chords`/`lead` tracks were voiced by the native synth instead, which
+   * is audible (0.71-3.66 dB in a band, measured) and must not be reported as a clean export.
+   */
+  gs1HostFailures: number;
 }
 
 export interface ExportedStem {
@@ -95,6 +126,8 @@ export interface ExportedStem {
   filename: string;
   trackName: string;
   trackIdx: number;
+  /** GS-1 hosts that failed to load for this stem's render; `0` normally. See `ExportedWav`. */
+  gs1HostFailures: number;
 }
 
 /**
@@ -323,26 +356,49 @@ export async function renderPatternOffline(
    *
    * A host is created, awaited and connected here — before `startRendering()` — because the
    * scheduler below runs straight-line and must not await. The patch is pushed once, up front.
-   * When routing is off (the default) this map is empty and the export is bit-for-bit what it was.
    */
   const gs1Hosts = new Map<number, Gs1Host>();
+  let gs1HostFailures = 0;
   if (isGs1RoutingEnabled() && typeof ctx.audioWorklet?.addModule === "function") {
     for (let t = 0; t < numTracks; t++) {
       const track = pattern.tracks[t];
       const routed = track ? gs1PatchFor(track.track_id, track.instrument) : null;
       if (!routed) continue;
-      try {
-        const host = await createGs1Host({ context: ctx });
-        await host.ready;
-        host.setPatch(routed.params);
-        host.output.connect(trackStrips[t].insert.input);
-        gs1Hosts.set(t, host);
-      } catch {
-        // A failed load leaves the track on the native engine, exactly like a live failure.
-        gs1Hosts.delete(t);
+      /**
+       * Bounded retry, then report — this used to be a silent single attempt.
+       *
+       * `createGs1Host` fetches the WASM core **over the network** and loads a worklet module, so
+       * its failure is transient by nature, and a bare `catch` left that track on the native synth
+       * *for that render only*. Measured on `chicago-house` (3 bars, fingerprint delta against a
+       * clean render): one GS-1 host failing moves the sound by **0.71 dB** in band 6 for the
+       * chords track and **3.66 dB** in band 9 for the lead — which is the magnitude, and the
+       * genre-dependent spread, of the rare repeat-render outliers recorded in appendix G.14.
+       *
+       * In other words the export's *sound* depended on whether a fetch won a race, silently. That
+       * is the same defect as the silent limiter fallback (G.14): a renderer that hands back a
+       * different file than the one that was auditioned, and says nothing. The retry makes the
+       * transient case not happen; the count makes the persistent case impossible to miss.
+       */
+      let host: Gs1Host | null = null;
+      for (let attempt = 0; attempt < GS1_HOST_LOAD_ATTEMPTS && !host; attempt++) {
+        try {
+          const candidate = await createGs1Host({ context: ctx });
+          await candidate.ready;
+          host = candidate;
+        } catch {
+          // Retried below; the last failure is counted after the loop.
+        }
       }
+      if (!host) {
+        gs1HostFailures += 1;
+        continue;
+      }
+      host.setPatch(routed.params);
+      host.output.connect(trackStrips[t].insert.input);
+      gs1Hosts.set(t, host);
     }
   }
+  options.onGs1HostFailures?.(gs1HostFailures);
 
   const drumKit: DrumKitType = options.drumKit || "808";
   const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
@@ -605,11 +661,16 @@ export async function exportMasterWav(
   options: RenderWavOptions = {}
 ): Promise<ExportedWav> {
   let limiterKind: MasterLimiterKind = "fallback";
+  let gs1HostFailures = 0;
   const audioBuf = await renderPatternOffline(pattern, {
     ...options,
     onLimiterKind: (kind) => {
       limiterKind = kind;
       options.onLimiterKind?.(kind);
+    },
+    onGs1HostFailures: (count) => {
+      gs1HostFailures = count;
+      options.onGs1HostFailures?.(count);
     },
   });
   const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
@@ -623,6 +684,7 @@ export async function exportMasterWav(
     filename,
     durationSec: audioBuf.duration,
     limiterKind,
+    gs1HostFailures,
   };
 }
 
@@ -641,9 +703,13 @@ export async function exportStemsWav(
   for (let i = 0; i < pattern.tracks.length; i++) {
     const track = pattern.tracks[i];
     const trackName = (track.track_id || track.name || `track_${i + 1}`).toLowerCase().replace(/[^a-z0-9_-]/gi, "_");
+    let stemGs1Failures = 0;
     const audioBuf = await renderPatternOffline(pattern, {
       ...options,
       stemTrackIdx: i,
+      onGs1HostFailures: (count) => {
+        stemGs1Failures = count;
+      },
     });
     const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
     const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
@@ -654,6 +720,7 @@ export async function exportStemsWav(
       filename,
       trackName: track.name,
       trackIdx: i,
+      gs1HostFailures: stemGs1Failures,
     });
   }
 
@@ -667,7 +734,7 @@ export async function exportStemsZip(
   pattern: DrumPattern,
   genreId = "groove",
   options: RenderWavOptions = {}
-): Promise<{ blob: Blob; filename: string }> {
+): Promise<{ blob: Blob; filename: string; gs1HostFailures: number }> {
   const stems = await exportStemsWav(pattern, genreId, options);
   const bpm = options.bpm || pattern.bpm || 120;
   const sanitizedGenre = (genreId || "groove").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
@@ -685,6 +752,8 @@ export async function exportStemsZip(
   return {
     blob: zipBlob,
     filename: zipFilename,
+    // Summed across stems: each stem renders independently, so each can lose its own GS-1 host.
+    gs1HostFailures: stems.reduce((n, stem) => n + stem.gs1HostFailures, 0),
   };
 }
 

@@ -598,6 +598,17 @@ export const studioMessages = {
    * usable — it is simply louder and less controlled than the audition, by 2.36 dB overall and
    * 4.83 dB in one band (appendix G.14). Saying nothing is what this change exists to stop.
    */
+  /**
+   * A GS-1 voice that could not load.
+   *
+   * The file is valid; what changed is *which synth* played the chords or lead track, which measures
+   * 0.71-3.66 dB in a band (G.14). Same rule as the limiter notice above: the user gets the file and
+   * gets told, rather than getting a quiet surprise.
+   */
+  export_wav_degraded_gs1: {
+    en: "Exported {filename}, but {count} GS-1 voice(s) could not load — the chords/lead track used the built-in synth instead. Reload and export again for a clean master.",
+    zh: "已导出 {filename}，但有 {count} 个 GS-1 音色未能加载——和弦/主音轨使用了内置合成器。请刷新页面后重新导出以获得正常母带。",
+  },
   export_wav_degraded_limiter: {
     en: "Exported {filename}, but the true-peak limiter could not load — this file is louder and less controlled than the preview. Reload and export again for a clean master.",
     zh: "已导出 {filename}，但真实峰值限幅器未能加载——该文件比试听更响、控制更差。请刷新页面后重新导出以获得正常母带。",

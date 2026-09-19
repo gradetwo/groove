@@ -58,6 +58,9 @@ const diffTrials = diffArg ? Math.max(2, Number(diffArg.split("=")[1]) || 2) : 0
 const barsArg = args.find((a) => a.startsWith("--bars="));
 const diffBars = barsArg ? Math.max(1, Number(barsArg.split("=")[1]) || 1) : 1;
 const primitives = args.includes("--primitives");
+const streamArg = args.find((a) => a.startsWith("--stream="));
+const streamTrials = streamArg ? Math.max(2, Number(streamArg.split("=")[1]) || 2) : 0;
+const streamBars = diffBars;
 const positional = args.filter((a) => !a.startsWith("--"));
 const genreId = positional[0] ?? "chicago-house";
 const repeats = Math.max(2, Number(positional[1] ?? 4) || 4);
@@ -170,6 +173,386 @@ await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
  * shown up as a rate — but a *fallback* render is trivially reachable by breaking `addModule`, and
  * if its fingerprint is the outlier's, the fork is named.
  */
+/**
+ * `--gs1` asks whether the rare ~1.3 dB outlier is a **GS-1 voice that failed to load**.
+ *
+ * This is the strongest candidate left, and it fits every property of the outlier measured so far:
+ *
+ *   - GS-1 routing is on by default (`DEFAULT_GS1_ROUTING_ENABLED = true`), so `renderPatternOffline`
+ *     builds a worklet host for the chords and lead tracks on every render;
+ *   - a host whose module fails to load is skipped by a **silent** `catch` and that track falls back
+ *     to the native synth for that render only — "a failed load leaves the track on the native
+ *     engine, exactly like a live failure";
+ *   - so the same input has two outcomes chosen by whether a worklet load won a race: fixed values,
+ *     stable magnitude, no dependence on the genre, and rare (a load only occasionally fails).
+ *
+ * It also re-reads the earlier `--force-fallback` result: that run rejected *every* `addModule`,
+ * which breaks the master limiter **and** both GS-1 hosts, so its 4.83 dB was never attributable to
+ * the limiter alone.
+ *
+ * Variants, all measured against a normal render:
+ *   1. as-is (the control);
+ *   2. GS-1 routing switched off — what GS-1 is worth when it does not load;
+ *   3. only the *second* `addModule` rejected — i.e. one GS-1 host fails, the limiter still loads;
+ *   4. every `addModule` rejected — the limiter and both hosts fail.
+ */
+/**
+ * `--stream=N` answers the question every hypothesis so far has dodged: **is the *scheduling*
+ * non-deterministic, or the browser's DSP?**
+ *
+ * Three explanations have been tested and rejected — the three-oscillator fan-in rule (real, fixed,
+ * different defect), the limiter worklet fallback (0.67 dB of band shape), and the silent GS-1 host
+ * fallback plus its uncached multi-megabyte core fetch (real, fixed, and the outlier survived both).
+ * Each was a guess about *how the graph is built*. This measures instead.
+ *
+ * It patches `AudioParam`'s scheduling methods (and the source `start` methods, whose buffer offsets
+ * are not params) to record every call with a stable per-param id, hashes that stream per render, and
+ * compares it with the audio hash of the same render:
+ *
+ *   - **stream identical, audio different** -> the scheduling is deterministic and the difference is
+ *     inside the browser's DSP. No amount of restructuring this project's graph will fix it, and the
+ *     honest response is to state the tolerance rather than claim bit-identity;
+ *   - **stream differs** -> the difference is ours, and the two hashes narrow it to the exact call.
+ *
+ * Recording is gated on a flag so the app's own live engine (idle here, but not guaranteed) cannot
+ * pollute the stream.
+ */
+if (streamTrials > 0) {
+  /**
+   * A bare page on the same origin, with no app mounted.
+   *
+   * The first version of this mode recorded on the app's page and was unreadable: the call count
+   * per render came out as two values differing 4x, because the studio's own live engine schedules
+   * and cancels work while the recorder is armed. Measuring a renderer through a running app
+   * measures both. Vite serves `/src/**` as modules on any path, so a blank document is enough to
+   * import the renderer directly.
+   */
+  await page.route("**/bare.html", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<!doctype html><meta charset=\"utf-8\"><title>bare</title>" })
+  );
+  await page.goto(`${baseUrl}/bare.html`, { waitUntil: "domcontentloaded" });
+  const out = await page.evaluate(
+    async ({ id, n, streamBars }) => {
+      const calls = [];
+      let recording = false;
+      /**
+       * Reassigned every render.
+       *
+       * Ids must be handed out in *creation order within this render* or two renders of the same
+       * graph hash differently for no reason — the first version kept them for the whole page and
+       * its per-param ids climbed monotonically, which made every stream hash unique by
+       * construction and hid the very question being asked.
+       */
+      let paramIds = new WeakMap();
+      let nextId = 0;
+
+      const PARAM_METHODS = [
+        "setValueAtTime",
+        "linearRampToValueAtTime",
+        "exponentialRampToValueAtTime",
+        "setTargetAtTime",
+        "cancelScheduledValues",
+        "cancelAndHoldAtTime",
+      ];
+      const paramProto = Object.getPrototypeOf(
+        new OfflineAudioContext(2, 128, 44100).createGain().gain
+      );
+      const paramOriginals = {};
+      for (const m of PARAM_METHODS) {
+        paramOriginals[m] = paramProto[m];
+        paramProto[m] = function (...a) {
+          if (recording) {
+            let pid = paramIds.get(this);
+            if (pid === undefined) {
+              pid = nextId++;
+              paramIds.set(this, pid);
+            }
+            calls.push(`p${pid}.${m}(${a.join(",")})`);
+          }
+          return paramOriginals[m].apply(this, a);
+        };
+      }
+
+      const SOURCE_TYPES = ["AudioBufferSourceNode", "OscillatorNode", "ConstantSourceNode"];
+      const sourceOriginals = [];
+      for (const type of SOURCE_TYPES) {
+        const ctor = globalThis[type];
+        if (!ctor) continue;
+        for (const m of ["start", "stop"]) {
+          const original = ctor.prototype[m];
+          if (typeof original !== "function") continue;
+          sourceOriginals.push([ctor.prototype, m, original]);
+          ctor.prototype[m] = function (...a) {
+            if (recording) calls.push(`${type}.${m}(${a.join(",")})`);
+            return original.apply(this, a);
+          };
+        }
+      }
+
+      const hash = (text) => {
+        let h = 0x811c9dc5;
+        for (let i = 0; i < text.length; i++) {
+          h ^= text.charCodeAt(i);
+          h = Math.imul(h, 0x01000193) >>> 0;
+        }
+        return h.toString(16).padStart(8, "0");
+      };
+
+      const wav = await import("/src/audio/WavExporter.ts");
+      const mixModule = await import("/src/data/genreMix.ts");
+      const genres = await import("/src/data/genres/index.ts");
+      const trackUtils = await import("/src/utils/trackUtils.ts");
+      const timbre = await import("/src/test/helpers/timbre.ts");
+
+      const genre = genres.ALL_GENRES.find((g) => g.id === id);
+      if (!genre) throw new Error(`unknown genre: ${id}`);
+      const drumKit = trackUtils.getDefaultDrumKitForGenre(genre);
+
+      const rows = [];
+      try {
+        for (let r = 0; r < n; r++) {
+          calls.length = 0;
+          paramIds = new WeakMap();
+          nextId = 0;
+          recording = true;
+          let buffer;
+          try {
+            buffer = await wav.renderPatternOffline(
+              mixModule.applyGenreMixDefaults(genre.sequencer_pattern, genre.id),
+              { bars: streamBars, drumKit, loudnessTrimDb: 0 }
+            );
+          } finally {
+            recording = false;
+          }
+          const channels = [];
+          for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
+          let audioHash = 0x811c9dc5;
+          const view = new DataView(new ArrayBuffer(4));
+          for (const ch of channels) {
+            for (let i = 0; i < ch.length; i++) {
+              view.setFloat32(0, ch[i]);
+              const word = view.getUint32(0);
+              for (let b = 0; b < 4; b++) {
+                audioHash ^= (word >>> (b * 8)) & 0xff;
+                audioHash = Math.imul(audioHash, 0x01000193) >>> 0;
+              }
+            }
+          }
+          rows.push({
+            audio: audioHash.toString(16).padStart(8, "0"),
+            stream: hash(calls.join(";")),
+            calls: calls.length,
+            // Kept only for the two extremes below: a full stream per render is megabytes.
+            text: calls.join("\n"),
+          });
+        }
+      } finally {
+        for (const m of PARAM_METHODS) paramProto[m] = paramOriginals[m];
+        for (const [proto, m, original] of sourceOriginals) proto[m] = original;
+      }
+      void timbre;
+      return rows;
+    },
+    { id: genreId, n: streamTrials, streamBars }
+  );
+
+  await browser.close();
+  server.kill();
+
+  const audioHashes = new Set(out.map((r) => r.audio));
+  const streamHashes = new Set(out.map((r) => r.stream));
+  const callCounts = new Set(out.map((r) => r.calls));
+
+  console.log(
+    `\n=== ${genreId}: ${streamTrials} renders, scheduled stream vs rendered audio (${streamBars} bar(s)) ===\n`
+  );
+  console.log(`   distinct audio hashes  : ${audioHashes.size} / ${out.length}`);
+  console.log(`   distinct stream hashes : ${streamHashes.size} / ${out.length}`);
+  console.log(`   scheduled calls/render : ${[...callCounts].join(", ")}\n`);
+
+  // The decisive pairing: renders whose *scheduled stream* was identical but whose audio was not.
+  const byStream = new Map();
+  for (const row of out) {
+    if (!byStream.has(row.stream)) byStream.set(row.stream, new Set());
+    byStream.get(row.stream).add(row.audio);
+  }
+  const splitStreams = [...byStream.entries()].filter(([, audios]) => audios.size > 1);
+  console.log(
+    `   identical stream, different audio : ${splitStreams.length} of ${byStream.size} stream(s)` +
+      (splitStreams.length > 0
+        ? "\n      -> the scheduling is deterministic; the difference is inside the browser's DSP."
+        : "")
+  );
+  if (callCounts.size > 1) {
+    /**
+     * Diff the sparsest render against the busiest one.
+     *
+     * The call *count* is the finding; the diff says which calls the extra ones are, which is what
+     * turns "the scheduling varies" into a site to look at.
+     */
+    const sorted = [...out].sort((a, b) => a.calls - b.calls);
+    const low = sorted[0];
+    const high = sorted[sorted.length - 1];
+    const countOf = (text) => {
+      const m = new Map();
+      for (const line of text.split("\n")) m.set(line, (m.get(line) || 0) + 1);
+      return m;
+    };
+    const lowCounts = countOf(low.text);
+    const highCounts = countOf(high.text);
+    const onlyHigh = [];
+    const onlyLow = [];
+    for (const [line, n] of highCounts) {
+      const d = n - (lowCounts.get(line) || 0);
+      if (d > 0) onlyHigh.push(`${d}x ${line}`);
+    }
+    for (const [line, n] of lowCounts) {
+      const d = n - (highCounts.get(line) || 0);
+      if (d > 0) onlyLow.push(`${d}x ${line}`);
+    }
+    /** Collapse to the method/parameter shape, so the report is readable. */
+    const summarise = (rowsIn) => {
+      const groups = new Map();
+      for (const entry of rowsIn) {
+        const line = entry.replace(/^\d+x /, "");
+        const key = line.replace(/\(.*$/, "");
+        groups.set(key, (groups.get(key) || 0) + 1);
+      }
+      return [...groups.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([k, n]) => `      ${String(n).padStart(4)}x  ${k}`)
+        .join("\n");
+    };
+    console.log(
+      `\n   calls: low=${low.calls} high=${high.calls}  (audio ${low.audio} vs ${high.audio})`
+    );
+    console.log(`   call shapes present only in the BUSY render (${onlyHigh.length} distinct):\n${summarise(onlyHigh)}`);
+    console.log(`   call shapes present only in the SPARSE render (${onlyLow.length} distinct):\n${summarise(onlyLow)}`);
+    void byStream;
+  }
+  console.log();
+  process.exit(0);
+}
+
+if (args.includes("--gs1")) {
+  const report = await page.evaluate(async ({ id }) => {
+    const wav = await import("/src/audio/WavExporter.ts");
+    const timbre = await import("/src/test/helpers/timbre.ts");
+    const mixModule = await import("/src/data/genreMix.ts");
+    const genres = await import("/src/data/genres/index.ts");
+    const trackUtils = await import("/src/utils/trackUtils.ts");
+    const gs1 = await import("/src/audio/gs1/gs1Tracks.ts");
+
+    const genre = genres.ALL_GENRES.find((g) => g.id === id);
+    if (!genre) throw new Error(`unknown genre: ${id}`);
+    const drumKit = trackUtils.getDefaultDrumKitForGenre(genre);
+
+    const renderOnce = async () => {
+      const buffer = await wav.renderPatternOffline(
+        mixModule.applyGenreMixDefaults(genre.sequencer_pattern, genre.id),
+        { bars: 3, drumKit, loudnessTrimDb: 0 }
+      );
+      const channels = [];
+      for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
+      const fp = timbre.fingerprintChannels(channels, buffer.sampleRate);
+      return { bandDb: fp.bandDb, rmsDb: fp.rmsDb };
+    };
+
+    const proto = Object.getPrototypeOf(new OfflineAudioContext(2, 128, 44100).audioWorklet);
+    const originalAddModule = proto.addModule;
+
+    /** Reject the Nth `addModule` call only (1 = the limiter, 2+ = the GS-1 hosts). */
+    const withAddModuleFailure = async (failFrom, failTo) => {
+      let call = 0;
+      proto.addModule = function (...a) {
+        call += 1;
+        if (call >= failFrom && call <= failTo) return Promise.reject(new Error(`forced addModule failure #${call}`));
+        return originalAddModule.apply(this, a);
+      };
+      try {
+        return await renderOnce();
+      } finally {
+        proto.addModule = originalAddModule;
+      }
+    };
+
+    const normal = await renderOnce();
+
+    gs1.setGs1RoutingEnabled(false);
+    let gs1Off;
+    try {
+      gs1Off = await renderOnce();
+    } finally {
+      gs1.setGs1RoutingEnabled(true);
+    }
+
+    // How many `addModule` calls a render makes at all: 1 for the master limiter plus one per
+    // GS-1 host, so the count says how many tracks GS-1 is voicing.
+    let addModuleCalls = 0;
+    proto.addModule = function (...a) {
+      addModuleCalls += 1;
+      return originalAddModule.apply(this, a);
+    };
+    try {
+      await renderOnce();
+    } finally {
+      proto.addModule = originalAddModule;
+    }
+
+    const limiterOnlyFailed = await withAddModuleFailure(1, 1);
+    const firstHostFailed = await withAddModuleFailure(2, 2);
+    const secondHostFailed = await withAddModuleFailure(3, 3);
+    const allWorksletsFailed = await withAddModuleFailure(1, 99);
+
+    const genre0 = genre.sequencer_pattern.tracks[0];
+    void genre0;
+    const routedTracks = genre.sequencer_pattern.tracks
+      .map((t) => ({ id: t.track_id, instrument: t.instrument }))
+      .filter((t) => Boolean(gs1.gs1PatchFor(t.id, t.instrument)));
+
+    return {
+      normal,
+      gs1Off,
+      limiterOnlyFailed,
+      firstHostFailed,
+      secondHostFailed,
+      allWorksletsFailed,
+      addModuleCalls,
+      routedTracks,
+    };
+  }, { id: genreId });
+
+  await browser.close();
+  server.kill();
+
+  const { normal } = report;
+  const show = (label, fp) => {
+    const deltas = fp.bandDb.map((v, k) => Math.abs(v - normal.bandDb[k]));
+    const worst = deltas.reduce((best, d, k) => (d > best.delta ? { k, delta: d } : best), { k: 0, delta: 0 });
+    console.log(
+      `   ${label.padEnd(30)} rmsDb ${fp.rmsDb.toFixed(4)}   worst band vs normal ${worst.delta.toFixed(4)} dB (band ${worst.k})`
+    );
+  };
+
+  console.log(`\n=== ${genreId}: is the outlier a GS-1 host that failed to load? (3 bars) ===\n`);
+  console.log(
+    `   addModule calls per render: ${report.addModuleCalls} ` +
+      `(1 limiter + ${report.addModuleCalls - 1} GS-1 host(s))`
+  );
+  console.log(
+    `   GS-1 voices: ${report.routedTracks.length === 0 ? "nothing" : report.routedTracks.map((t) => `${t.id}=${t.instrument}`).join(", ")}\n`
+  );
+  show("normal (control)", normal);
+  show("GS-1 routing off", report.gs1Off);
+  show("limiter failed only", report.limiterOnlyFailed);
+  show("1st GS-1 host failed", report.firstHostFailed);
+  show("2nd GS-1 host failed", report.secondHostFailed);
+  show("every worklet failed", report.allWorksletsFailed);
+  console.log();
+  process.exit(0);
+}
+
 if (args.includes("--force-fallback")) {
   const out = await page.evaluate(async ({ id }) => {
     const wav = await import("/src/audio/WavExporter.ts");

@@ -201,18 +201,28 @@ export function useExportActions({
       });
       triggerWavDownload(result.blob, result.filename);
       /**
-       * Tell the user when the master limiter did not load.
+       * Report a degraded master rather than a clean one.
        *
-       * The file is still valid, but it is not the file they just auditioned: a `DynamicsCompressor`
-       * fallback measures 2.36 dB louder overall and 4.83 dB off in one band (G.14). Reporting it is
-       * the whole point of surfacing the kind — a silently degraded master is the failure mode this
-       * avoids.
+       * Two independent degradations, both silent before this round: the true-peak limiter falling
+       * back to a `DynamicsCompressor` (2.36 dB louder overall, 4.83 dB off in one band), and a GS-1
+       * voice failing to load so its track is voiced by the built-in synth instead (0.71-3.66 dB off,
+       * measured). The file is handed over either way — it is valid — but the user is told, because
+       * the alternative is a file that quietly is not the thing they auditioned.
        */
-      showToast(
-        result.limiterKind === "fallback"
-          ? t("export_wav_degraded_limiter", { filename: result.filename })
-          : t("export_wav_done", { filename: result.filename })
-      );
+      if (result.gs1HostFailures > 0) {
+        showToast(
+          t("export_wav_degraded_gs1", {
+            filename: result.filename,
+            count: result.gs1HostFailures,
+          })
+        );
+      } else {
+        showToast(
+          result.limiterKind === "fallback"
+            ? t("export_wav_degraded_limiter", { filename: result.filename })
+            : t("export_wav_done", { filename: result.filename })
+        );
+      }
     } catch (err: any) {
       showToast(
         t("export_wav_failed", { error: describeError(err) })
@@ -234,8 +244,15 @@ export function useExportActions({
         drumKit,
       });
       triggerWavDownload(result.blob, result.filename);
+      // Same honesty rule as the master export: a stem whose GS-1 voice did not load is a valid
+      // file that is not what was auditioned, so it is reported rather than passed off as clean.
       showToast(
-        t("export_stems_done", { filename: result.filename })
+        result.gs1HostFailures > 0
+          ? t("export_wav_degraded_gs1", {
+              filename: result.filename,
+              count: result.gs1HostFailures,
+            })
+          : t("export_stems_done", { filename: result.filename })
       );
     } catch (err: any) {
       showToast(

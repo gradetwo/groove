@@ -1,27 +1,27 @@
 {
-  "version": "2.0.77",
+  "version": "2.0.78",
   "releaseDate": "2026-09-19",
-  "changelogCount": 141,
+  "changelogCount": 142,
   "latest": {
-    "version": "2.0.77",
+    "version": "2.0.78",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.77 播放时步进格子不再侵入轨道头旁边那块空隙（附一个能失败的守卫）",
-      "en": "v2.0.77 Step Cells Stop Intruding Into the Gutter Beside the Track Headers (With a Guard That Can Fail)"
+      "zh": "v2.0.78 导出重复偏差定案：调度是确定的，不确定的是浏览器 DSP；并修掉两个静默降级",
+      "en": "v2.0.78 The Repeat-Render Outlier Is Settled: This Renderer Is Deterministic, the Browser's DSP Is Not — Plus Two Silent Degradations Fixed"
     },
     "highlights": [
       {
-        "zh": "**问题（用户报告）**：连续播放时，轨道头旁边那块空间里会出现步进格子。每行是一个 flex row，`gap: var(--trk-head-gap)`，第一个子元素是 `sticky left-0` 的轨道头——**这个 gap 在轨道头的盒子之外，没有任何东西盖住它**。刚进入时格子首列在 609px、轨道头右缘在 593px（16px 干净空隙）；一旦播放自动横滚跟随播放头，格子就从这个空隙里穿过去，看起来像轨道头和网格贴在一起。实测：**静止时空隙里 0 个格子，播放中 8 个（每轨一个）**。标尺的拍号徽章是同样的结构，同样会被穿。",
-        "en": "**Reported by the user**: while it keeps playing, step cells appear in the space beside the track headers. Each row is a flex row with `gap: var(--trk-head-gap)` whose first child is a `sticky left-0` header — **the gap is outside the header's box, so nothing is painted over it**. On first entry the grid's first column is at 609 px and the header's right edge at 593 px (a clean 16 px gutter); once playback auto-scrolls to follow the playhead the cells slide straight through…"
+        "zh": "**定案：不是我们的代码。** 前三轮我提了三套假设（振荡器扇入规则、限幅器回退、GS-1 回退），全部落空。第四次不再猜，而是**测量**：把 `AudioParam` 的调度方法与源节点 `start` 记录成一条「调度流」，逐次渲染比对**同一次渲染的调度流哈希与音频哈希**。结果：**1 小节 30 次渲染 → 只有 1 条调度流（每次 529 个调用，恒定），却有 30 个不同音频；3 小节 8 次 → 1 条流（1079 调用）对 8 个音频**。也就是说本项目这一侧零非确定性，差异在浏览器 DSP 内部，**再改图也不可能逐位一致**。",
+        "en": "**Settled: it is not this project's code.** Three hypotheses failed (the oscillator fan-in rule, the limiter fallback, the GS-1 fallback). The fourth step was not another guess but a measurement: record every `AudioParam` scheduling call and source `start` into a scheduled stream, then compare **the stream hash and the audio hash of the same render**. Result: **30 renders at 1 bar produced exactly 1 scheduled stream (529 calls each, constant) and 30 different audio hashes; 8…"
       },
       {
-        "zh": "**修法**：`src/index.css` 新增 `.trk-head-gap-cover`，`TrackRow` 与 `Ruler` 各在 sticky 头之后放一块。它 `sticky left: var(--trk-head-w)`（钉在轨道头右缘，也正是自然位置），宽度等于空隙，背景 `var(--panel)`——空隙本来透出的就是面板色，所以**静止状态像素级不变**。两条负 margin 是全部技巧且都必需：`margin-left` 让它落在 header 之后的空隙里，`margin-right` 抵消它自己引入的 gap，否则**全 app 的网格都会右移 16px**。实测盖板宽度 16px = 空隙宽度 16px。",
-        "en": "**The fix**: a new `.trk-head-gap-cover` in `src/index.css`, added after the sticky header in both `TrackRow` and `Ruler`. It is `sticky left: var(--trk-head-w)` (pinned to the header's right edge, which is also its natural position), as wide as the gutter, with `background: var(--panel)` — which is what the gutter already showed through to, so **the resting layout is pixel-identical**. Two negative margins are the whole trick and both are needed: `margin-left` puts it in th…"
+        "zh": "**这解释了差异为什么随长度放大，也把离群值从「待修缺陷」降级为「已知有界的平台特性」**：1 小节时频段差 ~1e-4 dB，3 小节时到 ~1.3 dB——起点只是 LSB 级 DSP 差异，经过饱和/压缩等非线性级被逐步放大。所以那个「每次命中一个曲风」的 ~1.3–1.55 dB 离群值不是「另一个输出」，而是同一条发散分布的尾部。正确的应对**不是继续改代码，而是把承诺改成容差**：门禁阈值现在按**实测重复底噪**（中位数 ≈0.00007 dB、p90 ≈0.0006 dB）论证，而不是那个被证伪的「0 dB」。",
+        "en": "**That explains why the difference grows with length, and it downgrades the outlier from an open defect to a bounded platform characteristic**: at 1 bar the band difference is ~1e-4 dB, at 3 bars it reaches ~1.3 dB — starting from an LSB-level DSP difference and amplified through the saturating and compressing stages. The ~1.3-1.55 dB outlier that hits one genre per run is therefore the tail of one divergence distribution, not a second outcome. The right response is **not mo…"
       },
       {
-        "zh": "**守卫，以及它第一版为什么是错的。** `scripts/probe_grid_gutter.mjs`（`npm run probe:grid-gutter`，已进 `verify`）在真实 Chromium 里播放并采样每一行的空隙。两个设计要点：① **用命中测试而不是几何**——「格子是否与空隙矩形相交」在滚动时永远是 8，它们本来就该从 header 底下滚过去，问题是有没有被画出来；**第一版正是几何口径，因此放过了一个坏构建并报告通过**。② **空隙坐标在静止时采集**——报告说的「刚进入时候那个距离」就是标准，改成「播放时网格的第一列」量到的是滚动后的位置，整个检查退化成同义反复（第一版也犯了这个错）。另外 `--no-cover` 必须让它失败，否则它不算证据：实测去掉盖板后 **54/54 采样命中步进格子**，装上后三次采样全部 `gutter empty`。",
-        "en": "**The guard — and why its first version was wrong.** `scripts/probe_grid_gutter.mjs` (`npm run probe:grid-gutter`, wired into `verify`) plays the pattern in real Chromium and samples each row's gutter. Two things matter: (1) **it is a hit test, not geometry** — \"do cells intersect the gutter rectangle\" is always 8 while scrolling, because cells are *supposed* to pass under the header; the question is whether any is visible, and **the first version used geometry, passed a bro…"
+        "zh": "**最贵的教训是探针本身先要可信。** `--stream` 的第一版在挂着应用的页面上记录，于是一边渲染一边把**活引擎**的调度也记了进去，调用数出现 2199 与 529 两个值（4 倍差），看起来像个惊人发现；同时它的参数 id 在整个页面生命周期内递增，使每次渲染的流哈希**必然**不同。两个缺陷都在「没有任何东西挂载的空页面 + id 限制在单次渲染内」之后消失。**先怀疑仪器，再怀疑被测对象**——这一条写进文档，因为它差点让我去修一个不存在的问题。",
+        "en": "**The most expensive lesson is that the instrument has to be trustworthy first.** The first version of `--stream` recorded on the page with the app mounted, so it captured the **live engine's** scheduling alongside the render's: the call count came out as 2199 and 529, a 4x difference that looked like a major find. It also handed out per-param ids for the whole page lifetime, which made every render's stream hash different **by construction**. Both defects vanished once the…"
       }
     ],
     "truncated": true

@@ -12,7 +12,13 @@
  * do not pretend to.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createGs1Host, GS1_DEFAULT_POLYPHONY, GS1_EXPECTED_ABI, GS1_PROCESSOR_NAME } from "../audio/gs1/Gs1Host";
+import {
+  createGs1Host,
+  GS1_DEFAULT_POLYPHONY,
+  GS1_EXPECTED_ABI,
+  GS1_PROCESSOR_NAME,
+  resetGs1CoreCache,
+} from "../audio/gs1/Gs1Host";
 import { Param, PARAM_NAMES, type ParamId } from "../../vendor/gs1/src/audio/params";
 
 /** A minimal valid module: the 8-byte wasm header, which `WebAssembly.validate` accepts. */
@@ -97,6 +103,13 @@ let originalWorkletNode: unknown;
 let originalFetch: unknown;
 
 beforeEach(() => {
+  /**
+   * The core is cached per URL for the life of the page, which is the fix for ~600 redundant
+   * fetches per library render (see `gs1CoreCache.test.ts`). That cache is process-wide, so a suite
+   * that stubs `fetch` must clear it — otherwise a test inherits the previous test's *successful*
+   * core and its own failing fetch is never reached, which is exactly how this line was found.
+   */
+  resetGs1CoreCache();
   FakeAudioWorkletNode.instances = [];
   FakeAudioWorkletNode.lastMessageSeen = [];
   originalWorkletNode = (globalThis as Record<string, unknown>).AudioWorkletNode;

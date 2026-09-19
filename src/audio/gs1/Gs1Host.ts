@@ -153,6 +153,26 @@ function assertFiniteParam(id: number, value: number): void {
 }
 
 /**
+ * One core fetch per URL per page, shared by every host that needs it.
+ *
+ * Without this, every `createGs1Host` re-fetched the multi-megabyte WASM core: a host is built per
+ * routed track *per render*, so the library's timbre baseline (159 genres x 2 repeats, two routed
+ * tracks each) issued roughly **600 redundant fetches** — and every one of them was a chance for the
+ * 20 s abort timer to fire under contention.
+ *
+ * That mattered far beyond the wasted bandwidth. A fetch that fails makes `createGs1Host` reject, and
+ * `renderPatternOffline` catches it and leaves that track on the native synth **for that render
+ * only** — a silent change of what the export sounds like, measured at up to 3.7 dB in a band. That
+ * is the shape of the rare repeat-render outliers in appendix G.14, and caching is the fix that
+ * removes the opportunity rather than retrying into it: after the first successful fetch there is no
+ * request left to fail.
+ *
+ * The promise is cached rather than the bytes so that concurrent callers share one in-flight fetch.
+ * A rejection is evicted immediately — one transient failure must not become permanent.
+ */
+const coreLoadCache = new Map<string, Promise<{ bytes: ArrayBuffer; variant: "simd" | "scalar" }>>();
+
+/**
  * Fetch the core, preferring SIMD but validating the bytes before trusting them.
  *
  * Returns the bytes *and* which variant they are, so the caller can report the truth rather
@@ -162,29 +182,51 @@ async function fetchCore(
   simd: boolean,
   opts: Required<Pick<Gs1HostOptions, "simdUrl" | "scalarUrl" | "fetchTimeoutMs">>
 ): Promise<{ bytes: ArrayBuffer; variant: "simd" | "scalar" }> {
-  const load = async (url: string): Promise<ArrayBuffer> => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), opts.fetchTimeoutMs);
-    try {
-      const response = await fetch(url, { signal: controller.signal });
-      if (!response.ok) {
-        throw new Error(`[Gs1Host] core fetch failed: HTTP ${response.status} for ${url}`);
-      }
-      return await response.arrayBuffer();
-    } finally {
-      clearTimeout(timer);
-    }
-  };
-
   const wanted: "simd" | "scalar" = simd ? "simd" : "scalar";
-  let bytes = await load(wanted === "simd" ? opts.simdUrl : opts.scalarUrl);
-  if (WebAssembly.validate(bytes)) return { bytes, variant: wanted };
+  const cacheKey = `${wanted}|${opts.simdUrl}|${opts.scalarUrl}|${opts.fetchTimeoutMs}`;
+  const cached = coreLoadCache.get(cacheKey);
+  if (cached) return cached;
 
-  if (wanted === "simd") {
-    bytes = await load(opts.scalarUrl);
-    if (WebAssembly.validate(bytes)) return { bytes, variant: "scalar" };
-  }
-  throw new Error("[Gs1Host] neither the SIMD nor the scalar core validates in this browser");
+  const attempt = (async (): Promise<{ bytes: ArrayBuffer; variant: "simd" | "scalar" }> => {
+    const load = async (url: string): Promise<ArrayBuffer> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), opts.fetchTimeoutMs);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error(`[Gs1Host] core fetch failed: HTTP ${response.status} for ${url}`);
+        }
+        return await response.arrayBuffer();
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    let bytes = await load(wanted === "simd" ? opts.simdUrl : opts.scalarUrl);
+    if (WebAssembly.validate(bytes)) return { bytes, variant: wanted };
+
+    if (wanted === "simd") {
+      bytes = await load(opts.scalarUrl);
+      if (WebAssembly.validate(bytes)) return { bytes, variant: "scalar" };
+    }
+    throw new Error("[Gs1Host] neither the SIMD nor the scalar core validates in this browser");
+  })();
+
+  coreLoadCache.set(cacheKey, attempt);
+  attempt.catch(() => {
+    coreLoadCache.delete(cacheKey);
+  });
+  return attempt;
+}
+
+/**
+ * Drop the cached core. Exported for tests, which must not inherit another test's fetch.
+ *
+ * Deliberately *not* called on a failed host build: the bytes are context-independent data, so they
+ * stay valid even when a particular `AudioWorkletNode` refuses to construct.
+ */
+export function resetGs1CoreCache(): void {
+  coreLoadCache.clear();
 }
 
 /**
