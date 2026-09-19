@@ -142,3 +142,83 @@ export function noiseOffsetForLayer(
 export function noisePositionFor(trackIdx: number, stepIdx: number, ratchetIndex = 0): number {
   return trackIdx * 65536 + stepIdx * 64 + ratchetIndex;
 }
+
+/**
+ * Per-hit humanisation: the small amount by which one hit differs from the next.
+ *
+ * Every drum voice varies with *velocity* — that is what makes a pattern played rather than
+ * typed — but a pattern that repeats a hit at the same velocity produced hits that were
+ * **identical to the last decimal**: same pitch, same decay, same level, with only the noise
+ * read offset changing. On a real kit no two strokes land the same way, and the sameness is
+ * audible as a kind of stiffness that no amount of velocity programming removes.
+ *
+ * The ranges are deliberately narrow. This is not an effect; it is the difference between a
+ * machine and a player, and anything wider starts to sound like a drunk drummer. The numbers:
+ *
+ *   - **pitch**: ±6 cents. A stroke's tension varies by roughly this much; a semitone would be
+ *     a wrong note.
+ *   - **level**: ±0.6 dB. Below the threshold of "a different hit", above "identical".
+ *   - **decay**: ±4 %. Drum decay is dominated by the head and the room, which barely change
+ *     stroke to stroke; this is the shimmer, not a different drum.
+ *
+ * **Determinism is not negotiable.** Derived from the same musical position key the noise offsets
+ * use, so the live engine and the offline renderer produce the same variation and export parity
+ * holds. `Math.random` here would break the project's central export guarantee.
+ */
+export interface HitVariation {
+  /** Frequency multiplier, 1 ± a few cents. */
+  pitchRatio: number;
+  /** Linear level multiplier, 1 ± a fraction of a dB. */
+  levelScale: number;
+  /** Decay multiplier, 1 ± a few percent. */
+  decayScale: number;
+}
+
+/** Widest pitch deviation, in cents. */
+export const HIT_VARIATION_MAX_CENTS = 6;
+/** Widest level deviation, as a linear multiplier (≈ ±0.6 dB). */
+export const HIT_VARIATION_MAX_LEVEL = 0.934; // 10 ** (-0.6 / 20) ≈ 0.9333
+/** Widest decay deviation, as a fraction. */
+export const HIT_VARIATION_MAX_DECAY = 0.04;
+
+/**
+ * The variation for one hit, derived from its musical position.
+ *
+ * Each parameter takes its own hash of the position so the three do not move together — a hit
+ * that is both higher *and* shorter *and* louder reads as a different drum rather than as one
+ * stroke played differently, which is the opposite of what this is for.
+ */
+export function hitVariation(position: number | undefined): HitVariation {
+  /**
+   * Position 0 is the unvaried voice, and that is a deliberate boundary rather than a fallback.
+   *
+   * Every voice function in `DrumKitModels` defaults its `noisePosition` to 0, so this one value
+   * has to mean "no position supplied" — otherwise the default silently applies one arbitrary,
+   * unexplained detune to every caller that never asked for humanisation, and the pre-change
+   * exact-parameter baselines stop being reproducible.
+   *
+   * The cost is one unvaried hit per pattern: `noisePositionFor(0, 0, 0)` is also 0, so the first
+   * step of the first track keeps its old stiffness. That is the cheapest place to lose it — it is
+   * a single stroke rather than a groove — and the alternative (making the position argument
+   * mandatory) would break the export-parity key, which is not a trade worth making for one hit.
+   */
+  if (!position) {
+    return { pitchRatio: 1, levelScale: 1, decayScale: 1 };
+  }
+
+  /** A signed value in [-1, 1) from an independently mixed hash. */
+  const signed = (salt: number): number => {
+    const h = hashSeed((position ^ salt) >>> 0);
+    return (h / 0xffffffff) * 2 - 1;
+  };
+
+  const cents = signed(0x9e3779b1) * HIT_VARIATION_MAX_CENTS;
+  const level = signed(0x85ebca6b) * 0.033; // ±3.3 % ≈ ±0.28 dB, inside the ±0.6 dB bound
+  const decay = signed(0xc2b2ae35) * HIT_VARIATION_MAX_DECAY;
+
+  return {
+    pitchRatio: Math.pow(2, cents / 1200),
+    levelScale: Math.max(HIT_VARIATION_MAX_LEVEL, 1 + level),
+    decayScale: 1 + decay,
+  };
+}

@@ -14,7 +14,7 @@ import { makeDistortionCurve, synthesizeAnatomyKickVoice } from "./AnatomyKickEn
 
 export type DrumKitType = "808" | "909" | "acoustic" | "cyber" | string;
 import { safeFreq, safeVelocity } from "./dspGuards";
-import { noiseOffsetForHit, noiseOffsetForLayer } from "./noise";
+import { hitVariation, noiseOffsetForHit, noiseOffsetForLayer } from "./noise";
 
 /**
  * E-06: where a noise layer should start reading the shared noise buffer.
@@ -537,15 +537,38 @@ export function synthesizeKick(
   vel = safeVelocity(vel);
   if (kit.startsWith("kick:")) {
     const presetId = kit.slice(5);
-    return synthesizeAnatomyKickVoice(ctx, dest, time, vel, presetId, noiseBuffer);
+    return synthesizeAnatomyKickVoice(ctx, dest, time, vel, presetId, noiseBuffer, noisePosition);
   }
 
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
   const basePitch = pitchOffset > 24 ? pitchOffset - 36 : pitchOffset;
-  const pitchMultiplier = Math.pow(2, basePitch / 12);
+  /**
+   * Per-hit humanisation, derived from the same musical position the noise offsets use.
+   *
+   * A pattern that repeats a hit at the same velocity used to produce hits identical to the last
+   * decimal: same pitch, same decay, same level, with only the noise read offset changing. On a
+   * real kit no two strokes land the same way, and the sameness reads as stiffness that no amount
+   * of velocity programming removes.
+   *
+   * Deterministic, so the live engine and the offline renderer agree and export parity holds —
+   * which is also why it is keyed on `noisePosition` rather than a clock or `Math.random`.
+   */
+  const hit = hitVariation(noisePosition);
+  const pitchMultiplier = Math.pow(2, basePitch / 12) * hit.pitchRatio;
   // Defect B: at vel === 1 these are all exactly 1, so ff output is unchanged.
   const timbre = velocityTimbre(vel);
+  /**
+   * Both fold the velocity timbre scale and the per-hit variation into the literal a branch would
+   * otherwise hard-code.
+   *
+   * The first pass at this wired the 808 branch and missed the other three — the exact mistake the
+   * snare's helpers exist to prevent, made in the function right above them. Every branch now goes
+   * through these, so "which kits are humanised" is not a question a reviewer has to answer by
+   * reading four branches.
+   */
+  const decayOf = (base: number) => base * timbre.decayScale * hit.decayScale;
+  const levelOf = (base: number) => base * hit.levelScale;
 
   if (kit === "808") {
     // TR-808 Kick: Bridged-T network simulation with deep sub-bass resonance & long exponential decay
@@ -563,9 +586,10 @@ export function synthesizeKick(
     osc.frequency.exponentialRampToValueAtTime(endFreq + 15, time + 0.045);
     osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.28);
 
-    // Accents are tighter, ghost notes ring a touch longer.
-    const bodyDecay = 0.65 * timbre.decayScale;
-    const kickVol = vel * 1.35;
+    // Accents are tighter, ghost notes ring a touch longer — and each stroke differs slightly
+    // from the last.
+    const bodyDecay = decayOf(0.65);
+    const kickVol = levelOf(vel * 1.35);
     gain.gain.setValueAtTime(kickVol, time);
     gain.gain.exponentialRampToValueAtTime(kickVol * 0.7, time + 0.08);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + bodyDecay);
@@ -588,8 +612,8 @@ export function synthesizeKick(
       filter.frequency.value = safeFreq(2400 * timbre.brightness);
       filter.Q.value = 4;
       const clickGain = ctx.createGain();
-      const clickDecay = 0.015 * timbre.decayScale;
-      clickGain.gain.setValueAtTime(vel * 0.6 * timbre.transientScale, time);
+      const clickDecay = decayOf(0.015);
+      clickGain.gain.setValueAtTime(levelOf(vel * 0.6 * timbre.transientScale), time);
       clickGain.gain.exponentialRampToValueAtTime(0.0001, time + clickDecay);
       click.connect(filter);
       filter.connect(clickGain);
@@ -613,8 +637,8 @@ export function synthesizeKick(
     // Faster pitch drop for tighter punch
     osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.05);
 
-    const bodyDecay = 0.38 * timbre.decayScale;
-    const kickVol = vel * 1.25;
+    const bodyDecay = decayOf(0.38);
+    const kickVol = levelOf(vel * 1.25);
     gain.gain.setValueAtTime(kickVol, time);
     gain.gain.exponentialRampToValueAtTime(kickVol * 0.5, time + 0.06);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + bodyDecay);
@@ -635,8 +659,8 @@ export function synthesizeKick(
       filter.frequency.value = safeFreq(1100 * timbre.brightness);
       filter.Q.value = 2.5;
       const clickGain = ctx.createGain();
-      const clickDecay = 0.025 * timbre.decayScale;
-      clickGain.gain.setValueAtTime(vel * 0.8 * timbre.transientScale, time);
+      const clickDecay = decayOf(0.025);
+      clickGain.gain.setValueAtTime(levelOf(vel * 0.8 * timbre.transientScale), time);
       clickGain.gain.exponentialRampToValueAtTime(0.0001, time + clickDecay);
       click.connect(filter);
       filter.connect(clickGain);
@@ -659,8 +683,8 @@ export function synthesizeKick(
     osc.frequency.setValueAtTime(startFreq, time);
     osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.07);
 
-    const bodyDecay = 0.35 * timbre.decayScale;
-    const kickVol = vel * 1.1;
+    const bodyDecay = decayOf(0.35);
+    const kickVol = levelOf(vel * 1.1);
     gain.gain.setValueAtTime(kickVol, time);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + bodyDecay);
 
@@ -681,8 +705,8 @@ export function synthesizeKick(
       clickFilter.Q.value = 2.2;
 
       const clickGain = ctx.createGain();
-      const clickDecay = 0.012;
-      clickGain.gain.setValueAtTime(vel * 0.28 * timbre.transientScale, time);
+      const clickDecay = decayOf(0.012);
+      clickGain.gain.setValueAtTime(levelOf(vel * 0.28 * timbre.transientScale), time);
       clickGain.gain.exponentialRampToValueAtTime(0.0001, time + clickDecay);
 
       click.connect(clickFilter);
@@ -711,8 +735,8 @@ export function synthesizeKick(
     osc1.frequency.exponentialRampToValueAtTime(endFreq, time + 0.06);
     osc2.frequency.exponentialRampToValueAtTime(endFreq, time + 0.06);
 
-    const bodyDecay = 0.45 * timbre.decayScale;
-    gain.gain.setValueAtTime(vel * 1.3, time);
+    const bodyDecay = decayOf(0.45);
+    gain.gain.setValueAtTime(levelOf(vel * 1.3), time);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + bodyDecay);
 
     osc1.connect(gain);
@@ -748,7 +772,22 @@ export function synthesizeSnare(
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
   const basePitch = pitchOffset > 24 ? pitchOffset - 60 : pitchOffset;
-  const pitchMultiplier = Math.pow(2, basePitch / 12);
+  /**
+   * Per-hit humanisation (see `hitVariation`), folded into the pitch/decay/level of every branch
+   * below so the snare is humanised once rather than four times, once per kit. A snare is the
+   * voice where identical repeats are most obvious — the wires are noise, so a repeated hit reads
+   * as the same sample fired twice — and tuning drift between strokes is exactly what a drummer's
+   * stick does that a sampler does not.
+   */
+  const hit = hitVariation(noisePosition);
+  const pitchMultiplier = Math.pow(2, basePitch / 12) * hit.pitchRatio;
+  /**
+   * Both helpers fold the *velocity* timbre scale and the *per-hit* variation into the literal the
+   * branch would otherwise hard-code, so a branch reads as the same number it always did and the
+   * two scalings can neither be forgotten nor applied twice.
+   */
+  const decayOf = (base: number) => base * timbre.decayScale * hit.decayScale;
+  const levelOf = (base: number) => base * hit.levelScale;
   // D9: a `kick:` preset must not re-voice the snare (see `drumKitForVoice`).
   const effectiveKit = drumKitForVoice(kit);
   // Defect B: at vel === 1 these are all exactly 1, so ff output is unchanged.
@@ -768,8 +807,8 @@ export function synthesizeSnare(
     osc1.frequency.exponentialRampToValueAtTime(140 * pitchMultiplier, time + 0.08);
     osc2.frequency.exponentialRampToValueAtTime(260 * pitchMultiplier, time + 0.08);
 
-    const bodyDecay = 0.12 * timbre.decayScale;
-    oscGain.gain.setValueAtTime(vel * 0.65, time);
+    const bodyDecay = decayOf(0.12);
+    oscGain.gain.setValueAtTime(levelOf(vel * 0.65), time);
     oscGain.gain.exponentialRampToValueAtTime(0.001, time + bodyDecay);
 
     osc1.connect(oscGain);
@@ -791,8 +830,8 @@ export function synthesizeSnare(
       filter.frequency.value = safeFreq(1800 * timbre.brightness);
       filter.Q.value = 1.0;
       const noiseGain = ctx.createGain();
-      const noiseDecay = 0.22 * timbre.decayScale;
-      noiseGain.gain.setValueAtTime(vel * 0.85 * timbre.transientScale, time);
+      const noiseDecay = decayOf(0.22);
+      noiseGain.gain.setValueAtTime(levelOf(vel * 0.85 * timbre.transientScale), time);
       noiseGain.gain.exponentialRampToValueAtTime(0.0001, time + noiseDecay);
 
       noise.connect(filter);
@@ -819,8 +858,8 @@ export function synthesizeSnare(
     osc.frequency.setValueAtTime(220 * pitchMultiplier, time);
     osc.frequency.exponentialRampToValueAtTime(95 * pitchMultiplier, time + 0.07); // Q3
 
-    const bodyDecay = 0.14 * timbre.decayScale;
-    oscGain.gain.setValueAtTime(vel * 0.8, time);
+    const bodyDecay = decayOf(0.14);
+    oscGain.gain.setValueAtTime(levelOf(vel * 0.8), time);
     oscGain.gain.exponentialRampToValueAtTime(0.001, time + bodyDecay);
 
     osc.connect(oscGain);
@@ -837,11 +876,11 @@ export function synthesizeSnare(
       filter.type = "highpass";
       filter.frequency.value = safeFreq(1200 * timbre.brightness);
       const noiseGain = ctx.createGain();
-      const snapTime = 0.08 * timbre.decayScale;
-      const noiseDecay = 0.28 * timbre.decayScale;
-      noiseGain.gain.setValueAtTime(vel * 0.95 * timbre.transientScale, time);
+      const snapTime = decayOf(0.08);
+      const noiseDecay = decayOf(0.28);
+      noiseGain.gain.setValueAtTime(levelOf(vel * 0.95 * timbre.transientScale), time);
       noiseGain.gain.exponentialRampToValueAtTime(
-        vel * 0.3 * timbre.transientScale,
+        levelOf(vel * 0.3 * timbre.transientScale),
         time + snapTime
       );
       noiseGain.gain.exponentialRampToValueAtTime(0.0001, time + noiseDecay);
@@ -870,8 +909,8 @@ export function synthesizeSnare(
     osc.frequency.setValueAtTime(195 * pitchMultiplier, time);
     osc.frequency.exponentialRampToValueAtTime(135, time + 0.055);
 
-    const bodyDecay = 0.14 * timbre.decayScale;
-    toneGain.gain.setValueAtTime(vel * 0.78, time);
+    const bodyDecay = decayOf(0.14);
+    toneGain.gain.setValueAtTime(levelOf(vel * 0.78), time);
     toneGain.gain.exponentialRampToValueAtTime(0.001, time + bodyDecay);
 
     osc.connect(toneGain);
@@ -889,8 +928,8 @@ export function synthesizeSnare(
       filter.frequency.value = safeFreq(2200 * timbre.brightness);
       filter.Q.value = 1.5;
       const noiseGain = ctx.createGain();
-      const noiseDecay = 0.22 * timbre.decayScale;
-      noiseGain.gain.setValueAtTime(vel * 0.88 * timbre.transientScale, time);
+      const noiseDecay = decayOf(0.22);
+      noiseGain.gain.setValueAtTime(levelOf(vel * 0.88 * timbre.transientScale), time);
       noiseGain.gain.exponentialRampToValueAtTime(0.0001, time + noiseDecay);
 
       noise.connect(filter);
@@ -917,8 +956,8 @@ export function synthesizeSnare(
     osc.frequency.setValueAtTime(190 * pitchMultiplier, time);
     osc.frequency.exponentialRampToValueAtTime(110, time + 0.06);
 
-    const bodyDecay = 0.12 * timbre.decayScale;
-    toneGain.gain.setValueAtTime(vel * 0.75, time);
+    const bodyDecay = decayOf(0.12);
+    toneGain.gain.setValueAtTime(levelOf(vel * 0.75), time);
     toneGain.gain.exponentialRampToValueAtTime(0.001, time + bodyDecay);
 
     osc.connect(toneGain);
@@ -936,8 +975,8 @@ export function synthesizeSnare(
       filter.frequency.value = safeFreq(2200 * timbre.brightness);
       filter.Q.value = 1.4;
       const noiseGain = ctx.createGain();
-      const noiseDecay = 0.2 * timbre.decayScale;
-      noiseGain.gain.setValueAtTime(vel * 0.9 * timbre.transientScale, time);
+      const noiseDecay = decayOf(0.2);
+      noiseGain.gain.setValueAtTime(levelOf(vel * 0.9 * timbre.transientScale), time);
       noiseGain.gain.exponentialRampToValueAtTime(0.0001, time + noiseDecay);
 
       noise.connect(filter);
@@ -1002,6 +1041,14 @@ export function synthesizeHiHat(
   const isOpen = stepVal === 2;
   const isRatchet = stepVal === 3;
   /**
+   * Per-hit humanisation, shared by both branches. A closed hat is often the highest-density voice
+   * in a pattern — eight or sixteen identical hits a bar at one velocity is the single most common
+   * way this project sounded machine-made — so the variation matters most here. Length and level
+   * only: a hat's perceived pitch is its filter centre, and drifting that would read as a different
+   * instrument rather than a different stroke.
+   */
+  const hit = hitVariation(noisePosition);
+  /**
    * Q5: an open hat is a cymbal, not a gated sample. The decay used to be
    * `min(stepDur * 3.5, 0.45)` and then multiplied by the step's gate, so a 0.2 gate made a
    * 90 ms "open" hat and even the longest possible open hat stopped at 450 ms — roughly half
@@ -1018,7 +1065,8 @@ export function synthesizeHiHat(
   const timbre = velocityTimbre(vel);
   // A short gate still means the player released early, but a *minimum* is required or an
   // "open" hat becomes indistinguishable from a closed one.
-  const decayTime = Math.max(isOpen ? 0.25 : 0.02, baseDecay * gateVal) * timbre.decayScale;
+  const decayTime =
+    Math.max(isOpen ? 0.25 : 0.02, baseDecay * gateVal) * timbre.decayScale * hit.decayScale;
   const effectiveKit = drumKitForVoice(kit);
 
   if (effectiveKit === "808") {
@@ -1038,7 +1086,7 @@ export function synthesizeHiHat(
     bandpass.Q.value = 1.6;
 
     const envGain = ctx.createGain();
-    const hatVol = vel * (isOpen ? 0.75 : 0.6);
+    const hatVol = vel * (isOpen ? 0.75 : 0.6) * hit.levelScale;
     envGain.gain.setValueAtTime(hatVol, time);
     envGain.gain.exponentialRampToValueAtTime(0.0001, time + decayTime);
 
@@ -1085,7 +1133,7 @@ export function synthesizeHiHat(
     peakFilter.gain.value = 5.0;
 
     const gain = ctx.createGain();
-    const hatVol = vel * (isOpen ? 0.8 : 0.65);
+    const hatVol = vel * (isOpen ? 0.8 : 0.65) * hit.levelScale;
     gain.gain.setValueAtTime(hatVol, time);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + decayTime);
 
@@ -1625,8 +1673,20 @@ export function synthesizePercussion(
   vel = safeVelocity(vel);
   const spec = PERCUSSION_MODELS[resolvePercussionModel(kit, instrument)];
   // Defect B: at vel === 1 these are all exactly 1, so ff output is unchanged.
-  const timbre = velocityTimbre(vel);
-  const mult = percussionPitchMultiplier(pitchOffset);
+  const rawTimbre = velocityTimbre(vel);
+  /**
+   * Per-hit humanisation, applied once here rather than in each family so every model — cowbell,
+   * clap, shaker, membrane, metal, wood — is humanised by construction, including the ones with no
+   * noise layer to vary. `timbre` is rebuilt rather than mutated because `velocityTimbre` is the
+   * documented velocity response and this must stay a multiplicative footnote to it.
+   */
+  const hit = hitVariation(noisePosition);
+  const timbre = {
+    ...rawTimbre,
+    decayScale: rawTimbre.decayScale * hit.decayScale,
+    transientScale: rawTimbre.transientScale * hit.levelScale,
+  };
+  const mult = percussionPitchMultiplier(pitchOffset) * hit.pitchRatio;
 
   switch (spec.family) {
     case "cowbell":

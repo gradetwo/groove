@@ -10,6 +10,7 @@ import {
   synthesizeSnare,
   velocityTimbre,
 } from "../audio/DrumKitModels";
+import { HIT_VARIATION_MAX_DECAY, hitVariation } from "../audio/noise";
 import { AudioEngine } from "../audio/AudioEngine";
 import type { SequencerPattern } from "../types/genre";
 import { FakeAudioContext, installFakeAudioContext } from "./helpers/fakeAudio";
@@ -328,11 +329,24 @@ describe("velocity → timbre (Defect B)", () => {
     // Every value below is the literal the old implementation hard-coded; they must
     // survive untouched at velocity 127/127. (Verified end-to-end by diffing the
     // full scheduled-parameter stream against `git show HEAD` — see report.)
+    //
+    // The 808 body length is the one value the per-hit humanisation intentionally
+    // moves, so it is pinned *against the variation for this exact position* instead
+    // of against a bare literal: the pre-change 0.65 s decay must still be the value
+    // being scaled, and the scaling itself must stay inside the declared bound.
+    // Rendering at an explicit position keeps the expectation deterministic rather
+    // than dependent on whatever the default position happens to hash to.
+    const KICK_POSITION = 7;
     const kick808 = summarize(
-      renderVoice((c, d, b) => synthesizeKick(c, d, 0.5, 1, 0, "808", b)).nodes
+      renderVoice((c, d, b) => synthesizeKick(c, d, 0.5, 1, 0, "808", b, KICK_POSITION)).nodes
     );
     expect(kick808.filterFreqs).toEqual([2400]);
-    expect(kick808.lastRamp).toBeCloseTo(1.15, 9); // body decay 0.65 from t = 0.5
+    // body decay 0.65 from t = 0.5, scaled only by this hit's humanisation.
+    expect(kick808.lastRamp).toBeCloseTo(
+      0.5 + 0.65 * hitVariation(KICK_POSITION).decayScale,
+      9
+    );
+    expect(Math.abs(kick808.lastRamp - 1.15)).toBeLessThanOrEqual(0.65 * HIT_VARIATION_MAX_DECAY);
 
     const kick909 = summarize(
       renderVoice((c, d, b) => synthesizeKick(c, d, 0.5, 1, 0, "909", b)).nodes
@@ -365,7 +379,8 @@ describe("velocity → timbre (Defect B)", () => {
     expect(hat909.filterFreqs).toEqual([8200, 8600, 11500]);
     // Q4: the metal cluster contributes six inharmonic square partials; without it this hat
     // was pure filtered noise, which is the "cheap MIDI drum" tell the fix exists to remove.
-    expect(hat909.squareOscillators).toBe(6);    expect(
+    expect(hat909.squareOscillators).toBe(6);
+    expect(
       summarize(
         renderVoice((c, d, b) => synthesizeHiHat(c, d, 0.5, 1, 0, "acoustic", 1, 0.125, 0.8, b))
           .nodes

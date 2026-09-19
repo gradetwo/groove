@@ -12,6 +12,7 @@
 import { ecosystemBus } from "./ecosystemBus";
 import { safeGain, safeVelocity } from "./dspGuards";
 import { createMasterLimiter, type MasterLimiterHandle } from "./MasterLimiter";
+import { hitVariation } from "./noise";
 
 export interface SomaticKickParams {
   softness: number; // 0 (razor sharp pitch dip) to 1 (velvety soft curve)
@@ -815,13 +816,27 @@ export function synthesizeAnatomyKickVoice(
   time: number,
   vel: number,
   presetIdOrParams: string | Partial<SomaticKickParams>,
-  _noiseBuffer?: AudioBuffer | null
+  _noiseBuffer?: AudioBuffer | null,
+  noisePosition?: number
 ): KickVoiceCleanup {
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
 
   // F-01: user-controlled velocity/volume can be 0; exponential ramps require > 0.
   vel = safeVelocity(vel);
+
+  /**
+   * Per-hit humanisation, shared with `DrumKitModels` through `noise.ts`.
+   *
+   * These six `kick:*` presets are the only drum voice family outside `DrumKitModels`, and a kick
+   * usually lands on every beat — the most exposed place in a pattern for a repeated hit to read as
+   * the same sample twice. Leaving them out would have made "every drum voice is humanised" false
+   * for exactly the voice a listener hears most often.
+   *
+   * `undefined` and `0` are no-ops, so every existing caller and every exact-parameter test of this
+   * engine is untouched by this wiring.
+   */
+  const hit = hitVariation(noisePosition);
 
   const rawParams =
     typeof presetIdOrParams === "string"
@@ -851,15 +866,40 @@ export function synthesizeAnatomyKickVoice(
    */
   const velNorm = Math.max(0, Math.min(1, vel));
   const gripScale = 0.55 + 0.45 * Math.pow(velNorm, 0.6); // 0.55 at ppp → 1.0 at ff
-  const decayScale = 1 + 0.25 * (1 - velNorm); // ghost notes ring slightly longer
+  // Ghost notes ring slightly longer, and each stroke differs a little from the last.
+  const decayScale = (1 + 0.25 * (1 - velNorm)) * hit.decayScale;
   const effectiveGrit = p.grit * gripScale;
   const effectiveSoftness = Math.min(0.95, p.softness / gripScale);
+  /**
+   * The tonal layers' base frequency with this stroke's pitch variation folded in.
+   *
+   * `p.basePitch` itself is left alone: the click layer's filter centres are deliberately fixed
+   * (moving a filter centre reads as a different instrument, not a different stroke), so the
+   * variation belongs on the two pitched layers, which is what this local alias feeds.
+   */
+  const basePitch = p.basePitch * hit.pitchRatio;
 
   const t = Math.max(ctx.currentTime, time);
   const anySolo = p.subSolo || p.thumpSolo || p.clickSolo;
   const playSub = !p.subMute && (!anySolo || p.subSolo);
   const playThump = !p.thumpMute && (!anySolo || p.thumpSolo);
   const playClick = !p.clickMute && (!anySolo || p.clickSolo);
+
+  /**
+   * This stroke's level variation reaches every layer's peak (`subPeak` / `rumbleAmp` / `thumpPeak` /
+   * `clickPeak` below) rather than being applied as a single bus gain, for two concrete reasons,
+   * both about this module's voice lifetime:
+   *
+   *  - `VoiceRegistry` pairs `sources[i]` with `gains[i]` and disconnects exactly those on teardown.
+   *    A bus gain that no source is paired with would never be disconnected, so every hit would leak
+   *    one gain node into the graph for the life of the context; putting it first instead would shift
+   *    every pairing, making a stolen voice fade the wrong layer.
+   *  - It also matches how `DrumKitModels` applies the same variation (`levelOf()` on each peak),
+   *    so the two engines cannot drift into different ideas of what a stroke's level means.
+   *
+   * The cost is that the level no longer reaches the grit shaper the way velocity does. At ±0.28 dB
+   * that difference is inaudible, and keeping the graph shape is worth more than the interaction.
+   */
 
   let busNode: AudioNode = dest;
   if (effectiveGrit > 0.05 && typeof (ctx as any).createWaveShaper === "function") {
@@ -889,8 +929,8 @@ export function synthesizeAnatomyKickVoice(
     const subFilter = ctx.createBiquadFilter();
 
     subOsc.type = "sine";
-    const startPitch = p.basePitch * (1 + 2.2 * (1 - effectiveSoftness));
-    const endPitch = p.basePitch;
+    const startPitch = basePitch * (1 + 2.2 * (1 - effectiveSoftness));
+    const endPitch = basePitch;
 
     subOsc.frequency.setValueAtTime(startPitch, t);
     const pitchDropTime = 0.025 + effectiveSoftness * 0.04;
@@ -899,9 +939,9 @@ export function synthesizeAnatomyKickVoice(
     subFilter.type = "lowpass";
     subFilter.frequency.setValueAtTime(140, t);
 
-    const subDecay = 0.2 + p.boomToWhere * 0.9;
+    const subDecay = (0.2 + p.boomToWhere * 0.9) * hit.decayScale;
     if (subDecay > maxDecay) maxDecay = subDecay;
-    const subPeak = safeGain(vel * 1.25 * p.volume);
+    const subPeak = safeGain(vel * 1.25 * p.volume * hit.levelScale);
 
     subGain.gain.setValueAtTime(0.0001, t);
     subGain.gain.linearRampToValueAtTime(subPeak, t + 0.002);
@@ -921,9 +961,9 @@ export function synthesizeAnatomyKickVoice(
       const rumbleOsc = ctx.createOscillator();
       const rumbleGain = ctx.createGain();
       rumbleOsc.type = "sine";
-      rumbleOsc.frequency.setValueAtTime(p.basePitch * 0.75, t);
+      rumbleOsc.frequency.setValueAtTime(basePitch * 0.75, t);
       const rumbleDecay = subDecay * 1.1;
-      const rumbleAmp = vel * p.rumble * 0.4 * p.volume;
+      const rumbleAmp = vel * p.rumble * 0.4 * p.volume * hit.levelScale;
       rumbleGain.gain.setValueAtTime(0.0001, t);
       rumbleGain.gain.linearRampToValueAtTime(rumbleAmp, t + 0.04);
       rumbleGain.gain.exponentialRampToValueAtTime(0.0001, t + rumbleDecay);
@@ -944,8 +984,10 @@ export function synthesizeAnatomyKickVoice(
     const thumpFilter = ctx.createBiquadFilter();
 
     thumpOsc.type = "triangle";
-    const thumpStart = 380 * (1 - effectiveSoftness * 0.3);
-    const thumpEnd = 110;
+    // The thump layer's own sweep, transposed by the same stroke variation as the sub, so the two
+    // pitched layers stay in the same relationship to each other instead of drifting apart.
+    const thumpStart = 380 * (1 - effectiveSoftness * 0.3) * hit.pitchRatio;
+    const thumpEnd = 110 * hit.pitchRatio;
 
     thumpOsc.frequency.setValueAtTime(thumpStart, t);
     thumpOsc.frequency.exponentialRampToValueAtTime(thumpEnd, t + 0.022);
@@ -954,9 +996,9 @@ export function synthesizeAnatomyKickVoice(
     thumpFilter.frequency.setValueAtTime(160, t);
     thumpFilter.Q.setValueAtTime(1.8, t);
 
-    const thumpDecay = 0.05 + p.hitSkin * 0.18;
+    const thumpDecay = (0.05 + p.hitSkin * 0.18) * hit.decayScale;
     if (thumpDecay > maxDecay) maxDecay = thumpDecay;
-    const thumpPeak = safeGain(vel * (0.8 + p.hitSkin * 0.5) * p.volume);
+    const thumpPeak = safeGain(vel * (0.8 + p.hitSkin * 0.5) * p.volume * hit.levelScale);
 
     thumpGain.gain.setValueAtTime(0.0001, t);
     thumpGain.gain.linearRampToValueAtTime(thumpPeak, t + 0.001);
@@ -988,7 +1030,7 @@ export function synthesizeAnatomyKickVoice(
     clickFilter.Q.setValueAtTime(4.5, t);
 
     const clickDecay = (0.008 + (1 - effectiveSoftness) * 0.007) * decayScale;
-    const clickPeak = safeGain(vel * p.clickAmount * 0.95 * p.volume);
+    const clickPeak = safeGain(vel * p.clickAmount * 0.95 * p.volume * hit.levelScale);
 
     clickGain.gain.setValueAtTime(0.0001, t);
     clickGain.gain.linearRampToValueAtTime(clickPeak, t + 0.0003);

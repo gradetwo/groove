@@ -153,15 +153,19 @@ describe("Q3 · the drum pitch lane transposes the whole voice", () => {
     for (const kit of ["808", "909", "acoustic", "cyber"] as const) {
       const oscs: any[] = [];
       const localCtx = { ...ctx, createOscillator: () => { const o = ctx.createOscillator(); oscs.push(o); return o; } };
-      synthesizeKick(localCtx, ctx.createGain(), 0, 0.9, 0, kit, noiseBuffer);
+      /**
+       * Both calls use the **same** position, so the per-hit humanisation is identical on both sides
+       * and cancels: what is left is the pitch-lane behaviour this test is about. An exact equality
+       * would now be asserting that humanisation does not exist.
+       */
+      const AT = 4242;
+      synthesizeKick(localCtx, ctx.createGain(), 0, 0.9, 0, kit, noiseBuffer, AT);
       const freqCalls = oscs[0].frequency.calls;
       const settle = freqCalls[freqCalls.length - 1].value;
-      // The last ramp target is the settle frequency; it must be strictly above the
-      // un-transposed constant rather than identical to it.
       const { ctx: ctx2, noiseBuffer: nb2 } = createMockContext();
       const baseOscs: any[] = [];
       const baseCtx = { ...ctx2, createOscillator: () => { const o = ctx2.createOscillator(); baseOscs.push(o); return o; } };
-      synthesizeKick(baseCtx, ctx2.createGain(), 0, 0.9, 0, kit, nb2);
+      synthesizeKick(baseCtx, ctx2.createGain(), 0, 0.9, 0, kit, nb2, AT);
       const baseCalls = baseOscs[0].frequency.calls;
       const baseSettle = baseCalls[baseCalls.length - 1].value;
       // A pitch offset of 0 must leave the settle frequency exactly as authored...
@@ -174,11 +178,27 @@ describe("Q3 · the drum pitch lane transposes the whole voice", () => {
     const oscs: any[] = [];
     const localCtx = { ...ctx, createOscillator: () => { const o = ctx.createOscillator(); oscs.push(o); return o; } };
     // MIDI-style pitch values above 24 are absolute (the module subtracts 36); 36 means +0.
-    synthesizeKick(localCtx, ctx.createGain(), 0, 0.9, 48, "808", noiseBuffer);
+    /**
+     * Asserted as a **ratio against the same position at offset 0**, not as an absolute 84 Hz.
+     *
+     * The absolute value is no longer exact by design: each hit carries a few cents of humanisation,
+     * so a kick does not land on the same frequency twice. The ratio isolates the transposition,
+     * which is what the pitch lane is for.
+     */
+    const AT = 777;
+    const baseOscs: any[] = [];
+    const baseLocal = { ...ctx, createOscillator: () => { const o = ctx.createOscillator(); baseOscs.push(o); return o; } };
+    synthesizeKick(baseLocal, ctx.createGain(), 0, 0.9, 36, "808", noiseBuffer, AT);
+    const baseSettle = baseOscs[0].frequency.calls.slice(-1)[0].value;
+
+    synthesizeKick(localCtx, ctx.createGain(), 0, 0.9, 48, "808", noiseBuffer, AT);
     const calls = oscs[0].frequency.calls;
     const settle = calls[calls.length - 1].value;
-    // 48 - 36 = +12 semitones → 42 Hz * 2 = 84 Hz.
-    expect(settle).toBeCloseTo(84, 6);
+    // 48 - 36 = +12 semitones → exactly double, whatever the humanisation adds.
+    expect(settle / baseSettle).toBeCloseTo(2, 9);
+    // And it is around the documented 84 Hz, so the ratio is not hiding a wrong constant.
+    expect(settle).toBeGreaterThan(83.5);
+    expect(settle).toBeLessThan(84.5);
   });
 });
 
