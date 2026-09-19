@@ -222,6 +222,42 @@ input[type=range]::-moz-range-thumb {
   background: #f5b73d;
 }
 
+/**
+ * Covers the gutter between the frozen track-header column and the scrolling grid.
+ *
+ * Every track row (and the ruler) is a flex row with `gap: var(--trk-head-gap)` whose first child is
+ * a `sticky left-0` header. That gap is *outside* the header's box, so nothing is painted over it:
+ * at rest the first step cell starts after it, and once playback auto-scrolls the grid the cells
+ * slide into the gutter and the header looks like it is touching the grid. Measured at 1440x900 with
+ * the header at 593 px and the grid's first column at 609 px — **0 cells in the gutter at rest, 8
+ * (one per track) once the grid scrolls**, which is the "step cells appear in the header's space"
+ * report.
+ *
+ * The negative margins are the whole trick, and both are needed:
+ *   - `margin-left` pulls the box back off the flex gap that follows the header, so it starts
+ *     exactly where the header ends rather than one gap later;
+ *   - `margin-right` cancels the gap the box would itself introduce, so the step cells keep their
+ *     original x. Without it every grid in the app shifts 16 px right.
+ *
+ * `background: var(--panel)` because that is what the gutter already showed through to (the
+ * sequencer `<section>` is `bg-panel`), so at rest the layout is pixel-identical and nothing changes
+ * colour — the cover only exists while something is scrolling underneath it.
+ *
+ * `sticky left: var(--trk-head-w)` pins it to the header's right edge, which is also its natural
+ * position, so it costs no layout work before the scroll begins.
+ */
+.trk-head-gap-cover {
+  position: sticky;
+  left: var(--trk-head-w);
+  z-index: 30;
+  flex: none;
+  align-self: stretch;
+  width: var(--trk-head-gap);
+  margin-left: calc(-1 * var(--trk-head-gap));
+  margin-right: calc(-1 * var(--trk-head-gap));
+  background: var(--panel);
+}
+
 /* Touch Action & Gesture Conflict Prevention for Mobile */
 .touch-action-none {
   touch-action: none !important;

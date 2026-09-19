@@ -523,6 +523,10 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
         )}
       </div>
 
+      {/* Covers the flex gap between the frozen header and the grid, so cells that auto-scroll
+          during playback cannot be painted in it. See `.trk-head-gap-cover` in index.css. */}
+      <div aria-hidden="true" className="trk-head-gap-cover" />
+
       {/* Step Grid (.grid) */}
       <div className={`flex-1 flex gap-1 relative transition-all duration-150 ${
         isSilenced ? "opacity-25 grayscale saturate-50" : "opacity-100"

@@ -83,6 +83,10 @@ export const Ruler = memo<RulerProps>(function Ruler({
         </div>
       </div>
 
+      {/* Same guard as the track rows: the ruler's badges scroll with the grid and would otherwise
+          be painted in the flex gap. See `.trk-head-gap-cover` in index.css. */}
+      <div aria-hidden="true" className="trk-head-gap-cover" />
+
       {/* Dynamic Ruler Step Badges with Drag-to-Scroll & Loop Range Selection */}
       <div
         className={`flex-1 flex gap-1 relative cursor-grab select-none touch-action-manipulation ${
