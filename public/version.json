@@ -1,29 +1,29 @@
 {
-  "version": "2.0.89",
+  "version": "2.0.90",
   "releaseDate": "2026-09-19",
-  "changelogCount": 153,
+  "changelogCount": 154,
   "latest": {
-    "version": "2.0.89",
+    "version": "2.0.90",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.89 音序器终于有「本页帮助」：主编辑面不再是唯一没有帮助入口的界面",
-      "en": "v2.0.89 The Sequencer Gets a Help Entry — It Was the Only Screen Without One"
+      "zh": "v2.0.90 自动保存终于看得见：保存中／已保存／保存失败",
+      "en": "v2.0.90 The Auto-Save Is Visible Now: Saving, Saved, or Refused"
     },
     "highlights": [
       {
-        "zh": "**主编辑面是唯一没有帮助入口的界面**：钢琴卷帘有，「?」全局快捷键也有，但工具栏里 grep「help」零命中——最需要帮助的地方反而没有入口。现在 More 菜单里多了一项「本页帮助」，打开帮助中心的 sequencer 章节。",
-        "en": "**The main editor was the only screen without a help entry.** The piano roll has one and `?` opens the shortcuts, but the toolbar had zero hits for \"help\" — the place that needs it most had no way in. The More menu now carries **Help for this screen**, which opens the help centre at the sequencer chapter."
+        "zh": "**项目每次改动后 500 ms 就被写进 localStorage，而工作台从不告诉用户。** 反倒是「曲风制作器」一直有一个 `● 未保存修改` 徽标。于是用户分不清「已保存」和「只活在内存里」。现在工作台显示**保存中…／已保存／保存失败**三态。",
+        "en": "**The project has always been written to localStorage 500 ms after every change, and the studio never said so** — while the genre maker has shown an `● unsaved` badge all along. There was no way to tell a saved project from one living only in memory. The studio now shows **Saving… / Saved / Not saved**."
       },
       {
-        "zh": "**Tier 3，不占默认密度。** 帮助属于「会话边缘」类，而 G.10 好不容易把默认可见控件从 36 降到 16；放进 More 菜单意味着密度探针看不见它，也不会被判成「Tier 2/3 泄漏」（探针只禁止**默认可见**的非 Tier 1 控件）。层级表里照样登记了这一行——表仍是单一事实来源，而它的既有守卫（每个 `labelKey` 必须在 locale 里有定义）当场抓到我「只加了行、忘了加文案」。入口在宿主没给 handler 时**不渲染**，与 console 开关同一约定。",
-        "en": "**Tier 3, so it costs no default density.** Help is a session-edge affordance and G.10 spent real effort getting the default surface from 36 controls down to 16; inside the More menu the density probe cannot see it and it is not counted as a Tier 2/3 leak (the probe only forbids *visible* non-Tier-1 controls). It is still recorded in the tier table — which remains the single source of truth, and whose existing guard (every `labelKey` must exist in the locale) caught me addin…"
+        "zh": "**状态由写盘的那个模块拥有。** `projectStorage` 是唯一知道写入是否成功的模块，所以状态归它、界面只订阅——另建一套记账迟早会和事实不一致。「保存中」的含义是「改动还在 debounce 里排队」，不是「字节在飞」，文案就按这个事实写。**`保存失败` 是刻意加的一态**：localStorage 写满或被禁用会抛异常，而旧代码只打了条日志——没有这一态，指示器会在用户的作品**并不安全**时永远显示「保存中…」。",
+        "en": "**The status is owned by the module that writes.** `projectStorage` is the only place that knows whether a write succeeded, so it owns the status and the UI only subscribes — parallel bookkeeping would eventually disagree with reality. \"Saving\" means a change is waiting on the debounce, not that bytes are in flight, and the copy says exactly that. **\"Not saved\" is a deliberate third state**: localStorage throws when full or disabled and the old code only logged it, so withou…"
       },
       {
-        "zh": "**顺带把 U 表里已经完成、却还挂着「未修」的条目补齐**（U1/U2/U3/U4/U5/U6/U7/U11 均已交付，各自标注版本与附录），并写明仍然开放的四项及原因：**U8**（自动保存却没有「已保存」指示）、**U9**（中文术语一名多译——**需要你拍板用词**）、**U10**（卷帘是无障碍空洞）、**U12**（对比度 2.3:1 / 1.96:1 与 ≤10px 字号）。顺带修掉 U1 行里我上一轮重复粘贴的一句话。",
-        "en": "**The U table's finished rows are no longer labelled \"not fixed\"** (U1/U2/U3/U4/U5/U6/U7/U11 are all delivered, each with its version and appendix), and the four that remain open are named with their reasons: **U8** (autosave with no saved indicator), **U9** (one concept, four or five Chinese names — **this needs your call on the wording**), **U10** (the piano roll is an accessibility void), **U12** (contrast 2.3:1 / 1.96:1 and 44 controls at ≤10px). A duplicated phrase I le…"
+        "zh": "**它也说清楚存在哪。** 悬浮提示写「已保存到本浏览器（HH:MM）」与「仅保存在本浏览器——要留副本请导出」：对勾不能暗示云备份，因为并没有云。状态用 `role=\"status\"` + `aria-live=\"polite\"`——这份安心对读屏用户同样要有。订阅用 `useSyncExternalStore`（状态在 React 之外变化，debounce 在用户看屏幕时到点），快照对象只在变化时换新。",
+        "en": "**It also says where.** The tooltip reads \"Saved to this browser at HH:MM\" and \"Saved in this browser only — export to keep a copy\": a checkmark must not imply a cloud backup, because there is no cloud. The state is a `role=\"status\"` live region, because the reassurance matters to a screen reader too. The subscription uses `useSyncExternalStore` (the status changes outside React — the debounce fires while the user is reading the screen) with a snapshot that is only replaced…"
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
