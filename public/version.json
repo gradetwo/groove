@@ -1,27 +1,27 @@
 {
-  "version": "2.0.87",
+  "version": "2.0.88",
   "releaseDate": "2026-09-19",
-  "changelogCount": 151,
+  "changelogCount": 152,
   "latest": {
-    "version": "2.0.87",
+    "version": "2.0.88",
     "date": "2026-09-19",
     "category": "feature",
     "title": {
-      "zh": "v2.0.87 实操教学现在真的指向那个控件：圈出目标、压暗其余、且不挡点击",
-      "en": "v2.0.87 The Hands-on Lesson Actually Points at the Control Now"
+      "zh": "v2.0.88 首屏有一个明确的动作；顺带修掉冻结列里漏出来的播放头光束",
+      "en": "v2.0.88 The First Screen Has One Clear Action — and the Playhead Beam Stops Leaking Into the Frozen Column"
     },
     "highlights": [
       {
-        "zh": "**教练一直只能切视图，没有任何东西指向文字说的那个按钮或格子。** 写着「点一个格子里放底鼓」，格子在哪儿得自己找。现在每个步骤可以带一个 `anchor`（属性对：`data-testid` 或 `data-toolbar-id`），教练会把目标**圈出来**、用 `box-shadow` 把其余部分压暗——**环上 `pointer-events: none`**，所以应用照旧可点：指令变成「跟着做」而不只是「读一读」。鼓组 4 步、钢琴 3 步、调音台 1 步已接上。",
-        "en": "**The coach could only switch views; nothing pointed at the button or cell its text described.** It said \"click a step cell to place a kick\" and left you to find the cell. A step can now carry an `anchor` (an attribute pair: `data-testid` or `data-toolbar-id`), and the coach **rings the target** and dims the rest with a `box-shadow` — with **`pointer-events: none` on the ring**, so the app stays clickable and the instruction becomes something you can follow rather than only…"
+        "zh": "**首屏是一张格子和一排控件，没有任何东西提示先碰哪个。** 导游解决的是第一次访问，但回来的人、或当初把导游关掉的人，看到的仍然只是编辑器。现在首屏有一条细横条：一句话说明「按播放先听一遍这段律动，再点亮一个格子改它」+ 播放键 + ✕。它是一条提示而不是面板：U1 的抱怨正是「第一印象像控制面板」，用更多家具回答它就是重复同一个错误。",
+        "en": "**The first screen is a grid and a row of controls, with nothing saying which to touch first.** The guide covers a first visit, but a returning visitor — or anyone who dismissed it — still just sees an editor. The studio now shows one slim line: \"Press play to hear this groove — then light up a cell to change it\", plus a Play button and a dismiss ✕. A hint, not a panel: U1's complaint is that the first impression is a control surface, and answering that with more furniture w…"
       },
       {
-        "zh": "**控件不在当前界面时，明说。** 手机布局、面板未打开、控件被重命名——这些情况下没有环，面板出现一条说明。**圈一片空白比不圈更糟**：用户会去找一个并不存在的控件。手机端是三端共用的，这条退化路径正是为你重做的手机布局准备的。",
-        "en": "**When the control is not on this screen, it says so.** A phone layout, a closed panel, a renamed control — no ring, and an explicit note instead. **A ring around empty space is worse than no ring**: it sends the user hunting for a control that is not there. The coach is shared by all three surfaces, so this degradation is there for the phone layout you are redesigning."
+        "zh": "**它会永久退场，而且有三种退场方式。** 按它自己的播放键、**从别的路径开始播放**（空格、走带、教学——靠 `isPlaying` 观察）、或主动关掉。**关掉也算退场**是刻意的：被关掉又回来的提示比没有提示更烦人。记录只有一个键 `groove_first_play_done`；读失败视为「没有记录」（不让提示永久化），写失败静默（下次再出现，没有别的东西依赖它）。",
+        "en": "**It retires for good, by any of three routes:** its own Play button, **playback started some other way** (space bar, transport, a lesson — observed through `isPlaying`), or being dismissed. **Dismissal counts as done** on purpose: a hint that returns after being dismissed is worse than no hint. One key, `groove_first_play_done`; a failed read means \"no record\" (so the hint cannot become permanent), a failed write is silent (it simply appears again; nothing else depends on i…"
       },
       {
-        "zh": "**锚点不会腐烂。** 一条测试遍历课程数据里的每个 `anchor`，在 `src/` 全量源码里找 `attribute=\"value\"`（网格格子与通道条是模板字符串，所以按模板字面前缀匹配），少一个就失败。**这条门禁当场抓到了我自己**：`step-cell-1-4` 在源码里是 ``data-testid={`step-cell-${trackIdx}-${stepIdx}`}``，字面量匹配不到——于是门禁学会识别模板字面量，而不是我改数据去迁就门禁。",
-        "en": "**The anchors cannot rot.** A test walks every `anchor` in the course data and looks for `attribute=\"value\"` across all of `src/` (grid cells and channel strips are template strings, so those match on the template's literal prefix); one missing name fails the suite. **The gate caught me on its first run**: `step-cell-1-4` is written as ``data-testid={`step-cell-${trackIdx}-${stepIdx}`}`` in the source, so the literal match failed — the gate learned about templates rather tha…"
+        "zh": "**只在桌面/平板显示（`!isPhone`）。** 手机端是你正在重做的部分，我不把这条提示作为约束交给你——这不是「绕过冻结」，而是这条新组件本来就该按端取舍。",
+        "en": "**Desktop and tablet only (`!isPhone`).** The phone layout is being redesigned separately, and this hint is not something to hand that work as a constraint — a deliberate per-surface decision rather than a way around the freeze."
       }
     ],
     "truncated": true
