@@ -9,10 +9,11 @@
  * like it is playing but there is no sound", which is the most damaging first impression a music
  * app can make.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useTransportControls } from "../features/sequencer/hooks/useTransportControls";
 import { LanguageProvider } from "../i18n/LanguageContext";
+import { announcer } from "../platform/announcer";
 import { AudioEngine } from "../audio/AudioEngine";
 import { installFakeAudioContext } from "./helpers/fakeAudio";
 import React from "react";
@@ -21,20 +22,57 @@ interface FakeEngine {
   play: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   isAudioBlocked: ReturnType<typeof vi.fn>;
+  /**
+   * The transport writes these, so the double has to accept them.
+   *
+   * A missing one throws *inside* a handler, which reads as a failing assertion about the thing
+   * under test rather than about the fake — the same shape of confusion the missing
+   * `isAudioBlocked` caused (see the note in `mobileBottomControlBar.test.tsx`).
+   */
+  setBpm: ReturnType<typeof vi.fn>;
+  setPattern: ReturnType<typeof vi.fn>;
+  setSwing: ReturnType<typeof vi.fn>;
+  setTimeSignature: ReturnType<typeof vi.fn>;
+  setResolution: ReturnType<typeof vi.fn>;
+  setDrumsOnly: ReturnType<typeof vi.fn>;
 }
 
-const makeHarness = (over: { blocked?: boolean; rejects?: boolean } = {}) => {
-  const engine: FakeEngine = {
+/**
+ * A **complete** `FakeEngine`.
+ *
+ * Every method the transport writes has to exist here. A missing one throws *inside* a handler,
+ * which surfaces as a failing assertion about the code under test rather than about the double —
+ * the same shape of confusion the missing `isAudioBlocked` caused originally and the missing
+ * `setPreviewScope` caused in `mobileBottomControlBar.test.tsx`. Three harnesses in this file used
+ * to build their own partial object; they now share this one so they cannot drift apart again.
+ */
+function makeEngine(over: { blocked?: boolean; rejects?: boolean } = {}): FakeEngine {
+  return {
     play: vi.fn(async () => {
       if (over.rejects) throw new Error("NotAllowedError: play() failed");
     }),
     stop: vi.fn(),
     isAudioBlocked: vi.fn(() => over.blocked ?? false),
+    setBpm: vi.fn(),
+    setPattern: vi.fn(),
+    setSwing: vi.fn(),
+    setTimeSignature: vi.fn(),
+    setResolution: vi.fn(),
+    setDrumsOnly: vi.fn(),
   };
+}
+
+const makeHarness = (over: { blocked?: boolean; rejects?: boolean } = {}) => {
+  const engine = makeEngine(over);
   const setIsPlaying = vi.fn();
   const clearPlayhead = vi.fn();
   const showToast = vi.fn();
   const releasePreviewScope = vi.fn();
+  const commit = vi.fn();
+  /** Mutable: a test flips a mode between two calls to see both edges of a toggle. */
+  const seqState = {
+    current: { isMetronome: false, isCountIn: false, songMode: false, blindTestMode: false } as never,
+  };
 
   const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(LanguageProvider, null, children);
@@ -43,12 +81,12 @@ const makeHarness = (over: { blocked?: boolean; rejects?: boolean } = {}) => {
     () =>
       useTransportControls({
         engineRef: { current: engine as never },
-        seqStateRef: { current: { isMetronome: false, isCountIn: false } as never },
+        seqStateRef: seqState,
         isPlaying: false,
         setIsPlaying,
         setIsDrumsOnly: vi.fn(),
         clearPlayhead,
-        commit: vi.fn(),
+        commit,
         undo: vi.fn(() => null),
         redo: vi.fn(() => null),
         isZh: false,
@@ -57,7 +95,16 @@ const makeHarness = (over: { blocked?: boolean; rejects?: boolean } = {}) => {
       }),
     { wrapper }
   );
-  return { engine, setIsPlaying, clearPlayhead, showToast, releasePreviewScope, result };
+  return {
+    engine,
+    setIsPlaying,
+    clearPlayhead,
+    showToast,
+    releasePreviewScope,
+    commit,
+    seqState,
+    result,
+  };
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -113,7 +160,7 @@ describe("transport playback truthfulness", () => {
   });
 
   it("still stops cleanly when toggled off", async () => {
-    const engine: FakeEngine = { play: vi.fn(), stop: vi.fn(), isAudioBlocked: vi.fn(() => false) };
+    const engine = makeEngine();
     const setIsPlaying = vi.fn();
     const clearPlayhead = vi.fn();
     const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -144,8 +191,10 @@ describe("transport playback truthfulness", () => {
     expect(clearPlayhead).toHaveBeenCalled();
   });
 
-  it("does nothing when the engine is not ready", async () => {
+  it("says the engine is not ready instead of staying silent", async () => {
+    // U7: this used to return without a word, so the first Play press looked like a dead button.
     const setIsPlaying = vi.fn();
+    const showToast = vi.fn();
     const wrapper = ({ children }: { children: React.ReactNode }) =>
       React.createElement(LanguageProvider, null, children);
     const { result } = renderHook(
@@ -161,7 +210,7 @@ describe("transport playback truthfulness", () => {
           undo: vi.fn(() => null),
           redo: vi.fn(() => null),
           isZh: false,
-          showToast: vi.fn(),
+          showToast,
         }),
       { wrapper }
     );
@@ -169,6 +218,102 @@ describe("transport playback truthfulness", () => {
       await result.current.handleTogglePlay();
     });
     expect(setIsPlaying).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledTimes(1);
+    expect(String(showToast.mock.calls[0][0]).length).toBeGreaterThan(10);
+  });
+});
+
+/**
+ * U7: **a control that does nothing must say so.**
+ *
+ * Four mode toggles changed state without a word, the first tap of a two-tap tempo reading was
+ * silent, and an empty undo history was indistinguishable from a broken button — all reported as
+ * "点了没反应". Each of these handlers now reports what it did through `showToast` *and* the
+ * screen-reader `announcer`, which is the same pair the drums-only toggle already used.
+ *
+ * The assertions are language-independent on purpose: the suite runs under whichever language the
+ * environment resolves, so what is pinned is that a message exists, that the two edges of a toggle
+ * differ, and that the store action carries the right payload.
+ */
+describe("transport feedback · a control that does nothing still says something", () => {
+  let announced: string[] = [];
+  beforeEach(() => {
+    announced = [];
+    announcer.setListener((message) => announced.push(message));
+  });
+  afterEach(() => announcer.clearListener());
+
+  it("asks for a second tap on the first tap of tap tempo, and reports the tempo on the second", () => {
+    const { result, showToast, commit } = makeHarness();
+
+    act(() => result.current.handleTapTempo());
+    expect(commit).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledTimes(1);
+    expect(announced).toHaveLength(1);
+
+    act(() => result.current.handleTapTempo());
+    expect(commit).toHaveBeenCalledWith({ type: "SET_BPM", bpm: expect.any(Number) });
+    expect(showToast).toHaveBeenCalledTimes(2);
+    // The second message carries the measured value; the first asked for another tap.
+    expect(String(showToast.mock.calls[1][0])).toMatch(/\d/);
+    expect(String(showToast.mock.calls[0][0])).not.toBe(String(showToast.mock.calls[1][0]));
+    expect(announced).toHaveLength(2);
+  });
+
+  it("says there is nothing to undo, and nothing to redo", () => {
+    const { result, showToast } = makeHarness();
+    act(() => result.current.handleUndo());
+    act(() => result.current.handleRedo());
+    expect(showToast).toHaveBeenCalledTimes(2);
+    expect(String(showToast.mock.calls[0][0])).not.toBe(String(showToast.mock.calls[1][0]));
+    expect(announced).toHaveLength(2);
+  });
+
+  it("reports the metronome's new state on both edges", () => {
+    const { result, showToast, commit, seqState } = makeHarness();
+    act(() => result.current.handleToggleMetronome());
+    expect(commit).toHaveBeenLastCalledWith({ type: "SET_METRONOME", enabled: true });
+
+    seqState.current = { ...(seqState.current as object), isMetronome: true } as never;
+    act(() => result.current.handleToggleMetronome());
+    expect(commit).toHaveBeenLastCalledWith({ type: "SET_METRONOME", enabled: false });
+
+    expect(showToast).toHaveBeenCalledTimes(2);
+    expect(String(showToast.mock.calls[0][0])).not.toBe(String(showToast.mock.calls[1][0]));
+    expect(announced).toHaveLength(2);
+  });
+
+  it("reports the count-in's new state on both edges", () => {
+    const { result, showToast, commit, seqState } = makeHarness();
+    act(() => result.current.handleToggleCountIn());
+    expect(commit).toHaveBeenLastCalledWith({ type: "SET_COUNT_IN", enabled: true });
+    seqState.current = { ...(seqState.current as object), isCountIn: true } as never;
+    act(() => result.current.handleToggleCountIn());
+    expect(commit).toHaveBeenLastCalledWith({ type: "SET_COUNT_IN", enabled: false });
+    expect(String(showToast.mock.calls[0][0])).not.toBe(String(showToast.mock.calls[1][0]));
+    expect(announced).toHaveLength(2);
+  });
+
+  it("reports song mode's new state on both edges", () => {
+    const { result, showToast, commit, seqState } = makeHarness();
+    act(() => result.current.handleToggleSongMode());
+    expect(commit).toHaveBeenLastCalledWith({ type: "TOGGLE_SONG_MODE" });
+    seqState.current = { ...(seqState.current as object), songMode: true } as never;
+    act(() => result.current.handleToggleSongMode());
+    expect(showToast).toHaveBeenCalledTimes(2);
+    expect(String(showToast.mock.calls[0][0])).not.toBe(String(showToast.mock.calls[1][0]));
+    expect(announced).toHaveLength(2);
+  });
+
+  it("reports blind compare's new state on both edges", () => {
+    const { result, showToast, commit, seqState } = makeHarness();
+    act(() => result.current.handleToggleBlindCompare());
+    expect(commit).toHaveBeenLastCalledWith({ type: "TOGGLE_BLIND_TEST" });
+    seqState.current = { ...(seqState.current as object), blindTestMode: true } as never;
+    act(() => result.current.handleToggleBlindCompare());
+    expect(showToast).toHaveBeenCalledTimes(2);
+    expect(String(showToast.mock.calls[0][0])).not.toBe(String(showToast.mock.calls[1][0]));
+    expect(announced).toHaveLength(2);
   });
 });
 

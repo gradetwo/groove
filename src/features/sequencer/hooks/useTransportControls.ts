@@ -47,6 +47,12 @@ export interface UseTransportControlsResult {
  * A-02: transport & playback-mode controls — play/stop, drums-only, undo/redo,
  * tap tempo, pattern-slot switching/copying, song mode, blind compare, metronome
  * and count-in. Moved verbatim from `StudioView` (including the tap-tempo ref).
+ *
+ * U7: **a control that does nothing must say so.** Every handler here reports what it did (toast
+ * plus an `announcer` event for screen readers), including the cases where the honest answer is
+ * "nothing happened": an empty undo history, the first tap of a two-tap tempo reading, and a Play
+ * press before the engine instance exists. "点了没反应" is indistinguishable from a broken button,
+ * and that is the impression this file exists to prevent.
  */
 export function useTransportControls({
   engineRef,
@@ -68,16 +74,29 @@ export function useTransportControls({
     const now = performance.now();
     tapTimestampsRef.current = tapTimestampsRef.current.filter((t) => now - t < 2500);
     tapTimestampsRef.current.push(now);
-    if (tapTimestampsRef.current.length >= 2) {
-      const calculatedBpm = AudioEngine.calculateTapTempo(tapTimestampsRef.current);
-      if (calculatedBpm >= 40 && calculatedBpm <= 240) {
-        commit({ type: "SET_BPM", bpm: calculatedBpm });
-        if (engineRef.current) {
-          engineRef.current.setBpm(calculatedBpm);
-        }
-        showToast(`${t("transport_tap_bpm")}: ${calculatedBpm}`);
-      }
+
+    /**
+     * U7: the first tap used to say nothing at all. Tap tempo needs two taps, so a user who tapped
+     * once could not tell "waiting for a second tap" from "this button is broken" — and the second
+     * reading is the one people act on.
+     */
+    if (tapTimestampsRef.current.length < 2) {
+      const first = t("transport_tap_first");
+      showToast(first);
+      announcer.announce(first);
+      return;
     }
+
+    // `calculateTapTempo` clamps into 40-240 and returns 120 for a degenerate interval, so there is
+    // no out-of-range case left to report here (the old check could never be false).
+    const calculatedBpm = AudioEngine.calculateTapTempo(tapTimestampsRef.current);
+    commit({ type: "SET_BPM", bpm: calculatedBpm });
+    if (engineRef.current) {
+      engineRef.current.setBpm(calculatedBpm);
+    }
+    const message = `${t("transport_tap_bpm")}: ${calculatedBpm}`;
+    showToast(message);
+    announcer.announce(message);
   }, [commit, t, showToast]);
 
   // Toggle Drums-Only mode
@@ -114,7 +133,15 @@ export function useTransportControls({
    */
   const handleTogglePlay = useCallback(async () => {
     const engine = engineRef.current;
-    if (!engine) return;
+    if (!engine) {
+      /**
+       * U7: this used to return in silence, so the first Play press — before the engine instance
+       * exists — looked like a dead button. Say what is actually happening.
+       */
+      showToast(t("transport_engine_not_ready"));
+      announcer.announce(t("transport_announce_engine_not_ready"));
+      return;
+    }
     triggerHaptic(HapticPatterns.playPause);
     if (isPlaying) {
       engine.stop();
@@ -153,28 +180,49 @@ export function useTransportControls({
 
   const handleUndo = useCallback(() => {
     const prev = undo();
-    if (prev && engineRef.current) {
-      engineRef.current.setPattern(prev.pattern);
-      engineRef.current.setBpm(prev.bpm);
-      engineRef.current.setSwing(prev.swing / 100);
-      engineRef.current.setTimeSignature(prev.timeSignature);
-      engineRef.current.setResolution(prev.resolution);
-      triggerHaptic(HapticPatterns.undoRedo);
-      showToast(t("transport_undo_done"));
+    // U7: an empty history and a broken button looked identical from the outside.
+    if (!prev) {
+      const empty = t("transport_nothing_to_undo");
+      showToast(empty);
+      announcer.announce(empty);
+      return;
     }
+    // The store is already rolled back; syncing the engine is best-effort and must not silence the
+    // confirmation when the engine happens not to be ready yet.
+    const engine = engineRef.current;
+    if (engine) {
+      engine.setPattern(prev.pattern);
+      engine.setBpm(prev.bpm);
+      engine.setSwing(prev.swing / 100);
+      engine.setTimeSignature(prev.timeSignature);
+      engine.setResolution(prev.resolution);
+    }
+    triggerHaptic(HapticPatterns.undoRedo);
+    const done = t("transport_undo_done");
+    showToast(done);
+    announcer.announce(done);
   }, [undo, t, showToast]);
 
   const handleRedo = useCallback(() => {
     const next = redo();
-    if (next && engineRef.current) {
-      engineRef.current.setPattern(next.pattern);
-      engineRef.current.setBpm(next.bpm);
-      engineRef.current.setSwing(next.swing / 100);
-      engineRef.current.setTimeSignature(next.timeSignature);
-      engineRef.current.setResolution(next.resolution);
-      triggerHaptic(HapticPatterns.undoRedo);
-      showToast(t("transport_redo_done"));
+    if (!next) {
+      const empty = t("transport_nothing_to_redo");
+      showToast(empty);
+      announcer.announce(empty);
+      return;
     }
+    const engine = engineRef.current;
+    if (engine) {
+      engine.setPattern(next.pattern);
+      engine.setBpm(next.bpm);
+      engine.setSwing(next.swing / 100);
+      engine.setTimeSignature(next.timeSignature);
+      engine.setResolution(next.resolution);
+    }
+    triggerHaptic(HapticPatterns.undoRedo);
+    const done = t("transport_redo_done");
+    showToast(done);
+    announcer.announce(done);
   }, [redo, t, showToast]);
 
   const handleSwitchSlot = useCallback(
@@ -193,20 +241,43 @@ export function useTransportControls({
     [commit, t, showToast]
   );
 
-  const handleToggleSongMode = useCallback(() => commit({ type: "TOGGLE_SONG_MODE" }), [commit]);
-
-  const handleToggleBlindCompare = useCallback(
-    () => commit({ type: "TOGGLE_BLIND_TEST" }),
-    [commit]
+  /**
+   * U7: a mode toggle that changes state without a word is the "I clicked and nothing happened"
+   * case — four of them used to be exactly that. Every toggle now says (and announces) the state it
+   * just moved to, which is also what a screen reader needs to hear.
+   */
+  const reportMode = useCallback(
+    (enabled: boolean, onKey: string, offKey: string) => {
+      const message = t(enabled ? onKey : offKey);
+      showToast(message);
+      announcer.announce(message);
+    },
+    [showToast, t]
   );
 
+  const handleToggleSongMode = useCallback(() => {
+    const enabled = !seqStateRef.current.songMode;
+    commit({ type: "TOGGLE_SONG_MODE" });
+    reportMode(enabled, "transport_mode_song_on", "transport_mode_song_off");
+  }, [commit, reportMode]);
+
+  const handleToggleBlindCompare = useCallback(() => {
+    const enabled = !seqStateRef.current.blindTestMode;
+    commit({ type: "TOGGLE_BLIND_TEST" });
+    reportMode(enabled, "transport_mode_blind_on", "transport_mode_blind_off");
+  }, [commit, reportMode]);
+
   const handleToggleMetronome = useCallback(() => {
-    commit({ type: "SET_METRONOME", enabled: !seqStateRef.current.isMetronome });
-  }, [commit]);
+    const enabled = !seqStateRef.current.isMetronome;
+    commit({ type: "SET_METRONOME", enabled });
+    reportMode(enabled, "transport_mode_metronome_on", "transport_mode_metronome_off");
+  }, [commit, reportMode]);
 
   const handleToggleCountIn = useCallback(() => {
-    commit({ type: "SET_COUNT_IN", enabled: !seqStateRef.current.isCountIn });
-  }, [commit]);
+    const enabled = !seqStateRef.current.isCountIn;
+    commit({ type: "SET_COUNT_IN", enabled });
+    reportMode(enabled, "transport_mode_count_in_on", "transport_mode_count_in_off");
+  }, [commit, reportMode]);
 
   return {
     handleTapTempo,
