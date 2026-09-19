@@ -1,29 +1,29 @@
 {
-  "version": "2.0.61",
+  "version": "2.0.62",
   "releaseDate": "2026-09-19",
-  "changelogCount": 125,
+  "changelogCount": 126,
   "latest": {
-    "version": "2.0.61",
+    "version": "2.0.62",
     "date": "2026-09-19",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.0.61 手机两条固定栏合并到同一行：横屏占用 104px → 52px，每个标签宽度 39px → 104px",
-      "en": "v2.0.61 The Two Phone Bars Share One Row: 104px → 52px of Height, and 39px → 104px per Tab"
+      "zh": "v2.0.62 热修：合并后的底栏不再盖住轨道控制台；横屏面板的底部留白补齐",
+      "en": "v2.0.62 Hotfix: the Merged Bottom Row No Longer Covers the Track Inspector, and Landscape Panels Reserve the Bar's Height"
     },
     "highlights": [
       {
-        "zh": "**横屏一次性拿回 52px 高度**：走带条与标签栏此前一上一下各占一条，在 390px 高的横屏视口上共占 **104px**，而横向 844px 完全闲置。现在两者共享同一行：走带条固定在左 320px，标签栏取右侧 524px，**纵向占用降到 52px（13%，此前 27%）**。竖屏布局**逐像素不变**。",
-        "en": "**52px of height back on a landscape phone**: the transport and the tab bar used to sit at opposite ends of a 390px-tall viewport, costing **104px** between them while 844px of width sat unused. They now share one row — the transport fixed at 320px on the left, the tab bar taking the remaining 524px — so **the vertical footprint drops to 52px (13%, from 27%)**. The portrait layout is **pixel-for-pixel unchanged**."
+        "zh": "**v2.0.61 引入的缺陷（已在线上，故为热修）**：合并后的底栏照抄了标签栏的 z-[70]，而轨道控制台是 z-50 的浮层、下垫 z-40 遮罩——于是控制台**最下面 52px 被底栏压住**。实测方式是在重叠区做 element-at-point 探针，它返回的是走带条的按钮而不是面板。这与当初给控制台加 bottom 偏移要修的是同一类缺陷，而且**截图看不出来**（底栏不透明、面板停在顶部）。现在底栏用 z-30：它包含标签栏，但不能继承标签栏的层级——独立的标签栏可以站得很高因为它上面没有东西，被浮层覆盖的一行则不行。",
+        "en": "**A defect introduced by v2.0.61 (already in production, hence a hotfix)**: the merged row copied the tab bar's z-[70], while the track inspector is a z-50 sheet over a z-40 scrim — so the sheet's **bottom 52px sat under the row**. Measured with an element-at-point probe in the overlap, which returned a transport button rather than the panel. This is the same class of defect the inspector's bottom offset exists for, and it is **invisible in a screenshot** because the row is…"
       },
       {
-        "zh": "**顺带把导航的触摸目标做大了**：因为横向本来就有富余，合并后**每个 tab 的宽度从 39px 升到 104px**（实测），而不是像常见的「省空间」改动那样把按钮压小。全部 44px 触摸下限保持不变。",
-        "en": "**The navigation's touch targets got bigger, not smaller**: because the width was already spare, merging the row takes **each tab from 39px to 104px wide** (measured) instead of squeezing buttons the way a \"save space\" change usually does. Every 44px minimum is unchanged."
+        "zh": "**横屏的面板底部留白此前是 0**：--mobile-tab-bar-h 只在 max-width: 767px 下被设值，而横屏手机是 844px 宽——变量留在 0px，于是所有依赖它的底部浮层（控制台等）在横屏下都少了 53px 留白。现在改由 App 依据「标签栏是否固定」写出的 data-bottom-bar 属性驱动（宽度媒体查询回答不了这个问题：横屏工作台与横屏其他视图都是 844px 宽，一个合并进行内、一个固定贴底），并且合并行**自己声明** data-bottom-chrome=\"fixed\"，两种排布保留同一高度，浮层落在同一位置。",
+        "en": "**Landscape panels reserved 0px at the bottom**: --mobile-tab-bar-h was only set under max-width: 767px, and a landscape phone is 844px wide — so the variable stayed 0px and every bottom-anchored overlay that reads it was 53px short in landscape. It is now driven by a data-bottom-bar attribute that App sets from the same state that decides whether the bar is fixed (a width query cannot answer this: a landscape studio and a landscape non-studio view are both 844px wide, one w…"
       },
       {
-        "zh": "**实施中撞到并修掉的三个真实陷阱**：① `fixed inset-x-0 bottom-0` **无法参与 flex 行**——它无视容器、覆盖容器，第一次合并时标签栏在一个 1px 宽的父元素里自报整屏宽；为此加了 `embedded` 变体（嵌入式不加 `fixed`，定位与安全区留白交给调用方）。② 不设上限时**走带条会赢下整个 flex 行**（按内容拿到 646px，把五个 tab 挤成每个 39px），现在它固定 320px、由测试与 CSS 变量钉为同值。③ **裸 `env()` 会让 React 丢掉整条 style 声明**：安全区内边距原先写作 `env(safe-area-inset-bottom, 0px)`，jsdom 解析不了该值于是整个 `style` 属性消失——测试以「断言失败」的形式暴露了这个真实的序列化问题；改为 `max(0px, env(...))` 后正常，也与会话其余写法一致。",
-        "en": "**Three real traps found and fixed during implementation**: (1) `fixed inset-x-0 bottom-0` **cannot take part in a flex row** — it ignores its container and overlays it; the first attempt had the tab bar reporting itself full-width inside a 1px-wide parent. Hence an `embedded` variant, where the caller owns positioning and the safe-area padding. (2) Without a cap **the transport wins the whole flex row** (646px on content size, leaving five 39px tabs); it is now fixed at 320…"
+        "zh": "**两条都补了可失败测试**：底栏的 z-index 必须**小于 40**（控制台遮罩的层级）——这条断言直接锁住「不能继承标签栏层级」；以及**两种排布保留同一高度**、行必须声明自己的高度。",
+        "en": "**Both have failing-capable tests**: the row's z-index must be **less than 40** (the inspector's scrim layer), which pins the \"must not inherit the bar's layer\" rule directly, plus assertions that both arrangements reserve the same height and that the row declares its own."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

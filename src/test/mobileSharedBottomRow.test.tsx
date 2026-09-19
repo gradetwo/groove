@@ -121,3 +121,47 @@ describe("the tab bar embedded in a row", () => {
     expect(screen.getByTestId("mobile-tab-bar").className).toContain("w-full");
   });
 });
+
+/**
+ * The merged row must not sit above the panels that open over it.
+ *
+ * The first version of the row copied the tab bar's `z-[70]`. The track inspector is a `z-50` sheet
+ * over a `z-40` scrim, so the sheet's bottom 52 px ended up *underneath* the row — measured with an
+ * element-at-point probe in the overlap, which returned a transport button instead of the panel.
+ * That is the same class of defect the inspector's `bottom` offset exists for, and it is invisible
+ * in a screenshot because the row is opaque and the sheet is scrolled to its top.
+ */
+describe("the shared row's stacking", () => {
+  const readPanel = () =>
+    readFileSync(path.resolve(TEST_DIR, "../components/sequencer/SequencerPanel.tsx"), "utf8");
+  const readCss = () => readFileSync(path.resolve(TEST_DIR, "../index.css"), "utf8");
+
+  it("keeps the row below the inspector's scrim and sheet", () => {
+    const panel = readPanel();
+    const rowClass = panel.match(/data-testid="mobile-shared-bottom-row"[\s\S]{0,900}?className="([^"]+)"/)?.[1];
+    expect(rowClass, "the shared row's class was not found").toBeTruthy();
+    // The inspector is z-50 over a z-40 scrim. The row has to be under both.
+    const z = Number(rowClass!.match(/z-\[(\d+)\]|z-(\d+)/)?.slice(1).find(Boolean));
+    expect(Number.isFinite(z), `no numeric z-index in "${rowClass}"`).toBe(true);
+    expect(z).toBeLessThan(40);
+  });
+
+  it("reserves its own height for anything anchored above it", () => {
+    /**
+     * The row is not the same component as the standalone tab bar, so `data-bottom-bar` (which only
+     * `App` can set) does not describe it. It declares its own height instead, and the inspector's
+     * `bottom` reads the variable either way — otherwise the sheet would sit flush against the row
+     * and its last row of controls would be covered.
+     */
+    expect(readPanel()).toContain('data-bottom-chrome="fixed"');
+    expect(readCss()).toContain(':root:has([data-bottom-chrome="fixed"])');
+  });
+
+  it("gives both arrangements the same reserved height, so the sheet lands in one place", () => {
+    const css = readCss();
+    const rule = css.match(/:root\[data-bottom-bar="tab"\],\s*:root:has\(\[data-bottom-chrome="fixed"\]\)\s*\{([^}]*)\}/);
+    expect(rule, "the shared reservation rule is gone").toBeTruthy();
+    // The standalone bar is 52 px + 1 px border and the row measures 53 px; both reserve 53.
+    expect(rule![1]).toContain("53px");
+  });
+});

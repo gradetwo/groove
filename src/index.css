@@ -302,10 +302,22 @@ input[type=range]::-moz-range-thumb {
   }
 }
 
-@media (max-width: 767px) {
-  :root {
-    --mobile-tab-bar-h: calc(52px + env(safe-area-inset-bottom, 0px));
-  }
+/**
+ * How much of the bottom of the viewport is occupied by the phone's navigation bar.
+ *
+ * Keyed off a DOM attribute rather than a width media query, because width is the wrong question.
+ * The tab bar exists wherever `isMobile` is true, which includes a landscape phone — 844 px wide
+ * and therefore above every phone breakpoint — while the old `max-width: 767px` query left the
+ * variable at `0px` there. The consequence was concrete and was measured: in landscape the track
+ * inspector ran to the bottom of the viewport with 53 px of itself underneath the bottom chrome, and
+ * an element-at-point probe at that overlap returned a transport button, not the panel.
+ *
+ * `App` sets the attribute from the same state that decides whether the bar is fixed, so the two
+ * cannot disagree.
+ */
+:root[data-bottom-bar="tab"],
+:root:has([data-bottom-chrome="fixed"]) {
+  --mobile-tab-bar-h: calc(53px + env(safe-area-inset-bottom, 0px));
 }
 
 .overscroll-x-contain {

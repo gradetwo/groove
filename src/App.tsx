@@ -159,6 +159,22 @@ const MainApp: React.FC = () => {
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   /**
+   * Whether the phone's navigation bar is currently a fixed bottom bar.
+   *
+   * Published as `data-bottom-bar="tab"` on the document element because CSS needs it and a width
+   * media query cannot answer it: in a landscape studio the bar is merged into the row *inside* the
+   * view, and in a landscape non-studio view it is fixed at the bottom, yet both are 844 px wide.
+   * Everything that has to clear the bar (the track inspector's `bottom`) reads the variable this
+   * drives. See the rule's comment in `index.css` for the measured defect it fixes.
+   */
+  const hasFixedTabBar = isMobile && !(isShortLandscape && currentTab === "studio");
+  useEffect(() => {
+    const root = document.documentElement;
+    if (hasFixedTabBar) root.setAttribute("data-bottom-bar", "tab");
+    else root.removeAttribute("data-bottom-bar");
+  }, [hasFixedTabBar]);
+
+  /**
    * The phone navigation bar, built once and placed in one of two containers.
    *
    * Portrait (and every tall viewport): rendered fixed at the bottom, as it always was. Short

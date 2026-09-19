@@ -456,8 +456,19 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
     isShortLandscape && bottomBar ? (
       <div
         data-testid="mobile-shared-bottom-row"
-        className="fixed inset-x-0 bottom-0 z-[70] flex items-stretch border-t border-line bg-panel/95 backdrop-blur-lg"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        data-bottom-chrome="fixed"
+        /**
+         * `z-30`, deliberately *not* the tab bar's `z-[70]`.
+         *
+         * The row contains the tab bar, but it must not inherit that layer. The track inspector is a
+         * `z-50` sheet over a `z-40` scrim, and with the row at `z-70` the sheet's bottom 52 px sat
+         * underneath it: an element-at-point probe in the overlap returned a transport button
+         * instead of the panel, which is the same class of defect the inspector's `bottom` offset
+         * exists for. The standalone tab bar can afford a high layer because nothing covers it; a
+         * row that a sheet does cover cannot.
+         */
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-panel/95 backdrop-blur-lg"
+        style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom, 0px))" }}
       >
         {/*
           `min-w-0` lets the transport shrink instead of forcing the row wider than the viewport;
