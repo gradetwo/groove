@@ -1,27 +1,27 @@
 {
-  "version": "2.0.73",
+  "version": "2.0.74",
   "releaseDate": "2026-09-19",
-  "changelogCount": 137,
+  "changelogCount": 138,
   "latest": {
-    "version": "2.0.73",
+    "version": "2.0.74",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.73 页面双指滚动失效的根因（根样式 overscroll-behavior），以及让同一鼓件的连续敲击不再完全相同",
-      "en": "v2.0.73 The Root Cause of Dead Trackpad Scrolling (overscroll-behavior on the Root), and Per-Hit Variation So Repeated Drum Strokes Stop Being Identical"
+      "zh": "v2.0.74 踩镲的金属簇不再叠 6 个振荡器：一条可测的平台规律，以及一次自我更正",
+      "en": "v2.0.74 The Hi-Hat Cluster Stops Summing Six Oscillators: a Measurable Platform Rule, and a Self-Correction"
     },
     "highlights": [
       {
-        "zh": "**页面在 macOS Chrome 上无法双指滚动，根因是根样式的 `overscroll-behavior: none`**（用户本人在真机二分确认）。这个属性的字面定义只是「禁止滚动链与回弹」，但 **Chrome 在支持触摸的桌面硬件上同样采纳它**，于是纵向的那一半把最基础的页面手势一并关掉了；Safari 宽松，所以同一份代码在 Safari 上正常。用户实测的四条对照解释了它为什么难查：`touch-action: auto` 正常、`overflow: auto` 正常、**程序化滚动正常**（`scrollY` 能改）、但**双指手势被静默忽略**。",
-        "en": "**Two-finger trackpad scrolling was dead on macOS Chrome, and the cause was `overscroll-behavior: none` on the root** (bisected by hand on the affected machine). The property's definition is only \"no scroll chaining, no affordance\", but **Chrome honours it on touch-capable desktop hardware**, so the vertical half of the shorthand took the page's most basic gesture with it; Safari is laxer, which is why the same code was fine there. The user's four-way comparison explains why…"
+        "zh": "**起因**：重新录 timbre 基线时发现 `chicago-house` 的重复渲染偏差是 **1.317 dB**，而门禁脚本的头注释声称导出器逐位可复现（0.000014 dB）。追下去发现一条**平台层面可测的规律**：**一个 Web Audio 节点上叠加 3 个及以上「频率各不相同」的振荡器时，Chrome 的 `OfflineAudioContext` 每次渲染结果都不同**；同频振荡器可以、buffer 源可以、每节点最多 2 个可以。本项目的踩镲金属簇正是 6 个方波振荡器，而 `[310,387,466,522,681,1070]` 恰好落在观测到差异的频段 6–10。",
+        "en": "**How it started**: re-recording the timbre baseline showed `chicago-house` at a **1.317 dB** repeat drift, while the gate script's own header claimed the exporter was bit-reproducible (0.000014 dB). Chasing it produced a **measurable platform rule**: **a Web Audio node summing three or more oscillators tuned to different frequencies renders differently every time in Chrome's `OfflineAudioContext`** — same-frequency oscillators are fine, buffer sources are fine, and two per…"
       },
       {
-        "zh": "**修法按轴拆开，且保留横向是刻意的**：`overscroll-behavior-x: none; overscroll-behavior-y: auto`。横向仍要挡——步进格子本身有横向平移，放开双指横滑会不断触发浏览器的历史导航（后退/前进）。值得一提的是 `src/index.css` 里**早就有正确写法的同类规则**（`.overscroll-x-contain`，步进面板在用），也就是说这个教训此前只在**局部**应用过，**根部**没跟上。代价已写进文档：纵向还给浏览器后，触摸设备上向下拖可能重新触发下拉刷新，这一轮取桌面可用。",
-        "en": "**The fix splits by axis, and keeping the horizontal half is deliberate**: `overscroll-behavior-x: none; overscroll-behavior-y: auto`. Horizontal still needs suppressing — the step grid pans horizontally, so allowing the two-finger horizontal swipe would fire the browser's history navigation (Back/Forward) constantly. Worth noting: `src/index.css` **already contained the correct form of this rule** (`.overscroll-x-contain`, used by the sequencer pane), so the lesson had been…"
+        "zh": "**修法：把分音烘焙成一个 buffer**。新增 `inharmonicClusterBuffer()`，用奇次谐波 1/n 展开还原方波，所以音色不变；音高改由 `playbackRate` 承载（打击乐各族的 `mult` 正好是整体移调）。接入踩镲金属簇、打击乐 metal 族、铃鼓 jingle 层。两处不能烘焙的改为**树状扇入**：膜鸣族（timbale，3 个分音各有独立衰减与音高下滑，烘焙会丢掉「Defect B」的逐分音包络）用 (2+1) 树；`kick:*` 模拟底鼓（`somatic-808-gravity` 四层全开）用 2+2 树。参数一字未改。",
+        "en": "**The fix: bake the partials into one buffer.** New `inharmonicClusterBuffer()` renders a square partial as its odd harmonics at 1/n, so the timbre is unchanged, and the pitch lane moves to `playbackRate` (the percussion families' `mult` is exactly a whole-cluster transposition). Wired into the hi-hat cluster, the metal percussion family and the tambourine's jingle layer. Two voices cannot be baked and get **tree fan-in** instead: the membrane family (timbale — its three par…"
       },
       {
-        "zh": "**我的诊断脚本给出的结论是错的，错法可复现**：它当时报「5 个变体都能滚动」，我据此说过「可能不是主因」。原因是它的每条探针都用 `window.scrollTo` **程序化**滚动或判断 `scrollHeight > clientHeight`——而 `overscroll-behavior` 管的是**手势与回弹**，不是滚动范围也不是滚动 API，所以它能诚实地报「都能滚」而真机纹丝不动。**教训：绕过输入路径的探针测不出输入路径的 bug。** 该脚本这一版加了一条读**计算样式**的结论行（`overscroll-x/y` 与 `touch-action`），不需手势与硬件，命中已知坏配置直接 `exit 1`。",
-        "en": "**My own diagnostic reached the wrong conclusion, and the way it was wrong is reproducible**: it reported \"all five variants scroll\", and I told the user this might not be the main cause. Every probe in it scrolled **programmatically** (`window.scrollTo`) or asked whether `scrollHeight > clientHeight` — but `overscroll-behavior` gates the *gesture* and the affordance, not the scroll range or the scroll API, so it could honestly report \"everything scrolls\" while the real mach…"
+        "zh": "**顺带的收益与守卫**：每次踩镲少 6 个振荡器、每个金属族打击乐少 3 个——踩镲是 pattern 里最密的声部。新增 `oscillatorFanIn.test.ts`，对全部鼓件、全部 16 个打击乐模型、全部 `kick:*` 预设断言「同一节点首次混合的异频振荡器 ≤2」（它在修复前会失败，实测报出 12 条违规）；`drumFidelityTier1` 里补了 **Goertzel 频谱断言**（每个分音的基频与三次谐波都有能量、非谐波频点没有），防止这次改动把 Q4 的金属簇悄悄变成静音缓冲。",
+        "en": "**The side benefits and the guard**: six fewer oscillators per hi-hat hit and three fewer per metal percussion hit, on the densest voice in the pattern. New `oscillatorFanIn.test.ts` asserts, for every drum voice, every one of the 16 percussion models and every `kick:*` preset, that a node mixes at most two differently-tuned oscillators for the first time (it fails against the old code — 12 violations, measured); and `drumFidelityTier1` gains a **Goertzel spectrum assertion*…"
       }
     ],
     "truncated": true

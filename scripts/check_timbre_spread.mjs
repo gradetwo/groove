@@ -19,7 +19,8 @@
  *   A) `--limit=8` (the first 8 house genres — the most mutually similar genres in the
  *      library, so a stress case for "one blob"):
  *      distinct 8/8, closest pair future-house ↔ electro-house 1.0641 dB,
- *      mean pair 2.1686 dB, lowest bandDb −36.69 dB, worst repeat drift 0.000014 dB.
+ *      mean pair 2.1686 dB, lowest bandDb −36.69 dB. (The "worst repeat drift 0.000014 dB" this
+ *      line used to claim was a smoke-sample artifact — see the note under `closestPairFloorDb`.)
  *   B) `--genres=ambient,dub,doom-metal,delta-blues,bossa-nova,lofi-hip-hop,drift-phonk,
  *      dream-trance,trap-rap,traditional-jazz,downtempo,microhouse` — 12 deliberately
  *      diverse / high-frequency-poor genres:
@@ -28,20 +29,30 @@
  *   Combined A∪B (20 genres): closest pair still 1.0641 dB, flattest band spread 15.3 dB.
  *
  * `closestPairFloorDb = 0.25` dB (mean |ΔbandDb| of the closest genre pair)
- *  - The same-patch noise floor is 0: the renderer is seeded (V-01) and the fingerprint
- *    is deterministic — the worst |ΔbandDb| across two repeats in both smoke runs was
- *    0.000014 dB. The unit suite separately measures ≈ 0.03 dB for two takes of one tone
- *    with different start phase, so anything above ~0.05 dB is a real difference.
+ *  - **The same-patch noise floor is NOT zero, and the original 0.000014 dB figure below was a
+ *    smoke-sample artifact.** A full-library recording measures the per-genre repeat drift directly
+ *    (`repeatMaxBandDeltaDb`): median ≈ **0.00006 dB**, p90 ≈ 0.0006 dB. That is the figure to
+ *    reason from — the renderer is seeded (V-01) so the *notes* are identical, but Chrome's
+ *    `OfflineAudioContext` is not bit-reproducible once a node sums three or more differently-tuned
+ *    oscillators, so every render differs at the sub-sample level. See appendix G.14 for the
+ *    measured rule and `scripts/diagnose_repeat_determinism.mjs --primitives` to reproduce it.
+ *  - There is also a **rare** outlier: roughly one to three genres per full run show a
+ *    `repeatMaxBandDeltaDb` of ~1.3 dB, in a mid band, with a magnitude that repeats to five
+ *    decimals — a discrete second outcome, not noise. It is unexplained and listed as an open
+ *    defect in G.14. It does **not** threaten this floor: the floor is compared against the
+ *    *closest pair* distance, which is a mean over 13 bands, and that figure moved by only
+ *    0.0013 dB between two full recordings (0.2853 -> 0.2840 -> 0.2908 dB). The floor sits 14x
+ *    below the measured minimum, so the outlier would have to be an order of magnitude worse to
+ *    put it in play.
  *  - Measured closest pair: 1.0641 dB (the 8 similar house genres) and 1.1353 dB (the 12
  *    diverse genres); the 20-genre combination is still 1.0641 dB. The full 159-genre set
  *    can only make the minimum smaller (adding pairs cannot raise a minimum). The committed
  *    floor is 0.25 dB = 1.0641 / 4.3, a deliberate 4.3x discount for the unmeasured full
- *    library, while still ~8x above the 0.03 dB same-tone residual. That catches the
- *    failure this check exists for — two genres that render the *same* timbre (distance
- *    ≈ 0, as a duplicated genre or copy-pasted instrument set would) — without pretending
- *    to know the full-library minimum before the full baseline is recorded. If the full
- *    run's measured closest pair is comfortably above 1.06 dB, this floor can be RAISED
- *    (it is a floor, not a target); it must not be lowered.
+ *    library. That catches the failure this check exists for — two genres that render the
+ *    *same* timbre (distance ≈ 0, as a duplicated genre or copy-pasted instrument set would) —
+ *    without pretending to know the full-library minimum before the full baseline is recorded.
+ *    If the full run's measured closest pair is comfortably above 1.06 dB, this floor can be
+ *    RAISED (it is a floor, not a target); it must not be lowered.
  *
  * `distinctFingerprintsMin = 159` (all genre fingerprints pairwise distinct)
  *  - Distinctness is quantised to 0.01 dB per band, so two shapes collide only when all
