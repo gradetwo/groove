@@ -1,27 +1,27 @@
 {
-  "version": "2.0.79",
+  "version": "2.0.80",
   "releaseDate": "2026-09-19",
-  "changelogCount": 143,
+  "changelogCount": 144,
   "latest": {
-    "version": "2.0.79",
+    "version": "2.0.80",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.79 冻结轨道头那一列做成真正的实心（上一版只修了一半，且判据本身是错的）",
-      "en": "v2.0.79 The Frozen Header Column Is Actually Solid Now (the Previous Fix Covered Half the Leak, and Its Check Was Wrong)"
+      "zh": "v2.0.80 钢琴卷帘：写入的和弦不再「割裂」，工作区播放不再只剩和弦",
+      "en": "v2.0.80 Piano Roll: Stamped Chords Stop Sounding Fragmented, and a Lane Preview No Longer Sticks"
     },
     "highlights": [
       {
-        "zh": "用户复测后报告**仍然侵入**，是对的。v2.0.77 只修了轨道头与网格之间那道 **16px 空隙**，而同一列还有第二处漏光：**轨道头上下两条边条**。实测行高 85px、轨道头盒子只有 **73px**——差的 6px×2 是**行自己的 padding**，在内容盒之外。用「这一列是否实心」的口径一测：**3217/16256 个采样点透出东西**（其中 564 处直接是步进格子）。",
-        "en": "The user re-tested and reported it **still intrudes** — correctly. v2.0.77 fixed only the **16 px gutter** between the header and the grid, while the same column had a second leak: the **strips above and below the header box**. Measured: the row is 85 px tall and the header box only **73 px**, so 6 px at each end is the **row's own padding**, outside the content box. Measured with the right question — \"is this column solid?\" — **3217 of 16256 samples showed something through…"
+        "zh": "**和弦进行的和声节奏以前忽略小节。** `previewProgressionNotes` 接了一个 `stepsPerBar` 却从未使用，节奏就是 `floor(可用步数 ÷ 和弦数)`：一小节 16 步的模板里，任何 4 和弦进行都变成**每拍换和弦**，8 和弦的卡农变成**每 2 步（8 分音符）换和弦**。现在跟随曲库自己的成曲规则（一小节一个和弦），装不下才降到半小节/一拍，永不快于一拍。",
+        "en": "**The progression stamp ignored the bar.** `previewProgressionNotes` accepted a `stepsPerBar` and never used it, so the rhythm was `floor(steps / chords)`: on a one-bar pattern every four-chord progression changed chord **every beat**, and the eight-chord canon changed **every 2 steps** (eighth notes). It now follows the library's own authoring rule — one chord per bar — halving only when a shorter pattern must state the progression, and never faster than a beat."
       },
       {
-        "zh": "**我的检查判据本身是错的，这才是真正的问题。** v2.0.77 的探针问的是「这里有没有出现步进格子」，而格子只有 40px、位于 73px 盒子**内部**，根本到不了那 6px 边条——所以它「通过」了一个透光的列，并让我以为修好了。**判据错了比没有判据更糟。** 现在探针断言的是「这一列不许透出东西」，并把采样点分三类：轨道头/图层、**行自己的不透明 padding（合法）**、格子或透明（失败）。",
-        "en": "**The real problem was that my check asked the wrong question.** The v2.0.77 probe asked \"is a step cell visible here?\", and the cells are 40 px tall inside a 73 px box — they can never reach those 6 px strips. So it **passed a leaking column** and convinced me the job was done. **A wrong criterion is worse than none.** The probe now asserts \"nothing may show through this column\" and classifies each sample: header/layer, **the row's own opaque padding (legitimate)**, or a ce…"
+        "zh": "**和弦的槽被拉长、gate 被截断，于是一半是静音。** 音符模型的硬上限是 `MAX_NOTE_GATE_STEPS = 16`（一小节），旧代码却让槽长自由增长。实测那条双和弦 vamp `dorian_funk_14`：4 小节模板里每个和弦占 32 步却只响 16 步——**响 1 小节、静 1 小节**；8 小节模板里是**响 1 小节、静 3 小节**。这正是用户听到的「都是一两个和弦 + 拍子很短」。现在小节数多出来时**重复进行**填满（4 小节 = i–IV–i–IV），全 8 条进行 × 4 种长度的最大静音占比 **75.0% → 10.0%**——最坏情形是 8 小节模板里槽长 64 步、gate 被夹到 16 步；剩下的 10% 是刻意的释放。",
+        "en": "**A chord's slot outgrew its gate, so half of it was silence.** The note model caps a note at `MAX_NOTE_GATE_STEPS = 16` (one bar) while the old code let the slot grow freely. Measured on the two-chord vamp `dorian_funk_14`: on a four-bar pattern each chord owned 32 steps and rang for 16 — **one bar of chord, one bar of silence**; on eight bars, **one bar of sound, three of silence**. That is the \"only one or two chords and very short beats\" the user heard. The stamp now **r…"
       },
       {
-        "zh": "**另外两条实测结论。** ① **`align-self: stretch` 修不了它**：给轨道头加上后实测高度**仍是 73px**——flex 行交叉轴尺寸取自内容盒，而 padding 在内容盒之外，子元素无论怎么拉伸都覆盖不到它。② **`pointer-events: none` 会让探针看不见图层**：`elementFromPoint` 会跳过这类元素，于是图层明明在、探针却报了 3217 处失败。图层现在不加这个属性，因为它不遮挡任何可交互元素（格子正好从它右缘开始，轨道头 z 更高）。",
-        "en": "**Two more measured conclusions.** (1) **`align-self: stretch` does not fix it**: with it applied the header still measured **73 px**, because a flex line's cross size comes from the content box and the padding is outside it — no child can stretch into it. (2) **`pointer-events: none` makes a layer invisible to the probe**: `elementFromPoint` skips such elements, so the layer was present while the check reported 3217 failures. The layer no longer sets it, because it covers n…"
+        "zh": "**试听与写入结果仍然共用一个来源。** 试听改为直接消费 plan 的实例（音高、起点、gate、小节内位置），不再自己算「固定 450 ms × 0.9」，所以「试听 = 结果」是结构性成立；写入后的提示会说明节奏（「每小节 1 个和弦 · 重复 4 次」）以及装不下时的「小节太短 — 只放得下 4/8 个和弦」。",
+        "en": "**Audition and result still share one source.** The audition now consumes the plan's instances directly (pitches, onsets, gates, in-bar position) instead of recomputing \"a fixed 450 ms x 0.9\", so \"audition equals result\" is structural; the post-stamp notice reports the rhythm (\"1 bar per chord, repeated 4x\") and, when the pattern is too short, \"only 4 of 8 chords placed\"."
       }
     ],
     "truncated": true
