@@ -79,5 +79,17 @@
     "vite": "^6.0.3",
     "vitest": "^2.1.8",
     "wrangler": "^4.131.0"
-  }
+  },
+  "description": "Browser-based groove workstation and music-genre library: 159 genres, an 8-track step sequencer, a piano roll, Web Audio synthesis, and WAV/MIDI/Ableton export.",
+  "license": "MIT",
+  "keywords": [
+    "music",
+    "sequencer",
+    "web-audio",
+    "step-sequencer",
+    "piano-roll",
+    "drum-machine",
+    "music-theory",
+    "genres"
+  ]
 }
