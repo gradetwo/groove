@@ -1,27 +1,27 @@
 {
-  "version": "2.0.91",
+  "version": "2.0.92",
   "releaseDate": "2026-09-19",
-  "changelogCount": 155,
+  "changelogCount": 156,
   "latest": {
-    "version": "2.0.91",
+    "version": "2.0.92",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "audio",
     "title": {
-      "zh": "v2.0.91 界面文字读不清的问题，现在有一条会失败的检查",
-      "en": "v2.0.91 Unreadable UI Text Now Fails the Build"
+      "zh": "v2.0.92 切曲风时延迟尾巴不再被砍断",
+      "en": "v2.0.92 Switching Genres No Longer Cuts the Delay Tail"
     },
     "highlights": [
       {
-        "zh": "**全量扫了一遍 `src/` 里 66 个硬编码文字色**，逐个按 `--panel #121317` 算 WCAG 对比度：10 个低于 3:1，再 8 个低于 4.5:1 的正文线。计划里点名的只有其中两处。**52 处、11 个文件**换成早就存在的 `text-dim` 语义色，另把四处彩色胶囊调过线（红/粉底 `#ff5964`、`#ec4899`，以及钢琴卷帘黑键上的音名）。",
-        "en": "**Swept all 66 hard-coded text colours in `src/`** and measured each against `--panel #121317`: 10 fell below 3:1 and 8 more below the 4.5:1 body-text line. The plan named two of them. **52 occurrences across 11 files** moved onto the `text-dim` token that already existed, and four tinted chips were adjusted to clear the floor (the red/pink `#ff5964` and `#ec4899` fills, and the piano roll's black-key pitch names)."
+        "zh": "**乒乓开关一按，整条延迟图被重建、旧图被当场断开。** 于是还在延迟线里回荡的尾巴在一个采样里消失——切换那一刻的咔哒声。这条路径实测可达：`genreFx.ts` 里有 **11 处** `pingPong: true`（dub 一脉等），切到或切离这些曲风就会触发重建。",
+        "en": "**Toggling ping-pong rebuilt the whole delay graph and disconnected the old one on the spot.** Whatever was still ringing in its delay line vanished in a single sample — the click at the moment of the switch. The path is reachable in practice: **11** genre profiles carry `pingPong: true` (the dub lineage among them), and moving to or away from any of them triggers a rebuild."
       },
       {
-        "zh": "**新增 `readabilityAudit.test.ts`**：读源码找出每一个 `text-[#hex]`，按它自己那条 class 串里声明的背景算对比度，低于 4.5:1 就报出**引入它的那一行**和比值。毫秒级，不截图。把 `#4a4e58` 写回项目里任意一个文件，实测失败并报出 `2.23:1`。",
-        "en": "**New `readabilityAudit.test.ts`**: it reads the source, takes every `text-[#hex]`, resolves the background its own class string declares, and reports **the line that introduced it** when the ratio is under 4.5:1. Milliseconds, no screenshots. Writing `#4a4e58` back into any file in the project fails it with `2.23:1`."
+        "zh": "**现在每个 build 有自己的输出增益，旧 build 不断线、只淡出。** 它不再接收新的发送，但**已经录进它延迟线里的东西继续在响**，尾音交给新 build 接上。两种拓扑的内部结构一行没动——居中的那条延迟线仍是单节点、天然保留立体声，连单声道发送也照样居中。",
+        "en": "**Each build now has its own output gain, so the replaced build is faded out instead of disconnected.** It stops receiving new send, but **what is already in its delay line keeps sounding** and hands the tail over to the new build. Neither topology changed internally — the centred delay is still a single node that preserves stereo by construction, and a mono send still stays centred."
       },
       {
-        "zh": "**扫描器补上了两件容易搞错的事**：带变体的字色（`group-hover:text-[#0a0b0d]`）只对**同变体**的背景负责，否则正确的悬停镂空会被报成隐形字；半透明底要先**合成**再算（`bg-white/[0.06]`、`bg-[#ec4899]/20`，而且 Tailwind 的透明度有 `/20`、`/[0.06]`、`/[6%]` 三种写法）。时间线上那个「6% 白胶囊里的灰字」曾被我误报，它真实是 5.23:1。",
-        "en": "**The scanner learned the two things it had wrong**: a variant-gated ink (`group-hover:text-[#0a0b0d]`) answers only to that same variant's surface — otherwise a correct hover knockout reads as invisible text; and a translucent surface has to be **composited** before measuring (`bg-white/[0.06]`, `bg-[#ec4899]/20`, in all three Tailwind alpha spellings). The timeline's grey-on-6%-white chip was a false alarm of mine: it really is 5.23:1."
+        "zh": "**淡出窗跟着延迟时间走（0.25–0.5 s）**，因为新 build 的延迟线一开始是空的，它的第一声回声要等一个延迟时间才到，这段空档得由旧尾音盖住：固定 250 ms 只盖得住 120 BPM 的 1/8，60 BPM 的 1/4 会露洞。下限 250 ms 保证无咔哒（本文件其余斜坡是 12–20 ms），上限 500 ms 是因为再长切换就不像切换了。",
+        "en": "**The fade window follows the delay time (0.25–0.5 s)**, because the new build's delay line starts empty: its first repeat arrives one delay time later, and the outgoing tail is what covers that gap. A fixed 250 ms covers a 1/8 at 120 BPM but leaves a hole at a 1/4 at 60 BPM. The 250 ms floor keeps it click-free (the file's other ramps are 12–20 ms); the 500 ms ceiling is where a switch stops feeling like a switch."
       }
     ],
     "truncated": true
