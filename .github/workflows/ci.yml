@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main, next]
+  pull_request:
+    branches: [main, next]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Typecheck, Lint, Unit Tests & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Version Single-Source Check
+        run: npm run version:check
+
+      - name: Documentation Baseline Check
+        run: npm run docs:check
+
+      - name: TypeScript Typecheck
+        run: npm run typecheck
+
+      - name: ESLint Code Quality
+        run: npm run lint
+
+      - name: Red-Line Gate
+        run: npm run redlines
+
+      - name: Unit Tests & Coverage
+        run: npm run test:coverage
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Genre Database Schema Lint
+        run: npm run lint:data
+
+      # Cross-database audit (159 genres, 300 relations, timeline stories) that used to
+      # be an orphan script nothing invoked.
+      - name: Genre Database Audit
+        run: npm run data:lint
+
+      - name: Production Build
+        run: npm run build
+
+      - name: Bundle Budget & Performance Gate
+        run: npm run check:budget
+
+  e2e:
+    name: E2E Test Matrix (Playwright)
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Production Build
+        run: npm run build
+
+      - name: Cross-Browser & Cross-Device Test Matrix
+        run: npm run test:e2e
+
+      # E-10: Lighthouse is not installable in this environment, so the performance
+      # gate is a real-browser measurement with deterministic assertions (no genre
+      # data on first paint) plus reported FCP/LCP/CLS.
+      - name: Performance Gate (real browser, local build)
+        run: npm run perf:check

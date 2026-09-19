@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      `maximum-scale` is deliberately absent. Leaving it in (it was 2.0) re-enables pinch zoom,
+      and on iOS pinch zoom also restores the magnifier loupe — which over a grid of small step
+      cells means every slightly-slow tap pops a magnifying glass over the thing being aimed at.
+      `viewport-fit=cover` stays so the safe areas around a notch remain usable.
+    -->
+    <!--
+      `user-scalable=no` blocks pinch zoom outright. `maximum-scale` was removed first (it had been
+      re-enabling zoom, which on iOS also restores the magnifier loupe), but removing it left pinch
+      available, so the phone could still be zoomed by accident mid-gesture. This is a control
+      surface, not a document: zoom is never wanted and the accidental magnifier over a step grid is
+      the specific complaint. `viewport-fit=cover` stays so the notch and home-indicator areas are
+      usable.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Native-app feel: themed status bar area and no automatic phone-number linkification. -->
+    <meta name="theme-color" content="#0a0b0e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>GROOVE LAB</title>
+    <!-- SEO / social preview (N-07) -->
+    <meta
+      name="description"
+      content="GROOVE LAB — explore 159 music genres and build grooves in your browser: 8-track step sequencer, chord workshop, rhythm masterclasses, WAV/MIDI/Ableton export. 音乐曲风探索与律动工作台。"
+    />
+    <meta name="keywords" content="music genres, step sequencer, groove, drum machine, music production, 曲风, 音序器, 编曲" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="GROOVE LAB" />
+    <meta property="og:title" content="GROOVE LAB | Music Genre Explorer &amp; Browser Sequencer" />
+    <meta
+      property="og:description"
+      content="159 music genres, an 8-track step sequencer, chord workshop and rhythm masterclasses — all in the browser, no install."
+    />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GROOVE LAB | Music Genre Explorer &amp; Browser Sequencer" />
+    <meta
+      name="twitter:description"
+      content="159 music genres, an 8-track step sequencer, chord workshop and rhythm masterclasses — all in the browser."
+    />
+    <!-- Canonical / og:url / og:image are filled at runtime from location.origin so
+         they stay correct on workers.dev, preview URLs and custom domains (N-07). -->
+    <!-- Inline first-frame language sync to prevent FOUC (P1-12) -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem("groove_language");
+          var isZh = saved === "zh" || (!saved && (navigator.language || "").toLowerCase().startsWith("zh"));
+          document.documentElement.lang = isZh ? "zh-CN" : "en";
+          document.title = isZh ? "GROOVE LAB | 音乐曲风探索与律动工作台" : "GROOVE LAB | Music Genre Learning & Sequencer";
+
+          // N-07: absolute URLs derived at runtime — never hardcode a domain.
+          var origin = location.origin;
+          var canonical = origin + location.pathname;
+          var setMeta = function (selector, attr, value) {
+            var el = document.querySelector(selector);
+            if (el) el.setAttribute(attr, value);
+          };
+          setMeta('link[rel="canonical"]', "href", canonical);
+          setMeta('meta[property="og:url"]', "content", canonical);
+          setMeta('meta[property="og:image"]', "content", origin + "/icons/icon-512.png");
+          setMeta('meta[name="twitter:image"]', "content", origin + "/icons/icon-512.png");
+        } catch (e) {}
+      })();
+    </script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0a0b0d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Groove Lab" />
+    <!-- iOS ignores SVG apple-touch-icons, so point at the PNG (N-07). -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg" />
+
+    <!-- Modern Sans & Monospace Fonts with display=swap (P1-04) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- N-08: the Google Fonts stylesheet used to include Noto Sans SC, a CJK family
+         whose @font-face block is ~347 KB decoded / ~92 KB brotli on EVERY page load,
+         while zero font files were ever actually fetched. We now request only the two
+         small Latin families and let CJK text use the platform's own high-quality
+         system fonts (PingFang SC / Hiragino / Microsoft YaHei). -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#0a0b0d] text-[#e9e7e0] antialiased selection:bg-neon-cyan/30 selection:text-neon-cyan min-h-screen overflow-x-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

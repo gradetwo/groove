@@ -1,0 +1,46 @@
+# Cloudflare Workers static assets HTTP Headers (P4-11)
+
+# 1. Hashed production assets -> 1 year immutable
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# 2. Service Worker -> Never cache, always revalidate
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# 3. Web App Manifest
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+  Content-Type: application/manifest+json; charset=utf-8
+
+# 3b. Version check + changelog archive (A-08)
+# The update check must never be stale: a 5-minute max-age meant "check for updates"
+# reported the previous version for up to 5 minutes after a deploy (observed during
+# the v1.16.7 release). It is a 3KB file, so revalidation is cheap.
+/version.json
+  Cache-Control: no-cache, must-revalidate
+  Content-Type: application/json; charset=utf-8
+
+/changelog.json
+  # Must NOT be given a max-age. The intent was that a version key
+  # (`/changelog.json?v=<version>`, src/utils/changelog.ts#changelogArchiveUrl) would
+  # make a new release a new URL — but **this zone's CDN ignores the query string when
+  # caching**, which was measured directly during the v2.0.1 release: a request for a
+  # never-before-seen `?novel=<random>` came back `cf-cache-status: HIT` and served the
+  # previous release's archive. So the version key alone cannot guarantee edge freshness.
+  # With `no-cache` the edge revalidates on every request, which is what makes the
+  # update-record path provably fresh; `public/sw.js` also serves it network-first.
+  # The file only loads when the user opens the release history, so the revalidation
+  # cost is paid at most once per opening.
+  Cache-Control: no-cache, must-revalidate
+  Content-Type: application/json; charset=utf-8
+
+# 4. Main HTML document -> Must revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate

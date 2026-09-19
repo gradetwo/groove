@@ -1,0 +1,6 @@
+{
+  "_comment": "Red-line baseline. Changing any value here is an explicit decision and must be its own commit with the reason in the message.",
+  "genreCount": 159,
+  "relationSourceCoverage": 159,
+  "changelogEntries": 57
+}

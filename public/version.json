@@ -1,0 +1,29 @@
+{
+  "version": "2.0.81",
+  "releaseDate": "2026-09-19",
+  "changelogCount": 145,
+  "latest": {
+    "version": "2.0.81",
+    "date": "2026-09-19",
+    "category": "fix",
+    "title": {
+      "zh": "v2.0.81 送出改到声像后分接：硬左/硬右轨道的混响与延迟不再跑回正中间",
+      "en": "v2.0.81 Sends Tap After the Panner: a Hard-Panned Track's Reverb and Delay Keep Their Side"
+    },
+    "highlights": [
+      {
+        "zh": "**实时播放的送出分接点在声像之前，导出的在声像之后——两张图不一致，而导出器的注释还写着它们一致。** 逐轨送出的混响（`sendA`）与延迟（`sendB`）都是从 `stripOut`（极性/分析仪那一级，位于声像节点**上游**）分接的。于是一条硬左的轨道把**居中**的信号送进混响，干的信号在一侧、湿的尾巴在正中间；逐曲风策展的送出量就这样丢掉了它本来要制造的宽度。真实调音台的惯例也是 post-pan：效果跟着声源走。",
+        "en": "**Live playback tapped the sends before the panner, the exporter tapped after it — and the exporter's comment claimed they matched.** Per-track reverb (`sendA`) and delay (`sendB`) were fed from `stripOut` (the polarity/analyser stage, *upstream* of the panner). A hard-panned track therefore pushed a centred signal into the reverb: the dry signal sat on one side while its wet tail returned in the middle, and the per-genre curated send amounts lost the width they exist to cre…"
+      },
+      {
+        "zh": "**修法只有一行分接点。** `const sendTap = panner ?? spatialPanner ?? stripOut;`，两个送出都从它分接：双声道模式跟 `StereoPannerNode`，双耳（HRTF）模式跟 `spatialPanner`，没有声像节点时回退到原来的位置。实时链路的其余部分一个节点都没动，所以别的声音不受影响。",
+        "en": "**The fix is one tap point.** `const sendTap = panner ?? spatialPanner ?? stripOut;` now feeds both sends: the stereo panner in normal mode, the HRTF `spatialPanner` in binaural mode, and the old stage only when the context has no panner at all. Nothing else in the live chain changed, so no other sound moved with it."
+      },
+      {
+        "zh": "**测试（`trackSends.test.ts`，4 条）**：硬左轨道下两个送出的来源**只有 panner**；打开逐轨分析仪时分接点不会退回声像之前；空间模式下跟着 `spatialPanner`；离线导出图里被硬左 panner 直接喂到的增益正好 3 个（分组总线 + 两个送出）——最后一条钉的正是导出侧那一级，也就是这次要对齐的目标。把送出改回 `stripOut` 实测 **3 条失败**。全量单测 175 文件 / 2033 用例。",
+        "en": "**Tests (`trackSends.test.ts`, 4 cases):** a hard-panned track's sends come from the panner and nothing else; inserting the per-channel analyser does not move the tap back upstream of the pan; binaural mode follows `spatialPanner`; and in the offline graph the hard-panned panner feeds exactly three gains (group bus + both sends) — the last one pins the export stage this fix aligns with. Putting the old tap point back fails three of the four. Full suite: 175 files / 2033 test…"
+      }
+    ],
+    "truncated": true
+  }
+}

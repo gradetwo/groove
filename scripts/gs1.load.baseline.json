@@ -1,0 +1,137 @@
+{
+  "generatedBy": "scripts/measure_gs1_load.mjs",
+  "generatedAt": "2026-09-15T18:28:32.623Z",
+  "subset": false,
+  "genre": "heavy-metal",
+  "holdMs": 6000,
+  "settleMs": 700,
+  "postWarmupMs": 2600,
+  "warmupMs": 2000,
+  "appContext": {
+    "contexts": 2,
+    "state": "running",
+    "sampleRate": 44100
+  },
+  "loadThreshold": 0.35,
+  "decision": {
+    "threshold": 0.35,
+    "firstOverThresholdVoices": 16,
+    "worstSustainedP90": 0.3355232061568764,
+    "worstSustainedP90Voices": 16,
+    "judged": [
+      {
+        "voices": 4,
+        "voicesHeard": 4,
+        "sustainedP90": 0.02848473504177898,
+        "realtimeRatio": 1.0013605442176872,
+        "overloadEvents": 0,
+        "overThreshold": false
+      },
+      {
+        "voices": 8,
+        "voicesHeard": 8,
+        "sustainedP90": 0.05425568737012463,
+        "realtimeRatio": 1.0013605442176872,
+        "overloadEvents": 0,
+        "overThreshold": false
+      },
+      {
+        "voices": 12,
+        "voicesHeard": 12,
+        "sustainedP90": 0.1243700610675327,
+        "realtimeRatio": 0.9520181405895691,
+        "overloadEvents": 0,
+        "overThreshold": false
+      },
+      {
+        "voices": 16,
+        "voicesHeard": 16,
+        "sustainedP90": 0.3355232061568764,
+        "realtimeRatio": 0.5775963718820861,
+        "overloadEvents": 0,
+        "overThreshold": true
+      }
+    ],
+    "verdict": "cap-gs1-polyphony-below-16-voices"
+  },
+  "results": [
+    {
+      "requestedVoices": 4,
+      "frames": 345,
+      "settledFrames": 196,
+      "loadMedian": 0.010201666963797562,
+      "loadP90": 0.02848473504177898,
+      "loadMax": 0.05985355595933826,
+      "peakMax": 0.22566872835159302,
+      "truePeakMax": 0.22566872835159302,
+      "voicesMax": 4,
+      "allocViolations": 0,
+      "realtimeRatio": 1.0013605442176872,
+      "overloadEvents": 0,
+      "downgradeEvents": 1,
+      "polyphonyDowngrades": 0,
+      "variant": "simd",
+      "abi": 8,
+      "loadSetupMs": 70.60000000149012
+    },
+    {
+      "requestedVoices": 8,
+      "frames": 345,
+      "settledFrames": 196,
+      "loadMedian": 0.026159610932894744,
+      "loadP90": 0.05425568737012463,
+      "loadMax": 0.08776638071076019,
+      "peakMax": 0.3132869303226471,
+      "truePeakMax": 0.3379644453525543,
+      "voicesMax": 8,
+      "allocViolations": 0,
+      "realtimeRatio": 1.0013605442176872,
+      "overloadEvents": 0,
+      "downgradeEvents": 1,
+      "polyphonyDowngrades": 0,
+      "variant": "simd",
+      "abi": 8,
+      "loadSetupMs": 35.900000005960464
+    },
+    {
+      "requestedVoices": 12,
+      "frames": 328,
+      "settledFrames": 183,
+      "loadMedian": 0.06205064412441961,
+      "loadP90": 0.1243700610675327,
+      "loadMax": 0.19264038478002496,
+      "peakMax": 0.3942793011665344,
+      "truePeakMax": 0.43761682510375977,
+      "voicesMax": 12,
+      "allocViolations": 0,
+      "realtimeRatio": 0.9520181405895691,
+      "overloadEvents": 0,
+      "downgradeEvents": 1,
+      "polyphonyDowngrades": 0,
+      "variant": "simd",
+      "abi": 8,
+      "loadSetupMs": 57.20000000298023
+    },
+    {
+      "requestedVoices": 16,
+      "frames": 199,
+      "settledFrames": 114,
+      "loadMedian": 0.20492708365440213,
+      "loadP90": 0.3355232061568764,
+      "loadMax": 0.3785675823416978,
+      "peakMax": 0.44346296787261963,
+      "truePeakMax": 0.525818943977356,
+      "voicesMax": 16,
+      "allocViolations": 0,
+      "realtimeRatio": 0.5775963718820861,
+      "overloadEvents": 0,
+      "downgradeEvents": 1,
+      "polyphonyDowngrades": 0,
+      "variant": "simd",
+      "abi": 8,
+      "loadSetupMs": 54.80000000447035
+    }
+  ],
+  "pageErrors": [],
+  "path": "live AudioContext via Playwright + Vite dev server; the app's own AudioEngine playing through the studio UI, plus one GS-1 host on the same context"
+}

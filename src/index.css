@@ -1,0 +1,570 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #0a0b0d;
+    --panel: #121317;
+    --panel2: #0d0e12;
+    --line: #23262d;
+    --line2: #1a1c21;
+    --txt: #e9e7e0;
+    --sub: #8b8f99;
+    --dim: #828794;
+    --amber: #f5b73d;
+    --c-kick: #ff5964;
+    --c-snare: #ffb65c;
+    --c-hat: #45e0c9;
+    --c-perc: #c8e06a;
+    --c-bass: #ff8a5c;
+    --c-chord: #f06ec4;
+    --c-lead: #7ee787;
+    --c-fx: #9aa5ce;
+    --mono: "JetBrains Mono", monospace;
+    --disp: "Space Grotesk", "Noto Sans SC", sans-serif;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--txt);
+    /* N-08: Latin families first, then the platform's own CJK fonts. Requesting a
+       CJK webfont cost ~92 KB of render-blocking CSS per visit for fonts that were
+       never actually downloaded, so CJK now resolves to high-quality system faces. */
+    font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
+      sans-serif;
+    background-image: radial-gradient(ellipse 80% 60% at 50% -10%, #15161d 0%, transparent 60%);
+    background-attachment: fixed;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-text-size-adjust: 100%;
+    /* Prevent accidental text/element selection and callout popups on mobile touch (Item 3) */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /**
+     * Horizontal only. **This axis split is the whole point of the rule, not a detail of it.**
+     *
+     * This used to be the `overscroll-behavior: none` shorthand, here and on `html`. On macOS
+     * Chrome that silently killed two-finger trackpad scrolling of the page: the property is
+     * honoured on touch-capable *desktop* hardware, not only on touchscreens, and the shorthand's
+     * vertical half is exactly the half the page needs. Confirmed by hand against the built app —
+     * the same page scrolled with the rule absent and did not with it present, while `touch-action`
+     * and `overflow` were left untouched.
+     *
+     * What survives is deliberate: `-x: none` still suppresses Chrome's two-finger horizontal
+     * history-swipe (Back/Forward), which the step grid's own horizontal panning would otherwise
+     * trigger constantly. Vertical belongs to the browser again, so the page scrolls.
+     *
+     * `.overscroll-x-contain` further down this file already used this exact split for the
+     * sequencer's own scroll pane; the root was simply the one place the lesson had not been
+     * applied.
+     */
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: auto;
+  }
+
+  /**
+   * Controls keep the double-tap-zoom suppression; the page keeps its scroll gestures.
+   *
+   * `touch-action: manipulation` used to be on the root as well, to stop two quick taps on a step
+   * cell being read as a double-tap zoom. It is **not** applied at the root any more: Chrome honours
+   * `touch-action` on touch-capable desktop hardware too, and `manipulation` there disabled
+   * two-finger scrolling with a trackpad — a regression that broke the most basic page gesture, and
+   * the same failure mode as the `overscroll-behavior` shorthand directly above. Double-tap zoom is
+   * now prevented by the viewport's `user-scalable=no` (which also removes the iOS magnifier loupe),
+   * and `manipulation` is applied per-element, where it cannot affect page scrolling.
+   */
+  button,
+  [role="button"],
+  [role="gridcell"],
+  select,
+  input[type="range"] {
+    touch-action: manipulation;
+  }
+
+  html {
+    /* The document itself must never scroll horizontally: a stray overflow is what lets a phone
+       pan the whole UI sideways and makes the page feel like a website. */
+    overflow-x: hidden;
+    /* Same axis split as `body` above, and for the same measured reason: the shorthand's vertical
+       half is what stopped the page responding to a trackpad two-finger scroll. */
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: auto;
+  }
+
+  /* Explicitly allow selection in editable text inputs and code */
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  button, [role="button"], [role="grid"], [role="gridcell"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  ::selection {
+    background: #f5b73d33;
+  }
+}
+
+/* Sliders (P2-21: Real 44px minimum touch target without overlapping pseudo-elements) */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 44px;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  /*
+   * `pan-y`, not `none`.
+   *
+   * `none` meant a gesture that started over a slider could not pan the page at all. The studio
+   * renders 22 of these (per-track volume, pan, sends, swing, tempo, insert stages, mixer), so the
+   * dead zones were spread across the whole surface — and "two-finger scrolling stops working over
+   * parts of the page" is exactly the shape of that. `pan-y` keeps vertical page scrolling available
+   * while the horizontal drag that adjusts the value is unaffected, because a range input is a native
+   * control that handles its own gesture.
+   */
+  touch-action: pan-y;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--txt);
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: grab;
+}
+input[type=range]::-moz-range-track {
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+}
+input[type=range]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--txt);
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: grab;
+}
+
+/* Keyframes */
+@keyframes pulse-play {
+  0% { box-shadow: 0 0 0 0 #f5b73d66; }
+  100% { box-shadow: 0 0 0 16px #f5b73d00; }
+}
+
+/*
+ * The `.animate-spawn` rule and its `@keyframes spawn` lived here. Nothing referenced the class —
+ * not a className, not a template literal, not a test — so it was one more rule that reads as intent
+ * while having no effect. Found by `scripts/check_css_usage.mjs`, which now guards the rest.
+ */
+
+.animate-pulse-play {
+  animation: pulse-play 1.05s ease-out infinite;
+}
+
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0e12;
+}
+::-webkit-scrollbar-thumb {
+  background: #23262d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #393d46;
+}
+
+/* Sequencer Matrix Horizontal Scrollbar */
+.custom-sequencer-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.custom-sequencer-scroll::-webkit-scrollbar-track {
+  background: #0a0b0e;
+  border-radius: 4px;
+  /* Shares `--trk-head-w` with the ruler label and the track headers instead of the
+     126 px it used to hardcode — a fourth disagreeing width for the same column. */
+  margin-left: var(--trk-head-w);
+}
+.custom-sequencer-scroll::-webkit-scrollbar-thumb {
+  background: #323642;
+  border-radius: 4px;
+  border: 2px solid #0a0b0e;
+}
+.custom-sequencer-scroll::-webkit-scrollbar-thumb:hover {
+  background: #f5b73d;
+}
+
+/**
+ * Makes the frozen track-header column solid: full row height, header width plus the gutter.
+ *
+ * Two separate leaks, both seen while a pattern plays and the grid auto-scrolls:
+ *
+ *  1. **The gutter.** Each row is a flex row with `gap: var(--trk-head-gap)` and a `sticky left-0`
+ *     header, so the gap sits *outside* the header's box and nothing was painted over it. At rest
+ *     the first step cell starts after the gap (measured 593 -> 609 px at 1440x900); once the grid
+ *     scrolls, cells slide through it and the header looks like it is touching the grid.
+ *  2. **The strips above and below the header.** The header box is only as tall as its own content
+ *     while the row is as tall as its tallest child (the step cells): measured **73 px inside an
+ *     85 px row**, leaving 6 px unpainted at each end. Cells scrolling underneath showed through
+ *     those strips, so the column did not read as solid.
+ *
+ * `align-self: stretch` on the header does *not* fix this — the flex line's cross size comes from the
+ * grid, and the header still measured 73 px with `stretch` applied. A dedicated layer under the
+ * header does, and it fixes both leaks at once.
+ *
+ * The negative margin is the whole trick and must be exactly `width + 2 * gap`: the layer is placed
+ * *before* the header, so it occupies `[0, headerW + gap)`, and cancelling its own width plus the two
+ * flex gaps it introduces leaves the header at x=0 and the step cells at their original x. Get it
+ * wrong by one gap and every grid in the app shifts 16 px.
+ *
+ * `z-index: 30` puts it above the step cells, and the header is raised to `z-40` so its own text,
+ * borders and shadow still paint on top of it. (Measured the hard way: at `z-index: 19` the layer
+ * lost to the cells and 570 samples still resolved to a cell.) `pointer-events: none` keeps it from
+ * intercepting clicks aimed at the gutter. The background is left to the caller (`bg-panel` for the
+ * ruler, the header's own gradient for the track rows) so the strips match what they abut.
+ */
+.trk-head-solid {
+  position: sticky;
+  left: 0;
+  z-index: 30;
+  flex: none;
+  align-self: stretch;
+  width: calc(var(--trk-head-w) + var(--trk-head-gap));
+  margin-right: calc(-1 * (var(--trk-head-w) + 2 * var(--trk-head-gap)));
+}
+
+/* Touch Action & Gesture Conflict Prevention for Mobile */
+.touch-action-none {
+  touch-action: none !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/*
+ * `.touch-action-pan-x` / `.touch-action-pan-y` were declared here and referenced nowhere. The
+ * interacting surfaces use `touch-action-none` (which is used) and the per-element
+ * `manipulation` rule below, so these were two more shells of the same idea.
+ */
+
+.touch-action-manipulation {
+  touch-action: manipulation !important;
+}
+
+/* Prevent swipe-to-back and pull-to-refresh during sequencer scrubbing and matrix interactions */
+.overscroll-contain-all {
+  overscroll-behavior: contain !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/**
+ * Height of the phone tab bar, as a variable every bottom-anchored overlay can subtract.
+ *
+ * `0px` by default because the bar only exists below the `md` breakpoint (the header nav is hidden
+ * there and the tab bar replaces it). The media query at the end of this file raises it to the real
+ * height plus the safe-area inset, so a sheet that must sit above the bar is correct by
+ * construction rather than by a per-component guess. The track inspector needed exactly this: the
+ * bar was covering its last ~52 px, which on a landscape phone is the entire EQ canvas, and the
+ * measured symptom was a band handle whose hit test resolved to a tab-bar button.
+ */
+:root {
+  --mobile-tab-bar-h: 0px;
+  /* One source of truth for the frozen left column. The ruler label, the track
+     headers and the velocity lane all pin themselves to the left edge of the step
+     grid; if they disagree by even 4 px, the narrower sticky column of one paints
+     over the wider column of the other. They were 138 / 142 / 126 px at the same
+     time, and the ruler's `z-30` painted over the chords header at `z-20` — the
+     chord-track occlusion. Defined once here so the three cannot drift again. */
+  --trk-head-w: 142px;
+  /* The gap between that column and the first step column. Must match too: the
+     ruler used `sm:gap-3` while the rows used `gap-2 sm:gap-3`, which shifted the
+     step badges 4 px away from the cells they label on phones. */
+  --trk-head-gap: 0.75rem;
+  /**
+   * Width the phone transport claims when it shares the bottom row with the navigation bar.
+   *
+   * Kept in CSS so the panel can size the slot without importing the component's constant, and
+   * asserted equal to `TRANSPORT_ROW_WIDTH_PX` by a test — the same "CSS and TS cannot share a
+   * constant, so a test pins them together" arrangement as `PHONE_MAX_HEIGHT_PX`.
+   */
+  --mobile-transport-row-w: 320px;
+  /*
+   * Density, resolved in two steps.
+   *
+   * The `--dense-*` values are what the *viewport* implies (and, for landscape, the orientation),
+   * and the plain names are what the *user's* 界面密度 setting selects from them. Splitting it
+   * this way is what lets the setting be a real radio group without duplicating the phone
+   * minimum-touch-target rule and the landscape compression into every density tier — a second
+   * copy of either would be free to drift.
+   *
+   * Level 1 — viewport / orientation.
+   */
+  --step-cell-h-dense: 2.75rem; /* 44 px phone minimum touch target */
+  --step-cell-h-base: 2.5rem;   /* 40 px desktop */
+  --step-cell-h-compact-dense: 1.75rem;
+  --step-cell-h-compact-base: 1.75rem;
+  --track-row-pad-y-dense: 0.25rem;
+  --track-row-pad-y-base: 0.375rem;
+  --trk-row-h-dense: calc(var(--step-cell-h-dense) + 2 * var(--track-row-pad-y-dense));
+  --trk-row-h-base: calc(var(--step-cell-h-base) + 2 * var(--track-row-pad-y-base));
+  /* Level 2 — the setting. `standard` is the default and is what the app shipped before the
+     setting did anything, so a profile with no stored preference is unchanged. */
+  --step-cell-h: var(--step-cell-h-base);
+  --step-cell-h-compact: var(--step-cell-h-compact-base);
+  --track-row-pad-y: var(--track-row-pad-y-base);
+  --trk-row-h: var(--trk-row-h-base);
+}
+
+/** 紧凑: shorter rows, for fitting more tracks on screen while arranging. */
+:root[data-density="compact"] {
+  --step-cell-h: var(--step-cell-h-dense);
+  --step-cell-h-compact: var(--step-cell-h-compact-dense);
+  --track-row-pad-y: 0.125rem;
+}
+
+/** 宽松: taller rows, for touch accuracy and for reading a dense pattern. */
+:root[data-density="comfortable"] {
+  --step-cell-h: calc(var(--step-cell-h-base) + 0.5rem);
+  --step-cell-h-compact: calc(var(--step-cell-h-compact-base) + 0.5rem);
+  --track-row-pad-y: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --trk-head-w: 176px;
+    --trk-head-gap: 1rem;
+  }
+}
+
+/**
+ * How much of the bottom of the viewport is occupied by the phone's navigation bar.
+ *
+ * Keyed off a DOM attribute rather than a width media query, because width is the wrong question.
+ * The tab bar exists wherever `isMobile` is true, which includes a landscape phone — 844 px wide
+ * and therefore above every phone breakpoint — while the old `max-width: 767px` query left the
+ * variable at `0px` there. The consequence was concrete and was measured: in landscape the track
+ * inspector ran to the bottom of the viewport with 53 px of itself underneath the bottom chrome, and
+ * an element-at-point probe at that overlap returned a transport button, not the panel.
+ *
+ * `App` sets the attribute from the same state that decides whether the bar is fixed, so the two
+ * cannot disagree.
+ */
+:root[data-bottom-bar="tab"],
+:root:has([data-bottom-chrome="fixed"]) {
+  --mobile-tab-bar-h: calc(53px + env(safe-area-inset-bottom, 0px));
+}
+
+.overscroll-x-contain {
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/**
+ * Desktop-only controls inside the frozen track header.
+ *
+ * The header column is a fixed 142 px (phone) / 176 px (desktop) and it is `sticky`, so
+ * anything that escapes it is painted over the step grid and no longer hit-testable. It
+ * held eleven controls and needed 241 px on a phone: mute, solo and the inspector button
+ * all landed on top of step cells, so tapping them toggled steps instead.
+ *
+ * On a phone nobody can hit a 16 px target anyway, and the per-track console already owns
+ * mixer, insert chain and timbre — plus mute and solo in its own header. So the phone
+ * keeps the row identity (fold, type, colour, meter, name) and drops the rest, while the
+ * compact grid controls that *are* mobile-sized (mute, solo) stay inline.
+ *
+ * This is a real `display: none` rather than a Tailwind `hidden sm:flex`, because a
+ * conflicting `flex` in the element's own class list wins over `hidden` regardless of
+ * specificity — which is how the overflow survived the `hidden md:flex` markers already
+ * present on two of these buttons.
+ */
+@media (max-width: 639px) {
+  .trk-head-desktop-only {
+    display: none !important;
+  }
+  /* The volume/pan group and the shift/reorder cluster. Volume and pan are in the
+     inspector's mix tab; shift and reorder are desktop editing tools. */
+  .trk-head-desktop-group {
+    display: none !important;
+  }
+}
+
+/* 44x44 Real Minimum Touch Target for WCAG AAA & iOS HIG (P2-21: No overlapping ::after) */
+.touch-hit-44,
+.touch-target-44 {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* iOS Safe Area insets (P2-22) */
+.safe-pb, .pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+}
+/*
+ * Only the bottom inset has call sites; the top/left/right variants and `.bottom-safe` were
+ * declared and never applied. The components that need a top inset write it inline (see
+ * `SequencerPanel`'s landscape shell), which is also how the values stay visible at the site that
+ * depends on them.
+ */
+
+/* Reduced Motion Support (P2-19: Media Query & User Override) */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse-play,
+  .animate-pulse,
+  .animate-pulse-glow,
+  .animate-orbit {
+    animation: none !important;
+  }
+}
+
+html.reduced-motion *,
+html.reduced-motion *::before,
+html.reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html.reduced-motion .animate-pulse-play,
+html.reduced-motion .animate-pulse,
+html.reduced-motion .animate-pulse-glow,
+html.reduced-motion .animate-orbit {
+  animation: none !important;
+}
+
+/* Mobile Landscape Hardware Groovebox Experience (Height <= 500px & Landscape) */
+@media (max-height: 500px) and (orientation: landscape) {
+  /**
+   * A short landscape phone re-derives the density inputs rather than overriding the outputs, so
+   * the user's 界面密度 setting still has an effect here instead of being silently replaced.
+   *
+   * This block wins over the `[data-density]` selectors above on specificity (`:root` inside a
+   * media query loses to `:root[data-density]`), so it must set the `--…-dense` / `--…-base`
+   * inputs — the ones the density tiers select from — and never the plain names.
+   */
+  :root {
+    --step-cell-h-dense: 1.85rem;
+    --step-cell-h-base: 1.85rem;
+    --step-cell-h-compact-dense: 1.85rem;
+    --step-cell-h-compact-base: 1.85rem;
+    --track-row-pad-y-dense: 0.125rem;
+    --track-row-pad-y-base: 0.125rem;
+  }
+  header.sticky {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  .landscape-hide-sidebar {
+    display: none !important;
+  }
+  /*
+   * `.landscape-compact-bar` used to live here: five `!important` rules that compressed any bar's
+   * padding and forced its buttons to 28 px. Nothing referenced the class (checked across `src/`),
+   * so it was dead — and 28 px is below the 44 px touch minimum the phone shell standardised on, so
+   * the right disposition was to delete it rather than wire it up to something.
+   */
+  .landscape-compact-row {
+    padding-top: var(--track-row-pad-y) !important;
+    padding-bottom: var(--track-row-pad-y) !important;
+  }
+  /* Cells and headers track the same variable, so the step grid can never drift out of
+     horizontal alignment with its own ruler in this orientation. */
+  .landscape-compact-cell {
+    height: var(--step-cell-h-compact) !important;
+    min-width: var(--step-cell-h-compact) !important;
+  }
+}
+
+/* Scrollbar Utility Classes (P1-03) */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #2b2e38;
+  border-radius: 2px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #f5b73d;
+}
+
+/* Decoupled Playhead & Meter (P2-03) */
+.track-meter.is-flashing .meter-seg[data-meter-seg="1"],
+.track-meter.is-flashing .meter-seg[data-meter-seg="2"] {
+  background-color: #45e0c9 !important;
+  box-shadow: 0 0 4px #45e0c9 !important;
+}
+.track-meter.is-flashing .meter-seg[data-meter-seg="3"] {
+  background-color: #f5b73d !important;
+  box-shadow: 0 0 4px #f5b73d !important;
+}
+.track-meter.is-flashing .meter-seg[data-meter-seg="4"] {
+  background-color: #ff5964 !important;
+  box-shadow: 0 0 4px #ff5964 !important;
+}
+
+[data-ruler-step-idx].playhead-active {
+  color: #f5b73d !important;
+  font-weight: 700 !important;
+}
+
+.playhead-laser-beam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border: 2px solid #f5b73d;
+  background-color: rgba(245, 183, 61, 0.25);
+  box-shadow: 0 0 14px rgba(245, 183, 61, 0.5);
+  border-radius: 6px;
+  z-index: 15;
+  will-change: transform;
+}
