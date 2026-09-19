@@ -492,6 +492,9 @@ export const studioMessages = {
     zh: "小节太短 — 只放得下 {placed}/{total} 个和弦",
   },
   settings_replay_onboarding: { en: "Replay the new-user guide", zh: "重看新手引导" },
+  // U5: the sequencer toolbar had no way into the help centre.
+  toolbar_help_title: { en: "Help for this screen", zh: "本页帮助" },
+  toolbar_group_help_label: { en: "Help", zh: "帮助" },
 
   // U1: the first screen's single action, shown until playback has happened once.
   first_run_prompt_text: {

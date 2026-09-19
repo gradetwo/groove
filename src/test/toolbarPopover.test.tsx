@@ -2,6 +2,8 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Toolbar, type ToolbarProps } from "../components/sequencer/Toolbar";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 
 const noop = () => {};
@@ -65,6 +67,40 @@ describe("Toolbar Advanced Controls Popover & Progressive Disclosure", () => {
     expect(popover).not.toBeNull();
     expect(popover?.className).toContain("z-40");
     expect(popover?.className).toContain("shadow-2xl");
+  });
+
+  /**
+   * U5: the sequencer is the only screen without a help entry, and it is the one that needs it most.
+   *
+   * The entry lives in the More menu because help is a session-edge affordance — the density work
+   * (G.10) got the default surface down to 16 controls and this must not spend that back.
+   */
+  it("offers help for the sequencer screen from the More menu", () => {
+    const onOpenHelp = vi.fn();
+    render(<Toolbar {...makeToolbarProps({ onOpenHelp })} />);
+
+    fireEvent.click(screen.getByTestId("toolbar-more-menu-btn"));
+    const help = screen.getByTestId("toolbar-help");
+    fireEvent.click(help);
+    expect(onOpenHelp).toHaveBeenCalledWith("sequencer");
+    // The menu closes behind it, like every other entry in that popover.
+    expect(screen.queryByTestId("toolbar-more-menu")).toBeNull();
+  });
+
+  it("renders no help entry when the host cannot open help", () => {
+    // Optional, like the console toggle: an entry that opens nothing would be worse than none.
+    render(<Toolbar {...makeToolbarProps()} />);
+    fireEvent.click(screen.getByTestId("toolbar-more-menu-btn"));
+    expect(screen.queryByTestId("toolbar-help")).toBeNull();
+  });
+
+  it("is reachable from the panel, which is what StudioView hands the help opener to", () => {
+    // Wiring, not behaviour: the entry above is covered behaviourally, and a correct entry wired to
+    // nothing looks identical to no entry at all.
+    const panel = readFileSync(resolve(__dirname, "../components/sequencer/SequencerPanel.tsx"), "utf8");
+    expect(panel).toContain("onOpenHelp={onOpenHelp}");
+    const view = readFileSync(resolve(__dirname, "../views/StudioView.tsx"), "utf8");
+    expect(view).toContain("onOpenHelp={onOpenHelp}");
   });
 
   it("closes advanced popover when clicking outside", () => {
