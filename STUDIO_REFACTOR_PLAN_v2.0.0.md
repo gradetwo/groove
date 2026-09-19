@@ -380,7 +380,7 @@ App.tsx (路由/懒加载, 533)
 
 | ID | 任务 | 涉及文件 | 验收标准 |
 |---|---|---|---|
-| **L-01** | ⚠️ **高风险**：抽出 `SequencerStoreProvider`（App 层），`useSequencerStore()` 改为 Context 读取；**分三步**——① Provider 与旧 hook 并存（默认旧行为）；② 工作台切到 Provider；③ 调音台切到 Provider。每步单独发布 | 新 `src/app/SequencerStoreProvider.tsx`、`useSequencerStore.ts`、`StudioView.tsx`、`HardwareConsoleView.tsx` | 单测：Provider 内外 `commit` 后，另一挂载组件读到同值；`sequencerStore.test.ts`、`sequencerHistory.test.tsx`、`HardwareConsoleView.test.tsx` 全绿；**切到调音台再回来，pattern 与撤销栈不丢**（E2E） |
+| **L-01** | ⚠️ **高风险**：抽出 `SequencerStoreProvider`（App 层），`useSequencerStore()` 改为 Context 读取；**分三步**——① Provider 与旧 hook 并存（默认旧行为）；② 工作台切到 Provider；③ 调音台切到 Provider。每步单独发布 | 新增（计划中）`src/app/SequencerStoreProvider.tsx`；改动 `useSequencerStore.ts`、`StudioView.tsx`、`HardwareConsoleView.tsx` | 单测：Provider 内外 `commit` 后，另一挂载组件读到同值；`sequencerStore.test.ts`、`sequencerHistory.test.tsx`、`HardwareConsoleView.test.tsx` 全绿；**切到调音台再回来，pattern 与撤销栈不丢**（E2E） |
 | **L-02** | 新增 `src/app/studioBus.ts`（类型化 `CustomEvent` 总线），迁移 `groove_kick_presets_changed`、`groove_custom_genres_changed` 为第 1 批用户（行为不变，仅改名 + 集中常量） | 新文件、`AnatomyKickEngine.ts:88,104`、`Toolbar.tsx:580-586`、`customGenreDb.ts:57`、`useCustomGenres.ts:36`、`kick/SomaticControls.tsx:57` | 单测：新事件名生效、旧名不再派发；订阅/退订无泄漏 |
 | **L-03** | 分析仪 **轨道优先**：工作台点选某轨时若 `enableTrackAnalysers` 已开启则把该轨 analyser 交给分析视图，否则回落母带 | `App.tsx:263-276`、`AudioEngine.ts`（`getTrackAnalyser`）、`AnalyzerView.tsx:24-30` | 单测：注入 fake analyser，断言选中轨后 `externalAnalyser` 等于该轨实例；无轨道 analyser 时等于母带 |
 | **L-04** | 底鼓双向：工作台鼓机下拉的当前 `kick:*` → 底鼓设计器预载；底鼓设计器"保存/试听" → 工作台刷新并高亮 | `App.tsx:252-261`、`KickAnatomyView.tsx`、`Toolbar.tsx:719-768`、`studioBus.ts` | E2E：在设计器保存预设 → 切到工作台 → 该预设出现在自定义 optgroup 且被选中；反向：工作台选 `kick:berlin-orphic` → 进设计器 → 参数与之相符 |

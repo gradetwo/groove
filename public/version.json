@@ -1,27 +1,27 @@
 {
-  "version": "2.0.71",
+  "version": "2.0.72",
   "releaseDate": "2026-09-19",
-  "changelogCount": 135,
+  "changelogCount": 136,
   "latest": {
-    "version": "2.0.71",
+    "version": "2.0.72",
     "date": "2026-09-19",
-    "category": "refactor",
+    "category": "docs",
     "title": {
-      "zh": "v2.0.71 抽出 useEffectsRack：效果器架的状态与撤销联动不再写在视图里",
-      "en": "v2.0.71 Extracting useEffectsRack: the FX Rack's State and Undo Coupling Leave the View"
+      "zh": "v2.0.72 文档引用门禁：文档声明的文件必须真的存在（7 处过期引用已修）",
+      "en": "v2.0.72 A Documentation-Reference Gate: a File the Docs Claim Must Exist (Seven Stale Ones Fixed)"
     },
     "highlights": [
       {
-        "zh": "**为什么效果器架不是普通 `useState`**：每个消费方都接受一个 React setter，所以它必须留在 React state 里（否则所有调用点都要改）；但**它同时属于 pattern，必须进撤销栈**。以前没有这层联动时，Ctrl+Z 会把音符回滚而把效果改动留在原地——**半撤销比不能撤销更糟**，因为它看起来像是成功了。",
-        "en": "**Why the FX rack is not a plain `useState`**: every consumer takes a React setter, so it has to stay in React state (or every call site changes) — but **it also lives inside the pattern, so it must be in the undo stack**. Before that coupling existed, Ctrl+Z rolled the notes back and left the FX change in place: a **half-undo, which is worse than no undo** because it looks like it worked."
+        "zh": "**为什么文档在这里是承重的**：好几份文档是「这个设计为什么长这样」的唯一记录，而计划文档还负责写明**什么没做**。所以过期的文件引用是有害的——读者照着 `scripts/check_gs1.mjs` 去找，找不到，且**无法判断**它是从未建、被删除、还是被改名。手工一查找到 **7 处**。",
+        "en": "**Why the docs here are load-bearing**: several are the only record of why a design is the way it is, and the plan document is also where \"what is *not* done\" lives. A stale file reference is therefore actively harmful — a reader follows `scripts/check_gs1.mjs` and finds nothing, and **cannot tell** whether it was never built, was deleted, or was renamed. A manual pass found **seven**."
       },
       {
-        "zh": "**两个隐患被收进 hook，不再散在调用点**：① **在 state updater 里提交是副作用**，而 React 可能把它跑两次（StrictMode），一次改动会压入两条历史——表现为「第一次 Ctrl+Z 好像没反应」。所以下一个值从 ref 计算，不在 updater 里提交。② **历史会在界面底下移动**：撤销/重做把另一个 rack 放回 store 时，本地状态必须跟随，否则面板显示旧 rack、下一次编辑从错误的基础上提交。同时，**没发生恢复时绝不能覆盖用户的本地编辑**——否则控件会在手指底下弹回去。",
-        "en": "**Two hazards are handled inside the hook instead of at each call site**: (1) **committing from inside a state updater is a side effect React may run twice** (StrictMode double-invokes updaters), so one change could push two history entries — which presents as \"the first Ctrl+Z did nothing\". The next value is therefore computed from a ref, not committed inside the updater. (2) **History moves underneath the UI**: when a restore puts a different rack back in the store, the lo…"
+        "zh": "**已修正的引用**：① 门禁脚本真名是 `check-gs1.mjs`（连字符），文档写成了下划线——这是**唯一一处与可执行链路相关**的过期引用；② 更新记录的机制描述仍写着「编译进 bundle」，而它早已改成走网络的 `/version.json` + `/changelog.json`，被引用的那个模块也已不存在（已改写为实际机制，并保留当年那样做的理由与被取代的原因）；③ 一条测试覆盖的引用指向不存在的文件名（实际覆盖在另外两个文件里）；④ 计划表里一行「新 `…/SequencerStoreProvider.tsx`」被读成了断言，已明确标为计划。",
+        "en": "**References corrected**: (1) the gate script is `check-gs1.mjs` (hyphen) and the doc wrote an underscore — the only stale reference tied to an executable path; (2) the release-notes mechanism was still described as \"compiled into the bundle\" when it has long since become `/version.json` + `/changelog.json` fetched over the network, and the module it named no longer exists (rewritten to the real mechanism, keeping both why it was done that way and why it was replaced); (3) a…"
       },
       {
-        "zh": "**测试钉住的是隐患，而不是「它能存一个值」**：一次改动只提交一次（用 updater 形式，正是过去危险的形状）；同一 tick 内的两次改动会**复合**而不是都从旧值出发；十次连续改动**只用一个历史键**（拖一次滑块 = 一次撤销）；历史恢复后界面跟随；以及**没有恢复时本地编辑必须存活**。",
-        "en": "**The tests pin the hazards, not \"it can store a value\"**: one change commits once (passing an updater, which is the shape that used to be dangerous); two changes in one tick **compose** rather than both starting from the old value; ten consecutive changes use **one history key** (a slider drag is one undo step); the UI follows a restored rack; and a **local edit survives** when no restore happened."
+        "zh": "**关键设计决定：不从散文里推断意图。** 计划文档本来就会提到尚未创建的文件，所以朴素检查会被误报淹没。我试了两次「按措辞判断这是不是计划」，**两次都是「失败开放」**：第一次按整行判断，于是同一行里另一个**过期**路径被顺带豁免；第二次把范围收到路径之前的从句，结果从句边界又把标记挤出范围，反而把真正的计划报成错误。两个方向都错，而**第一个是危险的那个**（过期引用可以搭上任何含「新增」二字的行）。因此现在：**缺失路径一律是问题**，除非它被显式登记在脚本的 `PROPOSED` 表里——登记是一条**可见的决定**而不是猜测，这也正是它能被复审的原因。当前登记 5 条，每条都写明「尚未建、现有实现是什么」。",
+        "en": "**The design decision that matters: intent is not inferred from prose.** A plan document legitimately names files that do not exist yet, so a naive check drowns in false positives. I tried twice to decide \"is this line a plan?\" from its wording and **both attempts failed open**: line-wide, a planning word excused a *different*, stale path on the same line; scoped to the clause before the path, a clause boundary pushed the marker out of range and a genuine proposal was report…"
       }
     ],
     "truncated": true

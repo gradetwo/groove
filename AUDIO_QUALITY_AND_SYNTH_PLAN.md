@@ -83,7 +83,9 @@ const latestEntries = data.latest ? [data.latest] : (data.changelog || []);
 
 ### 1.5 对照：GS-1 为什么没有这个问题
 
-同级目录的 GS-1 把更新记录**编译进 bundle**（`src/changelog-head.ts` 被 `App.tsx` 静态引入，历史留在 `changelog-archive.ts`）。于是「记录」与「代码」同哈希、同版本，**结构上不可能不一致**，代价是包体（GS-1 为此只保留最近 30 条，省下约 79 KB）。
+同级目录的 GS-1 把更新记录**编译进 bundle**（当时的做法：一个由构建生成的头部模块被 `App.tsx` 静态引入，完整历史留在另一个模块里）。于是「记录」与「代码」同哈希、同版本，**结构上不可能不一致**，代价是包体。
+
+**这一条已经被取代**：更新记录现在走**网络**——`/version.json`（小、`no-store`、带 `?t=` 破坏缓存）与 `/changelog.json`（完整、可缓存、按版本号取 URL）。取代它的原因记在 `src/utils/changelog.ts` 的文件头：客户端缓存里的归档会比 `latest` 慢一版，于是「更新了却看不到这次更新的记录」。
 
 Groove Lab 现在是「记录作为独立运行时资源」，所以必须自己维护一致性。**后续可选方向**：把最近 N 条随构建打包（`latest` 已在做的事），只把完整归档留在远端——既拿到 GS-1 的结构性一致，又保留无限历史。本轮先用第 1.3 节的并集方案，成本最低且立即生效。
 
@@ -556,7 +558,7 @@ vendor/gs1/
 
 | 门禁 | 内容 |
 |---|---|
-| `scripts/check_gs1.mjs` | WASM 可校验；清单内每个文件 sha256 匹配；ABI === 8；`max_voices/max_block/spectrum_bins` 与契约一致；参数表无重复 id 且不越界 |
+| `scripts/check-gs1.mjs` | WASM 可校验；清单内每个文件 sha256 匹配；ABI === 8；`max_voices/max_block/spectrum_bins` 与契约一致；参数表无重复 id 且不越界 |
 | **扩展 `scripts/check_budgets.js`** | **当前预算脚本对 `.wasm` 完全盲**（逐 chunk 循环只筛 `.js`，初始路由只统计 `index.html` 引用）。不加这一行，未来 WASM 涨 40% 也会静默通过 |
 | `version.json` 增 `dependencies.gs1` | `{version, abi, wasmSha256}`，由 `version.mjs` 的 check 模式断言与清单一致 |
 | 契约测试 | vitest 里加载 vendored WASM，断言 ABI/上限、渲染一个音非静音、`gs_alloc_violations() === 0` |
@@ -623,7 +625,7 @@ budget / 四个证据门禁（响度、音色、GS-1 预算、GS-1 时序）全�
 
 **需求 10 待改**：`src/audio/PolySynth.ts`、`src/audio/DrumKitModels.ts`、`src/audio/AnatomyKickEngine.ts`、`src/audio/voiceRegistry.ts:82-88`、`src/audio/WavExporter.ts`、`src/test/helpers/{fakeAudio,loudness}.ts`、`scripts/check_loudness_spread.mjs`
 
-**需求 11 待改**：`vendor/gs1/*`（新增）、`scripts/sync-gs1.mjs`（新增）、`scripts/check_gs1.mjs`（新增）、`scripts/check_budgets.js`、`scripts/version.mjs`、`src/audio/instrumentPresets.ts:224`
+**需求 11 待改**：`vendor/gs1/*`（新增）、`scripts/sync-gs1.mjs`（新增）、`scripts/check-gs1.mjs`（新增）、`scripts/check_budgets.js`、`scripts/version.mjs`、`src/audio/instrumentPresets.ts:224`
 
 **既有设计记录**：`MIX_LOUDNESS_NOTES.md`（N-13 混音与响度）、`TIMBRE_NOTES.md`（预设策展）、`ROADMAP_V2.md`（Phase 5–8）、`BACKLOG.md`、`CODE_REVIEW_AND_PLAN_v1.16.0.md`（N-13…N-16 原始登记）
 
@@ -1340,7 +1342,7 @@ GS-1 快捷开关。三条设计约束写进组件注释并被测试钉住：
 **本版没有给引擎加任何能力**，因此测试断言的是接线：引擎值渲染、写入走 setter、夹取后回显、
 上限随保护开关禁用、限幅器状态如实显示（worklet 真峰值 / 压缩器降级）、GS-1 只委托不改引擎，
 以及用**真实 `AudioEngine`** 跑一遍端到端夹取（上限 0.5 + 总音量 1.0 → 面板必须显示 50%）。
-`src/test/audioSettingsModal.test.tsx` 共 **8** 条。
+该面板的接线由 `src/test/audioSettings.test.ts` 与 `src/test/settingsModal.test.tsx` 覆盖。
 
 ### 5.17.2 慢轨交接打包器（`scripts/slow_pack.mjs`）
 

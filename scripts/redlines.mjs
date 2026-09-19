@@ -233,6 +233,19 @@ check(
   Boolean(allowBlock) && allowBlock[1].replace(/\/\*[\s\S]*?\*\//g, "").trim() === ""
 );
 
+/**
+ * R6g — the documentation-reference gate must stay wired.
+ *
+ * These docs are the only record of why several designs are the way they are, and the plan states what
+ * is *not* done. A stale file reference therefore misleads in a way nothing else catches: the reader
+ * cannot tell whether the thing was never built, was deleted, or was renamed. Seven existed.
+ */
+check(
+  "R6g verify keeps the doc-reference gate",
+  scripts.verify.includes("npm run check:docs:refs") &&
+    scripts["check:docs:refs"] === "vite-node scripts/check_doc_refs.mjs"
+);
+
 check(
   "R6e verify keeps the CSS-usage gate",
   // `vite-node`, not `node`: the sweep imports its parsing helpers from `src/utils/cssUsage.ts` so the
