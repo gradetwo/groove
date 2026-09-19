@@ -22,6 +22,7 @@ import { ALL_GENRES } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { announcer } from "../ui";
 import {
   calculateEloDelta,
@@ -125,6 +126,9 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   onOpenStudio,
 }) => {
   const { t, isZh } = useLanguage();
+  /** Phone surface: measured at 390×664 the certificate button was 34 px, the reset icon 32×32 and
+   *  the three difficulty buttons 32–34 px. */
+  const { isMobile } = useDeviceCapabilities();
 
   const [initialStats] = useState<StoredStatsV2>(loadStoredStats);
   const [difficulty, setDifficulty] = useState<ChallengeDifficulty>("medium");
@@ -400,7 +404,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           {/* Certificate Action Button */}
           <button
             onClick={() => setIsCertificateOpen(true)}
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all shadow-lg shadow-amber-500/10"
+            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all shadow-lg shadow-amber-500/10 ${isMobile ? "min-h-11" : ""}`}
           >
             <Award className="w-4 h-4 text-amber-400" />
             <span>{t("challenge_certificate_btn")}</span>
@@ -509,7 +513,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             {/* Reset Stats Action */}
             <button
               onClick={handleResetStats}
-              className="p-2 rounded-xl bg-[#13141a] hover:bg-neutral-800 text-text-dim hover:text-rose-400 border border-line transition-colors"
+              className={`p-2 rounded-xl bg-[#13141a] hover:bg-neutral-800 text-text-dim hover:text-rose-400 border border-line transition-colors ${isMobile ? "min-h-11 min-w-11" : ""}`}
               title={isZh ? "重置所有成绩数据" : "Reset stats"}
               aria-label="Reset challenge stats"
             >
@@ -525,7 +529,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           <button
             key={d}
             onClick={() => handleDifficultyChange(d)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isMobile ? "min-h-11" : ""} ${
               difficulty === d
                 ? "bg-accent text-[#0a0b0d] shadow-lg shadow-indigo-600/30"
                 : "bg-panel text-text-sub hover:text-text border border-line"
@@ -577,7 +581,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           <div>
             <button
               onClick={handleTogglePlay}
-              className={`inline-flex items-center space-x-2 px-6 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-xl ${
+              className={`inline-flex items-center space-x-2 px-6 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-xl ${isMobile ? "min-h-11" : ""} ${
                 !hasStarted
                   ? "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-indigo-500/30 scale-105"
                   : isPlaying
@@ -686,7 +690,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
             <button
               onClick={() => startNewQuestion(difficulty, true)}
-              className="flex items-center space-x-1.5 px-5 py-2.5 rounded-2xl bg-accent text-[#0a0b0d] hover:bg-indigo-500 text-white font-bold text-xs shadow-xl shadow-indigo-600/30 transition-transform hover:scale-105"
+              className={`flex items-center space-x-1.5 px-5 py-2.5 rounded-2xl bg-accent text-[#0a0b0d] hover:bg-indigo-500 text-white font-bold text-xs shadow-xl shadow-indigo-600/30 transition-transform hover:scale-105 ${isMobile ? "min-h-11" : ""}`}
             >
               <span>{t("next_question")}</span>
               <ArrowRight className="w-4 h-4" />
@@ -742,7 +746,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
           <div className="flex items-center justify-end space-x-2 pt-2">
             <button
               onClick={() => onOpenStudio(question.correctGenre)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text text-xs font-semibold transition-colors"
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text text-xs font-semibold transition-colors ${isMobile ? "min-h-11" : ""}`}
             >
               <Sliders className="w-3.5 h-3.5 text-accent" />
               <span>{t("open_in_studio")}</span>
@@ -750,7 +754,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
             <button
               onClick={() => onSelectGenre(question.correctGenre)}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text text-xs font-semibold transition-colors"
+              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-text text-xs font-semibold transition-colors ${isMobile ? "min-h-11" : ""}`}
             >
               <ExternalLink className="w-3.5 h-3.5 text-accent" />
               <span>{t("view_detail")}</span>
