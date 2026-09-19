@@ -3246,3 +3246,37 @@ Explore 是 studio 之外使用频率最高的页面（选曲风），而且它�
 按同一套流程收拾 **chords（Tools 的落地页）与 kick**——两者都是 studio 之外最常用的创作页，问题也少
 （3 + 7），预计一轮能收完并把它们加进门禁；之后再排时间线 / compare / analyzer 这几个**更该考虑"手机上不提供"
 的分析型视图**（它们的问题数最多：12 / 14 / 13，而且都是桌面级信息密度）。
+
+## G.38 手机端第四轮：chords 与 kick 归零，门禁覆盖四面（v2.0.99）
+
+按 G.37 的清单往下走，这两页是 studio 之外最常用的创作入口，问题也最少（3 + 7），一轮收完。
+
+### chords（Tools 的落地页）：3 → 0
+
+- **Harmony Guide** 139×26 → 手机上 `min-h-11`。
+- **调号与调式两个 `<select>`** 119×32（手机用户在这页最先要动的两个）→ `min-h-11`。
+
+### kick（Kick Lab）：7 → 0
+
+- **Kick Lab Guide**（140×26）与 **Return to Studio**（156×24）→ `min-h-11`。
+- **CRT OSCILLOSCOPE / WATERFALL FFT** 两个可视化模式按钮（158×26、137×26）→ `min-h-11`。
+- **INITIATE PULSE**（146×30，`GravitationalSequencer`）→ `min-h-11`。
+- **TEMPO 数字输入** 48×**17**（同一个组件里，是全页最小的目标）→ `min-h-11`。
+- **YT/XY 波形切换** 57×33（`PhosphorOscilloscope`）→ `min-h-11`。
+
+四个文件（`ChordProgressionsView`、`KickAnatomyView`、`GravitationalSequencer`、`PhosphorOscilloscope`）都从
+`useDeviceCapabilities()` 读 `isMobile`，桌面路径一行未改；量后：**chords 10 控件 / 0 低于 44，kick 12 / 0**，
+横屏同样 0。
+
+### 门禁覆盖四面
+
+E2E 的手机门禁现在逐个量 **studio、explore、chords、kick**，失败信息带页面名 ✓。仍待处理（G.37 表）：
+maker 8、challenge 5、masterclass 1、horizontal-timeline 12、vertical-timeline 6、compare 14、analyzer 13。
+
+### 下一步的判断
+
+后四页（两条时间线、compare、analyzer）合计 45 个低于 44 px 的控件，且都是**桌面级信息密度**的视图：
+按目标里"难做好用的直接不提供"，它们更该走**手机端不提供**（像硬件调音台与钢琴卷帘那样，给出说明并指向
+可用路径），而不是把每个按钮都撑到 44 px 再塞回 390 px 宽的屏幕。下一轮先做 **maker（8）与 challenge（5）**
+这两页创作型入口，然后就时间线 / compare / analyzer 的取舍给出一版明确方案（保留哪几个、其余在手机上如何
+告知用户）。
