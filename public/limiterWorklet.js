@@ -94,10 +94,14 @@ class TruePeakLimiterKernel {
     this.historyLength = TRUE_PEAK_TAPS_PER_PHASE - 1;
     this.delayLines = [];
     this.histories = [];
-    this.gainWindow = new Float32Array(this.lookaheadSamples + 1);
-    this.gainWindow.fill(1);
+    // M14: monotonic deque over the lookahead window (one spare slot, so head === tail means empty).
+    this.dequeCapacity = this.lookaheadSamples + 2;
+    this.dequeIndex = new Int32Array(this.dequeCapacity);
+    this.dequeValue = new Float32Array(this.dequeCapacity);
+    this.dequeHead = 0;
+    this.dequeTail = 0;
+    this.samplesProcessed = 0;
     this.delayIndex = 0;
-    this.gainWindowIndex = 0;
     this.gain = 1;
     this.scratch = new Float32Array(this.historyLength + 128);
     this.framePeak = new Float32Array(128);
@@ -108,9 +112,10 @@ class TruePeakLimiterKernel {
   reset() {
     for (let c = 0; c < this.delayLines.length; c++) this.delayLines[c].fill(0);
     for (let h = 0; h < this.histories.length; h++) this.histories[h].fill(0);
-    this.gainWindow.fill(1);
+    this.dequeHead = 0;
+    this.dequeTail = 0;
+    this.samplesProcessed = 0;
     this.delayIndex = 0;
-    this.gainWindowIndex = 0;
     this.gain = 1;
   }
 
@@ -186,17 +191,34 @@ class TruePeakLimiterKernel {
     const D = this.lookaheadSamples;
     const windowSize = D + 1;
     const ceiling = this.ceilingLinear;
+    const capacity = this.dequeCapacity;
     for (let n = 0; n < frames; n++) {
       const truePeak = peak[n];
       const required = truePeak > 0 ? Math.min(1, ceiling / truePeak) : 1;
 
-      this.gainWindow[this.gainWindowIndex] = required;
-      this.gainWindowIndex = this.gainWindowIndex + 1 === windowSize ? 0 : this.gainWindowIndex + 1;
-      let target = 1;
-      for (let w = 0; w < windowSize; w++) {
-        const candidate = this.gainWindow[w];
-        if (candidate < target) target = candidate;
+      /**
+       * Sliding-window minimum over the lookahead (M14): the deque's front is the window's
+       * smallest value, so this is O(1) amortised instead of a scan of all D+1 slots per
+       * sample. Values enter as `Math.fround`, which is exactly what storing them into the
+       * old Float32Array window did, so the output is bit-identical — see the matching
+       * comment on the field in `src/audio/MasterLimiter.ts`, and the golden test that
+       * pins both implementations to the same samples.
+       */
+      const stored = Math.fround(required);
+      const oldest = this.samplesProcessed - windowSize;
+      while (this.dequeHead !== this.dequeTail && this.dequeIndex[this.dequeHead] <= oldest) {
+        this.dequeHead = this.dequeHead + 1 === capacity ? 0 : this.dequeHead + 1;
       }
+      while (this.dequeHead !== this.dequeTail) {
+        const back = this.dequeTail === 0 ? capacity - 1 : this.dequeTail - 1;
+        if (this.dequeValue[back] < stored) break;
+        this.dequeTail = back;
+      }
+      this.dequeIndex[this.dequeTail] = this.samplesProcessed;
+      this.dequeValue[this.dequeTail] = stored;
+      this.dequeTail = this.dequeTail + 1 === capacity ? 0 : this.dequeTail + 1;
+      this.samplesProcessed += 1;
+      const target = this.dequeValue[this.dequeHead];
 
       if (target <= this.gain) {
         this.gain = target;
