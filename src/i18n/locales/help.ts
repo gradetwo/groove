@@ -46,6 +46,11 @@ export const helpMessages = {
   tut_galaxy_desc: { en: "Navigate a 3D orbital constellation of 159 global genres, tracing family lineages and century-long migrations.", zh: "在 3D 引力星系与水平/垂直双轴时间线中漫游 159 种全球流派，追溯百年音乐演进的谱系与传承。" },
 
   // Tutorial Steps
+  // U2: a step can point at a control; when that control is not on the current surface, say so.
+  tut_anchor_missing: {
+    en: "This step's control is not shown on this screen — follow it on the desktop layout, or open the panel it lives in.",
+    zh: "这一步的控件在当前界面没有显示——请在桌面布局上跟着做，或先打开它所在的面板。",
+  },
   tut_drum_s1: { en: "Click step cells on the Kick track (row 1) to place standard four-on-the-floor pulses at steps 1, 5, 9, 13.", zh: "在底鼓轨道（第 1 行）的第 1、5、9、13 步点击网格激活，建立经典四四拍重音骨架。" },
   tut_drum_s2: { en: "Add Snare or Clap on steps 5 and 13 to establish the foundational backbeat groove.", zh: "在军鼓（Snare）或掌声（Clap）轨道的第 5 和 13 步添加敲击，形成标准节奏反拍驱动力。" },
   tut_drum_s3: { en: "Click the 'E' button on Closed Hi-Hat to open the Euclidean Generator: set 5 hits over 16 steps for dynamic syncopation.", zh: "点击闭镲轨道的「E」按钮打开欧几里得生成器，设定 16 步中分布 5 个脉冲，获得迷人的切分复节奏。" },

@@ -6,6 +6,22 @@ export interface TutorialCourseStep {
   tipZh?: string;
   tipEn?: string;
   targetTab?: NavTab;
+  /**
+   * The control this step is about.
+   *
+   * The coach used to be words only: it could switch to the right *view*, but nothing pointed at the
+   * button or cell the text described — "click a step cell" with no step cell indicated, which is the
+   * remaining half of U2. The coach now dims the app, rings this control and keeps the app
+   * interactive, so the instruction can actually be followed.
+   *
+   * An attribute pair rather than a raw CSS selector, because that is what makes the anchor
+   * *checkable*: `tutorialCoachAnchor.test.tsx` greps `src/` for the attribute and fails when a
+   * control is renamed or deleted, so a step can never quietly point at nothing.
+   *
+   * A step whose control does not exist on the current surface (a phone layout, a closed panel) is
+   * reported as such instead of showing a ring around empty space.
+   */
+  anchor?: { attribute: "data-testid" | "data-toolbar-id"; value: string };
 }
 
 export interface TutorialCourseDef {
@@ -35,24 +51,29 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
         tipZh: "四四拍是 House、Techno 和 Funk 的经典基底",
         tipEn: "Four-on-the-floor is the backbone of House & Techno",
         targetTab: "studio",
+        anchor: { attribute: "data-toolbar-id", value: "play" },
       },
       {
         labelKey: "tut_drum_s2",
         tipZh: "军鼓提供清晰的反拍律动点",
         tipEn: "Snare drives the essential rhythmic backbeat",
         targetTab: "studio",
+        // Track 1, step 4: the backbeat the tip is describing, on the grid itself.
+        anchor: { attribute: "data-testid", value: "step-cell-1-4" },
       },
       {
         labelKey: "tut_drum_s3",
         tipZh: "欧几里得律动利用最大公约数算法分布节奏点",
         tipEn: "Euclidean math distributes hits across steps evenly",
         targetTab: "studio",
+        anchor: { attribute: "data-toolbar-id", value: "euclid" },
       },
       {
         labelKey: "tut_drum_s4",
         tipZh: "高对比度力度通道提供从 p 到 fff 的动态控制",
         tipEn: "Dynamic velocity shaping from p to fff adds realism",
         targetTab: "studio",
+        anchor: { attribute: "data-toolbar-id", value: "velocity-lane" },
       },
     ],
   },
@@ -69,6 +90,7 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
         tipZh: "支持黑白键全音域纵向排布与音符拖拽",
         tipEn: "High-contrast full-range pitch canvas with dragging",
         targetTab: "studio",
+        anchor: { attribute: "data-testid", value: "toolbar-piano-roll-toggle" },
       },
       {
         labelKey: "tut_piano_s2",
@@ -81,12 +103,14 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
         tipZh: "和弦印章支持三和弦、七和弦、九和弦与挂留和弦",
         tipEn: "Multi-note chord ghost preview stamps full voicings",
         targetTab: "studio",
+        anchor: { attribute: "data-testid", value: "piano-roll-progression-suite" },
       },
       {
         labelKey: "tut_piano_s4",
         tipZh: "升序 (Arp ▲) 与降序 (Arp ▼) 琶音器一键展开",
         tipEn: "Arpeggiate selected chord notes chronologically across steps",
         targetTab: "studio",
+        anchor: { attribute: "data-testid", value: "piano-roll-arp-up" },
       },
     ],
   },
@@ -103,6 +127,7 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
         tipZh: "具备多轨独立推子、声像平衡与静音独奏",
         tipEn: "Full channel strips with precision faders and mute/solo",
         targetTab: "console",
+        anchor: { attribute: "data-testid", value: "console-fader-0" },
       },
       {
         labelKey: "tut_mixer_s2",
