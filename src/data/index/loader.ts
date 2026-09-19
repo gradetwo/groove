@@ -1,11 +1,41 @@
 import { Genre } from "../../types/genre";
 import { GENRE_INDEX, GENRE_INDEX_MAP, GenreIndexItem } from "./genresIndex";
-import { getCustomGenre } from "../../features/customGenre/customGenreDb";
 
 export { GENRE_INDEX, GENRE_INDEX_MAP };
 export type { GenreIndexItem };
 
 const cache = new Map<string, Genre>();
+
+/**
+ * How to resolve a user-made genre — **injected, not imported**.
+ *
+ * `src/data` used to import `getCustomGenre` straight out of `src/features/customGenre`, which made
+ * the domain layer name a feature: the layering gate recorded it as debt, because the data layer's
+ * contract then included how a *feature* stores its records. Custom genres are stored with the feature
+ * that creates them, so the dependency is real — it was simply pointing the wrong way.
+ *
+ * Inverted here: the domain asks "how do I resolve a custom genre?" and `App` answers, once, at
+ * startup. `src/data` no longer names any feature, and a surface that does not want custom genres
+ * (a test, a future shell) simply does not answer.
+ */
+type CustomGenreResolver = (id: string) => Promise<Genre | null>;
+
+let customGenreResolver: CustomGenreResolver | null = null;
+
+/** Called once by the app shell. Passing `null` clears the resolution. */
+export function setCustomGenreResolver(resolver: CustomGenreResolver | null): void {
+  customGenreResolver = resolver;
+}
+
+const resolveCustomGenre = async (id: string): Promise<Genre | null> => {
+  if (!customGenreResolver) return null;
+  try {
+    return await customGenreResolver(id);
+  } catch {
+    // A resolver failure must not make every genre load fail; a missing custom genre is just absent.
+    return null;
+  }
+};
 
 const CATEGORY_LOADERS: Record<string, () => Promise<Genre[]>> = {
   house: () => import("../genres/house").then((m) => m.HOUSE_GENRES),
@@ -25,6 +55,22 @@ const CATEGORY_LOADERS: Record<string, () => Promise<Genre[]>> = {
 };
 
 /**
+ * Drops cached genre records so the next load re-resolves them.
+ *
+ * The cache had no eviction at all, which is invisible for the built-in library (its chunks are
+ * immutable for the life of the page) and wrong for the one category that can change while the app is
+ * running: a **custom genre the user just edited or deleted**. Saving one and reopening it returned the
+ * pre-edit object, because `loadGenre` answered from the cache it had populated on first read.
+ *
+ * Call with an id after mutating that genre, or with nothing to clear everything (used by tests and
+ * after a bulk import).
+ */
+export function invalidateGenreCache(id?: string): void {
+  if (id === undefined) cache.clear();
+  else cache.delete(id);
+}
+
+/**
  * Loads a full genre by ID asynchronously on-demand (P1-13, P7-03)
  */
 export async function loadGenre(id: string): Promise<Genre | null> {
@@ -34,7 +80,7 @@ export async function loadGenre(id: string): Promise<Genre | null> {
 
   // Fast-track resolution for custom genres (P7-03)
   if (id.startsWith("custom-")) {
-    const custom = await getCustomGenre(id);
+    const custom = await resolveCustomGenre(id);
     if (custom) {
       cache.set(id, custom);
       return custom;
@@ -56,7 +102,7 @@ export async function loadGenre(id: string): Promise<Genre | null> {
   }
 
   // Final check for custom genres without prefix
-  const custom = await getCustomGenre(id);
+  const custom = await resolveCustomGenre(id);
   if (custom) {
     cache.set(id, custom);
     return custom;

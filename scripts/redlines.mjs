@@ -218,6 +218,21 @@ const deploySource = read("scripts/deploy.mjs");
  * the stylesheet forcing 28 px buttons long after the class stopped being applied. The gate is the
  * only thing that notices, so it must not be quietly dropped from `verify`.
  */
+/**
+ * R6f — the layer gate's tolerated-violation table must be empty.
+ *
+ * It exists so a real dependency that cannot yet be inverted can be declared *with its fix* instead of
+ * silently breaking the gate. But a parking space becomes a graveyard: the table must be a decision the
+ * team notices, not a place violations accumulate. Both original entries have been paid, so an empty
+ * table is now the contract.
+ */
+const layerSource = read("scripts/check_layers.mjs");
+const allowBlock = layerSource.match(/const ALLOW = new Map\(\[([\s\S]*?)\]\);/);
+check(
+  "R6f the layer gate tolerates no violations",
+  Boolean(allowBlock) && allowBlock[1].replace(/\/\*[\s\S]*?\*\//g, "").trim() === ""
+);
+
 check(
   "R6e verify keeps the CSS-usage gate",
   // `vite-node`, not `node`: the sweep imports its parsing helpers from `src/utils/cssUsage.ts` so the

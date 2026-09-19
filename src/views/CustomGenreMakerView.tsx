@@ -27,7 +27,7 @@ import {
 import { CustomGenre, RADAR_KEYS_ORDER } from "../types/customGenre";
 import { Genre, GenreCategory, GenreRadarMetrics, SequencerTrack } from "../types/genre";
 import { GENRE_INDEX } from "../data/index/genresIndex";
-import { loadGenre } from "../data/index/loader";
+import { invalidateGenreCache, loadGenre } from "../data/index/loader";
 import { useCustomGenres } from "../features/customGenre/useCustomGenres";
 import { encodeGenreToSharePayload, decodeSharePayloadToGenre } from "../features/customGenre/customGenreCodec";
 import { renderGenrePoster } from "../features/customGenre/posterGenerator";
@@ -243,6 +243,12 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
     setIsSaving(true);
     try {
       await saveCustomGenre(activeGenre);
+      /**
+       * The loader caches genre records for the life of the page, and a custom genre is the one
+       * category that can change while the app runs. Without this, reopening a genre the user just
+       * edited renders the pre-edit object — their change looks unsaved.
+       */
+      invalidateGenreCache(activeGenre.id);
       setIsDirty(false);
       toast.success(t("maker_saved_success"));
     } catch (err) {

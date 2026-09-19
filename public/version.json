@@ -1,27 +1,27 @@
 {
-  "version": "2.0.68",
+  "version": "2.0.69",
   "releaseDate": "2026-09-19",
-  "changelogCount": 132,
+  "changelogCount": 133,
   "latest": {
-    "version": "2.0.68",
+    "version": "2.0.69",
     "date": "2026-09-19",
     "category": "refactor",
     "title": {
-      "zh": "v2.0.68 死 CSS 清查：7 条无人引用的规则被删，并加了守门脚本",
-      "en": "v2.0.68 Dead-CSS Sweep: Seven Unreferenced Rules Deleted, and a Gate to Keep It That Way"
+      "zh": "v2.0.69 domain 不再指名 feature：自定义曲风解析改为注入，分层门禁的容忍表清零",
+      "en": "v2.0.69 The Domain Stops Naming a Feature: Custom-Genre Resolution Is Injected, and the Tolerance Table Is Empty"
     },
     "highlights": [
       {
-        "zh": "**为什么值得做**：`.landscape-compact-bar` 在样式表里躺了五条 `!important` 规则，**没有任何地方引用它**——包括把按钮压到 28px（低于手机端统一的 44px 下限）。它能活下来是因为**死 CSS 是不可见的**：不报错、不警告，下一个人读它只会当成意图。它是改旁边的代码时偶然发现的，那不是流程。",
-        "en": "**Why this was worth doing**: `.landscape-compact-bar` sat in the stylesheet as five `!important` rules that **nothing referenced** — including forcing buttons to 28px, below the 44px minimum the phone shell standardised on. It survived because **dead CSS is invisible**: nothing fails, nothing warns, and the next reader takes it for intent. It was found by accident while editing nearby code, which is not a process."
+        "zh": "**还清分层门禁最后一笔债**：`src/data/index/loader.ts` 直接 import `features/customGenre` 的 `getCustomGenre`——数据层因此「指名」了一个功能模块。这个依赖是真的（自定义曲风确实存在创建它的那个功能里），但**方向反了**。现在 loader 暴露 `setCustomGenreResolver`，由 `src/app/installCustomGenreResolver.ts` 在启动时回答它。`src/data` 不再知道任何 feature 的存在。",
+        "en": "**The layer gate's last debt is paid**: `src/data/index/loader.ts` imported `getCustomGenre` straight out of `features/customGenre`, so the data layer *named* a feature module. The dependency is real — custom genres are stored with the feature that creates them — but it pointed the wrong way. The loader now exposes `setCustomGenreResolver`, and `src/app/installCustomGenreResolver.ts` answers it at startup. `src/data` no longer knows any feature exists."
       },
       {
-        "zh": "**新增 `check:css` 门禁**（已接入 `verify`，红线 R6e 守住）：扫描 `src/index.css` 的类选择器，逐个在整棵源码树里找引用。**判断方向刻意保守**——引用检测是子串搜索而不是解析 `className`，因为类名常由片段拼出（`\"track-row-\" + idx`）。子串搜索偏向「有引用」：**漏掉一条死规则没有代价，删掉一条活规则是视觉回归**。",
-        "en": "**New `check:css` gate** (wired into `verify`, guarded by red line R6e): it enumerates the class selectors in `src/index.css` and looks for each one anywhere in the source tree. **The reference test errs deliberately towards \"live\"** — it is a substring search rather than a `className` parse, because class names are frequently assembled from fragments (`\"track-row-\" + idx`). A missed dead rule costs nothing; deleting a live one is a visual regression."
+        "zh": "**容忍表清零，并用红线 R6f 守住「必须为空」**：那张表存在的意义是让「真实但暂时无法反转的依赖」被**写明修法**地声明出来，而不是静默破坏门禁。但它一旦变成停车场就会变成坟场——两笔债既已还清，现在非空即失败。同时验证过门禁本身仍然会拦住新增违规（把旧 import 加回去，`check:layers` 退出码 1）。",
+        "en": "**The tolerance table is empty, and red line R6f keeps it that way.** The table exists so a real dependency that cannot yet be inverted is declared *with its fix* rather than silently breaking the gate — but a parking space becomes a graveyard. Both entries are paid, so it now fails if non-empty. The gate itself was also verified to still catch a new violation: re-adding the old import makes `check:layers` exit 1."
       },
       {
-        "zh": "**删掉 7 条**：`.animate-spawn`（连同它专属的 `@keyframes spawn`）、`.touch-action-pan-x` / `.touch-action-pan-y`、四个安全区辅助类（`.safe-pt` / `.safe-pl` / `.safe-pr` / `.bottom-safe`）以及 `.landscape-compact-header`。留下的 `.animate-pulse-glow` / `.animate-orbit` 登记为**刻意保留**：它们是 reduced-motion 守卫选择器表里的冗余分支，删掉会削弱一项可访问性保证，而保留一个永不匹配的分支没有代价。",
-        "en": "**Seven deleted**: `.animate-spawn` (with its only consumer, `@keyframes spawn`), `.touch-action-pan-x` / `.touch-action-pan-y`, four safe-area helpers (`.safe-pt` / `.safe-pl` / `.safe-pr` / `.bottom-safe`) and `.landscape-compact-header`. The two that stay — `.animate-pulse-glow` / `.animate-orbit` — are declared **intentional**: they are redundant arms of the reduced-motion guard's selector list, and pruning them would weaken an accessibility guarantee while a never-match…"
+        "zh": "**反转依赖会引入一个新的静默失败方式**：如果没人回答 loader 的问题，用户保存的自定义曲风就**解析不出来**——在用户看来是「我的曲风不见了」。所以行为在两个方向都被测试钉住：没有 resolver 时返回 null（而不是抛错，抛错会让整个曲风加载失败）；装了 resolver 时正常解析；内置曲风**不会去问 resolver**（这保证常见路径零开销）；resolver 抛错时（IndexedDB 被禁用）退化为「这个自定义曲风不存在」，而不是「所有曲风都加载不了」。",
+        "en": "**Inverting a dependency introduces a new way to fail silently**: if nobody answers the loader's question, a user's saved custom genre stops resolving — which looks to them like their genre has vanished. So the behaviour is pinned in both directions: no resolver returns null rather than throwing (a throw would fail the whole genre load); an installed resolver resolves; built-in genres never consult the resolver, which keeps the common path free; and a resolver that throws (I…"
       }
     ],
     "truncated": true

@@ -65,14 +65,19 @@ const REPORT_ONLY = process.argv.includes("--report");
  * pay it off.
  */
 const ALLOW = new Map([
-  [
-    "src/data/index/loader.ts -> src/features/customGenre/customGenreDb",
-    "The domain's genre loader resolves custom genres, which are stored by the feature that creates them. The right fix is inverting this: the loader should take a resolver and the app should supply it, so src/data stops naming a feature. Debt because the direction is genuinely wrong, tolerated because the alternative today is a 382-line IndexedDB store moving layers.",
-  ],
-  [
-    "src/hooks/useAppShortcuts.ts -> src/components/Header",
-    "Imports the `NavTab` union, which is navigation vocabulary rather than a component's shape. Move the union to a shared navigation module and delete this entry.",
-  ],
+  /*
+   * Empty, and it should stay that way.
+   *
+   * It held two entries: `src/data/index/loader.ts` naming the custom-genre feature (since inverted —
+   * the loader now takes a resolver that `src/app/installCustomGenreResolver.ts` supplies), and
+   * `src/hooks/useAppShortcuts.ts` importing `NavTab` from a component (since moved to
+   * `src/app/navigation.ts`).
+   *
+   * An entry here is debt with a stated fix. Adding one is legitimate when a dependency is real and
+   * genuinely cannot be inverted yet — but a non-empty table should be a thing the team has decided,
+   * not a place a violation goes to be forgotten, so `R6f` fails if this map is not empty. Pay the
+   * debt or delete the violation; do not park it.
+   */
 ]);
 
 const LAYERS = [

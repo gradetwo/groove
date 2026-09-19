@@ -6,6 +6,11 @@ import { useGs1Setting } from "./features/sequencer/useGs1Setting";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { Genre, SequencerPattern } from "./types/genre";
 import { GENRE_INDEX_MAP } from "./data/index/genresIndex";
+/**
+ * Side-effect import on purpose: it must run before the first `loadGenre`, and this module is the
+ * first thing the shell pulls in. See the file for why the wiring lives in `src/app`.
+ */
+import "./app/installCustomGenreResolver";
 import { loadGenre } from "./data/index/loader";
 import { AudioEngine } from "./audio/AudioEngine";
 import { ErrorBoundary } from "./components/ErrorBoundary";
