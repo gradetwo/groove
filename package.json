@@ -1,7 +1,7 @@
 {
   "name": "groove-music-genre-learning",
   "private": true,
-  "version": "2.0.75",
+  "version": "2.0.76",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -27,7 +27,7 @@
     "handoff:e2e": "node scripts/slow_pack.mjs run --only e2e --label e2e",
     "slow:export": "node scripts/slow_pack.mjs export",
     "slow:verify": "node scripts/slow_pack.mjs verify",
-    "verify": "npm run version:check && npm run docs:check && npm run redlines && npm run check:layers && npm run check:css && npm run check:docs:refs && npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run check:budget && npm run check:gs1 && npm run test:e2e",
+    "verify": "npm run version:check && npm run docs:check && npm run redlines && npm run check:layers && npm run check:css && npm run check:docs:refs && npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run probe:toolbar && npm run check:budget && npm run check:gs1 && npm run test:e2e",
     "package": "npm run verify && python3 scripts/package.py",
     "deploy": "npm run verify && npm run deploy:only",
     "deploy:only": "node scripts/deploy.mjs",
@@ -41,7 +41,8 @@
     "test:e2e:mobile": "E2E_PROFILE=mobile node scripts/test_matrix.js",
     "probe:scroll": "node scripts/serve_probe.mjs",
     "check:css": "vite-node scripts/check_css_usage.mjs",
-    "check:docs:refs": "vite-node scripts/check_doc_refs.mjs"
+    "check:docs:refs": "vite-node scripts/check_doc_refs.mjs",
+    "probe:toolbar": "node scripts/measure_toolbar_density.mjs"
   },
   "dependencies": {
     "@types/three": "^0.185.4",

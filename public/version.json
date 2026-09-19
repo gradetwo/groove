@@ -1,29 +1,29 @@
 {
-  "version": "2.0.75",
+  "version": "2.0.76",
   "releaseDate": "2026-09-19",
-  "changelogCount": 139,
+  "changelogCount": 140,
   "latest": {
-    "version": "2.0.75",
+    "version": "2.0.76",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.75 导出不再沉默：限幅器没加载成功时，用户会被告知",
-      "en": "v2.0.75 The Export Stops Being Silent: When the Limiter Did Not Load, the User Is Told"
+      "zh": "v2.0.76 工具条瘦身：36 → 16 个控件、215 → 111px，并修掉它暴露出的「密度里的控件点不动」",
+      "en": "v2.0.76 The Toolbar Slims Down: 36 -> 16 Controls, 215 -> 111 px, and the Click-Swallowing Bug It Exposed"
     },
     "highlights": [
       {
-        "zh": "上一版顺手测出一条比重复渲染偏差严重得多的隐患：`createMasterLimiter` 优先用 AudioWorklet 的 true-peak 限幅器，`addModule` 失败时**静默**换成 `DynamicsCompressor`。强制走回退路径实测（同一次 3 小节渲染）：整体**响 2.36 dB**、某频段**差 4.83 dB**。也就是说用户拿到的是一个**和他刚刚试听的不是同一个东西**的文件，而界面仍然说「导出完成」。",
-        "en": "The previous release turned up a hazard far worse than the repeat-render drift: `createMasterLimiter` prefers an AudioWorklet true-peak limiter and **silently** swaps in a `DynamicsCompressor` when `addModule` fails. Forcing that path measures the export **2.36 dB louder overall and 4.83 dB off in one band** for the same three-bar render. The user gets a file that is not the thing they just auditioned, while the UI still says \"export complete\"."
+        "zh": "**把早就写好、却一直没接线的分层表接上。** `toolbarTiers.ts` 早已登记 55 个控件的使用频率（Tier 1 常驻 12 个，硬上限 14），但 Toolbar 从来不看它。现在加一个谓词 `isControlVisible(id, showAdvanced)`，Toolbar 里定义一次 `shows`、13 处沿用。实测（`npm run probe:toolbar`，1440×900）：**可见控件 36 → 16 个元素、去重后 12 个 tier id；视觉行数 4 → 2；高度 215 → 111px；占视口 23.9% → 12.3%；默认可见的 Tier 2/3 控件 24 → 0。**",
+        "en": "**The tier table existed and nothing read it.** `toolbarTiers.ts` already recorded the frequency of 55 controls (12 always-visible Tier 1, hard cap 14), but the Toolbar never consulted it. There is now one predicate — `isControlVisible(id, showAdvanced)` — and one `shows` defined in the Toolbar and used in 13 places. Measured with `npm run probe:toolbar` at 1440x900: **visible controls 36 -> 16 elements (12 distinct tier ids); visual rows 4 -> 2; height 215 -> 111 px; 23.9%…"
       },
       {
-        "zh": "**修的是「静默」，不是回退**。回退本身要保留——音频绝不能被放任无上限。改动：`RenderWavOptions.onLimiterKind` 把实际使用的限幅器报出来；`ExportedWav.limiterKind` 一路带到调用方；音序器的导出动作在拿到 `\"fallback\"` 时改说「已导出该文件，但真实峰值限幅器未能加载——它比试听更响、控制更差，请刷新后重试」，而不是笼统的「导出完成」。文件照样给用户，因为它是有效的。",
-        "en": "**What changed is the silence, not the fallback.** The fallback stays — audio must never be left un-ceilinged. `RenderWavOptions.onLimiterKind` now reports which limiter the graph actually got, `ExportedWav.limiterKind` carries it out to callers, and the sequencer's export action says \"exported, but the true-peak limiter could not load — this file is louder and less controlled than the preview; reload and export again\" instead of a plain success. The file is still handed ove…"
+        "zh": "**顺带修掉一个真缺陷：高级面板的入口在最常见的桌面宽度下根本不在屏幕上。** 实测：1280 与 1440 宽下，Fold / 高级 / More 三个触发按钮被横向挤到 `left≈1565`——**在窗口右边缘之外**，而它们所在的容器是 `overflow-x-auto scrollbar-none`，**连滚动条都不显示**。所以这个入口实际不可发现，Tier 3 的 FX、量化细调、触感全部连带不可达。控件瘦下来之后它回到 `left=845`。探针现在每次都会打印这一行。",
+        "en": "**A real defect fixed on the way: the advanced panel's own entry point was off-screen at the most common desktop widths.** Measured at 1280 and 1440: the Fold / Advanced / More triggers were pushed to `left ~ 1565`, **past the right edge of the window**, inside an `overflow-x-auto scrollbar-none` container — **with no scrollbar shown either**. The entry to the advanced panel was undiscoverable, and everything Tier 3 behind it (FX, fine quantisation, haptics) was unreachable…"
       },
       {
-        "zh": "**为什么这也算修 bug 而不只是加日志**：本项目的原则是「不要声称界面无法观察到的成功」。一次静默降级的导出正是这个原则的反面——文件有效、提示成功、但结果与试听差 2.36 dB，而且用户没有任何办法察觉。测试 `src/test/exportLimiterKind.test.ts` 钉住「报告出实际的限幅器」与「降级不等于失败」两件事；顺带补上 `FakeAudioBuffer.duration`（缺它会让假渲染出的导出报 `durationSec: undefined`，是测试替身的洞而不是调用方的 bug）。",
-        "en": "**Why this counts as a fix and not just a log line**: this project's rule is to never claim a success the UI cannot observe. A silently degraded export is the exact opposite — valid file, success message, result 2.36 dB away from the audition, and no way for the user to notice. `src/test/exportLimiterKind.test.ts` pins both halves: that the actual limiter is reported, and that a degradation is not a failure. It also adds `FakeAudioBuffer.duration`, without which a fake-rende…"
+        "zh": "**接线的方式比原计划更省风险。** 原计划第一步是把 1889 行的 `Toolbar.tsx` 拆成四个组件。实际发现这些控件**本来就已经各自包在条件表达式里**，所以接线是「在既有条件后面追加一个 `shows(\"id\")`」——纯字符串替换、每处断言锚点唯一，而不是插入新的包裹层（脚本化的包裹层会撞上这些既有条件，我实测撞了一次并回退）。真正需要新包裹的只有三处，且都是整组同 tier；测试断言「这一组 tier 相同」，以保证那个 gate 始终描述它所挡住的东西。",
+        "en": "**The wiring took a lower-risk route than the plan's.** Step one was going to split the 1,889-line `Toolbar.tsx` into four components. In practice these controls **already sit inside their own conditional expressions**, so the gate is a `shows(\"id\")` appended to an existing condition — a pure string substitution with a uniqueness assertion per anchor, not a new wrapper layer. (A scripted wrapper collided with exactly those conditions; I hit it once and reverted.) Only three…"
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
