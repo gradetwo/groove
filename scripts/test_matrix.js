@@ -672,14 +672,17 @@ async function runTestOnTarget(target, baseUrl) {
       /**
        * Every phone-reachable surface is measured by name: the check runs after several
        * navigations, and "how many controls are on screen" only means something for a named screen.
-       * These four are the ones brought up to the 44 px rule so far; G.38 in the plan lists the
-       * measured counts for the rest (maker, challenge, masterclass, timelines, compare, analyzer).
+       * These seven are the ones brought up to the 44 px rule so far; G.39 in the plan lists the
+       * measured counts for the rest (both timelines, compare, analyzer).
        */
       for (const surface of [
         { name: "studio", url: baseUrl },
         { name: "explore", url: `${baseUrl}?tab=galaxy` },
         { name: "chords", url: `${baseUrl}?tab=chords` },
         { name: "kick", url: `${baseUrl}?tab=kick` },
+        { name: "maker", url: `${baseUrl}?tab=maker` },
+        { name: "challenge", url: `${baseUrl}?tab=challenge` },
+        { name: "masterclass", url: `${baseUrl}?tab=masterclass` },
       ]) {
         await page.goto(surface.url, { waitUntil: "domcontentloaded" });
         await page.waitForTimeout(600);
@@ -1681,46 +1684,76 @@ async function runTestOnTarget(target, baseUrl) {
     await page.waitForTimeout(600);
     await page.evaluate(() => window.__genreDiag.start());
 
-    const chipSelectors = await page.$$eval("[data-testid^='genre-chip-']", (els) =>
-      els.map((e) => `[data-testid='${e.getAttribute("data-testid")}']`)
+    /**
+     * Candidate chips, current genre excluded when the URL names it.
+     *
+     * The app keeps its genre in state, so "the second chip" is not necessarily a *change*: after the
+     * earlier steps had already visited it, clicking it was a legitimate no-op and this check went
+     * vacuous on both iPhone orientations. `candidates` gives the loop something to try instead.
+     */
+    const currentGenre = await page.evaluate(
+      () => new URLSearchParams(location.search).get("genre")
     );
-    const switches = Math.min(2, Math.max(0, chipSelectors.length - 1));
+    const candidates = (
+      await page.$$eval("[data-testid^='genre-chip-']", (els, current) =>
+        els
+          .map((e) => e.getAttribute("data-testid") ?? "")
+          .filter((id) => id && !id.endsWith(current ?? "\u0000"))
+          .map((id) => `[data-testid='${id}']`),
+        currentGenre
+      )
+    ).slice(0, 3);
+    const switches = candidates.length > 0 ? 1 : 0;
     for (let i = 1; i <= switches; i++) {
       const before = await page.evaluate(() => ({
         nav: window.__genreDiag.nav,
         samples: window.__genreDiag.samples.length,
       }));
-      // Click through the delivery-verifying helper: on WebKit a plain `force: true` click at
-      // coordinates silently did nothing here (the page had been scrolled by the earlier steps, and
-      // a click needs a pair of down/up on the same node), which is how the first version of this
-      // check passed vacuously with `navigations=0, flips=0`.
-      await clickVerified(page, chipSelectors[i], { timeoutMs: 8000 });
-      // By this point the matrix has edited the pattern (step toggles, a timbre change, a note
-      // drawn in the roll), so the unsaved-changes guard legitimately asks first. Answer it and
-      // carry on measuring: the loop this check hunts happens *after* the switch is allowed, and a
-      // dialog left open would otherwise make the check vacuous (it did, twice).
-      await page.waitForTimeout(400);
-      if (await page.$("[data-testid='unsaved-discard']")) {
-        console.log(`   · genre switch ${i}: unsaved-changes guard asked (pattern had edits) — discarding to continue`);
-        await clickVerified(page, "[data-testid='unsaved-discard']", { timeoutMs: 8000 });
+      let after = null;
+      for (const candidate of candidates) {
+        // Click through the delivery-verifying helper: on WebKit a plain `force: true` click at
+        // coordinates silently did nothing here (the page had been scrolled by the earlier steps, and
+        // a click needs a pair of down/up on the same node), which is how the first version of this
+        // check passed vacuously with `navigations=0, flips=0`.
+        await clickVerified(page, candidate, { timeoutMs: 8000 });
+        /**
+         * By this point the matrix has edited the pattern (step toggles, a timbre change, a note
+         * drawn in the roll), so the unsaved-changes guard legitimately asks first. Waiting for the
+         * dialog rather than sleeping 400 ms makes this deterministic: the fixed sleep missed it and
+         * left the dialog open, which is the second way this check went vacuous.
+         */
+        const guard = await page
+          .waitForSelector("[data-testid='unsaved-discard']", { timeout: 1500 })
+          .catch(() => null);
+        if (guard) {
+          console.log(`   · genre switch ${i}: unsaved-changes guard asked (pattern had edits) — discarding`);
+          await clickVerified(page, "[data-testid='unsaved-discard']", { timeoutMs: 8000 });
+        }
+        await page.waitForTimeout(2000);
+        after = await page.evaluate(({ nav, samples }) => {
+          const slice = window.__genreDiag.samples.slice(samples);
+          let changes = 0;
+          for (let k = 1; k < slice.length; k++) if (slice[k] !== slice[k - 1]) changes += 1;
+          return { navDelta: window.__genreDiag.nav - nav, patternFlips: changes };
+        }, before);
+        if (after.patternFlips >= 1) break;
       }
-      await page.waitForTimeout(2000);
-      const after = await page.evaluate(({ nav, samples }) => {
-        const slice = window.__genreDiag.samples.slice(samples);
-        let changes = 0;
-        for (let k = 1; k < slice.length; k++) if (slice[k] !== slice[k - 1]) changes += 1;
-        return { navDelta: window.__genreDiag.nav - nav, patternFlips: changes };
-      }, before);
       // Print the measurements before judging them: the sibling project's notes record a probe that
       // asserted first and therefore left nothing behind on the run that mattered (§6.10). With the
       // numbers in the log, an interrupted run is still evidence.
+      const surroundings = await page.evaluate(() => ({
+        dialog: Boolean(document.querySelector("[data-testid='unsaved-changes-dialog']")),
+        url: location.search,
+        genre: new URLSearchParams(location.search).get("genre"),
+      }));
       console.log(
-        `   · genre switch ${i}: navigations=${after.navDelta} patternFlips=${after.patternFlips} (${target.name})`
+        `   · genre switch ${i}: navigations=${after.navDelta} patternFlips=${after.patternFlips} ` +
+          `dialog=${surroundings.dialog} url=${surroundings.url || "(none)"} (${target.name})`
       );
 
       // A click that changed nothing means the check is not exercising anything: fail loudly rather
       // than pass. "Not judged" must never be recorded as "passed".
-      if (after.patternFlips < 1) {
+      if (!after || after.patternFlips < 1) {
         throw new Error(
           `Clicking a genre chip while playing changed no pattern on ${target.name} (navigations=${after.navDelta}, flips=${after.patternFlips}) — the check is vacuous`
         );
