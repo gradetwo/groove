@@ -369,3 +369,134 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     engine.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// M11: a track's own swing must not drop the latency compensation
+// ---------------------------------------------------------------------------------------
+
+describe("M11 · per-track swing and the latency offset", () => {
+  let restore: (() => void) | null = null;
+
+  beforeEach(() => {
+    restore = installFakeAudioContext();
+  });
+
+  afterEach(() => {
+    restore?.();
+    restore = null;
+    vi.restoreAllMocks();
+  });
+
+  /** One track, one note on an odd step — the step swing moves. */
+  function singleTrackPattern(trackOver: Record<string, unknown>): SequencerPattern {
+    return {
+      genre_id: "swing-parity",
+      bpm: 120,
+      swing: 0,
+      scale: "C minor",
+      totalSteps: 4,
+      tracks: [
+        {
+          track_id: "bass",
+          name: "Bass",
+          instrument: "synth",
+          steps: [0, 1, 0, 0],
+          velocity: new Array(4).fill(100),
+          pitch: [0, 60, 0, 0],
+          gate: new Array(4).fill(0.8),
+          volume: 0.8,
+          pan: 0,
+          mute: false,
+          solo: false,
+          ...trackOver,
+        },
+      ],
+    } as unknown as SequencerPattern;
+  }
+
+  /** Every voice onset the fake context recorded since the given counts. */
+  function onsetsSince(ctx: FakeAudioContext, oscBefore: number, srcBefore: number): number[] {
+    return [
+      ...ctx.createdOscillators.slice(oscBefore).flatMap((o) => o.startedAt),
+      ...ctx.createdBufferSources.slice(srcBefore).flatMap((s) => s.started.map((x) => x.when)),
+    ];
+  }
+
+  /** Schedules one odd step directly, the way the look-ahead loop calls the scheduler. */
+  function scheduleOddStep(
+    engine: AudioEngine,
+    ctx: FakeAudioContext,
+    gridTime: number,
+    stepDur = 0.125
+  ): number[] {
+    const latency = engine.getLatencyCompensation() / 1000;
+    const swingOffset = engine.getSwing() > 0 ? engine.getSwing() * 0.5 * stepDur : 0;
+    // What the caller computes: grid + global swing + latency, clamped to "not in the past".
+    const scheduled = Math.max(ctx.currentTime, gridTime + swingOffset + latency);
+    const oscBefore = ctx.createdOscillators.length;
+    const srcBefore = ctx.createdBufferSources.length;
+    (engine as unknown as { nextStepTime: number }).nextStepTime = gridTime;
+    (engine as unknown as { scheduleStep: (s: number, t: number, d: number) => number[] })
+      .scheduleStep(1, scheduled, stepDur);
+    return onsetsSince(ctx, oscBefore, srcBefore);
+  }
+
+  it("adds the same latency offset to a track with its own swing as to one without", () => {
+    const stepDur = 0.125;
+    const grid = 10;
+
+    const plain = new AudioEngine();
+    plain.setPattern(singleTrackPattern({}));
+    plain.setSwing(0);
+    plain.setLatencyCompensation(20);
+    plain.initAudioContext();
+    const plainCtx = plain.getAudioContext() as unknown as FakeAudioContext;
+    const plainOnsets = scheduleOddStep(plain, plainCtx, grid, stepDur);
+
+    const swung = new AudioEngine();
+    swung.setPattern(singleTrackPattern({ swing: 40 }));
+    swung.setSwing(0);
+    swung.setLatencyCompensation(20);
+    swung.initAudioContext();
+    const swungCtx = swung.getAudioContext() as unknown as FakeAudioContext;
+    const swungOnsets = scheduleOddStep(swung, swungCtx, grid, stepDur);
+
+    expect(plainOnsets.length).toBeGreaterThan(0);
+    expect(swungOnsets.length).toBeGreaterThan(0);
+
+    // No own swing: exactly the caller's time (grid + 20 ms).
+    for (const when of plainOnsets) expect(when).toBeCloseTo(grid + 0.02, 9);
+    // Own swing: its own 0.4 swing term *and* the same 20 ms — not one instead of the other.
+    const expected = grid + 0.4 * 0.5 * stepDur + 0.02;
+    for (const when of swungOnsets) expect(when).toBeCloseTo(expected, 9);
+    // The two differ by the swing term, and the bug (dropping the offset) would land the swung
+    // track a full 20 ms early — a whole latency-compensation ahead of every other track.
+    expect(expected - plainOnsets[0]).toBeCloseTo(0.4 * 0.5 * stepDur, 9);
+    expect(swungOnsets[0]).not.toBeCloseTo(grid + 0.4 * 0.5 * stepDur, 6);
+
+    plain.destroy();
+    swung.destroy();
+  });
+
+  it("offsets an independently-swung track from the global swing's grid, latency included", () => {
+    const stepDur = 0.125;
+    const grid = 4;
+
+    const engine = new AudioEngine();
+    // Global swing 50% and a track that cancels it: the track must land on the un-swung grid,
+    // still shifted by the latency compensation every voice carries.
+    engine.setPattern(singleTrackPattern({ swing: -50 }));
+    engine.setSwing(0.5);
+    engine.setLatencyCompensation(-8); // a negative compensation is legal (early monitoring)
+    engine.initAudioContext();
+    const ctx = engine.getAudioContext() as unknown as FakeAudioContext;
+    const onsets = scheduleOddStep(engine, ctx, grid, stepDur);
+
+    expect(onsets.length).toBeGreaterThan(0);
+    for (const when of onsets) expect(when).toBeCloseTo(grid - 0.008, 9);
+    // The global grid (what the other tracks get) is a full swing term away.
+    expect(onsets[0]).not.toBeCloseTo(grid + 0.5 * 0.5 * stepDur - 0.008, 6);
+
+    engine.destroy();
+  });
+});

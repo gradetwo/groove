@@ -25,7 +25,7 @@ import { initIosAudioUnlock } from "./iosAudioUnlock";
 import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp, visualLeadSeconds } from "./schedulerMath";
-import { resolveRatchet } from "./noteEvents";
+import { ratchetVelocityScale, resolveRatchet } from "./noteEvents";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -1750,6 +1750,8 @@ export class AudioEngine {
   private scheduleStep(step: number, time: number, stepDur: number): number[] {
     const activeTracks: number[] = [];
     if (!this.pattern || !this.ctx) return activeTracks;
+    // Narrowed once for the callbacks below, where `this.ctx` would widen back to nullable.
+    const ctx = this.ctx;
 
     const anySolo = this.trackStates.some((t) => t.solo);
 
@@ -1800,8 +1802,20 @@ export class AudioEngine {
       // Independent per-track swing offset
       const trackSwingOffset = (track.swing !== undefined ? track.swing / 100 : 0);
       const effSwing = Math.max(0, Math.min(0.75, this.swing + trackSwingOffset));
+      /**
+       * M11: a track with its own swing must carry the same two live-only adjustments the caller
+       * already folded into `time` — the latency compensation every voice is shifted by, and the
+       * `>= currentTime` clamp that keeps a late step in the future.
+       *
+       * This branch rebuilt the time from `nextStepTime` alone, so a track with independent swing
+       * fired a full latency-compensation ahead of every other track, and ahead of its own export
+       * (a bounce has no output latency to compensate). Only the swing term may differ here.
+       */
       const trackStepTime = (step % 2 === 1 && effSwing !== this.swing)
-        ? (this.nextStepTime + (effSwing * 0.5) * stepDur)
+        ? Math.max(
+            ctx.currentTime,
+            this.nextStepTime + (effSwing * 0.5) * stepDur + this.latencyCompensationMs / 1000
+          )
         : time;
 
       // Ratchet / Subdivisions
@@ -1825,7 +1839,7 @@ export class AudioEngine {
         const subDur = stepDur / ratchet;
         for (let r = 0; r < ratchet; r++) {
           const subTime = trackStepTime + r * subDur;
-          const subVel = normalizedVel * (0.85 + (r / ratchet) * 0.15);
+          const subVel = normalizedVel * ratchetVelocityScale(r, ratchet);
           this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal, false, noisePositionFor(trackIdx, stepIdx, r), stepIdx);
         }
       } else {
