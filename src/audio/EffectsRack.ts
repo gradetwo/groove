@@ -25,6 +25,9 @@ export interface EffectsRackState {
   bitDepth: number;    // 4 - 16 bits
 }
 
+/** Chorus modulation depth in seconds. Positive for the left tap, negated for the right. */
+const CHORUS_DEPTH_SEC = 0.003;
+
 export const DEFAULT_FX_STATE: EffectsRackState = {
   filterEnabled: false,
   filterType: "lowpass",
@@ -148,10 +151,20 @@ export class EffectsRack {
   // Stereo Chorus
   private chorusDry: GainNode;
   private chorusWet: GainNode;
+  /**
+   * Forces the wet branch to two channels before it is split.
+   *
+   * A `ChannelSplitterNode` hands a mono input to output 0 and *silence* to output 1, so an
+   * all-centred mix would lose the right tap entirely without this up-mix.
+   */
+  private chorusStereo: GainNode;
+  private chorusSplitter: ChannelSplitterNode | null = null;
   private chorusDelayL: DelayNode;
   private chorusDelayR: DelayNode;
   private chorusLfo: OscillatorNode | null = null;
-  private chorusLfoGain: GainNode | null = null;
+  /** Anti-phase depth: `+depth` to the left tap, `-depth` to the right. */
+  private chorusLfoGainL: GainNode | null = null;
+  private chorusLfoGainR: GainNode | null = null;
 
   private state: EffectsRackState;
 
@@ -195,12 +208,39 @@ export class EffectsRack {
     this.updateFilterRouting();
     this.shaperNode.connect(this.crusherNode);
 
-    // Chorus routing
+    /**
+     * The wet taps carry their **own** channel.
+     *
+     * They used to be fed straight from `crusherNode` and merged back through a
+     * `ChannelMergerNode`, whose inputs are one channel wide — so the merger down-mixed the stereo
+     * bus and both taps carried the same mono sum. The wet signal lost the image it was supposed to
+     * widen, and the only difference between the sides was the fixed 15/22 ms delay. Split first,
+     * delay each side, then merge: left tap = channel 0, right tap = channel 1.
+     */
+    this.chorusStereo = ctx.createGain();
+    this.chorusStereo.channelCount = 2;
+    this.chorusStereo.channelCountMode = "explicit";
+    this.chorusStereo.channelInterpretation = "speakers"; // mono in -> both sides, not one
+
     this.crusherNode.connect(this.chorusDry);
     this.chorusDry.connect(this.outputNode);
 
-    this.crusherNode.connect(this.chorusDelayL);
-    this.crusherNode.connect(this.chorusDelayR);
+    if (typeof ctx.createChannelSplitter === "function") {
+      try {
+        this.chorusSplitter = ctx.createChannelSplitter(2);
+        this.crusherNode.connect(this.chorusStereo);
+        this.chorusStereo.connect(this.chorusSplitter);
+        this.chorusSplitter.connect(this.chorusDelayL, 0, 0);
+        this.chorusSplitter.connect(this.chorusDelayR, 1, 0);
+      } catch {
+        this.chorusSplitter = null;
+        this.crusherNode.connect(this.chorusDelayL);
+        this.crusherNode.connect(this.chorusDelayR);
+      }
+    } else {
+      this.crusherNode.connect(this.chorusDelayL);
+      this.crusherNode.connect(this.chorusDelayR);
+    }
     if (typeof ctx.createChannelMerger === "function") {
       try {
         const merger = ctx.createChannelMerger(2);
@@ -236,17 +276,25 @@ export class EffectsRack {
     if (typeof (this.ctx as any).createOscillator !== "function") return;
     try {
       const lfo = this.ctx.createOscillator();
-      const depth = this.ctx.createGain();
       lfo.type = "sine";
       lfo.frequency.value = this.state.chorusRate;
-      depth.gain.value = 0.003; // 3ms modulation depth
 
-      lfo.connect(depth);
-      depth.connect(this.chorusDelayL.delayTime);
-      depth.connect(this.chorusDelayR.delayTime);
+      // Anti-phase taps: the two sides move against each other instead of together, which is what
+      // widens the image rather than only combing it (the Juno-style arrangement). Both bases are
+      // far enough from zero that 3 ms of swing cannot drive a delay time negative.
+      const depthL = this.ctx.createGain();
+      const depthR = this.ctx.createGain();
+      depthL.gain.value = CHORUS_DEPTH_SEC;
+      depthR.gain.value = -CHORUS_DEPTH_SEC;
+
+      lfo.connect(depthL);
+      lfo.connect(depthR);
+      depthL.connect(this.chorusDelayL.delayTime);
+      depthR.connect(this.chorusDelayR.delayTime);
       lfo.start();
       this.chorusLfo = lfo;
-      this.chorusLfoGain = depth;
+      this.chorusLfoGainL = depthL;
+      this.chorusLfoGainR = depthR;
     } catch {
       // OfflineAudioContext or test mock fallback: chorus simply stays unmodulated.
     }
@@ -261,13 +309,16 @@ export class EffectsRack {
     } catch {
       // Already stopped, or a mock that does not implement stop().
     }
-    try {
-      this.chorusLfoGain?.disconnect();
-    } catch {
-      /* already disconnected */
+    for (const gain of [this.chorusLfoGainL, this.chorusLfoGainR]) {
+      try {
+        gain?.disconnect();
+      } catch {
+        /* already disconnected */
+      }
     }
     this.chorusLfo = null;
-    this.chorusLfoGain = null;
+    this.chorusLfoGainL = null;
+    this.chorusLfoGainR = null;
   }
 
   /**
