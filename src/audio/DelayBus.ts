@@ -21,12 +21,14 @@
  * `input` and `output` are created once and never replaced: the caller wires
  * `sendB -> input` and `output -> masterGain` a single time and then only calls
  * `setParams`. `pingPong` is the one parameter that changes the routing, so toggling it
- * rebuilds the internal nodes behind those two stable endpoints.
+ * rebuilds the internal nodes behind those two stable endpoints — and the build it replaces is
+ * **cross-faded out rather than disconnected** (M4): cutting it dead truncated the ringing tail,
+ * which is audible as a click on every genre change into or out of the dub lineage.
  *
  * Centred (the default), stereo preserved end to end:
  * ```
  *   input -> pre -> delay -> damp(lowpass) -> fb -> delay     (damped feedback loop)
- *                     └───> wetSum -> output (returnLevel)
+ *                     └───> gen -> wetSum -> output (returnLevel)
  * ```
  * A single `DelayNode` carries the whole (mono or stereo) send and the summing `GainNode`
  * preserves its channel count, so nothing here is ever fed into a mono
@@ -36,8 +38,11 @@
  * ```
  *   input -> pre -> splitter ─0─> sumL -> delayL -> dampL -> fbL ─> sumR
  *                            ─1─> sumR -> delayR -> dampR -> fbR ─> sumL
- *   delayL ─> merger[0], delayR ─> merger[1] -> wetSum -> output
+ *   delayL ─> merger[0], delayR ─> merger[1] -> gen -> wetSum -> output
  * ```
+ * `gen` is each build's own output gain. It is what makes the handover possible: a rebuild fades
+ * its predecessor's `gen` out and its own in, so a replaced build keeps ringing through its own
+ * delay line (the send to it stops, its contents do not vanish) while the new build warms up.
  * The splitter turns the send into two one-channel lines *before* anything reaches the
  * merger, so the merger's mono inputs only ever receive mono delay-line outputs. That is
  * the mono-merger down-mix hazard handled explicitly: a multi-channel signal is never
@@ -99,6 +104,33 @@ const DELAY_PARAM_SMOOTH_SEC = 0.012;
 const FALLBACK_BPM = 120;
 const BPM_MIN = 1;
 const BPM_MAX = 1000;
+
+/**
+ * M4: the cross-fade window after a ping-pong toggle, and why it is tied to the delay time.
+ *
+ * Changing the routing means the old build has nowhere to go, and the old code disconnected it on
+ * the spot — the tail of every repeat that was still ringing vanished in one sample, which is a
+ * click. Here the replaced build keeps its nodes and is faded out while the new one fades in, so the
+ * tail hands over instead of stopping.
+ *
+ * The new build's delay line starts empty, so its first repeat arrives one delay time after the
+ * toggle: that is the gap the outgoing tail has to cover. A fixed window cannot cover it — 250 ms
+ * covers a 1/8 at 120 BPM but leaves a hole at a 1/4 at 60 BPM — so the window follows the delay
+ * time between a floor and a ceiling:
+ *
+ *  - **Floor 250 ms**: long enough to be click-free (the parameter ramps elsewhere in this file are
+ *    12–20 ms), and it equals one 1/8 at 120 BPM, the most common echo in the library.
+ *  - **Ceiling 500 ms**: beyond that the switch stops feeling immediate — the old image would still
+ *    be at full level a second later — and a longer delay means sparser echoes, where a tail that
+ *    ends between two repeats is inaudible anyway.
+ */
+const CROSSFADE_MIN_SEC = 0.25;
+const CROSSFADE_MAX_SEC = 0.5;
+
+/** The cross-fade window for a rebuild at this delay time. Pure, so the bound is testable. */
+export function delayCrossfadeSeconds(timeSeconds: number): number {
+  return Math.min(CROSSFADE_MAX_SEC, Math.max(CROSSFADE_MIN_SEC, clampDelayTime(timeSeconds)));
+}
 
 export const DEFAULT_DELAY_PARAMS: DelayParams = {
   enabled: true,
@@ -194,8 +226,31 @@ export class DelayBus {
   private readonly _pre: GainNode;
   /** Persistent wet summing node; the per-build graph always drains into this. */
   private readonly _wetSum: GainNode;
-  /** Nodes belonging to the current build, disconnected and discarded on a rebuild. */
+  /** Nodes belonging to the current build; handed to `_retiring` (not disconnected) on a rebuild.
+   *  The build's own output gain is *not* in here — it is `_genGain`, and a retired build lists the
+   *  two separately so neither is disconnected twice. */
   private _nodes: AudioNode[] = [];
+  /**
+   * The current build's own output gain.
+   *
+   * Every build gets one, which is what makes a cross-fade possible at all: a rebuild can fade its
+   * predecessor out through *that* generation's gain while its own starts at zero, and both are
+   * summed into the persistent `_wetSum`. Without it there is one shared return and the only way to
+   * remove the old build is to disconnect it — the M4 defect.
+   */
+  private _genGain: GainNode | null = null;
+  /**
+   * Builds that have been replaced and are still fading out, with the context time at which their
+   * fade ends.
+   *
+   * Disconnected lazily by `_sweepRetired` on the next `setParams`/rebuild/`dispose` — never by a
+   * timer, because this file's contract is that an `OfflineAudioContext` builds the identical graph
+   * and a `setTimeout` would make the graph depend on wall-clock scheduling. So a single toggle with
+   * no later parameter change leaves one silent build connected until the next one arrives; every
+   * genre switch and tempo move calls `setParams`, so in practice that is the next user action.
+   * It is an array because two toggles can land inside one fade window.
+   */
+  private _retiring: Array<{ gain: GainNode; nodes: AudioNode[]; until: number }> = [];
   private _delays: DelayNode[] = [];
   private _damps: BiquadFilterNode[] = [];
   private _fbs: GainNode[] = [];
@@ -253,7 +308,13 @@ export class DelayBus {
     this._disposed = true;
     this._disconnect(this._pre);
     for (const node of this._nodes) this._disconnect(node);
+    if (this._genGain) this._disconnect(this._genGain);
+    for (const gen of this._retiring) {
+      this._disconnect(gen.gain);
+      for (const node of gen.nodes) this._disconnect(node);
+    }
     this._nodes = [];
+    this._retiring = [];
     this._delays = [];
     this._damps = [];
     this._fbs = [];
@@ -268,6 +329,28 @@ export class DelayBus {
     }
   }
 
+  /**
+   * Disconnects builds whose cross-fade has finished.
+   *
+   * Lazy by design (M4): a `setTimeout` here would make the graph depend on wall-clock scheduling,
+   * and this file's contract is that an `OfflineAudioContext` builds an identical graph. The audio
+   * clock is the honest source for "the fade is over" — and while an offline context is being
+   * constructed its clock does not move at all, so a retired build simply stays connected.
+   */
+  private _sweepRetired(now: number): void {
+    if (this._retiring.length === 0) return;
+    const stillFading: Array<{ gain: GainNode; nodes: AudioNode[]; until: number }> = [];
+    for (const gen of this._retiring) {
+      if (now < gen.until) {
+        stillFading.push(gen);
+        continue;
+      }
+      this._disconnect(gen.gain);
+      for (const node of gen.nodes) this._disconnect(node);
+    }
+    this._retiring = stillFading;
+  }
+
   private _createDamp(): BiquadFilterNode {
     const damp = this._ctx.createBiquadFilter();
     damp.type = "lowpass";
@@ -277,18 +360,48 @@ export class DelayBus {
   }
 
   /**
-   * (Re)builds the internal graph behind the two stable endpoints. The old build is
-   * disconnected first, including `_pre`'s edges; `output` and `input` are never touched.
+   * (Re)builds the internal graph behind the two stable endpoints. `_pre`'s edges to the outgoing
+   * build are removed — it stops *recording* the send — but that build's own nodes stay connected
+   * and are faded out, so what is already in its delay line keeps ringing instead of being cut in
+   * one sample (M4). `output` and `input` are never touched.
    */
   private _build(): void {
     const ctx = this._ctx;
+    const now = ctx.currentTime;
+    this._sweepRetired(now);
+
+    const previous = this._genGain;
+    const fadeSec = delayCrossfadeSeconds(this._params.timeSeconds);
+    if (previous) {
+      const gain = previous.gain;
+      try {
+        gain.cancelScheduledValues(now);
+      } catch {
+        /* minimal param double */
+      }
+      // Pin where the fade actually is, then ramp: a toggle mid-fade must not jump to full.
+      gain.setValueAtTime(Math.max(0, gain.value), now);
+      gain.linearRampToValueAtTime(0, now + fadeSec);
+      this._retiring.push({
+        gain: previous,
+        nodes: this._nodes,
+        until: now + fadeSec,
+      });
+    }
+
     this._disconnect(this._pre);
-    for (const node of this._nodes) this._disconnect(node);
     this._nodes = [];
     this._delays = [];
     this._damps = [];
     this._fbs = [];
     this._timeApplied = false;
+
+    // The new build's own output gain: it fades in over the same window the old one fades out, and
+    // the very first build simply starts at full (there is nothing behind it to cross-fade with).
+    const genGain = ctx.createGain();
+    genGain.gain.setValueAtTime(previous ? 0 : 1, now);
+    if (previous) genGain.gain.linearRampToValueAtTime(1, now + fadeSec);
+    genGain.connect(this._wetSum);
 
     // `getParams()` reports the requested `pingPong` even here; only the audio degrades to
     // centred, which is the safe direction.
@@ -323,7 +436,7 @@ export class DelayBus {
       // split and is recombined here, never down-mixed.
       delayL.connect(merger, 0, 0);
       delayR.connect(merger, 0, 1);
-      merger.connect(this._wetSum);
+      merger.connect(genGain);
 
       this._nodes.push(
         splitter,
@@ -340,6 +453,7 @@ export class DelayBus {
       this._delays = [delayL, delayR];
       this._damps = [dampL, dampR];
       this._fbs = [fbL, fbR];
+      this._genGain = genGain;
       return;
     }
 
@@ -353,16 +467,18 @@ export class DelayBus {
     delay.connect(damp);
     damp.connect(fb);
     fb.connect(delay);
-    delay.connect(this._wetSum);
+    delay.connect(genGain);
 
     this._nodes.push(delay, damp, fb);
     this._delays = [delay];
     this._damps = [damp];
     this._fbs = [fb];
+    this._genGain = genGain;
   }
 
   private _applyAll(now: number): void {
     const params = this._params;
+    this._sweepRetired(now);
 
     for (const delay of this._delays) {
       if (!this._timeApplied) {
