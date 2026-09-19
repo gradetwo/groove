@@ -202,6 +202,22 @@ check(
   matrixSource.includes("is not a profile") && matrixSource.includes("PROFILE_MATCHERS")
 );
 
+/**
+ * R6d — the deploy must refuse to ship a build that is not the version being released.
+ *
+ * There is no ordering enforced between "bump the version" and "build". v2.0.64 was deployed while
+ * the repository said v2.0.65, and the only reason it was noticed is that the live `version.json`
+ * disagreed with the repo: the deploy log was green and the upload succeeded. The guard is one file
+ * read, so this red line only has to prove the guard is still there.
+ */
+const deploySource = read("scripts/deploy.mjs");
+check(
+  "R6d deploy refuses a dist whose version is not package.json's",
+  deploySource.includes("Stale build") &&
+    deploySource.includes('path.join(ROOT, "dist", "version.json")') &&
+    deploySource.includes("process.exit(1)")
+);
+
 /* R9 \u2014 every genre entry point must seed the arranged mix --------------------- */
 // User request: each genre's default mix must be arranged for that genre. That only
 // holds if *every* path that hands a genre's own pattern to an engine goes through

@@ -74,6 +74,43 @@ if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
   process.exit(1);
 }
 
+/**
+ * The build in `dist` must be the version being released.
+ *
+ * There is no ordering enforced between "bump the version" and "build": run them the wrong way round
+ * and this script happily uploads the *previous* release under the new version's name. That happened
+ * — v2.0.64 went out while the tag said v2.0.65, and the only reason it was caught is that the live
+ * `version.json` disagreed with the repository. Checking is one file read, and the failure it
+ * prevents is a wrong build in production with a green deploy log.
+ */
+const distVersionFile = path.join(ROOT, "dist", "version.json");
+if (fs.existsSync(distVersionFile)) {
+  let distVersion = null;
+  try {
+    distVersion = JSON.parse(fs.readFileSync(distVersionFile, "utf8")).version ?? null;
+  } catch {
+    /* reported below as "unreadable" */
+  }
+  const pkgVersion = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version;
+  if (distVersion !== pkgVersion) {
+    console.error(
+      [
+        "\u274c Stale build: dist is " + (distVersion ?? "unreadable") + " but package.json is " + pkgVersion + ".",
+        "   Run \`npm run build\` (or \`npm run deploy\`, which verifies first) so the uploaded assets match the release.",
+        "   This guard exists because a version bump after the last build otherwise ships the previous",
+        "   release under the new version's name.",
+        "",
+      ].join("\n")
+    );
+    process.exit(1);
+  }
+  console.log("\u2705 dist matches package.json at v" + distVersion);
+} else {
+  console.warn(
+    "\u26a0\ufe0f  dist/version.json is missing, so this deploy cannot be checked against package.json."
+  );
+}
+
 const args = ["wrangler", "deploy", ...(dryRun ? ["--dry-run"] : [])];
 console.log(`\u25b6\ufe0f  npx ${args.join(" ")}${dryRun ? " (dry run)" : ""}`);
 
