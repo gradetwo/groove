@@ -1,27 +1,27 @@
 {
-  "version": "2.0.97",
+  "version": "2.0.98",
   "releaseDate": "2026-09-19",
-  "changelogCount": 161,
+  "changelogCount": 162,
   "latest": {
-    "version": "2.0.97",
+    "version": "2.0.98",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.97 手机端：轨道头的检查器入口从 4×20 px 变成按得到的目标",
-      "en": "v2.0.97 The Phone Track Header: A 4×20 px Inspector Button Becomes a Real Target"
+      "zh": "v2.0.98 手机端：Explore 页收拾干净，并把每个视图都量了一遍",
+      "en": "v2.0.98 The Phone Explore Page Is Clean, and Every View Has Been Measured"
     },
     "highlights": [
       {
-        "zh": "**上一轮的门禁有个盲区**：它把整个 `[role=\"grid\"]` 子树排除在外（步进格子是 `role=\"gridcell\"`），可**轨道头就在同一个容器里**——于是五个控件（折叠 14×14、检查器入口 **4×20**、`L:16` 30×36、Mute/Solo 36×36）从来没被量到。把排除范围缩到 `role=\"gridcell\"` 本身之后，竖屏控件数从 16 变成 44，低于 44 px 的从 2 变成 **29**。",
-        "en": "**The previous round's gate had a blind spot**: it skipped the whole `[role=\"grid\"]` subtree (the step cells are `role=\"gridcell\"`), but **the track headers live inside that same container** — so five controls (fold 14×14, the inspector opener **4×20**, `L:16` 30×36, mute and solo 36×36) had never been measured. Narrowing the skip to `role=\"gridcell\"` itself took the portrait count from 16 to 44 controls and the under-44 count from 2 to **29**."
+        "zh": "**量具能走别的页了**：`measure_phone_surface.mjs` 新增 `--tabs=a,b,c`。一量之下，**除了 studio 之外的每个视图都有低于 44 px 的控件**——合计 **89 个**：chords 3、kick 7、maker 8、challenge 5、masterclass 1、horizontal-timeline 12、vertical-timeline 6、compare 14、analyzer 13，Explore 9。前两轮修好的是手机端的「主页」，其余页面从来没按手机标准量过。完整表格写进了计划的 G.37，它就是接下来几轮的工作清单。",
+        "en": "**The measuring tool can walk other pages now**: `measure_phone_surface.mjs` takes `--tabs=a,b,c`. Measuring them showed that **every view except the studio has controls under 44 px** — **89 of them** in total: chords 3, kick 7, maker 8, challenge 5, masterclass 1, horizontal-timeline 12, vertical-timeline 6, compare 14, analyzer 13 and Explore 9. The previous two rounds fixed the phone's *home*; the other pages had never been measured against the phone standard. The full ta…"
       },
       {
-        "zh": "**142 px 的固定列放不下三个 44 px 目标**，所以这一行只能减东西——减什么有依据：检查器入口是 `flex-1 min-w-0`，被同排的 `L:16`/M/S 挤成 4 px（也就是轨名被挤成 0 宽）。现在轨道头是**一个大检查器目标（≥44×44，轨名重新可见）+ 44×44 的 Mute**；Solo 去掉（`TrackInspector` 里写着 \"Always visible: muting or soloing must not require finding the right tab\"，那是重复的）；逐轨折叠去掉（工具栏有 Fold All）；`L:16` 变成**只读徽标**，改长度留给桌面。顺带把 Ruler 的「复制 B1」（58×30）提到 44 px。",
-        "en": "**A 142 px fixed column cannot hold three 44 px targets**, so the row had to lose something — and which somethings is argued: the inspector opener was `flex-1 min-w-0` squeezed to 4 px by the `L:16`/mute/solo beside it (the track name was squeezed to zero width too). The phone row is now **one big inspector target (≥44×44, with the name visible again) plus a 44×44 mute**; solo is gone (the inspector says \"Always visible: muting or soloing must not require finding the right t…"
+        "zh": "**Explore 从 9 个降到 0**（studio 之外使用频率最高的页面，选曲风的地方）。六个星云分类 chip（39–134×**29**）、`Show all`、列表视图、年代回放按钮（28×28）都到了 44 px——它们在一行横向滚动里，变高不会挤坏布局。",
+        "en": "**Explore went from nine to zero** — it is the busiest page after the studio, the one where a genre gets picked. The six nebula category chips (39–134 × **29**), the `Show all` chip, the list-view button and the era-replay button (28×28) all reach 44 px; they live in a horizontally scrolling row, so growing taller costs no layout."
       },
       {
-        "zh": "**横屏另有一处泄漏**：`.trk-head-desktop-only` 的隐藏规则是 `max-width: 639px`，而横屏手机是 **750 px 宽**——于是七个 16 px 控件（含一个 16×16 的「打开检查器」）在横屏回到屏幕上。这正是能力钩子注释里说的「两条规则一个按宽、一个按高」。现在短横屏也隐藏它们（用 `pointer: coarse` 限定，短桌面上窗口不受影响）。**结果：竖屏低于 44 px 的 29 → 3，横屏 → 1**，剩下三个都在冻结文件里（传输条 32×44、工具栏 Fold All 126×22），在门禁里具名豁免。",
-        "en": "**Landscape had a leak of its own**: the rule hiding `.trk-head-desktop-only` is a `max-width: 639px` query, and a landscape phone is **750 px wide** — so seven 16 px controls (including a 16×16 \"open inspector\") came back on screen in landscape. That is exactly the width-vs-height disagreement the capability hook's comment warns about. A short landscape phone now hides them too (gated on `pointer: coarse`, so a short *desktop* window is unaffected). **Result: portrait under…"
+        "zh": "**3D 投影标签在手机上改成纯视觉元素**（`pointer-events-none` + `tabIndex={-1}` + `aria-hidden`）。理由是它们**长不大**：渲染循环用 `translate3d(x, y-28) translate(-50%,-100%)` 把标签底边锚在投影点上，加高只会把文字整体上移；而 39×29 的按钮在手机上本来就点不准。手机改用 chip 行与列表视图选曲风（两者现在都是 44 px），标签留在屏幕上当信息。",
+        "en": "**The projected 3D labels became visual-only on a phone** (`pointer-events-none` + `tabIndex={-1}` + `aria-hidden`). They *cannot* grow: the render loop anchors each label's **bottom** edge to the projected point with `translate3d(x, y-28) translate(-50%,-100%)`, so a taller box only lifts the text; and a 39×29 button was not tappable anyway. The phone picks a genre from the chips row or the list view (both 44 px now) and keeps the labels as information."
       }
     ],
     "truncated": true
