@@ -35,6 +35,7 @@ import {
   noteEndStep,
   notesFromTrack,
   notesInRect,
+  previewProgressionNotes,
   quantizeLengths,
   rampNotesVelocity,
   removeNote,
@@ -725,6 +726,128 @@ describe("roll model · professional DAW chord tools and harmonic analysis", () 
     expect(updatedTrack.pitches?.[4]).toEqual([67, 71, 74]);
     expect(updatedTrack.pitches?.[8]).toEqual([69, 72, 76]);
     expect(updatedTrack.pitches?.[12]).toEqual([65, 69, 72]);
+  });
+
+  /**
+   * The stamp's harmonic rhythm, and the two measured defects that made it sound fragmented.
+   *
+   * The library's own authoring rule (`data/genreExpression.ts`) is one chord per bar, and a note
+   * never lasts longer than a bar (`MAX_NOTE_GATE_STEPS`). The stamp used to break both: it divided
+   * whatever pattern it was handed (a 16-step pattern turned the 8-chord canon into a change every
+   * 2 steps) and it clamped the gate to one bar while letting the chord's slot grow past it, so
+   * `dorian_funk_14` on a 4-bar pattern rang for 16 of its 32 steps — half the span was silence.
+   */
+  describe("roll model · progression harmonic rhythm", () => {
+    const BAR = 16; // the roll's grid is 1/16, so a bar is 16 steps
+    const BEAT = 4;
+    const pop = CHORD_PROGRESSIONS.find((p) => p.id === "pop_4chords")!;
+    const vamp = CHORD_PROGRESSIONS.find((p) => p.id === "dorian_funk_14")!;
+    const canon = CHORD_PROGRESSIONS.find((p) => p.id === "canon_8chords")!;
+
+    const emptyPattern = (steps: number) => {
+      const track = makeTrack({
+        steps: Array(steps).fill(0),
+        pitch: Array(steps).fill(null),
+        pitches: Array(steps).fill(null),
+        gate: Array(steps).fill(0.8),
+        velocity: Array(steps).fill(100),
+      });
+      return { ...makePattern(track), totalSteps: steps };
+    };
+
+    it("writes one chord per bar when the pattern has a bar to give each chord", () => {
+      const plan = previewProgressionNotes("C minor", pop, 4 * BAR, BAR);
+      expect(plan.stepsPerChord).toBe(BAR);
+      expect(plan.placedChords).toBe(4);
+      expect(plan.cycles).toBe(1);
+      expect(plan.truncated).toBe(false);
+      expect(plan.instances.map((i) => i.stepIdx)).toEqual([0, 16, 32, 48]);
+      // A bar-long chord is one note, and the gate holds it: the note model caps a note at a bar.
+      for (const instance of plan.instances) {
+        expect(instance.span).toBe(BAR);
+        expect(instance.gate).toBeGreaterThanOrEqual(BAR * 0.85);
+        expect(instance.gate).toBeLessThanOrEqual(MAX_NOTE_GATE_STEPS);
+      }
+    });
+
+    it("repeats a short progression instead of holding a chord past the one-bar note limit", () => {
+      // The old stamp gave each chord a 32-step span and a 16-step gate: one bar of chord, one bar
+      // of silence, per chord — the fragmentation a two-chord vamp is least able to survive.
+      const plan = previewProgressionNotes("C minor", vamp, 4 * BAR, BAR);
+      expect(plan.stepsPerChord).toBe(BAR);
+      expect(plan.cycles).toBe(2);
+      expect(plan.instances.map((i) => i.chordIdx)).toEqual([0, 1, 0, 1]);
+      expect(plan.instances.map((i) => i.stepIdx)).toEqual([0, 16, 32, 48]);
+      for (const instance of plan.instances) {
+        expect(instance.span).toBeLessThanOrEqual(MAX_NOTE_GATE_STEPS);
+        expect(instance.gate).toBeGreaterThanOrEqual(instance.span * 0.85);
+      }
+
+      // …and the stamp writes exactly that: four one-bar chords, no half-empty slot.
+      const stamped = applyChordProgression(emptyPattern(4 * BAR), 0, vamp, 4 * BAR, BAR);
+      const written = notesFromTrack(stamped.tracks[0], 60, "C minor");
+      expect([...new Set(written.map((n) => n.stepIdx))]).toEqual([0, 16, 32, 48]);
+      for (const note of written) expect(note.gate).toBeGreaterThanOrEqual(BAR * 0.85);
+    });
+
+    it("never changes chord faster than a beat, even when the pattern cannot hold the progression", () => {
+      // 8 chords in one 16-step bar used to land every 2 steps.
+      const plan = previewProgressionNotes("C minor", canon, BAR, BAR);
+      expect(plan.stepsPerBeat).toBe(BEAT);
+      expect(plan.stepsPerChord).toBe(BEAT);
+      expect(plan.truncated).toBe(true);
+      expect(plan.placedChords).toBe(4);
+      expect(plan.instances.map((i) => i.stepIdx)).toEqual([0, 4, 8, 12]);
+      for (const instance of plan.instances) expect(instance.span).toBeGreaterThanOrEqual(BEAT);
+    });
+
+    it("halves the harmonic rhythm only as far as it must", () => {
+      // A 4-chord progression in two bars is two chords per bar, not four.
+      expect(previewProgressionNotes("C minor", pop, 2 * BAR, BAR).stepsPerChord).toBe(BAR / 2);
+      // The 8-chord canon needs a bar per chord, so four bars is where it reaches that rhythm.
+      expect(previewProgressionNotes("C minor", canon, 4 * BAR, BAR).stepsPerChord).toBe(BAR / 2);
+      expect(previewProgressionNotes("C minor", canon, 8 * BAR, BAR).stepsPerChord).toBe(BAR);
+    });
+
+    it("tiles the whole span: every slot belongs to a chord and none is left silent", () => {
+      // 3 bars of a 2-chord vamp used to be two 24-step chords with a 16-step gate each.
+      const plan = previewProgressionNotes("C minor", vamp, 3 * BAR, BAR);
+      expect(plan.instances.map((i) => [i.stepIdx, i.span])).toEqual([
+        [0, 16],
+        [16, 16],
+        [32, 16],
+      ]);
+      plan.instances.forEach((instance, i) => {
+        const next = plan.instances[i + 1];
+        expect(instance.stepIdx + instance.span).toBe(next ? next.stepIdx : 3 * BAR);
+        expect(instance.gate).toBeGreaterThanOrEqual(instance.span * 0.85);
+      });
+    });
+
+    it("stamps the plan verbatim and keeps notes before the start step", () => {
+      const pattern = emptyPattern(4 * BAR);
+      // A note before the stamp's start survives; one inside the span is replaced by the harmony.
+      pattern.tracks[0].steps[2] = 1;
+      pattern.tracks[0].pitch![2] = 72;
+      pattern.tracks[0].pitches![2] = [72];
+      pattern.tracks[0].steps[20] = 1;
+      pattern.tracks[0].pitch![20] = 74;
+      pattern.tracks[0].pitches![20] = [74];
+
+      const plan = previewProgressionNotes("C minor", pop, 4 * BAR, BAR, { startStep: BAR });
+      const stamped = applyChordProgression(pattern, 0, pop, 4 * BAR, BAR, { startStep: BAR });
+      const track = stamped.tracks[0];
+
+      expect(track.pitches?.[2]).toEqual([72]);
+      expect(track.steps[20]).toBe(0);
+      for (const instance of plan.instances) {
+        const chord = plan.chords[instance.chordIdx];
+        expect([...(track.pitches?.[instance.stepIdx] ?? [])].sort((a, b) => a - b)).toEqual(
+          [...chord.chordNotes].sort((a, b) => a - b)
+        );
+        expect(track.gate?.[instance.stepIdx]).toBe(instance.gate);
+      }
+    });
   });
 
   it("compresses note velocities toward target level", () => {

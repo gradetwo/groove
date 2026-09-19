@@ -641,22 +641,21 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
     progressionAuditionTimersRef.current = [];
 
     const prog = CHORD_PROGRESSIONS.find((p) => p.id === selectedProgressionId) || CHORD_PROGRESSIONS[0];
-    const { chords, stepsPerChord } = previewProgressionNotes(
-      view.scale,
-      prog,
-      stepCount,
-      stepsPerBar,
-      { chordStyle: "triad", baseOctave: 4 }
-    );
+    const plan = previewProgressionNotes(view.scale, prog, stepCount, stepsPerBar, {
+      chordStyle: "triad",
+      baseOctave: 4,
+    });
     // The step length is the engine's, not a guess: a preview that ignores tempo drifts away
     // from the bar it is previewing as soon as the user changes BPM.
     const secondsPerStep = (60 / (pattern.bpm || 120)) / 4;
-    // A preview chord lasts as long as the stamped chord will: `stepsPerChord` steps, at the
-    // pattern's own tempo, times the same 0.9 fraction the stamp's default gate uses.
-    const chordSeconds = Math.max(0.12, secondsPerStep * stepsPerChord * 0.9);
-    const chordMs = Math.max(120, chordSeconds * 1000);
 
-    chords.forEach((chord, chordIdx) => {
+    // One engine call per instance, for the instance's own gate — the same notes, onsets and
+    // lengths the stamp writes, so the audition cannot promise a rhythm the stamp will not make.
+    for (const instance of plan.instances) {
+      if (instance.stepIdx >= plan.start + plan.cycleSteps) break;
+      const chord = plan.chords[instance.chordIdx];
+      if (!chord) continue;
+      const chordSeconds = Math.max(0.12, secondsPerStep * instance.gate);
       const timer = window.setTimeout(() => {
         if (onPreviewChord) {
           onPreviewChord(activeTrackIdx, chord.chordNotes, 95, chordSeconds);
@@ -665,16 +664,37 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
           // are already the final voicing so the engine's own voicing is skipped.
           chord.chordNotes.forEach((midi) => onAudition(activeTrackIdx, midi, 95, 0.7));
         }
-      }, chordIdx * chordMs);
+      }, (instance.stepIdx - plan.start) * secondsPerStep * 1000);
       progressionAuditionTimersRef.current.push(timer);
-    });
+    }
   }, [activeTrackIdx, onAudition, onPreviewChord, pattern.bpm, selectedProgressionId, stepCount, stepsPerBar, view.scale]);
 
+  /**
+   * Applies the progression and reports the rhythm it was written at.
+   *
+   * The stamp adapts its harmonic rhythm to the pattern (one chord per bar when it fits, otherwise
+   * half a bar, otherwise a beat) and repeats the progression to fill longer patterns. Reporting
+   * that is the difference between "the app wrote something" and the user knowing why a two-chord
+   * vamp now plays four times, or that the pattern is too short for all eight chords.
+   */
   const handleApplyProgression = useCallback(() => {
     const prog = CHORD_PROGRESSIONS.find((p) => p.id === selectedProgressionId) || CHORD_PROGRESSIONS[0];
     applyOp((p) => applyChordProgression(p, activeTrackIdx, prog, stepCount, stepsPerBar));
-    setNotice(t("roll_progression_applied", { name: isZh ? prog.name.zh : prog.name.en }));
-  }, [activeTrackIdx, applyOp, isZh, selectedProgressionId, stepCount, stepsPerBar, t]);
+    const plan = previewProgressionNotes(view.scale, prog, stepCount, stepsPerBar);
+    const beatsPerChord = Math.max(1, Math.round(plan.stepsPerChord / plan.stepsPerBeat));
+    const rhythm =
+      plan.stepsPerChord >= stepsPerBar
+        ? t("roll_progression_rhythm_bar")
+        : t("roll_progression_rhythm_beats", { n: beatsPerChord });
+    const parts = [`${t("roll_progression_applied", { name: isZh ? prog.name.zh : prog.name.en })} · ${rhythm}`];
+    if (plan.cycles > 1) parts.push(t("roll_progression_repeat", { n: plan.cycles }));
+    if (plan.truncated) {
+      parts.push(
+        t("roll_progression_truncated", { placed: plan.placedChords, total: plan.chords.length })
+      );
+    }
+    setNotice(parts.join(" · "));
+  }, [activeTrackIdx, applyOp, isZh, selectedProgressionId, stepsPerBar, stepCount, t, view.scale]);
 
   /**
    * Start/stop the isolated preview of this lane.

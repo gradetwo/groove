@@ -1075,6 +1075,62 @@ export function resolveProgressionChords(
  * `triad` style — so "preview" and "result" could disagree on voicing, octave, timing and
  * length. One function makes that drift structurally impossible.
  */
+/** One chord the stamp writes: where it lands, how long it holds the slot, how long it rings. */
+export interface ProgressionInstance {
+  /** Index into `ProgressionPlan.chords`. */
+  chordIdx: number;
+  stepIdx: number;
+  /** Steps until the next instance — the slot this chord owns. */
+  span: number;
+  /** Steps the note rings for; never shorter than 90% of `span`, never above `MAX_NOTE_GATE_STEPS`. */
+  gate: number;
+}
+
+/** The notes a progression stamp will write, and the harmonic rhythm it chose to write them at. */
+export interface ProgressionPlan {
+  chords: Array<{ rootMidi: number; chordNotes: number[]; roman: string }>;
+  /** Every chord instance the stamp writes, in playing order. */
+  instances: ProgressionInstance[];
+  /** Steps one chord owns inside a cycle: a bar, half a bar or a beat. */
+  stepsPerChord: number;
+  /** Steps in one beat of this pattern, so `stepsPerChord` reads as a musical duration. */
+  stepsPerBeat: number;
+  /** Length of the first cycle; the audition plays exactly this much. */
+  cycleSteps: number;
+  /** How many of `chords` fit in one cycle — fewer than `chords.length` on a short pattern. */
+  placedChords: number;
+  /** How many times the cycle is stated to fill the span (a partial final cycle counts). */
+  cycles: number;
+  /** True when the pattern cannot state the whole progression without changing faster than a beat. */
+  truncated: boolean;
+  start: number;
+}
+
+/**
+ * The notes a progression stamp will produce, and the harmonic rhythm it will write them at.
+ *
+ * Split out of `applyChordProgression` so the piano roll's **audition** can play exactly what
+ * the stamp would write. The two used to compute their own answers — the stamp divided the
+ * pattern evenly while the audition re-voiced each member at a fixed 450 ms and a fixed
+ * `triad` style — so "preview" and "result" could disagree on voicing, octave, timing and
+ * length. One function makes that drift structurally impossible.
+ *
+ * The rhythm follows the rule the genre library itself is authored with (see
+ * `data/genreExpression.ts`): **one chord per bar**, halved only when a shorter pattern has to
+ * state the progression, and never faster than one beat. Two measured defects used to live here:
+ *
+ *   - `stepsPerBar` was accepted and ignored, so the rhythm was whatever even division produced:
+ *     on a 16-step pattern the 8-chord canon changed chord every **2 steps** (8th notes) and any
+ *     4-chord progression became one chord per beat.
+ *   - A chord's slot could exceed `MAX_NOTE_GATE_STEPS` (16 steps = one bar) while its gate was
+ *     clamped to that cap, so the harmony stopped half-way through its own slot:
+ *     `dorian_funk_14` on a 4-bar pattern rang for 16 of its 32 steps — one bar of chord, one bar
+ *     of silence. That silence is the "fragmented" sound a two-chord vamp should never make.
+ *
+ * The note model's own limit (a note lasts at most a bar) is why a progression **repeats** to fill
+ * a longer pattern instead of stretching: `dorian_funk_14` over four bars is i–IV–i–IV, which is
+ * what the genres that use it actually play, rather than two 2-bar chords with holes between them.
+ */
 export function previewProgressionNotes(
   scaleStr: string | undefined | null,
   progression: ChordProgressionDef,
@@ -1087,21 +1143,78 @@ export function previewProgressionNotes(
     velocity?: number;
     gate?: number;
   }
-): { chords: Array<{ rootMidi: number; chordNotes: number[]; roman: string }>; stepsPerChord: number; start: number; endStep: number; gate: number } {
+): ProgressionPlan {
   const chords = resolveProgressionChords(scaleStr, progression, {
     chordStyle: options?.chordStyle ?? "triad",
     baseOctave: options?.baseOctave ?? 4,
   });
+  const total = chords.length;
+  const bar = Math.max(1, Math.round(stepsPerBar));
+  // The roll's grid is 1/16, so a bar is four beats. A chord change faster than that is a run of
+  // stabs rather than a progression: it means the pattern is too short for the progression it was
+  // handed, and the honest answer is to drop chords and say so — not to subdivide further.
+  const beat = Math.max(1, Math.round(bar / 4));
   const start = Math.max(0, Math.min(Math.max(0, stepCount - 1), options?.startStep ?? 0));
   const availableSteps = Math.max(1, stepCount - start);
-  const stepsPerChord = Math.max(1, Math.floor(availableSteps / Math.max(1, chords.length)));
-  const defaultGate = Math.min(MAX_NOTE_GATE_STEPS, Number((stepsPerChord * 0.9).toFixed(2)));
+  const gateFor = (span: number) =>
+    options?.gate != null
+      ? Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, options.gate))
+      : Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, Number((span * 0.9).toFixed(2))));
+
+  if (total === 0) {
+    return {
+      chords,
+      instances: [],
+      stepsPerChord: beat,
+      stepsPerBeat: beat,
+      cycleSteps: 0,
+      placedChords: 0,
+      cycles: 0,
+      truncated: false,
+      start,
+    };
+  }
+
+  // The slowest musical rhythm that still states the whole progression, then half a bar, then a
+  // beat. Nothing slower than a bar: a chord that owns two bars is a chord the note model cannot
+  // hold anyway, and real progressions state their harmony once per bar.
+  const stepsPerChord =
+    [bar, Math.max(beat, Math.round(bar / 2)), beat].find((steps) => steps * total <= availableSteps) ??
+    beat;
+  // A pattern with fewer beats than the progression has chords keeps the musical rhythm and drops
+  // what does not fit. `truncated` is what lets the UI tell the user to lengthen the pattern.
+  const placedChords = Math.min(total, Math.max(1, Math.floor(availableSteps / stepsPerChord)));
+  const cycleSteps = placedChords * stepsPerChord;
+
+  const instances: ProgressionInstance[] = [];
+  for (let cursor = 0; cursor < availableSteps; ) {
+    const span = Math.min(stepsPerChord, availableSteps - cursor);
+    // A leftover shorter than a beat is not a chord of its own; hold the previous one over it.
+    if (span < beat && instances.length > 0) {
+      const prev = instances[instances.length - 1];
+      prev.span += span;
+      prev.gate = gateFor(prev.span);
+      break;
+    }
+    instances.push({
+      chordIdx: instances.length % placedChords,
+      stepIdx: start + cursor,
+      span,
+      gate: gateFor(span),
+    });
+    cursor += span;
+  }
+
   return {
     chords,
+    instances,
     stepsPerChord,
+    stepsPerBeat: beat,
+    cycleSteps,
+    placedChords,
+    cycles: Math.max(1, Math.ceil(availableSteps / Math.max(1, cycleSteps))),
+    truncated: placedChords < total,
     start,
-    endStep: Math.min(stepCount, start + chords.length * stepsPerChord),
-    gate: options?.gate ?? defaultGate,
   };
 }
 
@@ -1122,35 +1235,31 @@ export function applyChordProgression(
     gate?: number;
   }
 ): SequencerPattern {
-  // Same calculation the piano roll auditions, so a preview cannot disagree with the result.
-  const { chords, stepsPerChord, start, gate } = previewProgressionNotes(
-    pattern.scale,
-    progression,
-    stepCount,
-    stepsPerBar,
-    options
-  );
-  if (chords.length === 0) return pattern;
+  // Same plan the piano roll auditions, so a preview cannot disagree with the result.
+  const plan = previewProgressionNotes(pattern.scale, progression, stepCount, stepsPerBar, options);
+  if (plan.chords.length === 0 || plan.instances.length === 0) return pattern;
 
   const velocity = options?.velocity ?? 100;
-  const endStep = Math.min(stepCount, start + chords.length * stepsPerChord);
-  const existingNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale);
-  const preservedNotes = existingNotes.filter((n) => n.stepIdx < start || n.stepIdx >= endStep);
+  // Everything from `start` on belongs to the progression: the plan tiles it to the end of the
+  // pattern, so a note after `start` that survived would be a second harmony under the first.
+  const preservedNotes = notesFromTrack(pattern.tracks[trackIdx], 60, pattern.scale).filter(
+    (n) => n.stepIdx < plan.start
+  );
 
   const newNotes: RollStepNote[] = [...preservedNotes];
-
-  chords.forEach((chord, i) => {
-    const stepIdx = start + i * stepsPerChord;
-    if (stepIdx >= stepCount) return;
+  for (const instance of plan.instances) {
+    if (instance.stepIdx >= stepCount) continue;
+    const chord = plan.chords[instance.chordIdx];
+    if (!chord) continue;
     for (const midi of chord.chordNotes) {
       newNotes.push({
-        stepIdx,
+        stepIdx: instance.stepIdx,
         midi,
-        gate,
+        gate: instance.gate,
         velocity,
       });
     }
-  });
+  }
 
   return withTrackNotes(pattern, trackIdx, newNotes, stepCount);
 }

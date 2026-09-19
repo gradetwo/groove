@@ -481,6 +481,16 @@ export const studioMessages = {
   roll_progression_stamp: { en: "Stamp", zh: "写入进行" },
   roll_progression_audition: { en: "Audition", zh: "试听进行" },
   roll_progression_applied: { en: "Progression applied: {name}", zh: "已写入和弦进行：{name}" },
+  roll_progression_rhythm_bar: { en: "1 bar per chord", zh: "每小节 1 个和弦" },
+  roll_progression_rhythm_beats: {
+    en: "{n} beats per chord — a longer pattern changes slower",
+    zh: "每 {n} 拍换 1 个和弦 — 加长小节可以放慢",
+  },
+  roll_progression_repeat: { en: "repeated {n}×", zh: "重复 {n} 次" },
+  roll_progression_truncated: {
+    en: "pattern too short — only {placed} of {total} chords placed",
+    zh: "小节太短 — 只放得下 {placed}/{total} 个和弦",
+  },
   roll_preview_start: { en: "Play lane", zh: "试听本轨" },
   roll_preview_stop: { en: "Stop", zh: "停止" },
   roll_preview_start_hint: {
