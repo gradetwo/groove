@@ -181,7 +181,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onPointerEnter={onPointerEnter ? () => onPointerEnter(trackIdx, stepIdx) : undefined}
-      className={`w-9 sm:min-w-[36px] sm:w-auto flex-1 ${isCompact ? "h-7 sm:h-7" : "h-11 sm:h-10"} landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:z-20 ${
+      className={`w-9 sm:min-w-[36px] sm:w-auto flex-1 ${isCompact ? "h-step-compact" : "h-step"} landscape-compact-cell border cursor-pointer relative transition-all duration-75 select-none touch-action-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:z-20 ${
         isBarStart
           ? "ml-3.5 sm:ml-4.5 border-l-2 border-l-[#f5b73d]/70"
           : isGroupStart

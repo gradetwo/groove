@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { encodeAudioBufferToWav, renderPatternOffline } from "../audio/WavExporter";
-import { DEFAULT_SYNTH_PRESETS, keyTrackedCutoff } from "../audio/PolySynth";
+import { DEFAULT_SYNTH_PRESETS, keyTrackedCutoff, voiceOscillatorTypes } from "../audio/PolySynth";
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { chordVoicingForStep } from "../audio/chordVoicing";
 import { deriveTrackStates } from "../audio/trackStates";
@@ -295,8 +295,12 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     // pins that the exporter really voices the chord rather than rendering one note.
     const voicing = chordVoicingForStep(60, "C minor");
     expect(voicing).toHaveLength(3);
+    // Derived from the preset, not assumed: the supersaw allocates a detuned outer pair for its
+    // stereo width, so "two oscillators per voice" stopped being true the moment it was widened.
+    // Asking `voiceOscillatorTypes` keeps this assertion about *which preset is in use* and about
+    // exporter parity, which is what it is for, rather than about a node count.
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual(
-      voicing.flatMap(() => [superSaw.osc1Type, superSaw.osc2Type])
+      voicing.flatMap(() => voiceOscillatorTypes(superSaw))
     );
     expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(superSaw.osc2DetuneCents);
     // One voice-level low-pass per chord tone, all at the supersaw cutoff — and none at

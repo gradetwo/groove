@@ -7,6 +7,7 @@ import { loadLayoutPrefs, saveLayoutPrefs } from "../features/sequencer/layoutPr
 import { loadKeyboardFabPref } from "../features/sequencer/keyboardFabPref";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
+import { useDensityPreference } from "../hooks/useDensityPreference";
 import { MobileEditMode } from "../components/sequencer/Toolbar";
 import { ToastBanner } from "../components/sequencer/ToastBanner";
 import { StepContextMenu } from "../components/sequencer/StepContextMenu";
@@ -185,6 +186,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const [autoFollowPlayhead, setAutoFollowPlayhead] = useState<boolean>(
     bootLayoutPrefs.autoFollowPlayhead
   );
+
+  /**
+   * C-06: the 界面密度 preference is applied as `data-density` on `<html>`, which is what the
+   * geometry custom properties in `index.css` select on. Without this the setting was stored,
+   * shown as pressed in Settings, and changed nothing.
+   */
+  useDensityPreference();
 
   // Phase 4 States (P4-01 ~ P4-04 & P4-06)
   const [isKeyboardMode, setIsKeyboardMode] = useState(false);

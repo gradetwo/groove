@@ -1,27 +1,27 @@
 {
-  "version": "2.0.57",
+  "version": "2.0.58",
   "releaseDate": "2026-09-19",
-  "changelogCount": 121,
+  "changelogCount": 122,
   "latest": {
-    "version": "2.0.57",
+    "version": "2.0.58",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.57 冻结列统一宽度修掉和弦轨道遮挡；播放头按真实输出延迟对齐声音；64/128 步不再半空",
-      "en": "v2.0.57 One width for the frozen column, a playhead aligned to real output latency, and no more half-empty 64/128-step grids"
+      "zh": "v2.0.58 超级锯有了真正的立体声展开；界面密度设置从此真的生效",
+      "en": "v2.0.58 The Supersaw Gets Real Stereo Width, and the Density Setting Finally Does Something"
     },
     "highlights": [
       {
-        "zh": "**冻结列只有一个宽度**：标尺标签 138px、轨道头 142px、力度泳道 126px——三个宽度、两种间距同时在用。标尺那列是 `z-30`、轨道头是 `z-20`，所以在手机上标尺压过和弦轨道头 4px（这就是「和弦轨道会被遮挡」），同时标尺的步号比它标注的格子偏移 4px。现在三者共用 `--trk-head-w` / `--trk-head-gap`，滚动条留白也从写死的 126px 改成同一个变量。实测四个端：列宽与首列 x 坐标全部对齐。",
-        "en": "**The frozen column now has one width**: the ruler label was 138 px, every track header 142 px and the velocity lane 126 px, with two different gaps. The ruler column is `z-30` and the track headers are `z-20`, so on a phone the ruler painted 4 px over the chords header — the reported occlusion — while the ruler badges sat 4 px away from the cells they label. All three share `--trk-head-w` / `--trk-head-gap` now, and the scrollbar gutter uses the same variable instead of a h…"
+        "zh": "**超级锯（supersaw）立体声展开**：此前它是两把锯齿相差 26 音分、**完全单声道**。两把失谐锯齿挤在同一声道里只会以单一速率互相拍频，听感是「一把带点合唱的主音」而不是 trance 的声墙——而这个音色是 trance / hardstyle /  euphoric 类曲风的和弦担当。现在增设一对失谐副振荡器（±42 音分，即预设失谐的 1.6 倍）并左右分开摆位，用等功率摆位（居中时两声道各 √½，满足 L²+R²=1，避免线性摆位把居中做得响 3dB）保持总响度不变；原本的一对仍居中垫在下面，副对的混音只取预设的一半，所以加宽不抬电平。",
+        "en": "**Real stereo width for the supersaw**: it was two sawtooths 26 cents apart in **complete mono**. Two detuned saws in one channel only beat against each other at a single rate, which reads as 'a lead with a bit of chorus' rather than a trance wall — and that timbre carries the chords in trance, hardstyle and euphoric genres. It now gains a detuned outer pair (±42 cents, 1.6× the preset's own offset) panned apart with equal-power panning (both channels at √½ when centred, L²+…"
       },
       {
-        "zh": "**手机端轨道头不再溢出到步进格上**：142px 的列里塞了十一个控件，实测内容宽 241px，而列是 `sticky` + `overflow:hidden`——静音、独奏、滑杆按钮全部压在步进格上方，点它们实际是在切步进。现在手机只保留音符身份（折叠、类型、色条、电平、名称）与静音/独奏，其余由每轨控制台承担；试听钮移进控制台，手机上不会失去这个功能。两处原本写了 `hidden md:flex` 仍在溢出的按钮，原因是元素自己的 `flex` 与 `hidden` 同优先级、由 Tailwind 输出顺序决定——所以改用真正的 `display:none !important`。",
-        "en": "**The phone track header no longer spills onto the step grid**: eleven controls inside a 142 px column measured 241 px of content, in a `sticky` box with `overflow: hidden`, so mute, solo and the sliders button all landed on top of step cells and tapping them toggled steps. The phone keeps the row identity (fold, type, colour, meter, name) plus mute and solo; everything else lives in the per-track inspector, and auditioning moved there too so the phone does not lose it. Two…"
+        "zh": "**其余 50 个预设逐位不变**：立体声级只在预设声明 `stereoSpread` 时创建，不需要的预设连一个 splitter 都不多分配。测试以**节点计数**断言这一点（遍历全部未选择加入的预设，断言 splitter/merger 数量为 0），而不是依赖那个 `if`——否则一旦有人把该级改成无条件，158 个预设会静默改声，两份已提交基线同时失效。按仓库规矩重录了两份基线。",
+        "en": "**The other 50 presets are bit-for-bit unchanged**: the stereo stage is built only when a preset declares `stereoSpread`, and a preset that does not ask for it allocates not one extra splitter. The test asserts that by **counting nodes** across every preset that does not opt in (splitter and merger counts must be 0) rather than trusting the `if` — otherwise making the stage unconditional would silently change 158 presets and invalidate both committed baselines at the same ti…"
       },
       {
-        "zh": "**播放头按真实输出延迟对齐声音**：原来在 `ctx.currentTime` 越过步进时间的那一刻就推进播放头。但排在 `t` 的音是在 `t` 被渲染、在 `t + outputLatency` 才到扬声器，所以画面系统性地早于声音。现在减去 `outputLatency + 限幅器前瞻 + 用户补偿`，并封顶半步；浏览器不报告延迟时结果精确为 0，离线导出与既有测试不受影响（有单测固定这一点）。",
-        "en": "**The playhead is aligned to the real output latency**: it advanced the instant `ctx.currentTime` passed a step's scheduled time, but a voice scheduled at `t` is *rendered* at `t` and reaches the speakers at `t + outputLatency`, so the picture was systematically early. It now subtracts `outputLatency + limiter lookahead + user compensation`, capped at half a step; where a browser reports no latency the result is exactly 0, so the offline bounce and every existing test are un…"
+        "zh": "**界面密度设置真正生效（此前是个谎）**：设置里有紧凑/标准/宽松三档、有持久化、有校验、有中英文案，**却没有任何组件读它**——按下紧凑按钮亮起，界面毫无变化。这比不提供该控件更糟。现在它落到 `<html data-density>` 上，由 `index.css` 的几何自定义属性消费，因此不需要任何组件订阅该状态、也不会造成每次改偏好就整树重渲染（与播放头走 DOM 总线同一考虑）。步进格高度实测：桌面 40 / 44 / 48px，手机竖屏同样 40 / 44 / 48px。",
+        "en": "**The density setting actually takes effect (it was previously a lie)**: Settings offered compact / standard / comfortable with persistence, validation and bilingual labels, and **no component read it** — pressing compact lit the button up and changed nothing on screen. That is worse than not offering the control. It now lands on `<html data-density>` and is consumed by the geometry custom properties in `index.css`, so no component has to subscribe to it and changing the pre…"
       }
     ],
     "truncated": true

@@ -108,6 +108,20 @@ export default {
         'normal': '200ms',
         'slow': '300ms',
       },
+      /**
+       * Density-aware sizes.
+       *
+       * `--step-cell-h`, `--step-cell-h-compact` and `--track-row-pad-y` are resolved per density
+       * tier in `src/index.css`, so `h-step` follows the user's 界面密度 setting — and the phone
+       * minimum touch target, and the short-landscape compression — without any component needing
+       * to know which tier is active. The theme keys exist so these are real Tailwind utilities
+       * rather than the same arbitrary value repeated across three files.
+       */
+      spacing: {
+        step: 'var(--step-cell-h)',
+        'step-compact': 'var(--step-cell-h-compact)',
+        'row-y': 'var(--track-row-pad-y)',
+      },
       animation: {
         'pulse-glow': 'pulseGlow 2s infinite ease-in-out',
         'orbit': 'orbit 20s linear infinite',

@@ -118,6 +118,19 @@ export interface SynthPreset {
    * (harder = slightly more percussive). `0` (default) disables it.
    */
   velocityToDecay?: number;
+  /**
+   * Stereo width for a detuned stack, 0…1 (0 = mono, the default).
+   *
+   * Absent is **exactly** the old voice: the second oscillator goes straight into the mixer with
+   * no splitter and no panners, so every preset that does not opt in renders bit-for-bit as it
+   * did, and the library's measured timbre/loudness baselines stay meaningful for it.
+   *
+   * When set, the voice gains a second detuned pair panned left and right. This is what a real
+   * supersaw *is* — the width is not decoration on top of the sound, it is the sound — and it is
+   * also why a mono two-saw stack read as "a lead with a slight chorus" rather than a trance
+   * wall. Values above `MAX_STEREO_SPREAD` are clamped at the call site.
+   */
+  stereoSpread?: number;
 }
 
 /**
@@ -309,7 +322,10 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
 
   // --- Chords / pads -------------------------------------------------------
   // `supersaw`: two saws an intentionally wide 26 cents apart (more than twice
-  // sawLead) through a bright, low-Q filter — the trance/EDM wall of sound.
+  // sawLead) through a bright, low-Q filter — the trance/EDM wall of sound. `stereoSpread`
+  // adds the outer detuned pair panned apart, which is what makes it a *wall*: a mono pair
+  // at this detune reads as one slightly-chorused lead, because the two saws beat against
+  // each other in a single channel instead of decorating the stereo field.
   supersaw: {
     // E-14: a supersaw wall is static brightness; the historical 2.5x sweep fights the detune.
     filterEnvOctaves: 0.7,
@@ -318,6 +334,7 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     osc2Type: "sawtooth",
     osc2DetuneCents: 26,
     osc2Mix: 0.55,
+    stereoSpread: 0.65,
     filterCutoff: 6500,
     filterQ: 1.0,
     adsr: { attack: 0.02, decay: 0.35, sustain: 0.85, release: 0.45 },
@@ -1169,6 +1186,73 @@ export function resonanceCompensationGainDb(
 const VELOCITY_FILTER_SETTLE_SEC = 0.0005;
 
 /**
+ * Equal-power channel gains for a detuned pair sitting `spread` of the way out from centre.
+ *
+ * `spread` is 0…1: 0 is dead centre and 1 is hard left/right. Equal power (`cos`/`sin` around
+ * 45°) rather than linear panning because the two sides are **decorrelated** — they are
+ * different detuned oscillators, not the same signal — so linear gains would make a centred
+ * pair 3 dB louder than a panned one. At centre both channels get `√½ ≈ 0.7071`, which is the
+ * constant-power point, and `left² + right² === 1` holds for every value.
+ *
+ * Pure and total: a non-finite or out-of-range `spread` is clamped rather than propagated, so
+ * a bad preset value cannot put `NaN` into a `GainNode.gain`.
+ */
+export function stereoSpreadGains(spread: number): { left: number; right: number } {
+  const amount = Number.isFinite(spread) ? Math.max(0, Math.min(1, spread)) : 0;
+  // The angle runs 45° (both channels √½) to 90° (all of it on the right). `amount * 45°` would
+  // instead start at {1, 0} — a hard-panned pair at "zero" width, which is both wrong and 3 dB
+  // louder than the mono voice it replaces.
+  const angle = ((1 + amount) * Math.PI) / 4;
+  return { left: Math.cos(angle), right: Math.sin(angle) };
+}
+
+/**
+ * Detune offsets, in cents, for the outer pair of a unison stack.
+ *
+ * The preset's own `osc2DetuneCents` places the *first* pair; the outer pair deliberately does
+ * not merely repeat it. Beating rate is proportional to the offset in cents, so a stack whose
+ * members are all within one narrow band produces one slow beat rather than the shimmer a real
+ * supersaw has. The outer offset is therefore a multiple of the preset's, and it is returned
+ * separately (rather than added to a running total) so a test can assert the relationship
+ * instead of hardcoding two numbers that happen to match.
+ */
+export function unisonOuterDetuneCents(
+  osc2DetuneCents: number,
+  multiple = UNISON_OUTER_DETUNE_MULTIPLE
+): number {
+  const base = Number.isFinite(osc2DetuneCents) ? osc2DetuneCents : 0;
+  return base * multiple;
+}
+
+/** How much wider the outer unison pair sits than the preset's own `osc2DetuneCents`. */
+export const UNISON_OUTER_DETUNE_MULTIPLE = 1.6;
+
+/**
+ * The oscillator waveforms one voice of this preset allocates, in creation order.
+ *
+ * Exists so callers that need to reason about a voice's node count — the exporter-parity tests,
+ * and anything counting voices for polyphony — ask the preset instead of assuming two. Before the
+ * unison stage the answer was always `[osc1Type, osc2Type]`, and that assumption is exactly what
+ * the parity suite had baked in.
+ */
+export function voiceOscillatorTypes(preset: SynthPreset): OscillatorType[] {
+  const base: OscillatorType[] = [preset.osc1Type, preset.osc2Type];
+  const spread = Math.max(0, Math.min(MAX_STEREO_SPREAD, preset.stereoSpread ?? 0));
+  // The outer pair is the same waveform as osc1: it is the detuned stack filling out the first
+  // oscillator, not a second timbre.
+  return spread > 0 ? [...base, preset.osc1Type, preset.osc1Type] : base;
+}
+
+/**
+ * The most a stereo spread is allowed to contribute.
+ *
+ * A full hard-panned pair in a *mono* playback path would collapse by 3 dB, and phones play
+ * these parts through a single speaker often enough that it matters. 0.7 keeps the sides
+ * clearly separated while leaving most of the signal in both channels.
+ */
+export const MAX_STEREO_SPREAD = 0.7;
+
+/**
  * One quarter-second of deterministic white noise per audio context, reused by every
  * noise-based voice. A linear congruential generator (not `Math.random`) is used so the
  * realtime engine and the offline WAV renderer produce the same noise bed — the same
@@ -1270,6 +1354,75 @@ export function playPolySynthNote(
   osc1.connect(osc1Gain);
   osc2.connect(osc2Gain);
 
+  /**
+   * Optional stereo unison stage.
+   *
+   * A second detuned pair is added and the two pairs are panned apart, which is the mechanism
+   * behind a supersaw's width. Placed *before* the filter so the filter, the resonance
+   * compensation, the amp envelope and the noise bed all keep the single-channel graph they had:
+   * only the oscillator mix is widened, and everything downstream stays as it was.
+   *
+   * The nodes are created only when a preset asks for it. A preset without `stereoSpread` (the
+   * default, and every preset that predates the field) therefore allocates exactly the nodes it
+   * always did and sounds identical — the guarantee that keeps the committed baselines honest.
+   */
+  let mixerOut: AudioNode = osc1Gain;
+  const spread = Math.max(0, Math.min(MAX_STEREO_SPREAD, preset.stereoSpread ?? 0));
+  if (spread > 0) {
+    const osc3 = ctx.createOscillator();
+    const osc4 = ctx.createOscillator();
+    const outerGain = ctx.createGain();
+    // A 1-input, 2-output splitter duplicates the mono outer pair onto both outputs, which is
+    // what makes two independent pan gains possible without sending the pair to `destination`
+    // (a bare `GainNode.connect(destination)` would, and the note would play twice).
+    const splitter = ctx.createChannelSplitter(2);
+    const merge = ctx.createChannelMerger(2);
+    const leftBus = ctx.createGain();
+    const rightBus = ctx.createGain();
+
+    const outerCents = unisonOuterDetuneCents(osc2DetuneCents);
+    for (const [osc, cents] of [
+      [osc3, outerCents],
+      [osc4, -outerCents],
+    ] as const) {
+      osc.type = osc1Type;
+      osc.frequency.setValueAtTime(freq, time);
+      osc.detune.setValueAtTime(cents, time);
+      if (preset.pitchSweepCents) {
+        const sweepEnd = safeFreq(freq * Math.pow(2, preset.pitchSweepCents / 1200), freq);
+        osc.frequency.exponentialRampToValueAtTime(sweepEnd, gateEnd);
+      }
+      osc.start(time);
+      // Bounded the same way the noise bed is (gate + release + a margin) rather than by
+      // `noteEndTime`, which is not computed until the amp envelope below. One extra release
+      // length of a silent tail costs nothing and keeps these two sources' lifetimes identical.
+      osc.stop(gateEnd + Math.max(0.01, adsr.release) + 0.01);
+      sources.push(osc);
+    }
+    // The outer pair carries half the mix, so adding it does not raise the summed level: the
+    // preset's own balance between osc1 and osc2 is preserved and only the width changes.
+    outerGain.gain.setValueAtTime(osc2Mix * 0.5, time);
+    osc3.connect(outerGain);
+    osc4.connect(outerGain);
+
+    const { left, right } = stereoSpreadGains(spread);
+    outerGain.connect(splitter);
+    splitter.connect(leftBus, 0);
+    splitter.connect(rightBus, 1);
+    leftBus.gain.setValueAtTime(left, time);
+    rightBus.gain.setValueAtTime(right, time);
+
+    // The original pair stays centred underneath: its mono mix goes to both output channels.
+    osc1Gain.connect(merge, 0, 0);
+    osc1Gain.connect(merge, 0, 1);
+    osc2Gain.connect(merge, 0, 0);
+    osc2Gain.connect(merge, 0, 1);
+    leftBus.connect(merge, 0, 0);
+    rightBus.connect(merge, 0, 1);
+    gains.push(outerGain, leftBus, rightBus);
+    mixerOut = merge;
+  }
+
   // Per-voice Resonant Biquad Filter
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
@@ -1365,12 +1518,12 @@ export function playPolySynthNote(
   if (compDb !== 0) {
     const resonanceComp = ctx.createGain();
     resonanceComp.gain.setValueAtTime(Math.pow(10, compDb / 20), time);
-    osc1Gain.connect(resonanceComp);
-    osc2Gain.connect(resonanceComp);
+    // `mixerOut` is the oscillator mix's last node — the stereo merge when the preset is
+    // widened, `osc1Gain` otherwise — so everything downstream is untouched by the unison stage.
+    mixerOut.connect(resonanceComp);
     resonanceComp.connect(filter);
   } else {
-    osc1Gain.connect(filter);
-    osc2Gain.connect(filter);
+    mixerOut.connect(filter);
   }
 
   /** The last filter stage in the chain, so the noise bed and the amp connect to the right one. */

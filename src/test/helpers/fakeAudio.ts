@@ -200,6 +200,8 @@ export class FakeAudioGraph {
   createdPanners: FakeStereoPannerNode[] = [];
   createdSpatialPanners: FakePannerNode[] = [];
   createdBufferSources: FakeBufferSourceNode[] = [];
+  createdChannelSplitters: FakeChannelSplitterNode[] = [];
+  createdChannelMergers: FakeChannelMergerNode[] = [];
 
   createGain() {
     const node = new FakeGainNode();
@@ -252,10 +254,14 @@ export class FakeAudioGraph {
     return new FakeAnalyserNode();
   }
   createChannelSplitter(numberOfOutputs = 2) {
-    return new FakeChannelSplitterNode(numberOfOutputs);
+    const node = new FakeChannelSplitterNode(numberOfOutputs);
+    this.createdChannelSplitters.push(node);
+    return node;
   }
   createChannelMerger(numberOfInputs = 2) {
-    return new FakeChannelMergerNode(numberOfInputs);
+    const node = new FakeChannelMergerNode(numberOfInputs);
+    this.createdChannelMergers.push(node);
+    return node;
   }
   createBuffer(numberOfChannels: number, length: number, sampleRate: number) {
     return new FakeAudioBuffer(numberOfChannels, length, sampleRate);

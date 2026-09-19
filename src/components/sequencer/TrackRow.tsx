@@ -191,14 +191,14 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
     <div
       role="row"
       aria-label={meta.name}
-      className={`flex items-center gap-[var(--trk-head-gap)] ${isCompact ? "py-0.5 min-h-[36px]" : "py-1 sm:py-1.5"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
+      className={`flex items-center gap-[var(--trk-head-gap)] ${isCompact ? "py-0.5 min-h-[var(--step-cell-h-compact)]" : "py-row-y"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
       style={{ ["--tc" as any]: meta.color }}
     >
       {/* Track Header (.trk-head) - `--trk-head-w` (142px mobile / 176px sm+) - Sticky Left.
           The width is shared with the ruler label and the velocity lane so the three cannot
           disagree and paint over each other; see the note on `--trk-head-w` in index.css. */}
       <div className={`sticky left-0 z-20 bg-gradient-to-r from-[#161822] to-[#121319] flex-none w-[var(--trk-head-w)] pr-1.5 sm:pr-2 pl-1 flex flex-col justify-center ${
-        isCompact ? "h-[36px] gap-0" : "gap-1"
+        isCompact ? "h-[var(--step-cell-h-compact)] gap-0" : "gap-1"
       } select-none border-r border-line-subtle border-l-[3.5px] border-l-[var(--tc)] shadow-[4px_0_12px_rgba(0,0,0,0.6)] overflow-hidden transition-all ${
         isSilenced && !isMute && !isSolo ? "opacity-60" : "opacity-100"
       }`}>

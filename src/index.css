@@ -246,6 +246,45 @@ input[type=range]::-moz-range-thumb {
      ruler used `sm:gap-3` while the rows used `gap-2 sm:gap-3`, which shifted the
      step badges 4 px away from the cells they label on phones. */
   --trk-head-gap: 0.75rem;
+  /*
+   * Density, resolved in two steps.
+   *
+   * The `--dense-*` values are what the *viewport* implies (and, for landscape, the orientation),
+   * and the plain names are what the *user's* 界面密度 setting selects from them. Splitting it
+   * this way is what lets the setting be a real radio group without duplicating the phone
+   * minimum-touch-target rule and the landscape compression into every density tier — a second
+   * copy of either would be free to drift.
+   *
+   * Level 1 — viewport / orientation.
+   */
+  --step-cell-h-dense: 2.75rem; /* 44 px phone minimum touch target */
+  --step-cell-h-base: 2.5rem;   /* 40 px desktop */
+  --step-cell-h-compact-dense: 1.75rem;
+  --step-cell-h-compact-base: 1.75rem;
+  --track-row-pad-y-dense: 0.25rem;
+  --track-row-pad-y-base: 0.375rem;
+  --trk-row-h-dense: calc(var(--step-cell-h-dense) + 2 * var(--track-row-pad-y-dense));
+  --trk-row-h-base: calc(var(--step-cell-h-base) + 2 * var(--track-row-pad-y-base));
+  /* Level 2 — the setting. `standard` is the default and is what the app shipped before the
+     setting did anything, so a profile with no stored preference is unchanged. */
+  --step-cell-h: var(--step-cell-h-base);
+  --step-cell-h-compact: var(--step-cell-h-compact-base);
+  --track-row-pad-y: var(--track-row-pad-y-base);
+  --trk-row-h: var(--trk-row-h-base);
+}
+
+/** 紧凑: shorter rows, for fitting more tracks on screen while arranging. */
+:root[data-density="compact"] {
+  --step-cell-h: var(--step-cell-h-dense);
+  --step-cell-h-compact: var(--step-cell-h-compact-dense);
+  --track-row-pad-y: 0.125rem;
+}
+
+/** 宽松: taller rows, for touch accuracy and for reading a dense pattern. */
+:root[data-density="comfortable"] {
+  --step-cell-h: calc(var(--step-cell-h-base) + 0.5rem);
+  --step-cell-h-compact: calc(var(--step-cell-h-compact-base) + 0.5rem);
+  --track-row-pad-y: 0.5rem;
 }
 
 @media (min-width: 640px) {
@@ -353,6 +392,22 @@ html.reduced-motion .animate-orbit {
 
 /* Mobile Landscape Hardware Groovebox Experience (Height <= 500px & Landscape) */
 @media (max-height: 500px) and (orientation: landscape) {
+  /**
+   * A short landscape phone re-derives the density inputs rather than overriding the outputs, so
+   * the user's 界面密度 setting still has an effect here instead of being silently replaced.
+   *
+   * This block wins over the `[data-density]` selectors above on specificity (`:root` inside a
+   * media query loses to `:root[data-density]`), so it must set the `--…-dense` / `--…-base`
+   * inputs — the ones the density tiers select from — and never the plain names.
+   */
+  :root {
+    --step-cell-h-dense: 1.85rem;
+    --step-cell-h-base: 1.85rem;
+    --step-cell-h-compact-dense: 1.85rem;
+    --step-cell-h-compact-base: 1.85rem;
+    --track-row-pad-y-dense: 0.125rem;
+    --track-row-pad-y-base: 0.125rem;
+  }
   header.sticky {
     padding-top: 0.25rem !important;
     padding-bottom: 0.25rem !important;
@@ -372,15 +427,17 @@ html.reduced-motion .animate-orbit {
     height: 1.75rem !important;
   }
   .landscape-compact-row {
-    padding-top: 0.125rem !important;
-    padding-bottom: 0.125rem !important;
+    padding-top: var(--track-row-pad-y) !important;
+    padding-bottom: var(--track-row-pad-y) !important;
   }
+  /* Cells and headers track the same variable, so the step grid can never drift out of
+     horizontal alignment with its own ruler in this orientation. */
   .landscape-compact-cell {
-    height: 1.85rem !important;
-    min-width: 1.85rem !important;
+    height: var(--step-cell-h-compact) !important;
+    min-width: var(--step-cell-h-compact) !important;
   }
   .landscape-compact-header {
-    height: 1.85rem !important;
+    height: var(--step-cell-h-compact) !important;
   }
 }
 

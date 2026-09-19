@@ -13,7 +13,12 @@
 import React from "react";
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { StepCell } from "../components/sequencer/StepCell";
+
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const baseProps = {
   trackIdx: 0,
@@ -50,20 +55,36 @@ describe("StepCell phone geometry", () => {
     expect(cls).toMatch(/sm:w-auto/);
   });
 
-  it("gives a phone a 44px-tall cell", () => {
+  it("gives a phone a 44px-tall cell and a shorter desktop cell, through the density token", () => {
     const { container } = renderCell();
     const cls = cellOf(container).className;
-    // `h-11` = 44px exactly; desktop stays at `h-10` because eight rows have to fit beside the
-    // information dossier there.
-    expect(cls).toMatch(/(^|\s)h-11(\s|$)/);
-    expect(cls).toMatch(/sm:h-10/);
+    /**
+     * The literal `h-11 sm:h-10` became `h-step`, which resolves through `--step-cell-h`. That
+     * indirection is what makes the 界面密度 setting work (`densityPreference.test.ts`), so the
+     * claim to pin changed from "this class name is present" to "the token the class names
+     * resolves to is the phone minimum on a phone and shorter on desktop".
+     *
+     * jsdom has no layout engine, so the resolved pixel values are asserted here from the
+     * stylesheet and the real geometry is measured in a browser by `scripts/diagnose_density.mjs`.
+     */
+    expect(cls).toMatch(/(^|\s)h-step(\s|$)/);
+    expect(cls).not.toMatch(/(^|\s)h-step-compact(\s|$)/);
+
+    const css = readFileSync(path.resolve(TEST_DIR, "../index.css"), "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      ""
+    );
+    // Phone minimum touch target: 44 px = 2.75rem, applied at the base breakpoint.
+    expect(css).toMatch(/--step-cell-h-dense:\s*2\.75rem/);
+    // Desktop is shorter on purpose: eight rows plus the information dossier have to share 900 px.
+    expect(css).toMatch(/--step-cell-h-base:\s*2\.5rem/);
   });
 
-  it("keeps the compact density override, which is an explicit user choice", () => {
-    // `isCompact` is the per-track density preference; it must still win over the new phone
-    // default or the preference becomes unreachable.
+  it("keeps the compact override, which is an explicit per-track user choice", () => {
+    // `isCompact` is the per-track density preference; it must still win over the phone default or
+    // the preference becomes unreachable.
     const { container } = renderCell({ isCompact: true });
-    expect(cellOf(container).className).toMatch(/h-7/);
+    expect(cellOf(container).className).toMatch(/(^|\s)h-step-compact(\s|$)/);
   });
 
   it("keeps the touch-action that stops double-tap zoom on a cell", () => {

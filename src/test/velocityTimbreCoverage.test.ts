@@ -19,90 +19,43 @@ import {
   keyTrackedCutoff,
   playPolySynthNote,
 } from "../audio/PolySynth";
+import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 
 const presets = Object.entries(DEFAULT_SYNTH_PRESETS);
 
-/** Peak of the filter envelope the voice actually schedules, read from a fake context. */
+/**
+ * Peak of the filter envelope the voice actually schedules, read from a real fake context.
+ *
+ * This used to be a hand-rolled mock with one stub per node type the synth used. That mock drifted
+ * every time a voice gained a node — the stereo unison stage added a `ChannelSplitter` and this
+ * file failed with `ctx.createChannelSplitter is not a function`, which says nothing about
+ * velocity. It now uses the shared double, which implements the whole graph API and throws on the
+ * same illegal ramp targets a browser does, so a new node type cannot silently stop being tested.
+ */
 const scheduledPeakCutoff = (
   preset: (typeof DEFAULT_SYNTH_PRESETS)[string],
   velocity: number
 ): number => {
-  const param = (initial = 0) => ({
-    value: initial,
-    events: [] as Array<{ kind: string; value: number }>,
-    setValueAtTime(v: number) {
-      this.events.push({ kind: "set", value: v });
-      this.value = v;
-      return this;
-    },
-    linearRampToValueAtTime(v: number) {
-      this.events.push({ kind: "lin", value: v });
-      this.value = v;
-      return this;
-    },
-    exponentialRampToValueAtTime(v: number) {
-      this.events.push({ kind: "exp", value: v });
-      this.value = v;
-      return this;
-    },
-    setTargetAtTime(v: number) {
-      this.value = v;
-      return this;
-    },
-    cancelScheduledValues() {
-      return this;
-    },
-  });
-  const filters: Array<{ frequency: { events: Array<{ value: number }> } }> = [];
-  const ctx: Record<string, unknown> = {
-    currentTime: 0,
-    sampleRate: 44100,
-    createGain: () => ({ gain: param(1), connect: () => {}, disconnect: () => {} }),
-    createOscillator: () => ({
-      type: "sine",
-      frequency: param(440),
-      detune: param(0),
-      connect: () => {},
-      disconnect: () => {},
-      start: () => {},
-      stop: () => {},
-    }),
-    createBiquadFilter: () => {
-      const f = {
-        type: "lowpass",
-        frequency: param(350),
-        Q: param(1),
-        gain: param(0),
-        connect: () => {},
-        disconnect: () => {},
-      };
-      filters.push(f as never);
-      return f;
-    },
-    createBufferSource: () => ({
-      buffer: null,
-      loop: false,
-      playbackRate: param(1),
-      connect: () => {},
-      disconnect: () => {},
-      start: () => {},
-      stop: () => {},
-    }),
-    createBuffer: (c: number, l: number, sr: number) => ({
-      numberOfChannels: c,
-      length: l,
-      sampleRate: sr,
-      getChannelData: () => new Float32Array(l),
-    }),
-    createWaveShaper: () => ({ curve: null, oversample: "none", connect: () => {}, disconnect: () => {} }),
-  };
-  const dest = (ctx.createGain as () => unknown)();
-  playPolySynthNote(ctx as never, dest as never, 60, 0, 0.5, velocity, preset);
-  const events = filters[0].frequency.events;
-  // The envelope's peak is the largest scheduled value; the note already settles onto the
-  // velocity-scaled base before it, which is why the peak — not events[0] — is the brightness
-  // a hard note is heard with.
-  return events.reduce((m, e) => Math.max(m, e.value), 0);
+  const restore = installFakeOfflineAudioContext();
+  try {
+    const ctx = new FakeOfflineAudioContext(1, 4096, 44100);
+    playPolySynthNote(
+      ctx as unknown as BaseAudioContext,
+      ctx.createGain() as unknown as AudioNode,
+      60,
+      0,
+      0.5,
+      velocity,
+      preset
+    );
+    const events = ctx.createdFilters[0].frequency.events;
+    // The envelope's peak is the largest scheduled value; the note already settles onto the
+    // velocity-scaled base before it, which is why the peak — not events[0] — is the brightness a
+    // hard note is heard with.
+    return events.reduce((m, e) => Math.max(m, e.value), 0);
+  } finally {
+    restore();
+  }
 };
 
 describe("velocity reaches timbre for every preset", () => {
