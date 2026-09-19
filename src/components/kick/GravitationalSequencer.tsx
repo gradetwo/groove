@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Play, Square, FastForward, Heart, Footprints, Flame, Clock } from "lucide-react";
 import { AnatomyKickEngine } from "../../audio/AnatomyKickEngine";
 import { ecosystemBus } from "../../audio/ecosystemBus";
+import { useDeviceCapabilities } from "../../hooks/useDeviceCapabilities";
 
 interface StepConfig {
   active: boolean;
@@ -30,6 +31,8 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
   onBpmChange,
   className = "",
 }) => {
+  /** Phone surface: measured at 390×664 INITIATE PULSE was 146×30 and the tempo field 48×17. */
+  const { isMobile } = useDeviceCapabilities();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -229,7 +232,7 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={handleTogglePlay}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all shadow-md ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all shadow-md ${isMobile ? "min-h-11" : ""} ${
               isPlaying
                 ? "bg-[#f5b73d] text-black hover:bg-[#ffc95c] shadow-[0_0_12px_rgba(245,183,61,0.5)]"
                 : "bg-[#181d28] text-text hover:bg-[#232a3b] border border-line/60"
@@ -257,7 +260,7 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
               max={220}
               value={bpm}
               onChange={(e) => onBpmChange(Number(e.target.value) || 120)}
-              className="w-12 bg-transparent text-xs text-[#f5b73d] font-bold text-center border-b border-line focus:outline-none"
+              className={`w-12 bg-transparent text-xs text-[#f5b73d] font-bold text-center border-b border-line focus:outline-none ${isMobile ? "min-h-11" : ""}`}
             />
             <span className="text-[10px] text-text-dim">BPM</span>
           </div>

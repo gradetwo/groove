@@ -24,6 +24,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { 
   ChordDefinition, 
   ChordQuality, 
@@ -95,6 +96,8 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
   onOpenHelp,
 }) => {
   const { t, language, isZh } = useLanguage();
+  /** Phone surface: measured at 390×664 the guide button was 139×26 and both selects 119×32. */
+  const { isMobile } = useDeviceCapabilities();
 
   // Audio Engine instance (lazy singleton)
   const engineRef = useRef<ChordAudioEngine | null>(null);
@@ -401,7 +404,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                   data-testid="chords-help-button"
                   onClick={onOpenHelp}
                   title={t("chords_guide_btn")}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all ml-auto"
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border border-accent/40 bg-accent/10 text-accent font-semibold text-xs hover:bg-accent/20 transition-all ml-auto ${isMobile ? "min-h-11" : ""}`}
                 >
                   <BookOpen className="w-3.5 h-3.5 text-accent" />
                   <span>{t("chords_guide_btn")}</span>
@@ -439,7 +442,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 <select
                   value={keyRoot}
                   onChange={(e) => setKeyRoot(e.target.value)}
-                  className="w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent"
+                  className={`w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
                 >
                   {NOTE_NAMES.map((n) => (
                     <option key={n} value={n}>{n}</option>
@@ -455,7 +458,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
                 <select
                   value={isMinorKey ? "minor" : "major"}
                   onChange={(e) => setIsMinorKey(e.target.value === "minor")}
-                  className="w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent"
+                  className={`w-full bg-[#0a0d14] border border-[#333a4a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent ${isMobile ? "min-h-11" : ""}`}
                 >
                   <option value="major">{t("chords_mode_major")}</option>
                   <option value="minor">{t("chords_mode_minor")}</option>

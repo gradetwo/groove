@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Activity, Radio } from "lucide-react";
+import { useDeviceCapabilities } from "../../hooks/useDeviceCapabilities";
 
 interface PhosphorOscilloscopeProps {
   analyser: AnalyserNode | null;
@@ -18,6 +19,8 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
   onToggleMode,
   className = "",
 }) => {
+  /** Phone surface: measured at 390×664 the mode toggle was 57×33. */
+  const { isMobile } = useDeviceCapabilities();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [internalMode, setInternalMode] = useState<"time" | "lissajous">(mode);
   const shockRef = useRef(0);
@@ -204,7 +207,7 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
           </div>
           <button
             onClick={handleToggle}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#141824] hover:bg-[#1f2638] text-text border border-line/50 text-[9px] transition-colors"
+            className={`flex items-center gap-1 px-2 py-0.5 rounded bg-[#141824] hover:bg-[#1f2638] text-text border border-line/50 text-[9px] transition-colors ${isMobile ? "min-h-11" : ""}`}
             title="Toggle YT Waveform vs XY Lissajous Vectorscope"
           >
             <Radio className="w-2.5 h-2.5 text-[#f5b73d]" />
