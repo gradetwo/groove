@@ -56,31 +56,55 @@ const PROBE = `(() => {
     const el = document.querySelector(sel);
     if (!el) return null;
     const r = el.getBoundingClientRect();
-    return { top: Math.round(r.top), h: Math.round(r.height), bottom: Math.round(r.bottom) };
+    return {
+      left: Math.round(r.left),
+      right: Math.round(r.right),
+      top: Math.round(r.top),
+      h: Math.round(r.height),
+      bottom: Math.round(r.bottom),
+    };
   };
   const vh = window.innerHeight;
   const tabBar = box("[data-testid='mobile-tab-bar']");
   const transport = box("[data-testid='mobile-transport-bar']");
   const grid = box("[role='grid']");
-  const chrome = (tabBar?.h ?? 0) + (transport?.h ?? 0);
   /**
-   * The band of viewport that is neither bar — the space a user can actually look at.
+   * Whether the bars sit one above the other, share a row, or neither.
    *
-   * Reported instead of the grid's box height because the grid *scrolls*: its box is the full
-   * pattern (747 px of rows in a 390 px viewport), so its height says nothing about how much of
-   * the screen the user has. The distance between the two bars does.
+   * Computed before the footprint because the footprint depends on it: stacked bars cost the sum of
+   * their heights, and bars sharing a row cost only the taller one. "Top minus bottom" is the wrong
+   * way to describe either — once they share a row the transport's top is *below* the tab bar's and
+   * the subtraction goes negative, which is exactly the misleading number the first version printed.
    */
-  const available = (tabBar ? tabBar.top : vh) - (transport ? transport.bottom : 0);
+  const stacked = Boolean(
+    tabBar && transport &&
+    tabBar.left < transport.right && transport.left < tabBar.right &&
+    tabBar.top < transport.bottom && transport.top < tabBar.bottom
+  );
+  const sideBySide = Boolean(
+    tabBar && transport &&
+    tabBar.bottom === transport.bottom &&
+    (tabBar.right <= transport.left || transport.right <= tabBar.left)
+  );
+  const stackedFootprintPx = (tabBar?.h ?? 0) + (transport?.h ?? 0);
   return {
     vh,
     layout: document.querySelector("[data-testid='mobile-transport-bar']")?.getAttribute("data-layout") ?? null,
     tabBar,
     transport,
-    chromePx: chrome,
-    chromePct: Math.round((chrome / vh) * 100),
     grid,
-    availablePx: Math.round(available),
-    availablePct: Math.round((available / vh) * 100),
+    stacked,
+    sideBySide,
+    /**
+     * How much *height* the bars claim — the layout's vertical footprint, and the number a "the bars
+     * eat the screen" complaint is actually about.
+     *
+     * Reported for the bars rather than as an "unobstructed height": in portrait the transport sits
+     * in the panel's own flow partway down the page, so "everything below it is free" is true and
+     * useless.
+     */
+    stackedFootprintPx,
+    footprintPx: stacked ? stackedFootprintPx : Math.max(tabBar?.h ?? 0, transport?.h ?? 0),
   };
 })()`;
 
@@ -116,23 +140,34 @@ for (const [label, width, height] of TARGETS) {
   console.log(`\n### ${label} viewport ${width}x${height} (vh=${out.vh})`);
   console.log(`  transport bar  ${JSON.stringify(out.transport)}  layout=${out.layout}`);
   console.log(`  tab bar        ${JSON.stringify(out.tabBar)}`);
-  console.log(`  fixed chrome   ${out.chromePx}px = ${out.chromePct}% of the viewport`);
   console.log(
-    `  free band      ${out.availablePx}px = ${out.availablePct}% of the viewport (between the two bars)`
+    `  bars           ${out.stacked ? "STACKED" : out.sideBySide ? "SIDE BY SIDE (one row)" : "neither — check the markup"}`
+  );
+  console.log(
+    `  height claimed ${out.footprintPx}px = ${Math.round((out.footprintPx / out.vh) * 100)}% of the viewport ` +
+      `(stacked it would be ${out.stackedFootprintPx}px)`
   );
   await context.close();
 }
 
 if (results.portrait && results.landscape) {
-  const saved = results.portrait.transport.h - results.landscape.transport.h;
+  const l = results.landscape;
   console.log(
-    `\nlandscape transport is ${saved}px shorter than portrait ` +
-      `(${results.portrait.transport.h} -> ${results.landscape.transport.h})`
+    `\nlandscape claims ${l.footprintPx}px of height ` +
+      `(${Math.round((l.footprintPx / l.vh) * 100)}% of the viewport), bars ` +
+      `${l.sideBySide ? "sharing one row" : l.stacked ? "stacked" : "in an unrecognised arrangement"}`
   );
+  if (l.sideBySide) {
+    console.log(
+      `OK — one row of ${l.footprintPx}px instead of ${l.stackedFootprintPx}px stacked, ` +
+        `so ${l.stackedFootprintPx - l.footprintPx}px of height is back`
+    );
+  } else {
+    console.log("*** landscape still stacks two full-width bars ***");
+  }
   console.log(
-    saved > 0
-      ? "OK — the landscape layout is doing something"
-      : "*** the landscape layout is identical to portrait ***"
+    `portrait claims ${results.portrait.footprintPx}px ` +
+      `(${Math.round((results.portrait.footprintPx / results.portrait.vh) * 100)}%) — unchanged by design`
   );
 }
 

@@ -140,6 +140,16 @@ export interface SequencerPanelProps {
    * 29 % of the viewport. Forwarded to the mobile transport so it can drop bar navigation.
    */
   isShortLandscape?: boolean;
+  /**
+   * The phone's navigation bar, handed down so the studio can put it on the *same* bottom row as
+   * the transport instead of stacking two full-width bars.
+   *
+   * On a 390 px-tall landscape viewport the two stacked bars cost 102 px — 26 % — while there is
+   * 844 px of width doing nothing. Sharing one row gives the vertical space back without removing
+   * a single control, which is why the bar is passed in rather than reimplemented here: `App` owns
+   * navigation and this only decides where the row is put.
+   */
+  bottomBar?: React.ReactNode;
   /** Opens the phone sheet, which holds everything the compact bar leaves out. */
   onOpenMobileSheet?: () => void;
   /** Opens the Chords view — the phone's replacement for the piano roll. */
@@ -292,6 +302,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onOpenAudioSettings,
   isPhone = false,
   isShortLandscape = false,
+  bottomBar,
   onOpenMobileSheet,
   onOpenChords,
   commit,
@@ -406,6 +417,68 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
     return map;
   }, [pattern.tracks, pattern.genre_id, t]);
 
+  /**
+   * The phone transport, as an element rather than a fixed position in the tree.
+   *
+   * It is rendered in one of two places: in the panel's own flow (portrait, and any layout with
+   * room), or inside the shared bottom row below when the viewport is a short landscape one. The
+   * element itself is identical either way — only the container differs — which is what keeps the
+   * two layouts from drifting apart.
+   */
+  const transportBar = isPhone ? (
+    <MobileTransportBar
+      isPlaying={isPlaying}
+      bpm={seqState.bpm}
+      viewedBar={viewedBar}
+      barCount={barCount}
+      canUndo={canUndo}
+      canRedo={canRedo}
+      onTogglePlay={onTogglePlay}
+      onPrevBar={() => onSelectBar(Math.max(0, viewedBar - 1))}
+      onNextBar={() => onSelectBar(Math.min(barCount - 1, viewedBar + 1))}
+      onUndo={onUndo}
+      onRedo={onRedo}
+      onOpenSheet={onOpenMobileSheet ?? (() => setIsMobileSheetOpen(true))}
+      isShortLandscape={isShortLandscape}
+    />
+  ) : null;
+
+  /**
+   * One bottom row, two bars side by side.
+   *
+   * This is the whole point of the exercise: on a 390 px-tall landscape viewport the stacked bars
+   * cost 102 px (26 % of the screen) while 844 px of width sat unused. Sharing a row returns the
+   * transport's 49 px to the grid without deleting a control. The safe-area padding lives on the
+   * row, not on the tab bar, so the home indicator cannot sit on top of the transport's right-hand
+   * buttons.
+   */
+  const sharedBottomRow =
+    isShortLandscape && bottomBar ? (
+      <div
+        data-testid="mobile-shared-bottom-row"
+        className="fixed inset-x-0 bottom-0 z-[70] flex items-stretch border-t border-line bg-panel/95 backdrop-blur-lg"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
+        {/*
+          `min-w-0` lets the transport shrink instead of forcing the row wider than the viewport;
+          `overflow-hidden` keeps its 44 px buttons inside the slot rather than bleeding over the
+          tab bar's border.
+        */}
+        <div
+          className="flex min-w-0 shrink-0 items-stretch overflow-hidden"
+          style={{ width: "min(var(--mobile-transport-row-w), 55vw)" }}
+        >
+          {transportBar}
+        </div>
+        {/*
+          `flex-1`, not `shrink-0`: the transport claims a fixed 320 px, and the navigation bar has
+          to take the rest. With `shrink-0` it kept its own intrinsic width (197 px) and left 524 px
+          of the row empty while the five tabs were 39 px wide targets.
+        */}
+        <div className="flex min-w-0 flex-1 items-stretch border-l border-line">{bottomBar}</div>
+      </div>
+    ) : null;
+
   return (
     <section
       className={
@@ -424,22 +497,12 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
           : undefined
       }
     >
+      {/*
+        The transport moves into the shared bottom row when that row exists, so it is rendered here
+        only in the layouts that do not have one.
+      */}
       {isPhone ? (
-        <MobileTransportBar
-          isPlaying={isPlaying}
-          bpm={seqState.bpm}
-          viewedBar={viewedBar}
-          barCount={barCount}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onTogglePlay={onTogglePlay}
-          onPrevBar={() => onSelectBar(Math.max(0, viewedBar - 1))}
-          onNextBar={() => onSelectBar(Math.min(barCount - 1, viewedBar + 1))}
-          onUndo={onUndo}
-          onRedo={onRedo}
-          onOpenSheet={onOpenMobileSheet ?? (() => setIsMobileSheetOpen(true))}
-          isShortLandscape={isShortLandscape}
-        />
+        sharedBottomRow ? null : transportBar
       ) : (
       /* Sequencer Unified Toolbar */
       <Toolbar
@@ -831,6 +894,9 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
           })}
         />
       )}
+
+      {/* The shared bottom row is fixed, so it is rendered outside the panel's own flow. */}
+      {sharedBottomRow}
     </section>
   );
 };

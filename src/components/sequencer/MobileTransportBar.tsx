@@ -123,6 +123,17 @@ export function tempoReadoutBudgetPx(
  */
 export const TRANSPORT_BAR_HEIGHT_PX = { portrait: 59, landscape: 49 } as const;
 
+/**
+ * Width the transport claims when it shares a bottom row with the phone's navigation bar.
+ *
+ * Without a cap it wins the flex row on content size — the first attempt gave it 646 px and left the
+ * five tabs 198 px, which is a 40 px target each and unusable. The cap keeps the transport at the
+ * width its five controls actually need, and the tabs get the remaining ~520 px of an 844 px
+ * landscape viewport. Also expressed as `55vw` at the call site so a narrow landscape viewport
+ * cannot hand the navigation bar less than the majority of the width.
+ */
+export const TRANSPORT_ROW_WIDTH_PX = 320;
+
 export const MobileTransportBar: React.FC<MobileTransportBarProps> = ({
   isPlaying,
   bpm,

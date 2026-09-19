@@ -73,6 +73,14 @@ interface StudioViewProps {
   onAudioEngineReady?: (engine: AudioEngine) => (() => void) | void;
   /** Opens the global settings panel, which App owns (item ⑤). */
   onOpenSettings?: () => void;
+  /**
+   * The phone navigation bar, supplied by `App` so the studio can place it on the same bottom row
+   * as the transport instead of stacking two full-width bars on a 390 px-tall viewport.
+   *
+   * `App` keeps ownership — it renders the element either way — and this only decides where the row
+   * goes. See `PRODUCT_PLAN_v2.1.0.md` §G.5 and the recipe above §G.6.
+   */
+  mobileBottomBar?: React.ReactNode;
   onOpenGenreMaker?: () => void;
   onOpenHelp?: (chapterId?: string) => void;
   initialChords?: ChordDefinition[] | null;
@@ -94,6 +102,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onAudioEngineReady,
   onOpenGenreMaker,
   onOpenSettings,
+  mobileBottomBar,
   onOpenHelp,
   initialChords,
   onClearInitialChords,
@@ -921,6 +930,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         <SequencerPanel
           isPhone={isPhone}
           isShortLandscape={isShortLandscape}
+          bottomBar={mobileBottomBar}
           onOpenChords={onOpenChords}
           pattern={pattern}
           seqState={seqState}

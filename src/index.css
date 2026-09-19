@@ -246,6 +246,14 @@ input[type=range]::-moz-range-thumb {
      ruler used `sm:gap-3` while the rows used `gap-2 sm:gap-3`, which shifted the
      step badges 4 px away from the cells they label on phones. */
   --trk-head-gap: 0.75rem;
+  /**
+   * Width the phone transport claims when it shares the bottom row with the navigation bar.
+   *
+   * Kept in CSS so the panel can size the slot without importing the component's constant, and
+   * asserted equal to `TRANSPORT_ROW_WIDTH_PX` by a test — the same "CSS and TS cannot share a
+   * constant, so a test pins them together" arrangement as `PHONE_MAX_HEIGHT_PX`.
+   */
+  --mobile-transport-row-w: 320px;
   /*
    * Density, resolved in two steps.
    *

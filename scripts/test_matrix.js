@@ -879,11 +879,32 @@ async function runTestOnTarget(target, baseUrl) {
        * sheet) unreachable. On a wide-but-short viewport the shell still shows the bar, so the same
        * offset applies.
        */
-      const tabBarHeight = await page.evaluate(() => {
-        const bar = document.querySelector("[data-testid='mobile-tab-bar']");
-        return bar ? bar.getBoundingClientRect().height : 0;
+      /**
+       * How far the phone's bottom chrome reaches up, whatever shape it is in.
+       *
+       * It used to measure the tab bar alone. On a short landscape phone the tab bar now shares one
+       * row with the transport, and on portrait the transport is not at the bottom at all — so the
+       * honest question is "what is the highest bottom-anchored element", and that is what this
+       * answers. Measuring one named element would have silently started asserting against the
+       * wrong edge the moment the two bars were merged.
+       */
+      const bottomChromeTop = await page.evaluate(() => {
+        const vh = window.innerHeight;
+        let top = vh;
+        for (const sel of [
+          "[data-testid='mobile-tab-bar']",
+          "[data-testid='mobile-transport-bar']",
+          "[data-testid='mobile-shared-bottom-row']",
+        ]) {
+          for (const el of document.querySelectorAll(sel)) {
+            const r = el.getBoundingClientRect();
+            // Only elements actually anchored to the bottom of the viewport count.
+            if (r.bottom >= vh - 2 && r.top < top) top = r.top;
+          }
+        }
+        return top;
       });
-      const expectedBottom = viewport.height - tabBarHeight;
+      const expectedBottom = bottomChromeTop;
       const touchingBottom = Math.abs(inspectorBox.y + inspectorBox.height - expectedBottom) <= 6;
       // Width is "spans the viewport", not an exact match: a mobile engine can reserve a few px
       // for a scrollbar, and a 400 px desktop dock would be nowhere near the viewport width.
@@ -891,7 +912,7 @@ async function runTestOnTarget(target, baseUrl) {
       if (!touchingBottom || inspectorBox.x > 2 || !spansWidth) {
         throw new Error(
           `Inspector is not a bottom sheet on ${target.name}: box=${JSON.stringify(inspectorBox)} ` +
-            `viewport=${JSON.stringify(viewport)} tabBar=${tabBarHeight} expectedBottom=${Math.round(expectedBottom)}`
+            `viewport=${JSON.stringify(viewport)} bottomChromeTop=${Math.round(bottomChromeTop)} expectedBottom=${Math.round(expectedBottom)}`
         );
       }
     } else {

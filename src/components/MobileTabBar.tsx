@@ -129,9 +129,24 @@ export interface MobileTabBarProps {
   onSelectTab: (tab: NavTab) => void;
   /** Tapping "You" opens the sheet, whose last group is the app actions. */
   onOpenSheet: () => void;
+  /**
+   * Render in flow instead of pinned to the viewport.
+   *
+   * A short landscape phone puts this bar on the *same* bottom row as the transport
+   * (`PRODUCT_PLAN_v2.1.0.md` §G.5), and `fixed inset-x-0 bottom-0` cannot take part in a flex row —
+   * it ignores its container and overlays it, which is exactly what the first attempt at the merge
+   * did: the bar reported itself full-width inside a 1 px-wide parent. Embedded, the bar takes the
+   * width its row gives it, and the caller owns the fixed positioning and the safe-area padding.
+   */
+  embedded?: boolean;
 }
 
-export const MobileTabBar: React.FC<MobileTabBarProps> = ({ activeTab, onSelectTab, onOpenSheet }) => {
+export const MobileTabBar: React.FC<MobileTabBarProps> = ({
+  activeTab,
+  onSelectTab,
+  onOpenSheet,
+  embedded = false,
+}) => {
   const { t } = useLanguage();
 
   const isActive = (entry: MobileTabEntry): boolean => {
@@ -144,11 +159,26 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ activeTab, onSelectT
   return (
     <nav
       data-testid="mobile-tab-bar"
+      data-embedded={embedded ? "true" : "false"}
       aria-label={t("mobile_nav_label")}
-      className="fixed inset-x-0 bottom-0 z-[70] border-t border-line bg-panel/95 backdrop-blur-lg"
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      className={
+        embedded
+          ? "h-full w-full border-l border-line bg-panel/95 backdrop-blur-lg"
+          : "fixed inset-x-0 bottom-0 z-[70] border-t border-line bg-panel/95 backdrop-blur-lg"
+      }
+      /**
+       * The caller owns the row's safe-area padding when embedded; applying it twice would leave a
+       * gap under the bar's own buttons.
+       *
+       * Wrapped in `max()` rather than written as a bare `env(...)`: React's style serialiser drops
+       * an entire declaration whose value it cannot parse, and a bare `env()` is parsed as one by
+       * jsdom — so the attribute vanished and a test that asserted the inset was present failed for
+       * a reason that looked like a missing prop. `max()` also matches how the rest of the codebase
+       * writes an inset with a fallback.
+       */
+      style={embedded ? undefined : { paddingBottom: "max(0px, env(safe-area-inset-bottom, 0px))" }}
     >
-      <ul className="flex items-stretch justify-around">
+      <ul className="flex h-full items-stretch justify-around">
         {MOBILE_PRIMARY_TABS.map((entry) => {
           const active = isActive(entry);
           const isSheetOpener = entry.id === "you";

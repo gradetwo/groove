@@ -155,8 +155,34 @@ const MainApp: React.FC = () => {
    * so a landscape phone gets the phone UI instead of the desktop editor squeezed into 390 px of
    * height.
    */
-  const { isMobile } = useDeviceCapabilities();
+  const { isMobile, isShortLandscape } = useDeviceCapabilities();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  /**
+   * The phone navigation bar, built once and placed in one of two containers.
+   *
+   * Portrait (and every tall viewport): rendered fixed at the bottom, as it always was. Short
+   * landscape studio: handed to `StudioView`, which puts it on the same row as the transport so the
+   * two bars stop costing 102 px of a 390 px-tall viewport. Built here rather than in the view so
+   * that `App` remains the only thing that knows how navigation works.
+   */
+  const mobileTabBar = (
+    <MobileTabBar
+      activeTab={currentTab}
+      onSelectTab={handleSelectTab}
+      onOpenSheet={() => setMobileSheetOpen(true)}
+    />
+  );
+
+  /** The same bar, in flow, for the shared bottom row. See `MobileTabBar`'s `embedded` prop. */
+  const embeddedMobileTabBar = (
+    <MobileTabBar
+      activeTab={currentTab}
+      onSelectTab={handleSelectTab}
+      onOpenSheet={() => setMobileSheetOpen(true)}
+      embedded
+    />
+  );
 
   const handleMobileSheetAction = useCallback(
     (action: MobileSheetAction["id"]) => {
@@ -309,6 +335,9 @@ const MainApp: React.FC = () => {
                     onSelectGenre={handleSelectStudioGenre}
                     onViewDetail={handleSelectDetailGenre}
                     onOpenChords={() => handleSelectTab("chords")}
+                    mobileBottomBar={
+                      isShortLandscape && isMobile ? embeddedMobileTabBar : undefined
+                    }
                     onAddToCompare={handleAddToCompare}
                     onAudioEngineReady={handleEngineReady}
                     onOpenSettings={() => setSettingsOpen(true)}
@@ -557,11 +586,12 @@ const MainApp: React.FC = () => {
        */}
       {isMobile && (
         <>
-          <MobileTabBar
-            activeTab={currentTab}
-            onSelectTab={handleSelectTab}
-            onOpenSheet={() => setMobileSheetOpen(true)}
-          />
+          {/*
+            In a short landscape viewport the studio puts this bar on the *same* bottom row as its
+            transport (via `mobileBottomBar`), so rendering it fixed here too would show two copies.
+            Every other view keeps it fixed.
+          */}
+          {!(isShortLandscape && currentTab === "studio") && mobileTabBar}
           <MobileMoreSheet
             open={mobileSheetOpen}
             onClose={() => setMobileSheetOpen(false)}

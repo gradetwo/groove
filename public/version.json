@@ -1,27 +1,27 @@
 {
-  "version": "2.0.60",
+  "version": "2.0.61",
   "releaseDate": "2026-09-19",
-  "changelogCount": 124,
+  "changelogCount": 125,
   "latest": {
-    "version": "2.0.60",
+    "version": "2.0.61",
     "date": "2026-09-19",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.0.60 测试桩守卫：新增节点类型不再以「崩」代替「断言不成立」",
-      "en": "v2.0.60 A Guard for Test Doubles: a New Node Type Fails an Assertion Instead of Crashing the Suite"
+      "zh": "v2.0.61 手机两条固定栏合并到同一行：横屏占用 104px → 52px，每个标签宽度 39px → 104px",
+      "en": "v2.0.61 The Two Phone Bars Share One Row: 104px → 52px of Height, and 39px → 104px per Tab"
     },
     "highlights": [
       {
-        "zh": "**问题**：`velocityTimbreCoverage` / `keyTracking` / `audioDspGuards` 各自手写一份「按节点类型逐个打桩」的 AudioContext 假对象。立体声展开一加 `ChannelSplitter`，前两份就以 `ctx.createChannelSplitter is not a function` 崩掉——报错**与它们要测的东西毫无关系**，而且失败形态是「测试崩了」而不是「断言不成立」。更糟的是没被跑到的那部分**等于没测**，不是「跳过」。",
-        "en": "**The problem**: `velocityTimbreCoverage`, `keyTracking` and `audioDspGuards` each hand-rolled an AudioContext double with one stub per node type. When the stereo unison stage added a `ChannelSplitter`, two of them died with `ctx.createChannelSplitter is not a function` — an error that says **nothing about what those suites test**, and whose failure mode is a *crash* rather than a failed assertion. Worse, the part that never ran was **not tested at all**, which is not the sa…"
+        "zh": "**横屏一次性拿回 52px 高度**：走带条与标签栏此前一上一下各占一条，在 390px 高的横屏视口上共占 **104px**，而横向 844px 完全闲置。现在两者共享同一行：走带条固定在左 320px，标签栏取右侧 524px，**纵向占用降到 52px（13%，此前 27%）**。竖屏布局**逐像素不变**。",
+        "en": "**52px of height back on a landscape phone**: the transport and the tab bar used to sit at opposite ends of a 390px-tall viewport, costing **104px** between them while 844px of width sat unused. They now share one row — the transport fixed at 320px on the left, the tab bar taking the remaining 524px — so **the vertical footprint drops to 52px (13%, from 27%)**. The portrait layout is **pixel-for-pixel unchanged**."
       },
       {
-        "zh": "**处置**：`keyTracking` 迁移到共享的 `FakeOfflineAudioContext`（实现完整图 API，并且会像浏览器一样对非法 ramp 目标抛错）。`audioDspGuards` 保留自己的最小桩——它故意只实现「指数 ramp 对 ≤0 抛错」这一条浏览器行为——但补上了缺失的 `createChannelSplitter` / `createChannelMerger`，并新增守卫测试：**桩必须实现这 13 个 `create*` 工厂**，且与共享 fake 的清单一致。",
-        "en": "**The fix**: `keyTracking` moved to the shared `FakeOfflineAudioContext`, which implements the whole graph API and throws on the same illegal ramp targets a browser does. `audioDspGuards` keeps its deliberately minimal double — it reproduces exactly one browser behaviour, `exponentialRampToValueAtTime` throwing for a target ≤ 0 — but gained the missing `createChannelSplitter` / `createChannelMerger` plus a guard test asserting the double implements all 13 `create*` factories…"
+        "zh": "**顺带把导航的触摸目标做大了**：因为横向本来就有富余，合并后**每个 tab 的宽度从 39px 升到 104px**（实测），而不是像常见的「省空间」改动那样把按钮压小。全部 44px 触摸下限保持不变。",
+        "en": "**The navigation's touch targets got bigger, not smaller**: because the width was already spare, merging the row takes **each tab from 39px to 104px wide** (measured) instead of squeezing buttons the way a \"save space\" change usually does. Every 44px minimum is unchanged."
       },
       {
-        "zh": "**守卫当场抓到一个真实缺口**：`createBuffer` 也没实现。此前没有任何测试把带 `noiseMix` 的预设喂给这个桩，所以它没爆——也就是说噪声床这条路径在这份桩上是完全空白的。已补上。这正是守卫的价值：它把一个「迟早会以崩的形式出现」的缺口，变成一个**现在就红**的断言。",
-        "en": "**The guard immediately found a second real gap**: `createBuffer` was missing too. Nothing had fed a preset with `noiseMix` to that double, so it never crashed — meaning the noise-bed path was entirely blank on it. Now implemented. That is the point of the guard: it turns a gap that would eventually surface as a crash into an assertion that is **red right now**."
+        "zh": "**实施中撞到并修掉的三个真实陷阱**：① `fixed inset-x-0 bottom-0` **无法参与 flex 行**——它无视容器、覆盖容器，第一次合并时标签栏在一个 1px 宽的父元素里自报整屏宽；为此加了 `embedded` 变体（嵌入式不加 `fixed`，定位与安全区留白交给调用方）。② 不设上限时**走带条会赢下整个 flex 行**（按内容拿到 646px，把五个 tab 挤成每个 39px），现在它固定 320px、由测试与 CSS 变量钉为同值。③ **裸 `env()` 会让 React 丢掉整条 style 声明**：安全区内边距原先写作 `env(safe-area-inset-bottom, 0px)`，jsdom 解析不了该值于是整个 `style` 属性消失——测试以「断言失败」的形式暴露了这个真实的序列化问题；改为 `max(0px, env(...))` 后正常，也与会话其余写法一致。",
+        "en": "**Three real traps found and fixed during implementation**: (1) `fixed inset-x-0 bottom-0` **cannot take part in a flex row** — it ignores its container and overlays it; the first attempt had the tab bar reporting itself full-width inside a 1px-wide parent. Hence an `embedded` variant, where the caller owns positioning and the safe-area padding. (2) Without a cap **the transport wins the whole flex row** (646px on content size, leaving five 39px tabs); it is now fixed at 320…"
       }
     ],
     "truncated": true
