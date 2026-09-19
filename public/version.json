@@ -1,27 +1,27 @@
 {
-  "version": "2.0.98",
+  "version": "2.0.99",
   "releaseDate": "2026-09-19",
-  "changelogCount": 162,
+  "changelogCount": 163,
   "latest": {
-    "version": "2.0.98",
+    "version": "2.0.99",
     "date": "2026-09-19",
     "category": "fix",
     "title": {
-      "zh": "v2.0.98 手机端：Explore 页收拾干净，并把每个视图都量了一遍",
-      "en": "v2.0.98 The Phone Explore Page Is Clean, and Every View Has Been Measured"
+      "zh": "v2.0.99 手机端：和弦台与 Kick Lab 的控件都按得到了",
+      "en": "v2.0.99 On a Phone: The Chord Studio and Kick Lab Controls Are All Hittable"
     },
     "highlights": [
       {
-        "zh": "**量具能走别的页了**：`measure_phone_surface.mjs` 新增 `--tabs=a,b,c`。一量之下，**除了 studio 之外的每个视图都有低于 44 px 的控件**——合计 **89 个**：chords 3、kick 7、maker 8、challenge 5、masterclass 1、horizontal-timeline 12、vertical-timeline 6、compare 14、analyzer 13，Explore 9。前两轮修好的是手机端的「主页」，其余页面从来没按手机标准量过。完整表格写进了计划的 G.37，它就是接下来几轮的工作清单。",
-        "en": "**The measuring tool can walk other pages now**: `measure_phone_surface.mjs` takes `--tabs=a,b,c`. Measuring them showed that **every view except the studio has controls under 44 px** — **89 of them** in total: chords 3, kick 7, maker 8, challenge 5, masterclass 1, horizontal-timeline 12, vertical-timeline 6, compare 14, analyzer 13 and Explore 9. The previous two rounds fixed the phone's *home*; the other pages had never been measured against the phone standard. The full ta…"
+        "zh": "**和弦台（Tools 落地页）3 → 0**：Harmony Guide（139×26）与调号/调式两个下拉（119×32）在手机上都到 44 px——这两个下拉正是手机用户在这页最先要动的东西。",
+        "en": "**The chord studio (the Tools landing page) went from 3 to 0**: the Harmony Guide (139×26) and the key/mode selects (119×32) now clear 44 px — and those selects are the first thing a phone user reaches for on that page."
       },
       {
-        "zh": "**Explore 从 9 个降到 0**（studio 之外使用频率最高的页面，选曲风的地方）。六个星云分类 chip（39–134×**29**）、`Show all`、列表视图、年代回放按钮（28×28）都到了 44 px——它们在一行横向滚动里，变高不会挤坏布局。",
-        "en": "**Explore went from nine to zero** — it is the busiest page after the studio, the one where a genre gets picked. The six nebula category chips (39–134 × **29**), the `Show all` chip, the list-view button and the era-replay button (28×28) all reach 44 px; they live in a horizontally scrolling row, so growing taller costs no layout."
+        "zh": "**Kick Lab 7 → 0**：Kick Lab Guide（140×26）、Return to Studio（156×24）、CRT/WATERFALL 两个可视化模式、INITIATE PULSE（146×30），以及全页最小的两个目标——**TEMPO 数字输入 48×17** 与 **YT/XY 波形切换 57×33**——都到 44 px。",
+        "en": "**Kick Lab went from 7 to 0**: the Kick Lab Guide (140×26), Return to Studio (156×24), the two visualiser modes, INITIATE PULSE (146×30), and the two smallest targets on the page — the **TEMPO number field at 48×17** and the **YT/XY waveform toggle at 57×33** — all reach 44 px."
       },
       {
-        "zh": "**3D 投影标签在手机上改成纯视觉元素**（`pointer-events-none` + `tabIndex={-1}` + `aria-hidden`）。理由是它们**长不大**：渲染循环用 `translate3d(x, y-28) translate(-50%,-100%)` 把标签底边锚在投影点上，加高只会把文字整体上移；而 39×29 的按钮在手机上本来就点不准。手机改用 chip 行与列表视图选曲风（两者现在都是 44 px），标签留在屏幕上当信息。",
-        "en": "**The projected 3D labels became visual-only on a phone** (`pointer-events-none` + `tabIndex={-1}` + `aria-hidden`). They *cannot* grow: the render loop anchors each label's **bottom** edge to the projected point with `translate3d(x, y-28) translate(-50%,-100%)`, so a taller box only lifts the text; and a 39×29 button was not tappable anyway. The phone picks a genre from the chips row or the list view (both 44 px now) and keeps the labels as information."
+        "zh": "四个文件（`ChordProgressionsView`、`KickAnatomyView`、`GravitationalSequencer`、`PhosphorOscilloscope`）都从 `useDeviceCapabilities()` 读 `isMobile`，**桌面路径一行未改**。量后：chords 10 控件 / 0 低于 44，kick 12 / 0，横屏同样 0。",
+        "en": "The four files (`ChordProgressionsView`, `KickAnatomyView`, `GravitationalSequencer`, `PhosphorOscilloscope`) read `isMobile` from `useDeviceCapabilities()`; **the desktop path is untouched**. After the change: chords 10 controls / 0 under 44, kick 12 / 0, and 0 in landscape too."
       }
     ],
     "truncated": true
