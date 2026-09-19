@@ -7,7 +7,7 @@ import { useLanguage } from "../../i18n/LanguageContext";
  *
  * The desktop toolbar is 1889 lines with 64 buttons and four group rows — on a 390×844 phone it
  * measured 395 px, 47 % of the viewport, before a single step was visible (the number is the
- * project's own, from `STUDIO_REFACTOR_PLAN_v2.0.0.md`). Shrinking that is not a matter of
+ * project's own measurement, taken while S1 of the studio refactor was planned). Shrinking that is not a matter of
  * responsive classes: the control set itself is wrong for the device.
  *
  * So the phone gets the four things a beat needs while it is being programmed — play, tempo,

@@ -1,6 +1,6 @@
 # GROOVE LAB 改进任务清单（BACKLOG）
 
-> 配套文档：`IMPROVEMENT_PLAN.md`（历史 v1.0 基线）、`CODE_REVIEW_AND_PLAN_v1.16.0.md`（当前审阅与规划）
+> 配套文档：`CODE_REVIEW_AND_PLAN_v1.16.0.md`（历史审阅与 N-xx 登记）、`PRODUCT_PLAN_v2.1.0.md`（当前规划）
 > 当前基线：**v2.0.80**（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
 > 优先级：**P0** 正确性/安全 ｜ **P1** 体验/性能/可维护 ｜ **P2** 增强
 > 工时单位：人·天（含自测）

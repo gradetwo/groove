@@ -57,7 +57,7 @@ python3 - <<'EOF' ...              # 产物 gzip 分包统计
 EOF
 ```
 
-本次审查对 4 个高风险子系统做了问题域深挖（音频引擎、音序器状态与持久化、视图/UI/无障碍、数据层与 CI），并交叉复核了 `BACKLOG.md`（113/113 全勾）、`ROADMAP_V2.md`、`IMPROVEMENT_PLAN.md`、`prd.md` 与实现的差距。
+本次审查对 4 个高风险子系统做了问题域深挖（音频引擎、音序器状态与持久化、视图/UI/无障碍、数据层与 CI），并交叉复核了 `BACKLOG.md`（113/113 全勾）、`ROADMAP_V2.md`、`prd.md` 与实现的差距。
 
 ---
 
@@ -333,7 +333,7 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 
 | 文档 | 声称 | 实际 |
 |---|---|---|
-| `IMPROVEMENT_PLAN.md` | 基线 v1.0 / `3e188c9` / 54 文件 / 95,047 行 | 现为 194 文件 / 134,892 行 —— 文档已过期约 40% |
+| v1.0 基线规划文档（开源整理时删除） | 基线 v1.0 / `3e188c9` / 54 文件 / 95,047 行 | 现为 194 文件 / 134,892 行 —— 文档已过期约 40% |
 | `ROADMAP_V2.md` | "当前基线 v1.13.0" | 实际 v1.16.0；Phase 6/7/8 多数已交付但文档头部未更新 |
 | `BACKLOG.md` | "Phase 2 无障碍 100% 验收（WCAG AA 达标）" | 实测未达标（§5.3） |
 | `BACKLOG.md` | "P4-08 数据生成管线治理：CI 校验生成结果 == 仓库数据" | 无该 CI 步骤，生成脚本本身是孤儿 |
@@ -418,7 +418,7 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 | **E-06** | **开发/测试端口隔离**（对应你的要求）：`vite.config.ts` 读取 `process.env.PORT`/`VITE_PORT`，默认 3000 但 `strictPort: false`；`preview` 同样可配；启动日志打印最终实际 URL；文档与书签改用变量 | 同时启动两个实例不冲突；`PORT=5273 npm run dev` 生效；e2e/截图脚本继续使用临时端口（保持现状）；CI 与本地并行开发互不抢占 3000/8080/3080 |
 | **E-07** | 数据管线接入门禁：把 `lint_genres.ts` / `build_genre_index.ts` 用 `tsx` 跑起来并接入 `lint:data` 与 CI（校验"生成结果 == 仓库数据"） | 手动改坏一条 relation，CI 必须报错；`genresIndex` 漂移被自动发现 |
 | **E-08** | 可观测性落地：`trackEvent` 接真实出口（或删除）；错误报告带正确版本号；错误 Toast 改用 assertive | 错误上报含正确版本与堆栈；`telemetry` 无死导出 |
-| **E-09** | 文档同步：刷新 `IMPROVEMENT_PLAN.md` 基线、`ROADMAP_V2.md` 头部、`BACKLOG.md` 无障碍章节的真实状态；建立"文档声称 = 实测证据"的复核约定 | 三份文档的基线与版本号与 `package.json` 一致；每条 ✅ 附可复现命令 |
+| **E-09** | 文档同步：刷新 `ROADMAP_V2.md` 头部、`BACKLOG.md` 无障碍章节的真实状态；建立"文档声称 = 实测证据"的复核约定 | 三份文档的基线与版本号与 `package.json` 一致；每条 ✅ 附可复现命令 |
 | **E-10** | 前端可观测门禁（可选）：接 Lighthouse CI（性能/无障碍/SEO 预算） | PR 上产出 Lighthouse 报告并对预算漂移报警 |
 | **E-11** | 数据 schema 全字段校验：`validateGenre` 从 8 字段扩到全部 30 字段；`build_all.py:72-73` 的 `pass` 换成真实校验；内容模板占位检测（禁止 159/159 雷同句） | 故意清空一个 `subgenres`、注入一条模板文案，门禁必须报错；测试不再硬编码 `159` |
 | **E-12** | 仓库卫生：`git rm --cached` 那个 `.pyc`；`.gitignore` 补 `.wrangler/`、`.env`、`.dev.vars`；清理 `release/`（39 MB / 22 个条目）与 `scratch/`（16 KB）；删除无入口的 30+ 个一次性 Python 生成器 | `git ls-files \| grep pyc` 为空；`git check-ignore .env` 生效；仓库体积下降 ≥ 39 MB |
@@ -560,8 +560,8 @@ GENRE_INDEX(159, 3547行, 轻索引)  ──► App.tsx loadGenre(id) ──► 
 | B-02（用户报告） | ✅ | 1.16.16 | **`.groove` 工程包版本戳写死 `1.15.2`**：`exportProjectToGrooveFile` 的 `appVersion` 参数默认值是硬编码字面量，落后两个小版本（审查文档 §4 那条"版本号漂移"实际未清净）。改为默认取 `src/version.ts`。**新增红线 R1b**：`src/` 下（除 `version.ts` 与测试）不得出现 semver 形状的字符串字面量——R1 只证明四个生成物与 `package.json` 一致，挡不住应用代码里新冒出的陈旧字面量，这正是本次的漏网方式。反向验证：放回 `"1.15.2"` → R1b 失败并定位 `projectDb.ts:515`。红线总数 19 → 20。 |
 | N-09（用户需求） | ✅ | 1.16.16 | **曲风音色真正落地**：曲风数据一直为 8 轨声明 `instrument`（`flute_lead`/`rhodes_ep`/`808_bass`/`sub_bass` …），引擎从前忽略它、按轨道角色套同一固定预设（长笛主导曲风响成锯齿主音）。新增 `src/audio/instrumentPresets.ts` 四级回退链（精确预设名 → 别名表 → 轨道角色默认 → 全局默认）+ 补齐 17 件乐器合成器预设；实时引擎与离线 WAV 渲染器解析**同一个 preset**（导出与试听不再两套音色）。**数据文件零改动**。测试直接扫描 `src/data/genres/**` 的全部 159×8 个 `(track_id, instrument)` 组合并与类型化导出交叉比对，断言无一组落到全局默认、各音色可区分；引擎与离线各用 FakeAudioContext 对比新建节点证明"真的取用了这条映射"。 |
 | N-10（用户需求） | ✅ | 1.16.16 | **声谱仪仪器级信号发生器**：`MasterAnalyzerSuite` 新增可选 `signalGenerator` 控件（电源开关 + 内置信号下拉框），与下方原有参考信号区块共用 `AnalyzerView` 里同一个 `generatorRef` 与状态源；旧区块 JSX/文案/播放停止**逐字节未改**，工作台侧边栏不传该 prop 渲染与之前完全一致。6 条交互测试 + 390px 实测无横向溢出。 |
-| P-01（规划） | ✅ | — | **工作台重构规划文档** `STUDIO_REFACTOR_PLAN_v2.0.0.md`（618 行，原文件名 `STUDIO_REFACTOR_PLAN_v1.17.0.md`，目标里程碑由 v1.17.x 改为 **v2.0.0–v2.0.12**）：四档视口实测量测（1440×900 工具栏 173px / 手机 395px 占视口 47% / 常显控件 33 个 / 首屏仅剩 2–5 条轨）、5 个冲刺 29 项任务、v2.0.0–v2.0.12 里程碑。主张**推广已有的 `showAdvancedControls` 渐进披露范式**，而非重写；ID 命名空间 `D-/C-/L-/X-/G-` 与本文 `F-/A-/E-/U-/N-` 不重叠。 |
-| N-11（用户需求） | ✅ | 1.16.17 | **工作台内浮出调音台**：抽出纯展示 `ConsolePanel`（引擎与音序状态全部注入），`/console` 路由退化为持有引擎+状态的 55 行薄包装，工作台把自己的 `engineRef`+store 交给浮层复用。**浏览器实测 `AudioContext` 构造数恒为 1**（打开浮层前后），浮层内推子改的就是工作台同一条轨道；四种关闭路径 + 关着时渲染 `null` 均有测试与反向验证。顺带修掉母带条在 1440px 下需横向滚动才能碰到的缺陷（改为滚动容器内 `sticky right-0`）。见 `CONSOLE_FLOAT_NOTES.md`。 |
+| P-01（规划） | ✅ | — | **工作台重构规划文档**（618 行，开源整理时删除，原文件名 `STUDIO_REFACTOR_PLAN_v1.17.0.md`，目标里程碑由 v1.17.x 改为 **v2.0.0–v2.0.12**）：四档视口实测量测（1440×900 工具栏 173px / 手机 395px 占视口 47% / 常显控件 33 个 / 首屏仅剩 2–5 条轨）、5 个冲刺 29 项任务、v2.0.0–v2.0.12 里程碑。主张**推广已有的 `showAdvancedControls` 渐进披露范式**，而非重写；ID 命名空间 `D-/C-/L-/X-/G-` 与本文 `F-/A-/E-/U-/N-` 不重叠。 |
+| N-11（用户需求） | ✅ | 1.16.17 | **工作台内浮出调音台**：抽出纯展示 `ConsolePanel`（引擎与音序状态全部注入），`/console` 路由退化为持有引擎+状态的 55 行薄包装，工作台把自己的 `engineRef`+store 交给浮层复用。**浏览器实测 `AudioContext` 构造数恒为 1**（打开浮层前后），浮层内推子改的就是工作台同一条轨道；四种关闭路径 + 关着时渲染 `null` 均有测试与反向验证。顺带修掉母带条在 1440px 下需横向滚动才能碰到的缺陷（改为滚动容器内 `sticky right-0`）。 |
 | N-12（N-09 后续，本轮审查发现） | ✅ | 1.16.18 | **数据侧已补齐**：159 曲风逐一改用本命音色，`instrumentation` 从「159 次重复的同一句占位串」改为**159 种互不相同**的真实配器清单。实测对比：`lead` 5 种→**27 种**（`saw_lead` **92→28**）、`fx` 1 种→**9 种**（`noise_sweep` **159→54**，新增黑胶底噪/激光/上升噪/铜管重击/磁带停转/低频下坠/反向镲/下扫）、`bass` 9→14 种、`chords` 6→11 种；合成器预设库 **20→49 件**（新增 30 件真实参数预设，非改名）。我点名的那处已修：`bebop`/`hard-bop`/`cool-jazz`/`modal-jazz`/`free-jazz`/`traditional-jazz` 的主音从锯齿合成音改为 sax ×4 / trumpet ×2 / muted_trumpet ×1 / harmonica ×1 / brass_section ×1；拉丁世界改用铜管组/长笛/手风琴；摇滚金属保持 `guitar_lead` 16/17（本就正确，未动）。新增 `src/test/genreInstrumentation.test.ts` 八条数据门禁（配器条目数、互异度、占位词、轨道乐器须被配器清单点名、fx 与 lead 不得单值化）防止再次同质化，逐条反向验证过。仅改 `instrument` 与 `instrumentation`，`steps/velocity/pitch/gate/ratchet/probability/BPM` 逐字段核对未动。 |
 | B-03（本轮审查发现） | ✅ | 1.16.18 | **工具栏分享链接丢掉 8 个逐轨字段**：分享编解码器一直支持 `pan`/`sendA`/`sendB`/`gate`/`ratchet`/`probability`/`trackLength`/`swing`，工程中心（`ProjectHubModal`）也逐字段映射了，但工具栏的分享按钮（`useExportActions.handleShare`）是内联拼装的、只传了 `volume` —— 于是**从工作台分享出去的链接声相被抹平、送出全部归零、门限/连击/概率/轨道长度/摇摆全部退回默认值**，接收方听到的是居中、干声且丢失编辑的版本（恰好抹掉 N-13 刚做的按曲风编排的声相与送出）。修法是收敛成 `SequencerUrlShare.toSharedTrack` 单一实现、两处入口共用（而非补那 8 个字段了事）。新增 `src/test/shareTrackFidelity.test.ts` 三条（映射键集合须与 payload 声明一致 / 满字段 encode→decode 全等 / 直接对最终 URL 断言 pan、sendA、sendB、swing 仍在），反向验证：从 `toSharedTrack` 删掉 `pan` → 三条全红，恢复后全绿。 |
 | P-02（集成方独立复核，证据留档） | ✅ | 1.16.19 | **用真实模块（`vite-node` 导入 `GENRE_MIX_RESOLVED`）独立复核混音的「按曲风编排」是否成立**，不采信工作流自述：**159/159** 曲风都在表内；`(volume, pan)` 组合 **157 种互不相同 / 159**（修前是 **1 种重复 159 次**）；含送出后仍是 157 种。逐轨分布：kick 音量 24 档、snare 26 档、percussion 25 档、lead 20 档、fx 21 档；并且**专业约定没有被「多样性」破坏**——kick 与 bass 在全部 159 个曲风里 pan **恰好为 0**（低频保持单声道）、snare |pan| ≤ 0.08（保持居中），而 hihat 全在左侧（−0.42..−0.22）、percussion 对称展开（−0.45..+0.45）、chords 21 档、lead 18 档。**送出总线全部复活**：0 个曲风的两条送出仍为 0（修前 1272 条轨道 0 条声明）。trim：144 个不同取值，−4.43..+5.53 dB。复核脚本 `scratch/audit_mix_distinct.ts`。 |

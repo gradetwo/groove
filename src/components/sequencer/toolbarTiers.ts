@@ -2,8 +2,7 @@
  * C-01 · Toolbar frequency tiers (single source of truth)
  *
  * The studio toolbar currently renders every control unconditionally and is
- * ~173 px tall at 1440x900. S1 of STUDIO_REFACTOR_PLAN_v2.0.0.md splits it into
- * three frequency tiers so a later milestone can show Tier 1, fold Tier 2 into a
+ * ~173 px tall at 1440x900. The tiering splits it into three frequency tiers so a later milestone can show Tier 1, fold Tier 2 into a
  * trailing icon group, and move Tier 3 into a "more" popover.
  *
  * Tiering rule

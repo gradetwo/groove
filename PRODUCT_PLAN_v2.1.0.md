@@ -485,7 +485,7 @@ studio 的 URL 才会稳定带上曲风。
 
 | # | 事实 | 位置 | 用户感受 |
 |---|---|---|---|
-| U1 | 首屏是**密集编辑器 + 无单一动作指引**：默认 4 组工具栏全开，桌面约 40 个可见控件，手机 390×844 下工具栏占 **47% 视口**（团队自己的量测，`STUDIO_REFACTOR_PLAN_v2.0.0.md:15`） | `Toolbar.tsx:1149/1236/1382` | 第一印象是"控制面板"而不是"做个 beat" |
+| U1 | 首屏是**密集编辑器 + 无单一动作指引**：默认 4 组工具栏全开，桌面约 40 个可见控件，手机 390×844 下工具栏占 **47% 视口**（团队自己的量测） | `Toolbar.tsx:1149/1236/1382` | 第一印象是"控制面板"而不是"做个 beat" |
 | U2 | 7 页 onboarding 是**功能清单**（"零采样合成…159 个曲风…"），只有第 7 页有动作 | `help.ts:131-157`；`NewUserOnboardingModal.tsx:36-93` | 先读 7 屏才第一次出声 |
 | U3 | 点一下遮罩就**永久结束** onboarding（`Modal` 默认 `closeOnBackdropClick=true`，而 `onClose={handleFinish}` 会写已完成标记），设置里**没有"重看引导"** | `Modal.tsx:41,125-129`；`NewUserOnboardingModal.tsx:98-105,122-127` | 手机上误触一次，唯一的新手引导再也回不来 |
 | U4 | 教程教练**没有任何 DOM 定位**：8 门课每一步都只 `onNavigateTab("studio")`，无 spotlight、无高亮、无"你完成了吗"判定 | `InteractiveTutorialCoach.tsx:81-90` | 承诺的"交互式动手课"实际是幻灯片 |
@@ -959,7 +959,7 @@ node scripts/check_timbre_spread.mjs      # 音色基线也需重录（母带链
 2. **点抽屉里的行会关闭抽屉**：拖拽关闭手势原先加在整张抽屉上且无守卫，任何 pointerup 比 pointerdown 低 60px 就关闭——点靠下的行会被误判为下滑关闭。
 3. **标签栏遮挡轨道检查器**：标签栏 `z-[70]` 固定底部、检查器 `bottom-0 z-50`，最后约 52px 被盖住；横屏手机检查器只有 ~279px 高，**整块 EQ 画布**都在被盖区，实测症状是 EQ 频段手柄的命中落到标签栏按钮上、拖动完全无效。改为共用 `--mobile-tab-bar-h`（默认 0，仅在手机断点下非零）。
 4. **发布门禁在测旧产物**：E2E 服务 `dist/`，`npm run build` 失败时七个目标仍全绿（本轮真实发生）。现加构建产物过期守卫。
-5. **`version:check` 误报**：它要求 `IMPROVEMENT_PLAN.md` 写死精确行数，该数字随未跟踪文件与测量时机浮动，导致版本正确时门禁变红。改由 `check_docs.mjs` 单一负责（±10% 容差）。
+5. **`version:check` 误报**：它要求规划文档写死精确行数，该数字随未跟踪文件与测量时机浮动，导致版本正确时门禁变红。改由 `check_docs.mjs` 单一负责（±10% 容差）。
 
 ## C.3 仍未做（下一轮优先级）
 
@@ -1948,11 +1948,13 @@ const bodyBlock = css.slice(css.indexOf("html,"), css.indexOf("/* Explicitly all
 | `REFACTOR_NOTES.md` | `StudioView` 拆分的提交清单（2440 → 658 行、18 个 hook） | 拆分规则已固化在 `ARCHITECTURE_SURFACES.md`，过程本身不再有读者 | 见下「StudioView 拆分的数字」 |
 
 **判据**：六份都**没有任何文件引用**（脚本、源码、测试、其它文档都没有），
-所以删除不会让 `check:docs:refs` 或任何门禁失败。反过来，**保留了**那些被代码引用的文档——
+所以删除不会让 `check:docs:refs` 或任何门禁失败。反过来，**当时保留了**那些被代码引用的文档——
 `TIMBRE_NOTES.md`（`instrumentPresets.test.ts` 引用）、`MIX_LOUDNESS_NOTES.md`（`masterGraph.ts` 引用）、
 `SLOW_TRACK_HANDOFF.md`（`slow_pack.mjs` 引用）、`STUDIO_REFACTOR_PLAN_v2.0.0.md`（`toolbarTiers.ts` 引用）、
 `CODE_REVIEW_AND_PLAN_v1.16.0.md`（多份文档与后续工作都上溯到它，是审计链的起点）。
 **「没有引用」是删除的必要条件，不是充分条件**——否则会顺手删掉唯一记录某个理由的文件。
+
+> 开源整理时这条判据被**正面使用**而不是绕过：先把引用改掉，再删文档。见附录 **G.18**。
 
 ### i18n 的保留决定（原文的结论）
 
@@ -2279,3 +2281,45 @@ ref 确实绑到了 hook 的导出），并另有一条断言把「清范围的�
 是刻意的，house 的 pad 留白就是错的。逐个判断等于重写 159 个曲风的编曲，并会把
 `scripts/timbre.baseline.json` 的全库指纹全部推翻——所以这一轮**不动**，列为下一轮候选
 （判据：和弦乐器属 pad/sustain 类则必须连奏，stab 类才允许留白）。
+
+## G.18 开源整理：删 5 份被取代的文档、重写 `DEPLOY.md`、补 README 与 LICENSE
+
+用户准备把仓库公开到 GitHub，要求删掉没用/过时的 markdown，并补中英文 README 与 MIT license。
+G.16 立的判据是「没有引用才能删」。这一轮**先在代码与文档里改掉引用，再删文档**，
+所以判据仍然成立：删除后 `check:docs:refs`、`docs:check`、`version:check` 都没有变红。
+
+### 已删（5 份，约 158 KB）
+
+| 文件 | 它是什么 | 为什么过时 | 引用怎么处理 |
+|---|---|---|---|
+| `IMPROVEMENT_PLAN.md` | v1.0 基线的**历史**规划（开头自称「历史文档」），头部写 194 文件 / 134,892 行 | 基线早已是 v2.0.80；`docs:check` 拿它做行数基线，而那个数字漂了约 40% | `BACKLOG.md` 头部改指本文；`check_docs.mjs` 去掉该文档与行数断言；`version.mjs` 去掉它的版本头重写，并删掉随之变成**死代码**的 `measureSourceSize()` |
+| `STUDIO_REFACTOR_PLAN_v2.0.0.md` | 工作台重构规划（目标 v2.0.0–v2.0.12） | 每条都已交付或并入本文的 U/C/L 系列 | `toolbarTiers.ts`、`MobileTransportBar.tsx` 的注释改为自述量测；审计表两处注明「已删除」 |
+| `CONSOLE_FLOAT_NOTES.md` | v1.16.17 浮层调音台的交付记录 | 交付记录，功能已被测试覆盖 | 审计表去掉指向它的尾注 |
+| `CROSS_ENGINE_TESTING_NOTES.md` | 对照姊妹项目做的跨引擎审计 | 一次性审计，结论已进测试 | `AUDIO_QUALITY_AND_SYNTH_PLAN.md` 只留教训本身，不再指向文件 |
+| `SLOW_TRACK_HANDOFF.md` | 慢机器↔快机器的门禁交接流程 | 作者本机工作流，对读者没有意义；工具 `slow_pack.mjs` 仍在 | 改指脚本自身的 preflight 注释 |
+
+### 重写而不是删除：`DEPLOY.md`
+
+它已经**假**到不能留：声称有 `release/groove-release.tar.gz`（仓库里没有这个产物）、
+「401 项测试 / 49 个测试文件」（实测 174 文件 / 2029 测试）、项目名写成了另一个名字，
+而且完全没写真正的部署方式（Cloudflare Workers + `scripts/deploy.mjs` + `.env.deploy`）。
+部署恰好是开源用户真正需要的信息，所以按实测重写。
+
+### 同时处理的仓库卫生
+
+- `wrangler.toml` **取消跟踪**：`.gitignore` 早已忽略它，但它仍被跟踪，于是忽略形同虚设——
+  而它写的是**作者的 worker 名**。补 `wrangler.toml.example`，并把步骤写进 `DEPLOY.md`。
+- 全库扫过密钥：只有 `.env.deploy.example` 里的 `replace-me` 占位符；`.env` 从未进过 git 历史
+  （`git log --all -- .env` 为空）。`vendor/gs1/` 是第三方代码，其中一条注释提到 `prd.md`
+  属上游文本，**不改**。
+- 新增 `README.md`（英）/ `README.zh-CN.md`（中）/ `LICENSE`（MIT）；`package.json` 补
+  `license` 与 `description`。线上体验地址进两份 README：`https://groove.wangda.today/`。
+
+### 保留了什么，为什么
+
+`PRODUCT_PLAN_v2.1.0.md`（当前计划 + 全部附录）、`ROADMAP_V2.md` / `BACKLOG.md`（当前基线，
+`version:sync` 写它们的版本头、`docs:check` 校验）、`ARCHITECTURE_SURFACES.md`（三端解耦的现行约定）、
+`prd.md`（最初的需求；`vendor/gs1` 与审计链上溯到它）、`AUDIO_QUALITY_AND_SYNTH_PLAN.md` 与
+`CODE_REVIEW_AND_PLAN_v1.16.0.md`（代码注释里 `E-xx` / `V-xx` / `N-xx` 编号的登记表）、
+`TIMBRE_NOTES.md` / `MIX_LOUDNESS_NOTES.md`（音色与母带/响度的实测记录，门禁基线以它们为据）。
+

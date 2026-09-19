@@ -1291,7 +1291,7 @@ function commandVerify() {
       console.log(
         "        environment/config problem in the tree it ran in, not a failing assertion — re-run from a"
       );
-      console.log("        clean checkout (see the preflight notes in SLOW_TRACK_HANDOFF.md).");
+      console.log("        clean checkout (see the preflight notes at the top of this script).");
     }
   }
 
