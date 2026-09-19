@@ -655,6 +655,32 @@ export const studioMessages = {
   },
   transport_undo_done: { en: "Undone ✓", zh: "已撤销 (Undo) ✓" },
   transport_redo_done: { en: "Redone ✓", zh: "已重做 (Redo) ✓" },
+  /**
+   * U7: the transport's honest "nothing happened" messages, plus the state readout every mode
+   * toggle now gives. A control that changes state silently is indistinguishable from a broken one.
+   */
+  transport_tap_first: {
+    en: "Tap again to set the tempo",
+    zh: "再点一次即可测定速度",
+  },
+  transport_nothing_to_undo: { en: "Nothing to undo", zh: "没有可撤销的操作" },
+  transport_nothing_to_redo: { en: "Nothing to redo", zh: "没有可重做的操作" },
+  transport_engine_not_ready: {
+    en: "Audio is still starting — tap Play again in a moment.",
+    zh: "音频仍在启动中——请稍后再点一次播放。",
+  },
+  transport_announce_engine_not_ready: {
+    en: "Audio engine is not ready yet.",
+    zh: "音频引擎尚未就绪。",
+  },
+  transport_mode_song_on: { en: "Song Mode on — A/B patterns chained", zh: "Song Mode 已开启——A/B 段落链式连播" },
+  transport_mode_song_off: { en: "Song Mode off", zh: "Song Mode 已关闭" },
+  transport_mode_blind_on: { en: "Blind Compare on — labels hidden", zh: "盲测对比已开启——已隐藏标签" },
+  transport_mode_blind_off: { en: "Blind Compare off", zh: "盲测对比已关闭" },
+  transport_mode_metronome_on: { en: "Metronome on", zh: "节拍器已开启" },
+  transport_mode_metronome_off: { en: "Metronome off", zh: "节拍器已关闭" },
+  transport_mode_count_in_on: { en: "Count-in on — 4 beats before playback", zh: "预备拍已开启——播放前 4 拍" },
+  transport_mode_count_in_off: { en: "Count-in off", zh: "预备拍已关闭" },
   transport_slot_copied: { en: "Copied Pattern {from} to {to} ✓", zh: "已将 Pattern {from} 复制至 {to} ✓" },
 
   // Sequencer Pattern Action Toasts (U-11: migrated from inline bilingual ternaries)
