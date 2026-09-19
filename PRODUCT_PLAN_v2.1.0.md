@@ -3280,3 +3280,54 @@ maker 8、challenge 5、masterclass 1、horizontal-timeline 12、vertical-timeli
 可用路径），而不是把每个按钮都撑到 44 px 再塞回 390 px 宽的屏幕。下一轮先做 **maker（8）与 challenge（5）**
 这两页创作型入口，然后就时间线 / compare / analyzer 的取舍给出一版明确方案（保留哪几个、其余在手机上如何
 告知用户）。
+
+## G.39 手机端第五轮：maker / challenge / masterclass 归零，并修掉一个"构造上就会空转"的检查（v2.1.0）
+
+### 三个视图：8 + 5 + 1 → 0
+
+- **maker（CustomGenreMakerView）**：fork 下拉 140×**18**、Fork 43×24、`New Blank Genre` / `Saved` /
+  `Poster & Share` / `Workshop Guide` / `Open in Studio` 一排 34 px，以及元数据表单里那个 316×38 的名称输入——
+  同一形状的表单控件（名称/分类/作者/BPM/音阶/拍号）也一起按 44 px 处理，因为它们只是**再往下滚一屏**的同一种东西，
+  不修就是"量不到就不算"的自欺。
+- **challenge**：`Rank Certificate` 34 px、`Reset challenge stats` 32×32、三档难度 32–34 px，以及结果页上的
+  按钮（同一页的后续状态）。
+- **masterclass**：`Groove Guide` 128×30，以及 `bake-to-studio` 那一档。
+
+四个文件都从 `useDeviceCapabilities()` 读 `isMobile`，桌面路径一行未改。量后：maker 15 控件 / **0**、challenge 12 / **0**、
+masterclass 10 / **0**，横屏同样 0。E2E 手机门禁现在覆盖 **7 个面**（studio、explore、chords、kick、maker、
+challenge、masterclass）。
+
+### 顺手修掉的门禁缺陷：genre-switch 检查在构造上会空转
+
+加完 7 面门禁后，iPhone 两个方向都开始报 `genre switch 1: navigations=0 patternFlips=0`，而这个检查在上一轮还是绿的。
+按老规矩先量再改，加了三行诊断（chip 的盒子、viewport、`elementFromPoint`、对话框状态、URL），量出来的事实是：
+
+- 竖屏：chip 在 x=**392**、viewport 宽 **390** —— 在屏幕外（rail 是横向滚动的）；
+- 横屏：chip 在屏内、`elementFromPoint` 返回的就是它自己的文字 —— 点击**送到了**（`clickVerified` 只有在事件确实
+  落到元素上才返回），但 URL 一动不动、`dialog=false`。
+
+两个现象指向同一个原因：**那个 chip 本来就是当前曲风**。检查原来固定点 `chipSelectors[1]`，并假定它一定是"别的曲风"；
+而 App 的当前曲风存在 state 里、不在 URL 里 —— 前面几步（尤其这一轮新加的门禁会走一遍 maker）已经切到过它，于是
+点击是一个**合法的 no-op**，检查却把它读成"空转"并失败。修法两条：
+
+1. `candidates` = 排除 URL 里那个 `genre`（若存在）之后的头三个 chip，逐个试，**只要有一个真的换了曲风就通过**；
+   真的坏掉的处理器仍然会失败（三个都没动）。
+2. 未保存确认框改成**等它出现**（`waitForSelector` 1.5 s）而不是睡 400 ms —— 诊断显示有时候它出现得比 400 ms 晚，
+   于是对话框留在屏幕上、切换被挡下，这是这个检查**第二次**空转的原因。
+
+修完的日志本身成了证据：`unsaved-changes guard asked — discarding` → `navigations=1 patternFlips=1` →
+`url=?genre=custom-my-first-custom-genre-…`（前几步在 maker 里建的曲风），四个 iPhone 目标全绿。
+
+### 剩下三页的取舍方案（下一轮动手）
+
+**horizontal-timeline（12）/ vertical-timeline（6）/ compare（14）/ analyzer（13）**——合计 45 个低于 44 px 的控件，
+且都是桌面级信息密度。建议：
+
+- **analyzer**：手机上只保留"波形/电平"这一档（它本来就是 studio 里能看到的东西），把瀑布图/Lissajous/双分割这些
+  分析工具收起来，并说明"完整分析在桌面端"。
+- **compare**：手机端**不提供**（A/B 盲听需要同时看两条轨道的信息，390 px 放不下），给出说明与替代路径
+  （studio 的盲听开关仍在）。
+- **两条时间线**：手机端**不提供**（它们是 1850–2025 的横向长卷与年代纵轴，手势与桌面窗口绑定），在 sheet 的说明里
+  写清楚，而不是让用户点进去面对一屏 18 px 高的年代 chip。
+
+这一节是**提案**，等确认后再动代码——因为它改变的是"手机上有什么"，不只是一种排版。
