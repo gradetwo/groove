@@ -1638,19 +1638,54 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     // Velocity lane: dragging a bar up must raise that note's velocity.
+    /**
+     * Three things here exist because this check failed once on an iPad in landscape with
+     * `100 → 52` — a *decrease*, which is not something an upward drag can do to the bar it grabbed:
+     *
+     *  1. the before/after reads use the **same element handle**. The first version re-queried
+     *     `[data-testid^='piano-roll-velocity-bar-']` afterwards, so if the lane re-rendered or
+     *     re-ordered (edits earlier in this run change the pattern) the two numbers came from
+     *     different notes and the comparison was meaningless;
+     *  2. the box is re-read until it stops moving, because `scrollIntoViewIfNeeded` plus a 150 ms
+     *     sleep is not a promise the lane has settled on a slow tablet;
+     *  3. the press is verified to land on the bar itself (`elementFromPoint` at the press point),
+     *     the same delivery contract `clickVerified` uses for clicks.
+     */
     const firstBar = "[data-testid^='piano-roll-velocity-bar-']";
     const barEl = await page.$(firstBar);
     if (!barEl) throw new Error("Velocity lane has no visible bar for a pattern with notes");
-    const barBefore = Number(await barEl.getAttribute("data-velocity"));
+    const velocityOf = async () => Number(await barEl.getAttribute("data-velocity"));
+    const barBefore = await velocityOf();
     await barEl.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(150);
-    const barBox = await barEl.boundingBox();
-    await page.mouse.move(barBox.x + barBox.width / 2, barBox.y + Math.max(2, barBox.height / 2));
+    let barBox = await barEl.boundingBox();
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await page.waitForTimeout(80);
+      const next = await barEl.boundingBox();
+      if (next && barBox && next.x === barBox.x && next.y === barBox.y && next.height === barBox.height) break;
+      barBox = next;
+    }
+    if (!barBox) throw new Error("Velocity bar has no box after settling");
+    const pressX = barBox.x + barBox.width / 2;
+    const pressY = barBox.y + Math.max(2, barBox.height / 2);
+    const onBar = await page.evaluate(
+      ({ x, y, sel }) => {
+        const hit = document.elementFromPoint(x, y);
+        const bar = document.querySelector(sel);
+        return Boolean(hit && bar && (hit === bar || bar.contains(hit)));
+      },
+      { x: pressX, y: pressY, sel: firstBar }
+    );
+    if (!onBar) {
+      throw new Error(
+        `The velocity press point is not on the bar (${Math.round(pressX)},${Math.round(pressY)}) on ${target.name}`
+      );
+    }
+    await page.mouse.move(pressX, pressY);
     await page.mouse.down();
-    await page.mouse.move(barBox.x + barBox.width / 2, barBox.y - 16, { steps: 5 });
+    await page.mouse.move(pressX, barBox.y - 16, { steps: 5 });
     await page.mouse.up();
     await page.waitForTimeout(250);
-    const barAfter = Number(await page.getAttribute(firstBar, "data-velocity"));
+    const barAfter = await velocityOf();
     if (!(barAfter > barBefore)) {
       throw new Error(`Dragging a velocity bar did not raise it on ${target.name} (${barBefore} → ${barAfter})`);
     }
