@@ -148,6 +148,49 @@ export interface SynthPreset {
    * partial cannot make a preset louder.
    */
   harmonics?: readonly number[];
+
+  /**
+   * Inharmonic partials, as multiples of the played frequency (G.8's 不谐分音 item).
+   *
+   * `harmonics` above goes through `createPeriodicWave`, which can only build *harmonic* spectra:
+   * every partial sits at an integer multiple of the fundamental. A struck metal body is not
+   * harmonic. A tubular bell's audible partials are the hum tone, the prime, the tierce, the quint
+   * and the nominal — the *non-integer* ratios are what an ear hears as metal, and their absence is
+   * why the bell used to be "two sines a minor tenth apart": 1900 cents is 2.997:1, i.e. a perfectly
+   * ordinary third harmonic with the second missing. It read as an organ, not a bell.
+   *
+   * Present means the voice is built from this bank **instead of** `osc1`/`osc2`: one sine per
+   * partial, each with its own gain and its own decay, because metal partials die from the top down
+   * (the hum tone outlasts the nominal). `osc1Type`/`osc2Type`/`osc2Mix` are then unused and are
+   * kept only because the type requires them.
+   *
+   * The bank is summed **two partials per node** (a binary tree). That is not tidiness: a node that
+   * sums three or more oscillators tuned to different frequencies does not render bit-identically
+   * twice in Chrome, which is measured in `scripts/diagnose_repeat_determinism.mjs --primitives` and
+   * guarded by `src/test/oscillatorFanIn.test.ts`. A binary tree is the reproducible shape.
+   */
+  partials?: readonly InharmonicPartial[];
+  /**
+   * Level of the partial bank as a whole, applied after normalisation (default 1).
+   *
+   * It exists so a preset that *replaces* a two-oscillator mix can keep that mix's level: the bell's
+   * old mixer summed to `(1 - 0.4 * 0.5) + 0.4 = 1.2`, and the bank carries the same number rather
+   * than quietly arriving 1.6 dB quieter and moving three genres' measured loudness.
+   */
+  partialsLevel?: number;
+}
+
+/**
+ * One partial of an inharmonic voice.
+ *
+ * `ratio` is the frequency as a multiple of the played note — deliberately not an integer for a
+ * struck body. `decayScale` is relative to the preset's `adsr.decay`: below 1 dies sooner, which is
+ * how a bell's upper partials behave.
+ */
+export interface InharmonicPartial {
+  ratio: number;
+  gain: number;
+  decayScale?: number;
 }
 
 /**
@@ -161,6 +204,24 @@ export interface SynthPreset {
  * `src/audio/instrumentPresets.ts` owns the instrument-name → preset-key mapping and is
  * the only place callers should translate a genre instrument into a timbre.
  */
+/**
+ * A tubular bell's partials, relative to the strike note.
+ *
+ * Sources disagree on the exact cents — a real bell's inharmonicity depends on its profile — so this
+ * is a clean, documented set rather than a measurement: the *ratios* matter, and every one of the four
+ * non-integer ones (0.56, 1.19, 1.5, 2.74) is deliberately far enough from an integer to be heard as
+ * metal. Gains and decays follow the physical pattern: the hum tone is the loudest and lasts longest,
+ * the upper partial is the quietest and dies first.
+ */
+export const BELL_PARTIALS: readonly InharmonicPartial[] = [
+  { ratio: 0.56, gain: 0.85, decayScale: 1.0 },
+  { ratio: 1.0, gain: 1.0, decayScale: 1.0 },
+  { ratio: 1.19, gain: 0.6, decayScale: 0.8 },
+  { ratio: 1.5, gain: 0.45, decayScale: 0.65 },
+  { ratio: 2.0, gain: 0.5, decayScale: 0.5 },
+  { ratio: 2.74, gain: 0.3, decayScale: 0.35 },
+];
+
 export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
   // --- Legacy track-role presets (kept bit-for-bit) -------------------------
   analogLead: {
@@ -839,14 +900,28 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     velocityToAttack: 0.3,
     velocityToDecay: 0.3,
   },
-  // `bell_lead`: inharmonic bell/music-box clang from two sines a minor-tenth apart
-  // (1900 cents), a 1.8 s ring and no sustain.
+  // `bell_lead`: a struck metal body, as its actual partials.
+  //
+  // It used to be two sines a minor tenth apart — 1900 cents is 2.997:1, i.e. a third harmonic with
+  // the second missing, which is a harmonic spectrum and therefore an organ, not a bell. The ratios
+  // below are a tubular bell's (hum / prime / tierce / quint / nominal / upper); the non-integer ones
+  // are the metal. Upper partials decay first, which is what makes a bell *ring* instead of buzz, and
+  // the bank is fanned in two per node so the voice still renders bit-identically twice.
   bellLead: {
     name: "Bell Lead",
     osc1Type: "sine",
     osc2Type: "sine",
-    osc2DetuneCents: 1900,
-    osc2Mix: 0.4,
+    osc2DetuneCents: 0,
+    osc2Mix: 0,
+    partials: BELL_PARTIALS,
+    //
+    // The bank carries the old pair's *energy*, not its summed amplitude: six partials share the
+    // amplitude and the upper ones decay early, so the same peak gain would have arrived several dB
+    // quieter and changed the mix balance of the genres that use it. The weighting is the sum of
+    // gain squared times decay scale against the old pair's 0.8^2 + 0.4^2, i.e. 1.2 * sqrt(0.80 /
+    // 0.242) = 2.18. (The library's *measured* loudness does not render this voice at all — verified
+    // by A/B rendering, see PRODUCT_PLAN_v2.1.0.md G.51 — so no loudness baseline moves either way.)
+    partialsLevel: 2.18,
     filterCutoff: 6000,
     filterQ: 1.0,
     adsr: { attack: 0.001, decay: 1.8, sustain: 0.0, release: 1.2 },
@@ -1300,6 +1375,48 @@ export function periodicWaveCoefficients(
   return { real, imag };
 }
 
+/** Most partials one voice may declare: a bell's six, and a ceiling so a preset cannot fan in twenty. */
+export const MAX_INHARMONIC_PARTIALS = 6;
+
+/** One partial of an inharmonic bank, ready to schedule. */
+export interface NormalisedPartial {
+  ratio: number;
+  gain: number;
+  decayScale: number;
+}
+
+/**
+ * A preset's partial bank, normalised — or `null` when the preset declares none.
+ *
+ * Pure and exported because this is part of a preset's *definition*, like
+ * `periodicWaveCoefficients`: two runs must produce the same numbers, and the live engine and the
+ * offline renderer call it through the same code path.
+ *
+ * Gains are normalised by their **sum**, not by a sampled peak, for the same reason the harmonic
+ * stack is: the sum is an exact upper bound in one pass and cannot depend on a sampling resolution.
+ * Non-finite or non-positive ratios and gains are dropped rather than clamped to something audible,
+ * and the bank is capped at `MAX_INHARMONIC_PARTIALS`.
+ */
+export function normalisedPartials(preset: Pick<SynthPreset, "partials" | "partialsLevel">): NormalisedPartial[] | null {
+  const declared = preset.partials;
+  if (!declared || declared.length === 0) return null;
+  const usable = declared
+    .filter((part) => Number.isFinite(part.ratio) && part.ratio > 0 && Number.isFinite(part.gain) && part.gain > 0)
+    .slice(0, MAX_INHARMONIC_PARTIALS);
+  if (usable.length === 0) return null;
+  const total = usable.reduce((sum, part) => sum + part.gain, 0);
+  const level = Number.isFinite(preset.partialsLevel ?? 1) ? Math.max(0, preset.partialsLevel ?? 1) : 1;
+  if (total <= 0 || level <= 0) return null;
+  return usable.map((part) => ({
+    ratio: part.ratio,
+    gain: (part.gain / total) * level,
+    decayScale: (() => {
+      const declared = part.decayScale ?? 1;
+      return Number.isFinite(declared) && declared > 0 ? declared : 1;
+    })(),
+  }));
+}
+
 /**
  * The oscillator waveforms one voice of this preset allocates, in creation order.
  *
@@ -1309,6 +1426,9 @@ export function periodicWaveCoefficients(
  * the parity suite had baked in.
  */
 export function voiceOscillatorTypes(preset: SynthPreset): OscillatorType[] {
+  // A partial bank replaces the pair entirely: one sine per partial, nothing else.
+  const bank = normalisedPartials(preset);
+  if (bank) return bank.map(() => "sine" as OscillatorType);
   const base: OscillatorType[] = [preset.osc1Type, preset.osc2Type];
   const spread = Math.max(0, Math.min(MAX_STEREO_SPREAD, preset.stereoSpread ?? 0));
   // The outer pair is the same waveform as osc1: it is the detuned stack filling out the first
@@ -1398,9 +1518,76 @@ export function playPolySynthNote(
   const attackScale = 1 + (preset.velocityToAttack ?? 0) * (1 - velCurve);
   const decayScale = 1 + (preset.velocityToDecay ?? 0) * (1 - velCurve);
 
+  /**
+   * The oscillator bank.
+   *
+   * A preset with `partials` is a struck metal body, and gets one sine oscillator per partial summed
+   * **two per node** — the reproducible shape (see the field's doc and `oscillatorFanIn.test.ts`).
+   * Everything else keeps the two-oscillator mix it always had, exactly as before.
+   */
+  const partialBank = normalisedPartials(preset);
+  let osc1: OscillatorNode | null = null;
+  let osc2: OscillatorNode | null = null;
+  /** The oscillator mix's last node; both branches below assign it. */
+  let mixerOut: AudioNode;
+  /** End of the gate, needed by both branches: the partial bank schedules its own decays from it. */
+  const gateEnd = time + Math.max(0.05, durationSec);
+  if (partialBank) {
+    /**
+     * Each partial carries its own decay, because that is what a bell *is*: a struck body whose upper
+     * partials die first, leaving the hum tone ringing. The decay is scheduled in seconds relative to
+     * the preset's own `adsr.decay` (and to the velocity scaling above), so a partial can be made
+     * shorter without touching the voice's envelope.
+     */
+    let stage: AudioNode[] = [];
+    for (const partial of partialBank) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      const partialFreq = safeFreq(freq * partial.ratio, freq);
+      osc.frequency.setValueAtTime(partialFreq, time);
+      if (preset.pitchSweepCents) {
+        const sweepEnd = safeFreq(freq * Math.pow(2, preset.pitchSweepCents / 1200) * partial.ratio, partialFreq);
+        osc.frequency.exponentialRampToValueAtTime(sweepEnd, gateEnd);
+      }
+      const gain = ctx.createGain();
+      const peak = Math.max(0.0001, partial.gain);
+      gain.gain.setValueAtTime(peak, time);
+      const decaySec = Math.max(0.02, adsr.decay * decayScale * partial.decayScale);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * 0.0005), time + decaySec);
+      osc.connect(gain);
+      osc.start(time);
+      osc.stop(gateEnd + Math.max(0.01, adsr.release) + 0.01);
+      sources.push(osc);
+      gains.push(gain);
+      stage.push(gain);
+    }
+    // Fan in two at a time: a node summing three or more differently-tuned oscillators is not
+    // bit-reproducible in Chrome's OfflineAudioContext (measured in
+    // `scripts/diagnose_repeat_determinism.mjs --primitives`).
+    while (stage.length > 1) {
+      const next: AudioNode[] = [];
+      for (let i = 0; i < stage.length; i += 2) {
+        if (i + 1 >= stage.length) {
+          next.push(stage[i]);
+          continue;
+        }
+        const sum = ctx.createGain();
+        sum.gain.setValueAtTime(1, time);
+        stage[i].connect(sum);
+        stage[i + 1].connect(sum);
+        gains.push(sum);
+        next.push(sum);
+      }
+      stage = next;
+    }
+    mixerOut = stage[0];
+  } else {
+  // ---- two-oscillator mix (every preset without `partials`) ----
   // Dual Oscillators
-  const osc1 = ctx.createOscillator();
-  const osc2 = ctx.createOscillator();
+  const osc1Node = ctx.createOscillator();
+  const osc2Node = ctx.createOscillator();
+  osc1 = osc1Node;
+  osc2 = osc2Node;
 
   /**
    * `osc1` is a wavetable when the preset declares harmonics, and `osc1Type` otherwise.
@@ -1410,22 +1597,22 @@ export function playPolySynthNote(
    * A `null` from the coefficient helper (an empty or silent stack) falls back to the plain
    * oscillator rather than creating a voice that produces nothing.
    */
-  osc1.type = osc1Type;
+  osc1Node.type = osc1Type;
   const wave = periodicWaveCoefficients(preset.harmonics);
-  if (wave) osc1.setPeriodicWave(ctx.createPeriodicWave(wave.real, wave.imag));
-  osc1.frequency.setValueAtTime(freq, time);
+  if (wave) osc1Node.setPeriodicWave(ctx.createPeriodicWave(wave.real, wave.imag));
+  osc1Node.frequency.setValueAtTime(freq, time);
 
-  osc2.type = osc2Type;
-  osc2.frequency.setValueAtTime(freq, time);
-  osc2.detune.setValueAtTime(osc2DetuneCents, time);
+  osc2Node.type = osc2Type;
+  osc2Node.frequency.setValueAtTime(freq, time);
+  osc2Node.detune.setValueAtTime(osc2DetuneCents, time);
 
   // Optional pitch envelope: a preset may glide both oscillators to a fixed offset by
   // the end of the note (negative = tape-stop / laser / sub-drop fall, positive = riser).
-  const gateEnd = time + Math.max(0.05, durationSec);
+  // (`gateEnd` is computed above, because the partial bank needs it too.)
   if (preset.pitchSweepCents) {
     const sweepEnd = safeFreq(freq * Math.pow(2, preset.pitchSweepCents / 1200), freq);
-    osc1.frequency.exponentialRampToValueAtTime(sweepEnd, gateEnd);
-    osc2.frequency.exponentialRampToValueAtTime(sweepEnd, gateEnd);
+    osc1Node.frequency.exponentialRampToValueAtTime(sweepEnd, gateEnd);
+    osc2Node.frequency.exponentialRampToValueAtTime(sweepEnd, gateEnd);
   }
 
   // Mixer
@@ -1434,8 +1621,8 @@ export function playPolySynthNote(
   osc1Gain.gain.setValueAtTime(1 - osc2Mix * 0.5, time);
   osc2Gain.gain.setValueAtTime(osc2Mix, time);
 
-  osc1.connect(osc1Gain);
-  osc2.connect(osc2Gain);
+  osc1Node.connect(osc1Gain);
+  osc2Node.connect(osc2Gain);
 
   /**
    * Optional stereo unison stage.
@@ -1449,9 +1636,10 @@ export function playPolySynthNote(
    * default, and every preset that predates the field) therefore allocates exactly the nodes it
    * always did and sounds identical — the guarantee that keeps the committed baselines honest.
    */
-  let mixerOut: AudioNode = osc1Gain;
+  mixerOut = osc1Gain;
   const spread = Math.max(0, Math.min(MAX_STEREO_SPREAD, preset.stereoSpread ?? 0));
-  if (spread > 0) {
+  // A partial bank has no detuned pair to widen; its width, if any, is baked into the ratios.
+  if (!partialBank && spread > 0) {
     const osc3 = ctx.createOscillator();
     const osc4 = ctx.createOscillator();
     const outerGain = ctx.createGain();
@@ -1504,6 +1692,7 @@ export function playPolySynthNote(
     rightBus.connect(merge, 0, 1);
     gains.push(outerGain, leftBus, rightBus);
     mixerOut = merge;
+  }
   }
 
   // Per-voice Resonant Biquad Filter
@@ -1701,12 +1890,13 @@ export function playPolySynthNote(
   lastFilter.connect(ampGain);
   ampGain.connect(dest);
 
-  osc1.start(time);
-  osc2.start(time);
-  osc1.stop(noteEndTime + 0.01);
-  osc2.stop(noteEndTime + 0.01);
-
-  sources.push(osc1, osc2);
+  if (osc1 && osc2) {
+    osc1.start(time);
+    osc2.start(time);
+    osc1.stop(noteEndTime + 0.01);
+    osc2.stop(noteEndTime + 0.01);
+    sources.push(osc1, osc2);
+  }
   gains.push(ampGain);
 
   return { sources, gains, stopTime: noteEndTime + 0.01 };
