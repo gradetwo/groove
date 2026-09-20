@@ -21,6 +21,8 @@ export const mobileMessages = {
   mobile_home_categories: { en: "Categories", zh: "分类" },
   mobile_home_all: { en: "All", zh: "全部" },
   mobile_home_empty: { en: "Nothing matches that search.", zh: "没有匹配的曲风。" },
+  // The capped vertical rail borrowed from the desktop timeline view (`TIMELINE_STORIES`).
+  mobile_home_timeline: { en: "A century of groove", zh: "百年律动时间轴" },
   mobile_audition_play: { en: "Audition this genre", zh: "试听这个曲风" },
   mobile_audition_stop: { en: "Stop the audition", zh: "停止试听" },
   mobile_genre_open_detail: { en: "Full details", zh: "查看完整详情" },
@@ -72,6 +74,19 @@ export const mobileMessages = {
   mobile_player_mode_all: { en: "Shuffle all genres", zh: "全部随机" },
   mobile_player_collapse: { en: "Collapse", zh: "收起" },
   mobile_player_scrub_hint: { en: "Drag the record: left slower, right faster", zh: "按住唱片左右拖动：左减速 右加速" },
+  // The player2.html port: its top bar, progress meta line, list and label footer.
+  mobile_player_tagline: { en: "Pocket groove machine", zh: "口袋律动机" },
+  mobile_player_status_idle: { en: "Idle", zh: "待机" },
+  mobile_player_status_dropping: { en: "Dropping the needle…", zh: "落针…" },
+  mobile_player_status_playing: { en: "Playing", zh: "播放中" },
+  mobile_player_realtime: { en: "Realtime synth", zh: "实时合成" },
+  mobile_player_loop: { en: "Loop", zh: "循环" },
+  mobile_player_list: { en: "Track list", zh: "曲目单" },
+  mobile_player_tap_detail: { en: "Tap the record for the genre page", zh: "轻点唱片看曲风详情" },
+  mobile_player_label_footer: { en: "GROOVE REC · 33 1/3 RPM", zh: "GROOVE REC · 33 1/3 RPM" },
+  mobile_player_slow: { en: "Slower", zh: "减慢" },
+  mobile_player_footer: { en: "GROOVE — a studio, in your pocket.", zh: "GROOVE — 把一间录音室，收进口袋。" },
+  mobile_player_fast: { en: "Faster", zh: "加快" },
 
   // 即兴 (jam, M4).
   mobile_jam_title: { en: "Jam", zh: "即兴" },

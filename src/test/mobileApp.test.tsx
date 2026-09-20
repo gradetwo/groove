@@ -18,6 +18,7 @@ import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileApp } from "../mobile/MobileApp";
 import { MOBILE_MODULES, shouldEnterPhoneShell, type MobileModule } from "../mobile/mobileModules";
 import { ALL_GENRES } from "../data/genres";
+import { TIMELINE_STORIES } from "../data/timeline_stories";
 
 const audition = vi.hoisted(() => ({
   toggle: vi.fn(),
@@ -235,6 +236,39 @@ describe("phone shell · home screen", () => {
     expect(rowIds()).toHaveLength(0);
     expect(screen.getByTestId("mobile-home-empty")).toBeInTheDocument();
   });
+
+  it("brings the century timeline back as a capped vertical rail, oldest era first", async () => {
+    /**
+     * 首页 had lost the vertical timeline the desktop view carries. It comes back from the same
+     * `TIMELINE_STORIES` data, but as a spine rather than the desktop's era cards: a fixed-height,
+     * vertically scrolling rail whose nodes run chronologically down the screen.
+     */
+    renderShell("home");
+    await findHome();
+
+    const rail = screen.getByTestId("mobile-home-timeline");
+    // Fixed height plus vertical scrolling is the shape; a horizontal carousel would fail both.
+    expect(rail.className).toMatch(/max-h-\[300px\]/);
+    expect(rail.className).toMatch(/overflow-y-auto/);
+    expect(rail.className).not.toMatch(/\bm-rail\b/);
+
+    const nodes = TIMELINE_STORIES.map((_, index) =>
+      screen.getByTestId(`mobile-home-timeline-node-${index}`)
+    );
+    expect(nodes).toHaveLength(TIMELINE_STORIES.length);
+    nodes.forEach((node, index) => {
+      // The nodes live inside the rail, in data order: index i is the i-th era, top to bottom.
+      expect(rail.contains(node)).toBe(true);
+      expect(node.textContent ?? "").toContain(TIMELINE_STORIES[index].year);
+      const match = node.className.match(/min-h-\[(\d+)px\]/);
+      expect(match, `timeline node ${index} must declare a min height`).not.toBeNull();
+      expect(Number(match![1]), `timeline node ${index} touch height`).toBeGreaterThanOrEqual(44);
+    });
+
+    // The ends of the rail, so an accidental reverse or shuffle is caught rather than only a count.
+    expect(nodes[0].textContent ?? "").toContain("1900s");
+    expect(nodes[nodes.length - 1].textContent ?? "").toContain("2020s");
+  });
 });
 
 describe("phone shell · genre detail and player bar", () => {
@@ -276,6 +310,41 @@ describe("phone shell · genre detail and player bar", () => {
     expect(screen.queryByTestId("mobile-detail-audition")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mobile-detail-jam")).not.toBeInTheDocument();
     expect(screen.getByTestId("mobile-detail-back")).toBeInTheDocument();
+  });
+
+  it("reads like a lyrics page: no boxes around the facts, only back and the related links as controls", async () => {
+    /**
+     * 曲风详情页 was a wall of panels and pills. The art, title and facts survive, but the facts are
+     * now plain label/value rows on the dark ground and the only interactive elements left are the
+     * back arrow and the related-genre links.
+     */
+    renderShell("home", { genreId: "deep-house" });
+    const detail = await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+
+    expect(screen.getByTestId("mobile-detail-art")).toBeInTheDocument();
+    const facts = screen.getByTestId("mobile-detail-facts");
+    expect(facts.textContent ?? "").toMatch(/BPM|拍号|Time/);
+    for (const row of [...facts.children]) {
+      expect(row.className, "a fact row must not be a card").not.toMatch(/rounded|border|m-card/);
+    }
+
+    const related = [...document.querySelectorAll('[data-testid^="mobile-detail-related-"]')].filter(
+      (node) => node.getAttribute("data-testid") !== "mobile-detail-related"
+    );
+    expect(related.length).toBeGreaterThan(0);
+    for (const node of related) {
+      expect(node.className, "a related genre must not be a pill").not.toMatch(/rounded|border|m-card/);
+      const match = node.className.match(/min-h-\[(\d+)px\]/);
+      expect(match, "a related genre link must still declare a min height").not.toBeNull();
+      expect(Number(match![1]), "related genre touch target").toBeGreaterThanOrEqual(44);
+    }
+
+    // Nothing interactive on the page besides the way back and those links.
+    const others = [...detail.querySelectorAll("button")].filter((node) => {
+      const id = node.getAttribute("data-testid") ?? "";
+      return id !== "mobile-detail-back" && !id.startsWith("mobile-detail-related-");
+    });
+    expect(others.map((node) => node.getAttribute("data-testid"))).toEqual([]);
   });
 
   it("returns to the previous screen when the page is tapped, but not when a link is", async () => {
@@ -387,13 +456,26 @@ describe("phone shell · the full-screen player", () => {
     expect(onOpenGenre).toHaveBeenCalledWith("deep-house");
   });
 
-  it("hides the bar's content in a drawer that starts closed", async () => {
+  it("keeps the track list collapsed until the list button opens it", async () => {
     renderShell("home", { genreId: "deep-house", mobilePlayer: true });
     await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
-    expect(screen.queryByTestId("mobile-player-drawer-panel")).not.toBeInTheDocument();
+
+    /**
+     * The panel is *collapsed*, not unmounted.
+     *
+     * The reference slides its pull-down list open (`max-height: 0` → `280px`), and a list that is
+     * removed from the DOM cannot animate — so "closed" is `aria-hidden` plus a zero max-height, which
+     * is also what keeps the rows out of a screen reader's way while shut.
+     */
+    const closed = screen.getByTestId("mobile-player-drawer-panel");
+    expect(closed.getAttribute("aria-hidden")).toBe("true");
+    expect(closed.className).not.toContain("is-open");
+    expect(screen.getByTestId("mobile-player-drawer-toggle").getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(screen.getByTestId("mobile-player-drawer-toggle"));
-    const panel = await screen.findByTestId("mobile-player-drawer-panel");
+    const panel = screen.getByTestId("mobile-player-drawer-panel");
+    expect(panel.className).toContain("is-open");
+    expect(panel.getAttribute("aria-hidden")).toBe("false");
     expect(panel.textContent ?? "").toMatch(/BPM|拍号/);
   });
 
@@ -515,11 +597,12 @@ describe("phone player · the jog", () => {
   it("also moves the tempo with the explicit ± buttons", async () => {
     renderShell("home", { genreId: "deep-house", mobilePlayer: true });
     await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+    // One step per press, as in the reference — the coarse moves are the drag and the press-and-hold.
     fireEvent.click(screen.getByTestId("mobile-player-bpm-up"));
-    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("124");
+    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("123");
     fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
     fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
-    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("120");
+    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("121");
   });
 });
 

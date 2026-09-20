@@ -9,15 +9,19 @@
  * rather than doing nothing useful; the full genre detail page and the player bar are the next
  * slices (M2), and the summary says so.
  *
- * Two things are deliberate:
+ * Three things are deliberate:
  *  - **No fixed row height.** A phone reader needs the meta line to wrap rather than be clipped, and
  *    the reference's 38 px swatch is kept as the touch target's anchor (the whole row is the target).
  *  - **Audition is the primary action.** Tapping a card auditions it through the real engine
  *    (`useGenreAudition`), which is what the reference does and what a genre list is for.
+ *  - **The century rail stays above the library.** The home screen had lost the vertical timeline the
+ *    desktop view (`VerticalTimelineView`) carries; it is back as a capped, internally scrolling rail
+ *    so the library below it is still the main content rather than a footnote.
  */
 import React, { useMemo, useState } from "react";
 import { ChevronRight, Pause, Search } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
+import { TIMELINE_STORIES } from "../../data/timeline_stories";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, GenreCategory } from "../../types/genre";
 import { genreArtBackground, genreCoverUrl } from "../genreArt";
@@ -130,6 +134,8 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
         ))}
       </div>
 
+      <HomeTimeline />
+
       <ul className="mt-3 space-y-2.5" data-testid="mobile-home-list">
         {genres.map((genre) => {
           const isPlaying = playingGenreId === genre.id;
@@ -194,6 +200,47 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * The century timeline, rendered from the same `TIMELINE_STORIES` the desktop `VerticalTimelineView`
+ * reads — the phone must not grow a second, drifting copy of the era data.
+ *
+ * The desktop view is far too heavy to port (era cards, tech-milestone chips, genre grids, audition
+ * buttons). What a phone home needs from it is the spine: one vertical rail, one dot per era, the
+ * decade and a one-line title, oldest at the top. The rail scrolls inside a fixed max height rather
+ * than unfolding to full length, because the genre library underneath is still the main content.
+ */
+function HomeTimeline() {
+  const { t, language } = useLanguage();
+  return (
+    <section className="mt-5" data-testid="mobile-home-timeline-section">
+      <h2 className="m-mono text-[10px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
+        {t("mobile_home_timeline")}
+      </h2>
+      <ol className="mt-1 max-h-[300px] overflow-y-auto" data-testid="mobile-home-timeline">
+        {TIMELINE_STORIES.map((story, index) => (
+          <li
+            key={story.id}
+            data-testid={`mobile-home-timeline-node-${index}`}
+            className="relative flex min-h-[56px] flex-col justify-center border-l border-[var(--m-line-2)] py-2 pl-5 pr-1"
+          >
+            {/* The node's own left border is the rail, so the line is continuous and never overflows. */}
+            <span
+              aria-hidden="true"
+              className="absolute -left-[5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-[var(--m-gold)] bg-[var(--m-bg)]"
+            />
+            <span className="m-mono text-[10px] uppercase tracking-[0.18em] text-[var(--m-gold)]">
+              {story.year}
+            </span>
+            <span className="mt-0.5 truncate text-[12.5px] text-[var(--m-ink-2)]">
+              {story.title[language]}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
