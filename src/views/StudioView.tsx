@@ -886,8 +886,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
         )}
 
         {/* Right Column: The Sequencer (.seq) — one grid item, so the first-run hint above the grid
-            cannot displace it into a second row. */}
-        <div className="min-w-0 flex flex-col">
+            cannot displace it into a second row.
+
+            The `order` classes belong *here*, on the grid item, not on the `section` inside it.
+            `InfoDossier` is `order-2 lg:order-1` and this wrapper used to carry no order at all, so
+            at `lg` the dossier sorted first and took the `352px` track while the editor — the thing
+            the app is for — was squeezed into it (measured at 1440×900: sequencer 352 px, dossier
+            1012 px, three step cells per track). `SequencerPanel`'s own `order-1 lg:order-2` did not
+            help: it is a child of *this* wrapper, which is the grid item. */}
+        <div className="min-w-0 flex flex-col order-1 lg:order-2">
           {/* Unconditional on purpose: a conditional sibling here would change the panel's position
               when the hint hides, which remounts the whole sequencer (see `FirstRunPrompt`). */}
           <FirstRunPrompt
