@@ -94,6 +94,24 @@ const bars = Math.max(1, Number(argValue("--bars", "3")) || 3);
 const repeats = Math.max(1, Number(argValue("--repeats", "2")) || 2);
 const port = Number(argValue("--port", process.env.PORT || "3150")) || 3150;
 /**
+ * `--force-fallback` makes the page unable to load the limiter worklet, so every render takes the
+ * `DynamicsCompressorNode` path.
+ *
+ * The fallback used to be reachable only by luck — whether Chromium accepted `audioWorklet.addModule`
+ * for `/limiterWorklet.js` varied between runs of the *same* command, which is exactly how a
+ * re-record came back with rows at +1.75 dBTP while a re-run of the same genres sat at −1.30 dBTP.
+ * A defect whose reproduction is a coin flip cannot be regression-tested, so this flag removes the
+ * coin: it routes the worklet URL to a 404, `addModule` rejects for a deterministic reason, and the
+ * resulting rows are labelled `fallback` by the renderer itself. Use it to check the offline
+ * true-peak ceiling on the degraded path, and never for publishing a baseline.
+ */
+const forceFallback = argValue("--force-fallback", "") !== "";
+/**
+ * `--allow-mixed-limiter` publishes (or samples against) a report even when some genre rendered
+ * through the compressor fallback. Only for diagnostics: see `assertSingleLimiterPath`.
+ */
+const allowMixedLimiter = argValue("--allow-mixed-limiter", "") !== "";
+/**
  * Absolute delivery target, or empty to keep the historical "match the library's own median"
  * behaviour. The fitted trims only ever made the genres match *each other*; the absolute level
  * was whatever the median happened to be (−15.7 LUFS), which is 1.7 dB below Spotify's
@@ -218,8 +236,48 @@ function spreadOf(entries, key) {
 }
 
 /** Renders + measures one genre in the page. Runs inside Chromium, so plain JS. */
-async function measureGenre(page, genreId, trimDb) {
-  return page.evaluate(
+/**
+ * Refuse to publish (or judge) numbers that came from more than one limiter path.
+ *
+ * The `worklet` limiter is a hard lookahead ceiling; the `fallback` is a soft compressor that
+ * (G.14) renders 2.36 dB louder overall on the same material. A row measured through each is not one
+ * measurement, so a run that hit both is not a baseline — and the failure mode this replaces is
+ * exactly that: a re-record whose rows were half fallback looked internally consistent and passed
+ * every check in `check:loudness`, because each row was self-consistent. Sampling mode gets the same
+ * treatment, since a fallback row there reads as "the report has drifted" when only the limiter did.
+ */
+function assertSingleLimiterPath(ids, context) {
+  if (forceFallback || allowMixedLimiter) return;
+  const offenders = ids
+    .map((id) => {
+      const seen = observedLimiterKinds.get(id);
+      return [id, seen ? [...seen].join("+") : "unrendered"];
+    })
+    .filter(([, kind]) => kind !== "worklet");
+  if (offenders.length === 0) return;
+  console.error(`\n❌ ${offenders.length} of ${ids.length} genre(s) did not render through the worklet limiter (${context}):`);
+  for (const [id, kind] of offenders) console.error(`   ${id}: ${kind}`);
+  console.error(
+    "   The compressor fallback is a different renderer (2.36 dB louder overall, G.14), so these\n" +
+      "   numbers cannot be published alongside worklet rows. Re-run; if it persists, pass\n" +
+      "   --allow-mixed-limiter to inspect it (never to land a baseline), or --force-fallback to\n" +
+      "   measure the degraded path on its own."
+  );
+  process.exit(1);
+}
+
+/**
+ * Every limiter path each genre was rendered through, across *all* of this run's calls.
+ *
+ * `measureGenre` is called repeatedly per genre (the arranged pass, then one call per trim round),
+ * so a genre's row has to be the union of what actually rendered it: `worklet+fallback` is a
+ * different claim from `worklet`, and a baseline whose rows silently mix the two is describing two
+ * different renderers with one number (G.14 measures the compressor path 2.36 dB louder overall).
+ */
+const observedLimiterKinds = new Map();
+
+async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
+  const measured = await page.evaluate(
     async ({ genreId: id, trimDb: trim, bars: barsArg, repeats: repeatsArg, makeupDb }) => {
       const [wav, genresModule, mixModule, loudness, trackUtils] = await Promise.all([
         import("/src/audio/WavExporter.ts"),
@@ -238,6 +296,16 @@ async function measureGenre(page, genreId, trimDb) {
       // `legacy` renders the genre file's own mix (the pre-feature placeholder);
       // `arranged` renders the table's mix. `trim === null` means "measure the raw
       // mix", otherwise the trim is applied by the same code path the exporter uses.
+      /**
+       * Which limiter each render actually installed.
+       *
+       * The run-level probe answers this once, but the probe's own notes are explicit that "a report
+       * that does not say which one rendered cannot be interpreted" — and the two paths behave
+       * differently (the worklet is a hard lookahead ceiling, the compressor fallback is soft). Now
+       * every row carries the kind it was rendered with, which is how the +1.75 dBTP rows were traced
+       * to a render that never went through a ceiling at all.
+       */
+      const limiterKinds = new Set();
       const render = async (pattern) => {
         const buffer = await wav.renderPatternOffline(pattern, {
           bars: barsArg,
@@ -245,6 +313,7 @@ async function measureGenre(page, genreId, trimDb) {
           loudnessTrimDb: trim === null ? 0 : trim,
           // `undefined` means "use the graph's shared default", which is what playback does.
           masterMakeupDb: makeupDb,
+          onLimiterKind: (kind) => limiterKinds.add(kind),
         });
         const channels = [];
         for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
@@ -279,6 +348,7 @@ async function measureGenre(page, genreId, trimDb) {
         arrangedTruePeakDb: median("truePeakDb"),
         arrangedRmsDb: median("rmsDb"),
         gatedBlockCount: runs[0].gatedBlockCount,
+        limiterKind: [...limiterKinds].join("+") || "unknown",
         withinGenreSpreadDb: spread,
         durationSec: runs[0].durationSec,
         sampleRate: 44100,
@@ -286,6 +356,28 @@ async function measureGenre(page, genreId, trimDb) {
     },
     { genreId, trimDb, bars, repeats, makeupDb: masterMakeupDb }
   );
+
+  /**
+   * Merge this call's limiter paths into the genre's union — on the **Node** side.
+   *
+   * `measureGenre`'s body runs inside the page, so it cannot touch this map (the first attempt did
+   * and threw `ReferenceError: observedLimiterKinds is not defined` from `page.evaluate`); the page
+   * returns the paths it saw and the merge happens here.
+   *
+   * The warm-up render is excluded deliberately: it exists *because* the first render in a fresh page
+   * is the degraded one (cold-start −15.55 LUFS against −12.68 warm), so counting its path would
+   * mark that genre `worklet+fallback` and abort a run that is in fact entirely on the worklet.
+   */
+  const seen = observedLimiterKinds.get(genreId) ?? new Set();
+  if (!discard) {
+    // Split on "+" so a round that itself mixed both paths lands as two entries, never as one
+    // string that would then read `worklet+worklet+fallback` in the union.
+    for (const kind of String(measured?.limiterKind ?? "").split("+")) {
+      if (kind && kind !== "unknown") seen.add(kind);
+    }
+    observedLimiterKinds.set(genreId, seen);
+  }
+  return measured;
 }
 
 /** Renders the untouched genre file (legacy placeholder mix), trim 0. */
@@ -418,6 +510,9 @@ async function waitForServer(url) {
     const page = await context.newPage();
     page.on("console", (msg) => {
       if (msg.type() === "error") process.stderr.write(`  [page error] ${msg.text()}\n`);
+      // The limiter's install failure is a `console.warn`, and a silent fallback is exactly how a
+      // render can come out above the true-peak ceiling without anything saying so. Forward it.
+      else if (/MasterLimiter/.test(msg.text())) process.stderr.write(`  [limiter] ${msg.text()}\n`);
     });
     // Serve a bare same-origin document instead of the app shell: the app boots React,
     // registers a service worker and can navigate/reload, which destroys the evaluate
@@ -428,6 +523,24 @@ async function waitForServer(url) {
         body: "<!doctype html><html><head><meta charset=\"utf-8\"><title>groove loudness probe</title></head><body></body></html>",
       })
     );
+    if (forceFallback) {
+      /**
+       * Make the platform refuse to register the limiter worklet.
+       *
+       * A `page.route` 404 on `/limiterWorklet.js` was tried first and **does not work**: the module
+       * is fetched by the audio rendering thread, which Playwright request routing does not see, so
+       * every render still reported `limiterKind: "worklet"` while the route was installed. Tainting
+       * the API before any app code runs is the honest stand-in for a platform (or a CSP, or a
+       * blocked asset) that cannot load the processor — it is the same rejection `addModule` gives.
+       */
+      await page.addInitScript(() => {
+        if (typeof AudioWorklet === "undefined") return;
+        AudioWorklet.prototype.addModule = function forcedFallback() {
+          return Promise.reject(new DOMException("forced fallback (measurement mode)", "NotSupportedError"));
+        };
+      });
+      console.log("Forcing the compressor fallback (addModule always rejects) — not a baseline run.");
+    }
     await page.goto(`${baseUrl}/__loudness_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
     let catalog = await listGenreIds(page);
@@ -470,7 +583,7 @@ async function waitForServer(url) {
      */
     try {
       const warmupStartedAt = Date.now();
-      await measureGenre(page, catalog[0].id, null);
+      await measureGenre(page, catalog[0].id, null, { discard: true });
       console.log(`Warm-up render (discarded): ${catalog[0].id} (${Date.now() - warmupStartedAt} ms)`);
     } catch (error) {
       console.log(`Warm-up render failed (continuing): ${error.message}`);
@@ -507,6 +620,7 @@ async function waitForServer(url) {
             `  (${Date.now() - startedAt} ms)`
         );
       }
+      assertSingleLimiterPath(ids, "sample check");
       const drift = loudnessDrift(measuredNow, baseline.genres, LOUDNESS_FRESHNESS_TOLERANCE_DB);
       console.log("===============================================================");
       if (drift.length === 0) {
@@ -545,6 +659,9 @@ async function waitForServer(url) {
         if (measured.length % 5 === 0) {
           fs.writeFileSync(`${outPath}.progress.json`, `${JSON.stringify({ generatedBy: "measure_genre_loudness.mjs", partial: true, done: measured.length, total: catalog.length, genres: measured }, null, 0)}\n`);
         }
+        // Fail fast rather than at the end: a full run is an hour of renders, and the check that
+        // matters (one limiter path) is knowable after each genre.
+        assertSingleLimiterPath([entry.id], "pass 1");
         process.stdout.write(
           `  [${String(index + 1).padStart(3)}/${catalog.length}] ${entry.id.padEnd(24)}` +
             ` legacy ${legacy.legacyLufs.toFixed(2)} LUFS   arranged ${arranged.arrangedLufs.toFixed(2)} LUFS` +
@@ -674,6 +791,7 @@ async function waitForServer(url) {
           entry.trimmedTruePeakDb = trimmed.arrangedTruePeakDb;
           entry.trimmedRmsDb = trimmed.arrangedRmsDb;
           entry.trimIterations = round;
+          assertSingleLimiterPath([entry.id], `trim round ${round}`);
         } catch (error) {
           failures.push({ genreId: entry.id, pass: `trim-round-${round}`, error: String(error.message || error) });
         }
@@ -733,6 +851,20 @@ async function waitForServer(url) {
       rms: spreadPass("legacyRmsDb", "arrangedRmsDb", "trimmedRmsDb"),
     };
 
+    assertSingleLimiterPath(measured.map((entry) => entry.id), "full run");
+
+    /**
+     * Publish each row's **union** of limiter paths, not just the arranged pass's.
+     *
+     * A genre re-rendered across trim rounds can meet both paths; the row is one number, so it has to
+     * say which renderers produced it. This is also the field that made the abandoned +1.75 dBTP
+     * re-record readable at all.
+     */
+    for (const entry of measured) {
+      const seen = observedLimiterKinds.get(entry.id);
+      if (seen && seen.size > 0) entry.limiterKind = [...seen].join("+");
+    }
+
     const report = {
       generatedBy: "scripts/measure_genre_loudness.mjs",
       generatedAt: new Date().toISOString(),
@@ -786,6 +918,17 @@ async function waitForServer(url) {
               ? Number(entry.arrangedTruePeakDb.toFixed(3))
               : null,
             arrangedRmsDb: Number(entry.arrangedRmsDb.toFixed(3)),
+            /**
+             * Which master limiter this genre's renders installed.
+             *
+             * Kept in the published row because a report that does not say so cannot be interpreted:
+             * `worklet` is the hard lookahead ceiling, `fallback` is the compressor (whose own
+             * warning admits it has no true-peak ceiling), and `worklet+fallback` means the page used
+             * both within one genre. The 2026-09-18 re-record's +1.75 dBTP rows were only traceable
+             * at all by re-running with this field, and the run-level `report.limiter` is a single
+             * probe that can disagree with what the genre rows actually did.
+             */
+            limiterKind: entry.limiterKind ?? "unknown",
             trimDb: entry.trimDb,
             trimmedLufs: Number.isFinite(entry.trimmedLufs) ? Number(entry.trimmedLufs.toFixed(3)) : null,
             trimmedPeakDb: Number.isFinite(entry.trimmedPeakDb) ? Number(entry.trimmedPeakDb.toFixed(3)) : null,
