@@ -57,6 +57,14 @@ function loadPlaywright() {
 
 const { chromium } = loadPlaywright();
 
+// Type-stripped directly by Node (the repository's engine floor is 22.22.2, where that is on by
+// default), so the sampler and the drift rule are the same code the unit tests exercise.
+import {
+  LOUDNESS_FRESHNESS_TOLERANCE_DB,
+  loudnessDrift,
+  sampleGenreIds,
+} from "../src/utils/loudnessFreshness.ts";
+
 const argv = process.argv.slice(2);
 /** Accepts both `--flag value` and `--flag=value`. */
 const argValue = (flag, fallback) => {
@@ -67,6 +75,16 @@ const argValue = (flag, fallback) => {
 };
 
 const limit = Number(argValue("--limit", "0")) || 0;
+/**
+ * Sample mode: re-render this many genres (spread across the catalog) and compare them with the
+ * committed report, writing nothing.
+ *
+ * This is the one check that can tell a *stale* report from a consistent one: every other loudness
+ * gate compares the report with itself and with \`genreMix.ts\`, both of which stay perfectly
+ * consistent while the code moves underneath them (PRODUCT_PLAN_v2.1.0.md G.52).
+ */
+const sampleCount = Math.max(0, Number(argValue("--sample", "0")) || 0);
+const reportPath = path.resolve(ROOT, argValue("--report", "scripts/loudness.baseline.json"));
 /** Optional explicit genre list (`--genres=a,b,c`) — handy for repeat/noise checks. */
 const genreFilter = (argValue("--genres", "") || "")
   .split(",")
@@ -422,7 +440,9 @@ async function waitForServer(url) {
       catalog = catalog.slice(0, limit);
     }
     console.log(`Measuring ${catalog.length} genre(s)...`);
-    console.log(`[start] ${catalog.length} genres → ${path.relative(ROOT, outPath)} (progress: ${path.relative(ROOT, outPath)}.progress.json) at ${new Date().toISOString()}`);
+    if (sampleCount === 0) {
+      console.log(`[start] ${catalog.length} genres → ${path.relative(ROOT, outPath)} (progress: ${path.relative(ROOT, outPath)}.progress.json) at ${new Date().toISOString()}`);
+    }
     let limiterProbe = null;
     try {
       limiterProbe = await probeLimiterKind(page);
@@ -433,6 +453,83 @@ async function waitForServer(url) {
       );
     } catch (error) {
       console.log(`Limiter probe failed: ${error.message}`);
+    }
+
+    /**
+     * Warm-up render, discarded.
+     *
+     * The **first** offline render in a fresh page does not go through the limiter worklet — its
+     * module is registered lazily — so it falls back to the dynamics compressor, and for a genre
+     * pinned at the ceiling that is not a rounding difference: `kawaii-future-bass` renders at
+     * −15.55 LUFS cold and −12.68 LUFS warm, measured three times each. Every measurement below
+     * therefore throws its first render away.
+     *
+     * This is also why a one-genre run must not be compared with a full-library baseline: its single
+     * render *is* the cold one. (The export path has the same hazard and solves it differently — it
+     * reports `limiterKind: "fallback"` to the user instead of hiding it.)
+     */
+    try {
+      const warmupStartedAt = Date.now();
+      await measureGenre(page, catalog[0].id, null);
+      console.log(`Warm-up render (discarded): ${catalog[0].id} (${Date.now() - warmupStartedAt} ms)`);
+    } catch (error) {
+      console.log(`Warm-up render failed (continuing): ${error.message}`);
+    }
+
+    if (sampleCount > 0) {
+      const ids = sampleGenreIds(
+        catalog.map((c) => c.id),
+        sampleCount
+      );
+      if (!fs.existsSync(reportPath)) {
+        throw new Error(`--sample needs a readable report: ${path.relative(ROOT, reportPath)}`);
+      }
+      const baseline = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+      if (!baseline?.genres) {
+        throw new Error(`--sample needs a report with a genre table: ${path.relative(ROOT, reportPath)}`);
+      }
+      console.log(
+        `Re-rendering ${ids.length} genre(s) to check the report still describes the code ` +
+          `(tolerance ±${LOUDNESS_FRESHNESS_TOLERANCE_DB} dB)...`
+      );
+      const measuredNow = [];
+      for (const [index, id] of ids.entries()) {
+        const startedAt = Date.now();
+        const arranged = await measureGenre(page, id, null);
+        const expected = baseline.genres[id]?.arrangedLufs;
+        measuredNow.push({ genreId: id, arrangedLufs: arranged.arrangedLufs });
+        const delta = typeof expected === "number" ? arranged.arrangedLufs - expected : Number.NaN;
+        console.log(
+          `  [${String(index + 1).padStart(3)}/${ids.length}] ${id.padEnd(24)}` +
+            ` report ${typeof expected === "number" ? expected.toFixed(2) : "—"} LUFS` +
+            `   now ${arranged.arrangedLufs.toFixed(2)} LUFS` +
+            `   Δ ${Number.isFinite(delta) ? (delta >= 0 ? "+" : "") + delta.toFixed(2) : "n/a"}` +
+            `  (${Date.now() - startedAt} ms)`
+        );
+      }
+      const drift = loudnessDrift(measuredNow, baseline.genres, LOUDNESS_FRESHNESS_TOLERANCE_DB);
+      console.log("===============================================================");
+      if (drift.length === 0) {
+        console.log(
+          `✅ The loudness report still describes the code (${ids.length} genre(s) re-rendered, ` +
+            `all within ±${LOUDNESS_FRESHNESS_TOLERANCE_DB} dB).`
+        );
+      } else {
+        console.error(`❌ ${drift.length} of ${ids.length} sampled genre(s) no longer match the report:`);
+        for (const row of drift) {
+          console.error(
+            `   ${row.genreId}: report ${Number.isFinite(row.expected) ? row.expected.toFixed(2) : "missing"}` +
+              ` LUFS, now ${row.actual.toFixed(2)} LUFS (Δ ${Number.isFinite(row.delta) ? row.delta.toFixed(2) : "n/a"} dB)`
+          );
+        }
+        console.error(
+          "\n   Re-record with `node scripts/measure_genre_loudness.mjs` and update src/data/genreMix.ts" +
+            " (`node scripts/apply_loudness_trims.mjs`) before landing."
+        );
+        process.exitCode = 1;
+      }
+      console.log("===============================================================");
+      return;
     }
 
     // Pass 1 — legacy (before) + arranged at unity trim.
