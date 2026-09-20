@@ -1,10 +1,10 @@
 /**
  * 即兴 (the jam module, M4).
  *
- * Layout follows the reference's jam screen, with the changes the user asked for: the tempo controls
- * live at the **bottom**, the drum-group mute row is **gone**, there is **no player bar** here, and
- * record/play sit at the top. What is left is one screen that does one thing: edit the groove and hear
- * it.
+ * Layout follows the reference's jam screen, with the changes the user asked for: play sits at the top,
+ * one dock at the **bottom** carries record, tempo and swing together, the drum-group mute row is
+ * **gone**, and there is **no player bar** here. What is left is one screen that does one thing: edit
+ * the groove and hear it.
  *
  * ## One deliberate deviation from the reference
  *
@@ -50,6 +50,9 @@ const PADS: Array<{ id: string; labelKey: string; lane: number }> = [
 const STEPS = 16;
 const BPM_MIN = 60;
 const BPM_MAX = 180;
+/** The swing range the engine already accepts, and the grid the rail snaps to. */
+const SWING_MAX = 0.4;
+const SWING_STEP = 0.05;
 
 export const clampJamBpm = (value: number): number =>
   Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(value)));
@@ -85,6 +88,9 @@ export function MobileJamScreen({
   const [swing, setSwing] = useState(0);
   const [playhead, setPlayhead] = useState(0);
   const lastApplied = useRef<string>("");
+  const swingRail = useRef<HTMLDivElement | null>(null);
+  /** True between pointerdown and pointerup on the feel rail: a plain hover must not move the groove. */
+  const swingDragging = useRef(false);
 
   // A different backing genre replaces the working copy (the module is about one genre at a time).
   useEffect(() => {
@@ -179,10 +185,27 @@ export function MobileJamScreen({
     });
   };
 
+  /**
+   * Swing is quantised to 5% because that is the smallest step the feel audibly distinguishes, and a
+   * rail that reported 23% while the pattern played 20% would be lying about the groove. The engine
+   * keeps the fraction (0..1); the readout converts.
+   */
   const changeSwing = (value: number) => {
-    const next = Math.min(0.4, Math.max(0, value));
+    const clamped = Math.min(SWING_MAX, Math.max(0, value));
+    const next = Number((Math.round(clamped / SWING_STEP) * SWING_STEP).toFixed(2));
     setSwing(next);
     onSwing(next);
+  };
+
+  /**
+   * A pointer's x on the rail *is* the feel — position, not delta — so a tap jumps straight to that
+   * swing and a drag tracks the thumb. The rect is read per event because the rail reflows with the
+   * viewport (and the tests hand it a measured width).
+   */
+  const swingFromPointer = (clientX: number) => {
+    const rect = swingRail.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return;
+    changeSwing(((clientX - rect.left) / rect.width) * SWING_MAX);
   };
 
   return (
@@ -205,24 +228,6 @@ export function MobileJamScreen({
 
         <button
           type="button"
-          data-testid="mobile-jam-record"
-          aria-pressed={recording}
-          aria-label={t("mobile_jam_record")}
-          onClick={() => setRecording((on) => !on)}
-          className={`m-press flex h-12 w-12 flex-none items-center justify-center rounded-full border ${
-            recording
-              ? "border-[var(--m-red)] bg-[rgba(242,109,109,0.18)]"
-              : "border-[var(--m-line-2)]"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`h-3.5 w-3.5 rounded-full ${recording ? "bg-[var(--m-red)]" : "bg-[rgba(242,109,109,0.7)]"}`}
-          />
-        </button>
-
-        <button
-          type="button"
           data-testid="mobile-jam-play"
           aria-pressed={isPlaying}
           aria-label={isPlaying ? t("mobile_jam_stop") : t("mobile_jam_play")}
@@ -236,12 +241,6 @@ export function MobileJamScreen({
           {isPlaying ? "■" : "▶"}
         </button>
       </div>
-
-      {recording && (
-        <p className="m-mono mt-2 text-[10px] text-[var(--m-red)]" data-testid="mobile-jam-record-hint">
-          {t("mobile_jam_record_on")}
-        </p>
-      )}
 
       {/* Groove grid */}
       <section className="mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-3.5">
@@ -327,19 +326,53 @@ export function MobileJamScreen({
         </div>
       </section>
 
-      {/* Tempo, at the bottom where the user asked for it */}
+      {/*
+        One dock, pinned above the tab bar: record, tempo and swing are the same gesture — "change the
+        groove while it plays" — so they belong in one bar rather than two stacked ones. `sticky`
+        rather than `fixed` keeps it inside the shell's column and lets the page still scroll.
+      */}
       <section
-        className="mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3.5"
+        className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3.5"
         data-testid="mobile-jam-tempo"
       >
-        <div className="flex min-h-[52px] items-center gap-3">
+        <div className="flex min-h-[56px] items-center gap-3">
+          <button
+            type="button"
+            data-testid="mobile-jam-record"
+            aria-pressed={recording}
+            aria-label={t("mobile_jam_record")}
+            onClick={() => setRecording((on) => !on)}
+            className={`m-press flex h-12 w-12 flex-none items-center justify-center rounded-full border ${
+              recording
+                ? "border-[var(--m-red)] bg-[rgba(242,109,109,0.18)]"
+                : "border-[var(--m-line-2)]"
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`h-3.5 w-3.5 rounded-full ${recording ? "bg-[var(--m-red)]" : "bg-[rgba(242,109,109,0.7)]"}`}
+            />
+          </button>
+
+          {/* The hint shares the row so arming record never reflows the controls beside it. */}
+          <div className="min-w-0 flex-1">
+            {recording && (
+              <p
+                className="m-mono text-[10px] leading-tight text-[var(--m-red)]"
+                data-testid="mobile-jam-record-hint"
+              >
+                {t("mobile_jam_record_on")}
+              </p>
+            )}
+          </div>
+
           <span className="text-[13px]">{t("mobile_jam_tempo")}</span>
           <button
             type="button"
             data-testid="mobile-jam-bpm-down"
             aria-label={`${t("mobile_jam_bpm")} -1`}
             onClick={() => changeBpm(-2)}
-            className="m-press m-mono flex h-12 w-12 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+            className="m-press m-mono flex h-12 w-12 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -351,34 +384,69 @@ export function MobileJamScreen({
             data-testid="mobile-jam-bpm-up"
             aria-label={`${t("mobile_jam_bpm")} +1`}
             onClick={() => changeBpm(2)}
-            className="m-press m-mono flex h-12 w-12 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+            className="m-press m-mono flex h-12 w-12 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             <Plus className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex min-h-[52px] items-center gap-3 border-t border-[var(--m-line)]">
+
+        {/* Swing: a feel rail, dragged rather than picked from chips. `touch-none` keeps the drag. */}
+        <div className="flex min-h-[56px] items-center gap-3 border-t border-[var(--m-line)]">
           <span className="text-[13px]">{t("mobile_jam_swing")}</span>
-          <span className="m-mono text-[10px] text-[var(--m-gold)]" data-testid="mobile-jam-swing-value">
+          <div
+            ref={swingRail}
+            data-testid="mobile-jam-swing-slider"
+            role="slider"
+            tabIndex={0}
+            aria-label={t("mobile_jam_swing")}
+            aria-valuemin={0}
+            aria-valuemax={Math.round(SWING_MAX * 100)}
+            aria-valuenow={Math.round(swing * 100)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") changeSwing(swing - SWING_STEP);
+              else if (event.key === "ArrowRight") changeSwing(swing + SWING_STEP);
+              else return;
+              event.preventDefault();
+            }}
+            onPointerDown={(event) => {
+              // Capture so a drag that leaves the rail (or the card) keeps feeding the value.
+              swingDragging.current = true;
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+              swingFromPointer(event.clientX);
+            }}
+            onPointerMove={(event) => {
+              if (swingDragging.current) swingFromPointer(event.clientX);
+            }}
+            onPointerUp={(event) => {
+              swingDragging.current = false;
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
+            }}
+            onPointerCancel={() => {
+              swingDragging.current = false;
+            }}
+            className="relative flex h-11 min-w-0 flex-1 cursor-pointer touch-none items-center"
+          >
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-[rgba(232,232,255,0.12)]"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-[var(--m-gold)]"
+              style={{ width: `${Math.round(swing * 100)}%` }}
+            />
+            <span
+              aria-hidden="true"
+              className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--m-gold)] bg-[var(--m-bg)]"
+              style={{ left: `${Math.round(swing * 100)}%` }}
+            />
+          </div>
+          <span
+            className="m-mono min-w-[40px] text-right text-[12px] text-[var(--m-gold)]"
+            data-testid="mobile-jam-swing-value"
+          >
             {Math.round(swing * 100)}%
           </span>
-          <div className="m-rail flex-1" role="group" aria-label={t("mobile_jam_swing")}>
-            {[0, 0.1, 0.2, 0.3, 0.4].map((value) => (
-              <button
-                key={value}
-                type="button"
-                data-testid={`mobile-jam-swing-${Math.round(value * 100)}`}
-                aria-pressed={Math.abs(swing - value) < 0.001}
-                onClick={() => changeSwing(value)}
-                className={`m-press m-mono min-h-[46px] flex-none rounded-full border px-3 text-[10px] ${
-                  Math.abs(swing - value) < 0.001
-                    ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
-                    : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"
-                }`}
-              >
-                {Math.round(value * 100)}%
-              </button>
-            ))}
-          </div>
         </div>
       </section>
     </section>
