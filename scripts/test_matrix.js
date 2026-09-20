@@ -855,6 +855,33 @@ async function runTestOnTarget(target, baseUrl) {
      * layout at 390x844 — so a size-swapping check there measures the emulation, not the design. The
      * phone layouts themselves are covered by every other mobile check in this matrix.
      */
+    /**
+     * 1.11 The 更多 module: the five rows, and the language switch they own.
+     */
+    await page.goto(`${baseUrl}/m/more`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-more"]', { timeout: 45000 });
+    const more = await page.evaluate(() => {
+      const rows = ["settings", "updates", "help", "search", "language"].map((id) =>
+        document.querySelector(`[data-testid="mobile-more-${id}"]`)
+      );
+      const heights = rows.map((node) => (node ? Math.round(node.getBoundingClientRect().height) : 0));
+      return {
+        missing: rows.filter((node) => !node).length,
+        smallest: heights.length ? Math.min(...heights) : 0,
+        version: document.querySelector('[data-testid="mobile-more-version"]')?.textContent ?? "",
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+    if (more.missing > 0) throw new Error(`More module is missing ${more.missing} row(s)`);
+    if (more.smallest < 44) throw new Error(`More module has a ${more.smallest}px row`);
+    if (!/^v\d+\.\d+\.\d+/.test(more.version)) {
+      throw new Error(`More module shows "${more.version}" as its version`);
+    }
+    if (more.overflow) throw new Error("More module overflows horizontally");
+
     if (!target.isMobile && !target.isTablet) {
       /**
        * Both orientations are set explicitly rather than assumed.
@@ -865,6 +892,11 @@ async function runTestOnTarget(target, baseUrl) {
        * started failing on a surface that was fine.
        */
       const original = page.viewportSize();
+      // Back to the page under test: later blocks navigate away, and this probe measures geometry.
+      await page.goto(`${baseUrl}/m/explore`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector('[data-testid="mobile-explore"]', { timeout: 45000 });
+      await page.click('[data-testid="mobile-explore-tab-chords"]');
+      await page.waitForSelector('[data-testid="mobile-explore-chords"]', { timeout: 45000 });
       /**
        * Measured geometrically, not through `grid-template-columns`.
        *

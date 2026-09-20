@@ -161,13 +161,14 @@ describe("phone shell · five modules", () => {
     expect(screen.queryByTestId("mobile-jam")).not.toBeInTheDocument();
     second.unmount();
 
-    // 探索 is real too (M6); 更多 is the last placeholder standing.
+    // Every module is a real screen now (M7): 更多 included.
     const third = renderShell("explore");
     expect(await screen.findByTestId("mobile-explore", {}, { timeout: 5000 })).toBeInTheDocument();
     third.unmount();
 
     renderShell("more");
-    expect(screen.getByTestId("mobile-module-more-placeholder")).toBeInTheDocument();
+    expect(await screen.findByTestId("mobile-more", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-explore")).not.toBeInTheDocument();
   });
 });
 
