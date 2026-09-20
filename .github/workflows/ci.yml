@@ -13,11 +13,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # v5 actions run on the Node 24 runtime. The v4 tags target Node 20, which GitHub
+      # deprecated on runners (2025-09-19) and now forces onto Node 24 with a warning.
+      # This is a *different* Node version from `.nvmrc` below: this one is the workflow's
+      # own runtime, `.nvmrc` is the project's floor (`engines` / `engine-strict`).
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # `.nvmrc` is the floor `engines` declares, so CI runs the *minimum* supported
           # version rather than a newer one that would hide a too-high requirement.
@@ -39,6 +43,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The runner's own Node runtime for `uses:` actions is a separate axis from the
+      # project's Node floor below; this gate fails on an action still tagged for the
+      # deprecated Node 20 runtime.
+      - name: Actions Runtime Gate
+        run: npm run check:actions
+
       - name: Version Single-Source Check
         run: npm run version:check
 
@@ -59,7 +69,7 @@ jobs:
 
       - name: Upload Coverage Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report
           path: coverage/
@@ -87,10 +97,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # Same floor as the `validate` job — see the comment there.
           node-version-file: ".nvmrc"
