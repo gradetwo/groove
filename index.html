@@ -97,7 +97,13 @@
          system fonts (PingFang SC / Hiragino / Microsoft YaHei). -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-[#0a0b0d] text-[#e9e7e0] antialiased selection:bg-neon-cyan/30 selection:text-neon-cyan min-h-screen overflow-x-hidden">
+  <!-- `overflow-x-hidden` used to sit on this tag. It was the reason `position: sticky` never
+       worked anywhere in the app: `overflow: hidden` makes the element a scroll container, so body
+       became the nearest scrollport for every sticky descendant and scrolled away with the page
+       (measured: the header, declared `sticky top-0 z-50`, at `top −400` after a 400 px wheel).
+       The same clipping is declared in `src/index.css` as `overflow-x: clip`, which clips the
+       pixels without creating a scroll container. -->
+  <body class="bg-[#0a0b0d] text-[#e9e7e0] antialiased selection:bg-neon-cyan/30 selection:text-neon-cyan min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

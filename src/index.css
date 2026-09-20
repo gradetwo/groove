@@ -66,6 +66,25 @@
      */
     overscroll-behavior-x: none;
     overscroll-behavior-y: auto;
+    /**
+     * Horizontal overflow is clipped here with **`clip`, not `hidden`** — and the difference is the
+     * whole reason `position: sticky` works anywhere in this app.
+     *
+     * `overflow: hidden` makes its element a scroll container. After the root's `overflow-x: hidden`,
+     * `body`'s overflow is not `visible` either (Chrome carries the value down), so `body` became the
+     * nearest scrollport for every sticky descendant — and because `body` scrolls *with* the page
+     * rather than inside it, nothing that declared `sticky` ever stuck: the app header (`sticky top-0
+     * z-50`) scrolled away, the dossier sidebar scrolled away, and the studio toolbar's transport
+     * strip had no anchor to park under. Measured at 1440×900 after a 400 px wheel: header at `top
+     * −400`.
+     *
+     * `clip` clips the same pixels without creating a scroll container, so horizontal panning of the
+     * page — the thing this rule exists for — is still impossible while sticky positioning works. The
+     * `hidden` line stays first as the fallback for browsers without `clip` (Safari < 16), where the
+     * page simply behaves as it did before.
+     */
+    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   /**
@@ -301,6 +320,17 @@ input[type=range]::-moz-range-thumb {
  */
 :root {
   --mobile-tab-bar-h: 0px;
+  /**
+   * Height of the sticky app header — the band a `sticky top-…` element has to leave alone.
+   *
+   * The header is `sticky top-0` and sizes itself from its own content, so the studio toolbar's
+   * sticky transport strip (`Toolbar.tsx`, G.47) cannot compute this from anything else. Measured
+   * 69 px at 1440×900, 1280×720, 1194×834 and 834×1112 — the header is one line at every desktop and
+   * tablet width. The E2E matrix asserts the rendered header still measures this, and that the strip
+   * is hit-testable after scrolling to the bottom: a number that is too large leaves a gap, and one
+   * that is too small parks the transport *behind* the header, where it cannot be clicked.
+   */
+  --app-header-h: 69px;
   /* One source of truth for the frozen left column. The ruler label, the track
      headers and the velocity lane all pin themselves to the left edge of the step
      grid; if they disagree by even 4 px, the narrower sticky column of one paints
