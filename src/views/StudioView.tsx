@@ -1,8 +1,12 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { Keyboard, Play, Square } from "lucide-react";
 import { Genre, SequencerPattern } from "../types/genre";
-import { AudioEngine, DrumKitType, EffectsRackState } from "../audio/AudioEngine";
-import { loadKeyboardFabPref } from "../features/sequencer/keyboardFabPref";
+import { AudioEngine, EffectsRackState } from "../audio/AudioEngine";
+import {
+  useInspectorCursor,
+  useKeyboardPerformance,
+  usePlaybackSettings,
+} from "../features/sequencer/hooks/useStudioSession";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { useDensityPreference } from "../hooks/useDensityPreference";
@@ -50,7 +54,6 @@ import { useMatrixScroll } from "../features/sequencer/hooks/useMatrixScroll";
 import { useGridInteraction } from "../features/sequencer/hooks/useGridInteraction";
 import { usePatternActions } from "../features/sequencer/hooks/usePatternActions";
 import { useTrackControls } from "../features/sequencer/hooks/useTrackControls";
-import { followReorderedRow } from "../features/sequencer/inspectorFollow";
 import { useVelocityLaneEditing } from "../features/sequencer/hooks/useVelocityLaneEditing";
 import { useTransportControls } from "../features/sequencer/hooks/useTransportControls";
 import { useToolbarControls } from "../features/sequencer/hooks/useToolbarControls";
@@ -58,7 +61,6 @@ import { usePanelToggles } from "../features/sequencer/hooks/usePanelToggles";
 import { ChordDefinition } from "../utils/chordTheory";
 import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { calculateGroupSize, calculateStepsPerBar } from "../utils/meter";
-import { getDefaultDrumKitForGenre } from "../utils/trackUtils";
 import { useAuditionPreview } from "../features/sequencer/hooks/useAuditionPreview";
 import { useEffectsRack } from "../features/sequencer/hooks/useEffectsRack";
 
@@ -216,26 +218,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
    */
   useDensityPreference();
 
-  // Phase 4 States (P4-01 ~ P4-04 & P4-06)
-  const [isKeyboardMode, setIsKeyboardMode] = useState(false);
-  const [showKeyboardFab, setShowKeyboardFab] = useState<boolean>(() => loadKeyboardFabPref());
-
-  useEffect(() => {
-    const handleFabSync = () => {
-      setShowKeyboardFab(loadKeyboardFabPref());
-    };
-    window.addEventListener("groove_fab_pref_changed", handleFabSync);
-    window.addEventListener("storage", handleFabSync);
-    return () => {
-      window.removeEventListener("groove_fab_pref_changed", handleFabSync);
-      window.removeEventListener("storage", handleFabSync);
-    };
-  }, []);
-
-  // Phase 5 States (P5-01 ~ P5-05)
-  const [drumKit, setDrumKit] = useState<DrumKitType>(() => getDefaultDrumKitForGenre(currentGenre));
-  const [isDrumsOnly, setIsDrumsOnly] = useState<boolean>(false);
-  const [isRecordArmed, setIsRecordArmed] = useState<boolean>(false);
+  /**
+   * Live performance state (keyboard mode, the FAB preference, drums-only, record-arm) and the
+   * inspector cursor. All of it used to be `useState` in this file, which meant another surface
+   * wanting a transport had to copy the behaviour rather than import it — see
+   * `features/sequencer/hooks/useStudioSession.ts` for what each hook owns and why.
+   */
+  const { isKeyboardMode, setIsKeyboardMode, showKeyboardFab } = useKeyboardPerformance();
+  const { drumKit, setDrumKit, isDrumsOnly, setIsDrumsOnly, isRecordArmed, setIsRecordArmed } =
+    usePlaybackSettings({ genre: currentGenre });
 
   /**
    * D-03 — the master FX rack is local UI state *and* part of the undo history.
@@ -261,19 +252,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
    * button) opens that one track's full configuration — timbre, mix and insert chain —
    * instead of sending the user to a separate mixer view.
    */
-  const [inspectorTrackIdx, setInspectorTrackIdx] = useState<number | null>(null);
-
   /**
-   * Keep the inspector pointed at the same *track* when rows are reordered.
-   *
-   * The inspector is addressed by row index, but `REORDER_TRACKS` swaps two rows, so
-   * without this the panel would silently start editing the neighbouring track after a
-   * move-up/move-down. `moveInspectorWithRow` is defined here (it only needs the setter);
-   * the two wrappers that also call the reorder handlers live below `useTrackControls`.
+   * Which track's inspector is open, and the remap that keeps it on the same track across row
+   * reorders (the rule is `inspectorFollow.followReorderedRow`; the state lives in the hook so the
+   * next surface does not have to copy either).
    */
-  const moveInspectorWithRow = useCallback((idx: number, toIndex: number) => {
-    setInspectorTrackIdx((current) => followReorderedRow(current, idx, toIndex));
-  }, []);
+  const { inspectorTrackIdx, setInspectorTrackIdx, moveInspectorWithRow } = useInspectorCursor();
 
   /**
    * D-02: persist the five layout toggles whenever one changes.
