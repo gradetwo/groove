@@ -1705,8 +1705,68 @@ async function runTestOnTarget(target, baseUrl) {
         `Legato changed no note length on ${target.name} (${gatesBefore.slice(0, 6).join(",")} → ${gatesAfter.slice(0, 6).join(",")})`
       );
     }
+    /**
+     * U10: two claims only a real browser can settle, because both are about focus.
+     *
+     * 1. `]` lengthens **the whole selection**, not the note under the cursor. Select-all ran above,
+     *    so every note is selected and each note's own `data-gate` is the evidence. The comparison
+     *    counts the notes that *could* grow — one already at the one-bar ceiling cannot, and counting
+     *    it as a failure would be the check lying rather than the editor.
+     * 2. The on-screen piano answers the keyboard: Home walks to the bottom drawn key, ArrowUp walks
+     *    one semitone up and sounds it. jsdom can assert the handler ran; only a browser can assert
+     *    that focus actually moved to the next key.
+     */
+    const selectedGates = () =>
+      page.$$eval("[data-testid^='piano-roll-note-']", (els) =>
+        Object.fromEntries(
+          els
+            .filter((e) => e.getAttribute("data-selected") === "true")
+            .map((e) => [e.getAttribute("data-testid"), Number(e.getAttribute("data-gate"))])
+        )
+      );
+    await page.focus("[data-testid='piano-roll-grid']");
+    const gatesBeforeSelection = await selectedGates();
+    const eligibleIds = Object.keys(gatesBeforeSelection).filter(
+      (id) => gatesBeforeSelection[id] < 15.5
+    );
+    if (eligibleIds.length < 2) {
+      throw new Error(
+        `Length-on-selection needs a multi-note selection; got ${eligibleIds.length} eligible note(s) on ${target.name}`
+      );
+    }
+    await page.keyboard.press("]");
+    await page.waitForTimeout(250);
+    const gatesAfterSelection = await selectedGates();
+    const grewIds = eligibleIds.filter(
+      (id) => (gatesAfterSelection[id] ?? 0) - gatesBeforeSelection[id] > 0.05
+    );
+    if (grewIds.length !== eligibleIds.length) {
+      throw new Error(
+        `"]" with ${eligibleIds.length} notes selected lengthened ${grewIds.length} of them on ${target.name}`
+      );
+    }
+
+    const focusedGutterKey = "[data-midi-pitch][tabindex='0']";
+    if (!(await page.$(focusedGutterKey))) {
+      throw new Error(`The pitch gutter has no keyboard tab stop on ${target.name}`);
+    }
+    await page.focus(focusedGutterKey);
+    await page.keyboard.press("Home"); // the bottom drawn key, so ArrowUp always has somewhere to go
+    await page.waitForTimeout(150);
+    const gutterKeyBefore = Number(await page.getAttribute(focusedGutterKey, "data-midi-pitch"));
+    await page.keyboard.press("ArrowUp");
+    await page.waitForTimeout(250);
+    const gutterKeyAfter = Number(await page.getAttribute(focusedGutterKey, "data-midi-pitch"));
+    const auditionLine = ((await page.textContent("[data-testid='piano-roll-announcer']")) ?? "").trim();
+    if (gutterKeyAfter !== gutterKeyBefore + 1 || auditionLine.length === 0) {
+      throw new Error(
+        `The pitch gutter did not answer ArrowUp on ${target.name} (key ${gutterKeyBefore} → ${gutterKeyAfter}, announcement "${auditionLine}")`
+      );
+    }
+
     console.log(
-      `   · roll tools: switched by keyboard, marquee selected, velocity ${barBefore} → ${barAfter}, legato lengthened a note`
+      `   · roll tools: switched by keyboard, marquee selected, velocity ${barBefore} → ${barAfter}, legato lengthened a note, ` +
+        `"]" lengthened ${grewIds.length} selected notes, gutter key ${gutterKeyBefore} → ${gutterKeyAfter} announced`
     );
 
     await clickVerified(page, "[data-testid='piano-roll-close']");
@@ -1714,6 +1774,40 @@ async function runTestOnTarget(target, baseUrl) {
     if (await page.$("[data-testid='piano-roll-grid']")) {
       throw new Error("Piano roll did not close");
     }
+
+    /**
+     * U10: the studio's own parameter lane answers the keyboard too.
+     *
+     * It is one tab stop with a cursor (not one per column), and the column's `aria-valuenow` is the
+     * value the store came back with — so this asserts the whole loop, not just that a handler ran.
+     * The lane is left the way it was found.
+     */
+    const laneColumn = "[data-testid='vel-step-0']";
+    const laneWasOpen = Boolean(await page.$(laneColumn));
+    if (!laneWasOpen) {
+      await clickVerified(page, "[data-toolbar-id='velocity-lane']");
+      await page.waitForSelector(laneColumn, { timeout: 10000 });
+    }
+    const laneTabStops = await page.$$eval("[data-testid^='vel-step-']", (els) =>
+      els.filter((e) => e.getAttribute("tabindex") === "0").length
+    );
+    if (laneTabStops !== 1) {
+      throw new Error(
+        `The parameter lane has ${laneTabStops} tab stops instead of one on ${target.name}`
+      );
+    }
+    const laneBefore = Number(await page.getAttribute(laneColumn, "aria-valuenow"));
+    const laneMax = Number(await page.getAttribute(laneColumn, "aria-valuemax"));
+    await page.focus(laneColumn);
+    await page.keyboard.press("ArrowUp");
+    await page.waitForTimeout(250);
+    const laneAfter = Number(await page.getAttribute(laneColumn, "aria-valuenow"));
+    if (!(laneAfter > laneBefore || laneBefore === laneMax)) {
+      throw new Error(
+        `ArrowUp did not raise the parameter lane's first column on ${target.name} (${laneBefore} → ${laneAfter})`
+      );
+    }
+    if (!laneWasOpen) await clickVerified(page, "[data-toolbar-id='velocity-lane']");
     } // end desktop-only piano roll assertions
 
     // 5g. Switching genre *while playing* (the case that shipped broken).
