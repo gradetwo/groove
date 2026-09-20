@@ -19,7 +19,6 @@ import React, { useMemo, useState } from "react";
 import { ChevronDown, Pause, Play, Search } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
 import { useLanguage } from "../../i18n/LanguageContext";
-import { useGenreAudition } from "../../hooks/useGenreAudition";
 import type { Genre, GenreCategory } from "../../types/genre";
 
 /**
@@ -52,12 +51,14 @@ const genreNameZh = (genre: Genre): string =>
   (genre.aliases ?? []).find((alias) => CJK.test(alias)) ?? "";
 
 export interface MobileHomeScreenProps {
+  /** Which genre the shell is currently auditioning; the engine lives in `MobileApp`. */
+  playingGenreId: string | null;
+  onToggleAudition: (genre: Genre) => void;
   onOpenGenre?: (genreId: string) => void;
 }
 
-export function MobileHomeScreen({ onOpenGenre }: MobileHomeScreenProps) {
+export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre }: MobileHomeScreenProps) {
   const { t, language } = useLanguage();
-  const { playingGenreId, toggleAudition, stopAudition } = useGenreAudition();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<GenreCategory | "all">("all");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -140,7 +141,7 @@ export function MobileHomeScreen({ onOpenGenre }: MobileHomeScreenProps) {
                   data-testid={`mobile-genre-play-${genre.id}`}
                   aria-label={isPlaying ? t("mobile_audition_stop") : t("mobile_audition_play")}
                   aria-pressed={isPlaying}
-                  onClick={() => (isPlaying ? stopAudition() : void toggleAudition(genre))}
+                  onClick={() => onToggleAudition(genre)}
                   className="m-press flex h-11 w-11 flex-none items-center justify-center rounded-xl"
                   style={{ background: swatch }}
                 >

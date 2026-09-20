@@ -33,13 +33,29 @@ vi.mock("../hooks/useGenreAudition", () => ({
   }),
 }));
 
-const renderShell = (module: MobileModule = "home", onSelect = vi.fn()) => {
+const renderShell = (
+  module: MobileModule = "home",
+  options: { genreId?: string; onSelect?: (module: MobileModule) => void } = {}
+) => {
+  // A dedicated spy: `options.onSelect` is a plain callback, so it has no `.mock`.
+  const onSelectSpy = vi.fn<(module: MobileModule) => void>();
+  const onSelect = options.onSelect ?? onSelectSpy;
+  const onOpenGenre = vi.fn();
+  const onCloseGenre = vi.fn();
+  const onOpenJam = vi.fn();
   const utils = render(
     <LanguageProvider>
-      <MobileApp module={module} onSelectModule={onSelect} />
+      <MobileApp
+        module={module}
+        genreId={options.genreId}
+        onSelectModule={onSelect}
+        onOpenGenre={onOpenGenre}
+        onCloseGenre={onCloseGenre}
+        onOpenJam={onOpenJam}
+      />
     </LanguageProvider>
   );
-  return { ...utils, onSelect };
+  return { ...utils, onSelect, onSelectSpy, onOpenGenre, onCloseGenre, onOpenJam };
 };
 
 /**
@@ -99,11 +115,11 @@ describe("phone shell · five modules", () => {
   });
 
   it("reports the tapped module and does not decide the route itself", () => {
-    const { onSelect } = renderShell();
+    const { onSelectSpy } = renderShell();
     for (const module of MOBILE_MODULES) {
       fireEvent.click(screen.getByTestId(`mobile-module-${module}`));
     }
-    expect(onSelect.mock.calls.map((call) => call[0])).toEqual([...MOBILE_MODULES]);
+    expect(onSelectSpy.mock.calls.map((call) => call[0])).toEqual([...MOBILE_MODULES]);
   });
 
   it("renders the requested module and not the previous one", () => {
@@ -192,5 +208,98 @@ describe("phone shell · home screen", () => {
     fireEvent.change(screen.getByTestId("mobile-home-search"), { target: { value: "zzzz-no-such-genre" } });
     expect(rowIds()).toHaveLength(0);
     expect(screen.getByTestId("mobile-home-empty")).toBeInTheDocument();
+  });
+});
+
+describe("phone shell · genre detail and player bar", () => {
+  beforeEach(() => {
+    localStorage.setItem("groove_language", "zh");
+    audition.toggle.mockReset();
+    audition.stop.mockReset();
+    audition.playingGenreId = null;
+  });
+
+  it("shows a genre's facts on its own page, with a way back", async () => {
+    const { onCloseGenre } = renderShell("home", { genreId: "deep-house" });
+    const detail = await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    expect(detail.getAttribute("data-genre")).toBe("deep-house");
+    expect(detail.textContent ?? "").toMatch(/Deep House/);
+    expect(screen.getByTestId("mobile-detail-facts").textContent ?? "").toMatch(/BPM|拍号|Time/);
+
+    fireEvent.click(screen.getByTestId("mobile-detail-back"));
+    expect(onCloseGenre).toHaveBeenCalledTimes(1);
+  });
+
+  it("links every related genre to its own page", async () => {
+    const { onOpenGenre } = renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const related = [...document.querySelectorAll('[data-testid^="mobile-detail-related-"]')].filter(
+      (node) => node.getAttribute("data-testid") !== "mobile-detail-related"
+    );
+    expect(related.length).toBeGreaterThan(0);
+    const id = (related[0].getAttribute("data-testid") ?? "").replace("mobile-detail-related-", "");
+    fireEvent.click(related[0]);
+    expect(onOpenGenre).toHaveBeenCalledWith(id);
+  });
+
+  it("auditions from the detail page and takes the genre to the jam module", async () => {
+    const { onOpenJam } = renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    fireEvent.click(screen.getByTestId("mobile-detail-audition"));
+    expect(audition.toggle).toHaveBeenCalledTimes(1);
+    expect(audition.toggle.mock.calls[0][0].id).toBe("deep-house");
+
+    fireEvent.click(screen.getByTestId("mobile-detail-jam"));
+    expect(onOpenJam).toHaveBeenCalledWith("deep-house");
+  });
+
+  it("shows no player bar when nothing is playing", async () => {
+    renderShell("home");
+    await findHome();
+    expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
+  });
+
+  it("shows the playing genre in the bar, and opens its detail page from there", async () => {
+    // Driven by the hook's reported state, which is the only thing the bar is allowed to depend on.
+    audition.playingGenreId = "deep-house";
+    const { onOpenGenre } = renderShell("home");
+    await findHome();
+
+    const bar = await screen.findByTestId("mobile-player-bar");
+    expect(bar.getAttribute("data-genre")).toBe("deep-house");
+    expect(bar.textContent ?? "").toMatch(/Deep House/);
+
+    fireEvent.click(screen.getByTestId("mobile-player-open"));
+    expect(onOpenGenre).toHaveBeenCalledWith("deep-house");
+  });
+
+  it("stops the audition from the bar", async () => {
+    audition.playingGenreId = "deep-house";
+    renderShell("home");
+    await findHome();
+    await screen.findByTestId("mobile-player-bar");
+
+    fireEvent.click(screen.getByTestId("mobile-player-toggle"));
+    expect(audition.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("never renders the bar on 即兴, even while a genre is playing", async () => {
+    // The module has its own transport and the user asked for the bar to be removed from it.
+    audition.playingGenreId = "deep-house";
+    renderShell("jam");
+    expect(screen.getByTestId("mobile-module-jam-placeholder")).toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
+  });
+
+  it("ignores a playing id that is not in the library instead of showing a nameless bar", async () => {
+    audition.playingGenreId = "deleted-custom-genre";
+    renderShell("home");
+    await findHome();
+    expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
+  });
+
+  it("says so when a detail route names a genre that does not exist", async () => {
+    renderShell("home", { genreId: "not-a-real-genre" });
+    expect(await screen.findByTestId("mobile-genre-missing", {}, { timeout: 5000 })).toBeInTheDocument();
   });
 });

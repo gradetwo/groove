@@ -317,7 +317,10 @@ const MainApp: React.FC = () => {
           module={route.mobile}
           genreId={route.genreId}
           onSelectModule={(module) => navigate({ tab: "studio", mobile: module })}
-          /* Genre details get a phone screen of their own in M2; until then the shell stays put. */
+          onOpenGenre={(genreId) => navigate({ tab: "studio", mobile: "home", genreId })}
+          /* `undefined` clears the genre: the shell reads `?genre=` as "show that genre's detail". */
+          onCloseGenre={() => navigate({ tab: "studio", mobile: "home", genreId: undefined })}
+          onOpenJam={(genreId) => navigate({ tab: "studio", mobile: "jam", genreId })}
         />
       </React.Suspense>
     );
