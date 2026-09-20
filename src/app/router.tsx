@@ -12,6 +12,8 @@ export interface RouteState {
    * and the phone's five modules stay out of it.
    */
   mobile?: MobileModule;
+  /** Full-screen phone player (`/m/home?player=1&genre=`), versus the list or a detail page. */
+  mobilePlayer?: boolean;
   genreId?: string;
   compareIds?: string[];
   difficulty?: "easy" | "medium" | "hard";
@@ -53,6 +55,7 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
     return {
       tab: "studio",
       mobile: normaliseMobileModule(mobileParam),
+      mobilePlayer: params.get("player") === "1",
       genreId: params.get("genre") || undefined,
     };
   }
@@ -219,8 +222,11 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
 export function formatRouteToUrl(route: RouteState): string {
   // The phone shell owns its own path space; nothing else may render at `/m/...`.
   if (route.mobile) {
-    const q = route.genreId ? `?genre=${encodeURIComponent(route.genreId)}` : "";
-    return `/m/${route.mobile}${q}`;
+    const params = new URLSearchParams();
+    if (route.genreId) params.set("genre", route.genreId);
+    if (route.mobilePlayer) params.set("player", "1");
+    const q = params.toString();
+    return `/m/${route.mobile}${q ? `?${q}` : ""}`;
   }
   // Use clean paths where possible, with fallback query params
   switch (route.tab) {

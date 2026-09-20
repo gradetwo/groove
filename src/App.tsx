@@ -315,12 +315,28 @@ const MainApp: React.FC = () => {
       <React.Suspense fallback={null}>
         <MobileApp
           module={route.mobile}
+          mobilePlayer={route.mobilePlayer}
           genreId={route.genreId}
-          onSelectModule={(module) => navigate({ tab: "studio", mobile: module })}
-          onOpenGenre={(genreId) => navigate({ tab: "studio", mobile: "home", genreId })}
+          onSelectModule={(module) =>
+            navigate({ tab: "studio", mobile: module, mobilePlayer: false, genreId: undefined })
+          }
+          onOpenGenre={(genreId) =>
+            navigate({ tab: "studio", mobile: "home", genreId, mobilePlayer: false })
+          }
           /* `undefined` clears the genre: the shell reads `?genre=` as "show that genre's detail". */
           onCloseGenre={() => navigate({ tab: "studio", mobile: "home", genreId: undefined })}
-          onOpenJam={(genreId) => navigate({ tab: "studio", mobile: "jam", genreId })}
+          onOpenJam={(genreId) =>
+            navigate({ tab: "studio", mobile: "jam", genreId, mobilePlayer: false })
+          }
+          /* The bar and the player are two forms of one thing: the flag decides which. */
+          onOpenPlayer={(genreId) =>
+            navigate({ tab: "studio", mobile: "home", genreId, mobilePlayer: true })
+          }
+          /* Collapsing returns to the list (the bar, when something is playing, sits above it)
+             rather than to the genre's page, so the chevron is always "back to browsing". */
+          onCollapsePlayer={() =>
+            navigate({ tab: "studio", mobile: "home", genreId: undefined, mobilePlayer: false })
+          }
         />
       </React.Suspense>
     );
