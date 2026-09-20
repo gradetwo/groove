@@ -127,6 +127,65 @@ export function rollKeyboardIntent(
   }
 }
 
+/**
+ * Keyboard on the pitch gutter — the on-screen piano (U10).
+ *
+ * The gutter could only be played with a pointer: press a key, hear the pitch, slide across the
+ * keys to glissando. A keyboard user had no way to hear a pitch without *writing* a note first,
+ * which is backwards — the point of the gutter is to listen before deciding.
+ *
+ * So the keys become a roving tab stop: arrows walk one key at a time (Shift or PageUp/PageDown an
+ * octave) and audition as they move, exactly what a pointer drag across the keys does, and
+ * Enter/Space re-auditions the key under focus. Anything with ⌘/Ctrl held is left to the platform,
+ * as everywhere else in this editor.
+ */
+export interface KeybedBounds {
+  loMidi: number;
+  hiMidi: number;
+}
+
+export type KeybedIntent =
+  /** Walk to another key and sound it on the way. */
+  | { kind: "move"; midi: number }
+  /** Sound the key that already has focus. */
+  | { kind: "audition"; midi: number };
+
+export function keybedIntent(
+  key: string,
+  modifiers: { shift?: boolean; meta?: boolean; ctrl?: boolean },
+  midi: number,
+  bounds: KeybedBounds
+): KeybedIntent | null {
+  if (modifiers.meta || modifiers.ctrl) return null;
+  const shift = Boolean(modifiers.shift);
+  const lo = Math.min(bounds.loMidi, bounds.hiMidi);
+  const hi = Math.max(bounds.loMidi, bounds.hiMidi);
+  const to = (target: number): KeybedIntent => ({
+    kind: "move",
+    midi: Math.min(hi, Math.max(lo, Math.round(target))),
+  });
+
+  switch (key) {
+    case "ArrowUp":
+      return to(midi + (shift ? SEMITONES_PER_OCTAVE : 1));
+    case "ArrowDown":
+      return to(midi - (shift ? SEMITONES_PER_OCTAVE : 1));
+    case "PageUp":
+      return to(midi + SEMITONES_PER_OCTAVE);
+    case "PageDown":
+      return to(midi - SEMITONES_PER_OCTAVE);
+    case "Home":
+      return to(lo);
+    case "End":
+      return to(hi);
+    case "Enter":
+    case " ":
+      return { kind: "audition", midi: Math.min(hi, Math.max(lo, Math.round(midi))) };
+    default:
+      return null;
+  }
+}
+
 /** The measured cell grid and scroll viewport, for keeping the cursor on screen. */
 export interface RollRevealInput {
   stepIdx: number;

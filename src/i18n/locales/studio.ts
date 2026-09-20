@@ -426,6 +426,13 @@ export const studioMessages = {
   },
   roll_kb_moved: { en: "Moved to {note} · step {step}", zh: "已移动到 {note} · 第 {step} 步" },
   roll_kb_length: { en: "{note} length {steps} steps", zh: "{note} 音长 {steps} 步" },
+  roll_kb_length_many: {
+    en: "{count} notes · length {steps} steps",
+    zh: "{count} 个音 · 音长 {steps} 步",
+  },
+  roll_kb_audition: { en: "Audition {note}", zh: "试听 {note}" },
+  roll_keybed_group: { en: "Pitch keys", zh: "音高琴键" },
+  roll_keybed_key: { en: "Key {note}", zh: "琴键 {note}" },
   roll_kb_removed_many: { en: "Removed {count} notes", zh: "已删除 {count} 个音" },
   roll_kb_no_note: { en: "No note at this step", zh: "这一步没有音符" },
   roll_octave_up: { en: "Scroll up an octave", zh: "向上一个八度" },

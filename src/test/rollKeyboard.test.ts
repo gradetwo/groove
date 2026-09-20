@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import {
   clampCursor,
+  keybedIntent,
   rollKeyboardIntent,
   scrollToRevealCursor,
   type RollKeyboardBounds,
@@ -188,5 +189,42 @@ describe("roll keyboard · keeping the cursor on screen", () => {
     expect(
       scrollToRevealCursor({ ...view, viewW: 0, viewH: 0, stepIdx: 40, rowIdx: 40 })
     ).toEqual({ left: 0, top: 0 });
+  });
+});
+
+describe("roll keyboard · the pitch gutter's on-screen piano", () => {
+  const KEYS = { loMidi: 48, hiMidi: 72 };
+
+  it("walks one key per arrow and an octave with Shift or PageUp/PageDown", () => {
+    expect(keybedIntent("ArrowUp", NONE, 60, KEYS)).toEqual({ kind: "move", midi: 61 });
+    expect(keybedIntent("ArrowDown", NONE, 60, KEYS)).toEqual({ kind: "move", midi: 59 });
+    expect(keybedIntent("ArrowUp", { ...NONE, shift: true }, 60, KEYS)).toEqual({
+      kind: "move",
+      midi: 72,
+    });
+    expect(keybedIntent("ArrowDown", { ...NONE, shift: true }, 60, KEYS)).toEqual({
+      kind: "move",
+      midi: 48,
+    });
+    expect(keybedIntent("PageUp", NONE, 55, KEYS)).toEqual({ kind: "move", midi: 67 });
+    expect(keybedIntent("PageDown", NONE, 67, KEYS)).toEqual({ kind: "move", midi: 55 });
+  });
+
+  it("stops at the drawn keys instead of walking onto a row that is not rendered", () => {
+    expect(keybedIntent("ArrowUp", NONE, 72, KEYS)).toEqual({ kind: "move", midi: 72 });
+    expect(keybedIntent("ArrowDown", NONE, 48, KEYS)).toEqual({ kind: "move", midi: 48 });
+    expect(keybedIntent("Home", NONE, 60, KEYS)).toEqual({ kind: "move", midi: 48 });
+    expect(keybedIntent("End", NONE, 60, KEYS)).toEqual({ kind: "move", midi: 72 });
+  });
+
+  it("sounds the focused key on Enter or Space, and leaves everything else alone", () => {
+    expect(keybedIntent("Enter", NONE, 64, KEYS)).toEqual({ kind: "audition", midi: 64 });
+    expect(keybedIntent(" ", NONE, 64, KEYS)).toEqual({ kind: "audition", midi: 64 });
+    // The window-level handler owns letters and the editing keys; ⌘/Ctrl belong to the platform.
+    for (const key of ["a", "Delete", "b", "Escape", "Tab"]) {
+      expect(keybedIntent(key, NONE, 64, KEYS), key).toBeNull();
+    }
+    expect(keybedIntent("ArrowUp", { ...NONE, meta: true }, 64, KEYS)).toBeNull();
+    expect(keybedIntent("ArrowUp", { ...NONE, ctrl: true }, 64, KEYS)).toBeNull();
   });
 });

@@ -66,6 +66,7 @@ import {
   previewProgressionNotes,
   scaleHighlightFor,
   scaleNotesVelocity,
+  scaleNotesLength,
   setNotesVelocity,
   splitNote,
   transposeTrack,
@@ -84,6 +85,7 @@ import {
 import {
   clampCursor,
   KEYBOARD_DEFAULT_GATE,
+  keybedIntent,
   rollKeyboardIntent,
   scrollToRevealCursor,
   type RollCursor,
@@ -272,6 +274,8 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const [fullPitchRange, setFullPitchRange] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [hoverCell, setHoverCell] = useState<{ stepIdx: number; midi: number } | null>(null);
+  /** U10: the gutter's own cursor — the key the arrows walk (null until the keyboard is used). */
+  const [keybedCursor, setKeybedCursor] = useState<number | null>(null);
   /** U10: where the keyboard is, as opposed to where the pointer is (`hoverCell`). */
   const [keyboardCursor, setKeyboardCursor] = useState<RollCursor | null>(null);
   /** U10: the live region's text — what a screen reader hears as the cursor moves and edits land. */
@@ -363,6 +367,15 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   }, [fullPitchRange, loPitch, hiPitch, isFolded, scale.pcs, notes]);
 
   const rowIdxMap = useMemo(() => new Map(rows.map((p, idx) => [p, idx])), [rows]);
+  /**
+   * Which key carries the gutter's tab stop: the one the keyboard last walked, else the one the
+   * pointer is hovering, else the middle of the drawn range — so tabbing straight into the gutter
+   * lands somewhere audible instead of at the top of a 128-key scroll. The handler falls back to the
+   * same value, so "the focused key owns the keypress" holds even when the event arrives at the
+   * group rather than at a key.
+   */
+  const keybedHomeMidi = rows.length ? rows[Math.floor(rows.length / 2)] : 60;
+  const keybedFocusMidi = keybedCursor ?? hoverCell?.midi ?? keybedHomeMidi;
   const fitCellW = availableWidth > 0 ? Math.max(MIN_CELL_W, (availableWidth - GUTTER_W) / Math.max(1, stepCount)) : 26;
   const cellW = customStepWidth ?? fitCellW;
   const rowH = rowHeight;
@@ -807,27 +820,27 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
       }
 
       if (intent.kind === "length") {
-        if (!hit) {
+        // The selection first, exactly as velocity does above: with several notes selected, `[`/`]`
+        // lengthen all of them, and only a bare cursor edits the single note under it.
+        const ids = hasSelection ? selection : hit ? [noteId(hit)] : [];
+        if (ids.length === 0) {
           take();
           announceRoll(t("roll_kb_no_note"));
           return;
         }
         take();
-        // `resizeNote` owns the clamp (0.1 step .. one bar); the announcement reads back the result.
-        const next = resizeNote(
-          pattern,
-          activeTrackIdx,
-          cursor.stepIdx,
-          hit.gate + intent.delta,
-          stepCount
-        );
-        const id = noteId(hit);
-        if (next !== pattern) commitDraft(next, [id]);
+        // `resizeNote` / `scaleNotesLength` own the clamp (0.1 step .. one bar); the announcement
+        // reads the result back rather than re-deriving it.
+        const next =
+          hit && !hasSelection
+            ? resizeNote(pattern, activeTrackIdx, cursor.stepIdx, hit.gate + intent.delta, stepCount)
+            : scaleNotesLength(pattern, activeTrackIdx, ids, intent.delta, stepCount);
+        if (next !== pattern) commitDraft(next, ids);
+        const steps = Number((noteAfter(next, ids[0])?.gate ?? 0).toFixed(2));
         announceRoll(
-          t("roll_kb_length", {
-            note: midiToNoteName(cursor.midi),
-            steps: Number((noteAfter(next, id)?.gate ?? hit.gate).toFixed(2)),
-          })
+          ids.length > 1
+            ? t("roll_kb_length_many", { count: ids.length, steps })
+            : t("roll_kb_length", { note: midiToNoteName(parseNoteId(ids[0]).midi), steps })
         );
         return;
       }
@@ -1062,6 +1075,60 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
   const handleKeybedPointerUp = () => {
     setActiveAuditionMidi(null);
   };
+
+  /** Moves DOM focus to a key, so the gutter's roving tab stop follows the arrows. */
+  const focusKeybedKey = useCallback((midi: number) => {
+    keybedScrollRef.current
+      ?.querySelector<HTMLElement>(`[data-midi-pitch="${midi}"]`)
+      ?.focus();
+  }, []);
+
+  /** Sounds a key the way the pointer does — including recording it when the transport is armed. */
+  const auditionKeybedKey = useCallback(
+    (midi: number) => {
+      setActiveAuditionMidi(midi);
+      onAudition(activeTrackIdx, midi, 100, 0.45);
+      if (isRecording) recordNote(midi, 100, 0.8);
+      announceRoll(t("roll_kb_audition", { note: midiToNoteName(midi) }));
+    },
+    [activeTrackIdx, onAudition, isRecording, recordNote, announceRoll, t]
+  );
+
+  /**
+   * U10: playing the gutter from the keyboard.
+   *
+   * Until now the on-screen piano was pointer-only, so a keyboard user could not hear a pitch
+   * without writing a note first — backwards, since the gutter exists to listen before deciding.
+   * Arrows walk a key and sound it on the way (Shift or PageUp/PageDown an octave); Enter/Space
+   * sounds the focused key again.
+   *
+   * The focused key owns the event. `stopPropagation` is what keeps the window-level selection
+   * handler from *also* moving selected notes, so "the widget with the focus ring is the widget the
+   * key affects" holds here exactly as it does on the grid and in the lane.
+   */
+  const handleKeybedKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const fromDom = Number(
+        (event.target as HTMLElement | null)
+          ?.closest?.("[data-midi-pitch]")
+          ?.getAttribute("data-midi-pitch")
+      );
+      const from = Number.isFinite(fromDom) ? fromDom : keybedFocusMidi;
+      const intent = keybedIntent(
+        event.key,
+        { shift: event.shiftKey, meta: event.metaKey, ctrl: event.ctrlKey },
+        from,
+        { loMidi: keyboardBounds.loMidi, hiMidi: keyboardBounds.hiMidi }
+      );
+      if (!intent) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setKeybedCursor(intent.midi);
+      if (intent.kind === "move") focusKeybedKey(intent.midi);
+      auditionKeybedKey(intent.midi);
+    },
+    [keyboardBounds, keybedFocusMidi, focusKeybedKey, auditionKeybedKey]
+  );
 
   const handleGridWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     if (event.ctrlKey || event.metaKey) {
@@ -2237,6 +2304,9 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                 onPointerMove={handleKeybedPointerMove}
                 onPointerUp={handleKeybedPointerUp}
                 onPointerCancel={handleKeybedPointerUp}
+                onKeyDown={handleKeybedKeyDown}
+                role="group"
+                aria-label={t("roll_keybed_group")}
                 data-testid="piano-roll-keybed"
                 title={t("roll_keybed_glissando_hint")}
               >
@@ -2253,6 +2323,10 @@ export const PianoRollLane: React.FC<PianoRollLaneProps> = ({
                       data-testid={`piano-roll-row-${midi}`}
                       data-midi-pitch={midi}
                       data-scale={isRoot ? "root" : inScale ? "in" : "out"}
+                      role="button"
+                      aria-label={t("roll_keybed_key", { note: midiToNoteName(midi) })}
+                      tabIndex={midi === keybedFocusMidi ? 0 : -1}
+                      onFocus={() => setKeybedCursor(midi)}
                       onPointerDown={(e) => handleKeybedPointerDown(midi, e)}
                       onPointerEnter={(e) => {
                         if (e.buttons === 1 && activeAuditionMidi !== midi) {
