@@ -63,7 +63,7 @@ export function MobilePlayerBar({
           data-testid="mobile-player-mode"
           aria-label={t(PLAY_MODE_LABEL_KEYS[playMode])}
           onClick={onCycleMode}
-          className="m-press flex h-11 w-11 flex-none items-center justify-center rounded-full text-[var(--m-gold)]"
+          className="m-press flex h-12 w-12 flex-none items-center justify-center rounded-full text-[var(--m-gold)]"
         >
           {MODE_ICONS[playMode]}
         </button>
@@ -73,7 +73,7 @@ export function MobilePlayerBar({
           data-testid="mobile-player-open"
           onClick={onOpen}
           aria-label={t("mobile_player_open")}
-          className="m-press flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-left"
+          className="m-press flex min-h-[46px] min-w-0 flex-1 items-center gap-3 text-left"
         >
           <span
             aria-hidden="true"
@@ -94,7 +94,7 @@ export function MobilePlayerBar({
           aria-pressed={isPlaying}
           aria-label={isPlaying ? t("mobile_player_pause") : t("mobile_player_play")}
           onClick={onToggle}
-          className="m-press flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--m-gold)] text-[var(--m-on-gold)]"
+          className="m-press flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--m-gold)] text-[var(--m-on-gold)]"
         >
           {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         </button>

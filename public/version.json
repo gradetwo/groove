@@ -1,27 +1,27 @@
 {
-  "version": "2.1.21",
+  "version": "2.2.0",
   "releaseDate": "2026-09-20",
-  "changelogCount": 185,
+  "changelogCount": 186,
   "latest": {
-    "version": "2.1.21",
+    "version": "2.2.0",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.1.21 手机端（M7）：更多——设置、更新、手册、搜索、语言，五格里的杂项",
-      "en": "v2.1.21 Phone (M7): 更多 — Settings, Changelog, Manual, Search and Language in Five Rows"
+      "zh": "v2.2.0 手机端默认进入新外壳：首页 / 即兴 / 挑战 / 探索 / 更多",
+      "en": "v2.2.0 The Phone Lands in the New Shell by Default: Home, Jam, Challenge, Explore, More"
     },
     "highlights": [
       {
-        "zh": "**「更多」是手机端的杂物抽屉，但不是按钮堆**：五行——设置、更新日志、手册与引导、搜索、语言——加上版本号。每一行打开的都是应用**已有**的面板（`SettingsModal` / `UpdatesModal` / 帮助中心 / 全局搜索），手机端不重写一份：那些面板本来就是响应式的，而第二份实现正是「手机和桌面对同一个设置的理解不一致」的来源。",
-        "en": "**更多 is the phone's odds-and-ends drawer without being a button pile**: five rows — settings, changelog, manual & tours, search, language — plus the version. Each row opens a panel the app **already** has (`SettingsModal` / `UpdatesModal` / the help centre / global search) rather than a second implementation: those panels are already responsive, and a second copy is exactly how a phone and a desktop end up disagreeing about what a setting means."
+        "zh": "**手机打开应用就进新界面。** 裸访问「/」在手机上现在直接落在新外壳的**首页**；带明确目的地的链接（`?tab=` / `?genre=` / `?groove=` / `?m=`）仍按它写的渲染——这是**分阶段的切换**：新外壳成为手机的默认入口，同时旧路由保持可达，所以老书签不会在被重写的情况下悄悄换页。判断规则 `shouldEnterPhoneShell` 是纯函数并有单测（手机裸访问进外壳；带任何目的地都不动；桌面永不重定向；已在新路由不重复进入）。",
+        "en": "**Opening the app on a phone now lands in the new interface.** A bare `/` goes straight to the shell's **首页**; a URL that names a destination (`?tab=` / `?genre=` / `?groove=` / `?m=`) still renders what it names. That is the **staged cutover**: the shell becomes the phone's default entry while the old routes stay reachable, so an existing bookmark is never silently rewritten. The rule (`shouldEnterPhoneShell`) is a pure function with unit tests: a bare phone visit enters th…"
       },
       {
-        "zh": "**语言行说的是「会切到什么」而不是「现在是什么」**——切换控件上唯一不含歧义的措辞；点一下立即切换并记住。",
-        "en": "**The language row states what it will switch *to*, not what is current** — the only unambiguous wording for a toggle. One tap switches and remembers."
+        "zh": "**顺带把手机触控目标提到标准之上**：切过来之后，矩阵里那条「手机面上不允许有低于 44 px 的控件」的检查立刻量出了新外壳自己的问题——分类胶囊 36 px、曲风行 42 px、色块试听键正好 44 px（分数布局下量到 43.99 就被判不合格）。全部提到 **44–48 px**，胶囊同时加 `min-w`（「全部」只有 44 px 宽也算了）。**这条检查是旧手机 IA 的，但它对新界面一样有效**，所以没有放宽门禁，而是把新界面改到合规。",
+        "en": "**The phone's touch targets were raised while cutting over**: the matrix's rule that no phone surface may have a control under 44 px immediately measured the new shell's own offenders — 36 px category chips, 42 px genre rows, and the 44 px swatch button (fractional layout measures it as 43.99, which fails). All are now **44-48 px**, and the chips also got a `min-w` (the \"All\" chip was only 44 px wide). That check belongs to the old phone IA, but it is just as true of the new…"
       },
       {
-        "zh": "**测试**：更多 **4 条**（五行齐全且每行 ≥44 px、**点哪行只开哪个面板**（同时断言没碰其它三个 opener）、语言行显示目标语言并真的切换、版本号来自单一来源）＋ E2E 一段（`/m/more` 五行齐全、最小行高 ≥44、版本号形如 `vX.Y.Z`、横向不溢出）。",
-        "en": "**Tests**: 4 more cases (five rows, each ≥44 px; tapping a row opens **only** its panel — the other three openers are asserted untouched; the language row shows the target language and switches it; the version comes from the single source) plus an E2E leg (`/m/more` has all five rows, the smallest is ≥44 px, the version matches `vX.Y.Z`, and there is no horizontal overflow)."
+        "zh": "**测试**：切换规则 3 条单测（分阶段切换的三种情形）；E2E 新增一条**只在手机/平板 target 上跑**的检查：裸访问 `/` 必须落在外壳且五格齐全。加上既有的 `/m/<module>` 可达性、曲风详情往返、播放器、即兴、挑战、探索、更多等检查，新界面现在有 8 段端到端断言在四个手机/平板 target 上运行。",
+        "en": "**Tests**: 3 unit cases for the cutover rule (the three shapes of the staged switch), plus a new E2E leg that runs **only on the phone/tablet targets**: a bare `/` must land in the shell with all five modules present. Together with the existing `/m/<module>` reachability, genre-detail round trip, player, jam, challenge, explore and more legs, the new interface now has eight end-to-end assertions running on all four phone/tablet targets."
       }
     ],
     "truncated": true

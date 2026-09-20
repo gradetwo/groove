@@ -235,7 +235,7 @@ export function MobileChallengeScreen({
             aria-selected={difficulty === diff}
             data-testid={`mobile-challenge-difficulty-${diff}`}
             onClick={() => setDifficulty(diff)}
-            className={`m-press min-h-[36px] flex-none rounded-full border px-3.5 text-[12px] ${
+            className={`m-press min-h-[46px] min-w-[46px] flex-none rounded-full border px-3.5 text-[12px] ${
               difficulty === diff
                 ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
                 : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"

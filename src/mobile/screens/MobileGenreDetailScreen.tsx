@@ -182,7 +182,7 @@ function BackButton({ onBack, label }: { onBack: () => void; label: string }) {
       type="button"
       data-testid="mobile-detail-back"
       onClick={onBack}
-      className="m-press m-mono flex min-h-[44px] items-center gap-1.5 text-[11px] text-[var(--m-ink-2)]"
+      className="m-press m-mono flex min-h-[46px] items-center gap-1.5 text-[11px] text-[var(--m-ink-2)]"
     >
       <ArrowLeft className="h-4 w-4" />
       {label}

@@ -105,7 +105,7 @@ export function MobileExploreScreen({
             aria-selected={page === id}
             data-testid={`mobile-explore-tab-${id}`}
             onClick={() => setPage(id)}
-            className={`m-press min-h-[36px] flex-none rounded-full border px-3.5 text-[12px] ${
+            className={`m-press min-h-[46px] min-w-[46px] flex-none rounded-full border px-3.5 text-[12px] ${
               page === id
                 ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
                 : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"
@@ -177,7 +177,7 @@ function KickLab() {
                 data-testid={`mobile-explore-kick-layer-${layer.id}`}
                 aria-pressed={on}
                 onClick={() => apply({ [layer.muteKey]: on } as Partial<typeof params>)}
-                className={`m-press min-h-[44px] flex-1 rounded-xl border text-[11px] ${
+                className={`m-press min-h-[46px] flex-1 rounded-xl border text-[11px] ${
                   on
                     ? "border-[var(--m-gold)] bg-[rgba(233,162,59,0.1)] text-[var(--m-gold)]"
                     : "border-[var(--m-line-2)] text-[var(--m-ink-3)]"
@@ -211,7 +211,7 @@ function KickLab() {
                   data-testid={`mobile-explore-kick-${feel.key}-${index}`}
                   aria-pressed={active}
                   onClick={() => apply({ [feel.key]: value } as Partial<typeof params>)}
-                  className={`m-press min-h-[36px] flex-none rounded-full border px-3 text-[11px] ${
+                  className={`m-press min-h-[46px] flex-none rounded-full border px-3 text-[11px] ${
                     active
                       ? "border-[var(--m-gold)] text-[var(--m-gold)]"
                       : "border-[var(--m-line-2)] text-[var(--m-ink-3)]"
@@ -312,7 +312,7 @@ function ChordLab() {
             aria-selected={category === entry.id}
             data-testid={`mobile-explore-chord-category-${entry.id}`}
             onClick={() => setCategory(entry.id)}
-            className={`m-press min-h-[36px] flex-none rounded-full border px-3.5 text-[12px] ${
+            className={`m-press min-h-[46px] min-w-[46px] flex-none rounded-full border px-3.5 text-[12px] ${
               category === entry.id
                 ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
                 : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"
