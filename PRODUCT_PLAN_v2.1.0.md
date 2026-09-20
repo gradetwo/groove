@@ -3867,3 +3867,67 @@ G.47 把 `<body>` 的 `overflow-x: hidden` 换成 `clip`（sticky 的前提）�
 一条 G.8 的「性质待确认」→ 量测（走带可达性探针）→ 发现两列互换（v2.1.7 修）→ 钉走带条 →
 发现 sticky 从未生效 → 修 `overflow-x: clip` → 暴露页眉溢出。**四层问题，只有第一层是计划里写着的。**
 每一层都留下了可失败的门禁，所以它们不会再回来。
+
+## G.49 CI 红了但不是代码错：Node 20 跑不动 jsdom 30（v2.1.9）
+
+### 现象
+
+GitHub CI 的 `npm run test:coverage` 失败：Vitest 报 **190 条未处理错误**，错误全是
+
+```
+TypeError: webidl.util.markAsUncloneable is not a function
+```
+
+来自 `node_modules/jsdom/node_modules/undici/lib/web/cache/cachestorage.js`。后果是
+`Test Files no tests / Tests no tests`——**一个测试都没跑**——覆盖率因此是 0%（branches/functions
+停在 31%），撞上阈值后 CI 只留下"覆盖率不达标"这句话，与真实原因毫无关系。
+
+### 根因（可复现的证据）
+
+不是测试坏了，也不是依赖树损坏，而是**CLI 上的 Node 版本低于测试环境的运行要求**：
+
+| 事实 | 值 |
+|---|---|
+| CI 的 Node（`.github/workflows/ci.yml`） | **20** |
+| 本机/开发用的 Node | 22.22.3 |
+| `jsdom@30.0.1` 的 `engines.node` | `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0` |
+| `jsdom` 内置的 `undici@8.10.2` 的 `engines.node` | `>=22.19.0` |
+| `undici/lib/web/cache/cachestorage.js:20` | 调用 `webidl.util.markAsUncloneable(this)` |
+| `worker_threads.markAsUncloneable` | Node 22 才有；Node 20 为 `undefined` |
+
+所以 `rm -rf node_modules package-lock.json && npm install` 解决不了这个问题——同样的依赖会在同
+样的旧 Node 上再次装出来。真正缺的是"把 CI 的 Node 提到工具链要求的版本"，并把这条要求写进仓库。
+
+### 修法
+
+1. **两个 CI job 都改成 `node-version-file: ".nvmrc"`**，`.nvmrc` = `22.22.2`——正好是 jsdom 声明的
+   **下限**。CI 因此跑"最低支持版本"而不是碰巧更新的版本：如果哪天有人把要求悄悄提高，CI 会先红。
+2. **`package.json` 加 `engines.node`**（与 jsdom 的范围一致），让要求有单一出处。
+3. **`.npmrc` 开 `engine-strict=true`**：不支持的 Node 在**安装阶段**就报 `EBADENGINE`，而不是在测试
+   阶段变成 190 条莫名其妙的未处理错误。实测：把 `engines` 临时改成 `>=99.0.0`，
+   `npm install --dry-run --engine-strict` 立即以 `EBADENGINE / Unsupported engine` 失败。
+4. **`npm run check:node`（新，verify 的第一步）**：不自己实现 semver 范围判断，而是直接**构造一个
+   JSDOM**——环境能不能跑，问它本人。这也顺带覆盖 `engine-strict` 管不到的情况：在别的 Node 上装好的
+   `node_modules` 被拿到这台机器上跑。
+5. **README（中英）** 的"Node.js 20 或更新"改成"**22.22.2 或更新**"，并写明原因。
+
+### 验证：本地覆盖率本来就是好的
+
+Node 22.22.3 上 `npm run test:coverage` **exit 0**：
+
+```
+Test Files  192 passed (192)
+     Tests  2185 passed (2185)
+ All files | 90.58 | 75.31 | 66.08 | 90.58 |     ← 阈值 78 / 60 / 58 / 78
+```
+
+——阈值没问题（还高出不少），`vitest.config.ts` 里那句"本分支实测 82.56 / 65.90 / 63.55"已按今天的
+数字更新。**CI 红的唯一原因是环境。**
+
+### 门禁
+
+`src/test/toolchainNode.test.ts`（5 条）把四份配置的关系钉住：`.nvmrc` 是具体版本且被
+`package.json#engines` **逐字**包含；`.nvmrc` 的那串版本也**逐字**出现在 `node_modules/jsdom` 的
+`engines` 里（这条断言解释"为什么是这个数"）；`.npmrc` 必须 `engine-strict=true`；工作流里每个
+`Setup Node.js` 都必须 `node-version-file: ".nvmrc"` 且**不得再出现硬编码的 `node-version:`**。
+下次再有人把依赖的要求抬高、或把 CI 的 Node 写回去，都会在本地就红。

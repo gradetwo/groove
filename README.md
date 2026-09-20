@@ -25,8 +25,14 @@ with a short production note and an eight-track pattern you can play, edit and e
 
 ## Requirements
 
-Node.js 20 or newer for development. The app itself needs only a browser: there is no backend, no
-database and no API key.
+Node.js **22.22.2 or newer** for development (see `engines` in `package.json` and `.nvmrc`). The app
+itself needs only a browser: there is no backend, no database and no API key.
+
+The version matters for one dependency: `jsdom` 30 — the DOM used by the unit tests — vendors
+`undici` 8, which calls `worker_threads.markAsUncloneable`. That export does not exist in Node 20, so
+on Node 20 the jsdom environment fails to construct and every test file errors before running a single
+test. `npm ci` refuses to install on an unsupported Node (`.npmrc` sets `engine-strict`), which turns
+that into one clear message instead of a coverage report full of zeros.
 
 ## Run it
 
