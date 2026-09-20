@@ -365,6 +365,23 @@ export async function renderPatternOffline(
   let gs1HostFailures = 0;
   if (isGs1RoutingEnabled() && typeof ctx.audioWorklet?.addModule === "function") {
     for (let t = 0; t < numTracks; t++) {
+      /**
+       * A stem render only ever plays its own track, so it must not build hosts for the others.
+       *
+       * Each GS-1 host instantiates a WASM core in that context's worklet scope, and the page's WASM
+       * memory budget is finite and **not** reclaimable: measured with
+       * `scripts/probe_gs1_memory_release.mjs`, a page builds **~124** hosts and then every further
+       * `WebAssembly.instantiate` fails with `RangeError: ... Out of memory`, whatever teardown is
+       * used (`dispose()`, an explicit `gc()`, and `OfflineAudioContext.close()` — which does not even
+       * exist). Past that point `renderPatternOffline` voices the chords/lead tracks with the native
+       * synth, so the export stops matching the audition (measured on `ambient`: chords +13.05 dB,
+       * lead -16.56 dB) until the page is reloaded.
+       *
+       * That made the stems path cost 2 hosts per stem render — 16 per export for nothing, since 14
+       * of those hosts belong to tracks the render drops on the first line of its scheduling loop.
+       * Skipping them is free and takes the budget from ~7 exports per page to ~31.
+       */
+      if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== t) continue;
       const track = pattern.tracks[t];
       const routed = track ? gs1PatchFor(track.track_id, track.instrument) : null;
       if (!routed) continue;

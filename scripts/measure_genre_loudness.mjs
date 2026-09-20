@@ -118,6 +118,12 @@ const forceFallback = argValue("--force-fallback", "") !== "";
  */
 const allowMixedLimiter = argValue("--allow-mixed-limiter", "") !== "";
 /**
+ * `--allow-voice-fallback` publishes a report even when a row lost a GS-1 voice. Diagnostics only;
+ * see `assertNoVoiceFallback`.
+ */
+const allowVoiceFallback = argValue("--allow-voice-fallback", "") !== "";
+
+/**
  * Recycling budget for the measuring page, in measurements (`--reload-every=K`, 0 disables).
  *
  * See the long-page degradation note in the run body: past ~50-75 offline renders in one page the
@@ -263,6 +269,43 @@ function spreadOf(entries, key) {
 
 /** Renders + measures one genre in the page. Runs inside Chromium, so plain JS. */
 /**
+ * Refuse to publish (or judge) a row whose GS-1 voice fell back to the native synth.
+ *
+ * The 2026-09-20 re-record was invalidated by exactly this and nobody noticed for two rounds: the
+ * chords stem measured **+13.05 dB** and the lead stem **-16.56 dB** between a fresh page and one that
+ * had rendered 60 other genres, while every other check stayed green (the limiter was the worklet, the
+ * peak was pinned at the ceiling, the report agreed with `genreMix.ts`).
+ *
+ * The cause is a hard platform budget, not a bug in the renderer's logic: each GS-1 host instantiates
+ * a WASM core in that context's worklet scope, a page can do that **~124 times** and then every
+ * `WebAssembly.instantiate` fails with `Out of memory` no matter how it is torn down (measured with
+ * `scripts/probe_gs1_memory_release.mjs`, fresh browser per policy: keep / keep+gc / dispose /
+ * dispose+gc / dispose+close all stop at 124-125). `renderPatternOffline` then voices the track with
+ * the built-in synth and *counts it* — the count is what this reads.
+ *
+ * The run is therefore not a measurement of the library; it is a measurement of whatever the page's
+ * remaining WASM budget allowed. `--reload-every` keeps the page far from that wall; this check is
+ * what makes it impossible to publish a run that hit it anyway.
+ */
+function assertNoVoiceFallback(ids, context) {
+  if (allowVoiceFallback) return;
+  const offenders = ids
+    .map((id) => [id, observedVoiceFailures.get(id) ?? 0])
+    .filter(([, count]) => count > 0);
+  if (offenders.length === 0) return;
+  console.error(`\n❌ ${offenders.length} of ${ids.length} genre(s) lost a GS-1 voice (${context}):`);
+  for (const [id, count] of offenders.slice(0, 8)) console.error(`   ${id}: ${count} host(s) failed`);
+  if (offenders.length > 8) console.error(`   (+${offenders.length - 8} more)`);
+  console.error(
+    "   The chords/lead track was voiced by the built-in synth instead, which moves the level by up\n" +
+      "   to 13 dB — the row does not describe the genre. The page's WASM budget is finite and not\n" +
+      "   reclaimable (~124 GS-1 hosts), so re-run (the device recycles the page), or pass\n" +
+      "   --allow-voice-fallback to inspect the degraded run (never to land a baseline)."
+  );
+  process.exit(1);
+}
+
+/**
  * Refuse to publish (or judge) numbers that came from more than one limiter path.
  *
  * The `worklet` limiter is a hard lookahead ceiling; the `fallback` is a soft compressor that
@@ -302,6 +345,9 @@ function assertSingleLimiterPath(ids, context) {
  */
 const observedLimiterKinds = new Map();
 
+/** Genre id → the most GS-1 hosts that failed to build in any of its renders (0 in a clean run). */
+const observedVoiceFailures = new Map();
+
 /** Measurements taken since the page was last recycled; see `--reload-every`. */
 let measurementsSinceReload = 0;
 
@@ -336,6 +382,14 @@ async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
        * to a render that never went through a ceiling at all.
        */
       const limiterKinds = new Set();
+      /**
+       * GS-1 hosts that failed to build, worst of this call's renders.
+       *
+       * A non-zero value means the chords/lead track was voiced by the built-in synth instead of the
+       * patch the library is curated around (up to 13 dB apart, measured), so the row cannot be used
+       * as a baseline. See `assertNoVoiceFallback` on the Node side for why the page runs out.
+       */
+      let gs1HostFailures = 0;
       const render = async (pattern) => {
         const buffer = await wav.renderPatternOffline(pattern, {
           bars: barsArg,
@@ -344,6 +398,9 @@ async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
           // `undefined` means "use the graph's shared default", which is what playback does.
           masterMakeupDb: makeupDb,
           onLimiterKind: (kind) => limiterKinds.add(kind),
+          onGs1HostFailures: (count) => {
+            gs1HostFailures = Math.max(gs1HostFailures, count);
+          },
         });
         const channels = [];
         for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
@@ -379,6 +436,7 @@ async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
         arrangedRmsDb: median("rmsDb"),
         gatedBlockCount: runs[0].gatedBlockCount,
         limiterKind: [...limiterKinds].join("+") || "unknown",
+        gs1HostFailures,
         withinGenreSpreadDb: spread,
         durationSec: runs[0].durationSec,
         sampleRate: 44100,
@@ -398,6 +456,12 @@ async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
    * is the degraded one (cold-start −15.55 LUFS against −12.68 warm), so counting its path would
    * mark that genre `worklet+fallback` and abort a run that is in fact entirely on the worklet.
    */
+  if (!discard) {
+    observedVoiceFailures.set(
+      genreId,
+      Math.max(observedVoiceFailures.get(genreId) ?? 0, measured?.gs1HostFailures ?? 0)
+    );
+  }
   const seen = observedLimiterKinds.get(genreId) ?? new Set();
   if (!discard) {
     // Split on "+" so a round that itself mixed both paths lands as two entries, never as one
@@ -713,6 +777,7 @@ async function waitForServer(url) {
         );
       }
       assertSingleLimiterPath(ids, "sample check");
+      assertNoVoiceFallback(ids, "sample check");
       const drift = loudnessDrift(measuredNow, baseline.genres, LOUDNESS_FRESHNESS_TOLERANCE_DB);
       console.log("===============================================================");
       if (drift.length === 0) {
@@ -758,6 +823,7 @@ async function waitForServer(url) {
         // Fail fast rather than at the end: a full run is an hour of renders, and the check that
         // matters (one limiter path) is knowable after each genre.
         assertSingleLimiterPath([entry.id], "pass 1");
+        assertNoVoiceFallback([entry.id], "pass 1");
         process.stdout.write(
           `  [${String(index + 1).padStart(3)}/${catalog.length}] ${entry.id.padEnd(24)}` +
             ` legacy ${legacy.legacyLufs.toFixed(2)} LUFS   arranged ${arranged.arrangedLufs.toFixed(2)} LUFS` +
@@ -889,6 +955,7 @@ async function waitForServer(url) {
           entry.trimmedRmsDb = trimmed.arrangedRmsDb;
           entry.trimIterations = round;
           assertSingleLimiterPath([entry.id], `trim round ${round}`);
+          assertNoVoiceFallback([entry.id], `trim round ${round}`);
         } catch (error) {
           failures.push({ genreId: entry.id, pass: `trim-round-${round}`, error: String(error.message || error) });
         }
@@ -949,6 +1016,7 @@ async function waitForServer(url) {
     };
 
     assertSingleLimiterPath(measured.map((entry) => entry.id), "full run");
+    assertNoVoiceFallback(measured.map((entry) => entry.id), "full run");
 
     /**
      * Publish each row's **union** of limiter paths, not just the arranged pass's.
@@ -1026,6 +1094,14 @@ async function waitForServer(url) {
              * probe that can disagree with what the genre rows actually did.
              */
             limiterKind: entry.limiterKind ?? "unknown",
+            /**
+             * GS-1 hosts that failed to build for this row; 0 in a publishable run.
+             *
+             * In the report for the same reason `limiterKind` is: a row recorded while the page's
+             * WASM budget was exhausted looks entirely normal (peaks pinned, no clamp hits) and only
+             * this field says the chords/lead track was a different synth.
+             */
+            gs1HostFailures: entry.gs1HostFailures ?? 0,
             trimDb: entry.trimDb,
             trimmedLufs: Number.isFinite(entry.trimmedLufs) ? Number(entry.trimmedLufs.toFixed(3)) : null,
             trimmedPeakDb: Number.isFinite(entry.trimmedPeakDb) ? Number(entry.trimmedPeakDb.toFixed(3)) : null,
