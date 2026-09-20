@@ -26,6 +26,12 @@
  *   node scripts/measure_genre_loudness.mjs                 # full 159-genre run
  *   node scripts/measure_genre_loudness.mjs --limit=8       # quick iteration
  *   node scripts/measure_genre_loudness.mjs --bars=4 --repeats=3
+ *   node scripts/measure_genre_loudness.mjs --sample=3      # is the report still true?
+ *   node scripts/measure_genre_loudness.mjs --force-fallback  # measure the degraded limiter path
+ *
+ * A full run recycles its measuring page (see `--reload-every`) because a page that has rendered
+ * ~50-75 genres starts rendering the same genre up to 2.45 dB louder; the sentinel check aborts the
+ * run if that happens anyway.
  *
  * `--limit` writes `scripts/loudness.partial.json` (untracked scratch) so an
  * iteration can never overwrite the committed baseline.
@@ -111,6 +117,26 @@ const forceFallback = argValue("--force-fallback", "") !== "";
  * through the compressor fallback. Only for diagnostics: see `assertSingleLimiterPath`.
  */
 const allowMixedLimiter = argValue("--allow-mixed-limiter", "") !== "";
+/**
+ * Recycling budget for the measuring page, in measurements (`--reload-every=K`, 0 disables).
+ *
+ * See the long-page degradation note in the run body: past ~50-75 offline renders in one page the
+ * same genre renders up to 2.45 dB louder. 12 keeps a ~4x margin under the measured onset.
+ */
+const reloadEveryArg = Number(argValue("--reload-every", "12"));
+const reloadEvery = Number.isFinite(reloadEveryArg) && reloadEveryArg >= 0 ? Math.floor(reloadEveryArg) : 12;
+
+/**
+ * The genre used as the run's canary, and how far it may move before the run gives up.
+ *
+ * `alternative-rock` is not special; it is the genre whose render was measured to move the most when a
+ * page degrades (+2.451 dB after 75 renders, −12.711 → −10.259 LUFS), so it is the most sensitive
+ * probe available. The tolerance is 0.3 dB: fresh-page repeats of the same genre land within 0.12 dB
+ * of each other (measured, 3 renders in each of three pages), so a real degradation is unmissable and
+ * the check does not fire on noise.
+ */
+const SENTINEL_GENRE_ID = "alternative-rock";
+const SENTINEL_TOLERANCE_DB = 0.3;
 /**
  * Absolute delivery target, or empty to keep the historical "match the library's own median"
  * behaviour. The fitted trims only ever made the genres match *each other*; the absolute level
@@ -276,7 +302,11 @@ function assertSingleLimiterPath(ids, context) {
  */
 const observedLimiterKinds = new Map();
 
+/** Measurements taken since the page was last recycled; see `--reload-every`. */
+let measurementsSinceReload = 0;
+
 async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
+  measurementsSinceReload += 1;
   const measured = await page.evaluate(
     async ({ genreId: id, trimDb: trim, bars: barsArg, repeats: repeatsArg, makeupDb }) => {
       const [wav, genresModule, mixModule, loudness, trackUtils] = await Promise.all([
@@ -382,6 +412,7 @@ async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
 
 /** Renders the untouched genre file (legacy placeholder mix), trim 0. */
 async function measureLegacy(page, genreId) {
+  measurementsSinceReload += 1;
   return page.evaluate(
     async ({ genreId: id, bars: barsArg }) => {
       const [wav, genresModule, loudness, trackUtils] = await Promise.all([
@@ -589,6 +620,60 @@ async function waitForServer(url) {
       console.log(`Warm-up render failed (continuing): ${error.message}`);
     }
 
+    /**
+     * Long-page degradation, and the two things that contain it.
+     *
+     * Measured 2026-09-20 with `scratch/diag_state_onset.mjs`: in a page that has already performed
+     * ~50-75 offline renders, the *same* genre renders up to **+2.45 dB louder** — `alternative-rock`
+     * at −12.711 LUFS in a fresh page and −10.259 once 75 other genres have rendered, three identical
+     * renders each way, with the true peak still pinned at the ceiling and the pattern untouched. It
+     * survives `limiter.dispose()` and `ctx.close()` (so it is not the limiter node leaking), it is
+     * deterministic per page, and a page reload clears it completely.
+     *
+     * That number is not academic: −10.259 is exactly the value the first full re-record published for
+     * that row, which is why 5 of 12 re-checked rows came back 0.5-2.5 dB away from the freshly
+     * recorded baseline and why that baseline was never landed. A measuring device that silently
+     * changes what it measures halfway through a two-hour run cannot be trusted for a ±0.35 dB gate,
+     * so:
+     *
+     *   1. the page is recycled every `reloadEvery` measurements (default 12, against a measured onset
+     *      at 45-60; a 15-render cycle held the sentinel within ±0.12 dB across 135 renders), and the
+     *      fresh page is warmed up again with a discarded render;
+     *   2. a **sentinel** genre is re-measured after every recycle and the run aborts if it moved more
+     *      than `SENTINEL_TOLERANCE_DB` — so a run that degrades anyway publishes nothing.
+     */
+    const sentinelId = catalog.some((c) => c.id === SENTINEL_GENRE_ID) ? SENTINEL_GENRE_ID : catalog[0].id;
+    let sentinelLufs = null;
+    const checkSentinel = async (context) => {
+      const sentinel = await measureGenre(page, sentinelId, null);
+      if (!Number.isFinite(sentinel?.arrangedLufs)) return;
+      if (sentinelLufs === null) {
+        sentinelLufs = sentinel.arrangedLufs;
+        console.log(`  sentinel ${sentinelId}: ${sentinelLufs.toFixed(3)} LUFS (${context})`);
+        return;
+      }
+      const drift = sentinel.arrangedLufs - sentinelLufs;
+      if (Math.abs(drift) > SENTINEL_TOLERANCE_DB) {
+        console.error(
+          `\n❌ the measuring page degraded: sentinel ${sentinelId} measured ${sentinelLufs.toFixed(3)} LUFS ` +
+            `and now measures ${sentinel.arrangedLufs.toFixed(3)} (Δ ${drift >= 0 ? "+" : ""}${drift.toFixed(3)} dB) ${context}.\n` +
+            "   A page that has rendered too many genres renders the same genre differently, so no row\n" +
+            "   from this run can be published. Nothing was written."
+        );
+        process.exit(1);
+      }
+    };
+    const recyclePageIfDue = async () => {
+      if (reloadEvery <= 0 || measurementsSinceReload < reloadEvery) return;
+      await page.reload({ waitUntil: "domcontentloaded", timeout: 60000 });
+      measurementsSinceReload = 0;
+      // The first render in a reloaded page is the cold one (lazy worklet registration), exactly like
+      // the run's opening render, so it is discarded the same way.
+      await measureGenre(page, catalog[0].id, null, { discard: true });
+      measurementsSinceReload = 0;
+      await checkSentinel("after page reload");
+    };
+
     if (sampleCount > 0) {
       const ids = sampleGenreIds(
         catalog.map((c) => c.id),
@@ -647,10 +732,14 @@ async function waitForServer(url) {
     }
 
     // Pass 1 — legacy (before) + arranged at unity trim.
+    // The sentinel's reference value comes from this warmed-up fresh page, so every later check is a
+    // comparison against a page that was known good rather than against a page that had already run.
+    await checkSentinel("start of run");
     const measured = [];
     for (const [index, entry] of catalog.entries()) {
       const startedAt = Date.now();
       try {
+        await recyclePageIfDue();
         const legacy = await measureLegacy(page, entry.id);
         const arranged = await measureGenre(page, entry.id, null);
         measured.push({ ...entry, ...legacy, ...arranged, trimDb: 0 });
@@ -785,6 +874,7 @@ async function waitForServer(url) {
       console.log(`\nTrim round ${round}: rendering ${queue.length} genre(s)...`);
       for (const [index, entry] of queue.entries()) {
         try {
+          await recyclePageIfDue();
           const trimmed = await measureGenre(page, entry.id, entry.trimDb);
           entry.trimmedLufs = trimmed.arrangedLufs;
           entry.trimmedPeakDb = trimmed.arrangedPeakDb;
