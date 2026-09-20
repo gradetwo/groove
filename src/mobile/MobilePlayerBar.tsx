@@ -56,7 +56,7 @@ export function MobilePlayerBar({
       data-genre={genre.id}
       className="m-rise fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-1/2 z-20 w-[calc(100%-16px)] max-w-[416px] -translate-x-1/2"
     >
-      <div className="flex items-center gap-3 rounded-2xl border border-[var(--m-line)] bg-[rgba(20,17,11,0.94)] p-2.5 backdrop-blur-md">
+      <div className="flex items-center gap-3 rounded-2xl border border-[var(--m-line)] bg-[rgba(20,20,31,0.94)] p-2.5 backdrop-blur-md">
         {/* Left button: the mode cycle (the user's spec colour-codes the *bar's* left control). */}
         <button
           type="button"

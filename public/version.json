@@ -1,29 +1,29 @@
 {
-  "version": "2.2.0",
+  "version": "2.2.1",
   "releaseDate": "2026-09-20",
-  "changelogCount": 186,
+  "changelogCount": 187,
   "latest": {
-    "version": "2.2.0",
+    "version": "2.2.1",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.2.0 手机端默认进入新外壳：首页 / 即兴 / 挑战 / 探索 / 更多",
-      "en": "v2.2.0 The Phone Lands in the New Shell by Default: Home, Jam, Challenge, Explore, More"
+      "zh": "v2.2.1 手机端换新配色：冷色深底 + 每模块一个强调色",
+      "en": "v2.2.1 A New Phone Palette: Cool Dark Ground, One Accent Per Module"
     },
     "highlights": [
       {
-        "zh": "**手机打开应用就进新界面。** 裸访问「/」在手机上现在直接落在新外壳的**首页**；带明确目的地的链接（`?tab=` / `?genre=` / `?groove=` / `?m=`）仍按它写的渲染——这是**分阶段的切换**：新外壳成为手机的默认入口，同时旧路由保持可达，所以老书签不会在被重写的情况下悄悄换页。判断规则 `shouldEnterPhoneShell` 是纯函数并有单测（手机裸访问进外壳；带任何目的地都不动；桌面永不重定向；已在新路由不重复进入）。",
-        "en": "**Opening the app on a phone now lands in the new interface.** A bare `/` goes straight to the shell's **首页**; a URL that names a destination (`?tab=` / `?genre=` / `?groove=` / `?m=`) still renders what it names. That is the **staged cutover**: the shell becomes the phone's default entry while the old routes stay reachable, so an existing bookmark is never silently rewritten. The rule (`shouldEnterPhoneShell`) is a pure function with unit tests: a bare phone visit enters th…"
+        "zh": "**去掉了那套土黄。** 底色从暖棕改为冷调近黑（#0b0b14 / #14141f），文字改为中性白，强调色按模块区分：**首页 青绿 · 即兴 紫 · 挑战 玫瑰 · 探索 蓝 · 更多 灰**；顶部光晕换成「强调色 + 紫」双径向渐变。",
+        "en": "**The muddy amber is gone.** The ground went from warm brown to a cool near-black (#0b0b14 / #14141f), the text is a neutral white, and the accent is per module: **home teal · jam violet · challenge rose · explore blue · more slate**, with a two-stop accent-plus-violet glow at the top."
       },
       {
-        "zh": "**顺带把手机触控目标提到标准之上**：切过来之后，矩阵里那条「手机面上不允许有低于 44 px 的控件」的检查立刻量出了新外壳自己的问题——分类胶囊 36 px、曲风行 42 px、色块试听键正好 44 px（分数布局下量到 43.99 就被判不合格）。全部提到 **44–48 px**，胶囊同时加 `min-w`（「全部」只有 44 px 宽也算了）。**这条检查是旧手机 IA 的，但它对新界面一样有效**，所以没有放宽门禁，而是把新界面改到合规。",
-        "en": "**The phone's touch targets were raised while cutting over**: the matrix's rule that no phone surface may have a control under 44 px immediately measured the new shell's own offenders — 36 px category chips, 42 px genre rows, and the 44 px swatch button (fractional layout measures it as 43.99, which fails). All are now **44-48 px**, and the chips also got a `min-w` (the \"All\" chip was only 44 px wide). That check belongs to the old phone IA, but it is just as true of the new…"
+        "zh": "**改法刻意只动颜色，不动组件**：55 处引用本来就写在 `--m-gold*` token 上，所以换值即换整屏；模块多色用 `.mobile-root[data-module=…]` 覆盖。第一版把颜色值扫进了 Tailwind 的 arbitrary class 名和内联样式里，手机 E2E 立刻报运行时错误，已回滚并改成 token-only（这正是「只在 CSS 里换值」的原因）。",
+        "en": "**Deliberately a colour-only change**: the 55 references already went through the `--m-gold*` tokens, so changing the values re-skins every screen, and the per-module hues are `[data-module]` overrides. The first attempt swept the new values into Tailwind arbitrary class names and inline styles; the phone E2E failed on a runtime error, so that was rolled back in favour of tokens only."
       },
       {
-        "zh": "**测试**：切换规则 3 条单测（分阶段切换的三种情形）；E2E 新增一条**只在手机/平板 target 上跑**的检查：裸访问 `/` 必须落在外壳且五格齐全。加上既有的 `/m/<module>` 可达性、曲风详情往返、播放器、即兴、挑战、探索、更多等检查，新界面现在有 8 段端到端断言在四个手机/平板 target 上运行。",
-        "en": "**Tests**: 3 unit cases for the cutover rule (the three shapes of the staged switch), plus a new E2E leg that runs **only on the phone/tablet targets**: a bare `/` must land in the shell with all five modules present. Together with the existing `/m/<module>` reachability, genre-detail round trip, player, jam, challenge, explore and more legs, the new interface now has eight end-to-end assertions running on all four phone/tablet targets."
+        "zh": "**顺带定位了那个运行时错误的根因**：canvas 的颜色字符串**不能**用 CSS 变量，`addColorStop(rgb(var(--x)/0.14))` 在 WebKit 直接抛 `The string did not match the expected pattern`。现在唱片光晕在 resize 时把 `--m-gold` 解析成具体 rgb，再用它拼 rgba——所以画布也跟着模块配色走。",
+        "en": "**And the root cause of that runtime error is now known**: canvas colour strings cannot contain CSS variables — `addColorStop(rgb(var(--x)/0.14))` throws `The string did not match the expected pattern` on WebKit. The disc's bloom now resolves `--m-gold` to concrete rgb on resize and builds rgba from it, so the canvas follows the module accent too."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

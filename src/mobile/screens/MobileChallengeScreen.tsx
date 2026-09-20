@@ -216,7 +216,7 @@ export function MobileChallengeScreen({
                 : t("mobile_challenge_top")}
             </span>
           </div>
-          <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[rgba(238,225,200,0.08)]">
+          <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[rgba(232,232,255,0.08)]">
             <div
               className="h-full rounded-full bg-[linear-gradient(90deg,var(--m-gold),var(--m-gold-hi))]"
               style={{ width: `${Math.round(rank.progressPercent)}%` }}
@@ -257,7 +257,7 @@ export function MobileChallengeScreen({
           aria-pressed={isPlaying}
           aria-label={isPlaying ? t("mobile_player_pause") : t("mobile_player_play")}
           onClick={() => question && onTogglePlay(question.correctGenre)}
-          className="m-press mx-auto mt-3 flex h-20 w-20 items-center justify-center rounded-full border border-[rgba(233,162,59,0.5)] bg-[#171208] text-[var(--m-gold)]"
+          className="m-press mx-auto mt-3 flex h-20 w-20 items-center justify-center rounded-full border border-[rgb(var(--m-gold-rgb)/0.5)] bg-[var(--m-card-2)] text-[var(--m-gold)]"
         >
           {isPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7" />}
         </button>

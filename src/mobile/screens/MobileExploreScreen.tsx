@@ -179,7 +179,7 @@ function KickLab() {
                 onClick={() => apply({ [layer.muteKey]: on } as Partial<typeof params>)}
                 className={`m-press min-h-[46px] flex-1 rounded-xl border text-[11px] ${
                   on
-                    ? "border-[var(--m-gold)] bg-[rgba(233,162,59,0.1)] text-[var(--m-gold)]"
+                    ? "border-[var(--m-gold)] bg-[rgb(var(--m-gold-rgb)/0.1)] text-[var(--m-gold)]"
                     : "border-[var(--m-line-2)] text-[var(--m-ink-3)]"
                 }`}
               >
@@ -425,7 +425,7 @@ function GrooveLab({
           aria-pressed={isPlaying}
           onClick={() => onTogglePlay(genre)}
           className={`m-press m-mono flex h-[50px] w-[50px] items-center justify-center rounded-full text-[11px] font-bold ${
-            isPlaying ? "bg-[var(--m-gold)] text-[var(--m-on-gold)]" : "border border-[rgba(233,162,59,0.5)] bg-[#171208] text-[var(--m-gold)]"
+            isPlaying ? "bg-[var(--m-gold)] text-[var(--m-on-gold)]" : "border border-[rgb(var(--m-gold-rgb)/0.5)] bg-[var(--m-card-2)] text-[var(--m-gold)]"
           }`}
         >
           {isPlaying ? "■" : "▶"}
@@ -465,11 +465,11 @@ function GrooveLab({
                     className={`h-3.5 flex-1 rounded-sm ${
                       steps[index]
                         ? isDropped
-                          ? "bg-[rgba(238,225,200,0.18)]"
+                          ? "bg-[rgba(232,232,255,0.18)]"
                           : index === playhead && isPlaying
                             ? "bg-[var(--m-gold-hi)]"
                             : "bg-[var(--m-gold)]"
-                        : "bg-[rgba(238,225,200,0.055)]"
+                        : "bg-[rgba(232,232,255,0.055)]"
                     }`}
                   />
                 ))}

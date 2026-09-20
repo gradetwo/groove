@@ -158,7 +158,7 @@ export function MobilePlayerScreen({
 
       {/* Progress rail: thin, amber, and read from the same clock as the disc. */}
       <div className="mt-4 w-full">
-        <div className="h-0.5 w-full overflow-hidden rounded-full bg-[rgba(238,225,200,0.12)]">
+        <div className="h-0.5 w-full overflow-hidden rounded-full bg-[rgba(232,232,255,0.12)]">
           <div
             data-testid="mobile-player-progress"
             className="h-full rounded-full bg-[var(--m-gold)] transition-[width] duration-200"
@@ -206,7 +206,7 @@ export function MobilePlayerScreen({
           onClick={() => setDrawerOpen((open) => !open)}
           className="m-press m-mono mx-auto flex h-6 w-24 items-center justify-center rounded-full text-[10px] text-[var(--m-ink-3)]"
         >
-          <span aria-hidden="true" className="h-1 w-9 rounded-full bg-[rgba(238,225,200,0.22)]" />
+          <span aria-hidden="true" className="h-1 w-9 rounded-full bg-[rgba(232,232,255,0.22)]" />
         </button>
         {drawerOpen && (
           <dl
