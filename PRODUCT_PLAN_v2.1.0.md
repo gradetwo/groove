@@ -4254,3 +4254,58 @@ G.52 只做到「拦下来、不发布」，没有修。这一轮补上：`rende
 
 1. **长页面渲染漂移的根因**：已测特征见 §3。下一步建议按「浏览器进程 vs 页面」二分：整进程重启（`chromium.launch` 重开）是否同样清除；若是，再查应用侧无界缓存（`DrumKitModels.clusterBufferCache`、`SoundBankManager.audioSampleCache` 都是强引用 `Map<string, AudioBuffer>`），并把它们改成有界或按上下文清理。产品面需要一条「长会话导出始终和试听一致」的证据，或者一个明确的降级提示。
 2. `check:loudness:fresh` 的容差 0.35 dB 建立在「新页面重复渲染同一曲风相差 ≤0.12 dB」之上；如果将来观察到更大的页内抖动，容差与哨兵容差都要重新标定。
+
+## G.54 `CI / nightly`：把「慢」和「环境敏感」的检查放进它们自己的时段
+
+### 为什么不是再加进 push 门禁
+
+原来的 CI 只有两个 job：`validate`（typecheck/lint/单测/覆盖率/构建/预算）与 `e2e`（desktop profile）。
+还有几个检查一直只存在于本地 `verify` 或根本没人跑：
+
+- **`test:e2e:all`**：完整 7 目标矩阵（3 个桌面浏览器 + 4 个手机/平板目标）。它慢，而且 WebKit 目标在
+  负载下会偶发卡死（本轮就遇到两次：一次 desktop WebKit 2 小时 CPU / 33 分钟墙钟，一次 iPhone 竖屏），
+  放进每次 push 等于让每个 PR 为环境抖动买单，还会把「浏览器没起来」显示成「代码坏了」。
+- **`test:coverage`**：覆盖率阈值比普通 `test` 严，属于「回归了要拦，但不该拦住每次提交」的一类。
+- **`check:loudness:fresh`**：需要浏览器 + 已提交基线，约 1 分钟。它存在的理由就是旧基线曾经长期没人质疑
+  （见 G.51/G.52/G.53），所以它必须**定期真的跑**，而不是写在那里。
+- **`perf:check`**：真实浏览器里的性能门禁。
+
+### 加了什么
+
+`CI / nightly`（`.github/workflows/ci.yml` 的第三个 job）：
+
+| 项 | 值 |
+|---|---|
+| 触发 | `schedule: cron "17 3 * * *"`（UTC）＋ `workflow_dispatch` |
+| 步骤 | `test:coverage` → `build` → `check:loudness:fresh` → `test:e2e:all` → `perf:check` |
+| 产物 | `nightly-coverage`、`nightly-e2e`（都 `if: always()`，失败时靠产物而不是日志定位） |
+| 超时 | 90 分钟（全矩阵本身 ~10 分钟，留足余量） |
+
+cron 用 03:17 而不是 03:00：整点是所有项目的定时任务排队的时间。
+
+**事件隔离是必须的**：`validate` 与 `e2e` 都加了 `if: github.event_name != 'schedule'`，`nightly` 只在
+`schedule`/`workflow_dispatch` 跑。否则定时触发会把 push 门禁再跑一遍，而且 `e2e`（desktop profile）会和
+全矩阵同时抢同一批端口。
+
+单测里的 `npm run test:e2e:all` 本来就是完整矩阵的入口，这一轮没有新增脚本、也没有改矩阵本身——只是把它
+接上了一个会真的发生的触发器。
+
+### 门禁：配置本身也要能被证明是活的
+
+`src/test/ciWorkflows.test.ts`（5 条，随单测跑）钉住：`schedule` 存在且 cron 是 5 段；`nightly` job 存在且
+只在 schedule/dispatch 跑；`validate`/`e2e` 在 schedule 上被跳过；`nightly` 真的调用了那 5 个脚本、装了三个
+浏览器、并且至少上传两个 artifact；最后一条最有用——**工作流里引用的每个 `npm run <script>` 必须在
+`package.json` 里存在**，这样「脚本改了名、CI 里还写着旧名字」不会静默变成空转。
+
+失败可证：删掉 `cron` 那一行 → 1 条红；把 `check:loudness:fresh` 改成不存在的名字 → 2 条红。
+
+想立刻跑一次：Actions → CI → Run workflow（`workflow_dispatch`），或本地 `npm run test:e2e:all`。
+
+### 顺带：为什么没有 visual job
+
+这一轮先做了 `CI / visual`（截图 + 像素比对 + 基线指纹），随后被明确要求**不要**。已全部撤除
+（脚本、npm scripts、基线、产物目录都没有留下），CI 里只有 `validate` / `e2e` / `nightly` 三个 job。
+期间量到的两条经验留在 G.53 式的记录里，供以后需要时复用：① 视觉基线必须按**渲染器指纹**（playwright
+版本 + 平台 + 页面里量到的字体指纹）分目录存放，否则跨机器比对的是「别人的字体光栅化」；② **要遮罩的是
+尺寸稳定的父元素**——先遮 `[data-meter-bar]` 反而更糟，因为遮罩盖的是元素当前包围盒，元素自己在动，
+遮罩就跟着动，正好把变化的那一条留了出来（master 表头的电平表，1792 px）。
