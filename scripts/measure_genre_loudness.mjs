@@ -623,7 +623,7 @@ async function waitForServer(url) {
     /**
      * Long-page degradation, and the two things that contain it.
      *
-     * Measured 2026-09-20 with `scratch/diag_state_onset.mjs`: in a page that has already performed
+     * Measured 2026-09-20 with `scripts/probe_page_degradation.mjs`: in a page that has already performed
      * ~50-75 offline renders, the *same* genre renders up to **+2.45 dB louder** — `alternative-rock`
      * at −12.711 LUFS in a fresh page and −10.259 once 75 other genres have rendered, three identical
      * renders each way, with the true peak still pinned at the ceiling and the pattern untouched. It
@@ -653,6 +653,12 @@ async function waitForServer(url) {
         return;
       }
       const drift = sentinel.arrangedLufs - sentinelLufs;
+      // Logged on every check, not only on failure: the sentinel's stability *is* the evidence that
+      // the page recycling is working, so a run's log has to show it.
+      console.log(
+        `  sentinel ${sentinelId}: ${sentinel.arrangedLufs.toFixed(3)} LUFS ` +
+          `(Δ ${drift >= 0 ? "+" : ""}${drift.toFixed(3)} dB, ${context})`
+      );
       if (Math.abs(drift) > SENTINEL_TOLERANCE_DB) {
         console.error(
           `\n❌ the measuring page degraded: sentinel ${sentinelId} measured ${sentinelLufs.toFixed(3)} LUFS ` +
@@ -671,6 +677,7 @@ async function waitForServer(url) {
       // the run's opening render, so it is discarded the same way.
       await measureGenre(page, catalog[0].id, null, { discard: true });
       measurementsSinceReload = 0;
+      console.log(`  recycled the measuring page after ${reloadEvery} measurement(s)`);
       await checkSentinel("after page reload");
     };
 
