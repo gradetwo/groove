@@ -19,7 +19,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # `.nvmrc` is the floor `engines` declares, so CI runs the *minimum* supported
+          # version rather than a newer one that would hide a too-high requirement.
+          #
+          # It used to say `20`, which no longer works: jsdom 30 (and the undici 8 it
+          # vendors, which calls `worker_threads.markAsUncloneable`) requires Node
+          # ^22.22.2, so on Node 20 the jsdom environment fails to construct — 190
+          # unhandled errors, no test executed, 0% coverage, and a red coverage gate that
+          # said nothing about the real problem. `engine-strict` in `.npmrc` now makes the
+          # install itself fail loudly on an unsupported Node.
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
@@ -78,7 +87,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Same floor as the `validate` job — see the comment there.
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       - name: Install dependencies
