@@ -65,3 +65,52 @@ describe("toolchain · CI cannot hardcode a different Node", () => {
     expect(workflow).not.toMatch(/^\s*node-version:/m);
   });
 });
+
+/**
+ * The *action* runtime is a second, separate Node version.
+ *
+ * GitHub runs each `uses:` action with the Node runtime that action declares, not the one
+ * `Setup Node.js` installed. On 2025-09-19 GitHub deprecated Node 20 for that runtime: the v4 tags of
+ * the first-party actions still target it, so runners force them onto Node 24 and warn on every run.
+ * `.nvmrc` says nothing about this axis, which is why it needs its own assertion — the same shape of
+ * gap that produced G.49, one layer lower.
+ */
+describe("toolchain · the action runtime is not the deprecated Node 20", () => {
+  /** First major of each action that runs on the Node 24 runtime; mirrors the gate script's table. */
+  const NODE24_FIRST_MAJOR: Record<string, number> = {
+    "actions/checkout": 5,
+    "actions/setup-node": 5,
+    "actions/upload-artifact": 5,
+    "actions/download-artifact": 5,
+  };
+
+  it("uses a Node 24 major for every first-party action", () => {
+    const uses = [...workflow.matchAll(/uses:\s*([\w.-]+\/[\w.-]+)@(v?\d+)/g)].map((m) => ({
+      action: m[1],
+      major: Number(m[2].replace(/^v/, "")),
+    }));
+    const judged = uses.filter((u) => NODE24_FIRST_MAJOR[u.action] !== undefined);
+    // Fail-ability first: if the regex or the workflow stops matching, the assertions below are empty.
+    expect(judged.length, "at least the checkout/setup-node pair in each job").toBeGreaterThanOrEqual(2);
+    for (const use of judged) {
+      expect(
+        use.major,
+        `${use.action}@v${use.major} targets the deprecated Node 20 action runtime`
+      ).toBeGreaterThanOrEqual(NODE24_FIRST_MAJOR[use.action]);
+    }
+  });
+
+  it("keeps the repository gate for it, wired into verify", () => {
+    const scripts = JSON.parse(read("package.json")) as { scripts?: Record<string, string> };
+    expect(scripts.scripts?.["check:actions"], "the check:actions script").toContain(
+      "check_actions_runtime.mjs"
+    );
+    expect(scripts.scripts?.verify ?? "").toContain("check:actions");
+    // The script must know about every action the table above judges, or the two would drift and the
+    // gate would quietly stop covering the action this test still checks.
+    const gate = read("scripts/check_actions_runtime.mjs");
+    for (const action of Object.keys(NODE24_FIRST_MAJOR)) {
+      expect(gate, `the gate's table must list ${action}`).toContain(`"${action}"`);
+    }
+  });
+});
