@@ -462,3 +462,58 @@ describe("phone cutover · which surface a URL gets", () => {
     ).toBe(false);
   });
 });
+
+describe("phone player · the jog", () => {
+  beforeEach(() => {
+    localStorage.setItem("groove_language", "zh");
+    localStorage.removeItem("groove_mobile_play_mode");
+    audition.toggle.mockReset();
+    audition.stop.mockReset();
+    audition.playingGenreId = null;
+  });
+
+  it("changes the tempo when the record is dragged, and reports it to the engine", async () => {
+    const props = renderShell("home", { genreId: "deep-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+    // Deep House is 122 BPM; a 50px drag is +10 BPM at the reference's 0.2 BPM/px.
+    expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("122 BPM");
+    const vinyl = screen.getByTestId("mobile-vinyl");
+
+    fireEvent.pointerDown(vinyl, { clientX: 100, pointerId: 1 });
+    fireEvent.pointerMove(vinyl, { clientX: 150, pointerId: 1 });
+    expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("132 BPM");
+    fireEvent.pointerUp(vinyl, { clientX: 150, pointerId: 1 });
+    expect(props.onOpenGenre).not.toHaveBeenCalled();
+  });
+
+  it("clamps the jog to the engine's own range", async () => {
+    renderShell("home", { genreId: "deep-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+    const vinyl = screen.getByTestId("mobile-vinyl");
+
+    fireEvent.pointerDown(vinyl, { clientX: 0, pointerId: 1 });
+    for (let i = 0; i < 10; i += 1) fireEvent.pointerMove(vinyl, { clientX: 500, pointerId: 1 });
+    expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("180 BPM");
+    fireEvent.pointerUp(vinyl, { clientX: 500, pointerId: 1 });
+
+    // Each move's delta is measured against the previous point, so the drag steps left gradually.
+    let x = 500;
+    fireEvent.pointerDown(vinyl, { clientX: x, pointerId: 2 });
+    for (let i = 0; i < 20; i += 1) {
+      x -= 100;
+      fireEvent.pointerMove(vinyl, { clientX: x, pointerId: 2 });
+    }
+    expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("60 BPM");
+    fireEvent.pointerUp(vinyl, { clientX: x, pointerId: 2 });
+  });
+
+  it("also moves the tempo with the explicit ± buttons", async () => {
+    renderShell("home", { genreId: "deep-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+    fireEvent.click(screen.getByTestId("mobile-player-bpm-up"));
+    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("124");
+    fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
+    fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
+    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("120");
+  });
+});

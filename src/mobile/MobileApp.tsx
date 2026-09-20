@@ -196,6 +196,7 @@ export function MobileApp({
               onTogglePlay={handleToggleAudition}
               onCycleMode={cyclePlayMode}
               onSkip={skip}
+              onTempo={setTempo}
               onCollapse={() => onCollapsePlayer?.()}
               onOpenDetail={(id) => onOpenGenre?.(id)}
             />

@@ -70,6 +70,7 @@ export const mobileMessages = {
   mobile_player_mode_style: { en: "Repeat this genre", zh: "大曲风内循环" },
   mobile_player_mode_all: { en: "Shuffle all genres", zh: "全部随机" },
   mobile_player_collapse: { en: "Collapse", zh: "收起" },
+  mobile_player_scrub_hint: { en: "Drag the record: left slower, right faster", zh: "按住唱片左右拖动：左减速 右加速" },
 
   // 即兴 (jam, M4).
   mobile_jam_title: { en: "Jam", zh: "即兴" },

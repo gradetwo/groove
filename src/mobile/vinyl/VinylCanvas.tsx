@@ -16,6 +16,10 @@
 import React, { useEffect, useRef } from "react";
 import {
   discAngle,
+  scrubAngleOffset,
+  scrubBpmDelta,
+  scrubFlickBpmDelta,
+  stepScrubReturn,
   needleRadius,
   stepDotPosition,
   stepTonearm,
@@ -34,6 +38,13 @@ export interface VinylClock {
 
 export interface VinylCanvasProps {
   playing: boolean;
+  /**
+   * Dragging the record nudges the tempo, exactly as the reference does: left slows down, right
+   * speeds up. Called with the *BPM delta* for this move; the caller clamps and applies it.
+   */
+  onScrub?: (bpmDelta: number) => void;
+  /** Released with momentum: the caller may add one last BPM step (already computed here). */
+  onScrubEnd?: (flickBpmDelta: number) => void;
   /** Read the transport position at draw time. Returning null means "no clock yet". */
   readClock: () => VinylClock | null;
   /** 16-step lanes, outer ring first (kick, snare, hat, bass). */
@@ -58,6 +69,8 @@ function withAlpha(hex: string, alpha: number): string {
 
 export function VinylCanvas({
   playing,
+  onScrub,
+  onScrubEnd,
   readClock,
   lanes,
   accent,
@@ -68,8 +81,11 @@ export function VinylCanvas({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   /** Kept in refs: the rAF loop reads them without re-rendering React at 60 fps. */
-  const clockRef = useRef({ playing, readClock, lanes, accent, title, subtitle, totalSteps });
-  clockRef.current = { playing, readClock, lanes, accent, title, subtitle, totalSteps };
+  const clockRef = useRef({ playing, readClock, lanes, accent, title, subtitle, totalSteps, onScrub, onScrubEnd });
+  clockRef.current = { playing, readClock, lanes, accent, title, subtitle, totalSteps, onScrub, onScrubEnd };
+  /** Jog state: kept in a ref so dragging never re-renders React at pointer-move rate. */
+  const dragRef = useRef<{ lastX: number; lastT: number; velocity: number } | null>(null);
+  const scrubRef = useRef({ offset: 0, velocity: 0 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -262,9 +278,16 @@ export function VinylCanvas({
       ctx.fill();
 
       // 2. The disc: baked texture + label + sequencer dots, rotated by the audio clock.
+      // The jog offset is added on top of the transport angle and springs back after a drag.
+      if (!dragRef.current) {
+        const spring = stepScrubReturn(scrubRef.current.offset, scrubRef.current.velocity, dt);
+        scrubRef.current = spring;
+        if (Math.abs(spring.offset) < 0.001 && Math.abs(spring.velocity) < 0.001) scrubRef.current = { offset: 0, velocity: 0 };
+      }
+
       ctx.save();
       ctx.translate(geometry.cx, geometry.cy);
-      ctx.rotate(angle);
+      ctx.rotate(angle + scrubRef.current.offset);
       ctx.drawImage(groovesFor(geometry), -geometry.cx, -geometry.cy, geometry.width, geometry.height);
       ctx.fillStyle = accent;
       ctx.globalAlpha = 0.92;
@@ -327,8 +350,40 @@ export function VinylCanvas({
     };
   }, []);
 
+  const endDrag = () => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag) return;
+    clockRef.current.onScrubEnd?.(scrubFlickBpmDelta(drag.velocity));
+  };
+
   return (
-    <div ref={wrapRef} className="relative w-[min(78vw,300px)]" data-testid="mobile-vinyl">
+    <div
+      ref={wrapRef}
+      className="relative w-[min(78vw,300px)] touch-pan-y"
+      data-testid="mobile-vinyl"
+      onPointerDown={(event) => {
+        // Long-press and drag: capture so the gesture keeps working outside the canvas, and let
+        // vertical pans through (`touch-pan-y`) so scrolling the page still works.
+        dragRef.current = { lastX: event.clientX, lastT: performance.now(), velocity: 0 };
+        (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const drag = dragRef.current;
+        if (!drag) return;
+        const now = performance.now();
+        const dx = event.clientX - drag.lastX;
+        const dt = Math.max(1, now - drag.lastT);
+        drag.velocity = drag.velocity * 0.72 + (dx / dt) * 0.28;
+        drag.lastX = event.clientX;
+        drag.lastT = now;
+        scrubRef.current = { offset: scrubAngleOffset(scrubRef.current.offset, dx), velocity: 0 };
+        if (dx !== 0) clockRef.current.onScrub?.(scrubBpmDelta(dx));
+      }}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onPointerLeave={endDrag}
+    >
       <canvas
         ref={canvasRef}
         data-testid="mobile-vinyl-canvas"
