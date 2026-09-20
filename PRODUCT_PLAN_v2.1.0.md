@@ -3936,6 +3936,30 @@ Test Files  192 passed (192)
 `Setup Node.js` 都必须 `node-version-file: ".nvmrc"` 且**不得再出现硬编码的 `node-version:`**。
 下次再有人把依赖的要求抬高、或把 CI 的 Node 写回去，都会在本地就红。
 
+### 追加（v2.1.13 之后）：Actions 自己的运行时也弃用了 Node 20——这是**另一条轴**
+
+GitHub 在 2025-09-19 弃用了 **Actions 运行时**的 Node 20：runner 执行每个 `uses:` 时用的是**该 action
+自己声明的** Node，而不是 `Setup Node.js` 装的那个。`actions/checkout@v4`、`actions/setup-node@v4`
+（以及同代的 `upload-artifact@v4`）仍然指向 Node 20，于是 runner 把它们**强制**跑在 Node 24 上并在每次
+运行打一条弃用警告。警告本身无害，问题是"强制"是临时措施：哪天不再强制，这些步骤就会直接失败。
+
+**与 G.49 的关系**：`.nvmrc` / `engines` / `engine-strict` 管的是"跑 `npm test` 的 Node"，这条轴管的是
+"跑 `actions/checkout` 的 Node"——G.49 的门禁一个字都没覆盖它，所以同一个洞又出现了一次，只是低了一层。
+
+修法与门禁：
+
+1. 三处 `uses:` 提到 **v5**（`checkout` / `setup-node` / `upload-artifact`），v5 系列跑在 Node 24 运行时；
+   `node-version-file: ".nvmrc"` 与 `cache: "npm"` 在 v5 里都仍然支持（已核对该 major 的 README）。
+   注释写在第一个 action 旁边，说明这条 Node 版本与 `.nvmrc` 是两回事。
+2. **`npm run check:actions`（新）**：`scripts/check_actions_runtime.mjs` 读 `.github/workflows/*.yml`，
+   对已知的四个 first-party action 要求 major ≥ 跑在 Node 24 的首个 major（表里只有确实发过 Node 24
+   major 的 action；表外的 action 打印为「不判定」而不是猜）。两条失败可证：把 `setup-node` 改回 v4 →
+   报 `targets the deprecated Node 20 action runtime (needs @v5 or newer)`；表里一个 action 都没有 → 报
+   `the gate checked nothing`（空转不能算绿）。已接进 `verify` 与 CI 的 `validate` job。
+3. `src/test/toolchainNode.test.ts` 从 5 条扩到 **7 条**：新增的两条独立钉住"工作流里每个
+   first-party action 的 major ≥ 5"以及"`check:actions` 存在、在 `verify` 里、且表覆盖同样的 action"。
+   把 `upload-artifact` 改回 v4，这条单测立即红。
+
 ## G.50 三组会话状态搬出视图，并给那条判据装上机械门禁（v2.1.10）
 
 ### 先把判据本身变成可执行的
