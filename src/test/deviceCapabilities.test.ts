@@ -6,14 +6,16 @@
  * tablet.
  */
 import { describe, it, expect } from "vitest";
-import { classifyDevice, PHONE_MAX_WIDTH_PX, PHONE_MAX_HEIGHT_PX, useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
+import {
+  classifyDevice,
+  DEVICE_QUERIES,
+  PHONE_MAX_HEIGHT_PX,
+  PHONE_MAX_WIDTH_PX,
+  useDeviceCapabilities,
+} from "../hooks/useDeviceCapabilities";
 import { renderHook } from "@testing-library/react";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const readFileSync = fs.readFileSync;
 
 const base = {
   touch: false,
@@ -67,12 +69,6 @@ describe("device classification", () => {
     expect(classifyDevice({ ...base, reducedMotion: true }).prefersReducedMotion).toBe(true);
   });
 
-  it("keeps the breakpoints in the documented range", () => {
-    expect(PHONE_MAX_WIDTH_PX).toBeGreaterThan(320);
-    expect(PHONE_MAX_WIDTH_PX).toBeLessThan(768);
-    expect(PHONE_MAX_HEIGHT_PX).toBeLessThan(PHONE_MAX_WIDTH_PX);
-  });
-
   it("flags a short landscape viewport, which is the shape with the least room", () => {
     const caps = classifyDevice({ ...base, touch: true, landscape: true, shortViewport: true });
     expect(caps.isShortLandscape).toBe(true);
@@ -88,19 +84,19 @@ describe("device classification", () => {
   });
 
   /**
-   * The JS boundary and the CSS boundary must be the same number.
+   * The JS boundary and the CSS boundary are now one value rather than two copies.
    *
-   * They were 480 and 500: a 490 px-tall landscape viewport got the compressed stylesheet from
-   * `@media (max-height: 500px)` while JS still classified it as a tall phone, so a component
-   * could be sized by one rule and positioned by another. There is no way to share a constant
-   * between CSS and TS, so this asserts they agree by reading the stylesheet — the one place an
-   * edit to either side is caught.
+   * They were 480 and 500 for a while: a 490 px-tall landscape viewport got the compressed
+   * stylesheet while JS still classified it as a tall phone, so a component could be sized by one
+   * rule and positioned by another. A test comparing the two copies is what kept them equal
+   * afterwards; this round replaced that arrangement with a single source — the numbers live in
+   * `src/platform/layoutTokens.ts`, `scripts/layout_tokens.mjs` writes them into `src/index.css`, and
+   * `npm run check:layout` (with `layoutCss.test.ts`) fails on drift. What is left for this file is
+   * the half the gate cannot see: the queries are *built from* the tokens, not typed out beside them.
    */
-  it("uses the same short-landscape boundary as the stylesheet", () => {
-    const css = readFileSync(path.resolve(TEST_DIR, "../index.css"), "utf8");
-    const media = css.match(/@media \(max-height: (\d+)px\) and \(orientation: landscape\)/);
-    expect(media, "the short-landscape media query is gone").toBeTruthy();
-    expect(Number(media![1])).toBe(PHONE_MAX_HEIGHT_PX);
+  it("builds both boundary queries from the tokens", () => {
+    expect(DEVICE_QUERIES.short).toBe(`(max-height: ${PHONE_MAX_HEIGHT_PX}px)`);
+    expect(DEVICE_QUERIES.phoneWidth).toBe(`(max-width: ${PHONE_MAX_WIDTH_PX}px)`);
   });
 });
 

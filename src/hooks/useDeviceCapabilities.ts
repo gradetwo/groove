@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PHONE_MAX_HEIGHT_PX, PHONE_MAX_WIDTH_PX } from "../platform/layoutTokens";
 
 /**
  * One source of truth for "what kind of device is this".
@@ -35,25 +36,32 @@ export interface DeviceCapabilities {
   prefersReducedMotion: boolean;
 }
 
-/** Phone breakpoint. Matches the 640 px `sm:` boundary the Tailwind config already uses. */
-export const PHONE_MAX_WIDTH_PX = 639;
-
 /**
- * Landscape phone: wider than the phone breakpoint but too short for the desktop chrome.
- *
- * 500 px, not 480: this is the boundary the *stylesheet* already uses for its short-landscape
- * block (`@media (max-height: 500px) and (orientation: landscape)` in `src/index.css`). The two
- * used to differ by 20 px, which meant a 490 px-tall landscape viewport got the compressed CSS
- * layout while JS still classified it as a tall phone — the kind of gap where a bar is measured
- * against one rule and positioned by another.
+ * The phone boundaries live in `src/platform/layoutTokens.ts`, because the stylesheet needs the same
+ * numbers (a media query cannot read a custom property) and `scripts/layout_tokens.mjs` writes them
+ * into `src/index.css`. Imported here for the queries below and re-exported, so a surface still asks
+ * the hook "what kind of device is this?" rather than reaching into the tokens itself.
  */
-export const PHONE_MAX_HEIGHT_PX = 500;
+export { PHONE_MAX_HEIGHT_PX, PHONE_MAX_WIDTH_PX };
 
 const QUERY_TOUCH = "(pointer: coarse)";
 const QUERY_PHONE_WIDTH = `(max-width: ${PHONE_MAX_WIDTH_PX}px)`;
 const QUERY_SHORT = `(max-height: ${PHONE_MAX_HEIGHT_PX}px)`;
 const QUERY_LANDSCAPE = "(orientation: landscape)";
 const QUERY_REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+/**
+ * The queries this hook listens to, exported so a test can assert they are *built from* the tokens
+ * rather than typed out again. The cross-language half — that `src/index.css` uses the same numbers —
+ * belongs to `scripts/layout_tokens.mjs` and `check:layout`.
+ */
+export const DEVICE_QUERIES = {
+  touch: QUERY_TOUCH,
+  phoneWidth: QUERY_PHONE_WIDTH,
+  short: QUERY_SHORT,
+  landscape: QUERY_LANDSCAPE,
+  reducedMotion: QUERY_REDUCED_MOTION,
+} as const;
 
 /**
  * Pure classification, so the decision is testable without a browser.

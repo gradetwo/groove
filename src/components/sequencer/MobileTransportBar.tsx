@@ -131,8 +131,12 @@ export const TRANSPORT_BAR_HEIGHT_PX = { portrait: 59, landscape: 49 } as const;
  * width its five controls actually need, and the tabs get the remaining ~520 px of an 844 px
  * landscape viewport. Also expressed as `55vw` at the call site so a narrow landscape viewport
  * cannot hand the navigation bar less than the majority of the width.
+ *
+ * The number itself is `TRANSPORT_ROW_WIDTH_PX` in `src/platform/layoutTokens.ts`: the shared row is
+ * sized from the `--mobile-transport-row-w` custom property, and `scripts/layout_tokens.mjs` writes
+ * that property from the token. This file used to keep a second copy of the number purely so a test
+ * could compare the two.
  */
-export const TRANSPORT_ROW_WIDTH_PX = 320;
 
 export const MobileTransportBar: React.FC<MobileTransportBarProps> = ({
   isPlaying,
