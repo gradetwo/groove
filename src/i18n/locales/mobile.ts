@@ -121,4 +121,12 @@ export const mobileMessages = {
   mobile_explore_kick_presets: { en: "Presets", zh: "底鼓预设" },
   mobile_explore_groove_all: { en: "All four lanes in", zh: "四轨全开" },
   mobile_explore_groove_dropped: { en: "Dropped", zh: "已拿掉" },
+
+  // 更多 (more, M7).
+  mobile_more_settings: { en: "Settings", zh: "设置" },
+  mobile_more_updates: { en: "What's new", zh: "更新日志" },
+  mobile_more_help: { en: "Manual & tours", zh: "手册与引导" },
+  mobile_more_search: { en: "Search genres and views", zh: "搜索曲风与页面" },
+  mobile_more_language: { en: "Language", zh: "语言" },
+  mobile_more_about: { en: "Groove Lab · an interactive genre atlas and sequencer", zh: "Groove Lab · 交互式曲风图谱与音序器" },
 };

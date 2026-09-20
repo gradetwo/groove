@@ -40,6 +40,9 @@ const MobileChallengeScreen = React.lazy(() =>
 const MobileExploreScreen = React.lazy(() =>
   import("./screens/MobileExploreScreen").then((m) => ({ default: m.MobileExploreScreen }))
 );
+const MobileMoreScreen = React.lazy(() =>
+  import("./screens/MobileMoreScreen").then((m) => ({ default: m.MobileMoreScreen }))
+);
 
 /** Where the play mode is remembered between sessions. */
 export const MOBILE_PLAY_MODE_KEY = "groove_mobile_play_mode";
@@ -58,6 +61,11 @@ export interface MobileAppProps {
   /** Expand the player bar into the full-screen player, and collapse it back. */
   onOpenPlayer?: (genreId: string) => void;
   onCollapsePlayer?: () => void;
+  /** The panels the 更多 module opens; they live in App, not in the shell. */
+  onOpenSettings?: () => void;
+  onOpenUpdates?: () => void;
+  onOpenHelp?: () => void;
+  onOpenSearch?: () => void;
 }
 
 export function MobileApp({
@@ -70,6 +78,10 @@ export function MobileApp({
   onCloseGenre,
   onOpenPlayer,
   onCollapsePlayer,
+  onOpenSettings,
+  onOpenUpdates,
+  onOpenHelp,
+  onOpenSearch,
 }: MobileAppProps) {
   const { t } = useLanguage();
 
@@ -220,6 +232,13 @@ export function MobileApp({
               isPlaying={Boolean(playingGenreId)}
               onTogglePlay={handleToggleAudition}
               onApplyPattern={applyPattern}
+            />
+          ) : module === "more" ? (
+            <MobileMoreScreen
+              onOpenSettings={() => onOpenSettings?.()}
+              onOpenUpdates={() => onOpenUpdates?.()}
+              onOpenHelp={() => onOpenHelp?.()}
+              onOpenSearch={() => onOpenSearch?.()}
             />
           ) : module === "home" ? (
             <MobileHomeScreen

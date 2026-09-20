@@ -334,6 +334,10 @@ const MainApp: React.FC = () => {
           }
           /* Collapsing returns to the list (the bar, when something is playing, sits above it)
              rather than to the genre's page, so the chevron is always "back to browsing". */
+          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenUpdates={() => setUpdatesOpen(true)}
+          onOpenHelp={() => setHelpOpen(true)}
+          onOpenSearch={() => setSearchOpen(true)}
           onCollapsePlayer={() =>
             navigate({ tab: "studio", mobile: "home", genreId: undefined, mobilePlayer: false })
           }

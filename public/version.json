@@ -1,27 +1,27 @@
 {
-  "version": "2.1.20",
+  "version": "2.1.21",
   "releaseDate": "2026-09-20",
-  "changelogCount": 184,
+  "changelogCount": 185,
   "latest": {
-    "version": "2.1.20",
+    "version": "2.1.21",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.1.20 手机端（M6）：探索——底鼓设计 / 和弦走向 / 律动解构，并为横屏重排",
-      "en": "v2.1.20 Phone (M6): 探索 — Kick Design, Progressions, Groove Layers, and a Landscape Layout"
+      "zh": "v2.1.21 手机端（M7）：更多——设置、更新、手册、搜索、语言，五格里的杂项",
+      "en": "v2.1.21 Phone (M7): 更多 — Settings, Changelog, Manual, Search and Language in Five Rows"
     },
     "highlights": [
       {
-        "zh": "**探索模块三个子页，每个都真的能做点什么**：**底鼓设计**（SUB/THUMP/CLICK 三层开关、柔软度/砂砾感/内脏压力三档手感、四个策展预设，点一下即发声）、**和弦走向**（按类别浏览策展走向，点播放按它自己的调性与风格试听）、**律动解构**（把当前曲风的四轨摊开，点一轨就把它从正在播放的循环里拿掉，图案即时重发给引擎，下一小节就听得到）。",
-        "en": "**Three sub-pages that each do something**: **kick design** (the SUB/THUMP/CLICK layers, the softness/grit/sub-weight feel values, and the four curated presets — one tap and it sounds), **progressions** (browse the curated progressions by category and audition one in its own key and feel), and **groove layers** (the current genre's four lanes laid out; tap a lane to drop it out of the loop that is playing — the pattern goes back to the engine and the next bar is missing that…"
+        "zh": "**「更多」是手机端的杂物抽屉，但不是按钮堆**：五行——设置、更新日志、手册与引导、搜索、语言——加上版本号。每一行打开的都是应用**已有**的面板（`SettingsModal` / `UpdatesModal` / 帮助中心 / 全局搜索），手机端不重写一份：那些面板本来就是响应式的，而第二份实现正是「手机和桌面对同一个设置的理解不一致」的来源。",
+        "en": "**更多 is the phone's odds-and-ends drawer without being a button pile**: five rows — settings, changelog, manual & tours, search, language — plus the version. Each row opens a panel the app **already** has (`SettingsModal` / `UpdatesModal` / the help centre / global search) rather than a second implementation: those panels are already responsive, and a second copy is exactly how a phone and a desktop end up disagreeing about what a setting means."
       },
       {
-        "zh": "**没有从桌面搬过来的**：手机版不再提供「载入工作台」与自制底鼓预设的保存/删除。两者都需要一个「工作台」作为落点，而手机上有工作台入口的模块自己就够了；两个会悄悄替换用户当前作品的按钮，比没有按钮更糟。",
-        "en": "**Left behind from the desktop**: 载入工作台 (bake to the workspace) and saving/deleting custom kick presets. Both need a workspace to write into, and on a phone the module that owns the workspace has its own entry point; two buttons that silently replace what the user is working on are worse than no buttons."
+        "zh": "**语言行说的是「会切到什么」而不是「现在是什么」**——切换控件上唯一不含歧义的措辞；点一下立即切换并记住。",
+        "en": "**The language row states what it will switch *to*, not what is current** — the only unambiguous wording for a toggle. One tap switches and remembers."
       },
       {
-        "zh": "**横屏是净新增设计**：参考稿完全没有方向处理（固定 432 px 单列），所以本轮为短而宽的视口加了媒体查询——列表与控制在横屏并排成两列、内容封顶到视口高度，**并且是量出来的**：E2E 在竖屏量到 1 列、把视口转成 844×390 后要求量到 **2 列**（这正是单测看不见的那类东西；也顺带证明没有横向溢出）。",
-        "en": "**Landscape is new design**: the reference has no orientation handling at all (a fixed 432 px column), so this round adds a media query for short, wide viewports — lists and controls sit side by side in two columns and the content is capped to the viewport height. It is **measured**, not asserted: the E2E leg measures one column in portrait, then switches the viewport to 844x390 and requires **two** columns (exactly the kind of thing a unit test cannot see), and checks there…"
+        "zh": "**测试**：更多 **4 条**（五行齐全且每行 ≥44 px、**点哪行只开哪个面板**（同时断言没碰其它三个 opener）、语言行显示目标语言并真的切换、版本号来自单一来源）＋ E2E 一段（`/m/more` 五行齐全、最小行高 ≥44、版本号形如 `vX.Y.Z`、横向不溢出）。",
+        "en": "**Tests**: 4 more cases (five rows, each ≥44 px; tapping a row opens **only** its panel — the other three openers are asserted untouched; the language row shows the target language and switches it; the version comes from the single source) plus an E2E leg (`/m/more` has all five rows, the smallest is ≥44 px, the version matches `vX.Y.Z`, and there is no horizontal overflow)."
       }
     ],
     "truncated": true
