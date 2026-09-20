@@ -133,13 +133,20 @@ const report = await page.evaluate(() => {
   /**
    * The toolbar container.
    *
-   * Found through a control it is known to own rather than by a wrapper testid, because the
-   * toolbar has been re-parented before and a stale selector would silently measure nothing
-   * (the failure mode this script must not have: a zero would read as "perfectly slim").
+   * By its own testid. It used to be found by walking up from the transport group to the nearest
+   * , which held only while the transport lived inside the toolbar: when G.47
+   * moved it into its own sticky strip (a *sibling* of the toolbar) that walk climbed past the
+   * toolbar into the panel wrapper and reported 155 controls and a 1105 px "toolbar".
    */
-  const anchor = document.querySelector("[data-testid='toolbar-group-transport']");
-  const toolbar = anchor?.closest("div.flex.flex-col") ?? anchor?.parentElement ?? null;
-  if (!toolbar) return { error: "toolbar container not found" };
+  /**
+   * The toolbar is two siblings: the sticky transport strip (G.47) and the row that follows it. The
+   * density question is about what the user sees together, so both are measured — counting only the
+   * row would let the transport grow back unnoticed, which is what this probe exists to prevent.
+   */
+  const toolbar = document.querySelector("[data-testid='studio-toolbar']");
+  const strip = document.querySelector("[data-testid='toolbar-transport-strip']");
+  if (!toolbar) return { error: "toolbar container not found ([data-testid='studio-toolbar'])" };
+  const containers = [strip, toolbar].filter(Boolean);
 
   const isVisible = (el) => {
     const rect = el.getBoundingClientRect();
@@ -153,7 +160,9 @@ const report = await page.evaluate(() => {
     return rect.right > 0 && rect.left < window.innerWidth;
   };
 
-  const all = Array.from(toolbar.querySelectorAll("button, select, input, [role='button']"));
+  const all = containers.flatMap((container) =>
+    Array.from(container.querySelectorAll("button, select, input, [role='button']"))
+  );
   const visible = all.filter(isVisible);
 
   /**
@@ -212,7 +221,16 @@ const report = await page.evaluate(() => {
     }
   }
 
-  const rect = toolbar.getBoundingClientRect();
+  /** The union of both containers: the band the two of them occupy together. */
+  const boxes = containers.map((container) => container.getBoundingClientRect());
+  const rect = {
+    top: Math.min(...boxes.map((r) => r.top)),
+    bottom: Math.max(...boxes.map((r) => r.bottom)),
+    left: Math.min(...boxes.map((r) => r.left)),
+    right: Math.max(...boxes.map((r) => r.right)),
+    get width() { return this.right - this.left; },
+    get height() { return this.bottom - this.top; },
+  };
 
   /**
    * Is the overflow reachable, or is the escape hatch simply gone?

@@ -27,7 +27,13 @@ export const InfoDossier = memo<InfoDossierProps>(function InfoDossier({
   const { t } = useLanguage();
 
   return (
-    <aside className="sticky top-16 flex flex-col gap-3.5 order-2 lg:order-1 landscape-hide-sidebar">
+    /**
+     * `sticky top-[var(--app-header-h)]`: the sidebar follows the page scroll like the transport
+     * strip does, parked at the same line. It used to say `top-16` (64 px), which was 5 px less than
+     * the header's real height — invisible until `overflow-x: clip` made sticky work at all (G.47),
+     * at which point the first 5 px of the dossier would have sat behind the header.
+     */
+    <aside className="sticky top-[var(--app-header-h)] flex flex-col gap-3.5 order-2 lg:order-1 landscape-hide-sidebar">
       {/* Hero Genre Card (.blk.g-head) */}
       <div className="bg-panel border border-line rounded-xl p-4 sm:p-4.5">
         <div className="flex items-start justify-between gap-2">

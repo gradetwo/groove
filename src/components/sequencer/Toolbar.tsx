@@ -764,12 +764,36 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMoreMenuOpen]);
 
-  return (
-    <div className="flex flex-col gap-1.5 min-w-0 w-full relative">
-      {/* Top Toolbar Header (Item 8: 4 logical group pills with 8-12px spacing and responsive fold) */}
-      <div className="w-full flex flex-wrap items-center justify-between gap-2 sm:gap-2.5 pb-2 mb-1.5 border-b border-line-subtle select-none min-w-0">
-        {/* Left Section: Transport Group & Edit Group */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0 max-w-full">
+  /**
+   * The transport, as its own sticky strip (G.47).
+   *
+   * The page scrolls — the studio panel is taller than most viewports — and the transport used to
+   * scroll away with it: measured at 1440×900, scrolled to the bottom, the group sat at `top −247`
+   * and its centre hit-tested as nothing. A phone fixes its transport to the bottom for the same
+   * reason; on PC/iPad the header is the one bar that always stays, so the transport parks directly
+   * underneath it.
+   *
+   * Two details are load-bearing:
+   *
+   *   - `top` is `var(--app-header-h)`, the header's own height (`src/index.css`), because a sticky
+   *     element has to be told how much of the viewport top is already spoken for. Too small and the
+   *     strip parks *behind* the header, where nothing can click it; the E2E matrix asserts the
+   *     rendered header still measures the token and that the strip is hit-testable at the bottom of
+   *     the page.
+   *   - the strip is rendered as a *sibling* of the toolbar (the fragment below), not inside it. A
+   *     sticky element can only move inside its parent's box, and the toolbar is one 116 px row:
+   *     inside it the strip had 63 px of travel and scrolled away anyway. Its parent is now the
+   *     panel section, which is as tall as the whole panel.
+   *
+   * Only the transport moves here: the edit, view and project groups keep scrolling with the page,
+   * so the permanently occupied band stays one row (~52 px) rather than a whole toolbar.
+   */
+  const transportStrip = (
+    <div
+      data-testid="toolbar-transport-strip"
+      className="sticky top-[var(--app-header-h)] z-30 -mx-3 sm:-mx-4 px-3 sm:px-4 py-1 bg-panel/95 backdrop-blur-md border-b border-line-subtle"
+    >
+      <div className="flex items-center gap-2 min-w-0 max-w-full">
           {/* Group 1: 播放控制组 (Playback & Transport Group) */}
           <div
             data-testid="toolbar-group-transport"
@@ -1227,6 +1251,18 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               )}
             </div>
           </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {transportStrip}
+    <div data-testid="studio-toolbar" className="flex flex-col gap-1.5 min-w-0 w-full relative">
+      {/* Top Toolbar Header (Item 8: 4 logical group pills with 8-12px spacing and responsive fold) */}
+      <div className="w-full flex flex-wrap items-center justify-between gap-2 sm:gap-2.5 pb-2 mb-1.5 border-b border-line-subtle select-none min-w-0">
+        {/* Left Section: Transport Group & Edit Group */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0 max-w-full">
 
           {/* Group 2: 编辑操作组 (Edit Operations Group) */}
           {!isToolbarFolded && (
@@ -1987,6 +2023,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 });
