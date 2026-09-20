@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Genre } from "../types/genre";
+import type { SequencerPattern } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre } from "../data/genreMix";
 import { announcer } from "../platform/announcer";
@@ -28,6 +29,17 @@ export interface UseGenreAuditionReturn {
    * the audio rather than to a wall clock.
    */
   readClock: () => GenreAuditionClock | null;
+  /**
+   * Replace the pattern the engine is playing without restarting it.
+   *
+   * The phone's 即兴 module edits steps while the loop runs, which is the whole point of a step editor
+   * with a playhead: the change has to be audible on the next bar, not after a stop/start. No-op when
+   * no engine exists yet (nothing is playing, so the edit is already reflected in the caller's copy).
+   */
+  applyPattern: (pattern: SequencerPattern) => void;
+  /** Live tempo/swing changes for the same reason. No-op before the engine exists. */
+  setTempo: (bpm: number) => void;
+  setSwingValue: (swing: number) => void;
 }
 
 /**
@@ -109,11 +121,28 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     return { step, fraction };
   }, []);
 
+  const applyPattern = useCallback((pattern: SequencerPattern) => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    engine.setPattern(pattern, false);
+  }, []);
+
+  const setTempo = useCallback((bpm: number) => {
+    engineRef.current?.setBpm(bpm);
+  }, []);
+
+  const setSwingValue = useCallback((swing: number) => {
+    engineRef.current?.setSwing(swing);
+  }, []);
+
   return {
     playingGenreId,
     isPlaying,
     toggleAudition,
     stopAudition,
     readClock,
+    applyPattern,
+    setTempo,
+    setSwingValue,
   };
 }

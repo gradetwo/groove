@@ -728,6 +728,49 @@ async function runTestOnTarget(target, baseUrl) {
     await page.click('[data-testid="mobile-player-collapse"]');
     await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 30000 });
 
+    /**
+     * 1.8 The 即兴 module: a groove grid, pads, and the tempo bar at the bottom.
+     *
+     * Asserted through the URL rather than by pressing play, for the same reason as the player: a
+     * headless runner is the wrong place to depend on audio starting. What is checked is the shape the
+     * user asked for — grid, pads, tempo at the bottom, no player bar here.
+     */
+    await page.goto(`${baseUrl}/m/jam`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-jam"]', { timeout: 30000 });
+    const jam = await page.evaluate(() => {
+      const step = (lane, index) => document.querySelector(`[data-testid="mobile-jam-step-${lane}-${index}"]`);
+      const grid = document.querySelector('[data-testid="mobile-jam-grid"]');
+      const pads = document.querySelectorAll('[data-testid^="mobile-jam-pad-"]');
+      const tempo = document.querySelector('[data-testid="mobile-jam-tempo"]');
+      const player = document.querySelector('[data-testid="mobile-player"]');
+      const bar = document.querySelector('[data-testid="mobile-player-bar"]');
+      const tempoBottom = tempo ? tempo.getBoundingClientRect().bottom : 0;
+      const gridBottom = grid ? grid.getBoundingClientRect().bottom : 0;
+      const sizes = [...document.querySelectorAll('[data-testid^="mobile-jam-step-"]')].map((node) =>
+        Math.round(node.getBoundingClientRect().height)
+      );
+      return {
+        steps: document.querySelectorAll('[data-testid^="mobile-jam-step-"]').length,
+        lanes: [0, 1, 2, 3].every((lane) => Boolean(step(lane, 15))),
+        pads: pads.length,
+        tempoBelowGrid: tempoBottom > gridBottom,
+        noPlayer: !player && !bar,
+        smallestStep: sizes.length ? Math.min(...sizes) : 0,
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+    if (jam.steps !== 64 || !jam.lanes) {
+      throw new Error(`Jam grid is not 4x16 (${jam.steps} steps, lanes ok: ${jam.lanes})`);
+    }
+    if (jam.pads !== 6) throw new Error(`Jam module has ${jam.pads} pad(s), expected 6`);
+    if (!jam.tempoBelowGrid) throw new Error("Jam tempo controls are not below the grid");
+    if (!jam.noPlayer) throw new Error("Jam module must not show the player or its bar");
+    if (jam.overflow) throw new Error("Jam module overflows horizontally");
+
+
 
     // Back to the app: the checks below measure the surface under test, not the phone shell.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
