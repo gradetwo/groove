@@ -5,12 +5,23 @@ on:
     branches: [main, next]
   pull_request:
     branches: [main, next]
+  # The heavy checks live in the `nightly` job: they are slow (the full 7-target browser
+  # matrix) or environment-sensitive in ways that would report flakiness as a code failure
+  # on every pull request. A dedicated nightly slot keeps them running without making every
+  # push pay for them; `workflow_dispatch` runs the same set on demand.
+  #
+  # 03:17 UTC rather than 03:00: the top of the hour is when scheduled jobs queue up
+  # behind everyone else's.
+  schedule:
+    - cron: "17 3 * * *"
   workflow_dispatch:
 
 jobs:
   validate:
     name: Typecheck, Lint, Unit Tests & Build
     runs-on: ubuntu-latest
+    # `nightly` owns the scheduled run; see the schedule comment above.
+    if: github.event_name != 'schedule'
 
     steps:
       # v5 actions run on the Node 24 runtime. The v4 tags target Node 20, which GitHub
@@ -94,6 +105,9 @@ jobs:
     name: E2E Test Matrix (Playwright)
     runs-on: ubuntu-latest
     needs: validate
+    # Skipped on schedule: `nightly` runs the *full* profile (`test:e2e:all`), which is a
+    # superset of this job's default profile.
+    if: github.event_name != 'schedule'
 
     steps:
       - name: Checkout repository
@@ -126,5 +140,78 @@ jobs:
       # E-10: Lighthouse is not installable in this environment, so the performance
       # gate is a real-browser measurement with deterministic assertions (no genre
       # data on first paint) plus reported FCP/LCP/CLS.
+      - name: Performance Gate (real browser, local build)
+        run: npm run perf:check
+
+  # `CI / nightly`: everything that is too slow or too environment-sensitive to gate a push.
+  #
+  # What it adds over `validate` + `e2e`:
+  #  - `test:e2e:all` — the full 7-target matrix (3 desktop browsers + 4 phone/tablet
+  #    targets), where the push-time gate runs the desktop profile only;
+  #  - `test:coverage` — the coverage thresholds, which are stricter than the plain test run;
+  #  - `check:loudness:fresh` — re-renders sampled genres in a fresh page and compares against
+  #    the committed baseline, which needs a browser and ~1 minute but catches a baseline that
+  #    no longer describes the code (that check exists because a stale one survived for weeks);
+  #  - `perf:check` — the real-browser performance gate.
+  #
+  # Everything is uploaded (coverage + e2e-out), because a nightly failure is usually diagnosed
+  # from the artifact rather than from the log.
+  nightly:
+    name: Nightly (full matrix, coverage, loudness freshness, perf)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          # Same floor as the push-time jobs — see the comment in `validate`.
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Node & npm versions
+        run: node -v && npm -v
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Unit Tests & Coverage
+        run: npm run test:coverage
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: nightly-coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Production Build
+        run: npm run build
+
+      # Needs a browser and the committed baseline; see the job comment.
+      - name: Loudness Baseline Freshness
+        run: npm run check:loudness:fresh
+
+      - name: Full Browser & Device Matrix
+        run: npm run test:e2e:all
+
+      - name: Upload E2E Artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: nightly-e2e
+          path: e2e-out/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Performance Gate (real browser, local build)
         run: npm run perf:check
