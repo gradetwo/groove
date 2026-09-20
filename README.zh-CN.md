@@ -21,8 +21,13 @@
 
 ## 环境要求
 
-开发需要 Node.js 20 或更新版本。应用本身只需要一个浏览器：没有后端、没有数据库、不需要任何
-API key。
+开发需要 **Node.js 22.22.2 或更新版本**（见 `package.json` 的 `engines` 与 `.nvmrc`）。应用本身只需要
+一个浏览器：没有后端、没有数据库、不需要任何 API key。
+
+版本要求来自一个依赖：单测用的 DOM 环境 `jsdom` 30 内置了 `undici` 8，后者会调用
+`worker_threads.markAsUncloneable`——这个导出在 Node 20 里不存在，于是 jsdom 环境根本建立不起来，
+每个测试文件都在跑第一条用例之前就报错。`npm ci` 现在会在不支持的 Node 上直接拒绝安装
+（`.npmrc` 开了 `engine-strict`），把那 190 条莫名其妙的未处理错误换成一句清楚的提示。
 
 ## 跑起来
 
