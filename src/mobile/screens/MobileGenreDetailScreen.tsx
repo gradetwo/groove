@@ -15,7 +15,7 @@
  *  - **Every related genre is a link to its own detail page**, so browsing sideways never dead-ends.
  */
 import React from "react";
-import { ArrowLeft, ChevronRight, Pause, Play, Wand2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Wand2 } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
 import { GENRE_RELATIONS } from "../../data/relations";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -33,7 +33,6 @@ export interface MobileGenreDetailScreenProps {
   genreId?: string;
   isPlaying: boolean;
   onBack: () => void;
-  onToggleAudition: (genre: Genre) => void;
   onOpenGenre: (genreId: string) => void;
   onOpenJam: (genreId: string) => void;
 }
@@ -42,7 +41,6 @@ export function MobileGenreDetailScreen({
   genreId,
   isPlaying,
   onBack,
-  onToggleAudition,
   onOpenGenre,
   onOpenJam,
 }: MobileGenreDetailScreenProps) {
@@ -53,6 +51,7 @@ export function MobileGenreDetailScreen({
     return (
       <div className="m-rise px-4 pt-2" data-testid="mobile-genre-missing">
         <BackButton onBack={onBack} label={t("mobile_back")} />
+      <p className="m-mono -mt-2 text-right text-[9px] text-[var(--m-ink-3)]">{t("mobile_detail_tap_back")}</p>
         <p className="mt-4 text-[13px] text-[var(--m-ink-2)]">{t("mobile_detail_missing")}</p>
       </div>
     );
@@ -78,8 +77,19 @@ export function MobileGenreDetailScreen({
     .slice(0, 8);
 
   return (
-    <article className="m-rise px-4 pt-2 pb-2" data-testid="mobile-genre-detail" data-genre={genre.id}>
+    <article
+      className="m-rise px-4 pt-2 pb-2"
+      data-testid="mobile-genre-detail"
+      data-genre={genre.id}
+      onClick={(event) => {
+        // "Tap once to go back", except when the tap was meant for something inside the page.
+        const target = event.target as HTMLElement;
+        if (target.closest("button, a, input")) return;
+        onBack();
+      }}
+    >
       <BackButton onBack={onBack} label={t("mobile_back")} />
+      <p className="m-mono -mt-2 text-right text-[9px] text-[var(--m-ink-3)]">{t("mobile_detail_tap_back")}</p>
 
       <header className="mt-3 flex items-center gap-3">
         <span aria-hidden="true" className="h-12 w-12 flex-none rounded-2xl" style={{ background: swatch }} />
@@ -91,22 +101,14 @@ export function MobileGenreDetailScreen({
         </div>
       </header>
 
+      {/* No play control here: the shell started this genre on the way in, and the player bar at the
+          bottom of the screen is the transport. */}
       <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          data-testid="mobile-detail-audition"
-          aria-pressed={isPlaying}
-          onClick={() => onToggleAudition(genre)}
-          className="m-press flex min-h-[46px] flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--m-gold)] text-[14px] font-bold text-[var(--m-on-gold)]"
-        >
-          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          {isPlaying ? t("mobile_audition_stop") : t("mobile_audition_play")}
-        </button>
         <button
           type="button"
           data-testid="mobile-detail-jam"
           onClick={() => onOpenJam(genre.id)}
-          className="m-press m-mono flex min-h-[46px] items-center gap-1.5 rounded-2xl border border-[var(--m-line-2)] px-3.5 text-[11px] text-[var(--m-gold)]"
+          className="m-press m-mono flex min-h-[46px] flex-1 items-center justify-center gap-1.5 rounded-2xl border border-[var(--m-line-2)] px-3.5 text-[11px] text-[var(--m-gold)]"
         >
           <Wand2 className="h-4 w-4" />
           {t("mobile_detail_try_jam")}

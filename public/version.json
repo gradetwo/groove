@@ -1,29 +1,29 @@
 {
-  "version": "2.2.2",
+  "version": "2.2.3",
   "releaseDate": "2026-09-20",
-  "changelogCount": 188,
+  "changelogCount": 189,
   "latest": {
-    "version": "2.2.2",
+    "version": "2.2.3",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.2.2 手机播放器：长按黑胶左右拖动调 BPM（jog）回来了",
-      "en": "v2.2.2 The Phone Player Gets Its Jog Back: Drag the Record to Change the Tempo"
+      "zh": "v2.2.3 曲风库去掉重复播放键：点卡片即进详情并自动播放；全屏页面不再有底部导航",
+      "en": "v2.2.3 The Library Loses Its Repeated Play Buttons: Tap a Card to Open and Play; Full-Screen Pages Drop the Tab Bar"
     },
     "highlights": [
       {
-        "zh": "**我上一版把 player2.html 最好玩的交互删掉了，这一版补回来**：按住唱片左右拖动即改速度——左减速、右加速（参考稿的 0.2 BPM/px），唱片同时按拖动量偏移（±1.6 rad 上限），松手后以弹簧回正（`-offset*26`、阻尼 `exp(-5t)`），带惯性的甩动再加最多 ±10 BPM。60–180 BPM 与引擎同一区间。",
-        "en": "**The previous release deleted the most enjoyable interaction in player2.html; this one brings it back**: long-press the record and drag left/right to change the tempo (left slower, right faster — the reference's 0.2 BPM per pixel), the disc offsets with the drag (capped at ±1.6 rad), springs back on release (`-offset*26`, damping `exp(-5t)`), and a flick adds up to ±10 BPM. Clamped to the engine's own 60-180 range."
+        "zh": "**每行一个一模一样的播放键确实丑，而且多此一举**：曲风卡片现在整块就是目标——**点一下进入该曲风详情页并自动开始播放**，色块只作身份标识（播放中显示暂停标记），不再是一个按钮。一次手势完成「打开 + 试听」。",
+        "en": "**One identical play button per row was ugly and redundant**: the card is now the whole target — **one tap opens that genre's page and starts it playing**, and the colour square is identity only (it shows a pause mark while playing) rather than a control. One gesture does \"open and audition\"."
       },
       {
-        "zh": "**手感可测**：jog 的数学全部是纯函数（位移→BPM、角偏移夹取、甩动阈值与上限、弹簧回正），单测 8 条；播放器上另有三条组件用例——拖动 50 px 必须从 122 变 132 BPM、连续拖动必须夹在 60/180、± 按钮也能改并显示当前值。",
-        "en": "**The feel is testable**: the jog maths is pure (drag to BPM, offset clamping, flick threshold and cap, spring return) with 8 unit cases, plus 3 component cases on the player — a 50 px drag must take 122 to 132 BPM, a long drag must clamp to 60/180, and the ± buttons must move and display the live value."
+        "zh": "**曲风详情页里没有任何播放键**：页面上唯一的交通是**最下方的播放条**与左上角的收起箭头；**点页面任意非链接处、或点箭头，都回到上一屏**（页面上有一行小字提示）。「拿去即兴」保留，它是导航而不是播放。",
+        "en": "**The genre page has no play control at all**: its only transport is the **player bar at the bottom**, plus the collapse arrow top-left. **Tapping anywhere that is not a link — or the arrow — returns to the previous screen** (a one-line hint says so). \"Jam with this\" stays: it is navigation, not playback."
       },
       {
-        "zh": "**同时补上参考稿里让 jog「被发现」的两样东西**：唱片下方的拖动提示（左减速 · 右加速），以及显式的 BPM ± 与实时读数。拖动用的是指针捕获（`setPointerCapture`），画布保留 `touch-pan-y`，所以纵向滚页面不会被 jog 吃掉。",
-        "en": "**Also restored the two things that make the jog discoverable**: the drag hint under the record (left slower · right faster) and explicit ± buttons with a live BPM readout. The drag uses pointer capture, and the canvas keeps `touch-pan-y`, so vertical page scrolling is not swallowed by the jog."
+        "zh": "**全屏页面不再有底部导航**：进入全屏播放器或曲风详情页时，五格模块栏隐藏（内容底部留白随之适配），播放条在没有模块栏时贴到底部安全区；返回浏览时它再出现。",
+        "en": "**Full-screen pages drop the bottom navigation**: the five-module bar is hidden inside the full-screen player and on a genre's page (the content's bottom padding adapts), the player bar sits at the bottom safe area when the module bar is gone, and the bar comes back when you return to browsing."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }

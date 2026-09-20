@@ -59,6 +59,7 @@ export const mobileMessages = {
   mobile_detail_time_signature: { en: "Time", zh: "拍号" },
   mobile_detail_bpm_range: { en: "Range", zh: "区间" },
   mobile_detail_try_jam: { en: "Jam with this", zh: "拿去即兴" },
+  mobile_detail_tap_back: { en: "Tap to go back", zh: "点一下返回" },
   mobile_detail_missing: { en: "That genre is not in the library.", zh: "曲风库里没有这个曲风。" },
 
   // Player bar (M2) and the full-screen player (M3).
