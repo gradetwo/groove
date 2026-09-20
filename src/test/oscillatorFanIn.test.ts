@@ -45,6 +45,7 @@ import {
   synthesizeSnare,
 } from "../audio/DrumKitModels";
 import { KICK_PRESETS, synthesizeAnatomyKickVoice } from "../audio/AnatomyKickEngine";
+import { DEFAULT_SYNTH_PRESETS, playPolySynthNote } from "../audio/PolySynth";
 
 /** The first frequency each oscillator was given — its identity for the purposes of this rule. */
 function firstFrequency(osc: FakeOscillatorNode): number {
@@ -142,6 +143,22 @@ describe("no voice sums three or more differently-tuned oscillators into one nod
         (c, d) => synthesizeAnatomyKickVoice(c, d, 0, 1, preset.id, null, 7),
       ]
     ),
+    /**
+     * Every *melodic* preset too.
+     *
+     * The rule was measured on drum voices and only ever applied to them, but the failure it guards
+     * is not a drum problem: a preset that sums three or more differently-tuned oscillators into one
+     * node makes every export unreproducible, whether those oscillators are a hi-hat's metal cluster
+     * or a bell's partial bank. Adding the whole `DEFAULT_SYNTH_PRESETS` table is what makes "the
+     * next 'add another partial for richness' change" — the phrase in this file's own doc — actually
+     * fail here rather than in an export diff.
+     */
+    ...Object.entries(DEFAULT_SYNTH_PRESETS).map(
+      ([key, preset]): [string, (c: BaseAudioContext, d: AudioNode, b: AudioBuffer) => unknown] => [
+        `preset ${key}`,
+        (c, d) => playPolySynthNote(c, d, 57, 0, 0.4, 1, preset),
+      ]
+    ),
   ];
 
   for (const [label, build] of cases) {
@@ -151,12 +168,32 @@ describe("no voice sums three or more differently-tuned oscillators into one nod
     });
   }
 
-  it("checks a voice for every published percussion model and kick preset", () => {
+  it("checks a voice for every published percussion model, kick preset and synth preset", () => {
     // Guards the loops above: a spec added without being exercised would make this whole file pass
-    // by covering less than it claims.
+    // by covering less than it claims. The preset count is in here because the melodic table is the
+    // one that grows.
     expect(PERCUSSION_MODEL_IDS.length).toBeGreaterThan(10);
     expect(KICK_PRESETS.length).toBeGreaterThan(1);
-    expect(cases.length).toBeGreaterThan(30);
+    expect(cases.length).toBeGreaterThan(30 + Object.keys(DEFAULT_SYNTH_PRESETS).length - 1);
+  });
+
+  it("would catch a three-oscillator fan-in if one appeared", () => {
+    /**
+     * The rule is only evidence if it can fail. Build the shape it forbids by hand — three
+     * oscillators at different frequencies into one gain — and require the walker to report it.
+     * (This is also exactly the mistake the bell's partial bank invites: fanning six partials into
+     * one node instead of into a tree.)
+     */
+    const ctx = new FakeOfflineAudioContext(1, 4096, 44100);
+    const sum = ctx.createGain();
+    for (const hz of [220, 262, 330]) {
+      const osc = ctx.createOscillator();
+      osc.frequency.setValueAtTime(hz, 0);
+      osc.connect(sum);
+    }
+    const violations = crowdedNodes(ctx);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].distinct).toBe(3);
   });
 
   restore();
