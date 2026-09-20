@@ -108,4 +108,17 @@ export const mobileMessages = {
   mobile_challenge_next: { en: "Next question", zh: "下一题" },
   mobile_challenge_to_next: { en: "{points} to the next rank", zh: "距下一段位 {points}" },
   mobile_challenge_top: { en: "Top rank", zh: "已是最高段位" },
+
+  // 探索 (explore, M6).
+  mobile_explore_kick: { en: "Kick design", zh: "底鼓设计" },
+  mobile_explore_chords: { en: "Progressions", zh: "和弦走向" },
+  mobile_explore_groove: { en: "Groove layers", zh: "律动解构" },
+  mobile_explore_kick_fire: { en: "Fire the kick", zh: "击发底鼓" },
+  mobile_explore_kick_layers: { en: "Three layers", zh: "三层身体" },
+  mobile_explore_kick_soft: { en: "Softness", zh: "柔软度" },
+  mobile_explore_kick_grit: { en: "Grit", zh: "砂砾感" },
+  mobile_explore_kick_low: { en: "Sub weight", zh: "内脏压力" },
+  mobile_explore_kick_presets: { en: "Presets", zh: "底鼓预设" },
+  mobile_explore_groove_all: { en: "All four lanes in", zh: "四轨全开" },
+  mobile_explore_groove_dropped: { en: "Dropped", zh: "已拿掉" },
 };

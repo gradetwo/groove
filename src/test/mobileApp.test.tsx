@@ -161,8 +161,13 @@ describe("phone shell · five modules", () => {
     expect(screen.queryByTestId("mobile-jam")).not.toBeInTheDocument();
     second.unmount();
 
-    renderShell("explore");
-    expect(screen.getByTestId("mobile-module-explore-placeholder")).toBeInTheDocument();
+    // 探索 is real too (M6); 更多 is the last placeholder standing.
+    const third = renderShell("explore");
+    expect(await screen.findByTestId("mobile-explore", {}, { timeout: 5000 })).toBeInTheDocument();
+    third.unmount();
+
+    renderShell("more");
+    expect(screen.getByTestId("mobile-module-more-placeholder")).toBeInTheDocument();
   });
 });
 

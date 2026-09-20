@@ -92,3 +92,37 @@
 .mobile-root .m-press:active {
   transform: scale(0.97);
 }
+
+/*
+ * Landscape.
+ *
+ * The reference design has no orientation handling at all (a fixed 432px column), so this is new
+ * design. On a short, wide viewport a phone has room for two columns but not for two screens of
+ * height: the pages that have a list and controls split them, and everything is capped to the
+ * viewport so nothing is pushed below the fold by scrolling.
+ */
+/*
+ * Keyed on the viewport's real shape rather than `orientation`, because an emulated device can report
+ * an orientation that disagrees with the viewport it is rendering into (measured: Playwright's
+ * "iPhone 14 landscape" profile at 390x844 still matched `orientation: landscape` on WebKit, which
+ * would have split a phone's portrait layout into two columns).
+ */
+@media (max-height: 620px) and (min-width: 620px) {
+  .mobile-root main {
+    max-width: 960px;
+  }
+  /*
+   * Landscape puts the cards in two columns.
+   *
+   * The first version tried to put the chip rail on one side and the list on the other, which cannot
+   * work with auto-placement (the rail spans both columns, so the list lands in the next row) — and
+   * the check that "proved" it was measuring the wrong element anyway. Two columns of cards is what a
+   * short, wide viewport actually has room for, and it is measurable: the first two cards share a row.
+   */
+  .mobile-root [data-landscape="split"] > ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    max-height: none;
+  }
+}
