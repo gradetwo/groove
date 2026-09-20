@@ -1844,10 +1844,15 @@ E2E 的 `openPianoRoll()` 原来是「找到卷帘开关就点、找不到就跳
 6. **`StudioView` 剩余接线的继续外提**：播放/混音设置（鼓组、drums-only、录音待命）、
    键盘演奏模式与 FAB 偏好、项目抽屉与检查器游标。目标仍是那条判据：
    **删掉某一端整个目录后，`src/features` 与 `src/audio` 仍应能编译通过。**
-7. **CSS 与 TS 常量仍靠测试钉同值**（`--mobile-transport-row-w` / `TRANSPORT_ROW_WIDTH_PX`）：
+7. ~~**CSS 与 TS 常量仍靠测试钉同值**（`--mobile-transport-row-w` / `TRANSPORT_ROW_WIDTH_PX`）：
    这是本项目第三次遇到「CSS 与 TS 无法共享常量」（前两次是 `PHONE_MAX_HEIGHT_PX`、
    `TRANSPORT_ROW_WIDTH_PX`）。根治办法是把这类常量集中到一处、由 TS 生成 CSS 变量——
-   属一次小型工程改造，收益是以后不必再为每个跨语言常量写一条守卫。
+   属一次小型工程改造，收益是以后不必再为每个跨语言常量写一条守卫。~~
+   **已完成（v2.1.6 / G.45）**：三个跨语言常量收进 `src/platform/layoutTokens.ts`，
+   `scripts/layout_tokens.mjs` 把它们写进 `src/index.css`，`check:layout` 进 `verify`；
+   那两条「两份拷贝必须相等」的守卫测试随之删除（并把「接线还在不在」换成了新的断言）。
+   注：媒体查询**不能**读 CSS 变量（`@media (max-width: var(--x))` 无效），所以生成的是数字本身，
+   不是变量——这一点在 G.45 里写明了。
 8. **PC/iPad 的走带条会随页面滚走**，而手机版已固定 —— **性质待确认**：
    `MobileTransportBar.tsx` 上方的注释明确写着这是刻意的（避免遮挡长页面）。
    在确认是有意设计还是权宜之前不动它；若属后者，三端的走带可达性就应统一。
@@ -3601,3 +3606,62 @@ U10（「卷帘是无障碍空洞」）在 v2.0.93 交付了主体：一个可�
 与刻度下限不一致），把它写成对四个维度的统一断言，下次有人加第五个维度时会立刻知道该填什么。
 
 全量单测 **189 文件 / 2164 用例**，`npm run verify` 全绿（3 桌面 + 4 手机目标 + 两个音质门禁）。
+
+## G.45 跨语言常量收进一处：数字由 TS 写进 CSS（v2.1.6）
+
+### 起因：第三次遇到同一个问题，且前两次的解法本身就是问题
+
+G.8 的第 7 条写着「CSS 与 TS 常量仍靠测试钉同值」，并注明这已是第三次。前两次的处理都是**再写一条
+守卫测试**：`deviceCapabilities.test.ts` 读 `index.css` 断言 `max-height` 与 `PHONE_MAX_HEIGHT_PX`
+相等，`mobileSharedBottomRow.test.tsx` 读 `index.css` 断言 `--mobile-transport-row-w` 与
+`TRANSPORT_ROW_WIDTH_PX` 相等。
+
+这套办法能防住「已存在的两份拷贝漂移」，但**防不住第三份**：新加一个跨语言常量时，除非作者记得再写
+一条守卫，否则没有任何东西会失败——而 480/500 那次（横屏 490px 视口拿到压缩样式表、JS 仍当它是高
+手机）正是人工发现的，不是测试发现的。所以本轮把「两份拷贝必须相等」换成「只有一份」。
+
+### 做法：一处定义 + 生成 + 门禁
+
+| 层 | 文件 | 作用 |
+|---|---|---|
+| 单一来源 | `src/platform/layoutTokens.ts` | `PHONE_MAX_WIDTH_PX = 639`、`PHONE_MAX_HEIGHT_PX = 500`、`TRANSPORT_ROW_WIDTH_PX = 320`，每个都写清「谁在用」与历史事故 |
+| 纯函数 | `src/platform/layoutCss.ts` | `findLayoutCssDrift(css)` / `syncLayoutCss(css)`：把 token 写进样式表，并报告漂移 |
+| I/O + 报告 | `scripts/layout_tokens.mjs` | `npm run layout:sync` 写入；`npm run check:layout` 报错退出 |
+| 门禁 | `package.json` 的 `verify` | `check:layout` 接在 `check:gs1` 之后 |
+
+**为什么生成的是数字，不是 CSS 变量**：计划里原本写的是「由 TS 生成 CSS 变量」，实现时发现媒体查询
+读不了自定义属性（`@media (max-width: var(--x))` 不合法）。所以 `--mobile-transport-row-w` 是真正的
+变量（由同一份 token 写入），两个断点则是**被生成的数字**。这也是为什么生成器要能改写媒体查询，而不是
+只写一个 `:root` 块。
+
+**匹配是锚定的**：三条规则的模式都锚在规则语法上（`^@media (max-width: (\d+)px) \{`），而不是搜
+`\d+`。否则斜杠后面的释义注释（「that block is a `max-width: 639px` query」）、以及 `--trk-head-w:
+142px` 这类无关数字都会被改写，门禁就变成了在检查自己。
+
+**删掉的规则也算漂移**：`findLayoutCssDrift` 在模式完全匹配不上时报 `found: null`。否则把媒体查询
+整块删掉，比较就会因为「没有可比的东西」而通过——那正是这类门禁最常见的失效方式。
+
+### 没有扩大范围
+
+只搬**两边都要用**的值。`--trk-head-w`（142/176px）与 `--trk-head-gap`、步进格高度、密度档位都留在
+CSS 里：它们只在 CSS 内部被消费，搬进来只会多一次生成，不会消掉任何重复。判据就是原来那条测试存在
+的理由——如果写一条测试的唯一原因是「两份拷贝必须相同」，这个值才该搬进来。
+
+### 测试：换了守卫，不是删了守卫
+
+- 新增 `src/test/layoutCss.test.ts`（9 条）：token 自身的自洽（宽度>高度、行宽够放五个 44px 控件）、
+  一致时报零漂移、**三处手工改错各自被点名**、**删掉媒体查询报 `found: null`**、释义注释与无关数字
+  不被改写、重写只动该动的三处且幂等、**真实 `src/index.css` 三条规则都在**且与 token 一致。
+- 删掉的两条守卫换成了它们真正还能证明的东西：`deviceCapabilities.test.ts` 改为断言 hook 的查询是
+  **由 token 拼出来的**（`DEVICE_QUERIES`，防的是「token 改了、查询里还写着旧数字」）；
+  `mobileSharedBottomRow.test.tsx` 改为断言面板仍在用 `min(var(--mobile-transport-row-w), 55vw)`
+  （防的是「token 正确但没人用」）。
+
+### 端到端自证
+
+手工把 `@media (max-height: 500px)` 改成 480 → `npm run check:layout` 退出 1 并打出
+「the short-landscape media query: stylesheet says 480, PHONE_MAX_HEIGHT_PX says 500」；
+`npm run layout:sync` 改回 500，`git diff src/index.css` 为空（逐字节还原）。
+
+全量单测 **190 文件 / 2172 用例**（新增 9 条，删掉 1 条被取代的重复断言），`npm run verify` 全绿
+（3 桌面 + 4 手机目标 + 音质与布局门禁）。
