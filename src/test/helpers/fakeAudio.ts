@@ -245,6 +245,22 @@ export class FakeAudioBuffer {
     if (!this.channels.has(channel)) this.channels.set(channel, new Float32Array(this.length));
     return this.channels.get(channel)!;
   }
+  /**
+   * Real `AudioBuffer.copyToChannel`, which the exporter uses to move a guarded render into a new
+   * buffer. Its absence here was not a caller bug but a hole in the double: `renderPatternOffline`
+   * threw `out.copyToChannel is not a function` on the fallback path, so every test that exercised
+   * a fallback export died before it could assert anything about it.
+   *
+   * `startInChannel` is honoured the way the platform specifies: 0 means "copy the whole thing at
+   * the front", otherwise the samples land at that offset and anything past the end is dropped.
+   */
+  copyToChannel(source: Float32Array, channel: number, startInChannel = 0): void {
+    const target = this.getChannelData(channel);
+    const offset = Math.max(0, Math.floor(startInChannel));
+    if (offset >= target.length) return;
+    const count = Math.min(source.length, target.length - offset);
+    target.set(source.subarray(0, count), offset);
+  }
 }
 
 /** Base graph API shared by the realtime and offline doubles. */
