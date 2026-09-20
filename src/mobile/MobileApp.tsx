@@ -31,6 +31,9 @@ const MobileGenreDetailScreen = React.lazy(() =>
 const MobilePlayerScreen = React.lazy(() =>
   import("./screens/MobilePlayerScreen").then((m) => ({ default: m.MobilePlayerScreen }))
 );
+const MobileJamScreen = React.lazy(() =>
+  import("./screens/MobileJamScreen").then((m) => ({ default: m.MobileJamScreen }))
+);
 
 /** Where the play mode is remembered between sessions. */
 export const MOBILE_PLAY_MODE_KEY = "groove_mobile_play_mode";
@@ -71,7 +74,8 @@ export function MobileApp({
    * thing playing audio. The player bar has to show and stop the same sound, and two instances of the
    * hook mean two engines — so the state is lifted here and passed down, and the bar reads it.
    */
-  const { playingGenreId, toggleAudition, stopAudition, readClock } = useGenreAudition();
+  const { playingGenreId, toggleAudition, stopAudition, readClock, applyPattern, setTempo, setSwingValue } =
+    useGenreAudition();
 
   /**
    * The play mode is the shell's, not the screen's: the bar's left button and the full-screen player
@@ -185,6 +189,18 @@ export function MobileApp({
               onToggleAudition={handleToggleAudition}
               onOpenGenre={(id) => onOpenGenre?.(id)}
               onOpenJam={(id) => onOpenJam?.(id)}
+            />
+          ) : module === "jam" ? (
+            /* The jam module has no player bar by design: its transport is the loop itself. */
+            <MobileJamScreen
+              genreId={genreId}
+              isPlaying={Boolean(playingGenreId) && playingGenreId === (genreId ?? playingGenreId)}
+              readClock={readClock}
+              onTogglePlay={handleToggleAudition}
+              onApplyPattern={applyPattern}
+              onTempo={setTempo}
+              onSwing={setSwingValue}
+              onOpenGenre={(id) => onOpenGenre?.(id)}
             />
           ) : module === "home" ? (
             <MobileHomeScreen

@@ -22,6 +22,9 @@ import { ALL_GENRES } from "../data/genres";
 const audition = vi.hoisted(() => ({
   toggle: vi.fn(),
   stop: vi.fn(),
+  applyPattern: vi.fn(),
+  setTempo: vi.fn(),
+  setSwingValue: vi.fn(),
   playingGenreId: null as string | null,
 }));
 
@@ -30,6 +33,10 @@ vi.mock("../hooks/useGenreAudition", () => ({
     playingGenreId: audition.playingGenreId,
     toggleAudition: audition.toggle,
     stopAudition: audition.stop,
+    readClock: () => ({ step: 0, fraction: 0 }),
+    applyPattern: audition.applyPattern,
+    setTempo: audition.setTempo,
+    setSwingValue: audition.setSwingValue,
   }),
 }));
 
@@ -140,12 +147,17 @@ describe("phone shell · five modules", () => {
     expect(onSelectSpy.mock.calls.map((call) => call[0])).toEqual([...MOBILE_MODULES]);
   });
 
-  it("renders the requested module and not the previous one", () => {
-    renderShell("jam");
-    expect(screen.getByTestId("mobile-module-jam-placeholder")).toBeInTheDocument();
+  it("renders the requested module and not the previous one", async () => {
+    const first = renderShell("jam");
+    // 即兴 is a real screen (M4) and a lazy chunk, so it is awaited; the modules still to come show
+    // the placeholder.
+    expect(await screen.findByTestId("mobile-jam", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.queryByTestId("mobile-home")).not.toBeInTheDocument();
-    // The placeholder must say what is coming rather than look broken.
-    expect(screen.getByTestId("mobile-module-jam-placeholder").textContent ?? "").toMatch(/速度条|tempo/i);
+    first.unmount();
+
+    renderShell("challenge");
+    expect(screen.getByTestId("mobile-module-challenge-placeholder")).toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-jam")).not.toBeInTheDocument();
   });
 });
 
@@ -306,7 +318,7 @@ describe("phone shell · genre detail and player bar", () => {
     // The module has its own transport and the user asked for the bar to be removed from it.
     audition.playingGenreId = "deep-house";
     renderShell("jam");
-    expect(screen.getByTestId("mobile-module-jam-placeholder")).toBeInTheDocument();
+    expect(await screen.findByTestId("mobile-jam", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
   });
 

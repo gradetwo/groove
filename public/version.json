@@ -1,27 +1,27 @@
 {
-  "version": "2.1.17",
+  "version": "2.1.18",
   "releaseDate": "2026-09-20",
-  "changelogCount": 181,
+  "changelogCount": 182,
   "latest": {
-    "version": "2.1.17",
+    "version": "2.1.18",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.1.17 手机端（M3）：全屏黑胶播放器——唱片、唱臂、抽屉与三态播放模式",
-      "en": "v2.1.17 Phone (M3): the Full-Screen Vinyl Player — Record, Tonearm, Drawer and Three Play Modes"
+      "zh": "v2.1.18 手机端（M4）：即兴——律动编排、打击垫，速度条移到底部",
+      "en": "v2.1.18 Phone (M4): 即兴 — a Groove Grid, Pads, and the Tempo Bar at the Bottom"
     },
     "highlights": [
       {
-        "zh": "**全屏播放器按参考稿重建**：canvas 画的黑胶（沟槽纹理、曲风色标、把该曲风真实的 16 步图案画成唱片上的点）、唱臂在播放时以弹簧摆入、固定的斜向高光让唱片读起来像黑胶。**角度只由音频时钟推导**（引擎的步进 + 步内插值），不用 CSS 自转——否则唱片会和它正在展示的音乐漂移。",
-        "en": "**The full-screen player is rebuilt from the reference**: a canvas vinyl (baked groove texture, the genre's colour on the label, and the genre's real 16-step pattern drawn as dots on the record), a tonearm that springs in when playback starts, and the fixed diagonal sheen that makes it read as vinyl. **The angle is derived from the audio clock** (the engine's step plus a sub-step interpolation) and never from a CSS rotation, which would drift away from the music it is showin…"
+        "zh": "**即兴模块按你的取舍建成**：4 轨 × 16 步的律动网格（点格子开关、播放时列高亮跟着音频时钟走、一键还原母版）＋ 6 个打击垫 ＋ 顶部**录制/播放**按钮；**BPM 与摇摆条移到了屏幕最下方**；**去掉了底/军/镲那排鼓组静音**；这个模块**不显示播放条**（它自己的走带就是循环本身）。",
+        "en": "**The jam module is built to your spec**: a 4-lane x 16-step groove grid (tap a step to toggle it, the playhead column follows the audio clock, one tap resets to the genre's own pattern), six pads, and record/play at the top; the **BPM and swing bar moved to the bottom of the screen**; the **drum-group mute row is gone**; and the module shows **no player bar** (its transport is the loop itself)."
       },
       {
-        "zh": "**三条你指定的交互**：左上向下箭头收起为播放条（回到列表，播放中则播放条浮在列表上方）；**点唱片进入该曲风详情页**，再点（或详情页返回）回到唱片视角；左侧按钮在**单曲循环 → 大曲风内循环 → 全部随机**之间循环，并记住上次选择。抽屉把播放条那点内容收起来：进度、BPM 区间、拍号、当前模式与「查看完整详情」。",
-        "en": "**The three interactions you specified**: the down chevron collapses to the player bar (back to the list, with the bar floating above it while something plays); **tapping the record opens that genre's page**, and tapping again (or the back control there) returns to the record; and the left button cycles **repeat one → repeat this genre → shuffle all**, remembering the choice. A drawer hides the player-bar content: progress, BPM range, time signature, the current mode and \"fu…"
+        "zh": "**两处刻意的取舍，都写在代码注释里**：① 打击垫是**步进输入**而不是现场鼓组——这个引擎没有对外的单次触发路径（为打击延迟再造一个 AudioContext 比不提供更糟），所以开「录制」后点打击垫就把**当前播放步**写进网格（落在播放头上，本身就是量化的），播放时垫子会跟着点亮；② 写入的是**点击瞬间正在播放的那一步**（读时钟，而不是用 80 ms 采样的 playhead）——180 BPM 时那 80 ms 就是整整一步，否则按感觉点会晚一格。",
+        "en": "**Two deliberate trade-offs, both recorded in the code**: (1) the pads are **step entry**, not a live drum kit - this engine has no public one-shot trigger, and adding a second AudioContext for pad latency would be worse than not offering it, so arming record writes the **current step** (quantised by definition, because it lands on the playhead) and the pads light up as their lane fires; (2) the write lands on the step playing **at click time** rather than on the 80 ms-sampl…"
       },
       {
-        "zh": "**故意不做的**：参考稿里的「搓盘改 BPM」。在手机上它是和纵向滚动打架的手势，也很难在 44 px 高的条上做可靠；按你「难做好用的直接不提供」的要求，速度改由即兴模块的显式控制负责。这条写在代码注释里，免得下次被当成遗漏。",
-        "en": "**Deliberately not ported**: the reference's jog-scrub (drag the record to change BPM). On a phone that gesture fights vertical scrolling and cannot be made reliable in a 44 px bar, so by your rule — do not ship what cannot be done well — tempo gets explicit controls in the 即兴 module instead. That decision is recorded in the code so it is not mistaken for an oversight."
+        "zh": "**编辑立刻可听见**：网格改动通过一个按内容比较的效应推给引擎（`setPattern`，不重启播放），速度/摇摆同理——所以「改一步、下一小节听到」是即时反馈，而不是停下再播。",
+        "en": "**Edits are audible immediately**: grid changes are pushed to the engine through a content-compared effect (`setPattern`, without restarting playback), and so are tempo and swing - so 'change a step, hear it next bar' is real feedback rather than stop-and-play."
       }
     ],
     "truncated": true
