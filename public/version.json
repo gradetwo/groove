@@ -1,27 +1,27 @@
 {
-  "version": "2.1.11",
+  "version": "2.1.12",
   "releaseDate": "2026-09-20",
-  "changelogCount": 175,
+  "changelogCount": 176,
   "latest": {
-    "version": "2.1.11",
+    "version": "2.1.12",
     "date": "2026-09-20",
-    "category": "audio",
+    "category": "fix",
     "title": {
-      "zh": "v2.1.11 钟声终于有了金属：不谐分音，以及一条本来只管鼓的规则",
-      "en": "v2.1.11 The Bell Finally Has Metal: Inharmonic Partials, and a Rule That Only Covered Drums"
+      "zh": "v2.1.12 量测装置修两处；并拦下一个更严重的发现：离线渲染里的限幅器对热素材不生效",
+      "en": "v2.1.12 Two Measurement Fixes, and a Bigger Find: the Offline Limiter Does Not Hold for Hot Material"
     },
     "highlights": [
       {
-        "zh": "**计划里那条「不谐分音」待办，核实后比它写的更糟。** 计划说钟只能用「两个不成整数比的振荡器」近似——而 `bell_lead` 的第二振荡器是 **+1900 cents**，也就是 2.997:1，**就是第三谐波**（只是缺了第二谐波）。那是一张标准谐波谱，听起来像管风琴。**「不成整数比」这句话本身是错的。**",
-        "en": "**The plan's “inharmonic partials” item was worse than it read.** It said a bell could only be approximated by “two oscillators at a non-integer ratio” — but `bell_lead`'s second oscillator was **+1900 cents**, i.e. 2.997:1, which is **the third harmonic** with the second missing. That is a textbook harmonic spectrum and it sounds like an organ. **The claim itself was wrong.**"
+        "zh": "**本来要重录响度基线，结果拦下了一个真问题。** 重录跑完后门禁报出 **9 个曲风超过 0 dBFS 采样峰 / −1 dBTP 天花板**，最差 **tropical-house +0.95 dBTP——而且这是 trim 之后**（未 trim 时 +1.75 dBTP）。同一曲风在已提交的基线里是 −13.01 LUFS / −1.3 dBTP，今天重录是 **−10.30 LUFS（响 2.7 dB）/ +1.75 dBTP**：**一个不受限的渲染既更响又更亮**，所以「基线过时」的读数里混着这个缺陷。**这份重录没有发布**（否则就是把削波写进基线），基线已还原。复现：`node scripts/measure_genre_loudness.mjs --genres=tropical-house --port=3170`。",
+        "en": "**This round set out to re-record the loudness baseline and stopped on something worse.** The re-record made the gate report **9 genres over 0 dBFS sample peak and the −1 dBTP ceiling**, worst **tropical-house at +0.95 dBTP — after its trim** (+1.75 dBTP before it). That genre's committed row is −13.01 LUFS / −1.3 dBTP; today it renders at **−10.30 LUFS (2.7 dB louder) / +1.75 dBTP**. **An unlimited render is both louder and brighter**, so the “stale baseline” reading was co…"
       },
       {
-        "zh": "**现在是真正的金属**：预设新增 `partials`（非整数比、各自增益与衰减），voice builder 建「每个偏音一个正弦」的 bank，取管钟的 hum / prime / tierce / quint / nominal / upper = **0.56 / 1.0 / 1.19 / 1.5 / 2.0 / 2.74**，越高的分音衰减越早——这是「钟在响」而不是「嗡嗡响」的原因。bank 按**能量**（Σ gain²·decayScale）而不是幅度和对旧的 0.8² + 0.4² 配平（≈2.18），否则同一峰值增益下会低好几分贝、改变用到它的曲风的混音平衡。",
-        "en": "**It is real metal now**: presets gained `partials` (non-integer ratios, each with its own gain and decay), and the voice builder turns that into one sine per partial — a tubular bell's hum / prime / tierce / quint / nominal / upper at **0.56 / 1.0 / 1.19 / 1.5 / 2.0 / 2.74**, with the upper ones decaying first, which is what makes a bell *ring* rather than buzz. The bank is matched to the old pair's **energy** (Σ gain²·decayScale against 0.8² + 0.4², ≈ 2.18) rather than its…"
+        "zh": "**我自己的改动被 A/B 排除了。** 把 `MasterLimiter.ts` 与 `public/limiterWorklet.js` 换成单调队列（M14）**之前**的版本，结果逐位相同（trim 后 +0.95 dBTP）→ 不是队列改写的锅，问题在限幅器是否真正接进离线渲染路径、或它在热素材上的行为。**下一轮第一件事**：修限幅器 → 再重录 → 再更新 trim。",
+        "en": "**My own change was ruled out by A/B**: swapping `MasterLimiter.ts` and `public/limiterWorklet.js` for their pre-M14 (monotonic deque) versions gives byte-identical results (trimmed +0.95 dBTP). So it is not the deque rewrite — it is whether the limiter is really in the offline render path, or how it behaves on hot material. **First thing next round**: fix the limiter, then re-record, then update the trims."
       },
       {
-        "zh": "**分音两个一组汇入**，不是一次性相加：一个节点把 3 个以上**不同频率**的振荡器相加时 Chrome 的离线渲染不可复现（实测 10 次渲染的哈希：1/2 个振荡器 1 种、3/4/5/6 个 3/7/9/10 种、4 个分两个节点 1 种）。这条规则存在很久，但**此前只覆盖鼓**——这次把 `oscillatorFanIn.test.ts` 扩到**整张合成器预设表**（39 → 91 条），并加了一条**自检**：手工搭一个「3 个不同频率振荡器汇入一个 gain」的图，必须被报出来。文件自己的注释早就写着这条规则是为了阻止「再加一个偏音让音色更丰富」的改动。",
-        "en": "**Partials are summed two per node**, never all at once: a node summing three or more *differently-tuned* oscillators does not render reproducibly in Chrome's offline context (ten renders hash to 1 distinct result for 1–2 oscillators, 3/7/9/10 for 3/4/5/6, and 1 again for four oscillators fanned in two per node). The rule had existed for a while but **only covered drums** — `oscillatorFanIn.test.ts` now builds every synth preset (39 → 91 cases) and gained a **self-check**: a…"
+        "zh": "**量测装置修了两处。** ① **首帧回退**：全新页面里的第一次离线渲染不走限幅器 worklet（模块惰性注册），落到 compressor 回退路径，对顶到天花板的素材差 **2.87 dB**（`kawaii-future-bass` 冷 −15.55 / 热 −12.68 LUFS，各测三次）。脚本现在先做一次**丢弃的预热渲染**；导出路径早有 `limiterKind: \"fallback\"` 的明确提示。② **`check:loudness:fresh`**：现有门禁只检查「报告与自己一致」，所以一份过时的报告能一路放行——新模式按**全库口径**重渲染 N 个**均匀分布**的曲风与报告比对，超过 ±0.35 dB 即失败（纯逻辑 9 条单测，含抽样覆盖与「不会空转」自检）。**暂不接入 verify**（限幅器修好前必然红），脚本留着，下一轮接线。",
+        "en": "**Two measurement fixes.** (1) **First-render fallback**: the first offline render in a fresh page does not use the limiter worklet (its module registers lazily) and falls back to the compressor — a **2.87 dB** difference on ceiling-pinned material (`kawaii-future-bass` at −15.55 cold vs −12.68 warm, three runs each). The script now performs a discarded **warm-up render** first; the export path already tells the user via `limiterKind: \"fallback\"`. (2) **`check:loudness:fresh…"
       }
     ],
     "truncated": true
