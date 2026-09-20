@@ -34,7 +34,11 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
-import type { MasterLimiterKind } from "./MasterLimiter";
+import {
+  limitBuffers,
+  MASTER_LIMITER_INTERNAL_CEILING_DB,
+  type MasterLimiterKind,
+} from "./MasterLimiter";
 import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
@@ -619,11 +623,50 @@ export async function renderPatternOffline(
   // Wait for the limiter module before rendering: an OfflineAudioContext renders in
   // one shot, so a worklet that installed after `startRendering()` would silently
   // leave the whole bounce on the compressor fallback.
-  // An OfflineAudioContext renders in one shot, so a worklet that installed after
-  // `startRendering()` would silently leave the whole bounce on the compressor fallback.
-  options.onLimiterKind?.(await graph.limiter.ready);
+  const limiterKind = await graph.limiter.ready;
+  options.onLimiterKind?.(limiterKind);
 
-  return await ctx.startRendering();
+  const rendered = await ctx.startRendering();
+  if (limiterKind === "worklet") return rendered;
+
+  /**
+   * The fallback path has no true-peak ceiling — its own warning says so ("no true-peak ceiling,
+   * no lookahead. Peak limiting is degraded") — and that let a hot arrangement render *above* the
+   * contract: measured on `tropical-house`, **+1.75 dBTP** in one run and −1.30 dBTP in the next,
+   * from the same code, because whether the AudioWorklet could be registered is not something the
+   * caller can rely on. Every export is re-run through the **same kernel the worklet runs**
+   * (`limitBuffers`), so the ceiling is a property of the renderer rather than of the platform's
+   * worklet support. The compressor's own reduction still applies first; this only removes what is
+   * left above the ceiling.
+   */
+  const channels: Float32Array[] = [];
+  for (let c = 0; c < rendered.numberOfChannels; c += 1) channels.push(rendered.getChannelData(c));
+  const guarded = applyOfflineCeiling(channels, rendered.sampleRate);
+  const out = ctx.createBuffer(rendered.numberOfChannels, rendered.length, rendered.sampleRate);
+  for (let c = 0; c < rendered.numberOfChannels; c += 1) out.copyToChannel(guarded.channels[c], c);
+  return out;
+}
+
+/**
+ * Apply the master true-peak ceiling to finished channel buffers.
+ *
+ * Pure and exported so the guarantee is unit-testable without an AudioContext: the offline renderer
+ * calls it when the graph could not run the limiter worklet, and the test drives hot, quiet and
+ * already-limited material through it.
+ *
+ * The kernel is the worklet's own (same class, same parameters) and it delays by its lookahead, which
+ * is also what the in-graph worklet does — so a guarded render is aligned with a worklet render.
+ */
+export function applyOfflineCeiling(
+  channels: readonly Float32Array[],
+  sampleRate: number
+): { channels: Float32Array[]; gainReductionDb: number } {
+  const result = limitBuffers(
+    channels.map((channel) => Float32Array.from(channel)),
+    sampleRate,
+    { ceilingDb: MASTER_LIMITER_INTERNAL_CEILING_DB }
+  );
+  return { channels: result.channels, gainReductionDb: result.gainReductionDb };
 }
 
 function synthFX(ctx: BaseAudioContext, dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur: number, gateVal: number): void {
