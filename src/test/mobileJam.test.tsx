@@ -46,6 +46,30 @@ describe("jam module", () => {
     localStorage.setItem("groove_language", "zh");
   });
 
+  /**
+   * jsdom performs no layout, so the feel rail's rect is all zeros and a drag would have nothing to
+   * map against. State the measured rail the browser would hand over, exactly as the piano roll's
+   * tests state a viewport width.
+   */
+  const measureSwingRail = (width = 200, left = 0) => {
+    const rail = screen.getByTestId("mobile-jam-swing-slider");
+    Object.defineProperty(rail, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        left,
+        top: 0,
+        right: left + width,
+        bottom: 44,
+        width,
+        height: 44,
+        x: left,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    });
+    return rail;
+  };
+
   it("renders four lanes of sixteen steps", () => {
     renderJam();
     for (let lane = 0; lane < 4; lane += 1) {
@@ -55,6 +79,12 @@ describe("jam module", () => {
     }
     expect(screen.getByTestId("mobile-jam-grid")).toBeInTheDocument();
     expect(screen.getByTestId("mobile-jam-tempo")).toBeInTheDocument();
+
+    // The grid is still four rows of sixteen *buttons* — the step is the tap target, not a cell.
+    const rows = Array.from(screen.getByTestId("mobile-jam-grid").children);
+    expect(rows).toHaveLength(4);
+    for (const row of rows) expect(row.querySelectorAll("button")).toHaveLength(16);
+    expect(screen.getByTestId("mobile-jam-step-0-0").tagName).toBe("BUTTON");
   });
 
   it("toggles a step and pushes the edited pattern to the engine", () => {
@@ -119,11 +149,70 @@ describe("jam module", () => {
     expect(bpm()).toBe(60);
   });
 
-  it("sets swing and reports it as a 0..1 fraction", () => {
+  it("raises the feel when the rail is dragged right, and the readout follows", () => {
     const { spies } = renderJam();
-    fireEvent.click(screen.getByTestId("mobile-jam-swing-30"));
-    expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("30%");
-    expect(spies.onSwing).toHaveBeenLastCalledWith(0.3);
+    const rail = measureSwingRail(200);
+
+    fireEvent.pointerDown(rail, { clientX: 0, pointerId: 1 });
+    expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("0%");
+
+    // Halfway along a 200 px rail is 20% of the engine's 0..0.4 swing range.
+    fireEvent.pointerMove(rail, { clientX: 100, pointerId: 1 });
+    expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("20%");
+    expect(spies.onSwing).toHaveBeenLastCalledWith(0.2);
+
+    // 60 px of 200 is 12% of the range, which snaps down to the 5% step (10%) rather than reading 12%.
+    fireEvent.pointerMove(rail, { clientX: 60, pointerId: 1 });
+    expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("10%");
+    expect(spies.onSwing).toHaveBeenLastCalledWith(0.1);
+
+    fireEvent.pointerUp(rail, { clientX: 60, pointerId: 1 });
+    // A move with no pointer down is a hover, not a drag: the groove must not follow the cursor.
+    fireEvent.pointerMove(rail, { clientX: 190, pointerId: 1 });
+    expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("10%");
+  });
+
+  it("clamps a drag past either end of the rail", () => {
+    const { spies } = renderJam();
+    const rail = measureSwingRail(200);
+
+    fireEvent.pointerDown(rail, { clientX: 100, pointerId: 1 });
+    fireEvent.pointerMove(rail, { clientX: 900, pointerId: 1 });
+    expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("40%");
+    expect(spies.onSwing).toHaveBeenLastCalledWith(0.4);
+    fireEvent.pointerUp(rail, { clientX: 900, pointerId: 1 });
+
+    fireEvent.pointerDown(rail, { clientX: 100, pointerId: 2 });
+    fireEvent.pointerMove(rail, { clientX: -500, pointerId: 2 });
+    expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("0%");
+    expect(spies.onSwing).toHaveBeenLastCalledWith(0);
+    fireEvent.pointerUp(rail, { clientX: -500, pointerId: 2 });
+  });
+
+  it("keeps record, tempo and swing in one dock after the pads", () => {
+    renderJam();
+    const dock = screen.getByTestId("mobile-jam-tempo");
+    for (const id of [
+      "mobile-jam-record",
+      "mobile-jam-bpm",
+      "mobile-jam-bpm-up",
+      "mobile-jam-bpm-down",
+      "mobile-jam-swing-slider",
+      "mobile-jam-swing-value",
+    ]) {
+      expect(dock.contains(screen.getByTestId(id))).toBe(true);
+    }
+
+    // The grid and pads come first, so the dock really is the bottom of the screen, and 即兴 still
+    // shows no player bar chrome.
+    const pads = screen.getByTestId("mobile-jam-pad-kick");
+    expect(pads.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
+
+    // The old chip row is gone: swing is a rail now.
+    expect(screen.queryByTestId("mobile-jam-swing-30")).not.toBeInTheDocument();
+    expect(screen.getByTestId("mobile-jam-swing-slider").getAttribute("role")).toBe("slider");
+    expect(screen.getByTestId("mobile-jam-record").tagName).toBe("BUTTON");
   });
 
   it("opens the backing genre's page from the header", () => {
