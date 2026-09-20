@@ -49,7 +49,8 @@
     "check:loudness": "node scripts/check_loudness_spread.mjs",
     "check:timbre": "node scripts/check_timbre_spread.mjs",
     "check:node": "node scripts/check_node_version.mjs",
-    "check:isolation": "node scripts/check_isolation.mjs"
+    "check:isolation": "node scripts/check_isolation.mjs",
+    "check:loudness:fresh": "node scripts/measure_genre_loudness.mjs --sample=3"
   },
   "dependencies": {
     "@types/three": "^0.185.4",
