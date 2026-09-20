@@ -1,27 +1,27 @@
 {
-  "version": "2.1.13",
+  "version": "2.1.14",
   "releaseDate": "2026-09-20",
-  "changelogCount": 177,
+  "changelogCount": 178,
   "latest": {
-    "version": "2.1.13",
+    "version": "2.1.14",
     "date": "2026-09-20",
-    "category": "audio",
+    "category": "fix",
     "title": {
-      "zh": "v2.1.13 离线导出的天花板补上了；顺便发现「同一个页面渲染久了会变声」，并据此重录响度基线、重拟合全部 trim",
-      "en": "v2.1.13 The Offline Export Ceiling Is Real Now — Plus a Measured Discovery: a Long-Lived Page Renders Differently, Which Invalidated the Loudness Baseline"
+      "zh": "v2.1.14 追到「同一个页面渲染久了会变声」的根因：GS-1 的 WASM 内存预算",
+      "en": "v2.1.14 Root Cause of \"a Long-Lived Page Renders Differently\": the GS-1 WASM Memory Budget"
     },
     "highlights": [
       {
-        "zh": "**导出文件终于一定满足 −1 dBTP。** 离线渲染只有在平台接受 `audioWorklet.addModule` 时才装得上真峰限幅器，装不上就走 DynamicsCompressor 回退——而回退路径**没有天花板**（它自己的告警就这么写）。于是「导出的天花板」变成了「平台支持程度的性质」：把回退路径变成确定事件后 A/B，**6/6 个热曲风超过 −1 dBTP**，arranged 最差 +2.22 dBTP、trim 之后最差 **+0.95 dBTP（tropical-house）**——正是上一版记录到、但当时无法复现的那个数字；补上守卫后 **0/6**，全部 −1.30 dBTP。守卫用的是**限幅器自己的内核**（同一个 `limitBuffers`、同一个 −1.3 dBTP 内部天花板），所以两条路径承诺同一个文件。",
-        "en": "**Exports now always hold -1 dBTP.** The offline renderer could only install the true-peak limiter when the platform accepted `audioWorklet.addModule`; otherwise the graph ran the DynamicsCompressor fallback, which has **no ceiling at all** (its own warning says so). The export ceiling was therefore a property of platform support, not of the renderer: forcing the fallback makes the A/B deterministic, and it measured **6/6 hot genres above -1 dBTP**, arranged worst +2.22 dBTP…"
+        "zh": "**上一版只是绕开，这一版追到了根因。** 把同一曲风按轨道拆开量（先量一遍 → 渲染 60 个别的曲风 → 再量一遍）：bass 与 fx 两根轨道**逐位相同**（Δ 0.000 dB），而 GS-1 负责的 chords **+13.050 dB**、lead **−16.555 dB**；limiter 两次都是 worklet、真峰都钉在 −1.30 dBTP，把 makeup 拉到 −12 dB（限幅器完全不介入）依然漂 +1.849 dB——所以差异在**内容**，不在母带链。给 host 创建的 `catch` 加上原因打印后真相就一句话：`WebAssembly.instantiate(): Out of memory: Cannot allocate Wasm memory for new instance`。",
+        "en": "**The previous release worked around it; this one found the cause.** Measuring one genre track by track (before, then after rendering 60 other genres) shows bass and fx **bit-identical** (Δ 0.000 dB) while the two GS-1-routed roles move: chords **+13.050 dB**, lead **−16.555 dB**. The limiter is the worklet both times and the peak stays pinned at −1.30 dBTP; with makeup at −12 dB (limiter disengaged) the drift is still +1.849 dB — so it is the *content*, not the master chain…"
       },
       {
-        "zh": "**发现并量到一条更根本的问题：同一个页面渲染约 50–75 次之后，同一个曲风会渲染成另一个东西。** `alternative-rock` 在新页面里连测三次都是 −12.711 LUFS；在同一个页面渲染过 118 个别的曲风之后再连测三次都是 **−10.259**（reload 之后又变回 −12.711）。起跳点实测在 45–75 次之间，峰值仍然钉在 −1.30 dBTP，图案没有被改写，`limiter.dispose()` + `ctx.close()` 挡不住，只有换页面能清除。这意味着**两小时的量测会在中途悄悄换掉「它测的是什么」**：第一次重录的 12 个抽样里有 5 个偏 0.5–2.5 dB。量测装置现在每 12 次测量换一次页面、换完丢弃一次冷渲染，并在每次换页后重测哨兵曲风，漂移超过 0.3 dB 就中止且不写任何文件。",
-        "en": "**A more fundamental problem, found and measured: after ~50-75 renders in one page, the same genre renders as something else.** `alternative-rock` measures -12.711 LUFS three times over in a fresh page and **-10.259** three times over after 118 other genres have rendered in that page (a reload restores -12.711). The onset is between 45 and 75 renders, the true peak stays pinned at -1.30 dBTP, the pattern is unmutated, `limiter.dispose()` plus `ctx.close()` does not help, and…"
+        "zh": "**一个页面能建约 124 个 GS-1 host，之后怎么拆都拿不回来**（每个策略开全新浏览器实测）：keep / keep+gc / `dispose()` / dispose+gc / dispose+`close()` 全部在第 124–125 个失败——`OfflineAudioContext` 上**根本没有 `close()`**，`host.dispose()` 只断开节点。只有刷新页面能释放，这正解释了为什么它看起来是「页面级」的、以及为什么上一轮的 dispose 实验无效。",
+        "en": "**A page builds ~124 GS-1 hosts and then never another one**, measured with a fresh browser per policy: keep, keep+gc, `dispose()`, dispose+gc and dispose+`close()` all fail at instance 124-125 — `OfflineAudioContext` has no `close()` at all, and `host.dispose()` only disconnects the node. Only reloading the page frees it, which is why the effect looked page-scoped and why last round's dispose experiment changed nothing."
       },
       {
-        "zh": "**响度基线重录 + 全部 trim 重拟合：旧基线本身就是「长页面」量出来的。** 把新基线（新页面、可复现）与已提交基线对比：`ambient` −13.77 → **−18.11**、`kawaii-future-bass` −11.77 → **−15.55**、`chillwave` −17.04 → **−19.65**、`alternative-rock` −10.42 → **−12.71**。污染值偏响 → 拟合出的 trim 偏狠 → 实际播出比类别目标低最多 3.8 dB（这正是 G.51 当年记下的「基线过时」症状，方向刚好对上）。最极端的 `ghetto-house`：它的目标就是它自己能达到的电平，trim 本该是 0，已提交的却是 **−7.84 dB**。新基线 159/159 行、0 个 clamp、真峰最差 −1.275 dBTP、77 条 trim 非零（旧 96 条），71 个曲风变响、19 个变安静。",
-        "en": "**The loudness baseline was re-recorded and every trim refitted: the old baseline had itself been recorded on a long-lived page.** Fresh page versus committed table: `ambient` -13.77 to **-18.11**, `kawaii-future-bass` -11.77 to **-15.55**, `chillwave` -17.04 to **-19.65**, `alternative-rock` -10.42 to **-12.71**. Contaminated values ran loud, so the fitted trims cut too hard, which is why those genres sat up to 3.8 dB below their category target -- exactly the symptom G.51…"
+        "zh": "**修法一：stem 渲染不再为用不到的轨道建 host。** 调度第一行就丢掉非本轨的轨，但 host 循环过去对每个 GS-1 角色都建一个，于是「母带 + 8 stems」一次导出白建 14 个 host（共 18 个）。现在只建 4 个：同一页面可导出的次数从约 7 次变成约 31 次。4 条单测钉住，删掉那行跳过会让其中 3 条立刻红。",
+        "en": "**Fix one: a stem render no longer builds hosts it cannot use.** The scheduling loop drops every track but its own on the first line, yet the host loop built one per GS-1 role anyway, so one \"master + 8 stems\" export built 14 hosts that could never sound (18 in total). It now builds 4: roughly 7 exports per page become roughly 31. Four unit cases pin it; deleting the skip fails three of them."
       }
     ],
     "truncated": true
