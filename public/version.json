@@ -1,27 +1,27 @@
 {
-  "version": "2.1.7",
+  "version": "2.1.8",
   "releaseDate": "2026-09-20",
-  "changelogCount": 171,
+  "changelogCount": 172,
   "latest": {
-    "version": "2.1.7",
+    "version": "2.1.8",
     "date": "2026-09-20",
     "category": "fix",
     "title": {
-      "zh": "v2.1.7 工作室两列左右互换：一次我自己引入、上线了二十多个版本的回归",
-      "en": "v2.1.7 The Studio's Two Columns Were Swapped: a Regression I Shipped and Left Live for Twenty Releases"
+      "zh": "v2.1.8 走带条钉在页眉之下——顺带发现 `position: sticky` 在这个应用里从来没生效过",
+      "en": "v2.1.8 The Transport Is Pinned Under the Header — and `position: sticky` Never Worked Anywhere in This App"
     },
     "highlights": [
       {
-        "zh": "**在 1440px 宽的屏幕上，编辑器只有 352px。** 工作室在 `lg` 是两列（`352px 1fr`），而实测出来是：信息栏 `aside@x400 1012px`、编辑器 `div@x28 352px`——**左右互换**。截图里编辑器只剩三格步进、工具栏折成窄条，信息栏占了整个右半屏。",
-        "en": "**On a 1440 px screen the editor was 352 px wide.** The studio is two columns at `lg` (`352px 1fr`), and the measurement was: dossier `aside@x400 1012px`, editor `div@x28 352px` — **swapped**. The screenshot shows three step cells per track, the toolbar folded into a narrow strip, and the info panel owning the whole right half."
+        "zh": "**走带条现在常驻页眉之下（约 52px）**：播放 / BPM / 小节 / 图案槽 / 撤销重做被提取成一条独立的 sticky 条，编辑 / 视图 / 工程组照旧随页面滚——常驻的是一行，不是整条工具栏。之前滚到底时传输组在 `top −247`、中心命中为空；现在停在页眉下方，命中测试打在它自己身上。",
+        "en": "**The transport now parks under the header (~52 px).** Play / BPM / bar / pattern slots / undo-redo moved into their own sticky strip, while the edit, view and project groups still scroll with the page — one row is permanent, not a whole toolbar. Before, scrolled to the bottom, the group sat at `top −247` and hit-tested as nothing; now it stops right below the header and the hit test lands on it."
       },
       {
-        "zh": "**根因是我在 v2.0.88 引入的**：那一轮为了在面板上方放首屏提示与保存指示器，把原本直接作为网格子项的 `SequencerPanel` 包进了一个 wrapper，而 `order-1 lg:order-2` 留在了 `section` 上——`section` 现在是 wrapper 的子节点，**不是网格项**。于是 `InfoDossier` 的 `lg:order-1` 排在默认 `order: 0` 的 wrapper 前面，抢到了第一列。修复是一行：`order` 属于网格项，把两个类放到 wrapper 上。重建后 1440×900 为信息栏 352 左 / 编辑器 1012 右。",
-        "en": "**The cause was mine, from v2.0.88.** That round added the first-run hint and the save indicator above the panel by wrapping the previously direct grid child in a `<div>`, and the `order-1 lg:order-2` classes stayed on the `section` — which is now a child of that wrapper, **not a grid item**. So the dossier's `lg:order-1` sorted ahead of the wrapper's default `order: 0` and took the first track. The fix is one line: `order` belongs to the grid item, so both classes moved to…"
+        "zh": "**实现时才查出真因：这个应用里没有任何 `position: sticky` 生效过。** `<body>` 上挂着 `overflow-x-hidden`，而 `overflow: hidden` 会让元素成为滚动容器——body 因此成了所有 sticky 后代的最近 scrollport，偏偏 body 是随页面一起滚的，于是连声明了 `sticky top-0 z-50` 的应用页眉也在滚 400px 后停在 `top −400`。改用 `overflow-x: clip`（裁剪同样像素，但不创建滚动容器）后 sticky 恢复工作，**页眉第一次真的会吸顶**。`hidden` 作为老 Safari 的回退保留在前。",
+        "en": "**Implementing it uncovered the real cause: `position: sticky` had never worked anywhere in this app.** `<body>` carried `overflow-x-hidden`, and `overflow: hidden` makes an element a scroll container — so `body` became the nearest scrollport for every sticky descendant, and since `body` scrolls *with* the page rather than inside it, even the app header (declared `sticky top-0 z-50`) sat at `top −400` after a 400 px wheel. Switching to `overflow-x: clip` — same clipping, no…"
       },
       {
-        "zh": "**为什么 190 个文件、2172 条测试、7 个目标全绿却没发现**：所有量测都发生在面板**内部**——间距探针量的是面板里的冻结列与网格间距（它报「frozen column [45, 237) = 192px」，两个数字都落在 352px 的窄列里，自洽得看不出问题）、工具栏探针量的是面板里的按钮密度、手机面审计量的是手机壳。**没有任何一条门禁比较「两个网格项谁宽」**。这是「相对断言在整体错位后仍然自洽」的教科书例子：量测需要一个绝对锚点。",
-        "en": "**Why 190 files, 2172 tests and 7 targets stayed green:** every measurement happened *inside* the panel — the gutter probe measured the frozen column and grid gap within it (it reported “frozen column [45, 237) = 192 px”, both numbers inside the 352 px column, self-consistent and therefore silent), the toolbar probe measured button density inside it, the phone audit measured the phone shell. **No gate compared the two grid items to each other.** A textbook case of relative a…"
+        "zh": "**门禁是失败可证的**：E2E 在 5 个桌面/iPad 目标上断言 `--app-header-h` 等于页眉实测高度、滚到底后走带条在视口内**且中心命中它自己**（在视口里但被页眉盖住是点不到的，纯几何测不出来）、并停靠在页眉之下 0–8px。把 `sticky` 从条上拿掉重建，它报 `top −462, at its centre nothing`。`stickyAnchors.test.ts`（7 条）把 `<body>` 不得再用 `overflow-x-hidden`、样式表必须用 `clip`、两个 sticky 元素锚定同一 token、走带条必须是工具栏的**同级兄弟**（sticky 只能在自己父盒内移动，工具栏只有 116px 高，这是第一版失败的原因）钉在源码上。",
+        "en": "**The new gates can fail.** The E2E asserts, on five desktop/iPad targets, that `--app-header-h` equals the header's rendered height, that the transport is inside the viewport **and that the point in its middle resolves to it** (an element in the viewport but behind the header cannot be clicked, and geometry alone would pass it), and that it parks 0–8 px under the header. Removing `sticky` from the strip and rebuilding makes it fail with `top −462, at its centre nothing`. Se…"
       }
     ],
     "truncated": true
