@@ -407,3 +407,49 @@ export function selectAdaptiveQuestion(options: {
     confusionTarget: topConfusion,
   };
 }
+
+/**
+ * The two hand-picked pools behind 初级 / 进阶 / 硬核.
+ *
+ * They lived inside `ChallengeView`, which meant the phone's 挑战 module could only reuse them by
+ * copying the lists — and a quiz whose two surfaces disagree about which genres are "easy" is two
+ * quizzes. The pools belong next to the algorithm that selects from them.
+ *
+ * `easy` is the genre everyone has heard of; `hard` is the near-miss set the reference design calls
+ * "speed interference"; `medium` is everything else, computed rather than listed so a new genre lands
+ * in it automatically.
+ */
+export const CHALLENGE_EASY_IDS = new Set([
+  "chicago-house", "detroit-techno", "uplifting-trance", "brostep", "liquid-dnb",
+  "boom-bap", "edm-trap", "synth-pop", "reggaeton", "disco", "funk", "rock-and-roll",
+  "heavy-metal", "grunge", "punk-rock", "delta-blues", "chicago-blues",
+  "bebop", "bossa-nova", "afrobeat", "eurodance", "progressive-house", "ambient",
+]);
+
+export const CHALLENGE_HARD_IDS = new Set([
+  "breakcore", "idm", "glitch-hop", "neurofunk", "footwork", "jersey-club",
+  "math-rock", "black-metal", "death-metal", "free-jazz",
+  "vaporwave", "chiptune", "uk-drill", "amapiano", "hardstyle", "jump-up",
+  "techstep", "halftime", "ragga-jungle", "industrial-techno",
+]);
+
+/** The pool a difficulty selects from, given the library. */
+export function difficultyPoolFor(
+  difficulty: ChallengeDifficulty,
+  allGenreIds: readonly string[]
+): Set<string> {
+  if (difficulty === "easy") return new Set(CHALLENGE_EASY_IDS);
+  if (difficulty === "hard") return new Set(CHALLENGE_HARD_IDS);
+  return new Set(
+    allGenreIds.filter(
+      (id) => !CHALLENGE_EASY_IDS.has(id) && !CHALLENGE_HARD_IDS.has(id)
+    )
+  );
+}
+
+/** Points a correct answer is worth, by difficulty. */
+export const CORRECT_ANSWER_POINTS: Record<ChallengeDifficulty, number> = {
+  easy: 100,
+  medium: 200,
+  hard: 350,
+};

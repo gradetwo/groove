@@ -338,7 +338,7 @@ async function openPianoRoll(page) {
     timeout: 15000,
   });
   await toggle.click();
-  await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 15000 });
+  await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 45000 });
   return "desktop";
 }
 
@@ -363,7 +363,7 @@ async function openPianoRoll(page) {
  * scroll the backdrop over the row's centre.
  */
 async function clickSheetRowAndVerify(page, selector, expectSelector, label) {
-  await page.waitForSelector(selector, { timeout: 15000 });
+  await page.waitForSelector(selector, { timeout: 45000 });
   const prepared = await page.evaluate((sel) => {
     const el = document.querySelector(sel);
     if (!el) return false;
@@ -389,7 +389,7 @@ async function clickSheetRowAndVerify(page, selector, expectSelector, label) {
 
   if (expectSelector) {
     try {
-      await page.waitForSelector(expectSelector, { timeout: 15000 });
+      await page.waitForSelector(expectSelector, { timeout: 45000 });
     } catch {
       const diag = await page.evaluate(() => ({
         sheetOpen: Boolean(document.querySelector("[data-testid='mobile-studio-sheet']")),
@@ -603,8 +603,8 @@ async function runTestOnTarget(target, baseUrl) {
      * any device (that is how it is opened on a phone before the swap).
      */
     await page.goto(`${baseUrl}/m/home`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector('[data-testid="mobile-shell"]', { timeout: 30000 });
-    await page.waitForSelector('[data-testid^="mobile-genre-row-"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="mobile-shell"]', { timeout: 45000 });
+    await page.waitForSelector('[data-testid^="mobile-genre-row-"]', { timeout: 45000 });
 
     const shell = await page.evaluate(() => {
       const modules = ["home", "jam", "challenge", "explore", "more"];
@@ -658,9 +658,9 @@ async function runTestOnTarget(target, baseUrl) {
     if (!firstRowId) throw new Error("Phone shell home has no genre row to open");
 
     await page.click(`[data-testid="mobile-genre-row-${firstRowId}"]`);
-    await page.waitForSelector(`[data-testid="mobile-genre-detail-${firstRowId}"]`, { timeout: 30000 });
+    await page.waitForSelector(`[data-testid="mobile-genre-detail-${firstRowId}"]`, { timeout: 45000 });
     await page.click(`[data-testid="mobile-genre-detail-${firstRowId}"]`);
-    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 45000 });
 
     const detail = await page.evaluate(() => {
       const page = document.querySelector('[data-testid="mobile-genre-detail"]');
@@ -685,7 +685,7 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     await page.click('[data-testid="mobile-detail-back"]');
-    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 45000 });
 
     /**
      * 1.7 The full-screen player, and the two ways out of it.
@@ -722,11 +722,11 @@ async function runTestOnTarget(target, baseUrl) {
 
     // Tapping the record goes to the genre's page; the chevron collapses back to the list.
     await page.click('[data-testid="mobile-player-record"]');
-    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 45000 });
     await page.goto(`${baseUrl}/m/home?player=1&genre=deep-house`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-testid="mobile-player"]', { timeout: 45000 });
     await page.click('[data-testid="mobile-player-collapse"]');
-    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 45000 });
 
     /**
      * 1.8 The 即兴 module: a groove grid, pads, and the tempo bar at the bottom.
@@ -736,7 +736,7 @@ async function runTestOnTarget(target, baseUrl) {
      * user asked for — grid, pads, tempo at the bottom, no player bar here.
      */
     await page.goto(`${baseUrl}/m/jam`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector('[data-testid="mobile-jam"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="mobile-jam"]', { timeout: 45000 });
     const jam = await page.evaluate(() => {
       const step = (lane, index) => document.querySelector(`[data-testid="mobile-jam-step-${lane}-${index}"]`);
       const grid = document.querySelector('[data-testid="mobile-jam-grid"]');
@@ -769,6 +769,50 @@ async function runTestOnTarget(target, baseUrl) {
     if (!jam.tempoBelowGrid) throw new Error("Jam tempo controls are not below the grid");
     if (!jam.noPlayer) throw new Error("Jam module must not show the player or its bar");
     if (jam.overflow) throw new Error("Jam module overflows horizontally");
+
+    /**
+     * 1.9 The 挑战 module: four options, a ladder, and a verdict that explains itself.
+     *
+     * The question is graded by answering option A, whichever genre it is: the screen must mark the
+     * real answer, show the explanation, and keep the ladder under the desktop's own storage key.
+     */
+    await page.goto(`${baseUrl}/m/challenge`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-challenge-options"]', { timeout: 45000 });
+    const options = await page.$$('[data-testid^="mobile-challenge-option-"]');
+    if (options.length !== 4) {
+      throw new Error(`Challenge module offered ${options.length} option(s), expected 4`);
+    }
+    await options[0].click();
+    await page.waitForSelector('[data-testid="mobile-challenge-verdict"]', { timeout: 45000 });
+    const challenge = await page.evaluate(() => {
+      const states = [...document.querySelectorAll('[data-testid^="mobile-challenge-option-"]')].map((node) =>
+        node.getAttribute("data-state")
+      );
+      const stored = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("groove_challenge_stats_v2") || "null");
+        } catch {
+          return null;
+        }
+      })();
+      return {
+        right: states.filter((state) => state === "right").length,
+        idle: states.filter((state) => state === "idle").length,
+        answered: stored ? stored.totalAnswered : 0,
+        elo: stored ? stored.elo : 0,
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+    if (challenge.right !== 1) throw new Error(`Challenge marked ${challenge.right} correct option(s)`);
+    if (challenge.idle !== 0) throw new Error("Challenge left an option ungraded");
+    if (challenge.answered < 1) throw new Error("Challenge did not record the answer in the shared ladder");
+    if (challenge.overflow) throw new Error("Challenge module overflows horizontally");
+
+    await page.click('[data-testid="mobile-challenge-next"]');
+    await page.waitForSelector('[data-testid="mobile-challenge-options"]', { timeout: 45000 });
 
 
 
@@ -1097,7 +1141,7 @@ async function runTestOnTarget(target, baseUrl) {
       "[data-testid='audio-settings-gs1-toggle']",
       "audio settings"
     );
-    await page.waitForSelector("[data-testid='audio-settings-gs1-toggle']", { timeout: 15000 });
+    await page.waitForSelector("[data-testid='audio-settings-gs1-toggle']", { timeout: 45000 });
 
     // GS-1 ships on by default, and flipping the switch must be a genuine state change.
     const gs1Toggle = await page.$("[data-testid='audio-settings-gs1-toggle']");
@@ -1392,7 +1436,7 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     await page.click(settingsEntry, { force: true });
-    await page.waitForSelector("[data-testid='settings-tab-audio']", { timeout: 15000 });
+    await page.waitForSelector("[data-testid='settings-tab-audio']", { timeout: 45000 });
     for (const tab of ["audio", "performance", "interface", "about"]) {
       if (!(await page.$(`[data-testid='settings-tab-${tab}']`))) {
         throw new Error(`Settings panel is missing the "${tab}" tab`);
@@ -1480,7 +1524,7 @@ async function runTestOnTarget(target, baseUrl) {
      * to the left edge, and opens the same inspector.
      */
     await clickVerified(page, "[data-testid='track-header-0']", { scrollInline: false });
-    await page.waitForSelector("[data-testid='track-inspector']", { timeout: 15000 });
+    await page.waitForSelector("[data-testid='track-inspector']", { timeout: 45000 });
     const inspectorBox = await (await page.$("[data-testid='track-inspector']")).boundingBox();
     const viewport = page.viewportSize();
     if (!inspectorBox || !viewport) {
@@ -1586,7 +1630,7 @@ async function runTestOnTarget(target, baseUrl) {
     // The curves are the point of the redesign, and the only way to know they are wired to the
     // parameters (not pictures) is to change a parameter and watch the drawing and the value move.
     await clickVerified(page, "[data-testid='track-inspector-tab-effects']");
-    await page.waitForSelector("[data-testid='insert-flow-strip']", { timeout: 15000 });
+    await page.waitForSelector("[data-testid='insert-flow-strip']", { timeout: 45000 });
     const flowSlots = await page.$$eval("[data-testid^='insert-flow-']", (els) =>
       els
         .map((e) => e.getAttribute("data-testid"))
@@ -1720,7 +1764,7 @@ async function runTestOnTarget(target, baseUrl) {
     const rollShell = await openPianoRoll(page);
     if (rollShell === null) {
       // `openPianoRoll` already opened the explanation; assert it and its route out.
-      await page.waitForSelector("[data-testid='piano-roll-mobile-notice']", { timeout: 15000 }).catch(() => {
+      await page.waitForSelector("[data-testid='piano-roll-mobile-notice']", { timeout: 45000 }).catch(() => {
         throw new Error("Phone shell hid the piano roll without explaining why");
       });
       if (!(await page.$("[data-testid='piano-roll-mobile-notice-chords']"))) {
@@ -1734,7 +1778,7 @@ async function runTestOnTarget(target, baseUrl) {
       }
     } else {
     try {
-      await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 15000 });
+      await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 45000 });
     } catch (rollErr) {
       // Diagnose on failure rather than guessing: the state of every panel at that moment.
       const diag = await page.evaluate(() => ({

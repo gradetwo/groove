@@ -26,6 +26,8 @@ import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { announcer } from "../ui";
 import {
   calculateEloDelta,
+  difficultyPoolFor,
+  CORRECT_ANSWER_POINTS,
   getRankTier,
   updateSM2Memory,
   selectAdaptiveQuestion,
@@ -107,20 +109,6 @@ const loadStoredStats = (): StoredStatsV2 => {
 };
 
 // Strict 3-Tier Difficulty Pool Partitioning (P3-17 & P6-04)
-const EASY_IDS = new Set([
-  "chicago-house", "detroit-techno", "uplifting-trance", "brostep", "liquid-dnb",
-  "boom-bap", "edm-trap", "synth-pop", "reggaeton", "disco", "funk", "rock-and-roll",
-  "heavy-metal", "grunge", "punk-rock", "delta-blues", "chicago-blues",
-  "bebop", "bossa-nova", "afrobeat", "eurodance", "progressive-house", "ambient"
-]);
-
-const HARD_IDS = new Set([
-  "breakcore", "idm", "glitch-hop", "neurofunk", "footwork", "jersey-club",
-  "math-rock", "black-metal", "death-metal", "free-jazz",
-  "vaporwave", "chiptune", "uk-drill", "amapiano", "hardstyle", "jump-up",
-  "techstep", "halftime", "ragga-jungle", "industrial-techno"
-]);
-
 export const ChallengeView: React.FC<ChallengeViewProps> = ({
   onSelectGenre,
   onOpenStudio,
@@ -173,13 +161,8 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   };
 
   // Disjoint pools based on difficulty
-  const getDifficultyPool = (diff: ChallengeDifficulty): Set<string> => {
-    if (diff === "easy") return EASY_IDS;
-    if (diff === "hard") return HARD_IDS;
-    return new Set(
-      ALL_GENRES.filter((g) => !EASY_IDS.has(g.id) && !HARD_IDS.has(g.id)).map((g) => g.id)
-    );
-  };
+  const getDifficultyPool = (diff: ChallengeDifficulty): Set<string> =>
+    difficultyPoolFor(diff, ALL_GENRES.map((genre) => genre.id));
 
   // Generate question using SuperMemo-2 Spaced Repetition and intelligent distractor matrix
   const generateQuestion = (diff = difficulty): QuizQuestion => {
@@ -304,7 +287,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     if (isCorrect) {
       setCorrectCount(nextCorrect);
       triggerHaptic(HapticPatterns.correctAnswer);
-      const pointGain = difficulty === "easy" ? 100 : difficulty === "medium" ? 200 : 350;
+      const pointGain = CORRECT_ANSWER_POINTS[difficulty];
       const newScore = score + pointGain;
       const newStreak = streak + 1;
       const newBestStreak = Math.max(bestStreak, newStreak);
