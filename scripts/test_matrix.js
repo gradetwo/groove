@@ -933,22 +933,27 @@ async function runTestOnTarget(target, baseUrl) {
      */
     const explore = await page.evaluate(() => ({
       chords: Boolean(document.querySelector('[data-testid="mobile-explore-chords-legacy"]')),
-      chordHelp: Boolean(document.querySelector('[data-testid="chords-help-button"]')),
     }));
-    if (!explore.chords || !explore.chordHelp) {
+    if (!explore.chords) {
       throw new Error(`Explore's chord page is not the reused desktop view (${JSON.stringify(explore)})`);
     }
+    /**
+     * Wait for the *view*, not just its wrapper.
+     *
+     * The wrapper is the Suspense boundary: it is in the DOM immediately, with the fallback inside,
+     * while the desktop view arrives in its own lazily-loaded chunk. Waiting on the wrapper alone made
+     * this check race the chunk on WebKit (and fail, correctly, with "the chord view is not mounted").
+     *
+     * The anchor is the playing-style row (`chord-style-*`), which the view always renders. Its help
+     * button would NOT do: the phone deliberately declines `onOpenHelp` (there is no studio tab or guide
+     * modal to send the user to), so that button is absent by design rather than by accident.
+     */
+    await page.waitForSelector('[data-testid^="chord-style-"]', { timeout: 45000 });
 
     await page.click('[data-testid="mobile-explore-tab-kick"]');
-    await page.waitForSelector('[data-testid="mobile-explore-kick-legacy"]', { timeout: 45000 });
-    if (!(await page.$('[data-testid="kick-help-button"]'))) {
-      throw new Error("Explore's kick page is not the reused desktop view");
-    }
+    await page.waitForSelector('[data-testid="kick-help-button"]', { timeout: 45000 });
     await page.click('[data-testid="mobile-explore-tab-groove"]');
-    await page.waitForSelector('[data-testid="mobile-explore-groove-legacy"]', { timeout: 45000 });
-    if (!(await page.$('[data-testid="bake-to-studio-btn"]'))) {
-      throw new Error("Explore's groove page is not the reused desktop view");
-    }
+    await page.waitForSelector('[data-testid="bake-to-studio-btn"]', { timeout: 45000 });
     await page.click('[data-testid="mobile-explore-tab-chords"]');
     await page.waitForSelector('[data-testid="mobile-explore-chords-legacy"]', { timeout: 45000 });
     const overflowNow = await page.evaluate(() => {
