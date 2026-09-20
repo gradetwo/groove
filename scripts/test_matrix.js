@@ -685,7 +685,7 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     await page.click('[data-testid="mobile-detail-back"]');
-    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 45000 });
+    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 45000, state: "attached" });
 
     /**
      * 1.7 The full-screen player, and the two ways out of it.
@@ -726,7 +726,7 @@ async function runTestOnTarget(target, baseUrl) {
     await page.goto(`${baseUrl}/m/home?player=1&genre=deep-house`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-testid="mobile-player"]', { timeout: 45000 });
     await page.click('[data-testid="mobile-player-collapse"]');
-    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 45000 });
+    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 45000, state: "attached" });
 
     /**
      * 1.8 The 即兴 module: a groove grid, pads, and the tempo bar at the bottom.
@@ -813,6 +813,89 @@ async function runTestOnTarget(target, baseUrl) {
 
     await page.click('[data-testid="mobile-challenge-next"]');
     await page.waitForSelector('[data-testid="mobile-challenge-options"]', { timeout: 45000 });
+
+    /**
+     * 1.10 The 探索 module: three sub-pages, and the landscape layout the reference never had.
+     *
+     * The sub-page switch, the kick's fire button and the groove's lane dropout are all checked by
+     * behaviour; the landscape part is checked by *measurement*, because a media query is exactly the
+     * kind of thing a unit test cannot see.
+     */
+    await page.goto(`${baseUrl}/m/explore`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-explore"]', { timeout: 45000 });
+    await page.click('[data-testid="mobile-explore-tab-chords"]');
+    await page.waitForSelector('[data-testid="mobile-explore-chords"]', { timeout: 45000 });
+
+    const explore = await page.evaluate(() => {
+      const body = document.querySelector('[data-testid="mobile-explore-chords"]');
+      const cards = document.querySelectorAll('[data-testid^="mobile-explore-chord-"]:not([data-testid*="play"]):not([data-testid*="category"])');
+      const columns = body ? getComputedStyle(body).gridTemplateColumns.split(" ").length : 0;
+      return {
+        cards: cards.length,
+        columns,
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+    if (explore.cards < 4) throw new Error(`Explore chord page listed ${explore.cards} progression(s)`);
+    if (explore.overflow) throw new Error("Explore module overflows horizontally");
+
+    /**
+     * On a landscape phone the list and the controls share the width, so the page body must lay out in
+     * two columns. Portrait keeps one column (checked implicitly by the same selector being a block).
+     */
+    /**
+     * The orientation probe runs on the *desktop* targets.
+     *
+     * `setViewportSize` fully controls the layout viewport there. In a mobile-emulated context WebKit
+     * resolves dimension media queries against the emulated device rather than the viewport it was
+     * asked to render into — measured: the "iPhone 14 landscape" profile still reported the portrait
+     * layout at 390x844 — so a size-swapping check there measures the emulation, not the design. The
+     * phone layouts themselves are covered by every other mobile check in this matrix.
+     */
+    if (!target.isMobile && !target.isTablet) {
+      /**
+       * Both orientations are set explicitly rather than assumed.
+       *
+       * The first version of this check read the *current* layout as "portrait" and then resized,
+       * which is wrong on a target that is already landscape — and worse, it never restored the
+       * viewport, so every check after it ran at 844x390 and the phone's own touch-target budgets
+       * started failing on a surface that was fine.
+       */
+      const original = page.viewportSize();
+      /**
+       * Measured geometrically, not through `grid-template-columns`.
+       *
+       * The computed value of `grid-template-columns` on a non-grid element is not a reliable "how many
+       * columns" signal on every engine (WebKit reported 2 for a one-column block), so the check asks
+       * the question that actually matters: is the card list beside the chip rail, or below it?
+       */
+      const layoutAt = async (width, height) => {
+        await page.setViewportSize({ width, height });
+        await page.waitForTimeout(250);
+        return page.evaluate(() => {
+          const cards = [...document.querySelectorAll('[data-testid="mobile-explore-chords"] ul > li')];
+          if (cards.length < 2) return "missing";
+          const [first, second] = cards.map((node) => node.getBoundingClientRect());
+          // Side by side = the second card shares the first card's row; stacked = it starts below it.
+          const sameRow = Math.abs(first.top - second.top) < 8 && second.left > first.left + 20;
+          return sameRow ? "side-by-side" : "stacked";
+        });
+      };
+
+      const portraitLayout = await layoutAt(390, 844);
+      const landscapeLayout = await layoutAt(844, 390);
+      if (portraitLayout !== "stacked") {
+        throw new Error(`Explore cards should stack at 390x844, measured ${portraitLayout}`);
+      }
+      if (landscapeLayout !== "side-by-side") {
+        throw new Error(`Explore cards should share a row at 844x390, measured ${landscapeLayout}`);
+      }
+      if (original) await page.setViewportSize(original);
+    }
+
 
 
 

@@ -1,29 +1,29 @@
 {
-  "version": "2.1.19",
+  "version": "2.1.20",
   "releaseDate": "2026-09-20",
-  "changelogCount": 183,
+  "changelogCount": 184,
   "latest": {
-    "version": "2.1.19",
+    "version": "2.1.20",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.1.19 手机端（M5）：挑战——四选一盲听、天梯与解析，和桌面共用同一条积分",
-      "en": "v2.1.19 Phone (M5): 挑战 — Blind Four-Way Listening, One Ladder Shared With the Desktop"
+      "zh": "v2.1.20 手机端（M6）：探索——底鼓设计 / 和弦走向 / 律动解构，并为横屏重排",
+      "en": "v2.1.20 Phone (M6): 探索 — Kick Design, Progressions, Groove Layers, and a Landscape Layout"
     },
     "highlights": [
       {
-        "zh": "**挑战模块接上现有题库与判分，而不是另写一套**：自适应选题（SuperMemo-2 复习 + 混淆矩阵）、Elo 增减、段位门槛都在 `challengeAlgorithm.ts` 里，本轮把**难度池**也搬了进去（原本写在桌面视图里），手机与桌面因此共用同一条规则；而且两者读写**同一个 localStorage 键**，手机上答的题会接着桌面的进度，不是第二个存档。",
-        "en": "**The challenge module reuses the existing quiz and scoring rather than growing a second one**: adaptive selection (SuperMemo-2 review plus a confusion matrix), the Elo update and the rank tiers all live in `challengeAlgorithm.ts`, and this round moved the **difficulty pools** in there too (they were defined inside the desktop view). The two surfaces therefore share one set of rules — and they read and write the **same localStorage key**, so answering on the phone continues…"
+        "zh": "**探索模块三个子页，每个都真的能做点什么**：**底鼓设计**（SUB/THUMP/CLICK 三层开关、柔软度/砂砾感/内脏压力三档手感、四个策展预设，点一下即发声）、**和弦走向**（按类别浏览策展走向，点播放按它自己的调性与风格试听）、**律动解构**（把当前曲风的四轨摊开，点一轨就把它从正在播放的循环里拿掉，图案即时重发给引擎，下一小节就听得到）。",
+        "en": "**Three sub-pages that each do something**: **kick design** (the SUB/THUMP/CLICK layers, the softness/grit/sub-weight feel values, and the four curated presets — one tap and it sounds), **progressions** (browse the curated progressions by category and audition one in its own key and feel), and **groove layers** (the current genre's four lanes laid out; tap a lane to drop it out of the loop that is playing — the pattern goes back to the engine and the next bar is missing that…"
       },
       {
-        "zh": "**手机形态**：天梯卡（积分/连胜/正确率/段位进度）、难度胶囊（初级 · 主流大类 / 进阶 · 细分子类 / 硬核 · 近速干扰）、一个大播放键听题、四张选项卡（答后正确项标绿 ✓、选错标红 ✗、其余变暗，并揭晓每题的实际 BPM）、以及就地展开的解析（答案曲风可点进详情页）。按你的取舍，**证书与重置没有带过来**——那是桌面功能，在手机上只会多花两屏。",
-        "en": "**Phone shape**: a ladder card (ladder points, streak, accuracy, rank progress), difficulty chips (easy · well-known / medium · subgenres / hard · near misses), one big play button to hear the question, four option cards (after answering: the real answer turns green with a tick, a wrong pick turns red with a cross, the rest dim, and each option reveals its actual BPM), and an explanation that opens in place with its genre linked to the detail page. By your rule, **the certif…"
+        "zh": "**没有从桌面搬过来的**：手机版不再提供「载入工作台」与自制底鼓预设的保存/删除。两者都需要一个「工作台」作为落点，而手机上有工作台入口的模块自己就够了；两个会悄悄替换用户当前作品的按钮，比没有按钮更糟。",
+        "en": "**Left behind from the desktop**: 载入工作台 (bake to the workspace) and saving/deleting custom kick presets. Both need a workspace to write into, and on a phone the module that owns the workspace has its own entry point; two buttons that silently replace what the user is working on are worse than no buttons."
       },
       {
-        "zh": "**测试**：挑战模块 **7 条**（四选项 + 播放键播的是题目的曲风、判分只标记一个正确答案且重复点击不重复计分、解析与 BPM 揭晓 + 曲风链接、天梯落盘到**桌面同一个键**且 Elo 变化、下一题清空判定、切难度重出题、脏存档不崩）＋ E2E 一段（`/m/challenge` 恰好 4 个选项、答一题后**恰好一个** correct、没有未判定的选项、共享天梯记录到 1 题、横向不溢出、下一题可用）。",
-        "en": "**Tests**: 7 cases for the module (four options and a play button that plays the question's genre; grading marks exactly one right answer and a second tap does not double-score; the explanation, the BPM reveal and the genre link; the ladder persisting to the **desktop's own key** with an Elo change; next-question clearing the verdict; a difficulty switch re-rolling; and a corrupt save not crashing) plus an E2E leg (`/m/challenge` has exactly 4 options, one answer leaves exac…"
+        "zh": "**横屏是净新增设计**：参考稿完全没有方向处理（固定 432 px 单列），所以本轮为短而宽的视口加了媒体查询——列表与控制在横屏并排成两列、内容封顶到视口高度，**并且是量出来的**：E2E 在竖屏量到 1 列、把视口转成 844×390 后要求量到 **2 列**（这正是单测看不见的那类东西；也顺带证明没有横向溢出）。",
+        "en": "**Landscape is new design**: the reference has no orientation handling at all (a fixed 432 px column), so this round adds a media query for short, wide viewports — lists and controls sit side by side in two columns and the content is capped to the viewport height. It is **measured**, not asserted: the E2E leg measures one column in portrait, then switches the viewport to 844x390 and requires **two** columns (exactly the kind of thing a unit test cannot see), and checks there…"
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }

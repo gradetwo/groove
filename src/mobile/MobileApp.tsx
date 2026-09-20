@@ -37,6 +37,9 @@ const MobileJamScreen = React.lazy(() =>
 const MobileChallengeScreen = React.lazy(() =>
   import("./screens/MobileChallengeScreen").then((m) => ({ default: m.MobileChallengeScreen }))
 );
+const MobileExploreScreen = React.lazy(() =>
+  import("./screens/MobileExploreScreen").then((m) => ({ default: m.MobileExploreScreen }))
+);
 
 /** Where the play mode is remembered between sessions. */
 export const MOBILE_PLAY_MODE_KEY = "groove_mobile_play_mode";
@@ -210,6 +213,13 @@ export function MobileApp({
               isPlaying={Boolean(playingGenreId)}
               onTogglePlay={handleToggleAudition}
               onOpenGenre={(id) => onOpenGenre?.(id)}
+            />
+          ) : module === "explore" ? (
+            <MobileExploreScreen
+              genreId={genreId}
+              isPlaying={Boolean(playingGenreId)}
+              onTogglePlay={handleToggleAudition}
+              onApplyPattern={applyPattern}
             />
           ) : module === "home" ? (
             <MobileHomeScreen
