@@ -644,6 +644,49 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error("Phone shell overflows horizontally (a zoom/scroll hazard on a phone)");
     }
 
+    /**
+     * 1.6 The route from a list row to a genre's own page and back.
+     *
+     * The detail page is the phone's answer to "how do I see what this genre is", and the reference
+     * design has no such page at all, so the path is exercised end to end rather than only in unit
+     * tests: expand a row, open the detail page, read a fact off it, and come back to the list.
+     */
+    const firstRowId = await page.evaluate(() => {
+      const row = document.querySelector('[data-testid^="mobile-genre-row-"]');
+      return row ? (row.getAttribute("data-testid") ?? "").replace("mobile-genre-row-", "") : null;
+    });
+    if (!firstRowId) throw new Error("Phone shell home has no genre row to open");
+
+    await page.click(`[data-testid="mobile-genre-row-${firstRowId}"]`);
+    await page.waitForSelector(`[data-testid="mobile-genre-detail-${firstRowId}"]`, { timeout: 15000 });
+    await page.click(`[data-testid="mobile-genre-detail-${firstRowId}"]`);
+    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 15000 });
+
+    const detail = await page.evaluate(() => {
+      const page = document.querySelector('[data-testid="mobile-genre-detail"]');
+      const facts = document.querySelector('[data-testid="mobile-detail-facts"]');
+      return {
+        genre: page?.getAttribute("data-genre") ?? null,
+        facts: facts?.textContent ?? "",
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+    if (detail.genre !== firstRowId) {
+      throw new Error(`Phone detail page opened ${detail.genre}, expected ${firstRowId}`);
+    }
+    if (detail.facts.trim().length === 0) {
+      throw new Error("Phone detail page rendered no facts");
+    }
+    if (detail.overflow) {
+      throw new Error("Phone detail page overflows horizontally");
+    }
+
+    await page.click('[data-testid="mobile-detail-back"]');
+    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 15000 });
+
     // Back to the app: the checks below measure the surface under test, not the phone shell.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
 

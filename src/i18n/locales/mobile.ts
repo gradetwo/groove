@@ -47,4 +47,27 @@ export const mobileMessages = {
     en: "Settings, updates, help, language, about.",
     zh: "设置、更新日志、帮助、语言与关于。",
   },
+
+  // Genre detail (M2).
+  mobile_back: { en: "Back", zh: "返回" },
+  mobile_detail_overview: { en: "Overview", zh: "概览" },
+  mobile_detail_character: { en: "Character", zh: "听感特征" },
+  mobile_detail_context: { en: "Context", zh: "文化背景" },
+  mobile_detail_instruments: { en: "Instrumentation", zh: "编制" },
+  mobile_detail_related: { en: "Related genres", zh: "相近曲风" },
+  mobile_detail_origin: { en: "Origin", zh: "发源" },
+  mobile_detail_time_signature: { en: "Time", zh: "拍号" },
+  mobile_detail_bpm_range: { en: "Range", zh: "区间" },
+  mobile_detail_try_jam: { en: "Jam with this", zh: "拿去即兴" },
+  mobile_detail_missing: { en: "That genre is not in the library.", zh: "曲风库里没有这个曲风。" },
+
+  // Player bar (M2) and the full-screen player (M3).
+  mobile_player_now: { en: "Now playing", zh: "正在播放" },
+  mobile_player_pause: { en: "Pause", zh: "暂停" },
+  mobile_player_play: { en: "Play", zh: "播放" },
+  mobile_player_open: { en: "Open the player", zh: "打开播放器" },
+  mobile_player_mode_one: { en: "Repeat one", zh: "单曲循环" },
+  mobile_player_mode_style: { en: "Repeat this genre", zh: "大曲风内循环" },
+  mobile_player_mode_all: { en: "Shuffle all genres", zh: "全部随机" },
+  mobile_player_collapse: { en: "Collapse", zh: "收起" },
 };
