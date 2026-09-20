@@ -1,27 +1,27 @@
 {
-  "version": "2.1.12",
+  "version": "2.1.13",
   "releaseDate": "2026-09-20",
-  "changelogCount": 176,
+  "changelogCount": 177,
   "latest": {
-    "version": "2.1.12",
+    "version": "2.1.13",
     "date": "2026-09-20",
-    "category": "fix",
+    "category": "audio",
     "title": {
-      "zh": "v2.1.12 量测装置修两处；并拦下一个更严重的发现：离线渲染里的限幅器对热素材不生效",
-      "en": "v2.1.12 Two Measurement Fixes, and a Bigger Find: the Offline Limiter Does Not Hold for Hot Material"
+      "zh": "v2.1.13 离线导出的天花板补上了；顺便发现「同一个页面渲染久了会变声」，并据此重录响度基线、重拟合全部 trim",
+      "en": "v2.1.13 The Offline Export Ceiling Is Real Now — Plus a Measured Discovery: a Long-Lived Page Renders Differently, Which Invalidated the Loudness Baseline"
     },
     "highlights": [
       {
-        "zh": "**本来要重录响度基线，结果拦下了一个真问题。** 重录跑完后门禁报出 **9 个曲风超过 0 dBFS 采样峰 / −1 dBTP 天花板**，最差 **tropical-house +0.95 dBTP——而且这是 trim 之后**（未 trim 时 +1.75 dBTP）。同一曲风在已提交的基线里是 −13.01 LUFS / −1.3 dBTP，今天重录是 **−10.30 LUFS（响 2.7 dB）/ +1.75 dBTP**：**一个不受限的渲染既更响又更亮**，所以「基线过时」的读数里混着这个缺陷。**这份重录没有发布**（否则就是把削波写进基线），基线已还原。复现：`node scripts/measure_genre_loudness.mjs --genres=tropical-house --port=3170`。",
-        "en": "**This round set out to re-record the loudness baseline and stopped on something worse.** The re-record made the gate report **9 genres over 0 dBFS sample peak and the −1 dBTP ceiling**, worst **tropical-house at +0.95 dBTP — after its trim** (+1.75 dBTP before it). That genre's committed row is −13.01 LUFS / −1.3 dBTP; today it renders at **−10.30 LUFS (2.7 dB louder) / +1.75 dBTP**. **An unlimited render is both louder and brighter**, so the “stale baseline” reading was co…"
+        "zh": "**导出文件终于一定满足 −1 dBTP。** 离线渲染只有在平台接受 `audioWorklet.addModule` 时才装得上真峰限幅器，装不上就走 DynamicsCompressor 回退——而回退路径**没有天花板**（它自己的告警就这么写）。于是「导出的天花板」变成了「平台支持程度的性质」：把回退路径变成确定事件后 A/B，**6/6 个热曲风超过 −1 dBTP**，arranged 最差 +2.22 dBTP、trim 之后最差 **+0.95 dBTP（tropical-house）**——正是上一版记录到、但当时无法复现的那个数字；补上守卫后 **0/6**，全部 −1.30 dBTP。守卫用的是**限幅器自己的内核**（同一个 `limitBuffers`、同一个 −1.3 dBTP 内部天花板），所以两条路径承诺同一个文件。",
+        "en": "**Exports now always hold -1 dBTP.** The offline renderer could only install the true-peak limiter when the platform accepted `audioWorklet.addModule`; otherwise the graph ran the DynamicsCompressor fallback, which has **no ceiling at all** (its own warning says so). The export ceiling was therefore a property of platform support, not of the renderer: forcing the fallback makes the A/B deterministic, and it measured **6/6 hot genres above -1 dBTP**, arranged worst +2.22 dBTP…"
       },
       {
-        "zh": "**我自己的改动被 A/B 排除了。** 把 `MasterLimiter.ts` 与 `public/limiterWorklet.js` 换成单调队列（M14）**之前**的版本，结果逐位相同（trim 后 +0.95 dBTP）→ 不是队列改写的锅，问题在限幅器是否真正接进离线渲染路径、或它在热素材上的行为。**下一轮第一件事**：修限幅器 → 再重录 → 再更新 trim。",
-        "en": "**My own change was ruled out by A/B**: swapping `MasterLimiter.ts` and `public/limiterWorklet.js` for their pre-M14 (monotonic deque) versions gives byte-identical results (trimmed +0.95 dBTP). So it is not the deque rewrite — it is whether the limiter is really in the offline render path, or how it behaves on hot material. **First thing next round**: fix the limiter, then re-record, then update the trims."
+        "zh": "**发现并量到一条更根本的问题：同一个页面渲染约 50–75 次之后，同一个曲风会渲染成另一个东西。** `alternative-rock` 在新页面里连测三次都是 −12.711 LUFS；在同一个页面渲染过 118 个别的曲风之后再连测三次都是 **−10.259**（reload 之后又变回 −12.711）。起跳点实测在 45–75 次之间，峰值仍然钉在 −1.30 dBTP，图案没有被改写，`limiter.dispose()` + `ctx.close()` 挡不住，只有换页面能清除。这意味着**两小时的量测会在中途悄悄换掉「它测的是什么」**：第一次重录的 12 个抽样里有 5 个偏 0.5–2.5 dB。量测装置现在每 12 次测量换一次页面、换完丢弃一次冷渲染，并在每次换页后重测哨兵曲风，漂移超过 0.3 dB 就中止且不写任何文件。",
+        "en": "**A more fundamental problem, found and measured: after ~50-75 renders in one page, the same genre renders as something else.** `alternative-rock` measures -12.711 LUFS three times over in a fresh page and **-10.259** three times over after 118 other genres have rendered in that page (a reload restores -12.711). The onset is between 45 and 75 renders, the true peak stays pinned at -1.30 dBTP, the pattern is unmutated, `limiter.dispose()` plus `ctx.close()` does not help, and…"
       },
       {
-        "zh": "**量测装置修了两处。** ① **首帧回退**：全新页面里的第一次离线渲染不走限幅器 worklet（模块惰性注册），落到 compressor 回退路径，对顶到天花板的素材差 **2.87 dB**（`kawaii-future-bass` 冷 −15.55 / 热 −12.68 LUFS，各测三次）。脚本现在先做一次**丢弃的预热渲染**；导出路径早有 `limiterKind: \"fallback\"` 的明确提示。② **`check:loudness:fresh`**：现有门禁只检查「报告与自己一致」，所以一份过时的报告能一路放行——新模式按**全库口径**重渲染 N 个**均匀分布**的曲风与报告比对，超过 ±0.35 dB 即失败（纯逻辑 9 条单测，含抽样覆盖与「不会空转」自检）。**暂不接入 verify**（限幅器修好前必然红），脚本留着，下一轮接线。",
-        "en": "**Two measurement fixes.** (1) **First-render fallback**: the first offline render in a fresh page does not use the limiter worklet (its module registers lazily) and falls back to the compressor — a **2.87 dB** difference on ceiling-pinned material (`kawaii-future-bass` at −15.55 cold vs −12.68 warm, three runs each). The script now performs a discarded **warm-up render** first; the export path already tells the user via `limiterKind: \"fallback\"`. (2) **`check:loudness:fresh…"
+        "zh": "**响度基线重录 + 全部 trim 重拟合：旧基线本身就是「长页面」量出来的。** 把新基线（新页面、可复现）与已提交基线对比：`ambient` −13.77 → **−18.11**、`kawaii-future-bass` −11.77 → **−15.55**、`chillwave` −17.04 → **−19.65**、`alternative-rock` −10.42 → **−12.71**。污染值偏响 → 拟合出的 trim 偏狠 → 实际播出比类别目标低最多 3.8 dB（这正是 G.51 当年记下的「基线过时」症状，方向刚好对上）。最极端的 `ghetto-house`：它的目标就是它自己能达到的电平，trim 本该是 0，已提交的却是 **−7.84 dB**。新基线 159/159 行、0 个 clamp、真峰最差 −1.275 dBTP、77 条 trim 非零（旧 96 条），71 个曲风变响、19 个变安静。",
+        "en": "**The loudness baseline was re-recorded and every trim refitted: the old baseline had itself been recorded on a long-lived page.** Fresh page versus committed table: `ambient` -13.77 to **-18.11**, `kawaii-future-bass` -11.77 to **-15.55**, `chillwave` -17.04 to **-19.65**, `alternative-rock` -10.42 to **-12.71**. Contaminated values ran loud, so the fitted trims cut too hard, which is why those genres sat up to 3.8 dB below their category target -- exactly the symptom G.51…"
       }
     ],
     "truncated": true
