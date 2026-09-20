@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { 
   Sliders, 
   Orbit, 
@@ -78,6 +78,34 @@ export const Header: React.FC<HeaderProps> = ({
   const { t, toggleLanguage, isZh } = useLanguage();
   /** Phone shell: the header keeps the brand and nothing else (see the right-tools block below). */
   const { isMobile } = useDeviceCapabilities();
+
+  /**
+   * The header's height is a layout input, not a constant.
+   *
+   * It wraps: measured 145 px at 768, 107 px at 834–1100 and 69 px from 1194 up. Two things park
+   * under it — the studio toolbar's sticky transport strip and the dossier sidebar, both at
+   * `top: var(--app-header-h)` — so a hand-written number would put them *behind* the header at
+   * exactly the widths where the header is tallest. The stylesheet keeps 69 px as the first-paint
+   * value and this writes the measured one (and re-writes it on every header resize, which is also
+   * what a rotation is).
+   *
+   * Phones are skipped: nothing there anchors to the header, and that surface is frozen.
+   */
+  const headerRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el || isMobile || typeof ResizeObserver === "undefined") return;
+    const write = () => {
+      document.documentElement.style.setProperty(
+        "--app-header-h",
+        `${Math.round(el.getBoundingClientRect().height)}px`
+      );
+    };
+    write();
+    const observer = new ResizeObserver(write);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isMobile]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const exploreRef = useRef<HTMLDivElement | null>(null);
@@ -175,8 +203,9 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header 
-      className={`sticky top-0 z-50 w-full ${mobileMenuOpen ? "bg-[#0a0b0d]" : "bg-bg/95 backdrop-blur-md"} border-b border-line px-4 sm:px-6 pb-3 flex items-center justify-between gap-4`}
+    <header
+      ref={headerRef}
+      className={`sticky top-0 z-50 w-full ${mobileMenuOpen ? "bg-[#0a0b0d]" : "bg-bg/95 backdrop-blur-md"} border-b border-line px-4 sm:px-6 pb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}
       style={{
         paddingTop: "max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.375rem))",
         paddingLeft: "max(1rem, env(safe-area-inset-left, 0px))",

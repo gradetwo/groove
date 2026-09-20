@@ -112,17 +112,8 @@ for (const viewport of VIEWPORTS) {
     /** The probe's own coordinates: the middle of the transport group at rest. */
     const atRest = rect(group);
     const headerAtRest = rect(header);
-    /** What a `sticky` row would pin: the toolbar root and its one wrapping row. */
-    const toolbarRoot = rect(group?.closest("div.flex.flex-col.gap-1\\.5"));
-    const toolbarRow = rect(group?.parentElement?.parentElement);
-    const groupBoxes = Object.fromEntries(
-      [...(group?.closest("div.flex.flex-wrap")?.querySelectorAll("[data-testid^='toolbar-group-']") ?? [])].map(
-        (el) => [
-          el.getAttribute("data-testid").replace("toolbar-group-", ""),
-          rect(el),
-        ]
-      )
-    );
+    /** The sticky strip the transport is rendered in (G.47), and the header it parks under. */
+    const strip = rect(group?.closest("div.sticky"));
     const pageAtRest = {
       scrollHeight: document.documentElement.scrollHeight,
       clientHeight: document.documentElement.clientHeight,
@@ -174,9 +165,7 @@ for (const viewport of VIEWPORTS) {
       maxScroll: Math.round(maxScroll),
       headerAtRest,
       atRest,
-      toolbarRoot,
-      toolbarRow,
-      groupBoxes,
+      strip,
       afterScroll,
       hit: hit ? `${hit.tagName.toLowerCase()}${hit.getAttribute("data-testid") ? `[${hit.getAttribute("data-testid")}]` : ""}` : null,
       reachable,
@@ -206,8 +195,7 @@ if (asJson) {
       `  page: scrollHeight ${r.pageAtRest.scrollHeight} − clientHeight ${r.pageAtRest.clientHeight} = ${r.maxScroll} px of scroll`
     );
     console.log(`  header at rest: top ${r.headerAtRest?.top} height ${r.headerAtRest?.height}`);
-    console.log(`  toolbar root: ${JSON.stringify(r.toolbarRoot)} | its row: ${JSON.stringify(r.toolbarRow)}`);
-    console.log(`  groups: ${Object.entries(r.groupBoxes ?? {}).map(([k, v]) => `${k}@${v?.top}`).join(' ')}`);
+    console.log(`  sticky strip: ${JSON.stringify(r.strip)}`);
     console.log(
       `  transport at rest: top ${r.atRest?.top} bottom ${r.atRest?.bottom} (h ${r.atRest?.height})`
     );

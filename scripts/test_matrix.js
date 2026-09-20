@@ -984,6 +984,60 @@ async function runTestOnTarget(target, baseUrl) {
       }
 
       /**
+       * Every header control has to be inside the viewport (G.48).
+       *
+       * The header's contents are 1153 px wide however wide the viewport is, and it did not wrap:
+       * measured at 834×1112 it ran from 0 to 1153, leaving **eight** controls past the right edge —
+       * search, random, the language switch, settings, the version chip, help, onboarding and the
+       * shortcuts button — and four of them still past it at 1024. A user on an iPad in portrait
+       * could not reach the language switch or the settings panel at all.
+       *
+       * It went unnoticed because `<body>` had `overflow-x: hidden`, which still allows *programmatic*
+       * horizontal scrolling — so the matrix's `elementHandle.click()` scrolled the body sideways and
+       * clicked a button no finger could reach. Replacing that with `overflow-x: clip` (G.47) made
+       * the same click fail with `Element is outside of the viewport`, which is what surfaced this.
+       *
+       * The fix is `flex-wrap` on the header, so it grows instead of overflowing; the check is the
+       * measurement that says so, on every desktop/tablet target.
+       */
+      const headerFit = await page.evaluate(() => {
+        const header = document.querySelector("header");
+        if (!header) return { error: "no header" };
+        const outside = [...header.querySelectorAll("button, a, select, input")]
+          .filter((el) => {
+            const box = el.getBoundingClientRect();
+            if (box.width <= 0 || box.height <= 0) return false;
+            const style = getComputedStyle(el);
+            if (style.visibility === "hidden" || style.display === "none") return false;
+            return box.right > window.innerWidth + 1 || box.left < -1;
+          })
+          .map(
+            (el) =>
+              el.getAttribute("data-testid") ??
+              el.getAttribute("title") ??
+              (el.textContent ?? "").trim().slice(0, 16)
+          );
+        return {
+          width: window.innerWidth,
+          height: Math.round(header.getBoundingClientRect().height),
+          headerScrollWidth: header.scrollWidth,
+          clientWidth: header.clientWidth,
+          outside,
+        };
+      });
+      if (headerFit.error) throw new Error(`${headerFit.error} on ${target.name}`);
+      if (headerFit.outside.length > 0) {
+        throw new Error(
+          `${headerFit.outside.length} header control(s) are outside a ${headerFit.width} px viewport on ${target.name}: ${headerFit.outside.join(", ")}`
+        );
+      }
+      if (headerFit.headerScrollWidth > headerFit.clientWidth + 1) {
+        throw new Error(
+          `The header overflows its own box on ${target.name} (${headerFit.headerScrollWidth} > ${headerFit.clientWidth})`
+        );
+      }
+
+      /**
        * The studio's two columns (G.46).
        *
        * Measured on the broken build at 1440×900: the *dossier* took the `1fr` track (1012 px) and
@@ -1044,6 +1098,94 @@ async function runTestOnTarget(target, baseUrl) {
           `Below lg the studio stacks the dossier above the editor on ${target.name}: dossier@${columns.dossier.y}, editor@${columns.seq.y}`
         );
       }
+
+      /**
+       * The transport stays reachable while the page is scrolled (G.47).
+       *
+       * The page scrolls — the panel is taller than a laptop viewport — so before this the transport
+       * scrolled away with it: measured at 1440×900, scrolled to the bottom, the group sat at
+       * `top −247` and hit-tested as nothing. It now lives in a `sticky` strip parked under the
+       * header.
+       *
+       * Three things are asserted, and the middle one is why this is a real check rather than a
+       * class-name assertion:
+       *
+       *   1. the strip's `top` offset token (`--app-header-h`) still equals the header's real height
+       *      — the header *wraps* (measured 145/107/69 px at 768/834/1440), so the number is written
+       *      at runtime and can go stale;
+       *   2. with the editor scrolled into the middle of the viewport the transport is inside it
+       *      *and* the point in its middle resolves to it — a strip parked behind the header is in
+       *      the viewport and still unclickable, which geometry alone would call fine;
+       *   3. it is parked at the header's bottom rather than somewhere below it.
+       *
+       * The scroll position is `panel top + 200`, not the bottom of the page: a sticky element is
+       * clamped by its parent, so at the very bottom — where a portrait tablet has only the panel's
+       * last 60 px left — the strip correctly leaves with the panel it belongs to. "While the editor
+       * is on screen the transport is on screen" is the claim that matters.
+       */
+      /**
+       * Close any menu an earlier step left open before hit-testing.
+       *
+       * The first version of this check failed on Chromium with `at its centre div.flex.items-center
+       * .gap-1.5` — a header dropdown (the Explore menu the navigation check opens and closes) was
+       * still painted over the strip, so the point in the transport's middle belonged to the menu.
+       * Escape closes it; nothing else at this stage opens a dialog that Escape would take down.
+       */
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(200);
+      const reach = await page.evaluate(async () => {
+        const settle = () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)))
+          );
+        const header = document.querySelector("header");
+        const group = document.querySelector("[data-testid='toolbar-group-transport']");
+        const strip = group?.closest("div.sticky");
+        const panel = strip?.parentElement;
+        if (!header || !group || !panel) return { error: "no header, transport group or panel" };
+        const token = parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue("--app-header-h")
+        );
+        const headerHeight = header.getBoundingClientRect().height;
+        const panelTop = panel.getBoundingClientRect().top + window.scrollY;
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        window.scrollTo({ top: Math.min(maxScroll, Math.max(0, panelTop + 200)), behavior: "auto" });
+        await settle();
+        const box = group.getBoundingClientRect();
+        const headerBox = header.getBoundingClientRect();
+        const x = box.left + Math.min(80, box.width / 2);
+        const y = (box.top + box.bottom) / 2;
+        const hit = document.elementFromPoint(x, y);
+        return {
+          token,
+          headerHeight,
+          top: Math.round(box.top),
+          headerBottom: Math.round(headerBox.bottom),
+          inViewport: box.top >= 0 && box.bottom <= window.innerHeight,
+          hit: hit
+            ? `${hit.tagName.toLowerCase()}${hit.getAttribute("data-testid") ? `[${hit.getAttribute("data-testid")}]` : ""}.${(hit.className ?? "").toString().split(" ").slice(0, 3).join(".")}`
+            : null,
+          reachable: Boolean(hit && (hit === group || group.contains(hit) || hit.contains(group))),
+        };
+      });
+      if (reach.error) throw new Error(`${reach.error} on ${target.name}`);
+      if (Math.abs(reach.token - reach.headerHeight) > 1) {
+        throw new Error(
+          `--app-header-h is ${reach.token} but the header is ${reach.headerHeight} px tall on ${target.name}`
+        );
+      }
+      if (!reach.inViewport || !reach.reachable) {
+        throw new Error(
+          `The transport is not reachable with the page scrolled on ${target.name}: top ${reach.top}, at its centre ${reach.hit ?? "nothing"}`
+        );
+      }
+      if (reach.top < reach.headerBottom || reach.top > reach.headerBottom + 8) {
+        throw new Error(
+          `The transport is not parked under the header on ${target.name}: top ${reach.top}, header bottom ${reach.headerBottom}`
+        );
+      }
+      // Put the page back where the rest of the run expects it.
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: "auto" }));
     }
 
     /**
@@ -2007,7 +2149,7 @@ async function runTestOnTarget(target, baseUrl) {
 
     return { success: true };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, error: (process.env.E2E_STACK ? err.stack : err.message) };
   } finally {
     await browser.close();
   }
