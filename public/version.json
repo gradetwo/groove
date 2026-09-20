@@ -1,27 +1,27 @@
 {
-  "version": "2.1.15",
+  "version": "2.1.16",
   "releaseDate": "2026-09-20",
-  "changelogCount": 179,
+  "changelogCount": 180,
   "latest": {
-    "version": "2.1.15",
+    "version": "2.1.16",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.1.15 手机端重构第一步：五格新外壳与曲风库（/m/home 可访问）",
-      "en": "v2.1.15 Phone Rebuild, Step One: the Five-Module Shell and the Genre Library (/m/home)"
+      "zh": "v2.1.16 手机端（M2）：每个曲风都有自己的详情页，加上常驻播放条",
+      "en": "v2.1.16 Phone (M2): a Page for Every Genre, and a Player Bar"
     },
     "highlights": [
       {
-        "zh": "**手机端按新 IA 重建，第一步是外壳 + 曲风库。** 底部五个模块：**首页 · 即兴 · 挑战 · 探索 · 更多**（设置、更新、帮助等杂项归入「更多」）。新的界面是独立的一层（`src/mobile/`），用自己的路由 `/m/<module>` 访问：**现有手机界面照旧工作、照旧被 E2E 覆盖**，新界面一个模块一个模块替换上去；等五个模块都真实可用，再把开关切过去、删掉旧壳。手机上现在就能打开 `/m/home` 试用。",
-        "en": "**The phone UI is being rebuilt on the new IA, starting with the shell and the genre library.** Five modules at the bottom: **Home · Jam · Challenge · Explore · More** (settings, updates and help live under More). The new surface is its own layer (`src/mobile/`) on its own route, `/m/<module>`: **the existing phone UI keeps working and keeps being covered by E2E** while the new one replaces it module by module. When all five modules are real, the switch flips and the old she…"
+        "zh": "**每个曲风都有详情页**：概览（年代、BPM 区间、拍号）、听感特征、文化背景、编制标签，以及**相近曲风**——每一条都能点进它自己的详情页，横向浏览不会走进死路。参考稿里根本没有单曲风页面（它唯一的单曲风视图是 A/B 对比页），所以这是设计出来的，不是移植过来的。",
+        "en": "**Every genre has a page of its own**: overview facts (era, BPM range, time signature), character, cultural context, instrumentation chips, and **related genres** — each of which links to its own page, so browsing sideways never dead-ends. The reference design has no per-genre page at all (its only per-genre view is an A/B compare screen), so this is designed rather than ported."
       },
       {
-        "zh": "**首页就是曲风库**：分类胶囊（六大类，色块与参考稿一致）、搜索（同时匹配英文名与中文别名）、以及每个曲风一行——色块方块兼作试听按钮（走真实引擎的 `useGenreAudition`）、英文名 + 中文名、等宽小字元信息（年代 · BPM · 分类）。点整行**就地展开**该曲风的摘要（听感要点、BPM 区间、拍号、发源地），而不是跳走——参考稿里没有任何从列表看详情的入口，这是净新增的交互。",
-        "en": "**Home is the genre library**: category chips (six categories, swatches matching the reference), search (English names and Chinese aliases), and one row per genre — the colour square doubles as the audition button (through the real engine via `useGenreAudition`), then English name plus Chinese name and a monospace meta line (era · BPM · category). Tapping the row **expands that genre's summary in place** (character, BPM range, time signature, origin) instead of navigating aw…"
+        "zh": "**相近曲风取自关系表，而不是曲风对象。** 数据库里每个曲风自己的 `related_genres`/`subgenres` 都是空的，策展好的 300 条关系（带权重与双语说明）在独立的表里；读对象会安静地渲染出一个空区块。第一次跑测试就抓到了这一点（相关曲风 0 条）。",
+        "en": "**Related genres come from the relations table, not from the genre object.** Every genre's own `related_genres`/`subgenres` arrays are empty in the database; the curated 300 relations (weighted, with bilingual descriptions) live in their own table. Reading the object would have silently rendered an empty section — which the first test run caught."
       },
       {
-        "zh": "**规格照手机来**：底部栏每格 ≥56 px、五个模块各带可见文字标签（没有 hover 的设备上，纯图标不可发现）、`aria-current` 标记当前模块；外壳只用自己的设计令牌（深棕 + 琥珀，作用域在 `.mobile-root`，不动桌面），数字一律等宽对齐；横向不溢出、焦点进搜索框不触发 iOS 缩放（输入 16 px）；放大镜与双指缩放由既有的 `user-scalable=no` 拦住。",
-        "en": "**Built to phone specs**: every tab is ≥56 px with a visible text label (an icon-only bar is undiscoverable on a device with no hover) and `aria-current` marks the active module; the shell carries its own design tokens (dark brown plus amber, scoped to `.mobile-root`, the desktop untouched) with tabular monospace numerals; no horizontal overflow, and the search field is 16 px so focusing it cannot trigger iOS zoom. Pinch zoom and the magnifier stay blocked by the existing `u…"
+        "zh": "**常驻播放条**：一行显示正在试听的曲风（色块 + 名称 + BPM/分类），点整行进详情页，右侧按钮停止。它**只由「正在播放的是谁」驱动**并自己解析曲风，所以在播放中重新进入外壳也能正确显示；只出现在**首页**（即兴有自己的走带，你要求那里不要播放条）；如果正在播放的 id 已不在曲风库里，就**不渲染**这条播放条，而不是显示一条没有名字的条。",
+        "en": "**A persistent player bar**: one row showing the auditioning genre (swatch, name, BPM/category), tapping the row opens its detail page, and the button on the right stops it. It is driven by **what is playing** and resolves its own genre, so a shell that mounts mid-playback still shows the right thing; it appears on **首页 only** (即兴 has its own transport and the bar was to be removed there), and a playing id that is no longer in the library renders **no** bar rather than a nam…"
       }
     ],
     "truncated": true
