@@ -42,8 +42,8 @@ export default defineConfig({
       ],
       // Real gate, not a formality: thresholds sit a few points below the measured
       // baseline so normal churn passes but a genuine regression turns CI red.
-      // Measured on this branch: lines 82.56%, statements 82.56%,
-      // branches 65.90%, functions 63.55%.
+      // Measured on this branch (Node 22.22.3, 192 files / 2185 tests): lines 90.58%,
+      // statements 90.58%, branches 75.31%, functions 66.08%.
       thresholds: {
         lines: 78,
         statements: 78,
