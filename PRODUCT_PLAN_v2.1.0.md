@@ -1841,9 +1841,13 @@ E2E 的 `openPianoRoll()` 原来是「找到卷帘开关就点、找不到就跳
      ~~合唱降混成单声道、左右共用同一 LFO~~ —— **已完成（v2.0.82）**，见 G.20。
 5. **不谐分音**：`createPeriodicWave` 只能生成**谐波**级数，所以钟/锣/钟琴的金属感
    仍只能用两个不成整数比的振荡器近似。真正的解法是采样或加减法合成。
-6. **`StudioView` 剩余接线的继续外提**：播放/混音设置（鼓组、drums-only、录音待命）、
+6. ~~**`StudioView` 剩余接线的继续外提**：播放/混音设置（鼓组、drums-only、录音待命）、
    键盘演奏模式与 FAB 偏好、项目抽屉与检查器游标。目标仍是那条判据：
-   **删掉某一端整个目录后，`src/features` 与 `src/audio` 仍应能编译通过。**
+   **删掉某一端整个目录后，`src/features` 与 `src/audio` 仍应能编译通过。**~~
+   **已完成（v2.1.10 / G.50）**：三组状态搬进 `features/sequencer/hooks/useStudioSession.ts`
+   （`usePlaybackSettings` / `useKeyboardPerformance` / `useInspectorCursor`），并给那条判据加了
+   **机械门禁** `check:isolation`（把 `src` 复制一份、删掉所有 surface 目录后跑 `tsc`）。
+   项目抽屉只是一个没有规则的开合布尔值，留在视图里（理由见 G.50）。
 7. ~~**CSS 与 TS 常量仍靠测试钉同值**（`--mobile-transport-row-w` / `TRANSPORT_ROW_WIDTH_PX`）：
    这是本项目第三次遇到「CSS 与 TS 无法共享常量」（前两次是 `PHONE_MAX_HEIGHT_PX`、
    `TRANSPORT_ROW_WIDTH_PX`）。根治办法是把这类常量集中到一处、由 TS 生成 CSS 变量——
@@ -3931,3 +3935,60 @@ Test Files  192 passed (192)
 `engines` 里（这条断言解释"为什么是这个数"）；`.npmrc` 必须 `engine-strict=true`；工作流里每个
 `Setup Node.js` 都必须 `node-version-file: ".nvmrc"` 且**不得再出现硬编码的 `node-version:`**。
 下次再有人把依赖的要求抬高、或把 CI 的 Node 写回去，都会在本地就红。
+
+## G.50 三组会话状态搬出视图，并给那条判据装上机械门禁（v2.1.10）
+
+### 先把判据本身变成可执行的
+
+G.8 第 6 条给的判据是机械的：**「删掉某一端整个目录后，`src/features` 与 `src/audio` 仍应能编译
+通过」**。既然它是可执行的，就不该靠人读代码来相信。新增 `scripts/check_isolation.mjs`：
+
+1. 把 `src/`（以及 GS-1 host 按相对路径引用的 `vendor/`）复制到 `node_modules/.cache/groove-isolation/`；
+2. 删掉 `src/components`、`src/views`、`src/ui`、`src/App.tsx`、`src/test`——即**因为某个屏幕才存在**
+   的全部东西；
+3. 写一份只以 `src/features`、`src/audio` 为根的 tsconfig，跑 `tsc --noEmit`。
+
+跑 **7.5 秒**，已接进 `verify`（在 `check:layers` 之后）。失败可证：往 `src/features` 里放一个
+`import { ToastBanner } from "../../components/…"` 的探针文件后，门禁立刻报
+
+```
+src/features/sequencer/_isolation_probe.ts(2,29): error TS2307: Cannot find module
+  '../../components/sequencer/ToastBanner' or its corresponding type declarations.
+```
+
+删掉探针即恢复绿色。**为什么用真复制而不是路径改写**：改写会让 `tsc` 用与正常树不同的解析规则，
+那样"隔离编译通过"证明不了任何事。
+
+`surfaceIsolation.test.ts`（4 条）补上门禁自己说不出的三件事：被删的 surface 清单必须与
+`check_layers.mjs` 的 `UI_DIR_PREFIXES` 一致（否则新加一个 `src/screens` 会让实验悄悄变弱）；
+`check:isolation` 必须真的在 `verify` 里；以及一个毫秒级的直接 import 扫描（报出文件与说明符，
+还带一条"扫描器自检"——喂给它一个 surface 引用必须命中、喂给它 `utils/haptics` 必须放行）。
+
+### 再把三组状态搬出去
+
+`features/sequencer/hooks/useStudioSession.ts` 收三个 hook：
+
+| hook | 原来在视图里是什么 | 现在由 hook 拥有的规则 |
+|---|---|---|
+| `usePlaybackSettings({ genre })` | `drumKit` / `isDrumsOnly` / `isRecordArmed` 三个 `useState` | 起始鼓组 = 该曲风的默认（`getDefaultDrumKitForGenre`）；三者**都不持久化**（D-06：静默重新待命录音、重新进入 drums-only 比忘掉更糟） |
+| `useKeyboardPerformance()` | `isKeyboardMode` / `showKeyboardFab` + 一个同时监听自定义事件与 `storage` 的 effect | FAB 偏好是**存**的，且两个来源的变更都要跟（本标签页走自定义事件，跨标签页走 `storage`） |
+| `useInspectorCursor()` | `inspectorTrackIdx` + `moveInspectorWithRow` 的 `useCallback` | 重排后检查器跟着**音轨**而不是行号（规则仍是纯函数 `inspectorFollow.followReorderedRow`） |
+
+顺手把事件名从两处字面量收成一个常量 `FAB_PREF_CHANGED_EVENT`——写方和听方打错一个字母是**静默
+bug**：读者只会继续显示旧值。
+
+`StudioView` 因此少了 ~25 行状态与 effect（1222 行），并且这 11 条新测试（`studioSession.test.tsx`）
+**不再需要渲染整个工作室**就能验证行为——这正是"下一端能复用"的实际含义。
+
+### 有意留下的
+
+`isProjectHubOpen`（项目抽屉）留在视图里：它是一个**没有规则**的开合布尔值，搬进 hook 只会把一个
+`useState` 挪个位置，而下一端（手机）本来就会渲染自己的抽屉。判据是"行为能否复用"，不是"每个
+`useState` 都要搬家"。
+
+### 门禁
+
+- `npm run check:isolation`（verify 内，7.5 s）+ `surfaceIsolation.test.ts`（4 条）。
+- `studioSession.test.tsx`（11 条）：鼓组默认、三者不持久化、FAB 偏好的三条同步路径与卸载后不再监听、
+  检查器的打开/跟随重排/无关重排不动/关闭时不动。
+- 全量单测 **195 文件 / 2205 用例**，`npm run verify` 全绿。
