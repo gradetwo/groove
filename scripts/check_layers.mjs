@@ -89,10 +89,13 @@ const LAYERS = [
   { name: "util", dirs: ["src/utils"] },
   { name: "platform", dirs: ["src/platform"] },
   { name: "logic", dirs: ["src/features", "src/state", "src/store", "src/hooks"] },
-  { name: "ui", dirs: ["src/components", "src/views", "src/ui"] },
+  // `src/mobile` is the phone surface (M-series): presentation, same layer as the views it will
+  // eventually replace. Listed explicitly so the gate can tell "logic imported the phone UI" from
+  // "an unclassified directory imported something".
+  { name: "ui", dirs: ["src/components", "src/views", "src/ui", "src/mobile"] },
 ];
 
-const UI_DIR_PREFIXES = ["src/components", "src/views", "src/ui"];
+const UI_DIR_PREFIXES = ["src/components", "src/views", "src/ui", "src/mobile"];
 
 /** Every .ts/.tsx under src, excluding tests and test helpers. */
 function walk(dir, out = []) {

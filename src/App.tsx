@@ -45,6 +45,11 @@ const KickAnatomyView = React.lazy(() => import("./views/KickAnatomyView").then(
 const MasterclassView = React.lazy(() => import("./views/MasterclassView").then((m) => ({ default: m.MasterclassView })));
 const AnalyzerView = React.lazy(() => import("./views/AnalyzerView").then((m) => ({ default: m.AnalyzerView })));
 const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerView").then((m) => ({ default: m.CustomGenreMakerView })));
+/**
+ * The phone shell (M-series). Lazy for the same reason every view is: it pulls the genre database,
+ * which must not be in the first paint (redline R8).
+ */
+const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
 
@@ -296,6 +301,27 @@ const MainApp: React.FC = () => {
       setEngineInstance(null);
     };
   };
+
+  /**
+   * The phone shell owns its own route space (`/m/<module>`). When one is requested, the desktop
+   * composition is not rendered at all — that is what makes the two surfaces independently
+   * replaceable while the phone UI is rebuilt module by module.
+   *
+   * This sits after every hook call (the shell is a different tree, but React still requires the hook
+   * order in *this* component to be unconditional).
+   */
+  if (route.mobile) {
+    return (
+      <React.Suspense fallback={null}>
+        <MobileApp
+          module={route.mobile}
+          genreId={route.genreId}
+          onSelectModule={(module) => navigate({ tab: "studio", mobile: module })}
+          /* Genre details get a phone screen of their own in M2; until then the shell stays put. */
+        />
+      </React.Suspense>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg text-text flex flex-col font-sans selection:bg-accent/25 selection:text-accent">

@@ -117,4 +117,53 @@ describe("Router & Deep Linking (P1-08)", () => {
       expect(url).toBe("/");
     });
   });
+
+  describe("phone shell routes (/m/<module>)", () => {
+    /**
+     * The phone redesign lives on its own path space (M-series). It is parsed before the genre paths
+     * so `/m/home` can never be mistaken for a genre, and it is reachable on any device by URL —
+     * which is how the shell is tested and how it can be opened on a phone before it replaces the
+     * old phone UI.
+     */
+    it("parses /m/<module>", () => {
+      expect(parseUrlToRoute("/m/home", "").mobile).toBe("home");
+      expect(parseUrlToRoute("/m/jam", "").mobile).toBe("jam");
+      expect(parseUrlToRoute("/m/challenge", "").mobile).toBe("challenge");
+      expect(parseUrlToRoute("/m/explore", "").mobile).toBe("explore");
+      expect(parseUrlToRoute("/m/more", "").mobile).toBe("more");
+    });
+
+    it("carries a genre into a module route", () => {
+      const route = parseUrlToRoute("/m/home", "?genre=deep-house");
+      expect(route.mobile).toBe("home");
+      expect(route.genreId).toBe("deep-house");
+    });
+
+    it("accepts ?m=<module> and falls back to home for an unknown module", () => {
+      expect(parseUrlToRoute("/", "?m=explore").mobile).toBe("explore");
+      expect(parseUrlToRoute("/m/not-a-module", "").mobile).toBe("home");
+      expect(parseUrlToRoute("/m/", "").mobile).toBe("home");
+    });
+
+    it("formats a module route back to its own path", () => {
+      expect(formatRouteToUrl({ tab: "studio", mobile: "more" })).toBe("/m/more");
+      expect(formatRouteToUrl({ tab: "studio", mobile: "home", genreId: "ambient" })).toBe(
+        "/m/home?genre=ambient"
+      );
+    });
+
+    it("round-trips a module route", () => {
+      const url = formatRouteToUrl({ tab: "studio", mobile: "challenge", genreId: "trap-rap" });
+      const [path, search] = url.split("?");
+      const route = parseUrlToRoute(path, search ? `?${search}` : "");
+      expect(route.mobile).toBe("challenge");
+      expect(route.genreId).toBe("trap-rap");
+    });
+
+    it("does not leak the module into a desktop route", () => {
+      // A desktop destination must format exactly as before: the phone route is a separate space.
+      expect(formatRouteToUrl({ tab: "detail", genreId: "ambient" })).toBe("/genre/ambient");
+      expect(parseUrlToRoute("/genre/ambient", "").mobile).toBeUndefined();
+    });
+  });
 });

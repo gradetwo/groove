@@ -591,6 +591,62 @@ async function runTestOnTarget(target, baseUrl) {
       await playBtn.click({ force: true }); // Pause back
     }
 
+    /**
+     * 1.5 Phone shell route (M-series).
+     *
+     * The phone redesign is being built as a separate surface at `/m/<module>` so the existing phone
+     * UI keeps working and keeps being tested while it is replaced module by module. This is the
+     * check that keeps that surface *reachable*: it is URL-only until the swap, so a broken route or a
+     * shell that fails to mount would otherwise be invisible to every gate.
+     *
+     * It runs on every target on purpose — the shell is a phone surface, but the route has to work on
+     * any device (that is how it is opened on a phone before the swap).
+     */
+    await page.goto(`${baseUrl}/m/home`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-shell"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid^="mobile-genre-row-"]', { timeout: 30000 });
+
+    const shell = await page.evaluate(() => {
+      const modules = ["home", "jam", "challenge", "explore", "more"];
+      const tabs = modules.map((id) => document.querySelector(`[data-testid="mobile-module-${id}"]`));
+      return {
+        found: tabs.map((node) => Boolean(node)),
+        order: [...document.querySelectorAll('[data-testid^="mobile-module-"]')]
+          .map((node) => node.getAttribute("data-testid"))
+          .filter((id) => /^mobile-module-(home|jam|challenge|explore|more)$/.test(id ?? "")),
+        heights: tabs.map((node) => (node ? Math.round(node.getBoundingClientRect().height) : 0)),
+        labels: tabs.map((node) => (node?.textContent ?? "").trim()),
+        rows: document.querySelectorAll('[data-testid^="mobile-genre-row-"]').length,
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+
+    if (shell.found.some((found) => !found)) {
+      throw new Error(`Phone shell is missing a module tab: ${shell.found.join(", ")}`);
+    }
+    if (shell.order.join(",") !== "mobile-module-home,mobile-module-jam,mobile-module-challenge,mobile-module-explore,mobile-module-more") {
+      throw new Error(`Phone shell module order is wrong: ${shell.order.join(" > ")}`);
+    }
+    const tooSmall = shell.heights.filter((height) => height < 44);
+    if (tooSmall.length > 0) {
+      throw new Error(`Phone shell has a tab under 44px: ${shell.heights.join(", ")}`);
+    }
+    if (shell.labels.some((label) => label.length === 0)) {
+      throw new Error("Phone shell has an icon-only tab (no visible label)");
+    }
+    if (shell.rows < 50) {
+      throw new Error(`Phone shell home listed ${shell.rows} genre(s); the library has 159`);
+    }
+    if (shell.overflow) {
+      throw new Error("Phone shell overflows horizontally (a zoom/scroll hazard on a phone)");
+    }
+
+    // Back to the app: the checks below measure the surface under test, not the phone shell.
+    await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+
     // 2. Responsive Viewport Check (Horizontal scroll check)
     const overflowCheck = await page.evaluate(() => {
       const root = document.documentElement;
