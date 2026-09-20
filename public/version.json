@@ -1,27 +1,27 @@
 {
-  "version": "2.1.5",
+  "version": "2.1.6",
   "releaseDate": "2026-09-20",
-  "changelogCount": 169,
+  "changelogCount": 170,
   "latest": {
-    "version": "2.1.5",
+    "version": "2.1.6",
     "date": "2026-09-20",
-    "category": "feature",
+    "category": "refactor",
     "title": {
-      "zh": "v2.1.5 参数条与钢琴键都能用键盘了；音长作用于整个选区",
-      "en": "v2.1.5 The Parameter Lane and the On-Screen Piano Are Playable; Length Reaches the Selection"
+      "zh": "v2.1.6 跨语言常量只留一份：数字由 TS 写进 CSS",
+      "en": "v2.1.6 One Copy of Each Cross-Language Constant: TS Writes the Numbers into CSS"
     },
     "highlights": [
       {
-        "zh": "**参数条不再是指针专属**：十六个拖拽目标、没有入口。现在它是**一个 tab 停留点 + 一个光标**——每列是 `role=\"slider\"`（带 `aria-orientation=\"vertical\"` 与 `aria-valuemin/max/now/valuetext`），上下键改值、左右键换列、Shift 与 PageUp/PageDown 走大步、Home/End 到两端，每次改动由 live region 播报「第 N 步 · 力度 101」。**0 个新 DOM 节点**，指针的拖拽与横扫一行未改。",
-        "en": "**The parameter lane is no longer pointer-only**: sixteen drag targets and no way in. It is now **one tab stop with a cursor** — each column is a `role=\"slider\"` (with `aria-orientation=\"vertical\"` and `aria-valuemin/max/now/valuetext`), Up/Down change the value, Left/Right move between columns, Shift and PageUp/PageDown take bigger steps, Home/End jump to the ends, and a live region says “step N · velocity 101” after each change. **Zero new DOM nodes**, and the pointer's dr…"
+        "zh": "**同一个数字写两遍，靠一条测试钉住——这是第三次了。** 手机宽/高断点（639 / 500）和共享底栏里走带条的宽度（320）都在 CSS 与 TS 各有一份，前两次的处理都是再写一条「两份必须相等」的守卫。问题是它防不住**第三份**：新加一个跨语言常量时，除非作者记得补一条守卫，没有任何东西会失败——而当年 480/500 那次（横屏 490px 视口拿到压缩样式表、JS 仍当它是高手机）就是人工发现的。",
+        "en": "**The same number written twice and pinned by a test — for the third time.** The phone width and height boundaries (639 / 500) and the shared bottom row's transport width (320) each existed on both sides of the CSS/TS line, and the first two rounds answered with another \"the two copies must match\" guard. What that cannot catch is the **third copy**: add a cross-language constant and nothing fails unless the author remembers a new guard — and the 480/500 drift (a 490 px-tall…"
       },
       {
-        "zh": "**四个维度四套刻度，本来写了两份。** 同一列里画力度（1..127）、音长（0.1..2.0 步）、概率（0..100%）、滚奏（1,2,3,4,8）：指针有自己一套换算，键盘要再加一套，柱高与读数是第三套——拖拽改 100、按键改 101 这类分叉就是这样长出来的。四套刻度现在收在 `laneValues.ts` 一处，**公式是从组件里搬出来的，不是重写的**（拖到 100 仍然画到 100，测试逐条钉住四个换算、四种柱高、四种读数）。滚奏是**一张清单**而不是 1..8 的区间，所以键盘沿清单走，导入进来的非法值先吸附再走，不会造出引擎没有定义的连音数。",
-        "en": "**Four dimensions, four scales, two copies of each.** One column draws velocity (1..127), length (0.1..2.0 steps), probability (0..100 %) and ratchet (1, 2, 3, 4, 8): the pointer had one set of conversions, a keyboard path would need a second, and the bar height and readout a third — which is exactly how “drag says 100, key says 101” grows. The four scales now live in one place, `laneValues.ts`, and **the formulas were moved out of the component rather than rewritten** (a dr…"
+        "zh": "**所以只留一份**：三个数字搬进 `src/platform/layoutTokens.ts`，`scripts/layout_tokens.mjs` 把它们写进 `src/index.css`（`npm run layout:sync`），`npm run check:layout` 接进 `verify`——与 `ROADMAP_V2.md` 的版本头同一套办法。**媒体查询不能读 CSS 变量**（`@media (max-width: var(--x))` 不合法），所以生成的是数字本身；`--mobile-transport-row-w` 才是真正的变量，也由同一份 token 写。",
+        "en": "**So there is one copy.** The three numbers live in `src/platform/layoutTokens.ts`; `scripts/layout_tokens.mjs` writes them into `src/index.css` (`npm run layout:sync`), and `npm run check:layout` sits inside `verify` — the same arrangement as the version header in `ROADMAP_V2.md`. **A media query cannot read a custom property** (`@media (max-width: var(--x))` is not valid), so what gets generated is the number itself; `--mobile-transport-row-w` is a real variable and is wri…"
       },
       {
-        "zh": "**音长 `[`/`]` 现在和力度一样作用于整个选区** —— 这是 U10 里最后一个真缺口：选区可以被键盘调响，却只能一个字一个字地调长。新增 `scaleNotesLength` 与 `scaleNotesVelocity` 同形（选区 → 步集合、相对增量、同一处钳位），播报改成「2 个音 · 音长 1.8 步」，并补上选区版的钳位测试（0.1 步下限、一小节上限）。",
-        "en": "**Length (`[`/`]`) now reaches the whole selection, exactly like velocity** — the last real gap in U10: a selection could be nudged louder from the keyboard but only lengthened one note at a time. The new `scaleNotesLength` mirrors `scaleNotesVelocity` (selection → set of steps, relative delta, the same clamp), the announcement became “2 notes · length 1.8 steps”, and the selection's clamps (0.1-step floor, one-bar ceiling) have their own test."
+        "zh": "**匹配锚在规则语法上，删掉规则也算漂移。** 三条模式都锚定 `@media (max-width: …) {` 这样的完整规则，而不是搜 `d+`——否则释义注释里的 639、以及无关的 `--trk-head-w: 142px` 都会被改写，门禁就变成在检查自己。反过来，模式完全匹配不上时报 `found: null` 并失败：把媒体查询整块删掉，不该因为「没有可比的东西」而通过。",
+        "en": "**The patterns are anchored to rule syntax, and a deleted rule counts as drift.** All three match a complete rule such as `@media (max-width: …) {` rather than searching for `\\d+` — otherwise the 639 inside an explanatory comment, or the unrelated `--trk-head-w: 142px`, would be rewritten and the gate would end up checking itself. In the other direction, a pattern that matches nothing reports `found: null` and fails: deleting the media query must not pass by having nothing l…"
       }
     ],
     "truncated": true
