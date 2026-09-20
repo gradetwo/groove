@@ -1,27 +1,27 @@
 {
-  "version": "2.1.9",
+  "version": "2.1.10",
   "releaseDate": "2026-09-20",
-  "changelogCount": 173,
+  "changelogCount": 174,
   "latest": {
-    "version": "2.1.9",
+    "version": "2.1.10",
     "date": "2026-09-20",
-    "category": "fix",
+    "category": "refactor",
     "title": {
-      "zh": "v2.1.9 CI 的 Node 版本：jsdom 30 需要 Node 22，而 CI 跑在 Node 20",
-      "en": "v2.1.9 CI's Node Version: jsdom 30 Needs Node 22, and CI Ran on Node 20"
+      "zh": "v2.1.10 会话状态搬出视图；「删掉一端仍能编译」变成机械门禁",
+      "en": "v2.1.10 Session State Out of the View; “Delete a Surface and It Still Compiles” Becomes a Gate"
     },
     "highlights": [
       {
-        "zh": "**CI 红不是代码错。** `npm run test:coverage` 报 190 条 `webidl.util.markAsUncloneable is not a function`，**一个测试都没跑**，覆盖率 0% 撞阈值——于是 CI 只留下「覆盖率不达标」这句话，和真实原因毫无关系。原因是 **CI 用 Node 20 跑只有 Node 22 才能跑的 jsdom 30**：它内置的 `undici` 8 在 `cachestorage.js` 里调用 `worker_threads.markAsUncloneable`，这个导出 Node 20 没有。所以 `rm -rf node_modules` 重装解决不了——同样的依赖会在同样的旧 Node 上再装出来。",
-        "en": "**The red CI was not a code failure.** `npm run test:coverage` reported 190 `webidl.util.markAsUncloneable is not a function` errors with **no test executed** and 0 % coverage, so the only visible message was a coverage-threshold failure that had nothing to do with the cause. CI ran **Node 20** for `jsdom` 30, which needs Node 22: the `undici` 8 it vendors calls `worker_threads.markAsUncloneable` in `cachestorage.js`, and Node 20 does not export it. Reinstalling `node_module…"
+        "zh": "**判据是可执行的，就不该靠人读代码来相信。** 计划里那条「删掉某一端整个目录后 `src/features` 与 `src/audio` 仍应能编译通过」现在是一条门禁：`check:isolation` 把 `src`（连同 GS-1 host 相对引用的 `vendor/`）复制一份，**删掉 `components/`、`views/`、`ui/`、`App.tsx`、`test/`**，再跑 `tsc --noEmit`。7.5 秒，已进 `verify`。失败可证：往 `src/features` 放一个 `import … from \"../../components/…\"` 的探针，立刻报 `TS2307: Cannot find module`；删掉即绿。用真复制而不是路径改写，因为改写会让 `tsc` 用不同的解析规则，那样「隔离通过」证明不了任何事。",
+        "en": "**A criterion that can be executed should not rest on someone reading the code.** The plan's rule — *delete a surface's whole directory and `src/features` plus `src/audio` still compile* — is now a gate: `check:isolation` copies `src` (plus the `vendor/` directory the GS-1 host imports by relative path), **deletes `components/`, `views/`, `ui/`, `App.tsx` and `test/`**, and runs `tsc --noEmit`. It takes 7.5 s and sits inside `verify`. It can fail: a probe file in `src/featur…"
       },
       {
-        "zh": "**证据**：`jsdom@30.0.1` 的 `engines.node` 是 `^22.22.2 || ^24.15.0 || >=26.0.0`；它内置的 `undici@8.10.2` 要求 `>=22.19.0`；`cachestorage.js:20` 正是那一句调用；而 `typeof worker_threads.markAsUncloneable` 在 Node 22.22.3 上是 `function`、在 Node 20 上是 `undefined`。本地 Node 22.22.3 上 `npm run test:coverage` **exit 0**：192 文件 / 2185 用例，覆盖率 lines 90.58% / branches 75.31% / functions 66.08%（阈值 78 / 60 / 58）——**阈值没问题，问题只在环境**。",
-        "en": "**The evidence**: `jsdom@30.0.1` declares `engines.node: ^22.22.2 || ^24.15.0 || >=26.0.0`; the `undici@8.10.2` it vendors requires `>=22.19.0`; `cachestorage.js:20` is exactly that call; and `typeof worker_threads.markAsUncloneable` is `function` on Node 22.22.3 and `undefined` on Node 20. Locally on Node 22.22.3 `npm run test:coverage` exits 0 with 192 files / 2185 tests and lines 90.58 % / branches 75.31 % / functions 66.08 % against thresholds of 78 / 60 / 58 — **the thr…"
+        "zh": "**三组状态搬出 `StudioView`**，进 `features/sequencer/hooks/useStudioSession.ts`：`usePlaybackSettings({ genre })`（鼓组起始值来自曲风默认，drums-only 与录音待命**都不持久化**——静默重新待命比忘掉更糟）、`useKeyboardPerformance()`（FAB 偏好是存的，本标签页的自定义事件与跨标签页的 `storage` 两条同步路径都归它管）、`useInspectorCursor()`（重排后检查器跟着**音轨**而不是行号）。新增 11 条测试**不再需要渲染整个工作室**——这才是「下一端能复用」的实际含义。",
+        "en": "**Three groups of state moved out of `StudioView`** into `features/sequencer/hooks/useStudioSession.ts`: `usePlaybackSettings({ genre })` (the kit starts at the genre's default; drums-only and record-arm are **never persisted** — silently re-arming is worse than forgetting), `useKeyboardPerformance()` (the FAB preference is stored, and both sync paths belong to it: the in-tab custom event and the cross-tab `storage` event) and `useInspectorCursor()` (after a row reorder the…"
       },
       {
-        "zh": "**修法**：两个 CI job 都改为 `node-version-file: \".nvmrc\"`，`.nvmrc` = `22.22.2`（正是 jsdom 声明的**下限**，所以 CI 跑「最低支持版本」，谁把要求悄悄抬高都会先红）；`package.json` 加 `engines.node`；`.npmrc` 开 `engine-strict`，不支持的 Node 在**安装阶段**就报 `EBADENGINE`（实测：`engines` 临时改成 `>=99` 时 `npm install --engine-strict` 立即失败）；新增 `npm run check:node` 作为 verify 第一步——它不自己实现 semver 范围判断，而是**直接构造一个 JSDOM**，环境能不能跑问它本人，顺带覆盖「在别的 Node 上装好的 node_modules 拿来跑」这种情况。README（中英）的「Node 20 或更新」改成「22.22.2 或更新」并写明原因。",
-        "en": "**The fix**: both CI jobs now use `node-version-file: \".nvmrc\"` with `.nvmrc` = `22.22.2` — exactly the floor jsdom declares, so CI runs the *minimum* supported version and anyone quietly raising the requirement goes red first; `package.json` gains `engines.node`; `.npmrc` sets `engine-strict`, so an unsupported Node fails at **install** time with `EBADENGINE` (verified: with `engines` temporarily set to `>=99`, `npm install --engine-strict` fails immediately); and `npm run…"
+        "zh": "**顺手收掉一个静默 bug 的温床**：FAB 偏好的事件名原本是两处字面量（写方 `dispatchEvent`、听方 `addEventListener`），打错一个字母不会有任何报错——读者只会继续显示旧值。现在是一个常量 `FAB_PREF_CHANGED_EVENT`。",
+        "en": "**And one silent-bug trap closed**: the FAB preference's event name was a string literal in two places (the writer's `dispatchEvent`, the listener's `addEventListener`). A typo in one of them raises nothing — the reader simply keeps showing the old value. It is now the constant `FAB_PREF_CHANGED_EVENT`."
       }
     ],
     "truncated": true
