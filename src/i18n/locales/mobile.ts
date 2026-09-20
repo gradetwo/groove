@@ -92,4 +92,20 @@ export const mobileMessages = {
   mobile_jam_lane_bass: { en: "Bass", zh: "贝斯" },
   mobile_jam_pad_clap: { en: "Clap", zh: "拍手" },
   mobile_jam_pad_rim: { en: "Rim", zh: "边击" },
+
+  // 挑战 (challenge, M5).
+  mobile_challenge_score: { en: "Ladder", zh: "天梯积分" },
+  mobile_challenge_streak: { en: "Streak", zh: "连胜/最佳" },
+  mobile_challenge_accuracy: { en: "Accuracy", zh: "正确率" },
+  mobile_challenge_difficulty: { en: "Difficulty", zh: "难度" },
+  mobile_challenge_easy: { en: "Easy · well known", zh: "初级 · 主流大类" },
+  mobile_challenge_medium: { en: "Medium · subgenres", zh: "进阶 · 细分子类" },
+  mobile_challenge_hard: { en: "Hard · near misses", zh: "硬核 · 近速干扰" },
+  mobile_challenge_question: { en: "Which genre is playing?", zh: "刚才听到的是哪个曲风？" },
+  mobile_challenge_correct: { en: "Correct", zh: "答对了" },
+  mobile_challenge_wrong: { en: "Not quite", zh: "答错了" },
+  mobile_challenge_answer_is: { en: "The answer was", zh: "答案是" },
+  mobile_challenge_next: { en: "Next question", zh: "下一题" },
+  mobile_challenge_to_next: { en: "{points} to the next rank", zh: "距下一段位 {points}" },
+  mobile_challenge_top: { en: "Top rank", zh: "已是最高段位" },
 };

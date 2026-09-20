@@ -1,29 +1,29 @@
 {
-  "version": "2.1.18",
+  "version": "2.1.19",
   "releaseDate": "2026-09-20",
-  "changelogCount": 182,
+  "changelogCount": 183,
   "latest": {
-    "version": "2.1.18",
+    "version": "2.1.19",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.1.18 手机端（M4）：即兴——律动编排、打击垫，速度条移到底部",
-      "en": "v2.1.18 Phone (M4): 即兴 — a Groove Grid, Pads, and the Tempo Bar at the Bottom"
+      "zh": "v2.1.19 手机端（M5）：挑战——四选一盲听、天梯与解析，和桌面共用同一条积分",
+      "en": "v2.1.19 Phone (M5): 挑战 — Blind Four-Way Listening, One Ladder Shared With the Desktop"
     },
     "highlights": [
       {
-        "zh": "**即兴模块按你的取舍建成**：4 轨 × 16 步的律动网格（点格子开关、播放时列高亮跟着音频时钟走、一键还原母版）＋ 6 个打击垫 ＋ 顶部**录制/播放**按钮；**BPM 与摇摆条移到了屏幕最下方**；**去掉了底/军/镲那排鼓组静音**；这个模块**不显示播放条**（它自己的走带就是循环本身）。",
-        "en": "**The jam module is built to your spec**: a 4-lane x 16-step groove grid (tap a step to toggle it, the playhead column follows the audio clock, one tap resets to the genre's own pattern), six pads, and record/play at the top; the **BPM and swing bar moved to the bottom of the screen**; the **drum-group mute row is gone**; and the module shows **no player bar** (its transport is the loop itself)."
+        "zh": "**挑战模块接上现有题库与判分，而不是另写一套**：自适应选题（SuperMemo-2 复习 + 混淆矩阵）、Elo 增减、段位门槛都在 `challengeAlgorithm.ts` 里，本轮把**难度池**也搬了进去（原本写在桌面视图里），手机与桌面因此共用同一条规则；而且两者读写**同一个 localStorage 键**，手机上答的题会接着桌面的进度，不是第二个存档。",
+        "en": "**The challenge module reuses the existing quiz and scoring rather than growing a second one**: adaptive selection (SuperMemo-2 review plus a confusion matrix), the Elo update and the rank tiers all live in `challengeAlgorithm.ts`, and this round moved the **difficulty pools** in there too (they were defined inside the desktop view). The two surfaces therefore share one set of rules — and they read and write the **same localStorage key**, so answering on the phone continues…"
       },
       {
-        "zh": "**两处刻意的取舍，都写在代码注释里**：① 打击垫是**步进输入**而不是现场鼓组——这个引擎没有对外的单次触发路径（为打击延迟再造一个 AudioContext 比不提供更糟），所以开「录制」后点打击垫就把**当前播放步**写进网格（落在播放头上，本身就是量化的），播放时垫子会跟着点亮；② 写入的是**点击瞬间正在播放的那一步**（读时钟，而不是用 80 ms 采样的 playhead）——180 BPM 时那 80 ms 就是整整一步，否则按感觉点会晚一格。",
-        "en": "**Two deliberate trade-offs, both recorded in the code**: (1) the pads are **step entry**, not a live drum kit - this engine has no public one-shot trigger, and adding a second AudioContext for pad latency would be worse than not offering it, so arming record writes the **current step** (quantised by definition, because it lands on the playhead) and the pads light up as their lane fires; (2) the write lands on the step playing **at click time** rather than on the 80 ms-sampl…"
+        "zh": "**手机形态**：天梯卡（积分/连胜/正确率/段位进度）、难度胶囊（初级 · 主流大类 / 进阶 · 细分子类 / 硬核 · 近速干扰）、一个大播放键听题、四张选项卡（答后正确项标绿 ✓、选错标红 ✗、其余变暗，并揭晓每题的实际 BPM）、以及就地展开的解析（答案曲风可点进详情页）。按你的取舍，**证书与重置没有带过来**——那是桌面功能，在手机上只会多花两屏。",
+        "en": "**Phone shape**: a ladder card (ladder points, streak, accuracy, rank progress), difficulty chips (easy · well-known / medium · subgenres / hard · near misses), one big play button to hear the question, four option cards (after answering: the real answer turns green with a tick, a wrong pick turns red with a cross, the rest dim, and each option reveals its actual BPM), and an explanation that opens in place with its genre linked to the detail page. By your rule, **the certif…"
       },
       {
-        "zh": "**编辑立刻可听见**：网格改动通过一个按内容比较的效应推给引擎（`setPattern`，不重启播放），速度/摇摆同理——所以「改一步、下一小节听到」是即时反馈，而不是停下再播。",
-        "en": "**Edits are audible immediately**: grid changes are pushed to the engine through a content-compared effect (`setPattern`, without restarting playback), and so are tempo and swing - so 'change a step, hear it next bar' is real feedback rather than stop-and-play."
+        "zh": "**测试**：挑战模块 **7 条**（四选项 + 播放键播的是题目的曲风、判分只标记一个正确答案且重复点击不重复计分、解析与 BPM 揭晓 + 曲风链接、天梯落盘到**桌面同一个键**且 Elo 变化、下一题清空判定、切难度重出题、脏存档不崩）＋ E2E 一段（`/m/challenge` 恰好 4 个选项、答一题后**恰好一个** correct、没有未判定的选项、共享天梯记录到 1 题、横向不溢出、下一题可用）。",
+        "en": "**Tests**: 7 cases for the module (four options and a play button that plays the question's genre; grading marks exactly one right answer and a second tap does not double-score; the explanation, the BPM reveal and the genre link; the ladder persisting to the **desktop's own key** with an Elo change; next-question clearing the verdict; a difficulty switch re-rolling; and a corrupt save not crashing) plus an E2E leg (`/m/challenge` has exactly 4 options, one answer leaves exac…"
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

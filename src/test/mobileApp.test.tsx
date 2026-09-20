@@ -155,9 +155,14 @@ describe("phone shell · five modules", () => {
     expect(screen.queryByTestId("mobile-home")).not.toBeInTheDocument();
     first.unmount();
 
-    renderShell("challenge");
-    expect(screen.getByTestId("mobile-module-challenge-placeholder")).toBeInTheDocument();
+    // 挑战 is real too (M5); 探索 is the placeholder now.
+    const second = renderShell("challenge");
+    expect(await screen.findByTestId("mobile-challenge", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.queryByTestId("mobile-jam")).not.toBeInTheDocument();
+    second.unmount();
+
+    renderShell("explore");
+    expect(screen.getByTestId("mobile-module-explore-placeholder")).toBeInTheDocument();
   });
 });
 
