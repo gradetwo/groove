@@ -1,27 +1,27 @@
 {
-  "version": "2.2.4",
+  "version": "2.3.0",
   "releaseDate": "2026-09-20",
-  "changelogCount": 190,
+  "changelogCount": 191,
   "latest": {
-    "version": "2.2.4",
-    "date": "2026-09-20",
+    "version": "2.3.0",
+    "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.2.4 真正去掉黄色：极光冷色底 + 每个曲风一张自己的封面图；并移除「拿去即兴」",
-      "en": "v2.2.4 Amber Actually Gone: an Aurora Ground, a Cover Per Genre, and No Jam Hand-Off"
+      "zh": "v2.3.0 手机端五项到位：播放器直接移植 player2、每个曲风一张真图、探索复用老视图、即兴合成一个控制块、首页时间轴回归",
+      "en": "v2.3.0 Five Things the Phone Was Missing: the player2 Port, a Real Cover Per Genre, Reused Desktop Views, One Jam Dock, and the Timeline Back"
     },
     "highlights": [
       {
-        "zh": "**先承认一件事**：v2.2.1 声称换了配色，但那次改动**没有真正写进 `mobile.css`**（脚本替换静默失败，我只验证了「构建通过」而没验证「琥珀色字符串已消失」）。所以线上一直是那套屎黄色——这一版是真正生效的一次：冷调近黑底（#0b0b14）、中性白文字、默认强调色青绿，模块配色为 即兴 紫 / 挑战 玫瑰 / 探索 蓝 / 更多 灰，并且**验证了 `#e9a23b` 在样式里为 0 次出现**。",
-        "en": "**One admission first**: v2.2.1 claimed a new palette but the change **never reached `mobile.css`** (the scripted replacement failed silently, and I verified the build rather than the amber string). The live build stayed amber; this one is real: a cool near-black ground (#0b0b14), neutral white ink, teal default accent, and per-module accents (jam violet / challenge rose / explore blue / more slate) — with `#e9a23b` verified to appear **zero** times in the stylesheet."
+        "zh": "**播放器现在是 player2.html 的移植，不是「参考它做的」**。上一版把参考稿的观感删掉了：扁平的唱盘标签、React 做的进度条、带边框的按钮排。这一版把代码搬了过来——预渲染的纹路（约 1500 条弧线、划痕、灰尘、边缘环）、印着每件乐器 16 格刻度的标签与四套盘纸、四层光（中心弥散光、轨道环、搓盘高光、固定高光）、随拍点脉冲的时序点阵、落针涟漪；唱臂是刚体旋转（停驻托架、摆入抬臂、沟槽抖动、底鼓时唱头小幅上跳、落针闪光）；速度用参考稿的 `1-exp(-dt/130)` 阻尼，所以数字像电机一样滑过去而不是跳过去。**拍点也接上了周边**：`--bpmBeat`/`--kick`/`--breath` 每帧写到 `.mobile-root`，状态灯、顶部光晕、播放键与均衡器条全部由它们驱动。舞台照抄参考稿：顶栏（品牌 + 活状态灯）、拖动提示、曲名与速度（± 支持 420ms 后连发）、2px 进度轨与「实时合成 · 无限循环」、五个传输键、以及下拉曲目单（正在播放那行有三条均衡器）。",
+        "en": "**The player is now a port of `player2.html`, not \"inspired by\" it.** The previous version had deleted the reference's look: a flat label, a React progress bar, a bordered button row. This one brings the code across — the baked groove texture (~1500 arcs, scratches, dust, edge rings), the printed label with a 16-tick band per instrument and its four paper stocks, four lighting layers (centre bloom, ring guides, scrub shine, fixed sheen), the sequencer dots that pulse per ste…"
       },
       {
-        "zh": "**每个曲风有自己的封面图**：按你给的参考图的极光质感（紫 → 粉 → 青，深色底、多层径向光晕）**程序化生成**——同一曲风永远同一张、不同曲风互不相同、六个类别各有色相带。同时留了**真实图片的入口**：把 `<genre-id>.jpg` 放进 `public/covers/` 就会自动覆盖生成图，不需要改代码。**没有直接塞入真实照片**，是因为这个环境离线、且 159 张图的版权归属需要你来定；生成图今天就能用，真实图随时可替换。",
-        "en": "**Every genre gets its own cover**: generated from the aurora look in your reference (violet → pink → teal over a dark ground, layered radial glows) — the same genre always looks the same, different genres differ, and each of the six categories has its own hue band. There is also a **real-image hook**: drop `<genre-id>.jpg` into `public/covers/` and it takes over automatically, no code change. Real photographs are not bundled because this environment is offline and 159 image…"
+        "zh": "**每个曲风一张真图**：159 张 320×320 的实拍照片（Lorem Picsum，来源为 Unsplash 许可，出处与可复现的下载地址记在 `public/covers/CREDITS.md`），共约 2.8MB。新增 `genreCovers.test.ts` 守住这套资源：每个曲风必须有图、没有小于 2KB 的残图、没有多余文件、出处文件还在。`genreArt.ts` 本来就更偏好真实文件，所以换图或删图都不用改代码。",
+        "en": "**A real photograph per genre**: 159 320×320 photos (Lorem Picsum, which serves Unsplash-licensed images; the licence and the reproducible URL pattern are in `public/covers/CREDITS.md`), ~2.8 MB in total. A new `genreCovers.test.ts` guards the set: every genre has a file, none is under 2 KB (a truncated download), there are no orphans, and the credits file still says where they came from. `genreArt.ts` already preferred a real file over the generated art, so pictures can be…"
       },
       {
-        "zh": "**「拿去即兴」已按你的要求移除**：曲风详情页不再有任何按钮（除了左上角的返回），点页面任意非链接处也能返回。",
-        "en": "**The jam hand-off is gone, as asked**: a genre's page now has no buttons at all besides the back arrow, and tapping anywhere that is not a link also returns."
+        "zh": "**探索改成挂载老视图，不再自己造一份**：三个子页现在是应用自己的 `ChordProgressionsView` / `KickAnatomyView` / `MasterclassView`，和弦走向仍然是第一个也是默认页，三个都包在 `[data-legacy=\"desktop\"]` 里（这正是触控尺寸门禁豁免的标记——桌面布局的密集控件不是手机控件）。顺手删掉了手机版那套 `KickLab`/`ChordLab`/`GrooveLab` 与它们的音频接线。",
+        "en": "**探索 now mounts the app's own views instead of reimplementing them**: the three sub-pages are `ChordProgressionsView` / `KickAnatomyView` / `MasterclassView`, chords still first and still the default, each inside `[data-legacy=\"desktop\"]` — the marker the touch-target gate exempts, because a desktop layout's dense controls are not phone controls. The phone-only `KickLab`/`ChordLab`/`GrooveLab` and their audio wiring are gone."
       }
     ],
     "truncated": true
