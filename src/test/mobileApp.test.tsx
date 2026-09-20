@@ -42,6 +42,12 @@ const renderShell = (module: MobileModule = "home", onSelect = vi.fn()) => {
   return { ...utils, onSelect };
 };
 
+/**
+ * The home screen is a lazy chunk, so first paint under a full-suite run can take longer than the
+ * 1 s default; the tests wait explicitly rather than relying on the machine's mood.
+ */
+const findHome = () => screen.findByTestId("mobile-home", {}, { timeout: 5000 });
+
 const rowIds = (): string[] =>
   [...document.querySelectorAll('[data-testid^="mobile-genre-row-"]')].map((node) =>
     (node.getAttribute("data-testid") ?? "").replace("mobile-genre-row-", "")
@@ -119,14 +125,14 @@ describe("phone shell · home screen", () => {
 
   it("lists the whole library by default", async () => {
     renderShell("home");
-    await screen.findByTestId("mobile-home");
+    await findHome();
     expect(rowIds()).toHaveLength(ALL_GENRES.length);
     expect(ALL_GENRES.length).toBeGreaterThan(100);
   });
 
   it("filters by search text, matching English names and CJK aliases", async () => {
     renderShell("home");
-    await screen.findByTestId("mobile-home");
+    await findHome();
     fireEvent.change(screen.getByTestId("mobile-home-search"), { target: { value: "house" } });
     const filtered = rowIds();
     expect(filtered.length).toBeGreaterThan(0);
@@ -141,7 +147,7 @@ describe("phone shell · home screen", () => {
 
   it("filters by category chip", async () => {
     renderShell("home");
-    await screen.findByTestId("mobile-home");
+    await findHome();
     fireEvent.click(screen.getByRole("tab", { name: /Hip Hop/ }));
     const expected = ALL_GENRES.filter((genre) => genre.category === "Hip Hop").map((genre) => genre.id);
     expect(new Set(rowIds())).toEqual(new Set(expected));
@@ -150,7 +156,7 @@ describe("phone shell · home screen", () => {
 
   it("expands one genre's summary at a time", async () => {
     renderShell("home");
-    await screen.findByTestId("mobile-home");
+    await findHome();
     const [first, second] = rowIds();
     fireEvent.click(screen.getByTestId(`mobile-genre-row-${first}`));
     expect(screen.getByTestId(`mobile-genre-summary-${first}`)).toBeInTheDocument();
@@ -163,7 +169,7 @@ describe("phone shell · home screen", () => {
 
   it("auditions through the engine hook and shows the playing genre", async () => {
     const { unmount } = renderShell("home");
-    await screen.findByTestId("mobile-home");
+    await findHome();
     const genreId = rowIds()[0];
     fireEvent.click(screen.getByTestId(`mobile-genre-play-${genreId}`));
     expect(audition.toggle).toHaveBeenCalledTimes(1);
@@ -173,7 +179,7 @@ describe("phone shell · home screen", () => {
     // Same screen, now reporting that genre as playing: the button must flip to the stop state.
     audition.playingGenreId = genreId;
     renderShell("home");
-    await screen.findByTestId("mobile-home");
+    await findHome();
     const playingButton = screen.getByTestId(`mobile-genre-play-${genreId}`);
     expect(playingButton).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(playingButton);
@@ -182,7 +188,7 @@ describe("phone shell · home screen", () => {
 
   it("says so when a search matches nothing instead of showing an empty list", async () => {
     renderShell("home");
-    await screen.findByTestId("mobile-home");
+    await findHome();
     fireEvent.change(screen.getByTestId("mobile-home-search"), { target: { value: "zzzz-no-such-genre" } });
     expect(rowIds()).toHaveLength(0);
     expect(screen.getByTestId("mobile-home-empty")).toBeInTheDocument();
