@@ -1,0 +1,94 @@
+/**
+ * Phone-shell design tokens.
+ *
+ * The values are taken from the two reference designs the redesign is based on
+ * (`mobile_all.html` / `player2.html`): a dark brown ground, one amber accent, one teal secondary,
+ * and an extremely restrained surface palette — three browns, no elevation, no large shadows.
+ *
+ * Scoped to `.mobile-root` rather than `:root` on purpose. The desktop UI has its own token set in
+ * `src/index.css`; a redesign that rewrote the shared tokens would restyle the desktop as a side
+ * effect, and the two surfaces are meant to be independently replaceable while the phone shell is
+ * built up module by module.
+ */
+
+.mobile-root {
+  --m-bg: #0b0907;
+  --m-card: #14110b;
+  --m-card-2: #1b160d;
+  --m-line: rgba(238, 225, 200, 0.09);
+  --m-line-2: rgba(238, 225, 200, 0.2);
+  --m-ink: #efe7d6;
+  --m-ink-2: #a79b82;
+  --m-ink-3: #6f6653;
+  --m-gold: #e9a23b;
+  --m-gold-hi: #ffcf7d;
+  --m-teal: #3fd8c2;
+  --m-red: #f26d6d;
+  --m-green: #5ad48e;
+  --m-violet: #9d7bea;
+  /* Text on an amber fill is always this, never white: measured contrast on #E9A23B. */
+  --m-on-gold: #181104;
+  background: var(--m-bg);
+  color: var(--m-ink);
+  font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans",
+    "Noto Sans SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* A control surface, not a document: no text selection, no tap highlight, no long-press callout. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* All numerals in the shell are tabular so a changing BPM does not shift the layout. */
+.mobile-root .m-mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+/* The gold glow bleeding from the top, exactly as in both references. */
+.mobile-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(130% 40% at 50% -8%, rgba(233, 162, 59, 0.07), transparent 60%);
+}
+
+/* Horizontal chip rails scroll without a visible scrollbar (the reference's `.chips`). */
+.mobile-root .m-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.mobile-root .m-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* Page enter: `.45s cubic-bezier(.22,1,.36,1)`, the reference's `rise`. */
+@keyframes mobile-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.mobile-root .m-rise {
+  animation: mobile-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Tap feedback for every pressable surface (pads, cards, transport). */
+.mobile-root .m-press {
+  transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+  touch-action: manipulation;
+}
+.mobile-root .m-press:active {
+  transform: scale(0.97);
+}

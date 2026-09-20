@@ -4450,3 +4450,26 @@ GS-1 上游（降低每个实例的 WASM 预留），要么在宿主（一个可
 
 **注**：现有手机 E2E 断言编码的是旧 IA（五格旧标签、旧页面结构），因此 M1–M7 期间需要同步改造
 `scripts/test_matrix.js` 的手机部分，不能等到最后——否则 verify 会一直红。
+
+## M.6 进度：M1 外壳 + M2 首页（v2.1.15）
+
+已落地（`src/mobile/`，路由 `/m/<module>`）：
+
+- `mobileModules.ts` 五模块词汇（`home | jam | challenge | explore | more`）+ 未知值回落；`mobile.css`
+  设计令牌（作用域 `.mobile-root`，不动桌面）；`MobileModuleTabBar`（五格、每格 ≥56 px、可见文字标签、
+  `aria-current`）；`MobileApp` 外壳（金色顶部光晕、安全区、内容预留固定栏高度、lazy 加载以不进首屏）；
+  `screens/MobileHomeScreen.tsx` 曲风库（分类胶囊、搜索、色块即试听按钮、行内展开摘要）；i18n
+  `src/i18n/locales/mobile.ts`。
+- 路由：`/m/<module>`（含 `?genre=`）解析与格式化，**先于** genre 路径解析，避免 `/m/home` 被误判；未知模块
+  回落 `home`；不污染桌面路由。
+- `App.tsx`：`route.mobile` 存在时整棵树换成手机外壳（lazy + Suspense），桌面与旧手机界面完全不变。
+- 层级门禁把 `src/mobile` 归类为 **ui**（与它将取代的 views 同层），这样「logic 反向依赖手机 UI」会被抓住。
+
+**为什么用「并行新增 + 最后切换」而不是直接替换**：现有手机界面的 E2E 断言编码的是旧 IA（五格旧标签、旧
+页面结构、旧 surface 列表）。直接替换会让 `verify` 长时间变红，也会让「手机端坏了」与「手机端被改到一半」
+无法区分。新界面有独立 URL，因此从第一天起就能在真机上打开试用，同时 E2E 加了一条**可达性检查**（五格存在且
+顺序正确、≥44 px、有文字标签、首页列出 ≥50 曲风、横向不溢出）在**每个 target** 上运行，保证这个只靠 URL 到达
+的界面始终被门禁看着。
+
+下一步 M3：全屏黑胶播放器（canvas 渲染器拆纯函数：几何/角度/唱臂/搓盘）+ 抽屉式播放条 + 模式三态循环 +
+收起/展开 + 点唱片切详情；随后 M2 剩余部分（曲风详情页 + 播放条）。

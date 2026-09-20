@@ -1,27 +1,27 @@
 {
-  "version": "2.1.14",
+  "version": "2.1.15",
   "releaseDate": "2026-09-20",
-  "changelogCount": 178,
+  "changelogCount": 179,
   "latest": {
-    "version": "2.1.14",
+    "version": "2.1.15",
     "date": "2026-09-20",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.1.14 追到「同一个页面渲染久了会变声」的根因：GS-1 的 WASM 内存预算",
-      "en": "v2.1.14 Root Cause of \"a Long-Lived Page Renders Differently\": the GS-1 WASM Memory Budget"
+      "zh": "v2.1.15 手机端重构第一步：五格新外壳与曲风库（/m/home 可访问）",
+      "en": "v2.1.15 Phone Rebuild, Step One: the Five-Module Shell and the Genre Library (/m/home)"
     },
     "highlights": [
       {
-        "zh": "**上一版只是绕开，这一版追到了根因。** 把同一曲风按轨道拆开量（先量一遍 → 渲染 60 个别的曲风 → 再量一遍）：bass 与 fx 两根轨道**逐位相同**（Δ 0.000 dB），而 GS-1 负责的 chords **+13.050 dB**、lead **−16.555 dB**；limiter 两次都是 worklet、真峰都钉在 −1.30 dBTP，把 makeup 拉到 −12 dB（限幅器完全不介入）依然漂 +1.849 dB——所以差异在**内容**，不在母带链。给 host 创建的 `catch` 加上原因打印后真相就一句话：`WebAssembly.instantiate(): Out of memory: Cannot allocate Wasm memory for new instance`。",
-        "en": "**The previous release worked around it; this one found the cause.** Measuring one genre track by track (before, then after rendering 60 other genres) shows bass and fx **bit-identical** (Δ 0.000 dB) while the two GS-1-routed roles move: chords **+13.050 dB**, lead **−16.555 dB**. The limiter is the worklet both times and the peak stays pinned at −1.30 dBTP; with makeup at −12 dB (limiter disengaged) the drift is still +1.849 dB — so it is the *content*, not the master chain…"
+        "zh": "**手机端按新 IA 重建，第一步是外壳 + 曲风库。** 底部五个模块：**首页 · 即兴 · 挑战 · 探索 · 更多**（设置、更新、帮助等杂项归入「更多」）。新的界面是独立的一层（`src/mobile/`），用自己的路由 `/m/<module>` 访问：**现有手机界面照旧工作、照旧被 E2E 覆盖**，新界面一个模块一个模块替换上去；等五个模块都真实可用，再把开关切过去、删掉旧壳。手机上现在就能打开 `/m/home` 试用。",
+        "en": "**The phone UI is being rebuilt on the new IA, starting with the shell and the genre library.** Five modules at the bottom: **Home · Jam · Challenge · Explore · More** (settings, updates and help live under More). The new surface is its own layer (`src/mobile/`) on its own route, `/m/<module>`: **the existing phone UI keeps working and keeps being covered by E2E** while the new one replaces it module by module. When all five modules are real, the switch flips and the old she…"
       },
       {
-        "zh": "**一个页面能建约 124 个 GS-1 host，之后怎么拆都拿不回来**（每个策略开全新浏览器实测）：keep / keep+gc / `dispose()` / dispose+gc / dispose+`close()` 全部在第 124–125 个失败——`OfflineAudioContext` 上**根本没有 `close()`**，`host.dispose()` 只断开节点。只有刷新页面能释放，这正解释了为什么它看起来是「页面级」的、以及为什么上一轮的 dispose 实验无效。",
-        "en": "**A page builds ~124 GS-1 hosts and then never another one**, measured with a fresh browser per policy: keep, keep+gc, `dispose()`, dispose+gc and dispose+`close()` all fail at instance 124-125 — `OfflineAudioContext` has no `close()` at all, and `host.dispose()` only disconnects the node. Only reloading the page frees it, which is why the effect looked page-scoped and why last round's dispose experiment changed nothing."
+        "zh": "**首页就是曲风库**：分类胶囊（六大类，色块与参考稿一致）、搜索（同时匹配英文名与中文别名）、以及每个曲风一行——色块方块兼作试听按钮（走真实引擎的 `useGenreAudition`）、英文名 + 中文名、等宽小字元信息（年代 · BPM · 分类）。点整行**就地展开**该曲风的摘要（听感要点、BPM 区间、拍号、发源地），而不是跳走——参考稿里没有任何从列表看详情的入口，这是净新增的交互。",
+        "en": "**Home is the genre library**: category chips (six categories, swatches matching the reference), search (English names and Chinese aliases), and one row per genre — the colour square doubles as the audition button (through the real engine via `useGenreAudition`), then English name plus Chinese name and a monospace meta line (era · BPM · category). Tapping the row **expands that genre's summary in place** (character, BPM range, time signature, origin) instead of navigating aw…"
       },
       {
-        "zh": "**修法一：stem 渲染不再为用不到的轨道建 host。** 调度第一行就丢掉非本轨的轨，但 host 循环过去对每个 GS-1 角色都建一个，于是「母带 + 8 stems」一次导出白建 14 个 host（共 18 个）。现在只建 4 个：同一页面可导出的次数从约 7 次变成约 31 次。4 条单测钉住，删掉那行跳过会让其中 3 条立刻红。",
-        "en": "**Fix one: a stem render no longer builds hosts it cannot use.** The scheduling loop drops every track but its own on the first line, yet the host loop built one per GS-1 role anyway, so one \"master + 8 stems\" export built 14 hosts that could never sound (18 in total). It now builds 4: roughly 7 exports per page become roughly 31. Four unit cases pin it; deleting the skip fails three of them."
+        "zh": "**规格照手机来**：底部栏每格 ≥56 px、五个模块各带可见文字标签（没有 hover 的设备上，纯图标不可发现）、`aria-current` 标记当前模块；外壳只用自己的设计令牌（深棕 + 琥珀，作用域在 `.mobile-root`，不动桌面），数字一律等宽对齐；横向不溢出、焦点进搜索框不触发 iOS 缩放（输入 16 px）；放大镜与双指缩放由既有的 `user-scalable=no` 拦住。",
+        "en": "**Built to phone specs**: every tab is ≥56 px with a visible text label (an icon-only bar is undiscoverable on a device with no hover) and `aria-current` marks the active module; the shell carries its own design tokens (dark brown plus amber, scoped to `.mobile-root`, the desktop untouched) with tabular monospace numerals; no horizontal overflow, and the search field is 16 px so focusing it cannot trigger iOS zoom. Pinch zoom and the magnifier stay blocked by the existing `u…"
       }
     ],
     "truncated": true
