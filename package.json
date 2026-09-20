@@ -27,7 +27,7 @@
     "handoff:e2e": "node scripts/slow_pack.mjs run --only e2e --label e2e",
     "slow:export": "node scripts/slow_pack.mjs export",
     "slow:verify": "node scripts/slow_pack.mjs verify",
-    "verify": "npm run check:node && npm run version:check && npm run docs:check && npm run redlines && npm run check:layers && npm run check:isolation && npm run check:css && npm run check:docs:refs && npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run probe:toolbar && npm run probe:grid-gutter && npm run check:budget && npm run check:gs1 && npm run check:layout && npm run check:loudness && npm run check:timbre && npm run test:e2e && npm run test:e2e:mobile",
+    "verify": "npm run check:node && npm run version:check && npm run docs:check && npm run redlines && npm run check:layers && npm run check:isolation && npm run check:css && npm run check:docs:refs && npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run probe:toolbar && npm run probe:grid-gutter && npm run check:budget && npm run check:gs1 && npm run check:layout && npm run check:loudness && npm run check:loudness:fresh && npm run check:timbre && npm run test:e2e && npm run test:e2e:mobile",
     "package": "npm run verify && python3 scripts/package.py",
     "deploy": "npm run verify && npm run deploy:only",
     "deploy:only": "node scripts/deploy.mjs",
