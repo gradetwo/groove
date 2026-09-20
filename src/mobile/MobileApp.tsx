@@ -139,6 +139,22 @@ export function MobileApp({
     [genreId, mobilePlayer, onOpenPlayer, playMode, playingGenreId, stopAudition, toggleAudition]
   );
 
+  /**
+   * Switch the record to another genre *without* leaving the player — the pull-down list's action.
+   *
+   * Deliberately not `openGenreAndPlay`: that one opens the genre's page, which is right from the
+   * library and wrong from inside the player (the whole point of the list is to stay on the record).
+   */
+  const playGenreInPlayer = useCallback(
+    (genre: Genre) => {
+      if (playingGenreId === genre.id) return;
+      stopAudition();
+      void toggleAudition(genre);
+      onOpenPlayer?.(genre.id);
+    },
+    [onOpenPlayer, playingGenreId, stopAudition, toggleAudition]
+  );
+
   const handleToggleAudition = useCallback(
     (genre: Genre) => {
       if (playingGenreId === genre.id) {
@@ -183,6 +199,14 @@ export function MobileApp({
    * transport, and the genre page is a reading page with the player bar as its only bottom chrome.
    */
   const showTabBar = !isPlayer && !isDetail;
+  /**
+   * …and so does the shell's own wordmark header.
+   *
+   * It used to sit above every module, which on a full-screen surface meant *two* bars saying GROOVE:
+   * the shell's and the player's own top bar (the reference's). A full-screen page owns its chrome, so
+   * the shell steps out of the way for both of them.
+   */
+  const showShellHeader = !isPlayer && !isDetail;
 
   return (
     <div className="mobile-root relative min-h-[100dvh] w-full" data-testid="mobile-shell" data-module={module}>
@@ -197,16 +221,18 @@ export function MobileApp({
               : "env(safe-area-inset-bottom)",
         }}
       >
-        <header className="flex items-center justify-between px-4 pt-4 pb-1">
-          <div className="flex items-baseline gap-2">
-            <span className="m-mono text-[12px] font-bold tracking-[0.24em] text-[var(--m-gold)]">
-              GROOVE
-            </span>
-            <span className="text-[10px] tracking-[0.1em] text-[var(--m-ink-2)]">
-              {t("mobile_shell_title")}
-            </span>
-          </div>
-        </header>
+        {showShellHeader && (
+          <header className="flex items-center justify-between px-4 pt-4 pb-1">
+            <div className="flex items-baseline gap-2">
+              <span className="m-mono text-[12px] font-bold tracking-[0.24em] text-[var(--m-gold)]">
+                GROOVE
+              </span>
+              <span className="text-[10px] tracking-[0.1em] text-[var(--m-ink-2)]">
+                {t("mobile_shell_title")}
+              </span>
+            </div>
+          </header>
+        )}
 
         <Suspense
           fallback={
@@ -222,6 +248,7 @@ export function MobileApp({
               playMode={playMode}
               readClock={readClock}
               onTogglePlay={handleToggleAudition}
+              onPlayGenre={playGenreInPlayer}
               onCycleMode={cyclePlayMode}
               onSkip={skip}
               onTempo={setTempo}

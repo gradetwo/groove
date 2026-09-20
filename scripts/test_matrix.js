@@ -726,6 +726,97 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error("Phone player overflows horizontally");
     }
 
+    /**
+     * The ported record's own chrome.
+     *
+     * `player2.html`'s player is more than a canvas: five transport buttons, a tempo readout, a
+     * pull-down track list, and a set of beat slaves (`--bpmBeat`, `--kick`, `--breath`) that the
+     * canvas writes onto the shell root so the surrounding chrome pulses with the beat. Those slaves
+     * are the part that silently disappears if the loop stops running, so they are asserted here.
+     */
+    const ported = await page.evaluate(() => {
+      const root = document.querySelector(".mobile-root");
+      const readout = document.querySelector('[data-testid="mobile-player-bpm"]');
+      return {
+        missing: [
+          "mobile-player-mode",
+          "mobile-player-skip-back",
+          "mobile-player-play",
+          "mobile-player-skip-forward",
+          "mobile-player-drawer-toggle",
+        ].filter((id) => !document.querySelector(`[data-testid="${id}"]`)),
+        bpmText: readout ? readout.textContent.replace(/\s+/g, " ").trim() : null,
+        beat: root ? root.style.getPropertyValue("--bpmBeat").trim() : "",
+        kick: root ? root.style.getPropertyValue("--kick").trim() : "",
+      };
+    });
+    if (ported.missing.length) {
+      throw new Error(`Phone player is missing the reference's controls: ${ported.missing.join(", ")}`);
+    }
+    if (!ported.bpmText || !/^\d{2,3} BPM$/.test(ported.bpmText)) {
+      throw new Error(`Phone player does not show its tempo (${ported.bpmText})`);
+    }
+    if (!/^\d+(\.\d+)?s$/.test(ported.beat) || ported.kick === "") {
+      throw new Error(`Phone player's beat slaves are not running (bpmBeat=${ported.beat} kick=${ported.kick})`);
+    }
+
+    // The pull-down list: rows for this genre's category, the playing one marked, no overflow.
+    await page.click('[data-testid="mobile-player-drawer-toggle"]');
+    const cue = await page.evaluate(() => {
+      const panel = document.querySelector('[data-testid="mobile-player-drawer-panel"]');
+      const current = document.querySelector('[data-testid="mobile-player-cue-deep-house"]');
+      return {
+        rows: document.querySelectorAll('[data-testid^="mobile-player-cue-"]').length,
+        open: panel ? panel.className.includes("is-open") : false,
+        currentMarked: current ? current.getAttribute("aria-current") === "true" : false,
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+    if (cue.rows < 2 || !cue.open || !cue.currentMarked) {
+      throw new Error(`Phone player's track list is wrong (${JSON.stringify(cue)})`);
+    }
+    if (cue.overflow) {
+      throw new Error("Phone player overflows horizontally with the track list open");
+    }
+    await page.click('[data-testid="mobile-player-drawer-toggle"]');
+
+    /**
+     * The jog, end to end: a real pointer drag on the record has to move the tempo *and* must not be
+     * mistaken for the tap that opens the genre's page. That distinction is the whole reason the record
+     * is one control with two gestures, so it is worth a browser.
+     */
+    const bpmNumber = () =>
+      page.evaluate(() => {
+        const node = document.querySelector('[data-testid="mobile-player-bpm-value"]');
+        return node ? Number(node.textContent.trim()) : NaN;
+      });
+    const beforeJog = await bpmNumber();
+    const recordBox = await (await page.$('[data-testid="mobile-player-record"]')).boundingBox();
+    const recordX = recordBox.x + recordBox.width / 2;
+    const recordY = recordBox.y + recordBox.height / 2;
+    await page.mouse.move(recordX, recordY);
+    await page.mouse.down();
+    await page.mouse.move(recordX - 60, recordY, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(
+      (previous) => {
+        const node = document.querySelector('[data-testid="mobile-player-bpm-value"]');
+        return node && Number(node.textContent.trim()) !== previous;
+      },
+      beforeJog,
+      { timeout: 15000 }
+    );
+    const afterJog = await bpmNumber();
+    if (!(afterJog < beforeJog)) {
+      throw new Error(`Dragging the record left did not slow it down (${beforeJog} -> ${afterJog})`);
+    }
+    if (!(await page.$('[data-testid="mobile-player"]'))) {
+      throw new Error("Jogging the record left the player (the drag was taken for a tap)");
+    }
+
     // Tapping the record goes to the genre's page; the chevron collapses back to the list.
     await page.click('[data-testid="mobile-player-record"]');
     await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 45000 });
@@ -823,30 +914,48 @@ async function runTestOnTarget(target, baseUrl) {
     /**
      * 1.10 The 探索 module: three sub-pages, and the landscape layout the reference never had.
      *
-     * The sub-page switch, the kick's fire button and the groove's lane dropout are all checked by
-     * behaviour; the landscape part is checked by *measurement*, because a media query is exactly the
-     * kind of thing a unit test cannot see.
+     * All three sub-pages mount the app's own desktop views, so the switch is checked by the wrapper
+     * each one renders; the landscape part is checked by *measurement*, because a layout that pins the
+     * reused view to a phone column is exactly the kind of thing a unit test cannot see.
      */
     await page.goto(`${baseUrl}/m/explore`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-testid="mobile-explore"]', { timeout: 45000 });
     await page.click('[data-testid="mobile-explore-tab-chords"]');
-    await page.waitForSelector('[data-testid="mobile-explore-chords"]', { timeout: 45000 });
+    await page.waitForSelector('[data-testid="mobile-explore-chords-legacy"]', { timeout: 45000 });
 
-    const explore = await page.evaluate(() => {
-      const body = document.querySelector('[data-testid="mobile-explore-chords"]');
-      const cards = document.querySelectorAll('[data-testid^="mobile-explore-chord-"]:not([data-testid*="play"]):not([data-testid*="category"])');
-      const columns = body ? getComputedStyle(body).gridTemplateColumns.split(" ").length : 0;
-      return {
-        cards: cards.length,
-        columns,
-        overflow: (() => {
-          const root = document.documentElement;
-          return root.scrollWidth > root.clientWidth + 4;
-        })(),
-      };
+    /**
+     * 探索 does not reimplement the desktop tools any more — it *mounts* them.
+     *
+     * The three sub-pages render the app's own `ChordProgressionsView`, `KickAnatomyView` and
+     * `MasterclassView` inside `[data-legacy="desktop"]`, which is what the user asked for (they are
+     * mature, and they are the reason the chord page works so well in landscape) and what the
+     * touch-target gate keys off to exempt a desktop layout's own controls.
+     */
+    const explore = await page.evaluate(() => ({
+      chords: Boolean(document.querySelector('[data-testid="mobile-explore-chords-legacy"]')),
+      chordHelp: Boolean(document.querySelector('[data-testid="chords-help-button"]')),
+    }));
+    if (!explore.chords || !explore.chordHelp) {
+      throw new Error(`Explore's chord page is not the reused desktop view (${JSON.stringify(explore)})`);
+    }
+
+    await page.click('[data-testid="mobile-explore-tab-kick"]');
+    await page.waitForSelector('[data-testid="mobile-explore-kick-legacy"]', { timeout: 45000 });
+    if (!(await page.$('[data-testid="kick-help-button"]'))) {
+      throw new Error("Explore's kick page is not the reused desktop view");
+    }
+    await page.click('[data-testid="mobile-explore-tab-groove"]');
+    await page.waitForSelector('[data-testid="mobile-explore-groove-legacy"]', { timeout: 45000 });
+    if (!(await page.$('[data-testid="bake-to-studio-btn"]'))) {
+      throw new Error("Explore's groove page is not the reused desktop view");
+    }
+    await page.click('[data-testid="mobile-explore-tab-chords"]');
+    await page.waitForSelector('[data-testid="mobile-explore-chords-legacy"]', { timeout: 45000 });
+    const overflowNow = await page.evaluate(() => {
+      const root = document.documentElement;
+      return root.scrollWidth > root.clientWidth + 4;
     });
-    if (explore.cards < 4) throw new Error(`Explore chord page listed ${explore.cards} progression(s)`);
-    if (explore.overflow) throw new Error("Explore module overflows horizontally");
+    if (overflowNow) throw new Error("Explore module overflows horizontally");
 
     /**
      * On a landscape phone the list and the controls share the width, so the page body must lay out in
@@ -902,34 +1011,40 @@ async function runTestOnTarget(target, baseUrl) {
       await page.goto(`${baseUrl}/m/explore`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector('[data-testid="mobile-explore"]', { timeout: 45000 });
       await page.click('[data-testid="mobile-explore-tab-chords"]');
-      await page.waitForSelector('[data-testid="mobile-explore-chords"]', { timeout: 45000 });
+      await page.waitForSelector('[data-testid="mobile-explore-chords-legacy"]', { timeout: 45000 });
       /**
-       * Measured geometrically, not through `grid-template-columns`.
+       * The reused desktop view has to take the whole width it is given.
        *
-       * The computed value of `grid-template-columns` on a non-grid element is not a reliable "how many
-       * columns" signal on every engine (WebKit reported 2 for a one-column block), so the check asks
-       * the question that actually matters: is the card list beside the chip rail, or below it?
+       * This is the measurable half of "reuse the old views, they work well in landscape": the wrapper
+       * is *not* pinned to a phone column, so a landscape phone hands it ~800px and it lays its own
+       * chords out across them. Asserted as geometry (the wrapper's width tracks the viewport, and no
+       * orientation overflows), because that is what a media query or a fixed `max-width` would break.
        */
       const layoutAt = async (width, height) => {
         await page.setViewportSize({ width, height });
         await page.waitForTimeout(250);
         return page.evaluate(() => {
-          const cards = [...document.querySelectorAll('[data-testid="mobile-explore-chords"] ul > li')];
-          if (cards.length < 2) return "missing";
-          const [first, second] = cards.map((node) => node.getBoundingClientRect());
-          // Side by side = the second card shares the first card's row; stacked = it starts below it.
-          const sameRow = Math.abs(first.top - second.top) < 8 && second.left > first.left + 20;
-          return sameRow ? "side-by-side" : "stacked";
+          const wrapper = document.querySelector('[data-testid="mobile-explore-chords-legacy"]');
+          const root = document.documentElement;
+          return {
+            width: wrapper ? Math.round(wrapper.getBoundingClientRect().width) : 0,
+            isDesktopMarked: wrapper ? wrapper.getAttribute("data-legacy") === "desktop" : false,
+            overflow: root.scrollWidth > root.clientWidth + 4,
+            viewport: root.clientWidth,
+          };
         });
       };
 
       const portraitLayout = await layoutAt(390, 844);
       const landscapeLayout = await layoutAt(844, 390);
-      if (portraitLayout !== "stacked") {
-        throw new Error(`Explore cards should stack at 390x844, measured ${portraitLayout}`);
+      if (!portraitLayout.isDesktopMarked || portraitLayout.width < portraitLayout.viewport - 24) {
+        throw new Error(`Explore's reused chord view does not fill the phone's width (${JSON.stringify(portraitLayout)})`);
       }
-      if (landscapeLayout !== "side-by-side") {
-        throw new Error(`Explore cards should share a row at 844x390, measured ${landscapeLayout}`);
+      if (landscapeLayout.overflow || portraitLayout.overflow) {
+        throw new Error(`Explore's reused chord view overflows (portrait=${portraitLayout.overflow} landscape=${landscapeLayout.overflow})`);
+      }
+      if (landscapeLayout.width < landscapeLayout.viewport * 0.8) {
+        throw new Error(`Explore's reused chord view stays in a phone column in landscape (${JSON.stringify(landscapeLayout)})`);
       }
       if (original) await page.setViewportSize(original);
     }
@@ -1083,6 +1198,10 @@ async function runTestOnTarget(target, baseUrl) {
           // the whole `[role="grid"]` subtree is how five tiny header controls (4×20, 14×14 …) went
           // unnoticed by the first version of this check.
           if (node.closest('[role="gridcell"]')) continue;
+          // Reused *desktop* views (探索 → 和弦走向) keep their own control sizes on purpose: the user
+          // asked for those modules to come along rather than be rebuilt. The phone's own chrome is
+          // still held to 44 px; this exemption is scoped to the wrapper the reuse declares.
+          if (node.closest('[data-legacy="desktop"]')) continue;
           const testid = node.getAttribute("data-testid");
           if (testid && ALLOWED_SMALL.has(testid)) continue;
           const rect = node.getBoundingClientRect();
