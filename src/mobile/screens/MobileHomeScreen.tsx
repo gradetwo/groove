@@ -91,7 +91,7 @@ export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre
       </div>
 
       {/* 16px type: anything smaller makes iOS zoom the page when the field takes focus. */}
-      <label className="mt-4 flex min-h-[44px] items-center gap-2 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3">
+      <label className="mt-4 flex min-h-[46px] items-center gap-2 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3">
         <Search className="h-4 w-4 text-[var(--m-ink-3)]" aria-hidden="true" />
         <input
           type="search"
@@ -142,7 +142,7 @@ export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre
                   aria-label={isPlaying ? t("mobile_audition_stop") : t("mobile_audition_play")}
                   aria-pressed={isPlaying}
                   onClick={() => onToggleAudition(genre)}
-                  className="m-press flex h-11 w-11 flex-none items-center justify-center rounded-xl"
+                  className="m-press flex h-12 w-12 flex-none items-center justify-center rounded-xl"
                   style={{ background: swatch }}
                 >
                   {isPlaying ? (
@@ -157,7 +157,7 @@ export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre
                   data-testid={`mobile-genre-row-${genre.id}`}
                   aria-expanded={isOpen}
                   onClick={() => setExpanded(isOpen ? null : genre.id)}
-                  className="m-press min-w-0 flex-1 text-left"
+                  className="m-press min-h-[46px] min-w-0 flex-1 text-left"
                 >
                   <div className="flex items-baseline gap-2">
                     <span className="truncate text-[15px] font-bold">{genre.name}</span>
@@ -196,7 +196,7 @@ export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre
                       type="button"
                       data-testid={`mobile-genre-detail-${genre.id}`}
                       onClick={() => onOpenGenre(genre.id)}
-                      className="m-press m-mono mt-3 min-h-[44px] rounded-full border border-[var(--m-line-2)] px-4 text-[11px] text-[var(--m-gold)]"
+                      className="m-press m-mono mt-3 min-h-[46px] rounded-full border border-[var(--m-line-2)] px-4 text-[11px] text-[var(--m-gold)]"
                     >
                       {t("mobile_genre_open_detail")}
                     </button>
@@ -234,7 +234,7 @@ function CategoryChip({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`m-press flex min-h-[36px] flex-none items-center gap-1.5 rounded-full border px-3.5 text-[12px] ${
+      className={`m-press flex min-h-[46px] min-w-[46px] flex-none items-center justify-center gap-1.5 rounded-full border px-3.5 text-[12px] ${
         active
           ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
           : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"

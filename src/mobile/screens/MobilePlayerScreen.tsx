@@ -93,7 +93,7 @@ export function MobilePlayerScreen({
           type="button"
           data-testid="mobile-player-collapse"
           onClick={onCollapse}
-          className="m-press m-mono min-h-[44px] rounded-full border border-[var(--m-line-2)] px-4 text-[11px] text-[var(--m-gold)]"
+          className="m-press m-mono min-h-[46px] rounded-full border border-[var(--m-line-2)] px-4 text-[11px] text-[var(--m-gold)]"
         >
           {t("mobile_back")}
         </button>
@@ -111,7 +111,7 @@ export function MobilePlayerScreen({
           data-testid="mobile-player-collapse"
           aria-label={t("mobile_player_collapse")}
           onClick={onCollapse}
-          className="m-press flex h-11 w-11 items-center justify-center rounded-full text-[var(--m-ink-2)]"
+          className="m-press flex h-12 w-12 items-center justify-center rounded-full text-[var(--m-ink-2)]"
         >
           <ChevronDown className="h-5 w-5" />
         </button>
@@ -221,7 +221,7 @@ export function MobilePlayerScreen({
               type="button"
               data-testid="mobile-player-drawer-detail"
               onClick={() => onOpenDetail(genre.id)}
-              className="m-press m-mono col-span-2 mt-1 flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--m-line-2)] text-[11px] text-[var(--m-gold)]"
+              className="m-press m-mono col-span-2 mt-1 flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-[var(--m-line-2)] text-[11px] text-[var(--m-gold)]"
             >
               <ListMusic className="h-4 w-4" />
               {t("mobile_genre_open_detail")}

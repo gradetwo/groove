@@ -192,7 +192,7 @@ export function MobileJamScreen({
           type="button"
           data-testid="mobile-jam-genre"
           onClick={() => onOpenGenre(genre.id)}
-          className="m-press flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-left"
+          className="m-press flex min-h-[46px] min-w-0 flex-1 items-center gap-2 text-left"
         >
           <span className="min-w-0">
             <span className="block truncate text-[16px] font-bold leading-tight">{genre.name}</span>
@@ -209,7 +209,7 @@ export function MobileJamScreen({
           aria-pressed={recording}
           aria-label={t("mobile_jam_record")}
           onClick={() => setRecording((on) => !on)}
-          className={`m-press flex h-11 w-11 flex-none items-center justify-center rounded-full border ${
+          className={`m-press flex h-12 w-12 flex-none items-center justify-center rounded-full border ${
             recording
               ? "border-[var(--m-red)] bg-[rgba(242,109,109,0.18)]"
               : "border-[var(--m-line-2)]"
@@ -254,7 +254,7 @@ export function MobileJamScreen({
             type="button"
             data-testid="mobile-jam-reset"
             onClick={reset}
-            className="m-press m-mono flex min-h-[36px] items-center gap-1 rounded-full border border-[var(--m-line-2)] px-3 text-[10px] text-[var(--m-ink-2)]"
+            className="m-press m-mono flex min-h-[46px] items-center gap-1 rounded-full border border-[var(--m-line-2)] px-3 text-[10px] text-[var(--m-ink-2)]"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             {t("mobile_jam_reset")}
@@ -339,7 +339,7 @@ export function MobileJamScreen({
             data-testid="mobile-jam-bpm-down"
             aria-label={`${t("mobile_jam_bpm")} -1`}
             onClick={() => changeBpm(-2)}
-            className="m-press m-mono flex h-11 w-11 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+            className="m-press m-mono flex h-12 w-12 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -351,7 +351,7 @@ export function MobileJamScreen({
             data-testid="mobile-jam-bpm-up"
             aria-label={`${t("mobile_jam_bpm")} +1`}
             onClick={() => changeBpm(2)}
-            className="m-press m-mono flex h-11 w-11 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+            className="m-press m-mono flex h-12 w-12 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -369,7 +369,7 @@ export function MobileJamScreen({
                 data-testid={`mobile-jam-swing-${Math.round(value * 100)}`}
                 aria-pressed={Math.abs(swing - value) < 0.001}
                 onClick={() => changeSwing(value)}
-                className={`m-press m-mono min-h-[36px] flex-none rounded-full border px-3 text-[10px] ${
+                className={`m-press m-mono min-h-[46px] flex-none rounded-full border px-3 text-[10px] ${
                   Math.abs(swing - value) < 0.001
                     ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
                     : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"

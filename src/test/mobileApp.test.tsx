@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileApp } from "../mobile/MobileApp";
-import { MOBILE_MODULES, type MobileModule } from "../mobile/mobileModules";
+import { MOBILE_MODULES, shouldEnterPhoneShell, type MobileModule } from "../mobile/mobileModules";
 import { ALL_GENRES } from "../data/genres";
 
 const audition = vi.hoisted(() => ({
@@ -434,5 +434,31 @@ describe("phone shell · the full-screen player", () => {
 
     fireEvent.click(within(bar).getByTestId("mobile-player-mode"));
     expect(localStorage.getItem("groove_mobile_play_mode")).toBe("genre");
+  });
+});
+
+describe("phone cutover · which surface a URL gets", () => {
+  /**
+   * The staged cutover: the shell is the phone's default entry, but an explicit destination still
+   * wins. This is asserted as a pure rule so the decision is visible without rendering the app.
+   */
+  it("enters the shell on a bare phone visit", () => {
+    expect(shouldEnterPhoneShell({ isMobile: true, pathname: "/", search: "" })).toBe(true);
+    expect(shouldEnterPhoneShell({ isMobile: true, pathname: "", search: "" })).toBe(true);
+  });
+
+  it("leaves a phone alone when the URL names a destination", () => {
+    for (const search of ["?tab=studio", "?genre=deep-house", "?groove=abc", "?m=jam", "?player=1"]) {
+      expect(shouldEnterPhoneShell({ isMobile: true, pathname: "/", search }), search).toBe(false);
+    }
+    expect(shouldEnterPhoneShell({ isMobile: true, pathname: "/genre/deep-house", search: "" })).toBe(false);
+    expect(shouldEnterPhoneShell({ isMobile: true, pathname: "/studio", search: "" })).toBe(false);
+  });
+
+  it("never redirects a desktop, and never re-enters an already-mobile route", () => {
+    expect(shouldEnterPhoneShell({ isMobile: false, pathname: "/", search: "" })).toBe(false);
+    expect(
+      shouldEnterPhoneShell({ isMobile: true, mobileRoute: "home", pathname: "/m/home", search: "" })
+    ).toBe(false);
   });
 });

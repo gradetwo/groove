@@ -50,6 +50,8 @@ const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerVi
  * which must not be in the first paint (redline R8).
  */
 const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
+// The cutover rule lives with the module vocabulary, where it can be tested without App.
+import { shouldEnterPhoneShell } from "./mobile/mobileModules";
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
 
@@ -301,6 +303,28 @@ const MainApp: React.FC = () => {
       setEngineInstance(null);
     };
   };
+
+  /**
+   * A phone that opens the app bare lands in the new shell.
+   *
+   * This is the cutover, staged: the shell is the phone's *default entry*, while `?tab=...` and
+   * `?genre=...` links keep rendering what they name (an old bookmark or a desktop-oriented test must
+   * not be silently rewritten). `shouldEnterPhoneShell` is the rule, unit-tested on its own.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (
+      !shouldEnterPhoneShell({
+        isMobile,
+        mobileRoute: route.mobile,
+        pathname: window.location.pathname,
+        search: window.location.search,
+      })
+    ) {
+      return;
+    }
+    navigate({ tab: "studio", mobile: "home" }, { replace: true });
+  }, [isMobile, navigate, route.mobile]);
 
   /**
    * The phone shell owns its own route space (`/m/<module>`). When one is requested, the desktop
