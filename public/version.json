@@ -1,27 +1,27 @@
 {
-  "version": "2.2.3",
+  "version": "2.2.4",
   "releaseDate": "2026-09-20",
-  "changelogCount": 189,
+  "changelogCount": 190,
   "latest": {
-    "version": "2.2.3",
+    "version": "2.2.4",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.2.3 曲风库去掉重复播放键：点卡片即进详情并自动播放；全屏页面不再有底部导航",
-      "en": "v2.2.3 The Library Loses Its Repeated Play Buttons: Tap a Card to Open and Play; Full-Screen Pages Drop the Tab Bar"
+      "zh": "v2.2.4 真正去掉黄色：极光冷色底 + 每个曲风一张自己的封面图；并移除「拿去即兴」",
+      "en": "v2.2.4 Amber Actually Gone: an Aurora Ground, a Cover Per Genre, and No Jam Hand-Off"
     },
     "highlights": [
       {
-        "zh": "**每行一个一模一样的播放键确实丑，而且多此一举**：曲风卡片现在整块就是目标——**点一下进入该曲风详情页并自动开始播放**，色块只作身份标识（播放中显示暂停标记），不再是一个按钮。一次手势完成「打开 + 试听」。",
-        "en": "**One identical play button per row was ugly and redundant**: the card is now the whole target — **one tap opens that genre's page and starts it playing**, and the colour square is identity only (it shows a pause mark while playing) rather than a control. One gesture does \"open and audition\"."
+        "zh": "**先承认一件事**：v2.2.1 声称换了配色，但那次改动**没有真正写进 `mobile.css`**（脚本替换静默失败，我只验证了「构建通过」而没验证「琥珀色字符串已消失」）。所以线上一直是那套屎黄色——这一版是真正生效的一次：冷调近黑底（#0b0b14）、中性白文字、默认强调色青绿，模块配色为 即兴 紫 / 挑战 玫瑰 / 探索 蓝 / 更多 灰，并且**验证了 `#e9a23b` 在样式里为 0 次出现**。",
+        "en": "**One admission first**: v2.2.1 claimed a new palette but the change **never reached `mobile.css`** (the scripted replacement failed silently, and I verified the build rather than the amber string). The live build stayed amber; this one is real: a cool near-black ground (#0b0b14), neutral white ink, teal default accent, and per-module accents (jam violet / challenge rose / explore blue / more slate) — with `#e9a23b` verified to appear **zero** times in the stylesheet."
       },
       {
-        "zh": "**曲风详情页里没有任何播放键**：页面上唯一的交通是**最下方的播放条**与左上角的收起箭头；**点页面任意非链接处、或点箭头，都回到上一屏**（页面上有一行小字提示）。「拿去即兴」保留，它是导航而不是播放。",
-        "en": "**The genre page has no play control at all**: its only transport is the **player bar at the bottom**, plus the collapse arrow top-left. **Tapping anywhere that is not a link — or the arrow — returns to the previous screen** (a one-line hint says so). \"Jam with this\" stays: it is navigation, not playback."
+        "zh": "**每个曲风有自己的封面图**：按你给的参考图的极光质感（紫 → 粉 → 青，深色底、多层径向光晕）**程序化生成**——同一曲风永远同一张、不同曲风互不相同、六个类别各有色相带。同时留了**真实图片的入口**：把 `<genre-id>.jpg` 放进 `public/covers/` 就会自动覆盖生成图，不需要改代码。**没有直接塞入真实照片**，是因为这个环境离线、且 159 张图的版权归属需要你来定；生成图今天就能用，真实图随时可替换。",
+        "en": "**Every genre gets its own cover**: generated from the aurora look in your reference (violet → pink → teal over a dark ground, layered radial glows) — the same genre always looks the same, different genres differ, and each of the six categories has its own hue band. There is also a **real-image hook**: drop `<genre-id>.jpg` into `public/covers/` and it takes over automatically, no code change. Real photographs are not bundled because this environment is offline and 159 image…"
       },
       {
-        "zh": "**全屏页面不再有底部导航**：进入全屏播放器或曲风详情页时，五格模块栏隐藏（内容底部留白随之适配），播放条在没有模块栏时贴到底部安全区；返回浏览时它再出现。",
-        "en": "**Full-screen pages drop the bottom navigation**: the five-module bar is hidden inside the full-screen player and on a genre's page (the content's bottom padding adapts), the player bar sits at the bottom safe area when the module bar is gone, and the bar comes back when you return to browsing."
+        "zh": "**「拿去即兴」已按你的要求移除**：曲风详情页不再有任何按钮（除了左上角的返回），点页面任意非链接处也能返回。",
+        "en": "**The jam hand-off is gone, as asked**: a genre's page now has no buttons at all besides the back arrow, and tapping anywhere that is not a link also returns."
       }
     ],
     "truncated": true

@@ -268,14 +268,14 @@ describe("phone shell · genre detail and player bar", () => {
     expect(onOpenGenre).toHaveBeenCalledWith(id);
   });
 
-  it("carries no play control, and takes the genre to the jam module", async () => {
-    const { onOpenJam } = renderShell("home", { genreId: "deep-house" });
+  it("carries no play control and no jam hand-off", async () => {
+    renderShell("home", { genreId: "deep-house" });
     await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
-    // The shell started this genre on the way in; the bar at the bottom is the transport.
+    // The shell started this genre on the way in; the bar at the bottom is the transport, and the
+    // page itself has no controls beyond going back.
     expect(screen.queryByTestId("mobile-detail-audition")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId("mobile-detail-jam"));
-    expect(onOpenJam).toHaveBeenCalledWith("deep-house");
+    expect(screen.queryByTestId("mobile-detail-jam")).not.toBeInTheDocument();
+    expect(screen.getByTestId("mobile-detail-back")).toBeInTheDocument();
   });
 
   it("returns to the previous screen when the page is tapped, but not when a link is", async () => {

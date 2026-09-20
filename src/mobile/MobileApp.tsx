@@ -234,7 +234,6 @@ export function MobileApp({
               isPlaying={playingGenreId === genreId}
               onBack={() => onCloseGenre?.()}
               onOpenGenre={(id) => onOpenGenre?.(id)}
-              onOpenJam={(id) => onOpenJam?.(id)}
             />
           ) : module === "jam" ? (
             /* The jam module has no player bar by design: its transport is the loop itself. */

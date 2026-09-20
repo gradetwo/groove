@@ -15,12 +15,12 @@
  *  - **Every related genre is a link to its own detail page**, so browsing sideways never dead-ends.
  */
 import React from "react";
-import { ArrowLeft, ChevronRight, Wand2 } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
 import { GENRE_RELATIONS } from "../../data/relations";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre } from "../../types/genre";
-import { CATEGORY_SWATCH } from "./MobileHomeScreen";
+import { genreArtBackground, genreCoverUrl } from "../genreArt";
 
 const CJK = /[\u3400-\u9fff]/;
 const chineseName = (genre: Genre): string =>
@@ -34,7 +34,6 @@ export interface MobileGenreDetailScreenProps {
   isPlaying: boolean;
   onBack: () => void;
   onOpenGenre: (genreId: string) => void;
-  onOpenJam: (genreId: string) => void;
 }
 
 export function MobileGenreDetailScreen({
@@ -42,7 +41,6 @@ export function MobileGenreDetailScreen({
   isPlaying,
   onBack,
   onOpenGenre,
-  onOpenJam,
 }: MobileGenreDetailScreenProps) {
   const { t, language } = useLanguage();
   const genre = genreById(genreId);
@@ -57,7 +55,7 @@ export function MobileGenreDetailScreen({
     );
   }
 
-  const swatch = CATEGORY_SWATCH[genre.category];
+
   /**
    * Related genres come from `GENRE_RELATIONS`, not from the genre object.
    *
@@ -92,7 +90,21 @@ export function MobileGenreDetailScreen({
       <p className="m-mono -mt-2 text-right text-[9px] text-[var(--m-ink-3)]">{t("mobile_detail_tap_back")}</p>
 
       <header className="mt-3 flex items-center gap-3">
-        <span aria-hidden="true" className="h-12 w-12 flex-none rounded-2xl" style={{ background: swatch }} />
+        <span
+          aria-hidden="true"
+          data-testid="mobile-detail-art"
+          className="relative h-16 w-16 flex-none overflow-hidden rounded-2xl"
+          style={{ background: genreArtBackground(genre) }}
+        >
+          <img
+            src={genreCoverUrl(genre.id)}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        </span>
         <div className="min-w-0">
           <h1 className="truncate text-[20px] font-bold leading-tight">{genre.name}</h1>
           <p className="truncate text-[12px] text-[var(--m-ink-2)]">
@@ -100,20 +112,6 @@ export function MobileGenreDetailScreen({
           </p>
         </div>
       </header>
-
-      {/* No play control here: the shell started this genre on the way in, and the player bar at the
-          bottom of the screen is the transport. */}
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          data-testid="mobile-detail-jam"
-          onClick={() => onOpenJam(genre.id)}
-          className="m-press m-mono flex min-h-[46px] flex-1 items-center justify-center gap-1.5 rounded-2xl border border-[var(--m-line-2)] px-3.5 text-[11px] text-[var(--m-gold)]"
-        >
-          <Wand2 className="h-4 w-4" />
-          {t("mobile_detail_try_jam")}
-        </button>
-      </div>
 
       <FactsGrid genre={genre} />
 
@@ -158,7 +156,7 @@ export function MobileGenreDetailScreen({
                     <span
                       aria-hidden="true"
                       className="h-3 w-3 flex-none rounded-full"
-                      style={{ background: CATEGORY_SWATCH[item.category] }}
+                      style={{ background: genreArtBackground(item) }}
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-bold">{item.name}</span>
