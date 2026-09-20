@@ -982,6 +982,68 @@ async function runTestOnTarget(target, baseUrl) {
       ) {
         throw new Error(`Settings entry point is misplaced: ${JSON.stringify(headerOrder)}`);
       }
+
+      /**
+       * The studio's two columns (G.46).
+       *
+       * Measured on the broken build at 1440×900: the *dossier* took the `1fr` track (1012 px) and
+       * the sequencer — the thing the app is for — was squeezed into the 352 px one, showing three
+       * step cells per track. Every existing gate measured *inside* the panel (the gutter probe, the
+       * toolbar density probe, the phone surface audit), so all of them passed while the desktop
+       * layout was wrong; the only thing that catches a swap is comparing the two grid items to each
+       * other, which is what this does. Above `lg` the dossier is the fixed left column and the
+       * sequencer takes the rest; below `lg` there is one column and the editor comes first.
+       *
+       * The items are identified by *what they are* — the one holding the transport group, and the
+       * `aside` — not by their index: `grid.children` is DOM order, and `order` moves them visually
+       * without touching the DOM. (Assuming the DOM order was visual is how this check first failed
+       * on the iPad in portrait, where the dossier is legitimately the *second* grid child.)
+       */
+      const columns = await page.evaluate(() => {
+        const grid = document.querySelector("main.grid");
+        if (!grid) return { error: "the studio grid is gone" };
+        const seqSection = document
+          .querySelector("[data-testid='toolbar-group-transport']")
+          ?.closest("section");
+        const box = (el) => {
+          const r = el.getBoundingClientRect();
+          return {
+            tag: el.tagName.toLowerCase(),
+            x: Math.round(r.left),
+            y: Math.round(r.top),
+            w: Math.round(r.width),
+          };
+        };
+        const items = [...grid.children];
+        const seqItem = items.find((el) => seqSection && el.contains(seqSection));
+        const dossierItem = items.find((el) => el.tagName.toLowerCase() === "aside");
+        return {
+          itemCount: items.length,
+          seq: seqItem ? box(seqItem) : null,
+          dossier: dossierItem ? box(dossierItem) : null,
+          viewportW: window.innerWidth,
+          cols: getComputedStyle(grid).gridTemplateColumns,
+        };
+      });
+      if (columns.error) throw new Error(`${columns.error} on ${target.name}`);
+      if (!columns.seq) throw new Error(`The studio grid has no editor column on ${target.name}`);
+      if (!columns.dossier) throw new Error(`The studio grid has no dossier column on ${target.name}`);
+      if (columns.viewportW >= 1024) {
+        if (columns.dossier.x >= columns.seq.x) {
+          throw new Error(
+            `The studio's columns are swapped on ${target.name}: dossier@${columns.dossier.x} ${columns.dossier.w}px, editor@${columns.seq.x} ${columns.seq.w}px (grid: ${columns.cols})`
+          );
+        }
+        if (columns.seq.w < columns.viewportW * 0.55) {
+          throw new Error(
+            `The sequencer is not the wide column on ${target.name}: ${columns.seq.w} of ${columns.viewportW} px (grid: ${columns.cols})`
+          );
+        }
+      } else if (columns.seq.y >= columns.dossier.y) {
+        throw new Error(
+          `Below lg the studio stacks the dossier above the editor on ${target.name}: dossier@${columns.dossier.y}, editor@${columns.seq.y}`
+        );
+      }
     }
 
     /**
