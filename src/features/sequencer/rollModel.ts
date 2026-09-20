@@ -277,6 +277,11 @@ export function moveNote(
   return withTrackNotes(pattern, trackIdx, kept, stepCount);
 }
 
+/** The length clamp, in one place: a note is never shorter than a tenth of a step nor longer than a bar. */
+export function clampGate(gate: number): number {
+  return Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, gate));
+}
+
 /** Resize a step by changing its `gate` (the only length control the engine has). */
 export function resizeNote(
   pattern: SequencerPattern,
@@ -286,9 +291,31 @@ export function resizeNote(
   stepCount: number
 ): SequencerPattern {
   const notes = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
-    n.stepIdx === stepIdx ? { ...n, gate: Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, gate)) } : n
+    n.stepIdx === stepIdx ? { ...n, gate: clampGate(gate) } : n
   );
   return withTrackNotes(pattern, trackIdx, notes, stepCount);
+}
+
+/**
+ * Lengthen or shorten every step the selection touches — the roll's `[`/`]` with something selected.
+ *
+ * `resizeNote` above is the single-note counterpart, and this mirrors `scaleNotesVelocity`: same
+ * selection → steps mapping, same relative delta, same clamp. Without it the keyboard could change
+ * the velocity of a whole selection but only the length of the one note under the cursor, which is
+ * the kind of asymmetry nobody discovers until they need it.
+ */
+export function scaleNotesLength(
+  pattern: SequencerPattern,
+  trackIdx: number,
+  selection: readonly RollNoteId[],
+  deltaGate: number,
+  stepCount: number
+): SequencerPattern {
+  const steps = new Set(selectedSteps(selection));
+  const next = notesFromTrack(pattern.tracks[trackIdx]).map((n) =>
+    steps.has(n.stepIdx) ? { ...n, gate: clampGate(n.gate + deltaGate) } : n
+  );
+  return withTrackNotes(pattern, trackIdx, next, stepCount);
 }
 
 /** Change the velocity of every note on a step (velocity is per step in this model). */

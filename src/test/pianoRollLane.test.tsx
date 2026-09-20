@@ -1159,3 +1159,137 @@ describe("PianoRollLane · keyboard editing (U10)", () => {
   });
 });
 
+
+// ---------------------------------------------------------------------------------------
+// U10 (cont.): the operation that only worked on a bare cursor, and the on-screen piano
+// ---------------------------------------------------------------------------------------
+
+describe("PianoRollLane · keyboard editing reaches the whole selection (U10)", () => {
+  /** Two notes on steps 0 and 2, so a selection has something to span. */
+  const twoNotes = () =>
+    makePattern({
+      steps: [1, 0, 1, 0, 0, 0, 0, 0],
+      pitch: [60, null, 62, null, null, null, null, null],
+    });
+
+  /** Marquee both notes with the pointer — how a selection is made in this editor. */
+  function selectBoth(grid: HTMLElement) {
+    fireEvent.keyDown(window, { key: "1" });
+    fireEvent.pointerDown(grid, { clientX: 5 * 26 + 4, clientY: extremeRowY("bottom") });
+    fireEvent.pointerMove(grid, { clientX: 4, clientY: extremeRowY("top") });
+    fireEvent.pointerUp(grid);
+    expect(screen.getByTestId("piano-roll-selected-count").textContent).toContain("2");
+  }
+
+  it("changes velocity and length of every selected note, and says how many", () => {
+    const { grid, announcer, lastPattern } = setupKeyboard(twoNotes());
+    selectBoth(grid);
+
+    fireEvent.keyDown(grid, { key: "+" });
+    const louder = lastPattern()!;
+    expect(louder.tracks[0].velocity?.[0]).toBe(101);
+    expect(louder.tracks[0].velocity?.[2]).toBe(101);
+    expect(announcer.textContent).toContain("2 个音 · 力度 101");
+
+    // The half that used to be missing: `]` only ever edited the note under the cursor, so a
+    // selection could be made louder but not longer.
+    fireEvent.keyDown(grid, { key: "]" });
+    const longer = lastPattern()!;
+    expect(longer.tracks[0].gate?.[0]).toBeCloseTo(1.8, 5);
+    expect(longer.tracks[0].gate?.[2]).toBeCloseTo(1.8, 5);
+    expect(announcer.textContent).toContain("2 个音 · 音长 1.8 步");
+  });
+
+  it("clamps the selection's length at one bar and at a tenth of a step", () => {
+    const { grid, lastPattern } = setupKeyboard(twoNotes());
+    selectBoth(grid);
+    // Shift is a beat: four presses from 0.8 steps is 16.8, which the clamp stops at one bar.
+    for (let i = 0; i < 4; i++) fireEvent.keyDown(grid, { key: "]", shiftKey: true });
+    expect(lastPattern()!.tracks[0].gate?.[0]).toBe(16);
+    expect(lastPattern()!.tracks[0].gate?.[2]).toBe(16);
+
+    for (let i = 0; i < 8; i++) fireEvent.keyDown(grid, { key: "[", shiftKey: true });
+    expect(lastPattern()!.tracks[0].gate?.[0]).toBe(0.1);
+    expect(lastPattern()!.tracks[0].gate?.[2]).toBe(0.1);
+  });
+
+  it("leaves keys the platform owns to the platform", () => {
+    const { grid, announcer, commits } = setupKeyboard();
+    fireEvent.focusIn(grid);
+    // Focusing the surface announces its starting cell; the point is that none of the keys below
+    // produce a second announcement or an edit.
+    const announcedOnFocus = announcer.textContent;
+    for (const event of [
+      { key: "ArrowUp", metaKey: true },
+      { key: "ArrowRight", ctrlKey: true },
+      { key: "Delete", metaKey: true },
+      { key: "z" },
+      { key: "Tab" },
+    ]) {
+      fireEvent.keyDown(grid, event);
+    }
+    expect(commits).toHaveLength(0);
+    expect(announcer.textContent).toBe(announcedOnFocus);
+  });
+});
+
+describe("PianoRollLane · the on-screen piano from the keyboard (U10)", () => {
+  const keyFor = (midi: number) => screen.getByTestId(`piano-roll-row-${midi}`);
+  const focusedKey = () =>
+    screen.getAllByTestId(/^piano-roll-row-\d+$/).find((k) => k.getAttribute("tabindex") === "0")!;
+  const keybed = () => screen.getByTestId("piano-roll-keybed");
+
+  it("puts exactly one key in the tab order", () => {
+    setup();
+    const keys = screen.getAllByTestId(/^piano-roll-row-\d+$/);
+    expect(keys.filter((k) => k.getAttribute("tabindex") === "0")).toHaveLength(1);
+    expect(keys.filter((k) => k.getAttribute("tabindex") === "-1")).toHaveLength(keys.length - 1);
+  });
+
+  it("walks a key at a time with the arrows, sounding each one and taking focus", () => {
+    const { onAudition } = setup();
+    const startMidi = Number(focusedKey().getAttribute("data-midi-pitch"));
+    fireEvent.keyDown(keybed(), { key: "ArrowUp" });
+
+    expect(onAudition).toHaveBeenLastCalledWith(0, startMidi + 1, 100, 0.45);
+    expect(keyFor(startMidi + 1)).toHaveAttribute("tabindex", "0");
+    expect(document.activeElement).toBe(keyFor(startMidi + 1));
+  });
+
+  it("re-sounds the focused key on Enter, and announces the note", () => {
+    const { onAudition } = setup();
+    const midi = Number(focusedKey().getAttribute("data-midi-pitch"));
+    fireEvent.keyDown(keybed(), { key: "Enter" });
+    expect(onAudition).toHaveBeenLastCalledWith(0, midi, 100, 0.45);
+    expect(screen.getByTestId("piano-roll-announcer").textContent).toContain(`NOTE_${midi}`);
+  });
+
+  it("stops at the drawn keys instead of walking onto a row that is not rendered", () => {
+    setup();
+    // Shift is an octave; the drawn range is 0..127, so neither end can be walked past.
+    const top = screen.getAllByTestId(/^piano-roll-row-\d+$/)[0];
+    fireEvent.focus(top);
+    fireEvent.keyDown(keybed(), { key: "ArrowUp", shiftKey: true });
+    expect(top).toHaveAttribute("tabindex", "0");
+  });
+
+  it("does not move the selection while a key has focus", () => {
+    const { commits, grid } = setupKeyboard(twoNotesForKeybed());
+    fireEvent.keyDown(window, { key: "1" });
+    fireEvent.pointerDown(grid, { clientX: 5 * 26 + 4, clientY: extremeRowY("bottom") });
+    fireEvent.pointerMove(grid, { clientX: 4, clientY: extremeRowY("top") });
+    fireEvent.pointerUp(grid);
+    const before = commits.length;
+
+    // Up on the gutter walks the *key*, not the selected notes: the focused widget owns the key.
+    fireEvent.keyDown(keybed(), { key: "ArrowUp" });
+    expect(commits).toHaveLength(before);
+  });
+});
+
+function twoNotesForKeybed(): SequencerPattern {
+  return makePattern({
+    steps: [1, 0, 1, 0, 0, 0, 0, 0],
+    pitch: [60, null, 62, null, null, null, null, null],
+  });
+}
