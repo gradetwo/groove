@@ -35,6 +35,24 @@ export const studioMessages = {
   vel_close: { en: "Close drawer", zh: "关闭力度抽屉" },
   vel_drag_hint: { en: "Drag to paint", zh: "滑动绘制力度" },
 
+  // Parameter lane keyboard (U10): one tab stop with a cursor, arrows edit, and a live region says
+  // what changed. The four parameter names live here because a rotating announcement needs the same
+  // word the dimension buttons use.
+  dim_velocity: { en: "Velocity", zh: "力度" },
+  dim_gate: { en: "Length", zh: "音长" },
+  dim_probability: { en: "Probability", zh: "概率" },
+  dim_ratchet: { en: "Ratchet", zh: "滚奏" },
+  vel_lane_group: { en: "Step parameters", zh: "逐步参数" },
+  vel_step_aria: { en: "Step {step} · {dimension}", zh: "第 {step} 步 · {dimension}" },
+  vel_step_value: {
+    en: "Step {step} · {dimension} {value}",
+    zh: "第 {step} 步 · {dimension} {value}",
+  },
+  vel_kb_hint: {
+    en: "Up and Down change the value, Left and Right move between steps, hold Shift for bigger jumps",
+    zh: "上下键改数值，左右键换步，按住 Shift 幅度更大",
+  },
+
   // Pitch Picker & Scale Lock (P6-02)
   pitch_modal_aria: { en: "Scale-Locked Note Pitch Picker", zh: "调式锁定音高选择器" },
   pitch_modal_title: { en: "Pitch & Scale Matrix", zh: "音高与调式网格" },

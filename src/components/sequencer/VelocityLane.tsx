@@ -1,9 +1,11 @@
-import React, { memo, useRef, useState, useCallback, useEffect } from "react";
+import React, { memo, useId, useRef, useState, useCallback, useEffect } from "react";
 import { SequencerTrack } from "../../types/genre";
 import { Sliders, Sparkles, TrendingUp, TrendingDown, X, Dices, Repeat, Clock } from "lucide-react";
 import { triggerHaptic, HapticPatterns } from "../../utils/haptics";
 import { useLanguage } from "../../i18n/LanguageContext";
+import type { MessageKey } from "../../i18n/LanguageContext";
 import { subscribePlayhead } from "../../features/sequencer/playheadBus";
+import { LANE_SPECS, laneKeyboardIntent } from "../../features/sequencer/laneValues";
 
 /**
  * The union lives in `src/features/sequencer/stepParameters.ts`; re-exported so existing importers
@@ -11,6 +13,19 @@ import { subscribePlayhead } from "../../features/sequencer/playheadBus";
  */
 import type { ParameterDimension } from "../../features/sequencer/stepParameters";
 export type { ParameterDimension };
+
+/**
+ * The parameter's own name, for the slider labels and the live region.
+ *
+ * The dimension buttons spell their own tooltips, but a screen reader needs the same word in the
+ * rotating cursor's announcements, so the four names live in one map.
+ */
+const DIMENSION_LABEL_KEY: Record<ParameterDimension, MessageKey> = {
+  velocity: "dim_velocity",
+  gate: "dim_gate",
+  probability: "dim_probability",
+  ratchet: "dim_ratchet",
+};
 
 export interface VelocityLaneProps {
   tracks: SequencerTrack[];
@@ -66,7 +81,18 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
   const [isPainting, setIsPainting] = useState(false);
   const [localDimension, setLocalDimension] = useState<ParameterDimension>(dimension);
 
+  /**
+   * U10: the lane's keyboard cursor. Exactly one column is in the tab order at a time — sixteen tab
+   * stops for one drawer is not a keyboard path, it is an obstacle course — and Up/Down edit the
+   * column it is on (see `features/sequencer/laneValues.ts`).
+   */
+  const [laneCursor, setLaneCursor] = useState(0);
+  const [laneAnnouncement, setLaneAnnouncement] = useState("");
+  const laneHintId = useId();
+
   const activeDim = onSelectDimension ? dimension : localDimension;
+  const laneSpec = LANE_SPECS[activeDim];
+  const dimLabel = t(DIMENSION_LABEL_KEY[activeDim]);
   const switchDim = (d: ParameterDimension) => {
     setLocalDimension(d);
     onSelectDimension?.(d);
@@ -113,26 +139,56 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
       : (currentTrack?.velocity?.[activeIdx] !== undefined ? currentTrack.velocity[activeIdx] : 100);
   });
 
-  const commitValue = useCallback(
-    (stepIdx: number, rawRatio: number) => {
-      const ratio = Math.max(0, Math.min(1, rawRatio));
+  /**
+   * Announces a line to the live region.
+   *
+   * Same trick as the roll's: `aria-live` only re-announces when the text *changes*, and nudging a
+   * value into its ceiling produces the identical message twice in a row. Alternating a zero-width
+   * space keeps the message identical to a reader while making the DOM text differ.
+   */
+  const announceLane = useCallback((text: string) => {
+    setLaneAnnouncement((prev) => (prev.endsWith("\u200B") ? text : `${text}\u200B`));
+  }, []);
+
+  /** The one line a reader hears after a keypress: the column, its parameter, and the new value. */
+  const describeLaneStep = useCallback(
+    (index: number, value: number) =>
+      t("vel_step_value", {
+        step: index + 1,
+        dimension: dimLabel,
+        value: laneSpec.format(value),
+      }),
+    [t, dimLabel, laneSpec]
+  );
+
+  /**
+   * Writes one column's value, whatever the dimension.
+   *
+   * The pointer and the keyboard both land here with a *value*: the pointer converts its 0..1 drag
+   * ratio through the dimension's scale first (`laneValues.ts`), so a drag and a keypress are one
+   * edit through one switch, and the four callbacks stay in a single place.
+   */
+  const commitLaneValue = useCallback(
+    (stepIdx: number, value: number) => {
       if (activeDim === "probability") {
-        const prob = Math.round(ratio * 100);
-        onUpdateProbability?.(activeTrackIdx, stepIdx, prob);
+        onUpdateProbability?.(activeTrackIdx, stepIdx, value);
       } else if (activeDim === "ratchet") {
-        // Discrete ratchet steps: 1, 2, 3, 4, 8
-        const rVal = ratio < 0.2 ? 1 : ratio < 0.4 ? 2 : ratio < 0.65 ? 3 : ratio < 0.85 ? 4 : 8;
-        onUpdateRatchet?.(activeTrackIdx, stepIdx, rVal);
+        onUpdateRatchet?.(activeTrackIdx, stepIdx, value);
       } else if (activeDim === "gate") {
-        // Gate: 0.1 to 2.0
-        const gateVal = Math.round((0.1 + ratio * 1.9) * 10) / 10;
-        onUpdateGate?.(activeTrackIdx, stepIdx, gateVal);
+        onUpdateGate?.(activeTrackIdx, stepIdx, value);
       } else {
-        const vel = Math.round(ratio * 127);
-        onUpdateVelocity(activeTrackIdx, stepIdx, Math.max(1, Math.min(127, vel)));
+        onUpdateVelocity(activeTrackIdx, stepIdx, value);
       }
     },
     [activeDim, activeTrackIdx, onUpdateVelocity, onUpdateProbability, onUpdateRatchet, onUpdateGate]
+  );
+
+  const commitValue = useCallback(
+    (stepIdx: number, rawRatio: number) => {
+      const ratio = Math.max(0, Math.min(1, rawRatio));
+      commitLaneValue(stepIdx, LANE_SPECS[activeDim].ratioToValue(ratio));
+    },
+    [activeDim, commitLaneValue]
   );
 
   const updateFromPointer = useCallback(
@@ -175,6 +231,72 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
       commitValue(idx, ratio);
     }
   };
+
+  /** Moves DOM focus with the cursor, so the roving tab stop follows the arrow keys. */
+  const focusColumn = useCallback((index: number) => {
+    containerRef.current
+      ?.querySelector<HTMLElement>(`[data-step-idx="${index}"]`)
+      ?.focus();
+  }, []);
+
+  /**
+   * Keyboard editing on the lane.
+   *
+   * The lane is one tab stop whose cursor is a column, not sixteen tab stops: Up/Down edit the
+   * value under the cursor (the faders are vertical, which is what `aria-orientation` says) and
+   * Left/Right move the cursor, focusing the column that moved. Keys the lane does not own — Tab,
+   * ⌘/Ctrl combinations, Enter, Delete, letters — are left completely alone, because this drawer is
+   * one panel of a larger app and the shortcuts around it have to keep working.
+   */
+  const handleLaneKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      /**
+       * The focused column owns the keypress.
+       *
+       * Reading the index off the event rather than trusting `laneCursor` keeps one invariant: the
+       * column the user can see a focus ring on is the column the arrow key edits. The two can only
+       * disagree if focus moved without this component hearing about it, and then the DOM is right.
+       */
+      const targetEl = (event.target as HTMLElement | null)?.closest?.("[data-step-idx]") as
+        | HTMLElement
+        | null;
+      const fromDom = targetEl?.dataset.stepIdx !== undefined ? Number(targetEl.dataset.stepIdx) : NaN;
+      const index = Number.isFinite(fromDom) ? fromDom : laneCursor;
+      const value = values[index] ?? laneSpec.preset;
+      if (index !== laneCursor) setLaneCursor(index);
+
+      const intent = laneKeyboardIntent(
+        event.key,
+        { shift: event.shiftKey, meta: event.metaKey, ctrl: event.ctrlKey },
+        index,
+        value,
+        laneSpec,
+        { count: values.length }
+      );
+      if (!intent) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (intent.kind === "cursor") {
+        setLaneCursor(intent.index);
+        focusColumn(intent.index);
+        announceLane(describeLaneStep(intent.index, values[intent.index] ?? laneSpec.preset));
+        return;
+      }
+
+      commitLaneValue(index, intent.value);
+      announceLane(describeLaneStep(index, intent.value));
+    },
+    [
+      laneCursor,
+      laneSpec,
+      values,
+      commitLaneValue,
+      focusColumn,
+      announceLane,
+      describeLaneStep,
+    ]
+  );
 
   useEffect(() => {
     const handleGlobalPointerUp = () => setIsPainting(false);
@@ -262,20 +384,10 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
     }
   };
 
-  // Label and formatted display helper
-  const formatValue = (val: number) => {
-    if (activeDim === "probability") return `${val}%`;
-    if (activeDim === "ratchet") return `${val}x`;
-    if (activeDim === "gate") return `${Math.round(val * 100)}%`;
-    return `${val}`;
-  };
-
-  const getHeightPercent = (val: number) => {
-    if (activeDim === "probability") return Math.max(5, val);
-    if (activeDim === "ratchet") return Math.max(12, (val / 8) * 100);
-    if (activeDim === "gate") return Math.max(5, Math.min(100, (val / 2.0) * 100));
-    return Math.max(5, (val / 127) * 100);
-  };
+  // Label and bar geometry come from the dimension's scale (`laneValues.ts`), so the keyboard, the
+  // drag and the drawing cannot disagree about what 100 means.
+  const formatValue = (val: number) => laneSpec.format(val);
+  const getHeightPercent = (val: number) => laneSpec.heightPercent(val);
 
   return (
     <div className="bg-[#0e1014] border-t border-line p-3 sm:p-4 rounded-b-2xl select-none animate-in fade-in slide-in-from-top-2 duration-200">
@@ -431,8 +543,18 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
         <div 
           ref={containerRef} 
           onTouchMove={handleTouchMove}
+          role="group"
+          aria-label={t("vel_lane_group")}
+          aria-describedby={laneHintId}
+          onKeyDown={handleLaneKeyDown}
           className="flex-1 flex gap-1 items-end h-24 sm:h-28 bg-[#090a0d] p-2 rounded-xl border border-[#1a1c22] touch-none"
         >
+          <p id={laneHintId} className="sr-only">
+            {t("vel_kb_hint")}
+          </p>
+          <div role="status" aria-live="polite" className="sr-only">
+            {laneAnnouncement}
+          </div>
           {values.map((val, stepIdx) => {
             const trackLen = currentTrack?.trackLength && currentTrack.trackLength > 0 ? currentTrack.trackLength : stepCount;
             const activeStepIdx = trackLen > 0 ? stepIdx % trackLen : stepIdx;
@@ -452,9 +574,22 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
               <div
                 key={stepIdx}
                 data-step-idx={stepIdx}
-                onPointerDown={(e) => handlePointerDown(stepIdx, e)}
+                data-testid={`vel-step-${stepIdx}`}
+                role="slider"
+                aria-orientation="vertical"
+                aria-label={t("vel_step_aria", { step: stepIdx + 1, dimension: dimLabel })}
+                aria-valuemin={laneSpec.min}
+                aria-valuemax={laneSpec.max}
+                aria-valuenow={val}
+                aria-valuetext={laneSpec.format(val)}
+                tabIndex={stepIdx === laneCursor ? 0 : -1}
+                onFocus={() => setLaneCursor(stepIdx)}
+                onPointerDown={(e) => {
+                  setLaneCursor(stepIdx);
+                  handlePointerDown(stepIdx, e);
+                }}
                 onPointerEnter={(e) => handlePointerEnter(stepIdx, e)}
-                className={`min-w-[28px] sm:min-w-[32px] flex-1 h-full flex flex-col justify-end items-center relative cursor-ns-resize group select-none touch-none [&[data-playhead=true]]:ring-1 [&[data-playhead=true]]:ring-white [&[data-playhead=true]_.vel-tooltip]:opacity-100 ${
+                className={`min-w-[28px] sm:min-w-[32px] flex-1 h-full flex flex-col justify-end items-center relative cursor-ns-resize group select-none touch-none outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset focus-visible:rounded-sm [&[data-playhead=true]]:ring-1 [&[data-playhead=true]]:ring-white [&[data-playhead=true]_.vel-tooltip]:opacity-100 ${
                   isBarStart ? "ml-3 sm:ml-4 border-l border-[#3a3e48]" : isGroupStart ? "ml-1.5 sm:ml-2" : ""
                 }`}
               >
@@ -463,7 +598,7 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
                   className={`vel-tooltip absolute -top-5 font-mono text-[9px] font-bold px-1 rounded transition-opacity pointer-events-none z-20 ${
                     isPlayhead
                       ? "opacity-100 bg-accent text-black"
-                      : "opacity-0 group-hover:opacity-100 bg-line text-text"
+                      : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 bg-line text-text"
                   }`}
                 >
                   {formatValue(val)}
