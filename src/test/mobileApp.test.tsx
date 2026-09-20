@@ -211,36 +211,21 @@ describe("phone shell · home screen", () => {
     expect(expected.length).toBeGreaterThan(0);
   });
 
-  it("expands one genre's summary at a time", async () => {
-    renderShell("home");
-    await findHome();
-    const [first, second] = rowIds();
-    fireEvent.click(screen.getByTestId(`mobile-genre-row-${first}`));
-    expect(screen.getByTestId(`mobile-genre-summary-${first}`)).toBeInTheDocument();
-    expect(screen.getByTestId(`mobile-genre-row-${first}`)).toHaveAttribute("aria-expanded", "true");
-
-    fireEvent.click(screen.getByTestId(`mobile-genre-row-${second}`));
-    expect(screen.queryByTestId(`mobile-genre-summary-${first}`)).not.toBeInTheDocument();
-    expect(screen.getByTestId(`mobile-genre-summary-${second}`)).toBeInTheDocument();
-  });
-
-  it("auditions through the engine hook and shows the playing genre", async () => {
-    const { unmount } = renderShell("home");
+  it("opens a genre from its card and starts it playing in one gesture", async () => {
+    /**
+     * The library used to repeat one identical play button per row. The card is now the target: one
+     * tap opens the page and the shell starts the genre, so there is no play control to look at (or to
+     * be identical sixteen times).
+     */
+    const { onOpenGenre } = renderShell("home");
     await findHome();
     const genreId = rowIds()[0];
-    fireEvent.click(screen.getByTestId(`mobile-genre-play-${genreId}`));
+    expect(document.querySelector(`[data-testid="mobile-genre-play-${genreId}"]`)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(`mobile-genre-row-${genreId}`));
     expect(audition.toggle).toHaveBeenCalledTimes(1);
     expect(audition.toggle.mock.calls[0][0].id).toBe(genreId);
-    unmount();
-
-    // Same screen, now reporting that genre as playing: the button must flip to the stop state.
-    audition.playingGenreId = genreId;
-    renderShell("home");
-    await findHome();
-    const playingButton = screen.getByTestId(`mobile-genre-play-${genreId}`);
-    expect(playingButton).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(playingButton);
-    expect(audition.stop).toHaveBeenCalledTimes(1);
+    expect(onOpenGenre).toHaveBeenCalledWith(genreId);
   });
 
   it("says so when a search matches nothing instead of showing an empty list", async () => {
@@ -283,15 +268,35 @@ describe("phone shell · genre detail and player bar", () => {
     expect(onOpenGenre).toHaveBeenCalledWith(id);
   });
 
-  it("auditions from the detail page and takes the genre to the jam module", async () => {
+  it("carries no play control, and takes the genre to the jam module", async () => {
     const { onOpenJam } = renderShell("home", { genreId: "deep-house" });
     await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
-    fireEvent.click(screen.getByTestId("mobile-detail-audition"));
-    expect(audition.toggle).toHaveBeenCalledTimes(1);
-    expect(audition.toggle.mock.calls[0][0].id).toBe("deep-house");
+    // The shell started this genre on the way in; the bar at the bottom is the transport.
+    expect(screen.queryByTestId("mobile-detail-audition")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("mobile-detail-jam"));
     expect(onOpenJam).toHaveBeenCalledWith("deep-house");
+  });
+
+  it("returns to the previous screen when the page is tapped, but not when a link is", async () => {
+    const { onCloseGenre, onOpenGenre } = renderShell("home", { genreId: "deep-house" });
+    const detail = await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+
+    // A tap on the page itself goes back…
+    fireEvent.click(detail);
+    expect(onCloseGenre).toHaveBeenCalledTimes(1);
+    expect(onOpenGenre).not.toHaveBeenCalled();
+
+    // …while a tap on a related genre is still that genre's link.
+    onCloseGenre.mockClear();
+    const related = [...document.querySelectorAll('[data-testid^="mobile-detail-related-"]')].find(
+      (node) => node.getAttribute("data-testid") !== "mobile-detail-related"
+    ) as HTMLElement | undefined;
+    if (related) {
+      fireEvent.click(related);
+      expect(onCloseGenre).not.toHaveBeenCalled();
+      expect(onOpenGenre).toHaveBeenCalledTimes(1);
+    }
   });
 
   it("shows no player bar when nothing is playing", async () => {
@@ -515,5 +520,38 @@ describe("phone player · the jog", () => {
     fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
     fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
     expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("120");
+  });
+});
+
+describe("phone shell · full-screen surfaces own the screen", () => {
+  beforeEach(() => {
+    localStorage.setItem("groove_language", "zh");
+    audition.toggle.mockReset();
+    audition.stop.mockReset();
+    audition.playingGenreId = null;
+  });
+
+  it("hides the module bar on a genre's page, and keeps only the player bar there", async () => {
+    audition.playingGenreId = "deep-house";
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+
+    expect(screen.queryByTestId("mobile-module-bar")).not.toBeInTheDocument();
+    expect(screen.getByTestId("mobile-player-bar")).toBeInTheDocument();
+  });
+
+  it("hides both bars inside the full-screen player", async () => {
+    audition.playingGenreId = "deep-house";
+    renderShell("home", { genreId: "deep-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+
+    expect(screen.queryByTestId("mobile-module-bar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
+  });
+
+  it("keeps the module bar while browsing the library", async () => {
+    renderShell("home");
+    await findHome();
+    expect(screen.getByTestId("mobile-module-bar")).toBeInTheDocument();
   });
 });

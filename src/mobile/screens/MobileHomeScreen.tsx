@@ -16,7 +16,7 @@
  *    (`useGenreAudition`), which is what the reference does and what a genre list is for.
  */
 import React, { useMemo, useState } from "react";
-import { ChevronDown, Pause, Play, Search } from "lucide-react";
+import { ChevronRight, Pause, Search } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, GenreCategory } from "../../types/genre";
@@ -53,15 +53,20 @@ const genreNameZh = (genre: Genre): string =>
 export interface MobileHomeScreenProps {
   /** Which genre the shell is currently auditioning; the engine lives in `MobileApp`. */
   playingGenreId: string | null;
-  onToggleAudition: (genre: Genre) => void;
-  onOpenGenre?: (genreId: string) => void;
+  /**
+   * Open a genre: the shell starts it playing and shows its page.
+   *
+   * This replaced a per-row play button. Sixteen identical round buttons down a list is both ugly and
+   * redundant — the card *is* the target, and "open the thing you tapped, playing" is one gesture
+   * instead of two.
+   */
+  onSelectGenre: (genre: Genre) => void;
 }
 
-export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre }: MobileHomeScreenProps) {
+export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeScreenProps) {
   const { t, language } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<GenreCategory | "all">("all");
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   const genres = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -125,7 +130,6 @@ export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre
       <ul className="mt-3 space-y-2.5" data-testid="mobile-home-list">
         {genres.map((genre) => {
           const isPlaying = playingGenreId === genre.id;
-          const isOpen = expanded === genre.id;
           const swatch = CATEGORY_SWATCH[genre.category];
           return (
             <li
@@ -136,73 +140,36 @@ export function MobileHomeScreen({ playingGenreId, onToggleAudition, onOpenGenre
               }`}
             >
               <div className="flex items-center gap-3 p-3.5">
-                <button
-                  type="button"
-                  data-testid={`mobile-genre-play-${genre.id}`}
-                  aria-label={isPlaying ? t("mobile_audition_stop") : t("mobile_audition_play")}
-                  aria-pressed={isPlaying}
-                  onClick={() => onToggleAudition(genre)}
-                  className="m-press flex h-12 w-12 flex-none items-center justify-center rounded-xl"
+                {/* The colour is identity, not a button: tapping the card opens the genre (and plays it). */}
+                <span
+                  aria-hidden="true"
+                  className="flex h-12 w-12 flex-none items-center justify-center rounded-xl"
                   style={{ background: swatch }}
                 >
                   {isPlaying ? (
                     <Pause className="h-4 w-4 fill-[var(--m-on-gold)] text-[var(--m-on-gold)]" />
-                  ) : (
-                    <Play className="h-4 w-4 fill-[var(--m-on-gold)] text-[var(--m-on-gold)]" />
-                  )}
-                </button>
+                  ) : null}
+                </span>
 
                 <button
                   type="button"
                   data-testid={`mobile-genre-row-${genre.id}`}
-                  aria-expanded={isOpen}
-                  onClick={() => setExpanded(isOpen ? null : genre.id)}
-                  className="m-press min-h-[46px] min-w-0 flex-1 text-left"
+                  onClick={() => onSelectGenre(genre)}
+                  className="m-press flex min-h-[46px] min-w-0 flex-1 items-center gap-2 text-left"
                 >
-                  <div className="flex items-baseline gap-2">
-                    <span className="truncate text-[15px] font-bold">{genre.name}</span>
-                    <span className="truncate text-[11px] text-[var(--m-ink-2)]">{genreNameZh(genre)}</span>
-                  </div>
-                  <div className="m-mono mt-1 truncate text-[10px] text-[var(--m-ink-3)]">
-                    {genre.origin_year} · {genre.default_bpm} BPM · {genre.category}
-                  </div>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline gap-2">
+                      <span className="truncate text-[15px] font-bold">{genre.name}</span>
+                      <span className="truncate text-[11px] text-[var(--m-ink-2)]">{genreNameZh(genre)}</span>
+                    </span>
+                    <span className="m-mono mt-1 block truncate text-[10px] text-[var(--m-ink-3)]">
+                      {genre.origin_year} · {genre.default_bpm} BPM · {genre.category}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 flex-none text-[var(--m-ink-3)]" aria-hidden="true" />
                 </button>
-
-                <ChevronDown
-                  aria-hidden="true"
-                  className={`h-4 w-4 flex-none text-[var(--m-ink-3)] transition-transform ${
-                    isOpen ? "rotate-180" : ""
-                  }`}
-                />
               </div>
 
-              {isOpen && (
-                <div
-                  className="m-rise border-t border-[var(--m-line)] px-3.5 py-3"
-                  data-testid={`mobile-genre-summary-${genre.id}`}
-                >
-                  <p className="text-[12px] leading-relaxed text-[var(--m-ink-2)]">
-                    {genre.key_characteristics?.[language] ??
-                      genre.cultural_context?.[language] ??
-                      ""}
-                  </p>
-                  <div className="m-mono mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[var(--m-ink-3)]">
-                    <span>{genre.bpm_range} BPM</span>
-                    <span>{genre.time_signature}</span>
-                    <span>{genre.origin_place?.[language] ?? ""}</span>
-                  </div>
-                  {onOpenGenre && (
-                    <button
-                      type="button"
-                      data-testid={`mobile-genre-detail-${genre.id}`}
-                      onClick={() => onOpenGenre(genre.id)}
-                      className="m-press m-mono mt-3 min-h-[46px] rounded-full border border-[var(--m-line-2)] px-4 text-[11px] text-[var(--m-gold)]"
-                    >
-                      {t("mobile_genre_open_detail")}
-                    </button>
-                  )}
-                </div>
-              )}
             </li>
           );
         })}

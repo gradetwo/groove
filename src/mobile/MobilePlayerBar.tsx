@@ -31,6 +31,9 @@ export interface MobilePlayerBarProps {
   /** What is playing. Resolved here so the shell needs no second copy of "the current genre". */
   genreId: string | null;
   isPlaying: boolean;
+  /** When the module bar is on screen the bar floats above it; on a full-screen page it sits at the
+      bottom edge (plus the safe area). */
+  aboveTabBar?: boolean;
   playMode: PlayMode;
   onToggle: () => void;
   onCycleMode: () => void;
@@ -40,6 +43,7 @@ export interface MobilePlayerBarProps {
 export function MobilePlayerBar({
   genreId,
   isPlaying,
+  aboveTabBar = true,
   playMode,
   onToggle,
   onCycleMode,
@@ -54,7 +58,9 @@ export function MobilePlayerBar({
     <div
       data-testid="mobile-player-bar"
       data-genre={genre.id}
-      className="m-rise fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-1/2 z-20 w-[calc(100%-16px)] max-w-[416px] -translate-x-1/2"
+      className={`m-rise fixed left-1/2 z-20 w-[calc(100%-16px)] max-w-[416px] -translate-x-1/2 ${
+        aboveTabBar ? "bottom-[calc(56px+env(safe-area-inset-bottom))]" : "bottom-[env(safe-area-inset-bottom)]"
+      }`}
     >
       <div className="flex items-center gap-3 rounded-2xl border border-[var(--m-line)] bg-[rgba(20,20,31,0.94)] p-2.5 backdrop-blur-md">
         {/* Left button: the mode cycle (the user's spec colour-codes the *bar's* left control). */}

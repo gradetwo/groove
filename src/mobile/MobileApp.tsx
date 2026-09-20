@@ -157,17 +157,45 @@ export function MobileApp({
    * meant a shell that mounted while something was already playing had no genre to show — and two
    * copies of "what is playing" is one too many. The bar resolves the genre from the id instead.
    */
+  /**
+   * Tapping a card opens its page *and* plays it.
+   *
+   * This is the redesign the user asked for: the library no longer repeats one identical play button
+   * per row (ugly, and two taps for one intention), so the card is the target and the shell starts the
+   * genre as it navigates.
+   */
+  const openGenreAndPlay = useCallback(
+    (genre: Genre) => {
+      if (playingGenreId !== genre.id) handleToggleAudition(genre);
+      onOpenGenre?.(genre.id);
+    },
+    [handleToggleAudition, onOpenGenre, playingGenreId]
+  );
+
   const isPlayer = module === "home" && Boolean(mobilePlayer) && Boolean(genreId);
   const isDetail = module === "home" && Boolean(genreId) && !mobilePlayer;
   // The bar is the collapsed *form* of the player, so it is hidden while the full player is open.
   const showPlayerBar = module === "home" && !isPlayer && Boolean(playingGenreId);
+  /**
+   * The module bar belongs to browsing, not to a full-screen surface.
+   *
+   * The player and a genre's page both take the whole screen (the user's rule): the player has its own
+   * transport, and the genre page is a reading page with the player bar as its only bottom chrome.
+   */
+  const showTabBar = !isPlayer && !isDetail;
 
   return (
     <div className="mobile-root relative min-h-[100dvh] w-full" data-testid="mobile-shell" data-module={module}>
       {/* Scroll container: the bar is fixed, so the content reserves its height plus the safe area. */}
       <main
         className="relative z-10 mx-auto min-h-[100dvh] w-full max-w-[432px]"
-        style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom))" }}
+        style={{
+          paddingBottom: showTabBar
+            ? "calc(72px + env(safe-area-inset-bottom))"
+            : isDetail
+              ? "calc(84px + env(safe-area-inset-bottom))"
+              : "env(safe-area-inset-bottom)",
+        }}
       >
         <header className="flex items-center justify-between px-4 pt-4 pb-1">
           <div className="flex items-baseline gap-2">
@@ -205,7 +233,6 @@ export function MobileApp({
               genreId={genreId}
               isPlaying={playingGenreId === genreId}
               onBack={() => onCloseGenre?.()}
-              onToggleAudition={handleToggleAudition}
               onOpenGenre={(id) => onOpenGenre?.(id)}
               onOpenJam={(id) => onOpenJam?.(id)}
             />
@@ -242,11 +269,7 @@ export function MobileApp({
               onOpenSearch={() => onOpenSearch?.()}
             />
           ) : module === "home" ? (
-            <MobileHomeScreen
-              playingGenreId={playingGenreId}
-              onToggleAudition={handleToggleAudition}
-              onOpenGenre={(id) => onOpenGenre?.(id)}
-            />
+            <MobileHomeScreen playingGenreId={playingGenreId} onSelectGenre={openGenreAndPlay} />
           ) : (
             <ModulePlaceholder module={module} />
           )}
@@ -258,6 +281,7 @@ export function MobileApp({
         <MobilePlayerBar
           genreId={playingGenreId}
           isPlaying
+          aboveTabBar={showTabBar}
           playMode={playMode}
           onToggle={stopAudition}
           onCycleMode={cyclePlayMode}
@@ -265,7 +289,7 @@ export function MobileApp({
         />
       )}
 
-      <MobileModuleTabBar active={module} onSelect={onSelectModule} />
+      {showTabBar && <MobileModuleTabBar active={module} onSelect={onSelectModule} />}
     </div>
   );
 }
