@@ -29,7 +29,7 @@ import type { Genre, GenreCategory } from "../../types/genre";
  * a seventh colour source.
  */
 export const CATEGORY_SWATCH: Record<GenreCategory, string> = {
-  Electronic: "#E9A23B",
+  Electronic: "var(--m-gold)",
   "Rock/Metal": "#F26D6D",
   "Hip Hop": "#9D7BEA",
   "Jazz/Blues": "#5AD48E",

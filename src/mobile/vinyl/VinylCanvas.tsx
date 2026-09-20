@@ -47,6 +47,15 @@ export interface VinylCanvasProps {
 
 const DPR_CAP = 2;
 
+/** `#rrggbb` → `rgba(r,g,b,a)`: canvas colours must be concrete, never `var(...)`. */
+function withAlpha(hex: string, alpha: number): string {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) return `rgba(94,234,212,${alpha})`;
+  const value = parseInt(match[1], 16);
+  return `rgba(${(value >> 16) & 255},${(value >> 8) & 255},${value & 255},${alpha})`;
+}
+
+
 export function VinylCanvas({
   playing,
   readClock,
@@ -75,8 +84,11 @@ export function VinylCanvas({
     let lastFrame = performance.now();
     let angle = 0;
     let grooveCache: { key: string; canvas: HTMLCanvasElement } | null = null;
+    /** The module accent, resolved from the stylesheet: canvas cannot read CSS variables. */
+    let accentRgb = "#5eead4";
 
     const resize = () => {
+      accentRgb = window.getComputedStyle(canvas).getPropertyValue("--m-gold").trim() || "#5eead4";
       const dpr = Math.min(DPR_CAP, window.devicePixelRatio || 1);
       const width = wrap.clientWidth || 300;
       const height = Math.round(width * (352 / 300));
@@ -137,7 +149,7 @@ export function VinylCanvas({
         octx.beginPath();
         octx.arc(geometry.cx, geometry.cy, geometry.maxR - 2.4, 0, Math.PI * 2);
         octx.stroke();
-        octx.strokeStyle = "rgba(255,246,225,0.10)";
+        octx.strokeStyle = "rgba(255,255,255,0.10)";
         octx.lineWidth = 1.2;
         octx.beginPath();
         octx.arc(geometry.cx, geometry.cy, geometry.maxR - 1, 0, Math.PI * 2);
@@ -242,8 +254,8 @@ export function VinylCanvas({
 
       // 1. Centre bloom (fixed to the screen, not to the disc).
       const bloom = ctx.createRadialGradient(geometry.cx, geometry.cy, geometry.maxR * 0.22, geometry.cx, geometry.cy, geometry.maxR * 1.35);
-      bloom.addColorStop(0, state.playing ? "rgba(233,162,59,0.14)" : "rgba(233,162,59,0.05)");
-      bloom.addColorStop(1, "rgba(233,162,59,0)");
+      bloom.addColorStop(0, withAlpha(accentRgb, state.playing ? 0.14 : 0.05));
+      bloom.addColorStop(1, withAlpha(accentRgb, 0));
       ctx.fillStyle = bloom;
       ctx.beginPath();
       ctx.arc(geometry.cx, geometry.cy, geometry.maxR * 1.35, 0, Math.PI * 2);
@@ -285,12 +297,12 @@ export function VinylCanvas({
         geometry.cx + geometry.maxR * 0.3,
         geometry.cy + geometry.maxR * 0.55
       );
-      sheen.addColorStop(0, "rgba(255,246,225,0)");
-      sheen.addColorStop(0.2, "rgba(255,246,225,0.07)");
-      sheen.addColorStop(0.36, "rgba(255,246,225,0)");
-      sheen.addColorStop(0.68, "rgba(255,246,225,0)");
-      sheen.addColorStop(0.85, "rgba(255,246,225,0.05)");
-      sheen.addColorStop(1, "rgba(255,246,225,0)");
+      sheen.addColorStop(0, "rgba(255,255,255,0)");
+      sheen.addColorStop(0.2, "rgba(255,255,255,0.07)");
+      sheen.addColorStop(0.36, "rgba(255,255,255,0)");
+      sheen.addColorStop(0.68, "rgba(255,255,255,0)");
+      sheen.addColorStop(0.85, "rgba(255,255,255,0.05)");
+      sheen.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = sheen;
       ctx.beginPath();
       ctx.arc(geometry.cx, geometry.cy, geometry.maxR, 0, Math.PI * 2);

@@ -230,7 +230,7 @@ export function MobileJamScreen({
           className={`m-press m-mono flex h-[54px] w-[54px] flex-none items-center justify-center rounded-full text-[11px] font-bold ${
             isPlaying
               ? "bg-[var(--m-gold)] text-[var(--m-on-gold)]"
-              : "border border-[rgba(233,162,59,0.5)] bg-[#171208] text-[var(--m-gold)]"
+              : "border border-[rgb(var(--m-gold-rgb)/0.5)] bg-[var(--m-card-2)] text-[var(--m-gold)]"
           }`}
         >
           {isPlaying ? "■" : "▶"}
@@ -283,8 +283,8 @@ export function MobileJamScreen({
                         on
                           ? "bg-[var(--m-gold)]"
                           : active
-                            ? "bg-[rgba(233,162,59,0.35)]"
-                            : "bg-[rgba(238,225,200,0.055)]"
+                            ? "bg-[rgb(var(--m-gold-rgb)/0.35)]"
+                            : "bg-[rgba(232,232,255,0.055)]"
                       }`}
                     />
                   );
@@ -313,8 +313,8 @@ export function MobileJamScreen({
                 type="button"
                 data-testid={`mobile-jam-pad-${pad.id}`}
                 onClick={() => writeAtPlayhead(pad.lane)}
-                className={`m-press flex h-[76px] flex-col items-center justify-center rounded-[18px] border bg-[linear-gradient(180deg,#1C1710,#120F09)] ${
-                  firing ? "border-[rgba(233,162,59,0.8)]" : "border-[var(--m-line)]"
+                className={`m-press flex h-[76px] flex-col items-center justify-center rounded-[18px] border bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))] ${
+                  firing ? "border-[rgb(var(--m-gold-rgb)/0.8)]" : "border-[var(--m-line)]"
                 }`}
               >
                 <span className="text-[13px] font-semibold">{t(pad.labelKey)}</span>
