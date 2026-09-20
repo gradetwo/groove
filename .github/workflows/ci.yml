@@ -31,6 +31,11 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "npm"
 
+      # Printed *before* the install, so an engine rejection shows which Node asked for it.
+      # (npm validates `engines` before running any script, so a `preinstall` hook cannot do this.)
+      - name: Node & npm versions
+        run: node -v && npm -v
+
       - name: Install dependencies
         run: npm ci
 
@@ -90,6 +95,11 @@ jobs:
           # Same floor as the `validate` job — see the comment there.
           node-version-file: ".nvmrc"
           cache: "npm"
+
+      # Printed *before* the install, so an engine rejection shows which Node asked for it.
+      # (npm validates `engines` before running any script, so a `preinstall` hook cannot do this.)
+      - name: Node & npm versions
+        run: node -v && npm -v
 
       - name: Install dependencies
         run: npm ci
