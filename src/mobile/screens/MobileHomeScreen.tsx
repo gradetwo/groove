@@ -20,6 +20,7 @@ import { ChevronRight, Pause, Search } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, GenreCategory } from "../../types/genre";
+import { genreArtBackground, genreCoverUrl } from "../genreArt";
 
 /**
  * One colour per category, from the reference palette.
@@ -29,12 +30,14 @@ import type { Genre, GenreCategory } from "../../types/genre";
  * a seventh colour source.
  */
 export const CATEGORY_SWATCH: Record<GenreCategory, string> = {
-  Electronic: "var(--m-gold)",
-  "Rock/Metal": "#F26D6D",
-  "Hip Hop": "#9D7BEA",
-  "Jazz/Blues": "#5AD48E",
-  "Pop/R&B": "#E97BA3",
-  "Latin/World": "#3FD8C2",
+  // A cool, high-contrast set. The reference designs leaned on amber for everything, which made every
+  // genre's tile look identical (and yellow); these six read as distinct at tile size.
+  Electronic: "#5eead4",
+  "Rock/Metal": "#fb7185",
+  "Hip Hop": "#a78bfa",
+  "Jazz/Blues": "#60a5fa",
+  "Pop/R&B": "#f0abfc",
+  "Latin/World": "#34d399",
 };
 
 const CATEGORIES = Object.keys(CATEGORY_SWATCH) as GenreCategory[];
@@ -130,7 +133,6 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
       <ul className="mt-3 space-y-2.5" data-testid="mobile-home-list">
         {genres.map((genre) => {
           const isPlaying = playingGenreId === genre.id;
-          const swatch = CATEGORY_SWATCH[genre.category];
           return (
             <li
               key={genre.id}
@@ -143,11 +145,22 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
                 {/* The colour is identity, not a button: tapping the card opens the genre (and plays it). */}
                 <span
                   aria-hidden="true"
-                  className="flex h-12 w-12 flex-none items-center justify-center rounded-xl"
-                  style={{ background: swatch }}
+                  data-testid={`mobile-genre-art-${genre.id}`}
+                  className="relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl"
+                  style={{ background: genreArtBackground(genre) }}
                 >
+                  {/* A real cover wins when one exists; the generated art stays behind it. */}
+                  <img
+                    src={genreCoverUrl(genre.id)}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
                   {isPlaying ? (
-                    <Pause className="h-4 w-4 fill-[var(--m-on-gold)] text-[var(--m-on-gold)]" />
+                    <Pause className="relative h-4 w-4 text-white drop-shadow" />
                   ) : null}
                 </span>
 

@@ -12,32 +12,61 @@
  */
 
 .mobile-root {
-  --m-bg: #0b0907;
-  --m-card: #14110b;
-  --m-card-2: #1b160d;
-  --m-line: rgba(238, 225, 200, 0.09);
-  --m-line-2: rgba(238, 225, 200, 0.2);
-  --m-ink: #efe7d6;
-  --m-ink-2: #a79b82;
-  --m-ink-3: #6f6653;
-  --m-gold: #e9a23b;
-  --m-gold-hi: #ffcf7d;
-  --m-teal: #3fd8c2;
-  --m-red: #f26d6d;
-  --m-green: #5ad48e;
-  --m-violet: #9d7bea;
-  /* Text on an amber fill is always this, never white: measured contrast on #E9A23B. */
-  --m-on-gold: #181104;
+  /* A cool, near-black ground. The amber-on-brown scheme of the reference designs is *not* carried
+     over: colour now comes from the module accent and from each genre's own art. */
+  --m-bg: #0b0b14;
+  --m-card: #14141f;
+  --m-card-2: #1c1c2a;
+  --m-line: rgba(232,232,255,0.09);
+  --m-line-2: rgba(232,232,255,0.2);
+  --m-ink: #f3f3f9;
+  --m-ink-2: #a9a9bd;
+  --m-ink-3: #6e6e85;
+  --m-teal: #5eead4;
+  --m-red: #fb7185;
+  --m-green: #4ade80;
+  --m-violet: #a78bfa;
+  /* Default accent (首页); each module overrides these below. The names stay `--m-gold*` because
+     every screen refers to them. */
+  --m-gold: #5eead4;
+  --m-gold-hi: #99f6e4;
+  --m-gold-rgb: 94 234 212;
+  /* Text on an accent fill is always this near-black, never white. */
+  --m-on-gold: #0b0b14;
   background: var(--m-bg);
   color: var(--m-ink);
   font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans",
     "Noto Sans SC", sans-serif;
   -webkit-font-smoothing: antialiased;
-  /* A control surface, not a document: no text selection, no tap highlight, no long-press callout. */
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
+}
+
+/*
+ * One accent per module: colour says where you are, and a single hue per screen keeps it calm.
+ * Token overrides only — no component needed to change for this.
+ */
+.mobile-root[data-module="jam"] {
+  --m-gold: #a78bfa;
+  --m-gold-rgb: 167 139 250;
+  --m-gold-hi: #ddd6fe;
+}
+.mobile-root[data-module="challenge"] {
+  --m-gold: #fb7185;
+  --m-gold-rgb: 251 113 133;
+  --m-gold-hi: #fecdd3;
+}
+.mobile-root[data-module="explore"] {
+  --m-gold: #60a5fa;
+  --m-gold-rgb: 96 165 250;
+  --m-gold-hi: #bfdbfe;
+}
+.mobile-root[data-module="more"] {
+  --m-gold: #94a3b8;
+  --m-gold-rgb: 148 163 184;
+  --m-gold-hi: #e2e8f0;
 }
 
 /* All numerals in the shell are tabular so a changing BPM does not shift the layout. */
@@ -54,7 +83,9 @@
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background: radial-gradient(130% 40% at 50% -8%, rgba(233, 162, 59, 0.07), transparent 60%);
+  background:
+    radial-gradient(120% 38% at 50% -8%, rgb(var(--m-gold-rgb)/0.16), transparent 62%),
+    radial-gradient(90% 32% at 12% 104%, rgba(167,139,250,0.12), transparent 70%);
 }
 
 /* Horizontal chip rails scroll without a visible scrollbar (the reference's `.chips`). */
