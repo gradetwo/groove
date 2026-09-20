@@ -1,74 +1,62 @@
 /**
  * 探索 (the explore module, M6).
  *
- * Three sub-pages, all of them *doing* something rather than describing it:
+ * Three sub-pages, and every one of them is the **desktop view, reused as-is** rather than a phone-only
+ * reimplementation — the mature views already do the work, and they hold up especially well in
+ * landscape:
  *
- *  - **底鼓设计** — the kick's three physical layers (SUB / THUMP / CLICK) and three feel values, with
- *    the four curated presets from `AnatomyKickEngine`. Firing it is one tap; the sound is the point.
- *  - **和弦走向** — the curated progressions from `src/data/popularProgressions.ts`, grouped by
- *    category and auditioned through `ChordAudioEngine` in the key they are written in.
- *  - **律动解构** — take the current genre's groove apart: four lanes with their real steps, and a tap
- *    drops a lane out of the loop that is playing (the pattern is re-sent to the engine, so the change
- *    is audible on the next bar).
+ *  - **和弦走向** — `ChordProgressionsView`: the curated progressions and their auditions.
+ *  - **底鼓设计** — `KickAnatomyView`: the kick's three physical layers, feel values and visualizers.
+ *  - **律动解构** — `MasterclassView`: the polyrhythm / feel lessons that take a groove apart.
  *
- * What did **not** come along from the desktop: "载入工作台" (bake to the sequencer) and the custom-kick
- * preset save/delete. Both need a workspace to write into, and on a phone the module that owns the
- * workspace already has its own entry point; two buttons that silently replace what the user is
- * working on are worse than no buttons.
+ * 和弦走向 comes first: it is the sub-page the user reaches for, and it is the default.
  *
- * ## Landscape
+ * All three arrive through `React.lazy`, so the phone bundle does not carry the desktop audio, canvas
+ * and data graphs until a sub-page is actually opened. Each one sits inside `[data-legacy="desktop"]`:
+ * the reused controls keep their desktop sizes, so the phone touch-target gate skips just those
+ * subtrees while this screen's own chrome — the sub-tab switcher — is still held to 44 px.
  *
- * The reference has no orientation handling at all (a fixed 432 px column), so this is new design
- * rather than a port: in landscape the sub-page body becomes two columns (controls beside the list)
- * via a `@media (orientation: landscape)` rule in `mobile.css`, and the whole surface is capped so it
- * never grows taller than the viewport. The tests assert the layout hooks; the E2E measures the
- * rendered column count on a landscape target.
+ * What the reused views deliberately do **not** get is the shell's transport (`isPlaying` /
+ * `onTogglePlay` / `onApplyPattern`). Each view owns its engine and its own audition transport, and
+ * silently driving the phone's loop from a desktop panel would replace what the user is working on.
+ * The props stay on the interface because `MobileApp` still passes them.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Flame } from "lucide-react";
-import { ALL_GENRES } from "../../data/genres";
-import { patternFromGenre } from "../../data/genreMix";
-import { POPULAR_PROGRESSION_CATEGORIES, POPULAR_PROGRESSIONS } from "../../data/popularProgressions";
-import { KICK_PRESETS, globalAnatomyKickEngine } from "../../audio/AnatomyKickEngine";
-import { ChordAudioEngine } from "../../audio/ChordAudioEngine";
+import React, { useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, SequencerPattern } from "../../types/genre";
 
-type ExplorePage = "kick" | "chords" | "groove";
+type ExplorePage = "chords" | "kick" | "groove";
 
-const LANES = [
-  { trackId: "kick", labelKey: "mobile_jam_lane_kick" },
-  { trackId: "snare", labelKey: "mobile_jam_lane_snare" },
-  { trackId: "hihat", labelKey: "mobile_jam_lane_hat" },
-  { trackId: "bass", labelKey: "mobile_jam_lane_bass" },
-];
+/** The desktop views, loaded on demand and rendered inside the phone's 探索 page. */
+const LegacyChordView = React.lazy(() =>
+  import("../../views/ChordProgressionsView").then((m) => ({ default: m.ChordProgressionsView }))
+);
+const LegacyKickView = React.lazy(() =>
+  import("../../views/KickAnatomyView").then((m) => ({ default: m.KickAnatomyView }))
+);
+const LegacyGrooveView = React.lazy(() =>
+  import("../../views/MasterclassView").then((m) => ({ default: m.MasterclassView }))
+);
 
-/** The three feel values, each as five named steps (the reference's 4-word buckets, plus a neutral). */
 /**
- * The three feel values, in the engine's own vocabulary.
- *
- * The reference's 柔软度 / 砂砾感 / 内脏压力 are `softness` / `grit` / `rumble`, and their four-word
- * buckets are the labels below; the fifth step is the extreme end of each scale, because a phone row
- * of chips has room for one more than the desktop's wording had.
+ * `MASTERCLASSES[0].id` — the polyrhythm lesson, the most literal "take a groove apart" entry. It is a
+ * literal rather than an import so the masterclass data module stays out of the phone's eager graph.
  */
-const FEELS = [
-  { key: "softness", labelKey: "mobile_explore_kick_soft", steps: ["硬", "实", "韧", "松", "软"] },
-  { key: "grit", labelKey: "mobile_explore_kick_grit", steps: ["滑", "润", "糙", "砾", "砂"] },
-  { key: "rumble", labelKey: "mobile_explore_kick_low", steps: ["轻", "稳", "沉", "压", "闷"] },
-] as const;
+const GROOVE_LESSON_ID = "polyrhythm";
 
-/** The three physical layers are mute switches on the engine. */
-const KICK_LAYERS = [
-  { id: "sub", muteKey: "subMute", label: "SUB" },
-  { id: "thump", muteKey: "thumpMute", label: "THUMP" },
-  { id: "click", muteKey: "clickMute", label: "CLICK" },
-] as const;
+/**
+ * Stand-in for the reused views' own desktop affordances (help / return to studio / bake).
+ *
+ * The phone has no studio tab or guide modal to navigate to, and an inert button is better than one
+ * that yanks the user out of 探索. A zero-argument function satisfies every one of those handler
+ * types, so one constant covers all three views.
+ */
+const noop = () => {};
 
-const pageOfPresetName = (preset: { name?: unknown; id?: string }, language: string): string => {
-  const name = preset.name as { zh?: string; en?: string } | string | undefined;
-  if (typeof name === "string") return name;
-  return (language === "zh" ? name?.zh : name?.en) ?? preset.id ?? "";
-};
+/** One Suspense placeholder for all three lazy chunks — the phone only needs "something is coming". */
+const LegacyFallback = () => (
+  <p className="m-mono text-[10px] text-[var(--m-ink-3)]">…</p>
+);
 
 export interface MobileExploreScreenProps {
   genreId?: string;
@@ -77,14 +65,10 @@ export interface MobileExploreScreenProps {
   onApplyPattern: (pattern: SequencerPattern) => void;
 }
 
-export function MobileExploreScreen({
-  genreId,
-  isPlaying,
-  onTogglePlay,
-  onApplyPattern,
-}: MobileExploreScreenProps) {
-  const { t, language } = useLanguage();
-  const [page, setPage] = useState<ExplorePage>("kick");
+export function MobileExploreScreen(_props: MobileExploreScreenProps) {
+  const { t } = useLanguage();
+  // 和弦走向 first (the user's order), and it is the desktop view itself — see below.
+  const [page, setPage] = useState<ExplorePage>("chords");
 
   return (
     <section className="m-rise px-4 pt-2" data-testid="mobile-explore" data-page={page}>
@@ -93,8 +77,8 @@ export function MobileExploreScreen({
       <div className="m-rail mt-3" role="tablist" aria-label={t("mobile_module_explore")}>
         {(
           [
-            ["kick", "mobile_explore_kick"],
             ["chords", "mobile_explore_chords"],
+            ["kick", "mobile_explore_kick"],
             ["groove", "mobile_explore_groove"],
           ] as Array<[ExplorePage, string]>
         ).map(([id, labelKey]) => (
@@ -116,371 +100,38 @@ export function MobileExploreScreen({
         ))}
       </div>
 
-      {page === "kick" && <KickLab />}
-      {page === "chords" && <ChordLab />}
+      {page === "chords" && (
+        /**
+         * The **desktop chord view, reused as-is**.
+         *
+         * The user asked for the old modules to come along ("和弦走向横屏后就很好用"), and this is the
+         * honest way to do that: the view already has the auditions, the key/timbre pickers and a
+         * layout that works in landscape.
+         */
+        <div data-legacy="desktop" data-testid="mobile-explore-chords-legacy" className="mt-3">
+          <React.Suspense fallback={<LegacyFallback />}>
+            <LegacyChordView />
+          </React.Suspense>
+        </div>
+      )}
+      {page === "kick" && (
+        // The desktop kick laboratory, with its visualizers and its shared engine. The `noop`s keep its
+        // guide / workbench buttons inert instead of unmounting them.
+        <div data-legacy="desktop" data-testid="mobile-explore-kick-legacy" className="mt-3">
+          <React.Suspense fallback={<LegacyFallback />}>
+            <LegacyKickView onOpenHelp={noop} onOpenStudio={noop} />
+          </React.Suspense>
+        </div>
+      )}
       {page === "groove" && (
-        <GrooveLab
-          genreId={genreId}
-          isPlaying={isPlaying}
-          onTogglePlay={onTogglePlay}
-          onApplyPattern={onApplyPattern}
-          language={language}
-        />
+        // The desktop masterclass, opened on the polyrhythm lesson. `onOpenStudio` is required by the
+        // view's props, so a no-op stands in for the studio tab the phone does not have.
+        <div data-legacy="desktop" data-testid="mobile-explore-groove-legacy" className="mt-3">
+          <React.Suspense fallback={<LegacyFallback />}>
+            <LegacyGrooveView initialLessonId={GROOVE_LESSON_ID} onOpenStudio={noop} />
+          </React.Suspense>
+        </div>
       )}
     </section>
-  );
-}
-
-/* ------------------------------------------------------------------ 底鼓设计 */
-
-function KickLab() {
-  const { t, language } = useLanguage();
-  const [params, setParams] = useState(() => ({ ...globalAnatomyKickEngine.getParams() }));
-  const [presetId, setPresetId] = useState<string | null>(null);
-
-  const apply = useCallback((next: Partial<typeof params>) => {
-    const merged = { ...globalAnatomyKickEngine.getParams(), ...next };
-    setParams(merged);
-    globalAnatomyKickEngine.setParams(merged);
-  }, []);
-
-  const fire = useCallback(() => {
-    // The engine is shared (a single module-level instance), so this is the same voice the desktop
-    // kick lab fires — one kick, no second audio graph.
-    // `trigger` lazily creates and resumes the context, so the first tap already sounds.
-    globalAnatomyKickEngine.trigger();
-  }, []);
-
-  return (
-    <div className="mt-3 space-y-3" data-testid="mobile-explore-kick">
-      <button
-        type="button"
-        data-testid="mobile-explore-kick-fire"
-        onClick={fire}
-        className="m-press flex min-h-[58px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--m-gold)] text-[16px] font-bold text-[var(--m-on-gold)]"
-      >
-        <Flame className="h-5 w-5" />
-        {t("mobile_explore_kick_fire")}
-      </button>
-
-      <div className="rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-3.5">
-        <p className="m-mono text-[9px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
-          {t("mobile_explore_kick_layers")}
-        </p>
-        <div className="mt-2 flex gap-2">
-          {KICK_LAYERS.map((layer) => {
-            const on = !params[layer.muteKey];
-            return (
-              <button
-                key={layer.id}
-                type="button"
-                data-testid={`mobile-explore-kick-layer-${layer.id}`}
-                aria-pressed={on}
-                onClick={() => apply({ [layer.muteKey]: on } as Partial<typeof params>)}
-                className={`m-press min-h-[46px] flex-1 rounded-xl border text-[11px] ${
-                  on
-                    ? "border-[var(--m-gold)] bg-[rgb(var(--m-gold-rgb)/0.1)] text-[var(--m-gold)]"
-                    : "border-[var(--m-line-2)] text-[var(--m-ink-3)]"
-                }`}
-              >
-                {layer.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {FEELS.map((feel) => (
-        <div key={feel.key} className="rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-3.5">
-          <div className="flex items-baseline justify-between">
-            <p className="m-mono text-[9px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
-              {t(feel.labelKey)}
-            </p>
-            <span className="m-mono text-[10px] text-[var(--m-gold)]">
-              {Math.round(params[feel.key] * 100)}%
-            </span>
-          </div>
-          <div className="m-rail mt-2">
-            {feel.steps.map((word, index) => {
-              const value = index / (feel.steps.length - 1);
-              const active = Math.abs(params[feel.key] - value) < 0.13;
-              return (
-                <button
-                  key={word}
-                  type="button"
-                  data-testid={`mobile-explore-kick-${feel.key}-${index}`}
-                  aria-pressed={active}
-                  onClick={() => apply({ [feel.key]: value } as Partial<typeof params>)}
-                  className={`m-press min-h-[46px] flex-none rounded-full border px-3 text-[11px] ${
-                    active
-                      ? "border-[var(--m-gold)] text-[var(--m-gold)]"
-                      : "border-[var(--m-line-2)] text-[var(--m-ink-3)]"
-                  }`}
-                >
-                  {word}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      <div className="rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-3.5">
-        <p className="m-mono text-[9px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
-          {t("mobile_explore_kick_presets")}
-        </p>
-        <div className="mt-2 space-y-2">
-          {KICK_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              data-testid={`mobile-explore-kick-preset-${preset.id}`}
-              aria-pressed={presetId === preset.id}
-              onClick={() => {
-                setPresetId(preset.id);
-                apply(preset.params);
-                fire();
-              }}
-              className={`m-press min-h-[46px] w-full rounded-xl border px-3 text-left text-[12px] ${
-                presetId === preset.id
-                  ? "border-[var(--m-gold)] text-[var(--m-gold)]"
-                  : "border-[var(--m-line)] text-[var(--m-ink-2)]"
-              }`}
-            >
-              {pageOfPresetName(preset, language)}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ 和弦走向 */
-
-function ChordLab() {
-  const { t, language } = useLanguage();
-  const [category, setCategory] = useState<string>(POPULAR_PROGRESSION_CATEGORIES[0]?.id ?? "all");
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const engineRef = useRef<ChordAudioEngine | null>(null);
-
-  useEffect(() => {
-    return () => {
-      engineRef.current?.panic();
-      engineRef.current = null;
-    };
-  }, []);
-
-  const progressions = useMemo(
-    // `all` is the unfiltered view, not a category of its own.
-    () =>
-      category === "all"
-        ? POPULAR_PROGRESSIONS
-        : POPULAR_PROGRESSIONS.filter((progression) => progression.category === category),
-    [category]
-  );
-
-  const toggle = useCallback(
-    (progression: (typeof POPULAR_PROGRESSIONS)[number]) => {
-      if (!engineRef.current) engineRef.current = new ChordAudioEngine();
-      const engine = engineRef.current;
-      if (playingId === progression.id) {
-        engine.panic();
-        setPlayingId(null);
-        return;
-      }
-      engine.stop();
-      engine.initAudioContext();
-      engine.setTimbre(progression.suggestedTimbre);
-      engine.setStyle(progression.suggestedStyle);
-      engine.setBpm(progression.suggestedBpm);
-      engine.setLoop(true);
-      engine.startProgression(progression.chords, () => {});
-      setPlayingId(progression.id);
-    },
-    [playingId]
-  );
-
-  return (
-    <div className="mt-3" data-testid="mobile-explore-chords" data-landscape="split">
-      <div className="m-rail" role="tablist" aria-label={t("mobile_explore_chords")}>
-        {POPULAR_PROGRESSION_CATEGORIES.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            role="tab"
-            aria-selected={category === entry.id}
-            data-testid={`mobile-explore-chord-category-${entry.id}`}
-            onClick={() => setCategory(entry.id)}
-            className={`m-press min-h-[46px] min-w-[46px] flex-none rounded-full border px-3.5 text-[12px] ${
-              category === entry.id
-                ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
-                : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"
-            }`}
-          >
-            {language === "zh" ? entry.nameZh : entry.nameEn}
-          </button>
-        ))}
-      </div>
-
-      {/* `flex` + `gap` rather than `space-y`: the landscape rule swaps `display` to `grid`, and a
-          margin-based row spacing (Tailwind's `space-y-*`, specificity 0,3,0) would beat that rule and
-          offset the second column by 10px, making a shared row look like a stack. */}
-      <ul className="mt-3 flex flex-col gap-2.5">
-        {progressions.map((progression) => (
-          <li
-            key={progression.id}
-            data-testid={`mobile-explore-chord-${progression.id}`}
-            className={`m-press rounded-2xl border bg-[var(--m-card)] p-3.5 ${
-              playingId === progression.id ? "border-[var(--m-gold)]" : "border-[var(--m-line)]"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-bold">
-                  {language === "zh" ? progression.name.zh : progression.name.en}
-                </p>
-                <p className="m-mono mt-1 truncate text-[10px] text-[var(--m-gold)]">
-                  {progression.roman.join(" – ")} · {progression.defaultKey}
-                </p>
-              </div>
-              <button
-                type="button"
-                data-testid={`mobile-explore-chord-play-${progression.id}`}
-                aria-pressed={playingId === progression.id}
-                aria-label={playingId === progression.id ? t("mobile_player_pause") : t("mobile_player_play")}
-                onClick={() => toggle(progression)}
-                className="m-press flex h-12 w-12 flex-none items-center justify-center rounded-full bg-[var(--m-gold)] text-[var(--m-on-gold)]"
-              >
-                {playingId === progression.id ? "■" : "▶"}
-              </button>
-            </div>
-            <p className="mt-2 text-[12px] leading-relaxed text-[var(--m-ink-2)]">
-              {language === "zh" ? progression.emotion.zh : progression.emotion.en}
-            </p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ 律动解构 */
-
-function GrooveLab({
-  genreId,
-  isPlaying,
-  onTogglePlay,
-  onApplyPattern,
-  language,
-}: {
-  genreId?: string;
-  isPlaying: boolean;
-  onTogglePlay: (genre: Genre) => void;
-  onApplyPattern: (pattern: SequencerPattern) => void;
-  language: string;
-}) {
-  const { t } = useLanguage();
-  const genre = ALL_GENRES.find((item) => item.id === genreId) ?? ALL_GENRES[0];
-  const [dropped, setDropped] = useState<string[]>([]);
-  const [playhead, setPlayhead] = useState(0);
-  const base = useMemo(() => patternFromGenre(genre), [genre]);
-
-  /** Lane dropout: the pattern sent to the engine simply omits the dropped lanes' steps. */
-  const pattern = useMemo(() => {
-    if (dropped.length === 0) return base;
-    return {
-      ...base,
-      tracks: base.tracks.map((track) =>
-        dropped.includes(track.track_id)
-          ? ({ ...track, steps: track.steps.map(() => false) } as unknown as typeof track)
-          : track
-      ),
-    } as SequencerPattern;
-  }, [base, dropped]);
-
-  useEffect(() => {
-    onApplyPattern(pattern);
-  }, [onApplyPattern, pattern]);
-
-  // A coarse playhead readout: the grid is a picture of the groove, not an editor.
-  useEffect(() => {
-    if (!isPlaying) return;
-    const id = window.setInterval(() => setPlayhead((step) => (step + 1) % 16), 120);
-    return () => window.clearInterval(id);
-  }, [isPlaying]);
-
-  return (
-    <div className="mt-3" data-testid="mobile-explore-groove" data-landscape="split">
-      <div className="flex items-center gap-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold">{genre.name}</p>
-          <p className="m-mono mt-0.5 truncate text-[9.5px] text-[var(--m-ink-3)]">
-            {dropped.length === 0 ? t("mobile_explore_groove_all") : `${t("mobile_explore_groove_dropped")}: ${dropped.length}`}
-          </p>
-        </div>
-        <button
-          type="button"
-          data-testid="mobile-explore-groove-play"
-          aria-pressed={isPlaying}
-          onClick={() => onTogglePlay(genre)}
-          className={`m-press m-mono flex h-[50px] w-[50px] items-center justify-center rounded-full text-[11px] font-bold ${
-            isPlaying ? "bg-[var(--m-gold)] text-[var(--m-on-gold)]" : "border border-[rgb(var(--m-gold-rgb)/0.5)] bg-[var(--m-card-2)] text-[var(--m-gold)]"
-          }`}
-        >
-          {isPlaying ? "■" : "▶"}
-        </button>
-      </div>
-
-      <div className="mt-3 space-y-2">
-        {LANES.map((lane) => {
-          const track = base.tracks.find((item) => item.track_id === lane.trackId);
-          const steps = track?.steps ?? [];
-          const isDropped = dropped.includes(lane.trackId);
-          return (
-            <button
-              key={lane.trackId}
-              type="button"
-              data-testid={`mobile-explore-groove-lane-${lane.trackId}`}
-              aria-pressed={!isDropped}
-              onClick={() =>
-                setDropped((current) =>
-                  current.includes(lane.trackId)
-                    ? current.filter((id) => id !== lane.trackId)
-                    : [...current, lane.trackId]
-                )
-              }
-              className={`m-press block w-full rounded-2xl border bg-[var(--m-card)] p-3 text-left ${
-                isDropped ? "border-[var(--m-line)] opacity-45" : "border-[var(--m-line-2)]"
-              }`}
-            >
-              <span className="m-mono flex items-center justify-between text-[9px] text-[var(--m-ink-3)]">
-                {t(lane.labelKey)}
-                <span>{lane.trackId}</span>
-              </span>
-              <span className="mt-1.5 flex gap-[3px]">
-                {Array.from({ length: 16 }, (_, index) => (
-                  <span
-                    key={index}
-                    className={`h-3.5 flex-1 rounded-sm ${
-                      steps[index]
-                        ? isDropped
-                          ? "bg-[rgba(232,232,255,0.18)]"
-                          : index === playhead && isPlaying
-                            ? "bg-[var(--m-gold-hi)]"
-                            : "bg-[var(--m-gold)]"
-                        : "bg-[rgba(232,232,255,0.055)]"
-                    }`}
-                  />
-                ))}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="m-mono mt-2 text-[9px] text-[var(--m-ink-3)]" data-testid="mobile-explore-groove-hint">
-        {language === "zh" ? "点一轨就把它从循环里拿掉" : "Tap a lane to drop it out of the loop"}
-      </p>
-    </div>
   );
 }
