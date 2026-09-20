@@ -30,7 +30,14 @@ const SCRATCH = path.join(ROOT, "node_modules", ".cache", "groove-isolation");
 const KEEP = process.argv.includes("--keep");
 
 /** Directories that only exist for a surface. Removing them is the experiment. */
-const SURFACE_PATHS = ["src/components", "src/views", "src/ui", "src/App.tsx", "src/test"];
+/**
+ * Everything that exists *because a screen exists*.
+ *
+ * The list has to match the surface directories in `check_layers.mjs`: adding a surface there without
+ * adding it here would let a logic module import the phone shell without the isolation gate noticing,
+ * which is exactly what `surfaceIsolation.test.ts` asserts against.
+ */
+const SURFACE_PATHS = ["src/components", "src/views", "src/ui", "src/mobile", "src/App.tsx", "src/test"];
 /** The roots the criterion names; `tsc` pulls in everything they import. */
 const ROOTS = ["src/features", "src/audio"];
 /** Shared below the logic layer — copied but never a root. */
