@@ -23,8 +23,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { LanguageProvider } from "../i18n/LanguageContext";
-import { MobileTransportBar, TRANSPORT_ROW_WIDTH_PX } from "../components/sequencer/MobileTransportBar";
+import { MobileTransportBar } from "../components/sequencer/MobileTransportBar";
 import { MobileTabBar } from "../components/MobileTabBar";
+import { TRANSPORT_ROW_WIDTH_PX } from "../platform/layoutTokens";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,16 +47,16 @@ const transportProps = {
 const wrap = (node: React.ReactNode) => render(<LanguageProvider>{node}</LanguageProvider>);
 
 describe("the transport in a shared row", () => {
-  it("declares the width it claims, and the stylesheet agrees", () => {
+  it("sizes its slot from the token, rather than from a second copy of the number", () => {
     /**
-     * The slot is sized in the panel's JSX from a CSS variable, so the two numbers have to match or
-     * the transport is clipped or leaves a gap. CSS and TS cannot share a constant, so the value is
-     * asserted equal here — the same arrangement as `PHONE_MAX_HEIGHT_PX`.
+     * The slot is sized in the panel's JSX from `min(var(--mobile-transport-row-w), 55vw)`, and
+     * `scripts/layout_tokens.mjs` writes that property from `TRANSPORT_ROW_WIDTH_PX`. So there is one
+     * number to get right; what is left to check is that the wiring is still there — a literal in the
+     * panel would leave the token correct and unused, which is the failure this replaced a
+     * two-copies-must-match test to catch.
      */
-    // Imported lazily to keep this file's import list short; the value is asserted, not used.
-    expect(TRANSPORT_ROW_WIDTH_PX).toBe(320);
-    const css = readFileSync(path.resolve(TEST_DIR, "../index.css"), "utf8");
-    expect(css).toContain(`--mobile-transport-row-w: ${TRANSPORT_ROW_WIDTH_PX}px`);
+    const panel = readFileSync(path.resolve(TEST_DIR, "../components/sequencer/SequencerPanel.tsx"), "utf8");
+    expect(panel).toContain("min(var(--mobile-transport-row-w), 55vw)");
   });
 
   it("is at least as wide as its own controls, or it would clip them", () => {

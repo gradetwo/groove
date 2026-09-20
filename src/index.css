@@ -315,9 +315,10 @@ input[type=range]::-moz-range-thumb {
   /**
    * Width the phone transport claims when it shares the bottom row with the navigation bar.
    *
-   * Kept in CSS so the panel can size the slot without importing the component's constant, and
-   * asserted equal to `TRANSPORT_ROW_WIDTH_PX` by a test — the same "CSS and TS cannot share a
-   * constant, so a test pins them together" arrangement as `PHONE_MAX_HEIGHT_PX`.
+   * **Written by `npm run layout:sync`.** The number lives in `src/platform/layoutTokens.ts`
+   * (`TRANSPORT_ROW_WIDTH_PX`), so the panel that sizes the slot and the bar that has to fit in it
+   * are measured against one value; `npm run check:layout` (inside `verify`) fails if this line and
+   * the token disagree. Editing the number here by hand is how the two used to drift apart.
    */
   --mobile-transport-row-w: 320px;
   /*
@@ -412,6 +413,10 @@ input[type=range]::-moz-range-thumb {
  * conflicting `flex` in the element's own class list wins over `hidden` regardless of
  * specificity — which is how the overflow survived the `hidden md:flex` markers already
  * present on two of these buttons.
+ *
+ * The `639` is written by `npm run layout:sync` from `PHONE_MAX_WIDTH_PX`
+ * (`src/platform/layoutTokens.ts`), the same number the device hook classifies with;
+ * `npm run check:layout` fails if the two disagree.
  */
 @media (max-width: 639px) {
   .trk-head-desktop-only {
@@ -473,7 +478,9 @@ html.reduced-motion .animate-orbit {
   animation: none !important;
 }
 
-/* Mobile Landscape Hardware Groovebox Experience (Height <= 500px & Landscape) */
+/* Mobile Landscape Hardware Groovebox Experience (Height <= 500px & Landscape)
+   The 500 is written by `npm run layout:sync` from `PHONE_MAX_HEIGHT_PX`
+   (`src/platform/layoutTokens.ts`); `npm run check:layout` fails if the two disagree. */
 @media (max-height: 500px) and (orientation: landscape) {
   /**
    * A short landscape phone re-derives the density inputs rather than overriding the outputs, so
