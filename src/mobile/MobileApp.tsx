@@ -11,12 +11,14 @@
  * What this file owns: the frame (ground, gold glow, safe areas, scroll container) and the routing of
  * a module id to a screen. What it does not own: any audio authoring, any genre data.
  */
-import React, { Suspense, useCallback } from "react";
+import React, { Suspense, useCallback, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useGenreAudition } from "../hooks/useGenreAudition";
 import { MobileModuleTabBar } from "./MobileModuleTabBar";
 import { MobilePlayerBar } from "./MobilePlayerBar";
 import { MOBILE_MODULE_PLAN_KEYS, type MobileModule } from "./mobileModules";
+import { ALL_GENRES } from "../data/genres";
+import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
 import type { Genre } from "../types/genre";
 import "./mobile.css";
 
@@ -26,9 +28,17 @@ const MobileHomeScreen = React.lazy(() =>
 const MobileGenreDetailScreen = React.lazy(() =>
   import("./screens/MobileGenreDetailScreen").then((m) => ({ default: m.MobileGenreDetailScreen }))
 );
+const MobilePlayerScreen = React.lazy(() =>
+  import("./screens/MobilePlayerScreen").then((m) => ({ default: m.MobilePlayerScreen }))
+);
+
+/** Where the play mode is remembered between sessions. */
+export const MOBILE_PLAY_MODE_KEY = "groove_mobile_play_mode";
 
 export interface MobileAppProps {
   module: MobileModule;
+  /** Show the full-screen player (`/m/home?player=1&genre=`). */
+  mobilePlayer?: boolean;
   genreId?: string;
   onSelectModule: (module: MobileModule) => void;
   /** Navigate to a genre's detail page (`/m/home?genre=`). */
@@ -36,9 +46,22 @@ export interface MobileAppProps {
   /** Leave the shell for the module that owns a genre's editable surface. */
   onOpenJam?: (genreId: string) => void;
   onCloseGenre?: () => void;
+  /** Expand the player bar into the full-screen player, and collapse it back. */
+  onOpenPlayer?: (genreId: string) => void;
+  onCollapsePlayer?: () => void;
 }
 
-export function MobileApp({ module, genreId, onSelectModule, onOpenGenre, onOpenJam, onCloseGenre }: MobileAppProps) {
+export function MobileApp({
+  module,
+  mobilePlayer,
+  genreId,
+  onSelectModule,
+  onOpenGenre,
+  onOpenJam,
+  onCloseGenre,
+  onOpenPlayer,
+  onCollapsePlayer,
+}: MobileAppProps) {
   const { t } = useLanguage();
 
   /**
@@ -48,7 +71,51 @@ export function MobileApp({ module, genreId, onSelectModule, onOpenGenre, onOpen
    * thing playing audio. The player bar has to show and stop the same sound, and two instances of the
    * hook mean two engines — so the state is lifted here and passed down, and the bar reads it.
    */
-  const { playingGenreId, toggleAudition, stopAudition } = useGenreAudition();
+  const { playingGenreId, toggleAudition, stopAudition, readClock } = useGenreAudition();
+
+  /**
+   * The play mode is the shell's, not the screen's: the bar's left button and the full-screen player
+   * cycle the same value, and it survives a reload (a mode that resets every visit is a mode the user
+   * has to set again every visit).
+   */
+  const [playMode, setPlayMode] = useState<PlayMode>(() => {
+    try {
+      return normalisePlayMode(localStorage.getItem(MOBILE_PLAY_MODE_KEY));
+    } catch {
+      return "one";
+    }
+  });
+  const cyclePlayMode = useCallback(() => {
+    setPlayMode((current) => {
+      const next = nextPlayMode(current);
+      try {
+        localStorage.setItem(MOBILE_PLAY_MODE_KEY, next);
+      } catch {
+        /* private mode: the mode simply does not persist */
+      }
+      return next;
+    });
+  }, []);
+
+  /**
+   * Previous/next follow the mode: the same genre on `one`, the same category on `genre`, the whole
+   * library on `all`. Continuous auto-advance when a pattern ends is deferred to the module that owns
+   * the transport (M4) — the mode already governs the queue here, and pretending otherwise would be a
+   * control that does nothing.
+   */
+  const skip = useCallback(
+    (direction: 1 | -1) => {
+      const from = genreId ?? playingGenreId;
+      if (!from) return;
+      const nextId = nextGenreForMode(playMode, from, ALL_GENRES, direction);
+      const genre = ALL_GENRES.find((item) => item.id === nextId);
+      if (!genre) return;
+      stopAudition();
+      void toggleAudition(genre);
+      if (mobilePlayer) onOpenPlayer?.(genre.id);
+    },
+    [genreId, mobilePlayer, onOpenPlayer, playMode, playingGenreId, stopAudition, toggleAudition]
+  );
 
   const handleToggleAudition = useCallback(
     (genre: Genre) => {
@@ -68,8 +135,10 @@ export function MobileApp({ module, genreId, onSelectModule, onOpenGenre, onOpen
    * meant a shell that mounted while something was already playing had no genre to show — and two
    * copies of "what is playing" is one too many. The bar resolves the genre from the id instead.
    */
-  const showPlayerBar = module === "home" && Boolean(playingGenreId);
-  const isDetail = module === "home" && Boolean(genreId);
+  const isPlayer = module === "home" && Boolean(mobilePlayer) && Boolean(genreId);
+  const isDetail = module === "home" && Boolean(genreId) && !mobilePlayer;
+  // The bar is the collapsed *form* of the player, so it is hidden while the full player is open.
+  const showPlayerBar = module === "home" && !isPlayer && Boolean(playingGenreId);
 
   return (
     <div className="mobile-root relative min-h-[100dvh] w-full" data-testid="mobile-shell" data-module={module}>
@@ -96,7 +165,19 @@ export function MobileApp({ module, genreId, onSelectModule, onOpenGenre, onOpen
             </div>
           }
         >
-          {isDetail ? (
+          {isPlayer ? (
+            <MobilePlayerScreen
+              genreId={genreId!}
+              isPlaying={playingGenreId === genreId}
+              playMode={playMode}
+              readClock={readClock}
+              onTogglePlay={handleToggleAudition}
+              onCycleMode={cyclePlayMode}
+              onSkip={skip}
+              onCollapse={() => onCollapsePlayer?.()}
+              onOpenDetail={(id) => onOpenGenre?.(id)}
+            />
+          ) : isDetail ? (
             <MobileGenreDetailScreen
               genreId={genreId}
               isPlaying={playingGenreId === genreId}
@@ -118,12 +199,14 @@ export function MobileApp({ module, genreId, onSelectModule, onOpenGenre, onOpen
       </main>
 
       {/* The bar sits above the tab bar; the content above reserves room for both. */}
-      {showPlayerBar && (
+      {showPlayerBar && playingGenreId && (
         <MobilePlayerBar
           genreId={playingGenreId}
           isPlaying
+          playMode={playMode}
           onToggle={stopAudition}
-          onOpen={() => playingGenreId && onOpenGenre?.(playingGenreId)}
+          onCycleMode={cyclePlayMode}
+          onOpen={() => onOpenPlayer?.(playingGenreId)}
         />
       )}
 

@@ -1,27 +1,27 @@
 {
-  "version": "2.1.16",
+  "version": "2.1.17",
   "releaseDate": "2026-09-20",
-  "changelogCount": 180,
+  "changelogCount": 181,
   "latest": {
-    "version": "2.1.16",
+    "version": "2.1.17",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.1.16 手机端（M2）：每个曲风都有自己的详情页，加上常驻播放条",
-      "en": "v2.1.16 Phone (M2): a Page for Every Genre, and a Player Bar"
+      "zh": "v2.1.17 手机端（M3）：全屏黑胶播放器——唱片、唱臂、抽屉与三态播放模式",
+      "en": "v2.1.17 Phone (M3): the Full-Screen Vinyl Player — Record, Tonearm, Drawer and Three Play Modes"
     },
     "highlights": [
       {
-        "zh": "**每个曲风都有详情页**：概览（年代、BPM 区间、拍号）、听感特征、文化背景、编制标签，以及**相近曲风**——每一条都能点进它自己的详情页，横向浏览不会走进死路。参考稿里根本没有单曲风页面（它唯一的单曲风视图是 A/B 对比页），所以这是设计出来的，不是移植过来的。",
-        "en": "**Every genre has a page of its own**: overview facts (era, BPM range, time signature), character, cultural context, instrumentation chips, and **related genres** — each of which links to its own page, so browsing sideways never dead-ends. The reference design has no per-genre page at all (its only per-genre view is an A/B compare screen), so this is designed rather than ported."
+        "zh": "**全屏播放器按参考稿重建**：canvas 画的黑胶（沟槽纹理、曲风色标、把该曲风真实的 16 步图案画成唱片上的点）、唱臂在播放时以弹簧摆入、固定的斜向高光让唱片读起来像黑胶。**角度只由音频时钟推导**（引擎的步进 + 步内插值），不用 CSS 自转——否则唱片会和它正在展示的音乐漂移。",
+        "en": "**The full-screen player is rebuilt from the reference**: a canvas vinyl (baked groove texture, the genre's colour on the label, and the genre's real 16-step pattern drawn as dots on the record), a tonearm that springs in when playback starts, and the fixed diagonal sheen that makes it read as vinyl. **The angle is derived from the audio clock** (the engine's step plus a sub-step interpolation) and never from a CSS rotation, which would drift away from the music it is showin…"
       },
       {
-        "zh": "**相近曲风取自关系表，而不是曲风对象。** 数据库里每个曲风自己的 `related_genres`/`subgenres` 都是空的，策展好的 300 条关系（带权重与双语说明）在独立的表里；读对象会安静地渲染出一个空区块。第一次跑测试就抓到了这一点（相关曲风 0 条）。",
-        "en": "**Related genres come from the relations table, not from the genre object.** Every genre's own `related_genres`/`subgenres` arrays are empty in the database; the curated 300 relations (weighted, with bilingual descriptions) live in their own table. Reading the object would have silently rendered an empty section — which the first test run caught."
+        "zh": "**三条你指定的交互**：左上向下箭头收起为播放条（回到列表，播放中则播放条浮在列表上方）；**点唱片进入该曲风详情页**，再点（或详情页返回）回到唱片视角；左侧按钮在**单曲循环 → 大曲风内循环 → 全部随机**之间循环，并记住上次选择。抽屉把播放条那点内容收起来：进度、BPM 区间、拍号、当前模式与「查看完整详情」。",
+        "en": "**The three interactions you specified**: the down chevron collapses to the player bar (back to the list, with the bar floating above it while something plays); **tapping the record opens that genre's page**, and tapping again (or the back control there) returns to the record; and the left button cycles **repeat one → repeat this genre → shuffle all**, remembering the choice. A drawer hides the player-bar content: progress, BPM range, time signature, the current mode and \"fu…"
       },
       {
-        "zh": "**常驻播放条**：一行显示正在试听的曲风（色块 + 名称 + BPM/分类），点整行进详情页，右侧按钮停止。它**只由「正在播放的是谁」驱动**并自己解析曲风，所以在播放中重新进入外壳也能正确显示；只出现在**首页**（即兴有自己的走带，你要求那里不要播放条）；如果正在播放的 id 已不在曲风库里，就**不渲染**这条播放条，而不是显示一条没有名字的条。",
-        "en": "**A persistent player bar**: one row showing the auditioning genre (swatch, name, BPM/category), tapping the row opens its detail page, and the button on the right stops it. It is driven by **what is playing** and resolves its own genre, so a shell that mounts mid-playback still shows the right thing; it appears on **首页 only** (即兴 has its own transport and the bar was to be removed there), and a playing id that is no longer in the library renders **no** bar rather than a nam…"
+        "zh": "**故意不做的**：参考稿里的「搓盘改 BPM」。在手机上它是和纵向滚动打架的手势，也很难在 44 px 高的条上做可靠；按你「难做好用的直接不提供」的要求，速度改由即兴模块的显式控制负责。这条写在代码注释里，免得下次被当成遗漏。",
+        "en": "**Deliberately not ported**: the reference's jog-scrub (drag the record to change BPM). On a phone that gesture fights vertical scrolling and cannot be made reliable in a 44 px bar, so by your rule — do not ship what cannot be done well — tempo gets explicit controls in the 即兴 module instead. That decision is recorded in the code so it is not mistaken for an oversight."
       }
     ],
     "truncated": true

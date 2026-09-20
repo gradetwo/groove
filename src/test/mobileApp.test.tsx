@@ -13,7 +13,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileApp } from "../mobile/MobileApp";
 import { MOBILE_MODULES, type MobileModule } from "../mobile/mobileModules";
@@ -35,7 +35,11 @@ vi.mock("../hooks/useGenreAudition", () => ({
 
 const renderShell = (
   module: MobileModule = "home",
-  options: { genreId?: string; onSelect?: (module: MobileModule) => void } = {}
+  options: {
+    genreId?: string;
+    mobilePlayer?: boolean;
+    onSelect?: (module: MobileModule) => void;
+  } = {}
 ) => {
   // A dedicated spy: `options.onSelect` is a plain callback, so it has no `.mock`.
   const onSelectSpy = vi.fn<(module: MobileModule) => void>();
@@ -43,19 +47,33 @@ const renderShell = (
   const onOpenGenre = vi.fn();
   const onCloseGenre = vi.fn();
   const onOpenJam = vi.fn();
+  const onOpenPlayer = vi.fn();
+  const onCollapsePlayer = vi.fn();
   const utils = render(
     <LanguageProvider>
       <MobileApp
         module={module}
+        mobilePlayer={options.mobilePlayer}
         genreId={options.genreId}
         onSelectModule={onSelect}
         onOpenGenre={onOpenGenre}
         onCloseGenre={onCloseGenre}
         onOpenJam={onOpenJam}
+        onOpenPlayer={onOpenPlayer}
+        onCollapsePlayer={onCollapsePlayer}
       />
     </LanguageProvider>
   );
-  return { ...utils, onSelect, onSelectSpy, onOpenGenre, onCloseGenre, onOpenJam };
+  return {
+    ...utils,
+    onSelect,
+    onSelectSpy,
+    onOpenGenre,
+    onCloseGenre,
+    onOpenJam,
+    onOpenPlayer,
+    onCollapsePlayer,
+  };
 };
 
 /**
@@ -259,18 +277,19 @@ describe("phone shell · genre detail and player bar", () => {
     expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
   });
 
-  it("shows the playing genre in the bar, and opens its detail page from there", async () => {
+  it("shows the playing genre in the bar, and expands to the player from there", async () => {
     // Driven by the hook's reported state, which is the only thing the bar is allowed to depend on.
     audition.playingGenreId = "deep-house";
-    const { onOpenGenre } = renderShell("home");
+    const { onOpenPlayer } = renderShell("home");
     await findHome();
 
     const bar = await screen.findByTestId("mobile-player-bar");
     expect(bar.getAttribute("data-genre")).toBe("deep-house");
     expect(bar.textContent ?? "").toMatch(/Deep House/);
 
+    // Tapping the bar enters the full-screen player (the record is what opens the genre's page).
     fireEvent.click(screen.getByTestId("mobile-player-open"));
-    expect(onOpenGenre).toHaveBeenCalledWith("deep-house");
+    expect(onOpenPlayer).toHaveBeenCalledWith("deep-house");
   });
 
   it("stops the audition from the bar", async () => {
@@ -301,5 +320,96 @@ describe("phone shell · genre detail and player bar", () => {
   it("says so when a detail route names a genre that does not exist", async () => {
     renderShell("home", { genreId: "not-a-real-genre" });
     expect(await screen.findByTestId("mobile-genre-missing", {}, { timeout: 5000 })).toBeInTheDocument();
+  });
+});
+
+describe("phone shell · the full-screen player", () => {
+  beforeEach(() => {
+    localStorage.setItem("groove_language", "zh");
+    localStorage.removeItem("groove_mobile_play_mode");
+    audition.toggle.mockReset();
+    audition.stop.mockReset();
+    audition.playingGenreId = null;
+  });
+
+  it("renders the record, the chevron and the mode button for its genre", async () => {
+    renderShell("home", { genreId: "deep-house", mobilePlayer: true });
+    const player = await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+    expect(player.getAttribute("data-genre")).toBe("deep-house");
+    expect(screen.getByTestId("mobile-vinyl-canvas")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-player-collapse")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-player-mode")).toBeInTheDocument();
+    // The collapsed bar is the same thing in another form, so it must not also be on screen.
+    expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
+  });
+
+  it("collapses back to the list and opens the genre's page from the record", async () => {
+    const { onCollapsePlayer, onOpenGenre } = renderShell("home", {
+      genreId: "deep-house",
+      mobilePlayer: true,
+    });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+
+    fireEvent.click(screen.getByTestId("mobile-player-collapse"));
+    expect(onCollapsePlayer).toHaveBeenCalledTimes(1);
+    // The shell answers the collapse by going back to the list, not to the genre's page.
+    expect(onOpenGenre).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("mobile-player-record"));
+    expect(onOpenGenre).toHaveBeenCalledWith("deep-house");
+  });
+
+  it("hides the bar's content in a drawer that starts closed", async () => {
+    renderShell("home", { genreId: "deep-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+    expect(screen.queryByTestId("mobile-player-drawer-panel")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("mobile-player-drawer-toggle"));
+    const panel = await screen.findByTestId("mobile-player-drawer-panel");
+    expect(panel.textContent ?? "").toMatch(/BPM|拍号/);
+  });
+
+  it("cycles the play mode, persists it, and shows it on both forms", async () => {
+    renderShell("home", { genreId: "deep-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+
+    // one -> genre -> all -> one, and every step is written to storage.
+    fireEvent.click(screen.getByTestId("mobile-player-mode"));
+    expect(localStorage.getItem("groove_mobile_play_mode")).toBe("genre");
+    fireEvent.click(screen.getByTestId("mobile-player-mode"));
+    expect(localStorage.getItem("groove_mobile_play_mode")).toBe("all");
+    fireEvent.click(screen.getByTestId("mobile-player-mode"));
+    expect(localStorage.getItem("groove_mobile_play_mode")).toBe("one");
+  });
+
+  it("skips within the mode's queue", async () => {
+    // `all` jumps to a different genre; `one` stays put.
+    localStorage.setItem("groove_mobile_play_mode", "all");
+    const { onOpenPlayer } = renderShell("home", { genreId: "chicago-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+
+    fireEvent.click(screen.getByTestId("mobile-player-skip-forward"));
+    expect(audition.toggle).toHaveBeenCalledTimes(1);
+    const played = audition.toggle.mock.calls[0][0].id as string;
+    expect(played).not.toBe("chicago-house");
+    expect(onOpenPlayer).toHaveBeenCalledWith(played);
+  });
+
+  it("says so when the player is pointed at a genre that does not exist", async () => {
+    renderShell("home", { genreId: "ghost-genre", mobilePlayer: true });
+    expect(await screen.findByTestId("mobile-player-missing", {}, { timeout: 5000 })).toBeInTheDocument();
+  });
+
+  it("opens the full player from the bar, and cycles the mode from the bar too", async () => {
+    audition.playingGenreId = "deep-house";
+    const { onOpenPlayer } = renderShell("home");
+    await findHome();
+    const bar = await screen.findByTestId("mobile-player-bar");
+
+    fireEvent.click(screen.getByTestId("mobile-player-open"));
+    expect(onOpenPlayer).toHaveBeenCalledWith("deep-house");
+
+    fireEvent.click(within(bar).getByTestId("mobile-player-mode"));
+    expect(localStorage.getItem("groove_mobile_play_mode")).toBe("genre");
   });
 });

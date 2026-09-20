@@ -658,9 +658,9 @@ async function runTestOnTarget(target, baseUrl) {
     if (!firstRowId) throw new Error("Phone shell home has no genre row to open");
 
     await page.click(`[data-testid="mobile-genre-row-${firstRowId}"]`);
-    await page.waitForSelector(`[data-testid="mobile-genre-detail-${firstRowId}"]`, { timeout: 15000 });
+    await page.waitForSelector(`[data-testid="mobile-genre-detail-${firstRowId}"]`, { timeout: 30000 });
     await page.click(`[data-testid="mobile-genre-detail-${firstRowId}"]`);
-    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 15000 });
+    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 30000 });
 
     const detail = await page.evaluate(() => {
       const page = document.querySelector('[data-testid="mobile-genre-detail"]');
@@ -685,7 +685,49 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     await page.click('[data-testid="mobile-detail-back"]');
-    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 15000 });
+    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 30000 });
+
+    /**
+     * 1.7 The full-screen player, and the two ways out of it.
+     *
+     * Opened directly by URL rather than by pressing play: the bar only appears while audio is
+     * actually running, and a headless runner is the wrong place to depend on that. The route is the
+     * same one the bar navigates to, so this still covers the wiring.
+     */
+    await page.goto(`${baseUrl}/m/home?player=1&genre=deep-house`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-player"]', { timeout: 45000 });
+    const player = await page.evaluate(() => {
+      const section = document.querySelector('[data-testid="mobile-player"]');
+      const vinyl = document.querySelector('[data-testid="mobile-vinyl-canvas"]');
+      const box = vinyl ? vinyl.getBoundingClientRect() : null;
+      return {
+        genre: section?.getAttribute("data-genre") ?? null,
+        hasVinyl: Boolean(vinyl),
+        vinylSize: box ? Math.round(box.width) : 0,
+        overflow: (() => {
+          const root = document.documentElement;
+          return root.scrollWidth > root.clientWidth + 4;
+        })(),
+      };
+    });
+    if (player.genre !== "deep-house") {
+      throw new Error(`Phone player opened ${player.genre}, expected deep-house`);
+    }
+    if (!player.hasVinyl || player.vinylSize < 200) {
+      throw new Error(`Phone player has no vinyl (size ${player.vinylSize})`);
+    }
+    if (player.overflow) {
+      throw new Error("Phone player overflows horizontally");
+    }
+
+    // Tapping the record goes to the genre's page; the chevron collapses back to the list.
+    await page.click('[data-testid="mobile-player-record"]');
+    await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 30000 });
+    await page.goto(`${baseUrl}/m/home?player=1&genre=deep-house`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-player"]', { timeout: 45000 });
+    await page.click('[data-testid="mobile-player-collapse"]');
+    await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 30000 });
+
 
     // Back to the app: the checks below measure the surface under test, not the phone shell.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });

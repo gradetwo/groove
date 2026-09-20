@@ -15,20 +15,36 @@
  * asked for the bar to be removed there), and the other modules have no audio of their own yet.
  */
 import React from "react";
-import { Pause, Play, SlidersHorizontal } from "lucide-react";
+import { Pause, Play, Repeat, Repeat1, Shuffle } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { ALL_GENRES } from "../data/genres";
 import { CATEGORY_SWATCH } from "./screens/MobileHomeScreen";
+import { PLAY_MODE_LABEL_KEYS, type PlayMode } from "./vinyl/vinylMath";
+
+const MODE_ICONS: Record<PlayMode, React.ReactNode> = {
+  one: <Repeat1 className="h-4 w-4" />,
+  genre: <Repeat className="h-4 w-4" />,
+  all: <Shuffle className="h-4 w-4" />,
+};
 
 export interface MobilePlayerBarProps {
   /** What is playing. Resolved here so the shell needs no second copy of "the current genre". */
   genreId: string | null;
   isPlaying: boolean;
+  playMode: PlayMode;
   onToggle: () => void;
+  onCycleMode: () => void;
   onOpen: () => void;
 }
 
-export function MobilePlayerBar({ genreId, isPlaying, onToggle, onOpen }: MobilePlayerBarProps) {
+export function MobilePlayerBar({
+  genreId,
+  isPlaying,
+  playMode,
+  onToggle,
+  onCycleMode,
+  onOpen,
+}: MobilePlayerBarProps) {
   const { t } = useLanguage();
   const genre = ALL_GENRES.find((item) => item.id === genreId);
   // A genre that vanished from the library (an old share link, a custom genre that was deleted) must
@@ -41,6 +57,17 @@ export function MobilePlayerBar({ genreId, isPlaying, onToggle, onOpen }: Mobile
       className="m-rise fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-1/2 z-20 w-[calc(100%-16px)] max-w-[416px] -translate-x-1/2"
     >
       <div className="flex items-center gap-3 rounded-2xl border border-[var(--m-line)] bg-[rgba(20,17,11,0.94)] p-2.5 backdrop-blur-md">
+        {/* Left button: the mode cycle (the user's spec colour-codes the *bar's* left control). */}
+        <button
+          type="button"
+          data-testid="mobile-player-mode"
+          aria-label={t(PLAY_MODE_LABEL_KEYS[playMode])}
+          onClick={onCycleMode}
+          className="m-press flex h-11 w-11 flex-none items-center justify-center rounded-full text-[var(--m-gold)]"
+        >
+          {MODE_ICONS[playMode]}
+        </button>
+
         <button
           type="button"
           data-testid="mobile-player-open"
@@ -59,7 +86,6 @@ export function MobilePlayerBar({ genreId, isPlaying, onToggle, onOpen }: Mobile
               {genre.default_bpm} BPM · {genre.category}
             </span>
           </span>
-          <SlidersHorizontal className="h-4 w-4 flex-none text-[var(--m-ink-3)]" aria-hidden="true" />
         </button>
 
         <button
