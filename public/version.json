@@ -1,27 +1,27 @@
 {
-  "version": "2.1.4",
-  "releaseDate": "2026-09-19",
-  "changelogCount": 168,
+  "version": "2.1.5",
+  "releaseDate": "2026-09-20",
+  "changelogCount": 169,
   "latest": {
-    "version": "2.1.4",
+    "version": "2.1.5",
     "date": "2026-09-20",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.1.4 两个音质门禁接进 verify；顺手清掉计划里六处过时的「未做」",
-      "en": "v2.1.4 Two Audio Gates Wired into verify; Six Stale “Not Done” Claims Corrected"
+      "zh": "v2.1.5 参数条与钢琴键都能用键盘了；音长作用于整个选区",
+      "en": "v2.1.5 The Parameter Lane and the On-Screen Piano Are Playable; Length Reaches the Selection"
     },
     "highlights": [
       {
-        "zh": "**两个一直存在、一直通过、却从来不在 `verify` 里的门禁**：`check_loudness_spread.mjs`（按大类分档的响度）与 `check_timbre_spread.mjs`（159 曲风的音色指纹）此前只能靠人记得手动跑，没有 npm script。现在有 `check:loudness` / `check:timbre`，并接进 `verify`（`check:gs1` 之后、E2E 之前）。两者只读已提交的基线与源码、不启浏览器，实测 0.06 s 与 0.15 s。**「代码改了、基线没重录」从此每次发版都会被抓住。**",
-        "en": "**Two gates that had always existed, always passed, and were never in `verify`**: `check_loudness_spread.mjs` (per-category loudness) and `check_timbre_spread.mjs` (the 159 genres' timbre fingerprints) could only be run by whoever remembered them — they had no npm script. Now `check:loudness` and `check:timbre` exist and sit inside `verify` (after `check:gs1`, before E2E). Both only read committed baselines and sources, launch no browser, and take 0.06 s and 0.15 s. **“Code…"
+        "zh": "**参数条不再是指针专属**：十六个拖拽目标、没有入口。现在它是**一个 tab 停留点 + 一个光标**——每列是 `role=\"slider\"`（带 `aria-orientation=\"vertical\"` 与 `aria-valuemin/max/now/valuetext`），上下键改值、左右键换列、Shift 与 PageUp/PageDown 走大步、Home/End 到两端，每次改动由 live region 播报「第 N 步 · 力度 101」。**0 个新 DOM 节点**，指针的拖拽与横扫一行未改。",
+        "en": "**The parameter lane is no longer pointer-only**: sixteen drag targets and no way in. It is now **one tab stop with a cursor** — each column is a `role=\"slider\"` (with `aria-orientation=\"vertical\"` and `aria-valuemin/max/now/valuetext`), Up/Down change the value, Left/Right move between columns, Shift and PageUp/PageDown take bigger steps, Home/End jump to the ends, and a live region says “step N · velocity 101” after each change. **Zero new DOM nodes**, and the pointer's dr…"
       },
       {
-        "zh": "**一次计划核对，翻出六处过时说法。** 全量响度测量其实早已跑完并写入基线（6 个类别中位数、69/159 因自身峰均比顶到上限、**159 条 trim 与报告完全一致**、0/159 削波、峰值最差 −1.242 dBTP）；音色基线也已重录，门禁还顺带断言 `src/data/genres/**` 与录音逐字节一致；「限幅器起音平滑」不是待办而是**已结案**（有前瞻时瞬时起音正是让天花板成为硬墙的做法，真正该修的每样本滑窗最小值已换成单调队列）。**手机端代码一行未动。**",
-        "en": "**A plan audit turned up six stale claims.** The full loudness measurement had in fact finished and been baked into the baseline (six category medians, 69/159 capped by their own crest factor, **all 159 trims matching the report**, 0/159 clipping, worst true peak −1.242 dBTP); the timbre baseline had been re-recorded too, and that gate also asserts `src/data/genres/**` is byte-identical to the recording; and “limiter attack smoothing” is not a pending task but **closed** (wi…"
+        "zh": "**四个维度四套刻度，本来写了两份。** 同一列里画力度（1..127）、音长（0.1..2.0 步）、概率（0..100%）、滚奏（1,2,3,4,8）：指针有自己一套换算，键盘要再加一套，柱高与读数是第三套——拖拽改 100、按键改 101 这类分叉就是这样长出来的。四套刻度现在收在 `laneValues.ts` 一处，**公式是从组件里搬出来的，不是重写的**（拖到 100 仍然画到 100，测试逐条钉住四个换算、四种柱高、四种读数）。滚奏是**一张清单**而不是 1..8 的区间，所以键盘沿清单走，导入进来的非法值先吸附再走，不会造出引擎没有定义的连音数。",
+        "en": "**Four dimensions, four scales, two copies of each.** One column draws velocity (1..127), length (0.1..2.0 steps), probability (0..100 %) and ratchet (1, 2, 3, 4, 8): the pointer had one set of conversions, a keyboard path would need a second, and the bar height and readout a third — which is exactly how “drag says 100, key says 101” grows. The four scales now live in one place, `laneValues.ts`, and **the formulas were moved out of the component rather than rewritten** (a dr…"
       },
       {
-        "zh": "**同一份文档自己跟自己矛盾**：状态块写着「首屏单一动作（U1/U2）、术语表、工具栏 `?` 入口、Modal 栈仍未做」，而上面的 U 表早就记着四项都已交付（G.23/G.25/G.26、U9、G.28、G.24）。§3.5 与 §4 那份「均未开始」的清单也多数已完成（齐奏/立体声展开、键盘跟踪、立体声完整性、延迟不重建图、`toolbarTiers`、密度设置、iOS 静音无声）；**真正仍未做的只有波表与鼓组采样层（需要素材与许可）和混响 IR 移出主线程（已降级）**。",
-        "en": "**The document contradicted itself**: a status block still claimed the first-screen single action (U1/U2), the glossary, the toolbar `?` entry point and the modal stack were undone, while the U table above had long recorded all four as delivered (G.23/G.25/G.26, U9, G.28, G.24). The “nothing started” list for §3.5 and §4 was likewise mostly finished (unison/stereo spread, key tracking, stereo integrity, delay without rebuilding the graph, `toolbarTiers`, the density setting,…"
+        "zh": "**音长 `[`/`]` 现在和力度一样作用于整个选区** —— 这是 U10 里最后一个真缺口：选区可以被键盘调响，却只能一个字一个字地调长。新增 `scaleNotesLength` 与 `scaleNotesVelocity` 同形（选区 → 步集合、相对增量、同一处钳位），播报改成「2 个音 · 音长 1.8 步」，并补上选区版的钳位测试（0.1 步下限、一小节上限）。",
+        "en": "**Length (`[`/`]`) now reaches the whole selection, exactly like velocity** — the last real gap in U10: a selection could be nudged louder from the keyboard but only lengthened one note at a time. The new `scaleNotesLength` mirrors `scaleNotesVelocity` (selection → set of steps, relative delta, the same clamp), the announcement became “2 notes · length 1.8 steps”, and the selection's clamps (0.1-step floor, one-bar ceiling) have their own test."
       }
     ],
     "truncated": true
