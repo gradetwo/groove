@@ -1,27 +1,27 @@
 {
-  "version": "2.1.6",
+  "version": "2.1.7",
   "releaseDate": "2026-09-20",
-  "changelogCount": 170,
+  "changelogCount": 171,
   "latest": {
-    "version": "2.1.6",
+    "version": "2.1.7",
     "date": "2026-09-20",
-    "category": "refactor",
+    "category": "fix",
     "title": {
-      "zh": "v2.1.6 跨语言常量只留一份：数字由 TS 写进 CSS",
-      "en": "v2.1.6 One Copy of Each Cross-Language Constant: TS Writes the Numbers into CSS"
+      "zh": "v2.1.7 工作室两列左右互换：一次我自己引入、上线了二十多个版本的回归",
+      "en": "v2.1.7 The Studio's Two Columns Were Swapped: a Regression I Shipped and Left Live for Twenty Releases"
     },
     "highlights": [
       {
-        "zh": "**同一个数字写两遍，靠一条测试钉住——这是第三次了。** 手机宽/高断点（639 / 500）和共享底栏里走带条的宽度（320）都在 CSS 与 TS 各有一份，前两次的处理都是再写一条「两份必须相等」的守卫。问题是它防不住**第三份**：新加一个跨语言常量时，除非作者记得补一条守卫，没有任何东西会失败——而当年 480/500 那次（横屏 490px 视口拿到压缩样式表、JS 仍当它是高手机）就是人工发现的。",
-        "en": "**The same number written twice and pinned by a test — for the third time.** The phone width and height boundaries (639 / 500) and the shared bottom row's transport width (320) each existed on both sides of the CSS/TS line, and the first two rounds answered with another \"the two copies must match\" guard. What that cannot catch is the **third copy**: add a cross-language constant and nothing fails unless the author remembers a new guard — and the 480/500 drift (a 490 px-tall…"
+        "zh": "**在 1440px 宽的屏幕上，编辑器只有 352px。** 工作室在 `lg` 是两列（`352px 1fr`），而实测出来是：信息栏 `aside@x400 1012px`、编辑器 `div@x28 352px`——**左右互换**。截图里编辑器只剩三格步进、工具栏折成窄条，信息栏占了整个右半屏。",
+        "en": "**On a 1440 px screen the editor was 352 px wide.** The studio is two columns at `lg` (`352px 1fr`), and the measurement was: dossier `aside@x400 1012px`, editor `div@x28 352px` — **swapped**. The screenshot shows three step cells per track, the toolbar folded into a narrow strip, and the info panel owning the whole right half."
       },
       {
-        "zh": "**所以只留一份**：三个数字搬进 `src/platform/layoutTokens.ts`，`scripts/layout_tokens.mjs` 把它们写进 `src/index.css`（`npm run layout:sync`），`npm run check:layout` 接进 `verify`——与 `ROADMAP_V2.md` 的版本头同一套办法。**媒体查询不能读 CSS 变量**（`@media (max-width: var(--x))` 不合法），所以生成的是数字本身；`--mobile-transport-row-w` 才是真正的变量，也由同一份 token 写。",
-        "en": "**So there is one copy.** The three numbers live in `src/platform/layoutTokens.ts`; `scripts/layout_tokens.mjs` writes them into `src/index.css` (`npm run layout:sync`), and `npm run check:layout` sits inside `verify` — the same arrangement as the version header in `ROADMAP_V2.md`. **A media query cannot read a custom property** (`@media (max-width: var(--x))` is not valid), so what gets generated is the number itself; `--mobile-transport-row-w` is a real variable and is wri…"
+        "zh": "**根因是我在 v2.0.88 引入的**：那一轮为了在面板上方放首屏提示与保存指示器，把原本直接作为网格子项的 `SequencerPanel` 包进了一个 wrapper，而 `order-1 lg:order-2` 留在了 `section` 上——`section` 现在是 wrapper 的子节点，**不是网格项**。于是 `InfoDossier` 的 `lg:order-1` 排在默认 `order: 0` 的 wrapper 前面，抢到了第一列。修复是一行：`order` 属于网格项，把两个类放到 wrapper 上。重建后 1440×900 为信息栏 352 左 / 编辑器 1012 右。",
+        "en": "**The cause was mine, from v2.0.88.** That round added the first-run hint and the save indicator above the panel by wrapping the previously direct grid child in a `<div>`, and the `order-1 lg:order-2` classes stayed on the `section` — which is now a child of that wrapper, **not a grid item**. So the dossier's `lg:order-1` sorted ahead of the wrapper's default `order: 0` and took the first track. The fix is one line: `order` belongs to the grid item, so both classes moved to…"
       },
       {
-        "zh": "**匹配锚在规则语法上，删掉规则也算漂移。** 三条模式都锚定 `@media (max-width: …) {` 这样的完整规则，而不是搜 `d+`——否则释义注释里的 639、以及无关的 `--trk-head-w: 142px` 都会被改写，门禁就变成在检查自己。反过来，模式完全匹配不上时报 `found: null` 并失败：把媒体查询整块删掉，不该因为「没有可比的东西」而通过。",
-        "en": "**The patterns are anchored to rule syntax, and a deleted rule counts as drift.** All three match a complete rule such as `@media (max-width: …) {` rather than searching for `\\d+` — otherwise the 639 inside an explanatory comment, or the unrelated `--trk-head-w: 142px`, would be rewritten and the gate would end up checking itself. In the other direction, a pattern that matches nothing reports `found: null` and fails: deleting the media query must not pass by having nothing l…"
+        "zh": "**为什么 190 个文件、2172 条测试、7 个目标全绿却没发现**：所有量测都发生在面板**内部**——间距探针量的是面板里的冻结列与网格间距（它报「frozen column [45, 237) = 192px」，两个数字都落在 352px 的窄列里，自洽得看不出问题）、工具栏探针量的是面板里的按钮密度、手机面审计量的是手机壳。**没有任何一条门禁比较「两个网格项谁宽」**。这是「相对断言在整体错位后仍然自洽」的教科书例子：量测需要一个绝对锚点。",
+        "en": "**Why 190 files, 2172 tests and 7 targets stayed green:** every measurement happened *inside* the panel — the gutter probe measured the frozen column and grid gap within it (it reported “frozen column [45, 237) = 192 px”, both numbers inside the 352 px column, self-consistent and therefore silent), the toolbar probe measured button density inside it, the phone audit measured the phone shell. **No gate compared the two grid items to each other.** A textbook case of relative a…"
       }
     ],
     "truncated": true
