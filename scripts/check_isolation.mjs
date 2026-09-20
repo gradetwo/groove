@@ -103,7 +103,10 @@ if (result.error) {
 }
 if (errors.length === 0) {
   console.log(
-    `✅ src/features and src/audio compile with no surface present (no components/, views/, ui/, App.tsx).`
+    // Generated from the list, so the message cannot drift from what was actually deleted.
+    `✅ src/features and src/audio compile with no surface present (no ${SURFACE_PATHS.map((rel) =>
+      rel.replace(/^src\//, "").replace(/^App\.tsx$/, "App.tsx")
+    ).join(", ")}).`
   );
   process.exit(0);
 }
