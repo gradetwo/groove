@@ -16,6 +16,10 @@ import {
   normalisePlayMode,
   PLAY_MODES,
   stepDotPosition,
+  scrubAngleOffset,
+  scrubBpmDelta,
+  scrubFlickBpmDelta,
+  stepScrubReturn,
   stepTonearm,
   TONEARM_PLAY_POSITION,
   TONEARM_REST_POSITION,
@@ -169,5 +173,38 @@ describe("vinyl · play modes", () => {
     expect(nextGenreForMode("all", "a", LIBRARY, -1)).toBe("c");
     expect(nextGenreForMode("all", "ghost", LIBRARY)).toBe("a");
     expect(nextGenreForMode("all", "a", [])).toBe("a");
+  });
+});
+
+describe("vinyl · the jog (drag the record)", () => {
+  it("maps a drag to BPM the way the reference does", () => {
+    expect(scrubBpmDelta(50)).toBeCloseTo(10, 6);
+    expect(scrubBpmDelta(-50)).toBeCloseTo(-10, 6);
+    expect(scrubBpmDelta(0)).toBe(0);
+  });
+
+  it("keeps the disc's drag offset inside ±1.6 rad", () => {
+    expect(scrubAngleOffset(0, 100)).toBeCloseTo(0.7, 6);
+    let offset = 0;
+    for (let i = 0; i < 50; i += 1) offset = scrubAngleOffset(offset, 100);
+    expect(offset).toBeLessThanOrEqual(1.6);
+    for (let i = 0; i < 100; i += 1) offset = scrubAngleOffset(offset, -100);
+    expect(offset).toBeGreaterThanOrEqual(-1.6);
+  });
+
+  it("only adds a flick when the release actually had momentum", () => {
+    expect(scrubFlickBpmDelta(0.1)).toBe(0);
+    expect(scrubFlickBpmDelta(-0.25)).toBe(0);
+    expect(scrubFlickBpmDelta(0.5)).toBeCloseTo(3, 6);
+    // …and it cannot exceed the reference's 10 BPM.
+    expect(scrubFlickBpmDelta(9)).toBe(10);
+    expect(scrubFlickBpmDelta(-9)).toBe(-10);
+  });
+
+  it("springs the disc back to its groove instead of leaving it offset", () => {
+    let state = { offset: 1.2, velocity: 0 };
+    for (let i = 0; i < 200; i += 1) state = stepScrubReturn(state.offset, state.velocity, 16);
+    expect(Math.abs(state.offset)).toBeLessThan(0.01);
+    expect(Math.abs(state.velocity)).toBeLessThan(0.01);
   });
 });

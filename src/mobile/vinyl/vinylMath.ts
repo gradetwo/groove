@@ -186,3 +186,48 @@ export function nextGenreForMode(
   const next = (index + direction + list.length) % list.length;
   return list[next].id;
 }
+
+/* ---------------------------------------------------------------- jog (drag the record) */
+
+/**
+ * BPM change for a horizontal drag.
+ *
+ * The reference maps `dx * 0.2` BPM per pixel and lets a flick add `|v| * 6` (capped at 10) on
+ * release; both are pure here so the feel is testable rather than only felt.
+ */
+export const SCRUB_BPM_PER_PX = 0.2;
+export const SCRUB_MAX_OFFSET_RADIANS = 1.6;
+export const SCRUB_FLICK_THRESHOLD = 0.25;
+export const SCRUB_FLICK_MAX_BPM = 10;
+
+export function scrubBpmDelta(dx: number): number {
+  return dx * SCRUB_BPM_PER_PX;
+}
+
+/** The disc's temporary angle offset while dragging, clamped to the reference's ±1.6 rad. */
+export function scrubAngleOffset(current: number, dx: number): number {
+  const next = current + dx * 0.007;
+  return Math.min(SCRUB_MAX_OFFSET_RADIANS, Math.max(-SCRUB_MAX_OFFSET_RADIANS, next));
+}
+
+/** Extra BPM from releasing a flick: below the threshold the record just stops. */
+export function scrubFlickBpmDelta(velocity: number): number {
+  if (Math.abs(velocity) <= SCRUB_FLICK_THRESHOLD) return 0;
+  const delta = velocity * 6;
+  return Math.min(SCRUB_FLICK_MAX_BPM, Math.max(-SCRUB_FLICK_MAX_BPM, delta));
+}
+
+/**
+ * One frame of the spring that returns the disc to its groove after a drag
+ * (reference: `v += -offset * 26 * dt`, `v *= exp(-dt * 5)`).
+ */
+export function stepScrubReturn(
+  offset: number,
+  velocity: number,
+  dtMs: number
+): { offset: number; velocity: number } {
+  const dt = Math.min(0.064, Math.max(0, dtMs / 1000));
+  let nextVelocity = velocity + -offset * 26 * dt;
+  nextVelocity *= Math.exp(-dt * 5);
+  return { offset: offset + nextVelocity * dt, velocity: nextVelocity };
+}

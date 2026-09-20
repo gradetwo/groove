@@ -34,6 +34,8 @@ const MODE_ICONS: Record<PlayMode, React.ReactNode> = {
 
 export interface MobilePlayerScreenProps {
   genreId: string;
+  /** Applied to the engine by the shell; the jog and the ± buttons both report through it. */
+  onTempo?: (bpm: number) => void;
   isPlaying: boolean;
   playMode: PlayMode;
   readClock: () => VinylClock | null;
@@ -46,6 +48,7 @@ export interface MobilePlayerScreenProps {
 
 export function MobilePlayerScreen({
   genreId,
+  onTempo,
   isPlaying,
   playMode,
   readClock,
@@ -59,6 +62,23 @@ export function MobilePlayerScreen({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [progress, setProgress] = useState(0);
   const genre = ALL_GENRES.find((item) => item.id === genreId);
+  /**
+   * The tempo the record is playing at.
+   *
+   * Seeded from the genre and moved by the jog (drag the record) and by the ± buttons. Clamped to the
+   * engine's own 60-180 range, and reported on every change so what is heard matches what is shown.
+   */
+  const [bpm, setBpm] = useState(() => genre?.default_bpm ?? 120);
+  const changeBpm = React.useCallback(
+    (delta: number) => {
+      setBpm((current) => {
+        const next = Math.min(180, Math.max(60, Math.round(current + delta)));
+        if (next !== current) onTempo?.(next);
+        return next;
+      });
+    },
+    [onTempo]
+  );
 
   /** The lane dots the record shows: the genre's real step pattern, four lanes. */
   const lanes = useMemo(() => {
@@ -141,6 +161,8 @@ export function MobilePlayerScreen({
         <VinylCanvas
           playing={isPlaying}
           readClock={readClock}
+          onScrub={changeBpm}
+          onScrubEnd={(flickDelta) => changeBpm(flickDelta)}
           lanes={lanes}
           accent={accent}
           title={genre.name}
@@ -152,7 +174,12 @@ export function MobilePlayerScreen({
       <div className="mt-2 w-full text-center">
         <h1 className="truncate text-[19px] font-bold">{genre.name}</h1>
         <p className="m-mono mt-1 text-[10px] text-[var(--m-ink-3)]">
-          {genre.category} · {genre.default_bpm} BPM · {t(PLAY_MODE_LABEL_KEYS[playMode])}
+          {genre.category} · <span data-testid="mobile-player-bpm">{bpm} BPM</span> ·{" "}
+          {t(PLAY_MODE_LABEL_KEYS[playMode])}
+        </p>
+        {/* The reference's drag hint, kept because the jog is invisible until someone tells you. */}
+        <p className="m-mono mt-1 text-[9px] text-[var(--m-ink-3)]" data-testid="mobile-player-scrub-hint">
+          {t("mobile_player_scrub_hint")}
         </p>
       </div>
 
@@ -165,6 +192,30 @@ export function MobilePlayerScreen({
             style={{ width: `${Math.round(progress * 100)}%` }}
           />
         </div>
+        <div className="mt-1 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            data-testid="mobile-player-bpm-down"
+            aria-label={`${t("mobile_jam_bpm")} -2`}
+            onClick={() => changeBpm(-2)}
+            className="m-press m-mono flex h-12 w-12 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+          >
+            −
+          </button>
+          <span className="m-mono min-w-[64px] text-center text-[13px] text-[var(--m-gold)]" data-testid="mobile-player-bpm-value">
+            {bpm} <span className="text-[8px] tracking-[0.14em] text-[var(--m-ink-3)]">BPM</span>
+          </span>
+          <button
+            type="button"
+            data-testid="mobile-player-bpm-up"
+            aria-label={`${t("mobile_jam_bpm")} +2`}
+            onClick={() => changeBpm(2)}
+            className="m-press m-mono flex h-12 w-12 items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+          >
+            +
+          </button>
+        </div>
+
         <div className="mt-3 flex items-center justify-between">
           <button
             type="button"

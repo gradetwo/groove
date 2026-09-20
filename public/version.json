@@ -1,27 +1,27 @@
 {
-  "version": "2.2.1",
+  "version": "2.2.2",
   "releaseDate": "2026-09-20",
-  "changelogCount": 187,
+  "changelogCount": 188,
   "latest": {
-    "version": "2.2.1",
+    "version": "2.2.2",
     "date": "2026-09-20",
     "category": "feature",
     "title": {
-      "zh": "v2.2.1 手机端换新配色：冷色深底 + 每模块一个强调色",
-      "en": "v2.2.1 A New Phone Palette: Cool Dark Ground, One Accent Per Module"
+      "zh": "v2.2.2 手机播放器：长按黑胶左右拖动调 BPM（jog）回来了",
+      "en": "v2.2.2 The Phone Player Gets Its Jog Back: Drag the Record to Change the Tempo"
     },
     "highlights": [
       {
-        "zh": "**去掉了那套土黄。** 底色从暖棕改为冷调近黑（#0b0b14 / #14141f），文字改为中性白，强调色按模块区分：**首页 青绿 · 即兴 紫 · 挑战 玫瑰 · 探索 蓝 · 更多 灰**；顶部光晕换成「强调色 + 紫」双径向渐变。",
-        "en": "**The muddy amber is gone.** The ground went from warm brown to a cool near-black (#0b0b14 / #14141f), the text is a neutral white, and the accent is per module: **home teal · jam violet · challenge rose · explore blue · more slate**, with a two-stop accent-plus-violet glow at the top."
+        "zh": "**我上一版把 player2.html 最好玩的交互删掉了，这一版补回来**：按住唱片左右拖动即改速度——左减速、右加速（参考稿的 0.2 BPM/px），唱片同时按拖动量偏移（±1.6 rad 上限），松手后以弹簧回正（`-offset*26`、阻尼 `exp(-5t)`），带惯性的甩动再加最多 ±10 BPM。60–180 BPM 与引擎同一区间。",
+        "en": "**The previous release deleted the most enjoyable interaction in player2.html; this one brings it back**: long-press the record and drag left/right to change the tempo (left slower, right faster — the reference's 0.2 BPM per pixel), the disc offsets with the drag (capped at ±1.6 rad), springs back on release (`-offset*26`, damping `exp(-5t)`), and a flick adds up to ±10 BPM. Clamped to the engine's own 60-180 range."
       },
       {
-        "zh": "**改法刻意只动颜色，不动组件**：55 处引用本来就写在 `--m-gold*` token 上，所以换值即换整屏；模块多色用 `.mobile-root[data-module=…]` 覆盖。第一版把颜色值扫进了 Tailwind 的 arbitrary class 名和内联样式里，手机 E2E 立刻报运行时错误，已回滚并改成 token-only（这正是「只在 CSS 里换值」的原因）。",
-        "en": "**Deliberately a colour-only change**: the 55 references already went through the `--m-gold*` tokens, so changing the values re-skins every screen, and the per-module hues are `[data-module]` overrides. The first attempt swept the new values into Tailwind arbitrary class names and inline styles; the phone E2E failed on a runtime error, so that was rolled back in favour of tokens only."
+        "zh": "**手感可测**：jog 的数学全部是纯函数（位移→BPM、角偏移夹取、甩动阈值与上限、弹簧回正），单测 8 条；播放器上另有三条组件用例——拖动 50 px 必须从 122 变 132 BPM、连续拖动必须夹在 60/180、± 按钮也能改并显示当前值。",
+        "en": "**The feel is testable**: the jog maths is pure (drag to BPM, offset clamping, flick threshold and cap, spring return) with 8 unit cases, plus 3 component cases on the player — a 50 px drag must take 122 to 132 BPM, a long drag must clamp to 60/180, and the ± buttons must move and display the live value."
       },
       {
-        "zh": "**顺带定位了那个运行时错误的根因**：canvas 的颜色字符串**不能**用 CSS 变量，`addColorStop(rgb(var(--x)/0.14))` 在 WebKit 直接抛 `The string did not match the expected pattern`。现在唱片光晕在 resize 时把 `--m-gold` 解析成具体 rgb，再用它拼 rgba——所以画布也跟着模块配色走。",
-        "en": "**And the root cause of that runtime error is now known**: canvas colour strings cannot contain CSS variables — `addColorStop(rgb(var(--x)/0.14))` throws `The string did not match the expected pattern` on WebKit. The disc's bloom now resolves `--m-gold` to concrete rgb on resize and builds rgba from it, so the canvas follows the module accent too."
+        "zh": "**同时补上参考稿里让 jog「被发现」的两样东西**：唱片下方的拖动提示（左减速 · 右加速），以及显式的 BPM ± 与实时读数。拖动用的是指针捕获（`setPointerCapture`），画布保留 `touch-pan-y`，所以纵向滚页面不会被 jog 吃掉。",
+        "en": "**Also restored the two things that make the jog discoverable**: the drag hint under the record (left slower · right faster) and explicit ± buttons with a live BPM readout. The drag uses pointer capture, and the canvas keeps `touch-pan-y`, so vertical page scrolling is not swallowed by the jog."
       }
     ],
     "truncated": false
