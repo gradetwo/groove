@@ -657,9 +657,8 @@ async function runTestOnTarget(target, baseUrl) {
     });
     if (!firstRowId) throw new Error("Phone shell home has no genre row to open");
 
+    // Tapping the card opens the genre's page directly (and starts it playing).
     await page.click(`[data-testid="mobile-genre-row-${firstRowId}"]`);
-    await page.waitForSelector(`[data-testid="mobile-genre-detail-${firstRowId}"]`, { timeout: 45000 });
-    await page.click(`[data-testid="mobile-genre-detail-${firstRowId}"]`);
     await page.waitForSelector('[data-testid="mobile-genre-detail"]', { timeout: 45000 });
 
     const detail = await page.evaluate(() => {
@@ -684,8 +683,15 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error("Phone detail page overflows horizontally");
     }
 
+    // A full-screen genre page owns the screen: no module bar while it is open.
+    const noBarOnDetail = await page.evaluate(
+      () => !document.querySelector('[data-testid="mobile-module-bar"]')
+    );
+    if (!noBarOnDetail) throw new Error("Genre detail page should not show the module bar");
+
     await page.click('[data-testid="mobile-detail-back"]');
     await page.waitForSelector('[data-testid="mobile-home"]', { timeout: 45000, state: "attached" });
+
 
     /**
      * 1.7 The full-screen player, and the two ways out of it.
