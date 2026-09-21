@@ -1,6 +1,25 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Activity, Radio } from "lucide-react";
 import { useDeviceCapabilities } from "../../hooks/useDeviceCapabilities";
+import { canvasRgba } from "../../utils/canvasPalette";
+import {
+  DESKTOP_CANVAS_FALLBACKS,
+  useCanvasPalette,
+  type CanvasPaletteFallbacks,
+} from "./useCanvasPalette";
+
+/**
+ * The desktop palette this beam painted with before a skin could reach the canvas.
+ *
+ * `signal` is the amber beam and the reticle flash, `peak` the white overdrive on a hit, `grid` the
+ * graticule and corner read-outs (always drawn at a low alpha, which is why the literal here is
+ * opaque white), and `ground` the near-black the phosphor decays back onto. With no `.mobile-root`
+ * ancestor every one of them is what the code used literally before, so the desktop is unchanged.
+ */
+const PALETTE_FALLBACKS: CanvasPaletteFallbacks = {
+  ...DESKTOP_CANVAS_FALLBACKS,
+  ground: "#040508",
+};
 
 interface PhosphorOscilloscopeProps {
   analyser: AnalyserNode | null;
@@ -22,6 +41,8 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
   /** Phone surface: measured at 390×664 the mode toggle was 57×33. */
   const { isMobile } = useDeviceCapabilities();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /** The skin's colours for the beam, resolved off `.mobile-root`; the desktop falls back to the literals above. */
+  const paletteRef = useCanvasPalette(canvasRef, PALETTE_FALLBACKS);
   const [internalMode, setInternalMode] = useState<"time" | "lissajous">(mode);
   const shockRef = useRef(0);
 
@@ -54,18 +75,25 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
       animationFrameId = requestAnimationFrame(render);
       const width = canvas.width;
       const height = canvas.height;
+      /** The palette resolved for this skin; read per frame but *resolved* only on mount / skin / resize. */
+      const colours = paletteRef.current;
 
       // Exponential decay of shockwave
       shockRef.current *= 0.88;
       const currentShock = shockRef.current;
 
-      // Phosphor persistence: black background with semi-transparent sweep
-      ctx.fillStyle = "rgba(4, 5, 8, 0.26)";
+      // Phosphor persistence: the skin's ground with a semi-transparent sweep
+      ctx.fillStyle = canvasRgba(colours.ground, 0.26);
       ctx.fillRect(0, 0, width, height);
 
-      // Draw Precision Reticle & Scale Markings
+      // Draw Precision Reticle & Scale Markings.
+      // Idle, the graticule is the skin's dim ink; on a hit it flashes with the signal, so the grid
+      // says "this is the transient" in the same accent the beam uses.
       ctx.save();
-      ctx.strokeStyle = currentShock > 0.08 ? `rgba(245, 183, 61, ${0.12 + currentShock * 0.3})` : "rgba(255, 255, 255, 0.05)";
+      ctx.strokeStyle =
+        currentShock > 0.08
+          ? canvasRgba(colours.signal, 0.12 + currentShock * 0.3)
+          : canvasRgba(colours.grid, 0.05);
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 4]);
 
@@ -91,7 +119,10 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
 
       // Center crosshairs
       ctx.setLineDash([]);
-      ctx.strokeStyle = currentShock > 0.08 ? `rgba(245, 183, 61, ${0.35 + currentShock * 0.4})` : "rgba(255, 255, 255, 0.15)";
+      ctx.strokeStyle =
+        currentShock > 0.08
+          ? canvasRgba(colours.signal, 0.35 + currentShock * 0.4)
+          : canvasRgba(colours.grid, 0.15);
       const midX = width / 2;
       const midY = height / 2;
       ctx.beginPath();
@@ -103,7 +134,7 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
 
       // Corner technical calibrations
       ctx.font = "9px 'JetBrains Mono', monospace";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+      ctx.fillStyle = canvasRgba(colours.grid, 0.35);
       ctx.fillText("+1.0V", 6, 14);
       ctx.fillText(" 0.0V", 6, midY + 3);
       ctx.fillText("-1.0V", 6, height - 6);
@@ -125,12 +156,14 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
         }
       }
 
-      // Draw Phosphor Beam
+      // Draw Phosphor Beam.
+      // A hit overdrives the trace into the surface's most prominent tone (`peak`), the steady beam
+      // is the signal accent, and the glow around it is that same accent.
       ctx.save();
-      const beamGlow = currentShock > 0.05 ? "#ffffff" : "#f5b73d";
-      ctx.strokeStyle = beamGlow;
+      const beamGlow = currentShock > 0.05 ? colours.peak : colours.signal;
+      ctx.strokeStyle = canvasRgba(beamGlow);
       ctx.shadowBlur = 8 + currentShock * 12;
-      ctx.shadowColor = "#f5b73d";
+      ctx.shadowColor = canvasRgba(colours.signal);
       ctx.lineWidth = 2 + currentShock * 1.5;
 
       if (!hasSignal) {
@@ -175,6 +208,18 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
 
       ctx.restore();
     };
+
+    /**
+     * One opaque coat of the ground before the loop starts.
+     *
+     * The sweep above is a semi-transparent film that converges *toward* the ground, and the element
+     * still carries the shell's `bg-black` plate underneath — a near-black on every skin. On a
+     * light-skinned phone the first frames would therefore be a dark plate fading to paper. The
+     * colour laid down here is exactly the one the sweep settles on, so the animation is unchanged
+     * and the desktop (ground `#040508`) is untouched.
+     */
+    ctx.fillStyle = canvasRgba(paletteRef.current.ground);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     render();
 
