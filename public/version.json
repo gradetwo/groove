@@ -1,27 +1,27 @@
 {
-  "version": "2.9.0",
+  "version": "2.9.1",
   "releaseDate": "2026-09-21",
-  "changelogCount": 197,
+  "changelogCount": 198,
   "latest": {
-    "version": "2.9.0",
+    "version": "2.9.1",
     "date": "2026-09-21",
     "category": "fix",
     "title": {
-      "zh": "v2.9.0 播放器重影修掉、探索配色统一、底鼓可视化换肤、手机首屏不再下载曲风库、三套皮肤的挑战与探索重新配色、README 加图",
-      "en": "v2.9.0 The Player's Doubled Text, One Accent Across 探索, Skin-Aware Kick Visualisers, a Phone First Paint With No Library Chunks, Re-Tuned 挑战/探索 for Three Skins, and README Screenshots"
+      "zh": "v2.9.1 手机流畅度：唱片不再掉帧、曲风库分块渲染、和弦工作台默认收起，并新增一个「卡顿」探针进 verify",
+      "en": "v2.9.1 Phone Smoothness: the Record Stops Dropping Frames, the Library Paints in Chunks, the Chord Workshop Opens Folded, and a Jank Probe Joins verify"
     },
     "highlights": [
       {
-        "zh": "**手机首屏不再下载整个曲风库**（这也是 GitHub CI 报的 `perf:check` 失败）。手机壳一直在 import `ALL_GENRES`，而那个数组是静态引入全部 14 个分类模块拼出来的——所以手机首屏其实会拉**全部 14 个分类分块**（4G + 4 倍 CPU 降速下 1061 KB），门禁只数 2.5 秒窗口内落地的请求，所以日志写「3」。现在手机用轻量索引 `GENRE_INDEX`（159 条的 id/名称/分类/年代/BPM，74 KB）浏览，只有真正需要 pattern 或文案时才 `loadGenre(id)` 取一条分类分块；`App` 里那个「默认曲风」也不再为手机路由加载（这里有个坑：路由会在首次提交时把 `/` 改写成 `/m/home`，所以那一刻 `shouldEnterPhoneShell` 回答「不是」，而屏幕上正是手机壳——判断必须问「手机壳是不是当前界面」，而不是「要不要切过去」）。实测桌面 1 块 / 1706.8 KB（工作台自己的默认曲风）、手机 **0 块**（原来 3 块 /…",
-        "en": "**The phone's first paint no longer downloads the library** — which is also the `perf:check` failure GitHub CI reported. The shell had always imported `ALL_GENRES`, an array built by statically importing all fourteen category modules, so a phone's first paint actually pulled **all 14 category chunks** (1061 KB on 4G + 4x CPU throttle); the gate only counts what lands inside its 2.5 s window, which is why the log said \"3\". The phone now browses the lightweight `GENRE_INDEX` (…"
+        "zh": "**先造尺子，再谈流畅**。`perf:check` 只回答「首屏下载了多少字节、几个分块」，而你说的「卡顿」是**主线程在你动手时正忙**——那是它看不见的。新增 `npm run probe:jank`：在 390×844 + 4 倍 CPU 降速下，像一个拇指那样走一遍手机端（冷启动 → 滚动曲风库 → 打开曲风 → 打开播放器并让唱片转起来 → 五个模块页 → 探索三个子页），记录每一步的**长任务**（条数、累计阻塞、最长）、**帧间隔**（中位数、最长、以及**脱离设备自身节奏**的帧占比）和 DOM 规模。最后那个指标很关键：唱片在手机撑不住 60fps 时会**主动降到约 30fps**，而一条固定的「超过 32ms 就算卡」会把稳定的 30fps 判成「100% 卡顿」——那正好是把事实说反了。它的预算是**按步骤**给的（导航步骤看阻塞与最长任务；动画步骤看中位数/最长帧与离群帧），已进 `verify`，也是 CI 手动开关里的一个 `jank` 选项。",
+        "en": "**Build the ruler before talking about smoothness.** `perf:check` answers \"how many bytes and chunks before the first paint\"; the stutter you meant is **the main thread being busy when your thumb does something**, which that gate cannot see. `npm run probe:jank` walks the phone the way a thumb does on a 390×844 profile at 4× CPU throttling (cold load → scroll the library → open a genre → open the player and let the record spin → all five modules → all three 探索 sub-pages) and…"
       },
       {
-        "zh": "**三套皮肤的「挑战」和「探索」重新配色**（你点名的那三处违和）。**漫画**：挑战原本在印刷黄该出现的地方印了赭色 ink（棕色难度片、棕色进度条、棕色链接、棕色 CTA）——现在难度选中片/「下一题」键/播放键/探索选中的子标签都用**印刷黄 + 墨字**（14.95:1），对错改成**实心网点版**（绿与红的相对亮度只差 2%，所以用不同网点密度 + ✓/✗ 说明条区分），墨色只做轮廓与正文；探索的复用桌面视图由附加片段把半透明强调膜换成不透明贴纸、发光换成墨色描边、三个 `blur-3xl` 色斑换成青/品红套印版块。**现代极简主义**：挑战原本一页上有四种颜色（绿、红、模块锈红、实心强调片）——现在只剩纸/墨/发丝线 + 一个强调色，绿红**只**出现在判定的选项与横幅上，选中态改成「墨色井 + 1px 强调描边」而不是实心填充，并移除了 `ring-2` 光晕、`pulse-glow` 呼吸与错误项的 `opacity-75`；探索复用视图里那些红/粉/绿/紫字面量与 `emerald` 全部收敛到一个强调色（三个子页的非配色色…",
-        "en": "**挑战 and 探索 were re-tuned for the three skins you named.** **Comic**: the challenge screen printed the ochre *ink* where a press prints the yellow *plate* (brown difficulty chip, brown rank bar, brown link, brown CTA) — the engaged difficulty chip, the next-question key, the play key and the selected 探索 sub-tab are the yellow plate with ink type now (14.95:1), right/wrong are **solid halftone plates** (the two inks are within 2 % relative luminance, so dot density plus the c…"
+        "zh": "**播放器：唱片不再掉帧**。第一次测量是**100% 的帧超过 32ms**、2.5 秒窗口里主线程被阻塞 6057ms，打开播放器时 76.7% 的帧是坏的；CPU profile 显示 **80% 的采样在 `(program)`**——是浏览器的光栅化与绘制，不是 JS。所以改的都是「每帧要让光栅器做什么」：**静态的全部预烘焙**（标签的晕染、四条环轨、各声部光晕、唱针闪光都变成精灵图，一帧里再没有 `createRadialGradient`）；**唱片本体移出旋转变换**（它是画面上最大的一块，而它的纹路与环轨都是同心圆，旋转它一个像素都不会变——真正要转的是标签和步进点，两者都很小）；**唱针不再用 `shadowBlur`**（软件光栅器最怕的 canvas 状态），闪光改成烘焙光晕 + 阈值以上的 `globalAlpha`；**背板分辨率上限 2 → 1.5**（用审计做消融：4 倍降速下每帧 ~146ms → ~108ms；标签仍按 512px 烘焙，所以字仍然清晰；1.25 更快但会糊掉唱片上唯一需要读的 9px 等宽…",
+        "en": "**The player: the record stops dropping frames.** The first measurement was **100 % of frames over 32 ms**, 6 057 ms of blocked main thread in a 2.5 s window, and 76.7 % bad frames when opening the player; a CPU profile put **80 % of samples in `(program)`** — the browser's raster and paint, not JS. So every change is about what a frame asks the rasteriser to do: **everything static is baked** (the label wash, the four ring guides, the per-lane glows and the needle flash bec…"
       },
       {
-        "zh": "**苏联岁月：军旗符号换成镰刀锤子，即兴不再是黑板**。播放器左上角原来是 `repeating-conic-gradient` 的十二齿红色放射扇（远看确实像旭日旗）——现在是 38×38 的内联 SVG **镰刀锤子**（国旗红，公有领域图形，`url(\"data:image/svg+xml,…\")` 内联，皮肤契约允许这一种 `url()`；不用 ☭ 字形是因为字体覆盖没保证，画成豆腐块更糟），不压唱片、不压返回键与顶栏。即兴原本是整块 `#111111`：现在网格卡与打击垫区是纸底，网格本体是 `--m-card-2` 凹槽（硬 `8px 8px 0` 墨影），步进格是石墨 `#2F2D27`（不是纯黑）的开关壳体、写入时套车道色 + 红色内圈 + 墨色五角星，打击垫外壳用比模块强调色深一档的钢蓝 `#243342`（珊瑚色压 `#2C3E50` 只有 4.31:1），dock 是纸板 + 墨框，ПРИКАЗ 从金色（纸上 2.09:1）改成墨色。",
-        "en": "**Soviet years: the rising-sun mark became a hammer and sickle, and 即兴 is no longer a blackboard.** The player's top-left corner was a twelve-tooth red `repeating-conic-gradient` fan (which really does read as a rising sun) — it is a 38x38 inline-SVG **hammer and sickle** now (flag red, a public-domain drawing, embedded as an inline data URL, the one `url()` the skin contract allows; the ☭ glyph was rejected because font coverage is not guaranteed and a tofu box would be wor…"
+        "zh": "**首页：曲风库分块渲染，冷启动阻塞 3010 → 1090ms**。profile 说代价是浏览器在 2578 个元素上的**样式与布局**（React 只占约 3%），所以：曲风行与时间轴节点加 `content-visibility: auto`（屏幕外的九成不再参与布局与绘制，配合 `auto` 固有尺寸，滚动条仍然诚实），并且列表**先渲染 24 行、之后每次翻倍**在空闲时间补齐——整库仍会在几百毫秒内进入 DOM，比拇指滑过第一屏还快，DOM 内容不变，所以计数类的测试只是改成等待「屏幕自己标称的数量」。**探索：打开与切换阻塞 1259 → 817ms**，和弦视图是最贵的挂载（约 1000 个元素、4 倍降速下单次 1350ms）：现在选子页是两次更新——分段控件（紧急，因为那是手指碰的东西）与视图挂载（React transition，让分段先画出来、重活在可中断的渲染里做），并且手机端把**和弦工作台默认收起**（专项探针 1335 → 236ms；视图本来就有收起开关与当前进行的摘要，桌面默认不变）。E2E 那条腿现在会…",
+        "en": "**首页: the library paints in chunks — cold-load blocking 3 010 → 1 090 ms.** The profile said the cost was the browser's **style and layout over 2 578 elements** (React was ~3 %), so the library rows and timeline eras take `content-visibility: auto` (the off-screen 90 % is no longer laid out or painted, with an `auto` intrinsic size so the scrollbar stays honest) and the list renders **24 rows first, then doubles** in idle time — the whole library is in the DOM within a few h…"
       }
     ],
     "truncated": true
