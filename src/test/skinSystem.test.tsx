@@ -451,8 +451,15 @@ describe("skin stylesheets", () => {
     // The two desktop accent literals the views are built around must be addressed...
     expect(css).toContain("#4ad8c8");
     expect(css).toContain("#f5b73d");
-    // ...and resolved through the active skin's own tokens, so one rule serves all three.
-    for (const token of ["--m-bg", "--m-card", "--m-line", "--m-ink", "--m-gold", "--m-teal"]) {
+    /**
+     * ...and resolved through the active skin's own tokens, so one rule serves every skin.
+     *
+     * The accent literals resolve to `--m-gold` — the *module's* accent, which is per skin and per module —
+     * rather than to a fixed `--m-teal`: keeping the desktop's teal as "the teal token" left the chord
+     * view's chips and dots blue-green on a page whose accent is blue, which is the two-accents-in-one-view
+     * the user reported ("和弦里头那个蓝绿色…不能违和").
+     */
+    for (const token of ["--m-bg", "--m-card", "--m-line", "--m-ink", "--m-gold"]) {
       expect(css, `legacySkin.css does not use ${token}`).toContain(`var(${token})`);
     }
   });
