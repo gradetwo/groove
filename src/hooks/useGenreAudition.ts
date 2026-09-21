@@ -50,6 +50,8 @@ export interface UseGenreAuditionReturn {
    */
   startVinylScrub: (velocity: number) => void;
   stopVinylScrub: () => void;
+  /** The engine's current BPM, or `null` when no engine exists. See the implementation. */
+  readTempo: () => number | null;
   /**
    * Play one track's voice once (a pad or a step tap) through its own mixed destination.
    * `instrument` overrides the track's declared model, for a pad that means a specific sound.
@@ -149,6 +151,20 @@ export function useGenreAudition(): UseGenreAuditionReturn {
   }, []);
 
   /**
+   * The tempo the engine is *actually* at.
+   *
+   * The shell used to display a genre's declared `default_bpm` — a constant from the data — next to a
+   * transport that may have been jogged, or may be playing a different genre after a skip, so the number
+   * and the music disagreed by exactly the amount the user had changed. Nothing but the engine knows the
+   * truth, so the bar and the player read it here.
+   *
+   * `null` means "nothing playing", which the callers treat as "show the genre's own default".
+   */
+  const readTempo = useCallback((): number | null => {
+    return engineRef.current?.getBpm() ?? null;
+  }, []);
+
+  /**
    * The vinyl scratch, built on demand.
    *
    * Lazily, because it needs the engine's `AudioContext` and the engine is only created when something
@@ -197,5 +213,6 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     startVinylScrub,
     stopVinylScrub,
     auditionTrack,
+    readTempo,
   };
 }

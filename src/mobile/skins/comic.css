@@ -455,7 +455,7 @@
 }
 
 /* The player bar is the same glass panel the shell had: it becomes a paper card with an ink edge. */
-:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(20,20,31,0.94)]"] {
+:root[data-skin="comic"] .mobile-root .m-player-bar-plate {
   background-color: var(--m-card);
   background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.085) 1px, transparent 1.25px);
   background-size: 7px 7px;
@@ -555,17 +555,18 @@
   color: var(--m-ink);
 }
 :root[data-skin="comic"] .mobile-root .m-tbtn.on {
-  background: #ffe600;
+  /* The transport carries no "engaged" highlight: the glyph already says what the button is
+     (see the rationale in `mobile.css`). The class stays as a hook, and nothing paints it. */
   color: var(--m-ink);
-  border-color: var(--m-ink);
 }
 :root[data-skin="comic"] .mobile-root .m-tbtn.on::after {
-  background: var(--m-ink);
+  content: none;
 }
 :root[data-skin="comic"] .mobile-root .m-tbig {
   border: 2px solid var(--m-ink);
   border-radius: 5px;
-  background: #ffe600;
+  /* Printed paper, not a yellow plate: the play glyph is the signal (the user's rule). */
+  background: var(--m-card);
   color: var(--m-ink);
   box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-ink);
 }

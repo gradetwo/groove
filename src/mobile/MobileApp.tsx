@@ -136,7 +136,8 @@ export function MobileApp({
   const { playingGenreId, toggleAudition, stopAudition, readClock, applyPattern, setTempo, setSwingValue,
     startVinylScrub,
     stopVinylScrub,
-    auditionTrack } =
+    auditionTrack,
+    readTempo } =
     useGenreAudition();
 
   /**
@@ -359,8 +360,9 @@ export function MobileApp({
           onToggle={stopAudition}
           onCycleMode={cyclePlayMode}
           onOpen={() => onOpenPlayer?.(playingGenreId)}
-          /* The rail reads the same clock the record does, so the two cannot disagree. */
+          /* The rail and the tempo both come from the transport, so the bar cannot disagree with it. */
           readClock={readClock}
+          readTempo={readTempo}
           totalSteps={ALL_GENRES.find((item) => item.id === playingGenreId)?.sequencer_pattern?.totalSteps || 16}
         />
       )}

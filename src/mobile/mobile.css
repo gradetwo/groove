@@ -454,20 +454,18 @@
   color: var(--m-ink);
   transform: scale(0.9);
 }
+/*
+ * No "engaged" highlight on the transport.
+ *
+ * The reference marks a toggled button with an accent colour and a pip, and the port copied it — but the
+ * user's point is that the *icon* already says what the button is (a repeat glyph for repeat-this-genre,
+ * a shuffle glyph for shuffle-all, a list glyph for the list), so the accent colour and the pip are a
+ * second, louder signal for something already said. The controls stay neutral ink; the state is still
+ * exposed to assistive tech through `aria-expanded` / `aria-label`, and the `.on` class remains as a hook
+ * for anything that genuinely needs to know (nothing paints it any more).
+ */
 .mobile-root .m-tbtn.on {
-  color: var(--m-gold);
-}
-/* The reference's "this button is engaged" pip. */
-.mobile-root .m-tbtn.on::after {
-  content: "";
-  position: absolute;
-  bottom: 1px;
-  left: 50%;
-  width: 3.5px;
-  height: 3.5px;
-  border-radius: 50%;
-  background: var(--m-gold);
-  transform: translateX(-50%);
+  color: var(--m-ink);
 }
 .mobile-root .m-tbig {
   display: flex;
