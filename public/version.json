@@ -1,27 +1,27 @@
 {
-  "version": "2.3.0",
-  "releaseDate": "2026-09-20",
-  "changelogCount": 191,
+  "version": "2.4.0",
+  "releaseDate": "2026-09-21",
+  "changelogCount": 192,
   "latest": {
-    "version": "2.3.0",
+    "version": "2.4.0",
     "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.3.0 手机端五项到位：播放器直接移植 player2、每个曲风一张真图、探索复用老视图、即兴合成一个控制块、首页时间轴回归",
-      "en": "v2.3.0 Five Things the Phone Was Missing: the player2 Port, a Real Cover Per Genre, Reused Desktop Views, One Jam Dock, and the Timeline Back"
+      "zh": "v2.4.0 皮肤系统：复古漫画 / 苏联重工业 / 8-bit 像素，设置里一键切换",
+      "en": "v2.4.0 A Skin System: Retro Comic, Soviet Heavy Industry and 8-bit Pixel, Switched in Settings"
     },
     "highlights": [
       {
-        "zh": "**播放器现在是 player2.html 的移植，不是「参考它做的」**。上一版把参考稿的观感删掉了：扁平的唱盘标签、React 做的进度条、带边框的按钮排。这一版把代码搬了过来——预渲染的纹路（约 1500 条弧线、划痕、灰尘、边缘环）、印着每件乐器 16 格刻度的标签与四套盘纸、四层光（中心弥散光、轨道环、搓盘高光、固定高光）、随拍点脉冲的时序点阵、落针涟漪；唱臂是刚体旋转（停驻托架、摆入抬臂、沟槽抖动、底鼓时唱头小幅上跳、落针闪光）；速度用参考稿的 `1-exp(-dt/130)` 阻尼，所以数字像电机一样滑过去而不是跳过去。**拍点也接上了周边**：`--bpmBeat`/`--kick`/`--breath` 每帧写到 `.mobile-root`，状态灯、顶部光晕、播放键与均衡器条全部由它们驱动。舞台照抄参考稿：顶栏（品牌 + 活状态灯）、拖动提示、曲名与速度（± 支持 420ms 后连发）、2px 进度轨与「实时合成 · 无限循环」、五个传输键、以及下拉曲目单（正在播放那行有三条均衡器）。",
-        "en": "**The player is now a port of `player2.html`, not \"inspired by\" it.** The previous version had deleted the reference's look: a flat label, a React progress bar, a bordered button row. This one brings the code across — the baked groove texture (~1500 arcs, scratches, dust, edge rings), the printed label with a 16-tick band per instrument and its four paper stocks, four lighting layers (centre bloom, ring guides, scrub shine, fixed sheen), the sequencer dots that pulse per ste…"
+        "zh": "**皮肤是一个属性，不是一套分支代码**。四种外观写在 `data-skin` 上（`groove_skin_v1` 持久化，**首帧之前**就应用，否则每次冷启动都会先画默认皮肤再闪一下），每个皮肤的样式表都限定在 `:root[data-skin=\"…\"] .mobile-root` 之下——所以切换不需要任何组件订阅，皮肤之间也不可能互相漏色。",
+        "en": "**A skin is one attribute, not a second code path.** The four looks live on `data-skin` (persisted in `groove_skin_v1`, applied **before the first paint** — an effect would draw the default skin and then flash), and every skin stylesheet is scoped to `:root[data-skin=\"…\"] .mobile-root`. Nothing has to subscribe for a change to reach the screen, and no skin can leak into another."
       },
       {
-        "zh": "**每个曲风一张真图**：159 张 320×320 的实拍照片（Lorem Picsum，来源为 Unsplash 许可，出处与可复现的下载地址记在 `public/covers/CREDITS.md`），共约 2.8MB。新增 `genreCovers.test.ts` 守住这套资源：每个曲风必须有图、没有小于 2KB 的残图、没有多余文件、出处文件还在。`genreArt.ts` 本来就更偏好真实文件，所以换图或删图都不用改代码。",
-        "en": "**A real photograph per genre**: 159 320×320 photos (Lorem Picsum, which serves Unsplash-licensed images; the licence and the reproducible URL pattern are in `public/covers/CREDITS.md`), ~2.8 MB in total. A new `genreCovers.test.ts` guards the set: every genre has a file, none is under 2 KB (a truncated download), there are no orphans, and the credits file still says where they came from. `genreArt.ts` already preferred a real file over the generated art, so pictures can be…"
+        "zh": "**复古漫画（蜘蛛侠平行宇宙那种印刷感）**：新闻纸底 + 分层网点（Ben-Day）、粗黑油墨描边与零模糊硬投影、青/品红套印偏移（标题与播放器光晕）、黄色专色顶带、黑底黄线的标签栏；字体 Bangers + Comic Neue。**苏联重工业**：冲压钢板面板（2px 边 + 内高光/内暗边 + 硬投影）、径向渐变铆钉、固定的模板/轧制纹理、传输条上的 45° 警戒斜纹、搪瓷信号灯配色；字体 Russo One + PT Sans Narrow。**8-bit 像素**：只用七色、2px 硬边 + 阶梯投影、切角像素块、扫描线、棋盘抖色表示失效态、去掉所有发光；字体 Press Start 2P + VT323。",
+        "en": "**Retro comic (Into the Spider-Verse print feel)**: newsprint with a layered Ben-Day dot screen, heavy ink outlines with hard zero-blur block shadows, cyan/magenta misregistration on the display type and the player's aura, a yellow spot-colour band, a black tab bar with a yellow rule, and Bangers + Comic Neue. **Soviet heavy industry**: stamped steel panels (2px border, inset light/dark bevel, hard shadow), radial-gradient rivets, a fixed formwork/mill texture, a 45° hazard…"
       },
       {
-        "zh": "**探索改成挂载老视图，不再自己造一份**：三个子页现在是应用自己的 `ChordProgressionsView` / `KickAnatomyView` / `MasterclassView`，和弦走向仍然是第一个也是默认页，三个都包在 `[data-legacy=\"desktop\"]` 里（这正是触控尺寸门禁豁免的标记——桌面布局的密集控件不是手机控件）。顺手删掉了手机版那套 `KickLab`/`ChordLab`/`GrooveLab` 与它们的音频接线。",
-        "en": "**探索 now mounts the app's own views instead of reimplementing them**: the three sub-pages are `ChordProgressionsView` / `KickAnatomyView` / `MasterclassView`, chords still first and still the default, each inside `[data-legacy=\"desktop\"]` — the marker the touch-target gate exempts, because a desktop layout's dense controls are not phone controls. The phone-only `KickLab`/`ChordLab`/`GrooveLab` and their audio wiring are gone."
+        "zh": "**切换处在「更多 → 外观」**：四个选项各自画出自己的底色/强调色/文字色预览（预览色放在数据里，因为未激活皮肤的规则根本不会应用，取不到计算值），当前项有描边与勾选，语义上是真正的 radiogroup（`aria-checked`），不是四个开关按钮。皮肤 CSS 的全部硬规矩都由测试守住而不是靠人看：不许 `!important`、不许外链与 `@font-face`、不许改几何属性（会破坏 44px 触控门禁）、必须定义整套 token、必须五个模块五个不同强调色、每条选择器都必须带作用域。",
+        "en": "**The switch lives in 更多 → 外观**: four options, each painting a preview of its own ground/accent/ink (those colours are data, because an inactive skin's rules never apply and cannot be read back from the cascade), with the active one outlined and checked, as a genuine `radiogroup` (`aria-checked`) rather than four toggles. The skins' rules are held by tests rather than by review: no `!important`, no external assets or `@font-face`, no geometry properties (which would break th…"
       }
     ],
     "truncated": true
