@@ -702,6 +702,25 @@ async function runTestOnTarget(target, baseUrl) {
      */
     await page.goto(`${baseUrl}/m/home?player=1&genre=deep-house`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-testid="mobile-player"]', { timeout: 45000 });
+    /**
+     * The player is a deep link into a *lazy* record.
+     *
+     * `mobile-player` appears as soon as the shell routes to the module — before the genre's chunk has
+     * been fetched and parsed — so the vinyl and the canvas's beat slaves exist a beat later. Waiting for
+     * the record is part of the contract this leg asserts (a player that never resolves its genre is a
+     * broken player, and the timeout below says so), and it is why this does not read the canvas the
+     * instant the section appears: that raced the fetch and reported "no vinyl"/empty slaves on a cold
+     * browser while the same build passed warm.
+     */
+    await page.waitForSelector('[data-testid="mobile-vinyl-canvas"]', { timeout: 45000 });
+    await page.waitForFunction(
+      () => {
+        const root = document.querySelector(".mobile-root");
+        if (!root) return false;
+        return /^\d+(\.\d+)?s$/.test(root.style.getPropertyValue("--bpmBeat").trim());
+      },
+      { timeout: 45000 }
+    );
     const player = await page.evaluate(() => {
       const section = document.querySelector('[data-testid="mobile-player"]');
       const vinyl = document.querySelector('[data-testid="mobile-vinyl-canvas"]');
