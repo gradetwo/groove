@@ -962,10 +962,43 @@ async function runTestOnTarget(target, baseUrl) {
      */
     await page.waitForSelector('[data-testid^="chord-style-"]', { timeout: 45000 });
 
+    /**
+     * The kick and groove sub-pages mount their views too — and the anchors are *content*, not the
+     * desktop actions: those buttons ("return to studio", "bake to studio") are exactly what the phone
+     * pass removed, and asserting on them again would re-introduce the dead controls as a requirement.
+     * Their absence is asserted below instead.
+     */
     await page.click('[data-testid="mobile-explore-tab-kick"]');
-    await page.waitForSelector('[data-testid="kick-help-button"]', { timeout: 45000 });
+    await page.waitForFunction(
+      () => {
+        /**
+         * Anchored on structure, not on copy: the kick lab draws its oscilloscope, waterfall and
+         * sequencer on canvases, and asserting a *label* would tie this check to the run's language
+         * (the first version waited for the Chinese heading and timed out on an English run).
+         */
+        const wrapper = document.querySelector('[data-testid="mobile-explore-kick-legacy"]');
+        if (!wrapper) return false;
+        return wrapper.querySelectorAll("canvas").length > 0 && (wrapper.textContent ?? "").trim().length > 120;
+      },
+      null,
+      { timeout: 45000 }
+    );
     await page.click('[data-testid="mobile-explore-tab-groove"]');
-    await page.waitForSelector('[data-testid="bake-to-studio-btn"]', { timeout: 45000 });
+    await page.waitForSelector('[data-testid="tap-sync-pad"]', { timeout: 45000 });
+
+    const deadActions = await page.evaluate(() =>
+      [
+        "kick-help-button",
+        "kick-studio-button",
+        "masterclass-help-button",
+        "bake-to-studio-btn",
+        "chords-help-button",
+        "chords-open-in-piano-roll",
+      ].filter((id) => document.querySelector(`[data-testid="${id}"]`))
+    );
+    if (deadActions.length > 0) {
+      throw new Error(`Explore still offers desktop-only actions on the phone: ${deadActions.join(", ")}`);
+    }
     await page.click('[data-testid="mobile-explore-tab-chords"]');
     await page.waitForSelector('[data-testid="mobile-explore-chords-legacy"]', { timeout: 45000 });
     const overflowNow = await page.evaluate(() => {

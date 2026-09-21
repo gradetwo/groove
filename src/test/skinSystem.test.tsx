@@ -370,18 +370,18 @@ describe("skin stylesheets", () => {
    * selector, and it must put a surface under each of the three sub-pages.
    */
   it("ships the legacy-view override sheet, imported after the three skins", () => {
-    const file = path.join(SKIN_CSS_DIR, "legacyViews.css");
-    expect(fs.existsSync(file), "legacyViews.css").toBe(true);
+    const file = path.join(SKIN_CSS_DIR, "legacySkin.css");
+    expect(fs.existsSync(file), "legacySkin.css").toBe(true);
     const shell = fs.readFileSync(path.join(process.cwd(), "src", "mobile", "MobileApp.tsx"), "utf8");
     const pixel = shell.indexOf("skins/pixel.css");
-    const legacy = shell.indexOf("skins/legacyViews.css");
-    expect(legacy, "legacyViews.css is not imported by the phone shell").toBeGreaterThan(-1);
+    const legacy = shell.indexOf("skins/legacySkin.css");
+    expect(legacy, "legacySkin.css is not imported by the phone shell").toBeGreaterThan(-1);
     // A later import wins an equal-specificity argument, which is what undoes comic.css's opt-out.
-    expect(legacy, "legacyViews.css must import after the skin sheets").toBeGreaterThan(pixel);
+    expect(legacy, "legacySkin.css must import after the skin sheets").toBeGreaterThan(pixel);
   });
 
   it("scopes every legacy-view rule to a skin and the desktop-legacy wrapper", () => {
-    const withoutComments = code(read("legacyViews"));
+    const withoutComments = code(read("legacySkin"));
     const preludes: string[] = [];
     let buffer = "";
     for (const char of withoutComments) {
@@ -394,7 +394,7 @@ describe("skin stylesheets", () => {
         buffer += char;
       }
     }
-    expect(preludes.length, "legacyViews.css has no rules").toBeGreaterThan(0);
+    expect(preludes.length, "legacySkin.css has no rules").toBeGreaterThan(0);
     for (const prelude of preludes) {
       if (!prelude || prelude.startsWith("@")) continue;
       for (const selector of splitSelectors(prelude)) {
@@ -408,11 +408,11 @@ describe("skin stylesheets", () => {
   });
 
   it("gives every styled skin and every 探索 sub-page a surface of its own", () => {
-    const withoutComments = code(read("legacyViews"));
+    const withoutComments = code(read("legacySkin"));
     const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
     for (const id of STYLED_SKINS) {
       const scoped = blocks.filter(([, selector]) => selector.includes(`:root[data-skin="${id}"]`));
-      expect(scoped.length, `legacyViews.css has no override for ${id}`).toBeGreaterThan(0);
+      expect(scoped.length, `legacySkin.css has no override for ${id}`).toBeGreaterThan(0);
       expect(
         scoped.some(([, , body]) => /background-color\s*:/.test(body)),
         `${id} restyles no surface`
@@ -429,29 +429,29 @@ describe("skin stylesheets", () => {
   });
 
   it("maps the desktop palette onto skin tokens rather than new hexes", () => {
-    const css = read("legacyViews");
+    const css = read("legacySkin");
     // The two desktop accent literals the views are built around must be addressed...
     expect(css).toContain("#4ad8c8");
     expect(css).toContain("#f5b73d");
     // ...and resolved through the active skin's own tokens, so one rule serves all three.
     for (const token of ["--m-bg", "--m-card", "--m-line", "--m-ink", "--m-gold", "--m-teal"]) {
-      expect(css, `legacyViews.css does not use ${token}`).toContain(`var(${token})`);
+      expect(css, `legacySkin.css does not use ${token}`).toContain(`var(${token})`);
     }
   });
 
   it("keeps the legacy-view sheet inside the shell's rules", () => {
-    const withoutComments = code(read("legacyViews"));
-    expect(withoutComments, "legacyViews.css: !important").not.toContain("!important");
-    expect(withoutComments, "legacyViews.css: url()").not.toMatch(/url\(/);
-    expect(withoutComments, "legacyViews.css: @font-face").not.toContain("@font-face");
-    expect(withoutComments, "legacyViews.css: @import").not.toContain("@import");
+    const withoutComments = code(read("legacySkin"));
+    expect(withoutComments, "legacySkin.css: !important").not.toContain("!important");
+    expect(withoutComments, "legacySkin.css: url()").not.toMatch(/url\(/);
+    expect(withoutComments, "legacySkin.css: @font-face").not.toContain("@font-face");
+    expect(withoutComments, "legacySkin.css: @import").not.toContain("@import");
     const GEOMETRY = /(?:^|[\s;{])(width|height|padding|margin|gap|display|order|visibility)(-[a-z-]+)?\s*:/;
     const geometry = withoutComments.match(GEOMETRY);
-    expect(geometry?.[0] ?? "", "legacyViews.css changes geometry").toBe("");
+    expect(geometry?.[0] ?? "", "legacySkin.css changes geometry").toBe("");
     const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
     for (const [, selector, body] of blocks) {
       if (!/position\s*:\s*(absolute|fixed)/.test(body)) continue;
-      expect(body, `legacyViews.css: ${selector.trim()} is positioned but not click-through`).toMatch(
+      expect(body, `legacySkin.css: ${selector.trim()} is positioned but not click-through`).toMatch(
         /pointer-events\s*:\s*none/
       );
     }
