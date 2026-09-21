@@ -456,4 +456,161 @@ describe("skin stylesheets", () => {
       );
     }
   });
+
+  /**
+   * The four panels behind 更多 are the *second* subtree with an override sheet of its own, and it
+   * is the one place the palette cannot be inherited: the panels are siblings of `.mobile-root`, and
+   * custom properties only travel down a tree. So this sheet is held to the skins' checklist plus
+   * two checks of its own — it has to restate the token block it maps onto, and it has to name the
+   * desktop literals it replaces (`#0d0f16` and friends) rather than leaving them dark.
+   */
+  const PANEL_SHEET = path.join(SKIN_CSS_DIR, "panelSkin.css");
+  const readPanels = () => fs.readFileSync(PANEL_SHEET, "utf8");
+
+  /** The same depth-agnostic prelude scan the skin cases run: comments already stripped. */
+  const panelPreludes = (withoutComments: string): string[] => {
+    const out: string[] = [];
+    let buffer = "";
+    for (const char of withoutComments) {
+      if (char === "{") {
+        out.push(buffer.trim());
+        buffer = "";
+      } else if (char === "}") {
+        buffer = "";
+      } else {
+        buffer += char;
+      }
+    }
+    return out;
+  };
+
+  it("ships the panel sheet, imported by App where the m-panels scope wrapper is", () => {
+    expect(fs.existsSync(PANEL_SHEET), "panelSkin.css").toBe(true);
+    const app = fs.readFileSync(path.join(process.cwd(), "src", "App.tsx"), "utf8");
+    // The import lives with the other `./mobile/…` imports; the wrapper lives in App's phone branch.
+    expect(app, "panelSkin.css is not imported by App").toContain('import "./mobile/skins/panelSkin.css";');
+    expect(app, "the panel scope wrapper is gone").toContain('className="m-panels"');
+  });
+
+  it("scopes every panel rule to a styled skin and the phone's panel wrapper", () => {
+    const withoutComments = code(readPanels());
+    const found = panelPreludes(withoutComments);
+    expect(found.length, "panelSkin.css has no rules").toBeGreaterThan(0);
+    for (const prelude of found) {
+      if (!prelude || prelude.startsWith("@")) continue;
+      for (const selector of splitSelectors(prelude)) {
+        expect(selector, `unscoped panel selector "${selector}"`).toMatch(
+          /:root\[data-skin="(comic|soviet|pixel)"\]/
+        );
+        // `.m-panels` is rendered only in App's phone branch, so the sheet can never touch a dialog
+        // the desktop opened — and the default skin matches none of these selectors.
+        expect(selector, `panel selector escapes the phone's scope: "${selector}"`).toContain(".m-panels");
+        expect(selector, `panel selector reaches a fourth skin: "${selector}"`).not.toMatch(
+          /data-skin="(default|windows-95)"/
+        );
+      }
+    }
+  });
+
+  it("restates the palette and styles all three skins, so a panel never falls back to desktop dark", () => {
+    const withoutComments = code(readPanels());
+    const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    for (const id of STYLED_SKINS) {
+      /**
+       * The tokens live on `.mobile-root`, a *sibling* of `.m-panels`, so the sheet has to publish
+       * the active skin's block on the scope element itself before any `var()` can resolve.
+       */
+      const own = blocks.find(([, selector]) => selector.trim() === `:root[data-skin="${id}"] .m-panels`);
+      expect(own, `${id} has no token block on .m-panels`).toBeTruthy();
+      for (const token of [...REQUIRED_TOKENS, "--m-font-display", "--m-font-mono"]) {
+        expect(own?.[2] ?? "", `${id} does not restate ${token}`).toContain(`${token}:`);
+      }
+      const scoped = blocks.filter(([, selector]) => selector.includes(`:root[data-skin="${id}"]`));
+      expect(scoped.length, `panelSkin.css has no override for ${id}`).toBeGreaterThan(0);
+      expect(
+        scoped.some(([, , body]) => /background-color\s*:/.test(body)),
+        `${id} restyles no panel surface`
+      ).toBe(true);
+      expect(scoped.some(([, , body]) => /[^-]color\s*:/.test(body)), `${id} re-inks no text`).toBe(true);
+      // A native control that keeps the desktop's dark scheme is the bug `color-scheme` prevents.
+      expect(own?.[2] ?? "", `${id} leaves color-scheme to the desktop`).toContain("color-scheme:");
+    }
+  });
+
+  it("maps the panels' desktop literals onto skin tokens instead of leaving them", () => {
+    const css = readPanels();
+    // The changelog's well, the help centre's frame, rail and article pane, the settings/search wells.
+    for (const literal of [
+      "#0d0f16",
+      "#0a0b10",
+      "#090a0f",
+      "#0d0f17",
+      "#0b0c13",
+      "#0e0f14",
+      "#0b0e19",
+      "#f5b73d",
+      "#45e0c9",
+      "#a78bfa",
+      "#f59e0b",
+      "#8e92a0",
+      "#b9b7b0",
+      "#0a0b0d",
+      "#1f222b",
+      "#2d313d",
+    ]) {
+      expect(css, `panelSkin.css never addresses ${literal}`).toContain(literal);
+    }
+    // ...and resolves them through the active skin's tokens, so one rule serves all three skins.
+    for (const token of [
+      "--m-bg",
+      "--m-card",
+      "--m-card-2",
+      "--m-line",
+      "--m-line-2",
+      "--m-ink",
+      "--m-ink-2",
+      "--m-ink-3",
+      "--m-gold",
+      "--m-gold-hi",
+      "--m-on-gold",
+      "--m-teal",
+      "--m-red",
+      "--m-green",
+      "--m-violet",
+      "--m-font-display",
+      "--m-font-mono",
+    ]) {
+      expect(css, `panelSkin.css does not use var(${token})`).toContain(`var(${token})`);
+    }
+    // The deeper grounds are enumerated; the panel/raised levels are grouped, as legacySkin does.
+    expect(css).toContain('[class*="bg-[#1"]');
+    expect(css).toContain('[class*="bg-[#2"]');
+    // Nothing is painted in the desktop's own surface or accent hex after the mapping.
+    const withoutComments = code(css);
+    expect(withoutComments).not.toMatch(/background-color:\s*#(0d0f16|0a0b10|12141a|f5b73d)\b/i);
+  });
+
+  it("keeps the panel sheet inside the shell's rules and keeps scrolling untouched", () => {
+    const withoutComments = code(readPanels());
+    expect(withoutComments, "panelSkin.css: !important").not.toContain("!important");
+    const externalUrls = [...withoutComments.matchAll(/url\(\s*["']?([^"')]+)/g)]
+      .map((match) => match[1].trim())
+      .filter((target) => !target.startsWith("data:") && !target.startsWith("#"));
+    expect(externalUrls, "panelSkin.css loads an external asset").toEqual([]);
+    expect(withoutComments, "panelSkin.css: @font-face").not.toContain("@font-face");
+    expect(withoutComments, "panelSkin.css: @import").not.toContain("@import");
+    const GEOMETRY = /(?:^|[\s;{])(width|height|padding|margin|gap|display|order|visibility)(-[a-z-]+)?\s*:/;
+    expect(withoutComments.match(GEOMETRY)?.[0] ?? "", "panelSkin.css changes geometry").toBe("");
+    // The panels scroll in regions the components own: a skin that set `overflow` could freeze the
+    // 193-entry changelog or the help article pane.
+    expect(withoutComments, "panelSkin.css touches overflow").not.toMatch(/overflow(-[xy])?\s*:/);
+    const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    expect(blocks.length, "panelSkin.css has no readable rules").toBeGreaterThan(0);
+    for (const [, selector, body] of blocks) {
+      if (!/position\s*:\s*(absolute|fixed)/.test(body)) continue;
+      expect(body, `panelSkin.css: ${selector.trim()} is positioned but not click-through`).toMatch(
+        /pointer-events\s*:\s*none/
+      );
+    }
+  });
 });
