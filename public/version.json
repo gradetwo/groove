@@ -1,27 +1,27 @@
 {
-  "version": "2.5.0",
+  "version": "2.6.0",
   "releaseDate": "2026-09-21",
-  "changelogCount": 193,
+  "changelogCount": 194,
   "latest": {
-    "version": "2.5.0",
+    "version": "2.6.0",
     "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.5.0 手机端第二轮：避开灵动岛、播放器擦盘声与阻尼、皮肤字体与苏联符号、探索换肤、更多面板真的能打开",
-      "en": "v2.5.0 The Phone, Second Pass: Clear the Dynamic Island, a Real Scratch and Damper, Skin Typography and Soviet Symbols, Skinned 探索, and 更多 Panels That Open"
+      "zh": "v2.6.0 手机端第三轮：唱臂落针位置修正、播放条重做、即兴变成乐器、曲风详情与时间轴补足内容、更多里头的面板也换肤",
+      "en": "v2.6.0 The Phone, Third Pass: the Arm Lands Where It Should, a Rebuilt Player Bar, 即兴 as an Instrument, Real Content on the Genre Page and Timeline, and Skinned Panels"
     },
     "highlights": [
       {
-        "zh": "**灵动岛避让**：外壳是 `viewport-fit=cover` 的控制面板，安全区是真实布局空间，但 `main` 之前完全没有顶部内边距——有灵动岛的机器上，品牌字就压在岛下面。现在 `main` 吃 `env(safe-area-inset-top)`，加上横屏时的左右安全区，所以每个模块都让开了：浏览页、全屏播放器、曲风详情页、以及探索里嵌入的桌面视图。没有安全区的设备上这是 0 变化。",
-        "en": "**Clearing the Dynamic Island.** The shell is a `viewport-fit=cover` control surface, so safe areas are real layout space — and `main` had no top inset at all, which put the wordmark behind the island on a device that has one. `main` now takes `env(safe-area-inset-top)` plus the left/right insets (a landscape notch is on the side), so every module clears it: browsing, the full-screen player, the genre page and the embedded desktop views in 探索. A no-op on hardware without ins…"
+        "zh": "**唱臂两个位置之前都是错的，这一版修正**：手臂的角度是从**转轴**量的，不是从唱片中心量的——`NEEDLE_ANGLE` 说的是唱针相对唱片的位置，而手臂绕的是唱片左上方那个转轴，所以手臂自身的工作角是 `atan2(针位−转轴)` ≈ **+0.82 rad**（向右下方指向唱片）。上一版直接用手臂画 `NEEDLE_ANGLE`，整整高了约 0.9 rad，于是**播放和停止时唱针都飘在唱片外**。现在有三个把几何讲清楚、无法再糊弄的函数（工作角 / 绘制角 / 针尖落点距离），测试断言的是耳朵能看见的事：**播放时针尖落在 0.9×半径的外圈上，停止时越过唱片边缘 14% 并停在中心上方**，三种真实尺寸都测。顺带第一次看得见行程：35.1° 停驻 → 47.2° 落针（12.1°），摆入抬臂、沟槽抖动、底鼓时唱头小幅上跳都在。",
+        "en": "**Both arm positions were wrong; this fixes them.** The arm's angle is measured from its **pivot**, not from the disc centre: `NEEDLE_ANGLE` says where the stylus sits *relative to the disc*, and the arm rotates about a pivot above and to its left, so the arm's own working angle is `atan2(needle − pivot)` ≈ **+0.82 rad** — pointing right and down at the record. The previous release drew the arm at `NEEDLE_ANGLE` itself, about 0.9 rad too high, so the stylus floated outside t…"
       },
       {
-        "zh": "**播放器：擦盘声 + 阻尼 + 唱臂姿态**。① 拖动唱片之前是无声的——现在按参考稿那条滤波噪声（带通、频率跟随手指速度、松手短尾）发声，跑在试听引擎自己的 context 上、走音乐总线。② 显示的速度本来就在缓动，但**引擎是跳变的**，所以缓动只是装饰；现在画布循环把阻尼的每个整数 BPM 报给引擎（参考稿的调度器每帧读的就是阻尼后的 BPM），搓盘因此真的会「转起来/慢下去」。读数也交回阻尼器拥有：React 只画一次初值，否则先跳到目标再被循环写回更低的值，数字会先上跳再回落。③ 唱臂之前在两个状态下都低了约 24°（移植时多减了一次唱针角，正好抵消行程），所以它从没真正落到唱片上、停止动画也几乎不动。现在 `tonearmDrawAngle()` 是唯一定义（停驻 = 工作角 -0.21 rad，工作角 = 唱针角），摆入抬臂、沟槽抖动、底鼓时唱头小幅上跳都在，并对两端都做了断言。",
-        "en": "**Player: the scratch, the damper, and where the arm actually points.** (1) Dragging the record made no sound; it now plays the reference's filtered noise band (bandpass, frequency from finger speed, short release tail) on the audition engine's own context, through the music bus. (2) The displayed tempo eased but the *engine* jumped, so the easing was cosmetic — the canvas loop now reports each whole-BPM step of the damper and the engine follows, which is what the reference'…"
+        "zh": "**播放条重做**：用户的原话是「太丑陋」，并且指出一个设计问题——**播放/暂停本身就有两个不同的图形，按钮不需要再高亮一次**。所以播放键现在只是图标（无填充、无光晕、无脉动，仍是 48px 触控区），其余部分围绕它重建：封面用曲风自己的真实图片（加载前是分类色）做成圆角描边缩略图；标题下加了一条**进度轨**，读的是唱片同一个传输时钟（直接写 DOM、5Hz，不走 React state，否则为了一个装饰每秒重渲五次整个外壳）；整行是一块可点区域（封面+标题+进度+箭头），两个按钮是它的兄弟节点；模式键保留参考稿那颗「已启用」小点，因为图标本身说不清这件事。",
+        "en": "**The player bar was rebuilt.** The user's words were \"太丑陋\", plus a design objection: **play/pause already has two different glyphs, so the button does not need a second highlight**. The play control is an icon now (no fill, no glow, no pulse; still a 48 px target) and the rest was rebuilt around it: the artwork is the genre's real cover (the category colour until it loads) in a rounded, ringed thumbnail; a **progress rail** under the title reads the same transport clock the…"
       },
       {
-        "zh": "**皮肤字体到位**：复古漫画改成手写体（标题 Permanent Marker、正文 Patrick Hand，`.m-mono` 保留等宽并加了手写标注），8-bit 全子树换成像素体（偏离字体的文本元素从 192 个降到 0，全部在探索里），苏联风加了真正的苏联符号：近卫绶带、`clip-path` 五角红星（贴在当前模块标签上）、齿轮、模板铭牌与厂号、红色楔形与警戒斜纹、黄铜仪表刻度。唱片是 canvas 画的，字体继承不到——所以新增 `--m-font-display`/`--m-font-mono` 两个 token，画布像读 `--m-gold` 一样读它们，唱片标签因此也跟着皮肤走。",
-        "en": "**The skins' typography lands.** The comic skin is hand-lettered now (Permanent Marker for display, Patrick Hand for body, `.m-mono` kept monospace with a hand-annotated treatment); the 8-bit skin forces pixel faces on the whole subtree (off-family text elements went from 192 to 0, all of them in 探索); and the Soviet skin gained real Soviet symbols — a Guards ribbon, a `clip-path` five-point star over the active module tab, a gear, stencil placards with a plant number, a red…"
+        "zh": "**即兴从「表单」变成「乐器」**：① 顶部那张曲风卡并进底部控制块——曲风、播放、录制、速度、摇摆现在是一块（顺序仍是 网格 → 打击垫 → 控制块），之前「在下面开录制、在上面按播放」；② **每件乐器有自己的颜色**，用的是参考稿打击垫的那套色板，并且和唱片的 `LAYER_COLORS` 完全一致，所以底鼓在格子、打击垫、唱片外圈上是同一个琥珀色；轨道标签、按下的格子、播放头都用自己的颜色，六个垫子各有自己的颜色（拍手是粉色，不是军鼓的珊瑚色）；③ **终于有了单发音源**：`AudioEngine.auditionTrack(trackId, velocity, instrument)` 立刻播一个轨道的音色，走那条轨道自己的推子与插入链（预览就该是「混音后的声音」），并且可以点名音色模型，所以写进军鼓轨的拍手垫不会听起来像军鼓；④ **碰什么都响、都亮**：垫子每次点击都发声并发光（不管播放器是否在跑、是否开了录制；开着录制时还会写入播放头那一步），步进格子点击也会响它所属的轨道——这样在循环转回来之前就能听见自己在编辑什么，播放时…",
+        "en": "**即兴 went from a form to an instrument.** (1) The genre card at the top merged into the bottom dock — genre, play, record, tempo and swing are one block now (order is still grid → pads → dock), where before you armed a take at the bottom and started it at the top. (2) **Every instrument has its own colour**, from the reference's own pad palette and identical to the vinyl's `LAYER_COLORS`, so the kick is the same amber on the cell, the pad and the record's outer ring; lane la…"
       }
     ],
     "truncated": true
