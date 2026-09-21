@@ -60,13 +60,50 @@ const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
   const { route, navigate } = useRouter();
 
+  /**
+   * Phone shell. `isMobile` is capability-based (see `useDeviceCapabilities`), not a width test,
+   * so a landscape phone gets the phone UI instead of the desktop editor squeezed into 390 px of
+   * height.
+   *
+   * Declared here rather than next to the cutover effect because the studio's genre load asks the
+   * same question ("is this a phone?") on its first render, and a hook cannot be called from below
+   * the code that needs it.
+   */
+  const { isMobile, isShortLandscape } = useDeviceCapabilities();
+
   const currentTab = route.tab;
 
   // On-demand asynchronous genre loading (P1-13)
   const targetGenreId = route.genreId || "chicago-house";
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
 
+  /**
+   * The default studio genre, resolved on demand — **except on a phone route**.
+   *
+   * `route.genreId || "chicago-house"` means every route without a genre resolves the studio's default,
+   * and the studio is not rendered at all when the phone shell owns the screen. That cost the phone
+   * profile one category chunk on its first paint (a genre it will never show), which the performance
+   * gate counts: the shell's own data path is index-based precisely so that landing in `/m/…` downloads
+   * no library chunks, and this was the last one.
+   */
   useEffect(() => {
+    /**
+     * On a phone the studio never renders, and on a *bare* route the cutover below has not run yet, so
+     * `route.mobile` alone is not enough to know that: the first render of `/` still looks like the
+     * desktop. Asking the same question the cutover asks — `shouldEnterPhoneShell` — is what makes this
+     * correct on that first render, and it is why the phone profile downloads **zero** library chunks
+     * before the shell appears (it used to fetch the studio's default genre, and the performance gate
+     * counted it).
+     */
+    /**
+     * `shellIsTheSurface`, not `shouldEnterPhoneShell`: see that constant's comment — by the time this
+     * effect runs on a phone the URL already names a module, so the cutover rule answers "no" while the
+     * shell is exactly what is on screen.
+     */
+    if (shellIsTheSurface) {
+      setSelectedGenre(null);
+      return;
+    }
     let isMounted = true;
     loadGenre(targetGenreId).then((g) => {
       if (isMounted && g) {
@@ -76,7 +113,7 @@ const MainApp: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [targetGenreId]);
+  }, [isMobile, route.mobile, targetGenreId]);
 
   const [comparePool, setComparePool] = useState<Genre[]>([]);
 
@@ -168,12 +205,6 @@ const MainApp: React.FC = () => {
     isZh,
   });
 
-  /**
-   * Phone shell. `isMobile` is capability-based (see `useDeviceCapabilities`), not a width test,
-   * so a landscape phone gets the phone UI instead of the desktop editor squeezed into 390 px of
-   * height.
-   */
-  const { isMobile, isShortLandscape } = useDeviceCapabilities();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   /**
@@ -306,6 +337,40 @@ const MainApp: React.FC = () => {
   };
 
   /**
+   * The cutover, decided **during render**, not only in the effect below.
+   *
+   * `shouldEnterPhoneShell` says "this is a phone, and it asked for nothing in particular" — bare `/`
+   * on a touch device. The effect below reacts to it by naming the home module in the URL, but an
+   * effect runs *after* a render, so the desktop composition used to mount for one frame first: the
+   * studio's own hooks then resolved a genre, and the phone paid for a category chunk it would never
+   * show (the performance gate counts genre chunks fetched on first paint, and this was the last one —
+   * the shell's own data path is index-based on purpose).
+   *
+   * Reading it here makes the shell the phone's *first* render as well as its destination: no flash of
+   * the desktop toolbar, and no chunk for a surface the user will never see.
+   */
+  const bareRouteWantsShell =
+    typeof window !== "undefined" &&
+    shouldEnterPhoneShell({
+      isMobile,
+      mobileRoute: route.mobile,
+      pathname: window.location.pathname,
+      search: window.location.search,
+    });
+
+  /**
+   * Is the phone shell the surface on screen?
+   *
+   * Two ways to be true, and the difference is the whole point: a named module route (`/m/jam`) *is* the
+   * shell, while a **bare route on a phone** only asks to become one. The router rewrites `/` to
+   * `/m/home` during the first commit, so by the time an effect runs the URL already names a module and
+   * `shouldEnterPhoneShell` answers `false` — asking only that question let the studio's genre effect
+   * through and the phone downloaded a category chunk for a surface it never shows. The shell is on
+   * screen in **both** cases, so this is what the render branch and the studio's load guard ask.
+   */
+  const shellIsTheSurface = route.mobile !== undefined || bareRouteWantsShell;
+
+  /**
    * A phone that opens the app bare lands in the new shell.
    *
    * This is the cutover, staged: the shell is the phone's *default entry*, while `?tab=...` and
@@ -313,19 +378,9 @@ const MainApp: React.FC = () => {
    * not be silently rewritten). `shouldEnterPhoneShell` is the rule, unit-tested on its own.
    */
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (
-      !shouldEnterPhoneShell({
-        isMobile,
-        mobileRoute: route.mobile,
-        pathname: window.location.pathname,
-        search: window.location.search,
-      })
-    ) {
-      return;
-    }
+    if (!bareRouteWantsShell) return;
     navigate({ tab: "studio", mobile: "home" }, { replace: true });
-  }, [isMobile, navigate, route.mobile]);
+  }, [bareRouteWantsShell, navigate]);
 
   /**
    * The phone shell owns its own route space (`/m/<module>`). When one is requested, the desktop
@@ -335,11 +390,13 @@ const MainApp: React.FC = () => {
    * This sits after every hook call (the shell is a different tree, but React still requires the hook
    * order in *this* component to be unconditional).
    */
-  if (route.mobile) {
+  if (shellIsTheSurface) {
     return (
       <React.Suspense fallback={null}>
         <MobileApp
-          module={route.mobile}
+          /* A bare route on a phone: the effect above is about to name the home module, and until it
+             does the shell still needs one. */
+          module={route.mobile ?? "home"}
           mobilePlayer={route.mobilePlayer}
           genreId={route.genreId}
           onSelectModule={(module) =>

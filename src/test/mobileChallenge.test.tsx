@@ -22,7 +22,6 @@ import {
   loadChallengeStats,
 } from "../mobile/screens/MobileChallengeScreen";
 import { HapticPatterns, triggerHaptic } from "../utils/haptics";
-import type { Genre } from "../types/genre";
 
 /**
  * The haptic helper is mocked so a test can assert the buzz without a Vibration API. Everything else in
@@ -33,9 +32,9 @@ vi.mock("../utils/haptics", async (importOriginal) => {
   return { ...actual, triggerHaptic: vi.fn() };
 });
 
-const renderChallenge = () => {
+const renderChallenge = async () => {
   const spies = {
-    onTogglePlay: vi.fn<(genre: Genre) => void>(),
+    onTogglePlay: vi.fn<(genreId: string) => void>(),
     onOpenGenre: vi.fn<(genreId: string) => void>(),
   };
   const utils = render(
@@ -43,6 +42,11 @@ const renderChallenge = () => {
       <MobileChallengeScreen isPlaying={false} {...spies} />
     </LanguageProvider>
   );
+  /**
+   * 挑战 resolves the library on demand before its first question (A-01), so every case waits for the
+   * options rather than assuming a synchronously imported `ALL_GENRES`.
+   */
+  await screen.findByTestId("mobile-challenge-options", {}, { timeout: 10000 });
   return { ...utils, spies };
 };
 
@@ -55,13 +59,14 @@ const optionIds = (): string[] =>
  * The correct option's id, learned the honest way.
  *
  * The play button plays `question.correctGenre`, so the spy's last call is the answer. (Reading a hidden
- * attribute off the DOM would leak the answer into the markup, which a quiz must not do.)
+ * attribute off the DOM would leak the answer into the markup, which a quiz must not do.) The screen
+ * hands the shell an **id** now, so the call argument is that id rather than a record.
  */
 const correctOptionId = (spies: { onTogglePlay: ReturnType<typeof vi.fn> }): string => {
   fireEvent.click(screen.getByTestId("mobile-challenge-play"));
-  const call = spies.onTogglePlay.mock.calls.at(-1) as [Genre] | undefined;
+  const call = spies.onTogglePlay.mock.calls.at(-1) as [string] | undefined;
   if (!call) throw new Error("the play button did not hand the question's genre to the transport");
-  return call[0].id;
+  return call[0];
 };
 
 const wrongOptionId = (correctId: string): string => {
@@ -81,17 +86,17 @@ describe("challenge module", () => {
     vi.useRealTimers();
   });
 
-  it("offers four options and a play button to hear the question", () => {
-    const { spies } = renderChallenge();
+  it("offers four options and a play button to hear the question", async () => {
+    const { spies } = await renderChallenge();
     expect(optionIds()).toHaveLength(4);
     fireEvent.click(screen.getByTestId("mobile-challenge-play"));
     // The play button plays the question's genre, whatever it turned out to be.
     expect(spies.onTogglePlay).toHaveBeenCalledTimes(1);
-    expect(optionIds()).toContain(spies.onTogglePlay.mock.calls[0][0].id);
+    expect(optionIds()).toContain(spies.onTogglePlay.mock.calls[0][0]);
   });
 
-  it("grades an answer: the right option is marked, the others dim or fail", () => {
-    renderChallenge();
+  it("grades an answer: the right option is marked, the others dim or fail", async () => {
+    await renderChallenge();
     const ids = optionIds();
     // Answering the first option: exactly one option ends up "right" (the real answer) and the picked
     // one is either right or wrong — never both, never neither.
@@ -107,8 +112,8 @@ describe("challenge module", () => {
     expect(loadChallengeStats().totalAnswered).toBe(before);
   });
 
-  it("shows the explanation with a link to the genre, and reveals the tempo clue", () => {
-    const { spies } = renderChallenge();
+  it("shows the explanation with a link to the genre, and reveals the tempo clue", async () => {
+    const { spies } = await renderChallenge();
     const ids = optionIds();
     expect(screen.getByText(/TEMPO CLUE · \?/)).toBeInTheDocument();
 
@@ -121,8 +126,8 @@ describe("challenge module", () => {
     expect(spies.onOpenGenre).toHaveBeenCalledTimes(1);
   });
 
-  it("moves the ladder and persists it under the desktop's own key", () => {
-    renderChallenge();
+  it("moves the ladder and persists it under the desktop's own key", async () => {
+    await renderChallenge();
     const ids = optionIds();
     fireEvent.click(screen.getByTestId(`mobile-challenge-option-${ids[0]}`));
 
@@ -133,8 +138,8 @@ describe("challenge module", () => {
     expect(stored.elo).not.toBe(EMPTY_CHALLENGE_STATS.elo);
   });
 
-  it("rolls a new question on demand, clearing the verdict", () => {
-    renderChallenge();
+  it("rolls a new question on demand, clearing the verdict", async () => {
+    await renderChallenge();
     const first = optionIds().join(",");
     fireEvent.click(screen.getByTestId(`mobile-challenge-option-${optionIds()[0]}`));
     expect(screen.getByTestId("mobile-challenge-verdict")).toBeInTheDocument();
@@ -146,8 +151,8 @@ describe("challenge module", () => {
     expect(optionIds().join(",")).not.toBe(first);
   });
 
-  it("re-rolls when the difficulty changes", () => {
-    renderChallenge();
+  it("re-rolls when the difficulty changes", async () => {
+    await renderChallenge();
     fireEvent.click(screen.getByTestId("mobile-challenge-difficulty-hard"));
     expect(screen.getByTestId("mobile-challenge-difficulty-hard")).toHaveAttribute("aria-selected", "true");
     expect(optionIds()).toHaveLength(4);
@@ -155,7 +160,7 @@ describe("challenge module", () => {
     expect(screen.queryByTestId("mobile-challenge-verdict")).not.toBeInTheDocument();
   });
 
-  it("survives a corrupt stored ladder instead of crashing", () => {
+  it("survives a corrupt stored ladder instead of crashing", async () => {
     localStorage.setItem(CHALLENGE_STORAGE_KEY, "{not json");
     const stats = loadChallengeStats();
     expect(stats.elo).toBe(EMPTY_CHALLENGE_STATS.elo);
@@ -165,8 +170,8 @@ describe("challenge module", () => {
   /**
    * The user's actual complaint: "反馈在下面，要滑动才能看见".
    */
-  it("pins the verdict to the viewport and marks both the right and the picked answer", () => {
-    const { spies } = renderChallenge();
+  it("pins the verdict to the viewport and marks both the right and the picked answer", async () => {
+    const { spies } = await renderChallenge();
     const correctId = correctOptionId(spies);
     const wrongId = wrongOptionId(correctId);
     fireEvent.click(screen.getByTestId(`mobile-challenge-option-${wrongId}`));
@@ -195,9 +200,13 @@ describe("challenge module", () => {
     expect(loadChallengeStats().streak).toBe(0);
   });
 
-  it("advances itself after the beat on a right answer, and says that it will", () => {
+  it("advances itself after the beat on a right answer, and says that it will", async () => {
+    const { spies } = await renderChallenge();
+    /**
+     * Fake timers go on *after* the library has resolved: `findBy*` drives `waitFor` with real timers,
+     * and the beat that matters is the one the answer schedules.
+     */
     vi.useFakeTimers();
-    const { spies } = renderChallenge();
     const correctId = correctOptionId(spies);
     const first = optionIds().join(",");
     fireEvent.click(screen.getByTestId(`mobile-challenge-option-${correctId}`));
@@ -222,9 +231,10 @@ describe("challenge module", () => {
     expect(optionIds().join(",")).not.toBe(first);
   });
 
-  it("never auto-advances a wrong answer, and offers next instead", () => {
+  it("never auto-advances a wrong answer, and offers next instead", async () => {
+    const { spies } = await renderChallenge();
+    // Fake timers after the loader resolved — see the case above.
     vi.useFakeTimers();
-    const { spies } = renderChallenge();
     const correctId = correctOptionId(spies);
     const wrongId = wrongOptionId(correctId);
     const first = optionIds().join(",");
@@ -247,8 +257,8 @@ describe("challenge module", () => {
     expect(optionIds()).toHaveLength(4);
   });
 
-  it("buzzes the shell's haptic: a celebratory double pulse for right, a warning for wrong", () => {
-    const { spies } = renderChallenge();
+  it("buzzes the shell's haptic: a celebratory double pulse for right, a warning for wrong", async () => {
+    const { spies } = await renderChallenge();
     const correctId = correctOptionId(spies);
     fireEvent.click(screen.getByTestId(`mobile-challenge-option-${wrongOptionId(correctId)}`));
     expect(vi.mocked(triggerHaptic)).toHaveBeenLastCalledWith(HapticPatterns.wrongAnswer);

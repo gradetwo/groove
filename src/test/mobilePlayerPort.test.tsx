@@ -20,7 +20,6 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { ALL_GENRES } from "../data/genres";
 import { MobilePlayerScreen } from "../mobile/screens/MobilePlayerScreen";
-import type { Genre } from "../types/genre";
 import {
   beatSeconds,
   createEnergy,
@@ -283,8 +282,8 @@ const renderPlayer = (
 ) => {
   const spies = {
     onOpenDetail: vi.fn<(genreId: string) => void>(),
-    onTogglePlay: vi.fn<(genre: Genre) => void>(),
-    onPlayGenre: vi.fn<(genre: Genre) => void>(),
+    onTogglePlay: vi.fn<(genreId: string) => void>(),
+    onPlayGenre: vi.fn<(genreId: string) => void>(),
     onSkip: vi.fn<(direction: 1 | -1) => void>(),
     onCycleMode: vi.fn<() => void>(),
     onCollapse: vi.fn<() => void>(),
@@ -470,7 +469,8 @@ describe("the ported full-screen player", () => {
         </div>
       </LanguageProvider>
     );
-    expect(screen.getByTestId("mobile-player-status").textContent).toBe("待机");
+    // The genre is resolved on demand (A-01): wait for the record before reading its status.
+    expect((await screen.findByTestId("mobile-player-status", {}, { timeout: 5000 })).textContent).toBe("待机");
 
     rerender(
       <LanguageProvider>
@@ -514,7 +514,7 @@ describe("the ported full-screen player", () => {
         </div>
       </LanguageProvider>
     );
-    const player = screen.getByTestId("mobile-player");
+    const player = await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
     expect(player.getAttribute("data-playing")).toBe("false");
     expect(container.querySelectorAll(".m-ic-play")).toHaveLength(1);
     expect(container.querySelectorAll(".m-ic-pause")).toHaveLength(1);
@@ -595,7 +595,8 @@ describe("the ported full-screen player", () => {
     fireEvent.click(screen.getByTestId("mobile-player-mode"));
     expect(spies.onCycleMode).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByTestId("mobile-player-play"));
-    expect(spies.onTogglePlay).toHaveBeenCalledWith(expect.objectContaining({ id: GENRE.id }));
+    // The screen hands the shell an id; the shell resolves the record before building the pattern.
+    expect(spies.onTogglePlay).toHaveBeenCalledWith(GENRE.id);
   });
 
   it("says so, with a way out, when the route names a genre that is not in the library", async () => {

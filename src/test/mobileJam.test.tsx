@@ -11,16 +11,16 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileJamScreen } from "../mobile/screens/MobileJamScreen";
 import { ALL_GENRES } from "../data/genres";
-import type { Genre, SequencerPattern } from "../types/genre";
+import type { SequencerPattern } from "../types/genre";
 
 const GENRE = ALL_GENRES.find((genre) => genre.id === "deep-house") ?? ALL_GENRES[0];
 
-const renderJam = (
+const renderJam = async (
   overrides: { genreId?: string; isPlaying?: boolean; readClock?: () => { step: number; fraction: number } } = {}
 ) => {
   // Typed spies, kept out of the props object so the assertions can read their call arguments.
   const spies = {
-    onTogglePlay: vi.fn<(genre: Genre) => void>(),
+    onTogglePlay: vi.fn<(genreId: string) => void>(),
     onApplyPattern: vi.fn<(pattern: SequencerPattern) => void>(),
     onTempo: vi.fn<(bpm: number) => void>(),
     onSwing: vi.fn<(swing: number) => void>(),
@@ -39,6 +39,12 @@ const renderJam = (
       <MobileJamScreen {...props} />
     </LanguageProvider>
   );
+  /**
+   * The backing genre is resolved on demand (A-01), so the editor mounts a tick after the render — the
+   * screen shows a placeholder until `loadGenre` answers. Every case waits for the real grid, which is
+   * also what proves the async path lands.
+   */
+  await screen.findByTestId("mobile-jam", {}, { timeout: 5000 });
   return { ...utils, props, spies };
 };
 
@@ -47,8 +53,8 @@ describe("jam module", () => {
    * The 即兴 additions from the user's second pass: every instrument has its own colour, everything you
    * touch makes a sound and lights up, and the transport lives in the same dock as the tempo.
    */
-  it("gives each lane and pad its own instrument colour", () => {
-    renderJam();
+  it("gives each lane and pad its own instrument colour", async () => {
+    await renderJam();
     /**
      * The colour lives in a bar beside the lane word, not in the word itself.
      *
@@ -74,8 +80,8 @@ describe("jam module", () => {
     expect(new Set(padDots).size, `pad dots: ${padDots.join(", ")}`).toBe(6);
   });
 
-  it("sounds and flashes a pad on every tap, whether or not the transport runs", () => {
-    const { spies } = renderJam({ isPlaying: false });
+  it("sounds and flashes a pad on every tap, whether or not the transport runs", async () => {
+    const { spies } = await renderJam({ isPlaying: false });
     fireEvent.click(screen.getByTestId("mobile-jam-pad-clap"));
     // The clap writes into the snare lane but must *sound* as a clap.
     expect(spies.onAuditionTrack).toHaveBeenCalledWith("snare", "clap");
@@ -86,14 +92,14 @@ describe("jam module", () => {
     expect(spies.onAuditionTrack).toHaveBeenCalledWith("kick", undefined);
   });
 
-  it("sounds a step cell when it is tapped", () => {
-    const { spies } = renderJam();
+  it("sounds a step cell when it is tapped", async () => {
+    const { spies } = await renderJam();
     fireEvent.click(screen.getByTestId("mobile-jam-step-2-5"));
     expect(spies.onAuditionTrack).toHaveBeenCalledWith("hihat", undefined);
   });
 
-  it("lights the playhead cell in its lane's colour", () => {
-    renderJam({ isPlaying: true, readClock: () => ({ step: 3, fraction: 0 }) });
+  it("lights the playhead cell in its lane's colour", async () => {
+    await renderJam({ isPlaying: true, readClock: () => ({ step: 3, fraction: 0 }) });
     // The playhead arrives on a timer; the cell for step 3 carries a ring rather than the neutral fill.
     return waitFor(() => {
       const cell = screen.getByTestId("mobile-jam-step-0-3");
@@ -129,8 +135,8 @@ describe("jam module", () => {
     return rail;
   };
 
-  it("renders four lanes of sixteen steps", () => {
-    renderJam();
+  it("renders four lanes of sixteen steps", async () => {
+    await renderJam();
     for (let lane = 0; lane < 4; lane += 1) {
       for (let step = 0; step < 16; step += 1) {
         expect(screen.getByTestId(`mobile-jam-step-${lane}-${step}`)).toBeInTheDocument();
@@ -146,8 +152,8 @@ describe("jam module", () => {
     expect(screen.getByTestId("mobile-jam-step-0-0").tagName).toBe("BUTTON");
   });
 
-  it("toggles a step and pushes the edited pattern to the engine", () => {
-    const { spies } = renderJam();
+  it("toggles a step and pushes the edited pattern to the engine", async () => {
+    const { spies } = await renderJam();
     const step = screen.getByTestId("mobile-jam-step-0-0");
     const before = step.getAttribute("aria-pressed");
     fireEvent.click(step);
@@ -158,8 +164,8 @@ describe("jam module", () => {
     expect(Boolean(kick?.steps[0])).toBe(before !== "true");
   });
 
-  it("resets the groove back to the genre's own pattern", () => {
-    renderJam();
+  it("resets the groove back to the genre's own pattern", async () => {
+    await renderJam();
     const step = screen.getByTestId("mobile-jam-step-0-0");
     const original = step.getAttribute("aria-pressed");
     fireEvent.click(step);
@@ -169,19 +175,20 @@ describe("jam module", () => {
     expect(screen.getByTestId("mobile-jam-step-0-0").getAttribute("aria-pressed")).toBe(original);
   });
 
-  it("plays and stops through the shell's transport", () => {
-    const { spies, unmount } = renderJam();
+  it("plays and stops through the shell's transport", async () => {
+    const { spies, unmount } = await renderJam();
     fireEvent.click(screen.getByTestId("mobile-jam-play"));
     expect(spies.onTogglePlay).toHaveBeenCalledTimes(1);
-    expect(spies.onTogglePlay.mock.calls[0][0].id).toBe(GENRE.id);
+    // The screen hands the shell an **id**; the shell resolves the record and builds the pattern.
+    expect(spies.onTogglePlay).toHaveBeenCalledWith(GENRE.id);
     unmount();
 
-    renderJam({ isPlaying: true });
+    await renderJam({ isPlaying: true });
     expect(screen.getByTestId("mobile-jam-play")).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("arms recording, and a pad then writes the step under the playhead", () => {
-    renderJam();
+  it("arms recording, and a pad then writes the step under the playhead", async () => {
+    await renderJam();
     expect(screen.queryByTestId("mobile-jam-record-hint")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("mobile-jam-record"));
     expect(screen.getByTestId("mobile-jam-record")).toHaveAttribute("aria-pressed", "true");
@@ -194,8 +201,8 @@ describe("jam module", () => {
     expect(screen.getByTestId("mobile-jam-step-0-4").getAttribute("aria-pressed")).not.toBe(before);
   });
 
-  it("keeps the tempo inside its documented range and tells the engine", () => {
-    const { spies } = renderJam();
+  it("keeps the tempo inside its documented range and tells the engine", async () => {
+    const { spies } = await renderJam();
     const bpm = () => Number((screen.getByTestId("mobile-jam-bpm").textContent ?? "").replace(/[^0-9]/g, ""));
     const start = bpm();
     fireEvent.click(screen.getByTestId("mobile-jam-bpm-up"));
@@ -208,8 +215,8 @@ describe("jam module", () => {
     expect(bpm()).toBe(60);
   });
 
-  it("raises the feel when the rail is dragged right, and the readout follows", () => {
-    const { spies } = renderJam();
+  it("raises the feel when the rail is dragged right, and the readout follows", async () => {
+    const { spies } = await renderJam();
     const rail = measureSwingRail(200);
 
     fireEvent.pointerDown(rail, { clientX: 0, pointerId: 1 });
@@ -231,8 +238,8 @@ describe("jam module", () => {
     expect(screen.getByTestId("mobile-jam-swing-value").textContent).toContain("10%");
   });
 
-  it("clamps a drag past either end of the rail", () => {
-    const { spies } = renderJam();
+  it("clamps a drag past either end of the rail", async () => {
+    const { spies } = await renderJam();
     const rail = measureSwingRail(200);
 
     fireEvent.pointerDown(rail, { clientX: 100, pointerId: 1 });
@@ -248,8 +255,8 @@ describe("jam module", () => {
     fireEvent.pointerUp(rail, { clientX: -500, pointerId: 2 });
   });
 
-  it("keeps record, tempo and swing in one dock after the pads", () => {
-    renderJam();
+  it("keeps record, tempo and swing in one dock after the pads", async () => {
+    await renderJam();
     const dock = screen.getByTestId("mobile-jam-tempo");
     for (const id of [
       "mobile-jam-record",
@@ -274,8 +281,8 @@ describe("jam module", () => {
     expect(screen.getByTestId("mobile-jam-record").tagName).toBe("BUTTON");
   });
 
-  it("opens the backing genre's page from the header", () => {
-    const { spies } = renderJam();
+  it("opens the backing genre's page from the header", async () => {
+    const { spies } = await renderJam();
     fireEvent.click(screen.getByTestId("mobile-jam-genre"));
     expect(spies.onOpenGenre).toHaveBeenCalledWith(GENRE.id);
   });

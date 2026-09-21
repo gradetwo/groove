@@ -17,52 +17,36 @@
  *  - **The century rail stays above the library.** The home screen had lost the vertical timeline the
  *    desktop view (`VerticalTimelineView`) carries; it is back as a capped, internally scrolling rail
  *    so the library below it is still the main content rather than a footnote.
+ *
+ * ## The data path (A-01)
+ *
+ * This screen browses `GENRE_INDEX`, never `ALL_GENRES`. The index carries every field the list, the
+ * search, the category counts and the era rail read; resolving a *full* record is the shell's job and
+ * happens only when a card is tapped (see `MobileApp`). The eager barrel would pull all fourteen
+ * category chunks into the phone's first paint, which is exactly the regression this screen was
+ * rewritten to remove.
  */
 import React, { useMemo, useState } from "react";
 import { ChevronRight, Pause, Search } from "lucide-react";
-import { ALL_GENRES } from "../../data/genres";
+import { GENRE_INDEX, type GenreIndexItem } from "../mobileGenreData";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
 import { useLanguage } from "../../i18n/LanguageContext";
-import type { Genre, GenreCategory } from "../../types/genre";
-import { genreArtBackground, genreCoverUrl } from "../genreArt";
+import type { GenreCategory } from "../../types/genre";
+import { CATEGORY_SWATCH, genreArtBackground, genreCoverUrl } from "../genreArt";
 
 /**
- * `id → Genre` for the whole shipped library.
+ * `id → index item` for the whole shipped library.
  *
- * The library is already in memory (`ALL_GENRES` drives the list below), so the timeline can resolve
- * each `genre_ids` entry to a **real** record — its `name`, its `category` and its `origin_place` —
- * without a second lookup table and without ever rendering a raw id. A story that named an id the
- * library does not carry resolves to nothing and the node simply omits it (see `HomeTimeline`), so a
- * dead id can never reach the screen.
+ * The index is already in memory (it drives the list below), so the timeline can resolve each
+ * `genre_ids` entry to a **real** record — its `name`, its `category` and its `origin_year` — without
+ * a second lookup table and without ever rendering a raw id. A story that named an id the library does
+ * not carry resolves to nothing and the node simply omits it (see `HomeTimeline`), so a dead id can
+ * never reach the screen.
  */
-const GENRE_BY_ID: Map<string, Genre> = new Map(ALL_GENRES.map((genre) => [genre.id, genre]));
+const INDEX_BY_ID: Map<string, GenreIndexItem> = new Map(GENRE_INDEX.map((genre) => [genre.id, genre]));
 
-/**
- * How many of an era's `origin_place` values a node names before folding the rest into "… +N more".
- *
- * The places are granular (`"New York & Philadelphia, USA"`) and an era can carry twelve of them, so
- * listing every one would turn the rail into an address book. Two keep the shape comparable between
- * eras; the count is what makes the tail honest rather than hidden.
- */
-const ERA_PLACES_SHOWN = 2;
-
-/**
- * One colour per category, from the reference palette.
- *
- * The desktop galaxy view derives colours from cluster membership; the phone list needs exactly six
- * stable, high-contrast swatches, so it maps the six categories it already has rather than inventing
- * a seventh colour source.
- */
-export const CATEGORY_SWATCH: Record<GenreCategory, string> = {
-  // A cool, high-contrast set. The reference designs leaned on amber for everything, which made every
-  // genre's tile look identical (and yellow); these six read as distinct at tile size.
-  Electronic: "#5eead4",
-  "Rock/Metal": "#fb7185",
-  "Hip Hop": "#a78bfa",
-  "Jazz/Blues": "#60a5fa",
-  "Pop/R&B": "#f0abfc",
-  "Latin/World": "#34d399",
-};
+/** One colour per category, shared with the player bar and the player (`genreArt.ts`). */
+export { CATEGORY_SWATCH };
 
 const CATEGORIES = Object.keys(CATEGORY_SWATCH) as GenreCategory[];
 
@@ -74,30 +58,30 @@ const CATEGORIES = Object.keys(CATEGORY_SWATCH) as GenreCategory[];
  * romanised or alternative English names first.
  */
 const CJK = /[\u3400-\u9fff]/;
-const genreNameZh = (genre: Genre): string =>
+const genreNameZh = (genre: Pick<GenreIndexItem, "aliases">): string =>
   (genre.aliases ?? []).find((alias) => CJK.test(alias)) ?? "";
 
 export interface MobileHomeScreenProps {
   /** Which genre the shell is currently auditioning; the engine lives in `MobileApp`. */
   playingGenreId: string | null;
   /**
-   * Open a genre: the shell starts it playing and shows its page.
+   * Open a genre by id: the shell resolves it to a full record, starts it playing and shows its page.
    *
    * This replaced a per-row play button. Sixteen identical round buttons down a list is both ugly and
    * redundant — the card *is* the target, and "open the thing you tapped, playing" is one gesture
-   * instead of two.
+   * instead of two. The id, not the record: this screen only has the index.
    */
-  onSelectGenre: (genre: Genre) => void;
+  onSelectGenre: (genreId: string) => void;
 }
 
 export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeScreenProps) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<GenreCategory | "all">("all");
 
   const genres = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return ALL_GENRES.filter((genre) => {
+    return GENRE_INDEX.filter((genre) => {
       if (category !== "all" && genre.category !== category) return false;
       if (!needle) return true;
       return (
@@ -193,7 +177,7 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
                 <button
                   type="button"
                   data-testid={`mobile-genre-row-${genre.id}`}
-                  onClick={() => onSelectGenre(genre)}
+                  onClick={() => onSelectGenre(genre.id)}
                   className="m-press flex min-h-[46px] min-w-0 flex-1 items-center gap-2 text-left"
                 >
                   <span className="min-w-0 flex-1">
@@ -223,13 +207,13 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
   );
 }
 
-/** One era, with its genres resolved out of the library and the facts those genres imply. */
+/** One era, with its genres resolved out of the index and the facts those genres imply. */
 interface EraNode {
   story: TimelineStory;
-  /** The story's `genre_ids`, in data order, each resolved to a real record (unknown ids dropped). */
-  genres: Genre[];
-  /** Distinct `origin_place` values for the era, in first-seen order. */
-  places: string[];
+  /** The story's `genre_ids`, in data order, each resolved to a real index item (unknown ids dropped). */
+  genres: GenreIndexItem[];
+  /** The distinct `origin_year` values for the era, oldest first. */
+  years: string[];
   /** Distinct macro-categories the era's genres fall into, in first-seen order. */
   categories: GenreCategory[];
 }
@@ -246,37 +230,45 @@ interface EraNode {
  * A node still shows the year and the title, but the story data carries far more than that and the
  * complaint was that the rail felt thin, so each node now also surfaces what is already shipped:
  *  - the **description excerpt** (`TimelineStory.description`), clamped to a few lines;
- *  - **one tappable chip per `genre_ids` entry**, resolved through the library to its real name and
- *    opening that genre (`onSelectGenre` takes a `Genre`, not an id);
- *  - **derived, comparable facts** — the genre count (`genre_ids.length`), the distinct
- *    `Genre.origin_place` values ("from"), and the distinct `Genre.category` families ("style").
+ *  - **one tappable chip per `genre_ids` entry**, resolved through the index to its real name and
+ *    opening that genre (`onSelectGenre` takes an id);
+ *  - **derived, comparable facts** — the genre count (`genre_ids.length`), the span of the era's
+ *    `origin_year` values ("from"), and the distinct `Genre.category` families ("style").
  *
- * Nothing here is invented: every string comes from `TIMELINE_STORIES` or from the library records
- * those stories point at.
+ * Nothing here is invented: every string comes from `TIMELINE_STORIES` or from the index records those
+ * stories point at.
+ *
+ * Note the one field this rail can no longer print: the *places* the era's genres came from. That is
+ * `Genre.origin_place`, which the lightweight index deliberately does not carry — so the "from" line
+ * now reports the origin **years** the index does have, rather than loading fourteen category chunks to
+ * decorate a timeline. The geography is still on each genre's own page, which loads its record.
  */
-function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genre: Genre) => void }) {
+function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genreId: string) => void }) {
   const { t, language } = useLanguage();
 
   /**
-   * The resolve-and-derive pass, keyed on the language because `origin_place` is bilingual.
+   * The resolve-and-derive pass: index ids in, comparable era facts out.
    *
    * Memoised because the home screen re-renders on every keystroke in the search field, and none of
-   * this depends on the query.
+   * this depends on the query — or on the language, which is applied at render time.
    */
   const eras = useMemo<EraNode[]>(
     () =>
       TIMELINE_STORIES.map((story) => {
         const genres = story.genre_ids
-          .map((id) => GENRE_BY_ID.get(id))
-          .filter((genre): genre is Genre => Boolean(genre));
+          .map((id) => INDEX_BY_ID.get(id))
+          .filter((genre): genre is GenreIndexItem => Boolean(genre));
+        const years = [...new Set(genres.map((genre) => genre.origin_year))]
+          .filter(Boolean)
+          .sort((a, b) => Number(a) - Number(b));
         return {
           story,
           genres,
-          places: [...new Set(genres.map((genre) => genre.origin_place[language]))],
+          years,
           categories: [...new Set(genres.map((genre) => genre.category))],
         };
       }),
-    [language]
+    []
   );
 
   return (
@@ -285,7 +277,7 @@ function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genre: Genre) => void
         {t("mobile_home_timeline")}
       </h2>
       <ol className="mt-1 max-h-[300px] overflow-y-auto" data-testid="mobile-home-timeline">
-        {eras.map(({ story, genres, places, categories }, index) => (
+        {eras.map(({ story, genres, years, categories }, index) => (
           <li
             key={story.id}
             data-testid={`mobile-home-timeline-node-${index}`}
@@ -337,7 +329,7 @@ function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genre: Genre) => void
                     <button
                       type="button"
                       data-testid={`mobile-home-timeline-genre-${index}-${genre.id}`}
-                      onClick={() => onSelectGenre(genre)}
+                      onClick={() => onSelectGenre(genre.id)}
                       aria-label={t("mobile_home_timeline_open_genre", { genre: genre.name })}
                       /**
                        * 44 px, not the 32 px this started at.
@@ -363,7 +355,7 @@ function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genre: Genre) => void
               </ul>
             )}
 
-            {/* What makes two eras comparable at a glance: where they came from, and in what. */}
+            {/* What makes two eras comparable at a glance: when their genres began, and in what. */}
             <div
               className="m-mono mt-1.5 space-y-px text-[9px] leading-snug"
               data-testid={`mobile-home-timeline-facts-${index}`}
@@ -373,10 +365,7 @@ function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genre: Genre) => void
                   {t("mobile_home_timeline_from")}
                 </span>
                 <span className="min-w-0 text-[var(--m-ink-2)]">
-                  {places.slice(0, ERA_PLACES_SHOWN).join(" · ")}
-                  {places.length > ERA_PLACES_SHOWN
-                    ? ` ${t("mobile_home_timeline_more_places", { count: places.length - ERA_PLACES_SHOWN })}`
-                    : ""}
+                  {years.length > 1 ? `${years[0]}–${years[years.length - 1]}` : (years[0] ?? "")}
                 </span>
               </p>
               <p className="flex gap-1.5">

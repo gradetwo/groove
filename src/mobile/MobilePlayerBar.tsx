@@ -33,9 +33,8 @@
 import React, { useEffect, useRef } from "react";
 import { ChevronRight, Pause, Play, Repeat, Repeat1, Shuffle } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
-import { ALL_GENRES } from "../data/genres";
-import { genreCoverUrl } from "./genreArt";
-import { CATEGORY_SWATCH } from "./screens/MobileHomeScreen";
+import { GENRE_INDEX_MAP } from "./mobileGenreData";
+import { CATEGORY_SWATCH, genreCoverUrl } from "./genreArt";
 import { loopProgress, PLAY_MODE_LABEL_KEYS, type PlayMode } from "./vinyl/vinylMath";
 import type { VinylClock } from "./vinyl/VinylCanvas";
 
@@ -79,7 +78,14 @@ export function MobilePlayerBar({
   const progressRef = useRef<HTMLSpanElement | null>(null);
   /** The meta line's tempo, written by the same interval as the rail. */
   const tempoRef = useRef<HTMLSpanElement | null>(null);
-  const genre = ALL_GENRES.find((item) => item.id === genreId);
+  /**
+   * The bar reads the **index**, not a full record.
+   *
+   * It needs a name, a category and a default tempo to say what is playing — all of which the
+   * lightweight index carries. Loading the genre's category chunk to draw a 46 px row would undo the
+   * phone's on-demand data path for no gain; the transport is the only thing that needs a pattern.
+   */
+  const genre = genreId ? GENRE_INDEX_MAP[genreId] : undefined;
 
   /**
    * The rail is written straight to the DOM, at the 5 Hz a bar this size can justify.
