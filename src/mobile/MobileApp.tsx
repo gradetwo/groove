@@ -32,6 +32,21 @@ import "./mobile.css";
 import "./skins/comic.css";
 import "./skins/soviet.css";
 import "./skins/pixel.css";
+/**
+ * The reused desktop views (探索) wear the active skin too.
+ *
+ * The three skin sheets deliberately withdraw from `[data-legacy="desktop"]`; this sheet puts the
+ * skin's palette back over that markup without re-applying their decorative passes. Imported after
+ * the three of them so it wins the equal-specificity opt-outs.
+ */
+import "./skins/legacyViews.css";
+/**
+ * The phone layout pass over the reused desktop views (探索).
+ *
+ * Imported last so a same-specificity rule of ours wins, and scoped to `.mobile-root
+ * [data-legacy="desktop"]` so nothing here can restyle the desktop app.
+ */
+import "./legacyViews.css";
 
 const MobileHomeScreen = React.lazy(() =>
   import("./screens/MobileHomeScreen").then((m) => ({ default: m.MobileHomeScreen }))
@@ -103,7 +118,9 @@ export function MobileApp({
    * thing playing audio. The player bar has to show and stop the same sound, and two instances of the
    * hook mean two engines — so the state is lifted here and passed down, and the bar reads it.
    */
-  const { playingGenreId, toggleAudition, stopAudition, readClock, applyPattern, setTempo, setSwingValue } =
+  const { playingGenreId, toggleAudition, stopAudition, readClock, applyPattern, setTempo, setSwingValue,
+    startVinylScrub,
+    stopVinylScrub } =
     useGenreAudition();
 
   /**
@@ -263,6 +280,8 @@ export function MobileApp({
               onCycleMode={cyclePlayMode}
               onSkip={skip}
               onTempo={setTempo}
+              onScrubSound={startVinylScrub}
+              onScrubSoundEnd={stopVinylScrub}
               onCollapse={() => onCollapsePlayer?.()}
               onOpenDetail={(id) => onOpenGenre?.(id)}
             />

@@ -48,6 +48,9 @@ export interface MobilePlayerScreenProps {
   genreId: string;
   /** Applied to the engine by the shell; the jog and the ± buttons both report through it. */
   onTempo?: (bpm: number) => void;
+  /** The vinyl scratch, played while the record is dragged (see `src/audio/VinylScrub.ts`). */
+  onScrubSound?: (velocity: number) => void;
+  onScrubSoundEnd?: () => void;
   isPlaying: boolean;
   playMode: PlayMode;
   readClock: () => VinylClock | null;
@@ -63,6 +66,8 @@ export interface MobilePlayerScreenProps {
 export function MobilePlayerScreen({
   genreId,
   onTempo,
+  onScrubSound,
+  onScrubSoundEnd,
   isPlaying,
   playMode,
   readClock,
@@ -90,6 +95,16 @@ export function MobilePlayerScreen({
    * what is shown. The number *drawn* eases into it (the reference's damper, in `VinylCanvas`).
    */
   const [bpm, setBpm] = useState(() => genre?.default_bpm ?? 120);
+  /**
+   * What React paints into the readout *once*.
+   *
+   * The canvas damper owns that node from the first frame on (it is what makes the number walk to a new
+   * tempo instead of snapping). Rendering `{bpm}` there instead would paint the target immediately and
+   * the loop would then overwrite it with a lower, eased value — the number would jump up, fall back and
+   * climb again. A frozen initial value keeps React out of the way: a re-render with the same text leaves
+   * the DOM untouched.
+   */
+  const initialBpm = useRef(genre?.default_bpm ?? 120).current;
   const changeBpm = useCallback(
     (delta: number) => {
       setBpm((current) => {
@@ -212,6 +227,10 @@ export function MobilePlayerScreen({
               draggedRef.current = true;
               changeBpm(flickDelta);
             }}
+            onScrubSound={onScrubSound}
+            onScrubSoundEnd={onScrubSoundEnd}
+            /* The engine follows the damper, so a jog audibly eases into the new tempo. */
+            onBpmTick={onTempo}
             lanes={lanes}
             accent={accent}
             title={genre.name}
@@ -259,8 +278,9 @@ export function MobilePlayerScreen({
                 &minus;
               </HoldButton>
               <div className="m-bpm-val" data-testid="mobile-player-bpm">
+                {/* The damper's value, not React's target — see `initialBpm`. */}
                 <b ref={bpmOutRef as React.RefObject<HTMLElement>} data-testid="mobile-player-bpm-value">
-                  {bpm}
+                  {initialBpm}
                 </b>{" "}
                 <small>BPM</small>
               </div>

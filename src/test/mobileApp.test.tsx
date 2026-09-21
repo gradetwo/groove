@@ -13,7 +13,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileApp } from "../mobile/MobileApp";
 import { MOBILE_MODULES, shouldEnterPhoneShell, type MobileModule } from "../mobile/mobileModules";
@@ -568,7 +568,12 @@ describe("phone player · the jog", () => {
 
     fireEvent.pointerDown(vinyl, { clientX: 100, pointerId: 1 });
     fireEvent.pointerMove(vinyl, { clientX: 150, pointerId: 1 });
-    expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("132 BPM");
+    /**
+     * The readout is the *damper's*, so it walks to the new tempo instead of snapping — the engine is
+     * told immediately, the number follows within a few hundred milliseconds (that easing is the point:
+     * it is what makes a jog sound and look like a motor).
+     */
+    await waitFor(() => expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("132 BPM"));
     fireEvent.pointerUp(vinyl, { clientX: 150, pointerId: 1 });
     expect(props.onOpenGenre).not.toHaveBeenCalled();
   });
@@ -580,7 +585,7 @@ describe("phone player · the jog", () => {
 
     fireEvent.pointerDown(vinyl, { clientX: 0, pointerId: 1 });
     for (let i = 0; i < 10; i += 1) fireEvent.pointerMove(vinyl, { clientX: 500, pointerId: 1 });
-    expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("180 BPM");
+    await waitFor(() => expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("180 BPM"));
     fireEvent.pointerUp(vinyl, { clientX: 500, pointerId: 1 });
 
     // Each move's delta is measured against the previous point, so the drag steps left gradually.
@@ -590,7 +595,7 @@ describe("phone player · the jog", () => {
       x -= 100;
       fireEvent.pointerMove(vinyl, { clientX: x, pointerId: 2 });
     }
-    expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("60 BPM");
+    await waitFor(() => expect(screen.getByTestId("mobile-player-bpm").textContent).toContain("60 BPM"));
     fireEvent.pointerUp(vinyl, { clientX: x, pointerId: 2 });
   });
 
@@ -599,10 +604,10 @@ describe("phone player · the jog", () => {
     await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
     // One step per press, as in the reference — the coarse moves are the drag and the press-and-hold.
     fireEvent.click(screen.getByTestId("mobile-player-bpm-up"));
-    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("123");
+    await waitFor(() => expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("123"));
     fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
     fireEvent.click(screen.getByTestId("mobile-player-bpm-down"));
-    expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("121");
+    await waitFor(() => expect(screen.getByTestId("mobile-player-bpm-value").textContent).toContain("121"));
   });
 });
 

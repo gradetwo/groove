@@ -559,6 +559,23 @@ export class AudioEngine {
    * a track. The role→bus decision lives in `trackBuses.ts` because the offline renderer has to
    * make exactly the same one.
    */
+  /**
+   * Where a hand-on-the-record scratch should play, and on which context.
+   *
+   * The scrub is a *manual* voice, so it goes into the music bus (through the insert chain, the fader
+   * and the limiter, exactly like a note) rather than straight to the destination: that is what keeps it
+   * inside the master ceiling and means the same context — and the same clock — as everything else.
+   *
+   * Returns `null` before the engine has been started, which is the honest answer: there is nothing to
+   * play into yet.
+   */
+  public getScrubTarget(): { ctx: AudioContext; destination: AudioNode } | null {
+    if (!this.ctx) return null;
+    const destination = this.masterGraph ? this.masterGraph.musicBusInput : this.masterGain;
+    if (!destination) return null;
+    return { ctx: this.ctx, destination };
+  }
+
   private busInputFor(trackIdx: number): GainNode {
     const fallback = this.masterGain!;
     if (!this.masterGraph) return fallback;

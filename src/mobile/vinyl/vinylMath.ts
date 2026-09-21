@@ -471,6 +471,23 @@ function clampAbs(value: number, limit: number): number {
 }
 
 /**
+ * The angle the arm is *drawn* at.
+ *
+ * The reference's arm has two positions: the working angle (`NEEDLE_ANGLE`, the stylus on the outer
+ * ring at 1:30) and the resting angle, 0.21 rad counter-clockwise of it, where the stylus hangs off the
+ * disc's upper right. `tonearmTheta` returns the *offset from rest* (0 at rest, +0.21 on the record,
+ * plus chatter), so the drawn angle is rest plus that offset.
+ *
+ * This function exists because the first port got it wrong in a way no test could see: it added
+ * `- NEEDLE_ANGLE` on top of the rest angle as well, which cancelled the travel exactly and left the arm
+ * sitting ~24° below where it belonged in *both* states — the swing was there, but the arm never
+ * reached the record. Asserted at both ends now.
+ */
+export function tonearmDrawAngle(position: number, offsetFromRest: number): number {
+  return NEEDLE_ANGLE - TONEARM_TRAVEL + offsetFromRest;
+}
+
+/**
  * How much the needle hops when the kick lands, and the radius the stylus sits at.
  *
  * The hop is `headKick * 1.6 * travel`: a kick visibly bounces the headshell, but only while the arm

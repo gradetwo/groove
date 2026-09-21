@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Genre } from "../types/genre";
 import type { SequencerPattern } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
+import { createVinylScrub, type VinylScrub } from "../audio/VinylScrub";
 import { patternFromGenre } from "../data/genreMix";
 import { announcer } from "../platform/announcer";
 
@@ -40,6 +41,15 @@ export interface UseGenreAuditionReturn {
   /** Live tempo/swing changes for the same reason. No-op before the engine exists. */
   setTempo: (bpm: number) => void;
   setSwingValue: (swing: number) => void;
+  /**
+   * The hand-on-the-record scratch, for the phone player's jog.
+   *
+   * `velocity` is the pointer's speed in pixels per millisecond; the voice maps it to a level and a
+   * band (see `src/audio/VinylScrub.ts`). A no-op before the engine exists, which is also when there is
+   * no context to build it on.
+   */
+  startVinylScrub: (velocity: number) => void;
+  stopVinylScrub: () => void;
 }
 
 /**
@@ -60,6 +70,8 @@ export function useGenreAudition(): UseGenreAuditionReturn {
         engineRef.current.stop();
         engineRef.current = null;
       }
+      scrubRef.current?.dispose();
+      scrubRef.current = null;
     };
   }, []);
 
@@ -131,6 +143,29 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     engineRef.current?.setBpm(bpm);
   }, []);
 
+  /**
+   * The vinyl scratch, built on demand.
+   *
+   * Lazily, because it needs the engine's `AudioContext` and the engine is only created when something
+   * is first auditioned — and remembered in a ref, because building it per event would create a noise
+   * source per pointer move. `stopVinylScrub` releases it rather than tearing it down: a second scratch
+   * should reuse the same voice.
+   */
+  const scrubRef = useRef<VinylScrub | null>(null);
+
+  const startVinylScrub = useCallback((velocity: number) => {
+    const target = engineRef.current?.getScrubTarget();
+    if (!target) return;
+    if (!scrubRef.current) {
+      scrubRef.current = createVinylScrub(target.ctx, target.destination, { playing: true });
+    }
+    scrubRef.current?.setIntensity(velocity);
+  }, []);
+
+  const stopVinylScrub = useCallback(() => {
+    scrubRef.current?.end();
+  }, []);
+
   const setSwingValue = useCallback((swing: number) => {
     engineRef.current?.setSwing(swing);
   }, []);
@@ -144,5 +179,7 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     applyPattern,
     setTempo,
     setSwingValue,
+    startVinylScrub,
+    stopVinylScrub,
   };
 }
