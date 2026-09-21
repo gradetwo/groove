@@ -13,7 +13,7 @@
 #
 #   profile  all | pc | mobile   which Playwright targets to run
 #   only     a target-name substring (e.g. "iPhone 14 (竖屏"), empty means all of the profile
-#   scope    e2e | verify | audio | all
+#   scope    e2e | verify | audio | jank | all
 #
 # `verify` runs the whole gate chain (`npm run verify`), which rebuilds and therefore re-runs the E2E
 # steps itself; `e2e` skips the other gates and goes straight at the browser matrix, which is the common
@@ -31,6 +31,7 @@ on:
           - e2e
           - verify
           - audio
+          - jank
           - all
       profile:
         description: "Playwright profile (e2e scope)"
@@ -71,8 +72,14 @@ jobs:
 
       # Only the scopes that drive a browser need the browsers; `audio` is pure Node.
       - name: Install Playwright Browsers
-        if: inputs.scope == 'e2e' || inputs.scope == 'verify' || inputs.scope == 'all'
+        if: inputs.scope != 'audio'
         run: npx playwright install --with-deps chromium firefox webkit
+
+      # The phone's runtime feel: per-step long tasks and frame deltas on a throttled profile, which is
+      # what "it stutters" actually is. Needs no browsers beyond Chromium.
+      - name: Phone jank audit
+        if: inputs.scope == 'jank' || inputs.scope == 'all'
+        run: npm run probe:jank
 
       - name: Audio measurement gates
         if: inputs.scope == 'audio' || inputs.scope == 'all'
