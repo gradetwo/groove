@@ -50,6 +50,11 @@ export interface UseGenreAuditionReturn {
    */
   startVinylScrub: (velocity: number) => void;
   stopVinylScrub: () => void;
+  /**
+   * Play one track's voice once (a pad or a step tap) through its own mixed destination.
+   * `instrument` overrides the track's declared model, for a pad that means a specific sound.
+   */
+  auditionTrack: (trackId: string, instrument?: string) => void;
 }
 
 /**
@@ -166,6 +171,16 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     scrubRef.current?.end();
   }, []);
 
+  /**
+   * One manual hit, for the 即兴 pads and step cells.
+   *
+   * No-op before the engine exists (nothing has been auditioned yet), which is also when there is no
+   * context to play into — the caller still gets its visual feedback either way.
+   */
+  const auditionTrack = useCallback((trackId: string, instrument?: string) => {
+    engineRef.current?.auditionTrack(trackId, 1, instrument);
+  }, []);
+
   const setSwingValue = useCallback((swing: number) => {
     engineRef.current?.setSwing(swing);
   }, []);
@@ -181,5 +196,6 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     setSwingValue,
     startVinylScrub,
     stopVinylScrub,
+    auditionTrack,
   };
 }
