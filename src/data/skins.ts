@@ -37,6 +37,12 @@ export const SKINS: readonly SkinDefinition[] = [
     preview: { ground: "#0b0b14", ink: "#f3f3f9", accent: "#5eead4" },
   },
   {
+    id: "minimal",
+    nameKey: "skin_minimal_name",
+    blurbKey: "skin_minimal_blurb",
+    preview: { ground: "#fafafa", ink: "#141414", accent: "#2358e6" },
+  },
+  {
     id: "comic",
     nameKey: "skin_comic_name",
     blurbKey: "skin_comic_blurb",
@@ -47,6 +53,12 @@ export const SKINS: readonly SkinDefinition[] = [
     nameKey: "skin_soviet_name",
     blurbKey: "skin_soviet_blurb",
     preview: { ground: "#1b1e21", ink: "#ede4cc", accent: "#c8452b" },
+  },
+  {
+    id: "sovietYears",
+    nameKey: "skin_soviet_years_name",
+    blurbKey: "skin_soviet_years_blurb",
+    preview: { ground: "#f4f1e1", ink: "#111111", accent: "#cc0000" },
   },
   {
     id: "pixel",

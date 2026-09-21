@@ -5,4 +5,4 @@
  * whole product (the desktop settings panel offers it too), and the phone shell must not be the only
  * thing that knows the list.
  */
-export type SkinId = "default" | "comic" | "soviet" | "pixel";
+export type SkinId = "default" | "minimal" | "comic" | "soviet" | "sovietYears" | "pixel";

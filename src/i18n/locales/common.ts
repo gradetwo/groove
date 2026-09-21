@@ -9,6 +9,11 @@ export const commonMessages = {
     en: "Cool dark ground, one accent per module — the default.",
     zh: "冷调深底 · 每个模块一个强调色（默认）",
   },
+  skin_minimal_name: { en: "Modern minimal", zh: "现代极简主义" },
+  skin_minimal_blurb: {
+    en: "Paper-white ground, hairline rules, one accent — nothing else.",
+    zh: "纸白底、发丝细线、单一强调色，其余留白",
+  },
   skin_comic_name: { en: "Retro comic", zh: "复古漫画" },
   skin_comic_blurb: {
     en: "Newsprint, halftone dots and heavy ink outlines.",
@@ -18,6 +23,11 @@ export const commonMessages = {
   skin_soviet_blurb: {
     en: "Stamped steel plates, rivets and signal lamps.",
     zh: "冲压钢板、铆钉与信号灯",
+  },
+  skin_soviet_years_name: { en: "Soviet years", zh: "苏联岁月" },
+  skin_soviet_years_blurb: {
+    en: "Constructivist posters: flag red, steel black, diagonal cuts, hard shadows.",
+    zh: "构成主义宣传画：国旗红、钢铁黑、对角线切割、硬投影",
   },
   skin_pixel_name: { en: "8-bit pixel", zh: "8-bit 像素" },
   skin_pixel_blurb: {
