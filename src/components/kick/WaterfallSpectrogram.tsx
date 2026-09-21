@@ -1,5 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Layers, Zap } from "lucide-react";
+import { canvasRgba, mixCanvasColors } from "../../utils/canvasPalette";
+import {
+  DESKTOP_CANVAS_FALLBACKS,
+  useCanvasPalette,
+  type CanvasPaletteFallbacks,
+} from "./useCanvasPalette";
+
+/**
+ * The desktop palette this waterfall painted with before a skin could reach the canvas.
+ *
+ * The magnitude ramp has three anchors and the code below interpolates between them exactly as it
+ * did with the numbers inline: `signalLow` is the faint bronze shadow, `signal` the bright gold, and
+ * `peak` the incandescent top; `grid` is the neutral band marker and its labels, and `ground` is the
+ * near-black the history is cleared onto. With no `.mobile-root` ancestor each resolves to the value
+ * it replaced, so the desktop render is unchanged.
+ */
+const PALETTE_FALLBACKS: CanvasPaletteFallbacks = {
+  ...DESKTOP_CANVAS_FALLBACKS,
+  signalLow: "rgb(180, 80, 20)",
+  ground: "#030407",
+};
 
 interface WaterfallSpectrogramProps {
   analyser: AnalyserNode | null;
@@ -13,6 +34,8 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /** The skin's colours for the ramp and its guides, read off `.mobile-root`; desktop keeps the literals. */
+  const paletteRef = useCanvasPalette(canvasRef, PALETTE_FALLBACKS);
   const historyRef = useRef<Uint8Array[]>([]);
   const maxHistory = 60;
   const shockRef = useRef(0);
@@ -37,6 +60,8 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       animationFrameId = requestAnimationFrame(render);
       const width = canvas.width;
       const height = canvas.height;
+      /** The palette resolved for this skin; read per frame but *resolved* only on mount / skin / resize. */
+      const colours = paletteRef.current;
 
       shockRef.current *= 0.9;
       const shock = shockRef.current;
@@ -55,8 +80,8 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
         }
       }
 
-      // Clear with dark void
-      ctx.fillStyle = "#030407";
+      // Clear with the skin's ground
+      ctx.fillStyle = canvasRgba(colours.ground);
       ctx.fillRect(0, 0, width, height);
 
       const history = historyRef.current;
@@ -76,29 +101,37 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
           if (val < 4) continue;
 
           const norm = val / 255;
-          // Palette: Black -> Deep Bronze -> Bright Gold -> Incandescent White
+          // Palette: the skin's ground -> the faint end of the signal -> the signal -> the peak.
+          // The three anchors are resolved colours now, but the interpolation is the arithmetic it
+          // always was, so the desktop (bronze -> gold -> white) renders exactly as before.
+          const low = colours.signalLow;
+          const mid = colours.signal;
+          const high = colours.peak;
           let r = 0;
           let g = 0;
           let bCol = 0;
           const a = Math.min(1, norm * (1.1 - s / maxHistory * 0.7));
 
           if (norm < 0.35) {
-            // Deep Bronze
-            r = Math.floor(norm * 3 * 180);
-            g = Math.floor(norm * 3 * 80);
-            bCol = Math.floor(norm * 3 * 20);
+            // The faint end: the low anchor scaled by how faint the cell is. `min(255)` only ever
+            // bites when the low anchor *is* the accent (a bright signal), never on the desktop.
+            r = Math.min(255, Math.floor(norm * 3 * low.r));
+            g = Math.min(255, Math.floor(norm * 3 * low.g));
+            bCol = Math.min(255, Math.floor(norm * 3 * low.b));
           } else if (norm < 0.75) {
-            // Bright Gold #f5b73d
+            // Rising through the signal colour.
             const t = (norm - 0.35) / 0.4;
-            r = Math.floor(180 + t * 65);
-            g = Math.floor(80 + t * 103);
-            bCol = Math.floor(20 + t * 41);
+            const mixed = mixCanvasColors(low, mid, t);
+            r = Math.floor(mixed.r);
+            g = Math.floor(mixed.g);
+            bCol = Math.floor(mixed.b);
           } else {
-            // Incandescent White
+            // Blown out at the peak — the most prominent tone the surface has.
             const t = (norm - 0.75) / 0.25;
-            r = Math.floor(245 + t * 10);
-            g = Math.floor(183 + t * 72);
-            bCol = Math.floor(61 + t * 194);
+            const mixed = mixCanvasColors(mid, high, t);
+            r = Math.floor(mixed.r);
+            g = Math.floor(mixed.g);
+            bCol = Math.floor(mixed.b);
           }
 
           ctx.fillStyle = `rgba(${r}, ${g}, ${bCol}, ${a})`;
@@ -106,12 +139,14 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
         }
       }
 
-      // Draw Anatomical Frequency Zone Marker Guides
+      // Draw Anatomical Frequency Zone Marker Guides.
+      // The kick bands a signal *belongs* to are the accent; the one neutral marker is the graticule
+      // ink, which is what "neither sub nor click" reads as on every skin.
       ctx.save();
       // Band 1: Sub 30-60 Hz (approx bin 1 to 4)
       const subX1 = (1 / 128) * width;
       const subX2 = (5 / 128) * width;
-      ctx.strokeStyle = "rgba(245, 183, 61, 0.4)";
+      ctx.strokeStyle = canvasRgba(colours.signal, 0.4);
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 3]);
       ctx.beginPath();
@@ -121,7 +156,7 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
 
       // Band 2: Thump 100-200 Hz (approx bin 8 to 18)
       const thumpX2 = (18 / 128) * width;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+      ctx.strokeStyle = canvasRgba(colours.grid, 0.25);
       ctx.beginPath();
       ctx.moveTo(thumpX2, 0);
       ctx.lineTo(thumpX2, height);
@@ -129,7 +164,7 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
 
       // Band 3: Click 1-2.5 kHz (approx bin 40 to 75)
       const clickX2 = (75 / 128) * width;
-      ctx.strokeStyle = "rgba(245, 183, 61, 0.3)";
+      ctx.strokeStyle = canvasRgba(colours.signal, 0.3);
       ctx.beginPath();
       ctx.moveTo(clickX2, 0);
       ctx.lineTo(clickX2, height);
@@ -138,16 +173,16 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       // Text labels
       ctx.setLineDash([]);
       ctx.font = "9px 'JetBrains Mono', monospace";
-      ctx.fillStyle = "rgba(245, 183, 61, 0.85)";
+      ctx.fillStyle = canvasRgba(colours.signal, 0.85);
       ctx.fillText("SUB: 30-60Hz", subX1 + 2, height - 8);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.fillStyle = canvasRgba(colours.grid, 0.75);
       ctx.fillText("THUMP: 100-200Hz", subX2 + 4, height - 8);
-      ctx.fillStyle = "rgba(245, 183, 61, 0.85)";
+      ctx.fillStyle = canvasRgba(colours.signal, 0.85);
       ctx.fillText("CLICK: 1-2.5kHz", thumpX2 + 6, height - 8);
 
       // Kinetic shock flash on border
       if (shock > 0.05) {
-        ctx.strokeStyle = `rgba(245, 183, 61, ${shock * 0.5})`;
+        ctx.strokeStyle = canvasRgba(colours.signal, shock * 0.5);
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, width, height);
       }

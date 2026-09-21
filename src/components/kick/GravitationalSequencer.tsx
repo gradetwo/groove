@@ -3,6 +3,22 @@ import { Play, Square, FastForward, Heart, Footprints, Flame, Clock } from "luci
 import { AnatomyKickEngine } from "../../audio/AnatomyKickEngine";
 import { ecosystemBus } from "../../audio/ecosystemBus";
 import { useDeviceCapabilities } from "../../hooks/useDeviceCapabilities";
+import { canvasRgba } from "../../utils/canvasPalette";
+import {
+  DESKTOP_CANVAS_FALLBACKS,
+  useCanvasPalette,
+  type CanvasPaletteFallbacks,
+} from "./useCanvasPalette";
+
+/**
+ * The desktop palette the shockwave plane painted with before a skin could reach the canvas.
+ *
+ * Only two roles are painted here: `signal` for an ordinary hit and `warning` for a gritty one, both
+ * exactly the literals the `triggerRipple` call used. The ripple canvas itself has no ground — it
+ * clears transparent so the shell's own `bg-black/40` well (already skinned by CSS) shows through —
+ * so the shared ground literal is never read.
+ */
+const PALETTE_FALLBACKS: CanvasPaletteFallbacks = DESKTOP_CANVAS_FALLBACKS;
 
 interface StepConfig {
   active: boolean;
@@ -58,6 +74,8 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
 
   const [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(0);
   const rippleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  /** The skin's colours for the rings, read off `.mobile-root`; the desktop keeps the literals. */
+  const paletteRef = useCanvasPalette(rippleCanvasRef, PALETTE_FALLBACKS);
   const ripplesRef = useRef<{ x: number; y: number; radius: number; maxRadius: number; alpha: number; color: string }[]>([]);
 
   // Sound play scheduler
@@ -78,7 +96,14 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
     const stepX = ((stepIdx + 0.5) / 16) * width;
     const p = engine.getParams();
     const maxR = 60 + p.boomToWhere * 120;
-    const color = p.grit > 0.6 ? "#ff5555" : "#f5b73d";
+    /**
+     * The ring's colour is decided when the hit fires, not per frame: a gritty kick is a warning
+     * (`--m-red`), an ordinary one is the signal accent (`--m-gold`). A skin switched mid-ring lets
+     * the rings already in flight finish in the colour they were born with — they live under a
+     * second, so re-reading the palette for them would be churn, not correctness.
+     */
+    const colours = paletteRef.current;
+    const color = canvasRgba(p.grit > 0.6 ? colours.warning : colours.signal);
 
     ripplesRef.current.push({
       x: stepX,
