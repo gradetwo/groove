@@ -88,12 +88,23 @@ export interface ChordProgressionsViewProps {
   onOpenStudioWithChords?: (chords: ChordDefinition[], options?: ChordOpenStudioOptions) => void;
   onOpenStudioWithArpeggio?: (baked: BakedArpeggioResult, label?: string) => void;
   onOpenHelp?: () => void;
+  /**
+   * Open with the chord builder collapsed.
+   *
+   * The phone reuses this view as-is inside 探索, where it is the single most expensive mount in the app:
+   * ~1 000 elements and a ~1 350 ms block on a 4×-throttled phone (`scripts/measure_phone_jank.mjs`), most
+   * of it the builder's note grids, style lists and arpeggiator controls. The builder already has a
+   * collapse toggle and a one-line summary of the current progression, so the phone opens it collapsed
+   * and the user expands it with one tap — the desktop keeps its default (`false`) and is unchanged.
+   */
+  initialBuilderCollapsed?: boolean;
 }
 
 export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
   onOpenStudioWithChords,
   onOpenStudioWithArpeggio,
   onOpenHelp,
+  initialBuilderCollapsed = false,
 }) => {
   const { t, language, isZh } = useLanguage();
   /** Phone surface: measured at 390×664 the guide button was 139×26 and both selects 119×32. */
@@ -141,7 +152,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
 
   // Copy feedback state
   const [copied, setCopied] = useState<boolean>(false);
-  const [isBuilderCollapsed, setIsBuilderCollapsed] = useState<boolean>(false);
+  const [isBuilderCollapsed, setIsBuilderCollapsed] = useState<boolean>(initialBuilderCollapsed);
 
   // Stop audio on unmount
   useEffect(() => {
@@ -615,6 +626,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
             {/* Collapse / Expand Toggle Button */}
             <button
               type="button"
+              data-testid="chord-builder-toggle"
               onClick={() => setIsBuilderCollapsed(!isBuilderCollapsed)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#141824] hover:bg-[#1f2638] border border-[#2b3348] text-xs text-[#eae6dc] transition-colors shrink-0"
               title={isBuilderCollapsed ? t("chords_expand_builder_title") : t("chords_collapse_builder_title")}

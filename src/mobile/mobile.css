@@ -685,3 +685,51 @@
     max-height: none;
   }
 }
+
+/* =============================================================================================
+ * Rendering cost: the off-screen parts of a long screen are not laid out or painted
+ *
+ * A phone scrolls a 159-row library plus an era timeline — about 2 600 elements on 首页 alone. Laying
+ * out and painting all of them before the first paint is what the jank audit measured as a single
+ * 1 119 ms task on a throttled phone (`scripts/measure_phone_jank.mjs`), and it is work the user cannot
+ * see: 90 % of those rows are below the fold.
+ *
+ * `content-visibility: auto` lets the browser skip layout *and* paint for a subtree that is off screen,
+ * and `contain-intrinsic-size` is what keeps the scrollbar honest while it does (without it the list
+ * collapses to zero height and the page jumps as you scroll into it). `auto <length>` remembers the last
+ * real size once a row has been rendered, so the placeholder is exact after the first pass.
+ *
+ * The values are the rendered heights: a genre row is a 3.5 rem cover with 0.875 rem padding either side
+ * (≈ 84 px) and the gap adds 10 px; an era node is roughly 150 px tall. They are estimates on purpose —
+ * `auto` corrects them the first time each one is laid out.
+ *
+ * Nothing here changes what is in the DOM, so every existing test that counts rows or reads a row's
+ * markup still sees the whole library, and the touch-target gate skips zero-size boxes, so skipped
+ * subtrees cannot produce a false "control under 44 px".
+ * =========================================================================================== */
+.mobile-root [data-testid="mobile-home-list"] > li,
+.mobile-root [data-testid^="mobile-home-timeline-node-"] {
+  content-visibility: auto;
+}
+.mobile-root [data-testid="mobile-home-list"] > li {
+  contain-intrinsic-size: auto 94px;
+}
+.mobile-root [data-testid^="mobile-home-timeline-node-"] {
+  contain-intrinsic-size: auto 150px;
+}
+
+/*
+ * The reused desktop views are the one remaining long task on a throttled phone: the chord page alone
+ * builds ~1 000 elements and reports a single ~1 350 ms block (`scripts/measure_phone_jank.mjs`), most of
+ * it layout and paint for sections that are below the fold. These are the *desktop* views, kept as they
+ * are, so the containment is applied to their top-level sections rather than to the views themselves.
+ *
+ * Scoped deliberately to the chord page. The 底鼓设计 view (the other wrapper) owns `<canvas>`
+ * visualisers, and a canvas inside a skipped subtree has no layout box — it would size itself to zero and
+ * have to re-bake when it scrolls into view, which is a worse trade than the layout it saves.
+ */
+.mobile-root [data-testid="mobile-explore-chords-legacy"] > div > section,
+.mobile-root [data-testid="mobile-explore-chords-legacy"] > section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
+}

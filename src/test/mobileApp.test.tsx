@@ -183,26 +183,35 @@ describe("phone shell · home screen", () => {
     audition.playingGenreId = null;
   });
 
-  it("lists the whole library by default", async () => {
+  it("lists the whole library by default, a screenful at a time", async () => {
+    /**
+     * The library is rendered in chunks: 159 rows is ~2 600 elements, and having all of them in the DOM
+     * before the first paint cost a single ~573 ms task on a throttled phone (see
+     * `scripts/measure_phone_jank.mjs`). The first screenful paints immediately and the rest arrives in
+     * idle time, so the assertion is about reachability — the list completes on its own, without a
+     * filter or a scroll — and the first chunk is smaller than the whole thing, which is the point of
+     * the change.
+     */
     renderShell("home");
     await findHome();
-    expect(rowIds()).toHaveLength(ALL_GENRES.length);
     expect(ALL_GENRES.length).toBeGreaterThan(100);
-  });
+    expect(rowIds().length).toBeGreaterThan(0);
+    expect(rowIds().length).toBeLessThan(ALL_GENRES.length);
+    await waitFor(() => expect(rowIds()).toHaveLength(ALL_GENRES.length), { timeout: 8000 });
+  }, 20000);
 
   it("filters by search text, matching English names and CJK aliases", async () => {
     renderShell("home");
     await findHome();
     fireEvent.change(screen.getByTestId("mobile-home-search"), { target: { value: "house" } });
-    const filtered = rowIds();
-    expect(filtered.length).toBeGreaterThan(0);
-    expect(filtered.length).toBeLessThan(ALL_GENRES.length);
     const expected = ALL_GENRES.filter(
       (genre) =>
         genre.name.toLowerCase().includes("house") ||
         (genre.aliases ?? []).some((alias) => alias.toLowerCase().includes("house"))
     ).map((genre) => genre.id);
-    expect(new Set(filtered)).toEqual(new Set(expected));
+    // The filter restarts the chunking, so wait for the result set to fill in.
+    await waitFor(() => expect(new Set(rowIds())).toEqual(new Set(expected)), { timeout: 8000 });
+    expect(rowIds().length).toBeLessThan(ALL_GENRES.length);
   });
 
   it("filters by category chip", async () => {
@@ -210,7 +219,7 @@ describe("phone shell · home screen", () => {
     await findHome();
     fireEvent.click(screen.getByRole("tab", { name: /Hip Hop/ }));
     const expected = ALL_GENRES.filter((genre) => genre.category === "Hip Hop").map((genre) => genre.id);
-    expect(new Set(rowIds())).toEqual(new Set(expected));
+    await waitFor(() => expect(new Set(rowIds())).toEqual(new Set(expected)), { timeout: 8000 });
     expect(expected.length).toBeGreaterThan(0);
   });
 
