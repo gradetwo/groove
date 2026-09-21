@@ -5,6 +5,35 @@ with a short production note and an eight-track pattern you can play, edit and e
 
 **Live demo: <https://groove.wangda.today/>** · [中文说明](README.zh-CN.md)
 
+<p align="center">
+  <img src="docs/screenshots/pc-studio.jpg" alt="The studio: eight tracks, a step sequencer, and a bilingual production note for the genre" width="880">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/phone-player.jpg" alt="The phone player: a vinyl you can jog by dragging, with the tonearm on the record" width="178">
+  <img src="docs/screenshots/phone-library.jpg" alt="The genre library with per-genre cover art and a vertical century timeline" width="178">
+  <img src="docs/screenshots/phone-jam.jpg" alt="Jam: a step grid with colour-coded lanes and playable pads" width="178">
+  <img src="docs/screenshots/phone-challenge.jpg" alt="Challenge: blind ear training with the verdict pinned on screen" width="178">
+</p>
+
+## Two surfaces, six skins
+
+The desktop is a full workstation; the phone is a separate, thumb-first app at `/m/…` with its own
+navigation, its own player and its own 16-step 即兴 editor. Six skins re-dress the whole phone shell
+from the same components — switch them in 更多 → 外观:
+
+| | | |
+|---|---|---|
+| <img src="docs/screenshots/skin-default.jpg" width="150"><br>**Aurora**<br>cool dark, one accent per module | <img src="docs/screenshots/skin-minimal.jpg" width="150"><br>**Modern minimal**<br>paper-white, Inter, hairlines | <img src="docs/screenshots/skin-comic.jpg" width="150"><br>**Retro comic**<br>newsprint, Ben-Day dots, misregistration |
+| <img src="docs/screenshots/skin-soviet.jpg" width="150"><br>**Heavy industry**<br>stamped steel, rivets, signal lamps | <img src="docs/screenshots/skin-sovietYears.jpg" width="150"><br>**Soviet years**<br>constructivist poster, flag red, hard shadows | <img src="docs/screenshots/skin-pixel.jpg" width="150"><br>**8-bit pixel**<br>scanlines, stepped frames, pixel type |
+
+## More of it
+
+| | |
+|---|---|
+| <img src="docs/screenshots/pc-galaxy.jpg" width="420"><br>**Genre galaxy** — the library as a 3D map | <img src="docs/screenshots/pc-chords.jpg" width="420"><br>**Chord workshop** — progressions, voicings, auditions |
+| <img src="docs/screenshots/pc-masterclass.jpg" width="420"><br>**Masterclass** — rhythm deconstruction with a live collider | <img src="docs/screenshots/phone-detail.jpg" width="420"><br>**Genre page (phone)** — lineage and evolution as a diagram |
+
 ## What is in it
 
 - **159 genres** — house, techno, hip-hop, trap, bebop, cumbia, afrobeat and many more — each with a

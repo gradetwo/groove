@@ -5,6 +5,34 @@
 
 **在线体验：<https://groove.wangda.today/>** · [English](README.md)
 
+<p align="center">
+  <img src="docs/screenshots/pc-studio.jpg" alt="工作台：8 轨步进音序器，左侧是该曲风的中英双语制作说明" width="880">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/phone-player.jpg" alt="手机播放器：可以按住拖动搓盘的黑胶，唱臂落在唱片上" width="178">
+  <img src="docs/screenshots/phone-library.jpg" alt="曲风库：每个曲风自己的封面图，以及垂直的百年时间轴" width="178">
+  <img src="docs/screenshots/phone-jam.jpg" alt="即兴：按乐器分色的步进网格与可敲击的打击垫" width="178">
+  <img src="docs/screenshots/phone-challenge.jpg" alt="挑战：盲听训练，判定固定在屏幕内" width="178">
+</p>
+
+## 两个界面，六套皮肤
+
+桌面端是一台完整的工作站；手机端是另一套为拇指设计、位于 `/m/…` 的独立应用，有自己的导航、播放器和
+16 步「即兴」编辑器。六套皮肤用同一批组件换装整个手机外壳——在 **更多 → 外观** 里切换：
+
+| | | |
+|---|---|---|
+| <img src="docs/screenshots/skin-default.jpg" width="150"><br>**极光冷色**<br>冷调深底，每模块一个强调色 | <img src="docs/screenshots/skin-minimal.jpg" width="150"><br>**现代极简主义**<br>纸白底、Inter、发丝细线 | <img src="docs/screenshots/skin-comic.jpg" width="150"><br>**复古漫画**<br>新闻纸、网点、套印偏移 |
+| <img src="docs/screenshots/skin-soviet.jpg" width="150"><br>**苏联重工业**<br>冲压钢板、铆钉、信号灯 | <img src="docs/screenshots/skin-sovietYears.jpg" width="150"><br>**苏联岁月**<br>构成主义宣传画、国旗红、硬投影 | <img src="docs/screenshots/skin-pixel.jpg" width="150"><br>**8-bit 像素**<br>扫描线、阶梯边框、像素字体 |
+
+## 更多截图
+
+| | |
+|---|---|
+| <img src="docs/screenshots/pc-galaxy.jpg" width="420"><br>**曲风星系** —— 把资料库摊成一张 3D 星图 | <img src="docs/screenshots/pc-chords.jpg" width="420"><br>**和弦工坊** —— 进行、声位与试听 |
+| <img src="docs/screenshots/pc-masterclass.jpg" width="420"><br>**大师课** —— 律动解构与实时碰撞器 | <img src="docs/screenshots/phone-detail.jpg" width="420"><br>**曲风详情（手机）** —— 传承与演变画成一张图 |
+
 ## 里面有什么
 
 - **159 种曲风** —— house、techno、hip-hop、trap、bebop、cumbia、afrobeat 等等，每种都配中英双语
