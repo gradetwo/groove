@@ -1,27 +1,27 @@
 {
-  "version": "2.6.0",
+  "version": "2.7.0",
   "releaseDate": "2026-09-21",
-  "changelogCount": 194,
+  "changelogCount": 195,
   "latest": {
-    "version": "2.6.0",
+    "version": "2.7.0",
     "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.6.0 手机端第三轮：唱臂落针位置修正、播放条重做、即兴变成乐器、曲风详情与时间轴补足内容、更多里头的面板也换肤",
-      "en": "v2.6.0 The Phone, Third Pass: the Arm Lands Where It Should, a Rebuilt Player Bar, 即兴 as an Instrument, Real Content on the Genre Page and Timeline, and Skinned Panels"
+      "zh": "v2.7.0 两套新皮肤：现代极简主义 与 苏联岁月（构成主义宣传画）",
+      "en": "v2.7.0 Two New Skins: Modern Minimal, and Soviet Years as a Constructivist Poster"
     },
     "highlights": [
       {
-        "zh": "**唱臂两个位置之前都是错的，这一版修正**：手臂的角度是从**转轴**量的，不是从唱片中心量的——`NEEDLE_ANGLE` 说的是唱针相对唱片的位置，而手臂绕的是唱片左上方那个转轴，所以手臂自身的工作角是 `atan2(针位−转轴)` ≈ **+0.82 rad**（向右下方指向唱片）。上一版直接用手臂画 `NEEDLE_ANGLE`，整整高了约 0.9 rad，于是**播放和停止时唱针都飘在唱片外**。现在有三个把几何讲清楚、无法再糊弄的函数（工作角 / 绘制角 / 针尖落点距离），测试断言的是耳朵能看见的事：**播放时针尖落在 0.9×半径的外圈上，停止时越过唱片边缘 14% 并停在中心上方**，三种真实尺寸都测。顺带第一次看得见行程：35.1° 停驻 → 47.2° 落针（12.1°），摆入抬臂、沟槽抖动、底鼓时唱头小幅上跳都在。",
-        "en": "**Both arm positions were wrong; this fixes them.** The arm's angle is measured from its **pivot**, not from the disc centre: `NEEDLE_ANGLE` says where the stylus sits *relative to the disc*, and the arm rotates about a pivot above and to its left, so the arm's own working angle is `atan2(needle − pivot)` ≈ **+0.82 rad** — pointing right and down at the record. The previous release drew the arm at `NEEDLE_ANGLE` itself, about 0.9 rad too high, so the stylus floated outside t…"
+        "zh": "**现代极简主义**：纸白底、黑墨字、Inter、发丝细线、**只留一个强调色**。这套皮肤的大部分工作其实是**删掉深色底**：外壳的极光、胶片颗粒、呼吸光晕、`backdrop-filter`、每一处 `rgba(232,232,255,α)` 白色薄层（在白底上等于看不见，改成两倍 alpha 的黑）、两条渐变，以及三个只在浅色下才暴露的状态问题——变暗的选项 `opacity-40` 只有 2.7:1、页脚呼吸的 span 3.0:1、以及那个「更亮一档」的强调色（在浅色下「更亮」就是看不见）。强调色用 `#2358e6` 而不是 `#2f6bff`：外壳会把强调色**填成实心**（首页分类片、挑战难度片、探索分段、「下一步」按钮），`#2f6bff` 在该实心底上只有 4.31:1，而这个同色相低一档的值双向都能到 5.6:1。",
+        "en": "**Modern minimal**: paper-white ground, black ink, Inter, hairline rules and **exactly one accent**. Most of the work was *deleting the dark ground*: the shell's aurora, film grain, breathing glow, `backdrop-filter`, every `rgba(232,232,255,α)` white wash (invisible on paper — now a black wash at twice the alpha), both gradients, and three failures that only a light ground exposes (a dimmed answer at `opacity-40` measured 2.7:1, the footer's breathing span 3.0:1, and a one-s…"
       },
       {
-        "zh": "**播放条重做**：用户的原话是「太丑陋」，并且指出一个设计问题——**播放/暂停本身就有两个不同的图形，按钮不需要再高亮一次**。所以播放键现在只是图标（无填充、无光晕、无脉动，仍是 48px 触控区），其余部分围绕它重建：封面用曲风自己的真实图片（加载前是分类色）做成圆角描边缩略图；标题下加了一条**进度轨**，读的是唱片同一个传输时钟（直接写 DOM、5Hz，不走 React state，否则为了一个装饰每秒重渲五次整个外壳）；整行是一块可点区域（封面+标题+进度+箭头），两个按钮是它的兄弟节点；模式键保留参考稿那颗「已启用」小点，因为图标本身说不清这件事。",
-        "en": "**The player bar was rebuilt.** The user's words were \"太丑陋\", plus a design objection: **play/pause already has two different glyphs, so the button does not need a second highlight**. The play control is an icon now (no fill, no glow, no pulse; still a 48 px target) and the rest was rebuilt around it: the artwork is the genre's real cover (the category colour until it loads) in a rounded, ringed thumbnail; a **progress rail** under the title reads the same transport clock the…"
+        "zh": "**苏联岁月**：按你给的四点做的构成主义宣传画。① **色彩暴力美学**：国旗红 `#CC0000` 主色 + 钢铁黑 `#111111` + 做旧纸张黄 `#F4F1E1`，勋章金与工业钢蓝只作为**形状**（`#FFD700` 只留在深色上的 `--m-gold-hi`）；所有柔和过渡、发光、模糊全部换成硬边几何；文字用纸色而不是黑色压在红底上——因为黑压红只有 3.21:1，纸压红是 5.19:1。② **构成主义几何**：`Russo One` 全站标题，`skewX(-10deg)` 只作用于四处展示文字（绝不作用于控件——触控门禁量的是**变换后**的盒子）；卡片/标签/面板/打击垫用 `clip-path: polygon()` 做对角线切割，硬投影 `10px 10px 0 #000` 放在外层或改用零模糊 `drop-shadow`（clip-path 会把自己元素的阴影一起裁掉，文件里写了这个取舍）；点击态 `translate(5px,5px)` 且阴影 10px→3px、过渡改成 `steps(2,end)`，像重型机…",
+        "en": "**Soviet years**: the constructivist poster, built to the four points you gave. (1) **Violent colour**: flag red `#CC0000` as the accent with steel black `#111111` and aged paper `#F4F1E1`, medal gold and industrial steel blue used as *shape* (`#FFD700` survives only as `--m-gold-hi` on dark); every soft transition, glow and blur becomes hard-edged geometry; text on a red flood is paper rather than black, because black on red is 3.21:1 while paper on red is 5.19:1. (2) **Con…"
       },
       {
-        "zh": "**即兴从「表单」变成「乐器」**：① 顶部那张曲风卡并进底部控制块——曲风、播放、录制、速度、摇摆现在是一块（顺序仍是 网格 → 打击垫 → 控制块），之前「在下面开录制、在上面按播放」；② **每件乐器有自己的颜色**，用的是参考稿打击垫的那套色板，并且和唱片的 `LAYER_COLORS` 完全一致，所以底鼓在格子、打击垫、唱片外圈上是同一个琥珀色；轨道标签、按下的格子、播放头都用自己的颜色，六个垫子各有自己的颜色（拍手是粉色，不是军鼓的珊瑚色）；③ **终于有了单发音源**：`AudioEngine.auditionTrack(trackId, velocity, instrument)` 立刻播一个轨道的音色，走那条轨道自己的推子与插入链（预览就该是「混音后的声音」），并且可以点名音色模型，所以写进军鼓轨的拍手垫不会听起来像军鼓；④ **碰什么都响、都亮**：垫子每次点击都发声并发光（不管播放器是否在跑、是否开了录制；开着录制时还会写入播放头那一步），步进格子点击也会响它所属的轨道——这样在循环转回来之前就能听见自己在编辑什么，播放时…",
-        "en": "**即兴 went from a form to an instrument.** (1) The genre card at the top merged into the bottom dock — genre, play, record, tempo and swing are one block now (order is still grid → pads → dock), where before you armed a take at the bottom and started it at the top. (2) **Every instrument has its own colour**, from the reference's own pad palette and identical to the vinyl's `LAYER_COLORS`, so the kick is the same amber on the cell, the pad and the record's outer ring; lane la…"
+        "zh": "**皮肤层也一起扩到六套**：探索里复用的桌面视图（`legacySkin.css`）与「更多」里那四个面板（`panelSkin.css`）都以「列出所有已启用皮肤」的方式写选择器，所以新增皮肤必须同步改它们。这一步是脚本做的，而且做对了两个细节：注释要先挪走（这两个文件用散文解释自己，而散文里会引用选择器和花括号，正则会把句子当成规则「改写」），选择器列表要按括号深度切分（`bg-[#38bdf8]` 这种 Tailwind 任意值里就带逗号）。门禁测试也从「三个皮肤」改成遍历皮肤目录，否则新增皮肤时它会静默漏检——这正是它这次抓到的漏洞。",
+        "en": "**Both skin layers were extended to six as well**: 探索's reused desktop views (`legacySkin.css`) and the four panels behind 更多 (`panelSkin.css`) list every styled skin in their selectors, so a new skin has to reach all of them. That step was scripted, and two details mattered: comments have to be stashed first (both files explain themselves in prose that quotes selectors and braces, and a regex will happily rewrite a sentence), and selector lists must be split on commas *at b…"
       }
     ],
     "truncated": true
