@@ -53,6 +53,7 @@ import {
   type ChallengeDifficulty,
   type SM2GenreMemory,
 } from "../../utils/challengeAlgorithm";
+import { outcomeColour as outcomeVar } from "../../utils/rankColours";
 
 /** Same key as the desktop view: one ladder, whichever surface you play on. */
 export const CHALLENGE_STORAGE_KEY = "groove_challenge_stats_v2";
@@ -273,7 +274,13 @@ function ChallengeArena({
   );
 
   const answeredCorrectly = Boolean(picked && question && picked === question.correctGenre.id);
-  const outcomeColour = answeredCorrectly ? "var(--m-green)" : "var(--m-red)";
+  /**
+   * The verdict colour, from the surface's own tokens rather than pastel hexes inlined here.
+   *
+   * `rankColours.ts` owns the mapping so the desktop and the phone cannot drift, and so a skin only has to
+   * define the tokens it already defines.
+   */
+  const outcomeColour = outcomeVar(answeredCorrectly ? "right" : "wrong", "phone");
 
   /**
    * Auto-advance, as an effect rather than a bare timer inside `answer`.

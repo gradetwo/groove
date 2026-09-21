@@ -13,7 +13,7 @@
 #
 #   profile  all | pc | mobile   which Playwright targets to run
 #   only     a target-name substring (e.g. "iPhone 14 (竖屏"), empty means all of the profile
-#   scope    e2e | verify | audio | jank | all
+#   scope    e2e | verify | audio | jank | skins | all
 #
 # `verify` runs the whole gate chain (`npm run verify`), which rebuilds and therefore re-runs the E2E
 # steps itself; `e2e` skips the other gates and goes straight at the browser matrix, which is the common
@@ -32,6 +32,7 @@ on:
           - verify
           - audio
           - jank
+          - skins
           - all
       profile:
         description: "Playwright profile (e2e scope)"
@@ -80,6 +81,12 @@ jobs:
       - name: Phone jank audit
         if: inputs.scope == 'jank' || inputs.scope == 'all'
         run: npm run probe:jank
+
+      # Every skin × every main view: the full sweep (the gate in `verify` samples three skins and five
+      # views to stay quick).
+      - name: Skin readability sweep
+        if: inputs.scope == 'skins' || inputs.scope == 'all'
+        run: npm run probe:skins:full
 
       - name: Audio measurement gates
         if: inputs.scope == 'audio' || inputs.scope == 'all'

@@ -163,6 +163,8 @@
      even though that value would not pass as small text on paper. */
   --m-gold: #cc0000;
   --m-gold-hi: #ffd700;
+  /* A warm step readable as *text* on this skin's card — the challenge's rank roles need one. */
+  --m-warning: #8a4d00;
   --m-gold-rgb: 204 0 0;
 
   /* The paper the whole thing is printed on, plus the two fixed, pointer-transparent layers the shell

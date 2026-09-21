@@ -30,6 +30,8 @@
      every screen refers to them. */
   --m-gold: #5eead4;
   --m-gold-hi: #99f6e4;
+  /* The warm step the challenge's rank roles need as *text* — readable on the card, unlike the light shape tint above. */
+  --m-warning: #f59e0b;
   --m-gold-rgb: 94 234 212;
   /* Text on an accent fill is always this near-black, never white. */
   --m-on-gold: #0b0b14;

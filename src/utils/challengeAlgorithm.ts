@@ -18,10 +18,25 @@ export interface RankTier {
   icon: string;
   minElo: number;
   maxElo: number;
-  color: string;
+  /**
+   * The tier's colour, as a **role** rather than a hex.
+   *
+   * These used to be literal metals (`#cd7f32`, `#c0c0c0`, …), which no skin can reach: the challenge's
+   * rank label was the one piece of text still unreachable after the six-skin round, and on paper the silver
+   * hex measured 1.6:1. A role is what the surface can map — the phone to `--m-*`, the desktop to `--d-*` —
+   * and every role named here is a token both surfaces already define *and* the readability audit already
+   * guarantees per skin. The metal look is the icon's job (🥉🥈🥇), which is a glyph, not a colour.
+   */
+  colourRole: TierColourRole;
   bgGradient: string;
-  borderColor: string;
 }
+
+/**
+ * The roles a tier may take. Deliberately a small closed set of *existing* semantic tokens: adding a role
+ * means adding a token to six desktop skins and five phone skins, which is exactly the cost that should be
+ * visible when someone wants a seventh metal.
+ */
+export type TierColourRole = "warning" | "neutral" | "accent" | "teal" | "violet" | "danger";
 
 export const RANK_TIERS: readonly RankTier[] = [
   {
@@ -31,9 +46,8 @@ export const RANK_TIERS: readonly RankTier[] = [
     icon: "🥉",
     minElo: 800,
     maxElo: 1199,
-    color: "#cd7f32",
+    colourRole: "warning",
     bgGradient: "from-amber-900/30 to-amber-950/20",
-    borderColor: "#cd7f32",
   },
   {
     id: "silver",
@@ -42,9 +56,8 @@ export const RANK_TIERS: readonly RankTier[] = [
     icon: "🥈",
     minElo: 1200,
     maxElo: 1399,
-    color: "#c0c0c0",
+    colourRole: "neutral",
     bgGradient: "from-slate-700/30 to-slate-900/20",
-    borderColor: "#a0aab2",
   },
   {
     id: "gold",
@@ -53,9 +66,8 @@ export const RANK_TIERS: readonly RankTier[] = [
     icon: "🥇",
     minElo: 1400,
     maxElo: 1599,
-    color: "#f5b73d",
+    colourRole: "accent",
     bgGradient: "from-amber-500/20 to-yellow-600/10",
-    borderColor: "#f5b73d",
   },
   {
     id: "platinum",
@@ -64,9 +76,8 @@ export const RANK_TIERS: readonly RankTier[] = [
     icon: "💎",
     minElo: 1600,
     maxElo: 1799,
-    color: "#4ad8c8",
+    colourRole: "teal",
     bgGradient: "from-teal-500/20 to-emerald-600/10",
-    borderColor: "#4ad8c8",
   },
   {
     id: "diamond",
@@ -75,9 +86,8 @@ export const RANK_TIERS: readonly RankTier[] = [
     icon: "🔮",
     minElo: 1800,
     maxElo: 1999,
-    color: "#a78bfa",
+    colourRole: "violet",
     bgGradient: "from-purple-600/20 to-indigo-600/10",
-    borderColor: "#a78bfa",
   },
   {
     id: "master",
@@ -86,9 +96,8 @@ export const RANK_TIERS: readonly RankTier[] = [
     icon: "👑",
     minElo: 2000,
     maxElo: 3000,
-    color: "#ff4d6d",
+    colourRole: "danger",
     bgGradient: "from-rose-600/30 to-amber-500/20",
-    borderColor: "#ff4d6d",
   },
 ] as const;
 

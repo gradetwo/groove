@@ -1,3 +1,4 @@
+import { trackColour, type TrackColourRole } from "../../utils/trackColours";
 import React, { memo, useMemo } from "react";
 import { ChevronDown, ChevronRight, Music2, Play, Sliders, SlidersHorizontal, Wand2 } from "lucide-react";
 import { MAX_NOTE_GATE_STEPS, SequencerTrack } from "../../types/genre";
@@ -21,18 +22,18 @@ export function getTrackCategory(trackId: string, name: string): TrackCategory {
 export function getTrackTypeDetails(category: TrackCategory, isZh: boolean) {
   switch (category) {
     case "drum":
-      return { label: isZh ? "鼓组" : "DRUM", color: "#ff5964" };
+      return { label: isZh ? "鼓组" : "DRUM", colourRole: "kick" as TrackColourRole };
     case "perc":
-      return { label: isZh ? "打击" : "PERC", color: "#45e0c9" };
+      return { label: isZh ? "打击" : "PERC", colourRole: "hat" as TrackColourRole };
     case "bass":
-      return { label: isZh ? "贝斯" : "BASS", color: "#ff8a5c" };
+      return { label: isZh ? "贝斯" : "BASS", colourRole: "bass" as TrackColourRole };
     case "chord":
-      return { label: isZh ? "和弦" : "CHORD", color: "#f06ec4" };
+      return { label: isZh ? "和弦" : "CHORD", colourRole: "chord" as TrackColourRole };
     case "lead":
-      return { label: isZh ? "主音" : "LEAD", color: "#7ee787" };
+      return { label: isZh ? "主音" : "LEAD", colourRole: "lead" as TrackColourRole };
     case "fx":
     default:
-      return { label: isZh ? "音效" : "FX", color: "#9aa5ce" };
+      return { label: isZh ? "音效" : "FX", colourRole: "fx" as TrackColourRole };
   }
 }
 
@@ -40,7 +41,8 @@ export interface TrackMetaConfig {
   id: string;
   name: string;
   sub: { zh: string; en: string };
-  color: string;
+  /** The lane's colour role; the surface maps it to its own fill/ink tokens. */
+  colourRole: TrackColourRole;
 }
 
 export interface TrackRowProps {
@@ -219,7 +221,17 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
        * above the beam as one unit.
        */
       className={`relative z-20 flex items-center gap-[var(--trk-head-gap)] bg-panel ${isCompact ? "py-0.5 min-h-[var(--step-cell-h-compact)]" : "py-row-y"} landscape-compact-row transition-opacity min-w-max track-row-${trackIdx}`}
-      style={{ ["--tc" as any]: meta.color }}
+      /**
+       * Two variables, because a lane is both a shape and a label.
+       *
+       * `--tc` is the fill (darkened per skin so white-ish note names read on it at 55 % opacity), `--tc-ink` is
+       * the readable version for text drawn *on the lane* — a white note name on a light skin's translucent
+       * lane tint was the audit's single largest finding (104 per studio view).
+       */
+      style={{
+        ["--tc" as any]: trackColour(meta.colourRole),
+        ["--tc-ink" as any]: trackColour(meta.colourRole, "ink"),
+      }}
     >
       {/* Solid frozen column: full row height, header width plus the gutter, underneath the header.
           See `.trk-head-solid` in index.css for why the header box alone is not enough. */}
@@ -268,9 +280,10 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
             data-testid={`track-type-${trackIdx}`}
             className="font-['JetBrains_Mono'] text-[7.5px] font-black uppercase px-1 py-0.2 rounded tracking-tighter shrink-0 border trk-head-desktop-only"
             style={{
-              backgroundColor: `${typeDetails.color}22`,
-              borderColor: `${typeDetails.color}55`,
-              color: typeDetails.color,
+              // The chip tint is the *ink* at low alpha, so it reads on the panel in every skin.
+              backgroundColor: `color-mix(in srgb, ${trackColour(typeDetails.colourRole)} 14%, transparent)`,
+              borderColor: `color-mix(in srgb, ${trackColour(typeDetails.colourRole)} 34%, transparent)`,
+              color: trackColour(typeDetails.colourRole),
             }}
             title={typeDetails.label}
           >
@@ -319,7 +332,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               className={`w-1 h-5 rounded-sm shadow-[0_0_8px_var(--tc)] shrink-0 group-hover/trk:scale-y-110 transition-transform ${
                 isSilenced ? "opacity-40" : "opacity-100"
               }`}
-              style={{ backgroundColor: meta.color }}
+              style={{ backgroundColor: trackColour(meta.colourRole) }}
             />
             {/* Mini 4-Segment Activity Meter (Decoupled from React State - P2-03) */}
             <div
@@ -648,7 +661,7 @@ export const TrackRow = memo<TrackRowProps>(function TrackRow({
               isPlayhead={false}
               isBarStart={isBarStart}
               isGroupStart={isGroupStart}
-              trackColor={meta.color}
+              trackColor={trackColour(meta.colourRole)}
               isAlternateBar={isAlternateBar}
               isCompact={isCompact}
               isSustainTail={isSustainTail}

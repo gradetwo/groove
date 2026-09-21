@@ -126,6 +126,8 @@
   --m-violet: #5b2a9e;
   --m-gold: #0b6e7f;
   --m-gold-hi: #063c46;
+  /* A warm step readable as *text* on this skin's card — the challenge's rank roles need one. */
+  --m-warning: #7a4a00;
   --m-gold-rgb: 11 110 127;
   /*
    * The two hands, exposed as tokens because `VinylCanvas` reads them off the shell root and paints

@@ -147,6 +147,8 @@
   /* Default module (首页): brass — the "approved / live" indicator. */
   --m-gold: #e6c766;
   --m-gold-hi: #f2e3a6;
+  /* A warm step readable as *text* on this skin's card — the challenge's rank roles need one. */
+  --m-warning: #e6c766;
   --m-gold-rgb: 230 199 102;
 
   /* The steel face; the concrete behind it is painted in section 3. */

@@ -71,6 +71,22 @@ const luminance = ([r, g, b]) => {
   return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
 };
 const isLight = (hex) => luminance(hexToRgb(hex)) > 0.5;
+/**
+ * A step that is guaranteed to *increase* contrast against a given ground.
+ *
+ * `step()` above moves toward white on a light ground, which is right for a *surface* (paper gets lighter as
+ * it is raised) and wrong for text: `warning` derived that way measured 3.25:1 on the comic panel and 3.57:1
+ * on the Soviet-years paper — the roles audit caught it. A colour meant to be *read* has to move away from
+ * its ground instead, whichever direction that is.
+ */
+const readableStep = (hex, ground, amount) => {
+  const groundIsLight = isLight(ground);
+  const [r, g, b] = hexToRgb(hex);
+  const target = groundIsLight ? 0 : 255;
+  const mix = (v) => v + (target - v) * amount;
+  return rgbToHex([mix(r), mix(g), mix(b)]);
+};
+
 /** Move a colour toward white (light grounds) or black (dark grounds) — the "one step up" of a palette. */
 const step = (hex, amount) => {
   const [r, g, b] = hexToRgb(hex);
@@ -164,23 +180,18 @@ const DEFAULT_SKIN = {
 const HUE_OVERRIDES = {
   minimal: {
     track: { bass: "#5b46d6", chord: "#b03a0b", lead: "#157f3d", fx: "#63636d", perc: "#0f766e", snare: "#c5303f" },
-    cat: { electronic: "#0d6a63", rock: "#c5303f", hiphop: "#2358e6", jazz: "#5b46d6", pop: "#b03a0b", latin: "#157f3d" },
   },
   comic: {
     track: { bass: "#c50034", chord: "#8a2be2", lead: "#00702f", fx: "#3a3440", perc: "#b26a00", snare: "#c50034" },
-    cat: { electronic: "#0b6e7f", rock: "#c50034", hiphop: "#b26a00", jazz: "#8a2be2", pop: "#d81b7a", latin: "#00702f" },
   },
   soviet: {
     track: { bass: "#8fb3ac", chord: "#c98a5b", lead: "#a8c48a", fx: "#7f8a93", perc: "#c0b9a3", snare: "#e2703a" },
-    cat: { electronic: "#8fb3ac", rock: "#e2703a", hiphop: "#e6c766", jazz: "#7f8a93", pop: "#c98a5b", latin: "#a8c48a" },
   },
   sovietYears: {
     track: { bass: "#2c3e50", chord: "#9e0b22", lead: "#1f5f6b", fx: "#56514a", perc: "#7a4f00", snare: "#9e0b22" },
-    cat: { electronic: "#1f5f6b", rock: "#9e0b22", hiphop: "#cc0000", jazz: "#2c3e50", pop: "#a8600f", latin: "#7a4f00" },
   },
   pixel: {
     track: { bass: "#8a5bff", chord: "#ff6b97", lead: "#7ef0c0", fx: "#8a8fb0", perc: "#ffd166", snare: "#ff6b97" },
-    cat: { electronic: "#5bc8ff", rock: "#ff6b97", hiphop: "#ffd166", jazz: "#8a5bff", pop: "#ff8ad8", latin: "#7ef0c0" },
   },
 };
 
@@ -202,9 +213,24 @@ function palette(skin) {
     accent: p.gold,
     danger: p.red,
     success: p.green,
-    warning: step(p.gold, light ? 0.25 : 0.15),
+    // Read, not just seen: the direction that increases contrast against the panel it sits on.
+    warning: readableStep(p.gold, p.card, light ? 0.35 : 0.2),
     track: { ...DEFAULT_SKIN.track, ...(HUE_OVERRIDES[skin]?.track ?? {}) },
-    cat: { ...DEFAULT_SKIN.cat, ...(HUE_OVERRIDES[skin]?.cat ?? {}) },
+    /**
+     * Category hues come from the phone's own identity tokens where the phone has one (its `--m-teal`,
+     * `--m-red`, `--m-gold`, `--m-violet`, `--m-green`), so the two surfaces agree *by construction* rather
+     * than by two hand-picked hexes that agree today. `pop` has no phone twin, so it takes the accent's
+     * lighter read.
+     */
+    cat: {
+      electronic: p.teal,
+      rock: p.red,
+      hiphop: p.gold,
+      jazz: p.violet,
+      pop: readableStep(p.gold, p.card, light ? 0.25 : 0.3),
+      latin: p.green,
+      ...(HUE_OVERRIDES[skin]?.cat ?? {}),
+    },
   };
 }
 
@@ -313,12 +339,17 @@ function allLiterals() {
   const map = new Map();
   for (const file of files) {
     const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-    const re = /(?:^|[\s"'])(bg|text|border|from|to|via|ring|shadow|fill|stroke|decoration|divide|outline|accent|caret)-\[(#[0-9a-fA-F]{3,8})\](?:\/(\d{1,3}))?/g;
+    const re =
+      /(?:^|[\s"'])((?:[a-z-]+:)*)(bg|text|border|from|to|via|ring|shadow|fill|stroke|decoration|divide|outline|accent|caret)-\[(#[0-9a-fA-F]{3,8})\](?:\/(\d{1,3}))?/g;
     for (const match of text.matchAll(re)) {
-      const [, prefix, hex, opacity] = match;
+      const [, variant, prefix, hex, opacity] = match;
       const key = hex.toLowerCase();
       if (!map.has(key)) map.set(key, new Set());
-      map.get(key).add(`${prefix}${opacity ? `:${opacity}` : ""}`);
+      // The variant is part of the class token (`hover:bg-[#14151a]`), so it is kept: these are the states a
+      // skin was silently missing — a hover that stayed dark-theme. Stored as `variant|prefix|opacity` so the
+      // three parts cannot be confused (the first attempt concatenated them and the parser then read
+      // `hover` as a prefix, silently dropping every variant).
+      map.get(key).add(`${variant}|${prefix}|${opacity ?? ""}`);
     }
   }
   return map;
@@ -362,9 +393,10 @@ function namedPaletteUses() {
   const uses = new Set();
   for (const file of files) {
     const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-    const re = /(?:^|[\s"'])(bg|text|border|from|to|via|ring|shadow|fill|stroke|decoration|outline|accent|caret)-(indigo|purple|violet|blue|sky|cyan|fuchsia|pink|teal|emerald|green|lime|red|rose|amber|yellow|orange)-([0-9]{2,3})(?:\/(\d{1,3}))?/g;
+    const re =
+      /(?:^|[\s"'])((?:[a-z-]+:)*)(bg|text|border|from|to|via|ring|shadow|fill|stroke|decoration|outline|accent|caret)-(indigo|purple|violet|blue|sky|cyan|fuchsia|pink|teal|emerald|green|lime|red|rose|amber|yellow|orange)-([0-9]{2,3})(?:\/(\d{1,3}))?/g;
     for (const match of text.matchAll(re)) {
-      uses.add(`${match[1]}|${match[2]}|${match[4] ?? ""}|${match[3]}`);
+      uses.add(`${match[1]}|${match[2]}|${match[3]}|${match[5] ?? ""}|${match[4]}`);
     }
   }
   return [...uses].sort();
@@ -470,6 +502,14 @@ const ROLE_TOKEN = {
   trackChord: "--d-track-chord",
   trackLead: "--d-track-lead",
   trackFx: "--d-track-fx",
+  trackKickInk: "--d-track-kick-ink",
+  trackSnareInk: "--d-track-snare-ink",
+  trackHatInk: "--d-track-hat-ink",
+  trackPercInk: "--d-track-perc-ink",
+  trackBassInk: "--d-track-bass-ink",
+  trackChordInk: "--d-track-chord-ink",
+  trackLeadInk: "--d-track-lead-ink",
+  trackFxInk: "--d-track-fx-ink",
   catElectronic: "--d-cat-electronic",
   catRock: "--d-cat-rock",
   catHiphop: "--d-cat-hiphop",
@@ -500,8 +540,31 @@ function tokenRecord(skin) {
     "--d-accent": channels(p.accent),
     // One step of the accent for hovers, and the soft tone the desktop already uses for secondary type.
     "--d-accent-hover": channels(step(p.accent, light ? 0.18 : 0.14)),
-    "--d-accent-soft": channels(light ? step(p.accent, 0.35) : step(p.accent, 0.25)),
+    /**
+     * The softer accent, as a *readable* tone rather than a lighter one.
+     *
+     * `#d8b988` (the desktop's soft gold) is used for song titles in the chord workshop. Mapped to a
+     * lightened accent it measured 3.3:1 on the minimal paper and 3.5:1 on the comic newsprint — 107 of the
+     * audit's findings. A "soft" accent still has to be read, so it takes the step that moves *away* from the
+     * panel.
+     */
+    "--d-accent-soft": channels(readableStep(p.accent, p.panel, light ? 0.45 : 0.3)),
     "--d-accent-glow": alpha(p.accent, 0.2),
+    /*
+     * Lane colours, twice: the colour itself (a shape — a pad, a step, a bar) and an ink that reads as
+     * *text* on the panel.
+     *
+     * The studio labels its track headers with the lane colour (`text-[#45e0c9]` for HI-HAT), and a bright
+     * instrument colour is chosen to glow on a dark pad, not to be small text: on the Soviet-years paper the
+     * teal measured 1.55:1. Same colour, same identity, but the text step is derived against the panel it is
+     * actually read on.
+     */
+    ...Object.fromEntries(
+      Object.entries(p.track).flatMap(([lane, hex]) => [
+        [`--d-track-${lane}`, channels(hex)],
+        [`--d-track-${lane}-ink`, channels(readableStep(hex, p.panel, light ? 0.75 : 0.55))],
+      ])
+    ),
     "--d-danger": channels(p.danger),
     "--d-success": channels(p.success),
     "--d-warning": channels(p.warning),
@@ -610,23 +673,29 @@ function generate() {
     caret: "caret-color",
   };
   for (const [hex, role] of Object.entries(literalRoles)) {
-    const token = ROLE_TOKEN[role];
+    let token = ROLE_TOKEN[role];
     if (!token) throw new Error(`literal ${hex}: role ${role} has no token`);
     const used = prefixes.get(hex);
     if (!used) continue;
     for (const use of [...used].sort()) {
-      const [prefix, opacity] = use.split(":");
+      const [variant, prefix, opacity] = use.split("|");
+      /*
+       * A lane colour used as *text* takes the readable step, not the shape colour.
+       *
+       * `ROLE_TOKEN[role]` names the shape; when the utility is `text-` on a lane role, the ink variant is
+       * what a skin guarantees against its own panel.
+       */
+      const inkRole = prefix === "text" && /^track[A-Z]/.test(role) ? `${role}Ink` : role;
+      const chosen = ROLE_TOKEN[inkRole] ?? token;
       const property = PROPERTY[prefix];
       if (!property) continue;
+      token = chosen;
       const colour = opacity ? `rgb(var(${token}) / ${(Number(opacity) / 100).toFixed(2)})` : `rgb(var(${token}))`;
       const value =
         prefix === "via"
           ? `var(--tw-gradient-from), ${colour}, var(--tw-gradient-to, rgb(0 0 0 / 0))`
           : colour;
-      const selector =
-        prefix === "from" || prefix === "to" || prefix === "via"
-          ? `[class*="${prefix}-[${hex}]"]`
-          : `[class~="${prefix}-[${hex}]${opacity ? `/${opacity}` : ""}"]`;
+      const selector = `[class~="${variant}${prefix}-[${hex}]${opacity ? `/${opacity}` : ""}"]`;
       rules.push(`${selector} { ${property}: ${value}; }`);
     }
   }
@@ -639,21 +708,21 @@ function generate() {
    */
   const grouped = new Map();
   for (const use of namedPaletteUses()) {
-    const [prefix, family, opacity] = use.split("|");
+    const [variant, prefix, family, opacity] = use.split("|");
     const role = NAMED_FAMILIES[family];
     if (!role) continue;
     const token = ROLE_TOKEN[role];
-    const key = `${prefix}|${token}|${opacity}`;
+    const key = `${variant}|${prefix}|${token}|${opacity}`;
     if (!grouped.has(key)) grouped.set(key, new Set());
     // Only the shades the source actually uses: emitting all eleven for every family would be ~2 000 rules
     // of CSS for classes that do not exist.
     // A Tailwind palette class is plain (`bg-indigo-600/40`), unlike the arbitrary-value form which carries
-    // brackets — so the selector is the class token itself.
-    grouped.get(key).add(`${prefix}-${family}-${use.split("|")[3]}${opacity ? `/${opacity}` : ""}`);
+    // brackets — so the selector is the class token itself, variant included (`hover:bg-indigo-600`).
+    grouped.get(key).add(`${variant}${prefix}-${family}-${use.split("|")[4]}${opacity ? `/${opacity}` : ""}`);
   }
   const namedRules = [];
   for (const [key, selectors] of [...grouped.entries()].sort()) {
-    const [prefix, token, opacity] = key.split("|");
+    const [, prefix, token, opacity] = key.split("|");
     const property = PROPERTY[prefix];
     if (!property) continue;
     const colour = opacity ? `rgb(var(${token}) / ${(Number(opacity) / 100).toFixed(2)})` : `rgb(var(${token}))`;
@@ -689,21 +758,21 @@ function generate() {
     for (const file of files) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
       const re = new RegExp(
-        `(?:^|[\\s"'])(bg|border|text)-(${GREY_FAMILIES.join("|")})-(${GREY_SHADES.join("|")})(?:\\/(\\d{1,3}))?`,
+        `(?:^|[\\s"'])((?:[a-z-]+:)*)(bg|border|text)-(${GREY_FAMILIES.join("|")})-(${GREY_SHADES.join("|")})(?:\\/(\\d{1,3}))?`,
         "g"
       );
       for (const match of text.matchAll(re)) {
-        const role = greyRole(match[1], match[3]);
+        const role = greyRole(match[2], match[4]);
         if (!role) continue;
-        const key = `${match[1]}|${role}|${match[4] ?? ""}`;
+        const key = `${match[1]}|${match[2]}|${role}|${match[5] ?? ""}`;
         if (!greyUses.has(key)) greyUses.set(key, new Set());
-        greyUses.get(key).add(`${match[1]}-${match[2]}-${match[3]}${match[4] ? `/${match[4]}` : ""}`);
+        greyUses.get(key).add(`${match[1]}${match[2]}-${match[3]}-${match[4]}${match[5] ? `/${match[5]}` : ""}`);
       }
     }
   }
   const greyRules = [];
   for (const [key, selectors] of [...greyUses.entries()].sort()) {
-    const [prefix, role, opacity] = key.split("|");
+    const [, prefix, role, opacity] = key.split("|");
     const property = PROPERTY[prefix];
     const token = ROLE_TOKEN[role];
     if (!property || !token) continue;
