@@ -7,21 +7,33 @@
  * 某个曲风的详情" — be the one place a genre's facts live, and be reachable from everywhere a genre is
  * named (the list row, the player bar, the player's record, the jam screen's backing-track name).
  *
- * The first version was too thin: art, three fact rows, one instrumentation line and two short
- * paragraphs. This pass mines the desktop `GenreDetailView` for everything a phone reader would want —
- * but keeps the phone's own shape instead of copying the desktop's cards:
+ * The page is still a lyrics page and not a dashboard: one column of text on the dark ground, no
+ * cards, no chips, no pills, no icon-per-heading, no play control, no jam hand-off. What changed in
+ * this pass is that the *structure* now carries the design, instead of a run of identical paragraphs:
  *
- *  - **A lyrics page, not a dashboard.** One quiet column of text on the dark ground: big art, title
- *    and subtitle, facts as plain label/value rows, then generously spaced prose. No cards, no chips,
- *    no pills, no icon-per-heading. The movements are separated only by a small mono kicker.
- *  - **Lineage is the centrepiece.** `getLineage` gives the ancestor/descendant/fusion graph and the
- *    era story places the genre in its decade; both are rendered as flowing prose with the genre names
- *    as inline links, so the family tree is something you *read* rather than a widget you parse.
+ *  - **The header is a composition, not a thumbnail.** The genre's own generated art bleeds full-width
+ *    behind a large cover block and dissolves into the ground (through a luminance mask, so it works
+ *    on every skin's ground); the name is set beside the art, in the display face the shell already
+ *    routes to `h1`; and the facts moved out of their label/value table into a one-line "at a glance"
+ *    strip at the foot of the header. The strip is the same `mobile-detail-facts` element the tests
+ *    know, so the invariant survives the redesign.
+ *  - **Lineage is a diagram.** `getLineage` gives the ancestor/descendant/fusion graph, and the old
+ *    page flattened it into four sentences. It is now a vertical flow on a single hairline rail —
+ *    ancestors above, the genre itself as the gold node, the era and the descendants below, with the
+ *    lateral relations set off to the side under a gold rule. Every sentence is kept (the relation
+ *    templates are the connective words, and the curated per-relation descriptions print verbatim),
+ *    and every genre name stays an inline `<a>`, so the diagram is read *and* navigated.
+ *  - **The lists have rhythm.** The rhythm voices get a left accent rule per part, the tracks become a
+ *    numbered list, the tips a marked list, and the cultural context a pull-quote.
+ *  - **The page ends deliberately.** The related-genre index closes with hairline separators and an
+ *    end rule, rather than stopping after the last row.
  *  - **Only real data, never an empty heading.** Every movement and every row is guarded by its own
  *    field, so a genre without pro tips does not grow an empty "Pro tips" section. (Today every
  *    library genre fills every prose field; the guards are what keep that from being load-bearing.)
- *  - **Nothing that duplicates the desktop's editing surface.** This is a reading page; the controls
- *    are the way back, the inline lineage names, and the related-genre rows. No play, no jam hand-off.
+ *  - **No hardcoded colour.** The page paints with token variables (`var(--m-ink-2)`, `var(--m-gold)`,
+ *    `var(--m-line-2)`, …) and Tailwind utilities only, so all six skins restyle it from `mobile.css`
+ *    and the skin sheets. The one non-token colour is the genre's own generated art, which is
+ *    identity and is already on every genre surface in the shell.
  *  - **Track rows are text, not links.** Each genre carries five YouTube search links, but a page whose
  *    only navigation is genre-to-genre should not sprout five external search buttons; the credit line
  *    is worth reading and not worth the chrome. (Reported, not silently dropped: the data is there.)
@@ -29,7 +41,7 @@
 import React from "react";
 import { ArrowLeft } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
-import { getLineage } from "../../data/lineage";
+import { getLineage, type LineageSibling } from "../../data/lineage";
 import { GENRE_RELATIONS } from "../../data/relations";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
 import { useLanguage, type Language, type MessageKey } from "../../i18n/LanguageContext";
@@ -53,31 +65,12 @@ const genreById = (id: string | undefined): Genre | undefined =>
  */
 const GENERIC_RELATION = /links historically back to|在音乐历史渊源上追溯关联至/;
 
-interface Explanation {
-  id: string;
-  description: I18nString;
-}
-
-/** Up to three curations of how this genre actually connects to its relatives. */
-function curatedExplanations(genre: Genre): Explanation[] {
-  const seen = new Set<string>();
-  const found: Explanation[] = [];
-  const touching = GENRE_RELATIONS
-    .filter((relation) => relation.source === genre.id || relation.target === genre.id)
-    .sort((a, b) => b.weight - a.weight);
-
-  for (const relation of touching) {
-    const description = relation.description;
-    if (!description || GENERIC_RELATION.test(description.en) || GENERIC_RELATION.test(description.zh)) {
-      continue;
-    }
-    const otherId = relation.source === genre.id ? relation.target : relation.source;
-    if (otherId === genre.id || seen.has(otherId) || !genreById(otherId)) continue;
-    seen.add(otherId);
-    found.push({ id: otherId, description });
-    if (found.length === 3) break;
-  }
-  return found;
+/** The curated half of a relation's description, or null when there is nothing worth printing. */
+function curatedNote(sibling: LineageSibling): I18nString | null {
+  const description = sibling.description;
+  if (!description) return null;
+  if (GENERIC_RELATION.test(description.en) || GENERIC_RELATION.test(description.zh)) return null;
+  return description;
 }
 
 /**
@@ -257,31 +250,7 @@ export function MobileGenreDetailScreen({
       <BackButton onBack={onBack} label={t("mobile_back")} />
       <p className="m-mono -mt-2 text-right text-[9px] text-[var(--m-ink-3)]">{t("mobile_detail_tap_back")}</p>
 
-      <header className="mt-3 flex items-center gap-4">
-        <span
-          aria-hidden="true"
-          data-testid="mobile-detail-art"
-          className="relative h-20 w-20 flex-none overflow-hidden rounded-2xl"
-          style={{ background: genreArtBackground(genre) }}
-        >
-          <img
-            src={genreCoverUrl(genre.id)}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
-          />
-        </span>
-        <div className="min-w-0">
-          <h1 className="text-[22px] font-bold leading-tight">{genre.name}</h1>
-          <p className="mt-1 text-[12.5px] text-[var(--m-ink-2)]">
-            {chineseName(genre)} · {genre.category}
-          </p>
-        </div>
-      </header>
-
-      <Facts genre={genre} story={story} />
+      <GenreHeader genre={genre} story={story} />
 
       {/* Lineage first: it is the page's centrepiece and it answers "where does this come from?". */}
       <LineageMovement genre={genre} story={story} onOpen={onOpenGenre} />
@@ -298,43 +267,124 @@ export function MobileGenreDetailScreen({
 
       <TracksMovement genre={genre} />
 
-      {related.length > 0 && (
-        <section className="mt-7" data-testid="mobile-detail-related">
-          <h2 className="m-mono text-[10px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
-            {t("mobile_detail_related")}
-          </h2>
-          <ul className="mt-1">
-            {related.map((id) => {
-              const item = genreById(id)!;
-              return (
-                <li key={id}>
-                  {/*
-                   * A plain text row, not a pill: the dot is the only ornament. It stays a real
-                   * button so it is focusable and its tap target is the full 46px row.
-                   */}
-                  <button
-                    type="button"
-                    data-testid={`mobile-detail-related-${id}`}
-                    onClick={() => onOpenGenre(id)}
-                    className="m-press flex min-h-[46px] w-full items-center gap-2.5 text-left"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="h-1.5 w-1.5 flex-none rounded-full"
-                      style={{ background: genreArtBackground(item) }}
-                    />
-                    <span className="truncate text-[13px] text-[var(--m-ink)]">{item.name}</span>
-                    <span className="m-mono ml-auto flex-none truncate text-[10px] text-[var(--m-ink-3)]">
-                      {chineseName(item)} · {item.default_bpm} BPM
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+      <RelatedIndex related={related} onOpenGenre={onOpenGenre} />
     </article>
+  );
+}
+
+/**
+ * The header: art, name, spec line.
+ *
+ * The composition is a poster, not a card. The genre's own generated art is laid full-bleed behind
+ * the block and faded out through a luminance mask, so the ground shows through by the time the name
+ * starts — which is what keeps the name legible in the light skins, where a bright gradient behind
+ * near-black type would be the failure mode. Nothing is boxed: there is no panel, no border around the
+ * header, and the art block is the only surface, because it is the genre itself.
+ */
+function GenreHeader({ genre, story }: { genre: Genre; story?: TimelineStory }) {
+  const chinese = chineseName(genre);
+  return (
+    <header className="relative -mx-4 mt-2 overflow-hidden" data-testid="mobile-detail-header">
+      {/*
+       * The bleed. Two layers: the art itself at a large size, then a mask that dissolves it into
+       * whatever ground the skin uses. The mask is luminance (black → transparent), so it is not a
+       * colour and cannot be wrong on a skin it has never seen.
+       */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[220px] opacity-55 [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_15%,transparent_80%)] [mask-image:linear-gradient(to_bottom,transparent,black_15%,transparent_80%)]"
+        style={{ background: genreArtBackground(genre), backgroundSize: "220% 220%" }}
+      />
+
+      <div className="relative flex items-end gap-4 px-4 pt-5">
+        <span
+          aria-hidden="true"
+          data-testid="mobile-detail-art"
+          className="relative h-[112px] w-[112px] flex-none overflow-hidden rounded-2xl ring-1 ring-[var(--m-line-2)]"
+          style={{ background: genreArtBackground(genre) }}
+        >
+          <img
+            src={genreCoverUrl(genre.id)}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        </span>
+
+        <div className="min-w-0 flex-1 pb-0.5">
+          <p className="m-mono text-[9px] uppercase tracking-[0.24em] text-[var(--m-ink-2)]">
+            {genre.category}
+          </p>
+          {/* One display moment on the page: everything else is set for reading, not for shouting. */}
+          <h1 className="mt-1.5 break-words text-[27px] font-bold leading-[1.02] tracking-[-0.01em]">
+            {genre.name}
+          </h1>
+          {chinese && <p className="mt-2 text-[12.5px] text-[var(--m-ink-2)]">{chinese}</p>}
+        </div>
+      </div>
+
+      <Facts genre={genre} story={story} />
+    </header>
+  );
+}
+
+/**
+ * The facts, as a one-line "at a glance" strip under the name.
+ *
+ * These were a label/value table (and before that, three bordered tiles). At phone width the table
+ * won every argument about space and lost the one about reading: six rows of right-aligned values is
+ * not a glance. The strip keeps every field and every label, but joins them into a wrapping spec line
+ * — the way a record sleeve prints its credits — so the header reads as one composition instead of
+ * heading-then-table. It is still the `mobile-detail-facts` element the phone tests assert against, and
+ * every unit is a plain `<span>` with no border, radius or surface, so it can never become a card.
+ */
+function Facts({ genre, story }: { genre: Genre; story?: TimelineStory }) {
+  const { t, language } = useLanguage();
+  const eraLabel = story
+    ? language === "zh"
+      ? `${story.decade} 年代`
+      : story.year
+    : genre.origin_decade
+      ? language === "zh"
+        ? `${genre.origin_decade} 年代`
+        : `${genre.origin_decade}s`
+      : "";
+
+  const units: Array<[string, string]> = (
+    [
+      [
+        t("mobile_detail_origin"),
+        [genre.origin_year, genre.origin_place?.[language]].filter(Boolean).join(" · "),
+      ],
+      [t("mobile_detail_era"), eraLabel],
+      [t("mobile_detail_bpm_range"), genre.bpm_range],
+      [t("mobile_detail_default_tempo"), genre.default_bpm ? `${genre.default_bpm} BPM` : ""],
+      [t("mobile_detail_time_signature"), genre.time_signature],
+      [t("mobile_detail_key_scale"), genre.sequencer_pattern?.scale ?? ""],
+    ] as Array<[string, string]>
+  ).filter(([, value]) => value.trim().length > 0);
+
+  return (
+    <div
+      className="relative mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1.5 px-4 pb-4"
+      data-testid="mobile-detail-facts"
+    >
+      {units.map(([label, value], index) => (
+        <span key={label} className="flex items-baseline gap-1.5 whitespace-nowrap">
+          <span className="m-mono text-[9px] uppercase tracking-[0.16em] text-[var(--m-ink-3)]">
+            {label}
+          </span>
+          <span className="min-w-0 text-[12px] text-[var(--m-ink)]">{value}</span>
+          {index < units.length - 1 && (
+            <span aria-hidden="true" className="text-[var(--m-gold)]">
+              ·
+            </span>
+          )}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -353,13 +403,14 @@ function BackButton({ onBack, label }: { onBack: () => void; label: string }) {
 }
 
 /**
- * A heading plus a run of prose, with nothing drawn around it.
+ * A heading plus a run of prose, under a hairline rule.
  *
  * The card wrapper this replaced was the loudest thing on the page: five rounded panels made the
  * genre page read like a settings screen. A lyrics page earns its calm from the dark ground showing
- * through, so a movement keeps only generous spacing and a wide line height — the small mono kicker is
- * the whole of its chrome. `break-words` is the 390 px guard: a long place name or track title wraps
- * instead of widening the page.
+ * through, so a movement keeps only generous spacing and a wide line height. The hairline is the one
+ * structural device — it gives six movements a visible beat without drawing a box around any of them,
+ * and `break-words` is the 390 px guard: a long place name or track title wraps instead of widening
+ * the page.
  */
 function Movement({
   title,
@@ -371,7 +422,7 @@ function Movement({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-7" data-testid={testId}>
+    <section className="mt-7 border-t border-[var(--m-line)] pt-5" data-testid={testId}>
       <h2 className="m-mono text-[10px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">{title}</h2>
       <div className="mt-2.5 space-y-3 break-words text-[13px] leading-[1.9] text-[var(--m-ink-2)]">
         {children}
@@ -390,70 +441,23 @@ function InlineLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Facts as label/value text rows on the ground.
+ * Lineage and evolution, as a vertical flow diagram.
  *
- * These were three bordered tiles; at phone width the tile borders and the tile gaps ate more space
- * than the values did. A row per fact is easier to scan and needs no box to separate it from its
- * neighbour — the 14px rhythm already does that. The second pass adds the era, the default tempo, the
- * key/scale and the meter, which the desktop page showed as an icon row; a row can simply be omitted
- * when its value is missing, which is the whole point of no icon.
- */
-function Facts({ genre, story }: { genre: Genre; story?: TimelineStory }) {
-  const { t, language } = useLanguage();
-  const eraLabel = story
-    ? language === "zh"
-      ? `${story.decade} 年代`
-      : story.year
-    : genre.origin_decade
-      ? language === "zh"
-        ? `${genre.origin_decade} 年代`
-        : `${genre.origin_decade}s`
-      : "";
-
-  const rows: Array<[string, string]> = [
-    [
-      t("mobile_detail_origin"),
-      [genre.origin_year, genre.origin_place?.[language]].filter(Boolean).join(" · "),
-    ],
-    [t("mobile_detail_era"), eraLabel],
-    [t("mobile_detail_bpm_range"), genre.bpm_range],
-    [t("mobile_detail_default_tempo"), genre.default_bpm ? `${genre.default_bpm} BPM` : ""],
-    [t("mobile_detail_time_signature"), genre.time_signature],
-    [t("mobile_detail_key_scale"), genre.sequencer_pattern?.scale ?? ""],
-  ];
-
-  return (
-    <dl className="mt-7 space-y-3.5" data-testid="mobile-detail-facts">
-      {rows
-        .filter(([, value]) => value.trim().length > 0)
-        .map(([label, value]) => (
-          <div key={label} className="flex items-baseline justify-between gap-6">
-            <dt className="m-mono flex-none text-[10px] uppercase tracking-[0.18em] text-[var(--m-ink-3)]">
-              {label}
-            </dt>
-            <dd className="min-w-0 break-words text-right text-[13px] leading-snug text-[var(--m-ink)]">
-              {value}
-            </dd>
-          </div>
-        ))}
-    </dl>
-  );
-}
-
-/**
- * Lineage and evolution, as prose.
+ * The data was already a graph; the old page flattened it into a family sentence and three curated
+ * sentences, and the reader had to rebuild the tree in their head. Here it is drawn:
  *
- * Three or four sentences, each drawn from a different table and each optional:
+ *   - a single hairline rail runs down the movement, with a node marker per stage;
+ *   - **源头 / From** holds the ancestors and the "演化而来" sentence;
+ *   - the genre itself is the gold node in the middle (a rotated square, the page's one accent shape);
+ *   - **年代 / Era** puts the timeline story beside it;
+ *   - **衍生 / Into** holds the descendants and the "催生了" sentence;
+ *   - the lateral relations (fusion / cross-influence / regional variant) sit off the rail under a
+ *     gold rule, because they are not ancestry and should not read as a rung of the ladder.
  *
- *  1. the family sentence, from `getLineage` — "从 Chicago House 与 Future House 演化而来，又直接催生了
- *     Melodic House、Microhouse 与 Tropical House。";
- *  2. one sentence per related relation type (fusion / cross-influence / regional variant);
- *  3. the era sentence, from `TIMELINE_STORIES` — "1980 年代 · 与 Acid House、Boom Bap 同时代。";
- *  4. up to three curated explanations, which print the relation's own `description` verbatim and
- *     turn the sibling's name into the link where it occurs (never a sentence invented here).
- *
- * Every name is an inline link, so reading the history is also navigating it. If no table has anything
- * to say the whole movement disappears rather than printing an empty heading.
+ * Every sentence is kept — the templates carry the connective words, and the per-relation descriptions
+ * print verbatim with their sibling's name linked where it occurs. Every genre name is an inline `<a>`,
+ * so reading the history is navigating it. If no table has anything to say the whole movement
+ * disappears rather than printing an empty heading.
  */
 function LineageMovement({
   genre,
@@ -476,41 +480,16 @@ function LineageMovement({
       language
     );
 
-  const ancestors = lineage.ancestors.map((sibling) => sibling.id);
-  const descendants = lineage.descendants.map((sibling) => sibling.id);
+  const { ancestors, descendants } = lineage;
   const byType = (type: string) =>
-    lineage.related.filter((sibling) => sibling.type === type).map((sibling) => sibling.id);
+    lineage.related.filter((sibling) => sibling.type === type);
 
-  const family: React.ReactNode[] = [];
-  if (ancestors.length > 0) {
-    family.push(
-      <Prose key="from" templateKey="mobile_detail_lineage_from" names={links(ancestors)} />
-    );
-  }
-  if (descendants.length > 0) {
-    family.push(
-      <Prose
-        key="to"
-        templateKey={
-          ancestors.length > 0 ? "mobile_detail_lineage_led_to" : "mobile_detail_lineage_led_to_only"
-        }
-        names={links(descendants)}
-      />
-    );
-  }
-  if (family.length > 0) family.push(<React.Fragment key="end">{end}</React.Fragment>);
-
-  const relatedSentence: React.ReactNode[] = [];
-  const relatedGroups: Array<[string, MessageKey, string[]]> = [
+  const relatedGroups: Array<[string, MessageKey, LineageSibling[]]> = [
     ["fusion", "mobile_detail_lineage_fusion", byType("fusion_with")],
     ["influence", "mobile_detail_lineage_influence", byType("influenced_by")],
     ["variant", "mobile_detail_lineage_variant", byType("regional_variant")],
   ];
-  for (const [key, templateKey, ids] of relatedGroups) {
-    if (ids.length === 0) continue;
-    relatedSentence.push(<Prose key={key} templateKey={templateKey} names={links(ids)} />);
-    relatedSentence.push(<React.Fragment key={`${key}-end`}>{end}</React.Fragment>);
-  }
+  const hasRelated = relatedGroups.some(([, , siblings]) => siblings.length > 0);
 
   const contemporaries = story
     ? story.genre_ids
@@ -521,64 +500,210 @@ function LineageMovement({
   const era =
     story && language === "zh" ? `${story.decade} 年代` : (story?.year ?? "");
 
-  const explanations = curatedExplanations(genre);
+  if (ancestors.length === 0 && descendants.length === 0 && !hasRelated && contemporaries.length === 0) {
+    return null;
+  }
 
-  const hasAnything =
-    family.length > 0 ||
-    relatedSentence.length > 0 ||
-    (contemporaries.length > 0 && Boolean(story)) ||
-    explanations.length > 0;
-  if (!hasAnything) return null;
+  const subtitle = [chineseName(genre), `${genre.default_bpm} BPM`, genre.time_signature]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Movement title={t("mobile_detail_lineage")} testId="mobile-detail-lineage">
-      {family.length > 0 && <p>{family}</p>}
-      {relatedSentence.length > 0 && <p>{relatedSentence}</p>}
-      {contemporaries.length > 0 && story && (
-        <p data-testid="mobile-detail-era">
-          <Prose
-            templateKey="mobile_detail_era_contemporary"
-            vars={{ era }}
-            names={links(contemporaries.map((item) => item.id))}
+      <div className="relative" data-testid="mobile-detail-flow">
+        {/* The rail. One rule, one accent node: the whole diagram hangs off these two elements. */}
+        <span
+          aria-hidden="true"
+          className="absolute bottom-3 left-[7px] top-[7px] w-px bg-[var(--m-line-2)]"
+        />
+
+        {ancestors.length > 0 && (
+          <Stage label={t("mobile_detail_flow_from")} testId="mobile-detail-flow-from">
+            <p>
+              <Prose templateKey="mobile_detail_lineage_from" names={links(ancestors.map((s) => s.id))} />
+              {end}
+            </p>
+            <LineageNotes siblings={ancestors} onOpen={onOpen} />
+          </Stage>
+        )}
+
+        <div className="relative py-4 pl-6" data-testid="mobile-detail-flow-self">
+          <span
+            aria-hidden="true"
+            className="absolute left-0 top-[16px] h-3.5 w-3.5 rotate-45 rounded-[2px] bg-[var(--m-gold)]"
           />
-          {end}
-        </p>
+          <p className="text-[14.5px] font-bold leading-tight text-[var(--m-gold)]">{genre.name}</p>
+          {subtitle && (
+            <p className="m-mono mt-1 text-[9.5px] uppercase tracking-[0.14em] text-[var(--m-ink-3)]">
+              {subtitle}
+            </p>
+          )}
+        </div>
+
+        {contemporaries.length > 0 && story && (
+          <Stage label={t("mobile_detail_era")} testId="mobile-detail-era" last={descendants.length === 0}>
+            <p>
+              <Prose
+                templateKey="mobile_detail_era_contemporary"
+                vars={{ era }}
+                names={links(contemporaries.map((item) => item.id))}
+              />
+              {end}
+            </p>
+          </Stage>
+        )}
+
+        {descendants.length > 0 && (
+          <Stage label={t("mobile_detail_flow_to")} testId="mobile-detail-flow-to" last>
+            <p>
+              <Prose
+                templateKey="mobile_detail_lineage_led_to_only"
+                names={links(descendants.map((s) => s.id))}
+              />
+              {end}
+            </p>
+            <LineageNotes siblings={descendants} onOpen={onOpen} />
+          </Stage>
+        )}
+      </div>
+
+      {hasRelated && (
+        <div
+          className="mt-5 border-l-2 border-[var(--m-gold)] pl-4"
+          data-testid="mobile-detail-flow-related"
+        >
+          <p className="m-mono text-[9px] uppercase tracking-[0.22em] text-[var(--m-ink-3)]">
+            {t("mobile_detail_flow_related")}
+          </p>
+          <div className="mt-2 space-y-3">
+            {relatedGroups.map(([key, templateKey, siblings]) =>
+              siblings.length === 0 ? null : (
+                <div key={key}>
+                  <p>
+                    <Prose templateKey={templateKey} names={links(siblings.map((s) => s.id))} />
+                    {end}
+                  </p>
+                  <LineageNotes siblings={siblings} onOpen={onOpen} />
+                </div>
+              )
+            )}
+          </div>
+        </div>
       )}
-      {explanations.length > 0 && (
-        <p>
-          {explanations.map((explanation, index) => {
-            const other = genreById(explanation.id);
-            if (!other) return null;
-            const text = explanation.description[language] ?? explanation.description.en;
-            const link = linkSiblingName(text, other);
-            return (
-              <React.Fragment key={explanation.id}>
-                {index > 0 && language === "en" ? " " : null}
-                {link ? (
-                  <>
-                    {link.before}
-                    <GenreLink id={explanation.id} onOpen={onOpen} label={link.hit} />
-                    {link.after}
-                  </>
-                ) : (
-                  text
-                )}
-              </React.Fragment>
-            );
-          })}
-        </p>
+    </Movement>
+  );
+}
+
+/** One rung of the lineage rail: a node marker, a mono stage label, then the sentence and notes. */
+function Stage({
+  label,
+  testId,
+  last,
+  children,
+}: {
+  label: string;
+  testId: string;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`relative pl-6 ${last ? "pb-1" : "pb-5"}`} data-testid={testId}>
+      <span
+        aria-hidden="true"
+        className="absolute left-[3px] top-[3px] h-2 w-2 rounded-full border border-[var(--m-gold)] bg-[var(--m-bg)]"
+      />
+      <p className="m-mono text-[9px] uppercase tracking-[0.22em] text-[var(--m-ink-3)]">{label}</p>
+      <div className="mt-1.5 space-y-2">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * The curated note under a stage.
+ *
+ * Each note is a print of the relation's own description, with the sibling's name linked where the
+ * sentence already says it. The short hairline in the left margin is the connector: it says "this
+ * sentence belongs to the names above" without repeating the name as a label. A relation whose only
+ * text is the reciprocal "links historically back to" mirror is skipped, so the note list is never a
+ * tautology.
+ */
+function LineageNotes({ siblings, onOpen }: { siblings: LineageSibling[]; onOpen: (id: string) => void }) {
+  const { language } = useLanguage();
+  const notes = siblings.filter((sibling) => curatedNote(sibling) !== null);
+  if (notes.length === 0) return null;
+
+  return (
+    <ul className="space-y-1.5">
+      {notes.map((sibling) => {
+        const other = genreById(sibling.id);
+        const description = curatedNote(sibling);
+        if (!other || !description) return null;
+        const text = description[language] ?? description.en;
+        const link = linkSiblingName(text, other);
+        return (
+          <li
+            key={sibling.id}
+            className="relative pl-4 text-[12.5px] leading-[1.75] text-[var(--m-ink-2)]"
+          >
+            <span
+              aria-hidden="true"
+              className="absolute left-0 top-[0.78em] h-px w-2 bg-[var(--m-line-2)]"
+            />
+            {link ? (
+              <>
+                {link.before}
+                <GenreLink id={sibling.id} onOpen={onOpen} label={link.hit} />
+                {link.after}
+              </>
+            ) : (
+              text
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * What the genre sounds like, then where it comes from culturally.
+ *
+ * The desktop page splits these into two cards ("Character" and "Cultural Context"); on a phone they
+ * are two paragraphs of one movement — the second answers the first, and two kickers 20 px apart
+ * would be chrome for its own sake. The context is set as a pull-quote: it is the one place on the
+ * page where the writing is *about* something rather than listing it, so it gets the one display
+ * treatment in the body — a gold rule and brighter ink.
+ */
+function CharacterMovement({ genre }: { genre: Genre }) {
+  const { t, language } = useLanguage();
+  const character = genre.key_characteristics?.[language] ?? "";
+  const context = genre.cultural_context?.[language] ?? "";
+  if (!character && !context) return null;
+
+  return (
+    <Movement title={t("mobile_detail_character_context")} testId="mobile-detail-character">
+      {character && <p data-testid="mobile-detail-character-text">{character}</p>}
+      {context && (
+        <blockquote
+          data-testid="mobile-detail-context"
+          className="border-l-2 border-[var(--m-gold)] pl-4 text-[14px] leading-[1.85] text-[var(--m-ink)]"
+        >
+          {context}
+        </blockquote>
       )}
     </Movement>
   );
 }
 
 /**
- * The drum pattern, one micro-labelled line per voice.
+ * The drum pattern, one micro-labelled line per voice, each on its own accent rule.
  *
  * The desktop page draws these as seven bordered tiles in a two-column grid. Stacked label-then-line
  * is the same information without the tile, and it survives 390 px: a right-aligned sentence in a
- * label/value row would not. `drum_pattern.tempo` is deliberately not repeated here — it carries the
- * same `bpm_range` the facts block already shows, so the only genuinely new value is the swing feel.
+ * label/value row would not. The left rule per part is the scan aid — it groups a label with its
+ * value, so six voices read as six parts rather than as six identical paragraphs.
+ * `drum_pattern.tempo` is deliberately not repeated here — it carries the same `bpm_range` the facts
+ * strip already shows, so the only genuinely new value is the swing feel.
  */
 function RhythmMovement({ genre }: { genre: Genre }) {
   const { t, language } = useLanguage();
@@ -598,38 +723,17 @@ function RhythmMovement({ genre }: { genre: Genre }) {
     <Movement title={t("mobile_detail_rhythm")} testId="mobile-detail-rhythm">
       {lead && <p>{lead}</p>}
       {rows.length > 0 && (
-        <dl className="space-y-3">
+        <dl className="space-y-2">
           {rows.map(([label, value]) => (
-            <div key={label}>
+            <div key={label} className="border-l-2 border-[var(--m-line-2)] pl-3.5">
               <dt className="m-mono text-[10px] uppercase tracking-[0.18em] text-[var(--m-ink-3)]">
                 {label}
               </dt>
-              <dd className="mt-1">{value}</dd>
+              <dd className="mt-1 text-[13px] leading-[1.8]">{value}</dd>
             </div>
           ))}
         </dl>
       )}
-    </Movement>
-  );
-}
-
-/**
- * What the genre sounds like, then where it comes from culturally.
- *
- * The desktop page splits these into two cards ("Character" and "Cultural Context"); on a phone they
- * are two short paragraphs of one movement — the second answers the first, and two kickers 20 px apart
- * would be chrome for its own sake.
- */
-function CharacterMovement({ genre }: { genre: Genre }) {
-  const { t, language } = useLanguage();
-  const character = genre.key_characteristics?.[language] ?? "";
-  const context = genre.cultural_context?.[language] ?? "";
-  if (!character && !context) return null;
-
-  return (
-    <Movement title={t("mobile_detail_character_context")} testId="mobile-detail-character">
-      {character && <p data-testid="mobile-detail-character-text">{character}</p>}
-      {context && <p data-testid="mobile-detail-context">{context}</p>}
     </Movement>
   );
 }
@@ -691,9 +795,9 @@ function InstrumentationMovement({ genre }: { genre: Genre }) {
 }
 
 /**
- * The practical tips, as a dotted list.
+ * The practical tips, as a marked list.
  *
- * The gold dot is the same ornament the related-genre rows use; it is a bullet, not a chip. A genre
+ * The gold dot is the same ornament the related-genre index uses; it is a bullet, not a chip. A genre
  * with no `production_tips` renders nothing at all rather than an empty "Pro tips" heading.
  */
 function TipsMovement({ genre }: { genre: Genre }) {
@@ -721,9 +825,9 @@ function TipsMovement({ genre }: { genre: Genre }) {
 /**
  * The credits: who made the genre, and what to listen to.
  *
- * The desktop page makes every track a panel with a YouTube button. Here the five tracks are plain
- * credited lines and the artists are one run: a reading page whose only navigation is genre-to-genre
- * should not sprout five external search buttons. The link data is real
+ * The desktop page makes every track a panel with a YouTube button. Here the five tracks are a
+ * numbered list — the numeral is the ornament, and a track list is a sequence, so it earns the count
+ * the rhythm table did not. The artists are one run. The link data is real
  * (`representative_tracks[].link`) and is deliberately not rendered; if the phone ever wants a listen
  * affordance it should be one control for the movement, not one per track.
  */
@@ -742,17 +846,84 @@ function TracksMovement({ genre }: { genre: Genre }) {
         </p>
       )}
       {tracks.length > 0 && (
-        <ul className="space-y-3">
+        <ol className="space-y-2.5">
           {tracks.map((track, index) => (
-            <li key={index}>
-              <p className="text-[13px] text-[var(--m-ink)]">{track.title}</p>
-              <p className="m-mono text-[10px] text-[var(--m-ink-3)]">
-                {track.artist} · {track.year}
-              </p>
+            <li key={index} className="flex gap-3">
+              <span
+                aria-hidden="true"
+                className="m-mono w-5 flex-none pt-px text-[10px] leading-[1.6] text-[var(--m-gold)]"
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="min-w-0">
+                <span className="block break-words text-[13px] leading-snug text-[var(--m-ink)]">
+                  {track.title}
+                </span>
+                <span className="m-mono mt-0.5 block text-[10px] text-[var(--m-ink-3)]">
+                  {track.artist} · {track.year}
+                </span>
+              </span>
             </li>
           ))}
-        </ul>
+        </ol>
       )}
     </Movement>
+  );
+}
+
+/**
+ * The related-genre index, and the end of the page.
+ *
+ * This is the finale, so it is built as one: a hairline under every row (the `<li>`, never the button
+ * — the touch target's class list must stay free of borders) turns eight loose links into an index,
+ * the art dot is the only colour, and the closing gold rule is the full stop. The genre names are the
+ * one place the page navigates, and the last row's rule is what says "that is all of it".
+ */
+function RelatedIndex({
+  related,
+  onOpenGenre,
+}: {
+  related: string[];
+  onOpenGenre: (id: string) => void;
+}) {
+  const { t } = useLanguage();
+  if (related.length === 0) return null;
+
+  return (
+    <section className="mt-7 border-t border-[var(--m-line)] pt-5" data-testid="mobile-detail-related">
+      <h2 className="m-mono text-[10px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
+        {t("mobile_detail_related")}
+      </h2>
+      <ul className="mt-2">
+        {related.map((id) => {
+          const item = genreById(id)!;
+          return (
+            <li key={id} className="border-b border-[var(--m-line)]">
+              {/*
+               * A plain text row, not a pill: the dot is the only ornament. It stays a real
+               * button so it is focusable and its tap target is the full 46px row.
+               */}
+              <button
+                type="button"
+                data-testid={`mobile-detail-related-${id}`}
+                onClick={() => onOpenGenre(id)}
+                className="m-press flex min-h-[46px] w-full items-center gap-2.5 text-left"
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 flex-none rounded-full"
+                  style={{ background: genreArtBackground(item) }}
+                />
+                <span className="truncate text-[13px] text-[var(--m-ink)]">{item.name}</span>
+                <span className="m-mono ml-auto flex-none truncate text-[10px] text-[var(--m-ink-3)]">
+                  {chineseName(item)} · {item.default_bpm} BPM
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <span aria-hidden="true" className="mx-auto mt-6 block h-px w-10 bg-[var(--m-gold)]" />
+    </section>
   );
 }
