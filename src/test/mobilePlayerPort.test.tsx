@@ -176,7 +176,16 @@ describe("the record's look, as maths", () => {
     }
     // The kick's band is the thick one, and the label's cache key must notice a pattern change.
     expect(LABEL_BANDS[1].width).toBeGreaterThan(LABEL_BANDS[0].width);
-    const spec = { title: "A", subtitle: "B", footer: "C", lanes: LANES, art: LABEL_ART[0], accent: "#fff" };
+    const spec = {
+      title: "A",
+      subtitle: "B",
+      footer: "C",
+      lanes: LANES,
+      art: LABEL_ART[0],
+      accent: "#fff",
+      displayFont: '"Space Grotesk", sans-serif',
+      monoFont: '"JetBrains Mono", monospace',
+    };
     expect(labelCacheKey(spec)).toBe(labelCacheKey({ ...spec }));
     const changed = [...LANES];
     changed[0] = [...LANES[0]];
@@ -246,6 +255,8 @@ const renderPlayer = (
     onCycleMode: vi.fn<() => void>(),
     onCollapse: vi.fn<() => void>(),
     onTempo: vi.fn<(bpm: number) => void>(),
+    onScrubSound: vi.fn<(velocity: number) => void>(),
+    onScrubSoundEnd: vi.fn<() => void>(),
   };
   const props = {
     genreId: GENRE.id,
@@ -304,19 +315,92 @@ describe("the ported full-screen player", () => {
     const readout = screen.getByTestId("mobile-player-bpm");
 
     // A plain click (keyboard, or a programmatic one) must still move it exactly one step.
+    // A plain click (keyboard, or a programmatic one) must still move it exactly one step. The *readout*
+    // is the damper's, so it walks to the new value rather than snapping: the engine call is immediate,
+    // the number follows.
     fireEvent.click(up);
-    expect(readout.textContent).toContain(`${GENRE.default_bpm + 1} BPM`);
+    expect(spies.onTempo).toHaveBeenCalledWith(GENRE.default_bpm + 1);
+    await waitFor(() => expect(readout.textContent).toContain(`${GENRE.default_bpm + 1} BPM`), { timeout: 3000 });
     const afterClick = spies.onTempo.mock.calls.length;
 
     // Held: one step immediately, then a repeat every 70 ms after the reference's 420 ms delay.
     fireEvent.pointerDown(up, { pointerId: 3 });
-    expect(readout.textContent).toContain(`${GENRE.default_bpm + 2} BPM`);
+    expect(spies.onTempo).toHaveBeenLastCalledWith(GENRE.default_bpm + 2);
     await waitFor(() => expect(spies.onTempo.mock.calls.length).toBeGreaterThan(afterClick + 1), { timeout: 1500 });
 
+    /**
+     * On release the *value* has to stop climbing — not the number of engine calls.
+     *
+     * The engine is now told every whole-BPM step of the damper (that is what makes a jog audibly ease;
+     * see the case below), so counting calls after release would count the damper settling rather than
+     * the hold repeating. What matters is that nothing is still stepping the tempo up.
+     */
     fireEvent.pointerUp(up, { pointerId: 3 });
-    const released = spies.onTempo.mock.calls.length;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(spies.onTempo.mock.calls.length).toBe(released);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    const settled = readout.textContent;
+    const callsAtSettle = spies.onTempo.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(readout.textContent).toBe(settled);
+    expect(spies.onTempo.mock.calls.length).toBe(callsAtSettle);
+  });
+
+  it("eases the engine into a new tempo instead of stepping it", async () => {
+    const { spies } = renderPlayer();
+    await screen.findByTestId("mobile-player");
+    const readout = screen.getByTestId("mobile-player-bpm");
+
+    // A 60px drag is +12 BPM. The *display* and the engine both walk there, in whole-BPM steps.
+    fireEvent.pointerDown(screen.getByTestId("mobile-vinyl"), { clientX: 100, pointerId: 9 });
+    fireEvent.pointerMove(screen.getByTestId("mobile-vinyl"), { clientX: 160, pointerId: 9 });
+    fireEvent.pointerUp(screen.getByTestId("mobile-vinyl"), { clientX: 160, pointerId: 9 });
+
+    const dragTarget = GENRE.default_bpm + 12;
+    await waitFor(() => expect(spies.onTempo).toHaveBeenCalledWith(dragTarget), { timeout: 3000 });
+
+    /**
+     * The proof that it eased rather than jumped: the engine was told intermediate tempos on the way.
+     *
+     * A `setBpm(target)` jump would produce exactly one call with the target; the reference's damper
+     * produces a staircase, which is the audible difference this test exists to protect. The top of the
+     * staircase is the release flick's tempo (the drag's own target plus up to 10), so the assertions are
+     * about the *shape* of the calls rather than the last one: the drag's target is among them, and at
+     * least one value sits strictly between where it started and where it ended.
+     */
+    const steps = spies.onTempo.mock.calls.map((call) => call[0]).filter((value) => typeof value === "number");
+    const top = Math.max(...steps);
+    const between = steps.filter((value) => value > GENRE.default_bpm && value < top);
+    expect(steps).toContain(dragTarget);
+    expect(new Set(between).size, `tempo calls: ${steps.join(", ")}`).toBeGreaterThan(0);
+    // …and the readout walks to the same place rather than snapping there.
+    await waitFor(() => expect(readout.textContent).toContain(`${top} BPM`), { timeout: 3000 });
+  });
+
+  it("plays the scratch while the record is dragged, and releases it", async () => {
+    const { spies } = renderPlayer();
+    await screen.findByTestId("mobile-player");
+    const vinyl = screen.getByTestId("mobile-vinyl");
+
+    fireEvent.pointerDown(vinyl, { clientX: 100, pointerId: 11 });
+    fireEvent.pointerMove(vinyl, { clientX: 130, pointerId: 11 });
+    fireEvent.pointerMove(vinyl, { clientX: 190, pointerId: 11 });
+    expect(spies.onScrubSound.mock.calls.length).toBeGreaterThanOrEqual(2);
+    // Pointer speed, not the BPM delta: the voice maps it to a level and a band.
+    for (const [velocity] of spies.onScrubSound.mock.calls) {
+      expect(Number.isFinite(velocity)).toBe(true);
+      expect(Math.abs(velocity)).toBeGreaterThan(0);
+    }
+    expect(spies.onScrubSoundEnd).not.toHaveBeenCalled();
+
+    fireEvent.pointerUp(vinyl, { clientX: 190, pointerId: 11 });
+    expect(spies.onScrubSoundEnd).toHaveBeenCalledTimes(1);
+
+    // A tap is not a scratch: it opens the genre's page and makes no noise at all.
+    spies.onScrubSound.mockClear();
+    spies.onScrubSoundEnd.mockClear();
+    fireEvent.pointerDown(vinyl, { clientX: 200, pointerId: 12 });
+    fireEvent.pointerUp(vinyl, { clientX: 200, pointerId: 12 });
+    expect(spies.onScrubSound).not.toHaveBeenCalled();
+    expect(spies.onScrubSoundEnd).not.toHaveBeenCalled();
   });
 
   it("drives the progress rail and the beat slaves from the transport", async () => {

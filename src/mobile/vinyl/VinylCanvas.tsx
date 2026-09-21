@@ -46,6 +46,7 @@ import {
   stepTonearm,
   TONEARM_PLAY_POSITION,
   TONEARM_REST_POSITION,
+  tonearmDrawAngle,
   tonearmHeadHop,
   tonearmLift,
   tonearmTheta,
@@ -86,6 +87,20 @@ export interface VinylCanvasProps {
   onScrub?: (bpmDelta: number) => void;
   /** Released with momentum: one last BPM step, already computed here. */
   onScrubEnd?: (flickBpmDelta: number) => void;
+  /**
+   * The scratch itself: pointer speed while the record is dragged, so the caller can play the noise a
+   * hand on a record makes (see `src/audio/VinylScrub.ts`), and a release to fade it out.
+   */
+  onScrubSound?: (velocity: number) => void;
+  onScrubSoundEnd?: () => void;
+  /**
+   * The tempo the *engine* should be at, as the damper walks toward the target.
+   *
+   * The reference's scheduler reads its damped BPM, so a jog audibly accelerates and decelerates instead
+   * of stepping; the phone's engine is set from outside, so the eased value is reported here — on each
+   * whole-BPM change, not every frame.
+   */
+  onBpmTick?: (bpm: number) => void;
 }
 
 const DPR_CAP = 2;
@@ -115,12 +130,39 @@ export function VinylCanvas({
     totalSteps = 16,
   onScrub,
   onScrubEnd,
+  onScrubSound,
+  onScrubSoundEnd,
+  onBpmTick,
 }: VinylCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   /** Kept in a ref: the rAF loop reads the current props without re-rendering React at 60 fps. */
-  const liveRef = useRef({ playing, readClock, lanes, accent, title, subtitle, artSeed, bpm, footer, totalSteps });
-  liveRef.current = { playing, readClock, lanes, accent, title, subtitle, artSeed, bpm, footer, totalSteps };
+  const liveRef = useRef({
+    playing,
+    readClock,
+    lanes,
+    accent,
+    title,
+    subtitle,
+    artSeed,
+    bpm,
+    footer,
+    totalSteps,
+    onBpmTick,
+  });
+  liveRef.current = {
+    playing,
+    readClock,
+    lanes,
+    accent,
+    title,
+    subtitle,
+    artSeed,
+    bpm,
+    footer,
+    totalSteps,
+    onBpmTick,
+  };
   /** Jog state: in refs so a drag never re-renders React at pointer-move rate. */
   const dragRef = useRef<{ lastX: number; lastT: number; velocity: number; travel: number; tapped: boolean } | null>(null);
   const scrubRef = useRef({ offset: 0, velocity: 0 });
@@ -147,11 +189,17 @@ export function VinylCanvas({
     let label: { key: string; sprite: BakedSprite | null } | null = null;
     /** The module accent resolved from the stylesheet: canvas cannot read CSS variables. */
     let accentHex = accent;
+    /** The skin's type faces, resolved the same way and for the same reason. */
+    let displayFont = '"Space Grotesk", "PingFang SC", sans-serif';
+    let monoFont = '"JetBrains Mono", monospace';
 
     const resize = () => {
       const module = canvas.closest(".mobile-root");
-      const resolved = module ? window.getComputedStyle(module).getPropertyValue("--m-gold").trim() : "";
+      const styles = module ? window.getComputedStyle(module) : null;
+      const resolved = styles?.getPropertyValue("--m-gold").trim() ?? "";
       accentHex = resolved || accent;
+      displayFont = styles?.getPropertyValue("--m-font-display").trim() || displayFont;
+      monoFont = styles?.getPropertyValue("--m-font-mono").trim() || monoFont;
       dpr = Math.min(DPR_CAP, window.devicePixelRatio || 1);
       const width = wrap.clientWidth || 300;
       const height = Math.round(width * (352 / 300));
@@ -169,6 +217,19 @@ export function VinylCanvas({
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
     observer?.observe(wrap);
 
+    /**
+     * Re-resolve on a skin change.
+     *
+     * The accent and the faces come from CSS variables, which cannot be read reactively; a skin switch
+     * happens at most a handful of times a session, so an attribute observer is cheaper and simpler than
+     * a per-frame `getComputedStyle`.
+     */
+    const skinObserver =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(() => resize());
+    skinObserver?.observe(document.documentElement, { attributes: true, attributeFilter: ["data-skin"] });
+
     const spriteFor = (geometry: VinylGeometry) => {
       if (!disc || disc.size !== Math.ceil(geometry.maxR * 2 + 4)) disc = bakeVinyl(geometry.maxR);
       return disc;
@@ -182,6 +243,8 @@ export function VinylCanvas({
         lanes: liveRef.current.lanes,
         art: LABEL_ART[labelArtIndex(liveRef.current.artSeed, LABEL_ART.length)],
         accent: accentHex,
+        displayFont,
+        monoFont,
       };
       const key = labelCacheKey(spec);
       if (!label || label.key !== key) label = { key, sprite: bakeLabel(spec) };
@@ -194,6 +257,8 @@ export function VinylCanvas({
       const lift = tonearmLift(arm.position);
       const workingAngle = NEEDLE_ANGLE;
       const onRecord = travel > 0.96;
+      // `theta` is the offset from rest; the drawn angle is rest plus that offset (see `tonearmDrawAngle`).
+      const drawnAngle = tonearmDrawAngle(arm.position, theta);
       // The bar's length is measured from the pivot to where the stylus should be: the arm is rigid and
       // only ever rotates or translates, which is what keeps its shape from stretching mid-swing.
       const tipX = geometry.cx + Math.cos(workingAngle) * geometry.maxR * 0.9;
@@ -217,7 +282,7 @@ export function VinylCanvas({
       // Shadow: offset by the lift, so a raised arm casts its shadow further away.
       ctx.save();
       ctx.translate(geometry.pivotX + 3 + lift * 4, geometry.pivotY + 6 + lift * 7);
-      ctx.rotate(theta + resting - NEEDLE_ANGLE);
+      ctx.rotate(drawnAngle);
       ctx.strokeStyle = "rgba(0,0,0,0.33)";
       ctx.lineWidth = 5.2;
       ctx.lineCap = "round";
@@ -230,7 +295,7 @@ export function VinylCanvas({
       // The arm itself: translate for the lift and the kick hop, then rotate.
       ctx.save();
       ctx.translate(geometry.pivotX, geometry.pivotY - lift * 6 - hop);
-      ctx.rotate(theta + resting - NEEDLE_ANGLE);
+      ctx.rotate(drawnAngle);
       ctx.strokeStyle = "#B7B0A0";
       ctx.lineWidth = 6.5;
       ctx.beginPath();
@@ -316,7 +381,16 @@ export function VinylCanvas({
     const draw = (now: number) => {
       frame = requestAnimationFrame(draw);
       const state = liveRef.current;
-      const dtMs = Math.min(50, now - lastFrame) || 16.7;
+      /**
+       * Clamped to a non-negative window.
+       *
+       * `requestAnimationFrame`'s timestamp is the *frame's* start, which can precede the
+       * `performance.now()` a just-mounted effect recorded — and a negative `dt` is not a small error in
+       * this loop: the tempo damper's `1 - exp(-dt/130)` turns negative and walks *away* from the target
+       * every frame, so the tempo (and the engine, which now follows it) diverges exponentially. Found by
+       * a test that waited for the damper to settle and read `-2269773 BPM`.
+       */
+      const dtMs = Math.min(50, Math.max(0, now - lastFrame)) || 16.7;
       lastFrame = now;
       const dt = dtMs / 1000;
 
@@ -341,8 +415,12 @@ export function VinylCanvas({
         host.style.setProperty("--bpmBeat", `${beatSeconds(displayedBpm).toFixed(3)}s`);
       }
       const damped = dampBpm(displayedBpm, state.bpm, dtMs);
-      if (Math.round(damped) !== Math.round(displayedBpm) && bpmOutRef?.current) {
-        bpmOutRef.current.textContent = String(Math.round(damped));
+      if (Math.round(damped) !== Math.round(displayedBpm)) {
+        // The engine follows the same damper the number on screen does, on whole-BPM steps only: that is
+        // what makes a jog sound like a motor rather than a slider, and it keeps `setBpm` off the frame
+        // budget.
+        state.onBpmTick?.(Math.round(damped));
+        if (bpmOutRef?.current) bpmOutRef.current.textContent = String(Math.round(damped));
       }
       displayedBpm = damped;
 
@@ -561,6 +639,7 @@ export function VinylCanvas({
     return () => {
       cancelAnimationFrame(frame);
       observer?.disconnect();
+      skinObserver?.disconnect();
     };
   }, [accent, bpmOutRef, progressRef]);
 
@@ -575,7 +654,10 @@ export function VinylCanvas({
     if (!drag) return;
     // A tap is left to the element that owns the record: it is a real button, and its click is the
     // tap. Only the *drag* has to be reported here, so a jog can be told from a tap.
-    if (!drag.tapped) onScrubEnd?.(flickDeltaFor(drag.velocity));
+    if (!drag.tapped) {
+      onScrubSoundEnd?.();
+      onScrubEnd?.(flickDeltaFor(drag.velocity));
+    }
   };
 
   return (
@@ -608,6 +690,9 @@ export function VinylCanvas({
         scrubRef.current = { offset: scrubRef.current.offset + dx * 0.007, velocity: 0 };
         scrubRef.current.offset = Math.min(1.6, Math.max(-1.6, scrubRef.current.offset));
         if (dx !== 0) onScrub?.(dx * 0.2);
+        // The reference's `setScrub(iv)`: the instantaneous speed, not the smoothed one, so the noise
+        // tracks the finger rather than lagging behind it.
+        onScrubSound?.(dx / dt);
       }}
       onPointerUp={finishDrag}
       onPointerCancel={finishDrag}

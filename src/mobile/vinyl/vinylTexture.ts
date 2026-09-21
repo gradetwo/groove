@@ -208,6 +208,15 @@ export interface LabelSpec {
   art: LabelArt;
   /** The module accent, used for the kick band, the bass dots and the centre ring. */
   accent: string;
+  /**
+   * The type faces, from the skin's `--m-font-display` / `--m-font-mono`.
+   *
+   * Canvas text cannot inherit anything from CSS, so the record would otherwise print every skin's label
+   * in Space Grotesk — the 8-bit skin included. `VinylCanvas` resolves the two variables on the skinned
+   * root and hands them in, exactly as it does for the accent.
+   */
+  displayFont: string;
+  monoFont: string;
 }
 
 /**
@@ -290,15 +299,15 @@ export function bakeLabel(spec: LabelSpec, size = 512): BakedSprite | null {
     }
   };
   letterSpacing(`${7 * scale}px`);
-  g.font = `700 ${45 * scale}px "Space Grotesk", sans-serif`;
+  g.font = `700 ${45 * scale}px ${spec.displayFont}`;
   g.fillText(spec.title.slice(0, 12), radius, 152 * scale);
   letterSpacing(`${5 * scale}px`);
-  g.font = `500 ${21 * scale}px "Space Grotesk", "PingFang SC", sans-serif`;
+  g.font = `500 ${21 * scale}px ${spec.displayFont}`;
   g.globalAlpha = 0.72;
   g.fillText(spec.subtitle.split(" ·")[0].slice(0, 14), radius, 186 * scale);
   g.globalAlpha = 1;
   letterSpacing(`${4 * scale}px`);
-  g.font = `500 ${15 * scale}px "JetBrains Mono", monospace`;
+  g.font = `500 ${15 * scale}px ${spec.monoFont}`;
   g.globalAlpha = 0.55;
   g.fillText(spec.footer, radius, 392 * scale);
   g.globalAlpha = 1;
@@ -324,7 +333,17 @@ export function bakeLabel(spec: LabelSpec, size = 512): BakedSprite | null {
 /** Stable cache key for a label: everything that changes the artwork, and nothing that does not. */
 export function labelCacheKey(spec: LabelSpec): string {
   const lanes = spec.lanes.map((lane) => lane.map((on) => (on ? "1" : "0")).join("")).join("|");
-  return [spec.title, spec.subtitle, spec.footer, spec.art.shape, spec.accent, lanes].join("~");
+  // The faces belong in the key: switching skin has to re-bake the label, not reuse the old one.
+  return [
+    spec.title,
+    spec.subtitle,
+    spec.footer,
+    spec.art.shape,
+    spec.accent,
+    spec.displayFont,
+    spec.monoFont,
+    lanes,
+  ].join("~");
 }
 
 /** The instrument colours as `r,g,b` strings, for the ring strokes and the label wash. */
