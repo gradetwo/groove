@@ -12,7 +12,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act, within } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor, within } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import {
   CHALLENGE_STORAGE_KEY,
@@ -45,8 +45,13 @@ const renderChallenge = async () => {
   /**
    * 挑战 resolves the library on demand before its first question (A-01), so every case waits for the
    * options rather than assuming a synchronously imported `ALL_GENRES`.
+   *
+   * Waiting for the *container* is not enough: it is rendered while the library is still loading, so a
+   * loaded machine saw it immediately and then read zero options — which is what failed in CI-style
+   * conditions. Wait for four options, which is the thing every case below is about.
    */
   await screen.findByTestId("mobile-challenge-options", {}, { timeout: 10000 });
+  await waitFor(() => expect(optionIds()).toHaveLength(4), { timeout: 10000 });
   return { ...utils, spies };
 };
 
