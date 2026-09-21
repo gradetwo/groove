@@ -14,10 +14,12 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { LanguageProvider } from "../i18n/LanguageContext";
+import { LanguageProvider, formatMessage } from "../i18n/LanguageContext";
+import { mobileMessages } from "../i18n/locales/mobile";
 import { MobileApp } from "../mobile/MobileApp";
 import { MOBILE_MODULES, shouldEnterPhoneShell, type MobileModule } from "../mobile/mobileModules";
 import { ALL_GENRES } from "../data/genres";
+import { getLineage } from "../data/lineage";
 import { TIMELINE_STORIES } from "../data/timeline_stories";
 
 const audition = vi.hoisted(() => ({
@@ -269,6 +271,125 @@ describe("phone shell · home screen", () => {
     expect(nodes[0].textContent ?? "").toContain("1900s");
     expect(nodes[nodes.length - 1].textContent ?? "").toContain("2020s");
   });
+
+  it("gives every era node its description excerpt and the facts its genres already carry", async () => {
+    /**
+     * The complaint: the rail showed a year and a one-line title while `TIMELINE_STORIES` already
+     * shipped a full description and a genre list, and the genre library already shipped each
+     * genre's origin and category. Every assertion below is bound to that shipped data, so a node
+     * that loses its excerpt, its count, its places or its categories fails here.
+     */
+    renderShell("home");
+    await findHome();
+    const libraryById = new Map(ALL_GENRES.map((genre) => [genre.id, genre]));
+
+    TIMELINE_STORIES.forEach((story, index) => {
+      const node = screen.getByTestId(`mobile-home-timeline-node-${index}`);
+
+      // The era's own prose — the whole record, displayed clamped rather than rewritten.
+      const excerpt = within(node).getByTestId(`mobile-home-timeline-excerpt-${index}`);
+      expect(excerpt.textContent).toBe(story.description.zh);
+      expect(excerpt.className, "the excerpt must be clamped, not printed whole").toMatch(/line-clamp-[1-6]/);
+
+      // The title plus the era's size, derived from the genre list rather than written down twice.
+      expect(node.textContent ?? "").toContain(story.title.zh);
+      const count = within(node).getByTestId(`mobile-home-timeline-count-${index}`);
+      expect(count.textContent ?? "").toContain(String(story.genre_ids.length));
+
+      // "From" and "Style": the distinct `origin_place` / `category` of the era's own genres.
+      const eraGenres = story.genre_ids.map((id) => libraryById.get(id));
+      expect(
+        eraGenres.every(Boolean),
+        `story ${story.id} names a genre the library does not carry`
+      ).toBe(true);
+      const places = [...new Set(eraGenres.map((genre) => genre!.origin_place.zh))];
+      const categories = [...new Set(eraGenres.map((genre) => genre!.category))];
+      expect(places.length).toBeGreaterThan(0);
+      expect(categories.length).toBeGreaterThan(0);
+
+      const facts = within(node).getByTestId(`mobile-home-timeline-facts-${index}`);
+      const factsText = facts.textContent ?? "";
+      // The node names the first places and counts the rest, so the tail is visible, not hidden.
+      for (const place of places.slice(0, 2)) expect(factsText).toContain(place);
+      if (places.length > 2) {
+        expect(factsText).toContain(
+          formatMessage(mobileMessages.mobile_home_timeline_more_places.zh, {
+            count: places.length - 2,
+          })
+        );
+      }
+      for (const category of categories) expect(factsText).toContain(category);
+    });
+  });
+
+  it("points every era genre link at a real library genre, and opens it on tap", async () => {
+    /**
+     * The other half of "richer": the genres are not decoration. Each chip is a link to the genre's
+     * own page, so it must resolve to a record the library actually has — a chip rendered from a
+     * dead id, or from the raw id, fails here.
+     */
+    const { onOpenGenre } = renderShell("home");
+    await findHome();
+
+    const links = [...document.querySelectorAll('[data-testid^="mobile-home-timeline-genre-"]')];
+    const expected = TIMELINE_STORIES.reduce((total, story) => total + story.genre_ids.length, 0);
+    expect(links).toHaveLength(expected);
+    expect(links.length).toBeGreaterThan(0);
+
+    const idOf = (node: Element): string =>
+      (node.getAttribute("data-testid") ?? "").replace(/^mobile-home-timeline-genre-\d+-/, "");
+
+    for (const link of links) {
+      const id = idOf(link);
+      const genre = ALL_GENRES.find((candidate) => candidate.id === id);
+      expect(genre, `${id} is not a genre in the library`).toBeTruthy();
+      // The real name, never the id.
+      expect(link.textContent ?? "").toContain(genre!.name);
+    }
+
+    // A tap opens the genre through the same path a library card uses.
+    const firstId = idOf(links[0]);
+    fireEvent.click(links[0]);
+    expect(onOpenGenre).toHaveBeenCalledWith(firstId);
+    expect(audition.toggle).toHaveBeenCalledTimes(1);
+    expect(audition.toggle.mock.calls[0][0].id).toBe(firstId);
+  });
+
+  it("keeps the richer rail capped, vertically scrollable and inside a 390px phone", async () => {
+    /**
+     * Richer nodes must not turn the rail into a wall or a sideways carousel: it stays a capped,
+     * internally scrolling vertical rail (which is what makes taller nodes safe), its chips wrap
+     * instead of forcing a horizontal scroll, and nothing in the section asks for a width a 390 px
+     * phone cannot give it (358 px of content box after the screen's 16 px gutters).
+     */
+    renderShell("home");
+    await findHome();
+    const section = screen.getByTestId("mobile-home-timeline-section");
+    const rail = screen.getByTestId("mobile-home-timeline");
+
+    expect(section.contains(rail)).toBe(true);
+
+    const cap = rail.className.match(/max-h-\[(\d+)px\]/);
+    expect(cap, "the rail must stay height-capped").not.toBeNull();
+    expect(Number(cap![1]), "the rail's cap").toBeLessThanOrEqual(400);
+    expect(rail.className).toMatch(/overflow-y-auto/);
+    expect(rail.className).not.toMatch(/overflow-x-auto|m-rail/);
+
+    TIMELINE_STORIES.forEach((_, index) => {
+      const chips = screen.getByTestId(`mobile-home-timeline-genres-${index}`);
+      expect(chips.className, "genre chips must wrap, not scroll sideways").toMatch(/flex-wrap/);
+      expect(chips.className).not.toMatch(/overflow-x-auto|flex-nowrap/);
+    });
+
+    const tooWide = [...section.querySelectorAll<HTMLElement>("[class]")]
+      .flatMap((node) =>
+        [...(node.getAttribute("class") ?? "").matchAll(/(?:^|\s)(?:w|min-w)-\[(\d+)px\]/g)].map(
+          (match) => Number(match[1])
+        )
+      )
+      .filter((width) => width > 358);
+    expect(tooWide, "nothing in the rail may be wider than the phone").toEqual([]);
+  });
 });
 
 describe("phone shell · genre detail and player bar", () => {
@@ -417,6 +538,161 @@ describe("phone shell · genre detail and player bar", () => {
   it("says so when a detail route names a genre that does not exist", async () => {
     renderShell("home", { genreId: "not-a-real-genre" });
     expect(await screen.findByTestId("mobile-genre-missing", {}, { timeout: 5000 })).toBeInTheDocument();
+  });
+});
+
+/**
+ * The second pass over 曲风详情 (the complaint: the page "内容太少").
+ *
+ * What this block protects, on top of the existing genre-detail cases:
+ *  - the **lineage prose** — the family sentence, the era line and the curated explanations are the
+ *    reason the richer page exists, so dropping them (or rendering an empty movement for a genre with
+ *    no ancestors) has to fail rather than quietly shrink the page again;
+ *  - the **movements the desktop page carries** — rhythm, sound, arrangement, tips and credits are
+ *    asserted against real per-genre values, so a heading with no body still fails;
+ *  - the **invariants that survive the extra content** — no play control, and inline names that are
+ *    links rather than buttons.
+ */
+describe("phone shell · genre detail, second pass", () => {
+  beforeEach(() => {
+    localStorage.setItem("groove_language", "zh");
+    audition.toggle.mockReset();
+    audition.stop.mockReset();
+    audition.playingGenreId = null;
+  });
+
+  it("reads the lineage and evolution as prose, with the names as links", async () => {
+    const { onOpenGenre, onCloseGenre } = renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const lineage = screen.getByTestId("mobile-detail-lineage");
+    const text = lineage.textContent ?? "";
+
+    // The family sentence names a real ancestor and a real descendant from `getLineage`…
+    expect(text).toMatch(/演化而来/);
+    expect(text).toContain("Chicago House");
+    expect(text).toContain("Melodic House");
+    // …and the fusion relations get their own sentence rather than being folded into a pill row.
+    expect(text).toMatch(/融合/);
+    expect(text).toContain("Afro House");
+
+    // Reading the history is navigating it: the ancestor is an anchor, and tapping it opens its page.
+    const link = within(lineage).getAllByTestId("mobile-detail-lineage-chicago-house")[0];
+    expect(link.tagName).toBe("A");
+    fireEvent.click(link);
+    expect(onOpenGenre).toHaveBeenCalledWith("chicago-house");
+    expect(onCloseGenre).not.toHaveBeenCalled();
+  });
+
+  it("places the genre in its decade and names what it was contemporary with", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const era = screen.getByTestId("mobile-detail-era");
+    const story = TIMELINE_STORIES.find((item) => item.genre_ids.includes("deep-house"))!;
+    const other = ALL_GENRES.find(
+      (item) => item.id === story.genre_ids.find((id) => id !== "deep-house")
+    )!;
+
+    const text = era.textContent ?? "";
+    expect(text).toContain(String(story.decade));
+    expect(text).toMatch(/同时代/);
+    expect(text).toContain(other.name);
+  });
+
+  it("uses the relation's own description rather than an invented one", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const text = screen.getByTestId("mobile-detail-lineage").textContent ?? "";
+    const lineage = getLineage("deep-house");
+    const curated = [...lineage.ancestors, ...lineage.descendants, ...lineage.related]
+      .map((sibling) => sibling.description?.zh)
+      .filter(
+        (description): description is string =>
+          description !== undefined && !/追溯关联至/.test(description)
+      );
+
+    expect(curated.length).toBeGreaterThan(0);
+    // The body of a curated sentence (minus its own trailing period) must be on the page.
+    expect(
+      curated.some((description) => text.includes(description.replace(/[。.]$/, "").slice(-10)))
+    ).toBe(true);
+  });
+
+  it("carries the production movements the desktop page has, drawn from real fields", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+
+    for (const id of [
+      "mobile-detail-rhythm",
+      "mobile-detail-sound",
+      "mobile-detail-instruments",
+      "mobile-detail-tips",
+      "mobile-detail-tracks",
+    ]) {
+      expect(screen.getByTestId(id).textContent?.trim().length ?? 0, `${id} is empty`).toBeGreaterThan(0);
+    }
+
+    // Values, not just headings: the facts block now carries the key/scale, and each movement reads a
+    // real field rather than a placeholder.
+    expect(screen.getByTestId("mobile-detail-facts").textContent).toContain("A minor");
+    expect(screen.getByTestId("mobile-detail-rhythm").textContent).toMatch(/底鼓|Kick/);
+    expect(screen.getByTestId("mobile-detail-sound").textContent).toContain("Fender Rhodes");
+    expect(screen.getByTestId("mobile-detail-instruments").textContent).toContain("Intro");
+    expect(screen.getByTestId("mobile-detail-tips").textContent).toContain("堆叠小九和弦");
+    expect(screen.getByTestId("mobile-detail-tracks").textContent).toContain("Larry Heard");
+  });
+
+  it("skips an empty field instead of printing an empty movement", async () => {
+    /**
+     * Tech House has no ancestors, no descendants and no era story — only a fusion relation. The
+     * movement must still render the fusion sentence, and must not grow a dangling "…演化而来" or an
+     * empty era line. The loop is the real assertion: no `mobile-detail-*` section may consist of its
+     * kicker alone.
+     */
+    renderShell("home", { genreId: "tech-house" });
+    const detail = await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const text = screen.getByTestId("mobile-detail-lineage").textContent ?? "";
+
+    expect(text).toMatch(/融合/);
+    expect(text).not.toMatch(/演化而来|催生/);
+    expect(screen.queryByTestId("mobile-detail-era")).not.toBeInTheDocument();
+
+    for (const section of [...detail.querySelectorAll('section[data-testid^="mobile-detail-"]')]) {
+      const body = [...section.children]
+        .filter((node) => node.tagName !== "H2")
+        .map((node) => node.textContent ?? "")
+        .join("")
+        .trim();
+      expect(body, `${section.getAttribute("data-testid")} has a kicker but no body`).not.toBe("");
+    }
+  });
+
+  it("still offers no play control or jam hand-off after the content pass", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    const detail = await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+
+    // The only buttons are the way back and the related rows; everything else tappable on the page is
+    // an inline genre link — an `<a>` in a sentence, not a transport control.
+    const controls = [
+      ...detail.querySelectorAll("button, input, select, textarea, [role='slider'], [role='button']"),
+    ];
+    const beyondBackAndRelated = controls.filter((node) => {
+      const id = node.getAttribute("data-testid") ?? "";
+      return id !== "mobile-detail-back" && !id.startsWith("mobile-detail-related-");
+    });
+    expect(beyondBackAndRelated.map((node) => node.getAttribute("data-testid") ?? node.tagName)).toEqual(
+      []
+    );
+    expect(detail.querySelectorAll("input, [role='slider']").length).toBe(0);
+  });
+
+  it("writes the lineage in the reader's language", async () => {
+    localStorage.setItem("groove_language", "en");
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const text = screen.getByTestId("mobile-detail-lineage").textContent ?? "";
+    expect(text).toMatch(/Evolved from/);
+    expect(text).toMatch(/contemporary with/);
+    expect(text).toContain("Chicago House");
   });
 });
 
