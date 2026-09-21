@@ -1,0 +1,715 @@
+/**
+ * Skin: "minimal" — 现代极简主义 (modern minimalism).
+ *
+ * What it is
+ * ----------
+ * Paper, ink, and one blue. The phone shell stops being a dark instrument panel and becomes a printed
+ * page: a near-white ground, near-black type, hairlines instead of raised surfaces, space instead of
+ * boxes, and a single accent that marks where you are and nothing else. The audience is a phone held in
+ * one hand, in daylight as often as at night, so the ground is the bright one and there is nothing on
+ * the screen that glows, blurs or shimmers: no gradients, no glows, no blur, no texture, no ornament.
+ *
+ * That last sentence is a *removal*, and removals are the bulk of this file. The shell's own look is
+ * built on a dark ground — a gold aurora bleeding from the top of `.mobile-root`, film grain over the
+ * player, a translucent "glass" plate on the tab bar and the player bar, and about a dozen
+ * `rgba(232,232,255,…)` washes that were *lighter than the ground*. On white, every one of those either
+ * vanishes or inverts, which is the failure mode of every light skin. So the rules below are of two
+ * kinds, and they are grouped that way:
+ *
+ *   1. **tokens** — one block that re-answers the shell's names, plus five module accents. Components
+ *      keep painting themselves with `bg-[var(--m-card)]`-style utilities; a skin is only a second set
+ *      of answers for those names, never a second copy of a component.
+ *   2. **overrides** — the handful of places the shell hard-codes a *dark-ground literal* (an
+ *      arbitrary Tailwind value such as `bg-[rgba(232,232,255,0.055)]`, or a rule in `mobile.css` that
+ *      bakes in a glow) rather than going through a token. Each one is listed below with the reason it
+ *      has to be inverted rather than merely recoloured.
+ *
+ * The palette, and why each value is the one it is
+ * -----------------------------------------------
+ *   ground          #FAFAFA   paper white — not #FFF, so a white card still reads as a card
+ *   card            #FFFFFF   the raised surface; a card is *whiter than the page*, not darker
+ *   card-2          #F4F4F6   a recessed well, or a card that is already inside a card
+ *   hairline        rgba(20,20,20,0.10)   every surface edge in this skin is this one line
+ *   hairline strong rgba(20,20,20,0.22)   a control's own edge, and a chip's outline
+ *   ink             #141414   near-black body text (17.6:1 on the ground)
+ *   ink-2           #5F5F68   secondary text — 6.1:1 on the ground, 5.8:1 on a 4% grey well
+ *   ink-3           #63636D   meta text and mono labels — 5.7:1 on the ground, 5.4:1 on the well
+ *   accent          #2358E6   the one hue; 5.8:1 as text on white, 5.6:1 white-on-fill
+ *   on-accent       #FAFAFA   the ground again — "text on an accent fill" is never pure white here,
+ *                             because the whole point of paper is that white is the *page*
+ *
+ * Three contrast decisions are load-bearing — a light skin fails here before it fails anywhere else —
+ * and all three were measured rather than eyeballed:
+ *
+ *  - `--m-ink-2` / `--m-ink-3` are deliberately *not* the usual "40% grey". Both are held above 4.5:1
+ *    against the ground **and** against the 4%-black well this skin uses for recessed chips and the
+ *    selected list row, which is the darkest surface that text sits on. (`rgba(0,0,0,0.04)` over
+ *    `#FAFAFA` is `#F0F0F0`; `#63636D` on it is 5.4:1.) They are also held *lighter* than the accent, so
+ *    a grey label still reads as the quiet one beside an accent label.
+ *  - Every accent is chosen to work in **both** directions at once: readable *as text* on white
+ *    (≥4.5:1) and able to carry `--m-on-gold` text *as a fill* (≥4.5:1 for all five). That is a narrow
+ *    window — measured, roughly L* 33–45 — and it is why the per-module hues are deeper than the
+ *    friendly tailwind shades the default skin reaches for. It is also why the accent is `#2358E6`
+ *    rather than the brief's `#2F6BFF`: the brighter blue measures 4.31:1 for `--m-on-gold` on a filled
+ *    chip, and the shell *does* fill chips (`bg-[var(--m-gold)] text-[var(--m-on-gold)]`), so the
+ *    darker step is the same hue at the value the contrast floor requires. Measured pairs, in the
+ *    browser: home 5.6:1, jam 7.3:1, challenge 5.7:1, explore 6.2:1, more 8.4:1 white-on-fill; every one
+ *    also ≥5.2:1 as text on the ground.
+ *  - `--m-red` / `--m-green` are deepened from the shell's pastels (`#fb7185`, `#4ade80`). They are used
+ *    as *text* in the challenge verdict and the jam's record hint, and a pastel signal is close to
+ *    invisible on white. The deep values are then used for the option outlines too, so one value serves
+ *    both roles.
+ *
+ * Type
+ * ----
+ * `"Inter"` (already requested in `index.html`) leads a stack with the shell's own faces behind it:
+ * `"Inter", "Space Grotesk", system-ui, sans-serif`. It is the right face for this skin specifically —
+ * a neutral grotesque with a tall x-height, drawn for interface text, and one that looks *calm* rather
+ * than styled at 10px, which is where most of a phone UI lives. The CJK tail is left to the platform
+ * (PingFang SC / HarmonyOS Sans / Noto Sans SC), which is why the stack names no CJK webfont: the app is
+ * bilingual and a downloaded CJK face is ~92 KB of brotli on every visit.
+ *
+ * Two typographic moves define the skin, and they are the only two:
+ *
+ *  - **Negative tracking is correct *here* and nowhere else in the product.** `letter-spacing: -0.01em`
+ *    on headings is what makes a tight, modern display line; on the other skins it would fight a display
+ *    face that was chosen to be lettered. So it is applied to headings only — never to body copy, never
+ *    to a mono readout (the mono token keeps `JetBrains Mono` and positive tracking: an instrument
+ *    number must stay tabular and widely spaced).
+ *  - **Nothing gets smaller.** The shell's sizes are kept exactly; the breathing room comes from the
+ *    hairlines and from the 4% wells that replace filled chips, not from shrinking type. This is the one
+ *    place a light skin is usually "fixed" by making everything 8px, and doing that is what pushes a
+ *    control under the 44px gate.
+ *
+ * Space instead of boxes
+ * ----------------------
+ * Where the shell fills a surface, this skin draws a line; where it draws a heavy container, this skin
+ * uses nothing but the gap around it; where it paints a coloured badge, this skin uses the accent at low
+ * alpha with accent text. Radii are small (6–10px) and consistent, with one deliberate exception:
+ * `rounded-full` stays a pill, because a 46px chip with a 6px radius is not minimal, it is unfinished.
+ * Shadows are allowed on exactly the two things that genuinely float — the player bar and the sticky jam
+ * dock — and each is one hairline plus a very soft ambient layer, which is the least a floating plate can
+ * have and still read as floating.
+ *
+ * The light ground, seen from the other side
+ * ------------------------------------------
+ * The shell has many "lighter than the dark ground" fills. Every one of them must become "darker than
+ * the light ground", and the substitutions are mechanical once stated:
+ *
+ *   `rgba(232,232,255,α)`  a white wash on a dark ground  ->  `rgba(20,20,20,α')`  a black wash on paper
+ *   `rgba(242,109,109,α)`  a red wash that only ever sat on dark  ->  a *red ink at low alpha*
+ *   `rgba(14,12,8,0.9)` / `rgba(20,20,31,0.9)`  dark glass  ->  solid white plus a hairline
+ *   `rgba(90,212,142,0.08)`  a green glow on dark  ->  a green *outline* plus a faint tint
+ *
+ * The alphas are not copied across: a black wash needs roughly twice the alpha of a white one to read as
+ * the same amount of "recessed" (a white overlay *lifts*, a black overlay *deepens*), so the off step
+ * goes 0.055 -> 0.10 and the rails go 0.12 -> 0.10–0.16.
+ *
+ * Scope, and what this file may not do
+ * ------------------------------------
+ * Every selector is written under `:root[data-skin="minimal"] .mobile-root`, so with the attribute absent
+ * — or set to another skin — this sheet changes nothing at all. No geometry: no
+ * width/height/padding/margin/gap/display/order/visibility, so no control can be pushed below the 44px
+ * touch minimum or reflow a measured layout. No `!important`, no external assets, no `@font-face`, no
+ * `@import`, and no `position` (both decorative overlays it repaints were positioned by the shell already,
+ * so this file only has to replace their paint). Shadows, radii and transforms are paint, not layout,
+ * which is why the floating plates can have both without moving anything.
+ *
+ * What this file cannot reach
+ * ---------------------------
+ *  - The record is a `<canvas>` (`VinylCanvas`). Its rings, its label and its shading are painted from JS
+ *    with hardcoded RGB, so only the two families it *can* read as tokens (`--m-font-display` /
+ *    `--m-font-mono`) reach it. Its own greys stay dark-on-dark, which on a light skin reads as a black
+ *    record on paper — intended, not an oversight.
+ *  - Colours written by JS as inline styles (the jam grid's step cells, the pads' lit halos, the genre
+ *    art tiles' backgrounds, `CATEGORY_SWATCH`) win over a stylesheet without `!important`, which this
+ *    file may not use. Those are the four instrument identity colours anyway, so they are left alone; the
+ *    one inline value that genuinely hurts on white (an *off* step's `rgba(232,232,255,0.055)`) is made
+ *    legible by giving the cell a hairline, which CSS is still allowed to do.
+ *  - 探索 mounts three reused desktop views inside `[data-legacy="desktop"]`. They have their own skin
+ *    layer (`skins/legacySkin.css`) and their own dark plates; this sheet deliberately does not chase
+ *    them, and anything it wrote there would be a second, competing palette.
+ */
+
+/* =============================================================================================
+ * 1. Tokens — the palette, and five module accents
+ *
+ * Only names the phone shell already reads are overridden. `--m-gold*` keep their names even though the
+ * value is now the module hue: every screen refers to those three names and renaming them would be a
+ * refactor, not a skin.
+ * =========================================================================================== */
+:root[data-skin="minimal"] .mobile-root {
+  /* Paper, and the two surfaces on it. The card is *whiter* than the page: on a light ground the raised
+     thing is the clean white one and the page behind it is very slightly grey. */
+  --m-bg: #fafafa;
+  --m-card: #ffffff;
+  --m-card-2: #f4f4f6;
+
+  /* Hairlines, not surfaces. `--m-line` is the default rule (a card's edge, a list divider) and
+     `--m-line-2` the stronger one a control draws around itself. Both are the *same* black wash at two
+     alphas, so every edge in the skin belongs to one family. */
+  --m-line: rgba(20, 20, 20, 0.1);
+  --m-line-2: rgba(20, 20, 20, 0.22);
+
+  --m-ink: #141414;
+  --m-ink-2: #5f5f68;
+  --m-ink-3: #63636d;
+
+  /* Text and glyphs on an accent fill. The ground again, not pure white: white is the page here, and a
+     chip drawn in the page's own colour reads as a hole cut out of the accent rather than as a label. */
+  --m-on-gold: #fafafa;
+
+  /* The three fixed signal tones. They do not follow the module: red is always "stop", green is always
+     "right". Deepened from the shell's pastels because they are used as *text* (the challenge verdict,
+     the jam's record hint) and a pastel on white is not text, it is a stain. */
+  --m-teal: #0f766e;
+  --m-red: #c5303f;
+  --m-green: #157f3d;
+  --m-violet: #5b46d6;
+
+  /* The type stacks, as tokens, because the record is painted by JS and cannot inherit anything:
+     `VinylCanvas` reads these two variables the way it reads `--m-gold`. The display token is what
+     carries "Inter" into the canvas label; the mono token is deliberately unchanged, so an instrument
+     readout stays an instrument readout. */
+  --m-font-display: "Inter", "Space Grotesk", system-ui, sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Default accent (any module without a rule of its own): the blue. `--m-gold-rgb` must stay
+     SPACE-separated — the components build `rgb(var(--m-gold-rgb)/0.5)` from it. */
+  --m-gold: #2358e6;
+  --m-gold-hi: #1d49bd;
+  --m-gold-rgb: 35 88 230;
+
+  background: var(--m-bg);
+  color: var(--m-ink);
+  font-family: "Inter", "Space Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "HarmonyOS Sans", "Noto Sans SC", sans-serif;
+  /*
+   * The native controls (the search field, the caret, the clear button, the scrollbars) are told the page
+   * is light. Without this a phone renders them in the dark scheme the desktop app wants, which on a white
+   * page looks like a rendering bug rather than a choice.
+   */
+  color-scheme: light;
+  /* Inter's optical sizing is what keeps a 10px label from looking like a scaled-down 22px heading. */
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+/*
+ * 首页 / 即兴 / 挑战 / 探索 / 更多 — one accent each, five distinct values, all inside the same narrow
+ * window: dark enough to read as text on paper, deep enough to carry `--m-on-gold` when filled. They are
+ * *monochrome-adjacent* on purpose — a blue, a violet-indigo, a warm signal, a teal and a slate — because
+ * the four instrument identity colours (kick amber, snare coral, hat teal, bass periwinkle) are already on
+ * screen in the jam grid, the pads and the record, and a rainbow of module hues would fight them. Every
+ * value clears 4.5:1 on `#FAFAFA`; see the header for the measurements.
+ */
+:root[data-skin="minimal"] .mobile-root[data-module="home"] {
+  --m-gold: #2358e6;
+  --m-gold-rgb: 35 88 230;
+  --m-gold-hi: #1d49bd;
+}
+:root[data-skin="minimal"] .mobile-root[data-module="jam"] {
+  --m-gold: #5038c9;
+  --m-gold-rgb: 80 56 201;
+  --m-gold-hi: #422ea6;
+}
+:root[data-skin="minimal"] .mobile-root[data-module="challenge"] {
+  --m-gold: #b03a0b;
+  --m-gold-rgb: 176 58 11;
+  --m-gold-hi: #922f08;
+}
+:root[data-skin="minimal"] .mobile-root[data-module="explore"] {
+  --m-gold: #0d6a63;
+  --m-gold-rgb: 13 106 99;
+  --m-gold-hi: #0a564f;
+}
+:root[data-skin="minimal"] .mobile-root[data-module="more"] {
+  --m-gold: #4a4a54;
+  --m-gold-rgb: 74 74 84;
+  --m-gold-hi: #3b3b43;
+}
+
+/*
+ * The page behind the shell.
+ *
+ * `.mobile-root` is a `min-h-[100dvh]` child of `<body>`, whose own background is the desktop's
+ * `#0a0b0d` — so a rubber-band scroll, or a phone whose browser chrome overdraws by a pixel, shows a black
+ * bar behind a white app. This paints the document ground from the *shell's own* token, so a future change
+ * to `--m-bg` cannot leave the two out of step. `:has()` is the only way to reach an ancestor in CSS and
+ * is supported everywhere this app runs (Chromium 105+, Safari 15.4+); where it is not, the fallback is
+ * the shell's own background, which is already painted over the whole viewport.
+ */
+:root[data-skin="minimal"] body:has(.mobile-root) {
+  background-color: var(--m-bg);
+  color: var(--m-ink);
+}
+
+/* =============================================================================================
+ * 2. Type — Inter, tight headings, and nothing shrunk
+ *
+ * The shell's sizes are kept exactly. Only the faces, the weight of a heading and the tracking of a
+ * heading and of the all-caps meta labels change; a control's box is never touched, so the 44px gate is
+ * unaffected by everything in this section.
+ * =========================================================================================== */
+
+/* The whole subtree, so a Tailwind `font-sans` or a rule added to `mobile.css` tomorrow still lands on the
+   skin's face. Three class weights of scope: `:root` + `[data-skin]` + `.mobile-root`. */
+:root[data-skin="minimal"] .mobile-root,
+:root[data-skin="minimal"] .mobile-root * {
+  font-family: "Inter", "Space Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "HarmonyOS Sans", "Noto Sans SC", sans-serif;
+}
+
+/*
+ * Headings: 500–600 rather than the shell's 700, with `-0.01em`.
+ *
+ * This is the one place negative tracking is correct in the product. A tight, medium-weight heading is
+ * what makes a page look *typeset*; bold plus loose tracking is the house style of the other skins and
+ * would read as shouting on paper. The selector list is explicit rather than `h1, h2, h3` alone because
+ * the shell's titles are split between real headings (`.text-[22px].font-bold`), the player's genre name
+ * (`.m-now-name`) and the wordmark, and all three have to move together or the screen looks
+ * half-converted. `550` is the weight this skin asks for; a browser with only the static Inter cuts lands
+ * on 600, which is inside the brief's 500–600.
+ */
+:root[data-skin="minimal"] .mobile-root h1,
+:root[data-skin="minimal"] .mobile-root h2,
+:root[data-skin="minimal"] .mobile-root h3,
+:root[data-skin="minimal"] .mobile-root .m-brand b,
+:root[data-skin="minimal"] .mobile-root .m-now-name,
+:root[data-skin="minimal"] .mobile-root .text-\[22px\].font-bold {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+/* The instrument readout keeps its own face, its tabular figures and its positive tracking: a number that
+   changes while you watch it must not move the row, and it must not look like body copy. */
+:root[data-skin="minimal"] .mobile-root .m-mono {
+  font-family: var(--m-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * All-caps meta labels ("GENRES · 159", "GROOVE", "PAD", the tempo's "BPM").
+ *
+ * The shell tracks these at 0.18–0.3em, which is a dark-instrument-panel gesture: on a dark ground the
+ * glowing letters needed the air. Paper does not, and at 0.3em a four-letter label reads as four separate
+ * letters rather than as a word. They come down to 0.12em — still unmistakably a label, no longer a
+ * display typeface — and they are *not* made smaller, so no chip and no row reflows.
+ */
+:root[data-skin="minimal"] .mobile-root .uppercase,
+:root[data-skin="minimal"] .mobile-root .tracking-\[0\.24em\],
+:root[data-skin="minimal"] .mobile-root .tracking-\[0\.3em\],
+:root[data-skin="minimal"] .mobile-root .tracking-\[0\.18em\] {
+  letter-spacing: 0.12em;
+}
+
+/* Links are the accent with a hairline rule instead of the shell's heavier underline. The verdict's genre
+   link is the one in the shell. */
+:root[data-skin="minimal"] .mobile-root .underline {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgb(var(--m-gold-rgb) / 0.4);
+}
+
+/* =============================================================================================
+ * 3. Ground — the aurora, the grain and the glass all go
+ *
+ * The shell paints three decorative overlays that exist only to make a dark ground feel lit. None of them
+ * has any meaning on paper, and two are actively harmful there.
+ * =========================================================================================== */
+
+/*
+ * `.mobile-root::before` is a fixed, two-stop radial aurora in the module's accent. On a light ground its
+ * `transparent` stop is the *darker* end, so the bleed reads as a grey smudge across the top of the page
+ * rather than as light — the exact opposite of its intent. Removed entirely.
+ */
+:root[data-skin="minimal"] .mobile-root::before {
+  background: none;
+}
+
+/*
+ * `.m-player::after` is film grain, an inline SVG noise filter at 5% over everything. Grain is a
+ * *dark-ground* device: it adds tooth to a surface that would otherwise be a flat black, and on paper it is
+ * dirt. Removed.
+ */
+:root[data-skin="minimal"] .mobile-root .m-player::after {
+  background-image: none;
+}
+
+/* The player's breathing aura rides the kick and the breath in the accent. A light skin cannot pulse the
+   page's brightness without every line of text on it moving through contrast, so this goes too. */
+:root[data-skin="minimal"] .mobile-root .m-player-aura {
+  background: none;
+}
+
+/*
+ * The two "glass" plates — the module tab bar and the player bar — plus the shell's `.backdrop-blur`
+ * utility. A blur is only legible when the plate behind it is translucent and dark; on white there is
+ * nothing to see through, and leaving `backdrop-filter` on a nearly opaque white plate costs a compositing
+ * layer every frame for no pixels. Both become solid plates with a hairline.
+ */
+:root[data-skin="minimal"] .mobile-root .backdrop-blur,
+:root[data-skin="minimal"] .mobile-root .backdrop-blur-md,
+:root[data-skin="minimal"] .mobile-root .backdrop-blur-xl,
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(14,12,8,0.9)]"],
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(20,20,31,0.9)]"] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* =============================================================================================
+ * 4. Chrome — top bar, tempo, transport, the pull-down list
+ * =========================================================================================== */
+
+/* The wordmark's glow: `mobile.css` gives `.m-brand b` a text-shadow whose radius rides the kick. A glow
+   is the one thing this skin does not do, and a *pulsing* glow on a white page is worse than a static one.
+   The brand keeps its size and its tracking. */
+:root[data-skin="minimal"] .mobile-root .m-brand b,
+:root[data-skin="minimal"] .mobile-root .m-mono.font-bold {
+  text-shadow: none;
+}
+
+/* The live pip: a hairline ring when idle, the accent when playing — a state change that survives being
+   printed in greyscale, because the *fill* changes and not only the colour. No glow, no pulse. */
+:root[data-skin="minimal"] .mobile-root .m-dot {
+  border: 1px solid var(--m-line-2);
+  background: transparent;
+  animation: none;
+}
+:root[data-skin="minimal"] .mobile-root .m-player[data-playing="true"] .m-dot {
+  border-color: var(--m-gold);
+  background: var(--m-gold);
+  box-shadow: none;
+  animation: none;
+}
+
+/* The drag hint's chevrons were a translucent lamp; they become the accent at full strength, because the
+   hint is the one line of copy that tells a first-time reader the record can be dragged. */
+:root[data-skin="minimal"] .mobile-root .m-drag-hint i {
+  color: var(--m-gold);
+}
+
+/*
+ * The tempo keys. The shell's dark-ground treatment is a 1px `--m-line-2` ring over a transparent fill,
+ * which on white is already correct — so this skin only replaces the *lamp* the key becomes when pressed
+ * (`--m-card-2` fill plus the accent) with the two things a minimal control does: a slightly deeper well,
+ * and 1px of downward travel. The travel is a `transform` on the button's own box, which is paint and not
+ * layout: the 44px key does not move its neighbours.
+ */
+:root[data-skin="minimal"] .mobile-root .m-bpm-ctl button {
+  background: transparent;
+  border-color: var(--m-line-2);
+  color: var(--m-ink);
+}
+:root[data-skin="minimal"] .mobile-root .m-bpm-ctl button:active {
+  background: var(--m-card-2);
+  border-color: var(--m-line-2);
+  color: var(--m-ink);
+  transform: translateY(1px);
+}
+
+/* The score readout. `mobile.css` paints `.m-bpm-val b` at 23px/700; on the row it shares with the name,
+   two 44px keys and its own unit label, that weight is what makes it the loudest thing on the screen. It
+   keeps its size — a number is the point of the control — and loses the weight. */
+:root[data-skin="minimal"] .mobile-root .m-bpm-val b {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+:root[data-skin="minimal"] .mobile-root .m-bpm-val small {
+  color: var(--m-ink-3);
+  letter-spacing: 0.14em;
+}
+
+/*
+ * The progress rail: a 2px groove, an accent fill, a solid head. The shell's head is a 7px dot with a
+ * glow; the glow goes and the head becomes a filled circle in the accent's deeper step, so the rail reads
+ * as a printed rule with a slider rather than as a light.
+ */
+:root[data-skin="minimal"] .mobile-root .m-prog-track {
+  background: rgba(20, 20, 20, 0.08);
+}
+:root[data-skin="minimal"] .mobile-root .m-prog-fill {
+  background: var(--m-gold);
+  box-shadow: none;
+}
+:root[data-skin="minimal"] .mobile-root .m-prog-fill::after {
+  background: var(--m-gold-hi);
+  box-shadow: none;
+}
+:root[data-skin="minimal"] .mobile-root .m-prog-meta {
+  color: var(--m-ink-3);
+  letter-spacing: 0.1em;
+}
+
+/* Transport. The triangle's swap (play -> pause) already *is* the playing state; the shell's colour
+   breathing on the big key was the dark skin's way of glowing, and it has nothing to say here. */
+:root[data-skin="minimal"] .mobile-root .m-tbtn {
+  color: var(--m-ink-2);
+}
+:root[data-skin="minimal"] .mobile-root .m-tbtn.on {
+  color: var(--m-gold);
+}
+:root[data-skin="minimal"] .mobile-root .m-tbtn.on::after {
+  background: var(--m-gold);
+}
+:root[data-skin="minimal"] .mobile-root .m-tbig {
+  color: var(--m-ink);
+}
+:root[data-skin="minimal"] .mobile-root .m-player[data-playing="true"] .m-tbig {
+  animation: none;
+  color: var(--m-gold);
+}
+
+/*
+ * The pull-down list (`.m-cue`).
+ *
+ * Two fixes, both forced by the light ground. First, the list has **no background of its own** in
+ * `mobile.css` — it relied on the page's dark ground showing through while its rows drew only a top
+ * hairline. Over a white page, a scrolling list and the content behind it would be the same colour, so the
+ * list gets a solid white plate. Second, the playing row's name was `--m-gold-hi`, the *lighter* step of an
+ * accent, which on paper is unreadable; the row is marked by ink and an accent rule instead, plus a 4%
+ * well so the mark is not colour-only.
+ */
+:root[data-skin="minimal"] .mobile-root .m-cue.is-open {
+  background: var(--m-card);
+  border: 1px solid var(--m-line);
+  border-radius: 10px;
+}
+:root[data-skin="minimal"] .mobile-root .m-cue-facts {
+  border-top-color: var(--m-line);
+  color: var(--m-ink-3);
+  letter-spacing: 0.1em;
+}
+:root[data-skin="minimal"] .mobile-root .m-cue-item {
+  border-top-color: var(--m-line);
+  color: var(--m-ink);
+  background: transparent;
+}
+:root[data-skin="minimal"] .mobile-root .m-cue-item .m-nm {
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+:root[data-skin="minimal"] .mobile-root .m-cue-item .m-idx,
+:root[data-skin="minimal"] .mobile-root .m-cue-item .m-bp {
+  color: var(--m-ink-3);
+}
+:root[data-skin="minimal"] .mobile-root .m-cue-item.on {
+  background: rgba(20, 20, 20, 0.04);
+  box-shadow: inset 2px 0 0 0 var(--m-gold);
+}
+:root[data-skin="minimal"] .mobile-root .m-cue-item.on .m-idx,
+:root[data-skin="minimal"] .mobile-root .m-cue-item.on .m-bp {
+  color: var(--m-ink-2);
+}
+:root[data-skin="minimal"] .mobile-root .m-cue-item.on .m-nm {
+  color: var(--m-ink);
+  font-weight: 600;
+}
+:root[data-skin="minimal"] .mobile-root .m-eq i {
+  background: var(--m-gold);
+}
+
+/* The footer line is the skin's quietest text and its widest tracking; it comes in to match the labels.
+   The shell also makes its inner `span` *breathe* (`opacity: calc(0.55 + breath + kick)`), and on a light
+   ground that is not a shimmer but a contrast failure: at the bottom of the breath the 9px grey measures
+   3.0:1. The breath is a dark-ground device — it needs a loud ground for the change to read as light — so
+   this skin holds the line still. */
+:root[data-skin="minimal"] .mobile-root .m-foot {
+  color: var(--m-ink-3);
+  letter-spacing: 0.14em;
+}
+:root[data-skin="minimal"] .mobile-root .m-foot span {
+  opacity: 1;
+}
+
+/* =============================================================================================
+ * 5. The tab bar and the player bar — the two plates that float
+ *
+ * The tab bar is `border-t border-[var(--m-line)] bg-[rgba(14,12,8,0.9)]`: a 90% dark plate over a dark
+ * page. On paper that is a black band across the bottom of the screen. It becomes the page's own white
+ * with a hairline above it — the one rule that keeps the bar from being a second visual layer — and the
+ * active tab keeps the accent it already had. The "you are here" underline is the mark the shell already
+ * draws; nothing new is added to the row.
+ * =========================================================================================== */
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(14,12,8,0.9)]"] {
+  background-color: var(--m-card);
+  border-top-color: var(--m-line);
+}
+
+/*
+ * The player bar is one of the two things that genuinely float above a scrolling page, so it is one of the
+ * two places a shadow is allowed: a 1px hairline, then a very soft ambient pair (18px at 4%, 10px at 6%).
+ * Nothing glows and nothing is black — the bar reads as a lifted sheet of the same paper, which is what
+ * "floating" means in this language.
+ */
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(20,20,31,0.9)]"] {
+  background-color: var(--m-card);
+  border-color: var(--m-line);
+  box-shadow:
+    0 1px 2px rgba(20, 20, 20, 0.04),
+    0 10px 24px rgba(20, 20, 20, 0.06);
+}
+
+/*
+ * The genre thumbnail's ring and the progress groove inside the bar are both `rgba(232,232,255,…)` — a
+ * white film that disappears on white. They become black films at comparable weight. The thumbnail keeps
+ * the category colour behind it (`genreArtBackground` is an inline style this sheet cannot reach), so the
+ * ring is what keeps it from bleeding into the white plate.
+ */
+:root[data-skin="minimal"] .mobile-root [class~="ring-[rgba(232,232,255,0.14)]"] {
+  --tw-ring-color: rgba(20, 20, 20, 0.14);
+}
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(232,232,255,0.14)]"] {
+  background-color: rgba(20, 20, 20, 0.12);
+}
+
+/* =============================================================================================
+ * 6. 即兴 — the step grid, the pads, the swing rail, the record key
+ *
+ * Every one of these was drawn for a dark ground, and one of them is drawn *from JS* as an inline style,
+ * which a stylesheet cannot override without `!important`. So the handling is per element and honest about
+ * which of the two it is:
+ *
+ *  - the **off step** (`rgba(232,232,255,0.055)`, inline): the wash cannot be replaced, so the cell also
+ *    gets a hairline drawn as an *inset shadow* — the one way to give a flex cell an edge without taking
+ *    width from its eleven siblings;
+ *  - the **swing rail** and the **record wash** (Tailwind classes): replaced outright, both inversions;
+ *  - the **pads** (inline border and halo when lit, a shell gradient when not): the gradient is removed and
+ *    the plate is left white with a hairline, so a pad lights up by *gaining* its instrument colour rather
+ *    than by losing a glow — the same information, stated for paper.
+ * =========================================================================================== */
+
+/* An off step: a 10% black well with a hairline. The hairline is what makes the grid readable at all on
+   white, and it is what keeps the cell visible when the browser paints the pale inline wash. */
+:root[data-skin="minimal"] .mobile-root .m-press.h-8 {
+  box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.08);
+  border-radius: 4px;
+}
+
+/* The pads' plate: the shell's dark-ground `linear-gradient` goes; the pad becomes white with a hairline.
+   When the pad is lit, JS supplies the instrument's own border and halo, and this rule (a background and a
+   radius only) does not interfere with either. */
+:root[data-skin="minimal"] .mobile-root [class~="bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))]"] {
+  background-image: none;
+  background-color: var(--m-card);
+  border-color: var(--m-line);
+  border-radius: 10px;
+}
+
+/*
+ * The swing rail's groove (`rgba(232,232,255,0.12)`) and the record key's armed wash
+ * (`rgba(242,109,109,0.18)`, plus the 70% dot). A 12% white film is invisible on white, so the groove
+ * becomes a 10% black one; the armed key becomes a red wash at the same *readable* weight. Both reds are
+ * written as `rgb()` of `--m-red`'s own value rather than through `var(--m-red)`: a wash needs the channel
+ * triple, and `mobile.css` does not publish one for red the way it publishes `--m-gold-rgb`. They are the
+ * only two literals in the file that repeat a token value, and the comment is why.
+ */
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(232,232,255,0.12)]"] {
+  background-color: rgba(20, 20, 20, 0.1);
+}
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(242,109,109,0.18)]"] {
+  background-color: rgb(197 48 63 / 0.1);
+}
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(242,109,109,0.7)]"] {
+  background-color: rgb(197 48 63 / 0.45);
+}
+
+/* The jam dock is the second thing that genuinely floats (it is `sticky` above the tab bar), so it is the
+   second and last place a shadow is allowed — the same soft pair the player bar wears. */
+:root[data-skin="minimal"] .mobile-root .m-jam-dock {
+  background: var(--m-card);
+  border-color: var(--m-line);
+  box-shadow:
+    0 1px 2px rgba(20, 20, 20, 0.04),
+    0 12px 26px rgba(20, 20, 20, 0.07);
+}
+
+/* =============================================================================================
+ * 7. 挑战 — ladder, options, verdict
+ * =========================================================================================== */
+
+/* The ladder's progress groove (`rgba(232,232,255,0.08)`) and its fill, which is a *gradient* from the
+   accent to its lighter step. On paper that gradient is a third value the palette does not have; it
+   becomes one flat accent bar, which is also what "one accent" means. */
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(232,232,255,0.08)]"] {
+  background-color: rgba(20, 20, 20, 0.07);
+}
+:root[data-skin="minimal"] .mobile-root [class~="bg-[linear-gradient(90deg,var(--m-gold),var(--m-gold-hi))]"] {
+  background-image: none;
+  background-color: var(--m-gold);
+}
+
+/*
+ * The answer options.
+ *
+ * `idle` and `dim` are the card's own look. The two *state* washes are the interesting case: they are
+ * `rgba(90,212,142,0.08)` and `rgba(242,109,109,0.07)` — 8% tints of a pastel on a dark ground, which on
+ * white are invisible. They become a 1px signal-coloured **outline** (what actually reads on paper) plus a
+ * 6% tint of the same signal, so the state survives both a greyscale print and a colour-blind reader: the
+ * border is the primary mark and the tint is the second.
+ *
+ * `dim` also loses the shell's `opacity-40`. Forty percent of near-black on white is 2.7:1 — below the
+ * contrast floor — for an option the user is still meant to read ("this was not it"). The state is already
+ * carried by the wrong answer's red outline, so the dimmed options only give up their card fill.
+ */
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(90,212,142,0.08)]"] {
+  background-color: rgb(21 127 61 / 0.06);
+  border-color: var(--m-green);
+}
+:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(242,109,109,0.07)]"] {
+  background-color: rgb(197 48 63 / 0.06);
+  border-color: var(--m-red);
+  opacity: 1;
+}
+:root[data-skin="minimal"] .mobile-root [class~="opacity-40"] {
+  opacity: 1;
+  background-color: transparent;
+}
+
+/* The verdict's "ELO" line is `text-[var(--m-gold-hi)]`. On this skin that token is the accent's deeper
+   step rather than a lighter tint, so it is legible on white with no special case; this rule only states
+   the intent so the next reader does not have to infer it. */
+:root[data-skin="minimal"] .mobile-root [class~="text-[var(--m-gold-hi)]"] {
+  color: var(--m-gold-hi);
+}
+
+/* =============================================================================================
+ * 8. The skin picker — the one place the selection is a *preview*
+ *
+ * The selected card is marked by the shell as `border-[var(--m-gold)] bg-[var(--m-card-2)]`. On a light
+ * ground a 1px accent border around a nearly identical grey card is not a strong enough mark for "this is
+ * the one in force", so the selected option gets a 2px accent edge drawn as an inset ring *and* keeps the
+ * shell's own background change. A ring is a shadow, so it adds no layout: the 72px row cannot grow and the
+ * two-column grid cannot reflow.
+ * =========================================================================================== */
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-skin-"] {
+  border-radius: 10px;
+}
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-skin-"][aria-checked="true"] {
+  box-shadow: inset 0 0 0 2px var(--m-gold);
+}
+
+/* =============================================================================================
+ * 9. States — pressed, and the one icon that needed rescuing
+ *
+ * The shell already has `.m-press:active { transform: scale(0.97) }`. This skin adds the second, non-colour
+ * signal the brief asks for: 1px of downward travel, so a press is *felt* as well as seen even on a control
+ * whose colour does not change. Both are transforms, so no box resizes.
+ * =========================================================================================== */
+:root[data-skin="minimal"] .mobile-root .m-press:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+/*
+ * The genre cover's "this is playing" glyph is a **white** lucide icon carrying the shell's `.drop-shadow`
+ * class, sitting on the genre's own art tile. On a light ground a white glyph on a pale tile is at the edge
+ * of invisible, and the icon's colour comes from JSX (`text-white`), which this sheet may not override. The
+ * one hook left is the filter itself: the white drop-shadow is replaced by a dark *glow* — four tight
+ * outlines are not possible, but a zero-offset dark shadow draws a halo around the glyph's own silhouette,
+ * which is exactly enough to separate white from any tile colour. It changes the icon's paint, never its
+ * box, and it is the only icon rule in the file.
+ */
+:root[data-skin="minimal"] .mobile-root .drop-shadow {
+  filter: drop-shadow(0 0 1px rgba(20, 20, 20, 0.9)) drop-shadow(0 0 3px rgba(20, 20, 20, 0.45));
+}

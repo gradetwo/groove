@@ -29,8 +29,10 @@ import "./mobile.css";
  * moment a skin covers the desktop too, this import moves to `main.tsx` — the CSS itself is already
  * scoped to `:root[data-skin]`, so nothing else would have to change.
  */
+import "./skins/minimal.css";
 import "./skins/comic.css";
 import "./skins/soviet.css";
+import "./skins/sovietYears.css";
 import "./skins/pixel.css";
 /**
  * The reused desktop views (探索) wear the active skin too.

@@ -29,7 +29,7 @@ import { applyStoredSkin, useSkin, SKIN_ATTRIBUTE } from "../hooks/useSkin";
 import { SkinPicker } from "../mobile/SkinPicker";
 
 /** The skins that ship a stylesheet. `default` is the base look in `mobile.css`, so it has none. */
-const STYLED_SKINS = ["comic", "soviet", "pixel"] as const;
+const STYLED_SKINS = ["minimal", "comic", "soviet", "sovietYears", "pixel"] as const;
 const SKIN_CSS_DIR = path.join(process.cwd(), "src", "mobile", "skins");
 
 /** Every skin must define these, or large parts of the shell keep the previous skin's colours. */
@@ -49,8 +49,15 @@ const REQUIRED_TOKENS = [
 ];
 
 describe("skin catalogue", () => {
-  it("ships the four skins the user asked for, default first", () => {
-    expect(SKINS.map((skin) => skin.id)).toEqual(["default", "comic", "soviet", "pixel"]);
+  it("ships the skins the user asked for, default first", () => {
+    expect(SKINS.map((skin) => skin.id)).toEqual([
+      "default",
+      "minimal",
+      "comic",
+      "soviet",
+      "sovietYears",
+      "pixel",
+    ]);
     expect(DEFAULT_SKIN).toBe("default");
   });
 
@@ -510,8 +517,11 @@ describe("skin stylesheets", () => {
     for (const prelude of found) {
       if (!prelude || prelude.startsWith("@")) continue;
       for (const selector of splitSelectors(prelude)) {
+        // Every styled skin, derived from the catalogue: a hard-coded trio here silently stops
+        // covering a skin the day one is added — which is exactly what happened with the fifth and
+        // sixth skins.
         expect(selector, `unscoped panel selector "${selector}"`).toMatch(
-          /:root\[data-skin="(comic|soviet|pixel)"\]/
+          new RegExp(`:root\\[data-skin="(${STYLED_SKINS.join("|")})"\\]`)
         );
         // `.m-panels` is rendered only in App's phone branch, so the sheet can never touch a dialog
         // the desktop opened — and the default skin matches none of these selectors.
