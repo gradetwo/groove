@@ -513,8 +513,16 @@
    the genre page: one grouped rule, because they are all "a panel of paper on the poster". The cut is
    the same 18 px corner on each; the shadow is a zero-blur `drop-shadow` on the silhouette, which is
    the honest way to get a hard shadow out of a clipped box. A cut of 18 px on a ≥46 px control can
-   never touch its centre, and none of these is a `<button>` — the controls live *inside* them. */
-:root[data-skin="sovietYears"] .mobile-root section > section,
+   never touch its centre, and none of these is a `<button>` — the controls live *inside* them.
+ *
+ * **The player's stage is excluded, and that exclusion is a bug fix.** `section > section` also matched
+ * `.m-player > .m-stage`, so the whole stage — the record *and the console's type* — was drawn through a
+ * hard `8px 8px` drop-shadow. A drop-shadow is a copy of the element's alpha, so every glyph in the
+ * console was painted twice, 8 px apart: the user reported "播放器页面内容有重复重叠", and they were
+ * looking at a shadow, not at duplicated markup. The poster's paste-up shadow belongs on cards whose
+ * text sits well inside their padding; it cannot be used on a block of small type, where the copy lands
+ * under the next line. The stage is the record plus a column of text — no cut, no shadow. */
+:root[data-skin="sovietYears"] .mobile-root section > section:not(.m-stage),
 :root[data-skin="sovietYears"] .mobile-root .m-jam-dock,
 :root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-challenge-option-"],
 :root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-more-"] {
@@ -522,6 +530,25 @@
   background-color: var(--m-card);
   clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
   filter: drop-shadow(8px 8px 0 #111111);
+}
+
+/*
+ * The top bar's tagline stays on one line.
+ *
+ * This skin uppercases and tracks out every label, which made "Pocket groove machine" two lines tall and
+ * it collided with the status chip beside it. Truncating is the honest answer: the tagline is decoration,
+ * and the status is information.
+ */
+:root[data-skin="sovietYears"] .mobile-root .m-brand span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  letter-spacing: 0.06em;
+}
+:root[data-skin="sovietYears"] .mobile-root .m-brand {
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* The switch housing: the jam's step cells are not dots any more. Each is a recessed well — a flat
