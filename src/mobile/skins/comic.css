@@ -1,0 +1,566 @@
+/**
+ * Skin: "comic" — 复古漫画 / 四色胶印 (retro comic book, four-colour offset print).
+ *
+ * What it is
+ * ----------
+ * The phone shell stops being a screen and becomes a printed page: a slightly ochre newsprint sheet,
+ * panels with heavy black ink outlines, Ben-Day dot screens for shading, flat spot colours, and
+ * display type with cyan and magenta plates deliberately a hair out of register. The reference is the
+ * Spider-Verse / 60s–80s comic look — a cheap four-colour press run, not a glossy app. Nothing here
+ * is glassy, blurred or elevated: a surface is either paper with ink on it, or an ink block with paper
+ * knocked out of it.
+ *
+ * Why these colours
+ * -----------------
+ *   newsprint    #F4E9D2  the ground — ochre off-white, never #FFF (pure white reads as a screen)
+ *   press sheet  #FBF4E2  a card: the same stock, one impression lighter, held by its outline
+ *   second hit   #F2E3C0  a surface that took the yellow plate twice (card-2)
+ *   ink black    #111014  every outline, every body letter, every hard shadow
+ *   process cyan #0B6E7F  home's ink        (its plate is the electric #00E5FF)
+ *   process mag. #C4006E  jam's ink         (its plate is the electric #FF2D95)
+ *   process ochre#7A5C00  challenge's ink   (its plate is the electric #FFE600)
+ *   process green#006B3C  explore's ink     (prints as ink only — no green plate in the palette)
+ *   graphite     #4A4340  more's ink        (prints as ink only)
+ *   process red  #C50034  wrong / recording;  green #00702F correct
+ *
+ * The five module accents are *process* inks — dark enough to be read as type on newsprint (5.4–8.8:1)
+ * — because the components use `--m-gold` as a **text** colour in a dozen places (the module tab
+ * label, the era year, the swing readout, the ELO line) and `VinylCanvas` reads it from the stylesheet
+ * to ink the record's paper label. The three electric primaries from the brief are therefore reserved
+ * for what a press uses a saturated plate for — halftone dots, misregistration fringes, the emphasis
+ * blocks (the transport's big key, the BPM readout, the "correct" answer) and the two colour bands on
+ * the ground — rather than being sprayed over every control. `--m-on-gold` becomes knocked-out paper
+ * rather than near-black for the same reason: with a dark ink block under it, paper type is the only
+ * thing that clears 4.5:1 (5.4:1 on cyan, 5.7:1 on ochre, 8.8:1 on graphite).
+ *
+ * Contrast was measured, not eyeballed: body ink is 17:1 on newsprint, `--m-ink-2` 10.9:1 and the
+ * dimmest tone `--m-ink-3` 8.1:1 — the latter held that dark because the player's 9px mono lines sit
+ * over the aura's plate wedges, where the worst case still clears 4.5:1.
+ *
+ * The misregistration trick
+ * -------------------------
+ * An offset press is a mechanical device: the cyan and magenta plates land a millimetre off the key
+ * plate. That is the whole visual signature here, and it is done with **hard, zero-blur offsets** only:
+ *   - display type carries `text-shadow: 1.5px 1.5px 0 magenta, -1px -1px 0 cyan` (a plate off-register
+ *     behind an in-register ink letterform, never a blur; the offsets are held around 1.5px because a
+ *     CJK title is a dense block of strokes and a wider register would close its counters);
+ *   - the player's aura is two hard-edged wedge plates whose diagonal edges are offset from each other,
+ *     so the seam between cyan and magenta *is* the misregistration;
+ *   - the panels never get a soft shadow: `4px 4px 0 #111014` is a solid block of ink, the way a
+ *     letterpress plate sits on the sheet.
+ *
+ * Keeping the boxes still
+ * -----------------------
+ * The shell's controls are measured by a Playwright gate, so the ink edge is **1px real border + 1px
+ * ring** (`box-shadow: 0 0 0 1px`) rather than a thicker border, and inner rules are *inset* bands
+ * (`inset 0 2px 0 0`) rather than `border-top: 3px`. A ring and an inset band paint outside the flow:
+ * the edge reads as 2–3px of ink while every box keeps the exact size the default skin gives it. The
+ * one rotation in the file sits on the decorative, `aria-hidden` cover tiles, never on a control.
+ *
+ * The halftone screen
+ * -------------------
+ * Ben-Day dots are layered `radial-gradient()` tiles — pure CSS, no images, no SVG. The ground screen
+ * lives on `.mobile-root::before`, which the shell already declares `position: fixed`, so the dots stay
+ * put while a list scrolls underneath (a scrolling texture shimmers, and a shimmer reads as a screen).
+ *
+ * Fonts
+ * -----
+ * `"Bangers"` is the hand-lettered display face, at 0.02em tracking and never negatively tracked
+ * because a letterpress display face already touches its own shoulders. It is put only on boxes whose
+ * line box is already pinned — the page titles (`leading-none`), the record's name line (`line-height:
+ * 1`) and the player's wordmark (sitting beside a 44px key) — since a display face has different
+ * vertical metrics and a face that grew a line box would push every control below it down the page.
+ * Body copy and labels are `"Comic Neue"`, the comic lettering that stays readable at 12–13px and, for
+ * CJK, falls through to the platform's system face. `.m-mono` keeps JetBrains Mono — the numerals are a
+ * dial readout and must stay tabular — and is recoloured through the ink tokens rather than refaced.
+ *
+ * Scope
+ * -----
+ * Every rule is scoped under `:root[data-skin="comic"]`, because several skins are meant to sit over
+ * the very same components; with the attribute absent — or set to another skin — this file changes
+ * nothing at all. Only colour, background, border, radius, shadow, letterform and decoration are
+ * touched: no geometry, no display/order, no opacity or visibility tricks, no `!important`, no images,
+ * no external URLs. The shell's literal Tailwind utilities (`border`, `rounded-2xl`, `bg-[var(--m-card)]`,
+ * …) are re-skinned through attribute selectors, which is how a utility-CSS surface gets re-skinned
+ * without rewriting a single component.
+ */
+
+/* ---------------------------------------------------------------------------------------------
+ * 1. Tokens
+ *
+ * Only the names the phone shell already reads are overridden, so no component has to know a skin
+ * exists. `--m-gold` / `--m-gold-hi` / `--m-gold-rgb` keep their names even though the value is now a
+ * process ink: every screen refers to them and renaming them would be a refactor, not a skin.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root {
+  --m-bg: #f4e9d2;
+  --m-card: #fbf4e2;
+  --m-card-2: #f2e3c0;
+  --m-line: #111014;
+  --m-line-2: #111014;
+  --m-ink: #111014;
+  --m-ink-2: #3a3440;
+  --m-ink-3: #4e4750;
+  --m-on-gold: #fff6df;
+  --m-teal: #00707a;
+  --m-red: #c50034;
+  --m-green: #00702f;
+  --m-violet: #5b2a9e;
+  --m-gold: #0b6e7f;
+  --m-gold-hi: #063c46;
+  --m-gold-rgb: 11 110 127;
+  font-family: "Comic Neue", "Space Grotesk", system-ui, sans-serif;
+}
+
+/*
+ * One process ink per module, exactly where the default skin puts one accent per module. On a light
+ * ground "hi" means a *heavier* deposit, not a brighter one: the emphasis tone is the same hue with
+ * more ink under it, which is also how density reads on paper.
+ */
+:root[data-skin="comic"] .mobile-root[data-module="jam"] {
+  --m-gold: #c4006e;
+  --m-gold-hi: #7a0041;
+  --m-gold-rgb: 196 0 110;
+}
+:root[data-skin="comic"] .mobile-root[data-module="challenge"] {
+  --m-gold: #7a5c00;
+  --m-gold-hi: #4e3a00;
+  --m-gold-rgb: 122 92 0;
+}
+:root[data-skin="comic"] .mobile-root[data-module="explore"] {
+  --m-gold: #006b3c;
+  --m-gold-hi: #00462a;
+  --m-gold-rgb: 0 107 60;
+}
+:root[data-skin="comic"] .mobile-root[data-module="more"] {
+  --m-gold: #4a4340;
+  --m-gold-hi: #2c2825;
+  --m-gold-rgb: 74 67 64;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 2. Letterforms
+ *
+ * The display face goes on the page titles, the wordmark and the record's name line — the places a
+ * comic would letter by hand. Everything else stays on Comic Neue so long Chinese/Latin pairs do not
+ * turn into a logo. The swap is deliberately limited to boxes whose line box is already pinned by a
+ * `leading-none` / `line-height: 1` utility (or, for the wordmark, by the 44px key beside it): a
+ * display face has different vertical metrics, and a face that grew a line box would push every
+ * control below it down the page.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root .m-rise h1,
+:root[data-skin="comic"] .mobile-root .m-brand b,
+:root[data-skin="comic"] .mobile-root .m-now-name {
+  font-family: "Bangers", "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: 0.02em;
+}
+:root[data-skin="comic"] .mobile-root .m-rise h1 {
+  text-transform: uppercase;
+  /* Cyan one way, magenta the other: the key plate is the ink letter itself. Kept to ~1.5px because a
+     CJK title is a dense block of strokes — a wider register would close the counters. */
+  text-shadow: 1.5px 1.5px 0 #ff2d95, -1px -1px 0 #00e5ff;
+  /* The rule under a title is a 3px block of ink, drawn as a shadow so no box moves. */
+  box-shadow: 0 3px 0 0 var(--m-ink);
+}
+/* Numerals are a dial readout: keep them tabular wherever the shell prints a number. */
+:root[data-skin="comic"] .mobile-root .m-mono,
+:root[data-skin="comic"] .mobile-root .m-tabular,
+:root[data-skin="comic"] .mobile-root .m-bpm-val b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 3. Newsprint ground, halftone screens and the two mastheads
+ * ------------------------------------------------------------------------------------------- */
+/*
+ * The sheet itself. `.mobile-root::before` is already fixed and already sits under `main`, so the dot
+ * screen (three plates at three scales) and the two registration bands ride the viewport instead of
+ * the content: nothing crawls, and the bands read as the plate edges of the page.
+ */
+:root[data-skin="comic"] .mobile-root::before {
+  background-image:
+    linear-gradient(180deg, rgb(0 229 255 / 0.13) 0 30px, transparent 30px),
+    linear-gradient(180deg, transparent calc(100% - 22px), rgb(255 45 149 / 0.14) calc(100% - 22px)),
+    radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.13) 1.1px, transparent 1.35px),
+    radial-gradient(circle at 1px 1px, rgb(255 45 149 / 0.16) 1.5px, transparent 1.8px),
+    radial-gradient(circle at 1px 1px, rgb(0 229 255 / 0.14) 1.2px, transparent 1.5px);
+  background-size: auto, auto, 6px 6px, 14px 14px, 21px 21px;
+  background-position: 0 0, 0 0, 0 0, 3px 4px, 7px 2px;
+}
+/*
+ * The shell masthead is a printed band: flat yellow, its own dot screen, and a heavy rule beneath it.
+ * `main > header` is exact — the player's own top bar lives inside `section.m-player`, not here.
+ */
+:root[data-skin="comic"] .mobile-root main > header {
+  background-color: #ffe600;
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.18) 1.1px, transparent 1.4px);
+  background-size: 6px 6px;
+  box-shadow: 0 3px 0 0 var(--m-ink);
+}
+/* The wordmark keeps `.m-mono` — the brief lets the monospace stack stand — and takes the inks and
+   the two-plate fringe instead of a face swap, because its line box is not pinned by a utility. */
+:root[data-skin="comic"] .mobile-root main > header .m-mono {
+  color: var(--m-ink);
+  text-shadow: 2px 0 0 #ff2d95, -1.5px 0 0 #00e5ff;
+}
+/* The player's top bar, same idea: one yellow impression behind the wordmark, dot-screened. */
+:root[data-skin="comic"] .mobile-root .m-topbar {
+  background-color: #ffe600;
+  background-image: radial-gradient(circle at 1px 1px, rgb(255 45 149 / 0.22) 1.2px, transparent 1.5px);
+  background-size: 7px 7px;
+  box-shadow: 0 3px 0 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-brand b {
+  text-shadow: 2px 2px 0 #ff2d95, -1px -1px 0 #00e5ff;
+}
+:root[data-skin="comic"] .mobile-root .m-now-name {
+  text-shadow: 2px 2px 0 #ff2d95;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 4. Ink outlines, plate radii, hard shadows, dot shading
+ *
+ * A press has one line weight and it is a heavy one. The edge is built as **1px real border + 1px ink
+ * ring** (`box-shadow: 0 0 0 1px`), not as a thicker border: the ring is painted outside the box, so
+ * the printed edge reads as 2px while every box keeps the exact size the default skin gives it. That
+ * matters because a chip or a card is auto-width — a real 2px border would widen it by 2px and a
+ * Playwright gate measures widths. Separators follow the same rule the other way round, as an inset
+ * band, so an inner rule never adds a pixel of height either.
+ *
+ * Any other rule in this file that sets `box-shadow` on one of these surfaces re-states the ring, so
+ * the edge survives the override.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [class~="border"] {
+  border-width: 1px;
+  border-style: solid;
+  box-shadow: 0 0 0 1px var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [class~="border-t"] {
+  border-top-width: 1px;
+  border-top-style: solid;
+  box-shadow: inset 0 2px 0 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [class~="border-l"] {
+  border-left-width: 1px;
+  border-left-style: solid;
+}
+/* Cards, panels, options, cells and the pad grid: cut corners, one solid block of ink behind them. */
+:root[data-skin="comic"] .mobile-root [class~="rounded-2xl"] {
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [class~="rounded-[18px]"] {
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [class~="rounded-xl"] {
+  border-radius: 4px;
+}
+/* Grid cells print as little squares, not lozenges. */
+:root[data-skin="comic"] .mobile-root [class~="rounded"] {
+  border-radius: 2px;
+}
+/* A chip that already carries an outline reads as a sticker: small radius, 2px block shadow. */
+:root[data-skin="comic"] .mobile-root [class~="rounded-full"][class~="border"] {
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--m-ink), 2px 2px 0 var(--m-ink);
+}
+/*
+ * The two big keys that are disc-shaped *and* filled (the jam transport and the player bar's toggle)
+ * carry no `border` class in their lit state, so they would print with no edge at all. `flex` is part
+ * of the selector to keep this off the module bar's 2px active underline, which shares the classes.
+ */
+:root[data-skin="comic"] .mobile-root [class~="rounded-full"][class~="bg-[var(--m-gold)]"][class~="flex"] {
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
+}
+/* The swing knob is the only `border-2` in the shell: it already owns a 2px edge, so it only needs
+   the ink and the block behind it. */
+:root[data-skin="comic"] .mobile-root [class~="border-2"] {
+  border-color: var(--m-ink);
+  box-shadow: 2px 2px 0 var(--m-ink);
+}
+/* Links get a printer's rule, not a hairline. */
+:root[data-skin="comic"] .mobile-root [class~="underline"] {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+/* Ben-Day shading on every paper panel. ~7% ink coverage: felt as tone, never read as noise. */
+:root[data-skin="comic"] .mobile-root [class~="bg-[var(--m-card)]"] {
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.075) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[var(--m-card-2)]"] {
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.1) 1.1px, transparent 1.35px);
+  background-size: 6px 6px;
+}
+/* The pad grid was a dark-mode gradient; it becomes a dot-screened plate instead. */
+:root[data-skin="comic"] .mobile-root [class~="bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))]"] {
+  background-color: var(--m-card);
+  background-image: radial-gradient(circle at 1px 1px, rgb(255 45 149 / 0.2) 1.2px, transparent 1.5px);
+  background-size: 6px 6px;
+}
+/* Cover art is pasted on at a tilt — the one rotation in the file, on a decorative tile, not a control. */
+:root[data-skin="comic"] .mobile-root [class~="rounded-2xl"][aria-hidden="true"] {
+  transform: rotate(-1.4deg);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 5. The module tab bar — a black plate with the plates knocked out of it
+ *
+ * Yellow-on-black is the emphasis the brief asks for, and one black band at the bottom anchors the
+ * page the way a comic's footer rule does. The bar's translucent dark glass and its backdrop blur go;
+ * both label tones are re-inked because on black the shell's dim ink would be invisible.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(14,12,8,0.9)]"] {
+  background-color: #111014;
+  background-image: radial-gradient(circle at 1px 1px, rgb(244 233 210 / 0.12) 1.1px, transparent 1.4px);
+  background-size: 6px 6px;
+  border-top-color: #ffe600;
+  /* The bar's 3px yellow rule is a shadow above the nav, not a taller border: the fixed bar and the
+     five 56px keys inside it keep the exact geometry the default skin gives them. */
+  box-shadow: 0 -2px 0 0 #ffe600;
+  backdrop-filter: none;
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(14,12,8,0.9)]"] [class~="text-[var(--m-ink-3)]"] {
+  color: #f4e9d2;
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(14,12,8,0.9)]"] [class~="text-[var(--m-gold)]"] {
+  color: #ffe600;
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(14,12,8,0.9)]"] [class~="bg-[var(--m-gold)]"] {
+  background-color: #ffe600;
+}
+
+/* The player bar is the same glass panel the shell had: it becomes a paper card with an ink edge. */
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(20,20,31,0.94)]"] {
+  background-color: var(--m-card);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.085) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+  backdrop-filter: none;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 6. The player
+ * ------------------------------------------------------------------------------------------- */
+/*
+ * The aura was a soft amber glow that breathed with the record. It is now two hard-edged plate wedges
+ * whose edges are offset from one another — the misregistration *is* the seam — plus a yellow sliver
+ * where the third plate missed. Held pale (≤0.42 alpha) so the 9px mono lines that sit on top keep
+ * their contrast even at full breath.
+ */
+:root[data-skin="comic"] .mobile-root .m-player-aura {
+  background-image:
+    linear-gradient(200deg, rgb(0 229 255 / 0.42) 0 26%, transparent 26%),
+    linear-gradient(20deg, rgb(255 45 149 / 0.36) 0 22%, transparent 22%),
+    linear-gradient(160deg, transparent 0 34%, rgb(255 230 0 / 0.5) 34% 37%, transparent 37%);
+}
+:root[data-skin="comic"] .mobile-root .m-dot {
+  border: 1px solid var(--m-ink);
+  box-shadow: none;
+}
+:root[data-skin="comic"] .mobile-root .m-player[data-playing="true"] .m-dot {
+  background: #ffe600;
+  box-shadow: 0 0 0 2px var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-drag-hint i {
+  color: var(--m-gold);
+}
+/* The tempo keys: printed keys with an ink edge, engaged state reversed out in yellow. */
+:root[data-skin="comic"] .mobile-root .m-bpm-ctl button {
+  border: 1px solid var(--m-ink);
+  border-radius: 4px;
+  background: var(--m-card);
+  box-shadow: 0 0 0 1px var(--m-ink), 2px 2px 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-bpm-ctl button:active {
+  border-color: var(--m-ink);
+  background: #ffe600;
+  color: var(--m-ink);
+}
+/*
+ * The tempo readout is the one number the player is about, so it gets the loudest thing a comic
+ * prints: black type on a yellow block. The block and its ink keyline are shadows with no blur, which
+ * is the only way to give an inline `<b>` a plate without padding it and pushing the row wider.
+ */
+:root[data-skin="comic"] .mobile-root .m-bpm-val b {
+  background: #ffe600;
+  box-shadow: 0 0 0 2px #ffe600, 0 0 0 3px var(--m-ink);
+}
+/* The progress rail: a 2px ink wash with an ink fill and a yellow registration dot on it. */
+:root[data-skin="comic"] .mobile-root .m-prog-track {
+  background: rgb(17 16 20 / 0.22);
+}
+:root[data-skin="comic"] .mobile-root .m-prog-fill {
+  background: var(--m-gold);
+  box-shadow: none;
+}
+:root[data-skin="comic"] .mobile-root .m-prog-fill::after {
+  background: #ffe600;
+  box-shadow: 0 0 0 2px var(--m-ink);
+}
+/* The pull-down list is a printed panel: paper, 2px ink edge drawn as a ring (a real border would
+   make the list 4px taller and the stage centres its content), then the block shadow. */
+:root[data-skin="comic"] .mobile-root .m-cue.is-open {
+  background-color: var(--m-card);
+  box-shadow: 0 0 0 2px var(--m-ink), 4px 4px 0 var(--m-ink);
+}
+/* Row rules are inset bands: the 2px printed rule costs the row no height. */
+:root[data-skin="comic"] .mobile-root .m-cue-facts {
+  border-top: 1px solid var(--m-ink);
+  box-shadow: inset 0 2px 0 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-cue-item {
+  border-top: 1px solid var(--m-ink);
+  box-shadow: inset 0 2px 0 0 var(--m-ink);
+}
+/*
+ * The transport. Five printed keys and one big yellow one — sharp corners, no glow, the play key
+ * reversed out in black-on-yellow. 1px border + ink ring, so the 46px/64px boxes are exactly the
+ * boxes the default skin lays out.
+ */
+:root[data-skin="comic"] .mobile-root .m-tbtn {
+  border: 1px solid var(--m-ink);
+  border-radius: 4px;
+  background: var(--m-card);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.09) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+  color: var(--m-ink-2);
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-tbtn:active {
+  background: var(--m-card-2);
+  color: var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-tbtn.on {
+  background: #ffe600;
+  color: var(--m-ink);
+  border-color: var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-tbtn.on::after {
+  background: var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root .m-tbig {
+  border: 2px solid var(--m-ink);
+  border-radius: 5px;
+  background: #ffe600;
+  color: var(--m-ink);
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-ink);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 7. Jam — the grid and the dock
+ *
+ * The step cells, the pads, the swing rail and the record key are all hard-coded for a dark ground
+ * (`rgba(232,232,255,…)` washes and `rgba(242,109,109,…)` reds read as nothing on paper), so the
+ * literal utility classes are re-inked: a pale wash and an ink hairline for an off step, the yellow
+ * plate for the playhead, plate red for the armed record.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(232,232,255,0.055)]"] {
+  background-color: rgb(17 16 20 / 0.12);
+  box-shadow: inset 0 0 0 1px var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgb(var(--m-gold-rgb)/0.35)]"] {
+  background-color: #ffe600;
+  box-shadow: inset 0 0 0 1px var(--m-ink);
+}
+/*
+ * The lit step of the grid gets the same inset edge as the other two. A real border here would be the
+ * only border in the row, and `flex: 1 1 0%` would then hand the bordered cells ~0.7px less width each
+ * — a silent resize of three controls for the sake of a hairline. Inset, nothing moves.
+ */
+:root[data-skin="comic"] .mobile-root [class~="h-8"][class~="bg-[var(--m-gold)]"] {
+  box-shadow: inset 0 0 0 1px var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [class~="border-[rgb(var(--m-gold-rgb)/0.8)]"] {
+  border-color: var(--m-ink);
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 #ff2d95;
+}
+:root[data-skin="comic"] .mobile-root [class~="border-[rgb(var(--m-gold-rgb)/0.5)]"] {
+  border-color: var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(242,109,109,0.18)]"] {
+  background-color: rgb(255 45 149 / 0.22);
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(242,109,109,0.7)]"] {
+  background-color: var(--m-red);
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(232,232,255,0.12)]"] {
+  background-color: rgb(17 16 20 / 0.16);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 8. Challenge
+ *
+ * The ladder bar becomes a flat ink bar; a right answer is a screaming yellow block (black on yellow
+ * is the loudest thing a comic can print), a wrong one a magenta wash; the arena key is the hero —
+ * yellow plate, ink ring, block shadow.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(90,212,142,0.08)]"] {
+  background-color: #ffe600;
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.12) 1.1px, transparent 1.35px);
+  background-size: 6px 6px;
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(242,109,109,0.07)]"] {
+  background-color: rgb(255 45 149 / 0.22);
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(232,232,255,0.08)]"] {
+  background-color: rgb(17 16 20 / 0.14);
+}
+:root[data-skin="comic"] .mobile-root [class~="bg-[linear-gradient(90deg,var(--m-gold),var(--m-gold-hi))]"] {
+  background-image: none;
+  background-color: var(--m-gold);
+}
+:root[data-skin="comic"] .mobile-root [class~="rounded-full"][class~="h-20"][class~="border"] {
+  border-radius: 50%;
+  border-color: var(--m-ink);
+  background-color: #ffe600;
+  color: var(--m-ink);
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-ink);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 9. Home — a card that is playing trades its black block for the module's own plate
+ *
+ * Narrowed to `rounded-2xl` + the plate border so it lands on the playing genre card and not on the
+ * timeline's 10px registration dots, which read better with the standard 2px chip shadow.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [class~="rounded-2xl"][class~="border-[var(--m-gold)]"] {
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-gold);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 10. The embedded desktop views opt out
+ *
+ * Explore mounts three desktop surfaces (chord workshop, kick lab, masterclass) on their own dark
+ * plates. They are a different design system and a 2px ink rule on a dense desktop grid reads as
+ * damage, so the ink pass, the ring and the letterform swap are withdrawn inside
+ * `[data-legacy="desktop"]` — the one subtree the skin deliberately does not print.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border"] {
+  border-width: 1px;
+  box-shadow: none;
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-t"] {
+  box-shadow: none;
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="rounded-2xl"] {
+  border-radius: 16px;
+  box-shadow: none;
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="rounded-xl"] {
+  border-radius: 12px;
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="rounded"] {
+  border-radius: 4px;
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] h1,
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] h2 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  text-transform: none;
+  text-shadow: none;
+  box-shadow: none;
+}

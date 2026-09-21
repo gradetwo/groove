@@ -1014,6 +1014,77 @@ async function runTestOnTarget(target, baseUrl) {
     }
     if (more.overflow) throw new Error("More module overflows horizontally");
 
+    /**
+     * The appearance picker.
+     *
+     * A skin is only real if the *root attribute* changes and the shell's own tokens change with it, so
+     * both are measured: the attribute (which every skin stylesheet is scoped to) and `--m-bg` read back
+     * off the live element. Asserting the attribute alone would pass for a picker that sets it while
+     * nothing is listening.
+     *
+     * The four options are also checked to be four, to be a radio group, and to have exactly one checked
+     * — the state has to be announced, not only coloured.
+     */
+    const skinBefore = await page.evaluate(() => ({
+      attr: document.documentElement.getAttribute("data-skin"),
+      bg: getComputedStyle(document.querySelector(".mobile-root")).getPropertyValue("--m-bg").trim(),
+      options: document.querySelectorAll('[data-testid^="mobile-skin-"]').length,
+      radios: [...document.querySelectorAll('[data-testid^="mobile-skin-"]')].map((node) => node.getAttribute("aria-checked")),
+    }));
+    if (skinBefore.options < 5) {
+      throw new Error(`更多 offers ${skinBefore.options} skin control(s) including the list itself`);
+    }
+    if (skinBefore.radios.filter((value) => value === "true").length !== 1) {
+      throw new Error(`the skin radio group has ${skinBefore.radios.filter((v) => v === "true").length} checked options`);
+    }
+    if (skinBefore.attr !== "default") {
+      throw new Error(`a fresh session should wear the default skin, found "${skinBefore.attr}"`);
+    }
+
+    await page.click('[data-testid="mobile-skin-pixel"]');
+    await page.waitForFunction(() => document.documentElement.getAttribute("data-skin") === "pixel", null, {
+      timeout: 15000,
+    });
+    const skinAfter = await page.evaluate(() => ({
+      bg: getComputedStyle(document.querySelector(".mobile-root")).getPropertyValue("--m-bg").trim(),
+      stored: (() => {
+        try {
+          return window.localStorage.getItem("groove_skin_v1");
+        } catch {
+          return null;
+        }
+      })(),
+      checked: document.querySelector('[data-testid="mobile-skin-pixel"]').getAttribute("aria-checked"),
+      overflow: (() => {
+        const root = document.documentElement;
+        return root.scrollWidth > root.clientWidth + 4;
+      })(),
+    }));
+    if (skinAfter.bg === skinBefore.bg) {
+      throw new Error(`the pixel skin did not change the shell ground (${skinBefore.bg})`);
+    }
+    if (skinAfter.stored !== "pixel" || skinAfter.checked !== "true") {
+      throw new Error(`the skin choice did not stick (${JSON.stringify(skinAfter)})`);
+    }
+    if (skinAfter.overflow) throw new Error("a skinned 更多 overflows horizontally");
+
+    // Reload: the choice has to survive, or it is not a preference.
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="mobile-more"]', { timeout: 45000 });
+    const skinReloaded = await page.evaluate(() => ({
+      attr: document.documentElement.getAttribute("data-skin"),
+      bg: getComputedStyle(document.querySelector(".mobile-root")).getPropertyValue("--m-bg").trim(),
+    }));
+    if (skinReloaded.attr !== "pixel" || skinReloaded.bg !== skinAfter.bg) {
+      throw new Error(`the skin did not survive a reload (${JSON.stringify(skinReloaded)})`);
+    }
+
+    // Back to the default: the rest of this target's legs measure the shipped look.
+    await page.click('[data-testid="mobile-skin-default"]');
+    await page.waitForFunction(() => document.documentElement.getAttribute("data-skin") === "default", null, {
+      timeout: 15000,
+    });
+
     if (!target.isMobile && !target.isTablet) {
       /**
        * Both orientations are set explicitly rather than assumed.

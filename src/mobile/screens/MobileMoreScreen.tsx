@@ -21,6 +21,7 @@ import {
   Info,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { SkinPicker } from "../SkinPicker";
 import { APP_VERSION } from "../../version";
 
 export interface MobileMoreScreenProps {
@@ -62,6 +63,9 @@ export function MobileMoreScreen({
   return (
     <section className="m-rise px-4 pt-2" data-testid="mobile-more">
       <h1 className="text-[22px] font-bold leading-none">{t("mobile_module_more")}</h1>
+
+      {/* 外观 comes first: it changes the whole screen, so it is the one row worth seeing at the top. */}
+      <SkinPicker />
 
       <ul className="mt-3 flex flex-col gap-2.5">
         {rows.map((row) => (

@@ -1,0 +1,676 @@
+/**
+ * Skin: "pixel" — 8-bit / NES-era game UI (一套8bit像素风设计).
+ *
+ * What it is
+ * ----------
+ * The phone shell stops being glass and becomes a cartridge-era menu screen: a tiny fixed palette,
+ * hard 2px frames, a stepped drop shadow with zero blur, square everything, blocky icons, a scanline
+ * veil and a checkerboard dither instead of gradients. Nothing here is "retro-ish" — it is the real
+ * thing, which mostly means *removing*: no blur, no glow, no soft shadow, no tint, no anti-aliasing.
+ *
+ * Scope
+ * -----
+ * Every rule is written under `:root[data-skin="pixel"] .mobile-root`. With the attribute absent, or
+ * set to another skin, this file changes nothing at all. It overrides the token contract in
+ * `src/mobile/mobile.css` (plus the handful of rules in that file that hard-code a radius, a glow or
+ * a colour) rather than replacing it: the screens keep painting themselves with
+ * `bg-[var(--m-card)]`-style utilities, and a skin is only a second set of answers for those names.
+ *
+ * The palette, and the rules that keep it small
+ * ---------------------------------------------
+ *   ground           #10121C   deep indigo-black
+ *   panel            #1A1D2E   dark panel
+ *   panel highlight  #262A44   raised step, separator, dithered track
+ *   ink              #E8E8F0   ink white
+ *   dim ink          #8A8FB0   secondary text and the default 2px frame
+ *   accents          #4CE0B3 green · #FFD23F yellow · #FF6B97 pink · #5BC8FF cyan · #B06BFF violet
+ *
+ *  - Accents are **flat fills with black text** (`--m-on-gold` is the ground, never white) or 2px
+ *    borders. There is no tint and no gradient: an 8-bit palette cannot afford a lighter step of a
+ *    hue, which is also why `--m-gold-hi` is the ink white — the "bright" version of an accent is the
+ *    palette switching colour, not a blend of one.
+ *  - `--m-line` is the dim ink and `--m-line-2` the ink white, so the components' own choice between
+ *    a default frame and a strong frame survives. Because they are tokens, not literals, the skin
+ *    changes what the two names *mean* without touching a component.
+ *  - `--m-ink-3` is a shade of the dim ink rather than a sixth colour. It is only slightly darker
+ *    than `--m-ink-2` on purpose: measured against the ground it still lands at about 5.6:1, and the
+ *    brief's meta labels are real text — a dimmer, more "authentic" grey would fall under 4.5:1.
+ *  - Per-module accents are one solid hue per screen, exactly where the default skin put them.
+ *
+ * The frame: a 2px border, a stepped shadow, and where the pixel corner cannot go
+ * ------------------------------------------------------------------------------
+ * Every panel, card and control carries a 2px solid frame plus a hard `box-shadow` step
+ * (`3px 3px 0 0 #000`) and a 2px inset ink line for the panel's lit edge — all of it blur-free,
+ * because a soft shadow is the one thing that instantly breaks the illusion. `box-shadow` also keeps
+ * the layout gates happy: it is painted outside the box and contributes nothing to layout, to
+ * `scrollWidth` or to a control's measured size.
+ *
+ * The brief's "pixel corner" is a 4px `clip-path` notch. It is used only on boxes that carry *no*
+ * stepped shadow, because `clip-path` clips an element's own shadow: a cut corner and a hard step
+ * cannot both live on the same element. So the notch appears on the decorative blocks that need no
+ * step (the genre art tiles, the tempo score panel, the status pip, the progress head) and the step
+ * appears everywhere else. Both always stay inside the element's own box, and neither is ever put on
+ * a control whose corner is part of its hit area.
+ *
+ * Type
+ * ----
+ * `"Press Start 2P"` for display and all-caps labels, `"VT323"` for body copy, meta text and every
+ * numeral. Press Start 2P is extremely wide, so it is only ever set at or *below* the size it
+ * replaces (22px headings become 14px, 10px labels become 8px) and it never wraps — a wrapped label
+ * would grow the chip it sits in and push its neighbours around. VT323 renders small, so body copy
+ * and numerals go 1–2px *above* their old size, which is a permission the brief gives and the only
+ * way the terminal face stays legible at 10px. No control's box changes size from either choice:
+ * the shell's controls are all `min-h-[46px]` or larger and the taller text fits inside them.
+ * Anti-aliasing is switched off on the pixel faces and SVG strokes are drawn with
+ * `shape-rendering: crispEdges`, so glyph and icon edges stay hard.
+ *
+ * Numerals read as a score counter: `tabular-nums` everywhere (the shell already had it on
+ * `.m-mono`), and the tempo readout becomes a notched, ink-framed score panel — the one place the
+ * pixel corner is traded against the stepped shadow on a piece of chrome, because a counter with a
+ * cut corner is more 8-bit than a counter with a drop shadow, and it costs no markup.
+ *
+ * Known limit: the record is painted into a `<canvas>` by `VinylCanvas`, so its rings, its shading
+ * and its round silhouette cannot be reached from CSS. The skin styles the chrome around it.
+ */
+
+/* =============================================================================================
+ * 1. Tokens — the palette, and five module accents
+ *
+ * Only names the phone shell already reads are overridden, so no component has to know a skin
+ * exists. `--m-gold*` keep their names even though the value is now the module hue: every screen
+ * refers to them and renaming them would be a refactor, not a skin.
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root {
+  --m-bg: #10121c;
+  --m-card: #1a1d2e;
+  --m-card-2: #262a44;
+  /* The default frame is the dim ink; the strong frame is the ink white. Both are palette values,
+     so "which border" stays a semantic choice the components already make. */
+  --m-line: #8a8fb0;
+  --m-line-2: #e8e8f0;
+  --m-ink: #e8e8f0;
+  --m-ink-2: #8a8fb0;
+  --m-ink-3: #7e84a8;
+  /* Text on an accent fill is the ground, never white: black-on-colour is the only reading an 8-bit
+     palette gives you for free, and white on yellow would be unreadable. */
+  --m-on-gold: #10121c;
+
+  /* The three fixed signal colours. They do not follow the module, because red is always the
+     recording lamp and green is always "right". */
+  --m-teal: #5bc8ff;
+  --m-red: #ff6b97;
+  --m-green: #4ce0b3;
+  --m-violet: #b06bff;
+
+  /* Default (首页 / any module without its own rule): green. `--m-gold-rgb` must stay
+     space-separated — the components build `rgb(var(--m-gold-rgb)/0.5)` from it. */
+  --m-gold: #4ce0b3;
+  --m-gold-hi: #e8e8f0;
+  --m-gold-rgb: 76 224 179;
+
+  background: var(--m-bg);
+  color: var(--m-ink);
+  font-family: "VT323", "JetBrains Mono", monospace;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+/* One accent per module, five distinct hues, all flat. Written out in full rather than inherited so
+   the mapping is readable in one place. */
+:root[data-skin="pixel"] .mobile-root[data-module="home"] {
+  --m-gold: #4ce0b3;
+  --m-gold-rgb: 76 224 179;
+  --m-gold-hi: #e8e8f0;
+}
+:root[data-skin="pixel"] .mobile-root[data-module="jam"] {
+  --m-gold: #b06bff;
+  --m-gold-rgb: 176 107 255;
+  --m-gold-hi: #e8e8f0;
+}
+:root[data-skin="pixel"] .mobile-root[data-module="challenge"] {
+  --m-gold: #ff6b97;
+  --m-gold-rgb: 255 107 151;
+  --m-gold-hi: #e8e8f0;
+}
+:root[data-skin="pixel"] .mobile-root[data-module="explore"] {
+  --m-gold: #5bc8ff;
+  --m-gold-rgb: 91 200 255;
+  --m-gold-hi: #e8e8f0;
+}
+:root[data-skin="pixel"] .mobile-root[data-module="more"] {
+  --m-gold: #ffd23f;
+  --m-gold-rgb: 255 210 63;
+  --m-gold-hi: #e8e8f0;
+}
+
+/* =============================================================================================
+ * 2. Type
+ *
+ * VT323 on the root, so every string that does not opt into the display face is a pixel terminal.
+ * `font-smooth` / `-webkit-font-smoothing` are the non-standard switches the brief asks for; they
+ * only matter on macOS, and on every other platform the hard edges come from the faces themselves.
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root .m-mono {
+  font-family: "VT323", "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+/* The shell's own rules name JetBrains Mono directly for the tiny readouts; re-point every one of
+   them at the pixel terminal so the skin does not inherit a face it never chose. */
+:root[data-skin="pixel"] .mobile-root .m-foot,
+:root[data-skin="pixel"] .mobile-root .m-drag-hint,
+:root[data-skin="pixel"] .mobile-root .m-prog-meta,
+:root[data-skin="pixel"] .mobile-root .m-cue-facts,
+:root[data-skin="pixel"] .mobile-root .m-cue-item .m-idx,
+:root[data-skin="pixel"] .mobile-root .m-cue-item .m-bp,
+:root[data-skin="pixel"] .mobile-root .m-bpm-val small,
+:root[data-skin="pixel"] .mobile-root .m-bpm-ctl button {
+  font-family: "VT323", "JetBrains Mono", monospace;
+}
+
+/* VT323 renders small: body copy and numerals get 1–2px back, never more. Every one of these
+   elements is inside a `min-h-[46px]`-or-taller control or a truncating line, so the taller text
+   cannot grow a control or push a neighbour. */
+:root[data-skin="pixel"] .mobile-root .text-\[8px\] {
+  font-size: 9px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[9px\] {
+  font-size: 10px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[9\.5px\] {
+  font-size: 10.5px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[10px\] {
+  font-size: 11px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[11px\] {
+  font-size: 12px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[12px\] {
+  font-size: 13px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[12\.5px\] {
+  font-size: 13.5px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[13px\] {
+  font-size: 14px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[14px\] {
+  font-size: 15px;
+}
+:root[data-skin="pixel"] .mobile-root .text-\[15px\] {
+  font-size: 16px;
+}
+/* The search field has to stay at or above 16px or iOS zooms the page when it takes focus. */
+:root[data-skin="pixel"] .mobile-root .text-\[16px\] {
+  font-size: 17px;
+}
+
+/* Display face. Press Start 2P is a fixed-width, very wide arcade face: it is the brand, the screen
+   titles and the all-caps labels, and only ever at or below the size it replaces. Tracking is
+   pulled in from the shell's 0.18–0.3em, because the face is already wide and a wide face plus wide
+   tracking is what pushes a label into its neighbour. */
+:root[data-skin="pixel"] .mobile-root .m-brand b,
+:root[data-skin="pixel"] .mobile-root .m-now-name,
+:root[data-skin="pixel"] .mobile-root .uppercase,
+:root[data-skin="pixel"] .mobile-root .text-\[22px\].font-bold,
+:root[data-skin="pixel"] .mobile-root .m-mono.font-bold.tracking-\[0\.24em\] {
+  font-family: "Press Start 2P", "JetBrains Mono", monospace;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Screen titles: 22px of proportional grotesque becomes 14px of pixel face. Two lines are still
+   possible for a long name and the heading is allowed to wrap — it is the one text block with room
+   underneath it. */
+:root[data-skin="pixel"] .mobile-root .text-\[22px\].font-bold {
+  font-size: 14px;
+}
+/* The player's genre name: 24px becomes 14px and stays `truncate`, so the tempo control beside it
+   can never be pushed off the row. */
+:root[data-skin="pixel"] .mobile-root .m-now-name {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-shadow: none;
+}
+/* Brand mark: the top bar shares its width with the collapse button and the status, so the mark
+   drops from 16px to 10px and loses the shell's soft glow entirely. */
+:root[data-skin="pixel"] .mobile-root .m-brand b {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-shadow: none;
+}
+/* The shell's own wordmark (首页 header) is a `.m-mono` all-caps label with a tracking class. */
+:root[data-skin="pixel"] .mobile-root .m-mono.font-bold.tracking-\[0\.24em\] {
+  font-size: 10px;
+}
+
+/* All-caps labels keep their caps but lose the extreme tracking, and are pinned below their old
+   size so the wide face cannot wrap them. */
+:root[data-skin="pixel"] .mobile-root .uppercase {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+:root[data-skin="pixel"] .mobile-root .uppercase.text-\[8px\] {
+  font-size: 7px;
+}
+
+/* =============================================================================================
+ * 3. Square everything
+ *
+ * The radius utilities are the shell's only rounding, apart from a few radii written directly in
+ * `mobile.css` (the status pip, the progress rail and its head, the equaliser bars, the engaged
+ * pip on a transport button). Both sets are squared off here.
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root .rounded-2xl,
+:root[data-skin="pixel"] .mobile-root .rounded-xl,
+:root[data-skin="pixel"] .mobile-root .rounded-\[18px\],
+:root[data-skin="pixel"] .mobile-root .rounded,
+:root[data-skin="pixel"] .mobile-root .rounded-full,
+:root[data-skin="pixel"] .mobile-root .m-dot,
+:root[data-skin="pixel"] .mobile-root .m-prog-track,
+:root[data-skin="pixel"] .mobile-root .m-prog-fill,
+:root[data-skin="pixel"] .mobile-root .m-prog-fill::after,
+:root[data-skin="pixel"] .mobile-root .m-eq i,
+:root[data-skin="pixel"] .mobile-root .m-bpm-ctl button,
+:root[data-skin="pixel"] .mobile-root .m-tbtn,
+:root[data-skin="pixel"] .mobile-root .m-tbig,
+:root[data-skin="pixel"] .mobile-root .m-tbtn.on::after {
+  border-radius: 0;
+}
+
+/* =============================================================================================
+ * 4. The pixel frame — 2px border plus a stepped, blur-free shadow
+ *
+ * `.border` is the literal utility the screens put on every card, panel and bordered control; the
+ * directional variants are the separators and the timeline rail, which get a width bump and nothing
+ * else. Colours are left to the tokens above, so an active card keeps its accent frame.
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root .border,
+:root[data-skin="pixel"] .mobile-root .border-2 {
+  border-width: 2px;
+  border-style: solid;
+  /* Layer order matters: the hard step is the "second border", the inset line is the lit edge of the
+     panel. Neither has a blur radius, because a blur radius would be the end of the illusion. */
+  box-shadow:
+    3px 3px 0 0 #000,
+    inset 0 0 0 2px rgb(232 232 240 / 0.07);
+}
+:root[data-skin="pixel"] .mobile-root .border-t {
+  border-top-width: 2px;
+  border-top-style: solid;
+}
+:root[data-skin="pixel"] .mobile-root .border-l {
+  border-left-width: 2px;
+  border-left-style: solid;
+}
+
+/* Accent frames are flat: the shell asks for a half-transparent lamp and an 8-bit palette has no
+   half-transparent lamp. */
+:root[data-skin="pixel"] .mobile-root .border-\[rgb\(var\(--m-gold-rgb\)\/0\.5\)\],
+:root[data-skin="pixel"] .mobile-root .border-\[rgb\(var\(--m-gold-rgb\)\/0\.8\)\] {
+  border-color: var(--m-gold);
+}
+
+/* The pull-down track list is the one container whose open state is a plate of its own. Styling only
+   `.is-open` also matters mechanically: `.m-cue` is `max-height: 0` when shut, and a border on the
+   shut state would leave a 4px sliver of frame on screen. */
+:root[data-skin="pixel"] .mobile-root .m-cue.is-open {
+  background-color: var(--m-card);
+  border: 2px solid var(--m-ink);
+  box-shadow: 3px 3px 0 0 #000;
+}
+
+/* Row separators are a dark step, not the bright frame, or fourteen cue rows would read as fifteen
+   panels. */
+:root[data-skin="pixel"] .mobile-root .m-cue-item,
+:root[data-skin="pixel"] .mobile-root .m-cue-facts {
+  border-top: 2px solid var(--m-card-2);
+}
+/* The playing row is marked with a flat lamp bar down its edge — an inset shadow, so nothing moves
+   and no extra element is needed. */
+:root[data-skin="pixel"] .mobile-root .m-cue-item.on {
+  background-color: var(--m-card-2);
+  box-shadow: inset 4px 0 0 0 var(--m-gold);
+}
+
+/* =============================================================================================
+ * 5. Flat accents, and the dither
+ *
+ * Accent fills are flat and always carry the ground as their text colour. The shell's painted-on
+ * values — translucent lamps, gradient fills — become either a flat colour or a checkerboard: a
+ * dither is how an 8-bit screen shows a half-tone, and it is reserved for the inactive and disabled
+ * states the brief names.
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root .bg-\[var\(--m-gold\)\] {
+  background-color: var(--m-gold);
+  background-image: none;
+  color: var(--m-on-gold);
+}
+:root[data-skin="pixel"] .mobile-root .bg-\[var\(--m-red\)\] {
+  background-color: var(--m-red);
+  background-image: none;
+}
+
+/* The two gradient utilities: an accent progress bar and a padded key. Both were a soft vertical
+   blend, which is the one thing this skin cannot contain. */
+:root[data-skin="pixel"] .mobile-root .bg-\[linear-gradient\(90deg\,var\(--m-gold\)\,var\(--m-gold-hi\)\)\] {
+  background-image: none;
+  background-color: var(--m-gold);
+}
+:root[data-skin="pixel"] .mobile-root .bg-\[linear-gradient\(180deg\,var\(--m-card-2\)\,var\(--m-card\)\)\] {
+  background-image: none;
+  background-color: var(--m-card-2);
+}
+
+/* Dead rails and empty step cells: a 2px checkerboard in the dim ink. */
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(232\,232\,255\,0\.055\)\],
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(232\,232\,255\,0\.08\)\],
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(232\,232\,255\,0\.12\)\] {
+  background-color: transparent;
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    rgb(138 143 176 / 0.32) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 4px 4px;
+}
+/* The step under the playhead: the same checkerboard, in the module lamp. */
+:root[data-skin="pixel"] .mobile-root .bg-\[rgb\(var\(--m-gold-rgb\)\/0\.35\)\] {
+  background-color: transparent;
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    rgb(var(--m-gold-rgb) / 0.55) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 4px 4px;
+}
+/* Challenge answers: a dithered lamp for "right", a fainter dither for "wrong" — the wrong tile also
+   carries the shell's own `opacity-75`, so it stays the quieter of the two. */
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(90\,212\,142\,0\.08\)\] {
+  background-color: transparent;
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    rgb(76 224 179 / 0.22) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 4px 4px;
+}
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(242\,109\,109\,0\.07\)\],
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(242\,109\,109\,0\.18\)\] {
+  background-color: transparent;
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    rgb(255 107 151 / 0.2) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 4px 4px;
+}
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(242\,109\,109\,0\.7\)\] {
+  background-color: var(--m-red);
+  background-image: none;
+}
+
+/* =============================================================================================
+ * 6. Screen texture — scanlines, a dithered wash, no glass
+ *
+ * Both overlays already exist in `mobile.css` as fixed, pointer-transparent layers: the shell's
+ * `::before` (behind the content, so the grain reads as the ground) and the player's `::after` (over
+ * everything, which is where a scanline veil belongs). The skin only repaints them — no new layer,
+ * no new pseudo-element, and the pointers stay transparent because that was already true.
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(232 232 240 / 0.04) 0 1px,
+    rgb(232 232 240 / 0) 1px 3px
+  );
+}
+:root[data-skin="pixel"] .mobile-root .m-player::after {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.22) 0 1px,
+    rgb(0 0 0 / 0) 1px 3px
+  );
+  opacity: 1;
+}
+/* The breathing aura becomes a fixed checkerboard wash in the module lamp: flat, faint, and still
+   riding whatever opacity the shell gives it. */
+:root[data-skin="pixel"] .mobile-root .m-player-aura {
+  background: none;
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    rgb(var(--m-gold-rgb) / 0.05) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 4px 4px;
+  background-attachment: fixed;
+}
+/* No glass anywhere: the two floating bars are solid plates. */
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(14\,12\,8\,0\.9\)\],
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(20\,20\,31\,0\.94\)\] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(20\,20\,31\,0\.94\)\] {
+  background-color: var(--m-card);
+}
+/* The module bar: a solid plate with an ink rule on top and a hard step under it, so it reads as a
+   console edge rather than a blurred sheet. */
+:root[data-skin="pixel"] .mobile-root .bg-\[rgba\(14\,12\,8\,0\.9\)\] {
+  background-color: var(--m-card);
+  border-top: 2px solid var(--m-ink);
+  box-shadow: 0 -3px 0 0 #000;
+}
+
+/* =============================================================================================
+ * 7. Player chrome
+ *
+ * Read top to bottom: status pip, record hint, name plate, tempo score panel, progress rail,
+ * transport, track list, footer. Each piece gets one pixel gesture and no more.
+ * =========================================================================================== */
+
+/* The "live" pip: a square with one corner cut, and a hard blink instead of a fade. */
+:root[data-skin="pixel"] .mobile-root .m-dot {
+  background-color: var(--m-ink-3);
+  clip-path: polygon(2px 0, 100% 0, 100% calc(100% - 2px), calc(100% - 2px) 100%, 0 100%, 0 2px);
+}
+:root[data-skin="pixel"] .mobile-root .m-player[data-playing="true"] .m-dot {
+  background-color: var(--m-gold);
+  box-shadow: none;
+  animation-timing-function: steps(2, end);
+}
+
+/* The drag hint's chevrons keep their glyphs but lose the translucent lamp. */
+:root[data-skin="pixel"] .mobile-root .m-drag-hint i {
+  color: var(--m-gold);
+}
+
+/* Tempo: the shell's round buttons become square key caps with a hard step. The boxes stay 44px —
+   colour, radius and shadow only. */
+:root[data-skin="pixel"] .mobile-root .m-bpm-ctl button {
+  background-color: var(--m-card-2);
+  border: 2px solid var(--m-ink);
+  color: var(--m-ink);
+  box-shadow: 2px 2px 0 0 #000;
+  /* VT323 needs the extra 2px to read at key-cap size; the box is a fixed 44x44, so this cannot
+     change what the touch gate measures. */
+  font-size: 20px;
+}
+:root[data-skin="pixel"] .mobile-root .m-bpm-ctl button:active {
+  background-color: var(--m-gold);
+  border-color: #000;
+  color: var(--m-on-gold);
+}
+
+/* The score counter. Its corners are cut rather than stepped, on purpose: an element cannot carry
+   both a hard offset step and a clipped corner, and a cut corner is the more period-correct
+   gesture for a readout. `tabular-nums` keeps a changing BPM from shifting the row. */
+:root[data-skin="pixel"] .mobile-root .m-bpm-val {
+  background-color: var(--m-bg);
+  border: 2px solid var(--m-ink);
+  color: var(--m-ink);
+  font-variant-numeric: tabular-nums;
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+}
+:root[data-skin="pixel"] .mobile-root .m-bpm-val b {
+  font-size: 25px;
+  letter-spacing: 0.04em;
+}
+:root[data-skin="pixel"] .mobile-root .m-bpm-val small {
+  font-family: "Press Start 2P", "JetBrains Mono", monospace;
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  color: var(--m-ink-2);
+}
+
+/* Progress rail: a dithered groove and a flat lamp, with a square block for a head. The head keeps
+   its 7px box so nothing about the rail's geometry changes. */
+:root[data-skin="pixel"] .mobile-root .m-prog-track {
+  background-color: transparent;
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    rgb(138 143 176 / 0.28) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 4px 4px;
+}
+:root[data-skin="pixel"] .mobile-root .m-prog-fill {
+  background: var(--m-gold);
+  box-shadow: none;
+}
+:root[data-skin="pixel"] .mobile-root .m-prog-fill::after {
+  background: var(--m-ink);
+  border: 2px solid #000;
+  box-shadow: none;
+}
+:root[data-skin="pixel"] .mobile-root .m-prog-meta {
+  color: var(--m-ink-2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+}
+
+/* Transport: five square key caps. The engaged button is a flat lamp, the rest are dead plates with
+   a faint dither — the "sparingly" use of the checkerboard on an interactive surface. */
+:root[data-skin="pixel"] .mobile-root .m-tbtn {
+  background-color: var(--m-card);
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    rgb(138 143 176 / 0.18) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 4px 4px;
+  border: 2px solid #000;
+  color: var(--m-ink-2);
+  box-shadow: 2px 2px 0 0 #000;
+}
+:root[data-skin="pixel"] .mobile-root .m-tbtn.on {
+  background-color: var(--m-gold);
+  background-image: none;
+  color: var(--m-on-gold);
+}
+:root[data-skin="pixel"] .mobile-root .m-tbtn.on::after {
+  background-color: var(--m-on-gold);
+}
+/* The big button is the one filled lamp in the transport. While playing it inverts to the ink white
+   — a hard state switch — and the shell's colour-breathing animation is dropped, because a white
+   glyph pulsing across a lamp is exactly the kind of half-state this skin does not have. */
+:root[data-skin="pixel"] .mobile-root .m-tbig {
+  background-color: var(--m-gold);
+  border: 2px solid #000;
+  color: var(--m-on-gold);
+  box-shadow: 3px 3px 0 0 #000;
+}
+:root[data-skin="pixel"] .mobile-root .m-tbig:active {
+  color: var(--m-on-gold);
+}
+:root[data-skin="pixel"] .mobile-root .m-player[data-playing="true"] .m-tbig {
+  background-color: var(--m-ink);
+  color: var(--m-on-gold);
+  animation: none;
+}
+
+/* Cue rows: the equaliser bars are pixels, the list index reads as a counter. */
+:root[data-skin="pixel"] .mobile-root .m-eq i {
+  background: var(--m-gold);
+}
+:root[data-skin="pixel"] .mobile-root .m-cue-item .m-idx,
+:root[data-skin="pixel"] .mobile-root .m-cue-item .m-bp {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+}
+:root[data-skin="pixel"] .mobile-root .m-foot {
+  letter-spacing: 0.22em;
+  color: var(--m-ink-3);
+}
+
+/* =============================================================================================
+ * 8. Icons and images
+ *
+ * Strokes are squared and thickened, and rendering is forced to hard edges: at 16–20px a lucide
+ * icon is the only anti-aliased curve left in the skin, and a curve is the one shape an 8-bit
+ * console could not draw. Icon sizes are never touched.
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root svg {
+  shape-rendering: crispEdges;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  stroke-width: 2.5;
+}
+:root[data-skin="pixel"] .mobile-root .drop-shadow {
+  filter: drop-shadow(2px 2px 0 #10121c);
+}
+/* Cover art is displayed at a fixed size, so a pixel-style resample is honest here. */
+:root[data-skin="pixel"] .mobile-root img {
+  image-rendering: pixelated;
+}
+
+/* The genre art tiles are the most visible pixel corner in the list: a decorative block with no
+   frame and no shadow of its own, so a 4px notch cuts cleanly and crops nothing. */
+:root[data-skin="pixel"] .mobile-root span.h-14.w-14,
+:root[data-skin="pixel"] .mobile-root span.h-20.w-20 {
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+}
+
+/* =============================================================================================
+ * 9. Row safety and states
+ *
+ * Press Start 2P is wide enough that a single long Latin label can out-run a 390px phone, and the
+ * shell's header shares its row between a 44px button, the mark and the status text. The pixel face
+ * therefore never wraps where the shell has no room for a second line: labels that can truncate do,
+ * and chips stay on one line (their rail already scrolls horizontally).
+ * =========================================================================================== */
+:root[data-skin="pixel"] .mobile-root .m-brand {
+  min-width: 0;
+}
+:root[data-skin="pixel"] .mobile-root .m-brand span,
+:root[data-skin="pixel"] .mobile-root .m-status {
+  white-space: nowrap;
+}
+:root[data-skin="pixel"] .mobile-root .m-brand span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+:root[data-skin="pixel"] .mobile-root .min-w-\[46px\] {
+  white-space: nowrap;
+}
+
+/* Pressed: the step collapses into the plate, so a key cap reads as pushed rather than scaled. */
+:root[data-skin="pixel"] .mobile-root .m-press.border:active,
+:root[data-skin="pixel"] .mobile-root .m-press.border-2:active {
+  box-shadow:
+    0 0 0 0 #000,
+    inset 0 0 0 2px rgb(232 232 240 / 0.16);
+}
+/* Keyboard focus gets the same hard 2px treatment as a frame. Nothing moves: an outline is painted
+   outside the box and is not part of any measured size. */
+:root[data-skin="pixel"] .mobile-root :focus-visible {
+  outline: 2px solid var(--m-gold);
+  outline-offset: 0;
+}
