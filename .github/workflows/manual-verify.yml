@@ -1,0 +1,140 @@
+# Manual verify — the slow checks, on demand.
+#
+# WHY THIS EXISTS
+# ---------------
+# Three kinds of check are too slow or too environment-sensitive to run on every push: the seven-target
+# browser matrix (`test:e2e:all`), the coverage run, and the audio measurement gates (timbre, loudness
+# freshness, the GS-1 ABI). `ci.yml`'s nightly job owns them on a schedule, but a *targeted* run — "just
+# the phone legs", "just the timbre gate" — used to mean pushing a commit or editing the schedule.
+#
+# This workflow is the manual switch: pick a scope in the GitHub UI, run it, and the artifacts are a
+# single directory you can hand over. It writes a summary to the run page as well, because reading a
+# result should not require downloading a zip.
+#
+#   profile  all | pc | mobile   which Playwright targets to run
+#   only     a target-name substring (e.g. "iPhone 14 (竖屏"), empty means all of the profile
+#   scope    e2e | verify | audio | all
+#
+# `verify` runs the whole gate chain (`npm run verify`), which rebuilds and therefore re-runs the E2E
+# steps itself; `e2e` skips the other gates and goes straight at the browser matrix, which is the common
+# case when a browser leg is what failed.
+name: Manual verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "What to run"
+        type: choice
+        default: e2e
+        options:
+          - e2e
+          - verify
+          - audio
+          - all
+      profile:
+        description: "Playwright profile (e2e scope)"
+        type: choice
+        default: all
+        options:
+          - all
+          - pc
+          - mobile
+      only:
+        description: "Target-name substring, e.g. iPhone 14 (竖屏 — empty for the whole profile"
+        type: string
+        default: ""
+
+jobs:
+  verify:
+    name: Manual verify (${{ inputs.scope }} / ${{ inputs.profile }})
+    runs-on: ubuntu-latest
+    # The full chain plus a browser install is the worst case; 150 minutes is the ceiling, not the norm.
+    timeout-minutes: 150
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          # The project's own floor, the same one the push-time jobs use (`.nvmrc` + `engines`).
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Node & npm versions
+        run: node -v && npm -v
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only the scopes that drive a browser need the browsers; `audio` is pure Node.
+      - name: Install Playwright Browsers
+        if: inputs.scope == 'e2e' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Audio measurement gates
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: |
+          npm run check:gs1
+          npm run check:timbre
+          npm run check:loudness:fresh
+
+      - name: Full gate chain
+        if: inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npm run verify
+
+      # A build is needed before the matrix: it serves `dist/`, and the matrix refuses to run against a
+      # stale bundle. `verify` builds on its own, so this only covers the `e2e` scope.
+      - name: Build
+        if: inputs.scope == 'e2e'
+        run: npm run build
+
+      - name: Browser & device matrix
+        if: inputs.scope == 'e2e'
+        env:
+          E2E_PROFILE: ${{ inputs.profile }}
+          E2E_ONLY: ${{ inputs.only }}
+        # `E2E_ONLY` is read by the matrix, so an empty value means "the whole profile"; the `env:`
+        # block above passes it through whether or not it was filled in.
+        run: node scripts/test_matrix.js
+
+      # Always, so a failure still produces the thing worth reading.
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: manual-verify-e2e
+          path: e2e-out/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: manual-verify-coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # A summary on the run page, so the result can be read (and pasted) without downloading anything.
+      - name: Summarise the matrix
+        if: always()
+        run: |
+          {
+            echo "## Manual verify — scope \`${{ inputs.scope }}\`, profile \`${{ inputs.profile }}\`"
+            echo
+            if [ -n "${{ inputs.only }}" ]; then echo "Target filter: \`${{ inputs.only }}\`"; echo; fi
+            found=0
+            for summary in e2e-out/*/summary.md; do
+              [ -f "$summary" ] || continue
+              found=1
+              echo "### $(basename "$(dirname "$summary")")"
+              echo
+              cat "$summary"
+              echo
+            done
+            if [ "$found" -eq 0 ]; then echo "No matrix summary was produced (scope may not have run it)."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
