@@ -888,6 +888,24 @@ async function runTestOnTarget(target, baseUrl) {
           const root = document.documentElement;
           return root.scrollWidth > root.clientWidth + 4;
         })(),
+        /**
+         * Clipped controls, which the scroll-width check cannot see.
+         *
+         * The dock row used to clip rather than scroll, so a live 44 px button sat 10 px outside a
+         * 390 px viewport while `documentElement.scrollWidth` stayed clean — the user saw a cut-off "+"
+         * and no gate said a word. Every control on the screen has to be *inside* the viewport.
+         */
+        outsideViewport: [...document.querySelectorAll('[data-testid^="mobile-jam-"]')]
+          .map((node) => {
+            const rect = node.getBoundingClientRect();
+            return {
+              id: node.getAttribute("data-testid"),
+              left: Math.round(rect.left),
+              right: Math.round(rect.right),
+              width: Math.round(rect.width),
+            };
+          })
+          .filter((box) => box.width > 0 && (box.left < -0.5 || box.right > window.innerWidth + 0.5)),
       };
     });
     if (jam.steps !== 64 || !jam.lanes) {
@@ -897,6 +915,13 @@ async function runTestOnTarget(target, baseUrl) {
     if (!jam.tempoBelowGrid) throw new Error("Jam tempo controls are not below the grid");
     if (!jam.noPlayer) throw new Error("Jam module must not show the player or its bar");
     if (jam.overflow) throw new Error("Jam module overflows horizontally");
+    if (jam.outsideViewport.length) {
+      throw new Error(
+        `Jam module has control(s) outside the viewport: ${jam.outsideViewport
+          .map((box) => `${box.id} (${box.left}..${box.right})`)
+          .join(", ")}`
+      );
+    }
 
     /**
      * 1.9 The 挑战 module: four options, a ladder, and a verdict that explains itself.

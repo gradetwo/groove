@@ -49,18 +49,22 @@
  *    `getBoundingClientRect()`, which is the *transformed* box, so a skewed control would report a
  *    different size than it paints and could be sheared past the 390 px edge). `clip-path: polygon()`
  *    cuts the corners off cards, chips, pads and panels.
- * 3. **Political and industrial symbols.** A red star beside the wordmark and on the active tab and
- *    inside the record's label; a cog stamped on the jam pads; slogan bands (`ПРАВДА`, `ПРИКАЗ`,
- *    `CCCP`, `СЛАВА ТРУДУ`) as rules and stamps. Every one is either a `background-image`/`clip-path`
- *    on an element that already exists, or `content` on a **decorative** pseudo-element (`::before` /
- *    `::after` of a container, an `aria-hidden` element, or a jam step cell — whose accessible name
+ * 3. **Political and industrial symbols.** A **hammer and sickle** (an inline SVG) alone in the
+ *    player's top-left corner; a red star beside the wordmark and on the active tab and inside the
+ *    record's label; a cog stamped on the jam pads; slogan bands (`ПРАВДА`, `ПРИКАЗ`, `CCCP`,
+ *    `СЛАВА ТРУДУ`) as rules and stamps. Every one is either a `background-image`/`clip-path`/inline
+ *    SVG on an element that already exists, or `content` on a **decorative** pseudo-element (`::before`
+ *    / `::after` of a container, an `aria-hidden` element, or a jam step cell — whose accessible name
  *    lives in `aria-label`, so a glyph added there can never collide with a visible label). No
- *    `content` is ever put on a control that renders a visible text label.
+ *    `content` is ever put on a control that renders a visible text label, and no symbol is a fan of
+ *    rays: the corner mark used to be a `repeating-conic-gradient` cog, which read as a rising sun and
+ *    was replaced (section 9).
  * 4. **Heavy-machinery interaction.** Every press is `translate(5px, 5px)` with the shadow collapsing
  *    from `10px 10px` to `5px 5px`, which is what a heavy switch feels like. The gate measures the
  *    *resting* state, so this is free; a §11 measurement in the verification pass confirms a pressed
  *    control does not cover another control's text. The jam step cells stop being round dots and
- *    become switch housings: a recessed well, a raised cap, and a red flood with a star when on.
+ *    become switch housings: a graphite recess, a red ring and an ink star when the step is written —
+ *    dark, but not black, and sitting in a paper well rather than a black slab (section 7).
  *
  * A note on `box-shadow` and `clip-path`
  * --------------------------------------
@@ -97,18 +101,25 @@
  *    tracks the canvas when the canvas is re-baked, and click-through so a jog drag still works.
  *  - **Colours set from JS** win over any stylesheet without `!important`, which this skin may not
  *    use. Three places are affected and each is handled where it can be: the jam step cells' off/on
- *    fills (`style={{background:…}}`) are covered by an opaque `background-image` wash plus inset
- *    shadows so the cell reads as a well or as red regardless; the playhead's inline ring is the one
- *    thing that is lost. Their lane colours (the `style={{color}}` legends and the pad dots) keep
- *    their own instrument palette on purpose — that palette is the product's map from colour to
- *    instrument and is not this skin's to change.
+ *    fills (`style={{background:…}}`) are painted over with an inset `box-shadow` well — a `box-shadow`
+ *    paints above the background and an inline `background` cannot stop it, which is the correction the
+ *    first two passes needed (an inline `background` shorthand *does* reset a stylesheet
+ *    `background-image`, so the "paper cap" those passes drew never rendered at all) — and the written
+ *    step's star sits on a positioned pseudo-element, which no inline style can reach. The playhead's
+ *    inline ring replaces our `box-shadow` wholesale, and that is left as the shell drew it: the moving
+ *    marker is the shell's own mark and the housing steps aside for it. Their lane colours (the
+ *    `style={{color}}` legends and the pad dots) keep their own instrument palette on purpose — that
+ *    palette is the product's map from colour to instrument and is not this skin's to change — which is
+ *    why the *pads* are the one dark surface the module keeps (a shade of steel blue, 5.1–7.2:1 under
+ *    those instrument colours) while the grid well and the dock are paper.
  *  - **探索's reused desktop views** (`[data-legacy="desktop"]`) are a dark-amber desktop UI whose
  *    text colours are literal (`text-[#eae6dc]` is 1.1:1 on paper). The `sovietYears` overrides for
- *    that subtree belong in `legacySkin.css` / `panelSkin.css`, which this file may not touch, so all
- *    this skin does is give the wrapper a steel-black plate: the desktop module stays dark and legible
- *    *inside* its frame instead of becoming invisible white-on-paper. Same for the four panels behind
- *    更多 (`.m-panels`), which get the token block they need to resolve `var(--m-*)` and keep their own
- *    dark scheme rather than being half-recoloured.
+ *    that subtree belong in `legacySkin.css`, which this file may not touch — so the frame and the
+ *    desktop palette's *extension* are written as a fragment to `/tmp/skin-legacy-sovietYears.css` for
+ *    the merger. What this file can do is own the phone's switcher and the poster edge around the
+ *    frame, and it does (section 11). Same for the four panels behind 更多 (`.m-panels`), which get the
+ *    token block they need to resolve `var(--m-*)` and keep their own dark scheme rather than being
+ *    half-recoloured — those panels are a separate sheet's business, not this pass's.
  */
 
 /* =============================================================================================
@@ -384,10 +395,13 @@
   border-radius: 0;
 }
 
-/* Every border in the shell becomes a 2 px black plate line. The base file's own hairlines are
-   translucent white, which on paper is invisible; overridden here as one rule rather than one per
-   component, because a half-re-inked card reads worse than either extreme. */
-:root[data-skin="sovietYears"] .mobile-root [class*="border-[var(--m-line]"] {
+/* Every border in the shell becomes an ink rule. The base file's own hairlines are translucent white,
+   which on paper is invisible, and its `--m-line-2` quieter grey is a 3:1 edge; both are re-inked here
+   as one rule rather than one per component, because a half-re-inked card reads worse than either
+   extreme. The selector deliberately drops the closing bracket of `border-[var(--m-line]` so that
+   `border-[var(--m-line)]` *and* `border-[var(--m-line-2)]` are both reached — the `-2` cases are the
+   challenge's ladder cells and the jam dock's keys, which a bracket-exact match left as pale greys. */
+:root[data-skin="sovietYears"] .mobile-root [class*="border-[var(--m-line"] {
   border-color: #111111;
 }
 
@@ -551,76 +565,41 @@
   overflow: hidden;
 }
 
-/* The switch housing: the jam's step cells are not dots any more. Each is a recessed well — a flat
-   paper-plate cap over the lane colour, with an inset shadow that reads as the inside of a housing —
-   and the ON state (`aria-pressed`, which the component already maintains for accessibility) floods
-   the whole cell red and stamps a star in its centre. The star is `content` on the cell's
-   `::before`: the cell carries **no visible label** (its accessible name is `aria-label`:
-   `"底鼓 1"`), so a glyph here cannot collide with a word, and the cell is 32 px tall exactly as it
-   was — this rule changes what it looks like, never how big it is. Measured at 390 px: the cell is
-   25×32, its centre is 12 px from each edge, and a 5 px press translate keeps it inside the grid. */
-:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"] {
-  background-image: linear-gradient(180deg, rgba(222, 215, 191, 0.96), rgba(222, 215, 191, 0.96));
-  background-color: transparent;
-  border: 1px solid #111111;
-  box-shadow:
-    inset 1px 1px 0 rgba(244, 241, 225, 0.85),
-    inset -1px -1px 0 rgba(17, 17, 17, 0.35),
-    2px 2px 0 #111111;
-}
-:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"][aria-pressed="true"] {
-  background-image: linear-gradient(180deg, #cc0000, #cc0000);
-  border-color: #111111;
-  box-shadow:
-    inset 1px 1px 0 rgba(244, 241, 225, 0.4),
-    inset -1px -1px 0 rgba(17, 17, 17, 0.5),
-    1px 1px 0 #111111;
-}
-:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"][aria-pressed="true"]::before {
-  content: "";
-  position: absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
-  inline-size: 9px;
-  block-size: 9px;
-  pointer-events: none;
-  background-color: #f4f1e1;
-  clip-path: polygon(
-    50% 0%,
-    61% 34%,
-    97% 35%,
-    68% 57%,
-    79% 92%,
-    50% 71%,
-    21% 92%,
-    32% 57%,
-    3% 35%,
-    39% 34%
-  );
-}
+/* The jam's step cells are not defined here. They are the one control on the skin whose surface is
+   part of 即兴's own re-balance — they sit inside the grid *well*, not on the page's paper — so the
+   housing and its written state live together in section 7, where the well they are sunk into is
+   defined. Keeping them in two places is what left the first two passes with a "paper cap" and a star
+   that never rendered; the whole point of section 7's note is that a cell can only be painted one way.
+   Measured at 390 px, for whoever moves them: the cell is 25×32, its centre is 12 px from each edge,
+   and the 5 px press translate keeps it inside the grid. */
 
-/* The pads: 76 px of instrument. A steel-blue case with a brass cog stamped into it (a
-   `repeating-conic-gradient` — twelve teeth as hard 15°/30° stops, no image and no extra element),
-   kept under the label, and a slow-turning animation driven by the transport. The pad's own
-   `background-image` in the markup is the base gradient; it is replaced, not layered under, so the
-   base's soft `180deg` card-to-card gradient cannot muddy the paper. The pad is `position: relative`
-   in the base file, so the cog needs no containing block of its own. */
+/* The pads: 76 px of instrument, and the one dark surface the poster keeps on this module.
+ *
+ * The case is a *shade* of the module's own steel blue — `#243342`, one step down from the accent
+ * `#2C3E50` — because the component paints the pad's *sub-label* (`KICK`, `SNARE`, …) and its corner dot
+ * from `JAM_COLORS` with an inline `style={{color}}`, and no stylesheet may outrank an inline style. On
+ * paper those bright instrument colours measure 1.2–2.4:1 and would vanish; on this case they clear
+ * 4.5:1 with room (amber 7.23:1, coral 5.07:1, teal 7.22:1, periwinkle 5.74:1) — measured, and the
+ * reason the case is a shade darker than the accent rather than the accent itself, where coral landed at
+ * 4.31:1 and an 8 px label would have failed. The pad's own label is paper (11.38:1 on the case).
+ *
+ * The cog is stamped into the case with a `repeating-conic-gradient` (twelve teeth as hard 15°/30° stops,
+ * no image, no extra element); it sits in the bottom-left corner, where the panel is empty (the label is
+ * above centre, the lane dot in the top-right), so it can cover no glyph. The pad is `position: relative`
+ * in the base file, so the cog needs no containing block of its own. */
 :root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-pad-"] {
-  background-image: repeating-conic-gradient(
-    from 0deg at 50% 50%,
-    rgba(17, 17, 17, 0.09) 0deg 15deg,
-    transparent 15deg 30deg
-  );
-  background-color: var(--m-card-2);
+  background-image: linear-gradient(180deg, rgba(244, 241, 225, 0.06) 0%, rgba(17, 17, 17, 0.22) 100%);
+  color: #f4f1e1;
+  background-color: #243342;
   border: 2px solid #111111;
   clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
   filter: drop-shadow(7px 7px 0 #111111);
 }
-/* The pad's cog: the industrial symbol the brief asks for, on the one surface made for hitting. It is
-   the pad's own `::before` — 15 px in the bottom-left corner, where the panel is empty (the label sits
-   above centre and the lane dot in the top-right), so it can cover no glyph. On the black console the
-   teeth have to be *lighter* than the plate to be seen at all, which is why this version is a paper
-   ring rather than the dark stamp the paper panels get. */
+/* The pad's cog: the industrial symbol the brief asks for, on the one surface made for hitting. Twelve
+   hard-stopped teeth and a hub, at 15 px in the bottom-left corner where the panel is empty (the label
+   sits above centre, the lane dot in the top-right), so it can cover no glyph. It is struck *in paper*
+   on the steel case — the same relationship the paper panels' dark stamp has with their paper, with the
+   ground inverted — and it is what keeps the pad reading as a machine part rather than a blue tile. */
 :root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-pad-"]::before {
   content: "";
   position: absolute;
@@ -629,16 +608,14 @@
   block-size: 15px;
   pointer-events: none;
   background-image:
-    radial-gradient(circle at 50% 50%, #111111 0 24%, transparent 24%),
+    radial-gradient(circle at 50% 50%, rgba(244, 241, 225, 0.9) 0 24%, transparent 24%),
     repeating-conic-gradient(
       from 0deg at 50% 50%,
-      rgba(244, 241, 225, 0.42) 0deg 13deg,
+      rgba(244, 241, 225, 0.5) 0deg 13deg,
       transparent 13deg 30deg
     );
   opacity: 0.9;
 }
-/* …and the console's own override has to keep it, because the grouped jam rule above resets the pads'
-   `filter`/`clip-path` and a later rule for the same element must not undo the cog's own paint. */
 
 /* The jam's swing rail: the base file draws `bg-[rgba(232,232,255,0.12)]` for the track and
    `bg-[rgba(232,232,255,0.14)]` for the player bar's rail — both white films that vanish on paper.
@@ -671,10 +648,22 @@
   color: #cdc7b3;
 }
 
-/* The challenge's answered states. `bg-[rgba(90,212,142,0.08)]` and the two red washes are 8% films
-   built for a dark ground; on paper they are nothing, and the verdict's whole job is to be visible at
-   a glance. Each gets a flat signal fill instead, with the ink that clears it: steel blue for right,
-   red for wrong, every label in paper. */
+/* The challenge's answered states, and the fix that matters most on this screen.
+ *
+ * `bg-[rgba(90,212,142,0.08)]` and `bg-[rgba(242,109,109,0.07)]` are 8% films built for a dark ground;
+ * on paper they are nothing, and a right/wrong tile's whole job is to be unmistakable at a glance. Each
+ * becomes a **flat flood** in the skin's own signal — `--m-green` #1C5C2E for right, `--m-red` #9E0B22
+ * for wrong — with **paper** lettering, because that is the arithmetic's answer on this palette: paper
+ * on the green is 7.07:1 and paper on the red is 7.33:1, while the near-black the other skins letter
+ * these floods with is 3.2:1 on flag red. One flood, one ink, no third colour on the tile.
+ *
+ * The `color` on the tile only reaches text that inherits, which the answers' own spans do not: the
+ * letter span is painted `text-[var(--m-green)]` / `text-[var(--m-red)]` — i.e. the *same value as the
+ * flood it now sits on* → invisible — and the category line is `text-[var(--m-ink-2)]`, a dark value
+ * chosen for paper, and `.m-mono` (this skin's own rule) paints it ink-2 as well. So the graded tile
+ * needs a descendant rule: every glyph inside a right or wrong tile is paper, and the ✓ / ✗ the
+ * component appends to the letter is legible for the first time. The dimmed tiles are left alone (the
+ * component fades them with `opacity`, which is the correct de-emphasis and needs no ink). */
 :root[data-skin="sovietYears"] .mobile-root .bg-\[rgba\(90\,212\,142\,0\.08\)\] {
   background-color: #1c5c2e;
   color: var(--m-on-gold);
@@ -682,6 +671,20 @@
 :root[data-skin="sovietYears"] .mobile-root .bg-\[rgba\(242\,109\,109\,0\.07\)\] {
   background-color: #9e0b22;
   color: var(--m-on-gold);
+}
+:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"] span,
+:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] span {
+  color: var(--m-on-gold);
+}
+/* The graded tiles are the one control on this screen that is *stamped*, so they get the poster's plate
+   treatment: a 2 px ink case and a hard ink shadow, and the soft `pulse-glow` loop the component runs on
+   the right answer is switched off — the flood already says "right" and a printed poster does not
+   breathe. The verdict rail still counts the beat down, which is where that information belongs. */
+:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"],
+:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] {
+  border: 2px solid #111111;
+  animation: none;
+  filter: drop-shadow(6px 6px 0 #111111);
 }
 :root[data-skin="sovietYears"] .mobile-root .bg-\[rgba\(242\,109\,109\,0\.18\)\] {
   background-color: #9e0b22;
@@ -695,6 +698,59 @@
    also what makes the artwork read as a pasted-on plate rather than a floating photo. */
 :root[data-skin="sovietYears"] .mobile-root .ring-\[rgba\(232\,232\,255\,0\.14\)\] {
   --tw-ring-color: #111111;
+}
+
+/* =============================================================================================
+ * 5b. 挑战: the arena's own surfaces (phone DOM)
+ *
+ * The graded tiles are handled above, with the signal floods. What is left is the arena's three
+ * controls, and each one is re-cut so the screen reads as this skin rather than as the base shell
+ * wearing two new colours: the play plate, the verdict bar and the difficulty rail.
+ *
+ * The challenge's module accent is the "second printing" red `#9E0B22`, so the *fill* here is that
+ * value and the ink on it is paper (7.33:1 — the number the state rules above are built on). Where the
+ * accent is used as a *word* on paper it is the same value at 6.7:1 on `--m-card`, which is why no
+ * separate text tone is introduced: one red, two grounds, both legible.
+ * =========================================================================================== */
+
+/* The play plate. It was an 80 px disc of `--m-card-2` with a red glyph — a control the same tone as the
+   card it sits on. As a flood it becomes the loudest mark on the screen, which is what the one thing the
+   thumb reaches for should be; the 3 px ink case and the hard shadow are the poster's own press. */
+:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-challenge-play"] {
+  background-color: var(--m-gold);
+  color: var(--m-on-gold);
+  border: 3px solid #111111;
+  box-shadow: 6px 6px 0 #111111;
+}
+/* The difficulty rail. `--m-line-2` (#8F8A76) is a hairline chosen for a quiet shell; a chip that
+   *changes the game* is a stamped key on this skin, so every chip takes the ink case and the three are
+   read as one row of switches. The selected one keeps the accent flood the component gives it
+   (`bg-[var(--m-gold)]` + `text-[var(--m-on-gold)]`), which the rule below only re-asserts so it cannot
+   lose to the ink case's colour. */
+:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-challenge-difficulty-"] {
+  border: 2px solid #111111;
+  color: var(--m-ink-2);
+  box-shadow: 3px 3px 0 #111111;
+}
+:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-challenge-difficulty-"][aria-selected="true"] {
+  background-color: var(--m-gold);
+  color: var(--m-on-gold);
+}
+/* The verdict bar. The component draws it as a paper card whose 2 px border is set inline to the
+   outcome's colour (`var(--m-green)` / `var(--m-red)`), and that inline colour is *kept* — it is the
+   verdict, and it means nothing here has to know whether the answer was right. What the skin changes is
+   the poster's edge: a 3 px case and a hard `8px 8px` ink shadow instead of Tailwind's `shadow-2xl`
+   (a 25 px blur — the one soft edge on a screen of hard ones), and the paper ground restated. The
+   "next question" key inside it is already a `--m-gold` flood with paper lettering; it gets the same
+   ink case so the bar ends on a stamped control rather than a floating pill. */
+:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-challenge-verdict"] {
+  background-color: var(--m-card);
+  border-width: 3px;
+  box-shadow: 8px 8px 0 #111111;
+}
+:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-challenge-next"] {
+  border: 2px solid #111111;
+  box-shadow: 4px 4px 0 #111111;
 }
 
 /* =============================================================================================
@@ -807,78 +863,102 @@
 }
 
 /* =============================================================================================
- * 7. 即兴 — the console, and the one place the poster goes dark
+ * 7. 即兴 — the console, re-balanced onto the poster's own paper
  *
- * The jam module is a machine console, and it is the screen where the poster's own logic has to bend.
- * The lane legends are drawn with an **inline** `style={{color}}` from `JAM_COLORS` — the product's
- * fixed map from colour to instrument, shared by the grid, the pads and the record's rings — and no
- * stylesheet may override an inline style without `!important`, which this file is not allowed to use.
- * Those colours are bright (#FFB25A, #6FD3C0, #FF7A6B, #9AA7FF) because they were chosen against a dark
- * ground; the contrast pass measured what putting them on paper does: 1.2–2.1:1, i.e. gone.
+ * The jam module is a machine console, and the first pass answered that with a black field: the grid
+ * card, the pads' section and the dock were all `#111111`, so the screen was 2/3 pure black and the
+ * poster's paper survived only in the margins. The user's verdict was "即兴里头太多全黑背景了", and the
+ * arithmetic behind the original choice was also only half the story: the lane legends are drawn with an
+ * **inline** `style={{color}}` from `JAM_COLORS` — the product's fixed map from colour to instrument,
+ * shared by the grid, the pads and the record's rings — those colours are bright (#FFB25A, #6FD3C0,
+ * #FF7A6B, #9AA7FF) because they were chosen against a dark ground, and they measure 1.2–2.1:1 on paper,
+ * so *some* dark ground has to stay. What does not have to stay is a dark *field*.
  *
- * So the honest answer is the opposite of the rest of the skin: **this module's panels are steel
- * black**, exactly as the console of a machine room would be, with paper lettering on them. The bright
- * instrument colours then land at 7–11:1 *and* mean what they mean, the panel's own white-ish alphas
- * become visible again, and the paper poster is still the page around them. The accent for this module
- * is steel blue, so its rail, its numerals and its star are the machine's, not the flag's.
+ * The re-balance, surface by surface, with the value each one now carries:
+ *
+ *   grid card      transparent — the section is a heading and a hint, and they belong on the poster.
+ *   grid well      `--m-card-2` #DED7BF, a recess cut into the paper, 2 px ink frame, hard ink shadow.
+ *   step housing   graphite #2F2D27 with a lit top-left and a shadowed bottom-right: dark, not black.
+ *   written step   the lane colour itself, ringed in flag red and stamped with an ink star.
+ *   pads section   transparent — the pads are pasted straight onto the poster.
+ *   pad case       steel blue #243342 — a shade of the module's accent, with paper labels and a paper
+ *                  cog stamp (the shade is what lets the inline instrument sub-labels clear 4.5:1).
+ *   dock           `--m-card` #ECE7D6 — the same paper plate as every other card on this skin.
+ *
+ * Every control stays the size the base file measured (≥44 px; the step cells are the shell's own 25×32
+ * budget and are unchanged), and the module's accent is still steel blue, so its numerals, rail and
+ * playhead marker are the machine's, not the flag's.
  * =========================================================================================== */
 
-/* Every panel on the screen, in one rule: the grid card, the pads' section, the dock, and the pad
-   housings themselves. `background-color` (not `background-image`) because the jam grid's cells and
-   the pads set their own images inline and a colour cannot fight them. */
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] section > section,
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] .m-jam-dock,
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid^="mobile-jam-pad-"] {
-  background-color: #111111;
-  border-color: #111111;
-  color: #f4f1e1;
+/* The two jam sections are **not** plates any more. The first pass made every jam surface `#111111`
+   — the grid card, the pads' section and the dock — which is the "即兴里头太多全黑背景了" the user
+   reported: two 340 px-wide slabs of pure black stacked on the screen, and the poster's own paper
+   visible only in the margins. A console is *parts*; a black field is a monitor. So the sections are
+   transparent (the page's paper is the ground), and the two parts that carry the machine are the grid
+   well and the dock. The section-4 group (`section > section`) already paints both children of the jam
+   root, so the plate is re-decided here — same selector, later rule — rather than added. */
+:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] section > section:not(.m-jam-dock) {
+  background-color: transparent;
+  border: 0;
+  box-shadow: none;
+  clip-path: none;
+  filter: none;
+  color: var(--m-ink);
 }
-/* The jam plates take a hard **box-shadow**, not the `filter: drop-shadow` the paper panels use, and
-   the cut is switched off for them. Two reasons, both measured: a `filter` on an ancestor makes
-   Chromium rasterise the whole subtree into one un-clipped filter region, so the pads' own diagonal
-   cuts and their `drop-shadow`s came out blurred and half-lost (the screenshot showed three flat black
-   rectangles); and the thing a machine-room console actually looks like is a *square plate*, bolted on.
-   So the console keeps the shadow, loses the cut, and stays legible — one deliberate exception to the
-   diagonal-cut rule, recorded rather than silently dropped. */
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] section > section,
+/* The dock: the same paper plate as every other card on this skin — `--m-card`, a 2 px ink line and a
+   hard `8px 8px` ink shadow — so the screen's one control surface belongs to the poster. This is also
+   the surface the BPM numerals were re-inked for (below). */
 :root[data-skin="sovietYears"] .mobile-root[data-module="jam"] .m-jam-dock {
+  background-color: var(--m-card);
+  border: 2px solid #111111;
+  box-shadow: 8px 8px 0 #111111;
   clip-path: none;
   filter: none;
-  box-shadow: 10px 10px 0 #111111;
+  color: var(--m-ink);
 }
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid^="mobile-jam-pad-"] {
-  box-shadow: 6px 6px 0 #111111;
-  filter: none;
+/* The grid well: `--m-card-2` (the recessed well paper) inside a 2 px ink frame, lit along its top edge
+   and shadowed along its bottom, so it reads as a panel cut into the poster and the switch housings are
+   sunk into *it*. It keeps a hard `box-shadow` rather than the `filter: drop-shadow` the other paper
+   panels use, and that is measured: a `filter` on this box makes Chromium rasterise the whole subtree
+   into one un-clipped filter region, which is what flattened the pads into five plain rectangles in the
+   first pass. */
+:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid="mobile-jam-grid"] {
+  background-color: var(--m-card-2);
+  background-image: none;
+  border: 2px solid #111111;
+  box-shadow:
+    inset 0 3px 0 rgba(17, 17, 17, 0.22),
+    inset 0 -2px 0 rgba(244, 241, 225, 0.5),
+    8px 8px 0 #111111;
   clip-path: none;
+  filter: none;
 }
-/* The panel's own hairlines are a light film on a dark ground, which is what they were designed for —
-   so on this module they are *kept* rather than overridden to black (the section-4 border rule is
-   restored here, because a black border on a black plate is no border at all). */
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [class*="border-[var(--m-line]"] {
-  border-color: #56514a;
+/* The card's hairlines. On the black console these were a light film; on paper they are the ink rule,
+   and the selector deliberately drops the closing bracket of `border-[var(--m-line]` so that the
+   `-2` variants (the dock's and the dock rows' separators) are reached as well. */
+:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [class*="border-[var(--m-line"] {
+  border-color: #111111;
 }
-/* The tempo card's readout: `Russo One`, paper, on the console's black. */
+/* The readouts. The BPM numeral is `text-[var(--m-gold-hi)]`, which for this module is a pale steel
+   blue (#A9C4D8) chosen to glow on black: on the dock's paper it measures 1.9:1, so the module's own
+   accent — steel blue #2C3E50, 8.9:1 on `--m-card` — is what a numeral has to be set in. The swing
+   value already reads `var(--m-gold)` and so lands on the same steel. */
 :root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid="mobile-jam-bpm"],
 :root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid="mobile-jam-swing-value"] {
-  color: #d4a017;
+  color: var(--m-gold);
 }
 
-/* The console's own slogan band, and a correction worth recording.
+/* The console's slogan band, and the one thing about it worth being exact about.
  *
- * The first version stamped `ПРИКАЗ` ("order") on the grid card as a `background-image` band across its
- * top-right. It was in the one place this screen cannot spare: the grid's cells start ~66 px from the
- * card's top, a band tall enough to read is taller than that, and the render showed it lying over steps
- * 9–16 of all four lanes as a red wash — a decorative layer eating the instrument. The measured cost of
- * getting it right is a 30 px-tall strip at the card's top-right that is free of leaf content, and the
- * band is what fits: a 3 px red rule with the slogan above it, ending before the grid's first cell row.
- * The wide diagonal cut is off on this card for the same reason — it removed the corner the slogan now
- * lives in. */
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid="mobile-jam-grid"] {
-  background-image: none;
-  clip-path: none;
-  filter: none;
-  box-shadow: 10px 10px 0 #111111;
-}
+ * `ПРИКАЗ` ("order") is the poster's stamp on this screen, and it is a *screen* mark rather than a card
+ * mark: both pseudo-elements are children of the grid `<div>`, but that div is static, so their
+ * containing block is the shell's own scrolling column (`main.relative`), not the card. That puts them
+ * in the one strip this screen can afford — the right end of the top bar, above the grid card and to
+ * the right of the masthead, y ≈ 16–43 at 390×844. It is documented because it looks like an accident
+ * and is not: anchored to the card instead (which is what the first pass's comment claimed it did), the
+ * band lands on the "RESET TO THE GENRE" key in the card's own top-right corner. The geometry is
+ * unchanged from the pass that measured it; only the ink is new, because the gold it was lettered in is
+ * 2.1:1 on paper and a slogan nobody can read is not a slogan. */
 :root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid="mobile-jam-grid"]::before {
   content: "";
   position: absolute;
@@ -889,9 +969,9 @@
   background-image: linear-gradient(90deg, #cc0000 0 100%);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 6px 100%, 0 calc(100% - 3px));
 }
-/* The band needs one readable mark on it, and `content` is allowed here: the card is a **container**,
-   not a control, so a slogan on its corner can never collide with a button's label or its accessible
-   name. It sits *above* the rule, in the same 30 px strip, and to the right of the reset button. */
+/* The word is `content` on a **container**, never on a control: the grid is a `<div>`, its child cells'
+ * accessible names live in `aria-label`, so a decorative glyph here cannot collide with a visible
+ * label or an accessible name. It is `pointer-events: none` like every other decoration in this file. */
 :root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid="mobile-jam-grid"]::after {
   content: "ПРИКАЗ";
   position: absolute;
@@ -900,81 +980,88 @@
   font-family: var(--m-font-display);
   font-size: 11px;
   letter-spacing: 0.22em;
-  color: #d4a017;
+  color: #111111;
 }
 
-/* The switch cells. The step sells the hard part of this skin, so it is worth stating exactly what can
-   and cannot be painted here.
+/* The switch housings. The step sells the hard part of this skin, so it is worth stating exactly what
+ * can and cannot be painted here.
  *
  * The cell's fill is an **inline `style={{background: "rgba(…)"}}`** written by the component (the lane
- * colour at 82% when the step is on, the neutral film when it is off). Two things follow, and the first
- * one cost a render to learn:
+ * colour at 82% when the step is on, `rgba(232,232,255,0.055)` when it is off). Two consequences:
  *
  *   1. an inline `background` **shorthand** resets `background-image` at a higher origin than any
- *      stylesheet rule, so `background-image: linear-gradient(…)` on the cell itself is computed to
- *      `none` no matter how specific the selector is (measured in Chromium: an inline
- *      `background: rgba(…)` beats a stylesheet `background-image`). Paint on the cell therefore has to
- *      be `box-shadow` or a pseudo-element. An inline `background-color` longhand does *not* have this
- *      problem, which is why the pad housings below are painted with a colour.
- *   2. the lane colour itself must be *kept*: it is the product's map from colour to instrument (the
- *      same `JAM_COLORS` the pads and the record's rings use), and overriding it would break the one
- *      thing the grid is for. On this module's black panel those colours measure 7.4–11.3:1, so they
- *      stay — this skin does not restate them, it re-inks the *room* around them.
+ *      stylesheet rule, so `background-image: …` on the cell computes to `none` however specific the
+ *      selector is. This is stated as a *measured* fact because the first two passes of this file got it
+ *      wrong: they painted a "paper cap" with `background-image` on the cell and a star on a **static**
+ *      `::before` (`inset: 0` with no `position` — which paints nothing at all, since `inset` only
+ *      applies to a positioned box). Neither ever rendered, which is why the grid in those renders
+ *      showed bare lane-coloured rectangles. Paint on a cell can only be a `box-shadow` or a
+ *      *positioned* pseudo-element.
+ *   2. the lane colour must be **kept**: it is the product's map from colour to instrument (the same
+ *      `JAM_COLORS` the pads and the record's rings use), and re-inking it would break the one thing the
+ *      grid is for.
  *
- * So the housing is a recess (a dark inner ring drawn with an inset shadow, which paints over the
- * inline fill because `background` does not touch `box-shadow`), and the cap is the `::before` overlay:
- * a film of steel over the lane colour with a lit top-left and a shadowed bottom-right, which is what
- * makes 15×32 px read as a physical part instead of a coloured rectangle. The overlay is not positioned
- * (`inset: 0` on a static pseudo-element paints the padding box) and is `pointer-events: none`, so the
- * 32 px tap target the shell budgeted is exactly as tappable as it was. The ON state stamps the star —
- * empty `content` on the same pseudo-element (the cell's accessible name lives in `aria-label`, so no
- * glyph can collide with a word), paper on the lane colour, with the red ring as the flood. */
+ * So the housing is a machined well drawn with `box-shadow`, which paints **over** the inline fill (an
+ * inset shadow sits above the background) and **under** the content: `inset 0 0 0 100px` is the well
+ * fill — a graphite `#2F2D27`, deliberately *not* `#111111`, because the user's complaint was that this
+ * module was too much solid black and because a machined housing is a dark grey part, not a void — and
+ * the two 1 px inset edges above it are the lit top-left and the shadowed bottom-right that make a
+ * 25×32 px cell read as a physical part rather than a coloured rectangle.
+ *
+ * The *written* step (the component's own `aria-pressed`, which it already maintains for accessibility)
+ * is a **red ring** and a **stamped star**, with the lane colour left showing instead of the graphite.
+ * The star is `content` on the cell's `::after`, positioned over a cell that is `position: relative`, so
+ * it needs no wrapper and no size of its own; the cell has **no visible label** (its accessible name is
+ * `aria-label`: "底鼓 1"), so a glyph there can collide with no word. Both the field and the stamp are
+ * `pointer-events: none`, so the 32 px tap target the shell budgeted is exactly as tappable as it was.
+ * The star is **ink, not paper**: it is stamped on the lane colour, where ink measures 5.6–10.4:1 and
+ * paper would be 1.6–2.4:1.
+ */
 :root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"] {
+  position: relative;
   border: 1px solid #111111;
   box-shadow:
-    inset 0 0 0 2px #111111,
-    inset 0 0 0 3px rgba(244, 241, 225, 0.16),
+    inset 0 0 0 100px #2f2d27,
+    inset 1px 1px 0 rgba(244, 241, 225, 0.14),
+    inset -2px -2px 0 rgba(17, 17, 17, 0.55),
     2px 2px 0 #111111;
-}
-:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"]::before {
-  content: "";
-  inset: 0;
-  pointer-events: none;
-  background-image: linear-gradient(
-    180deg,
-    rgba(17, 17, 17, 0.44) 0 45%,
-    rgba(17, 17, 17, 0.62) 45% 100%
-  );
 }
 /* "Engaged", not "on": the star and the red ring are for a step that has been **written**. The shell
    also marks the *playhead* cell with the same `aria-pressed` when the lane's step there happens to be
-   on, but draws it as the lane colour at 22% alpha plus an inset ring — a moving marker, not a written
-   step. Starring it turned the whole right half of the grid into a red flag (the screenshot pass caught
-   it: every lit cell was ringed red and starred), so the playhead is excluded by the one thing that
-   tells the two states apart in the DOM — the inline alpha, which is `…, 0.82)` on a written step and
-   `…, 0.22)` on the playhead. It is a selector on the component's own inline value, which is stated
-   here because it is fragile by nature: if `MobileJamScreen` ever changes those alphas, this rule stops
-   matching and the grid degrades to "no star", never to "all stars". */
+   on, but the playhead is drawn from inline styles (the lane colour at 22% plus an inset ring), and an
+   inline `boxShadow` replaces a stylesheet `box-shadow` wholesale — so a playhead cell automatically
+   keeps the shell's own moving marker and never takes the housing or the ring. The exclusion below is
+   therefore about the *written* step only, and it is keyed on the one thing that tells the two apart in
+   the DOM: the inline alpha, `…, 0.82)` on a written step and `…, 0.22)` on the playhead. That is
+   fragile by nature and stated here for that reason: if `MobileJamScreen` ever changes those alphas,
+   this rule stops matching and the grid degrades to "no star", never to "all stars". */
 :root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"][aria-pressed="true"]:not([style*=", 0.22)"]) {
   box-shadow:
     inset 0 0 0 2px #cc0000,
     inset 0 0 0 3px rgba(244, 241, 225, 0.35),
     2px 2px 0 #111111;
 }
-:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"][aria-pressed="true"]:not([style*=", 0.22)"])::before {
-  background-image: radial-gradient(
-    circle at 50% 50%,
-    #f4f1e1 0 27%,
-    rgba(17, 17, 17, 0.3) 28% 100%
+:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"][aria-pressed="true"]:not([style*=", 0.22)"])::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  inline-size: 9px;
+  block-size: 9px;
+  pointer-events: none;
+  background-color: #111111;
+  clip-path: polygon(
+    50% 0%,
+    61% 34%,
+    97% 35%,
+    68% 57%,
+    79% 92%,
+    50% 71%,
+    21% 92%,
+    32% 57%,
+    3% 35%,
+    39% 34%
   );
-}
-/* The playhead keeps its own ring, in the module accent rather than the lane colour, so "where the loop
-   is" and "what is written there" are two different marks. */
-:root[data-skin="sovietYears"] .mobile-root [data-testid^="mobile-jam-step-"][aria-pressed="true"][style*=", 0.22)"] {
-  box-shadow:
-    inset 0 0 0 2px #2c3e50,
-    inset 0 0 0 3px rgba(244, 241, 225, 0.3),
-    2px 2px 0 #111111;
 }
 
 /* The swing rail's knob takes its centre from `--m-bg`, and `--m-bg` cannot change for the module: it
@@ -985,28 +1072,22 @@
   background-color: #f4f1e1;
 }
 
-/* The console's hairlines inside the dock row and the swing row are `border-[var(--m-line)]` rules;
-   the grouped override above already restores them to the light film. The dim and muted tones are the
-   other way round: `--m-ink-2` / `--m-ink-3` are *dark* values chosen for paper, and they measure
-   1.7:1 and 2.4:1 on this panel, so inside the black plates the muted text is re-inked to a mid grey
-   that reads as dirt on steel at 9.0:1 — the same relationship, inverted with the ground.
+/* Nothing re-inks the dock's dim tones any more, and that is a decision rather than an omission.
  *
-   The scope is the black surfaces themselves, never the module as a whole: the bottom tab bar is paper
-   on every screen, and `[data-module="jam"] .m-mono` alone would have repainted the tab labels with the
-   console's grey — which is exactly the kind of leak the first pass produced and the contrast audit
-   caught (the tabs measured 1.7:1). */
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] section > section .m-mono,
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] .m-jam-dock .m-mono,
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] [data-testid^="mobile-jam-pad-"] .m-mono,
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] section > section [class*="text-[var(--m-ink-2)]"],
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] .m-jam-dock [class*="text-[var(--m-ink-2)]"],
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] section > section [class*="text-[var(--m-ink-3)]"],
-:root[data-skin="sovietYears"] .mobile-root[data-module="jam"] .m-jam-dock [class*="text-[var(--m-ink-3)]"] {
-  color: #b9b2a4;
-}
-/* The lane legends are the one exception: they are inline-coloured by the component on purpose, so
-   the rule above must not reach them. Nothing is needed here — recorded so a reader does not "fix"
-   the grey by adding a `color` that the inline style would win anyway. */
+ * The black console needed this rule: `--m-ink-2` / `--m-ink-3` are *dark* values chosen for paper and
+ * measured 1.7:1 and 2.4:1 on `#111111`, so every muted label inside the plates was re-inked to a mid
+ * grey. With the grid card and the dock back on paper, those tokens are the *correct* ink again — ink-2
+ * is 10.0:1 on `--m-card`, ink-3 is 6.4:1 on it and 6.9:1 on the page's own paper — so the re-ink is
+ * gone and the shell's own inks are what the labels are set in. Two things the deleted rule got wrong
+ * are worth recording, because both were live bugs: its `.m-mono` selector also reached the **pads**,
+ * whose sub-label is inline-coloured from the instrument palette (the inline style won, so the grey
+ * never showed — a reminder that the two agreed only by accident); and scoped as widely as
+ * `[data-module="jam"] .m-mono` it would have repainted the *bottom tab bar's* labels, which are paper
+ * on every module of this skin and were measured at 1.7:1 in the first pass's contrast audit. */
+/* The lane legends are now the only inline-coloured text on the module, on purpose: they take the lane
+   colour from the component, and the rule above no longer has a `color` for them to lose to. Nothing is
+   needed here — recorded so a reader does not "fix" them with a token that the inline style would beat
+   anyway. */
 
 /* =============================================================================================
  * 8. The record — the one place a `<canvas>` decides what is paintable
@@ -1050,29 +1131,50 @@
 }
 
 /* =============================================================================================
- * 9. The gear, and the two slogan bands
+ * 9. The emblem, and the two slogan bands
  *
- * The cog on the stage is `repeating-conic-gradient`: twelve teeth as hard 15°/30° stops and a dark
- * hub, one gradient, no image and no element. It is the stage's own `::before`, pinned to the
- * top-left corner (the stage's dead space in portrait — the record is centred below it), at
- * `z-index: 0` so it paints *under* the record and under every control, and click-through. A
- * background cannot overflow its host, so the cog can only ever be the box it is given, and it has no
- * text of its own. It is a *stamp*, not a spinning part: the skin gate reads every prelude before a
- * `{` as a selector and requires the skin's scope on it, so a `@keyframes` block cannot live in one
- * of these files — and a printed cog needs no motion anyway.
+ * The player's top-left corner used to carry a twelve-tooth cog drawn as a `repeating-conic-gradient`
+ * — red teeth radiating from a dark hub at 16% opacity. That is a *rising sun*, and the user read it
+ * exactly that way: "有个日本军旗一样的符号". A fan of rays is the one mark this skin must never print,
+ * so the gradient is gone and the corner carries the emblem the skin is named for: **☭, the hammer and
+ * sickle**.
+ *
+ * It is drawn as an inline SVG `url("data:image/svg+xml,…")` on the same `::before`, and that choice
+ * is deliberate rather than convenient:
+ *
+ *   1. **It has to be recognisable at 38 px.** `☭` (U+262D) is the obvious candidate, but it is a
+ *      non-emoji symbol with no guaranteed font coverage: a phone whose stack lacks it prints a tofu
+ *      box, and a tofu box in the corner of a Soviet poster is worse than the rising sun was. Two
+ *      inline SVG paths are the same glyph on every device, in every font stack.
+ *   2. The mark is a *drawing*, not a word. The hammer and the sickle interlock — one red plate, the
+ *      hammer's handle under the blade — and that interlock is what makes ☭ read as ☭ instead of as
+ *      two tools side by side. A `clip-path` polygon (the technique the stars in this file use) can
+ *      cut a silhouette but cannot compose the two through each other at 38 px.
+ *   3. The geometry is public domain (Wikimedia Commons' `Hammer_and_sickle_red_on_transparent.svg` —
+ *      ineligible for copyright, being a common-property symbol), it is ~2 KB of *inline* text, and
+ *      the skin gate allows exactly this construction: no external URL, no network, no `@font-face`.
+ *      The paths are embedded verbatim with their own `matrix(…)` transform and a `0 0 600 600`
+ *      viewBox, which is the source's own coordinate system; the fill is this skin's flag red.
+ *
+ * The placement is the same free corner the cog occupied, and it is measured rather than guessed: in
+ * portrait the stage's top-left holds nothing but the poster's own paper — the record starts ~120 px
+ * below it, the back chevron lives in the top bar *above* the stage, and the frame's own 2 px black
+ * edge is at x 0. The emblem is 38 px, 6 px down from the frame's inner top and 2 px in from its left,
+ * is `pointer-events: none`, and paints at `z-index: 0`, so it is under the record and under every
+ * control. A background paints only inside the box it is given, so it can never grow into one.
  * =========================================================================================== */
 :root[data-skin="sovietYears"] .mobile-root .m-stage::before {
   content: "";
   position: absolute;
-  inset: 2px auto auto -10px;
-  inline-size: 54px;
-  block-size: 54px;
+  inset: 6px auto auto 2px;
+  inline-size: 38px;
+  block-size: 38px;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.16;
-  background-image:
-    radial-gradient(circle at 50% 50%, #111111 0 20%, transparent 20%),
-    repeating-conic-gradient(from 0deg at 50% 50%, #cc0000 0deg 15deg, transparent 15deg 30deg);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20600%20600%27%3E%3Cg%20transform=%27matrix(3.9572752%200%200%203.9469524%20-484.68108%20-434.93624)%27%20fill=%27%23cc0000%27%3E%3Cpath%20d=%27m%20137.43744,171.69421%2018.86296,18.9937%2017.78834,-17.66589%20c%2027.05847,29.021%2055.43807,56.99501%2082.28704,86.12782%204.03444,4.06233%2010.59815,4.085%2014.66056,0.0506%204.06232,-4.03445%204.08499,-10.59815%200.0506,-14.66056%20-28.81871,-27.1901%20-57.72545,-54.60143%20-86.55328,-81.89095%20l%2023.96499,-23.80003%20-33.34026,-4.61605%20z%27/%3E%3Cpath%20d=%27m%20198.2887,110.1955%20c%2015.51743,8.7394%2027.29872,21.28122%2034.2484,34.3924%207.04394,13.28902%2010.13959,27.16218%2010.20325,38.25433%200.13054,22.74374%20-18.43771,41.18184%20-41.18183,41.18184%20-12.13597,0%20-23.04607,-5.24868%20-30.58302,-13.60085%20l%20-4.16863,3.51033%20c%20-0.70999,-0.27231%20-1.46387,-0.41221%20-2.22429,-0.41276%20-1.82948,1.9e-4%20-3.56621,0.80531%20-4.74859,2.20136%20-2.97368,0.38896%20-5.46251,2.44529%20-6.40534,5.29224%20-3.13486,6.28843%20-8.63524,11.21997%20-15.29104,13.4776%20-0.0637,0.0216%20-0.11992,0.05%20-0.1758,0.0783%20-3.07749,1.12758%20-6.16259,3.1643%20-8.78919,5.80245%20-5.19155,5.23656%20-7.72858,11.93658%20-6.30024,16.63822%20-0.14098,0.40857%20-0.21361,0.83759%20-0.21498,1.26979%201.5e-4,2.17082%201.75991,3.93058%203.93073,3.93073%200.54341,-0.002%201.08053,-0.11639%201.57745,-0.33632%204.69369,1.05881%2011.06885,-1.54582%2016.05444,-6.55917%202.82624,-2.85072%204.94356,-6.22349%205.98303,-9.53062%202.31696,-6.62278%207.29699,-12.01856%2013.62281,-15.05312%200.15105,-0.0725%200.27303,-0.14714%200.38218,-0.22358%202.12082,-1.01408%203.67251,-2.92895%204.225,-5.2139%209.70222,11.44481%2024.25255,18.75299%2040.51876,19.13577%2029.83352,0.70205%2052.13299,-21.25802%2053.16414,-52.83642%200.51894,-15.89259%20-5.62993,-36.3847%20-19.6412,-53.19089%20-10.70835,-12.84441%20-26.40987,-23.50795%20-44.18699,-28.20777%20z%27/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: 92% 92%;
 }
 
 /* The key caps are stamped, from the inside: `СЛАВА ТРУДУ` ("glory to labour") is a `background-image`
@@ -1173,19 +1275,55 @@
    picker lie about what each skin looks like. Only their radius is squared, by section 4. */
 
 /* =============================================================================================
- * 11. 探索: the frame around the reused desktop views
+ * 11. 探索: the phone's switcher, and the frame around the reused desktop views
  *
- * The three sub-pages are the desktop's own components, whose text colours are literal
- * (`text-[#eae6dc]`, 1.1:1 on paper). The `sovietYears` overrides that belong in `legacySkin.css`
- * cannot be written from this file, so the honest minimum is done here: the wrapper is given the
- * steel-black plate it needs to stay a legible dark module *inside* a paper poster, rather than
- * becoming white text on white paper. Reported as unfinished in the verification notes.
+ * The phone DOM of 探索 is a heading and one segmented switcher; everything under it is the desktop's
+ * own component (`ChordProgressionsView` / `KickAnatomyView` / `MasterclassView`), which is restyled by
+ * `legacySkin.css`. So this file owns exactly two things here:
+ *
+ *   1. **the switcher**. It is the poster's own control: a paper plate, a 2 px ink case, a hard ink
+ *      shadow, and the selected segment flooded in *flag red* with paper lettering (5.19:1). The
+ *      module's accent is a dark medal gold (`#7A4F00` — the value that keeps this skin's five module
+ *      accents distinct, which `src/test/skinSystem.test.tsx` enforces), and that is a good ink on
+ *      paper at 6.3:1 but it is not the poster's loud colour. The switcher is where the screen
+ *      announces itself, so it takes the flag; the gold stays as the module's metal — its numerals and
+ *      the reused views' instrument marks — which is what keeps 探索 from reading as a second 首页.
+ *   2. **the frame** around the reused desktop views. The paper ground itself comes from
+ *      `legacySkin.css`, the sheet that owns that subtree (its `sovietYears` wrapper block already
+ *      maps the desktop's `bg-*` literals and accents onto this skin's tokens, and it is imported after
+ *      the skins, so its ground wins over the black plate this rule used to paint). What this file adds
+ *      is the poster's edge — a 3 px ink case and a hard red offset — and the ink text colour the frame
+ *      must inherit. The desktop views' *internal* palette is extended by a fragment written to
+ *      `/tmp/skin-legacy-sovietYears.css` for the merger, because `legacySkin.css` may not be edited
+ *      from here.
  * =========================================================================================== */
+
+/* The switcher's segments. The container is `section > div[role="tablist"]` — a direct child of the
+   探索 section, so the legacy subtree's own tablists (which sit inside `[data-legacy]`) are never
+   reached. Both the plate and the segments take the ink case; the segment's 46 px minimum is a
+   `min-height`/`min-width` in the markup and `border-box` keeps it, so the case cannot shrink a target. */
+:root[data-skin="sovietYears"] .mobile-root[data-module="explore"] section > div[role="tablist"] {
+  background-color: var(--m-card);
+  border: 2px solid #111111;
+  box-shadow: 8px 8px 0 #111111;
+}
+:root[data-skin="sovietYears"] .mobile-root[data-module="explore"] [data-testid^="mobile-explore-tab-"] {
+  border: 2px solid #111111;
+  color: var(--m-ink-2);
+}
+:root[data-skin="sovietYears"] .mobile-root[data-module="explore"] [data-testid^="mobile-explore-tab-"][aria-selected="true"] {
+  background-color: #cc0000;
+  color: var(--m-on-gold);
+}
+
+/* The frame: the poster's edge around the reused desktop views. `color: var(--m-ink)` rather than the
+   paper this rule used to inherit — with a paper ground under it, any text the legacy sheet does not
+   classify would have been paper on paper. */
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"][data-testid^="mobile-explore-"] {
-  background-color: #111111;
+  background-color: var(--m-bg);
   border: 3px solid #111111;
   box-shadow: 8px 8px 0 #cc0000;
-  color: var(--m-bg);
+  color: var(--m-ink);
 }
 
 /* =============================================================================================

@@ -128,7 +128,9 @@
  *    legible by giving the cell a hairline, which CSS is still allowed to do.
  *  - 探索 mounts three reused desktop views inside `[data-legacy="desktop"]`. They have their own skin
  *    layer (`skins/legacySkin.css`) and their own dark plates; this sheet deliberately does not chase
- *    them, and anything it wrote there would be a second, competing palette.
+ *    them, and anything it wrote there would be a second, competing palette. A *fragment* of extra
+ *    minimal-only rules for that subtree is staged in `skin-legacy-minimal.css` for the merger
+ *    (section 8 below says which roles it re-answers); it is not loaded until then.
  */
 
 /* =============================================================================================
@@ -669,6 +671,126 @@
   background-color: transparent;
 }
 
+/*
+ * The graded tiles, once the shell has said *which* one.
+ *
+ * This is the one screen where a light skin has the opposite problem to the dark ones: the shell's
+ * grading is three colours deep — a green ring, a red ring and the module accent — and on paper, where
+ * every other edge is a hairline, a 2px ring on a 6% tint reads as a glow that the skin's language does
+ * not have. So the ring goes and the mark is rebuilt out of the three things paper actually has:
+ *
+ *   - a **1px** border in the signal (already supplied by the rules above), not a 1px border plus a 2px
+ *     ring — the same information at the weight the rest of the page is drawn at;
+ *   - a deeper tint (12%) so the tile is a *washed* tile and not a white one with a coloured edge,
+ *     which is how a printed page marks a field;
+ *   - the glyph the shell already prints (`A ✓` / `A ✗`) in the signal, which is the mark that survives
+ *     a greyscale print, and which is why losing the ring costs no clarity.
+ *
+ * `animate-pulse-glow` goes with the ring. It is a dark-ground device — on paper it animates a tile's
+ * opacity and scale, so a *text* tile's contrast moves while the user is reading it, which is the same
+ * failure the footer's breathing span was. The state is already stated; it does not need to breathe.
+ *
+ * The wash is 12%, and the letter+glyph on a graded tile is the signal *one step toward ink*
+ * (`color-mix`), because the two readings fight each other: the wash is what makes the tile unmistakable
+ * from across a phone, and it is also the ground the 10px `A ✓` sits on. Measured in the browser, the
+ * token green is 4.87:1 on paper and would be 4.15:1 on a 12% wash of itself — under the floor for
+ * small text. Mixing 20% ink into it puts the label at 5.5:1 (red 5.8:1) while the wash stays at the
+ * weight that reads, and the two are still the same hue, so the pair still looks like one signal. The
+ * option's *name* and its `category · BPM` line keep the skin's own ink and ink-2, untouched.
+ */
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"],
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] {
+  animation: none;
+  box-shadow: none;
+  opacity: 1;
+}
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"] {
+  background-color: rgb(21 127 61 / 0.12);
+  border-color: var(--m-green);
+}
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] {
+  background-color: rgb(197 48 63 / 0.12);
+  border-color: var(--m-red);
+}
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"] > span:first-child {
+  color: color-mix(in srgb, var(--m-green) 80%, var(--m-ink));
+}
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] > span:first-child {
+  color: color-mix(in srgb, var(--m-red) 80%, var(--m-ink));
+}
+
+/*
+ * The difficulty chips.
+ *
+ * The shell's selected chip is a solid accent pill (`bg-[var(--m-gold)] text-[var(--m-on-gold)]`), and on
+ * the dark skins that is the right weight — it is the only filled control on the row. Here the accent is
+ * one of four colours already on the page (the green and red tiles, and the accent the rank bar and the
+ * play button are drawn in), and a 46px block of it next to a graded tile made the *accent* the loudest
+ * thing on a page about right and wrong. It collapses onto the skin's own selection language instead —
+ * the 4% ink well and the accent hairline this file already uses for a selected list row and the skin
+ * picker — so "you are here" is a line and a shade, and the only saturated colour left on the screen is
+ * the one that means "right" or "wrong".
+ */
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-difficulty-"] {
+  box-shadow: none;
+}
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-challenge-difficulty-"][aria-selected="true"] {
+  background-color: rgba(20, 20, 20, 0.04);
+  border-color: var(--m-gold);
+  color: var(--m-ink);
+}
+
+/*
+ * The play button — the module's one big affordance.
+ *
+ * The shell draws it as a 50%-alpha accent ring over a grey well. On paper the half-alpha ring is a third
+ * grey and the well is a fourth surface (`--m-card-2` *inside* a `--m-card` panel), so the disc reads as a
+ * pale lamp rather than as a control. It becomes what the skin's other controls are: the card's own white,
+ * an accent hairline at full strength, and the accent glyph. The 80px circle is untouched.
+ */
+:root[data-skin="minimal"] .mobile-root [data-testid="mobile-challenge-play"] {
+  background-color: var(--m-card);
+  border-color: var(--m-gold);
+  color: var(--m-gold);
+  box-shadow: none;
+}
+
+/*
+ * The pinned verdict.
+ *
+ * The bar arrives as `border-2` in the outcome colour, and its own JSX paints the border, the rail, the
+ * badge, the title and the earned chip with the same inline `outcomeColour` — five red (or green) marks
+ * plus a 25px black `shadow-2xl`. None of the inline colours can be reached from a stylesheet, and they
+ * should not be: the outcome is the point of the bar. What *can* be re-answered is the **frame**, and the
+ * frame is the part that fights this skin: a 2px saturated box around a white plate is a fourth surface
+ * edge language on a page whose every other edge is a hairline.
+ *
+ * So the box border goes and the outcome is re-stated as a **4px signal rule down the left edge** — the
+ * same device `.m-cue-item.on` marks a row with — plus the soft ambient pair the skin allows the two
+ * plates that genuinely float (the bar is `fixed`, so it is the third such plate). The signal colour is
+ * chosen from the element's own `data-outcome`, which is the one hook the JSX exposes. Net effect: the
+ * bar reads as a ruled sheet of paper whose margin is green or red, the icon/title/rail still shout the
+ * verdict, and the page keeps exactly one edge language.
+ */
+:root[data-skin="minimal"] .mobile-root [data-testid="mobile-challenge-verdict"] {
+  border-style: none;
+  box-shadow:
+    0 1px 2px rgba(20, 20, 20, 0.04),
+    0 10px 24px rgba(20, 20, 20, 0.06);
+}
+:root[data-skin="minimal"] .mobile-root [data-testid="mobile-challenge-verdict"][data-outcome="right"] {
+  box-shadow:
+    inset 4px 0 0 0 var(--m-green),
+    0 1px 2px rgba(20, 20, 20, 0.04),
+    0 10px 24px rgba(20, 20, 20, 0.06);
+}
+:root[data-skin="minimal"] .mobile-root [data-testid="mobile-challenge-verdict"][data-outcome="wrong"] {
+  box-shadow:
+    inset 4px 0 0 0 var(--m-red),
+    0 1px 2px rgba(20, 20, 20, 0.04),
+    0 10px 24px rgba(20, 20, 20, 0.06);
+}
+
 /* The verdict's "ELO" line is `text-[var(--m-gold-hi)]`. On this skin that token is the accent's deeper
    step rather than a lighter tint, so it is legible on white with no special case; this rule only states
    the intent so the next reader does not have to infer it. */
@@ -677,7 +799,26 @@
 }
 
 /* =============================================================================================
- * 8. The skin picker — the one place the selection is a *preview*
+ * 8. 探索 — the phone's own switcher, before the reused desktop view starts
+ *
+ * 探索 is two surfaces in one page. The switcher and its sub-tab strip are phone DOM and belong to this
+ * sheet; the three views under `[data-legacy="desktop"]` are the desktop's and belong to
+ * `skins/legacySkin.css` (see the staged `skin-legacy-minimal.css` for the minimal-only refinement of that
+ * mapping). The two therefore do not have to share a chip style — but they do have to share a *palette*,
+ * and the phone half is the half this file can state outright.
+ *
+ * The switcher's selected segment is a solid accent fill, like the difficulty chips, and it is answered
+ * the same way: the 4% well and the accent hairline. The segment has no border of its own, so the hairline
+ * is an inset ring — a shadow, so the 46px segment and the three-column grid cannot move by a pixel.
+ * =========================================================================================== */
+:root[data-skin="minimal"] .mobile-root [data-testid^="mobile-explore-tab-"][aria-selected="true"] {
+  background-color: rgba(20, 20, 20, 0.04);
+  color: var(--m-ink);
+  box-shadow: inset 0 0 0 1px var(--m-gold);
+}
+
+/* =============================================================================================
+ * 9. The skin picker — the one place the selection is a *preview*
  *
  * The selected card is marked by the shell as `border-[var(--m-gold)] bg-[var(--m-card-2)]`. On a light
  * ground a 1px accent border around a nearly identical grey card is not a strong enough mark for "this is
@@ -693,7 +834,7 @@
 }
 
 /* =============================================================================================
- * 9. States — pressed, and the one icon that needed rescuing
+ * 10. States — pressed, and the one icon that needed rescuing
  *
  * The shell already has `.m-press:active { transform: scale(0.97) }`. This skin adds the second, non-colour
  * signal the brief asks for: 1px of downward travel, so a press is *felt* as well as seen even on a control

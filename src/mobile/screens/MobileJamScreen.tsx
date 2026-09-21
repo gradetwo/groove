@@ -522,7 +522,14 @@ function JamForGenre({
             aria-pressed={isPlaying}
             aria-label={isPlaying ? t("mobile_jam_stop") : t("mobile_jam_play")}
             onClick={() => onTogglePlay(genre.id)}
-            className="m-press flex h-[52px] w-[52px] flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+            /*
+              Four controls, a genre and a hint share 390 px. The fixed controls are 44 px — the touch
+              floor, not an accident — and the two flexible areas carry `min-w-0` so the genre name
+              truncates instead of pushing the last button off the right edge (it used to sit at
+              x 352–400 on a 390 px screen: 10 px of a live control outside the viewport, which the
+              scroll-width gate cannot see because the row clips rather than scrolls).
+            */
+            className="m-press flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             {isPlaying ? <Square className="h-5 w-5" fill="currentColor" /> : <Play className="ml-0.5 h-5 w-5" fill="currentColor" />}
           </button>
@@ -557,17 +564,17 @@ function JamForGenre({
             )}
           </div>
 
-          <span className="text-[13px]">{t("mobile_jam_tempo")}</span>
+          <span className="flex-none text-[12px]">{t("mobile_jam_tempo")}</span>
           <button
             type="button"
             data-testid="mobile-jam-bpm-down"
             aria-label={`${t("mobile_jam_bpm")} -1`}
             onClick={() => changeBpm(-2)}
-            className="m-press m-mono flex h-12 w-12 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+            className="m-press m-mono flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             <Minus className="h-4 w-4" />
           </button>
-          <span className="m-mono min-w-[64px] text-center text-[16px] text-[var(--m-gold-hi)]" data-testid="mobile-jam-bpm">
+          <span className="m-mono min-w-[56px] flex-none text-center text-[16px] text-[var(--m-gold-hi)]" data-testid="mobile-jam-bpm">
             {bpm} <span className="text-[8px] tracking-[0.14em] text-[var(--m-ink-3)]">BPM</span>
           </span>
           <button
@@ -575,7 +582,7 @@ function JamForGenre({
             data-testid="mobile-jam-bpm-up"
             aria-label={`${t("mobile_jam_bpm")} +1`}
             onClick={() => changeBpm(2)}
-            className="m-press m-mono flex h-12 w-12 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
+            className="m-press m-mono flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             <Plus className="h-4 w-4" />
           </button>
