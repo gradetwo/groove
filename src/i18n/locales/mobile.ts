@@ -23,6 +23,13 @@ export const mobileMessages = {
   mobile_home_empty: { en: "Nothing matches that search.", zh: "没有匹配的曲风。" },
   // The capped vertical rail borrowed from the desktop timeline view (`TIMELINE_STORIES`).
   mobile_home_timeline: { en: "A century of groove", zh: "百年律动时间轴" },
+  // Each era node is more than a year: how many genres it coined, where they came from, and the
+  // accessible name of the link that opens one. The category label reuses `mobile_home_categories`.
+  mobile_home_timeline_genres: { en: "{count} genres", zh: "{count} 个曲风" },
+  mobile_home_timeline_from: { en: "From", zh: "源自" },
+  mobile_home_timeline_style: { en: "Style", zh: "风格" },
+  mobile_home_timeline_more_places: { en: "+{count} more", zh: "另有 {count}" },
+  mobile_home_timeline_open_genre: { en: "Open {genre}", zh: "打开{genre}" },
   mobile_audition_play: { en: "Audition this genre", zh: "试听这个曲风" },
   mobile_audition_stop: { en: "Stop the audition", zh: "停止试听" },
   mobile_genre_open_detail: { en: "Full details", zh: "查看完整详情" },
@@ -63,6 +70,28 @@ export const mobileMessages = {
   mobile_detail_try_jam: { en: "Jam with this", zh: "拿去即兴" },
   mobile_detail_tap_back: { en: "Tap to go back", zh: "点一下返回" },
   mobile_detail_missing: { en: "That genre is not in the library.", zh: "曲风库里没有这个曲风。" },
+  /**
+   * The second pass over 曲风详情: lineage and the production movements.
+   *
+   * The `{names}` slot is filled with a run of tappable genre names, so these strings are templates in
+   * the same sense as `formatMessage`'s: the screen splits each one on the literal slot and interleaves
+   * React nodes, because a name cannot travel through a string.
+   */
+  mobile_detail_lineage: { en: "Lineage & evolution", zh: "传承与演变" },
+  mobile_detail_lineage_from: { en: "Evolved from {names}", zh: "从 {names} 演化而来" },
+  mobile_detail_lineage_led_to: { en: ", and directly gave rise to {names}", zh: "，又直接催生了 {names}" },
+  mobile_detail_lineage_led_to_only: { en: "It directly gave rise to {names}", zh: "直接催生了 {names}" },
+  mobile_detail_lineage_fusion: { en: "Fused with {names}", zh: "融合了 {names}" },
+  mobile_detail_lineage_influence: { en: "Also cross-influenced by {names}", zh: "也受到 {names} 的影响" },
+  mobile_detail_lineage_variant: { en: "Regional variants: {names}", zh: "在地变体：{names}" },
+  mobile_detail_era_contemporary: { en: "{era} · contemporary with {names}", zh: "{era} · 与 {names} 同时代" },
+  mobile_detail_character_context: { en: "Character & context", zh: "听感与背景" },
+  mobile_detail_rhythm: { en: "Rhythm", zh: "律动骨架" },
+  mobile_detail_sound: { en: "Sound & harmony", zh: "音色与和声" },
+  mobile_detail_progressions: { en: "Progressions", zh: "常用走向" },
+  mobile_detail_era: { en: "Era", zh: "年代" },
+  mobile_detail_key_scale: { en: "Key / scale", zh: "调式音阶" },
+  mobile_detail_default_tempo: { en: "Default tempo", zh: "默认速度" },
 
   // Player bar (M2) and the full-screen player (M3).
   mobile_player_now: { en: "Now playing", zh: "正在播放" },

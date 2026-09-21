@@ -21,10 +21,30 @@
 import React, { useMemo, useState } from "react";
 import { ChevronRight, Pause, Search } from "lucide-react";
 import { ALL_GENRES } from "../../data/genres";
-import { TIMELINE_STORIES } from "../../data/timeline_stories";
+import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, GenreCategory } from "../../types/genre";
 import { genreArtBackground, genreCoverUrl } from "../genreArt";
+
+/**
+ * `id → Genre` for the whole shipped library.
+ *
+ * The library is already in memory (`ALL_GENRES` drives the list below), so the timeline can resolve
+ * each `genre_ids` entry to a **real** record — its `name`, its `category` and its `origin_place` —
+ * without a second lookup table and without ever rendering a raw id. A story that named an id the
+ * library does not carry resolves to nothing and the node simply omits it (see `HomeTimeline`), so a
+ * dead id can never reach the screen.
+ */
+const GENRE_BY_ID: Map<string, Genre> = new Map(ALL_GENRES.map((genre) => [genre.id, genre]));
+
+/**
+ * How many of an era's `origin_place` values a node names before folding the rest into "… +N more".
+ *
+ * The places are granular (`"New York & Philadelphia, USA"`) and an era can carry twelve of them, so
+ * listing every one would turn the rail into an address book. Two keep the shape comparable between
+ * eras; the count is what makes the tail honest rather than hidden.
+ */
+const ERA_PLACES_SHOWN = 2;
 
 /**
  * One colour per category, from the reference palette.
@@ -134,7 +154,7 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
         ))}
       </div>
 
-      <HomeTimeline />
+      <HomeTimeline onSelectGenre={onSelectGenre} />
 
       <ul className="mt-3 space-y-2.5" data-testid="mobile-home-list">
         {genres.map((genre) => {
@@ -203,40 +223,159 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
   );
 }
 
+/** One era, with its genres resolved out of the library and the facts those genres imply. */
+interface EraNode {
+  story: TimelineStory;
+  /** The story's `genre_ids`, in data order, each resolved to a real record (unknown ids dropped). */
+  genres: Genre[];
+  /** Distinct `origin_place` values for the era, in first-seen order. */
+  places: string[];
+  /** Distinct macro-categories the era's genres fall into, in first-seen order. */
+  categories: GenreCategory[];
+}
+
 /**
  * The century timeline, rendered from the same `TIMELINE_STORIES` the desktop `VerticalTimelineView`
  * reads — the phone must not grow a second, drifting copy of the era data.
  *
  * The desktop view is far too heavy to port (era cards, tech-milestone chips, genre grids, audition
- * buttons). What a phone home needs from it is the spine: one vertical rail, one dot per era, the
- * decade and a one-line title, oldest at the top. The rail scrolls inside a fixed max height rather
- * than unfolding to full length, because the genre library underneath is still the main content.
+ * buttons). What a phone home needs from it is the spine: one vertical rail, one dot per era, oldest
+ * at the top. The rail scrolls inside a fixed max height rather than unfolding to full length, because
+ * the genre library underneath is still the main content.
+ *
+ * A node still shows the year and the title, but the story data carries far more than that and the
+ * complaint was that the rail felt thin, so each node now also surfaces what is already shipped:
+ *  - the **description excerpt** (`TimelineStory.description`), clamped to a few lines;
+ *  - **one tappable chip per `genre_ids` entry**, resolved through the library to its real name and
+ *    opening that genre (`onSelectGenre` takes a `Genre`, not an id);
+ *  - **derived, comparable facts** — the genre count (`genre_ids.length`), the distinct
+ *    `Genre.origin_place` values ("from"), and the distinct `Genre.category` families ("style").
+ *
+ * Nothing here is invented: every string comes from `TIMELINE_STORIES` or from the library records
+ * those stories point at.
  */
-function HomeTimeline() {
+function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genre: Genre) => void }) {
   const { t, language } = useLanguage();
+
+  /**
+   * The resolve-and-derive pass, keyed on the language because `origin_place` is bilingual.
+   *
+   * Memoised because the home screen re-renders on every keystroke in the search field, and none of
+   * this depends on the query.
+   */
+  const eras = useMemo<EraNode[]>(
+    () =>
+      TIMELINE_STORIES.map((story) => {
+        const genres = story.genre_ids
+          .map((id) => GENRE_BY_ID.get(id))
+          .filter((genre): genre is Genre => Boolean(genre));
+        return {
+          story,
+          genres,
+          places: [...new Set(genres.map((genre) => genre.origin_place[language]))],
+          categories: [...new Set(genres.map((genre) => genre.category))],
+        };
+      }),
+    [language]
+  );
+
   return (
     <section className="mt-5" data-testid="mobile-home-timeline-section">
       <h2 className="m-mono text-[10px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
         {t("mobile_home_timeline")}
       </h2>
       <ol className="mt-1 max-h-[300px] overflow-y-auto" data-testid="mobile-home-timeline">
-        {TIMELINE_STORIES.map((story, index) => (
+        {eras.map(({ story, genres, places, categories }, index) => (
           <li
             key={story.id}
             data-testid={`mobile-home-timeline-node-${index}`}
-            className="relative flex min-h-[56px] flex-col justify-center border-l border-[var(--m-line-2)] py-2 pl-5 pr-1"
+            className="relative flex min-h-[56px] flex-col justify-center border-l border-[var(--m-line-2)] py-3 pl-5 pr-1"
           >
             {/* The node's own left border is the rail, so the line is continuous and never overflows. */}
             <span
               aria-hidden="true"
-              className="absolute -left-[5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-[var(--m-gold)] bg-[var(--m-bg)]"
+              className="absolute -left-[5px] top-[19px] h-2.5 w-2.5 rounded-full border border-[var(--m-gold)] bg-[var(--m-bg)]"
             />
-            <span className="m-mono text-[10px] uppercase tracking-[0.18em] text-[var(--m-gold)]">
-              {story.year}
-            </span>
-            <span className="mt-0.5 truncate text-[12.5px] text-[var(--m-ink-2)]">
+
+            {/* The decade on the left, the size of the era's haul on the right. */}
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="m-mono flex-none text-[10px] uppercase tracking-[0.18em] text-[var(--m-gold)]">
+                {story.year}
+              </span>
+              <span
+                className="m-mono flex-none text-[9.5px] uppercase tracking-[0.14em] text-[var(--m-ink-3)]"
+                data-testid={`mobile-home-timeline-count-${index}`}
+              >
+                {t("mobile_home_timeline_genres", { count: genres.length })}
+              </span>
+            </div>
+
+            <h3 className="mt-1 text-[13px] font-bold leading-snug text-[var(--m-ink)]">
               {story.title[language]}
-            </span>
+            </h3>
+
+            {/* The excerpt is clamped, never the whole paragraph: the era is a node, not an article. */}
+            <p
+              className="mt-1 line-clamp-2 text-[11.5px] leading-relaxed text-[var(--m-ink-2)]"
+              data-testid={`mobile-home-timeline-excerpt-${index}`}
+            >
+              {story.description[language]}
+            </p>
+
+            {genres.length > 0 && (
+              <ul
+                className="mt-1.5 flex flex-wrap gap-1"
+                data-testid={`mobile-home-timeline-genres-${index}`}
+              >
+                {genres.map((genre) => (
+                  <li key={genre.id}>
+                    {/*
+                     * A genre link, not a label: it opens the real genre through the same
+                     * `onSelectGenre` the library rows use. The dot is the library's own art colour,
+                     * so a chip and its card below read as the same thing.
+                     */}
+                    <button
+                      type="button"
+                      data-testid={`mobile-home-timeline-genre-${index}-${genre.id}`}
+                      onClick={() => onSelectGenre(genre)}
+                      aria-label={t("mobile_home_timeline_open_genre", { genre: genre.name })}
+                      className="m-press flex min-h-[32px] items-center gap-1.5 rounded-full border border-[var(--m-line-2)] px-2 text-[10.5px] text-[var(--m-ink-2)]"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 flex-none rounded-full"
+                        style={{ background: genreArtBackground(genre) }}
+                      />
+                      <span className="whitespace-nowrap">{genre.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* What makes two eras comparable at a glance: where they came from, and in what. */}
+            <div
+              className="m-mono mt-1.5 space-y-px text-[9px] leading-snug"
+              data-testid={`mobile-home-timeline-facts-${index}`}
+            >
+              <p className="flex gap-1.5">
+                <span className="w-[40px] flex-none whitespace-nowrap uppercase tracking-[0.12em] text-[var(--m-ink-3)]">
+                  {t("mobile_home_timeline_from")}
+                </span>
+                <span className="min-w-0 text-[var(--m-ink-2)]">
+                  {places.slice(0, ERA_PLACES_SHOWN).join(" · ")}
+                  {places.length > ERA_PLACES_SHOWN
+                    ? ` ${t("mobile_home_timeline_more_places", { count: places.length - ERA_PLACES_SHOWN })}`
+                    : ""}
+                </span>
+              </p>
+              <p className="flex gap-1.5">
+                <span className="w-[40px] flex-none whitespace-nowrap uppercase tracking-[0.12em] text-[var(--m-ink-3)]">
+                  {t("mobile_home_timeline_style")}
+                </span>
+                <span className="min-w-0 text-[var(--m-ink-2)]">{categories.join(" · ")}</span>
+              </p>
+            </div>
           </li>
         ))}
       </ol>
