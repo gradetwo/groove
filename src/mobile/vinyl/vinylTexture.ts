@@ -19,6 +19,7 @@ import {
   LABEL_BASS_RADIUS,
   LAYER_COLORS,
   LAYER_KEYS,
+  LAYER_RADII,
   STEP_ANGLE,
   type LayerKey,
 } from "./vinylMath";
@@ -55,6 +56,10 @@ export interface BakedSprite {
  *
  * `radius` is the disc radius in CSS pixels. The sprite is baked at 2x and drawn back at 1x, which is
  * the only reason ~1500 arcs can be drawn once and still look sharp on a phone.
+ *
+ * The four instrument ring *guides* are baked in here as well — the reference strokes them per frame,
+ * but they are concentric circles on a disc that rotates about its own centre, so a rotation cannot
+ * move them: baking them costs nothing visually and removes four full-circle strokes from every frame.
  */
 export function bakeVinyl(radius: number, superSample = 2): BakedSprite | null {
   const size = Math.ceil(radius * 2 + 4);
@@ -135,6 +140,15 @@ export function bakeVinyl(radius: number, superSample = 2): BakedSprite | null {
   g.beginPath();
   g.arc(0, 0, r * 0.455, 0, tau);
   g.stroke();
+
+  // The sequencer's ring guides, in their baked place (see the function's header).
+  for (const key of LAYER_KEYS) {
+    g.strokeStyle = `rgba(${LAYER_COLORS[key].str},0.06)`;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(0, 0, LAYER_RADII[key] * r, 0, tau);
+    g.stroke();
+  }
 
   return { canvas, size };
 }
@@ -353,3 +367,174 @@ export const LAYER_RGB_STRINGS: Record<LayerKey, string> = {
   hat: LAYER_COLORS.hat.str,
   bass: LAYER_COLORS.bass.str,
 };
+
+/* ------------------------------------------------------------------- the per-frame pieces */
+
+/** A concrete colour, as the 2D context needs it (`var()` is silently ignored). */
+export interface Rgb {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/**
+ * The tint quantum, in 0..255 channel units.
+ *
+ * Every glow on the record is tinted with the current mix of the instrument colours, and that mix eases
+ * every frame (`mixGlow`). Re-baking a sprite per frame would trade a gradient fill for a gradient fill;
+ * re-baking it when a channel has moved by more than this is both invisible — 4/255 at an alpha below
+ * 0.2 is well under one 8-bit step of what lands on screen — and rare: the mix settles in well under a
+ * second and then stops moving entirely.
+ */
+export const TINT_QUANTUM = 4;
+
+/** The cache key for a tinted sprite: the colour bucketed to `TINT_QUANTUM`. */
+export function tintKey(colour: Rgb): string {
+  return `${Math.round(colour.r / TINT_QUANTUM)},${Math.round(colour.g / TINT_QUANTUM)},${Math.round(colour.b / TINT_QUANTUM)}`;
+}
+
+/** One stop of a baked radial glow: position 0..1 along the radius, and the alpha there. */
+export interface GlowStop {
+  at: number;
+  alpha: number;
+}
+
+/** One circle of a radial gradient, in logical sprite coordinates (the sprite's centre is 0,0). */
+export interface GlowCircle {
+  x?: number;
+  y?: number;
+  radius?: number;
+}
+
+export interface GlowSpec {
+  /** The sprite's logical radius: it is drawn as a `2 * radius` square about its centre. */
+  radius: number;
+  colour: Rgb;
+  stops: readonly GlowStop[];
+  /**
+   * The gradient's inner circle — the reference's wash and bloom both start away from their centre,
+   * which is what keeps a bright core from sitting in the middle of the glow.
+   */
+  inner?: GlowCircle;
+  /** The gradient's outer circle, if it is not simply the sprite's centre at `radius`. */
+  outer?: GlowCircle;
+  /** Bake at `1 / downscale` of the logical size: a soft glow has no detail to lose. */
+  downscale?: number;
+  /** Supersample the bake, for the glows small enough that their edge is visible. */
+  superSample?: number;
+  /**
+   * Mask the result to a disc of this radius about the sprite's centre.
+   *
+   * The label wash is the reason: the reference fills a gradient over the label's *square* and clips it
+   * to the label's circle, so a baked gradient without the mask would spill over the disc.
+   */
+  clipRadius?: number;
+}
+
+/**
+ * Bake a radial glow: the colour and the profile at bake time, the *intensity* per frame through
+ * `globalAlpha`.
+ *
+ * Splitting it that way is what makes the pulsing affordable. The reference rebuilds a radial gradient
+ * every frame for the centre bloom, the label wash and the needle flash, and a gradient fill is one of
+ * the more expensive things to ask a software rasteriser for — it evaluates the ramp per pixel. A baked
+ * sprite is a texture fetch, and the per-frame part (alpha) is free.
+ */
+export function bakeGlow(spec: GlowSpec): BakedSprite | null {
+  const size = Math.max(2, Math.ceil(spec.radius * 2));
+  const downscale = Math.max(1, spec.downscale ?? 1);
+  const superSample = Math.max(1, spec.superSample ?? 1);
+  const pixels = Math.max(1, Math.round((size / downscale) * superSample));
+  const canvas = document.createElement("canvas");
+  canvas.width = pixels;
+  canvas.height = pixels;
+  const g = canvas.getContext("2d");
+  if (!g) return null;
+  const tau = Math.PI * 2;
+  g.scale(pixels / size, pixels / size);
+  const half = size / 2;
+  g.translate(half, half);
+
+  const colour = `rgba(${Math.round(spec.colour.r)},${Math.round(spec.colour.g)},${Math.round(spec.colour.b)}`;
+  const inner = spec.inner ?? {};
+  const outer = spec.outer ?? {};
+  const gradient = g.createRadialGradient(
+    inner.x ?? 0,
+    inner.y ?? 0,
+    inner.radius ?? 0,
+    outer.x ?? 0,
+    outer.y ?? 0,
+    outer.radius ?? spec.radius
+  );
+  for (const stop of spec.stops) gradient.addColorStop(stop.at, `${colour},${stop.alpha})`);
+  g.fillStyle = gradient;
+  // Filling the whole box is safe for every glow here: the ramp reaches alpha 0 before the box's
+  // corners, and the box is what the caller scales the sprite to.
+  g.fillRect(-half, -half, size, size);
+  if (spec.clipRadius) {
+    g.globalCompositeOperation = "destination-in";
+    g.beginPath();
+    g.arc(0, 0, spec.clipRadius, 0, tau);
+    g.fill();
+    g.globalCompositeOperation = "source-over";
+  }
+  return { canvas, size };
+}
+
+/**
+ * A flat disc: the sequencer dots, the pip where a step is off, and the white core of an impulse.
+ *
+ * The reference fills one `arc` per dot per lane — 64 path rasterisations a frame — where a baked dot is
+ * a six-pixel blit whose alpha the caller supplies.
+ */
+export function bakeDisc(radius: number, colour: Rgb, superSample = 2): BakedSprite | null {
+  // The logical size stays exact rather than rounded up, because the caller draws the sprite at `size`:
+  // a rounded-up box draws a *bigger* dot than the reference's `arc`, and a 1.5 px pip where the
+  // reference has 1.2 px is a visibly brighter speck — its alpha is only 0.07.
+  const size = Math.max(2, radius * 2);
+  const pixels = Math.max(1, Math.round(size * superSample));
+  const canvas = document.createElement("canvas");
+  canvas.width = pixels;
+  canvas.height = pixels;
+  const g = canvas.getContext("2d");
+  if (!g) return null;
+  g.scale(pixels / size, pixels / size);
+  g.fillStyle = `rgb(${Math.round(colour.r)},${Math.round(colour.g)},${Math.round(colour.b)})`;
+  g.beginPath();
+  g.arc(size / 2, size / 2, radius, 0, Math.PI * 2);
+  g.fill();
+  return { canvas, size };
+}
+
+/**
+ * The fixed sheen: the highlight that makes the disc read as a physical object.
+ *
+ * Unlike everything else on the record it neither rotates nor changes colour — only its intensity rides
+ * the breath — so it is baked once per size and blitted with `globalAlpha`, which also removes a
+ * `createLinearGradient` from every frame. The stops are the reference's, with their alphas made
+ * relative to the intensity the caller supplies.
+ */
+export function bakeSheen(radius: number): BakedSprite | null {
+  const size = Math.max(2, Math.ceil(radius * 2));
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const g = canvas.getContext("2d");
+  if (!g) return null;
+  // The reference's line runs from the disc's top-left to a little past three o'clock.
+  const sheen = g.createLinearGradient(0, 0, radius * 1.3, radius * 1.55);
+  sheen.addColorStop(0, "rgba(255,246,225,0)");
+  sheen.addColorStop(0.2, "rgba(255,246,225,1)");
+  sheen.addColorStop(0.36, "rgba(255,255,255,0)");
+  sheen.addColorStop(0.68, "rgba(255,255,255,0)");
+  sheen.addColorStop(0.85, "rgba(255,246,225,0.7)");
+  sheen.addColorStop(1, "rgba(255,246,225,0)");
+  g.fillStyle = sheen;
+  g.fillRect(0, 0, size, size);
+  g.globalCompositeOperation = "destination-in";
+  g.beginPath();
+  g.arc(radius, radius, radius, 0, Math.PI * 2);
+  g.fill();
+  g.globalCompositeOperation = "source-over";
+  return { canvas, size };
+}

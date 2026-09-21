@@ -42,8 +42,29 @@ import {
   TONEARM_NEEDLE_RADIUS,
   TONEARM_TRAVEL,
   vinylGeometry,
+  vinylIsIdle,
 } from "../mobile/vinyl/vinylMath";
 import { LABEL_ART, labelCacheKey } from "../mobile/vinyl/vinylTexture";
+
+/**
+ * The sprites, with counters.
+ *
+ * The record is a static texture plus a few tinted glows, and the whole point of baking them is that a
+ * frame does not re-bake them. Counting the calls is the only way to assert that from a test: jsdom has
+ * no 2D context, so the drawing itself is not observable, but *how often each sprite is built* is.
+ */
+vi.mock("../mobile/vinyl/vinylTexture", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../mobile/vinyl/vinylTexture")>();
+  return {
+    ...actual,
+    bakeVinyl: vi.fn(actual.bakeVinyl),
+    bakeLabel: vi.fn(actual.bakeLabel),
+    bakeDisc: vi.fn(actual.bakeDisc),
+    bakeGlow: vi.fn(actual.bakeGlow),
+    bakeSheen: vi.fn(actual.bakeSheen),
+  };
+});
+import * as texture from "../mobile/vinyl/vinylTexture";
 
 const GENRE = ALL_GENRES.find((genre) => genre.id === "deep-house") ?? ALL_GENRES[0];
 
@@ -269,6 +290,38 @@ describe("the record's look, as maths", () => {
     expect(discRotation(0, 0)).toBeCloseTo(NEEDLE_ANGLE + Math.PI / 2, 6);
     expect(discRotation(16, 0) - discRotation(0, 0)).toBeCloseTo(Math.PI * 2, 6);
   });
+
+  it("calls a parked, silent record idle — and anything that still moves, not", () => {
+    /**
+     * The one frame the loop can afford to skip is the frame it does not draw, so the predicate that
+     * decides has to be exact about what "nothing is moving" means. Each field is a motion the picture
+     * shows: the disc turning, the arm swinging, an envelope still ringing, the flash, the ripple, the
+     * eased glow colour and the eased tempo number.
+     */
+    const settled = {
+      playing: false,
+      scrubbing: false,
+      armMoving: false,
+      energy: 0,
+      needleFlash: 0,
+      ripple: 0,
+      glowDelta: 0,
+      bpmDelta: 0,
+    };
+    expect(vinylIsIdle(settled)).toBe(true);
+    // Each one on its own is enough to wake the loop.
+    expect(vinylIsIdle({ ...settled, playing: true })).toBe(false);
+    expect(vinylIsIdle({ ...settled, scrubbing: true })).toBe(false);
+    expect(vinylIsIdle({ ...settled, armMoving: true })).toBe(false);
+    expect(vinylIsIdle({ ...settled, energy: 0.4 })).toBe(false);
+    expect(vinylIsIdle({ ...settled, needleFlash: 0.5 })).toBe(false);
+    expect(vinylIsIdle({ ...settled, ripple: 0.5 })).toBe(false);
+    expect(vinylIsIdle({ ...settled, glowDelta: 12 })).toBe(false);
+    expect(vinylIsIdle({ ...settled, bpmDelta: 3 })).toBe(false);
+    // …but the residue of a decayed envelope is not: below these the frame is not visibly different.
+    expect(vinylIsIdle({ ...settled, energy: 0.005, needleFlash: 0.005, ripple: 0.005 })).toBe(true);
+    expect(vinylIsIdle({ ...settled, glowDelta: 0.4, bpmDelta: 0.01 })).toBe(true);
+  });
 });
 
 /* ------------------------------------------------------------------ the screen */
@@ -312,6 +365,210 @@ const renderPlayer = (
 
 /** One animation frame, so the canvas loop's non-drawing work (slaves, progress) has run. */
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+/**
+ * A 2D context that records instead of drawing.
+ *
+ * jsdom has no canvas, so the drawing path is normally invisible to tests (`getContext` returns null and
+ * the loop only maintains its clock). Installing this makes the real draw path run: every method is a
+ * no-op, `drawImage` counts, and the gradients and text metrics the sprites need come back shaped well
+ * enough to keep going.
+ */
+function recordingContext(onDrawImage: () => void): CanvasRenderingContext2D {
+  const gradient = { addColorStop: () => undefined };
+  const target: Record<string, unknown> = {};
+  return new Proxy(target, {
+    get(state, prop: string) {
+      if (prop === "createRadialGradient" || prop === "createLinearGradient") return () => gradient;
+      if (prop === "drawImage") return () => onDrawImage();
+      if (prop === "measureText") return () => ({ width: 12 });
+      if (prop in state) return state[prop];
+      return () => undefined;
+    },
+    set(state, prop: string, value) {
+      state[prop] = value;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+}
+
+/**
+ * A recorder for the canvas's `drawImage` calls.
+ *
+ * It has to be installed *before* the screen is rendered: the loop captures its 2D context once, when
+ * its effect mounts, so a spy installed afterwards would leave the loop on the `null` context jsdom
+ * hands out and nothing would draw at all.
+ */
+const recordingCanvas = () => {
+  let current = 0;
+  const spy = vi
+    .spyOn(HTMLCanvasElement.prototype, "getContext")
+    .mockImplementation(() => recordingContext(() => { current += 1; }));
+  return {
+    read: () => current,
+    reset: () => { current = 0; },
+    restore: () => spy.mockRestore(),
+  };
+};
+
+type Recorder = ReturnType<typeof recordingCanvas>;
+
+/** Run `frames` animation frames, returning how many `drawImage` calls each one made. */
+const drawImagesPerFrame = async (canvas: Recorder, frames: number): Promise<number[]> => {
+  const counts: number[] = [];
+  for (let i = 0; i < frames; i += 1) {
+    canvas.reset();
+    await nextFrame();
+    counts.push(canvas.read());
+  }
+  return counts;
+};
+
+/** Every `setProperty` of a beat slave, in order. */
+const slaveWrites = () => {
+  const log: { name: string; value: string; at: number }[] = [];
+  const spy = vi
+    .spyOn(CSSStyleDeclaration.prototype, "setProperty")
+    .mockImplementation(function (this: CSSStyleDeclaration, name: string, value: string | null) {
+      if (name === "--kick" || name === "--breath" || name === "--bpmBeat") {
+        log.push({ name, value: value ?? "", at: performance.now() });
+      }
+    });
+  return { log, restore: () => spy.mockRestore() };
+};
+
+describe("the record's per-frame budget", () => {
+  beforeEach(() => {
+    localStorage.setItem("groove_language", "zh");
+    vi.mocked(texture.bakeVinyl).mockClear();
+    vi.mocked(texture.bakeLabel).mockClear();
+    vi.mocked(texture.bakeDisc).mockClear();
+    vi.mocked(texture.bakeGlow).mockClear();
+    vi.mocked(texture.bakeSheen).mockClear();
+  });
+
+  it("bakes each sprite once and then reuses it, frame after frame", async () => {
+    /**
+     * The record is a baked texture plus a handful of glows, and the reason it can be drawn at all on a
+     * phone is that a frame blits those sprites instead of rebuilding them. Counting the bakes is how a
+     * test without a canvas can hold that: twelve paused frames must produce exactly one disc, one
+     * label, one sheen, one flat disc per dot and one glow per halo.
+     */
+    const canvas = recordingCanvas();
+    try {
+      renderPlayer();
+      await screen.findByTestId("mobile-player");
+      await drawImagesPerFrame(canvas, 12);
+    } finally {
+      canvas.restore();
+    }
+    expect(vi.mocked(texture.bakeVinyl).mock.calls.length).toBe(1);
+    expect(vi.mocked(texture.bakeLabel).mock.calls.length).toBe(1);
+    expect(vi.mocked(texture.bakeSheen).mock.calls.length).toBe(1);
+    // Four lane dots, the pip where a step is off, and the white core of an impulse.
+    expect(vi.mocked(texture.bakeDisc).mock.calls.length).toBe(6);
+    // Four lane halos, the centre bloom and the label wash (no needle glow: nothing is ringing).
+    expect(vi.mocked(texture.bakeGlow).mock.calls.length).toBe(6);
+  });
+
+  it("paints a parked record once and then leaves the canvas alone", async () => {
+    /**
+     * The audit's phone profile spent most of the *paused* player's budget redrawing a picture that was
+     * not changing. The loop now asks `vinylIsIdle` every frame and skips the draw when nothing on
+     * screen is moving — while keeping its `requestAnimationFrame`, so the clock, the slaves and the
+     * tempo readout all stay live.
+     */
+    const canvas = recordingCanvas();
+    try {
+      renderPlayer();
+      await screen.findByTestId("mobile-player");
+      const counts = await drawImagesPerFrame(canvas, 12);
+      // The first frame draws the whole record…
+      expect(counts[0]).toBeGreaterThan(10);
+      // …and by the end the loop is running without touching the canvas at all.
+      expect(counts.slice(-8).every((count) => count === 0)).toBe(true);
+
+      // A tab that was hidden can come back with its canvas dropped, so coming back is a wake-up: one
+      // more frame, and then quiet again.
+      document.dispatchEvent(new Event("visibilitychange"));
+      const afterReturn = await drawImagesPerFrame(canvas, 3);
+      expect(afterReturn[0]).toBeGreaterThan(10);
+      expect(afterReturn.slice(1).every((count) => count === 0)).toBe(true);
+    } finally {
+      canvas.restore();
+    }
+  });
+
+  it("draws on the very next frame when the transport starts", async () => {
+    const canvas = recordingCanvas();
+    try {
+      const { rerender, props } = renderPlayer();
+      await screen.findByTestId("mobile-player");
+      await drawImagesPerFrame(canvas, 6);
+      // Play: `playing` is not something the loop can wait to notice — the record has to start now.
+      rerender(
+        <LanguageProvider>
+          <div className="mobile-root" data-module="home">
+            <MobilePlayerScreen {...props} isPlaying />
+          </div>
+        </LanguageProvider>
+      );
+      canvas.reset();
+      await nextFrame();
+      expect(canvas.read()).toBeGreaterThan(10);
+    } finally {
+      canvas.restore();
+    }
+  });
+
+  it("publishes the beat slaves on a 0.05 grid, at most every 80 ms, and not at all once settled", async () => {
+    let step = 0;
+    const canvas = recordingCanvas();
+    const playing = renderPlayer({ isPlaying: true, readClock: () => ({ step: (step += 1), fraction: 0 }) });
+    await screen.findByTestId("mobile-player");
+    const writes = slaveWrites();
+    await drawImagesPerFrame(canvas, 24);
+    writes.restore();
+    canvas.restore();
+
+    const kick = writes.log.filter((write) => write.name === "--kick");
+    const breath = writes.log.filter((write) => write.name === "--breath");
+    const bpm = writes.log.filter((write) => write.name === "--bpmBeat");
+    expect(kick.length).toBeGreaterThan(0);
+    expect(breath.length).toBeGreaterThan(0);
+    expect(bpm.length).toBeGreaterThan(0);
+    // Two decimals is what the reference's CSS can resolve; the breath sits on its own grid.
+    for (const write of kick) expect(write.value).toMatch(/^\d+\.\d{2}$/);
+    for (const write of breath) {
+      expect(write.value).toMatch(/^\d+\.\d{2}$/);
+      expect(Math.round(Number(write.value) / 0.05)).toBeCloseTo(Number(write.value) / 0.05, 6);
+    }
+    // …and no two *publications* are closer together than the cap, whatever they carry. One publication
+    // writes up to three properties within the same millisecond, so a publication starts whenever the
+    // gap from the previous write is more than a frame.
+    const stamps = writes.log.map((write) => write.at).sort((a, b) => a - b);
+    const publications: number[] = [];
+    for (const at of stamps) {
+      if (!publications.length || at - publications[publications.length - 1] > 5) publications.push(at);
+    }
+    expect(publications.length).toBeGreaterThan(1);
+    for (let i = 1; i < publications.length; i += 1) {
+      expect(publications[i] - publications[i - 1]).toBeGreaterThanOrEqual(75);
+    }
+
+    // A parked, settled record publishes nothing at all: what it wrote on its first frame still stands.
+    playing.unmount();
+    const parked = recordingCanvas();
+    renderPlayer();
+    await screen.findByTestId("mobile-player");
+    await drawImagesPerFrame(parked, 4);
+    const settled = slaveWrites();
+    await drawImagesPerFrame(parked, 8);
+    settled.restore();
+    parked.restore();
+    expect(settled.log).toEqual([]);
+  });
+});
 
 describe("the ported full-screen player", () => {
   beforeEach(() => {
