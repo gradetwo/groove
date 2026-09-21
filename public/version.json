@@ -1,27 +1,27 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0",
   "releaseDate": "2026-09-21",
-  "changelogCount": 195,
+  "changelogCount": 196,
   "latest": {
-    "version": "2.7.0",
+    "version": "2.8.0",
     "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.7.0 两套新皮肤：现代极简主义 与 苏联岁月（构成主义宣传画）",
-      "en": "v2.7.0 Two New Skins: Modern Minimal, and Soviet Years as a Constructivist Poster"
+      "zh": "v2.8.0 手机端第四轮：BPM 与实际一致、播放器不再高亮、探索去掉残留黄色、详情页有设计感、挑战反馈即时、耗时测试交给 GitHub CI 手动触发",
+      "en": "v2.8.0 The Phone, Fourth Pass: the Tempo You See Is the Tempo That Plays, a Quiet Transport, No Amber Left in 探索, a Designed Genre Page, Instant Challenge Feedback, and the Slow Checks on a Manual CI Switch"
     },
     "highlights": [
       {
-        "zh": "**现代极简主义**：纸白底、黑墨字、Inter、发丝细线、**只留一个强调色**。这套皮肤的大部分工作其实是**删掉深色底**：外壳的极光、胶片颗粒、呼吸光晕、`backdrop-filter`、每一处 `rgba(232,232,255,α)` 白色薄层（在白底上等于看不见，改成两倍 alpha 的黑）、两条渐变，以及三个只在浅色下才暴露的状态问题——变暗的选项 `opacity-40` 只有 2.7:1、页脚呼吸的 span 3.0:1、以及那个「更亮一档」的强调色（在浅色下「更亮」就是看不见）。强调色用 `#2358e6` 而不是 `#2f6bff`：外壳会把强调色**填成实心**（首页分类片、挑战难度片、探索分段、「下一步」按钮），`#2f6bff` 在该实心底上只有 4.31:1，而这个同色相低一档的值双向都能到 5.6:1。",
-        "en": "**Modern minimal**: paper-white ground, black ink, Inter, hairline rules and **exactly one accent**. Most of the work was *deleting the dark ground*: the shell's aurora, film grain, breathing glow, `backdrop-filter`, every `rgba(232,232,255,α)` white wash (invisible on paper — now a black wash at twice the alpha), both gradients, and three failures that only a light ground exposes (a dimmed answer at `opacity-40` measured 2.7:1, the footer's breathing span 3.0:1, and a one-s…"
+        "zh": "**显示的 BPM 终于是真的**。你报的「修改后下一首歌会不一致」下面其实是三处各自独立的不一致，同一个根因：界面印的是**数据里的数字**，引擎播的是另一个。① 播放条一直显示 `genre.default_bpm`（一个常量），所以你搓过盘之后它错的就是你改动的量——现在它通过新的 `readTempo` 直接读引擎的 `getBpm()`，挂在驱动进度轨的同一个 5Hz 定时器上；② 全屏播放器的速度只在这一屏首次挂载时播种一次、之后再不复位，于是切歌后读数、阻尼器、引擎各说各话——现在 `genre.id` 一变就重新播种；③ 唱片的数字会从**上一首**的速度缓动过去，等于给音乐演了一段它并没有做的过渡——切歌时直接跳到新值（引擎是同拍切过去的），只有搓盘才缓动，因为搓盘本来就是缓动。",
+        "en": "**The displayed BPM is finally the real one.** The report — \"it disagrees after a change and on the next song\" — turned out to be three separate disagreements with one root cause: the UI printed a **number from the data** while the engine played another. (1) The player bar showed `genre.default_bpm`, a constant, so after a jog it was wrong by exactly the amount you had changed; it now reads the engine's own `getBpm()` through a new `readTempo`, on the same 5 Hz timer that dr…"
       },
       {
-        "zh": "**苏联岁月**：按你给的四点做的构成主义宣传画。① **色彩暴力美学**：国旗红 `#CC0000` 主色 + 钢铁黑 `#111111` + 做旧纸张黄 `#F4F1E1`，勋章金与工业钢蓝只作为**形状**（`#FFD700` 只留在深色上的 `--m-gold-hi`）；所有柔和过渡、发光、模糊全部换成硬边几何；文字用纸色而不是黑色压在红底上——因为黑压红只有 3.21:1，纸压红是 5.19:1。② **构成主义几何**：`Russo One` 全站标题，`skewX(-10deg)` 只作用于四处展示文字（绝不作用于控件——触控门禁量的是**变换后**的盒子）；卡片/标签/面板/打击垫用 `clip-path: polygon()` 做对角线切割，硬投影 `10px 10px 0 #000` 放在外层或改用零模糊 `drop-shadow`（clip-path 会把自己元素的阴影一起裁掉，文件里写了这个取舍）；点击态 `translate(5px,5px)` 且阴影 10px→3px、过渡改成 `steps(2,end)`，像重型机…",
-        "en": "**Soviet years**: the constructivist poster, built to the four points you gave. (1) **Violent colour**: flag red `#CC0000` as the accent with steel black `#111111` and aged paper `#F4F1E1`, medal gold and industrial steel blue used as *shape* (`#FFD700` survives only as `--m-gold-hi` on dark); every soft transition, glow and blur becomes hard-edged geometry; text on a red flood is paper rather than black, because black on red is 3.21:1 while paper on red is 5.19:1. (2) **Con…"
+        "zh": "**播放器的按钮不再高亮**。移植时照搬了参考稿的「已启用」处理（强调色 + 小圆点），而你的意见是对的：**图形本身已经说明了这个键是什么**（循环箭头＝大曲风内循环、随机＝全部随机、清单＝曲目单），再加一层更响的颜色和圆点是在重复同一件事。五套皮肤都在画它（漫画的黄色印块、像素的强调色灯、苏联的压印板、苏联岁月的红色大键），大的播放键在三套皮肤里也是实心强调色——现在整条传输都是中性墨色，状态仍然通过 `aria-label`/`aria-expanded` 暴露给辅助技术，`.on` 类保留为钩子但没有任何规则去画它。顺带把播放条的底板改成**稳定的类名**（`m-player-bar-plate`）：漫画皮肤原本按字面工具类 `bg-[rgba(20,20,31,0.94)]` 匹配，我把 alpha 改成 `0.9` 的那天它静默失效，最小化播放条就变回深底压深字——你报的「黑不隆冬 看不清」，比任何门禁都早发现。命名钩子不会这样漂移。",
+        "en": "**The player's buttons no longer highlight.** The port copied the reference's \"engaged\" treatment (accent colour plus a pip), and your point is right: **the glyph already says what the button is** (a repeat arrow for repeat-this-genre, a shuffle for shuffle-all, a list for the track list), so the colour and the pip repeat the same thing louder. All five skins were painting it (a yellow print block in comic, an accent lamp in pixel, a stamped plate in soviet, a red key in sov…"
       },
       {
-        "zh": "**皮肤层也一起扩到六套**：探索里复用的桌面视图（`legacySkin.css`）与「更多」里那四个面板（`panelSkin.css`）都以「列出所有已启用皮肤」的方式写选择器，所以新增皮肤必须同步改它们。这一步是脚本做的，而且做对了两个细节：注释要先挪走（这两个文件用散文解释自己，而散文里会引用选择器和花括号，正则会把句子当成规则「改写」），选择器列表要按括号深度切分（`bg-[#38bdf8]` 这种 Tailwind 任意值里就带逗号）。门禁测试也从「三个皮肤」改成遍历皮肤目录，否则新增皮肤时它会静默漏检——这正是它这次抓到的漏洞。",
-        "en": "**Both skin layers were extended to six as well**: 探索's reused desktop views (`legacySkin.css`) and the four panels behind 更多 (`panelSkin.css`) list every styled skin in their selectors, so a new skin has to reach all of them. That step was scripted, and two details mattered: comments have to be stashed first (both files explain themselves in prose that quotes selectors and braces, and a regex will happily rewrite a sentence), and selector lists must be split on commas *at b…"
+        "zh": "**「极光冷色」探索里那点老黄色，清掉了**。皮肤层（探索里复用的桌面视图、以及「更多」背后那四个面板）之前**故意只覆盖五套有独立样式表的皮肤**——`default` 没有自己的样式表，它就是 `mobile.css` 的基础外观——所以默认皮肤下那两个位置仍然是桌面配色：这就是你看到的黄色残留。现在 `legacySkin.css` 覆盖全部六套，实测在「和弦走向」子页里**找不到任何琥珀色**，底色变成外壳自己的 `rgb(11,11,20)`。面板那一层保留 `default` 豁免（那几个面板本来就是桌面的深色组件，压在深色外壳上是协调的），并且测试现在写明哪一层覆盖哪些皮肤，让这个区别是决定而不是疏漏。",
+        "en": "**The last of the desktop amber is gone from 探索 under the default skin.** The skin *layers* — the reused desktop views in 探索 and the four panels behind 更多 — deliberately covered only the five skins that ship a stylesheet of their own (`default` has none: it is the base look in `mobile.css`), so under the default skin those two surfaces kept the desktop palette, which is the residue you saw. `legacySkin.css` covers all six now, and a probe of the chords sub-page finds **zero*…"
       }
     ],
     "truncated": true
