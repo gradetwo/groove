@@ -53,7 +53,6 @@ const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ d
 // The cutover rule lives with the module vocabulary, where it can be tested without App.
 import { shouldEnterPhoneShell, type MobileModule } from "./mobile/mobileModules";
 // The phone's four 更多 panels are siblings of the shell, so their skin lives in its own scoped sheet.
-import "./mobile/skins/panelSkin.css";
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
 

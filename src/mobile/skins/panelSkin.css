@@ -493,6 +493,13 @@
 :root[data-skin="pixel"] .m-panels [class*="hover:border-line"]:hover {
   border-color: var(--m-line-2);
 }
+/* The help rail's own hover wash is a 4% white film, which is invisible on newsprint; on the phone
+   the rail answers with the raised surface instead. */
+:root[data-skin="comic"] .m-panels [class*="hover:bg-white/"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:bg-white/"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:bg-white/"]:hover {
+  background-color: var(--m-card);
+}
 
 /* =============================================================================================
  * 9. Inputs, options, placeholders, native control colour and focus
