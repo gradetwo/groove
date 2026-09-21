@@ -1,3 +1,4 @@
+import { trackColour, type TrackColourRole } from "../../utils/trackColours";
 import React, { memo, useId, useRef, useState, useCallback, useEffect } from "react";
 import { SequencerTrack } from "../../types/genre";
 import { Sliders, Sparkles, TrendingUp, TrendingDown, X, Dices, Repeat, Clock } from "lucide-react";
@@ -48,7 +49,7 @@ export interface VelocityLaneProps {
   stepCount: number;
   stepsPerBar: number;
   groupSize: number;
-  tracksConfig: Array<{ id: string; name: string; color: string }>;
+  tracksConfig: Array<{ id: string; name: string; colourRole: TrackColourRole }>;
 }
 
 export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
@@ -458,10 +459,10 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
                       : "bg-bg text-text-dim border-[#1e212b] hover:text-text"
                   }`}
                   style={{
-                    borderColor: isSelected ? trackMeta.color : undefined,
+                    borderColor: isSelected ? trackColour(trackMeta.colourRole) : undefined,
                   }}
                 >
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: trackMeta.color }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: trackColour(trackMeta.colourRole) }} />
                   <span>{trackMeta.name}</span>
                 </button>
               );
@@ -620,8 +621,8 @@ export const VelocityLane = memo<VelocityLaneProps>(function VelocityLane({
                   } ${isPlayhead ? "ring-1 ring-white" : ""}`}
                   style={{
                     height: `${heightPercent}%`,
-                    backgroundColor: meta.color,
-                    ["--tc" as any]: meta.color,
+                    backgroundColor: trackColour(meta.colourRole),
+                    ["--tc" as any]: trackColour(meta.colourRole),
                   }}
                 >
                   {/* Top LED pip */}

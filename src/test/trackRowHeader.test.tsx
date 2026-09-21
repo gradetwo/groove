@@ -24,7 +24,7 @@ const META: TrackMetaConfig = {
   id: "kick",
   name: "KICK",
   sub: { zh: "底鼓", en: "Kick" },
-  color: "#ff5964",
+  colourRole: "kick",
 };
 
 function makeTrack(overrides: Partial<SequencerTrack> = {}): SequencerTrack {

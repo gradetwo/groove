@@ -1,3 +1,4 @@
+import { trackColour } from "../../utils/trackColours";
 import React from "react";
 import { Genre, SequencerPattern } from "../../types/genre";
 import { GrooveProject } from "../../types/project";
@@ -98,7 +99,7 @@ export const SequencerModals: React.FC<SequencerModalsProps> = ({
           isOpen={pitchPicker.isOpen}
           onClose={() => setPitchPicker((prev) => ({ ...prev, isOpen: false }))}
           trackName={pattern.tracks[pitchPicker.trackIdx]?.name || "Track"}
-          trackColor={DEMO_TRACKS_CONFIG[pitchPicker.trackIdx % DEMO_TRACKS_CONFIG.length].color}
+          trackColor={trackColour(DEMO_TRACKS_CONFIG[pitchPicker.trackIdx % DEMO_TRACKS_CONFIG.length].colourRole)}
           stepIdx={pitchPicker.stepIdx}
           initialNote={pitchPicker.initialNote}
           language={language}

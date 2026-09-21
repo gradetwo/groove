@@ -42,7 +42,7 @@ const baseProps = {
   stepCount: 4,
   stepsPerBar: 4,
   groupSize: 4,
-  tracksConfig: [{ id: "lead", name: "LEAD", color: "#45e0c9" }],
+  tracksConfig: [{ id: "lead", name: "LEAD", colourRole: "lead" as const }],
 };
 
 const renderLane = (dimension: ParameterDimension = "velocity", overrides: Record<string, unknown> = {}) =>

@@ -91,7 +91,7 @@ function baseTrackRowProps(overrides: Record<string, unknown> = {}) {
   return {
     track: makeTrack("Kick", "kick"),
     trackIdx: 0,
-    meta: { id: "kick", name: "Kick", sub: { zh: "底鼓", en: "Kick" }, color: "#ff5964" },
+    meta: { id: "kick", name: "Kick", sub: { zh: "底鼓", en: "Kick" }, colourRole: "kick" },
     isSolo: false,
     isMute: false,
     isSilenced: false,
@@ -180,7 +180,7 @@ describe("Item 9: Track Row Fold and Type Indicator Badges", () => {
         {...baseTrackRowProps({
           track: drumTrack,
           trackIdx: 0,
-          meta: { id: "kick", name: "Kick", sub: { zh: "底鼓", en: "Kick" }, color: "#ff5964" },
+          meta: { id: "kick", name: "Kick", sub: { zh: "底鼓", en: "Kick" }, colourRole: "kick" },
         })}
       />
     );
@@ -194,7 +194,7 @@ describe("Item 9: Track Row Fold and Type Indicator Badges", () => {
         {...baseTrackRowProps({
           track: bassTrack,
           trackIdx: 4,
-          meta: { id: "bass", name: "Bass", sub: { zh: "贝斯", en: "Bass" }, color: "#38bdf8" },
+          meta: { id: "bass", name: "Bass", sub: { zh: "贝斯", en: "Bass" }, colourRole: "bass" },
         })}
       />
     );

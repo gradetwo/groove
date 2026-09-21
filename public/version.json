@@ -1,27 +1,27 @@
 {
-  "version": "2.10.0",
+  "version": "2.11.0",
   "releaseDate": "2026-09-21",
-  "changelogCount": 199,
+  "changelogCount": 200,
   "latest": {
-    "version": "2.10.0",
+    "version": "2.11.0",
     "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.10.0 六套皮肤走进 PC 与 iPad：色板由手机端生成，桌面端也有各自的气质，设置里可切换",
-      "en": "v2.10.0 The Six Skins on PC and iPad: the Palette Generated From the Phone's, Each Skin's Own Character, and a Picker in Settings"
+      "zh": "v2.11.0 运行时皮肤审计：让「看着没问题、其实读不出来」变成机器拦住；并把 JS 里写死的颜色收进 token",
+      "en": "v2.11.0 A Runtime Skin Audit: Turning 'Looks Fine, Cannot Be Read' Into a Gate, and Moving JavaScript's Hardcoded Colours Into Tokens"
     },
     "highlights": [
       {
-        "zh": "**皮肤从「手机专属」变成「整个应用」。** 在此之前，六套皮肤只作用于手机外壳（`src/mobile/`，选择器都在 `.mobile-root` 之下），桌面端与 iPad 端只有一套硬编码在 `tailwind.config.js` 里的深色调色板，加上散落在 `src/` 里的约 **1700 处 `bg-[#…]` 字面色值**。现在桌面的色板是**由手机端自己的 token 生成的**：`scripts/desktop_skins.mjs` 直接读 `src/mobile/skins/<id>.css`，把底色、卡片、线条、墨色、强调色以及由它们推导出的悬停/柔和/发光色写进 `src/styles/`（`desktopTokens.css` 是默认皮肤、随首屏；`desktopSkins.css` 是另外五套调色板与字面映射，跟随皮肤懒加载）。`check:skins` 会在手机端色板改动而没重新生成时失败——两个界面因此不可能各说各话。",
-        "en": "**The skins stop being the phone's and become the app's.** Until now the six skins applied only to the phone shell (`src/mobile/`, every selector under `.mobile-root`), while the desktop and the iPad had one hardcoded dark palette in `tailwind.config.js` plus ~**1 700 literal `bg-[#…]` values** across `src/`. The desktop palette is now **generated from the phone's own tokens**: `scripts/desktop_skins.mjs` reads `src/mobile/skins/<id>.css` and writes the ground, card, lines,…"
+        "zh": "**新增 `npm run probe:skins`：在真实渲染里量对比度，而不是在样式表里猜。** 六套皮肤上线时已经有三个结构性门禁（CSS 契约、生成物一致性、源码级对比度扫描），却仍然要靠五轮人工看截图才发现问题——因为那些问题都有一个共同的形状：**某个颜色落在它实际所在的位置上读不出来**。所以新探针走真实的页面：每套皮肤 × 每类视图，逐个可见文字元素测它与**真正绘制在背后的颜色**的对比度（沿祖先链合成半透明层、渐变取最差的一档），并要求正文 ≥4.5:1、大字 ≥3:1；同时断言没有控件被水平裁切（滚动条带内的除外，那是设计）与控制台无错误。它已进 `verify`，手动 CI 新增 `skins` 档跑全量（6 皮肤 × 12 视图）。",
+        "en": "**New `npm run probe:skins`: measure contrast in the real render instead of guessing from the stylesheet.** The six-skin round shipped with three structural gates (the CSS contract, the generated-palette check, a source-level contrast scan) and still needed five rounds of human screenshot review — because every bug had the same shape: **a colour that cannot be read where it actually lands**. The probe walks the rendered page, per skin per view, and measures every visible tex…"
       },
       {
-        "zh": "**字面色值按「角色」映射，而不是按颜色。** Tailwind 的命名色（`bg-panel`、`text-accent`…）现在都解析成 `rgb(var(--d-…) / <alpha-value>)`，所以透明度写法照常可用；但源码里那 458 个不同的字面色值编译后的工具类改不了，于是生成器把**每一个**用到的字面色值按**最接近的角色**映射到 token 上（496 条规则只写 token，因此一条规则服务六套皮肤）。另外两类也一并处理：Tailwind **自带调色板**（`from-indigo-500`、`bg-purple-600`、`text-amber-400`）按色相家族映射到语义角色（绿=成功、红=危险、琥珀=警告、靛/紫/青=强调），**中性灰阶**按前缀与深浅映射（深灰填充=面板、浅灰=纸面、灰边框=发丝线、灰字=墨色层级）——后者修掉了一个真实缺陷：挑战页的 A/B/C/D 选项卡是 `bg-neutral-800` + 外壳墨色，在浅色皮肤上曾经是「深底压深字」完全看不见。实测现在三套浅/深皮肤的选项卡对…",
-        "en": "**Literals are mapped by *role*, not by colour.** Tailwind's named colours (`bg-panel`, `text-accent`, …) now resolve through `rgb(var(--d-…) / <alpha-value>)`, so opacity utilities keep working; but the 458 distinct literal values in the source compile to utilities a skin cannot reach, so the generator maps **every** literal in use to its **nearest role** (496 rules that name only tokens, so one rule serves all six skins). Two more families are handled the same way: Tailwin…"
+        "zh": "**它第一次运行就找到了真问题，其中两个是我这一轮亲手制造的。** ① 工作室 109 个、和弦页 113 个元素读不出来：钢琴卷帘的音名标签是白字，压在**55% 透明度的车道色**上——浅色皮肤下那层是浅色，白字等于消失（这是最大的一类）；② 和弦页的歌名用 `#d8b988`（柔和的强调色）映射成「更亮的强调色」，在纸底只有 3.3:1；③ 挑战页的段位色是**写在 JS 里的十六进制**，白银在纸底 **1.6:1**；④ 移动端「warning」用的浅色形状 token 在纸底 1.13:1。这些都不是「配色不好看」，而是**读不出来**，也正是样式表扫描永远看不到的部分。",
+        "en": "**Its first run found real problems — two of them mine from this round.** (1) 109 elements unreadable in the studio and 113 on the chords page: the piano-roll note names are white text on a lane fill at **55 % opacity**, which under a light skin is a light tint, so the labels vanished (the largest class); (2) the chord page's song titles map the soft accent `#d8b988` to a *lighter* accent, which is 3.3:1 on paper; (3) the challenge tiers were **hex colours written in JavaScr…"
       },
       {
-        "zh": "**每套皮肤在桌面端也有自己的气质**，不只是换色：`minimal` 是发丝线与 Inter、把桌面所有阴影与渐变整片关掉（用一条 1px 强调描边表达层级）；`soviet` 是冲压钢板（方角、2px 边、上下内阴影的斜面、石碑式大写、按下时 `translate(1px,1px)` 且过渡用 `steps(2,end)`）；`comic` 是新闻纸（Bangers/Patrick Hand、网点与纸纤维用 `background-image` 固定铺在根上、硬墨块取代柔和投影、套印错位的青/品红版条）；`pixel` 是 VT323/Press Start 2P、2px 阶梯边框、扫描线与像素网格、取消所有渐变与模糊；`sovietYears` 是构成主义宣传画（`Russo One` + `skewX(-10deg)` 仅用于展示文字、对角 `clip-path` 切角并配零模糊投影、国旗红压顶线、ПРАВДА 钢印、星形点缀、机械式按压）。**五个文件都只作用在桌面表面**（`[data-surface=\"desktop\"]`）：手机…",
-        "en": "**Each skin has its own character on the desktop too**, not just a palette: `minimal` is hairlines and Inter with every shadow and gradient switched off; `soviet` is stamped steel (square corners, 2px edges, an inset bevel, stencilled capitals, a press that travels `translate(1px,1px)` on `steps(2,end)`); `comic` is newsprint (Bangers/Patrick Hand, Ben-Day dots and paper fibre fixed on the root as `background-image`, hard ink blocks instead of soft shadows, cyan/magenta misr…"
+        "zh": "**把「颜色由 JavaScript 决定」这条根清掉。** 段位色与乐器色现在都是**角色**：`challengeAlgorithm` 说 `colourRole: \"neutral\"`，`trackConfig.ts` 说 `colourRole: \"bass\"`，由 `src/utils/rankColours.ts` 与 `src/utils/trackColours.ts` 在每个界面各自映射到自己的 token（手机 `--m-*`、桌面 `--d-*`），并且每个角色都要在**六套皮肤的两端**都过 4.5:1——新增的 `rankColours.test.ts` 就是这条闸门（它当时一次抓出 6 个不合格组合，包括手机端 1.13:1 那个）。金属感留给图标（🥉🥈🥇），因为字形不是颜色，它在任何主题下都活着。",
+        "en": "**Rooting out 'the colour is decided in JavaScript'.** Tier colours and instrument colours are **roles** now: `challengeAlgorithm` says `colourRole: \"neutral\"`, `trackConfig.ts` says `colourRole: \"bass\"`, and `src/utils/rankColours.ts` / `src/utils/trackColours.ts` map them to each surface's own tokens (the phone's `--m-*`, the desktop's `--d-*`). Every role has to clear 4.5:1 on **every skin of both surfaces** — the new `rankColours.test.ts` is that gate, and it immediately…"
       }
     ],
     "truncated": true

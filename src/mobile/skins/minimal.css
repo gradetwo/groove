@@ -180,6 +180,8 @@
      SPACE-separated — the components build `rgb(var(--m-gold-rgb)/0.5)` from it. */
   --m-gold: #2358e6;
   --m-gold-hi: #1d49bd;
+  /* A warm step readable as *text* on this skin's card — the challenge's rank roles need one. */
+  --m-warning: #b03a0b;
   --m-gold-rgb: 35 88 230;
 
   background: var(--m-bg);

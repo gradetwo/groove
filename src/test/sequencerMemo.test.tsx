@@ -54,13 +54,13 @@ const META: TrackMetaConfig = {
   id: "kick",
   name: "KICK",
   sub: { zh: "底鼓", en: "Kick" },
-  color: "#ff5964",
+  colourRole: "kick",
 };
 
 const METAS: TrackMetaConfig[] = [
   META,
-  { id: "snare", name: "SNARE", sub: { zh: "军鼓", en: "Snare" }, color: "#ffb65c" },
-  { id: "hat", name: "HI-HAT", sub: { zh: "踩镲", en: "Hi-Hat" }, color: "#45e0c9" },
+  { id: "snare", name: "SNARE", sub: { zh: "军鼓", en: "Snare" }, colourRole: "snare" },
+  { id: "hat", name: "HI-HAT", sub: { zh: "踩镲", en: "Hi-Hat" }, colourRole: "hat" },
 ];
 
 function makeTrack(overrides: Partial<SequencerTrack> = {}): SequencerTrack {

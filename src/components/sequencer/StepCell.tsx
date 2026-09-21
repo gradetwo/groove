@@ -243,7 +243,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
               boxShadow: `0 0 8px ${trackColor}`,
             }}
           />
-          <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[7.5px] font-bold text-white/60 tracking-tighter leading-none pointer-events-none drop-shadow">
+          <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[7.5px] font-bold text-[var(--tc-ink)] opacity-60 tracking-tighter leading-none pointer-events-none">
             {isSustainEnd ? "┤" : "─"}
           </span>
         </>
@@ -304,7 +304,7 @@ export const StepCell = memo<StepCellProps>(function StepCell({
 
       {/* Melodic note name readout */}
       {isOn && isMelodic && typeof midiNote === "number" && midiNote > 0 && !isOutsideLoop && (
-        <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[8px] font-black text-white tracking-tighter leading-none pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+        <span className="absolute inset-x-0 bottom-0.5 text-center font-['JetBrains_Mono'] text-[8px] font-black text-[var(--tc-ink)] tracking-tighter leading-none pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
           {midiToNoteName(midiNote)}
         </span>
       )}

@@ -1,3 +1,4 @@
+import { trackColour, type TrackColourRole } from "../../utils/trackColours";
 import React, { useState, useMemo } from "react";
 import { SequencerTrack } from "../../types/genre";
 import { generateEuclidean, EUCLIDEAN_PRESETS } from "../../audio/Euclidean";
@@ -9,7 +10,7 @@ interface EuclideanModalProps {
   isOpen: boolean;
   onClose: () => void;
   tracks: SequencerTrack[];
-  tracksConfig: Array<{ id: string; name: string; color: string }>;
+  tracksConfig: Array<{ id: string; name: string; colourRole: TrackColourRole }>;
   initialTrackIdx?: number;
   onApplyEuclidean: (trackIdx: number, steps: number[]) => void;
   language?: "zh" | "en";
@@ -124,9 +125,9 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                         ? "bg-[#181a22] text-[#f0ede6] shadow-[0_0_10px_rgba(0,0,0,0.5)] scale-105"
                         : "bg-bg text-text-dim border-[#1e212b] hover:text-text"
                     }`}
-                    style={{ borderColor: isSelected ? meta.color : undefined }}
+                    style={{ borderColor: isSelected ? trackColour(meta.colourRole) : undefined }}
                   >
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.color }} />
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: trackColour(meta.colourRole) }} />
                     <span>{meta.name}</span>
                   </button>
                 );
@@ -205,9 +206,9 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                       .filter((p) => p.isOn)
                       .map((p) => `${p.x},${p.y}`)
                       .join(" ")}
-                    fill={activeMeta.color}
+                    fill={trackColour(activeMeta.colourRole, "fill")}
                     fillOpacity="0.12"
-                    stroke={activeMeta.color}
+                    stroke={trackColour(activeMeta.colourRole, "fill")}
                     strokeWidth="1.5"
                   />
                 )}
@@ -219,7 +220,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                       cx={pt.x}
                       cy={pt.y}
                       r={pt.isOn ? 6.5 : 3}
-                      fill={pt.isOn ? activeMeta.color : "#282c38"}
+                      fill={pt.isOn ? trackColour(activeMeta.colourRole, "fill") : "#282c38"}
                       stroke={pt.isOn ? "#ffffff" : "none"}
                       strokeWidth={pt.isOn ? 1.5 : 0}
                     />
@@ -229,7 +230,7 @@ export const EuclideanModal: React.FC<EuclideanModalProps> = ({
                         cy={pt.y}
                         r={10}
                         fill="none"
-                        stroke={activeMeta.color}
+                        stroke={trackColour(activeMeta.colourRole, "fill")}
                         strokeWidth="0.75"
                         strokeDasharray="2 2"
                         className="animate-pulse"

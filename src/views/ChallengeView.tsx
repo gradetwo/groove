@@ -35,6 +35,7 @@ import {
   ChallengeDifficulty,
   DEFAULT_INITIAL_ELO,
 } from "../utils/challengeAlgorithm";
+import { tierColour } from "../utils/rankColours";
 import { triggerHaptic, HapticPatterns } from "../utils/haptics";
 import { ChallengeCertificateModal } from "../components/ChallengeCertificateModal";
 
@@ -416,7 +417,8 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
               </span>
               <span
                 className="text-xs sm:text-sm font-black flex items-center space-x-1"
-                style={{ color: tierInfo.tier.color }}
+                /* A role the surface maps to its own token — see `src/utils/rankColours.ts`. */
+                style={{ color: tierColour(tierInfo.tier.colourRole, "desktop") }}
               >
                 <span>{tierInfo.tier.icon}</span>
                 <span>{isZh ? tierInfo.tier.nameZh : tierInfo.tier.nameEn}</span>
