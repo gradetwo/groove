@@ -45,6 +45,15 @@ import "./skins/pixel.css";
  */
 import "./skins/legacySkin.css";
 /**
+ * The panels 更多 opens (更新记录 / 设置 / 手册 / 搜索) wear the skin too.
+ *
+ * Imported *here*, not from `App.tsx` where those panels are mounted: the initial route has a hard bundle
+ * budget and this sheet is phone-only, so it belongs in the shell's own chunk. The scoping (`.m-panels`)
+ * does not care which module loads the file — only that it is loaded by the time a phone can open a panel,
+ * which is exactly when this chunk is.
+ */
+import "./skins/panelSkin.css";
+/**
  * The phone layout pass over the reused desktop views (探索).
  *
  * Imported last so a same-specificity rule of ours wins, and scoped to `.mobile-root

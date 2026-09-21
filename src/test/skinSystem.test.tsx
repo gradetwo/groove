@@ -484,11 +484,22 @@ describe("skin stylesheets", () => {
     return out;
   };
 
-  it("ships the panel sheet, imported by App where the m-panels scope wrapper is", () => {
+  it("ships the panel sheet, imported by the phone shell that owns the scope wrapper", () => {
     expect(fs.existsSync(PANEL_SHEET), "panelSkin.css").toBe(true);
+    /**
+     * The **shell** imports the sheet, while the `m-panels` wrapper lives in `App`'s phone branch.
+     *
+     * That split is deliberate and load-bearing: the initial route has a hard bundle budget and this
+     * sheet is phone-only, so it must ride the shell's own (lazy) chunk. It was in `App.tsx` first, which
+     * put ~2 KB of gzip on every desktop visit and took the initial route 1.4 KB over its limit — caught
+     * by `check:budget`, which is exactly why that gate exists.
+     */
+    const shell = fs.readFileSync(path.join(process.cwd(), "src", "mobile", "MobileApp.tsx"), "utf8");
     const app = fs.readFileSync(path.join(process.cwd(), "src", "App.tsx"), "utf8");
-    // The import lives with the other `./mobile/…` imports; the wrapper lives in App's phone branch.
-    expect(app, "panelSkin.css is not imported by App").toContain('import "./mobile/skins/panelSkin.css";');
+    expect(shell, "panelSkin.css is not imported by the phone shell").toContain(
+      'import "./skins/panelSkin.css";'
+    );
+    expect(app, "panelSkin.css must not be imported by the initial route").not.toContain("panelSkin.css");
     expect(app, "the panel scope wrapper is gone").toContain('className="m-panels"');
   });
 
