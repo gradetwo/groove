@@ -55,7 +55,9 @@
  * ring** (`box-shadow: 0 0 0 1px`) rather than a thicker border, and inner rules are *inset* bands
  * (`inset 0 2px 0 0`) rather than `border-top: 3px`. A ring and an inset band paint outside the flow:
  * the edge reads as 2–3px of ink while every box keeps the exact size the default skin gives it. The
- * one rotation in the file sits on the decorative, `aria-hidden` cover tiles, never on a control.
+ * rotations in the file sit on the decorative, `aria-hidden` cover tiles and on the mono section
+ * kickers — never on a control — and `transform` is a paint-only property, so even those cannot move
+ * a box the Playwright gate measures.
  *
  * The halftone screen
  * -------------------
@@ -65,14 +67,30 @@
  *
  * Fonts
  * -----
- * `"Bangers"` is the hand-lettered display face, at 0.02em tracking and never negatively tracked
- * because a letterpress display face already touches its own shoulders. It is put only on boxes whose
- * line box is already pinned — the page titles (`leading-none`), the record's name line (`line-height:
- * 1`) and the player's wordmark (sitting beside a 44px key) — since a display face has different
- * vertical metrics and a face that grew a line box would push every control below it down the page.
- * Body copy and labels are `"Comic Neue"`, the comic lettering that stays readable at 12–13px and, for
- * CJK, falls through to the platform's system face. `.m-mono` keeps JetBrains Mono — the numerals are a
- * dial readout and must stay tabular — and is recoloured through the ink tokens rather than refaced.
+ * The page is **lettered**, not typeset, so there are two hands and an instrument voice between them.
+ *
+ * `"Permanent Marker"` is the display hand — a chisel-tip marker, which is what a comic's title, its
+ * logo and its big round number are drawn with. `"Bangers"` stays directly behind it in the stack: it
+ * is the lettered-comic face this skin shipped with, and the fallback while the marker face is still
+ * in flight. The marker is put only on boxes whose line box is already pinned or floored — the page
+ * titles (`leading-none`), the record's name line (`line-height: 1` and a `min-height: 58px` row), the
+ * player's wordmark (sitting beside a 44px key) and the tempo numeral (`min-width: 62px`) — because a
+ * marker face has different vertical metrics and a wider numeral, and a face that grew a line box or
+ * a readout that grew a row would push the controls below it down the page and off the measured
+ * layout.
+ *
+ * `"Patrick Hand"` is the body hand — body copy, labels, buttons and lists, at 0.02em tracking or
+ * wider and never negatively tracked, because a hand-lettered page puts air between its letters.
+ * `"Comic Neue"` (the lettering the skin used to set everything in) is the first fallback and the UI
+ * grotesque is behind that. Neither hand carries CJK, so Chinese copy falls through to the platform's
+ * system face, exactly as it did before. Because the handwriting face sits about a tenth under Comic
+ * Neue on x-height, the small *body* labels go up one pixel where the box can absorb it — never down,
+ * and never the mono voice, whose own x-height is large already.
+ *
+ * `.m-mono` keeps JetBrains Mono — the numerals are a dial readout and must stay tabular — and the
+ * `--m-font-mono` token restates it so the canvas paints the same face. It is recoloured through the
+ * ink tokens rather than refaced, and annotated by hand instead: a hard half-pixel ink stamp under
+ * the readout, and a double pencil rule under the uppercase mono labels.
  *
  * Scope
  * -----
@@ -109,7 +127,17 @@
   --m-gold: #0b6e7f;
   --m-gold-hi: #063c46;
   --m-gold-rgb: 11 110 127;
-  font-family: "Comic Neue", "Space Grotesk", system-ui, sans-serif;
+  /*
+   * The two hands, exposed as tokens because `VinylCanvas` reads them off the shell root and paints
+   * the record's paper label with them: the canvas cannot inherit CSS through a `<canvas>`, so the
+   * label's face has to be a variable the stylesheet owns, and a label that did not restate the
+   * skin's own faces would be the one printed thing on screen that still looked like an app.
+   */
+  --m-font-display: "Permanent Marker", "Bangers", "Space Grotesk", sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* Body copy, labels, buttons and lists: the handwriting voice, with the lettering this skin
+     shipped with (Comic Neue) as the first fallback and the UI grotesque behind it. */
+  font-family: "Patrick Hand", "Comic Neue", "Space Grotesk", system-ui, sans-serif;
 }
 
 /*
@@ -141,17 +169,32 @@
 /* ---------------------------------------------------------------------------------------------
  * 2. Letterforms
  *
- * The display face goes on the page titles, the wordmark and the record's name line — the places a
- * comic would letter by hand. Everything else stays on Comic Neue so long Chinese/Latin pairs do not
- * turn into a logo. The swap is deliberately limited to boxes whose line box is already pinned by a
- * `leading-none` / `line-height: 1` utility (or, for the wordmark, by the 44px key beside it): a
- * display face has different vertical metrics, and a face that grew a line box would push every
- * control below it down the page.
+ * Two hands, the way a comic is lettered: a **marker** for the loud voice, a **handwriting** for
+ * everything you actually have to read, and the **mono** readout left alone as a face and annotated
+ * by hand instead.
+ *
+ *   display  Permanent Marker over Bangers over the UI grotesque. The page titles, the player's
+ *            wordmark, the now-playing name and the tempo numeral — the places a letterer reaches
+ *            for the chisel tip. Every one of those boxes is already pinned or floored by the shell
+ *            (`leading-none`, `line-height: 1`, `min-height: 58px` on the now-line, `min-width: 62px`
+ *            on the tempo block, a 44px key beside the wordmark), which is what makes a face with
+ *            wider glyphs and different vertical metrics safe to put there.
+ *   body     Patrick Hand, falling through Comic Neue to the UI grotesque. Body copy, labels,
+ *            buttons and lists — the reading voice, and the one that has to stay legible at 10–13px.
+ *   mono     JetBrains Mono, kept tabular: `.m-mono` is the instrument readout (years, BPM, ELO, the
+ *            step labels) and a proportional face there would make a changing number shift the row.
+ *
+ * The rule list below uses `var(--m-font-display)` / `var(--m-font-mono)` rather than restating the
+ * stacks, because the canvas reads those same two tokens to paint the record's label: one
+ * declaration, so the CSS and the record can never drift apart.
  * ------------------------------------------------------------------------------------------- */
 :root[data-skin="comic"] .mobile-root .m-rise h1,
 :root[data-skin="comic"] .mobile-root .m-brand b,
-:root[data-skin="comic"] .mobile-root .m-now-name {
-  font-family: "Bangers", "Space Grotesk", system-ui, sans-serif;
+:root[data-skin="comic"] .mobile-root .m-now-name,
+:root[data-skin="comic"] .mobile-root .m-bpm-val b {
+  font-family: var(--m-font-display);
+  /* A press display face already touches its own shoulders; a *hand* leaves a gap. 0.02em is the
+     floor in this skin — tracking is never tightened anywhere in the file. */
   letter-spacing: 0.02em;
 }
 :root[data-skin="comic"] .mobile-root .m-rise h1 {
@@ -159,14 +202,82 @@
   /* Cyan one way, magenta the other: the key plate is the ink letter itself. Kept to ~1.5px because a
      CJK title is a dense block of strokes — a wider register would close the counters. */
   text-shadow: 1.5px 1.5px 0 #ff2d95, -1px -1px 0 #00e5ff;
-  /* The rule under a title is a 3px block of ink, drawn as a shadow so no box moves. */
-  box-shadow: 0 3px 0 0 var(--m-ink);
+  /* A marker ruled twice against a straight-edge: a 3px block of ink with a 2px ghost a hair below
+     it. Both are shadows, so the title's box does not move by a pixel. */
+  box-shadow: 0 3px 0 0 var(--m-ink), 0 5px 0 0 rgb(17 16 20 / 0.45);
 }
-/* Numerals are a dial readout: keep them tabular wherever the shell prints a number. */
-:root[data-skin="comic"] .mobile-root .m-mono,
-:root[data-skin="comic"] .mobile-root .m-tabular,
-:root[data-skin="comic"] .mobile-root .m-bpm-val b {
+/*
+ * Section headings carry the same double rule one weight down — a 2px ink stroke with a 1px ghost.
+ * In this shell an `h2` is either a 13px card title or a mono kicker; both are annotations written
+ * across the top of a panel, so both are ruled. Drawn as shadows again: a `border-bottom` would add
+ * a pixel of height to flex rows (the Jam card header) whose height the shell already decided.
+ */
+:root[data-skin="comic"] .mobile-root h2 {
+  box-shadow: 0 2px 0 0 var(--m-ink), 0 3px 0 0 rgb(17 16 20 / 0.45);
+}
+/* The instrument voice. Restated from the token so the canvas label matches, kept tabular so a
+   counting readout does not shuffle sideways, and stamped rather than set: a hard half-pixel ink
+   shadow reads as rubber-stamp bleed on paper and disappears on the black nav band. */
+:root[data-skin="comic"] .mobile-root .m-mono {
+  font-family: var(--m-font-mono);
   font-variant-numeric: tabular-nums;
+  text-shadow: 0.5px 0.5px 0 rgb(17 16 20 / 0.3);
+}
+/* The uppercase mono labels (GENRES · 159, TIER, KICK, TEMPO CLUE) are hand-annotated: a double
+   pencil rule, painted by `text-decoration` so the line box pays nothing for it. */
+:root[data-skin="comic"] .mobile-root .m-mono[class~="uppercase"] {
+  text-decoration: underline double;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+/* A kicker is written onto the page, not typeset onto it, so it sits a fraction off the rule it
+   annotates. `transform` is paint-only: no control and no measured box moves. */
+:root[data-skin="comic"] .mobile-root h2.m-mono {
+  transform: rotate(-0.6deg);
+}
+/* Numerals elsewhere (the 挑战 score) take the hand like any other body text; tabular figures are
+   simply restated where the face has them. */
+:root[data-skin="comic"] .mobile-root .m-tabular {
+  font-variant-numeric: tabular-nums;
+}
+/*
+ * The +1px pass.
+ *
+ * Patrick Hand's x-height is roughly a tenth under Comic Neue's, so the sizes the shell uses for its
+ * small *body* labels — 10px in the top bar, 11px under the record's name, 13px in the cue list —
+ * would read smaller in the hand than they did in the lettering face they replaced. Those labels go
+ * up one pixel. Never down, and not the mono voice, whose x-height is large already. Each of these
+ * lives in a box whose height is floored independently of the glyphs (`min-height` 48px on a cue
+ * row, 58px on the now-line) or is centred against a 44px key (the top bar), so the extra pixel is
+ * absorbed rather than passed on to a control.
+ */
+:root[data-skin="comic"] .mobile-root .m-brand span,
+:root[data-skin="comic"] .mobile-root .m-status,
+:root[data-skin="comic"] .mobile-root .m-cue-item .m-cn {
+  font-size: 11px;
+}
+:root[data-skin="comic"] .mobile-root .m-now-cn {
+  font-size: 12px;
+}
+:root[data-skin="comic"] .mobile-root .m-cue-item .m-nm {
+  font-size: 14px;
+}
+/*
+ * The tempo keys are UI, not readout: the shell gives them `"Space Grotesk"` by hand, so they are
+ * pointed back at the shell's body face. `inherit` rather than a restated stack, so the buttons
+ * follow whatever hand the skin sets on `.mobile-root` and cannot become a second source of truth.
+ */
+:root[data-skin="comic"] .mobile-root .m-bpm-ctl button {
+  font-family: inherit;
+}
+/*
+ * The floor on tracking. A hand-lettered page has air between its letters and tightened type is the
+ * one typographic move that reads as a screen rather than a press, so any negative tracking utility
+ * the shell ever grows is matched and pushed back to 0.02em. The shell has none today; this is the
+ * rule that keeps it that way, not a restyle of anything visible.
+ */
+:root[data-skin="comic"] .mobile-root [class*="tracking-[-"] {
+  letter-spacing: 0.02em;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -197,8 +308,10 @@
   background-size: 6px 6px;
   box-shadow: 0 3px 0 0 var(--m-ink);
 }
-/* The wordmark keeps `.m-mono` — the brief lets the monospace stack stand — and takes the inks and
-   the two-plate fringe instead of a face swap, because its line box is not pinned by a utility. */
+/* The masthead wordmark is the shell's byline and keeps `.m-mono` — the mono voice belongs on a
+   printed masthead — and takes the inks and the two-plate fringe instead of a face swap, because its
+   line box is not pinned by a utility. That fringe is also the one place the mono stamp is overridden:
+   two plates of misregistration say more than half a pixel of bleed, and this rule is more specific. */
 :root[data-skin="comic"] .mobile-root main > header .m-mono {
   color: var(--m-ink);
   text-shadow: 2px 0 0 #ff2d95, -1.5px 0 0 #00e5ff;
@@ -213,8 +326,11 @@
 :root[data-skin="comic"] .mobile-root .m-brand b {
   text-shadow: 2px 2px 0 #ff2d95, -1px -1px 0 #00e5ff;
 }
+/* The now-playing name is the biggest marker lettering on the page, so it carries both plates: the
+   magenta key plate behind the ink and the cyan one off the other corner, like the track title
+   stamped onto a sleeve. */
 :root[data-skin="comic"] .mobile-root .m-now-name {
-  text-shadow: 2px 2px 0 #ff2d95;
+  text-shadow: 2px 2px 0 #ff2d95, -1.5px -1.5px 0 #00e5ff;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -300,9 +416,15 @@
   background-image: radial-gradient(circle at 1px 1px, rgb(255 45 149 / 0.2) 1.2px, transparent 1.5px);
   background-size: 6px 6px;
 }
-/* Cover art is pasted on at a tilt — the one rotation in the file, on a decorative tile, not a control. */
+/* Cover art is pasted on at a tilt — the rotations in this file are all on decorative tiles or
+   non-controls, never on something the touch-target gate measures. */
 :root[data-skin="comic"] .mobile-root [class~="rounded-2xl"][aria-hidden="true"] {
   transform: rotate(-1.4deg);
+}
+/* …and alternate the paste angle, so a column of covers reads as cut and glued by hand rather than
+   stamped by a machine. Same decorative, `aria-hidden` tiles only. */
+:root[data-skin="comic"] .mobile-root [class~="rounded-2xl"][aria-hidden="true"]:nth-child(even) {
+  transform: rotate(1.1deg);
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -563,4 +685,13 @@
   text-transform: none;
   text-shadow: none;
   box-shadow: none;
+}
+/* The new hand annotations are withdrawn here too: the ink stamp and the pencil rule are what make a
+   dense desktop grid read as damage, which is the whole reason this subtree opts out. */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] .m-mono {
+  text-decoration: none;
+  text-shadow: none;
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] h2 {
+  transform: none;
 }

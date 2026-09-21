@@ -69,8 +69,31 @@
  * pixel corner is traded against the stepped shadow on a piece of chrome, because a counter with a
  * cut corner is more 8-bit than a counter with a drop shadow, and it costs no markup.
  *
+ * The whole subtree, not a list of classes
+ * ----------------------------------------
+ * The first pass left the shell's own faces standing wherever `mobile.css` names one — JetBrains Mono
+ * on the readouts, Space Grotesk on the tempo buttons — and the user's verdict on that was blunt:
+ * "像素风就全部像素体" ("the pixel one should be entirely pixel type"). A proportional grotesque on one
+ * small readout is enough to give the rest of the screen away, so the skin no longer repaints a list of
+ * classes that a future component edit can outgrow. It claims `.mobile-root, .mobile-root *` instead,
+ * with VT323 first and Press Start 2P second: three class weights of scope, at or above every family
+ * rule in `mobile.css` and every Tailwind `font-*` utility, so the shell can add either tomorrow and
+ * still render in the pixel stack.
+ *
+ * The trade-off is the display face, and it is the reason the two faces are not interchangeable.
+ * Press Start 2P is a fixed-width arcade face wide enough that a whole sentence in it would wrap into
+ * its neighbour, so it is pinned to short all-caps labels, titles and numerals at 8–14px and never
+ * tracked below 0.04em; body copy, meta text, counters and every long string keep VT323, set 1–2px
+ * above the size it replaces so a 10px line still reads on a phone. None of this changes a box: the
+ * faces are swapped inside controls that are already `min-h-[46px]` or taller. `-webkit-font-smoothing:
+ * none` and `text-rendering: geometricPrecision` are the crispness aids the brief asks for; switched
+ * off, 8px VT323 smudges, and a smudged pixel face is just small text.
+ *
  * Known limit: the record is painted into a `<canvas>` by `VinylCanvas`, so its rings, its shading
- * and its round silhouette cannot be reached from CSS. The skin styles the chrome around it.
+ * and its round silhouette cannot be reached from CSS. The skin styles the chrome around it. The
+ * canvas' baked label is the one piece of type the cascade cannot touch at all, which is why the two
+ * font families are also exposed as `--m-font-display` / `--m-font-mono` tokens: `VinylCanvas` reads
+ * them the same way it reads `--m-gold`, so the record prints in the skin's type too.
  */
 
 /* =============================================================================================
@@ -94,6 +117,13 @@
   /* Text on an accent fill is the ground, never white: black-on-colour is the only reading an 8-bit
      palette gives you for free, and white on yellow would be unreadable. */
   --m-on-gold: #10121c;
+
+  /* The record's canvas label is painted by JS and cannot inherit anything, so its two families have
+     to be tokens the same way `--m-gold` is. They mirror the stack forced on the subtree below — VT323
+     for the body line, Press Start 2P for the display line — which is the whole point: the record
+     prints in the skin's type, never in the shell's Space Grotesk. */
+  --m-font-display: "Press Start 2P", "JetBrains Mono", monospace;
+  --m-font-mono: "VT323", "JetBrains Mono", monospace;
 
   /* The three fixed signal colours. They do not follow the module, because red is always the
      recording lamp and green is always "right". */
@@ -146,10 +176,35 @@
 /* =============================================================================================
  * 2. Type
  *
- * VT323 on the root, so every string that does not opt into the display face is a pixel terminal.
- * `font-smooth` / `-webkit-font-smoothing` are the non-standard switches the brief asks for; they
- * only matter on macOS, and on every other platform the hard edges come from the faces themselves.
+ * VT323 on the whole subtree, so every string that does not opt into the display face is a pixel
+ * terminal — including the readouts `mobile.css` paints in JetBrains Mono. `font-smooth` /
+ * `-webkit-font-smoothing` are the non-standard switches the brief asks for; they only matter on
+ * macOS, and on every other platform the hard edges come from the faces themselves.
  * =========================================================================================== */
+
+/* The whole subtree, not a list of classes.
+ *
+ * The shell's own stylesheet names a face on a handful of readouts, and Tailwind can put `font-mono`
+ * on any screen the next time a component is edited. Repainting those classes one at a time is a race
+ * the skin loses on that edit, so it claims the entire subtree instead. The scoped selector weighs
+ * three classes — `:root` + `[data-skin]` + `.mobile-root` — which is at or above every `font-family`
+ * rule in `mobile.css` and every `font-*` utility, and `pixel.css` is imported last, so it also wins
+ * the specificity ties (`.m-cue-item .m-idx`). Nothing the shell writes can out-specify it.
+ *
+ * VT323 leads because it is the one face of the three that can set a whole sentence at 10px; Press
+ * Start 2P rides second so that if VT323 is missing the text lands on another pixel face rather than a
+ * grotesque. `canvas` is matched too and that is harmless — a canvas paints its text from JS and has no
+ * font of its own. `text-rendering: geometricPrecision` keeps glyph advances on the pixel grid instead
+ * of rounded by the text rasteriser's hinting, and the two smoothing switches are the crispness aids
+ * the brief asks for. */
+:root[data-skin="pixel"] .mobile-root,
+:root[data-skin="pixel"] .mobile-root * {
+  font-family: "VT323", "Press Start 2P", "JetBrains Mono", monospace;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+}
+
 :root[data-skin="pixel"] .mobile-root .m-mono {
   font-family: "VT323", "JetBrains Mono", monospace;
   font-variant-numeric: tabular-nums;

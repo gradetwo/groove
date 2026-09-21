@@ -308,7 +308,14 @@ describe("skin stylesheets", () => {
       // rules and not the prose around them.
       const withoutComments = code(read(id));
       expect(withoutComments, `${id}: !important`).not.toContain("!important");
-      expect(withoutComments, `${id}: url()`).not.toMatch(/url\(/);
+      /**
+       * No *external* assets. An inline `url("data:image/svg+xml;…")` is self-contained (the Soviet skin
+       * draws its star, ribbon and gear that way), so the rule is about the network, not about `url(`.
+       */
+      const externalUrls = [...withoutComments.matchAll(/url\(\s*["']?([^"')]+)/g)]
+        .map((match) => match[1].trim())
+        .filter((target) => !target.startsWith("data:") && !target.startsWith("#"));
+      expect(externalUrls, `${id} loads an external asset`).toEqual([]);
       expect(withoutComments, `${id}: @font-face`).not.toContain("@font-face");
       expect(withoutComments, `${id}: @import`).not.toContain("@import");
       /**
@@ -318,9 +325,26 @@ describe("skin stylesheets", () => {
        * flex-shrink guards and are exactly what a skin *should* touch, while a bare `width` or
        * `padding` is the thing that moves controls around.
        */
-      const GEOMETRY = /(?:^|[\s;{])(width|height|padding|margin|gap|position|display)(-[a-z-]+)?\s*:/;
+      const GEOMETRY = /(?:^|[\s;{])(width|height|padding|margin|gap|display|order|visibility)(-[a-z-]+)?\s*:/;
       const geometry = withoutComments.match(GEOMETRY);
       expect(geometry?.[0] ?? "", `${id} changes geometry`).toBe("");
+
+      /**
+       * …but a skin *may* position a decorative layer, and then it has to be click-through.
+       *
+       * The Soviet skin's star, ribbon and plate ornaments are absolutely positioned inside a panel;
+       * that is a legitimate way to draw a symbol, and the thing that makes it safe is not the absence of
+       * `position` but the presence of `pointer-events: none` — a decorative overlay that could swallow a
+       * tap is the actual defect. So the rule is the pair, checked per declaration block.
+       */
+      const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+      expect(blocks.length, `${id} has no readable rules`).toBeGreaterThan(0);
+      for (const [, selector, body] of blocks) {
+        if (!/position\s*:\s*(absolute|fixed)/.test(body)) continue;
+        expect(body, `${id}: ${selector.trim()} is positioned but not click-through`).toMatch(
+          /pointer-events\s*:\s*none/
+        );
+      }
     }
   });
 
@@ -335,6 +359,101 @@ describe("skin stylesheets", () => {
       expect(read(id), `${id} does not use ${family}`).toContain(family);
       // The font has to be requested, or the skin silently falls back on a real device.
       expect(html, `${family} is not in the font link`).toContain(family.replace(/"/g, "").replace(/ /g, "+"));
+    }
+  });
+
+  /**
+   * The reused desktop views (探索's 和弦走向 / 底鼓设计 / 律动解构) are the one place with a *second*
+   * hand-written override sheet. It is held to the same gate as the skins — because it is the same
+   * kind of file, aimed at the one subtree the skins deliberately withdraw from — plus three checks
+   * of its own: it must import after the skins, it must name the desktop-legacy wrapper in every
+   * selector, and it must put a surface under each of the three sub-pages.
+   */
+  it("ships the legacy-view override sheet, imported after the three skins", () => {
+    const file = path.join(SKIN_CSS_DIR, "legacyViews.css");
+    expect(fs.existsSync(file), "legacyViews.css").toBe(true);
+    const shell = fs.readFileSync(path.join(process.cwd(), "src", "mobile", "MobileApp.tsx"), "utf8");
+    const pixel = shell.indexOf("skins/pixel.css");
+    const legacy = shell.indexOf("skins/legacyViews.css");
+    expect(legacy, "legacyViews.css is not imported by the phone shell").toBeGreaterThan(-1);
+    // A later import wins an equal-specificity argument, which is what undoes comic.css's opt-out.
+    expect(legacy, "legacyViews.css must import after the skin sheets").toBeGreaterThan(pixel);
+  });
+
+  it("scopes every legacy-view rule to a skin and the desktop-legacy wrapper", () => {
+    const withoutComments = code(read("legacyViews"));
+    const preludes: string[] = [];
+    let buffer = "";
+    for (const char of withoutComments) {
+      if (char === "{") {
+        preludes.push(buffer.trim());
+        buffer = "";
+      } else if (char === "}") {
+        buffer = "";
+      } else {
+        buffer += char;
+      }
+    }
+    expect(preludes.length, "legacyViews.css has no rules").toBeGreaterThan(0);
+    for (const prelude of preludes) {
+      if (!prelude || prelude.startsWith("@")) continue;
+      for (const selector of splitSelectors(prelude)) {
+        expect(selector, `unscoped legacy selector "${selector}"`).toContain(":root[data-skin=");
+        expect(selector, `legacy selector escapes the phone shell: "${selector}"`).toContain(".mobile-root");
+        expect(selector, `legacy selector is not inside [data-legacy]: "${selector}"`).toContain(
+          '[data-legacy="desktop"]'
+        );
+      }
+    }
+  });
+
+  it("gives every styled skin and every 探索 sub-page a surface of its own", () => {
+    const withoutComments = code(read("legacyViews"));
+    const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    for (const id of STYLED_SKINS) {
+      const scoped = blocks.filter(([, selector]) => selector.includes(`:root[data-skin="${id}"]`));
+      expect(scoped.length, `legacyViews.css has no override for ${id}`).toBeGreaterThan(0);
+      expect(
+        scoped.some(([, , body]) => /background-color\s*:/.test(body)),
+        `${id} restyles no surface`
+      ).toBe(true);
+    }
+    for (const view of ["chords", "kick", "groove"]) {
+      const testId = `mobile-explore-${view}-legacy`;
+      const owner = blocks.find(
+        ([, selector, body]) =>
+          selector.includes(`[data-testid="${testId}"]`) && /background-color\s*:/.test(body)
+      );
+      expect(owner, `${testId} keeps the desktop ground`).toBeTruthy();
+    }
+  });
+
+  it("maps the desktop palette onto skin tokens rather than new hexes", () => {
+    const css = read("legacyViews");
+    // The two desktop accent literals the views are built around must be addressed...
+    expect(css).toContain("#4ad8c8");
+    expect(css).toContain("#f5b73d");
+    // ...and resolved through the active skin's own tokens, so one rule serves all three.
+    for (const token of ["--m-bg", "--m-card", "--m-line", "--m-ink", "--m-gold", "--m-teal"]) {
+      expect(css, `legacyViews.css does not use ${token}`).toContain(`var(${token})`);
+    }
+  });
+
+  it("keeps the legacy-view sheet inside the shell's rules", () => {
+    const withoutComments = code(read("legacyViews"));
+    expect(withoutComments, "legacyViews.css: !important").not.toContain("!important");
+    expect(withoutComments, "legacyViews.css: url()").not.toMatch(/url\(/);
+    expect(withoutComments, "legacyViews.css: @font-face").not.toContain("@font-face");
+    expect(withoutComments, "legacyViews.css: @import").not.toContain("@import");
+    const GEOMETRY = /(?:^|[\s;{])(width|height|padding|margin|gap|display|order|visibility)(-[a-z-]+)?\s*:/;
+    const geometry = withoutComments.match(GEOMETRY);
+    expect(geometry?.[0] ?? "", "legacyViews.css changes geometry").toBe("");
+    const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+    for (const [, selector, body] of blocks) {
+      if (!/position\s*:\s*(absolute|fixed)/.test(body)) continue;
+      expect(body, `legacyViews.css: ${selector.trim()} is positioned but not click-through`).toMatch(
+        /pointer-events\s*:\s*none/
+      );
     }
   });
 });
