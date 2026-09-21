@@ -605,6 +605,23 @@ async function runTestOnTarget(target, baseUrl) {
     await page.goto(`${baseUrl}/m/home`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-testid="mobile-shell"]', { timeout: 45000 });
     await page.waitForSelector('[data-testid^="mobile-genre-row-"]', { timeout: 45000 });
+    /**
+     * Wait for the shell to be *styled* before measuring it.
+     *
+     * `domcontentloaded` fires before the stylesheet has necessarily been applied, and an unstyled tab
+     * button is 38 px tall (icon + label + its own padding) — which this leg then reported as "a tab
+     * under 44px: 38, 38, 38, 38, 38". That is a measurement of the wrong thing, and it only shows up on
+     * a starved runner (the failing run had a hung browser process eating two cores). Waiting for the
+     * bar's own minimum height is waiting for the thing being asserted, and the timeout fails loudly if
+     * the stylesheet never arrives.
+     */
+    await page.waitForFunction(
+      () => {
+        const tab = document.querySelector('[data-testid="mobile-module-home"]');
+        return Boolean(tab) && tab.getBoundingClientRect().height >= 44;
+      },
+      { timeout: 30000 }
+    );
 
     const shell = await page.evaluate(() => {
       const modules = ["home", "jam", "challenge", "explore", "more"];
