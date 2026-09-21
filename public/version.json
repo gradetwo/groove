@@ -1,27 +1,27 @@
 {
-  "version": "2.4.0",
+  "version": "2.5.0",
   "releaseDate": "2026-09-21",
-  "changelogCount": 192,
+  "changelogCount": 193,
   "latest": {
-    "version": "2.4.0",
+    "version": "2.5.0",
     "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.4.0 皮肤系统：复古漫画 / 苏联重工业 / 8-bit 像素，设置里一键切换",
-      "en": "v2.4.0 A Skin System: Retro Comic, Soviet Heavy Industry and 8-bit Pixel, Switched in Settings"
+      "zh": "v2.5.0 手机端第二轮：避开灵动岛、播放器擦盘声与阻尼、皮肤字体与苏联符号、探索换肤、更多面板真的能打开",
+      "en": "v2.5.0 The Phone, Second Pass: Clear the Dynamic Island, a Real Scratch and Damper, Skin Typography and Soviet Symbols, Skinned 探索, and 更多 Panels That Open"
     },
     "highlights": [
       {
-        "zh": "**皮肤是一个属性，不是一套分支代码**。四种外观写在 `data-skin` 上（`groove_skin_v1` 持久化，**首帧之前**就应用，否则每次冷启动都会先画默认皮肤再闪一下），每个皮肤的样式表都限定在 `:root[data-skin=\"…\"] .mobile-root` 之下——所以切换不需要任何组件订阅，皮肤之间也不可能互相漏色。",
-        "en": "**A skin is one attribute, not a second code path.** The four looks live on `data-skin` (persisted in `groove_skin_v1`, applied **before the first paint** — an effect would draw the default skin and then flash), and every skin stylesheet is scoped to `:root[data-skin=\"…\"] .mobile-root`. Nothing has to subscribe for a change to reach the screen, and no skin can leak into another."
+        "zh": "**灵动岛避让**：外壳是 `viewport-fit=cover` 的控制面板，安全区是真实布局空间，但 `main` 之前完全没有顶部内边距——有灵动岛的机器上，品牌字就压在岛下面。现在 `main` 吃 `env(safe-area-inset-top)`，加上横屏时的左右安全区，所以每个模块都让开了：浏览页、全屏播放器、曲风详情页、以及探索里嵌入的桌面视图。没有安全区的设备上这是 0 变化。",
+        "en": "**Clearing the Dynamic Island.** The shell is a `viewport-fit=cover` control surface, so safe areas are real layout space — and `main` had no top inset at all, which put the wordmark behind the island on a device that has one. `main` now takes `env(safe-area-inset-top)` plus the left/right insets (a landscape notch is on the side), so every module clears it: browsing, the full-screen player, the genre page and the embedded desktop views in 探索. A no-op on hardware without ins…"
       },
       {
-        "zh": "**复古漫画（蜘蛛侠平行宇宙那种印刷感）**：新闻纸底 + 分层网点（Ben-Day）、粗黑油墨描边与零模糊硬投影、青/品红套印偏移（标题与播放器光晕）、黄色专色顶带、黑底黄线的标签栏；字体 Bangers + Comic Neue。**苏联重工业**：冲压钢板面板（2px 边 + 内高光/内暗边 + 硬投影）、径向渐变铆钉、固定的模板/轧制纹理、传输条上的 45° 警戒斜纹、搪瓷信号灯配色；字体 Russo One + PT Sans Narrow。**8-bit 像素**：只用七色、2px 硬边 + 阶梯投影、切角像素块、扫描线、棋盘抖色表示失效态、去掉所有发光；字体 Press Start 2P + VT323。",
-        "en": "**Retro comic (Into the Spider-Verse print feel)**: newsprint with a layered Ben-Day dot screen, heavy ink outlines with hard zero-blur block shadows, cyan/magenta misregistration on the display type and the player's aura, a yellow spot-colour band, a black tab bar with a yellow rule, and Bangers + Comic Neue. **Soviet heavy industry**: stamped steel panels (2px border, inset light/dark bevel, hard shadow), radial-gradient rivets, a fixed formwork/mill texture, a 45° hazard…"
+        "zh": "**播放器：擦盘声 + 阻尼 + 唱臂姿态**。① 拖动唱片之前是无声的——现在按参考稿那条滤波噪声（带通、频率跟随手指速度、松手短尾）发声，跑在试听引擎自己的 context 上、走音乐总线。② 显示的速度本来就在缓动，但**引擎是跳变的**，所以缓动只是装饰；现在画布循环把阻尼的每个整数 BPM 报给引擎（参考稿的调度器每帧读的就是阻尼后的 BPM），搓盘因此真的会「转起来/慢下去」。读数也交回阻尼器拥有：React 只画一次初值，否则先跳到目标再被循环写回更低的值，数字会先上跳再回落。③ 唱臂之前在两个状态下都低了约 24°（移植时多减了一次唱针角，正好抵消行程），所以它从没真正落到唱片上、停止动画也几乎不动。现在 `tonearmDrawAngle()` 是唯一定义（停驻 = 工作角 -0.21 rad，工作角 = 唱针角），摆入抬臂、沟槽抖动、底鼓时唱头小幅上跳都在，并对两端都做了断言。",
+        "en": "**Player: the scratch, the damper, and where the arm actually points.** (1) Dragging the record made no sound; it now plays the reference's filtered noise band (bandpass, frequency from finger speed, short release tail) on the audition engine's own context, through the music bus. (2) The displayed tempo eased but the *engine* jumped, so the easing was cosmetic — the canvas loop now reports each whole-BPM step of the damper and the engine follows, which is what the reference'…"
       },
       {
-        "zh": "**切换处在「更多 → 外观」**：四个选项各自画出自己的底色/强调色/文字色预览（预览色放在数据里，因为未激活皮肤的规则根本不会应用，取不到计算值），当前项有描边与勾选，语义上是真正的 radiogroup（`aria-checked`），不是四个开关按钮。皮肤 CSS 的全部硬规矩都由测试守住而不是靠人看：不许 `!important`、不许外链与 `@font-face`、不许改几何属性（会破坏 44px 触控门禁）、必须定义整套 token、必须五个模块五个不同强调色、每条选择器都必须带作用域。",
-        "en": "**The switch lives in 更多 → 外观**: four options, each painting a preview of its own ground/accent/ink (those colours are data, because an inactive skin's rules never apply and cannot be read back from the cascade), with the active one outlined and checked, as a genuine `radiogroup` (`aria-checked`) rather than four toggles. The skins' rules are held by tests rather than by review: no `!important`, no external assets or `@font-face`, no geometry properties (which would break th…"
+        "zh": "**皮肤字体到位**：复古漫画改成手写体（标题 Permanent Marker、正文 Patrick Hand，`.m-mono` 保留等宽并加了手写标注），8-bit 全子树换成像素体（偏离字体的文本元素从 192 个降到 0，全部在探索里），苏联风加了真正的苏联符号：近卫绶带、`clip-path` 五角红星（贴在当前模块标签上）、齿轮、模板铭牌与厂号、红色楔形与警戒斜纹、黄铜仪表刻度。唱片是 canvas 画的，字体继承不到——所以新增 `--m-font-display`/`--m-font-mono` 两个 token，画布像读 `--m-gold` 一样读它们，唱片标签因此也跟着皮肤走。",
+        "en": "**The skins' typography lands.** The comic skin is hand-lettered now (Permanent Marker for display, Patrick Hand for body, `.m-mono` kept monospace with a hand-annotated treatment); the 8-bit skin forces pixel faces on the whole subtree (off-family text elements went from 192 to 0, all of them in 探索); and the Soviet skin gained real Soviet symbols — a Guards ribbon, a `clip-path` five-point star over the active module tab, a gear, stencil placards with a plant number, a red…"
       }
     ],
     "truncated": true
