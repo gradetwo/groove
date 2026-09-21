@@ -1580,6 +1580,54 @@ async function runTestOnTarget(target, baseUrl) {
     }
     await page.waitForTimeout(200);
 
+    /**
+     * 5d. Skins on the big surfaces (v2.9.2).
+     *
+     * The six skins were the phone shell's; they are the whole app's now. The palette is generated from the
+     * phone's own tokens (`scripts/desktop_skins.mjs` → `src/styles/desktopSkins.css`), so what this leg has
+     * to prove is the wiring: the desktop settings panel offers them, choosing one writes `data-skin` on the
+     * document root and persists it to the shared key, the *palette actually moves*, and it can be put back
+     * — later legs run in the same page and would otherwise be themed by this one.
+     *
+     * It runs on every target and skips itself on a phone-sized one, where the shell's own picker (更多 →
+     * 外观) is the surface and is covered by leg 1.11.
+     */
+    await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("[data-surface='desktop'], [data-testid='mobile-shell']", { timeout: 30000 });
+    if (await page.$("[data-surface='desktop']")) {
+      await page.click("[data-testid='header-settings-open']");
+      await page.click("[data-testid='settings-tab-interface']");
+      await page.waitForSelector("[data-testid='settings-skins']", { timeout: 20000 });
+      const before = await page.evaluate(() => ({
+        skin: document.documentElement.getAttribute("data-skin"),
+        bg: getComputedStyle(document.documentElement).getPropertyValue("--d-bg").trim(),
+      }));
+      await page.click("[data-testid='settings-skin-minimal']");
+      await page.waitForTimeout(300);
+      const after = await page.evaluate(() => ({
+        skin: document.documentElement.getAttribute("data-skin"),
+        bg: getComputedStyle(document.documentElement).getPropertyValue("--d-bg").trim(),
+        stored: localStorage.getItem("groove_skin_v1"),
+        body: getComputedStyle(document.body).backgroundColor,
+      }));
+      if (after.skin !== "minimal" || after.stored !== "minimal") {
+        throw new Error(`Desktop skin picker did not apply/persist: ${JSON.stringify(after)}`);
+      }
+      if (after.bg === before.bg) {
+        throw new Error(`Desktop palette did not change with the skin (--d-bg stayed ${before.bg})`);
+      }
+      // The page ground has to follow the palette, not just the custom property.
+      if (after.body === "rgb(10, 11, 13)" && before.bg === "10 11 13") {
+        throw new Error(`Desktop page ground ignored the skin (body stayed ${after.body})`);
+      }
+      // Put it back before the modal closes: the rest of the matrix runs in this page.
+      await page.click("[data-testid='settings-skin-default']");
+      await page.waitForTimeout(200);
+      const restored = await page.evaluate(() => document.documentElement.getAttribute("data-skin"));
+      if (restored !== "default") throw new Error(`Desktop skin did not restore to default (${restored})`);
+      await page.keyboard.press("Escape");
+    }
+
     // 5c. Audio settings panel (v2.0.17).
     //
     // The engine-level settings (GS-1 voices, master level, hearing protection, latency

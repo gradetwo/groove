@@ -15,6 +15,44 @@ import { SKINS } from "../data/skins";
 import type { SkinId } from "../types/skin";
 import { loadSkin, saveSkin, SKIN_CHANGED_EVENT } from "../features/settings/skinPrefs";
 
+/**
+ * The desktop *character* sheets, loaded with the skin they belong to.
+ *
+ * `desktopTokens.css` (the default palette) is in the first paint, because a page that sets no skin still
+ * needs one; `desktopSkins.css` carries the five *other* palettes plus the literal map and is loaded here,
+ * with the skin that needs it. The character sheets are the opposite: five files of
+ * type, edges and texture, of which exactly one is ever in use, and only when a non-default skin is
+ * chosen. Keeping them in the entry bundle cost 6 KB of gzip on the initial route (the budget gate caught
+ * it at 225.6/220 KB) for CSS most loads never apply.
+ *
+ * The registry is explicit rather than a template literal so the bundler can see each import and emit a
+ * real chunk per skin; a computed path would either fail or pull all five back in. `default` has no
+ * character sheet — it is the app as it always looked.
+ */
+const CHARACTER_SHEETS: Partial<Record<SkinId, () => Promise<unknown>>> = {
+  minimal: () => import("../styles/skin-minimal.css"),
+  comic: () => import("../styles/skin-comic.css"),
+  soviet: () => import("../styles/skin-soviet.css"),
+  sovietYears: () => import("../styles/skin-sovietYears.css"),
+  pixel: () => import("../styles/skin-pixel.css"),
+};
+
+/**
+ * Bring in a skin's character, once.
+ *
+ * Awaited by nobody: the palette is already applied, so the skin is *correct* the moment the attribute is
+ * set and the character arrives a frame or two later. Caching happens in the module system, so calling this
+ * on every apply is free.
+ */
+export function loadCharacterSheet(id: SkinId): void {
+  if (id === "default") return;
+  // The extra palettes and the literal map first (everything else assumes they exist), then the character.
+  void import("../styles/desktopSkins.css").catch(() => {});
+  void CHARACTER_SHEETS[id]?.().catch(() => {
+    /* A missing character sheet is a cosmetic loss, never a reason to break the app. */
+  });
+}
+
 /** The attribute CSS selects on. Exported so the stylesheets, the hook and the tests cannot disagree. */
 export const SKIN_ATTRIBUTE = "data-skin";
 
@@ -27,6 +65,8 @@ export function applySkin(id: SkinId, root?: HTMLElement | null): void {
   const el = root ?? (typeof document !== "undefined" ? document.documentElement : null);
   if (!el) return;
   el.setAttribute(SKIN_ATTRIBUTE, id);
+  // Branded skins need their own sheet; the palette above is already in place either way.
+  loadCharacterSheet(id);
 }
 
 /** Apply whatever is stored, before React renders. Called once from `main.tsx`. */

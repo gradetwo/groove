@@ -1,27 +1,27 @@
 {
-  "version": "2.9.1",
+  "version": "2.10.0",
   "releaseDate": "2026-09-21",
-  "changelogCount": 198,
+  "changelogCount": 199,
   "latest": {
-    "version": "2.9.1",
+    "version": "2.10.0",
     "date": "2026-09-21",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.9.1 手机流畅度：唱片不再掉帧、曲风库分块渲染、和弦工作台默认收起，并新增一个「卡顿」探针进 verify",
-      "en": "v2.9.1 Phone Smoothness: the Record Stops Dropping Frames, the Library Paints in Chunks, the Chord Workshop Opens Folded, and a Jank Probe Joins verify"
+      "zh": "v2.10.0 六套皮肤走进 PC 与 iPad：色板由手机端生成，桌面端也有各自的气质，设置里可切换",
+      "en": "v2.10.0 The Six Skins on PC and iPad: the Palette Generated From the Phone's, Each Skin's Own Character, and a Picker in Settings"
     },
     "highlights": [
       {
-        "zh": "**先造尺子，再谈流畅**。`perf:check` 只回答「首屏下载了多少字节、几个分块」，而你说的「卡顿」是**主线程在你动手时正忙**——那是它看不见的。新增 `npm run probe:jank`：在 390×844 + 4 倍 CPU 降速下，像一个拇指那样走一遍手机端（冷启动 → 滚动曲风库 → 打开曲风 → 打开播放器并让唱片转起来 → 五个模块页 → 探索三个子页），记录每一步的**长任务**（条数、累计阻塞、最长）、**帧间隔**（中位数、最长、以及**脱离设备自身节奏**的帧占比）和 DOM 规模。最后那个指标很关键：唱片在手机撑不住 60fps 时会**主动降到约 30fps**，而一条固定的「超过 32ms 就算卡」会把稳定的 30fps 判成「100% 卡顿」——那正好是把事实说反了。它的预算是**按步骤**给的（导航步骤看阻塞与最长任务；动画步骤看中位数/最长帧与离群帧），已进 `verify`，也是 CI 手动开关里的一个 `jank` 选项。",
-        "en": "**Build the ruler before talking about smoothness.** `perf:check` answers \"how many bytes and chunks before the first paint\"; the stutter you meant is **the main thread being busy when your thumb does something**, which that gate cannot see. `npm run probe:jank` walks the phone the way a thumb does on a 390×844 profile at 4× CPU throttling (cold load → scroll the library → open a genre → open the player and let the record spin → all five modules → all three 探索 sub-pages) and…"
+        "zh": "**皮肤从「手机专属」变成「整个应用」。** 在此之前，六套皮肤只作用于手机外壳（`src/mobile/`，选择器都在 `.mobile-root` 之下），桌面端与 iPad 端只有一套硬编码在 `tailwind.config.js` 里的深色调色板，加上散落在 `src/` 里的约 **1700 处 `bg-[#…]` 字面色值**。现在桌面的色板是**由手机端自己的 token 生成的**：`scripts/desktop_skins.mjs` 直接读 `src/mobile/skins/<id>.css`，把底色、卡片、线条、墨色、强调色以及由它们推导出的悬停/柔和/发光色写进 `src/styles/`（`desktopTokens.css` 是默认皮肤、随首屏；`desktopSkins.css` 是另外五套调色板与字面映射，跟随皮肤懒加载）。`check:skins` 会在手机端色板改动而没重新生成时失败——两个界面因此不可能各说各话。",
+        "en": "**The skins stop being the phone's and become the app's.** Until now the six skins applied only to the phone shell (`src/mobile/`, every selector under `.mobile-root`), while the desktop and the iPad had one hardcoded dark palette in `tailwind.config.js` plus ~**1 700 literal `bg-[#…]` values** across `src/`. The desktop palette is now **generated from the phone's own tokens**: `scripts/desktop_skins.mjs` reads `src/mobile/skins/<id>.css` and writes the ground, card, lines,…"
       },
       {
-        "zh": "**播放器：唱片不再掉帧**。第一次测量是**100% 的帧超过 32ms**、2.5 秒窗口里主线程被阻塞 6057ms，打开播放器时 76.7% 的帧是坏的；CPU profile 显示 **80% 的采样在 `(program)`**——是浏览器的光栅化与绘制，不是 JS。所以改的都是「每帧要让光栅器做什么」：**静态的全部预烘焙**（标签的晕染、四条环轨、各声部光晕、唱针闪光都变成精灵图，一帧里再没有 `createRadialGradient`）；**唱片本体移出旋转变换**（它是画面上最大的一块，而它的纹路与环轨都是同心圆，旋转它一个像素都不会变——真正要转的是标签和步进点，两者都很小）；**唱针不再用 `shadowBlur`**（软件光栅器最怕的 canvas 状态），闪光改成烘焙光晕 + 阈值以上的 `globalAlpha`；**背板分辨率上限 2 → 1.5**（用审计做消融：4 倍降速下每帧 ~146ms → ~108ms；标签仍按 512px 烘焙，所以字仍然清晰；1.25 更快但会糊掉唱片上唯一需要读的 9px 等宽…",
-        "en": "**The player: the record stops dropping frames.** The first measurement was **100 % of frames over 32 ms**, 6 057 ms of blocked main thread in a 2.5 s window, and 76.7 % bad frames when opening the player; a CPU profile put **80 % of samples in `(program)`** — the browser's raster and paint, not JS. So every change is about what a frame asks the rasteriser to do: **everything static is baked** (the label wash, the four ring guides, the per-lane glows and the needle flash bec…"
+        "zh": "**字面色值按「角色」映射，而不是按颜色。** Tailwind 的命名色（`bg-panel`、`text-accent`…）现在都解析成 `rgb(var(--d-…) / <alpha-value>)`，所以透明度写法照常可用；但源码里那 458 个不同的字面色值编译后的工具类改不了，于是生成器把**每一个**用到的字面色值按**最接近的角色**映射到 token 上（496 条规则只写 token，因此一条规则服务六套皮肤）。另外两类也一并处理：Tailwind **自带调色板**（`from-indigo-500`、`bg-purple-600`、`text-amber-400`）按色相家族映射到语义角色（绿=成功、红=危险、琥珀=警告、靛/紫/青=强调），**中性灰阶**按前缀与深浅映射（深灰填充=面板、浅灰=纸面、灰边框=发丝线、灰字=墨色层级）——后者修掉了一个真实缺陷：挑战页的 A/B/C/D 选项卡是 `bg-neutral-800` + 外壳墨色，在浅色皮肤上曾经是「深底压深字」完全看不见。实测现在三套浅/深皮肤的选项卡对…",
+        "en": "**Literals are mapped by *role*, not by colour.** Tailwind's named colours (`bg-panel`, `text-accent`, …) now resolve through `rgb(var(--d-…) / <alpha-value>)`, so opacity utilities keep working; but the 458 distinct literal values in the source compile to utilities a skin cannot reach, so the generator maps **every** literal in use to its **nearest role** (496 rules that name only tokens, so one rule serves all six skins). Two more families are handled the same way: Tailwin…"
       },
       {
-        "zh": "**首页：曲风库分块渲染，冷启动阻塞 3010 → 1090ms**。profile 说代价是浏览器在 2578 个元素上的**样式与布局**（React 只占约 3%），所以：曲风行与时间轴节点加 `content-visibility: auto`（屏幕外的九成不再参与布局与绘制，配合 `auto` 固有尺寸，滚动条仍然诚实），并且列表**先渲染 24 行、之后每次翻倍**在空闲时间补齐——整库仍会在几百毫秒内进入 DOM，比拇指滑过第一屏还快，DOM 内容不变，所以计数类的测试只是改成等待「屏幕自己标称的数量」。**探索：打开与切换阻塞 1259 → 817ms**，和弦视图是最贵的挂载（约 1000 个元素、4 倍降速下单次 1350ms）：现在选子页是两次更新——分段控件（紧急，因为那是手指碰的东西）与视图挂载（React transition，让分段先画出来、重活在可中断的渲染里做），并且手机端把**和弦工作台默认收起**（专项探针 1335 → 236ms；视图本来就有收起开关与当前进行的摘要，桌面默认不变）。E2E 那条腿现在会…",
-        "en": "**首页: the library paints in chunks — cold-load blocking 3 010 → 1 090 ms.** The profile said the cost was the browser's **style and layout over 2 578 elements** (React was ~3 %), so the library rows and timeline eras take `content-visibility: auto` (the off-screen 90 % is no longer laid out or painted, with an `auto` intrinsic size so the scrollbar stays honest) and the list renders **24 rows first, then doubles** in idle time — the whole library is in the DOM within a few h…"
+        "zh": "**每套皮肤在桌面端也有自己的气质**，不只是换色：`minimal` 是发丝线与 Inter、把桌面所有阴影与渐变整片关掉（用一条 1px 强调描边表达层级）；`soviet` 是冲压钢板（方角、2px 边、上下内阴影的斜面、石碑式大写、按下时 `translate(1px,1px)` 且过渡用 `steps(2,end)`）；`comic` 是新闻纸（Bangers/Patrick Hand、网点与纸纤维用 `background-image` 固定铺在根上、硬墨块取代柔和投影、套印错位的青/品红版条）；`pixel` 是 VT323/Press Start 2P、2px 阶梯边框、扫描线与像素网格、取消所有渐变与模糊；`sovietYears` 是构成主义宣传画（`Russo One` + `skewX(-10deg)` 仅用于展示文字、对角 `clip-path` 切角并配零模糊投影、国旗红压顶线、ПРАВДА 钢印、星形点缀、机械式按压）。**五个文件都只作用在桌面表面**（`[data-surface=\"desktop\"]`）：手机…",
+        "en": "**Each skin has its own character on the desktop too**, not just a palette: `minimal` is hairlines and Inter with every shadow and gradient switched off; `soviet` is stamped steel (square corners, 2px edges, an inset bevel, stencilled capitals, a press that travels `translate(1px,1px)` on `steps(2,end)`); `comic` is newsprint (Bangers/Patrick Hand, Ben-Day dots and paper fibre fixed on the root as `background-image`, hard ink blocks instead of soft shadows, cyan/magenta misr…"
       }
     ],
     "truncated": true

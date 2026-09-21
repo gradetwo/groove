@@ -2,6 +2,21 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
+/**
+ * The default palette, eager.
+ *
+ * `desktopTokens.css` is generated (`scripts/desktop_skins.mjs`) and carries the *default* skin's values on
+ * `:root`, so a page that never sets `data-skin` — the first paint, a test, a screenshot of the app as it
+ * always looked — has the palette it needs. The five other palettes and the literal map live in
+ * `desktopSkins.css`, which `useSkin.ts` loads with the skin that needs it.
+ */
+import "./styles/desktopTokens.css";
+/*
+ * The skins' *character* sheets (type, edges, texture) are **not** imported here: exactly one of the five is
+ * ever in use, and they were 6 KB of gzip on the initial route for CSS that a default-skin load never
+ * applies. `useSkin.ts` imports the active one by name the moment a skin is applied — see
+ * `loadCharacterSheet`. The palette next door stays eager, because every skin needs one.
+ */
 
 import { applyStoredSkin } from "./hooks/useSkin";
 import { initPwa } from "./utils/pwa";

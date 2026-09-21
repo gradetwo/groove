@@ -4,26 +4,41 @@
 
 @layer base {
   :root {
-    --bg: #0a0b0d;
-    --panel: #121317;
-    --panel2: #0d0e12;
-    --line: #23262d;
-    --line2: #1a1c21;
-    --txt: #e9e7e0;
-    --sub: #8b8f99;
-    --dim: #828794;
-    --amber: #f5b73d;
-    --c-kick: #ff5964;
-    --c-snare: #ffb65c;
-    --c-hat: #45e0c9;
-    --c-perc: #c8e06a;
-    --c-bass: #ff8a5c;
-    --c-chord: #f06ec4;
-    --c-lead: #7ee787;
-    --c-fx: #9aa5ce;
+    /*
+     * The hand-written CSS in this file predates the design tokens and kept its own copies of them.
+     * They are *the same roles*, so they now resolve through the desktop palette
+     * (`src/styles/desktopSkins.css`, generated from the phone's skins): one place decides what "panel"
+     * or "the hat colour" is, and a skin change moves this file with everything else. Keeping a second
+     * set of hexes here is exactly how the surfaces drifted apart in the first place.
+     */
+    --bg: rgb(var(--d-bg));
+    --panel: rgb(var(--d-panel));
+    --panel2: rgb(var(--d-panel2));
+    --line: rgb(var(--d-line));
+    --line2: rgb(var(--d-line) / 0.6);
+    --txt: rgb(var(--d-ink));
+    --sub: rgb(var(--d-ink-3));
+    --dim: rgb(var(--d-ink-2));
+    --amber: rgb(var(--d-accent));
+    --c-kick: rgb(var(--d-track-kick));
+    --c-snare: rgb(var(--d-track-snare));
+    --c-hat: rgb(var(--d-track-hat));
+    --c-perc: rgb(var(--d-track-perc));
+    --c-bass: rgb(var(--d-track-bass));
+    --c-chord: rgb(var(--d-track-chord));
+    --c-lead: rgb(var(--d-track-lead));
+    --c-fx: rgb(var(--d-track-fx));
+    /*
+     * `--accent-rgb` is used by ~40 glow shadows across the studio (`rgba(var(--accent-rgb),0.3)`) and
+     * **was never defined**: an invalid colour, so those shadows silently painted nothing. Defining it as
+     * the token's own channels is both the missing piece and the skin-aware one — those glows now exist,
+     * and they follow the accent instead of a hardcoded amber.
+     */
+    --accent-rgb: var(--d-accent);
     --mono: "JetBrains Mono", monospace;
     --disp: "Space Grotesk", "Noto Sans SC", sans-serif;
-    color-scheme: dark;
+    /* Light skins need the browser to paint their form controls and scrollbars light too. */
+    color-scheme: var(--d-scheme);
   }
 
   body {
@@ -35,7 +50,7 @@
     font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
       "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
       sans-serif;
-    background-image: radial-gradient(ellipse 80% 60% at 50% -10%, #15161d 0%, transparent 60%);
+    background-image: radial-gradient(ellipse 80% 60% at 50% -10%, rgb(var(--d-page-glow)) 0%, transparent 60%);
     background-attachment: fixed;
     margin: 0;
     padding: 0;

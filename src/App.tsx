@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
-import { SettingsModal } from "./components/settings/SettingsModal";
 import { useGs1Setting } from "./features/sequencer/useGs1Setting";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { Genre, SequencerPattern } from "./types/genre";
@@ -33,6 +32,16 @@ import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
 
 // Code splitting & lazy loading chunks for optimal performance
+/**
+ * The settings panel is lazy, for the same reason every view is.
+ *
+ * It carries five tabs, their copy, and (since the desktop got the phone's skins) the skin catalogue with its
+ * preview swatches. None of that is in the first paint's job: the panel opens on a click. Moving it out is
+ * what kept the initial route inside its budget after the six-skin round added the eager default palette.
+ */
+const SettingsModal = React.lazy(() =>
+  import("./components/settings/SettingsModal").then((m) => ({ default: m.SettingsModal }))
+);
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
 const ChordProgressionsView = React.lazy(() => import("./views/ChordProgressionsView").then((m) => ({ default: m.ChordProgressionsView })));
 const GalaxyView = React.lazy(() => import("./views/GalaxyView").then((m) => ({ default: m.GalaxyView })));
@@ -448,8 +457,9 @@ const MainApp: React.FC = () => {
         */}
         <div className="m-panels">
         <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
-        <SettingsModal
-          isOpen={settingsOpen}
+        <React.Suspense fallback={null}>
+          <SettingsModal
+            isOpen={settingsOpen}
           onClose={() => setSettingsOpen(false)}
           engine={engineInstance}
           gs1Enabled={gs1Enabled}
@@ -462,11 +472,12 @@ const MainApp: React.FC = () => {
             }
             setSettingsOpen(false);
           }}
-          onOpenUpdates={() => {
-            setSettingsOpen(false);
-            setUpdatesOpen(true);
-          }}
-        />
+            onOpenUpdates={() => {
+              setSettingsOpen(false);
+              setUpdatesOpen(true);
+            }}
+          />
+        </React.Suspense>
         <GlobalSearch
           isOpen={searchOpen}
           onClose={() => setSearchOpen(false)}
@@ -500,7 +511,18 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-bg text-text flex flex-col font-sans selection:bg-accent/25 selection:text-accent">
+    /*
+      `data-surface` names which of the two apps this is.
+      
+      The phone shell and the desktop render from the same components but they are separate surfaces, and a
+      skin's *character* (a texture, a font, a cut corner) is written for one of them: the desktop's
+      character sheets are scoped to `[data-surface="desktop"]` so they cannot leak into the phone shell,
+      whose own sheets are scoped to `.mobile-root` and were tuned separately.
+    */
+    <div
+      data-surface="desktop"
+      className="min-h-screen bg-bg text-text flex flex-col font-sans selection:bg-accent/25 selection:text-accent"
+    >
       {/* Header */}
       <Header
         currentTab={currentTab}
@@ -984,6 +1006,7 @@ const MainApp: React.FC = () => {
 
 
       {/* Global settings panel (item ⑤): the app-level, non-per-track parameters. */}
+      <React.Suspense fallback={null}>
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -1005,6 +1028,7 @@ const MainApp: React.FC = () => {
           setUpdatesOpen(true);
         }}
       />
+      </React.Suspense>
 
       {/* Global Singleton Toast Container */}
       <ToastContainer position="bottom" />

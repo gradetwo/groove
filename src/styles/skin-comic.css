@@ -1,0 +1,793 @@
+/*
+ * The comic skin, on the desktop and the iPad.
+ *
+ * The palette is already the phone's (see `desktopSkins.css`, generated); this file is the skin's
+ * *character* — the things a palette cannot express: type, edges, texture, the way a panel is cut. It is
+ * scoped to `[data-skin="comic"]` and it may only use the `--d-*` tokens, so it works on any surface the
+ * desktop renders.
+ *
+ * Owned by the comic character pass; the contract it must satisfy is in
+ * `src/test/desktopCharacters.test.ts`.
+ *
+ * =============================================================================================
+ * What the desktop's comic character is
+ * =============================================================================================
+ *
+ * The phone shell (`.mobile-root`, `src/mobile/skins/comic.css`) turns a screen into a four-colour
+ * press sheet: newsprint, ink outlines, Ben-Day dots, flat spot plates, cyan and magenta a hair out of
+ * register. The desktop is the same press run, printed on the *chrome*: a denser sheet, more panels,
+ * and an instrument readout that must stay an instrument readout. The language is taken straight from
+ * the phone sheet — ink keylines, hard zero-blur shadows, dot screens, two-plate misregistration, a
+ * solid accent plate for "this is the one you are on" — and translated to what the desktop actually
+ * has.
+ *
+ * ONE HONEST DIFFERENCE FROM THE PHONE, stated up front because it is a deliberate choice and not an
+ * oversight. The brief's electric cyan and magenta plates are *not* in the desktop palette:
+ * `desktopSkins.css` (generated, not editable here) derives every `--d-*` token from the phone's
+ * **ink** tokens, and the comic skin's ink accent is the deep process-cyan the phone sheet reserves
+ * for type. A character sheet may not invent a colour (the gate enforces it), so the misregistration
+ * is built out of what the palette *does* have:
+ *
+ *   - the **cyan** plate is the accent itself, printed at 22–55 % so it reads as a light cyan
+ *     impression on newsprint and as a cool fringe on the dark panels;
+ *   - the **magenta** plate is `--d-danger` — the palette's own process magenta — at 18–45 %, and
+ *     `color-mix()` with the accent where a hue between the two is wanted. `color-mix` is not a new
+ *     colour: it is two declared tokens in a declared proportion, which is exactly what an offset
+ *     press does when two plates overlap.
+ *
+ * The result on paper is the brownish-orange misregistration of a cheap 70s comic run rather than the
+ * Spider-Verse neon; it is the same *mechanism* the phone sheet uses, resolved against the palette the
+ * two surfaces actually share. Everything else — the ink keyline, the hard block shadow, the dot
+ * screen, the lettered type — is identical.
+ *
+ * =============================================================================================
+ * The four moves
+ * =============================================================================================
+ *
+ * TYPE. Three voices, none of them the UI grotesque.
+ *   - `"Bangers"` is the display hand: page and section titles, the brand wordmark, the dossier's
+ *     genre name, the transport's play key. Letterspaced, never negatively tracked, always with the
+ *     two-plate fringe (`text-shadow: 1.5px 1.5px 0 magenta, -1px -1px 0 cyan`) and a doubled ink
+ *     rule under it (`box-shadow: 0 3px 0 ink, 0 5px 0 ink/45%`).
+ *   - `"Patrick Hand"` is the body hand: body copy, labels, chips, list rows — everything you read.
+ *     Comic Neue is the first fallback, then the shell's Space Grotesk. Neither hand carries CJK, so
+ *     Chinese falls through to the platform face exactly as it does on a phone.
+ *   - JetBrains Mono stays the instrument voice. The sequencer's step numbers, BPM, ruler, ELO and
+ *     meter labels are a *readout*: they keep their monospace face and their measured widths, and are
+ *     annotated by hand instead — a hard half-pixel ink stamp, and a double pencil rule under the
+ *     uppercase kickers (drawn with `text-decoration`, which costs the line box nothing).
+ *
+ * EDGES. A comic panel is an inked box, so the desktop's soft elevation is replaced by print:
+ *   - surfaces get an ink **keyline** — 1px real border (already there) plus a `0 0 0 1px` ink ring,
+ *     which paints outside the flow, so an auto-width chip does not grow by a pixel;
+ *   - elevation becomes a **hard block**: `4px 4px 0 ink` instead of a blurred shadow;
+ *   - radii drop from `rounded-2xl`/`rounded-xl` (16/12px) to 3–6px, because a press rules straight
+ *     lines and a 16px radius reads as a soft app card.
+ *
+ * TEXTURE. The sheet is dot-screened. The page ground carries a three-plate Ben-Day screen plus a
+ * newsprint fibre, painted as `background-image` on the desktop root; the fixed `::after` layer adds
+ * a fine 45° rosette *over* the whole viewport so the texture does not crawl while a list scrolls
+ * underneath it. Panels carry their own coarser screens at 7–9px. Every screen is a
+ * `radial-gradient`/`repeating-linear-gradient` tile — no images, no external fetch.
+ *
+ * The `bg-*` trap the phone sheet documents applies here too: a Tailwind background-image utility
+ * (`bg-gradient-to-r`, `bg-[radial-gradient(...)]`) overrides a `background-image` declaration, so
+ * the dot screens live on surfaces this file also *owns the background of* — and where a component's
+ * gradient is worth keeping (the chord hero, the rank rail, the progress bar) the ink keyline and the
+ * block shadow are applied instead of a screen. Nothing in this file tries to out-specify a gradient.
+ *
+ * THE ENGAGED PLATE. `--d-accent` is the press's cyan plate, and it is spent only where "you are
+ * here" has to be unmistakable: the Play key, the active toolbar view, the selected genre chip, the
+ * active difficulty, the selected timbre. On an accent plate the type is knocked out to paper
+ * (`--d-panel`, the lightest stock) with an ink keyline and a 3–4px block shadow. Everywhere else an
+ * "active" control is paper with a heavier ink rule, which keeps the plate meaning something.
+ *
+ * =============================================================================================
+ * Keeping it operable
+ * =============================================================================================
+ *
+ * The desktop's toolbar density gate and the E2E matrix measure real boxes, so this file never
+ * touches `width`, `height`, `padding`, `margin`, `gap`, `display`, `order` or `visibility`, and it
+ * deliberately never changes `font-size` either: Patrick Hand's x-height is close enough to Space
+ * Grotesk's at 10–13px (the desktop's working range), and a font-size change is the one "character"
+ * move that can push a wrapped toolbar row onto a second line. Faces, tracking, colour, decoration
+ * and paint only — `border-width`, `border-radius`, `box-shadow`, `background*`, `color`, `font-*`,
+ * `letter-spacing`, `text-shadow`, `text-decoration`, `outline`, `transform`, pseudo-elements.
+ *
+ * All colour is `var(--d-*)`, `rgb(var(--d-*) / a)` or `color-mix(...)` of the two; no literal hex,
+ * no `!important`, no `@font-face`, no external `url()`.
+ */
+
+/* =============================================================================================
+ * 1. The two plates, as tokens this file can reuse
+ *
+ * Scoped to the surface so they resolve on the desktop root and cannot leak into the phone shell.
+ * `--comic-magenta` is the press's own magenta ink; where a hue *between* the plates is wanted (the
+ * hero's fringe, a heat-struck step) `color-mix` does it at the point of use. These are not new
+ * colours: every one of them is a `--d-*` token.
+ * =========================================================================================== */
+:root[data-skin="comic"] [data-surface="desktop"] {
+  --comic-ink: rgb(var(--d-ink));
+  --comic-cyan: rgb(var(--d-accent) / 0.55);
+  --comic-magenta: rgb(var(--d-danger) / 0.45);
+  --comic-screen: radial-gradient(circle at 1px 1px, rgb(var(--d-ink) / 0.055) 1px, transparent 1.3px);
+  --comic-screen-fine: radial-gradient(circle at 1px 1px, rgb(var(--d-ink) / 0.085) 1px, transparent 1.25px);
+}
+
+/* =============================================================================================
+ * 2. Letterforms
+ *
+ * The body hand goes on the root and cascades; the mono voice is restored on every literal the
+ * desktop uses to ask for it, so a readout column can never drift. The display hand is applied
+ * rule by rule below, where a box can absorb a face with different vertical metrics.
+ * =========================================================================================== */
+:root[data-skin="comic"] [data-surface="desktop"] {
+  font-family: "Patrick Hand", "Comic Neue", "Space Grotesk", system-ui, sans-serif;
+  /* A hand-lettered page has air between its letters. This is a floor, never a tightening. */
+  letter-spacing: 0.02em;
+}
+
+/* The instrument voice, restored wherever the shell asks for it by name. Two spellings because the
+   desktop uses both the Tailwind `font-mono` utility and the literal `font-['JetBrains_Mono']`. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="font-mono"],
+:root[data-skin="comic"] [data-surface="desktop"] [class*="JetBrains_Mono"],
+:root[data-skin="comic"] [data-surface="desktop"] code,
+:root[data-skin="comic"] [data-surface="desktop"] kbd,
+:root[data-skin="comic"] [data-surface="desktop"] .text-mono {
+  font-family: "JetBrains Mono", ui-monospace, "Fira Code", "Roboto Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  /* Stamped rather than set: a hard half-pixel ink shadow is press bleed, not a blur. */
+  text-shadow: 0.5px 0.5px 0 rgb(var(--d-ink) / 0.28);
+  letter-spacing: 0;
+}
+
+/* The display voice. `Bangers` is the lettered-comic face; a marker face carries the page titles.
+   Every box this lands on is a heading whose line box is its own, so the face swap cannot reflow a
+   control. */
+:root[data-skin="comic"] [data-surface="desktop"] h1,
+:root[data-skin="comic"] [data-surface="desktop"] h2,
+:root[data-skin="comic"] [data-surface="desktop"] [class*="Space_Grotesk"]:not([class*="font-mono"]) {
+  font-family: "Bangers", "Permanent Marker", "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: 0.035em;
+}
+
+/* The page title: two plates a hair out of register, then the doubled ink rule under it. Both are
+   shadows, so the title's box does not move by a pixel. */
+:root[data-skin="comic"] [data-surface="desktop"] h1 {
+  text-transform: uppercase;
+  text-shadow: 1.5px 1.5px 0 var(--comic-magenta), -1px -1px 0 var(--comic-cyan);
+  box-shadow: 0 3px 0 0 var(--comic-ink), 0 5px 0 0 rgb(var(--d-ink) / 0.4);
+}
+
+/* Section titles carry the fringe one weight down. An `h3` on this surface is always prose — a
+   lesson name, a card kicker — so it stays in the body hand and only takes the plate fringe. */
+:root[data-skin="comic"] [data-surface="desktop"] h2,
+:root[data-skin="comic"] [data-surface="desktop"] h3,
+:root[data-skin="comic"] [data-surface="desktop"] h4 {
+  text-shadow: 1px 1px 0 var(--comic-magenta), -0.75px -0.75px 0 var(--comic-cyan);
+}
+:root[data-skin="comic"] [data-surface="desktop"] h3,
+:root[data-skin="comic"] [data-surface="desktop"] h4 {
+  font-family: "Patrick Hand", "Comic Neue", "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* The uppercase mono kickers (`SESSION · 128 STEPS`, `GROOVE DNA`, `TEMPO CLUE`) are annotations
+   written across the top of a panel, so they get a double pencil rule — drawn with
+   `text-decoration`, which adds nothing to the line box. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="font-mono"][class~="uppercase"],
+:root[data-skin="comic"] [data-surface="desktop"] [class*="JetBrains_Mono"][class~="uppercase"] {
+  text-decoration: underline double;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  letter-spacing: 0.06em;
+}
+
+/* =============================================================================================
+ * 3. The sheet: newsprint ground, Ben-Day screens, the two plate edges
+ *
+ * The desktop root is `min-h-screen bg-bg`, so its own background is the page ground. Three dot
+ * plates at three scales and two angles give the rosette a real halftone gets; the two thin bands at
+ * the top and bottom of the viewport are the plate edges of the sheet. `background-attachment:
+ * fixed` on the screens keeps the dots still while the page scrolls — a crawling texture reads as a
+ * screen, not as paper.
+ * =========================================================================================== */
+:root[data-skin="comic"] [data-surface="desktop"] {
+  background-color: rgb(var(--d-bg));
+  background-image:
+    radial-gradient(circle at 1px 1px, rgb(var(--d-ink) / 0.1) 1.05px, transparent 1.3px),
+    radial-gradient(circle at 1px 1px, rgb(var(--d-danger) / 0.1) 1.35px, transparent 1.65px),
+    radial-gradient(circle at 1px 1px, rgb(var(--d-accent) / 0.1) 1.15px, transparent 1.45px),
+    repeating-linear-gradient(115deg, rgb(var(--d-ink) / 0.022) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(25deg, rgb(var(--d-ink) / 0.018) 0 1px, transparent 1px 13px);
+  background-size: 6px 6px, 15px 15px, 23px 23px, auto, auto;
+  background-position: 0 0, 4px 5px, 9px 3px, 0 0, 0 0;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
+}
+
+/*
+ * The plate edges and the over-sheet rosette, on the fixed `::after` of the root.
+ *
+ * `::after` rather than `::before` on purpose: the root's first child is the sticky header, and a
+ * fixed pseudo-element painted before it would sit *under* the header's own background — the phone
+ * sheet hit exactly this. `z-index: 0` keeps this layer above the main content (which is not a
+ * stacking context of its own) and below the header and every modal (`z-50` and up), and
+ * `pointer-events: none` means no control loses a pixel of its hit area.
+ */
+:root[data-skin="comic"] [data-surface="desktop"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgb(var(--d-accent) / 0.3) 0 3px, transparent 3px),
+    linear-gradient(0deg, rgb(var(--d-danger) / 0.3) 0 3px, transparent 3px),
+    radial-gradient(circle at 1px 1px, rgb(var(--d-ink) / 0.05) 1px, transparent 1.3px);
+  background-size: auto, auto, 4px 4px;
+  background-position: 0 0, 0 100%, 1px 2px;
+}
+
+/* =============================================================================================
+ * 4. The header: a printed masthead
+ *
+ * The sticky header keeps its `bg-bg/95 backdrop-blur-md`. The paper is re-declared opaque with its
+ * own dot screen, and the rule under it becomes two: the 1px line the shell already draws, and a
+ * 3px ink block under that (`box-shadow` paints outside the box, so the header does not grow and
+ * nothing that parks under `--app-header-h` moves). The blur is dropped: a press sheet is not
+ * frosted.
+ * =========================================================================================== */
+:root[data-skin="comic"] [data-surface="desktop"] > header {
+  background-color: rgb(var(--d-bg) / 0.97);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: var(--comic-ink);
+  box-shadow: 0 2px 0 0 var(--comic-ink), 0 4px 0 0 rgb(var(--d-ink) / 0.22);
+}
+
+/* The brand wordmark: the page's byline, lettered and fringed with both plates. */
+:root[data-skin="comic"] [data-surface="desktop"] > header [class*="Space_Grotesk"] {
+  text-transform: uppercase;
+  text-shadow: 1.5px 1.5px 0 var(--comic-magenta), -1px -1px 0 var(--comic-cyan);
+}
+/* The brand's glowing dot becomes a printed registration mark: an ink-ringed spot plate. */
+:root[data-skin="comic"] [data-surface="desktop"] > header [class~="bg-accent"][class~="rounded-full"] {
+  box-shadow: 0 0 0 1px var(--comic-ink), 0 0 0 3px rgb(var(--d-panel));
+}
+
+/* Navigation and header tools are printed stickers: squared off, keyed in ink, sitting on a hard
+   block. The shell's soft glow shadows are withdrawn with them. */
+:root[data-skin="comic"] [data-surface="desktop"] > header nav > button,
+:root[data-skin="comic"] [data-surface="desktop"] > header > div > button {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px var(--comic-ink), 2px 2px 0 0 rgb(var(--d-ink) / 0.55);
+}
+
+/* …and the plate: the current tab is the only page-marked one in the row. Paper type on the accent
+   plate, an ink keyline around it and a thicker block under it. */
+:root[data-skin="comic"] [data-surface="desktop"] > header nav > button[class~="text-accent"],
+:root[data-skin="comic"] [data-surface="desktop"] > header nav > button[class*="border-accent"] {
+  background-color: rgb(var(--d-accent));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  border-color: var(--comic-ink);
+  color: rgb(var(--d-panel));
+  box-shadow: 0 0 0 1px var(--comic-ink), 3px 3px 0 0 var(--comic-ink);
+}
+
+/* The explore dropdown is a torn-off panel of the same paper. */
+:root[data-skin="comic"] [data-surface="desktop"] > header [class~="rounded-xl"][class~="shadow-2xl"] {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel));
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  box-shadow: 0 0 0 1px var(--comic-ink), 5px 5px 0 0 var(--comic-ink);
+}
+
+/* =============================================================================================
+ * 5. Surfaces: inked paper
+ * =========================================================================================== */
+
+/*
+ * The dossier sidebar (studio, left column) keeps the `aspect` of a card but becomes stock with a
+ * screen. `border-width: 1px` is restated rather than thickened: the keyline is the ink ring, which
+ * paints outside the box, so every card keeps the exact size the layout gate measured.
+ */
+:root[data-skin="comic"] [data-surface="desktop"] aside > [class~="rounded-xl"] {
+  border-radius: 5px;
+  border-width: 1px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel));
+  background-image: var(--comic-screen-fine);
+  background-size: 8px 8px;
+  box-shadow: 0 0 0 1px var(--comic-ink), 4px 4px 0 0 var(--comic-ink);
+}
+
+/* The genre name at the top of the dossier is the biggest lettering in the column. */
+:root[data-skin="comic"] [data-surface="desktop"] aside [class*="Space_Grotesk"] {
+  text-transform: uppercase;
+  text-shadow: 1.5px 1.5px 0 var(--comic-magenta), -1px -1px 0 var(--comic-cyan);
+}
+
+/* The small instrument tiles (TEMPO / KEY / METER) are printed swatches. */
+:root[data-skin="comic"] [data-surface="desktop"] aside [class~="rounded-lg"][class~="bg-panel2"] {
+  border-radius: 3px;
+  border-color: rgb(var(--d-ink) / 0.65);
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.2);
+}
+
+/* The two big sequencer panels: an inked board with a hard block under it. */
+:root[data-skin="comic"] [data-surface="desktop"] main > section[class~="rounded-2xl"],
+:root[data-skin="comic"] [data-surface="desktop"] main section[class~="rounded-2xl"] {
+  border-radius: 6px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px var(--comic-ink), 6px 6px 0 0 rgb(var(--d-ink) / 0.85);
+}
+
+/* Views that are a stack of flat panels (chords, challenge, maker, console). The `bg-panel` +
+   `border-line` pair is the app's own "card" spelling, so this is broad on purpose — but it never
+   touches a gradient (the hero and the rank rail keep theirs) and it never changes a radius below
+   `rounded-xl`, which is what keeps chips and keys from being caught by it. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-panel"][class~="border-line"][class~="rounded-3xl"],
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-panel"][class~="border-line"][class~="rounded-2xl"] {
+  border-radius: 6px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel));
+  background-image: var(--comic-screen-fine);
+  background-size: 8px 8px;
+  box-shadow: 0 0 0 1px var(--comic-ink), 5px 5px 0 0 var(--comic-ink);
+}
+
+/* The instrument strip inside those cards (`bg-panel2` + `border-line`) is a screened inset. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-panel2"][class~="border-line"][class~="rounded-2xl"],
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-panel2"][class~="border-line"][class~="rounded-xl"] {
+  border-radius: 4px;
+  border-color: rgb(var(--d-ink) / 0.6);
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.18);
+}
+
+/*
+ * The hero block and the dark plates.
+ *
+ * `overflow-hidden` is on most of them, so a pseudo-element wedge would be clipped: the
+ * misregistration is a *pair of hard offset shadows* instead — cyan one way, magenta the other, then
+ * the ink keyline. These blocks are deliberately excluded from the paper treatment above (they keep
+ * their gradient), which is why they are listed first and separately.
+ */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="rounded-2xl"][class~="shadow-2xl"][class~="overflow-hidden"][class~="border-line"] {
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px var(--comic-ink),
+    -3px 3px 0 0 var(--comic-cyan),
+    4px 4px 0 0 var(--comic-magenta),
+    6px 6px 0 0 var(--comic-ink);
+}
+
+/* =============================================================================================
+ * 6. Instruments: the studio toolbar and the sequencer grid
+ *
+ * The desktop's densest surface. Nothing here may change a box, so the toolbar groups get an ink
+ * keyline and a squared radius, the transport stays the loud plate, and the step grid is inked with
+ * *inset* bands (which paint inside the cell) rather than outer rings (which would double the seam
+ * between two adjacent steps).
+ * =========================================================================================== */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="rounded-xl"][class~="overflow-x-auto"] {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel2) / 0.9);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.3);
+}
+
+/* The transport strip itself is a paper band with a doubled ink rule under it. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="toolbar-transport-strip"] {
+  background-color: rgb(var(--d-bg) / 0.97);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: var(--comic-ink);
+  /* The strip is sticky directly above the grid, so its rule may only point *up*: an inset band plus
+     the 1px border reads as a 2px ink rule with nothing painted over the first row of steps. */
+  box-shadow: inset 0 2px 0 0 rgb(var(--d-ink) / 0.28);
+}
+
+/* PLAY is the loudest plate on the page and the one thing the hand is aimed at. Paper type reversed
+   out of the accent, an ink keyline and a 4px block — the one control allowed to shout. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="toolbar-group-transport"] > button:first-child {
+  border-radius: 4px;
+  background-color: rgb(var(--d-accent));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  color: rgb(var(--d-panel));
+  text-shadow: none;
+  box-shadow: 0 0 0 1px var(--comic-ink), 4px 4px 0 0 var(--comic-ink);
+}
+/* …and it presses into the page when held, the way a key on a press does. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="toolbar-group-transport"] > button:first-child:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 1px var(--comic-ink), 2px 2px 0 0 var(--comic-ink);
+}
+
+/* The BPM / bar readouts are instruments: mono, keyed in ink, no plate. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="toolbar-transport-strip"] [class~="bg-panel2"][class~="rounded-lg"] {
+  border-radius: 3px;
+  border-color: var(--comic-ink);
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.25);
+}
+
+/* The toolbar's secondary keys (fold / advanced / more / undo / views) are printed stickers. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="toolbar-"] > button,
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="studio-toolbar"] button[class~="bg-panel2"] {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px var(--comic-ink), 2px 2px 0 0 rgb(var(--d-ink) / 0.5);
+}
+
+/* The engaged view chip in the toolbar (the `bg-accent` one) prints as the plate. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="studio-toolbar"] button[class~="bg-accent"] {
+  background-color: rgb(var(--d-accent));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  border-color: var(--comic-ink);
+  color: rgb(var(--d-panel));
+  text-shadow: none;
+  box-shadow: 0 0 0 1px var(--comic-ink), 3px 3px 0 0 var(--comic-ink);
+}
+
+/* The ruler above the grid: newsprint cells with ink hairlines, keyed off `data-ruler-step-idx`,
+   which the shell writes on every cell; a bar start takes the heavier rule and a cell inside the loop
+   takes the accent plate, so the loop's span is readable from the ruler alone. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx] {
+  border-radius: 2px;
+  border-color: rgb(var(--d-ink) / 0.45);
+  background-color: rgb(var(--d-panel) / 0.55);
+  background-image: var(--comic-screen);
+  background-size: 6px 6px;
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.12);
+  color: rgb(var(--d-ink-2));
+}
+:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="border-l-2"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="bg-accent/15"] {
+  background-color: rgb(var(--d-line));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  border-color: var(--comic-ink);
+  box-shadow: inset 0 2px 0 0 rgb(var(--d-ink) / 0.55);
+  color: rgb(var(--d-ink));
+}
+
+/* A track row is a ruled band: paper, an ink seam above and below, no gradient header. */
+:root[data-skin="comic"] [data-surface="desktop"] [class*="track-row-"] {
+  border-top-color: rgb(var(--d-ink) / 0.35);
+  border-bottom-color: rgb(var(--d-ink) / 0.35);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [class*="track-row-"] > div:has(> [class*="trk-head-solid"]) {
+  background-image: none;
+  background-color: rgb(var(--d-panel2));
+  border-radius: 0;
+  border-right-color: var(--comic-ink);
+  box-shadow: 2px 0 0 0 rgb(var(--d-ink) / 0.4);
+}
+
+/* The per-track switches in the header are stamps. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="track-audition-"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="track-inspector-open-"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="track-piano-roll-open-"] {
+  border-radius: 3px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px rgb(var(--d-ink) / 0.35);
+}
+
+/*
+ * The step cells.
+ *
+ * A 128-cell grid cannot carry a 2px ink outline on every cell — it would read as damage. The cells
+ * keep their own track-colour fill (that is the sequencer's information), and the *ink* is spent on
+ * the beat seams (`border-l` on every fourth cell already exists) plus an inked edge with a hard
+ * block under a step that is actually lit.
+ *
+ * The two states are told apart without naming a colour: a *lit* step renders its gloss and its LED
+ * as children, an empty one renders nothing — `:has(> *)` is the whole test — so this file inks the
+ * hit step and leaves the stock step bare while every colour it names is a `--d-*` token.
+ */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="step-cell-"] {
+  border-radius: 3px;
+}
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="step-cell-"]:not(:has(> *)) {
+  background-color: rgb(var(--d-bg) / 0.5);
+  background-image: var(--comic-screen);
+  background-size: 6px 6px;
+  border-color: rgb(var(--d-ink) / 0.4);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="step-cell-"]:has(> *) {
+  border-color: var(--comic-ink);
+  box-shadow:
+    inset 0 0 0 1px rgb(var(--d-ink) / 0.45),
+    inset 0 1px 2px rgb(var(--d-ink) / 0.25),
+    2px 2px 0 0 rgb(var(--d-ink) / 0.5);
+}
+
+/* The collapsed-track toggle and the grid's own kicker stay instrument type. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="toggle-all-tracks-compact"] {
+  border-radius: 3px;
+  border-color: rgb(var(--d-ink) / 0.5);
+  box-shadow: 0 0 0 1px rgb(var(--d-ink) / 0.2);
+}
+
+/* The level meters and the piano-roll grid take an ink edge without a plate. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="track-meter"] {
+  border-radius: 2px;
+  border-color: rgb(var(--d-ink) / 0.6);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="piano-roll-grid"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="piano-roll-drawer"] {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px rgb(var(--d-ink) / 0.4);
+}
+
+/* =============================================================================================
+ * 6b. The one literal that has to be re-inked on paper
+ *
+ * `#d8b988` is the app's "soft gold" literal, remapped by the generated sheet onto
+ * `--d-accent-soft`. On the comic skin that token is a light process cyan, which is exactly right
+ * on the galaxy's dark plate and is 4.4:1 on newsprint — where this app actually uses it (the
+ * chord workshop's section labels, its "Chord Progressions & Harmonic Voicing Studio" byline, the
+ * figure captions). On paper it is re-inked; on the dark plate it is left alone, because that is
+ * the one surface the token was chosen for.
+ * =========================================================================================== */
+/* The workshop's own byline (a `span` inside the page `h1`) and its small uppercase field labels
+   are the two places that literal is *text*. Both are re-inked; the galaxy's labels are `font-mono`
+   and are not touched, so the token keeps its meaning on the dark plate. */
+:root[data-skin="comic"] [data-surface="desktop"] h1 [class~="font-serif"] {
+  color: rgb(var(--d-ink-2));
+  text-shadow: none;
+}
+:root[data-skin="comic"] [data-surface="desktop"] [class~="text-[11px]"][class~="font-semibold"] {
+  color: rgb(var(--d-ink-2));
+  text-decoration: underline double;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  letter-spacing: 0.05em;
+}
+
+/* =============================================================================================
+ * 7. Chips, cards and plates: the studio rail, the chords workshop, the challenge
+ * =========================================================================================== */
+
+/* Every genre chip in the rail is a printed card. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="genre-chip-"] {
+  border-radius: 4px;
+  border-width: 1px;
+  border-color: var(--comic-ink);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  box-shadow: 0 0 0 1px var(--comic-ink), 2px 2px 0 0 rgb(var(--d-ink) / 0.55);
+}
+/* The played genre is the plate, and its track-colour border is overruled by ink like every other
+   keyline in this skin. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="genre-chip-"][class*="shadow-[0_0_14px"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="genre-chip-"][class*="border-[var(--g)]"] {
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-accent));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  box-shadow: 0 0 0 1px var(--comic-ink), 4px 4px 0 0 var(--comic-ink);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="genre-chip-"][class*="border-[var(--g)]"] *,
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="genre-chip-"][class~="shadow-[0_0_14px_rgba(245,183,61,0.2)]"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid^="genre-chip-"][class~="shadow-[0_0_14px_rgba(245,183,61,0.2)]"] * {
+  color: rgb(var(--d-panel));
+  text-shadow: none;
+}
+
+/* The "all categories" select and the rail's shuffle key take the same edge. */
+:root[data-skin="comic"] [data-surface="desktop"] main > div > div > select {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px var(--comic-ink);
+}
+
+/*
+ * The chord workshop.
+ *
+ * Its hero and its instrument strips keep their dark gradients (they are the "plate" surfaces on that
+ * page); what changes is the *cut* — squared corners and the two-plate fringe on the hero — plus the
+ * cards, which become inked paper.
+ */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="rounded-2xl"][class*="bg-gradient-to-br"] {
+  border-radius: 6px;
+  border-color: var(--comic-ink);
+}
+/* The progression board itself: an inked panel with a hard ink block under it, the way the studio's
+   sequencer board is cut. Its inner strips keep their own dark gradients — they are that page's
+   "plates", and the board is the sheet they are printed on. */
+:root[data-skin="comic"] [data-surface="desktop"] main > div > section[class~="shadow-2xl"] {
+  border-radius: 6px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px var(--comic-ink), 6px 6px 0 0 rgb(var(--d-ink) / 0.85);
+}
+
+/* The instrument-timbre strip: four chips in a ruled box. The box is the panel; the chips keep the
+   keyline the pill rule below gives them. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="rounded-xl"]:has(> input) {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  box-shadow: 0 0 0 1px var(--comic-ink);
+}
+
+/* The selected timbre / voicing chip is the plate; the rest are ruled paper. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-accent"][class~="text-zinc-950"],
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-accent"]:has(> [class~="font-light"]) {
+  background-color: rgb(var(--d-accent));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  border-radius: 4px;
+  color: rgb(var(--d-panel));
+  text-shadow: none;
+  box-shadow: 0 0 0 1px var(--comic-ink), 3px 3px 0 0 var(--comic-ink);
+}
+/* Unselected chips are stock with an ink hairline. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="rounded-full"][class~="border-line"][class~="text-text-sub"],
+:root[data-skin="comic"] [data-surface="desktop"] [class~="rounded-full"][class~="border-line"][class~="hover:bg-white"] {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  box-shadow: 0 0 0 1px rgb(var(--d-ink) / 0.45);
+}
+/* The chord timeline's slot cards. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-panel"]:has(> [class~="font-light"]) [class~="rounded-xl"] {
+  border-radius: 4px;
+  border-color: rgb(var(--d-ink) / 0.55);
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.15);
+}
+
+/*
+ * The challenge.
+ *
+ * The three difficulty keys are a press's plate selector: the engaged one is the accent plate, the
+ * other two are stock. The answer tiles are stickers — paper, ink edge, hard block — and the graded
+ * states print flat as the outcome's own plate with paper type, exactly as the phone sheet does.
+ */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-accent"][class~="rounded-xl"] {
+  border-radius: 4px;
+  background-color: rgb(var(--d-accent));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  color: rgb(var(--d-panel));
+  text-shadow: none;
+  box-shadow: 0 0 0 1px var(--comic-ink), 3px 3px 0 0 var(--comic-ink);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="challenge-option"] {
+  border-radius: 5px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel));
+  background-image: var(--comic-screen);
+  background-size: 8px 8px;
+  box-shadow: 0 0 0 1px var(--comic-ink), 3px 3px 0 0 var(--comic-ink);
+}
+/* The letter badge inside each tile is knocked out of the paper. */
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="challenge-option"] > div > div:first-child,
+:root[data-skin="comic"] [data-surface="desktop"] [data-testid="challenge-option"] [class~="rounded-lg"][class~="bg-neutral-800"] {
+  border-radius: 3px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel2));
+  color: rgb(var(--d-ink));
+  box-shadow: 0 0 0 1px var(--comic-ink);
+}
+/* The stats strip is a paper bar with a keyline. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-panel2"][class~="rounded-2xl"][class~="border-line"] {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.2);
+}
+/* The ELO / score / accuracy figures are instrument readouts. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-panel2"][class~="rounded-2xl"] [class~="font-mono"] {
+  letter-spacing: 0.02em;
+}
+/* The progress rail keeps its gradient (that is the readout) and gains an ink keyline. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="bg-neutral-800"][class~="rounded-full"] {
+  border-color: var(--comic-ink);
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink) / 0.35);
+}
+/* The in-card alert strips (`bg-indigo-950/40`, etc.) are screened paper, not neon glass. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="rounded-2xl"][class~="bg-indigo-950/40"] {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel2));
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  color: rgb(var(--d-ink-2));
+  box-shadow: 0 0 0 1px rgb(var(--d-ink) / 0.4);
+}
+
+/* =============================================================================================
+ * 8. Galaxies: the one dark surface keeps its space and takes a printed label
+ *
+ * The nebula canvas is the view's whole point and is left alone. Only its chrome is lettered: the
+ * cluster labels, the legend card, and the guide pill.
+ * =========================================================================================== */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="nlab-core"] b {
+  font-family: "Bangers", "Permanent Marker", "Space Grotesk", sans-serif;
+  letter-spacing: 0.2em;
+  text-shadow: 1px 1px 0 rgb(var(--d-danger) / 0.55), -1px -1px 0 rgb(var(--d-accent) / 0.5);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [class~="nlab-core"] em {
+  font-family: "Patrick Hand", "Comic Neue", "Space Grotesk", sans-serif;
+  letter-spacing: 0.16em;
+}
+/* The nebula selector is a strip of printed labels on the dark plate; the current one is the plate. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="h-[calc(100dvh-64px)]"] [class~="rounded-full"][class~="backdrop-blur-md"] {
+  border-radius: 4px;
+  border-color: rgb(var(--d-ink) / 0.3);
+  background-image: var(--comic-screen);
+  background-size: 8px 8px;
+  box-shadow: 0 0 0 1px rgb(var(--d-ink) / 0.25), 4px 4px 0 0 rgb(var(--d-ink) / 0.5);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [class~="h-[calc(100dvh-64px)]"] [class~="rounded-full"][class~="backdrop-blur-md"] > [class~="bg-accent/20"] {
+  border-radius: 3px;
+  background-color: rgb(var(--d-accent));
+  background-image: var(--comic-screen-fine);
+  background-size: 6px 6px;
+  border-color: var(--comic-ink);
+  color: rgb(var(--d-panel));
+  box-shadow: 0 0 0 1px var(--comic-ink), 2px 2px 0 0 var(--comic-ink);
+}
+/* The legend card is paper, even here: it is a caption box pasted onto the plate. */
+:root[data-skin="comic"] [data-surface="desktop"] [class~="h-[calc(100dvh-64px)]"] [class~="backdrop-blur-md"]:has(> [class~="rounded-full"][class~="shadow-sm"]) {
+  border-radius: 4px;
+  border-color: var(--comic-ink);
+  background-color: rgb(var(--d-panel) / 0.94);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  box-shadow: 0 0 0 1px var(--comic-ink), 4px 4px 0 0 var(--comic-ink);
+}
+:root[data-skin="comic"] [data-surface="desktop"] [class~="h-[calc(100dvh-64px)]"] [class~="backdrop-blur-md"]:has(> [class~="rounded-full"][class~="shadow-sm"]) [class~="uppercase"] {
+  color: rgb(var(--d-ink-2));
+}
+:root[data-skin="comic"] [data-surface="desktop"] [class~="h-[calc(100dvh-64px)]"] [class~="rounded-full"][class~="backdrop-blur-sm"] {
+  border-radius: 4px;
+  border-color: rgb(var(--d-ink) / 0.4);
+  background-color: rgb(var(--d-panel) / 0.92);
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  color: rgb(var(--d-ink-2));
+  box-shadow: 0 0 0 1px rgb(var(--d-ink) / 0.35);
+}
+
+/* =============================================================================================
+ * 9. The footer: the colophon
+ * =========================================================================================== */
+:root[data-skin="comic"] [data-surface="desktop"] > footer {
+  background-color: rgb(var(--d-bg));
+  background-image: var(--comic-screen);
+  background-size: 7px 7px;
+  border-top-color: var(--comic-ink);
+  box-shadow: 0 -2px 0 0 var(--comic-ink), 0 -4px 0 0 rgb(var(--d-ink) / 0.22);
+}
+:root[data-skin="comic"] [data-surface="desktop"] > footer [class*="Space_Grotesk"] {
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 var(--comic-magenta), -1px -1px 0 var(--comic-cyan);
+}
+
+/* =============================================================================================
+ * 10. The motion guard
+ *
+ * A printed sheet does not animate. The skin adds no motion of its own, and the two press-like
+ * presses (`:active` transforms) are withdrawn where the reader has asked for stillness. Layout is
+ * untouched either way — these are paint-only.
+ * =========================================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-skin="comic"] [data-surface="desktop"] [data-testid="toolbar-group-transport"] > button:first-child:active {
+    transform: none;
+  }
+}

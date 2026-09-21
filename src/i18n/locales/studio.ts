@@ -331,6 +331,17 @@ export const studioMessages = {
   settings_haptics_unsupported: { en: "This browser exposes no vibration API, so the switch has no effect here.", zh: "当前浏览器没有震动接口，这个开关在此设备上不会生效。" },
   settings_haptics_intensity: { en: "Intensity", zh: "强度" },
   settings_section_language: { en: "Language", zh: "语言" },
+  /*
+   * The skin picker, on the desktop and the iPad.
+   *
+   * Same six skins as the phone's 更多 → 外观, and the same choice: `[data-skin]` is on the document root,
+   * so a skin picked here *is* the skin the phone shell wears.
+   */
+  settings_section_appearance: { en: "Appearance", zh: "外观" },
+  settings_section_appearance_hint: {
+    en: "The phone's six skins, applied to the whole app — the same palette on both surfaces.",
+    zh: "手机端的六套皮肤，作用于整个应用——两个界面用同一套配色。",
+  },
   settings_section_layout: { en: "Layout defaults", zh: "布局默认值" },
   settings_layout_hint: { en: "Saved for the next launch. Toggling inside the studio still wins for the current session.", zh: "保存后下次启动生效；本次会话中以工作台里的开关为准。" },
   settings_layout_sidebar: { en: "Sidebar collapsed", zh: "侧栏默认收起" },

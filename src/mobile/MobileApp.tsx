@@ -270,7 +270,12 @@ export function MobileApp({
   const showShellHeader = !isPlayer && !isDetail;
 
   return (
-    <div className="mobile-root relative min-h-[100dvh] w-full" data-testid="mobile-shell" data-module={module}>
+    <div
+      className="mobile-root relative min-h-[100dvh] w-full"
+      data-surface="phone"
+      data-testid="mobile-shell"
+      data-module={module}
+    >
       {/* Scroll container: the bar is fixed, so the content reserves its height plus the safe area. */}
       <main
         className="relative z-10 mx-auto min-h-[100dvh] w-full max-w-[432px]"

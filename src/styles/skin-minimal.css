@@ -1,0 +1,82 @@
+/*
+ * The minimal skin, on the desktop and the iPad — its *character*.
+ *
+ * The palette (`src/styles/desktopSkins.css`) already turns the desktop paper-white with black ink; what is
+ * missing is the restraint, and restraint is a set of *decisions* rather than a colour: hairlines instead of
+ * borders with weight, no shadows or gradients at all, one typeface (Inter), tight tracking on headings, and
+ * the accent spent on one thing at a time.
+ *
+ * Read `src/mobile/skins/minimal.css` for the phone's version of the same argument; this is the desktop
+ * translation of it. Two traps carry over:
+ *
+ *  - the desktop paints a soft page wash and many gradient panels, so "no gradients" has to be said
+ *    explicitly (`background-image: none`) rather than assumed;
+ *  - `background-image: none` does not touch Tailwind's shadow utilities, which are `box-shadow`.
+ *
+ * Rules: every selector is scoped to the desktop surface (the phone shell has its own sheet), colours come
+ * from `--d-*` tokens only, and nothing here changes a box's size — see `src/test/desktopCharacters.test.ts`.
+ */
+
+/* ---------------------------------------------------------------------------------------------
+ * 1. No decoration
+ *
+ * Depth comes from a hairline and a change of surface, so the desktop's glows, gradients and drop shadows
+ * are switched off wholesale. The few places where a panel genuinely has to read as floating (a dialog, a
+ * menu) get the hairline treatment instead of a shadow.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] [data-surface="desktop"] * {
+  box-shadow: none;
+}
+
+:root[data-skin="minimal"] [data-surface="desktop"] [class*="bg-gradient-to-"] {
+  background-image: none;
+}
+
+:root[data-skin="minimal"] [data-surface="desktop"] :is([role="dialog"], [role="menu"], [role="listbox"]) {
+  border: 1px solid var(--d-line-strong);
+  background-color: rgb(var(--d-panel));
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 2. Hairlines
+ *
+ * A border keeps its 1px and loses its weight: on paper, emphasis is ink at one pixel, not a heavier line.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] [data-surface="desktop"] [class*="border-line"] {
+  border-color: var(--d-line);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 3. Type
+ *
+ * Inter for the interface, the negative tracking the phone also uses on headings (the one place it is
+ * right), and the mono face kept for numerals — a groove box is full of numbers, and a monospaced column is
+ * what makes them scannable.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] [data-surface="desktop"] {
+  font-family: "Inter", "Space Grotesk", system-ui, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+}
+
+:root[data-skin="minimal"] [data-surface="desktop"] :is(h1, h2, h3) {
+  font-family: "Inter", "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+:root[data-skin="minimal"] [data-surface="desktop"] [class*="font-['Space_Grotesk']"] {
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 4. The accent, spent once
+ *
+ * The accent marks *the* one thing to press or read; the desktop put a glow around anything active, which
+ * on paper is a smudge (`box-shadow: none` above removes them). What is left is to keep the accent flat:
+ * no text shadow, no gradient behind the primary key.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] [data-surface="desktop"] [class*="text-accent"] {
+  text-shadow: none;
+}
+
+:root[data-skin="minimal"] [data-surface="desktop"] [data-toolbar-id="play"] {
+  background-image: none;
+}
