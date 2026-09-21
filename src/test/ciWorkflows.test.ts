@@ -36,6 +36,43 @@ function jobBlock(name: string): string {
   return (end === -1 ? rest : rest.slice(0, end)).join("\n");
 }
 
+describe("CI · the manual verify workflow is wired, not decorative", () => {
+  /**
+   * The slow checks have to be *runnable on demand*, and a workflow that loses its trigger, its inputs or
+   * its artifacts looks exactly like one that works until somebody presses the button. These assertions
+   * are about that contract: a manual trigger, a scope/profile choice, the browsers it needs, the scripts
+   * it names existing, and a result you can read or download.
+   */
+  const manual = read(".github/workflows/manual-verify.yml");
+
+  it("can be triggered by hand, with a scope and a target filter", () => {
+    expect(manual, "a workflow_dispatch trigger").toMatch(/^on:\s*$/m);
+    expect(manual).toMatch(/^ {2}workflow_dispatch:\s*$/m);
+    expect(manual, "a scope input").toContain("scope:");
+    expect(manual, "a profile input").toContain("profile:");
+    expect(manual, "a target filter input").toContain("only:");
+    // The matrix reads these two, so a manual run can be narrowed to the legs that matter.
+    expect(manual).toContain("E2E_PROFILE:");
+    expect(manual).toContain("E2E_ONLY:");
+  });
+
+  it("installs the browsers the matrix needs and uploads both artifacts", () => {
+    expect(manual).toMatch(/playwright install --with-deps chromium firefox webkit/);
+    const uploads = manual.match(/uses: actions\/upload-artifact@/g) ?? [];
+    expect(uploads.length, "e2e + coverage artifacts").toBeGreaterThanOrEqual(2);
+    expect(manual).toContain("path: e2e-out/");
+    expect(manual).toContain('"$GITHUB_STEP_SUMMARY"');
+  });
+
+  it("references only npm scripts that exist", () => {
+    const referenced = [...manual.matchAll(/npm run ([a-z0-9:_-]+)/gi)].map((m) => m[1]);
+    expect(referenced.length, "scripts referenced by the manual workflow").toBeGreaterThanOrEqual(4);
+    for (const script of referenced) {
+      expect(Object.keys(pkg.scripts ?? {}), `package.json must define "${script}"`).toContain(script);
+    }
+  });
+});
+
 describe("CI · the nightly job is wired, not decorative", () => {
   it("keeps a schedule trigger with a real cron expression", () => {
     expect(workflow).toMatch(/^on:\s*$/m);

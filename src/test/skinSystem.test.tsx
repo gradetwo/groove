@@ -30,6 +30,17 @@ import { SkinPicker } from "../mobile/SkinPicker";
 
 /** The skins that ship a stylesheet. `default` is the base look in `mobile.css`, so it has none. */
 const STYLED_SKINS = ["minimal", "comic", "soviet", "sovietYears", "pixel"] as const;
+
+/**
+ * The skins the two *layers* must cover: every styled skin **plus `default`**.
+ *
+ * `default` has no stylesheet of its own — it is the base look in `mobile.css` — so it is not in
+ * `STYLED_SKINS` (the loop that reads `<id>.css` would look for a file that does not exist). But the
+ * layers are what keep a phone surface from showing the *desktop* palette, and leaving `default` out is
+ * how the reused desktop views in 探索 kept their amber under the default skin: the user's
+ * "极光冷色探索里头还有老的黄色残留".
+ */
+const LAYER_SKINS = [...STYLED_SKINS, "default"] as const;
 const SKIN_CSS_DIR = path.join(process.cwd(), "src", "mobile", "skins");
 
 /** Every skin must define these, or large parts of the shell keep the previous skin's colours. */
@@ -417,7 +428,7 @@ describe("skin stylesheets", () => {
   it("gives every styled skin and every 探索 sub-page a surface of its own", () => {
     const withoutComments = code(read("legacySkin"));
     const blocks = [...withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
-    for (const id of STYLED_SKINS) {
+    for (const id of LAYER_SKINS) {
       const scoped = blocks.filter(([, selector]) => selector.includes(`:root[data-skin="${id}"]`));
       expect(scoped.length, `legacySkin.css has no override for ${id}`).toBeGreaterThan(0);
       expect(
@@ -540,6 +551,11 @@ describe("skin stylesheets", () => {
       /**
        * The tokens live on `.mobile-root`, a *sibling* of `.m-panels`, so the sheet has to publish
        * the active skin's block on the scope element itself before any `var()` can resolve.
+       *
+       * `default` is deliberately absent here — that skin's panels keep the desktop's own look, which is
+       * asserted below and documented in the sheet. The *legacy-view* layer is the opposite: it covers
+       * `default` too, because that is where the unre-skinned desktop palette was visible on the default
+       * skin (the user's amber residue in 探索).
        */
       const own = blocks.find(([, selector]) => selector.trim() === `:root[data-skin="${id}"] .m-panels`);
       expect(own, `${id} has no token block on .m-panels`).toBeTruthy();
