@@ -38,9 +38,9 @@
  *    only navigation is genre-to-genre should not sprout five external search buttons; the credit line
  *    is worth reading and not worth the chrome. (Reported, not silently dropped: the data is there.)
  */
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { ALL_GENRES } from "../../data/genres";
+import { GENRE_INDEX_MAP, loadGenre, type GenreIndexItem } from "../mobileGenreData";
 import { getLineage, type LineageSibling } from "../../data/lineage";
 import { GENRE_RELATIONS } from "../../data/relations";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
@@ -49,11 +49,19 @@ import type { Genre, I18nString } from "../../types/genre";
 import { genreArtBackground, genreCoverUrl } from "../genreArt";
 
 const CJK = /[\u3400-\u9fff]/;
-const chineseName = (genre: Genre): string =>
+const chineseName = (genre: { aliases?: string[] }): string =>
   (genre.aliases ?? []).find((alias) => CJK.test(alias)) ?? "";
 
-const genreById = (id: string | undefined): Genre | undefined =>
-  id ? ALL_GENRES.find((genre) => genre.id === id) : undefined;
+/**
+ * The **index** record for an id.
+ *
+ * The page's own genre is a full record (it prints prose, facts and lineage), but everything it links
+ * *to* — ancestors, descendants, contemporaries, related genres — is only ever named and opened, and the
+ * index carries exactly that. Looking those up here is what keeps a page of eight related genres from
+ * loading eight category chunks.
+ */
+const indexById = (id: string | undefined): GenreIndexItem | undefined =>
+  id ? GENRE_INDEX_MAP[id] : undefined;
 
 /**
  * The reciprocal "X links historically back to Y" relations.
@@ -85,7 +93,7 @@ function curatedNote(sibling: LineageSibling): I18nString | null {
  */
 function linkSiblingName(
   text: string,
-  genre: Genre
+  genre: { name: string; aliases?: string[] }
 ): { before: string; hit: string; after: string } | null {
   let best: { index: number; length: number } | null = null;
   for (const needle of [genre.name, ...(genre.aliases ?? [])]) {
@@ -167,7 +175,7 @@ function GenreLink({
   onOpen: (id: string) => void;
   label?: string;
 }) {
-  const genre = genreById(id);
+  const genre = indexById(id);
   if (!genre) return null;
   return (
     <a
@@ -197,7 +205,45 @@ export function MobileGenreDetailScreen({
   onOpenGenre,
 }: MobileGenreDetailScreenProps) {
   const { t } = useLanguage();
-  const genre = genreById(genreId);
+  const [genre, setGenre] = useState<Genre | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "missing">(genreId ? "loading" : "missing");
+
+  /**
+   * The page's own record, on demand.
+   *
+   * Prose, facts, lineage and rhythm are all fields of the full `Genre`, so the page is the surface that
+   * fetches the category chunk. It opens as soon as the route names an id (the shell has already
+   * navigated) and fills in when the record lands; a record that never lands falls through to the
+   * existing "missing genre" state, exactly as a genuinely unknown id does.
+   */
+  useEffect(() => {
+    if (!genreId) {
+      setGenre(null);
+      setStatus("missing");
+      return;
+    }
+    let alive = true;
+    setGenre(null);
+    setStatus("loading");
+    void loadGenre(genreId).then((record) => {
+      if (!alive) return;
+      setGenre(record);
+      setStatus(record ? "ready" : "missing");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [genreId]);
+
+  if (status === "loading") {
+    return (
+      <div className="m-rise px-4 pt-2" data-testid="mobile-genre-loading">
+        <BackButton onBack={onBack} label={t("mobile_back")} />
+        <p className="m-mono -mt-2 text-right text-[9px] text-[var(--m-ink-3)]">{t("mobile_detail_tap_back")}</p>
+        <p className="m-mono mt-6 text-center text-[11px] tracking-[0.24em] text-[var(--m-ink-3)]">…</p>
+      </div>
+    );
+  }
 
   if (!genre) {
     return (
@@ -222,7 +268,8 @@ export function MobileGenreDetailScreen({
    * Every genre's own `related_genres` / `subgenres` arrays are empty in the database — the curated
    * relations live in their own table (300 of them, weighted, each with a bilingual description) —
    * so reading the object would silently render an empty section. Ordered by weight so the closest
-   * relatives come first.
+   * relatives come first, and checked against the index: a relation naming an id the library does not
+   * carry is dropped without a fetch.
    */
   const related = [
     ...new Set(
@@ -231,7 +278,7 @@ export function MobileGenreDetailScreen({
         .map((relation) => relation.target)
     ),
   ]
-    .filter((id) => id !== genre.id && genreById(id))
+    .filter((id) => id !== genre.id && indexById(id))
     .slice(0, 8);
 
   return (
@@ -475,7 +522,7 @@ function LineageMovement({
   const links = (ids: string[]): React.ReactNode =>
     joinNodes(
       ids
-        .map((id) => (genreById(id) ? <GenreLink key={id} id={id} onOpen={onOpen} /> : null))
+        .map((id) => (indexById(id) ? <GenreLink key={id} id={id} onOpen={onOpen} /> : null))
         .filter((node): node is React.ReactElement => node !== null),
       language
     );
@@ -494,8 +541,8 @@ function LineageMovement({
   const contemporaries = story
     ? story.genre_ids
         .filter((id) => id !== genre.id)
-        .map(genreById)
-        .filter((item): item is Genre => Boolean(item))
+        .map(indexById)
+        .filter((item): item is GenreIndexItem => Boolean(item))
     : [];
   const era =
     story && language === "zh" ? `${story.decade} 年代` : (story?.year ?? "");
@@ -635,7 +682,7 @@ function LineageNotes({ siblings, onOpen }: { siblings: LineageSibling[]; onOpen
   return (
     <ul className="space-y-1.5">
       {notes.map((sibling) => {
-        const other = genreById(sibling.id);
+        const other = indexById(sibling.id);
         const description = curatedNote(sibling);
         if (!other || !description) return null;
         const text = description[language] ?? description.en;
@@ -896,7 +943,7 @@ function RelatedIndex({
       </h2>
       <ul className="mt-2">
         {related.map((id) => {
-          const item = genreById(id)!;
+          const item = indexById(id)!;
           return (
             <li key={id} className="border-b border-[var(--m-line)]">
               {/*

@@ -25,6 +25,26 @@ const CATEGORY_HUES: Record<string, [number, number]> = {
   "Latin/World": [150, 178],
 };
 
+/**
+ * One colour per category, from the reference palette.
+ *
+ * The desktop galaxy view derives colours from cluster membership; the phone shell needs exactly six
+ * stable, high-contrast swatches, so it maps the six categories it already has rather than inventing a
+ * seventh colour source. It lives beside the generated art (rather than on the home screen) so the
+ * player bar and the player can use it without statically importing the home screen — which would drag
+ * the library list's module into the shell's first-paint chunk.
+ */
+export const CATEGORY_SWATCH: Record<string, string> = {
+  // A cool, high-contrast set. The reference designs leaned on amber for everything, which made every
+  // genre's tile look identical (and yellow); these six read as distinct at tile size.
+  Electronic: "#5eead4",
+  "Rock/Metal": "#fb7185",
+  "Hip Hop": "#a78bfa",
+  "Jazz/Blues": "#60a5fa",
+  "Pop/R&B": "#f0abfc",
+  "Latin/World": "#34d399",
+};
+
 /** Stable 32-bit hash: the same genre always gets the same art. */
 export function hashGenreId(id: string): number {
   let hash = 0x811c9dc5;

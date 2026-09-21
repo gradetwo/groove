@@ -26,7 +26,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Minus, Play, Plus, RotateCcw, Square } from "lucide-react";
-import { ALL_GENRES } from "../../data/genres";
+import { GENRE_INDEX, loadGenre } from "../mobileGenreData";
 import { patternFromGenre } from "../../data/genreMix";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, SequencerPattern } from "../../types/genre";
@@ -93,7 +93,8 @@ export interface MobileJamScreenProps {
   genreId?: string;
   isPlaying: boolean;
   readClock: () => { step: number; fraction: number } | null;
-  onTogglePlay: (genre: Genre) => void;
+  /** Play/stop the backing genre *by id*: the shell resolves the record (the phone browses by index). */
+  onTogglePlay: (genreId: string) => void;
   onApplyPattern: (pattern: SequencerPattern) => void;
   onTempo: (bpm: number) => void;
   onSwing: (swing: number) => void;
@@ -107,8 +108,60 @@ export interface MobileJamScreenProps {
   onAuditionTrack?: (trackId: string, instrument?: string) => void;
 }
 
-export function MobileJamScreen({
-  genreId,
+/**
+ * The screen's data path: resolve the backing genre, then render the editor.
+ *
+ * 即兴 authors a real pattern (`patternFromGenre`), so it needs a full `Genre` rather than an index row.
+ * With no backing id it falls back to the first genre **in the index** — not to an eagerly imported
+ * `ALL_GENRES[0]` — and resolves that one record like any other.
+ */
+export function MobileJamScreen(props: MobileJamScreenProps) {
+  const { t } = useLanguage();
+  const targetId = props.genreId ?? GENRE_INDEX[0]?.id;
+  const [genre, setGenre] = useState<Genre | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "missing">(targetId ? "loading" : "missing");
+
+  useEffect(() => {
+    if (!targetId) {
+      setGenre(null);
+      setStatus("missing");
+      return;
+    }
+    let alive = true;
+    setGenre(null);
+    setStatus("loading");
+    void loadGenre(targetId).then((record) => {
+      if (!alive) return;
+      setGenre(record);
+      setStatus(record ? "ready" : "missing");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [targetId]);
+
+  if (status === "loading") {
+    return (
+      <section className="m-rise px-4 pt-2" data-testid="mobile-jam-loading">
+        <p className="m-mono mt-6 text-center text-[11px] tracking-[0.24em] text-[var(--m-ink-3)]">…</p>
+      </section>
+    );
+  }
+
+  if (!genre) {
+    return (
+      <section className="m-rise px-4 pt-2" data-testid="mobile-jam-missing">
+        <p className="mt-4 text-[13px] text-[var(--m-ink-2)]">{t("mobile_detail_missing")}</p>
+      </section>
+    );
+  }
+
+  return <JamForGenre genre={genre} {...props} />;
+}
+
+/** The editor itself, with a resolved backing genre in hand. */
+function JamForGenre({
+  genre,
   isPlaying,
   readClock,
   onTogglePlay,
@@ -117,9 +170,8 @@ export function MobileJamScreen({
   onSwing,
   onOpenGenre,
   onAuditionTrack,
-}: MobileJamScreenProps) {
+}: MobileJamScreenProps & { genre: Genre }) {
   const { t } = useLanguage();
-  const genre = ALL_GENRES.find((item) => item.id === genreId) ?? ALL_GENRES[0];
 
   /** The working copy: the genre's pattern, edited here and pushed to the engine as it changes. */
   const [pattern, setPattern] = useState<SequencerPattern>(() => patternFromGenre(genre));
@@ -469,7 +521,7 @@ export function MobileJamScreen({
             data-testid="mobile-jam-play"
             aria-pressed={isPlaying}
             aria-label={isPlaying ? t("mobile_jam_stop") : t("mobile_jam_play")}
-            onClick={() => onTogglePlay(genre)}
+            onClick={() => onTogglePlay(genre.id)}
             className="m-press flex h-[52px] w-[52px] flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink)]"
           >
             {isPlaying ? <Square className="h-5 w-5" fill="currentColor" /> : <Play className="ml-0.5 h-5 w-5" fill="currentColor" />}

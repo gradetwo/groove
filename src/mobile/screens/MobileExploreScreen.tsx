@@ -30,7 +30,7 @@
  */
 import React, { useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import type { Genre, SequencerPattern } from "../../types/genre";
+import type { SequencerPattern } from "../../types/genre";
 
 type ExplorePage = "chords" | "kick" | "groove";
 
@@ -59,7 +59,9 @@ const LegacyFallback = () => (
 export interface MobileExploreScreenProps {
   genreId?: string;
   isPlaying: boolean;
-  onTogglePlay: (genre: Genre) => void;
+  /** Accepted (and ignored) for interface symmetry with the other modules; the reused views own their
+      own transport, so the id is never used here. */
+  onTogglePlay: (genreId: string) => void;
   onApplyPattern: (pattern: SequencerPattern) => void;
 }
 

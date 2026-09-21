@@ -38,7 +38,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Pause, Play, X } from "lucide-react";
-import { ALL_GENRES } from "../../data/genres";
+import { loadLibraryFromIndex } from "../mobileGenreData";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre } from "../../types/genre";
 import { announcer } from "../../platform/announcer";
@@ -118,7 +118,8 @@ export interface ChallengeQuestion {
 
 export interface MobileChallengeScreenProps {
   isPlaying: boolean;
-  onTogglePlay: (genre: Genre) => void;
+  /** Play/pause a genre *by id*: the shell resolves the record (the phone browses by index). */
+  onTogglePlay: (genreId: string) => void;
   onOpenGenre: (genreId: string) => void;
 }
 
@@ -129,11 +130,49 @@ const DIFFICULTY_LABEL_KEYS: Record<ChallengeDifficulty, string> = {
   hard: "mobile_challenge_hard",
 };
 
-export function MobileChallengeScreen({
+/**
+ * The screen's data path: the adaptive quiz needs the whole library, so it loads it on module entry.
+ *
+ * `selectAdaptiveQuestion` takes `Genre[]` and builds its difficulty pool, distractor set and sibling
+ * matching from it, so 挑战 is the one phone surface that legitimately needs every record. It asks the
+ * index's on-demand loader for them (`loadLibraryFromIndex` — one category chunk per id, cached) instead
+ * of importing the eager `ALL_GENRES` barrel, and only when the module is actually opened: the shell's
+ * first paint never touches a category chunk.
+ *
+ * The arena mounts only once the records are in hand, so its question state starts from a real library
+ * rather than from an empty pool; the placeholder below is what the user sees for that moment.
+ */
+export function MobileChallengeScreen(props: MobileChallengeScreenProps) {
+  const [library, setLibrary] = useState<Genre[] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void loadLibraryFromIndex().then((genres) => {
+      if (alive) setLibrary(genres);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!library || library.length === 0) {
+    return (
+      <section className="m-rise px-4 pt-2" data-testid="mobile-challenge-loading">
+        <p className="m-mono mt-6 text-center text-[11px] tracking-[0.24em] text-[var(--m-ink-3)]">…</p>
+      </section>
+    );
+  }
+
+  return <ChallengeArena library={library} {...props} />;
+}
+
+/** The quiz itself, with the full library in hand. */
+function ChallengeArena({
+  library,
   isPlaying,
   onTogglePlay,
   onOpenGenre,
-}: MobileChallengeScreenProps) {
+}: MobileChallengeScreenProps & { library: Genre[] }) {
   const { t, language } = useLanguage();
   const [stats, setStats] = useState<StoredChallengeStats>(() => loadChallengeStats());
   const [difficulty, setDifficulty] = useState<ChallengeDifficulty>("medium");
@@ -158,8 +197,8 @@ export function MobileChallengeScreen({
   const nextQuestion = useCallback(
     (diff: ChallengeDifficulty, current: StoredChallengeStats) => {
       const result = selectAdaptiveQuestion({
-        allGenres: ALL_GENRES,
-        difficultyPool: difficultyPoolFor(diff, ALL_GENRES.map((genre) => genre.id)),
+        allGenres: library,
+        difficultyPool: difficultyPoolFor(diff, library.map((genre) => genre.id)),
         difficulty: diff,
         currentRound: current.totalAnswered,
         sm2Memory: current.sm2Memory,
@@ -174,7 +213,7 @@ export function MobileChallengeScreen({
       setLastDelta(null);
       setLastGained(0);
     },
-    []
+    [library]
   );
 
   /**
@@ -343,7 +382,7 @@ export function MobileChallengeScreen({
           data-testid="mobile-challenge-play"
           aria-pressed={isPlaying}
           aria-label={isPlaying ? t("mobile_player_pause") : t("mobile_player_play")}
-          onClick={() => question && onTogglePlay(question.correctGenre)}
+          onClick={() => question && onTogglePlay(question.correctGenre.id)}
           className="m-press mx-auto mt-3 flex h-20 w-20 items-center justify-center rounded-full border border-[rgb(var(--m-gold-rgb)/0.5)] bg-[var(--m-card-2)] text-[var(--m-gold)]"
         >
           {isPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7" />}

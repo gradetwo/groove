@@ -14,11 +14,11 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { LanguageProvider, formatMessage } from "../i18n/LanguageContext";
-import { mobileMessages } from "../i18n/locales/mobile";
+import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileApp } from "../mobile/MobileApp";
 import { MOBILE_MODULES, shouldEnterPhoneShell, type MobileModule } from "../mobile/mobileModules";
 import { ALL_GENRES } from "../data/genres";
+import { GENRE_INDEX } from "../data/index/loader";
 import { getLineage } from "../data/lineage";
 import { TIMELINE_STORIES } from "../data/timeline_stories";
 
@@ -226,9 +226,14 @@ describe("phone shell · home screen", () => {
     expect(document.querySelector(`[data-testid="mobile-genre-play-${genreId}"]`)).toBeNull();
 
     fireEvent.click(screen.getByTestId(`mobile-genre-row-${genreId}`));
-    expect(audition.toggle).toHaveBeenCalledTimes(1);
-    expect(audition.toggle.mock.calls[0][0].id).toBe(genreId);
+    /**
+     * The shell resolves the id to a full record before it can build a pattern, so the audition lands a
+     * tick later than the tap — the page opens immediately (asserted synchronously below), the sound
+     * follows the record.
+     */
     expect(onOpenGenre).toHaveBeenCalledWith(genreId);
+    await waitFor(() => expect(audition.toggle).toHaveBeenCalledTimes(1));
+    expect(audition.toggle.mock.calls[0][0].id).toBe(genreId);
   });
 
   it("says so when a search matches nothing instead of showing an empty list", async () => {
@@ -277,11 +282,15 @@ describe("phone shell · home screen", () => {
      * The complaint: the rail showed a year and a one-line title while `TIMELINE_STORIES` already
      * shipped a full description and a genre list, and the genre library already shipped each
      * genre's origin and category. Every assertion below is bound to that shipped data, so a node
-     * that loses its excerpt, its count, its places or its categories fails here.
+     * that loses its excerpt, its count, its years or its categories fails here.
+     *
+     * The rail reads the lightweight index (A-01), so the "from" line is the span of the era's genres'
+     * `origin_year` values — `origin_place` is deliberately not in the index, and loading fourteen
+     * category chunks to decorate a timeline is the regression this screen was rewritten to remove.
      */
     renderShell("home");
     await findHome();
-    const libraryById = new Map(ALL_GENRES.map((genre) => [genre.id, genre]));
+    const indexById = new Map(GENRE_INDEX.map((genre) => [genre.id, genre]));
 
     TIMELINE_STORIES.forEach((story, index) => {
       const node = screen.getByTestId(`mobile-home-timeline-node-${index}`);
@@ -296,28 +305,23 @@ describe("phone shell · home screen", () => {
       const count = within(node).getByTestId(`mobile-home-timeline-count-${index}`);
       expect(count.textContent ?? "").toContain(String(story.genre_ids.length));
 
-      // "From" and "Style": the distinct `origin_place` / `category` of the era's own genres.
-      const eraGenres = story.genre_ids.map((id) => libraryById.get(id));
+      // "From" and "Style": the span of the era's `origin_year` values and its distinct categories.
+      const eraGenres = story.genre_ids.map((id) => indexById.get(id));
       expect(
         eraGenres.every(Boolean),
-        `story ${story.id} names a genre the library does not carry`
+        `story ${story.id} names a genre the index does not carry`
       ).toBe(true);
-      const places = [...new Set(eraGenres.map((genre) => genre!.origin_place.zh))];
+      const years = [...new Set(eraGenres.map((genre) => genre!.origin_year))]
+        .filter(Boolean)
+        .sort((a, b) => Number(a) - Number(b));
       const categories = [...new Set(eraGenres.map((genre) => genre!.category))];
-      expect(places.length).toBeGreaterThan(0);
+      expect(years.length).toBeGreaterThan(0);
       expect(categories.length).toBeGreaterThan(0);
 
       const facts = within(node).getByTestId(`mobile-home-timeline-facts-${index}`);
       const factsText = facts.textContent ?? "";
-      // The node names the first places and counts the rest, so the tail is visible, not hidden.
-      for (const place of places.slice(0, 2)) expect(factsText).toContain(place);
-      if (places.length > 2) {
-        expect(factsText).toContain(
-          formatMessage(mobileMessages.mobile_home_timeline_more_places.zh, {
-            count: places.length - 2,
-          })
-        );
-      }
+      const expectedFrom = years.length > 1 ? `${years[0]}–${years[years.length - 1]}` : years[0];
+      expect(factsText).toContain(expectedFrom);
       for (const category of categories) expect(factsText).toContain(category);
     });
   });
@@ -351,7 +355,7 @@ describe("phone shell · home screen", () => {
     const firstId = idOf(links[0]);
     fireEvent.click(links[0]);
     expect(onOpenGenre).toHaveBeenCalledWith(firstId);
-    expect(audition.toggle).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(audition.toggle).toHaveBeenCalledTimes(1));
     expect(audition.toggle.mock.calls[0][0].id).toBe(firstId);
   });
 
@@ -929,10 +933,13 @@ describe("phone shell · the full-screen player", () => {
     await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
 
     fireEvent.click(screen.getByTestId("mobile-player-skip-forward"));
-    expect(audition.toggle).toHaveBeenCalledTimes(1);
+    // The queue is the index; the chosen id is resolved to a record before the transport sees it.
+    expect(onOpenPlayer).toHaveBeenCalledTimes(1);
+    const nextId = onOpenPlayer.mock.calls[0][0] as string;
+    expect(nextId).not.toBe("chicago-house");
+    await waitFor(() => expect(audition.toggle).toHaveBeenCalledTimes(1));
     const played = audition.toggle.mock.calls[0][0].id as string;
-    expect(played).not.toBe("chicago-house");
-    expect(onOpenPlayer).toHaveBeenCalledWith(played);
+    expect(played).toBe(nextId);
   });
 
   it("says so when the player is pointed at a genre that does not exist", async () => {

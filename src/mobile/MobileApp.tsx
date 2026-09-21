@@ -17,9 +17,8 @@ import { useGenreAudition } from "../hooks/useGenreAudition";
 import { MobileModuleTabBar } from "./MobileModuleTabBar";
 import { MobilePlayerBar } from "./MobilePlayerBar";
 import { MOBILE_MODULE_PLAN_KEYS, type MobileModule } from "./mobileModules";
-import { ALL_GENRES } from "../data/genres";
+import { GENRE_INDEX, loadGenre } from "./mobileGenreData";
 import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
-import type { Genre } from "../types/genre";
 import "./mobile.css";
 /**
  * The skins.
@@ -169,17 +168,20 @@ export function MobileApp({
    * library on `all`. Continuous auto-advance when a pattern ends is deferred to the module that owns
    * the transport (M4) — the mode already governs the queue here, and pretending otherwise would be a
    * control that does nothing.
+   *
+   * The queue is the **index** (`id` + `category`, which is all `nextGenreForMode` reads), and only the
+   * chosen id is resolved to a full record before the transport gets it.
    */
   const skip = useCallback(
     (direction: 1 | -1) => {
       const from = genreId ?? playingGenreId;
       if (!from) return;
-      const nextId = nextGenreForMode(playMode, from, ALL_GENRES, direction);
-      const genre = ALL_GENRES.find((item) => item.id === nextId);
-      if (!genre) return;
+      const nextId = nextGenreForMode(playMode, from, GENRE_INDEX, direction);
       stopAudition();
-      void toggleAudition(genre);
-      if (mobilePlayer) onOpenPlayer?.(genre.id);
+      void loadGenre(nextId).then((record) => {
+        if (record) void toggleAudition(record);
+      });
+      if (mobilePlayer) onOpenPlayer?.(nextId);
     },
     [genreId, mobilePlayer, onOpenPlayer, playMode, playingGenreId, stopAudition, toggleAudition]
   );
@@ -189,24 +191,37 @@ export function MobileApp({
    *
    * Deliberately not `openGenreAndPlay`: that one opens the genre's page, which is right from the
    * library and wrong from inside the player (the whole point of the list is to stay on the record).
+   * Takes an id because the pull-down list is built from the index; the record is fetched, then played.
    */
   const playGenreInPlayer = useCallback(
-    (genre: Genre) => {
-      if (playingGenreId === genre.id) return;
+    (id: string) => {
+      if (playingGenreId === id) return;
       stopAudition();
-      void toggleAudition(genre);
-      onOpenPlayer?.(genre.id);
+      void loadGenre(id).then((record) => {
+        if (record) void toggleAudition(record);
+      });
+      onOpenPlayer?.(id);
     },
     [onOpenPlayer, playingGenreId, stopAudition, toggleAudition]
   );
 
+  /**
+   * One id in, one audition out.
+   *
+   * Every screen now speaks ids: they browse the index, so they do not carry a record to hand back.
+   * "Play this" therefore resolves the record first (`loadGenre`, one category chunk) and only then
+   * builds the pattern. Stopping is the one case that stays synchronous — there is nothing to load to
+   * stop what is already playing.
+   */
   const handleToggleAudition = useCallback(
-    (genre: Genre) => {
-      if (playingGenreId === genre.id) {
+    (id: string) => {
+      if (playingGenreId === id) {
         stopAudition();
         return;
       }
-      void toggleAudition(genre);
+      void loadGenre(id).then((record) => {
+        if (record) void toggleAudition(record);
+      });
     },
     [playingGenreId, stopAudition, toggleAudition]
   );
@@ -223,12 +238,13 @@ export function MobileApp({
    *
    * This is the redesign the user asked for: the library no longer repeats one identical play button
    * per row (ugly, and two taps for one intention), so the card is the target and the shell starts the
-   * genre as it navigates.
+   * genre as it navigates. The page opens immediately (it resolves its own record and fills in); the
+   * sound starts as soon as the record this id names arrives.
    */
   const openGenreAndPlay = useCallback(
-    (genre: Genre) => {
-      if (playingGenreId !== genre.id) handleToggleAudition(genre);
-      onOpenGenre?.(genre.id);
+    (id: string) => {
+      if (playingGenreId !== id) handleToggleAudition(id);
+      onOpenGenre?.(id);
     },
     [handleToggleAudition, onOpenGenre, playingGenreId]
   );
@@ -363,7 +379,6 @@ export function MobileApp({
           /* The rail and the tempo both come from the transport, so the bar cannot disagree with it. */
           readClock={readClock}
           readTempo={readTempo}
-          totalSteps={ALL_GENRES.find((item) => item.id === playingGenreId)?.sequencer_pattern?.totalSteps || 16}
         />
       )}
 

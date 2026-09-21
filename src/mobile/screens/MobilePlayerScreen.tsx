@@ -27,11 +27,12 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lucide-react";
-import { ALL_GENRES } from "../../data/genres";
+import { GENRE_INDEX, loadGenre } from "../mobileGenreData";
 import { patternFromGenre } from "../../data/genreMix";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre } from "../../types/genre";
-import { CATEGORY_SWATCH } from "./MobileHomeScreen";
+import type { GenreIndexItem } from "../../types/genreIndex";
+import { CATEGORY_SWATCH } from "../genreArt";
 import { VinylCanvas, type VinylClock } from "../vinyl/VinylCanvas";
 import { PLAY_MODE_LABEL_KEYS, type PlayMode } from "../vinyl/vinylMath";
 
@@ -54,17 +55,78 @@ export interface MobilePlayerScreenProps {
   isPlaying: boolean;
   playMode: PlayMode;
   readClock: () => VinylClock | null;
-  onTogglePlay: (genre: Genre) => void;
+  /** Play/pause a genre *by id*: the shell resolves the record (the phone browses by index). */
+  onTogglePlay: (genreId: string) => void;
   /** Switch the record to another genre without leaving the player (the pull-down list). */
-  onPlayGenre?: (genre: Genre) => void;
+  onPlayGenre?: (genreId: string) => void;
   onCycleMode: () => void;
   onSkip: (direction: 1 | -1) => void;
   onCollapse: () => void;
   onOpenDetail: (genreId: string) => void;
 }
 
-export function MobilePlayerScreen({
-  genreId,
+/**
+ * The screen's data path: resolve the route's genre, then render the record.
+ *
+ * This is the surface that genuinely needs a full `Genre` — the lane dots are its real
+ * `sequencer_pattern`, its cue prints `time_signature`, and the record is drawn from its chord voicings
+ * — so it is the one that fetches the category chunk. It shows a placeholder while that happens (a
+ * blank frame rather than a record drawn from a guess) and the existing "missing" state when
+ * `loadGenre` finds nothing.
+ */
+export function MobilePlayerScreen(props: MobilePlayerScreenProps) {
+  const { t } = useLanguage();
+  const { genreId } = props;
+  const [genre, setGenre] = useState<Genre | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading");
+
+  useEffect(() => {
+    let alive = true;
+    setStatus("loading");
+    setGenre(null);
+    void loadGenre(genreId).then((record) => {
+      if (!alive) return;
+      setGenre(record);
+      setStatus(record ? "ready" : "missing");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [genreId]);
+
+  if (status === "loading") {
+    return (
+      <div
+        className="m-rise flex min-h-[70dvh] items-center justify-center px-6"
+        data-testid="mobile-player-loading"
+      >
+        <p className="m-mono text-[11px] tracking-[0.24em] text-[var(--m-ink-3)]">…</p>
+      </div>
+    );
+  }
+
+  if (!genre) {
+    return (
+      <div className="m-rise flex min-h-[70dvh] flex-col items-center justify-center gap-4 px-6" data-testid="mobile-player-missing">
+        <p className="text-[13px] text-[var(--m-ink-2)]">{t("mobile_detail_missing")}</p>
+        <button
+          type="button"
+          data-testid="mobile-player-collapse"
+          onClick={props.onCollapse}
+          className="m-press m-mono min-h-[46px] rounded-full border border-[var(--m-line-2)] px-4 text-[11px] text-[var(--m-gold)]"
+        >
+          {t("mobile_back")}
+        </button>
+      </div>
+    );
+  }
+
+  return <PlayerForGenre genre={genre} {...props} />;
+}
+
+/** The record itself, with a resolved genre in hand. */
+function PlayerForGenre({
+  genre,
   onTempo,
   onScrubSound,
   onScrubSoundEnd,
@@ -77,7 +139,7 @@ export function MobilePlayerScreen({
   onSkip,
   onCollapse,
   onOpenDetail,
-}: MobilePlayerScreenProps) {
+}: MobilePlayerScreenProps & { genre: Genre }) {
   const { t } = useLanguage();
   const [listOpen, setListOpen] = useState(false);
   /** The reference's "落针…": the needle is on its way down for about half a second. */
@@ -88,13 +150,12 @@ export function MobilePlayerScreen({
   /** Set by a jog's release so the record's own click does not also open the genre page. */
   const draggedRef = useRef(false);
 
-  const genre = ALL_GENRES.find((item) => item.id === genreId);
   /**
    * The tempo the record is playing at: seeded from the genre and moved by the jog and the ± buttons.
    * Clamped to the engine's own 60-180 range, and reported on every change so what is heard matches
    * what is shown. The number *drawn* eases into it (the reference's damper, in `VinylCanvas`).
    */
-  const [bpm, setBpm] = useState(() => genre?.default_bpm ?? 120);
+  const [bpm, setBpm] = useState(genre.default_bpm);
   /**
    * What React paints into the readout *once*.
    *
@@ -104,7 +165,7 @@ export function MobilePlayerScreen({
    * climb again. A frozen initial value keeps React out of the way: a re-render with the same text leaves
    * the DOM untouched.
    */
-  const initialBpm = useRef(genre?.default_bpm ?? 120).current;
+  const initialBpm = useRef(genre.default_bpm).current;
   const changeBpm = useCallback(
     (delta: number) => {
       setBpm((current) => {
@@ -125,10 +186,8 @@ export function MobilePlayerScreen({
    * takes the new genre's default and the canvas snaps its damper instead of walking from the old number.
    */
   useEffect(() => {
-    const next = genre?.default_bpm;
-    if (typeof next !== "number") return;
-    setBpm(next);
-  }, [genre?.id, genre?.default_bpm]);
+    setBpm(genre.default_bpm);
+  }, [genre.id, genre.default_bpm]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -148,7 +207,6 @@ export function MobilePlayerScreen({
 
   /** The lane dots the record shows: the genre's real step pattern, four lanes, outer ring first. */
   const lanes = useMemo(() => {
-    if (!genre) return [] as boolean[][];
     const pattern = patternFromGenre(genre);
     return ["kick", "snare", "hihat", "bass"].map((role) => {
       const track = pattern.tracks.find((item) => item.track_id === role) ?? pattern.tracks[0];
@@ -157,29 +215,18 @@ export function MobilePlayerScreen({
     });
   }, [genre]);
 
-  /** The pull-down list: the same category first, then the rest of the library. */
-  const cue = useMemo(() => {
-    if (!genre) return [] as Genre[];
-    const sameCategory = ALL_GENRES.filter((item) => item.category === genre.category);
-    const rest = ALL_GENRES.filter((item) => item.category !== genre.category);
+  /**
+   * The pull-down list: the same category first, then the rest of the library.
+   *
+   * Built from the **index** (id, name, category, default BPM), because a list of what else could play
+   * does not need fourteen full records — the shell resolves the one row that is tapped. The current
+   * row is matched by id.
+   */
+  const cue = useMemo<GenreIndexItem[]>(() => {
+    const sameCategory = GENRE_INDEX.filter((item) => item.category === genre.category);
+    const rest = GENRE_INDEX.filter((item) => item.category !== genre.category);
     return [...sameCategory, ...rest].slice(0, CUE_LIMIT);
   }, [genre]);
-
-  if (!genre) {
-    return (
-      <div className="m-rise flex min-h-[70dvh] flex-col items-center justify-center gap-4 px-6" data-testid="mobile-player-missing">
-        <p className="text-[13px] text-[var(--m-ink-2)]">{t("mobile_detail_missing")}</p>
-        <button
-          type="button"
-          data-testid="mobile-player-collapse"
-          onClick={onCollapse}
-          className="m-press m-mono min-h-[46px] rounded-full border border-[var(--m-line-2)] px-4 text-[11px] text-[var(--m-gold)]"
-        >
-          {t("mobile_back")}
-        </button>
-      </div>
-    );
-  }
 
   const accent = CATEGORY_SWATCH[genre.category];
   const status = isPlaying ? (dropping ? t("mobile_player_status_dropping") : t("mobile_player_status_playing")) : t("mobile_player_status_idle");
@@ -348,7 +395,7 @@ export function MobilePlayerScreen({
               data-testid="mobile-player-play"
               aria-pressed={isPlaying}
               aria-label={isPlaying ? t("mobile_player_pause") : t("mobile_player_play")}
-              onClick={() => onTogglePlay(genre)}
+              onClick={() => onTogglePlay(genre.id)}
               className="m-tbig"
             >
               {/* Both icons are in the DOM; `[data-playing]` swaps them, exactly as the reference does. */}
@@ -399,7 +446,7 @@ export function MobilePlayerScreen({
                   className={`m-cue-item ${on ? "on" : ""}`}
                   aria-current={on ? "true" : undefined}
                   onClick={() => {
-                    if (!on) (onPlayGenre ?? onTogglePlay)(item);
+                    if (!on) (onPlayGenre ?? onTogglePlay)(item.id);
                     setListOpen(false);
                   }}
                 >
