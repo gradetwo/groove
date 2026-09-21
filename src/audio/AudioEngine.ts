@@ -229,6 +229,8 @@ export class AudioEngine {
 
   // Drum Kit Models (P5-02)
   private drumKit: DrumKitType = "808";
+  /** Rotates the noise read offset for manual hits, so repeated pad taps do not sound identical. */
+  private auditionNoiseCursor = 0;
   /** Acoustic enhancement: Active open hi-hat voices tracked for choking */
   private openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number; envelope?: DrumVoiceEnvelope }> = [];
   private isDrumsOnly: boolean = false;
@@ -1885,7 +1887,16 @@ export class AudioEngine {
     pitch: number | null = 0,
     stepVal = 1,
     gateVal = 0.8,
-    stepIdx = -1
+    stepIdx = -1,
+    /**
+     * Play *this* instrument instead of the track's declared one.
+     *
+     * A manual hit is allowed to be about a sound rather than a lane: the phone's clap and rimshot pads
+     * write into the snare lane (that is where a backbeat lives) but they are their own models, and
+     * auditioning them as the lane's declared instrument would make two different pads sound identical.
+     * The scheduler never passes it, so a pattern still renders exactly as its data says.
+     */
+    instrumentOverride?: string
   ): void {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
@@ -1993,7 +2004,16 @@ export class AudioEngine {
      * actual notes per step in `pitches`, and the voice must play *those* rather than a voicing of
      * the root.
      */
-    stepIdx = -1
+    stepIdx = -1,
+    /**
+     * Play *this* instrument instead of the track's declared one.
+     *
+     * A manual hit may be about a sound rather than a lane: the phone's clap and rimshot pads write into
+     * the snare lane (that is where a backbeat lives) but they are their own models, and auditioning them
+     * as the lane's declared instrument would make two different pads sound identical. The scheduler never
+     * passes it, so a pattern still renders exactly as its data says.
+     */
+    instrumentOverride?: string
   ): void {
     if (!this.ctx) return;
     const dest = isAudition ? (this.masterGain || this.getTrackDestination(trackIdx)) : this.getTrackDestination(trackIdx);
@@ -2023,7 +2043,7 @@ export class AudioEngine {
       // Those two names already have real models in the percussion library, so a declared
       // clap/rim is voiced there; a plain snare (`tight_snare`, `acoustic_snare`, `808_snare`,
       // …) keeps the snare model.
-      const snareInstrument = this.pattern?.tracks[trackIdx]?.instrument;
+      const snareInstrument = instrumentOverride ?? this.pattern?.tracks[trackIdx]?.instrument;
       if (instrumentWantsPercussionVoice(snareInstrument)) {
         this.playPercussion(dest, safeStartTime, safeVel, pitch, noisePosition, snareInstrument);
       } else {
@@ -2041,7 +2061,7 @@ export class AudioEngine {
         safeVel,
         pitch,
         noisePosition,
-        this.pattern?.tracks[trackIdx]?.instrument
+        instrumentOverride ?? this.pattern?.tracks[trackIdx]?.instrument
       );
     } else if (trackId === "bass" || lowerName.includes("bass")) {
       this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
@@ -2126,6 +2146,59 @@ export class AudioEngine {
 
   public getIsRecordArmed(): boolean {
     return this.liveRecorder.getIsArmed();
+  }
+
+  /**
+   * Play one track's voice once, right now — a *manual* hit, not a scheduled step.
+   *
+   * The phone's 即兴 module is a step editor whose pads and cells are instruments: tapping one has to
+   * sound immediately, whatever the transport is doing (that is the whole point of a pad — you play it,
+   * you do not wait for the loop). `triggerInstrument` already voices every track type and already takes
+   * an `isAudition` flag, but that flag routes an audition through the master gain, and the comment in
+   * `playChord` says why the *track's* destination is where a preview belongs: it is the sound as mixed,
+   * with the track's own fader and inserts. So this calls the same dispatch with the track's destination.
+   *
+   * `track` is a track id (what screens have) or an index. Returns false when there is nothing to play —
+   * no engine yet, or no such track — which is the honest answer for a tap before the first audition.
+   */
+  public auditionTrack(track: string | number, velocity = 1, instrument?: string): boolean {
+    if (!this.ctx || !this.pattern?.tracks?.length) return false;
+    const index =
+      typeof track === "number"
+        ? track
+        : this.pattern.tracks.findIndex(
+            (item) => (item.track_id || "").toLowerCase() === String(track).toLowerCase()
+          );
+    const patternTrack = this.pattern.tracks[index];
+    if (!patternTrack) return false;
+    const trackName = patternTrack.name || patternTrack.track_id || "";
+    this.triggerInstrument(
+      index,
+      trackName,
+      this.ctx.currentTime,
+      velocity,
+      patternTrack.pitch?.find((value) => (value ?? 0) > 0) ?? 0,
+      1,
+      this.getStepDuration(),
+      0.8,
+      /**
+       * `isAudition` is *false* on purpose: the hit goes through the track's own strip, so a pad sounds
+       * the way that lane sounds in the loop rather than a dry version of it.
+       */
+      false,
+      /**
+       * The noise read offset. `-1` would index the shared noise buffer from a negative position; `0` is
+       * the same "first hit of the bar" every time, which is exactly what a hand-played pad wants to avoid
+       * sounding mechanical about. A cheap counter gives each tap its own offset without a clock, so the
+       * call stays deterministic per tap count.
+       */
+      this.auditionNoiseCursor++ % 16,
+      -1,
+      /** A pad can name the model it means: the clap and rim pads write into the snare lane but must not
+       *  sound like a plain snare (see `triggerInstrument`'s `instrumentOverride`). */
+      instrument
+    );
+    return true;
   }
 
   private playKick(dest: AudioNode, time: number, vel: number, pitchOffset: number, noisePosition = 0): void {

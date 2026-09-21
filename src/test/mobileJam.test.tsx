@@ -7,7 +7,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileJamScreen } from "../mobile/screens/MobileJamScreen";
 import { ALL_GENRES } from "../data/genres";
@@ -25,6 +25,7 @@ const renderJam = (
     onTempo: vi.fn<(bpm: number) => void>(),
     onSwing: vi.fn<(swing: number) => void>(),
     onOpenGenre: vi.fn<(genreId: string) => void>(),
+    onAuditionTrack: vi.fn<(trackId: string, instrument?: string) => void>(),
   };
   const props = {
     genreId: GENRE.id,
@@ -42,6 +43,57 @@ const renderJam = (
 };
 
 describe("jam module", () => {
+  /**
+   * The 即兴 additions from the user's second pass: every instrument has its own colour, everything you
+   * touch makes a sound and lights up, and the transport lives in the same dock as the tempo.
+   */
+  it("gives each lane and pad its own instrument colour", () => {
+    renderJam();
+    const kick = screen.getByTestId("mobile-jam-lane-label-0");
+    const snare = screen.getByTestId("mobile-jam-lane-label-1");
+    const hat = screen.getByTestId("mobile-jam-lane-label-2");
+    const bass = screen.getByTestId("mobile-jam-lane-label-3");
+    const colours = [kick, snare, hat, bass].map((node) => node.style.color);
+    for (const colour of colours) expect(colour).not.toBe("");
+    expect(new Set(colours).size, `lane colours: ${colours.join(", ")}`).toBe(4);
+
+    // The six pads carry their own instrument colours on the dot and the label, so a clap never reads as
+    // a snare even though both write the snare lane.
+    const padDots = ["kick", "snare", "hat", "clap", "rim", "bass"].map((id) => {
+      const pad = screen.getByTestId(`mobile-jam-pad-${id}`);
+      return (pad.querySelector("span[aria-hidden]") as HTMLElement | null)?.style.background ?? "";
+    });
+    expect(padDots.every(Boolean), `pad dots: ${padDots.join(", ")}`).toBe(true);
+    expect(new Set(padDots).size, `pad dots: ${padDots.join(", ")}`).toBe(6);
+  });
+
+  it("sounds and flashes a pad on every tap, whether or not the transport runs", () => {
+    const { spies } = renderJam({ isPlaying: false });
+    fireEvent.click(screen.getByTestId("mobile-jam-pad-clap"));
+    // The clap writes into the snare lane but must *sound* as a clap.
+    expect(spies.onAuditionTrack).toHaveBeenCalledWith("snare", "clap");
+    const pad = screen.getByTestId("mobile-jam-pad-clap");
+    expect(pad.style.boxShadow).not.toBe("");
+
+    fireEvent.click(screen.getByTestId("mobile-jam-pad-kick"));
+    expect(spies.onAuditionTrack).toHaveBeenCalledWith("kick", undefined);
+  });
+
+  it("sounds a step cell when it is tapped", () => {
+    const { spies } = renderJam();
+    fireEvent.click(screen.getByTestId("mobile-jam-step-2-5"));
+    expect(spies.onAuditionTrack).toHaveBeenCalledWith("hihat", undefined);
+  });
+
+  it("lights the playhead cell in its lane's colour", () => {
+    renderJam({ isPlaying: true, readClock: () => ({ step: 3, fraction: 0 }) });
+    // The playhead arrives on a timer; the cell for step 3 carries a ring rather than the neutral fill.
+    return waitFor(() => {
+      const cell = screen.getByTestId("mobile-jam-step-0-3");
+      expect(cell.style.background).not.toBe("");
+      expect(cell.style.background).not.toBe("rgba(232,232,255,0.055)");
+    });
+  });
   beforeEach(() => {
     localStorage.setItem("groove_language", "zh");
   });
