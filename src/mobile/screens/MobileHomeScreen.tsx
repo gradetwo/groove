@@ -26,7 +26,7 @@
  * category chunks into the phone's first paint, which is exactly the regression this screen was
  * rewritten to remove.
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Pause, Search } from "lucide-react";
 import { GENRE_INDEX, type GenreIndexItem } from "../mobileGenreData";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
@@ -74,6 +74,35 @@ export interface MobileHomeScreenProps {
   onSelectGenre: (genreId: string) => void;
 }
 
+/**
+ * How much of the library is in the first paint, and how much arrives afterwards.
+ *
+ * 159 rows is about 2 600 elements on this screen, and the jank audit
+ * (`scripts/measure_phone_jank.mjs`) measured the cost of having all of them present before the first
+ * paint: a single 573 ms task on a 4x-throttled phone, almost all of it the browser's own style and
+ * layout (`(program)` in a CPU profile) rather than React. `content-visibility` already skips the
+ * *layout* of the off-screen rows; it does not skip matching them against the stylesheet, and that is
+ * what this does — the first screenful is rendered immediately and the rest follows in idle time, in
+ * chunks small enough to stay off the frame budget.
+ *
+ * Nothing is hidden or unreachable: the list fills itself in within a few hundred milliseconds (faster
+ * than a thumb can scroll past the first screen), and a filter change restarts from one chunk because
+ * the result set is different.
+ */
+const FIRST_CHUNK = 24;
+
+/** Run something when the browser is idle, falling back to a macrotask (jsdom has no `requestIdleCallback`). */
+const whenIdle = (run: () => void): (() => void) => {
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void, options?: { timeout: number }) => number })
+    .requestIdleCallback;
+  if (typeof idle === "function") {
+    const id = idle(run, { timeout: 400 });
+    return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(run, 32);
+  return () => window.clearTimeout(id);
+};
+
 export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeScreenProps) {
   const { t } = useLanguage();
   const [query, setQuery] = useState("");
@@ -92,12 +121,37 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
     });
   }, [query, category]);
 
+  /** How many of `genres` are in the DOM right now. */
+  const [shown, setShown] = useState(FIRST_CHUNK);
+  useEffect(() => {
+    // A different result set starts small again: the rows that were rendered are not the rows that are.
+    setShown(FIRST_CHUNK);
+  }, [query, category]);
+  useEffect(() => {
+    if (shown >= genres.length) return;
+    /**
+     * Each idle pass doubles what is rendered (24 → 48 → 96 → all of it).
+     *
+     * Geometric rather than a fixed step: the remaining rows arrive in three or four passes instead of
+     * seven, so the list is complete sooner on a slow phone and a test that waits for it is not fighting
+     * the clock. The first paint stays the cheap part either way.
+     */
+    return whenIdle(() => setShown((current) => Math.min(genres.length, current * 2)));
+  }, [shown, genres.length]);
+
+  /** The rows to render: the head of the filtered list, and everything once the list is short. */
+  const visibleGenres = genres.length > shown ? genres.slice(0, shown) : genres;
+
   return (
     <div className="m-rise px-4 pb-4" data-testid="mobile-home">
       <div className="flex items-end justify-between pt-1">
         <div>
           <h1 className="text-[22px] font-bold leading-none">{t("mobile_home_title")}</h1>
-          <p className="m-mono mt-2 text-[10px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">
+          {/* The advertised count, and the thing a harness waits on while the list fills in chunks. */}
+          <p
+            className="m-mono mt-2 text-[10px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]"
+            data-testid="mobile-home-count"
+          >
             GENRES · {genres.length}
           </p>
         </div>
@@ -117,7 +171,15 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
           placeholder={t("mobile_home_search")}
           aria-label={t("mobile_home_search")}
           data-testid="mobile-home-search"
-          className="h-11 w-full bg-transparent text-[16px] text-[var(--m-ink)] outline-none placeholder:text-[var(--m-ink-3)]"
+          /**
+           * 46 px, matching the label it sits in — not 44.
+           *
+           * At exactly 44 the field sat on the touch gate's line, and a fractional layout height (43.9968
+           * at dpr 3) failed the phone matrix with `h: 44` after rounding: a control can pass on one device
+           * and fail on another while being the same 44 px tall. Two extra pixels cost nothing and take the
+           * measurement off the knife edge.
+           */
+          className="h-[46px] w-full bg-transparent text-[16px] text-[var(--m-ink)] outline-none placeholder:text-[var(--m-ink-3)]"
         />
       </label>
 
@@ -141,7 +203,7 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
       <HomeTimeline onSelectGenre={onSelectGenre} />
 
       <ul className="mt-3 space-y-2.5" data-testid="mobile-home-list">
-        {genres.map((genre) => {
+        {visibleGenres.map((genre) => {
           const isPlaying = playingGenreId === genre.id;
           return (
             <li

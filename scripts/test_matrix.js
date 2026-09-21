@@ -623,6 +623,22 @@ async function runTestOnTarget(target, baseUrl) {
       { timeout: 30000 }
     );
 
+    /**
+     * The library is rendered in chunks (see `MobileHomeScreen`): the first screenful paints immediately
+     * and the rest arrives in idle time, so a harness has to wait for the list to be complete rather than
+     * count rows the instant the shell appears. It waits for the number the screen itself advertises,
+     * which keeps this leg correct if the library ever changes size.
+     */
+    await page.waitForFunction(
+      () => {
+        const count = document.querySelector('[data-testid="mobile-home-count"]');
+        const advertised = Number((count?.textContent ?? "").replace(/\D/g, ""));
+        const rows = document.querySelectorAll('[data-testid^="mobile-genre-row-"]').length;
+        return advertised > 0 && rows >= advertised;
+      },
+      { timeout: 30000 }
+    );
+
     const shell = await page.evaluate(() => {
       const modules = ["home", "jam", "challenge", "explore", "more"];
       const tabs = modules.map((id) => document.querySelector(`[data-testid="mobile-module-${id}"]`));
@@ -634,6 +650,9 @@ async function runTestOnTarget(target, baseUrl) {
         heights: tabs.map((node) => (node ? Math.round(node.getBoundingClientRect().height) : 0)),
         labels: tabs.map((node) => (node?.textContent ?? "").trim()),
         rows: document.querySelectorAll('[data-testid^="mobile-genre-row-"]').length,
+        advertised: Number(
+          (document.querySelector('[data-testid="mobile-home-count"]')?.textContent ?? "").replace(/\D/g, "")
+        ),
         overflow: (() => {
           const root = document.documentElement;
           return root.scrollWidth > root.clientWidth + 4;
@@ -654,8 +673,10 @@ async function runTestOnTarget(target, baseUrl) {
     if (shell.labels.some((label) => label.length === 0)) {
       throw new Error("Phone shell has an icon-only tab (no visible label)");
     }
-    if (shell.rows < 50) {
-      throw new Error(`Phone shell home listed ${shell.rows} genre(s); the library has 159`);
+    if (shell.rows < 50 || shell.rows !== shell.advertised) {
+      throw new Error(
+        `Phone shell home listed ${shell.rows} genre(s); the screen advertises ${shell.advertised}`
+      );
     }
     if (shell.overflow) {
       throw new Error("Phone shell overflows horizontally (a zoom/scroll hazard on a phone)");
@@ -1017,10 +1038,17 @@ async function runTestOnTarget(target, baseUrl) {
      * while the desktop view arrives in its own lazily-loaded chunk. Waiting on the wrapper alone made
      * this check race the chunk on WebKit (and fail, correctly, with "the chord view is not mounted").
      *
-     * The anchor is the playing-style row (`chord-style-*`), which the view always renders. Its help
-     * button would NOT do: the phone deliberately declines `onOpenHelp` (there is no studio tab or guide
-     * modal to send the user to), so that button is absent by design rather than by accident.
+     * The anchor is the chord builder's own toggle, and the styles behind it are asserted after a tap.
+     *
+     * The phone mounts this view with the builder **collapsed** (`initialBuilderCollapsed`): the builder's
+     * note grids, style lists and arpeggiator controls were a single ~1 350 ms block on a throttled phone
+     * (`scripts/measure_phone_jank.mjs`), and the view already ships a collapse toggle plus a summary of
+     * the current progression — so the page opens fast and the user expands it with one tap. That makes
+     * the expand part of the contract, which is what this leg now checks: the styles must exist once it
+     * is pressed. The help button would NOT do as an anchor: the phone deliberately declines
+     * `onOpenHelp`, so it is absent by design rather than by accident.
      */
+    await page.click('[data-testid="chord-builder-toggle"]');
     await page.waitForSelector('[data-testid^="chord-style-"]', { timeout: 45000 });
 
     /**
