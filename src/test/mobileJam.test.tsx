@@ -49,13 +49,20 @@ describe("jam module", () => {
    */
   it("gives each lane and pad its own instrument colour", () => {
     renderJam();
-    const kick = screen.getByTestId("mobile-jam-lane-label-0");
-    const snare = screen.getByTestId("mobile-jam-lane-label-1");
-    const hat = screen.getByTestId("mobile-jam-lane-label-2");
-    const bass = screen.getByTestId("mobile-jam-lane-label-3");
-    const colours = [kick, snare, hat, bass].map((node) => node.style.color);
+    /**
+     * The colour lives in a bar beside the lane word, not in the word itself.
+     *
+     * Painting the *label* in the instrument colour reads well on a dark ground and fails on a light one
+     * (amber on paper is 1.7:1), and a light skin is a supported choice — so the identity moved to a bar
+     * and the word takes the shell's ink. This asserts the bar still differs per lane.
+     */
+    const colours = [0, 1, 2, 3].map((lane) => screen.getByTestId(`mobile-jam-lane-colour-${lane}`).style.background);
     for (const colour of colours) expect(colour).not.toBe("");
     expect(new Set(colours).size, `lane colours: ${colours.join(", ")}`).toBe(4);
+    // …and the labels stay legible in every skin because they inherit the shell's ink.
+    for (const lane of [0, 1, 2, 3]) {
+      expect(screen.getByTestId(`mobile-jam-lane-label-${lane}`).className).toContain("text-[var(--m-ink-2)]");
+    }
 
     // The six pads carry their own instrument colours on the dot and the label, so a clap never reads as
     // a snare even though both write the snare lane.

@@ -322,13 +322,25 @@ export function MobileJamScreen({
             const colour = laneColour(lane.trackId);
             return (
               <div key={lane.trackId} className="flex items-center gap-2 py-1">
-                {/* The lane label carries the instrument's colour, which is the grid's legend. */}
-                <span
-                  className="m-mono w-9 flex-none text-[9px]"
-                  style={{ color: colour.hex }}
-                  data-testid={`mobile-jam-lane-label-${laneIndex}`}
-                >
-                  {t(lane.labelKey)}
+                {/*
+                  The lane's identity: a colour bar plus a readable word.
+                  
+                  The word used to be painted *in* the instrument colour, which is fine on a dark ground and
+                  unreadable on a light one — amber on paper is 1.7:1, and a light skin is a supported
+                  choice. So the colour moved into a bar beside the label and the label itself takes the
+                  shell's ink: the mapping from colour to instrument is still on screen, and it survives
+                  every skin.
+                */}
+                <span className="flex w-9 flex-none items-center gap-1">
+                  <span
+                    aria-hidden="true"
+                    className="h-3.5 w-1 flex-none rounded-[1px]"
+                    style={{ background: colour.hex }}
+                    data-testid={`mobile-jam-lane-colour-${laneIndex}`}
+                  />
+                  <span className="m-mono truncate text-[9px] text-[var(--m-ink-2)]" data-testid={`mobile-jam-lane-label-${laneIndex}`}>
+                    {t(lane.labelKey)}
+                  </span>
                 </span>
                 <div className="flex flex-1 gap-[3px]">
                   {grid[laneIndex].map((on, step) => {
