@@ -339,7 +339,17 @@ function HomeTimeline({ onSelectGenre }: { onSelectGenre: (genre: Genre) => void
                       data-testid={`mobile-home-timeline-genre-${index}-${genre.id}`}
                       onClick={() => onSelectGenre(genre)}
                       aria-label={t("mobile_home_timeline_open_genre", { genre: genre.name })}
-                      className="m-press flex min-h-[32px] items-center gap-1.5 rounded-full border border-[var(--m-line-2)] px-2 text-[10.5px] text-[var(--m-ink-2)]"
+                      /**
+                       * 44 px, not the 32 px this started at.
+                       *
+                       * The first version traded the touch minimum away to keep a 14-genre era from
+                       * dwarfing a 300 px rail — and the phone matrix rejected it, correctly: every
+                       * control on these surfaces is held to 44 px, and a chip you cannot reliably hit is
+                       * not "richer information". The nodes are taller now and the rail already scrolls,
+                       * which is the honest cost; the library's position is untouched because the rail is
+                       * capped either way.
+                       */
+                      className="m-press flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--m-line-2)] px-3 text-[11px] text-[var(--m-ink-2)]"
                     >
                       <span
                         aria-hidden="true"
