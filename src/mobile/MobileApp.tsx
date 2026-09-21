@@ -124,7 +124,8 @@ export function MobileApp({
    */
   const { playingGenreId, toggleAudition, stopAudition, readClock, applyPattern, setTempo, setSwingValue,
     startVinylScrub,
-    stopVinylScrub } =
+    stopVinylScrub,
+    auditionTrack } =
     useGenreAudition();
 
   /**
@@ -306,6 +307,7 @@ export function MobileApp({
               onApplyPattern={applyPattern}
               onTempo={setTempo}
               onSwing={setSwingValue}
+              onAuditionTrack={auditionTrack}
               onOpenGenre={(id) => onOpenGenre?.(id)}
             />
           ) : module === "challenge" ? (
@@ -346,6 +348,9 @@ export function MobileApp({
           onToggle={stopAudition}
           onCycleMode={cyclePlayMode}
           onOpen={() => onOpenPlayer?.(playingGenreId)}
+          /* The rail reads the same clock the record does, so the two cannot disagree. */
+          readClock={readClock}
+          totalSteps={ALL_GENRES.find((item) => item.id === playingGenreId)?.sequencer_pattern?.totalSteps || 16}
         />
       )}
 
