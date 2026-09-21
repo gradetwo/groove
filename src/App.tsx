@@ -52,6 +52,8 @@ const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerVi
 const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
 // The cutover rule lives with the module vocabulary, where it can be tested without App.
 import { shouldEnterPhoneShell, type MobileModule } from "./mobile/mobileModules";
+// The phone's four 更多 panels are siblings of the shell, so their skin lives in its own scoped sheet.
+import "./mobile/skins/panelSkin.css";
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
 
@@ -380,6 +382,15 @@ const MainApp: React.FC = () => {
           moves the desktop route space, which on a phone would drop the user into the desktop UI. So a
           link out of the help centre goes to the phone's own module instead.
         */}
+        {/*
+          `m-panels` is the phone's scope for these four desktop panels.
+          
+          They are siblings of the shell rather than children of it (the shell renders its own root), so
+          they cannot be reached by `.mobile-root …` selectors — and `data-skin` alone is too wide a net,
+          because it is on `<html>` for the whole app. One explicit wrapper gives the panels a scope the
+          skins can address without touching the same dialogs when the desktop opens them.
+        */}
+        <div className="m-panels">
         <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
         <SettingsModal
           isOpen={settingsOpen}
@@ -427,6 +438,7 @@ const MainApp: React.FC = () => {
             />
           </React.Suspense>
         )}
+        </div>
       </React.Suspense>
     );
   }

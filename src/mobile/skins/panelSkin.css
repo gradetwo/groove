@@ -1,0 +1,628 @@
+/**
+ * Skin overrides for the phone's 更多 panels.
+ *
+ * What this is
+ * ------------
+ * 更多 opens four panels that are **the desktop's own components**, not phone copies:
+ * `UpdatesModal` (更新记录), `SettingsModal` (设置, plus its `AudioSettingsTab`), `HelpCenterModal`
+ * (手册) and `GlobalSearch` (搜索). They wear the desktop palette — Tailwind theme colours
+ * (`bg-panel`, `bg-panel2`, `border-line`, `text-text-sub`, `bg-accent`) plus a few dozen literal
+ * arbitrary values (`bg-[#0d0f16]`, `bg-[#0a0b10]`, `text-[#eae6dc]`, `text-[#f5b73d]`, the
+ * `#45e0c9` / `#a78bfa` / `#38bdf8` instrument tones) that are hardcoded for the desktop's own
+ * dark-amber scheme. With a skin active, the four panels therefore stayed desktop-dark while the
+ * rest of the phone wore the skin — the bug this file exists to fix.
+ *
+ * Why the panels need a scope of their own
+ * ----------------------------------------
+ * The shell renders `.mobile-root`; `App.tsx` mounts these four panels as its **siblings** inside
+ * `div.m-panels`, because reusing the components (rather than writing a second phone copy of
+ * settings/help) is a deliberate decision — two copies is how a phone and a desktop come to
+ * disagree about what a setting means. A sibling cannot be reached by `.mobile-root …` selectors,
+ * and scoping on `data-skin` alone would catch the very same dialogs when the desktop opens them,
+ * which must keep its own look. One explicit wrapper gives the panels a scope the skins can
+ * address without touching the desktop.
+ *
+ * The one thing the scope does *not* inherit is the palette. Every `--m-*` token is defined on
+ * `.mobile-root` (see `src/mobile/mobile.css` and the three skin sheets), and custom properties
+ * only inherit *down* a tree — a sibling never sees them. So this file restates the active token
+ * block on `.m-panels` itself (section 0) and then maps every desktop class onto those tokens with
+ * `var()`, exactly the way `legacySkin.css` does for the reused 探索 views. One rule then serves
+ * the three styled skins; per-skin values survive only where a token cannot express the answer
+ * (`color-scheme`, the scrim, and the body letterform, which has no `--m-font-body` token).
+ *
+ * Why the mapping is grouped rather than one rule per class
+ * --------------------------------------------------------
+ * The desktop stacks its darks in three depths — near-black page/wells (`#0…`), panels (`#1…`) and
+ * raised/inset blocks (`#2…`) — which line up one-to-one with the shell's three surface levels, so
+ * three grouped rules cover the eighty-odd literal grounds the panels use. The text-bearing chips
+ * are the exception: `--m-ink-2` and `--m-ink-3` measure 4.43:1 and 3.84:1 on pixel's `--m-card-2`,
+ * and Soviet's signal reds/greens land at 4.20/4.36, so a muted or signal tone is never allowed to
+ * sit on a raised chip — its label is lifted to `--m-ink` instead (section 6). Accent-tinted chips
+ * get the same treatment: on comic's newsprint, `--m-gold` on a 15% accent wash is 4.36:1, so a
+ * tinted chip keeps its tint and border but labels itself in the body ink.
+ *
+ * Rules of engagement
+ * -------------------
+ *  - Every selector is scoped under `:root[data-skin="…"] .m-panels`, so nothing applies on the
+ *    desktop and nothing applies while the skin is `default` — the default look keeps the panels'
+ *    own desktop palette on purpose, because it *is* the desktop palette.
+ *  - No `!important`, no `@font-face`, no `@import`, no external URLs, no images. Every colour is a
+ *    `var()` from the restated token block, `rgb(var(--m-gold-rgb) / a)` for an alpha accent, or
+ *    `color-mix()` against a signal token.
+ *  - No geometry at all: no width/height/padding/margin/gap/display/order/visibility, and no
+ *    `position`, so the phone layouts and every `overflow-y-auto` region keep scrolling exactly as
+ *    they did. `border-radius` is paint, and is the only metric the skins square off.
+ *  - `font-family` follows the skin for the same reason the shell does: body copy in the skin's
+ *    body face, `h1`–`h4` and `font-['Space_Grotesk']` in `--m-font-display`, `font-mono` in
+ *    `--m-font-mono`. Line heights stay the components' own, so no box changes size from a face.
+ */
+
+/* =============================================================================================
+ * 0. The scope's own tokens — the palette the rest of the file maps onto
+ *
+ * Restated from `.mobile-root` (a sibling, so it cannot be inherited): the same values, so a rule
+ * below reads as "desktop class -> skin token". `color-scheme` is the one per-skin value a token
+ * cannot carry: it decides whether the native scrollbar, range input and `<option>` list render
+ * light or dark, and comic's theme is newsprint. `font-family` here is the skin's body face, which
+ * the shell publishes everywhere except as a token.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels {
+  --m-bg: #f4e9d2;
+  --m-card: #fbf4e2;
+  --m-card-2: #f2e3c0;
+  --m-line: #111014;
+  --m-line-2: #111014;
+  --m-ink: #111014;
+  --m-ink-2: #3a3440;
+  --m-ink-3: #4e4750;
+  --m-on-gold: #fff6df;
+  --m-gold: #0b6e7f;
+  --m-gold-hi: #063c46;
+  --m-gold-rgb: 11 110 127;
+  --m-teal: #00707a;
+  --m-red: #c50034;
+  --m-green: #00702f;
+  --m-violet: #5b2a9e;
+  --m-font-display: "Permanent Marker", "Bangers", "Space Grotesk", sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* A press lays a black film over the page between impressions, not a grey screen. */
+  --pn-scrim: rgb(17 16 20 / 0.72);
+  color-scheme: light;
+  color: var(--m-ink);
+  font-family: "Patrick Hand", "Comic Neue", "Space Grotesk", system-ui, sans-serif;
+  scrollbar-color: var(--m-line-2) var(--m-card-2);
+}
+:root[data-skin="soviet"] .m-panels {
+  --m-bg: #1b1e21;
+  --m-card: #22262a;
+  --m-card-2: #2b3034;
+  --m-line: rgba(237, 228, 204, 0.11);
+  --m-line-2: rgba(237, 228, 204, 0.24);
+  --m-ink: #ede4cc;
+  --m-ink-2: #c0b9a3;
+  --m-ink-3: #98927f;
+  --m-on-gold: #16181a;
+  --m-gold: #e6c766;
+  --m-gold-hi: #f2e3a6;
+  --m-gold-rgb: 230 199 102;
+  --m-teal: #8fb3ac;
+  --m-red: #e2703a;
+  --m-green: #7c9b82;
+  --m-violet: #8e93b8;
+  --m-font-display: "Russo One", "Space Grotesk", system-ui, sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --pn-scrim: rgb(0 0 0 / 0.72);
+  color-scheme: dark;
+  color: var(--m-ink);
+  font-family: "PT Sans Narrow", "Space Grotesk", system-ui, sans-serif;
+  scrollbar-color: var(--m-line-2) var(--m-card-2);
+}
+:root[data-skin="pixel"] .m-panels {
+  --m-bg: #10121c;
+  --m-card: #1a1d2e;
+  --m-card-2: #262a44;
+  --m-line: #8a8fb0;
+  --m-line-2: #e8e8f0;
+  --m-ink: #e8e8f0;
+  --m-ink-2: #8a8fb0;
+  --m-ink-3: #7e84a8;
+  --m-on-gold: #10121c;
+  --m-gold: #4ce0b3;
+  --m-gold-hi: #e8e8f0;
+  --m-gold-rgb: 76 224 179;
+  --m-teal: #5bc8ff;
+  --m-red: #ff6b97;
+  --m-green: #4ce0b3;
+  --m-violet: #b06bff;
+  --m-font-display: "Press Start 2P", "JetBrains Mono", monospace;
+  --m-font-mono: "VT323", "JetBrains Mono", monospace;
+  --pn-scrim: rgb(4 6 12 / 0.78);
+  color-scheme: dark;
+  color: var(--m-ink);
+  font-family: "VT323", "JetBrains Mono", monospace;
+  scrollbar-color: var(--m-line-2) var(--m-card-2);
+}
+
+/* =============================================================================================
+ * 1. Letterforms — headings take the display face, the instrument voice the mono face
+ *
+ * The panels are dense reference text, so only real headings move to `--m-font-display`; body copy
+ * already inherits the skin's body face from section 0, and `font-mono` is the version numbers,
+ * dates and key names of the changelog and the help tables.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels :is(h1, h2, h3, h4),
+:root[data-skin="comic"] .m-panels [class~="font-['Space_Grotesk']"],
+:root[data-skin="soviet"] .m-panels :is(h1, h2, h3, h4),
+:root[data-skin="soviet"] .m-panels [class~="font-['Space_Grotesk']"],
+:root[data-skin="pixel"] .m-panels :is(h1, h2, h3, h4),
+:root[data-skin="pixel"] .m-panels [class~="font-['Space_Grotesk']"] {
+  font-family: var(--m-font-display);
+}
+:root[data-skin="comic"] .m-panels :is([class~="font-mono"], [class*="font-['JetBrains_Mono']"]),
+:root[data-skin="soviet"] .m-panels :is([class~="font-mono"], [class*="font-['JetBrains_Mono']"]),
+:root[data-skin="pixel"] .m-panels :is([class~="font-mono"], [class*="font-['JetBrains_Mono']"]) {
+  font-family: var(--m-font-mono);
+}
+
+/* =============================================================================================
+ * 2. The scrim and the dialog frame
+ *
+ * `Modal` puts `role="dialog"` on the full-screen scrim and the actual plate one level below it, so
+ * both can be named without a test id. The frame takes the skin's raised surface; the scrim is the
+ * per-skin film defined in section 0.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels [role="dialog"][class*="bg-black/"],
+:root[data-skin="soviet"] .m-panels [role="dialog"][class*="bg-black/"],
+:root[data-skin="pixel"] .m-panels [role="dialog"][class*="bg-black/"] {
+  background-color: var(--pn-scrim);
+}
+:root[data-skin="comic"] .m-panels [role="dialog"] > div,
+:root[data-skin="soviet"] .m-panels [role="dialog"] > div,
+:root[data-skin="pixel"] .m-panels [role="dialog"] > div {
+  background-color: var(--m-card);
+  border-color: var(--m-line-2);
+  color: var(--m-ink);
+}
+
+/* =============================================================================================
+ * 3. Grounds — the desktop's three depths onto the skin's three surfaces
+ *
+ * `#0…` is the desktop page/well (`#0d0f16` in the changelog, `#0a0b10` in the help centre) and
+ * becomes `--m-bg`; `#1…` and `bg-panel` are panels and become `--m-card`; `#2…`, the white/black
+ * washes and `bg-neutral-800` are raised or inset chips and become `--m-card-2`. `bg-panel2` joins
+ * the wells: it is the desktop's recessed surface, and it is what the settings sections and the
+ * search bars sit on, where its own text is `--m-ink` / `--m-ink-2` on `--m-bg` (never on a chip).
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels :is([class~="bg-[#090a0f]"], [class~="bg-[#0a0b10]"], [class~="bg-[#0b0c13]"], [class~="bg-[#0b0e19]"], [class~="bg-[#0c0e16]"], [class~="bg-[#0d0f16]"], [class~="bg-[#0d0f17]"], [class~="bg-[#0e0f14]"], [class~="bg-panel2"]),
+:root[data-skin="soviet"] .m-panels :is([class~="bg-[#090a0f]"], [class~="bg-[#0a0b10]"], [class~="bg-[#0b0c13]"], [class~="bg-[#0b0e19]"], [class~="bg-[#0c0e16]"], [class~="bg-[#0d0f16]"], [class~="bg-[#0d0f17]"], [class~="bg-[#0e0f14]"], [class~="bg-panel2"]),
+:root[data-skin="pixel"] .m-panels :is([class~="bg-[#090a0f]"], [class~="bg-[#0a0b10]"], [class~="bg-[#0b0c13]"], [class~="bg-[#0b0e19]"], [class~="bg-[#0c0e16]"], [class~="bg-[#0d0f16]"], [class~="bg-[#0d0f17]"], [class~="bg-[#0e0f14]"], [class~="bg-panel2"]) {
+  background-color: var(--m-bg);
+}
+/* `hover:bg-panel2` is a variant token, so `[class~=…]` cannot see it; the search rows use it as
+   their pointer feedback and it would otherwise stay the desktop's #0d0e12. */
+:root[data-skin="comic"] .m-panels [class~="hover:bg-panel2"]:hover,
+:root[data-skin="soviet"] .m-panels [class~="hover:bg-panel2"]:hover,
+:root[data-skin="pixel"] .m-panels [class~="hover:bg-panel2"]:hover {
+  background-color: var(--m-bg);
+}
+:root[data-skin="comic"] .m-panels :is([class*="bg-[#1"], [class~="bg-panel"]),
+:root[data-skin="soviet"] .m-panels :is([class*="bg-[#1"], [class~="bg-panel"]),
+:root[data-skin="pixel"] .m-panels :is([class*="bg-[#1"], [class~="bg-panel"]) {
+  background-color: var(--m-card);
+}
+/* Raised: written after `#1…` because a hover literal (`hover:bg-[#272b38]`) shares the class
+   attribute with its base — the raised surface is the one that should survive the phone, where
+   there is no pointer to hover with. */
+:root[data-skin="comic"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"]),
+:root[data-skin="soviet"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"]),
+:root[data-skin="pixel"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"]) {
+  background-color: var(--m-card-2);
+}
+/* The two `bg-white/20` / `bg-white/40` utilities are the tutorial's step dots: a UI mark, not a
+   surface, so they take the strong line tone. */
+:root[data-skin="comic"] .m-panels :is([class~="bg-white/20"], [class~="bg-white/40"]),
+:root[data-skin="soviet"] .m-panels :is([class~="bg-white/20"], [class~="bg-white/40"]),
+:root[data-skin="pixel"] .m-panels :is([class~="bg-white/20"], [class~="bg-white/40"]) {
+  background-color: var(--m-line-2);
+}
+/* The step-count badge inside an accent pill is a darkened accent, not a surface. */
+:root[data-skin="comic"] .m-panels [class~="bg-black/20"],
+:root[data-skin="soviet"] .m-panels [class~="bg-black/20"],
+:root[data-skin="pixel"] .m-panels [class~="bg-black/20"] {
+  background-color: var(--m-gold-hi);
+}
+
+/* =============================================================================================
+ * 4. Borders, rules and dividers
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels :is([class*="border-line-strong"], [class*="border-line/"], [class~="border-line"]),
+:root[data-skin="soviet"] .m-panels :is([class*="border-line-strong"], [class*="border-line/"], [class~="border-line"]),
+:root[data-skin="pixel"] .m-panels :is([class*="border-line-strong"], [class*="border-line/"], [class~="border-line"]) {
+  border-color: var(--m-line-2);
+}
+:root[data-skin="comic"] .m-panels [class*="border-line-subtle"],
+:root[data-skin="soviet"] .m-panels [class*="border-line-subtle"],
+:root[data-skin="pixel"] .m-panels [class*="border-line-subtle"] {
+  border-color: var(--m-line);
+}
+:root[data-skin="comic"] .m-panels :is([class~="border-[#1f222b]"], [class~="border-[#2d313d]"]),
+:root[data-skin="soviet"] .m-panels :is([class~="border-[#1f222b]"], [class~="border-[#2d313d]"]),
+:root[data-skin="pixel"] .m-panels :is([class~="border-[#1f222b]"], [class~="border-[#2d313d]"]) {
+  border-color: var(--m-line-2);
+}
+:root[data-skin="comic"] .m-panels [class*="border-accent"],
+:root[data-skin="soviet"] .m-panels [class*="border-accent"],
+:root[data-skin="pixel"] .m-panels [class*="border-accent"] {
+  border-color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels :is([class~="border-[#f5b73d]"], [class*="border-[#f5b73d]/"], [class*="border-amber-"]),
+:root[data-skin="soviet"] .m-panels :is([class~="border-[#f5b73d]"], [class*="border-[#f5b73d]/"], [class*="border-amber-"]),
+:root[data-skin="pixel"] .m-panels :is([class~="border-[#f5b73d]"], [class*="border-[#f5b73d]/"], [class*="border-amber-"]) {
+  border-color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels [class*="border-emerald-"],
+:root[data-skin="soviet"] .m-panels [class*="border-emerald-"],
+:root[data-skin="pixel"] .m-panels [class*="border-emerald-"] {
+  border-color: var(--m-green);
+}
+:root[data-skin="comic"] .m-panels [class*="border-cyan-"],
+:root[data-skin="soviet"] .m-panels [class*="border-cyan-"],
+:root[data-skin="pixel"] .m-panels [class*="border-cyan-"] {
+  border-color: var(--m-teal);
+}
+:root[data-skin="comic"] .m-panels [class*="border-violet-"],
+:root[data-skin="soviet"] .m-panels [class*="border-violet-"],
+:root[data-skin="pixel"] .m-panels [class*="border-violet-"] {
+  border-color: var(--m-violet);
+}
+:root[data-skin="comic"] .m-panels [class*="border-[#45e0c9]"],
+:root[data-skin="soviet"] .m-panels [class*="border-[#45e0c9]"],
+:root[data-skin="pixel"] .m-panels [class*="border-[#45e0c9]"] {
+  border-color: var(--m-teal);
+}
+:root[data-skin="comic"] .m-panels [class*="border-[#a78bfa]"],
+:root[data-skin="soviet"] .m-panels [class*="border-[#a78bfa]"],
+:root[data-skin="pixel"] .m-panels [class*="border-[#a78bfa]"] {
+  border-color: var(--m-violet);
+}
+:root[data-skin="comic"] .m-panels [class*="border-slate-"],
+:root[data-skin="soviet"] .m-panels [class*="border-slate-"],
+:root[data-skin="pixel"] .m-panels [class*="border-slate-"] {
+  border-color: var(--m-line);
+}
+/* Tailwind's `divide-*` colours the children's border, so the override has to name the child. */
+:root[data-skin="comic"] .m-panels :is([class*="divide-line"], [class*="divide-[#1"]) > :not([hidden]) ~ :not([hidden]),
+:root[data-skin="soviet"] .m-panels :is([class*="divide-line"], [class*="divide-[#1"]) > :not([hidden]) ~ :not([hidden]),
+:root[data-skin="pixel"] .m-panels :is([class*="divide-line"], [class*="divide-[#1"]) > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--m-line);
+}
+
+/* =============================================================================================
+ * 5. Type colour — the desktop's three text roles onto the skin's three inks
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels :is([class~="text-text"], [class~="text-white"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-text"], [class~="text-white"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-text"], [class~="text-white"]) {
+  color: var(--m-ink);
+}
+:root[data-skin="comic"] .m-panels :is([class~="text-text-sub"], [class*="text-text-sub/"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-slate-300"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-neutral-400"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-text-sub"], [class*="text-text-sub/"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-slate-300"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-neutral-400"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-text-sub"], [class*="text-text-sub/"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-slate-300"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-neutral-400"]) {
+  color: var(--m-ink-2);
+}
+/* The dim role. It is only ever mapped onto `--m-bg` / `--m-card` here (4.6:1 at worst, on pixel's
+   card), never onto a raised chip; section 6 lifts it when a component nests it in one. */
+:root[data-skin="comic"] .m-panels :is([class~="text-text-dim"], [class~="text-[#8e92a0]"], [class~="text-neutral-500"], [class~="text-neutral-600"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-text-dim"], [class~="text-[#8e92a0]"], [class~="text-neutral-500"], [class~="text-neutral-600"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-text-dim"], [class~="text-[#8e92a0]"], [class~="text-neutral-500"], [class~="text-neutral-600"]) {
+  color: var(--m-ink-3);
+}
+:root[data-skin="comic"] .m-panels :is([class~="text-accent"], [class*="text-accent/"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-accent"], [class*="text-accent/"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-accent"], [class*="text-accent/"]) {
+  color: var(--m-gold);
+}
+/* The desktop's fixed signal tones, each onto the skin's own signal token. */
+:root[data-skin="comic"] .m-panels :is([class~="text-emerald-300"], [class~="text-emerald-400"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-emerald-300"], [class~="text-emerald-400"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-emerald-300"], [class~="text-emerald-400"]) {
+  color: var(--m-green);
+}
+:root[data-skin="comic"] .m-panels :is([class~="text-amber-300"], [class~="text-amber-400"], [class~="text-orange-400"], [class~="text-[#f59e0b]"], [class~="text-[#f5b73d]"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-amber-300"], [class~="text-amber-400"], [class~="text-orange-400"], [class~="text-[#f59e0b]"], [class~="text-[#f5b73d]"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-amber-300"], [class~="text-amber-400"], [class~="text-orange-400"], [class~="text-[#f59e0b]"], [class~="text-[#f5b73d]"]) {
+  color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels :is([class~="text-cyan-300"], [class~="text-cyan-400"], [class~="text-teal-400"], [class~="text-sky-400"], [class~="text-blue-400"], [class~="text-[#45e0c9]"], [class~="text-[#38bdf8]"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-cyan-300"], [class~="text-cyan-400"], [class~="text-teal-400"], [class~="text-sky-400"], [class~="text-blue-400"], [class~="text-[#45e0c9]"], [class~="text-[#38bdf8]"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-cyan-300"], [class~="text-cyan-400"], [class~="text-teal-400"], [class~="text-sky-400"], [class~="text-blue-400"], [class~="text-[#45e0c9]"], [class~="text-[#38bdf8]"]) {
+  color: var(--m-teal);
+}
+:root[data-skin="comic"] .m-panels :is([class~="text-rose-400"], [class~="text-red-400"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-rose-400"], [class~="text-red-400"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-rose-400"], [class~="text-red-400"]) {
+  color: var(--m-red);
+}
+:root[data-skin="comic"] .m-panels :is([class~="text-violet-300"], [class~="text-violet-400"], [class~="text-purple-400"], [class~="text-indigo-400"], [class~="text-pink-400"], [class~="text-[#a78bfa]"], [class~="text-[#ec4899]"]),
+:root[data-skin="soviet"] .m-panels :is([class~="text-violet-300"], [class~="text-violet-400"], [class~="text-purple-400"], [class~="text-indigo-400"], [class~="text-pink-400"], [class~="text-[#a78bfa]"], [class~="text-[#ec4899]"]),
+:root[data-skin="pixel"] .m-panels :is([class~="text-violet-300"], [class~="text-violet-400"], [class~="text-purple-400"], [class~="text-indigo-400"], [class~="text-pink-400"], [class~="text-[#a78bfa]"], [class~="text-[#ec4899]"]) {
+  color: var(--m-violet);
+}
+
+/* =============================================================================================
+ * 6. Tinted chips, badges and the raised-chip text floor
+ *
+ * An accent wash is kept as an accent wash — `rgb(var(--m-gold-rgb) / 0.18)` — but its label is the
+ * body ink rather than `--m-gold`: on newsprint the accent as type on its own 15% tint measures
+ * 4.36:1, and on a raised `--m-card-2` chip even the muted roles fall under 4.5:1 (pixel's
+ * `--m-ink-2` is 4.43:1, Soviet's signal red 4.20:1). So on a raised or tinted chip the label is
+ * `--m-ink`, and the chip's hue is carried by its tint and its border.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels [class*="bg-accent/"],
+:root[data-skin="soviet"] .m-panels [class*="bg-accent/"],
+:root[data-skin="pixel"] .m-panels [class*="bg-accent/"] {
+  background-color: rgb(var(--m-gold-rgb) / 0.18);
+}
+:root[data-skin="comic"] .m-panels [class*="bg-emerald-500/"],
+:root[data-skin="soviet"] .m-panels [class*="bg-emerald-500/"],
+:root[data-skin="pixel"] .m-panels [class*="bg-emerald-500/"] {
+  background-color: color-mix(in srgb, var(--m-green) 18%, transparent);
+}
+:root[data-skin="comic"] .m-panels :is([class*="bg-cyan-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"]),
+:root[data-skin="soviet"] .m-panels :is([class*="bg-cyan-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"]),
+:root[data-skin="pixel"] .m-panels :is([class*="bg-cyan-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"]) {
+  background-color: color-mix(in srgb, var(--m-teal) 18%, transparent);
+}
+:root[data-skin="comic"] .m-panels :is([class*="bg-violet-500/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"]),
+:root[data-skin="soviet"] .m-panels :is([class*="bg-violet-500/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"]),
+:root[data-skin="pixel"] .m-panels :is([class*="bg-violet-500/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"]) {
+  background-color: color-mix(in srgb, var(--m-violet) 18%, transparent);
+}
+:root[data-skin="comic"] .m-panels [class*="bg-[#f59e0b]/"],
+:root[data-skin="soviet"] .m-panels [class*="bg-[#f59e0b]/"],
+:root[data-skin="pixel"] .m-panels [class*="bg-[#f59e0b]/"] {
+  background-color: rgb(var(--m-gold-rgb) / 0.18);
+}
+/* The tint's *own* label is the body ink too, because several chips carry an inherited signal
+   colour rather than a text class of their own (the numbered discs in the help centre). */
+:root[data-skin="comic"] .m-panels :is([class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]),
+:root[data-skin="soviet"] .m-panels :is([class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]),
+:root[data-skin="pixel"] .m-panels :is([class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]) {
+  color: var(--m-ink);
+}
+:root[data-skin="comic"] .m-panels [class*="bg-slate-500/"],
+:root[data-skin="soviet"] .m-panels [class*="bg-slate-500/"],
+:root[data-skin="pixel"] .m-panels [class*="bg-slate-500/"] {
+  background-color: color-mix(in srgb, var(--m-ink-2) 18%, transparent);
+}
+/* The floor. Names both the chip itself (a class list carries the background and the text token)
+   and anything inside it, since the panels do both. */
+:root[data-skin="comic"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"], [class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]):is([class*="text-text"], [class~="text-[#8e92a0]"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-neutral-400"], [class~="text-neutral-500"], [class~="text-neutral-600"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-slate-300"], [class~="text-emerald-300"], [class~="text-cyan-300"], [class~="text-violet-300"]),
+:root[data-skin="comic"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"], [class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]) :is([class*="text-text"], [class~="text-[#8e92a0]"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-neutral-400"], [class~="text-neutral-500"], [class~="text-neutral-600"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-slate-300"], [class~="text-emerald-300"], [class~="text-cyan-300"], [class~="text-violet-300"]),
+:root[data-skin="soviet"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"], [class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]):is([class*="text-text"], [class~="text-[#8e92a0]"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-neutral-400"], [class~="text-neutral-500"], [class~="text-neutral-600"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-slate-300"], [class~="text-emerald-300"], [class~="text-cyan-300"], [class~="text-violet-300"]),
+:root[data-skin="soviet"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"], [class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]) :is([class*="text-text"], [class~="text-[#8e92a0]"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-neutral-400"], [class~="text-neutral-500"], [class~="text-neutral-600"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-slate-300"], [class~="text-emerald-300"], [class~="text-cyan-300"], [class~="text-violet-300"]),
+:root[data-skin="pixel"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"], [class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]):is([class*="text-text"], [class~="text-[#8e92a0]"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-neutral-400"], [class~="text-neutral-500"], [class~="text-neutral-600"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-slate-300"], [class~="text-emerald-300"], [class~="text-cyan-300"], [class~="text-violet-300"]),
+:root[data-skin="pixel"] .m-panels :is([class*="bg-[#2"], [class~="bg-black/40"], [class~="bg-black/50"], [class~="bg-white/5"], [class~="bg-neutral-800"], [class*="bg-accent/"], [class*="bg-emerald-500/"], [class*="bg-cyan-500/"], [class*="bg-violet-500/"], [class*="bg-slate-500/"], [class*="bg-[#45e0c9]/"], [class*="bg-[#38bdf8]/"], [class*="bg-[#a78bfa]/"], [class*="bg-[#ec4899]/"], [class*="bg-[#f59e0b]/"]) :is([class*="text-text"], [class~="text-[#8e92a0]"], [class~="text-[#b9b7b0]"], [class~="text-[#a0a4b0]"], [class~="text-neutral-400"], [class~="text-neutral-500"], [class~="text-neutral-600"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-slate-300"], [class~="text-emerald-300"], [class~="text-cyan-300"], [class~="text-violet-300"]) {
+  color: var(--m-ink);
+}
+
+/* =============================================================================================
+ * 7. Accent-filled controls — solid fills, their hover step, and their labels
+ *
+ * The desktop's `bg-accent text-black` is the accent's *filled* form, so the label is the skin's
+ * knockout tone (`--m-on-gold`): paper on comic's process inks, near-black on Soviet and pixel
+ * enamels. Written after section 6 so a filled control is never mistaken for a tinted chip.
+ * =========================================================================================== */
+/* Exact tokens only: `bg-accent` is the *filled* form, while `bg-accent/15`-style classes are chips
+   whose tint and floor are handled in section 6. A substring match here would paint every chip gold
+   and leave its `text-accent` label gold-on-gold (1:1). */
+:root[data-skin="comic"] .m-panels :is([class~="bg-accent"], [class~="group-hover:bg-accent"]),
+:root[data-skin="soviet"] .m-panels :is([class~="bg-accent"], [class~="group-hover:bg-accent"]),
+:root[data-skin="pixel"] .m-panels :is([class~="bg-accent"], [class~="group-hover:bg-accent"]) {
+  background-color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels [class*="bg-accent/90"],
+:root[data-skin="soviet"] .m-panels [class*="bg-accent/90"],
+:root[data-skin="pixel"] .m-panels [class*="bg-accent/90"] {
+  background-color: var(--m-gold-hi);
+}
+:root[data-skin="comic"] .m-panels [class~="text-black"],
+:root[data-skin="soviet"] .m-panels [class~="text-black"],
+:root[data-skin="pixel"] .m-panels [class~="text-black"] {
+  color: var(--m-on-gold);
+}
+/* The search result's icon plate asks for `group-hover:text-[#0a0b0d]` on a `group-hover:bg-accent`
+   fill, so the knockout tone is the right one in both states. */
+:root[data-skin="comic"] .m-panels [class*="text-[#0a0b0d]"],
+:root[data-skin="soviet"] .m-panels [class*="text-[#0a0b0d]"],
+:root[data-skin="pixel"] .m-panels [class*="text-[#0a0b0d]"] {
+  color: var(--m-on-gold);
+}
+
+/* =============================================================================================
+ * 8. Hover steps — recoloured, and *only* on hover, so a variant class cannot paint a control
+ *    permanently from section 3's grouped grounds.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels [class*="hover:text-text"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:text-text"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:text-text"]:hover {
+  color: var(--m-ink);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:text-white"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:text-white"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:text-white"]:hover {
+  color: var(--m-ink);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:text-accent"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:text-accent"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:text-accent"]:hover {
+  color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:text-cyan-300"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:text-cyan-300"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:text-cyan-300"]:hover {
+  color: var(--m-teal);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:text-amber-300"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:text-amber-300"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:text-amber-300"]:hover {
+  color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:text-rose-400"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:text-rose-400"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:text-rose-400"]:hover {
+  color: var(--m-red);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:border-accent"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:border-accent"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:border-accent"]:hover {
+  border-color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:border-cyan-400"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:border-cyan-400"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:border-cyan-400"]:hover {
+  border-color: var(--m-teal);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:border-amber-400"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:border-amber-400"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:border-amber-400"]:hover {
+  border-color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels [class*="hover:border-line"]:hover,
+:root[data-skin="soviet"] .m-panels [class*="hover:border-line"]:hover,
+:root[data-skin="pixel"] .m-panels [class*="hover:border-line"]:hover {
+  border-color: var(--m-line-2);
+}
+
+/* =============================================================================================
+ * 9. Inputs, options, placeholders, native control colour and focus
+ *
+ * `accent-color` is the one place the desktop's hardcoded `var(--color-accent,#f59e0b)` shows
+ * through: the range sliders in 设置 paint their track with it, and `color-scheme` alone would
+ * leave the thumb amber on every skin.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels :is(input[type="text"], input:not([type]), textarea, select),
+:root[data-skin="soviet"] .m-panels :is(input[type="text"], input:not([type]), textarea, select),
+:root[data-skin="pixel"] .m-panels :is(input[type="text"], input:not([type]), textarea, select) {
+  background-color: var(--m-card);
+  color: var(--m-ink);
+  border-color: var(--m-line-2);
+  caret-color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels :is(option, optgroup),
+:root[data-skin="soviet"] .m-panels :is(option, optgroup),
+:root[data-skin="pixel"] .m-panels :is(option, optgroup) {
+  background-color: var(--m-card);
+  color: var(--m-ink);
+}
+/* `--m-ink-2`, not `--m-ink-3`: the placeholder sits on the search bar's own surface and the two
+   tones are close enough that the extra 1.3:1 of the raised ink is worth more than the hierarchy. */
+:root[data-skin="comic"] .m-panels ::placeholder,
+:root[data-skin="soviet"] .m-panels ::placeholder,
+:root[data-skin="pixel"] .m-panels ::placeholder {
+  color: var(--m-ink-2);
+}
+:root[data-skin="comic"] .m-panels :is(input[type="range"], input[type="checkbox"], input[type="radio"], progress),
+:root[data-skin="soviet"] .m-panels :is(input[type="range"], input[type="checkbox"], input[type="radio"], progress),
+:root[data-skin="pixel"] .m-panels :is(input[type="range"], input[type="checkbox"], input[type="radio"], progress) {
+  accent-color: var(--m-gold);
+}
+/* Tailwind composes a ring from `--tw-ring-color`; recolouring the variable keeps the ring the
+   component asked for and only changes its pigment. */
+:root[data-skin="comic"] .m-panels [class*="focus-visible:ring"],
+:root[data-skin="comic"] .m-panels [class*="focus:ring"],
+:root[data-skin="soviet"] .m-panels [class*="focus-visible:ring"],
+:root[data-skin="soviet"] .m-panels [class*="focus:ring"],
+:root[data-skin="pixel"] .m-panels [class*="focus-visible:ring"],
+:root[data-skin="pixel"] .m-panels [class*="focus:ring"] {
+  --tw-ring-color: var(--m-gold);
+}
+:root[data-skin="comic"] .m-panels :focus-visible,
+:root[data-skin="soviet"] .m-panels :focus-visible,
+:root[data-skin="pixel"] .m-panels :focus-visible {
+  outline-color: var(--m-gold);
+}
+
+/* =============================================================================================
+ * 10. Gradients and glows
+ *
+ * The desktop builds four gradients: one solid amber button, one faint amber plate, and two
+ * accent-to-dark cards. The button becomes a flat skin-accent gradient; the faint plate becomes an
+ * accent tint; the two cards become the skin's raised surface, with their accent border carrying
+ * the emphasis. Glows are recoloured through `--tw-shadow`, which leaves a `ring-*` on the same
+ * control intact where replacing `box-shadow` would not.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels [class~="from-[#f5b73d]"],
+:root[data-skin="soviet"] .m-panels [class~="from-[#f5b73d]"],
+:root[data-skin="pixel"] .m-panels [class~="from-[#f5b73d]"] {
+  background-image: linear-gradient(90deg, var(--m-gold), var(--m-gold-hi));
+}
+:root[data-skin="comic"] .m-panels [class*="from-[#f5b73d]/"],
+:root[data-skin="soviet"] .m-panels [class*="from-[#f5b73d]/"],
+:root[data-skin="pixel"] .m-panels [class*="from-[#f5b73d]/"] {
+  background-image: none;
+  background-color: rgb(var(--m-gold-rgb) / 0.14);
+}
+:root[data-skin="comic"] .m-panels [class*="from-accent/"],
+:root[data-skin="soviet"] .m-panels [class*="from-accent/"],
+:root[data-skin="pixel"] .m-panels [class*="from-accent/"] {
+  background-image: none;
+  background-color: var(--m-card);
+}
+:root[data-skin="comic"] .m-panels [class*="shadow-[0_0"],
+:root[data-skin="soviet"] .m-panels [class*="shadow-[0_0"],
+:root[data-skin="pixel"] .m-panels [class*="shadow-[0_0"] {
+  --tw-shadow: 0 0 12px rgb(var(--m-gold-rgb) / 0.28);
+}
+:root[data-skin="comic"] .m-panels [class*="shadow-amber-"],
+:root[data-skin="soviet"] .m-panels [class*="shadow-amber-"],
+:root[data-skin="pixel"] .m-panels [class*="shadow-amber-"] {
+  --tw-shadow-color: var(--m-gold);
+}
+
+/* =============================================================================================
+ * 11. Radii — each skin's corner language. The only metric any skin sheet touches.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels :is([class~="rounded-3xl"], [class~="rounded-2xl"]) {
+  border-radius: 4px;
+}
+:root[data-skin="comic"] .m-panels :is([class~="rounded-xl"], [class~="rounded-lg"], [class~="rounded-md"], [class~="rounded"], [class~="rounded-sm"]) {
+  border-radius: 3px;
+}
+:root[data-skin="comic"] .m-panels [class~="rounded-full"] {
+  border-radius: 50%;
+}
+:root[data-skin="soviet"] .m-panels [class*="rounded-"] {
+  border-radius: 0;
+}
+:root[data-skin="soviet"] .m-panels [class~="rounded-full"] {
+  border-radius: 50%;
+}
+:root[data-skin="pixel"] .m-panels [class*="rounded-"] {
+  border-radius: 0;
+}
+
+/* =============================================================================================
+ * 12. Selection and scrollbars — the last places the browser's own scheme showed through
+ *
+ * The panels scroll (`overflow-y-auto` on the changelog list, the help article pane and the
+ * settings body). Nothing here touches `overflow` — only the two scrollbar paints — so a 193-entry
+ * changelog keeps scrolling inside its own region.
+ * =========================================================================================== */
+:root[data-skin="comic"] .m-panels ::selection,
+:root[data-skin="soviet"] .m-panels ::selection,
+:root[data-skin="pixel"] .m-panels ::selection {
+  background-color: var(--m-gold);
+  color: var(--m-on-gold);
+}
+:root[data-skin="comic"] .m-panels ::-webkit-scrollbar,
+:root[data-skin="soviet"] .m-panels ::-webkit-scrollbar,
+:root[data-skin="pixel"] .m-panels ::-webkit-scrollbar {
+  background-color: var(--m-card-2);
+}
+:root[data-skin="comic"] .m-panels ::-webkit-scrollbar-thumb,
+:root[data-skin="soviet"] .m-panels ::-webkit-scrollbar-thumb,
+:root[data-skin="pixel"] .m-panels ::-webkit-scrollbar-thumb {
+  background-color: var(--m-line-2);
+  border-radius: 3px;
+}
