@@ -5,18 +5,33 @@
  * pin is the phone screen's own contract: four options that grade, a ladder that moves and persists to
  * the *same* storage key, a difficulty switch that re-rolls the question, and an explanation that links
  * to the genre.
+ *
+ * Since the answer-beat round there is a second contract, and it is the one the user complained about:
+ * the verdict is no longer a block under the options (off-screen on a phone) but a bar pinned to the
+ * viewport, a right answer advances itself after a visible beat, and a wrong one does not.
  */
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import {
   CHALLENGE_STORAGE_KEY,
+  CORRECT_AUTO_ADVANCE_MS,
   EMPTY_CHALLENGE_STATS,
   MobileChallengeScreen,
   loadChallengeStats,
 } from "../mobile/screens/MobileChallengeScreen";
+import { HapticPatterns, triggerHaptic } from "../utils/haptics";
 import type { Genre } from "../types/genre";
+
+/**
+ * The haptic helper is mocked so a test can assert the buzz without a Vibration API. Everything else in
+ * the module (the pattern table) stays real.
+ */
+vi.mock("../utils/haptics", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../utils/haptics")>();
+  return { ...actual, triggerHaptic: vi.fn() };
+});
 
 const renderChallenge = () => {
   const spies = {
@@ -36,10 +51,34 @@ const optionIds = (): string[] =>
     (node.getAttribute("data-testid") ?? "").replace("mobile-challenge-option-", "")
   );
 
+/**
+ * The correct option's id, learned the honest way.
+ *
+ * The play button plays `question.correctGenre`, so the spy's last call is the answer. (Reading a hidden
+ * attribute off the DOM would leak the answer into the markup, which a quiz must not do.)
+ */
+const correctOptionId = (spies: { onTogglePlay: ReturnType<typeof vi.fn> }): string => {
+  fireEvent.click(screen.getByTestId("mobile-challenge-play"));
+  const call = spies.onTogglePlay.mock.calls.at(-1) as [Genre] | undefined;
+  if (!call) throw new Error("the play button did not hand the question's genre to the transport");
+  return call[0].id;
+};
+
+const wrongOptionId = (correctId: string): string => {
+  const wrong = optionIds().find((id) => id !== correctId);
+  if (!wrong) throw new Error("no wrong option to pick");
+  return wrong;
+};
+
 describe("challenge module", () => {
   beforeEach(() => {
     localStorage.setItem("groove_language", "zh");
     localStorage.removeItem(CHALLENGE_STORAGE_KEY);
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("offers four options and a play button to hear the question", () => {
@@ -121,5 +160,101 @@ describe("challenge module", () => {
     const stats = loadChallengeStats();
     expect(stats.elo).toBe(EMPTY_CHALLENGE_STATS.elo);
     expect(stats.totalAnswered).toBe(0);
+  });
+
+  /**
+   * The user's actual complaint: "反馈在下面，要滑动才能看见".
+   */
+  it("pins the verdict to the viewport and marks both the right and the picked answer", () => {
+    const { spies } = renderChallenge();
+    const correctId = correctOptionId(spies);
+    const wrongId = wrongOptionId(correctId);
+    fireEvent.click(screen.getByTestId(`mobile-challenge-option-${wrongId}`));
+
+    const banner = screen.getByTestId("mobile-challenge-verdict");
+    // `fixed` is the guarantee that matters: the bar is in the viewport wherever the list is scrolled.
+    expect(banner.className).toMatch(/\bfixed\b/);
+    expect(banner.className).toContain("bottom-[calc(56px+env(safe-area-inset-bottom))]");
+    // It is the bar, not a block appended to the list (which is what put it below the fold).
+    expect(screen.getByTestId("mobile-challenge-options").contains(banner)).toBe(false);
+    expect(banner).toHaveAttribute("data-outcome", "wrong");
+
+    // The learning content is inside the pinned bar: the genre link and the next action.
+    expect(within(banner).getByTestId("mobile-challenge-verdict-genre")).toBeInTheDocument();
+    expect(within(banner).getByTestId("mobile-challenge-next")).toBeInTheDocument();
+    expect(banner).toHaveTextContent("答案是");
+    expect(within(banner).getByTestId("mobile-challenge-verdict-title")).toHaveTextContent("答错了");
+
+    // Right gets the shell's green treatment, the picked wrong one the red one, the rest dim.
+    const correctTile = screen.getByTestId(`mobile-challenge-option-${correctId}`);
+    const wrongTile = screen.getByTestId(`mobile-challenge-option-${wrongId}`);
+    expect(correctTile).toHaveAttribute("data-state", "right");
+    expect(correctTile.className).toContain("ring-[var(--m-green)]");
+    expect(wrongTile).toHaveAttribute("data-state", "wrong");
+    expect(wrongTile.className).toContain("ring-[var(--m-red)]");
+    expect(loadChallengeStats().streak).toBe(0);
+  });
+
+  it("advances itself after the beat on a right answer, and says that it will", () => {
+    vi.useFakeTimers();
+    const { spies } = renderChallenge();
+    const correctId = correctOptionId(spies);
+    const first = optionIds().join(",");
+    fireEvent.click(screen.getByTestId(`mobile-challenge-option-${correctId}`));
+
+    const banner = screen.getByTestId("mobile-challenge-verdict");
+    expect(banner).toHaveAttribute("data-outcome", "right");
+    expect(within(banner).getByTestId("mobile-challenge-auto-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-challenge-earned")).toHaveTextContent("+200");
+    expect(screen.getByTestId("mobile-challenge-streak-now")).toHaveTextContent("1");
+
+    // Still up just before the beat elapses: the user gets to see *why* it was right.
+    act(() => {
+      vi.advanceTimersByTime(CORRECT_AUTO_ADVANCE_MS - 100);
+    });
+    expect(screen.getByTestId("mobile-challenge-verdict")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(screen.queryByTestId("mobile-challenge-verdict")).not.toBeInTheDocument();
+    expect(optionIds()).toHaveLength(4);
+    expect(optionIds().join(",")).not.toBe(first);
+  });
+
+  it("never auto-advances a wrong answer, and offers next instead", () => {
+    vi.useFakeTimers();
+    const { spies } = renderChallenge();
+    const correctId = correctOptionId(spies);
+    const wrongId = wrongOptionId(correctId);
+    const first = optionIds().join(",");
+    fireEvent.click(screen.getByTestId(`mobile-challenge-option-${wrongId}`));
+
+    expect(screen.queryByTestId("mobile-challenge-auto-hint")).not.toBeInTheDocument();
+    expect(screen.getByTestId("mobile-challenge-earned")).toHaveTextContent("+0");
+    expect(screen.getByTestId("mobile-challenge-streak-now")).toHaveTextContent("0");
+
+    // Three beats' worth of time changes nothing: the explanation is still there to be read.
+    act(() => {
+      vi.advanceTimersByTime(CORRECT_AUTO_ADVANCE_MS * 3);
+    });
+    expect(screen.getByTestId("mobile-challenge-verdict")).toHaveAttribute("data-outcome", "wrong");
+    expect(optionIds().join(",")).toBe(first);
+
+    // The explicit action is the only way forward.
+    fireEvent.click(screen.getByTestId("mobile-challenge-next"));
+    expect(screen.queryByTestId("mobile-challenge-verdict")).not.toBeInTheDocument();
+    expect(optionIds()).toHaveLength(4);
+  });
+
+  it("buzzes the shell's haptic: a celebratory double pulse for right, a warning for wrong", () => {
+    const { spies } = renderChallenge();
+    const correctId = correctOptionId(spies);
+    fireEvent.click(screen.getByTestId(`mobile-challenge-option-${wrongOptionId(correctId)}`));
+    expect(vi.mocked(triggerHaptic)).toHaveBeenLastCalledWith(HapticPatterns.wrongAnswer);
+
+    fireEvent.click(screen.getByTestId("mobile-challenge-next"));
+    fireEvent.click(screen.getByTestId(`mobile-challenge-option-${correctOptionId(spies)}`));
+    expect(vi.mocked(triggerHaptic)).toHaveBeenLastCalledWith(HapticPatterns.correctAnswer);
   });
 });
