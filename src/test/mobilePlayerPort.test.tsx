@@ -35,8 +35,14 @@ import {
   LAYER_COLORS,
   NEEDLE_ANGLE,
   mixGlow,
+  tonearmDrawAngle,
   tonearmHeadHop,
+  tonearmStylusDistance,
   tonearmTheta,
+  tonearmWorkingAngle,
+  TONEARM_NEEDLE_RADIUS,
+  TONEARM_TRAVEL,
+  vinylGeometry,
 } from "../mobile/vinyl/vinylMath";
 import { LABEL_ART, labelCacheKey } from "../mobile/vinyl/vinylTexture";
 
@@ -230,6 +236,34 @@ describe("the record's look, as maths", () => {
 
     expect(tonearmHeadHop(1, 1)).toBeCloseTo(1.6, 6);
     expect(tonearmHeadHop(1, 0)).toBe(0);
+  });
+
+  it("lands the stylus on the record when playing, and off it when stopped", () => {
+    /**
+     * The assertion the arm needed all along.
+     *
+     * The arm's angle is measured from its **pivot**, not from the disc centre, and the first two ports
+     * got that wrong in opposite ways — one cancelled the travel, the next drew the arm at the *needle's*
+     * angle and left the stylus floating above the disc in both states. Neither was visible to a test that
+     * only asserted an angle, so this one asserts the thing a listener sees: where the stylus ends up.
+     */
+    const geometry = vinylGeometry(300, 352);
+    const working = tonearmWorkingAngle(geometry);
+
+    // Playing: the drawn angle is the working angle, and the stylus sits on the outer ring.
+    const playing = tonearmDrawAngle(working, TONEARM_TRAVEL);
+    expect(playing).toBeCloseTo(working, 6);
+    const onRecord = tonearmStylusDistance(geometry, playing);
+    expect(onRecord).toBeCloseTo(geometry.maxR * TONEARM_NEEDLE_RADIUS, 4);
+    expect(onRecord).toBeLessThan(geometry.maxR);
+
+    // Stopped: the arm has swung back by the travel, and the stylus is *past the edge* of the disc.
+    const resting = tonearmDrawAngle(working, 0);
+    expect(resting).toBeCloseTo(working - TONEARM_TRAVEL, 6);
+    const parked = tonearmStylusDistance(geometry, resting);
+    expect(parked).toBeGreaterThan(geometry.maxR);
+    // …on the upper right, which is where the reference parks it (a smaller y than the disc centre).
+    expect(resting).toBeLessThan(working);
   });
 
   it("puts the disc angle where the reference does, needle side up", () => {
