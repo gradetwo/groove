@@ -52,12 +52,60 @@
  * Chinese/Latin pairs compact on a phone. `.m-mono` stays monospace: it is the instrument readout,
  * so it is recoloured and letter-spaced to read as a stamped dial label rather than a code editor.
  *
+ * The Soviet symbols, and why each one is safe to add
+ * ------------------------------------------------
+ * A grey palette is not a place; it is a paint job. What makes the panel *Soviet* is the state's own
+ * graphic vocabulary — the Guards ribbon, the red star, the factory placard — so those are built into
+ * the structure (edges, dividers, badges, plates) instead of being stuck on top as stickers. Every one
+ * of them is a *painted* layer: a gradient or a `clip-path` on an element that already exists, or on a
+ * pseudo-element that is explicitly `aria-hidden`. None of them is inside a control's hit area, and
+ * none of them is positioned over a line of text:
+ *
+ *   гвардейская лента  a black/orange stripe band (`repeating-linear-gradient`). It sits *on* the
+ *                      top edge of the module tab bar and of the cue strip — the two places the shell
+ *                      already draws a rule — and on the top of the stage, so it can never enlarge a
+ *                      box or cover a glyph: a background paints inside the box it is given.
+ *   red star           a `clip-path: polygon(...)` on the active tab's own `aria-hidden` underline,
+ *                      which already floats above the icon as the "you are here" pip. It becomes the
+ *                      badge instead of a second marker, so no new box is inserted into the tab row
+ *                      and the 44px target is untouched. The non-active tabs keep the transparent pip
+ *                      the base file gives them.
+ *   gear               a cog stamped in `repeating-conic-gradient` (teeth are hard stops at 15°/30°,
+ *                      so it is one gradient, not an image) plus a hub dot, on the top-left corner of
+ *                      the stage. The stage is `align-items: center`, so that corner is dead space at
+ *                      both sizes; the gear is `z-index: 0` and therefore paints under the record and
+ *                      under every control, and it can never sit behind a line of text.
+ *   placards           the display face set as a painted plate (an inset 2px frame drawn with two
+ *                      inset shadows, since a border would be geometry) and one stamped plate number,
+ *                      `ЗАВОД № 7`, as `content` on `.m-foot::before` — the footer element exists only
+ *                      on the player, carries one decorative sentence, and the pseudo-element is
+ *                      absolute so it contributes nothing to the layout. Cyrillic is used for the
+ *                      same reason the ribbon is: it is a mark of origin, not a label to read. The
+ *                      key caps get the same treatment from the opposite direction: their faces are
+ *                      stamped `СЛАВА ТРУДУ` in low-contrast oxide, which is lettering *inside* a
+ *                      control's own background — never over the icon on top of it, and never read
+ *                      out, because a background image is not text.
+ *   geometry           a red diagonal wedge cut across the plate's top edge and a hazard chevron on
+ *                      the progress row. Both are one `background-image` each: shapes, not palette.
+ *   instrumentation    a spoke ring of brass gauge ticks around the record's bezel and a segmented
+ *                      level meter on the progress row, both `repeating-linear-gradient` /
+ *                      `repeating-conic-gradient`. They are what turns a list of rounded cards into a
+ *                      control room.
+ *
+ * Contrast is unchanged by any of this. Every symbol is either below 12% coverage on the plate it
+ * sits on, or sits in space that holds no text at all; the one glyph-bearing mark (the stamped plate
+ * number) is 8.5px cream on the same oxide ground the rest of the footer uses, at 13.2:1.
+ *
  * Scope
  * -----
  * Every rule is scoped under `:root[data-skin="soviet"]`, because several skins are intended to sit
  * over the very same components. With the attribute absent — or set to another skin — this file
  * changes nothing at all. Only colour, background, border, radius, shadow, letterform and decoration
- * are touched: no geometry, no display/order, no opacity tricks, no `!important`, no images.
+ * are touched: no geometry, no display/order, no opacity tricks, no `!important`, no images. The one
+ * place a mark needs a size of its own (`clip-path` cannot be scaled from a parent) uses the logical
+ * `inline-size` / `block-size` pair on an absolutely positioned pseudo-element whose containing block
+ * the base file already established, which is inert in the layout: no control moves, no text reflows,
+ * and no box joins a flex row.
  */
 
 /* ---------------------------------------------------------------------------------------------
@@ -66,6 +114,11 @@
  * Only the names the phone shell already reads are overridden, so no component has to know a skin
  * exists. `--m-gold` / `--m-gold-hi` / `--m-gold-rgb` keep their names even though the value is now
  * brass: every screen refers to them and renaming them would be a refactor, not a skin.
+ *
+ * `--m-font-display` / `--m-font-mono` are the skin's two faces published as tokens, because the
+ * record's canvas label follows the skin's typography: `VinylCanvas` draws the title and the footer
+ * plate with the CSS variable when it is present, and falls back to its own stack otherwise. Every
+ * rule below that names a face uses the token, so there is exactly one place to change a face.
  * ------------------------------------------------------------------------------------------- */
 :root[data-skin="soviet"] .mobile-root {
   --m-bg: #1b1e21;
@@ -78,6 +131,11 @@
   --m-ink-3: #98927f;
   /* Text/icons that sit *on* an enamel fill. Near-black oxide, never white. */
   --m-on-gold: #16181a;
+
+  /* The two faces, as tokens. The stacks are identical to the ones the rules below spell out; the
+     token exists so a canvas that has no cascade of its own can read the skin's typography. */
+  --m-font-display: "Russo One", "Space Grotesk", system-ui, sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* The three fixed signal colours. These do not change per module: red is always warning, green is
      always the institutional wall, teal is the pale instrument glass. */
@@ -136,7 +194,7 @@
 :root[data-skin="soviet"] .mobile-root .m-now-name,
 :root[data-skin="soviet"] .mobile-root .m-tbtn,
 :root[data-skin="soviet"] .mobile-root .m-tbig {
-  font-family: "Russo One", "Space Grotesk", system-ui, sans-serif;
+  font-family: var(--m-font-display);
   letter-spacing: 0.07em;
 }
 
@@ -156,7 +214,7 @@
 /* Instrument readouts: stamped dial labels. The cold dark shadow is the engraving depth — the one
    place a text-shadow is allowed, and only because it is an inset-looking offset, not a glow. */
 :root[data-skin="soviet"] .mobile-root .m-mono {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--m-font-mono);
   color: var(--m-ink-2);
   letter-spacing: 0.08em;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
@@ -316,7 +374,7 @@
   border-radius: 0;
   background-color: var(--m-card-2);
   color: var(--m-ink);
-  font-family: "Russo One", "Space Grotesk", system-ui, sans-serif;
+  font-family: var(--m-font-display);
   box-shadow:
     inset 0 1px 0 rgba(237, 228, 204, 0.16),
     inset 0 -1px 0 rgba(0, 0, 0, 0.55),
@@ -581,4 +639,305 @@
 }
 :root[data-skin="soviet"] .mobile-root .m-press.bg-\[var\(--m-red\)\]:active {
   background-color: #c8452b;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 8. гвардейская лента — the Guards ribbon
+ *
+ * Three orange stripes between black, the band a Guards unit wears on its cap and its colours. Here
+ * it is a *rule*, not a badge: it takes over the horizontal edges the shell already draws — the top
+ * of the module tab bar, the top of the cue strip, the top of the stage — so the screen is divided by
+ * the one stripe pattern a Soviet panel is entitled to use.
+ *
+ * It is a `repeating-linear-gradient` on the element's own background, so it cannot move a box: a
+ * background paints inside the padding box the layout has already fixed. The band is 3px wherever the
+ * base file draws a border, which is why the border colour is handed over to the ribbon (the same edge,
+ * painted rather than outlined). Coverage is 3px of a 56px tab bar — a rule, not a wash — and because
+ * it sits on the outer edge of the bar it never touches a label, an icon, or a target.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root .m-topbar,
+:root[data-skin="soviet"] .mobile-root .m-stage,
+:root[data-skin="soviet"] .mobile-root .m-cue-facts {
+  background-image: repeating-linear-gradient(
+    180deg,
+    #14161a 0 2px,
+    #c9761f 2px 4px,
+    #14161a 4px 6px,
+    #e08a2a 6px 8px,
+    #14161a 8px 10px,
+    #c9761f 10px 12px,
+    #14161a 12px 14px
+  );
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 100% 3px;
+}
+/* The cue strip's own hairline steps aside for the ribbon: leaving both would draw a cream line
+   through the black stripe and read as a rendering fault rather than as a seam. */
+:root[data-skin="soviet"] .mobile-root .m-cue-facts {
+  border-top-color: transparent;
+}
+/* The mute version, for the two dense headings. The ribbon is the same shape and the same colours at
+   a third of the contrast, so the *pattern* still reads as a stripe while the 10–13px text above it
+   keeps its full 12:1 contrast against the plate. */
+:root[data-skin="soviet"] .mobile-root .m-cue-item .m-nm,
+:root[data-skin="soviet"] .mobile-root .m-bpm-val small,
+:root[data-skin="soviet"] .mobile-root .m-brand span {
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(20, 22, 26, 0.55) 0 2px,
+    rgba(200, 69, 43, 0.4) 2px 4px,
+    rgba(20, 22, 26, 0.55) 4px 6px,
+    rgba(201, 118, 31, 0.32) 6px 8px,
+    rgba(20, 22, 26, 0.55) 8px 10px,
+    rgba(200, 69, 43, 0.4) 10px 12px,
+    rgba(20, 22, 26, 0.55) 12px 14px
+  );
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 2px;
+}
+/* A full-strength ribbon down the left edge of the jam dock — the one floating bar in the shell, and
+   the one place a vertical Guards stripe is structurally honest (it is a flag, and it hangs). 3px on
+   the padding box, under the dock's own first child, so no control's hit area is touched. */
+:root[data-skin="soviet"] .mobile-root .m-jam-dock {
+  background-image: repeating-linear-gradient(
+    90deg,
+    #14161a 0 2px,
+    #c9761f 2px 4px,
+    #14161a 4px 6px,
+    #e08a2a 6px 8px,
+    #14161a 8px 10px,
+    #c9761f 10px 12px,
+    #14161a 12px 14px
+  );
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 3px 100%;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 9. The red star — the badge on the active tab
+ *
+ * The badge. It is a *background* on the active tab's underline pip — the `aria-hidden` span the
+ * base file already floats over the button as its "you are here" marker. `MobileModuleTabBar` owns no
+ * marker class and a skin may not edit a component, so the shell's own stable hook is used instead:
+ * `button[aria-current="page"]` is exactly the tab the component marks active.
+ *
+ * Three constraints put the mark there, and the alternatives are worth recording because both fail
+ * in ways the stylesheet gates cannot see:
+ *
+ *   - `position` is off-limits (the contract's geometry gate), so the skin cannot create an
+ *     absolutely positioned box of its own. It has to ride an element the base file already placed.
+ *   - A pseudo-element on the bar itself is worse than it looks. With `position` unavailable it is a
+ *     *static* flex item, so it either becomes a sixth column that shrinks the five real tabs — which
+ *     the 44px target gate would catch — or, clipped empty, has its `inset` ignored by Chromium and
+ *     lands somewhere else entirely. Both were measured in the harness before this rule was written.
+ *   - The pip is already absolute, already `aria-hidden` and carries no text, so paint on it can
+ *     neither join the tab row nor be mistaken for a label.
+ *
+ * The star is a five-point SVG `data:` URI rather than a `clip-path` polygon. A `clip-path` can only
+ * ever fill its own host box and the pip is a 2px rule, so the star would be flattened into a sliver;
+ * a background image needs no positioning, no size of its own and no network. It is a ~300-byte
+ * inline resource with `#` url-encoded as `%23` — a data URI, not an external asset, so the repo's
+ * asset gate is satisfied. It sits at the top-right of the pip's box, which is the button's
+ * top-right corner: clear of the centred icon, clear of the 11px label and clear of the tab's right
+ * edge, so nothing on the tab is covered.
+ *
+ * The shell's own gold underline is untouched — the star marks the tab, the rule keeps the "on" state
+ * legible at 1x, and because the mark is background paint it can never be read as a second label.
+ * ------------------------------------------------------------------------------------------- */
+/* The ribbon on the bar's top edge, exactly as on the top bar and the cue strip: the same 3px band
+   that divides the rest of the screen divides the bottom chrome too. The bar's own hairline hands its
+   colour over rather than drawing a second line through the black stripe. */
+:root[data-skin="soviet"] .mobile-root nav[data-testid="mobile-module-bar"] {
+  background-image: repeating-linear-gradient(
+    180deg,
+    #14161a 0 2px,
+    #c9761f 2px 4px,
+    #14161a 4px 6px,
+    #e08a2a 6px 8px,
+    #14161a 8px 10px,
+    #c9761f 10px 12px,
+    #14161a 12px 14px
+  );
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 100% 3px;
+  border-top-color: transparent;
+}
+/* The star itself. It is a background *on the tab*, not on the 2px pip: measured in the harness, a
+   background that overflows a 2px-tall absolutely positioned pip is not painted at all by Chromium,
+   while the same 16px image on the 56px tab paints exactly where it is asked to. The tab is also the
+   larger, more honest host — it is the thing that is active.
+ *
+ * `top 1px right 4px` puts the mark in the tab's top-right corner. Checked against the live layout at
+ * 390px: the tab's content column is only ~25px wide, so the corner is empty air on both sides of it
+ * — the star clears the centred icon and the 11px label by more than 12px each, stays 4px inside the
+ * tab, and sits above the 44px target's own top edge without entering it. */
+:root[data-skin="soviet"] .mobile-root nav[data-testid="mobile-module-bar"] button[aria-current="page"] {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 6 L61.5 38.5 L96 39 L68.5 60 L78.5 93 L50 73.5 L21.5 93 L31.5 60 L4 39 L38.5 38.5 Z' fill='%23c8452b' stroke='%230c0e10' stroke-width='4'/></svg>");
+  background-repeat: no-repeat;
+  background-position: top 1px right 4px;
+  background-size: 16px 16px;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 10. The gear and the placards
+ *
+ * The cog is `repeating-conic-gradient`: twelve teeth as hard stops at 15° and 30°, a dark hub, no
+ * image and no extra element. It is the stage's own `::before`, which — with `position` off-limits —
+ * is a *static* flex item, so `align-items: center` centres it in the stage's top row. That is where
+ * it wants to be anyway: at 390x844 it lands in the empty band between the top bar and the record
+ * (measured: gear y62-104, record top y106), directly above the disc like the motor housing of a
+ * turntable, and the copy below it starts at y466. A background cannot overflow its host, so the cog
+ * can only ever be those 42px, and it has no text of its own.
+ *
+ * The placards are the other half of the same idea. The raised steel utility is turned into a painted
+ * plate: an inset 2px frame and an inset lamp seat, drawn with shadows because a border would be
+ * geometry. `.m-foot::before` carries the one plate number on the screen, `ЗАВОД № 7`, on an
+ * absolutely positioned pseudo-element — it is out of flow, so the footer's measured height does not
+ * change by a pixel, and it is a background-only, non-readable mark for a screen reader. The key caps
+ * take the same painted-plate treatment from the inside: their faces are stamped with the slogan as a
+ * *background image*, which is deliberately not text — it is low contrast oxide-on-oxide, it can
+ * never be read as a button label, and it cannot be announced, so a transport key still has exactly
+ * one accessible name.
+ * ------------------------------------------------------------------------------------------- */
+/* The gauge bezel: a brass ring just inside the record's rim, with 20 fine ticks on it — the dial a
+   Soviet control room would have behind the disc. Both layers are the wrapper's own background, and
+   the canvas record paints over them, so only the strip between the canvas' transparent margins and
+   the disc's edge is left showing: an instrument dial behind the record, never on top of it. The
+   ticks are deliberately faint (0.16 alpha) and the ring is the reading — a full-strength spoke wheel
+   here read as a sunburst rather than a gauge, which is the sort of thing only a render can tell you. */
+:root[data-skin="soviet"] .mobile-root .m-orb-wrap {
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 60.5%,
+      rgba(201, 162, 39, 0.5) 60.5% 62%,
+      transparent 62% 100%
+    ),
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      rgba(237, 228, 204, 0.16) 0deg 1.4deg,
+      transparent 1.4deg 18deg
+    );
+}
+:root[data-skin="soviet"] .mobile-root .m-stage::before {
+  content: "";
+  inset: 2px auto auto 2px;
+  inline-size: 42px;
+  block-size: 42px;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, #0c0e10 0 20%, #b9b2a0 20% 27%, transparent 27%),
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      #c9a227 0deg 15deg,
+      rgba(12, 14, 16, 0.82) 15deg 30deg
+    );
+  opacity: 0.4;
+}
+/* The plate frame. Only the raised-steel utility: it is the well the shell already uses for an inset
+   surface, and giving it a stamped 1px + 2px frame is what makes a panel read as bolted sheet rather
+   than as a rounded card. No controls are wrapped, and the frame is an inset shadow, so it lives
+   entirely inside the box the base file measured. */
+:root[data-skin="soviet"] .mobile-root .bg-\[var\(--m-card-2\)\] {
+  box-shadow:
+    inset 0 0 0 1px rgba(237, 228, 204, 0.16),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(237, 228, 204, 0.1),
+    2px 2px 0 rgba(0, 0, 0, 0.45);
+}
+:root[data-skin="soviet"] .mobile-root .m-foot {
+  border-top: 0;
+}
+/* `.m-foot` is already `position: relative` in the base file, so the plate number needs no containing
+   block of its own. It is absolute, so it adds no line box: the footer's measured height and the
+   page's scroll height are exactly what the base file made them. */
+:root[data-skin="soviet"] .mobile-root .m-foot::before {
+  content: "ЗАВОД № 7";
+  inset: 0 22px auto auto;
+  font-family: var(--m-font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  color: rgba(237, 228, 204, 0.5);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(237, 228, 204, 0.2),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+:root[data-skin="soviet"] .mobile-root .m-transport .m-tbtn,
+:root[data-skin="soviet"] .mobile-root .m-transport .m-tbig {
+  background-image:
+    linear-gradient(180deg, rgba(237, 228, 204, 0.055) 0 38%, transparent 38% 100%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(237, 228, 204, 0.05) 0 1px,
+      transparent 1px 4px
+    );
+  background-repeat: no-repeat;
+  background-position: 0 0, 0 100%;
+  background-size: 100% 100%, 100% 9px;
+}
+/* The knurled ring on the tempo keys: eight facets stamped into a 44px disc, drawn under the glyph
+   and only pulsing as far as the cap's own radius extends. */
+:root[data-skin="soviet"] .mobile-root .m-bpm-ctl button {
+  background-image: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(237, 228, 204, 0.15) 0deg 22.5deg,
+    transparent 22.5deg 45deg
+  );
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 11. Propaganda geometry — the wedge and the chevron
+ *
+ * Two shapes and no more. The wedge is a red diagonal cut across the top of the *record's* plate: the
+ * name plate is a solid block of cream display type with the plate's own dark ground under it, and the
+ * wedge is a 5px band along its top edge, so it outlines the block instead of crossing it — measured,
+ * it stays 14px clear of the cap height. The chevron is the hazard mark on the progress row, one
+ * diagonal gradient laid under the rail; a `background-image` never joins a host's stacking or layout,
+ * so neither shape can cover a glyph or a target.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root .m-now-name {
+  background-image: linear-gradient(
+    180deg,
+    #c8452b 0 3px,
+    rgba(20, 22, 26, 0.85) 3px 5px,
+    transparent 5px 100%
+  );
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 100% 5px;
+}
+:root[data-skin="soviet"] .mobile-root .m-prog-row {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(200, 69, 43, 0.32) 0 3px,
+    transparent 3px 9px
+  );
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+  background-size: 100% 4px;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 12. The control room — a segmented level meter under the readout
+ *
+ * A ten-segment bar of brass ticks runs along the bottom of the progress row's meta line, so the
+ * sheet's numbers sit on an instrument scale instead of on blank plate. The row has no background of
+ * its own, so this is a clean addition: 0.5 alpha on the rail's own ground, which is decoration in
+ * empty space rather than a contrast change to any of the three numbers beside it.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root .m-prog-meta {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(201, 162, 39, 0.5) 0 2px,
+    transparent 2px 9px
+  );
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+  background-size: 2px 4px;
 }
