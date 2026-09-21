@@ -3,9 +3,10 @@
  *
  * The module is a phone shell around three **desktop views, reused as-is** behind `React.lazy`, with
  * 和弦走向 first and opening by default. What this file pins is that shell: the sub-tab order and touch
- * targets, and that each tab actually mounts the matching `[data-legacy="desktop"]` wrapper with the
- * real desktop view inside it (awaited through `Suspense`, not stubbed), so "reuse the mature views"
- * cannot silently regress into an empty panel. The views' own behaviour lives in their own suites
+ * targets, that each tab actually mounts the matching `[data-legacy="desktop"]` wrapper with the real
+ * desktop view inside it (awaited through `Suspense`, not stubbed), and that the phone strips the
+ * desktop-only navigation the reused views would otherwise render (guide modal, 返回工作台,
+ * bake-to-studio, piano roll). The views' own behaviour lives in their own suites
  * (`ChordProgressionsView`, `KickAnatomyView`, `Masterclass`).
  */
 import React from "react";
@@ -57,18 +58,46 @@ describe("explore module", () => {
 
     fireEvent.click(screen.getByTestId("mobile-explore-tab-kick"));
     const kick = await screen.findByTestId("mobile-explore-kick-legacy");
-    // `kick-help-button` only renders when the view gets `onOpenHelp`, so it proves both that the real
-    // kick laboratory mounted and that the phone wired the handler.
-    expect(await within(kick).findByTestId("kick-help-button", {}, { timeout: 5000 })).toBeInTheDocument();
+    // The lab's own telemetry headline is inside the reused view, so it proves the real kick
+    // laboratory mounted — not merely that the wrapper exists. (The dossier repeats the phrase, hence
+    // `findAllByText`.)
+    expect(await within(kick).findAllByText(/底鼓设计/, {}, { timeout: 5000 })).not.toHaveLength(0);
     expect(screen.queryByTestId("mobile-explore-chords-legacy")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("mobile-explore-tab-groove"));
     const groove = await screen.findByTestId("mobile-explore-groove-legacy");
-    // `bake-to-studio-btn` is the masterclass' unconditional action, and `tap-sync-pad` only renders
-    // inside the polyrhythm lesson — proof the phone opened the lesson id it asks for.
-    expect(await within(groove).findByTestId("bake-to-studio-btn", {}, { timeout: 5000 })).toBeInTheDocument();
+    // `tap-sync-pad` only renders inside the polyrhythm lesson — proof the phone opened the lesson id
+    // it asks for.
     expect(await within(groove).findByTestId("tap-sync-pad", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.queryByTestId("mobile-explore-kick-legacy")).not.toBeInTheDocument();
+  });
+
+  it("renders no desktop-only studio / help / piano-roll action on the phone", async () => {
+    renderExplore();
+
+    // 和弦走向: neither the desktop guide modal nor the piano-roll hand-off has a destination here.
+    const chords = await screen.findByTestId("mobile-explore-chords-legacy");
+    await within(chords).findByRole("heading", { level: 1 }, { timeout: 5000 });
+    for (const id of ["chords-help-button", "chords-open-in-piano-roll"]) {
+      expect(screen.queryByTestId(id), id).not.toBeInTheDocument();
+    }
+
+    // 底鼓设计: the whole guide + "return to studio" block is absent, testids *and* the literal label.
+    fireEvent.click(screen.getByTestId("mobile-explore-tab-kick"));
+    const kick = await screen.findByTestId("mobile-explore-kick-legacy");
+    await within(kick).findAllByText(/底鼓设计/, {}, { timeout: 5000 });
+    for (const id of ["kick-help-button", "kick-studio-button"]) {
+      expect(screen.queryByTestId(id), id).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText("返回工作台")).not.toBeInTheDocument();
+
+    // 律动解构: `onOpenStudio` is optional now, so "Bake to Studio" is not rendered without it.
+    fireEvent.click(screen.getByTestId("mobile-explore-tab-groove"));
+    const groove = await screen.findByTestId("mobile-explore-groove-legacy");
+    await within(groove).findByTestId("tap-sync-pad", {}, { timeout: 5000 });
+    for (const id of ["bake-to-studio-btn", "masterclass-help-button"]) {
+      expect(screen.queryByTestId(id), id).not.toBeInTheDocument();
+    }
   });
 
   it("marks every reused view as desktop so the phone touch-target gate skips it", async () => {
@@ -89,6 +118,16 @@ describe("explore module", () => {
       "data-legacy",
       "desktop"
     );
+  });
+
+  it("keeps the switcher attached to the page: one three-column segmented control", () => {
+    renderExplore();
+
+    const tablist = screen.getByRole("tablist");
+    // Equal thirds that span the page's reading width, rather than a horizontally scrolling pill rail.
+    expect(tablist.className).toContain("grid-cols-3");
+    expect(tablist.className).not.toContain("m-rail");
+    expect(within(tablist).getAllByRole("tab")).toHaveLength(3);
   });
 
   it("keeps every sub-tab at or above the 44 px touch minimum", () => {
