@@ -8,43 +8,61 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Core theme palette (P1-01 design tokens)
-        bg: '#0a0b0d',
-        panel: '#121317',
-        panel2: '#0d0e12',
+        /**
+         * The desktop palette, as CSS variables.
+         *
+         * These were hexes until the desktop got the phone's six skins: a Tailwind class compiles to a
+         * fixed value, so the only way a skin can swap the palette underneath is for every utility to
+         * resolve through a custom property. `rgb(var(--d-panel) / <alpha-value>)` is the form that keeps
+         * Tailwind's own opacity modifiers (`bg-panel/60`, `border-line/40`) working.
+         *
+         * The values live in `src/styles/desktopSkins.css`, which is **generated** by
+         * `scripts/desktop_skins.mjs` from the phone's own tokens — so the two surfaces cannot drift, and
+         * `check:skins` fails if the file is stale. `:root` carries the default palette, so a page that
+         * never sets `data-skin` (a test, the first paint) still looks exactly like the app always did.
+         */
+        bg: 'rgb(var(--d-bg) / <alpha-value>)',
+        panel: 'rgb(var(--d-panel) / <alpha-value>)',
+        panel2: 'rgb(var(--d-panel2) / <alpha-value>)',
+        surface: 'rgb(var(--d-surface) / <alpha-value>)',
         line: {
-          DEFAULT: '#23262d',
-          strong: '#393d46',
-          subtle: '#1a1c21',
+          DEFAULT: 'rgb(var(--d-line) / <alpha-value>)',
+          strong: 'rgb(var(--d-line-strong) / <alpha-value>)',
+          // The old `subtle` was a third, darker hairline; it is the base line at a lower alpha now, which
+          // is the same visual weight and one token fewer to keep consistent across six skins.
+          subtle: 'rgb(var(--d-line) / 0.6)',
         },
         text: {
-          DEFAULT: '#e9e7e0',
-          sub: '#8b8f99',
-          dim: '#828794',
+          DEFAULT: 'rgb(var(--d-ink) / <alpha-value>)',
+          sub: 'rgb(var(--d-ink-3) / <alpha-value>)',
+          dim: 'rgb(var(--d-ink-2) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: '#f5b73d',
-          soft: '#d8b988',
-          hover: '#ffc55a',
-          glow: 'rgba(245, 183, 61, 0.2)',
+          DEFAULT: 'rgb(var(--d-accent) / <alpha-value>)',
+          soft: 'rgb(var(--d-accent-soft) / <alpha-value>)',
+          hover: 'rgb(var(--d-accent-hover) / <alpha-value>)',
+          glow: 'var(--d-accent-glow)',
         },
+        danger: 'rgb(var(--d-danger) / <alpha-value>)',
+        success: 'rgb(var(--d-success) / <alpha-value>)',
+        warning: 'rgb(var(--d-warning) / <alpha-value>)',
         track: {
-          kick: '#ff5964',
-          snare: '#ffb65c',
-          hat: '#45e0c9',
-          perc: '#c8e06a',
-          bass: '#ff8a5c',
-          chord: '#f06ec4',
-          lead: '#7ee787',
-          fx: '#9aa5ce',
+          kick: 'rgb(var(--d-track-kick) / <alpha-value>)',
+          snare: 'rgb(var(--d-track-snare) / <alpha-value>)',
+          hat: 'rgb(var(--d-track-hat) / <alpha-value>)',
+          perc: 'rgb(var(--d-track-perc) / <alpha-value>)',
+          bass: 'rgb(var(--d-track-bass) / <alpha-value>)',
+          chord: 'rgb(var(--d-track-chord) / <alpha-value>)',
+          lead: 'rgb(var(--d-track-lead) / <alpha-value>)',
+          fx: 'rgb(var(--d-track-fx) / <alpha-value>)',
         },
         cat: {
-          electronic: '#4ad8c8',
-          rock: '#ff5964',
-          hiphop: '#f5b73d',
-          jazz: '#9aa5ce',
-          pop: '#f06ec4',
-          latin: '#c8e06a',
+          electronic: 'rgb(var(--d-cat-electronic) / <alpha-value>)',
+          rock: 'rgb(var(--d-cat-rock) / <alpha-value>)',
+          hiphop: 'rgb(var(--d-cat-hiphop) / <alpha-value>)',
+          jazz: 'rgb(var(--d-cat-jazz) / <alpha-value>)',
+          pop: 'rgb(var(--d-cat-pop) / <alpha-value>)',
+          latin: 'rgb(var(--d-cat-latin) / <alpha-value>)',
         },
         // Backwards-compatible space & neon palettes
         space: {

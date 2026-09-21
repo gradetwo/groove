@@ -1,0 +1,845 @@
+/*
+ * The sovietYears skin, on the desktop and the iPad — the constructivist poster.
+ *
+ * The palette is already the phone's (see `desktopSkins.css`, generated); this file is the skin's
+ * *character* — the things a palette cannot express: type, edges, texture, the way a panel is cut. It is
+ * scoped to `:root[data-skin="sovietYears"] [data-surface="desktop"]`, so it works on the desktop and on
+ * the iPad (which renders the desktop UI) and cannot reach the phone shell, whose own sheets were tuned
+ * rule by rule. No colour is invented here: every fill, edge and glyph is a `--d-*` token, or — in the one
+ * place the shell hands the skin a colour of its own (the genre accent `--g`) — a `color-mix` of that value
+ * with the ink, which is a value on this surface rather than a new one.
+ *
+ *
+ * The language, in one paragraph
+ * ------------------------------
+ * A propaganda poster, pasted up and printed too heavily. Two inks and one paper: flag red is
+ * `--d-accent`, the dense black plate is `--d-ink`, aged paper is `--d-bg`. Nothing is soft — every
+ * gradient is flattened, every glow is deleted, every `blur` is switched off, and Tailwind's soft
+ * `shadow-*` scale is replaced with zero-blur plate offsets (`10px 10px 0` on a panel, `6px 6px 0` on a
+ * card, `3px 3px 0` on a key). Type is `Russo One` on display runs and `PT Sans Narrow` everywhere else,
+ * which is what a Soviet poster actually is: a heavy machine-cut display face over a condensed news face.
+ * The one motion is the press: a key moves onto its own shadow and the transition that carries it steps
+ * in two frames, because a printed thing does not ease.
+ *
+ *
+ * The two lessons the phone sheet learned, applied here
+ * ----------------------------------------------------
+ *  1. **A `clip-path` clips the element's own `box-shadow`.** So a panel is never both cut and shadowed
+ *     on the same box: the cut is paired with `filter: drop-shadow(8px 8px 0 …)` — a zero-blur
+ *     drop-shadow, which is a hard shadow drawn from the clipped silhouette — and the `box-shadow` the
+ *     shadow-scale rule would have given it is explicitly switched off in the same rule (section 3).
+ *  2. **`skewX` must never be applied to a control.** The toolbar density probe and the E2E matrix read
+ *     real boxes, and a skew is a *visual* shear, not a box change, so a sheared control would paint
+ *     somewhere its measured box is not. The skew here is therefore only ever on `h1`–`h4` and on
+ *     `Space Grotesk` runs, and section 2 adds one explicit reset for the case where such a run is
+ *     nested *inside* a control (the brand wordmark, a genre chip). No control is clipped either: the
+ *     cut lands on panels only, never on anything with a hit area.
+ *
+ *
+ * What this file cannot fix, and says so instead of hiding it
+ * ---------------------------------------------------------
+ *  - **The generated map only knows `[#hex]` literals.** The desktop's *named* Tailwind palette
+ *    (`text-white`, `bg-neutral-800`, `text-amber-400`, `bg-white/5`, `bg-black/70`) is not remapped by
+ *    `desktopSkins.css`, and on a paper ground those defaults are wrong in the loudest possible way:
+ *    `text-white` on `--d-bg` is 1.05:1, and `bg-neutral-800` under `text-text` is ink on ink (the A/B/C/D
+ *    letters of the challenge were invisible). Section 9 is that repair, by role, for the utilities the
+ *    four desktop tabs actually render. The *right* fix is the generator growing a named-palette map —
+ *    the list is in the report — but until then this skin is legible.
+ *
+ *  - **Two literals are mapped by role, and the role is wrong on a light skin.** `bg-[#f3f1eb]` and
+ *    `bg-[#e2dfd5]` — the voice-leading keyboard's white keys and its inactive keys — both arrive as
+ *    `--d-ink`, which is paper's opposite: the keys painted near-black under `text-zinc-700`. This file may
+ *    not name a hex (the gate forbids it), so section 9 re-inks those two by *position* instead: a white
+ *    key is a `button` that is a direct child of the keyboard's `h-full` row, and a black key is one level
+ *    deeper. That is a hook the generator should own — `bg-[#f3f1eb]`'s role is "the pale surface", not
+ *    "the ink".
+ *
+ *  - **The arbitrary-value hovers cannot be named either**, for the same reason, and there are ~20 of them
+ *    across the desktop. Section 9 matches them by the *shape* of the utility (`hover:bg-[…]`) and
+ *    re-grounds each family by role, which covers every one of them including the ones on views this pass
+ *    never opened.
+ *
+ *  - **Colours set from JS still win.** The sequencer writes `style={{ backgroundColor: trackColor }}`
+ *    and `style={{ opacity }}` on the step cells, and the playhead writes its own ring. Nothing here
+ *    fights that: the grid keeps the product's instrument colours (they are the app's map from colour to
+ *    instrument, not this skin's to change) and is re-cut *around* them with an inset well and an inset
+ *    ink frame, which an inline `background` cannot cancel.
+ */
+
+/* =============================================================================================
+ * 1. The paper, and the ink on it
+ *
+ * The grain is two `repeating-linear-gradient` fibres at 3% and 2.2% (a printed sheet has a direction;
+ * a flat fill does not), attached `fixed` so the grain does not crawl under a scrolling list — a
+ * scrolling texture shimmers, and a shimmer reads as a screen, not as paper. The face is PT Sans Narrow:
+ * the condensed news face the poster's small print was set in. Nothing here can change a box.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] {
+  font-family: "PT Sans Narrow", "PingFang SC", "HarmonyOS Sans", "Noto Sans SC", "Helvetica Neue",
+    Arial, sans-serif;
+  background-color: rgb(var(--d-bg));
+  background-image: repeating-linear-gradient(
+      0deg,
+      rgb(var(--d-ink) / 0.03) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(90deg, rgb(var(--d-ink) / 0.022) 0 1px, transparent 1px 4px);
+  background-attachment: fixed;
+  color: rgb(var(--d-ink));
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =============================================================================================
+ * 2. Type — a display run, and the reset that keeps it off the controls
+ *
+ * `Russo One` is the squarish industrial face the app already loads (index.html), so the poster costs
+ * no new request. It goes on the things that *name* something: the four heading levels and the app's
+ * own `Space Grotesk` display runs (the wordmark, genre names, view titles). The skew is the forward
+ * charge: `skewX(-10deg)` with the origin on the left **baseline**, so the glyphs lean forward from a
+ * fixed foot rather than sliding sideways, and nothing at the left edge moves at all.
+ *
+ * The headings also go uppercase with tracking. That is a width change, and a title that wraps to one
+ * more line is a poster title wrapping — it is not a measured box, so it is allowed here where a
+ * control's box would not be.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] h1,
+:root[data-skin="sovietYears"] [data-surface="desktop"] h2,
+:root[data-skin="sovietYears"] [data-surface="desktop"] h3,
+:root[data-skin="sovietYears"] [data-surface="desktop"] h4,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="font-[Space_Grotesk]"] {
+  font-family: "Russo One", "PingFang SC", "HarmonyOS Sans", "Noto Sans SC", "Impact", sans-serif;
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] h1,
+:root[data-skin="sovietYears"] [data-surface="desktop"] h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+  transform: skewX(-10deg);
+  transform-origin: left bottom;
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] h3,
+:root[data-skin="sovietYears"] [data-surface="desktop"] h4 {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+/* The wordmark and the genre names lean too — they are display runs, not labels. `:not(.truncate)` is the
+ * one exclusion, and it is a measured one: the genre *chips* are 124 px boxes whose names are `truncate`,
+ * so uppercasing them would set an ellipsis in the chip rail, which is a poster typo rather than a poster. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="font-[Space_Grotesk]"]:not([class~="truncate"]) {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transform: skewX(-10deg);
+  transform-origin: left bottom;
+}
+
+/*
+ * The genre accent as a *word*.
+ *
+ * `--g` is the product's map from a genre to its colour (`style={{ "--g": … }}`, set from the genre data),
+ * and the values are chosen against a dark stage: the selected genre's is `#3ddc97`, which is 1.55:1 on
+ * this paper — legible as a 10 px chip outline and not as a 26 px title. The accent therefore stays
+ * *exactly* as it is everywhere it is a shape (a chip border, a dot, a rule, a pad) and is mixed toward
+ * the ink only where it is a word: same hue, the paper's value. `color-mix` is already the app's own
+ * vocabulary for this (`StepCell` mixes `--tc` into a sustain tail), and both operands are values that
+ * exist on this surface — no colour is invented, and the genre still reads as its own colour.
+ */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-[var(--g)]"] {
+  color: color-mix(in srgb, var(--g) 45%, rgb(var(--d-ink)));
+}
+
+/*
+ * …and here is the one place that has to be undone: a display run *inside* a control. The brand button
+ * contains the wordmark, and every genre chip contains a `Space Grotesk` name. The gate that measures the
+ * toolbar reads the transformed box, so this reset is not cosmetic — it is the difference between a
+ * control that paints where it is measured and one that does not. It deliberately targets only the
+ * display-type elements (0,5,0 specificity, so it wins on merit and not on file order), which means the
+ * `-translate-y-1/2` centring transforms inside buttons and labels are left exactly as the shell wrote
+ * them.
+ */
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  :is(button, [role="button"], [role="tab"], [role="option"], a, input, select, textarea, label)
+  :is(h1, h2, h3, h4, [class~="font-[Space_Grotesk]"]) {
+  transform: none;
+}
+
+/* =============================================================================================
+ * 3. Edges — squared, cased in ink, and nailed on with a hard plate shadow
+ *
+ * The radius is the one metric a constructivist poster is allowed to touch, and it is square. The single
+ * exception is `rounded-full`: a full circle on this surface is a *dial* — the record, the LED pip, the
+ * level meters — and squaring a dial would be a lie about what it is, so those keep their shape.
+ *
+ * Every soft Tailwind shadow is replaced by an offset with no blur. Three sizes, by the size the shell
+ * already asked for: a panel (`shadow-2xl`/`shadow-xl`) is nailed on 10 px off the wall, a card
+ * (`shadow-lg`/`shadow-md`) 6 px, a key (`shadow-sm`) 3 px. The arbitrary shadows the components write by
+ * hand are handled by their own intent instead of their size: a `shadow-[0_0_…]` is a *glow*, and a glow
+ * is the one thing this palette does not have, so it is deleted; an `inset 0 1px 2px` is a *well*, and a
+ * well becomes a hard 2 px recess.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="rounded-"]:not([class*="rounded-full"]),
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="rounded"] {
+  border-radius: 0;
+}
+
+/* A 2 px ink case on every panel, chip and key that asks for a border. `border-width` rather than a
+ * `border` shorthand: the shell's own border styles and the semantic borders the components write by hand
+ * (a right/wrong answer, a difficulty tier) keep their colours — see the ink rule below, which only
+ * re-inks the *neutral* line utilities. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border"] {
+  border-width: 2px;
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-line"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-line-subtle"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-line-strong"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-b"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-t"] {
+  border-color: rgb(var(--d-ink));
+}
+
+/* The soft scale, replaced by plate offsets. `[class*=…]` rather than `[class~=…]` on purpose: it also
+ * catches the `hover:shadow-lg` / `group-hover:shadow-2xl` arms, so a hover cannot put the blur back. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="shadow-2xl"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="shadow-xl"] {
+  box-shadow: 10px 10px 0 rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="shadow-lg"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="shadow-md"] {
+  box-shadow: 6px 6px 0 rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="shadow-sm"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="shadow"] {
+  box-shadow: 3px 3px 0 rgb(var(--d-ink));
+}
+
+/* Glows out. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="shadow-[0_0"] {
+  box-shadow: none;
+}
+
+/* Wells in: the sequencer's `inset 0 1px 2px` recesses become a hard 2 px cut with a lip. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="shadow-[inset_0_1px_2px"] {
+  box-shadow: inset 0 2px 0 rgb(var(--d-ink) / 0.22), inset 0 0 0 1px rgb(var(--d-ink) / 0.16);
+}
+
+/* =============================================================================================
+ * 4. The cuts — diagonal corners on the panels, and the shadow moved off the clipped box
+ *
+ * Lesson one, stated once and honoured everywhere: a clipped box cannot cast a `box-shadow`, so both of
+ * these rules pair the cut with a `drop-shadow` that is drawn *from the silhouette*, and each one starts
+ * by cancelling the plate shadow section 3 just gave the same element. The cut is on panels
+ * only — never on a control, because a clip-path is also a hit-test mask and a control with a corner
+ * missing is a control with a corner that does not take a click.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="rounded-3xl"],
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class~="rounded-xl"][class~="sm:p-4.5"] {
+  box-shadow: none;
+  filter: drop-shadow(8px 8px 0 rgb(var(--d-ink)));
+  clip-path: polygon(
+    0 0,
+    calc(100% - 22px) 0,
+    100% 22px,
+    100% 100%,
+    24px 100%,
+    0 calc(100% - 24px)
+  );
+}
+
+/* The chords hero card is a `rounded-2xl` that is *not* a control — the shape hook that separates it
+ * from the progression blocks (which are `rounded-2xl` and are controls) is its gradient class, which
+ * section 6 flattens but does not remove from the class list. */
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class~="rounded-2xl"][class*="bg-gradient-to-br"] {
+  box-shadow: none;
+  filter: drop-shadow(10px 10px 0 rgb(var(--d-ink)));
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%);
+}
+
+/* =============================================================================================
+ * 5. The press
+ *
+ * A heavy switch: the key travels onto its own shadow and the shadow collapses to nothing, which is what
+ * the phone does at `translate(5px, 5px)`. It is written with the independent `translate` property
+ * rather than `transform` so it *composes* with the shell's own transforms instead of replacing them —
+ * a piano key centred with `-translate-x-1/2` stays centred and still stamps when pressed.
+ *
+ * `translate` is paint: it cannot move a box in the layout, and the gates measure the resting state.
+ * The step cells are excluded by role, and that exclusion is the one place this rule is not about looks:
+ * a cell that shifted 4 px while a pointer drag paints a run would put the *painted* cell under a pointer
+ * the user aimed at its neighbour, and the grid is the studio's core interaction.
+ *
+ * The transition is `steps(2, end)`: a printed mark arrives, it does not ease in.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="transition-all"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="transition-colors"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="transition-transform"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="transition-opacity"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="transition"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="duration-75"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="duration-200"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="duration-300"] {
+  transition-timing-function: steps(2, end);
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] button:active,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [role="button"]:active,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [role="tab"]:active,
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class*="cursor-pointer"]:not([role="gridcell"]):active {
+  translate: 4px 4px;
+  box-shadow: 1px 1px 0 rgb(var(--d-ink));
+}
+
+/* =============================================================================================
+ * 6. The headline furniture: the top bar's red rule, the ПРАВДА band, the stars
+ *
+ * The red rule under the top bar is an `inset` shadow rather than a pseudo-element: an inset shadow
+ * paints inside the border box, so it cannot cover the bar's own glyphs and cannot push anything, and the
+ * 3 px ink border below it is the printed edge of the sheet. The backdrop blur is switched off for the
+ * same reason the palette has no glows — a poster is opaque — and the bar's 95% background is made solid
+ * so that what scrolls under it is not read through it.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] header {
+  background-color: rgb(var(--d-bg));
+  border-bottom-width: 3px;
+  border-bottom-color: rgb(var(--d-ink));
+  box-shadow: inset 0 -4px 0 rgb(var(--d-accent)), 0 3px 0 rgb(var(--d-ink) / 0.12);
+  backdrop-filter: none;
+}
+
+/* The top bar's own keys: a paper face in an ink case, and the current page is a *flood* — the accent as
+ * a state, not as a tint. The active tab is the only place in the shell with that exact class pair
+ * (`border-accent/50` + `bg-accent/10`), and the flood is lettered in paper because that is the legible
+ * ink on `--d-accent` (5.2:1, against ink's 3.2:1). */
+:root[data-skin="sovietYears"] [data-surface="desktop"] nav button {
+  border-color: rgb(var(--d-ink));
+  box-shadow: 3px 3px 0 rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class~="border-accent/50"][class~="bg-accent/10"] {
+  background-color: rgb(var(--d-accent));
+  border-color: rgb(var(--d-ink));
+  color: rgb(var(--d-bg));
+  box-shadow: 3px 3px 0 rgb(var(--d-ink));
+}
+
+/* The brand mark, and every other accent dot in the shell, is a printed star. `clip-path` on a 10 px
+ * decorative span: it costs no box and no element, and the span is inside a control, which is why the
+ * star (a shape) is allowed where a skew (a box-moving paint of a *labelled* run) is not. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="w-2.5"][class~="h-2.5"][class~="bg-accent"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="w-2"][class~="h-2"][class~="bg-accent"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="w-1.5"][class~="h-1.5"][class~="bg-accent"] {
+  border-radius: 0;
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+
+/*
+ * The footer is the poster's own band. `footer` is decorative furniture — its own controls are children,
+ * and a pseudo-element of the footer is not their accessible name — so a `content` stamp here cannot
+ * collide with a visible label. Both marks are absolutely positioned inside the footer's *padding strip*,
+ * the 24 px of `py-6` that carries no ink at any width, so they cannot cross a glyph at any viewport the
+ * desktop renders.
+ */
+:root[data-skin="sovietYears"] [data-surface="desktop"] footer {
+  position: relative;
+  border-top-width: 3px;
+  border-top-color: rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] footer::before {
+  content: "ПРАВДА";
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 16px;
+  pointer-events: none;
+  background-color: rgb(var(--d-accent));
+  color: rgb(var(--d-bg));
+  box-shadow: inset 0 0 0 1px rgb(var(--d-ink));
+  font-family: "Russo One", Impact, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  white-space: nowrap;
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] footer::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-start: 16px;
+  inline-size: 10px;
+  block-size: 10px;
+  pointer-events: none;
+  background-color: rgb(var(--d-accent));
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+
+/* A section label is a printed rule: a short red bar flush with the bottom of the label's own line box.
+ * Every `h3` on this surface is an uppercase micro-label with its margin *below* it, and uppercase has no
+ * descenders, so a bar pinned to the bottom edge of the line box crosses nothing. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] h3 {
+  position: relative;
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] h3::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  inline-size: 2.5rem;
+  block-size: 3px;
+  pointer-events: none;
+  background-color: rgb(var(--d-accent));
+}
+
+/* =============================================================================================
+ * 7. Flat print — no gradients, no blurs, no glows anywhere on the sheet
+ *
+ * The components use gradients for emphasis, and on this skin emphasis is a flat flood. Each family is
+ * given the ground its own role asks for rather than one rule for all of them: the shell's chrome
+ * gradients become paper, the certificate key becomes the recessed well, and the one focal disc on the
+ * challenge screen becomes the only red flood in that card.
+ * =========================================================================================== */
+/* Flattening a gradient leaves the element with no `background-color` at all — `from-*` only writes a
+ * custom property — so the default ground is restated here and the two families that mean something else
+ * are re-grounded below. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="bg-gradient-to"] {
+  background-image: none;
+  background-color: rgb(var(--d-panel));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="bg-gradient-to"][class~="from-amber-500/20"] {
+  background-color: rgb(var(--d-panel2));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="bg-gradient-to"][class~="from-amber-400"] {
+  background-color: rgb(var(--d-accent));
+}
+
+/* A gradient *key* is a flood. The two elements on this surface that carry a gradient and are lettered in
+ * white are the challenge's primary key and its ear disc, and both of them exist to be the loudest mark in
+ * their card — so they get the flag, with paper lettering (5.2:1). The flood is deliberately limited to a
+ * control or to the disc (`bg-gradient-to-tr`), because a large `bg-gradient-to-l` panel that happens to
+ * carry white text somewhere else in the app should become paper, not a red banner. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] button[class*="bg-gradient-to"][class~="text-white"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] a[class*="bg-gradient-to"][class~="text-white"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="bg-gradient-to-tr"][class~="text-white"] {
+  background-color: rgb(var(--d-accent));
+  color: rgb(var(--d-bg));
+}
+
+/* A blurred colour blob is a hard-edged block on this surface: same colour, same place, no falloff. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="blur-3xl"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="blur-2xl"] {
+  filter: none;
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="backdrop-blur"]:not(header) {
+  backdrop-filter: none;
+  /* No glass on a printed sheet: a translucent panel becomes an opaque one. This is not only character —
+   * the 探索 galaxy is a `<canvas>` starfield, and a 70%-opaque legend with its blur switched off is a
+   * smear the stars read through. The top bar is excluded because section 6 gives it the *page's* tone
+   * rather than the panel's. */
+  background-color: rgb(var(--d-panel));
+}
+
+/* =============================================================================================
+ * 8. The studio: the toolbar housing, the wells, and the 1024 cells
+ *
+ * The toolbar's three groups were translucent black panel fills on a dark shell; on paper a translucent
+ * fill is a smudge, so each becomes an opaque stamped housing: 2 px of ink and no radius. The cells are
+ * the one place this file has to touch a thousand elements, so it is done with insets only — an inset
+ * shadow paints inside the box, costs no layout, and is exactly what the cells already paid for.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid^="toolbar-group-"] {
+  background-color: rgb(var(--d-panel2));
+  box-shadow: inset 0 0 0 2px rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid="toolbar-transport-strip"] {
+  background-color: rgb(var(--d-bg));
+  border-bottom: 2px solid rgb(var(--d-ink));
+}
+
+/* The transport keys are machine keys: paper face, ink case, and the accent only as a *state*. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid="toolbar-group-transport"] button,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid="toolbar-group-edit"] button,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid="toolbar-group-views"] button,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid="studio-toolbar"] button {
+  border-radius: 0;
+  border-color: rgb(var(--d-ink));
+  font-family: "PT Sans Narrow", "Noto Sans SC", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* The step grid: a recess cut into the paper, and an ink frame on the steps that are written. Both are
+ * insets, both are set after the generic well rule above so they win on order at equal specificity, and
+ * neither fights the inline `backgroundColor` the sequencer writes (a box-shadow paints over a
+ * background, which an inline style cannot cancel). */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid^="step-cell-"] {
+  border-color: rgb(var(--d-ink) / 0.45);
+  border-radius: 0;
+  box-shadow: inset 0 2px 0 rgb(var(--d-ink) / 0.2), inset 0 0 0 1px rgb(var(--d-ink) / 0.14);
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [data-testid^="step-cell-"][data-active="true"] {
+  border-color: rgb(var(--d-ink));
+  box-shadow: inset 0 0 0 2px rgb(var(--d-ink)), inset 0 3px 0 rgb(var(--d-bg) / 0.3);
+}
+
+/* The track header is a printed plate, not a glass rail. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="trk-head-solid"] {
+  background-color: rgb(var(--d-panel));
+  border-right: 2px solid rgb(var(--d-ink));
+}
+
+/* =============================================================================================
+ * 9. Closing the palette's named-utility gap (the finding, not the character)
+ *
+ * Everything below exists because `desktopSkins.css` maps `[#hex]` literals and nothing else, and the
+ * desktop writes a great deal of its surface with Tailwind's *named* palette. The mapping is by role, not
+ * by name: a signal that means "correct" becomes `--d-success`, a signal that means "wrong" becomes
+ * `--d-danger`, the app's gold becomes the medal bronze `--d-track-perc` (the one gold in this palette
+ * that is a legible *word* on paper — 7.1:1, where the poster's `#D4A017` is 2.5:1 and may only ever be a
+ * shape), and Tailwind's steel greys become the paper's own greys. Where a fill and its label travel
+ * together (a dark badge with ink text on it) both sides are set, because the point is legibility.
+ * =========================================================================================== */
+
+/* White text on paper is the single loudest failure on this surface (1.05:1). Nothing on this skin has a
+ * white ground, so `text-white` is ink, full stop. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-white"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-white"]:hover,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-white/90"]:hover {
+  color: rgb(var(--d-ink));
+}
+
+/* The `group-hover:` arm has to be written as the *rule Tailwind generates* (`.group:hover …`) rather than
+ * as a bare attribute selector: an attribute selector is unconditional, and inking a hover colour at rest
+ * would quietly repaint every element that only meant to change on hover. The other half of that pair is
+ * the letter chip, whose group-hover flood is `--d-accent` — and paper is the legible ink on the flood. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] .group:hover [class~="group-hover:text-white"] {
+  color: rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] .group:hover [class~="group-hover:text-black"] {
+  color: rgb(var(--d-bg));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-white/60"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-white/30"] {
+  color: rgb(var(--d-ink) / 0.65);
+}
+
+/* …but a *flood* is lettered in paper: ink on `--d-accent` is 3.2:1 while paper on it is 5.2:1, which is
+ * the same arithmetic the phone sheet is built on. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-accent"][class~="text-white"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-accent"][class~="text-black"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-accent"][class~="text-zinc-950"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-accent/90"][class~="text-black"] {
+  color: rgb(var(--d-bg));
+}
+
+/* The letter chips of the challenge are `bg-neutral-800` under `text-text` — ink on ink, which is why
+ * A/B/C/D were invisible. A chip is a paper tab here, and its hover keeps the accent flood with paper
+ * lettering. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-neutral-800"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-neutral-700"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-neutral-800"]:hover,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-neutral-700"]:hover,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-neutral-850"]:hover {
+  background-color: rgb(var(--d-panel2));
+  box-shadow: inset 0 0 0 2px rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-neutral-700"] {
+  border-color: rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="bg-black/"] {
+  background-color: rgb(var(--d-ink));
+  color: rgb(var(--d-bg));
+}
+
+/* The greys the shell uses as a scale, mapped onto the paper's own. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-zinc-700"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-zinc-600"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-zinc-500"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-neutral-600"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-neutral-700"] {
+  color: rgb(var(--d-ink-3));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-zinc-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-zinc-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-neutral-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-neutral-500"] {
+  color: rgb(var(--d-ink-2));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-zinc-200"] {
+  color: rgb(var(--d-ink));
+}
+
+/* Gold as a word: the medal bronze. Gold as a fill stays the flag. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-amber-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-amber-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-amber-500"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-amber-200"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-amber-300"]:hover {
+  color: rgb(var(--d-track-perc));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-amber-500/40"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-amber-500/30"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-amber-400/40"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-amber-500"] {
+  border-color: rgb(var(--d-track-perc));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="accent-amber-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="accent-cyan-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="accent-emerald-400"] {
+  accent-color: rgb(var(--d-accent));
+}
+
+/* The four signals of the challenge: right, wrong, machine, and "you". */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-emerald-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-emerald-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-emerald-200"] {
+  color: rgb(var(--d-success));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-cyan-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-cyan-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-sky-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-blue-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-teal-400"] {
+  color: rgb(var(--d-track-lead));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-rose-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-rose-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-red-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-red-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-pink-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-rose-400"]:hover,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-red-400"]:hover {
+  color: rgb(var(--d-danger));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-indigo-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-indigo-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-purple-400"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-purple-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-violet-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-slate-300"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-fuchsia-400"] {
+  color: rgb(var(--d-cat-jazz));
+}
+
+/* The tinted plates those signals sit on. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-indigo-500/10"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-indigo-500/15"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-indigo-500/20"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-cyan-500/10"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-cyan-500/15"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-emerald-500/15"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-rose-500/15"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-red-500/15"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-amber-500/15"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-amber-500/10"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-amber-500/20"] {
+  background-color: rgb(var(--d-panel2));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-indigo-500/30"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-cyan-500/30"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-emerald-500/30"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-white/5"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-white/10"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-white/20"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-white/50"] {
+  border-color: rgb(var(--d-ink) / 0.35);
+}
+
+/* Translucent white fills: on a dark shell they are a lift, on paper they are nothing. They become a
+ * shallow ink wash, which is the same gesture on this ground. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-white/5"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-white/20"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-white/5"]:hover,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-white/10"]:hover,
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-white/40"]:hover {
+  background-color: rgb(var(--d-ink) / 0.08);
+}
+
+/* Opaque white: the LED pip, and the key bed of the challenge's certificate button. On this ground a
+ * "white" fill is the paper's own card tone, and any text on it is ink. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-white"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-white/80"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="bg-white/90"] {
+  background-color: rgb(var(--d-panel));
+  color: rgb(var(--d-ink));
+}
+
+/*
+ * The voice-leading keyboard, which is the one place the generated map mis-roles a literal rather than
+ * missing it: its white keys are `bg-[#f3f1eb]` and its inactive keys `bg-[#e2dfd5]`, and both of those
+ * arrive as `--d-ink` — right on a dark shell ("the pale surface is the ink"), inverted on paper. The
+ * keys are re-inked by their position instead of by the class that carries the hex, because the gate
+ * forbids a `#` in this file: a white key is a `button` that is a direct child of the keyboard's
+ * `h-full` row, and a black key is a `button` inside the absolutely positioned overlay, one level
+ * deeper. Both are 0,5,1 selectors, so they also settle the `text-zinc-700` those keys ship with.
+ */
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class~="min-w-[560px]"]
+  > [class~="h-full"]
+  > button,
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class~="min-w-[560px]"]
+  > [class~="h-full"]
+  > [class~="justify-center"]
+  > button {
+  background-color: rgb(var(--d-panel));
+  color: rgb(var(--d-ink));
+}
+
+/* The black key is the black plate: ink face, paper lettering. */
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class~="min-w-[560px]"]
+  > [class~="h-full"]
+  > [class~="justify-center"]
+  > button {
+  background-color: rgb(var(--d-ink));
+  color: rgb(var(--d-bg));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-zinc-400/40"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-black/80"],
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-black"] {
+  border-color: rgb(var(--d-ink));
+}
+
+/*
+ * The arbitrary-value hovers.
+ *
+ * The components write their hover states as `hover:bg-[#14151a]`-style literals, and — this is the
+ * point — a hex cannot even be *named* in this file, so each one is matched by the shape of the utility
+ * (`[class*="hover:bg-["]`) rather than by its value, and re-grounded by role: an arbitrary background
+ * hover becomes the paper's next tone, an arbitrary text hover becomes the ink, an arbitrary border hover
+ * becomes the ink. That covers every one of them, on every view, including the ones this pass never
+ * opened. The shell's own `var(--g)` hovers (the genre's accent) are re-asserted after it, because they
+ * are the one arbitrary value that is *not* a hardcoded literal and killing them would flatten the genre
+ * accent the studio is built around.
+ */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="hover:bg-["]:hover {
+  background-color: rgb(var(--d-panel2));
+}
+
+:root[data-skin="sovietYears"]
+  [data-surface="desktop"]
+  [class~="bg-accent"][class*="hover:bg-["]:hover {
+  background-color: rgb(var(--d-accent-hover));
+  color: rgb(var(--d-bg));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="hover:text-["]:hover {
+  color: rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-[var(--g)]"]:hover {
+  color: color-mix(in srgb, var(--g) 45%, rgb(var(--d-ink)));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class*="hover:border-["]:hover {
+  border-color: rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:border-[var(--g)]"]:hover {
+  border-color: var(--g);
+}
+
+/* =============================================================================================
+ * 10. …and the shell's own states, re-asserted on top of it
+ *
+ * Section 9's remaps are `[class~="…"]` attribute selectors, which means they sit at 0,4,0 — higher than
+ * every Tailwind *variant* utility (`.hover\:text-accent` is 0,2,0 and `.group:hover …` is 0,3,0). That is
+ * what makes them win against the shell's dark defaults, and it is also how they would silently kill every
+ * hover the design has: the challenge's A/B/C/D chips are `bg-neutral-800 … group-hover:bg-accent`, and the
+ * first pass after section 9 left them paper on hover — the state simply never arrived.
+ *
+ * So each state the desktop actually uses is re-stated here with the same meaning the shell gave it, at a
+ * specificity above the remap. `group-hover:` is written as the rule Tailwind generates (`.group:hover …`)
+ * rather than as a bare attribute selector, because an attribute selector is unconditional and would apply
+ * a *hover* colour at rest.
+ * =========================================================================================== */
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-accent"]:hover {
+  color: rgb(var(--d-accent));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-text"]:hover {
+  color: rgb(var(--d-ink));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:border-accent"]:hover {
+  border-color: rgb(var(--d-accent));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:border-accent/40"]:hover {
+  border-color: rgb(var(--d-accent) / 0.4);
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-accent/20"]:hover {
+  background-color: rgb(var(--d-accent) / 0.2);
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:bg-line-subtle"]:hover {
+  background-color: rgb(var(--d-panel2));
+}
+
+:root[data-skin="sovietYears"] [data-surface="desktop"] .group:hover [class~="group-hover:text-accent"] {
+  color: rgb(var(--d-accent));
+}
+
+/* The letter chip: the accent flood, lettered in paper — the one hover in the shell that is a *flood*, and
+ * the reason this section exists. */
+:root[data-skin="sovietYears"] [data-surface="desktop"] .group:hover [class~="group-hover:bg-accent"] {
+  background-color: rgb(var(--d-accent));
+  color: rgb(var(--d-bg));
+  box-shadow: none;
+}

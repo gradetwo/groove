@@ -1,0 +1,481 @@
+/*
+ * The pixel skin, on the desktop and the iPad.
+ *
+ * The palette is already the phone's (see `desktopSkins.css`, generated); this file is the skin's
+ * *character* — the things a palette cannot express: type, edges, texture, the way a panel is cut. It is
+ * scoped to `[data-skin="pixel"]` and it may only use the `--d-*` tokens, so it works on any surface the
+ * desktop renders.
+ *
+ * Owned by the pixel character pass; the contract it must satisfy is in
+ * `src/test/desktopCharacters.test.ts`.
+ *
+ * What the character is
+ * ---------------------
+ * The phone shell stops being glass and becomes a cartridge-era menu screen; the desktop is the same
+ * console with a keyboard bolted on. The ground is deep indigo, every plate is a 2px frame with a hard,
+ * blur-free step under it, the page carries a scanline veil and a 4px grid, and the type is the pixel
+ * stack (`Press Start 2P` for display, `VT323` for body, the mono face kept for numerals). Everything
+ * that made the default theme soft — a radius, a blur, a glow, a gradient, a translucent lamp — is
+ * switched off or replaced by a flat colour or a stepped shadow.
+ *
+ * The four mechanisms, in the order a reader meets them below:
+ *
+ *  1. **Texture.** One inherited custom property (`--px-scan`) holds the scanline image so the page, the
+ *     panel and the flattened gradient all paint the same veil. It is declared on the surface root and
+ *     inherited, so a rule deep in the sheet never repeats the gradient.
+ *  2. **Type.** `VT323` claims the whole subtree; `Press Start 2P` takes display text, headings and
+ *     all-caps labels; `.font-mono` (and the `font-['JetBrains_Mono']` literal) is re-asserted for
+ *     numerals, which the brief keeps on the mono face. All three sit at three class weights of scope,
+ *     so no Tailwind `font-*` utility and no component rule can out-specify them.
+ *  3. **Edges.** `border-radius: 0` on the subtree, a 2px frame on every `.border`, a 2px separator on
+ *     every directional border, and every soft shadow — utility or arbitrary glow — replaced by a hard
+ *     `3px 3px 0 0` step.
+ *  4. **Flat colour.** `bg-gradient-*` loses its `background-image` and keeps a flat plate of its own
+ *     first stop (`--tw-gradient-from`, which the generated sheet already maps to a token). That is what
+ *     turns a hero panel into a plate without inventing a colour or a second rule per gradient.
+ *
+ * What is deliberately *not* here
+ * -------------------------------
+ * No `width`, `height`, `padding`, `margin`, `gap`, `display`, `order` or `visibility`: the toolbar
+ * density probe and the E2E matrix measure real boxes, and a skin that changes one is a skin that breaks
+ * a gate. Every gesture below is painted — `box-shadow` for the step, `outline` for focus, a
+ * `background-image` for the texture — so no control's hit area moves. A 2px border on `.border` does
+ * sit inside the box (the app is `box-sizing: border-box`), which is the one geometry change the brief
+ * explicitly sanctions.
+ *
+ * The `#000` in the stepped shadows is the gate's own allowance for a structural black; there is no
+ * "black" token, and a step painted in `--d-bg` would be invisible on the ground it falls onto.
+ */
+
+/* =============================================================================================
+ * 1. The texture, declared once
+ *
+ * A scanline veil is the ground colour at alpha: over a panel it darkens a row every third pixel, over
+ * the ground itself it disappears, which is exactly how a CRT reads. The page adds a 4px pixel grid in
+ * the ink at a very low alpha — it is the "pixel grid if it reads well" half of the brief, and at 0.02 it
+ * is a hint rather than a plaid.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] {
+  --px-scan: repeating-linear-gradient(
+    to bottom,
+    rgb(var(--d-bg) / 0.34) 0 1px,
+    rgb(var(--d-bg) / 0) 1px 3px
+  );
+  --px-grid:
+    repeating-linear-gradient(
+      to bottom,
+      rgb(var(--d-ink) / 0.03) 0 1px,
+      rgb(var(--d-ink) / 0) 1px 3px
+    ),
+    repeating-linear-gradient(
+      to right,
+      rgb(var(--d-ink) / 0.02) 0 1px,
+      rgb(var(--d-ink) / 0) 1px 4px
+    );
+  /* The page: the veil plus the grid, painted behind every child. `background-image` is not what a
+     Tailwind `bg-*` utility sets, so this survives the surface's own `bg-bg`. */
+  background-image: var(--px-grid);
+}
+
+/* =============================================================================================
+ * 2. Type
+ *
+ * VT323 on the whole subtree, so every string that does not opt into the display face is a pixel
+ * terminal. The selector weighs three classes of scope — `:root`, the skin attribute, the surface
+ * attribute — plus `*`, and this sheet is imported last, so it wins against every `font-*` utility and
+ * every component rule that names a grotesque. `canvas` is matched too and that is harmless.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"],
+:root[data-skin="pixel"] [data-surface="desktop"] * {
+  font-family: "VT323", "Press Start 2P", "JetBrains Mono", monospace;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+}
+
+/* Numerals keep the mono face, as the brief asks. `.font-mono` and the `font-['JetBrains_Mono']`
+   literal are the two hooks the desktop uses for every readout — BPM, step indices, years, counters —
+   and a fixed-advance digit is the one thing a changing number must not lose. `tabular-nums` keeps the
+   advance table on and the slight tracking squares the rhythm off against the pixel faces. */
+:root[data-skin="pixel"] [data-surface="desktop"] .font-mono,
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="JetBrains_Mono"],
+:root[data-skin="pixel"] [data-surface="desktop"] .tabular-nums {
+  font-family: "JetBrains Mono", "VT323", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* The display face. `Press Start 2P` is a fixed-width arcade face ~1.6x the width of the grotesque it
+   replaces, so it is the brand, the headings and the all-caps labels — and every rule below puts it at
+   or *below* the size it replaces, which is what keeps a wide face from wrapping into its neighbour. */
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display,
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"],
+:root[data-skin="pixel"] [data-surface="desktop"] h1,
+:root[data-skin="pixel"] [data-surface="desktop"] h2,
+:root[data-skin="pixel"] [data-surface="desktop"] h3,
+:root[data-skin="pixel"] [data-surface="desktop"] h4,
+:root[data-skin="pixel"] [data-surface="desktop"] .uppercase {
+  font-family: "Press Start 2P", "VT323", "JetBrains Mono", monospace;
+  /* Press Start 2P ships one weight. `font-bold` and `font-black` therefore do not embolden it, they
+     ask the rasteriser to smear a pixel face — which is how a crisp arcade font turns into mush at
+     12px. The face is already heavy; the weight goes back to normal so the pixels stay square. */
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+/* All-caps labels are the small end of the display face: 10px of grotesque becomes 9px of pixel caps,
+   and the shell's very wide tracking is pulled in because the face is already wide. The line-height the
+   size utility set is left alone on purpose, so the label's box does not move. */
+:root[data-skin="pixel"] [data-surface="desktop"] .uppercase.text-\[10px\],
+:root[data-skin="pixel"] [data-surface="desktop"] .uppercase.text-xs {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .uppercase.text-\[9px\] {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .uppercase.text-\[11px\],
+:root[data-skin="pixel"] [data-surface="desktop"] .uppercase.text-sm {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+}
+
+/* Headings: one pixel size per Tailwind step, always smaller than the step it replaces. Only `font-size`
+   is overridden — every step here is a config or utility pair that sets its own `line-height`, so the
+   box keeps the height it had and the wide face cannot change a measured row. */
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-xs,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-xs {
+  font-size: 9px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-sm,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-sm {
+  font-size: 10px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-base,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-base {
+  font-size: 11px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-lg,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-lg {
+  font-size: 12px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-xl,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-xl {
+  font-size: 13px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-2xl,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-2xl {
+  font-size: 15px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-3xl,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-3xl {
+  font-size: 16px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"].text-4xl,
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display.text-4xl {
+  font-size: 18px;
+}
+
+/* Responsive steps. A display heading is practically always written `text-2xl sm:text-3xl`, and this
+   sheet has no media queries (the gate parses flat rules), so the responsive variant is matched on the
+   class attribute and wins by source order — the desktop viewport is the `sm:`/`lg:` case anyway. */
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="sm:text-sm"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="sm:text-sm"] {
+  font-size: 10px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="sm:text-base"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="sm:text-base"] {
+  font-size: 11px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="sm:text-lg"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="sm:text-lg"] {
+  font-size: 12px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="sm:text-xl"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="sm:text-xl"] {
+  font-size: 13px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="sm:text-2xl"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="sm:text-2xl"] {
+  font-size: 15px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="sm:text-3xl"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="sm:text-3xl"] {
+  font-size: 16px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="sm:text-4xl"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="sm:text-4xl"],
+:root[data-skin="pixel"] [data-surface="desktop"] .font-display[class*="lg:text-4xl"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="lg:text-4xl"] {
+  font-size: 18px;
+}
+/* The two arbitrary display sizes the desktop actually writes (the Galaxy year badge and its small
+   kicker). They are matched on the class attribute because there is no utility name to hang a rule on. */
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="text-\[26px\]"] {
+  font-size: 16px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="text-\[9.5px\]"] {
+  font-size: 9px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="Space_Grotesk"][class*="text-\[8.5px\]"] {
+  font-size: 8px;
+}
+
+/* VT323 renders small, so the tiny fixed sizes get 1px back. These are the arbitrary sizes the desktop
+   uses by the hundred for meta text, chips and readouts; every one of them sits in a control that is
+   already sized by its own padding, and the size utilities at this end set no line-height, so the cost
+   is at most a single pixel of text height inside a much taller box. */
+:root[data-skin="pixel"] [data-surface="desktop"] .text-\[7px\] {
+  font-size: 8px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .text-\[8px\] {
+  font-size: 9px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .text-\[9px\] {
+  font-size: 10px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .text-\[9\.5px\] {
+  font-size: 10.5px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .text-\[10px\] {
+  font-size: 11px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .text-\[11px\] {
+  font-size: 12px;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .text-\[12px\] {
+  font-size: 13px;
+}
+
+/* =============================================================================================
+ * 3. Square everything
+ *
+ * One rule instead of a list of radius utilities: the desktop expresses a corner as `rounded`,
+ * `rounded-xl`, `rounded-[5px]` and a handful of radii written straight into `index.css`, and an 8-bit
+ * screen has exactly one corner. A squared `rounded-full` dot is not a bug in a pixel skin — it is the
+ * pixel.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"],
+:root[data-skin="pixel"] [data-surface="desktop"] * {
+  border-radius: 0;
+}
+
+/* The corners a `*` rule cannot reach, because they belong to pseudo-elements: the range thumb is the
+   one control the studio's knobs and sliders are built from, and it is written round in `index.css`.
+   Squaring it is the difference between a fader and a knob, so it is worth the vendor selectors.
+   Geometry is left exactly as `index.css` set it — only the corner changes.
+ *
+ * The `-webkit-` and `-moz-` arms are **separate rules on purpose**: an unknown pseudo-element makes its
+ * whole selector list invalid, so one list holding both engines is a list every engine throws away — the
+ * rule stays in the text and does nothing. */
+:root[data-skin="pixel"] [data-surface="desktop"] input[type="range"]::-webkit-slider-runnable-track,
+:root[data-skin="pixel"] [data-surface="desktop"] input[type="range"]::-webkit-slider-thumb {
+  border-radius: 0;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] input[type="range"]::-moz-range-track,
+:root[data-skin="pixel"] [data-surface="desktop"] input[type="range"]::-moz-range-thumb {
+  border-radius: 0;
+}
+/* The scrollbars the desktop draws itself (`custom-scroll`, the sequencer pane) are rounded pills too. */
+:root[data-skin="pixel"] [data-surface="desktop"] ::-webkit-scrollbar,
+:root[data-skin="pixel"] [data-surface="desktop"] ::-webkit-scrollbar-track,
+:root[data-skin="pixel"] [data-surface="desktop"] ::-webkit-scrollbar-thumb {
+  border-radius: 0;
+}
+
+/* =============================================================================================
+ * 4. No glass
+ *
+ * Every floating bar, sheet and modal is `backdrop-blur-*` over a translucent plate. The blur goes; the
+ * plate stays, and the frame rules below turn it into a solid console panel.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="backdrop-blur"] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* The decorative bloom blobs (`w-80 h-80 rounded-full blur-3xl`) are the one filter blur on the surface.
+   Once they are square and flat they read as pale rectangles, so they go: an 8-bit screen has no bloom,
+   and the element is `pointer-events-none` decoration in every one of its call sites. */
+:root[data-skin="pixel"] [data-surface="desktop"] [class~="blur-3xl"] {
+  filter: none;
+  opacity: 0;
+}
+
+/* =============================================================================================
+ * 5. Soft shadows become hard steps
+ *
+ * The desktop's depth is `shadow-sm` through `shadow-2xl`, plus hundreds of arbitrary glows
+ * (`shadow-[0_0_12px_rgba(245,183,61,0.3)]`). A glow is the softest thing on the page and the one
+ * gesture a pixel skin cannot keep, so all of them collapse into the same blur-free step — the shadow of
+ * a cartridge slot. This section comes *before* the frames, because a bordered panel should get the
+ * frame's own step plus its lit inner edge rather than this plain one.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] .shadow,
+:root[data-skin="pixel"] [data-surface="desktop"] .shadow-sm,
+:root[data-skin="pixel"] [data-surface="desktop"] .shadow-md,
+:root[data-skin="pixel"] [data-surface="desktop"] .shadow-lg,
+:root[data-skin="pixel"] [data-surface="desktop"] .shadow-xl,
+:root[data-skin="pixel"] [data-surface="desktop"] .shadow-2xl,
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="shadow-["] {
+  box-shadow: 2px 2px 0 0 #000;
+}
+/* An inset shadow is the "well" a control sits in, not a raised plate, so it keeps its direction:
+   the same step, pushed in. */
+:root[data-skin="pixel"] [data-surface="desktop"] .shadow-inner {
+  box-shadow: inset 2px 2px 0 0 rgb(var(--d-bg) / 0.6);
+}
+/* A drop shadow is a silhouette, so the pixel edition is a hard offset silhouette in the same step. */
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="drop-shadow"] {
+  filter: drop-shadow(2px 2px 0 #000);
+}
+
+/* =============================================================================================
+ * 6. The pixel frame
+ *
+ * `.border` is the literal utility the desktop puts on every card, panel and bordered control — the
+ * directional variants are separators and the sticky header's rule, which get a width bump and nothing
+ * else. Colours are left to the tokens, so an active card keeps its accent frame. The step is painted
+ * outside the box and the lit line inside it, so neither contributes to layout or to a measured size.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] .border,
+:root[data-skin="pixel"] [data-surface="desktop"] .border-2 {
+  border-width: 2px;
+  border-style: solid;
+  box-shadow:
+    3px 3px 0 0 #000,
+    inset 0 0 0 2px rgb(var(--d-ink) / 0.05);
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .border-t {
+  border-top-width: 2px;
+  border-top-style: solid;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .border-b {
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .border-l {
+  border-left-width: 2px;
+  border-left-style: solid;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .border-r {
+  border-right-width: 2px;
+  border-right-style: solid;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .border-x {
+  border-left-width: 2px;
+  border-right-width: 2px;
+  border-left-style: solid;
+  border-right-style: solid;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] .border-y {
+  border-top-width: 2px;
+  border-bottom-width: 2px;
+  border-top-style: solid;
+  border-bottom-style: solid;
+}
+
+/* =============================================================================================
+ * 7. Every plate carries the scanline
+ *
+ * Only `background-image` is set, never `background-color`: the generated literal map owns the colour
+ * (an accent plate must stay accent), and a Tailwind `bg-*` utility only ever writes the colour, so a
+ * background-image survives it. This catches the utility plates and the hundreds of hardcoded `bg-[#...]`
+ * literals the generated sheet remaps to tokens.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="bg-panel"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="bg-surface"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="bg-bg"],
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="bg-[#"] {
+  background-image: var(--px-scan);
+}
+
+/* =============================================================================================
+ * 8. Gradients off
+ *
+ * A pixel skin has no gradients, so every `bg-gradient-*` loses its `background-image` — and the flat
+ * plate it becomes is its **own first stop**: Tailwind already publishes the resolved `from-*` colour as
+ * `--tw-gradient-from`, and the generated sheet has mapped every hardcoded literal in it to a token. So
+ * a hero panel written `from-[#161822] via-[#12131a] to-[#0c0d12]` becomes a flat `--d-surface` plate,
+ * and an accent key written `from-accent to-[#ffc65c]` becomes a flat accent lamp with its own dark text
+ * still readable on it. No colour is invented and no gradient needs a rule of its own.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="bg-gradient-to-"] {
+  background-color: var(--tw-gradient-from, rgb(var(--d-panel)));
+  background-image: var(--px-scan);
+}
+/* The two radial backgrounds are a vignette and a scope fade — glass, not paint. */
+:root[data-skin="pixel"] [data-surface="desktop"] [class*="bg-[radial-gradient"] {
+  background-image: none;
+}
+
+/* =============================================================================================
+ * 9. The lamp: a filled key for a primary control
+ *
+ * The phone's primary accent is a flat fill carrying the ground as its text colour, and the desktop's
+ * primary button is the same gesture — `bg-accent` with black text. The skin only makes it a *key*: a 2px
+ * hard outline and a step, both painted with `box-shadow` so the button's box and its hit area are
+ * untouched. Pressing collapses the step into the plate.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] .bg-accent {
+  background-color: rgb(var(--d-accent));
+  background-image: none;
+  /* Black-on-colour is the only reading an 8-bit palette gives you for free. */
+  color: rgb(var(--d-bg));
+}
+:root[data-skin="pixel"] [data-surface="desktop"] button.bg-accent,
+:root[data-skin="pixel"] [data-surface="desktop"] a.bg-accent,
+:root[data-skin="pixel"] [data-surface="desktop"] [role="button"].bg-accent {
+  box-shadow:
+    0 0 0 2px #000,
+    3px 3px 0 0 #000;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] button.bg-accent:active,
+:root[data-skin="pixel"] [data-surface="desktop"] a.bg-accent:active,
+:root[data-skin="pixel"] [data-surface="desktop"] [role="button"].bg-accent:active {
+  box-shadow:
+    0 0 0 2px #000,
+    1px 1px 0 0 #000;
+}
+/* A blinking "live" pip is the one animation an 8-bit console can afford, and it does not fade: the
+   timing function turns Tailwind's eased opacity ramp into a two-step toggle, so the lamp is either on
+   or off. Motion, duration and the keyframes themselves are untouched. */
+:root[data-skin="pixel"] [data-surface="desktop"] .animate-pulse {
+  animation-timing-function: steps(2, end);
+}
+
+/* =============================================================================================
+ * 10. Hard edges everywhere else
+ *
+ * Icons are the last anti-aliased curves on the surface: stroked at 16-20px, a lucide glyph is a smooth
+ * circle where an 8-bit console could only draw a stair. `crispEdges` plus butt caps and mitre joins
+ * squares every stroke off without touching a single icon size. Cover art gets a pixel resample.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] svg {
+  shape-rendering: crispEdges;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] img {
+  image-rendering: pixelated;
+}
+
+/* =============================================================================================
+ * 11. Focus and selection
+ *
+ * A focus ring is a control's frame while it is being driven, so it gets the same hard 2px treatment as
+ * everything else — and it is an `outline`, which is painted outside the box and measured by nothing.
+ * The desktop's `selection:bg-accent/25` stays accent; it is only made opaque enough to read as a
+ * highlighted cell rather than a wash.
+ * =========================================================================================== */
+:root[data-skin="pixel"] [data-surface="desktop"] :focus-visible {
+  outline: 2px solid rgb(var(--d-accent));
+  outline-offset: 0;
+}
+:root[data-skin="pixel"] [data-surface="desktop"] ::selection {
+  background-color: rgb(var(--d-accent) / 0.4);
+  color: rgb(var(--d-ink));
+}

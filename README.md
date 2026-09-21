@@ -19,8 +19,10 @@ with a short production note and an eight-track pattern you can play, edit and e
 ## Two surfaces, six skins
 
 The desktop is a full workstation; the phone is a separate, thumb-first app at `/m/…` with its own
-navigation, its own player and its own 16-step 即兴 editor. Six skins re-dress the whole phone shell
-from the same components — switch them in 更多 → 外观:
+navigation, its own player and its own 16-step 即兴 editor. Six skins re-dress **both** — the same palette
+on either surface, because the desktop's tokens are generated from the phone's own (`scripts/desktop_skins.mjs`).
+Switch them in the desktop's **Settings → Interface → Appearance**, or on the phone in **更多 → 外观**; the
+choice is shared, so the two never disagree about which skin is active:
 
 | | | |
 |---|---|---|

@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "../../ui/Modal";
 import { useLanguage, type Language } from "../../i18n/LanguageContext";
+import { SKINS } from "../../data/skins";
+import { useSkin } from "../../hooks/useSkin";
 import {
   Gauge,
   Info,
   LayoutDashboard,
+  Palette,
   SlidersHorizontal,
   Smartphone,
   Waves,
@@ -112,6 +115,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const { t, language, setLanguage } = useLanguage();
   const [tab, setTab] = useState<SettingsTabId>(initialTab);
+  /** The active skin and the catalogue — shared with the phone's picker (same key, same root attribute). */
+  const { skin, setSkin, skins } = useSkin();
 
   // Re-open on the requested tab: the toolbar shortcut means "audio", the header means "last".
   useEffect(() => {
@@ -301,6 +306,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/*
+                The six skins, on the desktop.
+
+                The palette behind every one of them is the *phone's* (`src/styles/desktopSkins.css` is
+                generated from the phone's sheets), so choosing a skin here and choosing it in the phone's
+                更多 → 外观 is the same choice: `[data-skin]` lives on the document root and the storage key
+                is shared, so the two surfaces cannot disagree about which skin is active. The swatch is the
+                catalogue's own preview — a skin that is *not* active cannot be styled by its stylesheet, so
+                its three colours have to travel as data.
+              */}
+              <div className={sectionClass} data-testid="settings-skins">
+                <div className={sectionTitleClass}>
+                  <Palette className="w-4 h-4" />
+                  <span>{t("settings_section_appearance")}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {skins.map((definition) => {
+                    const active = skin === definition.id;
+                    return (
+                      <button
+                        key={definition.id}
+                        type="button"
+                        aria-pressed={active}
+                        data-testid={`settings-skin-${definition.id}`}
+                        onClick={() => setSkin(definition.id)}
+                        className={`flex min-h-[52px] items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition-colors ${
+                          active ? "border-accent bg-accent/15" : "border-line bg-panel hover:border-accent/50"
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-line"
+                          style={{ background: definition.preview.ground }}
+                        >
+                          <span
+                            className="h-3.5 w-3.5 rounded-full"
+                            style={{ background: definition.preview.accent }}
+                          />
+                        </span>
+                        <span className="min-w-0">
+                          <span className={`block truncate text-xs font-bold ${active ? "text-accent" : "text-text"}`}>
+                            {t(definition.nameKey)}
+                          </span>
+                          <span className="block truncate text-[10px] text-text-sub">
+                            {t(definition.blurbKey)}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className={hintClass}>{t("settings_section_appearance_hint")}</p>
               </div>
 
               <div className={sectionClass}>

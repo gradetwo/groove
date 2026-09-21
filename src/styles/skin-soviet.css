@@ -1,0 +1,85 @@
+/*
+ * The heavy-industry skin, on the desktop and the iPad — its *character*.
+ *
+ * The palette is the phone's (`src/styles/desktopSkins.css`: gunmetal grounds, bone ink, a brass accent).
+ * What is missing is the *machinery*: a stamped-steel panel has square corners, a 2px edge, an inset
+ * bevel that reads as pressed metal, wide stencilled capital letters, and controls that physically
+ * depress. Read `src/mobile/skins/soviet.css` — this is the same language on the desktop's chrome.
+ *
+ * Two lessons from the phone sheet, both earned by getting them wrong:
+ *
+ *  - **A bevel is an inset shadow, and an inset shadow is a `box-shadow`.** Switching the desktop's soft
+ *    drop shadows off wholesale (as the minimal skin does) would take the bevel with it, so this skin
+ *    rewrites `box-shadow` per surface instead of removing it.
+ *  - **An inline `background` shorthand resets `background-image` at a higher origin than a stylesheet
+ *    rule.** The desktop's plates are painted with utility classes, but a few inline styles exist; where a
+ *    texture matters it is drawn on a pseudo-element, which nothing inline can override.
+ *
+ * Rules: every selector scoped to the desktop surface, colours from `--d-*` only, no box-size changes —
+ * see `src/test/desktopCharacters.test.ts`.
+ */
+
+/* ---------------------------------------------------------------------------------------------
+ * 1. Square corners and a heavier edge
+ *
+ * A stamped plate is cut, not rounded, and it carries an edge you can see from across the room.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] [data-surface="desktop"] [class*="rounded"] {
+  border-radius: 0;
+}
+
+:root[data-skin="soviet"] [data-surface="desktop"] [class*="border-line"] {
+  border-color: var(--d-line-strong);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 2. Machined surfaces
+ *
+ * The panels the desktop draws with `bg-panel`/`bg-panel2` get the bevel: a light line along the top edge
+ * and a dark one along the bottom, which is what makes a flat rectangle read as a pressed plate. Shadows
+ * are replaced at the same time — metal sits on the bench, it does not float.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] [data-surface="desktop"] [class~="bg-panel"],
+:root[data-skin="soviet"] [data-surface="desktop"] [class~="bg-panel2"] {
+  box-shadow:
+    inset 0 1px 0 rgb(var(--d-ink) / 0.08),
+    inset 0 -1px 0 rgb(var(--d-bg) / 0.55);
+}
+
+/* The page itself: a faint vertical brush, so the ground is metal rather than a flat fill. */
+:root[data-skin="soviet"] [data-surface="desktop"] {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgb(var(--d-ink) / 0.012) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 3. Stencilled lettering
+ *
+ * Wide capitals for headings and section titles, letterspaced like a stencil; body copy stays in the
+ * narrower face so paragraphs do not become a wall. Numerals keep the mono face.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] [data-surface="desktop"] :is(h1, h2) {
+  font-family: "PT Sans Narrow", "Space Grotesk", "PingFang SC", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+:root[data-skin="soviet"] [data-surface="desktop"] [class*="uppercase"][class*="tracking-"] {
+  letter-spacing: 0.14em;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 4. Controls that depress
+ *
+ * A button on this panel travels: down and to the right, with the shadow collapsing under it, in two steps
+ * rather than a smooth ease — the same trick the phone uses, and the reason a press feels mechanical
+ * rather than animated.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] [data-surface="desktop"] button:active,
+:root[data-skin="soviet"] [data-surface="desktop"] [role="button"]:active {
+  transform: translate(1px, 1px);
+  transition-timing-function: steps(2, end);
+}

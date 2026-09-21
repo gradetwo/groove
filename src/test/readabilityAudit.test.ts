@@ -44,17 +44,49 @@ export function hexToRgb(hex: string): [number, number, number] {
 
 const AA_NORMAL = 4.5;
 
-/** The colours the palette declares; a token that fails is a systemic problem, not a site's. */
+/**
+ * Where the palette comes from now.
+ *
+ * The desktop's colours are **skins** as of the six-theme round: `tailwind.config.js` names resolve through
+ * `rgb(var(--d-…))`, and the values live in `src/styles/desktopSkins.css`, generated from the phone's own
+ * tokens by `scripts/desktop_skins.mjs`. So this audit reads that sheet instead of the config — and it
+ * checks **every skin**, not just the default one, because "readable" is a property of a palette and there
+ * are now six of them. A skin that cannot be read is a bug in the skin, and this is the gate that says so.
+ */
+const SKIN_CSS =
+  readFileSync(join(SRC, "styles", "desktopTokens.css"), "utf8") +
+  readFileSync(join(SRC, "styles", "desktopSkins.css"), "utf8");
+const SKIN_IDS = ["default", "minimal", "comic", "soviet", "sovietYears", "pixel"] as const;
+
+/** `--d-panel` per skin, as `#rrggbb`. Channels in the sheet are space-separated (`18 19 23`). */
+function skinTokens(skin: (typeof SKIN_IDS)[number]): Record<string, string> {
+  const block =
+    skin === "default"
+      ? /:root\s*\{([^}]*)\}/.exec(SKIN_CSS)
+      : new RegExp(`:root\\[data-skin="${skin}"\\]\\s*\\{([^}]*)\\}`).exec(SKIN_CSS);
+  if (!block) throw new Error(`desktopSkins.css: no token block for ${skin}`);
+  const tokens: Record<string, string> = {};
+  for (const match of block[1].matchAll(/(--d-[a-z0-9-]+)\s*:\s*([0-9]+)\s+([0-9]+)\s+([0-9]+)\s*;/g)) {
+    tokens[match[1]] = (
+      "#" +
+      [match[2], match[3], match[4]]
+        .map((v) => Number(v).toString(16).padStart(2, "0"))
+        .join("")
+    );
+  }
+  return tokens;
+}
+
+/** The config's names, mapped to the variable each one now resolves through. */
 const palette = tailwindConfig.theme.extend.colors as unknown as Record<string, unknown>;
 
-function paletteColour(path: string): string | null {
+function configValue(path: string): string | null {
   const parts = path.split(".");
   let node: unknown = palette;
   for (const part of parts) {
     if (typeof node !== "object" || node === null) return null;
     node = (node as Record<string, unknown>)[part];
   }
-  // A scale (`text`, `accent`) is an object whose bare name means its `DEFAULT` step.
   if (typeof node === "object" && node !== null) {
     const fallback = (node as Record<string, unknown>).DEFAULT;
     return typeof fallback === "string" ? fallback : null;
@@ -62,13 +94,23 @@ function paletteColour(path: string): string | null {
   return typeof node === "string" ? node : null;
 }
 
-/** `text-dim` → `#828794`; `accent` → `#f5b73d`; unknown names resolve to null. */
+const DEFAULT_TOKENS = skinTokens("default");
+
+/**
+ * `text-dim` → the default skin's `--d-ink-2` as a hex.
+ *
+ * The hop through the config (`rgb(var(--d-ink-2) / <alpha-value>)`) rather than a hand-written name map is
+ * deliberate: rename a token in the config and this keeps working, whereas a second table here would rot.
+ */
 function resolveToken(name: string): string | null {
-  const flat = name.replace(/-/g, ".");
-  return paletteColour(flat);
+  const declared = configValue(name.replace(/-/g, "."));
+  if (!declared) return null;
+  const variable = /var\((--d-[a-z0-9-]+)\)/.exec(declared);
+  if (variable) return DEFAULT_TOKENS[variable[1]] ?? null;
+  return declared.startsWith("#") ? declared : null;
 }
 
-const PANEL = paletteColour("panel")!;
+const PANEL = resolveToken("panel")!;
 
 /**
  * Occurrences whose background is not in the same class string.
@@ -241,14 +283,28 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe("contrast · the palette", () => {
-  it("keeps every text token readable on both dark surfaces", () => {
-    const surfaces = ["panel", "bg"] as const;
-    for (const surface of surfaces) {
-      const bg = hexToRgb(paletteColour(surface)!);
-      for (const token of ["text", "text.sub", "text.dim"]) {
-        const colour = paletteColour(token)!;
-        const ratio = contrast(hexToRgb(colour), bg);
-        expect(ratio, `${token} (${colour}) on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL);
+  it("keeps every text token readable on both surfaces of every skin", () => {
+    /**
+     * Six palettes, and every one of them has to be readable on its own grounds. This is the gate that
+     * makes a new skin safe: it is easy to write a theme that looks striking in a screenshot and leaves the
+     * 11 px labels at 3:1.
+     */
+    for (const skin of SKIN_IDS) {
+      const tokens = skinTokens(skin);
+      const text = { text: tokens["--d-ink"], "text.sub": tokens["--d-ink-3"], "text.dim": tokens["--d-ink-2"] };
+      for (const surface of ["--d-panel", "--d-bg"] as const) {
+        const bg = hexToRgb(tokens[surface]);
+        for (const [name, colour] of Object.entries(text)) {
+          const ratio = contrast(hexToRgb(colour), bg);
+          expect(ratio, `${skin}: ${name} (${colour}) on ${surface} (${tokens[surface]})`).toBeGreaterThanOrEqual(
+            AA_NORMAL
+          );
+        }
+      }
+      // The accent is used for text too (section titles, active tabs), so it is held to the same floor.
+      for (const surface of ["--d-panel", "--d-bg"] as const) {
+        const ratio = contrast(hexToRgb(tokens["--d-accent"]), hexToRgb(tokens[surface]));
+        expect(ratio, `${skin}: accent (${tokens["--d-accent"]}) on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL);
       }
     }
   });
