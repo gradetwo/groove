@@ -628,7 +628,7 @@
 }
 /* The player bar's floating card. Its base ground is `rgba(20,20,31,0.9)` with a 30 px blurred drop
    shadow — a soft, dark, glassy thing. Replaced with the poster's plate and a hard offset. */
-:root[data-skin="sovietYears"] .mobile-root .bg-\[rgba\(20\,20\,31\,0\.9\)\] {
+:root[data-skin="sovietYears"] .mobile-root .m-player-bar-plate {
   background-color: #111111;
   box-shadow: 6px 6px 0 #cc0000;
   backdrop-filter: none;
@@ -636,11 +636,11 @@
 }
 /* The player bar's own text sits on that black plate, so it is paper: the row's name, its meta line
    and its icons are re-inked by the container rule below rather than one selector per span. */
-:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-player-bar"] .bg-\[rgba\(20\,20\,31\,0\.9\)\] {
+:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-player-bar"] .m-player-bar-plate {
   color: var(--m-bg);
 }
-:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-player-bar"] .bg-\[rgba\(20\,20\,31\,0\.9\)\] [class*="text-[var(--m-ink-3)]"],
-:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-player-bar"] .bg-\[rgba\(20\,20\,31\,0\.9\)\] [class*="text-[var(--m-ink-2)]"] {
+:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-player-bar"] .m-player-bar-plate [class*="text-[var(--m-ink-3)]"],
+:root[data-skin="sovietYears"] .mobile-root [data-testid="mobile-player-bar"] .m-player-bar-plate [class*="text-[var(--m-ink-2)]"] {
   color: #cdc7b3;
 }
 
@@ -684,18 +684,22 @@
   color: var(--m-ink);
   box-shadow: 4px 4px 0 #111111;
 }
-:root[data-skin="sovietYears"] .mobile-root .m-tbtn.on,
-:root[data-skin="sovietYears"] .mobile-root .m-tbig {
-  color: var(--m-gold);
+:root[data-skin="sovietYears"] .mobile-root .m-tbtn.on {
+  /* The transport carries no "engaged" highlight: the glyph already says what the button is
+     (see the rationale in `mobile.css`). The class stays as a hook, and nothing paints it. */
+  color: var(--m-ink-2);
 }
 :root[data-skin="sovietYears"] .mobile-root .m-tbig {
-  background-color: var(--m-gold);
-  color: var(--m-on-gold);
+  /* A switch housing, not a red flood: the play glyph is the signal (the user's rule). */
+  background-color: var(--m-card);
+  color: var(--m-ink);
 }
 :root[data-skin="sovietYears"] .mobile-root .m-tbtn:active,
 :root[data-skin="sovietYears"] .mobile-root .m-tbig:active {
-  color: var(--m-on-gold);
-  background-color: #cc0000;
+  /* The press keeps the mechanical translate; a colour flood here would be the highlight the user
+     asked to remove, so the pressed key only darkens. */
+  color: var(--m-ink);
+  background-color: var(--m-card-2);
 }
 
 /* The tempo keys. 44 px circles with a soft `0.15s ease` transition in the base file; they become the

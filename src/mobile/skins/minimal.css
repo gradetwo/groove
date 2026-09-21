@@ -353,7 +353,7 @@
 :root[data-skin="minimal"] .mobile-root .backdrop-blur-md,
 :root[data-skin="minimal"] .mobile-root .backdrop-blur-xl,
 :root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(14,12,8,0.9)]"],
-:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(20,20,31,0.9)]"] {
+:root[data-skin="minimal"] .mobile-root .m-player-bar-plate {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -448,17 +448,19 @@
   color: var(--m-ink-2);
 }
 :root[data-skin="minimal"] .mobile-root .m-tbtn.on {
-  color: var(--m-gold);
+  /* The transport carries no "engaged" highlight: the glyph already says what the button is
+     (see the rationale in `mobile.css`). The class stays as a hook, and nothing paints it. */
+  color: var(--m-ink-2);
 }
 :root[data-skin="minimal"] .mobile-root .m-tbtn.on::after {
-  background: var(--m-gold);
+  content: none;
 }
 :root[data-skin="minimal"] .mobile-root .m-tbig {
   color: var(--m-ink);
 }
 :root[data-skin="minimal"] .mobile-root .m-player[data-playing="true"] .m-tbig {
   animation: none;
-  color: var(--m-gold);
+  color: var(--m-ink);
 }
 
 /*
@@ -543,7 +545,7 @@
  * Nothing glows and nothing is black — the bar reads as a lifted sheet of the same paper, which is what
  * "floating" means in this language.
  */
-:root[data-skin="minimal"] .mobile-root [class~="bg-[rgba(20,20,31,0.9)]"] {
+:root[data-skin="minimal"] .mobile-root .m-player-bar-plate {
   background-color: var(--m-card);
   border-color: var(--m-line);
   box-shadow:

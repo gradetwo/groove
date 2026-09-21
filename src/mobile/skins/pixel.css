@@ -625,28 +625,30 @@
   box-shadow: 2px 2px 0 0 #000;
 }
 :root[data-skin="pixel"] .mobile-root .m-tbtn.on {
-  background-color: var(--m-gold);
+  /* The transport carries no "engaged" highlight: the glyph already says what the button is
+     (see the rationale in `mobile.css`). The class stays as a hook, and nothing paints it. */
+  background-color: transparent;
   background-image: none;
-  color: var(--m-on-gold);
+  color: var(--m-ink);
 }
 :root[data-skin="pixel"] .mobile-root .m-tbtn.on::after {
-  background-color: var(--m-on-gold);
+  content: none;
 }
 /* The big button is the one filled lamp in the transport. While playing it inverts to the ink white
    — a hard state switch — and the shell's colour-breathing animation is dropped, because a white
    glyph pulsing across a lamp is exactly the kind of half-state this skin does not have. */
 :root[data-skin="pixel"] .mobile-root .m-tbig {
-  background-color: var(--m-gold);
+  background-color: var(--m-card);
   border: 2px solid #000;
-  color: var(--m-on-gold);
+  color: var(--m-ink);
   box-shadow: 3px 3px 0 0 #000;
 }
 :root[data-skin="pixel"] .mobile-root .m-tbig:active {
-  color: var(--m-on-gold);
+  color: var(--m-ink);
 }
 :root[data-skin="pixel"] .mobile-root .m-player[data-playing="true"] .m-tbig {
-  background-color: var(--m-ink);
-  color: var(--m-on-gold);
+  background-color: var(--m-card);
+  color: var(--m-ink);
   animation: none;
 }
 

@@ -116,6 +116,20 @@ export function MobilePlayerScreen({
     [onTempo]
   );
 
+  /**
+   * A different genre means a different tempo.
+   *
+   * The state was seeded once from the genre the screen first mounted with, so skipping to the next song
+   * (or opening the player on another genre) left the readout, the damper and the engine's tempo all
+   * disagreeing. The engine has already switched by the time this runs, so this follows it: the state
+   * takes the new genre's default and the canvas snaps its damper instead of walking from the old number.
+   */
+  useEffect(() => {
+    const next = genre?.default_bpm;
+    if (typeof next !== "number") return;
+    setBpm(next);
+  }, [genre?.id, genre?.default_bpm]);
+
   useEffect(() => {
     if (!isPlaying) return;
     setDropping(true);

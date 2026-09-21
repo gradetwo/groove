@@ -187,6 +187,8 @@ export function VinylCanvas({
     let ripple = 0;
     let glow = { r: 232, g: 186, b: 120 };
     let displayedBpm = liveRef.current.bpm;
+    /** The genre the damper is currently showing; a change means the tempo must snap, not walk. */
+    let displayedFor = liveRef.current.artSeed;
     let dpr = 1;
     let disc: BakedSprite | null = null;
     let label: { key: string; sprite: BakedSprite | null } | null = null;
@@ -425,6 +427,17 @@ export function VinylCanvas({
         const breath = 0.5 + 0.5 * Math.sin((now / 1000) * ((Math.PI * 2) / 3.4));
         host.style.setProperty("--breath", breath.toFixed(3));
         host.style.setProperty("--bpmBeat", `${beatSeconds(displayedBpm).toFixed(3)}s`);
+      }
+      /**
+       * A new genre is a new tempo, not a jog: snap rather than ease.
+       *
+       * Walking from the previous genre's number would animate a transition the music is not making —
+       * the engine switched on the same beat the screen did.
+       */
+      if (state.artSeed !== displayedFor) {
+        displayedFor = state.artSeed;
+        displayedBpm = state.bpm;
+        if (bpmOutRef?.current) bpmOutRef.current.textContent = String(Math.round(state.bpm));
       }
       const damped = dampBpm(displayedBpm, state.bpm, dtMs);
       if (Math.round(damped) !== Math.round(displayedBpm)) {

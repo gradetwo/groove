@@ -55,6 +55,8 @@ export interface MobilePlayerBarProps {
   playMode: PlayMode;
   /** The transport clock, for the progress rail. Omitted (or null) leaves the rail empty. */
   readClock?: () => VinylClock | null;
+  /** The engine's live tempo, so the bar cannot disagree with what is playing. */
+  readTempo?: () => number | null;
   totalSteps?: number;
   onToggle: () => void;
   onCycleMode: () => void;
@@ -67,6 +69,7 @@ export function MobilePlayerBar({
   aboveTabBar = true,
   playMode,
   readClock,
+  readTempo,
   totalSteps = 16,
   onToggle,
   onCycleMode,
@@ -74,6 +77,8 @@ export function MobilePlayerBar({
 }: MobilePlayerBarProps) {
   const { t } = useLanguage();
   const progressRef = useRef<HTMLSpanElement | null>(null);
+  /** The meta line's tempo, written by the same interval as the rail. */
+  const tempoRef = useRef<HTMLSpanElement | null>(null);
   const genre = ALL_GENRES.find((item) => item.id === genreId);
 
   /**
@@ -87,13 +92,25 @@ export function MobilePlayerBar({
     if (!isPlaying || !readClock) return;
     const write = () => {
       const clock = readClock();
-      if (!clock || !progressRef.current) return;
-      progressRef.current.style.width = `${(loopProgress(clock.step, clock.fraction, totalSteps) * 100).toFixed(2)}%`;
+      if (clock && progressRef.current) {
+        progressRef.current.style.width = `${(loopProgress(clock.step, clock.fraction, totalSteps) * 100).toFixed(2)}%`;
+      }
+      /**
+       * The tempo comes from the engine rather than from the genre's declared default.
+       *
+       * The declared value was the bug the user reported: jog the tempo (or let the queue skip to the
+       * next genre) and the bar kept printing the number from the data file. The engine is the only
+       * thing that knows what is playing.
+       */
+      const live = readTempo?.();
+      if (tempoRef.current && typeof live === "number" && Number.isFinite(live)) {
+        tempoRef.current.textContent = String(Math.round(live));
+      }
     };
     write();
     const id = window.setInterval(write, 200);
     return () => window.clearInterval(id);
-  }, [isPlaying, readClock, totalSteps]);
+  }, [isPlaying, readClock, readTempo, totalSteps]);
 
   // A genre that vanished from the library (an old share link, a custom genre that was deleted) must
   // not leave a bar with no name on it.
@@ -109,7 +126,15 @@ export function MobilePlayerBar({
         aboveTabBar ? "bottom-[calc(56px+env(safe-area-inset-bottom))]" : "bottom-[env(safe-area-inset-bottom)]"
       }`}
     >
-      <div className="flex items-center gap-1 rounded-[22px] border border-[var(--m-line)] bg-[rgba(20,20,31,0.9)] py-2 pl-2 pr-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      {/*
+        `m-player-bar-plate` is a *stable* hook for the skins.
+
+        They used to target the bar's ground by its literal utility (`[class~="bg-[rgba(20,20,31,0.94)]"]`),
+        so the day this class's alpha changed from 0.94 to 0.9 the comic skin's paper override silently
+        stopped matching and the minimised bar went back to a dark plate under dark ink — the user found
+        it before any gate did. A named class cannot drift like that.
+      */}
+      <div className="m-player-bar-plate flex items-center gap-1 rounded-[22px] border border-[var(--m-line)] bg-[rgba(20,20,31,0.9)] py-2 pl-2 pr-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         {/* The mode cycle: the reference's "left button", with a pip when it is not the default. */}
         <button
           type="button"
@@ -158,7 +183,8 @@ export function MobilePlayerBar({
               />
             </span>
             <span className="m-mono mt-1 block truncate text-[9px] leading-none tracking-[0.14em] text-[var(--m-ink-3)]">
-              {genre.default_bpm} BPM · {genre.category}
+              {/* The engine's tempo when there is one, the genre's own default before that. */}
+              <span ref={tempoRef}>{genre.default_bpm}</span> BPM · {genre.category}
             </span>
           </span>
           <ChevronRight className="h-4 w-4 flex-none text-[var(--m-ink-3)]" />

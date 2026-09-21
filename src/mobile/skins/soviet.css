@@ -457,12 +457,11 @@
     inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 :root[data-skin="soviet"] .mobile-root .m-tbtn.on {
-  color: var(--m-gold);
-  background-color: rgba(237, 228, 204, 0.05);
-  box-shadow:
-    inset 0 1px 0 rgba(237, 228, 204, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
-    0 0 0 1px var(--m-gold);
+  /* The transport carries no "engaged" highlight: the glyph already says what the button is
+     (see the rationale in `mobile.css`). The class stays as a hook, and nothing paints it. */
+  color: var(--m-ink-2);
+  background-color: transparent;
+  box-shadow: none;
 }
 :root[data-skin="soviet"] .mobile-root .m-tbtn:active,
 :root[data-skin="soviet"] .mobile-root .m-tbig:active {
