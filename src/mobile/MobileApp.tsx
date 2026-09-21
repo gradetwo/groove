@@ -38,8 +38,12 @@ import "./skins/pixel.css";
  * The three skin sheets deliberately withdraw from `[data-legacy="desktop"]`; this sheet puts the
  * skin's palette back over that markup without re-applying their decorative passes. Imported after
  * the three of them so it wins the equal-specificity opt-outs.
+ *
+ * Named `legacySkin.css`, not `legacyViews.css`: there is a *layout* sheet of that name one directory
+ * up (`./legacyViews.css`), and two files with one basename in one shell is how the next person edits
+ * the wrong one.
  */
-import "./skins/legacyViews.css";
+import "./skins/legacySkin.css";
 /**
  * The phone layout pass over the reused desktop views (探索).
  *

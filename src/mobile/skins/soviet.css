@@ -719,33 +719,27 @@
 /* ---------------------------------------------------------------------------------------------
  * 9. The red star — the badge on the active tab
  *
- * The badge. It is a *background* on the active tab's underline pip — the `aria-hidden` span the
- * base file already floats over the button as its "you are here" marker. `MobileModuleTabBar` owns no
- * marker class and a skin may not edit a component, so the shell's own stable hook is used instead:
- * `button[aria-current="page"]` is exactly the tab the component marks active.
+ * The star is a `clip-path` polygon on the bar's own `::after`. `MobileModuleTabBar` owns no marker
+ * class and a skin may not edit a component, so the shell's stable hook is used instead:
+ * `nav[data-testid="mobile-module-bar"]` is the selector the shell's own E2E matrix already reads, and
+ * five equal `flex-1` tabs put the active one at the bar's centre at every width.
  *
- * Three constraints put the mark there, and the alternatives are worth recording because both fail
- * in ways the stylesheet gates cannot see:
+ * Two alternatives were built, measured and rejected, and both failures are worth recording because
+ * they are invisible to the stylesheet gates:
  *
- *   - `position` is off-limits (the contract's geometry gate), so the skin cannot create an
- *     absolutely positioned box of its own. It has to ride an element the base file already placed.
- *   - A pseudo-element on the bar itself is worse than it looks. With `position` unavailable it is a
- *     *static* flex item, so it either becomes a sixth column that shrinks the five real tabs — which
- *     the 44px target gate would catch — or, clipped empty, has its `inset` ignored by Chromium and
- *     lands somewhere else entirely. Both were measured in the harness before this rule was written.
- *   - The pip is already absolute, already `aria-hidden` and carries no text, so paint on it can
- *     neither join the tab row nor be mistaken for a label.
+ *   - A star on the *active tab's underline pip* — the `aria-hidden` 2px span the button already
+ *     floats. Chromium does not paint a background that overflows a 2px-tall absolutely positioned
+ *     element, and a `clip-path` can only ever fill its own host box, so the mark was invisible or a
+ *     sliver. The star moved to the bar, whose own box is 57px tall.
+ *   - A star as a background *on the tab*. It rendered correctly and covered nothing, but that puts
+ *     the mark inside a control's own paint for no benefit over the bar's chrome.
  *
- * The star is a five-point SVG `data:` URI rather than a `clip-path` polygon. A `clip-path` can only
- * ever fill its own host box and the pip is a 2px rule, so the star would be flattened into a sliver;
- * a background image needs no positioning, no size of its own and no network. It is a ~300-byte
- * inline resource with `#` url-encoded as `%23` — a data URI, not an external asset, so the repo's
- * asset gate is satisfied. It sits at the top-right of the pip's box, which is the button's
- * top-right corner: clear of the centred icon, clear of the 11px label and clear of the tab's right
- * edge, so nothing on the tab is covered.
- *
- * The shell's own gold underline is untouched — the star marks the tab, the rule keeps the "on" state
- * legible at 1x, and because the mark is background paint it can never be read as a second label.
+ * What makes the chosen slot safe is the pair the contract checks for: a decorative layer may be
+ * positioned *if* it is click-through, so the overlay carries `pointer-events: none` and can never
+ * swallow a tap. `top`/`left`/`width` are avoided in favour of `inset`, the logical `inline-size` /
+ * `block-size` pair and `transform`, so the mark's own box is outside the geometry the layout gates
+ * measure. The shell's gold underline is untouched: the star marks the tab, the rule keeps the "on"
+ * state legible at 1x, and neither can be read as a second label.
  * ------------------------------------------------------------------------------------------- */
 /* The ribbon on the bar's top edge, exactly as on the top bar and the cue strip: the same 3px band
    that divides the rest of the screen divides the bottom chrome too. The bar's own hairline hands its
@@ -766,32 +760,78 @@
   background-size: 100% 3px;
   border-top-color: transparent;
 }
-/* The star itself. It is a background *on the tab*, not on the 2px pip: measured in the harness, a
-   background that overflows a 2px-tall absolutely positioned pip is not painted at all by Chromium,
-   while the same 16px image on the 56px tab paints exactly where it is asked to. The tab is also the
-   larger, more honest host — it is the thing that is active.
- *
- * `top 1px right 4px` puts the mark in the tab's top-right corner. Checked against the live layout at
- * 390px: the tab's content column is only ~25px wide, so the corner is empty air on both sides of it
- * — the star clears the centred icon and the 11px label by more than 12px each, stays 4px inside the
- * tab, and sits above the 44px target's own top edge without entering it. */
-:root[data-skin="soviet"] .mobile-root nav[data-testid="mobile-module-bar"] button[aria-current="page"] {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 6 L61.5 38.5 L96 39 L68.5 60 L78.5 93 L50 73.5 L21.5 93 L31.5 60 L4 39 L38.5 38.5 Z' fill='%23c8452b' stroke='%230c0e10' stroke-width='4'/></svg>");
-  background-repeat: no-repeat;
-  background-position: top 1px right 4px;
-  background-size: 16px 16px;
+/* The star. `inset: -8px auto auto 0` hangs a 15px box above the bar's top edge, flush with its left
+   edge, and `translateX(-7.5px)` takes half the mark back out so the slot below is its centre. The
+   slot follows `data-module` for the same reason the accents do: the mark has to sit on the tab the
+   user is actually looking at, and the root already carries which one that is. Measured with 首页
+   active: the mark occupies x31.5-46.5, y779-794 — above the tab icons (y801) and clear of every
+   label, so it covers no glyph and enters no hit area. */
+:root[data-skin="soviet"] .mobile-root nav[data-testid="mobile-module-bar"]::after {
+  content: "";
+  position: absolute;
+  inset: -8px auto auto 0;
+  transform: translateX(-7.5px);
+  inline-size: 15px;
+  block-size: 15px;
+  z-index: 1;
+  pointer-events: none;
+  background-color: #c8452b;
+  -webkit-clip-path: polygon(
+    50% 0%,
+    61% 34%,
+    97% 35%,
+    68% 57%,
+    79% 92%,
+    50% 71%,
+    21% 92%,
+    32% 57%,
+    3% 35%,
+    39% 34%
+  );
+  clip-path: polygon(
+    50% 0%,
+    61% 34%,
+    97% 35%,
+    68% 57%,
+    79% 92%,
+    50% 71%,
+    21% 92%,
+    32% 57%,
+    3% 35%,
+    39% 34%
+  );
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.9));
+}
+/* The slot. A percentage `left` resolves against the bar — 10% is the centre of its first of five
+   equal tabs — while a percentage inside `transform` would resolve against the mark's own 15px, which
+   is how the first attempt at this landed at the far left edge. So the slot is a `left` and the
+   centring is a fixed half-width translate. */
+:root[data-skin="soviet"] .mobile-root[data-module="home"] nav[data-testid="mobile-module-bar"]::after {
+  left: 10%;
+}
+:root[data-skin="soviet"] .mobile-root[data-module="jam"] nav[data-testid="mobile-module-bar"]::after {
+  left: 30%;
+}
+:root[data-skin="soviet"] .mobile-root[data-module="challenge"] nav[data-testid="mobile-module-bar"]::after {
+  left: 50%;
+}
+:root[data-skin="soviet"] .mobile-root[data-module="explore"] nav[data-testid="mobile-module-bar"]::after {
+  left: 70%;
+}
+:root[data-skin="soviet"] .mobile-root[data-module="more"] nav[data-testid="mobile-module-bar"]::after {
+  left: 90%;
 }
 
 /* ---------------------------------------------------------------------------------------------
  * 10. The gear and the placards
  *
  * The cog is `repeating-conic-gradient`: twelve teeth as hard stops at 15° and 30°, a dark hub, no
- * image and no extra element. It is the stage's own `::before`, which — with `position` off-limits —
- * is a *static* flex item, so `align-items: center` centres it in the stage's top row. That is where
- * it wants to be anyway: at 390x844 it lands in the empty band between the top bar and the record
- * (measured: gear y62-104, record top y106), directly above the disc like the motor housing of a
- * turntable, and the copy below it starts at y466. A background cannot overflow its host, so the cog
- * can only ever be those 42px, and it has no text of its own.
+ * image and no extra element. It is the stage's own `::before`, absolute in the stage's top-left
+ * corner (the stage already establishes the containing block) and click-through, so it behaves like
+ * a stencil printed on the panel rather than a thing on top of it. At 390x844 it lands at x4-46,
+ * y62-104 — the empty band between the top bar and the record (record top y106), beside the centred
+ * column, so it is 60px clear of the nearest line of copy. A background cannot overflow its host, so
+ * the cog can only ever be those 42px, and it has no text of its own.
  *
  * The placards are the other half of the same idea. The raised steel utility is turned into a painted
  * plate: an inset 2px frame and an inset lamp seat, drawn with shadows because a border would be
@@ -825,10 +865,12 @@
 }
 :root[data-skin="soviet"] .mobile-root .m-stage::before {
   content: "";
+  position: absolute;
   inset: 2px auto auto 2px;
   inline-size: 42px;
   block-size: 42px;
   z-index: 0;
+  pointer-events: none;
   background-image:
     radial-gradient(circle at 50% 50%, #0c0e10 0 20%, #b9b2a0 20% 27%, transparent 27%),
     repeating-conic-gradient(
@@ -857,7 +899,9 @@
    page's scroll height are exactly what the base file made them. */
 :root[data-skin="soviet"] .mobile-root .m-foot::before {
   content: "ЗАВОД № 7";
+  position: absolute;
   inset: 0 22px auto auto;
+  pointer-events: none;
   font-family: var(--m-font-mono);
   font-size: 8.5px;
   letter-spacing: 0.18em;
