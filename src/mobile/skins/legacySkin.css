@@ -67,8 +67,7 @@
  * =========================================================================================== */
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-kick-legacy"],
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] 
-{
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] {
   /* A newsprint press has no white overlay: a "black/40" well on paper is a *wash of ink*, but the
      kick lab writes its amber / red / teal readouts *on* these wells and the comic process inks are
      dark, so even a 10% wash left #006b3c-on-well at 4.48:1 and the signal reds lower. On the sheet
@@ -81,8 +80,7 @@
   color-scheme: light;
   font-family: inherit;
   scrollbar-color: var(--m-line-2) var(--m-card-2);
-}
-:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
+}:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-kick-legacy"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] {
   --lv-well: rgb(0 0 0 / 0.5);
@@ -92,8 +90,7 @@
   color-scheme: dark;
   font-family: inherit;
   scrollbar-color: var(--m-line-2) var(--m-card-2);
-}
-:root[data-skin="pixel"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
+}:root[data-skin="pixel"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-kick-legacy"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] {
   --lv-well: rgb(4 6 12 / 0.55);
@@ -110,8 +107,7 @@
  */
 :root[data-skin="default"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
 :root[data-skin="default"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-kick-legacy"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] {
   --lv-well: rgb(0 0 0 / 0.45);
   --lv-screen: #0a0c12;
   background-color: var(--m-bg);
@@ -126,8 +122,7 @@
  */
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-kick-legacy"],
-:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] 
-{
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] {
   --lv-well: rgb(0 0 0 / 0.04);
   --lv-screen: #1a1a1a;
   background-color: var(--m-bg);
@@ -142,8 +137,7 @@
  */
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-kick-legacy"],
-:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] 
-{
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-groove-legacy"] {
   --lv-well: rgb(17 17 17 / 0.06);
   --lv-screen: #111111;
   background-color: var(--m-bg);
@@ -160,66 +154,6 @@
  * `font-mono` is deliberately NOT remapped: see the header. Every face here is inherited or
  * family-only, so no box changes size from a declared metric.
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is(h1, h2, h3, h4),
@@ -231,8 +165,7 @@
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="font-[Space_Grotesk]"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="font-[Space_Grotesk]"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class~="font-[Space_Grotesk]"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="font-[Space_Grotesk]"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="font-[Space_Grotesk]"] {
   font-family: var(--m-font-display);
 }/* =============================================================================================
  * 3. Surfaces — theme classes and the literal dark grounds
@@ -240,73 +173,12 @@
 /* Desktop theme panels. `bg-surface` is a class the masterclass children use but Tailwind never
    generated (there is no `surface` colour in the theme), so on the phone it was simply invisible;
    mapping it here gives it the skin's raised surface instead. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"] {
   background-color: var(--m-card);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class~="bg-panel2"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-panel2"],
@@ -333,73 +205,12 @@
  * page/wells (`#0…`), panels (`#1…`) and raised/inset blocks (`#2…`) — which map one-to-one onto
  * the shell's three surface levels, so three rules cover every `bg-[#…]` in the three views.
  */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="bg-[#0"] {
   background-color: var(--m-bg);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="bg-[#1"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-[#1"],
@@ -421,153 +232,28 @@
  * because on newsprint a black key must actually be black). Both stay distinguishable and both
  * keep their labels legible, which a naive "every light literal -> ink" mapping would not.
  */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#ffffff]"], [class~="bg-[#f3f1eb]"], [class~="bg-[#e2dfd5]"]) {
   background-color: var(--m-card);
-}
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]),
+}:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-white"], [class~="text-[#eae6dc]"]):is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]) {
   background-color: var(--m-ink);
-}
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-white"], [class~="text-[#eae6dc]"]):is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]) {
+}:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-white"], [class~="text-[#eae6dc]"]):is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]) {
   color: var(--m-on-gold);
-}
-:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]),
+}:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#181a20]"], [class~="bg-[#252a36]"], [class~="bg-[#2c303c]"]) {
   background-color: var(--m-card-2);
 }/* A translucent light wash (the guitar's marker plate) is a well, not a surface. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-[#eae6dc]/15"] {
   background-color: var(--lv-well);
 }/* =============================================================================================
  * 4. The accent literals — the desktop's own accent and instrument colours
@@ -581,73 +267,12 @@
  * a page with a single accent is what every one of these skins is designed around.
  * `#f5b73d` is matched by exact token because the kick root carries it inside a `selection:` variant.
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#38bdf8]"]) {
   background-color: var(--m-gold);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#f5b73d]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-[#e5a93c]"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#f5b73d]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-[#e5a93c]"]),
@@ -672,73 +297,12 @@
   background-color: var(--m-violet);
 }/* The faint accent fills (`/10`-style chips) become the same accent at low alpha, so a tinted chip
    stays a tint instead of turning into a solid block. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#4ad8c8]/10"], [class~="bg-[#4ad8c8]/20"], [class~="bg-[#45e0c9]/20"], [class~="bg-[#38bdf8]/20"]) {
   background-color: color-mix(in srgb, var(--m-gold) 20%, transparent);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#f5b73d]/5"], [class~="bg-[#f5b73d]/10"], [class~="bg-[#f5b73d]/15"], [class~="bg-[#f5b73d]/20"], [class~="bg-[#f5b73d]/25"], [class~="bg-[#f5b73d]/30"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-[#f5b73d]/5"], [class~="bg-[#f5b73d]/10"], [class~="bg-[#f5b73d]/15"], [class~="bg-[#f5b73d]/20"], [class~="bg-[#f5b73d]/25"], [class~="bg-[#f5b73d]/30"]),
@@ -750,73 +314,12 @@
 }/* =============================================================================================
  * 5. The theme accent and the named signal colours
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"] {
   background-color: var(--m-gold);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent/5"], [class~="bg-accent/10"], [class~="bg-accent/15"], [class~="bg-accent/20"], [class~="bg-accent/30"], [class~="bg-accent/40"], [class~="bg-accent/50"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent/5"], [class~="bg-accent/10"], [class~="bg-accent/15"], [class~="bg-accent/20"], [class~="bg-accent/30"], [class~="bg-accent/40"], [class~="bg-accent/50"]),
@@ -876,73 +379,12 @@
   background-color: color-mix(in srgb, var(--m-gold) 20%, transparent);
 }/* A "white" block in the masterclass grids is the *hit* step: it becomes the module accent rather
    than ink, so the knocked-out label on it stays readable on every skin. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class~="bg-white"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-white"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="bg-white"] {
   background-color: var(--m-gold);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="bg-white/"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-white/"],
@@ -973,73 +415,12 @@
  * palette. The few *coloured* gradients (the CTA buttons, the masterclass step fills) keep their
  * meaning by becoming the accent/signal tone instead.
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-"] {
   background-image: none;
   background-color: var(--m-card);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="bg-[radial-gradient"],
@@ -1069,73 +450,12 @@
  * =========================================================================================== */
 /* Primary ink. On the comic sheet this is the difference between a page and a blank page: every
    `text-white` / `text-[#eae6dc]` in the desktop markup would otherwise be invisible on newsprint. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-[#eae6dc]"]) {
   color: var(--m-ink);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="text-text-sub"], [class~="text-zinc-400"], [class~="text-zinc-500"], [class~="text-zinc-600"], [class~="text-zinc-700"], [class~="text-[#d8b988]"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text-sub"], [class~="text-zinc-400"], [class~="text-zinc-500"], [class~="text-zinc-600"], [class~="text-zinc-700"], [class~="text-[#d8b988]"]),
@@ -1163,73 +483,12 @@
   color: var(--m-gold);
 }/* Knocked-out labels sit on an accent fill, so they take the skin's on-accent tone, never `--m-ink`
    (which is near-black on the comic sheet and near-white on the two dark skins). */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="text-black"], [class~="text-zinc-950"]) {
   color: var(--m-on-gold);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="text-[#4ad8c8]"], [class~="text-[#45e0c9]"], [class~="text-[#38bdf8]"], [class~="text-blue-400"], [class~="text-cyan-300"], [class~="text-cyan-400"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-[#4ad8c8]"], [class~="text-[#45e0c9]"], [class~="text-[#38bdf8]"], [class~="text-blue-400"], [class~="text-cyan-300"], [class~="text-cyan-400"]),
@@ -1263,66 +522,6 @@
    the fill may be the labelled element itself (a `<button class="bg-accent text-black">`) or an
    ancestor (a dim `<span class="text-zinc-400">` note name inside an active piano key), and both
    have to resolve to `--m-on-gold` — otherwise the comic skin prints near-black on near-black. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]):is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]),
@@ -1334,79 +533,17 @@
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]) :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]) :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]) :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]) :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent"], [class~="bg-[#f5b73d]"], [class~="bg-[#4ad8c8]"], [class~="bg-[#45e0c9]"], [class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#ffc65c]"], [class~="bg-[#ffc24b]"], [class~="bg-[#ffc95c]"], [class~="bg-[#ffc657]"], [class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-600/90"], [class~="bg-rose-500"], [class~="bg-[#d47fa6]"], [class~="bg-white"]) :is([class~="text-text"], [class~="text-white"], [class~="text-black"], [class~="text-zinc-200"], [class~="text-zinc-300"], [class~="text-zinc-400"], [class~="text-zinc-950"], [class~="text-text-sub"], [class~="text-text-dim"], [class~="text-[#eae6dc]"]) {
   color: var(--m-on-gold);
 }/* =============================================================================================
  * 8. Borders and row rules
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class~="border-line"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="border-line"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="border-line"] {
   border-color: var(--m-line);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="border-line/"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-line/"],
@@ -1423,73 +560,12 @@
 :root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class~="border-line-strong"] {
   border-color: var(--m-line-2);
 }/* The literal structural borders first, then the accent ones on top of them. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class*="border-[#"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="border-[#"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="border-[#"] {
   border-color: var(--m-line);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class*="border-[#4ad8c8]"], [class*="border-[#45e0c9]"], [class*="border-[#38bdf8]"], [class*="border-cyan-"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class*="border-[#4ad8c8]"], [class*="border-[#45e0c9]"], [class*="border-[#38bdf8]"], [class*="border-cyan-"]),
@@ -1541,144 +617,22 @@
 :root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="border-emerald-"] {
   border-color: var(--m-green);
 }/* Tailwind's `divide-*` colours the *children's* border, so the override has to name the child. */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="divide-line"] > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--m-line);
 }/* =============================================================================================
  * 9. Inputs and selects — a dropdown must not stay desktop-dark on newsprint
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is(select, input, textarea)[class] {
   background-color: var(--m-card);
   color: var(--m-ink);
   border-color: var(--m-line-2);
@@ -1746,73 +700,12 @@
  * `--tw-shadow`. Overriding the variable instead of the property recolours the glow in the skin's
  * accent *without* wiping a `ring-*` on the same control, which a `box-shadow: none` would.
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"],
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"] 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0"] {
   --tw-shadow: 0 0 10px color-mix(in srgb, var(--m-gold) 45%, transparent);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class*="ring-accent"], [class*="ring-[#f5b73d]"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class*="ring-accent"], [class*="ring-[#f5b73d]"]),
@@ -1842,94 +735,27 @@
  * the cheapest way to make the panels read as the skin's own surfaces. `rounded-full` survives on
  * comic and soviet because both draw circular status lamps and pills; pixel squares everything.
  * =========================================================================================== */
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="rounded-3xl"], [class~="rounded-2xl"]) 
-{
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="rounded-3xl"], [class~="rounded-2xl"]) {
   border-radius: 4px;
-}
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="rounded-xl"], [class~="rounded-lg"], [class~="rounded-md"], [class~="rounded"], [class~="rounded-sm"]) {
+}:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([class~="rounded-xl"], [class~="rounded-lg"], [class~="rounded-md"], [class~="rounded"], [class~="rounded-sm"]) {
   border-radius: 3px;
-}
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="rounded-full"] {
+}:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="rounded-full"] {
   border-radius: 50%;
-}
-:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class*="rounded-"] {
+}:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class*="rounded-"] {
   border-radius: 0;
-}
-:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="rounded-full"] {
+}:root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] [class~="rounded-full"] {
   border-radius: 50%;
-}
-:root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class*="rounded-"] {
+}:root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [class*="rounded-"] {
   border-radius: 0;
 }/* =============================================================================================
  * 12. Selection and scrollbars — cheap, and the last places the browser's default scheme showed
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] ::selection,
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] ::selection,
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] ::selection,
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] ::selection,
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] ::selection,
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] ::selection 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] ::selection {
   background-color: var(--m-gold);
   color: var(--m-on-gold);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] ::-webkit-scrollbar,
@@ -1957,73 +783,12 @@
  * known pair of hexes, so both states are enumerated. The `<canvas>` visualisers in 底鼓设计 have no
  * such seam — they paint pixels in JS — and stay the one genuine exception.
  * =========================================================================================== */
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="minimal"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="comic"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="soviet"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="sovietYears"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="pixel"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="default"] 
-:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
 :root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
 :root[data-skin="soviet"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
 :root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]),
-:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]) 
-{
+:root[data-skin="default"] .mobile-root [data-legacy="desktop"] :is([stroke="#222530"], [stroke="#323746"]) {
   stroke: var(--m-line);
 }:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [stroke="#f5b73d"],
 :root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [stroke="#f5b73d"],
@@ -2095,4 +860,543 @@
 :root[data-skin="pixel"] .mobile-root [data-legacy="desktop"] [stop-color="#45e0c9"],
 :root[data-skin="default"] .mobile-root [data-legacy="desktop"] [stop-color="#45e0c9"] {
   stop-color: var(--m-gold);
+}
+
+/*
+ * ---------------------------------------------------------------------------------------------
+ * minimal: the palette pass for 挑战/探索 (appended by the merger)
+ *
+ * The fragment below comes from the minimal skin's own review of the reused desktop views. It is
+ * appended **at the end of this sheet on purpose**: several of its rules tie the palette mappings above
+ * on specificity and win by source order. Kept as a separate section so the skin has one place to read
+ * its legacy-view treatment rather than rules scattered through the shared block.
+ * ---------------------------------------------------------------------------------------------
+ */
+/**
+ * Skin: "minimal" — extra rules for 探索's reused desktop views.
+ *
+ * Staged for the merger. These are the minimal-only refinements of the palette mapping that
+ * `skins/legacySkin.css` already applies inside `[data-legacy="desktop"]`. **Append this file after the
+ * existing `minimal` block (at the end of `legacySkin.css`): most of the rules below have the same
+ * specificity as the shared mapping and win by order.**
+ *
+ * What it changes, and why
+ * ------------------------
+ * The shared sheet resolves the desktop's literals through the skin's tokens — the right call — but in
+ * doing so it keeps three *other hues* alive in 探索: the `emerald` family lands on `--m-green`, the red
+ * family on `--m-red`, and `#d47fa6` on `--m-violet`. That is correct for the dark instrument-panel
+ * skins, and wrong for this one, whose 探索 palette is paper, ink, a hairline and exactly one teal accent
+ * (`#0d6a63`). At 390px the visible result was four hues of chip in one grid (a red POWER heading, a green
+ * audition/voicing chip, a violet EXTENDED heading), a red YouTube block, and a blurred accent blob
+ * washing the top of the kick lab so that the "KICK DESIGN" bar read as a *blue panel* on a page that is
+ * not supposed to have colour at all.
+ *
+ * So: the haze goes, the glows and the CRT texture go, and every decorative hue that is not the accent
+ * collapses onto either the accent or ink. Nothing here adds a colour, and nothing here changes geometry
+ * — the rules touch background, border-colour, box-shadow, filter, opacity and two Tailwind custom
+ * properties only.
+ *
+ * Red is the one judgement call: the desktop's reds in these three views are a chord-family *label*, the
+ * transport's stop state, a hover-only delete button and a YouTube brand block — none of them an error
+ * state that has to survive. The chord view's red/pink labels become quiet ink meta text; its red/pink
+ * *selected* chips become the same accent fill the teal ones already are; the kick lab's red block
+ * becomes an ink plate.
+ */
+
+/* -------------------------------------------------------------------------------------------------
+ * 1. The decorative haze. Each of the three views paints an `absolute … rounded-full blur-3xl` accent
+ *    blob behind its header; the kick lab's is the pale "KICK DESIGN" panel the user reported. The
+ *    shared sheet recolours the blob to the accent but cannot remove it, and a 64px-blurred wash is a
+ *    gradient by another name — the one thing this skin does not paint.
+ * ----------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="blur-3xl"] {
+  background-color: transparent;
+  background-image: none;
+  filter: none;
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 2. The CRT texture. The oscilloscope lays a dark radial vignette plus inline dark scanlines over its
+ *    canvas at 20% opacity. The canvas itself is already this skin's paper (it reads `--m-bg`), so the
+ *    overlay is only a grey film over a clean instrument drawing. The image is an inline style a
+ *    stylesheet cannot reach; its opacity is the hook that can, and zeroing it is also the honest
+ *    answer — this skin has no texture.
+ * ----------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="bg-[radial-gradient"] {
+  opacity: 0;
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 3. Shadows and glows. The panels float on `shadow-lg` / `shadow-2xl` and the accent chips carry
+ *    `shadow-[0_0_8px_…#f5b73d]`, which the shared sheet re-answers as an *accent glow*. This skin
+ *    allows a shadow on exactly two plates (the player bar and the jam dock) and a glow on nothing; the
+ *    reused views are neither, and their surfaces are already held by hairlines. Only the shadow custom
+ *    property is reset, so a Tailwind `ring-*` on the same element still paints.
+ * ----------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="shadow"] {
+  --tw-shadow: 0 0 #0000;
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 4. The chord view's family hues. The desktop tints each chord-quality family a different colour —
+ *    POWER red, triads/7ths teal, EXTENDED pink — in both the label and the selected chip. On paper
+ *    that is four accents inside one grid, and two of them (red, pink) are hues this skin does not
+ *    have. The labels become the skin's quiet meta ink; the chips become the one accent, which is the
+ *    same fill `bg-[#4ad8c8]` already resolves to, so "selected" reads as *this one* and never as
+ *    *this family's colour*. Scoped to the chords wrapper, where those literals live.
+ * ----------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"] :is([class~="text-[#e84855]"], [class~="text-[#d47fa6]"]) {
+  color: var(--m-ink-2);
+}
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"] :is([class~="bg-[#e84855]"], [class~="bg-[#ff5566]"], [class~="bg-[#d47fa6]"]) {
+  background-color: var(--m-gold);
+}
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-chords-legacy"] :is([class~="border-[#ff5566]"], [class~="border-[#d47fa6]"]) {
+  border-color: var(--m-gold);
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 5. The second green. Every `emerald` in the reused views is a success/active decoration — the
+ *    audition button, a selected voicing card, the "voices" count chip, the kick lab's "BUS ACTIVE"
+ *    readout, the masterclass accuracy figure. `--m-green` is this skin's "right answer" tone and 挑战
+ *    needs it to itself; in 探索 a green a few degrees off the teal accent only muddies the accent.
+ *    Collapsed onto the accent — solid fills, tints, borders and text alike.
+ * ----------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-emerald-400"], [class~="bg-emerald-500"]) {
+  background-color: var(--m-gold);
+}
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="bg-emerald-400/20"], [class~="bg-emerald-500/10"], [class~="bg-emerald-500/20"]) {
+  background-color: color-mix(in srgb, var(--m-gold) 12%, transparent);
+}
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] [class*="border-emerald-"] {
+  border-color: var(--m-gold);
+}
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="text-emerald-300"], [class~="text-emerald-400"], [class~="text-green-400"]) {
+  color: var(--m-gold);
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 6. The kick lab's one red block is a YouTube brand link, not a warning. Left as red it is the only
+ *    non-accent hue left on the page and reads as an error state beside the teal chrome; it becomes the
+ *    skin's ink plate, with the shared sheet's on-fill rule already supplying `--m-on-gold` text.
+ * ----------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"][data-testid="mobile-explore-kick-legacy"] :is([class~="bg-red-600"], [class~="bg-red-600/90"]) {
+  background-color: var(--m-ink);
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * 7. The per-parameter hues. `SomaticControls` colours two of its macros by parameter identity (grit
+ *    red, rumble violet) and the sequencer's feel icon is red as well; the shared sheet carries each to
+ *    `--m-red` / `--m-violet`. This skin's red is the "wrong answer" tone and violet does not exist in
+ *    it, and none of these is a state — the value is always printed next to the label — so here they are
+ *    the accent, like every other instrument readout in these views. With this rule, a sweep of every
+ *    painted colour in the three sub-pages at 390px finds no saturated hue other than the accent.
+ * ----------------------------------------------------------------------------------------------- */
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class~="text-red-400"], [class~="text-rose-400"], [class~="text-purple-400"]) {
+  color: var(--m-gold);
+}
+:root[data-skin="minimal"] .mobile-root [data-legacy="desktop"] :is([class*="accent-red-"], [class*="accent-rose-"], [class*="accent-purple-"]) {
+  accent-color: var(--m-gold);
+}
+
+/*
+ * ---------------------------------------------------------------------------------------------
+ * comic: the palette pass for 挑战/探索 (appended by the merger)
+ *
+ * The fragment below comes from the comic skin's own review of the reused desktop views. It is
+ * appended **at the end of this sheet on purpose**: several of its rules tie the palette mappings above
+ * on specificity and win by source order. Kept as a separate section so the skin has one place to read
+ * its legacy-view treatment rather than rules scattered through the shared block.
+ * ---------------------------------------------------------------------------------------------
+ */
+/*
+ * Comic (复古漫画) — the paint pass over the reused desktop views in 探索.
+ *
+ * Why
+ * ---
+ * The user's bug: "探索模块里配色也是，和皮肤不是很搭，有点违和". The palette mappings already in
+ * `legacySkin.css` put the *right colours* on the desktop markup (newsprint `--m-bg` / `--m-card`,
+ * the 探索 process ink as `--m-gold`, shell signals for red/green), but they stop there: the result
+ * was a thin-outlined, flat, soft-shadowed "wireframe" page that shares no *language* with the phone
+ * side. Three things specifically did not read as this skin:
+ *
+ *   1. the accent chips were **translucent films** (`color-mix(… 20%, transparent)`), so the newsprint
+ *      showed through a green wash — a screen surface, where a press prints an opaque dot screen;
+ *   2. the "raised" surfaces had **soft glows** (`shadow-[0_0_12px_rgba(245,183,61,…)]`, `blur-3xl`
+ *      discs) — this skin has no blur anywhere, it has a hard block of ink offset behind a plate;
+ *   3. nothing was **inked**: no 1px ink keyline, no black outline, no Ben-Day texture, so the three
+ *      pages looked like a different application with the comic's colours borrowed.
+ *
+ * What this fragment does (paint only, no geometry):
+ *   - newsprint screen on the page ground, and the same Ben-Day screen the phone's paper cards carry
+ *     (7px pitch, ink) on every panel surface;
+ *   - an ink keyline (`box-shadow: 0 0 0 1px`, the technique `comic.css` uses so no box is resized)
+ *     plus a hard offset ink block on the card surfaces;
+ *   - translucent accent films become an opaque `--m-card-2` sticker with a green Ben-Day dot screen;
+ *   - the *engaged* chips (a selected lesson, a selected kick layer, an accent headline pill) print
+ *     the skin's engaged plate — `#ffe600` with `#111014` type — exactly like 挑战's difficulty chips
+ *     and 探索's own sub-tab strip, so all three surfaces share one grammar;
+ *   - every soft glow becomes an ink keyline, and a rounded control also gets its hard block;
+ *   - the two decorative `blur-3xl` discs become hard-edged misregistration plate wedges (cyan and
+ *     magenta), which is the skin's signature and the reason those discs existed at all;
+ *   - the desktop's `font-serif` captions take the skin's hand.
+ *
+ * Rules obeyed: no `!important`, no `url()`, no `@font-face`/`@import`, and no geometry — every
+ * declaration here is colour, background, border-colour, box-shadow, filter, opacity or font.
+ * Nothing is positioned, so nothing needs `pointer-events`. Append this after the palette mappings
+ * so an equal-specificity rule of ours wins the tie.
+ */
+
+/* -------------------------------------------------------------------------------------------
+ * 1. The sheet: newsprint on the page ground, Ben-Day on every panel
+ * ----------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"][data-testid] {
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.09) 1.05px, transparent 1.3px);
+  background-size: 9px 9px;
+  color-scheme: light;
+}
+/* The theme panels and the raised surface class the masterclass children use. */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="bg-panel"],
+    [class~="bg-panel2"],
+    [class~="bg-surface"],
+    [class*="bg-surface/"],
+    [class*="bg-gradient-to-"]
+  ) {
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.075) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+}
+/* The literal desktop grounds, which the palette layer collapses onto the skin's two surfaces. */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class*="bg-[#0"],
+    [class*="bg-[#1"],
+    [class*="bg-[#2"]
+  ) {
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.075) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+}
+
+/* -------------------------------------------------------------------------------------------
+ * 2. Ink outlines and the hard block: the cards read as panels, not as divs
+ *
+ * The edge is a 1px ink ring painted by `box-shadow` (never a border-width), so no measured box
+ * changes size. Only the card-sized radii get the offset block; the smaller controls get the ring,
+ * because 3px of offset on every pill in a dense desktop grid is the damage this subtree was
+ * originally withdrawn from.
+ * ----------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="rounded-2xl"],
+    [class~="rounded-3xl"]
+  ):is(
+    [class~="bg-panel"],
+    [class~="bg-panel2"],
+    [class~="bg-surface"],
+    [class*="bg-surface/"],
+    [class*="bg-[#0"],
+    [class*="bg-[#1"],
+    [class*="bg-[#2"],
+    [class*="bg-gradient-to-"]
+  ) {
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="bg-panel"],
+    [class~="bg-panel2"],
+    [class~="bg-surface"],
+    [class*="bg-surface/"]
+  ) {
+  border-color: var(--m-ink);
+}
+
+/* -------------------------------------------------------------------------------------------
+ * 3. The glows go
+ *
+ * Every `shadow-[0_0_…]` in these views is a coloured bloom. A press has no bloom: the same
+ * emphasis is a keyline, and on a rounded control a solid block of ink behind it.
+ * ----------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0_"] {
+  box-shadow: 0 0 0 1px var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0_"]:is(
+    [class~="rounded"],
+    [class~="rounded-lg"],
+    [class~="rounded-xl"],
+    [class~="rounded-2xl"],
+    [class~="rounded-3xl"]
+  ) {
+  box-shadow: 0 0 0 1px var(--m-ink), 2px 2px 0 var(--m-ink);
+}
+/* The two coloured drop-shadows the views use as elevation (`shadow-[#f5b73d]`). */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class*="shadow-[#f5b73d]"] {
+  box-shadow: 0 0 0 1px var(--m-ink), 2px 2px 0 var(--m-ink);
+}
+/* Named elevation on anything the panel pass above did not already reach. */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="shadow-lg"],
+    [class~="shadow-xl"],
+    [class~="shadow-2xl"]
+  ) {
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
+}
+
+/* -------------------------------------------------------------------------------------------
+ * 4. The decorative blurs become plate wedges
+ *
+ * These three discs are the only `blur-3xl` in the subtree and they are decoration inside an
+ * `overflow-hidden` hero, so turning the blur off and printing a hard diagonal seam turns a screen
+ * glow into the cyan/magenta plates of the skin's misregistration trick. The disc must lose its own
+ * fill first — the palette layer gives it a raised surface, and an opaque disc under a wedge reads
+ * as a haze rather than as a plate.
+ * ----------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="blur-3xl"][class~="rounded-full"] {
+  filter: none;
+  opacity: 1;
+  background-color: transparent;
+  background-image: linear-gradient(135deg, rgb(0 229 255 / 0.2) 0 55%, transparent 55%);
+}
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="blur-3xl"][class~="rounded-full"]:is(
+    [class*="bg-[#4ad8c8]"],
+    [class*="bg-[#f5b73d]"]
+  ) {
+  background-image: linear-gradient(135deg, rgb(255 45 149 / 0.18) 0 55%, transparent 55%);
+}
+
+/* -------------------------------------------------------------------------------------------
+ * 5. Printed stickers: an opaque surface with a Ben-Day screen instead of a translucent film
+ *
+ * The palette layer renders the faint accent fills as `color-mix(…, transparent)`, which lets the
+ * newsprint show through a green wash. These become `--m-card-2` (the skin's "second hit" surface)
+ * carrying the module ink as a dot screen, with the ink keyline of a pasted sticker. The decorative
+ * discs of §4 carry one of these classes too and are excluded: they are a plate, not a sticker.
+ * ----------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="bg-accent/10"],
+    [class~="bg-[#4ad8c8]/10"],
+    [class~="bg-[#4ad8c8]/20"],
+    [class~="bg-[#45e0c9]/20"],
+    [class~="bg-[#38bdf8]/20"],
+    [class~="bg-[#f5b73d]/5"],
+    [class~="bg-[#f5b73d]/10"]
+  ):not([class~="blur-3xl"]) {
+  background-color: var(--m-card-2);
+  background-image: radial-gradient(circle at 1px 1px, rgb(var(--m-gold-rgb) / 0.5) 1.2px, transparent 1.5px);
+  background-size: 5px 5px;
+  box-shadow: 0 0 0 1px var(--m-ink);
+}
+/* The solid accent fills keep their flat plate, but they are printed plates, so they get the ink
+   keyline and the block behind them rather than the desktop's soft elevation. */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="bg-accent"],
+    [class~="bg-[#f5b73d]"]
+  ) {
+  color: var(--m-on-gold);
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
+}
+
+/* -------------------------------------------------------------------------------------------
+ * 6. The engaged plate
+ *
+ * The same `#ffe600` plate with knocked-out `#111014` type that 挑战's difficulty chips and 探索's
+ * sub-tab strip print. It lands on the three places the desktop marks "this is the one": the
+ * selected lesson in 律动解构, the selected layer in 底鼓设计, and the accent headline pills that
+ * open the two hero panels.
+ * ----------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="bg-accent/15"],
+    [class~="bg-accent/20"],
+    [class~="bg-[#f5b73d]/15"],
+    [class~="bg-[#f5b73d]/20"]
+  ) {
+  background-color: #ffe600;
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.15) 1.1px, transparent 1.4px);
+  background-size: 6px 6px;
+  border-color: var(--m-ink);
+  color: var(--m-ink);
+  box-shadow: 0 0 0 1px var(--m-ink), 2px 2px 0 var(--m-ink);
+}
+/* The unselected halves of those same segmented controls are printed keys: paper with an ink edge. */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] :is(
+    [class~="border-line/40"],
+    [class~="border-line/30"]
+  ) {
+  border-color: var(--m-ink);
+}
+
+/* -------------------------------------------------------------------------------------------
+ * 7. The desktop's serif captions are lettered, not typeset
+ * ----------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-legacy="desktop"] [class~="font-serif"] {
+  font-family: inherit;
+}
+
+/*
+ * ---------------------------------------------------------------------------------------------
+ * sovietYears: the palette pass for 挑战/探索 (appended by the merger)
+ *
+ * The fragment below comes from the sovietYears skin's own review of the reused desktop views. It is
+ * appended **at the end of this sheet on purpose**: several of its rules tie the palette mappings above
+ * on specificity and win by source order. Kept as a separate section so the skin has one place to read
+ * its legacy-view treatment rather than rules scattered through the shared block.
+ * ---------------------------------------------------------------------------------------------
+ */
+/*
+ * sovietYears — the reused desktop views in 探索 (和弦走向 / 底鼓设计 / 律动解构).
+ *
+ * WHAT THIS IS, AND WHY IT IS A FRAGMENT
+ * --------------------------------------
+ * The user's third complaint was "探索和挑战里头配色不符合这个皮肤配色". The phone DOM of 探索 (the
+ * switcher) and all of 挑战 are handled in `src/mobile/skins/sovietYears.css`; this file is the part
+ * that can only live in `legacySkin.css`, because the three sub-pages are the *desktop* components rendered
+ * inside `[data-legacy="desktop"]` and that shared sheet is the one that reskins them.
+ *
+ * The shared sheet already maps the desktop's **roles** onto every skin's tokens (`bg-panel` →
+ * `--m-card`, `text-text-sub` → `--m-ink-2`, the amber/teal instrument literals → `--m-gold`) — that is why
+ * these views are already paper rather than desktop-dark. What it cannot express is what *this* palette
+ * does with those roles, because one rule has to serve six skins. So every rule below is either a token
+ * re-point (one line, all of the desktop's structural hairlines) or the poster's own treatment of a role
+ * the desktop names.
+ *
+ * THE FIVE CHANGES, AND THE REASON FOR EACH
+ * -----------------------------------------
+ *  1. **Hairlines become ink.** `--m-line` / `--m-line-2` are re-pointed to `#111111` *inside this
+ *     subtree only*. Every structural line the views draw (`border-line`, `border-line/30`,
+ *     `border-line-strong`, `border-white/5`, `border-[#1f2533]`, `divide-*`) resolves through those two
+ *     tokens, so one line re-inks all of them, and the lines that carry *instrument* colour
+ *     (`border-[#4ad8c8]`, `border-emerald-*`, `border-accent`) keep their own mapping untouched. On this
+ *     skin a drawing has no soft edges: `--m-line` #C9C3AD on #ECE7D6 paper is 1.35:1, which is a smear,
+ *     not a rule. (`--m-line-2` also paints the scrollbar thumb here; ink is the right thumb on paper.)
+ *  2. **The wells become well paper.** `--lv-well` — what `bg-white/5`, `bg-white/10`, `bg-black/30`,
+ *     `bg-black/40` and `bg-black/60` all resolve to — was a 6% ink tint over the page. Re-pointed at
+ *     `#DED7BF`, the skin's own recessed well paper: the chips, the piano's black keys and the kick lab's
+ *     readout wells are now the same recessed paper the phone uses, and the ink that sits on them
+ *     (`--m-ink-2` #3D3A33 at 9.1:1, the module's bronze #7A4F00 at 5.8:1) is legible on it.
+ *     `--lv-screen` is deliberately **left** as the skin's ink `#111111`: those plates are the kick lab's
+ *     oscilloscope, waterfall and sequencer *screens*, the one place on this skin where a near-black
+ *     ground is the honest depiction rather than a slab, and the traces over them are painted in JS.
+ *  3. **The accent is split by role, which is how the rest of the skin already works.** The shared sheet
+ *     sends both the desktop's amber (#f5b73d, the *instrument* colour) and its theme `accent` (the
+ *     *action* colour) to `--m-gold` — the module's dark medal gold #7A4F00. Gold stays the instrument
+ *     (chord tones, kick layers, the oscilloscope trace, the groove lessons' metal); **`accent` becomes
+ *     the flag red `#CC0000`** — 和弦走向's Play, 底鼓设计's INITIATE PULSE, the selected timbre/style keys,
+ *     the pressed piano key — which is the same red the phone's own 探索 switcher and its frame are
+ *     painted in `sovietYears.css` section 11. Paper on that red is 5.19:1, and this skin's
+ *     `--m-on-gold` (which the shared sheet already puts on every knocked-out label) *is* paper, so the
+ *     labels on those keys come out right without another rule.
+ *  4. **The soft edges become paste-up edges.** The panels carry Tailwind's `shadow-lg`/`shadow-xl`
+ *     (25–50 px blurs) and the accented buttons carry `shadow-[0_0_15px_rgba(245,183,61,…)]` amber halos
+ *     — the desktop's glow language. Both become a zero-blur ink plate, on the roles the desktop names:
+ *     `bg-panel` / `bg-panel2` (the lesson and chord panels) and the chord view's two card literals
+ *     (`bg-[#10141e]`, `bg-[#0a0d14]`), so the view reads as a stack of sheets pasted onto the poster.
+ *     The two decorative corner glows (`blur-3xl` circles) paint nothing at all: this poster has no
+ *     glow, and they are `pointer-events-none` decoration with no content.
+ *  5. **The header gets the poster's band.** Each view's hero card takes a 4 px flag-red rule along its
+ *     top edge (a `background-image`, so it can cover no text), and `h1` / `h2` take a red plate offset
+ *     (`text-shadow`) — the same "printed twice, slightly off" headline the phone's own titles get. No
+ *     `font-size`, `letter-spacing` or `text-transform` is touched: those would re-wrap these dense
+ *     desktop headers and are the layout's business, not a paint pass's.
+ *
+ * RULES OF ENGAGEMENT (the same gate the skins live under)
+ * -------------------------------------------------------
+ * Every selector is scoped `:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] …`, so
+ * nothing here can apply on the desktop app, on another skin, or outside 探索. No `!important`, no
+ * `url(`, no `@font-face` / `@import`, and **no geometry**: no `width`/`height`/`padding`/`margin`/`gap`/
+ * `display`/`order`/`visibility`, so the phone layout of these reused views cannot move. Colour,
+ * background, border-colour, box-shadow, filter and text-shadow only. There is no `position` rule here,
+ * so the click-through pairing does not arise. `box-shadow` replaces Tailwind's shadows on named roles
+ * only — never on the views' 60-odd chips, where a shadow each would be noise rather than structure.
+ */
+
+/* ---------------------------------------------------------------------------------------------
+ * 1. The wrapper: this skin's inks on this subtree, and the two tokens everything else flows from.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"][data-testid^="mobile-explore-"] {
+  --lv-well: #ded7bf;
+  --lv-screen: #111111;
+  --m-line: #111111;
+  --m-line-2: #111111;
+  background-color: var(--m-bg);
+  color: var(--m-ink);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 2. The desktop's glows: a blurred accent circle is not a symbol, it is a soft edge. These two
+ *    layers per view are `pointer-events-none` decoration with no children, and on this poster they
+ *    paint nothing. (`filter: none` first, so the element cannot survive as a hard-edged disc either.)
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="blur-"] {
+  filter: none;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 3. The accented keys' amber halos (`shadow-[0_0_15px_rgba(245,183,61,…)]`) — the one soft shadow
+ *    the desktop puts on a control — become the poster's hard plate.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="shadow-[0_0_"] {
+  box-shadow: 4px 4px 0 #111111;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 4. The panel roles: soft `shadow-lg` / `shadow-xl` → a hard, zero-blur ink plate. Named roles only
+ *    (`bg-panel`, `bg-panel2`, and 和弦走向's two card literals), so the views' small chips keep their
+ *    flat surfaces instead of growing 60 little shadows.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-panel"],
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-panel2"],
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-[#10141e]"],
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-[#0a0d14]"] {
+  box-shadow: 8px 8px 0 #111111;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 5. The action accent: flag red, with paper lettering (the shared sheet already knocks the labels
+ *    out of an accent fill with `--m-on-gold`, which this skin sets to paper: 5.19:1). The fills,
+ *    the tints, the borders, the focus ring and the native form controls all move together, so a
+ *    selected chip and the key that selected it are the same red.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class~="bg-accent"] {
+  background-color: #cc0000;
+}
+/* The tints keep a *gradient of strength* rather than collapsing to one value: a `/5` wash on a whole
+ * hero card and a `/50` chip are different marks, and flattening them to 14% painted the masterclass
+ * hero as a slab of pink. Three steps is as fine as this needs to be. */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent/5"], [class~="bg-accent/10"], [class~="bg-accent/15"]) {
+  background-color: rgba(204, 0, 0, 0.07);
+}
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent/20"], [class~="bg-accent/25"], [class~="bg-accent/30"]) {
+  background-color: rgba(204, 0, 0, 0.12);
+}
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="bg-accent/40"], [class~="bg-accent/50"], [class~="bg-accent/60"]) {
+  background-color: rgba(204, 0, 0, 0.18);
+}
+/* As a *word* on paper the flag red is 4.8:1 on `--m-card`, which passes but is the floor; the
+ * deeper second-printing red (`--m-red`, 6.7:1) is what the shared sheet uses for text elsewhere, so
+ * accent *text* takes that and accent *fills* keep the flag. One hue, two tones, both by role. */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class~="text-accent"], [class~="text-accent/70"], [class~="text-accent/80"], [class~="text-accent/90"]) {
+  color: #9e0b22;
+}
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class*="border-accent"], [class~="ring-accent"], [class~="ring-accent/40"]) {
+  border-color: #cc0000;
+}
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is([class*="border-accent"], [class*="ring-accent"]) {
+  --tw-ring-color: #cc0000;
+}
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="accent-accent"] {
+  accent-color: #cc0000;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 6. The poster's headline band and plate offset. A `background-image` and a `text-shadow` are paint:
+ *    neither can move a box, wrap a line or cover a glyph, and the band is drawn inside the hero
+ *    card's own padding (the card is the view's header, and its first child is its badge).
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] [class*="bg-gradient-to-br"] {
+  background-image: linear-gradient(180deg, #cc0000 0 4px, transparent 4px);
+  background-repeat: no-repeat;
+  background-size: 100% 4px;
+}
+:root[data-skin="sovietYears"] .mobile-root [data-legacy="desktop"] :is(h1, h2) {
+  text-shadow: 2px 2px 0 rgba(204, 0, 0, 0.28);
 }

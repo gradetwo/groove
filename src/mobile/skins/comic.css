@@ -613,33 +613,166 @@
 }
 
 /* ---------------------------------------------------------------------------------------------
- * 8. Challenge
+ * 8. Challenge — the quiz page, printed
  *
- * The ladder bar becomes a flat ink bar; a right answer is a screaming yellow block (black on yellow
- * is the loudest thing a comic can print), a wrong one a magenta wash; the arena key is the hero —
- * yellow plate, ink ring, block shadow.
+ * The user's bug: "挑战里头配色有点违和". The screen was printing the module's ochre **ink**
+ * (`#7A5C00`) where a press prints the **plate** — the engaged difficulty chip, the rank bar, the
+ * verdict's genre link and the "next question" key were all a muddy brown that appears nowhere else
+ * in the skin, and the two graded options were a yellow field with a green ring (two signals
+ * fighting) and a magenta wash with red type (a colour that is in the palette but had no role).
+ *
+ * The fix keeps the shell's own semantics and this skin's kit, and invents nothing:
+ *
+ *   engaged / act   #FFE600 plate with `#111014` knocked-out type — the same yellow the masthead,
+ *                   the tempo readout and the arena key print, and the reason the module's ochre
+ *                   ink exists at all. Ink on yellow measures 14.9:1.
+ *   right           `--m-green` **printed as a solid plate** with paper type reversed out of it
+ *                   (5.8:1). A four-colour comic says "this one" with a flat spot block, not a
+ *                   tinted film.
+ *   wrong           the same, on `--m-red` (5.7:1 for paper type), but on a **coarser and denser
+ *                   dot screen** so the two plates differ by texture and not only by hue — the two
+ *                   tones are within 2% of each other in relative luminance, so hue alone would be
+ *                   the only greyscale-free signal.
+ *   rejected        the dim siblings are paper at `opacity-40`, so the two plates are the only
+ *                   saturated things on the page.
+ *
+ * Both graded plates also carry a paper *label*: the option's letter is knocked out of a small
+ * paper bar so the A/B/C/D and the ✓/✗ stay readable on a saturated ground, which is how a comic
+ * letters a caption box. The plate edge is the shell's 1px border plus a 1px ink ring and a 3px
+ * ink block shadow — paint, so no measured box changes size.
+ *
+ * Every rule is keyed on `data-testid` / `data-state` / `aria-selected` rather than on the literal
+ * Tailwind fills, because those are the hooks the component itself owns: pixel and 苏联岁月 re-key
+ * `bg-[rgba(90,212,142,0.08)]` and friends inside their own sheets, and a comic rule that matched
+ * the same class names would fight them for no reason.
  * ------------------------------------------------------------------------------------------- */
-:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(90,212,142,0.08)]"] {
+/* The engaged plate: the selected difficulty chip and the "next question" key. */
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-difficulty-"][aria-selected="true"] {
+  border-color: var(--m-ink);
   background-color: #ffe600;
-  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.12) 1.1px, transparent 1.35px);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.15) 1.1px, transparent 1.4px);
   background-size: 6px 6px;
+  color: var(--m-ink);
+  box-shadow: 0 0 0 1px var(--m-ink), 2px 2px 0 var(--m-ink);
 }
-:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(242,109,109,0.07)]"] {
-  background-color: rgb(255 45 149 / 0.22);
+/* The unselected chips are printed stickers: paper, ink edge, ink block. */
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-difficulty-"] {
+  border-color: var(--m-ink);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.09) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+  color: var(--m-ink-2);
 }
-:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(232,232,255,0.08)]"] {
-  background-color: rgb(17 16 20 / 0.14);
+/* The verdict's action key: the loudest plate on the page, and the one thing the thumb is aimed at
+   after a wrong answer (where the shell deliberately does not auto-advance). */
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-next"] {
+  background-color: #ffe600;
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.15) 1.1px, transparent 1.4px);
+  background-size: 6px 6px;
+  color: var(--m-ink);
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
 }
+/* The rank rail: an inked bar, not the module's ink-block gradient. */
 :root[data-skin="comic"] .mobile-root [class~="bg-[linear-gradient(90deg,var(--m-gold),var(--m-gold-hi))]"] {
   background-image: none;
-  background-color: var(--m-gold);
+  background-color: var(--m-ink);
 }
-:root[data-skin="comic"] .mobile-root [class~="rounded-full"][class~="h-20"][class~="border"] {
+:root[data-skin="comic"] .mobile-root [class~="bg-[rgba(232,232,255,0.08)]"] {
+  background-color: rgb(17 16 20 / 0.18);
+}
+/* The rank tier is a label, not an accent: it is lettered in ink and keeps the mono double rule
+   from §2 rather than being tinted with a process colour that then has nothing to say. */
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-ladder"] [class~="text-[var(--m-gold)]"] {
+  color: var(--m-ink);
+}
+/*
+ * The two graded plates.
+ *
+ * Solid `--m-green` / `--m-red` with paper type reversed out, an ink keyline and an ink block
+ * shadow. This is the one place in the shell where a saturated flat fill is right: a comic's
+ * "correct" is a spot plate, and it is unmistakable at a glance. The screens differ on purpose —
+ * a fine one on the green, a coarse one on the red — because the two process inks sit within 2% of
+ * each other in relative luminance, so the plate tone has to carry what the hue cannot.
+ */
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"] {
+  border-color: var(--m-green);
+  background-color: var(--m-green);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.14) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+  color: var(--m-on-gold);
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
+  /* The shell pulses a successful tile (a screen affordance); a printed plate does not breathe.
+     Removing it also keeps the tile from scaling under the automation's click. */
+  animation: none;
+}
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] {
+  border-color: var(--m-red);
+  background-color: var(--m-red);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.24) 1.35px, transparent 1.6px);
+  background-size: 5px 5px;
+  color: var(--m-on-gold);
+  box-shadow: 0 0 0 1px var(--m-ink), 3px 3px 0 var(--m-ink);
+  opacity: 1;
+}
+/*
+ * The caption strip: the letter and its ✓/✗ are knocked out of a paper bar so they never have to be
+ * read against the saturated plate. Green on the right, red on the wrong — the signal colour,
+ * printed as ink on paper, at 6.9:1 and 5.7:1.
+ */
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"] > span:first-child {
+  background-color: var(--m-on-gold);
+  box-shadow: 0 0 0 1px var(--m-ink);
+  color: var(--m-green);
+}
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] > span:first-child {
+  background-color: var(--m-on-gold);
+  box-shadow: 0 0 0 1px var(--m-ink);
+  color: var(--m-red);
+}
+/* The category · BPM line is dim ink on paper; on a plate it has to reverse too. */
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="right"] [class~="text-[var(--m-ink-2)]"],
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-challenge-option-"][data-state="wrong"] [class~="text-[var(--m-ink-2)]"] {
+  color: var(--m-on-gold);
+}
+/* The arena key: a yellow plate with an ink glyph, inked and blocked like every other printed key.
+   `[class~="rounded-full"]` is restated because §4's generic "a bordered chip is a sticker" rule is
+   one notch more specific than a bare `data-testid` and would square off this disc. */
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-play"][class~="rounded-full"] {
   border-radius: 50%;
   border-color: var(--m-ink);
   background-color: #ffe600;
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.15) 1.1px, transparent 1.4px);
+  background-size: 6px 6px;
   color: var(--m-ink);
   box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-ink);
+}
+/*
+ * The pinned verdict is a torn-off panel: paper, the shell's 2px outcome border, an ink keyline
+ * outside it and a hard block of the outcome's ink behind it.
+ */
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-verdict"] {
+  background-color: var(--m-card);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.075) 1px, transparent 1.25px);
+  background-size: 7px 7px;
+}
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-verdict"][data-outcome="right"] {
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-green);
+}
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-verdict"][data-outcome="wrong"] {
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-red);
+}
+/* The answer's name is marked with a yellow highlighter, the way a reader marks up a page — the
+   only place the old ochre link lived, and the module's plate rather than its ink. */
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-verdict-genre"] {
+  background-color: #ffe600;
+  color: var(--m-ink);
+  text-decoration-color: var(--m-ink);
+}
+/* The running ELO readout is a measurement, so it takes the instrument ink, not an accent. */
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-verdict"] [class~="text-[var(--m-gold-hi)]"] {
+  color: var(--m-ink-2);
+}
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-challenge-earned"] {
+  box-shadow: 0 0 0 1px var(--m-ink);
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -653,7 +786,34 @@
 }
 
 /* ---------------------------------------------------------------------------------------------
- * 10. The embedded desktop views opt out
+ * 10. Explore — the sub-page switcher
+ *
+ * 探索's own chrome is the only part of that module this skin file can reach: the three sub-pages
+ * below it are the reused desktop views and are inked by `legacySkin.css` (the comic fragment for
+ * which lives in `/tmp/skin-legacy-comic.css`). The switcher was a dark-green pill in a paper card:
+ * three surfaces, three languages. It becomes one printed panel with the engaged segment reversed
+ * out in the same yellow plate 挑战 uses, so the two modules share one grammar for "this is the
+ * one you are on" — and the module's green stays where it belongs, on the content's ink.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="comic"] .mobile-root [data-testid="mobile-explore"] [role="tablist"] {
+  background-color: var(--m-card);
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.09) 1.1px, transparent 1.35px);
+  background-size: 7px 7px;
+  box-shadow: 0 0 0 1px var(--m-ink), 4px 4px 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-explore-tab-"][aria-selected="true"] {
+  background-color: #ffe600;
+  background-image: radial-gradient(circle at 1px 1px, rgb(17 16 20 / 0.15) 1.1px, transparent 1.4px);
+  background-size: 6px 6px;
+  color: var(--m-ink);
+  box-shadow: 0 0 0 1px var(--m-ink), 2px 2px 0 var(--m-ink);
+}
+:root[data-skin="comic"] .mobile-root [data-testid^="mobile-explore-tab-"] {
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 11. The embedded desktop views opt out
  *
  * Explore mounts three desktop surfaces (chord workshop, kick lab, masterclass) on their own dark
  * plates. They are a different design system and a 2px ink rule on a dense desktop grid reads as

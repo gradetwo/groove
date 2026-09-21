@@ -1,27 +1,27 @@
 {
-  "version": "2.8.0",
+  "version": "2.9.0",
   "releaseDate": "2026-09-21",
-  "changelogCount": 196,
+  "changelogCount": 197,
   "latest": {
-    "version": "2.8.0",
+    "version": "2.9.0",
     "date": "2026-09-21",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.8.0 手机端第四轮：BPM 与实际一致、播放器不再高亮、探索去掉残留黄色、详情页有设计感、挑战反馈即时、耗时测试交给 GitHub CI 手动触发",
-      "en": "v2.8.0 The Phone, Fourth Pass: the Tempo You See Is the Tempo That Plays, a Quiet Transport, No Amber Left in 探索, a Designed Genre Page, Instant Challenge Feedback, and the Slow Checks on a Manual CI Switch"
+      "zh": "v2.9.0 播放器重影修掉、探索配色统一、底鼓可视化换肤、手机首屏不再下载曲风库、三套皮肤的挑战与探索重新配色、README 加图",
+      "en": "v2.9.0 The Player's Doubled Text, One Accent Across 探索, Skin-Aware Kick Visualisers, a Phone First Paint With No Library Chunks, Re-Tuned 挑战/探索 for Three Skins, and README Screenshots"
     },
     "highlights": [
       {
-        "zh": "**显示的 BPM 终于是真的**。你报的「修改后下一首歌会不一致」下面其实是三处各自独立的不一致，同一个根因：界面印的是**数据里的数字**，引擎播的是另一个。① 播放条一直显示 `genre.default_bpm`（一个常量），所以你搓过盘之后它错的就是你改动的量——现在它通过新的 `readTempo` 直接读引擎的 `getBpm()`，挂在驱动进度轨的同一个 5Hz 定时器上；② 全屏播放器的速度只在这一屏首次挂载时播种一次、之后再不复位，于是切歌后读数、阻尼器、引擎各说各话——现在 `genre.id` 一变就重新播种；③ 唱片的数字会从**上一首**的速度缓动过去，等于给音乐演了一段它并没有做的过渡——切歌时直接跳到新值（引擎是同拍切过去的），只有搓盘才缓动，因为搓盘本来就是缓动。",
-        "en": "**The displayed BPM is finally the real one.** The report — \"it disagrees after a change and on the next song\" — turned out to be three separate disagreements with one root cause: the UI printed a **number from the data** while the engine played another. (1) The player bar showed `genre.default_bpm`, a constant, so after a jog it was wrong by exactly the amount you had changed; it now reads the engine's own `getBpm()` through a new `readTempo`, on the same 5 Hz timer that dr…"
+        "zh": "**手机首屏不再下载整个曲风库**（这也是 GitHub CI 报的 `perf:check` 失败）。手机壳一直在 import `ALL_GENRES`，而那个数组是静态引入全部 14 个分类模块拼出来的——所以手机首屏其实会拉**全部 14 个分类分块**（4G + 4 倍 CPU 降速下 1061 KB），门禁只数 2.5 秒窗口内落地的请求，所以日志写「3」。现在手机用轻量索引 `GENRE_INDEX`（159 条的 id/名称/分类/年代/BPM，74 KB）浏览，只有真正需要 pattern 或文案时才 `loadGenre(id)` 取一条分类分块；`App` 里那个「默认曲风」也不再为手机路由加载（这里有个坑：路由会在首次提交时把 `/` 改写成 `/m/home`，所以那一刻 `shouldEnterPhoneShell` 回答「不是」，而屏幕上正是手机壳——判断必须问「手机壳是不是当前界面」，而不是「要不要切过去」）。实测桌面 1 块 / 1706.8 KB（工作台自己的默认曲风）、手机 **0 块**（原来 3 块 /…",
+        "en": "**The phone's first paint no longer downloads the library** — which is also the `perf:check` failure GitHub CI reported. The shell had always imported `ALL_GENRES`, an array built by statically importing all fourteen category modules, so a phone's first paint actually pulled **all 14 category chunks** (1061 KB on 4G + 4x CPU throttle); the gate only counts what lands inside its 2.5 s window, which is why the log said \"3\". The phone now browses the lightweight `GENRE_INDEX` (…"
       },
       {
-        "zh": "**播放器的按钮不再高亮**。移植时照搬了参考稿的「已启用」处理（强调色 + 小圆点），而你的意见是对的：**图形本身已经说明了这个键是什么**（循环箭头＝大曲风内循环、随机＝全部随机、清单＝曲目单），再加一层更响的颜色和圆点是在重复同一件事。五套皮肤都在画它（漫画的黄色印块、像素的强调色灯、苏联的压印板、苏联岁月的红色大键），大的播放键在三套皮肤里也是实心强调色——现在整条传输都是中性墨色，状态仍然通过 `aria-label`/`aria-expanded` 暴露给辅助技术，`.on` 类保留为钩子但没有任何规则去画它。顺带把播放条的底板改成**稳定的类名**（`m-player-bar-plate`）：漫画皮肤原本按字面工具类 `bg-[rgba(20,20,31,0.94)]` 匹配，我把 alpha 改成 `0.9` 的那天它静默失效，最小化播放条就变回深底压深字——你报的「黑不隆冬 看不清」，比任何门禁都早发现。命名钩子不会这样漂移。",
-        "en": "**The player's buttons no longer highlight.** The port copied the reference's \"engaged\" treatment (accent colour plus a pip), and your point is right: **the glyph already says what the button is** (a repeat arrow for repeat-this-genre, a shuffle for shuffle-all, a list for the track list), so the colour and the pip repeat the same thing louder. All five skins were painting it (a yellow print block in comic, an accent lamp in pixel, a stamped plate in soviet, a red key in sov…"
+        "zh": "**三套皮肤的「挑战」和「探索」重新配色**（你点名的那三处违和）。**漫画**：挑战原本在印刷黄该出现的地方印了赭色 ink（棕色难度片、棕色进度条、棕色链接、棕色 CTA）——现在难度选中片/「下一题」键/播放键/探索选中的子标签都用**印刷黄 + 墨字**（14.95:1），对错改成**实心网点版**（绿与红的相对亮度只差 2%，所以用不同网点密度 + ✓/✗ 说明条区分），墨色只做轮廓与正文；探索的复用桌面视图由附加片段把半透明强调膜换成不透明贴纸、发光换成墨色描边、三个 `blur-3xl` 色斑换成青/品红套印版块。**现代极简主义**：挑战原本一页上有四种颜色（绿、红、模块锈红、实心强调片）——现在只剩纸/墨/发丝线 + 一个强调色，绿红**只**出现在判定的选项与横幅上，选中态改成「墨色井 + 1px 强调描边」而不是实心填充，并移除了 `ring-2` 光晕、`pulse-glow` 呼吸与错误项的 `opacity-75`；探索复用视图里那些红/粉/绿/紫字面量与 `emerald` 全部收敛到一个强调色（三个子页的非配色色…",
+        "en": "**挑战 and 探索 were re-tuned for the three skins you named.** **Comic**: the challenge screen printed the ochre *ink* where a press prints the yellow *plate* (brown difficulty chip, brown rank bar, brown link, brown CTA) — the engaged difficulty chip, the next-question key, the play key and the selected 探索 sub-tab are the yellow plate with ink type now (14.95:1), right/wrong are **solid halftone plates** (the two inks are within 2 % relative luminance, so dot density plus the c…"
       },
       {
-        "zh": "**「极光冷色」探索里那点老黄色，清掉了**。皮肤层（探索里复用的桌面视图、以及「更多」背后那四个面板）之前**故意只覆盖五套有独立样式表的皮肤**——`default` 没有自己的样式表，它就是 `mobile.css` 的基础外观——所以默认皮肤下那两个位置仍然是桌面配色：这就是你看到的黄色残留。现在 `legacySkin.css` 覆盖全部六套，实测在「和弦走向」子页里**找不到任何琥珀色**，底色变成外壳自己的 `rgb(11,11,20)`。面板那一层保留 `default` 豁免（那几个面板本来就是桌面的深色组件，压在深色外壳上是协调的），并且测试现在写明哪一层覆盖哪些皮肤，让这个区别是决定而不是疏漏。",
-        "en": "**The last of the desktop amber is gone from 探索 under the default skin.** The skin *layers* — the reused desktop views in 探索 and the four panels behind 更多 — deliberately covered only the five skins that ship a stylesheet of their own (`default` has none: it is the base look in `mobile.css`), so under the default skin those two surfaces kept the desktop palette, which is the residue you saw. `legacySkin.css` covers all six now, and a probe of the chords sub-page finds **zero*…"
+        "zh": "**苏联岁月：军旗符号换成镰刀锤子，即兴不再是黑板**。播放器左上角原来是 `repeating-conic-gradient` 的十二齿红色放射扇（远看确实像旭日旗）——现在是 38×38 的内联 SVG **镰刀锤子**（国旗红，公有领域图形，`url(\"data:image/svg+xml,…\")` 内联，皮肤契约允许这一种 `url()`；不用 ☭ 字形是因为字体覆盖没保证，画成豆腐块更糟），不压唱片、不压返回键与顶栏。即兴原本是整块 `#111111`：现在网格卡与打击垫区是纸底，网格本体是 `--m-card-2` 凹槽（硬 `8px 8px 0` 墨影），步进格是石墨 `#2F2D27`（不是纯黑）的开关壳体、写入时套车道色 + 红色内圈 + 墨色五角星，打击垫外壳用比模块强调色深一档的钢蓝 `#243342`（珊瑚色压 `#2C3E50` 只有 4.31:1），dock 是纸板 + 墨框，ПРИКАЗ 从金色（纸上 2.09:1）改成墨色。",
+        "en": "**Soviet years: the rising-sun mark became a hammer and sickle, and 即兴 is no longer a blackboard.** The player's top-left corner was a twelve-tooth red `repeating-conic-gradient` fan (which really does read as a rising sun) — it is a 38x38 inline-SVG **hammer and sickle** now (flag red, a public-domain drawing, embedded as an inline data URL, the one `url()` the skin contract allows; the ☭ glyph was rejected because font coverage is not guaranteed and a tofu box would be wor…"
       }
     ],
     "truncated": true
