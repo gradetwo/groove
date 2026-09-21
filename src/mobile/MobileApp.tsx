@@ -21,6 +21,17 @@ import { ALL_GENRES } from "../data/genres";
 import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
 import type { Genre } from "../types/genre";
 import "./mobile.css";
+/**
+ * The skins.
+ *
+ * Imported *here* rather than from the app entry, and that is the scope decision: only the phone shell
+ * wears a skin today, so a desktop visit does not download three stylesheets it will never apply. The
+ * moment a skin covers the desktop too, this import moves to `main.tsx` — the CSS itself is already
+ * scoped to `:root[data-skin]`, so nothing else would have to change.
+ */
+import "./skins/comic.css";
+import "./skins/soviet.css";
+import "./skins/pixel.css";
 
 const MobileHomeScreen = React.lazy(() =>
   import("./screens/MobileHomeScreen").then((m) => ({ default: m.MobileHomeScreen }))

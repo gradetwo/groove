@@ -140,6 +140,8 @@ export const mobileMessages = {
   mobile_explore_groove_dropped: { en: "Dropped", zh: "已拿掉" },
 
   // 更多 (more, M7).
+  mobile_more_appearance: { en: "Appearance", zh: "外观" },
+  mobile_more_appearance_hint: { en: "Skin", zh: "皮肤" },
   mobile_more_settings: { en: "Settings", zh: "设置" },
   mobile_more_updates: { en: "What's new", zh: "更新日志" },
   mobile_more_help: { en: "Manual & tours", zh: "手册与引导" },

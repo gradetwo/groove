@@ -1,4 +1,30 @@
 export const commonMessages = {
+  // ---------------------------------------------------------------------------
+  // Skins (the appearance picker). App-wide on purpose: the skin belongs to the
+  // product, not to one surface, so the phone shell and a future desktop picker
+  // read the same four names.
+  // ---------------------------------------------------------------------------
+  skin_default_name: { en: "Aurora", zh: "极光冷色" },
+  skin_default_blurb: {
+    en: "Cool dark ground, one accent per module — the default.",
+    zh: "冷调深底 · 每个模块一个强调色（默认）",
+  },
+  skin_comic_name: { en: "Retro comic", zh: "复古漫画" },
+  skin_comic_blurb: {
+    en: "Newsprint, halftone dots and heavy ink outlines.",
+    zh: "新闻纸、网点与粗油墨描边",
+  },
+  skin_soviet_name: { en: "Heavy industry", zh: "苏联重工业" },
+  skin_soviet_blurb: {
+    en: "Stamped steel plates, rivets and signal lamps.",
+    zh: "冲压钢板、铆钉与信号灯",
+  },
+  skin_pixel_name: { en: "8-bit pixel", zh: "8-bit 像素" },
+  skin_pixel_blurb: {
+    en: "Hard pixel edges, scanlines and a tiny palette.",
+    zh: "硬像素边、扫描线与极小色板",
+  },
+
   // Brand & Navigation
   app_title: { en: "Groove Odyssey", zh: "音乐曲风探索与工作台" },
   app_subtitle: { en: "Interactive Music Genre Learning & Sequencer", zh: "沉浸式交互曲风百科与步进音序器" },

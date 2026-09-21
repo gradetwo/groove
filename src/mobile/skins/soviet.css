@@ -1,0 +1,584 @@
+/**
+ * Skin: "soviet" — 苏联时代重工业 (Soviet-era heavy industry).
+ *
+ * What it is
+ * ----------
+ * A 1960s–70s factory control room. The phone shell stops being glass and starts being *machinery*:
+ * stamped steel face plates, poured concrete behind them, enamel indicator lamps, analogue gauges with
+ * a red tick, and stencilled uppercase labels. Nothing glows, nothing blurs, nothing is printed on
+ * glass — every surface is a physical plate that was cut, bent and bolted.
+ *
+ * Why these colours
+ * -----------------
+ * The palette is the one Soviet industrial design actually used, and every value is desaturated on
+ * purpose: pure signal colours look like a web app, faded ones look like a panel that has been in
+ * service for thirty years.
+ *
+ *   oxide grey  #1B1E21  the ground: dark concrete / oxide primer, cool and matte
+ *   plate steel #22262A  the raised face plate (cards)
+ *   deep steel  #2B3034  a plate in shadow, or a recessed well (card-2)
+ *   enamel      #EDE4CC  warm cream enamel lettering; NOT white — white would read as paper
+ *   brass       #C9A227  the one "approved / active" lamp (see --m-gold below)
+ *   safety red  #C8452B  warning, stop, recording
+ *   orange      #E2703A  a secondary signal, for text on dark where #C8452B is too deep
+ *   inst. green #4A5D4E  the institutional wall green; faded, never emerald
+ *
+ * Contrast was measured rather than eyeballed: cream on oxide is 13.2:1, cream on a face plate
+ * 12:1, and the *darkest* body token (--m-ink-3) is held above 4.5:1 on all three grounds. The
+ * accent lamps each clear 4.5:1 as text on a plate (home 9.2, jam 7.5, challenge 6.7, explore 8.6,
+ * more 7.3) so the module hue never costs legibility.
+ *
+ * The stamped-plate / rivet technique
+ * -----------------------------------
+ * A physical plate is lit from above, so every panel here gets the same four-part treatment, all of
+ * it pure gradients — no images, no blur, no glow:
+ *   1. a 2px solid border (the cut edge of the sheet),
+ *   2. an inset highlight down the top/left (light catching the bevel),
+ *   3. an inset shadow up the bottom/right (the same bevel turning away),
+ *   4. a hard offset drop shadow with **zero blur** (a plate stands off the panel by 2px).
+ * Rivets are `radial-gradient` bolt heads: a bright specular dot just off-centre, a dark seat around
+ * it, one gradient per corner of the plate, 4px. They are deliberately low-contrast — you should
+ * notice them at arm's length and not before.
+ *
+ * The concrete/steel texture is repeating linear gradients at 3–6% opacity, attached *fixed* so the
+ * grain does not crawl under a scrolling list (a scrolling texture shimmers, and a shimmer reads as
+ * a screen, not as a wall).
+ *
+ * Fonts
+ * -----
+ * Display, headings and labels are `"Russo One"` — a squarish, slightly condensed face that behaves
+ * like stencilled plate lettering — set uppercase with 0.06–0.12em tracking, because a stencil needs
+ * air between the letters. Body copy is `"PT Sans Narrow"`, the condensed grotesque that keeps long
+ * Chinese/Latin pairs compact on a phone. `.m-mono` stays monospace: it is the instrument readout,
+ * so it is recoloured and letter-spaced to read as a stamped dial label rather than a code editor.
+ *
+ * Scope
+ * -----
+ * Every rule is scoped under `:root[data-skin="soviet"]`, because several skins are intended to sit
+ * over the very same components. With the attribute absent — or set to another skin — this file
+ * changes nothing at all. Only colour, background, border, radius, shadow, letterform and decoration
+ * are touched: no geometry, no display/order, no opacity tricks, no `!important`, no images.
+ */
+
+/* ---------------------------------------------------------------------------------------------
+ * 1. Tokens
+ *
+ * Only the names the phone shell already reads are overridden, so no component has to know a skin
+ * exists. `--m-gold` / `--m-gold-hi` / `--m-gold-rgb` keep their names even though the value is now
+ * brass: every screen refers to them and renaming them would be a refactor, not a skin.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root {
+  --m-bg: #1b1e21;
+  --m-card: #22262a;
+  --m-card-2: #2b3034;
+  --m-line: rgba(237, 228, 204, 0.11);
+  --m-line-2: rgba(237, 228, 204, 0.24);
+  --m-ink: #ede4cc;
+  --m-ink-2: #c0b9a3;
+  --m-ink-3: #98927f;
+  /* Text/icons that sit *on* an enamel fill. Near-black oxide, never white. */
+  --m-on-gold: #16181a;
+
+  /* The three fixed signal colours. These do not change per module: red is always warning, green is
+     always the institutional wall, teal is the pale instrument glass. */
+  --m-teal: #8fb3ac;
+  --m-red: #e2703a;
+  --m-green: #7c9b82;
+  --m-violet: #8e93b8;
+
+  /* Default module (首页): brass — the "approved / live" indicator. */
+  --m-gold: #e6c766;
+  --m-gold-hi: #f2e3a6;
+  --m-gold-rgb: 230 199 102;
+
+  /* The steel face; the concrete behind it is painted in section 3. */
+  background-color: var(--m-bg);
+  color: var(--m-ink);
+  font-family: "PT Sans Narrow", "Space Grotesk", system-ui, sans-serif;
+}
+
+/* One enamelled lamp per module. Each hue is a real panel-lamp colour (brass, slate-violet, signal
+   orange, instrument cyan, institutional green), each is desaturated to sit on dark steel, and each
+   clears 4.5:1 as text on a plate. The *fill* variants used for borders and dots are the deeper
+   signal tones, which is why one module can be "red" without its label being unreadable. */
+:root[data-skin="soviet"] .mobile-root[data-module="jam"] {
+  --m-gold: #b5b3d6;
+  --m-gold-hi: #d6d4ec;
+  --m-gold-rgb: 181 179 214;
+}
+:root[data-skin="soviet"] .mobile-root[data-module="challenge"] {
+  --m-gold: #e89a6e;
+  --m-gold-hi: #f3c9a8;
+  --m-gold-rgb: 232 154 110;
+}
+:root[data-skin="soviet"] .mobile-root[data-module="explore"] {
+  --m-gold: #acc6d6;
+  --m-gold-hi: #d3e2ec;
+  --m-gold-rgb: 172 198 214;
+}
+:root[data-skin="soviet"] .mobile-root[data-module="more"] {
+  --m-gold: #9dbba5;
+  --m-gold-hi: #c9dccd;
+  --m-gold-rgb: 157 187 165;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 2. Type
+ *
+ * Display face on everything that names something, condensed body face on everything that explains
+ * something, monospace on everything that measures something. No size is changed on a control, so
+ * the 44px touch gate cannot be affected by any of this.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root h1,
+:root[data-skin="soviet"] .mobile-root h2,
+:root[data-skin="soviet"] .mobile-root h3,
+:root[data-skin="soviet"] .mobile-root .m-brand b,
+:root[data-skin="soviet"] .mobile-root .m-now-name,
+:root[data-skin="soviet"] .mobile-root .m-tbtn,
+:root[data-skin="soviet"] .mobile-root .m-tbig {
+  font-family: "Russo One", "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: 0.07em;
+}
+
+/* Stencilled plate lettering: uppercase, widely tracked, air between the letters. Only on labels
+   that are already short — never on a truncating name, where wider tracking would eat characters. */
+:root[data-skin="soviet"] .mobile-root .m-brand b,
+:root[data-skin="soviet"] .mobile-root .m-brand span,
+:root[data-skin="soviet"] .mobile-root .m-status,
+:root[data-skin="soviet"] .mobile-root .m-drag-hint,
+:root[data-skin="soviet"] .mobile-root .m-prog-meta,
+:root[data-skin="soviet"] .mobile-root .m-cue-facts,
+:root[data-skin="soviet"] .mobile-root .m-foot {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Instrument readouts: stamped dial labels. The cold dark shadow is the engraving depth — the one
+   place a text-shadow is allowed, and only because it is an inset-looking offset, not a glow. */
+:root[data-skin="soviet"] .mobile-root .m-mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--m-ink-2);
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-facts,
+:root[data-skin="soviet"] .mobile-root .m-idx,
+:root[data-skin="soviet"] .mobile-root .m-bp {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 3. Ground: concrete, brushed steel and a warning stencil
+ *
+ * `.m-player-aura` is a fixed, pointer-transparent layer already used by the shell for its breathing
+ * glow. The skin reuses the slot as the room itself: a radial pool of lamp light over a fixed
+ * concrete grain. The animated `opacity` in the base file is left exactly as it is (it is an
+ * effect hook, not a hidden element), so the wall still answers the beat — it just answers in
+ * matte grey instead of neon.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root .m-player-aura {
+  background:
+    repeating-linear-gradient(0deg, rgba(237, 228, 204, 0.02) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 42% at 50% -6%, rgba(237, 228, 204, 0.05), transparent 62%),
+    radial-gradient(90% 40% at 50% 118%, rgba(74, 93, 78, 0.14), transparent 72%);
+  background-attachment: fixed;
+}
+
+/* Concrete ground. The player frame itself is the plate (section 4), so the room's texture lives on
+   the two fixed, pointer-transparent layers the shell already has: the aura layer above and the
+   shell's own ground below. Both use horizontal 1px formwork courses and vertical 3px mill
+   striations under 5%, attached *fixed*, so the grain never crawls under a scrolling list. */
+
+/* Institutional signage: a bright rule with a dark seat under it, punched across the top of the
+   frame. A gradient rather than a pseudo-element so nothing is added to the tree. */
+:root[data-skin="soviet"] .mobile-root .m-topbar {
+  background-image: linear-gradient(
+    180deg,
+    rgba(237, 228, 204, 0.14) 0 1px,
+    rgba(0, 0, 0, 0.5) 1px 2px,
+    transparent 2px 100%
+  );
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 4. Stamped plates
+ *
+ * The four-part treatment described at the top of the file. Applied to the *containers* — the player
+ * frame, the stage, the jam dock, the cue tray, every panel — so a card reads as a plate bolted to
+ * the wall. Cards themselves are `--m-card`; a card sitting on the player is `--m-card-2` (deep
+ * steel) so it does not disappear into the plate it is mounted on.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root .m-player,
+:root[data-skin="soviet"] .mobile-root .m-cue.is-open {
+  background-color: var(--m-card);
+  border: 2px solid var(--m-line-2);
+  border-radius: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(237, 228, 204, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    inset 1px 0 0 rgba(237, 228, 204, 0.07),
+    inset -1px 0 0 rgba(0, 0, 0, 0.4),
+    2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+/* `.m-stage` is the frame's inner well, not a second plate: it stays transparent so the frame's
+   rivets and bevel read as one continuous sheet. */
+:root[data-skin="soviet"] .mobile-root .m-stage {
+  background-color: transparent;
+  border: 0;
+}
+
+/* Rivets. Four `radial-gradient` bolt heads placed at the corners by `background-position`, plus the
+   steel grain between them. One tile, no elements, no images. */
+:root[data-skin="soviet"] .mobile-root .m-player,
+:root[data-skin="soviet"] .mobile-root .m-cue.is-open {
+  background-image:
+    radial-gradient(circle 2.5px at 7px 7px, #b9b2a0 0 1.5px, #0c0e10 1.5px 2.5px, transparent 2.5px),
+    radial-gradient(circle 2.5px at calc(100% - 7px) 7px, #b9b2a0 0 1.5px, #0c0e10 1.5px 2.5px, transparent 2.5px),
+    radial-gradient(circle 2.5px at 7px calc(100% - 7px), #b9b2a0 0 1.5px, #0c0e10 1.5px 2.5px, transparent 2.5px),
+    radial-gradient(circle 2.5px at calc(100% - 7px) calc(100% - 7px), #b9b2a0 0 1.5px, #0c0e10 1.5px 2.5px, transparent 2.5px),
+    repeating-linear-gradient(0deg, rgba(237, 228, 204, 0.02) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px);
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  background-clip: padding-box;
+}
+/* The player is the whole frame, so its rivets sit a little wider than a card's. */
+:root[data-skin="soviet"] .mobile-root .m-player {
+  background-image:
+    radial-gradient(circle 3px at 12px 12px, #b9b2a0 0 2px, #0c0e10 2px 3px, transparent 3px),
+    radial-gradient(circle 3px at calc(100% - 12px) 12px, #b9b2a0 0 2px, #0c0e10 2px 3px, transparent 3px),
+    radial-gradient(circle 3px at 12px calc(100% - 12px), #b9b2a0 0 2px, #0c0e10 2px 3px, transparent 3px),
+    radial-gradient(circle 3px at calc(100% - 12px) calc(100% - 12px), #b9b2a0 0 2px, #0c0e10 2px 3px, transparent 3px),
+    repeating-linear-gradient(0deg, rgba(237, 228, 204, 0.018) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.045) 0 1px, transparent 1px 3px);
+}
+
+/* Sheared corners. Sheet metal is cut square; a 2px radius is the most a punched plate is allowed,
+   and it is only used where the base file rounds a large surface (cards) so the edge does not look
+   like a rendering artefact. Pills and circles are squared off entirely — an indicator lamp is a
+   rectangle on a Soviet panel, never a lozenge. */
+:root[data-skin="soviet"] .mobile-root .rounded-2xl,
+:root[data-skin="soviet"] .mobile-root .rounded-xl {
+  border-radius: 2px;
+}
+:root[data-skin="soviet"] .mobile-root .rounded-full,
+:root[data-skin="soviet"] .mobile-root .rounded {
+  border-radius: 0;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 5. The player's instrument cluster
+ *
+ * Read top to bottom: status lamp, the record, the name plate, the tempo control, the gauge, the
+ * transport. Each gets one industrial gesture and no more.
+ * ------------------------------------------------------------------------------------------- */
+
+/* The "live" lamp. Dead: a cold steel stud. Running: a lamp with a painted warning ring, which is
+   the only place red and cream are allowed to touch — it is the one unambiguous "状態" signal on the
+   screen. */
+:root[data-skin="soviet"] .mobile-root .m-dot {
+  background-color: var(--m-ink-3);
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  border-radius: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(237, 228, 204, 0.3),
+    0 0 0 1px rgba(237, 228, 204, 0.16);
+}
+:root[data-skin="soviet"] .mobile-root .m-player[data-playing="true"] .m-dot {
+  background-color: #c8452b;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(237, 228, 204, 0.85) 0 1.5px,
+    transparent 1.5px 3.5px
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 0 0 1px rgba(200, 69, 43, 0.55);
+}
+
+/* Name plate: the one place the cream is used at full strength and full tracking. */
+:root[data-skin="soviet"] .mobile-root .m-now-name {
+  color: var(--m-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+:root[data-skin="soviet"] .mobile-root .m-now-cn {
+  color: var(--m-ink-2);
+  border-top: 1px solid var(--m-line);
+}
+
+/* Tempo control: two round buttons become two square plates with a knurled edge. No size changes —
+   the 44px square is the base file's and stays exactly where it is. */
+:root[data-skin="soviet"] .mobile-root .m-bpm-ctl button {
+  border: 2px solid var(--m-line-2);
+  border-radius: 0;
+  background-color: var(--m-card-2);
+  color: var(--m-ink);
+  font-family: "Russo One", "Space Grotesk", system-ui, sans-serif;
+  box-shadow:
+    inset 0 1px 0 rgba(237, 228, 204, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    1px 1px 0 rgba(0, 0, 0, 0.5);
+}
+:root[data-skin="soviet"] .mobile-root .m-bpm-ctl button:active {
+  border-color: var(--m-gold);
+  background-color: var(--m-gold);
+  color: var(--m-on-gold);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+}
+/* The tempo digits are the gauge's needle readout: cream on dark, tabular, engraved. */
+:root[data-skin="soviet"] .mobile-root .m-bpm-val b {
+  color: var(--m-ink);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+:root[data-skin="soviet"] .mobile-root .m-bpm-val small {
+  color: var(--m-ink-3);
+  text-transform: uppercase;
+}
+
+/* Gauge track: a recessed slot milled into the plate, with the fill as a brass bar capped by a red
+   witness mark (the `::after` is the base file's own element — recoloured, not redrawn). The base
+   file's 2px height is a measured dimension and is left exactly as it is; the slot is implied by the
+   tick pattern and the recessed shadow rather than by thickening the rail. */
+:root[data-skin="soviet"] .mobile-root .m-prog-track {
+  border-radius: 0;
+  background-color: var(--m-card-2);
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(237, 228, 204, 0.22) 0 1px,
+    transparent 1px 8px
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.7),
+    inset 0 -1px 0 rgba(237, 228, 204, 0.08);
+}
+:root[data-skin="soviet"] .mobile-root .m-prog-fill {
+  border-radius: 0;
+  background-color: var(--m-gold);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.28) 0 2px,
+    transparent 2px 5px
+  );
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.6);
+}
+:root[data-skin="soviet"] .mobile-root .m-prog-fill::after {
+  border-radius: 0;
+  background-color: #c8452b;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* Transport: a bolted rail with a hazard stencil along its top edge, running the full width but
+   under the buttons' padding so it never sits behind an icon. */
+:root[data-skin="soviet"] .mobile-root .m-transport {
+  border-top: 2px solid var(--m-line);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(200, 69, 43, 0.5) 0 6px,
+    rgba(0, 0, 0, 0.6) 6px 12px
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 3px;
+  background-position: 0 0;
+}
+/* Every transport key is a small stamped key cap: raised bezel at rest, driven in when pressed. No
+   pseudo-elements are added to a control, so nothing about the hit target changes. */
+:root[data-skin="soviet"] .mobile-root .m-tbtn,
+:root[data-skin="soviet"] .mobile-root .m-tbig {
+  border-radius: 0;
+  color: var(--m-ink-2);
+  background-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(237, 228, 204, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+:root[data-skin="soviet"] .mobile-root .m-tbtn.on {
+  color: var(--m-gold);
+  background-color: rgba(237, 228, 204, 0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(237, 228, 204, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    0 0 0 1px var(--m-gold);
+}
+:root[data-skin="soviet"] .mobile-root .m-tbtn:active,
+:root[data-skin="soviet"] .mobile-root .m-tbig:active {
+  color: var(--m-ink);
+  background-color: rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.7),
+    inset 0 -1px 0 rgba(237, 228, 204, 0.08);
+}
+:root[data-skin="soviet"] .mobile-root .m-tbig {
+  color: var(--m-ink);
+}
+:root[data-skin="soviet"] .mobile-root .m-player[data-playing="true"] .m-tbig {
+  color: var(--m-gold-hi);
+}
+
+/* The pull-down tray: a hinged steel flap. Each row is a stamped strip; the selected row gets an
+   enamel tick painted down its left edge, done with an inset shadow so the 3px mark never overlaps
+   the 20px index column's text. */
+:root[data-skin="soviet"] .mobile-root .m-cue-facts {
+  border-top: 2px solid var(--m-line-2);
+  color: var(--m-ink-3);
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-item {
+  border-top: 1px solid var(--m-line);
+  background-color: rgba(0, 0, 0, 0.14);
+  color: var(--m-ink);
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-item .m-idx,
+:root[data-skin="soviet"] .mobile-root .m-cue-item .m-bp {
+  color: var(--m-ink-3);
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-item .m-nm {
+  color: var(--m-ink);
+  letter-spacing: 0.03em;
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-item .m-cn {
+  color: var(--m-ink-2);
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-item.on {
+  background-color: rgba(237, 228, 204, 0.07);
+  box-shadow: inset 3px 0 0 var(--m-gold);
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-item.on .m-idx,
+:root[data-skin="soviet"] .mobile-root .m-cue-item.on .m-bp {
+  color: var(--m-gold);
+}
+:root[data-skin="soviet"] .mobile-root .m-cue-item.on .m-nm {
+  color: var(--m-gold-hi);
+}
+/* The equaliser is not a light show: three brass slugs in a slot. */
+:root[data-skin="soviet"] .mobile-root .m-eq i {
+  border-radius: 0;
+  background-color: var(--m-gold);
+}
+:root[data-skin="soviet"] .mobile-root .m-foot {
+  color: var(--m-ink-3);
+  border-top: 1px solid var(--m-line);
+}
+:root[data-skin="soviet"] .mobile-root .m-drag-hint {
+  color: var(--m-ink-3);
+}
+:root[data-skin="soviet"] .mobile-root .m-drag-hint i {
+  color: var(--m-gold);
+}
+
+/* The record itself: a bezel of dark steel around the artwork so the disc sits *in* the panel
+   instead of floating on it. */
+:root[data-skin="soviet"] .mobile-root .m-orb-wrap {
+  border: 2px solid var(--m-line-2);
+  border-radius: 0;
+  background-color: var(--m-card-2);
+  box-shadow:
+    inset 0 1px 0 rgba(237, 228, 204, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 6. Tailwind utilities the components paint with
+ *
+ * The screens carry their colours as literal utilities (`bg-[var(--m-card)]`, `border`, …). The
+ * variables above recolor most of them for free; these are the few that are literal paint and would
+ * otherwise leave a brown-glass or neon-smoke trace of the previous skin.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root .border,
+:root[data-skin="soviet"] .mobile-root .border-2,
+:root[data-skin="soviet"] .mobile-root .border-t,
+:root[data-skin="soviet"] .mobile-root .border-l {
+  border-color: var(--m-line);
+}
+:root[data-skin="soviet"] .mobile-root .border-\[var\(--m-line-2\)\] {
+  border-color: var(--m-line-2);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[var\(--m-card\)\] {
+  background-color: var(--m-card);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[var\(--m-card-2\)\] {
+  background-color: var(--m-card-2);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[var\(--m-gold\)\] {
+  background-color: var(--m-gold);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[var\(--m-bg\)\] {
+  background-color: var(--m-bg);
+}
+/* Painted-on-the-fly values: the shell's shadowed well, the smoked glass of the two floating bars,
+   the track under the swing slider, the recording pip. All become flat steel. */
+:root[data-skin="soviet"] .mobile-root .bg-\[rgba\(232\,232\,255\,0\.08\)\],
+:root[data-skin="soviet"] .mobile-root .bg-\[rgba\(232\,232\,255\,0\.055\)\] {
+  background-color: rgba(237, 228, 204, 0.07);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[rgba\(232\,232\,255\,0\.12\)\] {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[rgba\(20\,20\,31\,0\.94\)\] {
+  background-color: #202427;
+  box-shadow:
+    inset 0 1px 0 rgba(237, 228, 204, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 -2px 0 rgba(0, 0, 0, 0.5);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[rgba\(14\,12\,8\,0\.9\)\] {
+  background-color: #202427;
+  background-image:
+    linear-gradient(180deg, rgba(237, 228, 204, 0.08) 0 1px, transparent 1px 100%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 3px);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[rgba\(242\,109\,109\,0\.7\)\] {
+  background-color: #c8452b;
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[var\(--m-red\)\] {
+  background-color: #c8452b;
+  box-shadow: 0 0 0 1px rgba(237, 228, 204, 0.35);
+}
+:root[data-skin="soviet"] .mobile-root .bg-\[linear-gradient\(90deg\,var\(--m-gold\)\,var\(--m-gold-hi\)\)\],
+:root[data-skin="soviet"] .mobile-root .bg-\[linear-gradient\(180deg\,var\(--m-card-2\)\,var\(--m-card\)\)\] {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.12) 0 2px,
+    transparent 2px 5px
+  );
+}
+/* No glass in a control room: the floating bars are solid plate, and blur is switched off by making
+   the effect a no-op rather than by hiding anything. */
+:root[data-skin="soviet"] .mobile-root .backdrop-blur-md,
+:root[data-skin="soviet"] .mobile-root .backdrop-blur {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * 7. Pressed state
+ *
+ * The base file scales a press to 0.97 (transform only, no layout). The skin adds the physical part:
+ * a pressed key cap loses its highlight, gains an inner shadow, and its border goes to the module
+ * lamp. Purely additive to :active, so the resting geometry the gates measure is untouched.
+ * ------------------------------------------------------------------------------------------- */
+:root[data-skin="soviet"] .mobile-root .m-press:active {
+  background-color: rgba(0, 0, 0, 0.28);
+  border-color: var(--m-gold);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 0 rgba(237, 228, 204, 0.08);
+}
+/* A fill that is already the module lamp must not be double-painted when pressed. */
+:root[data-skin="soviet"] .mobile-root .m-press.bg-\[var\(--m-gold\)\]:active,
+:root[data-skin="soviet"] .mobile-root .m-press.bg-\[var\(--m-red\)\]:active {
+  background-color: var(--m-gold);
+  color: var(--m-on-gold);
+}
+:root[data-skin="soviet"] .mobile-root .m-press.bg-\[var\(--m-red\)\]:active {
+  background-color: #c8452b;
+}
