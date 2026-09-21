@@ -225,152 +225,163 @@ export function MobilePlayerScreen({
           />
         </button>
 
-        <div className="m-drag-hint" data-testid="mobile-player-scrub-hint">
-          <i aria-hidden="true">&#9664;</i>
-          {t("mobile_player_scrub_hint")}
-          <i aria-hidden="true">&#9654;</i>
-        </div>
-        <p className="m-mono mt-1 text-[9px] tracking-[0.14em] text-[var(--m-ink-3)]">{t("mobile_player_tap_detail")}</p>
+        {/*
+          The console: every control except the record, in one column.
 
-        <div className="m-now-line">
-          <div className="min-w-0">
-            <div className="m-now-name truncate" data-testid="mobile-player-name">
-              {genre.name}
+          It exists for landscape. Stacked, a landscape phone (390 px tall) has to squeeze the record
+          into whatever is left after the top bar, the two hints, the name/tempo line, the progress rail
+          and the transport — which measured 143 px of record, i.e. a postage stamp. As a column beside
+          the record, the record takes its size from the *height* and the controls take the rest of the
+          width, and both are comfortable.
+        */}
+        <div className="m-console">
+          <div className="m-drag-hint" data-testid="mobile-player-scrub-hint">
+            <i aria-hidden="true">&#9664;</i>
+            {t("mobile_player_scrub_hint")}
+            <i aria-hidden="true">&#9654;</i>
+          </div>
+          <p className="m-mono mt-1 text-[9px] tracking-[0.14em] text-[var(--m-ink-3)]">{t("mobile_player_tap_detail")}</p>
+
+          <div className="m-now-line">
+            <div className="min-w-0">
+              <div className="m-now-name truncate" data-testid="mobile-player-name">
+                {genre.name}
+              </div>
+              <div className="m-now-cn truncate">{genre.category}</div>
             </div>
-            <div className="m-now-cn truncate">{genre.category}</div>
-          </div>
-          <div className="m-bpm-ctl">
-            <HoldButton
-              data-testid="mobile-player-bpm-down"
-              aria-label={t("mobile_player_slow")}
-              step={-1}
-              onStep={changeBpm}
-            >
-              &minus;
-            </HoldButton>
-            <div className="m-bpm-val" data-testid="mobile-player-bpm">
-              <b ref={bpmOutRef as React.RefObject<HTMLElement>} data-testid="mobile-player-bpm-value">
-                {bpm}
-              </b>{" "}
-              <small>BPM</small>
-            </div>
-            <HoldButton
-              data-testid="mobile-player-bpm-up"
-              aria-label={t("mobile_player_fast")}
-              step={1}
-              onStep={changeBpm}
-            >
-              +
-            </HoldButton>
-          </div>
-        </div>
-
-        <div className="m-prog-row">
-          <div className="m-prog-track">
-            <div
-              ref={progressRef as React.RefObject<HTMLDivElement>}
-              className="m-prog-fill"
-              data-testid="mobile-player-progress"
-            />
-          </div>
-          <div className="m-prog-meta">
-            <span data-testid="mobile-player-elapsed">{mmss}</span>
-            <span>{t("mobile_player_realtime")}</span>
-            <span>&#8734; {t("mobile_player_loop")}</span>
-          </div>
-        </div>
-
-        <div className="m-transport">
-          <button
-            type="button"
-            data-testid="mobile-player-mode"
-            aria-label={t(PLAY_MODE_LABEL_KEYS[playMode])}
-            onClick={onCycleMode}
-            className={`m-tbtn ${playMode === "one" ? "" : "on"}`}
-          >
-            {MODE_ICONS[playMode]}
-          </button>
-          <button
-            type="button"
-            data-testid="mobile-player-skip-back"
-            aria-label={t("mobile_back")}
-            onClick={() => onSkip(-1)}
-            className="m-tbtn"
-          >
-            <SkipBack className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            data-testid="mobile-player-play"
-            aria-pressed={isPlaying}
-            aria-label={isPlaying ? t("mobile_player_pause") : t("mobile_player_play")}
-            onClick={() => onTogglePlay(genre)}
-            className="m-tbig"
-          >
-            {/* Both icons are in the DOM; `[data-playing]` swaps them, exactly as the reference does. */}
-            <Play className="m-ic-play h-8 w-8" fill="currentColor" />
-            <Pause className="m-ic-pause h-8 w-8" fill="currentColor" />
-          </button>
-          <button
-            type="button"
-            data-testid="mobile-player-skip-forward"
-            aria-label={t("mobile_player_open")}
-            onClick={() => onSkip(1)}
-            className="m-tbtn"
-          >
-            <SkipForward className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            data-testid="mobile-player-drawer-toggle"
-            aria-label={t("mobile_player_list")}
-            aria-expanded={listOpen}
-            onClick={() => setListOpen((open) => !open)}
-            className={`m-tbtn ${listOpen ? "on" : ""}`}
-          >
-            <ListMusic className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className={`m-cue ${listOpen ? "is-open" : ""}`} data-testid="mobile-player-drawer-panel" aria-hidden={!listOpen}>
-          <div className="m-cue-facts">
-            <span>
-              {t("mobile_detail_origin")} {genre.origin_year}
-            </span>
-            <span>
-              {t("mobile_detail_time_signature")} {genre.time_signature}
-            </span>
-            <span>
-              {t("mobile_detail_bpm_range")} {genre.bpm_range}
-            </span>
-            <span>{t(PLAY_MODE_LABEL_KEYS[playMode])}</span>
-          </div>
-          {cue.map((item, index) => {
-            const on = item.id === genre.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                data-testid={`mobile-player-cue-${item.id}`}
-                className={`m-cue-item ${on ? "on" : ""}`}
-                aria-current={on ? "true" : undefined}
-                onClick={() => {
-                  if (!on) (onPlayGenre ?? onTogglePlay)(item);
-                  setListOpen(false);
-                }}
+            <div className="m-bpm-ctl">
+              <HoldButton
+                data-testid="mobile-player-bpm-down"
+                aria-label={t("mobile_player_slow")}
+                step={-1}
+                onStep={changeBpm}
               >
-                <span className="m-idx">{String(index + 1).padStart(2, "0")}</span>
-                <span className="m-nm truncate">{item.name}</span>
-                <span className="m-cn truncate">{item.category}</span>
-                <span className="m-eq" aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                </span>
-                <span className="m-bp">{item.default_bpm} BPM</span>
-              </button>
-            );
-          })}
+                &minus;
+              </HoldButton>
+              <div className="m-bpm-val" data-testid="mobile-player-bpm">
+                <b ref={bpmOutRef as React.RefObject<HTMLElement>} data-testid="mobile-player-bpm-value">
+                  {bpm}
+                </b>{" "}
+                <small>BPM</small>
+              </div>
+              <HoldButton
+                data-testid="mobile-player-bpm-up"
+                aria-label={t("mobile_player_fast")}
+                step={1}
+                onStep={changeBpm}
+              >
+                +
+              </HoldButton>
+            </div>
+          </div>
+
+          <div className="m-prog-row">
+            <div className="m-prog-track">
+              <div
+                ref={progressRef as React.RefObject<HTMLDivElement>}
+                className="m-prog-fill"
+                data-testid="mobile-player-progress"
+              />
+            </div>
+            <div className="m-prog-meta">
+              <span data-testid="mobile-player-elapsed">{mmss}</span>
+              <span>{t("mobile_player_realtime")}</span>
+              <span>&#8734; {t("mobile_player_loop")}</span>
+            </div>
+          </div>
+
+          <div className="m-transport">
+            <button
+              type="button"
+              data-testid="mobile-player-mode"
+              aria-label={t(PLAY_MODE_LABEL_KEYS[playMode])}
+              onClick={onCycleMode}
+              className={`m-tbtn ${playMode === "one" ? "" : "on"}`}
+            >
+              {MODE_ICONS[playMode]}
+            </button>
+            <button
+              type="button"
+              data-testid="mobile-player-skip-back"
+              aria-label={t("mobile_back")}
+              onClick={() => onSkip(-1)}
+              className="m-tbtn"
+            >
+              <SkipBack className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              data-testid="mobile-player-play"
+              aria-pressed={isPlaying}
+              aria-label={isPlaying ? t("mobile_player_pause") : t("mobile_player_play")}
+              onClick={() => onTogglePlay(genre)}
+              className="m-tbig"
+            >
+              {/* Both icons are in the DOM; `[data-playing]` swaps them, exactly as the reference does. */}
+              <Play className="m-ic-play h-8 w-8" fill="currentColor" />
+              <Pause className="m-ic-pause h-8 w-8" fill="currentColor" />
+            </button>
+            <button
+              type="button"
+              data-testid="mobile-player-skip-forward"
+              aria-label={t("mobile_player_open")}
+              onClick={() => onSkip(1)}
+              className="m-tbtn"
+            >
+              <SkipForward className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              data-testid="mobile-player-drawer-toggle"
+              aria-label={t("mobile_player_list")}
+              aria-expanded={listOpen}
+              onClick={() => setListOpen((open) => !open)}
+              className={`m-tbtn ${listOpen ? "on" : ""}`}
+            >
+              <ListMusic className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className={`m-cue ${listOpen ? "is-open" : ""}`} data-testid="mobile-player-drawer-panel" aria-hidden={!listOpen}>
+            <div className="m-cue-facts">
+              <span>
+                {t("mobile_detail_origin")} {genre.origin_year}
+              </span>
+              <span>
+                {t("mobile_detail_time_signature")} {genre.time_signature}
+              </span>
+              <span>
+                {t("mobile_detail_bpm_range")} {genre.bpm_range}
+              </span>
+              <span>{t(PLAY_MODE_LABEL_KEYS[playMode])}</span>
+            </div>
+            {cue.map((item, index) => {
+              const on = item.id === genre.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-testid={`mobile-player-cue-${item.id}`}
+                  className={`m-cue-item ${on ? "on" : ""}`}
+                  aria-current={on ? "true" : undefined}
+                  onClick={() => {
+                    if (!on) (onPlayGenre ?? onTogglePlay)(item);
+                    setListOpen(false);
+                  }}
+                >
+                  <span className="m-idx">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="m-nm truncate">{item.name}</span>
+                  <span className="m-cn truncate">{item.category}</span>
+                  <span className="m-eq" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="m-bp">{item.default_bpm} BPM</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
