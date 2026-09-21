@@ -30,6 +30,7 @@ import {
 export type { ChangelogEntry, ChangelogHighlight, VersionInfo, ChangelogArchive } from "../utils/changelog";
 
 import { APP_VERSION } from "../version";
+import { splitBoldRuns } from "../utils/markdownLite";
 
 /** Single source of truth lives in package.json → src/version.ts (E-05). */
 export const CURRENT_CLIENT_VERSION = APP_VERSION;
@@ -346,7 +347,20 @@ export const UpdatesModal: React.FC<UpdatesModalProps> = ({
                     <li key={hIdx} className="flex items-start gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-accent/70 shrink-0 mt-1.5" />
                       <span className="leading-relaxed">
-                        {h[language] || h.en}
+                        {/*
+                          The changelog writes `**bold**` around the sentence that matters and this panel
+                          used to print the asterisks. Rendered as runs rather than with a Markdown parser:
+                          see `src/utils/markdownLite.ts`.
+                        */}
+                        {splitBoldRuns(h[language] || h.en).map((run, runIdx) =>
+                          run.bold ? (
+                            <strong key={runIdx} className="font-semibold text-text">
+                              {run.text}
+                            </strong>
+                          ) : (
+                            <span key={runIdx}>{run.text}</span>
+                          )
+                        )}
                       </span>
                     </li>
                   ))}

@@ -1079,6 +1079,32 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error(`the skin did not survive a reload (${JSON.stringify(skinReloaded)})`);
     }
 
+    /**
+     * The 更多 rows have to open something.
+     *
+     * They did not: those panels (`UpdatesModal`, `SettingsModal`, the help centre, global search) were
+     * mounted only in the desktop branch of `App`, so on the phone each row set state that nothing
+     * rendered — the user's report was "更新记录之类功能都是空的". This walks three of them and asserts a
+     * real dialog with real content, in the same run as the rest of the phone checks.
+     */
+    const shellVersion = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).version;
+    const openPanel = async (rowTestId, expectedText) => {
+      await page.click(`[data-testid="${rowTestId}"]`);
+      await page.waitForSelector('[role="dialog"]', { timeout: 20000 });
+      const text = await page.evaluate(() => document.querySelector('[role="dialog"]')?.textContent ?? "");
+      if (expectedText && !text.includes(expectedText)) {
+        throw new Error(`${rowTestId} opened a panel without "${expectedText}" (${text.slice(0, 120)}…)`);
+      }
+      if (text.trim().length < 80) {
+        throw new Error(`${rowTestId} opened an empty panel (${text.trim().length} chars)`);
+      }
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), null, { timeout: 20000 });
+    };
+    await openPanel("mobile-more-updates", `v${shellVersion}`);
+    await openPanel("mobile-more-settings", null);
+    await openPanel("mobile-more-help", null);
+
     // Back to the default: the rest of this target's legs measure the shipped look.
     await page.click('[data-testid="mobile-skin-default"]');
     await page.waitForFunction(() => document.documentElement.getAttribute("data-skin") === "default", null, {

@@ -51,7 +51,7 @@ const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerVi
  */
 const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
 // The cutover rule lives with the module vocabulary, where it can be tested without App.
-import { shouldEnterPhoneShell } from "./mobile/mobileModules";
+import { shouldEnterPhoneShell, type MobileModule } from "./mobile/mobileModules";
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
 
@@ -366,6 +366,67 @@ const MainApp: React.FC = () => {
             navigate({ tab: "studio", mobile: "home", genreId: undefined, mobilePlayer: false })
           }
         />
+
+        {/*
+          The phone's panels — the same components the desktop renders.
+
+          They used to be mounted *only* in the desktop branch below, so every row in 更多 set state that
+          nothing rendered: 设置, 更新记录, 手册 and 搜索 were all empty on the phone. Reusing the panels
+          rather than writing phone copies is the decision the 更多 screen already documents (those panels
+          are responsive, and a second copy is how a phone and a desktop come to disagree about what a
+          setting means).
+
+          The one thing that cannot simply be reused is navigation *out* of a panel: `handleSelectTab`
+          moves the desktop route space, which on a phone would drop the user into the desktop UI. So a
+          link out of the help centre goes to the phone's own module instead.
+        */}
+        <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          engine={engineInstance}
+          gs1Enabled={gs1Enabled}
+          onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
+          onReplayOnboarding={() => {
+            try {
+              localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
+            } catch {
+              // A storage that refuses to forget is not a reason to refuse the replay.
+            }
+            setSettingsOpen(false);
+          }}
+          onOpenUpdates={() => {
+            setSettingsOpen(false);
+            setUpdatesOpen(true);
+          }}
+        />
+        <GlobalSearch
+          isOpen={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          /* A result opens that genre in the phone shell, not in the desktop studio. */
+          onSelectGenre={(genre) => {
+            setSearchOpen(false);
+            navigate({ tab: "studio", mobile: "home", genreId: genre.id, mobilePlayer: false });
+          }}
+        />
+        {helpOpen && (
+          <React.Suspense fallback={null}>
+            <HelpCenterModal
+              isOpen={helpOpen}
+              initialCategory={helpCategory}
+              onClose={() => {
+                setHelpOpen(false);
+                setHelpCategory(undefined);
+              }}
+              /* The theory tools this help centre links to now live in 探索; everything else is 首页. */
+              onSelectTab={(tab) => {
+                setHelpOpen(false);
+                const module: MobileModule = tab === "chords" || tab === "kick" || tab === "masterclass" ? "explore" : "home";
+                navigate({ tab: "studio", mobile: module, genreId: undefined, mobilePlayer: false });
+              }}
+            />
+          </React.Suspense>
+        )}
       </React.Suspense>
     );
   }
