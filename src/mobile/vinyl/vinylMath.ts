@@ -412,6 +412,59 @@ export function rgbaString(colour: { r: number; g: number; b: number }, alpha: n
 }
 
 /**
+ * Is anything on screen still moving?
+ *
+ * The record has no dirty-rectangle path — it rotates, it is composited with gradients, and a partial
+ * repaint of a turning sprite is not cheaper than the whole thing — so the only cheap frame is the one
+ * that is not drawn at all. That is what this decides, and it is a pure function of the loop's own
+ * values so that "a paused, settled player stops repainting" is a test rather than a hope.
+ *
+ * Every threshold is a *visibility* threshold, not a numerical one: below them the motion is under a
+ * fifth of a pixel, a 1 % alpha or a hundredth of a BPM, so the next frame would be indistinguishable
+ * from this one and the loop can idle until an input or a transport change wakes it.
+ */
+export interface VinylIdleInput {
+  /** The transport is playing: the disc turns with the audio clock, so every frame is a new picture. */
+  playing: boolean;
+  /** A pointer is on the record, or the scrub spring has not come back to rest. */
+  scrubbing: boolean;
+  /** The arm is still travelling, or still ringing, toward its target. */
+  armMoving: boolean;
+  /** The loudest envelope still ringing, 0..1. */
+  energy: number;
+  /** The stylus flash after the needle lands, 0..1. */
+  needleFlash: number;
+  /** The ring that expands out of the disc on a landing, 0..1. */
+  ripple: number;
+  /** How far the eased glow colour still is from its target, in 0..255 channel units. */
+  glowDelta: number;
+  /** How far the eased tempo number still is from the engine's, in BPM. */
+  bpmDelta: number;
+}
+
+/** The energy below which a dot's halo is not drawn at all (the draw uses the same 0.02). */
+export const IDLE_ENERGY = 0.02;
+export const IDLE_FLASH = 0.02;
+export const IDLE_RIPPLE = 0.02;
+export const IDLE_GLOW_DELTA = 1.5;
+export const IDLE_BPM_DELTA = 0.05;
+/** The arm's velocity, in travel units per second, below which it has visibly stopped. */
+export const IDLE_ARM_VELOCITY = 0.004;
+
+export function vinylIsIdle(input: VinylIdleInput): boolean {
+  return (
+    !input.playing &&
+    !input.scrubbing &&
+    !input.armMoving &&
+    input.energy <= IDLE_ENERGY &&
+    input.needleFlash <= IDLE_FLASH &&
+    input.ripple <= IDLE_RIPPLE &&
+    input.glowDelta <= IDLE_GLOW_DELTA &&
+    input.bpmDelta <= IDLE_BPM_DELTA
+  );
+}
+
+/**
  * The BPM the display shows while it catches up with the tempo the engine is already playing.
  *
  * The reference damps toward the target with `1 - exp(-dtMs / 130)`: the number on screen eases into
