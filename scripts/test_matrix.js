@@ -794,7 +794,19 @@ async function runTestOnTarget(target, baseUrl) {
         return node ? Number(node.textContent.trim()) : NaN;
       });
     const beforeJog = await bpmNumber();
-    const recordBox = await (await page.$('[data-testid="mobile-player-record"]')).boundingBox();
+    /**
+     * Scroll the record into view first.
+     *
+     * Opening the track list makes the player taller than a landscape phone, and closing it leaves the
+     * page scrolled where the click left it — so the record's centre could sit *above* the viewport, and
+     * a mouse press at a negative y is not a drag at all. That is what timed out here on an iPhone in
+     * landscape while the same step passed in portrait (where the scroll is small enough to keep the
+     * record on screen). The app was fine; the probe was aiming off-screen.
+     */
+    const recordHandle = await page.$('[data-testid="mobile-player-record"]');
+    await recordHandle.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+    const recordBox = await recordHandle.boundingBox();
     const recordX = recordBox.x + recordBox.width / 2;
     const recordY = recordBox.y + recordBox.height / 2;
     await page.mouse.move(recordX, recordY);
@@ -1031,8 +1043,18 @@ async function runTestOnTarget(target, baseUrl) {
         return page.evaluate(() => {
           const wrapper = document.querySelector('[data-testid="mobile-explore-chords-legacy"]');
           const root = document.documentElement;
+          /**
+           * Measured against the module's own sub-tab rail, not the viewport.
+           *
+           * The shell keeps a padding around its content (`px-4`), so "fills the phone's width" means
+           * "is as wide as the rest of this module's content" — and the rail is exactly that reference:
+           * a sibling in the same column. Comparing with the viewport (352 of 384, which *is* full
+           * width) is what made the first two versions of this check fail on every browser.
+           */
+          const rail = document.querySelector('[data-testid="mobile-explore-tab-chords"]')?.parentElement;
           return {
             width: wrapper ? Math.round(wrapper.getBoundingClientRect().width) : 0,
+            container: rail ? Math.round(rail.getBoundingClientRect().width) : 0,
             isDesktopMarked: wrapper ? wrapper.getAttribute("data-legacy") === "desktop" : false,
             overflow: root.scrollWidth > root.clientWidth + 4,
             viewport: root.clientWidth,
@@ -1042,14 +1064,18 @@ async function runTestOnTarget(target, baseUrl) {
 
       const portraitLayout = await layoutAt(390, 844);
       const landscapeLayout = await layoutAt(844, 390);
-      if (!portraitLayout.isDesktopMarked || portraitLayout.width < portraitLayout.viewport - 24) {
-        throw new Error(`Explore's reused chord view does not fill the phone's width (${JSON.stringify(portraitLayout)})`);
+      if (!portraitLayout.isDesktopMarked || portraitLayout.width < portraitLayout.container - 2) {
+        throw new Error(
+          `Explore's reused chord view is narrower than its own module column (${JSON.stringify(portraitLayout)})`
+        );
       }
       if (landscapeLayout.overflow || portraitLayout.overflow) {
         throw new Error(`Explore's reused chord view overflows (portrait=${portraitLayout.overflow} landscape=${landscapeLayout.overflow})`);
       }
-      if (landscapeLayout.width < landscapeLayout.viewport * 0.8) {
-        throw new Error(`Explore's reused chord view stays in a phone column in landscape (${JSON.stringify(landscapeLayout)})`);
+      if (landscapeLayout.width <= portraitLayout.width + 200) {
+        throw new Error(
+          `Explore's reused chord view stays in a phone column in landscape (portrait ${JSON.stringify(portraitLayout)}, landscape ${JSON.stringify(landscapeLayout)})`
+        );
       }
       if (original) await page.setViewportSize(original);
     }

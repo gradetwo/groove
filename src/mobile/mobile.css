@@ -268,6 +268,14 @@
   aspect-ratio: 300 / 352;
   cursor: grab;
 }
+/* The controls, as one column. In portrait the stage stacks, so this is simply full width. */
+.mobile-root .m-console {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
 .mobile-root .m-orb-wrap:active {
   cursor: grabbing;
 }
@@ -598,11 +606,41 @@
    * The player in landscape: the record is sized from the *height* it has to share with the tempo
    * line, the progress rail and the transport, so the whole stage still fits without scrolling.
    */
+  /*
+   * The player in landscape: the record beside the controls, not above them.
+   *
+   * Sized from the *height* — the record's diameter comes from the vertical space a landscape phone
+   * actually has (a 390 px-tall device reports ~340 dvh once the browser's own chrome is taken out),
+   * and the console takes the rest of the width. `66dvh` keeps the disc above the 200 px the E2E matrix
+   * requires — at `58dvh` it measured 197 px, which is exactly the postage stamp this layout exists to
+   * prevent — while still leaving the whole stage inside the viewport instead of scrolling by a few px.
+   */
   .mobile-root .m-orb-wrap {
-    width: min(42vh, 300px);
+    width: min(66dvh, 300px);
+    flex: none;
   }
   .mobile-root .m-stage {
-    justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding-bottom: 8px;
+  }
+  .mobile-root .m-console {
+    flex: 1;
+    max-width: 520px;
+  }
+  /* Landscape has no room for a footer line; the two columns already fill the height. */
+  /*
+   * 即兴 in landscape: the tempo dock stops floating.
+   *
+   * On a short viewport the sticky dock (pinned above the tab bar) lands *over* the step grid — measured
+   * on an iPhone 14 in landscape: grid bottom 385, dock 204-318 — so it hides the thing it controls. In
+   * the flow it simply sits after the pads, which is what "tempo at the bottom" means when there is only
+   * 390 px of height to spend.
+   */
+  .mobile-root .m-jam-dock {
+    position: static;
   }
   .mobile-root .m-foot {
     display: none;

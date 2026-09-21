@@ -332,7 +332,12 @@ export function MobileJamScreen({
         rather than `fixed` keeps it inside the shell's column and lets the page still scroll.
       */}
       <section
-        className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3.5"
+        /**
+         * `m-jam-dock` is the hook `mobile.css` needs to un-stick this dock on a short landscape phone:
+         * there, a floating 114 px dock would cover the very grid it belongs to, so it goes back into
+         * the flow (and the module scrolls to it, which is where it lives in the first place).
+         */
+        className="m-jam-dock sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3.5"
         data-testid="mobile-jam-tempo"
       >
         <div className="flex min-h-[56px] items-center gap-3">
