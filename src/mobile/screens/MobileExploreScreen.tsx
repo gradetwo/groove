@@ -20,6 +20,13 @@
  * `onTogglePlay` / `onApplyPattern`). Each view owns its engine and its own audition transport, and
  * silently driving the phone's loop from a desktop panel would replace what the user is working on.
  * The props stay on the interface because `MobileApp` still passes them.
+ *
+ * They also do **not** get the desktop-only navigation handlers (`onOpenHelp` / `onOpenStudio`): the
+ * phone has no guide modal, no 工作台 tab and no "bake to studio" destination, and passing a no-op
+ * only put dead buttons on screen. `KickAnatomyView` renders its whole guide/studio block only when
+ * one of those props is present, and `MasterclassView`'s `onOpenStudio` is optional, so omitting them
+ * removes the affordances instead of leaving them inert. See `legacyViews.css` for the phone-specific
+ * layout pass over the reused desktop markup.
  */
 import React, { useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -44,15 +51,6 @@ const LegacyGrooveView = React.lazy(() =>
  */
 const GROOVE_LESSON_ID = "polyrhythm";
 
-/**
- * Stand-in for the reused views' own desktop affordances (help / return to studio / bake).
- *
- * The phone has no studio tab or guide modal to navigate to, and an inert button is better than one
- * that yanks the user out of 探索. A zero-argument function satisfies every one of those handler
- * types, so one constant covers all three views.
- */
-const noop = () => {};
-
 /** One Suspense placeholder for all three lazy chunks — the phone only needs "something is coming". */
 const LegacyFallback = () => (
   <p className="m-mono text-[10px] text-[var(--m-ink-3)]">…</p>
@@ -74,7 +72,16 @@ export function MobileExploreScreen(_props: MobileExploreScreenProps) {
     <section className="m-rise px-4 pt-2" data-testid="mobile-explore" data-page={page}>
       <h1 className="text-[22px] font-bold leading-none">{t("mobile_module_explore")}</h1>
 
-      <div className="m-rail mt-3" role="tablist" aria-label={t("mobile_module_explore")}>
+      {/*
+        The switcher is a full-width segmented control in a card, not a floating pill rail: on a phone
+        it reads as the page's own header chrome and each segment keeps a 46 px tap target. It stays
+        outside `[data-legacy="desktop"]`, so the touch-target gate still measures it.
+      */}
+      <div
+        className="mt-3 grid grid-cols-3 gap-1 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-1"
+        role="tablist"
+        aria-label={t("mobile_module_explore")}
+      >
         {(
           [
             ["chords", "mobile_explore_chords"],
@@ -89,10 +96,10 @@ export function MobileExploreScreen(_props: MobileExploreScreenProps) {
             aria-selected={page === id}
             data-testid={`mobile-explore-tab-${id}`}
             onClick={() => setPage(id)}
-            className={`m-press min-h-[46px] min-w-[46px] flex-none rounded-full border px-3.5 text-[12px] ${
+            className={`m-press min-h-[46px] min-w-[46px] rounded-xl px-2 text-[12px] ${
               page === id
-                ? "border-[var(--m-gold)] bg-[var(--m-gold)] text-[var(--m-on-gold)]"
-                : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"
+                ? "bg-[var(--m-gold)] font-semibold text-[var(--m-on-gold)]"
+                : "text-[var(--m-ink-2)]"
             }`}
           >
             {t(labelKey)}
@@ -106,7 +113,8 @@ export function MobileExploreScreen(_props: MobileExploreScreenProps) {
          *
          * The user asked for the old modules to come along ("和弦走向横屏后就很好用"), and this is the
          * honest way to do that: the view already has the auditions, the key/timbre pickers and a
-         * layout that works in landscape.
+         * layout that works in landscape. It gets no studio / piano-roll handlers, so those desktop
+         * CTAs never render.
          */
         <div data-legacy="desktop" data-testid="mobile-explore-chords-legacy" className="mt-3">
           <React.Suspense fallback={<LegacyFallback />}>
@@ -115,20 +123,20 @@ export function MobileExploreScreen(_props: MobileExploreScreenProps) {
         </div>
       )}
       {page === "kick" && (
-        // The desktop kick laboratory, with its visualizers and its shared engine. The `noop`s keep its
-        // guide / workbench buttons inert instead of unmounting them.
+        // The desktop kick laboratory, with its visualizers and its shared engine. Without
+        // `onOpenHelp` / `onOpenStudio` its whole guide + return-to-studio block is not rendered.
         <div data-legacy="desktop" data-testid="mobile-explore-kick-legacy" className="mt-3">
           <React.Suspense fallback={<LegacyFallback />}>
-            <LegacyKickView onOpenHelp={noop} onOpenStudio={noop} />
+            <LegacyKickView />
           </React.Suspense>
         </div>
       )}
       {page === "groove" && (
-        // The desktop masterclass, opened on the polyrhythm lesson. `onOpenStudio` is required by the
-        // view's props, so a no-op stands in for the studio tab the phone does not have.
+        // The desktop masterclass, opened on the polyrhythm lesson. `onOpenStudio` is left off, which
+        // makes the view drop its "bake to studio" CTA for the phone.
         <div data-legacy="desktop" data-testid="mobile-explore-groove-legacy" className="mt-3">
           <React.Suspense fallback={<LegacyFallback />}>
-            <LegacyGrooveView initialLessonId={GROOVE_LESSON_ID} onOpenStudio={noop} />
+            <LegacyGrooveView initialLessonId={GROOVE_LESSON_ID} />
           </React.Suspense>
         </div>
       )}

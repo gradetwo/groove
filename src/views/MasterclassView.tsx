@@ -26,7 +26,14 @@ import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 
 interface MasterclassViewProps {
   initialLessonId?: string;
-  onOpenStudio: (payload: { pattern: SequencerPattern; label: string }) => void;
+  /**
+   * Hand the lesson's baked pattern to the studio.
+   *
+   * Optional on purpose: the phone's 探索 reuses this view but has no studio tab to navigate to, so
+   * when the handler is absent the "Bake to Studio" CTA is not rendered at all rather than left on
+   * screen as an inert button. The desktop `App` always passes it, so its UI is unchanged.
+   */
+  onOpenStudio?: (payload: { pattern: SequencerPattern; label: string }) => void;
   onSelectGenre?: (genre: { id: string }) => void;
   onOpenHelp?: () => void;
 }
@@ -77,8 +84,10 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
     }
   };
 
-  // One-click Bake to Studio
+  // One-click Bake to Studio. The CTA only exists when the host provides the handler (see the prop's
+  // comment), so this also has to tolerate being absent.
   const handleBakeToStudio = () => {
+    if (!onOpenStudio) return;
     engine.stop();
     const pattern = lesson.generateStudioPattern(activePresetId);
     const label = isZh ? lesson.title.zh : lesson.title.en;
@@ -194,15 +203,17 @@ export const MasterclassView: React.FC<MasterclassViewProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={handleBakeToStudio}
-            data-testid="bake-to-studio-btn"
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-accent to-[#ffc65c] text-black hover:brightness-110 active:scale-95 transition-all shadow-[0_0_15px_rgba(245,183,61,0.3)] shrink-0 self-start sm:self-auto ${isMobile ? "min-h-11" : ""}`}
-          >
-            <Sliders className="w-4 h-4" />
-            <span>{t("masterclass_bake_btn")}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          {onOpenStudio && (
+            <button
+              onClick={handleBakeToStudio}
+              data-testid="bake-to-studio-btn"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-accent to-[#ffc65c] text-black hover:brightness-110 active:scale-95 transition-all shadow-[0_0_15px_rgba(245,183,61,0.3)] shrink-0 self-start sm:self-auto ${isMobile ? "min-h-11" : ""}`}
+            >
+              <Sliders className="w-4 h-4" />
+              <span>{t("masterclass_bake_btn")}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Interactive Lab Component */}
