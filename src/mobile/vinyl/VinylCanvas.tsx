@@ -44,10 +44,13 @@ import {
   rgbaString,
   stepScrubReturn,
   stepTonearm,
+  TONEARM_NEEDLE_RADIUS,
   TONEARM_PLAY_POSITION,
   TONEARM_REST_POSITION,
+  TONEARM_TRAVEL,
   tonearmDrawAngle,
   tonearmHeadHop,
+  tonearmWorkingAngle,
   tonearmLift,
   tonearmTheta,
   vinylGeometry,
@@ -255,16 +258,25 @@ export function VinylCanvas({
       if (!ctx) return;
       const travel = Math.min(1, Math.max(0, arm.position));
       const lift = tonearmLift(arm.position);
-      const workingAngle = NEEDLE_ANGLE;
       const onRecord = travel > 0.96;
-      // `theta` is the offset from rest; the drawn angle is rest plus that offset (see `tonearmDrawAngle`).
-      const drawnAngle = tonearmDrawAngle(arm.position, theta);
+      /**
+       * The arm's own working angle — from the *pivot*, not from the disc centre.
+       *
+       * `NEEDLE_ANGLE` says where the stylus sits relative to the disc; the arm rotates about a pivot
+       * above it, so its angle is that needle position seen from the pivot (~+0.82 rad, pointing right
+       * and down at the record). Drawing the arm at `NEEDLE_ANGLE` itself held the stylus up and off the
+       * disc in both states — see `tonearmWorkingAngle`.
+       */
+      const workingAngle = tonearmWorkingAngle(geometry);
       // The bar's length is measured from the pivot to where the stylus should be: the arm is rigid and
       // only ever rotates or translates, which is what keeps its shape from stretching mid-swing.
-      const tipX = geometry.cx + Math.cos(workingAngle) * geometry.maxR * 0.9;
-      const tipY = geometry.cy + Math.sin(workingAngle) * geometry.maxR * 0.9;
+      const tipX = geometry.cx + Math.cos(NEEDLE_ANGLE) * geometry.maxR * TONEARM_NEEDLE_RADIUS;
+      const tipY = geometry.cy + Math.sin(NEEDLE_ANGLE) * geometry.maxR * TONEARM_NEEDLE_RADIUS;
       const barLength = Math.hypot(tipX - geometry.pivotX, tipY - geometry.pivotY);
-      const resting = workingAngle - 0.21;
+      /** The resting angle: the reference's `th0`, where the stylus hangs off the disc's upper right. */
+      const resting = workingAngle - TONEARM_TRAVEL;
+      // `theta` is the offset from rest; the drawn angle is the rest angle plus that offset.
+      const drawnAngle = tonearmDrawAngle(workingAngle, theta);
 
       // Cradle: fixed at the resting angle, so it stays behind when the arm swings out.
       ctx.save();

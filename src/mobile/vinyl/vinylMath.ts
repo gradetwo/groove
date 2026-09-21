@@ -269,8 +269,11 @@ export const LAYER_COLORS: Record<LayerKey, { r: number; g: number; b: number; s
   bass: { r: 154, g: 167, b: 255, str: "154,167,255" },
 };
 
-/** The reference's needle working azimuth: 1:30 on the dial. */
+/** The reference's needle working azimuth: 1:30 on the dial, measured from the disc centre. */
 export const NEEDLE_ANGLE = -0.42;
+
+/** The outer ring the stylus lands on, as a fraction of the disc radius (the reference's `rN`). */
+export const TONEARM_NEEDLE_RADIUS = 0.9;
 
 /** The mid-swing lift travels through this arc; `tonearmAngle` uses it too. */
 export const TONEARM_TRAVEL = 0.21;
@@ -471,20 +474,52 @@ function clampAbs(value: number, limit: number): number {
 }
 
 /**
- * The angle the arm is *drawn* at.
+ * The angle the arm is *drawn* at, given the arm's working angle.
  *
- * The reference's arm has two positions: the working angle (`NEEDLE_ANGLE`, the stylus on the outer
- * ring at 1:30) and the resting angle, 0.21 rad counter-clockwise of it, where the stylus hangs off the
- * disc's upper right. `tonearmTheta` returns the *offset from rest* (0 at rest, +0.21 on the record,
- * plus chatter), so the drawn angle is rest plus that offset.
+ * **The angle is measured from the pivot, not from the disc centre, and that distinction is the whole
+ * reason this function exists.** `NEEDLE_ANGLE` (the reference's `NEEDLE_A`, -0.42 rad) is where the
+ * stylus sits *relative to the disc*, but the arm rotates about a pivot above and left of the disc, so
+ * the arm's own working angle is `atan2(needleY - pivotY, needleX - pivotX)` — about **+0.82 rad** on a
+ * 300x352 box, i.e. pointing right and *down* at the record. Drawing the arm at `NEEDLE_ANGLE` itself put
+ * it ~0.9 rad too high, so the stylus floated up and off the disc in *both* states, and the "correct"
+ * version of this function shipped that way because the two angles look interchangeable.
  *
- * This function exists because the first port got it wrong in a way no test could see: it added
- * `- NEEDLE_ANGLE` on top of the rest angle as well, which cancelled the travel exactly and left the arm
- * sitting ~24° below where it belonged in *both* states — the swing was there, but the arm never
- * reached the record. Asserted at both ends now.
+ * The resting position is the working angle minus `TONEARM_TRAVEL`, where the stylus hangs off the disc's
+ * upper right — that is the reference's `th0`. `tonearmTheta` returns the offset from rest (0 at rest,
+ * +0.21 on the record, plus chatter), so the drawn angle is this base plus that offset.
  */
-export function tonearmDrawAngle(position: number, offsetFromRest: number): number {
-  return NEEDLE_ANGLE - TONEARM_TRAVEL + offsetFromRest;
+export function tonearmDrawAngle(workingAngle: number, offsetFromRest: number): number {
+  return workingAngle - TONEARM_TRAVEL + offsetFromRest;
+}
+
+/**
+ * The arm's working angle: the rotation from the pivot that puts the stylus on the outer ring.
+ *
+ * Pure, and the same formula the drawing uses, so a test can prove the stylus lands *on the record* at
+ * play and *off* it at rest — the assertion that would have caught the bug above.
+ */
+export function tonearmWorkingAngle(geometry: VinylGeometry): number {
+  const needleRadius = geometry.maxR * TONEARM_NEEDLE_RADIUS;
+  const needleX = geometry.cx + Math.cos(NEEDLE_ANGLE) * needleRadius;
+  const needleY = geometry.cy + Math.sin(NEEDLE_ANGLE) * needleRadius;
+  return Math.atan2(needleY - geometry.pivotY, needleX - geometry.pivotX);
+}
+
+/**
+ * How far the stylus is from the disc centre when the arm is drawn at `angle`.
+ *
+ * The arm is rigid: its length is the pivot-to-stylus distance at the working angle, and it only ever
+ * rotates. This returns that distance for any drawn angle, which is what lets a test say "on the record"
+ * (≤ `maxR`) or "off it" (> `maxR`) without eyeballing a canvas.
+ */
+export function tonearmStylusDistance(geometry: VinylGeometry, angle: number): number {
+  const needleRadius = geometry.maxR * TONEARM_NEEDLE_RADIUS;
+  const tipX = geometry.cx + Math.cos(NEEDLE_ANGLE) * needleRadius;
+  const tipY = geometry.cy + Math.sin(NEEDLE_ANGLE) * needleRadius;
+  const armLength = Math.hypot(tipX - geometry.pivotX, tipY - geometry.pivotY);
+  const stylusX = geometry.pivotX + Math.cos(angle) * armLength;
+  const stylusY = geometry.pivotY + Math.sin(angle) * armLength;
+  return Math.hypot(stylusX - geometry.cx, stylusY - geometry.cy);
 }
 
 /**
