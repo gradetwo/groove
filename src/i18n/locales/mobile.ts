@@ -78,6 +78,11 @@ export const mobileMessages = {
    * React nodes, because a name cannot travel through a string.
    */
   mobile_detail_lineage: { en: "Lineage & evolution", zh: "传承与演变" },
+  // The three stage labels of the lineage flow diagram. They are annotations written along a rail,
+  // not headings, so they stay short enough to sit beside a node marker.
+  mobile_detail_flow_from: { en: "From", zh: "源头" },
+  mobile_detail_flow_to: { en: "Into", zh: "衍生" },
+  mobile_detail_flow_related: { en: "Crossovers", zh: "交叉与影响" },
   mobile_detail_lineage_from: { en: "Evolved from {names}", zh: "从 {names} 演化而来" },
   mobile_detail_lineage_led_to: { en: ", and directly gave rise to {names}", zh: "，又直接催生了 {names}" },
   mobile_detail_lineage_led_to_only: { en: "It directly gave rise to {names}", zh: "直接催生了 {names}" },
@@ -152,6 +157,13 @@ export const mobileMessages = {
   mobile_challenge_wrong: { en: "Not quite", zh: "答错了" },
   mobile_challenge_answer_is: { en: "The answer was", zh: "答案是" },
   mobile_challenge_next: { en: "Next question", zh: "下一题" },
+  /* The pinned answer bar. `{points}` is what the answer paid; on a wrong answer it is 0, which is the
+     honest number rather than a hidden chip. */
+  mobile_challenge_earned: { en: "+{points} pts", zh: "+{points} 分" },
+  mobile_challenge_streak_now: { en: "Streak {count}", zh: "连胜 {count}" },
+  /* Only ever shown on a right answer: the question is about to change by itself. A wrong answer says
+     nothing here on purpose — the user leaves when they have finished reading. */
+  mobile_challenge_auto_next: { en: "Next in a moment…", zh: "自动进入下一题…" },
   mobile_challenge_to_next: { en: "{points} to the next rank", zh: "距下一段位 {points}" },
   mobile_challenge_top: { en: "Top rank", zh: "已是最高段位" },
 

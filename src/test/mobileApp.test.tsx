@@ -696,6 +696,160 @@ describe("phone shell · genre detail, second pass", () => {
   });
 });
 
+/**
+ * The third pass over 曲风详情 (the complaint: the page reads "太平淡" — too plain).
+ *
+ * The character did not change: one column, no cards, no play control, and the lineage names still
+ * inline anchors. What this block protects is the *design* that replaced the flat paragraphs:
+ *  - the **header composition** — the art and the one-line at-a-glance strip are one element
+ *    (`mobile-detail-facts` lives inside `mobile-detail-header`), and the strip still carries real
+ *    values rather than six labels;
+ *  - the **lineage diagram** — ancestors, the genre itself, the era, descendants and the lateral
+ *    relations are distinct stages in document order, every stage keeps its anchors, and a stage that
+ *    loses its links has to fail rather than quietly render as prose again;
+ *  - the **list rhythm** — a left accent rule per rhythm voice, numbered tracks, a marked tips list,
+ *    a pull-quote for the cultural context, and a related index that closes the page;
+ *  - **skin safety** — nothing on the page paints an inline hex, so all six skins can restyle it.
+ */
+describe("phone shell · genre detail, third pass", () => {
+  beforeEach(() => {
+    localStorage.setItem("groove_language", "zh");
+    audition.toggle.mockReset();
+    audition.stop.mockReset();
+    audition.playingGenreId = null;
+  });
+
+  it("keeps the facts as an at-a-glance strip inside the header", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+
+    const header = screen.getByTestId("mobile-detail-header");
+    const facts = screen.getByTestId("mobile-detail-facts");
+    expect(header.contains(facts), "the strip is part of the header composition").toBe(true);
+    expect(screen.getByTestId("mobile-detail-art")).toBeInTheDocument();
+
+    const genre = ALL_GENRES.find((item) => item.id === "deep-house")!;
+    // Values, not just labels: origin, tempo, meter and key are all on the line.
+    expect(facts.textContent).toContain(genre.origin_year);
+    expect(facts.textContent).toContain(genre.bpm_range);
+    expect(facts.textContent).toContain(genre.time_signature);
+    expect(facts.textContent).toContain(genre.sequencer_pattern.scale);
+
+    // One display moment: the name appears once as the page title.
+    expect(header.querySelectorAll("h1").length).toBe(1);
+    expect(header.querySelector("h1")?.textContent).toContain("Deep House");
+
+    // Every unit stays inline text — a strip that grows a border or a radius is a card.
+    for (const unit of [...facts.children]) {
+      expect(unit.className, "an at-a-glance unit must not be a card").not.toMatch(
+        /rounded|border|m-card/
+      );
+    }
+  });
+
+  it("draws the lineage as a flow, with every stage still navigable", async () => {
+    const { onOpenGenre, onCloseGenre } = renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const lineage = screen.getByTestId("mobile-detail-lineage");
+
+    for (const id of [
+      "mobile-detail-flow-from",
+      "mobile-detail-flow-self",
+      "mobile-detail-era",
+      "mobile-detail-flow-to",
+      "mobile-detail-flow-related",
+    ]) {
+      expect(within(lineage).getByTestId(id), `${id} is missing from the diagram`).toBeInTheDocument();
+    }
+
+    // Ancestors above the genre, the genre above its descendants and the crossovers below: the
+    // stages must stay in that document order or the "flow" is just prose again.
+    const stages = ["mobile-detail-flow-from", "mobile-detail-flow-self", "mobile-detail-era", "mobile-detail-flow-to", "mobile-detail-flow-related"];
+    const documentOrder = [...lineage.querySelectorAll("[data-testid]")].map((node) =>
+      node.getAttribute("data-testid")
+    );
+    const indices = stages.map((id) => documentOrder.indexOf(id));
+    expect(indices).toEqual([...indices].sort((a, b) => a - b));
+
+    // The genre itself is the accent node in the middle of the rail.
+    expect(within(lineage).getByTestId("mobile-detail-flow-self").textContent).toContain("Deep House");
+
+    // Every stage keeps the inline anchors: an `<a>`, not a button, and not a plain name.
+    const links = within(lineage).getAllByTestId(/^mobile-detail-lineage-/);
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) expect(link.tagName).toBe("A");
+
+    fireEvent.click(within(lineage).getAllByTestId("mobile-detail-lineage-chicago-house")[0]);
+    expect(onOpenGenre).toHaveBeenCalledWith("chicago-house");
+    expect(onCloseGenre).not.toHaveBeenCalled();
+  });
+
+  it("runs the movements in order and closes on the related index", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    const detail = await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+
+    expect([...detail.querySelectorAll("section[data-testid]")].map((node) => node.getAttribute("data-testid"))).toEqual([
+      "mobile-detail-lineage",
+      "mobile-detail-character",
+      "mobile-detail-rhythm",
+      "mobile-detail-sound",
+      "mobile-detail-instruments",
+      "mobile-detail-tips",
+      "mobile-detail-tracks",
+      "mobile-detail-related",
+    ]);
+
+    // The finale is an index: a hairline under every row, and the row itself still a clean target.
+    const related = screen.getByTestId("mobile-detail-related");
+    const rows = [...related.querySelectorAll("li")];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.className, "each related row is separated by a hairline").toMatch(/border-b/);
+      expect(
+        row.querySelector("button")?.className ?? "",
+        "the touch target itself must stay border-free"
+      ).not.toMatch(/rounded|border|m-card/);
+    }
+  });
+
+  it("gives every rhythm voice its own accent rule and value", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const rhythm = screen.getByTestId("mobile-detail-rhythm");
+
+    const parts = [...rhythm.querySelectorAll("dl > div")];
+    expect(parts.length).toBeGreaterThan(3);
+    for (const part of parts) {
+      expect(part.className, "a rhythm part is marked by a left rule").toMatch(/border-l-2/);
+      expect(part.querySelector("dt")?.textContent?.trim().length ?? 0).toBeGreaterThan(0);
+      expect(part.querySelector("dd")?.textContent?.trim().length ?? 0).toBeGreaterThan(0);
+    }
+  });
+
+  it("numbers the key tracks and quotes the cultural context", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const genre = ALL_GENRES.find((item) => item.id === "deep-house")!;
+
+    const tracks = [...screen.getByTestId("mobile-detail-tracks").querySelectorAll("ol > li")];
+    expect(tracks.length).toBe(genre.representative_tracks.length);
+    expect(tracks[0].textContent).toContain("01");
+    expect(tracks[1].textContent).toContain("02");
+    expect(tracks[0].textContent).toContain(genre.representative_tracks[0].title);
+
+    expect(screen.getByTestId("mobile-detail-context").tagName).toBe("BLOCKQUOTE");
+  });
+
+  it("paints only with tokens: no inline hex anywhere on the page", async () => {
+    renderShell("home", { genreId: "deep-house" });
+    const detail = await screen.findByTestId("mobile-genre-detail", {}, { timeout: 5000 });
+    const hexStyles = [...detail.querySelectorAll("[style]")]
+      .map((node) => node.getAttribute("style") ?? "")
+      .filter((style) => /#[0-9a-f]{3,8}\b/i.test(style));
+    expect(hexStyles, "a hardcoded hex would break five of the six skins").toEqual([]);
+  });
+});
+
 describe("phone shell · the full-screen player", () => {
   beforeEach(() => {
     localStorage.setItem("groove_language", "zh");
