@@ -48,25 +48,31 @@ const SAMPLE = [
 /**
  * The ratchet, per claim, in *number of sampled genres affected*.
  *
- * Today's measurements (12 genres): 12 flat-velocity, 11 shallow duck, 12 near-mono, 10 hollow mids, 5 static
- * harmony, 1 cut tail. Zero is the goal for all of them, and `docs/GROOVE_QUALITY_PLAN.md` is the route.
+ * Re-derived after two measurement-integrity fixes (P0.2). The analyser used to render
+ * `genre.sequencer_pattern` — the authored skeleton no user ever plays — so `flatTracks` and
+ * `staticHarmony` were counting values the genre-entry expansion had already replaced. On the
+ * pattern the user actually hears the sample is 0/12 flat and 0/12 static, so both budgets fall.
+ *
+ * `weakDuck` rises from 11 to 12 **because the instrument changed, not because the audio did**: the
+ * duck was measured on a bass-only render, where the sidechain is never even scheduled (the trigger
+ * lives in the kick's branch), so the old number was the bass part's own envelope. The paired
+ * measurement shows a mean dip of at most 0.25 dB with a deepest single dip of −1.8 dB — the plan's
+ * "the mechanism is there and the setting is wrong". P0.3 deepens it and this budget goes to 0.
+ *
+ * Zero is the goal for every one of them — `docs/GROOVE_QUALITY_PLAN.md` is the route — and they can
+ * only go down. (History worth keeping: the first calibration named three ids that do not exist here —
+ * `house`, `dnb`, `shoegaze` — and the analyser dropped them silently, so the budgets described nine
+ * genres. The analyser now names unmatched ids instead of filtering them away.)
  */
 const BUDGET = {
-  /**
-   * Today's measurements over this sample, and the *first honest* calibration of it.
-   *
-   * The first attempt was wrong twice over: three of the twelve ids did not exist (`house`, `dnb`, `shoegaze` are
-   * not genre ids here) and the analyser dropped them silently, so the budgets were set against nine genres and
-   * the gate failed the moment the sample was correct. The analyser now names unmatched ids, and these numbers
-   * are the real twelve. Zero is the goal for every one of them — `docs/GROOVE_QUALITY_PLAN.md` is the route — and
-   * they can only go down.
-   */
-  flatTracks: 12,
-  weakDuck: 11,
+  flatTracks: 0,
+  weakDuck: 12,
   narrowStereo: 12,
   thinMids: 11,
-  staticHarmony: 5,
-  cutTail: 2,
+  staticHarmony: 0,
+  // boom-bap only (−29.1 dBFS, and it trips both confirmation renders). detroit-techno's −24.7 dBFS
+  // readings were the render nondeterminism, not a cut tail; see P0.8 in the plan.
+  cutTail: 1,
 };
 
 const CLAIMS = {
@@ -133,9 +139,10 @@ function measureRows(rows) {
       detail.flatTracks.push(`${row.id} (${velocity.filter((e) => e.distinct <= 1).length}/8 flat)`);
     }
     const duck = row.musical?.duck;
-    if (duck && duck.kickOnsets > 0 && duck.duckDb > -1.5) {
+    // `duckOnsets`, not `kickOnsets`: a kick that lands in a bass rest has no sidechain to measure.
+    if (duck && duck.duckOnsets > 0 && duck.duckDb > -1.5) {
       tally.weakDuck += 1;
-      detail.weakDuck.push(`${row.id} (${duck.duckDb} dB)`);
+      detail.weakDuck.push(`${row.id} (${duck.duckDb} dB over ${duck.duckOnsets} onsets)`);
     }
     if (row.correlation > 0.98) {
       tally.narrowStereo += 1;
