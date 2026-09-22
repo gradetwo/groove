@@ -1,7 +1,7 @@
 # GROOVE LAB 改进任务清单（BACKLOG）
 
 > 配套文档：`CODE_REVIEW_AND_PLAN_v1.16.0.md`（历史审阅与 N-xx 登记）、`PRODUCT_PLAN_v2.1.0.md`（当前规划）
-> 当前基线：**v2.11.0**（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
+> 当前基线：**v2.11.1**（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
 > 优先级：**P0** 正确性/安全 ｜ **P1** 体验/性能/可维护 ｜ **P2** 增强
 > 工时单位：人·天（含自测）
 > 使用方式：每个任务一条 PR；`ID` 可直接用于 commit message，如 `fix(P0-01): correct Bjorklund euclidean generator`
