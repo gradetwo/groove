@@ -26,6 +26,7 @@ import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp, visualLeadSeconds } from "./schedulerMath";
 import { ratchetVelocityScale, resolveRatchet } from "./noteEvents";
+import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -2210,12 +2211,15 @@ export class AudioEngine {
   }
 
   /**
-   * Acoustic enhancement: Kick-Bass low-frequency sidechain ducking.
-   * Dips bass track strip by ~3dB for ~60ms to eliminate 40-100Hz masking.
+   * Kick/bass low-frequency sidechain ducking.
+   *
+   * P0.3: the depth and release come from the genre's `duck` setting (`audio/sidechain.ts`), which the
+   * offline renderer schedules from the same helper. The old inline formula (`max(0.65, 1 - 0.3 * vel)`,
+   * 3 ms in, 65 ms out) measured at most 0.25 dB of duck through the app's own render path — inaudible.
    */
   private applyKickDuckOnBass(time: number, vel: number): void {
     if (!this.pattern?.tracks) return;
-    const duckDepth = Math.max(0.65, 1 - 0.3 * vel);
+    const shape = resolveKickDuckShape(this.pattern.genre_id, vel);
     this.pattern.tracks.forEach((track, idx) => {
       const tid = (track.track_id || "").toLowerCase();
       const tname = (track.name || "").toLowerCase();
@@ -2223,11 +2227,7 @@ export class AudioEngine {
         const strip = this.trackStrips[idx];
         if (strip?.duckGain) {
           try {
-            const param = strip.duckGain.gain;
-            param.cancelScheduledValues(time);
-            param.setValueAtTime(1.0, time);
-            param.linearRampToValueAtTime(duckDepth, time + 0.003);
-            param.exponentialRampToValueAtTime(1.0, time + 0.065);
+            scheduleKickDuck(strip.duckGain.gain, time, shape);
           } catch {
             // AudioParam scheduling guard
           }

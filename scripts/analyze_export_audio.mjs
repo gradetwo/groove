@@ -94,7 +94,7 @@ function startDevServer() {
 async function measureGenre(page, genreId, bars, soloTracks) {
   return page.evaluate(
     async ({ id, bars: barsArg, soloTracks }) => {
-      const [wav, genresModule, mixModule, loudness, timbre, metrics, trackUtils] = await Promise.all([
+      const [wav, genresModule, mixModule, loudness, timbre, metrics, trackUtils, noteEvents] = await Promise.all([
         import("/src/audio/WavExporter.ts"),
         import("/src/data/genres/index.ts"),
         import("/src/data/genreMix.ts"),
@@ -102,6 +102,9 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         import("/src/test/helpers/timbre.ts"),
         import("/src/test/helpers/audioMetrics.ts"),
         import("/src/utils/trackUtils.ts"),
+        // The duck measurement reproduces the renderer's step grid, so it uses the *shared* probability
+        // helper instead of a second copy of the decision.
+        import("/src/audio/noteEvents.ts"),
       ]);
       const genre = genresModule.ALL_GENRES.find((g) => g.id === id);
       if (!genre) throw new Error(`unknown genre: ${id}`);
@@ -273,29 +276,41 @@ async function measureGenre(page, genreId, bars, soloTracks) {
       /**
        * Does the bass actually duck when the kick hits?
        *
-       * Measured as a **paired** render: the same bass+kick pair once with the duck active (`withKick`) and once
-       * with the kick removed (`control`, which can never schedule a duck — the trigger lives inside the kick's
-       * own branch of the render loop). The two renders differ only in the kick's presence, so the level ratio
-       * over the same windows *is* the sidechain and nothing else.
+       * Measured as a **paired** render: the same bass+kick pair once with the duck active and once with the kick
+       * removed (the control can never schedule a duck — the trigger lives inside the kick's own branch of the
+       * render loop). The two renders differ only in the kick's presence, so the level ratio over the same windows
+       * *is* the sidechain and nothing else.
        *
-       * The first version rendered the bass **alone** and compared the window before the kick with the window
-       * after it. With the kick's steps zeroed no duck is ever scheduled, so that number was the bass part's own
-       * envelope: a bass note that starts on the kick reads as +2..+5 dB, which the gate counted as "weak ducking"
-       * for the wrong reason. It also could never be falsified by making the sidechain deeper.
+       * Earlier versions of this measurement were wrong in ways worth keeping written down:
+       *
+       *   1. it rendered the bass **alone** and compared the window before a kick with the window after it. With the
+       *      kick's steps zeroed no duck is ever scheduled, so that number was the bass part's own envelope — a bass
+       *      note starting on the kick read as +2..+5 dB — and no amount of depth could have falsified it;
+       *   2. it anchored the window to a detected kick *peak*. An 808's peak lands tens of milliseconds after its
+       *      trigger, so the window fell into the release and reported a 6 dB duck as a 0.5 dB mean.
+       *
+       * The window is anchored to the **scheduled** kick step: the grid below mirrors `renderPatternOffline`
+       * (`step % trackLength`, its swing rule, its `totalSteps`, and the shared probability helper), and the
+       * kick-only render is kept as a cross-check that the mirror still lines up with what rendered.
+       *
+       * It is measured **twice**: once with the mastering bus compressor in the chain (`duckMasterDb`, what reaches
+       * the file) and once with it bypassed (`duckDb`, the sidechain's own depth). The difference is not academic —
+       * the glue compressor and the ceiling give part of the duck back on loud genres, so reporting only one of the
+       * two numbers would either flatter the sidechain or understate it.
        */
       const measureDuck = async () => {
         const bassTrack = pattern.tracks.find((t) => t.track_id === "bass");
         const kickTrack = pattern.tracks.find((t) => t.track_id === "kick");
         if (!bassTrack || !kickTrack) return null;
-        /** Keep the named tracks and silence everything else, so the mix bus cannot mask the pair. */
-        const only = (keep, options = {}) => ({
+        const kickIdx = pattern.tracks.indexOf(kickTrack);
+        /** Keep the named tracks and silence everything else, so no other part can mask the pair. */
+        const only = (keep) => ({
           ...pattern,
           tracks: pattern.tracks.map((t) =>
             keep.includes(t.track_id)
               ? t
               : { ...t, steps: t.steps.map(() => 0), gate: t.gate ? t.gate.map(() => 0) : undefined }
           ),
-          ...options,
         });
         /** The pattern's own mixer, with the kick's *output* removed and its triggering untouched. */
         const kickSilentStates = () =>
@@ -307,23 +322,35 @@ async function measureGenre(page, genreId, bars, soloTracks) {
             sendA: t.track_id === "kick" ? 0 : Number.isFinite(t.sendA) ? t.sendA : 0,
             sendB: t.track_id === "kick" ? 0 : Number.isFinite(t.sendB) ? t.sendB : 0,
           }));
-        const [withKick, control] = await Promise.all([
-          wav.renderPatternOffline(only(["bass", "kick"]), {
-            bars: barsArg,
-            // The kick must *trigger* the duck but contribute no audio: measuring the summed pair would just
-            // measure the kick's own level after its own onset (+9..+25 dB "duck"). Zeroing the kick strip's
-            // volume and sends keeps the trigger (it lives in the step branch, not the mixer) and leaves the
-            // bass's duck as the only difference between the two renders.
-            trackStates: kickSilentStates(),
-          }).catch(() => null),
-          wav.renderPatternOffline(only(["bass"]), { bars: barsArg, trackStates: kickSilentStates() }).catch(
-            () => null
-          ),
+        const renderPair = (busComp) =>
+          Promise.all([
+            wav
+              .renderPatternOffline(only(["bass", "kick"]), {
+                bars: barsArg,
+                trackStates: kickSilentStates(),
+                masterBusCompEnabled: busComp,
+                // The ceiling is part of "what reaches the file", not part of the sidechain: with the pure pair it
+                // is lifted out of the way (a +12 dBTP target no programme here reaches) so the two pairs separate
+                // the mechanism from the mastering chain's give-back.
+                limiterCeilingDb: busComp ? undefined : 12,
+              })
+              .catch(() => null),
+            wav
+              .renderPatternOffline(only(["bass"]), {
+                bars: barsArg,
+                trackStates: kickSilentStates(),
+                masterBusCompEnabled: busComp,
+                limiterCeilingDb: busComp ? undefined : 12,
+              })
+              .catch(() => null),
+          ]);
+        const [[pureDucked, pureControl], [fullDucked, fullControl], kickSolo] = await Promise.all([
+          renderPair(false),
+          renderPair(true),
+          wav.renderPatternOffline(only(["kick"]), { bars: barsArg }).catch(() => null),
         ]);
-        if (!withKick || !control) return null;
-        const ducked = withKick.getChannelData(0);
-        const unducked = control.getChannelData(0);
-        const rate = withKick.sampleRate;
+        if (!pureDucked || !pureControl || !fullDucked || !fullControl || !kickSolo) return null;
+        const rate = pureDucked.sampleRate;
         const rms = (data, from, to) => {
           let sum = 0;
           const start = Math.max(0, from);
@@ -331,47 +358,106 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           for (let i = start; i < end; i += 1) sum += data[i] * data[i];
           return Math.sqrt(sum / Math.max(1, end - start));
         };
-        const from = Math.round(rate * 0.005);
-        const to = Math.round(rate * 0.025);
+        const clampSwing = (value) => Math.max(0, Math.min(0.75, Number.isFinite(value) ? value : 0));
+        const bpm = Math.max(20, Math.min(300, pattern.bpm || 120));
+        const stepDur = 60 / bpm / 4;
+        const swing = clampSwing(pattern.swing ? (pattern.swing > 1 ? pattern.swing / 100 : pattern.swing) : 0);
+        const effectiveSwing = clampSwing(swing + (kickTrack.swing ?? 0) / 100);
+        const patternSteps = pattern.totalSteps > 0 ? pattern.totalSteps : kickTrack.steps.length || 16;
+        const kickLength = kickTrack.trackLength > 0 ? kickTrack.trackLength : kickTrack.steps.length;
+        const seed = noteEvents.patternSeed(pattern);
         /**
-         * Kick onsets come from a kick-only render, so a ducked bass cannot hide one: the first sample above half
-         * the kick's peak, with a 60 ms refractory gap.
+         * The dip, measured as the **deepest 5 ms** in the 60 ms after each kick.
+         *
+         * A fixed window cannot work here. The first attempt averaged 5-25 ms, which measures a long release as a
+         * deeper duck than a short one at the same depth; the second averaged 3-15 ms, which lands before the bass
+         * note's own energy has developed — the ratio is energy-weighted, so a note that peaks at 20 ms read as
+         * 0 dB and the sounding floor excluded the rest. The deepest short window is what a listener actually hears
+         * as "the bass dropped", and it is independent of both the release length and the note's envelope.
          */
-        const kickSolo = await wav.renderPatternOffline(only(["kick"]), { bars: barsArg }).catch(() => null);
-        if (!kickSolo) return null;
-        const kickOnly = kickSolo.getChannelData(0);
-        const peak = kickOnly.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
-        const onsets = [];
-        let last = -Infinity;
-        for (let i = 0; i < kickOnly.length; i += 1) {
-          if (Math.abs(kickOnly[i]) > peak * 0.5 && i - last > rate * 0.06) {
-            onsets.push(i);
-            last = i;
+        const windowSamples = Math.round(rate * 0.005);
+        const scanSamples = Math.round(rate * 0.06);
+        const stepSamples = Math.max(1, Math.round(rate * 0.001));
+
+        /** Every scheduled kick step in the render, as `[sampleIndex, step]`. */
+        const grid = [];
+        for (let step = 0; step < patternSteps * barsArg; step++) {
+          const stepIdx = kickLength > 0 ? step % kickLength : step;
+          if (!(kickTrack.steps[stepIdx] > 0)) continue;
+          if (!noteEvents.probabilityPasses(kickTrack.probability?.[stepIdx], seed, kickIdx, stepIdx)) continue;
+          const swingOffset = step % 2 === 1 && effectiveSwing > 0 ? effectiveSwing * 0.5 * stepDur : 0;
+          const at = Math.round((step * stepDur + swingOffset) * rate);
+          if (at + scanSamples >= pureDucked.length) break;
+          grid.push(at);
+        }
+        const kickAudio = kickSolo.getChannelData(0);
+        const kickPeak = kickAudio.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+        const energyOnsets = grid.filter((at) => kickPeak > 0 && rms(kickAudio, at, at + scanSamples) > kickPeak * 0.01).length;
+
+        /**
+         * The ratio at every grid point where the bass is *properly* sounding.
+         *
+         * An absolute floor of 1e-4 (−80 dBFS) treated a decaying tail or the noise floor as "the bass is playing
+         * here", and with a sparse bass line those meaningless windows were the majority — they are why a real duck
+         * first measured as a 0.5 dB mean. The floor is relative to the control's own average level (within ~16 dB
+         * of it) with an absolute guard; the sounding test uses the *control* of the same pair, so the two pairs
+         * cannot disagree about which windows count.
+         */
+        const ratiosFor = (duckedBuffer, controlBuffer) => {
+          const ducked = duckedBuffer.getChannelData(0);
+          const unducked = controlBuffer.getChannelData(0);
+          const floor = Math.max(1e-3, rms(unducked, 0, unducked.length) * 0.15);
+          const dips = [];
+          let louderOnsets = 0;
+          for (const at of grid) {
+            let deepest = null;
+            let windows = 0;
+            for (let start = at; start + windowSamples <= at + scanSamples; start += stepSamples) {
+              const reference = rms(unducked, start, start + windowSamples);
+              if (reference <= floor) continue;
+              const ratio = 20 * Math.log10(Math.max(rms(ducked, start, start + windowSamples), 1e-9) / reference);
+              deepest = deepest === null ? ratio : Math.min(deepest, ratio);
+              windows += 1;
+            }
+            // Two windows is the minimum for "there is bass here and it was watched over time".
+            if (deepest === null || windows < 2) continue;
+            dips.push(deepest);
+            if (deepest > 0) louderOnsets += 1;
           }
-        }
-        if (!onsets.length) return null;
-        /**
-         * Only onsets where the bass is actually sounding count. A kick that lands in a bass rest has nothing to
-         * duck, and including those windows would drag every genre towards 0 dB — the "measurable" count is
-         * reported so a genre with no overlap is visible instead of silently passing.
-         */
-        const SILENCE = 1e-4;
-        const usable = [];
-        for (const at of onsets) {
-          const reference = rms(unducked, at + from, at + to);
-          if (reference <= SILENCE) continue;
-          usable.push(20 * Math.log10(Math.max(rms(ducked, at + from, at + to), 1e-9) / reference));
-        }
-        if (!usable.length) return { kickOnsets: onsets.length, duckOnsets: 0, duckDb: 0 };
-        const mean = usable.reduce((a, b) => a + b, 0) / usable.length;
+          if (!dips.length) return { onsets: 0, meanDb: 0 };
+          const sorted = [...dips].sort((a, b) => a - b);
+          return {
+            onsets: dips.length,
+            meanDb: Math.round((dips.reduce((a, b) => a + b, 0) / dips.length) * 100) / 100,
+            medianDb: Math.round(sorted[Math.floor(sorted.length / 2)] * 100) / 100,
+            minDb: Math.round(sorted[0] * 100) / 100,
+            /** Onsets where the bass never dipped at all — a red flag if this is not ~0. */
+            louderOnsets,
+          };
+        };
+        const pure = ratiosFor(pureDucked, pureControl);
+        const full = ratiosFor(fullDucked, fullControl);
         return {
-          kickOnsets: onsets.length,
-          duckOnsets: usable.length,
-          duckDb: Math.round(mean * 100) / 100,
-          duckMinDb: Math.round(Math.min(...usable) * 100) / 100,
+          /** Scheduled kick steps in the render (the mirror of the renderer's `totalSteps` loop). */
+          kickSteps: grid.length,
+          /** Of those, how many show kick energy in the kick-only render — 0 here means the mirror has drifted. */
+          kickOnsets: energyOnsets,
+          /** Of those, how many have the bass sounding — the denominator of every number below. */
+          duckOnsets: pure.onsets,
+          /** The sidechain's own depth (mastering bus compressor and ceiling bypassed): the mechanism. */
+          duckDb: pure.meanDb,
+          duckMedianDb: pure.medianDb,
+          duckMinDb: pure.minDb,
+          duckLouderOnsets: pure.louderOnsets ?? 0,
+          /** Through the full mastering chain — what the file actually shows, and the claim's number. */
+          duckMasterDb: full.meanDb,
+          duckMasterMedianDb: full.medianDb,
+          duckMasterMinDb: full.minDb,
         };
       };
       const duck = await measureDuck();
+
+
 
       /** Where the energy sits: the 2/3-octave bands that cover roughly 200 Hz - 2 kHz. */
       const bandCentres = timbre.TIMBRE_BAND_CENTRES_HZ;
@@ -494,14 +580,28 @@ const CLAIMS = {
     return Math.max(...offsets.map(Math.abs)) < 3;
   },
   /**
-   * The kick and the bass arrive together and nothing ducks: a shallow dip is the same as none.
+   * The kick and the bass arrive together and the sidechain is too shallow to hear.
    *
-   * `duckOnsets` (not `kickOnsets`) is the denominator: a genre whose bass is silent under every kick has no
-   * sidechain to hear, and is reported as unmeasurable rather than counted as passing or failing.
+   * Measured on the *mechanism* (`duckMedianDb`, the deepest 5 ms window per onset, median across onsets, with
+   * the mastering chain's dynamics bypassed) and never on the raw mean: a single loud onset or a long release
+   * would move a mean around. `duckOnsets` (not `kickOnsets`) is the denominator — a genre whose bass is silent
+   * under every kick has no sidechain to hear and is reported as unmeasurable, not counted as passing or failing.
    */
   weakDuck: (row) => {
     const duck = row.musical?.duck;
-    return Boolean(duck) && duck.duckOnsets > 0 && duck.duckDb > -1.5;
+    return Boolean(duck) && duck.duckOnsets > 0 && (duck.duckMedianDb ?? 0) > -3;
+  },
+  /**
+   * The sidechain is real and the mastering chain gives it back.
+   *
+   * A separate claim because the two failures need different work: `weakDuck` is the mix (P0.3), this is the
+   * master chain's gain recovery (P2.3). It shows up on loud genres — disco measures a −4.4 dB dip with the
+   * dynamics bypassed and −0.4 dB through the ceiling — and it also flattens the per-note dynamics P0.2 added.
+   */
+  duckErasedInMaster: (row) => {
+    const duck = row.musical?.duck;
+    if (!duck || duck.duckOnsets <= 0) return false;
+    return (duck.duckMedianDb ?? 0) <= -3 && (duck.duckMasterMedianDb ?? 0) > -1.5;
   },
   /** The mid-range is thin: the 200 Hz - 2 kHz bands hold less than the average band's share. */
   thinMids: (row) => (row.musical?.midBandShareDb ?? 0) < -6,

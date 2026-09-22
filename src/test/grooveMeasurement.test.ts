@@ -58,8 +58,37 @@ describe("P0.2 · the duck is measured as a duck", () => {
   });
 
   it("only counts onsets where the bass is actually sounding", () => {
+    // A fixed −80 dBFS floor counted decaying tails as "the bass is playing here", and with a sparse bass line
+    // those meaningless windows were the majority — they made a real duck measure as a 0.5 dB mean.
     expect(analyser).toMatch(/duckOnsets/);
-    expect(analyser).toMatch(/reference <= SILENCE/);
+    expect(analyser).toMatch(/rms\(unducked, 0, unducked\.length\) \* 0\.15/);
+    expect(analyser).toMatch(/reference <= floor/);
+  });
+
+  it("anchors the window to the scheduled kick, not to a detected peak", () => {
+    // An 808's peak lands tens of milliseconds after its trigger, so a peak-anchored window measured the
+    // release and reported a 6 dB duck as a 0.5 dB one. The grid mirrors the renderer's own loop.
+    expect(analyser).toMatch(/patternSteps \* barsArg/);
+    expect(analyser).toMatch(/effectiveSwing \* 0\.5 \* stepDur/);
+    expect(analyser).toMatch(/noteEvents\.probabilityPasses/);
+    // ...and the kick-only render is kept as a cross-check that the mirror still lines up.
+    expect(analyser).toMatch(/kickOnsets: energyOnsets/);
+  });
+
+  it("measures the deepest short window, so the release length cannot flatter the depth", () => {
+    // A 25 ms mean measured a slow release as a deeper duck than a fast one at the same depth.
+    expect(analyser).toMatch(/rate \* 0\.005/);
+    expect(analyser).toMatch(/rate \* 0\.06/);
+    expect(analyser).toMatch(/deepest = deepest === null \? ratio : Math\.min\(deepest, ratio\)/);
+    expect(analyser).toMatch(/duckMedianDb/);
+  });
+
+  it("separates the sidechain from the mastering chain's give-back", () => {
+    // Both pairs, one with the mastering dynamics out of the way: the difference is the ceiling/glue compressor
+    // refilling the dip, which is a different defect from a shallow sidechain.
+    expect(analyser).toMatch(/masterBusCompEnabled: busComp/);
+    expect(analyser).toMatch(/duckMasterMedianDb/);
+    expect(analyser).toMatch(/duckErasedInMaster/);
   });
 
   it("does not fall back to the kick's own onset level", () => {

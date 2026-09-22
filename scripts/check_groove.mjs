@@ -66,7 +66,13 @@ const SAMPLE = [
  */
 const BUDGET = {
   flatTracks: 0,
-  weakDuck: 12,
+  // P0.3 landed: every sampled genre whose bass sounds under a kick now dips 3.8-5.1 dB in its deepest 5 ms,
+  // and the two genres with no bass under the kick at all (minimal-techno, ambient) are unmeasurable rather
+  // than counted as passing.
+  weakDuck: 0,
+  // disco: a -4.4 dB sidechain that the ceiling's gain recovery refills to -0.4 dB in the file. Budgeted
+  // rather than excused — this one is the master chain's dynamics (P2.3), not the mix.
+  duckErasedInMaster: 1,
   narrowStereo: 12,
   thinMids: 11,
   staticHarmony: 0,
@@ -78,6 +84,10 @@ const BUDGET = {
 const CLAIMS = {
   flatTracks: {
     label: "flat velocities (≥4 of 8 tracks with one velocity)",
+    worse: (count, budget) => count > budget,
+  },
+  duckErasedInMaster: {
+    label: "duck lost in the mastering chain (sidechain ≥3 dB, file <1.5 dB)",
     worse: (count, budget) => count > budget,
   },
   weakDuck: { label: "inaudible sidechain (duck shallower than 1.5 dB)", worse: (count, budget) => count > budget },
@@ -129,8 +139,8 @@ function analyse() {
  * unconditionally. A gate that cannot fail is worse than no gate, so the accumulator is named `tally`.
  */
 function measureRows(rows) {
-  const tally = { flatTracks: 0, weakDuck: 0, narrowStereo: 0, thinMids: 0, staticHarmony: 0, cutTail: 0 };
-  const detail = { flatTracks: [], weakDuck: [], narrowStereo: [], thinMids: [], staticHarmony: [], cutTail: [] };
+  const tally = { flatTracks: 0, weakDuck: 0, duckErasedInMaster: 0, narrowStereo: 0, thinMids: 0, staticHarmony: 0, cutTail: 0 };
+  const detail = { flatTracks: [], weakDuck: [], duckErasedInMaster: [], narrowStereo: [], thinMids: [], staticHarmony: [], cutTail: [] };
   for (const row of rows) {
     if (row.error) continue;
     const velocity = Object.values(row.musical?.velocityByTrack ?? {}).filter(Boolean);
@@ -139,10 +149,17 @@ function measureRows(rows) {
       detail.flatTracks.push(`${row.id} (${velocity.filter((e) => e.distinct <= 1).length}/8 flat)`);
     }
     const duck = row.musical?.duck;
-    // `duckOnsets`, not `kickOnsets`: a kick that lands in a bass rest has no sidechain to measure.
-    if (duck && duck.duckOnsets > 0 && duck.duckDb > -1.5) {
+    // `duckOnsets`, not `kickOnsets`: a kick that lands in a bass rest has no sidechain to measure. The median
+    // of the deepest 5 ms window per onset, not the mean — see the analyser's `weakDuck` for why.
+    if (duck && duck.duckOnsets > 0 && (duck.duckMedianDb ?? 0) > -3) {
       tally.weakDuck += 1;
-      detail.weakDuck.push(`${row.id} (${duck.duckDb} dB over ${duck.duckOnsets} onsets)`);
+      detail.weakDuck.push(`${row.id} (${duck.duckMedianDb} dB dip over ${duck.duckOnsets} onsets)`);
+    }
+    if (duck && duck.duckOnsets > 0 && (duck.duckMedianDb ?? 0) <= -3 && (duck.duckMasterMedianDb ?? 0) > -1.5) {
+      tally.duckErasedInMaster += 1;
+      detail.duckErasedInMaster.push(
+        `${row.id} (sidechain ${duck.duckMedianDb} dB, file ${duck.duckMasterMedianDb} dB)`
+      );
     }
     if (row.correlation > 0.98) {
       tally.narrowStereo += 1;

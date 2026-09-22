@@ -23,6 +23,7 @@ import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
+import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -67,6 +68,11 @@ export interface RenderWavOptions {
   masterMakeupDb?: number;
   /** Set false to render without the mastering bus compressor (measurement tooling). */
   masterBusCompEnabled?: boolean;
+  /**
+   * Master true-peak ceiling, dBTP. The graph already accepts it for measurement tooling; forwarding it here
+   * lets a probe separate "the sidechain ducked" from "the ceiling gave part of it back".
+   */
+  limiterCeilingDb?: number;
   /**
    * Called once per render with the limiter that actually ended up in the graph.
    *
@@ -266,6 +272,7 @@ export async function renderPatternOffline(
     loudnessTrimDb,
     masterMakeupDb: options.masterMakeupDb,
     masterBusCompEnabled: options.masterBusCompEnabled,
+    limiterCeilingDb: options.limiterCeilingDb,
   });
 
   // N-14: the genre's master FX and bus character, applied through the same shared
@@ -485,8 +492,9 @@ export async function renderPatternOffline(
         // Synthesis Dispatch with physical drum kit modeling and polyphonic synth
         if (trackId === "kick" || lowerName.includes("kick")) {
           synthesizeKick(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
-          // Acoustic Enhancement: Kick-Bass sidechain ducking (parity with AudioEngine)
-          const duckDepth = Math.max(0.65, 1 - 0.3 * subVel);
+          // Kick-bass sidechain ducking, scheduled from the same shape the live engine uses
+          // (`audio/sidechain.ts`), so an export matches what was auditioned.
+          const duckShape = resolveKickDuckShape(pattern.genre_id, subVel);
           pattern.tracks.forEach((tTrack: Track, tIdx: number) => {
             const tTid = (tTrack.track_id || "").toLowerCase();
             const tName = (tTrack.name || "").toLowerCase();
@@ -494,11 +502,7 @@ export async function renderPatternOffline(
               const bassStrip = trackStrips[tIdx];
               if (bassStrip?.duckGain) {
                 try {
-                  const param = bassStrip.duckGain.gain;
-                  param.cancelScheduledValues(subTime);
-                  param.setValueAtTime(1.0, subTime);
-                  param.linearRampToValueAtTime(duckDepth, subTime + 0.003);
-                  param.exponentialRampToValueAtTime(1.0, subTime + 0.065);
+                  scheduleKickDuck(bassStrip.duckGain.gain, subTime, duckShape);
                 } catch {
                   // Guard against scheduling errors
                 }

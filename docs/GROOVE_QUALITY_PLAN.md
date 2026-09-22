@@ -50,8 +50,9 @@ Both are the same mistake at different depths: **measuring something other than 
    *silent* (volume and sends zeroed, so it still triggers) and once without the kick, and compares the same 5–25 ms
    windows: the only difference between the two files is the duck gain.
 
-With the honest instrument the sample's sidechain measures a mean dip of **at most 0.25 dB** and a deepest single
-dip of **−1.8 dB**. That is not a tuning detail — it is the mechanism being inaudible, which is P0.3.
+With the honest instrument the sample's sidechain measured a mean dip of **at most 0.25 dB** and a deepest single
+dip of **−1.8 dB**. That is not a tuning detail — it is the mechanism being inaudible, which is what P0.3 fixed
+(the depth and release now come from `DUCK_BY_CATEGORY` and measure −3.8…−5.1 dB).
 
 ### A third finding: the renders are not repeat-identical, and the tail is where it shows
 
@@ -77,22 +78,23 @@ derived from:
 | Claim | Before (skeleton basis) | Now (heard pattern) | Worst offenders |
 | :--- | :--- | :--- | :--- |
 | `flatTracks` — ≥4 of 8 lanes at one velocity | 12/12 | **0/12** | — (P0.2) |
-| `weakDuck` — mean dip shallower than 1.5 dB | 11/12 | **12/12** | minimal-techno −0.25 dB; every genre ≤0.25 dB |
+| `weakDuck` — dip shallower than 3 dB | 11/12 (wrong instrument) | **0/12** | — (P0.3); minimal-techno and ambient are unmeasurable, not passing |
+| `duckErasedInMaster` — sidechain ≥3 dB, file <1.5 dB | — (new claim) | **1/12** | disco: −4.4 dB in the sidechain, −0.4 dB through the ceiling |
 | `narrowStereo` — channel correlation > 0.98 | 12/12 | 12/12 | trap-rap 0.9993, disco 0.9995 |
 | `thinMids` — 200 Hz–2 kHz share below −6 dB | 11/12 | 11/12 | trap-rap −12.4 dB, disco −12.1 dB |
 | `staticHarmony` — one chord for the loop | 5/12 | **0/12** | — (the expansion writes the progression) |
-| `cutTail` — last 50 ms above −30 dBFS | 2/12 | 2/12 | detroit-techno −24.7 dBFS, boom-bap −29.1 dBFS |
+| `cutTail` — last 50 ms above −30 dBFS | 2/12 | 1/12 | boom-bap −29.1 dBFS (detroit-techno's readings were the render nondeterminism) |
 
-Two of the six claims were **measurement artefacts**, one (the duck) is a real and now correctly instrumented
-defect, and the other three are real. P0.4–P0.6 keep their targets; P1.3 (harmonic movement) drops off the list
-below because the claim it was written for does not survive the corrected basis.
+Two of the six original claims were **measurement artefacts**, one (the duck) was real and is now fixed, and the
+other three are real. P0.4–P0.6 keep their targets; P1.3 (harmonic movement) drops off the list below because the
+claim it was written for does not survive the corrected basis.
 
 ### Confirmed
 
 | Claim | Measurement | Scale |
 | :--- | :--- | :--- |
 | **Velocities were flat — "a MIDI dump"** | **Fixed (P0.2).** The authored skeleton really was flat — six of eight lanes carry a single value in chicago-blues and reggaeton (kick 120, snare 115, bass/chords/lead/fx 100) — and the expansion preserved that, so **12 of 12** sampled genres shipped ≥4 flat lanes. Humanisation is now baked into `patternFromGenre`; the sample is **0 of 12**, with ≥2 distinct velocities on drum lanes (reggaeton: kick 3, snare 11, hats 18). | landed |
-| **The bass and kick collide (no usable sidechain)** | The ducking stage *exists* (`duckGain`, wired into both engines) and now measures **≤0.25 dB mean** on every sampled genre (deepest single onset −1.8 dB): the mechanism fires 20 ms too briefly and 3 dB too shallow to hear. | library-wide |
+| **The bass and kick collide (no usable sidechain)** | **Fixed (P0.3).** The ducking stage existed (`duckGain`, wired into both engines) but measured **≤0.25 dB mean** with a deepest single onset of −1.8 dB: the mechanism fired ~3 dB too shallow and recovered in 65 ms. The depth and release now come from the genre table and measure **−3.8…−5.1 dB** where the bass sounds under the kick. One genre (disco) still loses its duck to the mastering chain's gain recovery — see `duckErasedInMaster`. | landed |
 | **It is effectively mono** | Channel correlation **0.9856–0.9995**; **12 of 12** sampled genres correlate above 0.98. Panning is implemented and the mix even asks for it (chicago-blues: chords −0.22, lead +0.22, afrobeat percussion −0.4), but the *material* those values apply to is quiet and centred. | library-wide |
 | **The mid-range is hollow** | The 200 Hz – 2 kHz bands hold **−12.4 dB** (trap-rap) and **−12.1 dB** (disco) of the total; **11 of 12** sampled genres are below −6 dB (afrobeat −6.3 is the closest to passing). | most genres |
 | **The melody barely moves** | Lead: **3 distinct pitches across a 4th** (81–86, 72–77) in the two named genres. Not static, but narrow. | the named two |
@@ -135,7 +137,7 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
 | :-- | :--- | :--- | :--- | :--- | :--- |
 | 0.1 | **A `check:groove` gate** — the musical ratchet | new `scripts/check_groove.mjs` | Renders a sample per category and fails when velocity spread, duck depth, stereo width, mid-band share, swing audibility or tail level regress. Budgets start at today's numbers and only go down, like `probe:skins`. | M | none (read-only) |
 | 0.2 | **Seeded velocity humanisation** ✅ | `genreMix.humanisePatternVelocities`, called at the end of `patternFromGenre` | `velocityByTrack[*].distinct` rises without touching the 159 genre files; a fixed seed means two renders of the same groove stay identical. **Baked into the pattern rather than applied at trigger time** so the live engine, the WAV/MP3 bounce, the MIDI/`.als` exports and the editor's velocity lane all read the same performance — and so the gate, which counts the pattern, can see it. Amounts are per category (0.18–0.34) scaled per lane (kick ×0.35, bass ×0.5, hats ×1.1) with per-genre exceptions where the style is machine-locked (chiptune, gabber, drill) or hand-played (ambient, blues, funk). Result: **0 of 12** sampled genres with a flat lane. | S | done |
-| 0.3 | **An audible sidechain** | `AudioEngine` duck depth/release + `genreMix` (`duckDb`, `duckReleaseMs`), scheduled by one shared helper | `duckDb` moves from ≤0.25 dB to **4–6 dB** on the pair-isolated measurement, with the kick's own peak unmoved; the release is short enough to breathe between kicks. The claim threshold rises from "shallower than 1.5 dB" to "shallower than 3 dB" so the budget means *audible*. | M | medium — over-ducking pumps; the gate caps the depth |
+| 0.3 | **An audible sidechain** ✅ | `genreMix` (`DUCK_BY_CATEGORY` + per-genre overrides), scheduled by one shared helper (`src/audio/sidechain.ts`) for the live engine and the renderer | The claim is the **dip**: the deepest 5 ms window in the 60 ms after each scheduled kick, median across onsets — independent of the release length and of where the bass note's own energy sits. `weakDuck` (shallower than 3 dB) went **12/12 → 0/12**; the sample measures −3.8…−5.1 dB where the bass sounds under the kick, and the two genres where it never does (minimal-techno, ambient) report as unmeasurable instead of passing. Depth is the promise (4–6 dB scheduled), release is the genre (70 ms gabber, 280 ms ambient), and a quiet kick ducks proportionally less. | M | done |
 | 0.4 | **Deliberate width** | `genreMix` pans per role (hats/perc/lead ±0.3…0.5, kick/bass centre) | `correlation` falls below 0.98 for the genres that ask for width, with mono compatibility checked (side ≤ −8 dB) so a phone speaker does not lose an element. | S | low |
 | 0.5 | **Make swing act on 8th off-beats too** | `WavExporter` swing application (+ the sequencer's, kept in parity) | `swingOffsetMs` measurable on a *busy* stem for every genre that declares swing ≥ 20; a genre that declares it and does not show it fails. After the basis fix only boom-bap (kick plays 8ths, swing acts on 16ths) is on this list. | M | medium — changes existing timing; golden-render tests will need re-baselining, deliberately |
 | 0.6 | **Tail per pattern** | `WavExporter` (`+0.6 s` → the pattern's own release) | `tailRmsDb` under −60 dBFS for every genre; detroit-techno and boom-bap are the regression cases. | S | low |
@@ -158,7 +160,7 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
 | :-- | :--- | :--- | :--- | :--- |
 | 2.1 | **An arrangement layer**: a pattern gains sections (A/A/B/A + a fill), so "change the chord every 8 bars", "add a riser", "vary the stab" become data instead of wishes | `src/types/genre.ts` + the renderer + the sequencer's bar model | a 4-section song renders with measurable variation per section (`patternStatistics` per section differ) | L — the deepest item here, now specced in `docs/ARRANGEMENT_PLAN.md` |
 | 2.2 | **Per-note timbre variation**: seeded detune / cutoff / send nudges per stab | `PolySynth` (and GS-1 patch params) | consecutive stabs differ in centroid by ≥ 3 %; with a fixed seed two renders match | M |
-| 2.3 | **Saturation depth** per category | `insertCurves` + the channel strip | crest factor and the 3rd-harmonic ratio rise without the true peak moving | M |
+| 2.3 | **Saturation depth** per category, and the master chain's give-back | `insertCurves` + the channel strip + `masterGraph` | crest factor and the 3rd-harmonic ratio rise without the true peak moving. P0.3 added the reason to look: `duckErasedInMaster` proves the bus compressor and the ceiling *refill* short dips on loud genres (disco: −4.4 dB of sidechain becomes −0.4 dB in the file), which also flattens the per-note dynamics P0.2 added. Drive that claim's budget from 1 to 0. | M |
 | 2.4 | **Top-end texture** (noise sweep / riser / vinyl crackle) as a real instrument role | new voice + a `texture` track id | the top three bands gain energy only in the bars the arrangement says | M |
 | 2.5 | **Sample-based texture** (vocal chops, found sound) | product decision first | — | L, needs licensing |
 
@@ -182,8 +184,8 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
 | Round | This workstream | Skin workstream (unchanged) |
 | :--- | :--- | :--- |
 | done | P0.1 gate + basis fixes + **P0.2 humanisation** (flat lanes 12/12 → 0/12) | remaining 13 findings, `JAM_COLORS`, P0 0-5 |
-| next | P0.3 duck depth/release (shared scheduling helper) | touch/jank ratchet |
-| +1 | P0.4 width + P0.5 swing 8ths + P0.6 tail | — |
+| done | **P0.3 audible sidechain** (2 dB → 3.8–5.1 dB measured, shared scheduling helper) | — |
+| next | P0.4 width + P0.5 swing 8ths + P0.6 tail | touch/jank ratchet |
 | +2 | P1.1 accents + P1.2 mid fill (generator) | — |
 | +3 | P1.4 percussion texture + category review by ear | — |
 | +4 | P2.2 timbre variation + P2.3 saturation | — |
