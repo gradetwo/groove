@@ -59,6 +59,7 @@
     "probe:skins:full": "node scripts/measure_skin_readability.mjs --full --report"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@types/three": "^0.185.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",

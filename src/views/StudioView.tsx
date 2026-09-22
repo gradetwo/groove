@@ -418,6 +418,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleExportAls,
     handleExportGroove,
     handleExportWav,
+    handleExportMp3,
     handleExportStems,
     handleShare,
   } = useExportActions({
@@ -983,6 +984,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onExportGroove={handleExportGroove}
           onOpenProjectHub={handleOpenProjectHub}
           onExportWav={handleExportWav}
+          onExportMp3={handleExportMp3}
           onExportStems={handleExportStems}
           onImportMidi={async (file) => {
             guard.request(t("unsaved_action_import", { name: file?.name ?? "MIDI" }), () =>

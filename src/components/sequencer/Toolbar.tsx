@@ -140,6 +140,7 @@ export interface ToolbarProps {
   onExportAls?: () => void;
   onExportGroove?: () => void;
   onExportWav?: () => void;
+  onExportMp3?: () => void;
   onExportStems?: () => void;
   activeProjectName?: string;
   onOpenProjectHub?: () => void;
@@ -436,6 +437,7 @@ interface ExportMenuProps {
   onExportAls?: () => void;
   onExportGroove?: () => void;
   onExportWav?: () => void;
+  onExportMp3?: () => void;
   onExportStems?: () => void;
 }
 
@@ -450,6 +452,7 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
   onExportAls,
   onExportGroove,
   onExportWav,
+  onExportMp3,
   onExportStems,
 }) {
   const { t } = useLanguage();
@@ -540,6 +543,7 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
 
           <div className="p-1 space-y-0.5">
             <button
+              data-testid="export-wav"
               onClick={() => {
                 onExportWav?.();
                 setExportOpen(false);
@@ -550,6 +554,22 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
               <div className="flex flex-col">
                 <span className="font-medium text-text">{t("toolbar_export_wav")}</span>
                 <span className="text-[10px] text-text-dim">16-bit 44.1kHz PCM (.wav)</span>
+              </div>
+            </button>
+
+            {/* MP3 sits right under the WAV: same master, different codec, and the one users ask for by name. */}
+            <button
+              data-testid="export-mp3"
+              onClick={() => {
+                onExportMp3?.();
+                setExportOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 text-left rounded-lg text-text-sub hover:text-text hover:bg-[#1a1d26] transition-colors"
+            >
+              <FileAudio className="w-3.5 h-3.5 text-[#a78bfa] shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-medium text-text">{t("toolbar_export_mp3")}</span>
+                <span className="text-[10px] text-text-dim">192kbps CBR (.mp3)</span>
               </div>
             </button>
 
@@ -636,6 +656,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onExportAls,
   onExportGroove,
   onExportWav,
+  onExportMp3,
   onExportStems,
   activeProjectName,
   onOpenProjectHub,
@@ -1654,6 +1675,7 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 onExportAls={onExportAls}
                 onExportGroove={onExportGroove}
                 onExportWav={onExportWav}
+                onExportMp3={onExportMp3}
                 onExportStems={onExportStems}
               />
             )}

@@ -48,7 +48,10 @@ choice is shared, so the two never disagree about which skin is active:
 - **Synthesised sound, no samples.** Drums, basses, pads and leads are built from Web Audio
   oscillators and buffers, including modelled kits (TR-808, TR-909, acoustic, cyber-wave). Nothing is
   fetched at runtime, so it also works offline.
-- **Export** — WAV master, per-track stem ZIP, standard MIDI, and an Ableton Live `.als` project.
+- **Export** — WAV master, **MP3 (192 kbps)**, per-track stem ZIP, standard MIDI, and an Ableton Live `.als`
+  project. The MP3 encoder is loaded only when you ask for an MP3 (a separate ~67 KB-on-the-wire chunk), so
+  it costs nothing to the people who never use it; it is LGPL, and its licence ships in
+  [public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md).
   A pattern can be shared as a URL too.
 - **Besides the studio** — a 3D genre galaxy, an A/B compare view, and a blind ear-training
   challenge.

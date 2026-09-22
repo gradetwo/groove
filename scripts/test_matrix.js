@@ -1628,6 +1628,39 @@ async function runTestOnTarget(target, baseUrl) {
       await page.keyboard.press("Escape");
     }
 
+    /**
+     * 5e. Export MP3 downloads a real MP3 (v2.12.0).
+     *
+     * The report that started this was "PC and iPad have no WAV/MP3 export", and the two causes were both
+     * invisible to a code review: the entry was behind the advanced-controls toggle *and* nested in another
+     * control's JSX branch. A leg that only asserted the menu item exists would have passed the whole time. So
+     * this clicks it and inspects the bytes: the encoder is a lazy chunk, and the only way to know it is wired,
+     * fetched and producing MPEG frames is to download the file and look.
+     *
+     * Desktop targets only: the phone exposes the same handler as a sheet row (its own leg covers the row).
+     */
+    if (await page.$("[data-surface='desktop']")) {
+      await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("[data-toolbar-id='export']", { timeout: 30000 });
+      const [download] = await Promise.all([
+        page.waitForEvent("download", { timeout: 120000 }),
+        (async () => {
+          await page.click("[data-toolbar-id='export']");
+          await page.waitForSelector("[data-testid='export-mp3']", { timeout: 10000 });
+          await page.click("[data-testid='export-mp3']");
+        })(),
+      ]);
+      const filename = download.suggestedFilename();
+      if (!filename.endsWith(".mp3")) throw new Error(`MP3 export produced ${filename}`);
+      const file = await download.path();
+      const bytes = fs.readFileSync(file);
+      // An MPEG audio frame sync is eleven set bits: 0xFF then the top three bits of the next byte.
+      const frameSync = bytes.length > 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0;
+      if (!frameSync) throw new Error(`MP3 export is not an MPEG stream (first bytes ${bytes[0]}, ${bytes[1]})`);
+      if (bytes.length < 20 * 1024) throw new Error(`MP3 export is suspiciously small: ${bytes.length} bytes`);
+      console.log(`      export: ${filename} · ${(bytes.length / 1024).toFixed(1)} KiB · MPEG frame sync ✓`);
+    }
+
     // 5c. Audio settings panel (v2.0.17).
     //
     // The engine-level settings (GS-1 voices, master level, hearing protection, latency

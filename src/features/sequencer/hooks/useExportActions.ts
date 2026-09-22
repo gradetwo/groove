@@ -6,6 +6,7 @@ import { downloadMidiFile } from "../../../audio/MidiExporter";
 import { downloadAbletonProject } from "../../../audio/AbletonExporter";
 import { getShareUrlResult, toSharedTrack } from "../../../audio/SequencerUrlShare";
 import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../../../audio/WavExporter";
+import { exportMasterMp3 } from "../../../audio/Mp3Exporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
 import { useLanguage } from "../../../i18n/LanguageContext";
@@ -47,6 +48,7 @@ export interface UseExportActionsResult {
   handleExportAls: () => Promise<void>;
   handleExportGroove: () => void;
   handleExportWav: () => Promise<void>;
+  handleExportMp3: () => Promise<void>;
   handleExportStems: () => Promise<void>;
   handleShare: () => void;
 }
@@ -232,6 +234,44 @@ export function useExportActions({
     }
   }, [currentGenre.id, bpm, swing, drumKit, t, showToast]);
 
+  /**
+   * The same master as the WAV, encoded to MP3.
+   *
+   * The render is shared (`renderPatternOffline`), so the two files are the same performance; only the codec
+   * differs. The encoder is fetched on this click and never before — see `Mp3Exporter`, which is also why this
+   * handler is the only thing in the app that touches it.
+   */
+  const handleExportMp3 = useCallback(async () => {
+    try {
+      setIsExportingAudio(true);
+      showToast(t("export_mp3_rendering"));
+      const result = await exportMasterMp3(patternRef.current, currentGenre.id, {
+        bpm,
+        swing,
+        drumKit,
+      });
+      triggerWavDownload(result.blob, result.filename);
+      if (result.gs1HostFailures > 0) {
+        showToast(
+          t("export_wav_degraded_gs1", {
+            filename: result.filename,
+            count: result.gs1HostFailures,
+          })
+        );
+      } else {
+        showToast(
+          result.limiterKind === "fallback"
+            ? t("export_wav_degraded_limiter", { filename: result.filename })
+            : t("export_mp3_done", { filename: result.filename, kbps: result.bitrateKbps })
+        );
+      }
+    } catch (err: any) {
+      showToast(t("export_mp3_failed", { error: describeError(err) }));
+    } finally {
+      setIsExportingAudio(false);
+    }
+  }, [currentGenre.id, bpm, swing, drumKit, t, showToast]);
+
   const handleExportStems = useCallback(async () => {
     try {
       setIsExportingAudio(true);
@@ -296,6 +336,7 @@ export function useExportActions({
     handleExportAls,
     handleExportGroove,
     handleExportWav,
+    handleExportMp3,
     handleExportStems,
     handleShare,
   };
