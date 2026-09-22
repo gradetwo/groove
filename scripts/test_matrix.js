@@ -1620,8 +1620,16 @@ async function runTestOnTarget(target, baseUrl) {
       if (after.body === "rgb(10, 11, 13)" && before.bg === "10 11 13") {
         throw new Error(`Desktop page ground ignored the skin (body stayed ${after.body})`);
       }
-      // Put it back before the modal closes: the rest of the matrix runs in this page.
-      await page.click("[data-testid='settings-skin-default']");
+      /**
+       * Put it back before the modal closes: the rest of the matrix runs in this page.
+       *
+       * Dispatched rather than clicked. The skin buttons are `transition-all`, and now that the skin sheets apply
+       * their `hover:` states for real (they used to be emitted without the pseudo-class and therefore did
+       * nothing), Playwright's actionability check — which waits for two identical frames — spent its 30 s budget
+       * on this one click while the machine was loaded by the rest of the matrix. The assertion here is about the
+       * *palette*, not about whether a finger can hit it; the touch-target leg already covers that.
+       */
+      await page.$eval("[data-testid='settings-skin-default']", (el) => el.click());
       await page.waitForTimeout(200);
       const restored = await page.evaluate(() => document.documentElement.getAttribute("data-skin"));
       if (restored !== "default") throw new Error(`Desktop skin did not restore to default (${restored})`);
