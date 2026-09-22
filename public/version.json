@@ -1,29 +1,29 @@
 {
-  "version": "2.11.2",
+  "version": "2.11.3",
   "releaseDate": "2026-09-22",
-  "changelogCount": 202,
+  "changelogCount": 203,
   "latest": {
-    "version": "2.11.2",
+    "version": "2.11.3",
     "date": "2026-09-21",
     "category": "fix",
     "title": {
-      "zh": "v2.11.2 CI 修正：手动开关的 jank/skins 档先构建再跑探针；push 时的 E2E 从「只跑桌面」改成全量 7 个目标",
-      "en": "v2.11.2 CI Fixes: the Manual Switch Builds Before Its Probes, and the Push-Time E2E Runs All Seven Targets Instead of Desktop Only"
+      "zh": "v2.11.3 导出终于找得到了：导出是主操作而非「高级功能」，菜单也不再挂在工程面板的分支里",
+      "en": "v2.11.3 Export Is Findable: a Primary Action, Its Menu Out of the Project Panel, and Labelled Export Rather Than MIDI"
     },
     "highlights": [
       {
-        "zh": "**手动开关的 `jank` 档跑不起来**——`probe:jank`（和 `probe:skins`）自己起静态服务托管 `dist/`，而工作流只为 `e2e` 档构建，所以手工触发 `jank` 直接失败：`❌ dist/index.html is missing — build first`。现在加了一个显式的 Build 步骤（覆盖 `jank`/`skins`/`all`），并把它放在两个探针之前；`verify` 档自己会构建、`audio` 不需要，都在注释里写明。已在本机复现同一个报错，并用修正后的顺序（build → probe:jank）跑通。",
-        "en": "**The manual switch's `jank` scope could not run.** `probe:jank` (and `probe:skins`) serve `dist/` themselves, but the workflow only built for the `e2e` scope, so a manual `jank` run failed outright: `❌ dist/index.html is missing — build first`. There is an explicit Build step now (covering `jank`/`skins`/`all`) placed before both probes; `verify` builds on its own and `audio` needs nothing, and the comments say so. The failure was reproduced locally and the corrected order…"
+        "zh": "**你报的「PC 和 iPad 上找不到导出 WAV/MP3」查清了，是两个各自独立的原因叠加。** ① 导出按钮在工具栏里被登记为 **Tier 2**（「高级控件」），也就是说**必须先打开高级控件它才会出现**；而且它的文字标签是 `hidden lg:inline`——1024px 以下只剩一个没有文字的下载图标。② 更隐蔽的是：这个菜单**渲染在「工程」面板那个 JSX 分支里面**，那个分支自己也有 Tier 2 守卫，而且在工具栏折叠时（手机/平板正是这种情况）**整块不渲染**——所以那些设备上导出**根本不在 DOM 里**。现在导出是 Tier 1（默认可见）、文字标签从 640px 起就显示、并拥有自己的可见性守卫；实测 iPad 竖/横（834 / 1194）与 PC 1280 / 1440 都稳定显示「导出」。",
+        "en": "**Your report — can't find WAV/MP3 export on PC and iPad — turned out to be two independent causes stacked.** (1) Export was registered as a **Tier-2** toolbar control (advanced controls), so it only appeared after the user found that toggle; and its text label was `hidden lg:inline`, so below 1024 px it was an unlabelled download icon. (2) More hidden: the menu was rendered **inside the project-panel JSX branch**, which has its own Tier-2 guard *and* is skipped entirely whe…"
       },
       {
-        "zh": "**CI 的 E2E 门禁从「只跑桌面」改成**每次 push / PR 跑 `npm run test:e2e:all`（**7/7**：3 个桌面浏览器 + iPhone 竖/横 + iPad 竖/横）。当初缩减成桌面档的理由是「手机界面正在重做、断言会被重做作废」——这个理由早已不存在，而**跳过三分之二目标的门禁，正是 iPad 专属回归能活到线上的原因**（上一轮那次 iPad 横屏失败就是例证，虽然那次是环境挂起）。`test:e2e`（`E2E_PROFILE=pc`）保留为本机快速迭代用，但**CI 不再调用它**，并且新增测试断言这一点：CI 的 e2e 任务必须调用 `test:e2e:all`、必须不匹配 `npm run test:e2e`、必须在矩阵之前构建。文档（`ARCHITECTURE_SURFACES.md` §6 与矩阵自身的注释）同步更新，不再声称这是「有意的门禁缩减」。",
-        "en": "**The CI E2E gate now runs `npm run test:e2e:all` — all seven targets** (three desktop browsers, iPhone portrait/landscape, iPad portrait/landscape) on every push and pull request. The reduction to the desktop profile existed because the phone UI was mid-redesign and its assertions would have been invalidated by it; that reason expired, and **a gate that skips two thirds of the targets is how an iPad-only regression reaches production** (the iPad-landscape failure last round…"
+        "zh": "**它以前还叫「MIDI」。** 触发按钮的 `title` 用的是 i18n 键 `export`，而这个键在本应用里意思是 **MIDI**（定义在 `explore.ts`）——于是**一个含五种格式的菜单，标题却是其中一种**。这大概是「找不到」最直接的原因：谁会去点一个写着「MIDI」的按钮找 WAV？现在它有自己的一对键 `toolbar_export_menu`（导出 / Export），且所有 labelKey 又都只来自 `studio.ts`（测试里那张跨文件例外表因此清空，并保留为将来真正例外的显式位置）。",
+        "en": "**It used to be called MIDI.** The trigger's `title` borrowed the i18n key `export`, which in this app means **MIDI** (it is defined in `explore.ts`) — so **a menu of five formats was titled after one of them**. That is probably the most direct reason nobody found it: who clicks something labelled MIDI looking for WAV? It has its own pair of keys now (`toolbar_export_menu`), and every labelKey resolves from `studio.ts` again (the test's cross-file exception table is therefor…"
       },
       {
-        "zh": "**全量皮肤扫描改成「只报告」**，因为它第一次跑就暴露出一批**工作项**而不是回归：像素皮肤在**对比视图上有 227 个低对比元素**、底鼓 102、银河 105、分析器 97、时间轴 20——这些视图此前从未被抽样审计过。手工 CI 的 `skins` 档现在跑 `--report`（打印每套皮肤 × 每个视图的表格，不失败），而 `verify` 里那个抽样扫描仍是门禁，棘轮只降不升。这批数字已经进入下一轮的工作清单（像素皮肤的非工作室视图是重点）。",
-        "en": "**The full skin sweep is report-only now**, because its first run produced **work items rather than regressions**: the pixel skin has **227 low-contrast elements on the compare view**, 102 on the kick lab, 105 on the galaxy, 97 on the analyser and 20 on the timeline — views that had never been sampled by the audit before. The manual CI `skins` scope runs `--report` (the per-skin × per-view table, no failure), while the sampled sweep inside `verify` remains the gate with a ra…"
+        "zh": "**加了两个回归守卫，因为这类 bug 单看代码是看不出来的。** ① 列表层：`export` 必须在 Tier 1、必须在 `DEFAULT_VISIBLE_IDS` 里、必须不在 Tier 2/3——有人把它降级就会失败。② 渲染层（新增 `toolbarExportDiscoverability.test.tsx`）：在 `showAdvancedControls: false`（全新安装的默认状态）下挂载工具栏，断言导出入口**确实存在**且带 Tier 1 标记、可访问名不是「MIDI」而是「导出」；并有一条**结构化**断言，直接读源码确认 `<ExportMenu>` 不在 `project-hub` 守卫与它闭合括号之间——因为这次的根因就是「位置」，而渲染测试看不见「我在哪个分支里」。另外 `probe:toolbar` 的可见控件清单里现在有 `export`。",
+        "en": "**Two regression guards, because this class of bug is invisible in a code review.** (1) Table level: `export` must be Tier 1, must be in `DEFAULT_VISIBLE_IDS` and must not be in Tier 2/3 — demoting it fails. (2) Render level (new `toolbarExportDiscoverability.test.tsx`): the toolbar is mounted with `showAdvancedControls: false` (a fresh install's default state) and the export entry must **exist**, carry the Tier 1 marker, and have an accessible name that is the export label…"
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
