@@ -1,27 +1,27 @@
 {
-  "version": "2.11.3",
+  "version": "2.12.0",
   "releaseDate": "2026-09-22",
-  "changelogCount": 203,
+  "changelogCount": 204,
   "latest": {
-    "version": "2.11.3",
+    "version": "2.12.0",
     "date": "2026-09-21",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.11.3 导出终于找得到了：导出是主操作而非「高级功能」，菜单也不再挂在工程面板的分支里",
-      "en": "v2.11.3 Export Is Findable: a Primary Action, Its Menu Out of the Project Panel, and Labelled Export Rather Than MIDI"
+      "zh": "v2.12.0 MP3 导出：同一个母带、懒加载的编码器、随应用发布的 LGPL 许可证",
+      "en": "v2.12.0 MP3 Export: the Same Master, a Lazy Encoder, and an LGPL Licence That Ships With the App"
     },
     "highlights": [
       {
-        "zh": "**你报的「PC 和 iPad 上找不到导出 WAV/MP3」查清了，是两个各自独立的原因叠加。** ① 导出按钮在工具栏里被登记为 **Tier 2**（「高级控件」），也就是说**必须先打开高级控件它才会出现**；而且它的文字标签是 `hidden lg:inline`——1024px 以下只剩一个没有文字的下载图标。② 更隐蔽的是：这个菜单**渲染在「工程」面板那个 JSX 分支里面**，那个分支自己也有 Tier 2 守卫，而且在工具栏折叠时（手机/平板正是这种情况）**整块不渲染**——所以那些设备上导出**根本不在 DOM 里**。现在导出是 Tier 1（默认可见）、文字标签从 640px 起就显示、并拥有自己的可见性守卫；实测 iPad 竖/横（834 / 1194）与 PC 1280 / 1440 都稳定显示「导出」。",
-        "en": "**Your report — can't find WAV/MP3 export on PC and iPad — turned out to be two independent causes stacked.** (1) Export was registered as a **Tier-2** toolbar control (advanced controls), so it only appeared after the user found that toggle; and its text label was `hidden lg:inline`, so below 1024 px it was an unlabelled download icon. (2) More hidden: the menu was rendered **inside the project-panel JSX branch**, which has its own Tier-2 guard *and* is skipped entirely whe…"
+        "zh": "**导出菜单里有了 MP3（192 kbps CBR），和 WAV 同一个母带。** 两者共用同一次离线渲染（`renderPatternOffline`），所以同一段编曲导出的 WAV 与 MP3 是**同一个演奏**：同样的限制器、采样率与天花板，只是编码不同。文件用 ffprobe 解码验证过：`mp3 / 44100 Hz / 立体声 / 191 999 bps`，时长与图案一致。",
+        "en": "**The export menu has MP3 (192 kbps CBR) now, and it is the same master as the WAV.** Both share one offline render (`renderPatternOffline`), so a WAV and an MP3 of one pattern are the **same performance** — same limiter, sample rate and ceiling, different codec. The file was verified by decoding it with ffprobe: `mp3 / 44100 Hz / stereo / 191,999 bps`, with a duration matching the pattern."
       },
       {
-        "zh": "**它以前还叫「MIDI」。** 触发按钮的 `title` 用的是 i18n 键 `export`，而这个键在本应用里意思是 **MIDI**（定义在 `explore.ts`）——于是**一个含五种格式的菜单，标题却是其中一种**。这大概是「找不到」最直接的原因：谁会去点一个写着「MIDI」的按钮找 WAV？现在它有自己的一对键 `toolbar_export_menu`（导出 / Export），且所有 labelKey 又都只来自 `studio.ts`（测试里那张跨文件例外表因此清空，并保留为将来真正例外的显式位置）。",
-        "en": "**It used to be called MIDI.** The trigger's `title` borrowed the i18n key `export`, which in this app means **MIDI** (it is defined in `explore.ts`) — so **a menu of five formats was titled after one of them**. That is probably the most direct reason nobody found it: who clicks something labelled MIDI looking for WAV? It has its own pair of keys now (`toolbar_export_menu`), and every labelKey resolves from `studio.ts` again (the test's cross-file exception table is therefor…"
+        "zh": "**编码器是懒加载的，不用它的人不付代价。** 浏览器不会写 MP3（`MediaRecorder` 只给 webm/opus 或 m4a/AAC），所以必须有编码器：用了 `@breezystack/lamejs`（LAME 的 JS 移植）。它 259 KB（gzip 后 67 KB），因此**只在点「导出 MP3」那一刻才下载**——首屏预算实测**完全没变（217.0 KB）**，分块单独存在（`lamejs-*.js`）。有一条测试直接读源码，一旦有人把它改成静态 `import` 就失败：那会让每个用户的首屏多背 67 KB，而症状只是「首屏慢了一点」，没人会把它和 MP3 菜单联系起来。",
+        "en": "**The encoder is lazy, so people who never export an MP3 pay nothing.** A browser cannot write MP3 (`MediaRecorder` gives webm/opus or m4a/AAC), so an encoder is required: this uses `@breezystack/lamejs` (LAME ported to JavaScript). It is 259 KB (67 KB gzipped), so it is fetched **only at the moment MP3 export is clicked** — the first-paint budget measured **completely unchanged (217.0 KB)** and the encoder lives in its own chunk (`lamejs-*.js`). A test reads the source and…"
       },
       {
-        "zh": "**加了两个回归守卫，因为这类 bug 单看代码是看不出来的。** ① 列表层：`export` 必须在 Tier 1、必须在 `DEFAULT_VISIBLE_IDS` 里、必须不在 Tier 2/3——有人把它降级就会失败。② 渲染层（新增 `toolbarExportDiscoverability.test.tsx`）：在 `showAdvancedControls: false`（全新安装的默认状态）下挂载工具栏，断言导出入口**确实存在**且带 Tier 1 标记、可访问名不是「MIDI」而是「导出」；并有一条**结构化**断言，直接读源码确认 `<ExportMenu>` 不在 `project-hub` 守卫与它闭合括号之间——因为这次的根因就是「位置」，而渲染测试看不见「我在哪个分支里」。另外 `probe:toolbar` 的可见控件清单里现在有 `export`。",
-        "en": "**Two regression guards, because this class of bug is invisible in a code review.** (1) Table level: `export` must be Tier 1, must be in `DEFAULT_VISIBLE_IDS` and must not be in Tier 2/3 — demoting it fails. (2) Render level (new `toolbarExportDiscoverability.test.tsx`): the toolbar is mounted with `showAdvancedControls: false` (a fresh install's default state) and the export entry must **exist**, carry the Tier 1 marker, and have an accessible name that is the export label…"
+        "zh": "**许可证与来源随应用发布。** LAME 是 **LGPL-3.0**，所以这不是可选的礼貌而是分发义务：[public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md) 现在包含编码器的版本钉（`1.2.7`，精确锁定在 `package.json` 与 lockfile）、上游链接与 LAME 致谢，以及**逐字未改的 LGPL-3.0 与它所并入的 GPL-3.0 全文**。许可证的合规方式写在文件里：作为**独立分块**在运行时加载（这正是 LAME 自己那句「以独立文件链接」在 Web 上最直白的等价物，也让这个库保持可替换），不修改它，并acknowledge + 链接上游。",
+        "en": "**The licence and provenance ship with the app.** LAME is **LGPL-3.0**, so this is a redistribution obligation rather than a courtesy: [public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md) now carries the encoder's exact version pin (`1.2.7`, pinned in `package.json` and the lockfile), the upstream links and the LAME acknowledgement, plus the **verbatim, unmodified LGPL-3.0 and the GPL-3.0 it incorporates**. How the licence is met is written down there: a **separate…"
       }
     ],
     "truncated": true
