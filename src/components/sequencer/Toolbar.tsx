@@ -470,10 +470,15 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
   return (
     <div className="relative shrink-0" ref={exportMenuRef}>
       <button
+        data-toolbar-id="export"
+        data-toolbar-tier="1"
         onClick={() => setExportOpen((prev) => !prev)}
         disabled={isExportingAudio}
         className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono'] disabled:opacity-50"
-        title={t("export")}
+        /* Its own label: `export` is the key for "MIDI" in this app, so the menu was titled after one of its
+           five items. */
+        title={t("toolbar_export_menu")}
+        aria-label={t("toolbar_export_menu")}
         aria-haspopup="true"
         aria-expanded={exportOpen}
       >
@@ -482,7 +487,8 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
         ) : (
           <Download className="w-3.5 h-3.5" />
         )}
-        <span className="hidden lg:inline">{t("export")}</span>
+        {/* The word, from tablet width up: an unlabelled icon among twenty is not a discoverable action. */}
+        <span className="hidden sm:inline">{t("toolbar_export_menu")}</span>
         <ChevronDown className={`w-3 h-3 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
       </button>
 
@@ -1615,14 +1621,6 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 </button>
               )}
 
-              <ExportMenu
-                isExportingAudio={isExportingAudio}
-                onExportMidi={onExportMidi}
-                onExportAls={onExportAls}
-                onExportGroove={onExportGroove}
-                onExportWav={onExportWav}
-                onExportStems={onExportStems}
-              />
 
               {/* Share Groove */}
               {!isEditorMaximized && (
@@ -1639,6 +1637,26 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
 
             </div>
           )}
+
+            {/*
+              Export has its own guard, and that is the fix for the report that started this.
+
+              The menu used to sit *inside* the `project-hub` block, and `project-hub` is a Tier-2 control:
+              so the only way to reach WAV export was to first turn on "advanced controls" — and on a phone
+              or iPad the block is not rendered at all (`isToolbarFolded`), which is why there was no export
+              entry on those surfaces. `export` is Tier 1 now, so this guard is normally true; the point of
+              writing it out is that export's visibility stops being a side effect of an unrelated control.
+            */}
+            {shows("export") && (
+              <ExportMenu
+                isExportingAudio={isExportingAudio}
+                onExportMidi={onExportMidi}
+                onExportAls={onExportAls}
+                onExportGroove={onExportGroove}
+                onExportWav={onExportWav}
+                onExportStems={onExportStems}
+              />
+            )}
         </div>
       </div>
 

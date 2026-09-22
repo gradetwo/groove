@@ -123,6 +123,17 @@ export const TIER_1_PRIMARY: readonly ToolbarTierItem[] = [
   { id: "fold-toggle", labelKey: "toolbar_fold_compact", testId: "toolbar-fold-toggle", tier: 1 },
   // The Toolbar's label for this toggle is "More" (zh: 高级).
   { id: "more", labelKey: "toolbar_advanced_label", tier: 1 },
+
+  /**
+   * Export is **primary**, not advanced.
+   *
+   * It shipped as tier 2, which means "behind the advanced-controls toggle", with a trigger whose label is
+   * `hidden lg:inline` and whose tooltip came from the i18n key `export` — which in this app means "MIDI". The
+   * result is the report that started this: on a PC and on an iPad nobody could find WAV export, because the
+   * only entry point was an unlabelled icon behind a toggle, titled "MIDI". Exporting the master, the stems, a
+   * MIDI file and an Ableton set is a primary thing to do with a finished groove.
+   */
+  { id: "export", labelKey: "toolbar_export_menu", tier: 1 },
 ];
 
 /** Tier 2 — medium frequency: fold behind an icon group without losing them. */
@@ -161,7 +172,6 @@ export const TIER_2: readonly ToolbarTierItem[] = [
   { id: "keyboard-mode", labelKey: "toolbar_keyboard_label", tier: 2 },
   // The hook binds P to the project hub; reachable from "more" (note 3).
   { id: "project-hub", labelKey: "toolbar_project_hub_title", shortcut: "P", reachableVia: "more", tier: 2 },
-  { id: "export", labelKey: "export", tier: 2 },
   { id: "inspire", labelKey: "toolbar_inspire_label", tier: 2 },
   // The drawer's only high-frequency row (plan C-05 keeps it at the group head).
   { id: "swing", labelKey: "swing", tier: 2 },
