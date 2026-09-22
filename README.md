@@ -118,6 +118,23 @@ The design notes behind the code are kept in the repository, in Chinese: `PRODUC
 - Audio cannot start without a user gesture — browsers require a click or key press before sound.
 - The phone layout is being redesigned; the desktop layout is currently the most complete.
 
+## MCP server (for other LLMs and agents)
+
+The genre library, the sequencer, the exporters and the measurements are exposed over the
+[Model Context Protocol](https://modelcontextprotocol.io), so an agent can search the 159 genres, read a genre's
+recorded facts, compose a pattern from it, export MIDI/Ableton, build a share link, and render real WAV/MP3
+through the app's own engine.
+
+```bash
+npm run mcp:build        # → dist-mcp/groove-mcp.mjs
+GROOVE_MCP_OUT=/tmp/groove npm run mcp
+npm run check:mcp        # the gate: boots it over stdio and calls the tools
+```
+
+Point any stdio MCP client at `dist-mcp/groove-mcp.mjs`. The full contract — every tool, resource and prompt, plus
+what is deliberately not exposed — is in [docs/MCP.md](docs/MCP.md), with client configuration in
+[mcp/README.md](mcp/README.md).
+
 ## License
 
 MIT — see [LICENSE](LICENSE). The bundled GS-1 synth core and the DSP libraries compiled into it are

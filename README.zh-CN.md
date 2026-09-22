@@ -104,6 +104,21 @@ Workers，步骤见 [DEPLOY.md](DEPLOY.md)。
 代码背后的设计记录也留在仓库里（中文）：`PRODUCT_PLAN_v2.1.0.md`（当前计划与技术附录）、
 `ROADMAP_V2.md`、`BACKLOG.md`、`ARCHITECTURE_SURFACES.md`。
 
+## MCP 服务（给其它 LLM 与 agent 用）
+
+曲风库、音序器、导出器与测量能力通过 [Model Context Protocol](https://modelcontextprotocol.io) 暴露出去：
+agent 可以检索 159 个曲风、读取曲风的**已记录事实**、据此写 pattern、导出 MIDI/Ableton、生成分享链接，
+并用 App 自己的引擎渲染真实 WAV/MP3。
+
+```bash
+npm run mcp:build        # → dist-mcp/groove-mcp.mjs
+GROOVE_MCP_OUT=/tmp/groove npm run mcp
+npm run check:mcp        # 门禁：用 stdio 启动它并真调用各个工具
+```
+
+把任意 stdio MCP 客户端指向 `dist-mcp/groove-mcp.mjs` 即可。完整契约（每个工具、resource、prompt，以及**故意
+不暴露**的部分）见 [docs/MCP.md](docs/MCP.md)，客户端配置见 [mcp/README.md](mcp/README.md)。
+
 ## 已知限制
 
 - 同一段编曲重复导出**不是逐位相同**的。调度本身是确定性的，但 Chrome 自己的 DSP 在两次渲染之间
