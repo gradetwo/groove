@@ -394,6 +394,31 @@ check(
     scripts["check:mcp"].includes("check_mcp.mjs")
 );
 
+/**
+ * R12a — the literal→role table is the single source for what a hardcoded hex means.
+ *
+ * The desktop generator and the phone's two sheets both decide that, and they were written independently: a hex
+ * could be a surface on one and an ink on the other, and the same element would flip from a paper plate to dark
+ * type depending on which shell drew it. The table plus `check_skin_roles.mjs` is the fix, so both have to stay.
+ */
+const roleTablePath = path.join(ROOT, "src", "data", "skinLiteralRoles.json");
+check("R12a the shared literal→role table exists", fs.existsSync(roleTablePath));
+if (fs.existsSync(roleTablePath)) {
+  const roleTable = JSON.parse(fs.readFileSync(roleTablePath, "utf8"));
+  const deviations = roleTable.deviations ?? [];
+  check(
+    "R12a every literal maps to a role in the vocabulary",
+    Object.values(roleTable.literals ?? {}).every((role) => (roleTable.roles ?? []).includes(role)),
+    `${Object.keys(roleTable.literals ?? {}).length} literals`
+  );
+  check(
+    "R12a every deviation carries a reason",
+    deviations.length > 0 && deviations.every((entry) => (entry.reason ?? "").length > 40),
+    `${deviations.length} documented deviation(s)`
+  );
+}
+check("R12a the drift check stays wired", typeof scripts["check:skin-roles"] === "string");
+
 console.log("===============================================================");
 console.log("  \ud83d\udea6 RED-LINE GATE");
 console.log("===============================================================");

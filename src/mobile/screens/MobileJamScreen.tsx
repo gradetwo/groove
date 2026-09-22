@@ -24,6 +24,7 @@
  *  - during playback the playhead cell of every lane lights in its own colour, and a lane whose step is
  *    on glows on its pad.
  */
+import { trackColour, type TrackColourRole } from "../../utils/trackColours";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Minus, Play, Plus, RotateCcw, Square } from "lucide-react";
 import { GENRE_INDEX, loadGenre } from "../mobileGenreData";
@@ -65,18 +66,39 @@ const PADS: Array<{ id: string; labelKey: string; lane: number; trackId: string;
  * two percussion pads have their own colours because they are different sounds (a clap is not a snare),
  * which is why the pads carry a colour per *pad* while the grid carries one per *lane*.
  */
-const JAM_COLORS: Record<string, { hex: string; rgb: string }> = {
-  kick: { hex: "#FFB25A", rgb: "255,178,90" },
-  snare: { hex: "#FF7A6B", rgb: "255,122,107" },
-  hat: { hex: "#6FD3C0", rgb: "111,211,192" },
-  clap: { hex: "#FF9FB0", rgb: "255,159,176" },
-  rim: { hex: "#D8C79A", rgb: "216,199,154" },
-  bass: { hex: "#9AA7FF", rgb: "154,167,255" },
+/**
+ * The jam lanes' colours, as **roles** rather than hexes.
+ *
+ * They used to be six hardcoded `{ hex, rgb }` pairs, which is the one kind of colour a skin cannot reach: the
+ * jam pads kept the default palette on every phone skin (the same bug class the desktop's instrument colours had
+ * before they became roles). Each lane now names the *shared* lane palette (`--d-track-*`), which the generator
+ * derives from **this phone skin's own accent family** — so the phone's skins drive it, and the phone and the
+ * desktop agree about which lane is which colour by construction.
+ *
+ * The `-on` variant is the ink that reads *on* the fill, which is what a pad's label needs; the fills themselves
+ * are the designed per-skin hues (the audit's contrast gate covers them on both surfaces).
+ */
+const JAM_LANES: Record<string, TrackColourRole> = {
+  kick: "kick",
+  snare: "snare",
+  hat: "hat",
+  // Six pads, six distinct fills: the clap takes the pink role and the rim the olive one, which is where their
+  // old hardcoded hues sat. Distinctness is a test (`mobileJam.test.tsx`), not a hope.
+  clap: "chord",
+  rim: "perc",
+  bass: "bass",
 };
 
-/** The lane's identity colour: its track id, except the hat lane, which the pads call `hat`. */
-function laneColour(trackId: string) {
-  return JAM_COLORS[trackId === "hihat" ? "hat" : trackId] ?? JAM_COLORS.kick;
+/** The CSS colour of a lane: `alpha` composites the fill the way the old `rgba(...)` triplets did. */
+function laneFill(trackId: string, alpha = 1): string {
+  const role = JAM_LANES[trackId === "hihat" ? "hat" : trackId] ?? "kick";
+  return alpha >= 1 ? trackColour(role) : `rgb(${trackColour(role)} / ${alpha})`;
+}
+
+/** The ink for text drawn on a lane fill. */
+function laneInk(trackId: string): string {
+  const role = JAM_LANES[trackId === "hihat" ? "hat" : trackId] ?? "kick";
+  return trackColour(role, "ink");
 }
 
 const STEPS = 16;
@@ -371,7 +393,8 @@ function JamForGenre({
 
         <div className="mt-2" data-testid="mobile-jam-grid">
           {LANES.map((lane, laneIndex) => {
-            const colour = laneColour(lane.trackId);
+            const fill = laneFill(lane.trackId);
+            const ink = laneInk(lane.trackId);
             return (
               <div key={lane.trackId} className="flex items-center gap-2 py-1">
                 {/*
@@ -387,7 +410,7 @@ function JamForGenre({
                   <span
                     aria-hidden="true"
                     className="h-3.5 w-1 flex-none rounded-[1px]"
-                    style={{ background: colour.hex }}
+                    style={{ background: fill }}
                     data-testid={`mobile-jam-lane-colour-${laneIndex}`}
                   />
                   <span className="m-mono truncate text-[9px] text-[var(--m-ink-2)]" data-testid={`mobile-jam-lane-label-${laneIndex}`}>
@@ -417,9 +440,9 @@ function JamForGenre({
                         className="m-press h-8 flex-1 rounded"
                         style={
                           on
-                            ? { background: `rgba(${colour.rgb}, 0.82)`, boxShadow: active ? `0 0 10px rgba(${colour.rgb}, 0.65)` : undefined }
+                            ? { background: laneFill(lane.trackId, 0.82), boxShadow: active ? `0 0 10px ${laneFill(lane.trackId, 0.65)}` : undefined }
                             : active
-                              ? { background: `rgba(${colour.rgb}, 0.22)`, boxShadow: `inset 0 0 0 1.5px rgba(${colour.rgb}, 0.75)` }
+                              ? { background: laneFill(lane.trackId, 0.22), boxShadow: `inset 0 0 0 1.5px ${laneFill(lane.trackId, 0.75)}` }
                               : { background: "rgba(232,232,255,0.055)" }
                         }
                       />
@@ -443,7 +466,6 @@ function JamForGenre({
         </header>
         <div className="mt-2 grid grid-cols-3 gap-2.5">
           {PADS.map((pad) => {
-            const colour = JAM_COLORS[pad.id] ?? JAM_COLORS.kick;
             /** Lit while the lane's step is on the playhead, or for a moment after a hand hit it. */
             const lit = flashing.includes(pad.lane) || (isPlaying && Boolean(grid[pad.lane]?.[playhead]));
             return (
@@ -460,17 +482,17 @@ function JamForGenre({
                  */
                 className="m-press relative flex h-[76px] flex-col items-center justify-center rounded-[18px] border bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))]"
                 style={{
-                  borderColor: lit ? `rgba(${colour.rgb}, 0.85)` : undefined,
-                  boxShadow: lit ? `0 0 22px rgba(${colour.rgb}, 0.35), inset 0 0 18px rgba(${colour.rgb}, 0.14)` : undefined,
+                  borderColor: lit ? laneFill(pad.id, 0.85) : undefined,
+                  boxShadow: lit ? `0 0 22px ${laneFill(pad.id, 0.35)}, inset 0 0 18px ${laneFill(pad.id, 0.14)}` : undefined,
                 }}
               >
                 <span
                   aria-hidden="true"
                   className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full"
-                  style={{ background: colour.hex, opacity: lit ? 1 : 0.5 }}
+                  style={{ background: laneFill(pad.id), opacity: lit ? 1 : 0.5 }}
                 />
                 <span className="text-[13px] font-semibold">{t(pad.labelKey)}</span>
-                <span className="m-mono mt-1 text-[8px] uppercase tracking-[0.26em]" style={{ color: colour.hex }}>
+                <span className="m-mono mt-1 text-[8px] uppercase tracking-[0.26em]" style={{ color: laneInk(pad.id) }}>
                   {pad.id}
                 </span>
               </button>

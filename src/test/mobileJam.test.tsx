@@ -78,6 +78,17 @@ describe("jam module", () => {
     });
     expect(padDots.every(Boolean), `pad dots: ${padDots.join(", ")}`).toBe(true);
     expect(new Set(padDots).size, `pad dots: ${padDots.join(", ")}`).toBe(6);
+    /**
+     * …and they are **roles**, not hexes.
+     *
+     * The six colours used to be hardcoded `{ hex, rgb }` pairs in this file — the one kind of colour a skin
+     * cannot reach, so the jam pads kept the default palette on every phone skin. Each pad now names the shared
+     * lane palette (`--d-track-*`), which the generator derives from the *phone skin's own* accent family; a hex
+     * here again would be a regression this assertion catches.
+     */
+    for (const dot of padDots) {
+      expect(dot, `pad dot "${dot}" is not a role token`).toMatch(/^var\(--d-track-[a-z]+(-on)?\)$/);
+    }
   });
 
   it("sounds and flashes a pad on every tap, whether or not the transport runs", async () => {

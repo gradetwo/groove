@@ -33,6 +33,7 @@
  *   node scripts/desktop_skins.mjs            # write src/styles/desktopSkins.css
  *   node scripts/desktop_skins.mjs --check    # fail if it is out of date (the gate)
  */
+import sharedLiteralRoles from "../src/data/skinLiteralRoles.json" with { type: "json" };
 import fs from "node:fs";
 import path from "node:path";
 
@@ -640,60 +641,16 @@ function palette(skin) {
  * red. The long tail is one-off decoration inside gradients and glows, which the per-skin character pass
  * owns. Every entry is a role the token table already has, so the mapping cannot invent a colour.
  */
-const LITERAL_ROLES = {
-  // grounds
-  "#0a0b0d": "bg",
-  "#0c0d12": "bg",
-  "#0f1118": "bg",
-  // panels
-  "#12131a": "panel",
-  "#1a1c22": "panel",
-  "#1f222b": "panel",
-  "#0d0e12": "panel2",
-  "#111422": "panel2",
-  "#161a2b": "panel2",
-  "#17181c": "panel2",
-  "#12151f": "panel2",
-  "#15171d": "panel2",
-  // lines
-  "#23262d": "line",
-  "#252833": "line",
-  "#2b3040": "lineStrong",
-  "#3a3e48": "lineStrong",
-  // inks
-  "#eae6dc": "ink",
-  "#f5f4ef": "ink",
-  "#b9b7b0": "ink2",
-  "#8e93a0": "ink3",
-  // signal
-  // The piano keys: a light surface inside the theme, with its own ink (see `surfacePale`).
-  "#f3f1eb": "surfacePale",
-  "#e2dfd5": "surfacePale2",
-  "#f5b73d": "accent",
-  "#d8b988": "accentSoft",
-  "#f59e0b": "warning",
-  "#ff5964": "danger",
-  "#45e0c9": "trackHat",
-  /**
-   * The app's brand teal is used as the **selected** state in the chord workshop (`bg-[#4ad8c8]/20
-   * border-[#4ad8c8] text-[#4ad8c8]` on the chosen playing style, the status dot, the section badges).
-   *
-   * It was mapped by distance to the *electronic* category hue, which is a fixed teal on every theme — so on
-   * the newsprint and aged-paper skins the selected chip stayed fluorescent cyan and read as a leftover. A
-   * selection is exactly what the accent role is for: it now follows the skin (blue on minimal, ink-teal on
-   * comic, flag red on Soviet-years).
-   */
-  "#4ad8c8": "accent",
-  "#38bdf8": "trackFx",
-  "#ec4899": "trackChord",
-  "#a78bfa": "trackBass",
-  "#7ee787": "trackLead",
-  "#c8e06a": "trackPerc",
-  "#ffb65c": "trackSnare",
-  "#f06ec4": "trackChord",
-  "#9aa5ce": "trackFx",
-  "#ff8a5c": "trackBass",
-};
+/**
+ * The literal -> role table now lives in `src/data/skinLiteralRoles.json`, shared with the phone sheets.
+ *
+ * It used to be defined here, which made the desktop the only place the mapping was written down: the phone's
+ * legacy and panel sheets hand-map the same hexes to their own tokens, and nothing compared the two. The table is
+ * data so that the generator, the phone sheets and the desktop output can all be checked against one copy.
+ */
+const LITERAL_ROLES = sharedLiteralRoles.literals;
+
+
 
 /**
  * The role set, and how a literal that is *not* in the list above is assigned.

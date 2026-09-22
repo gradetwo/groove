@@ -1,0 +1,363 @@
+{
+  "$comment": [
+    "One literal -> role table for every surface, extracted from the desktop generator and now the single source",
+    "both it and the two phone sheets are checked against (`scripts/check_skin_roles.mjs`).",
+    "",
+    "A role is a *meaning* (a ground, a panel, an ink step, a lane, a signal), not a colour: each surface maps the",
+    "role to its own token (`--d-*` on the desktop, `--m-*` on the phone). The point of the table is that a hex",
+    "cannot mean 'a surface' on one surface and 'an ink' on the other without someone writing it down here as a",
+    "deviation — which is how the phone's legacy views and the desktop's generated sheet drifted apart before.",
+    "",
+    "Deviations are deliberate: the phone's character sheets are opinionated about what a dark plate is on their",
+    "skin (comic prints dark plates as solid ink, because on newsprint a dark plate *is* ink). Each one carries a",
+    "reason, so a future reader can tell a decision from a mistake."
+  ],
+  "roles": [
+    "bg",
+    "panel",
+    "panel2",
+    "surface",
+    "surfacePale",
+    "surfacePale2",
+    "line",
+    "lineStrong",
+    "ink",
+    "ink2",
+    "ink3",
+    "inkOnPale",
+    "onAccent",
+    "accent",
+    "accentSoft",
+    "danger",
+    "success",
+    "warning",
+    "trackKick",
+    "trackSnare",
+    "trackHat",
+    "trackPerc",
+    "trackBass",
+    "trackChord",
+    "trackLead",
+    "trackFx",
+    "catElectronic",
+    "catRock",
+    "catHiphop",
+    "catJazz",
+    "catPop",
+    "catLatin"
+  ],
+  "literals": {
+    "#0a0b0d": "bg",
+    "#0c0d12": "bg",
+    "#0f1118": "bg",
+    "#12131a": "panel",
+    "#1a1c22": "panel",
+    "#1f222b": "panel",
+    "#0d0e12": "panel2",
+    "#111422": "panel2",
+    "#161a2b": "panel2",
+    "#17181c": "panel2",
+    "#12151f": "panel2",
+    "#15171d": "panel2",
+    "#23262d": "line",
+    "#252833": "line",
+    "#2b3040": "lineStrong",
+    "#3a3e48": "lineStrong",
+    "#eae6dc": "ink",
+    "#f5f4ef": "ink",
+    "#b9b7b0": "ink2",
+    "#8e93a0": "ink3",
+    "#f3f1eb": "surfacePale",
+    "#e2dfd5": "surfacePale2",
+    "#f5b73d": "accent",
+    "#d8b988": "accentSoft",
+    "#f59e0b": "warning",
+    "#ff5964": "danger",
+    "#45e0c9": "trackHat",
+    "#4ad8c8": "accent",
+    "#38bdf8": "trackFx",
+    "#ec4899": "trackChord",
+    "#a78bfa": "trackBass",
+    "#7ee787": "trackLead",
+    "#c8e06a": "trackPerc",
+    "#ffb65c": "trackSnare",
+    "#f06ec4": "trackChord",
+    "#9aa5ce": "trackFx",
+    "#ff8a5c": "trackBass"
+  },
+  "deviations": [
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#181a20",
+      "role": "ink",
+      "reason": "The comic sheet prints a dark plate as solid ink on purpose: on newsprint a dark plate *is* ink, and the desktop's raised-surface token would make it paper."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#181a20",
+      "role": "panel2",
+      "reason": "The Soviet and pixel sheets keep a dark plate dark (the phone's raised card is dark there, the desktop's `surface` is not)."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#252a36",
+      "role": "ink",
+      "reason": "The comic sheet prints a dark plate as solid ink on purpose: on newsprint a dark plate *is* ink, and the desktop's raised-surface token would make it paper."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#252a36",
+      "role": "panel2",
+      "reason": "The Soviet and pixel sheets keep a dark plate dark (the phone's raised card is dark there, the desktop's `surface` is not)."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#38bdf8",
+      "role": "accent",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#38bdf8",
+      "role": "panel2",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#45e0c9",
+      "role": "accent",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#45e0c9",
+      "role": "panel2",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#4ad8c8",
+      "role": "panel2",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#d47fa6",
+      "role": "accent",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#d47fa6",
+      "role": "catJazz",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#e2dfd5",
+      "role": "panel",
+      "reason": "The phone's legacy keyboard draws its keys from the skin's card; the phone has no pale-surface token, and the two are within a few percent of luminance on every skin."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#e84855",
+      "role": "accent",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#f3f1eb",
+      "role": "panel",
+      "reason": "The phone's legacy keyboard draws its keys from the skin's card; the phone has no pale-surface token, and the two are within a few percent of luminance on every skin."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "bg",
+      "literal": "#f5b73d",
+      "role": "panel2",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "border",
+      "literal": "#d47fa6",
+      "role": "accent",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "border",
+      "literal": "#ff5566",
+      "role": "accent",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "text",
+      "literal": "#38bdf8",
+      "role": "accent",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "text",
+      "literal": "#45e0c9",
+      "role": "accent",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "text",
+      "literal": "#d47fa6",
+      "role": "catJazz",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "text",
+      "literal": "#d47fa6",
+      "role": "ink2",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "text",
+      "literal": "#d8b988",
+      "role": "ink2",
+      "reason": "The phone treats the soft gold as one of its ink steps for secondary type, not as a soft accent."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "text",
+      "literal": "#e84855",
+      "role": "ink2",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "legacySkin.css",
+      "prefix": "text",
+      "literal": "#eae6dc",
+      "role": "onAccent",
+      "reason": "A label on an ink plate: the phone asks its own on-accent ink, which is what the shell guarantees reads on any filled plate."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "bg",
+      "literal": "#0b0c13",
+      "role": "bg",
+      "reason": "In the panel skin the phone reads the component's near-black plates as the page ground; the desktop reads them as a raised panel. A deliberate difference in depth, not in hue."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "bg",
+      "literal": "#0b0e19",
+      "role": "bg",
+      "reason": "In the panel skin the phone reads the component's near-black plates as the page ground; the desktop reads them as a raised panel. A deliberate difference in depth, not in hue."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "bg",
+      "literal": "#0c0e16",
+      "role": "bg",
+      "reason": "In the panel skin the phone reads the component's near-black plates as the page ground; the desktop reads them as a raised panel. A deliberate difference in depth, not in hue."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "bg",
+      "literal": "#0d0f16",
+      "role": "bg",
+      "reason": "In the panel skin the phone reads the component's near-black plates as the page ground; the desktop reads them as a raised panel. A deliberate difference in depth, not in hue."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "bg",
+      "literal": "#0d0f17",
+      "role": "bg",
+      "reason": "In the panel skin the phone reads the component's near-black plates as the page ground; the desktop reads them as a raised panel. A deliberate difference in depth, not in hue."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "bg",
+      "literal": "#0e0f14",
+      "role": "bg",
+      "reason": "In the panel skin the phone reads the component's near-black plates as the page ground; the desktop reads them as a raised panel. A deliberate difference in depth, not in hue."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "border",
+      "literal": "#1f222b",
+      "role": "lineStrong",
+      "reason": "The phone's hairline is one step stronger than the desktop's on these plates."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#38bdf8",
+      "role": "catElectronic",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#45e0c9",
+      "role": "catElectronic",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#8e92a0",
+      "role": "ink",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#a0a4b0",
+      "role": "ink",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#a78bfa",
+      "role": "catJazz",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#b9b7b0",
+      "role": "ink",
+      "reason": "Deliberate phone-shell choice: see the sheet's own comment."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#ec4899",
+      "role": "catJazz",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    },
+    {
+      "surface": "panelSkin.css",
+      "prefix": "text",
+      "literal": "#f59e0b",
+      "role": "accent",
+      "reason": "The phone shell speaks a five-colour vocabulary (gold/teal/violet/red/green) and expresses a lane or category hue as the nearest of those, where the desktop gives every lane its own token. Deliberate: a phone screen has one accent per module."
+    }
+  ]
+}

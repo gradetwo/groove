@@ -310,8 +310,26 @@ async function main() {
    * roughly 50 % headroom over the measured value: enough to absorb a shared CI runner, tight enough that
    * a real regression trips it.
    */
-  const NAVIGATION = { blockedMs: 2600, worstTaskMs: 1300, worstFrameMs: 1300, nodes: 4000 };
-  const ANIMATION = { worstFrameMs: 1400, medianFrameMs: 160, jankyPct: 20 };
+  /**
+   * Tightened once, from ~50 % headroom to ~35 %.
+   *
+   * The measurements this round were: navigation steps at most 1145 ms blocked / 832 ms worst task / 833 ms
+   * worst frame / 2 581 DOM nodes, and the animation step at 100 ms median / 683 ms worst frame / 2.7 % out of
+   * step. The old numbers were set when those were 1 700/900/900/3 900 and 110/1 000/6 %, so they had drifted
+   * into "whatever happens passes": the ratchet only works if it is re-set when the code gets faster. The
+   * headroom stays (a shared CI runner is slower than this machine) but it is now a third, not a half.
+   */
+  const NAVIGATION = { blockedMs: 1800, worstTaskMs: 1000, worstFrameMs: 1000, nodes: 3200 };
+  const ANIMATION = { worstFrameMs: 1000, medianFrameMs: 130, jankyPct: 12 };
+  /** The tightest value each dimension could be set to, printed so the next round knows where the slack is. */
+  const measured = {
+    blockedMs: Math.max(...steps.map((s) => s.blockedMs)),
+    worstTaskMs: Math.max(...steps.filter((s) => !s.step.startsWith("player:")).map((s) => s.worstTaskMs)),
+    worstFrameMs: Math.max(...steps.map((s) => s.worstFrameMs)),
+    nodes: Math.max(...steps.map((s) => s.nodes)),
+    medianFrameMs: Math.max(...steps.filter((s) => s.step.startsWith("player:")).map((s) => s.medianFrameMs), 0),
+    jankyPct: Math.max(...steps.map((s) => s.jankyFramePct)),
+  };
   const failures = [];
   for (const s of steps) {
     const budget = s.step.startsWith("player:") ? ANIMATION : NAVIGATION;
@@ -339,6 +357,23 @@ async function main() {
     for (const failure of failures) console.error(`   · ${failure}`);
     process.exit(1);
   }
+  /**
+   * The hint the other ratchets print, and this one did not: how much slack is left, per dimension.
+   *
+   * A budget nobody re-reads is a budget that stops being a gate — this probe's numbers were ~50 % loose before
+   * this round, and nothing said so.
+   */
+  const slack = [
+    ["blockedMs", NAVIGATION.blockedMs, measured.blockedMs],
+    ["worstTaskMs", NAVIGATION.worstTaskMs, measured.worstTaskMs],
+    ["worstFrameMs", NAVIGATION.worstFrameMs, measured.worstFrameMs],
+    ["medianFrameMs", ANIMATION.medianFrameMs, measured.medianFrameMs],
+    ["jankyPct", ANIMATION.jankyPct, measured.jankyPct],
+    ["nodes", NAVIGATION.nodes, measured.nodes],
+  ]
+    .filter(([, limit, value]) => Number.isFinite(value) && value > 0 && value < limit * 0.8)
+    .map(([name, limit, value]) => `${name} ${value} < ${limit}`);
+  if (slack.length) console.log(`   budget could be tightened: ${slack.join(", ")}`);
   console.log("✅ phone jank budget holds");
 }
 
