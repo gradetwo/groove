@@ -1,27 +1,27 @@
 {
-  "version": "2.15.0",
+  "version": "2.15.1",
   "releaseDate": "2026-09-22",
-  "changelogCount": 208,
+  "changelogCount": 209,
   "latest": {
-    "version": "2.15.0",
+    "version": "2.15.1",
     "date": "2026-09-21",
-    "category": "fix",
+    "category": "refactor",
     "title": {
-      "zh": "v2.15.0 皮肤收口：悬停色曾被当成基础色（133 条），审计修掉四处误判，低对比棘轮归零",
-      "en": "v2.15.0 Skin Close-out: Hover Colours Were Being Applied as Base (133 Rules), the Audit Was Wrong Four Ways, and the Contrast Ratchet Is Zero"
+      "zh": "v2.15.1 皮肤收口：两端共用一张字面值→角色表（39 处偏差逐条写明理由），手机即兴车道角色化，卡顿棘轮收紧",
+      "en": "v2.15.1 Skin Close-out: One Literal→Role Table for Both Surfaces (39 Deviations Documented With Reasons), Phone Jam Lanes as Roles, and a Tighter Jank Ratchet"
     },
     "highlights": [
       {
-        "zh": "**每一个 `hover:` 规则都在被静态应用——这是皮肤系统迄今最大的一个 bug。** 生成器输出的 133 条规则，选择器只是类属性（`[class~=…]`），**没有 `:hover`**。变体是**状态**，而属性选择器只要类存在就命中——于是在所有非默认皮肤上，**悬停色变成了基础色**，审计量到的填充是元素静止时根本没有的颜色。现在生成器会把变体还原成它真正代表的东西：`hover:`/`focus:`/`active:`/`checked:` 取伪类，`group-hover:` 取 `.group:hover …`，`peer-checked:` 取 `.peer:checked ~ …`，`sm:`/`md:` 等变成**真正的 `@media` 块**（排在扁平规则之后），`aria-pressed:`/`data-[…]:` 取属性选择器，`selection:`/`placeholder:` 取伪元素。仍然不认识的变体会**被报告**而不是静默丢弃——当初正是这种沉默让它上了线。现在**静态 `hover:` 规则…",
-        "en": "**Every `hover:` rule was being applied statically — the biggest bug the skin system has had.** The map emitted 133 rules whose selector was just the class-token attribute, with no `:hover`. A variant is a *state*, and as an attribute selector it matches whenever the class is present — so on every non-default skin the hover colour was the base colour, and the fills the audit measured were colours the element does not have at rest. The emitter now builds the selector a varian…"
+        "zh": "**P0 0-5：两端共用一张「字面值 → 角色」表。** 桌面生成器用手写表决定一个十六进制是什么意思；手机的 legacySkin.css 与 panelSkin.css 又在 **180 条手写规则**里重新决定了一遍，而**没有任何东西比较过两者**——同一个十六进制可以在一端是「表面」、在另一端是「墨色」，同一个元素就会因为由哪个外壳绘制，而在纸色板与深色字之间翻转。现在 `src/data/skinLiteralRoles.json` 是**唯一来源**（生成器 import 它；生成的样式表**逐字节不变**，这正是抽取得以被证明的方式），`scripts/check_skin_roles.mjs` 解析**三处**——表、生成的桌面样式表、两张手机样式表——并要求它们在同一字面值**且同一属性**上一致。",
+        "en": "**P0 0-5: one literal→role table for both surfaces.** The desktop generator decided what a hex means by hand; the phone's `legacySkin.css` and `panelSkin.css` decided the same thing again in **180 hand-written rules**, and nothing compared them — a hex could be a surface on one and an ink on the other, and the same element would flip from a paper plate to dark type depending on which shell drew it. `src/data/skinLiteralRoles.json` is now the single source (the generator impo…"
       },
       {
-        "zh": "**审计自己还有四处错**，每一处都是靠把发现追到浏览器再追回来定位的：① 它把**没有被绘制的那层底色**也留在候选里并取最差比值，于是覆盖层遮住下层这件事不成立——漫画皮肤的 CTA 明明计算样式是实心青绿渐变，却被报成纸色压纸色 1.05:1；现在覆盖层会**替换**候选，半透明层按 alpha 合成。② 它用 `background-size` 判断纹理，而角色皮肤会给按钮设 `6px 6px` 来画网点——于是真正的 Tailwind 渐变被丢掉；现在只看**图像本身**（色标半径是像素级、或 `repeating-` 渐变），不看尺寸。③ 它只解析一层 Tailwind 渐变变量（`--tw-gradient-stops` 本身是 `var(--tw-gradient-from), var(…)`），渐变元素于是回退到背后的东西；现在会**迭代整条变量链**。④ 它的诊断输出（`--json`、逐视图表格、问题清单）在早先某次编辑里丢了，而门禁照常工作——已恢复。",
-        "en": "**The audit itself was still wrong in four ways**, each found by chasing a finding to the browser and back: (1) it kept the *unpainted* ground as a candidate and reported the worst ratio, so a cover layer did not hide what it covers — the comic CTA was reported as paper on paper at 1.05:1 while its computed style was a solid teal gradient; candidates are now **replaced** by a covering layer and composited through a translucent one. (2) It decided texture from `background-siz…"
+        "zh": "**它第一次运行就找出 39 处分歧，而「逐条审阅」正是重点**：手机样式表是**有意**这么写的，所以每一处现在都被记录为**带理由的偏差**。审阅得出六个族：① 传统键盘用皮肤的卡片色画键，桌面用浅色表面角色；② 漫画样式表把深色板印成实心墨（在新闻纸上深色板**就是**墨），桌面则把它当作凸起表面，苏联与像素保持深色；③ 墨色板上的标签取手机的 on-accent 墨色；④ 车道与类目色被收拢到手机的**五色词汇**（它的外壳每个模块只有一个强调色），桌面给每条车道自己的 token；⑤ 柔和金色被当作手机的一个墨色档位而非柔和强调色；⑥ 面板皮肤里手机把近黑板当作页面底色，桌面把它当作凸起面板。另有 9 个字面值只有手机映射（桌面通过命名类达到同样效果），只报数、不失败。红线 **R12a**、表的单测、以及进 `verify` 的 `check:skin-roles` 一起守住它。",
+        "en": "**Its first run found 39 divergences, and reviewing them was the point**: the phone's sheets are opinionated on purpose, so each is now recorded as a **deviation with a reason**. Six families came out of that review: (1) the legacy keyboard draws keys from the skin's card while the desktop uses the pale-surface role; (2) the comic sheet prints dark plates as solid ink (on newsprint a dark plate *is* ink) where the desktop raises them as a surface, and Soviet and pixel keep t…"
       },
       {
-        "zh": "**然后才是真正的颜色工作**：① 信号填充与文字的配对改成**结构性**的（源里用到的每个信号填充乘以朴素墨色加同变体墨色），而不是靠 400 字符的共现窗口——这正是 `bg-accent` 配深色墨、以及挑战页渐变 CTA 一直没有配对的原因；② 应用**自己的调色板名**（`bg-accent` 既不是字面值也不是调色板家族）现在被识别为信号填充；③ 强调色、车道色、信号色的**文字**档位改为在它们自己的淡色 chip 上、且**两种卡片底色都算**的前提下推导（极简皮肤的徽章 4.44:1、段位证书 4.45:1）；④ 漫画皮肤那条过宽的 `:has` 选择器（把普通标尺标签也变成纸压纸）已删除；⑤ 苏联岁月皮肤里作为**文字**的青铜色改用可读的琥珀 token，而不是车道填充色；⑥ 极简皮肤的扁平渐变规则现在保留填充（`var(--tw-gradient-from)`）——一个只靠渐变上色的 CTA 原本**完全没有填充**，实测 1.04:1。",
-        "en": "**And the real colour work**: (1) signal fills are paired with their inks **structurally** (every signal fill the source uses times the plain inks plus the same-variant ones) instead of by a 400-character co-occurrence window, which is why `bg-accent` with a dark ink and the challenge's gradient CTA had no pair; (2) the app's **own palette names** (`bg-accent` is neither a literal nor a palette family) are recognised as signal fills; (3) the accent, lane and signal **text**…"
+        "zh": "**手机的即兴车道改用角色。** `JAM_COLORS` 原本是 MobileJamScreen 里六个写死的 `{ hex, rgb }` 对——**皮肤够不到的那一类颜色**，所以每套手机皮肤上即兴垫都还是默认调色板。现在每个垫子命名**共用的车道调色板**（`--d-track-*`），而它是生成器**从这张手机皮肤自己的强调色族**推导出来的——于是两端对「哪条车道是什么颜色」是**按构造一致**的。六个垫子仍是六种不同填充（拍手取粉色角色、边击取橄榄色角色），测试现在断言圆点是 `var(--d-track-…)` 的 token 而不是十六进制。",
+        "en": "**The phone's jam lanes are roles now.** `JAM_COLORS` was six hardcoded `{ hex, rgb }` pairs in `MobileJamScreen.tsx` — the one kind of colour a skin cannot reach, so the jam pads kept the default palette on every phone skin. Each pad names the **shared** lane palette (`--d-track-*`), which the generator derives from the **phone skin's own** accent family, so the two surfaces agree about which lane is which colour by construction. Six pads still get six distinct fills (the c…"
       }
     ],
     "truncated": true
