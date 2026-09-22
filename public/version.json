@@ -1,27 +1,27 @@
 {
-  "version": "2.13.1",
+  "version": "2.14.0",
   "releaseDate": "2026-09-22",
-  "changelogCount": 206,
+  "changelogCount": 207,
   "latest": {
-    "version": "2.13.1",
+    "version": "2.14.0",
     "date": "2026-09-21",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "v2.13.1 皮肤收口：审计不再把装饰当底色，灰色阶 500 档回归，和弦页低对比 129 → 5",
-      "en": "v2.13.1 Skin Clean-up: the Audit Stops Treating Decoration as Ground, Grey Shade 500 Comes Back, and the Chord Page Falls From 129 to 5"
+      "zh": "v2.14.0 编排优先：补完歌曲模型（clips + 时间轴），手机明确为功能子集，音质改进变成可降的门禁",
+      "en": "v2.14.0 Arrangement First: the Song Model (Clips + a Timeline), the Phone as an Explicit Subset, and the Audio-Quality Work as a Ratchet"
     },
     "highlights": [
       {
-        "zh": "**审计自己在说谎——这轮三件事里有两件在\"测量\"里。** ① 审计把**装饰当成了底色**：渐变的色标被直接当作文字背后的颜色，于是漫画皮肤的半调网点（1px 点阵）与手机的颗粒让\"纸色压纸色\"这种假失败出现在压在墨色上的标签上；苏联岁月标签栏顶端那条 **6px 红旗条**更让每个标签都变成\"深墨压红\"。现在审计会把每个色标**按 alpha 合成到它背后的底色上**，并忽略 `background-size` 是固定像素尺寸的 background-image——纹理不是底色。二十个假阳性消失了，而噪声一走，**二十个被旧模型掩盖的真问题**露了出来。",
-        "en": "**The audit itself was lying, and two of this round\\'s three findings were in the measurement.** (1) It treated **decoration as ground**: a gradient\\'s colour stops were read as the colours behind the text, so the comic skin\\'s halftone screen (a 1 px dot grid) and the phone\\'s grain produced paper-on-paper \"failures\" on labels that actually sit on ink, and Soviet-years\\' **6 px flag stripe** along the top of its tab bar turned every tab label into \"dark ink on red\". The aud…"
+        "zh": "**先回答那个问题：是的，而且应该提前——理由不是「DAW 很酷」，而是剩下的大部分音质改进没有时间轴就写不出来。** 现在的渲染器只接受一个 `bars` 参数，把**同一个 pattern 重复 N 次**（`totalSteps = patternSteps * bars`），所以导出 4 小节就是四个一模一样的小节——这正是那份试听报告听到的「无限循环机器」。「第 4 小节加 fill」「每 8 小节换一次和弦」「做一个 riser」全都是关于**时间轴**的陈述，单小节 pattern 里根本无处安放。",
+        "en": "**Answering the question first: yes, and it should be pulled forward — not because a DAW is nice, but because most of the remaining audio-quality work is not expressible without a timeline.** The renderer takes a `bars` argument and **repeats one pattern** (`totalSteps = patternSteps * bars`), so a four-bar export is four identical bars — exactly the \"infinite loop machine\" the listening report heard. \"Add a fill in bar 4\", \"change the chord every 8 bars\", \"build a riser\" ar…"
       },
       {
-        "zh": "**灰色阶的 500 档一直被静默跳过。** 生成器的档位选择没有边界，`text-zinc-500` 被解析成 `-50`，于是输出的选择器（`[class~=\"text-zinc-50\"]`）**匹配不到任何元素**，Tailwind 自己的 `#71717a` 就留在了页面上。一个 `(?![0-9])` 修好了全 App 每一个 `-500` 工具类（和弦页的 \"Root\" 标签就是可见症状）。",
-        "en": "**The grey ramp had been silently skipping shade 500.** The shade alternation had no boundary, so `text-zinc-500` was parsed as `-50` and the emitted selector (`[class~=\"text-zinc-50\"]`) **matched nothing**, leaving Tailwind\\'s own `#71717a` in place. One `(?![0-9])` fixed every `-500` utility in the app (the chord page\\'s \"Root\" labels were the visible symptom)."
+        "zh": "**而且它比看起来便宜得多，因为接缝早就在了。** `GrooveProject` 一直带着 `patterns: { A, B }`、`songMode` 与 `songChain: (\"A\" | \"B\")[]`——但 grep 显示 `songChain` 只出现在类型、持久化层和一个弹窗的 prop 里：**没有任何东西渲染或播放它**。编排是一个「有记录、没引擎」的承诺，所以这轮是**把一个已经存在的概念补完**，而不是从零造 DAW。",
+        "en": "**And it is far cheaper than it looked, because the seam was already there.** `GrooveProject` has carried `patterns: { A, B }`, `songMode` and `songChain: (\"A\" | \"B\")[]` for a while — but a grep shows `songChain` only in the type, the persistence layer and a modal prop: **nothing renders or plays it**. The arrangement is a record with no engine, so this is finishing an existing concept rather than building a DAW from scratch."
       },
       {
-        "zh": "**然后才是调色板真正的缺口。** ① **文字角色现在按它实际所在的那块底色推导**，不只是面板：强调色文字与车道 ink 会在\"面板 / 两种卡片 / 8%-15%-20% 的自身淡色\"里**最大化最差对比度**（`bg-accent/15`、`bg-<lane>/12` 就是它们实际出现的地方）。我先试过\"逐个底色依次修\"，结果把苏联岁月从 12 处恶化到 78 处——这些底色分布在该颜色的**两侧**，依次修最后只满足了最后一个；现在改为以 2% 步长离开基色、**取第一个在所有底色上都过 4.5:1 的候选**，色相仍然是原来的色相，而不是塌成黑色。② **信号色（danger/success/warning）现在同时按文字对待**：苏联岁月的绿在它的表面上只有 3.6:1；而 warning 改用手机自己的 `--m-warning`——\"把皮肤强调色压暗\"在极简皮肤上会得到一个**蓝色**的警告。③ **`text-[#4ad8c8]` 取强调色的可读档**（车道色早就是这样了）；苏联岁月纸底上的 `text-accent` 只有…",
-        "en": "**Then the palette gaps the honest audit exposed.** (1) **Text roles are now derived against the chips they are actually read on**, not just the panel: the accent ink and the lane inks maximise the **worst-case contrast** across the panel, both card tones and the 8/15/20 % washes these colours are used as (`bg-accent/15`, `bg-<lane>/12`). A sequential \"fix it against each ground\" reduce was tried first and made Soviet-years worse (12 → 78): the grounds sit on **both sides**…"
+        "zh": "**这一轮的实件（编排计划的 B0）。** ① `src/types/song.ts`：`Song`（clips + sections）、`SongSection`（槽位、重复小节数、逐段静音与力度缩放）、`resolveTimeline`（把编排摊成逐小节的时间轴，**报告问题而不是抛异常**，所以半成品编排也能被显示）、增删改复制 section 的函数，以及历史 `songChain` 的双向迁移。② 10 条单测把迁移钉死：**今天保存的工程明天打开，小节数与顺序完全一致**。③ `docs/ARRANGEMENT_PLAN.md`：模型、六个步骤（B1 持久化 → B2 渲染器时间轴 → B3 编排视图 → B4 导出器 → B5 音质收益 → B6 MCP），以及手机范围的**子集契约**。",
+        "en": "**What landed (B0 of the arrangement plan).** (1) `src/types/song.ts`: `Song` (clips + sections), `SongSection` (slot, repeat count, per-section mutes and velocity scale), `resolveTimeline` (flattens the arrangement into a bar-by-bar timeline that **reports problems instead of throwing**, so a half-built song can still be displayed), section add/update/duplicate/remove, and migration to and from the historical `songChain`. (2) Ten unit tests pin the migration: **a project sa…"
       }
     ],
     "truncated": true
