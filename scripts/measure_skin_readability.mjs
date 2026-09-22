@@ -325,13 +325,42 @@ async function main() {
     errors: r.errors.length,
   }));
 
+  /**
+   * Budgets, as a ratchet.
+   *
+   * Zero is the goal; the numbers below are **today's measurements**, printed with a "could be tightened"
+   * hint exactly like the phone touch-target gate. A view whose count rises fails; a view whose count falls
+   * reports the tighter number it could be set to, so the budget can only go down.
+   *
+   * Why a budget rather than a clean sweep before shipping: what is left are colours *chosen in components* —
+   * a chord chip that paints itself with the ink token, a view that assumes a dark plate, an inline genre
+   * accent — each a small UI decision rather than a palette bug. The gate makes them countable and stops them
+   * growing while they are worked off.
+   */
+  const BUDGET = {
+    // Today's measurements, per view: the ratchet starts where the code is and can only go down.
+    studio: 8,
+    chords: 130,
+    challenge: 3,
+    "phone-home": 6,
+    "phone-challenge": 6,
+  };
   if (!JSON_OUT) {
     console.log("\n🎨 SKIN READABILITY AUDIT\n");
+    /**
+     * Three states, not two: a view with findings that are inside its budget is a ⚠️, not a ❌.
+     *
+     * Printing ❌ for a run that passes (which this did until it was looked at) is the kind of report people
+     * stop reading — and the budget exists precisely so "known, counted, being worked off" is a different
+     * state from "this regressed".
+     */
     for (const row of summary) {
-      const bad = row.lowContrast || row.clipped || row.errors;
+      const allowed = BUDGET[row.view] ?? (FULL ? 0 : Infinity);
+      const broken = row.clipped || row.errors || row.lowContrast > allowed;
+      const warn = !broken && row.lowContrast > 0;
       console.log(
-        `  ${bad ? "❌" : "✅"} ${row.skin.padEnd(12)} ${row.view.padEnd(16)} text ${String(row.checked).padStart(4)}  ` +
-          `low-contrast ${row.lowContrast}  clipped ${row.clipped}  console ${row.errors}`
+        `  ${broken ? "❌" : warn ? "⚠️" : "✅"} ${row.skin.padEnd(12)} ${row.view.padEnd(16)} text ${String(row.checked).padStart(4)}  ` +
+          `low-contrast ${row.lowContrast}${warn ? `/${allowed}` : ""}  clipped ${row.clipped}  console ${row.errors}`
       );
     }
     const offenders = results.flatMap((r) => r.failures.map((f) => ({ skin: r.skin, view: r.view, ...f })));
@@ -356,26 +385,6 @@ async function main() {
     console.log(JSON.stringify({ summary, results }, null, 2));
   }
 
-  /**
-   * Budgets, as a ratchet.
-   *
-   * Zero is the goal; the numbers below are **today's measurements**, printed with a "could be tightened"
-   * hint exactly like the phone touch-target gate. A view whose count rises fails; a view whose count falls
-   * reports the tighter number it could be set to, so the budget can only go down.
-   *
-   * Why a budget rather than a clean sweep before shipping: what is left are colours *chosen in components* —
-   * a chord chip that paints itself with the ink token, a view that assumes a dark plate, an inline genre
-   * accent — each a small UI decision rather than a palette bug. The gate makes them countable and stops them
-   * growing while they are worked off.
-   */
-  const BUDGET = {
-    // Today's measurements, per view: the ratchet starts where the code is and can only go down.
-    studio: 8,
-    chords: 130,
-    challenge: 3,
-    "phone-home": 6,
-    "phone-challenge": 6,
-  };
   const over = [];
   const tighten = [];
   for (const row of summary) {
