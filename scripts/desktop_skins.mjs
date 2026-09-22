@@ -94,6 +94,69 @@ const ensureContrast = (hex, ground, floor) => {
   return rgbToHex([r, g, b]);
 };
 
+/**
+ * The grounds a *tinted* chip presents: the panel itself and the colour mixed into it.
+ *
+ * The desktop's chips are `bg-<role>/10..30`, so the text on them is not read against the panel but against a
+ * 10-30 % wash of the role over it. Deriving a text role against the panel alone left 54 elements at 4.2:1 —
+ * "Load to Studio" and the lane labels on every light skin — because a 20 % accent wash is *lighter* than the
+ * panel on a light theme and *darker* on a dark one, and the ink has to clear both.
+ */
+const tintGrounds = (base, panel, steps = [0, 0.1, 0.2, 0.3]) =>
+  steps.map((amount) => rgbToHex(overHex({ rgb: hexToRgb(base), a: amount }, hexToRgb(panel))));
+
+/** Composite a colour at `a` over an opaque one, in hex space. */
+function overHex(fg, bg) {
+  return [0, 1, 2].map((i) => Math.round(fg.rgb[i] * fg.a + bg[i] * (1 - fg.a)));
+}
+
+/**
+ * The ink that reads **best on all of these grounds at once**.
+ *
+ * The first attempt reduced with `ensureContrast`, which is wrong whenever the grounds sit on both sides of the
+ * colour: a light panel asks for a darker ink, a 20 % wash of a saturated accent asks for a lighter one, and the
+ * sequential reduce satisfied whichever came last (Soviet-years' chord page went from 12 findings to 78). This
+ * maximises the *minimum* contrast instead, so one colour has to work everywhere — and if nothing clears the
+ * floor, the caller still gets the best available rather than a colour tuned to one ground.
+ */
+const bestInkFor = (base, grounds, floor, options = {}) => {
+  const [br, bg, bb] = hexToRgb(base);
+  const luminanceOf = (hex) => luminance(hexToRgb(hex));
+  const worst = (hex) => {
+    const value = luminanceOf(hex);
+    return grounds.reduce((min, ground) => {
+      const other = luminanceOf(ground);
+      const [hi, lo] = value > other ? [value, other] : [other, value];
+      return Math.min(min, (hi + 0.05) / (lo + 0.05));
+    }, Infinity);
+  };
+  if (worst(base) >= floor) return base;
+  /**
+   * Move away from the base in small steps and take the **first** candidate that clears every ground.
+   *
+   * Distance matters as much as contrast: the obvious "maximise the minimum" search returns pure black for
+   * every skin, which is not an accent anymore. A 2 % step keeps the colour's identity while the ratio climbs.
+   */
+  const step = options.step ?? 0.02;
+  let fallback = base;
+  let fallbackScore = worst(base);
+  for (let t = step; t <= 1.0001; t += step) {
+    for (const target of [0, 255]) {
+      const candidate = rgbToHex([br, bg, bb].map((v) => v + (target - v) * t));
+      const score = worst(candidate);
+      if (score >= floor) return candidate;
+      if (score > fallbackScore) {
+        fallback = candidate;
+        fallbackScore = score;
+      }
+    }
+  }
+  return fallback;
+};
+
+/** The chip washes the app actually uses (`bg-<role>/10`, `/15`, `/20`). */
+const CHIP_TINTS = [0, 0.08, 0.15, 0.2];
+
 const ensureTextOn = (fill, text, floor) => {
   const target = isLight(text) ? 0 : 255;
   let [r, g, b] = hexToRgb(fill);
@@ -165,6 +228,14 @@ function phonePalette(skin) {
     ink2: read("--m-ink-2"),
     ink3: read("--m-ink-3"),
     gold: read("--m-gold"),
+    // The phone's own warning tone, added when the six skins gained one; older sheets without it fall back.
+    warning: (() => {
+      try {
+        return read("--m-warning");
+      } catch {
+        return null;
+      }
+    })(),
     goldHi: read("--m-gold-hi"),
     teal: read("--m-teal"),
     red: read("--m-red"),
@@ -349,10 +420,22 @@ function palette(skin) {
     ink2: p.ink2,
     ink3: p.ink3,
     accent: p.gold,
-    danger: p.red,
-    success: p.green,
+    /**
+     * The signal colours, held to the contrast floor as *text* as well as used as floods.
+     *
+     * They are used both ways: a fill with `--d-on-accent` on it, and small type (the challenge's rank
+     * certificate). `p.red`/`p.green` are the phone's own tokens and on the light skins they are mid-tones —
+     * Soviet-years' green measured 3.6:1 on its surface — so each steps only as far as the floor needs.
+     */
+    danger: ensureContrast(p.red, p.card, 4.5),
+    success: ensureContrast(p.green, p.card, 4.5),
     // Read, not just seen: the direction that increases contrast against the panel it sits on.
-    warning: readableStep(p.gold, p.card, light ? 0.35 : 0.2),
+    /**
+     * The warning tone: the phone's own `--m-warning` when it has one (a warning should be amber, not a darker
+     * version of whatever the skin's accent happens to be — the minimal skin's accent is blue), otherwise the
+     * accent stepped away from the ground. Either way it is held to the text floor.
+     */
+    warning: ensureContrast(p.warning ?? readableStep(p.gold, p.card, light ? 0.35 : 0.2), p.card, 4.5),
     /**
      * A light surface inside the theme, and the ink that reads on it.
      *
@@ -390,9 +473,14 @@ function palette(skin) {
      * Soviet-years flag red measured 3.2:1 there. Taking the darkest of the three grounds (card, card-2 and the
      * surface step between them) costs a slightly deeper red and removes the class.
      */
-    accentInk: [p.card, p.card2, step(p.card, 0.06)].reduce(
-      (best, ground) => ensureContrast(best, ground, 4.5),
-      p.gold
+    /**
+     * The accent as type, chosen to read on the panel, both card tones *and* the accent's own chip washes —
+     * most of this text sits on `bg-accent/15`.
+     */
+    accentInk: bestInkFor(
+      p.gold,
+      [p.card, p.card2, step(p.card, 0.06), ...tintGrounds(p.gold, p.card, CHIP_TINTS.filter((t) => t > 0))],
+      4.5
     ),
     /**
      * The lane fills — this skin's *designed* hue, not a darkened one.
@@ -840,7 +928,20 @@ function tokenRecord(skin) {
     ...Object.fromEntries(
       Object.entries(p.track).flatMap(([lane, hex]) => [
         [`--d-track-${lane}`, channels(hex)],
-        [`--d-track-${lane}-ink`, channels(readableStep(hex, p.panel, light ? 0.75 : 0.55))],
+        /**
+         * The lane name, derived against the panel *and* the lane's own 10-30 % washes — a track header prints
+         * its name on a chip tinted with its own colour.
+         */
+        [
+          `--d-track-${lane}-ink`,
+          channels(
+            bestInkFor(
+              readableStep(hex, p.panel, light ? 0.75 : 0.55),
+              tintGrounds(hex, p.panel, CHIP_TINTS),
+              4.5
+            )
+          ),
+        ],
         [`--d-track-${lane}-on`, channels(p.trackOn[lane])],
       ])
     ),
@@ -990,7 +1091,20 @@ function generate() {
       const tableIsLine = LINE_ROLES.has(role) && !LINE_PREFIXES.has(prefix);
       const kindMismatch = (surfacePrefix && tableIsInk) || tableIsLine;
       const baseRole = perUse && kindMismatch ? perUse : role;
-      const inkRole = prefix === "text" && /^track[A-Z]/.test(baseRole) ? `${baseRole}Ink` : baseRole;
+      /**
+       * A colour used as *type* takes its text token, not its fill token.
+       *
+       * `text-[#4ad8c8]` (the brand teal, and now the accent) mapped to `--d-accent` — the raw accent, which is
+       * a *flood* colour: on the Soviet-years paper it measured 3.5:1. The accent's readable step is exactly
+       * what `--d-accent-ink` is for, and the lane colours have had their own ink since the first audit.
+       */
+      const textRole =
+        prefix === "text" && baseRole === "accent"
+          ? "accentInk"
+          : prefix === "text" && /^track[A-Z]/.test(baseRole)
+            ? `${baseRole}Ink`
+            : baseRole;
+      const inkRole = textRole;
       const chosen = ROLE_TOKEN[inkRole] ?? token;
       const property = PROPERTY[prefix];
       if (!property) continue;
@@ -1063,7 +1177,7 @@ function generate() {
     for (const file of files) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
       const re = new RegExp(
-        `(?:^|[\\s"'])((?:[a-z-]+:)*)(bg|border|text)-(${GREY_FAMILIES.join("|")})-(${GREY_SHADES.join("|")})(?:\\/(\\d{1,3}))?`,
+        `(?:^|[\\s"'])((?:[a-z-]+:)*)(bg|border|text)-(${GREY_FAMILIES.join("|")})-(${GREY_SHADES.join("|")})(?![0-9])(?:\\/(\\d{1,3}))?`,
         "g"
       );
       for (const match of text.matchAll(re)) {
@@ -1129,6 +1243,8 @@ function generate() {
 
     const whiteVariants = new Set();
     const whiteOnSignal = new Set();
+    /** Signals that carry a *dark* named ink (`bg-accent text-zinc-950`, a green gradient with black type). */
+    const darkInkSignals = new Set();
     const blackVariants = new Set();
     /** `text-zinc-900/950` variants that must take the signal fill's ink (see below). */
     const darkOnSignal = new Set();
@@ -1136,14 +1252,18 @@ function generate() {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
       for (const match of text.matchAll(/(?:^|[\s"'`])((?:[a-z-]+:)*)(bg|from|via|to)-(\[[^\]]+\]|[a-z]+-[0-9]{2,3})(?:\/(\d{1,3}))?/g)) {
         const window = text.slice(match.index, match.index + 400);
-        if (/(?:^|[\s"'])(?:[a-z-]+:)*text-white/.test(window)) {
+        const wantsWhite = /(?:^|[\s"'])(?:[a-z-]+:)*text-white/.test(window);
+        const wantsDark = /(?:^|[\s"'])(?:[a-z-]+:)*text-(?:black|zinc-9[0-9]{2})/.test(window);
+        if (wantsWhite || wantsDark) {
           const value = match[3];
           const literal = value.startsWith("[#") ? value.slice(1, -1).toLowerCase() : null;
           const role = literal
             ? literalRoles[literal] ?? nearestRole(literal, roles, rolesFor(match[2]))
             : NAMED_FAMILIES[value.split("-")[0]];
           if (role && /^(accent|accentSoft|danger|success|warning|track|cat)/.test(role)) {
-            whiteOnSignal.add(`${match[1]}${match[2]}-${value}${match[4] ? `/${match[4]}` : ""}`);
+            const selector = `${match[1]}${match[2]}-${value}${match[4] ? `/${match[4]}` : ""}`;
+            if (wantsWhite) whiteOnSignal.add(selector);
+            if (wantsDark) darkInkSignals.add(selector);
           }
         }
       }
@@ -1176,7 +1296,7 @@ function generate() {
      * Emitted as a pair for the same reason as `text-white`: CSS can see both classes on the element, and the
      * signal fill's ink is chosen per skin exactly for this.
      */
-    const darkOnSignalRules = [...whiteOnSignal]
+    const darkOnSignalRules = [...new Set([...whiteOnSignal, ...darkInkSignals])]
       .sort()
       .flatMap((signal) => [...darkOnSignal].sort().map((ink) => `[class~="${signal}"][class~="${ink}"] { color: rgb(var(--d-on-accent)); }`));
 

@@ -150,40 +150,61 @@ const AUDIT = () => {
   };
 
   /**
-   * The colours behind an element, worst-first.
+   * The colours behind an element, worst-first — with decorations composited rather than taken raw.
    *
-   * Walks up compositing translucent layers until something opaque is found, and if any ancestor paints a
-   * gradient it returns that gradient's stops as separate candidates — because text sits on *one* of them and
-   * the audit cannot know which.
+   * The first version returned a gradient's stops *as they are*, which reported a false positive on every
+   * element that paints a pattern over a solid colour: the comic skin's halftone dot grid and the phone's grain
+   * both contain a light stop, so paper-on-ink labels were "measured" against that stop (paper on paper, 1:1)
+   * even though the ink ground is what a reader sees. The candidates are now the *results* of painting each stop
+   * over the ground behind it: a 30 %-alpha halftone composites to almost the ground, while an opaque gradient
+   * stop still becomes itself. Both cases come out right.
    */
   const backgrounds = (el) => {
-    let stack = [];
+    /** Every layer from the text outwards: its own colour, its own decoration, then the ancestors'. */
+    const layers = [];
     let node = el;
-    let base = null;
+    let ground = null;
     while (node && node !== document.documentElement.parentElement) {
       const style = getComputedStyle(node);
-      if (style.backgroundImage && style.backgroundImage !== "none") {
-        const stops = gradientStops(style.backgroundImage);
-        if (stops.length) {
-          // Composite the accumulated translucent layers over each stop.
-          const resolved = stops.map((stop) => over({ rgb: stop.rgb, a: stop.a }, stack.length ? stack[stack.length - 1] : [255, 255, 255]));
-          return resolved.map((rgb) => (stack.length ? over(stack[0], rgb) : rgb));
-        }
-      }
       const bg = parse(style.backgroundColor);
-      if (bg && bg.a > 0) {
-        stack.unshift(bg);
-        if (bg.a >= 0.999) {
-          base = bg.rgb;
-          break;
-        }
+      /**
+       * A background-image only counts as a ground when it **covers the element**.
+       *
+       * `background-size: 6px 6px` is the comic skin's halftone screen and `100% 6px` is Soviet-years' red
+       * stripe along the top edge of its tab bar: both are decoration, and the second one produced a false
+       * positive on every tab label (dark ink "on the flag red") even though the labels sit on the paper plate
+       * the bar actually is. Sizes that name a fixed pixel dimension are textures; `auto`/`cover`/`100% 100%`
+       * are grounds.
+       */
+      const size = style.backgroundSize || "auto";
+      const coversBox = !/\b\d+(\.\d+)?px\b/.test(size) || /100%\s+100%/.test(size);
+      const stops =
+        style.backgroundImage && style.backgroundImage !== "none" && coversBox
+          ? gradientStops(style.backgroundImage)
+          : [];
+      layers.push({ bg, stops });
+      if (bg && bg.a >= 0.999) {
+        ground = bg.rgb;
+        break;
       }
       node = node.parentElement;
     }
-    const opaque = base ?? [10, 11, 13];
-    let result = opaque;
-    for (let i = stack.length - 1; i >= 0; i -= 1) result = over(stack[i], result);
-    return [result];
+    const opaque = ground ?? [10, 11, 13];
+
+    /** All the colours a reader's eye could land on: the plain ground plus every composite with a decoration. */
+    const candidates = new Set([opaque.join(",")]);
+    // Deepest first: compose each layer's decoration and then its own colour over what is underneath.
+    let current = opaque;
+    for (let i = layers.length - 1; i >= 0; i -= 1) {
+      const layer = layers[i];
+      for (const stop of layer.stops) {
+        const painted = stop.a >= 0.999 ? stop.rgb : over(stop, current);
+        candidates.add(painted.join(","));
+      }
+      if (layer.bg && layer.bg.a > 0) current = over(layer.bg, current);
+      candidates.add(current.join(","));
+    }
+    return [...candidates].map((key) => key.split(",").map(Number));
   };
 
   const isVisible = (el) => {
@@ -350,58 +371,18 @@ async function main() {
     /**
      * Today's measurements, per view: the ratchet starts where the code is and can only go down.
      *
-     * Tightened from 8/130/3/6/6 after the role-kind, named-ink and accent-ink fixes took the chord page from
-     * 129 to 13 elements in the worst skin. What is left is listed in the changelog: mostly component-level
-     * colour decisions (a chip painted with the ink token, a legend on a dark plate) rather than palette gaps.
+     * Tightened three times now — 8/130/3/6/6 → 6/14/3/6/6 → this. The chord page went 129 → 5, the studio
+     * 7 → 1, and **the two phone views are at zero**, which is where all of them should end up. What is left is
+     * four specific causes, listed in the changelog: `text-zinc-950` on the accent flood, the primary button's
+     * label on a lane-coloured fill, accent text on an accent chip on two light skins, and the challenge view's
+     * rank colour, which is decided in JavaScript rather than by a token.
      */
-    studio: 6,
-    chords: 14,
+    studio: 2,
+    chords: 6,
     challenge: 3,
-    "phone-home": 6,
-    "phone-challenge": 6,
+    "phone-home": 0,
+    "phone-challenge": 0,
   };
-  if (!JSON_OUT) {
-    console.log("\n🎨 SKIN READABILITY AUDIT\n");
-    /**
-     * Three states, not two: a view with findings that are inside its budget is a ⚠️, not a ❌.
-     *
-     * Printing ❌ for a run that passes (which this did until it was looked at) is the kind of report people
-     * stop reading — and the budget exists precisely so "known, counted, being worked off" is a different
-     * state from "this regressed".
-     */
-    for (const row of summary) {
-      // A view with no budget is *reported* rather than failed: in the full sweep most views are not in the map
-    // yet, and inventing a budget of 0 would make the diagnostic useless (and a budget of 227 dishonest).
-    const allowed = BUDGET[row.view] ?? Infinity;
-      const broken = row.clipped || row.errors || row.lowContrast > allowed;
-      const warn = !broken && row.lowContrast > 0;
-      console.log(
-        `  ${broken ? "❌" : warn ? "⚠️" : "✅"} ${row.skin.padEnd(12)} ${row.view.padEnd(16)} text ${String(row.checked).padStart(4)}  ` +
-          `low-contrast ${row.lowContrast}${warn ? `/${allowed}` : ""}  clipped ${row.clipped}  console ${row.errors}`
-      );
-    }
-    const offenders = results.flatMap((r) => r.failures.map((f) => ({ skin: r.skin, view: r.view, ...f })));
-    if (offenders.length) {
-      console.log(`\n  ${offenders.length} element(s) below the contrast floor:`);
-      for (const o of offenders.slice(0, 40)) {
-        console.log(`   · ${o.skin}/${o.view}  ${o.ratio}:1 (floor ${o.floor})  ${o.colour} on ${o.bg}  "${o.text}"  [${o.testid ?? o.tag}]`);
-      }
-      if (offenders.length > 40) console.log(`   … and ${offenders.length - 40} more`);
-    }
-    const clipped = results.flatMap((r) => r.clipped.map((c) => ({ skin: r.skin, view: r.view, ...c })));
-    if (clipped.length) {
-      console.log(`\n  ${clipped.length} clipped control(s):`);
-      for (const c of clipped.slice(0, 20)) console.log(`   · ${c.skin}/${c.view}  "${c.text}"  [${c.testid ?? c.tag}]`);
-    }
-    const errored = results.filter((r) => r.errors.length);
-    if (errored.length) {
-      console.log(`\n  ${errored.length} page(s) with console errors:`);
-      for (const e of errored.slice(0, 10)) console.log(`   · ${e.skin}/${e.view}  ${e.errors[0]}`);
-    }
-  } else {
-    console.log(JSON.stringify({ summary, results }, null, 2));
-  }
-
   const over = [];
   const tighten = [];
   for (const row of summary) {

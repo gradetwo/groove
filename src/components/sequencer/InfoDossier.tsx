@@ -38,7 +38,7 @@ export const InfoDossier = memo<InfoDossierProps>(function InfoDossier({
       <div className="bg-panel border border-line rounded-xl p-4 sm:p-4.5">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="font-['Space_Grotesk'] font-bold text-2xl sm:text-[26px] leading-[1.15] text-[var(--g)] tracking-tight">
+            <div className="font-['Space_Grotesk'] font-bold text-2xl sm:text-[26px] leading-[1.15] text-[var(--g-ink)] tracking-tight">
               {genre.name}
             </div>
             <div className="text-xs text-text-sub mt-1 font-medium">
@@ -162,15 +162,15 @@ export const InfoDossier = memo<InfoDossierProps>(function InfoDossier({
         </h3>
         <div className="space-y-2">
           <div className="flex gap-2 text-xs text-[#b9b7b0] leading-relaxed">
-            <span className="text-[var(--g)] shrink-0">▸</span>
+            <span className="text-[var(--g-ink)] shrink-0">▸</span>
             <span>{genre.drum_pattern.swing[language]}</span>
           </div>
           {genre.common_chords.length > 0 && (
             <div className="flex gap-2 text-xs text-[#b9b7b0] leading-relaxed">
-              <span className="text-[var(--g)] shrink-0">▸</span>
+              <span className="text-[var(--g-ink)] shrink-0">▸</span>
               <span>
                 {isZh ? "经典走向: " : "Progressions: "}
-                <code className="font-mono text-[var(--g)] font-bold">
+                <code className="font-mono text-[var(--g-ink)] font-bold">
                   {genre.common_chords.join(" → ")}
                 </code>
               </span>
@@ -193,7 +193,7 @@ export const InfoDossier = memo<InfoDossierProps>(function InfoDossier({
                     href={track.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-text hover:text-[var(--g)] hover:underline"
+                    className="text-text hover:text-[var(--g-ink)] hover:underline"
                   >
                     {track.title}
                   </a>
@@ -213,7 +213,7 @@ export const InfoDossier = memo<InfoDossierProps>(function InfoDossier({
         <div className="flex items-center gap-2 mt-3 pt-2">
           <button
             onClick={() => onViewDetail(genre)}
-            className="flex-1 text-xs text-text-sub hover:text-[var(--g)] hover:border-[var(--g)] p-2 border border-line rounded-lg transition-colors text-center"
+            className="flex-1 text-xs text-text-sub hover:text-[var(--g-ink)] hover:border-[var(--g)] p-2 border border-line rounded-lg transition-colors text-center"
           >
             {t("view_detail")} →
           </button>
