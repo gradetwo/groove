@@ -22,40 +22,66 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { render, screen } from "@testing-library/react";
+import React from "react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { Toolbar } from "../components/sequencer/Toolbar";
-import { DEMO_TRACKS_CONFIG } from "../components/sequencer/trackConfig";
 
-/** The minimum `Toolbar` needs to render its control row. */
+/**
+ * The minimum `Toolbar` needs to render its control row.
+ *
+ * Written out in full rather than cast: the props are the contract, and a `as unknown as ToolbarProps` would
+ * hide the next prop the component requires (which is exactly how the first version of this file passed under
+ * vitest and failed `tsc`).
+ */
 function renderToolbar(overrides: Record<string, unknown> = {}) {
   const noop = vi.fn();
+  const props = {
+    isPlaying: false,
+    bpm: 124,
+    swing: 0,
+    timeSignature: "4/4",
+    resolution: "1/16" as const,
+    stepCount: 16,
+    barCount: 1,
+    viewedBar: 0,
+    mobileEditMode: "step" as const,
+    showAdvancedControls: false,
+    isVelocityLaneOpen: false,
+    isSidebarCollapsed: false,
+    isEditorMaximized: false,
+    canUndo: false,
+    canRedo: false,
+    genreName: "Chicago House",
+    genreAccent: "#4ad8c8",
+    isZh: true,
+    stepsPerBar: 4,
+    groupSize: 4,
+    onTogglePlay: noop,
+    onChangeBpm: noop,
+    onChangeSwing: noop,
+    onChangeTimeSignature: noop,
+    onChangeResolution: noop,
+    onChangeStepCount: noop,
+    onChangeMobileEditMode: noop,
+    onSelectBar: noop,
+    onToggleVelocityLane: noop,
+    onOpenEuclidean: noop,
+    onUndo: noop,
+    onRedo: noop,
+    onToggleMaximize: noop,
+    onToggleSidebar: noop,
+    onToggleAdvancedControls: noop,
+    onQuickAction: noop,
+    onExportMidi: noop,
+    onShare: noop,
+    onAddSteps: noop,
+    onRemoveSteps: noop,
+    onScrollByPixels: noop,
+    ...overrides,
+  };
   return render(
     <LanguageProvider>
-      <Toolbar
-        tracks={DEMO_TRACKS_CONFIG}
-        activeTrackIdx={0}
-        onSelectTrack={noop}
-        onToggleMute={noop}
-        onToggleSolo={noop}
-        onClearTrack={noop}
-        stepCount={16}
-        stepsPerBar={4}
-        groupSize={4}
-        isPlaying={false}
-        onTogglePlay={noop}
-        bpm={124}
-        onBpmChange={noop}
-        swing={0}
-        onSwingChange={noop}
-        showAdvancedControls={false}
-        isSidebarCollapsed={false}
-        onToggleSidebar={noop}
-        isEditorMaximized={false}
-        onToggleMaximize={noop}
-        onExportMidi={noop}
-        onExportWav={noop}
-        {...overrides}
-      />
+      <Toolbar {...(props as unknown as React.ComponentProps<typeof Toolbar>)} />
     </LanguageProvider>
   );
 }
