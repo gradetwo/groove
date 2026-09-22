@@ -45,14 +45,14 @@ const TOOLBAR_PATH = path.join(SRC_DIR, "components", "sequencer", "Toolbar.tsx"
 const STUDIO_LOCALE_PATH = path.join(SRC_DIR, "i18n", "locales", "studio.ts");
 
 /**
- * `export` is the ExportMenu trigger's real key (`title={t("export")}`) but it is
- * defined in `explore.ts`, not `studio.ts` — the locale files are merged at
- * runtime. Every other labelKey resolves from `studio.ts`. This map is the
- * explicit, reviewable exception; nothing else may leave `studio.ts`.
+ * Keys that legitimately live outside `studio.ts`.
+ *
+ * Empty, and that is information: the export menu's trigger used to borrow `export` — which means "MIDI" and
+ * is defined in `explore.ts` — so the menu of five formats was titled after one of them and nobody could find
+ * WAV export. It has its own key in `studio.ts` now (`toolbar_export_menu`), and every labelKey resolves from
+ * one file again. The map stays so a future genuine exception has an obvious, reviewable home.
  */
-const CROSS_LOCALE_KEYS: Record<string, string> = {
-  export: "i18n/locales/explore.ts",
-};
+const CROSS_LOCALE_KEYS: Record<string, string> = {};
 
 const KEBAB_CASE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
@@ -71,6 +71,19 @@ function makeItem(
 }
 
 describe("toolbar tier table (C-01)", () => {
+  it("keeps export a primary action, so it is not hidden behind advanced controls", () => {
+    /**
+     * The report that produced this: on a PC and on an iPad nobody could find WAV export. Two causes, both
+     * asserted here — `export` was Tier 2 (so `shows("export")` was false until the user turned on "advanced
+     * controls"), and the menu itself sat *inside* the `project-hub` block, whose own Tier-2 guard hid it a
+     * second time. Tier is the contract; the render placement is checked next door in
+     * `toolbarExportDiscoverability.test.tsx`, which mounts the toolbar with advanced controls off.
+     */
+    expect(TIER_1_PRIMARY.map((item) => item.id)).toContain("export");
+    expect([...TIER_2, ...TIER_3].map((item) => item.id)).not.toContain("export");
+    expect(DEFAULT_VISIBLE_IDS).toContain("export");
+  });
+
   it("the shipped table is internally valid", () => {
     expect(validateTiers(ALL_TIER_ITEMS)).toEqual([]);
   });

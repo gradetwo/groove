@@ -198,6 +198,13 @@ export const studioMessages = {
   toolbar_genre_maker_title: { en: "Custom Genre Maker (P7-03)", zh: "自定义曲风工坊 (P7-03)" },
   toolbar_genre_maker_aria: { en: "Genre Maker", zh: "曲风工坊" },
   toolbar_genre_maker_label: { en: "Maker", zh: "曲风工坊" },
+  /**
+   * The export *menu*'s own label.
+   *
+   * It used to borrow the key `export`, which means "MIDI" — so the menu of five formats was titled after one
+   * of them and nobody found WAV. Export is a primary action now (tier 1) and says so.
+   */
+  toolbar_export_menu: { en: "Export", zh: "导出" },
   toolbar_export_midi: { en: "Export MIDI", zh: "导出 MIDI 文件" },
   toolbar_export_als: { en: "Export Ableton Set", zh: "导出 Ableton 工程" },
   toolbar_export_groove: { en: "Export .groove Set", zh: "导出 .groove 工程包" },
