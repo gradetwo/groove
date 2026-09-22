@@ -150,9 +150,13 @@ function useTransportControls({ announceScope }: { announceScope: "full" | "mini
 | `npm run test:e2e:mobile` | 仅手机与 iPad 4 个目标 |
 | `E2E_ONLY=iPhone npm run test:e2e:all` | 单个目标，便于迭代 |
 
-**这不是把手机测试删掉**，而是换一个profile跑：矩阵定义（7 个目标与各自断言）**完整保留**，
+**这不是把手机测试删掉**，而是换一个 profile 跑：矩阵定义（7 个目标与各自断言）**完整保留**，
 并且由红线 **R6c** 守住——一旦有人删掉手机/iPad 目标、或把 `test:e2e:all` 改掉，红线条即失败。
-新界面落地后把 `test:e2e` 改回 `E2E_PROFILE=all` 即可恢复全量门禁。
+
+**（已恢复全量）** 新界面早已落地、手机/平板目标在 `verify` 里连续多个版本全绿，所以现在：
+**CI 每次 push / PR 跑 `npm run test:e2e:all`（7/7）**，`verify` 依次跑桌面档与移动档（合起来也是 7/7）；
+`test:e2e`（`E2E_PROFILE=pc`）只留作本机快速迭代用。当初缩减门禁的理由是"手机界面正在重做、
+断言会被重做作废"——这个理由已经不存在，而**跳过三分之二目标的门禁，正是 iPad 专属回归能活到线上**的原因。
 
 同时修正了一处既有缺陷：跑部分目标时汇总信息原本**硬编码**「ALL 7 ... PASSED」，
 也就是只跑了 3 个却宣称 7 个全过。现在按实际跑的数目报，并提示全量命令。

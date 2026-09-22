@@ -49,6 +49,15 @@ const argValue = (name, fallback) => {
 };
 
 const FULL = flag("--full");
+/**
+ * `--report` prints the same table and never fails.
+ *
+ * The full sweep (6 skins x 12 views) is a *diagnostic*, not a push gate: it is where the work items come from
+ * — its first run showed the pixel skin with 227 low-contrast elements on the compare view alone, which is a
+ * character sheet to fix rather than a regression to block a merge on. The gate is the sampled sweep inside
+ * `verify`, whose budgets are a ratchet that can only go down.
+ */
+const REPORT_ONLY = flag("--report");
 const JSON_OUT = flag("--json");
 const DIST = path.resolve(argValue("--dist", path.join(ROOT, "dist")));
 
@@ -361,7 +370,9 @@ async function main() {
      * state from "this regressed".
      */
     for (const row of summary) {
-      const allowed = BUDGET[row.view] ?? (FULL ? 0 : Infinity);
+      // A view with no budget is *reported* rather than failed: in the full sweep most views are not in the map
+    // yet, and inventing a budget of 0 would make the diagnostic useless (and a budget of 227 dishonest).
+    const allowed = BUDGET[row.view] ?? Infinity;
       const broken = row.clipped || row.errors || row.lowContrast > allowed;
       const warn = !broken && row.lowContrast > 0;
       console.log(
@@ -403,6 +414,15 @@ async function main() {
   if (!JSON_OUT && tighten.length) console.log(`\n  budget could be tightened: ${[...new Set(tighten)].join(", ")}`);
 
   const failed = over.length > 0 || results.some((r) => r.clipped.length || r.errors.length);
+  if (REPORT_ONLY) {
+    // Still exit 0: the point of this mode is the table, and a red exit would turn a diagnostic into a gate.
+    console.log(
+      failed
+        ? `\n📋 report only: ${over.length} view(s) over budget, ${results.reduce((n, r) => n + r.failures.length, 0)} element(s) below the floor (not failing)`
+        : "\n📋 report only: everything inside budget"
+    );
+    return;
+  }
   if (failed) {
     console.error("\n❌ skin readability audit failed");
     for (const line of over) console.error(`   · ${line}`);

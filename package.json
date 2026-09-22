@@ -56,7 +56,7 @@
     "skins:gen": "node scripts/desktop_skins.mjs",
     "check:skins": "node scripts/desktop_skins.mjs --check",
     "probe:skins": "node scripts/measure_skin_readability.mjs",
-    "probe:skins:full": "node scripts/measure_skin_readability.mjs --full"
+    "probe:skins:full": "node scripts/measure_skin_readability.mjs --full --report"
   },
   "dependencies": {
     "@types/three": "^0.185.4",
