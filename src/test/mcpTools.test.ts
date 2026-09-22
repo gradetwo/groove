@@ -78,7 +78,10 @@ describe("MCP · the library surface", () => {
   });
 
   it("serves the progression library and the masterclasses", () => {
-    const progressions = listChordProgressions({});
+    const progressions = listChordProgressions({}) as {
+      total: number;
+      progressions: Array<{ id: string }>;
+    };
     expect(progressions.total).toBeGreaterThan(5);
     const first = progressions.progressions[0];
     expect(getChordProgression(first.id)).toBeTruthy();
