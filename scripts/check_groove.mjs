@@ -74,11 +74,13 @@ const BUDGET = {
   // rather than excused — this one is the master chain's dynamics (P2.3), not the mix.
   duckErasedInMaster: 1,
   narrowStereo: 12,
+  // P0.4 is held (see the plan): the pan widening that fixes this costs loudness, and its fix is the blocked
+  // trim re-record. The budget stays at the measured 12 — the honest "not yet" rather than a moved goalpost.
+  sideTooHot: 0,
   thinMids: 11,
   staticHarmony: 0,
-  // boom-bap only (−29.1 dBFS, and it trips both confirmation renders). detroit-techno's −24.7 dBFS
-  // readings were the render nondeterminism, not a cut tail; see P0.8 in the plan.
-  cutTail: 1,
+  // P0.6: 0. Every sampled genre's tail is below −82 dBFS since the tail is the genre's own reverb/delay decay.
+  cutTail: 0,
 };
 
 const CLAIMS = {
@@ -90,11 +92,15 @@ const CLAIMS = {
     label: "duck lost in the mastering chain (sidechain ≥3 dB, file <1.5 dB)",
     worse: (count, budget) => count > budget,
   },
-  weakDuck: { label: "inaudible sidechain (duck shallower than 1.5 dB)", worse: (count, budget) => count > budget },
+  weakDuck: { label: "inaudible sidechain (dip shallower than 3 dB)", worse: (count, budget) => count > budget },
+  sideTooHot: {
+    label: "mono-unsafe width (side above −8 dB)",
+    worse: (count, budget) => count > budget,
+  },
   narrowStereo: { label: "near-mono (channel correlation above 0.98)", worse: (count, budget) => count > budget },
   thinMids: { label: "hollow mids (200 Hz–2 kHz below −6 dB of the total)", worse: (count, budget) => count > budget },
   staticHarmony: { label: "static harmony (one chord for the loop)", worse: (count, budget) => count > budget },
-  cutTail: { label: "cut tail (last 50 ms above −30 dBFS)", worse: (count, budget) => count > budget },
+  cutTail: { label: "cut tail (last 50 ms above −60 dBFS)", worse: (count, budget) => count > budget },
 };
 
 function analyse() {
@@ -139,8 +145,26 @@ function analyse() {
  * unconditionally. A gate that cannot fail is worse than no gate, so the accumulator is named `tally`.
  */
 function measureRows(rows) {
-  const tally = { flatTracks: 0, weakDuck: 0, duckErasedInMaster: 0, narrowStereo: 0, thinMids: 0, staticHarmony: 0, cutTail: 0 };
-  const detail = { flatTracks: [], weakDuck: [], duckErasedInMaster: [], narrowStereo: [], thinMids: [], staticHarmony: [], cutTail: [] };
+  const tally = {
+    flatTracks: 0,
+    weakDuck: 0,
+    duckErasedInMaster: 0,
+    narrowStereo: 0,
+    sideTooHot: 0,
+    thinMids: 0,
+    staticHarmony: 0,
+    cutTail: 0,
+  };
+  const detail = {
+    flatTracks: [],
+    weakDuck: [],
+    duckErasedInMaster: [],
+    narrowStereo: [],
+    sideTooHot: [],
+    thinMids: [],
+    staticHarmony: [],
+    cutTail: [],
+  };
   for (const row of rows) {
     if (row.error) continue;
     const velocity = Object.values(row.musical?.velocityByTrack ?? {}).filter(Boolean);
@@ -165,6 +189,10 @@ function measureRows(rows) {
       tally.narrowStereo += 1;
       detail.narrowStereo.push(`${row.id} (${row.correlation.toFixed(4)})`);
     }
+    if (row.sideToMidDb > -8) {
+      tally.sideTooHot += 1;
+      detail.sideTooHot.push(`${row.id} (${row.sideToMidDb.toFixed(1)} dB)`);
+    }
     if ((row.musical?.midBandShareDb ?? 0) < -6) {
       tally.thinMids += 1;
       detail.thinMids.push(`${row.id} (${row.musical.midBandShareDb.toFixed(1)} dB)`);
@@ -174,7 +202,8 @@ function measureRows(rows) {
       tally.staticHarmony += 1;
       detail.staticHarmony.push(row.id);
     }
-    if (row.tailRmsDb > -30) {
+    // P0.6 tightened this from -30 dBFS to the -60 dBFS the plan promised: every tail now measures below -82.
+    if (row.tailRmsDb > -60) {
       tally.cutTail += 1;
       detail.cutTail.push(`${row.id} (${row.tailRmsDb.toFixed(1)} dBFS)`);
     }
@@ -185,7 +214,23 @@ function measureRows(rows) {
 const data = await analyse();
 const rows = data.rows ?? [];
 const rendered = rows.filter((row) => !row.error);
+const failed = rows.filter((row) => row.error);
 const { counts: measured, detail } = measureRows(rows);
+
+/**
+ * A genre that fails to render must not make the gate *easier*.
+ *
+ * `measureRows` skips `row.error`, so three failed renders quietly turned "12 sampled genres" into 9 and every
+ * budget looked satisfied — the same "a gate that cannot fail is worse than no gate" trap the accumulator bug
+ * was. The run is invalid unless every sampled genre rendered.
+ */
+if (failed.length) {
+  console.error(`\n❌ ${failed.length} of ${rows.length} sampled genres did not render, so no claim can be judged:`);
+  for (const row of failed.slice(0, 4)) console.error(`   · ${row.id}: ${row.error}`);
+  console.error("\n   Fix the render (typically a stale dev server or an edited file mid-run, which hot-reloads the");
+  console.error("   measuring page) and re-run; a partial sample is not a passing sample.");
+  process.exit(1);
+}
 
 const failures = [];
 const tighten = [];

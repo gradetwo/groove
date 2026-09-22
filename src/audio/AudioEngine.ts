@@ -27,6 +27,7 @@ import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp, visualLeadSeconds } from "./schedulerMath";
 import { ratchetVelocityScale, resolveRatchet } from "./noteEvents";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
+import { swingMovesStep, swingOffsetSeconds } from "./swing";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -1728,8 +1729,9 @@ export class AudioEngine {
         }
       }
 
-      // Swing pushes odd steps (1, 3, 5...) slightly forward
-      const swingOffset = (step % 2 === 1 && this.swing > 0) ? (this.swing * 0.5) * stepDur : 0;
+      // P0.5: the off-8th moves the full amount and the off-16ths half (see `audio/swing.ts`); the old
+      // odd-step-only rule left every 8th-note pattern dead straight.
+      const swingOffset = swingOffsetSeconds(step, this.swing, stepDur);
       const latencyOffset = this.latencyCompensationMs / 1000;
       const actualStepTime = Math.max(this.ctx.currentTime, this.nextStepTime + swingOffset + latencyOffset);
 
@@ -1831,7 +1833,7 @@ export class AudioEngine {
        * fired a full latency-compensation ahead of every other track, and ahead of its own export
        * (a bounce has no output latency to compensate). Only the swing term may differ here.
        */
-      const trackStepTime = (step % 2 === 1 && effSwing !== this.swing)
+      const trackStepTime = (swingMovesStep(step) && effSwing !== this.swing)
         ? Math.max(
             ctx.currentTime,
             this.nextStepTime + (effSwing * 0.5) * stepDur + this.latencyCompensationMs / 1000

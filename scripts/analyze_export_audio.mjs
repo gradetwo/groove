@@ -145,7 +145,15 @@ async function measureGenre(page, genreId, bars, soloTracks) {
        * so a tail that trips the claim is re-rendered once; a *real* cut tail (a pattern still sounding at the
        * end, like boom-bap) trips both renders, and a burst that was an artefact does not.
        */
-      const TAIL_CLAIM_DB = -30;
+      /**
+       * The level the last 50 ms must be below.
+       *
+       * −30 dBFS was the *measured* bar when the renderer had a fixed 0.6 s tail; the plan's target was always
+       * "under −60 dBFS", and P0.6 (a tail sized to the genre's own reverb and delay) reaches it everywhere:
+       * every sampled genre now measures below −82 dBFS. The threshold moved with the fix, so the claim now means
+       * "the render ends in silence" rather than "the render is not obviously cut".
+       */
+      const TAIL_CLAIM_DB = -60;
       let tailRenders = 1;
       const first = await renderMaster();
       let buffer = first.rendered;
@@ -170,11 +178,13 @@ async function measureGenre(page, genreId, bars, soloTracks) {
       const mix = mixModule.resolveGenreMix(id);
 
       /**
-       * Swing, measured rather than declared: where do the off-16ths actually land?
+       * Swing, measured rather than declared: how far past the grid do the off-beats land?
        *
-       * The grid is `60 / bpm / 4` seconds per 16th. An onset in the second half of a beat that sits later than
-       * its grid line is the swing a player hears; if every onset is on the grid, the declared `swing` is not
-       * reaching the audio.
+       * The grid is `60 / bpm / 4` seconds per 16th. This used to look only at the **odd 16ths** ("e" and "a"),
+       * which is why boom-bap — declared swing 60, the highest in the sample — measured as perfectly straight:
+       * its kick plays 8ths, and an 8th grid never touches an odd 16th. Any off-downbeat position counts now
+       * (steps 1, 2 and 3 of each beat, i.e. all of the "e", "&" and "a"), so a pattern that swings on the
+       * off-8th is measurable, exactly as P0.5 makes it audible.
        */
       const stepSec = 60 / (pattern.bpm || 120) / 4;
       const measureSwing = (stemChannels, rate) => {
@@ -183,7 +193,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         for (const ms of onsets) {
           const steps = ms / 1000 / stepSec;
           const nearest = Math.round(steps);
-          if (nearest % 2 === 1 && Math.abs(steps - nearest) < 0.35) {
+          if (nearest % 4 !== 0 && Math.abs(steps - nearest) < 0.35) {
             offsets.push((steps - nearest) * stepSec * 1000);
           }
         }
@@ -243,6 +253,12 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           /** How far the off-16ths sit past their grid line, in ms (0 = straight). */
           swingOffsetMs: measureSwing(stemChannels, stemBuffer.sampleRate)?.meanOffsetMs ?? null,
           swingSamples: measureSwing(stemChannels, stemBuffer.sampleRate)?.samples ?? 0,
+          /**
+           * Per-stem stereo, so "the mix is mono" can be attributed to a lane instead of guessed at: a lane that
+           * is panned and loud shows low correlation here even when the master is dominated by centred kick/bass.
+           */
+          correlation: stemChannels.length > 1 ? metrics.channelCorrelation(stemChannels[0], stemChannels[1]) : 1,
+          sideToMidDb: metrics.sideToMidDb(stemChannels),
         };
       }
 
@@ -516,6 +532,8 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         declaredSwing: pattern.swing ?? 0,
         tracksWithSwing: pattern.tracks.filter((t) => (t.swing ?? 0) !== 0).length,
         tracksWithPan: pattern.tracks.filter((t) => (t.pan ?? 0) !== 0).length,
+        /** Lanes the mix places decisively off-centre (P0.4): the data side of "the field is wide". */
+        tracksWithWidePan: pattern.tracks.filter((t) => Math.abs(t.pan ?? 0) >= 0.4).length,
         tracksWithReverb: pattern.tracks.filter((t) => (t.sendA ?? 0) > 0).length,
         tracksWithDelay: pattern.tracks.filter((t) => (t.sendB ?? 0) > 0).length,
         mixSends: mix
@@ -552,7 +570,7 @@ const CLAIMS = {
   /** No send anywhere in the pattern: whatever space there is comes only from the mix defaults. */
   dryPattern: (row) => row.tracksWithReverb === 0 && row.tracksWithDelay === 0,
   /** A tail still at -30 dBFS RMS in its last 50 ms was cut, not decayed. */
-  cutTail: (row) => row.tailRmsDb > -30,
+  cutTail: (row) => row.tailRmsDb > -60,
   /** Declared swing that the audio does not show: the ratio of alternating intervals stays at 1.00. */
   swingNotAudible: (row) =>
     (row.declaredSwing ?? 0) >= 20 && row.stems?.kick?.swingRatio != null && Math.abs(row.stems.kick.swingRatio - 1) < 0.05,
@@ -612,6 +630,13 @@ const CLAIMS = {
   },
   /** Still effectively mono: correlation this high means the pan in the mix is not reaching the file. */
   narrowStereo: (row) => row.correlation > 0.98,
+  /**
+   * The other failure: so much side energy that a mono fold loses an element.
+   *
+   * P0.4 widens the field, so the guard has to exist: −8 dB of side-to-mid is where a phone speaker (or a club's
+   * mono rig) starts to lose level on a hard-panned lane. The sample sits at −15…−29 dB, comfortably inside.
+   */
+  sideTooHot: (row) => row.sideToMidDb > -8,
 };
 
 /** A short label for a stem, so the table stays readable. */

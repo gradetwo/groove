@@ -24,6 +24,8 @@ import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
+import { swingOffsetSeconds } from "./swing";
+import { resolveRenderTailSec } from "./renderTail";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -236,7 +238,11 @@ export async function renderPatternOffline(
       ? (pattern as any).totalSteps
       : pattern.tracks[0]?.steps.length || 16;
   const totalSteps = patternSteps * bars;
-  const totalDurationSec = totalSteps * stepDur + 0.6; // Tail for decay/release
+  // P0.6: the tail is the pattern's own reverb/delay decay, not a fixed 0.6 s. `genreFx` is resolved a few
+  // lines below for the graph; resolve it here first so the render length can depend on it.
+  const tailGenreFx = resolveGenreFx(pattern.genre_id);
+  const tailSec = resolveRenderTailSec(tailGenreFx, bpm);
+  const totalDurationSec = totalSteps * stepDur + tailSec;
 
   const OfflineContextClass =
     (typeof window !== "undefined" && (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)) ||
@@ -279,8 +285,7 @@ export async function renderPatternOffline(
   // applier the live engine uses, at the same *playing* tempo (never the metadata
   // `default_bpm`). An unknown/custom genre resolves to null and the graph keeps its
   // defaults, exactly as playback does.
-  const genreFx = resolveGenreFx(pattern.genre_id);
-  if (genreFx) applyGenreFxToGraph(graph, genreFx, bpm);
+  if (tailGenreFx) applyGenreFxToGraph(graph, tailGenreFx, bpm);
 
   // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
   // export never matched the audition it was rendered from, which broke the project's
@@ -460,11 +465,10 @@ export async function renderPatternOffline(
         return;
       }
 
-      // F-03: per-track swing offset, mirroring AudioEngine.scheduleStep.
+      // F-03/P0.5: per-track swing offset, from the shared rule both engines use.
       const trackSwingOffset = track.swing !== undefined ? track.swing / 100 : 0;
       const effSwing = Math.max(0, Math.min(0.75, swing + trackSwingOffset));
-      const swingOffset =
-        step % 2 === 1 && effSwing > 0 ? (effSwing * 0.5) * stepDur : 0;
+      const swingOffset = swingOffsetSeconds(step, effSwing, stepDur);
       const stepTime = unswungTime + swingOffset;
 
       const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
