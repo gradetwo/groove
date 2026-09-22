@@ -78,7 +78,7 @@ independent until B5, and B is what makes that document's P1 possible.
 | :-- | :--- | :--- | :--- | :--- |
 | **B0** | **This slice**: the `Song` types, the pure timeline functions (flatten, normalise, migrate, total bars) and their tests | `src/types/song.ts`, `src/features/arrangement/songTimeline.ts` | unit tests: migration is lossless, flattening agrees with the old semantics, invalid sections are reported not thrown | **done in this round** |
 | **B1** | Persistence and share: read/write `sections`, keep reading `songChain`; `.groove` and the share URL carry the arrangement ✅ | `projectStorage.ts`, `projectDb.ts`, `useSequencerStore.ts`, `useProjectHub.ts`, `types/project.ts`, `SequencerUrlShare.ts` | round-trip tests, plus a share link that decodes an arrangement — `src/test/songPersistence.test.ts` (9 cases: legacy migration, hydration preference, save round-trip, the two views staying in step) and three new cases in `sharePayloadSecurity.test.ts` | **done** |
-| **B2** | **The renderer gets a timeline**: `renderSongOffline(song)` concatenates sections (per-section clip, repeats, mutes, velocity scale) instead of repeating one pattern. `bars` becomes "render the song" rather than "repeat the loop" | `WavExporter.ts` | `check:groove` gains section-level metrics; a 4-section song renders with measurable differences per section | M |
+| **B2** | **The renderer gets a timeline**: `renderSongOffline(song)` plays the sections (per-section clip, repeats, mutes, velocity scale) instead of repeating one pattern; the WAV export follows it in song mode ✅ | `src/data/songFlatten.ts`, `WavExporter.ts`, `useExportActions.ts` | flattening is unit-tested bar by bar (order, repeats, mutes, velocity clamping, mixed clip lengths, optional lanes); the render is **three clip lengths longer** for a 4-pass song than the single loop it replaces, measured through the same offline path. Section-level *audio* metrics in `check:groove` are still open (recorded below) | **core done** |
 | **B3** | **The arrangement view** (iPad and PC): tracks down the side, bars across the top, clips as regions; select a clip → the step sequencer edits it. Drag to move, edge-drag to repeat, keyboard on PC, touch on iPad | new `src/views/ArrangementView.tsx` + toolbar entry | a new `probe:arrangement` (clip drag/resize with mouse *and* touch, ≥44 px targets on iPad, no clipped controls) | L — the visible feature |
 | **B4** | **Exporters follow the timeline**: MIDI/ALS/.als/MP3 render the arrangement; the share link carries it | `MidiExporter`, `AbletonExporter`, `useExportActions` | the exported MIDI's length equals the song's bar count; the ALS has one clip per section | M |
 | **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks | arrangement data + the new `texture`/fill voices | `check:groove`'s static-harmony and velocity claims fall; the report's "no fill, no variation" items become expressible | M |
@@ -100,6 +100,28 @@ decodes with `sections` absent so the caller migrates its own chain.
 
 Two things it deliberately does **not** do: the chain editor is still lossy for a section with `bars: 4` (that is
 B3's editor replacing it), and nothing yet *renders* the arrangement (that is B2).
+
+### B2 — what landed, and what it deliberately did not
+
+There is **no second renderer**. `flattenSong(song)` turns the arrangement into one ordinary pattern — each bar
+contributes its clip's full length (a bar is one *pass of its clip*, which is what `SongSection.bars` counts and
+what `resolveTimeline` enumerates), with the section's mutes zeroing its own bars and its `velocityScale` applied
+to that bar's velocities — and `renderSongOffline` hands that pattern to `renderPatternOffline` with `bars: 1`,
+because the flattened pattern's `totalSteps` *is* the song. Every gate, limiter path, stem exporter and
+measurement keeps working unchanged, and the WAV export uses it when the project is in song mode.
+
+Three details that are decisions rather than accidents:
+
+* **polymeter is dropped** on flattening: a lane that loops every 8 steps has no meaning in a song whose bars come
+  from different clips, and leaving `trackLength` set would make the renderer wrap the lane *inside* the song;
+* **an optional lane survives only if every contributing clip defines it** (otherwise a song mixing a clip with
+  ratchets and one without would invent subdivisions for the second);
+* **a bad section is skipped with a reason** — a missing clip, or a clip whose track list differs from the song's
+  first clip — so a half-finished arrangement renders what is playable and reports the rest, which is the state the
+  arrangement view has to be able to show.
+
+Still open from B2's verification: `check:groove` has no section-level audio metrics yet (the flattening tests
+prove per-bar differences in the *data*; proving them in the rendered file is a separate measurement).
 
 ### B1 implementation notes (the surfaces the arrangement has to survive)
 

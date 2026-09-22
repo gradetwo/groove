@@ -23,6 +23,8 @@ import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
+import { flattenSong } from "../data/songFlatten";
+import type { Song } from "../types/song";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
 import { swingOffsetSeconds } from "./swing";
 import { resolveRenderTailSec } from "./renderTail";
@@ -718,6 +720,36 @@ function synthFX(ctx: BaseAudioContext, dest: AudioNode, time: number, vel: numb
 
   osc.start(time);
   osc.stop(time + noteDuration + 0.02);
+}
+
+/**
+ * B2 — render a whole song, through the same renderer as everything else.
+ *
+ * There is deliberately no second renderer: the arrangement is flattened into one pattern
+ * (`flattenSong`, which applies each section's clip, repeats, mutes and velocity scale) and handed to
+ * `renderPatternOffline` with `bars: 1`, because the flattened pattern's `totalSteps` *is* the song. Every
+ * measurement, gate, limiter path and stem exporter therefore keeps working on a song unchanged.
+ *
+ * `songMode` is the caller's decision (the app renders the song when the project is in song mode and the loop
+ * otherwise); this function always renders the arrangement it is given.
+ */
+export async function renderSongOffline(
+  song: Song,
+  options: RenderWavOptions = {}
+): Promise<AudioBuffer> {
+  const flattened = flattenSong(song);
+  if (!flattened.totalBars || flattened.totalSteps <= 0) {
+    throw new Error(`cannot render the song: ${flattened.problems.join("; ") || "no playable bars"}`);
+  }
+  return renderPatternOffline(flattened.pattern, { ...options, bars: 1 });
+}
+
+/** The song's own metadata through the master export path, for the file name and the caller's report. */
+export async function exportSongWav(
+  song: Song,
+  options: RenderWavOptions = {}
+): Promise<ExportedWav> {
+  return exportMasterWav(flattenSong(song).pattern, song.genreId || "song", options);
 }
 
 /**

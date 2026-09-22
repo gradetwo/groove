@@ -5,7 +5,7 @@ import { DrumKitType, EffectsRackState } from "../../../audio/AudioEngine";
 import { downloadMidiFile } from "../../../audio/MidiExporter";
 import { downloadAbletonProject } from "../../../audio/AbletonExporter";
 import { getShareUrlResult, toSharedTrack } from "../../../audio/SequencerUrlShare";
-import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../../../audio/WavExporter";
+import { exportMasterWav, exportSongWav, exportStemsZip, triggerWavDownload } from "../../../audio/WavExporter";
 import { exportMasterMp3 } from "../../../audio/Mp3Exporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
@@ -196,11 +196,38 @@ export function useExportActions({
     try {
       setIsExportingAudio(true);
       showToast(t("export_wav_rendering"));
-      const result = await exportMasterWav(patternRef.current, currentGenre.id, {
-        bpm,
-        swing,
-        drumKit,
-      });
+      /**
+       * B2: in song mode the bounce is the *arrangement*, not the loop.
+       *
+       * `renderSongOffline` flattens the sections through the same renderer, so this is the only difference between
+       * the two paths: which pattern the offline engine is handed. Outside song mode nothing changes, and a song
+       * whose sections all point at empty clips refuses with a reason instead of emitting a silent file.
+       */
+      const state = seqStateRef.current;
+      const result =
+        state.songMode && state.sections?.length
+          ? await exportSongWav(
+              {
+                id: "session",
+                name: currentGenre.name,
+                genreId: currentGenre.id,
+                bpm,
+                swing,
+                resolution,
+                clips: {
+                  A: state.activeSlot === "A" ? patternRef.current : state.patterns.A,
+                  B: state.activeSlot === "B" ? patternRef.current : state.patterns.B,
+                },
+                sections: state.sections,
+                loopRange: state.loopRange,
+              },
+              { bpm, swing, drumKit }
+            )
+          : await exportMasterWav(patternRef.current, currentGenre.id, {
+              bpm,
+              swing,
+              drumKit,
+            });
       triggerWavDownload(result.blob, result.filename);
       /**
        * Report a degraded master rather than a clean one.
