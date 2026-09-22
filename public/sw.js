@@ -4,7 +4,7 @@
  * Offline-first progressive web application.
  */
 
-const CACHE_VERSION = "groove-v2.11.2";
+const CACHE_VERSION = "groove-v2.11.3";
 const CACHE_NAME = `groove-app-shell-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
