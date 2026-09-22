@@ -71,6 +71,46 @@ const luminance = ([r, g, b]) => {
   return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
 };
 const isLight = (hex) => luminance(hexToRgb(hex)) > 0.5;
+/** Darken a fill until text of the given colour reads on it (the lane fills carry white note names). */
+/**
+ * Move a colour only as far as it needs to go to clear a contrast floor.
+ *
+ * Different from `readableStep`, which always moves by the amount it is given: this returns the colour
+ * unchanged when it already passes, so a skin whose accent is already readable keeps the exact hue the phone
+ * uses. That matters — a palette change here would be a palette change on the phone too.
+ */
+const ensureContrast = (hex, ground, floor) => {
+  const target = isLight(ground) ? 0 : 255;
+  const [startHi, startLo] = [luminance(hexToRgb(hex)), luminance(hexToRgb(ground))].sort((x, y) => y - x);
+  if ((startHi + 0.05) / (startLo + 0.05) >= floor) return hex;
+  let [r, g, b] = hexToRgb(hex);
+  for (let step = 0; step < 40; step += 1) {
+    const mix = (v) => v + (target - v) * 0.06;
+    [r, g, b] = [mix(r), mix(g), mix(b)];
+    const candidate = rgbToHex([r, g, b]);
+    const [a, c] = [luminance(hexToRgb(candidate)), luminance(hexToRgb(ground))].sort((x, y) => y - x);
+    if ((a + 0.05) / (c + 0.05) >= floor) return candidate;
+  }
+  return rgbToHex([r, g, b]);
+};
+
+const ensureTextOn = (fill, text, floor) => {
+  const target = isLight(text) ? 0 : 255;
+  let [r, g, b] = hexToRgb(fill);
+  for (let step = 0; step < 20; step += 1) {
+    const candidate = rgbToHex([r, g, b]);
+    const [hi, lo] = [luminance(hexToRgb(candidate)), luminance(hexToRgb(text))].sort((x, y) => y - x);
+    if ((hi + 0.05) / (lo + 0.05) >= floor) return candidate;
+    const mix = (v) => v + (target - v) * 0.12;
+    [r, g, b] = [mix(r), mix(g), mix(b)];
+  }
+  return rgbToHex([r, g, b]);
+};
+/** WCAG contrast ratio between two colours, for choosing the readable of two candidates. */
+const contrast = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
 /**
  * A step that is guaranteed to *increase* contrast against a given ground.
  *
@@ -145,6 +185,12 @@ const DEFAULT_SKIN = {
   ink2: "#b9b7b0",
   ink3: "#8b8f99",
   accent: "#f5b73d",
+  // The app's own pale surfaces (the piano keys) and the ink that reads on an accent fill.
+  surfacePale: "#f3f1eb",
+  surfacePale2: "#e2dfd5",
+  inkOnPale: "#3f3f46",
+  onAccent: "#0b0b0d",
+  accentInk: "#f5b73d",
   danger: "#ff5964",
   success: "#7ee787",
   warning: "#f59e0b",
@@ -215,6 +261,37 @@ function palette(skin) {
     success: p.green,
     // Read, not just seen: the direction that increases contrast against the panel it sits on.
     warning: readableStep(p.gold, p.card, light ? 0.35 : 0.2),
+    /**
+     * A light surface inside the theme, and the ink that reads on it.
+     *
+     * The piano keyboard is the one place where a surface is deliberately lighter than the page: white keys
+     * `#f3f1eb`, inactive keys `#e2dfd5`, with dark grey labels. Mapped by distance alone those keys landed on
+     * the *ink* role (light in the default palette) and their labels on `--d-ink-2`; under a light skin the
+     * keys went dark and the labels turned light, and the labels vanished.
+     */
+    surfacePale: light ? step(p.card, -0.05) : step(p.card, 0.82),
+    surfacePale2: light ? step(p.card, -0.11) : step(p.card, 0.66),
+    inkOnPale: readableStep("#808080", light ? step(p.card, -0.05) : step(p.card, 0.82), 0.95),
+    /**
+     * The ink that sits *on* an accent fill. `bg-accent text-black` is 8:1 on the default amber and 3.6:1 on
+     * the minimal blue; the phone solved this with `--m-on-gold` and the desktop had no equivalent.
+     */
+    onAccent:
+      contrast(hexToRgb("#0b0b0d"), hexToRgb(p.gold)) >= contrast(hexToRgb("#fafafa"), hexToRgb(p.gold))
+        ? "#0b0b0d"
+        : "#fafafa",
+    /**
+     * The accent, as *text*.
+     *
+     * `bg-accent` is a flood (flag red on the Soviet-years poster, and the label on it takes `--d-on-accent`);
+     * `text-accent` is small type on a surface, where the same red measures 3.3:1 on that skin's beige. The
+     * step is minimal and only applied when needed.
+     */
+    // `p` here is the *phone* palette, so the ground is its card (the desktop panel is derived from it).
+    // Derived against the *surface*, not the card: the chips that carry accent text sit on a surface step, and
+    // the first version checked against the lighter card, decided the flag red already passed and left it at
+    // 3.3:1 where it is actually read.
+    accentInk: ensureContrast(p.gold, step(p.card, 0.06), 4.5),
     track: { ...DEFAULT_SKIN.track, ...(HUE_OVERRIDES[skin]?.track ?? {}) },
     /**
      * Category hues come from the phone's own identity tokens where the phone has one (its `--m-teal`,
@@ -272,6 +349,9 @@ const LITERAL_ROLES = {
   "#b9b7b0": "ink2",
   "#8e93a0": "ink3",
   // signal
+  // The piano keys: a light surface inside the theme, with its own ink (see `surfacePale`).
+  "#f3f1eb": "surfacePale",
+  "#e2dfd5": "surfacePale2",
   "#f5b73d": "accent",
   "#d8b988": "accentSoft",
   "#f59e0b": "warning",
@@ -301,7 +381,50 @@ const LITERAL_ROLES = {
  * has to mean for the long tail. `desktopSkins.test.ts` then asserts that every literal used as text is
  * remapped, and that every role is readable on every skin.
  */
-function nearestRole(hex, roles) {
+/**
+ * Which roles may answer which kind of utility.
+ *
+ * A role carries a *kind* as well as a colour, and the first version of this file ignored that: it picked the
+ * nearest role by distance alone, so a light surface literal (`#e2dfd5`, a piano key) landed on the **ink**
+ * role and a dark navy plate could land on a *light* surface. On the default palette that is invisible; under
+ * a light skin it inverts, which is how the comic theme ended up with a button painted in its own ink and the
+ * same ink for its label — 17 elements of ink-on-ink on one page, found by the readability audit.
+ *
+ * So: a `bg-`/gradient/fill utility may only take a surface-ish or signal role, and a `text-` utility may only
+ * take an ink-ish or signal role. The signal roles (`accent`, `danger`, `success`, `warning`, the lanes and the
+ * categories) are colours in their own right and are allowed on either side, because that is how the product
+ * uses them: an accent text, an accent fill.
+ */
+const SURFACE_ROLES = new Set([
+  "bg", "panel", "panel2", "surface", "surfacePale", "surfacePale2",
+  "onAccent", "accent", "accentSoft", "danger", "success", "warning",
+  "trackKick", "trackSnare", "trackHat", "trackPerc", "trackBass", "trackChord", "trackLead", "trackFx",
+  "catElectronic", "catRock", "catHiphop", "catJazz", "catPop", "catLatin",
+]);
+/**
+ * A line is a line.
+ *
+ * `line`/`lineStrong` are hairlines, and a hairline is never a surface: on a light skin a mid-tone rule becomes
+ * a mid-tone *fill*, which is how the chord workshop's degree chips ended up as accent text on a 3.2:1 grey
+ * plate — 100 of the audit's findings in one class. Borders, rings, dividers and outlines may use them; a
+ * fill may not.
+ */
+const LINE_ROLES = new Set(["line", "lineStrong"]);
+const INK_ROLES = new Set([
+  "ink", "ink2", "ink3", "inkOnPale", "accent", "accentSoft", "danger", "success", "warning",
+  "trackKickInk", "trackSnareInk", "trackHatInk", "trackPercInk", "trackBassInk", "trackChordInk",
+  "trackLeadInk", "trackFxInk",
+  "catElectronic", "catRock", "catHiphop", "catJazz", "catPop", "catLatin",
+]);
+/** `bg`/`border`/`from`/… versus `text`/`decoration` — the two halves of the role vocabulary. */
+const LINE_PREFIXES = new Set(["border", "ring", "outline", "divide"]);
+const rolesFor = (prefix) => {
+  if (prefix === "text" || prefix === "decoration" || prefix === "caret") return INK_ROLES;
+  if (LINE_PREFIXES.has(prefix)) return new Set([...SURFACE_ROLES, ...LINE_ROLES]);
+  return SURFACE_ROLES;
+};
+
+function nearestRole(hex, roles, allowed) {
   const [r, g, b] = hexToRgb(hex);
   const channel = (v) => {
     const s = v / 255;
@@ -310,6 +433,7 @@ function nearestRole(hex, roles) {
   let best = null;
   let bestDistance = Infinity;
   for (const [role, roleHex] of Object.entries(roles)) {
+    if (allowed && !allowed.has(role)) continue;
     const [rr, rg, rb] = hexToRgb(roleHex);
     // Weighted RGB distance (a cheap stand-in for a perceptual one) with a luminance term, because
     // "which role is this grey" is mostly a question of lightness.
@@ -438,7 +562,9 @@ function greyRole(prefix, shade) {
   if (prefix === "text") {
     if (n <= 300) return "ink";
     if (n <= 500) return "ink3";
-    return "ink2";
+    // 600 and darker is text written *for a light surface* (a piano key, a light chip): it has to stay dark on
+    // every skin, so it takes the pale-surface ink rather than the theme's.
+    return "inkOnPale";
   }
   return null;
 }
@@ -491,6 +617,11 @@ const ROLE_TOKEN = {
   ink3: "--d-ink-3",
   accent: "--d-accent",
   accentSoft: "--d-accent-soft",
+  surfacePale: "--d-surface-pale",
+  surfacePale2: "--d-surface-pale-2",
+  inkOnPale: "--d-ink-on-pale",
+  onAccent: "--d-on-accent",
+  accentInk: "--d-accent-ink",
   warning: "--d-warning",
   danger: "--d-danger",
   success: "--d-success",
@@ -537,6 +668,11 @@ function tokenRecord(skin) {
     "--d-ink": channels(p.ink),
     "--d-ink-2": channels(p.ink2),
     "--d-ink-3": channels(p.ink3),
+    "--d-surface-pale": channels(p.surfacePale),
+    "--d-surface-pale-2": channels(p.surfacePale2),
+    "--d-ink-on-pale": channels(p.inkOnPale),
+    "--d-on-accent": channels(p.onAccent),
+    "--d-accent-ink": channels(p.accentInk),
     "--d-accent": channels(p.accent),
     // One step of the accent for hovers, and the soft tone the desktop already uses for secondary type.
     "--d-accent-hover": channels(step(p.accent, light ? 0.18 : 0.14)),
@@ -641,10 +777,28 @@ function generate() {
   const prefixes = allLiterals();
   const roles = roleHexes();
   const literalRoles = { ...LITERAL_ROLES };
-  for (const hex of prefixes.keys()) {
+  /**
+   * The long tail is assigned per *use*, not per colour: the same hex can be a surface in one place and ink
+   * in another, and the role has to match the job the utility does.
+   */
+  const roleFor = new Map();
+  for (const [hex, uses] of prefixes.entries()) {
+    /**
+     * Computed for **every** literal, not only the ones outside the hand-written table.
+     *
+     * The table maps a colour by what it usually is, and a colour is not one thing: `#181c28` is a dark chip
+     * surface in one place and would be a reasonable ink in another. Where the table's role has the wrong
+     * *kind* for the utility it is used under (an ink role on a `bg-`), the per-use role wins — that is the fix
+     * for the comic skin painting a button with its own ink and then labelling it with the same ink.
+     */
+    for (const use of uses) {
+      const prefix = use.split("|")[1];
+      const role = nearestRole(hex, roles, rolesFor(prefix));
+      if (role) roleFor.set(`${hex}|${prefix}`, role);
+    }
     if (literalRoles[hex]) continue;
-    const role = nearestRole(hex, roles);
-    if (role) literalRoles[hex] = role;
+    const first = [...roleFor.entries()].find(([key]) => key.startsWith(`${hex}|`));
+    if (first) literalRoles[hex] = first[1];
   }
   const rules = [];
   const PROPERTY = {
@@ -685,7 +839,15 @@ function generate() {
        * `ROLE_TOKEN[role]` names the shape; when the utility is `text-` on a lane role, the ink variant is
        * what a skin guarantees against its own panel.
        */
-      const inkRole = prefix === "text" && /^track[A-Z]/.test(role) ? `${role}Ink` : role;
+      const perUse = roleFor.get(`${hex}|${prefix}`);
+      // Prefer the per-use role when the table's role is the wrong kind for this utility.
+      const surfacePrefix = prefix !== "text" && prefix !== "decoration" && prefix !== "caret";
+      const tableIsInk = INK_ROLES.has(role) && !SURFACE_ROLES.has(role);
+      // A line role on a fill is the same mistake as an ink role on one.
+      const tableIsLine = LINE_ROLES.has(role) && !LINE_PREFIXES.has(prefix);
+      const kindMismatch = (surfacePrefix && tableIsInk) || tableIsLine;
+      const baseRole = perUse && kindMismatch ? perUse : role;
+      const inkRole = prefix === "text" && /^track[A-Z]/.test(baseRole) ? `${baseRole}Ink` : baseRole;
       const chosen = ROLE_TOKEN[inkRole] ?? token;
       const property = PROPERTY[prefix];
       if (!property) continue;
@@ -798,6 +960,100 @@ function generate() {
       rules.join("\n") +
       "\n"
   );
+
+  /**
+   * `text-black` and `text-white`: the two named inks the shell writes by hand.
+   *
+   * `text-black` sits on an accent flood (`bg-accent text-black`) and means "the flood's own ink"; `text-white`
+   * sits on plates the desktop assumed were dark, and means "the surface's ink". Under a light skin both
+   * assumptions invert, which is how the audit found invisible text in the chord workshop (48 elements) and a
+   * 3.6:1 button label on the minimal blue. The rules are emitted from the source, and the `text-white` case
+   * is conditional because CSS can see both halves: on a **signal** fill it takes `--d-on-accent`, everywhere
+   * else the surface ink.
+   */
+  {
+    const files = [];
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const rel = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (!/node_modules|test|__tests__/.test(entry.name)) walk(rel);
+        } else if (/\.tsx?$/.test(entry.name)) files.push(rel);
+      }
+    };
+    for (const dir of ["src/components", "src/views", "src/features", "src/ui"]) walk(dir);
+    files.push("src/App.tsx");
+
+    const whiteVariants = new Set();
+    const whiteOnSignal = new Set();
+    const blackVariants = new Set();
+    for (const file of files) {
+      const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+      for (const match of text.matchAll(/(?:^|[\s"'`])((?:[a-z-]+:)*)(bg|from|via|to)-(\[[^\]]+\]|[a-z]+-[0-9]{2,3})(?:\/(\d{1,3}))?/g)) {
+        const window = text.slice(match.index, match.index + 400);
+        if (/(?:^|[\s"'])(?:[a-z-]+:)*text-white/.test(window)) {
+          const value = match[3];
+          const literal = value.startsWith("[#") ? value.slice(1, -1).toLowerCase() : null;
+          const role = literal
+            ? literalRoles[literal] ?? nearestRole(literal, roles, rolesFor(match[2]))
+            : NAMED_FAMILIES[value.split("-")[0]];
+          if (role && /^(accent|accentSoft|danger|success|warning|track|cat)/.test(role)) {
+            whiteOnSignal.add(`${match[1]}${match[2]}-${value}${match[4] ? `/${match[4]}` : ""}`);
+          }
+        }
+      }
+      for (const match of text.matchAll(/(?:^|[\s"'])((?:[a-z-]+:)*)text-white/g)) whiteVariants.add(match[1] + "text-white");
+      for (const match of text.matchAll(/(?:^|[\s"'])((?:[a-z-]+:)*)text-black/g)) blackVariants.add(match[1] + "text-black");
+    }
+
+    const whiteRules = [...whiteVariants]
+      .sort()
+      .map((selector) => `[class~="${selector}"] { color: rgb(var(--d-ink)); }`);
+    const signalRules = [...whiteOnSignal]
+      .sort()
+      .map((selector) => `[class~="${selector}"][class~="text-white"] { color: rgb(var(--d-on-accent)); }`);
+    const blackRules = [...blackVariants]
+      .sort()
+      .map((selector) => `[class~="${selector}"] { color: rgb(var(--d-on-accent)); }`);
+
+    parts.push(
+      "\n/*\n * The two named inks, by what they sit on: `text-white` is the surface's ink (or the fill's, on a\n" +
+        " * signal fill), `text-black` is the ink of an accent flood.\n */\n" +
+        [...signalRules, ...blackRules, ...whiteRules].join("\n") +
+        "\n"
+    );
+  }
+
+  /**
+   * `text-accent` is the accent as *type*: the readable step. `bg-accent` keeps the flood, and its label takes
+   * `--d-on-accent`. This was the last class the readability audit still reported in bulk — 71 elements on the
+   * Soviet-years chord page, flag red on beige at 3.3:1.
+   */
+  {
+    const variants = new Set();
+    const files = [];
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const rel = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (!/node_modules|test|__tests__/.test(entry.name)) walk(rel);
+        } else if (/\.tsx?$/.test(entry.name)) files.push(rel);
+      }
+    };
+    for (const dir of ["src/components", "src/views", "src/features", "src/ui"]) walk(dir);
+    files.push("src/App.tsx");
+    for (const file of files) {
+      const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+      for (const match of text.matchAll(/(?:^|[\s"'])((?:[a-z-]+:)*)text-accent(?:[\s"'/]|$)/g)) {
+        variants.add(`${match[1]}text-accent`);
+      }
+    }
+    parts.push(
+      "\n/*\n * The accent as type; the flood keeps the raw accent and its label uses `--d-on-accent`.\n */\n" +
+        [...variants].sort().map((selector) => `[class~="${selector}"] { color: rgb(var(--d-accent-ink)); }`).join("\n") +
+        "\n"
+    );
+  }
 
   return parts.join("\n");
 }

@@ -29,6 +29,11 @@
   --d-ink: 20 20 20;
   --d-ink-2: 95 95 104;
   --d-ink-3: 99 99 109;
+  --d-surface-pale: 255 255 255;
+  --d-surface-pale-2: 255 255 255;
+  --d-ink-on-pale: 6 6 6;
+  --d-on-accent: 250 250 250;
+  --d-accent-ink: 35 88 230;
   --d-accent: 35 88 230;
   --d-accent-hover: 75 118 235;
   --d-accent-soft: 19 48 127;
@@ -74,6 +79,11 @@
   --d-ink: 17 16 20;
   --d-ink-2: 58 52 64;
   --d-ink-3: 78 71 80;
+  --d-surface-pale: 255 255 237;
+  --d-surface-pale-2: 255 255 251;
+  --d-ink-on-pale: 6 6 6;
+  --d-on-accent: 250 250 250;
+  --d-accent-ink: 11 110 127;
   --d-accent: 11 110 127;
   --d-accent-hover: 55 136 150;
   --d-accent-soft: 6 61 70;
@@ -119,6 +129,11 @@
   --d-ink: 237 228 204;
   --d-ink-2: 192 185 163;
   --d-ink-3: 152 146 127;
+  --d-surface-pale: 215 216 217;
+  --d-surface-pale-2: 180 181 183;
+  --d-ink-on-pale: 6 6 6;
+  --d-on-accent: 11 11 13;
+  --d-accent-ink: 230 199 102;
   --d-accent: 230 199 102;
   --d-accent-hover: 198 171 88;
   --d-accent-soft: 238 216 148;
@@ -164,6 +179,11 @@
   --d-ink: 17 17 17;
   --d-ink-2: 61 58 51;
   --d-ink-3: 86 81 74;
+  --d-surface-pale: 248 243 225;
+  --d-surface-pale-2: 255 255 238;
+  --d-ink-on-pale: 6 6 6;
+  --d-on-accent: 250 250 250;
+  --d-accent-ink: 192 0 0;
   --d-accent: 204 0 0;
   --d-accent-hover: 213 46 46;
   --d-accent-soft: 112 0 0;
@@ -209,6 +229,11 @@
   --d-ink: 232 232 240;
   --d-ink-2: 138 143 176;
   --d-ink-3: 126 132 168;
+  --d-surface-pale: 214 214 217;
+  --d-surface-pale-2: 177 178 184;
+  --d-ink-on-pale: 6 6 6;
+  --d-on-accent: 11 11 13;
+  --d-accent-ink: 76 224 179;
   --d-accent: 76 224 179;
   --d-accent-hover: 65 193 154;
   --d-accent-soft: 130 233 202;
@@ -265,15 +290,15 @@
 [class~="border-zinc-700"] { border-color: rgb(var(--d-line-strong)); }
 [class~="border-zinc-400/40"] { border-color: rgb(var(--d-line-strong) / 0.40); }
 [class~="border-slate-50"] { border-color: rgb(var(--d-line)); }
+[class~="text-neutral-400"],
+[class~="text-zinc-400"] { color: rgb(var(--d-ink-3)); }
+[class~="text-zinc-400/90"] { color: rgb(var(--d-ink-3) / 0.90); }
 [class~="text-neutral-600"],
 [class~="text-neutral-700"],
 [class~="text-neutral-900"],
 [class~="text-zinc-600"],
 [class~="text-zinc-700"],
-[class~="text-zinc-950"] { color: rgb(var(--d-ink-2)); }
-[class~="text-neutral-400"],
-[class~="text-zinc-400"] { color: rgb(var(--d-ink-3)); }
-[class~="text-zinc-400/90"] { color: rgb(var(--d-ink-3) / 0.90); }
+[class~="text-zinc-950"] { color: rgb(var(--d-ink-on-pale)); }
 [class~="text-neutral-50"],
 [class~="text-slate-300"],
 [class~="text-zinc-200"],
@@ -612,18 +637,18 @@
 [class~="to-[#12151f]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
 [class~="bg-[#15171d]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#15171d]/60"] { background-color: rgb(var(--d-panel2) / 0.60); }
-[class~="hover:bg-[#252833]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#252833]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#252833]"] { border-color: rgb(var(--d-line)); }
 [class~="border-[#2b3040]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="hover:border-[#3a3e48]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="border-[#3a3e48]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#eae6dc]/15"] { background-color: rgb(var(--d-ink) / 0.15); }
-[class~="bg-[#eae6dc]/20"] { background-color: rgb(var(--d-ink) / 0.20); }
-[class~="border-[#eae6dc]/10"] { border-color: rgb(var(--d-ink) / 0.10); }
-[class~="border-[#eae6dc]/15"] { border-color: rgb(var(--d-ink) / 0.15); }
-[class~="border-[#eae6dc]/20"] { border-color: rgb(var(--d-ink) / 0.20); }
-[class~="border-[#eae6dc]/25"] { border-color: rgb(var(--d-ink) / 0.25); }
-[class~="ring-[#eae6dc]/10"] { --tw-ring-color: rgb(var(--d-ink) / 0.10); }
+[class~="bg-[#eae6dc]/15"] { background-color: rgb(var(--d-track-fx) / 0.15); }
+[class~="bg-[#eae6dc]/20"] { background-color: rgb(var(--d-track-fx) / 0.20); }
+[class~="border-[#eae6dc]/10"] { border-color: rgb(var(--d-track-fx) / 0.10); }
+[class~="border-[#eae6dc]/15"] { border-color: rgb(var(--d-track-fx) / 0.15); }
+[class~="border-[#eae6dc]/20"] { border-color: rgb(var(--d-track-fx) / 0.20); }
+[class~="border-[#eae6dc]/25"] { border-color: rgb(var(--d-track-fx) / 0.25); }
+[class~="ring-[#eae6dc]/10"] { --tw-ring-color: rgb(var(--d-track-fx) / 0.10); }
 [class~="text-[#eae6dc]"] { color: rgb(var(--d-ink)); }
 [class~="text-[#eae6dc]/30"] { color: rgb(var(--d-ink) / 0.30); }
 [class~="text-[#eae6dc]/45"] { color: rgb(var(--d-ink) / 0.45); }
@@ -637,6 +662,8 @@
 [class~="text-[#f5f4ef]"] { color: rgb(var(--d-ink)); }
 [class~="text-[#b9b7b0]"] { color: rgb(var(--d-ink-2)); }
 [class~="text-[#8e93a0]"] { color: rgb(var(--d-ink-3)); }
+[class~="bg-[#f3f1eb]"] { background-color: rgb(var(--d-surface-pale)); }
+[class~="bg-[#e2dfd5]"] { background-color: rgb(var(--d-surface-pale-2)); }
 [class~="focus-visible:ring-[#f5b73d]/50"] { --tw-ring-color: rgb(var(--d-accent) / 0.50); }
 [class~="focus:border-[#f5b73d]"] { border-color: rgb(var(--d-accent)); }
 [class~="group-hover:text-[#f5b73d]"] { color: rgb(var(--d-accent)); }
@@ -731,17 +758,17 @@
 [class~="bg-[#090a0d]"] { background-color: rgb(var(--d-bg)); }
 [class~="to-[#090a0d]"] { --tw-gradient-to: rgb(var(--d-bg)); }
 [class~="hover:bg-[#ffc24b]"] { background-color: rgb(var(--d-accent)); }
-[class~="bg-[#1e222b]"] { background-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#282d39]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1e222b]"] { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#282d39]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#323846]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="hover:bg-[#252834]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#252834]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2d3139]"] { border-color: rgb(var(--d-line)); }
 [class~="bg-[#10b981]"] { background-color: rgb(var(--d-cat-electronic)); }
 [class~="text-[#10b981]"] { color: rgb(var(--d-cat-electronic)); }
 [class~="bg-[#121319]"] { background-color: rgb(var(--d-panel)); }
 [class~="to-[#121319]"] { --tw-gradient-to: rgb(var(--d-panel)); }
 [class~="bg-[#0e0f14]"] { background-color: rgb(var(--d-panel2)); }
-[class~="hover:bg-[#1e202a]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1e202a]"] { background-color: rgb(var(--d-surface)); }
 [class~="divide-[#1a1c21]"] { border-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#181a22]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#181a22]"] { background-color: rgb(var(--d-surface)); }
@@ -762,11 +789,11 @@
 [class~="border-[#2d313d]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="text-[#a0a4b0]"] { color: rgb(var(--d-ink-2)); }
 [class~="bg-[#1c1f27]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#282d38]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#282d38]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#14161f]"] { background-color: rgb(var(--d-panel)); }
-[class~="bg-[#1d202a]"] { background-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#272b38]"] { background-color: rgb(var(--d-line)); }
-[class~="border-[#272b38]"] { border-color: rgb(var(--d-line)); }
+[class~="bg-[#1d202a]"] { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#272b38]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#272b38]"] { border-color: rgb(var(--d-surface)); }
 [class~="text-[#8e92a0]"] { color: rgb(var(--d-ink-3)); }
 [class~="bg-[#050609]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#12141c]"] { background-color: rgb(var(--d-panel)); }
@@ -787,23 +814,21 @@
 [class~="border-[#3d2b20]"] { border-color: rgb(var(--d-line)); }
 [class~="border-[#2b2420]"] { border-color: rgb(var(--d-line)); }
 [class~="bg-[#1f1915]"] { background-color: rgb(var(--d-panel)); }
-[class~="hover:bg-[#2e2520]"] { background-color: rgb(var(--d-line)); }
-[class~="via-[#e5e3dc]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-ink)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="to-[#c2b9a7]"] { --tw-gradient-to: rgb(var(--d-ink-2)); }
+[class~="hover:bg-[#2e2520]"] { background-color: rgb(var(--d-surface)); }
+[class~="via-[#e5e3dc]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-track-fx)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
+[class~="to-[#c2b9a7]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
 [class~="border-[#695d52]/60"] { border-color: rgb(var(--d-line-strong) / 0.60); }
 [class~="bg-[#0a0d14]"] { background-color: rgb(var(--d-panel2)); }
-[class~="bg-[#f3f1eb]"] { background-color: rgb(var(--d-ink)); }
-[class~="hover:bg-[#ffffff]"] { background-color: rgb(var(--d-ink)); }
-[class~="via-[#ffffff]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-ink)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="bg-[#e2dfd5]"] { background-color: rgb(var(--d-ink)); }
+[class~="hover:bg-[#ffffff]"] { background-color: rgb(var(--d-track-fx)); }
+[class~="via-[#ffffff]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-track-fx)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#181a20]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#181a20]"] { border-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#2c303c]"] { background-color: rgb(var(--d-line)); }
-[class~="border-[#2c303c]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#252a36]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#2c303c]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#2c303c]"] { border-color: rgb(var(--d-surface)); }
+[class~="bg-[#252a36]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#111218]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#0f1116]"] { background-color: rgb(var(--d-panel)); }
-[class~="bg-[#22262e]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#22262e]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0a0b10]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#0d0f17]"] { background-color: rgb(var(--d-panel2)); }
 [class~="via-[#0d0f17]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel2)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
@@ -814,67 +839,67 @@
 [class~="bg-[#090a0f]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#111420]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#181d2c]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#232a3f]"] { background-color: rgb(var(--d-line)); }
-[class~="bg-[#1b1f2e]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#232a3f]"] { background-color: rgb(var(--d-surface)); }
+[class~="bg-[#1b1f2e]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#131726]"] { background-color: rgb(var(--d-surface)); }
 [class~="via-[#131726]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="to-[#0c0e17]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
-[class~="bg-[#1c2030]"] { background-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#252a3f]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1c2030]"] { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#252a3f]"] { background-color: rgb(var(--d-surface)); }
 [class~="via-[#191d2e]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="to-[#101322]"] { --tw-gradient-to: rgb(var(--d-panel)); }
 [class~="bg-[#10131d]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#10131f]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#161a29]"] { background-color: rgb(var(--d-surface)); }
 [class~="via-[#161a29]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="bg-[#1c2132]"] { background-color: rgb(var(--d-line)); }
-[class~="border-[#1c2132]/80"] { border-color: rgb(var(--d-line) / 0.80); }
-[class~="hover:bg-[#272e45]"] { background-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#1c2132]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#1c2132]/80"] { border-color: rgb(var(--d-surface) / 0.80); }
+[class~="hover:bg-[#272e45]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141828]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#15192a]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#181d30]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#181d30]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0b0e19]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0c0e16]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#181c2b]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#202538]"] { background-color: rgb(var(--d-line)); }
-[class~="text-[#f472b6]"] { color: rgb(var(--d-track-chord-ink)); }
+[class~="hover:bg-[#202538]"] { background-color: rgb(var(--d-surface)); }
+[class~="text-[#f472b6]"] { color: rgb(var(--d-cat-pop)); }
 [class~="bg-[#0e101a]/95"] { background-color: rgb(var(--d-panel) / 0.95); }
 [class~="bg-[#0a0c14]/95"] { background-color: rgb(var(--d-panel2) / 0.95); }
 [class~="to-[#0a0c14]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
 [class~="bg-[#0c0e18]"] { background-color: rgb(var(--d-panel2)); }
 [class~="to-[#0c0e18]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
 [class~="bg-[#161b2b]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#20273f]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#20273f]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#141722]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141722]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#141722]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="to-[#141722]"] { --tw-gradient-to: rgb(var(--d-surface)); }
-[class~="hover:bg-[#1e2334]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1e2334]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0a0b12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="via-[#121522]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#131624]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#1c2236]"] { background-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#252d47]"] { background-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#1c2236]"] { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#252d47]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#ffc95c]"] { background-color: rgb(var(--d-track-snare)); }
 [class~="hover:bg-[#181d28]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#181d28]/60"] { background-color: rgb(var(--d-surface) / 0.60); }
 [class~="bg-[#181d28]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#181d28]/80"] { background-color: rgb(var(--d-surface) / 0.80); }
-[class~="hover:bg-[#232a3b]"] { background-color: rgb(var(--d-line)); }
-[class~="bg-[#232a3b]"] { background-color: rgb(var(--d-line)); }
-[class~="border-[#232a3b]"] { border-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#232a3b]"] { background-color: rgb(var(--d-surface)); }
+[class~="bg-[#232a3b]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#232a3b]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#10141d]"] { background-color: rgb(var(--d-panel)); }
-[class~="hover:bg-[#19202e]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#19202e]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#151922]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#1f2533]"] { background-color: rgb(var(--d-line)); }
-[class~="border-[#1f2533]"] { border-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1f2533]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#1f2533]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#0d1017]"] { background-color: rgb(var(--d-panel)); }
 [class~="via-[#0d1017]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="hover:bg-[#161b26]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#10141e]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#0a0c10]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#141824]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#1f2638]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1f2638]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#06070a]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#080a0f]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#06080d]"] { background-color: rgb(var(--d-bg)); }
@@ -882,7 +907,7 @@
 [class~="bg-[#11141c]"] { background-color: rgb(var(--d-panel)); }
 [class~="to-[#11141c]"] { --tw-gradient-to: rgb(var(--d-panel)); }
 [class~="bg-[#10131b]"] { background-color: rgb(var(--d-panel)); }
-[class~="hover:bg-[#1e2436]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1e2436]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#ffc65c]"] { background-color: rgb(var(--d-track-snare)); }
 [class~="to-[#ffc65c]"] { --tw-gradient-to: rgb(var(--d-track-snare)); }
 [class~="bg-[#0b0c10]"] { background-color: rgb(var(--d-bg)); }
@@ -892,12 +917,12 @@
 [class~="bg-[#11131a]/85"] { background-color: rgb(var(--d-panel) / 0.85); }
 [class~="bg-[#11131a]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
 [class~="from-[#11131a]"] { --tw-gradient-from: rgb(var(--d-panel)); }
-[class~="bg-[#252a38]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#252a38]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141720]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#2a2e3d]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#2a2e3d]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#151720]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#090a0e]"] { background-color: rgb(var(--d-bg)); }
-[class~="bg-[#2a2f3f]"] { background-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#2a2f3f]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#f0ede6]"] { color: rgb(var(--d-ink)); }
 [class~="border-[#1e212b]"] { border-color: rgb(var(--d-line)); }
 [class~="bg-[#0a0b0e]"] { background-color: rgb(var(--d-bg)); }
@@ -913,17 +938,17 @@
 [class~="bg-[#101217]/98"] { background-color: rgb(var(--d-panel) / 0.98); }
 [class~="via-[#101217]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#0c0e12]"] { background-color: rgb(var(--d-panel2)); }
-[class~="border-[#b0b3ba]"] { border-color: rgb(var(--d-ink-2)); }
+[class~="border-[#b0b3ba]"] { border-color: rgb(var(--d-track-fx)); }
 [class~="to-[#ffe28a]"] { --tw-gradient-to: rgb(var(--d-track-perc)); }
-[class~="from-[#f2f3f7]"] { --tw-gradient-from: rgb(var(--d-ink)); }
-[class~="to-[#e0e2e8]"] { --tw-gradient-to: rgb(var(--d-ink)); }
-[class~="hover:to-[#ebedf2]"] { --tw-gradient-to: rgb(var(--d-ink)); }
+[class~="from-[#f2f3f7]"] { --tw-gradient-from: rgb(var(--d-track-fx)); }
+[class~="to-[#e0e2e8]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
+[class~="hover:to-[#ebedf2]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
 [class~="to-[#ffd060]"] { --tw-gradient-to: rgb(var(--d-track-snare)); }
-[class~="border-[#2a2d36]"] { border-color: rgb(var(--d-line)); }
-[class~="from-[#2a2d36]"] { --tw-gradient-from: rgb(var(--d-line)); }
+[class~="border-[#2a2d36]"] { border-color: rgb(var(--d-surface)); }
+[class~="from-[#2a2d36]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="via-[#1a1c23]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="text-[#b9bdc9]"] { color: rgb(var(--d-ink-2)); }
-[class~="hover:from-[#353945]"] { --tw-gradient-from: rgb(var(--d-line-strong)); }
+[class~="hover:from-[#353945]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="from-[#1b1f2b]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="to-[#12151e]"] { --tw-gradient-to: rgb(var(--d-panel)); }
 [class~="text-[#cbd1de]"] { color: rgb(var(--d-ink)); }
@@ -938,7 +963,7 @@
 [class~="from-[#181c28]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="border-[#2e3447]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="from-[#191d29]"] { --tw-gradient-from: rgb(var(--d-surface)); }
-[class~="from-[#1c2235]"] { --tw-gradient-from: rgb(var(--d-line)); }
+[class~="from-[#1c2235]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="bg-[#121624]"] { background-color: rgb(var(--d-surface)); }
 [class~="to-[#121624]"] { --tw-gradient-to: rgb(var(--d-surface)); }
 [class~="border-[#2b3142]"] { border-color: rgb(var(--d-line-strong)); }
@@ -953,20 +978,20 @@
 [class~="to-[#0c0e15]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
 [class~="border-[#262b3b]"] { border-color: rgb(var(--d-line)); }
 [class~="via-[#1a1d28]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-surface)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="to-[#252a3a]"] { --tw-gradient-to: rgb(var(--d-line)); }
-[class~="hover:to-[#31374a]"] { --tw-gradient-to: rgb(var(--d-line-strong)); }
-[class~="from-[#cad0dd]"] { --tw-gradient-from: rgb(var(--d-ink)); }
-[class~="via-[#e2e6f0]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-ink)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="to-[#f4f6fa]"] { --tw-gradient-to: rgb(var(--d-ink)); }
-[class~="text-[#1a1d29]"] { color: rgb(var(--d-surface)); }
+[class~="to-[#252a3a]"] { --tw-gradient-to: rgb(var(--d-surface)); }
+[class~="hover:to-[#31374a]"] { --tw-gradient-to: rgb(var(--d-surface)); }
+[class~="from-[#cad0dd]"] { --tw-gradient-from: rgb(var(--d-track-fx)); }
+[class~="via-[#e2e6f0]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-track-fx)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
+[class~="to-[#f4f6fa]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
+[class~="text-[#1a1d29]"] { color: rgb(var(--d-ink-3)); }
 [class~="border-[#9ca3b5]"] { border-color: rgb(var(--d-track-fx)); }
-[class~="border-[#b8bcc8]"] { border-color: rgb(var(--d-ink-2)); }
+[class~="border-[#b8bcc8]"] { border-color: rgb(var(--d-track-fx)); }
 [class~="text-[#8e95a8]"] { color: rgb(var(--d-ink-3)); }
 [class~="from-[#171a25]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="hover:bg-[#13151f]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#13151f]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
 [class~="via-[#13151f]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="bg-[#1c202e]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1c202e]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2e3549]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="bg-[#0f121d]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#181c2e]"] { background-color: rgb(var(--d-surface)); }
@@ -985,30 +1010,30 @@
 [class~="bg-[#0f1117]/95"] { background-color: rgb(var(--d-panel) / 0.95); }
 [class~="border-[#212430]"] { border-color: rgb(var(--d-line)); }
 [class~="bg-[#171922]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#222533]"] { background-color: rgb(var(--d-line)); }
-[class~="border-[#222533]"] { border-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#222533]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#222533]"] { border-color: rgb(var(--d-surface)); }
 [class~="border-[#282b3a]"] { border-color: rgb(var(--d-line)); }
 [class~="hover:bg-[#181a24]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#181a24]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#282c3c]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#1d2333]"] { background-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#252e42]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1d2333]"] { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#252e42]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2b2f40]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="border-[#1c1e26]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#12141a]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#12141a]/60"] { background-color: rgb(var(--d-panel) / 0.60); }
 [class~="border-[#1d202b]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#eae8e1]"] { background-color: rgb(var(--d-ink)); }
-[class~="bg-[#d8d6ce]"] { background-color: rgb(var(--d-ink)); }
+[class~="bg-[#eae8e1]"] { background-color: rgb(var(--d-track-fx)); }
+[class~="bg-[#d8d6ce]"] { background-color: rgb(var(--d-track-fx)); }
 [class~="bg-[#18191f]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#121318]"] { background-color: rgb(var(--d-panel)); }
-[class~="hover:bg-[#20222a]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#20222a]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0d0e13]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0d1117]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
 [class~="bg-[#0e1017]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#0e1017]/40"] { background-color: rgb(var(--d-panel) / 0.40); }
 [class~="bg-[#0e1017]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
-[class~="hover:bg-[#232838]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#232838]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:text-[#fbbf24]"] { color: rgb(var(--d-accent)); }
 [class~="hover:text-[#fbbf24]/80"] { color: rgb(var(--d-accent) / 0.80); }
 [class~="bg-[#fbbf24]"] { background-color: rgb(var(--d-accent)); }
@@ -1019,7 +1044,7 @@
 [class~="bg-[#151824]/60"] { background-color: rgb(var(--d-surface) / 0.60); }
 [class~="hover:bg-[#2a1315]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#181d2a]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#e9e7e0]"] { background-color: rgb(var(--d-ink)); }
+[class~="bg-[#e9e7e0]"] { background-color: rgb(var(--d-track-fx)); }
 [class~="bg-[#141014]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#101115]"] { background-color: rgb(var(--d-panel)); }
 [class~="border-[#1c1d22]"] { border-color: rgb(var(--d-surface)); }
@@ -1027,7 +1052,7 @@
 [class~="border-[#1a1c28]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#181c2c]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#282e42]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="hover:bg-[#1f253a]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1f253a]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#131522]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#202434]"] { border-color: rgb(var(--d-line)); }
 [class~="hover:bg-[#191c2c]"] { background-color: rgb(var(--d-surface)); }
@@ -1035,9 +1060,9 @@
 [class~="bg-[#14151a]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#a855f7]/20"] { background-color: rgb(var(--d-track-chord) / 0.20); }
 [class~="border-[#a855f7]"] { border-color: rgb(var(--d-track-chord)); }
-[class~="text-[#c084fc]"] { color: rgb(var(--d-track-fx-ink)); }
+[class~="text-[#c084fc]"] { color: rgb(var(--d-cat-jazz)); }
 [class~="hover:bg-[#1a1d26]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#1f232b]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1f232b]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#f87171]"] { color: rgb(var(--d-danger)); }
 [class~="bg-[#161822]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#161822]"] { --tw-gradient-from: rgb(var(--d-surface)); }
@@ -1053,60 +1078,60 @@
 [class~="hover:bg-[#ff5566]"] { background-color: rgb(var(--d-danger)); }
 [class~="border-[#ff5566]"] { border-color: rgb(var(--d-danger)); }
 [class~="border-[#2b3242]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="hover:bg-[#1a2030]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1a2030]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2b3348]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="hover:bg-[#23293a]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#23293a]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2a3244]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#2a3346]"] { background-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#2a3346]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#141b2b]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="to-[#10141f]"] { --tw-gradient-to: rgb(var(--d-panel)); }
 [class~="border-[#2b3a55]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#1f293d]"] { background-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#2a3752]"] { background-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#1f293d]"] { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#2a3752]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#3b4b6b]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="bg-[#090d14]"] { background-color: rgb(var(--d-panel2)); }
 [class~="border-[#20293d]"] { border-color: rgb(var(--d-line)); }
 [class~="bg-[#171a24]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#171a24]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="border-[#2d3445]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#1a2336]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1a2336]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#151a26]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#11151f]"] { background-color: rgb(var(--d-panel)); }
-[class~="hover:bg-[#222838]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#222838]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#222838]"] { border-color: rgb(var(--d-line)); }
 [class~="hover:border-[#3a445e]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="hover:bg-[#141926]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#141926]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2b3345]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="border-[#202738]"] { border-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#252d42]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#252d42]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2a344d]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="border-[#293042]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="bg-[#d47fa6]"] { background-color: rgb(var(--d-track-chord)); }
-[class~="border-[#d47fa6]"] { border-color: rgb(var(--d-track-chord)); }
-[class~="text-[#d47fa6]"] { color: rgb(var(--d-track-chord-ink)); }
+[class~="bg-[#d47fa6]"] { background-color: rgb(var(--d-cat-pop)); }
+[class~="border-[#d47fa6]"] { border-color: rgb(var(--d-cat-pop)); }
+[class~="text-[#d47fa6]"] { color: rgb(var(--d-cat-pop)); }
 [class~="hover:bg-[#181e2e]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#202532]"] { border-color: rgb(var(--d-line)); }
 [class~="hover:border-[#384156]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="hover:bg-[#131824]"] { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#1a2232]"] { background-color: rgb(var(--d-line)); }
-[class~="bg-[#1c2230]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1a2232]"] { background-color: rgb(var(--d-surface)); }
+[class~="bg-[#1c2230]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#1c1e24]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#1c1e24]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#252830]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#252830]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#1a1b20]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#15161c]"] { background-color: rgb(var(--d-panel)); }
 [class~="border-[#232630]"] { border-color: rgb(var(--d-line)); }
-[class~="text-[#9ca3af]"] { color: rgb(var(--d-track-fx-ink)); }
-[class~="hover:bg-[#1f2229]"] { background-color: rgb(var(--d-line)); }
-[class~="border-[#1f2229]"] { border-color: rgb(var(--d-line)); }
+[class~="text-[#9ca3af]"] { color: rgb(var(--d-cat-jazz)); }
+[class~="hover:bg-[#1f2229]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#1f2229]"] { border-color: rgb(var(--d-surface)); }
 [class~="text-[#c4c7cf]"] { color: rgb(var(--d-ink-2)); }
 [class~="text-[#a4a9b5]"] { color: rgb(var(--d-ink-2)); }
-[class~="hover:bg-[#1f222a]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1f222a]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#1f222a]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#282c37]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#282c37]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:border-[#383d4a]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="hover:bg-[#222530]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#222530]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#e0ded8]"] { color: rgb(var(--d-ink)); }
 [class~="text-[#f3f1ec]"] { color: rgb(var(--d-ink)); }
 [class~="text-[#d4d1c9]"] { color: rgb(var(--d-ink)); }
@@ -1119,8 +1144,8 @@
 [class~="border-[#2c2f3d]"] { border-color: rgb(var(--d-line)); }
 [class~="text-[#e2e0d8]"] { color: rgb(var(--d-ink)); }
 [class~="border-[#2c3040]"] { border-color: rgb(var(--d-line-strong)); }
-[class~="hover:bg-[#1f222c]"] { background-color: rgb(var(--d-line)); }
-[class~="text-[#9ea3af]"] { color: rgb(var(--d-track-fx-ink)); }
+[class~="hover:bg-[#1f222c]"] { background-color: rgb(var(--d-surface)); }
+[class~="text-[#9ea3af]"] { color: rgb(var(--d-cat-jazz)); }
 [class~="bg-[#04060a]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#06090f]/90"] { background-color: rgb(var(--d-bg) / 0.90); }
 [class~="bg-[#080c16]/80"] { background-color: rgb(var(--d-panel2) / 0.80); }
@@ -1130,7 +1155,7 @@
 [class~="bg-[#05070c]/60"] { background-color: rgb(var(--d-bg) / 0.60); }
 [class~="bg-[#05070c]/70"] { background-color: rgb(var(--d-bg) / 0.70); }
 [class~="bg-[#0a0d16]/90"] { background-color: rgb(var(--d-panel2) / 0.90); }
-[class~="from-[#182032]"] { --tw-gradient-from: rgb(var(--d-line)); }
+[class~="from-[#182032]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="to-[#0f1424]"] { --tw-gradient-to: rgb(var(--d-surface)); }
 [class~="from-[#111522]/90"] { --tw-gradient-from: rgb(var(--d-surface) / 0.90); }
 [class~="to-[#0b0e18]/95"] { --tw-gradient-to: rgb(var(--d-panel2) / 0.95); }
@@ -1141,15 +1166,15 @@
 [class~="border-[#242732]"] { border-color: rgb(var(--d-line)); }
 [class~="border-[#2e323e]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="bg-[#13161f]"] { background-color: rgb(var(--d-panel)); }
-[class~="hover:bg-[#1f2330]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#1f2330]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#242735]"] { border-color: rgb(var(--d-line)); }
 [class~="border-[#1d2029]"] { border-color: rgb(var(--d-surface)); }
-[class~="text-[#a0a5b2]"] { color: rgb(var(--d-track-fx-ink)); }
+[class~="text-[#a0a5b2]"] { color: rgb(var(--d-cat-jazz)); }
 [class~="hover:bg-[#e5a72d]"] { background-color: rgb(var(--d-accent)); }
-[class~="hover:bg-[#222735]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#222735]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#161820]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#161820]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#20232c]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#20232c]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#0c0d11]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#14161e]"] { background-color: rgb(var(--d-panel)); }
 [class~="border-[#282c38]"] { border-color: rgb(var(--d-line)); }
@@ -1159,9 +1184,9 @@
 [class~="border-[#262a3a]"] { border-color: rgb(var(--d-line)); }
 [class~="border-[#1b1d26]"] { border-color: rgb(var(--d-surface)); }
 [class~="text-[#8d92a0]"] { color: rgb(var(--d-ink-3)); }
-[class~="hover:bg-[#232632]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#232632]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#232632]"] { border-color: rgb(var(--d-line)); }
-[class~="text-[#9ca1af]"] { color: rgb(var(--d-track-fx-ink)); }
+[class~="text-[#9ca1af]"] { color: rgb(var(--d-cat-jazz)); }
 [class~="hover:text-[#9ca1ad]"] { color: rgb(var(--d-ink-3)); }
 [class~="text-[#9ca1ad]"] { color: rgb(var(--d-ink-3)); }
 [class~="hover:bg-[#181b24]"] { background-color: rgb(var(--d-surface)); }
@@ -1171,16 +1196,68 @@
 [class~="bg-[#07090e]"] { background-color: rgb(var(--d-bg)); }
 [class~="hover:bg-[#141924]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#090b12]"] { --tw-gradient-from: rgb(var(--d-panel2)); }
-[class~="bg-[#1c202d]"] { background-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#252b3d]"] { background-color: rgb(var(--d-line)); }
+[class~="bg-[#1c202d]"] { background-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#252b3d]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#b4b7c2]"] { color: rgb(var(--d-ink-2)); }
 [class~="text-[#7e8494]"] { color: rgb(var(--d-ink-3)); }
 [class~="bg-[#181b26]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#d6d4ce]"] { color: rgb(var(--d-ink)); }
 [class~="bg-[#161824]"] { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#202334]"] { background-color: rgb(var(--d-line)); }
+[class~="hover:bg-[#202334]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#ffc55a]"] { background-color: rgb(var(--d-track-snare)); }
 [class~="bg-[#0d1512]/95"] { background-color: rgb(var(--d-panel) / 0.95); }
 [class~="bg-[#14120e]/95"] { background-color: rgb(var(--d-panel2) / 0.95); }
 [class~="bg-[#16130d]/95"] { background-color: rgb(var(--d-panel) / 0.95); }
 [class~="bg-[#180e10]/95"] { background-color: rgb(var(--d-panel2) / 0.95); }
+
+
+/*
+ * The two named inks, by what they sit on: `text-white` is the surface's ink (or the fill's, on a
+ * signal fill), `text-black` is the ink of an accent flood.
+ */
+[class~="bg-[#45e0c9]/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#4ad8c8]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#e84855]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#f5b73d]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#f5b73d]/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#f5b73d]/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#ff5964]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-amber-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-cyan-500/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-emerald-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-emerald-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-indigo-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-red-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-red-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-red-600/90"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-rose-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="from-indigo-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="from-rose-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-[#45e0c9]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-[#e84855]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-[#ff5566]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-amber-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-emerald-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-indigo-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-red-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:bg-red-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:from-indigo-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:to-purple-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="to-amber-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="to-purple-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="group-hover:text-black"] { color: rgb(var(--d-on-accent)); }
+[class~="hover:text-black"] { color: rgb(var(--d-on-accent)); }
+[class~="text-black"] { color: rgb(var(--d-on-accent)); }
+[class~="group-hover:text-white"] { color: rgb(var(--d-ink)); }
+[class~="hover:text-white"] { color: rgb(var(--d-ink)); }
+[class~="text-white"] { color: rgb(var(--d-ink)); }
+
+
+/*
+ * The accent as type; the flood keeps the raw accent and its label uses `--d-on-accent`.
+ */
+[class~="focus:text-accent"] { color: rgb(var(--d-accent-ink)); }
+[class~="group-hover:text-accent"] { color: rgb(var(--d-accent-ink)); }
+[class~="hover:text-accent"] { color: rgb(var(--d-accent-ink)); }
+[class~="selection:text-accent"] { color: rgb(var(--d-accent-ink)); }
+[class~="text-accent"] { color: rgb(var(--d-accent-ink)); }

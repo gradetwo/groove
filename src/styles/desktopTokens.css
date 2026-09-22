@@ -26,6 +26,11 @@
   --d-ink: 233 231 224;
   --d-ink-2: 185 183 176;
   --d-ink-3: 139 143 153;
+  --d-surface-pale: 243 241 235;
+  --d-surface-pale-2: 226 223 213;
+  --d-ink-on-pale: 63 63 70;
+  --d-on-accent: 11 11 13;
+  --d-accent-ink: 245 183 61;
   --d-accent: 245 183 61;
   --d-accent-hover: 211 157 52;
   --d-accent-soft: 248 205 119;

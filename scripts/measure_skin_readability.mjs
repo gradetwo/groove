@@ -338,9 +338,15 @@ async function main() {
    * growing while they are worked off.
    */
   const BUDGET = {
-    // Today's measurements, per view: the ratchet starts where the code is and can only go down.
-    studio: 8,
-    chords: 130,
+    /**
+     * Today's measurements, per view: the ratchet starts where the code is and can only go down.
+     *
+     * Tightened from 8/130/3/6/6 after the role-kind, named-ink and accent-ink fixes took the chord page from
+     * 129 to 13 elements in the worst skin. What is left is listed in the changelog: mostly component-level
+     * colour decisions (a chip painted with the ink token, a legend on a dark plate) rather than palette gaps.
+     */
+    studio: 6,
+    chords: 14,
     challenge: 3,
     "phone-home": 6,
     "phone-challenge": 6,
