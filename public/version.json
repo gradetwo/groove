@@ -1,27 +1,27 @@
 {
-  "version": "2.14.0",
+  "version": "2.15.0",
   "releaseDate": "2026-09-22",
-  "changelogCount": 207,
+  "changelogCount": 208,
   "latest": {
-    "version": "2.14.0",
+    "version": "2.15.0",
     "date": "2026-09-21",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.14.0 编排优先：补完歌曲模型（clips + 时间轴），手机明确为功能子集，音质改进变成可降的门禁",
-      "en": "v2.14.0 Arrangement First: the Song Model (Clips + a Timeline), the Phone as an Explicit Subset, and the Audio-Quality Work as a Ratchet"
+      "zh": "v2.15.0 皮肤收口：悬停色曾被当成基础色（133 条），审计修掉四处误判，低对比棘轮归零",
+      "en": "v2.15.0 Skin Close-out: Hover Colours Were Being Applied as Base (133 Rules), the Audit Was Wrong Four Ways, and the Contrast Ratchet Is Zero"
     },
     "highlights": [
       {
-        "zh": "**先回答那个问题：是的，而且应该提前——理由不是「DAW 很酷」，而是剩下的大部分音质改进没有时间轴就写不出来。** 现在的渲染器只接受一个 `bars` 参数，把**同一个 pattern 重复 N 次**（`totalSteps = patternSteps * bars`），所以导出 4 小节就是四个一模一样的小节——这正是那份试听报告听到的「无限循环机器」。「第 4 小节加 fill」「每 8 小节换一次和弦」「做一个 riser」全都是关于**时间轴**的陈述，单小节 pattern 里根本无处安放。",
-        "en": "**Answering the question first: yes, and it should be pulled forward — not because a DAW is nice, but because most of the remaining audio-quality work is not expressible without a timeline.** The renderer takes a `bars` argument and **repeats one pattern** (`totalSteps = patternSteps * bars`), so a four-bar export is four identical bars — exactly the \"infinite loop machine\" the listening report heard. \"Add a fill in bar 4\", \"change the chord every 8 bars\", \"build a riser\" ar…"
+        "zh": "**每一个 `hover:` 规则都在被静态应用——这是皮肤系统迄今最大的一个 bug。** 生成器输出的 133 条规则，选择器只是类属性（`[class~=…]`），**没有 `:hover`**。变体是**状态**，而属性选择器只要类存在就命中——于是在所有非默认皮肤上，**悬停色变成了基础色**，审计量到的填充是元素静止时根本没有的颜色。现在生成器会把变体还原成它真正代表的东西：`hover:`/`focus:`/`active:`/`checked:` 取伪类，`group-hover:` 取 `.group:hover …`，`peer-checked:` 取 `.peer:checked ~ …`，`sm:`/`md:` 等变成**真正的 `@media` 块**（排在扁平规则之后），`aria-pressed:`/`data-[…]:` 取属性选择器，`selection:`/`placeholder:` 取伪元素。仍然不认识的变体会**被报告**而不是静默丢弃——当初正是这种沉默让它上了线。现在**静态 `hover:` 规则…",
+        "en": "**Every `hover:` rule was being applied statically — the biggest bug the skin system has had.** The map emitted 133 rules whose selector was just the class-token attribute, with no `:hover`. A variant is a *state*, and as an attribute selector it matches whenever the class is present — so on every non-default skin the hover colour was the base colour, and the fills the audit measured were colours the element does not have at rest. The emitter now builds the selector a varian…"
       },
       {
-        "zh": "**而且它比看起来便宜得多，因为接缝早就在了。** `GrooveProject` 一直带着 `patterns: { A, B }`、`songMode` 与 `songChain: (\"A\" | \"B\")[]`——但 grep 显示 `songChain` 只出现在类型、持久化层和一个弹窗的 prop 里：**没有任何东西渲染或播放它**。编排是一个「有记录、没引擎」的承诺，所以这轮是**把一个已经存在的概念补完**，而不是从零造 DAW。",
-        "en": "**And it is far cheaper than it looked, because the seam was already there.** `GrooveProject` has carried `patterns: { A, B }`, `songMode` and `songChain: (\"A\" | \"B\")[]` for a while — but a grep shows `songChain` only in the type, the persistence layer and a modal prop: **nothing renders or plays it**. The arrangement is a record with no engine, so this is finishing an existing concept rather than building a DAW from scratch."
+        "zh": "**审计自己还有四处错**，每一处都是靠把发现追到浏览器再追回来定位的：① 它把**没有被绘制的那层底色**也留在候选里并取最差比值，于是覆盖层遮住下层这件事不成立——漫画皮肤的 CTA 明明计算样式是实心青绿渐变，却被报成纸色压纸色 1.05:1；现在覆盖层会**替换**候选，半透明层按 alpha 合成。② 它用 `background-size` 判断纹理，而角色皮肤会给按钮设 `6px 6px` 来画网点——于是真正的 Tailwind 渐变被丢掉；现在只看**图像本身**（色标半径是像素级、或 `repeating-` 渐变），不看尺寸。③ 它只解析一层 Tailwind 渐变变量（`--tw-gradient-stops` 本身是 `var(--tw-gradient-from), var(…)`），渐变元素于是回退到背后的东西；现在会**迭代整条变量链**。④ 它的诊断输出（`--json`、逐视图表格、问题清单）在早先某次编辑里丢了，而门禁照常工作——已恢复。",
+        "en": "**The audit itself was still wrong in four ways**, each found by chasing a finding to the browser and back: (1) it kept the *unpainted* ground as a candidate and reported the worst ratio, so a cover layer did not hide what it covers — the comic CTA was reported as paper on paper at 1.05:1 while its computed style was a solid teal gradient; candidates are now **replaced** by a covering layer and composited through a translucent one. (2) It decided texture from `background-siz…"
       },
       {
-        "zh": "**这一轮的实件（编排计划的 B0）。** ① `src/types/song.ts`：`Song`（clips + sections）、`SongSection`（槽位、重复小节数、逐段静音与力度缩放）、`resolveTimeline`（把编排摊成逐小节的时间轴，**报告问题而不是抛异常**，所以半成品编排也能被显示）、增删改复制 section 的函数，以及历史 `songChain` 的双向迁移。② 10 条单测把迁移钉死：**今天保存的工程明天打开，小节数与顺序完全一致**。③ `docs/ARRANGEMENT_PLAN.md`：模型、六个步骤（B1 持久化 → B2 渲染器时间轴 → B3 编排视图 → B4 导出器 → B5 音质收益 → B6 MCP），以及手机范围的**子集契约**。",
-        "en": "**What landed (B0 of the arrangement plan).** (1) `src/types/song.ts`: `Song` (clips + sections), `SongSection` (slot, repeat count, per-section mutes and velocity scale), `resolveTimeline` (flattens the arrangement into a bar-by-bar timeline that **reports problems instead of throwing**, so a half-built song can still be displayed), section add/update/duplicate/remove, and migration to and from the historical `songChain`. (2) Ten unit tests pin the migration: **a project sa…"
+        "zh": "**然后才是真正的颜色工作**：① 信号填充与文字的配对改成**结构性**的（源里用到的每个信号填充乘以朴素墨色加同变体墨色），而不是靠 400 字符的共现窗口——这正是 `bg-accent` 配深色墨、以及挑战页渐变 CTA 一直没有配对的原因；② 应用**自己的调色板名**（`bg-accent` 既不是字面值也不是调色板家族）现在被识别为信号填充；③ 强调色、车道色、信号色的**文字**档位改为在它们自己的淡色 chip 上、且**两种卡片底色都算**的前提下推导（极简皮肤的徽章 4.44:1、段位证书 4.45:1）；④ 漫画皮肤那条过宽的 `:has` 选择器（把普通标尺标签也变成纸压纸）已删除；⑤ 苏联岁月皮肤里作为**文字**的青铜色改用可读的琥珀 token，而不是车道填充色；⑥ 极简皮肤的扁平渐变规则现在保留填充（`var(--tw-gradient-from)`）——一个只靠渐变上色的 CTA 原本**完全没有填充**，实测 1.04:1。",
+        "en": "**And the real colour work**: (1) signal fills are paired with their inks **structurally** (every signal fill the source uses times the plain inks plus the same-variant ones) instead of by a 400-character co-occurrence window, which is why `bg-accent` with a dark ink and the challenge's gradient CTA had no pair; (2) the app's **own palette names** (`bg-accent` is neither a literal nor a palette family) are recognised as signal fills; (3) the accent, lane and signal **text**…"
       }
     ],
     "truncated": true
