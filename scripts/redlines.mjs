@@ -325,6 +325,75 @@ check(
     (orphanFxIds.length ? `; orphan ${orphanFxIds.join(",")}` : "")
 );
 
+/**
+ * R11a — the MCP surface must stay whole, and must stay outside the app.
+ *
+ * Two ways the MCP server could rot quietly: a tool could be dropped from the registry (an agent that relied on
+ * it gets "method not found" with no test failing), or the web bundle could start importing it, at which point
+ * the Node entry point and its 4 MB of library data are a build dependency of the app. The first is a count and
+ * a name list; the second is a grep over `src/`.
+ */
+const registrySource = read("mcp/registry.ts");
+const declaredTools = [...registrySource.matchAll(/^\s{4}name: "([a-z_]+)",$/gm)].map((match) => match[1]);
+const REQUIRED_MCP_TOOLS = [
+  "list_genres",
+  "get_genre",
+  "search_genres",
+  "list_categories",
+  "get_genre_relations",
+  "list_chord_progressions",
+  "get_chord_progression",
+  "list_masterclasses",
+  "get_pattern",
+  "apply_pattern_ops",
+  "validate_pattern",
+  "pattern_statistics",
+  "compare_genres",
+  "export_midi",
+  "export_ableton",
+  "share_url",
+  "get_loudness_report",
+  "render_audio",
+  "analyze_audio",
+];
+const missingTools = REQUIRED_MCP_TOOLS.filter((name) => !declaredTools.includes(name));
+check(
+  "R11a every declared MCP tool is still registered",
+  missingTools.length === 0,
+  missingTools.length ? `missing ${missingTools.join(", ")}` : `${declaredTools.length} tools`
+);
+const surfaceSource = read("mcp/server.ts");
+check(
+  "R11a the MCP server still exposes resources and prompts",
+  surfaceSource.includes("registerResource") && surfaceSource.includes("registerPrompt")
+);
+/**
+ * Nothing that *ships* may import the MCP server: it is a consumer of the app's layers, not part of the app.
+ *
+ * `src/test/**` is excluded on purpose — the handler tests live there because vitest only includes `src/**`, and a
+ * test reaching the handlers is the point. What must never happen is a component, view, hook or engine importing
+ * `mcp/`, which would drag the Node entry point and its 4 MB of library data into the web build.
+ */
+const srcFiles = walkSrc(path.join(ROOT, "src"))
+  .filter((file) => /\.tsx?$/.test(file))
+  .filter((file) => !file.includes(`${path.sep}test${path.sep}`));
+const appImportsMcp = srcFiles
+  .map((file) => ({ file: path.relative(ROOT, file), source: fs.readFileSync(file, "utf8") }))
+  .filter(({ source }) => /from "(\.\.\/)+mcp\//.test(source) || /from "@\/mcp\//.test(source))
+  .map(({ file }) => file);
+check(
+  "R11a no app source imports the MCP server",
+  appImportsMcp.length === 0,
+  appImportsMcp.slice(0, 3).join(", ")
+);
+// The gate builds the bundle itself, so `verify` is never gated on a stale artifact.
+check(
+  "R11a the MCP gate stays wired (and builds what it checks)",
+  typeof scripts["check:mcp"] === "string" &&
+    scripts["check:mcp"].includes("build_mcp.mjs") &&
+    scripts["check:mcp"].includes("check_mcp.mjs")
+);
+
 console.log("===============================================================");
 console.log("  \ud83d\udea6 RED-LINE GATE");
 console.log("===============================================================");
