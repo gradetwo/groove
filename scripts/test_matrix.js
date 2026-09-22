@@ -157,14 +157,14 @@ const TARGET_FILTER = process.env.E2E_ONLY || "";
  *   E2E_PROFILE=mobile  the four phone/tablet targets
  *   E2E_PROFILE=all     everything — the full matrix, `npm run test:e2e:all`
  *
- * The phone and tablet surfaces are being redesigned from scratch, so their targets assert against a
- * UI that is about to be replaced: running them in every gate costs minutes per iteration and
- * reports failures that the redesign will invalidate. `pc` is therefore the default *in the gate*
- * while `all` stays one command away — the matrix itself is unchanged, and a surface that has been
- * redesigned just switches profiles back.
+ * `pc` is still the default for a *local* fast pass (a single-target iteration is usually a desktop
+ * one), but it is no longer the gate: the phone and tablet surfaces have shipped and have been green
+ * in `verify` for several releases, so **CI runs `test:e2e:all` on every push and pull request** and
+ * `verify` runs the desktop profile followed by the mobile one. The old reduction existed because the
+ * phone UI was mid-redesign and its assertions would have been invalidated by it; that reason is gone,
+ * and a gate that skips two thirds of the targets is how an iPad-only regression reaches production.
  *
- * This is a deliberate, reversible reduction in gate coverage, recorded here and in
- * `ARCHITECTURE_SURFACES.md` §6 rather than quietly left to look like a full run.
+ * `ARCHITECTURE_SURFACES.md` §6 records the same change.
  */
 const TARGET_PROFILE = (process.env.E2E_PROFILE || "all").toLowerCase();
 const PROFILE_MATCHERS = {

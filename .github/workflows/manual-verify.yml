@@ -15,6 +15,9 @@
 #   only     a target-name substring (e.g. "iPhone 14 (竖屏"), empty means all of the profile
 #   scope    e2e | verify | audio | jank | skins | all
 #
+# Every scope except `audio` needs a production build: `e2e` and `verify` build in their own step, and `jank`
+# and `skins` are handed one by the explicit Build step above them.
+#
 # `verify` runs the whole gate chain (`npm run verify`), which rebuilds and therefore re-runs the E2E
 # steps itself; `e2e` skips the other gates and goes straight at the browser matrix, which is the common
 # case when a browser leg is what failed.
@@ -78,15 +81,25 @@ jobs:
 
       # The phone's runtime feel: per-step long tasks and frame deltas on a throttled profile, which is
       # what "it stutters" actually is. Needs no browsers beyond Chromium.
+      # `probe:jank` and `probe:skins` measure a *built* application: they serve `dist/` themselves. Without
+      # this step the `jank` scope failed with "dist/index.html is missing — build first", which is exactly
+      # what a manual run reported. `verify` builds on its own (and runs both probes after its own build);
+      # `audio` never needs one.
+      - name: Build
+        if: inputs.scope == 'jank' || inputs.scope == 'skins' || inputs.scope == 'all'
+        run: npm run build
+
       - name: Phone jank audit
         if: inputs.scope == 'jank' || inputs.scope == 'all'
         run: npm run probe:jank
 
       # Every skin × every main view: the full sweep (the gate in `verify` samples three skins and five
       # views to stay quick).
-      - name: Skin readability sweep
+      # The full sweep is diagnostic: it reports every skin x view so the work items are visible, and does not
+      # fail the run (the sampled sweep inside `verify` is the gate, with budgets that only go down).
+      - name: Skin readability sweep (report only)
         if: inputs.scope == 'skins' || inputs.scope == 'all'
-        run: npm run probe:skins:full
+        run: npm run probe:skins:full -- --report
 
       - name: Audio measurement gates
         if: inputs.scope == 'audio' || inputs.scope == 'all'
@@ -101,7 +114,7 @@ jobs:
 
       # A build is needed before the matrix: it serves `dist/`, and the matrix refuses to run against a
       # stale bundle. `verify` builds on its own, so this only covers the `e2e` scope.
-      - name: Build
+      - name: Build (matrix scope)
         if: inputs.scope == 'e2e'
         run: npm run build
 

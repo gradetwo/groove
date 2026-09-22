@@ -36,6 +36,33 @@ function jobBlock(name: string): string {
   return (end === -1 ? rest : rest.slice(0, end)).join("\n");
 }
 
+describe("CI · every target runs on every push", () => {
+  /**
+   * The push-time matrix used to run the desktop profile only, on the grounds that the phone and tablet
+   * surfaces were mid-redesign. That reason expired and the reduction stayed — two thirds of the targets were
+   * unguarded on the path that actually gates a merge, which is how an iPad-only regression survives to
+   * production. So the profile is asserted, not assumed: `test:e2e` (desktop only) may remain a local
+   * convenience, but the job must not call it.
+   */
+  const e2e = jobBlock("e2e");
+
+  it("runs the full seven-target matrix, not the desktop profile", () => {
+    expect(e2e, "the CI e2e job should run every target").toContain("npm run test:e2e:all");
+    expect(e2e, "the CI e2e job must not fall back to the desktop-only profile").not.toMatch(/npm run test:e2e(?!:)/);
+  });
+
+  it("installs the browsers that matrix needs", () => {
+    expect(e2e).toMatch(/playwright install --with-deps chromium firefox webkit/);
+  });
+
+  it("builds before it serves the matrix", () => {
+    const build = e2e.indexOf("npm run build");
+    const matrix = e2e.indexOf("npm run test:e2e:all");
+    expect(build, "the job should build").toBeGreaterThan(-1);
+    expect(build, "the build must come before the matrix (it serves dist/)").toBeLessThan(matrix);
+  });
+});
+
 describe("CI · the manual verify workflow is wired, not decorative", () => {
   /**
    * The slow checks have to be *runnable on demand*, and a workflow that loses its trigger, its inputs or
@@ -54,6 +81,20 @@ describe("CI · the manual verify workflow is wired, not decorative", () => {
     // The matrix reads these two, so a manual run can be narrowed to the legs that matter.
     expect(manual).toContain("E2E_PROFILE:");
     expect(manual).toContain("E2E_ONLY:");
+  });
+
+  it("builds before the probes that read dist/", () => {
+    /**
+     * The `jank` scope failed with "dist/index.html is missing — build first": `probe:jank` serves `dist/`
+     * itself and the workflow only built for the `e2e` scope. A manual switch that cannot run its own scope is
+     * worse than no switch, so this asserts the order, not just the presence of a build step.
+     */
+    const build = manual.indexOf("- name: Build\n        if: inputs.scope == 'jank'");
+    expect(build, "a build step for the probe scopes").toBeGreaterThan(-1);
+    const jank = manual.indexOf("npm run probe:jank");
+    const skins = manual.indexOf("npm run probe:skins:full");
+    expect(build, "the build must come before probe:jank").toBeLessThan(jank);
+    expect(build, "the build must come before probe:skins").toBeLessThan(skins);
   });
 
   it("installs the browsers the matrix needs and uploads both artifacts", () => {

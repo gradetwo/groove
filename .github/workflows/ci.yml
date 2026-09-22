@@ -105,8 +105,8 @@ jobs:
     name: E2E Test Matrix (Playwright)
     runs-on: ubuntu-latest
     needs: validate
-    # Skipped on schedule: `nightly` runs the *full* profile (`test:e2e:all`), which is a
-    # superset of this job's default profile.
+    # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness baseline
+    # freshness check and the performance gate, so a scheduled run would duplicate this job.
     if: github.event_name != 'schedule'
 
     steps:
@@ -134,8 +134,13 @@ jobs:
       - name: Production Build
         run: npm run build
 
+      # The **full** seven-target matrix on every push and pull request: three desktop browsers and the four
+      # phone/tablet targets. It used to run the desktop profile only, on the grounds that the phone and tablet
+      # surfaces were being rebuilt and would report failures the redesign would invalidate — that redesign has
+      # shipped, the mobile targets have been green in `verify` for several releases, and a gate that skips two
+      # thirds of the targets is how an iPad-only regression survives to production.
       - name: Cross-Browser & Cross-Device Test Matrix
-        run: npm run test:e2e
+        run: npm run test:e2e:all
 
       # E-10: Lighthouse is not installable in this environment, so the performance
       # gate is a real-browser measurement with deterministic assertions (no genre
@@ -146,8 +151,8 @@ jobs:
   # `CI / nightly`: everything that is too slow or too environment-sensitive to gate a push.
   #
   # What it adds over `validate` + `e2e`:
-  #  - `test:e2e:all` — the full 7-target matrix (3 desktop browsers + 4 phone/tablet
-  #    targets), where the push-time gate runs the desktop profile only;
+  #  - `test:e2e:all` — the full 7-target matrix, which the push-time gate now also runs
+  #    (kept here as well so a scheduled run is complete on its own);
   #  - `test:coverage` — the coverage thresholds, which are stricter than the plain test run;
   #  - `check:loudness:fresh` — re-renders sampled genres in a fresh page and compares against
   #    the committed baseline, which needs a browser and ~1 minute but catches a baseline that
