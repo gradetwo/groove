@@ -130,6 +130,29 @@ async function measureGenre(page, genreId, bars, soloTracks) {
       const mix = mixModule.getGenreMix ? mixModule.getGenreMix(id) : null;
 
       /**
+       * Swing, measured rather than declared: where do the off-16ths actually land?
+       *
+       * The grid is `60 / bpm / 4` seconds per 16th. An onset in the second half of a beat that sits later than
+       * its grid line is the swing a player hears; if every onset is on the grid, the declared `swing` is not
+       * reaching the audio.
+       */
+      const stepSec = 60 / (pattern.bpm || 120) / 4;
+      const measureSwing = (stemChannels, rate) => {
+        const onsets = metrics.onsetTimesMs(stemChannels, rate);
+        const offsets = [];
+        for (const ms of onsets) {
+          const steps = ms / 1000 / stepSec;
+          const nearest = Math.round(steps);
+          if (nearest % 2 === 1 && Math.abs(steps - nearest) < 0.35) {
+            offsets.push((steps - nearest) * stepSec * 1000);
+          }
+        }
+        if (!offsets.length) return null;
+        const mean = offsets.reduce((a, b) => a + b, 0) / offsets.length;
+        return { samples: offsets.length, meanOffsetMs: Math.round(mean * 100) / 100 };
+      };
+
+      /**
        * Per-track pass: the claims are about *instruments* ("the hats are harsh", "the lead aliases", "the kick
        * gives no headroom"), and a mix-level number cannot tell which track caused it. Each stem is the same
        * pattern with every other track silenced, rendered through the same path.
@@ -177,11 +200,107 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           clicks: metrics.clickAnalysis(stemChannels, stemBuffer.sampleRate, { factor: 6 }),
           onsetCount: onsets.length,
           swingRatio: meanEven && meanOdd ? meanEven / meanOdd : null,
+          /** How far the off-16ths sit past their grid line, in ms (0 = straight). */
+          swingOffsetMs: measureSwing(stemChannels, stemBuffer.sampleRate)?.meanOffsetMs ?? null,
+          swingSamples: measureSwing(stemChannels, stemBuffer.sampleRate)?.samples ?? 0,
         };
       }
 
+      /**
+       * The musical claims, which are about the pattern and the mix rather than the signal.
+       *
+       * A listening report says "every note has the same velocity", "the melody never moves", "there is no
+       * swing", "the bass fights the kick", "the mid-range is empty". Each of those is checkable:
+       */
+      const velocityByTrack = Object.fromEntries(
+        pattern.tracks.map((track) => {
+          const on = track.steps.map((step, index) => (step ? track.velocity?.[index] ?? 100 : null)).filter((v) => v !== null);
+          return [
+            track.track_id,
+            on.length ? { min: Math.min(...on), max: Math.max(...on), distinct: new Set(on).size, onsets: on.length } : null,
+          ];
+        })
+      );
+      const pitchByTrack = Object.fromEntries(
+        pattern.tracks
+          .filter((track) => track.pitch?.some((p) => p !== null))
+          .map((track) => {
+            const notes = track.pitch.filter((p) => p !== null);
+            return [
+              track.track_id,
+              { distinct: new Set(notes).size, min: Math.min(...notes), max: Math.max(...notes), changes: notes.filter((p, i) => i > 0 && p !== notes[i - 1]).length },
+            ];
+          })
+      );
+
+      /** Does the bass actually duck when the kick hits? RMS 25 ms after each kick onset vs 25 ms before. */
+      const measureDuck = async () => {
+        const bassTrack = pattern.tracks.find((t) => t.track_id === "bass");
+        const kickTrack = pattern.tracks.find((t) => t.track_id === "kick");
+        if (!bassTrack || !kickTrack) return null;
+        const soloOf = (track) => ({
+          ...pattern,
+          tracks: pattern.tracks.map((t) => (t.track_id === track.track_id ? t : { ...t, steps: t.steps.map(() => 0) })),
+        });
+        const [bassBuf, kickBuf] = await Promise.all([
+          wav.renderPatternOffline(soloOf(bassTrack), { bars: barsArg }).catch(() => null),
+          wav.renderPatternOffline(soloOf(kickTrack), { bars: barsArg }).catch(() => null),
+        ]);
+        if (!bassBuf || !kickBuf) return null;
+        const bass = bassBuf.getChannelData(0);
+        const kick = kickBuf.getChannelData(0);
+        const rate = bassBuf.sampleRate;
+        const window = Math.round(rate * 0.025);
+        const rms = (from, to) => {
+          let sum = 0;
+          const start = Math.max(0, from);
+          const end = Math.min(bass.length, to);
+          for (let i = start; i < end; i += 1) sum += bass[i] * bass[i];
+          return Math.sqrt(sum / Math.max(1, end - start));
+        };
+        // Kick onsets: the first sample above half the kick's peak, with a refractory gap of 60 ms.
+        const peak = kick.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+        const onsets = [];
+        let last = -Infinity;
+        for (let i = 0; i < kick.length; i += 1) {
+          if (Math.abs(kick[i]) > peak * 0.5 && i - last > rate * 0.06) {
+            onsets.push(i);
+            last = i;
+          }
+        }
+        if (!onsets.length) return null;
+        let before = 0;
+        let after = 0;
+        for (const at of onsets) {
+          before += rms(at - window, at - Math.round(rate * 0.005));
+          after += rms(at + Math.round(rate * 0.005), at + window);
+        }
+        const ratioDb = 20 * Math.log10(after / Math.max(before, 1e-9));
+        return { kickOnsets: onsets.length, duckDb: Math.round(ratioDb * 100) / 100 };
+      };
+      const duck = await measureDuck();
+
+      /** Where the energy sits: the 2/3-octave bands that cover roughly 200 Hz - 2 kHz. */
+      const bandCentres = timbre.TIMBRE_BAND_CENTRES_HZ;
+      const midBands = bands.map((db, i) => ({ hz: bandCentres[i], db })).filter((b) => b.hz >= 200 && b.hz <= 2000);
+
       return {
         id,
+        musical: {
+          velocityByTrack,
+          pitchByTrack,
+          // Where the off-16ths actually land is measured per stem, in the stem loop below.
+          swing: { declared: pattern.swing ?? 0 },
+          duck,
+          midBandShareDb: 10 * Math.log10(midBands.reduce((acc, b) => acc + 10 ** (b.db / 10), 0)),
+          midBands,
+          panSends: Object.fromEntries(
+            pattern.tracks.map((track) => [
+              track.track_id,
+              { pan: track.pan ?? 0, sendA: track.sendA ?? 0, sendB: track.sendB ?? 0 },
+            ])
+          ),
+        },
         stems,
         bpm: pattern.bpm,
         bars: barsArg,
@@ -256,6 +375,41 @@ const CLAIMS = {
     (row.declaredSwing ?? 0) >= 20 && row.stems?.kick?.swingRatio != null && Math.abs(row.stems.kick.swingRatio - 1) < 0.05,
   /** Hard quantised by design: nothing declares swing. */
   noSwing: (row) => row.declaredSwing === 0 && row.tracksWithSwing === 0,
+  /**
+   * The musical claims from the listening report, made countable.
+   *
+   * `flatTracks` counts tracks whose triggered steps all carry **one** velocity — "it sounds like a MIDI dump".
+   * The threshold is 4 of 8 because a drum machine legitimately has a fixed kick; it is the *number* of flat
+   * tracks that a listener hears as lifeless.
+   */
+  flatTracks: (row) => {
+    const rows = Object.values(row.musical?.velocityByTrack ?? {}).filter(Boolean);
+    return rows.length > 0 && rows.filter((v) => v.distinct <= 1).length >= 4;
+  },
+  /** A declared swing the audio does not show: ≥20 declared, and no offset measurable on the off-16ths. */
+  inaudibleSwing: (row) => {
+    const declared = row.musical?.swing?.declared ?? 0;
+    if (declared < 20) return false;
+    const offsets = Object.values(row.stems ?? {})
+      .map((stem) => stem.swingOffsetMs)
+      .filter((value) => value !== null && value !== undefined);
+    if (!offsets.length) return true;
+    return Math.max(...offsets.map(Math.abs)) < 3;
+  },
+  /** The kick and the bass arrive together and nothing ducks: a shallow dip is the same as none. */
+  weakDuck: (row) => {
+    const duck = row.musical?.duck;
+    return Boolean(duck) && duck.kickOnsets > 0 && duck.duckDb > -1.5;
+  },
+  /** The mid-range is thin: the 200 Hz - 2 kHz bands hold less than the average band's share. */
+  thinMids: (row) => (row.musical?.midBandShareDb ?? 0) < -6,
+  /** The harmony never moves inside the loop: one chord for the whole pattern. */
+  staticHarmony: (row) => {
+    const chords = row.musical?.pitchByTrack?.chords;
+    return Boolean(chords) && chords.distinct <= 1;
+  },
+  /** Still effectively mono: correlation this high means the pan in the mix is not reaching the file. */
+  narrowStereo: (row) => row.correlation > 0.98,
 };
 
 /** A short label for a stem, so the table stays readable. */

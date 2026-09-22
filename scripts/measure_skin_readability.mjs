@@ -383,6 +383,52 @@ async function main() {
     "phone-home": 0,
     "phone-challenge": 0,
   };
+  /**
+   * The report.
+   *
+   * A gate that only says "pass" is not much use while there is work left, and a *diagnostic* run has to be
+   * machine-readable — this block was lost in an earlier edit of this file (the table, the offender list and
+   * `--json` all went missing while the gate itself kept working), which is why it is written out here again
+   * with the reason attached.
+   */
+  if (JSON_OUT) {
+    // Only the data reaches stdout, so `--json` can be piped into anything. The exit code is still the gate.
+    console.log(JSON.stringify({ summary, results }, null, 2));
+  } else {
+    console.log("\n🎨 SKIN READABILITY AUDIT\n");
+    const allowedFor = (view) => BUDGET[view] ?? (FULL ? 0 : Infinity);
+    for (const row of summary) {
+      const allowed = allowedFor(row.view);
+      const broken = row.clipped > 0 || row.errors > 0 || row.lowContrast > allowed;
+      const warn = !broken && row.lowContrast > 0;
+      console.log(
+        `  ${broken ? "❌" : warn ? "⚠️" : "✅"} ${row.skin.padEnd(12)} ${row.view.padEnd(16)} text ${String(row.checked).padStart(4)}  ` +
+          `low-contrast ${row.lowContrast}${warn || broken ? `/${allowed}` : ""}  clipped ${row.clipped}  console ${row.errors}`
+      );
+    }
+    const offenders = results.flatMap((r) => r.failures.map((f) => ({ skin: r.skin, view: r.view, ...f })));
+    if (offenders.length) {
+      console.log(`\n  ${offenders.length} element(s) below the floor:`);
+      for (const o of offenders.slice(0, 40)) {
+        console.log(
+          `   · ${o.skin}/${o.view}  ${o.ratio}:1 (floor ${o.floor})  ${o.colour} on ${o.bg}  ` +
+            `"${o.text}"  [${o.testid ?? o.tag}] ${o.classes ?? ""}`
+        );
+      }
+      if (offenders.length > 40) console.log(`   … and ${offenders.length - 40} more`);
+    }
+    const clipped = results.flatMap((r) => r.clipped.map((c) => ({ skin: r.skin, view: r.view, ...c })));
+    if (clipped.length) {
+      console.log(`\n  ${clipped.length} clipped control(s):`);
+      for (const c of clipped.slice(0, 20)) console.log(`   · ${c.skin}/${c.view}  "${c.text}"  [${c.testid ?? c.tag}]`);
+    }
+    const errored = results.filter((r) => r.errors.length);
+    if (errored.length) {
+      console.log(`\n  ${errored.length} page(s) with console errors:`);
+      for (const e of errored.slice(0, 10)) console.log(`   · ${e.skin}/${e.view}  ${e.errors[0]}`);
+    }
+  }
+
   const over = [];
   const tighten = [];
   for (const row of summary) {
