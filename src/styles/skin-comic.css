@@ -469,8 +469,13 @@
   color: rgb(var(--d-panel));
 }
 
-/* …and any child that asserts its own colour has to follow the plate, or the label stays dark teal on ink. */
-:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx]:has([class~="text-accent"]) [class~="text-accent"],
+/**
+ * …and any child that asserts its own colour has to follow the plate, or the label stays dark teal on ink.
+ *
+ * Only the *plate* states, and only for the accent: a first version used `[data-ruler-step-idx]:has(…)`, which
+ * matched every ruler cell containing an accent child and turned the ordinary cells' labels into paper on paper
+ * (the audit measured exactly 1.00:1 on "BAR 1").
+ */
 :root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="border-l-2"] [class~="text-accent"],
 :root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="bg-accent/15"] [class~="text-accent"] {
   color: rgb(var(--d-panel));

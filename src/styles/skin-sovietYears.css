@@ -619,7 +619,12 @@
 :root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-amber-500"],
 :root[data-skin="sovietYears"] [data-surface="desktop"] [class~="text-amber-200"],
 :root[data-skin="sovietYears"] [data-surface="desktop"] [class~="hover:text-amber-300"]:hover {
-  color: rgb(var(--d-track-perc));
+  /**
+   * The bronze is a **fill** colour (`--d-track-perc`), and this sheet was using it as type: on the age-paper
+   * surface it measured 4.25:1 — just under the floor, on the rank certificate's own numbers. The skin's amber
+   * token *is* the bronze as text, derived to read on its panels.
+   */
+  color: rgb(var(--d-warning));
 }
 
 :root[data-skin="sovietYears"] [data-surface="desktop"] [class~="border-amber-500/40"],

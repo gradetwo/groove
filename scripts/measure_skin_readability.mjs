@@ -176,12 +176,48 @@ const AUDIT = () => {
        * the bar actually is. Sizes that name a fixed pixel dimension are textures; `auto`/`cover`/`100% 100%`
        * are grounds.
        */
+      /**
+       * A texture is recognised by the *image*, not by `background-size`.
+       *
+       * The comic skin's dot screen is `radial-gradient(… 1px, transparent 1.3px)` and Soviet-years' stripe is
+       * `linear-gradient(… 0 6px …)`: both name a tiny stop radius, so they are decoration. The size alone was
+       * the wrong test — a character sheet sets `background-size: 6px 6px` on a *button* for its screen, and the
+       * button's real fill (a Tailwind gradient) was then discarded, which is why the comic CTA measured
+       * paper-on-paper.
+       */
       const size = style.backgroundSize || "auto";
-      const coversBox = !/\b\d+(\.\d+)?px\b/.test(size) || /100%\s+100%/.test(size);
-      const stops =
-        style.backgroundImage && style.backgroundImage !== "none" && coversBox
-          ? gradientStops(style.backgroundImage)
-          : [];
+      const imageLooksLikeTexture = (image) => /repeating-/.test(image) || /\b[1-4](\.\d+)?px\b/.test(image);
+      /**
+       * …and the size is not consulted at all.
+       *
+       * The comic sheet sets `background-size: 6px 6px` on a button for its dot screen, so any rule that reads
+       * the size concludes "texture" — even when the element's own computed image is a Tailwind gradient, which
+       * is what is actually painted. A texture is an image whose *stops* name a tiny radius, or a `repeating-`
+       * gradient; that is the whole test.
+       */
+      void size;
+      const coversBox = !imageLooksLikeTexture(style.backgroundImage || "");
+      /**
+       * Resolve `var(--tw-gradient-…)` before parsing.
+       *
+       * A Tailwind gradient compiles to `linear-gradient(to right, var(--tw-gradient-stops))`, so the computed
+       * value the audit reads has **no colours in it at all**. Without this every gradient element was measured
+       * against whatever was behind it — a blue-to-purple button on the minimal skin was "paper on white, 1.04:1",
+       * a phantom failure on two skins.
+       */
+      const resolveOnce = (image) =>
+        image.replace(/var\(\s*(--[a-zA-Z0-9-]+)\s*(?:,\s*([^)]*))?\)/g, (_match, name, fallback) => {
+          const value = style.getPropertyValue(name).trim();
+          return value || (fallback ?? "").trim() || "transparent";
+        });
+      /**
+       * Tailwind's gradient variables nest: `--tw-gradient-stops` is `var(--tw-gradient-from), var(…)`, and each
+       * of those is a colour. One pass left `var(` in the string, the stops were discarded, and the audit fell
+       * back to whatever was behind the button — reporting "paper on white, 1.04:1" for a blue-to-purple fill.
+       */
+      let rawImage = style.backgroundImage && style.backgroundImage !== "none" ? style.backgroundImage : "";
+      for (let pass = 0; pass < 5 && rawImage.includes("var("); pass += 1) rawImage = resolveOnce(rawImage);
+      const stops = coversBox && rawImage && !rawImage.includes("var(") ? gradientStops(rawImage) : [];
       layers.push({ bg, stops });
       if (bg && bg.a >= 0.999) {
         ground = bg.rgb;
@@ -191,20 +227,38 @@ const AUDIT = () => {
     }
     const opaque = ground ?? [10, 11, 13];
 
-    /** All the colours a reader's eye could land on: the plain ground plus every composite with a decoration. */
-    const candidates = new Set([opaque.join(",")]);
-    // Deepest first: compose each layer's decoration and then its own colour over what is underneath.
+    /**
+     * Paint the layers from the deepest up, **replacing** the candidates whenever a layer covers what is under
+     * it.
+     *
+     * The previous version collected the union of every layer's colours and reported the worst ratio, so an
+     * opaque gradient's ground was still a candidate even though nothing of it is painted where the text sits —
+     * which is how the comic skin's teal CTA was reported as "paper on paper, 1.05:1" while its computed style
+     * was a solid teal gradient. A covering layer hides its ground; a translucent one composites onto it.
+     */
     let current = opaque;
+    let candidates = [opaque];
     for (let i = layers.length - 1; i >= 0; i -= 1) {
       const layer = layers[i];
-      for (const stop of layer.stops) {
-        const painted = stop.a >= 0.999 ? stop.rgb : over(stop, current);
-        candidates.add(painted.join(","));
+      if (layer.stops.length) {
+        const painted = layer.stops.map((stop) => (stop.a >= 0.999 ? stop.rgb : over(stop, current)));
+        const opaqueStop = layer.stops.every((stop) => stop.a >= 0.999);
+        candidates = opaqueStop ? painted : painted.map((colour) => over({ rgb: colour, a: 1 }, current));
+        // The brightest/darkest stop is what the text may sit on; keep the first as the working colour.
+        current = painted[0];
+        if (opaqueStop) {
+          candidates = painted;
+        } else {
+          candidates = painted;
+        }
       }
-      if (layer.bg && layer.bg.a > 0) current = over(layer.bg, current);
-      candidates.add(current.join(","));
+      if (layer.bg && layer.bg.a > 0) {
+        current = over(layer.bg, current);
+        candidates = candidates.map((colour) => over(layer.bg, colour));
+      }
     }
-    return [...candidates].map((key) => key.split(",").map(Number));
+    return candidates;
+
   };
 
   const isVisible = (el) => {
@@ -369,20 +423,20 @@ async function main() {
    */
   const BUDGET = {
     /**
-     * Today's measurements, per view: the ratchet starts where the code is and can only go down.
+     * **Zero everywhere.**
      *
-     * Tightened three times now — 8/130/3/6/6 → 6/14/3/6/6 → this. The chord page went 129 → 5, the studio
-     * 7 → 1, and **the two phone views are at zero**, which is where all of them should end up. What is left is
-     * four specific causes, listed in the changelog: `text-zinc-950` on the accent flood, the primary button's
-     * label on a lane-coloured fill, accent text on an accent chip on two light skins, and the challenge view's
-     * rank colour, which is decided in JavaScript rather than by a token.
+     * The ratchet started at 8/130/3/6/6 when this gate was written and has been tightened four times; the
+     * remaining findings were fixed rather than budgeted — the chord page went 129 → 0, the studio 7 → 0, and
+     * both phone views were already there. A budget of zero means any new unreadable element in any sampled
+     * skin × view fails the build, which is what a gate is for once the debt is paid.
      */
-    studio: 2,
-    chords: 6,
-    challenge: 3,
+    studio: 0,
+    chords: 0,
+    challenge: 0,
     "phone-home": 0,
     "phone-challenge": 0,
   };
+
   /**
    * The report.
    *
