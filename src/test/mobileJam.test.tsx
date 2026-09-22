@@ -26,6 +26,7 @@ const renderJam = async (
     onSwing: vi.fn<(swing: number) => void>(),
     onOpenGenre: vi.fn<(genreId: string) => void>(),
     onAuditionTrack: vi.fn<(trackId: string, instrument?: string) => void>(),
+    onMetronome: vi.fn<(enabled: boolean) => void>(),
   };
   const props = {
     genreId: GENRE.id,
@@ -266,11 +267,12 @@ describe("jam module", () => {
     fireEvent.pointerUp(rail, { clientX: -500, pointerId: 2 });
   });
 
-  it("keeps record, tempo and swing in one dock after the pads", async () => {
+  it("keeps record, tempo, swing and the metronome in one dock above the pads", async () => {
     await renderJam();
     const dock = screen.getByTestId("mobile-jam-tempo");
     for (const id of [
       "mobile-jam-record",
+      "mobile-jam-metronome",
       "mobile-jam-bpm",
       "mobile-jam-bpm-up",
       "mobile-jam-bpm-down",
@@ -280,16 +282,29 @@ describe("jam module", () => {
       expect(dock.contains(screen.getByTestId(id))).toBe(true);
     }
 
-    // The grid and pads come first, so the dock really is the bottom of the screen, and 即兴 still
-    // shows no player bar chrome.
-    const pads = screen.getByTestId("mobile-jam-pad-kick");
-    expect(pads.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    /**
+     * Pads last, nearest the thumbs.
+     *
+     * They used to sit above the dock, which put the transport under the playing hand: a thumb reaching for a
+     * pad could land on record. The order is transport, then pads, and the pads own the sticky slot.
+     */
+    const padsDock = screen.getByTestId("mobile-jam-pads-dock");
+    expect(dock.compareDocumentPosition(padsDock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(padsDock.contains(screen.getByTestId("mobile-jam-pad-kick"))).toBe(true);
     expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
 
     // The old chip row is gone: swing is a rail now.
     expect(screen.queryByTestId("mobile-jam-swing-30")).not.toBeInTheDocument();
     expect(screen.getByTestId("mobile-jam-swing-slider").getAttribute("role")).toBe("slider");
     expect(screen.getByTestId("mobile-jam-record").tagName).toBe("BUTTON");
+  });
+
+  it("toggles the metronome through the shell", async () => {
+    const { spies } = await renderJam();
+    const button = screen.getByTestId("mobile-jam-metronome");
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(button);
+    expect(spies.onMetronome).toHaveBeenLastCalledWith(true);
   });
 
   it("opens the backing genre's page from the header", async () => {

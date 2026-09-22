@@ -77,12 +77,29 @@ independent until B5, and B is what makes that document's P1 possible.
 | # | Step | Where | Verified by | Effort |
 | :-- | :--- | :--- | :--- | :--- |
 | **B0** | **This slice**: the `Song` types, the pure timeline functions (flatten, normalise, migrate, total bars) and their tests | `src/types/song.ts`, `src/features/arrangement/songTimeline.ts` | unit tests: migration is lossless, flattening agrees with the old semantics, invalid sections are reported not thrown | **done in this round** |
-| **B1** | Persistence and share: read/write `sections`, keep reading `songChain`; `.groove` and the share URL carry the arrangement | `projectStorage.ts`, `SequencerUrlShare.ts` | round-trip tests, plus a share link that decodes an arrangement | S |
+| **B1** | Persistence and share: read/write `sections`, keep reading `songChain`; `.groove` and the share URL carry the arrangement | `projectStorage.ts`, `projectDb.ts`, `useSequencerStore.ts`, `SequencerUrlShare.ts` | round-trip tests, plus a share link that decodes an arrangement | S |
 | **B2** | **The renderer gets a timeline**: `renderSongOffline(song)` concatenates sections (per-section clip, repeats, mutes, velocity scale) instead of repeating one pattern. `bars` becomes "render the song" rather than "repeat the loop" | `WavExporter.ts` | `check:groove` gains section-level metrics; a 4-section song renders with measurable differences per section | M |
 | **B3** | **The arrangement view** (iPad and PC): tracks down the side, bars across the top, clips as regions; select a clip → the step sequencer edits it. Drag to move, edge-drag to repeat, keyboard on PC, touch on iPad | new `src/views/ArrangementView.tsx` + toolbar entry | a new `probe:arrangement` (clip drag/resize with mouse *and* touch, ≥44 px targets on iPad, no clipped controls) | L — the visible feature |
 | **B4** | **Exporters follow the timeline**: MIDI/ALS/.als/MP3 render the arrangement; the share link carries it | `MidiExporter`, `AbletonExporter`, `useExportActions` | the exported MIDI's length equals the song's bar count; the ALS has one clip per section | M |
 | **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks | arrangement data + the new `texture`/fill voices | `check:groove`'s static-harmony and velocity claims fall; the report's "no fill, no variation" items become expressible | M |
 | **B6** | MCP surface: `create_song`, `add_section`, `render_song` — an agent composes an arrangement, not a loop | `mcp/**` | the MCP gate calls them; docs updated | S |
+
+### B1 implementation notes (the surfaces the arrangement has to survive)
+
+The arrangement is only real once it survives a reload, a project package and a share link. The five places, and
+the compatibility rule at each:
+
+| Surface | What it writes | What it must keep reading |
+| :--- | :--- | :--- |
+| `PersistedProject` (localStorage snapshot, `projectStorage.ts`) | `sections`, plus the legacy `songChain` derived from them (`toSongChain`) so an older build reading the same snapshot still shows the same order | a snapshot without `sections` — hydrate with `migrateSongChain(saved, saved.songChain)`, which is lossless by construction (one 1-bar section per chain entry) |
+| IndexedDB project record (`projectDb.ts`) | the same two fields on the project row | rows written before B1 (absent → migrate on load) |
+| `.groove` package (`exportProjectPackage` / the importer) | whatever the `GrooveProject` carries, so `sections` rides along once it is on the type | packages exported before B1 (`sections` absent → migrate) |
+| Share URL (`SequencerUrlShare.ts`) | `sections` as a compact array on `SharedSequencerState` | links without it — a shared link is a single pattern, so the decoded state gets one section covering the loop |
+| Sequencer store (`useSequencerStore.ts`) | — (it is the reader) | a state whose `sections` is stale relative to `songChain` (both are kept in step: `songChain` is derived, never independently edited) |
+
+Two rules keep this from drifting: **`songChain` stays a derived view** (writing it by hand beside `sections` is how
+the two would disagree), and **every reader migrates rather than defaults** (a default of `["A","B"]` silently
+discards an arrangement; `migrateSongChain` cannot).
 
 ## The phone is a subset (decision, and how it is enforced)
 

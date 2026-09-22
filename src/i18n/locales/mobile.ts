@@ -136,6 +136,7 @@ export const mobileMessages = {
   mobile_jam_pads_hint: { en: "Arm record, then tap to write it in", zh: "开录制后点按即写入当前步" },
   mobile_jam_tempo: { en: "Tempo", zh: "速度" },
   mobile_jam_swing: { en: "Swing", zh: "摇摆" },
+  mobile_jam_metronome: { en: "Metronome", zh: "节拍器" },
   mobile_jam_bpm: { en: "BPM", zh: "BPM" },
   mobile_jam_lane_kick: { en: "Kick", zh: "底鼓" },
   mobile_jam_lane_snare: { en: "Snare", zh: "军鼓" },
