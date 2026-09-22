@@ -77,12 +77,29 @@ independent until B5, and B is what makes that document's P1 possible.
 | # | Step | Where | Verified by | Effort |
 | :-- | :--- | :--- | :--- | :--- |
 | **B0** | **This slice**: the `Song` types, the pure timeline functions (flatten, normalise, migrate, total bars) and their tests | `src/types/song.ts`, `src/features/arrangement/songTimeline.ts` | unit tests: migration is lossless, flattening agrees with the old semantics, invalid sections are reported not thrown | **done in this round** |
-| **B1** | Persistence and share: read/write `sections`, keep reading `songChain`; `.groove` and the share URL carry the arrangement | `projectStorage.ts`, `projectDb.ts`, `useSequencerStore.ts`, `SequencerUrlShare.ts` | round-trip tests, plus a share link that decodes an arrangement | S |
+| **B1** | Persistence and share: read/write `sections`, keep reading `songChain`; `.groove` and the share URL carry the arrangement ✅ | `projectStorage.ts`, `projectDb.ts`, `useSequencerStore.ts`, `useProjectHub.ts`, `types/project.ts`, `SequencerUrlShare.ts` | round-trip tests, plus a share link that decodes an arrangement — `src/test/songPersistence.test.ts` (9 cases: legacy migration, hydration preference, save round-trip, the two views staying in step) and three new cases in `sharePayloadSecurity.test.ts` | **done** |
 | **B2** | **The renderer gets a timeline**: `renderSongOffline(song)` concatenates sections (per-section clip, repeats, mutes, velocity scale) instead of repeating one pattern. `bars` becomes "render the song" rather than "repeat the loop" | `WavExporter.ts` | `check:groove` gains section-level metrics; a 4-section song renders with measurable differences per section | M |
 | **B3** | **The arrangement view** (iPad and PC): tracks down the side, bars across the top, clips as regions; select a clip → the step sequencer edits it. Drag to move, edge-drag to repeat, keyboard on PC, touch on iPad | new `src/views/ArrangementView.tsx` + toolbar entry | a new `probe:arrangement` (clip drag/resize with mouse *and* touch, ≥44 px targets on iPad, no clipped controls) | L — the visible feature |
 | **B4** | **Exporters follow the timeline**: MIDI/ALS/.als/MP3 render the arrangement; the share link carries it | `MidiExporter`, `AbletonExporter`, `useExportActions` | the exported MIDI's length equals the song's bar count; the ALS has one clip per section | M |
 | **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks | arrangement data + the new `texture`/fill voices | `check:groove`'s static-harmony and velocity claims fall; the report's "no fill, no variation" items become expressible | M |
 | **B6** | MCP surface: `create_song`, `add_section`, `render_song` — an agent composes an arrangement, not a loop | `mcp/**` | the MCP gate calls them; docs updated | S |
+
+### B1 — what landed
+
+`sections` is now the **source of truth** and `songChain` is a derived view (`sectionsToSongChain`), so the two
+cannot disagree: `SET_SECTIONS` derives the chain, `SET_SONG_CHAIN` (the studio's existing bar editor) recreates
+one-bar sections from it, and `LOAD_PROJECT` derives the chain when the project brings an arrangement. Hydration
+handles three ages of data — a snapshot with `sections`, one with only `songChain` (migrated), and none at all —
+and a save writes both, so an older build reading the same snapshot still shows the same order. `.groove` packages
+and the project hub ride along because the arrangement is on `GrooveProject`.
+
+The share link carries it too: `SharedSequencerState.sections` encodes as one tuple per section
+(`[slot, bars, label?, velocityScale?, mute?]`) and the decoder applies the same bounds as every other untrusted
+field — an out-of-bounds section is dropped, not trusted, and a link made before the arrangement existed still
+decodes with `sections` absent so the caller migrates its own chain.
+
+Two things it deliberately does **not** do: the chain editor is still lossy for a section with `bars: 4` (that is
+B3's editor replacing it), and nothing yet *renders* the arrangement (that is B2).
 
 ### B1 implementation notes (the surfaces the arrangement has to survive)
 

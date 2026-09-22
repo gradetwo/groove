@@ -313,6 +313,8 @@ export function useExportActions({
       resolution,
       totalSteps: stepCount,
       tracks: patternRef.current.tracks.map(toSharedTrack),
+      // B1: the link carries the arrangement, so opening it reproduces the song and not only the clip.
+      sections: seqStateRef.current.sections,
     });
     if (!result.url) {
       showToast(

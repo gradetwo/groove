@@ -174,11 +174,18 @@ export function duplicateSection(song: Song, id: string): Song {
  */
 export function migrateSongChain(song: Omit<Song, "sections"> & { sections?: SongSection[] }, songChain: Array<"A" | "B">): Song {
   if (song.sections?.length) return { ...song, sections: song.sections };
+  return { ...song, sections: sectionsFromSongChain(song.id, songChain) };
+}
+
+/**
+ * One 1-bar section per chain entry — the whole migration, usable by a caller that holds a chain but no `Song`.
+ *
+ * An empty chain becomes one bar of A rather than nothing: a project with no sections cannot play, and the old
+ * default was `["A", "B"]`-ish in spirit (something, not silence).
+ */
+export function sectionsFromSongChain(songId: string, songChain: Array<"A" | "B">): SongSection[] {
   const chain = songChain?.length ? songChain : (["A"] as Array<"A" | "B">);
-  return {
-    ...song,
-    sections: chain.map((slot, index) => ({ id: `${song.id}-s${index + 1}`, slot, bars: 1 })),
-  };
+  return chain.map((slot, index) => ({ id: `${songId}-s${index + 1}`, slot, bars: 1 }));
 }
 
 /**
@@ -186,8 +193,19 @@ export function migrateSongChain(song: Omit<Song, "sections"> & { sections?: Son
  * and the project-hub modal do). Lossy by nature: it can only express A/B and one bar per entry.
  */
 export function toSongChain(song: Song): Array<"A" | "B"> {
+  return sectionsToSongChain(song.sections);
+}
+
+/**
+ * The same view from a bare section list.
+ *
+ * The store keeps `sections` as the source of truth and derives `songChain` from it, and it has no `Song` to hand
+ * (it holds two patterns, not a clip library) — so the derivation lives here, once, instead of being re-implemented
+ * where the two could disagree.
+ */
+export function sectionsToSongChain(sections: readonly SongSection[]): Array<"A" | "B"> {
   const chain: Array<"A" | "B"> = [];
-  for (const section of song.sections) {
+  for (const section of sections) {
     const slot: "A" | "B" = section.slot === "B" ? "B" : "A";
     for (let bar = 0; bar < clampBars(section.bars); bar += 1) chain.push(slot);
   }

@@ -8,6 +8,7 @@ import { BakedArpeggioResult } from "../../utils/arpeggiatorTheory";
 // The one helper every genre-entry point uses: clone + seed the genre's arranged mix.
 // `clonePattern` stays untouched because slot copies and undo must preserve user values.
 import { patternFromGenre, migrateLegacyPlaceholderMix } from "../../data/genreMix";
+import { sectionsFromSongChain, sectionsToSongChain, type SongSection } from "../../types/song";
 import {
   debounceSaveProject,
   loadSavedProject,
@@ -82,6 +83,14 @@ export interface SequencerState {
   };
   activeSlot: "A" | "B";
   songMode: boolean;
+  /**
+   * The arrangement (B1), and the source of truth for the bar order.
+   *
+   * `songChain` is kept as a derived view (see `sectionsToSongChain`) because the studio, the project hub and the
+   * share codec still speak it: deriving it here is what stops the two from disagreeing, which hand-writing both
+   * would guarantee.
+   */
+  sections: SongSection[];
   songChain: ("A" | "B")[];
   blindTestMode: boolean;
   bpm: number;
@@ -159,6 +168,8 @@ export type SequencerAction =
       stepCount: number;
       songMode?: boolean;
       songChain?: ("A" | "B")[];
+      /** B1: the arrangement, when the project carries one. */
+      sections?: SongSection[];
       loopRange?: [number, number] | null;
       isMetronome?: boolean;
       isCountIn?: boolean;
@@ -172,6 +183,7 @@ export type SequencerAction =
   | { type: "COPY_PATTERN_SLOT"; from: "A" | "B"; to: "A" | "B" }
   | { type: "TOGGLE_SONG_MODE" }
   | { type: "SET_SONG_CHAIN"; chain: ("A" | "B")[] }
+  | { type: "SET_SECTIONS"; sections: SongSection[] }
   | { type: "TOGGLE_BLIND_TEST" }
   | { type: "SET_LOOP_RANGE"; range: [number, number] | null }
   | { type: "SET_METRONOME"; enabled: boolean }
@@ -248,6 +260,10 @@ export function createInitialSequencerState(genre: Genre): SequencerState {
       },
       activeSlot,
       songMode: saved.songMode || false,
+      // B1: prefer the arrangement; a snapshot from before it migrates its chain losslessly, one bar per letter.
+      sections: saved.sections?.length
+        ? saved.sections
+        : sectionsFromSongChain("session", saved.songChain || ["A", "B"]),
       songChain: saved.songChain || ["A", "B"],
       blindTestMode: false,
       bpm: saved.bpm || genre.default_bpm || 120,
@@ -277,6 +293,7 @@ export function createInitialSequencerState(genre: Genre): SequencerState {
     },
     activeSlot: "A",
     songMode: false,
+    sections: sectionsFromSongChain("session", ["A", "B"]),
     songChain: ["A", "B"],
     blindTestMode: false,
     bpm: genre.default_bpm || 140,
@@ -392,7 +409,19 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
       return { ...state, songMode: !state.songMode };
 
     case "SET_SONG_CHAIN":
-      return { ...state, songChain: [...action.chain] };
+      /**
+       * The studio's chain editor is still the phone/desktop UI for the bar order, so a chain edit recreates the
+       * sections from it (one bar each). That is lossy for a section with `bars: 4` — the arrangement view (B3) is
+       * the editor that replaces this path, and until it lands the chain remains the only way to edit the order.
+       */
+      return {
+        ...state,
+        songChain: [...action.chain],
+        sections: sectionsFromSongChain("session", action.chain),
+      };
+
+    case "SET_SECTIONS":
+      return { ...state, sections: [...action.sections], songChain: sectionsToSongChain(action.sections) };
 
     case "TOGGLE_BLIND_TEST":
       return { ...state, blindTestMode: !state.blindTestMode };
@@ -986,6 +1015,9 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
       const patA = clonePattern(action.patterns.A);
       const patB = clonePattern(action.patterns.B || action.patterns.A);
       const currentPattern = activeSlot === "B" ? clonePattern(patB) : clonePattern(patA);
+      const loadedSections = action.sections?.length
+        ? action.sections
+        : sectionsFromSongChain("project", action.songChain || ["A", "B"]);
       return {
         ...state,
         currentGenre: action.genre,
@@ -1001,7 +1033,9 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         resolution: action.resolution,
         stepCount: action.stepCount,
         songMode: Boolean(action.songMode),
-        songChain: action.songChain || ["A", "B"],
+        sections: loadedSections,
+        // Derived when the project brings an arrangement, so `songChain` can never contradict it on load.
+        songChain: action.sections?.length ? sectionsToSongChain(loadedSections) : action.songChain || ["A", "B"],
         loopRange: action.loopRange !== undefined ? action.loopRange : null,
         isMetronome: Boolean(action.isMetronome),
         isCountIn: Boolean(action.isCountIn),
@@ -1111,6 +1145,7 @@ export function useSequencerStore(initialGenre: Genre) {
       },
       activeSlot: state.activeSlot,
       songMode: state.songMode,
+      sections: state.sections,
       songChain: state.songChain,
       loopRange: state.loopRange,
       isMetronome: state.isMetronome,

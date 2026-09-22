@@ -4,6 +4,7 @@
  */
 
 import { SequencerPattern, Genre } from "../../types/genre";
+import type { SongSection } from "../../types/song";
 
 export const PROJECT_STORAGE_KEY = "groove_project_v1";
 export const STORAGE_VERSION = 1;
@@ -29,6 +30,11 @@ export interface PersistedProject {
   activeSlot: "A" | "B";
   songMode: boolean;
   songChain: ("A" | "B")[];
+  /**
+   * The arrangement (B1). Optional so a snapshot written before it hydrates through `migrateSongChain` rather
+   * than being read as "no arrangement"; `songChain` is still written beside it for older readers.
+   */
+  sections?: SongSection[];
   loopRange: [number, number] | null;
   isMetronome: boolean;
   isCountIn: boolean;
@@ -165,6 +171,7 @@ export function saveProjectImmediate(project: Omit<PersistedProject, "version" |
             activeSlot: project.activeSlot,
             songMode: project.songMode,
             songChain: project.songChain,
+            sections: project.sections,
             loopRange: project.loopRange,
             isMetronome: project.isMetronome,
             isCountIn: project.isCountIn,

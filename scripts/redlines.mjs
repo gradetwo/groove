@@ -288,9 +288,13 @@ check(
 
 // R9b: the mix table must cover exactly the genre ids in the database. Read as text
 // so this stays a cheap static gate (the vitest suite asserts the same thing typed).
-const mixIds = [...read("src/data/genreMix.ts").matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{\s*category:/gm)].map(
-  (m) => m[1]
-);
+/**
+ * Any field order counts: the entry is `"id": { ... }`, and whether `category` or `humanise` comes first is a
+ * fact about the data's readability, not about its coverage. (This parser used to require `category` first, so
+ * adding a leading field silently "lost" 23 genres — a false red line that cost more than the bug it guards.)
+ */
+const mixBlock = read("src/data/genreMix.ts").split("export const GENRE_MIX")[1].split("\n};")[0];
+const mixIds = [...mixBlock.matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{/gm)].map((m) => m[1]);
 const missingMixIds = dataIds.filter((id) => !mixIds.includes(id));
 const orphanMixIds = mixIds.filter((id) => !dataIds.includes(id));
 check(
