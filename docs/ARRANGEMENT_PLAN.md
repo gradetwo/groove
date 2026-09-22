@@ -84,38 +84,43 @@ independent until B5, and B is what makes that document's P1 possible.
 | **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks | arrangement data + the new `texture`/fill voices | `check:groove`'s static-harmony and velocity claims fall; the report's "no fill, no variation" items become expressible | M |
 | **B6** | MCP surface: `create_song`, `add_section`, `render_song` — an agent composes an arrangement, not a loop | `mcp/**` | the MCP gate calls them; docs updated | S |
 
-## iPad + PC only
+## The phone is a subset (decision, and how it is enforced)
 
-That is a scoping decision with a large, concrete consequence list — and most of it is *removal*, which is why it
-belongs in the same plan rather than in a backlog.
+The product decision, in your words: **the phone version is a functional subset of the iPad and PC version, with
+its own UI and interaction layer; professional multi-track work like this simply does not exist on the phone.**
 
-**What it removes:**
+That is a better shape than either "support it fully" or "delete it", and the codebase is already built for it:
+`src/mobile/**` is an independent shell with its own screens, its own skins and its own touch rules. The work is to
+make the subset **explicit**, so the next desktop feature cannot leak into the phone by autocomplete.
 
-| Removed | Size / where |
+`src/platform/surfaceCapabilities.ts` is that declaration — a table of 22 capabilities, each with the surfaces that
+have it and, where the phone does not, the reason. `src/test/surfaceCapabilities.test.ts` asserts both directions:
+
+* **the phone is a subset, not a fork** — every phone capability must also exist on the desktop, and the phone's
+  list must be strictly shorter;
+* **every desktop-only capability carries a reason** (a restriction without one is how a restriction becomes an
+  accident);
+* **nothing under `src/mobile/**` imports a desktop-only module path** — the piano roll, the hardware console, the
+  project hub's multi-clip mode and the arrangement view are named with their module paths, and the phone shell is
+  grepped for them;
+* **the shared model stays shared** — `src/types/song.ts` may not import a surface, so both the phone and the
+  desktop can read the arrangement even though only the desktop can edit it.
+
+The five desktop-only capabilities today:
+
+| Capability | Why the phone does not have it |
 | :--- | :--- |
-| The phone shell | `src/mobile/**` — 17 files, 6,866 lines (screens, the vinyl canvas, the tab bar, the studio sheet) |
-| Phone-only skin layers | `src/mobile/skins/*.css` (five character sheets + `legacySkin.css`, `panelSkin.css`), `JAM_COLORS` role-isation, the phone views in `probe:skins` |
-| `/m/*` routes and their gates | the router's phone branch, the phone legs of the E2E matrix (both iPhone 14 targets), `probe:jank`, the phone touch rules |
-| Skin work that only served the phone | the phone tab-bar label class, the `panelSkin`/`legacySkin` split, and the phone half of the "shared role table" item (P0 0-5) |
+| `arrangement` | the timeline this plan introduces; a phone layout cannot host it without becoming a different product |
+| `arrangement-export` | it follows from `arrangement`: a surface without a timeline has nothing longer than a loop to export |
+| `piano-roll` | it needs the width the phone layout does not have; the phone edits patterns on the step grid |
+| `hardware-console` | an inspection surface for a large screen |
+| `project-hub-multitrack` | the phone keeps the single-pattern project it ships with today |
 
-**What it adds:**
-
-* The desktop surface becomes the *only* surface, so it must be **touch-correct on iPad**: the ≥44 px touch-target
-  budget (currently a phone gate) becomes a requirement for the desktop layout too, and hover-only affordances need
-  a touch path. `probe:toolbar` already counts visible controls and the matrix already asserts "no control outside
-  the viewport" on iPad — those become the primary touch gates instead of secondary ones.
-* The arrangement view must be designed for both input models from the start: drag/resize with a mouse, long-press
-  and drag with a finger, no hover-only affordances, and a timeline that is legible on an 11-inch screen without
-  the phone layout's density tricks.
-* The E2E matrix shrinks from 7 targets to 4 (three desktop engines + iPad portrait/landscape) — which makes room
-  for the arrangement legs in the same runtime.
-
-**The recommendation on sequencing the removal** (this is the one decision worth your confirmation): **freeze and
-de-gate the phone now, delete it in the release that ships the arrangement view.** Freezing means: no new phone
-work, its gates stop blocking the build (they cannot fail a merge), `/m/*` keeps working for anyone with the URL,
-and nothing user-visible breaks mid-flight. Deleting it in the same release as the arrangement view avoids ever
-shipping a release whose phone surface is half-removed, and it means the deletion is verified against the feature
-that replaces it.
+What this means for the work below: **no deletion, no freeze**. The phone keeps shipping what it has, its own gates
+(the touch budget, `probe:jank`, its skin sheets) keep guarding it, and the arrangement steps B1–B4 are simply
+declared desktop-only — the router does not reach them on the phone, and the MCP surface has them because MCP has
+no layout at all. The phone's skin work stays independent, which is what "UI and interaction decoupled" already
+means in this codebase.
 
 ## What this changes in the audio-quality plan
 
