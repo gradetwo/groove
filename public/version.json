@@ -1,27 +1,27 @@
 {
-  "version": "2.13.0",
+  "version": "2.13.1",
   "releaseDate": "2026-09-22",
-  "changelogCount": 205,
+  "changelogCount": 206,
   "latest": {
-    "version": "2.13.0",
+    "version": "2.13.1",
     "date": "2026-09-21",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.13.0 MCP 服务：让其它 LLM 与 agent 用上曲风库、音序器、导出与测量",
-      "en": "v2.13.0 An MCP Server: the Genre Library, the Sequencer, the Exporters and the Measurements, for Other LLMs and Agents"
+      "zh": "v2.13.1 皮肤收口：审计不再把装饰当底色，灰色阶 500 档回归，和弦页低对比 129 → 5",
+      "en": "v2.13.1 Skin Clean-up: the Audit Stops Treating Decoration as Ground, Grey Shade 500 Comes Back, and the Chord Page Falls From 129 to 5"
     },
     "highlights": [
       {
-        "zh": "**新增 MCP 服务：19 个工具、4 个 resource、3 个 prompt，其它 LLM 与 agent 可以直接用 Groove Lab。** 能检索 159 个曲风、读取曲风的**已记录事实**（年代、产地、文化背景、节奏特征、音色设计、制作提示、代表曲目、雷达指标、混音与响度修剪）、据此用**具名操作**写 pattern、导出 MIDI 与 Ableton 工程、生成分享链接，并用 App 自己的引擎渲染真实 WAV/MP3。一条命令跑起来：`npm run mcp:build && npm run mcp`。",
-        "en": "**New MCP server: 19 tools, 4 resources and 3 prompts, so other LLMs and agents can use Groove Lab directly.** Search the 159 genres, read a genre's **recorded facts** (era, origin, cultural context, rhythm features, sound design, production tips, representative tracks, radar metrics, mix and loudness trim), compose a pattern with **named operations**, export MIDI and Ableton projects, build a share link, and render real WAV/MP3 through the app's own engine. One command to r…"
+        "zh": "**审计自己在说谎——这轮三件事里有两件在\"测量\"里。** ① 审计把**装饰当成了底色**：渐变的色标被直接当作文字背后的颜色，于是漫画皮肤的半调网点（1px 点阵）与手机的颗粒让\"纸色压纸色\"这种假失败出现在压在墨色上的标签上；苏联岁月标签栏顶端那条 **6px 红旗条**更让每个标签都变成\"深墨压红\"。现在审计会把每个色标**按 alpha 合成到它背后的底色上**，并忽略 `background-size` 是固定像素尺寸的 background-image——纹理不是底色。二十个假阳性消失了，而噪声一走，**二十个被旧模型掩盖的真问题**露了出来。",
+        "en": "**The audit itself was lying, and two of this round\\'s three findings were in the measurement.** (1) It treated **decoration as ground**: a gradient\\'s colour stops were read as the colours behind the text, so the comic skin\\'s halftone screen (a 1 px dot grid) and the phone\\'s grain produced paper-on-paper \"failures\" on labels that actually sit on ink, and Soviet-years\\' **6 px flag stripe** along the top of its tab bar turned every tab label into \"dark ink on red\". The aud…"
       },
       {
-        "zh": "**它之所以能在 Node 里跑，是因为这个仓库的曲风库本来就是数据。** 159 个曲风、它们的 pattern、混音表、和弦走向、关系图谱与大师课都在 `src/data/**`，不依赖 DOM；MIDI 与 Ableton 是字节/XML 级 JS、分享是 base64、响度报告是已提交的实测表。所以**浏览、作曲、导出、分享完全不需要浏览器**。",
-        "en": "**It runs in Node because this repository's library is data.** The 159 genres, their patterns, mix tables, chord progressions, relation graph and masterclasses live under `src/data/**` with no DOM dependency; MIDI and Ableton are byte/XML-level JS, sharing is base64, and the loudness report is the committed measurement table. **Browsing, composing, exporting and sharing therefore need no browser at all.**"
+        "zh": "**灰色阶的 500 档一直被静默跳过。** 生成器的档位选择没有边界，`text-zinc-500` 被解析成 `-50`，于是输出的选择器（`[class~=\"text-zinc-50\"]`）**匹配不到任何元素**，Tailwind 自己的 `#71717a` 就留在了页面上。一个 `(?![0-9])` 修好了全 App 每一个 `-500` 工具类（和弦页的 \"Root\" 标签就是可见症状）。",
+        "en": "**The grey ramp had been silently skipping shade 500.** The shade alternation had no boundary, so `text-zinc-500` was parsed as `-50` and the emitted selector (`[class~=\"text-zinc-50\"]`) **matched nothing**, leaving Tailwind\\'s own `#71717a` in place. One `(?![0-9])` fixed every `-500` utility in the app (the chord page\\'s \"Root\" labels were the visible symptom)."
       },
       {
-        "zh": "**只有\"出声音\"真的需要浏览器**：`render_audio` 会在第一次调用时**惰性**启动 Vite dev server 与无头 Chromium（冷启动约 40 秒，之后每次渲染几秒），并驱动 App 真实的 `renderPatternOffline`——和导出按钮用的是同一段代码，所以拿到的是**这个 App 的声音**，而不是第二套实现。`GROOVE_MCP_NO_BROWSER=1` 可以关掉它，其它工具照常工作。",
-        "en": "**Only making sound genuinely needs a browser.** `render_audio` starts a Vite dev server and headless Chromium **lazily** on first use (~40 s cold, then seconds per render) and drives the app's real `renderPatternOffline` — the same code the export button uses, so what comes back is **this app's audio**, not a second implementation of it. `GROOVE_MCP_NO_BROWSER=1` refuses instead, and every other tool keeps working."
+        "zh": "**然后才是调色板真正的缺口。** ① **文字角色现在按它实际所在的那块底色推导**，不只是面板：强调色文字与车道 ink 会在\"面板 / 两种卡片 / 8%-15%-20% 的自身淡色\"里**最大化最差对比度**（`bg-accent/15`、`bg-<lane>/12` 就是它们实际出现的地方）。我先试过\"逐个底色依次修\"，结果把苏联岁月从 12 处恶化到 78 处——这些底色分布在该颜色的**两侧**，依次修最后只满足了最后一个；现在改为以 2% 步长离开基色、**取第一个在所有底色上都过 4.5:1 的候选**，色相仍然是原来的色相，而不是塌成黑色。② **信号色（danger/success/warning）现在同时按文字对待**：苏联岁月的绿在它的表面上只有 3.6:1；而 warning 改用手机自己的 `--m-warning`——\"把皮肤强调色压暗\"在极简皮肤上会得到一个**蓝色**的警告。③ **`text-[#4ad8c8]` 取强调色的可读档**（车道色早就是这样了）；苏联岁月纸底上的 `text-accent` 只有…",
+        "en": "**Then the palette gaps the honest audit exposed.** (1) **Text roles are now derived against the chips they are actually read on**, not just the panel: the accent ink and the lane inks maximise the **worst-case contrast** across the panel, both card tones and the 8/15/20 % washes these colours are used as (`bg-accent/15`, `bg-<lane>/12`). A sequential \"fix it against each ground\" reduce was tried first and made Soviet-years worse (12 → 78): the grounds sit on **both sides**…"
       }
     ],
     "truncated": true
