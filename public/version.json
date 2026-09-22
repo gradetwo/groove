@@ -1,27 +1,27 @@
 {
-  "version": "2.11.0",
-  "releaseDate": "2026-09-21",
-  "changelogCount": 200,
+  "version": "2.11.1",
+  "releaseDate": "2026-09-22",
+  "changelogCount": 201,
   "latest": {
-    "version": "2.11.0",
+    "version": "2.11.1",
     "date": "2026-09-21",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.11.0 运行时皮肤审计：让「看着没问题、其实读不出来」变成机器拦住；并把 JS 里写死的颜色收进 token",
-      "en": "v2.11.0 A Runtime Skin Audit: Turning 'Looks Fine, Cannot Be Read' Into a Gate, and Moving JavaScript's Hardcoded Colours Into Tokens"
+      "zh": "v2.11.1 皮肤收口：底色不会再被刷成墨色，强调色作为文字有可读版本，和弦页低对比从 129 降到 13",
+      "en": "v2.11.1 Skin Clean-up: Surfaces Are No Longer Painted With Ink, the Accent Has a Readable Text Step, and the Chord Page's Low-Contrast Count Fell From 129 to 13"
     },
     "highlights": [
       {
-        "zh": "**新增 `npm run probe:skins`：在真实渲染里量对比度，而不是在样式表里猜。** 六套皮肤上线时已经有三个结构性门禁（CSS 契约、生成物一致性、源码级对比度扫描），却仍然要靠五轮人工看截图才发现问题——因为那些问题都有一个共同的形状：**某个颜色落在它实际所在的位置上读不出来**。所以新探针走真实的页面：每套皮肤 × 每类视图，逐个可见文字元素测它与**真正绘制在背后的颜色**的对比度（沿祖先链合成半透明层、渐变取最差的一档），并要求正文 ≥4.5:1、大字 ≥3:1；同时断言没有控件被水平裁切（滚动条带内的除外，那是设计）与控制台无错误。它已进 `verify`，手动 CI 新增 `skins` 档跑全量（6 皮肤 × 12 视图）。",
-        "en": "**New `npm run probe:skins`: measure contrast in the real render instead of guessing from the stylesheet.** The six-skin round shipped with three structural gates (the CSS contract, the generated-palette check, a source-level contrast scan) and still needed five rounds of human screenshot review — because every bug had the same shape: **a colour that cannot be read where it actually lands**. The probe walks the rendered page, per skin per view, and measures every visible tex…"
+        "zh": "**角色现在分「种类」了。** 生成器挑「最接近的角色」时只看颜色，不看这个工具类到底是底色、边框还是文字：于是浅色表面的字面值被归到**墨色**角色、发丝线的字面值被归到**填充**角色。在默认深色板下这看不出来，在浅色皮肤下就整个反过来——**漫画皮肤因此把自己的按钮刷成墨色、又用同一个墨色写字**（一页 30 处墨压墨）。现在底色类工具只能取表面/信号角色，边框类只能取线条/信号角色，文字类只能取墨色/信号角色，手写表里的条目也要过同一道种类检查。",
+        "en": "**Roles have kinds now.** The generator's \"nearest role\" looked only at the colour, never at whether the utility is a ground, a border or type — so a light surface literal could land on the **ink** role and a hairline on a **fill**. Invisible under the default dark palette; completely inverted under a light skin, which is how the comic theme **painted a button with its own ink and then labelled it with the same ink** (30 elements of ink-on-ink on one page). Ground utilities…"
       },
       {
-        "zh": "**它第一次运行就找到了真问题，其中两个是我这一轮亲手制造的。** ① 工作室 109 个、和弦页 113 个元素读不出来：钢琴卷帘的音名标签是白字，压在**55% 透明度的车道色**上——浅色皮肤下那层是浅色，白字等于消失（这是最大的一类）；② 和弦页的歌名用 `#d8b988`（柔和的强调色）映射成「更亮的强调色」，在纸底只有 3.3:1；③ 挑战页的段位色是**写在 JS 里的十六进制**，白银在纸底 **1.6:1**；④ 移动端「warning」用的浅色形状 token 在纸底 1.13:1。这些都不是「配色不好看」，而是**读不出来**，也正是样式表扫描永远看不到的部分。",
-        "en": "**Its first run found real problems — two of them mine from this round.** (1) 109 elements unreadable in the studio and 113 on the chords page: the piano-roll note names are white text on a lane fill at **55 % opacity**, which under a light skin is a light tint, so the labels vanished (the largest class); (2) the chord page's song titles map the soft accent `#d8b988` to a *lighter* accent, which is 3.3:1 on paper; (3) the challenge tiers were **hex colours written in JavaScr…"
+        "zh": "**`text-white` 与 `text-black` 不再是「字面白/黑」，而是「我所在底色的墨色」。** 这两个是 Tailwind 命名类，任何字面值扫描都看不到它们，而它们被写了上百处：`text-white` 压在**假定为深色**的板上（浅色皮肤下那块是纸，白字直接消失——单是工作室和弦页就有 48 处）；`text-black` 压在强调色实心上（最小皮肤的蓝底上只有 3.6:1）。现在 `text-white` 在**信号色实心**上取 `--d-on-accent`，其余情况取所在表面的墨色；`text-black` 取 `--d-on-accent`。",
+        "en": "**`text-white` and `text-black` stop meaning literal white and black.** They are Tailwind *named* classes, so no literal scan sees them, and they are written in hundreds of places: `text-white` on plates the desktop **assumed were dark** (under a light skin that plate is paper and the label simply disappears — 48 of them in the chord workshop alone); `text-black` on an accent flood (3.6:1 on the minimal blue). `text-white` now takes `--d-on-accent` on a **signal** fill and t…"
       },
       {
-        "zh": "**把「颜色由 JavaScript 决定」这条根清掉。** 段位色与乐器色现在都是**角色**：`challengeAlgorithm` 说 `colourRole: \"neutral\"`，`trackConfig.ts` 说 `colourRole: \"bass\"`，由 `src/utils/rankColours.ts` 与 `src/utils/trackColours.ts` 在每个界面各自映射到自己的 token（手机 `--m-*`、桌面 `--d-*`），并且每个角色都要在**六套皮肤的两端**都过 4.5:1——新增的 `rankColours.test.ts` 就是这条闸门（它当时一次抓出 6 个不合格组合，包括手机端 1.13:1 那个）。金属感留给图标（🥉🥈🥇），因为字形不是颜色，它在任何主题下都活着。",
-        "en": "**Rooting out 'the colour is decided in JavaScript'.** Tier colours and instrument colours are **roles** now: `challengeAlgorithm` says `colourRole: \"neutral\"`, `trackConfig.ts` says `colourRole: \"bass\"`, and `src/utils/rankColours.ts` / `src/utils/trackColours.ts` map them to each surface's own tokens (the phone's `--m-*`, the desktop's `--d-*`). Every role has to clear 4.5:1 on **every skin of both surfaces** — the new `rankColours.test.ts` is that gate, and it immediately…"
+        "zh": "**强调色分「实心」与「文字」两种用法。** 新增 `--d-accent-ink`：它只把强调色**移动到刚好**能在那块表面上达到 4.5:1 的程度——`bg-accent` 仍是原始强调色（实心块上的字用 `--d-on-accent`），而 `text-accent` 用这个可读版本。苏联岁月的国旗红在纸底只有 3.3:1，是最后一类成批出现的问题（71 处）；它的推导必须对着**表面**而不是卡片，第一版对着更亮的卡片算，判断为「已经够读」而放过了。",
+        "en": "**The accent now has two jobs: a flood and type.** The new `--d-accent-ink` moves the accent **only as far as it needs** to clear 4.5:1 on the surface it is read on — `bg-accent` keeps the raw accent (its label taking `--d-on-accent`), while `text-accent` uses the readable step. The Soviet-years flag red is 3.3:1 on paper, and that was the last class appearing in bulk (71 elements). Its derivation has to be against the **surface**, not the card: the first version checked the…"
       }
     ],
     "truncated": true
