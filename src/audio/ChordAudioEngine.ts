@@ -5,6 +5,7 @@
  * and Overdriven Power Guitar with strumming, arpeggios, and balladic rhythms.
  */
 
+import { scheduleNoteEnvelope } from "./noteEnvelope";
 import { getChordMidiNotes, ChordDefinition, Inversion } from "../utils/chordTheory";
 import { VoiceRegistry, createEngineAudioContext } from "./voiceRegistry";
 import { createMasterLimiter, type MasterLimiterHandle } from "./MasterLimiter";
@@ -209,13 +210,21 @@ export class ChordAudioEngine {
     filter.frequency.setValueAtTime(cutoff, now);
     filter.frequency.exponentialRampToValueAtTime(Math.min(6000, freq * 1.8), now + noteDuration);
 
-    // Note gain envelope: instantaneous attack (felt strike), quick decay, natural ringout
+    /**
+     * Note gain envelope: fast attack (felt strike), initial drop, decay to the gate.
+     *
+     * Scheduled through `scheduleNoteEnvelope` because the hand-written version asked the final ramp to end
+     * *before* the initial drop for any note shorter than 0.22 s, and Web Audio answers that with a step — the
+     * click that was measurable on every short chord (16,277 discontinuity samples in one genre's chord stem).
+     */
     const noteGain = this.ctx.createGain();
     const peakGain = Math.min(1.0, velocity * (0.28 / Math.sqrt(midi / 50)));
-    noteGain.gain.setValueAtTime(0.0001, now);
-    noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.006); // 6ms attack
-    noteGain.gain.exponentialRampToValueAtTime(peakGain * 0.58, now + 0.22); // Initial drop
-    noteGain.gain.exponentialRampToValueAtTime(0.0001, now + noteDuration);
+    const envelope = scheduleNoteEnvelope(noteGain.gain, {
+      now,
+      peak: peakGain,
+      gateSec: noteDuration,
+      options: { attackSec: 0.006, dropMaxSec: 0.22, dropRatio: 0.58 },
+    });
 
     // Hammer strike click transient (percussive wooden/felt click)
     const hammerGain = this.ctx.createGain();
@@ -240,7 +249,8 @@ export class ChordAudioEngine {
     osc2.start(now);
     osc3.start(now);
 
-    const stopTime = now + noteDuration + 0.05;
+    // Stop after the release has reached the floor, never at the ramp itself.
+    const stopTime = envelope.stopAt;
     osc1.stop(stopTime);
     osc2.stop(stopTime);
     osc3.stop(stopTime);
@@ -282,10 +292,12 @@ export class ChordAudioEngine {
 
     const gain = this.ctx.createGain();
     const peakGain = Math.min(0.9, velocity * 0.24);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(peakGain, now + 0.004); // Fast 4ms pluck
-    gain.gain.exponentialRampToValueAtTime(peakGain * 0.45, now + 0.18);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + noteDuration);
+    const envelope = scheduleNoteEnvelope(gain.gain, {
+      now,
+      peak: peakGain,
+      gateSec: noteDuration,
+      options: { attackSec: 0.004, dropMaxSec: 0.18, dropRatio: 0.45 },
+    });
 
     osc.connect(lowpass);
     subOsc.connect(lowpass);
@@ -344,10 +356,12 @@ export class ChordAudioEngine {
 
     const gain = this.ctx.createGain();
     const peakGain = Math.min(0.85, velocity * 0.22);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(peakGain, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(peakGain * 0.72, now + 0.4);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + noteDuration);
+    const envelope = scheduleNoteEnvelope(gain.gain, {
+      now,
+      peak: peakGain,
+      gateSec: noteDuration,
+      options: { attackSec: 0.008, dropMaxSec: 0.4, dropRatio: 0.72 },
+    });
 
     osc1.connect(preGain);
     osc2.connect(preGain);
