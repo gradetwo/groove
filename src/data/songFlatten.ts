@@ -12,7 +12,7 @@
  * audio (bar order, repeats, mutes, velocity, polymeter).
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
-import { resolveTimeline, type ClipSlot, type Song } from "../types/song";
+import { resolveTimeline, type ClipSlot, type Song, type SongSection } from "../types/song";
 
 /** The per-step arrays a clip may carry; `steps` is required, the rest are optional. */
 const OPTIONAL_STEP_ARRAYS = ["velocity", "pitch", "pitches", "gate", "ratchet", "probability"] as const;
@@ -163,4 +163,53 @@ function skeletonPattern(song: Song): SequencerPattern {
     totalSteps: 0,
     tracks: [],
   } as unknown as SequencerPattern;
+}
+
+/** What a session currently is: a loop, or an arrangement. */
+export interface ExportPatternInput {
+  songMode: boolean;
+  activeSlot: "A" | "B";
+  patterns: { A: SequencerPattern; B: SequencerPattern };
+  current: SequencerPattern;
+  sections: SongSection[];
+  genreId: string;
+  bpm: number;
+  swing: number;
+  resolution: "1/8" | "1/16" | "1/32";
+  loopRange: [number, number] | null;
+}
+
+export interface ExportPattern {
+  pattern: SequencerPattern;
+  /** True when the pattern is a flattened arrangement rather than the loop. */
+  isSong: boolean;
+  problems: string[];
+}
+
+/**
+ * The pattern an exporter should write.
+ *
+ * Every exporter (WAV, MP3, MIDI, `.als`) asks this one question instead of each deciding for itself, which is how
+ * "the MIDI is 4 bars while the WAV is 16" would otherwise happen. In song mode it flattens the arrangement; in
+ * loop mode it returns the pattern being edited, unchanged.
+ */
+export function patternForExport(input: ExportPatternInput): ExportPattern {
+  if (!input.songMode || !input.sections?.length) {
+    return { pattern: input.current, isSong: false, problems: [] };
+  }
+  const flattened = flattenSong({
+    id: "session",
+    name: input.genreId,
+    genreId: input.genreId,
+    bpm: input.bpm,
+    swing: input.swing,
+    resolution: input.resolution,
+    clips: {
+      A: input.activeSlot === "A" ? input.current : input.patterns.A,
+      B: input.activeSlot === "B" ? input.current : input.patterns.B,
+    },
+    sections: input.sections,
+    loopRange: input.loopRange,
+  });
+  return { pattern: flattened.pattern, isSong: true, problems: flattened.problems };
 }

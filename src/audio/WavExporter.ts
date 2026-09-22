@@ -744,14 +744,6 @@ export async function renderSongOffline(
   return renderPatternOffline(flattened.pattern, { ...options, bars: 1 });
 }
 
-/** The song's own metadata through the master export path, for the file name and the caller's report. */
-export async function exportSongWav(
-  song: Song,
-  options: RenderWavOptions = {}
-): Promise<ExportedWav> {
-  return exportMasterWav(flattenSong(song).pattern, song.genreId || "song", options);
-}
-
 /**
  * Exports Master Mix as a downloadable WAV Blob
  */

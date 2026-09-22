@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { flattenSong, clipSteps } from "../data/songFlatten";
+import { flattenSong, clipSteps, patternForExport } from "../data/songFlatten";
 import { createSong, type ClipSlot, type Song, type SongSection } from "../types/song";
 import type { SequencerPattern } from "../types/genre";
 import { installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 import { renderPatternOffline, renderSongOffline } from "../audio/WavExporter";
+import { generateMidiBytes } from "../audio/MidiExporter";
 
 /**
  * B2 — the renderer gets a timeline.
@@ -235,6 +236,79 @@ describe("B2 · the render is as long as the song", () => {
     } finally {
       restore();
     }
+  });
+
+  it("is the same decision for every exporter", () => {
+    /**
+     * B4: the four exporters must not disagree about the length of one session. `patternForExport` is that single
+     * decision — song mode gives the flattened arrangement, loop mode gives the pattern being edited — and this is
+     * the test that keeps the WAV, MP3, MIDI and `.als` paths from drifting apart again.
+     */
+    const loopState = {
+      songMode: false,
+      activeSlot: "A" as const,
+      patterns: { A: clip(16), B: clip(16) },
+      current: clip(16),
+      sections: [{ id: "s1", slot: "A" as const, bars: 4 }],
+      genreId: "chicago-house",
+      bpm: 124,
+      swing: 0,
+      resolution: "1/16" as const,
+      loopRange: null,
+    };
+    const loop = patternForExport(loopState);
+    expect(loop.isSong).toBe(false);
+    expect(loop.pattern.totalSteps).toBe(16);
+
+    const arrangement = patternForExport({ ...loopState, songMode: true });
+    expect(arrangement.isSong).toBe(true);
+    expect(arrangement.pattern.totalSteps).toBe(64);
+
+    // Song mode with nothing to arrange is not an arrangement: it falls back to the loop rather than exporting
+    // silence.
+    const empty = patternForExport({ ...loopState, songMode: true, sections: [] });
+    expect(empty.isSong).toBe(false);
+    expect(empty.pattern.totalSteps).toBe(16);
+  });
+
+  it("makes the MIDI as long as the song, not as long as one loop", () => {
+    // B4's stated check: the exported MIDI's length equals the song's bar count. The exporter is unchanged; what
+    // changes is that it is handed the arrangement's pattern.
+    const loop = patternForExport({
+      songMode: false,
+      activeSlot: "A",
+      patterns: { A: clip(16), B: clip(16) },
+      current: clip(16),
+      sections: [{ id: "s1", slot: "A", bars: 4 }],
+      genreId: "chicago-house",
+      bpm: 124,
+      swing: 0,
+      resolution: "1/16",
+      loopRange: null,
+    });
+    const arrangement = patternForExport({
+      songMode: true,
+      activeSlot: "A",
+      patterns: { A: clip(16), B: clip(16) },
+      current: clip(16),
+      sections: [{ id: "s1", slot: "A", bars: 4 }],
+      genreId: "chicago-house",
+      bpm: 124,
+      swing: 0,
+      resolution: "1/16",
+      loopRange: null,
+    });
+    const countNotes = (pattern: (typeof loop)["pattern"]) => {
+      const bytes = generateMidiBytes({ bpm: 124, pattern });
+      let notes = 0;
+      for (let i = 0; i < bytes.length - 2; i += 1) {
+        if ((bytes[i] & 0xf0) === 0x90 && bytes[i + 2] > 0) notes += 1;
+      }
+      return notes;
+    };
+    // Two lanes, every 4th step on: 4 hits per lane per clip pass.
+    expect(countNotes(loop.pattern)).toBe(8);
+    expect(countNotes(arrangement.pattern)).toBe(32);
   });
 
   it("refuses a song with nothing playable, with a reason", async () => {

@@ -688,6 +688,14 @@ export const studioMessages = {
   export_wav_rendering: { en: "Rendering offline WAV master...", zh: "正在离线高质量渲染 WAV 母带..." },
   export_mp3_rendering: { en: "Rendering and encoding MP3...", zh: "正在离线渲染并编码 MP3..." },
   export_wav_done: { en: "Exported Master WAV: {filename} ✓", zh: "母带 WAV 导出完成: {filename} ✓" },
+  /**
+   * B4 — the arrangement had gaps. Naming them is the point: a bounce that quietly drops a section is worse than
+   * one that says which section it could not play.
+   */
+  export_arrangement_partial: {
+    en: "Exported the arrangement, but some sections were skipped: {detail}",
+    zh: "已导出编排，但部分段落被跳过：{detail}",
+  },
   export_mp3_done: { en: "Exported MP3: {filename} ✓ ({kbps} kbps)", zh: "已导出 MP3: {filename} ✓ （{kbps} kbps）" },
   export_mp3_failed: { en: "MP3 export failed: {error}", zh: "MP3 导出失败: {error}" },
   /**
