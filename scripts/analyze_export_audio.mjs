@@ -428,6 +428,17 @@ const fmt = (value, digits = 1) => (value == null || !Number.isFinite(value) ? "
   });
   const ids = ONLY.length ? allIds.filter((id) => ONLY.includes(id)) : allIds;
   if (!ids.length) throw new Error("no genres matched");
+  /**
+   * Say which requested ids do not exist.
+   *
+   * Three of the twelve in the first sample silently vanished here (`house`, `dnb`, `shoegaze` are not genre ids
+   * in this library), so a "12-genre sample" was nine genres and every count was compared against a budget
+   * calibrated on a different set. Silent filtering is how a measurement becomes a guess.
+   */
+  const unmatched = ONLY.filter((id) => !allIds.includes(id));
+  if (unmatched.length) {
+    console.error(`⚠️  ${unmatched.length} requested genre id(s) do not exist and were skipped: ${unmatched.join(", ")}`);
+  }
 
   const rows = [];
   for (const id of ids) {

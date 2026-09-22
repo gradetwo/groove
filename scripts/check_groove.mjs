@@ -32,9 +32,9 @@ const JSON_OUT = process.argv.includes("--json");
  */
 const SAMPLE = [
   "chicago-house", // Electronic — the app's reference genre
-  "detroit-techno", // Electronic — the one with a cut tail
-  "house", // Electronic — four-on-the-floor
-  "dnb", // Electronic — fast breakbeat
+  "detroit-techno", // Electronic — a cut tail
+  "minimal-techno", // Electronic — long, sparse
+  "liquid-dnb", // Electronic — fast breakbeat
   "ambient", // Electronic — the genre with a single velocity library-wide
   "reggaeton", // Latin/World — named in the report
   "afrobeat", // Latin/World — percussion-led
@@ -42,7 +42,7 @@ const SAMPLE = [
   "boom-bap", // Hip Hop — swung by tradition
   "trap-rap", // Hip Hop — modern half-time
   "disco", // Pop/R&B — groove-driven
-  "shoegaze", // Rock/Metal — live-feel material
+  "synthwave", // Pop/R&B (synth) — steady, quantised
 ];
 
 /**
@@ -53,17 +53,20 @@ const SAMPLE = [
  */
 const BUDGET = {
   /**
-   * Today's measurements over this sample (9 genres rendered; three ids in the first draft did not exist).
+   * Today's measurements over this sample, and the *first honest* calibration of it.
    *
-   * Zero is the goal for every one of them, and `docs/GROOVE_QUALITY_PLAN.md` is the route. The gap is wide on
-   * purpose — it is what the listening reports heard — and it can only narrow.
+   * The first attempt was wrong twice over: three of the twelve ids did not exist (`house`, `dnb`, `shoegaze` are
+   * not genre ids here) and the analyser dropped them silently, so the budgets were set against nine genres and
+   * the gate failed the moment the sample was correct. The analyser now names unmatched ids, and these numbers
+   * are the real twelve. Zero is the goal for every one of them — `docs/GROOVE_QUALITY_PLAN.md` is the route — and
+   * they can only go down.
    */
-  flatTracks: 9,
-  weakDuck: 8,
-  narrowStereo: 9,
-  thinMids: 8,
+  flatTracks: 12,
+  weakDuck: 11,
+  narrowStereo: 12,
+  thinMids: 11,
   staticHarmony: 5,
-  cutTail: 1,
+  cutTail: 2,
 };
 
 const CLAIMS = {

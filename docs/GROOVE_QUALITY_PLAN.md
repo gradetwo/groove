@@ -27,6 +27,12 @@ with the *musical* metrics the listening complaints need:
 Sample for the prevalence numbers: 24 genres across categories (15 rendered cleanly; the rest failed on
 `--stem-tracks` combinations that do not exist in those patterns).
 
+The **gate** (`npm run check:groove`) uses a fixed 12-genre sample instead, and its budgets are that sample's
+measurements: **12/12** flat velocities, **11/12** inaudible sidechain, **12/12** near-mono, **11/12** hollow mids,
+**5/12** static harmony, **2/12** cut tails. Its first calibration was wrong twice over — three of the twelve ids
+did not exist and the analyser dropped them silently, so the budgets described nine genres. The analyser now names
+unmatched ids rather than filtering them away.
+
 ## What the measurements say
 
 ### Confirmed
