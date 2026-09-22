@@ -214,6 +214,8 @@ export function buildStudioSheetGroups(input: {
   onOpenEuclidean: () => void;
   onOpenProjectHub: () => void;
   onOpenExport: () => void;
+  /** MP3 is a second row rather than a menu: on a phone the sheet *is* the menu. */
+  onOpenExportMp3?: () => void;
   onQuickAction?: () => void;
   onToggleConsole?: () => void;
   onToggleAnalyzer: () => void;
@@ -316,6 +318,9 @@ export function buildStudioSheetGroups(input: {
       actions: [
         { id: "project-hub", labelKey: "toolbar_project_hub_title", onSelect: input.onOpenProjectHub },
         { id: "export", labelKey: "toolbar_export_wav", onSelect: input.onOpenExport },
+        ...(input.onOpenExportMp3
+          ? [{ id: "export-mp3", labelKey: "toolbar_export_mp3", onSelect: input.onOpenExportMp3 }]
+          : []),
         ...(input.onQuickAction ? [{ id: "inspire", labelKey: "toolbar_inspire_label", onSelect: input.onQuickAction }] : []),
       ],
     },

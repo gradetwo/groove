@@ -21,7 +21,7 @@ import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { Toolbar } from "../components/sequencer/Toolbar";
@@ -106,6 +106,30 @@ describe("export discoverability", () => {
     expect(label.length).toBeGreaterThan(0);
     expect(label, "the trigger must not be labelled 'MIDI'").not.toMatch(/^MIDI$/i);
     expect(label).toMatch(/导出|export/i);
+  });
+
+  it("actually calls the MP3 action when its item is clicked", async () => {
+    /**
+     * The wiring bug this catches, found by exporting for real rather than by reading: `onExportMp3` was
+     * declared on `ToolbarProps`, destructured inside `ExportMenu` and passed down to it — but the `Toolbar`
+     * component itself never destructured it, so the menu item called `undefined?.()` on every click. Typecheck
+     * could not see it (the prop is optional), the item rendered, the menu opened and nothing at all happened:
+     * no chunk request, no toast, no download.
+     *
+     * Both formats are asserted, so a pass cannot come from the test measuring the wrong element.
+     */
+    const onExportMp3 = vi.fn();
+    const onExportWav = vi.fn();
+    renderToolbar({ onExportMp3, onExportWav });
+
+    fireEvent.click(document.querySelector('[data-toolbar-id="export"]') as HTMLElement);
+    const mp3 = await screen.findByTestId("export-mp3");
+    fireEvent.click(mp3);
+    expect(onExportMp3).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(document.querySelector('[data-toolbar-id="export"]') as HTMLElement);
+    fireEvent.click(await screen.findByTestId("export-wav"));
+    expect(onExportWav).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the menu itself out of the project-hub block", () => {

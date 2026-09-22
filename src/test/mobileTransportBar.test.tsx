@@ -368,6 +368,62 @@ function buildStudioSheetGroupsForTest(over: { onToggleMetronome?: () => void })
  * alone: the point is that the *short* layout is genuinely narrower and shorter, and that it still
  * holds every control at the 44 px touch minimum.
  */
+describe("the phone's export rows", () => {
+  /**
+   * The phone has no export *menu*: the sheet is the menu, so both formats are rows.
+   *
+   * This is asserted at the model level because the desktop leg cannot see the phone's sheet and the phone's
+   * transport button is not reachable on every route — and because the failure mode is silent: a row whose
+   * handler is missing renders and does nothing at all, exactly like the desktop bug that started this
+   * (`onExportMp3` declared but never destructured), which typecheck cannot catch on an optional prop.
+   */
+  const build = (over: Record<string, unknown> = {}) => {
+    const noop = () => {};
+    return buildStudioSheetGroups({
+      isMetronome: false,
+      isCountIn: false,
+      isRecordArmed: false,
+      isDrumsOnly: false,
+      isSongMode: false,
+      isBlindCompare: false,
+      drumKit: "909",
+      mobileEditMode: "step",
+      onToggleMetronome: noop,
+      onToggleCountIn: noop,
+      onToggleRecordArmed: noop,
+      onToggleDrumsOnly: noop,
+      onToggleSongMode: noop,
+      onToggleBlindCompare: noop,
+      ...over,
+    } as Parameters<typeof buildStudioSheetGroups>[0]);
+  };
+  const ids = (over: Record<string, unknown> = {}) =>
+    build(over)
+      .flatMap((group) => group.actions)
+      .map((action) => action.id);
+
+  it("offers WAV and, when the handler exists, MP3", () => {
+    const withMp3 = ids({ onOpenExport: () => {}, onOpenExportMp3: () => {} });
+    expect(withMp3).toContain("export");
+    expect(withMp3).toContain("export-mp3");
+  });
+
+  it("does not offer a row it cannot wire", () => {
+    // A row with no handler is a dead control on a touch surface, where there is no tooltip to explain it.
+    expect(ids({ onOpenExport: () => {} })).not.toContain("export-mp3");
+  });
+
+  it("routes each row to its own action", () => {
+    const wav = vi.fn();
+    const mp3 = vi.fn();
+    const actions = build({ onOpenExport: wav, onOpenExportMp3: mp3 }).flatMap((group) => group.actions);
+    actions.find((action) => action.id === "export")?.onSelect?.();
+    actions.find((action) => action.id === "export-mp3")?.onSelect?.();
+    expect(wav).toHaveBeenCalledTimes(1);
+    expect(mp3).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("MobileTransportBar in a short landscape viewport", () => {
   const renderLandscape = (overrides: Partial<typeof baseProps> = {}) =>
     render(

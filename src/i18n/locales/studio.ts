@@ -209,6 +209,7 @@ export const studioMessages = {
   toolbar_export_als: { en: "Export Ableton Set", zh: "导出 Ableton 工程" },
   toolbar_export_groove: { en: "Export .groove Set", zh: "导出 .groove 工程包" },
   toolbar_export_wav: { en: "Export Master WAV", zh: "导出母带 WAV" },
+  toolbar_export_mp3: { en: "Export MP3 (192 kbps)", zh: "导出 MP3（192kbps）" },
   toolbar_export_stems: { en: "Export Stems Pack", zh: "导出分轨 Stems 打包" },
   toolbar_advanced_title: { en: "Toggle advanced settings", zh: "展开/收起高级设置 (摇摆度、步进微调、平移)" },
   toolbar_advanced_label: { en: "More", zh: "高级" },
@@ -685,7 +686,10 @@ export const studioMessages = {
   export_als_failed: { en: "Ableton export failed: {error}", zh: "Ableton 工程导出失败: {error}" },
   export_groove_done: { en: "Exported .groove: {name} ✓", zh: "已导出 .groove 工程包: {name} ✓" },
   export_wav_rendering: { en: "Rendering offline WAV master...", zh: "正在离线高质量渲染 WAV 母带..." },
+  export_mp3_rendering: { en: "Rendering and encoding MP3...", zh: "正在离线渲染并编码 MP3..." },
   export_wav_done: { en: "Exported Master WAV: {filename} ✓", zh: "母带 WAV 导出完成: {filename} ✓" },
+  export_mp3_done: { en: "Exported MP3: {filename} ✓ ({kbps} kbps)", zh: "已导出 MP3: {filename} ✓ （{kbps} kbps）" },
+  export_mp3_failed: { en: "MP3 export failed: {error}", zh: "MP3 导出失败: {error}" },
   /**
    * The degraded-path notice.
    *

@@ -89,6 +89,7 @@ export interface SequencerPanelProps {
   onExportGroove: () => void;
   onOpenProjectHub: () => void;
   onExportWav: () => Promise<void>;
+  onExportMp3: () => Promise<void>;
   onExportStems: () => Promise<void>;
   onImportMidi: (file: File) => Promise<void>;
   onInspireMe: () => void;
@@ -266,6 +267,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onExportGroove,
   onOpenProjectHub,
   onExportWav,
+  onExportMp3,
   onExportStems,
   onImportMidi,
   onInspireMe,
@@ -578,6 +580,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         onOpenProjectHub={onOpenProjectHub}
         onOpenGenreMaker={onOpenGenreMaker}
         onExportWav={onExportWav}
+        onExportMp3={onExportMp3}
         onExportStems={onExportStems}
         isExportingAudio={isExportingAudio}
         onImportMidi={onImportMidi}
@@ -886,6 +889,7 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
             onOpenEuclidean,
             onOpenProjectHub,
             onOpenExport: onExportWav,
+            onOpenExportMp3: onExportMp3,
             onQuickAction: () => onQuickAction("humanize"),
             onToggleConsole,
             onToggleAnalyzer,
