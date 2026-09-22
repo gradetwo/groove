@@ -1,27 +1,27 @@
 {
-  "version": "2.12.0",
+  "version": "2.13.0",
   "releaseDate": "2026-09-22",
-  "changelogCount": 204,
+  "changelogCount": 205,
   "latest": {
-    "version": "2.12.0",
+    "version": "2.13.0",
     "date": "2026-09-21",
     "category": "feature",
     "title": {
-      "zh": "v2.12.0 MP3 导出：同一个母带、懒加载的编码器、随应用发布的 LGPL 许可证",
-      "en": "v2.12.0 MP3 Export: the Same Master, a Lazy Encoder, and an LGPL Licence That Ships With the App"
+      "zh": "v2.13.0 MCP 服务：让其它 LLM 与 agent 用上曲风库、音序器、导出与测量",
+      "en": "v2.13.0 An MCP Server: the Genre Library, the Sequencer, the Exporters and the Measurements, for Other LLMs and Agents"
     },
     "highlights": [
       {
-        "zh": "**导出菜单里有了 MP3（192 kbps CBR），和 WAV 同一个母带。** 两者共用同一次离线渲染（`renderPatternOffline`），所以同一段编曲导出的 WAV 与 MP3 是**同一个演奏**：同样的限制器、采样率与天花板，只是编码不同。文件用 ffprobe 解码验证过：`mp3 / 44100 Hz / 立体声 / 191 999 bps`，时长与图案一致。",
-        "en": "**The export menu has MP3 (192 kbps CBR) now, and it is the same master as the WAV.** Both share one offline render (`renderPatternOffline`), so a WAV and an MP3 of one pattern are the **same performance** — same limiter, sample rate and ceiling, different codec. The file was verified by decoding it with ffprobe: `mp3 / 44100 Hz / stereo / 191,999 bps`, with a duration matching the pattern."
+        "zh": "**新增 MCP 服务：19 个工具、4 个 resource、3 个 prompt，其它 LLM 与 agent 可以直接用 Groove Lab。** 能检索 159 个曲风、读取曲风的**已记录事实**（年代、产地、文化背景、节奏特征、音色设计、制作提示、代表曲目、雷达指标、混音与响度修剪）、据此用**具名操作**写 pattern、导出 MIDI 与 Ableton 工程、生成分享链接，并用 App 自己的引擎渲染真实 WAV/MP3。一条命令跑起来：`npm run mcp:build && npm run mcp`。",
+        "en": "**New MCP server: 19 tools, 4 resources and 3 prompts, so other LLMs and agents can use Groove Lab directly.** Search the 159 genres, read a genre's **recorded facts** (era, origin, cultural context, rhythm features, sound design, production tips, representative tracks, radar metrics, mix and loudness trim), compose a pattern with **named operations**, export MIDI and Ableton projects, build a share link, and render real WAV/MP3 through the app's own engine. One command to r…"
       },
       {
-        "zh": "**编码器是懒加载的，不用它的人不付代价。** 浏览器不会写 MP3（`MediaRecorder` 只给 webm/opus 或 m4a/AAC），所以必须有编码器：用了 `@breezystack/lamejs`（LAME 的 JS 移植）。它 259 KB（gzip 后 67 KB），因此**只在点「导出 MP3」那一刻才下载**——首屏预算实测**完全没变（217.0 KB）**，分块单独存在（`lamejs-*.js`）。有一条测试直接读源码，一旦有人把它改成静态 `import` 就失败：那会让每个用户的首屏多背 67 KB，而症状只是「首屏慢了一点」，没人会把它和 MP3 菜单联系起来。",
-        "en": "**The encoder is lazy, so people who never export an MP3 pay nothing.** A browser cannot write MP3 (`MediaRecorder` gives webm/opus or m4a/AAC), so an encoder is required: this uses `@breezystack/lamejs` (LAME ported to JavaScript). It is 259 KB (67 KB gzipped), so it is fetched **only at the moment MP3 export is clicked** — the first-paint budget measured **completely unchanged (217.0 KB)** and the encoder lives in its own chunk (`lamejs-*.js`). A test reads the source and…"
+        "zh": "**它之所以能在 Node 里跑，是因为这个仓库的曲风库本来就是数据。** 159 个曲风、它们的 pattern、混音表、和弦走向、关系图谱与大师课都在 `src/data/**`，不依赖 DOM；MIDI 与 Ableton 是字节/XML 级 JS、分享是 base64、响度报告是已提交的实测表。所以**浏览、作曲、导出、分享完全不需要浏览器**。",
+        "en": "**It runs in Node because this repository's library is data.** The 159 genres, their patterns, mix tables, chord progressions, relation graph and masterclasses live under `src/data/**` with no DOM dependency; MIDI and Ableton are byte/XML-level JS, sharing is base64, and the loudness report is the committed measurement table. **Browsing, composing, exporting and sharing therefore need no browser at all.**"
       },
       {
-        "zh": "**许可证与来源随应用发布。** LAME 是 **LGPL-3.0**，所以这不是可选的礼貌而是分发义务：[public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md) 现在包含编码器的版本钉（`1.2.7`，精确锁定在 `package.json` 与 lockfile）、上游链接与 LAME 致谢，以及**逐字未改的 LGPL-3.0 与它所并入的 GPL-3.0 全文**。许可证的合规方式写在文件里：作为**独立分块**在运行时加载（这正是 LAME 自己那句「以独立文件链接」在 Web 上最直白的等价物，也让这个库保持可替换），不修改它，并acknowledge + 链接上游。",
-        "en": "**The licence and provenance ship with the app.** LAME is **LGPL-3.0**, so this is a redistribution obligation rather than a courtesy: [public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md) now carries the encoder's exact version pin (`1.2.7`, pinned in `package.json` and the lockfile), the upstream links and the LAME acknowledgement, plus the **verbatim, unmodified LGPL-3.0 and the GPL-3.0 it incorporates**. How the licence is met is written down there: a **separate…"
+        "zh": "**只有\"出声音\"真的需要浏览器**：`render_audio` 会在第一次调用时**惰性**启动 Vite dev server 与无头 Chromium（冷启动约 40 秒，之后每次渲染几秒），并驱动 App 真实的 `renderPatternOffline`——和导出按钮用的是同一段代码，所以拿到的是**这个 App 的声音**，而不是第二套实现。`GROOVE_MCP_NO_BROWSER=1` 可以关掉它，其它工具照常工作。",
+        "en": "**Only making sound genuinely needs a browser.** `render_audio` starts a Vite dev server and headless Chromium **lazily** on first use (~40 s cold, then seconds per render) and drives the app's real `renderPatternOffline` — the same code the export button uses, so what comes back is **this app's audio**, not a second implementation of it. `GROOVE_MCP_NO_BROWSER=1` refuses instead, and every other tool keeps working."
       }
     ],
     "truncated": true
