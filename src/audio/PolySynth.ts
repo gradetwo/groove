@@ -1551,12 +1551,29 @@ export function playPolySynthNote(
       }
       const gain = ctx.createGain();
       const peak = Math.max(0.0001, partial.gain);
-      gain.gain.setValueAtTime(peak, time);
+      /**
+       * A struck partial still needs a ramp, and it has to reach silence before its oscillator stops.
+       *
+       * This used to be `setValueAtTime(peak, time)` — a step from silence to full amplitude in one sample,
+       * i.e. a broadband impulse on **every partial of every note** — and the oscillator then stopped while the
+       * gain still sat at `peak * 0.0005`, which is the same discontinuity in reverse. The preset declares an
+       * attack for exactly this reason; it is applied now, and the release is carved out of the note's own end
+       * so a short gate cannot overlap the decay.
+       */
+      const attackFloor = 0.0001;
+      const partialAttackSec = Math.max(0.002, adsr.attack * attackScale);
       const decaySec = Math.max(0.02, adsr.decay * decayScale * partial.decayScale);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * 0.0005), time + decaySec);
+      const decayEnd = time + partialAttackSec + decaySec;
+      const plannedStop = gateEnd + Math.max(0.01, adsr.release) + 0.01;
+      const releaseSec = Math.max(0.004, Math.min(0.05, adsr.release));
+      const releaseAt = Math.max(decayEnd, plannedStop - releaseSec);
+      gain.gain.setValueAtTime(attackFloor, time);
+      gain.gain.linearRampToValueAtTime(peak, time + partialAttackSec);
+      gain.gain.exponentialRampToValueAtTime(Math.max(attackFloor, peak * 0.0005), decayEnd);
+      gain.gain.exponentialRampToValueAtTime(attackFloor, releaseAt);
       osc.connect(gain);
       osc.start(time);
-      osc.stop(gateEnd + Math.max(0.01, adsr.release) + 0.01);
+      osc.stop(releaseAt + 0.01);
       sources.push(osc);
       gains.push(gain);
       stage.push(gain);

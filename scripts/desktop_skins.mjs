@@ -224,26 +224,118 @@ const DEFAULT_SKIN = {
  * kind of thing" on both surfaces.
  */
 const HUE_OVERRIDES = {
+  /**
+   * The eight instrument colours, **designed per skin** rather than inherited lane by lane.
+   *
+   * The previous table overrode six of eight lanes per skin and let the rest fall through to the default
+   * theme's neon set, which is why the light skins still showed dark-theme colours: comic inherited
+   * `kick: #ff5964` and `hat: #45e0c9` from the neon palette, so a newsprint theme grew a fluorescent cyan
+   * lane and a magenta one. A partial override can only ever be as coherent as its un-overridden remainder.
+   *
+   * These are complete sets, and each one is drawn from its own skin's accent family (the phone's
+   * `--m-gold` / `--m-teal` / `--m-red` / `--m-green` / `--m-violet`) so the lanes belong to the theme instead
+   * of sitting on top of it:
+   *
+   *   default       neon night     the app's original eight, unchanged
+   *   minimal       clean light    mid-tones that hold up on white with either ink
+   *   comic         newsprint      flat poster plates, the way a comic uses spot colour
+   *   soviet        dark industry  desaturated military tones
+   *   sovietYears   aged paper     print inks, all dark enough for paper
+   *   pixel         8-bit neon     saturated hues on near-black
+   *
+   * The **lane identity is stable across skins** — kick is always the red one, hat the teal one, bass the
+   * indigo one — because the colour is how a track is recognised at a glance; only its interpretation changes.
+   */
+  track: {
+    default: {
+      kick: "#ff5964",
+      snare: "#ffb65c",
+      hat: "#45e0c9",
+      perc: "#c8e06a",
+      bass: "#7c6cf0",
+      chord: "#f06ec4",
+      lead: "#7ee787",
+      fx: "#9aa5ce",
+    },
+    minimal: {
+      kick: "#d4293a",
+      snare: "#c25a00",
+      hat: "#0f766e",
+      perc: "#5c7c0f",
+      bass: "#4a3ac9",
+      chord: "#b0248a",
+      lead: "#157f3d",
+      fx: "#5b6472",
+    },
+    comic: {
+      kick: "#e23b2e",
+      snare: "#f08a1e",
+      hat: "#1f9aa8",
+      perc: "#86b32a",
+      bass: "#6b46c1",
+      chord: "#d43f8d",
+      lead: "#2e9e4f",
+      fx: "#6b625c",
+    },
+    soviet: {
+      kick: "#b8503a",
+      snare: "#c9a227",
+      hat: "#8fb3ac",
+      perc: "#9dbba5",
+      bass: "#8e93b8",
+      chord: "#c07b72",
+      lead: "#a8c48a",
+      fx: "#7e8794",
+    },
+    sovietYears: {
+      kick: "#9e0b22",
+      snare: "#a8681a",
+      hat: "#1f5f6b",
+      perc: "#4a6b2a",
+      bass: "#3b3f6b",
+      chord: "#8e2b62",
+      lead: "#2f6b3a",
+      fx: "#56514a",
+    },
+    pixel: {
+      kick: "#ff4d6d",
+      snare: "#ffa23f",
+      hat: "#5bc8ff",
+      perc: "#7bff6b",
+      bass: "#b06bff",
+      chord: "#ff6bd6",
+      lead: "#ffd23f",
+      fx: "#8a8fb0",
+    },
+  },
   minimal: {
-    track: { bass: "#5b46d6", chord: "#b03a0b", lead: "#157f3d", fx: "#63636d", perc: "#0f766e", snare: "#c5303f" },
+    // (the lane palette moved to `track` above; this stays the home of the non-lane hue overrides)
   },
-  comic: {
-    track: { bass: "#c50034", chord: "#8a2be2", lead: "#00702f", fx: "#3a3440", perc: "#b26a00", snare: "#c50034" },
-  },
-  soviet: {
-    track: { bass: "#8fb3ac", chord: "#c98a5b", lead: "#a8c48a", fx: "#7f8a93", perc: "#c0b9a3", snare: "#e2703a" },
-  },
-  sovietYears: {
-    track: { bass: "#2c3e50", chord: "#9e0b22", lead: "#1f5f6b", fx: "#56514a", perc: "#7a4f00", snare: "#9e0b22" },
-  },
-  pixel: {
-    track: { bass: "#8a5bff", chord: "#ff6b97", lead: "#7ef0c0", fx: "#8a8fb0", perc: "#ffd166", snare: "#ff6b97" },
-  },
+  comic: {},
+  soviet: {},
+  sovietYears: {},
+  pixel: {},
 };
 
 /** The full token record for one skin. */
 function palette(skin) {
-  if (skin === "default") return { ...DEFAULT_SKIN, hue: DEFAULT_SKIN };
+  if (skin === "default") {
+    /**
+     * The default skin is the app's original palette, written out rather than derived — and it still needs the
+     * per-lane on-fill ink, which is a *choice* (white on the neon lanes) rather than a derivation of the
+     * ground. Computing it here keeps the token set identical for all six skins, which is what
+     * `desktopSkins.test.ts` checks.
+     */
+    const trackOn = Object.fromEntries(
+      Object.entries(DEFAULT_SKIN.track).map(([lane, hex]) => [
+        lane,
+        contrast(hexToRgb(DEFAULT_SKIN.ink), hexToRgb(hex)) >= contrast(hexToRgb("#ffffff"), hexToRgb(hex))
+          ? DEFAULT_SKIN.ink
+          : "#ffffff",
+      ])
+    );
+    return { ...DEFAULT_SKIN, trackOn, hue: DEFAULT_SKIN };
+  }
   const p = phonePalette(skin);
   const light = isLight(p.bg);
   return {
@@ -291,8 +383,33 @@ function palette(skin) {
     // Derived against the *surface*, not the card: the chips that carry accent text sit on a surface step, and
     // the first version checked against the lighter card, decided the flag red already passed and left it at
     // 3.3:1 where it is actually read.
-    accentInk: ensureContrast(p.gold, step(p.card, 0.06), 4.5),
-    track: { ...DEFAULT_SKIN.track, ...(HUE_OVERRIDES[skin]?.track ?? {}) },
+    /**
+     * The accent as type, derived against the **worst ground it is read on**.
+     *
+     * Deriving it against the card was not enough: the header's version badge sits on `--m-card-2`, and the
+     * Soviet-years flag red measured 3.2:1 there. Taking the darkest of the three grounds (card, card-2 and the
+     * surface step between them) costs a slightly deeper red and removes the class.
+     */
+    accentInk: [p.card, p.card2, step(p.card, 0.06)].reduce(
+      (best, ground) => ensureContrast(best, ground, 4.5),
+      p.gold
+    ),
+    /**
+     * The lane fills — this skin's *designed* hue, not a darkened one.
+     *
+     * They used to be pushed toward black until white text cleared 4.5:1 on them, which on a light skin turned
+     * eight distinct instruments into eight muddy near-greys: the fills bought label contrast with the colour
+     * map the studio is built on. The label problem is solved where it belongs — `--d-track-<lane>-on` is the
+     * ink that reads on the fill itself, chosen per lane.
+     */
+    track: { ...(HUE_OVERRIDES.track[skin] ?? HUE_OVERRIDES.track.default) },
+    trackOn: Object.fromEntries(
+      Object.entries(HUE_OVERRIDES.track[skin] ?? HUE_OVERRIDES.track.default).map(([lane, hex]) => [
+        lane,
+        // Bright plates take ink (the comic-book look), dark ones take white.
+        contrast(hexToRgb(p.ink), hexToRgb(hex)) >= contrast(hexToRgb("#ffffff"), hexToRgb(hex)) ? p.ink : "#ffffff",
+      ])
+    ),
     /**
      * Category hues come from the phone's own identity tokens where the phone has one (its `--m-teal`,
      * `--m-red`, `--m-gold`, `--m-violet`, `--m-green`), so the two surfaces agree *by construction* rather
@@ -357,7 +474,16 @@ const LITERAL_ROLES = {
   "#f59e0b": "warning",
   "#ff5964": "danger",
   "#45e0c9": "trackHat",
-  "#4ad8c8": "catElectronic",
+  /**
+   * The app's brand teal is used as the **selected** state in the chord workshop (`bg-[#4ad8c8]/20
+   * border-[#4ad8c8] text-[#4ad8c8]` on the chosen playing style, the status dot, the section badges).
+   *
+   * It was mapped by distance to the *electronic* category hue, which is a fixed teal on every theme — so on
+   * the newsprint and aged-paper skins the selected chip stayed fluorescent cyan and read as a leftover. A
+   * selection is exactly what the accent role is for: it now follows the skin (blue on minimal, ink-teal on
+   * comic, flag red on Soviet-years).
+   */
+  "#4ad8c8": "accent",
   "#38bdf8": "trackFx",
   "#ec4899": "trackChord",
   "#a78bfa": "trackBass",
@@ -633,6 +759,14 @@ const ROLE_TOKEN = {
   trackChord: "--d-track-chord",
   trackLead: "--d-track-lead",
   trackFx: "--d-track-fx",
+  trackKickOn: "--d-track-kick-on",
+  trackSnareOn: "--d-track-snare-on",
+  trackHatOn: "--d-track-hat-on",
+  trackPercOn: "--d-track-perc-on",
+  trackBassOn: "--d-track-bass-on",
+  trackChordOn: "--d-track-chord-on",
+  trackLeadOn: "--d-track-lead-on",
+  trackFxOn: "--d-track-fx-on",
   trackKickInk: "--d-track-kick-ink",
   trackSnareInk: "--d-track-snare-ink",
   trackHatInk: "--d-track-hat-ink",
@@ -667,7 +801,15 @@ function tokenRecord(skin) {
     "--d-line-strong": channels(p.lineStrong),
     "--d-ink": channels(p.ink),
     "--d-ink-2": channels(p.ink2),
-    "--d-ink-3": channels(p.ink3),
+    /**
+     * The dim ink, held to the same floor as the rest of the type.
+     *
+     * `--m-ink-3` is the phone's third text step and on the light skins it is a mid grey (minimal's is
+     * `#71717a`): as desktop body text on a white panel that is 4.2:1, and the audit found it on the chord
+     * page's "Root" labels and the studio's footer. It keeps its *relative* dimness — the step is only applied
+     * as far as the 4.5:1 floor needs it.
+     */
+    "--d-ink-3": channels(ensureContrast(p.ink3, p.surface, 4.5)),
     "--d-surface-pale": channels(p.surfacePale),
     "--d-surface-pale-2": channels(p.surfacePale2),
     "--d-ink-on-pale": channels(p.inkOnPale),
@@ -699,6 +841,7 @@ function tokenRecord(skin) {
       Object.entries(p.track).flatMap(([lane, hex]) => [
         [`--d-track-${lane}`, channels(hex)],
         [`--d-track-${lane}-ink`, channels(readableStep(hex, p.panel, light ? 0.75 : 0.55))],
+        [`--d-track-${lane}-on`, channels(p.trackOn[lane])],
       ])
     ),
     "--d-danger": channels(p.danger),
@@ -987,6 +1130,8 @@ function generate() {
     const whiteVariants = new Set();
     const whiteOnSignal = new Set();
     const blackVariants = new Set();
+    /** `text-zinc-900/950` variants that must take the signal fill's ink (see below). */
+    const darkOnSignal = new Set();
     for (const file of files) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
       for (const match of text.matchAll(/(?:^|[\s"'`])((?:[a-z-]+:)*)(bg|from|via|to)-(\[[^\]]+\]|[a-z]+-[0-9]{2,3})(?:\/(\d{1,3}))?/g)) {
@@ -1004,6 +1149,16 @@ function generate() {
       }
       for (const match of text.matchAll(/(?:^|[\s"'])((?:[a-z-]+:)*)text-white/g)) whiteVariants.add(match[1] + "text-white");
       for (const match of text.matchAll(/(?:^|[\s"'])((?:[a-z-]+:)*)text-black/g)) blackVariants.add(match[1] + "text-black");
+      /**
+       * The dark *named* inks on a signal fill, which is the same case as `text-black`.
+       *
+       * `bg-accent text-zinc-950` (the chord workshop's "To Studio" button) is what the audit found at 3.6:1 on
+       * the minimal blue: `text-zinc-950` is a neutral-ramp utility, so the ramp sends it to the pale-surface
+       * ink — dark on dark, or dark on blue. On a signal fill it takes the fill's own ink instead.
+       */
+      for (const match of text.matchAll(/(?:^|[\s"'])((?:[a-z-]+:)*)text-zinc-(?:9[0-9]{2})/g)) {
+        darkOnSignal.add(match[1] + match[0].trim().replace(/^[\s"']/, ""));
+      }
     }
 
     const whiteRules = [...whiteVariants]
@@ -1015,11 +1170,20 @@ function generate() {
     const blackRules = [...blackVariants]
       .sort()
       .map((selector) => `[class~="${selector}"] { color: rgb(var(--d-on-accent)); }`);
+    /**
+     * And the same inks *on* a signal fill: `bg-accent text-zinc-950` has to become the accent's own ink.
+     *
+     * Emitted as a pair for the same reason as `text-white`: CSS can see both classes on the element, and the
+     * signal fill's ink is chosen per skin exactly for this.
+     */
+    const darkOnSignalRules = [...whiteOnSignal]
+      .sort()
+      .flatMap((signal) => [...darkOnSignal].sort().map((ink) => `[class~="${signal}"][class~="${ink}"] { color: rgb(var(--d-on-accent)); }`));
 
     parts.push(
       "\n/*\n * The two named inks, by what they sit on: `text-white` is the surface's ink (or the fill's, on a\n" +
         " * signal fill), `text-black` is the ink of an accent flood.\n */\n" +
-        [...signalRules, ...blackRules, ...whiteRules].join("\n") +
+        [...signalRules, ...darkOnSignalRules, ...blackRules, ...whiteRules].join("\n") +
         "\n"
     );
   }
