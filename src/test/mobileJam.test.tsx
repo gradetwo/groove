@@ -63,12 +63,27 @@ describe("jam module", () => {
      * (amber on paper is 1.7:1), and a light skin is a supported choice — so the identity moved to a bar
      * and the word takes the shell's ink. This asserts the bar still differs per lane.
      */
-    const colours = [0, 1, 2, 3].map((lane) => screen.getByTestId(`mobile-jam-lane-colour-${lane}`).style.background);
+    const colours = [0, 1, 2, 3, 4, 5].map((lane) => screen.getByTestId(`mobile-jam-lane-colour-${lane}`).style.background);
     for (const colour of colours) expect(colour).not.toBe("");
-    expect(new Set(colours).size, `lane colours: ${colours.join(", ")}`).toBe(4);
+    expect(new Set(colours).size, `lane colours: ${colours.join(", ")}`).toBe(6);
     // …and the labels stay legible in every skin because they inherit the shell's ink.
-    for (const lane of [0, 1, 2, 3]) {
+    for (const lane of [0, 1, 2, 3, 4, 5]) {
       expect(screen.getByTestId(`mobile-jam-lane-label-${lane}`).className).toContain("text-[var(--m-ink-2)]");
+    }
+
+    // Every pad names the row it writes, so "the clap lights the snare row" is legible instead of surprising
+    // (a true one-row-per-pad grid needs the clap/rim to be their own lanes — the drum-kit model decision).
+    // Language-agnostic on purpose: the tag must equal the *row's* label, whatever the locale renders.
+    for (const [pad, laneIndex] of [
+      ["kick", 0],
+      ["snare", 1],
+      ["hat", 2],
+      ["clap", 1],
+      ["rim", 1],
+      ["bass", 4],
+    ] as const) {
+      const rowLabel = screen.getByTestId(`mobile-jam-lane-label-${laneIndex}`).textContent ?? "";
+      expect(screen.getByTestId(`mobile-jam-pad-lane-${pad}`).textContent ?? "").toBe(rowLabel);
     }
 
     // The six pads carry their own instrument colours on the dot and the label, so a clap never reads as
@@ -147,9 +162,10 @@ describe("jam module", () => {
     return rail;
   };
 
-  it("renders four lanes of sixteen steps", async () => {
+  it("renders six lanes of sixteen steps — one visible row per pad, plus percussion and chords", async () => {
     await renderJam();
-    for (let lane = 0; lane < 4; lane += 1) {
+    // The phone's report: "the pads and the rows do not match". Six pads, six rows.
+    for (let lane = 0; lane < 6; lane += 1) {
       for (let step = 0; step < 16; step += 1) {
         expect(screen.getByTestId(`mobile-jam-step-${lane}-${step}`)).toBeInTheDocument();
       }
@@ -157,9 +173,9 @@ describe("jam module", () => {
     expect(screen.getByTestId("mobile-jam-grid")).toBeInTheDocument();
     expect(screen.getByTestId("mobile-jam-tempo")).toBeInTheDocument();
 
-    // The grid is still four rows of sixteen *buttons* — the step is the tap target, not a cell.
+    // The grid is six rows of sixteen *buttons* — the step is the tap target, not a cell.
     const rows = Array.from(screen.getByTestId("mobile-jam-grid").children);
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(6);
     for (const row of rows) expect(row.querySelectorAll("button")).toHaveLength(16);
     expect(screen.getByTestId("mobile-jam-step-0-0").tagName).toBe("BUTTON");
   });

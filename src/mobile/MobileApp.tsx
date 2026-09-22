@@ -302,7 +302,13 @@ export function MobileApp({
     >
       {/* Scroll container: the bar is fixed, so the content reserves its height plus the safe area. */}
       <main
-        className="relative z-10 mx-auto min-h-[100dvh] w-full max-w-[432px]"
+        /**
+         * 即兴 is the one module that must not scroll: it is a step editor with a transport, and a screen that
+         * pans under a thumb mid-take is how a take is lost. Every other module keeps the scrolling shell.
+         */
+        className={`relative z-10 mx-auto w-full max-w-[432px] ${
+          module === "jam" && showTabBar ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"
+        }`}
         style={{
           paddingBottom: showTabBar
             ? "calc(72px + env(safe-area-inset-bottom))"

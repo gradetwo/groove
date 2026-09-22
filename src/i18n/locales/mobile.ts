@@ -142,6 +142,8 @@ export const mobileMessages = {
   mobile_jam_lane_snare: { en: "Snare", zh: "军鼓" },
   mobile_jam_lane_hat: { en: "Hat", zh: "踩镲" },
   mobile_jam_lane_bass: { en: "Bass", zh: "贝斯" },
+  mobile_jam_lane_perc: { en: "Perc", zh: "打击乐" },
+  mobile_jam_lane_chords: { en: "Chords", zh: "和声" },
   mobile_jam_pad_clap: { en: "Clap", zh: "拍手" },
   mobile_jam_pad_rim: { en: "Rim", zh: "边击" },
 

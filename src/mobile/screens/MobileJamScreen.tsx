@@ -32,12 +32,25 @@ import { patternFromGenre } from "../../data/genreMix";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, SequencerPattern } from "../../types/genre";
 
-/** The four lanes the grid edits, in the reference's order, mapped to real track ids. */
+/**
+ * The six lanes the grid edits, in the reference's order, mapped to real track ids.
+ *
+ * Four was one row per *pad* group, which is why the phone reported the pads and the rows not matching: six
+ * pads (kick, snare, hat, clap, rim, bass) sat above four rows. The grid now shows six lanes of the pattern —
+ * the extra two are **percussion** and **chords**, which are grid-only (no pad), so every pad has a visible
+ * lane and the grid edits two lanes a jam session actually wants.
+ *
+ * A true one-row-per-pad grid needs the clap and rim to be their own instrument lanes rather than snare
+ * voicings; that is a drum-kit model decision and belongs with the arrangement work
+ * (`docs/ARRANGEMENT_PLAN.md`), so the pads currently keep writing the snare lane and say so on the pad.
+ */
 const LANES: Array<{ trackId: string; labelKey: string }> = [
   { trackId: "kick", labelKey: "mobile_jam_lane_kick" },
   { trackId: "snare", labelKey: "mobile_jam_lane_snare" },
   { trackId: "hihat", labelKey: "mobile_jam_lane_hat" },
+  { trackId: "percussion", labelKey: "mobile_jam_lane_perc" },
   { trackId: "bass", labelKey: "mobile_jam_lane_bass" },
+  { trackId: "chords", labelKey: "mobile_jam_lane_chords" },
 ];
 
 /**
@@ -54,7 +67,7 @@ const PADS: Array<{ id: string; labelKey: string; lane: number; trackId: string;
   { id: "hat", labelKey: "mobile_jam_lane_hat", lane: 2, trackId: "hihat" },
   { id: "clap", labelKey: "mobile_jam_pad_clap", lane: 1, trackId: "snare", instrument: "clap" },
   { id: "rim", labelKey: "mobile_jam_pad_rim", lane: 1, trackId: "snare", instrument: "rimshot" },
-  { id: "bass", labelKey: "mobile_jam_lane_bass", lane: 3, trackId: "bass" },
+  { id: "bass", labelKey: "mobile_jam_lane_bass", lane: 4, trackId: "bass" },
 ];
 
 /**
@@ -82,6 +95,9 @@ const JAM_LANES: Record<string, TrackColourRole> = {
   kick: "kick",
   snare: "snare",
   hat: "hat",
+  // The two grid-only lanes: each takes the colour role of the track it edits.
+  percussion: "perc",
+  chords: "chord",
   // Six pads, six distinct fills: the clap takes the pink role and the rim the olive one, which is where their
   // old hardcoded hues sat. Distinctness is a test (`mobileJam.test.tsx`), not a hope.
   clap: "chord",
@@ -377,9 +393,22 @@ function JamForGenre({
   };
 
   return (
-    <section className="m-rise px-4 pt-2" data-testid="mobile-jam" data-genre={genre.id}>
+    /**
+     * One screen, no sliding.
+     *
+     * The phone asked for the jam module to be full-screen and non-scrolling: a step editor that pans under the
+     * thumb mid-take is how a take is lost. So the module is a fixed-height column — grid (flexible), transport,
+     * pads (last, nearest the thumbs) — and the grid takes the space that is left instead of pushing the screen
+     * taller. `overflow-hidden` is deliberate: nothing here may scroll, and the row/pad sizes are what make that
+     * true rather than a clip.
+     */
+    <section
+      className="m-rise flex h-full min-h-0 flex-col overflow-hidden px-3 pt-1.5"
+      data-testid="mobile-jam"
+      data-genre={genre.id}
+    >
       {/* Groove grid */}
-      <section className="mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-3.5">
+      <section className="mt-2 flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-2.5">
         <header className="flex items-center justify-between">
           <h2 className="text-[13px] font-bold">
             {t("mobile_jam_grid")}{" "}
@@ -403,12 +432,12 @@ function JamForGenre({
         </header>
         <p className="m-mono mt-1 text-[9px] text-[var(--m-ink-3)]">{t("mobile_jam_grid_hint")}</p>
 
-        <div className="mt-2" data-testid="mobile-jam-grid">
+        <div className="mt-1.5 min-h-0 flex-1 overflow-hidden" data-testid="mobile-jam-grid">
           {LANES.map((lane, laneIndex) => {
             const fill = laneFill(lane.trackId);
             const ink = laneInk(lane.trackId);
             return (
-              <div key={lane.trackId} className="flex items-center gap-2 py-1">
+              <div key={lane.trackId} className="flex items-center gap-2 py-[3px]">
                 {/*
                   The lane's identity: a colour bar plus a readable word.
                   
@@ -449,7 +478,7 @@ function JamForGenre({
                          *    is visible without hiding the pattern under it;
                          *  - **off** — the shell's neutral cell.
                          */
-                        className="m-press h-8 flex-1 rounded"
+                        className="m-press h-6 flex-1 rounded"
                         style={
                           on
                             ? { background: laneFill(lane.trackId, 0.82), boxShadow: active ? `0 0 10px ${laneFill(lane.trackId, 0.65)}` : undefined }
@@ -656,7 +685,7 @@ function JamForGenre({
         never on record.
       */}
       <section
-        className="m-jam-pads sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-2.5"
+        className="m-jam-pads z-20 mt-2 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-2"
         data-testid="mobile-jam-pads-dock"
       >
         <header className="flex items-baseline justify-between px-1">
@@ -666,7 +695,7 @@ function JamForGenre({
           </h2>
           <p className="m-mono text-[9px] text-[var(--m-ink-3)]">{t("mobile_jam_pads_hint")}</p>
         </header>
-        <div className="mt-2 grid grid-cols-3 gap-2.5">
+        <div className="mt-1.5 grid grid-cols-3 gap-2">
           {PADS.map((pad) => {
             /** Lit while the lane's step is on the playhead, or for a moment after a hand hit it. */
             const lit = flashing.includes(pad.lane) || (isPlaying && Boolean(grid[pad.lane]?.[playhead]));
@@ -682,7 +711,7 @@ function JamForGenre({
                  * light rather than as selection, and `transform` stays untouched so the tap feedback in
                  * `.m-press` is unaffected.
                  */
-                className="m-press relative flex h-[76px] flex-col items-center justify-center rounded-[18px] border bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))]"
+                className="m-press relative flex h-[54px] flex-col items-center justify-center rounded-[16px] border bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))]"
                 style={{
                   borderColor: lit ? laneFill(pad.id, 0.85) : undefined,
                   boxShadow: lit ? `0 0 22px ${laneFill(pad.id, 0.35)}, inset 0 0 18px ${laneFill(pad.id, 0.14)}` : undefined,
@@ -693,9 +722,16 @@ function JamForGenre({
                   className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full"
                   style={{ background: laneFill(pad.id), opacity: lit ? 1 : 0.5 }}
                 />
-                <span className="text-[13px] font-semibold">{t(pad.labelKey)}</span>
-                <span className="m-mono mt-1 text-[8px] uppercase tracking-[0.26em]" style={{ color: laneInk(pad.id) }}>
+                <span className="text-[12px] font-semibold leading-none">{t(pad.labelKey)}</span>
+                <span className="m-mono mt-0.5 text-[7px] uppercase tracking-[0.22em]" style={{ color: laneInk(pad.id) }}>
                   {pad.id}
+                </span>
+                {/* Which row this pad writes: the clap and rim pads light the snare row, and say so. */}
+                <span
+                  className="m-mono text-[7px] leading-none text-[var(--m-ink-3)]"
+                  data-testid={`mobile-jam-pad-lane-${pad.id}`}
+                >
+                  {t(LANES[pad.lane].labelKey)}
                 </span>
               </button>
             );
