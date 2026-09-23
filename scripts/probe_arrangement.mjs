@@ -275,6 +275,55 @@ if (afterKey[0].id !== first.id) {
 }
 
 /**
+ * B5's editors — a section's name and the lanes it silences — in the built app, at 44 px.
+ *
+ * The unit tests pin the model functions and the component's props; what they cannot see is whether the row exists
+ * once a region is selected *in the built app*, whether a typed name reaches the region, and whether the chips are
+ * finger-sized. A section you can only address with a pointer is the same defect the rest of this view was built to
+ * avoid.
+ */
+await page.click(`[data-testid='arrangement-region-${first.id}']`);
+await page.waitForTimeout(80);
+const editor = await page.evaluate(() => {
+  const input = document.querySelector("[data-testid='arrangement-label']");
+  const chip = document.querySelector("[data-testid^='arrangement-mute-']");
+  const size = (el) => {
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    return { width: Math.round(rect.width), height: Math.round(rect.height) };
+  };
+  return { input: size(input), chip: size(chip), chipId: chip?.getAttribute("data-testid") ?? null };
+});
+if (!editor.input || !editor.chip) {
+  await fail("selecting a region did not reveal the label input and the lane chips.");
+}
+for (const [name, box] of [
+  ["arrangement-label", editor.input],
+  [editor.chipId, editor.chip],
+]) {
+  if (box.width < 44 || box.height < 44) {
+    await fail(`${name} is ${box.width}x${box.height} px, below the 44 px contract.`);
+  }
+}
+
+await page.fill("[data-testid='arrangement-label']", "probe drop");
+await page.keyboard.press("Enter");
+await page.waitForTimeout(80);
+const renamed = await page.$eval(`[data-testid='arrangement-region-${first.id}']`, (node) =>
+  (node.textContent ?? "").replace(/\s+/g, " ").trim()
+);
+if (!renamed.includes("probe drop")) {
+  await fail(`typing a name did not reach the region: it reads "${renamed}".`);
+}
+
+await page.click(`[data-testid='${editor.chipId}']`);
+await page.waitForTimeout(80);
+const pressed = await page.$eval(`[data-testid='${editor.chipId}']`, (node) => node.getAttribute("aria-pressed"));
+if (pressed !== "true") {
+  await fail(`the lane chip did not report itself as muting (aria-pressed="${pressed}").`);
+}
+
+/**
  * B5 — the generator, and the two things a delivered arrangement must show.
  *
  * The unit tests prove the form table and the flattening; this proves the wiring in the built app: the picker is
