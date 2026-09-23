@@ -10,9 +10,11 @@ import {
   LOUDNESS_TRIM_MAX_DB,
   LOUDNESS_TRIM_MIN_DB,
   MIX_TRACK_IDS,
+  MIX_WIDTH_SCALE,
   applyGenreMixDefaults,
   getGenreHumaniseAmount,
   getGenreLoudnessTrimDb,
+  widenPan,
   humanisePatternVelocities,
   migrateLegacyPlaceholderMix,
   patternFromGenre,
@@ -120,6 +122,42 @@ describe("genre mix defaults · musical variety", () => {
       expect(pans.some((p) => p < 0), `${trackId} never pans left`).toBe(true);
       expect(pans.some((p) => p > 0), `${trackId} never pans right`).toBe(true);
     }
+  });
+
+  it("spreads the side lanes by MIX_WIDTH_SCALE, and only the side lanes", () => {
+    /**
+     * P0.4. The authored pan is the mix's *intent*; the width stage is what makes it audible. Measured at 2.0 on
+     * 2026-09-23: the sample goes from 12/12 effectively mono to 3/12, with the side at −9.2…−20.5 dB.
+     */
+    // Kick, bass and snare keep exactly what the table authored — the doubling must not touch the centre.
+    for (const trackId of ["kick", "bass", "snare"] as const) {
+      const authored = new Set<number>();
+      for (const mix of Object.values(GENRE_MIX)) {
+        const base = CATEGORY_MIX_PROFILES[mix.category] ?? CATEGORY_MIX_PROFILES.Electronic;
+        authored.add((mix.overrides?.[trackId]?.pan ?? base[trackId]?.pan ?? 0));
+      }
+      const resolved = new Set(Object.values(GENRE_MIX_RESOLVED).map((mix) => mix[trackId].pan));
+      for (const value of resolved) expect(authored.has(value), `${trackId} pan ${value} was not authored`).toBe(true);
+    }
+    // Every other lane is exactly doubled, until the clamp at ±1.
+    const doubled = Object.entries(GENRE_MIX).filter(([id]) => !id.startsWith("__"));
+    let checked = 0;
+    for (const [, mix] of doubled) {
+      const base = CATEGORY_MIX_PROFILES[mix.category] ?? CATEGORY_MIX_PROFILES.Electronic;
+      for (const trackId of MIX_TRACK_IDS) {
+        if (trackId === "kick" || trackId === "bass" || trackId === "snare") continue;
+        const raw = mix.overrides?.[trackId]?.pan ?? base[trackId]?.pan ?? 0;
+        const expected = Math.max(-1, Math.min(1, raw * MIX_WIDTH_SCALE));
+        expect(widenPan(trackId, raw)).toBeCloseTo(expected, 6);
+        checked += 1;
+      }
+    }
+    // 159 genres x the five side lanes; named so a genre dropped from the table cannot pass this silently.
+    expect(checked).toBe(Object.keys(GENRE_MIX).length * 5);
+    // A hard-panned lane is the case the clamp exists for.
+    expect(widenPan("lead", 0.5)).toBe(1);
+    expect(widenPan("lead", -0.5)).toBe(-1);
+    expect(widenPan("lead", Number.NaN)).toBe(0);
   });
 
   it("revives the send buses instead of leaving them dead", () => {

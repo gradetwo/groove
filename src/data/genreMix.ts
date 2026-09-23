@@ -465,14 +465,48 @@ export const GENRE_MIX: Record<string, GenreMix> = {
 
 const DEFAULT_TRACK_MIX: TrackMix = { volume: 0.8, pan: 0, sendA: 0, sendB: 0 };
 
+/**
+ * How far the authored pans are spread once resolved — `1` is "as written".
+ *
+ * Every category profile pans its hats, percussion, chords and lead by ±0.12…0.5, and the result still measured as
+ * effectively **mono**: 12 of 12 sampled genres correlate above 0.98 (chicago-house 0.9973, minimal-techno 0.9989),
+ * because the lanes that ask for a side are quiet next to a centred kick and bass. Scaling the *resolved* pan — not
+ * the authored table, and not 159 entries by hand — spreads the intent the mix already states. Measured at 2.0:
+ * **12/12 → 3/12** narrow (detroit-techno 0.9825, ambient 0.9834, minimal-techno 0.9921), with the side at
+ * −9.2…−20.5 dB, inside the mono-safe guard (`sideTooHot`, side > −8 dB).
+ *
+ * The cost is why this waited for a re-record rather than landing when it was measured: a hard-panned lane puts up
+ * to +3 dB into one channel, so the true-peak ceiling clamps harder and the widest genres lose up to **1.9 dB** of
+ * loudness. The trims absorb that, and they are re-recorded once, at the end of the audio batch (P0.4 → P2.3 → P2.2
+ * → P2.4) rather than four times.
+ */
+export const MIX_WIDTH_SCALE = 2;
+
+/**
+ * The lanes the width stage leaves where the mix put them: kick, bass and snare.
+ *
+ * The profiles already say these belong in the middle ("that is a mix decision, not laziness"), and a genre that
+ * nudges its snare to 0.08 means "almost centred", not "hard left" — doubling it to 0.16 would spend the width on a
+ * lane that carries no image and would break the invariant the mix table's own test holds. The side image comes from
+ * hats, percussion, chords, lead and fx, which is where the 12/12 → 3/12 measurement came from.
+ */
+const WIDTH_MONO_TRACKS: ReadonlySet<MixTrackId> = new Set(["kick", "bass", "snare"]);
+
+/** The pan one lane gets once the width stage has run. */
+export function widenPan(trackId: MixTrackId, pan: number): number {
+  if (!Number.isFinite(pan)) return 0;
+  const scaled = WIDTH_MONO_TRACKS.has(trackId) ? pan : pan * MIX_WIDTH_SCALE;
+  return Math.max(-1, Math.min(1, scaled));
+}
+
 function resolveTrackMix(genreMix: GenreMix, trackId: MixTrackId): TrackMix {
   const base = CATEGORY_MIX_PROFILES[genreMix.category] ?? CATEGORY_MIX_PROFILES.Electronic;
   const baseTrack = base[trackId] ?? DEFAULT_TRACK_MIX;
   const override = genreMix.overrides?.[trackId];
-  if (!override) return { ...baseTrack };
+  if (!override) return { ...baseTrack, pan: widenPan(trackId, baseTrack.pan) };
   return {
     volume: override.volume ?? baseTrack.volume,
-    pan: override.pan ?? baseTrack.pan,
+    pan: widenPan(trackId, override.pan ?? baseTrack.pan),
     sendA: override.sendA ?? baseTrack.sendA,
     sendB: override.sendB ?? baseTrack.sendB,
   };
