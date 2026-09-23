@@ -10,8 +10,10 @@
  */
 import {
   MAX_SECTION_BARS,
+  MAX_SECTION_TRANSPOSE,
   removeSection,
   resolveTimeline,
+  sectionTranspose,
   type Song,
   type SongSection,
 } from "../../types/song";
@@ -228,5 +230,29 @@ export function toggleSectionMute(song: Song, id: string, lane: string): Song {
   if (nextMute.length) next.mute = nextMute;
   else delete next.mute;
   sections[index] = next;
+  return { ...song, sections };
+}
+
+/**
+ * Move one section's pitched lanes by `semitones`, clamped to the model's own limit.
+ *
+ * A result of zero **removes the key**, the same rule a label and a mute follow: a section that was transposed and
+ * put back is identical to one that never was, so a project round-trips byte for byte and a diff shows only real
+ * edits.
+ */
+export function transposeSection(song: Song, id: string, semitones: number): Song {
+  const index = song.sections.findIndex((section) => section.id === id);
+  if (index === -1) return song;
+  const current = sectionTranspose(song.sections[index]);
+  const next = Math.max(-MAX_SECTION_TRANSPOSE, Math.min(MAX_SECTION_TRANSPOSE, Math.round(current + semitones)));
+  if (next === current) return song;
+  const sections = [...song.sections];
+  const overrides = { ...(sections[index].overrides ?? {}) };
+  if (next) overrides.transpose = next;
+  else delete overrides.transpose;
+  const updated: SongSection = { ...sections[index] };
+  if (Object.keys(overrides).length) updated.overrides = overrides;
+  else delete updated.overrides;
+  sections[index] = updated;
   return { ...song, sections };
 }

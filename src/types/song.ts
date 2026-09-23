@@ -54,6 +54,14 @@ export interface SectionOverrides {
   velocityRamp?: [number, number];
   /** Extra hits on the section's last pass. */
   fill?: SongFill;
+  /**
+   * Semitones to move this section's *pitched* lanes by — the harmonic half of "change the chord every 8 bars".
+   *
+   * Drums are untouched by construction: only a step that carries a pitch (`pitch` or a `pitches` stack) moves, and a
+   * kick has neither. Clamped to ±24 (two octaves) because a share link or a hand-edited project can carry anything,
+   * and clamped again per note into the MIDI range so a transposed line cannot leave the playable set.
+   */
+  transpose?: number;
 }
 
 /**
@@ -115,6 +123,8 @@ export interface SongBar {
   velocityScale: number;
   /** The section's fill, present only on the section's **last** pass. */
   fill?: SongFill;
+  /** The section's transposition in semitones, when it has one. */
+  transpose?: number;
 }
 
 export interface SongTimeline {
@@ -132,6 +142,16 @@ const clampBars = (bars: number): number => {
 
 /** A share link or an import can carry anything; a ramp outside this range is a mistake, not a mix decision. */
 const clampRamp = (value: number): number => (Number.isFinite(value) ? Math.max(0, Math.min(4, value)) : 1);
+
+/** Two octaves up or down: past that an arrangement is transposing a line out of its instrument's range. */
+export const MAX_SECTION_TRANSPOSE = 24;
+
+/** A section's transposition, or 0 — the value every consumer can multiply by without asking. */
+export function sectionTranspose(section: Pick<SongSection, "overrides">): number {
+  const value = section.overrides?.transpose;
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(-MAX_SECTION_TRANSPOSE, Math.min(MAX_SECTION_TRANSPOSE, Math.round(value as number)));
+}
 
 /**
  * Where a bar sits on its section's ramp, as a multiplier.
@@ -168,6 +188,7 @@ export function resolveTimeline(song: Song): SongTimeline {
     }
     const scale = Number.isFinite(section.velocityScale) ? (section.velocityScale as number) : 1;
     const fill = normaliseFill(section.overrides?.fill);
+    const transpose = sectionTranspose(section);
     for (let bar = 0; bar < count; bar += 1) {
       bars.push({
         sectionId: section.id,
@@ -178,6 +199,7 @@ export function resolveTimeline(song: Song): SongTimeline {
         velocityScale: scale * rampAt(section.overrides?.velocityRamp, bar, count),
         // The fill is the section's *last* pass: it is what leads into the next section.
         ...(fill && bar === count - 1 ? { fill } : {}),
+        ...(transpose ? { transpose } : {}),
       });
     }
   }

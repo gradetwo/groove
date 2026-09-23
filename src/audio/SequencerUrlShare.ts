@@ -4,7 +4,15 @@
  */
 
 import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
-import { CLIP_SLOTS, MAX_SECTION_BARS, normaliseFill, type ClipSlot, type SectionOverrides, type SongSection } from "../types/song";
+import {
+  CLIP_SLOTS,
+  MAX_SECTION_BARS,
+  MAX_SECTION_TRANSPOSE,
+  normaliseFill,
+  type ClipSlot,
+  type SectionOverrides,
+  type SongSection,
+} from "../types/song";
 
 export interface SharedSequencerState {
   genreId: string;
@@ -107,6 +115,8 @@ interface CompactTrackPayload {
 interface CompactOverrides {
   r?: [number, number];
   f?: [string[], number[], number];
+  /** The section's transposition in semitones. */
+  t?: number;
 }
 
 /** Share-link bounds for a section's overrides — small enough that 64 sections cannot blow the URL ceiling. */
@@ -141,6 +151,10 @@ function compactOverrides(section: SongSection): CompactOverrides | undefined {
     if (tracks.length && steps.length) out.f = [tracks, steps, fill.velocity ?? 112];
   }
 
+  if (Number.isFinite(source.transpose) && source.transpose !== 0) {
+    out.t = Math.max(-MAX_SECTION_TRANSPOSE, Math.min(MAX_SECTION_TRANSPOSE, Math.round(source.transpose as number)));
+  }
+
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -163,6 +177,10 @@ function decodeOverrides(raw: unknown): SectionOverrides | undefined {
         Math.max(0, Math.min(MAX_RAMP, Number(to))),
       ];
     }
+  }
+
+  if (Number.isFinite(source.t) && source.t !== 0) {
+    out.transpose = Math.max(-MAX_SECTION_TRANSPOSE, Math.min(MAX_SECTION_TRANSPOSE, Math.round(Number(source.t))));
   }
 
   if (Array.isArray(source.f) && source.f.length >= 2) {
