@@ -39,6 +39,13 @@ git diff --stat apple2011/next HEAD
 
 `ci.yml`:
 
+* **E2E legs are bounded twice**: each target runs in a **child process with a hard 8-minute watchdog**
+  (`E2E_TARGET_TIMEOUT_MS`), and the jobs carry a 45-minute `timeout-minutes`. Measured on 2026-09-23: a wedged
+  WebKit process held the iPad leg for **three and a half hours** (07:09 → cancelled at 10:30) while its sibling legs
+  finished in minutes, because GitHub's default job timeout is six hours and Playwright's own timeouts cover its
+  waits rather than a stalled browser. A hang now fails in eight minutes **with the target named**, and is not
+  retried.
+
 * **validate** (every push/PR): actions-runtime gate, `version:check`, `docs:check`, typecheck, lint, red lines,
   unit tests + coverage, genre schema lint/audit, **the loudness report-vs-table gate** (two file reads, ~1 s — it was
   `verify`-only and spent a day red without anyone seeing it), production build, bundle budget.

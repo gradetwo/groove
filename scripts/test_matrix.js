@@ -7,6 +7,7 @@
 import http from "http";
 import fs from "fs";
 import path from "path";
+import { spawnSync } from "node:child_process";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
@@ -149,6 +150,23 @@ function startStaticServer() {
  * This exists so a phone-only fix does not cost a full matrix per attempt.
  */
 const TARGET_FILTER = process.env.E2E_ONLY || "";
+
+/**
+ * Hard wall-clock limit for **one** target, ms.
+ *
+ * A WebKit hang once held a job for three hours (observed 2026-09-23: the iPad leg sat in "Cross-Browser &
+ * Cross-Device Test Matrix" from 07:09 until the run was cancelled, while its sibling legs finished in
+ * minutes). Playwright's own timeouts cover its waits, not a wedged browser process or a stall in teardown,
+ * and GitHub's default job timeout is **six hours** — so a hang was indistinguishable from slow progress and
+ * cost a runner for an afternoon.
+ *
+ * Each target therefore runs in a **child process** the parent can kill: a hang becomes `FAIL … (timeout)`
+ * with the target named, in eight minutes instead of six hours. `E2E_TARGET_TIMEOUT_MS=0` disables the
+ * watchdog for a deliberate long run.
+ */
+const TARGET_TIMEOUT_MS = Number(process.env.E2E_TARGET_TIMEOUT_MS ?? "480000");
+/** Set when this process *is* the child: run the filtered target, report, exit. No server, no summary. */
+const RUN_ONE = process.argv.includes("--one");
 
 /**
  * Which *group* of targets the release gate runs.
@@ -3026,14 +3044,56 @@ async function main() {
     console.log(`[Filter] --target=${targetFilter} → ${targets.map((t) => t.name).join(", ")}\n`);
   }
 
+  /**
+   * The child: run exactly the filtered target and exit with its verdict.
+   *
+   * Deliberately *not* wrapped in the parent's retry/summary machinery — a child that is killed for hanging must
+   * not be restarted by a retry, or the watchdog would just buy the hang another eight minutes.
+   */
+  if (RUN_ONE) {
+    const only = targets[0];
+    if (!only) {
+      log(`❌ --one matched no target`);
+      process.exit(1);
+    }
+    const result = await runTestOnTarget(only, baseUrl);
+    if (!result.success) log(`   Error details: ${result.error}`);
+    server.close();
+    process.exit(result.success ? 0 : 1);
+  }
+
   for (const target of targets) {
     // One line per target, written as the target starts and again when it finishes: with the log
     // on disk, a run that is still going looks like progress instead of a hang.
     log(`⏳ Testing ${target.name} ...`);
     const start = Date.now();
-    let res = await runTestOnTarget(target, baseUrl);
+    /**
+     * Each target runs in its own process so a wedged browser can be **killed**.
+     *
+     * `runTestOnTarget` closes its browser in a `finally`, which is enough for a failure and useless for a hang:
+     * the `finally` only runs once the body finishes, and the body is what is stuck. A child process can be
+     * killed by the OS, which is the only thing that works on a stall inside WebKit.
+     */
+    const child = TARGET_TIMEOUT_MS > 0
+      ? spawnSync(process.execPath, [process.argv[1], `--target=${target.name}`, "--one"], {
+          timeout: TARGET_TIMEOUT_MS,
+          stdio: "inherit",
+          env: process.env,
+        })
+      : null;
+    const timedOut = Boolean(child && (child.signal === "SIGTERM" || child.error?.code === "ETIMEDOUT"));
+    let res = timedOut
+      ? {
+          success: false,
+          error: `target hung: killed after ${Math.round(TARGET_TIMEOUT_MS / 1000)}s with no verdict ` +
+            `(set E2E_TARGET_TIMEOUT_MS=0 to disable the watchdog)`,
+        }
+      : child
+        ? { success: child.status === 0, error: child.status === 0 ? null : `child exited with ${child.status}` }
+        : await runTestOnTarget(target, baseUrl);
     let retried = false;
-    if (!res.success) {
+    // A hang is not retried: it is a property of the target, and the second attempt would hang the same way.
+    if (!res.success && !timedOut) {
       log(`   ↻ ${target.name}: retrying once`);
       retried = true;
       res = await runTestOnTarget(target, baseUrl);
