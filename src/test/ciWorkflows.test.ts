@@ -84,7 +84,9 @@ describe("CI · every target runs on every push", () => {
     // They serve `dist/`, so the build has to come first…
     expect(e2e.indexOf("npm run build")).toBeLessThan(e2e.indexOf("npm run probe:arrangement"));
     // …and they belong to one leg: three copies of the same measurement would only burn three runners.
-    expect(e2e).toMatch(/if: matrix\.leg == 'Desktop browsers'\n\s+run: npm run probe:toolbar/);
+    expect(e2e).toMatch(/if: matrix\.leg == 'Desktop browsers'\n\s+run: \|/);
+    // The iPad pass is the one that proves the touch half of B3's contract — a mouse drag cannot.
+    expect(e2e).toContain("npm run probe:arrangement -- --viewport=ipad");
   });
 });
 

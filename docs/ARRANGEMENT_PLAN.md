@@ -200,8 +200,12 @@ B5 slice, and it belongs with the nightly audio gates.
 
 `probe:arrangement` is the part a unit test cannot do: it opens the entry in the built app, checks every region's
 pixel position against the ruler's own arithmetic, measures every target a finger must hit, and performs a real
-pointer drag. Its negative control is a deliberate nudge below half a bar — if that reordered anything, every
-passing drag assertion above it would be meaningless.
+**drag**. It runs twice in CI — the desktop viewport with a mouse, and Playwright's iPad Pro 11 landscape metrics
+(1194×834, DSR 2) with **touch enabled**, where the drags go through Chromium's CDP `Input.dispatchTouchEvent`
+rather than `page.mouse`: the thing worth proving on a tablet is that `touch-action: none` is in place, and without
+it the browser scrolls the panel instead of moving the region — which a mouse drag cannot see. Its negative control
+is a deliberate nudge below half a bar; if that reordered anything, every passing drag assertion above it would be
+meaningless.
 
 ### B1 implementation notes (the surfaces the arrangement has to survive)
 

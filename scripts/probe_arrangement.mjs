@@ -27,7 +27,26 @@ const require = createRequire(import.meta.url);
 const playwright = require("playwright");
 const ROOT = process.cwd();
 
-const asJson = process.argv.slice(2).includes("--json");
+const argv = process.argv.slice(2);
+const asJson = argv.includes("--json");
+/**
+ * Which surface this pass measures.
+ *
+ * B3's contract is "mouse on PC, touch on iPad" and the finger-target claim is about the *tablet*, so the probe
+ * runs twice: the desktop viewport with a mouse, and Playwright's iPad Pro 11 landscape metrics (1194x834, touch,
+ * DSR 2) with touch enabled. Chromium is used for both — this measures layout and pointer handling, not engine
+ * differences, which the E2E matrix owns.
+ */
+const viewportArg = (argv.find((a) => a.startsWith("--viewport=")) ?? "--viewport=desktop").split("=")[1];
+const SURFACES = {
+  desktop: { label: "desktop 1440x900 (mouse)", viewport: { width: 1440, height: 900 }, hasTouch: false, isMobile: false },
+  ipad: { label: "iPad Pro 11 landscape (touch)", viewport: { width: 1194, height: 834 }, hasTouch: true, isMobile: true },
+};
+const surface = SURFACES[viewportArg];
+if (!surface) {
+  console.error(`❌ unknown --viewport=${viewportArg}; use ${Object.keys(SURFACES).join(" or ")}`);
+  process.exit(1);
+}
 
 if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
   console.error("❌ No built app found — run `npm run build` first.");
@@ -68,7 +87,12 @@ const fail = async (message) => {
 };
 
 const browser = await playwright.chromium.launch({ args: ["--no-sandbox"] });
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const context = await browser.newContext({
+  viewport: surface.viewport,
+  hasTouch: surface.hasTouch,
+  isMobile: surface.isMobile,
+  deviceScaleFactor: surface.hasTouch ? 2 : 1,
+});
 await context.addInitScript(() => {
   try {
     localStorage.setItem("groove_onboarding_completed", "true");
@@ -220,6 +244,25 @@ const dragBy = async (selector, dx) => {
   const box = await page.locator(selector).first().boundingBox();
   const y = box.y + box.height / 2;
   const x = box.x + Math.min(8, box.width / 4);
+  /**
+   * A **real touch drag** on the touch surface, through CDP.
+   *
+   * `page.mouse` would still work with `hasTouch: true`, but it dispatches `pointerType: "mouse"` — and the thing
+   * worth proving on an iPad is the touch path: without `touch-action: none` the browser scrolls the panel instead of
+   * dragging the region, and a mouse drag cannot see that. Chromium's CDP `Input.dispatchTouchEvent` is the only way
+   * to send a finger.
+   */
+  if (surface.hasTouch) {
+    const cdp = await page.context().newCDPSession(page);
+    const point = (at) => (at === null ? [] : [{ x: at, y }]);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: point(x) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: point(x + dx / 2) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: point(x + dx) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: point(null) });
+    await cdp.detach();
+    await page.waitForTimeout(60);
+    return;
+  }
   await page.mouse.move(x, y);
   await page.mouse.down();
   // Two moves: a real drag is not a single jump, and a handler that only reads the last event would pass anyway.
@@ -369,6 +412,7 @@ if (badges.builds === 0 || badges.fills === 0) {
 }
 
 const summary = {
+  viewport: surface.label,
   regions: afterKey.length,
   barWidth: Math.round(barWidth),
   maxAlignmentErrorPx: Number(
@@ -391,7 +435,7 @@ if (asJson) {
   console.log(JSON.stringify(summary, null, 2));
 } else {
   console.log(
-    `✅ Arrangement view: ${summary.regions} regions, ${summary.barWidth} px bars, ` +
+    `✅ Arrangement view [${surface.label}]: ${summary.regions} regions, ${summary.barWidth} px bars, ` +
       `worst bar misalignment ${summary.maxAlignmentErrorPx} px, smallest finger target ${summary.smallestTarget} px`
   );
   console.log(`   after drag → move → resize → ArrowLeft: ${summary.orderAfterDrag}`);
