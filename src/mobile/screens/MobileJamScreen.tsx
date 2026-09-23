@@ -726,10 +726,14 @@ function JamForGenre({
                 <span className="m-mono mt-0.5 text-[7px] uppercase tracking-[0.22em]" style={{ color: laneInk(pad.id) }}>
                   {pad.id}
                 </span>
-                {/* Which row this pad writes: the clap and rim pads light the snare row, and say so. */}
+                {/*
+                  Which row this pad writes: the clap and rim pads light the snare row, and say so. Deliberately
+                  *not* named `mobile-jam-pad-…`: the E2E matrix counts pads by that prefix, and a label inside a pad
+                  is not a pad (it read as 12 pads on every device until this was renamed).
+                */}
                 <span
                   className="m-mono text-[7px] leading-none text-[var(--m-ink-3)]"
-                  data-testid={`mobile-jam-pad-lane-${pad.id}`}
+                  data-testid={`mobile-jam-pad-writes-${pad.id}`}
                 >
                   {t(LANES[pad.lane].labelKey)}
                 </span>

@@ -83,7 +83,7 @@ describe("jam module", () => {
       ["bass", 4],
     ] as const) {
       const rowLabel = screen.getByTestId(`mobile-jam-lane-label-${laneIndex}`).textContent ?? "";
-      expect(screen.getByTestId(`mobile-jam-pad-lane-${pad}`).textContent ?? "").toBe(rowLabel);
+      expect(screen.getByTestId(`mobile-jam-pad-writes-${pad}`).textContent ?? "").toBe(rowLabel);
     }
 
     // The six pads carry their own instrument colours on the dot and the label, so a clap never reads as

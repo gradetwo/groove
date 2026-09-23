@@ -66,7 +66,30 @@ What the numbers mean:
 - **The GPU is irrelevant to this work** (no ML, no CUDA); the L4 shape is valuable for its 12 vCPU and 52 GB.
   Sharding into 6 shards × 2 genres would use more of those cores than the 4 × 3 tried here.
 
-## Current VM state (session `gooday`)
+## Reproducing the VM from scratch
+
+```bash
+# 1. (once) fix the CLI, see above — `colab exec` does not work without it.
+# 2. a payload without history (16 MB; the contents API rejects the 114 MB one):
+tar --exclude=node_modules --exclude=dist --exclude=dist-mcp --exclude=scratch --exclude=.git \
+    -czf /tmp/groove-src.tgz .
+colab new -s gooday --gpu L4
+colab upload -s gooday /tmp/groove-src.tgz /content/groove-src.tgz
+colab upload -s gooday scripts/colab/bootstrap.sh /content/bootstrap.sh
+# 3. run it detached (a cell longer than ~10 s fails the CLI request), then poll the log:
+echo "nohup bash /content/bootstrap.sh > /content/bootstrap.log 2>&1 &" | colab console -s gooday
+echo "tail -5 /content/bootstrap.log" | colab console -s gooday
+```
+
+`scripts/colab/bootstrap.sh` installs Node 22 into `/usr/local`, extracts the payload, makes the synthetic
+`git` baseline (with `safe.directory`, because the shell runs as root over files owned by `ubuntu`) and runs
+`npm ci` plus the unit suite as a smoke test.
+
+**Sessions do not survive on their own.** The `gooday` session used for the measurements below was reclaimed
+(404) mid-session, taking the VM filesystem with it — so treat the VM as disposable and keep the source of truth
+local. `colab sessions` shows what is alive; `colab stop -s <name>` releases it deliberately.
+
+## What the VM state was (session `gooday`)
 
 Set up and idle: Node v22.22.2 in `/usr/local`, the repo at `/content/groove` (16 MB tarball, no history),
 `node_modules` installed (`npm ci`, 552 packages, **10 s**), Playwright's Chromium headless shell downloaded,

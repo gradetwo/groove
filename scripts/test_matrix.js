@@ -917,7 +917,13 @@ async function runTestOnTarget(target, baseUrl) {
       );
       return {
         steps: document.querySelectorAll('[data-testid^="mobile-jam-step-"]').length,
-        lanes: [0, 1, 2, 3].every((lane) => Boolean(step(lane, 15))),
+        /**
+         * Six lanes now: the phone's report was that six pads sat above four rows with nothing saying which row a
+         * pad wrote, so 即兴 shows kick / snare / hat / percussion / bass / chords — one visible row per pad plus
+         * the two grid-only lanes a jam session wants. The assertion follows the product, and `lanes` checks the
+         * *last* lane exists so a truncated grid fails rather than passing on the first four.
+         */
+        lanes: [0, 1, 2, 3, 4, 5].every((lane) => Boolean(step(lane, 15))),
         pads: pads.length,
         tempoBelowGrid: tempoBottom > gridBottom,
         noPlayer: !player && !bar,
@@ -946,8 +952,8 @@ async function runTestOnTarget(target, baseUrl) {
           .filter((box) => box.width > 0 && (box.left < -0.5 || box.right > window.innerWidth + 0.5)),
       };
     });
-    if (jam.steps !== 64 || !jam.lanes) {
-      throw new Error(`Jam grid is not 4x16 (${jam.steps} steps, lanes ok: ${jam.lanes})`);
+    if (jam.steps !== 96 || !jam.lanes) {
+      throw new Error(`Jam grid is not 6x16 (${jam.steps} steps, lanes ok: ${jam.lanes})`);
     }
     if (jam.pads !== 6) throw new Error(`Jam module has ${jam.pads} pad(s), expected 6`);
     if (!jam.tempoBelowGrid) throw new Error("Jam tempo controls are not below the grid");
