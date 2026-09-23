@@ -32,6 +32,7 @@ import { expandGenrePattern, resolveGenreExpression } from "./genreExpression";
 import { GENRE_INDEX_MAP } from "./index/genresIndex";
 import { humaniseVelocity, patternSeed } from "../audio/noteEvents";
 import { applyGrooveTexture } from "./genreGroove";
+import { applyMidRangeFill } from "./genreMid";
 
 /** The eight sequencer roles a mix profile assigns values to. */
 export const MIX_TRACK_IDS = [
@@ -669,7 +670,12 @@ export function patternFromGenre(genre: Pick<Genre, "id" | "sequencer_pattern"> 
    * bar in only 1 of 11 sampled genres. Running after humanisation means a ghost is a fraction of a value that has
    * already been humanised, and only quieter onsets are ever added — see `genreGroove.ts`.
    */
-  return applyGrooveTexture(humanised, genre.id, category);
+  const textured = applyGrooveTexture(humanised, genre.id, category);
+  /**
+   * P1.2: the mid-range. The bass lane gains a walk only when it does not have one, and a low chord stack gains its
+   * own top note an octave up — both note rewrites, never onset changes, so every rhythm claim stays where it was.
+   */
+  return applyMidRangeFill(textured, genre.id, category);
 }
 
 /**
