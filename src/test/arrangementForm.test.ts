@@ -9,7 +9,17 @@ import {
   FILL_STEPS,
 } from "../data/arrangementForm";
 import { flattenSong } from "../data/songFlatten";
-import { MAX_SECTION_BARS, normaliseFill, resolveTimeline, type ClipSlot, type Song, type SongFill, type SongSection } from "../types/song";
+import {
+  MAX_SECTION_BARS,
+  MAX_SECTION_TRANSPOSE,
+  normaliseFill,
+  resolveTimeline,
+  sectionTranspose,
+  type ClipSlot,
+  type Song,
+  type SongFill,
+  type SongSection,
+} from "../types/song";
 import type { SequencerPattern } from "../types/genre";
 
 /**
@@ -281,5 +291,73 @@ describe("B5 · choosing the lanes a fill lands on", () => {
     expect(fillForTracks([{ track_id: "snare", name: "Snare" }], 2)?.steps).toEqual([0, 1]);
     expect(fillForTracks([{ track_id: "snare", name: "Snare" }], 1)?.steps).toEqual([0]);
     expect(fillForTracks([{ track_id: "snare", name: "Snare" }], 16)?.steps.length).toBe(FILL_STEPS);
+  });
+});
+
+describe("B5 · a section's transposition moves its pitched lanes and nothing else", () => {
+  const pitched = (): SequencerPattern =>
+    ({
+      ...clip(),
+      tracks: [
+        track("kick", 16),
+        { ...track("chords", 16), pitch: new Array(16).fill(0).map((_, i) => (i % 4 === 0 ? 60 : 0)) },
+        {
+          ...track("bass", 16),
+          pitch: new Array(16).fill(0).map((_, i) => (i % 4 === 0 ? 36 : 0)),
+          pitches: new Array(16).fill(null).map((_, i) => (i % 4 === 0 ? [36, 43] : null)),
+        },
+      ],
+    }) as unknown as SequencerPattern;
+
+  it("shifts every pitched step by exactly the section's semitones", () => {
+    const songWith = (transpose: number) =>
+      song([{ id: "s1", slot: "A", bars: 2, overrides: { transpose } }], { A: pitched(), B: pitched() });
+    const flat = flattenSong(songWith(5));
+    const chords = flat.pattern.tracks.find((lane) => lane.track_id === "chords")!;
+    const bass = flat.pattern.tracks.find((lane) => lane.track_id === "bass")!;
+    expect(chords.pitch!.filter((note) => typeof note === "number" && note > 0)).toEqual(
+      new Array(8).fill(65)
+    );
+    expect(bass.pitch!.filter((note) => typeof note === "number" && note > 0)).toEqual(new Array(8).fill(41));
+    // …and the stack travels with its root, so the chord's shape is unchanged.
+    expect(bass.pitches!.filter(Boolean)).toEqual(new Array(8).fill([41, 48]));
+  });
+
+  it("leaves the drums alone, because a drum has no key", () => {
+    const flat = flattenSong(song([{ id: "s1", slot: "A", bars: 1, overrides: { transpose: 7 } }], { A: pitched() }));
+    const kick = flat.pattern.tracks.find((lane) => lane.track_id === "kick")!;
+    expect(kick.pitch ?? []).toEqual([]);
+    expect(kick.steps.filter(Boolean).length).toBeGreaterThan(0);
+  });
+
+  it("cannot walk a line off the keyboard", () => {
+    // ±24 is the model's limit, and the note is clamped again so a transposed top note stays playable.
+    const high = { ...pitched(), tracks: [{ ...track("chords", 16), pitch: new Array(16).fill(0).map((_, i) => (i % 4 === 0 ? 120 : 0)) }] } as unknown as SequencerPattern;
+    const flat = flattenSong(song([{ id: "s1", slot: "A", bars: 1, overrides: { transpose: 24 } }], { A: high, B: high }));
+    const chords = flat.pattern.tracks.find((lane) => lane.track_id === "chords")!;
+    expect(Math.max(...chords.pitch!.filter((note): note is number => typeof note === "number"))).toBe(127);
+  });
+
+  it("clamps an absurd transposition instead of trusting it, and ignores a non-finite one", () => {
+    const huge = song([{ id: "s1", slot: "A", bars: 1, overrides: { transpose: 1000 } }], { A: pitched() });
+    expect(sectionTranspose(huge.sections[0])).toBe(MAX_SECTION_TRANSPOSE);
+    const nan = song([{ id: "s1", slot: "A", bars: 1, overrides: { transpose: Number.NaN } }], { A: pitched() });
+    expect(sectionTranspose(nan.sections[0])).toBe(0);
+    // A section with no transposition carries no key at all, so the timeline stays free of zeroes.
+    const plain = resolveTimeline(song([{ id: "s1", slot: "A", bars: 1 }], { A: pitched() }));
+    expect(plain.bars[0]).not.toHaveProperty("transpose");
+  });
+
+  it("carries the transposition on every bar of its section, and none of the next", () => {
+    const timeline = resolveTimeline(
+      song(
+        [
+          { id: "s1", slot: "A", bars: 2, overrides: { transpose: -3 } },
+          { id: "s2", slot: "A", bars: 1 },
+        ],
+        { A: pitched() }
+      )
+    );
+    expect(timeline.bars.map((bar) => bar.transpose ?? 0)).toEqual([-3, -3, 0]);
   });
 });

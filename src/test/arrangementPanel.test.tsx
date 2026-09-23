@@ -326,6 +326,31 @@ describe("B3 · the arrangement panel", () => {
     expect(onChange.mock.calls[1][0].sections[0]).not.toHaveProperty("mute");
   });
 
+  it("moves the selected section's pitched lanes a semitone or an octave at a time", () => {
+    renderPanel({ selectedId: "s1" });
+    expect(screen.getByTestId("arrangement-transpose-value").textContent).toContain("+0");
+    fireEvent.click(screen.getByTestId("arrangement-transpose-up"));
+    expect(onChange.mock.calls[0][0].sections[0].overrides?.transpose).toBe(1);
+    fireEvent.click(screen.getByTestId("arrangement-transpose-down-octave"));
+    expect(onChange.mock.calls[1][0].sections[0].overrides?.transpose).toBe(-12);
+    // A discrete edit, like the label and the mute chips: one undo entry each.
+    expect(onChange.mock.calls[1][0].continuous).toBe(false);
+    expect(onChange.mock.calls[1][0].gesture).toBe("arrangement:transpose");
+  });
+
+  it("shows the transposition it is actually carrying, and keeps every stepper at 44 px", () => {
+    renderPanel({
+      song: song([{ id: "s1", slot: "A", bars: 2, overrides: { transpose: -7 } }], { A: clip(16) }),
+      selectedId: "s1",
+    });
+    expect(screen.getByTestId("arrangement-transpose-value").textContent).toContain("-7");
+    for (const id of ["arrangement-transpose-down-octave", "arrangement-transpose-down", "arrangement-transpose-up", "arrangement-transpose-up-octave"]) {
+      const button = screen.getByTestId(id);
+      expect(button.style.minHeight, id).toBe(`${ARRANGEMENT_MIN_TARGET}px`);
+      expect(button.style.minWidth, id).toBe(`${ARRANGEMENT_MIN_TARGET}px`);
+    }
+  });
+
   it("shows the lane chips only for a selected section, and at 44 px", () => {
     renderPanel({ selectedId: null });
     expect(screen.queryByTestId("arrangement-mute-kick")).toBeNull();

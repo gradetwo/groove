@@ -110,6 +110,14 @@ export function flattenSong(song: Song): FlattenedSong {
       const scale = Number.isFinite(bar.velocityScale) ? bar.velocityScale : 1;
       const fill = bar.fill && fillTargets(bar.fill, track) ? bar.fill : undefined;
       const fillVelocity = fill ? (fill.velocity ?? 100) : 100;
+      /**
+       * The section's transposition moves *pitched* steps and nothing else: a step with no pitch is a drum, and a
+       * drum has no key. The shift is applied to `pitch` and to each note of a `pitches` stack, then clamped into the
+       * MIDI range so a ±24 section cannot walk a line off the end of the keyboard.
+       */
+      const transpose = bar.transpose ?? 0;
+      const shifted = (note: unknown): unknown =>
+        transpose && typeof note === "number" && note > 0 ? Math.max(0, Math.min(127, note + transpose)) : note;
 
       for (let step = 0; step < clipLength; step += 1) {
         const on = track.steps?.[step] ?? 0;
@@ -134,6 +142,12 @@ export function flattenSong(song: Song): FlattenedSong {
             } else {
               (built.velocity as unknown[]).push(filled ? 100 : undefined);
             }
+          } else if (name === "pitch") {
+            (built.pitch as unknown[]).push(shifted(value));
+          } else if (name === "pitches") {
+            (built.pitches as unknown[]).push(
+              Array.isArray(value) ? value.map((note) => shifted(note)) : value
+            );
           } else {
             (built[name] as unknown[]).push(value);
           }

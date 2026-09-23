@@ -249,6 +249,21 @@ describe("F-09 · sequencer share URL never exceeds what the decoder accepts", (
     ]);
   });
 
+  it("carries a section's transposition, and bounds it like everything else from a link", () => {
+    const state = {
+      ...makeState(2, 16),
+      sections: [{ id: "s1", slot: "A" as const, bars: 2, overrides: { transpose: -5 } }],
+    };
+    const decoded = decodeSharedSequencer(encodeSharedSequencer(state));
+    expect(decoded?.sections?.[0].overrides?.transpose).toBe(-5);
+
+    const hostile = {
+      ...makeState(2, 16),
+      sections: [{ id: "s1", slot: "A" as const, bars: 2, overrides: { transpose: 9999 } }],
+    };
+    expect(decodeSharedSequencer(encodeSharedSequencer(hostile))?.sections?.[0].overrides?.transpose).toBe(24);
+  });
+
   it("bounds hostile overrides instead of trusting them", () => {
     // A link is untrusted input like every other field: a 500× ramp is a mistake, and a fill with a thousand steps
     // would spend the URL budget on data no pattern can address.

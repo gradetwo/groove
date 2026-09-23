@@ -172,7 +172,16 @@ the renderer's default and the ramp would never reach them — the lane is there
 reaches it*, and holes are spelled out as the same 100 the renderer would have used. A test pins the other half:
 a lane no fill reaches flattens exactly as it did before, holes included.
 
-**B5's audio half is now measured, not assumed.** `probe:arrangement-audio` (CI, desktop leg) renders a two-bar
+**The harmonic half of B5 — "change the chord every 8 bars" — is a section override, not a new clip.**
+`SectionOverrides.transpose` moves a section's *pitched* lanes by ±24 semitones and touches nothing else: a drum has
+no key, so a kick cannot move, and the shift is clamped twice (the section's own ±24, then each note into the MIDI
+range) so a share link cannot walk a line off the keyboard. It follows the same "no empty keys" rule as `label` and
+`mute`: transposed and put back leaves no `overrides` object at all, so a project round-trips byte for byte and a diff
+shows real edits. The arrangement view exposes it as four 44 px steppers (±1, ±12) beside the label, and the share
+link carries it as `t` in the same compact override object as the ramp and the fill — bounded on both sides, like
+every other field in a link.
+
+`probe:arrangement-audio` (CI, desktop leg) renders a two-bar
 build and a two-bar fill through the app's own offline engine and measures the *audio*: the fill's bar gains
 **+6.04 %** high-frequency energy (a snare hit is broadband) for a **−0.17 %** level change, which is what a fill is
 — onsets, not loudness. The same run also produced the number P2.3 needs: a **6 dB** velocity ramp in the pattern

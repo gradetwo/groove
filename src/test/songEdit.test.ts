@@ -10,9 +10,10 @@ import {
   sectionRegions,
   setSectionLabel,
   toggleSectionMute,
+  transposeSection,
   MAX_SECTION_LABEL,
 } from "../features/arrangement/songEdit";
-import { MAX_SECTION_BARS, type ClipSlot, type Song, type SongSection } from "../types/song";
+import { MAX_SECTION_BARS, MAX_SECTION_TRANSPOSE, type ClipSlot, type Song, type SongSection } from "../types/song";
 import type { SequencerPattern } from "../types/genre";
 
 /**
@@ -297,5 +298,42 @@ describe("B5 · naming a section and silencing a lane", () => {
     const edited = setSectionLabel(toggleSectionMute(base, "s2", "snare"), "s2", "break");
     expect(edited.sections[1]).toEqual({ id: "s2", slot: "A", bars: 2, mute: ["hihat", "snare"], label: "break" });
     expect(edited.sections[0]).toEqual(base.sections[0]);
+  });
+});
+
+describe("B5 · transposing a section", () => {
+  const base = song([{ id: "s1", slot: "A", bars: 1 }, { id: "s2", slot: "A", bars: 1 }], { A: clip(16) });
+
+  it("adds and subtracts semitones relative to what the section already says", () => {
+    const up = transposeSection(base, "s1", 5);
+    expect(up.sections[0].overrides?.transpose).toBe(5);
+    expect(transposeSection(up, "s1", 7).sections[0].overrides?.transpose).toBe(12);
+    expect(transposeSection(up, "s1", -12).sections[0].overrides?.transpose).toBe(-7);
+  });
+
+  it("drops the whole overrides object when it lands back on zero", () => {
+    // The same rule a label and a mute follow: transposed and put back is identical to never transposed, so a diff
+    // shows real edits and a project round-trips byte for byte.
+    const up = transposeSection(base, "s1", 3);
+    const back = transposeSection(up, "s1", -3);
+    expect(back.sections[0]).not.toHaveProperty("overrides");
+  });
+
+  it("keeps a sibling override when the transposition goes", () => {
+    const withBoth = song(
+      [{ id: "s1", slot: "A", bars: 2, overrides: { transpose: 4, velocityRamp: [0.5, 1] } }],
+      { A: clip(16) }
+    );
+    const back = transposeSection(withBoth, "s1", -4);
+    expect(back.sections[0].overrides).toEqual({ velocityRamp: [0.5, 1] });
+  });
+
+  it("clamps at the model's limit and is a no-op there", () => {
+    const max = transposeSection(base, "s1", 1000);
+    expect(max.sections[0].overrides?.transpose).toBe(MAX_SECTION_TRANSPOSE);
+    expect(transposeSection(max, "s1", 5)).toBe(max);
+    expect(transposeSection(base, "s1", 0)).toBe(base);
+    expect(transposeSection(base, "ghost", 3)).toBe(base);
+    expect(transposeSection(base, "s2", 3).sections[0]).not.toHaveProperty("overrides");
   });
 });

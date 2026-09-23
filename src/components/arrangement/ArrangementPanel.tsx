@@ -18,7 +18,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import { resolveTimeline, type Song, type SongSection } from "../../types/song";
+import { resolveTimeline, sectionTranspose, type Song, type SongSection } from "../../types/song";
 import {
   applyArrangementCommand,
   commandForKey,
@@ -28,6 +28,7 @@ import {
   sectionRegions,
   setSectionLabel,
   toggleSectionMute,
+  transposeSection,
   type ArrangementCommand,
   type SectionRegion,
 } from "../../features/arrangement/songEdit";
@@ -220,6 +221,12 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
   const toggleMute = (id: string, lane: string) => {
     const next = toggleSectionMute(song, id, lane);
     if (next !== song) onChange({ sections: next.sections, gesture: "arrangement:mute", continuous: false });
+  };
+
+  /** Move the section's pitched lanes — the harmonic half of "change the chord every 8 bars". */
+  const transpose = (id: string, semitones: number) => {
+    const next = transposeSection(song, id, semitones);
+    if (next !== song) onChange({ sections: next.sections, gesture: "arrangement:transpose", continuous: false });
   };
 
   /** The lanes of the clip the selected section points at — what a mute can silence. */
@@ -441,6 +448,30 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
               style={{ minHeight: ARRANGEMENT_MIN_TARGET }}
               className="min-w-[10rem] rounded-lg border border-line bg-panel2 px-3 text-xs text-text focus:border-accent focus:outline-none"
             />
+            {/**
+              * The transposition stepper. Four buttons rather than a drag: this is a harmonic decision, not a
+              * continuous one, and 44 px each keeps it usable on an iPad.
+              */}
+            {[-12, -1, 1, 12].map((delta) => (
+              <button
+                key={delta}
+                type="button"
+                data-testid={`arrangement-transpose-${delta > 0 ? "up" : "down"}${Math.abs(delta) === 12 ? "-octave" : ""}`}
+                onClick={() => transpose(selected.id, delta)}
+                title={t("arrangement_transpose_hint", { semitones: delta > 0 ? `+${delta}` : String(delta) })}
+                aria-label={t("arrangement_transpose_hint", { semitones: delta > 0 ? `+${delta}` : String(delta) })}
+                style={{ minHeight: ARRANGEMENT_MIN_TARGET, minWidth: ARRANGEMENT_MIN_TARGET }}
+                className="rounded-lg border border-line bg-panel2 px-2 font-['JetBrains_Mono'] text-[11px] text-text-sub transition-colors hover:border-accent/50 hover:text-accent"
+              >
+                {delta > 0 ? `+${delta}` : delta}
+              </button>
+            ))}
+            <span
+              data-testid="arrangement-transpose-value"
+              className="font-['JetBrains_Mono'] text-[11px] text-text-dim"
+            >
+              {t("arrangement_transpose_value", { semitones: `${sectionTranspose(selected) >= 0 ? "+" : ""}${sectionTranspose(selected)}` })}
+            </span>
             {selectedLanes.map((lane) => {
               const laneId = lane.track_id;
               const muted = (selected.mute ?? []).includes(laneId);
