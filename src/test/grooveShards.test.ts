@@ -178,3 +178,36 @@ describe("check:groove · the shard aggregate cannot lose a genre", () => {
     expect(outOfRange.stderr).toContain("there is no shard 5 of 4");
   });
 });
+
+describe("the budget table and the claim table cannot drift apart", () => {
+  /**
+   * `flatStabs` was counted, detailed and budgeted before it was added to `CLAIMS`, which is the one mistake this
+   * file can make that looks like success: the aggregate printed a table, the budget was never judged, and the gate
+   * could not fail. A claim is three things — a budget, a spec and a row to count into — so all three are asserted.
+   */
+  const keysOf = (source: string, name: string): string[] => {
+    const start = source.indexOf(`const ${name} = {`);
+    expect(start, `${name} exists`).toBeGreaterThan(-1);
+    // The object literal ends at the first line that closes it at column 2.
+    const end = source.indexOf("\n  };", start);
+    const body = source.slice(start, end === -1 ? source.length : end);
+    return [...body.matchAll(/^ {2}([a-zA-Z][a-zA-Z0-9]*):/gm)].map((match) => match[1]);
+  };
+
+  it("has a claim, a tally and a detail array for every budget", () => {
+    const script = fs.readFileSync(path.resolve(process.cwd(), "scripts/check_groove.mjs"), "utf8");
+    const budgets = keysOf(script, "BUDGET");
+    const claims = keysOf(script, "CLAIMS");
+    expect(budgets.length).toBeGreaterThan(5);
+    for (const key of budgets) {
+      expect(claims, `${key} has a claim spec`).toContain(key);
+    }
+    // …and the tally/detail objects the counting loop writes into.
+    const tallyStart = script.indexOf("const tally = {");
+    const detailStart = script.indexOf("const detail = {");
+    for (const key of budgets) {
+      expect(script.slice(tallyStart, script.indexOf("};", tallyStart)), `${key} is counted`).toContain(`${key}: 0`);
+      expect(script.slice(detailStart, script.indexOf("};", detailStart)), `${key} has detail`).toContain(`${key}: []`);
+    }
+  });
+});
