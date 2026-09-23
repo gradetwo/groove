@@ -34,6 +34,18 @@ export const mobileMessages = {
   mobile_audition_stop: { en: "Stop the audition", zh: "停止试听" },
   mobile_genre_open_detail: { en: "Full details", zh: "查看完整详情" },
 
+  // The multi-level genre picker (`MobileGenrePicker`): a category level, a genre level and a filter.
+  // Its search/count/empty strings are shared with the library above; only the title and the six
+  // category names are new, because the library printed the raw data category and the picker does not.
+  mobile_genre_picker_title: { en: "Choose a genre", zh: "选择曲风" },
+  mobile_genre_picker_categories: { en: "Browse by category", zh: "按分类浏览" },
+  mobile_category_electronic: { en: "Electronic", zh: "电子" },
+  mobile_category_rock_metal: { en: "Rock/Metal", zh: "摇滚/金属" },
+  mobile_category_hip_hop: { en: "Hip Hop", zh: "嘻哈" },
+  mobile_category_jazz_blues: { en: "Jazz/Blues", zh: "爵士/布鲁斯" },
+  mobile_category_latin_world: { en: "Latin/World", zh: "拉丁/世界" },
+  mobile_category_pop_rnb: { en: "Pop/R&B", zh: "流行/R&B" },
+
   // Honest placeholders for the modules that are still being rebuilt.
   mobile_module_building: { en: "Rebuilding for the phone", zh: "手机版正在重建" },
   mobile_module_home_plan: {
@@ -115,7 +127,6 @@ export const mobileMessages = {
   mobile_player_status_playing: { en: "Playing", zh: "播放中" },
   mobile_player_realtime: { en: "Realtime synth", zh: "实时合成" },
   mobile_player_loop: { en: "Loop", zh: "循环" },
-  mobile_player_list: { en: "Track list", zh: "曲目单" },
   mobile_player_tap_detail: { en: "Tap the record for the genre page", zh: "轻点唱片看曲风详情" },
   mobile_player_label_footer: { en: "GROOVE REC · 33 1/3 RPM", zh: "GROOVE REC · 33 1/3 RPM" },
   mobile_player_slow: { en: "Slower", zh: "减慢" },
