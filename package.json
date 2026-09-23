@@ -52,6 +52,7 @@
     "check:node": "node scripts/check_node_version.mjs",
     "check:isolation": "node scripts/check_isolation.mjs",
     "check:loudness:fresh": "node scripts/measure_genre_loudness.mjs --sample=3",
+    "record:loudness": "node scripts/measure_genre_loudness.mjs",
     "check:actions": "node scripts/check_actions_runtime.mjs",
     "probe:jank": "node scripts/measure_phone_jank.mjs",
     "skins:gen": "node scripts/desktop_skins.mjs",

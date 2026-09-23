@@ -133,3 +133,41 @@ describe("P0.2 · the gate and the analyser agree on what a claim is", () => {
     expect(gate).toMatch(/spec\.worse\(measured\[claim\], budget\)/);
   });
 });
+
+describe("P0.9 · the loudness reference is measured on a warm page", () => {
+  const script = read("scripts/measure_genre_loudness.mjs");
+
+  it("recycles the page before it takes the sentinel's reference", () => {
+    /**
+     * The abort that made the 2026-09-20 re-record unpublishable, reproduced on 2026-09-23 with a 14-genre run:
+     * `chicago-house` read −12.349 LUFS on the page the run opened in and −11.589 after the first reload
+     * (Δ +0.760 dB against a 0.3 dB tolerance), and every row after that reload agreed with the *later* value.
+     * The opening page is the only page in a run whose module graph was fetched over the network for the first
+     * time; a reloaded page is stable from its first measurement. So the reference has to be taken with the same
+     * procedure the later checks use — reload, discard one render, measure — or a sentinel "drift" is really two
+     * page states being compared.
+     */
+    const recycle = script.indexOf("await recyclePage(");
+    const reference = script.indexOf('await checkSentinel("reference (warm page)")');
+    expect(recycle, "the reference must be preceded by a page recycle").toBeGreaterThan(-1);
+    expect(reference).toBeGreaterThan(recycle);
+  });
+
+  it("keeps the reload in one place, so the reference and the checks cannot drift apart", () => {
+    // Two copies of "reload, discard, measure" is how the reference would stop being comparable with the checks
+    // that use it — the failure this whole describe block is about.
+    expect((script.match(/await page\.reload\(/g) ?? []).length).toBe(1);
+    expect(script).toMatch(/const recyclePage = async/);
+    expect(script).toMatch(/await recyclePage\(`after \$\{reloadEvery\} measurement\(s\)`\)/);
+  });
+
+  it("kills the dev server on the abort path too", () => {
+    /**
+     * The sentinel exits with `process.exit(1)`, which bypasses the `finally` — and the analyser's port is fixed
+     * (`--strictPort`), so the *next* run failed with "Port 3150 is already in use", which reads like a broken
+     * script rather than a leftover process. Cost one debugging round on 2026-09-23.
+     */
+    expect(script).toMatch(/process\.on\("exit"/);
+    expect(script.indexOf('process.on("exit"')).toBeLessThan(script.indexOf("await checkSentinel("));
+  });
+});

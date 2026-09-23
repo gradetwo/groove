@@ -58,15 +58,19 @@ git diff --stat apple2011/next HEAD
   and the serial run cannot disagree. It runs with `if: always()` and no `npm ci` (the merge path imports nothing but
   Node), so a dead shard produces "no shard measured: …" instead of silence.
 
-`manual-verify.yml` is the on-demand switch (`scope: e2e | verify | audio | jank | skins | all`, plus
-`profile`/`only`) and is the right tool for "just the phone legs" or "just the timbre gate".
+`manual-verify.yml` is the on-demand switch (`scope: e2e | verify | audio | trim | jank | skins | all`, plus
+`profile`/`only`) and is the right tool for "just the phone legs", "just the timbre gate", or the 159-genre loudness
+trim re-record (`trim`, which uploads the report as an artifact and never commits a baseline).
 
 ### Gating policy
 
-`check:loudness:fresh` is red until **P0.8 → P0.9** land (the swing timing change needs the 159 loudness trims
-re-recorded, and the re-record cannot publish while the renderer's repeat nondeterminism is open — the measurement's
-own sentinel refuses). It therefore runs in **nightly and does not gate pull requests**, by decision rather than by
-accident. Everything else is a blocking check.
+`check:loudness:fresh` is red until **P0.9** lands (the swing and sidechain changes moved the fitted trims, so the
+committed report no longer describes the code). Its blocker was **P0.8**, and that is now resolved by measurement
+rather than by luck: the gate's sentinel was comparing two page states, not two renders. The run now takes its
+reference on a recycled page (`measure_genre_loudness.mjs`), and the 14-genre subset that aborted at Δ +0.760 dB
+finishes at Δ −0.000 dB. What remains is the re-record itself — run `Manual verify` with `scope: trim`, download the
+artifact, apply it with `node scripts/apply_loudness_trims.mjs`, and commit. Until then `check:loudness:fresh` runs in
+**nightly and does not gate pull requests**, by decision rather than by accident. Everything else is a blocking check.
 
 ### Measured results
 
