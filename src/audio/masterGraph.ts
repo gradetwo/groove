@@ -52,6 +52,11 @@
  * master fader moves the wet signal too, and the reverb/delay returns are loudness-matched
  * with the rest of the genre, which is how a real console behaves.
  */
+import {
+  createBusCompressor,
+  type BusCompressorHandle,
+  type BusCompressorKind,
+} from "./GlueCompressorFactory";
 import { EffectsRack, DEFAULT_FX_STATE, type EffectsRackState } from "./EffectsRack";
 import { ReverbBus, DEFAULT_REVERB_PARAMS, type ReverbParams } from "./ReverbBus";
 import { DelayBus, DEFAULT_DELAY_PARAMS, type DelayParams } from "./DelayBus";
@@ -105,6 +110,17 @@ export interface MasterGraphOptions {
   masterBusCompThresholdDb?: number;
   masterBusCompKneeDb?: number;
   masterBusCompRatio?: number;
+  /**
+   * A **pre-duck** copy of the bus for the compressor's detector (A2).
+   *
+   * Supplying one switches the stage to the worklet compressor, whose detector reads this node instead of the
+   * programme — which is the whole fix: the duck is in the programme, and a compressor that sees it hands it back
+   * (measured: the median dip goes −4.37 dB → 0 dB through a `DynamicsCompressorNode`). Without one the graph uses
+   * the node and behaves exactly as before, byte for byte.
+   */
+  busCompDetector?: AudioNode;
+  /** Fixed makeup for the worklet compressor, dB. 0 by default; calibrated against the node it replaces. */
+  busCompMakeupDb?: number;
   /** Master true-peak ceiling, dBTP. Defaults to the limiter's own default. */
   limiterCeilingDb?: number;
   /**
@@ -168,6 +184,8 @@ export interface MasterGraph {
   getLoudnessTrimDb(): number;
   /** The ceiling actually installed once module loading settles. */
   limiterKind(): MasterLimiterKind;
+  /** Which bus compressor is live (`node` unless a detector was supplied and the worklet loaded). */
+  busCompressorKind(): BusCompressorKind;
   /** Lookahead latency of the ceiling, seconds (0 on the compressor fallback). */
   limiterLatencySeconds(): number;
   dispose(): void;
@@ -266,22 +284,23 @@ export function buildMasterGraph(
    * chain (used by the measurement tooling to isolate its effect); the default is on.
    */
   const busCompEnabled = options.masterBusCompEnabled !== false;
-  const masterBusComp = ctx.createDynamicsCompressor();
-  if (busCompEnabled) {
-    masterBusComp.threshold.value = Number.isFinite(options.masterBusCompThresholdDb)
-      ? (options.masterBusCompThresholdDb as number)
-      : MASTER_BUS_COMP_THRESHOLD_DB;
-    masterBusComp.knee.value = Number.isFinite(options.masterBusCompKneeDb)
-      ? Math.max(0, options.masterBusCompKneeDb as number)
-      : MASTER_BUS_COMP_KNEE_DB;
-    masterBusComp.ratio.value = Number.isFinite(options.masterBusCompRatio)
-      ? Math.max(1, options.masterBusCompRatio as number)
-      : MASTER_BUS_COMP_RATIO;
-    masterBusComp.attack.value = MASTER_BUS_COMP_ATTACK_SEC;
-    masterBusComp.release.value = Number.isFinite(options.masterBusCompReleaseSec)
-      ? Math.max(0.01, options.masterBusCompReleaseSec as number)
-      : MASTER_BUS_COMP_RELEASE_SEC;
-  }
+  /**
+   * The bus compressor, as a handle rather than a bare node.
+   *
+   * With no detector it is a `DynamicsCompressorNode` with the shipped settings — the graph then behaves exactly as
+   * it did before this existed. With a detector (`busCompDetector`) it becomes the two-input worklet compressor,
+   * whose gain follows a pre-duck copy of the bus; the node keeps the ceiling until the module loads, exactly like
+   * the limiter's own fallback.
+   */
+  const busComp: BusCompressorHandle = createBusCompressor(ctx, {
+    thresholdDb: options.masterBusCompThresholdDb,
+    kneeDb: options.masterBusCompKneeDb,
+    ratio: options.masterBusCompRatio,
+    releaseSec: options.masterBusCompReleaseSec,
+    detector: options.busCompDetector ?? null,
+    makeupDb: options.busCompMakeupDb,
+  });
+  const masterBusComp = busComp.input;
 
   const reverb = new ReverbBus(ctx, options.reverb ?? DEFAULT_REVERB_PARAMS);
   const delay = new DelayBus(ctx, options.delay ?? DEFAULT_DELAY_PARAMS);
@@ -402,7 +421,7 @@ export function buildMasterGraph(
   loudnessTrimGain.connect(masterMakeupGain);
   if (busCompEnabled) {
     masterMakeupGain.connect(masterBusComp);
-    masterBusComp.connect(limiter.input);
+    busComp.output.connect(limiter.input);
   } else {
     masterMakeupGain.connect(limiter.input);
   }
@@ -463,6 +482,7 @@ export function buildMasterGraph(
     getLoudnessTrimDb() {
       return appliedTrimDb;
     },
+    busCompressorKind: () => busComp.kind(),
     limiterKind() {
       return limiter.kind;
     },

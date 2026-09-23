@@ -292,8 +292,20 @@ export async function renderPatternOffline(
   // dialled into FLT/DRIVE/CHORUS/LO-FI simply did not reach the file. It also used a
   // 0.85 fader against the live engine's 0.8, an unrelated ~0.5 dB offset; both now come
   // from `MASTER_FADER_DEFAULT`.
+  /**
+   * The compressor's **pre-duck** detector bus (A2).
+   *
+   * The sidechain duck is applied per lane, inside the strip, so the bus compressor downstream used to see it and
+   * hand it back — measured, the *median* dip in the file went −4.37 dB → 0 dB through the stock node. The worklet
+   * compressor takes a second input instead: this bus, tapped from each lane **before** its duck gain, carrying the
+   * lane's own volume so a muted or quiet lane still counts for what it contributes.
+   */
+  const detectorBus = ctx.createGain();
+  detectorBus.gain.value = 1;
+
   const graph = buildMasterGraph(ctx, {
     loudnessTrimDb,
+    busCompDetector: detectorBus,
     masterMakeupDb: options.masterMakeupDb,
     masterBusCompEnabled: options.masterBusCompEnabled,
     masterBusCompReleaseSec: options.masterBusCompReleaseSec,
@@ -351,6 +363,13 @@ export async function renderPatternOffline(
     const tDuckGain = ctx.createGain();
     tDuckGain.gain.setValueAtTime(1, 0);
     tInsert.output.connect(tDuckGain);
+
+    // …and the pre-duck tap that feeds the compressor's detector. It sits before `tDuckGain` on purpose and carries
+    // the lane's volume, so the detector sees the programme as it would be *without* a sidechain, not as it is.
+    const tDetectorTap = ctx.createGain();
+    tDetectorTap.gain.setValueAtTime(silenced(tState) ? 0 : Math.max(0, Math.min(2, tState.volume)), 0);
+    tInsert.output.connect(tDetectorTap);
+    tDetectorTap.connect(detectorBus);
 
     const tGain = ctx.createGain();
     tGain.gain.setValueAtTime(Math.max(0, Math.min(2, tState.volume)), 0);
