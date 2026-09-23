@@ -552,6 +552,14 @@ async function measureGenre(page, genreId, bars, soloTracks) {
  * They are judgements, so they are written down: every one of them is a statement about what a listener hears,
  * and each has a *control* that must not trip it (a bright hi-hat is not a click; a loud mix is not distortion).
  */
+/**
+ * P1.1 — the spread, in MIDI steps, below which a lane reads as programmed rather than played.
+ *
+ * The plan's own bar ("max − min ≥ 15 on snare/hats"), in one place: the analyser's claim and the gate's budget
+ * both cite it, so the two cannot drift apart.
+ */
+export const MIN_LANE_SPREAD = 15;
+
 const CLAIMS = {
   /** A discontinuity: a sample 6x (≈ +15.6 dB) above its own local median slew. */
   clicks: (row) => (row.clicks?.count ?? 0) > 0,
@@ -620,6 +628,26 @@ const CLAIMS = {
     const duck = row.musical?.duck;
     if (!duck || duck.duckOnsets <= 0) return false;
     return (duck.duckMedianDb ?? 0) <= -3 && (duck.duckMasterMedianDb ?? 0) > -1.5;
+  },
+  /**
+   * P1.1 — the *dynamics* of the lanes a listener hears as played, not just "more than one value".
+   *
+   * `flatTracks` asks whether a lane has any variation at all (`distinct <= 1`); this asks whether the variation is
+   * wide enough to hear. Measured at the pattern level on 2026-09-23, the snare lane reached a spread of 15 MIDI
+   * steps in **1 of 11** sampled genres and the hats in **8 of 11** — while `flatTracks` was already 0/12. A gate
+   * with no claim for this simply cannot see the problem the plan's P1.1 names, which is why P0.2 "fixed" the report
+   * and the grooves still sounded flat.
+   *
+   * Only the two lanes an idiom actually ornaments are counted: a fixed kick and a fixed bass are decisions (that is
+   * the same allowance `flatTracks` makes), a fixed snare is a MIDI dump. A genre with neither lane sounding is not
+   * measurable and is not counted as passing.
+   */
+  thinDynamics: (row) => {
+    const lanes = ["snare", "hihat"]
+      .map((id) => row.musical?.velocityByTrack?.[id])
+      .filter((lane) => lane && lane.onsets > 0);
+    if (!lanes.length) return false;
+    return lanes.some((lane) => lane.max - lane.min < MIN_LANE_SPREAD);
   },
   /** The mid-range is thin: the 200 Hz - 2 kHz bands hold less than the average band's share. */
   thinMids: (row) => (row.musical?.midBandShareDb ?? 0) < -6,

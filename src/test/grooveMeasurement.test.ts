@@ -120,10 +120,22 @@ describe("P0.2 · the gate and the analyser agree on what a claim is", () => {
   });
 
   it("budgets every claim the analyser defines for the musical ratchet", () => {
-    for (const claim of ["flatTracks", "weakDuck", "narrowStereo", "thinMids", "staticHarmony", "cutTail"]) {
+    for (const claim of ["flatTracks", "thinDynamics", "weakDuck", "narrowStereo", "thinMids", "staticHarmony", "cutTail"]) {
       expect(analyser, `${claim} must exist in the analyser`).toMatch(new RegExp(`\\b${claim}: \\(row\\)`));
       expect(gate, `${claim} must have a budget`).toMatch(new RegExp(`\\b${claim}: \\d+`));
     }
+  });
+
+  it("uses one dynamics floor for P1.1, in both files", () => {
+    /**
+     * The analyser names the threshold and the gate compares against it. Two literals, one number: a drift check,
+     * because the failure it prevents ("the claim and the budget mean different things") is invisible otherwise — the
+     * gate would simply stop firing.
+     */
+    const analyserFloor = /MIN_LANE_SPREAD = (\d+)/.exec(analyser)?.[1];
+    const gateFloor = /lane\.max[^\n]*lane\.min\s*<\s*(\d+)/.exec(gate)?.[1];
+    expect(analyserFloor, "the analyser must name the floor").toBeTruthy();
+    expect(gateFloor, "the gate must use it").toBe(analyserFloor);
   });
 
   it("keeps the gate's accumulator able to fail", () => {
