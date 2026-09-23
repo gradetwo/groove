@@ -33,6 +33,7 @@ import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_storie
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { GenreCategory } from "../../types/genre";
 import { CATEGORY_SWATCH, genreArtBackground, genreCoverUrl } from "../genreArt";
+import { genreMatchesQuery, genreNameZh } from "../genreQuery";
 
 /**
  * `id → index item` for the whole shipped library.
@@ -49,17 +50,6 @@ const INDEX_BY_ID: Map<string, GenreIndexItem> = new Map(GENRE_INDEX.map((genre)
 export { CATEGORY_SWATCH };
 
 const CATEGORIES = Object.keys(CATEGORY_SWATCH) as GenreCategory[];
-
-/**
- * The Chinese name, which the genre database carries as a CJK alias (`"芝加哥浩室"`).
- *
- * `Genre.name` is English by contract ("Always in English"), so the phone list takes the first alias
- * that actually contains CJK rather than assuming `aliases[0]` is a translation — some genres list
- * romanised or alternative English names first.
- */
-const CJK = /[\u3400-\u9fff]/;
-const genreNameZh = (genre: Pick<GenreIndexItem, "aliases">): string =>
-  (genre.aliases ?? []).find((alias) => CJK.test(alias)) ?? "";
 
 export interface MobileHomeScreenProps {
   /** Which genre the shell is currently auditioning; the engine lives in `MobileApp`. */
@@ -109,16 +99,9 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
   const [category, setCategory] = useState<GenreCategory | "all">("all");
 
   const genres = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return GENRE_INDEX.filter((genre) => {
-      if (category !== "all" && genre.category !== category) return false;
-      if (!needle) return true;
-      return (
-        genre.name.toLowerCase().includes(needle) ||
-        genreNameZh(genre).includes(query.trim()) ||
-        (genre.aliases ?? []).some((alias) => alias.toLowerCase().includes(needle))
-      );
-    });
+    return GENRE_INDEX.filter(
+      (genre) => (category === "all" || genre.category === category) && genreMatchesQuery(genre, query)
+    );
   }, [query, category]);
 
   /** How many of `genres` are in the DOM right now. */
