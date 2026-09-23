@@ -115,6 +115,13 @@ export interface MasterLimiterOptions {
   releaseFastMs?: number;
   /** Slow release time constant, ms. */
   releaseSlowMs?: number;
+  /**
+   * A **pre-duck** copy of the bus for the ceiling's detector.
+   *
+   * Supplying one makes the ceiling's gain follow that copy instead of the programme, so a sidechain dip the
+   * arrangement asked for cannot make the limiter release and hand the level back. See `processBlock`.
+   */
+  detector?: AudioNode | null;
 }
 
 function dbToLinear(db: number): number {
@@ -312,7 +319,24 @@ export class TruePeakLimiterKernel {
    * written. Both are arrays of one Float32Array per channel and must be at least
    * `frames` long. Output is delayed by `latencySamples` (silence for the first block).
    */
-  processBlock(inputs: Float32Array[], outputs: Float32Array[], frames: number): void {
+  /**
+   * @param detector optional second stream whose peak drives the gain.
+   *
+   * The ceiling's own detector sees the programme, and the sidechain duck is part of that programme — measured
+   * 2026-09-23: with the ceiling in the chain the duck's *median* dip in the file is **0 dB** once the mix reaches
+   * the ceiling (the same defect the bus compressor had, and why it was given a detector of its own). With a
+   * **pre-duck** copy here, the gain cannot respond to a dip the arrangement asked for, at any level — which is
+   * what makes the fix independent of the operating point the loudness trims set.
+   *
+   * The detector's peak can only be ≥ the programme's (a duck attenuates), so limiting on it is conservative: the
+   * output stays at or below the ceiling.
+   */
+  processBlock(
+    inputs: Float32Array[],
+    outputs: Float32Array[],
+    frames: number,
+    detector: Float32Array[] | null = null
+  ): void {
     const channels = Math.min(inputs.length, outputs.length);
     if (channels <= 0 || frames <= 0) return;
     this.ensureChannels(channels);
@@ -322,10 +346,13 @@ export class TruePeakLimiterKernel {
     const histLen = this.historyLength;
     const peak = this.framePeak;
     peak.fill(0, 0, frames);
+    // The channel whose peak is measured: the detector's when there is one (wrapping if it has fewer channels), the
+    // programme's otherwise.
+    const detectorChannels = detector && detector.length ? detector.length : 0;
 
     // 1. Per-channel 4× oversampled true peak, combined across channels (stereo link).
     for (let c = 0; c < channels; c++) {
-      const source = inputs[c];
+      const source = (detectorChannels ? detector![c % detectorChannels] : inputs[c]) as Float32Array;
       const scratch = this.scratch;
       scratch.set(this.histories[c], 0);
       scratch.set(source.subarray(0, frames), histLen);
@@ -533,7 +560,8 @@ export function createMasterLimiter(
       await worklet.addModule(MASTER_LIMITER_WORKLET_URL);
       if (disposed) return "fallback";
       const node = new AudioWorkletNode(ctx, MASTER_LIMITER_PROCESSOR_NAME, {
-        numberOfInputs: 1,
+        // Two inputs when a detector was supplied: 0 is the programme, 1 is what the gain follows.
+        numberOfInputs: options.detector ? 2 : 1,
         numberOfOutputs: 1,
         outputChannelCount: [2],
         channelCount: 2,
@@ -564,6 +592,7 @@ export function createMasterLimiter(
       } catch {
         /* not connected */
       }
+      if (options.detector) options.detector.connect(node, 0, 1);
       input.connect(node);
       node.connect(output);
       active = node;

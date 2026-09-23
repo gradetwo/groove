@@ -307,6 +307,9 @@ export async function renderPatternOffline(
     // gain so a deliberate dip is not mistaken for a quiet passage. See `busCompDetectorInput` for why it is not
     // created here.
     busCompDetector: "internal",
+    // …and the same pre-duck bus for the ceiling's detector: at the operating point the trims set, the ceiling is
+    // what eats the duck (measured: file median −0.2 dB against a −4.36 dB sidechain).
+    limiterDetector: "internal",
     masterMakeupDb: options.masterMakeupDb,
     masterBusCompEnabled: options.masterBusCompEnabled,
     masterBusCompReleaseSec: options.masterBusCompReleaseSec,
@@ -370,7 +373,7 @@ export async function renderPatternOffline(
     const tDetectorTap = ctx.createGain();
     tDetectorTap.gain.setValueAtTime(silenced(tState) ? 0 : Math.max(0, Math.min(2, tState.volume)), 0);
     tInsert.output.connect(tDetectorTap);
-    if (graph.busCompDetectorInput) tDetectorTap.connect(graph.busCompDetectorInput);
+    if (graph.duckDetectorInput) tDetectorTap.connect(graph.duckDetectorInput);
 
     const tGain = ctx.createGain();
     tGain.gain.setValueAtTime(Math.max(0, Math.min(2, tState.volume)), 0);

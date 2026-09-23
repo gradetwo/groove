@@ -599,3 +599,88 @@ describe("M14 · the deque window reproduces the scan it replaced", () => {
     }
   });
 });
+
+/**
+ * A2, second half — the ceiling can be given a **detector of its own**.
+ *
+ * The compressor's fix was not enough on its own: applying the batch's trims made disco ~2 dB louder, and with the
+ * mix at the ceiling the *ceiling* released over the sidechain dip and handed it back (measured: the file's median
+ * dip fell from −2.39 dB to −0.2 dB while the compressor's own cell stayed at −4.42 dB). A pre-duck copy of the bus
+ * removes the dependency on the operating point entirely, which is what these cases pin on the kernel: the same
+ * programme, once with the dip visible to the detector and once with a detector that never dips.
+ */
+describe("E-12 · the ceiling follows a detector stream when it has one", () => {
+  /** Loud plateaus with a deep, abrupt dip in the middle — a sidechain duck, in the shape the limiter sees it. */
+  const programmeWithDip = () => {
+    const frames = SAMPLE_RATE; // one second
+    const signal = new Float32Array(frames);
+    for (let i = 0; i < frames; i += 1) {
+      /**
+       * The plateaus are **above** the ceiling deliberately: at 0.7 (−3.1 dBFS) the limiter never engages, so both
+       * cases measured the same dip and the test proved nothing. 1.4 is about 4 dB of reduction — the state a loud
+       * genre is actually in.
+       */
+      // A 200 ms dip: long enough for an 80 ms release slope to travel, which is what "given back" means.
+      const inDip = i > frames * 0.4 && i < frames * 0.6;
+      signal[i] = (inDip ? 0.05 : 1.4) * Math.sin((2 * Math.PI * 220 * i) / SAMPLE_RATE);
+    }
+    return signal;
+  };
+
+  const dipDepthDb = (buffer: Float32Array) => {
+    const window = Math.round(SAMPLE_RATE * 0.02);
+    const at = (fraction: number) => {
+      const from = Math.round(buffer.length * fraction);
+      let sum = 0;
+      for (let i = from; i < from + window && i < buffer.length; i += 1) sum += buffer[i] * buffer[i];
+      return Math.sqrt(sum / window);
+    };
+    const body = Math.max(at(0.2), at(0.6));
+    const dip = at(0.44);
+    return 20 * Math.log10(Math.max(dip, 1e-9) / Math.max(body, 1e-9));
+  };
+
+  const run = (detector: Float32Array | null) => {
+    const signal = programmeWithDip();
+    const kernel = new TruePeakLimiterKernel(SAMPLE_RATE);
+    const frames = signal.length;
+    const out = new Float32Array(frames);
+    for (let start = 0; start < frames; start += 128) {
+      const count = Math.min(128, frames - start);
+      kernel.processBlock(
+        [signal.subarray(start, start + count)],
+        [out.subarray(start, start + count)],
+        count,
+        detector ? [detector.subarray(start, start + count)] : null
+      );
+    }
+    return out;
+  };
+
+  it("keeps the dip when the detector cannot see it, and gives it back when it can", () => {
+    const steady = new Float32Array(SAMPLE_RATE).fill(1.4);
+    const withDetector = dipDepthDb(run(steady));
+    const selfDetected = dipDepthDb(run(null));
+    /**
+     * The reference is the **input's own** dip (0.05 against 1.4 = −28.9 dB), not a number chosen here: with a
+     * detector the ceiling applies one gain to the whole passage, so the dip arrives exactly as written.
+     */
+    const inputDipDb = 20 * Math.log10(0.05 / 1.4);
+    expect(Math.abs(withDetector - inputDipDb), `preserved the input's dip (${withDetector.toFixed(1)} dB)`).toBeLessThan(1);
+    /**
+     * And the ceiling's own detector, which reads the dip as "less programme", releases and hands part of it back —
+     * measured here, **1.9 dB** of a 200 ms dip, which is what the kernel's own ballistics can do in that time. The
+     * real chain gives back far more (the file's median dip went to −0.2 dB against a −4.36 dB sidechain), because
+     * the dip also moves the bus compressor's detector and the two stages stack; this case pins the *property* the
+     * fix is made of, and the four-cell measurement in the analyser pins the effect.
+     */
+    expect(selfDetected).toBeGreaterThan(withDetector + 1);
+  });
+
+  it("still enforces the ceiling, because the detector can only be louder than the programme", () => {
+    // A detector louder than the programme can only make the gain *lower*: the output stays under the ceiling.
+    const louderDetector = new Float32Array(SAMPLE_RATE).fill(2.0);
+    const out = run(louderDetector);
+    expect(truePeakDbChannels([out])).toBeLessThanOrEqual(MASTER_LIMITER_CEILING_DB + CEILING_TOLERANCE_DB);
+  });
+});
