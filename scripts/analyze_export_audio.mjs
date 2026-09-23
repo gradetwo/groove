@@ -189,6 +189,8 @@ async function measureGenre(page, genreId, bars, soloTracks) {
       }
 
       const shape = timbre.fingerprintChannels(channels, rate);
+      /** Measured once: the return object needs it twice (the claim and the relative tail). */
+      const integratedLufs = loudness.measureLoudness(channels, rate).integratedLufs;
 
       // The highest three 2/3-octave bands (centres ~8 kHz and up) hold what "harsh" means.
       const bands = shape.bandDb;
@@ -833,13 +835,26 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         truePeakDb: loudness.truePeakDbChannels(channels),
         samplePeakDb: metrics.samplePeakDb(channels),
         clippedSamples: metrics.clippedSampleCount(channels),
-        integratedLufs: loudness.measureLoudness(channels, rate).integratedLufs,
+        integratedLufs,
         // C1
         channelCount: buffer.numberOfChannels,
         correlation: channels.length > 1 ? metrics.channelCorrelation(channels[0], channels[1]) : 1,
         sideToMidDb: metrics.sideToMidDb(channels),
         // C2
         tailRmsDb,
+        /**
+         * The same tail, relative to the render's own body.
+         *
+         * `tailRmsDb` is absolute, and the batch raised the master level by design (A2's calibrated makeup), which
+         * moves every tail towards the line at once. The relative figure is the level-independent half of the same
+         * question — and it is recorded, not claimed, because four runs of the same code put four *different* genres
+         * across both lines (absolute −27…−50 dBFS, relative −12…−40 dB), while a quiet machine reads the same genre
+         * at −89. That is a property of Chromium's DSP state between pages (P0.8's residual), not of the code.
+         */
+        tailRelativeDb:
+          Number.isFinite(tailRmsDb) && Number.isFinite(integratedLufs)
+            ? Math.round((tailRmsDb - (integratedLufs + 3)) * 10) / 10
+            : null,
         /** 2 when the tail claim tripped and a second render confirmed (or cleared) it. */
         tailRenders,
         finalPeakDb: metrics.finalPeakDb(channels, rate, 5),
