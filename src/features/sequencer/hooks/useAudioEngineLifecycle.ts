@@ -7,6 +7,7 @@ import { midiInputManager } from "../../../audio/MidiInputManager";
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheory";
 import { publishPlayhead } from "../playheadBus";
+import { editorPositionFor } from "../../../data/songFlatten";
 import { loadLayoutPrefs, type LayoutPrefs } from "../layoutPrefs";
 
 export interface UseAudioEngineLifecycleOptions {
@@ -251,11 +252,56 @@ export function useAudioEngineLifecycle({
   useEffect(() => {
     const engine = new AudioEngine({
       onStep: ({ step }) => {
-        updatePlayhead(step);
-        // The piano roll follows the same step through the DOM-only bus (no re-render per step).
-        publishPlayhead(step);
-        // Song Mode auto-transition between pattern slots on loop wrap-around (P3-02)
-        if (seqStateRef.current.songMode && lastStepRef.current > step && step === 0) {
+        /**
+         * The transport may be playing the arrangement (B7), in which case `step` counts through the whole song and
+         * the grid shows one pass of one clip. `editorPositionFor` maps it back — and returns null (or
+         * `matchesEditor: false`) when the pass plays a clip the grid is not showing, which is a state the beam has
+         * nothing useful to say about.
+         */
+        const state = seqStateRef.current;
+        const songMode = Boolean(state.songMode && state.sections?.length);
+        const position = songMode
+          ? editorPositionFor(
+              {
+                songMode: true,
+                activeSlot: state.activeSlot,
+                patterns: state.patterns,
+                current: pattern,
+                sections: state.sections ?? [],
+                genreId: state.currentGenre?.id ?? "",
+                bpm,
+                swing,
+                resolution,
+                loopRange: state.loopRange,
+              },
+              step
+            )
+          : null;
+        if (songMode) {
+          if (position?.matchesEditor) updatePlayhead(position.localStep);
+          else clearPlayhead();
+          // The piano roll draws the clip being edited, so it follows the same mapped step.
+          publishPlayhead(position?.matchesEditor ? position.localStep : -1);
+        } else {
+          updatePlayhead(step);
+          // The piano roll follows the same step through the DOM-only bus (no re-render per step).
+          publishPlayhead(step);
+        }
+        /**
+         * Song mode's A↔B alternation (P3-02) — kept **only** for a session with no arrangement.
+         *
+         * Before B1 there was no timeline, so "song mode" meant "swap the two slots on every wrap"; that is now a
+         * second, contradictory answer to the same question, and with the console feeding the engine the *flattened
+         * arrangement* it would be a feedback loop: the swap commits to the store, the console recomputes the song
+         * and sets the flattened pattern again, and the slots alternate underneath it. A song with sections plays its
+         * sections; a session that never made one keeps the old behaviour, byte for byte.
+         */
+        if (
+          seqStateRef.current.songMode &&
+          !(seqStateRef.current.sections?.length) &&
+          lastStepRef.current > step &&
+          step === 0
+        ) {
           const nextSlot = seqStateRef.current.activeSlot === "A" ? "B" : "A";
           commit({ type: "SWITCH_PATTERN_SLOT", slot: nextSlot });
           engine.setPattern(seqStateRef.current.patterns[nextSlot]);
