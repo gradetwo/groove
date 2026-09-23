@@ -72,6 +72,8 @@ export interface RenderWavOptions {
   masterMakeupDb?: number;
   /** Set false to render without the mastering bus compressor (measurement tooling). */
   masterBusCompEnabled?: boolean;
+  /** The bus compressor's release, seconds — see `MasterGraphOptions.masterBusCompReleaseSec`. */
+  masterBusCompReleaseSec?: number;
   /**
    * Master true-peak ceiling, dBTP. The graph already accepts it for measurement tooling; forwarding it here
    * lets a probe separate "the sidechain ducked" from "the ceiling gave part of it back".
@@ -290,6 +292,7 @@ export async function renderPatternOffline(
     loudnessTrimDb,
     masterMakeupDb: options.masterMakeupDb,
     masterBusCompEnabled: options.masterBusCompEnabled,
+    masterBusCompReleaseSec: options.masterBusCompReleaseSec,
     limiterCeilingDb: options.limiterCeilingDb,
     limiterReleaseFastMs: options.limiterReleaseFastMs,
     limiterReleaseSlowMs: options.limiterReleaseSlowMs,

@@ -59,6 +59,8 @@ const ONLY = value("--only", "")
   .split(",")
   .map((id) => id.trim())
   .filter(Boolean);
+/** Bus-compressor release override, seconds — the A/B knob for the mastering chain's give-back (P2.3). */
+const BUS_COMP_RELEASE = Number(value("--bus-comp-release", "0")) || 0;
 /** The **export** default is one bar; `--bars=4` shows what the tail looks like with more material. */
 const BARS = Number(value("--bars", "1"));
 const PORT = Number(value("--port", "5321"));
@@ -93,7 +95,11 @@ function startDevServer() {
  */
 async function measureGenre(page, genreId, bars, soloTracks) {
   return page.evaluate(
-    async ({ id, bars: barsArg, soloTracks }) => {
+    /**
+     * `busCompRelease` crosses the boundary explicitly: a Node-side constant is not visible inside this function
+     * (the first version of the A/B referenced one and crashed the whole measurement with a ReferenceError).
+     */
+    async ({ id, bars: barsArg, soloTracks, busCompRelease }) => {
       const [wav, genresModule, mixModule, loudness, timbre, metrics, trackUtils, noteEvents] = await Promise.all([
         import("/src/audio/WavExporter.ts"),
         import("/src/data/genres/index.ts"),
@@ -338,17 +344,25 @@ async function measureGenre(page, genreId, bars, soloTracks) {
             sendA: t.track_id === "kick" ? 0 : Number.isFinite(t.sendA) ? t.sendA : 0,
             sendB: t.track_id === "kick" ? 0 : Number.isFinite(t.sendB) ? t.sendB : 0,
           }));
-        const renderPair = (busComp) =>
+        /**
+         * A render pair with the two mastering stages switchable **independently**.
+         *
+         * The first version of this measurement turned both off together, so "the sidechain is −4.4 dB and the file
+         * shows −0.4 dB" said *that* something in the mastering chain gave the duck back but not *what*. It is two
+         * very different bugs: the bus compressor's makeup (a level decision) or the ceiling's gain recovering as
+         * the duck removes programme peak (a peak decision), and each has a different fix. The matrix is the cheapest
+         * way to tell them apart — four renders instead of two.
+         */
+        const compRelease = busCompRelease > 0 ? { masterBusCompReleaseSec: busCompRelease } : {};
+        const renderPair = (busComp, ceilingLifted) =>
           Promise.all([
             wav
               .renderPatternOffline(only(["bass", "kick"]), {
                 bars: barsArg,
                 trackStates: kickSilentStates(),
                 masterBusCompEnabled: busComp,
-                // The ceiling is part of "what reaches the file", not part of the sidechain: with the pure pair it
-                // is lifted out of the way (a +12 dBTP target no programme here reaches) so the two pairs separate
-                // the mechanism from the mastering chain's give-back.
-                limiterCeilingDb: busComp ? undefined : 12,
+                ...compRelease,
+                limiterCeilingDb: ceilingLifted ? 12 : undefined,
               })
               .catch(() => null),
             wav
@@ -356,13 +370,26 @@ async function measureGenre(page, genreId, bars, soloTracks) {
                 bars: barsArg,
                 trackStates: kickSilentStates(),
                 masterBusCompEnabled: busComp,
-                limiterCeilingDb: busComp ? undefined : 12,
+                ...compRelease,
+                limiterCeilingDb: ceilingLifted ? 12 : undefined,
               })
               .catch(() => null),
           ]);
-        const [[pureDucked, pureControl], [fullDucked, fullControl], kickSolo] = await Promise.all([
-          renderPair(false),
-          renderPair(true),
+        const [
+          [pureDucked, pureControl],
+          [compDucked, compControl],
+          [ceilingDucked, ceilingControl],
+          [fullDucked, fullControl],
+          kickSolo,
+        ] = await Promise.all([
+          // No bus compressor, ceiling lifted: the sidechain's own depth.
+          renderPair(false, true),
+          // Bus compressor only.
+          renderPair(true, true),
+          // Ceiling only.
+          renderPair(false, false),
+          // Both: what the file shows.
+          renderPair(true, false),
           wav.renderPatternOffline(only(["kick"]), { bars: barsArg }).catch(() => null),
         ]);
         if (!pureDucked || !pureControl || !fullDucked || !fullControl || !kickSolo) return null;
@@ -452,6 +479,8 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           };
         };
         const pure = ratiosFor(pureDucked, pureControl);
+        const comp = compDucked && compControl ? ratiosFor(compDucked, compControl) : null;
+        const ceiling = ceilingDucked && ceilingControl ? ratiosFor(ceilingDucked, ceilingControl) : null;
         const full = ratiosFor(fullDucked, fullControl);
         return {
           /** Scheduled kick steps in the render (the mirror of the renderer's `totalSteps` loop). */
@@ -465,6 +494,14 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           duckMedianDb: pure.medianDb,
           duckMinDb: pure.minDb,
           duckLouderOnsets: pure.louderOnsets ?? 0,
+          /**
+           * The mastering chain, attributed: the same pair rendered with one stage at a time.
+           *
+           * `duckCompDb` is the bus compressor alone and `duckCeilingDb` the ceiling alone, so
+           * `duckDb - duckMasterDb` can be spent on whichever stage actually owns it instead of on a guess.
+           */
+          duckCompDb: comp ? comp.meanDb : null,
+          duckCeilingDb: ceiling ? ceiling.meanDb : null,
           /** Through the full mastering chain — what the file actually shows, and the claim's number. */
           duckMasterDb: full.meanDb,
           duckMasterMedianDb: full.medianDb,
@@ -542,7 +579,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         trackCount: pattern.tracks.length,
       };
     },
-    { id: genreId, bars, soloTracks }
+    { id: genreId, bars, soloTracks, busCompRelease: BUS_COMP_RELEASE }
   );
 }
 
