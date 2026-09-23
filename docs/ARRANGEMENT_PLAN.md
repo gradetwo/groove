@@ -81,7 +81,7 @@ independent until B5, and B is what makes that document's P1 possible.
 | **B2** | **The renderer gets a timeline**: `renderSongOffline(song)` plays the sections (per-section clip, repeats, mutes, velocity scale) instead of repeating one pattern; the WAV export follows it in song mode ✅ | `src/data/songFlatten.ts`, `WavExporter.ts`, `useExportActions.ts` | flattening is unit-tested bar by bar (order, repeats, mutes, velocity clamping, mixed clip lengths, optional lanes); the render is **three clip lengths longer** for a 4-pass song than the single loop it replaces, measured through the same offline path. Section-level *audio* metrics in `check:groove` are still open (recorded below) | **core done** |
 | **B3** | **The arrangement view** (iPad and PC): bars across the top, clips as regions; select a clip → the step sequencer edits it. Drag to move, drag the bottom band to repeat, keyboard on PC, touch on iPad ✅ | `src/features/arrangement/songEdit.ts`, `src/components/arrangement/ArrangementPanel.tsx`, the studio toolbar's Tier 2 entry | 15 cases in `src/test/songEdit.test.ts` (ruler, drop targets, the keyboard model, ids that cannot collide) + 14 in `src/test/arrangementPanel.test.tsx` (regions, an unplayable section, the gestures, every target ≥ 44 px, focus) + `npm run probe:arrangement`, which drives the **built** app: opens the entry through the advanced density, checks every region against its own bar in the ruler's arithmetic, measures every finger target in the DOM, and performs a real mouse drag → band drag → ArrowLeft, with a sub-half-bar nudge as the negative control | **done** |
 | **B4** | **Exporters follow the timeline**: MIDI/ALS/.als/MP3 render the arrangement; the share link carries it | `MidiExporter`, `AbletonExporter`, `useExportActions` | the exported MIDI's length equals the song's bar count; the ALS has one clip per section | M |
-| **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks | arrangement data + the new `texture`/fill voices | `check:groove`'s static-harmony and velocity claims fall; the report's "no fill, no variation" items become expressible | M |
+| **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks ✅ *(model + generator; the audio claim is measured in `check:groove`)* | `src/types/song.ts` (`SectionOverrides`), `src/data/songFlatten.ts`, `src/data/arrangementForm.ts`, the arrangement view's picker | `SongSection.overrides` carries a `velocityRamp` (a build) and a `fill`; `resolveTimeline` folds the ramp into each bar's `velocityScale` and puts the fill on the section's **last pass only**, so the single renderer needed no new concept; the generator derives the fill's lanes from the clip (`fillLanes`) instead of inventing one, so it works for 159 genres with no hand edits. 24 cases in `src/test/arrangementForm.test.ts` (ramp interpolation and clamping, fill normalisation, the fill's onsets and velocities in the flattened pattern, muted lanes, a lane no fill reaches flattening exactly as before, the form table's own limits) + 4 in `src/test/arrangementPanel.test.tsx` (the picker, its 44 px targets, the build/fill badges) + `probe:arrangement` generates the club form in the built app and asserts 6 named regions with 2 build and 2 fill badges | M |
 | **B6** | MCP surface: `create_song`, `add_section`, `render_song` — an agent composes an arrangement, not a loop ✅ | `mcp/song.ts`, `mcp/registry.ts` | the gate calls the two browser-free tools (46 checks, up from 42) and asserts `render_song` is declared; 14 unit tests in `src/test/mcpSong.test.ts`; `docs/MCP.md` gained the Song section | **done** |
 
 ### B1 — what landed
@@ -149,6 +149,34 @@ everything it *decides* is in `songEdit.ts`, and the split is enforced by two te
 Deliberately **not** in this slice: adding a section from the view (the studio's song chain still creates them, and
 the empty state says so), the playhead, and per-section mutes/labels editors — those are B5's material, and the
 panel already renders `label`, `mute` and `velocityScale` regions correctly when they arrive from a project.
+
+### B5 — what landed, and what it deliberately leaves
+
+The listening report's "there is no fill, no build, no variation" is a statement about a *timeline*, so the fix is
+arrangement data rather than a second pattern:
+
+* **`SongSection.overrides`** carries a `velocityRamp` (the multiplier at the section's first and last pass) and a
+  `fill` (lanes + step offsets inside one pass + a velocity).
+* **`resolveTimeline` is where they become facts**: the ramp is folded into each bar's `velocityScale` — multiplied
+  with the section's own scale, so a quiet build stays quiet — and the fill is attached to the section's **last
+  pass only**. Folding rather than carrying alongside is why `flattenSong` needed no new concept: every consumer
+  that already honours `velocityScale` gets an 8-bar build for free.
+* **`arrangementForm.ts` is the generator.** Three forms (`loop`, `club`, `song`) as an inspectable table, expanded
+  against whatever clip the project holds. It is the same rule the colour work and P0.2 follow: one table, no
+  per-genre hand-editing. `fillLanes` picks the lanes that read as drums **from the clip**, so a clip with no drum
+  lane gets no fill rather than a fill on a chord.
+
+One subtlety worth keeping: the flattening rule for the optional `velocity` array was "only if every contributing
+clip provides one". A fill names a velocity for the hits it adds, so a lane with no array would sound those hits at
+the renderer's default and the ramp would never reach them — the lane is therefore given an array *when a fill
+reaches it*, and holes are spelled out as the same 100 the renderer would have used. A test pins the other half:
+a lane no fill reaches flattens exactly as it did before, holes included.
+
+Deliberately left: a **per-hit crescendo** inside a fill (needs a per-step velocity list on `SongFill`), editing a
+ramp or a fill by hand in the view (the picker generates them; the region shows them), and the *audio* half of the
+claim — `check:groove`'s velocity and static-harmony numbers are measured from a genre's own pattern, not from a
+generated arrangement, so "the sample moved" needs the arrangement to be what the analyser renders. That is the next
+B5 slice, and it belongs with the nightly audio gates.
 
 `probe:arrangement` is the part a unit test cannot do: it opens the entry in the built app, checks every region's
 pixel position against the ruler's own arithmetic, measures every target a finger must hit, and performs a real

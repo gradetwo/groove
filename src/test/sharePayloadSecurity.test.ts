@@ -220,6 +220,18 @@ describe("F-09 · sequencer share URL never exceeds what the decoder accepts", (
         { id: "s1", slot: "A" as const, bars: 4, label: "intro" },
         { id: "s2", slot: "B" as const, bars: 8, velocityScale: 0.8, mute: ["hihat", "percussion"] },
         { id: "s3", slot: "A" as const, bars: 1 },
+        /**
+         * B5: a build and a fill are section data, so a shared link has to carry them — otherwise the recipient
+         * opens the same clips with the arrangement's dynamics silently missing, which is the failure mode B1's
+         * whole persistence story exists to prevent.
+         */
+        {
+          id: "s4",
+          slot: "B" as const,
+          bars: 4,
+          label: "break",
+          overrides: { velocityRamp: [0.55, 1] as [number, number], fill: { tracks: ["snare", "hihat"], steps: [12, 13, 14, 15], velocity: 120 } },
+        },
       ],
     };
     const decoded = decodeSharedSequencer(encodeSharedSequencer(state));
@@ -227,7 +239,43 @@ describe("F-09 · sequencer share URL never exceeds what the decoder accepts", (
       { id: "share-s1", slot: "A", bars: 4, label: "intro" },
       { id: "share-s2", slot: "B", bars: 8, velocityScale: 0.8, mute: ["hihat", "percussion"] },
       { id: "share-s3", slot: "A", bars: 1 },
+      {
+        id: "share-s4",
+        slot: "B",
+        bars: 4,
+        label: "break",
+        overrides: { velocityRamp: [0.55, 1], fill: { tracks: ["snare", "hihat"], steps: [12, 13, 14, 15], velocity: 120 } },
+      },
     ]);
+  });
+
+  it("bounds hostile overrides instead of trusting them", () => {
+    // A link is untrusted input like every other field: a 500× ramp is a mistake, and a fill with a thousand steps
+    // would spend the URL budget on data no pattern can address.
+    const state = {
+      ...makeState(2, 16),
+      sections: [
+        {
+          id: "s1",
+          slot: "A" as const,
+          bars: 1,
+          overrides: {
+            velocityRamp: [1e9, -1e9] as [number, number],
+            fill: {
+              tracks: new Array(100).fill("snare"),
+              steps: [15, -1, Number.NaN, ...new Array(100).fill(3)],
+              velocity: 9000,
+            },
+          },
+        },
+      ],
+    };
+    const decoded = decodeSharedSequencer(encodeSharedSequencer(state));
+    const overrides = decoded?.sections?.[0].overrides;
+    expect(overrides?.velocityRamp).toEqual([4, 0]);
+    expect(overrides?.fill?.tracks).toEqual(["snare"]);
+    expect(overrides?.fill?.steps).toEqual([3, 15]);
+    expect(overrides?.fill?.velocity).toBe(127);
   });
 
   it("leaves `sections` absent for a link that has none, rather than inventing one", () => {

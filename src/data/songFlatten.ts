@@ -12,7 +12,7 @@
  * audio (bar order, repeats, mutes, velocity, polymeter).
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
-import { resolveTimeline, type ClipSlot, type Song, type SongSection } from "../types/song";
+import { resolveTimeline, type ClipSlot, type Song, type SongFill, type SongSection } from "../types/song";
 
 /** The per-step arrays a clip may carry; `steps` is required, the rest are optional. */
 const OPTIONAL_STEP_ARRAYS = ["velocity", "pitch", "pitches", "gate", "ratchet", "probability"] as const;
@@ -30,6 +30,11 @@ export interface FlattenedSong {
 }
 
 const clipFor = (song: Song, slot: ClipSlot): SequencerPattern | undefined => song.clips?.[slot];
+
+/** Does this fill name that lane? Ids and names both, because a clip may carry either as its handle. */
+function fillTargets(fill: SongFill, track: SequencerTrack): boolean {
+  return fill.tracks.includes(track.track_id) || (!!track.name && fill.tracks.includes(track.name));
+}
 
 /**
  * The arrangement as one pattern.
@@ -78,12 +83,19 @@ export function flattenSong(song: Song): FlattenedSong {
   }, 0);
 
   const tracks: SequencerTrack[] = baseTracks.map((baseTrack, trackIdx) => {
-    /** Only an array *every* contributing clip provides becomes one; otherwise the lane keeps the renderer default. */
-    const arrays = OPTIONAL_STEP_ARRAYS.filter((name) =>
-      playable.every((bar) => {
-        const track = clipFor(song, bar.slot)?.tracks?.[trackIdx];
-        return Array.isArray(track?.[name as OptionalStepArray]);
-      })
+    /**
+     * Only an array *every* contributing clip provides becomes one; otherwise the lane keeps the renderer default.
+     * The exception is `velocity`: a bar whose section carries a fill names a velocity for the hits it adds, so that
+     * lane needs an array even when no clip has one — otherwise the fill would sound at the renderer's default 100
+     * and the section's `velocityRamp` would not reach it.
+     */
+    const filled = playable.some((bar) => bar.fill && fillTargets(bar.fill, baseTrack));
+    const arrays = OPTIONAL_STEP_ARRAYS.filter(
+      (name) =>
+        playable.every((bar) => {
+          const track = clipFor(song, bar.slot)?.tracks?.[trackIdx];
+          return Array.isArray(track?.[name as OptionalStepArray]);
+        }) || (name === "velocity" && filled)
     );
 
     const steps: number[] = [];
@@ -96,15 +108,32 @@ export function flattenSong(song: Song): FlattenedSong {
       const clipLength = clipSteps(clip);
       const muted = bar.mute.includes(track.track_id) || bar.mute.includes(track.name);
       const scale = Number.isFinite(bar.velocityScale) ? bar.velocityScale : 1;
+      const fill = bar.fill && fillTargets(bar.fill, track) ? bar.fill : undefined;
+      const fillVelocity = fill ? (fill.velocity ?? 100) : 100;
 
       for (let step = 0; step < clipLength; step += 1) {
         const on = track.steps?.[step] ?? 0;
-        steps.push(muted ? 0 : on);
+        const fillHit = Boolean(fill?.steps.includes(step));
+        steps.push(muted ? 0 : fillHit ? 1 : on);
         for (const name of arrays) {
           const source = track[name as OptionalStepArray] as unknown[] | undefined;
           const value = source?.[step];
-          if (name === "velocity" && !muted && typeof value === "number") {
-            (built.velocity as number[]).push(Math.max(1, Math.min(127, Math.round(value * scale))));
+          if (name === "velocity" && !muted) {
+            /**
+             * A fill hit carries the fill's own velocity; a written value keeps the lane's, scaled.
+             *
+             * A lane with no written value is `undefined` — the renderer's own default, exactly as before — *unless*
+             * the lane is in the array because a fill reaches it, in which case the hole is spelled out as the same
+             * 100 the renderer would have used. Not doing so is how a fill would be the one hit in the song the
+             * section's ramp did not reach.
+             */
+            if (fillHit) {
+              (built.velocity as number[]).push(Math.max(1, Math.min(127, Math.round(fillVelocity * scale))));
+            } else if (typeof value === "number") {
+              (built.velocity as number[]).push(Math.max(1, Math.min(127, Math.round(value * scale))));
+            } else {
+              (built.velocity as unknown[]).push(filled ? 100 : undefined);
+            }
           } else {
             (built[name] as unknown[]).push(value);
           }

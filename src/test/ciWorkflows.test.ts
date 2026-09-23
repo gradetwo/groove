@@ -119,7 +119,7 @@ describe("CI · the manual verify workflow is wired, not decorative", () => {
      * is the one job whose *output* is the deliverable. Two properties keep it safe: the report is written to a
      * scratch directory (never to the committed baseline path) and it leaves as an artifact for a human to apply.
      */
-    expect(manual).toMatch(/\n          - trim\n/);
+    expect(manual).toMatch(/\n {10}- trim\n/);
     expect(manual).toContain("npm run record:loudness -- --out=loudness-report/");
     expect(manual, "the run must not write the committed baseline").not.toContain("record:loudness -- --out=scripts/");
     expect(manual).toMatch(/name: loudness-report/);

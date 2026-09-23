@@ -246,4 +246,58 @@ describe("B3 · the arrangement panel", () => {
     renderPanel();
     expect(document.activeElement).toBe(screen.getByTestId("arrangement-panel"));
   });
+
+  it("offers the B5 forms only when the host can generate one", () => {
+    // A caller with no clip to generate from renders no generator, rather than three buttons that do nothing.
+    renderPanel();
+    expect(screen.queryByTestId("arrangement-form-club")).toBeNull();
+  });
+
+  it("hands the chosen form to the host, with the bar count it will produce", () => {
+    const onGenerate = vi.fn();
+    renderPanel({ onGenerate });
+    const club = screen.getByTestId("arrangement-form-club");
+    // The bar count is computed by the form table, not written in prose — see `ARRANGEMENT_FORMS`.
+    expect(club.dataset.bars).toBe("40");
+    fireEvent.click(club);
+    expect(onGenerate).toHaveBeenCalledWith("club");
+    fireEvent.click(screen.getByTestId("arrangement-form-loop"));
+    expect(onGenerate).toHaveBeenCalledWith("loop");
+  });
+
+  it("keeps the generator's buttons at the 44 px contract too", () => {
+    renderPanel({ onGenerate: vi.fn() });
+    for (const form of ["loop", "club", "song"]) {
+      const button = screen.getByTestId(`arrangement-form-${form}`);
+      expect(button.style.minHeight, form).toBe(`${ARRANGEMENT_MIN_TARGET}px`);
+      expect(button.style.minWidth, form).toBe(`${ARRANGEMENT_MIN_TARGET}px`);
+    }
+  });
+
+  it("shows what a section does — a build and a fill are visible on the region", () => {
+    /**
+     * B5's whole point is that these stopped being invisible pattern hacks. A generated arrangement whose fill is
+     * not on screen is one the user has to take on trust.
+     */
+    renderPanel({
+      song: song(
+        [
+          { id: "s1", slot: "A", bars: 4, label: "build", overrides: { velocityRamp: [0.6, 1] } },
+          {
+            id: "s2",
+            slot: "A",
+            bars: 2,
+            label: "break",
+            overrides: { fill: { tracks: ["snare"], steps: [12, 13, 14, 15], velocity: 112 } },
+          },
+        ],
+        { A: clip(16) }
+      ),
+    });
+    expect(screen.getByTestId("arrangement-build-s1").textContent).toBe("↗");
+    // The dictionary's own two renderings, so the assertion does not depend on which language the provider picked.
+    expect(["fill", "加花"]).toContain(screen.getByTestId("arrangement-fill-s2").textContent);
+    expect(screen.queryByTestId("arrangement-fill-s1")).toBeNull();
+    expect(screen.queryByTestId("arrangement-build-s2")).toBeNull();
+  });
 });
