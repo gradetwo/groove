@@ -505,32 +505,12 @@
   }
 }
 
-/* The pull-down list (the reference's `.cue`): shut it is zero-height, open it slides out. */
-.mobile-root .m-cue {
-  width: 100%;
-  max-height: 0;
-  margin-top: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, margin-top 0.3s ease;
-}
-.mobile-root .m-cue.is-open {
-  max-height: 340px;
-  margin-top: 12px;
-  overflow-y: auto;
-  opacity: 1;
-}
-.mobile-root .m-cue-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  padding: 8px 2px;
-  border-top: 1px solid var(--m-line);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  color: var(--m-ink-3);
-}
+/*
+ * The rows of the genre picker (C-02), which replaced the player's pull-down `.cue` list.
+ *
+ * The row styling is shared: the picker renders these classes so a genre reads the same wherever the
+ * shell lists one, and `.on` marks the genre that is playing.
+ */
 .mobile-root .m-cue-item {
   display: flex;
   align-items: center;
