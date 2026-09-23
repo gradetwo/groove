@@ -104,12 +104,32 @@ jobs:
         run: npm run check:budget
 
   e2e:
-    name: E2E Test Matrix (Playwright)
+    name: E2E ${{ matrix.leg }} (Playwright)
     runs-on: ubuntu-latest
     needs: validate
     # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness baseline
     # freshness check and the performance gate, so a scheduled run would duplicate this job.
     if: github.event_name != 'schedule'
+    # Three legs instead of one seven-target run.
+    #
+    # The targets are independent browsers and devices, and the job used to walk all seven in a single runner:
+    # one slow iPad leg delayed every result, a WebKit hang blocked the desktop ones behind it, and the whole
+    # suite had to be re-run to re-check a single engine. `E2E_ONLY` (the filter `manual-verify.yml` already
+    # drives) partitions them, and `fail-fast: false` keeps one engine's failure from cancelling the others —
+    # which is the point of running them apart.
+    #
+    # Every leg still runs the full-matrix script (`test:e2e:all`); the filter narrows *within* the complete
+    # target set, so no leg can quietly become the desktop-only profile (`ciWorkflows.test.ts` asserts that).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: Desktop browsers
+            only: Desktop
+          - leg: iPhone 14
+            only: iPhone 14
+          - leg: iPad Pro 11
+            only: iPad Pro 11
 
     steps:
       - name: Checkout repository
@@ -141,13 +161,20 @@ jobs:
       # surfaces were being rebuilt and would report failures the redesign would invalidate — that redesign has
       # shipped, the mobile targets have been green in `verify` for several releases, and a gate that skips two
       # thirds of the targets is how an iPad-only regression survives to production.
-      - name: Cross-Browser & Cross-Device Test Matrix
+      - name: Cross-Browser & Cross-Device Test Matrix (${{ matrix.leg }})
+        env:
+          # Read by `scripts/test_matrix.js`: this leg's slice of the seven targets.
+          E2E_ONLY: ${{ matrix.only }}
         run: npm run test:e2e:all
 
       # E-10: Lighthouse is not installable in this environment, so the performance
       # gate is a real-browser measurement with deterministic assertions (no genre
       # data on first paint) plus reported FCP/LCP/CLS.
+      #
+      # One runner measures it: the number belongs to the build, not to the engine, so three copies would only
+      # burn three runners' minutes.
       - name: Performance Gate (real browser, local build)
+        if: matrix.leg == 'Desktop browsers'
         run: npm run perf:check
 
   # `CI / nightly`: everything that is too slow or too environment-sensitive to gate a push.
