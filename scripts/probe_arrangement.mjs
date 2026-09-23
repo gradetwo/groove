@@ -323,6 +323,18 @@ if (pressed !== "true") {
   await fail(`the lane chip did not report itself as muting (aria-pressed="${pressed}").`);
 }
 
+// The transposition stepper: an octave up, then a semitone back down — the readout has to follow.
+const transposeValue = () => page.$eval("[data-testid='arrangement-transpose-value']", (node) => node.textContent ?? "");
+if (!(await transposeValue()).includes("+0")) {
+  await fail(`the transposition readout does not start at zero: "${await transposeValue()}".`);
+}
+await page.click("[data-testid='arrangement-transpose-up-octave']");
+await page.click("[data-testid='arrangement-transpose-down']");
+await page.waitForTimeout(80);
+if (!(await transposeValue()).includes("+11")) {
+  await fail(`+12 then -1 left the readout at "${await transposeValue()}", expected +11.`);
+}
+
 /**
  * B5 — the generator, and the two things a delivered arrangement must show.
  *
