@@ -73,6 +73,14 @@ export interface RenderWavOptions {
   masterMakeupDb?: number;
   /** Set false to render without the mastering bus compressor (measurement tooling). */
   masterBusCompEnabled?: boolean;
+  /**
+   * Per-note timbre variation (P2.2/A3), on by default.
+   *
+   * Off renders every stab of the same note *identically*, which is what the A3 measurement needs as its control:
+   * the claim is that the nudge moves a stab's colour, and the only way to show that is to render the same pattern
+   * with and without it. It is also the escape hatch for anyone comparing two renders byte for byte.
+   */
+  noteVariation?: boolean;
   /** The bus compressor's release, seconds — see `MasterGraphOptions.masterBusCompReleaseSec`. */
   masterBusCompReleaseSec?: number;
   /** The bus compressor's threshold (dB), knee (dB) and ratio — see `MasterGraphOptions`. */
@@ -478,6 +486,10 @@ export async function renderPatternOffline(
    * would always have had — and no `Math.random()`, because the export has to be the audition.
    */
   const variationSeed = variationSeedFrom(exportSeed);
+  /** A3's control switch: off means "every stab identical", which is what the measurement compares against. */
+  const noteVariationOn = options.noteVariation !== false;
+  const variationFor = (trackIdx: number, step: number, noteIndex = 0) =>
+    noteVariationOn ? polyVoiceVariation(variationSeed, trackIdx, step, noteIndex) : null;
 
   // Acoustic Enhancement: Track open hi-hat voices for offline choke group
   const openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number; envelope?: DrumVoiceEnvelope }> = [];
@@ -607,7 +619,7 @@ export async function renderPatternOffline(
             subDur * gateVal,
             subVel,
             synthPreset,
-            polyVoiceVariation(variationSeed, trackIdx, stepIdx, r)
+            variationFor(trackIdx, stepIdx, r)
           );
         } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
           // E-01: identical voicing to `AudioEngine.playChord`. Exporter parity is a
@@ -661,7 +673,7 @@ export async function renderPatternOffline(
               synthPreset,
               // `i` as the note index: the voices inside one stab must not all get the same nudge, or a chord would
               // move as a block and read as a pitch drift rather than as a hand on the keys.
-              polyVoiceVariation(variationSeed, trackIdx, stepIdx, i)
+              variationFor(trackIdx, stepIdx, i)
             );
           });
         } else if (trackId === "lead" || lowerName.includes("lead")) {
@@ -691,7 +703,7 @@ export async function renderPatternOffline(
             leadDur,
             subVel,
             synthPreset,
-            polyVoiceVariation(variationSeed, trackIdx, stepIdx, r)
+            variationFor(trackIdx, stepIdx, r)
           );
         } else if (trackId === "fx" || lowerName.includes("fx")) {
           // Same split as AudioEngine.playFX: `noise_sweep` keeps the shared swept riser,
@@ -708,7 +720,7 @@ export async function renderPatternOffline(
               subDur * gateVal * 1.5,
               subVel,
               synthPreset,
-              polyVoiceVariation(variationSeed, trackIdx, stepIdx, r)
+              variationFor(trackIdx, stepIdx, r)
             );
           }
         } else {

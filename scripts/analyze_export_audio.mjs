@@ -239,10 +239,145 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         }
         const stemChannels = [];
         for (let c = 0; c < stemBuffer.numberOfChannels; c += 1) stemChannels.push(stemBuffer.getChannelData(c));
+        /** Which lane this stem is, for the per-stab grid below. */
+        const stemsTrackId = trackId;
         const stemShape = timbre.fingerprintChannels(stemChannels, stemBuffer.sampleRate);
         const stemTop = stemShape.bandDb.slice(-3).reduce((acc, db) => acc + 10 ** (db / 10), 0);
         const onsets = metrics.onsetTimesMs(stemChannels, stemBuffer.sampleRate);
         // Alternating onset intervals: 1.00 is straight 16ths, above 1 is a long-short (swung) pair.
+        /**
+         * How much the *timbre* moves from one stab to the next (P2.2/A3).
+         *
+         * A 16-step loop repeats the same stab twelve times a bar; if those twelve are identical, the loop reads as
+         * a machine and this number is 0. Measured on the detected onsets rather than on a reconstructed step grid,
+         * because the question is "did the sound change between two hits a listener hears", and the detector is
+         * already the thing that found them.
+         *
+         * The window is 30 ms from each onset — long enough for the 2/3-octave bank's low bands to have some energy,
+         * short enough to stay inside the note. The metric is the **filterbank centroid** the timbre helper already
+         * exposes (there is no FFT helper in this repo; see its header), so a move here is a real spectral move at
+         * the bank's 2/3-octave resolution, not an artefact of a different analyser.
+         */
+        /**
+         * How much the *timbre* moves between two hits of the **same note** (P2.2/A3).
+         *
+         * A 16-step loop repeats the same stab twelve times a bar; if those twelve are identical, the loop reads as a
+         * machine and this number is 0. The first version of this measurement compared consecutive *detected*
+         * onsets and read 13–34 % — which was the metric measuring **pitch**, since consecutive onsets are usually
+         * different notes. The nudge is what makes the same note sound different twice, so the comparison has to be
+         * within a pitch:
+         *
+         *  · the grid is the *renderer's* own (step → time with its swing rule and probability gate), because the
+         *    question is about the notes the pattern asked for, not about what a detector made of the sum;
+         *  · onsets are grouped by MIDI pitch and compared **within** each group, in time order;
+         *  · the metric is the filterbank centroid the timbre helper already exposes (there is no FFT helper in this
+         *    repo — see its header), over a 30 ms window: long enough for the low bands to have energy, short enough
+         *    to stay inside the note.
+         */
+        /**
+         * How much the *timbre* moves between two hits of the **same note** (P2.2/A3), and its control.
+         *
+         * A 16-step loop repeats the same stab twelve times a bar; if those twelve are identical, the loop reads as a
+         * machine and this number is 0. Three things had to be fixed before the number meant anything, and each is
+         * worth keeping written down:
+         *
+         *  1. comparing consecutive *detected* onsets read 13–34 % because consecutive onsets are usually different
+         *     **pitches** — the metric was measuring melody;
+         *  2. keying the groups by pitch alone put every chord-lane hit in one bucket (`pitch` is often 0 there, with
+         *     the harmony in `pitches`), and then by velocity too, because P0.2 humanises it and velocity drives the
+         *     filter — so two hits in a group were still not "the same stab twice";
+         *  3. measuring inside the filter envelope's own sweep (0–30 ms) reported the transient's *phase*: a small
+         *     cutoff difference is a large instantaneous centroid difference there. The settled window (90–120 ms) is
+         *     what a listener hears as the stab's colour.
+         *
+         * Even so, the settled number is 15–27 % with the nudge on, and the honest question is how much of that is the
+         * nudge at all — a stab is not rendered in isolation, so the filter's state and the seeded noise bed differ
+         * per hit. Hence the control: the **same pattern rendered with the variation off**. Whatever that reads is
+         * context; the difference is the fix.
+         */
+        const stabMove = await (async () => {
+          const track = pattern.tracks.find((t) => (t.track_id || "").toLowerCase() === stemsTrackId);
+          if (!track) return null;
+          const trackIndex = pattern.tracks.indexOf(track);
+          const trackLength = track.trackLength > 0 ? track.trackLength : track.steps.length;
+          const patternSteps = pattern.totalSteps > 0 ? pattern.totalSteps : trackLength || 16;
+          const stepDurSec = 60 / Math.max(20, Math.min(300, pattern.bpm || 120)) / 4;
+          const rawSwing = pattern.swing ? (pattern.swing > 1 ? pattern.swing / 100 : pattern.swing) : 0;
+          const swingAmount = Math.max(0, Math.min(0.75, rawSwing + (track.swing ?? 0) / 100));
+          const stabSeed = noteEvents.patternSeed(pattern);
+          /** key -> sample offsets, in time order, at the given sample rate. */
+          const gridAt = (sampleRate) => {
+            const byKey = new Map();
+            for (let step = 0; step < patternSteps * barsArg; step += 1) {
+              const idx = trackLength > 0 ? step % trackLength : step;
+              if (!(track.steps[idx] > 0)) continue;
+              if (!noteEvents.probabilityPasses(track.probability?.[idx], stabSeed, trackIndex, idx)) continue;
+              const swingOffset = step % 2 === 1 && swingAmount > 0 ? swingAmount * 0.5 * stepDurSec : 0;
+              const at = Math.round((step * stepDurSec + swingOffset) * sampleRate);
+              const voicing = track.pitches?.[idx];
+              const velocity = track.velocity?.[idx] ?? 0;
+              const key = `${
+                voicing && voicing.length ? `v:${voicing.join("-")}` : `p:${track.pitch?.[idx] ?? 0}`
+              }@${Math.round(velocity)}`;
+              if (!byKey.has(key)) byKey.set(key, []);
+              byKey.get(key).push(at);
+            }
+            return byKey;
+          };
+          /** The median settled centroid move within a group, per cent — null when there is too little to say. */
+          const settledMedian = (channels, sampleRate) => {
+            const byKey = gridAt(sampleRate);
+            const start = Math.round(sampleRate * 0.09);
+            const windowSamples = Math.round(sampleRate * 0.03);
+            const moves = [];
+            let hits = 0;
+            for (const positions of byKey.values()) {
+              const centroids = [];
+              for (const at of positions) {
+                const from = at + start;
+                if (from <= 0 || from + windowSamples > (channels[0]?.length ?? 0)) continue;
+                const window = channels.map((channel) => channel.subarray(from, from + windowSamples));
+                const shape = timbre.fingerprintChannels(window, sampleRate);
+                if (shape.centroidHz > 0) centroids.push(shape.centroidHz);
+              }
+              hits += centroids.length;
+              for (let i = 1; i < centroids.length; i += 1) {
+                if (!(centroids[i - 1] > 0)) continue;
+                moves.push((Math.abs(centroids[i] - centroids[i - 1]) / centroids[i - 1]) * 100);
+              }
+            }
+            if (moves.length < 3) return null;
+            const sorted = [...moves].sort((a, b) => a - b);
+            const at = (q) =>
+              Math.round(sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] * 100) / 100;
+            return { hits, comparisons: moves.length, medianPct: at(0.5), p25Pct: at(0.25), maxPct: Math.round(sorted[sorted.length - 1] * 100) / 100 };
+          };
+          const withVariation = settledMedian(stemChannels, stemBuffer.sampleRate);
+          if (!withVariation) return null;
+          let without = null;
+          try {
+            const control = await wav.renderPatternOffline(solo, {
+              bars: barsArg,
+              drumKit,
+              noteVariation: false,
+            });
+            const controlChannels = [];
+            for (let c = 0; c < control.numberOfChannels; c += 1) controlChannels.push(control.getChannelData(c));
+            without = settledMedian(controlChannels, control.sampleRate);
+          } catch {
+            without = null;
+          }
+          return {
+            ...withVariation,
+            /** What the same pattern reads with every stab identical — context, not the fix. */
+            controlMedianPct: without?.medianPct ?? null,
+            /** The claim's number: how much of the movement is the variation. */
+            deltaPct:
+              without && Number.isFinite(without.medianPct)
+                ? Math.round((withVariation.medianPct - without.medianPct) * 100) / 100
+                : null,
+          };
+        })();
         const intervals = onsets.slice(1).map((ms, i) => ms - onsets[i]).filter((ms) => ms > 20);
         const even = intervals.filter((_, i) => i % 2 === 0);
         const odd = intervals.filter((_, i) => i % 2 === 1);
@@ -257,6 +392,8 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           topBandShareDb: 10 * Math.log10(Math.max(stemTop, 1e-12)),
           clicks: metrics.clickAnalysis(stemChannels, stemBuffer.sampleRate, { factor: 6 }),
           onsetCount: onsets.length,
+          /** Per-stab timbre movement (P2.2/A3) — null when the lane has too few stabs to say. */
+          stabMove,
           swingRatio: meanEven && meanOdd ? meanEven / meanOdd : null,
           /** How far the off-16ths sit past their grid line, in ms (0 = straight). */
           swingOffsetMs: measureSwing(stemChannels, stemBuffer.sampleRate)?.meanOffsetMs ?? null,
