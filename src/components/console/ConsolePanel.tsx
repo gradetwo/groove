@@ -9,6 +9,7 @@ import { ChannelStrip } from "./ChannelStrip";
 import { MasterStrip } from "./MasterStrip";
 import { getTrackVisual } from "./trackVisuals";
 import { followPeak, linearToMeterPosition, peakFromTimeDomain } from "./meterMath";
+import { patternForExport } from "../../data/songFlatten";
 
 /**
  * The subset of `useSequencerStore`'s public surface the console actually reads.
@@ -149,9 +150,46 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
   }, [engine]);
 
   // ----- Store -> engine sync (audio always matches the console) ------------
+  /**
+   * B7 — what the transport *plays*.
+   *
+   * `patternForExport` is the one function that decides what an exporter writes (B4): in song mode it is the
+   * flattened arrangement, otherwise the loop being edited. Playback asked a different question and got a different
+   * answer — the engine was handed `pattern` — so an arrangement could be exported, measured, and never heard: a
+   * 40-bar song played as one looping bar. The editor above keeps showing the loop, because editing a bar and
+   * *auditioning the arrangement* are different jobs; what changes is what reaches the speakers.
+   */
+  const playing = useMemo(
+    () =>
+      patternForExport({
+        songMode: Boolean(seqState.songMode),
+        activeSlot: seqState.activeSlot,
+        patterns: seqState.patterns,
+        current: pattern,
+        sections: seqState.sections ?? [],
+        genreId: currentGenre.id,
+        bpm,
+        swing,
+        resolution,
+        loopRange: seqState.loopRange,
+      }),
+    [
+      seqState.songMode,
+      seqState.activeSlot,
+      seqState.patterns,
+      seqState.sections,
+      seqState.loopRange,
+      pattern,
+      currentGenre.id,
+      bpm,
+      swing,
+      resolution,
+    ]
+  );
+
   useEffect(() => {
-    engine.setPattern(pattern);
-  }, [engine, pattern]);
+    engine.setPattern(playing.pattern);
+  }, [engine, playing.pattern]);
 
   useEffect(() => {
     engine.setBpm(bpm);
@@ -161,10 +199,14 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
   }, [engine, bpm, swing, timeSignature, resolution]);
 
   useEffect(() => {
-    engine.setLoopRange(seqState.loopRange);
+    /**
+     * A song is played **through**, not looped: the loop range belongs to the pattern being edited, and looping a
+     * 16-step window inside a 40-bar arrangement is the same silence in a different shape.
+     */
+    engine.setLoopRange(playing.isSong ? null : seqState.loopRange);
     engine.setMetronome(seqState.isMetronome);
     engine.setCountIn(seqState.isCountIn);
-  }, [engine, seqState.loopRange, seqState.isMetronome, seqState.isCountIn]);
+  }, [engine, playing.isSong, seqState.loopRange, seqState.isMetronome, seqState.isCountIn]);
 
   useEffect(() => {
     tracks.forEach((track, trackIdx) => {

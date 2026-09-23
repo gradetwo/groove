@@ -202,6 +202,16 @@ boundaries, apply the section's overrides as the playhead crosses them) and it i
 what the arrangement view shows and what the app does. It is recorded here because "the surface shows a timeline the
 transport ignores" is a product hole, not a missing polish item.
 
+**Landed (first slice, 2026-09-23): the transport asks the same function the exporters do.** `patternForExport`
+already answers "what does this session *play*?" — the flattened arrangement in song mode, the loop otherwise — and
+playback used to bypass it, so the arrangement could be exported, measured, and never heard. The console now feeds the
+engine that answer, and clears the loop range in song mode (looping a 16-step window inside a 40-bar song is the same
+silence in a different shape). The editor above still shows the loop being *edited*, which is a different job, and
+`editorPositionFor` answers the one question that follows: which pass of which section the transport is in, and
+whether that pass is the clip the grid is showing (`matchesEditor`) — so the beam is not drawn at a step that belongs
+to different music. What remains of B7 is the wiring of that helper into the playhead, and per-section *listening*
+checks (the plan's probe, below).
+
 **What it takes, and how it would be verified.** The transport already knows the bar it is on; the missing piece is
 that the *engine* is handed one pattern and told to repeat it. The shape that fits this codebase is the one B2
 established for export — derive the timeline once (`resolveTimeline`), then switch the playing clip at a pass
