@@ -50,6 +50,17 @@ export interface ResolvedGlueCompressorOptions {
   sampleRate: number;
 }
 
+/**
+ * Fixed makeup, dB — calibrated against the node this kernel replaces.
+ *
+ * `DynamicsCompressorNode` applies its own internal makeup; a custom compressor has to state it. Measured on disco
+ * (2026-09-23, same pattern, same trim): the node's path renders at **−13.34 LUFS / −1.30 dBTP** and this kernel at
+ * **−19.70 / −2.36** with no makeup, so the node's makeup is worth **6.36 dB** on that material. Anything the node
+ * did that this does not (its detector's own smoothing) is inside the trims' noise floor, and the batch re-records
+ * them anyway.
+ */
+export const GLUE_COMP_MAKEUP_DB = 5.5;
+
 export const GLUE_COMP_THRESHOLD_DB = -16;
 export const GLUE_COMP_KNEE_DB = 8;
 export const GLUE_COMP_RATIO = 2;

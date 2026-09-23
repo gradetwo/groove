@@ -97,6 +97,14 @@ export interface TrackChannelStrip {
    */
   duckGain: GainNode;
   /**
+   * The **pre-duck** tap that feeds the bus compressor's detector (A2).
+   *
+   * It carries the lane's volume (the mixer update sets both), but not the duck, so the compressor's gain follows the
+   * programme as it would be without a sidechain. The offline renderer taps the same point, which is what keeps
+   * "what you export" and "what you hear" the same graph.
+   */
+  detectorTap: GainNode;
+  /**
    * Polarity stage (Ø). Held at +1 normally and -1 when the channel is inverted, so
    * the sign can be flipped without touching the volume stage (N-01 follow-up).
    */
@@ -174,6 +182,14 @@ export class AudioEngine {
    * loudness match to hold (see `masterGraph.ts`).
    */
   private masterGraph: MasterGraph | null = null;
+
+  /**
+   * The bus compressor's pre-duck detector bus (A2).
+   *
+   * Created before the master graph, because the graph's compressor takes it as its second input; every strip taps
+   * into it from before its own duck gain. See `GlueCompressorFactory` for why the compressor needs it at all.
+   */
+  private masterDetectorBus: GainNode | null = null;
 
   /**
    * P6: the GS-1 voices for `chords`/`lead`, or `null` until a context exists.
@@ -355,9 +371,16 @@ export class AudioEngine {
           // E-17 / N-16: one shared master graph for playback and export. Chain:
           //   fader → FX rack → loudness trim → true-peak limiter → analyser taps,
           // with the reverb/delay returns summing into the fader, exactly as before.
+          /**
+           * The detector bus exists before the graph, because the graph's compressor takes it as its second input.
+           * The strips connect into it as they are built, below.
+           */
+          this.masterDetectorBus = this.ctx.createGain();
+          this.masterDetectorBus.gain.setValueAtTime(1, this.ctx.currentTime);
           const graph = buildMasterGraph(this.ctx, {
             analysers: true,
             loudnessTrimDb: this.appliedLoudnessTrimDb,
+            busCompDetector: this.masterDetectorBus,
           });
           this.masterGraph = graph;
           this.masterGain = graph.masterGain;
@@ -613,6 +636,12 @@ export class AudioEngine {
       insert.output.connect(duckGain);
       duckGain.connect(gain);
 
+      // The pre-duck tap: same source as `duckGain`, so the sidechain cannot reach it.
+      const detectorTap = this.ctx.createGain();
+      detectorTap.gain.setValueAtTime(0.8, this.ctx.currentTime);
+      insert.output.connect(detectorTap);
+      if (this.masterDetectorBus) detectorTap.connect(this.masterDetectorBus);
+
       const polarity = this.ctx.createGain();
       polarity.gain.setValueAtTime(1, this.ctx.currentTime);
 
@@ -683,7 +712,18 @@ export class AudioEngine {
         sendB.connect(this.masterGraph.delay.input);
       }
 
-      this.trackStrips.push({ gain, duckGain, polarity, analyser, panner, spatialPanner, sendA, sendB, insert });
+      this.trackStrips.push({
+        gain,
+        duckGain,
+        detectorTap,
+        polarity,
+        analyser,
+        panner,
+        spatialPanner,
+        sendA,
+        sendB,
+        insert,
+      });
     }
     this.syncTrackGains();
   }
@@ -873,6 +913,16 @@ export class AudioEngine {
           if (typeof strip.gain.gain.setValueAtTime === "function") {
             strip.gain.gain.setValueAtTime(targetGain, now);
           }
+        } catch (_) {}
+      }
+
+      // The detector tap follows the same volume (and the same silence), so a muted or quiet lane counts for exactly
+      // what it contributes — but never the duck, which is applied between them.
+      try {
+        strip.detectorTap.gain.setTargetAtTime(targetGain, now, 0.005);
+      } catch (_) {
+        try {
+          strip.detectorTap.gain.setValueAtTime(targetGain, now);
         } catch (_) {}
       }
 
