@@ -40,7 +40,8 @@ git diff --stat apple2011/next HEAD
 `ci.yml`:
 
 * **validate** (every push/PR): actions-runtime gate, `version:check`, `docs:check`, typecheck, lint, red lines,
-  unit tests + coverage, genre schema lint/audit, production build, bundle budget.
+  unit tests + coverage, genre schema lint/audit, **the loudness report-vs-table gate** (two file reads, ~1 s — it was
+  `verify`-only and spent a day red without anyone seeing it), production build, bundle budget.
 * **e2e** — **three parallel legs** (`Desktop browsers`, `iPhone 14`, `iPad Pro 11`) over the same seven targets,
   partitioned by the `E2E_ONLY` filter, with `fail-fast: false` so one engine cannot block the others. Every leg
   still runs the complete-matrix script (the workflow test asserts it, because "one leg quietly becomes the
@@ -82,6 +83,7 @@ artifact, apply it with `node scripts/apply_loudness_trims.mjs`, and commit. Unt
 | Local full unit suite (8 vCPU laptop) | 170 s |
 | Same suite on a 12-vCPU Colab VM | 69 s (**2.5×**) |
 | `check:groove`, 12 genres, serial | ~21 min locally |
+| The 159-genre trim re-record (`Manual verify` · `scope: trim`) | ~2 h on a 4-vCPU runner, artifact only |
 | Same gate, 4 shards on the 12-vCPU VM | 569 s, 12 rows, 0 errors (vs 1272 s of serial work) |
 | Same gate, 4 shards on the 8-vCPU/15 GB laptop | **timed out** — four (Vite + Chromium) stacks do not fit |
 | One shard (`--shard=1/4`: 3 genres) on one core | 517 s — i.e. a shard costs one core, which is why four runners beat one machine |
