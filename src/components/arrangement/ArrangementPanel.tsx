@@ -16,7 +16,7 @@
  * Desktop/iPad only, by the surface contract (`surfaceCapabilities.ts`): the phone has no arrangement surface, and
  * nothing under `src/mobile/**` may import this module.
  */
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { resolveTimeline, type Song, type SongSection } from "../../types/song";
 import {
@@ -26,6 +26,8 @@ import {
   moveSection,
   resizeSection,
   sectionRegions,
+  setSectionLabel,
+  toggleSectionMute,
   type ArrangementCommand,
   type SectionRegion,
 } from "../../features/arrangement/songEdit";
@@ -108,6 +110,14 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
 }) => {
   const { t, language } = useLanguage();
   const locale = language === "zh" ? "zh" : "en";
+  /**
+   * The label being typed, kept locally until it is committed.
+   *
+   * One commit per keystroke would be one undo entry per keystroke (the store records history per `onChange`), so the
+   * draft lives here and `commitLabel` runs on Enter or blur — the same reason the fader drags elsewhere in the
+   * studio are coalesced.
+   */
+  const [labelDraft, setLabelDraft] = useState<string | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -200,6 +210,20 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
   };
 
   const selected = song.sections.find((section) => section.id === selectedId) ?? null;
+
+  const commitLabel = (id: string, value: string) => {
+    setLabelDraft(null);
+    const next = setSectionLabel(song, id, value);
+    if (next !== song) onChange({ sections: next.sections, gesture: "arrangement:label", continuous: false });
+  };
+
+  const toggleMute = (id: string, lane: string) => {
+    const next = toggleSectionMute(song, id, lane);
+    if (next !== song) onChange({ sections: next.sections, gesture: "arrangement:mute", continuous: false });
+  };
+
+  /** The lanes of the clip the selected section points at — what a mute can silence. */
+  const selectedLanes = selected ? (song.clips?.[selected.slot]?.tracks ?? []) : [];
   const regionName = (region: SectionRegion) =>
     region.section.label ?? `${t("arrangement_section_word")} ${regions.indexOf(region) + 1}`;
 
@@ -395,6 +419,52 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* B5 leftovers: what a section *is*, not just where it sits — its name and which lanes it silences. */}
+        {selected && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
+            <input
+              data-testid="arrangement-label"
+              value={labelDraft ?? selected.label ?? ""}
+              onChange={(event) => setLabelDraft(event.target.value)}
+              onBlur={(event) => commitLabel(selected.id, event.target.value)}
+              onKeyDown={(event) => {
+                // The panel's Escape clears the selection; while typing it should abandon the draft instead.
+                if (event.key === "Escape") {
+                  event.stopPropagation();
+                  setLabelDraft(null);
+                }
+                if (event.key === "Enter") commitLabel(selected.id, (event.target as HTMLInputElement).value);
+              }}
+              placeholder={t("arrangement_label_placeholder")}
+              maxLength={32}
+              style={{ minHeight: ARRANGEMENT_MIN_TARGET }}
+              className="min-w-[10rem] rounded-lg border border-line bg-panel2 px-3 text-xs text-text focus:border-accent focus:outline-none"
+            />
+            {selectedLanes.map((lane) => {
+              const laneId = lane.track_id;
+              const muted = (selected.mute ?? []).includes(laneId);
+              return (
+                <button
+                  key={laneId}
+                  type="button"
+                  data-testid={`arrangement-mute-${laneId}`}
+                  aria-pressed={muted}
+                  title={t("arrangement_mute_hint", { lane: laneId })}
+                  onClick={() => toggleMute(selected.id, laneId)}
+                  style={{ minHeight: ARRANGEMENT_MIN_TARGET, minWidth: ARRANGEMENT_MIN_TARGET }}
+                  className={`rounded-lg border px-3 font-['JetBrains_Mono'] text-[11px] transition-colors ${
+                    muted
+                      ? "border-danger/60 bg-danger/20 text-warning"
+                      : "border-line bg-panel2 text-text-sub hover:border-accent/50 hover:text-accent"
+                  }`}
+                >
+                  {muted ? `${laneId} ✕` : laneId}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Footer: the same edits the drag and the keyboard make, as buttons a finger can hit. */}
         <footer className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">

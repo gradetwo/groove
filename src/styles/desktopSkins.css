@@ -1315,6 +1315,7 @@
 [class~="bg-cyan-500/25"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-cyan-500/50"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-danger/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-danger/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-500/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1484,6 +1485,7 @@
 [class~="bg-cyan-500/25"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-cyan-500/50"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-danger/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-danger/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-500"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-500/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }

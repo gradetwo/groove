@@ -185,3 +185,48 @@ export function commandForKey(key: string, shiftKey = false, metaKey = false): A
       return null;
   }
 }
+
+/** The longest label a section may carry. Long enough for "second chorus (no hats)", short enough for a region. */
+export const MAX_SECTION_LABEL = 32;
+
+/**
+ * Set a section's label.
+ *
+ * An empty (or whitespace-only) label **removes the key** rather than storing an empty string: `label` is what the
+ * view falls back from, and a project that has been labelled and unlabelled again should be byte-identical to one
+ * that never was — the same reason `mute` is dropped when it empties.
+ */
+export function setSectionLabel(song: Song, id: string, label: string): Song {
+  const index = song.sections.findIndex((section) => section.id === id);
+  if (index === -1) return song;
+  const trimmed = label.trim().slice(0, MAX_SECTION_LABEL);
+  const current = song.sections[index].label ?? "";
+  if (current === trimmed) return song;
+  const sections = [...song.sections];
+  const next: SongSection = { ...sections[index] };
+  if (trimmed) next.label = trimmed;
+  else delete next.label;
+  sections[index] = next;
+  return { ...song, sections };
+}
+
+/**
+ * Silence one lane for one section, or let it back in — a breakdown or a drop, expressed on the timeline.
+ *
+ * The lane is stored by the id the *clip* uses (a section's `mute` is matched against both `track_id` and `name` by
+ * `flattenSong`), and the list is dropped entirely when it empties so an un-muted section is identical to one that
+ * was never muted.
+ */
+export function toggleSectionMute(song: Song, id: string, lane: string): Song {
+  const index = song.sections.findIndex((section) => section.id === id);
+  if (index === -1 || !lane) return song;
+  const sections = [...song.sections];
+  const section = sections[index];
+  const muted = section.mute ?? [];
+  const nextMute = muted.includes(lane) ? muted.filter((entry) => entry !== lane) : [...muted, lane];
+  const next: SongSection = { ...section };
+  if (nextMute.length) next.mute = nextMute;
+  else delete next.mute;
+  sections[index] = next;
+  return { ...song, sections };
+}

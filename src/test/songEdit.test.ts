@@ -8,6 +8,9 @@ import {
   moveSection,
   resizeSection,
   sectionRegions,
+  setSectionLabel,
+  toggleSectionMute,
+  MAX_SECTION_LABEL,
 } from "../features/arrangement/songEdit";
 import { MAX_SECTION_BARS, type ClipSlot, type Song, type SongSection } from "../types/song";
 import type { SequencerPattern } from "../types/genre";
@@ -246,5 +249,53 @@ describe("B3 · the keyboard model", () => {
     expect(applyArrangementCommand(base, "s1", "shrink").sections[0].bars).toBe(1);
     expect(applyArrangementCommand(base, null, "remove")).toBe(base);
     expect(applyArrangementCommand(base, "ghost", "grow")).toBe(base);
+  });
+});
+
+describe("B5 · naming a section and silencing a lane", () => {
+  const base = song(
+    [
+      { id: "s1", slot: "A", bars: 1 },
+      { id: "s2", slot: "A", bars: 2, mute: ["hihat"] },
+    ],
+    { A: clip(16) }
+  );
+
+  it("sets, trims and caps a label", () => {
+    expect(setSectionLabel(base, "s1", "  drop  ").sections[0].label).toBe("drop");
+    expect(setSectionLabel(base, "s1", "x".repeat(200)).sections[0].label).toHaveLength(MAX_SECTION_LABEL);
+  });
+
+  it("removes the key for an empty label, so an unnamed section is byte-identical to one never named", () => {
+    // A project that was labelled and unlabelled again must not carry `label: ""` for ever — the same reason `mute`
+    // is dropped when it empties, and the reason a round-trip test can compare objects instead of fields.
+    const named = setSectionLabel(base, "s1", "drop");
+    expect(named.sections[0]).toHaveProperty("label");
+    const cleared = setSectionLabel(named, "s1", "   ");
+    expect(cleared.sections[0]).not.toHaveProperty("label");
+    // …and clearing an already-empty label is a no-op, not a new undo entry.
+    expect(setSectionLabel(base, "s1", "")).toBe(base);
+    expect(setSectionLabel(base, "s2", "drop").sections[0]).not.toHaveProperty("label");
+  });
+
+  it("toggles a lane's mute for one section only", () => {
+    const muted = toggleSectionMute(base, "s1", "hihat");
+    expect(muted.sections[0].mute).toEqual(["hihat"]);
+    // The other section already muted that lane; toggling s1 must not touch it.
+    expect(muted.sections[1].mute).toEqual(["hihat"]);
+    expect(toggleSectionMute(muted, "s1", "hihat").sections[0]).not.toHaveProperty("mute");
+    expect(toggleSectionMute(base, "s2", "kick").sections[1].mute).toEqual(["hihat", "kick"]);
+  });
+
+  it("is a no-op for an unknown id or an empty lane", () => {
+    expect(setSectionLabel(base, "ghost", "drop")).toBe(base);
+    expect(toggleSectionMute(base, "ghost", "kick")).toBe(base);
+    expect(toggleSectionMute(base, "s1", "")).toBe(base);
+  });
+
+  it("leaves the rest of the section alone", () => {
+    const edited = setSectionLabel(toggleSectionMute(base, "s2", "snare"), "s2", "break");
+    expect(edited.sections[1]).toEqual({ id: "s2", slot: "A", bars: 2, mute: ["hihat", "snare"], label: "break" });
+    expect(edited.sections[0]).toEqual(base.sections[0]);
   });
 });
