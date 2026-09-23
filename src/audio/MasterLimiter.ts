@@ -543,6 +543,15 @@ export function createMasterLimiter(
           ceilingDb,
           lookaheadMs: requestedLookaheadMs,
           sampleRate: ctx.sampleRate,
+          /**
+           * The release ballistics, when a caller overrides them.
+           *
+           * These two were declared on `MasterLimiterOptions` and honoured by the worklet, but never passed —
+           * so a caller could set them and measure no difference at all. Absent means the worklet's own
+           * defaults (80 ms fast, 400 ms slow), which is the shipped behaviour.
+           */
+          releaseFastMs: options.releaseFastMs,
+          releaseSlowMs: options.releaseSlowMs,
         },
       });
       try {
