@@ -167,6 +167,20 @@ jobs:
           E2E_ONLY: ${{ matrix.only }}
         run: npm run test:e2e:all
 
+      # The studio's DOM probes, on the one leg that already has browsers *and* a production build.
+      #
+      # They serve `dist/` themselves and drive it in a real browser, so they are neither unit tests (the
+      # contracts they check — pixel geometry, finger-target sizes, a real pointer drag — are not decidable from
+      # source) nor part of the matrix (they are not per-device). Running them here is what keeps the local
+      # machine out of the loop for the checks that can run on a runner.
+      #
+      # `probe:arrangement` (B3) asserts that every region sits above its own bar in the ruler's arithmetic, that
+      # every target a finger must hit is at least 44 × 44 px as painted, and that a real mouse drag reorders the
+      # song — with a sub-half-bar nudge as the negative control, because a check that cannot fail proves nothing.
+      - name: Studio DOM Probes (toolbar density, grid gutter, arrangement)
+        if: matrix.leg == 'Desktop browsers'
+        run: npm run probe:toolbar && npm run probe:grid-gutter && npm run probe:arrangement
+
       # E-10: Lighthouse is not installable in this environment, so the performance
       # gate is a real-browser measurement with deterministic assertions (no genre
       # data on first paint) plus reported FCP/LCP/CLS.

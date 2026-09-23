@@ -61,6 +61,22 @@ describe("CI · every target runs on every push", () => {
     expect(build, "the job should build").toBeGreaterThan(-1);
     expect(build, "the build must come before the matrix (it serves dist/)").toBeLessThan(matrix);
   });
+
+  it("runs the studio DOM probes on the desktop leg, against the same build", () => {
+    /**
+     * The arrangement probe's contract is pixel geometry, finger-target sizes and a real pointer drag — none of it
+     * decidable from source, which is why it exists. It was born as a local `npm run probe:arrangement`; wiring it
+     * (and the two older probes) into CI is what keeps it from becoming a script nobody runs, and it is the kind of
+     * check that should not burn a developer's machine.
+     */
+    for (const script of ["probe:toolbar", "probe:grid-gutter", "probe:arrangement"]) {
+      expect(e2e, `the e2e job must run ${script}`).toContain(`npm run ${script}`);
+    }
+    // They serve `dist/`, so the build has to come first…
+    expect(e2e.indexOf("npm run build")).toBeLessThan(e2e.indexOf("npm run probe:arrangement"));
+    // …and they belong to one leg: three copies of the same measurement would only burn three runners.
+    expect(e2e).toMatch(/if: matrix\.leg == 'Desktop browsers'\n\s+run: npm run probe:toolbar/);
+  });
 });
 
 describe("CI · the manual verify workflow is wired, not decorative", () => {

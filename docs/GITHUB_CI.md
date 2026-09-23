@@ -5,6 +5,11 @@ concurrency on the Free plan is 20 jobs. That is the real currency: single jobs 
 front of you, but twenty of them in parallel are. This file records the branch flow, what CI runs, and the numbers
 that decided the shape.
 
+**The working rule that follows from it: if a check can run on a runner, it runs on a runner — not on the laptop.**
+The development loop is a targeted `npx vitest run <file>` (seconds) plus a push; the full suite, the build, the
+browser matrix and the probes belong to `dev`'s CI. A local `npm run verify` is for a release candidate, not for
+each commit, because it pegs every core for half an hour and answers exactly what CI already answers.
+
 ## Branches and the sync flow
 
 | Branch | Who owns it | What it means |
@@ -39,8 +44,10 @@ git diff --stat apple2011/next HEAD
 * **e2e** — **three parallel legs** (`Desktop browsers`, `iPhone 14`, `iPad Pro 11`) over the same seven targets,
   partitioned by the `E2E_ONLY` filter, with `fail-fast: false` so one engine cannot block the others. Every leg
   still runs the complete-matrix script (the workflow test asserts it, because "one leg quietly becomes the
-  desktop-only profile" is how two thirds of the targets stopped being checked once). The performance gate runs on
-  the desktop leg only — the number belongs to the build.
+  desktop-only profile" is how two thirds of the targets stopped being checked once). The desktop leg then runs the
+  **studio DOM probes** (`probe:toolbar`, `probe:grid-gutter`, `probe:arrangement`) against the same build — they
+  serve `dist/` themselves, so that leg has everything they need and no other leg needs a copy — and the
+  performance gate (the number belongs to the build, not to the engine).
 * **nightly** (schedule / dispatch): coverage, build, `check:loudness:fresh`, **`check:groove`** (the musical
   ratchet: twelve genres through the offline engine), the full matrix, the performance gate, and the artifacts.
 
@@ -97,9 +104,21 @@ Two conclusions came out of those numbers, and both are load-bearing:
 
 1. CI phase 2: `check_groove.mjs --shard=i/n` + a workflow matrix (one shard per runner) + an aggregator job;
    shard the nightly 159-genre loudness/timbre sweeps the same way (artifacts only, no auto-committed baselines).
+   This is the last heavy gate that is still a single serial job.
 2. CI phase 3: a tag workflow (`v*`) that runs verify + build, uploads `dist` as an artifact and drafts the GitHub
    Release from `public/changelog.json`. Deployment stays local (`node scripts/deploy.mjs`) by decision.
-3. The product work the plans still own: **B3** (arrangement view), **B5** (fills/variation as arrangement data),
-   **P1** (content design through a generator), **P2** (per-note timbre, saturation depth, top-end texture), the
-   phone's multi-level genre picker, and **P0.8 → P0.9** (the render nondeterminism and the loudness re-record that
-   is waiting on it).
+3. The product work the plans still own: **B5** (fills/variation as arrangement data, unblocked now that B3's
+   timeline view edits `sections`), **P1** (content design through a generator), **P2** (per-note timbre,
+   saturation depth, top-end texture), the phone's multi-level genre picker, and **P0.8 → P0.9** (the render
+   nondeterminism and the loudness re-record that is waiting on it).
+
+## What the laptop still owes
+
+Nothing that a runner can do. What remains local on purpose:
+
+* the **first** run of a new probe (`probe:arrangement` was written and debugged locally, then wired into the
+  desktop leg — debugging a brand-new check through CI round-trips is slower than one local run);
+* `npm run build` when a probe needs `dist/` *right now*;
+* `node scripts/deploy.mjs`, which needs Cloudflare credentials and is deliberately not a CI job;
+* the release-candidate `npm run verify`, once, before a version is published.
+
