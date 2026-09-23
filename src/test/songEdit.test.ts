@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  applyArrangementCommand,
   arrangementBars,
+  commandForKey,
+  dropIndexForBar,
   duplicateSectionInPlace,
   moveSection,
   resizeSection,
@@ -129,5 +132,119 @@ describe("B3 · the gestures behind the view", () => {
     expect(doubled.sections.map((s) => s.label ?? s.slot)).toEqual(["intro", "drop", "drop", "outro"]);
     expect(new Set(doubled.sections.map((s) => s.id)).size).toBe(4);
     expect(arrangementBars(doubled)).toBe(1 + 4 + 4 + 2);
+  });
+
+  it("never hands out an id that is already taken", () => {
+    /**
+     * `sections.length + 1` looked safe and is not: duplicate (making `song-1-s3`), delete the original, duplicate
+     * again — and the second copy is called `song-1-s3` too. Two sections sharing an id makes `moveSection`,
+     * `resizeSection` and the view's selection all address the wrong region, so the id is scanned for, not
+     * computed. The ids below follow the model's own convention, which is what makes the collision reachable.
+     */
+    const baseIds = song(
+      [
+        { id: "song-1-s1", slot: "A", bars: 1 },
+        { id: "song-1-s2", slot: "A", bars: 1 },
+      ],
+      { A: clip(16) }
+    );
+    const copied = duplicateSectionInPlace(baseIds, "song-1-s1");
+    expect(copied.sections.map((s) => s.id)).toEqual(["song-1-s1", "song-1-s3", "song-1-s2"]);
+    const removed = { ...copied, sections: copied.sections.filter((s) => s.id !== "song-1-s1") };
+    const again = duplicateSectionInPlace(removed, "song-1-s3");
+    expect(again.sections.map((s) => s.id)).toEqual(["song-1-s3", "song-1-s4", "song-1-s2"]);
+  });
+});
+
+describe("B3 · what a drop on the ruler means", () => {
+  const laidOut = song(
+    [
+      { id: "s1", slot: "A", bars: 2 },
+      { id: "s2", slot: "A", bars: 4 },
+      { id: "s3", slot: "A", bars: 1 },
+    ],
+    { A: clip(16) }
+  );
+
+  it("resolves a bar to the region that covers it", () => {
+    // The regions are [0,2) [2,6) [6,7); a drop inside a region lands on that region, not on the next one.
+    expect(dropIndexForBar(laidOut, 0)).toBe(0);
+    expect(dropIndexForBar(laidOut, 1)).toBe(0);
+    expect(dropIndexForBar(laidOut, 2)).toBe(1);
+    expect(dropIndexForBar(laidOut, 5)).toBe(1);
+    expect(dropIndexForBar(laidOut, 6)).toBe(2);
+  });
+
+  it("treats a drop past the end as 'last', which is what dragging right means", () => {
+    expect(dropIndexForBar(laidOut, 7)).toBe(2);
+    expect(dropIndexForBar(laidOut, 900)).toBe(2);
+    expect(dropIndexForBar(laidOut, -4)).toBe(0);
+  });
+
+  it("returns a sections index, not a region index, when a section has no region", () => {
+    /**
+     * The case this exists for: `s2` points at an empty clip, so it has no region and the region after it is drawn
+     * at bar 2. A drop at bar 2 must address `s3`, which is index 2 of `sections` — returning the region index (1)
+     * would move the dragged section in front of a section nobody can see.
+     */
+    const holed = song(
+      [
+        { id: "s1", slot: "A", bars: 2 },
+        { id: "s2", slot: "C", bars: 4 },
+        { id: "s3", slot: "A", bars: 1 },
+      ],
+      { A: clip(16) }
+    );
+    expect(sectionRegions(holed).map((region) => region.section.id)).toEqual(["s1", "s3"]);
+    expect(dropIndexForBar(holed, 2)).toBe(2);
+  });
+
+  it("has an answer even for a song with nothing playable", () => {
+    const empty = song([{ id: "s1", slot: "C", bars: 1 }], { A: clip(16) });
+    expect(dropIndexForBar(empty, 3)).toBe(0);
+  });
+});
+
+describe("B3 · the keyboard model", () => {
+  const base = song(
+    [
+      { id: "s1", slot: "A", bars: 1, label: "intro" },
+      { id: "s2", slot: "A", bars: 4, label: "drop" },
+    ],
+    { A: clip(16) }
+  );
+
+  it("maps keys to commands, and refuses the ones that are not its own", () => {
+    expect(commandForKey("ArrowLeft")).toBe("move-left");
+    expect(commandForKey("ArrowRight")).toBe("move-right");
+    expect(commandForKey("ArrowLeft", true)).toBe("shrink");
+    expect(commandForKey("ArrowRight", true)).toBe("grow");
+    expect(commandForKey("Delete")).toBe("remove");
+    expect(commandForKey("Backspace")).toBe("remove");
+    expect(commandForKey("d", false, true)).toBe("duplicate");
+    // Plain `d` belongs to the studio's drums-only toggle; stealing it would break a documented shortcut.
+    expect(commandForKey("d")).toBeNull();
+    expect(commandForKey("Escape")).toBeNull();
+  });
+
+  it("applies each command to the selected section", () => {
+    expect(applyArrangementCommand(base, "s2", "move-left").sections.map((s) => s.id)).toEqual(["s2", "s1"]);
+    expect(applyArrangementCommand(base, "s1", "move-right").sections.map((s) => s.id)).toEqual(["s2", "s1"]);
+    expect(applyArrangementCommand(base, "s1", "grow").sections[0].bars).toBe(2);
+    expect(applyArrangementCommand(base, "s2", "shrink").sections[1].bars).toBe(3);
+    expect(applyArrangementCommand(base, "s1", "remove").sections.map((s) => s.id)).toEqual(["s2"]);
+    const doubled = applyArrangementCommand(base, "s1", "duplicate");
+    expect(doubled.sections).toHaveLength(3);
+    expect(doubled.sections[0].id).toBe("s1");
+    expect(new Set(doubled.sections.map((s) => s.id)).size).toBe(3);
+  });
+
+  it("is a no-op at the edges and with nothing selected", () => {
+    // Holding an arrow at the start of the song must not reorder anything, and a stale id must not throw.
+    expect(applyArrangementCommand(base, "s1", "move-left")).toBe(base);
+    expect(applyArrangementCommand(base, "s2", "move-right")).toBe(base);
+    expect(applyArrangementCommand(base, "s1", "shrink").sections[0].bars).toBe(1);
+    expect(applyArrangementCommand(base, null, "remove")).toBe(base);
+    expect(applyArrangementCommand(base, "ghost", "grow")).toBe(base);
   });
 });

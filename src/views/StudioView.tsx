@@ -24,6 +24,8 @@ import { saveProject } from "../features/sequencer/projectDb";
 import { GenreRail } from "../components/sequencer/GenreRail";
 import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
+import { ArrangementPanel, type ArrangementEdit } from "../components/arrangement/ArrangementPanel";
+import { sessionSong } from "../data/songFlatten";
 import { TrackInspector } from "../components/console/TrackInspector";
 import { MusicalTypingModal } from "../components/sequencer/MusicalTypingModal";
 import { INSTRUMENT_PRESET_ALIASES } from "../audio/instrumentPresets";
@@ -244,6 +246,71 @@ export const StudioView: React.FC<StudioViewProps> = ({
 
   // Multi-Project Hub State (P7-02)
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
+
+  /**
+   * B3: the arrangement view is open, and which of its regions is selected.
+   *
+   * Both live here rather than in the panel because the selection is what the *keyboard* addresses and the panel
+   * remounts on every edit (its props are the song). The panel stays a pure function of (`song`, `selectedId`).
+   */
+  const [isArrangementOpen, setIsArrangementOpen] = useState(false);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+
+  /**
+   * The session as the arrangement view draws it.
+   *
+   * Built by `sessionSong`, the same function `patternForExport` flattens — so the timeline on screen and the file
+   * an export writes are the same song by construction, not by two similar-looking literals that drift apart.
+   */
+  const arrangementSong = useMemo(
+    () =>
+      sessionSong({
+        songMode: Boolean(seqState.songMode),
+        activeSlot: seqState.activeSlot,
+        patterns: seqState.patterns,
+        current: pattern,
+        sections: seqState.sections ?? [],
+        genreId: currentGenre.id,
+        bpm,
+        swing,
+        resolution,
+        loopRange: seqState.loopRange,
+      }),
+    [
+      seqState.songMode,
+      seqState.activeSlot,
+      seqState.patterns,
+      seqState.sections,
+      seqState.loopRange,
+      pattern,
+      currentGenre.id,
+      bpm,
+      swing,
+      resolution,
+    ]
+  );
+
+  /**
+   * Apply one arrangement edit.
+   *
+   * A drag produces one edit per pointer move, so it is coalesced into a single undo entry; a key or a button is a
+   * discrete edit and gets its own — otherwise two quick deletions would collapse and the first would be unreachable
+   * from the undo stack.
+   */
+  const handleArrangementEdit = useCallback(
+    (edit: ArrangementEdit) => {
+      const action = { type: "SET_SECTIONS" as const, sections: edit.sections };
+      if (edit.continuous) commitCoalesced(action, edit.gesture);
+      else commit(action);
+    },
+    [commit, commitCoalesced]
+  );
+
+  /** Opening always starts with nothing selected: a stale selection from the last visit would be a surprise edit. */
+  const handleOpenArrangement = useCallback(() => {
+    setSelectedSectionId(null);
+    setIsArrangementOpen(true);
+  }, []);
 
   /**
    * E-10: which track's inspector is open, or null.
@@ -1011,6 +1078,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onSwitchSlot={handleSwitchSlot}
           onCopySlot={handleCopySlot}
           onToggleSongMode={handleToggleSongMode}
+          /**
+           * B3, and the whole of the phone contract at this call site: the phone is not given a way to open a
+           * surface it does not have (`surfaceCapabilities`), so the entry does not exist there. No branch inside
+           * the toolbar decides this.
+           */
+          onOpenArrangement={isPhone ? undefined : handleOpenArrangement}
+          isArrangementOpen={isArrangementOpen}
           onToggleBlindCompare={handleToggleBlindCompare}
           onToggleMetronome={handleToggleMetronome}
           onToggleCountIn={handleToggleCountIn}
@@ -1197,6 +1271,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
         onToggleTransport={handleTogglePlay}
         onClose={() => setIsConsoleOpen(false)}
       />
+
+      {/* B3: the arrangement view. Desktop/iPad only — the entry that opens it is not rendered on the phone, and
+          the panel itself reads the same `sections` the renderer and the exporters use. */}
+      {isArrangementOpen && !isPhone && (
+        <ArrangementPanel
+          song={arrangementSong}
+          selectedId={selectedSectionId}
+          onSelect={setSelectedSectionId}
+          onChange={handleArrangementEdit}
+          onClose={() => setIsArrangementOpen(false)}
+        />
+      )}
 
       <MusicalTypingModal
         isOpen={isKeyboardMode}

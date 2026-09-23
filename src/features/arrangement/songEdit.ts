@@ -8,7 +8,13 @@
  * The renderer (B2) and the persistence layer (B1) already treat `sections` as the source of truth; this module
  * only reorders and resizes that list, never invents a section and never silently drops one.
  */
-import { MAX_SECTION_BARS, resolveTimeline, type Song, type SongSection } from "../../types/song";
+import {
+  MAX_SECTION_BARS,
+  removeSection,
+  resolveTimeline,
+  type Song,
+  type SongSection,
+} from "../../types/song";
 
 /** One region as the view draws it: the section, the bar it starts at, and how many bars it covers. */
 export interface SectionRegion {
@@ -84,8 +90,98 @@ export function resizeSection(song: Song, id: string, bars: number): Song {
 export function duplicateSectionInPlace(song: Song, id: string): Song {
   const index = song.sections.findIndex((section) => section.id === id);
   if (index === -1) return song;
-  const copy: SongSection = { ...song.sections[index], id: `${song.id}-s${song.sections.length + 1}` };
+  const copy: SongSection = { ...song.sections[index], id: nextSectionId(song) };
   const sections = [...song.sections];
   sections.splice(index + 1, 0, copy);
   return { ...song, sections };
+}
+
+/**
+ * A free section id.
+ *
+ * `sections.length + 1` was enough while duplicate was the only creator, but it collides as soon as a duplicate is
+ * removed and made again ("session-s3" twice) — and two sections sharing an id makes `moveSection`, `resizeSection`
+ * and the view's selection all address the wrong region. Scanning for a free suffix costs nothing at these sizes.
+ */
+function nextSectionId(song: Song): string {
+  const taken = new Set(song.sections.map((section) => section.id));
+  for (let n = song.sections.length + 1; ; n += 1) {
+    const candidate = `${song.id}-s${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
+/**
+ * The section index a drop at `bar` means.
+ *
+ * The view turns a drag into a bar (that is the ruler's job); what a bar *means* is the model's, and it is the same
+ * question `sectionRegions` already answered — which region covers this bar. A drop past the last region (or on a
+ * bar an unplayable section used to occupy) lands at the end, which is what dragging to the right means.
+ *
+ * It returns an index into `song.sections`, not into the regions: sections whose clip is empty have no region, and
+ * returning a region index here would move the dragged section to the wrong place in exactly the case the view is
+ * supposed to be honest about.
+ */
+export function dropIndexForBar(song: Song, bar: number): number {
+  const regions = sectionRegions(song);
+  if (!regions.length) return 0;
+  const target = Math.max(0, Math.floor(bar));
+  const hit = regions.find((region) => target < region.startBar + region.bars) ?? regions[regions.length - 1];
+  const index = song.sections.findIndex((section) => section.id === hit.section.id);
+  return index === -1 ? song.sections.length - 1 : index;
+}
+
+/** Every edit the arrangement view can make to the selected section. */
+export type ArrangementCommand = "move-left" | "move-right" | "grow" | "shrink" | "duplicate" | "remove";
+
+/**
+ * Apply a keyboard command to one section — the whole keyboard model, as a pure function.
+ *
+ * The view maps a key to one of these and this does the edit, so the bindings can be tested without a browser and
+ * the PC and iPad paths cannot drift: a touch drag and an arrow key end in the same `moveSection`/`resizeSection`.
+ * A missing selection (`null`) or a stale id is a no-op, because both happen for one frame during a re-render.
+ */
+export function applyArrangementCommand(song: Song, id: string | null, command: ArrangementCommand): Song {
+  if (!id) return song;
+  const index = song.sections.findIndex((section) => section.id === id);
+  if (index === -1) return song;
+  const section = song.sections[index];
+  switch (command) {
+    case "move-left":
+      return moveSection(song, id, index - 1);
+    case "move-right":
+      return moveSection(song, id, index + 1);
+    case "grow":
+      return resizeSection(song, id, section.bars + 1);
+    case "shrink":
+      return resizeSection(song, id, section.bars - 1);
+    case "duplicate":
+      return duplicateSectionInPlace(song, id);
+    case "remove":
+      return removeSection(song, id);
+  }
+}
+
+/**
+ * The section the given key should act on, or `null` when the key is not an arrangement command.
+ *
+ * Kept here rather than in the component so the *bindings* are testable too: the failure this prevents is a key
+ * that only works while the region happens to have focus, which is the kind of difference between mouse and touch
+ * nobody notices until an iPad user reports it.
+ */
+export function commandForKey(key: string, shiftKey = false, metaKey = false): ArrangementCommand | null {
+  switch (key) {
+    case "ArrowLeft":
+      return shiftKey ? "shrink" : "move-left";
+    case "ArrowRight":
+      return shiftKey ? "grow" : "move-right";
+    case "Delete":
+    case "Backspace":
+      return "remove";
+    case "d":
+    case "D":
+      return metaKey ? "duplicate" : null;
+    default:
+      return null;
+  }
 }

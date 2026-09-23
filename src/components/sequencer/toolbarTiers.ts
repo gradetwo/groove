@@ -151,6 +151,14 @@ export const TIER_2: readonly ToolbarTierItem[] = [
   { id: "length", labelKey: "toolbar_length_label", tier: 2 },
   { id: "tool-mode", labelKey: "toolbar_tool_label", tier: 2 },
   { id: "song-mode", labelKey: "toolbar_song_mode_title", tier: 2 },
+  /**
+   * B3's arrangement view.
+   *
+   * Tier 2 beside song mode because it is the editor for the same thing that toggle turns on — and because Tier 1
+   * is at its cap of 14. It has no keyboard binding of its own, so it needs no `reachableVia`; the host passes its
+   * handler only on the desktop/iPad shell, so the phone never renders it at all.
+   */
+  { id: "arrangement", labelKey: "toolbar_arrangement_title", tier: 2 },
   // The hook binds C to the floating console; reachable from "more" (note 3).
   { id: "console",
     labelKey: "console_float_toggle",
