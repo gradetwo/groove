@@ -179,7 +179,7 @@ jobs:
       # song — with a sub-half-bar nudge as the negative control, because a check that cannot fail proves nothing.
       - name: Studio DOM Probes (toolbar density, grid gutter, arrangement)
         if: matrix.leg == 'Desktop browsers'
-        run: npm run probe:toolbar && npm run probe:grid-gutter && npm run probe:arrangement
+        run: npm run probe:toolbar && npm run probe:grid-gutter && npm run probe:arrangement && npm run probe:arrangement-audio
 
       # E-10: Lighthouse is not installable in this environment, so the performance
       # gate is a real-browser measurement with deterministic assertions (no genre

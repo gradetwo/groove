@@ -45,6 +45,7 @@
     "probe:toolbar": "node scripts/measure_toolbar_density.mjs",
     "probe:grid-gutter": "node scripts/probe_grid_gutter.mjs",
     "probe:arrangement": "node scripts/probe_arrangement.mjs",
+    "probe:arrangement-audio": "node scripts/probe_arrangement_audio.mjs",
     "layout:sync": "vite-node scripts/layout_tokens.mjs",
     "check:layout": "vite-node scripts/layout_tokens.mjs --check",
     "check:loudness": "node scripts/check_loudness_spread.mjs",
