@@ -82,7 +82,7 @@ independent until B5, and B is what makes that document's P1 possible.
 | **B3** | **The arrangement view** (iPad and PC): tracks down the side, bars across the top, clips as regions; select a clip → the step sequencer edits it. Drag to move, edge-drag to repeat, keyboard on PC, touch on iPad | new `src/views/ArrangementView.tsx` + toolbar entry | a new `probe:arrangement` (clip drag/resize with mouse *and* touch, ≥44 px targets on iPad, no clipped controls) | L — the visible feature |
 | **B4** | **Exporters follow the timeline**: MIDI/ALS/.als/MP3 render the arrangement; the share link carries it | `MidiExporter`, `AbletonExporter`, `useExportActions` | the exported MIDI's length equals the song's bar count; the ALS has one clip per section | M |
 | **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks | arrangement data + the new `texture`/fill voices | `check:groove`'s static-harmony and velocity claims fall; the report's "no fill, no variation" items become expressible | M |
-| **B6** | MCP surface: `create_song`, `add_section`, `render_song` — an agent composes an arrangement, not a loop | `mcp/**` | the MCP gate calls them; docs updated | S |
+| **B6** | MCP surface: `create_song`, `add_section`, `render_song` — an agent composes an arrangement, not a loop ✅ | `mcp/song.ts`, `mcp/registry.ts` | the gate calls the two browser-free tools (46 checks, up from 42) and asserts `render_song` is declared; 14 unit tests in `src/test/mcpSong.test.ts`; `docs/MCP.md` gained the Song section | **done** |
 
 ### B1 — what landed
 
