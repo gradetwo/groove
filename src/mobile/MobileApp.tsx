@@ -373,7 +373,6 @@ export function MobileApp({
               onAuditionTrack={auditionTrack}
               onMetronome={setMetronome}
               metronome={readMetronome()}
-              onOpenGenre={(id) => onOpenGenre?.(id)}
             />
           ) : module === "challenge" ? (
             <MobileChallengeScreen

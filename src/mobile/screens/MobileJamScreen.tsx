@@ -26,6 +26,7 @@
  */
 import { trackColour, type TrackColourRole } from "../../utils/trackColours";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MobileGenrePicker } from "../MobileGenrePicker";
 import { ChevronRight, Minus, Play, Plus, RotateCcw, Square, Timer } from "lucide-react";
 import { GENRE_INDEX, loadGenre } from "../mobileGenreData";
 import { patternFromGenre } from "../../data/genreMix";
@@ -136,7 +137,6 @@ export interface MobileJamScreenProps {
   onApplyPattern: (pattern: SequencerPattern) => void;
   onTempo: (bpm: number) => void;
   onSwing: (swing: number) => void;
-  onOpenGenre: (genreId: string) => void;
   /** Beat click while the transport runs (the jam module's metronome toggle). */
   onMetronome?: (enabled: boolean) => void;
   /** The metronome's current value, so a fresh mount renders the truth rather than a guess. */
@@ -210,7 +210,6 @@ function JamForGenre({
   onApplyPattern,
   onTempo,
   onSwing,
-  onOpenGenre,
   onAuditionTrack,
   onMetronome,
   metronome,
@@ -220,6 +219,14 @@ function JamForGenre({
   /** The working copy: the genre's pattern, edited here and pushed to the engine as it changes. */
   const [pattern, setPattern] = useState<SequencerPattern>(() => patternFromGenre(genre));
   const [recording, setRecording] = useState(false);
+  /**
+   * The genre picker, opened from the dock's genre row.
+   *
+   * It replaces the *grid* while it is open rather than sitting beside it: this module is one screen with no
+   * scrolling (`overflow-hidden`, a flexible grid and fixed pads), so a panel added to the column would either push
+   * the pads off the bottom or force a scroll — and the grid's card is the one element whose size is meant to give.
+   */
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [bpm, setBpm] = useState(genre.default_bpm);
   const [swing, setSwing] = useState(0);
   const [playhead, setPlayhead] = useState(0);
@@ -419,9 +426,9 @@ function JamForGenre({
             data-testid="mobile-jam-reset"
             onClick={reset}
             /*
-             * Shrunk to a 44 px square icon, which is the touch floor rather than a decoration: the header
-             * now also carries the genre picker, and a labelled pill beside it pushed the title out of the
-             * row on a 390 px screen. The label lives in `aria-label` and the tooltip.
+             * Shrunk to a 44 px square icon, which is the touch floor rather than a decoration: a labelled
+             * pill beside the title pushed the title out of the row on a 390 px screen. The label lives in
+             * `aria-label` and the tooltip. (The genre control is in the dock below, where the thumb is.)
              */
             aria-label={t("mobile_jam_reset")}
             title={t("mobile_jam_reset")}
@@ -432,6 +439,21 @@ function JamForGenre({
         </header>
         <p className="m-mono mt-1 text-[9px] text-[var(--m-ink-3)]">{t("mobile_jam_grid_hint")}</p>
 
+        {pickerOpen ? (
+          <div className="mt-1.5 min-h-0 flex-1 overflow-hidden" data-testid="mobile-jam-picker">
+            <MobileGenrePicker
+              onSelect={(id) => {
+                setPickerOpen(false);
+                // Tapping the genre that is already backing the jam is a no-op, not a restart.
+                if (id !== genre.id) onTogglePlay(id);
+              }}
+              onClose={() => setPickerOpen(false)}
+              currentGenreId={genre.id}
+              initialCategory={genre.category}
+              genreTestIdPrefix="mobile-jam-picker-genre"
+            />
+          </div>
+        ) : (
         <div className="mt-1.5 min-h-0 flex-1 overflow-hidden" data-testid="mobile-jam-grid">
           {LANES.map((lane, laneIndex) => {
             const fill = laneFill(lane.trackId);
@@ -494,6 +516,7 @@ function JamForGenre({
             );
           })}
         </div>
+        )}
       </section>
 
       {/*
@@ -521,7 +544,15 @@ function JamForGenre({
           <button
             type="button"
             data-testid="mobile-jam-genre"
-            onClick={() => onOpenGenre(genre.id)}
+            aria-expanded={pickerOpen}
+            /*
+              Switching the backing genre, not navigating away from the take.
+              
+              The row used to open the genre's detail page, which is a *browse* gesture on a screen whose whole
+              purpose is "play this genre now" — and it was the only way to change what the jam is backed by. It
+              now opens the multi-level picker (C-02), the same one the player uses.
+            */
+            onClick={() => setPickerOpen((open) => !open)}
             className="m-press flex min-h-[46px] min-w-0 flex-1 items-center gap-2 text-left"
           >
             <span className="min-w-0">
