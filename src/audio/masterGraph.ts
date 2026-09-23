@@ -85,6 +85,15 @@ export interface MasterGraphOptions {
   masterMakeupDb?: number;
   /** Set false to remove the mastering bus compressor from the chain (measurement tooling). */
   masterBusCompEnabled?: boolean;
+  /**
+   * The bus compressor's release, seconds.
+   *
+   * Measurement tooling with a purpose: the compressor is what gives the sidechain duck back (measured on disco:
+   * a −4.41 dB duck becomes −2.09 dB with the compressor alone, while the ceiling leaves it at −4.41 dB), because
+   * its detector sees the ducked bass as "less programme" and releases within the duck's own length. A slower
+   * release holds that gain reduction through the duck, and this is the knob that tests it.
+   */
+  masterBusCompReleaseSec?: number;
   /** Master true-peak ceiling, dBTP. Defaults to the limiter's own default. */
   limiterCeilingDb?: number;
   /**
@@ -252,7 +261,9 @@ export function buildMasterGraph(
     masterBusComp.knee.value = MASTER_BUS_COMP_KNEE_DB;
     masterBusComp.ratio.value = MASTER_BUS_COMP_RATIO;
     masterBusComp.attack.value = MASTER_BUS_COMP_ATTACK_SEC;
-    masterBusComp.release.value = MASTER_BUS_COMP_RELEASE_SEC;
+    masterBusComp.release.value = Number.isFinite(options.masterBusCompReleaseSec)
+      ? Math.max(0.01, options.masterBusCompReleaseSec as number)
+      : MASTER_BUS_COMP_RELEASE_SEC;
   }
 
   const reverb = new ReverbBus(ctx, options.reverb ?? DEFAULT_REVERB_PARAMS);

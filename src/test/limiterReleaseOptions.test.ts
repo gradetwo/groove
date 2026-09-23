@@ -13,6 +13,7 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { createMasterLimiter } from "../audio/MasterLimiter";
+import { buildMasterGraph } from "../audio/masterGraph";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { installFakeOfflineAudioContext, FakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { DrumPattern } from "../types/genre";
@@ -107,5 +108,50 @@ describe("…and a render can ask for them", () => {
     await renderPatternOffline(PATTERN, { bars: 1 });
     const plain = FakeAudioWorkletNode.instances.at(-1)!;
     expect(plain.options.processorOptions?.releaseFastMs).toBeUndefined();
+  });
+});
+
+
+describe("the bus compressor's release is reachable too", () => {
+  /**
+   * The graph does not expose its compressor (it is an internal stage), so the assertion is made where the value
+   * lands: the fake context records every `createDynamicsCompressor()` and the test reads the node back. An
+   * assertion with a `?? default` fallback would pass whether or not the option arrived, which is the shape of a
+   * test that cannot fail.
+   */
+  const compressorReleaseFor = (options: Parameters<typeof buildMasterGraph>[1]) => {
+    const ctx = new FakeOfflineAudioContext(2, 128, 44100);
+    const made: Array<{ release: { value: number } }> = [];
+    const original = ctx.createDynamicsCompressor.bind(ctx);
+    (ctx as unknown as Record<string, unknown>).createDynamicsCompressor = () => {
+      const node = original() as unknown as { release: { value: number } };
+      made.push(node);
+      return node;
+    };
+    buildMasterGraph(ctx as unknown as BaseAudioContext, options);
+    return made;
+  };
+
+  it("uses the caller's value, and the shipped 220 ms when there is none", () => {
+    /**
+     * Wired for the same reason as the limiter's: A2 had to test whether the compressor's *release* is what
+     * refills the sidechain duck. (Measured answer: it is not — 0.22 s, 0.5 s and 0.8 s all leave disco's duck at
+     * −2.0 dB — but that is only knowable if the knob arrives.)
+     */
+    /**
+     * The graph builds more than one `DynamicsCompressor`: the bus compressor, and the *fallback* limiter that
+     * holds the ceiling until the worklet module loads. Asserting on the last one made this test read the fallback's
+     * 0.25 s and "fail" — so the assertion is on the set of releases, which is what the option is about.
+     */
+    const releases = (options: Parameters<typeof buildMasterGraph>[1]) =>
+      compressorReleaseFor(options).map((node) => node.release.value);
+
+    const overridden = releases({ masterBusCompReleaseSec: 0.5 });
+    expect(overridden.length, "the graph must build its compressors").toBeGreaterThan(0);
+    expect(overridden).toContain(0.5);
+
+    // …and the shipped value when there is no option, which is the number the plan's measurements quote.
+    expect(releases({})).toContain(0.22);
+    expect(releases({})).not.toContain(0.5);
   });
 });
