@@ -104,7 +104,13 @@ const BUDGET = {
   // number is not reproducible from the code that landed — it predates the rule that keeps kick, bass and snare out
   // of the width stage, and it is not the gate's sample. Going further than 9 needs more than a pan scale (the
   // mid/side stage the plan measured buys ~0.5 dB of side, i.e. not enough on its own).
-  narrowStereo: 9,
+  /**
+   * A1's ratchet tightened once more, on **two agreeing runs**: 9 → 8. The run before A2's ceiling detector read 9
+   * and the two after it read 8, 8 — which is the evidence this file's own note asked for before moving a budget that
+   * had already moved once (12 → 9). `thinMids` and `flatStabs` move with it, and for the same reason: the same two
+   * runs read 9, 9 and 1, 1, against budgets of 11 and 4.
+   */
+  narrowStereo: 8,
   sideTooHot: 0,
   /**
    * P2.2/A3: genres whose per-note nudge does not separate from its own control.
@@ -117,8 +123,8 @@ const BUDGET = {
    * The budget is a first estimate (a third of the sample) and is expected to be ratcheted down to the measurement:
    * a gate seeded at "everything fails" could not fail, which is worse than a gate.
    */
-  flatStabs: 4,
-  thinMids: 11,
+  flatStabs: 1,
+  thinMids: 9,
   staticHarmony: 0,
   // P0.6: 0. Every sampled genre's tail is below −82 dBFS since the tail is the genre's own reverb/delay decay.
   /**
