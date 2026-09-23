@@ -270,7 +270,13 @@ const wiring = [
   // as one connection.
   ["masterGraph places the makeup gain after the trim", /loudnessTrimGain\.connect\(masterMakeupGain\)/],
   ["masterGraph places the bus compressor after the makeup gain", /masterMakeupGain\.connect\(masterBusComp\)/],
-  ["masterGraph places the limiter after the bus compressor", /masterBusComp\.connect\(limiter\.input\)/],
+  /**
+   * The stage is a *handle* now (A2): `busComp.output` is the compressor's own output — the node directly, or the
+   * two-input worklet when a detector was supplied — so the assertion follows the handle rather than the node name.
+   * This line went red on CI exactly once, which is what a wiring assertion is for.
+   */
+  ["masterGraph places the limiter after the bus compressor", /busComp\.output\.connect\(limiter\.input\)/],
+  ["the bus compressor is fed by the makeup gain", /masterMakeupGain\.connect\(masterBusComp\)/],
   ["the live engine builds the shared graph", /buildMasterGraph\(this\.ctx/],
   ["the offline renderer builds the shared graph", /buildMasterGraph\(ctx/],
   ["AudioEngine derives the trim from the pattern's genre", /getGenreLoudnessTrimDb\(pattern\.genre_id\)/],
