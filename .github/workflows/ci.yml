@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [main, next]
+    # `dev` is the branch the CI work lands on (feature work is cherry-picked into it from the local tree and
+    # `main` is moved by merging `dev`); without it here, a push to `dev` would run nothing at all.
+    branches: [main, next, dev]
   pull_request:
-    branches: [main, next]
+    branches: [main, next, dev]
   # The heavy checks live in the `nightly` job: they are slow (the full 7-target browser
   # matrix) or environment-sensitive in ways that would report flakiness as a code failure
   # on every pull request. A dedicated nightly slot keeps them running without making every
