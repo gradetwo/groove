@@ -7,8 +7,16 @@
  *   2. ./.env.deploy  (git-ignored; see .env.deploy.example)
  *
  * Usage:
- *   node scripts/deploy.mjs            # build is NOT run; run `npm run build` first or use `npm run deploy`
- *   node scripts/deploy.mjs --dry-run  # wrangler deploy --dry-run (no upload)
+ *   node scripts/deploy.mjs             # build is NOT run; run `npm run build` first or use `npm run deploy`
+ *   node scripts/deploy.mjs --dry-run   # wrangler deploy --dry-run (no upload)
+ *   node scripts/deploy.mjs --preview   # upload a *version* and alias it, leaving production traffic alone
+ *
+ * `--preview` exists because iterating on the live URL is the wrong trade: it replaces the released
+ * build for real users while a change is half-finished, and the only way back is another deploy of the
+ * old one. `wrangler versions upload --preview-alias` puts the working tree on its own URL
+ * (`https://<alias>-<worker>.<subdomain>.workers.dev`) while `groove.wangda.today` keeps serving the
+ * release. The same credential injection and the same "is `dist` actually this version" guard apply,
+ * because a preview that is not the build you are looking at is worse than no preview.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -50,6 +58,15 @@ const fileEnv = ENV_FILES.reduce(
 );
 const env = { ...process.env, ...fileEnv };
 const dryRun = process.argv.includes("--dry-run");
+const preview = process.argv.includes("--preview");
+/** Stable so it is the same URL every time; the version underneath it is what changes. */
+const previewAliasIndex = process.argv.findIndex((a) => a.startsWith("--preview-alias"));
+const previewAlias =
+  previewAliasIndex !== -1 && process.argv[previewAliasIndex].includes("=")
+    ? process.argv[previewAliasIndex].split("=")[1]
+    : previewAliasIndex !== -1 && process.argv[previewAliasIndex + 1]
+      ? process.argv[previewAliasIndex + 1]
+      : "dev";
 
 // Credentials are optional here: if neither the environment nor .env.deploy provides
 // a token we still try, because wrangler may already hold its own authenticated
@@ -111,8 +128,17 @@ if (fs.existsSync(distVersionFile)) {
   );
 }
 
-const args = ["wrangler", "deploy", ...(dryRun ? ["--dry-run"] : [])];
-console.log(`\u25b6\ufe0f  npx ${args.join(" ")}${dryRun ? " (dry run)" : ""}`);
+const args = preview
+  ? ["wrangler", "versions", "upload", "--preview-alias", previewAlias]
+  : ["wrangler", "deploy", ...(dryRun ? ["--dry-run"] : [])];
+console.log(
+  `\u25b6\ufe0f  npx ${args.join(" ")}` +
+    (preview
+      ? `  (preview only \u2014 production traffic is untouched; the URL is the alias URL wrangler prints)`
+      : dryRun
+        ? " (dry run)"
+        : "")
+);
 
 const childEnv = { ...env };
 if (!childEnv.CLOUDFLARE_API_TOKEN) delete childEnv.CLOUDFLARE_API_TOKEN;

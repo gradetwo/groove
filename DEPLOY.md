@@ -38,6 +38,27 @@ npm run deploy:only                 # 跳过 verify，只上传
 node scripts/deploy.mjs --dry-run   # 只打包、不上传
 ```
 
+### 开发期：用预览版本快速迭代（不动线上）
+
+改到一半就直接部署线上 URL 是笔亏本买卖：真实用户会看到未完成的构建，回退只能靠再部署一次旧版。
+`--preview` 走 `wrangler versions upload`，把工作区的构建挂到**独立 URL**上，`groove.wangda.today`
+继续服务已发布的版本：
+
+```bash
+npm run build            # 任何 public/ 或 src/ 的改动之后都要重新构建
+npm run deploy:preview   # 上传一个 version，并挂到 dev 别名上
+# → https://dev-<worker>.<subdomain>.workers.dev   （别名固定，URL 每次相同）
+#   每次上传还会打印一个带版本 ID 的一次性 URL
+```
+
+它和正式部署**共用同一套凭据注入与同一道版本闸门**（`dist/version.json` 必须等于 `package.json`）——
+一个"不是你现在正在看的那个构建"的预览，比没有预览更糟。别名可以用 `--preview-alias=<名字>` 换，
+比如给并行的两条改动各一个环境。
+
+确认线上没被碰到：`curl -s https://groove.wangda.today/ | grep -o 'assets/index-[^"]*\.js'`
+应当仍是旧构建的 hash，而预览 URL 上是新的。真正上线仍然只有一条路：
+`npm run deploy`（先跑完整 `verify`）。
+
 ## 3. 其他静态托管
 
 `dist/` 是普通静态目录，直接放上去即可，但需要 **SPA 回退**（未知路径返回 `index.html`）。
