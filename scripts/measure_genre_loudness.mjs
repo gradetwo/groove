@@ -69,6 +69,7 @@ import {
   LOUDNESS_FRESHNESS_TOLERANCE_DB,
   loudnessDrift,
   sampleGenreIds,
+  freshnessToleranceFor,
 } from "../src/utils/loudnessFreshness.ts";
 
 const argv = process.argv.slice(2);
@@ -812,7 +813,12 @@ async function waitForServer(url) {
       }
       assertSingleLimiterPath(ids, "sample check");
       assertNoVoiceFallback(ids, "sample check");
-      const drift = loudnessDrift(measuredNow, baseline.genres, LOUDNESS_FRESHNESS_TOLERANCE_DB);
+      /**
+       * Each row is judged at its **own** noise floor (`freshnessToleranceFor`): the report's repeat stability is
+       * 0.000 dB for 158 genres and 0.524 dB for `synthwave`, so one library-wide floor would make this gate fail by
+       * itself whenever its three-genre sample includes that one row.
+       */
+      const drift = loudnessDrift(measuredNow, baseline.genres, freshnessToleranceFor);
       console.log("===============================================================");
       if (drift.length === 0) {
         console.log(
