@@ -117,6 +117,8 @@ interface CompactOverrides {
   f?: [string[], number[], number];
   /** The section's transposition in semitones. */
   t?: number;
+  /** The section asks for a riser. A flag, so the compact form is a single `true`. */
+  s?: boolean;
 }
 
 /** Share-link bounds for a section's overrides — small enough that 64 sections cannot blow the URL ceiling. */
@@ -151,6 +153,8 @@ function compactOverrides(section: SongSection): CompactOverrides | undefined {
     if (tracks.length && steps.length) out.f = [tracks, steps, fill.velocity ?? 112];
   }
 
+  if (source.riser) out.s = true;
+
   if (Number.isFinite(source.transpose) && source.transpose !== 0) {
     out.t = Math.max(-MAX_SECTION_TRANSPOSE, Math.min(MAX_SECTION_TRANSPOSE, Math.round(source.transpose as number)));
   }
@@ -178,6 +182,8 @@ function decodeOverrides(raw: unknown): SectionOverrides | undefined {
       ];
     }
   }
+
+  if (source.s === true) out.riser = true;
 
   if (Number.isFinite(source.t) && source.t !== 0) {
     out.transpose = Math.max(-MAX_SECTION_TRANSPOSE, Math.min(MAX_SECTION_TRANSPOSE, Math.round(Number(source.t))));

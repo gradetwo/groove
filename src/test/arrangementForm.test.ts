@@ -8,7 +8,7 @@ import {
   formBars,
   FILL_STEPS,
 } from "../data/arrangementForm";
-import { flattenSong } from "../data/songFlatten";
+import { flattenSong, textureLanes } from "../data/songFlatten";
 import {
   MAX_SECTION_BARS,
   MAX_SECTION_TRANSPOSE,
@@ -359,5 +359,73 @@ describe("B5 · a section's transposition moves its pitched lanes and nothing el
       )
     );
     expect(timeline.bars.map((bar) => bar.transpose ?? 0)).toEqual([-3, -3, 0]);
+  });
+});
+
+describe("P2.4 · a riser is a fill on the clip's texture lane, and it rises", () => {
+  const textureClip = () =>
+    ({
+      ...clip(),
+      totalSteps: 16,
+      tracks: [
+        track("kick", 16),
+        { ...track("fx", 16), name: "FX", instrument: "noise_sweep" },
+      ],
+    }) as unknown as SequencerPattern;
+
+  it("puts the riser on the texture lane's last pass, with a velocity that rises across its steps", () => {
+    const songWith = {
+      ...song([{ id: "s1", slot: "A", bars: 2, overrides: { riser: true } }], { A: textureClip() }),
+    };
+    const timeline = resolveTimeline(songWith, {
+      riserLanesFor: (slot) => textureLanes(songWith.clips[slot]!.tracks ?? []),
+      stepsPerPassFor: () => 16,
+    });
+    const fill = timeline.bars[1].fill;
+    expect(fill, "the riser lands on the section's last pass only").toBeDefined();
+    expect(fill!.tracks).toEqual(["fx"]);
+    // Eight steps — a riser has to be heard arriving, which is why it is longer than a fill's four.
+    expect(fill!.steps).toHaveLength(8);
+    expect(fill!.steps).toEqual([8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(fill!.velocityRamp).toEqual([48, 120]);
+    // …and the pass *before* it is untouched: a riser is not a change to the section, it is what leads out of it.
+    expect(timeline.bars[0].fill).toBeUndefined();
+  });
+
+  it("flattens the ramp into per-step velocities, rising, on the texture lane only", () => {
+    const songWith = song([{ id: "s1", slot: "A", bars: 1, overrides: { riser: true } }], { A: textureClip() });
+    const flat = flattenSong(songWith);
+    const fx = flat.pattern.tracks.find((lane) => lane.track_id === "fx")!;
+    const hits = [8, 9, 10, 11, 12, 13, 14, 15].map((step) => (fx.steps ?? [])[step]).filter(Boolean);
+    expect(hits).toHaveLength(8);
+    const ramp = [8, 9, 10, 11, 12, 13, 14, 15].map((step) => (fx.velocity ?? [])[step] as number);
+    for (let i = 1; i < ramp.length; i += 1) expect(ramp[i]).toBeGreaterThan(ramp[i - 1]);
+    expect(ramp[0]).toBeLessThan(60);
+    expect(ramp[ramp.length - 1]).toBeGreaterThan(100);
+    /**
+     * The kick lane is not *touched by* the riser — which is not the same as being silent: this clip's kick already
+     * sounds on steps 8 and 12. The assertion is a comparison against the same song without the riser, because "the
+     * lane did not change" is the claim and "the lane is empty" was the first version's mistake.
+     */
+    const withoutRiser = flattenSong(song([{ id: "s1", slot: "A", bars: 1 }], { A: textureClip() }));
+    const kick = flat.pattern.tracks.find((lane) => lane.track_id === "kick")!;
+    const kickBefore = withoutRiser.pattern.tracks.find((lane) => lane.track_id === "kick")!;
+    expect(kick.steps).toEqual(kickBefore.steps);
+    expect(kick.velocity).toEqual(kickBefore.velocity);
+  });
+
+  it("asks for no riser when the clip has no texture lane", () => {
+    const plain = song([{ id: "s1", slot: "A", bars: 1, overrides: { riser: true } }], { A: clip(16) });
+    const flat = flattenSong(plain);
+    // A clip with nothing that can sweep gets nothing — not a riser on whatever lane came first.
+    expect(textureLanes(plain.clips.A!.tracks ?? [])).toEqual([]);
+    expect(flat.problems).toEqual([]);
+  });
+
+  it("hands the shape to the generators: the club build and the song's chorus ask for one", () => {
+    const club = ARRANGEMENT_FORMS.club.steps.filter((step) => step.riser).map((step) => step.label);
+    const songForm = ARRANGEMENT_FORMS.song.steps.filter((step) => step.riser).map((step) => step.label);
+    expect(club).toEqual(["build"]);
+    expect(songForm).toEqual(["chorus"]);
   });
 });

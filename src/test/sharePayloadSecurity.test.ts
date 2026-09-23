@@ -264,6 +264,19 @@ describe("F-09 · sequencer share URL never exceeds what the decoder accepts", (
     expect(decodeSharedSequencer(encodeSharedSequencer(hostile))?.sections?.[0].overrides?.transpose).toBe(24);
   });
 
+  it("carries a section's riser, which is the smallest override there is", () => {
+    // A riser is a flag, so "did it survive the link" is a two-line question — and a flag is exactly what a
+    // hand-written field list forgets.
+    const state = {
+      ...makeState(2, 16),
+      sections: [{ id: "s1", slot: "A" as const, bars: 2, overrides: { riser: true } }],
+    };
+    expect(decodeSharedSequencer(encodeSharedSequencer(state))?.sections?.[0].overrides?.riser).toBe(true);
+    // …and an absent riser stays absent rather than becoming `false` in the object.
+    const plain = { ...makeState(2, 16), sections: [{ id: "s1", slot: "A" as const, bars: 2 }] };
+    expect(decodeSharedSequencer(encodeSharedSequencer(plain))?.sections?.[0].overrides?.riser).toBeUndefined();
+  });
+
   it("bounds hostile overrides instead of trusting them", () => {
     // A link is untrusted input like every other field: a 500× ramp is a mistake, and a fill with a thousand steps
     // would spend the URL budget on data no pattern can address.

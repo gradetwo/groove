@@ -31,6 +31,24 @@ export interface FlattenedSong {
 
 const clipFor = (song: Song, slot: ClipSlot): SequencerPattern | undefined => song.clips?.[slot];
 
+/**
+ * The lanes that can perform a riser: the clip's texture role.
+ *
+ * Matched the way the fill matcher works — by id **or** name, lowercased — because a clip may carry either as its
+ * handle, and a genre's texture lane is called `fx` in some and `riser`/`texture` in others. No lane means no riser,
+ * which is the honest outcome for a clip with no texture voice at all.
+ */
+export function textureLanes(tracks: readonly SequencerTrack[]): string[] {
+  const found: string[] = [];
+  for (const track of tracks) {
+    const id = (track.track_id ?? "").toLowerCase();
+    const name = (track.name ?? "").toLowerCase();
+    if (!/(^|[^a-z])(fx|riser|texture|sweep|noise)([^a-z]|$)/.test(`${id} ${name}`)) continue;
+    if (!found.includes(track.track_id)) found.push(track.track_id);
+  }
+  return found;
+}
+
 /** Does this fill name that lane? Ids and names both, because a clip may carry either as its handle. */
 function fillTargets(fill: SongFill, track: SequencerTrack): boolean {
   return fill.tracks.includes(track.track_id) || (!!track.name && fill.tracks.includes(track.name));
@@ -44,7 +62,17 @@ function fillTargets(fill: SongFill, track: SequencerTrack): boolean {
  * lengths are summed rather than assumed equal.
  */
 export function flattenSong(song: Song): FlattenedSong {
-  const timeline = resolveTimeline(song);
+  /**
+   * The timeline needs the *clip* to place a riser: which lane can perform one and how long a pass is. Both are the
+   * clip's business, so they are handed over as resolvers rather than copied into the song's data.
+   */
+  const timeline = resolveTimeline(song, {
+    riserLanesFor: (slot) => textureLanes(song.clips?.[slot]?.tracks ?? []),
+    stepsPerPassFor: (slot) => {
+      const clip = song.clips?.[slot];
+      return clip?.totalSteps || clip?.tracks?.[0]?.steps?.length || 0;
+    },
+  });
   const problems = [...timeline.problems];
   const bars = timeline.bars;
 
@@ -109,7 +137,22 @@ export function flattenSong(song: Song): FlattenedSong {
       const muted = bar.mute.includes(track.track_id) || bar.mute.includes(track.name);
       const scale = Number.isFinite(bar.velocityScale) ? bar.velocityScale : 1;
       const fill = bar.fill && fillTargets(bar.fill, track) ? bar.fill : undefined;
-      const fillVelocity = fill ? (fill.velocity ?? 100) : 100;
+      /**
+       * A fill's velocity, and — when it carries a ramp — the value for *this* step of it.
+       *
+       * The ramp is what makes a riser a riser, so it is read per step rather than once for the pass; a fill without
+       * one keeps the single value it always had, which is why every existing fill is unaffected.
+       */
+      const fillVelocityAt = (step: number) => {
+        if (!fill) return 100;
+        const base = fill.velocity ?? 100;
+        if (!fill.velocityRamp || fill.steps.length < 2) return base;
+        const index = fill.steps.indexOf(step);
+        if (index < 0) return base;
+        const [from, to] = fill.velocityRamp;
+        const t = index / (fill.steps.length - 1);
+        return from + (to - from) * t;
+      };
       /**
        * The section's transposition moves *pitched* steps and nothing else: a step with no pitch is a drum, and a
        * drum has no key. The shift is applied to `pitch` and to each note of a `pitches` stack, then clamped into the
@@ -136,7 +179,9 @@ export function flattenSong(song: Song): FlattenedSong {
              * section's ramp did not reach.
              */
             if (fillHit) {
-              (built.velocity as number[]).push(Math.max(1, Math.min(127, Math.round(fillVelocity * scale))));
+              (built.velocity as number[]).push(
+                Math.max(1, Math.min(127, Math.round(fillVelocityAt(step) * scale)))
+              );
             } else if (typeof value === "number") {
               (built.velocity as number[]).push(Math.max(1, Math.min(127, Math.round(value * scale))));
             } else {
