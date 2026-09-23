@@ -125,6 +125,18 @@ const BUDGET = {
 };
 
 const CLAIMS = {
+  /**
+   * P2.2/A3 — the per-note nudge must separate from its own control.
+   *
+   * This key was counted, detailed and budgeted before it was added here, which is the most instructive mistake in
+   * this file: a claim with a budget that is never judged is a gate that cannot fail, and the aggregate printed a
+   * table without the row. `grooveShards.test.ts` now asserts that every budget has a claim, a tally and a detail
+   * array, so the next one cannot be half-added.
+   */
+  flatStabs: {
+    label: "per-note variation lost in the voice (nudge does not separate from its control)",
+    worse: (count, budget) => count > budget,
+  },
   flatTracks: {
     label: "flat velocities (≥4 of 8 tracks with one velocity)",
     worse: (count, budget) => count > budget,
@@ -172,7 +184,9 @@ function analyseIds(ids, port) {
       [
         path.join(ROOT, "scripts", "analyze_export_audio.mjs"),
         `--only=${ids.join(",")}`,
-        "--stem-tracks=kick,bass,chords",
+        // `lead` as well as `chords`: the per-stab claim (A3) needs the *exposed* melodic lane, and measurement showed
+        // the lead separates from its control by x2.48 while the chords sit buried under the harmony at x1.16.
+        "--stem-tracks=kick,bass,chords,lead",
         `--port=${port}`,
         "--json",
       ],
@@ -361,7 +375,9 @@ function analyseSerial() {
       [
         path.join(ROOT, "scripts", "analyze_export_audio.mjs"),
         `--only=${SAMPLE.join(",")}`,
-        "--stem-tracks=kick,bass,chords",
+        // `lead` as well as `chords`: the per-stab claim (A3) needs the *exposed* melodic lane, and measurement showed
+        // the lead separates from its control by x2.48 while the chords sit buried under the harmony at x1.16.
+        "--stem-tracks=kick,bass,chords,lead",
         "--json",
       ],
       { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] }
