@@ -61,6 +61,8 @@ const ONLY = value("--only", "")
   .filter(Boolean);
 /** Bus-compressor overrides — the A/B knobs for the mastering chain's give-back (P2.3). */
 const BUS_COMP_RELEASE = Number(value("--bus-comp-release", "0")) || 0;
+/** `--no-note-variation` renders with every stab identical (A3's control), for attributing a regression. */
+const NO_NOTE_VARIATION = process.argv.includes("--no-note-variation");
 const BUS_COMP_THRESHOLD = value("--bus-comp-threshold", "");
 const BUS_COMP_RATIO = value("--bus-comp-ratio", "");
 /** The **export** default is one bar; `--bars=4` shows what the tail looks like with more material. */
@@ -101,7 +103,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
      * `busCompRelease` crosses the boundary explicitly: a Node-side constant is not visible inside this function
      * (the first version of the A/B referenced one and crashed the whole measurement with a ReferenceError).
      */
-    async ({ id, bars: barsArg, soloTracks, busCompRelease, busCompThreshold, busCompRatio }) => {
+    async ({ id, bars: barsArg, soloTracks, busCompRelease, busCompThreshold, busCompRatio, noNoteVariation }) => {
       const [wav, genresModule, mixModule, loudness, timbre, metrics, trackUtils, noteEvents] = await Promise.all([
         import("/src/audio/WavExporter.ts"),
         import("/src/data/genres/index.ts"),
@@ -132,6 +134,8 @@ async function measureGenre(page, genreId, bars, soloTracks) {
       const renderMaster = async () => {
         let kind = "fallback";
         const rendered = await wav.renderPatternOffline(pattern, {
+        ...(noNoteVariation ? { noteVariation: false } : {}),
+
           bars: barsArg,
           drumKit,
           onLimiterKind: (value) => {
@@ -849,7 +853,15 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         trackCount: pattern.tracks.length,
       };
     },
-    { id: genreId, bars, soloTracks, busCompRelease: BUS_COMP_RELEASE, busCompThreshold: BUS_COMP_THRESHOLD, busCompRatio: BUS_COMP_RATIO }
+    {
+      id: genreId,
+      bars,
+      soloTracks,
+      busCompRelease: BUS_COMP_RELEASE,
+      busCompThreshold: BUS_COMP_THRESHOLD,
+      busCompRatio: BUS_COMP_RATIO,
+      noNoteVariation: NO_NOTE_VARIATION,
+    }
   );
 }
 
@@ -1008,8 +1020,26 @@ const fmt = (value, digits = 1) => (value == null || !Number.isFinite(value) ? "
     console.error(`⚠️  ${unmatched.length} requested genre id(s) do not exist and were skipped: ${unmatched.join(", ")}`);
   }
 
+  /**
+   * Recycle the page every few genres, because a long-lived page **degrades** and the tail is where it shows.
+   *
+   * Measured 2026-09-23: `ambient` renders a tail of **−89 dBFS** in a fresh page and **−27 dBFS** after a run of
+   * renders in the same one — a 62 dB difference in the number the `cutTail` claim is made of, with the integrated
+   * loudness unchanged to 0.3 dB. `measure_genre_loudness.mjs` has recycled for exactly this reason since P0.8 (its
+   * note: past ~50–75 offline renders in one page, renders start to shift); this analyser rendered every genre of a
+   * shard in one page and did not. A claim measured in a degrading page is a claim about the page, so the page is
+   * now replaced before that happens — and the count is lower here than the loudness script's because a genre costs
+   * about eight renders (master, four stems, four duck cells).
+   */
+  const RELOAD_EVERY = 3;
+  const recyclePage = async () => {
+    await page.goto("about:blank");
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  };
+
   const rows = [];
-  for (const id of ids) {
+  for (const [index, id] of ids.entries()) {
+    if (index > 0 && index % RELOAD_EVERY === 0) await recyclePage();
     try {
       rows.push(await measureGenre(page, id, BARS, STEM_TRACKS));
     } catch (error) {
