@@ -209,8 +209,18 @@ engine that answer, and clears the loop range in song mode (looping a 16-step wi
 silence in a different shape). The editor above still shows the loop being *edited*, which is a different job, and
 `editorPositionFor` answers the one question that follows: which pass of which section the transport is in, and
 whether that pass is the clip the grid is showing (`matchesEditor`) — so the beam is not drawn at a step that belongs
-to different music. What remains of B7 is the wiring of that helper into the playhead, and per-section *listening*
-checks (the plan's probe, below).
+to different music. The playhead is wired to that helper in the same slice (a step inside the editor's own clip
+moves the beam; a pass playing another clip hides it), and song mode's old A↔B alternation on every wrap is kept
+**only** for a session with no sections — with the console feeding the engine the flattened arrangement, that swap was
+a feedback loop.
+
+**What remains of B7 is its *listening* proof, and it needs something the app does not have yet.** The unit cases pin
+what the console feeds the engine and how the playhead maps; what none of them can show is that the *sound* changes at
+a pass boundary, and a probe cannot observe it either: the engine is created inside the app and nothing exposes it, so
+`page.evaluate` has no analyser to sample. The probes that do need engine internals inject a hook through
+`page.addInitScript` (`measure_gs1_jitter.mjs`'s `window.__e7`) — that is the shape this takes, and it is an app change
+(a deliberate test hook) rather than a probe change. Until then the plan says plainly that B7 is verified structurally
+and not audibly, and a listening check by a human is the honest substitute.
 
 **What it takes, and how it would be verified.** The transport already knows the bar it is on; the missing piece is
 that the *engine* is handed one pattern and told to repeat it. The shape that fits this codebase is the one B2
