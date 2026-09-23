@@ -158,6 +158,12 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
   unlike `measure_genre_loudness.mjs` — rendered every genre of a shard in one page. It now recycles every three
   genres (a genre costs about eight renders: master, four stems, four duck cells), because a claim measured in a
   degrading page is a claim about the page.
+* **Recycling was necessary and is not sufficient for that claim.** The next run, with recycling in, still reported
+  `cutTail` — but for a *different* genre (`liquid-dnb −49.8 dBFS` against `ambient −27.2` in a page that had
+  degraded). Two runs of the same code, two different genres crossing an **absolute** −60 dBFS line, while a fresh
+  page reads −89: the tail of a render is not repeatable to ±60 dB, and a claim written as an absolute level inherits
+  that. The claim's *intent* is "the export does not end with an audible truncation", which is a statement about the
+  tail **relative to the body** — that is the re-base to make, with the numbers from a repeated run as its evidence.
 
 **P0.9 closed for the A1–A3 batch on 2026-09-23.** The batch's single re-record (159 genres, `subset: false`, worklet
 limiter, 0 clamp hits) was applied — **79 trims moved**, largest `dream-trance +6.86`, `chicago-blues +5.34`,
