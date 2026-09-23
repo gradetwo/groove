@@ -59,8 +59,10 @@ const ONLY = value("--only", "")
   .split(",")
   .map((id) => id.trim())
   .filter(Boolean);
-/** Bus-compressor release override, seconds — the A/B knob for the mastering chain's give-back (P2.3). */
+/** Bus-compressor overrides — the A/B knobs for the mastering chain's give-back (P2.3). */
 const BUS_COMP_RELEASE = Number(value("--bus-comp-release", "0")) || 0;
+const BUS_COMP_THRESHOLD = value("--bus-comp-threshold", "");
+const BUS_COMP_RATIO = value("--bus-comp-ratio", "");
 /** The **export** default is one bar; `--bars=4` shows what the tail looks like with more material. */
 const BARS = Number(value("--bars", "1"));
 const PORT = Number(value("--port", "5321"));
@@ -99,7 +101,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
      * `busCompRelease` crosses the boundary explicitly: a Node-side constant is not visible inside this function
      * (the first version of the A/B referenced one and crashed the whole measurement with a ReferenceError).
      */
-    async ({ id, bars: barsArg, soloTracks, busCompRelease }) => {
+    async ({ id, bars: barsArg, soloTracks, busCompRelease, busCompThreshold, busCompRatio }) => {
       const [wav, genresModule, mixModule, loudness, timbre, metrics, trackUtils, noteEvents] = await Promise.all([
         import("/src/audio/WavExporter.ts"),
         import("/src/data/genres/index.ts"),
@@ -353,7 +355,11 @@ async function measureGenre(page, genreId, bars, soloTracks) {
          * the duck removes programme peak (a peak decision), and each has a different fix. The matrix is the cheapest
          * way to tell them apart — four renders instead of two.
          */
-        const compRelease = busCompRelease > 0 ? { masterBusCompReleaseSec: busCompRelease } : {};
+        const compRelease = {
+          ...(busCompRelease > 0 ? { masterBusCompReleaseSec: busCompRelease } : {}),
+          ...(busCompThreshold !== "" ? { masterBusCompThresholdDb: Number(busCompThreshold) } : {}),
+          ...(busCompRatio !== "" ? { masterBusCompRatio: Number(busCompRatio) } : {}),
+        };
         const renderPair = (busComp, ceilingLifted) =>
           Promise.all([
             wav
@@ -478,6 +484,38 @@ async function measureGenre(page, genreId, bars, soloTracks) {
             louderOnsets,
           };
         };
+        /**
+         * The absolute levels of the four pairs, because a *ratio* cannot say whether the ducked side came up or the
+         * control went down.
+         *
+         * What the four cells say (disco, 2026-09-23), mean | median:
+         *
+         *   pure (no bus comp, ceiling lifted)   −4.41 | −4.37
+         *   bus compressor only                  −2.09 |  0
+         *   ceiling only                         −4.41 | −4.37
+         *   both — the file                      −1.98 | −0.2
+         *
+         * The ceiling is transparent in **both** statistics, so the gain-recovery hypothesis is dead. The bus
+         * compressor is what takes the *median* onset's dip to **zero** while only halving the mean, and three
+         * attempts to tune it away all failed: release (0.22/0.50/0.80 s → −2.09/−2.04/−2.03), threshold (−6 dB →
+         * −2.2), ratio (1.2:1 → −2.18). Content cannot pay for it either — a temporary **×3** duck depth moved the
+         * pure median to −13.62 dB and the file's median only to −0.35, i.e. the median is *saturated at zero* by the
+         * node rather than shrunk proportionally.
+         *
+         * The conclusion is structural, not a setting: a `DynamicsCompressorNode` whose detector sees the ducked
+         * programme will give a deliberate dip back, and the fix is a compressor the sidechain cannot fool (detect on
+         * a pre-duck copy). These fields are what makes that arguable rather than asserted.
+         */
+        const rmsOf = (buffer) => rms(buffer.getChannelData(0), 0, buffer.getChannelData(0).length);
+        const levels = {
+          pureDucked: Math.round(rmsOf(pureDucked) * 1e6) / 1e6,
+          pureControl: Math.round(rmsOf(pureControl) * 1e6) / 1e6,
+          compDucked: compDucked ? Math.round(rmsOf(compDucked) * 1e6) / 1e6 : null,
+          compControl: compControl ? Math.round(rmsOf(compControl) * 1e6) / 1e6 : null,
+          ceilingDucked: ceilingDucked ? Math.round(rmsOf(ceilingDucked) * 1e6) / 1e6 : null,
+          fullDucked: Math.round(rmsOf(fullDucked) * 1e6) / 1e6,
+          fullControl: Math.round(rmsOf(fullControl) * 1e6) / 1e6,
+        };
         const pure = ratiosFor(pureDucked, pureControl);
         const comp = compDucked && compControl ? ratiosFor(compDucked, compControl) : null;
         const ceiling = ceilingDucked && ceilingControl ? ratiosFor(ceilingDucked, ceilingControl) : null;
@@ -500,8 +538,13 @@ async function measureGenre(page, genreId, bars, soloTracks) {
            * `duckCompDb` is the bus compressor alone and `duckCeilingDb` the ceiling alone, so
            * `duckDb - duckMasterDb` can be spent on whichever stage actually owns it instead of on a guess.
            */
+          /** Absolute RMS of each pair, for attributing a ratio change to one side or the other. */
+          duckLevels: levels,
+          /** Bus compressor alone: the mean halves and the *median* is zeroed — the claim's own statistic. */
           duckCompDb: comp ? comp.meanDb : null,
+          duckCompMedianDb: comp ? comp.medianDb : null,
           duckCeilingDb: ceiling ? ceiling.meanDb : null,
+          duckCeilingMedianDb: ceiling ? ceiling.medianDb : null,
           /** Through the full mastering chain — what the file actually shows, and the claim's number. */
           duckMasterDb: full.meanDb,
           duckMasterMedianDb: full.medianDb,
@@ -579,7 +622,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         trackCount: pattern.tracks.length,
       };
     },
-    { id: genreId, bars, soloTracks, busCompRelease: BUS_COMP_RELEASE }
+    { id: genreId, bars, soloTracks, busCompRelease: BUS_COMP_RELEASE, busCompThreshold: BUS_COMP_THRESHOLD, busCompRatio: BUS_COMP_RATIO }
   );
 }
 
