@@ -93,11 +93,24 @@ const BUDGET = {
   // and the two genres with no bass under the kick at all (minimal-techno, ambient) are unmeasurable rather
   // than counted as passing.
   weakDuck: 0,
-  // A2 landed on 2026-09-23 and the gate's own sample reads **0**: the bus compressor is now a two-input worklet
-  // whose detector follows a pre-duck copy of the bus, so a deliberate dip is no longer read as a quiet passage.
-  // Before it, disco measured a −4.37 dB sidechain arriving as a −0.2 dB dip in the file; after it, −2.39 dB (and
-  // chicago-house −5.03 → −5.03, untouched). Ratcheted from 1 to the measurement, as the rule says.
-  duckErasedInMaster: 0,
+  /**
+   * **Back to 1, and the previous 0 was an artefact — my own reading, corrected.**
+   *
+   * A2's compressor half is real and verified: with the bus compressor alone the dip measures **−4.42 dB** against a
+   * −4.40 dB mechanism, so the two-input worklet does exactly what it was built to do. What eats the rest is the
+   * **ceiling** (ceiling alone −3.44 dB), and the fix for that — a pre-duck detector on the limiters — is correct at
+   * the kernel level (−1.00 dBTP with and without a detector, both implementations, measured in isolation) but
+   * **cannot be wired yet**: in the render path it stops the ceiling limiting at all (chicago-house at +1.36 dBTP
+   * against a −1 dBTP contract, and a re-record that asked 49 genres for a −9 dB cut because the mix was 3–8 dB
+   * louder). Unwired, the same render measures −1.30 dBTP and disco's file median dip is **−0.3 dB** against a
+   * −4.4 dB sidechain.
+   *
+   * So the run that read 0 was reading a ceiling that had stopped working — the dip survived because nothing was
+   * eating it. That is the least comfortable sentence in this file and it is here because a number nobody can explain
+   * is worth less than a smaller number with a mechanism behind it. The wiring is the open bug, the isolation probe
+   * is where to start, and the budget records what ships today.
+   */
+  duckErasedInMaster: 1,
   // P0.4 landed on 2026-09-23 (`MIX_WIDTH_SCALE` on the resolved pans, centre lanes untouched) and the gate's own
   // 12-genre sample reads 9: chicago-house 0.9906, detroit-techno 0.9933, minimal-techno 0.9968. Ratcheted from 12 to
   // the measurement, as the rule says. Note what this is *not*: the earlier ad-hoc experiment quoted 3/12, and that

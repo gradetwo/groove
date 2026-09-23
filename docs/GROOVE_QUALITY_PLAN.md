@@ -146,6 +146,20 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
 | 0.7 | **Measure the loudness and timbre baselines on the pattern the user hears** | `measure_genre_loudness.mjs`, `measure_genre_timbre.mjs` | Found while fixing A3: both baseline scripts render `applyGenreMixDefaults(genre.sequencer_pattern)` — the mix applied to the *unexpanded* skeleton. They are self-consistent (the gate re-measures the same thing), so `check:loudness`/`check:timbre` still hold, but they certify a one-loop pattern rather than a performance. Regenerating 159 baselines is a release of its own; do it deliberately, not as a side effect. | M | medium — every baseline moves |
 | 0.9 | **Re-record the loudness trims after the P0.3–P0.6 mix changes** | `scripts/measure_genre_loudness.mjs` + `apply_loudness_trims.mjs` | P0.3 removes bass energy on purpose (4–6 dB of sidechain), so `check:loudness:fresh` now reads **2-step-garage −0.79 dB** against the recorded report; P0.4–P0.6 were each isolated and are loudness-neutral (the same −0.79 dB with the tail reverted, the width at identity and the pans parked). **Unblocked on 2026-09-23**: the sentinel that refused to publish was comparing two page states (see P0.8 below), and it now takes its reference on a recycled page — a 14-genre re-run that aborted at Δ +0.760 dB finishes at Δ −0.000 dB. **Verified on CI over a full 159-genre run**: the sentinel drifted **≤ 0.004 dB** across every page recycle (`+0.001, −0.000, +0.000, +0.004, +0.000 …`), against the 0.3 dB tolerance and the 0.66–0.76 dB that used to abort the run. That run then died at its *last* line — `ENOENT … loudness-report/loudness.baseline.json`, a directory `--out` named and nothing created (the progress writes failed the same way inside the per-genre `catch`, which is why two hours looked healthy) — so the script now `mkdirSync`s its output directory and a test pins it. **Applying the trims moved the operating point, and two claims said so** (2026-09-23, the run right after):
 
+* **The ceiling's detector disables the ceiling in the render path, and that is why A2's second half is not wired.**
+  Found the hard way, by *applying* the next re-record's report and reading it: `clampHits 49` and 49 genres asking
+  for a −9 dB cut, which means the unity-trim renders were 3–8 dB louder than the target. The cause is in the report:
+  `arrangedTruePeakDb` **+6.36, +4.16, +6.79, +8.15 dBTP** against the previous report's −1.30. The limiter was not
+  limiting. With `detector: null` the same genre renders at **−1.30 dBTP**, exactly the contract. The DSP is not at
+  fault — the worklet and the kernel both measure **−1.00 dBTP with *and* without a detector** in isolation
+  (`scratch/limiter_detector_probe.mjs`) — so what is left is why the bus reads as silent in the render path, and the
+  isolation probe is where the next session starts. The wiring is off and the capability stays, tested, because a
+  silent detector means "no limiting" and a file at +6 dBTP is not a trade this project makes.
+* **…and the duck's "0" was an artefact of that bug, which changes the reading.** With the ceiling working again,
+  disco's file median dip is **−0.3 dB** against a −4.4 dB sidechain, so `duckErasedInMaster` is **1** — the budget is
+  back, with the correction written beside it. What A2 *did* fix is real and separable: with the bus compressor
+  alone the dip measures **−4.42 dB** against a −4.40 dB mechanism. The remaining eater is the ceiling, whose fix is
+  the unwired one above.
 * **`duckErasedInMaster` came back for disco** — sidechain −4.36 dB, file **−0.2 dB**. The four-cell matrix attributes
   it: pure −4.40 \| −4.36, bus compressor only −4.42 \| −4.38, **ceiling only −3.44**, file −1.34 \| **−0.2**. So the
   compressor fix holds and the **ceiling** is what eats the dip — at the *new* trim (disco is ~2 dB louder than when
