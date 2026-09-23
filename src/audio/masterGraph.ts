@@ -354,7 +354,21 @@ export function buildMasterGraph(
   // See MASTER_LIMITER_DETECTOR_MARGIN_DB.
   const limiter = createMasterLimiter(ctx, {
     ceilingDb: options.limiterCeilingDb ?? MASTER_LIMITER_INTERNAL_CEILING_DB,
-    detector: limiterDetectorNode,
+    /**
+     * **Not wired, and this is a bug fix rather than a retreat.**
+     *
+     * The kernel and the worklet both limit correctly with a detector — measured in isolation, −1.00 dBTP with and
+     * without one, through both implementations — but in the *render path* the ceiling stops limiting entirely:
+     * chicago-house rendered at **+1.36 dBTP** against a −1 dBTP contract, and the re-record that followed asked 49
+     * genres for a −9 dB cut because the mix was 3–8 dB louder. With `detector: null` the same render measures
+     * **−1.30 dBTP**, exactly the contract, which is what makes this the wiring and not the DSP.
+     *
+     * What is left to find is why the bus is silent *here* when its taps are connected before rendering, and the
+     * probe that proves the DSP is fine is the place to start (`scratch/limiter_detector_probe.mjs`). Until then the
+     * ceiling keeps the behaviour every released version has had: a silent detector would mean "no limiting", and a
+     * file at +6 dBTP is not a trade this makes.
+     */
+    detector: null,
     releaseFastMs: options.limiterReleaseFastMs,
     releaseSlowMs: options.limiterReleaseSlowMs,
   });
