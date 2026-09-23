@@ -11,6 +11,7 @@
 import { describe, it, expect } from "vitest";
 import {
   LOUDNESS_FRESHNESS_TOLERANCE_DB,
+  freshnessToleranceFor,
   loudnessDrift,
   sampleGenreIds,
   type LoudnessBaseline,
@@ -100,5 +101,46 @@ describe("loudness freshness · what counts as drift", () => {
     // The stale report's smallest real drift was 0.57 dB; noise between two renders is ~0.05 dB.
     expect(LOUDNESS_FRESHNESS_TOLERANCE_DB).toBeGreaterThan(0.05);
     expect(LOUDNESS_FRESHNESS_TOLERANCE_DB).toBeLessThan(0.57);
+  });
+});
+
+describe("the tolerance is the row's own noise floor", () => {
+  const baseline = {
+    quiet: { arrangedLufs: -12, withinGenreSpreadDb: 0.0 },
+    noisy: { arrangedLufs: -12, withinGenreSpreadDb: 0.524 },
+    unmeasured: { arrangedLufs: -12 },
+  };
+
+  it("keeps the documented floor for a deterministic row and widens only for a noisy one", () => {
+    expect(freshnessToleranceFor("quiet", baseline.quiet)).toBe(LOUDNESS_FRESHNESS_TOLERANCE_DB);
+    expect(freshnessToleranceFor("unmeasured", baseline.unmeasured)).toBe(LOUDNESS_FRESHNESS_TOLERANCE_DB);
+    // The 2026-09-23 report: `synthwave`'s repeats differ by 0.524 dB, which is *wider* than the 0.35 dB floor — so
+    // the gate would fail on a fresh, correct report whenever its sample included that row.
+    expect(freshnessToleranceFor("noisy", baseline.noisy)).toBeCloseTo(1.048, 3);
+    expect(freshnessToleranceFor("missing", undefined)).toBe(LOUDNESS_FRESHNESS_TOLERANCE_DB);
+  });
+
+  it("judges each sampled row at its own tolerance", () => {
+    const measured = [
+      { genreId: "quiet", arrangedLufs: -12.3 },
+      { genreId: "noisy", arrangedLufs: -12.6 },
+    ];
+    // 0.3 dB of movement is not drift for either row (the floor covers it) …
+    expect(loudnessDrift(measured, baseline, freshnessToleranceFor)).toEqual([]);
+    // A move past the row's own band is still caught — 1.2 dB beats the noisy row's 1.048 dB, and the quiet row's
+    // 0.4 dB beats the 0.35 dB floor — worst first.
+    const bigger = [
+      { genreId: "quiet", arrangedLufs: -12.4 },
+      { genreId: "noisy", arrangedLufs: -13.2 },
+    ];
+    expect(loudnessDrift(bigger, baseline, freshnessToleranceFor).map((row) => row.genreId)).toEqual([
+      "noisy",
+      "quiet",
+    ]);
+    // …and a plain number keeps the old behaviour exactly, which is what makes the widening visible: the very same
+    // 0.6 dB that is noise for `noisy` is drift under the library-wide floor.
+    expect(loudnessDrift(measured, baseline, LOUDNESS_FRESHNESS_TOLERANCE_DB).map((row) => row.genreId)).toEqual([
+      "noisy",
+    ]);
   });
 });

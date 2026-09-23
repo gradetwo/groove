@@ -24,7 +24,13 @@ export interface FreshLoudness {
 }
 
 /** The committed report's rows, keyed by genre id. */
-export type LoudnessBaseline = Record<string, { arrangedLufs?: number } | undefined>;
+export interface LoudnessBaselineRow {
+  arrangedLufs?: number;
+  /** The row's own repeat stability, in dB — `0.000` for almost the whole library, `0.524` for `synthwave`. */
+  withinGenreSpreadDb?: number;
+}
+
+export type LoudnessBaseline = Record<string, LoudnessBaselineRow | undefined>;
 
 export interface LoudnessDrift {
   genreId: string;
@@ -74,7 +80,7 @@ export function sampleGenreIds(ids: readonly string[], count: number): string[] 
 export function loudnessDrift(
   measured: readonly FreshLoudness[],
   baseline: LoudnessBaseline,
-  toleranceDb: number
+  toleranceDb: number | ((genreId: string, entry: LoudnessBaselineRow | undefined) => number)
 ): LoudnessDrift[] {
   const drift: LoudnessDrift[] = [];
   for (const row of measured) {
@@ -89,7 +95,9 @@ export function loudnessDrift(
       continue;
     }
     const delta = row.arrangedLufs - expected;
-    if (!Number.isFinite(delta) || Math.abs(delta) > toleranceDb) {
+    const tolerance =
+      typeof toleranceDb === "function" ? toleranceDb(row.genreId, baseline[row.genreId]) : toleranceDb;
+    if (!Number.isFinite(delta) || Math.abs(delta) > tolerance) {
       drift.push({ genreId: row.genreId, expected, actual: row.arrangedLufs, delta });
     }
   }
@@ -99,9 +107,29 @@ export function loudnessDrift(
 /**
  * How far two renders of the same arrangement may differ before it counts as drift.
  *
- * Measured: re-rendering the same genre twice moves the gated integrated loudness by ~0.05 dB, and
- * the report's own repeat-stability block records the same order of magnitude. 0.35 dB is wide
- * enough that noise cannot fail the check and an order of magnitude tighter than the 0.57 dB
- * smallest drift the stale report actually had.
+ * Measured: re-rendering the same genre twice moves the gated integrated loudness by ~0.05 dB for almost the whole
+ * library, and the report's own repeat-stability block records the same order of magnitude. 0.35 dB is wide enough
+ * that noise cannot fail the check on those rows and an order of magnitude tighter than the 0.57 dB smallest drift
+ * the stale report actually had.
  */
 export const LOUDNESS_FRESHNESS_TOLERANCE_DB = 0.35;
+
+/**
+ * The tolerance a *specific* row may be judged at: at least the documented floor, and never below twice the noise
+ * that row's own repeats already showed.
+ *
+ * This exists because the 2026-09-23 re-record produced a report whose repeat stability is `0.000 dB` for 158 of 159
+ * genres and **0.524 dB for `synthwave`** — larger than the 0.35 dB floor. Judging that row at the floor would mean a
+ * gate that fails by itself whenever its three-genre sample happens to include synthwave, and a gate that can fail
+ * on a fresh, correct report is worse than one that is slightly less sensitive. Doubling is the same convention the
+ * report's own spread claims use: the noise is what two renders differ by, so the band one render may sit in is
+ * twice that.
+ */
+export function freshnessToleranceFor(
+  genreId: string,
+  entry: LoudnessBaselineRow | undefined
+): number {
+  const noise = Number(entry?.withinGenreSpreadDb);
+  if (!Number.isFinite(noise) || noise <= 0) return LOUDNESS_FRESHNESS_TOLERANCE_DB;
+  return Math.max(LOUDNESS_FRESHNESS_TOLERANCE_DB, noise * 2);
+}
