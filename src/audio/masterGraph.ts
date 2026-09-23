@@ -87,6 +87,14 @@ export interface MasterGraphOptions {
   masterBusCompEnabled?: boolean;
   /** Master true-peak ceiling, dBTP. Defaults to the limiter's own default. */
   limiterCeilingDb?: number;
+  /**
+   * The ceiling's release time constants, ms.
+   *
+   * Measurement tooling with a real use: a faster release refills a duck as the limiter's gain recovers, which
+   * is what `duckErasedInMaster` measures. Omitted, the limiter keeps its own defaults.
+   */
+  limiterReleaseFastMs?: number;
+  limiterReleaseSlowMs?: number;
   /** Initial send-bus parameters (per-genre defaults are applied later via setters). */
   reverb?: Partial<ReverbParams>;
   delay?: Partial<DelayParams>;
@@ -256,6 +264,8 @@ export function buildMasterGraph(
   // See MASTER_LIMITER_DETECTOR_MARGIN_DB.
   const limiter = createMasterLimiter(ctx, {
     ceilingDb: options.limiterCeilingDb ?? MASTER_LIMITER_INTERNAL_CEILING_DB,
+    releaseFastMs: options.limiterReleaseFastMs,
+    releaseSlowMs: options.limiterReleaseSlowMs,
   });
 
   /**
