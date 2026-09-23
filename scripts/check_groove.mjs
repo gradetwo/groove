@@ -106,6 +106,18 @@ const BUDGET = {
   // mid/side stage the plan measured buys ~0.5 dB of side, i.e. not enough on its own).
   narrowStereo: 9,
   sideTooHot: 0,
+  /**
+   * P2.2/A3: genres whose per-note nudge does not separate from its own control.
+   *
+   * The measurement is an A/B: the same lane rendered with the variation on and off, comparing the **band-shape
+   * distance** between consecutive hits of the same note (same voicing *and* same velocity, so the nudge is the only
+   * thing that differs). The centroid the plan first proposed cannot see this: an 8 % cutoff nudge moved it by 0.01 %
+   * while the two hits were not identical at all, because the 2/3-octave bank is far coarser than the nudge.
+   *
+   * The budget is a first estimate (a third of the sample) and is expected to be ratcheted down to the measurement:
+   * a gate seeded at "everything fails" could not fail, which is worse than a gate.
+   */
+  flatStabs: 4,
   thinMids: 11,
   staticHarmony: 0,
   // P0.6: 0. Every sampled genre's tail is below −82 dBFS since the tail is the genre's own reverb/delay decay.
@@ -392,6 +404,7 @@ function measureRows(rows) {
     narrowStereo: 0,
     sideTooHot: 0,
     thinMids: 0,
+    flatStabs: 0,
     staticHarmony: 0,
     cutTail: 0,
   };
@@ -403,6 +416,7 @@ function measureRows(rows) {
     narrowStereo: [],
     sideTooHot: [],
     thinMids: [],
+    flatStabs: [],
     staticHarmony: [],
     cutTail: [],
   };
@@ -448,6 +462,18 @@ function measureRows(rows) {
     if (row.sideToMidDb > -8) {
       tally.sideTooHot += 1;
       detail.sideTooHot.push(`${row.id} (${row.sideToMidDb.toFixed(1)} dB)`);
+    }
+    const stabs = row.musical?.stabVariation;
+    /**
+     * Only genres whose melodic lane could be measured: a lane with fewer than three repeated notes has nothing to
+     * compare, and counting that as a failure would make the claim about the library's arrangement rather than about
+     * the variation.
+     */
+    if (stabs && Number.isFinite(stabs.ratio) && stabs.ratio < 1.5) {
+      tally.flatStabs += 1;
+      detail.flatStabs.push(
+        `${row.id} (${stabs.lane} ${stabs.distanceDb} dB vs control ${stabs.controlDistanceDb} dB, x${stabs.ratio})`
+      );
     }
     if ((row.musical?.midBandShareDb ?? 0) < -6) {
       tally.thinMids += 1;

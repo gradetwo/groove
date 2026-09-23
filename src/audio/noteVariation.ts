@@ -20,10 +20,10 @@
 import { hashSeed } from "./noise";
 
 /** The widest a per-note detune may move the second oscillator, cents. Small on purpose: this is not a pitch bend. */
-export const NOTE_VARIATION_MAX_DETUNE_CENTS = 6;
+export const NOTE_VARIATION_MAX_DETUNE_CENTS = 12;
 
 /** The widest a per-note filter nudge may move the cutoff, as a fraction (0.08 = ±8 %). */
-export const NOTE_VARIATION_MAX_CUTOFF_SCALE = 0.08;
+export const NOTE_VARIATION_MAX_CUTOFF_SCALE = 0.2;
 
 export interface PolyVoiceVariation {
   /** Cents added to the preset's own second-oscillator detune. */
