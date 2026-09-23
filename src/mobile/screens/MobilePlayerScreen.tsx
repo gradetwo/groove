@@ -11,7 +11,7 @@
  * stage       the record, the drag hint, the name/category and the tempo with press-and-hold ±
  * prog-row    a 2px rail driven by the transport, and the "realtime synth · loop" meta line
  * transport   mode | previous | play | next | track list
- * cue         the pull-down list: the genre's own category, with an equaliser on the playing row
+ * picker      the multi-level genre browse (C-02): category → genre, with a filter
  * ```
  *
  * Three things are ours, and each replaces or adds exactly one control:
@@ -22,17 +22,22 @@
  *  - the **mode button** cycles 单曲循环 → 大曲风内循环 → 全部随机, and the mode decides what
  *    previous/next picks and what the list plays next.
  *
+ * The track-list button used to open the reference's `.cue` pull-down: the genre's own category, capped
+ * at fourteen rows. C-02 replaced it with `MobileGenrePicker` — the same gesture, but the whole library
+ * is browsable by category and searchable in both languages. The port's list is gone; its one idea (lead
+ * with the genre's own category) is the picker's `initialCategory`.
+ *
  * Not ported, on purpose: the reference's `.styles`, `.pads` and `.sliders` zones. Those are 曲风库 and
  * 即兴 in this app; a copy inside the player would be two modules pretending to be one.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ListMusic, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lucide-react";
-import { GENRE_INDEX, loadGenre } from "../mobileGenreData";
+import { loadGenre } from "../mobileGenreData";
 import { patternFromGenre } from "../../data/genreMix";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre } from "../../types/genre";
-import type { GenreIndexItem } from "../../types/genreIndex";
 import { CATEGORY_SWATCH } from "../genreArt";
+import { MobileGenrePicker } from "../MobileGenrePicker";
 import { VinylCanvas, type VinylClock } from "../vinyl/VinylCanvas";
 import { PLAY_MODE_LABEL_KEYS, type PlayMode } from "../vinyl/vinylMath";
 
@@ -41,9 +46,6 @@ const MODE_ICONS: Record<PlayMode, React.ReactNode> = {
   genre: <Repeat className="h-5 w-5" />,
   all: <Shuffle className="h-5 w-5" />,
 };
-
-/** How many rows the pull-down list shows before it scrolls. */
-const CUE_LIMIT = 14;
 
 export interface MobilePlayerScreenProps {
   genreId: string;
@@ -213,19 +215,6 @@ function PlayerForGenre({
       const steps = track?.steps ?? [];
       return Array.from({ length: 16 }, (_, index) => Boolean(steps[index % Math.max(1, steps.length)]));
     });
-  }, [genre]);
-
-  /**
-   * The pull-down list: the same category first, then the rest of the library.
-   *
-   * Built from the **index** (id, name, category, default BPM), because a list of what else could play
-   * does not need fourteen full records — the shell resolves the one row that is tapped. The current
-   * row is matched by id.
-   */
-  const cue = useMemo<GenreIndexItem[]>(() => {
-    const sameCategory = GENRE_INDEX.filter((item) => item.category === genre.category);
-    const rest = GENRE_INDEX.filter((item) => item.category !== genre.category);
-    return [...sameCategory, ...rest].slice(0, CUE_LIMIT);
   }, [genre]);
 
   const accent = CATEGORY_SWATCH[genre.category];
@@ -414,7 +403,7 @@ function PlayerForGenre({
             <button
               type="button"
               data-testid="mobile-player-drawer-toggle"
-              aria-label={t("mobile_player_list")}
+              aria-label={t("mobile_genre_picker_title")}
               aria-expanded={listOpen}
               onClick={() => setListOpen((open) => !open)}
               className={`m-tbtn ${listOpen ? "on" : ""}`}
@@ -423,45 +412,34 @@ function PlayerForGenre({
             </button>
           </div>
 
-          <div className={`m-cue ${listOpen ? "is-open" : ""}`} data-testid="mobile-player-drawer-panel" aria-hidden={!listOpen}>
-            <div className="m-cue-facts">
-              <span>
-                {t("mobile_detail_origin")} {genre.origin_year}
-              </span>
-              <span>
-                {t("mobile_detail_time_signature")} {genre.time_signature}
-              </span>
-              <span>
-                {t("mobile_detail_bpm_range")} {genre.bpm_range}
-              </span>
-              <span>{t(PLAY_MODE_LABEL_KEYS[playMode])}</span>
-            </div>
-            {cue.map((item, index) => {
-              const on = item.id === genre.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  data-testid={`mobile-player-cue-${item.id}`}
-                  className={`m-cue-item ${on ? "on" : ""}`}
-                  aria-current={on ? "true" : undefined}
-                  onClick={() => {
-                    if (!on) (onPlayGenre ?? onTogglePlay)(item.id);
-                    setListOpen(false);
-                  }}
-                >
-                  <span className="m-idx">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="m-nm truncate">{item.name}</span>
-                  <span className="m-cn truncate">{item.category}</span>
-                  <span className="m-eq" aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                  <span className="m-bp">{item.default_bpm} BPM</span>
-                </button>
-              );
-            })}
+          {/*
+            The list button opens the shell's genre picker (C-02), not the fourteen-row tease it used to.
+            
+            The panel wrapper stays in the DOM whether or not the picker is showing — it is the switch the
+            picker's own test drives, and a wrapper that vanished when closed would make "is it open?"
+            unanswerable from the outside. The picker itself owns the two levels, the filter and the
+            back control; the host owns only the choice's meaning, which here is "switch the record
+            without leaving the player" (`onPlayGenre`), exactly what the pull-down list did. It stays in
+            the flow rather than over it so the transport's own button can still close it.
+          */}
+          <div
+            data-testid="mobile-player-drawer-panel"
+            className={listOpen ? "is-open" : ""}
+            aria-hidden={!listOpen}
+          >
+            <MobileGenrePicker
+              open={listOpen}
+              onClose={() => setListOpen(false)}
+              onSelect={(id) => {
+                // Tapping the row that is already playing is a no-op, not a restart.
+                if (id !== genre.id) (onPlayGenre ?? onTogglePlay)(id);
+                setListOpen(false);
+              }}
+              currentGenreId={genre.id}
+              initialCategory={genre.category}
+              /* The rows keep the ids this screen's tests (and the E2E matrix) already drive. */
+              genreTestIdPrefix="mobile-player-cue"
+            />
           </div>
         </div>
       </section>
