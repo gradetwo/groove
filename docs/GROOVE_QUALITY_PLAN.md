@@ -289,6 +289,30 @@ lowered to the new measurements in the same change (the ratchet only goes down).
 (see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
 it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
 
+### Handoff — the batch's state at the end of this session (2026-09-23)
+
+**Landed and verified**: A1 (width, `narrowStereo` ratcheted 12 → 9 → 8 on two agreeing runs), A4 (the riser), A3
+(native path, with the GS-1 gap measured and named), B7 (playback plays the arrangement, playhead mapped, the A↔B
+contradiction removed), and A2's **compressor** half (with the bus compressor alone the sidechain dip measures
+−4.42 dB against a −4.40 dB mechanism).
+
+**One bug is open, and it is the reason A2 is not closed**: the ceiling's own pre-duck detector — implemented,
+kernel-tested, worklet-mirrored — **stops the ceiling limiting in the render path** (chicago-house at +1.36 dBTP
+against a −1 dBTP contract; a re-record that followed asked 49 genres for a −9 dB cut). With `detector: null` the same
+render is −1.30 dBTP. The DSP is cleared by an isolation probe (`scratch/limiter_detector_probe.mjs`: −1.00 dBTP with
+and without a detector, both implementations), so what remains is *why the bus reads as silent in the render path*
+when its taps are connected before rendering. The wiring is off and the capability stays.
+
+**One re-record is in flight** (`Manual verify · scope=trim`, dispatched 2026-09-23 on the corrected code) and it is
+the one that matters: read the report first — `clampHits` must be 0 and `arrangedTruePeakDb` ≈ −1.30 — then
+`apply_loudness_trims.mjs`, then `Manual verify · scope=audio` for `check:loudness:fresh`, then
+`Manual verify · scope=verify` as the release pre-flight. The pre-flight already ran once and reached the loudness
+freshness check with **everything before it green**.
+
+**`duckErasedInMaster` ships at 1**, documented in `check_groove.mjs` with the mechanism: the compressor's half is
+fixed, the ceiling's half is the unwired fix above. The earlier reading of 0 was measured against a ceiling that had
+stopped working, and the correction is beside both numbers.
+
 ### P1 — content design (data, in category batches)
 
 | # | Change | Where | Verification | Effort |
