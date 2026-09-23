@@ -43,6 +43,8 @@ import { resolveChordTreatment } from "../data/genreVoicing";
 import { VoiceRegistry } from "./voiceRegistry";
 import { type MasterLimiterHandle, type MasterLimiterKind } from "./MasterLimiter";
 import { buildMasterGraph, dbToGain, type MasterGraph } from "./masterGraph";
+import { polyVoiceVariation, variationSeedFrom } from "./noteVariation";
+import { patternSeed } from "./noteEvents";
 import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
@@ -190,6 +192,26 @@ export class AudioEngine {
    * into it from before its own duck gain. See `GlueCompressorFactory` for why the compressor needs it at all.
    */
   private masterDetectorBus: GainNode | null = null;
+
+  /**
+   * P2.2 / A3: the seed for per-note timbre variation, cached per pattern.
+   *
+   * Cached because the scheduler asks for it on every note and it is a pure function of the pattern; keyed by the
+   * pattern's *identity* so editing a pattern (a new object) picks up a new set of nudges, exactly as the offline
+   * renderer does. Without this, playback would be the un-nudged machine the export no longer is.
+   */
+  private variationSeedCache: { pattern: unknown; seed: number } | null = null;
+
+  private get variationSeed(): number {
+    if (!this.pattern) return 0;
+    if (this.variationSeedCache?.pattern !== this.pattern) {
+      this.variationSeedCache = {
+        pattern: this.pattern,
+        seed: variationSeedFrom(patternSeed(this.pattern)),
+      };
+    }
+    return this.variationSeedCache.seed;
+  }
 
   /**
    * P6: the GS-1 voices for `chords`/`lead`, or `null` until a context exists.
@@ -2117,7 +2139,7 @@ export class AudioEngine {
         instrumentOverride ?? this.pattern?.tracks[trackIdx]?.instrument
       );
     } else if (trackId === "bass" || lowerName.includes("bass")) {
-      this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
+      this.playBass(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset, stepIdx, trackIdx);
     } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
       // Genre-appropriate chord treatment: which notes *and* how they are played.
       // Rock/metal get thirdless power chords struck short, jazz gets extended voicings
@@ -2139,14 +2161,15 @@ export class AudioEngine {
         synthPreset,
         chordTreatment,
         trackIdx,
+        stepIdx,
         chordNotesForStep(this.pattern?.tracks[trackIdx], stepIdx, effectivePitch, this.pattern?.scale, {
           style: chordTreatment.style,
         })
       );
     } else if (trackId === "lead" || lowerName.includes("lead")) {
-      this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset, trackIdx);
+      this.playLead(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset, trackIdx, stepIdx);
     } else if (trackId === "fx" || lowerName.includes("fx")) {
-      this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset);
+      this.playFX(dest, safeStartTime, safeVel, pitch, stepDur, gateVal, synthPreset, stepIdx, trackIdx);
     } else {
       this.playPercussion(
         dest,
@@ -2376,12 +2399,24 @@ export class AudioEngine {
     pitchOffset: number,
     stepDur = 0.125,
     gateVal = 0.8,
-    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.acidBass
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.acidBass,
+    /** The pattern step, for the per-note variation seed (P2.2/A3). */
+    step = 0,
+    trackIdx = 0
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 36;
     const dur = stepDur * gateVal;
-    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
+    const voice = playPolySynthNote(
+      this.ctx,
+      dest,
+      midi,
+      time,
+      dur,
+      vel,
+      preset,
+      polyVoiceVariation(this.variationSeed, trackIdx ?? 0, step)
+    );
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
@@ -2413,6 +2448,8 @@ export class AudioEngine {
     preset: SynthPreset = DEFAULT_SYNTH_PRESETS.warmPad,
     treatment?: ChordTreatment,
     trackIdx?: number,
+    /** The pattern step, for the per-note variation seed (P2.2/A3). */
+    step = 0,
     /**
      * The notes to sound. Passed in by the caller from `chordNotesForStep`, so a **stored** chord
      * (the pattern's `pitches`, expanded per genre by `applyGenreExpression`) is played verbatim
@@ -2471,7 +2508,16 @@ export class AudioEngine {
     const voiceVel = vel * chordVoiceGain(notes.length);
     notes.forEach((note, i) => {
       const noteTime = chordVoiceOnset(time, i, effective);
-      const voice = playPolySynthNote(this.ctx!, dest, note, noteTime, dur, voiceVel, preset);
+      const voice = playPolySynthNote(
+        this.ctx!,
+        dest,
+        note,
+        noteTime,
+        dur,
+        voiceVel,
+        preset,
+        polyVoiceVariation(this.variationSeed, trackIdx ?? 0, step, i)
+      );
       voice.sources.forEach((src, idx) => {
         this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
       });
@@ -2486,7 +2532,9 @@ export class AudioEngine {
     stepDur = 0.125,
     gateVal = 0.8,
     preset: SynthPreset = DEFAULT_SYNTH_PRESETS.analogLead,
-    trackIdx?: number
+    trackIdx?: number,
+    /** The pattern step, for the per-note variation seed (P2.2/A3). */
+    step = 0
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 72;
@@ -2498,7 +2546,16 @@ export class AudioEngine {
         return;
       }
     }
-    const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
+    const voice = playPolySynthNote(
+      this.ctx,
+      dest,
+      midi,
+      time,
+      dur,
+      vel,
+      preset,
+      polyVoiceVariation(this.variationSeed, trackIdx ?? 0, step)
+    );
     voice.sources.forEach((src, idx) => {
       this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
     });
@@ -2511,7 +2568,10 @@ export class AudioEngine {
     pitchOffset: number,
     stepDur = 0.125,
     gateVal = 0.8,
-    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.noiseSweep
+    preset: SynthPreset = DEFAULT_SYNTH_PRESETS.noiseSweep,
+    /** The pattern step, for the per-note variation seed (P2.2/A3). */
+    step = 0,
+    trackIdx = 0
   ): void {
     if (!this.ctx) return;
 
@@ -2522,7 +2582,16 @@ export class AudioEngine {
     if (preset !== DEFAULT_SYNTH_PRESETS.noiseSweep) {
       const midi = pitchOffset > 0 ? pitchOffset : 72;
       const dur = stepDur * gateVal * 1.5;
-      const voice = playPolySynthNote(this.ctx, dest, midi, time, dur, vel, preset);
+      const voice = playPolySynthNote(
+      this.ctx,
+      dest,
+      midi,
+      time,
+      dur,
+      vel,
+      preset,
+      polyVoiceVariation(this.variationSeed, trackIdx ?? 0, step)
+    );
       voice.sources.forEach((src, idx) => {
         this.registerVoice(src, voice.gains[idx] || (voice.gains[0] as GainNode), voice.stopTime);
       });

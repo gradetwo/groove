@@ -9,6 +9,7 @@
  * - Dynamic resonant lowpass filter per voice
  */
 
+import type { PolyVoiceVariation } from "./noteVariation";
 import { safeGain, safeFreq, safeVelocity } from "./dspGuards";
 
 export interface Adsrenvelope {
@@ -1480,7 +1481,14 @@ export function playPolySynthNote(
   time: number,
   durationSec: number,
   velocity: number,
-  preset: SynthPreset = DEFAULT_SYNTH_PRESETS.analogLead
+  preset: SynthPreset = DEFAULT_SYNTH_PRESETS.analogLead,
+  /**
+   * Per-note timbre variation (P2.2 / A3).
+   *
+   * Omitted means "no variation", and every scheduled value is then exactly what it was before this parameter
+   * existed — which is what lets the existing render tests keep comparing whole buffers.
+   */
+  variation: PolyVoiceVariation | null = null
 ): PolyVoiceCleanup {
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
@@ -1503,7 +1511,12 @@ export function playPolySynthNote(
    * passes pitches both as absolute notes and as role-relative offsets (a bass offset of +12 and an
    * absolute 48 must produce the same ratio, and only the frequency knows that).
    */
-  const filterCutoff = keyTrackedCutoff(preset, midiNote);
+  /**
+   * Key tracking first, then the per-note nudge: the nudge is a *multiplier* on the tracked cutoff, so it behaves
+   * the same on a bass note and a lead note instead of being a fixed number of Hz that is inaudible on one and a
+   * wobble on the other.
+   */
+  const filterCutoff = keyTrackedCutoff(preset, midiNote) * (variation ? variation.cutoffScale : 1);
   // Velocity → timbre depth. Each field defaults to 0, which short-circuits to the
   // original expression: an un-annotated preset schedules the exact cutoff, sweep and
   // amp timing it always did at *every* velocity. An annotated preset also keeps its
@@ -1621,7 +1634,7 @@ export function playPolySynthNote(
 
   osc2Node.type = osc2Type;
   osc2Node.frequency.setValueAtTime(freq, time);
-  osc2Node.detune.setValueAtTime(osc2DetuneCents, time);
+  osc2Node.detune.setValueAtTime(osc2DetuneCents + (variation ? variation.detuneCents : 0), time);
 
   // Optional pitch envelope: a preset may glide both oscillators to a fixed offset by
   // the end of the note (negative = tape-stop / laser / sub-drop fall, positive = riser).
@@ -1675,7 +1688,7 @@ export function playPolySynthNote(
     ] as const) {
       osc.type = osc1Type;
       osc.frequency.setValueAtTime(freq, time);
-      osc.detune.setValueAtTime(cents, time);
+      osc.detune.setValueAtTime(cents + (variation ? variation.detuneCents : 0), time);
       if (preset.pitchSweepCents) {
         const sweepEnd = safeFreq(freq * Math.pow(2, preset.pitchSweepCents / 1200), freq);
         osc.frequency.exponentialRampToValueAtTime(sweepEnd, gateEnd);

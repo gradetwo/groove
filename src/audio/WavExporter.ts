@@ -23,6 +23,7 @@ import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
+import { polyVoiceVariation, variationSeedFrom } from "./noteVariation";
 import { flattenSong } from "../data/songFlatten";
 import type { Song } from "../types/song";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
@@ -478,6 +479,13 @@ export async function renderPatternOffline(
 
   const drumKit: DrumKitType = options.drumKit || "808";
   const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
+  /**
+   * The per-note variation seed (P2.2 / A3): the pattern's own string seed, hashed once per render.
+   *
+   * Deliberately the *same* seed the probability gate uses, so a note that plays at all plays with the nudge it
+   * would always have had — and no `Math.random()`, because the export has to be the audition.
+   */
+  const variationSeed = variationSeedFrom(exportSeed);
 
   // Acoustic Enhancement: Track open hi-hat voices for offline choke group
   const openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number; envelope?: DrumVoiceEnvelope }> = [];
@@ -599,7 +607,16 @@ export async function renderPatternOffline(
           synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r), track.instrument);
         } else if (trackId === "bass" || lowerName.includes("bass")) {
           const midi = pitchVal > 0 ? pitchVal : 36;
-          playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal, subVel, synthPreset);
+          playPolySynthNote(
+            ctx,
+            trackDest,
+            midi,
+            subTime,
+            subDur * gateVal,
+            subVel,
+            synthPreset,
+            polyVoiceVariation(variationSeed, trackIdx, stepIdx, r)
+          );
         } else if (trackId === "chords" || trackId === "chord" || lowerName.includes("chord") || lowerName.includes("pad")) {
           // E-01: identical voicing to `AudioEngine.playChord`. Exporter parity is a
           // hard rule in this project, so both sides call the same shared module and
@@ -649,7 +666,10 @@ export async function renderPatternOffline(
               chordVoiceOnset(subTime, i, treatment),
               chordDur,
               voiceVel,
-              synthPreset
+              synthPreset,
+              // `i` as the note index: the voices inside one stab must not all get the same nudge, or a chord would
+              // move as a block and read as a pitch drift rather than as a hand on the keys.
+              polyVoiceVariation(variationSeed, trackIdx, stepIdx, i)
             );
           });
         } else if (trackId === "lead" || lowerName.includes("lead")) {
@@ -671,7 +691,16 @@ export async function renderPatternOffline(
               return;
             }
           }
-          playPolySynthNote(ctx, trackDest, midi, subTime, leadDur, subVel, synthPreset);
+          playPolySynthNote(
+            ctx,
+            trackDest,
+            midi,
+            subTime,
+            leadDur,
+            subVel,
+            synthPreset,
+            polyVoiceVariation(variationSeed, trackIdx, stepIdx, r)
+          );
         } else if (trackId === "fx" || lowerName.includes("fx")) {
           // Same split as AudioEngine.playFX: `noise_sweep` keeps the shared swept riser,
           // anything else is voiced by the poly synth with the track's own preset.
@@ -679,7 +708,16 @@ export async function renderPatternOffline(
             synthFX(ctx, trackDest, subTime, subVel, pitchVal, subDur, gateVal);
           } else {
             const midi = pitchVal > 0 ? pitchVal : 72;
-            playPolySynthNote(ctx, trackDest, midi, subTime, subDur * gateVal * 1.5, subVel, synthPreset);
+            playPolySynthNote(
+              ctx,
+              trackDest,
+              midi,
+              subTime,
+              subDur * gateVal * 1.5,
+              subVel,
+              synthPreset,
+              polyVoiceVariation(variationSeed, trackIdx, stepIdx, r)
+            );
           }
         } else {
           synthesizePercussion(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r), track.instrument);
