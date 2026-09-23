@@ -158,6 +158,28 @@ describe("IndexedDB Multi-Project Hub Engine (P7-02)", () => {
     expect(() => validateGroovePackage({ format: "invalid" })).toThrow();
   });
 
+  it("carries a section's B5 overrides through a .groove package, JSON and all", () => {
+    /**
+     * The third persistence surface B1 lists. `exportProjectPackage` spreads the whole project and
+     * `validateGroovePackage` is a structural check rather than a field whitelist, so the overrides survive — and
+     * this is the test that notices the day either of those stops being true, because the whole round trip goes
+     * through `JSON.parse(JSON.stringify(...))` exactly like a downloaded and re-imported file does.
+     */
+    const proj = createBlankProject(sampleGenre, "Overrides Test");
+    const sections = [
+      { id: "p1", slot: "A" as const, bars: 8, label: "build", overrides: { velocityRamp: [0.6, 1] as [number, number] } },
+      {
+        id: "p2",
+        slot: "B" as const,
+        bars: 4,
+        overrides: { fill: { tracks: ["snare"], steps: [12, 13, 14, 15], velocity: 118 }, transpose: -2 },
+      },
+    ];
+    const pkg = exportProjectPackage({ ...proj, sections, songChain: ["A", "B"] });
+    const roundTripped = validateGroovePackage(JSON.parse(JSON.stringify(pkg)));
+    expect(roundTripped.project.sections).toEqual(sections);
+  });
+
   /**
    * Regression (E-05 follow-up): `exportProjectToGrooveFile` used to default its
    * `appVersion` parameter to a hardcoded "1.15.2", so every .groove file written
