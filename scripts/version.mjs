@@ -101,9 +101,19 @@ function splitVersionFiles(currentVersionJson, currentChangelogJson) {
   }
   const latest = condenseLatest(changelog.find((e) => e.version === version) || changelog[0] || null);
 
+  /**
+   * The release date belongs to the *version*, not to the calendar.
+   *
+   * `releaseDate: today` made `version:check` fail every day after the artifact was written — CI's first step was
+   * red on a tree nobody had touched, purely because the date had rolled over (the branch was pushed on the 23rd
+   * against a file written on the 22nd, and `npm run verify` failed at `version:check`). Reusing the committed date
+   * while the version is unchanged keeps the date meaningful (it is when the version was cut) and keeps the check
+   * about the single source of truth rather than about the hour.
+   */
+  const releaseDate = data?.version === version && typeof data?.releaseDate === "string" ? data.releaseDate : today;
   const small = {
     version,
-    releaseDate: today,
+    releaseDate,
     changelogCount: changelog.length,
     latest,
   };
