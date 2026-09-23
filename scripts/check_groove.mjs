@@ -93,9 +93,11 @@ const BUDGET = {
   // and the two genres with no bass under the kick at all (minimal-techno, ambient) are unmeasurable rather
   // than counted as passing.
   weakDuck: 0,
-  // disco: a -4.4 dB sidechain that the ceiling's gain recovery refills to -0.4 dB in the file. Budgeted
-  // rather than excused — this one is the master chain's dynamics (P2.3), not the mix.
-  duckErasedInMaster: 1,
+  // A2 landed on 2026-09-23 and the gate's own sample reads **0**: the bus compressor is now a two-input worklet
+  // whose detector follows a pre-duck copy of the bus, so a deliberate dip is no longer read as a quiet passage.
+  // Before it, disco measured a −4.37 dB sidechain arriving as a −0.2 dB dip in the file; after it, −2.39 dB (and
+  // chicago-house −5.03 → −5.03, untouched). Ratcheted from 1 to the measurement, as the rule says.
+  duckErasedInMaster: 0,
   // P0.4 landed on 2026-09-23 (`MIX_WIDTH_SCALE` on the resolved pans, centre lanes untouched) and the gate's own
   // 12-genre sample reads 9: chicago-house 0.9906, detroit-techno 0.9933, minimal-techno 0.9968. Ratcheted from 12 to
   // the measurement, as the rule says. Note what this is *not*: the earlier ad-hoc experiment quoted 3/12, and that
