@@ -167,6 +167,14 @@ async function measureGenre(page, genreId, bars, soloTracks) {
        */
       const TAIL_CLAIM_DB = -60;
       let tailRenders = 1;
+      /**
+       * A discarded warm-up render, so the measured one is never the first on a freshly recycled page.
+       *
+       * The loudness script has done this since P0.8 ("Warm-up render (discarded)") for the same reason: the first
+       * render after a page is created runs in a different state from the ones after it, and the difference shows up
+       * in the *tail* — which is exactly the number `cutTail` is made of.
+       */
+      await renderMaster();
       const first = await renderMaster();
       let buffer = first.rendered;
       let channels = first.renderedChannels;
@@ -1031,7 +1039,17 @@ const fmt = (value, digits = 1) => (value == null || !Number.isFinite(value) ? "
    * now replaced before that happens — and the count is lower here than the loudness script's because a genre costs
    * about eight renders (master, four stems, four duck cells).
    */
-  const RELOAD_EVERY = 3;
+  /**
+   * One page per genre, and a discarded warm-up render inside each.
+   *
+   * The tail is where page state shows first (P0.8's own finding), and three runs of the *same* code failed
+   * `cutTail` for three *different* genres — `ambient` at −27 dBFS, `liquid-dnb` at −49.8, `disco` at −46.3 — while a
+   * fresh page renders ambient at −89. So the number a genre gets depends on how many renders its page has already
+   * done, which is not a property of the genre or of the code. Recycling per genre bounds that history identically
+   * for every genre, and the discarded render means the measured one is never the first on a fresh page (the
+   * cold/warm fork the loudness sentinel hit, fixed the same way there).
+   */
+  const RELOAD_EVERY = 1;
   const recyclePage = async () => {
     await page.goto("about:blank");
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
