@@ -118,12 +118,16 @@ const BUDGET = {
   // of the width stage, and it is not the gate's sample. Going further than 9 needs more than a pan scale (the
   // mid/side stage the plan measured buys ~0.5 dB of side, i.e. not enough on its own).
   /**
-   * A1's ratchet tightened once more, on **two agreeing runs**: 9 → 8. The run before A2's ceiling detector read 9
-   * and the two after it read 8, 8 — which is the evidence this file's own note asked for before moving a budget that
-   * had already moved once (12 → 9). `thinMids` and `flatStabs` move with it, and for the same reason: the same two
-   * runs read 9, 9 and 1, 1, against budgets of 11 and 4.
+   * **Back to 9, because the two paths that judge this claim disagree and only one of them was measured.**
+   *
+   * The ratchet to 8 came from two agreeing *shard* runs (each renders three genres in a process). `scope=verify`
+   * renders all twelve in one — and reads **9**, with `thinMids` at **11** against the shard path's 9. Both paths run
+   * the same analyser with the same per-genre recycling, so the difference is how many renders the browser has done,
+   * which is the same non-repeatability that moved `cutTail`. A budget has to hold in *both* paths or the same code
+   * passes in one and fails in the other; the max is the honest value, and tightening further needs a measurement
+   * that is path-independent first — the recorded follow-up, not a guess.
    */
-  narrowStereo: 8,
+  narrowStereo: 9,
   sideTooHot: 0,
   /**
    * P2.2/A3: genres whose per-note nudge does not separate from its own control.
@@ -137,7 +141,7 @@ const BUDGET = {
    * a gate seeded at "everything fails" could not fail, which is worse than a gate.
    */
   flatStabs: 1,
-  thinMids: 9,
+  thinMids: 11,
   staticHarmony: 0,
   // P0.6: 0. Every sampled genre's tail is below −82 dBFS since the tail is the genre's own reverb/delay decay.
   /**
