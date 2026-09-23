@@ -274,6 +274,73 @@ describe("B3 · the arrangement panel", () => {
     }
   });
 
+  it("names the selected section once, not once per keystroke", () => {
+    /**
+     * The store records one undo entry per `onChange`, so a commit per keystroke would bury the user's actual edits
+     * under their typing. The draft lives in the panel and is committed on Enter — the same reason the fader drags
+     * elsewhere are coalesced.
+     */
+    renderPanel({ selectedId: "s1" });
+    const input = screen.getByTestId("arrangement-label") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "d" } });
+    fireEvent.change(input, { target: { value: "drop" } });
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0].sections[0].label).toBe("drop");
+    expect(onChange.mock.calls[0][0].continuous).toBe(false);
+  });
+
+  it("abandons the draft on Escape instead of clearing the selection", () => {
+    renderPanel({ selectedId: "s1" });
+    const input = screen.getByTestId("arrangement-label");
+    fireEvent.change(input, { target: { value: "typo" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(onSelect).not.toHaveBeenCalledWith(null);
+    expect(onChange).not.toHaveBeenCalled();
+    // Abandoning the draft falls back to what the section actually says ("intro" in this fixture).
+    expect((screen.getByTestId("arrangement-label") as HTMLInputElement).value).toBe("intro");
+  });
+
+  it("commits a label on blur too, which is what a finger does", () => {
+    renderPanel({ selectedId: "s1" });
+    const input = screen.getByTestId("arrangement-label");
+    fireEvent.change(input, { target: { value: "break" } });
+    fireEvent.blur(input);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0].gesture).toBe("arrangement:label");
+  });
+
+  it("silences a lane for this section from the footer", () => {
+    const { unmount } = renderPanel({ selectedId: "s1" });
+    const chip = screen.getByTestId("arrangement-mute-kick");
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(chip);
+    expect(onChange.mock.calls[0][0].sections[0].mute).toEqual(["kick"]);
+    unmount();
+
+    // A section that already mutes the lane shows it, so the state is readable rather than remembered.
+    renderPanel({ song: song([{ id: "s2", slot: "A", bars: 1, mute: ["kick"] }], { A: clip(16) }), selectedId: "s2" });
+    expect(screen.getByTestId("arrangement-mute-kick").getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByTestId("arrangement-mute-kick"));
+    expect(onChange.mock.calls[1][0].sections[0]).not.toHaveProperty("mute");
+  });
+
+  it("shows the lane chips only for a selected section, and at 44 px", () => {
+    renderPanel({ selectedId: null });
+    expect(screen.queryByTestId("arrangement-mute-kick")).toBeNull();
+    expect(screen.queryByTestId("arrangement-label")).toBeNull();
+    renderPanel({ selectedId: "s1" });
+    // The label input and every chip are finger targets, like the rest of this view.
+    expect((screen.getByTestId("arrangement-label") as HTMLElement).style.minHeight).toBe(`${ARRANGEMENT_MIN_TARGET}px`);
+    expect((screen.getByTestId("arrangement-mute-kick") as HTMLElement).style.minHeight).toBe(
+      `${ARRANGEMENT_MIN_TARGET}px`
+    );
+    expect((screen.getByTestId("arrangement-mute-kick") as HTMLElement).style.minWidth).toBe(
+      `${ARRANGEMENT_MIN_TARGET}px`
+    );
+  });
+
   it("shows what a section does — a build and a fill are visible on the region", () => {
     /**
      * B5's whole point is that these stopped being invisible pattern hacks. A generated arrangement whose fill is

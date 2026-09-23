@@ -184,6 +184,8 @@ export const studioMessages = {
     zh: "用「{name}」形式替换编排，共 {bars} 小节",
   },
   arrangement_fill_badge: { en: "fill", zh: "加花" },
+  arrangement_label_placeholder: { en: "Name this section", zh: "给这个段落命名" },
+  arrangement_mute_hint: { en: "Silence the {lane} lane for this section", zh: "对本段落静音 {lane} 轨" },
   toolbar_blind_title: { en: "A/B Blind Listening Comparison Mode", zh: "A/B 盲听对比评估模式" },
   toolbar_blind_label: { en: "BLIND", zh: "盲听" },
   toolbar_bar_label: { en: "BAR", zh: "小节" },
