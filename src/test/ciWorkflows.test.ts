@@ -103,6 +103,17 @@ describe("CI · every target runs on every push", () => {
     expect(() => parseYaml("jobs:\n  a:\n    timeout-minutes: 1\n    timeout-minutes: 2\n")).toThrow();
   });
 
+  it("uploads the test results, so a red run can be read instead of re-run", () => {
+    /**
+     * Measured 2026-09-23: a failing unit test in CI could not be read from the API (`gh run view --log` returned
+     * nothing for that job), so finding one assertion meant running all 2,870 tests on the machine CI exists to
+     * spare. The JUnit file is written by `CI_JUNIT` (off by default locally) and uploaded `if: always()`.
+     */
+    expect(jobBlock("validate")).toContain("CI_JUNIT=test-results/junit.xml");
+    expect(jobBlock("validate")).toContain("name: test-results");
+    expect(jobBlock("validate")).toMatch(/if: always\(\)\n\s+uses: actions\/upload-artifact@v5/);
+  });
+
   it("runs the loudness trim gate on every push, because it needs no browser", () => {
     /**
      * It is the report-versus-table comparison, not the audio measurement: two file reads, about a second. It stayed
