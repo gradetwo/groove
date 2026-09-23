@@ -34,7 +34,8 @@ const argValue = (flag, fallback) => {
 const MAX_P90P10_DB = Number(argValue("--max-p90p10", "1.5"));
 const MAX_FULL_RANGE_DB = Number(argValue("--max-range", "4"));
 const reportPath = path.resolve(ROOT, argValue("--report", "scripts/loudness.baseline.json"));
-const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
+/** Repo-relative by default; an absolute path is used as given, so `--mix=/tmp/…` works for a test. */
+const read = (p) => fs.readFileSync(path.isAbsolute(p) ? p : path.join(ROOT, p), "utf8");
 
 const problems = [];
 const oks = [];
@@ -190,12 +191,21 @@ if (!report.clampHits || !Number.isFinite(report.clampHits.total)) {
 // happily while every genre plays at unity trim because `src/data/genreMix.ts` (what
 // playback and export read) was never updated. These checks close that loop.
 // ---------------------------------------------------------------------------
-const MIX_PATH = "src/data/genreMix.ts";
+const MIX_PATH = argValue("--mix", "src/data/genreMix.ts");
 const mixSource = read(MIX_PATH);
+/**
+ * The genre's line, **whatever order its fields are in**.
+ *
+ * The pattern used to require `category` first, and P0.2/P0.3 put `humanise:`/`duck:` in front of it for 23 genres —
+ * so this gate saw 136 of 159 trims and reported the other 23 as missing from the table. (It reported them rather
+ * than ignoring them, which is why it went red instead of quietly passing; the reason it went unnoticed is that this
+ * gate runs in `npm run verify` and `manual-verify scope=audio`, not in the push-time CI job.)
+ */
 const tableTrims = new Map(
-  [...mixSource.matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{\s*category:\s*"[^"]+",\s*loudnessTrimDb:\s*(-?[\d.]+)/gm)].map(
-    (m) => [m[1], Number(m[2])]
-  )
+  [...mixSource.matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{.*?\bloudnessTrimDb:\s*(-?[\d.]+)/gm)].map((m) => [
+    m[1],
+    Number(m[2]),
+  ])
 );
 
 const missingFromTable = entries.filter(([id]) => !tableTrims.has(id)).map(([id]) => id);

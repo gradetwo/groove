@@ -62,6 +62,15 @@ describe("CI · every target runs on every push", () => {
     expect(build, "the build must come before the matrix (it serves dist/)").toBeLessThan(matrix);
   });
 
+  it("runs the loudness trim gate on every push, because it needs no browser", () => {
+    /**
+     * It is the report-versus-table comparison, not the audio measurement: two file reads, about a second. It stayed
+     * out of the push gate and went red unnoticed for a day — 23 of 159 genres were invisible to it after P0.2/P0.3
+     * changed the table's field order. A gate that runs nowhere automatic is a gate that cannot fail.
+     */
+    expect(jobBlock("validate")).toContain("npm run check:loudness");
+  });
+
   it("runs the studio DOM probes on the desktop leg, against the same build", () => {
     /**
      * The arrangement probe's contract is pixel geometry, finger-target sizes and a real pointer drag — none of it

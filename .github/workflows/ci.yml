@@ -97,6 +97,12 @@ jobs:
       - name: Genre Database Audit
         run: npm run data:lint
 
+      # The report-to-table half of the loudness gate: it reads two files, needs no browser and takes about a second,
+      # so there is no reason for it to live only in `verify` and `manual-verify scope=audio` — which is exactly why
+      # it went red unnoticed for a day (23 of 159 genres were invisible to it; see `loudnessTrimWiring.test.ts`).
+      - name: Loudness Trim Gate (report vs table)
+        run: npm run check:loudness
+
       - name: Production Build
         run: npm run build
 
