@@ -4,6 +4,7 @@ import { DEFAULT_SYNTH_PRESETS, keyTrackedCutoff } from "../audio/PolySynth";
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { chordVoicingForStep } from "../audio/chordVoicing";
 import { resolveVoicingStyle } from "../data/genreVoicing";
+import { NOTE_VARIATION_MAX_CUTOFF_SCALE, NOTE_VARIATION_MAX_DETUNE_CENTS } from "../audio/noteVariation";
 import type { SequencerPattern } from "../types/genre";
 import { FakeAudioContext, installFakeAudioContext } from "./helpers/fakeAudio";
 
@@ -280,7 +281,10 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     // Two oscillators were created by playPolySynthNote with the resolved waveform
     // pair and the resolved detune — not the fixed analog lead (saw + square, 7 cents).
     expect(oscillators.map((o) => o.type)).toEqual([flute.osc1Type, flute.osc2Type]);
-    expect(oscillators[1].detune.events[0]?.value).toBe(flute.osc2DetuneCents);
+    // Within the per-note variation's bound (P2.2/A3): the authored detune is the centre of a seeded nudge now.
+    expect(
+      Math.abs(Number(oscillators[1].detune.events[0]?.value) - flute.osc2DetuneCents)
+    ).toBeLessThanOrEqual(NOTE_VARIATION_MAX_DETUNE_CENTS);
     expect(oscillators.map((o) => o.type)).not.toEqual([
       DEFAULT_SYNTH_PRESETS.analogLead.osc1Type,
       DEFAULT_SYNTH_PRESETS.analogLead.osc2Type,
@@ -290,8 +294,12 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     // authored figure is a C4 value and this is a C5, so key tracking has moved it (see
     // `keyTrackedCutoff`).
     expect(filters).toHaveLength(1);
-    expect(filters[0].frequency.events[0]?.value).toBe(keyTrackedCutoff(flute, 72));
-    expect(filters[0].frequency.events[0]?.value).not.toBe(flute.filterCutoff);
+    const fluteCutoff = Number(filters[0].frequency.events[0]?.value);
+    const trackedFlute = keyTrackedCutoff(flute, 72);
+    expect(Math.abs(fluteCutoff - trackedFlute) / trackedFlute).toBeLessThanOrEqual(
+      NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
+    );
+    expect(fluteCutoff).not.toBe(flute.filterCutoff);
 
     engine.destroy();
   });
@@ -302,7 +310,11 @@ describe("genre timbres · the live engine voices the declared instrument", () =
 
     expect(oscillators.map((o) => o.type)).toEqual([sub.osc1Type, sub.osc2Type]);
     // Two octaves below the C4 anchor, so the corner closes — which is what a sub bass needs.
-    expect(filters[0].frequency.events[0]?.value).toBe(keyTrackedCutoff(sub, 36));
+    const subCutoff = Number(filters[0].frequency.events[0]?.value);
+    const trackedSub = keyTrackedCutoff(sub, 36);
+    expect(Math.abs(subCutoff - trackedSub) / trackedSub).toBeLessThanOrEqual(
+      NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
+    );
     // The old behaviour was acidBass (1200 Hz); sub_bass must be lower still.
     expect(filters[0].frequency.events[0]?.value).toBeLessThan(
       DEFAULT_SYNTH_PRESETS.acidBass.filterCutoff
@@ -331,9 +343,17 @@ describe("genre timbres · the live engine voices the declared instrument", () =
     // One tracked corner per chord tone: a voicing is not one filter setting repeated, it is each
     // note's own. (This used to require the identical authored value on all four.)
     const expectedRhodes = voicing.map((n) => keyTrackedCutoff(rhodes, n));
-    expect(filters.map((f) => f.frequency.events[0]?.value).sort((a, b) => (a as number) - (b as number))).toEqual(
-      [...expectedRhodes].sort((a, b) => a - b)
-    );
+    const played = filters.map((f) => Number(f.frequency.events[0]?.value)).sort((a, b) => a - b);
+    // Each voice's corner is within the nudge of its own note's tracked cutoff — the claim that survives is "the EP
+    // preset, tracked to its note", not "exactly this Hz" (P2.2/A3 nudges every note on purpose).
+    expect(played).toHaveLength(expectedRhodes.length);
+    [...expectedRhodes]
+      .sort((a, b) => a - b)
+      .forEach((expected, i) => {
+        expect(Math.abs(played[i] - expected) / expected).toBeLessThanOrEqual(
+          NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
+        );
+      });
     expect(rhodes).not.toBe(DEFAULT_SYNTH_PRESETS.warmPad);
 
     engine.destroy();
@@ -342,8 +362,10 @@ describe("genre timbres · the live engine voices the declared instrument", () =
   it("keeps the legacy role preset for an unknown instrument", () => {
     const { engine, filters } = triggerAndDiff(synthPattern("lead", "totally_unknown", 72));
 
-    expect(filters[0].frequency.events[0]?.value).toBe(
-      keyTrackedCutoff(DEFAULT_SYNTH_PRESETS.analogLead, 72)
+    const legacyCutoff = Number(filters[0].frequency.events[0]?.value);
+    const trackedLead = keyTrackedCutoff(DEFAULT_SYNTH_PRESETS.analogLead, 72);
+    expect(Math.abs(legacyCutoff - trackedLead) / trackedLead).toBeLessThanOrEqual(
+      NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
     );
 
     engine.destroy();

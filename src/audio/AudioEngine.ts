@@ -186,14 +186,6 @@ export class AudioEngine {
   private masterGraph: MasterGraph | null = null;
 
   /**
-   * The bus compressor's pre-duck detector bus (A2).
-   *
-   * Created before the master graph, because the graph's compressor takes it as its second input; every strip taps
-   * into it from before its own duck gain. See `GlueCompressorFactory` for why the compressor needs it at all.
-   */
-  private masterDetectorBus: GainNode | null = null;
-
-  /**
    * P2.2 / A3: the seed for per-note timbre variation, cached per pattern.
    *
    * Cached because the scheduler asks for it on every note and it is a pure function of the pattern; keyed by the
@@ -393,16 +385,11 @@ export class AudioEngine {
           // E-17 / N-16: one shared master graph for playback and export. Chain:
           //   fader → FX rack → loudness trim → true-peak limiter → analyser taps,
           // with the reverb/delay returns summing into the fader, exactly as before.
-          /**
-           * The detector bus exists before the graph, because the graph's compressor takes it as its second input.
-           * The strips connect into it as they are built, below.
-           */
-          this.masterDetectorBus = this.ctx.createGain();
-          this.masterDetectorBus.gain.setValueAtTime(1, this.ctx.currentTime);
           const graph = buildMasterGraph(this.ctx, {
             analysers: true,
             loudnessTrimDb: this.appliedLoudnessTrimDb,
-            busCompDetector: this.masterDetectorBus,
+            // The graph owns the detector bus (A2); the strips connect into it as they are built, below.
+            busCompDetector: "internal",
           });
           this.masterGraph = graph;
           this.masterGain = graph.masterGain;
@@ -662,7 +649,8 @@ export class AudioEngine {
       const detectorTap = this.ctx.createGain();
       detectorTap.gain.setValueAtTime(0.8, this.ctx.currentTime);
       insert.output.connect(detectorTap);
-      if (this.masterDetectorBus) detectorTap.connect(this.masterDetectorBus);
+      const detectorBus = this.masterGraph?.busCompDetectorInput ?? null;
+      if (detectorBus) detectorTap.connect(detectorBus);
 
       const polarity = this.ctx.createGain();
       polarity.gain.setValueAtTime(1, this.ctx.currentTime);

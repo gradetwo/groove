@@ -71,10 +71,19 @@ export function createBusCompressor(
     makeupDb: finite(options.makeupDb, GLUE_COMP_MAKEUP_DB),
   };
 
-  const input = ctx.createGain();
-  input.gain.value = 1;
-  const output = ctx.createGain();
-  output.gain.value = 1;
+  /**
+   * With no detector the stage **is** the node — no wrapper gains.
+   *
+   * The swap needs a fixed input and output to replace the node between, but creating them on the shipped path would
+   * add two nodes to every render for nothing: the graph would no longer be the graph it was (structural tests that
+   * identify the master trim and makeup gains by position noticed immediately, and they were right to). So the
+   * wrappers exist only where the worklet can: with a detector, on a context that has the API.
+   */
+  const wrappersNeeded = Boolean(options.detector) && audioWorkletAvailable(ctx);
+  const input = wrappersNeeded ? ctx.createGain() : null;
+  const output = wrappersNeeded ? ctx.createGain() : null;
+  if (input) input.gain.value = 1;
+  if (output) output.gain.value = 1;
 
   const node = ctx.createDynamicsCompressor();
   node.threshold.value = settings.thresholdDb;
@@ -82,8 +91,10 @@ export function createBusCompressor(
   node.ratio.value = settings.ratio;
   node.attack.value = GLUE_COMP_ATTACK_SEC;
   node.release.value = settings.releaseSec;
-  input.connect(node);
-  node.connect(output);
+  if (input && output) {
+    input.connect(node);
+    node.connect(output);
+  }
 
   const detector = options.detector ?? null;
   let kind: BusCompressorKind = "node";
@@ -95,7 +106,7 @@ export function createBusCompressor(
    * programme either way, and swapping in a second implementation would only risk a difference nobody asked for.
    */
   const ready: Promise<BusCompressorKind> =
-    detector && audioWorkletAvailable(ctx)
+    wrappersNeeded && detector
       ? (async () => {
           try {
             const worklet = (ctx as BaseAudioContext & { audioWorklet: AudioWorklet }).audioWorklet;
@@ -119,10 +130,10 @@ export function createBusCompressor(
               },
             });
             detector.connect(created, 0, 1);
-            input.disconnect(node);
-            node.disconnect(output);
-            input.connect(created);
-            created.connect(output);
+            input!.disconnect(node);
+            node.disconnect(output!);
+            input!.connect(created);
+            created.connect(output!);
             workletNode = created;
             kind = "worklet";
           } catch {
@@ -134,17 +145,19 @@ export function createBusCompressor(
       : Promise.resolve<BusCompressorKind>("node");
 
   return {
-    input,
-    output,
+    // The node itself when there is nothing to swap: the shipped path's graph is then identical to the one before
+    // this factory existed, node for node.
+    input: input ?? node,
+    output: output ?? node,
     kind: () => kind,
     ready,
     dispose: () => {
       disposed = true;
       try {
-        input.disconnect();
+        input?.disconnect();
         node.disconnect();
         workletNode?.disconnect();
-        output.disconnect();
+        output?.disconnect();
       } catch {
         /* already detached */
       }

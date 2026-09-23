@@ -118,7 +118,7 @@ export interface MasterGraphOptions {
    * (measured: the median dip goes −4.37 dB → 0 dB through a `DynamicsCompressorNode`). Without one the graph uses
    * the node and behaves exactly as before, byte for byte.
    */
-  busCompDetector?: AudioNode;
+  busCompDetector?: AudioNode | "internal";
   /** Fixed makeup for the worklet compressor, dB. 0 by default; calibrated against the node it replaces. */
   busCompMakeupDb?: number;
   /** Master true-peak ceiling, dBTP. Defaults to the limiter's own default. */
@@ -186,6 +186,14 @@ export interface MasterGraph {
   limiterKind(): MasterLimiterKind;
   /** Which bus compressor is live (`node` unless a detector was supplied and the worklet loaded). */
   busCompressorKind(): BusCompressorKind;
+  /**
+   * The detector bus the strips should tap (A2), or null when this graph has no detector.
+   *
+   * Created **by the graph**, after the fader and the trim. The first version had every caller create it before
+   * calling in, which moved the master fader and trim one place down the node list — and the tests that identify
+   * them by position were the first thing to notice, correctly: the graph's structure is part of its contract.
+   */
+  busCompDetectorInput: AudioNode | null;
   /** Lookahead latency of the ceiling, seconds (0 on the compressor fallback). */
   limiterLatencySeconds(): number;
   dispose(): void;
@@ -292,12 +300,20 @@ export function buildMasterGraph(
    * whose gain follows a pre-duck copy of the bus; the node keeps the ceiling until the module loads, exactly like
    * the limiter's own fallback.
    */
+  const detectorBus: AudioNode | null =
+    options.busCompDetector === "internal"
+      ? (() => {
+          const bus = ctx.createGain();
+          bus.gain.value = 1;
+          return bus as AudioNode;
+        })()
+      : (options.busCompDetector ?? null);
   const busComp: BusCompressorHandle = createBusCompressor(ctx, {
     thresholdDb: options.masterBusCompThresholdDb,
     kneeDb: options.masterBusCompKneeDb,
     ratio: options.masterBusCompRatio,
     releaseSec: options.masterBusCompReleaseSec,
-    detector: options.busCompDetector ?? null,
+    detector: detectorBus,
     makeupDb: options.busCompMakeupDb,
   });
   const masterBusComp = busComp.input;
@@ -483,6 +499,7 @@ export function buildMasterGraph(
       return appliedTrimDb;
     },
     busCompressorKind: () => busComp.kind(),
+    busCompDetectorInput: detectorBus,
     limiterKind() {
       return limiter.kind;
     },
