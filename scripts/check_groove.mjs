@@ -96,9 +96,13 @@ const BUDGET = {
   // disco: a -4.4 dB sidechain that the ceiling's gain recovery refills to -0.4 dB in the file. Budgeted
   // rather than excused — this one is the master chain's dynamics (P2.3), not the mix.
   duckErasedInMaster: 1,
-  narrowStereo: 12,
-  // P0.4 is held (see the plan): the pan widening that fixes this costs loudness, and its fix is the blocked
-  // trim re-record. The budget stays at the measured 12 — the honest "not yet" rather than a moved goalpost.
+  // P0.4 landed on 2026-09-23 (`MIX_WIDTH_SCALE` on the resolved pans, centre lanes untouched) and the gate's own
+  // 12-genre sample reads 9: chicago-house 0.9906, detroit-techno 0.9933, minimal-techno 0.9968. Ratcheted from 12 to
+  // the measurement, as the rule says. Note what this is *not*: the earlier ad-hoc experiment quoted 3/12, and that
+  // number is not reproducible from the code that landed — it predates the rule that keeps kick, bass and snare out
+  // of the width stage, and it is not the gate's sample. Going further than 9 needs more than a pan scale (the
+  // mid/side stage the plan measured buys ~0.5 dB of side, i.e. not enough on its own).
+  narrowStereo: 9,
   sideTooHot: 0,
   thinMids: 11,
   staticHarmony: 0,
