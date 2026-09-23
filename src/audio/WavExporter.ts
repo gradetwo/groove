@@ -74,6 +74,10 @@ export interface RenderWavOptions {
   masterBusCompEnabled?: boolean;
   /** The bus compressor's release, seconds — see `MasterGraphOptions.masterBusCompReleaseSec`. */
   masterBusCompReleaseSec?: number;
+  /** The bus compressor's threshold (dB), knee (dB) and ratio — see `MasterGraphOptions`. */
+  masterBusCompThresholdDb?: number;
+  masterBusCompKneeDb?: number;
+  masterBusCompRatio?: number;
   /**
    * Master true-peak ceiling, dBTP. The graph already accepts it for measurement tooling; forwarding it here
    * lets a probe separate "the sidechain ducked" from "the ceiling gave part of it back".
@@ -293,6 +297,9 @@ export async function renderPatternOffline(
     masterMakeupDb: options.masterMakeupDb,
     masterBusCompEnabled: options.masterBusCompEnabled,
     masterBusCompReleaseSec: options.masterBusCompReleaseSec,
+    masterBusCompThresholdDb: options.masterBusCompThresholdDb,
+    masterBusCompKneeDb: options.masterBusCompKneeDb,
+    masterBusCompRatio: options.masterBusCompRatio,
     limiterCeilingDb: options.limiterCeilingDb,
     limiterReleaseFastMs: options.limiterReleaseFastMs,
     limiterReleaseSlowMs: options.limiterReleaseSlowMs,

@@ -94,6 +94,17 @@ export interface MasterGraphOptions {
    * release holds that gain reduction through the duck, and this is the knob that tests it.
    */
   masterBusCompReleaseSec?: number;
+  /**
+   * The bus compressor's threshold (dB), knee (dB) and ratio.
+   *
+   * Measurement tooling for the same question as the release above: A2 has to separate "the compressor's gain
+   * reduction on the *programme* is what refills the duck" from "the node's own makeup gain is", and the only way to
+   * ask is to stop the compressor compressing. A threshold of −6 dB is close to "off" for this material; if the duck
+   * comes back at −6 and not at −16, the gain reduction is the cause.
+   */
+  masterBusCompThresholdDb?: number;
+  masterBusCompKneeDb?: number;
+  masterBusCompRatio?: number;
   /** Master true-peak ceiling, dBTP. Defaults to the limiter's own default. */
   limiterCeilingDb?: number;
   /**
@@ -257,9 +268,15 @@ export function buildMasterGraph(
   const busCompEnabled = options.masterBusCompEnabled !== false;
   const masterBusComp = ctx.createDynamicsCompressor();
   if (busCompEnabled) {
-    masterBusComp.threshold.value = MASTER_BUS_COMP_THRESHOLD_DB;
-    masterBusComp.knee.value = MASTER_BUS_COMP_KNEE_DB;
-    masterBusComp.ratio.value = MASTER_BUS_COMP_RATIO;
+    masterBusComp.threshold.value = Number.isFinite(options.masterBusCompThresholdDb)
+      ? (options.masterBusCompThresholdDb as number)
+      : MASTER_BUS_COMP_THRESHOLD_DB;
+    masterBusComp.knee.value = Number.isFinite(options.masterBusCompKneeDb)
+      ? Math.max(0, options.masterBusCompKneeDb as number)
+      : MASTER_BUS_COMP_KNEE_DB;
+    masterBusComp.ratio.value = Number.isFinite(options.masterBusCompRatio)
+      ? Math.max(1, options.masterBusCompRatio as number)
+      : MASTER_BUS_COMP_RATIO;
     masterBusComp.attack.value = MASTER_BUS_COMP_ATTACK_SEC;
     masterBusComp.release.value = Number.isFinite(options.masterBusCompReleaseSec)
       ? Math.max(0.01, options.masterBusCompReleaseSec as number)
