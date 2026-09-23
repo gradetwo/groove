@@ -191,10 +191,10 @@ start.
 
 | # | Change | Where | Verification | Effort |
 | :-- | :--- | :--- | :--- | :--- |
-| 1.1 | **Ghost notes and velocity accents** in the drum patterns (a light snare 20–30 below the main hit, hats alternating 70/90) | `src/data/genres/*` — via a generator + per-category rules, not 159 hand-edits | P0.2 already gives every lane ≥2 velocities, so the bar is content, not jitter: **max − min ≥ 15** on snare/hats, and the pattern's *rhythm* unchanged (onset counts pinned by test) | M |
+| 1.1 | **Ghost notes and velocity accents** in the drum patterns ✅ | `src/data/genreGroove.ts` — one table per category plus named exceptions, applied at the end of `patternFromGenre`; no genre file is touched | Measured at the **pattern level** (no audio render) on 2026-09-23, which is the plan's own bar: snare `max − min ≥ 15` went **1/11 → 11/11** and hats **8/11 → 11/11** of the sampled genres that sound. The rhythm half is pinned too: every original onset keeps its step, the hat lane gains no onsets at all (accents are velocities), and a ghost is always the sixteenth before a hit and quieter than it. Two findings shaped the rule — lowering the off-eighths unconditionally *flattened* chicago-house's hat lane (its open hat is on the "and"), and three lanes put every hat on the same sixteenth, where the fallback is to alternate. Everything it does lowers a velocity or adds a quieter onset, so the library's peaks do not move. | M | **done** |
 | 1.2 | **Mid-range fill**: bass moves to the 5th/octave instead of the root, and a soft pad doubles the chord an octave up | genre patterns + `genreVoicing` | `midBandShareDb` rises above −6 dB; `pitchByTrack.bass.distinct` ≥ 3 | M |
 | 1.3 | ~~**Harmonic movement inside the loop** for the 6-in-15 static genres~~ | — | **Dropped**: the static-harmony claim came from the skeleton basis; the played pattern already moves (0 of 12 static). | — |
-| 1.4 | **Percussion texture**: shaker/conga/clave patterns on the off-beats, low velocity | genre patterns (`percussion` track) | onsets on the percussion track ≥ 4 with distinct velocities | S |
+| 1.4 | ~~**Percussion texture**: shaker/conga/clave patterns on the off-beats, low velocity~~ | — | **Already holds, measured 2026-09-23**: every one of the eleven sampled genres with a sounding percussion lane has ≥ 4 onsets *and* more than one velocity, and `ambient` has no drum lane at all (correctly — it must not be given one). There is nothing to generate, so `genreGroove.ts` deliberately does not. A test records the measurement so a future change that strips the texture fails rather than being noticed by ear. | — |
 | 1.5 | **A fill in the last bar** | needs P2.1 | the last bar's onset count differs from the others | M |
 
 ### P2 — engine and product
@@ -231,8 +231,8 @@ start.
 | done | **P0.5 swing 8ths + P0.6 tail** (swing claims 0, tails ≤−82 dBFS) | — |
 | held | **P0.4 width** (measured 12→3 narrow; waits for P0.8 → P0.9, see its row) | — |
 | next | **P0.8 nondeterminism → P0.9 trim re-record** (this is the release blocker, not a nicety: it also caps how wide the mix can go) | touch/jank ratchet |
-| next | P1.1 accents + P1.2 mid fill (generator) | touch/jank ratchet |
-| +3 | P1.4 percussion texture + category review by ear | — |
+| done | **P1.1 accents + ghosts** (snare spread 1/11 → 11/11, hats 8/11 → 11/11 at the pattern level); **P1.4 measured and retired** (it already held) | touch/jank ratchet |
+| next | P1.2 mid fill (bass to the 5th/octave, pad an octave up) — verified by `pitchByTrack.bass.distinct` locally and `midBandShareDb` in the nightly gate | — |
 | +4 | P2.2 timbre variation + P2.3 saturation | — |
 | +5 | P0.7 loudness/timbre baseline basis (own release) | — |
 

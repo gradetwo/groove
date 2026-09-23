@@ -31,6 +31,7 @@ import { Genre, GenreCategory, SequencerPattern, SequencerTrack } from "../types
 import { expandGenrePattern, resolveGenreExpression } from "./genreExpression";
 import { GENRE_INDEX_MAP } from "./index/genresIndex";
 import { humaniseVelocity, patternSeed } from "../audio/noteEvents";
+import { applyGrooveTexture } from "./genreGroove";
 
 /** The eight sequencer roles a mix profile assigns values to. */
 export const MIX_TRACK_IDS = [
@@ -661,7 +662,14 @@ export function patternFromGenre(genre: Pick<Genre, "id" | "sequencer_pattern"> 
   // P0.2: the last step of "this genre's pattern", and deliberately after the expansion —
   // see `humanisePatternVelocities` for why it is baked into the pattern instead of applied
   // at trigger time.
-  return humanisePatternVelocities(expanded, genre.id);
+  const humanised = humanisePatternVelocities(expanded, genre.id);
+  /**
+   * P1.1: the content half of the same problem. Humanisation gives a lane more than one velocity; a ghost note is a
+   * *different, quieter hit*, and measured on 2026-09-23 the snare lane still reached the plan's `max − min ≥ 15`
+   * bar in only 1 of 11 sampled genres. Running after humanisation means a ghost is a fraction of a value that has
+   * already been humanised, and only quieter onsets are ever added — see `genreGroove.ts`.
+   */
+  return applyGrooveTexture(humanised, genre.id, category);
 }
 
 /**
