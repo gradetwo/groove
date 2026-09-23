@@ -24,6 +24,11 @@ export const CLIP_SLOTS: readonly ClipSlot[] = ["A", "B", "C", "D"];
  * files. `steps` are offsets inside one pass of the clip (the pass the section puts last), so a 1-bar clip and a
  * 4-bar clip both express "the last beat of the last bar" the same way.
  */
+/** Steps a riser covers at the end of its pass. Longer than a fill's four: it has to be heard arriving. */
+export const RISER_STEPS = 8;
+/** The velocity a riser starts at and ends on. It rises across its steps, which is what makes it a riser. */
+export const RISER_VELOCITY_RAMP: [number, number] = [48, 120];
+
 export interface SongFill {
   /** Track ids (or names) the extra hits land on. A track the clip does not have is simply not hit. */
   tracks: string[];
@@ -31,6 +36,14 @@ export interface SongFill {
   steps: number[];
   /** Velocity for the added hits, 1–127. Defaults to `DEFAULT_FILL_VELOCITY`. */
   velocity?: number;
+  /**
+   * A *rising* velocity across the fill's own steps, `[first, last]`.
+   *
+   * A riser is a fill whose hits get louder (and, on a swept voice, brighter) as it arrives, so it is expressed as a
+   * fill with a ramp rather than as a second kind of event that every consumer — the flattener, the share link, the
+   * arrangement view — would have to learn separately.
+   */
+  velocityRamp?: [number, number];
 }
 
 /** The velocity an unspecified fill hit gets. Loud enough to read as a fill, quiet enough not to clip. */
@@ -54,6 +67,13 @@ export interface SectionOverrides {
   velocityRamp?: [number, number];
   /** Extra hits on the section's last pass. */
   fill?: SongFill;
+  /**
+   * A riser into the next section: a fill-shaped hit on the clip's **texture lane** (fx), rising across its steps.
+   *
+   * Kept as a flag rather than as a hand-written fill because the lanes are the clip's business — the arrangement says
+   * "a riser here" and `resolveTimeline` finds the lane that can perform one, exactly as `fill` does for drums.
+   */
+  riser?: boolean;
   /**
    * Semitones to move this section's *pitched* lanes by — the harmonic half of "change the chord every 8 bars".
    *
@@ -173,7 +193,30 @@ function rampAt(ramp: [number, number] | undefined, barInSection: number, count:
  * half-finished song (a section pointing at an empty slot) and the renderer refuses it with a reason, rather than
  * the UI crashing on the way to that refusal.
  */
-export function resolveTimeline(song: Song): SongTimeline {
+/**
+ * What the timeline needs from the *clip* to place a riser: which lane can perform one, and how long a pass is.
+ *
+ * A resolver rather than a value, because sections point at different clips and a four-bar clip's texture lane is not
+ * the same track id as another's.
+ */
+export interface TimelineOptions {
+  riserLanesFor?: (slot: ClipSlot) => readonly string[];
+  stepsPerPassFor?: (slot: ClipSlot) => number;
+}
+
+/** One fill for the last pass when a section asked for both: the union of the hits, and the riser's rise. */
+function mergeFillAndRiser(fill: SongFill | undefined, riser: SongFill | undefined): SongFill {
+  if (!fill) return riser as SongFill;
+  if (!riser) return fill;
+  return {
+    tracks: [...new Set([...fill.tracks, ...riser.tracks])],
+    steps: [...new Set([...fill.steps, ...riser.steps])].sort((a, b) => a - b),
+    velocity: Math.max(fill.velocity ?? DEFAULT_FILL_VELOCITY, riser.velocity ?? DEFAULT_FILL_VELOCITY),
+    ...(riser.velocityRamp ? { velocityRamp: riser.velocityRamp } : {}),
+  };
+}
+
+export function resolveTimeline(song: Song, options: TimelineOptions = {}): SongTimeline {
   const problems: string[] = [];
   const bars: SongBar[] = [];
   const known = new Set(Object.keys(song.clips ?? {}) as ClipSlot[]);
@@ -188,6 +231,31 @@ export function resolveTimeline(song: Song): SongTimeline {
     }
     const scale = Number.isFinite(section.velocityScale) ? (section.velocityScale as number) : 1;
     const fill = normaliseFill(section.overrides?.fill);
+    /**
+     * A riser is expressed as a fill on the texture lane — see `SectionOverrides.riser`.
+     *
+     * The lanes are the *clip's* business, so the timeline asks the caller for them (`resolveTimeline`'s optional
+     * `riserLanes`), the same division of labour `fill` uses: this module owns the timeline, not the clip's tracks.
+     */
+    const riserLanes = section.overrides?.riser ? (options.riserLanesFor?.(section.slot) ?? []) : [];
+    const riserPass = Number(options.stepsPerPassFor?.(section.slot));
+    const riser =
+      riserLanes.length && Number.isFinite(riserPass) && riserPass > 0
+        ? (() => {
+            const pass = Math.floor(riserPass);
+            const first = Math.max(0, pass - RISER_STEPS);
+            const steps: number[] = [];
+            for (let step = first; step < pass; step += 1) steps.push(step);
+            return steps.length
+              ? {
+                  tracks: [...riserLanes],
+                  steps,
+                  velocity: RISER_VELOCITY_RAMP[1],
+                  velocityRamp: [...RISER_VELOCITY_RAMP] as [number, number],
+                }
+              : undefined;
+          })()
+        : undefined;
     const transpose = sectionTranspose(section);
     for (let bar = 0; bar < count; bar += 1) {
       bars.push({
@@ -197,8 +265,8 @@ export function resolveTimeline(song: Song): SongTimeline {
         barIndex: bars.length,
         mute: section.mute ?? [],
         velocityScale: scale * rampAt(section.overrides?.velocityRamp, bar, count),
-        // The fill is the section's *last* pass: it is what leads into the next section.
-        ...(fill && bar === count - 1 ? { fill } : {}),
+        // The fill is the section's *last* pass: it is what leads into the next section, and a riser rides with it.
+        ...(bar === count - 1 && (fill || riser) ? { fill: mergeFillAndRiser(fill, riser) } : {}),
         ...(transpose ? { transpose } : {}),
       });
     }
@@ -227,7 +295,21 @@ export function normaliseFill(fill: SongFill | undefined): SongFill | undefined 
   const velocity = Number.isFinite(fill.velocity)
     ? Math.max(1, Math.min(127, Math.round(fill.velocity as number)))
     : DEFAULT_FILL_VELOCITY;
-  return { tracks, steps, velocity };
+  /**
+   * A ramp arrives from the same untrusted places, so both ends are clamped into the MIDI range and a reversed pair
+   * is put back in order rather than producing a fill that starts loud and ends silent.
+   */
+  let velocityRamp: [number, number] | undefined;
+  if (Array.isArray(fill.velocityRamp) && fill.velocityRamp.length === 2) {
+    const [from, to] = fill.velocityRamp;
+    if (Number.isFinite(from) && Number.isFinite(to)) {
+      const clamp = (value: number) => Math.max(1, Math.min(127, Math.round(value)));
+      const low = clamp(Math.min(from, to));
+      const high = clamp(Math.max(from, to));
+      velocityRamp = [low, high];
+    }
+  }
+  return { tracks, steps, velocity, ...(velocityRamp ? { velocityRamp } : {}) };
 }
 
 export interface CreateSongInput {

@@ -48,6 +48,8 @@ export interface ArrangementFormStep {
   label: string;
   /** A build across this section: the multiplier at its first and last pass. */
   velocityRamp?: [number, number];
+  /** Ask the timeline for a riser into the next section (see `SectionOverrides.riser`). */
+  riser?: boolean;
   /** Put a drum fill on this section's last pass. */
   fill?: boolean;
 }
@@ -93,7 +95,8 @@ export const ARRANGEMENT_FORMS: Record<ArrangementFormId, ArrangementForm> = {
     },
     steps: [
       { slot: "A", bars: 8, label: "intro", velocityRamp: [0.55, 0.85] },
-      { slot: "A", bars: 8, label: "build", velocityRamp: [0.85, 1] },
+      // The build asks for a riser as well as the ramp: the texture lane arrives over its last pass.
+      { slot: "A", bars: 8, label: "build", velocityRamp: [0.85, 1], riser: true },
       { slot: "A", bars: 8, label: "drop" },
       { slot: "B", bars: 4, label: "break", fill: true },
       { slot: "A", bars: 8, label: "drop" },
@@ -110,7 +113,7 @@ export const ARRANGEMENT_FORMS: Record<ArrangementFormId, ArrangementForm> = {
     steps: [
       { slot: "A", bars: 4, label: "intro", velocityRamp: [0.6, 0.9] },
       { slot: "A", bars: 8, label: "verse" },
-      { slot: "B", bars: 8, label: "chorus" },
+      { slot: "B", bars: 8, label: "chorus", riser: true },
       { slot: "A", bars: 8, label: "verse" },
       { slot: "B", bars: 8, label: "chorus", fill: true },
       { slot: "A", bars: 4, label: "outro", fill: true },
@@ -198,6 +201,7 @@ export function arrangementSections(request: ArrangementRequest): SongSection[] 
   return form.steps.map((step, index) => {
     const overrides: SectionOverrides = {};
     if (step.velocityRamp) overrides.velocityRamp = step.velocityRamp;
+    if (step.riser) overrides.riser = true;
     if (step.fill && fill) overrides.fill = fill;
     return {
       id: `${request.songId}-s${index + 1}`,
