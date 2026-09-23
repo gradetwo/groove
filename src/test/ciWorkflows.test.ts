@@ -62,6 +62,22 @@ describe("CI · every target runs on every push", () => {
     expect(build, "the build must come before the matrix (it serves dist/)").toBeLessThan(matrix);
   });
 
+  it("bounds a hung E2E target in minutes, not in GitHub's six-hour default", () => {
+    /**
+     * Measured 2026-09-23: the iPad leg sat in the matrix step from 07:09 until the run was cancelled at 10:30 —
+     * three and a half hours — while its sibling legs finished in minutes. Playwright's own timeouts cover its
+     * waits, not a wedged browser process, so the bound has to be explicit in two places: a job timeout here, and
+     * the per-target watchdog in `scripts/test_matrix.js` (which is what actually names the target).
+     */
+    expect(jobBlock("e2e")).toContain("timeout-minutes: 45");
+    expect(jobBlock("nightly")).toContain("timeout-minutes: 120");
+    const matrix = read("scripts/test_matrix.js");
+    expect(matrix).toContain("E2E_TARGET_TIMEOUT_MS");
+    expect(matrix).toContain("target hung: killed after");
+    // The child must be spawnable and killable; an in-process race cannot stop a stuck WebKit.
+    expect(matrix).toContain("spawnSync(process.execPath");
+  });
+
   it("runs the loudness trim gate on every push, because it needs no browser", () => {
     /**
      * It is the report-versus-table comparison, not the audio measurement: two file reads, about a second. It stayed

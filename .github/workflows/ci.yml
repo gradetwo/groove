@@ -113,6 +113,10 @@ jobs:
     name: E2E ${{ matrix.leg }} (Playwright)
     runs-on: ubuntu-latest
     needs: validate
+    # A backstop for the WebKit hang the target watchdog already catches (`test_matrix.js`): GitHub's default job
+    # timeout is *six hours*, so a wedged browser used to hold a runner for an afternoon — measured on 2026-09-23,
+    # the iPad leg sat in the matrix step from 07:09 until the run was cancelled at 10:30.
+    timeout-minutes: 45
     # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness baseline
     # freshness check and the performance gate, so a scheduled run would duplicate this job.
     if: github.event_name != 'schedule'
@@ -304,6 +308,9 @@ jobs:
     name: Nightly (full matrix, coverage, loudness freshness, perf)
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # The full seven-target matrix plus coverage plus the loudness re-render legitimately takes over an hour, so this
+    # is a hang backstop rather than a budget.
+    timeout-minutes: 120
     timeout-minutes: 90
 
     steps:
