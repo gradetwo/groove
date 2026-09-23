@@ -173,6 +173,20 @@ describe("P0.9 · the loudness reference is measured on a warm page", () => {
     expect(script).toMatch(/await recyclePage\(`after \$\{reloadEvery\} measurement\(s\)`\)/);
   });
 
+  it("creates the directory it was told to write into", () => {
+    /**
+     * 2026-09-23, on CI: a 159-genre re-record rendered every genre for two hours and then died with
+     * `ENOENT … loudness-report/loudness.baseline.json`, because `--out` named a directory nothing had created. The
+     * every-five-genres progress write failed the same way, and the per-genre `catch` that records failures swallowed
+     * it — so the run looked healthy from the outside for two hours and published nothing. The mkdir is the fix; this
+     * asserts it stays, and that it happens before the first write.
+     */
+    const mkdir = script.indexOf("fs.mkdirSync(path.dirname(outPath), { recursive: true })");
+    const firstWrite = script.indexOf("fs.writeFileSync(`${outPath}.progress.json`");
+    expect(mkdir, "the report's directory must be created").toBeGreaterThan(-1);
+    expect(mkdir, "…before anything is written into it").toBeLessThan(firstWrite);
+  });
+
   it("kills the dev server on the abort path too", () => {
     /**
      * The sentinel exits with `process.exit(1)`, which bypasses the `finally` — and the analyser's port is fixed

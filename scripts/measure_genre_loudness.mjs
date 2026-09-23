@@ -226,6 +226,16 @@ const outPath = path.resolve(
   ROOT,
   argValue("--out", isSubsetRun ? "scripts/loudness.partial.json" : "scripts/loudness.baseline.json")
 );
+/**
+ * Make sure the report can be written where the caller asked for it.
+ *
+ * `--out` is a path, not a directory that exists: the CI re-record passes `--out=loudness-report/…`, and on
+ * 2026-09-23 a two-hour, 159-genre run rendered every genre and *then* died with
+ * `ENOENT … loudness-report/loudness.baseline.json` — because nothing had created the directory. Worse, the
+ * every-five-genres progress write failed the same way and was swallowed by the per-genre `catch` that records
+ * failures, so the run looked healthy from the outside for two hours and published nothing.
+ */
+fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
 // Must match `LOUDNESS_TRIM_MIN_DB` / `LOUDNESS_TRIM_MAX_DB` in src/data/genreMix.ts.
 // `src/test/loudnessReport.test.ts` fails if these drift from the committed report.
