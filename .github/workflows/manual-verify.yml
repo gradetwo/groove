@@ -75,10 +75,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Only the scopes that drive a browser need the browsers; `audio` is pure Node.
-      - name: Install Playwright Browsers
-        if: inputs.scope != 'audio'
-        run: npx playwright install --with-deps chromium firefox webkit
+      # `audio` is **not** pure Node, which the old comment here claimed and its `if:` acted on.
+      #
+      # `check:loudness:fresh` (and `scope=trim`) render through `measure_genre_loudness.mjs`, which launches
+      # Chromium: measured 2026-09-23, `scope=audio` failed with
+      #   browserType.launch: Executable doesn't exist at …/chromium_headless_shell-1243/…
+      # while `scope=trim` passed, because only the audio scope skipped this step. Chromium is installed for every
+      # scope now; the other two engines are only needed by the device matrix.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright Firefox & WebKit
+        if: inputs.scope == 'e2e' || inputs.scope == 'all'
+        run: npx playwright install --with-deps firefox webkit
 
       # The phone's runtime feel: per-step long tasks and frame deltas on a throttled profile, which is
       # what "it stutters" actually is. Needs no browsers beyond Chromium.

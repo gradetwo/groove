@@ -114,6 +114,18 @@ describe("CI · every target runs on every push", () => {
     expect(jobBlock("validate")).toMatch(/if: always\(\)\n\s+uses: actions\/upload-artifact@v5/);
   });
 
+  it("installs Chromium for every manual-verify scope, because `audio` drives one", () => {
+    /**
+     * The audio scope was documented as "pure Node" and skipped the browser install — but `check:loudness:fresh`
+     * renders through `measure_genre_loudness.mjs`, which launches Chromium. Measured 2026-09-23: `scope=audio`
+     * failed with `browserType.launch: Executable doesn't exist at …/chromium_headless_shell-1243/…` while
+     * `scope=trim` (the same script, with browsers installed) passed. A stale comment cost a release-blocking run.
+     */
+    const manual = read(".github/workflows/manual-verify.yml");
+    expect(manual).toMatch(/- name: Install Playwright Chromium\n\s+run: npx playwright install --with-deps chromium/);
+    expect(manual).not.toContain("if: inputs.scope != 'audio'\n        run: npx playwright install");
+  });
+
   it("runs the loudness trim gate on every push, because it needs no browser", () => {
     /**
      * It is the report-versus-table comparison, not the audio measurement: two file reads, about a second. It stayed
@@ -188,7 +200,10 @@ describe("CI · the manual verify workflow is wired, not decorative", () => {
     expect(manual).toMatch(/name: loudness-report/);
   });
 
-  it("installs the browsers the matrix needs and uploads both artifacts", () => {    expect(manual).toMatch(/playwright install --with-deps chromium firefox webkit/);
+  it("installs the browsers the matrix needs and uploads both artifacts", () => {
+    // Chromium for every scope (see the case below: `audio` drives one), the other two engines for the matrix.
+    expect(manual).toMatch(/playwright install --with-deps chromium\n/);
+    expect(manual).toMatch(/playwright install --with-deps firefox webkit/);
     const uploads = manual.match(/uses: actions\/upload-artifact@/g) ?? [];
     expect(uploads.length, "e2e + coverage artifacts").toBeGreaterThanOrEqual(2);
     expect(manual).toContain("path: e2e-out/");
