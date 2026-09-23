@@ -17,6 +17,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+// Types come from `src/js-yaml.d.ts` (ambient), because the package ships none.
+import { load as parseYaml } from "js-yaml";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -70,12 +72,35 @@ describe("CI · every target runs on every push", () => {
      * the per-target watchdog in `scripts/test_matrix.js` (which is what actually names the target).
      */
     expect(jobBlock("e2e")).toContain("timeout-minutes: 45");
-    expect(jobBlock("nightly")).toContain("timeout-minutes: 120");
+    // The nightly job already carried a 90-minute bound; the first version of this change added a second
+    // `timeout-minutes` key instead, which is not a bigger bound — it is an invalid workflow file, and GitHub
+    // rejected the run before it started a single job. The parser guard below is what would have caught it.
+    expect(jobBlock("nightly")).toContain("timeout-minutes: 90");
+    // Counted as *keys*, not as text: the comment above the key names it too, and a bare `match` counted the prose.
+    expect(jobBlock("nightly").match(/^\s+timeout-minutes:/gm)).toHaveLength(1);
     const matrix = read("scripts/test_matrix.js");
     expect(matrix).toContain("E2E_TARGET_TIMEOUT_MS");
     expect(matrix).toContain("target hung: killed after");
     // The child must be spawnable and killable; an in-process race cannot stop a stuck WebKit.
     expect(matrix).toContain("spawnSync(process.execPath");
+  });
+
+  it("every workflow file is valid YAML, with no duplicated keys", () => {
+    /**
+     * GitHub rejects a workflow with a duplicate key ("This run likely failed because of a workflow file issue") and
+     * runs nothing — measured on 2026-09-23, when this change added `timeout-minutes` to the nightly job that
+     * already had one. `check:actions` validates action runtimes, not YAML, and nothing locally parsed the files, so
+     * the first thing to notice was a failed run.
+     *
+     * `js-yaml`'s **default** mode is the strict one here: it rejects duplicated mapping keys, which is exactly what
+     * GitHub does. (The `json: true` option, used by the ad-hoc check that missed this, *accepts* them.)
+     */
+    for (const file of ["ci.yml", "manual-verify.yml"]) {
+      const parsed = parseYaml(read(`.github/workflows/${file}`)) as { jobs?: Record<string, unknown> };
+      expect(Object.keys(parsed.jobs ?? {}).length, `${file} has jobs`).toBeGreaterThan(0);
+    }
+    // The guard is only worth having if it fails: prove the parser rejects what GitHub rejects.
+    expect(() => parseYaml("jobs:\n  a:\n    timeout-minutes: 1\n    timeout-minutes: 2\n")).toThrow();
   });
 
   it("runs the loudness trim gate on every push, because it needs no browser", () => {
