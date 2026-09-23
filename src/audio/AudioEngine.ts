@@ -390,6 +390,7 @@ export class AudioEngine {
             loudnessTrimDb: this.appliedLoudnessTrimDb,
             // The graph owns the detector bus (A2); the strips connect into it as they are built, below.
             busCompDetector: "internal",
+            limiterDetector: "internal",
           });
           this.masterGraph = graph;
           this.masterGain = graph.masterGain;
@@ -649,7 +650,7 @@ export class AudioEngine {
       const detectorTap = this.ctx.createGain();
       detectorTap.gain.setValueAtTime(0.8, this.ctx.currentTime);
       insert.output.connect(detectorTap);
-      const detectorBus = this.masterGraph?.busCompDetectorInput ?? null;
+      const detectorBus = this.masterGraph?.duckDetectorInput ?? null;
       if (detectorBus) detectorTap.connect(detectorBus);
 
       const polarity = this.ctx.createGain();

@@ -139,7 +139,12 @@ class TruePeakLimiterKernel {
     }
   }
 
-  processBlock(inputs, outputs, frames) {
+  /**
+   * `detector` is an optional second stream whose peak drives the gain — a **pre-duck** copy of the bus, so the
+   * ceiling cannot respond to a dip the arrangement asked for. Its peak is ≥ the programme's (a duck attenuates), so
+   * limiting on it stays conservative. Mirrors `TruePeakLimiterKernel.processBlock` in `src/audio/MasterLimiter.ts`.
+   */
+  processBlock(inputs, outputs, frames, detector) {
     const channels = Math.min(inputs.length, outputs.length);
     if (channels <= 0 || frames <= 0) return;
     this.ensureChannels(channels);
@@ -149,10 +154,11 @@ class TruePeakLimiterKernel {
     const histLen = this.historyLength;
     const peak = this.framePeak;
     peak.fill(0, 0, frames);
+    const detectorChannels = detector && detector.length ? detector.length : 0;
 
     // 1. Per-channel 4× oversampled true peak, combined across channels (stereo link).
     for (let c = 0; c < channels; c++) {
-      const source = inputs[c];
+      const source = detectorChannels ? detector[c % detectorChannels] : inputs[c];
       const scratch = this.scratch;
       scratch.set(this.histories[c], 0);
       scratch.set(source.subarray(0, frames), histLen);
@@ -269,7 +275,10 @@ class GrooveLimiterProcessor extends AudioWorkletProcessor {
       for (let c = 0; c < output.length; c++) output[c].fill(0);
       return true;
     }
-    this.kernel.processBlock(input, output, frames);
+    // Input 1 is the detector when something is connected to it (the pre-duck bus); input 0 is what gets limited.
+    const detectorInput = inputs[1];
+    const detector = detectorInput && detectorInput.length ? detectorInput : null;
+    this.kernel.processBlock(input, output, frames, detector);
     return true;
   }
 }

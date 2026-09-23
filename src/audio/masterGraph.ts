@@ -119,6 +119,15 @@ export interface MasterGraphOptions {
    * the node and behaves exactly as before, byte for byte.
    */
   busCompDetector?: AudioNode | "internal";
+  /**
+   * The same **pre-duck** bus, for the *ceiling*'s detector.
+   *
+   * Measured 2026-09-23, applying the batch's trims: disco's duck went from −2.39 dB in the file back to **−0.2**
+   * because the louder trim (`−6.56 → −4.31`) drives the mix into the ceiling, and the ceiling's gain releases over
+   * the dip — the compressor's fix held (−4.42 dB with the compressor alone), so the ceiling was the remaining
+   * stage. Wiring the same bus into it makes the fix independent of the operating point the trims set.
+   */
+  limiterDetector?: AudioNode | "internal";
   /** Fixed makeup for the worklet compressor, dB. 0 by default; calibrated against the node it replaces. */
   busCompMakeupDb?: number;
   /** Master true-peak ceiling, dBTP. Defaults to the limiter's own default. */
@@ -187,13 +196,13 @@ export interface MasterGraph {
   /** Which bus compressor is live (`node` unless a detector was supplied and the worklet loaded). */
   busCompressorKind(): BusCompressorKind;
   /**
-   * The detector bus the strips should tap (A2), or null when this graph has no detector.
+   * The pre-duck bus the strips should tap (A2), or null when this graph has no detector.
    *
    * Created **by the graph**, after the fader and the trim. The first version had every caller create it before
    * calling in, which moved the master fader and trim one place down the node list — and the tests that identify
    * them by position were the first thing to notice, correctly: the graph's structure is part of its contract.
    */
-  busCompDetectorInput: AudioNode | null;
+  duckDetectorInput: AudioNode | null;
   /** Lookahead latency of the ceiling, seconds (0 on the compressor fallback). */
   limiterLatencySeconds(): number;
   dispose(): void;
@@ -300,14 +309,32 @@ export function buildMasterGraph(
    * whose gain follows a pre-duck copy of the bus; the node keeps the ceiling until the module loads, exactly like
    * the limiter's own fallback.
    */
-  const detectorBus: AudioNode | null =
-    options.busCompDetector === "internal"
-      ? (() => {
-          const bus = ctx.createGain();
-          bus.gain.value = 1;
-          return bus as AudioNode;
-        })()
-      : (options.busCompDetector ?? null);
+  /**
+   * One pre-duck bus for both stages that need it.
+   *
+   * The compressor and the ceiling answer the same question — "is the *music* quieter here, or did the sidechain ask
+   * for this?" — so they share the answer, and the graph owns it (see `duckDetectorInput` for why it is not created
+   * by the callers).
+   */
+  const wantsInternalDetector =
+    options.busCompDetector === "internal" || options.limiterDetector === "internal";
+  const detectorBus: AudioNode | null = wantsInternalDetector
+    ? (() => {
+        const bus = ctx.createGain();
+        bus.gain.value = 1;
+        return bus as AudioNode;
+      })()
+    : typeof options.busCompDetector === "object"
+      ? (options.busCompDetector ?? null)
+      : typeof options.limiterDetector === "object"
+        ? (options.limiterDetector ?? null)
+        : null;
+  const limiterDetectorNode: AudioNode | null =
+    options.limiterDetector === "internal"
+      ? detectorBus
+      : typeof options.limiterDetector === "object"
+        ? (options.limiterDetector ?? null)
+        : null;
   const busComp: BusCompressorHandle = createBusCompressor(ctx, {
     thresholdDb: options.masterBusCompThresholdDb,
     kneeDb: options.masterBusCompKneeDb,
@@ -327,6 +354,7 @@ export function buildMasterGraph(
   // See MASTER_LIMITER_DETECTOR_MARGIN_DB.
   const limiter = createMasterLimiter(ctx, {
     ceilingDb: options.limiterCeilingDb ?? MASTER_LIMITER_INTERNAL_CEILING_DB,
+    detector: limiterDetectorNode,
     releaseFastMs: options.limiterReleaseFastMs,
     releaseSlowMs: options.limiterReleaseSlowMs,
   });
@@ -499,7 +527,7 @@ export function buildMasterGraph(
       return appliedTrimDb;
     },
     busCompressorKind: () => busComp.kind(),
-    busCompDetectorInput: detectorBus,
+    duckDetectorInput: detectorBus,
     limiterKind() {
       return limiter.kind;
     },
