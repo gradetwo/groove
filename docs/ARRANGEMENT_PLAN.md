@@ -172,6 +172,17 @@ the renderer's default and the ramp would never reach them — the lane is there
 reaches it*, and holes are spelled out as the same 100 the renderer would have used. A test pins the other half:
 a lane no fill reaches flattens exactly as it did before, holes included.
 
+**B5's audio half is now measured, not assumed.** `probe:arrangement-audio` (CI, desktop leg) renders a two-bar
+build and a two-bar fill through the app's own offline engine and measures the *audio*: the fill's bar gains
+**+6.04 %** high-frequency energy (a snare hit is broadband) for a **−0.17 %** level change, which is what a fill is
+— onsets, not loudness. The same run also produced the number P2.3 needs: a **6 dB** velocity ramp in the pattern
+(43.7 → 86.7 mean snare velocity) renders as **−1.7 %**, i.e. the master chain's gain recovery gives the ramp back.
+The probe asserts what is true (the fill is audible; the ramp is in the pattern and does not *invert*), prints the
+number, and names the erasure as P2.3's item rather than asserting something the engine does not do.
+
+Why it took a probe: every audio claim in `src/test/**` is really structural — jsdom's Web Audio double renders an
+empty buffer — so "the fill is audible" needs a real browser, and the unit tests can only pin the pattern.
+
 Deliberately left: a **per-hit crescendo** inside a fill (needs a per-step velocity list on `SongFill`), editing a
 ramp or a fill by hand in the view (the picker generates them; the region shows them), and the *audio* half of the
 claim — `check:groove`'s velocity and static-harmony numbers are measured from a genre's own pattern, not from a
