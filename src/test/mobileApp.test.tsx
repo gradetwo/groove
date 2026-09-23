@@ -28,19 +28,27 @@ const audition = vi.hoisted(() => ({
   applyPattern: vi.fn(),
   setTempo: vi.fn(),
   setSwingValue: vi.fn(),
+  setMetronome: vi.fn(),
   playingGenreId: null as string | null,
+  /** Captured from the shell, so a test can complete a pass the way the engine would. */
+  onPatternEnd: null as ((genreId: string) => void) | null,
 }));
 
 vi.mock("../hooks/useGenreAudition", () => ({
-  useGenreAudition: () => ({
-    playingGenreId: audition.playingGenreId,
-    toggleAudition: audition.toggle,
-    stopAudition: audition.stop,
-    readClock: () => ({ step: 0, fraction: 0 }),
-    applyPattern: audition.applyPattern,
-    setTempo: audition.setTempo,
-    setSwingValue: audition.setSwingValue,
-  }),
+  useGenreAudition: (options?: { onPatternEnd?: (genreId: string) => void }) => {
+    audition.onPatternEnd = options?.onPatternEnd ?? null;
+    return {
+      playingGenreId: audition.playingGenreId,
+      toggleAudition: audition.toggle,
+      stopAudition: audition.stop,
+      readClock: () => ({ step: 0, fraction: 0 }),
+      applyPattern: audition.applyPattern,
+      setTempo: audition.setTempo,
+      setSwingValue: audition.setSwingValue,
+      setMetronome: audition.setMetronome,
+      readMetronome: () => false,
+    };
+  },
 }));
 
 const renderShell = (
@@ -949,6 +957,31 @@ describe("phone shell · the full-screen player", () => {
     await waitFor(() => expect(audition.toggle).toHaveBeenCalledTimes(1));
     const played = audition.toggle.mock.calls[0][0].id as string;
     expect(played).toBe(nextId);
+  });
+
+  it("advances at the end of a pass — which is what the mode button is for", async () => {
+    // The phone's report: "the play-order button does nothing, everything is repeat-one". The mode governed
+    // only the manual skip buttons; nothing told the shell that a pass had finished, so the engine's own loop
+    // was the only thing that ever happened. This is that missing link.
+    localStorage.setItem("groove_mobile_play_mode", "genre");
+    const { onOpenPlayer } = renderShell("home", { genreId: "chicago-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+
+    expect(typeof audition.onPatternEnd).toBe("function");
+    audition.onPatternEnd?.("chicago-house");
+    await waitFor(() => expect(onOpenPlayer).toHaveBeenCalledTimes(1));
+    expect(onOpenPlayer.mock.calls[0][0]).not.toBe("chicago-house");
+  });
+
+  it("stays on the same genre when the mode is Repeat one", async () => {
+    localStorage.setItem("groove_mobile_play_mode", "one");
+    const { onOpenPlayer } = renderShell("home", { genreId: "chicago-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+
+    // In `one` the shell installs no advance handler, so the engine's own loop is the whole behaviour.
+    audition.onPatternEnd?.("chicago-house");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onOpenPlayer).not.toHaveBeenCalled();
   });
 
   it("says so when the player is pointed at a genre that does not exist", async () => {

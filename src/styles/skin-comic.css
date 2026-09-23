@@ -454,12 +454,35 @@
 }
 :root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="border-l-2"],
 :root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="bg-accent/15"] {
+  /**
+   * The current bar is an **ink plate**, and its type has to be the paper stock.
+   *
+   * `--d-line` on this skin is the ink itself (`--m-line: #111014` — the phone's keyline colour), so painting
+   * the plate with it and leaving `color: var(--d-ink)` produced ink on ink: the step numbers and the bar label
+   * were invisible (the readability audit measured 17,16,20 on 17,16,20 — twelve elements).
+   */
   background-color: rgb(var(--d-line));
   background-image: var(--comic-screen-fine);
   background-size: 6px 6px;
   border-color: var(--comic-ink);
   box-shadow: inset 0 2px 0 0 rgb(var(--d-ink) / 0.55);
-  color: rgb(var(--d-ink));
+  color: rgb(var(--d-panel));
+}
+
+/**
+ * …and any child that asserts its own colour has to follow the plate, or the label stays dark teal on ink.
+ *
+ * Only the *plate* states, and only for the accent: a first version used `[data-ruler-step-idx]:has(…)`, which
+ * matched every ruler cell containing an accent child and turned the ordinary cells' labels into paper on paper
+ * (the audit measured exactly 1.00:1 on "BAR 1").
+ */
+:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="border-l-2"] [class~="text-accent"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="bg-accent/15"] [class~="text-accent"] {
+  color: rgb(var(--d-panel));
+}
+:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="border-l-2"] [class~="text-text-sub"],
+:root[data-skin="comic"] [data-surface="desktop"] [data-ruler-step-idx][class~="bg-accent/15"] [class~="text-text-sub"] {
+  color: rgb(var(--d-panel) / 0.8);
 }
 
 /* A track row is a ruled band: paper, an ink seam above and below, no gradient header. */

@@ -71,6 +71,9 @@ export function useProjectHub({
         resolution: project.resolution,
         stepCount: project.stepCount,
         songMode: project.songMode,
+        // B1: the arrangement rides with the project in both directions (load, and the scratch snapshot that
+        // makes a reload restore *this* project). A project saved before it migrates from the chain in the reducer.
+        sections: project.sections,
         songChain: project.songChain,
         loopRange: project.loopRange,
         isMetronome: project.isMetronome,
@@ -103,6 +106,9 @@ export function useProjectHub({
         patterns: project.patterns,
         activeSlot: project.activeSlot,
         songMode: project.songMode,
+        // B1: the arrangement rides with the project in both directions (load, and the scratch snapshot that
+        // makes a reload restore *this* project). A project saved before it migrates from the chain in the reducer.
+        sections: project.sections,
         songChain: project.songChain,
         loopRange: project.loopRange,
         isMetronome: project.isMetronome,

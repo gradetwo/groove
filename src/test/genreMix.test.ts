@@ -4,12 +4,16 @@ import {
   CATEGORY_MIX_PROFILES,
   GENRE_MIX,
   GENRE_MIX_RESOLVED,
+  HUMANISE_BY_CATEGORY,
+  HUMANISE_TRACK_SCALE,
   LEGACY_PLACEHOLDER_MIX,
   LOUDNESS_TRIM_MAX_DB,
   LOUDNESS_TRIM_MIN_DB,
   MIX_TRACK_IDS,
   applyGenreMixDefaults,
+  getGenreHumaniseAmount,
   getGenreLoudnessTrimDb,
+  humanisePatternVelocities,
   migrateLegacyPlaceholderMix,
   patternFromGenre,
   resolveGenreMix,
@@ -335,5 +339,153 @@ describe("genre mix defaults · loudness trim lookup", () => {
     expect(getGenreLoudnessTrimDb("custom-whatever")).toBe(0);
     expect(getGenreLoudnessTrimDb("nope")).toBe(0);
     expect(getGenreLoudnessTrimDb(undefined)).toBe(0);
+  });
+});
+
+/** The twelve ids `scripts/check_groove.mjs` samples; the gate's budgets are about these. */
+const GROOVE_SAMPLE = [
+  "chicago-house",
+  "detroit-techno",
+  "minimal-techno",
+  "liquid-dnb",
+  "ambient",
+  "reggaeton",
+  "afrobeat",
+  "chicago-blues",
+  "boom-bap",
+  "trap-rap",
+  "disco",
+  "synthwave",
+];
+
+/** The analyser's `velocityByTrack` view of a pattern (sounding steps only). */
+function distinctVelocitiesByTrack(pattern: SequencerPattern): Record<string, number | null> {
+  return Object.fromEntries(
+    pattern.tracks.map((track) => {
+      const on = track.steps
+        .map((step, index) => (step ? track.velocity?.[index] ?? 100 : null))
+        .filter((value): value is number => value !== null);
+      return [track.track_id, on.length ? new Set(on).size : null];
+    })
+  );
+}
+
+describe("P0.2 · velocity humanisation policy", () => {
+  it("gives an unknown genre, an unknown lane and a zero amount no amount at all", () => {
+    const lane = { track_id: "hihat", name: "Hi-hat" } as SequencerTrack;
+    expect(getGenreHumaniseAmount("custom-blank", lane)).toBe(0);
+    expect(getGenreHumaniseAmount("nope", lane)).toBe(0);
+    expect(getGenreHumaniseAmount(undefined, lane)).toBe(0);
+    expect(getGenreHumaniseAmount("reggaeton", { track_id: "weird", name: "Weird" } as unknown as SequencerTrack)).toBe(0);
+  });
+
+  it("is the category default scaled per lane, and a genre can override the default", () => {
+    const lane = (track_id: string, name: string) => ({ track_id, name }) as unknown as SequencerTrack;
+    // reggaeton declares no humanise override, so it is its category default times the lane scale.
+    expect(getGenreHumaniseAmount("reggaeton", lane("hihat", "Hi-hat"))).toBeCloseTo(
+      HUMANISE_BY_CATEGORY["Latin/World"] * HUMANISE_TRACK_SCALE.hihat
+    );
+    // chiptune does: trackers are grid-locked, so it sits far below the Electronic base.
+    expect(getGenreHumaniseAmount("chiptune", lane("hihat", "Hi-hat"))).toBeCloseTo(
+      GENRE_MIX.chiptune.humanise! * HUMANISE_TRACK_SCALE.hihat
+    );
+    expect(GENRE_MIX.chiptune.humanise!).toBeLessThan(HUMANISE_BY_CATEGORY.Electronic);
+    // The low end is the quietest lane in every genre: kick and bass must never be the loosest.
+    for (const genreId of Object.keys(GENRE_MIX)) {
+      const kick = getGenreHumaniseAmount(genreId, lane("kick", "Kick"));
+      const hats = getGenreHumaniseAmount(genreId, lane("hihat", "Hi-hat"));
+      expect(kick, genreId).toBeLessThan(hats);
+      expect(getGenreHumaniseAmount(genreId, lane("bass", "Bass")), genreId).toBeLessThan(hats);
+    }
+  });
+
+  it("bakes a stable performance in, leaves the input alone, and skips silent steps", () => {
+    const source: SequencerPattern = {
+      genre_id: "reggaeton",
+      bpm: 96,
+      scale: "A minor",
+      totalSteps: 16,
+      tracks: [
+        {
+          track_id: "hihat",
+          name: "Hi-hat",
+          instrument: "drum",
+          steps: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+          velocity: new Array(16).fill(100),
+          volume: 0.7,
+          pan: -0.3,
+          sendA: 0,
+          sendB: 0,
+        },
+      ],
+    } as unknown as SequencerPattern;
+
+    const first = humanisePatternVelocities(source, "reggaeton");
+    const second = humanisePatternVelocities(source, "reggaeton");
+    expect(first.tracks[0].velocity).toEqual(second.tracks[0].velocity);
+    // The input is untouched, and the sounding steps really moved.
+    expect(source.tracks[0].velocity).toEqual(new Array(16).fill(100));
+    const velocity = first.tracks[0].velocity!;
+    expect(new Set([0, 4, 8, 12].map((i) => velocity[i])).size).toBeGreaterThan(1);
+    // A step that does not sound keeps its authored value exactly.
+    for (const silent of [1, 2, 3, 5, 6, 7]) expect(velocity[silent]).toBe(100);
+    // Range is the MIDI range the engine and every exporter share.
+    for (const value of velocity) {
+      expect(Number.isInteger(value)).toBe(true);
+      expect(value).toBeGreaterThanOrEqual(1);
+      expect(value).toBeLessThanOrEqual(127);
+    }
+  });
+
+  it("creates the velocity lane when a genre's track has none", () => {
+    const source = {
+      genre_id: "afrobeat",
+      bpm: 110,
+      scale: "C minor",
+      totalSteps: 8,
+      tracks: [
+        {
+          track_id: "percussion",
+          name: "Percussion",
+          instrument: "drum",
+          steps: [1, 0, 1, 0, 1, 0, 1, 0],
+          volume: 0.9,
+          pan: -0.4,
+          sendA: 0,
+          sendB: 0,
+        },
+      ],
+    } as unknown as SequencerPattern;
+    const humanised = humanisePatternVelocities(source, "afrobeat");
+    const velocity = humanised.tracks[0].velocity!;
+    expect(velocity).toHaveLength(8);
+    expect(new Set([0, 2, 4, 6].map((i) => velocity[i])).size).toBeGreaterThan(1);
+  });
+});
+
+describe("P0.2 · the groove gate's flatTracks claim", () => {
+  it("no sampled genre ships four lanes of one velocity", () => {
+    const offenders: string[] = [];
+    for (const genreId of GROOVE_SAMPLE) {
+      const genre = ALL_GENRES.find((entry) => entry.id === genreId);
+      expect(genre, `sample id ${genreId} must exist in ALL_GENRES`).toBeDefined();
+      const pattern = patternFromGenre(genre!);
+      const distinct = distinctVelocitiesByTrack(pattern);
+      const flat = Object.values(distinct).filter((count) => count !== null && count <= 1).length;
+      if (flat >= 4) offenders.push(`${genreId}: ${flat} flat lanes`);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("is what changed the measurement: the authored skeleton really was flat", () => {
+    // The gate used to render `genre.sequencer_pattern` directly — the authored skeleton,
+    // which no user ever plays. It is flat; the pattern the app plays is not. If this ever
+    // stops being true the humanisation has been undone somewhere upstream.
+    const flatLanes = (pattern: SequencerPattern) =>
+      Object.values(distinctVelocitiesByTrack(pattern)).filter((count) => count !== null && count <= 1).length;
+
+    const genre = ALL_GENRES.find((entry) => entry.id === "reggaeton")!;
+    expect(flatLanes(genre.sequencer_pattern)).toBeGreaterThanOrEqual(4);
+    expect(flatLanes(patternFromGenre(genre))).toBeLessThan(4);
   });
 });

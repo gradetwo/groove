@@ -1,27 +1,27 @@
 {
-  "version": "2.13.0",
+  "version": "2.15.1",
   "releaseDate": "2026-09-22",
-  "changelogCount": 205,
+  "changelogCount": 209,
   "latest": {
-    "version": "2.13.0",
+    "version": "2.15.1",
     "date": "2026-09-21",
-    "category": "feature",
+    "category": "refactor",
     "title": {
-      "zh": "v2.13.0 MCP 服务：让其它 LLM 与 agent 用上曲风库、音序器、导出与测量",
-      "en": "v2.13.0 An MCP Server: the Genre Library, the Sequencer, the Exporters and the Measurements, for Other LLMs and Agents"
+      "zh": "v2.15.1 皮肤收口：两端共用一张字面值→角色表（39 处偏差逐条写明理由），手机即兴车道角色化，卡顿棘轮收紧",
+      "en": "v2.15.1 Skin Close-out: One Literal→Role Table for Both Surfaces (39 Deviations Documented With Reasons), Phone Jam Lanes as Roles, and a Tighter Jank Ratchet"
     },
     "highlights": [
       {
-        "zh": "**新增 MCP 服务：19 个工具、4 个 resource、3 个 prompt，其它 LLM 与 agent 可以直接用 Groove Lab。** 能检索 159 个曲风、读取曲风的**已记录事实**（年代、产地、文化背景、节奏特征、音色设计、制作提示、代表曲目、雷达指标、混音与响度修剪）、据此用**具名操作**写 pattern、导出 MIDI 与 Ableton 工程、生成分享链接，并用 App 自己的引擎渲染真实 WAV/MP3。一条命令跑起来：`npm run mcp:build && npm run mcp`。",
-        "en": "**New MCP server: 19 tools, 4 resources and 3 prompts, so other LLMs and agents can use Groove Lab directly.** Search the 159 genres, read a genre's **recorded facts** (era, origin, cultural context, rhythm features, sound design, production tips, representative tracks, radar metrics, mix and loudness trim), compose a pattern with **named operations**, export MIDI and Ableton projects, build a share link, and render real WAV/MP3 through the app's own engine. One command to r…"
+        "zh": "**P0 0-5：两端共用一张「字面值 → 角色」表。** 桌面生成器用手写表决定一个十六进制是什么意思；手机的 legacySkin.css 与 panelSkin.css 又在 **180 条手写规则**里重新决定了一遍，而**没有任何东西比较过两者**——同一个十六进制可以在一端是「表面」、在另一端是「墨色」，同一个元素就会因为由哪个外壳绘制，而在纸色板与深色字之间翻转。现在 `src/data/skinLiteralRoles.json` 是**唯一来源**（生成器 import 它；生成的样式表**逐字节不变**，这正是抽取得以被证明的方式），`scripts/check_skin_roles.mjs` 解析**三处**——表、生成的桌面样式表、两张手机样式表——并要求它们在同一字面值**且同一属性**上一致。",
+        "en": "**P0 0-5: one literal→role table for both surfaces.** The desktop generator decided what a hex means by hand; the phone's `legacySkin.css` and `panelSkin.css` decided the same thing again in **180 hand-written rules**, and nothing compared them — a hex could be a surface on one and an ink on the other, and the same element would flip from a paper plate to dark type depending on which shell drew it. `src/data/skinLiteralRoles.json` is now the single source (the generator impo…"
       },
       {
-        "zh": "**它之所以能在 Node 里跑，是因为这个仓库的曲风库本来就是数据。** 159 个曲风、它们的 pattern、混音表、和弦走向、关系图谱与大师课都在 `src/data/**`，不依赖 DOM；MIDI 与 Ableton 是字节/XML 级 JS、分享是 base64、响度报告是已提交的实测表。所以**浏览、作曲、导出、分享完全不需要浏览器**。",
-        "en": "**It runs in Node because this repository's library is data.** The 159 genres, their patterns, mix tables, chord progressions, relation graph and masterclasses live under `src/data/**` with no DOM dependency; MIDI and Ableton are byte/XML-level JS, sharing is base64, and the loudness report is the committed measurement table. **Browsing, composing, exporting and sharing therefore need no browser at all.**"
+        "zh": "**它第一次运行就找出 39 处分歧，而「逐条审阅」正是重点**：手机样式表是**有意**这么写的，所以每一处现在都被记录为**带理由的偏差**。审阅得出六个族：① 传统键盘用皮肤的卡片色画键，桌面用浅色表面角色；② 漫画样式表把深色板印成实心墨（在新闻纸上深色板**就是**墨），桌面则把它当作凸起表面，苏联与像素保持深色；③ 墨色板上的标签取手机的 on-accent 墨色；④ 车道与类目色被收拢到手机的**五色词汇**（它的外壳每个模块只有一个强调色），桌面给每条车道自己的 token；⑤ 柔和金色被当作手机的一个墨色档位而非柔和强调色；⑥ 面板皮肤里手机把近黑板当作页面底色，桌面把它当作凸起面板。另有 9 个字面值只有手机映射（桌面通过命名类达到同样效果），只报数、不失败。红线 **R12a**、表的单测、以及进 `verify` 的 `check:skin-roles` 一起守住它。",
+        "en": "**Its first run found 39 divergences, and reviewing them was the point**: the phone's sheets are opinionated on purpose, so each is now recorded as a **deviation with a reason**. Six families came out of that review: (1) the legacy keyboard draws keys from the skin's card while the desktop uses the pale-surface role; (2) the comic sheet prints dark plates as solid ink (on newsprint a dark plate *is* ink) where the desktop raises them as a surface, and Soviet and pixel keep t…"
       },
       {
-        "zh": "**只有\"出声音\"真的需要浏览器**：`render_audio` 会在第一次调用时**惰性**启动 Vite dev server 与无头 Chromium（冷启动约 40 秒，之后每次渲染几秒），并驱动 App 真实的 `renderPatternOffline`——和导出按钮用的是同一段代码，所以拿到的是**这个 App 的声音**，而不是第二套实现。`GROOVE_MCP_NO_BROWSER=1` 可以关掉它，其它工具照常工作。",
-        "en": "**Only making sound genuinely needs a browser.** `render_audio` starts a Vite dev server and headless Chromium **lazily** on first use (~40 s cold, then seconds per render) and drives the app's real `renderPatternOffline` — the same code the export button uses, so what comes back is **this app's audio**, not a second implementation of it. `GROOVE_MCP_NO_BROWSER=1` refuses instead, and every other tool keeps working."
+        "zh": "**手机的即兴车道改用角色。** `JAM_COLORS` 原本是 MobileJamScreen 里六个写死的 `{ hex, rgb }` 对——**皮肤够不到的那一类颜色**，所以每套手机皮肤上即兴垫都还是默认调色板。现在每个垫子命名**共用的车道调色板**（`--d-track-*`），而它是生成器**从这张手机皮肤自己的强调色族**推导出来的——于是两端对「哪条车道是什么颜色」是**按构造一致**的。六个垫子仍是六种不同填充（拍手取粉色角色、边击取橄榄色角色），测试现在断言圆点是 `var(--d-track-…)` 的 token 而不是十六进制。",
+        "en": "**The phone's jam lanes are roles now.** `JAM_COLORS` was six hardcoded `{ hex, rgb }` pairs in `MobileJamScreen.tsx` — the one kind of colour a skin cannot reach, so the jam pads kept the default palette on every phone skin. Each pad names the **shared** lane palette (`--d-track-*`), which the generator derives from the **phone skin's own** accent family, so the two surfaces agree about which lane is which colour by construction. Six pads still get six distinct fills (the c…"
       }
     ],
     "truncated": true

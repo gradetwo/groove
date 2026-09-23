@@ -26,6 +26,7 @@ const renderJam = async (
     onSwing: vi.fn<(swing: number) => void>(),
     onOpenGenre: vi.fn<(genreId: string) => void>(),
     onAuditionTrack: vi.fn<(trackId: string, instrument?: string) => void>(),
+    onMetronome: vi.fn<(enabled: boolean) => void>(),
   };
   const props = {
     genreId: GENRE.id,
@@ -62,12 +63,27 @@ describe("jam module", () => {
      * (amber on paper is 1.7:1), and a light skin is a supported choice — so the identity moved to a bar
      * and the word takes the shell's ink. This asserts the bar still differs per lane.
      */
-    const colours = [0, 1, 2, 3].map((lane) => screen.getByTestId(`mobile-jam-lane-colour-${lane}`).style.background);
+    const colours = [0, 1, 2, 3, 4, 5].map((lane) => screen.getByTestId(`mobile-jam-lane-colour-${lane}`).style.background);
     for (const colour of colours) expect(colour).not.toBe("");
-    expect(new Set(colours).size, `lane colours: ${colours.join(", ")}`).toBe(4);
+    expect(new Set(colours).size, `lane colours: ${colours.join(", ")}`).toBe(6);
     // …and the labels stay legible in every skin because they inherit the shell's ink.
-    for (const lane of [0, 1, 2, 3]) {
+    for (const lane of [0, 1, 2, 3, 4, 5]) {
       expect(screen.getByTestId(`mobile-jam-lane-label-${lane}`).className).toContain("text-[var(--m-ink-2)]");
+    }
+
+    // Every pad names the row it writes, so "the clap lights the snare row" is legible instead of surprising
+    // (a true one-row-per-pad grid needs the clap/rim to be their own lanes — the drum-kit model decision).
+    // Language-agnostic on purpose: the tag must equal the *row's* label, whatever the locale renders.
+    for (const [pad, laneIndex] of [
+      ["kick", 0],
+      ["snare", 1],
+      ["hat", 2],
+      ["clap", 1],
+      ["rim", 1],
+      ["bass", 4],
+    ] as const) {
+      const rowLabel = screen.getByTestId(`mobile-jam-lane-label-${laneIndex}`).textContent ?? "";
+      expect(screen.getByTestId(`mobile-jam-row-of-${pad}`).textContent ?? "").toBe(rowLabel);
     }
 
     // The six pads carry their own instrument colours on the dot and the label, so a clap never reads as
@@ -78,6 +94,17 @@ describe("jam module", () => {
     });
     expect(padDots.every(Boolean), `pad dots: ${padDots.join(", ")}`).toBe(true);
     expect(new Set(padDots).size, `pad dots: ${padDots.join(", ")}`).toBe(6);
+    /**
+     * …and they are **roles**, not hexes.
+     *
+     * The six colours used to be hardcoded `{ hex, rgb }` pairs in this file — the one kind of colour a skin
+     * cannot reach, so the jam pads kept the default palette on every phone skin. Each pad now names the shared
+     * lane palette (`--d-track-*`), which the generator derives from the *phone skin's own* accent family; a hex
+     * here again would be a regression this assertion catches.
+     */
+    for (const dot of padDots) {
+      expect(dot, `pad dot "${dot}" is not a role token`).toMatch(/^var\(--d-track-[a-z]+(-on)?\)$/);
+    }
   });
 
   it("sounds and flashes a pad on every tap, whether or not the transport runs", async () => {
@@ -135,9 +162,10 @@ describe("jam module", () => {
     return rail;
   };
 
-  it("renders four lanes of sixteen steps", async () => {
+  it("renders six lanes of sixteen steps — one visible row per pad, plus percussion and chords", async () => {
     await renderJam();
-    for (let lane = 0; lane < 4; lane += 1) {
+    // The phone's report: "the pads and the rows do not match". Six pads, six rows.
+    for (let lane = 0; lane < 6; lane += 1) {
       for (let step = 0; step < 16; step += 1) {
         expect(screen.getByTestId(`mobile-jam-step-${lane}-${step}`)).toBeInTheDocument();
       }
@@ -145,9 +173,9 @@ describe("jam module", () => {
     expect(screen.getByTestId("mobile-jam-grid")).toBeInTheDocument();
     expect(screen.getByTestId("mobile-jam-tempo")).toBeInTheDocument();
 
-    // The grid is still four rows of sixteen *buttons* — the step is the tap target, not a cell.
+    // The grid is six rows of sixteen *buttons* — the step is the tap target, not a cell.
     const rows = Array.from(screen.getByTestId("mobile-jam-grid").children);
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(6);
     for (const row of rows) expect(row.querySelectorAll("button")).toHaveLength(16);
     expect(screen.getByTestId("mobile-jam-step-0-0").tagName).toBe("BUTTON");
   });
@@ -255,11 +283,12 @@ describe("jam module", () => {
     fireEvent.pointerUp(rail, { clientX: -500, pointerId: 2 });
   });
 
-  it("keeps record, tempo and swing in one dock after the pads", async () => {
+  it("keeps record, tempo, swing and the metronome in one dock above the pads", async () => {
     await renderJam();
     const dock = screen.getByTestId("mobile-jam-tempo");
     for (const id of [
       "mobile-jam-record",
+      "mobile-jam-metronome",
       "mobile-jam-bpm",
       "mobile-jam-bpm-up",
       "mobile-jam-bpm-down",
@@ -269,16 +298,29 @@ describe("jam module", () => {
       expect(dock.contains(screen.getByTestId(id))).toBe(true);
     }
 
-    // The grid and pads come first, so the dock really is the bottom of the screen, and 即兴 still
-    // shows no player bar chrome.
-    const pads = screen.getByTestId("mobile-jam-pad-kick");
-    expect(pads.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    /**
+     * Pads last, nearest the thumbs.
+     *
+     * They used to sit above the dock, which put the transport under the playing hand: a thumb reaching for a
+     * pad could land on record. The order is transport, then pads, and the pads own the sticky slot.
+     */
+    const padsDock = screen.getByTestId("mobile-jam-pads-dock");
+    expect(dock.compareDocumentPosition(padsDock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(padsDock.contains(screen.getByTestId("mobile-jam-pad-kick"))).toBe(true);
     expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
 
     // The old chip row is gone: swing is a rail now.
     expect(screen.queryByTestId("mobile-jam-swing-30")).not.toBeInTheDocument();
     expect(screen.getByTestId("mobile-jam-swing-slider").getAttribute("role")).toBe("slider");
     expect(screen.getByTestId("mobile-jam-record").tagName).toBe("BUTTON");
+  });
+
+  it("toggles the metronome through the shell", async () => {
+    const { spies } = await renderJam();
+    const button = screen.getByTestId("mobile-jam-metronome");
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(button);
+    expect(spies.onMetronome).toHaveBeenLastCalledWith(true);
   });
 
   it("opens the backing genre's page from the header", async () => {

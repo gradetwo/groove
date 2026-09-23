@@ -288,9 +288,13 @@ check(
 
 // R9b: the mix table must cover exactly the genre ids in the database. Read as text
 // so this stays a cheap static gate (the vitest suite asserts the same thing typed).
-const mixIds = [...read("src/data/genreMix.ts").matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{\s*category:/gm)].map(
-  (m) => m[1]
-);
+/**
+ * Any field order counts: the entry is `"id": { ... }`, and whether `category` or `humanise` comes first is a
+ * fact about the data's readability, not about its coverage. (This parser used to require `category` first, so
+ * adding a leading field silently "lost" 23 genres — a false red line that cost more than the bug it guards.)
+ */
+const mixBlock = read("src/data/genreMix.ts").split("export const GENRE_MIX")[1].split("\n};")[0];
+const mixIds = [...mixBlock.matchAll(/^\s{2}"([a-z0-9-]+)":\s*\{/gm)].map((m) => m[1]);
 const missingMixIds = dataIds.filter((id) => !mixIds.includes(id));
 const orphanMixIds = mixIds.filter((id) => !dataIds.includes(id));
 check(
@@ -393,6 +397,31 @@ check(
     scripts["check:mcp"].includes("build_mcp.mjs") &&
     scripts["check:mcp"].includes("check_mcp.mjs")
 );
+
+/**
+ * R12a — the literal→role table is the single source for what a hardcoded hex means.
+ *
+ * The desktop generator and the phone's two sheets both decide that, and they were written independently: a hex
+ * could be a surface on one and an ink on the other, and the same element would flip from a paper plate to dark
+ * type depending on which shell drew it. The table plus `check_skin_roles.mjs` is the fix, so both have to stay.
+ */
+const roleTablePath = path.join(ROOT, "src", "data", "skinLiteralRoles.json");
+check("R12a the shared literal→role table exists", fs.existsSync(roleTablePath));
+if (fs.existsSync(roleTablePath)) {
+  const roleTable = JSON.parse(fs.readFileSync(roleTablePath, "utf8"));
+  const deviations = roleTable.deviations ?? [];
+  check(
+    "R12a every literal maps to a role in the vocabulary",
+    Object.values(roleTable.literals ?? {}).every((role) => (roleTable.roles ?? []).includes(role)),
+    `${Object.keys(roleTable.literals ?? {}).length} literals`
+  );
+  check(
+    "R12a every deviation carries a reason",
+    deviations.length > 0 && deviations.every((entry) => (entry.reason ?? "").length > 40),
+    `${deviations.length} documented deviation(s)`
+  );
+}
+check("R12a the drift check stays wired", typeof scripts["check:skin-roles"] === "string");
 
 console.log("===============================================================");
 console.log("  \ud83d\udea6 RED-LINE GATE");

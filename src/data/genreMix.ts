@@ -30,6 +30,7 @@
 import { Genre, GenreCategory, SequencerPattern, SequencerTrack } from "../types/genre";
 import { expandGenrePattern, resolveGenreExpression } from "./genreExpression";
 import { GENRE_INDEX_MAP } from "./index/genresIndex";
+import { humaniseVelocity, patternSeed } from "../audio/noteEvents";
 
 /** The eight sequencer roles a mix profile assigns values to. */
 export const MIX_TRACK_IDS = [
@@ -147,6 +148,98 @@ export const CATEGORY_MIX_PROFILES: Record<GenreCategory, CategoryMixProfile> = 
   },
 };
 
+/**
+ * P0.2 — how much a lane's velocities move, as a fraction of `HUMANISE_MAX_VELOCITY`.
+ *
+ * This is the *performance* half of the mix: the profiles above decide how loud each
+ * lane is, these decide how much it breathes. A category default carries all 159 genres;
+ * the handful of entries below that declare `humanise` step away from it, each with its
+ * reason inline (same layering rule as `overrides`).
+ *
+ * Calibrated so a 16-step lane lands at ±1..5 MIDI steps: enough that "all 100s" stops
+ * being true, small enough that the loop does not sound like it is drifting.
+ */
+export const HUMANISE_BY_CATEGORY: Record<GenreCategory, number> = {
+  // Drum machines are tight by design; the movement in club music comes from arrangement.
+  Electronic: 0.18,
+  // Swung, hand-played hats and claps over a kick that stays close to the grid.
+  "Hip Hop": 0.24,
+  // The idiom *is* dynamic variation — brushes, horns and comping live between values.
+  "Jazz/Blues": 0.34,
+  // Live percussion is the lead voice, so its dynamics carry the groove.
+  "Latin/World": 0.3,
+  // Programmed but not sterile; the topline is mixed even and stays that way.
+  "Pop/R&B": 0.2,
+  // A real drummer hits the backbeat harder; the double-kick stays tight via the scale.
+  "Rock/Metal": 0.26,
+};
+
+/**
+ * Per-lane scale on top of the genre amount.
+ *
+ * The kick and the bass are deliberately the quietest lanes: their level is the mix's
+ * low-end anchor (and the kick drives the sidechain), so a wandering one changes the
+ * balance of the whole track rather than adding feel. Hats and percussion are the
+ * opposite — they are where a human hand is most audible.
+ */
+export const HUMANISE_TRACK_SCALE: Record<MixTrackId, number> = {
+  kick: 0.35,
+  snare: 0.95,
+  hihat: 1.1,
+  percussion: 1.15,
+  bass: 0.5,
+  chords: 0.85,
+  lead: 1.0,
+  fx: 0.7,
+};
+
+/** One genre's kick/bass sidechain: how deep, and how long it takes to come back. */
+export interface DuckSetting {
+  /** Peak depth of the duck, in dB below unity. */
+  duckDb: number;
+  /** Time from the onset back to unity gain, in ms. */
+  releaseMs: number;
+}
+
+/** Bounds the table cannot escape; the resolver clamps into them, the tests pin them. */
+export const DUCK_DB_MIN = 0;
+export const DUCK_DB_MAX = 12;
+export const DUCK_RELEASE_MIN_MS = 20;
+export const DUCK_RELEASE_MAX_MS = 600;
+
+/**
+ * P0.3 — sidechain depth and release per category.
+ *
+ * Measured through the app's own offline path, the old formula dipped the bass by at most 0.25 dB
+ * (deepest single onset −1.8 dB), which is why the listening report heard "no sidechain at all".
+ * The depth here is the *product promise* (a kick that clears the bass — the gate asserts 3 dB or
+ * more in the 5–25 ms after the onset, and every entry is chosen to measure 4–6 dB), and the release
+ * is the genre character: a club kick that breathes, an ambient pulse that swells.
+ */
+export const DUCK_BY_CATEGORY: Record<GenreCategory, DuckSetting> = {
+  // Four-on-the-floor: the classic breath between kicks, one duck per kick.
+  Electronic: { duckDb: 6, releaseMs: 130 },
+  // 808s are the bass and the kick at once, so the duck is what keeps them from fighting.
+  "Hip Hop": { duckDb: 6.5, releaseMs: 140 },
+  // An upright bass in a small room: a gentle duck, because the players already stay out of each other's way —
+  // but still one the gate can measure in its 5 ms window (the window reads ~1 dB shallower than the depth).
+  "Jazz/Blues": { duckDb: 5, releaseMs: 105 },
+  // Live percussion over a polite kick; the bass is the anchor, so it comes back quickly.
+  "Latin/World": { duckDb: 5, releaseMs: 120 },
+  // Programmed but not pumping: medium depth, medium release.
+  "Pop/R&B": { duckDb: 5.5, releaseMs: 125 },
+  // A real kick and a picked bass in the same register — the deepest duck outside the club genres.
+  "Rock/Metal": { duckDb: 6, releaseMs: 130 },
+};
+
+/**
+ * Fallback for custom/unknown genres.
+ *
+ * The sidechain is the kick/bass relationship rather than a genre taste, so unlike the mix and the
+ * humanisation this is *not* left untouched for a custom genre — it gets the neutral setting.
+ */
+export const DEFAULT_DUCK: DuckSetting = { duckDb: 5, releaseMs: 120 };
+
 /** One genre's mix entry: its category base, optional deviations, and loudness trim. */
 export interface GenreMix {
   /** Category whose profile supplies the base values. */
@@ -162,6 +255,18 @@ export interface GenreMix {
    * `scripts/loudness.baseline.json` and `scripts/measure_genre_loudness.mjs`.
    */
   loudnessTrimDb: number;
+  /**
+   * P0.2 velocity-humanisation amount for this genre; defaults to
+   * `HUMANISE_BY_CATEGORY[category]`. Present only for genres whose production style
+   * really is machine-locked or fully hand-played.
+   */
+  humanise?: number;
+  /**
+   * P0.3 kick/bass sidechain override; unset fields inherit
+   * `DUCK_BY_CATEGORY[category]`. Present only where the genre's own tempo or idiom
+   * makes the category's release wrong (a 170 BPM kick cannot breathe for 130 ms).
+   */
+  duck?: Partial<DuckSetting>;
 }
 
 /** Clamp bounds for `loudnessTrimDb`; the measurement script must use the same. */
@@ -189,36 +294,36 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "acid-house": { category: "Electronic", loudnessTrimDb: -7.48 },
   "acid-techno": { category: "Electronic", loudnessTrimDb: -6.52 },
   "afro-house": { category: "Electronic", loudnessTrimDb: 0, overrides: { percussion: { volume: 0.8, pan: -0.45, sendB: 0.26 } } },
-  "ambient": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.5, sendA: 0.2 }, snare: { volume: 0.42, sendA: 0.22 }, hihat: { volume: 0.38, pan: -0.34 }, percussion: { volume: 0.34 }, bass: { volume: 0.78 }, chords: { volume: 0.92, sendA: 0.38 }, lead: { volume: 0.68, sendA: 0.34 }, fx: { volume: 0.24, sendA: 0.3 } } },
-  "ambient-dub": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.62 }, snare: { volume: 0.5, sendA: 0.2 }, hihat: { volume: 0.44, sendB: 0.24 }, bass: { volume: 0.9, sendA: 0.04 }, chords: { volume: 0.86, sendA: 0.36 }, lead: { volume: 0.6, sendA: 0.34 }, fx: { volume: 0.3, sendA: 0.26 } } },
-  "ambient-techno": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.58 }, snare: { volume: 0.5 }, hihat: { volume: 0.46 }, percussion: { volume: 0.44 }, chords: { volume: 0.88, sendA: 0.32 }, lead: { volume: 0.66, sendA: 0.3 }, fx: { volume: 0.32, sendA: 0.24 } } },
+  "ambient": { humanise: 0.45, category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.5, sendA: 0.2 }, snare: { volume: 0.42, sendA: 0.22 }, hihat: { volume: 0.38, pan: -0.34 }, percussion: { volume: 0.34 }, bass: { volume: 0.78 }, chords: { volume: 0.92, sendA: 0.38 }, lead: { volume: 0.68, sendA: 0.34 }, fx: { volume: 0.24, sendA: 0.3 } }, duck: { duckDb: 4, releaseMs: 280 } }, // almost nothing here is on the grid; the pads are played and breathe · there is no pumping here — a slow swell under a rare kick
+  "ambient-dub": { humanise: 0.42, category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.62 }, snare: { volume: 0.5, sendA: 0.2 }, hihat: { volume: 0.44, sendB: 0.24 }, bass: { volume: 0.9, sendA: 0.04 }, chords: { volume: 0.86, sendA: 0.36 }, lead: { volume: 0.6, sendA: 0.34 }, fx: { volume: 0.3, sendA: 0.26 } }  }, // dub mixing and hand-played keys over a slow pulse
+  "ambient-techno": { humanise: 0.3, category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.58 }, snare: { volume: 0.5 }, hihat: { volume: 0.46 }, percussion: { volume: 0.44 }, chords: { volume: 0.88, sendA: 0.32 }, lead: { volume: 0.66, sendA: 0.3 }, fx: { volume: 0.32, sendA: 0.24 } }, duck: { duckDb: 5, releaseMs: 240 } }, // the ambient side dominates: sparse, patient playing · sparse kicks, so the duck can breathe for longer
   "bass-house": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.97 }, bass: { volume: 0.97 } } },
   "bassline": { category: "Electronic", loudnessTrimDb: -3.99, overrides: { bass: { volume: 0.96 } } },
   "big-beat": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.97 }, snare: { volume: 0.9, sendA: 0.16 }, chords: { volume: 0.8, pan: -0.4 } } },
   "breakbeat": { category: "Electronic", loudnessTrimDb: 0, overrides: { snare: { volume: 0.9, sendA: 0.14 }, percussion: { volume: 0.78, pan: 0.45 } } },
   "breakcore": { category: "Electronic", loudnessTrimDb: -3.64, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.95 }, hihat: { volume: 0.82 }, percussion: { volume: 0.8 } } },
-  "brooklyn-drill": { category: "Electronic", loudnessTrimDb: -0.68, overrides: { hihat: { volume: 0.8, pan: -0.4, sendB: 0.18 }, bass: { volume: 0.97 }, lead: { volume: 0.62 } } },
-  "brostep": { category: "Electronic", loudnessTrimDb: -3.09, overrides: { kick: { volume: 0.98 }, bass: { volume: 0.98, sendA: 0.0 } } },
+  "brooklyn-drill": { humanise: 0.12, category: "Electronic", loudnessTrimDb: -0.68, overrides: { hihat: { volume: 0.8, pan: -0.4, sendB: 0.18 }, bass: { volume: 0.97 }, lead: { volume: 0.62 } }  }, // drill hats are hyper-programmed; variation reads as sloppiness
+  "brostep": { humanise: 0.12, category: "Electronic", loudnessTrimDb: -3.09, overrides: { kick: { volume: 0.98 }, bass: { volume: 0.98, sendA: 0.0 } }  }, // see dubstep
   "chicago-drill": { category: "Electronic", loudnessTrimDb: 0, overrides: { hihat: { volume: 0.8, pan: -0.38 }, bass: { volume: 0.97 }, chords: { volume: 0.6 } } },
   "chicago-house": { category: "Electronic", loudnessTrimDb: -5.18, overrides: { snare: { volume: 0.86, sendA: 0.14 }, chords: { volume: 0.78, sendA: 0.18 } } },
   "chillstep": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.6, sendA: 0.22 }, hihat: { volume: 0.6 }, bass: { volume: 0.92 }, chords: { volume: 0.84, sendA: 0.3 }, lead: { volume: 0.72, sendA: 0.28 } } },
   "chillwave": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.62 }, snare: { volume: 0.5 }, hihat: { volume: 0.5, pan: -0.28 }, bass: { volume: 0.84 }, chords: { volume: 0.9, sendA: 0.34 }, lead: { volume: 0.74, sendA: 0.3 }, fx: { volume: 0.3 } } },
-  "chiptune": { category: "Electronic", loudnessTrimDb: -3.27, overrides: { hihat: { volume: 0.8 }, lead: { volume: 0.88, pan: 0.1 }, chords: { volume: 0.78 }, fx: { volume: 0.5 } } },
+  "chiptune": { humanise: 0.07, category: "Electronic", loudnessTrimDb: -3.27, overrides: { hihat: { volume: 0.8 }, lead: { volume: 0.88, pan: 0.1 }, chords: { volume: 0.78 }, fx: { volume: 0.5 } }  }, // trackers are grid-locked and the chips have no velocity to speak of
   "deathstep": { category: "Electronic", loudnessTrimDb: -0.66, overrides: { kick: { volume: 0.98 }, bass: { volume: 0.98 }, snare: { volume: 0.7 } } },
   "deep-house": { category: "Electronic", loudnessTrimDb: 0, overrides: { hihat: { volume: 0.62, sendB: 0.2 }, bass: { volume: 0.94 }, chords: { volume: 0.82, sendA: 0.2 }, lead: { volume: 0.68 } } },
   "detroit-techno": { category: "Electronic", loudnessTrimDb: -5.57, overrides: { chords: { volume: 0.8, pan: -0.18, sendA: 0.2 }, lead: { volume: 0.74 } } },
   "downtempo": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.66, sendA: 0.18 }, hihat: { volume: 0.6 }, bass: { volume: 0.9 }, chords: { volume: 0.84, sendA: 0.26 }, lead: { volume: 0.72, sendA: 0.24 }, fx: { volume: 0.36 } } },
   "dream-trance": { category: "Electronic", loudnessTrimDb: -6.86, overrides: { lead: { volume: 0.88, sendA: 0.3 }, chords: { volume: 0.84, sendA: 0.3 } } },
-  "drift-phonk": { category: "Electronic", loudnessTrimDb: -0.64, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.98 } } },
-  "dub": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.8 }, snare: { volume: 0.56, sendA: 0.24 }, hihat: { volume: 0.46, sendB: 0.26 }, bass: { volume: 0.98 }, chords: { volume: 0.82, sendA: 0.34 }, lead: { volume: 0.6, sendA: 0.34 }, fx: { volume: 0.34, sendA: 0.3 } } },
-  "dubstep": { category: "Electronic", loudnessTrimDb: -0.21, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.72 }, bass: { volume: 0.99 }, chords: { volume: 0.6 }, lead: { volume: 0.64 }, fx: { volume: 0.6 } } },
+  "drift-phonk": { humanise: 0.08, category: "Electronic", loudnessTrimDb: -0.64, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.98 } }  }, // phonk is deliberately flat and loud — that is the aesthetic
+  "dub": { humanise: 0.4, category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.8 }, snare: { volume: 0.56, sendA: 0.24 }, hihat: { volume: 0.46, sendB: 0.26 }, bass: { volume: 0.98 }, chords: { volume: 0.82, sendA: 0.34 }, lead: { volume: 0.6, sendA: 0.34 }, fx: { volume: 0.34, sendA: 0.3 } }, duck: { duckDb: 7, releaseMs: 200 } }, // a real drummer, and the mix is the instrument · dub is built on a deep, slow sidechain; the swell is the genre
+  "dubstep": { humanise: 0.12, category: "Electronic", loudnessTrimDb: -0.21, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.72 }, bass: { volume: 0.99 }, chords: { volume: 0.6 }, lead: { volume: 0.64 }, fx: { volume: 0.6 } }  }, // the dynamics live in the sound design, not in the lane levels
   "dub-techno": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.72 }, snare: { volume: 0.6, sendA: 0.24 }, hihat: { volume: 0.5, sendB: 0.24 }, bass: { volume: 0.96 }, chords: { volume: 0.86, sendA: 0.34 }, fx: { volume: 0.36, sendA: 0.28 } } },
   "edm-trap": { category: "Electronic", loudnessTrimDb: -0.04, overrides: { kick: { volume: 0.98 }, bass: { volume: 0.98 }, hihat: { volume: 0.82, pan: -0.38 }, lead: { volume: 0.8, sendA: 0.22 } } },
   "electro": { category: "Electronic", loudnessTrimDb: 0, overrides: { snare: { volume: 0.9 }, bass: { volume: 0.94 }, chords: { volume: 0.64 } } },
   "electro-house": { category: "Electronic", loudnessTrimDb: -3.46, overrides: { kick: { volume: 0.98 }, lead: { volume: 0.86, pan: 0.18 } } },
   "euro-trance": { category: "Electronic", loudnessTrimDb: -8.26, overrides: { lead: { volume: 0.9, sendA: 0.26 }, chords: { volume: 0.8, sendA: 0.28 }, fx: { volume: 0.72 } } },
-  "footwork": { category: "Electronic", loudnessTrimDb: -8.99, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.8 }, hihat: { volume: 0.84, pan: -0.38 }, percussion: { volume: 0.8 } } },
-  "frenchcore": { category: "Electronic", loudnessTrimDb: -3.99, overrides: { kick: { volume: 1.0 }, lead: { volume: 0.72 }, fx: { volume: 0.5 } } },
+  "footwork": { humanise: 0.12, category: "Electronic", loudnessTrimDb: -8.99, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.8 }, hihat: { volume: 0.84, pan: -0.38 }, percussion: { volume: 0.8 } }, duck: { duckDb: 6.5, releaseMs: 80 } }, // at 160 BPM any humanisation reads as a mistake, not as feel · 160 BPM footwork: punch, not a swell
+  "frenchcore": { humanise: 0.07, category: "Electronic", loudnessTrimDb: -3.99, overrides: { kick: { volume: 1.0 }, lead: { volume: 0.72 }, fx: { volume: 0.5 } }, duck: { duckDb: 7, releaseMs: 70 } }, // same as gabber: the kick is the genre, and it does not move · see hardcore-gabber — the tempo sets the release
   "french-house": { category: "Electronic", loudnessTrimDb: -4.31, overrides: { bass: { volume: 0.94 }, chords: { volume: 0.8, sendA: 0.18 }, lead: { volume: 0.76, sendB: 0.22 } } },
   "future-bass": { category: "Electronic", loudnessTrimDb: 0, overrides: { bass: { volume: 0.96 }, lead: { volume: 0.86, sendA: 0.24 }, chords: { volume: 0.78, sendA: 0.24 } } },
   "future-garage": { category: "Electronic", loudnessTrimDb: 0, overrides: { hihat: { volume: 0.7, pan: -0.34, sendB: 0.22 }, bass: { volume: 0.94 }, chords: { volume: 0.8, sendA: 0.22 } } },
@@ -229,14 +334,14 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "grime": { category: "Electronic", loudnessTrimDb: 0, overrides: { bass: { volume: 0.96 }, lead: { volume: 0.82 }, chords: { volume: 0.6 } } },
   "halftime": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.94 }, bass: { volume: 0.97 }, hihat: { volume: 0.62 } } },
   "happy-hardcore": { category: "Electronic", loudnessTrimDb: -4.17, overrides: { kick: { volume: 0.98 }, lead: { volume: 0.86 }, chords: { volume: 0.78, sendA: 0.2 } } },
-  "hardcore-gabber": { category: "Electronic", loudnessTrimDb: -2.56, overrides: { kick: { volume: 1.0 }, snare: { volume: 0.7 }, bass: { volume: 0.94 } } },
-  "hardstyle": { category: "Electronic", loudnessTrimDb: -4.36, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.98 }, lead: { volume: 0.82 }, fx: { volume: 0.6 } } },
-  "hard-techno": { category: "Electronic", loudnessTrimDb: -4.56, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.95 }, snare: { volume: 0.86 } } },
+  "hardcore-gabber": { humanise: 0.07, category: "Electronic", loudnessTrimDb: -2.56, overrides: { kick: { volume: 1.0 }, snare: { volume: 0.7 }, bass: { volume: 0.94 } }, duck: { duckDb: 7, releaseMs: 70 } }, // the genre is defined by its machine-straight kick · a 170+ BPM kick arrives every ~170 ms, so the duck must clear before the next one
+  "hardstyle": { humanise: 0.09, category: "Electronic", loudnessTrimDb: -4.36, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.98 }, lead: { volume: 0.82 }, fx: { volume: 0.6 } }, duck: { duckDb: 7, releaseMs: 80 } }, // the reverse bass and kick are programmed, not played · the reverse bass is re-triggered on every kick, so the duck clears fast
+  "hard-techno": { humanise: 0.1, category: "Electronic", loudnessTrimDb: -4.56, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.95 }, snare: { volume: 0.86 } }, duck: { duckDb: 6.5, releaseMs: 110 } }, // industrial-weight techno: a flat kick is the point · harder and faster than the category base
   "hard-trance": { category: "Electronic", loudnessTrimDb: -1.91, overrides: { kick: { volume: 0.98 }, lead: { volume: 0.88, sendA: 0.22 } } },
   "hard-trap": { category: "Electronic", loudnessTrimDb: -0.02, overrides: { kick: { volume: 0.98 }, bass: { volume: 0.99 }, hihat: { volume: 0.8, pan: -0.4 } } },
   "hybrid-trap": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.97 }, bass: { volume: 0.96 }, hihat: { volume: 0.8, pan: -0.36 }, lead: { volume: 0.78 } } },
   "idm": { category: "Electronic", loudnessTrimDb: -2.97, overrides: { percussion: { volume: 0.8, pan: 0.36 }, chords: { volume: 0.8, sendA: 0.24 }, bass: { volume: 0.88 } } },
-  "industrial-techno": { category: "Electronic", loudnessTrimDb: -4.53, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.95 }, snare: { volume: 0.88 } } },
+  "industrial-techno": { humanise: 0.1, category: "Electronic", loudnessTrimDb: -4.53, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.95 }, snare: { volume: 0.88 } }, duck: { duckDb: 6.5, releaseMs: 110 } }, // see hard-techno — the machine aesthetic is the genre · see hard-techno
   "jersey-club": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.99 }, percussion: { volume: 0.88, pan: 0.42 }, bass: { volume: 0.96 } } },
   "jersey-drill": { category: "Electronic", loudnessTrimDb: -5.28, overrides: { kick: { volume: 0.98 }, bass: { volume: 0.98 }, hihat: { volume: 0.82, pan: -0.4 }, percussion: { volume: 0.78 } } },
   "jump-up": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.92 }, bass: { volume: 0.98 } } },
@@ -264,7 +369,7 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "schranz": { category: "Electronic", loudnessTrimDb: -0.01, overrides: { kick: { volume: 1.0 }, bass: { volume: 0.96 }, percussion: { volume: 0.82 } } },
   "speedbass": { category: "Electronic", loudnessTrimDb: -3.12, overrides: { bass: { volume: 0.98 }, kick: { volume: 0.97 } } },
   "speed-garage": { category: "Electronic", loudnessTrimDb: -3.13, overrides: { hihat: { volume: 0.74, pan: -0.34, sendB: 0.2 }, bass: { volume: 0.94 } } },
-  "synthwave": { category: "Electronic", loudnessTrimDb: -3.32, overrides: { snare: { volume: 0.88, sendA: 0.22 }, chords: { volume: 0.86, pan: -0.3, sendA: 0.2 }, lead: { volume: 0.84, pan: 0.3, sendA: 0.22 }, bass: { volume: 0.92 } } },
+  "synthwave": { category: "Electronic", loudnessTrimDb: -3.32, overrides: { snare: { volume: 0.88, sendA: 0.22 }, chords: { volume: 0.86, pan: -0.3, sendA: 0.2 }, lead: { volume: 0.84, pan: 0.3, sendA: 0.22 }, bass: { volume: 0.92 } }, duck: { duckDb: 5, releaseMs: 150 } }, // slow tempo and a sustained bass: a longer release keeps it from chopping
   "tearout-dubstep": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, bass: { volume: 1.0 }, snare: { volume: 0.72 } } },
   "tech-house": { category: "Electronic", loudnessTrimDb: -5.27, overrides: { kick: { volume: 0.97 }, bass: { volume: 0.94 }, percussion: { volume: 0.76, sendB: 0.26 } } },
   "techstep": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.92 }, bass: { volume: 0.98 } } },
@@ -280,7 +385,7 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "wave": { category: "Electronic", loudnessTrimDb: 0, overrides: { kick: { volume: 0.76 }, hihat: { volume: 0.56 }, bass: { volume: 0.96 }, chords: { volume: 0.88, sendA: 0.32 }, lead: { volume: 0.78, sendA: 0.3 } } },
 
   // ------------------------------------------------------------------- Hip Hop
-  "boom-bap": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.94, sendA: 0.04 }, snare: { volume: 0.92, sendA: 0.12 }, hihat: { volume: 0.66 }, percussion: { volume: 0.58 }, bass: { volume: 0.94 }, chords: { volume: 0.74, sendA: 0.16 }, lead: { volume: 0.62 } } },
+  "boom-bap": { humanise: 0.34, category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.94, sendA: 0.04 }, snare: { volume: 0.92, sendA: 0.12 }, hihat: { volume: 0.66 }, percussion: { volume: 0.58 }, bass: { volume: 0.94 }, chords: { volume: 0.74, sendA: 0.16 }, lead: { volume: 0.62 } }, duck: { duckDb: 6.5, releaseMs: 120 } }, // sampled and MPC-swung: velocities are part of the sample chop · sampled kick and upright-ish bass share a band
   "cloud-rap": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.66, sendA: 0.24 }, hihat: { volume: 0.6, sendB: 0.2 }, bass: { volume: 0.97 }, chords: { volume: 0.86, sendA: 0.34 }, lead: { volume: 0.76, sendA: 0.3 } } },
   "conscious-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.86 }, snare: { volume: 0.84 }, hihat: { volume: 0.6 }, bass: { volume: 0.95 }, chords: { volume: 0.78, sendA: 0.18 }, lead: { volume: 0.72, sendA: 0.18 } } },
   "east-coast-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.95 }, snare: { volume: 0.9 }, hihat: { volume: 0.64 }, bass: { volume: 0.95 }, chords: { volume: 0.74, sendA: 0.14 } } },
@@ -289,15 +394,15 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "lofi-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.84 }, snare: { volume: 0.68, sendA: 0.16 }, hihat: { volume: 0.54, pan: -0.3 }, bass: { volume: 0.95 }, chords: { volume: 0.86, sendA: 0.28 }, lead: { volume: 0.68, sendA: 0.26 }, fx: { volume: 0.36 } } },
   "old-school-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.95 }, snare: { volume: 0.92, sendA: 0.1 }, hihat: { volume: 0.68 }, percussion: { volume: 0.7, pan: 0.4 }, bass: { volume: 0.94 } } },
   "southern-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.8 }, hihat: { volume: 0.74 }, bass: { volume: 0.99 }, chords: { volume: 0.72, sendA: 0.2 }, lead: { volume: 0.7, sendA: 0.2 } } },
-  "trap-rap": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.8 }, hihat: { volume: 0.84, pan: -0.42, sendB: 0.18 }, bass: { volume: 0.99 } } },
+  "trap-rap": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.98 }, snare: { volume: 0.8 }, hihat: { volume: 0.84, pan: -0.42, sendB: 0.18 }, bass: { volume: 0.99 } }, duck: { duckDb: 7, releaseMs: 90 } }, // the 808 *is* the bass and the kick at once — producers duck it hard and quickly
   "west-coast-hip-hop": { category: "Hip Hop", loudnessTrimDb: 0, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.86 }, hihat: { volume: 0.68 }, bass: { volume: 0.95 }, lead: { volume: 0.78, pan: 0.22 } } },
 
   // --------------------------------------------------------------- Jazz/Blues
   "acid-jazz": { category: "Jazz/Blues", loudnessTrimDb: -2.59, overrides: { kick: { volume: 0.86 }, snare: { volume: 0.84, sendA: 0.12 }, bass: { volume: 0.96 }, chords: { volume: 0.82, pan: -0.2 }, lead: { volume: 0.8, pan: 0.2 }, fx: { volume: 0.36, sendA: 0.12 } } },
-  "bebop": { category: "Jazz/Blues", loudnessTrimDb: -7.22, overrides: { kick: { volume: 0.62, sendA: 0.08 }, snare: { volume: 0.66, sendA: 0.1 }, hihat: { volume: 0.56 }, percussion: { volume: 0.46 }, bass: { volume: 0.98 }, chords: { volume: 0.76, sendA: 0.14 }, lead: { volume: 0.84, sendA: 0.16 } } },
-  "chicago-blues": { category: "Jazz/Blues", loudnessTrimDb: -5.64, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.8, sendA: 0.14 }, bass: { volume: 0.92 }, chords: { volume: 0.84, pan: -0.22 }, lead: { volume: 0.86, pan: 0.22, sendA: 0.2 } } },
+  "bebop": { humanise: 0.4, category: "Jazz/Blues", loudnessTrimDb: -7.22, overrides: { kick: { volume: 0.62, sendA: 0.08 }, snare: { volume: 0.66, sendA: 0.1 }, hihat: { volume: 0.56 }, percussion: { volume: 0.46 }, bass: { volume: 0.98 }, chords: { volume: 0.76, sendA: 0.14 }, lead: { volume: 0.84, sendA: 0.16 } }  }, // bebop comping is defined by accent, not by grid position
+  "chicago-blues": { humanise: 0.42, category: "Jazz/Blues", loudnessTrimDb: -5.64, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.8, sendA: 0.14 }, bass: { volume: 0.92 }, chords: { volume: 0.84, pan: -0.22 }, lead: { volume: 0.86, pan: 0.22, sendA: 0.2 } }, duck: { duckDb: 5.5, releaseMs: 110 } }, // a live band — the whole idiom is dynamics · an acoustic bass and a played kick: gentle and quick
   "cool-jazz": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.56 }, snare: { volume: 0.6, sendA: 0.14 }, hihat: { volume: 0.52 }, percussion: { volume: 0.44 }, bass: { volume: 0.92 }, chords: { volume: 0.82, sendA: 0.18 }, lead: { volume: 0.7, sendA: 0.18 } } },
-  "delta-blues": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.6 }, snare: { volume: 0.62, sendA: 0.16 }, hihat: { volume: 0.44 }, percussion: { volume: 0.4 }, bass: { volume: 0.86 }, chords: { volume: 0.88, pan: -0.2, sendA: 0.2 }, lead: { volume: 0.84, pan: 0.2, sendA: 0.2 } } },
+  "delta-blues": { humanise: 0.44, category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.6 }, snare: { volume: 0.62, sendA: 0.16 }, hihat: { volume: 0.44 }, percussion: { volume: 0.4 }, bass: { volume: 0.86 }, chords: { volume: 0.88, pan: -0.2, sendA: 0.2 }, lead: { volume: 0.84, pan: 0.2, sendA: 0.2 } }, duck: { duckDb: 5.5, releaseMs: 110 } }, // solo guitar and voice; the quietest licks carry the feel · see chicago-blues
   "electric-blues": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.8 }, snare: { volume: 0.82, sendA: 0.14 }, bass: { volume: 0.92 }, chords: { volume: 0.84, pan: -0.24 }, lead: { volume: 0.88, pan: 0.24, sendA: 0.2 } } },
   "free-jazz": { category: "Jazz/Blues", loudnessTrimDb: -7.52, overrides: { kick: { volume: 0.68, sendA: 0.14 }, snare: { volume: 0.74, sendA: 0.16 }, hihat: { volume: 0.6, sendA: 0.14 }, percussion: { volume: 0.68, pan: 0.26 }, bass: { volume: 0.96 }, chords: { volume: 0.74, sendA: 0.2 }, lead: { volume: 0.84, sendA: 0.2 } } },
   "gypsy-jazz": { category: "Jazz/Blues", loudnessTrimDb: 0, overrides: { kick: { volume: 0.58 }, snare: { volume: 0.6, sendA: 0.12 }, hihat: { volume: 0.5 }, percussion: { volume: 0.44 }, bass: { volume: 0.94 }, chords: { volume: 0.9, pan: -0.24, sendA: 0.18 }, lead: { volume: 0.88, pan: 0.24, sendA: 0.18 } } },
@@ -309,7 +414,7 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "traditional-jazz": { category: "Jazz/Blues", loudnessTrimDb: -2.82, overrides: { kick: { volume: 0.66 }, snare: { volume: 0.72, sendA: 0.14 }, hihat: { volume: 0.52 }, percussion: { volume: 0.58, pan: 0.28 }, bass: { volume: 0.94 }, chords: { volume: 0.84, sendA: 0.18 }, lead: { volume: 0.8, sendA: 0.18 } } },
 
   // -------------------------------------------------------------- Latin/World
-  "afrobeat": { category: "Latin/World", loudnessTrimDb: 0, overrides: { snare: { volume: 0.7 }, percussion: { volume: 0.96, pan: -0.44, sendB: 0.2 }, bass: { volume: 0.9 }, chords: { volume: 0.76, pan: 0.18 }, lead: { volume: 0.74 } } },
+  "afrobeat": { humanise: 0.36, category: "Latin/World", loudnessTrimDb: 0, overrides: { snare: { volume: 0.7 }, percussion: { volume: 0.96, pan: -0.44, sendB: 0.2 }, bass: { volume: 0.9 }, chords: { volume: 0.76, pan: 0.18 }, lead: { volume: 0.74 } }  }, // a live percussion ensemble is the lead voice
   "amapiano": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.86 }, percussion: { volume: 0.88, pan: -0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.82, sendA: 0.2 }, lead: { volume: 0.74, sendA: 0.2 } } },
   "bachata": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.68 }, percussion: { volume: 0.9, pan: -0.4 }, bass: { volume: 0.86 }, chords: { volume: 0.68 }, lead: { volume: 0.82, pan: 0.18, sendA: 0.2 } } },
   "bossa-nova": { category: "Latin/World", loudnessTrimDb: 0, overrides: { kick: { volume: 0.5 }, snare: { volume: 0.46, sendA: 0.12 }, hihat: { volume: 0.48 }, percussion: { volume: 0.72, pan: -0.3 }, bass: { volume: 0.9 }, chords: { volume: 0.9, pan: 0.18, sendA: 0.22 }, lead: { volume: 0.8, sendA: 0.22 }, fx: { volume: 0.2 } } },
@@ -325,14 +430,14 @@ export const GENRE_MIX: Record<string, GenreMix> = {
   "alternative-rnb": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.8 }, hihat: { volume: 0.52, pan: -0.3 }, bass: { volume: 0.95 }, chords: { volume: 0.86, sendA: 0.3 }, lead: { volume: 0.88, sendA: 0.3 } } },
   "city-pop": { category: "Pop/R&B", loudnessTrimDb: -2.52, overrides: { snare: { volume: 0.86, sendA: 0.16 }, bass: { volume: 0.9 }, chords: { volume: 0.8, pan: -0.26, sendA: 0.2 }, lead: { volume: 0.84, pan: 0.26, sendA: 0.2 } } },
   "contemporary-rnb": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.7 }, hihat: { volume: 0.7, pan: -0.34 }, bass: { volume: 0.97 }, lead: { volume: 0.92, sendA: 0.22 } } },
-  "disco": { category: "Pop/R&B", loudnessTrimDb: -6.39, overrides: { snare: { volume: 0.86, sendA: 0.16 }, hihat: { volume: 0.7, pan: -0.28, sendB: 0.16 }, percussion: { volume: 0.8, pan: 0.4, sendB: 0.22 }, bass: { volume: 0.94 }, chords: { volume: 0.8, pan: -0.24, sendA: 0.2 }, lead: { volume: 0.82, pan: 0.24, sendA: 0.2 } } },
+  "disco": { category: "Pop/R&B", loudnessTrimDb: -6.39, overrides: { snare: { volume: 0.86, sendA: 0.16 }, hihat: { volume: 0.7, pan: -0.28, sendB: 0.16 }, percussion: { volume: 0.8, pan: 0.4, sendB: 0.22 }, bass: { volume: 0.94 }, chords: { volume: 0.8, pan: -0.24, sendA: 0.2 }, lead: { volume: 0.82, pan: 0.24, sendA: 0.2 } }, duck: { duckDb: 5.5, releaseMs: 140 } }, // four-on-the-floor with a melodic bass line that has to come back between kicks
   "eurodance": { category: "Pop/R&B", loudnessTrimDb: -7.19, overrides: { kick: { volume: 0.96 }, bass: { volume: 0.94 }, chords: { volume: 0.82, sendA: 0.22 }, lead: { volume: 0.92, sendA: 0.24 }, fx: { volume: 0.72 } } },
-  "funk": { category: "Pop/R&B", loudnessTrimDb: -0.02, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.9 }, hihat: { volume: 0.74 }, percussion: { volume: 0.76, pan: 0.38 }, bass: { volume: 0.98 }, chords: { volume: 0.74, pan: -0.22 }, lead: { volume: 0.78, pan: 0.22 } } },
+  "funk": { humanise: 0.38, category: "Pop/R&B", loudnessTrimDb: -0.02, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.9 }, hihat: { volume: 0.74 }, percussion: { volume: 0.76, pan: 0.38 }, bass: { volume: 0.98 }, chords: { volume: 0.74, pan: -0.22 }, lead: { volume: 0.78, pan: 0.22 } }  }, // the one is hard, the ghosts are barely there; that gap is the genre
   "j-pop": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.92 }, snare: { volume: 0.86 }, hihat: { volume: 0.72 }, bass: { volume: 0.92 }, chords: { volume: 0.8, sendA: 0.18 }, lead: { volume: 0.94, sendA: 0.2 }, fx: { volume: 0.7 } } },
   "k-pop": { category: "Pop/R&B", loudnessTrimDb: -8.99, overrides: { kick: { volume: 0.94 }, snare: { volume: 0.88 }, bass: { volume: 0.94 }, lead: { volume: 0.94, sendA: 0.2 }, fx: { volume: 0.74 } } },
-  "motown": { category: "Pop/R&B", loudnessTrimDb: -3.27, overrides: { kick: { volume: 0.76 }, snare: { volume: 0.78, sendA: 0.16 }, hihat: { volume: 0.56 }, percussion: { volume: 0.72, pan: 0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.76, sendA: 0.16 }, lead: { volume: 0.92, pan: 0.1, sendA: 0.22 } } },
+  "motown": { humanise: 0.36, category: "Pop/R&B", loudnessTrimDb: -3.27, overrides: { kick: { volume: 0.76 }, snare: { volume: 0.78, sendA: 0.16 }, hihat: { volume: 0.56 }, percussion: { volume: 0.72, pan: 0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.76, sendA: 0.16 }, lead: { volume: 0.92, pan: 0.1, sendA: 0.22 } }  }, // see soul — same rooms, same players
   "neo-soul": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.72, sendA: 0.14 }, hihat: { volume: 0.54, pan: -0.26 }, bass: { volume: 0.95 }, chords: { volume: 0.88, pan: -0.18, sendA: 0.24 }, lead: { volume: 0.9, sendA: 0.26 } } },
-  "soul": { category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.78, sendA: 0.16 }, hihat: { volume: 0.58 }, percussion: { volume: 0.7, pan: 0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.78, sendA: 0.16 }, lead: { volume: 0.94, sendA: 0.24 } } },
+  "soul": { humanise: 0.36, category: "Pop/R&B", loudnessTrimDb: 0, overrides: { kick: { volume: 0.78 }, snare: { volume: 0.78, sendA: 0.16 }, hihat: { volume: 0.58 }, percussion: { volume: 0.7, pan: 0.36 }, bass: { volume: 0.94 }, chords: { volume: 0.78, sendA: 0.16 }, lead: { volume: 0.94, sendA: 0.24 } }  }, // session players: Motown's own kit is famously dynamic
   "synth-pop": { category: "Pop/R&B", loudnessTrimDb: -6.79, overrides: { kick: { volume: 0.9 }, bass: { volume: 0.9 }, chords: { volume: 0.82, pan: -0.24, sendA: 0.18 }, lead: { volume: 0.9, pan: 0.2, sendA: 0.2 } } },
   "traditional-pop": { category: "Pop/R&B", loudnessTrimDb: -3.17, overrides: { kick: { volume: 0.66 }, snare: { volume: 0.62, sendA: 0.16 }, hihat: { volume: 0.48 }, percussion: { volume: 0.5 }, bass: { volume: 0.86 }, chords: { volume: 0.78, sendA: 0.2 }, lead: { volume: 0.94, sendA: 0.26 }, fx: { volume: 0.24 } } },
 
@@ -415,6 +520,47 @@ export function resolveMixTrackId(track: Pick<SequencerTrack, "track_id" | "name
   return null;
 }
 
+/**
+ * P0.2 — the humanisation amount for one lane of one genre.
+ *
+ * Returns 0 for an unknown/custom genre id or an unrecognised lane, which is what makes
+ * humanisation opt-in: a genre the table does not know never has its velocities touched,
+ * exactly like `applyGenreMixDefaults` leaves its mix alone.
+ */
+export function getGenreHumaniseAmount(
+  genreId: string | undefined | null,
+  track: Pick<SequencerTrack, "track_id" | "name">
+): number {
+  if (!genreId) return 0;
+  const entry = GENRE_MIX[genreId];
+  if (!entry) return 0;
+  const role = resolveMixTrackId(track);
+  if (!role) return 0;
+  const base = entry.humanise ?? HUMANISE_BY_CATEGORY[entry.category] ?? 0;
+  if (!(base > 0)) return 0;
+  return base * HUMANISE_TRACK_SCALE[role];
+}
+
+/**
+ * P0.3 — the resolved kick/bass sidechain for a genre.
+ *
+ * Unknown/custom ids get `DEFAULT_DUCK` (see there for why this one is not opt-in), and both fields are
+ * clamped, so a table entry cannot schedule a 90 dB duck or a two-second release by accident.
+ */
+export function getGenreDuck(genreId: string | undefined | null): DuckSetting {
+  const entry = genreId ? GENRE_MIX[genreId] : undefined;
+  const base = entry ? DUCK_BY_CATEGORY[entry.category] ?? DEFAULT_DUCK : DEFAULT_DUCK;
+  const duckDb = entry?.duck?.duckDb ?? base.duckDb;
+  const releaseMs = entry?.duck?.releaseMs ?? base.releaseMs;
+  return {
+    duckDb: Math.max(DUCK_DB_MIN, Math.min(DUCK_DB_MAX, Number.isFinite(duckDb) ? duckDb : DEFAULT_DUCK.duckDb)),
+    releaseMs: Math.max(
+      DUCK_RELEASE_MIN_MS,
+      Math.min(DUCK_RELEASE_MAX_MS, Number.isFinite(releaseMs) ? releaseMs : DEFAULT_DUCK.releaseMs)
+    ),
+  };
+}
+
 /** Shallow pattern copy with fresh per-track arrays (mirrors the store's clonePattern). */
 function copyPatternTracks(pattern: SequencerPattern): SequencerPattern {
   return {
@@ -457,6 +603,43 @@ export function applyGenreMixDefaults(pattern: SequencerPattern, genreId?: strin
 }
 
 /**
+ * P0.2 — seeds velocity humanisation into every sounding step of a genre's pattern.
+ *
+ * Runs *after* the expansion, so a ghost-note rule (`×0.6`) is humanised around its own
+ * value rather than around the authored one, and only on steps that sound: a silent step's
+ * velocity is left exactly as authored, which keeps the velocity lane readable in the
+ * editor. Unknown/custom genre ids get a plain copy back.
+ *
+ * Baked here rather than at trigger time on purpose. The pattern is a document: the live
+ * engine, the WAV bounce, the MIDI/`.als` exports and the editor's velocity lane all read
+ * `track.velocity`, so one transform at genre entry gives them all the same performance
+ * for free — and `check:groove` measures the pattern, not the render, so this is also the
+ * only place the `flatTracks` claim can actually see it.
+ */
+export function humanisePatternVelocities(pattern: SequencerPattern, genreId?: string): SequencerPattern {
+  const id = genreId ?? pattern.genre_id;
+  const copy = copyPatternTracks(pattern);
+  if (!id || !GENRE_MIX[id]) return copy;
+
+  const seed = patternSeed(copy as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
+  return {
+    ...copy,
+    tracks: copy.tracks.map((track, trackIdx) => {
+      const amount = getGenreHumaniseAmount(id, track);
+      if (amount <= 0) return track;
+      const base = track.velocity ? [...track.velocity] : [];
+      // Iterate the steps, not the array: a track whose velocity lane is shorter than its step
+      // lane (an imported or hand-edited pattern) still gets a full-length lane back.
+      const velocity = track.steps.map((step, stepIdx) => {
+        const value = base[stepIdx] ?? 100;
+        return step > 0 ? humaniseVelocity(value, seed, trackIdx, stepIdx, amount) : value;
+      });
+      return { ...track, velocity };
+    }),
+  };
+}
+
+/**
  * The one helper every genre-entry site must use: clone a genre's pattern with the
  * genre's arranged mix applied. `clonePattern` itself is deliberately left alone
  * because it also backs slot copies and undo, where the user's values must survive.
@@ -472,9 +655,13 @@ export function patternFromGenre(genre: Pick<Genre, "id" | "sequencer_pattern"> 
   // A track the genre leaves silent stays silent: nothing here invents content for an `fx` part a
   // genre does not use.
   const category = (GENRE_INDEX_MAP[genre.id]?.category ?? undefined) as GenreCategory | undefined;
-  return expandGenrePattern(mixed, resolveGenreExpression(genre.id, category), {
+  const expanded = expandGenrePattern(mixed, resolveGenreExpression(genre.id, category), {
     commonChords: genre.common_chords,
   });
+  // P0.2: the last step of "this genre's pattern", and deliberately after the expansion —
+  // see `humanisePatternVelocities` for why it is baked into the pattern instead of applied
+  // at trigger time.
+  return humanisePatternVelocities(expanded, genre.id);
 }
 
 /**

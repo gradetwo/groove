@@ -1,4 +1,5 @@
 import { SequencerPattern } from "./genre";
+import type { SongSection } from "./song";
 import { EffectsRackState, DrumKitType } from "../audio/AudioEngine";
 
 export interface ProjectSnapshotSummary {
@@ -24,7 +25,16 @@ export interface GrooveProject {
   };
   activeSlot: "A" | "B";
   songMode: boolean;
+  /**
+   * The legacy bar chain, still written so an older build (and the hub's list view) can read the order.
+   * `sections` is the source of truth from B1 on; `songChain` is derived from it via `sectionsToSongChain`.
+   */
   songChain: ("A" | "B")[];
+  /**
+   * The arrangement (B1). Optional because projects saved before it exist and `.groove` packages carry whatever
+   * the project had: a reader that finds none migrates `songChain` losslessly (`migrateSongChain`).
+   */
+  sections?: SongSection[];
   loopRange: [number, number] | null;
   effectsRack: EffectsRackState;
   drumKit: DrumKitType;

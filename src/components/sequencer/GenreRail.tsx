@@ -74,18 +74,22 @@ export const GenreRail = memo<GenreRailProps>(function GenreRail({
                   ? "border-[var(--g)] shadow-[0_0_14px_rgba(245,183,61,0.2)] bg-[#171920]"
                   : "border-line hover:border-[#3a3e48] hover:-translate-y-0.5"
               }`}
-              style={{ ["--g" as any]: accent }}
+              style={{
+                ["--g" as any]: accent,
+                // The chip's label is type; the chip's own border goes on using `--g`.
+                ["--g-ink" as any]: `color-mix(in srgb, ${accent} 38%, var(--d-ink))`,
+              }}
             >
               <span
                 className={`font-['Space_Grotesk'] font-bold text-sm tracking-wide truncate ${
-                  isCurrent ? "text-[var(--g)]" : "text-[#f0ede6]"
+                  isCurrent ? "text-[var(--g-ink)]" : "text-[#f0ede6]"
                 }`}
               >
                 {g.name}
               </span>
               <span
                 className={`font-mono text-[9.5px] uppercase tracking-[0.14em] truncate ${
-                  isCurrent ? "text-[var(--g)] opacity-95 font-bold" : "text-text-sub"
+                  isCurrent ? "text-[var(--g-ink)] opacity-95 font-bold" : "text-text-sub"
                 }`}
               >
                 {getGenreChipTag(g)}

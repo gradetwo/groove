@@ -33,6 +33,7 @@
  *   node scripts/desktop_skins.mjs            # write src/styles/desktopSkins.css
  *   node scripts/desktop_skins.mjs --check    # fail if it is out of date (the gate)
  */
+import sharedLiteralRoles from "../src/data/skinLiteralRoles.json" with { type: "json" };
 import fs from "node:fs";
 import path from "node:path";
 
@@ -93,6 +94,163 @@ const ensureContrast = (hex, ground, floor) => {
   }
   return rgbToHex([r, g, b]);
 };
+
+/**
+ * The grounds a *tinted* chip presents: the panel itself and the colour mixed into it.
+ *
+ * The desktop's chips are `bg-<role>/10..30`, so the text on them is not read against the panel but against a
+ * 10-30 % wash of the role over it. Deriving a text role against the panel alone left 54 elements at 4.2:1 —
+ * "Load to Studio" and the lane labels on every light skin — because a 20 % accent wash is *lighter* than the
+ * panel on a light theme and *darker* on a dark one, and the ink has to clear both.
+ */
+const tintGrounds = (base, panel, steps = [0, 0.1, 0.2, 0.3]) =>
+  steps.map((amount) => rgbToHex(overHex({ rgb: hexToRgb(base), a: amount }, hexToRgb(panel))));
+
+/** Composite a colour at `a` over an opaque one, in hex space. */
+function overHex(fg, bg) {
+  return [0, 1, 2].map((i) => Math.round(fg.rgb[i] * fg.a + bg[i] * (1 - fg.a)));
+}
+
+/**
+ * The ink that reads **best on all of these grounds at once**.
+ *
+ * The first attempt reduced with `ensureContrast`, which is wrong whenever the grounds sit on both sides of the
+ * colour: a light panel asks for a darker ink, a 20 % wash of a saturated accent asks for a lighter one, and the
+ * sequential reduce satisfied whichever came last (Soviet-years' chord page went from 12 findings to 78). This
+ * maximises the *minimum* contrast instead, so one colour has to work everywhere — and if nothing clears the
+ * floor, the caller still gets the best available rather than a colour tuned to one ground.
+ */
+const bestInkFor = (base, grounds, floor, options = {}) => {
+  const [br, bg, bb] = hexToRgb(base);
+  const luminanceOf = (hex) => luminance(hexToRgb(hex));
+  const worst = (hex) => {
+    const value = luminanceOf(hex);
+    return grounds.reduce((min, ground) => {
+      const other = luminanceOf(ground);
+      const [hi, lo] = value > other ? [value, other] : [other, value];
+      return Math.min(min, (hi + 0.05) / (lo + 0.05));
+    }, Infinity);
+  };
+  if (worst(base) >= floor) return base;
+  /**
+   * Move away from the base in small steps and take the **first** candidate that clears every ground.
+   *
+   * Distance matters as much as contrast: the obvious "maximise the minimum" search returns pure black for
+   * every skin, which is not an accent anymore. A 2 % step keeps the colour's identity while the ratio climbs.
+   */
+  const step = options.step ?? 0.02;
+  let fallback = base;
+  let fallbackScore = worst(base);
+  for (let t = step; t <= 1.0001; t += step) {
+    for (const target of [0, 255]) {
+      const candidate = rgbToHex([br, bg, bb].map((v) => v + (target - v) * t));
+      const score = worst(candidate);
+      if (score >= floor) return candidate;
+      if (score > fallbackScore) {
+        fallback = candidate;
+        fallbackScore = score;
+      }
+    }
+  }
+  return fallback;
+};
+
+/**
+ * Turn a Tailwind variant prefix into a selector, because `[class~="hover:bg-x"]` alone matches **always**.
+ *
+ * This was a real, app-wide bug: the map emitted 133 rules whose selector was just the class-token attribute, so
+ * a `hover:` colour (and every `focus:`, `group-hover:`, `sm:` variant) was applied as the **base** colour on
+ * every skin but the default. The buttons painted themselves in their hover colour, and the audit saw fills that
+ * do not exist at rest. A variant has to become the state it names:
+ *
+ *   hover:            → `:hover`
+ *   group-hover:      → `.group:hover …`   (Tailwind's group contract)
+ *   peer-checked:     → `.peer:checked ~ …`
+ *   sm:/md:/lg:…      → an `@media (min-width: …)` wrapper
+ *   aria-pressed:     → `[aria-pressed="true"]`
+ *   data-[state=open] → `[data-state="open"]`
+ *
+ * An unrecognised variant returns `null` and the caller **skips the rule**, because a rule that applies at the
+ * wrong time is worse than a colour that stays unmapped (the unmapped one is at least visible to the audit).
+ */
+const BREAKPOINTS = { sm: 640, md: 768, lg: 1024, xl: 1280, "2xl": 1536 };
+/** Variants that are pseudo-*elements* (`::selection`), not states. */
+const PSEUDO_ELEMENTS = new Set(["selection", "placeholder", "before", "after", "marker", "file", "first-line"]);
+const PSEUDO_VARIANTS = new Set([
+  "hover", "focus", "focus-visible", "focus-within", "active", "disabled", "checked",
+  "first", "last", "odd", "even", "visited", "target", "placeholder-shown",
+]);
+
+function variantSelector(variant, baseSelector) {
+  /** `@media` wrappers that have to sit outside the rule. */
+  const media = [];
+  /** Selectors that have to sit *before* the element (group/peer). */
+  let prefix = "";
+  for (const part of variant.split(":").filter(Boolean)) {
+    if (PSEUDO_ELEMENTS.has(part)) {
+      baseSelector += `::${part}`;
+      continue;
+    }
+    if (PSEUDO_VARIANTS.has(part)) {
+      baseSelector += `:${part}`;
+      continue;
+    }
+    if (BREAKPOINTS[part]) {
+      media.push(`(min-width: ${BREAKPOINTS[part]}px)`);
+      continue;
+    }
+    if (part.startsWith("group-")) {
+      const state = part.slice("group-".length);
+      if (!PSEUDO_VARIANTS.has(state)) return null;
+      prefix += `.group:${state} `;
+      continue;
+    }
+    if (part.startsWith("peer-")) {
+      const state = part.slice("peer-".length);
+      if (!PSEUDO_VARIANTS.has(state)) return null;
+      prefix += `.peer:${state} ~ `;
+      continue;
+    }
+    if (part.startsWith("aria-")) {
+      baseSelector += `[aria-${part.slice(5)}="true"]`;
+      continue;
+    }
+    const dataMatch = /^data-\[(.+?)=["']?(.+?)["']?\]$/.exec(part);
+    if (dataMatch) {
+      baseSelector += `[data-${dataMatch[1]}="${dataMatch[2]}"]`;
+      continue;
+    }
+    if (part.startsWith("data-")) {
+      baseSelector += `[${part}]`;
+      continue;
+    }
+    // Unknown: the caller drops the rule and counts it.
+    return null;
+  }
+  return { selector: `${prefix}${baseSelector}`, media };
+}
+
+/**
+ * Wrap a set of media queries around a rule, and collect per-breakpoint blocks.
+ *
+ * Media queries cannot be attached to a selector, so rules carrying one are gathered and emitted together at the
+ * end of the sheet — which also keeps them last in the cascade, where Tailwind puts them.
+ */
+const mediaBuckets = new Map();
+function pushRule(rules, selector, body, media = []) {
+  if (!media.length) {
+    rules.push(`${selector} { ${body} }`);
+    return;
+  }
+  const key = media.join(" and ");
+  if (!mediaBuckets.has(key)) mediaBuckets.set(key, []);
+  mediaBuckets.get(key).push(`${selector} { ${body} }`);
+}
+/** How many rules were dropped because their variant is not understood. */
+const skippedVariants = new Map();
+
+/** The chip washes the app actually uses (`bg-<role>/10`, `/15`, `/20`). */
+const CHIP_TINTS = [0, 0.08, 0.15, 0.2];
 
 const ensureTextOn = (fill, text, floor) => {
   const target = isLight(text) ? 0 : 255;
@@ -165,6 +323,14 @@ function phonePalette(skin) {
     ink2: read("--m-ink-2"),
     ink3: read("--m-ink-3"),
     gold: read("--m-gold"),
+    // The phone's own warning tone, added when the six skins gained one; older sheets without it fall back.
+    warning: (() => {
+      try {
+        return read("--m-warning");
+      } catch {
+        return null;
+      }
+    })(),
     goldHi: read("--m-gold-hi"),
     teal: read("--m-teal"),
     red: read("--m-red"),
@@ -349,10 +515,32 @@ function palette(skin) {
     ink2: p.ink2,
     ink3: p.ink3,
     accent: p.gold,
-    danger: p.red,
-    success: p.green,
+    /**
+     * The signal colours, held to the contrast floor as *text* as well as used as floods.
+     *
+     * They are used both ways: a fill with `--d-on-accent` on it, and small type (the challenge's rank
+     * certificate). `p.red`/`p.green` are the phone's own tokens and on the light skins they are mid-tones —
+     * Soviet-years' green measured 3.6:1 on its surface — so each steps only as far as the floor needs.
+     */
+    danger: bestInkFor(p.red, [p.card, p.card2, ...tintGrounds(p.red, p.card, CHIP_TINTS.filter((t) => t > 0))], 4.5),
+    success: bestInkFor(p.green, [p.card, p.card2, ...tintGrounds(p.green, p.card, CHIP_TINTS.filter((t) => t > 0))], 4.5),
     // Read, not just seen: the direction that increases contrast against the panel it sits on.
-    warning: readableStep(p.gold, p.card, light ? 0.35 : 0.2),
+    /**
+     * The warning tone: the phone's own `--m-warning` when it has one (a warning should be amber, not a darker
+     * version of whatever the skin's accent happens to be — the minimal skin's accent is blue), otherwise the
+     * accent stepped away from the ground. Either way it is held to the text floor.
+     */
+    warning: bestInkFor(
+      p.warning ?? readableStep(p.gold, p.card, light ? 0.35 : 0.2),
+      [
+        p.card,
+        p.card2,
+        // …and its own chips: "Rank Certificate" sits on a 20 % amber wash, which measured 4.45:1 against a
+        // warning derived from the panel alone.
+        ...tintGrounds(p.warning ?? p.gold, p.card, CHIP_TINTS.filter((t) => t > 0)),
+      ],
+      4.5
+    ),
     /**
      * A light surface inside the theme, and the ink that reads on it.
      *
@@ -390,9 +578,22 @@ function palette(skin) {
      * Soviet-years flag red measured 3.2:1 there. Taking the darkest of the three grounds (card, card-2 and the
      * surface step between them) costs a slightly deeper red and removes the class.
      */
-    accentInk: [p.card, p.card2, step(p.card, 0.06)].reduce(
-      (best, ground) => ensureContrast(best, ground, 4.5),
-      p.gold
+    /**
+     * The accent as type, chosen to read on the panel, both card tones *and* the accent's own chip washes —
+     * most of this text sits on `bg-accent/15`.
+     */
+    accentInk: bestInkFor(
+      p.gold,
+      [
+        p.card,
+        p.card2,
+        step(p.card, 0.06),
+        // Its own chips, over both card tones: `bg-accent/20` on a `bg-[#f4f4f6]` panel is a different ground
+        // from the same wash over white, and the "Hooktheory" badge sits on the former (4.44:1 before this).
+        ...tintGrounds(p.gold, p.card, CHIP_TINTS.filter((t) => t > 0)),
+        ...tintGrounds(p.gold, p.card2, CHIP_TINTS.filter((t) => t > 0)),
+      ],
+      4.5
     ),
     /**
      * The lane fills — this skin's *designed* hue, not a darkened one.
@@ -440,60 +641,16 @@ function palette(skin) {
  * red. The long tail is one-off decoration inside gradients and glows, which the per-skin character pass
  * owns. Every entry is a role the token table already has, so the mapping cannot invent a colour.
  */
-const LITERAL_ROLES = {
-  // grounds
-  "#0a0b0d": "bg",
-  "#0c0d12": "bg",
-  "#0f1118": "bg",
-  // panels
-  "#12131a": "panel",
-  "#1a1c22": "panel",
-  "#1f222b": "panel",
-  "#0d0e12": "panel2",
-  "#111422": "panel2",
-  "#161a2b": "panel2",
-  "#17181c": "panel2",
-  "#12151f": "panel2",
-  "#15171d": "panel2",
-  // lines
-  "#23262d": "line",
-  "#252833": "line",
-  "#2b3040": "lineStrong",
-  "#3a3e48": "lineStrong",
-  // inks
-  "#eae6dc": "ink",
-  "#f5f4ef": "ink",
-  "#b9b7b0": "ink2",
-  "#8e93a0": "ink3",
-  // signal
-  // The piano keys: a light surface inside the theme, with its own ink (see `surfacePale`).
-  "#f3f1eb": "surfacePale",
-  "#e2dfd5": "surfacePale2",
-  "#f5b73d": "accent",
-  "#d8b988": "accentSoft",
-  "#f59e0b": "warning",
-  "#ff5964": "danger",
-  "#45e0c9": "trackHat",
-  /**
-   * The app's brand teal is used as the **selected** state in the chord workshop (`bg-[#4ad8c8]/20
-   * border-[#4ad8c8] text-[#4ad8c8]` on the chosen playing style, the status dot, the section badges).
-   *
-   * It was mapped by distance to the *electronic* category hue, which is a fixed teal on every theme — so on
-   * the newsprint and aged-paper skins the selected chip stayed fluorescent cyan and read as a leftover. A
-   * selection is exactly what the accent role is for: it now follows the skin (blue on minimal, ink-teal on
-   * comic, flag red on Soviet-years).
-   */
-  "#4ad8c8": "accent",
-  "#38bdf8": "trackFx",
-  "#ec4899": "trackChord",
-  "#a78bfa": "trackBass",
-  "#7ee787": "trackLead",
-  "#c8e06a": "trackPerc",
-  "#ffb65c": "trackSnare",
-  "#f06ec4": "trackChord",
-  "#9aa5ce": "trackFx",
-  "#ff8a5c": "trackBass",
-};
+/**
+ * The literal -> role table now lives in `src/data/skinLiteralRoles.json`, shared with the phone sheets.
+ *
+ * It used to be defined here, which made the desktop the only place the mapping was written down: the phone's
+ * legacy and panel sheets hand-map the same hexes to their own tokens, and nothing compared the two. The table is
+ * data so that the generator, the phone sheets and the desktop output can all be checked against one copy.
+ */
+const LITERAL_ROLES = sharedLiteralRoles.literals;
+
+
 
 /**
  * The role set, and how a literal that is *not* in the list above is assigned.
@@ -628,6 +785,48 @@ const NAMED_FAMILIES = {
 };
 
 /** Every `(prefix)-<family>-<shade>[/opacity]` the source actually uses. */
+/**
+ * Every **signal fill** the source uses, as a class string with its variant and opacity.
+ *
+ * Collected in one place, by walking the source once, because the pairing below needs the complete set and the
+ * map is emitted in several blocks: an earlier attempt populated it inside one of those blocks and the pairing
+ * (which runs later in the file but earlier in the sheet) saw an empty set — the same ordering trap as the
+ * `NaN` accumulator and the unmatched ids. A function called once, before anything consumes it, cannot be
+ * reordered by accident.
+ */
+function collectSignalFills(literalRoles) {
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!/node_modules|test|__tests__/.test(entry.name)) walk(rel);
+      } else if (/\.tsx?$/.test(entry.name)) files.push(rel);
+    }
+  };
+  for (const dir of ["src/components", "src/views", "src/features", "src/ui"]) walk(dir);
+  files.push("src/App.tsx");
+
+  const SIGNAL_ROLE = /^(accent|accentSoft|danger|success|warning|track|cat)/;
+  const fills = new Set();
+  const litRe = /(?:^|[\s"'`])((?:[a-z-]+:)*)(bg|from|via|to)-(\[#[0-9a-fA-F]{3,8}\]|[a-z]+-[0-9]{2,3})(?:\/(\d{1,3}))?/g;
+  const ownRe = /(?:^|[\s"'`])((?:[a-z-]+:)*)(bg|from|via|to)-(accent|accentSoft|danger|success|warning|track-[a-z]+|cat-[a-z]+)(?:\/(\d{1,3}))?/g;
+  for (const file of files) {
+    const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+    for (const match of text.matchAll(litRe)) {
+      const value = match[3];
+      const literal = value.startsWith("[#") ? value.slice(1, -1).toLowerCase() : null;
+      const role = literal ? literalRoles[literal] : NAMED_FAMILIES[value.split("-")[0]];
+      if (!role || !SIGNAL_ROLE.test(role)) continue;
+      fills.add(`${match[1]}${match[2]}-${value}${match[4] ? `/${match[4]}` : ""}`);
+    }
+    for (const match of text.matchAll(ownRe)) {
+      fills.add(`${match[1]}${match[2]}-${match[3]}${match[4] ? `/${match[4]}` : ""}`);
+    }
+  }
+  return fills;
+}
+
 function namedPaletteUses() {
   const files = [];
   const walk = (dir) => {
@@ -840,7 +1039,20 @@ function tokenRecord(skin) {
     ...Object.fromEntries(
       Object.entries(p.track).flatMap(([lane, hex]) => [
         [`--d-track-${lane}`, channels(hex)],
-        [`--d-track-${lane}-ink`, channels(readableStep(hex, p.panel, light ? 0.75 : 0.55))],
+        /**
+         * The lane name, derived against the panel *and* the lane's own 10-30 % washes — a track header prints
+         * its name on a chip tinted with its own colour.
+         */
+        [
+          `--d-track-${lane}-ink`,
+          channels(
+            bestInkFor(
+              readableStep(hex, p.panel, light ? 0.75 : 0.55),
+              tintGrounds(hex, p.panel, CHIP_TINTS),
+              4.5
+            )
+          ),
+        ],
         [`--d-track-${lane}-on`, channels(p.trackOn[lane])],
       ])
     ),
@@ -898,6 +1110,13 @@ function generateTokens() {
 }
 
 function generate() {
+  /**
+   * Every signal **fill** the source uses (declared here, filled in below).
+   *
+   * The literal map is emitted before the named-ink block, so this cannot be declared next to its use.
+   */
+  /** Signal fills, collected once (see `collectSignalFills`) — assigned as soon as the literal map exists. */
+  let allSignals = new Set();
   const parts = [header(false) + "\n"];
 
   for (const skin of SKINS.filter((s) => s !== "default")) {
@@ -924,6 +1143,9 @@ function generate() {
    * The long tail is assigned per *use*, not per colour: the same hex can be a surface in one place and ink
    * in another, and the role has to match the job the utility does.
    */
+  /** Populate the signal fills as soon as the roles are known, so nothing downstream sees an empty set. */
+  allSignals = collectSignalFills(literalRoles);
+
   const roleFor = new Map();
   for (const [hex, uses] of prefixes.entries()) {
     /**
@@ -990,7 +1212,20 @@ function generate() {
       const tableIsLine = LINE_ROLES.has(role) && !LINE_PREFIXES.has(prefix);
       const kindMismatch = (surfacePrefix && tableIsInk) || tableIsLine;
       const baseRole = perUse && kindMismatch ? perUse : role;
-      const inkRole = prefix === "text" && /^track[A-Z]/.test(baseRole) ? `${baseRole}Ink` : baseRole;
+      /**
+       * A colour used as *type* takes its text token, not its fill token.
+       *
+       * `text-[#4ad8c8]` (the brand teal, and now the accent) mapped to `--d-accent` — the raw accent, which is
+       * a *flood* colour: on the Soviet-years paper it measured 3.5:1. The accent's readable step is exactly
+       * what `--d-accent-ink` is for, and the lane colours have had their own ink since the first audit.
+       */
+      const textRole =
+        prefix === "text" && baseRole === "accent"
+          ? "accentInk"
+          : prefix === "text" && /^track[A-Z]/.test(baseRole)
+            ? `${baseRole}Ink`
+            : baseRole;
+      const inkRole = textRole;
       const chosen = ROLE_TOKEN[inkRole] ?? token;
       const property = PROPERTY[prefix];
       if (!property) continue;
@@ -1001,7 +1236,12 @@ function generate() {
           ? `var(--tw-gradient-from), ${colour}, var(--tw-gradient-to, rgb(0 0 0 / 0))`
           : colour;
       const selector = `[class~="${variant}${prefix}-[${hex}]${opacity ? `/${opacity}` : ""}"]`;
-      rules.push(`${selector} { ${property}: ${value}; }`);
+      const built = variantSelector(variant, selector);
+      if (!built) {
+        skippedVariants.set(variant, (skippedVariants.get(variant) ?? 0) + 1);
+        continue;
+      }
+      pushRule(rules, built.selector, `${property}: ${value};`, built.media);
     }
   }
   /**
@@ -1027,7 +1267,8 @@ function generate() {
   }
   const namedRules = [];
   for (const [key, selectors] of [...grouped.entries()].sort()) {
-    const [, prefix, token, opacity] = key.split("|");
+    // The variant is part of the key, so a `hover:` colour cannot be grouped with the base one.
+    const [namedVariant, prefix, token, opacity] = key.split("|");
     const property = PROPERTY[prefix];
     if (!property) continue;
     const colour = opacity ? `rgb(var(${token}) / ${(Number(opacity) / 100).toFixed(2)})` : `rgb(var(${token}))`;
@@ -1039,7 +1280,12 @@ function generate() {
       .sort()
       .map((selector) => `[class~="${selector}"]`)
       .join(",\n");
-    namedRules.push(`${selectorList} { ${property}: ${value}; }`);
+    const built = variantSelector(namedVariant, selectorList);
+    if (!built) {
+      skippedVariants.set(namedVariant, (skippedVariants.get(namedVariant) ?? 0) + 1);
+      continue;
+    }
+    pushRule(namedRules, built.selector, `${property}: ${value};`, built.media);
   }
   /**
    * Neutral ramps: every shade of every grey family the source uses, per role.
@@ -1063,7 +1309,7 @@ function generate() {
     for (const file of files) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
       const re = new RegExp(
-        `(?:^|[\\s"'])((?:[a-z-]+:)*)(bg|border|text)-(${GREY_FAMILIES.join("|")})-(${GREY_SHADES.join("|")})(?:\\/(\\d{1,3}))?`,
+        `(?:^|[\\s"'])((?:[a-z-]+:)*)(bg|border|text)-(${GREY_FAMILIES.join("|")})-(${GREY_SHADES.join("|")})(?![0-9])(?:\\/(\\d{1,3}))?`,
         "g"
       );
       for (const match of text.matchAll(re)) {
@@ -1082,9 +1328,30 @@ function generate() {
     const token = ROLE_TOKEN[role];
     if (!property || !token) continue;
     const colour = opacity ? `rgb(var(${token}) / ${(Number(opacity) / 100).toFixed(2)})` : `rgb(var(${token}))`;
-    greyRules.push(
-      [...selectors].sort().map((selector) => `[class~="${selector}"]`).join(",\n") + ` { ${property}: ${colour}; }`
-    );
+    /**
+     * The stored selector is `variant` + the utility, e.g. `hover:bg-neutral-800`. Splitting them is what turns
+     * a hover colour back into a hover.
+     */
+    const parts = [...selectors].sort().map((selector) => {
+      const colon = selector.lastIndexOf(":");
+      const utility = colon === -1 ? selector : selector.slice(colon + 1);
+      const variant = colon === -1 ? "" : selector.slice(0, colon + 1);
+      return { selector, variant, base: `[class~="${selector}"]`, utility };
+    });
+    const grouped = new Map();
+    for (const part of parts) {
+      const built = variantSelector(part.variant, part.base);
+      if (!built) {
+        skippedVariants.set(part.variant, (skippedVariants.get(part.variant) ?? 0) + 1);
+        continue;
+      }
+      const key = `${built.selector}|${built.media.join(" and ")}`;
+      if (!grouped.has(key)) grouped.set(key, { ...built, count: 0 });
+      grouped.get(key).count += 1;
+    }
+    for (const { selector, media } of grouped.values()) {
+      pushRule(greyRules, selector, `${property}: ${colour};`, media);
+    }
   }
   parts.push(
     "\n/*\n * Tailwind's neutral ramps, by prefix and shade: a dark grey fill is a panel, a light one is a\n * sheet, a border is a hairline, a grey text is an ink step. Without this the challenge's\n * `bg-neutral-800` option chips kept their dark boxes under the shell's ink on a light skin —\n * invisible text.\n */\n" +
@@ -1127,23 +1394,42 @@ function generate() {
     for (const dir of ["src/components", "src/views", "src/features", "src/ui"]) walk(dir);
     files.push("src/App.tsx");
 
-    const whiteVariants = new Set();
     const whiteOnSignal = new Set();
+    /** Signals that carry a *dark* named ink (`bg-accent text-zinc-950`, a green gradient with black type). */
+    const darkInkSignals = new Set();
     const blackVariants = new Set();
     /** `text-zinc-900/950` variants that must take the signal fill's ink (see below). */
     const darkOnSignal = new Set();
+    const whiteVariants = new Set();
+    /**
+     * Every signal **fill** the source uses, regardless of what sits on it.
+     *
+     * The first version only paired a fill with an ink when both appeared in the same 400-character window, which
+     * is fragile in exactly the place it matters: the challenge's primary button writes its gradient and its
+     * `text-white` in one template literal with a conditional in between, and the pair was never emitted — so the
+     * label fell back to the surface ink and measured 3.2:1 on the comic skin. A pair only applies when both
+     * classes are on the same element, so emitting it for every fill the app uses is both safe and complete.
+     */
     for (const file of files) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-      for (const match of text.matchAll(/(?:^|[\s"'`])((?:[a-z-]+:)*)(bg|from|via|to)-(\[[^\]]+\]|[a-z]+-[0-9]{2,3})(?:\/(\d{1,3}))?/g)) {
+      for (const match of text.matchAll(/(?:^|[\s"'`])((?:[a-z-]+:)*)(bg|from|via|to)-(\[[^\]]+\]|[a-z]+-[0-9]{2,3}|accent(?:Soft)?|danger|success|warning|track-[a-z]+|cat-[a-z]+)(?:\/(\d{1,3}))?/g)) {
         const window = text.slice(match.index, match.index + 400);
-        if (/(?:^|[\s"'])(?:[a-z-]+:)*text-white/.test(window)) {
+        const wantsWhite = /(?:^|[\s"'])(?:[a-z-]+:)*text-white/.test(window);
+        const wantsDark = /(?:^|[\s"'])(?:[a-z-]+:)*text-(?:black|zinc-9[0-9]{2})/.test(window);
+        if (wantsWhite || wantsDark) {
           const value = match[3];
           const literal = value.startsWith("[#") ? value.slice(1, -1).toLowerCase() : null;
           const role = literal
             ? literalRoles[literal] ?? nearestRole(literal, roles, rolesFor(match[2]))
-            : NAMED_FAMILIES[value.split("-")[0]];
+            : NAMED_FAMILIES[value.split("-")[0]] ??
+              // The app's own palette names have no shade, so they have no family mapping: they *are* the role.
+              /^(accent|accentSoft|danger|success|warning|track|cat)/.test(value)
+                ? value
+                : undefined;
           if (role && /^(accent|accentSoft|danger|success|warning|track|cat)/.test(role)) {
-            whiteOnSignal.add(`${match[1]}${match[2]}-${value}${match[4] ? `/${match[4]}` : ""}`);
+            const selector = `${match[1]}${match[2]}-${value}${match[4] ? `/${match[4]}` : ""}`;
+            if (wantsWhite) whiteOnSignal.add(selector);
+            if (wantsDark) darkInkSignals.add(selector);
           }
         }
       }
@@ -1161,29 +1447,82 @@ function generate() {
       }
     }
 
-    const whiteRules = [...whiteVariants]
-      .sort()
-      .map((selector) => `[class~="${selector}"] { color: rgb(var(--d-ink)); }`);
-    const signalRules = [...whiteOnSignal]
-      .sort()
-      .map((selector) => `[class~="${selector}"][class~="text-white"] { color: rgb(var(--d-on-accent)); }`);
-    const blackRules = [...blackVariants]
-      .sort()
-      .map((selector) => `[class~="${selector}"] { color: rgb(var(--d-on-accent)); }`);
+    const whiteRules = [];
+    for (const selector of [...whiteVariants].sort()) {
+      const colon = selector.lastIndexOf(":");
+      const variant = colon === -1 ? "" : selector.slice(0, colon + 1);
+      const built = variantSelector(variant, `[class~="${selector}"]`);
+      if (!built) {
+        skippedVariants.set(variant, (skippedVariants.get(variant) ?? 0) + 1);
+        continue;
+      }
+      pushRule(whiteRules, built.selector, "color: rgb(var(--d-ink));", built.media);
+    }
+    /**
+     * The pairs, built from the fills themselves rather than from a co-occurrence window.
+     *
+     * `allSignals` holds every signal fill the source uses, in every variant spelling; each is paired with the
+     * *plain* inks plus the inks sharing its own variant (`hover:bg-x` with `hover:text-white`), which keeps the
+     * sheet small and the CSS honest.
+     */
+    const variantOf = (selector) => {
+      const colon = selector.lastIndexOf(":");
+      return colon === -1 ? "" : selector.slice(0, colon + 1);
+    };
+    const signalsFor = (inkVariant) =>
+      [...allSignals].filter((signal) => variantOf(signal) === inkVariant || variantOf(signal) === "");
+    const signalRules = [];
+    for (const selector of [...new Set([...whiteOnSignal, ...signalsFor("")])].sort()) {
+      const colon = selector.lastIndexOf(":");
+      const variant = colon === -1 ? "" : selector.slice(0, colon + 1);
+      const built = variantSelector(variant, `[class~="${selector}"][class~="text-white"]`);
+      if (!built) {
+        skippedVariants.set(variant, (skippedVariants.get(variant) ?? 0) + 1);
+        continue;
+      }
+      pushRule(signalRules, built.selector, "color: rgb(var(--d-on-accent));", built.media);
+    }
+    const blackRules = [];
+    for (const selector of [...blackVariants].sort()) {
+      const colon = selector.lastIndexOf(":");
+      const variant = colon === -1 ? "" : selector.slice(0, colon + 1);
+      const built = variantSelector(variant, `[class~="${selector}"]`);
+      if (!built) {
+        skippedVariants.set(variant, (skippedVariants.get(variant) ?? 0) + 1);
+        continue;
+      }
+      pushRule(blackRules, built.selector, "color: rgb(var(--d-on-accent));", built.media);
+    }
     /**
      * And the same inks *on* a signal fill: `bg-accent text-zinc-950` has to become the accent's own ink.
      *
      * Emitted as a pair for the same reason as `text-white`: CSS can see both classes on the element, and the
      * signal fill's ink is chosen per skin exactly for this.
      */
-    const darkOnSignalRules = [...whiteOnSignal]
-      .sort()
-      .flatMap((signal) => [...darkOnSignal].sort().map((ink) => `[class~="${signal}"][class~="${ink}"] { color: rgb(var(--d-on-accent)); }`));
+    const darkOnSignalRules = [];
+    for (const signal of [...new Set([...darkInkSignals, ...signalsFor("")])].sort()) {
+      const colon = signal.lastIndexOf(":");
+      const variant = colon === -1 ? "" : signal.slice(0, colon + 1);
+      for (const ink of [...darkOnSignal].sort()) {
+        const built = variantSelector(variant, `[class~="${signal}"][class~="${ink}"]`);
+        if (!built) {
+          skippedVariants.set(variant, (skippedVariants.get(variant) ?? 0) + 1);
+          continue;
+        }
+        pushRule(darkOnSignalRules, built.selector, "color: rgb(var(--d-on-accent));", built.media);
+      }
+    }
 
     parts.push(
       "\n/*\n * The two named inks, by what they sit on: `text-white` is the surface's ink (or the fill's, on a\n" +
         " * signal fill), `text-black` is the ink of an accent flood.\n */\n" +
-        [...signalRules, ...darkOnSignalRules, ...blackRules, ...whiteRules].join("\n") +
+        /**
+         * Order matters: the unconditional rules are *fallbacks* ("text-white is the surface ink"), and the
+         * paired rules are the exceptions ("…unless you are on a signal fill"). Tailwind's cascade resolves an
+         * equal-specificity tie by source order, so the pairs must come **last** — the other way round, the
+         * fallback won and the comic skin's gradient button labelled itself in its own ink (3.2:1).
+         */
+        [...whiteRules, ...blackRules, ...signalRules, ...darkOnSignalRules].join("\n") +
         "\n"
     );
   }
@@ -1214,9 +1553,43 @@ function generate() {
     }
     parts.push(
       "\n/*\n * The accent as type; the flood keeps the raw accent and its label uses `--d-on-accent`.\n */\n" +
-        [...variants].sort().map((selector) => `[class~="${selector}"] { color: rgb(var(--d-accent-ink)); }`).join("\n") +
+        (() => {
+          const rules = [];
+          for (const selector of [...variants].sort()) {
+            const colon = selector.lastIndexOf(":");
+            const variant = colon === -1 ? "" : selector.slice(0, colon + 1);
+            const built = variantSelector(variant, `[class~="${selector}"]`);
+            if (!built) {
+              skippedVariants.set(variant, (skippedVariants.get(variant) ?? 0) + 1);
+              continue;
+            }
+            pushRule(rules, built.selector, "color: rgb(var(--d-accent-ink));", built.media);
+          }
+          return rules.join("\n");
+        })() +
         "\n"
     );
+  }
+
+  /**
+   * Media-query rules go last, where Tailwind puts its own.
+   *
+   * They cannot live inside the flat list: a `sm:` variant is a `@media` wrapper, not a selector, and a rule
+   * with the media attached to the selector is not CSS.
+   */
+  if (mediaBuckets.size) {
+    const blocks = [...mediaBuckets.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([query, rules]) => `@media ${query} {\n${rules.join("\n")}\n}`);
+    parts.push("\n/*\n * Breakpoint variants, wrapped rather than flattened.\n */\n" + blocks.join("\n"));
+  }
+  if (skippedVariants.size) {
+    /**
+     * Reported, never silent: an unhandled variant means a colour stays unmapped, which the readability audit
+     * will find. Dropping it quietly is how `hover:` came to be applied as a base colour in the first place.
+     */
+    const summary = [...skippedVariants.entries()].map(([variant, count]) => `${variant || "(none)"}×${count}`).join(", ");
+    console.error(`⚠️  desktop skins: ${skippedVariants.size} unhandled variant(s) skipped: ${summary}`);
   }
 
   return parts.join("\n");

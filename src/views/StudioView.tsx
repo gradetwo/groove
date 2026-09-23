@@ -830,7 +830,18 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
   return (
-    <div className="w-full text-text" style={{ ["--g" as any]: genreAccent }}>
+    <div className="w-full text-text" /**
+       * The genre accent, twice.
+       *
+       * `--g` is the *shape* colour (a bar, a chip's border, a waveform) and stays whatever the genre says.
+       * `--g-ink` is the same hue mixed toward the surface ink so it can be *read*: a genre's accent is chosen
+       * to glow on the studio's dark plate, and on a light skin the title, the era line and the progression
+       * were mint-on-white at 1.6:1.
+       */
+      style={{
+        ["--g" as any]: genreAccent,
+        ["--g-ink" as any]: `color-mix(in srgb, ${genreAccent} 38%, var(--d-ink))`,
+      }}>
       <ToastBanner message={toastMessage} />
 
       {/* Genre Rail Wrapper (.rail-wrap) */}

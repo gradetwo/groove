@@ -9,6 +9,7 @@ import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../../../au
 import { exportMasterMp3 } from "../../../audio/Mp3Exporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
+import { patternForExport } from "../../../data/songFlatten";
 import { useLanguage } from "../../../i18n/LanguageContext";
 
 /**
@@ -75,15 +76,43 @@ export function useExportActions({
   const { t } = useLanguage();
   const [isExportingAudio, setIsExportingAudio] = useState(false);
 
+  /**
+   * B4 — the one place that decides what an exporter writes.
+   *
+   * In song mode every exporter (WAV, MP3, MIDI, `.als`) writes the *arrangement*; in loop mode they write the
+   * pattern being edited. Putting the decision here is what stops the four of them disagreeing about the length of
+   * the same session, which is the failure this replaced.
+   */
+  const exportPattern = useCallback(() => {
+    const state = seqStateRef.current;
+    const decision = patternForExport({
+      songMode: Boolean(state.songMode),
+      activeSlot: state.activeSlot,
+      patterns: state.patterns,
+      current: patternRef.current,
+      sections: state.sections ?? [],
+      genreId: currentGenre.id,
+      bpm,
+      swing,
+      resolution,
+      loopRange: state.loopRange,
+    });
+    if (decision.problems.length) {
+      // Say what was dropped: a silent half-arrangement is worse than a visible one.
+      showToast(t("export_arrangement_partial", { detail: decision.problems.slice(0, 3).join("; ") }));
+    }
+    return decision.pattern;
+  }, [bpm, currentGenre.id, resolution, showToast, swing, t]);
+
   const handleExportMidi = useCallback(() => {
     downloadMidiFile(
-      { pattern: patternRef.current, bpm, genreName: currentGenre.name },
+      { pattern: exportPattern(), bpm, genreName: currentGenre.name },
       currentGenre.name
     );
     showToast(
       t("export_midi_done", { name: currentGenre.name })
     );
-  }, [bpm, currentGenre.name, t, showToast]);
+  }, [bpm, currentGenre.name, exportPattern, t, showToast]);
 
   const handleExportAls = useCallback(async () => {
     try {
@@ -93,7 +122,7 @@ export function useExportActions({
       const result = await downloadAbletonProject(
         {
           bpm,
-          pattern: patternRef.current,
+          pattern: exportPattern(),
           genreName: currentGenre.name,
           scaleName: patternRef.current.scale,
         },
@@ -107,7 +136,7 @@ export function useExportActions({
         t("export_als_failed", { error: describeError(err) })
       );
     }
-  }, [bpm, currentGenre.name, t, showToast]);
+  }, [bpm, currentGenre.name, exportPattern, t, showToast]);
 
   const handleExportGroove = useCallback(() => {
     const projToExport: GrooveProject = activeProject
@@ -196,7 +225,14 @@ export function useExportActions({
     try {
       setIsExportingAudio(true);
       showToast(t("export_wav_rendering"));
-      const result = await exportMasterWav(patternRef.current, currentGenre.id, {
+      /**
+       * B2: in song mode the bounce is the *arrangement*, not the loop.
+       *
+       * `renderSongOffline` flattens the sections through the same renderer, so this is the only difference between
+       * the two paths: which pattern the offline engine is handed. Outside song mode nothing changes, and a song
+       * whose sections all point at empty clips refuses with a reason instead of emitting a silent file.
+       */
+      const result = await exportMasterWav(exportPattern(), currentGenre.id, {
         bpm,
         swing,
         drumKit,
@@ -245,7 +281,7 @@ export function useExportActions({
     try {
       setIsExportingAudio(true);
       showToast(t("export_mp3_rendering"));
-      const result = await exportMasterMp3(patternRef.current, currentGenre.id, {
+      const result = await exportMasterMp3(exportPattern(), currentGenre.id, {
         bpm,
         swing,
         drumKit,
@@ -270,7 +306,7 @@ export function useExportActions({
     } finally {
       setIsExportingAudio(false);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, t, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, t, showToast]);
 
   const handleExportStems = useCallback(async () => {
     try {
@@ -313,6 +349,8 @@ export function useExportActions({
       resolution,
       totalSteps: stepCount,
       tracks: patternRef.current.tracks.map(toSharedTrack),
+      // B1: the link carries the arrangement, so opening it reproduces the song and not only the clip.
+      sections: seqStateRef.current.sections,
     });
     if (!result.url) {
       showToast(

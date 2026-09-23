@@ -169,21 +169,33 @@ export function normalisePlayMode(value: string | null | undefined): PlayMode {
 /**
  * Which genre plays next, given the mode.
  *
- * `one` repeats the same genre; `genre` walks the same category in library order; `all` walks the
- * whole library. Returns the id to play (never null: a one-item library repeats that item).
+ * `one` repeats the same genre; `genre` walks the same category in library order; `all` **shuffles** rather
+ * than walking, because that is what the button says ("Shuffle all genres" / 全部随机) and a control whose
+ * label promises one thing while the queue does another is the same defect as a control that does nothing.
+ * Returns the id to play (never null: a one-item library repeats that item).
+ *
+ * `random` is injectable so the shuffle is testable and deterministic under test; production passes
+ * `Math.random`.
  */
 export function nextGenreForMode(
   mode: PlayMode,
   currentId: string,
   library: readonly { id: string; category: string }[],
-  direction: 1 | -1 = 1
+  direction: 1 | -1 = 1,
+  random: () => number = Math.random
 ): string {
   if (library.length === 0) return currentId;
   if (mode === "one") return currentId;
-  const pool =
-    mode === "genre"
-      ? library.filter((genre) => genre.category === library.find((g) => g.id === currentId)?.category)
-      : library;
+  if (mode === "all") {
+    // Never hand back the genre that is already playing: "next" that repeats is the bug this mode had.
+    const candidates = library.filter((genre) => genre.id !== currentId);
+    if (candidates.length === 0) return currentId;
+    const pick = Math.min(candidates.length - 1, Math.max(0, Math.floor(random() * candidates.length)));
+    return candidates[pick].id;
+  }
+  const pool = library.filter(
+    (genre) => genre.category === library.find((g) => g.id === currentId)?.category
+  );
   const list = pool.length > 0 ? pool : library;
   const index = list.findIndex((genre) => genre.id === currentId);
   if (index === -1) return list[0].id;

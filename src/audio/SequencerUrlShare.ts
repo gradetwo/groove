@@ -4,6 +4,7 @@
  */
 
 import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
+import { CLIP_SLOTS, MAX_SECTION_BARS, type ClipSlot, type SongSection } from "../types/song";
 
 export interface SharedSequencerState {
   genreId: string;
@@ -32,6 +33,14 @@ export interface SharedSequencerState {
     sendA?: number;
     sendB?: number;
   }>;
+  /**
+   * B1 — the arrangement, when the link carries one.
+   *
+   * Optional: links made before the arrangement existed are still valid, and a decoder that finds none leaves it
+   * out (the caller migrates its own chain, exactly as the store does). Sections are validated on the way in with
+   * the same suspicion as every other field: a link is untrusted input.
+   */
+  sections?: SongSection[];
 }
 
 /**
@@ -97,6 +106,8 @@ interface CompactSharePayload {
   rs?: "1/8" | "1/16" | "1/32";
   stLen?: number;
   t: CompactTrackPayload[];
+  /** `[slot, bars, label?, velocityScale?, mute?]` per section; absent for a pre-B1 link. */
+  sec?: Array<[ClipSlot, number, string?, number?, string[]?]>;
 }
 
 const VALID_RESOLUTIONS = new Set(["1/8", "1/16", "1/32"]);
@@ -185,6 +196,31 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
       });
     }
 
+    /**
+     * The arrangement, compactly: a tuple per section, and only the fields that differ from the defaults.
+     *
+     * A section that cannot be expressed within the bounds is dropped rather than failing the whole link: the link's
+     * purpose is to share a groove, and a malformed extra should not make the groove unshareable.
+     */
+    const compactSections: CompactSharePayload["sec"] = [];
+    for (const section of state.sections ?? []) {
+      if (!section || typeof section !== "object") continue;
+      if (!CLIP_SLOTS.includes(section.slot)) continue;
+      const bars = Number(section.bars);
+      if (!Number.isInteger(bars) || bars < 1 || bars > MAX_SECTION_BARS) continue;
+      const label = typeof section.label === "string" ? section.label.slice(0, 24) : undefined;
+      const scale = Number(section.velocityScale);
+      const velocityScale = Number.isFinite(scale) && scale !== 1 ? Math.max(0, Math.min(2, scale)) : undefined;
+      const mute = Array.isArray(section.mute)
+        ? section.mute.filter((id): id is string => typeof id === "string").slice(0, 16).map((id) => id.slice(0, 32))
+        : undefined;
+      compactSections.push(
+        mute || velocityScale !== undefined || label
+          ? [section.slot, bars, label, velocityScale, mute?.length ? mute : undefined]
+          : [section.slot, bars]
+      );
+    }
+
     const payload: CompactSharePayload = {
       g: state.genreId,
       b: Math.round(state.bpm),
@@ -194,6 +230,7 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
       rs: (state.resolution && VALID_RESOLUTIONS.has(state.resolution)) ? state.resolution : "1/16",
       stLen: totalSteps,
       t: compactTracks,
+      ...(compactSections.length ? { sec: compactSections } : {}),
     };
 
     const jsonStr = JSON.stringify(payload);
@@ -398,6 +435,30 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
       });
     }
 
+    /**
+     * The arrangement, validated the same way as the rest of an untrusted payload: a tuple that does not fit the
+     * bounds is dropped, not trusted, and an absent field stays absent (the caller migrates its own chain).
+     */
+    const sections: SongSection[] = [];
+    if (Array.isArray(payload.sec)) {
+      for (const raw of payload.sec.slice(0, 64)) {
+        if (!Array.isArray(raw) || raw.length < 2) continue;
+        const [slot, bars, label, velocityScale, mute] = raw as [unknown, unknown, unknown, unknown, unknown];
+        if (typeof slot !== "string" || !CLIP_SLOTS.includes(slot as ClipSlot)) continue;
+        const barCount = Number(bars);
+        if (!Number.isInteger(barCount) || barCount < 1 || barCount > MAX_SECTION_BARS) continue;
+        const section: SongSection = { id: `share-s${sections.length + 1}`, slot: slot as ClipSlot, bars: barCount };
+        if (typeof label === "string" && label) section.label = label.slice(0, 24);
+        const scale = Number(velocityScale);
+        if (Number.isFinite(scale) && scale !== 0) section.velocityScale = Math.max(0, Math.min(2, scale));
+        if (Array.isArray(mute)) {
+          const ids = mute.filter((id): id is string => typeof id === "string").slice(0, 16).map((id) => id.slice(0, 32));
+          if (ids.length) section.mute = ids;
+        }
+        sections.push(section);
+      }
+    }
+
     return {
       genreId: String(payload.g),
       bpm,
@@ -407,6 +468,7 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
       resolution,
       totalSteps,
       tracks,
+      ...(sections.length ? { sections } : {}),
     };
   } catch {
     return null;

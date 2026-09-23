@@ -23,6 +23,11 @@ import { playPolySynthNote, DEFAULT_SYNTH_PRESETS } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { patternSeed, probabilityPasses, resolveRatchet, ratchetVelocityScale } from "./noteEvents";
+import { flattenSong } from "../data/songFlatten";
+import type { Song } from "../types/song";
+import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
+import { swingOffsetSeconds } from "./swing";
+import { resolveRenderTailSec } from "./renderTail";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -67,6 +72,11 @@ export interface RenderWavOptions {
   masterMakeupDb?: number;
   /** Set false to render without the mastering bus compressor (measurement tooling). */
   masterBusCompEnabled?: boolean;
+  /**
+   * Master true-peak ceiling, dBTP. The graph already accepts it for measurement tooling; forwarding it here
+   * lets a probe separate "the sidechain ducked" from "the ceiling gave part of it back".
+   */
+  limiterCeilingDb?: number;
   /**
    * Called once per render with the limiter that actually ended up in the graph.
    *
@@ -230,7 +240,11 @@ export async function renderPatternOffline(
       ? (pattern as any).totalSteps
       : pattern.tracks[0]?.steps.length || 16;
   const totalSteps = patternSteps * bars;
-  const totalDurationSec = totalSteps * stepDur + 0.6; // Tail for decay/release
+  // P0.6: the tail is the pattern's own reverb/delay decay, not a fixed 0.6 s. `genreFx` is resolved a few
+  // lines below for the graph; resolve it here first so the render length can depend on it.
+  const tailGenreFx = resolveGenreFx(pattern.genre_id);
+  const tailSec = resolveRenderTailSec(tailGenreFx, bpm);
+  const totalDurationSec = totalSteps * stepDur + tailSec;
 
   const OfflineContextClass =
     (typeof window !== "undefined" && (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)) ||
@@ -266,14 +280,14 @@ export async function renderPatternOffline(
     loudnessTrimDb,
     masterMakeupDb: options.masterMakeupDb,
     masterBusCompEnabled: options.masterBusCompEnabled,
+    limiterCeilingDb: options.limiterCeilingDb,
   });
 
   // N-14: the genre's master FX and bus character, applied through the same shared
   // applier the live engine uses, at the same *playing* tempo (never the metadata
   // `default_bpm`). An unknown/custom genre resolves to null and the graph keeps its
   // defaults, exactly as playback does.
-  const genreFx = resolveGenreFx(pattern.genre_id);
-  if (genreFx) applyGenreFxToGraph(graph, genreFx, bpm);
+  if (tailGenreFx) applyGenreFxToGraph(graph, tailGenreFx, bpm);
 
   // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
   // export never matched the audition it was rendered from, which broke the project's
@@ -453,11 +467,10 @@ export async function renderPatternOffline(
         return;
       }
 
-      // F-03: per-track swing offset, mirroring AudioEngine.scheduleStep.
+      // F-03/P0.5: per-track swing offset, from the shared rule both engines use.
       const trackSwingOffset = track.swing !== undefined ? track.swing / 100 : 0;
       const effSwing = Math.max(0, Math.min(0.75, swing + trackSwingOffset));
-      const swingOffset =
-        step % 2 === 1 && effSwing > 0 ? (effSwing * 0.5) * stepDur : 0;
+      const swingOffset = swingOffsetSeconds(step, effSwing, stepDur);
       const stepTime = unswungTime + swingOffset;
 
       const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
@@ -485,8 +498,9 @@ export async function renderPatternOffline(
         // Synthesis Dispatch with physical drum kit modeling and polyphonic synth
         if (trackId === "kick" || lowerName.includes("kick")) {
           synthesizeKick(ctx, trackDest, subTime, subVel, pitchVal, drumKit, noiseBuf, noisePositionFor(trackIdx, stepIdx, r));
-          // Acoustic Enhancement: Kick-Bass sidechain ducking (parity with AudioEngine)
-          const duckDepth = Math.max(0.65, 1 - 0.3 * subVel);
+          // Kick-bass sidechain ducking, scheduled from the same shape the live engine uses
+          // (`audio/sidechain.ts`), so an export matches what was auditioned.
+          const duckShape = resolveKickDuckShape(pattern.genre_id, subVel);
           pattern.tracks.forEach((tTrack: Track, tIdx: number) => {
             const tTid = (tTrack.track_id || "").toLowerCase();
             const tName = (tTrack.name || "").toLowerCase();
@@ -494,11 +508,7 @@ export async function renderPatternOffline(
               const bassStrip = trackStrips[tIdx];
               if (bassStrip?.duckGain) {
                 try {
-                  const param = bassStrip.duckGain.gain;
-                  param.cancelScheduledValues(subTime);
-                  param.setValueAtTime(1.0, subTime);
-                  param.linearRampToValueAtTime(duckDepth, subTime + 0.003);
-                  param.exponentialRampToValueAtTime(1.0, subTime + 0.065);
+                  scheduleKickDuck(bassStrip.duckGain.gain, subTime, duckShape);
                 } catch {
                   // Guard against scheduling errors
                 }
@@ -710,6 +720,28 @@ function synthFX(ctx: BaseAudioContext, dest: AudioNode, time: number, vel: numb
 
   osc.start(time);
   osc.stop(time + noteDuration + 0.02);
+}
+
+/**
+ * B2 — render a whole song, through the same renderer as everything else.
+ *
+ * There is deliberately no second renderer: the arrangement is flattened into one pattern
+ * (`flattenSong`, which applies each section's clip, repeats, mutes and velocity scale) and handed to
+ * `renderPatternOffline` with `bars: 1`, because the flattened pattern's `totalSteps` *is* the song. Every
+ * measurement, gate, limiter path and stem exporter therefore keeps working on a song unchanged.
+ *
+ * `songMode` is the caller's decision (the app renders the song when the project is in song mode and the loop
+ * otherwise); this function always renders the arrangement it is given.
+ */
+export async function renderSongOffline(
+  song: Song,
+  options: RenderWavOptions = {}
+): Promise<AudioBuffer> {
+  const flattened = flattenSong(song);
+  if (!flattened.totalBars || flattened.totalSteps <= 0) {
+    throw new Error(`cannot render the song: ${flattened.problems.join("; ") || "no playable bars"}`);
+  }
+  return renderPatternOffline(flattened.pattern, { ...options, bars: 1 });
 }
 
 /**

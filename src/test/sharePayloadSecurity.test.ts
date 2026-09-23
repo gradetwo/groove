@@ -205,4 +205,48 @@ describe("F-09 · sequencer share URL never exceeds what the decoder accepts", (
     expect(decoded?.tracks[0].steps.slice(0, 16)).toEqual(state.tracks[0].steps);
     expect(decoded?.tracks[0].velocity?.slice(0, 16)).toEqual(state.tracks[0].velocity);
   });
+
+  /**
+   * B1 — the link carries the arrangement.
+   *
+   * A share link is untrusted input, so the sections are bounded on the way in exactly like every other field,
+   * and a link made before the arrangement existed still decodes (with no `sections`, so the caller migrates its
+   * own chain).
+   */
+  it("round-trips an arrangement, including its overrides", () => {
+    const state = {
+      ...makeState(2, 16),
+      sections: [
+        { id: "s1", slot: "A" as const, bars: 4, label: "intro" },
+        { id: "s2", slot: "B" as const, bars: 8, velocityScale: 0.8, mute: ["hihat", "percussion"] },
+        { id: "s3", slot: "A" as const, bars: 1 },
+      ],
+    };
+    const decoded = decodeSharedSequencer(encodeSharedSequencer(state));
+    expect(decoded?.sections).toEqual([
+      { id: "share-s1", slot: "A", bars: 4, label: "intro" },
+      { id: "share-s2", slot: "B", bars: 8, velocityScale: 0.8, mute: ["hihat", "percussion"] },
+      { id: "share-s3", slot: "A", bars: 1 },
+    ]);
+  });
+
+  it("leaves `sections` absent for a link that has none, rather than inventing one", () => {
+    const decoded = decodeSharedSequencer(encodeSharedSequencer(makeState(2, 16)));
+    expect(decoded?.sections).toBeUndefined();
+  });
+
+  it("drops an out-of-bounds section instead of trusting it or failing the link", () => {
+    // 9999 bars would allocate minutes of audio; an unknown slot is not a clip. The groove still opens.
+    const state = {
+      ...makeState(2, 16),
+      sections: [
+        { id: "s1", slot: "A" as const, bars: 9999 },
+        { id: "s2", slot: "Z" as unknown as "A", bars: 1 },
+        { id: "s3", slot: "B" as const, bars: 2 },
+      ],
+    };
+    const decoded = decodeSharedSequencer(encodeSharedSequencer(state));
+    expect(decoded).not.toBeNull();
+    expect(decoded?.sections).toEqual([{ id: "share-s1", slot: "B", bars: 2 }]);
+  });
 });

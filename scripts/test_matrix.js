@@ -917,7 +917,13 @@ async function runTestOnTarget(target, baseUrl) {
       );
       return {
         steps: document.querySelectorAll('[data-testid^="mobile-jam-step-"]').length,
-        lanes: [0, 1, 2, 3].every((lane) => Boolean(step(lane, 15))),
+        /**
+         * Six lanes now: the phone's report was that six pads sat above four rows with nothing saying which row a
+         * pad wrote, so 即兴 shows kick / snare / hat / percussion / bass / chords — one visible row per pad plus
+         * the two grid-only lanes a jam session wants. The assertion follows the product, and `lanes` checks the
+         * *last* lane exists so a truncated grid fails rather than passing on the first four.
+         */
+        lanes: [0, 1, 2, 3, 4, 5].every((lane) => Boolean(step(lane, 15))),
         pads: pads.length,
         tempoBelowGrid: tempoBottom > gridBottom,
         noPlayer: !player && !bar,
@@ -946,8 +952,8 @@ async function runTestOnTarget(target, baseUrl) {
           .filter((box) => box.width > 0 && (box.left < -0.5 || box.right > window.innerWidth + 0.5)),
       };
     });
-    if (jam.steps !== 64 || !jam.lanes) {
-      throw new Error(`Jam grid is not 4x16 (${jam.steps} steps, lanes ok: ${jam.lanes})`);
+    if (jam.steps !== 96 || !jam.lanes) {
+      throw new Error(`Jam grid is not 6x16 (${jam.steps} steps, lanes ok: ${jam.lanes})`);
     }
     if (jam.pads !== 6) throw new Error(`Jam module has ${jam.pads} pad(s), expected 6`);
     if (!jam.tempoBelowGrid) throw new Error("Jam tempo controls are not below the grid");
@@ -1620,8 +1626,16 @@ async function runTestOnTarget(target, baseUrl) {
       if (after.body === "rgb(10, 11, 13)" && before.bg === "10 11 13") {
         throw new Error(`Desktop page ground ignored the skin (body stayed ${after.body})`);
       }
-      // Put it back before the modal closes: the rest of the matrix runs in this page.
-      await page.click("[data-testid='settings-skin-default']");
+      /**
+       * Put it back before the modal closes: the rest of the matrix runs in this page.
+       *
+       * Dispatched rather than clicked. The skin buttons are `transition-all`, and now that the skin sheets apply
+       * their `hover:` states for real (they used to be emitted without the pseudo-class and therefore did
+       * nothing), Playwright's actionability check — which waits for two identical frames — spent its 30 s budget
+       * on this one click while the machine was loaded by the rest of the matrix. The assertion here is about the
+       * *palette*, not about whether a finger can hit it; the touch-target leg already covers that.
+       */
+      await page.$eval("[data-testid='settings-skin-default']", (el) => el.click());
       await page.waitForTimeout(200);
       const restored = await page.evaluate(() => document.documentElement.getAttribute("data-skin"));
       if (restored !== "default") throw new Error(`Desktop skin did not restore to default (${restored})`);

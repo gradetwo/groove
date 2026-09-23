@@ -1,7 +1,10 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
+  HUMANISE_MAX_VELOCITY,
+  clampVelocity,
   deterministicRoll,
   hashString,
+  humaniseVelocity,
   patternSeed,
   probabilityPasses,
   ratchetVelocityScale,
@@ -92,6 +95,87 @@ describe("N-04 · deterministic probability helper", () => {
     expect(resolveRatchet(99, false)).toBe(8);
     expect(ratchetVelocityScale(0, 3)).toBeCloseTo(0.85);
     expect(ratchetVelocityScale(2, 3)).toBeCloseTo(0.95);
+  });
+});
+
+/**
+ * P0.2 — the velocity humanisation helper.
+ *
+ * The property that matters to the rest of the app is *determinism* (an export is a document),
+ * so every test here either pins a stable key or pins the bound the amount promises.
+ */
+describe("P0.2 · seeded velocity humanisation", () => {
+  it("is the identity at amount 0, for a negative amount, and for a non-finite one", () => {
+    for (const amount of [0, -0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      for (const base of [1, 37, 100, 127]) {
+        expect(humaniseVelocity(base, "seed", 0, 3, amount)).toBe(base);
+      }
+    }
+  });
+
+  it("clamps into 1..127 and never returns a fraction", () => {
+    expect(clampVelocity(0)).toBe(1);
+    expect(clampVelocity(999)).toBe(127);
+    expect(clampVelocity(100.4)).toBe(100);
+    expect(clampVelocity(Number.NaN)).toBe(100);
+    for (const base of [1, 2, 126, 127]) {
+      for (let step = 0; step < 200; step++) {
+        const value = humaniseVelocity(base, "seed", 0, step, 1);
+        expect(Number.isInteger(value)).toBe(true);
+        expect(value).toBeGreaterThanOrEqual(1);
+        expect(value).toBeLessThanOrEqual(127);
+      }
+    }
+  });
+
+  it("is idempotent for a given (seed, track, step) key", () => {
+    const first = Array.from({ length: 64 }, (_, step) => humaniseVelocity(100, "s|120|16", 2, step, 0.3));
+    const second = Array.from({ length: 64 }, (_, step) => humaniseVelocity(100, "s|120|16", 2, step, 0.3));
+    expect(first).toEqual(second);
+    // ...and a different lane is a different performance, not the same one transposed.
+    const other = Array.from({ length: 64 }, (_, step) => humaniseVelocity(100, "s|120|16", 3, step, 0.3));
+    expect(other).not.toEqual(first);
+  });
+
+  it("stays inside the amount's bound and actually moves the lane", () => {
+    const amount = 0.25;
+    const bound = Math.ceil(amount * HUMANISE_MAX_VELOCITY) + 1;
+    const values = Array.from({ length: 512 }, (_, step) => humaniseVelocity(100, "s", 0, step, amount));
+    for (const value of values) expect(Math.abs(value - 100)).toBeLessThanOrEqual(bound);
+    // The bound must not be the only thing that is true: a lane of 100s has to become a lane.
+    const distinct = new Set(values);
+    expect(distinct.size).toBeGreaterThan(4);
+    expect(Math.min(...values)).toBeLessThan(100);
+    expect(Math.max(...values)).toBeGreaterThan(100);
+  });
+
+  it("does not correlate the humanisation with the probability gate", () => {
+    // The salt exists for this: an unsalted roll would make a 30% gate keep only the quiet
+    // half of the humanisation (mean ~97 against ~103), which is an audible side effect of
+    // a feature nobody asked for. The control is the same computation on the *unsalted* key,
+    // which must show the bias the salt removes.
+    const amount = 0.3;
+    const step = 4000;
+    const gated: number[] = [];
+    const ungated: number[] = [];
+    const unsaltedGated: number[] = [];
+    const unsaltedUngated: number[] = [];
+    for (let i = 0; i < step; i++) {
+      const passed = probabilityPasses(30, "p0.2", 0, i);
+      const value = humaniseVelocity(100, "p0.2", 0, i, amount);
+      (passed ? gated : ungated).push(value);
+
+      const roll = deterministicRoll("p0.2", 0, i);
+      const unsalted = Math.round(100 + ((roll / 99) * 2 - 1) * amount * HUMANISE_MAX_VELOCITY);
+      (passed ? unsaltedGated : unsaltedUngated).push(unsalted);
+    }
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    const saltedGap = Math.abs(mean(gated) - mean(ungated));
+    const unsaltedGap = Math.abs(mean(unsaltedGated) - mean(unsaltedUngated));
+
+    expect(saltedGap).toBeLessThan(0.5);
+    expect(unsaltedGap).toBeGreaterThan(2);
+    expect(saltedGap).toBeLessThan(unsaltedGap);
   });
 });
 

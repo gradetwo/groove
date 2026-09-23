@@ -66,3 +66,48 @@ export function resolveRatchet(
 export function ratchetVelocityScale(subIdx: number, ratchet: number): number {
   return 0.85 + (subIdx / ratchet) * 0.15;
 }
+
+/**
+ * P0.2 — the velocity range a humanised hit may move, in MIDI steps, at `amount === 1`.
+ *
+ * Fourteen is a little over 10% of the 1..127 range. With the per-category amounts in
+ * `genreMix` (0.07..0.34) that is a ±1..5 step spread per lane: wide enough that a lane
+ * stops reading as one machine-gun value, narrow enough that the mix does not appear to
+ * wobble between two passes of the same loop.
+ */
+export const HUMANISE_MAX_VELOCITY = 14;
+
+/** Clamp into the MIDI velocity range every renderer and exporter agrees on (1..127). */
+export function clampVelocity(velocity: number): number {
+  if (!Number.isFinite(velocity)) return 100;
+  return Math.max(1, Math.min(127, Math.round(velocity)));
+}
+
+/**
+ * P0.2 — deterministic per-hit velocity humanisation.
+ *
+ * A pattern's velocities are authored, then repeated: a lane written as "all 100s" renders
+ * as a MIDI dump, and `check:groove` counts it (`flatTracks`). This spreads each sounding
+ * hit around its authored value by a stable amount, so the same project always produces
+ * the same notes — the property the rest of this file exists to protect.
+ *
+ * The roll is salted (`:vel`) on purpose. `probabilityPasses` reads `deterministicRoll` at
+ * the same `(track, step)` key, so an unsalted roll would correlate the two: a 30% gate
+ * keeps `roll < 30`, which would then always receive the *quiet* half of the humanisation.
+ *
+ * `amount <= 0`, a non-finite amount, or an unknown genre (the caller's job) is the
+ * identity, which keeps every pre-P0.2 fixture and every custom genre bit-identical.
+ */
+export function humaniseVelocity(
+  velocity: number,
+  seed: string,
+  trackIdx: number,
+  stepIdx: number,
+  amount: number,
+  subIdx = 0
+): number {
+  if (!(amount > 0) || !Number.isFinite(amount)) return clampVelocity(velocity);
+  const roll = deterministicRoll(`${seed}:vel`, trackIdx, stepIdx, subIdx);
+  const signed = (roll / 99) * 2 - 1; // -1..1 across the full 0..99 roll space
+  return clampVelocity(velocity + signed * amount * HUMANISE_MAX_VELOCITY);
+}

@@ -11,7 +11,7 @@
  * What this file owns: the frame (ground, gold glow, safe areas, scroll container) and the routing of
  * a module id to a screen. What it does not own: any audio authoring, any genre data.
  */
-import React, { Suspense, useCallback, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useGenreAudition } from "../hooks/useGenreAudition";
 import { MobileModuleTabBar } from "./MobileModuleTabBar";
@@ -132,12 +132,20 @@ export function MobileApp({
    * thing playing audio. The player bar has to show and stop the same sound, and two instances of the
    * hook mean two engines — so the state is lifted here and passed down, and the bar reads it.
    */
+  /**
+   * `onPatternEnd` is read through a ref, so the engine's callback sees the *current* mode and queue instead of
+   * the ones captured when the engine was built. The advance itself is deferred (the hook already defers it out
+   * of the scheduler) and skipped for `one`, which is the engine's own loop and needs no help.
+   */
+  const advanceRef = useRef<(() => void) | null>(null);
   const { playingGenreId, toggleAudition, stopAudition, readClock, applyPattern, setTempo, setSwingValue,
     startVinylScrub,
     stopVinylScrub,
     auditionTrack,
+    setMetronome,
+    readMetronome,
     readTempo } =
-    useGenreAudition();
+    useGenreAudition({ onPatternEnd: () => advanceRef.current?.() });
 
   /**
    * The play mode is the shell's, not the screen's: the bar's left button and the full-screen player
@@ -185,6 +193,22 @@ export function MobileApp({
     },
     [genreId, mobilePlayer, onOpenPlayer, playMode, playingGenreId, stopAudition, toggleAudition]
   );
+
+  /**
+   * Auto-advance when a pass ends: 大曲风内循环 walks the category, 全部随机 shuffles, 单曲循环 does nothing
+   * (the engine's own loop is the repeat). This is what the mode button governs and, until now, nothing did.
+   */
+  useEffect(() => {
+    advanceRef.current =
+      playMode === "one"
+        ? null
+        : () => {
+            skip(1);
+          };
+    return () => {
+      advanceRef.current = null;
+    };
+  }, [playMode, skip]);
 
   /**
    * Switch the record to another genre *without* leaving the player — the pull-down list's action.
@@ -278,7 +302,13 @@ export function MobileApp({
     >
       {/* Scroll container: the bar is fixed, so the content reserves its height plus the safe area. */}
       <main
-        className="relative z-10 mx-auto min-h-[100dvh] w-full max-w-[432px]"
+        /**
+         * 即兴 is the one module that must not scroll: it is a step editor with a transport, and a screen that
+         * pans under a thumb mid-take is how a take is lost. Every other module keeps the scrolling shell.
+         */
+        className={`relative z-10 mx-auto w-full max-w-[432px] ${
+          module === "jam" && showTabBar ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"
+        }`}
         style={{
           paddingBottom: showTabBar
             ? "calc(72px + env(safe-area-inset-bottom))"
@@ -341,6 +371,8 @@ export function MobileApp({
               onTempo={setTempo}
               onSwing={setSwingValue}
               onAuditionTrack={auditionTrack}
+              onMetronome={setMetronome}
+              metronome={readMetronome()}
               onOpenGenre={(id) => onOpenGenre?.(id)}
             />
           ) : module === "challenge" ? (

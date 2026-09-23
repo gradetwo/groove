@@ -69,6 +69,18 @@ Read-only tools are marked ▢, tools that change something outside the session 
 | `get_chord_progression` ▢ | `id` | degrees, roman numerals, example songs, emotional tag |
 | `get_loudness_report` ▢ | `genreId?` | the committed baseline (LUFS, true peak, trim) for one genre or the whole table |
 
+### Song (arrangement)
+
+An agent composes a *timeline* here, not a loop: `create_song` returns a `songId`, `add_section` places clips on it,
+and `render_song` bounces the whole arrangement through the same offline engine `render_audio` uses (the flattening
+is B2's `flattenSong`, so the tool cannot render something the app would not). Songs live in the server process.
+
+| Tool | Arguments | Returns |
+| :--- | :--- | :--- |
+| `create_song` ▣ | `genreId?`, `pattern?`, `name?`, `bpm?`, `swing?`, `resolution?`, `bars?` | `songId` plus the arrangement summary; clip A is seeded from the genre's *arranged* pattern, or from an explicit `pattern` |
+| `add_section` ▣ | `songId`, `slot`, `bars?`, `label?`, `mute?`, `velocityScale?`, `index?` | the whole arrangement (shape, bar count, per-section overrides, problems) |
+| `render_song` ▣ | `songId`, `format?`, `bitrateKbps?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
+
 ### Sequencer
 
 | Tool | Arguments | Returns |

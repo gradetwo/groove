@@ -24,19 +24,33 @@
  *  - during playback the playhead cell of every lane lights in its own colour, and a lane whose step is
  *    on glows on its pad.
  */
+import { trackColour, type TrackColourRole } from "../../utils/trackColours";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Minus, Play, Plus, RotateCcw, Square } from "lucide-react";
+import { ChevronRight, Minus, Play, Plus, RotateCcw, Square, Timer } from "lucide-react";
 import { GENRE_INDEX, loadGenre } from "../mobileGenreData";
 import { patternFromGenre } from "../../data/genreMix";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { Genre, SequencerPattern } from "../../types/genre";
 
-/** The four lanes the grid edits, in the reference's order, mapped to real track ids. */
+/**
+ * The six lanes the grid edits, in the reference's order, mapped to real track ids.
+ *
+ * Four was one row per *pad* group, which is why the phone reported the pads and the rows not matching: six
+ * pads (kick, snare, hat, clap, rim, bass) sat above four rows. The grid now shows six lanes of the pattern —
+ * the extra two are **percussion** and **chords**, which are grid-only (no pad), so every pad has a visible
+ * lane and the grid edits two lanes a jam session actually wants.
+ *
+ * A true one-row-per-pad grid needs the clap and rim to be their own instrument lanes rather than snare
+ * voicings; that is a drum-kit model decision and belongs with the arrangement work
+ * (`docs/ARRANGEMENT_PLAN.md`), so the pads currently keep writing the snare lane and say so on the pad.
+ */
 const LANES: Array<{ trackId: string; labelKey: string }> = [
   { trackId: "kick", labelKey: "mobile_jam_lane_kick" },
   { trackId: "snare", labelKey: "mobile_jam_lane_snare" },
   { trackId: "hihat", labelKey: "mobile_jam_lane_hat" },
+  { trackId: "percussion", labelKey: "mobile_jam_lane_perc" },
   { trackId: "bass", labelKey: "mobile_jam_lane_bass" },
+  { trackId: "chords", labelKey: "mobile_jam_lane_chords" },
 ];
 
 /**
@@ -53,7 +67,7 @@ const PADS: Array<{ id: string; labelKey: string; lane: number; trackId: string;
   { id: "hat", labelKey: "mobile_jam_lane_hat", lane: 2, trackId: "hihat" },
   { id: "clap", labelKey: "mobile_jam_pad_clap", lane: 1, trackId: "snare", instrument: "clap" },
   { id: "rim", labelKey: "mobile_jam_pad_rim", lane: 1, trackId: "snare", instrument: "rimshot" },
-  { id: "bass", labelKey: "mobile_jam_lane_bass", lane: 3, trackId: "bass" },
+  { id: "bass", labelKey: "mobile_jam_lane_bass", lane: 4, trackId: "bass" },
 ];
 
 /**
@@ -65,18 +79,42 @@ const PADS: Array<{ id: string; labelKey: string; lane: number; trackId: string;
  * two percussion pads have their own colours because they are different sounds (a clap is not a snare),
  * which is why the pads carry a colour per *pad* while the grid carries one per *lane*.
  */
-const JAM_COLORS: Record<string, { hex: string; rgb: string }> = {
-  kick: { hex: "#FFB25A", rgb: "255,178,90" },
-  snare: { hex: "#FF7A6B", rgb: "255,122,107" },
-  hat: { hex: "#6FD3C0", rgb: "111,211,192" },
-  clap: { hex: "#FF9FB0", rgb: "255,159,176" },
-  rim: { hex: "#D8C79A", rgb: "216,199,154" },
-  bass: { hex: "#9AA7FF", rgb: "154,167,255" },
+/**
+ * The jam lanes' colours, as **roles** rather than hexes.
+ *
+ * They used to be six hardcoded `{ hex, rgb }` pairs, which is the one kind of colour a skin cannot reach: the
+ * jam pads kept the default palette on every phone skin (the same bug class the desktop's instrument colours had
+ * before they became roles). Each lane now names the *shared* lane palette (`--d-track-*`), which the generator
+ * derives from **this phone skin's own accent family** — so the phone's skins drive it, and the phone and the
+ * desktop agree about which lane is which colour by construction.
+ *
+ * The `-on` variant is the ink that reads *on* the fill, which is what a pad's label needs; the fills themselves
+ * are the designed per-skin hues (the audit's contrast gate covers them on both surfaces).
+ */
+const JAM_LANES: Record<string, TrackColourRole> = {
+  kick: "kick",
+  snare: "snare",
+  hat: "hat",
+  // The two grid-only lanes: each takes the colour role of the track it edits.
+  percussion: "perc",
+  chords: "chord",
+  // Six pads, six distinct fills: the clap takes the pink role and the rim the olive one, which is where their
+  // old hardcoded hues sat. Distinctness is a test (`mobileJam.test.tsx`), not a hope.
+  clap: "chord",
+  rim: "perc",
+  bass: "bass",
 };
 
-/** The lane's identity colour: its track id, except the hat lane, which the pads call `hat`. */
-function laneColour(trackId: string) {
-  return JAM_COLORS[trackId === "hihat" ? "hat" : trackId] ?? JAM_COLORS.kick;
+/** The CSS colour of a lane: `alpha` composites the fill the way the old `rgba(...)` triplets did. */
+function laneFill(trackId: string, alpha = 1): string {
+  const role = JAM_LANES[trackId === "hihat" ? "hat" : trackId] ?? "kick";
+  return alpha >= 1 ? trackColour(role) : `rgb(${trackColour(role)} / ${alpha})`;
+}
+
+/** The ink for text drawn on a lane fill. */
+function laneInk(trackId: string): string {
+  const role = JAM_LANES[trackId === "hihat" ? "hat" : trackId] ?? "kick";
+  return trackColour(role, "ink");
 }
 
 const STEPS = 16;
@@ -99,6 +137,10 @@ export interface MobileJamScreenProps {
   onTempo: (bpm: number) => void;
   onSwing: (swing: number) => void;
   onOpenGenre: (genreId: string) => void;
+  /** Beat click while the transport runs (the jam module's metronome toggle). */
+  onMetronome?: (enabled: boolean) => void;
+  /** The metronome's current value, so a fresh mount renders the truth rather than a guess. */
+  metronome?: boolean;
   /**
    * Play one hit now, for a pad or a step cell.
    *
@@ -170,6 +212,8 @@ function JamForGenre({
   onSwing,
   onOpenGenre,
   onAuditionTrack,
+  onMetronome,
+  metronome,
 }: MobileJamScreenProps & { genre: Genre }) {
   const { t } = useLanguage();
 
@@ -349,9 +393,22 @@ function JamForGenre({
   };
 
   return (
-    <section className="m-rise px-4 pt-2" data-testid="mobile-jam" data-genre={genre.id}>
+    /**
+     * One screen, no sliding.
+     *
+     * The phone asked for the jam module to be full-screen and non-scrolling: a step editor that pans under the
+     * thumb mid-take is how a take is lost. So the module is a fixed-height column — grid (flexible), transport,
+     * pads (last, nearest the thumbs) — and the grid takes the space that is left instead of pushing the screen
+     * taller. `overflow-hidden` is deliberate: nothing here may scroll, and the row/pad sizes are what make that
+     * true rather than a clip.
+     */
+    <section
+      className="m-rise flex h-full min-h-0 flex-col overflow-hidden px-3 pt-1.5"
+      data-testid="mobile-jam"
+      data-genre={genre.id}
+    >
       {/* Groove grid */}
-      <section className="mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-3.5">
+      <section className="mt-2 flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-2.5">
         <header className="flex items-center justify-between">
           <h2 className="text-[13px] font-bold">
             {t("mobile_jam_grid")}{" "}
@@ -361,19 +418,26 @@ function JamForGenre({
             type="button"
             data-testid="mobile-jam-reset"
             onClick={reset}
-            className="m-press m-mono flex min-h-[46px] items-center gap-1 rounded-full border border-[var(--m-line-2)] px-3 text-[10px] text-[var(--m-ink-2)]"
+            /*
+             * Shrunk to a 44 px square icon, which is the touch floor rather than a decoration: the header
+             * now also carries the genre picker, and a labelled pill beside it pushed the title out of the
+             * row on a 390 px screen. The label lives in `aria-label` and the tooltip.
+             */
+            aria-label={t("mobile_jam_reset")}
+            title={t("mobile_jam_reset")}
+            className="m-press m-mono flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--m-line-2)] text-[var(--m-ink-2)]"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
-            {t("mobile_jam_reset")}
+            <RotateCcw className="h-4 w-4" />
           </button>
         </header>
         <p className="m-mono mt-1 text-[9px] text-[var(--m-ink-3)]">{t("mobile_jam_grid_hint")}</p>
 
-        <div className="mt-2" data-testid="mobile-jam-grid">
+        <div className="mt-1.5 min-h-0 flex-1 overflow-hidden" data-testid="mobile-jam-grid">
           {LANES.map((lane, laneIndex) => {
-            const colour = laneColour(lane.trackId);
+            const fill = laneFill(lane.trackId);
+            const ink = laneInk(lane.trackId);
             return (
-              <div key={lane.trackId} className="flex items-center gap-2 py-1">
+              <div key={lane.trackId} className="flex items-center gap-2 py-[3px]">
                 {/*
                   The lane's identity: a colour bar plus a readable word.
                   
@@ -387,7 +451,7 @@ function JamForGenre({
                   <span
                     aria-hidden="true"
                     className="h-3.5 w-1 flex-none rounded-[1px]"
-                    style={{ background: colour.hex }}
+                    style={{ background: fill }}
                     data-testid={`mobile-jam-lane-colour-${laneIndex}`}
                   />
                   <span className="m-mono truncate text-[9px] text-[var(--m-ink-2)]" data-testid={`mobile-jam-lane-label-${laneIndex}`}>
@@ -414,12 +478,12 @@ function JamForGenre({
                          *    is visible without hiding the pattern under it;
                          *  - **off** — the shell's neutral cell.
                          */
-                        className="m-press h-8 flex-1 rounded"
+                        className="m-press h-6 flex-1 rounded"
                         style={
                           on
-                            ? { background: `rgba(${colour.rgb}, 0.82)`, boxShadow: active ? `0 0 10px rgba(${colour.rgb}, 0.65)` : undefined }
+                            ? { background: laneFill(lane.trackId, 0.82), boxShadow: active ? `0 0 10px ${laneFill(lane.trackId, 0.65)}` : undefined }
                             : active
-                              ? { background: `rgba(${colour.rgb}, 0.22)`, boxShadow: `inset 0 0 0 1.5px rgba(${colour.rgb}, 0.75)` }
+                              ? { background: laneFill(lane.trackId, 0.22), boxShadow: `inset 0 0 0 1.5px ${laneFill(lane.trackId, 0.75)}` }
                               : { background: "rgba(232,232,255,0.055)" }
                         }
                       />
@@ -427,53 +491,6 @@ function JamForGenre({
                   })}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Pads: step entry at the playhead */}
-      <section className="mt-3">
-        <header className="flex items-baseline justify-between px-1">
-          <h2 className="text-[13px] font-bold">
-            {t("mobile_jam_pads")}{" "}
-            <span className="m-mono text-[9px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">PADS</span>
-          </h2>
-          <p className="m-mono text-[9px] text-[var(--m-ink-3)]">{t("mobile_jam_pads_hint")}</p>
-        </header>
-        <div className="mt-2 grid grid-cols-3 gap-2.5">
-          {PADS.map((pad) => {
-            const colour = JAM_COLORS[pad.id] ?? JAM_COLORS.kick;
-            /** Lit while the lane's step is on the playhead, or for a moment after a hand hit it. */
-            const lit = flashing.includes(pad.lane) || (isPlaying && Boolean(grid[pad.lane]?.[playhead]));
-            return (
-              <button
-                key={pad.id}
-                type="button"
-                data-testid={`mobile-jam-pad-${pad.id}`}
-                onClick={() => writeAtPlayhead(pad.lane, pad.instrument)}
-                /**
-                 * The halo is the instrument's colour, so a glance at the pads you are hitting tells you
-                 * which lane is answering. `box-shadow` rather than a border colour because it reads as
-                 * light rather than as selection, and `transform` stays untouched so the tap feedback in
-                 * `.m-press` is unaffected.
-                 */
-                className="m-press relative flex h-[76px] flex-col items-center justify-center rounded-[18px] border bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))]"
-                style={{
-                  borderColor: lit ? `rgba(${colour.rgb}, 0.85)` : undefined,
-                  boxShadow: lit ? `0 0 22px rgba(${colour.rgb}, 0.35), inset 0 0 18px rgba(${colour.rgb}, 0.14)` : undefined,
-                }}
-              >
-                <span
-                  aria-hidden="true"
-                  className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full"
-                  style={{ background: colour.hex, opacity: lit ? 1 : 0.5 }}
-                />
-                <span className="text-[13px] font-semibold">{t(pad.labelKey)}</span>
-                <span className="m-mono mt-1 text-[8px] uppercase tracking-[0.26em]" style={{ color: colour.hex }}>
-                  {pad.id}
-                </span>
-              </button>
             );
           })}
         </div>
@@ -490,7 +507,7 @@ function JamForGenre({
          * there, a floating 114 px dock would cover the very grid it belongs to, so it goes back into
          * the flow (and the module scrolls to it, which is where it lives in the first place).
          */
-        className="m-jam-dock sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3.5"
+        className="m-jam-dock mt-3 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] px-3"
         data-testid="mobile-jam-tempo"
       >
         {/*
@@ -500,7 +517,7 @@ function JamForGenre({
           for "what is playing" and "start it": you armed a take at the bottom and started it at the top.
           They are one gesture, so they are one row — and the dock is the only chrome on this screen now.
         */}
-        <div className="flex min-h-[58px] items-center gap-2 border-b border-[var(--m-line)]">
+        <div className="flex min-h-[48px] items-center gap-1.5 border-b border-[var(--m-line)]">
           <button
             type="button"
             data-testid="mobile-jam-genre"
@@ -508,8 +525,8 @@ function JamForGenre({
             className="m-press flex min-h-[46px] min-w-0 flex-1 items-center gap-2 text-left"
           >
             <span className="min-w-0">
-              <span className="block truncate text-[15px] font-bold leading-tight">{genre.name}</span>
-              <span className="m-mono block truncate text-[9px] text-[var(--m-ink-3)]">
+              <span className="block truncate text-[14px] font-bold leading-tight">{genre.name}</span>
+              <span className="m-mono block truncate text-[8px] text-[var(--m-ink-3)]">
                 {t("mobile_jam_backing")} · {genre.category}
               </span>
             </span>
@@ -540,7 +557,7 @@ function JamForGenre({
             aria-pressed={recording}
             aria-label={t("mobile_jam_record")}
             onClick={() => setRecording((on) => !on)}
-            className={`m-press flex h-[52px] w-[52px] flex-none items-center justify-center rounded-full border ${
+            className={`m-press flex h-11 w-11 flex-none items-center justify-center rounded-full border ${
               recording
                 ? "border-[var(--m-red)] bg-[rgba(242,109,109,0.18)]"
                 : "border-[var(--m-line-2)]"
@@ -550,6 +567,20 @@ function JamForGenre({
               aria-hidden="true"
               className={`h-3.5 w-3.5 rounded-full ${recording ? "bg-[var(--m-red)]" : "bg-[rgba(242,109,109,0.7)]"}`}
             />
+          </button>
+
+          <button
+            type="button"
+            data-testid="mobile-jam-metronome"
+            aria-pressed={Boolean(metronome)}
+            aria-label={t("mobile_jam_metronome")}
+            title={t("mobile_jam_metronome")}
+            onClick={() => onMetronome?.(!metronome)}
+            className={`m-press flex h-11 w-11 flex-none items-center justify-center rounded-full border ${
+              metronome ? "border-[var(--m-gold)] text-[var(--m-gold)]" : "border-[var(--m-line-2)] text-[var(--m-ink-2)]"
+            }`}
+          >
+            <Timer className="h-[18px] w-[18px]" />
           </button>
 
           {/* The hint shares the row so arming record never reflows the controls beside it. */}
@@ -564,7 +595,6 @@ function JamForGenre({
             )}
           </div>
 
-          <span className="flex-none text-[12px]">{t("mobile_jam_tempo")}</span>
           <button
             type="button"
             data-testid="mobile-jam-bpm-down"
@@ -589,7 +619,7 @@ function JamForGenre({
         </div>
 
         {/* Swing: a feel rail, dragged rather than picked from chips. `touch-none` keeps the drag. */}
-        <div className="flex min-h-[56px] items-center gap-3 border-t border-[var(--m-line)]">
+        <div className="flex min-h-[44px] items-center gap-3 border-t border-[var(--m-line)]">
           <span className="text-[13px]">{t("mobile_jam_swing")}</span>
           <div
             ref={swingRail}
@@ -647,6 +677,73 @@ function JamForGenre({
           </span>
         </div>
       </section>
+      {/*
+        Pads, last and nearest the thumbs.
+
+        The dock used to be the bottom-most element and the pads sat above it, which put the transport under
+        the hand that is playing. They are swapped now: transport, then pads, so a thumb lands on a pad and
+        never on record.
+      */}
+      <section
+        className="m-jam-pads z-20 mt-2 rounded-2xl border border-[var(--m-line)] bg-[var(--m-card)] p-2"
+        data-testid="mobile-jam-pads-dock"
+      >
+        <header className="flex items-baseline justify-between px-1">
+          <h2 className="text-[13px] font-bold">
+            {t("mobile_jam_pads")}{" "}
+            <span className="m-mono text-[9px] uppercase tracking-[0.24em] text-[var(--m-ink-3)]">PADS</span>
+          </h2>
+          <p className="m-mono text-[9px] text-[var(--m-ink-3)]">{t("mobile_jam_pads_hint")}</p>
+        </header>
+        <div className="mt-1.5 grid grid-cols-3 gap-2">
+          {PADS.map((pad) => {
+            /** Lit while the lane's step is on the playhead, or for a moment after a hand hit it. */
+            const lit = flashing.includes(pad.lane) || (isPlaying && Boolean(grid[pad.lane]?.[playhead]));
+            return (
+              <button
+                key={pad.id}
+                type="button"
+                data-testid={`mobile-jam-pad-${pad.id}`}
+                onClick={() => writeAtPlayhead(pad.lane, pad.instrument)}
+                /**
+                 * The halo is the instrument's colour, so a glance at the pads you are hitting tells you
+                 * which lane is answering. `box-shadow` rather than a border colour because it reads as
+                 * light rather than as selection, and `transform` stays untouched so the tap feedback in
+                 * `.m-press` is unaffected.
+                 */
+                className="m-press relative flex h-[54px] flex-col items-center justify-center rounded-[16px] border bg-[linear-gradient(180deg,var(--m-card-2),var(--m-card))]"
+                style={{
+                  borderColor: lit ? laneFill(pad.id, 0.85) : undefined,
+                  boxShadow: lit ? `0 0 22px ${laneFill(pad.id, 0.35)}, inset 0 0 18px ${laneFill(pad.id, 0.14)}` : undefined,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full"
+                  style={{ background: laneFill(pad.id), opacity: lit ? 1 : 0.5 }}
+                />
+                <span className="text-[12px] font-semibold leading-none">{t(pad.labelKey)}</span>
+                <span className="m-mono mt-0.5 text-[7px] uppercase tracking-[0.22em]" style={{ color: laneInk(pad.id) }}>
+                  {pad.id}
+                </span>
+                {/*
+                  Which row this pad writes: the clap and rim pads light the snare row, and say so. The name is
+                  deliberately outside the `mobile-jam-pad-` prefix the E2E matrix counts pads by: a label inside a
+                  pad is not a pad. (`mobile-jam-pad-writes-…` was tried first and still matched — the prefix is
+                  the whole problem, not the suffix.)
+                */}
+                <span
+                  className="m-mono text-[7px] leading-none text-[var(--m-ink-3)]"
+                  data-testid={`mobile-jam-row-of-${pad.id}`}
+                >
+                  {t(LANES[pad.lane].labelKey)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
     </section>
   );
 }

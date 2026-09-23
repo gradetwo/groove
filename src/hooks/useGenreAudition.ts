@@ -57,6 +57,15 @@ export interface UseGenreAuditionReturn {
    * `instrument` overrides the track's declared model, for a pad that means a specific sound.
    */
   auditionTrack: (trackId: string, instrument?: string) => void;
+  /**
+   * Click on every beat while the transport runs.
+   *
+   * The engine has had `setMetronome` since the sequencer work; the phone's jam module is the first surface
+   * that asks for it, so the hook carries it rather than every caller reaching for the engine.
+   */
+  setMetronome: (enabled: boolean) => void;
+  /** The metronome flag (false before an engine exists). */
+  readMetronome: () => boolean;
 }
 
 /**
@@ -64,11 +73,35 @@ export interface UseGenreAuditionReturn {
  * Eliminates duplicated AudioEngine instantiation across Galaxy, HorizontalTimeline,
  * VerticalTimeline, Compare, and Challenge views.
  */
-export function useGenreAudition(): UseGenreAuditionReturn {
+/**
+ * `onPatternEnd` fires once per completed pass of the pattern.
+ *
+ * The phone's play-mode button (单曲循环 → 大曲风内循环 → 全部随机) governs *what plays next*, and until now
+ * nothing told the shell that a pass had finished — so every mode behaved like "repeat one", which is what the
+ * phone reported. The engine loops the pattern by design, so the pass boundary is the moment its step counter
+ * wraps; detecting it here keeps the decision in one place and works for every surface that auditions.
+ */
+export interface UseGenreAuditionOptions {
+  onPatternEnd?: (genreId: string) => void;
+}
+
+export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenreAuditionReturn {
   const [playingGenreId, setPlayingGenreId] = useState<string | null>(null);
+  /**
+   * The metronome is engine state, so it survives a pattern swap; the flag is mirrored here too so a surface
+   * can render the toggle before any engine exists (nothing is playing, so it is remembered for the first play).
+   */
+  const [metronome, setMetronomeFlag] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
   /** When the engine last reported a step, for the sub-step interpolation. */
   const lastStepRef = useRef<{ step: number; at: number } | null>(null);
+  /** Read through a ref so the engine's callback never closes over a stale mode/queue. */
+  const onPatternEndRef = useRef<UseGenreAuditionOptions["onPatternEnd"]>(options.onPatternEnd);
+  onPatternEndRef.current = options.onPatternEnd;
+  const playingGenreIdRef = useRef<string | null>(null);
+  playingGenreIdRef.current = playingGenreId;
+  /** The last step the engine reported, so a wrap (a backwards jump) can be seen. */
+  const observedStepRef = useRef<number | null>(null);
 
   // Clean up engine on unmount
   useEffect(() => {
@@ -107,19 +140,33 @@ export function useGenreAudition(): UseGenreAuditionReturn {
         });
         engineRef.current.setOnStep((info) => {
           if (typeof info?.step === "number") {
+            const previous = observedStepRef.current;
+            observedStepRef.current = info.step;
             lastStepRef.current = { step: info.step, at: performance.now() };
+            /**
+             * A pass ended. Deferred with a microtask because this runs *inside* the engine's scheduler: the
+             * handler replaces the pattern (and may stop the transport), and re-entering the scheduler from its
+             * own step callback is how a transport wedges.
+             */
+            if (previous !== null && info.step <= previous) {
+              const id = playingGenreIdRef.current;
+              const handler = onPatternEndRef.current;
+              if (id && handler) queueMicrotask(() => handler(id));
+            }
           }
         });
       }
 
       const engine = engineRef.current;
       engine.stop();
+      // A freshly built engine has to be told again: the metronome is engine state, not pattern state.
+      engine.setMetronome(metronome);
       engine.setPattern(patternFromGenre(genre), true);
       setPlayingGenreId(genre.id);
       announcer.announce(`正在试听：${genre.name} / Auditioning: ${genre.name}`);
       await engine.play();
     },
-    [playingGenreId, stopAudition]
+    [playingGenreId, stopAudition, metronome]
   );
 
   const isPlaying = useCallback(
@@ -145,6 +192,12 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     if (!engine) return;
     engine.setPattern(pattern, false);
   }, []);
+
+  const setMetronome = useCallback((enabled: boolean) => {
+    setMetronomeFlag(enabled);
+    engineRef.current?.setMetronome(enabled);
+  }, []);
+  const readMetronome = useCallback(() => engineRef.current?.getMetronome() ?? metronome, [metronome]);
 
   const setTempo = useCallback((bpm: number) => {
     engineRef.current?.setBpm(bpm);
@@ -214,5 +267,7 @@ export function useGenreAudition(): UseGenreAuditionReturn {
     stopVinylScrub,
     auditionTrack,
     readTempo,
+    setMetronome,
+    readMetronome,
   };
 }

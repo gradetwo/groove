@@ -150,40 +150,115 @@ const AUDIT = () => {
   };
 
   /**
-   * The colours behind an element, worst-first.
+   * The colours behind an element, worst-first — with decorations composited rather than taken raw.
    *
-   * Walks up compositing translucent layers until something opaque is found, and if any ancestor paints a
-   * gradient it returns that gradient's stops as separate candidates — because text sits on *one* of them and
-   * the audit cannot know which.
+   * The first version returned a gradient's stops *as they are*, which reported a false positive on every
+   * element that paints a pattern over a solid colour: the comic skin's halftone dot grid and the phone's grain
+   * both contain a light stop, so paper-on-ink labels were "measured" against that stop (paper on paper, 1:1)
+   * even though the ink ground is what a reader sees. The candidates are now the *results* of painting each stop
+   * over the ground behind it: a 30 %-alpha halftone composites to almost the ground, while an opaque gradient
+   * stop still becomes itself. Both cases come out right.
    */
   const backgrounds = (el) => {
-    let stack = [];
+    /** Every layer from the text outwards: its own colour, its own decoration, then the ancestors'. */
+    const layers = [];
     let node = el;
-    let base = null;
+    let ground = null;
     while (node && node !== document.documentElement.parentElement) {
       const style = getComputedStyle(node);
-      if (style.backgroundImage && style.backgroundImage !== "none") {
-        const stops = gradientStops(style.backgroundImage);
-        if (stops.length) {
-          // Composite the accumulated translucent layers over each stop.
-          const resolved = stops.map((stop) => over({ rgb: stop.rgb, a: stop.a }, stack.length ? stack[stack.length - 1] : [255, 255, 255]));
-          return resolved.map((rgb) => (stack.length ? over(stack[0], rgb) : rgb));
-        }
-      }
       const bg = parse(style.backgroundColor);
-      if (bg && bg.a > 0) {
-        stack.unshift(bg);
-        if (bg.a >= 0.999) {
-          base = bg.rgb;
-          break;
-        }
+      /**
+       * A background-image only counts as a ground when it **covers the element**.
+       *
+       * `background-size: 6px 6px` is the comic skin's halftone screen and `100% 6px` is Soviet-years' red
+       * stripe along the top edge of its tab bar: both are decoration, and the second one produced a false
+       * positive on every tab label (dark ink "on the flag red") even though the labels sit on the paper plate
+       * the bar actually is. Sizes that name a fixed pixel dimension are textures; `auto`/`cover`/`100% 100%`
+       * are grounds.
+       */
+      /**
+       * A texture is recognised by the *image*, not by `background-size`.
+       *
+       * The comic skin's dot screen is `radial-gradient(… 1px, transparent 1.3px)` and Soviet-years' stripe is
+       * `linear-gradient(… 0 6px …)`: both name a tiny stop radius, so they are decoration. The size alone was
+       * the wrong test — a character sheet sets `background-size: 6px 6px` on a *button* for its screen, and the
+       * button's real fill (a Tailwind gradient) was then discarded, which is why the comic CTA measured
+       * paper-on-paper.
+       */
+      const size = style.backgroundSize || "auto";
+      const imageLooksLikeTexture = (image) => /repeating-/.test(image) || /\b[1-4](\.\d+)?px\b/.test(image);
+      /**
+       * …and the size is not consulted at all.
+       *
+       * The comic sheet sets `background-size: 6px 6px` on a button for its dot screen, so any rule that reads
+       * the size concludes "texture" — even when the element's own computed image is a Tailwind gradient, which
+       * is what is actually painted. A texture is an image whose *stops* name a tiny radius, or a `repeating-`
+       * gradient; that is the whole test.
+       */
+      void size;
+      const coversBox = !imageLooksLikeTexture(style.backgroundImage || "");
+      /**
+       * Resolve `var(--tw-gradient-…)` before parsing.
+       *
+       * A Tailwind gradient compiles to `linear-gradient(to right, var(--tw-gradient-stops))`, so the computed
+       * value the audit reads has **no colours in it at all**. Without this every gradient element was measured
+       * against whatever was behind it — a blue-to-purple button on the minimal skin was "paper on white, 1.04:1",
+       * a phantom failure on two skins.
+       */
+      const resolveOnce = (image) =>
+        image.replace(/var\(\s*(--[a-zA-Z0-9-]+)\s*(?:,\s*([^)]*))?\)/g, (_match, name, fallback) => {
+          const value = style.getPropertyValue(name).trim();
+          return value || (fallback ?? "").trim() || "transparent";
+        });
+      /**
+       * Tailwind's gradient variables nest: `--tw-gradient-stops` is `var(--tw-gradient-from), var(…)`, and each
+       * of those is a colour. One pass left `var(` in the string, the stops were discarded, and the audit fell
+       * back to whatever was behind the button — reporting "paper on white, 1.04:1" for a blue-to-purple fill.
+       */
+      let rawImage = style.backgroundImage && style.backgroundImage !== "none" ? style.backgroundImage : "";
+      for (let pass = 0; pass < 5 && rawImage.includes("var("); pass += 1) rawImage = resolveOnce(rawImage);
+      const stops = coversBox && rawImage && !rawImage.includes("var(") ? gradientStops(rawImage) : [];
+      layers.push({ bg, stops });
+      if (bg && bg.a >= 0.999) {
+        ground = bg.rgb;
+        break;
       }
       node = node.parentElement;
     }
-    const opaque = base ?? [10, 11, 13];
-    let result = opaque;
-    for (let i = stack.length - 1; i >= 0; i -= 1) result = over(stack[i], result);
-    return [result];
+    const opaque = ground ?? [10, 11, 13];
+
+    /**
+     * Paint the layers from the deepest up, **replacing** the candidates whenever a layer covers what is under
+     * it.
+     *
+     * The previous version collected the union of every layer's colours and reported the worst ratio, so an
+     * opaque gradient's ground was still a candidate even though nothing of it is painted where the text sits —
+     * which is how the comic skin's teal CTA was reported as "paper on paper, 1.05:1" while its computed style
+     * was a solid teal gradient. A covering layer hides its ground; a translucent one composites onto it.
+     */
+    let current = opaque;
+    let candidates = [opaque];
+    for (let i = layers.length - 1; i >= 0; i -= 1) {
+      const layer = layers[i];
+      if (layer.stops.length) {
+        const painted = layer.stops.map((stop) => (stop.a >= 0.999 ? stop.rgb : over(stop, current)));
+        const opaqueStop = layer.stops.every((stop) => stop.a >= 0.999);
+        candidates = opaqueStop ? painted : painted.map((colour) => over({ rgb: colour, a: 1 }, current));
+        // The brightest/darkest stop is what the text may sit on; keep the first as the working colour.
+        current = painted[0];
+        if (opaqueStop) {
+          candidates = painted;
+        } else {
+          candidates = painted;
+        }
+      }
+      if (layer.bg && layer.bg.a > 0) {
+        current = over(layer.bg, current);
+        candidates = candidates.map((colour) => over(layer.bg, colour));
+      }
+    }
+    return candidates;
+
   };
 
   const isVisible = (el) => {
@@ -348,43 +423,51 @@ async function main() {
    */
   const BUDGET = {
     /**
-     * Today's measurements, per view: the ratchet starts where the code is and can only go down.
+     * **Zero everywhere.**
      *
-     * Tightened from 8/130/3/6/6 after the role-kind, named-ink and accent-ink fixes took the chord page from
-     * 129 to 13 elements in the worst skin. What is left is listed in the changelog: mostly component-level
-     * colour decisions (a chip painted with the ink token, a legend on a dark plate) rather than palette gaps.
+     * The ratchet started at 8/130/3/6/6 when this gate was written and has been tightened four times; the
+     * remaining findings were fixed rather than budgeted — the chord page went 129 → 0, the studio 7 → 0, and
+     * both phone views were already there. A budget of zero means any new unreadable element in any sampled
+     * skin × view fails the build, which is what a gate is for once the debt is paid.
      */
-    studio: 6,
-    chords: 14,
-    challenge: 3,
-    "phone-home": 6,
-    "phone-challenge": 6,
+    studio: 0,
+    chords: 0,
+    challenge: 0,
+    "phone-home": 0,
+    "phone-challenge": 0,
   };
-  if (!JSON_OUT) {
+
+  /**
+   * The report.
+   *
+   * A gate that only says "pass" is not much use while there is work left, and a *diagnostic* run has to be
+   * machine-readable — this block was lost in an earlier edit of this file (the table, the offender list and
+   * `--json` all went missing while the gate itself kept working), which is why it is written out here again
+   * with the reason attached.
+   */
+  if (JSON_OUT) {
+    // Only the data reaches stdout, so `--json` can be piped into anything. The exit code is still the gate.
+    console.log(JSON.stringify({ summary, results }, null, 2));
+  } else {
     console.log("\n🎨 SKIN READABILITY AUDIT\n");
-    /**
-     * Three states, not two: a view with findings that are inside its budget is a ⚠️, not a ❌.
-     *
-     * Printing ❌ for a run that passes (which this did until it was looked at) is the kind of report people
-     * stop reading — and the budget exists precisely so "known, counted, being worked off" is a different
-     * state from "this regressed".
-     */
+    const allowedFor = (view) => BUDGET[view] ?? (FULL ? 0 : Infinity);
     for (const row of summary) {
-      // A view with no budget is *reported* rather than failed: in the full sweep most views are not in the map
-    // yet, and inventing a budget of 0 would make the diagnostic useless (and a budget of 227 dishonest).
-    const allowed = BUDGET[row.view] ?? Infinity;
-      const broken = row.clipped || row.errors || row.lowContrast > allowed;
+      const allowed = allowedFor(row.view);
+      const broken = row.clipped > 0 || row.errors > 0 || row.lowContrast > allowed;
       const warn = !broken && row.lowContrast > 0;
       console.log(
         `  ${broken ? "❌" : warn ? "⚠️" : "✅"} ${row.skin.padEnd(12)} ${row.view.padEnd(16)} text ${String(row.checked).padStart(4)}  ` +
-          `low-contrast ${row.lowContrast}${warn ? `/${allowed}` : ""}  clipped ${row.clipped}  console ${row.errors}`
+          `low-contrast ${row.lowContrast}${warn || broken ? `/${allowed}` : ""}  clipped ${row.clipped}  console ${row.errors}`
       );
     }
     const offenders = results.flatMap((r) => r.failures.map((f) => ({ skin: r.skin, view: r.view, ...f })));
     if (offenders.length) {
-      console.log(`\n  ${offenders.length} element(s) below the contrast floor:`);
+      console.log(`\n  ${offenders.length} element(s) below the floor:`);
       for (const o of offenders.slice(0, 40)) {
-        console.log(`   · ${o.skin}/${o.view}  ${o.ratio}:1 (floor ${o.floor})  ${o.colour} on ${o.bg}  "${o.text}"  [${o.testid ?? o.tag}]`);
+        console.log(
+          `   · ${o.skin}/${o.view}  ${o.ratio}:1 (floor ${o.floor})  ${o.colour} on ${o.bg}  ` +
+            `"${o.text}"  [${o.testid ?? o.tag}] ${o.classes ?? ""}`
+        );
       }
       if (offenders.length > 40) console.log(`   … and ${offenders.length - 40} more`);
     }
@@ -398,8 +481,6 @@ async function main() {
       console.log(`\n  ${errored.length} page(s) with console errors:`);
       for (const e of errored.slice(0, 10)) console.log(`   · ${e.skin}/${e.view}  ${e.errors[0]}`);
     }
-  } else {
-    console.log(JSON.stringify({ summary, results }, null, 2));
   }
 
   const over = [];

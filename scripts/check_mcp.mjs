@@ -211,6 +211,42 @@ try {
   const loudness = payload(await client.request("tools/call", { name: "get_loudness_report", arguments: { genreId: "chicago-house" } }));
   check("get_loudness_report returns the committed measurement", typeof loudness.arrangedLufs === "number", JSON.stringify(loudness).slice(0, 120));
 
+  /**
+   * B6: the arrangement surface. `create_song` and `add_section` need no browser, so the gate *calls* them and
+   * checks the timeline arithmetic; `render_song` is asserted as declared (calling it would start Chromium, which
+   * this gate deliberately never does — `render_audio` is treated the same way).
+   */
+  check(
+    "the song tools are declared",
+    ["create_song", "add_section", "render_song"].every((name) => names.includes(name)),
+    names.filter((name) => name.includes("song")).join(", ")
+  );
+  const created = payload(
+    await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2 } })
+  );
+  check(
+    "create_song seeds a song with one repeated section",
+    typeof created.songId === "string" && created.totalBars === 2 && (created.clips ?? []).includes("A"),
+    JSON.stringify(created).slice(0, 140)
+  );
+  const arranged = payload(
+    await client.request("tools/call", {
+      name: "add_section",
+      arguments: { songId: created.songId, slot: "A", bars: 4, label: "drop", velocityScale: 0.8 },
+    })
+  );
+  check(
+    "add_section grows the arrangement and reports its shape",
+    arranged.totalBars === 6 && arranged.shape === "A×2 → drop×4" && arranged.problems.length === 0,
+    JSON.stringify({ bars: arranged.totalBars, shape: arranged.shape, problems: arranged.problems })
+  );
+  const renderSongSchema = (tools?.tools ?? []).find((tool) => tool.name === "render_song");
+  check(
+    "render_song takes a songId and is marked as changing the session",
+    Boolean(renderSongSchema) && JSON.stringify(renderSongSchema.inputSchema).includes("songId"),
+    JSON.stringify(renderSongSchema?.inputSchema ?? {}).slice(0, 120)
+  );
+
   const resource = await client.request("resources/read", { uri: "groove://genres" });
   const resourceText = resource?.contents?.[0]?.text ?? "";
   check("resources/read serves the library index", resourceText.includes("chicago-house"), `${resourceText.length} chars`);

@@ -29,7 +29,16 @@
 }
 
 :root[data-skin="minimal"] [data-surface="desktop"] [class*="bg-gradient-to-"] {
+  /**
+   * Flat means "no gradient", not "no fill".
+   *
+   * Switching the image off wholesale left any element whose *only* fill was a gradient completely transparent —
+   * including the challenge's primary button, whose label is paper, so it measured 1.04:1: a white label on the
+   * page itself. The flat version of a gradient is its own `from` colour (which the generator has already mapped
+   * to a token), and when there is no such variable the element keeps whatever fill it had.
+   */
   background-image: none;
+  background-color: var(--tw-gradient-from, transparent);
 }
 
 :root[data-skin="minimal"] [data-surface="desktop"] :is([role="dialog"], [role="menu"], [role="listbox"]) {

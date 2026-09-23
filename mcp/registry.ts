@@ -11,6 +11,7 @@ import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelatio
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
+import { addMcpSection, createMcpSong, flattenMcpSong } from "./song";
 import type { SequencerPattern } from "../src/types/genre";
 
 /** MCP tool results are text for maximum client compatibility; JSON is the text. */
@@ -328,6 +329,113 @@ export const TOOLS: ToolDefinition[] = [
         return analyseWavFile(String(args.path));
       } catch (error) {
         return failure(`could not analyse "${String(args.path)}": ${(error as Error).message}`);
+      }
+    },
+  },
+  /**
+   * B6 — the arrangement, not the loop.
+   *
+   * Everything above builds or renders a *pattern*. These three let an agent compose a song: `create_song` seeds
+   * clip A (from the genre's arranged pattern, the same one the app plays), `add_section` places it on a timeline,
+   * and `render_song` bounces the whole arrangement through the same offline engine `render_audio` uses — the
+   * flattening is `flattenSong`, so the tool cannot render something the app would not.
+   */
+  {
+    name: "create_song",
+    title: "Create a song",
+    description:
+      "Start an arrangement: one clip (A) seeded from a genre's arranged pattern, or from an explicit pattern, plus a first section. Returns a songId that add_section and render_song take. Songs live in this server process only.",
+    readOnly: false,
+    inputSchema: {
+      genreId: z.string().optional().describe("genre id whose arranged pattern seeds clip A"),
+      pattern: patternSchema.optional().describe("an explicit pattern for clip A instead of a genre's"),
+      name: z.string().optional(),
+      bpm: z.number().min(20).max(300).optional(),
+      swing: z.number().min(0).max(100).optional(),
+      resolution: z.enum(["1/8", "1/16", "1/32"]).optional(),
+      bars: z
+        .number()
+        .int()
+        .min(1)
+        .max(64)
+        .optional()
+        .describe("how many times the first section repeats its clip; default 1"),
+    },
+    handler: (args) => {
+      try {
+        const genreId = args.genreId as string | undefined;
+        const genre = genreId ? findGenre(genreId) : undefined;
+        if (!genre && !args.pattern) return failure("provide either genreId or pattern");
+        return createMcpSong({
+          genreId: genreId ?? "custom",
+          genre: genre ?? null,
+          pattern: args.pattern as SequencerPattern | undefined,
+          name: args.name as string | undefined,
+          bpm: args.bpm as number | undefined,
+          swing: args.swing as number | undefined,
+          resolution: args.resolution as "1/8" | "1/16" | "1/32" | undefined,
+          bars: args.bars as number | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "add_section",
+    title: "Add a section",
+    description:
+      "Place a clip on the song's timeline: slot, how many times it repeats, and optional per-section mutes, velocity scale (a build or a breakdown) and label. Returns the whole arrangement, so a model can see what it built.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      slot: z.enum(["A", "B", "C", "D"]),
+      bars: z.number().int().min(1).max(64).optional().describe("clip repeats; default 1"),
+      label: z.string().max(24).optional().describe('e.g. "intro", "drop", "fill"'),
+      mute: z.array(z.string()).max(16).optional().describe("track ids silenced in this section"),
+      velocityScale: z.number().min(0).max(2).optional().describe("1 = as written, 0.8 = a quieter build"),
+      index: z.number().int().min(0).optional().describe("insert position; appended when omitted"),
+    },
+    handler: (args) => {
+      try {
+        return addMcpSection({
+          songId: String(args.songId),
+          slot: args.slot as "A" | "B" | "C" | "D",
+          bars: args.bars as number | undefined,
+          label: args.label as string | undefined,
+          mute: args.mute as string[] | undefined,
+          velocityScale: args.velocityScale as number | undefined,
+          index: args.index as number | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "render_song",
+    title: "Render the arrangement",
+    description:
+      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      format: z.enum(["wav", "mp3"]).default("wav"),
+      bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
+    },
+    handler: async (args) => {
+      try {
+        const { song, flattened } = flattenMcpSong(String(args.songId));
+        const result = await renderAudio(flattened.pattern, {
+          format: (args.format as "wav" | "mp3") ?? "wav",
+          // The flattened pattern *is* the song, so one pass plays all of it (B2).
+          bars: 1,
+          bitrateKbps: args.bitrateKbps as number | undefined,
+          genreId: song.genreId,
+        });
+        return { ...(result as unknown as Record<string, unknown>), songId: song.id, totalSteps: flattened.pattern.totalSteps };
+      } catch (error) {
+        return failure((error as Error).message);
       }
     },
   },

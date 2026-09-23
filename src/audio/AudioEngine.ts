@@ -26,6 +26,8 @@ import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp, visualLeadSeconds } from "./schedulerMath";
 import { ratchetVelocityScale, resolveRatchet } from "./noteEvents";
+import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
+import { swingMovesStep, swingOffsetSeconds } from "./swing";
 import { TrackState, deriveTrackStates } from "./trackStates";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -1727,8 +1729,9 @@ export class AudioEngine {
         }
       }
 
-      // Swing pushes odd steps (1, 3, 5...) slightly forward
-      const swingOffset = (step % 2 === 1 && this.swing > 0) ? (this.swing * 0.5) * stepDur : 0;
+      // P0.5: the off-8th moves the full amount and the off-16ths half (see `audio/swing.ts`); the old
+      // odd-step-only rule left every 8th-note pattern dead straight.
+      const swingOffset = swingOffsetSeconds(step, this.swing, stepDur);
       const latencyOffset = this.latencyCompensationMs / 1000;
       const actualStepTime = Math.max(this.ctx.currentTime, this.nextStepTime + swingOffset + latencyOffset);
 
@@ -1830,7 +1833,7 @@ export class AudioEngine {
        * fired a full latency-compensation ahead of every other track, and ahead of its own export
        * (a bounce has no output latency to compensate). Only the swing term may differ here.
        */
-      const trackStepTime = (step % 2 === 1 && effSwing !== this.swing)
+      const trackStepTime = (swingMovesStep(step) && effSwing !== this.swing)
         ? Math.max(
             ctx.currentTime,
             this.nextStepTime + (effSwing * 0.5) * stepDur + this.latencyCompensationMs / 1000
@@ -2210,12 +2213,15 @@ export class AudioEngine {
   }
 
   /**
-   * Acoustic enhancement: Kick-Bass low-frequency sidechain ducking.
-   * Dips bass track strip by ~3dB for ~60ms to eliminate 40-100Hz masking.
+   * Kick/bass low-frequency sidechain ducking.
+   *
+   * P0.3: the depth and release come from the genre's `duck` setting (`audio/sidechain.ts`), which the
+   * offline renderer schedules from the same helper. The old inline formula (`max(0.65, 1 - 0.3 * vel)`,
+   * 3 ms in, 65 ms out) measured at most 0.25 dB of duck through the app's own render path — inaudible.
    */
   private applyKickDuckOnBass(time: number, vel: number): void {
     if (!this.pattern?.tracks) return;
-    const duckDepth = Math.max(0.65, 1 - 0.3 * vel);
+    const shape = resolveKickDuckShape(this.pattern.genre_id, vel);
     this.pattern.tracks.forEach((track, idx) => {
       const tid = (track.track_id || "").toLowerCase();
       const tname = (track.name || "").toLowerCase();
@@ -2223,11 +2229,7 @@ export class AudioEngine {
         const strip = this.trackStrips[idx];
         if (strip?.duckGain) {
           try {
-            const param = strip.duckGain.gain;
-            param.cancelScheduledValues(time);
-            param.setValueAtTime(1.0, time);
-            param.linearRampToValueAtTime(duckDepth, time + 0.003);
-            param.exponentialRampToValueAtTime(1.0, time + 0.065);
+            scheduleKickDuck(strip.duckGain.gain, time, shape);
           } catch {
             // AudioParam scheduling guard
           }

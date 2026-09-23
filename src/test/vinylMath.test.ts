@@ -161,18 +161,34 @@ describe("vinyl · play modes", () => {
     expect(normalisePlayMode("all")).toBe("all");
   });
 
-  it("repeats in one, walks the category in genre, and the library in all", () => {
+  it("repeats in one, walks the category in genre", () => {
     expect(nextGenreForMode("one", "a", LIBRARY)).toBe("a");
     expect(nextGenreForMode("genre", "a", LIBRARY)).toBe("b");
     expect(nextGenreForMode("genre", "b", LIBRARY)).toBe("a");
-    expect(nextGenreForMode("all", "c", LIBRARY)).toBe("a");
-    expect(nextGenreForMode("all", "a", LIBRARY)).toBe("b");
+    // The category walk wraps, and never leaves the category.
+    expect(nextGenreForMode("genre", "b", LIBRARY, 1, () => 0)).toBe("a");
+    expect(nextGenreForMode("genre", "a", LIBRARY, -1)).toBe("b");
   });
 
-  it("walks backwards too, and never returns nothing", () => {
-    expect(nextGenreForMode("all", "a", LIBRARY, -1)).toBe("c");
-    expect(nextGenreForMode("all", "ghost", LIBRARY)).toBe("a");
+  it("shuffles across the whole library in all, and never repeats the current genre", () => {
+    // The button says "Shuffle all genres" / 全部随机, so `all` must not walk in library order: that was the
+    // second half of the phone's complaint that the mode button "did nothing".
+    expect(nextGenreForMode("all", "a", LIBRARY, 1, () => 0)).toBe("b");
+    expect(nextGenreForMode("all", "a", LIBRARY, 1, () => 0.99)).toBe("c");
+    expect(nextGenreForMode("all", "c", LIBRARY, 1, () => 0)).toBe("a");
+    // Whatever it picks, it is never the genre already playing — not even with a one-item candidate pool.
+    for (const current of ["a", "b", "c"]) {
+      const pick = nextGenreForMode("all", current, LIBRARY, 1, () => 0.4);
+      expect(pick).not.toBe(current);
+      expect(LIBRARY.map((g) => g.id)).toContain(pick);
+    }
+    expect(nextGenreForMode("all", "a", [{ id: "a", category: "Electronic" }], 1, () => 0)).toBe("a");
+  });
+
+  it("never returns nothing, even for an id the library does not have", () => {
+    expect(nextGenreForMode("all", "ghost", LIBRARY, 1, () => 0)).toBe(LIBRARY[0].id);
     expect(nextGenreForMode("all", "a", [])).toBe("a");
+    expect(nextGenreForMode("genre", "ghost", LIBRARY, 1, () => 0)).toBe("a");
   });
 });
 
