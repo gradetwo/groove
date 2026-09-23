@@ -308,9 +308,10 @@ jobs:
     name: Nightly (full matrix, coverage, loudness freshness, perf)
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    # The full seven-target matrix plus coverage plus the loudness re-render legitimately takes over an hour, so this
-    # is a hang backstop rather than a budget.
-    timeout-minutes: 120
+    # This job already carried a 90-minute bound (the full seven-target matrix plus coverage plus the loudness
+    # re-render legitimately takes over an hour), so it needs no change: the hang backstop was only missing from the
+    # E2E legs, and a second `timeout-minutes` key is not a bigger bound — it is an invalid workflow file, which
+    # GitHub rejects before running a single job. Learned the direct way.
     timeout-minutes: 90
 
     steps:
