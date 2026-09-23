@@ -191,6 +191,86 @@ jobs:
         if: matrix.leg == 'Desktop browsers'
         run: npm run perf:check
 
+  # The musical ratchet, sharded — one slice of the sample per runner.
+  #
+  # `check:groove` renders twelve genres through the app's own offline engine and judges six claims. It is
+  # single-threaded per genre (one page, one render at a time), so the serial gate is ~21 minutes of one core with
+  # every other core idle. Measured on a 12-vCPU VM: four shards in 569 s against 1272 s of serial work. A standard
+  # runner has 4 vCPUs and cannot host four (Vite + Chromium) stacks — the 8-vCPU/15 GB laptop could not either —
+  # which is why the split is **one shard per runner**, not N shards inside one job.
+  #
+  # A shard judges no budgets: it writes its rows and uploads them. `groove-gate` below owns the judgement, so the
+  # budgets are compared in exactly one place and the sharded run cannot disagree with the serial one.
+  groove-shards:
+    name: Groove shard ${{ matrix.shard }}/4
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Chromium only: the analyser drives one page. The other engines belong to the browser matrix, not here.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Groove gate shard ${{ matrix.shard }}/4
+        run: npm run check:groove -- --shard=${{ matrix.shard }}/4 --rows-out=groove-rows/rows-${{ matrix.shard }}.json
+
+      # Uploaded even when the shard failed: partial rows are how the aggregate explains what is missing.
+      - name: Upload shard rows
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: groove-rows-${{ matrix.shard }}
+          path: groove-rows/
+          if-no-files-found: warn
+          retention-days: 14
+
+  groove-gate:
+    name: Groove gate (the aggregate judges the budgets)
+    runs-on: ubuntu-latest
+    needs: groove-shards
+    # `always()` on purpose: when a shard dies, this is the job that *names* the genres that went unmeasured — and
+    # it is cheap, because the merge path imports nothing outside Node's standard library.
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+
+      # `merge-multiple` flattens the four artifacts into one directory; the aggregator reads every *.json in it
+      # and refuses anything that is not the sample, exactly once each.
+      - name: Download shard rows
+        uses: actions/download-artifact@v5
+        with:
+          pattern: groove-rows-*
+          merge-multiple: true
+          path: groove-rows
+
+      # Deliberately no `npm ci`: this step runs even when the shards failed, and `check_groove.mjs --merge-dir`
+      # needs nothing but Node.
+      - name: Judge the union of the shards
+        run: npm run check:groove -- --merge-dir=groove-rows
+
   # `CI / nightly`: everything that is too slow or too environment-sensitive to gate a push.
   #
   # What it adds over `validate` + `e2e`:
@@ -201,6 +281,9 @@ jobs:
   #    the committed baseline, which needs a browser and ~1 minute but catches a baseline that
   #    no longer describes the code (that check exists because a stale one survived for weeks);
   #  - `perf:check` — the real-browser performance gate.
+  #
+  # The musical ratchet is *not* here: it is `groove-shards` + `groove-gate` above, on the same schedule, because
+  # one job cannot shard across runners and the gate is single-threaded per genre.
   #
   # Everything is uploaded (coverage + e2e-out), because a nightly failure is usually diagnosed
   # from the artifact rather than from the log.
@@ -249,17 +332,8 @@ jobs:
       - name: Loudness Baseline Freshness
         run: npm run check:loudness:fresh
 
-      # The musical ratchet from `docs/GROOVE_QUALITY_PLAN.md`: twelve genres rendered through the app's own
-      # offline engine, per track as well as mixed, with six claims (flat velocities, sidechain depth, stereo
-      # width, mid-range share, static harmony, tail level) judged against budgets that only go down.
-      #
-      # It was the last heavy gate that ran *only* on a developer's machine — about twenty minutes there, which is
-      # exactly the kind of "slow but must run" work this job exists for. The serial path is deliberate: it is the
-      # code every release has been verified on, and four sharded (Vite + Chromium) stacks do not fit a 4-vCPU
-      # runner (they did not fit an 8-vCPU/15 GB laptop either). `--shards=N` is available for a many-core host,
-      # and the per-runner form (`--shard=i/n` + an aggregator job) is the next step.
-      - name: Groove Quality Gate (12 genres, offline engine)
-        run: npm run check:groove
+      # The musical ratchet lives in `groove-shards` + `groove-gate` above (one shard per runner), because a
+      # 4-vCPU runner cannot host four (Vite + Chromium) stacks and the serial gate is ~21 minutes of one core.
 
       - name: Full Browser & Device Matrix
         run: npm run test:e2e:all

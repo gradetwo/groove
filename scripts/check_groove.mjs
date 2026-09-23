@@ -17,9 +17,16 @@
  * are **today's numbers**: a view of the library that gets worse fails, one that gets better prints the tighter
  * number it could be set to, exactly like the touch-target and skin gates.
  *
- * Usage:  node scripts/check_groove.mjs [--json] [--shards=N]   # N independent analyser processes
+ * Usage:
+ *   node scripts/check_groove.mjs                     # the sample, serially (the release-verified path)
+ *   node scripts/check_groove.mjs --shards=N          # N analyser processes inside one machine
+ *   node scripts/check_groove.mjs --shard=i/n --rows-out=dir/rows-i.json
+ *                                                     # one slice, for a runner of its own; it writes its rows
+ *                                                     # and judges nothing — the aggregator owns the budgets
+ *   node scripts/check_groove.mjs --merge-dir=dir     # judge the union of the shards' row files
  */
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
@@ -112,6 +119,140 @@ const CLAIMS = {
 };
 
 /**
+ * Run the analyser over an explicit id list — one process, one dev server, one port.
+ *
+ * Extracted from `analyseShards` so the single-runner shard mode (`--shard=i/n`) runs *exactly* the same command
+ * as one slice of the in-process fan-out: two code paths that "should" produce the same rows is how the aggregate
+ * and the per-shard view would drift apart.
+ */
+function analyseIds(ids, port) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      [
+        path.join(ROOT, "scripts", "analyze_export_audio.mjs"),
+        `--only=${ids.join(",")}`,
+        "--stem-tracks=kick,bass,chords",
+        `--port=${port}`,
+        "--json",
+      ],
+      { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] }
+    );
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("exit", (code) => {
+      if (code !== 0) {
+        reject(
+          new Error(
+            `analyze_export_audio.mjs (${ids.join(",")}) exited ${code}:\n${stderr.slice(-800)}`
+          )
+        );
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout).rows ?? []);
+      } catch (error) {
+        reject(new Error(`could not parse the analyser's JSON: ${String(error)}\n${stdout.slice(0, 400)}`));
+      }
+    });
+  });
+}
+
+/**
+ * One slice of the sample, for a runner of its own.
+ *
+ * This exists because the sample is bigger than one 4-vCPU runner can chew through comfortably and because the
+ * analyser is single-threaded per genre: four runners doing one slice each is the shape the numbers picked (see
+ * `docs/GITHUB_CI.md`). It deliberately **judges no budgets** — a shard that only saw three genres cannot know
+ * whether the sample as a whole regressed, and a judgement per shard would also mean four places to change when a
+ * budget moves. The aggregator judges.
+ *
+ * It does still fail on a genre that did not render: a shard that silently dropped one would make the aggregate
+ * *easier*, which is this file's oldest failure mode.
+ */
+async function runShard(spec, rowsOut) {
+  const match = /^(\d+)\/(\d+)$/.exec(String(spec));
+  if (!match) throw new Error(`--shard must be i/n (e.g. 2/4); got "${spec}"`);
+  const index = Number(match[1]);
+  const total = Number(match[2]);
+  const slices = partitionSample(SAMPLE, total);
+  if (index < 1 || index > slices.length) {
+    throw new Error(`--shard ${spec}: there is no shard ${index} of ${total}`);
+  }
+  const ids = slices[index - 1];
+  const started = Date.now();
+  const rows = await analyseIds(ids, Number(value("--port", "5321")) || 5321);
+  const failed = rows.filter((row) => row.error);
+  const payload = { shard: index, of: total, ids, rows };
+  if (rowsOut) {
+    fs.mkdirSync(path.dirname(path.resolve(ROOT, rowsOut)), { recursive: true });
+    fs.writeFileSync(path.resolve(ROOT, rowsOut), JSON.stringify(payload, null, 2));
+  } else {
+    console.log(JSON.stringify(payload, null, 2));
+  }
+  console.log(
+    `   shard ${index}/${total}: ${rows.length - failed.length}/${ids.length} rendered in ` +
+      `${Math.round((Date.now() - started) / 1000)}s${rowsOut ? ` → ${rowsOut}` : ""}`
+  );
+  if (failed.length !== 0 || rows.length !== ids.length) {
+    console.error(`\n❌ shard ${index}/${total} is incomplete, so the aggregate it feeds would be too:`);
+    for (const row of failed.slice(0, 4)) console.error(`   · ${row.id}: ${row.error}`);
+    for (const id of ids.filter((id) => !rows.some((row) => row.id === id))) {
+      console.error(`   · ${id}: the analyser returned no row at all`);
+    }
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+/**
+ * The union of the shards' rows, or a refusal.
+ *
+ * The check that matters is **coverage**: every sampled genre must appear exactly once. A missing artifact (a
+ * failed shard, a wrong name, a job that uploaded nothing) would otherwise turn twelve genres into nine and every
+ * budget would look satisfied — the exact way this gate lied before it was fixed.
+ */
+function mergeShardRows(dir) {
+  const absolute = path.resolve(ROOT, dir);
+  if (!fs.existsSync(absolute)) throw new Error(`--merge-dir ${dir} does not exist`);
+  const files = fs.readdirSync(absolute).filter((name) => name.endsWith(".json")).sort();
+  if (!files.length) throw new Error(`--merge-dir ${dir} has no .json row files`);
+  const byId = new Map();
+  const problems = [];
+  for (const file of files) {
+    let payload;
+    try {
+      payload = JSON.parse(fs.readFileSync(path.join(absolute, file), "utf8"));
+    } catch (error) {
+      problems.push(`${file}: not JSON (${String(error).slice(0, 80)})`);
+      continue;
+    }
+    for (const row of payload.rows ?? []) {
+      if (byId.has(row.id)) problems.push(`${row.id} appears in more than one shard`);
+      byId.set(row.id, row);
+    }
+  }
+  const missing = SAMPLE.filter((id) => !byId.has(id));
+  const extra = [...byId.keys()].filter((id) => !SAMPLE.includes(id));
+  if (missing.length) problems.push(`no shard measured: ${missing.join(", ")}`);
+  if (extra.length) problems.push(`measured but not in the sample: ${extra.join(", ")}`);
+  if (problems.length) {
+    console.error(`\n❌ the shards do not add up to the sample (${files.length} file(s) in ${dir}):`);
+    for (const problem of problems) console.error(`   · ${problem}`);
+    console.error("\n   A partial aggregate is not a passing aggregate: re-run the missing shard.");
+    process.exit(1);
+  }
+  if (!JSON_OUT) console.log(`   (${files.length} shard file(s), ${byId.size} genres)`);
+  return { rows: SAMPLE.map((id) => byId.get(id)) };
+}
+
+/**
  * Split the sample into `shards` slices that stay in the sample's order.
  *
  * Exported shape is deliberately trivial (a list of lists) so the partitioning is testable without spawning a
@@ -137,44 +278,10 @@ function analyseShards(shards) {
   const slices = partitionSample(SAMPLE, shards);
   const basePort = Number(value("--port", "5321")) || 5321;
   return Promise.all(
-    slices.map(
-      (slice, index) =>
-        new Promise((resolve, reject) => {
-          const child = spawn(
-            process.execPath,
-            [
-              path.join(ROOT, "scripts", "analyze_export_audio.mjs"),
-              `--only=${slice.join(",")}`,
-              "--stem-tracks=kick,bass,chords",
-              `--port=${basePort + index}`,
-              "--json",
-            ],
-            { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] }
-          );
-          let stdout = "";
-          let stderr = "";
-          child.stdout.on("data", (chunk) => {
-            stdout += chunk.toString();
-          });
-          child.stderr.on("data", (chunk) => {
-            stderr += chunk.toString();
-          });
-          child.on("exit", (code) => {
-            if (code !== 0) {
-              reject(
-                new Error(
-                  `analyze_export_audio.mjs shard ${index + 1}/${slices.length} (${slice.join(",")}) exited ${code}:\n${stderr.slice(-800)}`
-                )
-              );
-              return;
-            }
-            try {
-              resolve(JSON.parse(stdout).rows ?? []);
-            } catch (error) {
-              reject(new Error(`could not parse shard ${index + 1}'s JSON: ${String(error)}\n${stdout.slice(0, 400)}`));
-            }
-          });
-        })
+    slices.map((slice, index) =>
+      analyseIds(slice, basePort + index).catch((error) => {
+        throw new Error(`shard ${index + 1}/${slices.length} (${slice.join(",")}): ${error.message}`);
+      })
     )
   );
 }
@@ -198,6 +305,14 @@ async function analyse() {
   }
   return { rows };
 }
+
+/**
+ * One shard per runner, and the aggregator that judges — the CI shape.
+ *
+ * Dispatch happens at the bottom of the file (see `shardSpec` / `mergeDir` there): a shard writes its rows and
+ * judges nothing, and the merge reads them and judges everything. Neither is reachable by accident — `--shard`
+ * and `--merge-dir` have to be asked for.
+ */
 
 function analyseSerial() {
   return new Promise((resolve, reject) => {
@@ -307,61 +422,82 @@ function measureRows(rows) {
   return { counts: tally, detail };
 }
 
-const data = await analyse();
-const rows = data.rows ?? [];
-const rendered = rows.filter((row) => !row.error);
-const failed = rows.filter((row) => row.error);
-const { counts: measured, detail } = measureRows(rows);
+/**
+ * Judge a set of rows — the whole gate, in one place.
+ *
+ * It is a function rather than top-level code because there are two ways to arrive with rows now (the analysed
+ * sample, and the merged shard files) and **the budgets must be judged in exactly one place**: two copies of this
+ * comparison is how "the sharded run passes and the serial run fails" would start.
+ */
+function judge(rows) {
+  const rendered = rows.filter((row) => !row.error);
+  const failed = rows.filter((row) => row.error);
+  const { counts: measured, detail } = measureRows(rows);
+
+  /**
+   * A genre that fails to render must not make the gate *easier*.
+   *
+   * `measureRows` skips `row.error`, so three failed renders quietly turned "12 sampled genres" into 9 and every
+   * budget looked satisfied — the same "a gate that cannot fail is worse than no gate" trap the accumulator bug
+   * was. The run is invalid unless every sampled genre rendered.
+   */
+  if (failed.length) {
+    console.error(`\n❌ ${failed.length} of ${rows.length} sampled genres did not render, so no claim can be judged:`);
+    for (const row of failed.slice(0, 4)) console.error(`   · ${row.id}: ${row.error}`);
+    console.error("\n   Fix the render (typically a stale dev server or an edited file mid-run, which hot-reloads the");
+    console.error("   measuring page) and re-run; a partial sample is not a passing sample.");
+    process.exit(1);
+  }
+
+  const failures = [];
+  const tighten = [];
+  for (const [claim, spec] of Object.entries(CLAIMS)) {
+    const budget = BUDGET[claim];
+    if (spec.worse(measured[claim], budget)) {
+      failures.push(
+        `${spec.label}: ${measured[claim]} of ${rendered.length} sampled genres (budget ${budget}) — ${detail[claim].slice(0, 4).join(", ")}`
+      );
+    } else if (measured[claim] < budget) {
+      tighten.push(`${claim} ${measured[claim]} < ${budget}`);
+    }
+  }
+
+  if (JSON_OUT) {
+    console.log(JSON.stringify({ rendered: rendered.length, measured, budget: BUDGET, detail }, null, 2));
+  } else {
+    console.log("\n🎚️  GROOVE QUALITY GATE\n");
+    console.log(`   ${rendered.length}/${rows.length} sampled genres rendered · offline engine, per-track stems\n`);
+    console.log("   claim".padEnd(24) + "now".padEnd(8) + "budget".padEnd(9) + "worst offenders");
+    for (const [claim, spec] of Object.entries(CLAIMS)) {
+      console.log(
+        `   ${claim.padEnd(22)}${String(measured[claim]).padEnd(8)}${String(BUDGET[claim]).padEnd(9)}${detail[claim].slice(0, 3).join(", ")}`
+      );
+      void spec;
+    }
+    if (tighten.length) console.log(`\n   budget could be tightened: ${tighten.join(", ")}`);
+  }
+
+  if (failures.length) {
+    console.error("\n❌ groove quality regressed:");
+    for (const line of failures) console.error(`   · ${line}`);
+    console.error("\n   The plan for each of these is in docs/GROOVE_QUALITY_PLAN.md.");
+    process.exit(1);
+  }
+  if (!JSON_OUT) {
+    console.log("\n✅ groove quality holds: no claim above its budget (and the budgets only go down)");
+  }
+}
 
 /**
- * A genre that fails to render must not make the gate *easier*.
- *
- * `measureRows` skips `row.error`, so three failed renders quietly turned "12 sampled genres" into 9 and every
- * budget looked satisfied — the same "a gate that cannot fail is worse than no gate" trap the accumulator bug
- * was. The run is invalid unless every sampled genre rendered.
+ * `--shard=i/n` writes one slice's rows and stops; `--merge-dir=<dir>` reads the shard files and judges their
+ * union. Anything else is the ordinary gate over the sample.
  */
-if (failed.length) {
-  console.error(`\n❌ ${failed.length} of ${rows.length} sampled genres did not render, so no claim can be judged:`);
-  for (const row of failed.slice(0, 4)) console.error(`   · ${row.id}: ${row.error}`);
-  console.error("\n   Fix the render (typically a stale dev server or an edited file mid-run, which hot-reloads the");
-  console.error("   measuring page) and re-run; a partial sample is not a passing sample.");
-  process.exit(1);
-}
+const shardSpec = value("--shard", null);
+const mergeDir = value("--merge-dir", null);
 
-const failures = [];
-const tighten = [];
-for (const [claim, spec] of Object.entries(CLAIMS)) {
-  const budget = BUDGET[claim];
-  if (spec.worse(measured[claim], budget)) {
-    failures.push(
-      `${spec.label}: ${measured[claim]} of ${rendered.length} sampled genres (budget ${budget}) — ${detail[claim].slice(0, 4).join(", ")}`
-    );
-  } else if (measured[claim] < budget) {
-    tighten.push(`${claim} ${measured[claim]} < ${budget}`);
-  }
-}
-
-if (JSON_OUT) {
-  console.log(JSON.stringify({ rendered: rendered.length, measured, budget: BUDGET, detail }, null, 2));
+if (shardSpec) {
+  await runShard(shardSpec, value("--rows-out", null));
 } else {
-  console.log("\n🎚️  GROOVE QUALITY GATE\n");
-  console.log(`   ${rendered.length}/${rows.length} sampled genres rendered · offline engine, per-track stems\n`);
-  console.log("   claim".padEnd(24) + "now".padEnd(8) + "budget".padEnd(9) + "worst offenders");
-  for (const [claim, spec] of Object.entries(CLAIMS)) {
-    console.log(
-      `   ${claim.padEnd(22)}${String(measured[claim]).padEnd(8)}${String(BUDGET[claim]).padEnd(9)}${detail[claim].slice(0, 3).join(", ")}`
-    );
-    void spec;
-  }
-  if (tighten.length) console.log(`\n   budget could be tightened: ${tighten.join(", ")}`);
-}
-
-if (failures.length) {
-  console.error("\n❌ groove quality regressed:");
-  for (const line of failures) console.error(`   · ${line}`);
-  console.error("\n   The plan for each of these is in docs/GROOVE_QUALITY_PLAN.md.");
-  process.exit(1);
-}
-if (!JSON_OUT) {
-  console.log("\n✅ groove quality holds: no claim above its budget (and the budgets only go down)");
+  const data = mergeDir ? { rows: mergeShardRows(mergeDir).rows } : await analyse();
+  judge(data.rows ?? []);
 }

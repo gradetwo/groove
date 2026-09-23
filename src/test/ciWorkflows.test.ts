@@ -178,3 +178,55 @@ describe("CI · the nightly job is wired, not decorative", () => {
     }
   });
 });
+
+describe("CI · the groove gate is sharded across runners, and judged once", () => {
+  const shards = jobBlock("groove-shards");
+  const gate = jobBlock("groove-gate");
+
+  it("declares both halves, on the same schedule as the other heavy checks", () => {
+    expect(shards, "a `groove-shards` job").not.toBe("");
+    expect(gate, "a `groove-gate` job").not.toBe("");
+    for (const [name, block] of [
+      ["groove-shards", shards],
+      ["groove-gate", gate],
+    ] as const) {
+      expect(block, `${name} runs on schedule`).toMatch(/github\.event_name == 'schedule'/);
+      expect(block, `${name} runs on dispatch`).toMatch(/github\.event_name == 'workflow_dispatch'/);
+    }
+  });
+
+  it("runs one shard per runner rather than N shards inside one job", () => {
+    /**
+     * The measurement that decided the shape: four (Vite + Chromium) stacks do not fit a 4-vCPU runner — they did
+     * not fit an 8-vCPU/15 GB laptop either — so `--shards=4` inside one job reproduces a timeout. One slice per
+     * runner is the form that works, and `--shard=i/n` is the flag that produces it.
+     */
+    expect(shards).toMatch(/matrix:\s*\n\s+shard: \[1, 2, 3, 4\]/);
+    expect(shards).toContain("--shard=${{ matrix.shard }}/4");
+    expect(shards).not.toContain("--shards=");
+    expect(shards).toMatch(/fail-fast: false/);
+  });
+
+  it("keeps the judgement in the aggregator, not in every shard", () => {
+    // A shard that judged budgets could only judge its own three genres, and the budgets would then exist in two
+    // places. The shard writes rows; the gate reads them and decides.
+    expect(shards).toContain("--rows-out=");
+    expect(gate).toContain("--merge-dir=");
+    expect(gate).toMatch(/needs: groove-shards/);
+    // The aggregate must run even when a shard died, or the missing genres are never named.
+    expect(gate).toMatch(/if: always\(\)/);
+  });
+
+  it("carries the rows between them as artifacts, and stops if one never arrived", () => {
+    expect(shards).toMatch(/uses: actions\/upload-artifact@v5/);
+    expect(gate).toMatch(/uses: actions\/download-artifact@v5/);
+    expect(gate).toMatch(/pattern: groove-rows-\*/);
+    expect(gate).toMatch(/merge-multiple: true/);
+  });
+
+  it("leaves the serial gate out of the nightly job, so it cannot run twice", () => {
+    // `nightly` used to own `check:groove`; if that step stayed, a scheduled run would pay ~21 minutes twice and
+    // the two runs could disagree about the same code.
+    expect(jobBlock("nightly")).not.toMatch(/npm run check:groove\b(?!\s*--)/);
+  });
+});
