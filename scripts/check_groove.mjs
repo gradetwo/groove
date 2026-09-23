@@ -17,13 +17,21 @@
  * are **today's numbers**: a view of the library that gets worse fails, one that gets better prints the tighter
  * number it could be set to, exactly like the touch-target and skin gates.
  *
- * Usage:  node scripts/check_groove.mjs [--json]
+ * Usage:  node scripts/check_groove.mjs [--json] [--shards=N]   # N independent analyser processes
  */
 import { spawn } from "node:child_process";
 import path from "node:path";
 
 const ROOT = process.cwd();
 const JSON_OUT = process.argv.includes("--json");
+/** `--flag value` / `--flag=value`, the same shape the analyser's own CLI uses. */
+function value(name, fallback) {
+  const argv = process.argv.slice(2);
+  const inline = argv.find((arg) => arg.startsWith(`${name}=`));
+  if (inline) return inline.slice(name.length + 1);
+  const index = argv.indexOf(name);
+  return index !== -1 && argv[index + 1] ? argv[index + 1] : fallback;
+}
 
 /**
  * One or two genres per category, chosen because they are the ones the reports named or because they are the
@@ -103,7 +111,95 @@ const CLAIMS = {
   cutTail: { label: "cut tail (last 50 ms above −60 dBFS)", worse: (count, budget) => count > budget },
 };
 
-function analyse() {
+/**
+ * Split the sample into `shards` slices that stay in the sample's order.
+ *
+ * Exported shape is deliberately trivial (a list of lists) so the partitioning is testable without spawning a
+ * browser: a shard that drops or duplicates a genre would make the gate *easier*, which is the one failure mode
+ * this file has already been burned by once (the accumulator bug, and the silent-filter bug before it).
+ */
+export function partitionSample(sample, shards) {
+  const count = Math.max(1, Math.min(sample.length, Math.floor(shards) || 1));
+  const slices = Array.from({ length: count }, () => []);
+  sample.forEach((id, index) => slices[index % count].push(id));
+  return slices;
+}
+
+/**
+ * Run the analyser, optionally as several independent shards.
+ *
+ * The analyser is single-threaded per genre (one page, one render at a time), so a plain run leaves every other
+ * core idle: measured on the 12-genre sample, four shards finished in 569 s against 1272 s of serial work, and the
+ * machine that ran them had 12 cores. Each shard gets its own port (the analyser's dev server is fixed-port) and
+ * its own slice, and the rows are merged back into sample order before anything is measured.
+ */
+function analyseShards(shards) {
+  const slices = partitionSample(SAMPLE, shards);
+  const basePort = Number(value("--port", "5321")) || 5321;
+  return Promise.all(
+    slices.map(
+      (slice, index) =>
+        new Promise((resolve, reject) => {
+          const child = spawn(
+            process.execPath,
+            [
+              path.join(ROOT, "scripts", "analyze_export_audio.mjs"),
+              `--only=${slice.join(",")}`,
+              "--stem-tracks=kick,bass,chords",
+              `--port=${basePort + index}`,
+              "--json",
+            ],
+            { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] }
+          );
+          let stdout = "";
+          let stderr = "";
+          child.stdout.on("data", (chunk) => {
+            stdout += chunk.toString();
+          });
+          child.stderr.on("data", (chunk) => {
+            stderr += chunk.toString();
+          });
+          child.on("exit", (code) => {
+            if (code !== 0) {
+              reject(
+                new Error(
+                  `analyze_export_audio.mjs shard ${index + 1}/${slices.length} (${slice.join(",")}) exited ${code}:\n${stderr.slice(-800)}`
+                )
+              );
+              return;
+            }
+            try {
+              resolve(JSON.parse(stdout).rows ?? []);
+            } catch (error) {
+              reject(new Error(`could not parse shard ${index + 1}'s JSON: ${String(error)}\n${stdout.slice(0, 400)}`));
+            }
+          });
+        })
+    )
+  );
+}
+
+async function analyse() {
+  const shards = Number(value("--shards", process.env.GROOVE_SHARDS || "1")) || 1;
+  /**
+   * One shard is the *original* single-process analyser, deliberately: the default path must stay the code every
+   * release has been verified on, and sharding stays strictly opt-in. (`analyseShards(1)` would be equivalent, but
+   * "equivalent" is not "the same code", and this gate was already broken once by a change that looked equivalent.)
+   */
+  if (shards <= 1) return analyseSerial();
+  const started = Date.now();
+  const groups = await analyseShards(shards);
+  const rows = groups.flat();
+  // Sample order, so the table and the offender lists read the same however the shards interleave.
+  const order = new Map(SAMPLE.map((id, index) => [id, index]));
+  rows.sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+  if (!JSON_OUT) {
+    console.log(`   (${groups.length} shards, ${Math.round((Date.now() - started) / 1000)}s wall)`);
+  }
+  return { rows };
+}
+
+function analyseSerial() {
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
