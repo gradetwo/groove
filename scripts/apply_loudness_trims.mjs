@@ -29,7 +29,19 @@ const argValue = (flag, fallback) => {
 
 const checkOnly = argv.includes("--check");
 const reportPath = path.resolve(ROOT, argValue("--report", "scripts/loudness.baseline.json"));
-const MIX_PATH = path.join(ROOT, "src/data/genreMix.ts");
+/**
+ * `--mix=` exists so this script can be driven from a test against a synthetic table.
+ *
+ * It also has to be *order-independent*, and it was not: the original pattern required `category` to be the first
+ * field of a genre's object literal, and P0.2/P0.3 put `humanise:` and `duck:` in front of it for 23 genres. The
+ * consequences were quiet and both bad — `node scripts/apply_loudness_trims.mjs --check` reported "23 report
+ * genre(s) missing from the table" and the write path refused (correctly, and luckily: it would otherwise have
+ * rewritten 136 of 159 trims and reported success).
+ */
+const MIX_PATH = path.resolve(ROOT, argValue("--mix", "src/data/genreMix.ts"));
+
+/** A genre's line, whatever order its fields are in — the trim is the only field this script cares about. */
+const TABLE_LINE = /^\s{2}"([a-z0-9-]+)":\s*\{.*?\bloudnessTrimDb:\s*(-?[\d.]+)/;
 
 if (!fs.existsSync(reportPath)) {
   console.error(`❌ loudness report not found: ${path.relative(ROOT, reportPath)}`);
@@ -46,8 +58,8 @@ if (report.subset || report.limit) {
 function readTableTrims(source) {
   const found = new Map();
   for (const line of source.split("\n")) {
-    const match = line.match(/^\s{2}"([a-z0-9-]+)":\s*\{\s*category:\s*"([^"]+)",\s*loudnessTrimDb:\s*(-?[\d.]+)/);
-    if (match) found.set(match[1], Number(match[3]));
+    const match = line.match(TABLE_LINE);
+    if (match) found.set(match[1], Number(match[2]));
   }
   return found;
 }
@@ -59,7 +71,7 @@ function formatTrim(value) {
 function rewrite(source, trims) {
   const seen = new Set();
   const lines = source.split("\n").map((line) => {
-    const match = line.match(/^(\s{2}"([a-z0-9-]+)":\s*\{\s*category:\s*"[^"]+",\s*loudnessTrimDb:\s*)(-?[\d.]+)(.*)$/);
+    const match = line.match(/^(\s{2}"([a-z0-9-]+)":\s*\{.*?\bloudnessTrimDb:\s*)(-?[\d.]+)(.*)$/);
     if (!match) return line;
     const [, prefix, genreId, , suffix] = match;
     if (!trims.has(genreId)) return line;
