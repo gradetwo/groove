@@ -192,6 +192,8 @@ number, and names the erasure as P2.3's item rather than asserting something the
 Why it took a probe: every audio claim in `src/test/**` is really structural — jsdom's Web Audio double renders an
 empty buffer — so "the fill is audible" needs a real browser, and the unit tests can only pin the pattern.
 
+### B7 — the transport plays the arrangement (not done; the largest gap left)
+
 **Not done, and named here rather than discovered later: the arrangement is not *played* live.** The transport
 loops the pattern being edited; `songMode` is still a flag the exports and the WAV bounce consult (B4), not something
 the engine walks. So a user can build a 40-bar arrangement in the view, export it, and hear one loop while the
@@ -199,6 +201,16 @@ transport runs. Nothing in B0–B6 asked for live playback — it is a transport
 boundaries, apply the section's overrides as the playhead crosses them) and it is the largest remaining gap between
 what the arrangement view shows and what the app does. It is recorded here because "the surface shows a timeline the
 transport ignores" is a product hole, not a missing polish item.
+
+**What it takes, and how it would be verified.** The transport already knows the bar it is on; the missing piece is
+that the *engine* is handed one pattern and told to repeat it. The shape that fits this codebase is the one B2
+established for export — derive the timeline once (`resolveTimeline`), then switch the playing clip at a pass
+boundary and apply that section's `velocityScale`/`mute`/`overrides` as the playhead crosses it, through the same
+`flattenSong` data the renderer uses, so playback and export cannot disagree. Verification is a probe on the built
+app that plays a two-section song, samples the analyser at a bar boundary, and asserts the second section is
+audibly a different clip (and, once A2 of the quality plan lands, that its ramp is audible); plus a unit test that
+the transport asks for the right pass at each boundary. It is deliberately **after** the audio batch: it changes what
+is *played*, not what is *rendered*, so it cannot stale the trims — which is why it is the parallel track.
 
 Deliberately left: a **per-hit crescendo** inside a fill (needs a per-step velocity list on `SongFill`), editing a
 ramp or a fill by hand in the view (the picker generates them; the region shows them), and the *audio* half of the

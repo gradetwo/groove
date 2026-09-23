@@ -140,7 +140,7 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
 | 0.1 | **A `check:groove` gate** — the musical ratchet | new `scripts/check_groove.mjs` | Renders a sample per category and fails when velocity spread, duck depth, stereo width, mid-band share, swing audibility or tail level regress. Budgets start at today's numbers and only go down, like `probe:skins`. | M | none (read-only) |
 | 0.2 | **Seeded velocity humanisation** ✅ | `genreMix.humanisePatternVelocities`, called at the end of `patternFromGenre` | `velocityByTrack[*].distinct` rises without touching the 159 genre files; a fixed seed means two renders of the same groove stay identical. **Baked into the pattern rather than applied at trigger time** so the live engine, the WAV/MP3 bounce, the MIDI/`.als` exports and the editor's velocity lane all read the same performance — and so the gate, which counts the pattern, can see it. Amounts are per category (0.18–0.34) scaled per lane (kick ×0.35, bass ×0.5, hats ×1.1) with per-genre exceptions where the style is machine-locked (chiptune, gabber, drill) or hand-played (ambient, blues, funk). Result: **0 of 12** sampled genres with a flat lane. | S | done |
 | 0.3 | **An audible sidechain** ✅ | `genreMix` (`DUCK_BY_CATEGORY` + per-genre overrides), scheduled by one shared helper (`src/audio/sidechain.ts`) for the live engine and the renderer | The claim is the **dip**: the deepest 5 ms window in the 60 ms after each scheduled kick, median across onsets — independent of the release length and of where the bass note's own energy sits. `weakDuck` (shallower than 3 dB) went **12/12 → 0/12**; the sample measures −3.8…−5.1 dB where the bass sounds under the kick, and the two genres where it never does (minimal-techno, ambient) report as unmeasurable instead of passing. Depth is the promise (4–6 dB scheduled), release is the genre (70 ms gabber, 280 ms ambient), and a quiet kick ducks proportionally less. | M | done |
-| 0.4 | **Deliberate width** — ⛔ **held, and measured** | `genreMix` (`MIX_WIDTH_SCALE` on the resolved pans) | The pan widening **works**: scaled 2.0 it took the sample from **12/12 genres effectively mono to 3/12** (detroit-techno 0.9825, ambient 0.9834, minimal-techno 0.9921) with side −9.2…−20.5 dB, comfortably mono-safe (`sideTooHot` 0/12). It is **not landed** because a hard-panned lane is up to +3 dB in one channel, so the true-peak ceiling clamps harder and the loudness falls by up to **1.9 dB** on the widest genres — and absorbing that means re-recording the 159 fitted trims, which the loudness run **refuses to publish while P0.8 is open** (its sentinel measured one genre 0.66 dB apart on identical code). A mid/side width stage was also built and measured: on the reverb return it is loudness-neutral but buys ~0.5 dB of side (12/12 stay narrow), and on the master it is audible but pays the same ceiling cost. The mechanism, the numbers and the two-line change are all here; the next session lands it immediately after P0.8. | S | **blocked on P0.8 → P0.9** |
+| 0.4 | **Deliberate width** — ⛔ **held, and measured** | `genreMix` (`MIX_WIDTH_SCALE` on the resolved pans) | The pan widening **works**: scaled 2.0 it took the sample from **12/12 genres effectively mono to 3/12** (detroit-techno 0.9825, ambient 0.9834, minimal-techno 0.9921) with side −9.2…−20.5 dB, comfortably mono-safe (`sideTooHot` 0/12). It is **not landed** because a hard-panned lane is up to +3 dB in one channel, so the true-peak ceiling clamps harder and the loudness falls by up to **1.9 dB** on the widest genres — and absorbing that means re-recording the 159 fitted trims, which the loudness run **refuses to publish while P0.8 is open** (its sentinel measured one genre 0.66 dB apart on identical code). A mid/side width stage was also built and measured: on the reverb return it is loudness-neutral but buys ~0.5 dB of side (12/12 stay narrow), and on the master it is audible but pays the same ceiling cost. The mechanism, the numbers and the two-line change are all here; **P0.9 landed on 2026-09-23, so this is now the first item of the audio batch below** — and it is the only reason the width was held. | S | **unblocked — next audio change** |
 | 0.5 | **Swing on 8th off-beats** ✅ | `src/audio/swing.ts`, used by both engines | The off-8th moves the full amount and the off-16ths half, so a pattern written in 8ths swings; the analyser's detector now looks at every off-downbeat, not just the odd 16ths (which is why boom-bap measured straight at declared swing 60). `inaudibleSwing` and `swingNotAudible` are both **0/12**. | M | done — timing changes, deliberately |
 | 0.6 | **Tail per pattern** ✅ | `src/audio/renderTail.ts`, used by `WavExporter` | The tail is the genre's own reverb RT60 and its delay repeats to −60 dB (tempo-synced divisions resolved at the playing tempo), floored at the old 0.6 s and capped at 5 s. `cutTail` **2/12 → 0/12**: boom-bap went from −29.1 dBFS in its last 50 ms to −82.3, and every sampled genre is now below −82 dBFS. | S | done |
 | 0.7 | **Measure the loudness and timbre baselines on the pattern the user hears** | `measure_genre_loudness.mjs`, `measure_genre_timbre.mjs` | Found while fixing A3: both baseline scripts render `applyGenreMixDefaults(genre.sequencer_pattern)` — the mix applied to the *unexpanded* skeleton. They are self-consistent (the gate re-measures the same thing), so `check:loudness`/`check:timbre` still hold, but they certify a one-loop pattern rather than a performance. Regenerating 159 baselines is a release of its own; do it deliberately, not as a side effect. | M | medium — every baseline moves |
@@ -212,6 +212,34 @@ are lazy module/WASM compilation completing mid-life, and any worklet whose proc
 installed. `scripts/probe_render_state_fork.mjs` reproduces it in about 90 seconds, which is where that round should
 start.
 
+### Revision — 2026-09-23, after P0.9: one audio batch, then one re-record
+
+P0.9 landed (159 trims re-recorded and applied; `check:loudness:fresh` green at Δ +0.00 dB). That changes how the
+remaining items should be *sequenced*, because of one hard fact about the measurement:
+
+> **Every audio change invalidates the fitted trims.** `check:loudness:fresh` re-renders a sample and compares it with
+> the committed report, so the moment a mix stage moves, the report is stale and has to be re-recorded — two hours of
+> CI per re-record, and nothing can be released in between.
+
+So the remaining audio items are **one batch with one re-record at the end**, ordered by measured impact rather than
+by the order they appear in the table above. The evidence for that order:
+
+| # | Order | Item | Why here (measured) | Exit criteria |
+| :-- | :-- | :--- | :--- | :--- |
+| A1 | **1** | **P0.4 deliberate width** | The work is done and measured: `MIX_WIDTH_SCALE` 2.0 takes the sample from **12/12 effectively mono to 3/12**, side −9.2…−20.5 dB (mono-safe). It was held *only* because a hard-panned lane costs up to **1.9 dB** of loudness on the widest genres and absorbing that needs a re-record — which is exactly what this batch ends with. | `narrowStereo` ratchet **12 → 3**, `sideTooHot` stays 0, and the batch's re-record absorbs the loudness |
+| A2 | **2** | **P2.3 the master chain's give-back** | The largest audible win left, because it **multiplies everything P0.2, P1.1 and B5 already added**: `duckErasedInMaster` measures a −4.4 dB sidechain arriving as −0.4 dB in the file, and `probe:arrangement-audio` measured a **12 dB velocity change moving the file by ±0.3 dB** (0.25 → 0.3013, 0.5 → 0.3402, 1 → 0.3348, 2 → 0.3253). Builds, fills and per-note dynamics are being refilled by the bus compressor's makeup and the ceiling. | `duckErasedInMaster` **1 → 0**; the same probe shows the ramp's per-bar level moving with the pattern's 6 dB instead of −1.7 % |
+| A3 | **3** | **P2.2 per-note timbre variation** | Independent of A2 *in mechanism* — it changes a hit's **colour** (centroid, cutoff, send) rather than its level, so it survives a chain that pins level, and it can be verified even if A2's fix lands later. It is also what stops a 16-step loop of the same stab sounding like a machine. | consecutive stabs differ in centroid by ≥ 3 %; two renders with a fixed seed match |
+| A4 | **4** | **P2.4 top-end texture** | Depends on the arrangement data (B5: a `texture` lane only in the bars the arrangement names) and lands *better after* A2 — a riser whose level is refilled by the chain is the same defect as a build that is. | the top three bands gain energy only in the arranged bars |
+| — | parked | **P2.5 sample-based texture** | Needs a licensing decision before any code. Stays parked until someone makes it. | — |
+
+**The exit for the batch is one re-record, not four:** `node scripts/measure_genre_loudness.mjs` → download the
+artifact → `node scripts/apply_loudness_trims.mjs` → `check:loudness:fresh` green, with `check:groove`'s budget table
+lowered to the new measurements in the same change (the ratchet only goes down).
+
+**And a second track runs in parallel, because it touches no audio:** the transport does not play the arrangement
+(see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
+it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
+
 ### P1 — content design (data, in category batches)
 
 | # | Change | Where | Verification | Effort |
@@ -254,11 +282,12 @@ start.
 | done | P0.1 gate + basis fixes + **P0.2 humanisation** (flat lanes 12/12 → 0/12) | remaining 13 findings, `JAM_COLORS`, P0 0-5 |
 | done | **P0.3 audible sidechain** (2 dB → 3.8–5.1 dB measured, shared scheduling helper) | — |
 | done | **P0.5 swing 8ths + P0.6 tail** (swing claims 0, tails ≤−82 dBFS) | — |
-| held | **P0.4 width** (measured 12→3 narrow; waits for P0.8 → P0.9, see its row) | — |
+| **now** | **A1 P0.4 width** → **A2 P2.3 give-back** → **A3 P2.2 timbre** → **A4 P2.4 texture**, then **one** re-record (see the revision above). P0.4 is unblocked: P0.9 landed. | touch/jank ratchet |
+| parallel | **B7 the transport plays the arrangement** (`docs/ARRANGEMENT_PLAN.md`) — no audio, cannot stale the trims, and it is the largest gap between a surface and the app | — |
 | next | **P0.8 nondeterminism → P0.9 trim re-record** (this is the release blocker, not a nicety: it also caps how wide the mix can go) | touch/jank ratchet |
 | done | **P1.1 accents + ghosts** (snare spread 1/11 → 11/11, hats 8/11 → 11/11 at the pattern level); **P1.4 measured and retired** (it already held) | touch/jank ratchet |
 | done | **P1.2 measured to its end**: the content half landed (pad + bass walk), and the audio claim was tested twice — content (0.00 dB) and a 5 dB mix tilt (+0.2/+1.0 dB) — both rejected *by measurement*. `thinMids` keeps its metric and its budget (11, the ratchet that stops a regression) but its **claim text is corrected**: −6 dB was aspirational, the library's mid content is inherently sparse, and the honest reading of the number is "compared against this library, not against a target". | — |
-| +4 | P2.2 timbre variation + P2.3 saturation | — |
-| +5 | P0.7 loudness/timbre baseline basis (own release) | — |
+| +4 | A1–A4 as one batch, then the re-record (above) | — |
+| +5 | P0.7 loudness/timbre baseline basis (own release); P2.5 parked on a licensing decision | — |
 
 The first two rows touch no CSS and no component; the skin rows touch no audio. Neither gate can mask the other.
