@@ -48,8 +48,15 @@ git diff --stat apple2011/next HEAD
   **studio DOM probes** (`probe:toolbar`, `probe:grid-gutter`, `probe:arrangement`) against the same build — they
   serve `dist/` themselves, so that leg has everything they need and no other leg needs a copy — and the
   performance gate (the number belongs to the build, not to the engine).
-* **nightly** (schedule / dispatch): coverage, build, `check:loudness:fresh`, **`check:groove`** (the musical
-  ratchet: twelve genres through the offline engine), the full matrix, the performance gate, and the artifacts.
+* **nightly** (schedule / dispatch): coverage, build, `check:loudness:fresh`, the full matrix, the performance
+  gate, and the artifacts. The musical ratchet is **not** in this job any more — see below.
+* **groove-shards** (schedule / dispatch): four runners, one slice of the twelve-genre sample each
+  (`--shard=i/4 --rows-out=…`). A shard judges **no budgets**: it renders its three genres, writes the rows and
+  uploads them as an artifact.
+* **groove-gate** (schedule / dispatch, `needs: groove-shards`): downloads the four artifacts, merges them, refuses
+  anything that is not the sample exactly once, and *there* the budgets are compared — one place, so the sharded run
+  and the serial run cannot disagree. It runs with `if: always()` and no `npm ci` (the merge path imports nothing but
+  Node), so a dead shard produces "no shard measured: …" instead of silence.
 
 `manual-verify.yml` is the on-demand switch (`scope: e2e | verify | audio | jank | skins | all`, plus
 `profile`/`only`) and is the right tool for "just the phone legs" or "just the timbre gate".
@@ -80,9 +87,8 @@ Two conclusions came out of those numbers, and both are load-bearing:
    legs (parallel, attributable failures) are the wins. The audio analyser is single-threaded per genre, so its
    1.19× on the VM is clock, not cores.
 2. **Sharding must be one shard per runner, not N shards inside one runner.** A 4-vCPU runner cannot host four
-   (Vite + Chromium) stacks — the 8-vCPU laptop could not either. `check_groove.mjs --shards=N` (in-process,
-   opt-in) is for a many-core host; the CI-shaped version is `--shard=i/n` per runner plus an aggregator job that
-   judges the budgets in one place. **That refactor is the next CI step.**
+   (Vite + Chromium) stacks — the 8-vCPU laptop could not either. That is now the shape in `ci.yml`
+   (`groove-shards` + `groove-gate`), and the in-process `--shards=N` is kept for a many-core host (Colab).
 
 ## Operating notes (each one cost time to learn)
 
@@ -102,11 +108,10 @@ Two conclusions came out of those numbers, and both are load-bearing:
 
 ## Next steps
 
-1. CI phase 2: `check_groove.mjs --shard=i/n` + a workflow matrix (one shard per runner) + an aggregator job;
-   shard the nightly 159-genre loudness/timbre sweeps the same way (artifacts only, no auto-committed baselines).
-   This is the last heavy gate that is still a single serial job.
-2. CI phase 3: a tag workflow (`v*`) that runs verify + build, uploads `dist` as an artifact and drafts the GitHub
+1. CI phase 3: a tag workflow (`v*`) that runs verify + build, uploads `dist` as an artifact and drafts the GitHub
    Release from `public/changelog.json`. Deployment stays local (`node scripts/deploy.mjs`) by decision.
+2. Shard the nightly 159-genre loudness/timbre sweeps the same way the groove gate is sharded now (artifacts only,
+   no auto-committed baselines).
 3. The product work the plans still own: **B5** (fills/variation as arrangement data, unblocked now that B3's
    timeline view edits `sections`), **P1** (content design through a generator), **P2** (per-note timbre,
    saturation depth, top-end texture), the phone's multi-level genre picker, and **P0.8 → P0.9** (the render
