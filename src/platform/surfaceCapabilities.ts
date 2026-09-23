@@ -132,11 +132,13 @@ export function desktopOnly(): CapabilityId[] {
 /**
  * Where each capability lives, as a module prefix — what the test uses to check the phone shell.
  *
- * A capability with no module yet (the arrangement view) simply has no entry; the test then only asserts the
- * declaration, and adding the module later is what activates the leak check.
+ * A capability with no module yet simply has no entry; the test then only asserts the declaration, and adding the
+ * module later is what activates the leak check. `arrangement` was in exactly that state until B3 built the view:
+ * its entry used to name a planned path, and now names the component that really renders it — which is the moment
+ * the phone-side leak check starts being able to fail.
  */
 export const CAPABILITY_MODULES: Partial<Record<CapabilityId, readonly string[]>> = {
-  arrangement: ["src/views/ArrangementView", "src/features/arrangement/ArrangementPanel"],
+  arrangement: ["src/components/arrangement/ArrangementPanel"],
   "piano-roll": ["src/components/sequencer/PianoRollLane"],
   "hardware-console": ["src/components/console"],
   "project-hub-multitrack": ["src/components/sequencer/ProjectHubModal"],

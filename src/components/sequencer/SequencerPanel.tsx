@@ -102,6 +102,12 @@ export interface SequencerPanelProps {
   onCopySlot: (from: "A" | "B", to: "A" | "B") => void;
   onToggleSongMode: () => void;
   onToggleBlindCompare: () => void;
+  /**
+   * B3: opens the arrangement view. Optional so the phone shell (and any caller with no arrangement surface)
+   * simply never renders the entry, instead of the toolbar asking what kind of device it is on.
+   */
+  onOpenArrangement?: () => void;
+  isArrangementOpen?: boolean;
   onToggleMetronome: () => void;
   onToggleCountIn: () => void;
   onToggleAnalyzer: () => void;
@@ -280,6 +286,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   onCopySlot,
   onToggleSongMode,
   onToggleBlindCompare,
+  onOpenArrangement,
+  isArrangementOpen = false,
   onToggleMetronome,
   onToggleCountIn,
   onToggleAnalyzer,
@@ -595,6 +603,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         onSwitchSlot={onSwitchSlot}
         onCopySlot={onCopySlot}
         onToggleSongMode={onToggleSongMode}
+        onOpenArrangement={onOpenArrangement}
+        isArrangementOpen={isArrangementOpen}
         onToggleBlindCompare={onToggleBlindCompare}
         onToggleMetronome={onToggleMetronome}
         onToggleCountIn={onToggleCountIn}

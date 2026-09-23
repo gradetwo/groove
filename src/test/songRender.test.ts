@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { flattenSong, clipSteps, patternForExport } from "../data/songFlatten";
+import { flattenSong, clipSteps, patternForExport, sessionSong } from "../data/songFlatten";
 import { createSong, type ClipSlot, type Song, type SongSection } from "../types/song";
 import type { SequencerPattern } from "../types/genre";
 import { installFakeOfflineAudioContext } from "./helpers/fakeAudio";
@@ -269,6 +269,33 @@ describe("B2 · the render is as long as the song", () => {
     const empty = patternForExport({ ...loopState, songMode: true, sections: [] });
     expect(empty.isSong).toBe(false);
     expect(empty.pattern.totalSteps).toBe(16);
+  });
+
+  it("builds the session's song from the pattern being edited, not from the saved slot", () => {
+    /**
+     * B3 rests on this. The arrangement view draws `sessionSong(input)` and the exporters flatten it, so if the
+     * edited pattern (`current`) did not land in the active clip, the timeline on screen would show a song made of
+     * the *saved* slots — the arrangement of a pattern the user is no longer looking at.
+     */
+    const saved = clip(16);
+    const edited = clip(32);
+    const session = {
+      songMode: true,
+      activeSlot: "A" as const,
+      patterns: { A: saved, B: saved },
+      current: edited,
+      sections: [{ id: "s1", slot: "A" as const, bars: 1 }],
+      genreId: "chicago-house",
+      bpm: 124,
+      swing: 0,
+      resolution: "1/16" as const,
+      loopRange: null,
+    };
+    expect(sessionSong(session).clips.A).toBe(edited);
+    expect(sessionSong(session).clips.B).toBe(saved);
+    // …and the other slot's edit does not leak into the clip being drawn.
+    expect(sessionSong({ ...session, activeSlot: "B" }).clips.B).toBe(edited);
+    expect(sessionSong({ ...session, activeSlot: "B" }).clips.A).toBe(saved);
   });
 
   it("makes the MIDI as long as the song, not as long as one loop", () => {

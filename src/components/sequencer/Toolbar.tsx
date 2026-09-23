@@ -112,6 +112,13 @@ export interface ToolbarProps {
   blindCompare?: boolean;
   isMetronome?: boolean;
   isCountIn?: boolean;
+  /**
+   * B3: opens the arrangement view. Optional, like the console toggle — the entry renders only where a host can
+   * actually open it, and the studio passes it only when it is not the phone. That keeps "the phone has no
+   * arrangement surface" a decision of the surface rather than a branch inside the toolbar.
+   */
+  onOpenArrangement?: () => void;
+  isArrangementOpen?: boolean;
   onTogglePlay: () => void;
   onChangeBpm: (bpm: number) => void;
   onChangeSwing: (swing: number) => void;
@@ -321,6 +328,9 @@ interface PatternSlotControlsProps {
   onCopySlot?: (from: "A" | "B", to: "A" | "B") => void;
   onToggleSongMode?: () => void;
   onToggleBlindCompare?: () => void;
+  /** B3: opens the arrangement view (desktop/iPad only — the host decides by passing a handler). */
+  onOpenArrangement?: () => void;
+  isArrangementOpen?: boolean;
   /** Advanced density: song mode and blind compare are Tier 2 and Tier 3 (see `toolbarTiers`). */
   showAdvancedControls: boolean;
 }
@@ -337,6 +347,8 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
   onCopySlot,
   onToggleSongMode,
   onToggleBlindCompare,
+  onOpenArrangement,
+  isArrangementOpen = false,
   showAdvancedControls,
 }) {
   const { t } = useLanguage();
@@ -406,6 +418,27 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
         >
           <Repeat className="w-3.5 h-3.5" />
           <span className="hidden sm:inline font-['JetBrains_Mono']">SONG</span>
+        </button>
+      )}
+
+      {/* Arrangement view (B3). Tier 2 beside song mode: it is the editor for the chain that toggle turns on. */}
+      {onOpenArrangement && shows("arrangement") && (
+        <button
+          data-toolbar-id="arrangement" data-toolbar-tier="2"
+          type="button"
+          onClick={onOpenArrangement}
+          data-testid="toolbar-arrangement-toggle"
+          className={`h-8 px-2 rounded-lg border flex items-center gap-1 text-xs transition-colors shrink-0 ${
+            isArrangementOpen
+              ? "bg-accent/20 border-accent text-accent font-bold"
+              : "bg-panel2 border-line hover:border-[#3a3e48] text-text-sub hover:text-text"
+          }`}
+          title={t("toolbar_arrangement_title")}
+          aria-label={t("toolbar_arrangement_title")}
+          aria-pressed={isArrangementOpen}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span className="hidden md:inline font-['JetBrains_Mono']">{t("toolbar_arrangement_label")}</span>
         </button>
       )}
 
@@ -622,6 +655,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   blindCompare = false,
   isMetronome = false,
   isCountIn = false,
+  onOpenArrangement,
+  isArrangementOpen = false,
   drumKit = "808",
   onChangeDrumKit,
   isDrumsOnly = false,
@@ -1061,6 +1096,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
               onCopySlot={onCopySlot}
               onToggleSongMode={onToggleSongMode}
               onToggleBlindCompare={onToggleBlindCompare}
+              onOpenArrangement={onOpenArrangement}
+              isArrangementOpen={isArrangementOpen}
               showAdvancedControls={showAdvancedControls}
             />
 

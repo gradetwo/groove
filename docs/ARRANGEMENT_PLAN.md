@@ -79,7 +79,7 @@ independent until B5, and B is what makes that document's P1 possible.
 | **B0** | **This slice**: the `Song` types, the pure timeline functions (flatten, normalise, migrate, total bars) and their tests | `src/types/song.ts`, `src/features/arrangement/songTimeline.ts` | unit tests: migration is lossless, flattening agrees with the old semantics, invalid sections are reported not thrown | **done in this round** |
 | **B1** | Persistence and share: read/write `sections`, keep reading `songChain`; `.groove` and the share URL carry the arrangement ✅ | `projectStorage.ts`, `projectDb.ts`, `useSequencerStore.ts`, `useProjectHub.ts`, `types/project.ts`, `SequencerUrlShare.ts` | round-trip tests, plus a share link that decodes an arrangement — `src/test/songPersistence.test.ts` (9 cases: legacy migration, hydration preference, save round-trip, the two views staying in step) and three new cases in `sharePayloadSecurity.test.ts` | **done** |
 | **B2** | **The renderer gets a timeline**: `renderSongOffline(song)` plays the sections (per-section clip, repeats, mutes, velocity scale) instead of repeating one pattern; the WAV export follows it in song mode ✅ | `src/data/songFlatten.ts`, `WavExporter.ts`, `useExportActions.ts` | flattening is unit-tested bar by bar (order, repeats, mutes, velocity clamping, mixed clip lengths, optional lanes); the render is **three clip lengths longer** for a 4-pass song than the single loop it replaces, measured through the same offline path. Section-level *audio* metrics in `check:groove` are still open (recorded below) | **core done** |
-| **B3** | **The arrangement view** (iPad and PC): tracks down the side, bars across the top, clips as regions; select a clip → the step sequencer edits it. Drag to move, edge-drag to repeat, keyboard on PC, touch on iPad | `src/features/arrangement/songEdit.ts` (done) + new `src/views/ArrangementView.tsx` + toolbar entry (pending) | **Model layer landed**: 10 unit tests pin the bar ruler (`sectionRegions` follows `resolveTimeline`, so an unplayable section is not drawn and does not shift the regions after it), and the gestures (move with overshoot clamping, resize against `MAX_SECTION_BARS`, duplicate in place, unknown-id no-ops). The view, the toolbar entry and `probe:arrangement` are the remaining work. | L — the visible feature (model done) |
+| **B3** | **The arrangement view** (iPad and PC): bars across the top, clips as regions; select a clip → the step sequencer edits it. Drag to move, drag the bottom band to repeat, keyboard on PC, touch on iPad ✅ | `src/features/arrangement/songEdit.ts`, `src/components/arrangement/ArrangementPanel.tsx`, the studio toolbar's Tier 2 entry | 15 cases in `src/test/songEdit.test.ts` (ruler, drop targets, the keyboard model, ids that cannot collide) + 14 in `src/test/arrangementPanel.test.tsx` (regions, an unplayable section, the gestures, every target ≥ 44 px, focus) + `npm run probe:arrangement`, which drives the **built** app: opens the entry through the advanced density, checks every region against its own bar in the ruler's arithmetic, measures every finger target in the DOM, and performs a real mouse drag → band drag → ArrowLeft, with a sub-half-bar nudge as the negative control | **done** |
 | **B4** | **Exporters follow the timeline**: MIDI/ALS/.als/MP3 render the arrangement; the share link carries it | `MidiExporter`, `AbletonExporter`, `useExportActions` | the exported MIDI's length equals the song's bar count; the ALS has one clip per section | M |
 | **B5** | **The payoff for the audio plan**: fills, variation, harmonic movement every 8 bars, risers and builds become *sections and overrides* instead of pattern hacks | arrangement data + the new `texture`/fill voices | `check:groove`'s static-harmony and velocity claims fall; the report's "no fill, no variation" items become expressible | M |
 | **B6** | MCP surface: `create_song`, `add_section`, `render_song` — an agent composes an arrangement, not a loop ✅ | `mcp/song.ts`, `mcp/registry.ts` | the gate calls the two browser-free tools (46 checks, up from 42) and asserts `render_song` is declared; 14 unit tests in `src/test/mcpSong.test.ts`; `docs/MCP.md` gained the Song section | **done** |
@@ -122,6 +122,38 @@ Three details that are decisions rather than accidents:
 
 Still open from B2's verification: `check:groove` has no section-level audio metrics yet (the flattening tests
 prove per-bar differences in the *data*; proving them in the rendered file is a separate measurement).
+
+### B3 — what landed, and the four decisions inside it
+
+The view is `ArrangementPanel` (a modal over the studio, opened from a Tier 2 toolbar entry beside Song Mode);
+everything it *decides* is in `songEdit.ts`, and the split is enforced by two test files rather than by intention.
+
+1. **It draws the timeline, not the list.** `sectionRegions` walks `resolveTimeline`, so a section whose clip is
+   empty has no region and does not shift the regions after it. The same honesty is in `dropIndexForBar`: a drop
+   resolves to an index in `song.sections`, not to a region index, so dropping onto the bar an unplayable section
+   would have occupied still lands where the user pointed.
+2. **Move and resize are stacked bands, not a body and a corner.** A one-bar region is 48 px wide; a 44 px edge
+   handle would leave four pixels of body, and the region could be resized but never dragged. So the region is a
+   56 px move band over a 44 px resize band — both as wide as the region, both at or above the 44 px contract, and
+   no gesture is ambiguous. This is the one place where the finger contract changed the layout rather than a
+   colour.
+3. **One `Song`, two consumers.** `sessionSong()` is the single builder of "what the session is right now", used by
+   the arrangement view *and* by `patternForExport` for WAV/MP3/MIDI/`.als`. The timeline on screen and the file an
+   export writes cannot describe different songs, and the subtle part — the pattern being edited lives in
+   `current`, not in `patterns[activeSlot]` — is written once.
+4. **A gesture is one undo entry; a key press is its own.** Drags call `commitCoalesced` under a
+   `arrangement:move:<id>` / `arrangement:resize:<id>` key, discrete commands call `commit`. Without the
+   distinction a drag would evict the undo stack forty times, and without the other half two quick deletions would
+   collapse and the first would be unreachable.
+
+Deliberately **not** in this slice: adding a section from the view (the studio's song chain still creates them, and
+the empty state says so), the playhead, and per-section mutes/labels editors — those are B5's material, and the
+panel already renders `label`, `mute` and `velocityScale` regions correctly when they arrive from a project.
+
+`probe:arrangement` is the part a unit test cannot do: it opens the entry in the built app, checks every region's
+pixel position against the ruler's own arithmetic, measures every target a finger must hit, and performs a real
+pointer drag. Its negative control is a deliberate nudge below half a bar — if that reordered anything, every
+passing drag assertion above it would be meaningless.
 
 ### B1 implementation notes (the surfaces the arrangement has to survive)
 
@@ -190,8 +222,9 @@ So the revised order is:
 | Track | Round 1 | Round 2 | Round 3 | Round 4 |
 | :--- | :--- | :--- | :--- | :--- |
 | **A — audio quality** (independent) | velocity humanisation, duck depth | stereo width, swing, tail | mid-range fill, ghost notes (pattern-level) | per-note timbre variation, saturation depth |
-| **B — song/arrangement** | B0 types + timeline (**this round**) | B1 persistence + share | B2 renderer timeline | B3 arrangement view |
+| **B — song/arrangement** | B0 types + timeline ✅ | B1 persistence + share ✅ | B2 renderer timeline ✅ | B3 arrangement view ✅ |
 
 Track A's first two rounds need no timeline and fix the report's three biggest complaints. Track B's B0–B2 are
 invisible (no UI) and can proceed in parallel. The arrangement view (B3) is the first user-visible step, and it is
-where the two tracks meet.
+where the two tracks meet — and with it landed, **B5** (fills, 8-bar variation and risers as arrangement data) is
+unblocked, because there is finally a surface and a data path for them.

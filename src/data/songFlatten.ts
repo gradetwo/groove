@@ -193,11 +193,16 @@ export interface ExportPattern {
  * "the MIDI is 4 bars while the WAV is 16" would otherwise happen. In song mode it flattens the arrangement; in
  * loop mode it returns the pattern being edited, unchanged.
  */
-export function patternForExport(input: ExportPatternInput): ExportPattern {
-  if (!input.songMode || !input.sections?.length) {
-    return { pattern: input.current, isSong: false, problems: [] };
-  }
-  const flattened = flattenSong({
+/**
+ * The session as a `Song`.
+ *
+ * Both the exporters and the arrangement view need to know what the session currently *is*, and they must agree:
+ * if the view drew an arrangement the WAV export did not flatten (or the other way round), the user would be
+ * editing a song they cannot hear. The clip swap is the subtle part — the pattern being edited lives in
+ * `input.current`, not in `input.patterns`, until the slot is switched — so it happens once, here.
+ */
+export function sessionSong(input: ExportPatternInput): Song {
+  return {
     id: "session",
     name: input.genreId,
     genreId: input.genreId,
@@ -210,6 +215,13 @@ export function patternForExport(input: ExportPatternInput): ExportPattern {
     },
     sections: input.sections,
     loopRange: input.loopRange,
-  });
+  };
+}
+
+export function patternForExport(input: ExportPatternInput): ExportPattern {
+  if (!input.songMode || !input.sections?.length) {
+    return { pattern: input.current, isSong: false, problems: [] };
+  }
+  const flattened = flattenSong(sessionSong(input));
   return { pattern: flattened.pattern, isSong: true, problems: flattened.problems };
 }
