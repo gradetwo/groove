@@ -727,13 +727,14 @@ function JamForGenre({
                   {pad.id}
                 </span>
                 {/*
-                  Which row this pad writes: the clap and rim pads light the snare row, and say so. Deliberately
-                  *not* named `mobile-jam-pad-…`: the E2E matrix counts pads by that prefix, and a label inside a pad
-                  is not a pad (it read as 12 pads on every device until this was renamed).
+                  Which row this pad writes: the clap and rim pads light the snare row, and say so. The name is
+                  deliberately outside the `mobile-jam-pad-` prefix the E2E matrix counts pads by: a label inside a
+                  pad is not a pad. (`mobile-jam-pad-writes-…` was tried first and still matched — the prefix is
+                  the whole problem, not the suffix.)
                 */}
                 <span
                   className="m-mono text-[7px] leading-none text-[var(--m-ink-3)]"
-                  data-testid={`mobile-jam-pad-writes-${pad.id}`}
+                  data-testid={`mobile-jam-row-of-${pad.id}`}
                 >
                   {t(LANES[pad.lane].labelKey)}
                 </span>
