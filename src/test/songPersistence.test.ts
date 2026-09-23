@@ -145,6 +145,45 @@ describe("B1 · a save keeps the arrangement", () => {
     // The legacy field is still written, so an older build reading this snapshot sees the same order.
     expect(restored?.songChain).toEqual(["A", "A", "B", "B", "B", "B", "A"]);
   });
+
+  it("carries a section's B5 overrides through the same save, byte for byte", () => {
+    /**
+     * The overrides are the newest fields on a section, and exactly the ones a hand-written whitelist would drop.
+     * `sections` is persisted as a whole object today, so they ride along — and this is the test that notices the day
+     * it becomes a field-by-field copy, which is how a saved arrangement would silently lose its fills.
+     */
+    const sections = [
+      { id: "s1", slot: "A" as const, bars: 8, label: "build", overrides: { velocityRamp: [0.6, 1] as [number, number] } },
+      {
+        id: "s2",
+        slot: "B" as const,
+        bars: 4,
+        overrides: {
+          fill: { tracks: ["snare"], steps: [12, 13, 14, 15], velocity: 118 },
+          transpose: -2,
+        },
+      },
+    ];
+    saveProjectImmediate({
+      genreId: genre.id,
+      bpm: 124,
+      swing: 0,
+      timeSignature: "4/4",
+      resolution: "1/16",
+      stepCount: 16,
+      patterns: { A: pattern(), B: pattern() },
+      activeSlot: "A",
+      songMode: true,
+      songChain: sectionsToSongChain(sections),
+      sections,
+      loopRange: null,
+      isMetronome: false,
+      isCountIn: false,
+    });
+
+    const restored = loadSavedProject();
+    expect(restored?.sections).toEqual(sections);
+  });
 });
 
 describe("B1 · the store's two views cannot disagree", () => {
@@ -158,6 +197,18 @@ describe("B1 · the store's two views cannot disagree", () => {
     const next = sequencerReducer(base, { type: "SET_SECTIONS", sections });
     expect(next.sections).toEqual(sections);
     expect(next.songChain).toEqual(["B", "B", "A"]);
+  });
+
+  it("keeps the overrides when the store takes a new arrangement", () => {
+    // The reducer must not normalise a section down to the fields it understands: `overrides` is data the user made.
+    const sections = [
+      { id: "s1", slot: "A" as const, bars: 2, overrides: { transpose: 3 } },
+      { id: "s2", slot: "B" as const, bars: 2 },
+    ];
+    const next = sequencerReducer(base, { type: "SET_SECTIONS", sections });
+    expect(next.sections).toEqual(sections);
+    // …and the legacy chain view ignores what it cannot express instead of crashing on it.
+    expect(next.songChain).toEqual(["A", "A", "B", "B"]);
   });
 
   it("recreates sections from the legacy chain editor", () => {
