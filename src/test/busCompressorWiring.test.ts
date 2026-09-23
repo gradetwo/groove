@@ -88,7 +88,9 @@ describe("the bus compressor's detector reaches the compressor", () => {
       into.push({ target, input });
       return connectInto(target, output, input);
     };
-    const graph = buildMasterGraph(ctx as unknown as BaseAudioContext, { busCompDetector: detector });
+    const graph = buildMasterGraph(ctx as unknown as BaseAudioContext, {
+      busCompDetector: detector as unknown as AudioNode,
+    });
     await (graph as unknown as { busCompressorKind: () => string }).busCompressorKind();
 
     /**
@@ -122,7 +124,9 @@ describe("the bus compressor's detector reaches the compressor", () => {
     restore = withFakeWorklet();
     const ctx = context();
     const connections = recordConnections(ctx);
-    buildMasterGraph(ctx as unknown as BaseAudioContext, { busCompDetector: ctx.createGain() });
+    buildMasterGraph(ctx as unknown as BaseAudioContext, {
+      busCompDetector: ctx.createGain() as unknown as AudioNode,
+    });
     const gains = connections.filter((c) => c.from && c.to);
     expect(gains.length).toBeGreaterThan(0);
   });

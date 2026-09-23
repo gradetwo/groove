@@ -4,6 +4,7 @@ import { DEFAULT_SYNTH_PRESETS, keyTrackedCutoff, voiceOscillatorTypes } from ".
 import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { chordVoicingForStep } from "../audio/chordVoicing";
 import { deriveTrackStates } from "../audio/trackStates";
+import { NOTE_VARIATION_MAX_CUTOFF_SCALE, NOTE_VARIATION_MAX_DETUNE_CENTS } from "../audio/noteVariation";
 import { FakeAudioBuffer, FakeOfflineAudioContext, FakeGainNode, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 
 /**
@@ -251,7 +252,13 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     const flute = resolveInstrumentPreset("flute_lead", "lead");
 
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual([flute.osc1Type, flute.osc2Type]);
-    expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(flute.osc2DetuneCents);
+    /**
+     * Within the per-note variation's bound, not exactly the preset's number: P2.2/A3 nudges every note so a loop of
+     * identical stabs stops sounding like a machine, and the authored detune is the *centre* of that nudge rather
+     * than the value. The bound is imported so this cannot drift from the helper's own constant.
+     */
+    const fluteDetune = Number(ctx.createdOscillators[1].detune.events[0]?.value);
+    expect(Math.abs(fluteDetune - flute.osc2DetuneCents)).toBeLessThanOrEqual(NOTE_VARIATION_MAX_DETUNE_CENTS);
     /**
      * The cutoff the voice holds for the note it is actually playing.
      *
@@ -262,9 +269,23 @@ describe("genre timbres · offline render voices the declared instrument", () =>
      */
     const expectedCutoff = keyTrackedCutoff(flute, 72);
     const cutoffs = filterCutoffs();
-    expect(cutoffs).toContain(expectedCutoff);
-    // Exactly one voice, so exactly one filter carries the flute's cutoff.
-    expect(cutoffs.filter((c) => c === expectedCutoff)).toHaveLength(1);
+    // Same reason as the detune above: the nudge scales the tracked cutoff by at most ±8 %.
+    expect(
+      cutoffs.some(
+        (value) =>
+          Number.isFinite(value) &&
+          Math.abs((value as number) - expectedCutoff) / expectedCutoff <= NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
+      )
+    ).toBe(true);
+    // Exactly one voice, so exactly one filter carries the flute's cutoff — *within* the nudge, since the nudge is
+    // what keeps twelve stabs of the same note from being twelve identical stabs (P2.2/A3).
+    expect(
+      cutoffs.filter(
+        (c) =>
+          Number.isFinite(c) &&
+          Math.abs((c as number) - expectedCutoff) / expectedCutoff <= NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
+      )
+    ).toHaveLength(1);
     // The authored number is a C4 value; this note is an octave up, so tracking must have moved it.
     expect(expectedCutoff).not.toBe(flute.filterCutoff);
   });
@@ -279,7 +300,14 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual([sub.osc1Type, sub.osc2Type]);
     // Two octaves below the C4 anchor, so key tracking closes the corner — which is the whole
     // point for a sub bass: the authored cutoff is a C4 figure, not the note's own.
-    expect(filterCutoffs()).toContain(keyTrackedCutoff(sub, 36));
+    const subCutoff = keyTrackedCutoff(sub, 36);
+    expect(
+      filterCutoffs().some(
+        (value) =>
+          Number.isFinite(value) &&
+          Math.abs((value as number) - subCutoff) / subCutoff <= NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
+      )
+    ).toBe(true);
     expect(sub.filterCutoff).toBeLessThan(DEFAULT_SYNTH_PRESETS.acidBass.filterCutoff);
   });
 
@@ -302,7 +330,10 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     expect(ctx.createdOscillators.map((o) => o.type)).toEqual(
       voicing.flatMap(() => voiceOscillatorTypes(superSaw))
     );
-    expect(ctx.createdOscillators[1].detune.events[0]?.value).toBe(superSaw.osc2DetuneCents);
+    const superSawDetune = Number(ctx.createdOscillators[1].detune.events[0]?.value);
+    expect(Math.abs(superSawDetune - superSaw.osc2DetuneCents)).toBeLessThanOrEqual(
+      NOTE_VARIATION_MAX_DETUNE_CENTS
+    );
     // One voice-level low-pass per chord tone, all at the supersaw cutoff — and none at
     // the legacy warmPad value. Counted by cutoff rather than by array length, because
     // the shared master graph (E-17) contributes biquads of its own.
@@ -318,9 +349,19 @@ describe("genre timbres · offline render voices the declared instrument", () =>
      */
     const expectedCutoffs = voicing.map((n) => keyTrackedCutoff(superSaw, n));
     for (const expected of expectedCutoffs) {
-      expect(cutoffs, `a voice at ${expected} Hz`).toContain(expected);
+      // Within the per-note variation's bound: each chord tone's corner is nudged by up to ±8 % (P2.2/A3), so the
+      // claim that survives is "this voice used the supersaw preset, tracked to its note", not "exactly this Hz".
+      expect(
+        cutoffs.some(
+          (value) =>
+            Number.isFinite(value) &&
+            Math.abs((value as number) - expected) / expected <= NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
+        ),
+        `a voice within ±8 % of ${expected} Hz`
+      ).toBe(true);
     }
-    // Distinct per-note corners are the observable consequence of the fix on a chord.
+    // Distinct per-note corners are the observable consequence of the fix on a chord (and key tracking still moves
+    // them by far more than the nudge does).
     expect(new Set(expectedCutoffs).size).toBe(voicing.length);
     expect(cutoffs).not.toContain(keyTrackedCutoff(DEFAULT_SYNTH_PRESETS.warmPad, 60));
   });
