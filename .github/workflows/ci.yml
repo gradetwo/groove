@@ -235,6 +235,18 @@ jobs:
       - name: Loudness Baseline Freshness
         run: npm run check:loudness:fresh
 
+      # The musical ratchet from `docs/GROOVE_QUALITY_PLAN.md`: twelve genres rendered through the app's own
+      # offline engine, per track as well as mixed, with six claims (flat velocities, sidechain depth, stereo
+      # width, mid-range share, static harmony, tail level) judged against budgets that only go down.
+      #
+      # It was the last heavy gate that ran *only* on a developer's machine — about twenty minutes there, which is
+      # exactly the kind of "slow but must run" work this job exists for. The serial path is deliberate: it is the
+      # code every release has been verified on, and four sharded (Vite + Chromium) stacks do not fit a 4-vCPU
+      # runner (they did not fit an 8-vCPU/15 GB laptop either). `--shards=N` is available for a many-core host,
+      # and the per-runner form (`--shard=i/n` + an aggregator job) is the next step.
+      - name: Groove Quality Gate (12 genres, offline engine)
+        run: npm run check:groove
+
       - name: Full Browser & Device Matrix
         run: npm run test:e2e:all
 
