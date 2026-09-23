@@ -330,52 +330,110 @@ async function measureGenre(page, genreId, bars, soloTracks) {
             const start = Math.round(sampleRate * 0.09);
             const windowSamples = Math.round(sampleRate * 0.03);
             const moves = [];
+            const distances = [];
             let hits = 0;
             for (const positions of byKey.values()) {
-              const centroids = [];
+              const shapes = [];
               for (const at of positions) {
                 const from = at + start;
                 if (from <= 0 || from + windowSamples > (channels[0]?.length ?? 0)) continue;
                 const window = channels.map((channel) => channel.subarray(from, from + windowSamples));
                 const shape = timbre.fingerprintChannels(window, sampleRate);
-                if (shape.centroidHz > 0) centroids.push(shape.centroidHz);
+                if (shape.centroidHz > 0) shapes.push(shape);
               }
-              hits += centroids.length;
-              for (let i = 1; i < centroids.length; i += 1) {
-                if (!(centroids[i - 1] > 0)) continue;
-                moves.push((Math.abs(centroids[i] - centroids[i - 1]) / centroids[i - 1]) * 100);
+              hits += shapes.length;
+              for (let i = 1; i < shapes.length; i += 1) {
+                if (!(shapes[i - 1].centroidHz > 0)) continue;
+                moves.push(
+                  ((Math.abs(shapes[i].centroidHz - shapes[i - 1].centroidHz) / shapes[i - 1].centroidHz) * 100)
+                );
+                /**
+                 * …and the **band-shape** distance between the same two hits.
+                 *
+                 * The centroid is a 2/3-octave-weighted average, and an 8 % cutoff nudge is a sixth of a band: it
+                 * moved the centroid by nothing measurable (native on 7.83 % against off 7.84 %) while the two hits
+                 * were not identical at all. The helper's band-distance is the metric that can see a change that
+                 * small, and it is the one the claim uses.
+                 */
+                distances.push(timbre.fingerprintDistance(shapes[i - 1], shapes[i]));
               }
             }
             if (moves.length < 3) return null;
             const sorted = [...moves].sort((a, b) => a - b);
             const at = (q) =>
               Math.round(sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] * 100) / 100;
-            return { hits, comparisons: moves.length, medianPct: at(0.5), p25Pct: at(0.25), maxPct: Math.round(sorted[sorted.length - 1] * 100) / 100 };
+            const sortedDistances = [...distances].sort((a, b) => a - b);
+            const atDistance = (q) =>
+              Math.round(
+                (sortedDistances[Math.min(sortedDistances.length - 1, Math.floor(q * sortedDistances.length))] ?? 0) *
+                  1000
+              ) / 1000;
+            return {
+              hits,
+              comparisons: moves.length,
+              medianPct: at(0.5),
+              p25Pct: at(0.25),
+              maxPct: Math.round(sorted[sorted.length - 1] * 100) / 100,
+              /** Mean absolute band-shape difference between consecutive hits of the same note, dB. */
+              medianDistanceDb: sortedDistances.length ? atDistance(0.5) : null,
+            };
           };
-          const withVariation = settledMedian(stemChannels, stemBuffer.sampleRate);
-          if (!withVariation) return null;
-          let without = null;
+          /**
+           * The shipping pair first, as the *context* figure: with GS-1 voicing the lane (its default), the nudge
+           * never runs, and this pair is identical — which is how the gap was found. It stays in the report because
+           * it is the honest description of what the delivered file does today.
+           */
+          const shippingOn = settledMedian(stemChannels, stemBuffer.sampleRate);
+          if (!shippingOn) return null;
+          const renderSettled = async (options) => {
+            try {
+              const buffer = await wav.renderPatternOffline(solo, { bars: barsArg, drumKit, ...options });
+              const channels = [];
+              for (let c = 0; c < buffer.numberOfChannels; c += 1) channels.push(buffer.getChannelData(c));
+              return settledMedian(channels, buffer.sampleRate);
+            } catch {
+              return null;
+            }
+          };
+          const shippingOff = await renderSettled({ noteVariation: false });
+
+          /**
+           * And the pair the claim is about: the **native** path, where the variation actually reaches the voice.
+           *
+           * GS-1's host API has no per-note timbre parameters (`noteOnAt(note, velocity, atFrame, pan)`), so with
+           * the pool enabled the nudge cannot run at all. Measuring the native path is therefore the only way to
+           * measure the fix, and it is reported as *that* — a native-path figure, not a claim about every genre's
+           * delivered file, which GS-1 currently voices with no per-note timbre at all.
+           */
+          let nativeOn = null;
+          let nativeOff = null;
           try {
-            const control = await wav.renderPatternOffline(solo, {
-              bars: barsArg,
-              drumKit,
-              noteVariation: false,
-            });
-            const controlChannels = [];
-            for (let c = 0; c < control.numberOfChannels; c += 1) controlChannels.push(control.getChannelData(c));
-            without = settledMedian(controlChannels, control.sampleRate);
+            const gs1 = await import("/src/audio/gs1/gs1Tracks.ts");
+            gs1.setGs1RoutingEnabled(false);
+            nativeOn = await renderSettled({});
+            nativeOff = await renderSettled({ noteVariation: false });
+            gs1.setGs1RoutingEnabled(true);
           } catch {
-            without = null;
+            nativeOn = null;
+            nativeOff = null;
           }
+          const delta = (a, b) =>
+            a && b && Number.isFinite(a.medianPct) && Number.isFinite(b.medianPct)
+              ? Math.round((a.medianPct - b.medianPct) * 100) / 100
+              : null;
           return {
-            ...withVariation,
-            /** What the same pattern reads with every stab identical — context, not the fix. */
-            controlMedianPct: without?.medianPct ?? null,
-            /** The claim's number: how much of the movement is the variation. */
-            deltaPct:
-              without && Number.isFinite(without.medianPct)
-                ? Math.round((withVariation.medianPct - without.medianPct) * 100) / 100
-                : null,
+            ...shippingOn,
+            /** The shipping lane (GS-1 by default): identical with and without the nudge, until the core grows one. */
+            shippingMedianPct: shippingOn.medianPct,
+            shippingControlPct: shippingOff?.medianPct ?? null,
+            shippingDeltaPct: delta(shippingOn, shippingOff),
+            /** The native path: the figure the claim uses, because it is where the nudge lands. */
+            nativeMedianPct: nativeOn?.medianPct ?? null,
+            nativeControlPct: nativeOff?.medianPct ?? null,
+            nativeDeltaPct: delta(nativeOn, nativeOff),
+            /** The claim's metric: band-shape distance between consecutive hits, native path, nudge on and off. */
+            nativeDistanceDb: nativeOn?.medianDistanceDb ?? null,
+            nativeControlDistanceDb: nativeOff?.medianDistanceDb ?? null,
           };
         })();
         const intervals = onsets.slice(1).map((ms, i) => ms - onsets[i]).filter((ms) => ms > 20);
@@ -692,6 +750,37 @@ async function measureGenre(page, genreId, bars, soloTracks) {
 
 
 
+      /**
+       * The per-stab figure for the row: the melodic lane with the most comparisons.
+       *
+       * `chords` and `lead` are measured separately because they mask differently — the lead is exposed and showed a
+       * clean 2.5x separation from its control, the chords are buried under the harmony and showed 1.16x. Reporting
+       * both and claiming on the better one would flatter; reporting the *most-populated* lane and requiring the
+       * separation to hold is the honest version, and a genre whose only melodic lane is buried will say so.
+       */
+      const stabVariation = (() => {
+        const candidates = ["chords", "lead"]
+          .map((lane) => ({ lane, move: stems[lane]?.stabMove }))
+          .filter((entry) => entry.move && Number.isFinite(entry.move.nativeDistanceDb));
+        if (!candidates.length) return null;
+        const best = candidates.sort((a, b) => b.move.comparisons - a.move.comparisons)[0];
+        const distanceDb = best.move.nativeDistanceDb;
+        const controlDistanceDb = best.move.nativeControlDistanceDb;
+        return {
+          lane: best.lane,
+          comparisons: best.move.comparisons,
+          distanceDb,
+          controlDistanceDb,
+          /** The claim's number: how many times the control the nudge's own movement is. */
+          ratio:
+            Number.isFinite(controlDistanceDb) && controlDistanceDb > 0
+              ? Math.round((distanceDb / controlDistanceDb) * 100) / 100
+              : null,
+          /** The shipping lane's number, for the GS-1 gap: identical to its control until the core grows a seam. */
+          shippingDeltaDb: null,
+        };
+      })();
+
       /** Where the energy sits: the 2/3-octave bands that cover roughly 200 Hz - 2 kHz. */
       const bandCentres = timbre.TIMBRE_BAND_CENTRES_HZ;
       const midBands = bands.map((db, i) => ({ hz: bandCentres[i], db })).filter((b) => b.hz >= 200 && b.hz <= 2000);
@@ -699,6 +788,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
       return {
         id,
         musical: {
+          stabVariation,
           velocityByTrack,
           pitchByTrack,
           // Where the off-16ths actually land is measured per stem, in the stem loop below.
