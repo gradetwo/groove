@@ -24,7 +24,6 @@ const renderJam = async (
     onApplyPattern: vi.fn<(pattern: SequencerPattern) => void>(),
     onTempo: vi.fn<(bpm: number) => void>(),
     onSwing: vi.fn<(swing: number) => void>(),
-    onOpenGenre: vi.fn<(genreId: string) => void>(),
     onAuditionTrack: vi.fn<(trackId: string, instrument?: string) => void>(),
     onMetronome: vi.fn<(enabled: boolean) => void>(),
   };
@@ -323,9 +322,40 @@ describe("jam module", () => {
     expect(spies.onMetronome).toHaveBeenLastCalledWith(true);
   });
 
-  it("opens the backing genre's page from the header", async () => {
+  it("opens the multi-level genre picker from the backing-genre row", async () => {
+    /**
+     * The row used to navigate away to the genre's page — a *browse* gesture on a screen whose whole purpose is
+     * "play this genre now", and the only way to change what the jam is backed by. It opens the picker instead
+     * (C-02), and the picker takes the grid's place rather than sitting beside it, because this module is one
+     * screen with no scrolling: anything added to the column would push the pads off the bottom.
+     */
+    await renderJam();
+    expect(screen.queryByTestId("mobile-jam-picker")).toBeNull();
+    expect(screen.getByTestId("mobile-jam-genre").getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(screen.getByTestId("mobile-jam-genre"));
+    expect(screen.getByTestId("mobile-jam-picker")).toBeTruthy();
+    expect(screen.queryByTestId("mobile-jam-grid")).toBeNull();
+    expect(screen.getByTestId("mobile-jam-genre").getAttribute("aria-expanded")).toBe("true");
+
+    // The same control closes it again, which is what a thumb expects of a toggle.
+    fireEvent.click(screen.getByTestId("mobile-jam-genre"));
+    expect(screen.queryByTestId("mobile-jam-picker")).toBeNull();
+    expect(screen.getByTestId("mobile-jam-grid")).toBeTruthy();
+  });
+
+  it("switches the backing genre from the picker, and does not restart the one already playing", async () => {
     const { spies } = await renderJam();
     fireEvent.click(screen.getByTestId("mobile-jam-genre"));
-    expect(spies.onOpenGenre).toHaveBeenCalledWith(GENRE.id);
+    // The picker's own rows carry the jam's prefix, so the assertion cannot pass on a player row left in the DOM.
+    const rows = screen.getAllByTestId(/^mobile-jam-picker-genre-/);
+    expect(rows.length).toBeGreaterThan(0);
+
+    const other = rows.find((row) => row.getAttribute("data-genre-id") !== GENRE.id) ?? rows[0];
+    fireEvent.click(other);
+    expect(spies.onTogglePlay).toHaveBeenCalledTimes(1);
+    // …and choosing closes the picker, so the grid is back under the thumb.
+    expect(screen.queryByTestId("mobile-jam-picker")).toBeNull();
+    expect(screen.getByTestId("mobile-jam-grid")).toBeTruthy();
   });
 });
