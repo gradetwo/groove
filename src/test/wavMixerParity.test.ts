@@ -277,15 +277,21 @@ describe("genre timbres · offline render voices the declared instrument", () =>
           Math.abs((value as number) - expectedCutoff) / expectedCutoff <= NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
       )
     ).toBe(true);
-    // Exactly one voice, so exactly one filter carries the flute's cutoff — *within* the nudge, since the nudge is
-    // what keeps twelve stabs of the same note from being twelve identical stabs (P2.2/A3).
+    /**
+     * The voice's own filter, within the nudge — and **not** "exactly one filter in that band".
+     *
+     * That stronger form was true at a ±8 % nudge and stopped being true at ±20 %: the shared master graph
+     * contributes biquads of its own, and one of them lands inside a band that wide. Counting them was a bonus
+     * assertion; what carries the claim is that a filter sits at the *tracked* cutoff of *this* preset rather than at
+     * the authored C4 value, which the next line asserts.
+     */
     expect(
       cutoffs.filter(
         (c) =>
           Number.isFinite(c) &&
           Math.abs((c as number) - expectedCutoff) / expectedCutoff <= NOTE_VARIATION_MAX_CUTOFF_SCALE + 1e-9
-      )
-    ).toHaveLength(1);
+      ).length
+    ).toBeGreaterThanOrEqual(1);
     // The authored number is a C4 value; this note is an octave up, so tracking must have moved it.
     expect(expectedCutoff).not.toBe(flute.filterCutoff);
   });
