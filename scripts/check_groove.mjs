@@ -81,6 +81,14 @@ const SAMPLE = [
  */
 const BUDGET = {
   flatTracks: 0,
+  /**
+   * P1.1: a snare or hat lane whose spread is below 15 MIDI steps.
+   *
+   * `flatTracks` cannot see this — it counts lanes with a *single* value, and P0.2 took that to 0/12 while the snare
+   * lane still reached a spread of 15 in only **1 of 11** sampled genres (measured 2026-09-23). The budget is 0
+   * because the generator lands there, and it only goes down.
+   */
+  thinDynamics: 0,
   // P0.3 landed: every sampled genre whose bass sounds under a kick now dips 3.8-5.1 dB in its deepest 5 ms,
   // and the two genres with no bass under the kick at all (minimal-techno, ambient) are unmeasurable rather
   // than counted as passing.
@@ -101,6 +109,10 @@ const BUDGET = {
 const CLAIMS = {
   flatTracks: {
     label: "flat velocities (≥4 of 8 tracks with one velocity)",
+    worse: (count, budget) => count > budget,
+  },
+  thinDynamics: {
+    label: "flat dynamics (a snare/hat lane spread below 15 MIDI steps)",
     worse: (count, budget) => count > budget,
   },
   duckErasedInMaster: {
@@ -358,6 +370,7 @@ function analyseSerial() {
 function measureRows(rows) {
   const tally = {
     flatTracks: 0,
+    thinDynamics: 0,
     weakDuck: 0,
     duckErasedInMaster: 0,
     narrowStereo: 0,
@@ -368,6 +381,7 @@ function measureRows(rows) {
   };
   const detail = {
     flatTracks: [],
+    thinDynamics: [],
     weakDuck: [],
     duckErasedInMaster: [],
     narrowStereo: [],
@@ -382,6 +396,21 @@ function measureRows(rows) {
     if (velocity.length && velocity.filter((entry) => entry.distinct <= 1).length >= 4) {
       tally.flatTracks += 1;
       detail.flatTracks.push(`${row.id} (${velocity.filter((e) => e.distinct <= 1).length}/8 flat)`);
+    }
+    /**
+     * P1.1: the lanes an idiom ornaments, and how wide their dynamics are.
+     *
+     * `flatTracks` above asks whether a lane has one value; this asks whether the variation is enough to hear, which
+     * is a different claim about the same data — and the one the plan's P1.1 is written against. A genre with neither
+     * lane sounding is unmeasurable, not passing.
+     */
+    const dynamicsLanes = ["snare", "hihat"]
+      .map((id) => ({ id, lane: row.musical?.velocityByTrack?.[id] }))
+      .filter((entry) => entry.lane && entry.lane.onsets > 0);
+    const thin = dynamicsLanes.filter((entry) => entry.lane.max - entry.lane.min < 15);
+    if (thin.length) {
+      tally.thinDynamics += 1;
+      detail.thinDynamics.push(`${row.id} (${thin.map((e) => `${e.id} ${e.lane.max - e.lane.min}`).join(", ")})`);
     }
     const duck = row.musical?.duck;
     // `duckOnsets`, not `kickOnsets`: a kick that lands in a bass rest has no sidechain to measure. The median

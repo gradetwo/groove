@@ -29,7 +29,13 @@ function cleanRow(id: string, overrides: Record<string, unknown> = {}) {
     sideToMidDb: -20,
     tailRmsDb: -90,
     musical: {
-      velocityByTrack: { kick: { distinct: 5 }, snare: { distinct: 4 } },
+      // `thinDynamics` (P1.1) reads the spread, not the distinct count: a lane can have many values inside a
+      // 4-step window, which is exactly the state P0.2 left the library in.
+      velocityByTrack: {
+        kick: { distinct: 3, onsets: 8, min: 118, max: 120 },
+        snare: { distinct: 4, onsets: 8, min: 92, max: 118 },
+        hihat: { distinct: 6, onsets: 16, min: 72, max: 112 },
+      },
       duck: { duckOnsets: 4, duckMedianDb: -4, duckMasterMedianDb: -4 },
       midBandShareDb: -2,
       pitchByTrack: { chords: { distinct: 4 } },
@@ -87,6 +93,30 @@ describe("check:groove · the shard aggregate cannot lose a genre", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("12/12 sampled genres rendered");
     expect(result.stdout).toContain("groove quality holds");
+  });
+
+  it("judges the claim P0.2 could not see: a lane with values but no dynamics", () => {
+    /**
+     * P1.1's whole reason for existing: `flatTracks` counts lanes with a *single* value and P0.2 took that to 0/12,
+     * while the snare lane still reached the plan's 15-step spread in 1 of 11 sampled genres. A row whose snare lane
+     * has four distinct velocities inside a 4-step window must fail here, or the ratchet cannot hold the content.
+     */
+    const rows = SAMPLE_IDS.map((id) => cleanRow(id));
+    rows[2] = cleanRow(SAMPLE_IDS[2], {
+      musical: {
+        ...cleanRow(SAMPLE_IDS[2]).musical,
+        velocityByTrack: {
+          kick: { distinct: 3, onsets: 8, min: 118, max: 120 },
+          snare: { distinct: 4, onsets: 8, min: 104, max: 108 },
+          hihat: { distinct: 6, onsets: 16, min: 72, max: 112 },
+        },
+      },
+    });
+    const dir = shardDir({ "rows-1.json": { shard: 1, of: 1, ids: SAMPLE_IDS, rows } });
+    const result = runGate([`--merge-dir=${dir}`]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("flat dynamics");
+    expect(result.stderr).toContain("snare 4");
   });
 
   it("still judges — a merge that cannot fail would be decoration", () => {
