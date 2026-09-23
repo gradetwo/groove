@@ -78,6 +78,16 @@ export interface RenderWavOptions {
    */
   limiterCeilingDb?: number;
   /**
+   * The ceiling's release ballistics, ms — measurement tooling, like `limiterCeilingDb`.
+   *
+   * The release is what decides whether a *dip* survives: the limiter's gain recovering while the sidechain
+   * ducks the bass is the mechanism behind `duckErasedInMaster` (−4.4 dB in the sidechain, −0.4 dB in the
+   * file), so separating "the duck was scheduled" from "the ceiling refilled it" needs these. Omitted, the
+   * worklet keeps its shipped 80 ms / 400 ms.
+   */
+  limiterReleaseFastMs?: number;
+  limiterReleaseSlowMs?: number;
+  /**
    * Called once per render with the limiter that actually ended up in the graph.
    *
    * `createMasterLimiter` prefers an `AudioWorkletNode` and falls back to a `DynamicsCompressor`
@@ -281,6 +291,8 @@ export async function renderPatternOffline(
     masterMakeupDb: options.masterMakeupDb,
     masterBusCompEnabled: options.masterBusCompEnabled,
     limiterCeilingDb: options.limiterCeilingDb,
+    limiterReleaseFastMs: options.limiterReleaseFastMs,
+    limiterReleaseSlowMs: options.limiterReleaseSlowMs,
   });
 
   // N-14: the genre's master FX and bus character, applied through the same shared

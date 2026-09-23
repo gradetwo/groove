@@ -13,7 +13,9 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { createMasterLimiter } from "../audio/MasterLimiter";
+import { renderPatternOffline } from "../audio/WavExporter";
 import { installFakeOfflineAudioContext, FakeOfflineAudioContext } from "./helpers/fakeAudio";
+import type { DrumPattern } from "../types/genre";
 
 class FakeAudioWorkletNode {
   static instances: FakeAudioWorkletNode[] = [];
@@ -71,5 +73,39 @@ describe("the master limiter's release options reach the worklet", () => {
     // `undefined`, not 80/400: the worklet owns its defaults, and duplicating them here is how the two drift.
     expect(defaults.options.processorOptions?.releaseFastMs).toBeUndefined();
     expect(defaults.options.processorOptions?.releaseSlowMs).toBeUndefined();
+  });
+});
+
+
+describe("…and a render can ask for them", () => {
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  const PATTERN: DrumPattern = {
+    genre_id: "deep-house",
+    bpm: 124,
+    swing: 0,
+    scale: "minorPentatonic",
+    tracks: [
+      { name: "Kick", track_id: "kick", instrument: "kick", steps: [1, 0, 0, 0], volume: 0.9, pan: 0 },
+      { name: "Snare", track_id: "snare", instrument: "snare", steps: [0, 0, 1, 0], volume: 0.8, pan: 0 },
+    ],
+  };
+
+  it("carries them from the render options to the processor", async () => {
+    // The end-to-end half: `renderPatternOffline` is the path every measurement and the export button use, so a
+    // knob that stops at the graph's own options is a knob no probe can reach.
+    restore = withFakeWorklet();
+    await renderPatternOffline(PATTERN, { bars: 1, limiterReleaseFastMs: 250, limiterReleaseSlowMs: 400 });
+    const node = FakeAudioWorkletNode.instances.at(-1)!;
+    expect(node.options.processorOptions?.releaseFastMs).toBe(250);
+    expect(node.options.processorOptions?.releaseSlowMs).toBe(400);
+
+    await renderPatternOffline(PATTERN, { bars: 1 });
+    const plain = FakeAudioWorkletNode.instances.at(-1)!;
+    expect(plain.options.processorOptions?.releaseFastMs).toBeUndefined();
   });
 });
