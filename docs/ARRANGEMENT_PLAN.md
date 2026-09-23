@@ -192,6 +192,14 @@ number, and names the erasure as P2.3's item rather than asserting something the
 Why it took a probe: every audio claim in `src/test/**` is really structural — jsdom's Web Audio double renders an
 empty buffer — so "the fill is audible" needs a real browser, and the unit tests can only pin the pattern.
 
+**Not done, and named here rather than discovered later: the arrangement is not *played* live.** The transport
+loops the pattern being edited; `songMode` is still a flag the exports and the WAV bounce consult (B4), not something
+the engine walks. So a user can build a 40-bar arrangement in the view, export it, and hear one loop while the
+transport runs. Nothing in B0–B6 asked for live playback — it is a transport/engine item (switch clips at pass
+boundaries, apply the section's overrides as the playhead crosses them) and it is the largest remaining gap between
+what the arrangement view shows and what the app does. It is recorded here because "the surface shows a timeline the
+transport ignores" is a product hole, not a missing polish item.
+
 Deliberately left: a **per-hit crescendo** inside a fill (needs a per-step velocity list on `SongFill`), editing a
 ramp or a fill by hand in the view (the picker generates them; the region shows them), and the *audio* half of the
 claim — `check:groove`'s velocity and static-harmony numbers are measured from a genre's own pattern, not from a
