@@ -15,9 +15,11 @@ import {
   describeSong,
   resolveTimeline,
   type ClipSlot,
+  type SectionOverrides,
   type Song,
   type SongSection,
 } from "../src/types/song";
+import { fillForTracks } from "../src/data/arrangementForm";
 import { flattenSong, type FlattenedSong } from "../src/data/songFlatten";
 import { patternFromGenre } from "../src/data/genreMix";
 import type { Genre, SequencerPattern } from "../src/types/genre";
@@ -44,6 +46,8 @@ export interface SongSummary {
     label?: string;
     mute?: string[];
     velocityScale?: number;
+    /** B5: the section's build, fill and transposition, when it has any. */
+    overrides?: SectionOverrides;
   }>;
   /** Anything that would stop a render (an empty slot, a song over the bar limit). */
   problems: string[];
@@ -70,6 +74,7 @@ export function summariseSong(song: Song): SongSummary {
       ...(section.label ? { label: section.label } : {}),
       ...(section.mute?.length ? { mute: section.mute } : {}),
       ...(section.velocityScale !== undefined ? { velocityScale: section.velocityScale } : {}),
+      ...(section.overrides && Object.keys(section.overrides).length ? { overrides: section.overrides } : {}),
     })),
     problems: flattened.problems,
     totalSteps: flattened.totalSteps,
@@ -134,6 +139,19 @@ export interface AddMcpSectionInput {
   velocityScale?: number;
   /** Insert before this section index; appended when omitted. */
   index?: number;
+  /** B5 — a build across the section: the velocity multiplier at its first and last pass, e.g. `[0.6, 1]`. */
+  velocityRamp?: [number, number];
+  /**
+   * B5 — a drum fill on the section's last pass.
+   *
+   * A boolean, not a lane list: the lanes are derived from the clip the section points at, exactly like the app's own
+   * generator (`fillForTracks`), so an agent says "a fill here" without having to know that this genre's snare is
+   * called `snare` and that a pass is sixteen steps. A clip with no drum lane gets no fill rather than a fill on a
+   * chord.
+   */
+  fill?: boolean;
+  /** B5 — move the section's pitched lanes by this many semitones (±24). */
+  transpose?: number;
 }
 
 /**
@@ -151,6 +169,16 @@ export function addMcpSection(input: AddMcpSectionInput): SongSummary {
         "create_song puts the seed pattern in A"
     );
   }
+  // The guard above proved the clip exists; the non-null assertion is what tells the compiler.
+  const clip = song.clips[input.slot]!;
+  const overrides: SectionOverrides = {};
+  if (input.velocityRamp) overrides.velocityRamp = input.velocityRamp;
+  if (input.transpose !== undefined) overrides.transpose = input.transpose;
+  if (input.fill) {
+    const stepsPerPass = clip.totalSteps || clip.tracks?.[0]?.steps?.length || 0;
+    const fill = fillForTracks(clip.tracks ?? [], stepsPerPass);
+    if (fill) overrides.fill = fill;
+  }
   const section: Omit<SongSection, "id"> = {
     slot: input.slot,
     // Raw, so the clamp is reported (see `createMcpSong`).
@@ -158,6 +186,7 @@ export function addMcpSection(input: AddMcpSectionInput): SongSummary {
     ...(input.label ? { label: input.label } : {}),
     ...(input.mute?.length ? { mute: input.mute } : {}),
     ...(input.velocityScale !== undefined ? { velocityScale: input.velocityScale } : {}),
+    ...(Object.keys(overrides).length ? { overrides } : {}),
   };
   const appended = appendSection(song, section);
   const inserted =

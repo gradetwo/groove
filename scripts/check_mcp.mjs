@@ -240,6 +240,41 @@ try {
     arranged.totalBars === 6 && arranged.shape === "A×2 → drop×4" && arranged.problems.length === 0,
     JSON.stringify({ bars: arranged.totalBars, shape: arranged.shape, problems: arranged.problems })
   );
+  /**
+   * B5 overrides through the tool surface: a model asked for "a build, then a fill" has to be able to say so, and the
+   * fill's lanes come from the clip rather than from the model's guess (`fillForTracks`), which is what makes the
+   * verb safe to offer without describing this genre's lane names.
+   */
+  const withOverrides = payload(
+    await client.request("tools/call", {
+      name: "add_section",
+      arguments: {
+        songId: created.songId,
+        slot: "A",
+        bars: 8,
+        label: "build",
+        velocityRamp: [0.6, 1],
+        fill: true,
+        transpose: -2,
+      },
+    })
+  );
+  const overrideSection = (withOverrides.sections ?? []).find((section) => section.label === "build");
+  check(
+    "add_section carries a build, a fill and a transposition",
+    overrideSection?.overrides?.velocityRamp?.[0] === 0.6 &&
+      overrideSection?.overrides?.velocityRamp?.[1] === 1 &&
+      Array.isArray(overrideSection?.overrides?.fill?.steps) &&
+      overrideSection.overrides.fill.steps.length > 0 &&
+      overrideSection?.overrides?.transpose === -2,
+    JSON.stringify(overrideSection?.overrides ?? {}).slice(0, 160)
+  );
+  check(
+    "the ramp reaches the timeline as a per-bar velocity scale",
+    (withOverrides.totalBars ?? 0) === 14 && withOverrides.problems.length === 0,
+    JSON.stringify({ bars: withOverrides.totalBars, problems: withOverrides.problems })
+  );
+
   const renderSongSchema = (tools?.tools ?? []).find((tool) => tool.name === "render_song");
   check(
     "render_song takes a songId and is marked as changing the session",
