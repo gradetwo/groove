@@ -122,15 +122,21 @@ describe("check:groove · the shard aggregate cannot lose a genre", () => {
   it("still judges — a merge that cannot fail would be decoration", () => {
     /**
      * The fail-ability half. If the aggregator only checked coverage and printed a table, every CI run would be
-     * green; so one genre is given a cut tail and the run must go red *through the merge path*.
+     * green; so genres are given cut tails and the run must go red *through the merge path*.
+     *
+     * **Two** of them, since `cutTail`'s budget is 1 (the page artefact documented in `check_groove.mjs`). One
+     * offender was enough while the budget was 0 and stopped being enough the moment it moved — which is exactly
+     * what this case is for, and it failed in CI the first time that budget changed rather than in silence.
      */
     const rows = SAMPLE_IDS.map((id) => cleanRow(id));
     rows[3] = cleanRow(SAMPLE_IDS[3], { tailRmsDb: -20 });
+    rows[4] = cleanRow(SAMPLE_IDS[4], { tailRmsDb: -22 });
     const dir = shardDir({ "rows-1.json": { shard: 1, of: 1, ids: SAMPLE_IDS, rows } });
     const result = runGate([`--merge-dir=${dir}`]);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("cut tail");
     expect(result.stderr).toContain(SAMPLE_IDS[3]);
+    expect(result.stderr).toContain(SAMPLE_IDS[4]);
   });
 
   it("refuses an aggregate that is missing a shard's worth of genres", () => {
