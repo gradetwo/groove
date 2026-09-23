@@ -125,7 +125,17 @@ const CLAIMS = {
     worse: (count, budget) => count > budget,
   },
   narrowStereo: { label: "near-mono (channel correlation above 0.98)", worse: (count, budget) => count > budget },
-  thinMids: { label: "hollow mids (200 Hz–2 kHz below −6 dB of the total)", worse: (count, budget) => count > budget },
+  /**
+   * `thinMids` — the 200 Hz - 2 kHz share, against a threshold that turned out to be *aspirational*.
+   *
+   * P1.2 tried to move this twice and both attempts were rejected by measurement: the content fix (a chord's top note
+   * doubled an octave up, plus a bass walk) measured **0.00 dB** on four genres, and a 5 dB tilt that takes the low
+   * end away measured **+0.2 dB** (disco) and **+1.0 dB** (reggaeton). Reaching −6 dB that way would need ~25 dB of
+   * tilt. The metric and the budget stay — a regression is still a regression, and only the budget can move — but the
+   * claim is what it is: this library's mid content is sparse by construction, so the number is a *ratchet against
+   * itself*, not a target met. Numbers and reasoning: `docs/GROOVE_QUALITY_PLAN.md` P1.2.
+   */
+  thinMids: { label: "thin mids (200 Hz–2 kHz share below the −6 dB the plan set, which measurement showed is aspirational)", worse: (count, budget) => count > budget },
   staticHarmony: { label: "static harmony (one chord for the loop)", worse: (count, budget) => count > budget },
   cutTail: { label: "cut tail (last 50 ms above −60 dBFS)", worse: (count, budget) => count > budget },
 };

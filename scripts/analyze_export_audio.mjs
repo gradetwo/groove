@@ -649,7 +649,13 @@ const CLAIMS = {
     if (!lanes.length) return false;
     return lanes.some((lane) => lane.max - lane.min < MIN_LANE_SPREAD);
   },
-  /** The mid-range is thin: the 200 Hz - 2 kHz bands hold less than the average band's share. */
+  /**
+   * The mid-range is thin: the 200 Hz - 2 kHz bands hold less than the average band's share.
+   *
+   * The −6 dB floor is the plan's own number, and P1.2 measured twice that neither content (0.00 dB) nor a 5 dB cut of
+   * the low end (+0.2…+1.0 dB) reaches it — see `check_groove.mjs` for the full note. Kept as the *definition* of the
+   * claim so the budget has something stable to ratchet against.
+   */
   thinMids: (row) => (row.musical?.midBandShareDb ?? 0) < -6,
   /** The harmony never moves inside the loop: one chord for the whole pattern. */
   staticHarmony: (row) => {
