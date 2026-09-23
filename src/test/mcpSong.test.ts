@@ -138,6 +138,76 @@ describe("B6 · add_section", () => {
   });
 });
 
+describe("B5 · a section's build, fill and transposition through the tool surface", () => {
+  beforeEach(() => clearMcpSongs());
+
+  it("reports the overrides it accepted, so a model can read back what it built", () => {
+    const song = createMcpSong({ genreId: "chicago-house", genre, bars: 1 });
+    const summary = addMcpSection({
+      songId: song.songId,
+      slot: "A",
+      bars: 8,
+      label: "build",
+      velocityRamp: [0.6, 1],
+      transpose: -2,
+    });
+    const section = summary.sections[summary.sections.length - 1];
+    expect(section.overrides?.velocityRamp).toEqual([0.6, 1]);
+    expect(section.overrides?.transpose).toBe(-2);
+  });
+
+  it("derives a fill's lanes from the clip, so a model does not have to know them", () => {
+    /**
+     * The whole point of `fill: true` over a lane list: an agent asked for "a fill here" knows neither this genre's
+     * lane names nor that a pass is sixteen steps. `fillForTracks` does, and a clip with no drum lane gets no fill
+     * rather than a fill on a chord.
+     */
+    const song = createMcpSong({ genreId: "chicago-house", genre, bars: 1 });
+    const summary = addMcpSection({ songId: song.songId, slot: "A", bars: 2, fill: true });
+    const section = summary.sections[summary.sections.length - 1];
+    const fill = section.overrides?.fill;
+    expect(fill).toBeDefined();
+    expect(fill!.tracks.length).toBeGreaterThan(0);
+    expect(fill!.steps.length).toBeGreaterThan(0);
+    // The lanes it chose are lanes the clip really has.
+    const clipLanes = (getMcpSong(song.songId)!.clips.A!.tracks ?? []).map((track) => track.track_id);
+    for (const lane of fill!.tracks) expect(clipLanes).toContain(lane);
+
+    // …and a pattern with no drum-ish lane gets no `overrides.fill` key at all.
+    const tonal = setMcpClip(song.songId, "B", {
+      ...clip(16),
+      tracks: [{ ...clip(16).tracks[0], track_id: "chords", name: "Chords", instrument: "synth" }],
+    });
+    void tonal;
+    const noFill = addMcpSection({ songId: song.songId, slot: "B", bars: 1, fill: true });
+    const last = noFill.sections[noFill.sections.length - 1];
+    expect(last.overrides?.fill).toBeUndefined();
+  });
+
+  it("puts the fill in the render, on the section's last pass only", () => {
+    // The agent-visible effect: the tool cannot render without Chromium, but the pattern it *would* render is here.
+    const song = createMcpSong({ genreId: "chicago-house", genre, bars: 1 });
+    addMcpSection({ songId: song.songId, slot: "A", bars: 4, fill: true });
+    const stored = getMcpSong(song.songId)!;
+    const { flattened } = flattenMcpSong(song.songId);
+    // A *pass* is the clip's own length (128 steps for this genre's arranged pattern), not a bar — which is what
+    // `SongSection.bars` counts.
+    const stepsPerPass = stored.clips.A!.totalSteps!;
+    expect(stepsPerPass).toBeGreaterThan(16);
+    // The lane the fill actually targets — not the busiest one, which may be a hat the fill never touches.
+    const target = stored.sections[1].overrides!.fill!.tracks[0];
+    const lane = flattened.pattern.tracks.find((track) => track.track_id === target)!;
+    expect(lane, `the fill's lane ${target} must be in the flattened pattern`).toBeDefined();
+    // The song is "one bar of A" (from create_song) followed by the four-bar section just added, so the fill is on
+    // the *last* pass, not the fourth.
+    const passes = stored.sections.reduce((sum, section) => sum + Math.max(1, Math.floor(section.bars)), 0);
+    const onsetsIn = (pass: number) =>
+      (lane.steps ?? []).slice(pass * stepsPerPass, (pass + 1) * stepsPerPass).filter(Boolean).length;
+    expect(passes).toBe(5);
+    expect(onsetsIn(passes - 1)).toBeGreaterThan(onsetsIn(0));
+  });
+});
+
 describe("B6 · what the render would play", () => {
   it("flattens the arrangement through the same function the app exports with", () => {
     const created = createMcpSong({ genreId: "custom", pattern: clip(16), bars: 3 });
