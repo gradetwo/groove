@@ -306,6 +306,59 @@ export function sessionSong(input: ExportPatternInput): Song {
   };
 }
 
+/**
+ * Where in the *editor's* grid the transport is, while it plays the arrangement (B7).
+ *
+ * The grid shows the loop being edited — one pass of one clip — and the transport is now playing a whole song, so its
+ * step index runs into the hundreds. Highlighting that index directly puts the beam past the end of the grid; the
+ * useful answer is "which pass of which section, and how far into it".
+ *
+ * `matchesEditor` is the honesty: it is true only when the playing section uses the clip the grid is showing. A song
+ * whose chorus is clip B while the editor shows clip A has nowhere meaningful to point, and saying so beats drawing
+ * the beam at a step that belongs to different music.
+ */
+export interface SongEditorPosition {
+  /** Index into the timeline's bars (one bar is one pass of a clip). */
+  barIndex: number;
+  sectionId: string;
+  /** The clip slot the pass plays. `ClipSlot` rather than `A | B`: a song may use any slot the store allows. */
+  slot: ClipSlot;
+  /** Step within that pass — what the grid's own step index means. */
+  localStep: number;
+  /** Whether the grid is showing the clip this pass plays. */
+  matchesEditor: boolean;
+}
+
+export function editorPositionFor(
+  input: ExportPatternInput,
+  absoluteStep: number
+): SongEditorPosition | null {
+  if (!input.songMode || !input.sections?.length) return null;
+  if (!Number.isFinite(absoluteStep) || absoluteStep < 0) return null;
+  const stepsPerPass = input.current.totalSteps || input.current.tracks?.[0]?.steps?.length || 0;
+  if (stepsPerPass <= 0) return null;
+  // The song's own clips (built by `sessionSong`), not the A/B pair: a song may reference slots the editor's pair
+  // does not carry, and the timeline is what knows which pass plays what.
+  const song = sessionSong(input);
+  const timeline = resolveTimeline(song, {
+    riserLanesFor: (slot) => textureLanes(song.clips?.[slot]?.tracks ?? []),
+    stepsPerPassFor: (slot) => {
+      const clip = song.clips?.[slot];
+      return clip?.totalSteps || clip?.tracks?.[0]?.steps?.length || 0;
+    },
+  });
+  const barIndex = Math.floor(absoluteStep / stepsPerPass);
+  const bar = timeline.bars[barIndex];
+  if (!bar) return null;
+  return {
+    barIndex,
+    sectionId: bar.sectionId,
+    slot: bar.slot,
+    localStep: absoluteStep % stepsPerPass,
+    matchesEditor: bar.slot === input.activeSlot,
+  };
+}
+
 export function patternForExport(input: ExportPatternInput): ExportPattern {
   if (!input.songMode || !input.sections?.length) {
     return { pattern: input.current, isSong: false, problems: [] };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { flattenSong, clipSteps, patternForExport, sessionSong } from "../data/songFlatten";
+import { editorPositionFor, flattenSong, clipSteps, patternForExport, sessionSong } from "../data/songFlatten";
 import { createSong, type ClipSlot, type Song, type SongSection } from "../types/song";
 import type { SequencerPattern } from "../types/genre";
 import { installFakeOfflineAudioContext } from "./helpers/fakeAudio";
@@ -345,5 +345,60 @@ describe("B2 · the render is as long as the song", () => {
     } finally {
       restore();
     }
+  });
+});
+
+/**
+ * B7 — the transport plays the arrangement.
+ *
+ * The defect was a question asked of the wrong function: exporters asked `patternForExport` ("what do I write?")
+ * and got the flattened song, while playback was handed the loop being edited — so a 40-bar arrangement could be
+ * exported, measured, and never heard. These cases pin the answer playback now gets, and the one piece of the
+ * *editor* that has to follow it: where in the grid the transport is.
+ */
+describe("B7 · playback plays the arrangement", () => {
+  const sectionSong = (songMode: boolean) => ({
+    songMode,
+    activeSlot: "A" as const,
+    patterns: { A: clip(16), B: clip(16) },
+    current: clip(16),
+    sections: [
+      { id: "s1", slot: "A" as const, bars: 2 },
+      { id: "s2", slot: "B" as const, bars: 1 },
+    ],
+    genreId: "chicago-house",
+    bpm: 124,
+    swing: 0,
+    resolution: "1/16" as const,
+    loopRange: null,
+  });
+
+  it("hands the engine the flattened song in song mode and the loop otherwise", () => {
+    const arrangement = patternForExport(sectionSong(true));
+    expect(arrangement.isSong).toBe(true);
+    // Three passes of a sixteen-step clip, in one pattern: what the renderer would write, and now what plays.
+    expect(arrangement.pattern.totalSteps).toBe(48);
+    expect(arrangement.problems).toEqual([]);
+
+    const loop = patternForExport(sectionSong(false));
+    expect(loop.isSong).toBe(false);
+    // Byte for byte the pattern being edited: loop mode must not change by a single step.
+    expect(loop.pattern).toEqual(clip(16));
+  });
+
+  it("maps the song's step back into the editor's grid, slot and all", () => {
+    // Bar 2 (the third pass) is clip B, while the editor shows A — so the answer is "nowhere in this grid".
+    const third = editorPositionFor(sectionSong(true), 32)!;
+    expect(third).toMatchObject({ barIndex: 2, sectionId: "s2", slot: "B", localStep: 0, matchesEditor: false });
+    // Bar 0 is clip A, the editor's own clip: the beam belongs at step 4.
+    expect(editorPositionFor(sectionSong(true), 4)).toMatchObject({
+      barIndex: 0,
+      slot: "A",
+      localStep: 4,
+      matchesEditor: true,
+    });
+    // Past the end of the song there is no position, and neither is there one in loop mode.
+    expect(editorPositionFor(sectionSong(true), 48)).toBeNull();
+    expect(editorPositionFor(sectionSong(false), 4)).toBeNull();
   });
 });
