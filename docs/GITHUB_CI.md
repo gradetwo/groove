@@ -80,6 +80,7 @@ accident. Everything else is a blocking check.
 | `check:groove`, 12 genres, serial | ~21 min locally |
 | Same gate, 4 shards on the 12-vCPU VM | 569 s, 12 rows, 0 errors (vs 1272 s of serial work) |
 | Same gate, 4 shards on the 8-vCPU/15 GB laptop | **timed out** — four (Vite + Chromium) stacks do not fit |
+| One shard (`--shard=1/4`: 3 genres) on one core | 517 s — i.e. a shard costs one core, which is why four runners beat one machine |
 
 Two conclusions came out of those numbers, and both are load-bearing:
 
@@ -94,6 +95,10 @@ Two conclusions came out of those numbers, and both are load-bearing:
 
 * **`gh` needs `-R gradetwo/groove`** — the local tree has no git remote, so `gh` cannot infer the repository.
   `gh run list/view -R gradetwo/groove --branch dev` is the way; SSH push already works.
+* **The PAT cannot dispatch a workflow** (`HTTP 403: Resource not accessible by personal access token`): it has
+  `repo` + `actions:read` but not `workflow`. Pushes work, so the push-time jobs (`validate`, the three `e2e` legs)
+  run by themselves; the **schedule/dispatch-only** jobs (`nightly`, `groove-shards`, `groove-gate`) need either a
+  PAT with the `workflow` scope or a click on *Run workflow* in the Actions tab.
 * **Long CI work is unreadable without a token? No longer** — `gh` is authenticated on this machine (account
   `gradetwo`, protocol ssh).
 * **Never `pkill -f <pattern>` when the pattern can match your own command line** (a heredoc containing
