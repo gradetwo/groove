@@ -6,7 +6,12 @@
  * safe to ship — it is bounded, it is seeded (the same pattern renders the same file), and it actually differs
  * between consecutive steps.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { renderPatternOffline } from "../audio/WavExporter";
+import { resolveInstrumentPreset } from "../audio/instrumentPresets";
+import { setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
+import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
+import type { SequencerPattern } from "../types/genre";
 import {
   NOTE_VARIATION_MAX_CUTOFF_SCALE,
   NOTE_VARIATION_MAX_DETUNE_CENTS,
@@ -58,5 +63,74 @@ describe("P2.2 · per-note timbre variation", () => {
     const variation = polyVoiceVariation(Number.NaN, 0, 0);
     expect(Number.isFinite(variation.detuneCents)).toBe(true);
     expect(Number.isFinite(variation.cutoffScale)).toBe(true);
+  });
+});
+
+/**
+ * The wiring, not the arithmetic: the nudge has to reach a *render*.
+ *
+ * jsdom's Web Audio double returns an empty buffer, so the comparison is made where the change actually happens —
+ * the scheduled `detune` and filter values. `noteVariation: false` is A3's control (and the escape hatch for anyone
+ * comparing two renders byte for byte), so both branches are pinned: the default one must move the values off the
+ * preset's own number, and the control must reproduce it exactly.
+ */
+describe("P2.2 · the variation reaches a render, and the control does not", () => {
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  /** A chord lane on the *native* synth path: GS-1 has no per-note timbre parameters (see the plan's A3 note). */
+  const chordPattern = (): SequencerPattern =>
+    ({
+      genre_id: "chicago-house",
+      bpm: 124,
+      swing: 0,
+      scale: "C minor",
+      totalSteps: 16,
+      tracks: [
+        {
+          track_id: "chords",
+          name: "Chords",
+          instrument: "warm_pad",
+          steps: new Array(16).fill(0).map((_, i) => (i % 4 === 0 ? 1 : 0)),
+          velocity: new Array(16).fill(100),
+          volume: 0.8,
+          pan: 0,
+          sendA: 0,
+          sendB: 0,
+        },
+      ],
+    }) as unknown as SequencerPattern;
+
+  it("moves the scheduled detune by default and reproduces it exactly with the variation off", async () => {
+    restore = installFakeOfflineAudioContext();
+    setGs1RoutingEnabled(false);
+
+    /**
+     * Only the oscillators that *schedule* a detune: a preset's first oscillator has none (it plays at the note's
+     * own pitch) and reading it as a value produced `NaN` — which the first version of this test compared happily.
+     */
+    const scheduledDetunes = () =>
+      FakeOfflineAudioContext.lastInstance!.createdOscillators
+        .map((osc) => osc.detune.events[0]?.value)
+        .filter((value): value is number => typeof value === "number");
+
+    await renderPatternOffline(chordPattern(), { bars: 1 });
+    const withVariation = scheduledDetunes();
+
+    await renderPatternOffline(chordPattern(), { bars: 1, noteVariation: false });
+    const without = scheduledDetunes();
+
+    expect(withVariation.length).toBeGreaterThan(0);
+    // The control is the preset's own number, note for note…
+    const preset = resolveInstrumentPreset("warm_pad", "chords");
+    for (const value of without) expect(value).toBe(preset.osc2DetuneCents);
+    // …and the default is not, because each stab carries its own nudge.
+    expect(withVariation.some((value) => value !== preset.osc2DetuneCents)).toBe(true);
+    for (const value of withVariation) {
+      expect(Math.abs(value - preset.osc2DetuneCents)).toBeLessThanOrEqual(NOTE_VARIATION_MAX_DETUNE_CENTS);
+    }
   });
 });
