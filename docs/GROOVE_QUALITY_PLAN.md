@@ -150,11 +150,15 @@ P1.2's pad/bass work did to the arrangements' loudness. `npm run check:loudness:
 genres at **Δ +0.00 dB**), `check:loudness` is green, and `apply_loudness_trims --check` reports 159 trims matching.
 
 The re-record also produced the first honest picture of the **measurement's own noise floor**, and it is not uniform:
-158 of 159 genres repeat to 0.000–0.002 dB and `synthwave` alone moves **0.524 dB** between two back-to-back renders
-— wider than `LOUDNESS_FRESHNESS_TOLERANCE_DB` (0.35), so the freshness gate could have failed *by itself* on a fresh,
-correct report whenever its sample included that row. Each row is now judged at `max(0.35, 2 ×` its own repeat
-stability `)` (`freshnessToleranceFor`), and `loudnessReport.test.ts` asserts the shape of that distribution (every
-row under 0.6, exactly one above 0.05) rather than a maximum the data had outgrown.
+almost every genre repeats to 0.000–0.002 dB, and **one** row per run moves much further — `synthwave` at **0.524 dB**
+in the morning run, `dubstep` at **0.763 dB** in the afternoon one, with that same `synthwave` row down at 0.021 in
+the second. A genre's own render noise does not move from 0.52 to 0.02 between runs; a *page* does, which is the
+degradation `measure_genre_loudness.mjs` already documents (past ~50–75 offline renders in one page, renders start to
+shift). So the test asserts the **shape** — exactly one row above 0.05, everything else at the floor, nothing above
+1 dB — rather than a named genre or a maximum the data had outgrown, and the freshness check is safe by construction:
+`freshnessToleranceFor` judges each row at `max(0.35, 2 ×` its *own* recorded stability `)`, so the row that is noisy
+in the report is the row judged loosely. Narrowing *which* page condition produces the outlier is a measurement for a
+later round; it is recorded here rather than smoothed over.
 
 **And preparing to apply it found a second, older defect — one that would have blocked the release at `npm run verify`.**
 Both `apply_loudness_trims.mjs` and `check_loudness_spread.mjs` matched a genre's table line with a pattern that
