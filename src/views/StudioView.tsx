@@ -26,6 +26,7 @@ import { InfoDossier } from "../components/sequencer/InfoDossier";
 import { ConsoleOverlay } from "../components/console/ConsoleOverlay";
 import { ArrangementPanel, type ArrangementEdit } from "../components/arrangement/ArrangementPanel";
 import { sessionSong } from "../data/songFlatten";
+import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
 import { TrackInspector } from "../components/console/TrackInspector";
 import { MusicalTypingModal } from "../components/sequencer/MusicalTypingModal";
 import { INSTRUMENT_PRESET_ALIASES } from "../audio/instrumentPresets";
@@ -311,6 +312,31 @@ export const StudioView: React.FC<StudioViewProps> = ({
     setSelectedSectionId(null);
     setIsArrangementOpen(true);
   }, []);
+
+  /**
+   * B5 — replace the arrangement with a form.
+   *
+   * The generator is handed the pattern **being edited** (not the saved slot: the clip the sections point at is
+   * whichever one the export will flatten), so "where does the fill land" and "how long is a pass" come from the
+   * same object the user is looking at.
+   *
+   * Generating switches song mode on when it is off, deliberately: an arrangement you cannot hear is a puzzle, and
+   * `songMode` is what makes the transport, the exports and the WAV bounce follow the timeline instead of one loop.
+   */
+  const handleGenerateArrangement = useCallback(
+    (form: ArrangementFormId) => {
+      const sections = arrangementSections({
+        songId: "session",
+        form,
+        tracks: pattern.tracks ?? [],
+        stepsPerPass: pattern.totalSteps || pattern.tracks?.[0]?.steps?.length || 0,
+      });
+      commit({ type: "SET_SECTIONS", sections });
+      if (!seqState.songMode) commit({ type: "TOGGLE_SONG_MODE" });
+      setSelectedSectionId(null);
+    },
+    [commit, pattern, seqState.songMode]
+  );
 
   /**
    * E-10: which track's inspector is open, or null.
@@ -1280,6 +1306,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           selectedId={selectedSectionId}
           onSelect={setSelectedSectionId}
           onChange={handleArrangementEdit}
+          onGenerate={handleGenerateArrangement}
           onClose={() => setIsArrangementOpen(false)}
         />
       )}

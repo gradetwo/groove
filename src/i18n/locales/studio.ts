@@ -178,6 +178,12 @@ export const studioMessages = {
   arrangement_shrink: { en: "−1 bar", zh: "减 1 小节" },
   arrangement_duplicate: { en: "Duplicate", zh: "复制段落" },
   arrangement_remove: { en: "Delete", zh: "删除段落" },
+  arrangement_generate: { en: "Build an arrangement:", zh: "生成编排：" },
+  arrangement_form_aria: {
+    en: "Replace the arrangement with the {name} form, {bars} bars",
+    zh: "用「{name}」形式替换编排，共 {bars} 小节",
+  },
+  arrangement_fill_badge: { en: "fill", zh: "加花" },
   toolbar_blind_title: { en: "A/B Blind Listening Comparison Mode", zh: "A/B 盲听对比评估模式" },
   toolbar_blind_label: { en: "BLIND", zh: "盲听" },
   toolbar_bar_label: { en: "BAR", zh: "小节" },

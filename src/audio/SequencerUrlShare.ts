@@ -4,7 +4,7 @@
  */
 
 import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
-import { CLIP_SLOTS, MAX_SECTION_BARS, type ClipSlot, type SongSection } from "../types/song";
+import { CLIP_SLOTS, MAX_SECTION_BARS, normaliseFill, type ClipSlot, type SectionOverrides, type SongSection } from "../types/song";
 
 export interface SharedSequencerState {
   genreId: string;
@@ -97,6 +97,87 @@ interface CompactTrackPayload {
   sB?: number;
 }
 
+/**
+ * B5 overrides, compactly.
+ *
+ * `r` is a section's velocity ramp `[from, to]`; `f` is its fill `[tracks, steps, velocity]`. An object rather than
+ * more tuple positions because a fill has three parts of its own, and a tuple whose meaning depends on how many
+ * optional fields precede it is exactly the shape that breaks when the next field is added.
+ */
+interface CompactOverrides {
+  r?: [number, number];
+  f?: [string[], number[], number];
+}
+
+/** Share-link bounds for a section's overrides — small enough that 64 sections cannot blow the URL ceiling. */
+const MAX_FILL_TRACKS = 8;
+const MAX_FILL_STEPS = 32;
+const MAX_RAMP = 4;
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * A section's overrides in share form, or `undefined` when there is nothing worth spending bytes on.
+ *
+ * The bounds are the encoder's half of the same contract the decoder enforces: a link must never carry a value the
+ * reader would refuse, or the app would produce links it cannot open (F-09).
+ */
+function compactOverrides(section: SongSection): CompactOverrides | undefined {
+  const source = section.overrides;
+  if (!source || typeof source !== "object") return undefined;
+  const out: CompactOverrides = {};
+
+  const ramp = source.velocityRamp;
+  if (Array.isArray(ramp) && ramp.length >= 2 && Number.isFinite(ramp[0]) && Number.isFinite(ramp[1])) {
+    out.r = [
+      round2(Math.max(0, Math.min(MAX_RAMP, ramp[0]))),
+      round2(Math.max(0, Math.min(MAX_RAMP, ramp[1]))),
+    ];
+  }
+
+  const fill = normaliseFill(source.fill);
+  if (fill) {
+    const tracks = fill.tracks.slice(0, MAX_FILL_TRACKS).map((id) => id.slice(0, 32));
+    const steps = fill.steps.slice(0, MAX_FILL_STEPS);
+    if (tracks.length && steps.length) out.f = [tracks, steps, fill.velocity ?? 112];
+  }
+
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * The inverse of {@link compactOverrides}, on data that may be anything at all.
+ *
+ * Everything is re-bounded here rather than trusted: `normaliseFill` already drops non-finite steps, negative
+ * offsets and out-of-range velocities, and the ramp is clamped to the same ceiling the model uses.
+ */
+function decodeOverrides(raw: unknown): SectionOverrides | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const source = raw as CompactOverrides;
+  const out: SectionOverrides = {};
+
+  if (Array.isArray(source.r) && source.r.length >= 2) {
+    const [from, to] = source.r;
+    if (Number.isFinite(from) && Number.isFinite(to)) {
+      out.velocityRamp = [
+        Math.max(0, Math.min(MAX_RAMP, Number(from))),
+        Math.max(0, Math.min(MAX_RAMP, Number(to))),
+      ];
+    }
+  }
+
+  if (Array.isArray(source.f) && source.f.length >= 2) {
+    const [tracks, steps, velocity] = source.f;
+    const fill = normaliseFill({
+      tracks: Array.isArray(tracks) ? (tracks.filter((id) => typeof id === "string").slice(0, MAX_FILL_TRACKS).map((id) => id.slice(0, 32)) as string[]) : [],
+      steps: Array.isArray(steps) ? (steps.filter((step) => typeof step === "number").slice(0, MAX_FILL_STEPS) as number[]) : [],
+      velocity: typeof velocity === "number" ? velocity : undefined,
+    });
+    if (fill) out.fill = fill;
+  }
+
+  return Object.keys(out).length ? out : undefined;
+}
+
 interface CompactSharePayload {
   g: string;
   b: number;
@@ -106,8 +187,8 @@ interface CompactSharePayload {
   rs?: "1/8" | "1/16" | "1/32";
   stLen?: number;
   t: CompactTrackPayload[];
-  /** `[slot, bars, label?, velocityScale?, mute?]` per section; absent for a pre-B1 link. */
-  sec?: Array<[ClipSlot, number, string?, number?, string[]?]>;
+  /** `[slot, bars, label?, velocityScale?, mute?, overrides?]` per section; absent for a pre-B1 link. */
+  sec?: Array<[ClipSlot, number, string?, number?, string[]?, CompactOverrides?]>;
 }
 
 const VALID_RESOLUTIONS = new Set(["1/8", "1/16", "1/32"]);
@@ -214,9 +295,10 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
       const mute = Array.isArray(section.mute)
         ? section.mute.filter((id): id is string => typeof id === "string").slice(0, 16).map((id) => id.slice(0, 32))
         : undefined;
+      const overrides = compactOverrides(section);
       compactSections.push(
-        mute || velocityScale !== undefined || label
-          ? [section.slot, bars, label, velocityScale, mute?.length ? mute : undefined]
+        overrides || mute || velocityScale !== undefined || label
+          ? [section.slot, bars, label, velocityScale, mute?.length ? mute : undefined, overrides]
           : [section.slot, bars]
       );
     }
@@ -443,7 +525,14 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
     if (Array.isArray(payload.sec)) {
       for (const raw of payload.sec.slice(0, 64)) {
         if (!Array.isArray(raw) || raw.length < 2) continue;
-        const [slot, bars, label, velocityScale, mute] = raw as [unknown, unknown, unknown, unknown, unknown];
+        const [slot, bars, label, velocityScale, mute, overrides] = raw as [
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+        ];
         if (typeof slot !== "string" || !CLIP_SLOTS.includes(slot as ClipSlot)) continue;
         const barCount = Number(bars);
         if (!Number.isInteger(barCount) || barCount < 1 || barCount > MAX_SECTION_BARS) continue;
@@ -455,6 +544,8 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
           const ids = mute.filter((id): id is string => typeof id === "string").slice(0, 16).map((id) => id.slice(0, 32));
           if (ids.length) section.mute = ids;
         }
+        const decoded = decodeOverrides(overrides);
+        if (decoded) section.overrides = decoded;
         sections.push(section);
       }
     }

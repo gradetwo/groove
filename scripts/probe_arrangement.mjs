@@ -187,6 +187,7 @@ const targets = await page.evaluate(() => {
     ...document.querySelectorAll("[data-testid^='arrangement-region-']"),
     ...document.querySelectorAll("[data-testid^='arrangement-move-']"),
     ...document.querySelectorAll("[data-testid^='arrangement-resize-']"),
+    ...document.querySelectorAll("[data-testid^='arrangement-form-']"),
     document.querySelector("[data-testid='arrangement-close']"),
     document.querySelector("[data-testid='arrangement-grow']"),
     document.querySelector("[data-testid='arrangement-shrink']"),
@@ -273,6 +274,39 @@ if (afterKey[0].id !== first.id) {
   await fail(`ArrowLeft on ${first.id} did not move it back to the first position.`);
 }
 
+/**
+ * B5 — the generator, and the two things a delivered arrangement must show.
+ *
+ * The unit tests prove the form table and the flattening; this proves the wiring in the built app: the picker is
+ * reachable, one click replaces the two-section default with the form's own sections, and the sections that carry a
+ * build or a fill *say so on the region*. A generated arrangement whose fill is invisible is one the user has to
+ * take on trust.
+ */
+const beforeGenerate = await regionIds();
+await page.click("[data-testid='arrangement-form-club']");
+await page.waitForTimeout(120);
+const afterGenerate = await regionIds();
+if (afterGenerate.length === beforeGenerate.length) {
+  await fail(
+    `the club form produced ${afterGenerate.length} region(s), the same as the default arrangement — the generator ` +
+      "did not reach the store."
+  );
+}
+const labelled = await page.$$eval("[data-testid^='arrangement-region-']", (nodes) =>
+  // The visible text, not the id: the point of a generated arrangement is that its sections are *named*.
+  nodes.map((node) => (node.textContent ?? "").replace(/\s+/g, " ").trim())
+);
+const badges = await page.evaluate(() => ({
+  builds: document.querySelectorAll("[data-testid^='arrangement-build-']").length,
+  fills: document.querySelectorAll("[data-testid^='arrangement-fill-']").length,
+}));
+if (badges.builds === 0 || badges.fills === 0) {
+  await fail(
+    `the generated arrangement shows ${badges.builds} build badge(s) and ${badges.fills} fill badge(s); the club form ` +
+      "has two of each."
+  );
+}
+
 const summary = {
   regions: afterKey.length,
   barWidth: Math.round(barWidth),
@@ -286,6 +320,10 @@ const summary = {
     .map((t) => Math.min(t.width, t.height))
     .reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY),
   orderAfterDrag: afterKey.map((r) => `${r.slot}×${r.bars}`).join(" → "),
+  generatedRegions: afterGenerate.length,
+  generatedLabels: labelled.join(" → "),
+  buildBadges: badges.builds,
+  fillBadges: badges.fills,
 };
 
 if (asJson) {
@@ -297,6 +335,10 @@ if (asJson) {
   );
   console.log(`   after drag → move → resize → ArrowLeft: ${summary.orderAfterDrag}`);
   console.log("   negative control: a sub-half-bar nudge changed nothing");
+  console.log(
+    `   generated (club): ${summary.generatedRegions} regions [${summary.generatedLabels}], ` +
+      `${summary.buildBadges} build + ${summary.fillBadges} fill badge(s)`
+  );
 }
 
 await browser.close();

@@ -29,6 +29,7 @@ import {
   type ArrangementCommand,
   type SectionRegion,
 } from "../../features/arrangement/songEdit";
+import { ARRANGEMENT_FORMS, ARRANGEMENT_FORM_IDS, formBars, type ArrangementFormId } from "../../data/arrangementForm";
 
 /**
  * The view's measurements, exported because the touch contract is a number.
@@ -81,6 +82,11 @@ export interface ArrangementPanelProps {
   onSelect: (id: string | null) => void;
   onChange: (edit: ArrangementEdit) => void;
   onClose: () => void;
+  /**
+   * B5: replace the arrangement with a form. Optional, like every other host-provided action — a caller that has no
+   * clip to generate from renders no generator rather than a button that does nothing.
+   */
+  onGenerate?: (form: ArrangementFormId) => void;
 }
 
 interface DragState {
@@ -98,8 +104,10 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
   onSelect,
   onChange,
   onClose,
+  onGenerate,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const locale = language === "zh" ? "zh" : "en";
   const dragRef = useRef<DragState | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -228,6 +236,32 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
           </button>
         </header>
 
+        {/* B5 — the generator. Three forms, one click each: "there is no fill, no build, no variation" is fixed
+            before the user has to place a single region by hand. */}
+        {onGenerate && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
+            <span className="font-['JetBrains_Mono'] text-[11px] text-text-dim">{t("arrangement_generate")}</span>
+            {ARRANGEMENT_FORM_IDS.map((form) => (
+              <button
+                key={form}
+                type="button"
+                data-testid={`arrangement-form-${form}`}
+                data-bars={formBars(form)}
+                onClick={() => onGenerate(form)}
+                title={`${locale === "zh" ? ARRANGEMENT_FORMS[form].summary.zh : ARRANGEMENT_FORMS[form].summary.en} · ${formBars(form)}`}
+                aria-label={t("arrangement_form_aria", {
+                  name: locale === "zh" ? ARRANGEMENT_FORMS[form].label.zh : ARRANGEMENT_FORMS[form].label.en,
+                  bars: formBars(form),
+                })}
+                style={{ minHeight: ARRANGEMENT_MIN_TARGET, minWidth: ARRANGEMENT_MIN_TARGET }}
+                className="rounded-lg border border-line bg-panel2 px-3 text-xs text-text-sub transition-colors hover:border-accent/50 hover:text-accent"
+              >
+                {locale === "zh" ? ARRANGEMENT_FORMS[form].label.zh : ARRANGEMENT_FORMS[form].label.en}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* The half-finished song has to be visible: the renderer refuses it with these reasons. */}
         {timeline.problems.length > 0 && (
           <div
@@ -317,6 +351,23 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
                         <span className="shrink-0 font-['JetBrains_Mono'] text-[10px] text-text-dim">
                           {region.bars}×
                         </span>
+                        {/* B5: what the section does, not just what it holds. */}
+                        {region.section.overrides?.velocityRamp && (
+                          <span
+                            data-testid={`arrangement-build-${region.section.id}`}
+                            className="shrink-0 rounded bg-accent/20 px-1 font-['JetBrains_Mono'] text-[10px] text-accent"
+                          >
+                            ↗
+                          </span>
+                        )}
+                        {region.section.overrides?.fill && (
+                          <span
+                            data-testid={`arrangement-fill-${region.section.id}`}
+                            className="shrink-0 rounded bg-accent/20 px-1 font-['JetBrains_Mono'] text-[10px] text-accent"
+                          >
+                            {t("arrangement_fill_badge")}
+                          </span>
+                        )}
                       </span>
                       {/*
                         The resize band, along the bottom of the region. It is a real 44 px target and it is *stacked*
