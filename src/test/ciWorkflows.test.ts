@@ -113,8 +113,19 @@ describe("CI · the manual verify workflow is wired, not decorative", () => {
     expect(build, "the build must come before probe:skins").toBeLessThan(skins);
   });
 
-  it("installs the browsers the matrix needs and uploads both artifacts", () => {
-    expect(manual).toMatch(/playwright install --with-deps chromium firefox webkit/);
+  it("offers the loudness trim re-record as a scope, and never lets it commit a baseline", () => {
+    /**
+     * P0.9 is ~1 hour of single-core offline rendering, which is the definition of "belongs on a runner", and it
+     * is the one job whose *output* is the deliverable. Two properties keep it safe: the report is written to a
+     * scratch directory (never to the committed baseline path) and it leaves as an artifact for a human to apply.
+     */
+    expect(manual).toMatch(/\n          - trim\n/);
+    expect(manual).toContain("npm run record:loudness -- --out=loudness-report/");
+    expect(manual, "the run must not write the committed baseline").not.toContain("record:loudness -- --out=scripts/");
+    expect(manual).toMatch(/name: loudness-report/);
+  });
+
+  it("installs the browsers the matrix needs and uploads both artifacts", () => {    expect(manual).toMatch(/playwright install --with-deps chromium firefox webkit/);
     const uploads = manual.match(/uses: actions\/upload-artifact@/g) ?? [];
     expect(uploads.length, "e2e + coverage artifacts").toBeGreaterThanOrEqual(2);
     expect(manual).toContain("path: e2e-out/");

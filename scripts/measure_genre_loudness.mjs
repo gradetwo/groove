@@ -595,6 +595,21 @@ async function waitForServer(url) {
   console.log("===============================================================\n");
 
   const server = await startDevServer();
+  /**
+   * Kill the dev server on **every** exit path, not only the happy one.
+   *
+   * The sentinel aborts with `process.exit(1)`, which bypasses the `finally` below — and the server's
+   * port is fixed (`--strictPort`), so the next run then fails with "Port 3150 is already in use",
+   * which reads like a broken script rather than a leftover process. That cost a debugging round on
+   * 2026-09-23; the hook makes the abort path clean up after itself.
+   */
+  process.on("exit", () => {
+    try {
+      server.kill("SIGTERM");
+    } catch {
+      /* already gone */
+    }
+  });
   const browser = await chromium.launch({ args: ["--no-sandbox"] });
   const results = [];
   const failures = [];
@@ -733,15 +748,24 @@ async function waitForServer(url) {
         process.exit(1);
       }
     };
-    const recyclePageIfDue = async () => {
-      if (reloadEvery <= 0 || measurementsSinceReload < reloadEvery) return;
+    /**
+     * Reload the page and throw its first render away.
+     *
+     * Extracted so the reference measurement can use *exactly* the procedure every later sentinel check
+     * uses — see the call before `checkSentinel` below for why that matters.
+     */
+    const recyclePage = async (label) => {
       await page.reload({ waitUntil: "domcontentloaded", timeout: 60000 });
       measurementsSinceReload = 0;
       // The first render in a reloaded page is the cold one (lazy worklet registration), exactly like
       // the run's opening render, so it is discarded the same way.
       await measureGenre(page, catalog[0].id, null, { discard: true });
       measurementsSinceReload = 0;
-      console.log(`  recycled the measuring page after ${reloadEvery} measurement(s)`);
+      console.log(`  recycled the measuring page ${label}`);
+    };
+    const recyclePageIfDue = async () => {
+      if (reloadEvery <= 0 || measurementsSinceReload < reloadEvery) return;
+      await recyclePage(`after ${reloadEvery} measurement(s)`);
       await checkSentinel("after page reload");
     };
 
@@ -804,9 +828,24 @@ async function waitForServer(url) {
     }
 
     // Pass 1 — legacy (before) + arranged at unity trim.
-    // The sentinel's reference value comes from this warmed-up fresh page, so every later check is a
-    // comparison against a page that was known good rather than against a page that had already run.
-    await checkSentinel("start of run");
+    /**
+     * The reference is measured on a **reloaded** page, not on the page the run opened in.
+     *
+     * This is the fix for the abort that made the 2026-09-20 re-record unpublishable: the sentinel read
+     * `chicago-house` at −12.349 LUFS on the opening page and −11.589 after the first reload (Δ +0.760 dB,
+     * against a 0.3 dB tolerance), and every row measured after that reload agreed with the *later* value.
+     * The opening page is the only page in the run whose module graph was fetched over the network for the
+     * first time; a page that has loaded once before is stable from its first measurement (measured with a
+     * scratch probe: ten back-to-back renders in a reloaded page agree to 0.000 dB, while the first four
+     * renders of a cold page alternate between two discrete values).
+     *
+     * So the reference now uses exactly the procedure every later check uses — reload, discard one render,
+     * measure — which is what makes the comparison a comparison rather than a comparison of two different
+     * page states. The alternative tried first (one discarded warm-up render, which is still done inside
+     * `recyclePage`) is not enough on its own: the difference is cold-vs-warm module state, not render count.
+     */
+    await recyclePage("once before the reference, so it is measured on a warm page like every later check");
+    await checkSentinel("reference (warm page)");
     const measured = [];
     for (const [index, entry] of catalog.entries()) {
       const startedAt = Date.now();

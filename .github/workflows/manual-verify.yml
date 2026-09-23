@@ -34,6 +34,7 @@ on:
           - e2e
           - verify
           - audio
+          - trim
           - jank
           - skins
           - all
@@ -107,6 +108,27 @@ jobs:
           npm run check:gs1
           npm run check:timbre
           npm run check:loudness:fresh
+
+      # P0.9 — the 159-genre trim re-record, which is ~1 hour of single-core offline rendering and the reason
+      # `check:loudness:fresh` was red. It belongs here rather than on a laptop for the usual reason, and here
+      # specifically because it is the one job whose *output* is the deliverable.
+      #
+      # It writes to a scratch directory and uploads it: a measurement run must never commit a baseline by itself
+      # (the loudness numbers decide what ships, and an auto-committed re-record is how a bad run becomes the
+      # truth). A human downloads the artifact, applies it with `node scripts/apply_loudness_trims.mjs` and
+      # commits the diff.
+      - name: Loudness trim re-record (159 genres, artifact only)
+        if: inputs.scope == 'trim' || inputs.scope == 'all'
+        run: npm run record:loudness -- --out=loudness-report/loudness.baseline.json
+
+      - name: Upload the loudness report
+        if: (inputs.scope == 'trim' || inputs.scope == 'all') && always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: loudness-report
+          path: loudness-report/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Full gate chain
         if: inputs.scope == 'verify' || inputs.scope == 'all'

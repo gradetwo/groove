@@ -144,8 +144,48 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
 | 0.5 | **Swing on 8th off-beats** ✅ | `src/audio/swing.ts`, used by both engines | The off-8th moves the full amount and the off-16ths half, so a pattern written in 8ths swings; the analyser's detector now looks at every off-downbeat, not just the odd 16ths (which is why boom-bap measured straight at declared swing 60). `inaudibleSwing` and `swingNotAudible` are both **0/12**. | M | done — timing changes, deliberately |
 | 0.6 | **Tail per pattern** ✅ | `src/audio/renderTail.ts`, used by `WavExporter` | The tail is the genre's own reverb RT60 and its delay repeats to −60 dB (tempo-synced divisions resolved at the playing tempo), floored at the old 0.6 s and capped at 5 s. `cutTail` **2/12 → 0/12**: boom-bap went from −29.1 dBFS in its last 50 ms to −82.3, and every sampled genre is now below −82 dBFS. | S | done |
 | 0.7 | **Measure the loudness and timbre baselines on the pattern the user hears** | `measure_genre_loudness.mjs`, `measure_genre_timbre.mjs` | Found while fixing A3: both baseline scripts render `applyGenreMixDefaults(genre.sequencer_pattern)` — the mix applied to the *unexpanded* skeleton. They are self-consistent (the gate re-measures the same thing), so `check:loudness`/`check:timbre` still hold, but they certify a one-loop pattern rather than a performance. Regenerating 159 baselines is a release of its own; do it deliberately, not as a side effect. | M | medium — every baseline moves |
-| 0.9 | **Re-record the loudness trims after the P0.3–P0.6 mix changes** | `scripts/measure_genre_loudness.mjs` + `apply_loudness_trims.mjs` | P0.3 removes bass energy on purpose (4–6 dB of sidechain), so `check:loudness:fresh` now reads **2-step-garage −0.79 dB** against the recorded report; P0.4–P0.6 were each isolated and are loudness-neutral (the same −0.79 dB with the tail reverted, the width at identity and the pans parked). The corrective run is **blocked by P0.8**: the full measurement's own sentinel measured `alternative-rock` −13.753 LUFS at the start of the run and −13.094 after the first page reload — 0.66 dB apart on identical code — and refused to publish. Do this immediately after P0.8; until then `check:loudness:fresh` is the one gate a release cannot pass, and the audio work must not deploy. | S | blocked on P0.8 |
-| 0.8 | **Make two renders of the same project sample-identical** | the master chain: limiter worklet, bus compressor and channel strips | `scripts/diagnose_repeat_determinism.mjs` already isolates it to the master chain (per-track and per-bus renders are unstable too) and leaves the next experiment written down. Until it is fixed, the tail claim is confirmation-based (above), and "export twice, get the same file" is only true to the repeat noise floor `check:timbre` cites. | L | high — touches everything, so it gets its own release and its own ratchet |
+| 0.9 | **Re-record the loudness trims after the P0.3–P0.6 mix changes** | `scripts/measure_genre_loudness.mjs` + `apply_loudness_trims.mjs` | P0.3 removes bass energy on purpose (4–6 dB of sidechain), so `check:loudness:fresh` now reads **2-step-garage −0.79 dB** against the recorded report; P0.4–P0.6 were each isolated and are loudness-neutral (the same −0.79 dB with the tail reverted, the width at identity and the pans parked). **Unblocked on 2026-09-23**: the sentinel that refused to publish was comparing two page states (see P0.8 below), and it now takes its reference on a recycled page — a 14-genre re-run that aborted at Δ +0.760 dB finishes at Δ −0.000 dB. What is left is the run itself, ~1 hour of renders, which belongs on CI/Colab rather than on the laptop. Until it lands, `check:loudness:fresh` is the one gate a release cannot pass. | S | ready to run |
+| 0.8 | **Make two renders of the same project sample-identical** | the master chain: limiter worklet, bus compressor and channel strips | **Measured on 2026-09-23, and the answer changed the goal: the scheduling is already deterministic — it is the browser's DSP that is not bit-reproducible.** The goal is now a *stated tolerance* rather than bit-identity; the separate 0.76 dB page-state fork that actually blocked P0.9 is fixed. See the section below. | L → **M** | medium, narrowed by measurement |
+
+### P0.8 — what the 2026-09-23 measurements say
+
+Three cheap, reproducible runs took this from "somewhere in the master chain" to a much smaller question:
+
+1. **The scheduling is not the problem.** `diagnose_repeat_determinism.mjs --stream=8` patches `AudioParam`'s scheduling
+   methods and the sources' `start`, hashes the recorded call stream per render, and compares it with that render's
+   audio hash: **8 renders → 8 distinct audio hashes, 1 distinct scheduling stream, 530 identical calls each.** Two
+   renders are handed *the same notes at the same times* and come back with different samples, so no amount of
+   restructuring this project's graph will make them bit-identical — the difference is inside the browser's offline
+   DSP.
+2. **The residue is inaudible.** `--diff-trials=10` on one bar of `chicago-house`: 10 distinct outcomes, first
+   difference at 0.021 s, largest absolute difference **1.3 × 10⁻⁴**, worst FFT band delta **0.0001 dB**, signed/abs
+   ratio 0.09 (i.e. not a level change). That is the repeat noise floor a tolerance has to cover, four orders of
+   magnitude below every threshold in `check:timbre`.
+3. **The limiter-fallback hypothesis is refuted at this rate.** `--limiter-trials=1500` created 1500 master limiters
+   in 1500 fresh `OfflineAudioContext`s: **1500 worklet, 0 fallback.** The "about 1 render in 200" guess in the
+   script's header does not reproduce, so the rare large outlier is not the limiter.
+
+What remains is a **discrete, reversible page-state fork** — a different phenomenon from (2):
+
+* in the loudness measurement it appears as a **0.760 dB** step in integrated LUFS (`chicago-house` −12.349 vs
+  −11.589) with the **same true peak** (−1.30 dBTP) and a *higher* RMS in the quieter-LUFS state, i.e. a change in
+  K-weighted content rather than a level;
+* it is **exactly reproducible** while a page is in one state (the same value repeats to three decimals across
+  rounds), it affects the first renders of a **cold** page, and a reload clears it — a scratch probe of ten
+  back-to-back renders measured the cold page's first four renders alternating between the two states and its last six
+  agreeing to 0.000 dB;
+* both states report `limiter: worklet` and zero GS-1 host failures.
+
+**P0.9 is unblocked by measurement, not by luck**: the value the sentinel compares against is now taken on a
+*recycled* page — reload, discard one render, measure — exactly like every later check
+(`measure_genre_loudness.mjs`). Re-running the same 14-genre subset that aborted at Δ +0.760 dB now finishes, with
+`sentinel chicago-house: -11.589 LUFS (Δ -0.000 dB, after page reload)`. The full 159-genre trim re-record can
+therefore be published; what is left of P0.8 is the tolerance statement, not a hunt for a graph defect.
+
+Deliberately left to its own round: **what the two page states are.** The candidates the evidence has not eliminated
+are lazy module/WASM compilation completing mid-life, and any worklet whose processor state depends on when it was
+installed. `scripts/probe_render_state_fork.mjs` reproduces it in about 90 seconds, which is where that round should
+start.
 
 ### P1 — content design (data, in category batches)
 
