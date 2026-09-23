@@ -2,6 +2,18 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+/**
+ * A machine-readable test report, but only when asked for.
+ *
+ * `CI_JUNIT=path npm test` writes JUnit XML there. This exists because a red job's *test output* was not readable
+ * from the run — `gh run view --log` returned nothing for the failing job — so diagnosing a single failure meant
+ * running all 2,870 tests on the machine that was supposed to be free, which is exactly the load the workflow exists
+ * to absorb. With the XML uploaded as an artifact, the failing assertion is a download away.
+ *
+ * Off by default: a local `npm test` writes no file it did not ask for, and the reporter list is unchanged.
+ */
+const junitPath = process.env.CI_JUNIT;
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -12,6 +24,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    ...(junitPath
+      ? {
+          reporters: ['default', 'junit'],
+          outputFile: { junit: junitPath },
+        }
+      : {}),
     /**
      * Absolute on purpose.
      *

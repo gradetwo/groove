@@ -46,6 +46,11 @@ git diff --stat apple2011/next HEAD
   waits rather than a stalled browser. A hang now fails in eight minutes **with the target named**, and is not
   retried.
 
+* **A red unit-test job is readable**: `CI_JUNIT` writes JUnit XML and the job uploads it as the
+  `test-results` artifact (`if: always()`). Measured 2026-09-23: the failing job's log was not retrievable
+  from the API, so diagnosing one assertion meant running all 2,870 tests locally — the load CI exists to
+  absorb. Local runs are unchanged (the reporter is off unless the variable is set).
+
 * **validate** (every push/PR): actions-runtime gate, `version:check`, `docs:check`, typecheck, lint, red lines,
   unit tests + coverage, genre schema lint/audit, **the loudness report-vs-table gate** (two file reads, ~1 s — it was
   `verify`-only and spent a day red without anyone seeing it), production build, bundle budget.
