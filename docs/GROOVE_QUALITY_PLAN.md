@@ -547,6 +547,26 @@ chords at −0.15…−0.25 and lead at +0.15…+0.25, and never beyond ±0.5; t
 stereo delay and the reverb returns."* The change was reverted, and the measurement was right about the numbers and
 wrong about the music — which is what the audition is for.
 
+**Three routes were then measured, and all three are dead ends — the third for a reason worth knowing.**
+
+| lever | chicago-house correlation | verdict |
+|---|---|---|
+| hard-pan the sustained roles | 0.9810 → 0.9766 | works numerically, **rejected by the audition** |
+| ping-pong delay only | 0.9810 → 0.9810 | nothing: the delay's return is 0.2 and its send is small |
+| ping-pong + delay return 0.34 + reverb return 0.36, width 1 | 0.9810 → 0.9807 | sound changed a lot, image by 0.0003 dB |
+| `organStack` unison 3 + spread 0.8 | 0.9810 → 0.9809 | nothing — and here is why |
+
+The last row is the informative one. GS-1's `spread` is a **detune** spread (±35 cents at full, `osc[0].spread` in the
+core), and its unison sub-voices are rendered into a single mono scratch buffer (`unison_buf`) before the voice's own
+pan is applied. So unison makes a voice *thicker*, never *wider*: there is no stereo spread across the stack to ask
+for, which is exactly what the audio review recommended ("stereo detune, chorus") and exactly what does not exist.
+
+What would actually reach the plan's target of 3, in order of honesty: (a) **stereo unison in the core** — place the
+unison sub-voices across the field (an upstream change, and the natural companion to ABI 9's per-note tuning);
+(b) a **chorus / stereo widener** effect the app does not have; (c) accept **7** as this architecture's floor, which is
+what the ratcheted budget does. Until one of (a) or (b) lands, the budget is the measurement and the plan's "12 → 3"
+line is refuted rather than pending.
+
 The review also settles the claim's ceiling: the **existing** resolved pans are already outside its recommended
 range (chords −0.36, lead +0.6), so the mix is at the pan limit and the near-mono reading is a property of the
 architecture, not of a missing nudge. Getting to 3 means stereo *processing* — a chorus/spread on the sustained
