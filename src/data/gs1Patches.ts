@@ -52,7 +52,8 @@ export type Gs1PatchName =
   | "acidLead"
   | "bellMallet"
   | "organStack"
-  | "sampleTexture";
+  | "sampleTexture"
+  | "sampleSurface";
 
 /**
  * The ten patches.
@@ -69,6 +70,30 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
    * a loop point is the caller's business when it is not. `PATCH_GAIN` stays at the measured ceiling (0.6) because
    * the sample arrives normalised: the patch seats it rather than adding level.
    */
+  /**
+   * The same voice with a **surface-noise** envelope: short, quiet, no sustain.
+   *
+   * `vinyl_crackle` is what 26 genres already ask for ("surface noise / needle hiss", per the native preset's own
+   * note), and a recording of surface noise is the right source for it — but a crackle is a *tick*, not a chord. The
+   * native voice is filtered noise with a 0.12 s decay; this is the same intent played from a sample, so the envelope
+   * is short and the tail does not ring into the next onset.
+   */
+  sampleSurface: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 9, // sample
+    [Param.OSC1_LEVEL]: 0.85,
+    [Param.SMP_ROOT]: 60,
+    [Param.SMP_MODE]: 0,
+    [Param.FILTER_TYPE]: 1,
+    [Param.FILTER_CUTOFF]: 7000,
+    [Param.FILTER_RES]: 0.8,
+    [Param.FILTER_ENV_AMT]: 0.2,
+    [Param.ENV_ATTACK]: 0.004,
+    [Param.ENV_DECAY]: 0.12,
+    [Param.ENV_SUSTAIN]: 0.05,
+    [Param.ENV_RELEASE]: 0.25,
+    [Param.PATCH_GAIN]: 0.6,
+  },
   sampleTexture: {
     [Param.OSC1_ON]: 1,
     [Param.OSC1_WAVE]: 9, // sample
@@ -403,10 +428,17 @@ export const GS1_LEAD_ROUTING: Record<string, Gs1Routing> = {
  * work (A4) put there. Any name listed here plays the imported sample; anything else stays on the native engine.
  */
 export const GS1_TEXTURE_ROUTING: Record<string, Gs1Routing> = {
+  /**
+   * `vinyl_crackle` is the one name the **library already uses** — 26 genres declare it for surface noise / needle
+   * hiss — and it is the reason this table exists rather than a hypothetical: the recording is a better source for
+   * that instrument than a subtractive noise preset, and the content did not have to change to say so.
+   */
+  vinyl_crackle: { patch: "sampleSurface" },
+  tape_hiss: { patch: "sampleSurface" },
+  // The musical one-shots: a chop or a found sound carries its own length, so its envelope follows the sample.
   vinyl_texture: { patch: "sampleTexture" },
   vocal_chop: { patch: "sampleTexture" },
   found_sound: { patch: "sampleTexture" },
-  tape_hiss: { patch: "sampleTexture" },
 };
 
 export function routingForRole(role: string | null | undefined): Record<string, Gs1Routing> | null {
