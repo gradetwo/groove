@@ -370,11 +370,17 @@ export function buildMasterGraph(
      * where it still fails at `+1.42 dBTP` **with** that rule in place — so the bus is carrying a real signal to a
      * limiter that is not applying it.
      *
-     * The blind spot that made this hard to chase: a worklet in an **OfflineAudioContext** does not deliver
-     * `port.postMessage` or `console.log` while it renders, so the node's own view of its inputs is unobservable
-     * there. The next step is the *realtime* engine (`AudioEngine`), where the same wiring can be watched live — and
-     * if it limits correctly there, the difference is the offline/async interaction around the node swap rather than
-     * the DSP, the graph or the kernel.
+     * **The target is now narrow: the strip taps.** Measured 2026-09-24 with three probes in `scratch/`:
+     *
+     *   · this graph, in an **OfflineAudioContext**, with the programme and a detector fed *directly* into it →
+     *     **−1.30 dBTP**, limited, with a matched *or* a quiet detector (`limiter_offline_graph_probe.mjs`);
+     *   · the same graph in a **realtime** context, same feeds → limited (−1.31 dBFS, `limiter_realtime_probe.mjs`);
+     *   · the **real render path** (strips tapping `duckDetectorInput`) → **+1.42 dBTP**, unlimited.
+     *
+     * So the DSP, the graph, the kernel, the worklet and the context type are each cleared, and what remains is the
+     * wiring that the strips add. Two candidate mechanisms are already refuted: a level mismatch (the makeup sits
+     * between the taps and the limiter, so the bus is ~5.5 dB quieter than the programme — and a deliberately quiet
+     * detector still limits) and a silent detector (the floor rule below falls back to the programme).
      */
     detector: null,
     releaseFastMs: options.limiterReleaseFastMs,
