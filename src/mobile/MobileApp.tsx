@@ -14,6 +14,7 @@
 import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useGenreAudition } from "../hooks/useGenreAudition";
+import { auditionArrangementFor } from "./mobileGenreData";
 import { MobileModuleTabBar } from "./MobileModuleTabBar";
 import { MobilePlayerBar } from "./MobilePlayerBar";
 import { MOBILE_MODULE_PLAN_KEYS, type MobileModule } from "./mobileModules";
@@ -145,7 +146,18 @@ export function MobileApp({
     setMetronome,
     readMetronome,
     readTempo } =
-    useGenreAudition({ onPatternEnd: () => advanceRef.current?.() });
+    /**
+     * The phone plays **songs**, not loops: a genre's own pattern is a 4–16 second pass, so the play modes had
+     * nothing long enough to wait for and 全部随机 read as continuous switching (the report that started this).
+     * `auditionArrangementFor` picks the form from the genre's category — club for Electronic, song for the rest —
+     * and the pass end then means the end of the track.
+     */
+    useGenreAudition({
+      onPatternEnd: () => advanceRef.current?.(),
+      arrangement: auditionArrangementFor(
+        genreId ? GENRE_INDEX.find((item) => item.id === genreId)?.category : undefined
+      ),
+    });
 
   /**
    * The play mode is the shell's, not the screen's: the bar's left button and the full-screen player

@@ -32,11 +32,14 @@ const audition = vi.hoisted(() => ({
   playingGenreId: null as string | null,
   /** Captured from the shell, so a test can complete a pass the way the engine would. */
   onPatternEnd: null as ((genreId: string) => void) | null,
+  /** The other option the shell passes: which arrangement a phone track is. */
+  arrangement: undefined as string | false | undefined,
 }));
 
 vi.mock("../hooks/useGenreAudition", () => ({
-  useGenreAudition: (options?: { onPatternEnd?: (genreId: string) => void }) => {
+  useGenreAudition: (options?: { onPatternEnd?: (genreId: string) => void; arrangement?: string | false }) => {
     audition.onPatternEnd = options?.onPatternEnd ?? null;
+    audition.arrangement = options?.arrangement;
     return {
       playingGenreId: audition.playingGenreId,
       toggleAudition: audition.toggle,
@@ -1120,5 +1123,32 @@ describe("phone shell · full-screen surfaces own the screen", () => {
     renderShell("home");
     await findHome();
     expect(screen.getByTestId("mobile-module-bar")).toBeInTheDocument();
+  });
+});
+
+describe("phone shell · a track is a song", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem("groove_language", "en");
+  });
+
+  it("auditions the genre's arrangement, so the modes have a track to wait for", async () => {
+    /**
+     * Measured: a genre's own pattern is a 4–16 second pass, so "advance when the pass ends" switched almost
+     * immediately even once the pass detection was correct — the second half of the reported 连续切歌.
+     */
+    renderShell("home", { genreId: "chicago-house", mobilePlayer: true });
+    await screen.findByTestId("mobile-player", {}, { timeout: 5000 });
+    // Electronic → club; anything else → song (the mapping is tested directly next door).
+    expect(audition.arrangement).toBe("club");
+  });
+
+  it("maps the library's categories to a form", async () => {
+    const { auditionArrangementFor } = await import("../mobile/mobileGenreData");
+    expect(auditionArrangementFor("Electronic")).toBe("club");
+    for (const category of ["Rock/Metal", "Hip Hop", "Jazz/Blues", "Pop/R&B", "Latin/World", undefined]) {
+      expect(auditionArrangementFor(category), String(category)).toBe("song");
+    }
   });
 });

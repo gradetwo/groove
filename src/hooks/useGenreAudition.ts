@@ -4,6 +4,8 @@ import type { SequencerPattern } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
 import { createVinylScrub, type VinylScrub } from "../audio/VinylScrub";
 import { patternFromGenre } from "../data/genreMix";
+import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
+import { flattenSong, sessionSong } from "../data/songFlatten";
 import { announcer } from "../platform/announcer";
 
 export interface GenreAuditionClock {
@@ -90,9 +92,25 @@ export interface UseGenreAuditionReturn {
  */
 export interface UseGenreAuditionOptions {
   onPatternEnd?: (genreId: string) => void;
+  /**
+   * Play the genre as a **song** (an arrangement) instead of one pass of its loop.
+   *
+   * Measured 2026-09-24: a genre's own pattern is 32–128 steps, which at 120 BPM is a **4–16 second** pass — so
+   * "wait for the track to finish" had nothing to wait for, and the phone's play modes read as continuous switching
+   * even once the pass-end detection was correct. A form is 40 bars: about **80 seconds** for an eight-bar genre,
+   * and it is the same arrangement the exporters write and the studio plays (B2/B7), so the phone hears what the
+   * file contains rather than a shorter, different thing.
+   *
+   * `false` (the default) keeps the loop, which is what the browse surfaces want: an audition of "what is this
+   * genre like" should not make a visitor wait a minute and a half to hear the next one.
+   */
+  arrangement?: ArrangementFormId | false;
 }
 
 export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenreAuditionReturn {
+  const arrangementForm = options.arrangement ?? false;
+  const arrangementFormRef = useRef<ArrangementFormId | false>(arrangementForm);
+  arrangementFormRef.current = arrangementForm;
   const [playingGenreId, setPlayingGenreId] = useState<string | null>(null);
   /**
    * The metronome is engine state, so it survives a pattern swap; the flag is mirrored here too so a surface
@@ -184,7 +202,33 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
       engine.stop();
       // A freshly built engine has to be told again: the metronome is engine state, not pattern state.
       engine.setMetronome(metronome);
-      const pattern = patternFromGenre(genre);
+      /**
+       * The loop, or the genre's song. `flattenSong` runs the same arrangement model the renderer does, so what the
+       * phone plays and what an export contains cannot drift (`patternForExport` is the export-side twin of this).
+       */
+      const loop = patternFromGenre(genre);
+      const form = arrangementFormRef.current;
+      const pattern = form
+        ? flattenSong(
+            sessionSong({
+              songMode: true,
+              activeSlot: "A",
+              patterns: { A: loop, B: loop },
+              current: loop,
+              sections: arrangementSections({
+                songId: genre.id,
+                form,
+                tracks: loop.tracks,
+                stepsPerPass: loop.totalSteps || Math.max(0, ...loop.tracks.map((t) => t.steps.length)),
+              }),
+              genreId: genre.id,
+              bpm: genre.default_bpm ?? 120,
+              swing: 0,
+              resolution: "1/16",
+              loopRange: null,
+            })
+          ).pattern
+        : loop;
       engine.setPattern(pattern, true);
       /**
        * The pattern's own length, and a cleared observation, so the first step of *this* pattern is never read as
