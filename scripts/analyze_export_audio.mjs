@@ -634,8 +634,21 @@ async function measureGenre(page, genreId, bars, soloTracks) {
          * as "the bass dropped", and it is independent of both the release length and the note's envelope.
          */
         const windowSamples = Math.round(rate * 0.005);
-        const scanSamples = Math.round(rate * 0.06);
+        /**
+         * How far past a kick the dip is watched: **one onset's worth of time**, capped at 400 ms.
+         *
+         * This was a flat 60 ms, and a listening review of `disco-loop.wav` (2026-09-24, see
+         * `docs/AUDIO_REVIEW.md`) said the file has "几乎没有明显的侧链抽吸避让" while the same file's median dip
+         * read −3.82 dB — both true, because 60 ms cannot contain a duck. Measured with the longer scan, the
+         * mechanism holds ≥3 dB for **16 ms** on disco: depth without duration, which is a click to the ear and a
+         * duck to a claim that only reads depth.
+         *
+         * The cap is the gap to the next onset (`stepSamples * kickSteps`), because a window that runs into the
+         * next kick measures two ducks and calls it one.
+         */
         const stepSamples = Math.max(1, Math.round(rate * 0.001));
+        /** The longest a dip is watched: 400 ms, or the gap to the next kick, whichever is shorter. */
+        const MAX_SCAN_SAMPLES = Math.round(rate * 0.4);
 
         /** Every scheduled kick step in the render, as `[sampleIndex, step]`. */
         const grid = [];
@@ -645,12 +658,15 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           if (!noteEvents.probabilityPasses(kickTrack.probability?.[stepIdx], seed, kickIdx, stepIdx)) continue;
           const swingOffset = step % 2 === 1 && effectiveSwing > 0 ? effectiveSwing * 0.5 * stepDur : 0;
           const at = Math.round((step * stepDur + swingOffset) * rate);
-          if (at + scanSamples >= pureDucked.length) break;
+          // Two windows is the minimum for a measured onset, so keep only what can carry one.
+          if (at + windowSamples * 2 >= pureDucked.length) break;
           grid.push(at);
         }
         const kickAudio = kickSolo.getChannelData(0);
         const kickPeak = kickAudio.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
-        const energyOnsets = grid.filter((at) => kickPeak > 0 && rms(kickAudio, at, at + scanSamples) > kickPeak * 0.01).length;
+        const energyOnsets = grid.filter(
+          (at) => kickPeak > 0 && rms(kickAudio, at, at + windowSamples * 6) > kickPeak * 0.01
+        ).length;
 
         /**
          * The ratio at every grid point where the bass is *properly* sounding.
@@ -665,21 +681,47 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           const ducked = duckedBuffer.getChannelData(0);
           const unducked = controlBuffer.getChannelData(0);
           const floor = Math.max(1e-3, rms(unducked, 0, unducked.length) * 0.15);
+          /**
+           * The distance to the next onset, per onset.
+           *
+           * The first version of this scanned a flat 60 ms (too short to contain a duck) and the second reused
+           * `stepSamples * kickLength`, which is the *scan step* times the pattern length — a number with no
+           * musical meaning that quietly reduced `disco` to zero measured onsets. The gap is the thing itself:
+           * consecutive entries of the onset grid.
+           */
+          const gapSamples = grid.map((at, index) =>
+            index + 1 < grid.length ? Math.max(1, grid[index + 1] - at) : MAX_SCAN_SAMPLES
+          );
           const dips = [];
+          /**
+           * How **long** each onset's dip lasts, in milliseconds.
+           *
+           * Depth alone cannot tell a duck from a spike: `deepest` takes the deepest 5 ms window in the scan, so a
+           * 5 ms hole reads the same as a 150 ms hole. A listening review of `disco-loop.wav` (2026-09-24, `agy`,
+           * see `docs/AUDIO_REVIEW.md`) said there was "几乎没有明显的侧链抽吸避让" while this file's median dip read
+           * −3.82 dB — and the difference between those two statements is exactly duration. So it is measured now
+           * rather than argued: the median, across onsets, of the time the dip spends at least 3 dB down.
+           */
+          const holds = [];
+          const HOLD_DB = -3;
           let louderOnsets = 0;
-          for (const at of grid) {
+          for (const [index, at] of grid.entries()) {
+            const scanSamples = Math.min(MAX_SCAN_SAMPLES, gapSamples[index]);
             let deepest = null;
             let windows = 0;
+            let heldWindows = 0;
             for (let start = at; start + windowSamples <= at + scanSamples; start += stepSamples) {
               const reference = rms(unducked, start, start + windowSamples);
               if (reference <= floor) continue;
               const ratio = 20 * Math.log10(Math.max(rms(ducked, start, start + windowSamples), 1e-9) / reference);
               deepest = deepest === null ? ratio : Math.min(deepest, ratio);
+              if (ratio <= HOLD_DB) heldWindows += 1;
               windows += 1;
             }
             // Two windows is the minimum for "there is bass here and it was watched over time".
             if (deepest === null || windows < 2) continue;
             dips.push(deepest);
+            holds.push((heldWindows * stepSamples * 1000) / rate);
             if (deepest > 0) louderOnsets += 1;
           }
           if (!dips.length) return { onsets: 0, meanDb: 0 };
@@ -691,6 +733,15 @@ async function measureGenre(page, genreId, bars, soloTracks) {
             minDb: Math.round(sorted[0] * 100) / 100,
             /** Onsets where the bass never dipped at all — a red flag if this is not ~0. */
             louderOnsets,
+            /**
+             * Median time, in ms, that a dip spends at least 3 dB down — the *duration* half of the depth above.
+             *
+             * `minDb` says how deep the deepest window was; this says whether that was a duck or a click.
+             */
+            hold3DbMs: (() => {
+              const sortedHolds = [...holds].sort((a, b) => a - b);
+              return Math.round(sortedHolds[Math.floor(sortedHolds.length / 2)] * 10) / 10;
+            })(),
           };
         };
         /**
@@ -758,6 +809,14 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           duckMasterDb: full.meanDb,
           duckMasterMedianDb: full.medianDb,
           duckMasterMinDb: full.minDb,
+          /**
+           * The file's duck *duration* (see `ratiosFor`): the answer to "is this ducking, or just spiking?".
+           *
+           * Read beside `duckMasterMedianDb`: a −3.8 dB median that holds for 150 ms is pumping, and the same
+           * number holding for 10 ms is a click that a whole-file spectrum will never see.
+           */
+          duckMasterHold3DbMs: full.hold3DbMs,
+          duckPureHold3DbMs: pure.hold3DbMs,
         };
       };
       const duck = await measureDuck();
