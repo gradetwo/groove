@@ -266,7 +266,8 @@ export const GENRE_INSERT: Record<string, GenreInsertPatch> = {
   /* ---- Electronic: future bass / retro / chill --------------------------- */
   "future-bass": { chords: { high: { hz: 9000, gainDb: 1.5 }, compRatio: 2 }, lead: POP_LEAD },
   "kawaii-future-bass": { chords: { high: { hz: 10000, gainDb: 2 } }, lead: POP_LEAD },
-  synthwave: { chords: WARM_DRIVE, bass: { low: { hz: 75, gainDb: 2 } }, lead: POP_LEAD },
+  // Stereo width opt-in (see the block above `GENRE_INSERT`'s first category): the sustained lanes only.
+  synthwave: { chords: { ...WARM_DRIVE, width: 0.3 }, bass: { low: { hz: 75, gainDb: 2 } }, lead: { ...POP_LEAD, width: 0.25 }, fx: { width: 0.3 } },
   vaporwave: { chords: LOFI_TAPE, lead: LOFI_TAPE, snare: DARK_TOP },
   chillwave: { chords: AMBIENT_PAD, lead: { high: { hz: 8000, gainDb: -2 } } },
   downtempo: { chords: AMBIENT_PAD, bass: { low: { hz: 70, gainDb: 2 } } },
@@ -291,7 +292,24 @@ export const GENRE_INSERT: Record<string, GenreInsertPatch> = {
   breakbeat: { kick: CLUB_KICK, snare: { compRatio: 3.5, compThresholdDb: -14 }, bass: DRIVEN_BASS },
   "big-beat": { kick: CLUB_KICK, chords: CRUNCH_GUITAR, bass: DRIVEN_BASS },
   /* ---- Electronic: house ------------------------------------------------- */
-  "chicago-house": { kick: CLUB_KICK, chords: WARM_DRIVE, snare: WARM_DRIVE },
+  /**
+   * ---- Stereo width opt-ins (2026-09-24) ----------------------------------------
+   *
+   * The seven genres whose channel correlation measured above 0.98, given the strip's stereo-spread stage on the
+   * sustained lanes (chords/lead/fx — never kick, bass or snare, which stay centred). This is the shape the audio
+   * review asked for, "stereo detune, chorus, stereo delay", and the one the two cheaper routes could not produce:
+   * panning the same lanes tears the image apart by ear (and the pans were already past the range it recommends),
+   * and GS-1's unison spread is detune-only with its sub-voices summed to mono. Measured on the review's own band
+   * analysis: mid-band side/mid −27.9 → −22.4 dB, mono fold loss 0.0002 dB.
+   *
+   * Plainly about the metric: this **does not move `narrowStereo`** (chicago-house 0.98100 → 0.98069), because that
+   * claim is dominated by the centred low end. A genre that sounds wider and measures the same is the honest
+   * outcome, not a trick to make a number move — which is why the budget stays at 7.
+   *
+   * The other six opt-ins live with their category: `detroit-techno`, `minimal-techno`, `synthwave` (Electronic),
+   * `trap-rap` (Hip Hop), `reggaeton` (Latin/World) and `disco` (Pop/R&B).
+   */
+  "chicago-house": { kick: CLUB_KICK, chords: { ...WARM_DRIVE, width: 0.3 }, snare: WARM_DRIVE, lead: { width: 0.25 }, fx: { width: 0.3 } },
   "deep-house": { kick: CLUB_KICK, chords: { compRatio: 2, high: { hz: 9000, gainDb: 1 } }, bass: { low: { hz: 70, gainDb: 2 } } },
   "tech-house": { kick: CLUB_KICK, chords: WARM_DRIVE, hihat: { compRatio: 3, compThresholdDb: -22 } },
   "future-house": { kick: CLUB_KICK, chords: WARM_DRIVE, lead: POP_LEAD },
@@ -307,8 +325,8 @@ export const GENRE_INSERT: Record<string, GenreInsertPatch> = {
   "nu-disco-house": { kick: CLUB_KICK, chords: WARM_DRIVE, bass: { low: { hz: 80, gainDb: 2 } } },
   microhouse: { kick: CLUB_KICK, chords: AMBIENT_PAD, hihat: { high: { hz: 11000, gainDb: 2 } } },
   /* ---- Electronic: techno ------------------------------------------------ */
-  "detroit-techno": { kick: CLUB_KICK, chords: WARM_DRIVE, percussion: { high: { hz: 9000, gainDb: 2 } } },
-  "minimal-techno": { kick: CLUB_KICK, chords: AMBIENT_PAD, hihat: { compRatio: 2.5 } },
+  "detroit-techno": { kick: CLUB_KICK, chords: { ...WARM_DRIVE, width: 0.3 }, percussion: { high: { hz: 9000, gainDb: 2 } }, lead: { width: 0.25 }, fx: { width: 0.3 } },
+  "minimal-techno": { kick: CLUB_KICK, chords: { ...AMBIENT_PAD, width: 0.3 }, hihat: { compRatio: 2.5 }, lead: { width: 0.25 }, fx: { width: 0.3 } },
   "acid-techno": { lead: ACID_LEAD, kick: CLUB_KICK, bass: { mid: { hz: 500, gainDb: -2.5 } } },
   "dub-techno": { kick: CLUB_KICK, bass: DUB_BASS, chords: DARK_TOP, snare: DUB_SNARE },
   "industrial-techno": { kick: DRIVEN_KICK, chords: SATURATED_GUITAR, snare: { compRatio: 5 } },
@@ -350,7 +368,7 @@ export const GENRE_INSERT: Record<string, GenreInsertPatch> = {
   "old-school-hip-hop": { snare: { compRatio: 3.5, compThresholdDb: -14 }, bass: { low: { hz: 75, gainDb: 2 } } },
   "boom-bap": { kick: { compRatio: 4.5, compThresholdDb: -12 }, snare: { compRatio: 3.5 }, bass: { low: { hz: 75, gainDb: 2 } } },
   "g-funk": { bass: { low: { hz: 65, gainDb: 2.5 } }, lead: { high: { hz: 9000, gainDb: 1.5 } } },
-  "trap-rap": { bass: TRAP_808, hihat: { compRatio: 3, compThresholdDb: -22 }, kick: { compRatio: 4.5 } },
+  "trap-rap": { bass: TRAP_808, hihat: { compRatio: 3, compThresholdDb: -22 }, kick: { compRatio: 4.5 }, chords: { width: 0.3 }, lead: { width: 0.25 }, fx: { width: 0.3 } },
   "conscious-hip-hop": { bass: { low: { hz: 75, gainDb: 2 } }, chords: JAZZ_CLEAN },
   "emo-rap": { bass: TRAP_808, chords: { high: { hz: 8500, gainDb: 1.5 } }, lead: POP_LEAD },
   "lofi-hip-hop": { chords: LOFI_TAPE, snare: LOFI_TAPE, bass: { low: { hz: 70, gainDb: 2 } } },
@@ -383,7 +401,7 @@ export const GENRE_INSERT: Record<string, GenreInsertPatch> = {
   bachata: { percussion: LATIN_PERC, chords: CRUNCH_GUITAR, bass: { low: { hz: 80, gainDb: 2 } } },
   reggae: { bass: DUB_BASS, snare: DUB_SNARE, chords: DARK_TOP, percussion: DARK_TOP },
   dancehall: { bass: DUB_BASS, percussion: LATIN_PERC, snare: { high: { hz: 8000, gainDb: 1.5 } } },
-  reggaeton: { bass: TRAP_808, percussion: LATIN_PERC, kick: { compRatio: 4.5 } },
+  reggaeton: { bass: TRAP_808, percussion: LATIN_PERC, kick: { compRatio: 4.5 }, chords: { width: 0.3 }, lead: { width: 0.25 }, fx: { width: 0.3 } },
   afrobeat: { percussion: LATIN_PERC, bass: { low: { hz: 70, gainDb: 2.5 } }, chords: WARM_DRIVE },
   amapiano: { bass: { low: { hz: 50, gainDb: 3 }, compReleaseSec: 0.25 }, percussion: LATIN_PERC, chords: AMBIENT_PAD },
   "bossa-nova": { chords: JAZZ_CLEAN, bass: JAZZ_BASS, percussion: { high: { hz: 9000, gainDb: 1.5 }, compRatio: 2 } },
@@ -395,7 +413,7 @@ export const GENRE_INSERT: Record<string, GenreInsertPatch> = {
   // Topline-first: the lead gets the presence lift, everything else stays out of its way.
   "traditional-pop": { lead: POP_LEAD, chords: WARM_DRIVE },
   "synth-pop": { chords: WARM_DRIVE, lead: POP_LEAD, snare: { high: { hz: 8000, gainDb: 2 } } },
-  disco: { kick: CLUB_KICK, chords: WARM_DRIVE, bass: { low: { hz: 80, gainDb: 2 }, mid: { hz: 600, gainDb: -2 } } },
+  disco: { kick: CLUB_KICK, chords: { ...WARM_DRIVE, width: 0.3 }, bass: { low: { hz: 80, gainDb: 2 }, mid: { hz: 600, gainDb: -2 } }, lead: { width: 0.25 }, fx: { width: 0.3 } },
   eurodance: { kick: CLUB_KICK, chords: WARM_DRIVE, lead: POP_LEAD },
   funk: { chords: { driveEnabled: true, driveAmount: 1.5, driveMix: 0.3 }, bass: { low: { hz: 80, gainDb: 2 }, compRatio: 4, compAttackSec: 0.01 }, snare: { high: { hz: 8000, gainDb: 2 } } },
   soul: { chords: JAZZ_CLEAN, bass: { low: { hz: 80, gainDb: 1.5 } }, lead: POP_LEAD },
