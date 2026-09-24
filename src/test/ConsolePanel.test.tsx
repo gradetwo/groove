@@ -197,3 +197,34 @@ describe("ConsoleOverlay · dismissible shared drawer (feature #2)", () => {
     expect(AudioEngineCtor).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * B7's decision moved out of this panel, and the regression that caused the move is what this case guards.
+ *
+ * The console used to feed the engine the flattened song itself. The live-arrangement probe then found the gap: the
+ * console is only mounted when the user opens it, so the studio's transport played the loop while the arrangement was
+ * on screen. The decision now lives in the engine's lifecycle hook (`playingPattern`), and the console must **not**
+ * set a pattern — two writers of one transport is how they drifted apart in the first place.
+ */
+describe("ConsolePanel · B7 lives in the lifecycle hook, not here", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem("groove_language", "en");
+  });
+
+  it("does not push a pattern of its own, even with song mode on", async () => {
+    const { getStore } = renderPanel();
+    await act(async () => {
+      getStore().commit({
+        type: "SET_SECTIONS",
+        sections: [
+          { id: "s1", slot: "A", bars: 2 },
+          { id: "s2", slot: "B", bars: 1 },
+        ] as never,
+      });
+      getStore().commit({ type: "TOGGLE_SONG_MODE" });
+    });
+    expect(engineMock.setPattern, "the console must not be a second writer of the transport").not.toHaveBeenCalled();
+  });
+});
