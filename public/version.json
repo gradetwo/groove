@@ -1,27 +1,27 @@
 {
-  "version": "2.15.1",
-  "releaseDate": "2026-09-22",
-  "changelogCount": 209,
+  "version": "2.16.0",
+  "releaseDate": "2026-09-24",
+  "changelogCount": 210,
   "latest": {
-    "version": "2.15.1",
-    "date": "2026-09-21",
-    "category": "refactor",
+    "version": "2.16.0",
+    "date": "2026-09-24",
+    "category": "feature",
     "title": {
-      "zh": "v2.15.1 皮肤收口：两端共用一张字面值→角色表（39 处偏差逐条写明理由），手机即兴车道角色化，卡顿棘轮收紧",
-      "en": "v2.15.1 Skin Close-out: One Literal→Role Table for Both Surfaces (39 Deviations Documented With Reasons), Phone Jam Lanes as Roles, and a Tighter Jank Ratchet"
+      "zh": "v2.16.0 手机随机播放真的会等一首放完；母带链不再吃掉侧链与渐强；GS-1 有了逐音音准与采样导入",
+      "en": "v2.16.0 Phone Shuffle Waits for the Track; the Master Chain Stops Eating Ducks and Builds; GS-1 Gains Per-Note Tuning and Sample Import"
     },
     "highlights": [
       {
-        "zh": "**P0 0-5：两端共用一张「字面值 → 角色」表。** 桌面生成器用手写表决定一个十六进制是什么意思；手机的 legacySkin.css 与 panelSkin.css 又在 **180 条手写规则**里重新决定了一遍，而**没有任何东西比较过两者**——同一个十六进制可以在一端是「表面」、在另一端是「墨色」，同一个元素就会因为由哪个外壳绘制，而在纸色板与深色字之间翻转。现在 `src/data/skinLiteralRoles.json` 是**唯一来源**（生成器 import 它；生成的样式表**逐字节不变**，这正是抽取得以被证明的方式），`scripts/check_skin_roles.mjs` 解析**三处**——表、生成的桌面样式表、两张手机样式表——并要求它们在同一字面值**且同一属性**上一致。",
-        "en": "**P0 0-5: one literal→role table for both surfaces.** The desktop generator decided what a hex means by hand; the phone's `legacySkin.css` and `panelSkin.css` decided the same thing again in **180 hand-written rules**, and nothing compared them — a hex could be a surface on one and an ink on the other, and the same element would flip from a paper plate to dark type depending on which shell drew it. `src/data/skinLiteralRoles.json` is now the single source (the generator impo…"
+        "zh": "**手机播放器的播放顺序按钮修好了，两个原因都修了。** ① 换歌被误判成「一遍播完」：钩子把「步数往回跳」当作结束，而换 pattern 正好从 0 开始，于是每次切歌都触发下一次切歌——一步一首。现在真正的回绕需要**这个 pattern 自己的长度**，并在加载新 pattern 时清空观测值。② 「一首曲子」只有 4–16 秒（曲风自带 pattern 的长度），所以即使判定对了也还是连续切歌；手机端现在播**编排**（40 小节，八小节曲风约 80 秒），Electronic 走 club 结构、其余走 song 结构，浏览页的试听仍保留循环。",
+        "en": "**The phone's play-order button works, and both causes are fixed.** (1) A track swap was read as a finished pass: the hook treated a backwards step as the end, and loading a pattern starts at step 0, so every swap triggered the next one — one genre per step. A real wrap now needs **the pattern's own length**, and the observation is cleared when a pattern loads. (2) A track was 4–16 seconds (the genre's own pattern), so even correct detection switched constantly; the phone no…"
       },
       {
-        "zh": "**它第一次运行就找出 39 处分歧，而「逐条审阅」正是重点**：手机样式表是**有意**这么写的，所以每一处现在都被记录为**带理由的偏差**。审阅得出六个族：① 传统键盘用皮肤的卡片色画键，桌面用浅色表面角色；② 漫画样式表把深色板印成实心墨（在新闻纸上深色板**就是**墨），桌面则把它当作凸起表面，苏联与像素保持深色；③ 墨色板上的标签取手机的 on-accent 墨色；④ 车道与类目色被收拢到手机的**五色词汇**（它的外壳每个模块只有一个强调色），桌面给每条车道自己的 token；⑤ 柔和金色被当作手机的一个墨色档位而非柔和强调色；⑥ 面板皮肤里手机把近黑板当作页面底色，桌面把它当作凸起面板。另有 9 个字面值只有手机映射（桌面通过命名类达到同样效果），只报数、不失败。红线 **R12a**、表的单测、以及进 `verify` 的 `check:skin-roles` 一起守住它。",
-        "en": "**Its first run found 39 divergences, and reviewing them was the point**: the phone's sheets are opinionated on purpose, so each is now recorded as a **deviation with a reason**. Six families came out of that review: (1) the legacy keyboard draws keys from the skin's card while the desktop uses the pale-surface role; (2) the comic sheet prints dark plates as solid ink (on newsprint a dark plate *is* ink) where the desktop raises them as a surface, and Soviet and pixel keep t…"
+        "zh": "**母带链不再把编排写进去的东西还回来。** 侧链下潜与渐强都被母带「恢复」掉了：总线压缩器与限幅天花板各加了释放保持（200 ms / 180 ms），实测 disco 文件里的下潜中位从 −0.3 dB 变成 **−3.82 dB**，`duckErasedInMaster` 从 1 收到 **0**；渐强改成在内容侧加深（club 编排的 intro→build 现在 10.5 dB），文件里的 build 从 +0.27 dB 变成 **+23%**，探针也改成断言这条下限而不是只报告。",
+        "en": "**The master chain stops giving back what the arrangement wrote.** Both the sidechain dip and the build were being refilled: the bus compressor and the ceiling each gained a release **hold** (200 ms / 180 ms), which moved disco's file-level median dip from −0.3 dB to **−3.82 dB** and `duckErasedInMaster` from 1 to **0**; the build was deepened in the content instead (the club form's intro to build is 10.5 dB now), taking the file's build from +0.27 dB to **+23 %**, and the p…"
       },
       {
-        "zh": "**手机的即兴车道改用角色。** `JAM_COLORS` 原本是 MobileJamScreen 里六个写死的 `{ hex, rgb }` 对——**皮肤够不到的那一类颜色**，所以每套手机皮肤上即兴垫都还是默认调色板。现在每个垫子命名**共用的车道调色板**（`--d-track-*`），而它是生成器**从这张手机皮肤自己的强调色族**推导出来的——于是两端对「哪条车道是什么颜色」是**按构造一致**的。六个垫子仍是六种不同填充（拍手取粉色角色、边击取橄榄色角色），测试现在断言圆点是 `var(--d-track-…)` 的 token 而不是十六进制。",
-        "en": "**The phone's jam lanes are roles now.** `JAM_COLORS` was six hardcoded `{ hex, rgb }` pairs in `MobileJamScreen.tsx` — the one kind of colour a skin cannot reach, so the jam pads kept the default palette on every phone skin. Each pad names the **shared** lane palette (`--d-track-*`), which the generator derives from the **phone skin's own** accent family, so the two surfaces agree about which lane is which colour by construction. Six pads still get six distinct fills (the c…"
+        "zh": "**立体声更宽了。** 解析后的声像缩放从 2.0 提到 3.0，门禁自己点名的两个 offender 越过 0.98（chicago-house 0.9865 → 0.9716，detroit-techno 0.9939 → 0.9736），单声道安全线（side 高于 −8 dB 才判不合格）仍在安全区。鼓、贝斯、军鼓仍留在混音表放的位置。",
+        "en": "**Wider stereo.** The resolved-pan scale went from 2.0 to 3.0 and the gate's own two offenders crossed the 0.98 line (chicago-house 0.9865 to 0.9716, detroit-techno 0.9939 to 0.9736), with the mono-safe guard untouched (side above −8 dB is the failure). Kick, bass and snare stay where the mix table put them."
       }
     ],
     "truncated": true
