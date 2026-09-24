@@ -200,3 +200,62 @@ describe("P2.5 · a texture lane renders through GS-1", () => {
     expect(host.setTuningNote).toHaveBeenCalled();
   });
 });
+
+/**
+ * The property the *audition* made necessary: with the pool on, the texture lane is voiced by GS-1 and **not** by the
+ * native fallback.
+ *
+ * This came out of a real disagreement. A listening review heard a bell/mallet on a `vocal_chop` lane and inferred
+ * the native fallback had played — a reading it could only have reached by reading the alias table added the same
+ * hour, because the sample voice and a mallet patch do not sound alike in a way one can attribute from a single file.
+ * It was wrong: rendering the same genre with the pool on and off gives different files, which is the check that
+ * settles it (and `render_genre_wav.mjs --no-gs1` is now the tool for it). What the mocked case above pins is the
+ * *seam*; this pins the system, by asserting the native engine created no voice for the lane.
+ */
+describe("P2.5 · the texture lane does not double", () => {
+  it("keeps the native synth out of a GS-1 texture track", async () => {
+    const { renderPatternOffline } = await import("../audio/WavExporter");
+    const restore = installFakeOfflineAudioContext();
+    setGs1RoutingEnabled(true);
+    mocks.createGs1Host.mockImplementation(async () => ({
+      ready: Promise.resolve({ abi: 9, variant: "simd" }),
+      scheduledNoteLatencyFrames: 128,
+      output: { connect: () => undefined },
+      setPatch: vi.fn(),
+      importSample: vi.fn().mockResolvedValue({ has: true, code: 0 }),
+      clearSample: vi.fn().mockResolvedValue({ has: false, code: 0 }),
+      noteOnAt: vi.fn(),
+      noteOffAt: vi.fn(),
+      setTuningNote: vi.fn(),
+      allNotesOff: vi.fn(),
+      dispose: vi.fn(),
+    }));
+
+    try {
+      const pattern = {
+        genre_id: "chillwave",
+        bpm: 110,
+        swing: 0,
+        scale: "A minor",
+        totalSteps: 16,
+        tracks: [
+          {
+            name: "Texture",
+            track_id: "fx",
+            instrument: "vocal_chop",
+            steps: [1, ...Array(15).fill(0)],
+            velocity: [95, ...Array(15).fill(0)],
+            probability: Array(16).fill(100),
+          },
+        ],
+      } as never;
+      await renderPatternOffline(pattern, { bars: 1, sampleRate: 44100 });
+      const ctx = (await import("./helpers/fakeAudio")).FakeOfflineAudioContext.lastInstance!;
+      // The texture lane's note went to GS-1, so the native engine built no oscillators for it.
+      expect(ctx.createdOscillators.length).toBe(0);
+    } finally {
+      restore();
+      setGs1RoutingEnabled(true);
+    }
+  });
+});

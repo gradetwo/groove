@@ -90,6 +90,18 @@ export const INSTRUMENT_PRESET_ALIASES: Record<string, string> = {
   sweep_down: "sweepDown",
   sub_drop: "subDrop",
   laser_zap: "laserZap",
+  /**
+   * P2.5's sample-texture instruments (ABI 9's sample voice).
+   *
+   * They are GS-1 instruments first — the patch plays an imported recording — and these aliases are the **native
+   * fallback** for a caller who has the pool switched off. Without them the instrumentation guard is right to
+   * complain: an fx lane with no exact or alias key falls through to the legacy per-role default, which is how a
+   * track ends up voiced by something nobody chose. A crackle is the one with a true native twin; a chop and a found
+   * sound borrow the closest short one-shots the native engine has.
+   */
+  vinyl_texture: "vinylCrackle",
+  vocal_chop: "bellMallet",
+  found_sound: "vinylCrackle",
 
   // --- Synonyms / legacy spellings ----------------------------------------
   sawtooth_lead: "sawLead",
