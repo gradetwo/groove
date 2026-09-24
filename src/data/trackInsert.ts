@@ -42,6 +42,15 @@ export interface TrackEqBand {
   q: number;
 }
 
+/**
+ * Longest delay the stereo-spread stage may ask for.
+ *
+ * The stage's own base delay is 11 ms and its modulation never exceeds 4.5 ms, so 60 ms is a bound with room to
+ * spare; it is stated here rather than in the module because the contract for a strip stage belongs with the other
+ * strip numbers (and the fake offline context records it, so a test can hold it).
+ */
+export const STEREO_WIDTH_MAX_DELAY_SEC = 0.06;
+
 export interface TrackInsertParams {
   /** High-pass. The single most valuable per-track stage: it is almost free headroom. */
   hpfEnabled: boolean;
@@ -68,6 +77,15 @@ export interface TrackInsertParams {
   driveAmount: number;
   /** Wet/dry for the drive stage, 0..1. Full wet on a per-track insert is rarely wanted. */
   driveMix: number;
+
+  /**
+   * Stereo-spread amount, 0..1 — **omitted (or 0) means the stage is not built at all**.
+   *
+   * A chorus-widener for the sustained lanes, which is where the near-mono claim can actually be answered (the pans
+   * are already past the range the audio review recommends, and GS-1's unison spread is detune-only). Off by default
+   * so that adding the capability changes no shipped genre: a track only pays for the two delays when a genre asks.
+   */
+  width?: number;
 }
 
 /** Documented bounds. The UI and the DSP both clamp to these; tests assert they hold. */
