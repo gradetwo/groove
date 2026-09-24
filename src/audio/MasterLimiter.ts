@@ -106,6 +106,13 @@ export const MASTER_LIMITER_RELEASE_KNEE_DB = 6;
  * A hold keeps the gain where the peak put it for a fifth of a second. A sidechain duck is shorter than that, so it
  * survives; a musical phrase is longer, so nothing else changes — and unlike slowing the release (measured: 400/2000 ms
  * holds the duck too, but costs ~6 dB of ceiling headroom on every genre) a hold does not compound.
+ *
+ * Measured on the 12-genre sample: disco's file median dip went from −0.3 dB to **−3.82 dB** (its ceiling cell
+ * −3.44 → −3.92) with the integrated level unchanged, and `cutTail` fell to **0 of 12**. One genre still loses its
+ * duck and it is *not* the ceiling: **trap-rap** reads pure −5.04, compressor −5.04, ceiling −4.01 — every stage
+ * alone preserves it — and file **−0.67**. Each stage is fine and the two together are not, which is where the next
+ * look goes: the bus compressor's recovery and the ceiling's hold are chasing the same dip. Sweeping the hold
+ * (180 → 250 → 350 ms) does not touch it (−0.67, −0.31, −0.87), which is what rules the ceiling out.
  */
 export const MASTER_LIMITER_RELEASE_HOLD_MS = 180;
 /** URL of the AudioWorklet module, served from `public/` (same pattern as the clock). */
