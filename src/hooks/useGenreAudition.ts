@@ -80,6 +80,13 @@ export interface UseGenreAuditionReturn {
  * nothing told the shell that a pass had finished — so every mode behaved like "repeat one", which is what the
  * phone reported. The engine loops the pattern by design, so the pass boundary is the moment its step counter
  * wraps; detecting it here keeps the decision in one place and works for every surface that auditions.
+ *
+ * **A wrap is not "the step went backwards"**, which is how this was written first and why the phone reported
+ * 随机播放会连续切歌 — shuffle switching tracks one after another instead of waiting for a pass to finish.
+ * `setPattern` starts the new pattern at step 0, so every *swap* looked like a wrap: the shell advanced to the
+ * next genre, that swap looked like another wrap, and the queue ran away a genre per step. A real wrap needs the
+ * pattern's own length — the previous step has to be its last one — and the observed step has to be cleared when
+ * a pattern is loaded, so a swap cannot be mistaken for one.
  */
 export interface UseGenreAuditionOptions {
   onPatternEnd?: (genreId: string) => void;
@@ -100,8 +107,15 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
   onPatternEndRef.current = options.onPatternEnd;
   const playingGenreIdRef = useRef<string | null>(null);
   playingGenreIdRef.current = playingGenreId;
-  /** The last step the engine reported, so a wrap (a backwards jump) can be seen. */
+  /** The last step the engine reported, so a wrap can be seen. */
   const observedStepRef = useRef<number | null>(null);
+  /**
+   * The last step the pattern currently loaded can report (`totalSteps - 1`).
+   *
+   * Without it, "the step went backwards" is the only available test, and a pattern swap satisfies it. Set from
+   * the pattern the hook hands the engine, and reset together with `observedStepRef` on every (re)start.
+   */
+  const lastStepOfPatternRef = useRef<number | null>(null);
 
   // Clean up engine on unmount
   useEffect(() => {
@@ -148,7 +162,16 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
              * handler replaces the pattern (and may stop the transport), and re-entering the scheduler from its
              * own step callback is how a transport wedges.
              */
-            if (previous !== null && info.step <= previous) {
+            /**
+             * A pass ended: the counter came back to the top of *this* pattern.
+             *
+             * `previous >= last - 1` rather than `=== last`, with one step of slack for a dropped report under
+             * load — the engine's step callback is driven by a queue with a visual lead, and missing an advance is
+             * worse than tolerating a near-miss. The reset on load is what keeps that slack from becoming a
+             * cascade: a freshly loaded pattern has no previous step to compare against.
+             */
+            const last = lastStepOfPatternRef.current;
+            if (last !== null && previous !== null && info.step === 0 && previous >= last - 1) {
               const id = playingGenreIdRef.current;
               const handler = onPatternEndRef.current;
               if (id && handler) queueMicrotask(() => handler(id));
@@ -161,7 +184,15 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
       engine.stop();
       // A freshly built engine has to be told again: the metronome is engine state, not pattern state.
       engine.setMetronome(metronome);
-      engine.setPattern(patternFromGenre(genre), true);
+      const pattern = patternFromGenre(genre);
+      engine.setPattern(pattern, true);
+      /**
+       * The pattern's own length, and a cleared observation, so the first step of *this* pattern is never read as
+       * the end of the previous one — see the note on `onPatternEnd`.
+       */
+      const steps = pattern.totalSteps || Math.max(0, ...pattern.tracks.map((track) => track.steps.length));
+      lastStepOfPatternRef.current = steps > 0 ? steps - 1 : null;
+      observedStepRef.current = null;
       setPlayingGenreId(genre.id);
       announcer.announce(`正在试听：${genre.name} / Auditioning: ${genre.name}`);
       await engine.play();
