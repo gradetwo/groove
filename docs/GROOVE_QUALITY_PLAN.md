@@ -289,6 +289,26 @@ lowered to the new measurements in the same change (the ratchet only goes down).
 (see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
 it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
 
+### The dynamics disagreement, settled with numbers (2026-09-24)
+
+The listening review's "LRA 0.6 LU, mechanical" and our `thinDynamics` claim reading 0 offenders were answering
+different questions, and the sample now says which one a listener is hearing:
+
+| | measured |
+| --- | --- |
+| loop renders, 12-genre sample | LRA **0.3 – 5.9 LU**, median **1.7** (chicago-blues 0.3 … ambient 5.9) |
+| the arrangement, same genre (chicago-house) | **2.83 LU** against the loop's **0.82 LU** |
+
+So a loop is repetitive by construction — 1.7 LU is what a four-bar loop *is* — and the range lives in the
+arrangement, which is what `probe_arrangement_audio` now asserts (the song must move at least 1 LU more than its own
+loop) and what `probe:live-arrangement` measures in the live transport (+9.8 % across the club form's build). No new
+claim is added on the loop's LRA: a threshold there would be a claim about the genre being a loop.
+
+Two smaller things the same pass pinned: `probe_arrangement_audio` now reports the song's range beside the loop's, and
+its build assertion names the genre when it fails — `disco` measures an apparent **−1.2 dB** build because its bass
+sustains across the bar line, which is a limitation of a per-bar RMS comparison rather than a defect, and it is
+written down instead of being smoothed over.
+
 ### The batch is releasable (2026-09-24): the full chain is green
 
 `Manual verify · scope=verify` ran the whole chain on the batch's final tree — typecheck, lint, the unit suite, the
