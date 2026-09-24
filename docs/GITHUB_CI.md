@@ -144,6 +144,12 @@ Two conclusions came out of those numbers, and both are load-bearing:
 
 Nothing that a runner can do. What remains local on purpose:
 
+* **`probe:live-arrangement` is the only probe that listens to the app.** It uses `?probe=1`, which installs a
+  deliberate test seam (`src/platform/probeHooks.ts`) exposing the engine, the sequencer read and `commit` — B7's
+  audible half was unverifiable without one, because the engine is created inside the app. It asserts that song mode
+  with the club form takes the transport **past the loop's length** and that the live level **rises** across the build.
+  It found its first real defect on the day it was written: the arrangement was wired into the console panel, which is
+  only mounted when the user opens it, so the studio's own transport played the loop.
 * the **first** run of a new probe (`probe:arrangement` was written and debugged locally, then wired into the
   desktop leg — debugging a brand-new check through CI round-trips is slower than one local run);
 * `npm run build` when a probe needs `dist/` *right now*;

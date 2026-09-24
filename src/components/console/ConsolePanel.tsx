@@ -151,46 +151,13 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
 
   // ----- Store -> engine sync (audio always matches the console) ------------
   /**
-   * B7 — what the transport *plays*.
+   * B7's decision moved to the engine's lifecycle hook (`playingPattern` in `useAudioEngineLifecycle`).
    *
-   * `patternForExport` is the one function that decides what an exporter writes (B4): in song mode it is the
-   * flattened arrangement, otherwise the loop being edited. Playback asked a different question and got a different
-   * answer — the engine was handed `pattern` — so an arrangement could be exported, measured, and never heard: a
-   * 40-bar song played as one looping bar. The editor above keeps showing the loop, because editing a bar and
-   * *auditioning the arrangement* are different jobs; what changes is what reaches the speakers.
+   * It was written here first, and the live-arrangement probe found the consequence: the console is only mounted when
+   * the user opens it, so the studio's transport played the loop while the arrangement was on screen. One decision,
+   * in the place every surface with an engine already uses — the console still syncs tempo, swing and the mixer, but
+   * not which pattern plays.
    */
-  const playing = useMemo(
-    () =>
-      patternForExport({
-        songMode: Boolean(seqState.songMode),
-        activeSlot: seqState.activeSlot,
-        patterns: seqState.patterns,
-        current: pattern,
-        sections: seqState.sections ?? [],
-        genreId: currentGenre.id,
-        bpm,
-        swing,
-        resolution,
-        loopRange: seqState.loopRange,
-      }),
-    [
-      seqState.songMode,
-      seqState.activeSlot,
-      seqState.patterns,
-      seqState.sections,
-      seqState.loopRange,
-      pattern,
-      currentGenre.id,
-      bpm,
-      swing,
-      resolution,
-    ]
-  );
-
-  useEffect(() => {
-    engine.setPattern(playing.pattern);
-  }, [engine, playing.pattern]);
-
   useEffect(() => {
     engine.setBpm(bpm);
     engine.setSwing(swing / 100);
@@ -200,13 +167,12 @@ export const ConsolePanel: React.FC<ConsolePanelProps> = ({
 
   useEffect(() => {
     /**
-     * A song is played **through**, not looped: the loop range belongs to the pattern being edited, and looping a
-     * 16-step window inside a 40-bar arrangement is the same silence in a different shape.
+     * The loop range follows the same decision as the pattern, and that decision lives in the lifecycle hook now: the
+     * console no longer sets it, so the two cannot disagree about whether a song is playing.
      */
-    engine.setLoopRange(playing.isSong ? null : seqState.loopRange);
     engine.setMetronome(seqState.isMetronome);
     engine.setCountIn(seqState.isCountIn);
-  }, [engine, playing.isSong, seqState.loopRange, seqState.isMetronome, seqState.isCountIn]);
+  }, [engine, seqState.isMetronome, seqState.isCountIn]);
 
   useEffect(() => {
     tracks.forEach((track, trackIdx) => {

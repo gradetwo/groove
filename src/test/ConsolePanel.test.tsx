@@ -199,47 +199,32 @@ describe("ConsoleOverlay · dismissible shared drawer (feature #2)", () => {
 });
 
 /**
- * B7 — what the engine is *played*.
+ * B7's decision moved out of this panel, and the regression that caused the move is what this case guards.
  *
- * `patternForExport` is the one function that decides what an exporter writes, and playback asked a different
- * question until this change: the engine was handed the loop being edited, so an arrangement could be exported,
- * measured by every gate in the repository, and never heard. These cases pin the two answers the panel now gives.
+ * The console used to feed the engine the flattened song itself. The live-arrangement probe then found the gap: the
+ * console is only mounted when the user opens it, so the studio's transport played the loop while the arrangement was
+ * on screen. The decision now lives in the engine's lifecycle hook (`playingPattern`), and the console must **not**
+ * set a pattern — two writers of one transport is how they drifted apart in the first place.
  */
-describe("ConsolePanel · B7 playback plays the arrangement", () => {
+describe("ConsolePanel · B7 lives in the lifecycle hook, not here", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     localStorage.setItem("groove_language", "en");
   });
 
-  it("hands the engine the flattened song in song mode, and the loop otherwise", async () => {
+  it("does not push a pattern of its own, even with song mode on", async () => {
     const { getStore } = renderPanel();
-    const loop = getStore().state.pattern;
-    await waitFor(() => expect(engineMock.setPattern).toHaveBeenCalled());
-    expect(engineMock.setPattern.mock.calls.at(-1)![0]).toEqual(loop);
-
     await act(async () => {
-      getStore().commit({ type: "SET_SECTIONS", sections: [
-        { id: "s1", slot: "A", bars: 2 },
-        { id: "s2", slot: "B", bars: 1 },
-      ] as never });
+      getStore().commit({
+        type: "SET_SECTIONS",
+        sections: [
+          { id: "s1", slot: "A", bars: 2 },
+          { id: "s2", slot: "B", bars: 1 },
+        ] as never,
+      });
       getStore().commit({ type: "TOGGLE_SONG_MODE" });
     });
-
-    /**
-     * Three passes of the genre's own clip — 128 steps each for chicago-house, so 384 — rather than a number chosen
-     * here: the first version of this asserted 48 from a 16-step fixture and failed against the real genre, which is
-     * the assertion being wrong rather than the wiring.
-     */
-    const perPass = loop.totalSteps || loop.tracks[0]?.steps?.length || 0;
-    await waitFor(() => expect(engineMock.setPattern.mock.calls.at(-1)![0].totalSteps).toBe(perPass * 3));
-    // …and a song is played through, not looped: a 16-step window inside it is the same silence in another shape.
-    await waitFor(() => expect(engineMock.setLoopRange).toHaveBeenCalledWith(null));
-
-    // Leaving song mode restores the loop, byte for byte.
-    await act(async () => {
-      getStore().commit({ type: "TOGGLE_SONG_MODE" });
-    });
-    await waitFor(() => expect(engineMock.setPattern.mock.calls.at(-1)![0]).toEqual(loop));
+    expect(engineMock.setPattern, "the console must not be a second writer of the transport").not.toHaveBeenCalled();
   });
 });

@@ -7,8 +7,38 @@ import { midiInputManager } from "../../../audio/MidiInputManager";
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheory";
 import { publishPlayhead } from "../playheadBus";
+import { installProbeHooks, uninstallProbeHooks } from "../../../platform/probeHooks";
+import { patternForExport } from "../../../data/songFlatten";
 import { editorPositionFor } from "../../../data/songFlatten";
 import { loadLayoutPrefs, type LayoutPrefs } from "../layoutPrefs";
+
+/** Whether this session has an arrangement to play: song mode on, and sections to walk. */
+function isSongMode(state: SequencerState): boolean {
+  return Boolean(state.songMode && state.sections?.length);
+}
+
+/**
+ * The pattern the transport should be handed (B7's one answer).
+ *
+ * `patternForExport` decides what an exporter writes — the flattened arrangement in song mode, the loop otherwise — and
+ * playback asking the same function is the whole point: before this, an arrangement could be exported, measured by every
+ * gate in the repository, and never heard.
+ */
+export function playingPattern(state: SequencerState, current: SequencerPattern): SequencerPattern {
+  if (!isSongMode(state)) return current;
+  return patternForExport({
+    songMode: true,
+    activeSlot: state.activeSlot,
+    patterns: state.patterns,
+    current,
+    sections: state.sections ?? [],
+    genreId: state.currentGenre?.id ?? "",
+    bpm: state.bpm ?? 120,
+    swing: state.swing ?? 0,
+    resolution: state.resolution ?? "1/16",
+    loopRange: state.loopRange,
+  }).pattern;
+}
 
 export interface UseAudioEngineLifecycleOptions {
   engineRef: React.MutableRefObject<AudioEngine | null>;
@@ -321,12 +351,20 @@ export function useAudioEngineLifecycle({
     });
     engineRef.current = engine;
     setEngineReady(true);
-    engine.setPattern(pattern);
+    /**
+     * What the transport **plays** — the arrangement in song mode, the loop otherwise (B7).
+     *
+     * This lives here rather than in the console panel, which is where it was first written and where the live-arrangement
+     * probe found the gap: the console is only mounted when the user opens it, so the studio's own transport played the
+     * loop while the arrangement panel was right there on screen. `patternForExport` is the exporters' own decision, so
+     * what plays and what a file contains are the same answer.
+     */
+    engine.setPattern(playingPattern(seqStateRef.current, pattern));
     engine.setBpm(bpm);
     engine.setSwing(swing / 100);
     engine.setTimeSignature(timeSignature);
     engine.setResolution(resolution);
-    engine.setLoopRange(seqState.loopRange);
+    engine.setLoopRange(isSongMode(seqStateRef.current) ? null : seqState.loopRange);
     engine.setMetronome(seqState.isMetronome);
     engine.setCountIn(seqState.isCountIn);
     engine.setDrumKit(drumKit);
@@ -336,10 +374,28 @@ export function useAudioEngineLifecycle({
     // P5-05: Real-time Live Recording Callback
     engine.getLiveRecorder().setOnQuantizedStep(handleQuantizedStep);
 
+    /** Set when the probe hook installed, so the teardown removes exactly what it added. */
+    let cleanupProbe: (() => void) | undefined;
+
+    /**
+     * The measurement seam for the audible checks (`?probe=1` only — see `installProbeHooks`).
+     *
+     * Installed here because this is where the engine and the sequencer's own read/commit pair are both in scope, and
+     * torn down with the engine so a probe can never reach a destroyed transport.
+     */
+    const probeInstalled = installProbeHooks({
+      engine,
+      readState: () => seqStateRef.current,
+      commit: (action, recordHistory) => commit(action, recordHistory),
+    });
+    if (probeInstalled) {
+      cleanupProbe = uninstallProbeHooks;
+    }
     const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
     return () => {
       cleanup?.();
+      cleanupProbe?.();
       engine.destroy();
       engineRef.current = null;
       setEngineReady(false);
@@ -349,9 +405,11 @@ export function useAudioEngineLifecycle({
   // Sync Loop Range, Metronome & Count-In to AudioEngine (P3-07)
   useEffect(() => {
     if (engineRef.current) {
-      engineRef.current.setLoopRange(seqState.loopRange);
+      // A song is played **through**: the loop range belongs to the pattern being edited, and looping a bar inside a
+      // forty-bar arrangement is the same silence in a different shape (B7).
+      engineRef.current.setLoopRange(isSongMode(seqStateRef.current) ? null : seqState.loopRange);
     }
-  }, [seqState.loopRange]);
+  }, [seqState.loopRange, seqState.songMode, seqState.sections]);
 
   useEffect(() => {
     if (engineRef.current) {
@@ -428,12 +486,17 @@ export function useAudioEngineLifecycle({
     }
   }, [effectsRackState]);
 
-  // Sync engine when sequencer state changes
+  /**
+   * Sync engine when sequencer state changes — with the **arrangement**, when there is one (B7).
+   *
+   * The dependencies are the whole answer, not just `pattern`: song mode turning on, a section added or resized, and
+   * the clip being edited all change what the transport should play.
+   */
   useEffect(() => {
     if (engineRef.current) {
-      engineRef.current.setPattern(pattern);
+      engineRef.current.setPattern(playingPattern(seqStateRef.current, pattern));
     }
-  }, [pattern]);
+  }, [pattern, seqState.songMode, seqState.sections, seqState.activeSlot, seqState.patterns]);
 
   useEffect(() => {
     if (engineRef.current) {
