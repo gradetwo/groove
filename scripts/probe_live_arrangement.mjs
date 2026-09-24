@@ -142,11 +142,43 @@ const measured = await page.evaluate(
   { sampleMs: SAMPLE_MS }
 );
 
-const third = Math.max(1, Math.floor(measured.samples.length / 3));
-const meanRms = (list) => list.reduce((sum, sample) => sum + sample.rms, 0) / Math.max(1, list.length);
-const early = meanRms(measured.samples.slice(0, third));
-const late = meanRms(measured.samples.slice(-third));
+/**
+ * Per-**bar** levels, by median, with the dropouts counted separately.
+ *
+ * The first version compared the mean of the first third of the samples against the mean of the last third, and it
+ * failed a `scope=verify` run at 3.4 % on a shared runner while the same tree measured 10.1 % locally. The mean is
+ * the problem: one glitchy stretch drags it, and a stalled transport reads exactly like a build that does not lift.
+ * A median per bar is both the more robust statistic and the *right* one — the claim is about the level of a bar
+ * moving, not about an average of samples.
+ *
+ * Dropouts are counted rather than ignored so the two failures can be told apart: "the mix does not lift" is a
+ * finding about the app, "the platform dropped out" is a finding about the machine, and the caller gets the second
+ * one as an explicit `unmeasured` instead of a message that blames the mix.
+ */
+const median = (values) => {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+const barOf = (sample) => Math.floor(sample.step / Math.max(1, loopSteps));
+const bars = new Map();
+for (const sample of measured.samples) {
+  const key = barOf(sample);
+  if (!bars.has(key)) bars.set(key, []);
+  bars.get(key).push(sample.rms);
+}
+const barLevels = [...bars.entries()]
+  .sort((a, b) => a[0] - b[0])
+  .map(([bar, values]) => ({ bar, level: median(values), samples: values.length }));
+const dropouts = measured.samples.filter((sample) => sample.rms === 0).length;
+const dropoutPct = (dropouts / Math.max(1, measured.samples.length)) * 100;
+const first = barLevels[0];
+const last = barLevels[barLevels.length - 1];
+const early = first ? first.level : 0;
+const late = last ? last.level : 0;
 const risePct = early > 0 ? ((late - early) / early) * 100 : 0;
+const unmeasured = dropoutPct > 20 || barLevels.length < 2;
 
 const summary = {
   loopSteps,
@@ -158,6 +190,10 @@ const summary = {
   lateRms: Number(late.toExponential(3)),
   risePct: Number(risePct.toFixed(1)),
   playing: measured.playing,
+  barLevels: barLevels.map((entry) => ({ bar: entry.bar, level: Number(entry.level.toExponential(3)) })),
+  dropouts,
+  dropoutPct: Number(dropoutPct.toFixed(1)),
+  unmeasured,
 };
 
 if (!measured.playing) await fail("the transport never started — nothing was measured");
@@ -169,9 +205,16 @@ if (!(measured.maxStep > loopSteps)) {
       `B7's defect reproduced`
   );
 }
+if (unmeasured) {
+  await fail(
+    `unmeasured: the platform dropped out (${dropouts} zero-level samples, ${dropoutPct.toFixed(1)} %) or the ` +
+      `transport only reached ${barLevels.length} bar(s) — this says nothing about the mix`
+  );
+}
 if (!(risePct > 5)) {
   await fail(
-    `the build does not lift the live mix: ${early.toExponential(3)} → ${late.toExponential(3)} (${risePct.toFixed(1)} %)`
+    `the build does not lift the live mix: bar ${first?.bar} ${early.toExponential(3)} → bar ${last?.bar} ` +
+      `${late.toExponential(3)} (${risePct.toFixed(1)} %)`
   );
 }
 

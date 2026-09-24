@@ -10,6 +10,19 @@ The development loop is a targeted `npx vitest run <file>` (seconds) plus a push
 browser matrix and the probes belong to `dev`'s CI. A local `npm run verify` is for a release candidate, not for
 each commit, because it pegs every core for half an hour and answers exactly what CI already answers.
 
+### The live arrangement probe measures per pass, and separates "the mix" from "the machine"
+
+`probe:live-arrangement` is the only probe that *listens* to the running app, so its numbers carry the runner's
+behaviour as well as the mix's. A `scope=verify` run on 2026-09-24 failed it at **3.4 %** (`1.586e-1 → 1.640e-1`)
+while the same tree measured **10.1 %** on a workstation minutes earlier — the probe was averaging samples over the
+first and last third of its window, and on a shared runner one glitchy stretch drags a mean exactly like a build
+that does not lift.
+
+It now takes the **median per pass** (the claim is about a pass's level, not about an average of samples) and counts
+**zero-level samples** separately. More than 20 % dropouts, or a transport that never reached two passes, fails as
+`unmeasured` — a statement about the machine — instead of as "the build does not lift the live mix", which is a
+statement about the app. The 5 % floor is unchanged; what changed is which failure the probe is willing to name.
+
 ## Branches and the sync flow
 
 | Branch | Who owns it | What it means |
