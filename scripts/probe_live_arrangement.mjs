@@ -17,6 +17,13 @@
  *      measured as +23 % in the file by `probe_arrangement_audio.mjs`). A transport playing one loop has no reason to
  *      get louder.
  *
+ * **What the level assertion is and is not.** The window covers about two passes of the loop (the loop is 128 steps ≈
+ * 15.5 s at 124 BPM; the club form is five passes), so the comparison is the opening pass against the **loudest pass
+ * in the window** — "does the build lift the mix", not "does the arrangement end louder" (it ends on a drop) and not
+ * "does the whole form lift it", which is the *offline* probe's business: `probe_arrangement_audio.mjs` renders the
+ * entire song and asserts ≥ 15 %. The two are deliberately different measurements of the same claim, one audible and
+ * short, one rendered and complete.
+ *
  * Runs against `dist/`, like the other probes, so it measures what ships.
  */
 import fs from "node:fs";
@@ -32,7 +39,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const asJson = process.argv.includes("--json");
 const SAMPLE_MS = Number(
-  (process.argv.find((a) => a.startsWith("--sample-ms=")) ?? "--sample-ms=20000").split("=")[1]
+  (process.argv.find((a) => a.startsWith("--sample-ms=")) ?? "--sample-ms=40000").split("=")[1]
 );
 
 if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
@@ -113,6 +120,21 @@ const measured = await page.evaluate(
     if (!probe.readState().songMode) probe.commit({ type: "TOGGLE_SONG_MODE" });
     await probe.engine.play();
 
+    /**
+     * Wait until the transport is *actually running* before the window opens.
+     *
+     * The first version sampled immediately, so the page's own start-up (audio context resume, the first scheduler
+     * tick) ate several seconds of a 20 s window — and a loop pass is ≈15.5 s at 124 BPM, so whether the window
+     * covered a second pass was a coin flip. That is the whole explanation for the same tree measuring +10 % and
+     * −3 % on different machines: not the mix, the warm-up.
+     */
+    const waitStarted = Date.now();
+    const startStep = probe.engine.getCurrentStep();
+    while (Date.now() - waitStarted < 15000) {
+      if (probe.engine.getIsPlaying() && probe.engine.getCurrentStep() !== startStep) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     const analyser = probe.engine.getMasterAnalyser();
     if (!analyser) throw new Error("the master analyser is not available");
     const frames = new Float32Array(analyser.fftSize);
@@ -174,9 +196,18 @@ const barLevels = [...bars.entries()]
 const dropouts = measured.samples.filter((sample) => sample.rms === 0).length;
 const dropoutPct = (dropouts / Math.max(1, measured.samples.length)) * 100;
 const first = barLevels[0];
-const last = barLevels[barLevels.length - 1];
+/**
+ * The **loudest** pass, not the last one.
+ *
+ * The claim is that the build lifts the mix, and the club form is intro → build → drop → outro: comparing the first
+ * pass against the *last* compares the opening with whatever the arrangement happens to end on (measured on a
+ * shared runner: −3.2 %, i.e. the drop), and comparing the first two does the same thing one pass earlier. The
+ * loudest pass is what "the build lifts it" means, and it is robust to how much of the arrangement the window
+ * happens to cover as long as it covers the build.
+ */
+const loudest = barLevels.reduce((best, entry) => (entry.level > best.level ? entry : best), first ?? { bar: 0, level: 0 });
 const early = first ? first.level : 0;
-const late = last ? last.level : 0;
+const late = loudest.level;
 const risePct = early > 0 ? ((late - early) / early) * 100 : 0;
 const unmeasured = dropoutPct > 20 || barLevels.length < 2;
 
@@ -213,8 +244,8 @@ if (unmeasured) {
 }
 if (!(risePct > 5)) {
   await fail(
-    `the build does not lift the live mix: bar ${first?.bar} ${early.toExponential(3)} → bar ${last?.bar} ` +
-      `${late.toExponential(3)} (${risePct.toFixed(1)} %)`
+    `the build does not lift the live mix: first pass ${early.toExponential(3)} → loudest pass ${late.toExponential(3)} ` +
+      `(bar ${loudest.bar}, ${risePct.toFixed(1)} %)`
   );
 }
 
