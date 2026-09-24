@@ -3,14 +3,14 @@
   "upstream": {
     "name": "groove-synth-gs1",
     "version": "2.1.6",
-    "commit": "1a940ac32a3d4bf3ba695887c412ec0dff438681",
+    "commit": "57adc44ad2cbaad98096c69363163323709b8527",
     "license": "MIT",
     "dirty": false
   },
-  "abi": 8,
+  "abi": 9,
   "files": {
     "LICENSE": {
-      "sha256": "88b3e59db110f49197080087a78024c35a1ab0a03830a50caabd94fcaf9b60e1",
+      "sha256": "9859d2774f34a782feadb6a43a5bd44dbd39b36c6f1f1132e3b7ce3080c93792",
       "bytes": 1087
     },
     "src/audio/engine.ts": {
@@ -26,12 +26,12 @@
       "bytes": 38115
     },
     "src/generated/synth_core_scalar.wasm": {
-      "sha256": "24c243e30a91aa02ab0e2ce18ebaac7158c6d445ec8b97d436abe2c8a88da447",
-      "bytes": 203066
+      "sha256": "511b71d778711c35ba4b555589a44819c26e77c3473f172cd8fcb8605da300db",
+      "bytes": 203216
     },
     "src/generated/synth_core.wasm": {
-      "sha256": "3ef983845d7379e66bcf78e136d63edb57d90e46bf084e7b1931445e72962f3d",
-      "bytes": 217069
+      "sha256": "a84262267db21d8166e9e4d109f5285eb31789d4605757de94e397654500be6c",
+      "bytes": 217219
     }
   }
 }

@@ -44,7 +44,12 @@ const MANIFEST_PATH = path.join(VENDOR_ROOT, "UPSTREAM.json");
 
 /** The published ABI contract this integration is written against (GS-1 v8). */
 const EXPECTED = {
-  abiVersion: 8,
+  /**
+   * ABI 9 (2026-09-24): the upstream core gained `gs_note_bend` and `gs_set_tuning_note`, which is what A3's GS-1
+   * half was waiting for — the engine's per-note `bends`/`tuning` tables already existed, only the C entry points were
+   * missing. The upstream `verify-wasm.mjs` was bumped in the same change, as its own comment requires.
+   */
+  abiVersion: 9,
   maxVoices: 32,
   maxBlockSize: 1024,
   spectrumBins: 36,

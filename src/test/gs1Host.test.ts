@@ -389,3 +389,27 @@ describe("Gs1Host — analysis and polyphony replies", () => {
     expect(host.lastAnalysis).toBeNull();
   });
 });
+
+/**
+ * ABI 9's two new entry points, through the adapter that exposes them.
+ *
+ * A3's GS-1 half was blocked on these: the engine's per-note `bends` / `tuning` tables and the per-voice read of them
+ * had existed since the MPE work, the vendored processor has handled the `noteBend` / `tuning` messages all along, and
+ * the only missing piece was the core exporting the two C functions. Now it does, so the host must actually post.
+ */
+describe("Gs1Host · per-note pitch (ABI 9)", () => {
+  it("posts noteBend and tuning, and refuses nonsense instead of forwarding it", async () => {
+    const { host, node } = await bootHost();
+    host.noteBend(60, -0.12);
+    host.setTuningNote(60, 12);
+    expect(node.port.postMessage.mock.calls.map((call) => call[0])).toEqual([
+      { type: "noteBend", note: 60, semitones: -0.12 },
+      { type: "tuning", note: 60, cents: 12 },
+    ]);
+
+    node.port.postMessage.mockClear();
+    host.noteBend(Number.NaN, 1);
+    host.setTuningNote(60, Number.POSITIVE_INFINITY);
+    expect(node.port.postMessage, "a non-finite value is dropped rather than sent to the audio thread").not.toHaveBeenCalled();
+  });
+});

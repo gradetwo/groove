@@ -59,7 +59,12 @@ const LOCAL_METADATA = new Set(["UPSTREAM.json", "README.md", "THIRD_PARTY_NOTIC
 
 /** The published ABI contract this integration is written against (GS-1 v8). */
 const EXPECTED = {
-  abiVersion: 8,
+  /**
+   * ABI 9 (2026-09-24): the upstream core gained `gs_note_bend` and `gs_set_tuning_note`, which is what A3's GS-1
+   * half was waiting for — the engine's per-note `bends`/`tuning` tables already existed, only the C entry points were
+   * missing. The upstream `verify-wasm.mjs` was bumped in the same change, as its own comment requires.
+   */
+  abiVersion: 9,
   maxVoices: 32,
   maxBlockSize: 1024,
   spectrumBins: 36,
@@ -253,8 +258,12 @@ describe.skipIf(!manifest)("GS-1 vendored core contract", () => {
     for (const fn of ["gs_note_on", "gs_note_on_pan", "gs_note_off", "gs_pitch_bend", "gs_set_param"]) {
       expect(typeof raw[fn], `expected export ${fn}`).toBe("function");
     }
+    /**
+     * …and the other half of that note, which came true on 2026-09-24: the pin now exports both, so the case flips from
+     * "not yet" to "must be there", and `Gs1Host` exposes them. This is the prompt the assertion was written to be.
+     */
     for (const fn of ["gs_note_bend", "gs_set_tuning_note"]) {
-      expect(raw[fn], `${fn} is not in the pin yet — if it appears, expose it in Gs1Host`).toBeUndefined();
+      expect(typeof raw[fn], `${fn} must be exported now that the pin carries ABI 9`).toBe("function");
     }
   });
 

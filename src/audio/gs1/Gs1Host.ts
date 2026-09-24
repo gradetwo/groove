@@ -10,6 +10,7 @@
  * integration plan deliberately wants a **nine-method narrow face**:
  *
  *     init / noteOn / noteOff / allNotesOff / setPatch / setParam / onAnalysis / onPolyphony / dispose
+ *     + noteBend / setTuningNote (ABI 9)
  *
  * `init` is this module's `createGs1Host` factory. Everything else is below. Upstream is free
  * to refactor the other thirty-odd methods without touching us, and nothing in this file
@@ -26,9 +27,11 @@
  *
  * ## Deliberate limits
  *
- * - **No `noteBend` / microtuning.** ABI 8 does not export `gs_note_bend` or
- *   `gs_set_tuning_note`; the vendored processor guards both with `if (this.wasm.gs_note_bend)`.
- *   Exposing them here would be a lie, so this adapter does not.
+ * - **`noteBend` and `setTuningNote` are exposed since ABI 9** (2026-09-24). ABI 8 did not export
+ *   `gs_note_bend` / `gs_set_tuning_note` and the processor's guards for them were dead, so this adapter said so
+ *   rather than lying. The upstream core now exports both — its `bends` / `tuning` tables and the per-voice read of
+ *   them had existed all along; only the C entry points were missing — so the narrow face grows by two methods, which
+ *   is what A3's GS-1 half was waiting for.
  * - **WASM variant choice mirrors upstream**: prefer the SIMD core, but validate the bytes and
  *   fall back to the scalar core, because a browser can advertise SIMD and still reject the
  *   build. `WebAssembly.validate` is the authority, not feature detection.
@@ -129,6 +132,15 @@ export interface Gs1Host {
    */
   noteOnAt(note: number, velocity: number, atFrame: number, pan?: number): void;
   noteOffAt(note: number, atFrame: number): void;
+  /**
+   * Bend **one** note, in semitones (MPE) — the per-note pitch A3's variation needs.
+   *
+   * The engine clamps to ±48 semitones. The vendored processor has handled the `noteBend` message since before this
+   * adapter existed; until ABI 9 the core simply did not export the function it calls, so the branch was dead.
+   */
+  noteBend(note: number, semitones: number): void;
+  /** Set **one** key's microtuning offset, in cents (±1200 by the engine's own clamp). */
+  setTuningNote(note: number, cents: number): void;
   allNotesOff(): void;
   /** Write one parameter by numeric id (`Param.*` in the vendored `params.ts`). */
   setParam(id: number, value: number): void;
@@ -392,6 +404,14 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
         atFrame: Math.round(atFrame),
         ...(pan === undefined ? {} : { pan }),
       });
+    },
+    noteBend(note, semitones) {
+      if (!Number.isFinite(note) || !Number.isFinite(semitones)) return;
+      post({ type: "noteBend", note: Math.round(note), semitones });
+    },
+    setTuningNote(note, cents) {
+      if (!Number.isFinite(note) || !Number.isFinite(cents)) return;
+      post({ type: "tuning", note: Math.round(note), cents });
     },
     noteOffAt(note, atFrame) {
       if (!Number.isFinite(atFrame)) {
