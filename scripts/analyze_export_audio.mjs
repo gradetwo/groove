@@ -1065,14 +1065,13 @@ const fmt = (value, digits = 1) => (value == null || !Number.isFinite(value) ? "
    * cold/warm fork the loudness sentinel hit, fixed the same way there).
    */
   const RELOAD_EVERY = 1;
-  const recyclePage = async () => {
-    await page.goto("about:blank");
+  const reloadPage = async () => {
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   };
 
   const rows = [];
   for (const [index, id] of ids.entries()) {
-    if (index > 0 && index % RELOAD_EVERY === 0) await recyclePage();
+    if (index > 0 && index % RELOAD_EVERY === 0) await reloadPage();
     try {
       rows.push(await measureGenre(page, id, BARS, STEM_TRACKS));
     } catch (error) {
