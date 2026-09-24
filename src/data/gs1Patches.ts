@@ -51,7 +51,8 @@ export type Gs1PatchName =
   | "squareLead"
   | "acidLead"
   | "bellMallet"
-  | "organStack";
+  | "organStack"
+  | "sampleTexture";
 
 /**
  * The ten patches.
@@ -60,6 +61,30 @@ export type Gs1PatchName =
  * in order to decide whether a value change is a bug or an improvement.
  */
 export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
+  /**
+   * P2.5's voice: an **imported sample**, not an oscillator.
+   *
+   * `OSC1_WAVE: 9` is the core's sample selection (8 is the single-cycle wavetable), `SMP_ROOT` says which key plays
+   * the recording at its own pitch, and `SMP_MODE: 0` plays it once — a found sound or a vocal chop is a one-shot, and
+   * a loop point is the caller's business when it is not. `PATCH_GAIN` stays at the measured ceiling (0.6) because
+   * the sample arrives normalised: the patch seats it rather than adding level.
+   */
+  sampleTexture: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 9, // sample
+    [Param.OSC1_LEVEL]: 0.9,
+    [Param.SMP_ROOT]: 60,
+    [Param.SMP_MODE]: 0,
+    [Param.FILTER_TYPE]: 1,
+    [Param.FILTER_CUTOFF]: 9000,
+    [Param.FILTER_RES]: 0.1,
+    [Param.FILTER_ENV_AMT]: 0.15,
+    [Param.ENV_ATTACK]: 0.002,
+    [Param.ENV_DECAY]: 0.6,
+    [Param.ENV_SUSTAIN]: 0.6,
+    [Param.ENV_RELEASE]: 0.25,
+    [Param.PATCH_GAIN]: 0.6,
+  },
   /** Slow, wide and soft: the workhorse chord pad behind most of the library. */
   warmPad: {
     [Param.OSC1_ON]: 1,
@@ -370,9 +395,24 @@ export const GS1_LEAD_ROUTING: Record<string, Gs1Routing> = {
 };
 
 /** Which routing table applies to a role, or `null` for roles GS-1 does not voice. */
+/**
+ * `texture` — the role P2.5 adds: a lane that plays a **recording** rather than a synth.
+ *
+ * The mechanism ships before the content, deliberately. Which genres get a texture, and which recording each uses, is
+ * a product decision rather than a code one, and the arrangement model already has the `texture` lane that the riser
+ * work (A4) put there. Any name listed here plays the imported sample; anything else stays on the native engine.
+ */
+export const GS1_TEXTURE_ROUTING: Record<string, Gs1Routing> = {
+  vinyl_texture: { patch: "sampleTexture" },
+  vocal_chop: { patch: "sampleTexture" },
+  found_sound: { patch: "sampleTexture" },
+  tape_hiss: { patch: "sampleTexture" },
+};
+
 export function routingForRole(role: string | null | undefined): Record<string, Gs1Routing> | null {
   if (role === "chords") return GS1_CHORDS_ROUTING;
   if (role === "lead") return GS1_LEAD_ROUTING;
+  if (role === "texture") return GS1_TEXTURE_ROUTING;
   return null;
 }
 
@@ -399,7 +439,7 @@ export function resolveGs1Patch(
 }
 
 /** Every role GS-1 can voice, for gates and UI copy. */
-export const GS1_ROLES = ["chords", "lead"] as const;
+export const GS1_ROLES = ["chords", "lead", "texture"] as const;
 
 /** Parameter ids referenced by any patch, for bounds checks and documentation. */
 export function patchParamIds(): number[] {

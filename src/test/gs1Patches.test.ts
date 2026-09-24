@@ -79,8 +79,19 @@ describe("GS-1 routing — exhaustive coverage, read from the genre database", (
     expect(unmapped, `lead instruments with no GS-1 decision: ${unmapped.join(", ")}`).toEqual([]);
   });
 
+  /**
+   * The **texture** role is exempt from the two coverage rules below, and the exemption is the point of P2.5's order.
+   *
+   * Its mechanism (patch, routing, import) ships before any genre declares a texture instrument: *which* genres get a
+   * found sound or a vocal chop, and which recording each uses, is a content decision rather than a code one. So
+   * "does the library use every name you listed" and "is every library name decided" cannot apply to a role the
+   * library does not use yet — they stay in force for `chords` and `lead`, where they earn their keep, and a genre
+   * that declares a texture instrument brings this role under them simply by existing.
+   */
+  const LIBRARY_COVERED_ROLES = GS1_ROLES.filter((role) => role !== "texture");
+
   it("has no orphan entries for instruments the library never uses", () => {
-    for (const role of GS1_ROLES) {
+    for (const role of LIBRARY_COVERED_ROLES) {
       const used = new Set(instrumentsForRole(role));
       const table = routingForRole(role) as Record<string, unknown>;
       const orphans = Object.keys(table).filter((name) => !used.has(name));
@@ -89,7 +100,7 @@ describe("GS-1 routing — exhaustive coverage, read from the genre database", (
   });
 
   it("gives every native decision a reason", () => {
-    for (const role of GS1_ROLES) {
+    for (const role of LIBRARY_COVERED_ROLES) {
       const table = routingForRole(role) as Record<string, { native?: boolean; reason?: string }>;
       const mute = Object.entries(table)
         .filter(([, entry]) => entry.native === true && !(entry.reason && entry.reason.length > 20))
@@ -102,7 +113,10 @@ describe("GS-1 routing — exhaustive coverage, read from the genre database", (
     // Not a target, a sanity check on the shape of the decision: an all-native table would mean
     // the integration does nothing, an all-GS-1 table would mean the acoustic instruments were
     // silently forced through a subtractive engine.
-    for (const role of GS1_ROLES) {
+    // `texture` is exempt from the "keeps something native" half: it is a *mechanism* waiting for content, and its
+    // table is deliberately all-routed because every name in it means "play the recording". The library-covered roles
+    // keep both halves of the check.
+    for (const role of LIBRARY_COVERED_ROLES) {
       const table = routingForRole(role) as Record<string, { native?: boolean }>;
       const routed = Object.values(table).filter((e) => !e.native).length;
       const kept = Object.values(table).filter((e) => e.native).length;
@@ -185,8 +199,8 @@ describe("GS-1 resolution", () => {
     expect(resolveGs1Patch("chords", undefined)).toBeNull();
   });
 
-  it("covers the roles the plan scoped and nothing else", () => {
-    expect(GS1_ROLES).toEqual(["chords", "lead"]);
+  it("covers the roles the plan scoped, plus the texture role P2.5 adds", () => {
+    expect(GS1_ROLES).toEqual(["chords", "lead", "texture"]);
     for (const role of ["kick", "snare", "hihat", "percussion", "bass", "fx"]) {
       expect(routingForRole(role), `${role} must stay on the native engine`).toBeNull();
     }
