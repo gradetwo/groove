@@ -75,3 +75,47 @@ describe("seamless loop · fold the tail over the head", () => {
     expect(tailFramesOf(10, 4)).toBe(6);
   });
 });
+
+/**
+ * …and the renderer's own switch. Asserted structurally rather than by listening: a loop render with the option on
+ * is exactly the loop's length, and with it off it is longer by the tail the genre's FX asked for. The tail's
+ * *content* is the unit cases' business above; what matters here is that the option reaches the buffer a caller gets.
+ */
+import { installFakeOfflineAudioContext } from "./helpers/fakeAudio";
+
+describe("seamless loop · the renderer's option", () => {
+  const pattern = {
+    genre_id: "chicago-house",
+    bpm: 124,
+    swing: 0,
+    scale: "C minor",
+    totalSteps: 16,
+    tracks: [
+      {
+        name: "Kick",
+        track_id: "kick",
+        instrument: "kick_909",
+        steps: [1, ...Array(15).fill(0)],
+        velocity: [110, ...Array(15).fill(0)],
+        probability: Array(16).fill(100),
+      },
+    ],
+  } as never;
+
+  it("returns the loop itself with the option on, and the loop plus its tail with it off", async () => {
+    const { renderPatternOffline } = await import("../audio/WavExporter");
+    const restore = installFakeOfflineAudioContext();
+    try {
+      const plain = await renderPatternOffline(pattern, { bars: 1, sampleRate: 44100 });
+      const loop = await renderPatternOffline(pattern, { bars: 1, sampleRate: 44100, seamlessLoop: true });
+      const stepDur = 60 / 124 / 4;
+      const expectedLoopFrames = Math.round(16 * stepDur * 44100);
+      expect(loop.length).toBe(expectedLoopFrames);
+      expect(plain.length).toBeGreaterThan(loop.length);
+      // The tail the genre's FX ask for, at the render's own rate — the fold removes exactly that much.
+      expect(plain.length - loop.length).toBeGreaterThan(0.5 * 44100 * 0.5);
+    } finally {
+      restore();
+    }
+  });
+});

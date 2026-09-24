@@ -28,7 +28,7 @@ import { flattenSong } from "../data/songFlatten";
 import type { Song } from "../types/song";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
 import { swingOffsetSeconds } from "./swing";
-import { resolveRenderTailSec } from "./renderTail";
+import { foldLoopTail, resolveRenderTailSec, tailFramesOf } from "./renderTail";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -82,6 +82,15 @@ export interface RenderWavOptions {
    * with and without it. It is also the escape hatch for anyone comparing two renders byte for byte.
    */
   noteVariation?: boolean;
+  /**
+   * Return a **seamless loop** rather than the render as it stands (P0.6).
+   *
+   * The render includes the loop's own tail — reverb and delay decay, derived from the genre's FX — which is right
+   * for a file that ends and wrong for an asset that repeats. With this on, the tail is folded back over the head
+   * modulo the loop length and the result is exactly the loop: playing it twice reproduces the decay the first pass
+   * would have had, instead of a gap followed by a restart. Ignored when the render is shorter than the loop.
+   */
+  seamlessLoop?: boolean;
   /** The bus compressor's release, seconds — see `MasterGraphOptions.masterBusCompReleaseSec`. */
   masterBusCompReleaseSec?: number;
   /** The bus compressor's threshold (dB), knee (dB) and ratio — see `MasterGraphOptions`. */
@@ -793,7 +802,28 @@ export async function renderPatternOffline(
   options.onLimiterKind?.(limiterKind);
 
   const rendered = await ctx.startRendering();
-  if (limiterKind === "worklet") return rendered;
+
+  /**
+   * A **seamless loop** asset (P0.6's other half): the render above is the loop *plus* its tail, which is right for
+   * a file and wrong for a loop — played as a loop it rings out into silence and starts again. Folding the tail over
+   * the head makes it exactly the loop's length and continuous, and is the same arithmetic the audition's live loop
+   * does implicitly by never stopping.
+   *
+   * Only offered for a loop render: a song's tail belongs at its end, and a caller that asks for both gets the tail
+   * (the song is the thing that was asked for).
+   */
+  const loopFrames = Math.max(1, Math.round(totalSteps * stepDur * rendered.sampleRate));
+  const asRequested = <T>(buffer: T): T | AudioBuffer => {
+    if (!options.seamlessLoop || loopFrames >= rendered.length) return buffer as unknown as T;
+    const source: Float32Array[] = [];
+    for (let c = 0; c < rendered.numberOfChannels; c += 1) source.push(rendered.getChannelData(c));
+    const folded = foldLoopTail(source, loopFrames, tailFramesOf(rendered.length, loopFrames));
+    const loop = ctx.createBuffer(rendered.numberOfChannels, loopFrames, rendered.sampleRate);
+    folded.forEach((data, c) => loop.copyToChannel(data, c));
+    return loop;
+  };
+
+  if (limiterKind === "worklet") return asRequested(rendered) as AudioBuffer;
 
   /**
    * The fallback path has no true-peak ceiling — its own warning says so ("no true-peak ceiling,
@@ -810,7 +840,7 @@ export async function renderPatternOffline(
   const guarded = applyOfflineCeiling(channels, rendered.sampleRate);
   const out = ctx.createBuffer(rendered.numberOfChannels, rendered.length, rendered.sampleRate);
   for (let c = 0; c < rendered.numberOfChannels; c += 1) out.copyToChannel(guarded.channels[c], c);
-  return out;
+  return asRequested(out) as AudioBuffer;
 }
 
 /**
