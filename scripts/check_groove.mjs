@@ -124,13 +124,18 @@ const BUDGET = {
    * The **max observed** in the one path that judges it, which is not the same as the best.
    *
    * Five shard dispatches read 8, 8, 9 for this claim, and 9, 9, 11 for `thinMids`. The cause is visible in the
-   * numbers: the four genres that flip sit at 0.9896–0.9963 against a **0.98** threshold, so a 0.2 % wobble in a
-   * single correlation (detroit-techno read 0.9926 and 0.9906 in two runs) moves the count. A threshold that sits
-   * inside the measurement's own noise is a coin flip, and a budget below the *worst* reading would fail on the
-   * machine rather than on the mix — so the budget is the worst reading, and the tightening waits for a render that
-   * repeats. `cutTail` is the contrast: 1 in all five shard runs, which is why it stays at 1.
+   * numbers: the genres that flip sit at 0.9896–0.9963 against a **0.98** threshold, so a 0.2 % wobble in a single
+   * correlation (detroit-techno read 0.9926 and 0.9906 in two runs) moves the count. A threshold that sits inside
+   * the measurement's own noise is a coin flip, and a budget below the *worst* reading would fail on the machine
+   * rather than on the mix — so the budget is the worst reading, and the tightening waits for a render that repeats.
+   *
+   * **Ratcheted 9 -> 7 on 2026-09-24**, which is that rule being applied rather than suspended: two independent
+   * shard dispatches (after the wider resolved pan and the P2.5 content change) both read **7**, and the count is
+   * now carried by three genres — chicago-house 0.9809, detroit-techno 0.9875, minimal-techno 0.9940 — of which one
+   * sits a fifth of a percent above the threshold rather than three. The plan's literal target of 3 therefore still
+   * needs a *mix* change, not a measurement; until then this budget tracks what the mix actually does.
    */
-  narrowStereo: 9,
+  narrowStereo: 7,
   sideTooHot: 0,
   /**
    * P2.2/A3: genres whose per-note nudge does not separate from its own control.
