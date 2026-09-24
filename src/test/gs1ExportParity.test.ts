@@ -17,6 +17,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const recorded = vi.hoisted(() => ({
   noteOnAt: [] as number[][],
   noteOffAt: [] as number[][],
+  /** `[note, cents]` pairs the renderer sent (ABI 9's per-note variation). */
+  tuning: [] as number[][],
   patches: 0,
   latencyFrames: 128,
   hosts: 0,
@@ -32,6 +34,11 @@ vi.mock("../audio/gs1/Gs1Host", () => ({
       noteOnAt: (note: number, velocity: number, atFrame: number, pan?: number) =>
         recorded.noteOnAt.push([note, velocity, atFrame, pan ?? 0]),
       noteOffAt: (note: number, atFrame: number) => recorded.noteOffAt.push([note, atFrame]),
+      /**
+       * ABI 9's entry point, recorded like the others: the renderer sends the per-note variation through it, and a
+       * stub that omits it fails inside the render loop rather than at the interface.
+       */
+      setTuningNote: (note: number, cents: number) => recorded.tuning.push([note, cents]),
       setPatch: () => {
         recorded.patches += 1;
       },
@@ -89,6 +96,7 @@ afterEach(() => {
   restore = null;
   setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED);
   recorded.noteOnAt.length = 0;
+  recorded.tuning.length = 0;
   recorded.noteOffAt.length = 0;
   recorded.patches = 0;
   recorded.hosts = 0;
@@ -155,6 +163,11 @@ describe("GS-1 export parity", () => {
         noteOnAt: (note: number, velocity: number, atFrame: number) =>
           recorded.noteOnAt.push([note, velocity, atFrame, 0]),
         noteOffAt: (note: number, atFrame: number) => recorded.noteOffAt.push([note, atFrame]),
+      /**
+       * ABI 9's entry point, recorded like the others: the renderer sends the per-note variation through it, and a
+       * stub that omits it fails inside the render loop rather than at the interface.
+       */
+      setTuningNote: (note: number, cents: number) => recorded.tuning.push([note, cents]),
         setPatch: () => undefined,
         allNotesOff: () => undefined,
         dispose: () => undefined,
