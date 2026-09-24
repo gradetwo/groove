@@ -115,6 +115,9 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         // The duck measurement reproduces the renderer's step grid, so it uses the *shared* probability
         // helper instead of a second copy of the decision.
         import("/src/audio/noteEvents.ts"),
+        // The authored duck envelope: the depth claim is measured from the render, the *duration* is computed here
+        // (see `envelopeHold3DbMs`) because widening the scan made the render-side numbers unstable.
+        import("/src/audio/sidechain.ts"),
       ]);
       const genre = genresModule.ALL_GENRES.find((g) => g.id === id);
       if (!genre) throw new Error(`unknown genre: ${id}`);
@@ -643,7 +646,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
          * and the readings got *worse and unstable* — `disco` fell from −4.4 dB to 0 dB on the sample run while a
          * local run of the same genre read −2.2 dB, and the derived "≥3 dB hold" came out at 14 ms for an envelope
          * that holds 3 dB for **64.5 ms** (`duckGainAt`, Electronic: 6 dB, 3 ms attack, 130 ms release —
-         * `sidechainDuckEnvelope.test.ts`).
+         * `sidechainDuck.test.ts`).
          *
          * So the longer window adds windows where the ducked and control renders differ for reasons that are not the
          * duck (a note ending, the next note's onset, the noise-based drum variation), and the median across onsets
@@ -709,21 +712,6 @@ async function measureGenre(page, genreId, bars, soloTracks) {
             minDb: Math.round(sorted[0] * 100) / 100,
             /** Onsets where the bass never dipped at all — a red flag if this is not ~0. */
             louderOnsets,
-            /**
-             * The envelope's own duration, for context — **computed, not measured**.
-             *
-             * `weakDuck`/`duckErasedInMaster` read depth out of a 60 ms scan (see above); the authored envelope is
-             * what says how long a duck lasts, and `sidechainDuckEnvelope.test.ts` pins it.
-             */
-            /** The authored envelope's ≥3 dB hold, in ms — computed in the page from the same shape the render uses. */
-            envelopeHold3DbMs: (() => {
-              const shape = sidechain.resolveKickDuckShape(pattern.genre_id, 1);
-              let held = 0;
-              for (let t = 0; t < shape.releaseSec; t += 0.0005) {
-                if (20 * Math.log10(Math.max(sidechain.duckGainAt(shape, t), 1e-9)) <= -3) held += 0.5;
-              }
-              return Math.round(held * 10) / 10;
-            })(),
           };
         };
         /**
@@ -769,6 +757,22 @@ async function measureGenre(page, genreId, bars, soloTracks) {
           kickOnsets: energyOnsets,
           /** Of those, how many have the bass sounding — the denominator of every number below. */
           duckOnsets: pure.onsets,
+          /**
+           * The **authored envelope's** ≥3 dB hold, in ms — computed, not measured.
+           *
+           * `weakDuck`/`duckErasedInMaster` read depth out of a 60 ms scan, which cannot describe a duck; the
+           * envelope the renderer schedules is what says how long one lasts, and `sidechainDuck.test.ts` pins it per
+           * category. Reported beside the depth so a row says both "the dip measures 4.4 dB" and "the duck it came
+           * from lasts 64.5 ms" — which is the whole answer to "is this sidechain audible?".
+           */
+          envelopeHold3DbMs: (() => {
+            const shape = sidechain.resolveKickDuckShape(pattern.genre_id, 1);
+            let held = 0;
+            for (let t = 0; t < shape.releaseSec; t += 0.0005) {
+              if (20 * Math.log10(Math.max(sidechain.duckGainAt(shape, t), 1e-9)) <= -3) held += 0.5;
+            }
+            return Math.round(held * 10) / 10;
+          })(),
           /** The sidechain's own depth (mastering bus compressor and ceiling bypassed): the mechanism. */
           duckDb: pure.meanDb,
           duckMedianDb: pure.medianDb,
