@@ -38,7 +38,14 @@
  */
 import type { MixTrackId } from "../../data/genreMix";
 import { createGs1Host, type Gs1Host } from "./Gs1Host";
-import { GS1_POLYPHONY_CEILING, capPlanPolyphony, isGs1RoutingEnabled, planGs1Notes } from "./gs1Tracks";
+import {
+  GS1_POLYPHONY_CEILING,
+  capPlanPolyphony,
+  isGs1RoutingEnabled,
+  patchNeedsSample,
+  planGs1Notes,
+} from "./gs1Tracks";
+import { generateTextureSample } from "./textureSample";
 
 /** One note to schedule, in the sound source's own timeline. */
 export interface PoolNote {
@@ -72,6 +79,13 @@ interface TrackSlot {
   patch: string | null;
   creating: Promise<void> | null;
   dest: AudioNode | null;
+  /**
+   * Whether this host has been handed its recording (P2.5).
+   *
+   * A sample patch is silent until one arrives, and the import is asynchronous, so it is requested once per host
+   * rather than once per note.
+   */
+  sampleLoaded: boolean;
 }
 
 export class Gs1VoicePool {
@@ -121,6 +135,7 @@ export class Gs1VoicePool {
       ready: false,
       patch: null,
       creating: null,
+      sampleLoaded: false,
       dest,
     };
     this.slots.set(trackIdx, slot);
@@ -182,6 +197,15 @@ export class Gs1VoicePool {
       if (slot.patch !== plan.patch) {
         slot.host.setPatch(plan.params);
         slot.patch = plan.patch;
+        /**
+         * A sample patch needs its recording (P2.5). Not awaited: this runs inside the scheduler, and the native
+         * engine already covers the first notes while the import lands — the same fallback the pool uses while a host
+         * is loading. `sampleLoaded` keeps it to once per host rather than once per note.
+         */
+        if (patchNeedsSample(plan.patch) && !slot.sampleLoaded) {
+          slot.sampleLoaded = true;
+          void slot.host.importSample(generateTextureSample(this.ctx.sampleRate), this.ctx.sampleRate);
+        }
       }
       slot.instrument = instrument;
       const capped = capPlanPolyphony(plan, this.maxVoices);

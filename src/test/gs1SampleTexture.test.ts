@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { GS1_PATCHES, GS1_TEXTURE_ROUTING, resolveGs1Patch, routingForRole } from "../data/gs1Patches";
+import { gs1PatchFor, patchNeedsSample } from "../audio/gs1/gs1Tracks";
 import { Param } from "../../vendor/gs1/src/audio/params";
 import {
   TEXTURE_SAMPLE_ROOT,
@@ -67,5 +68,31 @@ describe("P2.5 · sample-based texture", () => {
     expect(generateTextureSample(22050).length).toBe(Math.round(TEXTURE_SAMPLE_SECONDS * 22050));
     // A nonsense rate falls back rather than producing a zero-length buffer the host would refuse.
     expect(generateTextureSample(Number.NaN).length).toBe(Math.round(TEXTURE_SAMPLE_SECONDS * 44100));
+  });
+});
+
+/**
+ * The **loader**: a sample patch is silent until its recording arrives, so whoever builds the host has to hand it one.
+ *
+ * Both paths ask the same two questions in the same place — does this patch play a sample, and has this host been given
+ * one — which is what these cases check at the seam rather than through a render, because the import is asynchronous
+ * and the interesting failure is "asked zero times" or "asked on every note".
+ */
+describe("P2.5 · the loader", () => {
+  it("knows which patches need a recording", () => {
+    expect(patchNeedsSample("sampleTexture")).toBe(true);
+    for (const name of Object.keys(GS1_PATCHES) as Array<keyof typeof GS1_PATCHES>) {
+      if (name === "sampleTexture") continue;
+      expect(patchNeedsSample(name), name).toBe(false);
+    }
+  });
+
+  it("routes a texture instrument through whatever lane declares it", () => {
+    // The lane is an `fx` lane; the instrument is what says "this is a recording".
+    expect(gs1PatchFor("fx", "vinyl_texture")?.patch).toBe("sampleTexture");
+    // …and the rule runs one way only: an fx instrument that is not a texture stays native.
+    expect(gs1PatchFor("fx", "noise_sweep")).toBeNull();
+    // The role-specific tables still win where they apply.
+    expect(gs1PatchFor("chords", "warm_pad")?.patch).toBe("warmPad");
   });
 });
