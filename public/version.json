@@ -1,29 +1,29 @@
 {
-  "version": "2.16.0",
+  "version": "2.17.0",
   "releaseDate": "2026-09-24",
-  "changelogCount": 210,
+  "changelogCount": 211,
   "latest": {
-    "version": "2.16.0",
+    "version": "2.17.0",
     "date": "2026-09-24",
     "category": "feature",
     "title": {
-      "zh": "v2.16.0 手机随机播放真的会等一首放完；母带链不再吃掉侧链与渐强；GS-1 有了逐音音准与采样导入",
-      "en": "v2.16.0 Phone Shuffle Waits for the Track; the Master Chain Stops Eating Ducks and Builds; GS-1 Gains Per-Note Tuning and Sample Import"
+      "zh": "v2.17.0 GS-1 升级到 ABI 9：出货音色也有了逐音音准；采样织体的机制全线打通",
+      "en": "v2.17.0 GS-1 moves to ABI 9: per-note tuning on the shipping voice, and the sample-texture path is complete end to end"
     },
     "highlights": [
       {
-        "zh": "**手机播放器的播放顺序按钮修好了，两个原因都修了。** ① 换歌被误判成「一遍播完」：钩子把「步数往回跳」当作结束，而换 pattern 正好从 0 开始，于是每次切歌都触发下一次切歌——一步一首。现在真正的回绕需要**这个 pattern 自己的长度**，并在加载新 pattern 时清空观测值。② 「一首曲子」只有 4–16 秒（曲风自带 pattern 的长度），所以即使判定对了也还是连续切歌；手机端现在播**编排**（40 小节，八小节曲风约 80 秒），Electronic 走 club 结构、其余走 song 结构，浏览页的试听仍保留循环。",
-        "en": "**The phone's play-order button works, and both causes are fixed.** (1) A track swap was read as a finished pass: the hook treated a backwards step as the end, and loading a pattern starts at step 0, so every swap triggered the next one — one genre per step. A real wrap now needs **the pattern's own length**, and the observation is cleared when a pattern loads. (2) A track was 4–16 seconds (the genre's own pattern), so even correct detection switched constantly; the phone no…"
+        "zh": "**逐音音色变化现在真的作用在出货音色上。** 之前这条变化只对原生合成器生效：GS-1（和弦与主奏的默认音色）的接口只有音高/力度/声像，所以开着采样池时渲染结果与关闭时**逐字节相同**。上游合成核里逐音的音准表、弯音表和逐声部读取一直都在，缺的只是两个 C 出口——补上后核版本升到 ABI 9，适配器暴露 `noteBend` / `setTuningNote`，变化以**逐音微分音**的形式送达（GS-1 没有逐音截止频率）。实测：主奏 0.164 dB 对 0.069 对照（×2.38），与原生路径的 ×2.48 基本一致。",
+        "en": "**The per-note timbre variation now reaches the shipping voice.** It only ever applied to the native synths: GS-1 — the default for chords and lead — took pitch, velocity and pan, so with the pool enabled the render was **byte-identical** with and without the nudge. The core's per-note tuning table, its bend table and the per-voice read of them had existed all along; only two C entry points were missing. With them the core is ABI 9, the adapter exposes `noteBend` / `setTunin…"
       },
       {
-        "zh": "**母带链不再把编排写进去的东西还回来。** 侧链下潜与渐强都被母带「恢复」掉了：总线压缩器与限幅天花板各加了释放保持（200 ms / 180 ms），实测 disco 文件里的下潜中位从 −0.3 dB 变成 **−3.82 dB**，`duckErasedInMaster` 从 1 收到 **0**；渐强改成在内容侧加深（club 编排的 intro→build 现在 10.5 dB），文件里的 build 从 +0.27 dB 变成 **+23%**，探针也改成断言这条下限而不是只报告。",
-        "en": "**The master chain stops giving back what the arrangement wrote.** Both the sidechain dip and the build were being refilled: the bus compressor and the ceiling each gained a release **hold** (200 ms / 180 ms), which moved disco's file-level median dip from −0.3 dB to **−3.82 dB** and `duckErasedInMaster` from 1 to **0**; the build was deepened in the content instead (the club form's intro to build is 10.5 dB now), taking the file's build from +0.27 dB to **+23 %**, and the p…"
+        "zh": "**采样织体的机制全线打通（还没有曲风使用）。** 适配器首次暴露采样导入（`importSample` / `clearSample`，返回核心自己的返回码），新增一个 `texture` 角色与 `sampleTexture` 音色（核心的采样档、根音 60、一次性播放），并定下一条路由规则：**乐器名**说明「这是录音」，因此在任何轨上都成立；录音在每个 GS-1 实例上只导入一次（离线在接入图之前 `await`，实时在调度器里发出），`fx` 轨的渲染与实时播放都已接上。真录音是内容：现在播的是生成的替身（确定性噪声床 + 瞬态点击），你有素材随时替换。",
+        "en": "**The sample-texture path is complete end to end (no genre uses it yet).** The adapter exposes sample import for the first time (`importSample` / `clearSample`, returning the core's own codes), a `texture` role and a `sampleTexture` patch join the tables (the core's sample mode, root 60, one-shot), and one routing rule decides: the **instrument name** says \"this is a recording\", so it holds on any lane. The recording is imported once per GS-1 instance (awaited before the off…"
       },
       {
-        "zh": "**立体声更宽了。** 解析后的声像缩放从 2.0 提到 3.0，门禁自己点名的两个 offender 越过 0.98（chicago-house 0.9865 → 0.9716，detroit-techno 0.9939 → 0.9736），单声道安全线（side 高于 −8 dB 才判不合格）仍在安全区。鼓、贝斯、军鼓仍留在混音表放的位置。",
-        "en": "**Wider stereo.** The resolved-pan scale went from 2.0 to 3.0 and the gate's own two offenders crossed the 0.98 line (chicago-house 0.9865 to 0.9716, detroit-techno 0.9939 to 0.9736), with the mono-safe guard untouched (side above −8 dB is the failure). Kick, bass and snare stay where the mix table put them."
+        "zh": "**为什么分两次发**：上一版修的是手机播放顺序（会连续切歌），这一版是声音与合成核，两者互不影响，各自可回退。",
+        "en": "**Why this is a separate release**: the previous one fixed the phone's play-order button switching tracks without waiting; this one is sound and the synth core. They do not depend on each other, and either can be rolled back alone."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
