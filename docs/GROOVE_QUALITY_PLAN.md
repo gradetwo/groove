@@ -289,6 +289,22 @@ lowered to the new measurements in the same change (the ratchet only goes down).
 (see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
 it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
 
+### Listening review — what `agy` found on 2026-09-24, and the three gaps it opened
+
+`docs/AUDIO_REVIEW.md` records the tool and the workflow. Its first two reviews (a disco loop and an 87-second ambient
+loop, both rendered through the same offline path the exporters use) produced four things worth acting on, and one of
+them is a *gap in this plan's claims* rather than a defect in the audio:
+
+| finding | our side | what to do |
+| --- | --- | --- |
+| side **28.7 dB** below mid on disco, correlation **0.997**; ambient **0.9867**, side/mid **−21.2 dB** | `narrowStereo` (A1) already lists both | independent corroboration, from listening rather than from the gate — A1's remaining work is unchanged and now has a second witness |
+| "几乎没有明显的侧链抽吸避让" on disco | the release hold moved the file's median dip from −0.3 to **−3.82 dB** | **disagreement to resolve**: is a −3.8 dB median dip audible as ducking, or is the median flattering a duck that is still mostly gone? Measure the *shape* of the dip (depth over time), not just its median |
+| LRA **0.6 LU** ("机械感偏重") | `thinDynamics` 0 offenders, but that claim reads **per-track velocity spread**, not master dynamics | **one of the two is measuring the wrong thing** — a master-dynamics claim (EBU R128 LRA) is missing, and the loop-driven arrangement is a plausible cause of a 0.6 LU range |
+| a **1.74 s** silent tail (disco) and a **3 s** fade (ambient) | `cutTail` asks only that the tail be *below* −60 dBFS | **`cutTail` has no floor**: a loop asset that cannot be looped seamlessly passes. The claim needs a second half — silence *inside* the loop versus silence *after* it |
+
+The last one is the kind of thing only listening finds: every number we have about the tail says "good", and the
+musical fact is "this cannot be used as a loop".
+
 ### The WASM seam (recorded 2026-09-24, at the user's request to start it early)
 
 The repository already has **one** WASM dependency and it is properly pinned: the vendored GS-1 synth core
