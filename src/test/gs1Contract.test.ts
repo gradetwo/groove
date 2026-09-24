@@ -231,6 +231,33 @@ describe.skipIf(!manifest)("GS-1 vendored core contract", () => {
     }
   });
 
+  it("records which per-note controls the pinned core does and does not export", () => {
+    /**
+     * A3's GS-1 half needs a **per-note** timbre parameter, and this is where that stands — measured out of the
+     * shipped binary rather than assumed, because the adapter and the processor disagree about it in a way that costs
+     * an afternoon to untangle:
+     *
+     *   · `public/gs1/workletProcessor.js` **handles** `noteBend` and `tuning`, calling `gs_note_bend` and
+     *     `gs_set_tuning_note` behind `if (this.wasm.…)` guards;
+     *   · the vendored **engine** (v2.1.6) offers `noteBend(note, semitones)` and `setTuning(table)`;
+     *   · the shipped **core** exports neither — its 104 exports include `gs_note_on`, `gs_note_on_pan`,
+     *     `gs_note_off`, `gs_pitch_bend`, `gs_set_param` and `gs_set_param_inst`, and the two functions the guards
+     *     test for are absent, so those branches are dead with this pin.
+     *
+     * `Gs1Host` is therefore right to say "no notesBend / microtuning", and per-note timbre on GS-1 needs an
+     * **upstream ABI bump** (a core that exports them) rather than more host code. This case fails the day the pin
+     * gains either export, which is the prompt to expose it in the adapter and finish A3's GS-1 half instead of
+     * rediscovering why it was impossible.
+     */
+    const { raw } = instantiate(PRIMARY_WASM);
+    for (const fn of ["gs_note_on", "gs_note_on_pan", "gs_note_off", "gs_pitch_bend", "gs_set_param"]) {
+      expect(typeof raw[fn], `expected export ${fn}`).toBe("function");
+    }
+    for (const fn of ["gs_note_bend", "gs_set_tuning_note"]) {
+      expect(raw[fn], `${fn} is not in the pin yet — if it appears, expose it in Gs1Host`).toBeUndefined();
+    }
+  });
+
   it("has no duplicate parameter ids", () => {
     const table = parseParamTable(readFileSync(path.join(VENDOR_ROOT, PARAMS_REL), "utf8"));
     expect(table.entries.length).toBeGreaterThan(0);
