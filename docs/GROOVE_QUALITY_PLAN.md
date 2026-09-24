@@ -523,6 +523,35 @@ is `ambient-techno` ↔ `dub-techno` at **0.2774 dB** — above the 0.25 floor, 
 tightest corner: three neighbouring styles that deliberately share a rhythm section. The floor is not lowered for
 them; the measurement is recorded instead.
 
+### P2.5's content: the crackle half is the content, and the one-shot half has nowhere to sit (2026-09-24)
+
+The remaining P2.5 item was "pick 1–2 genres and declare a texture instrument". An inventory of the lane says why it
+is not that simple, and an audition says why it should not be done anyway:
+
+* **the `fx` lane is a single transition hit per loop in all 159 genres** — one onset in 16 steps for every candidate
+  checked (lofi-hip-hop, trip-hop, boom-bap, future-garage, conscious-hip-hop, neo-soul, downtempo, chillwave,
+  glitch-hop, phonk, jazz-fusion). There is no free lane: a one-shot texture either replaces the genre's existing
+  transition or displaces a musical part;
+* two idiomatic swaps were tried and **rejected by ear**: `chillwave`'s `tape_stop` → `vocal_chop` ("the tape stop
+  belongs to chillwave's tape haze; the new hit lands on the beat every bar and interrupts the drift") and
+  `glitch-hop`'s `tape_stop` → `found_sound`. Both were reverted.
+
+So P2.5's *content* is what shipped in v2.18.0: the 26 genres that already declared `vinyl_crackle` — the instrument
+whose whole meaning is a recording — now play one. The one-shot instruments (`vinyl_texture`, `vocal_chop`,
+`found_sound`) stay routed, playable and documented as available; no genre is worse off for not using them.
+
+**One real gap came out of it.** The instrumentation guard refused a texture instrument on an `fx` lane because it
+had no exact or alias key — i.e. with the GS-1 pool switched off, such a lane would have fallen through to the legacy
+per-role default nobody chose. `INSTRUMENT_PRESET_ALIASES` now carries the three (a crackle has a true native twin; a
+chop and a found sound borrow the closest short one-shots), which is also what makes `--no-gs1` renders comparable.
+
+**A second, smaller lesson.** A listening review of the `vocal_chop` render concluded the native fallback had played,
+and cited the alias table added the same hour — a reading it could only have got from the file, not from the audio.
+The check that settles that question is two renders: the same genre with the pool on and off differ, so the lane was
+GS-1's. `render_genre_wav.mjs --no-gs1` is now the tool for it, `gs1SampleTexture.test.ts` asserts the native engine
+builds no oscillators for a routed texture lane, and the review's *musical* verdict (which did not depend on that
+attribution) is what reverted the swap.
+
 ### The near-mono claim cannot be met by panning — proved by an audition, not by a number (2026-09-24)
 
 `narrowStereo` reads **7** after the ratchet, and the plan's literal target is 3. The obvious lever is the pan

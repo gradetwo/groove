@@ -45,6 +45,14 @@ const bars = Math.max(1, Number(arg("--bars", "2")) || 2);
 const out = path.resolve(arg("--out", `/tmp/${genre}.wav`));
 const port = Number(arg("--port", "5350")) || 5350;
 const seamlessLoop = process.argv.includes("--seamless-loop");
+/**
+ * Render with the GS-1 pool switched off, which is how a routed instrument's **native fallback** is auditioned.
+ *
+ * Needed for exactly the question that came up: "did the texture lane play its recording, or the native preset?"
+ * Listening cannot tell you (the two are different sounds, but which one you heard is a guess unless you have the
+ * other); rendering both can.
+ */
+const noGs1 = process.argv.includes("--no-gs1");
 
 const waitForServer = (url, timeoutMs = 30000) =>
   new Promise((resolve, reject) => {
@@ -86,15 +94,17 @@ try {
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const result = await page.evaluate(
-    async ({ genreId, bars, seamlessLoop }) => {
-      const [genres, wav, mix, trackStates] = await Promise.all([
+    async ({ genreId, bars, seamlessLoop, noGs1 }) => {
+      const [genres, wav, mix, trackStates, gs1Tracks] = await Promise.all([
         import("/src/data/genres/index.ts"),
         import("/src/audio/WavExporter.ts"),
         import("/src/data/genreMix.ts"),
         // The same derivation the engine uses, so the audition honours mute/solo/volume/pan instead of rendering
         // everything at the table's defaults.
         import("/src/audio/trackStates.ts"),
+        import("/src/audio/gs1/gs1Tracks.ts"),
       ]);
+      if (noGs1) gs1Tracks.setGs1RoutingEnabled(false);
       const entry = genres.ALL_GENRES.find((g) => g.id === genreId);
       if (!entry) return { error: `unknown genre ${genreId}` };
       const pattern = entry.sequencer_pattern;
@@ -131,7 +141,7 @@ try {
           : null,
       };
     },
-    { genreId: genre, bars, seamlessLoop }
+    { genreId: genre, bars, seamlessLoop, noGs1 }
   );
 
   await browser.close();
