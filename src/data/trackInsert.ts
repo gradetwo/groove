@@ -118,6 +118,8 @@ export interface TrackInsertPatch {
   driveEnabled?: boolean;
   driveAmount?: number;
   driveMix?: number;
+  /** Stereo-spread amount, 0..1 — see `TrackInsertParams.width`. */
+  width?: number;
 }
 
 export const INSERT_HPF_MIN_HZ = 20;
