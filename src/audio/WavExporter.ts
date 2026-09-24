@@ -49,7 +49,8 @@ import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
 import { createGs1Host, type Gs1Host } from "./gs1/Gs1Host";
-import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes } from "./gs1/gs1Tracks";
+import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample } from "./gs1/gs1Tracks";
+import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 
 export interface RenderWavOptions {
@@ -474,6 +475,14 @@ export async function renderPatternOffline(
         continue;
       }
       host.setPatch(routed.params);
+      /**
+       * A sample patch needs its recording (P2.5). Imported **before** the host joins the graph, so the first note
+       * cannot be silent while the bytes are on their way — and only when the patch actually plays a sample, so a
+       * synth patch pays nothing.
+       */
+      if (patchNeedsSample(routed.patch)) {
+        await host.importSample(generateTextureSample(ctx.sampleRate), ctx.sampleRate);
+      }
       host.output.connect(trackStrips[t].insert.input);
       gs1Hosts.set(t, host);
     }

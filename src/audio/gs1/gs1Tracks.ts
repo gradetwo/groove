@@ -28,6 +28,11 @@ import { resolveGs1Patch, type Gs1Patch, type Gs1PatchName } from "../../data/gs
 /** Voices the E3 measurement says one GS-1 instance can sustain alongside the full 8-track app. */
 export const GS1_POLYPHONY_CEILING = 8;
 /** Roles GS-1 voices. Everything else stays on the native engine (see `gs1Patches.ts`). */
+/**
+ * Track ids GS-1 voices. `texture` is deliberately **not** here: it is not a `MixTrackId` — a texture lane is an `fx`
+ * lane whose *instrument* names a recording (`GS1_TEXTURE_ROUTING`), and this list is what gates and UI code use to ask
+ * "could this track be GS-1". The role reaches `planGs1Notes` as a string from that lane.
+ */
 export const GS1_ROUTED_ROLES: readonly MixTrackId[] = ["chords", "lead"];
 
 /**
@@ -126,9 +131,14 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
   if (!routingEnabled) return null;
   if (!(sampleRate > 0) || !Number.isFinite(sampleRate)) return null;
   if (!notes || notes.length === 0) return null;
-  if (role !== "chords" && role !== "lead") return null;
+  /**
+   * `texture` is a plan-able role since P2.5: the arrangement already has the lane (A4's risers fire on it), and its
+   * instruments resolve to a **sample** patch rather than an oscillator. Nothing declares one yet — the mechanism
+   * ships before the content — so this is the allow-list, not a claim that a genre uses it.
+   */
+  if (role !== "chords" && role !== "lead" && role !== "texture" && role !== "fx") return null;
 
-  const resolved = resolveGs1Patch(role, instrument);
+  const resolved = resolveRoutedPatch(role, instrument);
   if (!resolved) return null;
 
   const latency = Math.max(0, Math.round(options.latencyFrames ?? 0));
@@ -172,7 +182,24 @@ export function capPlanPolyphony(plan: Gs1Plan, ceiling = GS1_POLYPHONY_CEILING)
 }
 
 /** Just the patch decision, for callers that only need to know whether GS-1 would voice a track. */
+/**
+ * The patch for a track, with the **texture fallback** P2.5 needs.
+ *
+ * A texture lane is an `fx` lane whose *instrument* names a recording (`GS1_TEXTURE_ROUTING`), so the role alone does
+ * not decide: an instrument that appears in the texture table routes to its sample patch wherever it is found. That is
+ * one rule in one place, and both the renderer and the live pool ask it — the alternative (each call site trying two
+ * roles) is how a track ends up voiced by GS-1 in the file and by the native engine in the room.
+ */
+export function resolveRoutedPatch(role: string | null | undefined, instrument: string | null | undefined) {
+  return resolveGs1Patch(role, instrument) ?? resolveGs1Patch("texture", instrument);
+}
+
 export function gs1PatchFor(role: string | null | undefined, instrument: string | null | undefined) {
   if (!routingEnabled) return null;
-  return resolveGs1Patch(role, instrument);
+  return resolveRoutedPatch(role, instrument);
+}
+
+/** Whether a patch plays an **imported sample**, and therefore cannot sound until one is loaded. */
+export function patchNeedsSample(patch: Gs1PatchName): boolean {
+  return patch === "sampleTexture";
 }
