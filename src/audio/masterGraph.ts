@@ -355,32 +355,25 @@ export function buildMasterGraph(
   const limiter = createMasterLimiter(ctx, {
     ceilingDb: options.limiterCeilingDb ?? MASTER_LIMITER_INTERNAL_CEILING_DB,
     /**
-     * **Not wired, and this is a bug fix rather than a retreat.**
+     * The limiter is **not** given the detector input, and that is a decision made on measurements rather than a
+     * retreat — A2's second half is now handled by the ceiling's release **hold** instead.
      *
-     * The kernel and the worklet both limit correctly with a detector — measured in isolation, −1.00 dBTP with and
-     * without one, through both implementations — but in the *render path* the ceiling stops limiting entirely:
-     * chicago-house rendered at **+1.36 dBTP** against a −1 dBTP contract, and the re-record that followed asked 49
-     * genres for a −9 dB cut because the mix was 3–8 dB louder. With `detector: null` the same render measures
-     * **−1.30 dBTP**, exactly the contract, which is what makes this the wiring and not the DSP.
+     * The duck was eaten by the ceiling's recovery, not by its detector: the ceiling alone turned disco's −4.40 dB
+     * mechanism into −3.44 dB, and the finished file into −0.3 dB. Two fixes were built. The detector input (this
+     * option) is implemented, kernel-tested and cleared by an isolation probe, but wiring it into the render path
+     * disabled the ceiling entirely (+1.42 dBTP against a −1 dBTP contract) for a reason still not identified, and
+     * the bus also had to be level-matched by hand because the strip taps sit before the fader, the trim and the
+     * makeup — three moving parts for one dip.
      *
-     * What the next investigation has, in order: the DSP is cleared (`scratch/limiter_detector_probe.mjs` — −1.00 dBTP
-     * with *and* without a detector, both implementations, in a hand-built two-input graph); the kernel and the worklet
-     * now treat a detector that reads **below 1e-6** as a wiring failure rather than as a quiet passage, because a
-     * denormal-level detector asks for `ceiling / 1e-9` and leaves the ceiling at unity gain; and the render path is
-     * where it still fails at `+1.42 dBTP` **with** that rule in place — so the bus is carrying a real signal to a
-     * limiter that is not applying it.
+     * A **180 ms release hold** (`MASTER_LIMITER_RELEASE_HOLD_MS`) gets there with none of them: measured on disco,
+     * the ceiling's own cell went from −3.44 to **−3.92 dB** and the file from −0.3 to **−3.82 dB** (median), while
+     * the ceiling still holds −1.30 dBTP and the integrated level is unchanged (−14.73 LUFS). Slowing the release
+     * instead was measured too and rejected: 400/2000 ms holds the duck as well but costs ~6 dB of ceiling headroom
+     * on every genre.
      *
-     * **The target is now narrow: the strip taps.** Measured 2026-09-24 with three probes in `scratch/`:
-     *
-     *   · this graph, in an **OfflineAudioContext**, with the programme and a detector fed *directly* into it →
-     *     **−1.30 dBTP**, limited, with a matched *or* a quiet detector (`limiter_offline_graph_probe.mjs`);
-     *   · the same graph in a **realtime** context, same feeds → limited (−1.31 dBFS, `limiter_realtime_probe.mjs`);
-     *   · the **real render path** (strips tapping `duckDetectorInput`) → **+1.42 dBTP**, unlimited.
-     *
-     * So the DSP, the graph, the kernel, the worklet and the context type are each cleared, and what remains is the
-     * wiring that the strips add. Two candidate mechanisms are already refuted: a level mismatch (the makeup sits
-     * between the taps and the limiter, so the bus is ~5.5 dB quieter than the programme — and a deliberately quiet
-     * detector still limits) and a silent detector (the floor rule below falls back to the programme).
+     * The detector option stays because it is the general answer for a caller that *already* has a pre-duck copy —
+     * the analyser uses `--bus-comp-release`-style overrides, and the kernel case that pins it is worth keeping — but
+     * the shipped graph does not need it.
      */
     detector: null,
     releaseFastMs: options.limiterReleaseFastMs,
