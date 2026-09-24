@@ -735,6 +735,33 @@ export async function renderPatternOffline(
             variationFor(trackIdx, stepIdx, r)
           );
         } else if (trackId === "fx" || lowerName.includes("fx")) {
+          /**
+           * A **texture** instrument takes GS-1 with its recording (P2.5), the same way chords and lead do.
+           *
+           * The lane is an `fx` lane and the *instrument* is what says "this is a sample" (`resolveRoutedPatch`), so
+           * this is the one place in the fx branch that asks. Checked first: a routed instrument has a host, and a
+           * host that exists for this track is the whole answer.
+           */
+          const fxHost = gs1Hosts.get(trackIdx);
+          if (fxHost) {
+            const planned = planGs1Notes({
+              role: "fx",
+              instrument: track.instrument,
+              notes: [{ note: pitchVal > 0 ? pitchVal : 60, time: subTime, duration: subDur * gateVal * 1.5, velocity: subVel }],
+              sampleRate: ctx.sampleRate,
+              latencyFrames: fxHost.scheduledNoteLatencyFrames,
+            });
+            if (planned) {
+              const plannedNote = planned.notes[0];
+              const variation = variationFor(trackIdx, stepIdx, 0);
+              if (variation && plannedNote) fxHost.setTuningNote(plannedNote.note, variation.detuneCents);
+              if (plannedNote) {
+                fxHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
+                fxHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
+              }
+              return;
+            }
+          }
           // Same split as AudioEngine.playFX: `noise_sweep` keeps the shared swept riser,
           // anything else is voiced by the poly synth with the track's own preset.
           if (synthPreset === DEFAULT_SYNTH_PRESETS.noiseSweep) {
