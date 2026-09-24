@@ -24,12 +24,15 @@ const recorded = vi.hoisted(() => ({
   hosts: 0,
 }));
 
-vi.mock("../audio/gs1/Gs1Host", () => ({
+vi.mock("../audio/gs1/Gs1Host", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../audio/gs1/Gs1Host")>();
+  return {
+  ...actual,
   createGs1Host: async () => {
     recorded.hosts += 1;
     return {
       scheduledNoteLatencyFrames: recorded.latencyFrames,
-      ready: Promise.resolve({ abi: 8, variant: "simd" }),
+      ready: Promise.resolve({ abi: GS1_EXPECTED_ABI, variant: "simd" }),
       output: { connect: () => undefined },
       noteOnAt: (note: number, velocity: number, atFrame: number, pan?: number) =>
         recorded.noteOnAt.push([note, velocity, atFrame, pan ?? 0]),
@@ -46,8 +49,10 @@ vi.mock("../audio/gs1/Gs1Host", () => ({
       dispose: () => undefined,
     };
   },
-}));
+  };
+});
 
+import { GS1_EXPECTED_ABI } from "../audio/gs1/Gs1Host";
 import { renderPatternOffline } from "../audio/WavExporter";
 import {
   DEFAULT_GS1_ROUTING_ENABLED,
@@ -118,6 +123,9 @@ describe("GS-1 export parity", () => {
     const pattern = makePattern();
     await renderPatternOffline(pattern, { bars: 1, sampleRate: SR });
 
+    if (recorded.hosts !== 2) {
+      console.log("DIAG hosts", recorded.hosts, "patches", recorded.patches, "noteOn", recorded.noteOnAt.length, "tuning", JSON.stringify(recorded.tuning));
+    }
     // One host per routed track, each patch pushed once.
     expect(recorded.hosts).toBe(2);
     expect(recorded.patches).toBe(2);
@@ -158,7 +166,7 @@ describe("GS-1 export parity", () => {
     const live = new Gs1VoicePool({ sampleRate: SR } as BaseAudioContext, {
       createHost: (async () => ({
         scheduledNoteLatencyFrames: recorded.latencyFrames,
-        ready: Promise.resolve({ abi: 8, variant: "simd" }),
+        ready: Promise.resolve({ abi: GS1_EXPECTED_ABI, variant: "simd" }),
         output: { connect: () => undefined },
         noteOnAt: (note: number, velocity: number, atFrame: number) =>
           recorded.noteOnAt.push([note, velocity, atFrame, 0]),

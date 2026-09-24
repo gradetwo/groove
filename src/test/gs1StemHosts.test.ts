@@ -27,9 +27,17 @@ import type { DrumPattern } from "../types/genre";
 
 const mocks = vi.hoisted(() => ({ createGs1Host: vi.fn() }));
 
-vi.mock("../audio/gs1/Gs1Host", () => ({
-  createGs1Host: mocks.createGs1Host,
-}));
+/**
+ * Only the factory is replaced; everything else the module exports is kept.
+ *
+ * A mock that returns a *subset* is a trap the fixtures walked into twice in one day: `WavExporter` reads
+ * `GS1_EXPECTED_ABI` from this module, and a factory that omitted it made the host-acquisition `try` throw — which
+ * looked like six hosts built and none used (three retries × two tracks) rather than a missing export.
+ */
+vi.mock("../audio/gs1/Gs1Host", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../audio/gs1/Gs1Host")>();
+  return { ...actual, createGs1Host: mocks.createGs1Host };
+});
 
 import { renderPatternOffline, exportStemsWav } from "../audio/WavExporter";
 import { setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";

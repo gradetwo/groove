@@ -7,6 +7,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Gs1VoicePool, type PoolNote } from "../audio/gs1/Gs1VoicePool";
+import { GS1_EXPECTED_ABI } from "../audio/gs1/Gs1Host";
 import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
 import type { Gs1Host } from "../audio/gs1/Gs1Host";
 
@@ -24,7 +25,7 @@ function makeHost(options: { latency?: number; readyDelayMs?: number; fail?: boo
     ready: options.fail
       ? Promise.reject(new Error("load failed"))
       : new Promise<{ abi: number; variant: "simd" }>((resolve) =>
-          setTimeout(() => resolve({ abi: 8, variant: "simd" }), options.readyDelayMs ?? 0)
+          setTimeout(() => resolve({ abi: GS1_EXPECTED_ABI, variant: "simd" }), options.readyDelayMs ?? 0)
         ),
     output: { connect: vi.fn() },
     noteOnAt: (note: number, velocity: number, atFrame: number, pan?: number) =>

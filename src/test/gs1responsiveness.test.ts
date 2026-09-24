@@ -23,7 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AudioEngine } from "../audio/AudioEngine";
 import { Gs1VoicePool, type PoolNote } from "../audio/gs1/Gs1VoicePool";
 import { DEFAULT_GS1_ROUTING_ENABLED, setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
-import type { Gs1Host } from "../audio/gs1/Gs1Host";
+import { GS1_EXPECTED_ABI, type Gs1Host } from "../audio/gs1/Gs1Host";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import { installFakeAudioContext } from "./helpers/fakeAudio";
 
@@ -33,7 +33,7 @@ function makeHost() {
   const calls = { noteOnAt: 0, patches: 0, allNotesOff: 0, dispose: 0 };
   const host = {
     scheduledNoteLatencyFrames: 128,
-    ready: Promise.resolve({ abi: 8, variant: "simd" }),
+    ready: Promise.resolve({ abi: GS1_EXPECTED_ABI, variant: "simd" }),
     output: { connect: vi.fn() },
     noteOnAt: () => {
       calls.noteOnAt += 1;
