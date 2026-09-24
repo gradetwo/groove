@@ -2581,6 +2581,28 @@ export class AudioEngine {
   ): void {
     if (!this.ctx) return;
 
+    /**
+     * A **texture** instrument goes to GS-1 with its recording (P2.5), exactly as the exporter's fx branch does.
+     *
+     * The lane is an `fx` lane; the instrument is what says "this is a sample". Asked before the riser split, because
+     * a routed instrument has a host and the host is the whole answer — and if it cannot take the note (still loading,
+     * or no patch), the native paths below are the fallback, which is the same bargain every other GS-1 role makes.
+     */
+    if (this.gs1Pool) {
+      const midiFallback = pitchOffset > 0 ? pitchOffset : 60;
+      if (
+        this.gs1Pool.tryPlay(
+          trackIdx,
+          "fx",
+          this.pattern?.tracks[trackIdx]?.instrument,
+          [{ note: midiFallback, time, duration: stepDur * gateVal * 1.5, velocity: vel }],
+          dest
+        )
+      ) {
+        return;
+      }
+    }
+
     // Every genre declares `noise_sweep` for its fx track, and the swept saw-through-
     // bandpass riser below is exactly that sound — it is also byte-identical to
     // WavExporter.synthFX, which the exporter-parity principle requires. Only a future
