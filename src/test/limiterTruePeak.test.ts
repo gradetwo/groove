@@ -684,3 +684,45 @@ describe("E-12 · the ceiling follows a detector stream when it has one", () => 
     expect(truePeakDbChannels([out])).toBeLessThanOrEqual(MASTER_LIMITER_CEILING_DB + CEILING_TOLERANCE_DB);
   });
 });
+
+/**
+ * The wiring-failure guard, which exists because of a measured failure rather than in the abstract.
+ *
+ * With the render path's detector connected, chicago-house rendered at **+1.42 dBTP** against a −1 dBTP contract: a
+ * detector whose signal is denormal-level asks for `ceiling / 1e-9`, i.e. no reduction at all, and the ceiling passes
+ * the programme through. A detector that is quieter than the programme while the programme is loud is not describing
+ * a quiet passage — it is not describing anything.
+ */
+describe("E-12 · a detector that carries no signal cannot disable the ceiling", () => {
+  const loud = () => {
+    const frames = SAMPLE_RATE;
+    const signal = new Float32Array(frames);
+    for (let i = 0; i < frames; i += 1) signal[i] = 1.4 * Math.sin((2 * Math.PI * 220 * i) / SAMPLE_RATE);
+    return signal;
+  };
+  const peakDb = (detector: Float32Array | null) => {
+    const signal = loud();
+    const kernel = new TruePeakLimiterKernel(SAMPLE_RATE);
+    const out = new Float32Array(signal.length);
+    for (let start = 0; start < signal.length; start += 128) {
+      const count = Math.min(128, signal.length - start);
+      kernel.processBlock(
+        [signal.subarray(start, start + count)],
+        [out.subarray(start, start + count)],
+        count,
+        detector ? [detector.subarray(start, start + count)] : null
+      );
+    }
+    let peak = 0;
+    for (let i = 0; i < out.length; i += 1) peak = Math.max(peak, Math.abs(out[i]));
+    return 20 * Math.log10(Math.max(peak, 1e-9));
+  };
+
+  it("ignores a denormal detector and limits anyway", () => {
+    const denormal = new Float32Array(SAMPLE_RATE).fill(1e-9);
+    expect(peakDb(denormal)).toBeLessThanOrEqual(MASTER_LIMITER_CEILING_DB + CEILING_TOLERANCE_DB);
+    expect(peakDb(new Float32Array(SAMPLE_RATE))).toBeLessThanOrEqual(
+      MASTER_LIMITER_CEILING_DB + CEILING_TOLERANCE_DB
+    );
+  });
+});

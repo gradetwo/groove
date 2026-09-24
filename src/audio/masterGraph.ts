@@ -363,10 +363,18 @@ export function buildMasterGraph(
      * genres for a −9 dB cut because the mix was 3–8 dB louder. With `detector: null` the same render measures
      * **−1.30 dBTP**, exactly the contract, which is what makes this the wiring and not the DSP.
      *
-     * What is left to find is why the bus is silent *here* when its taps are connected before rendering, and the
-     * probe that proves the DSP is fine is the place to start (`scratch/limiter_detector_probe.mjs`). Until then the
-     * ceiling keeps the behaviour every released version has had: a silent detector would mean "no limiting", and a
-     * file at +6 dBTP is not a trade this makes.
+     * What the next investigation has, in order: the DSP is cleared (`scratch/limiter_detector_probe.mjs` — −1.00 dBTP
+     * with *and* without a detector, both implementations, in a hand-built two-input graph); the kernel and the worklet
+     * now treat a detector that reads **below 1e-6** as a wiring failure rather than as a quiet passage, because a
+     * denormal-level detector asks for `ceiling / 1e-9` and leaves the ceiling at unity gain; and the render path is
+     * where it still fails at `+1.42 dBTP` **with** that rule in place — so the bus is carrying a real signal to a
+     * limiter that is not applying it.
+     *
+     * The blind spot that made this hard to chase: a worklet in an **OfflineAudioContext** does not deliver
+     * `port.postMessage` or `console.log` while it renders, so the node's own view of its inputs is unobservable
+     * there. The next step is the *realtime* engine (`AudioEngine`), where the same wiring can be watched live — and
+     * if it limits correctly there, the difference is the offline/async interaction around the node swap rather than
+     * the DSP, the graph or the kernel.
      */
     detector: null,
     releaseFastMs: options.limiterReleaseFastMs,
