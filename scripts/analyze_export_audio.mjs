@@ -873,6 +873,16 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         samplePeakDb: metrics.samplePeakDb(channels),
         clippedSamples: metrics.clippedSampleCount(channels),
         integratedLufs,
+        /**
+         * EBU R128 loudness range, in LU — the **master's** own dynamics, reported rather than claimed.
+         *
+         * Added after a listening review (`docs/AUDIO_REVIEW.md`) reported this master at **0.6 LU** and called the
+         * result mechanical, while `thinDynamics` — which measures the *pattern's* per-track velocity spread — read 0
+         * offenders. The two are not the same question, and this is the one a listener hears. It is informational for
+         * now: a loop of club music is *supposed* to sit in a narrow range, so a threshold has to come from measuring
+         * the library rather than from taste.
+         */
+        lraLu: Math.round(loudness.measureLoudnessRange(channels, rate) * 10) / 10,
         // C1
         channelCount: buffer.numberOfChannels,
         correlation: channels.length > 1 ? metrics.channelCorrelation(channels[0], channels[1]) : 1,
@@ -1130,6 +1140,7 @@ const fmt = (value, digits = 1) => (value == null || !Number.isFinite(value) ? "
         "truePk".padEnd(9) +
         "corr".padEnd(7) +
         "tailRms".padEnd(9) +
+        "LRA".padEnd(7) +
         "vel".padEnd(9) +
         "swing"
     );
@@ -1137,6 +1148,7 @@ const fmt = (value, digits = 1) => (value == null || !Number.isFinite(value) ? "
       console.log(
         `   ${row.id.padEnd(24)}${fmt(row.clicks?.worstDb).padEnd(9)}${row.topBandShareDb.toFixed(1).padEnd(9)}` +
           `${row.truePeakDb.toFixed(2).padEnd(9)}${row.correlation.toFixed(3).padEnd(7)}${row.tailRmsDb.toFixed(1).padEnd(9)}` +
+          `${fmt(row.lraLu).padEnd(7)}` +
           `${`${row.velocityMin ?? "-"}-${row.velocityMax ?? "-"}(${row.velocityUnique})`.padEnd(9)}${row.declaredSwing}`
       );
     }
