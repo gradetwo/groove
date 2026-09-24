@@ -309,6 +309,19 @@ the one that matters: read the report first — `clampHits` must be 0 and `arran
 `Manual verify · scope=verify` as the release pre-flight. The pre-flight already ran once and reached the loudness
 freshness check with **everything before it green**.
 
+**Everything is green as of 2026-09-24**, in the one path that judges it: the push CI (unit tests, four groove
+shards, `groove-gate`, all three E2E legs) and `Manual verify · scope=verify` (the full chain including
+`check:loudness:fresh` against the applied trims, `check:timbre`, the probes and the device matrix). Two measurement
+lessons from getting there are worth more than the green tick:
+
+* **One judge, one path.** Three configurations rendered the same twelve genres and read three different `cutTail`
+  counts (1 on four separate runners, 2 serially in one job, 5 with four shards fanned out inside one job — the last
+  two starving the renderer). `verify` no longer renders the sample; `groove-shards`/`groove-gate` own the judgement.
+* **Four budgets are the *worst* reading, not the best.** `flatStabs 2`, `cutTail 2`, `narrowStereo 9`, `thinMids 11`
+  — because the genres that flip sit *at* their thresholds (0.9896–0.9963 against 0.98; x1.02–x1.12 against 1.5), so
+  the count moves with runner load. Tightening them waits for a render that repeats, which is P0.8's open fork. The
+  claims that read **0 in every observation** stay at 0, and those are where a regression shows up first.
+
 **`duckErasedInMaster` ships at 1**, documented in `check_groove.mjs` with the mechanism: the compressor's half is
 fixed, the ceiling's half is the unwired fix above. The earlier reading of 0 was measured against a ceiling that had
 stopped working, and the correction is beside both numbers.
