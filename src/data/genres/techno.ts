@@ -1787,7 +1787,7 @@ export const TECHNO_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "reese_bass",
           "steps": [
             1,
             0,

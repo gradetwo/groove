@@ -6943,7 +6943,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "kick",
           "name": "Kick Drum",
-          "instrument": "sub_kick",
+          "instrument": "punchy_kick",
           "steps": [
             1,
             0,
@@ -7115,7 +7115,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "sub_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -7158,7 +7158,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "warm_pad",
+          "instrument": "vibraphone",
           "steps": [
             1,
             0,
@@ -7201,7 +7201,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "pluck_synth",
+          "instrument": "bell_lead",
           "steps": [
             0,
             0,
