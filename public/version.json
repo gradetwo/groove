@@ -1,23 +1,23 @@
 {
-  "version": "2.19.0",
+  "version": "2.19.1",
   "releaseDate": "2026-09-24",
-  "changelogCount": 213,
+  "changelogCount": 214,
   "latest": {
-    "version": "2.19.0",
+    "version": "2.19.1",
     "date": "2026-09-24",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v2.19.0 循环素材能自己接上了：渲染尾巴折回开头；导出多了一个无缝循环选项",
-      "en": "v2.19.0 Loop assets join themselves: the render's tail folds back over the head, behind a `seamlessLoop` export option"
+      "zh": "v2.19.1 维护版本：声音没有变化，收尾 P2.5 的内容问题并补齐一处回退音色",
+      "en": "v2.19.1 maintenance: no audible change — P2.5's content question closed, and one fallback gap filled"
     },
     "highlights": [
       {
-        "zh": "**循环不再是一遍放完、余音拖出去、再从头开始。** 渲染尾巴本身是对的（文件不能在混响还在响的时候停），但把它接在循环后面就错了：接缝既晚又轻。现在把尾巴按循环长度折回开头——也就是「假如循环从没停过，混响本来会在做的事」——导出的 `seamlessLoop` 选项给出的文件正好是一个循环的长度，重复播放时听到的是那一次衰减，而不是一段空白加一次重启。两条返回路径（worklet 限幅与回退限幅）走同一个出口，所以这个保证不取决于平台是否支持 AudioWorklet。",
-        "en": "**A loop no longer plays, rings out and restarts.** The render tail is right for a file (it must not stop while the reverb is audible) and wrong for a loop: the seam is both late and quiet. The tail is now folded back over the head modulo the loop length — what the reverb would have been doing had the loop never stopped — so the `seamlessLoop` export option returns exactly one loop, and repeating it reproduces that decay instead of a gap followed by a restart. Both return pa…"
+        "zh": "这一版**不含任何可听变化**，是上一版之后的收尾。① 采样织体的「内容」问题有了结论：159 个曲风的 `fx` 轨都是**每循环一次转场音**，没有空轨可用——试过的两个换法（chillwave 用 vocal chop、glitch-hop 用 found sound）都被试听否掉，已回退；P2.5 真正落地的内容就是 v2.18.0 里那 26 个曲风的唱针噪声。② 顺带补上一个真实缺口：织体乐器在 GS-1 关闭时没有原生回退音色（会掉到没人选过的默认音色），现在三个名字都有了对应，并被新的用例盯住。",
+        "en": "This release has **no audible change**; it closes out the previous one. (1) P2.5's content question has an answer: the `fx` lane is a single transition hit per loop in all 159 genres, so there is no free lane — the two swaps tried (a vocal chop for chillwave, a found sound for glitch-hop) were rejected by ear and reverted, and P2.5's real content is what shipped in v2.18.0 (26 genres' needle noise playing a recording). (2) It filled a genuine gap on the way: a texture instru…"
       },
       {
-        "zh": "**顺带两条测量上的诚实**：① 曲风质量门禁的 `narrowStereo` 预算按规则从 9 收到 **7**——两次独立分片都读到 7（相邻风格那三个 0.98 上下的曲风已经挪开），而 `flatStabs` / `cutTail` 因为两次读数不同（2/1、0/1）继续保留最差值；② 会「听」应用的实时编排探针以前取首尾三分之一的**均值**，在共享 runner 上把一次卡顿读成「渐强没抬起来」（同一棵树在本地是 +10 %、CI 上是 3.4 %）。现在它按**每一遍的中位数**比较开头那遍与最响的一遍，并且把「平台掉帧」单独报成 `unmeasured`——对机器的判断和对混音的判断不再混为一谈。",
-        "en": "**Two measurement fixes alongside it.** (1) The quality gate's `narrowStereo` budget ratchets 9 → **7**, because the rule is that a budget is the worst reading *and* the tightening waits for a render that repeats: two independent shard dispatches both read 7, while `flatStabs` and `cutTail` keep their worst reading (2/1 and 0/1) for exactly the same reason. (2) The live arrangement probe — the only one that listens to the running app — used to average the first and last thir…"
+        "zh": "另外新增 `scripts/render_genre_wav.mjs`（把某个曲风渲染成 WAV，供试听；`--no-gs1` 可渲染同一条轨的原生回退版本），它是这一轮判断「听到的到底是采样还是回退音色」的依据——两次渲染一比即知，比从单个文件推断可靠。",
+        "en": "Also new: `scripts/render_genre_wav.mjs` renders a genre to a WAV for auditions (`--no-gs1` renders the same lane's native fallback), which is what settled \"was that the recording or the fallback?\" — two renders answer it, while a single file only invites a guess."
       }
     ],
     "truncated": false
