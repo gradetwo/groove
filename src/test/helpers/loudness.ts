@@ -66,6 +66,11 @@ const RELATIVE_GATE_LU = -10;
 /** BS.1770 offset term: L = −0.691 + 10·log10(Σ G_i · z_i). */
 const LOUDNESS_OFFSET = -0.691;
 const BLOCK_SECONDS = 0.4;
+/** Tech 3342's short-term window and step, for the loudness *range*. */
+const SHORT_TERM_SECONDS = 3;
+const SHORT_TERM_HOP_SECONDS = 1;
+/** The range's relative gate: 20 LU below the gated mean. */
+const LRA_RELATIVE_GATE_LU = 20;
 const BLOCK_OVERLAP = 0.75;
 
 /**
@@ -328,4 +333,44 @@ export function sampleRmsDb(channels: Float32Array[]): number {
   }
   if (count === 0 || sum <= 0) return -Infinity;
   return 20 * Math.log10(Math.sqrt(sum / count));
+}
+
+/**
+ * EBU R128 **loudness range** (LRA), in LU — how much the *master* actually moves.
+ *
+ * Added because a listening review of `disco-loop.wav` reported LRA **0.6 LU** and called the result mechanical, while
+ * this repository's own dynamics claim (`thinDynamics`) read 0 offenders — and that claim measures the *pattern's*
+ * per-track velocity spread, not the master. One of the two had to be measuring the wrong thing, and the master is the
+ * one a listener experiences.
+ *
+ * The definition used here is Tech 3342's: 3 s short-term blocks with a 1 s step, an absolute gate at −70 LUFS, then a
+ * relative gate 20 LU below the gated mean, and LRA = P95 − P10 of what survives. Percentiles rather than min/max, so
+ * one quiet intro cannot dominate the number.
+ */
+export function measureLoudnessRange(channels: Float32Array[], sampleRate: number): number {
+  if (channels.length === 0 || channels[0].length === 0) return 0;
+  const weighted = channels.map((channel) => kWeightChannel(channel, sampleRate));
+  const blockSamples = Math.round(SHORT_TERM_SECONDS * sampleRate);
+  const hopSamples = Math.round(SHORT_TERM_HOP_SECONDS * sampleRate);
+  const length = weighted[0].length;
+  if (length < blockSamples) return 0;
+
+  const blocks: number[] = [];
+  for (let start = 0; start + blockSamples <= length; start += hopSamples) {
+    let sum = 0;
+    for (const channel of weighted) {
+      for (let i = start; i < start + blockSamples; i++) sum += channel[i] * channel[i];
+    }
+    const block = loudnessOfBlock(sum, blockSamples, weighted.length) + 0; // already offset-corrected
+    if (block > ABSOLUTE_GATE_LUFS) blocks.push(block);
+  }
+  if (blocks.length < 2) return 0;
+
+  const mean = blocks.reduce((a, b) => a + b, 0) / blocks.length;
+  const relativeGate = mean - LRA_RELATIVE_GATE_LU;
+  const gated = blocks.filter((value) => value > relativeGate).sort((a, b) => a - b);
+  if (gated.length < 2) return 0;
+  const percentile = (fraction: number) =>
+    gated[Math.min(gated.length - 1, Math.max(0, Math.round(fraction * (gated.length - 1))))];
+  return Math.max(0, percentile(0.95) - percentile(0.1));
 }
