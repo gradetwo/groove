@@ -34,6 +34,8 @@ export interface GlueCompressorOptions {
   kneeDb?: number;
   ratio?: number;
   attackSec?: number;
+  /** Release hold, ms. See `GLUE_COMP_HOLD_MS`. */
+  holdMs?: number;
   releaseSec?: number;
   /** Fixed makeup, dB. 0 = none; the graph calibrates this against the node it replaces. */
   makeupDb?: number;
@@ -45,6 +47,7 @@ export interface ResolvedGlueCompressorOptions {
   kneeDb: number;
   ratio: number;
   attackSec: number;
+  holdMs: number;
   releaseSec: number;
   makeupDb: number;
   sampleRate: number;
@@ -66,6 +69,17 @@ export const GLUE_COMP_KNEE_DB = 8;
 export const GLUE_COMP_RATIO = 2;
 export const GLUE_COMP_ATTACK_SEC = 0.03;
 export const GLUE_COMP_RELEASE_SEC = 0.22;
+/**
+ * Release **hold**, ms — the compressor's gain cannot rise inside this window.
+ *
+ * Added for A2's last piece, and it is the same defect as the ceiling's, one stage earlier. `trap-rap` measures every
+ * stage *alone* preserving the duck (pure −5.04 dB, bus compressor −5.04, ceiling −4.01) while the finished file reads
+ * **−0.67**: the compressor's gain recovers during the dip, hands a normal-level signal to the ceiling, and the
+ * ceiling has nothing left to hold. A hold keeps the compressor's gain where the last peak put it for a fifth of a
+ * second, so a sidechain duck reaches the ceiling intact — which is where the ceiling's own 180 ms hold
+ * (`MASTER_LIMITER_RELEASE_HOLD_MS`) can then do its work.
+ */
+export const GLUE_COMP_HOLD_MS = 200;
 
 export function resolveGlueCompressorOptions(
   options: GlueCompressorOptions = {}
@@ -78,6 +92,7 @@ export function resolveGlueCompressorOptions(
     kneeDb: Math.max(0, finite(options.kneeDb, GLUE_COMP_KNEE_DB)),
     ratio,
     attackSec: Math.max(0, finite(options.attackSec, GLUE_COMP_ATTACK_SEC)),
+    holdMs: Math.max(0, finite(options.holdMs, GLUE_COMP_HOLD_MS)),
     releaseSec: Math.max(0, finite(options.releaseSec, GLUE_COMP_RELEASE_SEC)),
     makeupDb: finite(options.makeupDb, 0),
     sampleRate: Math.max(1, finite(options.sampleRate, 44100)),
@@ -111,6 +126,9 @@ export class GlueCompressorKernel {
   readonly options: ResolvedGlueCompressorOptions;
   private readonly attackCoefficient: number;
   private readonly releaseCoefficient: number;
+  private readonly holdSamples: number;
+  private samplesProcessed = 0;
+  private holdUntil = 0;
   private readonly makeupGain: number;
   /** Current gain reduction in dB, ≥ 0. Starts at 1.0 linear (no reduction), like the node. */
   private reductionDb = 0;
@@ -123,6 +141,7 @@ export class GlueCompressorKernel {
       this.options.attackSec <= 0 ? 1 : 1 - Math.exp(-1 / (this.options.attackSec * this.options.sampleRate));
     this.releaseCoefficient =
       this.options.releaseSec <= 0 ? 1 : 1 - Math.exp(-1 / (this.options.releaseSec * this.options.sampleRate));
+    this.holdSamples = Math.round((this.options.holdMs / 1000) * this.options.sampleRate);
     this.makeupGain = Math.pow(10, this.options.makeupDb / 20);
   }
 
@@ -146,9 +165,14 @@ export class GlueCompressorKernel {
     const levelDb = 20 * Math.log10(observed > 1e-9 ? observed : 1e-9);
     const target = glueCompressorReductionDb(levelDb, this.options);
     // Attack when the reduction deepens, release when it eases — the usual asymmetry, and the reason the detector's
-    // own movement (rather than the programme's) is what the gain follows.
-    const coefficient = target > this.reductionDb ? this.attackCoefficient : this.releaseCoefficient;
-    this.reductionDb += (target - this.reductionDb) * coefficient;
+    // own movement (rather than the programme's) is what the gain follows. The hold sits on the release side.
+    if (target >= this.reductionDb) {
+      this.reductionDb += (target - this.reductionDb) * this.attackCoefficient;
+      this.holdUntil = this.samplesProcessed + this.holdSamples;
+    } else if (this.samplesProcessed >= this.holdUntil) {
+      this.reductionDb += (target - this.reductionDb) * this.releaseCoefficient;
+    }
+    this.samplesProcessed += 1;
     const gain = this.makeupGain * Math.pow(10, -this.reductionDb / 20);
     return programme * gain;
   }
@@ -167,8 +191,13 @@ export class GlueCompressorKernel {
       }
       const levelDb = 20 * Math.log10(observed > 1e-9 ? observed : 1e-9);
       const target = glueCompressorReductionDb(levelDb, this.options);
-      const coefficient = target > this.reductionDb ? this.attackCoefficient : this.releaseCoefficient;
-      this.reductionDb += (target - this.reductionDb) * coefficient;
+      if (target >= this.reductionDb) {
+        this.reductionDb += (target - this.reductionDb) * this.attackCoefficient;
+        this.holdUntil = this.samplesProcessed + this.holdSamples;
+      } else if (this.samplesProcessed >= this.holdUntil) {
+        this.reductionDb += (target - this.reductionDb) * this.releaseCoefficient;
+      }
+      this.samplesProcessed += 1;
       const gain = this.makeupGain * Math.pow(10, -this.reductionDb / 20);
       for (const channel of programme) channel[i] = (channel[i] ?? 0) * gain;
     }

@@ -29,6 +29,8 @@
 const THRESHOLD_DB = -16;
 const KNEE_DB = 8;
 const RATIO = 2;
+/** Mirrors `GLUE_COMP_HOLD_MS`. */
+const HOLD_MS = 200;
 const ATTACK_SEC = 0.03;
 const RELEASE_SEC = 0.22;
 
@@ -56,6 +58,10 @@ class GlueCompressorProcessor extends AudioWorkletProcessor {
     this.sampleRateHz = Math.max(1, finite(settings.sampleRate, sampleRate));
     this.attackCoefficient = attackSec <= 0 ? 1 : 1 - Math.exp(-1 / (attackSec * this.sampleRateHz));
     this.releaseCoefficient = releaseSec <= 0 ? 1 : 1 - Math.exp(-1 / (releaseSec * this.sampleRateHz));
+    // Release hold, mirrors `GLUE_COMP_HOLD_MS` in `src/audio/GlueCompressor.ts`.
+    this.holdSamples = Math.round((Math.max(0, finite(settings.holdMs, HOLD_MS)) / 1000) * this.sampleRateHz);
+    this.samplesProcessed = 0;
+    this.holdUntil = 0;
     this.reduction = 0;
   }
 
@@ -78,8 +84,13 @@ class GlueCompressorProcessor extends AudioWorkletProcessor {
       }
       const levelDb = 20 * Math.log10(observed > 1e-9 ? observed : 1e-9);
       const target = reductionDb(levelDb, this.thresholdDb, this.kneeDb, this.ratio);
-      const coefficient = target > this.reduction ? this.attackCoefficient : this.releaseCoefficient;
-      this.reduction += (target - this.reduction) * coefficient;
+      if (target >= this.reduction) {
+        this.reduction += (target - this.reduction) * this.attackCoefficient;
+        this.holdUntil = this.samplesProcessed + this.holdSamples;
+      } else if (this.samplesProcessed >= this.holdUntil) {
+        this.reduction += (target - this.reduction) * this.releaseCoefficient;
+      }
+      this.samplesProcessed += 1;
       const gain = this.makeupGain * Math.pow(10, -this.reduction / 20);
 
       for (let c = 0; c < output.length; c += 1) {

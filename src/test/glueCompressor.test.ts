@@ -15,6 +15,7 @@ import {
   GLUE_COMP_ATTACK_SEC,
   GLUE_COMP_KNEE_DB,
   GLUE_COMP_RATIO,
+  GLUE_COMP_HOLD_MS,
   GLUE_COMP_RELEASE_SEC,
   GLUE_COMP_THRESHOLD_DB,
   GlueCompressorKernel,
@@ -65,13 +66,40 @@ describe("GLUE — the bus compressor follows a detector of its own", () => {
     const withDetector = survival(true);
     const selfDetected = survival(false);
     /**
-     * Measured here: **≈1.00** with a steady detector (the dip passes through untouched) against **≈1.76** when the
-     * programme detects itself — over a 0.4 s dip the gain releases most of the way back, which is the refill in its
-     * pure form. The node this replaces gives back *more* than this kernel does (it zeroes the median dip), but the
-     * difference these cases pin is the one the fix is about: a detector the duck cannot move, versus one it can.
+     * Measured here: **≈1.00** with a steady detector (the dip passes through untouched) against **≈1.48** when the
+     * programme detects itself. The self-detected figure *was* ≈1.76, and the difference is the release **hold** added
+     * for A2's last piece: this probe's dip is 0.4 s, twice the 200 ms hold, so the refill now starts late and only
+     * gets half the window. The detector path is still the one that leaves the dip alone, which is what this case is
+     * for; the hold's own property (a dip shorter than the hold survives *either* way) is the next case.
      */
     expect(withDetector).toBeLessThan(1.02);
-    expect(selfDetected).toBeGreaterThan(1.5);
+    expect(selfDetected).toBeGreaterThan(withDetector * 1.4);
+    expect(selfDetected).toBeLessThan(1.56);
+  });
+
+  it("does not refill a sidechain-length dip even when the programme detects itself", () => {
+    /**
+     * The hold's reason for existing: a duck the arrangement asked for is ~100–200 ms, and the compressor's own
+     * release (220 ms) used to be free to fill it. Sweep the dip length instead of trusting one number.
+     */
+    const survivalForDip = (dipSec: number) => {
+      const kernel = new GlueCompressorKernel({ sampleRate: SAMPLE_RATE, holdMs: GLUE_COMP_HOLD_MS });
+      const loudN = Math.round(SAMPLE_RATE * 0.2);
+      let loudSum = 0;
+      for (let i = 0; i < loudN; i += 1) loudSum += kernel.processSample(LOUD, null);
+      const dipN = Math.round(SAMPLE_RATE * dipSec);
+      const tailN = Math.round(SAMPLE_RATE * 0.02);
+      let tailSum = 0;
+      for (let i = 0; i < dipN; i += 1) {
+        const value = kernel.processSample(QUIET, null);
+        if (i >= dipN - tailN) tailSum += value;
+      }
+      return tailSum / tailN / QUIET / (loudSum / loudN / LOUD);
+    };
+    // A 150 ms duck — shorter than the hold — passes through untouched…
+    expect(survivalForDip(0.15)).toBeLessThan(1.02);
+    // …while a 600 ms hole is long enough for the release to resume, which is the shape the hold is *not* for.
+    expect(survivalForDip(0.6)).toBeGreaterThan(1.3);
   });
 
   it("computes a soft knee that is continuous at both corners", () => {
