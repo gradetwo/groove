@@ -413,3 +413,46 @@ describe("Gs1Host · per-note pitch (ABI 9)", () => {
     expect(node.port.postMessage, "a non-finite value is dropped rather than sent to the audio thread").not.toHaveBeenCalled();
   });
 });
+
+/**
+ * P2.5's first piece: the adapter can hand the core a **sample**.
+ *
+ * The core has had `gs_sample_import` and the processor its `sample` / `sampleClear` messages all along; the adapter's
+ * `default:` case said out loud that it exposed none of them. With the licensing question set aside, the plumbing comes
+ * first — *what* a sample is for (a vocal chop, a found sound, a rendered one-shot) is a caller's decision, and the
+ * reply is what tells the caller whether the core took it.
+ */
+describe("Gs1Host · sample import (P2.5's plumbing)", () => {
+  it("posts the sample with a request id and resolves the core's reply", async () => {
+    const { host, node } = await bootHost();
+    const samples = new Float32Array([0, 0.5, -0.5, 1]);
+    const pending = host.importSample(samples, 48000);
+    const posted = node.port.postMessage.mock.calls.at(-1)![0] as { type: string; request: number; sampleRate: number };
+    expect(posted.type).toBe("sample");
+    expect(posted.sampleRate).toBe(48000);
+    expect(Number.isFinite(posted.request), "the request id is what the reply is matched on").toBe(true);
+
+    node.port.emit({ type: "sample", request: posted.request, has: true, code: 0 });
+    await expect(pending).resolves.toEqual({ has: true, code: 0 });
+  });
+
+  it("reports the core's own failure codes rather than swallowing them", async () => {
+    const { host, node } = await bootHost();
+    const pending = host.importSample(new Float32Array([1, 0, 0]), 44100);
+    const request = (node.port.postMessage.mock.calls.at(-1)![0] as { request: number }).request;
+    // 4 is the core's "the arena has no room" — an ordinary outcome, not an exception.
+    node.port.emit({ type: "sample", request, has: false, code: 4 });
+    await expect(pending).resolves.toEqual({ has: false, code: 4 });
+  });
+
+  it("answers an empty import without bothering the audio thread, and clears through the port", async () => {
+    const { host, node } = await bootHost();
+    await expect(host.importSample(new Float32Array(0), 44100)).resolves.toEqual({ has: false, code: 1 });
+
+    const clearing = host.clearSample();
+    const request = (node.port.postMessage.mock.calls.at(-1)![0] as { type: string; request: number }).request;
+    expect((node.port.postMessage.mock.calls.at(-1)![0] as { type: string }).type).toBe("sampleClear");
+    node.port.emit({ type: "sample", request, has: false, code: 0 });
+    await expect(clearing).resolves.toEqual({ has: false, code: 0 });
+  });
+});
