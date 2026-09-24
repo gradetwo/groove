@@ -227,7 +227,14 @@ jobs:
   # which is why the split is **one shard per runner**, not N shards inside one job.
   #
   # A shard judges no budgets: it writes its rows and uploads them. `groove-gate` below owns the judgement, so the
-  # budgets are compared in exactly one place and the sharded run cannot disagree with the serial one.
+  # budgets are compared in exactly one place — and, since 2026-09-23, that place is the **only** measurement of the
+  # sample. `npm run verify` used to render all twelve genres inside one job while these four rendered three each on
+  # separate runners, and the two disagreed on identical code (`cutTail` 1 here against 2 there, and **5** when the
+  # four ran concurrently inside one runner — CPU starvation, not a mix change). One judge, one path: the verify
+  # chain no longer renders the sample at all, and `scope=verify` relies on these jobs in the same dispatch.
+  #
+  # The four-in-one-machine fan-out (`--shards=4`) exists and was measured faster (569 s against 1272 s), but it is
+  # not a judging path for that reason.
   groove-shards:
     name: Groove shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
