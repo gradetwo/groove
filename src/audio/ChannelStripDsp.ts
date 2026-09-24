@@ -71,9 +71,11 @@ import {
   bypassTrackInsert,
   isTrackInsertBypassed,
   type TrackEqBand,
+  STEREO_WIDTH_MAX_DELAY_SEC,
   type TrackInsertParams,
 } from "../data/trackInsert";
 import { makeSaturationCurve } from "./EffectsRack";
+import { StereoWidth } from "./StereoWidth";
 
 /**
  * High-pass Q. `1/sqrt(2)` is the Butterworth (maximally flat) value: the high-pass is
@@ -81,6 +83,12 @@ import { makeSaturationCurve } from "./EffectsRack";
  * response is exactly −3.01 dB at `hpfHz` for every corner frequency.
  */
 export const INSERT_HPF_Q = Math.SQRT1_2;
+
+/** Ceiling on the stereo-spread amount; the stage's own clamp agrees with it. */
+export const STEREO_WIDTH_MAX = 1;
+
+/** Bound passed to `createDelay` by the stereo-spread stage. Re-exported so a test can hold the contract. */
+export { STEREO_WIDTH_MAX_DELAY_SEC };
 
 /**
  * Compressor knee, dB. `trackInsert.ts` deliberately does not expose a knee — the
@@ -158,11 +166,24 @@ export class ChannelStrip {
    */
   private readonly internalNodes: readonly AudioNode[];
 
+  /**
+   * The stereo-spread stage, created **on demand** and kept for the strip's life.
+   *
+   * Lazy because `width` is 0 for every genre that has not asked for it, and the strip's own discipline is that a
+   * disabled stage must cost nothing — an unbuilt stage costs nothing at all. Kept once built because a strip's
+   * nodes have fixed identity (see the class header) and because a genre that asks for width asks for it always.
+   */
+  private widthStage: StereoWidth | null = null;
+
   private params: TrackInsertParams;
   private routingSignature = "";
   private disposed = false;
 
-  constructor(ctx: BaseAudioContext, params?: TrackInsertParams) {
+  /**
+   * `params` is a **patch**, not a complete table: the constructor merges it over the neutral bypass values, so a
+   * caller that wants one stage (a widener, say) does not have to write out the other eight.
+   */
+  constructor(ctx: BaseAudioContext, params?: Partial<TrackInsertParams>) {
     this.ctx = ctx;
 
     this.input = ctx.createGain();
@@ -206,7 +227,7 @@ export class ChannelStrip {
 
     // No params means "no processing": a neutral straight wire is the only safe default
     // for a per-track insert. Callers that want a role's chain pass `resolveTrackInsert`.
-    this.params = sanitizeParams(params ?? bypassTrackInsert(), ctx.sampleRate);
+    this.params = sanitizeParams(mergeParams(bypassTrackInsert(), params ?? {}), ctx.sampleRate);
     this.applyParams();
   }
 
@@ -261,6 +282,7 @@ export class ChannelStrip {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.widthStage?.dispose();
     for (const node of [this.input, ...this.internalNodes, this.output]) {
       try {
         node.disconnect();
@@ -314,6 +336,10 @@ export class ChannelStrip {
     this.writeParam(this.driveDry.gain, 1 - p.driveMix, now);
     this.writeParam(this.driveWet.gain, p.driveMix, now);
 
+    // The width stage's amount, when a genre has asked for one. Nothing is built for `width = 0`: the
+    // stage does not exist, so there is no gain to keep in step and no delays in the graph.
+    if (this.widthStage) this.widthStage.setAmount(p.width ?? 0);
+
     // `null` is the WaveShaper's linear (transparent) mode. Rebuilt from the corrected
     // master-rack curve, whose small-signal slope is exactly 1 (tanh(k·x)/k, not /tanh(k)).
     if (p.driveEnabled) {
@@ -360,19 +386,42 @@ export class ChannelStrip {
       insert(this.makeup);
     }
 
+    /**
+     * The stereo-spread stage sits last, after the drive and before the strip's output.
+     *
+     * Last because it is an *image* stage: everything before it shapes the sound, and widening a signal that is
+     * about to be reshaped would only make the reshaping less predictable. Absent unless a genre asked (see
+     * `widthStage`), and when it is present the strip's outgoing edges end there rather than at `output`.
+     */
+    const tail: AudioNode = (p.width ?? 0) > 0 ? this.ensureWidthStage().input : this.output;
+
     if (p.driveEnabled) {
-      // Dry/wet split. `driveIn` is the split point; both legs sum at `output`.
+      // Dry/wet split. `driveIn` is the split point; both legs sum at the tail.
       prev.connect(this.driveIn);
       this.driveIn.connect(this.shaper);
       this.shaper.connect(this.driveWet);
-      this.driveWet.connect(this.output);
+      this.driveWet.connect(tail);
       this.driveIn.connect(this.driveDry);
-      this.driveDry.connect(this.output);
+      this.driveDry.connect(tail);
     } else {
-      // No drive: the previous stage (or `input` when everything is off) feeds `output`
-      // directly. With every stage off this is a straight wire.
-      prev.connect(this.output);
+      // No drive: the previous stage (or `input` when everything is off) feeds the tail
+      // directly. With every stage off — and no width — this is a straight wire.
+      prev.connect(tail);
     }
+  }
+
+  /**
+   * The width stage, built the first time a genre asks for it and connected once.
+   *
+   * `input` is the strip's own tail input and `output` the strip's output, so the stage is transparent to the rest
+   * of the graph: callers only ever see `strip.input` and `strip.output`.
+   */
+  private ensureWidthStage(): StereoWidth {
+    if (this.widthStage) return this.widthStage;
+    const stage = new StereoWidth(this.ctx, this.params.width ?? 0);
+    stage.output.connect(this.output);
+    this.widthStage = stage;
+    return stage;
   }
 
   /**
@@ -393,6 +442,7 @@ export class ChannelStrip {
 /** Identity of the *routing*, i.e. the enabled flags — not the values. */
 function routingSignature(p: TrackInsertParams): string {
   return [
+    (p.width ?? 0) > 0 ? 1 : 0,
     p.hpfEnabled ? 1 : 0,
     p.low.enabled ? 1 : 0,
     p.mid.enabled ? 1 : 0,
@@ -435,6 +485,8 @@ function mergeParams(current: TrackInsertParams, patch: Partial<TrackInsertParam
     driveEnabled: boolOr(pick("driveEnabled", cur.driveEnabled), current.driveEnabled),
     driveAmount: finiteOr(pick("driveAmount", cur.driveAmount), current.driveAmount),
     driveMix: finiteOr(pick("driveMix", cur.driveMix), current.driveMix),
+    // `undefined` in a patch means "leave it as it is"; 0 is a real value here (no stage).
+    width: p.width === undefined ? (cur.width as number | undefined) : finiteOr(p.width, 0),
   };
 }
 
@@ -493,5 +545,7 @@ function sanitizeParams(raw: TrackInsertParams, sampleRate: number): TrackInsert
     driveEnabled: boolOr(raw?.driveEnabled, neutral.driveEnabled),
     driveAmount: clamp(raw?.driveAmount, INSERT_DRIVE_MIN, INSERT_DRIVE_MAX, neutral.driveAmount),
     driveMix: clamp(raw?.driveMix, 0, INSERT_DRIVE_MIX_MAX, neutral.driveMix),
+    // Optional by contract: an authored table that says nothing about width gets 0, i.e. no stage at all.
+    width: clamp(raw?.width ?? 0, 0, STEREO_WIDTH_MAX, 0),
   };
 }
