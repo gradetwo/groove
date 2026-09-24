@@ -19,6 +19,8 @@ const TRUE_PEAK_OVERSAMPLE = 4;
 const TRUE_PEAK_TAPS_PER_PHASE = 12;
 const TRUE_PEAK_KAISER_BETA = 8.0;
 const RELEASE_KNEE_DB = 6;
+/** Mirrors `MASTER_LIMITER_RELEASE_HOLD_MS` in `src/audio/MasterLimiter.ts`. */
+const RELEASE_HOLD_MS = 180;
 
 function besselI0(x) {
   let sum = 1;
@@ -85,6 +87,9 @@ class TruePeakLimiterKernel {
     this.ceilingLinear = Math.pow(10, this.ceilingDb / 20);
     this.lookaheadMs = Number.isFinite(options.lookaheadMs) ? Math.max(0, options.lookaheadMs) : 3.0;
     this.lookaheadSamples = Math.max(1, Math.round((this.lookaheadMs / 1000) * this.sampleRate));
+    this.releaseHoldMs = Number.isFinite(options.releaseHoldMs)
+      ? Math.max(0, options.releaseHoldMs)
+      : RELEASE_HOLD_MS;
     this.releaseFastMs = Number.isFinite(options.releaseFastMs) ? Math.max(0.1, options.releaseFastMs) : 80;
     this.releaseSlowMs = Number.isFinite(options.releaseSlowMs)
       ? Math.max(this.releaseFastMs, options.releaseSlowMs)
@@ -105,6 +110,8 @@ class TruePeakLimiterKernel {
     this.gain = 1;
     this.scratch = new Float32Array(this.historyLength + 128);
     this.framePeak = new Float32Array(128);
+    this.holdSamples = Math.round((this.releaseHoldMs / 1000) * this.sampleRate);
+    this.holdUntil = 0;
     this.fastCoefficient = 1 - Math.exp(-1 / ((this.releaseFastMs / 1000) * this.sampleRate));
     this.slowCoefficient = 1 - Math.exp(-1 / ((this.releaseSlowMs / 1000) * this.sampleRate));
   }
@@ -247,7 +254,11 @@ class TruePeakLimiterKernel {
       const target = this.dequeValue[this.dequeHead];
 
       if (target <= this.gain) {
+        // Instant attack, and the hold restarts — mirrors `TruePeakLimiterKernel.processBlock`.
         this.gain = target;
+        this.holdUntil = this.samplesProcessed + this.holdSamples;
+      } else if (this.samplesProcessed < this.holdUntil) {
+        // Held: a dip shorter than the hold cannot be refilled by the ceiling's recovery (A2).
       } else {
         const reductionDb = this.gain <= 1e-6 ? 120 : -20 * Math.log10(this.gain);
         const coefficient = reductionDb > RELEASE_KNEE_DB ? this.slowCoefficient : this.fastCoefficient;

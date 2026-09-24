@@ -94,6 +94,20 @@ export const MASTER_LIMITER_RELEASE_FAST_MS = 80;
 export const MASTER_LIMITER_RELEASE_SLOW_MS = 400;
 /** Gain reduction (dB) above which the slow release slope takes over. */
 export const MASTER_LIMITER_RELEASE_KNEE_DB = 6;
+/**
+ * Release **hold**, ms — the ceiling does not recover inside this window.
+ *
+ * Added for A2's second half, and it is the cheap answer to a problem that a detector input was the expensive answer
+ * to. `duckErasedInMaster` measures whether a sidechain dip survives the master chain, and the ceiling is what ate it:
+ * measured on disco, the ceiling alone turned a −4.40 dB mechanism into a −3.44 dB dip and the finished file into
+ * **−0.3 dB** (median). The cause is not the detector — it is that the ceiling's own gain *releases* while the
+ * programme is ducked, refilling the dip as it recovers.
+ *
+ * A hold keeps the gain where the peak put it for a fifth of a second. A sidechain duck is shorter than that, so it
+ * survives; a musical phrase is longer, so nothing else changes — and unlike slowing the release (measured: 400/2000 ms
+ * holds the duck too, but costs ~6 dB of ceiling headroom on every genre) a hold does not compound.
+ */
+export const MASTER_LIMITER_RELEASE_HOLD_MS = 180;
 /** URL of the AudioWorklet module, served from `public/` (same pattern as the clock). */
 export const MASTER_LIMITER_WORKLET_URL = "/limiterWorklet.js";
 /** `registerProcessor` name inside `public/limiterWorklet.js`. */
@@ -113,6 +127,8 @@ export interface MasterLimiterOptions {
   lookaheadMs?: number;
   /** Fast release time constant, ms. */
   releaseFastMs?: number;
+  /** Release hold, ms. See `MASTER_LIMITER_RELEASE_HOLD_MS`. */
+  releaseHoldMs?: number;
   /** Slow release time constant, ms. */
   releaseSlowMs?: number;
   /**
@@ -203,6 +219,7 @@ export class TruePeakLimiterKernel {
   readonly lookaheadMs: number;
   readonly lookaheadSamples: number;
   readonly releaseFastMs: number;
+  readonly releaseHoldMs: number;
   readonly releaseSlowMs: number;
 
   private readonly taps: Float32Array[];
@@ -233,6 +250,9 @@ export class TruePeakLimiterKernel {
   private dequeTail = 0;
   /** How many samples have entered the window; it holds the most recent `lookaheadSamples + 1`. */
   private samplesProcessed = 0;
+  /** Sample index until which the gain may not release. */
+  private holdUntil = 0;
+  private holdSamples = 0;
 
   private delayIndex = 0;
   private gain = 1;
@@ -247,6 +267,9 @@ export class TruePeakLimiterKernel {
       ? Math.max(0, options.lookaheadMs as number)
       : MASTER_LIMITER_LOOKAHEAD_MS;
     this.lookaheadSamples = Math.max(1, Math.round((this.lookaheadMs / 1000) * this.sampleRate));
+    this.releaseHoldMs = Number.isFinite(options.releaseHoldMs)
+      ? Math.max(0, options.releaseHoldMs as number)
+      : MASTER_LIMITER_RELEASE_HOLD_MS;
     this.releaseFastMs = Number.isFinite(options.releaseFastMs)
       ? Math.max(0.1, options.releaseFastMs as number)
       : MASTER_LIMITER_RELEASE_FAST_MS;
@@ -264,6 +287,7 @@ export class TruePeakLimiterKernel {
     this.scratch = new Float32Array(this.historyLength + 128);
     this.framePeak = new Float32Array(128);
     // One-pole release: gain moves a fraction (1 − e^(−1/(τ·fs))) toward unity each sample.
+    this.holdSamples = Math.round((this.releaseHoldMs / 1000) * this.sampleRate);
     this.fastCoefficient = 1 - Math.exp(-1 / ((this.releaseFastMs / 1000) * this.sampleRate));
     this.slowCoefficient = 1 - Math.exp(-1 / ((this.releaseSlowMs / 1000) * this.sampleRate));
   }
@@ -439,8 +463,12 @@ export class TruePeakLimiterKernel {
       const target = this.dequeValue[this.dequeHead];
 
       if (target <= this.gain) {
-        // Instant attack: with lookahead in place this happens before the peak arrives.
+        // Instant attack: with lookahead in place this happens before the peak arrives — and it restarts the hold,
+        // so the window is measured from the last moment the ceiling actually had to work.
         this.gain = target;
+        this.holdUntil = this.samplesProcessed + this.holdSamples;
+      } else if (this.samplesProcessed < this.holdUntil) {
+        // Held: a dip shorter than the hold cannot be refilled by the ceiling's own recovery (A2).
       } else {
         // Program-dependent release: shallow reduction recovers quickly, deep reduction
         // recovers slowly so a sustained loud section does not pump.
