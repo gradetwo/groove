@@ -65,6 +65,9 @@ const PATCH_FIELDS = new Set([
   "driveEnabled",
   "driveAmount",
   "driveMix",
+  // The strip's stereo-spread stage (2026-09-24). Listed here like every other patchable field, so a genre cannot
+  // quietly invent a field the strip does not read.
+  "width",
 ]);
 const BAND_FIELDS = new Set(["enabled", "hz", "gainDb", "q"]);
 const ROLE_SET = new Set<string>(MIX_TRACK_IDS);
