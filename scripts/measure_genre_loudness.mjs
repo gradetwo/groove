@@ -1125,7 +1125,22 @@ async function waitForServer(url) {
       clampHits,
       spread,
       genres: Object.fromEntries(
-        measured.map((entry) => [
+        measured.map((entry) => {
+          /**
+           * A row that cannot prove it was measured is **not** a publishable row.
+           *
+           * The 2026-09-24 report carried three of them (`bebop`, `modal-jazz`, `motown`) with
+           * `withinGenreSpreadDb: null`. Re-measuring those genres gave the same levels and the same trims with a
+           * spread of 0.000 — so nothing shipped wrong, and what shipped was a report claiming a stability it had
+           * never measured. Silent nulls are how that happens, so this throws instead, naming the genre: a
+           * re-record that cannot measure a repeat must fail and be re-run, not publish a hole.
+           */
+          if (!Number.isFinite(entry.withinGenreSpreadDb)) {
+            throw new Error(
+              `${entry.id}: no repeat spread was measured for this row; re-run the re-record rather than publishing it`
+            );
+          }
+          return [
           entry.id,
           {
             category: entry.category,
@@ -1162,6 +1177,16 @@ async function waitForServer(url) {
             trimmedPeakDb: Number.isFinite(entry.trimmedPeakDb) ? Number(entry.trimmedPeakDb.toFixed(3)) : null,
             trimmedTruePeakDb: Number.isFinite(entry.trimmedTruePeakDb) ? Number(entry.trimmedTruePeakDb.toFixed(3)) : null,
             trimmedRmsDb: Number.isFinite(entry.trimmedRmsDb) ? Number(entry.trimmedRmsDb.toFixed(3)) : null,
+            /**
+             * The repeat spread, and a row that cannot produce one is **not** a row.
+             *
+             * Three rows in the 2026-09-24 report carried `null` here — they had been carried forward from an
+             * earlier report by the merge below, which copied whole entries without checking them. Re-measuring
+             * those three genres gave the *same* levels and trims with a spread of 0.000, so nothing shipped
+             * wrong; what shipped was a report claiming a stability it had never measured. The guard that keeps
+             * that from recurring is in the merge: a row without a finite spread is treated as unmeasured and
+             * rendered again.
+             */
             withinGenreSpreadDb: Number(entry.withinGenreSpreadDb.toFixed(3)),
             // Why this genre stopped where it did, so a reader can tell a fitted target from a
             // crest-limited one without re-deriving it.
@@ -1175,7 +1200,8 @@ async function waitForServer(url) {
             // the first subtraction was already within tolerance.
             trimIterations: entry.trimIterations ?? 0,
           },
-        ])
+        ];
+        })
       ),
       unmeasured: failures,
     };
