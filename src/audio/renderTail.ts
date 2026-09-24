@@ -60,3 +60,48 @@ export function resolveRenderTailSec(fx: RenderTailFx | null | undefined, bpm: n
   const derived = Math.max(reverbDecay, delayTail);
   return Math.max(RENDER_TAIL_MIN_SEC, Math.min(RENDER_TAIL_MAX_SEC, Number.isFinite(derived) ? derived : 0));
 }
+
+/**
+ * P0.6's other half — **[seamless loop] fold the tail back over the head**.
+ *
+ * The tail above exists because a render must not stop while the reverb is still audible; but a *loop* asset with
+ * that tail appended is not a loop: it plays, rings out into silence, and then restarts, so the seam is both late
+ * and quiet. The standard fix is to render the loop **plus** its tail and then add the tail back over the beginning,
+ * modulo the loop length — what the reverb would have been doing if the loop had never stopped. The result is
+ * exactly `loopFrames` long and joins itself.
+ *
+ * Pure and exported for the same reason the tail is: the arithmetic is testable without an `AudioContext`, and the
+ * failure it prevents (a loop whose seam is a hole) is measurable on buffers.
+ */
+export function foldLoopTail(
+  channels: readonly Float32Array[],
+  loopFrames: number,
+  tailFrames: number
+): Float32Array[] {
+  const length = Math.max(0, Math.floor(loopFrames));
+  const tail = Math.max(0, Math.floor(tailFrames));
+  return channels.map((source) => {
+    const out = new Float32Array(length);
+    if (length === 0) return out;
+    // The loop itself.
+    for (let i = 0; i < Math.min(length, source.length); i += 1) out[i] = source[i];
+    // …plus whatever the tail was still doing, wrapped to where it belongs in the next pass.
+    for (let i = 0; i < tail; i += 1) {
+      const at = length + i;
+      if (at >= source.length) break;
+      out[i % length] += source[at];
+    }
+    return out;
+  });
+}
+
+/**
+ * How much of a render is tail, when the caller rendered `loopFrames` of loop plus a derived tail.
+ *
+ * Clamped to the render so a short buffer cannot produce a negative tail; the fold would otherwise read past the
+ * end (which it already guards, but a caller asking for more tail than it rendered has a bug worth absorbing here
+ * rather than in the audio).
+ */
+export function tailFramesOf(totalFrames: number, loopFrames: number): number {
+  return Math.max(0, Math.min(Math.floor(totalFrames) - Math.floor(loopFrames), Math.floor(totalFrames)));
+}
