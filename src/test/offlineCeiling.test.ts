@@ -178,7 +178,15 @@ describe("renderPatternOffline wiring", () => {
   });
 
   it("returns the worklet render untouched and guards only the fallback", () => {
-    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*return\s+rendered;/);
+    /**
+     * The worklet path returns early, the fallback path runs the ceiling kernel — and since the seamless-loop
+     * option (P0.6) both go out through the same helper, which is what this asserts instead of a bare `return
+     * rendered;`: a loop that only joins itself, or a ceiling that is only applied, on one of the two paths is not
+     * a guarantee. The early return still has to come *before* the guard, so the fallback only pays for the kernel
+     * it needs.
+     */
+    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*return\s+asRequested\(/);
     expect(source).toMatch(/applyOfflineCeiling\(\s*channels\s*,\s*rendered\.sampleRate\s*\)/);
+    expect(source).toMatch(/return\s+asRequested\(out\)\s+as\s+AudioBuffer;/);
   });
 });
