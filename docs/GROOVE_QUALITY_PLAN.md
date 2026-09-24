@@ -296,7 +296,17 @@ it cannot invalidate the trims, and it can be built while the batch's re-record 
 contradiction removed), and A2's **compressor** half (with the bus compressor alone the sidechain dip measures
 −4.42 dB against a −4.40 dB mechanism).
 
-**One bug is open, and it is the reason A2 is not closed**: the ceiling's own pre-duck detector — implemented,
+**One bug is open, and it is the reason A2 is not closed** — with three things learned about it this round, all
+recorded beside the `detector: null` line so the next attempt starts where this one stopped: the DSP is cleared
+(isolation probe: −1.00 dBTP with *and* without a detector, both implementations, hand-built two-input graph); a
+detector below **1e-6** is now treated as a wiring failure rather than a quiet passage (the `!== 0` test I first wrote
+passed denormal residue, which asks for `ceiling / 1e-9` — no reduction — and is exactly the `+1.42 dBTP` measured);
+and a worklet in an **OfflineAudioContext** delivers neither `port.postMessage` nor `console.log` while rendering, so
+its own view of its inputs cannot be observed there. That last one cost three diagnostic attempts and is the reason
+the next step is the **realtime** engine, where the same wiring can be watched: if it limits live, the fault is the
+offline/async interaction around the node swap rather than the DSP, the graph or the kernel.
+
+**The original bug**: the ceiling's own pre-duck detector — implemented,
 kernel-tested, worklet-mirrored — **stops the ceiling limiting in the render path** (chicago-house at +1.36 dBTP
 against a −1 dBTP contract; a re-record that followed asked 49 genres for a −9 dB cut). With `detector: null` the same
 render is −1.30 dBTP. The DSP is cleared by an isolation probe (`scratch/limiter_detector_probe.mjs`: −1.00 dBTP with
