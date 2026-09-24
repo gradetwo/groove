@@ -289,6 +289,23 @@ lowered to the new measurements in the same change (the ratchet only goes down).
 (see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
 it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
 
+### A2 closed (2026-09-24): both stages hold, and `duckErasedInMaster` is 0
+
+trap-rap was the last genre losing its duck, and its four cells said why: every stage **alone** preserved the dip
+(pure −5.04 dB, bus compressor −5.04, ceiling −4.01) while the finished file read **−0.67**. The order was the
+problem — the compressor's gain recovers *during* the dip and hands the ceiling a normal-level signal, so the
+ceiling's own hold had nothing to hold. The compressor now holds too (200 ms, `GLUE_COMP_HOLD_MS`), and on the same
+two genres:
+
+| | file dip (median) before | after |
+| --- | --- | --- |
+| trap-rap | −2.18 dB (**−0.67**) | **−2.57 dB (−1.88)** |
+| disco | −4.09 dB (−4.31) | −4.32 dB (**−4.33**) |
+
+The sample reads **`duckErasedInMaster` 0 of 12** and **`weakDuck` 0**, so the budget is ratcheted 1 → 0 with its
+0.38 dB margin recorded. The change moves the master's level slightly, so the 159 trims are stale again and one more
+re-record is in flight — the batch's design, not a surprise.
+
 ### A2's ramp half — measured, and fixed in the content (2026-09-24)
 
 The objective asked for a probe proving that a bar's level moves with the pattern's velocity ramp. It now does, and
