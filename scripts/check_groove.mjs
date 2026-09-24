@@ -125,16 +125,15 @@ const BUDGET = {
   // of the width stage, and it is not the gate's sample. Going further than 9 needs more than a pan scale (the
   // mid/side stage the plan measured buys ~0.5 dB of side, i.e. not enough on its own).
   /**
-   * **Back to 9, because the two paths that judge this claim disagree and only one of them was measured.**
+   * Fitted to the **one** path that measures stably: CI's four shards, one per runner.
    *
-   * The ratchet to 8 came from two agreeing *shard* runs (each renders three genres in a process). `scope=verify`
-   * renders all twelve in one — and reads **9**, with `thinMids` at **11** against the shard path's 9. Both paths run
-   * the same analyser with the same per-genre recycling, so the difference is how many renders the browser has done,
-   * which is the same non-repeatability that moved `cutTail`. A budget has to hold in *both* paths or the same code
-   * passes in one and fails in the other; the max is the honest value, and tightening further needs a measurement
-   * that is path-independent first — the recorded follow-up, not a guess.
+   * Read 8 in two separate dispatches. The configurations that render inside a single job read differently — serial
+   * (12 genres, one browser at a time) 9 and `cutTail` 2, four in-job shards 9 and `cutTail` **5** — because they
+   * starve the renderer rather than because the mix changed. That is now moot: `groove-shards`/`groove-gate` own the
+   * judgement on separate runners, and `npm run verify` no longer renders the sample at all rather than judging it
+   * from a measurement nobody can reproduce.
    */
-  narrowStereo: 9,
+  narrowStereo: 8,
   sideTooHot: 0,
   /**
    * P2.2/A3: genres whose per-note nudge does not separate from its own control.
@@ -148,7 +147,7 @@ const BUDGET = {
    * a gate seeded at "everything fails" could not fail, which is worse than a gate.
    */
   flatStabs: 1,
-  thinMids: 11,
+  thinMids: 9,
   staticHarmony: 0,
   // P0.6: 0. Every sampled genre's tail is below −82 dBFS since the tail is the genre's own reverb/delay decay.
   /**
