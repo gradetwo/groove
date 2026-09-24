@@ -1,27 +1,27 @@
 {
-  "version": "2.17.0",
+  "version": "2.18.0",
   "releaseDate": "2026-09-24",
-  "changelogCount": 211,
+  "changelogCount": 212,
   "latest": {
-    "version": "2.17.0",
+    "version": "2.18.0",
     "date": "2026-09-24",
     "category": "feature",
     "title": {
-      "zh": "v2.17.0 GS-1 升级到 ABI 9：出货音色也有了逐音音准；采样织体的机制全线打通",
-      "en": "v2.17.0 GS-1 moves to ABI 9: per-note tuning on the shipping voice, and the sample-texture path is complete end to end"
+      "zh": "v2.18.0 26 个曲风的「黑胶爆豆声」改用真实采样；顺带修好两对几乎一模一样的曲风",
+      "en": "v2.18.0 26 genres' vinyl crackle plays a real sample — and the recording it forced exposed two pairs of near-identical genres"
     },
     "highlights": [
       {
-        "zh": "**逐音音色变化现在真的作用在出货音色上。** 之前这条变化只对原生合成器生效：GS-1（和弦与主奏的默认音色）的接口只有音高/力度/声像，所以开着采样池时渲染结果与关闭时**逐字节相同**。上游合成核里逐音的音准表、弯音表和逐声部读取一直都在，缺的只是两个 C 出口——补上后核版本升到 ABI 9，适配器暴露 `noteBend` / `setTuningNote`，变化以**逐音微分音**的形式送达（GS-1 没有逐音截止频率）。实测：主奏 0.164 dB 对 0.069 对照（×2.38），与原生路径的 ×2.48 基本一致。",
-        "en": "**The per-note timbre variation now reaches the shipping voice.** It only ever applied to the native synths: GS-1 — the default for chords and lead — took pitch, velocity and pan, so with the pool enabled the render was **byte-identical** with and without the nudge. The core's per-note tuning table, its bend table and the per-voice read of them had existed all along; only two C entry points were missing. With them the core is ABI 9, the adapter exposes `noteBend` / `setTunin…"
+        "zh": "**唱针噪声不再是合成出来的。** 库里 26 个曲风（microhouse、trip-hop、boom-bap、lofi-hip-hop、爵士与布鲁斯各支、motown、neo-soul、samba 等）本来就声明了 `vinyl_crackle`——正是原生音色注释里写的「采样与虫胶唱片曲风」——所以这次不是给它们加新东西，而是那条轨终于播的是录音：GS-1 的采样档、一次性播放、根音 60，音色包络按「爆豆是一声轻响、不是一个和弦」来定。真录音是内容，目前播的是生成的替身（衰减噪声床 + 不均匀瞬态），有素材随时替换。",
+        "en": "**Needle noise is no longer synthesised.** 26 genres already declared `vinyl_crackle` — microhouse, trip-hop, boom-bap, lofi-hip-hop, the jazz and blues genres, motown, neo-soul, samba — which is exactly the \"sampled and shellac-recorded\" set the native voice's own comment names. So nothing was added to them; the lane simply plays a recording now: GS-1's sample mode, one-shot, root 60, with an envelope chosen because a crackle is a tick rather than a chord. The recording its…"
       },
       {
-        "zh": "**采样织体的机制全线打通（还没有曲风使用）。** 适配器首次暴露采样导入（`importSample` / `clearSample`，返回核心自己的返回码），新增一个 `texture` 角色与 `sampleTexture` 音色（核心的采样档、根音 60、一次性播放），并定下一条路由规则：**乐器名**说明「这是录音」，因此在任何轨上都成立；录音在每个 GS-1 实例上只导入一次（离线在接入图之前 `await`，实时在调度器里发出），`fx` 轨的渲染与实时播放都已接上。真录音是内容：现在播的是生成的替身（确定性噪声床 + 瞬态点击），你有素材随时替换。",
-        "en": "**The sample-texture path is complete end to end (no genre uses it yet).** The adapter exposes sample import for the first time (`importSample` / `clearSample`, returning the core's own codes), a `texture` role and a `sampleTexture` patch join the tables (the core's sample mode, root 60, one-shot), and one routing rule decides: the **instrument name** says \"this is a recording\", so it holds on any lane. The recording is imported once per GS-1 instance (awaited before the off…"
+        "zh": "**第一次诚实的全库音色指纹测量抓出两对几乎相同的曲风。** 提交在库里的指纹基线是 09-20 的（在那轮宽度/母带/逐音改动之前），而这个门禁是拿基线**内部**两两比较的——所以旧文件按构造就能通过，线下的声音早就漂了。重新录 159 首之后，最近的一对是 `french-house` ↔ `nu-disco-house` **0.1330 dB**（下限 0.25），而旧文件里是 0.6407：两个曲风声明了**完全相同的八件乐器**，此前只靠老混音里的差异撑着。修法是给它们各自的曲风该有的编制——nu-disco-house 用 m1 organ / pluck synth / fingerstyle bass，microhouse 用 punchy kick / finger_bass / vibraphone / bell_lead——现在这两对分别是 **1.1963 dB** 与 **0.4133 dB**。剩下的最近一对是 ambient-techno ↔ dub-techno 的 0.2774 dB：三个相邻风格本来就共用…",
+        "en": "**The first honest full-library timbre recording caught two pairs of near-identical genres.** The committed fingerprint baseline was from 09-20 — before the width, master and per-note work — and the gate compares pairs *within* the baseline, so a stale file passes by construction while the shipped sound drifts underneath it. Re-recording all 159 put the closest pair at `french-house` ↔ `nu-disco-house` **0.1330 dB** (floor 0.25) against 0.6407 in the stale file: the two decl…"
       },
       {
-        "zh": "**为什么分两次发**：上一版修的是手机播放顺序（会连续切歌），这一版是声音与合成核，两者互不影响，各自可回退。",
-        "en": "**Why this is a separate release**: the previous one fixed the phone's play-order button switching tracks without waiting; this one is sound and the synth core. They do not depend on each other, and either can be rolled back alone."
+        "zh": "**电平重录与曲线**：159 个曲风重新测过，10 条 trim 变动（26 条非零），天花板上限守住（最差 −1.23 dBTP），p90−p10 从 5.90 收到 **5.86 LU**。",
+        "en": "**Levels re-recorded**: all 159 genres re-measured, 10 trims moved (26 non-zero), the ceiling held (worst −1.23 dBTP), and p90−p10 tightened from 5.90 to **5.86 LU**."
       }
     ],
     "truncated": false
