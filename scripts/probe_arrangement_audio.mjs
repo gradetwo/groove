@@ -104,13 +104,14 @@ try {
   await page.goto(`${base}/__arrangement_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const measured = await page.evaluate(async ({ genreId: id, ramp }) => {
-    const [wav, genresModule, mixModule, formsModule, flattenModule, trackUtils] = await Promise.all([
+    const [wav, genresModule, mixModule, formsModule, flattenModule, trackUtils, loudness] = await Promise.all([
       import("/src/audio/WavExporter.ts"),
       import("/src/data/genres/index.ts"),
       import("/src/data/genreMix.ts"),
       import("/src/data/arrangementForm.ts"),
       import("/src/data/songFlatten.ts"),
       import("/src/utils/trackUtils.ts"),
+      import("/src/test/helpers/loudness.ts"),
     ]);
     const genre = genresModule.ALL_GENRES.find((g) => g.id === id);
     if (!genre) throw new Error(`unknown genre ${id}`);
@@ -197,6 +198,11 @@ try {
 
     const withFill = await render(song);
     const control = await render(withoutFill);
+    /** The same genre's **loop**, so the song's range can be compared with the loop's rather than asserted alone. */
+    const loop = await render({
+      ...song,
+      sections: [{ id: "probe-loop", slot: "A", bars: 2 }],
+    });
 
     // Bar geometry: every pass of a one-bar clip is one bar, so the step count gives the bar map.
     const flattened = flattenModule.flattenSong(song);
@@ -258,6 +264,15 @@ try {
           withFillHigh: highBand(withFill.channels, bar * barSeconds, (bar + 1) * barSeconds, withFill.buffer.sampleRate),
           controlHigh: highBand(control.channels, bar * barSeconds, (bar + 1) * barSeconds, control.buffer.sampleRate),
         })),
+        /**
+         * The **song's** loudness range, against the loop's.
+         *
+         * A listening review reported a *loop* at 0.6 LU and called the master mechanical; measured across the
+         * 12-genre sample the loops run 0.3–5.9 LU (median 1.7), because a loop is a loop. The range belongs to the
+         * arrangement, which is what this probe renders — so it is measured here, where a build exists to move it.
+         */
+        songLraLu: loudness.measureLoudnessRange(withFill.channels, withFill.buffer.sampleRate),
+        loopLraLu: loudness.measureLoudnessRange(loop.channels, loop.buffer.sampleRate),
         buildRms: buildSpans.map((span) => ({
           first: rms(withFill.channels, span.start * barSeconds, (span.start + 1) * barSeconds, withFill.buffer.sampleRate),
           last: rms(withFill.channels, span.end * barSeconds, (span.end + 1) * barSeconds, withFill.buffer.sampleRate),
@@ -289,6 +304,24 @@ try {
     }
   }
 
+  /**
+   * The arrangement has to move more than the loop it came from.
+   *
+   * This is the *robust* half of the build claim: a per-bar RMS comparison can be defeated by a genre whose bass
+   * sustains across the bar line (`disco` measures an apparent −1.2 dB build for exactly that reason, recorded here
+   * rather than smoothed over), while loudness range over the whole passage cannot.
+   */
+  {
+    const songLra = measured.audio.songLraLu;
+    const loopLra = measured.audio.loopLraLu;
+    if (!(songLra > loopLra + 1)) {
+      await fail(
+        `the arrangement does not move more than the loop: song LRA ${songLra.toFixed(2)} LU against the loop's ` +
+          `${loopLra.toFixed(2)} LU`
+      );
+    }
+  }
+
   for (const [index, span] of measured.buildSpans.entries()) {
     const spanPattern = measured.patternVelocity.slice(span.start, span.end + 1);
     if (!(spanPattern[spanPattern.length - 1] >= spanPattern[0] * 1.8)) {
@@ -311,7 +344,8 @@ try {
      */
     if (last < first * 1.15) {
       await fail(
-        `the build does not lift the file: bars ${span.start}..${span.end} render at ${first.toExponential(3)} → ` +
+        `the build does not lift the file for ${genreId}: bars ${span.start}..${span.end} render at ` +
+          `${first.toExponential(3)} → ` +
           `${last.toExponential(3)}`
       );
     }
@@ -333,6 +367,15 @@ try {
     buildGainPct: measured.audio.buildRms.map((entry) =>
       Number((((entry.last - entry.first) / Math.max(entry.first, 1e-12)) * 100).toFixed(2))
     ),
+    /**
+     * The song's range against the same genre's loop.
+     *
+     * A loop is repetitive by construction — across the sample they measure 0.3–5.9 LU (median 1.7), which is why a
+     * listening review's "0.6 LU, mechanical" was true of a loop and not a defect in the library. The arrangement is
+     * where range lives, and this is the pair that says so.
+     */
+    songLraLu: Number(measured.audio.songLraLu.toFixed(2)),
+    loopLraLu: Number(measured.audio.loopLraLu.toFixed(2)),
   };
 
   if (asJson) {
@@ -347,7 +390,11 @@ try {
     );
     console.log(
       `   build bars: ${summary.buildGainPct.map((p) => `${p >= 0 ? "+" : ""}${p}%`).join(", ")} rendered level for a ` +
-        `~6 dB pattern ramp (${summary.patternVelocityPerBar} velocity)`
+        `ramp (${summary.patternVelocityPerBar} velocity)`
+    );
+    console.log(
+      `   loudness range: the arrangement moves ${summary.songLraLu} LU against the loop's ${summary.loopLraLu} LU ` +
+        `(a loop is repetitive by construction — the sample runs 0.3–5.9 LU)`
     );
     if (Math.abs(summary.buildGainPct[0]) < 2) {
       console.log(
