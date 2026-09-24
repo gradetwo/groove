@@ -509,6 +509,18 @@ stopped working, and the correction is beside both numbers.
 
 The first two rows touch no CSS and no component; the skin rows touch no audio. Neither gate can mask the other.
 
+**The same recording put a second cluster under the floor**, and it is worth naming because the remedy was not the
+same: `microhouse` ↔ `ambient-techno` measured **0.1892 dB** because the two — plus `dub-techno` — declared the
+**same drums, bass and chords** (`sub_kick`, `rimshot`, `closed_hat`, `rim_shaker`, `sub_bass`, `warm_pad`) and
+differed only in lead and fx. Changing the lead bought almost nothing (0.2659 dB) and changing the kick bought
+*nothing measurable at all* — the fingerprint is a 13-band mean over the whole render, so a lead is a small part of
+it and two sub kicks are one part. What moved it was `microhouse`'s own palette, which is also what the genre is:
+`punchy_kick`, `finger_bass`, `vibraphone` and `bell_lead` instead of the dub-techno weights. Measured after:
+`microhouse` ↔ `ambient-techno` **0.4133 dB**, `microhouse` ↔ `dub-techno` **0.3841 dB**, and the pair left closest
+is `ambient-techno` ↔ `dub-techno` at **0.2774 dB** — above the 0.25 floor, and honest about being the library's
+tightest corner: three neighbouring styles that deliberately share a rhythm section. The floor is not lowered for
+them; the measurement is recorded instead.
+
 ### The timbre gate's first honest full-library recording (2026-09-24)
 
 Re-recording all 159 fingerprints for the P2.5 content change turned up something the committed baseline had been
