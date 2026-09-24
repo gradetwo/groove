@@ -20,6 +20,13 @@
  * Usage:
  *   node scripts/check_groove.mjs                     # the sample, serially (the release-verified path)
  *   node scripts/check_groove.mjs --shards=N          # N analyser processes inside one machine
+ *
+ * **`npm run verify` uses `--shards=4`, and that is a measurement decision, not a speed one.** Without it the chain
+ * renders all twelve genres in one process while CI's `groove-shards` renders three per process, and the two paths
+ * disagreed about the claims they judge on identical code: the shard path read `narrowStereo 8` / `thinMids 9` /
+ * `cutTail 1`, the serial path 9 / 11 / 2. One set of budgets cannot be honest for two different measurements, so the
+ * verify chain now measures the way the shards do — the speed is a side effect (569 s against 1272 s on a 12-vCPU
+ * runner) rather than the reason.
  *   node scripts/check_groove.mjs --shard=i/n --rows-out=dir/rows-i.json
  *                                                     # one slice, for a runner of its own; it writes its rows
  *                                                     # and judges nothing — the aggregator owns the budgets
