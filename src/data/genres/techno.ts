@@ -1496,7 +1496,7 @@ export const TECHNO_GENRES: Genre[] = [
       "Warm Pad",
       "Sawtooth Synth Lead",
       "Analog Noise",
-      "Deep Sub Bass"
+      "Reese Bass"
     ],
     "sound_design": {
       "en": "Tape-delayed minor chord stabs, sweeping filters with high feedback, analog noise.",

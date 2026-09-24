@@ -6336,9 +6336,9 @@ export const HOUSE_GENRES: Genre[] = [
     },
     "instrumentation": [
       "Arp Odyssey Arpeggios",
-      "Juno Synth Lead",
-      "Slap Bass Guitar",
-      "Rhodes Chords",
+      "Plucked Synth Chords",
+      "Fingerstyle Electric Bass",
+      "Organ Chords",
       "Brass Stabs"
     ],
     "sound_design": {
@@ -6822,9 +6822,9 @@ export const HOUSE_GENRES: Genre[] = [
     "instrumentation": [
       "Microscopic Radio Clicks",
       "Vinyl Needle Drops",
-      "Low-Passed Pad",
-      "Plucked Synth Blips",
-      "Sine Sub Bass"
+      "Vibraphone Chords",
+      "Bell Lead",
+      "Fingerstyle Electric Bass"
     ],
     "sound_design": {
       "en": "Microscopic radio clicks, vinyl needle drops, subtle low-passed chords, sub sine.",
