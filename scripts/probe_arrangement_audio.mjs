@@ -33,6 +33,19 @@ const argv = process.argv.slice(2);
 const asJson = argv.includes("--json");
 const genreId = (argv.find((a) => a.startsWith("--genre=")) ?? "--genre=chicago-house").split("=")[1];
 const port = Number((argv.find((a) => a.startsWith("--port=")) ?? "--port=3188").split("=")[1]);
+/**
+ * The build's velocity ramp, as `first,last` multipliers.
+ *
+ * Added to answer a question the probe could only report on: a **6 dB** ramp in the pattern renders as −0.15 dB in
+ * the file, because the master chain's gain rides down on the louder bar. Sweeping the ramp is how you find out
+ * whether more content buys an audible build or whether the chain has a ceiling on slow dynamics.
+ */
+const rampSpec = (argv.find((a) => a.startsWith("--ramp=")) ?? "--ramp=0.25,1").split("=")[1];
+const RAMP = rampSpec
+  .split(",")
+  .map((value) => Number(value))
+  .filter((value) => Number.isFinite(value) && value > 0);
+const rampPair = RAMP.length === 2 ? RAMP : [0.5, 1];
 
 if (!fs.existsSync(path.join(ROOT, "node_modules", "vite", "bin", "vite.js"))) {
   console.error("❌ No node_modules — run `npm ci` first.");
@@ -90,7 +103,7 @@ try {
   );
   await page.goto(`${base}/__arrangement_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-  const measured = await page.evaluate(async (id) => {
+  const measured = await page.evaluate(async ({ genreId: id, ramp }) => {
     const [wav, genresModule, mixModule, formsModule, flattenModule, trackUtils] = await Promise.all([
       import("/src/audio/WavExporter.ts"),
       import("/src/data/genres/index.ts"),
@@ -115,7 +128,7 @@ try {
      */
     const fill = formsModule.fillForTracks(clip.tracks, stepsPerPass);
     const sections = [
-      { id: "probe-s1", slot: "A", bars: 2, label: "build", overrides: { velocityRamp: [0.5, 1] } },
+      { id: "probe-s1", slot: "A", bars: 2, label: "build", overrides: { velocityRamp: ramp } },
       { id: "probe-s2", slot: "A", bars: 2, label: "fill", ...(fill ? { overrides: { fill } } : {}) },
     ];
     const song = {
@@ -251,7 +264,7 @@ try {
         })),
       },
     };
-  }, genreId);
+  }, { genreId, ramp: rampPair });
 
   // ── the assertions ───────────────────────────────────────────────────────────────────────────────
   if (!measured.fillBars.length) await fail(`the ${genreId} club form produced no fill — the generator found no lane`);
@@ -286,18 +299,19 @@ try {
     }
     const { first, last } = measured.audio.buildRms[index];
     /**
-     * The ramp is a *level* ramp, and the master ceiling is what stands between it and the file.
+     * The ramp is a *level* ramp, and the master chain hands most of it back — so the assertion is a real
+     * audibility bound, and the ramp it is measured with is the one the forms actually carry.
      *
-     * Measured: a **6 dB** ramp in the pattern (43.7 → 86.7 mean snare velocity) renders as 0.3582 → 0.3521, i.e.
-     * **−0.15 dB**. The limiter's gain rides down on the louder bar and gives the quiet one back, which is the same
-     * mechanism `duckErasedInMaster` records for the sidechain — so this probe asserts only that the section does not
-     * *materially* invert (5 %), prints the number, and says plainly that the ramp's audibility is P2.3's item. An
-     * assertion that the build is 6 dB louder in the file would simply be false today, and a probe that asserts
-     * something false is worse than one that reports.
+     * Measured 2026-09-24 on chicago-house, sweeping `--ramp`: 6 dB of velocity renders **+0.27 dB**, 9 dB
+     * **+1.06 dB**, 12 dB **+1.81 dB** — roughly a sixth of what the pattern asks for, linear rather than saturated.
+     * A 3.8 dB ramp (what the club build carried before this) arrived as about a tenth of a decibel, which is why
+     * the old assertion only ruled out an *inversion*: a probe that asserts something false is worse than one that
+     * reports. With the default ramp at 12 dB — the depth the forms now carry, 0.3 → 1.0 ≈ 10.5 dB — the file gains
+     * **23 %**, so ≥15 % is asserted and a regression to a shallow build fails here.
      */
-    if (last < first * 0.95) {
+    if (last < first * 1.15) {
       await fail(
-        `the build is inverted: bars ${span.start}..${span.end} render at ${first.toExponential(3)} → ` +
+        `the build does not lift the file: bars ${span.start}..${span.end} render at ${first.toExponential(3)} → ` +
           `${last.toExponential(3)}`
       );
     }

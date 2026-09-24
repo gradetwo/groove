@@ -94,9 +94,17 @@ export const ARRANGEMENT_FORMS: Record<ArrangementFormId, ArrangementForm> = {
       zh: "前奏 → 渐强 → drop → 间奏 → drop → 尾奏",
     },
     steps: [
-      { slot: "A", bars: 8, label: "intro", velocityRamp: [0.55, 0.85] },
+      /**
+       * The intro→build ramp is **deep on purpose**: 0.3 → 1.0 is 10.5 dB of velocity across sixteen bars.
+       *
+       * Measured 2026-09-24 with `probe_arrangement_audio.mjs --ramp=<first>,<last>` on chicago-house: the master
+       * chain hands back most of a build, so 6 dB of ramp renders as **+0.27 dB**, 9 dB as +1.06 dB and 12 dB as
+       * **+1.81 dB** — roughly a sixth of what the pattern asks for, and linear rather than saturated. A 3.8 dB
+       * ramp (the previous 0.55 → 0.85) therefore arrived as about a tenth of a dB, which is not a build.
+       */
+      { slot: "A", bars: 8, label: "intro", velocityRamp: [0.3, 0.7] },
       // The build asks for a riser as well as the ramp: the texture lane arrives over its last pass.
-      { slot: "A", bars: 8, label: "build", velocityRamp: [0.85, 1], riser: true },
+      { slot: "A", bars: 8, label: "build", velocityRamp: [0.7, 1], riser: true },
       { slot: "A", bars: 8, label: "drop" },
       { slot: "B", bars: 4, label: "break", fill: true },
       { slot: "A", bars: 8, label: "drop" },
@@ -111,8 +119,9 @@ export const ARRANGEMENT_FORMS: Record<ArrangementFormId, ArrangementForm> = {
       zh: "前奏 → 主歌 → 副歌 → 主歌 → 副歌 → 尾奏",
     },
     steps: [
-      { slot: "A", bars: 4, label: "intro", velocityRamp: [0.6, 0.9] },
-      { slot: "A", bars: 8, label: "verse" },
+      // Song-shaped material starts quieter and arrives later: 0.35 → 0.95 over the intro and the first verse.
+      { slot: "A", bars: 4, label: "intro", velocityRamp: [0.35, 0.65] },
+      { slot: "A", bars: 8, label: "verse", velocityRamp: [0.65, 0.95] },
       { slot: "B", bars: 8, label: "chorus", riser: true },
       { slot: "A", bars: 8, label: "verse" },
       { slot: "B", bars: 8, label: "chorus", fill: true },

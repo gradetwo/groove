@@ -289,6 +289,25 @@ lowered to the new measurements in the same change (the ratchet only goes down).
 (see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
 it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
 
+### A2's ramp half — measured, and fixed in the content (2026-09-24)
+
+The objective asked for a probe proving that a bar's level moves with the pattern's velocity ramp. It now does, and
+the answer took a sweep to find: the master chain **hands back about five sixths** of any build, linearly.
+
+| velocity ramp in the pattern | file's build (chicago-house, `probe_arrangement_audio --ramp`) |
+| --- | --- |
+| 6 dB | **+0.27 dB** |
+| 9 dB | +1.06 dB |
+| 12 dB | **+1.81 dB** |
+
+So a 3.8 dB ramp — what the club form's build carried — arrived as about a tenth of a decibel, i.e. not a build, and
+no master-chain setting was needed to explain it: the bus compressor plus the ceiling simply reduce the louder bars
+more, in proportion. The fix is therefore in the content, and it is one edit to the form table: the club form's
+intro→build ramp is now **0.3 → 1.0 (10.5 dB)** and the song form's verse ramp carries a comparable rise, which the
+probe measures as **+23 %** in the file. Its assertion changed with it — from "the build does not invert" (the most
+that could honestly be asserted before) to "the file's build gains ≥15 %" — and `arrangementForm.test.ts` pins the
+forms' ramp depth so a future edit cannot quietly return to a tenth of a decibel.
+
 ### Listening review — what `agy` found on 2026-09-24, and the three gaps it opened
 
 `docs/AUDIO_REVIEW.md` records the tool and the workflow. Its first two reviews (a disco loop and an 87-second ambient

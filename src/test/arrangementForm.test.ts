@@ -7,6 +7,7 @@ import {
   fillLanes,
   formBars,
   FILL_STEPS,
+  type ArrangementFormId,
 } from "../data/arrangementForm";
 import { flattenSong, textureLanes } from "../data/songFlatten";
 import {
@@ -427,5 +428,38 @@ describe("P2.4 · a riser is a fill on the clip's texture lane, and it rises", (
     const songForm = ARRANGEMENT_FORMS.song.steps.filter((step) => step.riser).map((step) => step.label);
     expect(club).toEqual(["build"]);
     expect(songForm).toEqual(["chorus"]);
+  });
+});
+
+/**
+ * The builds have to be **deep enough to survive the master chain** (measured 2026-09-24).
+ *
+ * `probe_arrangement_audio.mjs --ramp=<first>,<last>` on chicago-house: the file's build rises +0.27 dB for a
+ * 6 dB ramp, +1.06 dB for 9 dB, +1.81 dB for 12 dB — about a sixth of what the pattern asks for, linear rather
+ * than saturated. So the form table's ramps are the only lever, and a 3.8 dB ramp (the old club build) arrived
+ * as roughly a tenth of a decibel. These cases pin the depth the forms must carry, not the exact numbers.
+ */
+describe("B1 · the forms' builds carry enough ramp to be heard", () => {
+  const spanDb = (form: ArrangementFormId): number => {
+    const ranges = ARRANGEMENT_FORMS[form].steps
+      .map((step) => step.velocityRamp)
+      .filter((value): value is [number, number] => Boolean(value));
+    const first = Math.min(...ranges.map(([from]) => from));
+    const last = Math.max(...ranges.map(([, to]) => to));
+    return 20 * Math.log10(last / first);
+  };
+
+  it("gives the club form a build of at least 9 dB", () => {
+    // 0.3 → 1.0 across intro and build, i.e. ~10.5 dB of velocity.
+    expect(spanDb("club")).toBeGreaterThan(9);
+  });
+
+  it("gives the song form a verse-to-chorus rise", () => {
+    expect(spanDb("song")).toBeGreaterThan(7);
+  });
+
+  it("keeps the loop form flat, because a loop has nowhere to build to", () => {
+    const loop = ARRANGEMENT_FORMS.loop.steps.filter((step) => step.velocityRamp);
+    expect(loop).toEqual([]);
   });
 });
