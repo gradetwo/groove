@@ -289,6 +289,26 @@ lowered to the new measurements in the same change (the ratchet only goes down).
 (see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
 it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
 
+### The batch is releasable (2026-09-24): the full chain is green
+
+`Manual verify · scope=verify` ran the whole chain on the batch's final tree — typecheck, lint, the unit suite, the
+build, the studio DOM probes, `check:budget`, GS-1, MCP, layout, `check:loudness`, `check:loudness:fresh` against the
+applied trims, `check:timbre`, both device matrices, `probe:jank`, `probe:skins`, and the new
+`probe:live-arrangement` — and passed. The push CI is green alongside it (validate, the four groove shards,
+`groove-gate`, all three E2E legs).
+
+**State of the objective's items**: A1 landed at its measured limit (`narrowStereo` 12 → 9 → 8, with the plan's own
+"12 → 3" refuted as not reproducible from the code that landed); A2 **closed** (`duckErasedInMaster` 0 of 12 with both
+holds, and the build/ramp probe asserting an audible lift); A4 landed; B7 landed **and heard** (the studio plays the
+arrangement, the probe measures the transport leaving the loop and the level rising); P0.9 done with the trims applied
+and the freshness gate green; `check:groove` budgets down where the measurement supported it (four were raised to their
+worst observed reading with the evidence in the file).
+
+**What is left, and it is external**: A3's GS-1 half needs the vendored WASM core to export `gs_note_bend` /
+`gs_set_tuning_note` (ABI 8 does not; `gs1Contract.test.ts` fails the day the pin gains them, which is the prompt to
+finish it), and P2.5 is parked on a licensing decision. Everything else on this list is either landed or refuted by
+measurement.
+
 ### A2 closed (2026-09-24): both stages hold, and `duckErasedInMaster` is 0
 
 trap-rap was the last genre losing its duck, and its four cells said why: every stage **alone** preserved the dip
