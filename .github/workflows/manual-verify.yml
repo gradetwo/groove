@@ -85,8 +85,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      # `verify` needs them too: `npm run verify` ends in `test:e2e` and `test:e2e:mobile`, which drive all three
+      # engines. Measured 2026-09-24: narrowing this to `e2e`/`all` made `scope=verify` fail with
+      #   Fatal test runner error: browserType.launch: Executable doesn't exist at …/firefox-1543/firefox/firefox
+      # — the same class of mistake as the audio scope's Chromium, made while fixing it.
       - name: Install Playwright Firefox & WebKit
-        if: inputs.scope == 'e2e' || inputs.scope == 'all'
+        if: inputs.scope == 'e2e' || inputs.scope == 'verify' || inputs.scope == 'all'
         run: npx playwright install --with-deps firefox webkit
 
       # The phone's runtime feel: per-step long tasks and frame deltas on a throttled profile, which is

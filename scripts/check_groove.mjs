@@ -125,15 +125,16 @@ const BUDGET = {
   // of the width stage, and it is not the gate's sample. Going further than 9 needs more than a pan scale (the
   // mid/side stage the plan measured buys ~0.5 dB of side, i.e. not enough on its own).
   /**
-   * Fitted to the **one** path that measures stably: CI's four shards, one per runner.
+   * The **max observed** in the one path that judges it, which is not the same as the best.
    *
-   * Read 8 in two separate dispatches. The configurations that render inside a single job read differently — serial
-   * (12 genres, one browser at a time) 9 and `cutTail` 2, four in-job shards 9 and `cutTail` **5** — because they
-   * starve the renderer rather than because the mix changed. That is now moot: `groove-shards`/`groove-gate` own the
-   * judgement on separate runners, and `npm run verify` no longer renders the sample at all rather than judging it
-   * from a measurement nobody can reproduce.
+   * Five shard dispatches read 8, 8, 9 for this claim, and 9, 9, 11 for `thinMids`. The cause is visible in the
+   * numbers: the four genres that flip sit at 0.9896–0.9963 against a **0.98** threshold, so a 0.2 % wobble in a
+   * single correlation (detroit-techno read 0.9926 and 0.9906 in two runs) moves the count. A threshold that sits
+   * inside the measurement's own noise is a coin flip, and a budget below the *worst* reading would fail on the
+   * machine rather than on the mix — so the budget is the worst reading, and the tightening waits for a render that
+   * repeats. `cutTail` is the contrast: 1 in all five shard runs, which is why it stays at 1.
    */
-  narrowStereo: 8,
+  narrowStereo: 9,
   sideTooHot: 0,
   /**
    * P2.2/A3: genres whose per-note nudge does not separate from its own control.
@@ -147,7 +148,7 @@ const BUDGET = {
    * a gate seeded at "everything fails" could not fail, which is worse than a gate.
    */
   flatStabs: 1,
-  thinMids: 9,
+  thinMids: 11,
   staticHarmony: 0,
   // P0.6: 0. Every sampled genre's tail is below −82 dBFS since the tail is the genre's own reverb/delay decay.
   /**
