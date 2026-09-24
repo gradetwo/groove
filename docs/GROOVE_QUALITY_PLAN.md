@@ -289,6 +289,27 @@ lowered to the new measurements in the same change (the ratchet only goes down).
 (see `docs/ARRANGEMENT_PLAN.md`, **B7**). It is the largest gap between what a surface shows and what the app does,
 it cannot invalidate the trims, and it can be built while the batch's re-record occupies CI.
 
+### The WASM seam (recorded 2026-09-24, at the user's request to start it early)
+
+The repository already has **one** WASM dependency and it is properly pinned: the vendored GS-1 synth core
+(`vendor/gs1`, v2.1.6, ABI 8) ships as `public/gs1/synth_core{,_scalar}.wasm`, is synced by `scripts/sync-gs1.mjs`
+and asserted **byte-identical** to the pin by `check:gs1` — so "add WASM" is not an open question here, it is a
+question of which ABI the pin exposes.
+
+**A3's GS-1 half is the one place that needs more of it**, and the measurements say exactly what is missing:
+`workletProcessor.js` already handles `noteBend` and `tuning` (calling `gs_note_bend` / `gs_set_tuning_note` behind
+`if (this.wasm.…)` guards), the vendored engine already offers `noteBend(note, semitones)` and `setTuning(table)` —
+and the shipped core exports **neither**: its 104 exports are `gs_note_on`, `gs_note_on_pan`, `gs_note_off`,
+`gs_pitch_bend`, `gs_set_param`, `gs_set_param_inst`, … but no per-note bend or tuning entry point, so those branches
+are dead with this pin. `gs_set_param`/`gs_set_param_inst` are **per instrument, not per note**, so no amount of host
+code can make a GS-1 voice vary per note today.
+
+Consequence, and the decision it needs: per-note timbre on GS-1 requires an **upstream ABI bump** in
+`groove-synth-gs1` (a core exporting those two functions), not more adapter code. `gs1Contract.test.ts` now asserts
+the current state and **fails the day the pin gains either export**, which is the prompt to expose it in `Gs1Host` and
+finish A3's GS-1 half rather than rediscover why it was impossible. Until then A3's GS-1 scope is honestly
+velocity + pan per note, and the native poly synths carry the per-note timbre variation.
+
 ### Handoff — the batch's state at the end of this session (2026-09-23)
 
 **Landed and verified**: A1 (width, `narrowStereo` ratcheted 12 → 9 → 8 on two agreeing runs), A4 (the riser), A3
