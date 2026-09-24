@@ -658,10 +658,24 @@ export async function renderPatternOffline(
             });
             if (planned) {
               const capped = capPlanPolyphony(planned);
-              for (const plannedNote of capped.notes) {
+              capped.notes.forEach((plannedNote, plannedIndex) => {
+                /**
+                 * GS-1's half of A3's per-note variation (ABI 9).
+                 *
+                 * The native path nudges a voice's second-oscillator detune and its cutoff; GS-1 has no per-note
+                 * cutoff, but it has per-note **tuning**, which is the same nudge in the same unit (cents) — so the
+                 * shipping voice gets it too. Until ABI 9 this was impossible: the core did not export
+                 * `gs_set_tuning_note`, so a render with the pool enabled was *identical* with and without the
+                 * variation, which is why the claim was measured on the native path and labelled as such.
+                 *
+                 * The note index comes from the *capped* plan, which is what the ear hears: voices inside one stab
+                 * must not share a nudge, or the chord moves as a block.
+                 */
+                const variation = variationFor(trackIdx, stepIdx, plannedIndex);
+                if (variation) chordHost.setTuningNote(plannedNote.note, variation.detuneCents);
                 chordHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
                 chordHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
-              }
+              });
               return;
             }
           }
@@ -693,6 +707,9 @@ export async function renderPatternOffline(
             });
             if (planned) {
               const plannedNote = planned.notes[0];
+              // GS-1's half of A3's per-note variation — see the chord block above for why tuning is the parameter.
+              const variation = variationFor(trackIdx, stepIdx, 0);
+              if (variation) leadHost.setTuningNote(plannedNote.note, variation.detuneCents);
               leadHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
               leadHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
               return;

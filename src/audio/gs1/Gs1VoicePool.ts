@@ -47,6 +47,14 @@ export interface PoolNote {
   duration: number;
   velocity: number;
   pan?: number;
+  /**
+   * Per-note microtuning, in cents — A3's variation on the GS-1 voice.
+   *
+   * The native path nudges a voice's second-oscillator detune and its cutoff; GS-1 has no per-note cutoff, so the
+   * nudge arrives as per-note **tuning** (ABI 9). Without this a render with the pool enabled was identical with and
+   * without the variation, which is why the per-note claim used to be measured on the native path only.
+   */
+  cents?: number;
 }
 
 export interface Gs1VoicePoolOptions {
@@ -178,6 +186,8 @@ export class Gs1VoicePool {
       slot.instrument = instrument;
       const capped = capPlanPolyphony(plan, this.maxVoices);
       for (const note of capped.notes) {
+        // The nudge goes in before the note, so the voice starts at the tuned pitch rather than sliding to it.
+        if (note.cents !== undefined) slot.host.setTuningNote(note.note, note.cents);
         slot.host.noteOnAt(note.note, note.velocity, note.atFrame, note.pan);
       }
       for (const note of capped.notes) {

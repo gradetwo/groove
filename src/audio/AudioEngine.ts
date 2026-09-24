@@ -2461,6 +2461,14 @@ export class AudioEngine {
         treatment ?? { style: "triad", articulation: "block", gateScale: 1, strumSeconds: CHORD_STRUM_SEC };
       const gs1Notes = notes.map((note, i) => ({
         note,
+        /**
+         * A3's per-note variation, arriving as per-note tuning because GS-1 has no per-note cutoff (ABI 9). The same
+         * `polyVoiceVariation` the native path uses, with `i` as the note index so the voices inside one stab differ.
+         */
+        ...(() => {
+          const variation = polyVoiceVariation(this.variationSeed, trackIdx ?? 0, step, i);
+          return variation ? { cents: variation.detuneCents } : {};
+        })(),
         // Same onset helper as the native path, so a strum/roll cannot drift apart between the
         // two engines.
         time: chordVoiceOnset(time, i, effective),
@@ -2531,7 +2539,16 @@ export class AudioEngine {
     // P6: same contract as `playChord` — GS-1 takes the note or the native engine does.
     if (trackIdx !== undefined && this.gs1Pool) {
       const instrument = this.pattern?.tracks[trackIdx]?.instrument;
-      if (this.gs1Pool.tryPlay(trackIdx, "lead", instrument, [{ note: midi, time, duration: dur, velocity: vel }], dest)) {
+      const leadVariation = polyVoiceVariation(this.variationSeed, trackIdx ?? 0, step, 0);
+      if (
+        this.gs1Pool.tryPlay(
+          trackIdx,
+          "lead",
+          instrument,
+          [{ note: midi, time, duration: dur, velocity: vel, ...(leadVariation ? { cents: leadVariation.detuneCents } : {}) }],
+          dest
+        )
+      ) {
         return;
       }
     }
