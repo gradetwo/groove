@@ -17,16 +17,27 @@ import {
  * and the generator agree about the root key, and the generated one-shot has the shape a texture lane needs.
  */
 describe("P2.5 · sample-based texture", () => {
-  it("routes a texture instrument to the sample patch", () => {
+  it("routes every texture instrument to a sample patch, surface noise included", () => {
     expect(routingForRole("texture")).toBe(GS1_TEXTURE_ROUTING);
     expect(Object.keys(GS1_TEXTURE_ROUTING).length).toBeGreaterThan(1);
     for (const instrument of Object.keys(GS1_TEXTURE_ROUTING)) {
       const resolved = resolveGs1Patch("texture", instrument);
-      expect(resolved?.patch, instrument).toBe("sampleTexture");
+      // Both patches play a sample; the envelope is what differs, and a crackle needs the short one.
+      const expected = instrument === "vinyl_crackle" || instrument === "tape_hiss" ? "sampleSurface" : "sampleTexture";
+      expect(resolved?.patch, instrument).toBe(expected);
     }
+    // The name the library actually uses routes through the sample voice — 26 genres declare `vinyl_crackle`.
+    expect(gs1PatchFor("fx", "vinyl_crackle")?.patch).toBe("sampleSurface");
   });
 
-  it("puts the patch in the core's sample mode, at the root the generator says", () => {
+  it("puts the patches in the core's sample mode, at the root the generator says", () => {
+    for (const name of ["sampleTexture", "sampleSurface"] as const) {
+      const patch = GS1_PATCHES[name];
+      expect(patch[Param.OSC1_WAVE], name).toBe(9);
+      expect(patch[Param.SMP_ROOT], name).toBe(TEXTURE_SAMPLE_ROOT);
+      expect(patch[Param.SMP_MODE], name).toBe(0);
+      expect(patch[Param.PATCH_GAIN] ?? 1, name).toBeLessThanOrEqual(0.6);
+    }
     const patch = GS1_PATCHES.sampleTexture;
     // `Wave::from_u32`: 8 is the single-cycle wavetable and 9 is the imported sample.
     expect(patch[Param.OSC1_WAVE]).toBe(9);
