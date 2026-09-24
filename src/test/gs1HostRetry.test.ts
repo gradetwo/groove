@@ -50,6 +50,12 @@ function fakeHost() {
     setPatch: vi.fn(),
     output: { connect: vi.fn() },
     noteOnAt: vi.fn(),
+    /**
+     * ABI 9's entry point. A stub without it fails inside the render loop the moment the variation is on, which is
+     * how this list has always been arrived at (see the note above) — the interface is the source of truth, not the
+     * set of calls a stub happened to see.
+     */
+    setTuningNote: vi.fn(),
     noteOffAt: vi.fn(),
     dispose: vi.fn(),
   };
