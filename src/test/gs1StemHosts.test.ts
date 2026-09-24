@@ -55,6 +55,14 @@ function fakeHost() {
     output: { connect: vi.fn() },
     noteOnAt: vi.fn(),
     noteOffAt: vi.fn(),
+    /**
+     * ABI 9's entry point, which the renderer now calls for A3's variation.
+     *
+     * Its absence is what these cases caught first — the fixture had the shape the adapter used to have, so a
+     * `setTuningNote is not a function` failure was the interface telling the test double to catch up rather than a
+     * defect in the render.
+     */
+    setTuningNote: vi.fn(),
     dispose: vi.fn(),
   };
 }
@@ -97,5 +105,55 @@ describe("GS-1 hosts in stem renders", () => {
     // Old behaviour: 3 stem renders × 2 hosts = 6. Now: kick 0, chords 1, lead 1 = 2.
     expect(mocks.createGs1Host).toHaveBeenCalledTimes(2);
     for (const stem of stems) expect(stem.gs1HostFailures).toBe(0);
+  });
+});
+
+/**
+ * A3's GS-1 half, which ABI 9 unblocked: the variation must reach the **shipping** voice.
+ *
+ * Until the core exported `gs_set_tuning_note` the render with the pool enabled was *identical* with and without the
+ * per-note nudge (measured Δ0), which is why the plan's per-note claim was taken on the native path and labelled as
+ * such. This is the wiring that changes it: the same `polyVoiceVariation` the native path uses, arriving as per-note
+ * tuning, because GS-1 has no per-note cutoff.
+ */
+describe("GS-1 · the per-note variation reaches the shipping voice", () => {
+  let restore: (() => void) | null = null;
+
+  beforeEach(() => {
+    mocks.createGs1Host.mockReset();
+    mocks.createGs1Host.mockImplementation(() => Promise.resolve(fakeHost()));
+    restore = installFakeOfflineAudioContext();
+    setGs1RoutingEnabled(true);
+  });
+
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  it("sends a tuning offset per routed note, and none when the variation is off", async () => {
+    const { renderPatternOffline } = await import("../audio/WavExporter");
+    const withVariation = await renderPatternOffline(PATTERN, { noteVariation: true, bars: 1 });
+    const hostsAfterOn = mocks.createGs1Host.mock.results.map((result) => result.value);
+    const tuningCalls = await Promise.all(
+      hostsAfterOn.map(async (host) => (await host) as unknown as { setTuningNote: { mock: { calls: unknown[][] } } })
+    );
+    const offsetsOn = tuningCalls.flatMap((host) => host.setTuningNote.mock.calls.map((call) => call[1] as number));
+    expect(offsetsOn.length, "at least one routed note carries a tuning offset").toBeGreaterThan(0);
+    // The nudge is ±12 cents by definition, and the engine clamps at ±1200 — so this is the same quantity the native
+    // path applies to a voice's detune, not a different one that happens to be in cents.
+    for (const cents of offsetsOn) expect(Math.abs(cents)).toBeLessThanOrEqual(12.001);
+
+    mocks.createGs1Host.mockClear();
+    const withoutVariation = await renderPatternOffline(PATTERN, { noteVariation: false, bars: 1 });
+    const hostsAfterOff = mocks.createGs1Host.mock.results.map((result) => result.value);
+    const offsetsOff = (
+      await Promise.all(
+        hostsAfterOff.map(async (host) => (await host) as unknown as { setTuningNote: { mock: { calls: unknown[][] } } })
+      )
+    ).flatMap((host) => host.setTuningNote.mock.calls);
+    expect(offsetsOff, "the escape hatch sends nothing at all").toEqual([]);
+    // The renders are different objects; the point of the case above is that the *messages* differ.
+    expect(withVariation.numberOfChannels).toBe(withoutVariation.numberOfChannels);
   });
 });

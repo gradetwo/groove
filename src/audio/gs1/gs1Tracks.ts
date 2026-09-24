@@ -81,6 +81,8 @@ export interface Gs1PlannedNote {
   offFrame: number;
   velocity: number;
   pan?: number;
+  /** Per-note microtuning in cents (ABI 9). See `PoolNote.cents`. */
+  cents?: number;
 }
 
 export interface Gs1Plan {
@@ -94,7 +96,15 @@ export interface Gs1PlanOptions {
   /** The track's `instrument` name, which is what selects a patch. */
   instrument: string | null | undefined;
   /** Note times in seconds, in the sound source's own timeline (`AudioContext` or offline). */
-  notes: readonly { note: number; time: number; duration: number; velocity: number; pan?: number }[];
+  notes: readonly {
+    note: number;
+    time: number;
+    duration: number;
+    velocity: number;
+    pan?: number;
+    /** Per-note microtuning in cents — carried through so A3's variation reaches the GS-1 voice (ABI 9). */
+    cents?: number;
+  }[];
   sampleRate: number;
   /**
    * The latency the worklet reported (frames). The planner subtracts it so the *audible* onset
@@ -137,6 +147,7 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
       offFrame,
       velocity: Math.min(1, Math.max(0, note.velocity)),
       ...(note.pan === undefined ? {} : { pan: note.pan }),
+      ...(note.cents === undefined ? {} : { cents: note.cents }),
     });
   }
   if (planned.length === 0) return null;
