@@ -204,6 +204,8 @@ describe("CI · the manual verify workflow is wired, not decorative", () => {
     // Chromium for every scope (see the case below: `audio` drives one), the other two engines for the matrix.
     expect(manual).toMatch(/playwright install --with-deps chromium\n/);
     expect(manual).toMatch(/playwright install --with-deps firefox webkit/);
+    // And the condition must cover every scope that runs the device matrix: `verify` ends in `test:e2e`.
+    expect(manual).toMatch(/if: inputs\.scope == 'e2e' \|\| inputs\.scope == 'verify' \|\| inputs\.scope == 'all'/);
     const uploads = manual.match(/uses: actions\/upload-artifact@/g) ?? [];
     expect(uploads.length, "e2e + coverage artifacts").toBeGreaterThanOrEqual(2);
     expect(manual).toContain("path: e2e-out/");
