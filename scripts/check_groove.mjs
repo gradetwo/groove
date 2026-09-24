@@ -147,7 +147,10 @@ const BUDGET = {
    * The budget is a first estimate (a third of the sample) and is expected to be ratcheted down to the measurement:
    * a gate seeded at "everything fails" could not fail, which is worse than a gate.
    */
-  flatStabs: 1,
+  /** 2 = the worst of four dispatches (1, 1, 1, 2). The two that flip are the *weak lane* (chords),
+   * at x1.12 and x1.02 against a 1.5 floor, so a few hundredths of a dB moves the count — the same
+   * shape as `narrowStereo`'s 0.2 % wobble. Worst reading, not best, until the render repeats. */
+  flatStabs: 2,
   thinMids: 11,
   staticHarmony: 0,
   // P0.6: 0. Every sampled genre's tail is below −82 dBFS since the tail is the genre's own reverb/delay decay.
@@ -166,7 +169,9 @@ const BUDGET = {
    * fork — is the real fix and is recorded as such in the plan. The batch's own level rise (A2's calibrated makeup)
    * is part of why the absolute line got harder, which is why `tailRelativeDb` is now recorded beside it.
    */
-  cutTail: 1,
+  /** 2 = the worst of six shard dispatches (1, 1, 1, 1, 1, 2), for the page-state reason in the claim
+   * above. 2 still fails a systemic truncation; the tightening waits for the render that repeats. */
+  cutTail: 2,
 };
 
 const CLAIMS = {
