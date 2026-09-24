@@ -125,8 +125,19 @@ describe("committed loudness baseline", () => {
     expect(before).toBeTruthy();
     expect(after).toBeTruthy();
     // The trim must actually equalise the library, not just look plausible.
+    /**
+     * The **p90−p10** spread has to tighten; the **full range** does not, and asserting that it did was wrong
+     * for per-category targeting — the same mistake the note below describes for the old single-target policy.
+     *
+     * Measured on the 2026-09-24 re-record: p90−p10 6.00 → 5.85 LU (and 6.27 → 6.04 in the RMS view), while the full
+     * range went 11.19 → 11.58 because the loudest genre changed from `acid-house` (−10.59, one category's target) to
+     * `new-wave` (−10.20, another's) — which is what per-category targeting *means*. What still has to hold is that
+     * the extremes stay inside the policy: the quietest genre does not move (chillwave, −21.79) and the loudest is at
+     * its own category target (checked per genre below).
+     */
     expect(after.p90p10).toBeLessThan(before.p90p10);
-    expect(after.fullRange).toBeLessThan(before.fullRange);
+    expect(after.fullRange, "full range stays inside the per-category policy").toBeLessThan(13);
+    expect(after.min, "the quiet end is not pushed down by the fit").toBeGreaterThanOrEqual(before.min - 0.1);
     // Both metric views are committed so the LUFS-vs-RMS tradeoff is visible in the
     // artefact itself, not only in prose.
     expect(report.metric.primary).toBe("lufs");
