@@ -129,3 +129,53 @@ describe("genre audition · a pass ends once, at the end of the pattern", () => 
     expect(onPatternEnd, "the swap after an advance is not a second advance").toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * …and a "track" has to be long enough to be one.
+ *
+ * Measured before this: a genre's own pattern is 32–128 steps — a **4–16 second** pass at 120 BPM — so even with the
+ * wrap detection fixed, shuffle switched every few seconds, which is the other half of 连续切歌. `arrangement` makes
+ * the audition a **song**: the same 40-bar form the exporters write and the studio plays, so the phone hears what the
+ * file contains and the pass end becomes the end of the track.
+ */
+describe("genre audition · a track is a song, not one pass of the loop", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stepHandler.current = null;
+  });
+
+  it("hands the engine the arrangement, many times the loop's length", async () => {
+    const { result } = renderHook(() => useGenreAudition({ arrangement: "club" }));
+    await act(async () => {
+      await result.current.toggleAudition(genre("chicago-house"));
+    });
+    const played = engineMock.setPattern.mock.calls.at(-1)![0] as {
+      totalSteps?: number;
+      tracks: { steps: unknown[] }[];
+    };
+    const loopSteps = await patternSteps("chicago-house");
+    const songSteps = played.totalSteps || Math.max(0, ...played.tracks.map((t) => t.steps.length));
+    // The club form is 40 bars; an eight-bar genre therefore plays five times its loop before the track ends.
+    expect(songSteps).toBeGreaterThan(loopSteps * 4);
+  });
+
+  it("ends the track at the end of the song, not at the end of every pass", async () => {
+    const onPatternEnd = vi.fn();
+    const { result } = renderHook(() => useGenreAudition({ arrangement: "club", onPatternEnd }));
+    await act(async () => {
+      await result.current.toggleAudition(genre("chicago-house"));
+    });
+    const played = engineMock.setPattern.mock.calls.at(-1)![0] as { totalSteps?: number };
+    const songSteps = played.totalSteps!;
+
+    // The loop's own wrap point (one pass in) is *not* the end of the track…
+    await act(async () => stepHandler.current?.({ step: (await patternSteps("chicago-house")) - 1, time: 0 }));
+    await act(async () => stepHandler.current?.({ step: 0, time: 0 }));
+    expect(onPatternEnd, "a loop pass is not a track").not.toHaveBeenCalled();
+
+    // …the song's end is.
+    await act(async () => stepHandler.current?.({ step: songSteps - 1, time: 0 }));
+    await act(async () => stepHandler.current?.({ step: 0, time: 0 }));
+    expect(onPatternEnd).toHaveBeenCalledTimes(1);
+  });
+});

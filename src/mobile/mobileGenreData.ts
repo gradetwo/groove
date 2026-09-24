@@ -1,3 +1,5 @@
+import type { ArrangementFormId } from "../data/arrangementForm";
+
 /**
  * The phone shell's one data path (A-01).
  *
@@ -34,4 +36,19 @@ export type { GenreIndexItem };
 export async function loadLibraryFromIndex(): Promise<Genre[]> {
   const records = await Promise.all(GENRE_INDEX.map((item) => loadGenre(item.id)));
   return records.filter((record): record is Genre => record !== null);
+}
+
+/**
+ * Which arrangement a *phone track* is.
+ *
+ * The phone's play modes advance when a track ends, so a track has to be a song rather than one pass of a loop —
+ * measured: a genre's own pattern is a 4–16 second pass, which is what made 全部随机 read as continuous switching.
+ * A form is 40 bars, about 80 seconds for an eight-bar genre.
+ *
+ * The rule follows the music rather than the library: **Electronic** is club music, whose form is the
+ * intro → build → drop → break → drop → outro shape, and every other category is song-shaped
+ * (intro → verse → chorus → verse → chorus → outro). One table, in the layer that decides what the phone plays.
+ */
+export function auditionArrangementFor(category: string | null | undefined): ArrangementFormId {
+  return category === "Electronic" ? "club" : "song";
 }
