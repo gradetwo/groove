@@ -1,27 +1,23 @@
 {
-  "version": "2.18.0",
+  "version": "2.19.0",
   "releaseDate": "2026-09-24",
-  "changelogCount": 212,
+  "changelogCount": 213,
   "latest": {
-    "version": "2.18.0",
+    "version": "2.19.0",
     "date": "2026-09-24",
     "category": "feature",
     "title": {
-      "zh": "v2.18.0 26 个曲风的「黑胶爆豆声」改用真实采样；顺带修好两对几乎一模一样的曲风",
-      "en": "v2.18.0 26 genres' vinyl crackle plays a real sample — and the recording it forced exposed two pairs of near-identical genres"
+      "zh": "v2.19.0 循环素材能自己接上了：渲染尾巴折回开头；导出多了一个无缝循环选项",
+      "en": "v2.19.0 Loop assets join themselves: the render's tail folds back over the head, behind a `seamlessLoop` export option"
     },
     "highlights": [
       {
-        "zh": "**唱针噪声不再是合成出来的。** 库里 26 个曲风（microhouse、trip-hop、boom-bap、lofi-hip-hop、爵士与布鲁斯各支、motown、neo-soul、samba 等）本来就声明了 `vinyl_crackle`——正是原生音色注释里写的「采样与虫胶唱片曲风」——所以这次不是给它们加新东西，而是那条轨终于播的是录音：GS-1 的采样档、一次性播放、根音 60，音色包络按「爆豆是一声轻响、不是一个和弦」来定。真录音是内容，目前播的是生成的替身（衰减噪声床 + 不均匀瞬态），有素材随时替换。",
-        "en": "**Needle noise is no longer synthesised.** 26 genres already declared `vinyl_crackle` — microhouse, trip-hop, boom-bap, lofi-hip-hop, the jazz and blues genres, motown, neo-soul, samba — which is exactly the \"sampled and shellac-recorded\" set the native voice's own comment names. So nothing was added to them; the lane simply plays a recording now: GS-1's sample mode, one-shot, root 60, with an envelope chosen because a crackle is a tick rather than a chord. The recording its…"
+        "zh": "**循环不再是一遍放完、余音拖出去、再从头开始。** 渲染尾巴本身是对的（文件不能在混响还在响的时候停），但把它接在循环后面就错了：接缝既晚又轻。现在把尾巴按循环长度折回开头——也就是「假如循环从没停过，混响本来会在做的事」——导出的 `seamlessLoop` 选项给出的文件正好是一个循环的长度，重复播放时听到的是那一次衰减，而不是一段空白加一次重启。两条返回路径（worklet 限幅与回退限幅）走同一个出口，所以这个保证不取决于平台是否支持 AudioWorklet。",
+        "en": "**A loop no longer plays, rings out and restarts.** The render tail is right for a file (it must not stop while the reverb is audible) and wrong for a loop: the seam is both late and quiet. The tail is now folded back over the head modulo the loop length — what the reverb would have been doing had the loop never stopped — so the `seamlessLoop` export option returns exactly one loop, and repeating it reproduces that decay instead of a gap followed by a restart. Both return pa…"
       },
       {
-        "zh": "**第一次诚实的全库音色指纹测量抓出两对几乎相同的曲风。** 提交在库里的指纹基线是 09-20 的（在那轮宽度/母带/逐音改动之前），而这个门禁是拿基线**内部**两两比较的——所以旧文件按构造就能通过，线下的声音早就漂了。重新录 159 首之后，最近的一对是 `french-house` ↔ `nu-disco-house` **0.1330 dB**（下限 0.25），而旧文件里是 0.6407：两个曲风声明了**完全相同的八件乐器**，此前只靠老混音里的差异撑着。修法是给它们各自的曲风该有的编制——nu-disco-house 用 m1 organ / pluck synth / fingerstyle bass，microhouse 用 punchy kick / finger_bass / vibraphone / bell_lead——现在这两对分别是 **1.1963 dB** 与 **0.4133 dB**。剩下的最近一对是 ambient-techno ↔ dub-techno 的 0.2774 dB：三个相邻风格本来就共用…",
-        "en": "**The first honest full-library timbre recording caught two pairs of near-identical genres.** The committed fingerprint baseline was from 09-20 — before the width, master and per-note work — and the gate compares pairs *within* the baseline, so a stale file passes by construction while the shipped sound drifts underneath it. Re-recording all 159 put the closest pair at `french-house` ↔ `nu-disco-house` **0.1330 dB** (floor 0.25) against 0.6407 in the stale file: the two decl…"
-      },
-      {
-        "zh": "**电平重录与曲线**：159 个曲风重新测过，10 条 trim 变动（26 条非零），天花板上限守住（最差 −1.23 dBTP），p90−p10 从 5.90 收到 **5.86 LU**。",
-        "en": "**Levels re-recorded**: all 159 genres re-measured, 10 trims moved (26 non-zero), the ceiling held (worst −1.23 dBTP), and p90−p10 tightened from 5.90 to **5.86 LU**."
+        "zh": "**顺带两条测量上的诚实**：① 曲风质量门禁的 `narrowStereo` 预算按规则从 9 收到 **7**——两次独立分片都读到 7（相邻风格那三个 0.98 上下的曲风已经挪开），而 `flatStabs` / `cutTail` 因为两次读数不同（2/1、0/1）继续保留最差值；② 会「听」应用的实时编排探针以前取首尾三分之一的**均值**，在共享 runner 上把一次卡顿读成「渐强没抬起来」（同一棵树在本地是 +10 %、CI 上是 3.4 %）。现在它按**每一遍的中位数**比较开头那遍与最响的一遍，并且把「平台掉帧」单独报成 `unmeasured`——对机器的判断和对混音的判断不再混为一谈。",
+        "en": "**Two measurement fixes alongside it.** (1) The quality gate's `narrowStereo` budget ratchets 9 → **7**, because the rule is that a budget is the worst reading *and* the tightening waits for a render that repeats: two independent shard dispatches both read 7, while `flatStabs` and `cutTail` keep their worst reading (2/1 and 0/1) for exactly the same reason. (2) The live arrangement probe — the only one that listens to the running app — used to average the first and last thir…"
       }
     ],
     "truncated": false
