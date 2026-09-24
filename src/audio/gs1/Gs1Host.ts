@@ -66,7 +66,14 @@ const scalarWasmUrl = `${DEFAULT_ASSET_BASE}/synth_core_scalar.wasm`;
 /** The processor name registered by the vendored worklet. */
 export const GS1_PROCESSOR_NAME = "gs1-synth-processor";
 /** ABI this adapter is written against; the vendored pin must report the same number. */
-export const GS1_EXPECTED_ABI = 8;
+/**
+ * The ABI this adapter is written for, and it **rejects** a core that reports anything else.
+ *
+ * It has to move with the pin in the same change: bumping the vendored core to 9 while this said 8 made every host
+ * refuse to build, which the loudness freshness check caught as three genres "lost a GS-1 voice" — the check that
+ * exists because a row measured with the pool switched off looks entirely normal otherwise.
+ */
+export const GS1_EXPECTED_ABI = 9;
 /** Voices the plan measures Phase 0 at. The core's own ceiling is 32. */
 export const GS1_DEFAULT_POLYPHONY = 16;
 
