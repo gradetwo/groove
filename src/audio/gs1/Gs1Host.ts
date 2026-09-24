@@ -96,6 +96,14 @@ export interface Gs1PolyphonyEvent {
   reason: string;
 }
 
+/** What the core says about an imported sample. */
+export interface Gs1SampleReply {
+  /** Whether a sample is loaded after the call. */
+  has: boolean;
+  /** 0 ok · 1 too short · 4 no room in the arena · −1 the core has no sample import. */
+  code: number;
+}
+
 export interface Gs1HostOptions {
   /** The context to build the node on. Never created here. */
   context: BaseAudioContext;
@@ -141,6 +149,20 @@ export interface Gs1Host {
   noteBend(note: number, semitones: number): void;
   /** Set **one** key's microtuning offset, in cents (±1200 by the engine's own clamp). */
   setTuningNote(note: number, cents: number): void;
+  /**
+   * Import a **sample** into the core (mono, the file's own rate).
+   *
+   * The first piece of P2.5's plumbing. The core has had `gs_sample_import` and the processor its `sample` /
+   * `sampleClear` messages all along; this adapter simply never exposed them, and said so in its own `default:` case.
+   * Nothing here decides *what* a sample is for — a caller that has one (a recording, a rendered one-shot, a test
+   * fixture) can now hand it over, and the reply says whether the core took it.
+   *
+   * The codes come from the processor and the core: **0** ok, **1** too short, **4** the arena has no room,
+   * **-1** this core has no sample import at all.
+   */
+  importSample(samples: Float32Array, sampleRate: number): Promise<Gs1SampleReply>;
+  /** Drop the imported sample; the reply carries `has: false` once the core confirms. */
+  clearSample(): Promise<Gs1SampleReply>;
   allNotesOff(): void;
   /** Write one parameter by numeric id (`Param.*` in the vendored `params.ts`). */
   setParam(id: number, value: number): void;
@@ -343,13 +365,40 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
           reject(new Error(`[Gs1Host] worklet error: ${String(data.message)}`));
           break;
         }
+        case "sample": {
+          const request = Number(data.request);
+          const waiters = Number.isFinite(request) ? sampleWaiters.get(request) : undefined;
+          if (waiters) {
+            sampleWaiters.delete(request);
+            waiters({ has: Boolean(data.has), code: Number(data.code ?? 0) });
+          }
+          break;
+        }
         default:
-          // `wavetable` / `sample` / `ir` replies belong to features this adapter does not
-          // expose yet; ignoring them is deliberate rather than an oversight.
+          // `wavetable` / `ir` replies belong to features this adapter does not expose yet; ignoring them is
+          // deliberate rather than an oversight (samples are the first of the three to arrive — P2.5).
           break;
       }
     };
   });
+
+  /**
+   * Pending sample requests, keyed by the request id the processor echoes back.
+   *
+   * A sample import is the one message whose *result* matters: "too short" and "no room in the arena" are both
+   * ordinary outcomes a caller has to see, and the core reports them on the port rather than by throwing.
+   */
+  const sampleWaiters = new Map<number, (reply: Gs1SampleReply) => void>();
+  let nextSampleRequest = 1;
+
+  const requestSample = (message: Record<string, unknown>): Promise<Gs1SampleReply> => {
+    if (disposed) return Promise.resolve({ has: false, code: -1 });
+    const request = nextSampleRequest++;
+    return new Promise<Gs1SampleReply>((resolve) => {
+      sampleWaiters.set(request, resolve);
+      node.port.postMessage({ ...message, request });
+    });
+  };
 
   const post = (message: Record<string, unknown>) => {
     if (disposed) return;
@@ -404,6 +453,13 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
         atFrame: Math.round(atFrame),
         ...(pan === undefined ? {} : { pan }),
       });
+    },
+    importSample(samples, sampleRate) {
+      if (!samples || samples.length === 0) return Promise.resolve({ has: false, code: 1 });
+      return requestSample({ type: "sample", samples, sampleRate });
+    },
+    clearSample() {
+      return requestSample({ type: "sampleClear" });
     },
     noteBend(note, semitones) {
       if (!Number.isFinite(note) || !Number.isFinite(semitones)) return;
