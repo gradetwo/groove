@@ -471,16 +471,21 @@ const DEFAULT_TRACK_MIX: TrackMix = { volume: 0.8, pan: 0, sendA: 0, sendB: 0 };
  * Every category profile pans its hats, percussion, chords and lead by ±0.12…0.5, and the result still measured as
  * effectively **mono**: 12 of 12 sampled genres correlate above 0.98 (chicago-house 0.9973, minimal-techno 0.9989),
  * because the lanes that ask for a side are quiet next to a centred kick and bass. Scaling the *resolved* pan — not
- * the authored table, and not 159 entries by hand — spreads the intent the mix already states. Measured at 2.0:
- * **12/12 → 3/12** narrow (detroit-techno 0.9825, ambient 0.9834, minimal-techno 0.9921), with the side at
- * −9.2…−20.5 dB, inside the mono-safe guard (`sideTooHot`, side > −8 dB).
+ * the authored table, and not 159 entries by hand — spreads the intent the mix already states.
  *
- * The cost is why this waited for a re-record rather than landing when it was measured: a hard-panned lane puts up
- * to +3 dB into one channel, so the true-peak ceiling clamps harder and the widest genres lose up to **1.9 dB** of
- * loudness. The trims absorb that, and they are re-recorded once, at the end of the audio batch (P0.4 → P2.3 → P2.2
- * → P2.4) rather than four times.
+ * **Measured 2026-09-24 at 2.0 → 3.0, on the gate's own offenders:**
+ *
+ *   chicago-house   0.9865 → **0.9716**   side/mid −21.7 → −18.4 dB
+ *   detroit-techno  0.9939 → **0.9736**   side/mid −25.1 → −18.7 dB
+ *
+ * Both cross the 0.98 line, the ceiling still holds −1.30 dBTP, and the side stays 10 dB inside the mono-safe guard
+ * (`sideTooHot` fails above −8 dB). At 2.0 the sample read **8 of 12** narrow; the objective's own target was 3.
+ *
+ * The cost is why this waited for a re-record: a hard-panned lane puts up to +3 dB into one channel, so the true-peak
+ * ceiling clamps harder and the widest genres lose loudness (chicago-house −13.86 LUFS at 3.0 against a slightly
+ * higher level at 2.0). The trims absorb that, and they are re-recorded once per batch rather than per change.
  */
-export const MIX_WIDTH_SCALE = 2;
+export const MIX_WIDTH_SCALE = 3;
 
 /**
  * The lanes the width stage leaves where the mix put them: kick, bass and snare.
