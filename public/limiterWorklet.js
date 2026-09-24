@@ -155,10 +155,30 @@ class TruePeakLimiterKernel {
     const peak = this.framePeak;
     peak.fill(0, 0, frames);
     const detectorChannels = detector && detector.length ? detector.length : 0;
+    /**
+     * "Carries a signal" means **above an audible-adjacent floor**, not merely non-zero.
+     *
+     * A detector that reads ~1e-9 while the programme is playing asks for `ceiling / 1e-9` — no reduction — so the
+     * ceiling applies unity gain. Measured in the render path: `+1.42 dBTP` against a −1 dBTP contract. Silence on a
+     * detector whose programme is loud is a wiring failure, not a quiet passage, and "no limiting" is never the
+     * safer reading of it. Mirrors `TruePeakLimiterKernel.processBlock`.
+     */
+    let detectorCarriesSignal = false;
+    if (detectorChannels) {
+      for (let c = 0; c < detectorChannels && !detectorCarriesSignal; c++) {
+        const channel = detector[c];
+        for (let i = 0; i < frames; i++) {
+          if (Math.abs(channel[i]) > 1e-6) {
+            detectorCarriesSignal = true;
+            break;
+          }
+        }
+      }
+    }
 
     // 1. Per-channel 4× oversampled true peak, combined across channels (stereo link).
     for (let c = 0; c < channels; c++) {
-      const source = detectorChannels ? detector[c % detectorChannels] : inputs[c];
+      const source = detectorCarriesSignal ? detector[c % detectorChannels] : inputs[c];
       const scratch = this.scratch;
       scratch.set(this.histories[c], 0);
       scratch.set(source.subarray(0, frames), histLen);

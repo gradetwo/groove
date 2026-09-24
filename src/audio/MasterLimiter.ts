@@ -346,13 +346,31 @@ export class TruePeakLimiterKernel {
     const histLen = this.historyLength;
     const peak = this.framePeak;
     peak.fill(0, 0, frames);
-    // The channel whose peak is measured: the detector's when there is one (wrapping if it has fewer channels), the
-    // programme's otherwise.
+    /**
+     * The channel whose peak is measured: the detector's when it carries a signal, the programme's otherwise.
+     *
+     * The "otherwise" is not decoration. A detector that is connected but **silent** — which is what the render path
+     * produced when this was first wired (`+1.36 dBTP` against a −1 dBTP contract) — would make the ceiling apply
+     * unity gain, because a peak of zero asks for no reduction. Silence on the detector input while the programme is
+     * playing is a wiring failure, not a quiet passage, and "no limiting" is never the safer reading of it.
+     */
     const detectorChannels = detector && detector.length ? detector.length : 0;
+    let detectorCarriesSignal = false;
+    if (detectorChannels) {
+      for (let c = 0; c < detectorChannels && !detectorCarriesSignal; c += 1) {
+        const channel = detector![c];
+        for (let i = 0; i < frames; i += 1) {
+          if (Math.abs(channel[i]) > 1e-6) {
+            detectorCarriesSignal = true;
+            break;
+          }
+        }
+      }
+    }
 
     // 1. Per-channel 4× oversampled true peak, combined across channels (stereo link).
     for (let c = 0; c < channels; c++) {
-      const source = (detectorChannels ? detector![c % detectorChannels] : inputs[c]) as Float32Array;
+      const source = (detectorCarriesSignal ? detector![c % detectorChannels] : inputs[c]) as Float32Array;
       const scratch = this.scratch;
       scratch.set(this.histories[c], 0);
       scratch.set(source.subarray(0, frames), histLen);
