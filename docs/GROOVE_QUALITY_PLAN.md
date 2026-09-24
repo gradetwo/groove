@@ -508,3 +508,22 @@ stopped working, and the correction is beside both numbers.
 | +5 | P0.7 loudness/timbre baseline basis (own release); P2.5 parked on a licensing decision | — |
 
 The first two rows touch no CSS and no component; the skin rows touch no audio. Neither gate can mask the other.
+
+### The timbre gate's first honest full-library recording (2026-09-24)
+
+Re-recording all 159 fingerprints for the P2.5 content change turned up something the committed baseline had been
+hiding: it was recorded on **2026-09-20**, before the A1/A2/A3 batch, and `check:timbre` compares pairs *within* the
+baseline — so a stale file passes by construction while the shipping sound drifts underneath it.
+
+The fresh full-library recording put the closest pair at **0.1330 dB** (`french-house` ↔ `nu-disco-house`, floor
+0.25 dB), against 0.6407 dB in the stale file. Not noise: a two-genre re-run reproduced 0.1329 dB exactly. The cause
+is visible in the data — both genres declared the **same eight instruments** (`punchy_kick`, `clap`, `closed_hat`,
+`rim_shaker`, `slap_bass`, `rhodes_ep`, `saw_lead`, `noise_sweep`) with near-identical onset counts, so the only
+thing separating them was whatever the older mixes happened to add.
+
+The fix is a curated palette for `nu-disco-house`, which is also what the genre is: `m1_organ` (the disco organ
+stab), `pluck_synth` (a plucked synth lead) and `finger_bass` (a fingerstyle funk bass) instead of the
+french-house `rhodes_ep` / `saw_lead` / `slap_bass`. Measured after the change: the same pair is **1.1963 dB**
+apart — in the range of the historical closest pairs (1.0641 / 1.1353 dB), which is what the floor was derived
+from. The baseline is now recorded against the current sound, so this class of drift is visible from here on.
+

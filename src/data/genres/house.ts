@@ -6630,7 +6630,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "bass",
           "name": "Bassline",
-          "instrument": "slap_bass",
+          "instrument": "finger_bass",
           "steps": [
             1,
             0,
@@ -6673,7 +6673,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "chords",
           "name": "Chords / Pad",
-          "instrument": "rhodes_ep",
+          "instrument": "m1_organ",
           "steps": [
             0,
             0,
@@ -6716,7 +6716,7 @@ export const HOUSE_GENRES: Genre[] = [
         {
           "track_id": "lead",
           "name": "Lead Synth",
-          "instrument": "saw_lead",
+          "instrument": "pluck_synth",
           "steps": [
             0,
             0,
