@@ -82,6 +82,20 @@ function runGate(args: string[]): { code: number; stdout: string; stderr: string
   }
 }
 
+/**
+ * The gate's own budget for a claim, read from its source.
+ *
+ * The fail-ability fixture needs "one more offender than the budget", and hard-coding that number broke the case
+ * twice in one day — once when `cutTail` went 0 → 1 and once when it went 1 → 2 — each time leaving a test that
+ * demonstrated the opposite of its own name. Reading the number makes it self-maintaining.
+ */
+function budgetValueOf(name: string): number {
+  const source = fs.readFileSync(path.resolve(process.cwd(), "scripts/check_groove.mjs"), "utf8");
+  const match = source.match(new RegExp(`^  ${name}: (\\d+),`, "m"));
+  expect(match, `${name} has a numeric budget`).not.toBeNull();
+  return Number(match![1]);
+}
+
 describe("check:groove · the shard aggregate cannot lose a genre", () => {
   it("judges the union of the shard files", () => {
     const dir = shardDir({
@@ -124,19 +138,23 @@ describe("check:groove · the shard aggregate cannot lose a genre", () => {
      * The fail-ability half. If the aggregator only checked coverage and printed a table, every CI run would be
      * green; so genres are given cut tails and the run must go red *through the merge path*.
      *
-     * **Two** of them, since `cutTail`'s budget is 1 (the page artefact documented in `check_groove.mjs`). One
-     * offender was enough while the budget was 0 and stopped being enough the moment it moved — which is exactly
-     * what this case is for, and it failed in CI the first time that budget changed rather than in silence.
+     * **`BUDGET.cutTail + 1` of them, read from the gate rather than written here.** The count used to be hard-coded
+     * and the case broke twice in one day — once when the budget went 0 → 1, once when it went 1 → 2 — each time
+     * becoming a fixture that demonstrated the *opposite* of what it is for. A fail-ability test that has to be
+     * edited whenever a budget moves is a test that will eventually be edited wrongly; reading the budget makes it
+     * self-maintaining, and it still fails loudly if the merge path stops judging.
      */
+    const offenders = budgetValueOf("cutTail") + 1;
     const rows = SAMPLE_IDS.map((id) => cleanRow(id));
-    rows[3] = cleanRow(SAMPLE_IDS[3], { tailRmsDb: -20 });
-    rows[4] = cleanRow(SAMPLE_IDS[4], { tailRmsDb: -22 });
+    for (let i = 0; i < offenders; i += 1) {
+      rows[3 + i] = cleanRow(SAMPLE_IDS[3 + i], { tailRmsDb: -20 - i });
+    }
     const dir = shardDir({ "rows-1.json": { shard: 1, of: 1, ids: SAMPLE_IDS, rows } });
     const result = runGate([`--merge-dir=${dir}`]);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("cut tail");
     expect(result.stderr).toContain(SAMPLE_IDS[3]);
-    expect(result.stderr).toContain(SAMPLE_IDS[4]);
+    expect(result.stderr).toContain(SAMPLE_IDS[3 + offenders - 1]);
   });
 
   it("refuses an aggregate that is missing a shard's worth of genres", () => {
