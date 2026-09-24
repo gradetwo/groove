@@ -521,6 +521,39 @@ is `ambient-techno` ↔ `dub-techno` at **0.2774 dB** — above the 0.25 floor, 
 tightest corner: three neighbouring styles that deliberately share a rhythm section. The floor is not lowered for
 them; the measurement is recorded instead.
 
+### The near-mono claim cannot be met by panning — proved by an audition, not by a number (2026-09-24)
+
+`narrowStereo` reads **7** after the ratchet, and the plan's literal target is 3. The obvious lever is the pan
+control, so it was measured properly first, with a new tool: `scripts/render_genre_wav.mjs` renders a genre through
+the app's own offline path and encoder and writes a WAV, which is what the audio-review step
+(`agy -p "@/tmp/x.wav ..."`) needs and what the command line did not have.
+
+The numbers were encouraging. `chicago-house`'s correlation is repeatable to **0.00013** across three runs (0.98100
+/ 0.98087 / 0.98099), so it is not noise; hard-panning the sustained roles (chords/lead/fx, which the width stage
+scales by 3 and clamps) moved seven genres like this:
+
+| genre | before | after hard pans |
+|---|---|---|
+| trap-rap | 0.9964 | **0.9750** |
+| chicago-house | 0.9809 | **0.9766** |
+| reggaeton | 0.9822 | **0.9618** |
+| detroit-techno | 0.9875 | 0.9851 |
+| minimal-techno | 0.9940 | 0.9937 |
+| disco | 0.9953 | 0.9938 |
+
+…and then the audition rejected the change outright: *"left has Chords + Hi-Hat + FX stacked and right has only the
+Lead — severe imbalance and headphone fatigue; hard-panning a mono source is not how house gets its space; keep
+chords at −0.15…−0.25 and lead at +0.15…+0.25, and never beyond ±0.5; the width comes from stereo detune, chorus,
+stereo delay and the reverb returns."* The change was reverted, and the measurement was right about the numbers and
+wrong about the music — which is what the audition is for.
+
+The review also settles the claim's ceiling: the **existing** resolved pans are already outside its recommended
+range (chords −0.36, lead +0.6), so the mix is at the pan limit and the near-mono reading is a property of the
+architecture, not of a missing nudge. Getting to 3 means stereo *processing* — a chorus/spread on the sustained
+roles (GS-1 has unison and spread; the native presets have `oscSpread`), or wide reverb returns with the centre
+carved out — which is a sound change of its own and needs its own audition. Until then the budget stays at the
+measured 7, which is the honest number for the mix that ships.
+
 ### The timbre gate's first honest full-library recording (2026-09-24)
 
 Re-recording all 159 fingerprints for the P2.5 content change turned up something the committed baseline had been
