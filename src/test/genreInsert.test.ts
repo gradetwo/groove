@@ -45,6 +45,7 @@ import {
   INSERT_HPF_MAX_HZ,
   INSERT_HPF_MIN_HZ,
   ROLE_INSERT_DEFAULTS,
+  resolveTrackInsert,
   type TrackInsertParams,
 } from "../data/trackInsert";
 import { MIX_TRACK_IDS } from "../data/genreMix";
@@ -139,9 +140,14 @@ describe("genre insert table — coverage (the R10-style guard)", () => {
 
 describe("genre insert resolution — the role layer still shows through", () => {
   it("returns the role default for an unknown or absent genre", () => {
-    expect(resolveTrackInsertForGenre("bass", "not-a-genre")).toEqual(ROLE_INSERT_DEFAULTS.bass);
-    expect(resolveTrackInsertForGenre("bass", null)).toEqual(ROLE_INSERT_DEFAULTS.bass);
-    expect(resolveTrackInsertForGenre("bass")).toEqual(ROLE_INSERT_DEFAULTS.bass);
+    /**
+     * Compared against the **resolved** default, not the authored table: a resolved chain always carries every field
+     * (`width` included, 0 when nobody asked), while the authored literals leave optional ones out. The claim here is
+     * "the role layer still shows through", and `resolveTrackInsert` is the role layer's own answer.
+     */
+    expect(resolveTrackInsertForGenre("bass", "not-a-genre")).toEqual(resolveTrackInsert("bass"));
+    expect(resolveTrackInsertForGenre("bass", null)).toEqual(resolveTrackInsert("bass"));
+    expect(resolveTrackInsertForGenre("bass")).toEqual(resolveTrackInsert("bass"));
   });
 
   it("keeps the role's untouched fields exactly", () => {
@@ -171,7 +177,7 @@ describe("genre insert resolution — the role layer still shows through", () =>
   });
 
   it("applyInsertPatch is a no-op for undefined, and returns a fresh object", () => {
-    const base = ROLE_INSERT_DEFAULTS.kick;
+    const base = resolveTrackInsert("kick");
     const same = applyInsertPatch(base, undefined);
     expect(same).toEqual(base);
     expect(same).not.toBe(base);

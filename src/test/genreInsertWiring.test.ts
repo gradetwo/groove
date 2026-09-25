@@ -18,6 +18,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { AudioEngine } from "../audio/AudioEngine";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
+import { resolveTrackInsert } from "../data/trackInsert";
 import { ROLE_INSERT_DEFAULTS } from "../data/trackInsert";
 import { installFakeAudioContext } from "./helpers/fakeAudio";
 import type { SequencerPattern } from "../types/genre";
@@ -92,7 +93,9 @@ describe("genre insert · the realtime engine resolves through the genre layer",
   it("falls back to the role default for a genre with no patch (custom genre)", () => {
     const engine = new AudioEngine();
     engine.setPattern(makePattern("my-custom-genre"));
-    expect(engine.getTrackInsert(1)).toEqual(ROLE_INSERT_DEFAULTS.chords);
+    // `resolveTrackInsert` is the role layer's own answer, which always carries every field; the authored literal
+    // leaves the optional ones out.
+    expect(engine.getTrackInsert(1)).toEqual(resolveTrackInsert("chords"));
     engine.destroy();
   });
 });

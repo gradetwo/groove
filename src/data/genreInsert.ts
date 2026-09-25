@@ -466,6 +466,9 @@ export function applyInsertPatch(
     low: mergeBand(base.low, patch?.low),
     mid: mergeBand(base.mid, patch?.mid),
     high: mergeBand(base.high, patch?.high),
+    // The resolved contract always carries `width` (0 when nobody asked), so a genre-resolved chain and a strip's own
+    // params are the same shape — the property the wiring cases compare.
+    width: patch?.width ?? base.width ?? 0,
   };
   if (!patch) return out;
   for (const [key, value] of Object.entries(patch) as [keyof TrackInsertPatch, unknown][]) {
