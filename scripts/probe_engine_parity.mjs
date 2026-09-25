@@ -16,8 +16,14 @@
  * ## How
  *
  * It shells out to `render_genre_wav.mjs` (the app's own offline renderer, in each engine) once per lane per engine
- * and compares the two files: a lane that is audible in one engine and silent in the other is the failure, and a
- * lane that differs only by a small rms delta is the engine's own arithmetic. `--tolerance-db` sets "small".
+ * and compares the two files.
+ *
+ * **Silence in one engine and not the other is the failure** — that is the defect, and it is unambiguous. A loudness
+ * difference is *not* a failure, and the reason is the fix itself: when a browser cannot hear the GS-1 voice offline
+ * the lanes deliberately fall back to the **native** engine, which is a different instrument. `chords` and `lead`
+ * landing 5–6 dB apart and a sampled texture 15 dB from its noise twin is what that fallback sounds like, so levels
+ * are reported and only a delta beyond `--tolerance-db` (20 dB by default, i.e. beyond any plausible voice swap) is
+ * treated as suspicious.
  *
  * Usage:
  *   node scripts/probe_engine_parity.mjs [--genres=chicago-house,uk-garage] [--bars=2] [--tolerance-db=6]
@@ -41,7 +47,7 @@ const arg = (name, fallback = "") => {
 
 const genres = (arg("--genres", "uk-garage,chicago-house") || "").split(",").filter(Boolean);
 const bars = Number(arg("--bars", "2")) || 2;
-const toleranceDb = Number(arg("--tolerance-db", "6"));
+const toleranceDb = Number(arg("--tolerance-db", "20"));
 const engines = (arg("--engines", "chromium,webkit") || "").split(",").filter(Boolean);
 const keep = process.argv.includes("--keep");
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "engine-parity-"));
@@ -85,6 +91,15 @@ function readWav(file) {
 
 const db = (v) => (v > 0 ? 20 * Math.log10(v) : -Infinity);
 
+/**
+ * One port per (engine, lane), handed out rather than randomised.
+ *
+ * A random port collided once — two renders racing for the same number, and the run failed on `EADDRINUSE` instead of
+ * on anything about audio. Ranges are per engine so the two never overlap either.
+ */
+let portCursor = 0;
+const portFor = (engine) => (engine === "chromium" ? 5200 : 5600) + (portCursor++ % 200);
+
 function render(engine, genre, lane) {
   const out = path.join(workDir, `${engine}-${genre}-${lane}.wav`);
   const result = spawnSync(
@@ -96,7 +111,7 @@ function render(engine, genre, lane) {
       `--stem=${lane}`,
       `--browser=${engine}`,
       `--out=${out}`,
-      `--port=${5200 + Math.floor(Math.random() * 400)}`,
+      `--port=${portFor(engine)}`,
     ],
     { cwd: ROOT, encoding: "utf8" }
   );
@@ -153,8 +168,9 @@ if (failures.length) {
   console.log("\n❌ engine parity failed:");
   for (const failure of failures) console.log(`   · ${failure}`);
   console.log(
-    "\n   A GS-1-routed lane (chords/lead/fx) that is silent on WebKit is the report this probe was written for:\n" +
-      "   the worklet host builds, the planner treats the track as handled, and no fallback plays."
+    "\n   A GS-1-routed lane (chords/lead/fx) that is silent in one engine while the other hears it is the report\n" +
+      "   this probe was written for: the worklet host builds, the planner treats the track as handled, and no\n" +
+      "   fallback plays. A *level* difference on those lanes is the fallback doing its job — a different voice."
   );
   process.exit(1);
 }
