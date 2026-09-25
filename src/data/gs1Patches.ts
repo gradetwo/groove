@@ -62,6 +62,8 @@ export type Gs1PatchName =
   | "dubStab"
   /** Ambient techno's wide strings wash — see the patch body for the trade it records. */
   | "ambientStrings"
+  /** A plain sine lead, for the instruments that name one. */
+  | "sineLead"
   | "sampleTexture"
   | "sampleSurface";
 
@@ -102,7 +104,7 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.ENV_DECAY]: 0.12,
     [Param.ENV_SUSTAIN]: 0.05,
     [Param.ENV_RELEASE]: 0.25,
-    [Param.PATCH_GAIN]: 0.6,
+    [Param.PATCH_GAIN]: 2.4,
   },
   sampleTexture: {
     [Param.OSC1_ON]: 1,
@@ -162,7 +164,8 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.ENV_DECAY]: 1.4,
     [Param.ENV_SUSTAIN]: 0.32,
     [Param.ENV_RELEASE]: 0.5,
-    [Param.PATCH_GAIN]: 0.6,
+    // −5.9 dB under the native Rhodes over six genres.
+    [Param.PATCH_GAIN]: 1.1,
   },
   /** Bowed ensemble: the slow swell that chords tracks use instead of a pad. */
   /**
@@ -243,14 +246,20 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.OSC2_SPREAD]: 0.7,
     [Param.OSC2_DETUNE]: -14,
     [Param.FILTER_TYPE]: 1,
-    [Param.FILTER_CUTOFF]: 6500,
+    [Param.FILTER_CUTOFF]: 3200,
     [Param.FILTER_RES]: 0.1,
-    [Param.FILTER_ENV_AMT]: 0.3,
+    [Param.FILTER_ENV_AMT]: 0.2,
     [Param.ENV_ATTACK]: 0.02,
     [Param.ENV_DECAY]: 0.6,
     [Param.ENV_SUSTAIN]: 0.9,
     [Param.ENV_RELEASE]: 0.7,
-    [Param.PATCH_GAIN]: 0.42,
+    /**
+     * Measured **−22.5 dB** under the native part on the chords lane (future-house, progressive-house) and −12.5 dB on
+     * the lead (uplifting-trance, euro-trance): a seven-voice saw stack through a 6.5 kHz filter reads bright and thin
+     * against a native supersaw that is dense and loud. The gain comes up to meet the level and the filter closes to
+     * meet the brightness; the eight-voice headroom rule allows up to 8.
+     */
+    [Param.PATCH_GAIN]: 2.4,
   },
   /** High-gain rhythm guitar: the drive lives in the filter, as on the real thing. */
   drivenGuitar: {
@@ -549,6 +558,33 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.LFO_TARGET]: Param.OSC1_PITCH,
     [Param.PATCH_GAIN]: 0.5,
   },
+  /**
+   * A **sine** lead for the instruments that name one.
+   *
+   * `sine_lead` was routed to `squareLead` — a pulse — and measured ×4.44 brightness against its native reference on
+   * `g-funk`. A routing table that ignores the word in the instrument name is the kind of mistake a sweep exists to
+   * find: the patch is a plain sine with a quiet octave, a gentle filter and a full sustain, which is what a sine lead
+   * is.
+   */
+  sineLead: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 0, // sine
+    [Param.OSC1_LEVEL]: 0.9,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 0,
+    [Param.OSC2_PITCH]: 12,
+    [Param.OSC2_LEVEL]: 0.14,
+    [Param.FILTER_TYPE]: 1,
+    [Param.FILTER_CUTOFF]: 4200,
+    [Param.FILTER_RES]: 0.08,
+    [Param.FILTER_ENV_AMT]: 0.1,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.01,
+    [Param.ENV_DECAY]: 0.4,
+    [Param.ENV_SUSTAIN]: 0.85,
+    [Param.ENV_RELEASE]: 0.4,
+    [Param.PATCH_GAIN]: 0.9,
+  },
   organStack: {
     [Param.OSC1_ON]: 1,
     // Triangle rather than pulse: the native registration's partials fall off steeply, and a pulse's 1/n series is
@@ -628,7 +664,7 @@ export const GS1_LEAD_ROUTING: Record<string, Gs1Routing> = {
   fm_lead: { patch: "bellMallet" },
   bell_lead: { patch: "bellMallet" },
   cowbell_lead: { patch: "bellMallet" },
-  sine_lead: { patch: "squareLead" },
+  sine_lead: { patch: "sineLead" },
   organ_lead: { patch: "organStack" },
   brass_synth: { patch: "analogLead" },
   warm_pad: { patch: "warmPad" },
