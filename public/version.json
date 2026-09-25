@@ -1,23 +1,23 @@
 {
-  "version": "2.19.1",
-  "releaseDate": "2026-09-24",
+  "version": "2.19.2",
+  "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.19.1",
-    "date": "2026-09-24",
+    "version": "2.19.2",
+    "date": "2026-09-25",
     "category": "fix",
     "title": {
-      "zh": "维护版：补上织体音色的后备音色，更新记录只保留最近十条",
-      "en": "Maintenance: a fallback voice for the texture instruments, and the changelog keeps the latest ten"
+      "zh": "修好 Safari 上的导出与主奏",
+      "en": "Safari: exports and the lead, fixed"
     },
     "highlights": [
       {
-        "zh": "修掉一处隐患：采样织体音色在关闭新合成引擎时没有后备音色，会掉到一个没人选过的默认音色。",
-        "en": "Fixed a gap: a sample-texture instrument had no fallback voice with the new synth engine switched off, and fell through to a default nobody chose."
+        "zh": "Safari 离线渲染时听不到合成引擎，导出的文件只剩鼓和贝斯，分轨里的和弦与主奏是空的。现在会自动改用原生音色，导出内容完整。",
+        "en": "Safari could not hear the synth engine when rendering offline, so exports kept only the drums and bass, and the chords/lead stems were empty. Those lanes now use the native engine."
       },
       {
-        "zh": "这一版没有可听的变化。",
-        "en": "Nothing in this release changes what you hear."
+        "zh": "播放时主奏的音准以前是单独发的，会在错误的时刻改到正在响的音；现在跟着音符一起、在音符自己的时刻生效。",
+        "en": "The lead's tuning used to arrive as a separate message that retuned whatever was already sounding; it now travels with the note and takes effect at the note's own moment."
       }
     ],
     "truncated": false
