@@ -626,6 +626,35 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The attack-arrival rule, and the queue that justified it (2026-09-26)
+
+Round 5 ended with one genre's lead rendering 50 dB below its siblings because its instrument's attack was longer than
+its notes. The same question asked of the whole catalogue is a **static** one — `preset.adsr.attack` against the note the
+lane actually plays — and it needs no audio at all:
+
+```
+318 routed lanes measured; attack longer than half the note: 55
+5.33  chords  breakcore        warm_pad  attack 0.152s  note 0.028s
+5.05  chords  hardcore-gabber  warm_pad  attack 0.152s  note 0.030s
+4.91  chords  jump-up          warm_pad  attack 0.152s  note 0.031s
+4.88  chords  neurofunk        warm_pad  attack 0.152s  note 0.031s
+```
+
+**55 of 318 lanes** play their instrument's attack at five times the length of the note. So the engine and the exporter
+both grew one rule (`soundingDuration`): a note is never shorter than `attack × 2.5`. Measured A/B on `breakcore`'s
+chords:
+
+```
+              before      after
+gs1          −31.9 dBFS  −21.4 dBFS   (+10.5 dB)
+native       −38.9 dBFS  −12.0 dBFS   (+26.9 dB)
+```
+
+The pad now speaks instead of being cut at 18 % of its attack. Two lessons are worth keeping: the queue was **static**
+(no audio, no CI matrix — one arithmetic pass over the catalogue), and the rule had to be applied in **both** the engine
+and the exporter, because the first A/B showed *no change at all* until the exporter's four mirrored sites were wrapped
+too. That is the parity rule earning its keep the hard way.
+
 ### The genre-stem metric measures *part against instrument*, and the native reference was the broken side (2026-09-26)
 
 Five clean axes could not explain the genre gap, so the search moved to the lane's own state. Rendering each lane of

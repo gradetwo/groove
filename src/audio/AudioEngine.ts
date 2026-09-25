@@ -38,6 +38,7 @@ import {
   chordNoteDuration,
   chordVoiceOnset,
   CHORD_STRUM_SEC,
+  soundingDuration,
   type ChordTreatment,
   chordNotesForStep,
 } from "./chordVoicing";
@@ -2583,7 +2584,12 @@ export class AudioEngine {
     // in how long they ring and whether the notes roll.
     const effective: ChordTreatment =
       treatment ?? { style: "triad", articulation: "block", gateScale: 1, strumSeconds: CHORD_STRUM_SEC };
-    const dur = chordNoteDuration(stepDur, gateVal, effective);
+    /**
+     * The **attack-arrival rule** (see `soundingDuration`): the voicing's own preset attack decides a floor under the
+     * note's length, so a fast genre cannot cut a pad before it speaks. Applied to the shared duration, which both the
+     * native path below and the GS-1 plan above use, because "the two engines must agree" is this function's contract.
+     */
+    const dur = soundingDuration(chordNoteDuration(stepDur, gateVal, effective), preset.adsr.attack);
     // Hold the voicing's summed power at the single note it replaces, so adding
     // harmony is not heard as a level jump (and does not push the limiter harder on
     // every genre at once).
@@ -2620,7 +2626,7 @@ export class AudioEngine {
   ): void {
     if (!this.ctx) return;
     const midi = pitchOffset > 0 ? pitchOffset : 72;
-    const dur = stepDur * gateVal * 1.5;
+    const dur = soundingDuration(stepDur * gateVal * 1.5, preset.adsr.attack);
     // P6: same contract as `playChord` — GS-1 takes the note or the native engine does.
     if (trackIdx !== undefined && this.gs1Pool) {
       const instrument = this.pattern?.tracks[trackIdx]?.instrument;
@@ -2694,7 +2700,7 @@ export class AudioEngine {
     // non-sweep fx instrument takes the poly-synth path.
     if (preset !== DEFAULT_SYNTH_PRESETS.noiseSweep) {
       const midi = pitchOffset > 0 ? pitchOffset : 72;
-      const dur = stepDur * gateVal * 1.5;
+      const dur = soundingDuration(stepDur * gateVal * 1.5, preset.adsr.attack);
       const voice = playPolySynthNote(
       this.ctx,
       dest,

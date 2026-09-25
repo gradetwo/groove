@@ -37,6 +37,7 @@ import {
   chordNotesForStep,
   chordVoiceGain,
   chordNoteDuration,
+  soundingDuration,
   chordVoiceOnset,
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
@@ -680,7 +681,11 @@ export async function renderPatternOffline(
           // a chord is stored — which is the whole reason this is one shared call.
           const notes = chordNotesForStep(track, stepIdx, midi, pattern.scale, { style: treatment.style });
           const voiceVel = subVel * chordVoiceGain(notes.length);
-          const chordDur = chordNoteDuration(subDur, gateVal, treatment);
+          /**
+           * The attack-arrival rule, at the same place the engine applies it — this function exists to mirror the engine
+           * and a rule applied in only one of them is how a rendered stem comes to disagree with the room.
+           */
+          const chordDur = soundingDuration(chordNoteDuration(subDur, gateVal, treatment), synthPreset.adsr.attack);
           // P6: if GS-1 voices this track, it takes the notes and the native voices are skipped —
           // playing both would double the harmony. The frame plan comes from the shared planner,
           // so the live engine and this renderer cannot disagree about when a note sounds.
@@ -744,7 +749,7 @@ export async function renderPatternOffline(
           });
         } else if (trackId === "lead" || lowerName.includes("lead")) {
           const midi = pitchVal > 0 ? pitchVal : 72;
-          const leadDur = subDur * gateVal * 1.5;
+          const leadDur = soundingDuration(subDur * gateVal * 1.5, synthPreset.adsr.attack);
           const leadHost = gs1Hosts.get(trackIdx);
           if (leadHost) {
             const planned = planGs1Notes({
@@ -792,7 +797,14 @@ export async function renderPatternOffline(
             const planned = planGs1Notes({
               role: "fx",
               instrument: track.instrument,
-              notes: [{ note: pitchVal > 0 ? pitchVal : 60, time: subTime, duration: subDur * gateVal * 1.5, velocity: subVel }],
+              notes: [
+                {
+                  note: pitchVal > 0 ? pitchVal : 60,
+                  time: subTime,
+                  duration: soundingDuration(subDur * gateVal * 1.5, synthPreset.adsr.attack),
+                  velocity: subVel,
+                },
+              ],
               sampleRate: ctx.sampleRate,
               latencyFrames: fxHost.scheduledNoteLatencyFrames,
             });
@@ -823,7 +835,7 @@ export async function renderPatternOffline(
               trackDest,
               midi,
               subTime,
-              subDur * gateVal * 1.5,
+              soundingDuration(subDur * gateVal * 1.5, synthPreset.adsr.attack),
               subVel,
               synthPreset,
               variationFor(trackIdx, stepIdx, r)
