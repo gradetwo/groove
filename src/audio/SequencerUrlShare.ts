@@ -211,8 +211,24 @@ interface CompactSharePayload {
   rs?: "1/8" | "1/16" | "1/32";
   stLen?: number;
   t: CompactTrackPayload[];
-  /** `[slot, bars, label?, velocityScale?, mute?, overrides?]` per section; absent for a pre-B1 link. */
-  sec?: Array<[ClipSlot, number, string?, number?, string[]?, CompactOverrides?]>;
+  /**
+   * `[slot, bars, label?, velocityScale?, mute?, overrides?, slots?]` per section; absent for a pre-B1 link.
+   *
+   * The seventh element is the per-lane clip choice (`SongSection.slots`, the first step of the per-track
+   * arrangement). Appending it keeps every older link decodable — a shorter tuple simply has no per-lane choice — and
+   * it is bounded the same way the rest of the payload is: at most eight lanes, each a known slot.
+   */
+  sec?: Array<
+    [
+      ClipSlot,
+      number,
+      string?,
+      number?,
+      string[]?,
+      CompactOverrides?,
+      Array<[string, ClipSlot]>?,
+    ]
+  >;
 }
 
 const VALID_RESOLUTIONS = new Set(["1/8", "1/16", "1/32"]);
@@ -320,9 +336,21 @@ export function encodeSharedSequencer(state: SharedSequencerState): string {
         ? section.mute.filter((id): id is string => typeof id === "string").slice(0, 16).map((id) => id.slice(0, 32))
         : undefined;
       const overrides = compactOverrides(section);
+      /**
+       * The per-lane clip choice, as `[trackId, slot]` pairs: eight lanes at most, and only pairs that name a real
+       * slot. A section that says nothing about lanes contributes nothing, which is what keeps an untouched song's
+       * link byte-identical to before this field existed.
+       */
+      const slots = section.slots
+        ? (Object.entries(section.slots)
+            .filter(([trackId, slot]) => typeof trackId === "string" && CLIP_SLOTS.includes(slot as ClipSlot))
+            .slice(0, 8)
+            .map(([trackId, slot]) => [trackId.slice(0, 32), slot as ClipSlot]) as Array<[string, ClipSlot]>)
+        : [];
+      const lanes = slots.length ? slots : undefined;
       compactSections.push(
-        overrides || mute || velocityScale !== undefined || label
-          ? [section.slot, bars, label, velocityScale, mute?.length ? mute : undefined, overrides]
+        overrides || mute || velocityScale !== undefined || label || lanes
+          ? [section.slot, bars, label, velocityScale, mute?.length ? mute : undefined, overrides, lanes]
           : [section.slot, bars]
       );
     }
@@ -549,7 +577,8 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
     if (Array.isArray(payload.sec)) {
       for (const raw of payload.sec.slice(0, 64)) {
         if (!Array.isArray(raw) || raw.length < 2) continue;
-        const [slot, bars, label, velocityScale, mute, overrides] = raw as [
+        const [slot, bars, label, velocityScale, mute, overrides, rawSlots] = raw as [
+          unknown,
           unknown,
           unknown,
           unknown,
@@ -570,6 +599,17 @@ export function decodeSharedSequencer(encoded: string): SharedSequencerState | n
         }
         const decoded = decodeOverrides(overrides);
         if (decoded) section.overrides = decoded;
+        if (Array.isArray(rawSlots)) {
+          const slots: Record<string, ClipSlot> = {};
+          for (const pair of rawSlots.slice(0, 8)) {
+            if (!Array.isArray(pair) || pair.length < 2) continue;
+            const [trackId, lane] = pair as [unknown, unknown];
+            if (typeof trackId !== "string" || !trackId) continue;
+            if (typeof lane !== "string" || !CLIP_SLOTS.includes(lane as ClipSlot)) continue;
+            slots[trackId.slice(0, 32)] = lane as ClipSlot;
+          }
+          if (Object.keys(slots).length) section.slots = slots;
+        }
         sections.push(section);
       }
     }

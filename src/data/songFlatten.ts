@@ -12,7 +12,7 @@
  * audio (bar order, repeats, mutes, velocity, polymeter).
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
-import { resolveTimeline, type ClipSlot, type Song, type SongFill, type SongSection } from "../types/song";
+import { resolveTimeline, type ClipSlot, type Song, type SongBar, type SongFill, type SongSection } from "../types/song";
 
 /** The per-step arrays a clip may carry; `steps` is required, the rest are optional. */
 const OPTIONAL_STEP_ARRAYS = ["velocity", "pitch", "pitches", "gate", "ratchet", "probability"] as const;
@@ -61,6 +61,33 @@ function fillTargets(fill: SongFill, track: SequencerTrack): boolean {
  * enumerates), so a clip that is itself four bars long contributes four bars of audio per pass. Mixed clip
  * lengths are summed rather than assumed equal.
  */
+
+/**
+ * The clip a **lane** takes its steps from in this bar — the section's own clip, unless the section names another.
+ *
+ * `SongSection.slots` is the per-lane choice (`docs/TRACK_ARRANGEMENT_PLAN.md`), addressed by `track_id` rather than
+ * by position: a lane the other clip does not have falls back to the section's clip instead of quietly taking a
+ * different lane's steps. When a section names nothing, this is `clipFor(song, bar.slot)` for every lane — which is
+ * what makes the "no overrides is byte-identical" test possible.
+ */
+function laneSourceFor(
+  song: Song,
+  bar: SongBar,
+  trackIdx: number,
+  baseTrack: { track_id?: string; name?: string }
+): { clip: SequencerPattern; trackIdx: number } | null {
+  const named = baseTrack.track_id ? bar.slots?.[baseTrack.track_id] : undefined;
+  if (!named || named === bar.slot) {
+    const clip = clipFor(song, bar.slot);
+    return clip ? { clip, trackIdx } : null;
+  }
+  const override = clipFor(song, named);
+  if (!override) return null;
+  const at = (override.tracks ?? []).findIndex((track) => track.track_id === baseTrack.track_id);
+  if (at < 0) return null;
+  return { clip: override, trackIdx: at };
+}
+
 export function flattenSong(song: Song): FlattenedSong {
   /**
    * The timeline needs the *clip* to place a riser: which lane can perform one and how long a pass is. Both are the
@@ -121,7 +148,8 @@ export function flattenSong(song: Song): FlattenedSong {
     const arrays = OPTIONAL_STEP_ARRAYS.filter(
       (name) =>
         playable.every((bar) => {
-          const track = clipFor(song, bar.slot)?.tracks?.[trackIdx];
+          const source = laneSourceFor(song, bar, trackIdx, baseTrack);
+          const track = source?.clip?.tracks?.[source.trackIdx];
           return Array.isArray(track?.[name as OptionalStepArray]);
         }) || (name === "velocity" && filled)
     );
@@ -131,8 +159,13 @@ export function flattenSong(song: Song): FlattenedSong {
     for (const name of arrays) built[name] = [];
 
     for (const bar of playable) {
-      const clip = clipFor(song, bar.slot)!;
-      const track = clip.tracks[trackIdx];
+      /**
+       * A lane the section's own clip choice does not provide falls back to the section's clip: a missing name is
+       * "no opinion", not "silence".
+       */
+      const source = laneSourceFor(song, bar, trackIdx, baseTrack);
+      const clip = source?.clip ?? clipFor(song, bar.slot)!;
+      const track = clip.tracks[source?.trackIdx ?? trackIdx];
       const clipLength = clipSteps(clip);
       const muted = bar.mute.includes(track.track_id) || bar.mute.includes(track.name);
       const scale = Number.isFinite(bar.velocityScale) ? bar.velocityScale : 1;
