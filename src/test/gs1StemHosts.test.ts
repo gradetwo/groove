@@ -68,6 +68,7 @@ function fakeHost() {
   return {
     ready: Promise.resolve(),
     setPatch: vi.fn(),
+    setModRoute: () => undefined,
     output: { connect: vi.fn() },
     noteOnAt: vi.fn(),
     noteOffAt: vi.fn(),
