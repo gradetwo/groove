@@ -29,6 +29,7 @@ import type { Song } from "../types/song";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
 import { swingOffsetSeconds } from "./swing";
 import { foldLoopTail, resolveRenderTailSec, tailFramesOf } from "./renderTail";
+import { ensureOfflineGs1Capability } from "./gs1/gs1OfflineCapability";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
@@ -432,7 +433,23 @@ export async function renderPatternOffline(
    */
   const gs1Hosts = new Map<number, Gs1Host>();
   let gs1HostFailures = 0;
-  if (isGs1RoutingEnabled() && typeof ctx.audioWorklet?.addModule === "function") {
+  /**
+   * Asked of **this** kind of context, before any host is built.
+   *
+   * Safari renders every GS-1 lane silent inside an `OfflineAudioContext` (measured: a `chords` or `lead` stem is an
+   * empty file there while the native lanes match Chromium within 0.8 dB), and because a host that exists means
+   * "this track is handled", those lanes were exported as silence. The probe renders one note the same way an export
+   * does; a measured silence sends every routed lane to the native engine, which is a different voice but a file
+   * with music in it. `unmeasured` leaves everything as it was.
+   */
+  const gs1Verdict = isGs1RoutingEnabled() ? await ensureOfflineGs1Capability({ sampleRate: ctx.sampleRate }) : "unmeasured";
+  const gs1Available = isGs1RoutingEnabled() && gs1Verdict !== "silent";
+  if (!gs1Available && isGs1RoutingEnabled()) {
+    console.warn(
+      "[render] this browser renders the GS-1 voice silent offline (probe verdict: silent) — chords/lead go to the native engine"
+    );
+  }
+  if (gs1Available && typeof ctx.audioWorklet?.addModule === "function") {
     for (let t = 0; t < numTracks; t++) {
       /**
        * A stem render only ever plays its own track, so it must not build hosts for the others.

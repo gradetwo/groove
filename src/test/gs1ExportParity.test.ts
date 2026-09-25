@@ -59,6 +59,14 @@ import {
   planGs1Notes,
   setGs1RoutingEnabled,
 } from "../audio/gs1/gs1Tracks";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
+
+/**
+ * The offline capability probe builds a host of its own, and these cases count hosts and assert what the renderer did
+ * with them. Declared satisfied here, at module scope, so it is covered whichever `describe` a case lives in; the
+ * probe has its own file and its own acceptance test (`probe_engine_parity.mjs`).
+ */
+setGs1OfflineCapability("usable");
 import { Gs1VoicePool } from "../audio/gs1/Gs1VoicePool";
 import { chordVoicingForStep, chordNoteDuration, chordVoiceOnset, chordVoiceGain } from "../audio/chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";

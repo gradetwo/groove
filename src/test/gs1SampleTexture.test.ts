@@ -1,6 +1,14 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { GS1_PATCHES, GS1_TEXTURE_ROUTING, resolveGs1Patch, routingForRole } from "../data/gs1Patches";
 import { gs1PatchFor, patchNeedsSample } from "../audio/gs1/gs1Tracks";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
+
+/**
+ * The offline capability probe builds a host of its own, and these cases count hosts and assert what the renderer did
+ * with them. Declared satisfied here, at module scope, so it is covered whichever `describe` a case lives in; the
+ * probe has its own file and its own acceptance test (`probe_engine_parity.mjs`).
+ */
+setGs1OfflineCapability("usable");
 import { Param } from "../../vendor/gs1/src/audio/params";
 import {
   TEXTURE_SAMPLE_ROOT,
