@@ -37,6 +37,8 @@ function makePoolStub() {
     },
     releaseAll: vi.fn(),
     status: () => [],
+    /** The engine tells the pool the genre on every pattern change. */
+    setGenre: () => undefined,
     dispose: vi.fn(),
   } as unknown as Gs1VoicePool;
   return { pool, plays };
