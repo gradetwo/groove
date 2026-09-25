@@ -1,1 +1,0 @@
-default/ambient	seed=1067	reason=regen_failed reasons=['R1', 'R4']

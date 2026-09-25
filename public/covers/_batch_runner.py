@@ -371,6 +371,67 @@ def remotes_for(job_hint):
     return f"/content/out/<job>/ and MyDrive/DSH/<job>"
 
 
+# --- failure classification -------------------------------------------------
+# Colab allows ONE ssh connection per runtime: when the generation loop, the
+# migration tooling or any other client touch ssh at the same time, the loser
+# gets 429 / rc=255 / "no result from the worker server".  Those are TRANSPORT
+# faults and must be retried with backoff, never recorded as tile failures.
+TRANSPORT_MARKERS = (
+    "no result from the worker server",
+    "rc=255",
+    "429",
+    "already-active ssh session",
+    "connection reset",
+    "connection refused",
+    "ssh to session",
+    "timed out",
+    "appears to be lost",
+)
+CONTENT_ATTEMPTS = 2
+TRANSPORT_ATTEMPTS = 5
+TRANSPORT_SLEEPS = (20, 45, 90, 90, 120)
+
+
+def classify_failure(detail, logfile=None):
+    """Return 'transport' or 'content' for a failed generation."""
+    blob = (detail or "").lower()
+    if logfile and os.path.exists(logfile):
+        try:
+            with open(logfile, "rb") as fh:
+                fh.seek(max(0, os.path.getsize(logfile) - 4000))
+                tail = fh.read().decode("utf-8", "replace").lower()
+            blob += "\n" + tail
+        except Exception:
+            pass
+    if any(marker in blob for marker in TRANSPORT_MARKERS):
+        return "transport"
+    # a colabgen CLI failure that never produced a CG_RESULT is a transport fault
+    if logfile and "cg_result" not in blob:
+        return "transport"
+    return "content"
+
+
+def remote_run_active():
+    """True while the detached remote loop owns the GPU (marker refreshed by sync).
+
+    Prevents the classic double-writer: a relaunched local loop and the remote
+    run both writing the same tiles.
+    """
+    marker = os.path.join(SCRATCH, "REMOTE_ACTIVE")
+    if not os.path.exists(marker):
+        return False
+    try:
+        age = time.time() - os.path.getmtime(marker)
+        with open(marker) as fh:
+            name = fh.read().strip()
+    except Exception:
+        return False
+    if age > 3600:
+        return False
+    log(f"REMOTE-ACTIVE run={name or 'covers-gen'} marker_age_s={age:.0f}")
+    return True
+
+
 def read_decisions(skin):
     """Reviewer's reject decisions for a skin, from _review/decisions.jsonl.
 
@@ -396,19 +457,16 @@ def read_decisions(skin):
 
 
 def process_rejects(skin, decisions, data):
-    """Move rejected tiles to _rejected/<skin>/ and regenerate in place, same seed."""
+    """Move rejected tiles to _rejected/<skin>/ and regenerate in place, same seed.
+
+    The GPU-urgent hint is raised PER TILE inside _process_rejects_inner, not for
+    the whole wave: holding it across a wave starves the generation loop for
+    minutes (that was a real stall).  Triage / contact sheets / PIL work are all
+    CPU-only and happen outside any lock.
+    """
     rej_dir = os.path.join(COVERS, "_rejected", skin)
     os.makedirs(rej_dir, exist_ok=True)
-    # ask the generation loop to stand down between images while we regenerate
-    with open(GPU_URGENT, "w") as fh:
-        fh.write(f"{skin} pid={os.getpid()}\n")
-    try:
-        return _process_rejects_inner(skin, decisions, data, rej_dir)
-    finally:
-        try:
-            os.remove(GPU_URGENT)
-        except OSError:
-            pass
+    return _process_rejects_inner(skin, decisions, data, rej_dir)
 
 
 def _process_rejects_inner(skin, decisions, data, rej_dir):
@@ -435,50 +493,81 @@ def _process_rejects_inner(skin, decisions, data, rej_dir):
         if hint:
             prompt = f"{prompt} {hint}"
 
-        if not acquire_gpu_lock(f"regen:{skin}:{genre}"):
-            log(f"REJECT-GPU-LOCK-TIMEOUT {skin} {genre}")
-            stats["regen_failed"] += 1
-            continue
-
-        ok_done = False
+        # announce this tile so the generation loop stands down between images,
+        # then take the GPU.  Both are released per tile, never per wave.
+        with open(GPU_URGENT, "w") as fh:
+            fh.write(f"{skin}:{genre} pid={os.getpid()}\n")
         try:
-            for attempt in (1, 2):
-                t0 = time.time()
-                ok, result = _run_generation_locked(skin, genre, prompt, seed, 100 + attempt)
-                if not ok:
-                    log(f"REJECT-GEN-FAIL {skin} {genre} attempt={attempt} seed={seed} {result}")
-                    continue
-                try:
-                    with open(result, "rb") as fh:
-                        png_bytes = fh.read()
-                    finalise(png_bytes, jpg, skin, pixelate=(skin == "pixel"))
-                    vok, detail = verify_image(jpg)
-                    if not vok:
-                        raise RuntimeError(detail)
-                    kept = os.path.join(SRC_DIR, f"{skin}__{genre}.png")
-                    shutil.copy2(result, kept)
-                    write_meta(os.path.join(COVERS, skin, genre + ".json"), skin, genre, seed,
-                               prompt, origin=origin,
-                               review={"decision": "regenerated_after_reject",
-                                       "reasons": reasons,
-                                       "attempt": attempt,
-                                       "previous": f"_rejected/{skin}/{genre}.jpg",
-                                       "seconds": round(time.time() - t0, 1)})
-                    log(f"REGEN-OK {skin} {genre} reasons={','.join(reasons)} attempt={attempt} "
-                        f"seconds={time.time()-t0:.1f} seed={seed}")
-                    if attempt == 1:
-                        stats["regen_attempt1_ok"] += 1
+            acquired = acquire_gpu_lock(f"regen:{skin}:{genre}", timeout=60)
+            if not acquired:
+                log(f"REJECT-GPU-LOCK-TIMEOUT {skin} {genre} — skipping, tile stays as-is")
+                stats["regen_failed"] += 1
+                # put the previous image back so no hole is left behind
+                if os.path.exists(old) and not os.path.exists(jpg):
+                    shutil.copy2(old, jpg)
+                continue
+            log(f"LOCK-ACQUIRED regen {skin} {genre} at "
+                f"{datetime.now(timezone.utc).strftime('%H:%M:%SZ')}")
+            ok_done = False
+            try:
+                content_attempt = 0
+                transport_attempt = 0
+                while True:
+                    t0 = time.time()
+                    ok, result = _run_generation_locked(skin, genre, prompt, seed,
+                                                        100 + content_attempt + transport_attempt)
+                    if ok:
+                        try:
+                            with open(result, "rb") as fh:
+                                png_bytes = fh.read()
+                            finalise(png_bytes, jpg, skin, pixelate=(skin == "pixel"))
+                            vok, detail = verify_image(jpg)
+                            if not vok:
+                                raise RuntimeError(detail)
+                            kept = os.path.join(SRC_DIR, f"{skin}__{genre}.png")
+                            shutil.copy2(result, kept)
+                            write_meta(os.path.join(COVERS, skin, genre + ".json"), skin, genre,
+                                       seed, prompt, origin=origin,
+                                       review={"decision": "regenerated_after_reject",
+                                               "reasons": reasons,
+                                               "attempt": content_attempt + transport_attempt + 1,
+                                               "previous": f"_rejected/{skin}/{genre}.jpg",
+                                               "seconds": round(time.time() - t0, 1)})
+                            log(f"REGEN-OK {skin} {genre} reasons={','.join(reasons)} "
+                                f"seconds={time.time()-t0:.1f} seed={seed}")
+                            stats["regen_ok"] += 1
+                            if transport_attempt or content_attempt:
+                                stats["accepted_after_2"] += 1
+                            ok_done = True
+                            break
+                        except Exception as exc:
+                            log(f"REJECT-POSTPROCESS-FAIL {skin} {genre} {exc}")
+                            content_attempt += 1
                     else:
-                        stats["accepted_after_2"] += 1
-                        log(f"ACCEPTED-AFTER-2 {skin} {genre} "
-                            f"reasons={','.join(reasons)} (kept attempt 2)")
-                    stats["regen_ok"] += 1
-                    ok_done = True
-                    break
-                except Exception as exc:
-                    log(f"REJECT-POSTPROCESS-FAIL {skin} {genre} attempt={attempt} {exc}")
+                        logfile = os.path.join(GENLOG_DIR, f"{skin}__{genre}.a{100 + content_attempt + transport_attempt}.log")
+                        kind = classify_failure(result, logfile)
+                        if kind == "transport" and transport_attempt < TRANSPORT_ATTEMPTS - 1:
+                            delay = TRANSPORT_SLEEPS[min(transport_attempt, len(TRANSPORT_SLEEPS) - 1)]
+                            transport_attempt += 1
+                            log(f"REJECT-TRANSPORT-RETRY {skin} {genre} attempt={transport_attempt} "
+                                f"sleep={delay}s detail={str(result)[:120]}")
+                            time.sleep(delay)
+                            continue
+                        content_attempt += 1
+                        log(f"REJECT-GEN-FAIL {skin} {genre} kind={kind} attempt={content_attempt} "
+                            f"seed={seed} {result}")
+                    if content_attempt >= CONTENT_ATTEMPTS:
+                        break
+                    time.sleep(5)
+            finally:
+                release_gpu_lock()
+                log(f"LOCK-RELEASED regen {skin} {genre} at "
+                    f"{datetime.now(timezone.utc).strftime('%H:%M:%SZ')}")
         finally:
-            release_gpu_lock()
+            try:
+                os.remove(GPU_URGENT)
+            except OSError:
+                pass
 
         if not ok_done:
             stats["regen_failed"] += 1
@@ -539,6 +628,17 @@ def main():
     skins = args.skins.split(",")
     for skin in skins:
         os.makedirs(os.path.join(COVERS, skin), exist_ok=True)
+
+    # One writer only: if the detached remote loop owns the GPU, refuse to start a
+    # second writer rather than doubling GPU burn and racing on the same tiles.
+    if not args.verify_only and remote_run_active():
+        log("REFUSE-START local runner is not needed: the detached remote run "
+            "(_review/… no, _batch_scratch/REMOTE_ACTIVE, run 'covers-gen') is alive and "
+            "generating; a second writer would duplicate GPU work. Exiting cleanly.")
+        print("REFUSING to start: remote run 'covers-gen' is active (see "
+              "_batch_scratch/REMOTE_ACTIVE). Pull artifacts with "
+              "/home/crow/.venv/bin/python _batch_sync.py instead.", flush=True)
+        return
 
     total_elapsed_start = time.time()
     if not args.verify_only:
@@ -604,13 +704,30 @@ def main():
             t0 = time.time()
             got = False
             png_path = None
-            for attempt in (1, 2):
-                ok, result = run_generation(skin, genre, prompt, seed, attempt)
+            content_attempt = 0
+            transport_attempt = 0
+            result = ""
+            while True:
+                tag = content_attempt + transport_attempt + 1
+                ok, result = run_generation(skin, genre, prompt, seed, tag)
                 if ok:
                     png_path = result
                     got = True
                     break
-                log(f"GEN-FAIL {skin} {genre} attempt={attempt} seed={seed} {result}")
+                logfile = os.path.join(GENLOG_DIR, f"{skin}__{genre}.a{tag}.log")
+                kind = classify_failure(result, logfile)
+                if kind == "transport" and transport_attempt < TRANSPORT_ATTEMPTS - 1:
+                    delay = TRANSPORT_SLEEPS[min(transport_attempt, len(TRANSPORT_SLEEPS) - 1)]
+                    transport_attempt += 1
+                    log(f"TRANSPORT-RETRY {skin} {genre} attempt={transport_attempt} "
+                        f"sleep={delay}s detail={str(result)[:120]}")
+                    time.sleep(delay)
+                    continue
+                content_attempt += 1
+                log(f"GEN-FAIL {skin} {genre} kind={kind} attempt={content_attempt} "
+                    f"seed={seed} {result}")
+                if content_attempt >= CONTENT_ATTEMPTS:
+                    break
                 time.sleep(5)
 
             if not got:

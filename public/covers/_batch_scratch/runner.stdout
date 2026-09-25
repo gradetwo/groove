@@ -62,3 +62,27 @@
 2026-09-25T13:26:12Z CHECKPOINT 2026-09-25T13:26:08Z done=4 skipped=36 failed=0 elapsed_min=4.2 avg_s=59.7 balance=251.46
 2026-09-25T13:26:12Z GPU-YIELD generation loop pausing for review regeneration
 2026-09-25T13:35:41Z BATCH-INTERRUPTED signal=15 — safe to restart, completed images are skipped
+2026-09-25T14:47:41Z BATCH-START session=batch model=qwen-image-2.1 preset=quality steps=40 size=1024x1024 genres=159 skins=6 targets=954 balance=242.16 cwd=/home/crow/music/groove/public/covers/_batch_scratch
+2026-09-25T14:47:41Z RECOVERY remote copies per job: VM /content/out/<job>/ and Drive MyDrive/DSH/<job> (recover with `colabgen jobs` / `colabgen cp --get`)
+2026-09-25T14:47:41Z RECOVERY local source PNGs kept at /home/crow/music/groove/public/covers/_batch_scratch/src
+2026-09-25T14:47:41Z FIXES applied: minimal+=min-structure clause; pixel=post-pixelate 160px NEAREST; negative+=signature/small print/fine print/corner mark
+2026-09-25T14:47:43Z SKIN-START default balance=242.16
+2026-09-25T14:47:45Z CHECKPOINT 2026-09-25T14:47:44Z done=0 skipped=20 failed=0 elapsed_min=0.1 avg_s=0.0 balance=242.16
+2026-09-25T14:47:48Z CHECKPOINT 2026-09-25T14:47:45Z done=0 skipped=40 failed=0 elapsed_min=0.1 avg_s=0.0 balance=242.16
+2026-09-25T14:48:23Z OK default deep-house seconds=34.8 seed=1110
+2026-09-25T14:48:54Z OK default delta-blues seconds=31.0 seed=1201
+2026-09-25T14:48:54Z GPU-YIELD generation loop pausing for review regeneration
+2026-09-25T14:52:34Z GPU-YIELD-RESUME waited_s=220
+2026-09-25T14:53:17Z OK default detroit-techno seconds=43.2 seed=1572
+2026-09-25T14:54:03Z OK default disco seconds=46.1 seed=1001
+2026-09-25T14:54:54Z OK default doom-metal seconds=50.4 seed=1150
+2026-09-25T14:55:39Z OK default downtempo seconds=45.8 seed=1768
+2026-09-25T14:56:27Z OK default dream-trance seconds=47.6 seed=1550
+2026-09-25T14:57:22Z OK default drift-phonk seconds=54.5 seed=1567
+2026-09-25T14:58:09Z OK default dub seconds=47.3 seed=1960
+2026-09-25T14:58:41Z OK default dub-techno seconds=32.1 seed=1964
+2026-09-25T14:59:12Z OK default dubstep seconds=31.3 seed=1306
+2026-09-25T14:59:49Z GEN-FAIL default east-coast-hip-hop attempt=1 seed=1701 no output png (see /home/crow/music/groove/public/covers/_batch_scratch/genlogs/default__east-coast-hip-hop.a1.log)
+2026-09-25T15:00:19Z GEN-FAIL default east-coast-hip-hop attempt=2 seed=1701 exit=1 see /home/crow/music/groove/public/covers/_batch_scratch/genlogs/default__east-coast-hip-hop.a2.log
+2026-09-25T15:00:24Z FAIL default east-coast-hip-hop seconds=71.4 seed=1701
+2026-09-25T15:00:50Z BATCH-INTERRUPTED signal=15 — safe to restart, completed images are skipped

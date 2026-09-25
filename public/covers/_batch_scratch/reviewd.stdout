@@ -6,3 +6,14 @@
 2026-09-25T13:27:01Z REJECT-GEN-FAIL default ambient attempt=1 seed=1067 exit=1 see /home/crow/music/groove/public/covers/_batch_scratch/genlogs/default__ambient.a101.log
 2026-09-25T13:27:59Z REJECT-GEN-FAIL default ambient attempt=2 seed=1067 exit=1 see /home/crow/music/groove/public/covers/_batch_scratch/genlogs/default__ambient.a102.log
 2026-09-25T13:27:59Z REJECT-REGEN-FAILED default ambient reasons=R1,R4 previous image restored from _rejected/default/ambient.jpg
+2026-09-25T14:47:43Z REVIEWD START watching skins; verdicts in _review/verdicts.json; touch _review/verdicts.ready to apply (consumed once)
+2026-09-25T14:48:43Z REVIEWD VERDICT default count=6 ids=acid-techno,ambient,alternative-rnb,bossa-nova,chicago-drill,chillwave
+2026-09-25T14:49:36Z REGEN-OK default acid-techno reasons=R1 attempt=1 seconds=32.9 seed=1996
+2026-09-25T14:50:10Z REGEN-OK default ambient reasons=R1,R4 attempt=1 seconds=33.9 seed=1067
+2026-09-25T14:50:44Z REGEN-OK default alternative-rnb reasons=R4,R1 attempt=1 seconds=34.7 seed=1715
+2026-09-25T14:51:15Z REGEN-OK default bossa-nova reasons=R4,R1 attempt=1 seconds=30.8 seed=1808
+2026-09-25T14:51:56Z REGEN-OK default chicago-drill reasons=R1 attempt=1 seconds=40.5 seed=1575
+2026-09-25T14:52:31Z REGEN-OK default chillwave reasons=R4 attempt=1 seconds=35.0 seed=1556
+2026-09-25T14:52:31Z REVIEWD REVIEW default reviewed=44 rejected=6 regen_ok=6 accepted_after_2=0 regen_failed=0 reasons={R1,R4} ids=acid-techno,ambient,alternative-rnb,bossa-nova,chicago-drill,chillwave
+2026-09-25T14:53:07Z REVIEWD RE-TRIAGE default reviewed=44 flags={none}
+2026-09-25T14:53:07Z REVIEWD RE-SHEETS default _review/default_sheet_000.jpg _review/default_sheet_001.jpg
