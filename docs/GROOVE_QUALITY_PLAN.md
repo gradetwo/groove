@@ -582,6 +582,26 @@ Both need their own fix, and the shape of the first one is clear: the offline re
 the context it renders in** (a short probe render through the same kind of `OfflineAudioContext`, and a re-render with
 GS-1 off when it comes back silent) rather than trusting a realtime probe, which answers a different question.
 
+### The stereo-spread stage widens the mix and breaks the per-note claim — so it is off (2026-09-25)
+
+The stage itself works and the review liked it (mid-band side/mid −27.9 → −22.4 dB, mono fold loss 0.0002 dB, "the
+shipped version"). Enabled on the seven near-mono genres' sustained lanes, it also moved the gate:
+
+```
+flatStabs  4   budget 2   chicago-house (lead 0.391 vs control 0.349, x1.12),
+                          detroit-techno (x1.2), minimal-techno (x0.6), liquid-dnb (chords x1.02)
+```
+
+The mechanism is not subtle once the numbers are read together: the stage's modulated delays make every hit's
+**spectrum** differ for a reason that has nothing to do with the per-note nudge, so the *control* render (nudge off)
+starts separating too — detroit-techno's control distance rose from 0.325 to 0.616 dB — and the ratio the claim is
+built on collapses. A chorus is time-varying timbre by design; A3 measures exactly that quantity.
+
+So the opt-in is reverted and the trade is recorded: **the stage stays in the tree, unused**, because it is the right
+answer to the near-mono question and the wrong one for the per-note question, and a future session can choose between
+them with both measurements in front of it. `flatStabs` stays at its budget of 2, the timbre fingerprints stay valid,
+and the width target remains refuted rather than half-met.
+
 ### The near-mono claim cannot be met by panning — proved by an audition, not by a number (2026-09-24)
 
 `narrowStereo` reads **7** after the ratchet, and the plan's literal target is 3. The obvious lever is the pan
