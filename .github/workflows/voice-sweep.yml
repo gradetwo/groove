@@ -23,6 +23,50 @@ on:
         default: "2"
 
 jobs:
+  calibration:
+    name: Calibration shard ${{ matrix.shard }}/4
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      # One clean measurement per instrument: the patch against its **native preset**, one held note, one lane, no
+      # genre in between. This is the table the level corrections come from, because a genre's mix turned out to be too
+      # noisy a probe (readings swing several dB between identical runs) for calibrating an instrument.
+      - name: Calibrate instruments
+        run: |
+          node scripts/probe_gs1_calibration.mjs \
+            --shard=${{ matrix.shard }}/4 \
+            --takes=3 \
+            --out=calibration-shard-${{ matrix.shard }}.json
+
+      - name: Upload report
+        uses: actions/upload-artifact@v5
+        with:
+          name: calibration-shard-${{ matrix.shard }}
+          path: calibration-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 14
+
   sweep:
     name: Sweep shard ${{ matrix.shard }}/6
     runs-on: ubuntu-latest
