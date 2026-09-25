@@ -96,6 +96,7 @@ const context = await browser.newContext({
 await context.addInitScript(() => {
   try {
     localStorage.setItem("groove_onboarding_completed", "true");
+localStorage.setItem("groove_audio_started", "1");
     // A saved project would bring its own arrangement; measuring the shipped default is the point.
     localStorage.removeItem("groove_project_v1");
   } catch {

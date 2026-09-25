@@ -81,6 +81,7 @@ for (const [label, width, height, device] of targets) {
   await context.addInitScript(() => {
     try {
       localStorage.setItem("groove_onboarding_completed", "true");
+localStorage.setItem("groove_audio_started", "1");
     } catch {
       /* disabled */
     }

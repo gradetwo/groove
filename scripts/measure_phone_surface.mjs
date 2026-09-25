@@ -209,6 +209,7 @@ try {
     await context.addInitScript(() => {
       try {
         localStorage.setItem("groove_onboarding_completed", "true");
+localStorage.setItem("groove_audio_started", "1");
       } catch (_) {}
     });
     const page = await context.newPage();
