@@ -148,7 +148,7 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
             disabled={busy}
             className="gate-btn"
           >
-            {busy ? "正在启动… / Starting…" : "启动音频引擎 / Start Audio Engine"}
+            {busy ? "正在启动…" : "启动音频引擎"}
           </button>
           {error ? (
             <div className="gate-error" data-testid="audio-start-error" role="alert">
