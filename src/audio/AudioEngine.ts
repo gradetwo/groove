@@ -22,6 +22,8 @@ import { resolveInstrumentPreset } from "./instrumentPresets";
 import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
 import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
+import { ensureLiveGs1Capability, gs1Capability } from "./gs1/gs1Capability";
+import { createGs1Host } from "./gs1/Gs1Host";
 import { ecosystemBus } from "./ecosystemBus";
 import { safeVelocity, safeTime } from "./dspGuards";
 import { computeCatchUp, visualLeadSeconds } from "./schedulerMath";
@@ -1509,7 +1511,35 @@ export class AudioEngine {
     return ctx.state;
   }
 
+  /**
+   * Ask this browser's **live** audio stack whether GS-1 actually makes a sound, and switch it off if it does not.
+   *
+   * Safari's worklet renders the GS-1 core silent — measured offline (`probe_engine_parity`) and now live as well — so
+   * a GS-1-routed lane there is silence rather than a wrong timbre. The export path already answers this by falling
+   * back to the native engine; this is the same answer for playback, and it is a **measurement in the context under
+   * test**, not a browser check. `unmeasured` (a suspended context, a host that will not build) changes nothing.
+   */
+  public async probeLiveGs1(): Promise<"usable" | "silent" | "unmeasured"> {
+    if (!this.ctx || !this.gs1Enabled) return "unmeasured";
+    const ctx = this.ctx;
+    const verdict = await ensureLiveGs1Capability(ctx, { createHost: () => createGs1Host({ context: ctx }) });
+    if (verdict === "silent" && this.gs1Enabled) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[gs1] this browser renders the synth engine silent (measured, not guessed) — voicing chords/lead natively"
+      );
+      this.setGs1Enabled(false);
+    }
+    return verdict;
+  }
+
   public async play(options: { keepPreviewScope?: boolean } = {}): Promise<void> {
+    /**
+     * A session that never passed the start screen (a returning visitor, a probe) has no live verdict yet, so the first
+     * transport start asks once. Deliberately **not awaited**: a silent browser hears its first moments natively and
+     * the routing flips as soon as the answer arrives, rather than delaying playback on a 300 ms measurement.
+     */
+    if (this.ctx && this.gs1Enabled && gs1Capability() === undefined) void this.probeLiveGs1();
     /**
      * A full play clears any preview scope, because that is what the user just asked for.
      *
