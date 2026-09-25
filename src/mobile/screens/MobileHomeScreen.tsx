@@ -32,7 +32,8 @@ import { GENRE_INDEX, type GenreIndexItem } from "../mobileGenreData";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { GenreCategory } from "../../types/genre";
-import { CATEGORY_SWATCH, genreArtBackground, genreCoverUrl } from "../genreArt";
+import { CATEGORY_SWATCH, genreArtBackground } from "../genreArt";
+import { GenreCover } from "../GenreCover";
 import { genreMatchesQuery, genreNameZh } from "../genreQuery";
 
 /**
@@ -204,15 +205,10 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
                   className="relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl"
                   style={{ background: genreArtBackground(genre) }}
                 >
-                  {/* A real cover wins when one exists; the generated art stays behind it. */}
-                  <img
-                    src={genreCoverUrl(genre.id)}
-                    alt=""
-                    loading="lazy"
+                  {/* The skin's own cover, then the shared one; the generated art stays behind both. */}
+                  <GenreCover
+                    genreId={genre.id}
                     className="absolute inset-0 h-full w-full object-cover"
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
                   />
                   {isPlaying ? (
                     <Pause className="relative h-4 w-4 text-white drop-shadow" />

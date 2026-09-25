@@ -46,7 +46,8 @@ import { GENRE_RELATIONS } from "../../data/relations";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
 import { useLanguage, type Language, type MessageKey } from "../../i18n/LanguageContext";
 import type { Genre, I18nString } from "../../types/genre";
-import { genreArtBackground, genreCoverUrl } from "../genreArt";
+import { genreArtBackground } from "../genreArt";
+import { GenreCover } from "../GenreCover";
 
 const CJK = /[\u3400-\u9fff]/;
 const chineseName = (genre: { aliases?: string[] }): string =>
@@ -350,14 +351,7 @@ function GenreHeader({ genre, story }: { genre: Genre; story?: TimelineStory }) 
           className="relative h-[112px] w-[112px] flex-none overflow-hidden rounded-2xl ring-1 ring-[var(--m-line-2)]"
           style={{ background: genreArtBackground(genre) }}
         >
-          <img
-            src={genreCoverUrl(genre.id)}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
-          />
+          <GenreCover genreId={genre.id} eager className="absolute inset-0 h-full w-full object-cover" />
         </span>
 
         <div className="min-w-0 flex-1 pb-0.5">
