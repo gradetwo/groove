@@ -45,10 +45,26 @@ but it is not the fix.
   (a mistake made twice in this work, now written down);
 * the **supersede rule** is not the cause either — disabling it leaves the ratio at 7.76.
 
-**Next suspect**: the per-note **tuning** write (`cents`, ABI 9). The engine sends a value with every note, and if the
-core's `gs_set_tuning_note` touches a voice that is already sounding — or resets oscillator state while doing it — that is
-one discontinuity per note, which is exactly the shape of the report. The test is a one-line A/B: render the lead with the
-variation disabled and compare the ratio.
+**Refuted as well** (all four A/Bs, same lead stem, same ratio metric):
+
+| hypothesis | measured | verdict |
+| --- | --- | --- |
+| steal fade 20 ms → 50 ms | 7.76 → 7.77 | no |
+| the supersede rule (dropping a stale release) | 7.76 with it disabled | no |
+| the per-note **tuning** write (`cents`, ABI 9) | 8.14 without it | no |
+| the **patch** (uk-garage's `organStab` vs the shared organ) | 15.45 with the shared patch | no — and the shared one is worse |
+
+So the pops are GS-1-specific (7.76 against 2.12 for the native render of the same lane) and *none* of the patch, the
+scheduling rules or the tuning is responsible. What is left is the mechanism only GS-1 has: **the worklet splits the render
+block at every due note event** (`gs_process(chunk)` per segment) so a note can start mid-block. That was the next
+hypothesis, and the honest result of testing it is in the test above: the split is *not* supposed to be bit-identical
+(the parameter smoothing depends on the frame count by construction) and its divergence is 0.0056 on a ~0.5 signal, which
+is a drift rather than a discontinuity — so the split is **not yet** implicated either.
+
+The next experiment is therefore the split itself, staged rather than inferred: render the same part with every event on a
+**block boundary** (so no split ever happens) and compare the ratio. That is a one-flag render, and it decides whether the
+remaining suspect is the chunking or something in the voice's own start (`gs_voice_reset` + `gs_voice_phase` on a slot whose
+filter is still ringing).
 
 ## 2. Velocity response belongs in the core — **partly done from Groove's side**
 
