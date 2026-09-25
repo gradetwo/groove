@@ -1486,6 +1486,29 @@ export class AudioEngine {
     this.openHiHatVoices = [];
   }
 
+  /**
+   * Create and resume the audio context **inside the current user gesture**, and nothing else.
+   *
+   * The start screen needs exactly this. Mobile browsers only allow an `AudioContext` to start from a gesture, and the
+   * engine creates its context lazily (on the first play), so at gate time there was nothing registered for the
+   * unlocker to resume — which is why the first playback after the gate still said "audio is blocked by the browser"
+   * and a second tap worked. Both calls below are synchronous, so the gesture is still live when they run.
+   *
+   * Returns the context state, which is the honest answer to "did that work": Firefox can leave `resume()` pending,
+   * and a screen that pretends otherwise would be reporting a hope rather than a measurement.
+   */
+  public primeAudioContext(): AudioContextState | null {
+    const ctx = this.initAudioContext();
+    if (!ctx) return null;
+    try {
+      initIosAudioUnlock(ctx).unlock();
+    } catch {
+      /* the unlocker is a best-effort iOS path */
+    }
+    if (ctx.state === "suspended") void ctx.resume().catch(() => undefined);
+    return ctx.state;
+  }
+
   public async play(options: { keepPreviewScope?: boolean } = {}): Promise<void> {
     /**
      * A full play clears any preview scope, because that is what the user just asked for.
@@ -2088,7 +2111,22 @@ export class AudioEngine {
     instrumentOverride?: string
   ): void {
     if (!this.ctx) return;
-    const dest = isAudition ? (this.masterGain || this.getTrackDestination(trackIdx)) : this.getTrackDestination(trackIdx);
+    /**
+     * The **track's own destination**, audition or not — and this line was the UK Garage lead defect.
+     *
+     * A manual preview used to be routed straight to the master gain. A GS-1 host can only be bound to one
+     * destination, so previewing a synth lane while the loop was also using it made the pool tear that host down and
+     * rebuild it against the master; the next sequencer note then found a mismatched slot and fell back to the native
+     * engine, which churned again. Two or three taps of a track's own preview button were enough to hear it as "no
+     * sound, then a strange sound" — the user's reproduction, and the one that finally named the cause.
+     *
+     * `auditionTrack` (the pads' entry point) already worked around this by passing `isAudition = false` with a
+     * comment saying exactly why; `triggerNote` (the track header, the pitch picker, the chord keyboard) did not.
+     * There is one rule now instead of two answers: a preview belongs on the lane, mixed with its own fader and
+     * inserts — which is what a person pressing that button is listening for anyway.
+     */
+    const dest = this.getTrackDestination(trackIdx);
+    void isAudition;
 
     // F-01: every voice funnels through here, so this is the single choke point that
     // keeps user-controlled zeros (muted fader, velocity 0, NaN from a bad import)

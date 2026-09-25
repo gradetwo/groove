@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from "react";
 import { initIosAudioUnlock } from "../audio/iosAudioUnlock";
+import { getActiveAudioEngine } from "../audio/activeEngine";
 import { APP_VERSION } from "../version";
 
 /**
@@ -52,6 +53,13 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
      * from it: unlock first, then do the slow work.
      */
     try {
+      /**
+       * The **engine's** context first. It is created lazily, so at this moment it usually does not exist yet, and
+       * the unlocker has nothing registered to resume — which is exactly why the first playback after the gate still
+       * said "audio is blocked by the browser" and a second tap worked. `primeAudioContext` creates and resumes it
+       * synchronously, here, while the gesture is live.
+       */
+      getActiveAudioEngine()?.primeAudioContext();
       initIosAudioUnlock().unlock();
     } catch {
       /* an unlocker that cannot run is not a reason to refuse the app */
@@ -107,10 +115,8 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
    */
   const environment =
     typeof navigator === "undefined"
-      ? ""
-      : `${APP_VERSION} · ${navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome") ? "Safari" : "browser"} · ${
-          typeof AudioContext === "undefined" ? "no AudioContext" : "AudioContext ok"
-        }`;
+      ? `v${APP_VERSION}`
+      : `v${APP_VERSION} · ${typeof AudioContext === "undefined" ? "no AudioContext" : "AudioContext ok"}`;
 
   /**
    * Inline styles on purpose, after the bundle budget came within a few hundred bytes of its limit: every Tailwind
@@ -159,19 +165,49 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
       {children}
       <div data-testid="audio-start-gate" role="dialog" aria-label="开始" style={cardStyle}>
         <div style={boxStyle}>
-          <div style={{ font: "700 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: "0.18em" }}>
-            GROOVE LAB
+          {/* The sibling synth project's brand block: a mark, a wordmark with the accent half, and the build. */}
+          <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <span
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                top: -14,
+                left: "50%",
+                width: 84,
+                height: 84,
+                transform: "translateX(-50%)",
+                borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(240,180,90,0.28) 0%, transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+            <svg
+              viewBox="0 0 24 24"
+              width="46"
+              height="46"
+              fill="none"
+              aria-hidden="true"
+              style={{ position: "relative", color: "#f0b45a" }}
+            >
+              <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeOpacity="0.35" />
+              <path d="M3.5 12 Q6.5 4.5 12 12 T20.5 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            <div style={{ font: "700 15px/1 inherit", letterSpacing: "0.16em" }}>
+              GROOVE <span style={{ color: "#f0b45a" }}>LAB</span>
+            </div>
+            <div style={{ font: "500 9.5px/1 ui-monospace, monospace", letterSpacing: "0.14em", opacity: 0.55 }}>
+              {environment}
+            </div>
           </div>
-          <div style={{ font: "500 9.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace", opacity: 0.6 }}>
-            {environment}
-          </div>
-          <p style={{ maxWidth: 280, fontSize: 12, lineHeight: 1.6, opacity: 0.78, margin: 0 }}>
-            点击开始，浏览器才会允许播放声音。
+          <p style={{ maxWidth: 280, fontSize: 12, lineHeight: 1.6, opacity: 0.72, margin: 0 }}>
+            手机与 Safari 只在点击后允许出声。点一下，音频引擎就此启动。
             <br />
-            Browsers only allow audio after a tap.
+            <span style={{ fontSize: 11, opacity: 0.75 }}>
+              Browsers only allow audio after a tap — this is that tap.
+            </span>
           </p>
           <button type="button" data-testid="audio-start-button" onClick={() => void start()} disabled={busy} style={buttonStyle}>
-            {busy ? "正在启动… / Starting…" : "启动音频 / Start audio"}
+            {busy ? "正在启动… / Starting…" : "启动音频引擎 / Start Audio Engine"}
           </button>
           {error ? (
             <div
