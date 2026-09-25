@@ -203,9 +203,12 @@ describe("P2.5 · a texture lane renders through GS-1", () => {
     expect(host.importSample).toHaveBeenCalledTimes(1);
     expect(host.importSample.mock.calls[0][1]).toBe(44100);
     expect((host.importSample.mock.calls[0][0] as Float32Array).length).toBeGreaterThan(1000);
-    // …and the note is addressed to that host rather than to the native riser.
+    // …and the note is addressed to that host rather than to the native riser, with its nudge attached.
     expect(host.noteOnAt).toHaveBeenCalled();
-    expect(host.setTuningNote).toHaveBeenCalled();
+    expect(
+      host.noteOnAt.mock.calls.some((call) => typeof call[4] === "number"),
+      "the per-note nudge travels with the note itself (the worklet applies it at that note's frame)"
+    ).toBe(true);
   });
 });
 

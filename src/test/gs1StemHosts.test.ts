@@ -152,9 +152,15 @@ describe("GS-1 · the per-note variation reaches the shipping voice", () => {
     const withVariation = await renderPatternOffline(PATTERN, { noteVariation: true, bars: 1 });
     const hostsAfterOn = mocks.createGs1Host.mock.results.map((result) => result.value);
     const tuningCalls = await Promise.all(
-      hostsAfterOn.map(async (host) => (await host) as unknown as { setTuningNote: { mock: { calls: unknown[][] } } })
+      hostsAfterOn.map(
+        async (host) => (await host) as unknown as { noteOnAt: { mock: { calls: unknown[][] } } }
+      )
     );
-    const offsetsOn = tuningCalls.flatMap((host) => host.setTuningNote.mock.calls.map((call) => call[1] as number));
+    // The nudge now rides **with the note** (`noteOnAt`'s fifth argument) instead of a separate `setTuningNote`
+    // message: sent separately it retuned whichever voice was still sounding on that key, which is the live defect.
+    const offsetsOn = tuningCalls.flatMap((host) =>
+      host.noteOnAt.mock.calls.map((call) => call[4]).filter((cents): cents is number => typeof cents === "number")
+    );
     expect(offsetsOn.length, "at least one routed note carries a tuning offset").toBeGreaterThan(0);
     // The nudge is ±12 cents by definition, and the engine clamps at ±1200 — so this is the same quantity the native
     // path applies to a voice's detune, not a different one that happens to be in cents.
@@ -165,9 +171,11 @@ describe("GS-1 · the per-note variation reaches the shipping voice", () => {
     const hostsAfterOff = mocks.createGs1Host.mock.results.map((result) => result.value);
     const offsetsOff = (
       await Promise.all(
-        hostsAfterOff.map(async (host) => (await host) as unknown as { setTuningNote: { mock: { calls: unknown[][] } } })
+        hostsAfterOff.map(
+          async (host) => (await host) as unknown as { noteOnAt: { mock: { calls: unknown[][] } } }
+        )
       )
-    ).flatMap((host) => host.setTuningNote.mock.calls);
+    ).flatMap((host) => host.noteOnAt.mock.calls.filter((call) => typeof call[4] === "number"));
     expect(offsetsOff, "the escape hatch sends nothing at all").toEqual([]);
     // The renders are different objects; the point of the case above is that the *messages* differ.
     expect(withVariation.numberOfChannels).toBe(withoutVariation.numberOfChannels);

@@ -210,9 +210,9 @@ export class Gs1VoicePool {
       slot.instrument = instrument;
       const capped = capPlanPolyphony(plan, this.maxVoices);
       for (const note of capped.notes) {
-        // The nudge goes in before the note, so the voice starts at the tuned pitch rather than sliding to it.
-        if (note.cents !== undefined) slot.host.setTuningNote(note.note, note.cents);
-        slot.host.noteOnAt(note.note, note.velocity, note.atFrame, note.pan);
+        // The nudge rides with the note, so the worklet applies it at the note's own frame — a separate message
+        // retuned whichever voice was still sounding on that key (see the worklet protocol's `cents`).
+        slot.host.noteOnAt(note.note, note.velocity, note.atFrame, note.pan, note.cents);
       }
       for (const note of capped.notes) {
         slot.host.noteOffAt(note.note, note.offFrame);
