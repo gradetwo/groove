@@ -13,7 +13,13 @@
  * away from its native reference and how its brightness compares, measured with as little else in the picture as the
  * app allows.
  *
- * ## Why it measures several notes and two articulations
+ * ## Why it also sweeps velocity
+ *
+ * The third axis is **velocity**, added after the genre-stem sweep reported +30 dB for `strings_lead` while this
+ * calibration called the same instrument perfect: both uses send the same velocity to both engines, but the **native**
+ * presets carry `velocityToCutoff` and `velocityToFilterEnv` (a soft note is a *darker* note) while a GS-1 voice reads
+ * velocity as amplitude. A lane played quietly is therefore two different sounds, and the only way to know how far apart
+ * is to measure it.
  *
  * The first version played one held note and called all 26 instruments correct — and a lane that calibrated at ±0.0 dB
  * still rendered 13 dB quiet in its genre, because the patch attacked over 360 ms where its native preset attacked in
@@ -43,6 +49,11 @@ const value = (flag, fallback) => {
   return at !== -1 && process.argv[at + 1] ? process.argv[at + 1] : fallback;
 };
 const TAKES = Math.max(1, Number(value("takes", "3")) || 3);
+/** The velocities a lane is actually played at: `velocityScale` sections and soft parts live in the lower half. */
+const VELOCITIES = (value("velocities", "0.35,0.9") || "0.35,0.9")
+  .split(",")
+  .map((v) => Number(v))
+  .filter((v) => Number.isFinite(v) && v > 0 && v <= 1);
 const SHARD = value("shard", "1/1");
 const OUT = value("out", "");
 const asJson = process.argv.includes("--json");
@@ -113,7 +124,7 @@ const rows = [];
 for (const target of targets) {
   try {
     const measured = await page.evaluate(
-      async ({ role, instrument, notes, takes }) => {
+      async ({ role, instrument, notes, takes, velocities }) => {
         const engine = window.__grooveProbe.engine;
         const trackIdx = { chords: 5, lead: 6, fx: 7 }[role];
         /**
@@ -166,10 +177,10 @@ for (const target of targets) {
           }
           return false;
         };
-        const take = async (gs1On, note, gate, windowMs) => {
+        const take = async (gs1On, note, gate, windowMs, velocity = 0.9) => {
           engine.setGs1Enabled(gs1On);
           await waitForQuiet();
-          engine.triggerNote(trackIdx, nameFor, 0.9, note, 1, gate);
+          engine.triggerNote(trackIdx, nameFor, velocity, note, 1, gate);
           let peak = 0;
           let sum = 0;
           let count = 0;
@@ -194,6 +205,20 @@ for (const target of targets) {
 
         const out = [];
         for (const note of notes) {
+          /**
+           * The velocity sweep: the same note at each velocity a lane is played at, held. This is where a preset's
+           * velocity-to-cutoff response and a GS-1 voice's flat amplitude response part company.
+           */
+          const velocityRows = [];
+          for (const velocity of velocities) {
+            const g = [];
+            const n = [];
+            for (let i = 0; i < takes; i += 1) {
+              g.push(await take(true, note, 4, 700, velocity));
+              n.push(await take(false, note, 4, 700, velocity));
+            }
+            velocityRows.push({ velocity, gs1: g, native: n });
+          }
           const held = [];
           const stab = [];
           for (let i = 0; i < takes; i += 1) {
@@ -206,11 +231,17 @@ for (const target of targets) {
              */
             stab.push({ gs1: await take(true, note, 1.2, 500), native: await take(false, note, 1.2, 500) });
           }
-          out.push({ note, held, stab });
+          out.push({ note, held, stab, velocityRows });
         }
         return out;
       },
-      { role: target.role, instrument: target.instrument, notes: NOTES_FOR[target.role] ?? [60], takes: TAKES }
+      {
+        role: target.role,
+        instrument: target.instrument,
+        notes: NOTES_FOR[target.role] ?? [60],
+        takes: TAKES,
+        velocities: VELOCITIES,
+      }
     );
 
     const median = (values) => {
@@ -230,8 +261,14 @@ for (const target of targets) {
       const nativeStab = median(entry.stab.map((t) => t.native.rms));
       const gs1Zcr = median(entry.held.map((t) => t.gs1.zcr));
       const nativeZcr = median(entry.held.map((t) => t.native.zcr));
+      const byVelocity = entry.velocityRows.map((row) => {
+        const gs1 = median(row.gs1.map((t) => t.rms));
+        const native = median(row.native.map((t) => t.rms));
+        return { velocity: row.velocity, levelDb: Number((db(gs1) - db(native)).toFixed(1)) };
+      });
       return {
         note: entry.note,
+        byVelocity,
         heldLevelDb: Number((db(gs1Held) - db(nativeHeld)).toFixed(1)),
         stabLevelDb: Number((db(gs1Stab) - db(nativeStab)).toFixed(1)),
         brightnessRatio: Number((gs1Zcr / Math.max(1, nativeZcr)).toFixed(2)),
@@ -255,6 +292,13 @@ for (const target of targets) {
       perNote,
       /** How much the level changes across the register: keyboard tracking shows up here. */
       registerSpreadDb: Number(heldSpread.toFixed(1)),
+      /** How far apart the two engines sit at the *quiet* end versus the loud end: a velocity-response mismatch. */
+      velocitySpreadDb: Number(
+        (
+          Math.max(...perNote.flatMap((n) => n.byVelocity.map((v) => v.levelDb))) -
+          Math.min(...perNote.flatMap((n) => n.byVelocity.map((v) => v.levelDb)))
+        ).toFixed(1)
+      ),
       worstHeldDb: worstHeld,
       worstStabDb: worstStab,
       worstBrightness,
@@ -267,7 +311,13 @@ for (const target of targets) {
             ? "timbre"
             : heldSpread > 4
               ? "register"
-              : "ok",
+              : Math.abs(
+                    Math.max(
+                      ...perNote.flatMap((n) => n.byVelocity.filter((v) => v.velocity < 0.5).map((v) => v.levelDb))
+                    )
+                  ) > 3
+                ? "velocity"
+                : "ok",
     });
   } catch (error) {
     rows.push({ role: target.role, instrument: target.instrument, error: String(error?.message ?? error).slice(0, 120) });
@@ -296,7 +346,7 @@ if (asJson) {
       .join(" ");
     console.log(
       `  ${row.verdict === "ok" ? "✅" : "⚠️ "} ${row.role.padEnd(7)} ${row.instrument.padEnd(16)} ` +
-        `held/stab ${notes.padEnd(28)} spread ${String(row.registerSpreadDb).padStart(4)} dB  ×${row.worstBrightness}  ${row.verdict}`
+        `held/stab ${notes.padEnd(28)} reg ${String(row.registerSpreadDb).padStart(4)} dB  vel ${String(row.velocitySpreadDb).padStart(5)} dB  ×${row.worstBrightness}  ${row.verdict}`
     );
   }
 }
