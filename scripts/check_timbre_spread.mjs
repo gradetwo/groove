@@ -352,7 +352,15 @@ check(
  * to differ in is the lead. Asserting the **names** means a future change that narrows some *other* pair — or narrows
  * this one further — fails with the reason attached instead of sliding under a number whose basis nobody remembers.
  */
-const CALIBRATED_CLOSEST_PAIR = ["ambient-techno", "dub-techno"];
+/**
+ * The pair the floor is calibrated against, updated when the catalogue's structure changes **and the reason is known**.
+ *
+ * `ambient-techno ↔ dub-techno` held it from the voicing sweep until the attack-arrival rule: with 55 lanes no longer
+ * cutting their instruments off mid-attack, the nearest pair became `microhouse ↔ dub-techno` at 0.2530 dB — still well
+ * above the floor, which is why the floor did not move and only the name did. A change here without a reason in the
+ * commit message is the thing this assertion exists to prevent.
+ */
+const CALIBRATED_CLOSEST_PAIR = ["dub-techno", "microhouse"];
 check(
   "the closest pair is still the one the floor was calibrated against",
   Boolean(closestPair) &&
