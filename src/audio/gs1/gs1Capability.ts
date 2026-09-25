@@ -23,10 +23,18 @@
  * engine silent, and one run left the snare lane empty too (that part did not reproduce, and is recorded here only so
  * nobody re-learns it the hard way). A working realtime context is not evidence about an `OfflineAudioContext`.
  *
- * The two-way comparison that followed found the real cause: the **ABI 8** core renders those lanes audibly on WebKit
- * and the **ABI 9** core renders them silent, so the defect arrived with the ABI 9 re-pin rather than with this file.
+ * **A correction, because the first version of this header claimed the opposite.** An ABI-8-versus-ABI-9 comparison
+ * seemed to show the ABI 8 core rendering audibly on WebKit and the ABI 9 core silent, which would have made the ABI 9
+ * re-pin the culprit. It did not: that comparison swapped only *one* of the two cores (SIMD and scalar) while the host
+ * still expected ABI 9, the adapter rejected the mismatch, GS-1 was switched off entirely, and the "audible" result was
+ * the **native fallback** playing instead. With both cores swapped and the expectation matched, **WebKit renders the
+ * GS-1 offline path silent on ABI 8 as well** — the export defect is pre-existing and engine-level, not a regression
+ * from the re-pin, and rolling the core back would have bought nothing.
+ *
  * The probes stay (`probe_engine_parity.mjs`, `probe_live_voice.mjs`) and so do these cases, but the verdict belongs
- * to a probe that renders **in the context under test** — which is where the next attempt should start.
+ * to a probe that renders **in the context under test** — which is where the next attempt should start. The live
+ * symptom is reported as *audible but wrong*, not silent, so it is a second and separate defect: the same worklet
+ * does run in Safari's realtime context.
  *
  * ## The three verdicts, and why "unmeasured" is one of them
  *

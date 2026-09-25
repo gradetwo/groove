@@ -552,6 +552,36 @@ GS-1's. `render_genre_wav.mjs --no-gs1` is now the tool for it, `gs1SampleTextur
 builds no oscillators for a routed texture lane, and the review's *musical* verdict (which did not depend on that
 attribution) is what reverted the swap.
 
+### Safari: the GS-1 worklet is silent in an `OfflineAudioContext` — and it is not a regression (2026-09-25)
+
+A user report: on Safari the MP3/WAV exports and the stem exports have no sound, and during playback the lead is
+audible but wrong. Measured with `probe_engine_parity.mjs` (the same genre's eight lanes rendered in Chromium and
+WebKit through the app's own offline path):
+
+| lane | Chromium | WebKit |
+|---|---|---|
+| kick, snare, hats, percussion, bass | — | match within 0.0–0.8 dB |
+| `chords`, `lead`, and an `fx` lane playing a sample texture | audible | **silent** |
+
+The three silent lanes are exactly the GS-1-routed ones, so a stem export of `chords` or `lead` is an empty file and a
+full export loses all harmony and lead while keeping drums and bass. The host builds (the ABI contract passes) and the
+planner routes to it, so nothing falls back: a track with a host is a track that is "handled".
+
+**The first diagnosis was wrong and worth recording as such.** Swapping the SIMD core to ABI 8 appeared to make the
+lead audible on WebKit, which pointed at the ABI 9 re-pin. It was an artefact: only one of the two cores was swapped
+while `GS1_EXPECTED_ABI` still said 9, the adapter rejected the mismatch, **GS-1 was switched off entirely**, and the
+audible result was the native fallback. Redone properly — both cores at ABI 8 *and* the expectation matched — WebKit
+renders the GS-1 path **silent on ABI 8 too**, and the native fallback audible beside it. So:
+
+* the export defect is **pre-existing and engine-level** (the worklet runs and outputs nothing in Safari's offline
+  context), not a regression from ABI 9, and a core rollback would buy nothing;
+* the **live** symptom is a second, different defect — the same worklet *does* run in Safari's realtime context, and
+  the report there is "audible but a very strange sound", not silence.
+
+Both need their own fix, and the shape of the first one is clear: the offline renderer has to verify the voice **in
+the context it renders in** (a short probe render through the same kind of `OfflineAudioContext`, and a re-render with
+GS-1 off when it comes back silent) rather than trusting a realtime probe, which answers a different question.
+
 ### The near-mono claim cannot be met by panning — proved by an audition, not by a number (2026-09-24)
 
 `narrowStereo` reads **7** after the ratchet, and the plan's literal target is 3. The obvious lever is the pan
