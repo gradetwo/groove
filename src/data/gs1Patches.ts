@@ -139,7 +139,16 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.FILTER_RES]: 0.18,
     [Param.FILTER_ENV_AMT]: 0.3,
     [Param.FILTER_KBD]: 0.25,
-    [Param.ENV_ATTACK]: 0.55,
+    /**
+     * The attack is the native preset's, and that is a measurement rather than a preference.
+     *
+     * A held note calibrated this patch at ±0.0 dB against its native reference, so nothing looked wrong — but the
+     * lanes that use it play **stabs**: on `tech-house`'s chords the GS-1 note took **360 ms** to reach 90 % of its
+     * peak where the native part took **80 ms**, and, cut at the genre's own gate, it measured 13 dB quieter. A slow
+     * attack is invisible to a sustained calibration and expensive in the music. `warmPad`'s native preset attacks in
+     * **0.15 s**; this patch now does too.
+     */
+    [Param.ENV_ATTACK]: 0.15,
     [Param.ENV_DECAY]: 1.2,
     [Param.ENV_SUSTAIN]: 0.85,
     [Param.ENV_RELEASE]: 1.6,
