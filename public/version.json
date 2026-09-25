@@ -1,23 +1,23 @@
 {
-  "version": "2.24.0",
+  "version": "2.25.0",
   "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.24.0",
+    "version": "2.25.0",
     "date": "2026-09-26",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "按曲风校正主奏音色；开屏与排障改进",
-      "en": "Lead timbres corrected per genre; start screen and diagnostics"
+      "zh": "音色按曲风校正：起音对齐、路由修正",
+      "en": "Voicing corrected per genre: attacks aligned, a routing fix"
     },
     "highlights": [
       {
-        "zh": "主奏音色按曲风逐个对照原生参考校正：十二个抽样曲风里最刺耳的从 6.6 倍亮度降到 1.5 倍、电平差从 ±15 dB 收到 ±2 dB；其中两个曲风（Disco、Reggaeton）与共用音色相差约 20 dB，改为各自专用音色。",
-        "en": "Lead timbres were corrected genre by genre against the native reference: the harshest reading fell from 6.6× brightness to 1.5×, and level differences from ±15 dB to ±2 dB. Two genres (Disco, Reggaeton) whose parts differ from the shared patch by ~20 dB got patches of their own."
+        "zh": "修好一类听感问题：有些合成音色的起音比它替代的原生音色慢很多（例：0.55 秒对 0.15 秒），被曲风的时值切短时音符还没到峰值，听起来又轻又糊。现在按原生音色对齐（实测峰值 +3.7 dB）。",
+        "en": "Fixed a class of voicing problem: some synth voices attacked far slower than the native sound they replace (0.55 s against 0.15 s), so a short note was cut before it arrived and sounded thin. They now follow their native presets (measured +3.7 dB peak)."
       },
       {
-        "zh": "开屏改成与参考项目完全一致的尺寸与透明度（半透明遮罩、按内容大小的按钮）；调试面板新增浏览器自身的音频延迟读数。",
-        "en": "The start screen now matches the reference project's measurements and transparency (a translucent mask, a content-sized button), and the debug panel reports the browser's own audio latency."
+        "zh": "修正一条路由错误（正弦主奏被接到脉冲音色）并按实测调整若干音色的电平与滤波；新增两把 CI 标尺，26 个乐器在三个音区、两种奏法下全部落在 ±0.7 dB 内。",
+        "en": "A routing mistake is fixed (a sine lead was wired to a pulse patch), several voices' level and filter are corrected from measurement, and two CI measurement tools now show all 26 instruments within ±0.7 dB across three registers and two articulations."
       }
     ],
     "truncated": false
