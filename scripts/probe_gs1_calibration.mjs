@@ -13,6 +13,14 @@
  * away from its native reference and how its brightness compares, measured with as little else in the picture as the
  * app allows.
  *
+ * ## Why it measures several notes and two articulations
+ *
+ * The first version played one held note and called all 26 instruments correct — and a lane that calibrated at ±0.0 dB
+ * still rendered 13 dB quiet in its genre, because the patch attacked over 360 ms where its native preset attacked in
+ * 80 ms and the genre cut the note first. **A held note cannot see an attack**, and one note cannot see keyboard
+ * tracking. So each instrument is measured at three notes in the register its lane actually plays, and at each note
+ * twice: held (gate 4) and as a **stab** (gate 0.3), which is what a great many of these lanes actually play.
+ *
  * Usage:
  *   node scripts/probe_gs1_calibration.mjs [--shard=1/4] [--takes=3] [--out=calibration.json]
  */
@@ -94,21 +102,23 @@ await page.goto(`http://127.0.0.1:${server.address().port}/?tab=studio&probe=1`,
 await page.waitForFunction(() => Boolean(window.__grooveProbe), null, { timeout: 30000 });
 await page.evaluate(() => window.__grooveProbe.engine.primeAudioContext());
 
-/** One note per lane, in the register that lane actually plays in. */
-const NOTE_FOR = { chords: 48, lead: 72, fx: 60 };
+/**
+ * The register each lane actually plays in: three notes, so keyboard tracking shows up as a difference between them.
+ * `chords` sits low, `lead` sits high, and `fx` in between — the spans come from the catalogue's own patterns.
+ */
+const NOTES_FOR = { chords: [36, 48, 60], lead: [60, 72, 84], fx: [48, 60] };
 const TRACK_FOR = { chords: 5, lead: 6, fx: 7 };
 
 const rows = [];
 for (const target of targets) {
   try {
     const measured = await page.evaluate(
-      async ({ role, instrument, takes }) => {
+      async ({ role, instrument, notes, takes }) => {
         const engine = window.__grooveProbe.engine;
         const trackIdx = { chords: 5, lead: 6, fx: 7 }[role];
-        const note = { chords: 48, lead: 72, fx: 60 }[role];
         /**
          * A synthetic pattern: **one** lane carrying the instrument under test, every other lane silent. The tempo is
-         * slow and the gate long so the note sustains for the whole measurement window.
+         * slow so a held note is long enough to measure through.
          */
         const steps = 16;
         const track = (id, name, inst, pitches) => ({
@@ -134,19 +144,39 @@ for (const target of targets) {
 
         const analyser = engine.getMasterAnalyser();
         const wave = new Float32Array(analyser.fftSize);
+        const nameFor = { chords: "Chords", lead: "Lead", fx: "FX" }[role];
 
-        const take = async (gs1On) => {
+        /** One note through the requested routing, measured for `windowMs`, returning peak / rms / zero-crossings. */
+        /**
+         * Wait until the room is **actually** quiet before the next note.
+         *
+         * A fixed delay was the first version, and it produced a stab reading of exactly 0.0 dB for every instrument:
+         * a pad's release is longer than the delay, so both takes were measuring the *previous* note's tail. The probe
+         * now polls the analyser until the level falls below a floor (or gives up after three seconds, so a genuinely
+         * stuck voice is visible as a bad reading rather than a hang).
+         */
+        const waitForQuiet = async (floor = 0.004, budgetMs = 3000) => {
+          const started = performance.now();
+          while (performance.now() - started < budgetMs) {
+            analyser.getFloatTimeDomainData(wave);
+            let peak = 0;
+            for (let i = 0; i < wave.length; i += 1) peak = Math.max(peak, Math.abs(wave[i]));
+            if (peak < floor) return true;
+            await new Promise((r) => requestAnimationFrame(r));
+          }
+          return false;
+        };
+        const take = async (gs1On, note, gate, windowMs) => {
           engine.setGs1Enabled(gs1On);
-          // Let the previous take's tail die away, or it lands in this one's window.
-          await new Promise((r) => setTimeout(r, 900));
-          engine.triggerNote(trackIdx, role === "chords" ? "Chords" : role === "lead" ? "Lead" : "FX", 0.9, note, 1, 4);
+          await waitForQuiet();
+          engine.triggerNote(trackIdx, nameFor, 0.9, note, 1, gate);
           let peak = 0;
           let sum = 0;
           let count = 0;
           let crossings = 0;
           let previous = 0;
           const started = performance.now();
-          while (performance.now() - started < 700) {
+          while (performance.now() - started < windowMs) {
             analyser.getFloatTimeDomainData(wave);
             for (let i = 0; i < wave.length; i += 1) {
               const v = wave[i];
@@ -159,63 +189,114 @@ for (const target of targets) {
             }
             await new Promise((r) => requestAnimationFrame(r));
           }
-          return {
-            peak,
-            rms: Math.sqrt(sum / Math.max(1, count)),
-            zcr: crossings / (count / analyser.context.sampleRate),
-          };
+          return { peak, rms: Math.sqrt(sum / Math.max(1, count)), zcr: crossings / (count / analyser.context.sampleRate) };
         };
 
-        const gs1 = [];
-        const native = [];
-        for (let i = 0; i < takes; i += 1) {
-          gs1.push(await take(true));
-          native.push(await take(false));
+        const out = [];
+        for (const note of notes) {
+          const held = [];
+          const stab = [];
+          for (let i = 0; i < takes; i += 1) {
+            held.push({ gs1: await take(true, note, 4, 700), native: await take(false, note, 4, 700) });
+            /**
+             * A **stab**: the articulation most of these lanes actually play (a beat or so, not a click). At 60 bpm a
+             * gate of 1.2 is a ~450 ms note — long enough to include the attack-to-sustain transition, which is exactly
+             * where a patch whose attack is slower than its native preset loses its level. A 0.3 gate measured the
+             * initial transient instead and reported 0.0 dB for every instrument, which is a measurement of nothing.
+             */
+            stab.push({ gs1: await take(true, note, 1.2, 500), native: await take(false, note, 1.2, 500) });
+          }
+          out.push({ note, held, stab });
         }
-        return { gs1, native };
+        return out;
       },
-      { role: target.role, instrument: target.instrument, takes: TAKES }
+      { role: target.role, instrument: target.instrument, notes: NOTES_FOR[target.role] ?? [60], takes: TAKES }
     );
 
     const median = (values) => {
       const sorted = [...values].sort((a, b) => a - b);
       return sorted[Math.floor(sorted.length / 2)];
     };
-    const gs1Rms = median(measured.gs1.map((m) => m.rms));
-    const nativeRms = median(measured.native.map((m) => m.rms));
-    const gs1Zcr = median(measured.gs1.map((m) => m.zcr));
-    const nativeZcr = median(measured.native.map((m) => m.zcr));
     const db = (v) => (v <= 1e-9 ? -120 : 20 * Math.log10(v));
+    const perNote = measured.map((entry) => {
+      const gs1Held = median(entry.held.map((t) => t.gs1.rms));
+      const nativeHeld = median(entry.held.map((t) => t.native.rms));
+      /**
+       * The stab's **rms**, not its peak: a note that reaches the master limiter shows the limiter's ceiling as its
+       * peak, and two different instruments both measured 0.667 — a metric that reports the same number for everything
+       * is measuring the ceiling, not the voice.
+       */
+      const gs1Stab = median(entry.stab.map((t) => t.gs1.rms));
+      const nativeStab = median(entry.stab.map((t) => t.native.rms));
+      const gs1Zcr = median(entry.held.map((t) => t.gs1.zcr));
+      const nativeZcr = median(entry.held.map((t) => t.native.zcr));
+      return {
+        note: entry.note,
+        heldLevelDb: Number((db(gs1Held) - db(nativeHeld)).toFixed(1)),
+        stabLevelDb: Number((db(gs1Stab) - db(nativeStab)).toFixed(1)),
+        brightnessRatio: Number((gs1Zcr / Math.max(1, nativeZcr)).toFixed(2)),
+        // Raw values, because a delta of exactly 0.0 is either a coincidence or a measurement of nothing.
+        gs1HeldRms: Number(gs1Held.toFixed(5)),
+        nativeHeldRms: Number(nativeHeld.toFixed(5)),
+        gs1StabRms: Number(gs1Stab.toFixed(5)),
+        nativeStabRms: Number(nativeStab.toFixed(5)),
+      };
+    });
+    const heldSpread = Math.max(...perNote.map((n) => n.heldLevelDb)) - Math.min(...perNote.map((n) => n.heldLevelDb));
+    const worstStab = perNote.reduce((worst, n) => (Math.abs(n.stabLevelDb) > Math.abs(worst) ? n.stabLevelDb : worst), 0);
+    const worstHeld = perNote.reduce((worst, n) => (Math.abs(n.heldLevelDb) > Math.abs(worst) ? n.heldLevelDb : worst), 0);
+    const worstBrightness = perNote.reduce(
+      (worst, n) => (Math.abs(Math.log(n.brightnessRatio)) > Math.abs(Math.log(worst)) ? n.brightnessRatio : worst),
+      1
+    );
     rows.push({
       role: target.role,
       instrument: target.instrument,
-      gs1Rms: Number(gs1Rms.toFixed(5)),
-      nativeRms: Number(nativeRms.toFixed(5)),
-      levelDb: Number((db(gs1Rms) - db(nativeRms)).toFixed(1)),
-      brightnessRatio: Number((gs1Zcr / Math.max(1, nativeZcr)).toFixed(2)),
+      perNote,
+      /** How much the level changes across the register: keyboard tracking shows up here. */
+      registerSpreadDb: Number(heldSpread.toFixed(1)),
+      worstHeldDb: worstHeld,
+      worstStabDb: worstStab,
+      worstBrightness,
+      verdict:
+        Math.abs(worstHeld) > 3 || Math.abs(worstStab) > 3
+          ? Math.abs(worstStab) > Math.abs(worstHeld)
+            ? "stab-level"
+            : "level"
+          : worstBrightness > 1.5 || worstBrightness < 1 / 1.5
+            ? "timbre"
+            : heldSpread > 4
+              ? "register"
+              : "ok",
     });
   } catch (error) {
     rows.push({ role: target.role, instrument: target.instrument, error: String(error?.message ?? error).slice(0, 120) });
+
   }
 }
 
 await browser.close();
 server.close();
 
-rows.sort((a, b) => Math.abs(b.levelDb ?? 0) - Math.abs(a.levelDb ?? 0));
+rows.sort((a, b) => Math.abs(b.worstStabDb ?? 0) - Math.abs(a.worstStabDb ?? 0));
 if (OUT) fs.writeFileSync(OUT, `${JSON.stringify(rows, null, 1)}\n`);
 if (asJson) {
   console.log(JSON.stringify(rows, null, 1));
 } else {
-  console.log(`GS-1 instrument calibration · shard ${SHARD} · ${TAKES} takes · one held note per lane, no other lanes`);
+  console.log(
+  `GS-1 instrument calibration · shard ${SHARD} · ${TAKES} takes · per note "held/stab" level vs native, one lane, no other lanes`
+);
   for (const row of rows) {
     if (row.error) {
       console.log(`  ❌ ${row.role.padEnd(7)} ${row.instrument.padEnd(16)} ${row.error}`);
       continue;
     }
+    const notes = row.perNote
+      .map((n) => `${n.note}:${n.heldLevelDb >= 0 ? "+" : ""}${n.heldLevelDb}/${n.stabLevelDb >= 0 ? "+" : ""}${n.stabLevelDb}`)
+      .join(" ");
     console.log(
-      `  ${row.role.padEnd(7)} ${row.instrument.padEnd(16)} level ${String(row.levelDb).padStart(6)} dB  ` +
-        `brightness ×${String(row.brightnessRatio).padStart(5)}  (gs1 rms ${row.gs1Rms}, native rms ${row.nativeRms})`
+      `  ${row.verdict === "ok" ? "✅" : "⚠️ "} ${row.role.padEnd(7)} ${row.instrument.padEnd(16)} ` +
+        `held/stab ${notes.padEnd(28)} spread ${String(row.registerSpreadDb).padStart(4)} dB  ×${row.worstBrightness}  ${row.verdict}`
     );
   }
 }
