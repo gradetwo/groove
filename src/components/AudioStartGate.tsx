@@ -1,7 +1,5 @@
 import React, { useCallback, useState } from "react";
 import { initIosAudioUnlock } from "../audio/iosAudioUnlock";
-import { ensureOfflineGs1Capability } from "../audio/gs1/gs1OfflineCapability";
-import { ensureGs1Capability } from "../audio/gs1/gs1Capability";
 
 /**
  * The entry gate: one tap that makes audio work, before anything asks it to.
@@ -51,16 +49,17 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
          */
         const unlocker = initIosAudioUnlock();
         unlocker.unlock();
-        try {
-          await ensureGs1Capability();
-        } catch {
-          /* a probe that cannot run is not a reason to keep someone out of the app */
-        }
-        try {
-          await ensureOfflineGs1Capability();
-        } catch {
-          /* same */
-        }
+        /**
+         * Both probes are imported **here**, after the tap: they pull in the GS-1 host and the WASM plumbing, and the
+         * bundle budget for the initial route is a hard gate — a screen whose only job is one button must not pay for
+         * the engine it is about to measure.
+         */
+        const [live, offline] = await Promise.all([
+          import("../audio/gs1/gs1Capability").then((m) => m.ensureGs1Capability()).catch(() => undefined),
+          import("../audio/gs1/gs1OfflineCapability").then((m) => m.ensureOfflineGs1Capability()).catch(() => undefined),
+        ]);
+        void live;
+        void offline;
       }
       try {
         localStorage.setItem(AUDIO_STARTED_KEY, "1");
