@@ -626,6 +626,37 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The genre-stem metric measures *part against instrument*, and the native reference was the broken side (2026-09-26)
+
+Five clean axes could not explain the genre gap, so the search moved to the lane's own state. Rendering each lane of
+`ambient-techno` **natively** with the stem renderer settled it:
+
+```
+native stem bass    peak 0.861   rms −18.6 dBFS
+native stem chords  peak 0.861   rms −11.1 dBFS
+native stem lead    peak 0.007   rms −60.1 dBFS   ← the lane in question
+```
+
+The native lead is **50 dB below the other lanes of its own genre.** It is not mute state, not register (the lane plays
+74/77), not velocity (the step default is 100/127 = 0.79), and not the note count (two notes). It is the **instrument**:
+`stringsLead` is a bowed ensemble with a **0.35 s attack** — and the lead lane's notes are
+`stepDur × gate × 1.5` ≈ **0.15 s**. The swell is cut before it arrives, so the preset renders a fifth of the level of
+every other lead instrument (measured across `tech-house` 0.28, `microhouse` 0.28, `downtempo` 0.016).
+
+**And the controlled calibration could not see it**, because it compares the GS-1 patch with that same native voice: two
+quiet things agreeing at ±0.1 dB. That is the methodological lesson worth keeping from all five rounds — *a calibration
+needs a reference that is known to be healthy, not merely the one the app happens to have*.
+
+The honest reading of the genre-stem sweep therefore changes: it measures **part against instrument**, and its warnings
+are **content** signals (this lane's notes do not suit this voice), not voice bugs. The voices themselves are verified on
+every axis. What remains is per-genre curation:
+
+* `stringsLead`'s `velocityToAttack` went 0.7 → 0.25 in this round (its swell now fits a played note; the stem rose
+  +5.2 dB), but its 0.35 s base attack is still longer than a 0.15 s lane note — the real choice is a longer gate for
+  those leads, or a faster preset, and that is a curation decision per genre rather than a bug;
+* the plan is to have the sweep **list** the lanes where the part and the instrument disagree (its `level` verdicts at
+  −10 dB or worse), so the curation is a queue rather than a hunt.
+
 ### The interaction hypothesis is refuted by the cell that was supposed to confirm it (2026-09-26)
 
 The prediction was that a **quiet, short** note would separate the engines by tens of dB, because the native presets
