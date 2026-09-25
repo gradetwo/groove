@@ -3,7 +3,7 @@
   "upstream": {
     "name": "groove-synth-gs1",
     "version": "2.1.6",
-    "commit": "2be10b9aacc98376c649a9a72921cf41197ec549",
+    "commit": "c1d4c2d3e5f7de0113a30f14e464336314af6201",
     "license": "MIT",
     "dirty": false
   },
