@@ -1115,6 +1115,14 @@ export class AudioEngine {
     return this.hearingProtection;
   }
 
+  /** The GS-1 hosts' own status, plus the routing flag — for the in-app diagnostic (`src/platform/diagnostics.ts`). */
+  public getGs1Diagnostics(): { enabled: boolean; hosts: Array<Record<string, unknown>> } {
+    return {
+      enabled: this.gs1Enabled,
+      hosts: this.gs1Pool?.status() ?? [],
+    };
+  }
+
   /** True while GS-1 voices `chords`/`lead`. */
   public isGs1Enabled(): boolean {
     return this.gs1Enabled;

@@ -13,6 +13,7 @@ import "./app/installCustomGenreResolver";
 import { loadGenre } from "./data/index/loader";
 import { AudioEngine } from "./audio/AudioEngine";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AudioStartGate } from "./components/AudioStartGate";
 import { ChordDefinition } from "./utils/chordTheory";
 import { BakedArpeggioResult } from "./utils/arpeggiatorTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
@@ -1043,9 +1044,16 @@ export function App() {
   return (
     <ErrorBoundary fallbackTitle="应用遇到未知错误 / Application Error">
       <LanguageProvider>
-        <RouterProvider>
-          <MainApp />
-        </RouterProvider>
+        {/*
+          The entry gate sits *over* the app rather than in front of it: browsers only start audio inside a gesture,
+          and the same tap is where the capability probes get their one honest chance to run (see `AudioStartGate`).
+          It renders once and then gets out of the way — the app underneath is mounted the whole time.
+        */}
+        <AudioStartGate>
+          <RouterProvider>
+            <MainApp />
+          </RouterProvider>
+        </AudioStartGate>
       </LanguageProvider>
     </ErrorBoundary>
   );
