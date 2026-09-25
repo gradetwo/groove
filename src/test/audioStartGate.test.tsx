@@ -44,8 +44,13 @@ describe("the audio start gate", () => {
     expect(screen.getByTestId("app")).toBeTruthy();
   });
 
-  it("closes even when the work behind the button fails", async () => {
-    // Refusing to enter the app because a capability probe threw would be a worse bug than the one it is probing for.
+  it("stays with the reason and a retry when the work behind the button fails", async () => {
+    /**
+     * The behaviour changed after reading the sibling synth project's start screen: its gate stays while audio has not
+     * started, and shows the failure with a retry. That is the right trade for this screen — the one moment a person
+     * can act on "audio did not start" is while they are still looking at the button — and it replaced a version that
+     * closed anyway and hoped.
+     */
     const onStart = vi.fn().mockRejectedValue(new Error("no audio here"));
     render(
       <AudioStartGate onStart={onStart}>
@@ -53,7 +58,14 @@ describe("the audio start gate", () => {
       </AudioStartGate>
     );
     fireEvent.click(screen.getByTestId("audio-start-button"));
-    await waitFor(() => expect(screen.queryByTestId("audio-start-gate")).toBeNull());
+    await waitFor(() => expect(screen.getByTestId("audio-start-error")).toBeTruthy());
+    expect(screen.getByTestId("audio-start-gate")).toBeTruthy();
+    expect(screen.getByTestId("audio-start-retry")).toBeTruthy();
+    // The app is still mounted underneath, so a stuck gate is never a blank screen.
     expect(screen.getByTestId("app")).toBeTruthy();
+
+    onStart.mockResolvedValueOnce(undefined);
+    fireEvent.click(screen.getByTestId("audio-start-retry"));
+    await waitFor(() => expect(screen.queryByTestId("audio-start-gate")).toBeNull());
   });
 });
