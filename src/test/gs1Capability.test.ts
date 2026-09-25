@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   GS1_PROBE_PEAK_THRESHOLD,
+  ensureLiveGs1Capability,
   ensureGs1Capability,
   gs1Capability,
   probeGs1Output,
@@ -88,5 +89,46 @@ describe("the GS-1 capability probe", () => {
     // No AudioContext at all in this environment: the honest answer is "no evidence", not "broken".
     const verdict = await ensureGs1Capability();
     expect(verdict).toBe("unmeasured");
+  });
+});
+
+/**
+ * The control tone exists because the first CI run after wiring the live probe failed on its own assertion: WebKit and
+ * Firefox rendered silence for reasons that had nothing to do with the synth engine, the probe switched GS-1 off, and
+ * "GS-1 defaults to on in settings" went red. A verdict that turns a feature off has to be able to show that sound was
+ * possible at all.
+ */
+describe("the live probe's control", () => {
+  it("says unmeasured when the context cannot render even a plain tone", async () => {
+    const analyser = {
+      fftSize: 64,
+      // Everything is silent — including an oscillator that cannot be silent — so the context is not rendering.
+      getFloatTimeDomainData: (target: Float32Array) => target.fill(0),
+    };
+    let hostsBuilt = 0;
+    const verdict = await ensureLiveGs1Capability(
+      {
+        // The real path is not exercised: the control returns before any host is built.
+        createAnalyser: () => analyser,
+        createGain: () => ({ gain: { value: 0 }, connect: () => undefined, disconnect: () => undefined }),
+        destination: {},
+        createOscillator: () => ({
+          type: "triangle",
+          frequency: { value: 0 },
+          connect: () => undefined,
+          disconnect: () => undefined,
+          start: () => undefined,
+          stop: () => undefined,
+        }),
+      } as unknown as BaseAudioContext,
+      {
+        createHost: async () => {
+          hostsBuilt += 1;
+          throw new Error("the probe must not build a host when the context is silent");
+        },
+      }
+    );
+    expect(verdict).toBe("unmeasured");
+    expect(hostsBuilt).toBe(0);
   });
 });

@@ -59,6 +59,23 @@ export interface ProbeAnalyser {
   readonly fftSize: number;
 }
 
+/**
+ * The **control**: a plain oscillator through the very same analyser.
+ *
+ * Without it the probe cannot tell "the synth engine is silent" from "this context is not rendering audio at all",
+ * and the second case is common and harmless — a headless browser with no output device, a suspended context, a
+ * throttled tab. The first CI run after wiring this probe failed exactly there: WebKit and Firefox rendered silence
+ * for reasons that had nothing to do with GS-1, the probe switched the engine off, and the matrix's own assertion
+ * ("GS-1 defaults to on") caught it. A verdict that turns a feature off has to be able to show that sound was possible
+ * in the first place.
+ */
+export interface ReferenceDeps {
+  /** Play a short, plain tone on the given analyser's context and report the peak it produced. */
+  measure: (analyser: ProbeAnalyser) => Promise<number>;
+  /** Peak that counts as "this context renders audio". */
+  threshold?: number;
+}
+
 export interface ProbeDeps {
   /** Create the host to test. Injected so the probe is testable without WASM or a worklet. */
   createHost: () => Promise<Gs1Host>;
@@ -145,6 +162,15 @@ export async function ensureLiveGs1Capability(
   silentSink.connect(context.destination);
   let host: Gs1Host | undefined;
   try {
+    /**
+     * The control first, and it decides everything: a context that cannot reproduce a plain oscillator cannot tell us
+     * anything about the synth engine, so the verdict is `unmeasured` and the current routing is left alone.
+     */
+    const referencePeak = await measureReferenceTone(context, analyser);
+    if (referencePeak < GS1_PROBE_PEAK_THRESHOLD) {
+      cached = "unmeasured";
+      return cached;
+    }
     const verdict = await probeGs1Output({
       analyser,
       createHost: async () => {
@@ -168,6 +194,52 @@ export async function ensureLiveGs1Capability(
       /* already gone */
     }
   }
+}
+
+/**
+ * A 220 Hz triangle at a third of full scale for ~150 ms, measured through `analyser`.
+ *
+ * Short and unmusical on purpose: it is a reference level, not a note, and it never reaches the speakers (the
+ * analyser's own output goes to a zero gain).
+ */
+async function measureReferenceTone(
+  context: BaseAudioContext,
+  analyser: ProbeAnalyser,
+  windowMs = 150
+): Promise<number> {
+  const osc = context.createOscillator();
+  const gain = context.createGain();
+  osc.type = "triangle";
+  osc.frequency.value = 220;
+  gain.gain.value = 0.33;
+  osc.connect(gain);
+  gain.connect(analyser as unknown as AudioNode);
+  const frames = new Float32Array(analyser.fftSize);
+  let peak = 0;
+  const read = () => {
+    analyser.getFloatTimeDomainData(frames);
+    for (let i = 0; i < frames.length; i += 1) {
+      const value = Math.abs(frames[i]);
+      if (value > peak) peak = value;
+    }
+  };
+  try {
+    osc.start();
+    const started = Date.now();
+    while (Date.now() - started < windowMs) {
+      read();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  } finally {
+    try {
+      osc.stop();
+      osc.disconnect();
+      gain.disconnect();
+    } catch {
+      /* already gone */
+    }
+  }
+  return peak;
 }
 
 export function gs1Capability(): Gs1Capability | undefined {
