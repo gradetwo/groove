@@ -10,7 +10,7 @@
   "origin": "Berlin after 1989, stripped concrete clubs and a silver 303 bass machine",
   "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
   "postprocess": null,
-  "timestamp": "2026-09-25T13:26:50Z",
+  "timestamp": "2026-09-25T14:49:36Z",
   "review": {
     "decision": "regenerated_after_reject",
     "reasons": [
@@ -18,6 +18,6 @@
     ],
     "attempt": 1,
     "previous": "_rejected/default/acid-techno.jpg",
-    "seconds": 39.6
+    "seconds": 32.9
   }
 }
