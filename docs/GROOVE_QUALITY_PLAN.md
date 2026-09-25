@@ -626,6 +626,14 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### Why the note layer comes next (2026-09-26)
+
+The owner's re-framing is worth recording here because it is the answer to a question this file kept running into: the
+product is a Logic-style production tool and the step sequencer is **one editor inside it**, so **pitch and sound outrank
+the grid**. Every voicing defect found in these rounds — a pad cut at 18 % of its attack, a swell longer than the note it
+was given, a pop after each note — is a case of the *grid* deciding something the *instrument* should have decided. The
+plan for taking that decision away from the grid is `docs/PRO_EDITOR_PLAN.md`.
+
 ### The attack-arrival rule, and the queue that justified it (2026-09-26)
 
 Round 5 ended with one genre's lead rendering 50 dB below its siblings because its instrument's attack was longer than
