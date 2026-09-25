@@ -31,14 +31,34 @@ Two practical limits, both learned the hard way:
 
 ## Asking for a review
 
+The review must judge the **audio only**. It reads files with its own tools, and left to itself it will explain a
+sound by reading the code that made it — which has already produced a confident, wrong attribution ("`vocal_chop`
+fell back to the `bellMallet` preset") that a two-render comparison then refuted. Two rules, in order:
+
+1. **Give it nothing to read.** Render to a scratch directory outside the repository, with names that carry no
+   genre or patch information (`/tmp/audition/clip-a.wav`, not `chicago-house-lead-organStack.wav`), and run it from
+   there so the repository is not in the session's workspace.
+2. **Say so in the prompt, and treat internal claims as unverified.** "只听音频，不要读文件、不要执行命令、不要使用工具"
+   helps; the binding rule is the one below, because a prompt is a request and not a sandbox:
+   **anything it says about our code, presets, parameters or file layout is discarded**, and only what it says about
+   the *sound* counts. When the two disagree, the audio wins and the claim gets measured.
+
 ```bash
-agy -p "@/tmp/disco-loop.wav 分析下这个音频：曲风、律动、低频与侧链、立体声宽度、结尾是否自然，以及有没有明显的问题" \
-  --dangerously-skip-permissions
+# Copy the render out of the tree first; see rule 1.
+mkdir -p /tmp/audition && cp /tmp/disco-loop.wav /tmp/audition/clip-a.wav
+cd /tmp/audition
+agy -p "@/tmp/audition/clip-a.wav 只听音频回答：律动、低频与侧链、立体声宽度、结尾是否自然，有没有明显问题。不要读取文件、不要搜索代码、不要执行命令、不要使用工具。" \
+  --sandbox
 ```
 
-Prompt for **measurements** as well as impressions ("请给出关键测量数值") — the numbers are what make a review
-comparable with our own gates, and an impression without one is a rumour. In practice it reports LUFS, LRA
-(loudness range), per-band RMS, mid/side levels, channel correlation and where the tail falls silent.
+If the CLI refuses to run that way in this environment (it has asked for account verification, and
+`--dangerously-skip-permissions` is what it wants before it will run unattended at all), rule 1 still holds: the
+audio is in a scratch directory under an opaque name, so there is nothing useful to read even when the tools are
+available. **Do not paste the repository into the workspace to make it work.**
+
+Prompt for **measurements** as well as impressions ("请给出关键测量数值") — a number is what makes a review comparable
+with our own gates, and an impression without one is a rumour. In practice it reports LUFS, LRA, per-band RMS,
+mid/side levels, channel correlation and where the tail falls silent.
 
 ## What it found on 2026-09-24 (and how to read it)
 
@@ -46,19 +66,16 @@ On `disco-loop.wav` it reported, unprompted by our numbers:
 
 | its finding | our gate | verdict |
 | --- | --- | --- |
-| side is **28.7 dB** below mid, correlation **0.997** — "听感等同于纯单声道" | `narrowStereo`: 8–9 of 12 genres above 0.98 correlation | **agrees** — and it is the same defect (A1's remaining work) |
-| "几乎没有明显的侧链抽吸避让" | `duckErasedInMaster`: the file's median dip was −0.3 dB before the release hold, −3.82 dB after | **agrees on the problem, disagrees on the residue** — worth a look: is a −3.8 dB median dip audible as ducking, or is our median flattering a duck that is still mostly gone? |
-| LRA **0.6 LU** ("机械感偏重") | `thinDynamics`: 0 offenders | **disagrees** — our claim measures something else (per-track velocity spread), and this is a *master* dynamics statement. One of the two is measuring the wrong thing |
-| a **1.74 s** silent tail after the last hit | `cutTail` asks only for silence | **new** — for a *loop asset* that is a defect: the file cannot be looped seamlessly. The claim's ceiling has no floor |
+| side is **28.7 dB** below mid, correlation **0.997** — "听感等同于纯单声道" | `narrowStereo`: 8–9 of 12 genres above 0.98 correlation | **agrees** — the same defect (A1's remaining work) |
+| "几乎没有明显的侧链抽吸避让" | `duckErasedInMaster`: the file's median dip was −0.3 dB before the release hold, −3.82 dB after | **agrees on the problem, disagrees on the residue** |
+| LRA **0.6 LU** ("机械感偏重") | `thinDynamics`: 0 offenders | **disagrees** — the claim measures per-track velocity spread, this is a *master* dynamics statement |
+| a **1.74 s** silent tail after the last hit | `cutTail` asks only for silence | **new** — a loop asset that cannot loop; closed later by `seamlessLoop` |
 
 `ambient-loop.wav` (87 s, a pad) confirmed the pattern on a second genre, and its numbers line up with ours:
-
-| its measurement | our gate | verdict |
-| --- | --- | --- |
-| correlation **+0.9867**, side/mid **−21.18 dB** | `narrowStereo` lists ambient at 0.99xx; `sideTooHot` only fails above −8 dB | **agrees** — narrow, and correctly not flagged as hot |
-| **L/R balance 0.53 dB** (slightly left) | nothing in the suite measures channel balance | **new gap** |
-| a **3-second fade to −90 dBFS**, then the file ends | `cutTail` is satisfied | same gap as disco: silence has no *floor*, so a loop asset that cannot loop passes |
+correlation **+0.9867**, side/mid **−21.18 dB**, **L/R balance 0.53 dB** (a gap nothing in the suite measured), and a
+3-second fade to −90 dBFS before the file ends.
 
 That is the point of the tool: corroborations, disagreements and gaps in a single review, on a genre the gates are
-happy with. Treat every
-finding as a **candidate**: measure it before believing it, and record the disagreement rather than smoothing it over.
+happy with. Treat every finding as a **candidate** — measure it before believing it, and record the disagreement
+rather than smoothing it over. And read the internal claims with the scepticism the `vocal_chop` case earned: the
+reviewer is trustworthy about sound and unreliable about code.

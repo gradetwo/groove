@@ -99,7 +99,17 @@ function splitVersionFiles(currentVersionJson, currentChangelogJson) {
   if (changelog.length === 0 && Array.isArray(data.changelog)) {
     changelog = data.changelog;
   }
-  const latest = condenseLatest(changelog.find((e) => e.version === version) || changelog[0] || null);
+  /**
+   * Keep the **newest ten** entries.
+   *
+   * The history panel is for "what changed lately", and a file that grows forever stops being readable long before
+   * it stops being fetched. Ten is the owner's call (2026-09-24) and this is where it is enforced, so a release
+   * cannot quietly grow the archive back: `version:sync` is part of `npm run verify`, and a test holds the file at
+   * the limit. The full history lives in git, which is what git is for.
+   */
+  const CHANGELOG_KEEP = 10;
+  const trimmed = changelog.slice(0, CHANGELOG_KEEP);
+  const latest = condenseLatest(trimmed.find((e) => e.version === version) || trimmed[0] || null);
 
   /**
    * The release date belongs to the *version*, not to the calendar.
@@ -114,10 +124,10 @@ function splitVersionFiles(currentVersionJson, currentChangelogJson) {
   const small = {
     version,
     releaseDate,
-    changelogCount: changelog.length,
+    changelogCount: trimmed.length,
     latest,
   };
-  const full = { version, changelog };
+  const full = { version, changelog: trimmed };
 
   return {
     versionJson: `${JSON.stringify(small, null, 2)}\n`,
