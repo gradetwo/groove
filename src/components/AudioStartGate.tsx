@@ -154,7 +154,6 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
             <div className="gate-error" data-testid="audio-start-error" role="alert">
               <b>启动失败 / Startup failed</b>
               <p>{error}</p>
-              <small>{environment}</small>
               <button
                 type="button"
                 className="gate-retry"

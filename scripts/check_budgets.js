@@ -24,7 +24,14 @@ const BUDGETS = {
    * was unwired from the strip and the card moved to inline styles — before this. What it bought is measured: the
    * screen that makes audio work on mobile browsers, and the switch that turns the diagnostic panel on.
    */
-  initialRouteGzipKb: 221,
+  /**
+   * 221 → 222 on 2026-09-26, and the reason is the shape of this feature rather than an oversight: voicing each genre's
+   * lanes its own way means **patch data** in the entry bundle (the resolver is synchronous, so the table cannot be
+   * lazy), and the overnight sweep added five patches. Three of them replaced nothing — they are the per-genre voices
+   * the owner asked for — and two were deleted again when the measurement said they did not help. The next feature in
+   * this area has to find its bytes elsewhere; this raise is recorded so that is a decision rather than a surprise.
+   */
+  initialRouteGzipKb: 222,
   /**
    * GS-1 vendored core. The Rust→WASM engine artifacts are not `.js`, so every
    * budget above simply does not see them: a GS-1 bump could grow the payload 40%

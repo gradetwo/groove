@@ -58,12 +58,8 @@ export type Gs1PatchName =
   | "discoStrings"
   /** A brass lead that carries (`reggaeton`). */
   | "brassLead"
-  /** The dark dub-techno chord stab. */
-  | "dubChord"
   /** Dub techno's own hollow lead stab. */
   | "dubStab"
-  /** Ambient techno's slow chord wash. */
-  | "ambientWash"
   /** Ambient techno's wide strings wash — see the patch body for the trade it records. */
   | "ambientStrings"
   | "sampleTexture"
@@ -493,39 +489,6 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.PATCH_GAIN]: 0.6,
   },
   /**
-   * The **dub-techno chord stab**: deep, dark and short — the genre's signature is a filtered chord hit under a long
-   * delay, not an airy wash.
-   *
-   * It exists for a measurement as much as for the sound. Correcting the shared `analogLead` and `sustainedStrings`
-   * pulled `dub-techno` and `ambient-techno` to **0.157 dB** apart, under the baseline's own 0.25 dB floor — they share
-   * their drums, their `warmPad` chords and their bass register, and the two leads had just been moved closer. Dub
-   * techno's chords being dark stabs is both the honest fix and the idiomatic one, and it separates the pair where they
-   * should differ.
-   */
-  dubChord: {
-    [Param.OSC1_ON]: 1,
-    [Param.OSC1_WAVE]: 2,
-    [Param.OSC1_LEVEL]: 0.5,
-    [Param.OSC1_UNISON]: 2,
-    [Param.OSC1_SPREAD]: 0.12,
-    [Param.OSC1_SUB]: 1,
-    [Param.OSC1_SUB_LEVEL]: 0.4,
-    [Param.OSC2_ON]: 1,
-    [Param.OSC2_WAVE]: 1,
-    [Param.OSC2_LEVEL]: 0.14,
-    [Param.OSC2_DETUNE]: -6,
-    [Param.FILTER_TYPE]: 0, // ladder — the round one
-    [Param.FILTER_CUTOFF]: 520,
-    [Param.FILTER_RES]: 0.22,
-    [Param.FILTER_ENV_AMT]: 0.2,
-    [Param.FILTER_KBD]: 0.2,
-    [Param.ENV_ATTACK]: 0.008,
-    [Param.ENV_DECAY]: 0.3,
-    [Param.ENV_SUSTAIN]: 0.45,
-    [Param.ENV_RELEASE]: 0.5,
-    [Param.PATCH_GAIN]: 0.6,
-  },
-  /**
    * Dub techno's lead: a short, hollow stab through a resonant low filter — the chord-and-stab language of the genre,
    * and deliberately nothing like either neighbour in the catalog (`analogLead`'s sustained saw, `sustainedStrings`'
    * airy pad).
@@ -548,43 +511,6 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.ENV_SUSTAIN]: 0.25,
     [Param.ENV_RELEASE]: 0.3,
     [Param.PATCH_GAIN]: 0.55,
-  },
-  /**
-   * Ambient techno's chord wash: slow, airy, and quiet in the upper mids — the counterpart to `dubChord`'s dark stab.
-   *
-   * It exists because two budgets disagree for this pair. The voicing rule says each lane should sit close to the
-   * **native** reference, and doing that for `dub-techno` and `ambient-techno` — which share their native rhythm
-   * section, sample for sample — pulled their fingerprints to 0.15 dB, under the baseline's 0.25 dB distinctness floor.
-   * Matching native on the *leads* is not negotiable; the chord voice is where these two genres genuinely differ, so
-   * that is where they are separated.
-   */
-  ambientWash: {
-    [Param.OSC1_ON]: 1,
-    [Param.OSC1_WAVE]: 1, // triangle — softer than the shared pad's saw
-    [Param.OSC1_LEVEL]: 0.55,
-    [Param.OSC1_UNISON]: 3,
-    [Param.OSC1_SPREAD]: 0.55,
-    [Param.OSC2_ON]: 1,
-    [Param.OSC2_WAVE]: 1,
-    [Param.OSC2_LEVEL]: 0.3,
-    [Param.OSC2_DETUNE]: 12,
-    [Param.FILTER_TYPE]: 1,
-    [Param.FILTER_CUTOFF]: 1100,
-    [Param.FILTER_RES]: 0.1,
-    [Param.FILTER_ENV_AMT]: 0.08,
-    [Param.FILTER_KBD]: 0.2,
-    [Param.ENV_ATTACK]: 1.2,
-    [Param.ENV_DECAY]: 1.6,
-    [Param.ENV_SUSTAIN]: 0.85,
-    [Param.ENV_RELEASE]: 2.2,
-    [Param.LFO_ON]: 1,
-    [Param.LFO_WAVE]: 0,
-    [Param.LFO_RATE]: 0.28,
-    [Param.LFO_DEPTH]: 0.18,
-    // The core declares four LFO targets (`lfoTarget` 0..3) and OSC2's pitch is not one of them — the range check in
-    // `gs1Patches.test.ts` caught exactly that, which is the guard doing its job on a fresh patch.
-    [Param.LFO_TARGET]: Param.OSC1_PITCH,
-    [Param.PATCH_GAIN]: 0.42,
   },
   /**
    * Ambient techno's strings: a wide, slow, noticeably brighter wash than the corrected shared patch — deliberately
@@ -800,8 +726,8 @@ export const GENRE_GS1_PATCH_OVERRIDES: Record<string, Partial<Record<string, Gs
   /** −6.1 dB under the native brass with the corrected shared lead; see `brassLead`. */
   reggaeton: { brass_synth: "brassLead" },
   /** Its own chord stab, and the pair distance the baseline floor requires; see `dubChord`. */
-  "dub-techno": { warm_pad: "dubChord", saw_lead: "dubStab" },
-  "ambient-techno": { warm_pad: "ambientWash", strings_lead: "ambientStrings" },
+  "dub-techno": { saw_lead: "dubStab" },
+  "ambient-techno": { strings_lead: "ambientStrings" },
 };
 
 /** The instruments a genre overrides, for the plan's per-genre voicing sweep and for tests. */
