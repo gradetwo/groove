@@ -799,7 +799,19 @@ export const DEFAULT_SYNTH_PRESETS: Record<string, SynthPreset> = {
     adsr: { attack: 0.35, decay: 0.4, sustain: 0.9, release: 0.9 },
     velocityToCutoff: 1.2,
     velocityToFilterEnv: 0.8,
-    velocityToAttack: 0.7,
+    /**
+     * **0.7 → 0.25**, and the sweep is what found it.
+     *
+     * `velocityToAttack` lengthens the attack to `attack · (1 + v)` at the velocity floor, so a pattern step at a soft
+     * velocity gave this preset an attack of **0.6 s** — and the lanes that play it (`ambient-techno`, `downtempo`,
+     * `disco`) cut their lead notes at about a third of a second. The note never arrived: measured, its stem rendered at
+     * **−54 to −60 dBFS** while every other lead instrument sat at −31 to −36, and a controlled one-note calibration
+     * could not see it because it compared that quiet native voice with the equally quiet GS-1 patch and called them
+     * equal.
+     *
+     * 0.25 keeps the bowed swell — 0.35 s at full velocity, 0.44 s at the floor — inside a note that is actually played.
+     */
+    velocityToAttack: 0.25,
     velocityToDecay: 0.2,
   },
   // `pluck_string`: nylon/koto-style plucked string — triangle body with a saw edge,
