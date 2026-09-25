@@ -626,6 +626,42 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The instrument sweep, and why the next step is one measurement per instrument (2026-09-26)
+
+All 159 genres reach GS-1 through only **26** lane/instrument pairs, so the sweep the owner asked for ("every genre's
+own voice, every lane") is 26 measurements, not 300. `scripts/probe_gs1_instrument_voicing.mjs` walks them — brightness
+ratio and level delta against the native reference, median over the genres that use each instrument — and
+`.github/workflows/voice-sweep.yml` runs it as a **6-way CI matrix** with a JSON report per shard, which turns the loop
+into a few minutes instead of half an hour.
+
+**What it found on its first full run (30 pairs):**
+
+```
+lead    square_lead      →squareLead      ×9.15   +3.0 dB   the catalogue's worst reading
+lead    strings_lead     →sustainedStrings ×4.45  +24.2 dB   too loud as well as too bright
+lead    sine_lead        →squareLead      ×4.44   −6.3 dB   **a sine lead routed to a pulse**
+lead    supersaw         →supersawStack   ×4.40  −12.5 dB
+chords  supersaw         →supersawStack   ×2.53  −22.5 dB   22 dB under the part it replaces
+fx      vinyl_crackle    →sampleSurface   ×3.36  −12.5 dB
+lead    acid_303         →acidLead        ×2.08  −15.5 dB
+```
+
+**Level, not brightness, is the dominant error** — a dozen instruments sit 5–22 dB *under* their native references —
+which is a different problem from the lead's brightness in the twelve-genre sample and wants a different correction.
+
+The first pass applied the arithmetic (filters and second oscillators down where the ratio was high, `PATCH_GAIN` up
+where the level was low) and re-measured: `sine_lead` **×4.44 → ×1.15** (its own sine patch, and the routing table
+had been ignoring the word in the instrument's name), `square_lead` **×9.15 → ×6.4**. The rest moved less than the
+medians predicted, and the readings themselves swing several dB between identical runs — so the honest conclusion is
+that **a genre's mix is too noisy a probe for calibrating an instrument**. The next step is one clean measurement per
+instrument: render the instrument's own patch and its native preset from the same synthetic note, with no genre, pattern
+or arrangement in between, and calibrate against that. The CI workflow stays; it is what will confirm the result.
+
+**The headroom guard was re-measured, not argued with.** `gs1Patches.test.ts` rejected any `PATCH_GAIN` above 0.6 from
+the eight-voice E3 measurement, and the sweep showed it was protecting a limiter that was never in danger while the lanes
+sat 12–22 dB quiet. Measured on the densest supersaw voicing in the catalogue with the raised gains: master peak **0.78,
+zero clipped samples** over eight seconds, host true-peak 0.02 against a limit of 1 → the bound is 3, recorded in the test.
+
 **The chords lane, measured the same way, is the next sweep and its problem is the opposite one.** The same twelve
 genres, GS-1 against native, with the *level* column as the story:
 
