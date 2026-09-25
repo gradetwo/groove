@@ -318,6 +318,7 @@ export function bypassTrackInsert(): TrackInsertParams {
     compMakeupDb: 0,
     driveEnabled: false,
     driveMix: 0,
+    width: 0,
   };
 }
 
@@ -331,6 +332,9 @@ export function resolveTrackInsert(role: MixTrackId | string | null | undefined)
     low: { ...base.low },
     mid: { ...base.mid },
     high: { ...base.high },
+    // Optional in the type (an authored table says nothing about width and means "off"), but always present in the
+    // *resolved* contract, so a resolved chain and a strip's own params are the same shape.
+    width: base.width ?? 0,
   };
 }
 

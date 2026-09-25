@@ -161,14 +161,19 @@ check(
 const changelogPath = path.join(ROOT, "public/changelog.json");
 check("R7b changelog archive exists separately", fs.existsSync(changelogPath));
 if (fs.existsSync(changelogPath)) {
-  // A sync must never shrink the release history (it once did: `version:sync`
-  // regenerated the archive from a file that no longer carried it).
+  /**
+   * The archive is **capped at ten entries** by the owner's rule (2026-09-24), so "never shrinks" is no longer the
+   * invariant to hold — it is "never silently loses the entries it is supposed to keep". The baseline is the cap, and
+   * the check below it is what still catches the original accident (`version:sync` regenerating the archive from a
+   * file that no longer carried it): a sync that empties the archive fails here.
+   */
   const archive = JSON.parse(fs.readFileSync(changelogPath, "utf8"));
   const count = Array.isArray(archive.changelog) ? archive.changelog.length : 0;
+  check("R7c1 release history keeps the whole archive", count >= Math.min(baseline.changelogEntries, 10));
   check(
-    "R7c release history never shrinks",
-    count >= baseline.changelogEntries,
-    `${count} entries (baseline ${baseline.changelogEntries})`
+    "R7c2 release history never exceeds the cap",
+    count <= 10,
+    `${count} entries (cap 10)`
   );
 }
 
