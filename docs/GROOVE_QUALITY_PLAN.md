@@ -626,6 +626,20 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+**The chords lane, measured the same way, is the next sweep and its problem is the opposite one.** The same twelve
+genres, GS-1 against native, with the *level* column as the story:
+
+```
+chicago-house −5.4 dB   detroit-techno −12.6   liquid-dnb −6.9   ambient −11.8
+afrobeat −8.2           chicago-blues −6.7     boom-bap −11.2    trap-rap −9.4   synthwave −5.7
+```
+
+i.e. the GS-1 chord voices are consistently **quieter** than the parts they replace — a −5 to −13 dB deficit in nine of
+twelve genres, which is a different failure from the lead's brightness and wants a different correction (patch gain and
+oscillator levels rather than filters). Two genres (`minimal-techno`, `disco`) render their chords lane **silent** in both
+engines, which is a separate thing to understand: the lane's own steps may simply be empty there, in which case the
+probe should say "no notes" instead of reporting a brightness ratio against silence.
+
 **One guard had to be recalibrated, and it is the interesting part.** Matching native for `dub-techno` and
 `ambient-techno` — which share their native rhythm section sample for sample — narrowed their fingerprints to **0.1700 dB**,
 under the 0.25 dB distinctness floor. That floor was calibrated from an 8-genre *subset* (1.0641 dB) discounted 4.3×, on
