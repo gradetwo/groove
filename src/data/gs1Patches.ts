@@ -52,11 +52,13 @@ export type Gs1PatchName =
   | "acidLead"
   | "bellMallet"
   | "organStack"
+  /** The organ as a UK-garage lead plays it — see the patch body and `GENRE_GS1_PATCH_OVERRIDES`. */
+  | "organStab"
   | "sampleTexture"
   | "sampleSurface";
 
 /**
- * The ten patches.
+ * The patches.
  *
  * Each entry states the *character* it is going for, because that is what a future reader needs
  * in order to decide whether a value change is a bug or an improvement.
@@ -330,25 +332,79 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.PATCH_GAIN]: 0.45,
   },
   /** Drawbar-ish organ: steady, hollow, a touch of sub. */
-  organStack: {
+  /**
+   * The drawbar organ, voiced to sit where the **native** `m1Organ` preset sits.
+   *
+   * The first version was a pulse-plus-sub stack with a wide-open filter, and the owner heard exactly what the numbers
+   * said: "harsher than GS-1 off, and short". Measured on the same lane of `uk-garage`, its zero-crossing rate was
+   * **7.9 kHz against the native render's 2.0 kHz** — four times the high-frequency activity, which is what brightness
+   * sounds like — and its release was 0.12 s against the native preset's 0.16 s with a fuller body behind it.
+   *
+   * The native preset is the reference because it is the sound this lane was written for: a drawbar registration of
+   * pure partials (8′ + 5⅓′ + 2′ + 2⅔′ + 1′ + ½′), a gentle ladder filter at 5.2 kHz, and a fast attack into a full
+   * sustain. Nothing here invents a new organ; it stops fighting the one the part was written for.
+   */
+  /**
+   * The drawbar organ **as a UK-garage lead plays it**: the same registration as the native `m1Organ` preset, with the
+   * body shortened and the tail left wet.
+   *
+   * This is the first patch that exists because a *genre* asked for it rather than because an instrument did (see
+   * `GENRE_GS1_PATCH_OVERRIDES`). The shared `organStack` was measured on this lane at 7.9 kHz zero-crossing against
+   * the native part's 2.0 kHz — four times the high-frequency activity, heard as "harsher than GS-1 off" — with a
+   * 0.12 s release behind it. Here the oscillator is a triangle at a ladder filter's gentle Q, the octave-up sine is
+   * quiet, the decay is short enough to read as a stab, and the release is long enough that the tail is the reverb
+   * rather than a click.
+   */
+  organStab: {
     [Param.OSC1_ON]: 1,
-    [Param.OSC1_WAVE]: 3,
+    [Param.OSC1_WAVE]: 1, // triangle — a drawbar registration's steeply falling partials, not a pulse's 1/n series
     [Param.OSC1_LEVEL]: 0.6,
     [Param.OSC1_SUB]: 1,
-    [Param.OSC1_SUB_LEVEL]: 0.5,
+    [Param.OSC1_SUB_LEVEL]: 0.22,
     [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 0, // sine — a drawbar partial, not a second voice
+    // An octave **and a fifth** above: the upper drawbars the native registration carries (5⅓′ + 2′), which is where a
+    // triangle's own partials are too steep to reach. This is what takes the voice from dull (measured 1.0 kHz
+    // zero-crossing) back toward the native part's 2.0 kHz without a pulse's buzz.
+    [Param.OSC2_PITCH]: 19,
+    [Param.OSC2_LEVEL]: 0.34,
+    [Param.FILTER_TYPE]: 0, // ladder
+    [Param.FILTER_CUTOFF]: 5200,
+    [Param.FILTER_RES]: 0.14,
+    [Param.FILTER_ENV_AMT]: 0.35,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.005,
+    [Param.ENV_DECAY]: 0.18,
+    [Param.ENV_SUSTAIN]: 0.62,
+    [Param.ENV_RELEASE]: 0.55,
+    [Param.PATCH_GAIN]: 0.46,
+  },
+  organStack: {
+    [Param.OSC1_ON]: 1,
+    // Triangle rather than pulse: the native registration's partials fall off steeply, and a pulse's 1/n series is
+    // what made this read as bright and buzzy instead of full.
+    [Param.OSC1_WAVE]: 1,
+    [Param.OSC1_LEVEL]: 0.62,
+    // The 16′ sub the native preset cannot express (a periodic wave has one fundamental) — at a level that fills the
+    // body without putting energy under the bass part.
+    [Param.OSC1_SUB]: 1,
+    [Param.OSC1_SUB_LEVEL]: 0.28,
+    [Param.OSC2_ON]: 1,
+    // Sine an octave up, quiet: the upper drawbars, not a second voice.
     [Param.OSC2_WAVE]: 0,
     [Param.OSC2_PITCH]: 12,
-    [Param.OSC2_LEVEL]: 0.35,
-    [Param.FILTER_TYPE]: 1,
-    [Param.FILTER_CUTOFF]: 4200,
-    [Param.FILTER_RES]: 0.08,
-    [Param.FILTER_ENV_AMT]: 0.1,
+    [Param.OSC2_LEVEL]: 0.24,
+    [Param.FILTER_TYPE]: 0, // ladder — the round one, like the native preset's gentle Q
+    [Param.FILTER_CUTOFF]: 4800,
+    [Param.FILTER_RES]: 0.12,
+    [Param.FILTER_ENV_AMT]: 0.12,
+    [Param.FILTER_KBD]: 0.3,
     [Param.ENV_ATTACK]: 0.006,
-    [Param.ENV_DECAY]: 0.2,
-    [Param.ENV_SUSTAIN]: 1,
-    [Param.ENV_RELEASE]: 0.12,
-    [Param.PATCH_GAIN]: 0.55,
+    [Param.ENV_DECAY]: 0.06,
+    [Param.ENV_SUSTAIN]: 0.95,
+    // Long enough to ring like the console the native preset models; the articulation still decides the note.
+    [Param.ENV_RELEASE]: 0.28,
+    [Param.PATCH_GAIN]: 0.42,
   },
 };
 
@@ -461,13 +517,45 @@ export interface ResolvedGs1Patch {
  */
 export function resolveGs1Patch(
   role: string | null | undefined,
-  instrument: string | null | undefined
+  instrument: string | null | undefined,
+  genreId?: string | null
 ): ResolvedGs1Patch | null {
   const routing = routingForRole(role);
   if (!routing || !instrument) return null;
   const entry = routing[instrument];
   if (!entry || !("patch" in entry)) return null;
-  return { patch: entry.patch, params: GS1_PATCHES[entry.patch] };
+  /**
+   * **A genre may voice a lane its own way.** The instrument table says what an instrument *is*; it cannot say what a
+   * genre does with it, and the owner's point is that it must not have to: `m1_organ` in a UK-garage lead is a short,
+   * wet stab, while the same instrument under a Latin montuno is a warm pad. The override is consulted first, keyed by
+   * the instrument name so it follows the lane through an instrument swap, and a genre that says nothing keeps the
+   * table's answer exactly as before.
+   */
+  const override = genreId ? GENRE_GS1_PATCH_OVERRIDES[genreId]?.[instrument] : undefined;
+  const patch = override ?? entry.patch;
+  return { patch, params: GS1_PATCHES[patch] };
+}
+
+/**
+ * Genres that voice a lane their own way, by instrument name.
+ *
+ * Deliberately small and grown one genre at a time, with the **native render as the reference**: an override is worth
+ * adding when the GS-1 voice of that lane measures or sounds materially different from the sound the part was written
+ * for (a zero-crossing rate twice the native lane's is bright; half of it is dull), not because a genre could have a
+ * flavour. The plan for sweeping the rest is in `docs/GROOVE_QUALITY_PLAN.md`.
+ */
+export const GENRE_GS1_PATCH_OVERRIDES: Record<string, Partial<Record<string, Gs1PatchName>>> = {
+  /**
+   * The lead is a drawbar organ played as a stab. The shared `organStack` is heard as harsh and short here (measured
+   * at 7.9 kHz zero-crossing against the native lane's 2.0 kHz), so this lane gets a darker, longer-tailed registration
+   * with a level matched to the native part.
+   */
+  "uk-garage": { m1_organ: "organStab" },
+};
+
+/** The instruments a genre overrides, for the plan's per-genre voicing sweep and for tests. */
+export function genreGs1Overrides(genreId: string): Partial<Record<string, Gs1PatchName>> {
+  return GENRE_GS1_PATCH_OVERRIDES[genreId] ?? {};
 }
 
 /** Every role GS-1 can voice, for gates and UI copy. */

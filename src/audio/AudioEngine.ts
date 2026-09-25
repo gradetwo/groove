@@ -748,6 +748,11 @@ export class AudioEngine {
 
   public setPattern(pattern: SequencerPattern, resetStates = false): void {
     this.pattern = pattern;
+    /**
+     * The pool voices lanes per genre (`GENRE_GS1_PATCH_OVERRIDES`), so it is told the genre here — the one place the
+     * pattern itself arrives — rather than at every note.
+     */
+    this.gs1Pool?.setGenre(pattern?.genre_id ?? null);
     const neededTracks = Math.max(16, pattern.tracks?.length || 0);
     if (this.ctx && this.trackStrips.length < neededTracks) {
       this.releaseTrackStrips();

@@ -189,6 +189,18 @@ export class Gs1VoicePool {
    * pushed to the host when it changes.
    */
   /**
+   * The genre whose patches this pool voices, set by the engine when the pattern changes.
+   *
+   * `null` means "the instrument table's answer", which is what the pool did before per-genre voicing existed.
+   */
+  private genreId: string | null = null;
+
+  /** Called by the engine on every pattern change; cheap, and it never rebuilds a host. */
+  public setGenre(genreId: string | null | undefined): void {
+    this.genreId = genreId ?? null;
+  }
+
+  /**
    * What each track's host is doing, for the in-app diagnostic (`?diag=1`).
    *
    * Deliberately tiny and read-only: the question a defect report has to answer is "did this track get a host, what
@@ -230,6 +242,9 @@ export class Gs1VoicePool {
         notes,
         sampleRate: this.ctx.sampleRate,
         latencyFrames: slot.host.scheduledNoteLatencyFrames,
+        // The genre decides how a lane is voiced (`GENRE_GS1_PATCH_OVERRIDES`); the live pool is told it once per
+        // pattern by the engine, so a genre change re-voices without any per-note work.
+        genreId: this.genreId,
       });
       if (!plan) {
         // No GS-1 patch for this instrument: play it natively, but keep the host alive — the user
