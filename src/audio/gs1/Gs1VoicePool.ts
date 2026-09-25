@@ -86,6 +86,8 @@ interface TrackSlot {
    * rather than once per note.
    */
   sampleLoaded: boolean;
+  /** The most recent self-report from this track's worklet (see `status()`). */
+  analysis?: Record<string, number>;
 }
 
 export class Gs1VoicePool {
@@ -150,6 +152,25 @@ export class Gs1VoicePool {
         host.output.connect(dest);
         slot.host = host;
         slot.ready = true;
+        /**
+         * Keep what the worklet reports about itself (`voices`, `load`, `violations`).
+         *
+         * Nothing else in the app reads these — they were only ever asserted in tests — and they are exactly the
+         * numbers a "starts fine then crackles" report needs: a voice count pinned at the ceiling and a load above the
+         * core's own 0.35 threshold mean the engine is shedding voices, which sounds like a broken instrument rather
+         * than a load problem.
+         */
+        host.onAnalysis((analysis) => {
+          if (this.slots.get(trackIdx) !== slot) return;
+          slot.analysis = {
+            voices: analysis.voices,
+            load: Number(analysis.load?.toFixed?.(3) ?? analysis.load ?? 0),
+            violations: analysis.violations,
+            truePeak: Number(analysis.truePeak?.toFixed?.(4) ?? analysis.truePeak ?? 0),
+            limit: Number(analysis.limit?.toFixed?.(4) ?? analysis.limit ?? 1),
+            at: Date.now(),
+          };
+        });
         void ready;
       } catch {
         // A failed load is not fatal: the track stays on the native engine, and the next
@@ -184,6 +205,7 @@ export class Gs1VoicePool {
         ready: slot.ready,
         variant: slot.host?.variant ?? null,
         hasHost: Boolean(slot.host),
+        analysis: slot.analysis ?? null,
       });
     }
     return out;

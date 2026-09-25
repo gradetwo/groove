@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 
+import { useSyncExternalStore } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import { Gauge, ShieldCheck, Timer, Waves } from "lucide-react";
+import { isDebugModeEnabled, setDebugModeEnabled, subscribeDebugMode } from "../../platform/debugMode";
+import { Bug, Gauge, ShieldCheck, Timer, Waves } from "lucide-react";
 import type { AudioEngine } from "../../audio/AudioEngine";
 
 /**
@@ -33,6 +35,12 @@ export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
   onToggleGs1,
 }) => {
   const { t } = useLanguage();
+  /**
+   * The debug switch reads its own store rather than being threaded through two hosts: it is one persisted boolean,
+   * and passing it down would put the same prop on every settings caller for no gain.
+   */
+  const debugEnabled = useSyncExternalStore(subscribeDebugMode, isDebugModeEnabled, () => false);
+  const onToggleDebug = () => setDebugModeEnabled(!debugEnabled);
 
   const [masterVolume, setMasterVolume] = useState(0.8);
   const [effectiveVolume, setEffectiveVolume] = useState(0.8);
@@ -115,6 +123,29 @@ export const AudioSettingsTab: React.FC<AudioSettingsTabProps> = ({
               className={toggleClass(gs1Enabled)}
             >
               {gs1Enabled ? t("audio_settings_on") : t("audio_settings_off")}
+            </button>
+          </div>
+        </div>
+
+        {/* Debug panel */}
+        <div className={sectionClass}>
+          <div className={sectionTitleClass}>
+            <Bug className="w-4 h-4" />
+            <span>{t("audio_settings_section_debug")}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className={rowLabelClass}>{t("audio_settings_debug_label")}</div>
+              <div className={hintClass}>{t("audio_settings_debug_hint")}</div>
+            </div>
+            <button
+              type="button"
+              onClick={onToggleDebug}
+              aria-pressed={debugEnabled}
+              data-testid="audio-settings-debug-toggle"
+              className={toggleClass(debugEnabled)}
+            >
+              {debugEnabled ? t("audio_settings_on") : t("audio_settings_off")}
             </button>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheory";
 import { publishPlayhead } from "../playheadBus";
 import { installProbeHooks, uninstallProbeHooks } from "../../../platform/probeHooks";
+import { debugModeForcedByUrl, isDebugModeEnabled, subscribeDebugMode } from "../../../platform/debugMode";
 import { patternForExport } from "../../../data/songFlatten";
 import { editorPositionFor } from "../../../data/songFlatten";
 import { loadLayoutPrefs, type LayoutPrefs } from "../layoutPrefs";
@@ -401,22 +402,27 @@ export function useAudioEngineLifecycle({
      */
     let cleanupDiag: (() => void) | undefined;
     /**
-     * Loaded **on demand**: the panel is a development surface, and the bundle budget is a hard gate (it failed at
-     * 221.8 KB against 220 KB when this was a static import). The flag check is inlined for the same reason — the
-     * panel's own module is the thing that must not be in the initial route.
+     * it on for a probe.
+     *
+     * Loaded on demand: it is a development surface, the bundle budget is a hard gate (it failed at 221.8 KB against
+     * 220 KB as a static import), and the panel's own module is the thing that must not be in the initial route.
      */
-    try {
-      if (new URLSearchParams(window.location.search).get("diag") === "1") {
+    const syncDiag = (on: boolean) => {
+      if (on && !cleanupDiag) {
         void import("../../../platform/diagnostics").then((mod) => {
-          cleanupDiag = mod.installDiagnostics(engine);
+          if (isDebugModeEnabled() || debugModeForcedByUrl()) cleanupDiag = mod.installDiagnostics(engine);
         });
+      } else if (!on && cleanupDiag) {
+        cleanupDiag();
+        cleanupDiag = undefined;
       }
-    } catch {
-      /* no window, or a URL that cannot be parsed: nothing to install */
-    }
+    };
+    syncDiag(isDebugModeEnabled() || debugModeForcedByUrl());
+    const unsubscribeDiag = subscribeDebugMode(() => syncDiag(isDebugModeEnabled()));
     const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
     return () => {
+      unsubscribeDiag();
       cleanup?.();
       cleanupDiag?.();
       cleanupProbe?.();

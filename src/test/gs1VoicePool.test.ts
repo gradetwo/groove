@@ -31,6 +31,8 @@ function makeHost(options: { latency?: number; readyDelayMs?: number; fail?: boo
     noteOnAt: (note: number, velocity: number, atFrame: number, pan?: number) =>
       calls.noteOnAt.push([note, velocity, atFrame, pan ?? 0]),
     noteOffAt: (note: number, atFrame: number) => calls.noteOffAt.push([note, atFrame]),
+    /** The pool subscribes to each host's self-report for the debug panel; a host must answer for it. */
+    onAnalysis: () => () => undefined,
     setPatch: () => {
       calls.patches += 1;
     },

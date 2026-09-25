@@ -39,6 +39,8 @@ function makeHost() {
       calls.noteOnAt += 1;
     },
     noteOffAt: () => {},
+    /** The pool subscribes to each host's self-report for the debug panel; a host must answer for it. */
+    onAnalysis: () => () => undefined,
     setPatch: () => {
       calls.patches += 1;
     },

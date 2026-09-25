@@ -179,6 +179,8 @@ describe("GS-1 export parity", () => {
         noteOnAt: (note: number, velocity: number, atFrame: number) =>
           recorded.noteOnAt.push([note, velocity, atFrame, 0]),
         noteOffAt: (note: number, atFrame: number) => recorded.noteOffAt.push([note, atFrame]),
+        // The pool subscribes to each host's self-report; the exporter's hosts are asked the same question.
+        onAnalysis: () => () => undefined,
       /**
        * ABI 9's entry point, recorded like the others: the renderer sends the per-note variation through it, and a
        * stub that omits it fails inside the render loop rather than at the interface.
