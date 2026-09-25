@@ -626,6 +626,28 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The disagreement is an interaction: quiet *and* short (2026-09-26)
+
+The controlled measurement now covers four axes per instrument — register (three notes), articulation (held and stab),
+**velocity** (0.08 to 0.9) and brightness — and all 26 instruments pass every one of them:
+
+```
+26/26:  |held| ≤ 0.9 dB   |stab| ≤ 0.5 dB   register ≤ 0.9 dB   velocity ≤ 0.2 dB   brightness ×0.98–1.06
+```
+
+So the genre-stem metric's +30 dB for `strings_lead` is not a velocity response, and it is not the voice. It is the
+**combination** the grid does not have a cell for. The native `stringsLead` preset carries
+**`velocityToAttack: 0.7`** — a soft note is a *slower* bow — while the GS-1 patch's attack is a fixed 0.32 s. A held note
+at any velocity catches up inside the 700 ms window (hence ±0 dB across the whole velocity sweep), and a stab at a **loud**
+velocity is fast in both engines (hence ±0.5 dB). A **quiet, short** note is where they part: the native swells slowly and
+is cut, the GS-1 voice starts immediately and is not — which is a difference of tens of dB, and exactly what the genre
+renders.
+
+**The next cell is therefore velocity × articulation**, and the fix it points at is upstream: the GS-1 core reads velocity
+as amplitude, while the native engine's presets carry `velocityToCutoff`, `velocityToFilterEnv`, `velocityToAttack` and
+`velocityToDecay`. Matching the app's existing sound means the core needs the same response — a real feature for the synth
+rather than another patch value, and the first finding in this work that belongs there.
+
 ### The controlled measurement is the authority, and the genre-stem metric disagrees with it (2026-09-26)
 
 With the calibration's own artefacts fixed (the previous take's tail, the limiter ceiling as a "peak", a gate too short
