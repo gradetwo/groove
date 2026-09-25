@@ -323,3 +323,124 @@ for each (a club genre, an instrument-led genre, an abstract genre):
 | `pixel` | `chiptune`, `vaporwave`, `lofi-hip-hop` |
 
 Full batch = 159 genres × 6 skins = **954 images**.
+
+---
+
+## Appendix D — pilot results (18 images generated and reviewed)
+
+The 18 pilot covers live in `public/covers/<skin-id>/<genre-id>.jpg` (1024×1024 JPEG q92). They were
+generated with Qwen-Image-2.1 at `--size 1:1 --steps 40 --preset quality`, 40 steps.
+
+| Skin | Covers | Verdict |
+|---|---|---|
+| `default` | `melodic-house`, `liquid-dnb`, `ambient-techno` | **Strong.** Glass piano in aurora light; rain-slick neon street; fog hall with a pulsing sphere. Palette and premium tone land immediately. |
+| `minimal` | `minimal-techno`, `ambient`, `cool-jazz` | **Mixed, then fixed.** `minimal-techno` (dot field with one blue tick) worked. `ambient` and `cool-jazz` came back nearly blank and read as broken tiles — see D.1. |
+| `comic` | `rock-and-roll`, `punk-rock`, `funk` | **Strongest skin.** Ben-Day dots, heavy keylines, cyan/magenta misregistration, flat spot plates, genuine cheap-70s-press energy. |
+| `soviet` | `industrial-techno`, `hard-techno`, `heavy-metal` | **Strong.** Brushed-steel grain, milled edges, rivets, one brass note. `heavy-metal` is the plainest (a steel box with a grille) but on-style. |
+| `sovietYears` | `hardstyle`, `hardcore-gabber`, `post-punk` | **Strong.** Red wedge + crowd + horn for `hardstyle` is the best single cover in the pilot. See D.3 for a faint-text defect. |
+| `pixel` | `chiptune`, `vaporwave`, `lofi-hip-hop` | **Mixed.** `chiptune` (moonlit hill, arcade cabinet, pixel waveform towers) and `lofi-hip-hop` (bedroom, cassette deck, rain window) are exactly right. `vaporwave` reverted to a smooth airbrushed render — see D.2. |
+
+### D.1 `minimal`: "generous empty space" is a trap
+
+The template's "very generous empty space" plus "one continuous hairline" was taken literally and
+produced near-blank white squares (`ambient` was a single thin circle; `cool-jazz` a single squiggle).
+Empty-tile covers read as missing assets, not as restraint.
+
+**Fix that worked** (both regenerated, same seeds, now correct): add an explicit floor on structure —
+*"the composition must fill at least half the sheet and contain 3 to 6 distinct black elements,
+including one large solid black shape occupying roughly a third of the frame. White space frames the
+subject; it is not the whole image. No empty white squares."* The regenerated `ambient` is now a bold
+black disc with a concentric white ring and a blue hairline (it reads as a record, which is apt), and
+`cool-jazz` a solid stepped stack of black bars with one blue bar. **Bake this paragraph into the
+`minimal` template for the full batch.**
+
+### D.2 `pixel`: force the look with a deterministic post-process
+
+"No anti-aliasing" in the prompt is respected for concrete objects (`chiptune`, `lofi-hip-hop`) but
+**ignored for smooth, atmospheric subjects** — `vaporwave` (sunset, grid sea, neon haze) came back as a
+smooth synthwave painting even with "drawn on a 64x64 pixel canvas", both before and after the prompt
+fix. The model's airbrush prior for sunset/neon is stronger than the instruction.
+
+**Recommendation: do not rely on the prompt for the pixel skin. Post-process every `pixel` cover
+deterministically** (local ImageMagick, no GPU cost):
+
+```
+magick in.png -resize 160x160! -filter point -resize 1024x1024! -strip -quality 92 out.jpg
+```
+
+Tested at 112 / 160 / 224 px: **160 px is the sweet spot** — unambiguously chunky pixel blocks and a
+stepped sun, while the column and buildings stay readable. 112 loses detail, 224 drifts back toward
+smooth. This makes the 8/16-bit read *guaranteed* rather than probabilistic, on all 159 pixel covers.
+
+### D.3 Faint text defect
+
+`no text` mostly held, but two `sovietYears` covers carry small signature-like marks in a corner.
+Add `signature, small print, fine print, caption, corner mark` to the shared negative prompt in §0,
+and consider a crop of the bottom 3 % for that skin.
+
+### D.4 Presets: `draft` is broken, `balanced` is fine, use `quality`
+
+* **`--preset draft` does not work in this environment.** It fails every time with
+  `RuntimeError: preset LoRA could not be loaded: ValueError: Invalid LoRA checkpoint. Make sure all
+  LoRA param names contain 'lora' substring.` The DMD 6-step LoRA is incompatible with the installed
+  `diffusers 0.41.0.dev0`. So the question of draft-vs-quality is moot until the LoRA loads — **do not
+  plan the 954-image batch around draft.**
+* **`--preset balanced` works and renders correctly, but measured NO speedup here.** Run 1 took
+  233 s (includes a one-time SageAttention reload); run 2, same image and settings, took **155.7 s** —
+  versus **~140 s** for the identical quality run on the same A100-40GB. The preset docs promise
+  ~30 % from SageAttention, but on a 40 GB card colabgen loads the pipeline with
+  `model_cpu_offload`, so the wall-clock is dominated by streaming weights over PCIe rather than by
+  attention compute — a faster attention kernel does not move the bottleneck. Balanced is visually
+  indistinguishable from quality (it is lossless-ish, `~23.5 dB PSNR vs bf16`), so it is *safe to use*,
+  just not the lever it looks like. **Re-measure before assuming a saving**, and expect it to help only
+  on a card large enough for a full-GPU load (A100-80 / G4).
+* **`--preset quality` is the safe default**, and is what all 18 pilot covers used.
+
+### D.5 Prompt patterns that clearly worked
+
+1. **Name the physical medium and its process, not a style adjective.** "Vintage 1970s comic book
+   printing, four-colour press on warm newsprint cream paper" beat any "comic style" phrasing — it
+   produced real Ben-Day screens and plate misregistration. Same for "1920s Soviet constructivist
+   propaganda poster, two flat inks on coarse aged paper" and "heavy-industry machined-metal rendering".
+2. **Give hex codes for ground/ink/accent and say which is the *single* accent.** Every skin that
+   named its accent as "the single sharp accent" / "exactly one element in ultramarine blue" / "exactly
+   one bar in blue" held the skin palette. Without that, the model spreads the accent everywhere.
+3. **Name what the subject is made of, and make the music physical.** "A massive riveted piston engine
+   driving a bank of steel speaker cones" and "a giant hand slapping a bass guitar that bends like
+   rubber" both landed; abstract "energy of the music" phrasing did not.
+4. **State the tile constraint.** "Square album cover" plus a scene with one dominant silhouette reads
+   at 120 px; the covers that failed (`minimal/ambient`) failed exactly at thumbnail size.
+5. **Ban the failure mode explicitly, in the positive sentence's own voice.** "No empty white squares",
+   "no smooth gradients, no photographic lighting" — the second did not rescue `pixel/vaporwave`, but
+   the same construction is what fixed `minimal`.
+6. **Reusing the same seed across a prompt change isolates the prompt.** All three refinements kept
+   their original seeds, so before/after differ only by wording.
+
+### D.6 Recommended full-batch recipe
+
+1. One warm session, `--preset quality` (or `balanced` after the first image amortises the reload),
+   `--size 1:1 --steps 40`, one stable seed per (skin, genre).
+2. Use the §1–§6 templates, with the D.1 structure paragraph folded into `minimal` and the shared
+   negative prompt extended per D.3.
+3. Post-pixelate the `pixel` skin at 160 px (D.2) — deterministic, free, and required.
+4. Convert to JPEG q92 at 1024×1024 into `public/covers/<skin-id>/<genre-id>.jpg`.
+5. Expect ~140 s/image on an A100-40GB and ~66 s/image on a G4 / RTX PRO 6000 Blackwell; the G4 is
+   roughly twice as fast per image but bills at a higher rate. See the cost note below.
+
+### D.7 Cost note (pilot, measured)
+
+Shared account, so the balance delta is an upper bound: **279.23 → 263.75 units = 15.48 units over
+~76 min**, but 2–4 colab sessions were active throughout (a MiniMax-H3 experiment shared the account).
+The covers work itself was **21 generations** (18 pilot + 3 refinements) plus 2 failed draft attempts,
+across **~34 min of pure generation wall-clock** — 13 images on a G4/RTX PRO 6000 at ~66 s each, then
+8 on an A100-40GB at ~135 s each. **Budget ≈ 7 units for the pilot covers work** (≈ 0.33 units/image
+all-in, including the VM bootstrap and the 33 GB weight download that a full batch would amortise).
+
+**Full batch projection (954 images, `quality`, one warm session):** at ~140 s/image on an A100-40GB
+that is ~37 h of GPU time ≈ **190–270 units**; on a G4/RTX PRO 6000 at ~66 s/image it is ~17.5 h
+≈ **160 units** (higher hourly rate, roughly half the wall-clock). The GPU is the right lever here, not
+the preset: `draft` is unavailable (D.4), and `balanced` measured no faster under `model_cpu_offload`
+(D.4). **Cheapest robust plan: `quality` on a G4 / RTX PRO 6000** — ~17.5 h, ~160 units, roughly half
+the A100-40GB wall-clock at a similar total cost. Prefer the biggest card and accept its higher hourly
+rate; do not plan around `draft`, and do not count on `balanced` unless it is re-measured on a full-GPU
+load. The `pixel` skin's post-pixelation step is local and free.

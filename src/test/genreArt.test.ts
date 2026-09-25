@@ -6,7 +6,7 @@
  * get the same tile), built from the aurora hues the reference uses, and syntactically valid CSS.
  */
 import { describe, it, expect } from "vitest";
-import { genreArtBackground, genreCoverUrl, hashGenreId } from "../mobile/genreArt";
+import { genreArtBackground, genreCoverCandidates, genreCoverUrl, hashGenreId } from "../mobile/genreArt";
 
 describe("genre art", () => {
   it("is deterministic for a genre and different between genres", () => {
@@ -42,5 +42,14 @@ describe("genre art", () => {
   it("offers a real-cover hook that a drop-in file wins", () => {
     expect(genreCoverUrl("deep-house")).toBe("/covers/deep-house.jpg");
     expect(genreCoverUrl("a b")).toBe("/covers/a%20b.jpg");
+  });
+
+  it("prefers the skin directory and falls back to the shared cover", () => {
+    expect(genreCoverCandidates("deep-house", "comic")).toEqual([
+      "/covers/comic/deep-house.jpg",
+      "/covers/deep-house.jpg",
+    ]);
+    expect(genreCoverCandidates("deep-house")).toEqual(["/covers/deep-house.jpg"]);
+    expect(genreCoverCandidates("a b", "pixel")[0]).toBe("/covers/pixel/a%20b.jpg");
   });
 });

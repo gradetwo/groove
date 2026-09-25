@@ -60,6 +60,21 @@ export function genreCoverUrl(id: string): string {
   return `/covers/${encodeURIComponent(id)}.jpg`;
 }
 
+/**
+ * Skin-aware cover candidates, in priority order:
+ *
+ *  1. `public/covers/<skin>/<genre>.jpg` — art made for this skin's style.
+ *  2. `public/covers/<genre>.jpg` — the shared/scraped fallback.
+ *
+ * Callers should try them in order (e.g. an <img> onError handler or a
+ * pre-resolved manifest), so a skin that has no art yet degrades to today's
+ * behaviour instead of showing a broken tile.
+ */
+export function genreCoverCandidates(id: string, skin?: string): string[] {
+  const file = `${encodeURIComponent(id)}.jpg`;
+  return skin ? [`/covers/${encodeURIComponent(skin)}/${file}`, `/covers/${file}`] : [`/covers/${file}`];
+}
+
 /** A CSS background for a genre's tile: deterministic, distinct, and no asset required. */
 export function genreArtBackground(genre: { id: string; category: string }): string {
   const hash = hashGenreId(genre.id);

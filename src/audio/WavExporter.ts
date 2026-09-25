@@ -469,7 +469,9 @@ export async function renderPatternOffline(
        */
       if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== t) continue;
       const track = pattern.tracks[t];
-      const routed = track ? gs1PatchFor(track.track_id, track.instrument) : null;
+      // The genre decides how a lane is voiced here too, from the pattern's own `genre_id` — the same answer the live
+      // engine gives, which is the parity this function exists to keep.
+      const routed = track ? gs1PatchFor(track.track_id, track.instrument, pattern.genre_id) : null;
       if (!routed) continue;
       /**
        * Bounded retry, then report — this used to be a silent single attempt.

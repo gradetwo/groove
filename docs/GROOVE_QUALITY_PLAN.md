@@ -582,6 +582,33 @@ Both need their own fix, and the shape of the first one is clear: the offline re
 the context it renders in** (a short probe render through the same kind of `OfflineAudioContext`, and a re-render with
 GS-1 off when it comes back silent) rather than trusting a realtime probe, which answers a different question.
 
+### A lane is voiced per genre, not per instrument (2026-09-25)
+
+The owner's rule, after the UK-garage lead was finally audible: **the lead timbre should follow each genre's own habit,
+and the other lanes the same** — one patch per instrument is the wrong shape.
+
+The instrument table (`INSTRUMENT_TO_GS1`) says what an instrument *is*; it cannot say what a genre does with it.
+`m1_organ` under a UK-garage lead is a short wet stab; the same instrument under a Latin montuno is a warm pad. So the
+resolver now consults a **per-genre override first**, keyed by instrument name (so a lane keeps its voice through an
+instrument swap), and a genre that says nothing keeps the table's answer byte-for-byte.
+
+**How a lane is judged, so the sweep is not a matter of taste.** `scripts/probe_gs1_voicing.mjs` renders a genre's lane
+twice — GS-1 on and with `--no-gs1` — and reports zero-crossing rate (high-frequency activity = "harsh"), level and where
+the sound ends (= "too short"). The **native render is the reference**, because those presets are what the library's
+parts were written for. The first two readings:
+
+```
+✅ uk-garage      brightness 1798 vs 1987 Hz (×0.9)  level +0.8 dB   — organStab, its own patch
+⚠️  chicago-house brightness 2276 vs 1375 Hz (×1.66) level +4.1 dB   — next candidate
+```
+
+`uk-garage`'s lead measured **×4.0 brightness** (7.9 kHz against 2.0 kHz) with the shared `organStack` — which is what
+"harsher than GS-1 off, and short" was — and now sits at ×0.9 and +0.8 dB with the genre's own `organStab`.
+
+**The sweep is the work, and it is per lane per genre.** 159 genres × up to three routed lanes, judged with the probe
+and fixed one at a time; the mechanism, the reference and the numbers are in place so each one is a small, checkable
+change rather than a re-litigation. `chicago-house` is recorded above as the next one, unclaimed rather than assumed.
+
 ### The stereo-spread stage widens the mix and breaks the per-note claim — so it is off (2026-09-25)
 
 The stage itself works and the review liked it (mid-band side/mid −27.9 → −22.4 dB, mono fold loss 0.0002 dB, "the

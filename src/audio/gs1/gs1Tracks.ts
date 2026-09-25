@@ -100,6 +100,13 @@ export interface Gs1PlanOptions {
   role: MixTrackId | string | null | undefined;
   /** The track's `instrument` name, which is what selects a patch. */
   instrument: string | null | undefined;
+  /**
+   * The genre, so a lane can be voiced the way **this genre** plays it (`GENRE_GS1_PATCH_OVERRIDES`).
+   *
+   * Optional, and absent means "the instrument table's answer": a caller that does not know the genre keeps working
+   * exactly as before, which is what every existing test relies on.
+   */
+  genreId?: string | null;
   /** Note times in seconds, in the sound source's own timeline (`AudioContext` or offline). */
   notes: readonly {
     note: number;
@@ -138,7 +145,7 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
    */
   if (role !== "chords" && role !== "lead" && role !== "texture" && role !== "fx") return null;
 
-  const resolved = resolveRoutedPatch(role, instrument);
+  const resolved = resolveRoutedPatch(role, instrument, options.genreId);
   if (!resolved) return null;
 
   const latency = Math.max(0, Math.round(options.latencyFrames ?? 0));
@@ -190,13 +197,21 @@ export function capPlanPolyphony(plan: Gs1Plan, ceiling = GS1_POLYPHONY_CEILING)
  * one rule in one place, and both the renderer and the live pool ask it — the alternative (each call site trying two
  * roles) is how a track ends up voiced by GS-1 in the file and by the native engine in the room.
  */
-export function resolveRoutedPatch(role: string | null | undefined, instrument: string | null | undefined) {
-  return resolveGs1Patch(role, instrument) ?? resolveGs1Patch("texture", instrument);
+export function resolveRoutedPatch(
+  role: string | null | undefined,
+  instrument: string | null | undefined,
+  genreId?: string | null
+) {
+  return resolveGs1Patch(role, instrument, genreId) ?? resolveGs1Patch("texture", instrument, genreId);
 }
 
-export function gs1PatchFor(role: string | null | undefined, instrument: string | null | undefined) {
+export function gs1PatchFor(
+  role: string | null | undefined,
+  instrument: string | null | undefined,
+  genreId?: string | null
+) {
   if (!routingEnabled) return null;
-  return resolveRoutedPatch(role, instrument);
+  return resolveRoutedPatch(role, instrument, genreId);
 }
 
 /** Whether a patch plays an **imported sample**, and therefore cannot sound until one is loaded. */
