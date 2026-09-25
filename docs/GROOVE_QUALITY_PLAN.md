@@ -626,6 +626,27 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### A slow attack is invisible to a held note and expensive in a stab (2026-09-26)
+
+The calibration's next question was *why* a lane that calibrates at ±0.0 dB renders 13 dB quiet in its genre. The
+answer came from the envelope of one note, on `tech-house`'s chords:
+
+```
+              peak     time to 90 % of peak     longest note    mean level while active
+gs1           0.166    360 ms                   400 ms          −24.9 dB
+native        0.428     80 ms                   550 ms          −11.7 dB
+```
+
+The GS-1 patch attacked over **360 ms** where the native part attacked in **80 ms**, so a stab cut at the genre's own
+gate never reached its level. `warmPad`'s native preset attacks in 0.15 s and the patch attacked in 0.55 s — a
+*sustained* calibration cannot see that, because a held note reaches the same sustain either way.
+
+Aligning that one value moved the lane's peak **+3.7 dB**, its longest note from 400 ms to **575 ms** (the native part's
+is 550) and its mean level while active **+4.1 dB**. The remaining ~6 dB is steady-state and register-dependent — the
+clean calibration plays note 48 while the genre voices its chords somewhere else, and the patches carry keyboard
+tracking — so the next extension of the calibration is to measure each instrument at **several notes** rather than one,
+and to include a **short stab** beside the held note so this class of error cannot hide again.
+
 ### The instruments calibrate: all 26 within ±0.5 dB and ×0.99–1.16 (2026-09-26)
 
 The clean measurement answered the question the sweep could not. `scripts/probe_gs1_calibration.mjs` plays **one held
