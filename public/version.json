@@ -1,23 +1,23 @@
 {
-  "version": "2.21.1",
+  "version": "2.22.0",
   "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.21.1",
+    "version": "2.22.0",
     "date": "2026-09-25",
     "category": "fix",
     "title": {
-      "zh": "修好主奏预览的怪音，以及开屏后的音频权限",
-      "en": "The lead's preview, and audio permission after the start screen"
+      "zh": "修好预览的怪音/没声音；开屏按钮重做",
+      "en": "The preview defect fixed; the start screen rebuilt"
     },
     "highlights": [
       {
-        "zh": "修好「点轨道头预览按钮两三次后主奏变怪音或没声音」：预览以前接总输出，而合成引擎一个声部只能接一个输出，于是每次预览都把它拆掉重建。现在预览走这条轨自己（带该轨推子与效果）。",
-        "en": "Fixed the lead going wrong or silent after two or three taps of a track's preview button: a preview routed to the master output, and a synth voice can be bound to only one output, so each tap tore it down and rebuilt it. A preview now plays on its own lane."
+        "zh": "修好「点轨道预览按钮几下就没声音或变怪音」。两个原因：合成引擎收到的定时音符用错了时间基准（引擎是懒加载的，差多少就晚多少），以及上一个音符的释放事件会掐掉刚按下的新音符。",
+        "en": "Fixed the lane going silent or wrong after tapping a track's preview button: timed notes were addressed in the wrong frame clock (the engine loads lazily, so they landed late), and the previous note's release cut the new one."
       },
       {
-        "zh": "开屏现在真正启动音频：之前音频上下文是懒创建的，开屏那一下没有对象可恢复，所以进应用后第一次播放仍被浏览器拦截、要再点一次。现在在点击的同一瞬间创建并恢复。",
-        "en": "The start screen now actually starts audio: the context was created lazily, so the first playback after the gate was still blocked and needed a second tap. It is now created and resumed inside the tap itself."
+        "zh": "开屏按参考项目的尺寸重做：去掉多余文字，按钮不再占满整行，版本号放在按钮下方。",
+        "en": "The start screen now uses the reference project's measurements: no extra paragraph, a content-sized button, and the build number below it."
       }
     ],
     "truncated": false
