@@ -7,7 +7,14 @@
  * claim as "it plays the right notes".
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { chordVoicingForStep, chordVoiceGain, chordNotesForStep, CHORD_STRUM_SEC } from "../audio/chordVoicing";
+import {
+  ATTACK_ARRIVAL_MULTIPLE,
+  CHORD_STRUM_SEC,
+  chordNotesForStep,
+  chordVoiceGain,
+  chordVoicingForStep,
+  soundingDuration,
+} from "../audio/chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { NOTE_NAMES } from "../utils/scaleTheory";
 import { renderPatternOffline } from "../audio/WavExporter";
@@ -279,3 +286,34 @@ describe("chordNotesForStep · a stored chord is played verbatim", () => {
  * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
  */
 setGs1OfflineCapability("usable");
+
+/**
+ * The attack-arrival rule, from the queue that found it.
+ *
+ * 55 of the 318 routed lanes had a preset attack longer than half the note they play — the worst being `warm_pad`
+ * chords in `breakcore`, a 0.152 s attack against a 0.028 s note — and rendering those lanes natively confirmed it:
+ * their stems sat 20 dB and more below their siblings. A note is never allowed to be shorter than its own attack needs.
+ */
+describe("a note lasts long enough for its own attack", () => {
+  it("raises a note that would be cut during the attack", () => {
+    // `warm_pad`'s attack against breakcore's note.
+    expect(soundingDuration(0.028, 0.152)).toBeCloseTo(0.152 * ATTACK_ARRIVAL_MULTIPLE, 9);
+  });
+
+  it("leaves a note alone when the attack fits inside it", () => {
+    // A fast pluck on a normal step: nothing to do, and the note keeps the length the genre asked for.
+    expect(soundingDuration(0.3, 0.002)).toBe(0.3);
+    // …and a preset with no attack at all is untouched too.
+    expect(soundingDuration(0.3, 0)).toBe(0.3);
+  });
+
+  it("never shortens a note", () => {
+    for (const [requested, attack] of [
+      [0.5, 0.01],
+      [0.05, 0.02],
+      [1, 0.4],
+    ] as const) {
+      expect(soundingDuration(requested, attack)).toBeGreaterThanOrEqual(requested);
+    }
+  });
+});

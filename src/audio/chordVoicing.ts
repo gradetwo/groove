@@ -397,3 +397,24 @@ export function chordNotesForStep(
   const effectiveMidi = Number.isFinite(midi) && midi > 0 ? midi : 60;
   return chordVoicingForStep(effectiveMidi, scale, options);
 }
+
+/**
+ * A note must last long enough for its own attack to arrive.
+ *
+ * Found by building the queue of lanes whose **preset attack** is longer than the note the lane plays: **55 of 318**
+ * routed lanes were over half, the worst being `warm_pad` chords in the fast genres — a 0.152 s attack against a
+ * 0.028 s note in `breakcore`, i.e. the pad never arrives at all, five times over. Rendering those lanes natively
+ * confirmed it: their stems sat 20 dB and more below their siblings (`stringsLead` was the single case that surfaced
+ * first, at −60 dBFS).
+ *
+ * The rule is musical rather than numerical: a synth retriggered faster than its own attack produces a wash of
+ * half-formed notes. A note is allowed to sound longer than the step asked for, and never shorter than its attack needs
+ * — `ATTACK_ARRIVAL_MULTIPLE` times the attack, which is where a linear-ish envelope is audibly "there".
+ */
+export const ATTACK_ARRIVAL_MULTIPLE = 2.5;
+
+export function soundingDuration(requested: number, attackSeconds: number): number {
+  if (!Number.isFinite(requested) || requested <= 0) return requested;
+  if (!Number.isFinite(attackSeconds) || attackSeconds <= 0) return requested;
+  return Math.max(requested, attackSeconds * ATTACK_ARRIVAL_MULTIPLE);
+}
