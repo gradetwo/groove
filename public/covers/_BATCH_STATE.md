@@ -1,7 +1,7 @@
 # Cover batch — authoritative state (auto-written 2026-09-25T14:50:53Z)
 
 GOAL: 6 skins x 159 genres = 954 covers, 1024x1024, Qwen-Image-2.1 on Colab G4.
-Progress (updated 2026-09-25T15:03:36Z): 76 jpgs, 6 rejected, 878 remaining. ONLY the runner is running now (reviewd intentionally stopped).
+Progress (updated 2026-09-25T15:24:59Z): 119 verified jpgs installed. GPU SESSION LOST - the `batch` runtime was reallocated as a CPU machine (torch 2.11.0+cpu, no /colab/ssh endpoint, /content/.colabgen/runs empty). The remote run `covers-gen` and its VM output are gone; 33 tiles were recovered from _batch_scratch/fetched/ (originals kept in fetched/_installed/). Stale marker moved to REMOTE_ACTIVE.stale-23:11 so a local loop can start again.
 
 ## Where things live
 - final tiles:      public/covers/<skin>/<genre>.jpg      (PIL-verified 1024x1024 JPEG)
@@ -39,3 +39,14 @@ rate 8.90 units/hr (G4). Baseline at resume: 242.16 units.
 - GPU-lock starvation: the reviewd held the model lock across a whole review wave and the runner idled for minutes at ~1% CPU. The lock must cover ONLY the regeneration call; triage, contact sheets and PIL checks are CPU-only and belong outside the lock. If generation stalls while processes are alive, that is the first thing to check.
 - Dependency installs must happen in a fresh process, never in the kernel that already imported the packages (two batch deaths: `_slice`/`_Ink`/`GenerationMixin`). Recovery: `colabgen restart -s batch && colabgen warm -s batch qwen-image-2.1`.
 - `colabgen` must never let a resolver swap torch on a GPU VM (it did once: cu128 -> cpu, GPU detached). Constraints now pin torch and a subprocess verifies `cuda.is_available()`.
+
+## Resume after the GPU loss (state as of the incident)
+1. The old G4 is gone. Create a FRESH runtime that has the /colab/ssh endpoint: `colab new` (or `colabgen up -s batch2 --gpu g4`). A runtime reallocated as CPU has no ssh endpoint and cannot be used - verify with `colabgen status -s <name>` (expect RTX PRO 6000 and backend=server, not `exec`).
+2. Warm: `colabgen warm -s <name> qwen-image-2.1`. If imports break: `colabgen restart -s <name> && colabgen warm ...`.
+3. Drive: `colabgen drive mount -s <name> --agent`, send the URL to the user, then `colabgen drive confirm -s <name>`.
+4. Resume the loops locally (they skip verified jpgs and re-derive identical seeds):
+   /home/crow/.venv/bin/python _batch_runner.py
+   /home/crow/.venv/bin/python _batch_reviewd.py
+   If _batch_runner.py refuses to start with `REFUSING ... remote run ... is active`, a stale marker is present: move _batch_scratch/REMOTE_ACTIVE aside (do not delete - it tells you which remote run existed).
+5. If you use the remote-run path instead (`colabgen submit -s <name> ...`), fetch with `colabgen run-fetch -s <name> <run> --dest _batch_scratch/fetched` and then run `_batch_sync.py` to install verified tiles into covers/<skin>/.
+6. Verify tiles land in covers/<skin>/ with PIL (1024x1024) before counting them; keep rejects in _rejected/.
