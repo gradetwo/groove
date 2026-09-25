@@ -1,6 +1,6 @@
 import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { GS1_PATCHES, GS1_TEXTURE_ROUTING, resolveGs1Patch, routingForRole } from "../data/gs1Patches";
+import { GS1_PATCH_GAIN_MAX, GS1_PATCHES, GS1_TEXTURE_ROUTING, resolveGs1Patch, routingForRole } from "../data/gs1Patches";
 import { gs1PatchFor, patchNeedsSample } from "../audio/gs1/gs1Tracks";
 
 /**
@@ -44,7 +44,7 @@ describe("P2.5 · sample-based texture", () => {
       expect(patch[Param.OSC1_WAVE], name).toBe(9);
       expect(patch[Param.SMP_ROOT], name).toBe(TEXTURE_SAMPLE_ROOT);
       expect(patch[Param.SMP_MODE], name).toBe(0);
-      expect(patch[Param.PATCH_GAIN] ?? 1, name).toBeLessThanOrEqual(0.6);
+      expect(patch[Param.PATCH_GAIN] ?? 1, name).toBeLessThanOrEqual(GS1_PATCH_GAIN_MAX);
     }
     const patch = GS1_PATCHES.sampleTexture;
     // `Wave::from_u32`: 8 is the single-cycle wavetable and 9 is the imported sample.
@@ -53,7 +53,7 @@ describe("P2.5 · sample-based texture", () => {
     // One-shot: `SMP_MODE` is the sample's loop mode, and a found sound is not a loop by default.
     expect(patch[Param.SMP_MODE]).toBe(0);
     // The measured headroom ceiling (E3, eight voices) — a patch above it drives the core's own limiter.
-    expect(patch[Param.PATCH_GAIN] ?? 1).toBeLessThanOrEqual(0.6);
+    expect(patch[Param.PATCH_GAIN] ?? 1).toBeLessThanOrEqual(GS1_PATCH_GAIN_MAX);
   });
 
   it("generates a deterministic one-shot that starts loud and ends silent", () => {

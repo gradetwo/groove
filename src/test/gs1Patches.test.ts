@@ -20,6 +20,7 @@ import { ALL_GENRES } from "../data/genres";
 import {
   GS1_CHORDS_ROUTING,
   GS1_LEAD_ROUTING,
+  GS1_PATCH_GAIN_MAX,
   GS1_PATCHES,
   GS1_ROLES,
   patchParamIds,
@@ -180,9 +181,8 @@ describe("GS-1 patches — every value is inside the core's declared range", () 
      * (`uplifting-trance`): master peak **0.78 with zero clipped samples** over eight seconds, and the host's own
      * true-peak 0.02 against a limit of 1 — so 3 is the new bound, and it is a measurement rather than a taste.
      */
-    const HEADROOM_GAIN_MAX = 3;
     const loud = Object.entries(GS1_PATCHES)
-      .filter(([, patch]) => (patch[Param.PATCH_GAIN] ?? 1) > HEADROOM_GAIN_MAX)
+      .filter(([, patch]) => (patch[Param.PATCH_GAIN] ?? 1) > GS1_PATCH_GAIN_MAX)
       .map(([name]) => name);
     expect(loud).toEqual([]);
   });

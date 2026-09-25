@@ -623,6 +623,19 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
   },
 };
 
+/**
+ * The highest `PATCH_GAIN` any patch may carry.
+ *
+ * It exists to keep the core's own limiter out of the picture, and it is a **measurement**, re-taken when the
+ * instrument sweep showed the old 0.6 bound protecting a limiter that was never in danger while a dozen lanes sat 12–22
+ * dB under their native references. Measured with the raised gains on the densest supersaw voicing in the catalogue
+ * (`uplifting-trance`): master peak **0.78 with zero clipped samples** over eight seconds, host true-peak 0.02 against a
+ * limit of 1.
+ *
+ * Exported because two suites assert it, and the second one caught the first one's fix being applied in only one place.
+ */
+export const GS1_PATCH_GAIN_MAX = 3;
+
 /** A routed instrument name, or an explicit decision to leave it on the native engine. */
 export type Gs1Routing =
   | { patch: Gs1PatchName }
