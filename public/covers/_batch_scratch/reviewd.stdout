@@ -1,0 +1,8 @@
+2026-09-25T13:15:27Z REVIEWD START watching skins; verdicts in _review/verdicts.json; touch _review/verdicts.ready to apply (consumed once)
+2026-09-25T13:17:27Z REVIEWD VERDICT default count=6 ids=acid-techno,ambient,alternative-rnb,bossa-nova,chicago-drill,chillwave
+2026-09-25T13:22:00Z REVIEWD START watching skins; verdicts in _review/verdicts.json; touch _review/verdicts.ready to apply (consumed once)
+2026-09-25T13:26:00Z REVIEWD VERDICT default count=6 ids=acid-techno,ambient,alternative-rnb,bossa-nova,chicago-drill,chillwave
+2026-09-25T13:26:50Z REGEN-OK default acid-techno reasons=R1 attempt=1 seconds=39.6 seed=1996
+2026-09-25T13:27:01Z REJECT-GEN-FAIL default ambient attempt=1 seed=1067 exit=1 see /home/crow/music/groove/public/covers/_batch_scratch/genlogs/default__ambient.a101.log
+2026-09-25T13:27:59Z REJECT-GEN-FAIL default ambient attempt=2 seed=1067 exit=1 see /home/crow/music/groove/public/covers/_batch_scratch/genlogs/default__ambient.a102.log
+2026-09-25T13:27:59Z REJECT-REGEN-FAILED default ambient reasons=R1,R4 previous image restored from _rejected/default/ambient.jpg
