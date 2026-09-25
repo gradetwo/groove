@@ -371,12 +371,24 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.FILTER_TYPE]: 0, // ladder
     [Param.FILTER_CUTOFF]: 5200,
     [Param.FILTER_RES]: 0.14,
-    [Param.FILTER_ENV_AMT]: 0.35,
+    /**
+     * A gentle filter envelope and a slightly longer attack than the shared patch: the owner heard "a popping sound
+     * on the last two beats", which is a transient — the filter envelope opening at 0.35 over 5 ms is a *chiff* at the
+     * front of every note. Measured as sample-to-sample jumps, this lane read 0.186 against the native lane's 0.107;
+     * the target is the native number, because a click is a discontinuity and nothing else in this voice is.
+     */
+    [Param.FILTER_ENV_AMT]: 0.12,
     [Param.FILTER_KBD]: 0.3,
-    [Param.ENV_ATTACK]: 0.005,
-    [Param.ENV_DECAY]: 0.18,
-    [Param.ENV_SUSTAIN]: 0.62,
-    [Param.ENV_RELEASE]: 0.55,
+    [Param.ENV_ATTACK]: 0.014,
+    [Param.ENV_DECAY]: 0.22,
+    [Param.ENV_SUSTAIN]: 0.7,
+    /**
+     * Long release, chosen against a measurement rather than a taste: the owner hears "a popping sound on the last two
+     * beats", and the same lane's content measured as ending **0.75 s earlier** than the native render's (7.25 s against
+     * 8.00 s over the same part) — a note whose tail is too short is a note the next attack lands on top of. The target
+     * is the native lane's own end time.
+     */
+    [Param.ENV_RELEASE]: 1.3,
     [Param.PATCH_GAIN]: 0.46,
   },
   organStack: {

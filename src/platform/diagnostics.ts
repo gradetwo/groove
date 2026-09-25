@@ -76,6 +76,9 @@ export interface DiagReport {
   sampleRate: number | null;
   contextState: string | null;
   gs1Enabled: boolean;
+  /** `AudioContext.baseLatency` / `outputLatency`, in ms — what the device adds before the listener hears it. */
+  baseLatencyMs: number | null;
+  outputLatencyMs: number | null;
   gs1OfflineVerdict: string | null;
   gs1Hosts: Array<Record<string, unknown>>;
   playing: boolean;
@@ -101,6 +104,12 @@ export async function collectDiagReport(engine: AudioEngine, notes: string[] = [
     sampleRate: ctx?.sampleRate ?? null,
     contextState: ctx?.state ?? null,
     gs1Enabled: engine.isGs1Enabled(),
+    baseLatencyMs:
+      ctx && Number.isFinite((ctx as AudioContext).baseLatency) ? Math.round((ctx as AudioContext).baseLatency * 1000) : null,
+    outputLatencyMs:
+      ctx && Number.isFinite((ctx as { outputLatency?: number }).outputLatency)
+        ? Math.round(((ctx as { outputLatency?: number }).outputLatency ?? 0) * 1000)
+        : null,
     gs1OfflineVerdict: gs1OfflineCapability() ?? null,
     gs1Hosts,
     playing: engine.getIsPlaying(),
@@ -260,6 +269,12 @@ export function installDiagnostics(engine: AudioEngine): () => void {
       ["violations", analysis ? String(analysis.violations) : "-"],
       ["hosts", String(report.gs1Hosts.length)],
       ["step", `${report.playing ? "playing" : "stopped"} · ${report.currentStep}`],
+      /**
+       * The browser's own latency, which is the half of "the sound is late" that no code of ours can fix: Safari on a
+       * Bluetooth output reports hundreds of milliseconds here, and the visual playhead compensates for exactly this
+       * number (`visualLeadSeconds`).
+       */
+      ["latency", `${report.baseLatencyMs} ms base · ${report.outputLatencyMs} ms out`],
     ];
     live.textContent = "";
     for (const [key, value] of rows) {

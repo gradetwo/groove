@@ -112,133 +112,57 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
   if (!open) return <>{children}</>;
 
   /**
-   * The card, after the sibling synth project's start screen: a mask over the app, a brand block with the version
-   * (the first thing a returning visitor wants to know is which build they are looking at), one large button, and —
-   * when it fails — the reason, a one-line environment diagnostic and a retry. The app stays mounted underneath.
+   * The card, after the sibling synth project's start screen: a translucent mask over the app, a brand block with the
+   * mark, the wordmark and the build, one content-sized button, and — when it fails — the reason, a one-line
+   * environment diagnostic and a retry. The app stays mounted underneath the whole time.
    */
   const environment =
     typeof navigator === "undefined"
       ? `v${APP_VERSION}`
       : `v${APP_VERSION} · ${typeof AudioContext === "undefined" ? "no AudioContext" : "AudioContext ok"}`;
 
-  /**
-   * Inline styles on purpose, after the bundle budget came within a few hundred bytes of its limit: every Tailwind
-   * utility in this card is a **new CSS rule** in the entry bundle (arbitrary values like `z-[2147483646]` cannot be
-   * reused), and this screen's job is one button. The layout is a handful of properties; paying a rule table for it is
-   * not a trade worth making on the route every visitor loads.
-   */
-  const cardStyle: React.CSSProperties = {
-    position: "fixed",
-    inset: 0,
-    zIndex: 2147483646,
-    display: "grid",
-    placeItems: "center",
-    background: "rgba(0,0,0,0.86)",
-    padding: 24,
-    textAlign: "center",
-  };
-  const boxStyle: React.CSSProperties = {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 18,
-    width: "100%",
-    maxWidth: 340,
-    padding: "30px 24px",
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "#0d0d12",
-    color: "#f2f2f6",
-  };
-  const buttonStyle: React.CSSProperties = {
-    width: "100%",
-    minHeight: 46,
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.35)",
-    background: "linear-gradient(180deg,#ffd089,#e9a02c 62%,#d98c1c)",
-    color: "#231703",
-    font: "700 14px/1 inherit",
-    letterSpacing: "0.08em",
-    cursor: busy ? "default" : "pointer",
-    opacity: busy ? 0.65 : 1,
-  };
-
   return (
     <>
       {children}
-      <div data-testid="audio-start-gate" role="dialog" aria-label="开始" style={cardStyle}>
-        <div style={boxStyle}>
-          {/* The sibling synth project's brand block: a mark, a wordmark with the accent half, and the build. */}
-          <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <span
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                top: -14,
-                left: "50%",
-                width: 84,
-                height: 84,
-                transform: "translateX(-50%)",
-                borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(240,180,90,0.28) 0%, transparent 70%)",
-                pointerEvents: "none",
-              }}
-            />
-            <svg
-              viewBox="0 0 24 24"
-              width="46"
-              height="46"
-              fill="none"
-              aria-hidden="true"
-              style={{ position: "relative", color: "#f0b45a" }}
-            >
+      <div data-testid="audio-start-gate" role="dialog" aria-label="开始" className="gate-overlay">
+        <div className="gate-card">
+          <div className="gate-brand">
+            <svg className="gate-logo" width="46" height="46" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeOpacity="0.35" />
-              <path d="M3.5 12 Q6.5 4.5 12 12 T20.5 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              <path
+                d="M3.5 12 Q6.5 4.5 12 12 T20.5 12"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
             </svg>
-            <div style={{ font: "700 15px/1 inherit", letterSpacing: "0.16em" }}>
-              GROOVE <span style={{ color: "#f0b45a" }}>LAB</span>
+            <div className="gate-name">
+              GROOVE <b>LAB</b>
             </div>
           </div>
-          <button type="button" data-testid="audio-start-button" onClick={() => void start()} disabled={busy} style={buttonStyle}>
+          <button
+            type="button"
+            data-testid="audio-start-button"
+            onClick={() => void start()}
+            disabled={busy}
+            className="gate-btn"
+          >
             {busy ? "正在启动… / Starting…" : "启动音频引擎 / Start Audio Engine"}
           </button>
-          <div style={{ font: "500 10px/1.5 ui-monospace, monospace", opacity: 0.45 }}>{environment}</div>
+          <div className="gate-diag" data-testid="audio-start-diag">
+            {environment}
+          </div>
           {error ? (
-            <div
-              data-testid="audio-start-error"
-              role="alert"
-              style={{
-                width: "100%",
-                textAlign: "left",
-                display: "grid",
-                gap: 6,
-                padding: 10,
-                borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "rgba(0,0,0,0.4)",
-              }}
-            >
-              <div style={{ font: "700 11px/1 ui-monospace, monospace", letterSpacing: "0.12em", color: "#f0b45a" }}>
-                启动失败 / Startup failed
-              </div>
-              <p style={{ margin: 0, font: "400 10.5px/1.5 ui-monospace, monospace", opacity: 0.75, wordBreak: "break-word" }}>
-                {error}
-              </p>
+            <div className="gate-error" data-testid="audio-start-error" role="alert">
+              <b>启动失败 / Startup failed</b>
+              <p>{error}</p>
+              <small>{environment}</small>
               <button
                 type="button"
+                className="gate-retry"
                 data-testid="audio-start-retry"
                 onClick={() => void start()}
                 disabled={busy}
-                style={{
-                  minHeight: 32,
-                  borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  background: "transparent",
-                  color: "#f2f2f6",
-                  font: "600 10.5px/1 ui-monospace, monospace",
-                  letterSpacing: "0.1em",
-                  cursor: "pointer",
-                }}
               >
                 重试 / Retry
               </button>
