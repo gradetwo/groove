@@ -44,6 +44,7 @@ function makeHost() {
     setPatch: () => {
       calls.patches += 1;
     },
+    setGenre: () => undefined,
     allNotesOff: () => {
       calls.allNotesOff += 1;
     },

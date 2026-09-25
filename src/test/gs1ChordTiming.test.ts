@@ -54,6 +54,8 @@ function makePoolStub() {
       return true;
     },
     releaseAll,
+    /** The engine tells the pool the genre once per pattern, so a per-genre voice reaches the live path too. */
+    setGenre: () => undefined,
     dispose: vi.fn(),
   } as unknown as Gs1VoicePool;
   return { pool, plays, releaseAll };
