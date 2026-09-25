@@ -626,6 +626,27 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The controlled measurement is the authority, and the genre-stem metric disagrees with it (2026-09-26)
+
+With the calibration's own artefacts fixed (the previous take's tail, the limiter ceiling as a "peak", a gate too short
+to contain an attack), it ran over every routed instrument, three notes per lane register and two articulations:
+
+```
+26 of 26 instruments: |held level| ≤ 0.7 dB, |stab level| ≤ 0.7 dB, brightness ×0.83–1.06, register spread ≤ 0.8 dB
+```
+
+The genre-stem sweep, run on the same build, still reports 21 of 30 pairs outside its band — `strings_lead` +30 dB and
+×8.12, `warm_pad` lead +9.8 dB — **and one of the two has to be wrong.** The controlled measurement plays one note on one
+lane with nothing else in the graph and agrees with itself across registers and articulations; the stem sweep renders a
+genre's lane and compares it with the same lane rendered natively, which is exactly where a difference in **how the lane
+is played** lands — the chord voicing's voice count (the chord gain scales with it), the articulation the two paths apply,
+and the register the part sits in.
+
+So the honest position is: **the voices are verified, and the genre-stem metric is not yet trustworthy enough to drive
+more edits.** It stays in the tree as a detector — it found the `sine_lead` routing mistake and the `warmPad` attack —
+and the next step is to make it attribute what it measures, starting with the number of notes each path plays for the
+same step, before any more patch values move on its word.
+
 ### A slow attack is invisible to a held note and expensive in a stab (2026-09-26)
 
 The calibration's next question was *why* a lane that calibrates at ±0.0 dB renders 13 dB quiet in its genre. The
