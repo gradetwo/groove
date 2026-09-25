@@ -1,3 +1,4 @@
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { describe, it, expect, afterEach } from "vitest";
 import { encodeAudioBufferToWav, renderPatternOffline } from "../audio/WavExporter";
 import { DEFAULT_SYNTH_PRESETS, keyTrackedCutoff, voiceOscillatorTypes } from "../audio/PolySynth";
@@ -384,3 +385,11 @@ describe("genre timbres · offline render voices the declared instrument", () =>
     expect(filterCutoffs()).toContain(2000);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

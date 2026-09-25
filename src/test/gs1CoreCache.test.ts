@@ -14,6 +14,7 @@
  * The fetch is stubbed rather than performed: this test is about *how many times* the network is
  * asked, which is the quantity that matters, and it must not depend on a real core being served.
  */
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createGs1Host, resetGs1CoreCache } from "../audio/gs1/Gs1Host";
 
@@ -115,3 +116,11 @@ describe("the GS-1 core fetch", () => {
     expect(attempt, "the failed fetch must be retried, not remembered").toBe(2);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

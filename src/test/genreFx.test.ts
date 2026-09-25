@@ -26,6 +26,7 @@ import { DEFAULT_FX_STATE } from "../audio/EffectsRack";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { SequencerPattern } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 const ids = GENRE_INDEX.map((g) => g.id);
 const indexIds = new Set(ids);
@@ -271,3 +272,11 @@ describe("N-14 · the global default is still the baseline", () => {
     expect(DEFAULT_FX_STATE.bitcrusherEnabled).toBe(false);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

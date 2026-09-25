@@ -17,6 +17,7 @@ import { buildMasterGraph } from "../audio/masterGraph";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { installFakeOfflineAudioContext, FakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { DrumPattern } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 class FakeAudioWorkletNode {
   static instances: FakeAudioWorkletNode[] = [];
@@ -155,3 +156,11 @@ describe("the bus compressor's release is reachable too", () => {
     expect(releases({})).not.toContain(0.5);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

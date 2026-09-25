@@ -1,3 +1,4 @@
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { describe, it, expect } from "vitest";
 import { editorPositionFor, flattenSong, clipSteps, patternForExport, sessionSong } from "../data/songFlatten";
 import { createSong, type ClipSlot, type Song, type SongSection } from "../types/song";
@@ -402,3 +403,11 @@ describe("B7 · playback plays the arrangement", () => {
     expect(editorPositionFor(sectionSong(false), 4)).toBeNull();
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

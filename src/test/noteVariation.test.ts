@@ -12,6 +12,7 @@ import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
 import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { SequencerPattern } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import {
   NOTE_VARIATION_MAX_CUTOFF_SCALE,
   NOTE_VARIATION_MAX_DETUNE_CENTS,
@@ -134,3 +135,11 @@ describe("P2.2 · the variation reaches a render, and the control does not", () 
     }
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

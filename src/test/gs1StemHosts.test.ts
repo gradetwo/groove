@@ -22,6 +22,7 @@
  * hosts of which 14 could never play a note. That is the difference between ~7 and ~31 exports per
  * page before GS-1 dies, which is why this is pinned by a test rather than left to a comment.
  */
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { DrumPattern } from "../types/genre";
 
@@ -41,7 +42,6 @@ vi.mock("../audio/gs1/Gs1Host", async (importOriginal) => {
 
 import { renderPatternOffline, exportStemsWav } from "../audio/WavExporter";
 import { setGs1RoutingEnabled } from "../audio/gs1/gs1Tracks";
-import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 /**
  * The offline capability probe builds a host of its own, and these cases count hosts and assert what the renderer did
@@ -87,12 +87,6 @@ describe("GS-1 hosts in stem renders", () => {
   let restore: (() => void) | null = null;
 
   beforeEach(() => {
-    /**
-     * These cases count hosts and assert what the renderer did with them, so the offline capability probe — which
-     * builds a host of its own — is declared satisfied here rather than run inside the count. The probe has its own
-     * file (`gs1OfflineCapability.test.ts`) and its own acceptance test (`probe_engine_parity.mjs`).
-     */
-    setGs1OfflineCapability(\"usable\");
     mocks.createGs1Host.mockReset();
     mocks.createGs1Host.mockImplementation(() => Promise.resolve(fakeHost()));
     restore = installFakeOfflineAudioContext();

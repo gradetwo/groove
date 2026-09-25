@@ -13,6 +13,7 @@ import { NOTE_NAMES } from "../utils/scaleTheory";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { SequencerPattern } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 /** Semitone offsets from the root, which is what "which chord is this" reduces to. */
 const offsets = (notes: number[]) => notes.map((n) => n - notes[0]);
@@ -270,3 +271,11 @@ describe("chordNotesForStep · a stored chord is played verbatim", () => {
     expect(chordNotesForStep(track, 0, 60, "C minor").length).toBeGreaterThan(1);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");
